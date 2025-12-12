@@ -3,6 +3,7 @@
 const jsgui = require("../jsgui");
 const { ComponentControl } = require("./ComponentControl");
 const { SelectionHandlesControl } = require("./SelectionHandlesControl");
+const { ListenerBag } = require("../../../../utils/listenerBag");
 
 const { Control, String_Control } = jsgui;
 
@@ -24,8 +25,25 @@ class CanvasControl extends Control {
     this._nextId = 1;
     this._dragState = null;
     this._resizeState = null;
+
+    this._domListenerBag = null;
+    this._boundOnMouseDown = null;
+    this._boundOnMouseMove = null;
+    this._boundOnMouseUp = null;
+
+    // Default demo components (rendered during activate). Needed even in activation mode.
+    this._pendingComponents = this._pendingComponents || [
+      { id: "rect1", type: "rect", x: 100, y: 100, width: 150, height: 100, fill: "#4A90D9" },
+      { id: "rect2", type: "rect", x: 300, y: 150, width: 120, height: 80, fill: "#D94A4A" },
+      { id: "ellipse1", type: "ellipse", cx: 550, cy: 200, rx: 70, ry: 50, fill: "#4AD94A" }
+    ];
     
     if (!spec.el) this.compose();
+  }
+
+  deactivate() {
+    this._disposeDomListeners();
+    this.__active = false;
   }
   
   compose() {
@@ -51,38 +69,69 @@ class CanvasControl extends Control {
     handles.dom.attributes.style = "display: none;";
     this.add(handles);
     
-    // Default test components
-    this._pendingComponents = [
-      { id: "rect1", type: "rect", x: 100, y: 100, width: 150, height: 100, fill: "#4A90D9" },
-      { id: "rect2", type: "rect", x: 300, y: 150, width: 120, height: 80, fill: "#D94A4A" },
-      { id: "ellipse1", type: "ellipse", cx: 550, cy: 200, rx: 70, ry: 50, fill: "#4AD94A" }
-    ];
   }
   
   activate() {
     if (this.__active) return;
     this.__active = true;
-    
-    const el = this.dom.el;
+
+    const el = this.dom?.el;
+    if (!el) return;
+
+    // Activation path: reconnect key internal DOM references.
+    if (!this._svgWrapper?.dom?.el) {
+      const wrapperEl = el.querySelector(".art-canvas__svg-wrapper");
+      if (wrapperEl) this._svgWrapper = { dom: { el: wrapperEl } };
+    }
+
+    if (!this._selectionHandles?.dom?.el) {
+      const selectionEl = el.querySelector(".art-selection");
+      if (selectionEl) {
+        this._selectionHandles = selectionEl.__jsgui_control || new SelectionHandlesControl({ el: selectionEl, context: this.context });
+        this._selectionHandles.dom = this._selectionHandles.dom || {};
+        this._selectionHandles.dom.el = selectionEl;
+        selectionEl.__jsgui_control = this._selectionHandles;
+      }
+    }
+
     this._svg = el.querySelector(".art-canvas__svg");
-    this._componentsGroup = this._svg.querySelector(".art-canvas__components");
-    
-    // Render pending
-    this._pendingComponents?.forEach(c => this._renderComponent(c));
+    this._componentsGroup = this._svg?.querySelector?.(".art-canvas__components");
+
+    // Render pending components (client-only).
+    this._pendingComponents?.forEach((c) => this._renderComponent(c));
     this._pendingComponents = null;
-    
-    this._selectionHandles.activate?.();
+
+    this._selectionHandles?.activate?.();
     this._setupEvents();
   }
   
   _setupEvents() {
-    this._svg.addEventListener("mousedown", (e) => this._onMouseDown(e));
-    document.addEventListener("mousemove", (e) => this._onMouseMove(e));
-    document.addEventListener("mouseup", () => this._onMouseUp());
-    
-    this._selectionHandles.on("resize-start", (d) => this._startResize(d));
-    this._selectionHandles.on("resize-move", (d) => this._doResize(d));
-    this._selectionHandles.on("resize-end", () => this._endResize());
+    if (!this._svg?.addEventListener) return;
+    if (typeof document === "undefined") return;
+
+    this._disposeDomListeners();
+    this._domListenerBag = new ListenerBag();
+
+    this._boundOnMouseDown = this._boundOnMouseDown || ((e) => this._onMouseDown(e));
+    this._boundOnMouseMove = this._boundOnMouseMove || ((e) => this._onMouseMove(e));
+    this._boundOnMouseUp = this._boundOnMouseUp || (() => this._onMouseUp());
+
+    this._domListenerBag.on(this._svg, "mousedown", this._boundOnMouseDown);
+    this._domListenerBag.on(document, "mousemove", this._boundOnMouseMove);
+    this._domListenerBag.on(document, "mouseup", this._boundOnMouseUp);
+
+    if (this._selectionHandles?.on) {
+      this._selectionHandles.on("resize-start", (d) => this._startResize(d));
+      this._selectionHandles.on("resize-move", (d) => this._doResize(d));
+      this._selectionHandles.on("resize-end", () => this._endResize());
+    }
+  }
+
+  _disposeDomListeners() {
+    if (this._domListenerBag) {
+      this._domListenerBag.dispose();
+      this._domListenerBag = null;
+    }
   }
   
   _onMouseDown(e) {
@@ -122,9 +171,17 @@ class CanvasControl extends Control {
     }
   }
   
-  _onMouseUp() { this._dragState = null; }
+  _onMouseUp() {
+    if (this._dragState) {
+      this.raise("selection-change", this._getSelectionData());
+    }
+    this._dragState = null;
+  }
   
   _renderComponent({ id, type, ...data }) {
+    if (typeof document === "undefined") return;
+    if (!this._componentsGroup) return;
+
     let el;
     const set = (k, v) => el.setAttribute(k, v);
     
@@ -133,12 +190,14 @@ class CanvasControl extends Control {
       set("x", data.x); set("y", data.y);
       set("width", data.width); set("height", data.height);
       set("fill", data.fill || "#4A90D9"); set("rx", "4");
+      if (data.stroke !== undefined) set("stroke", data.stroke);
       this._components.set(id, { type, el, ...data });
     } else if (type === "ellipse") {
       el = document.createElementNS(SVG_NS, "ellipse");
       set("cx", data.cx); set("cy", data.cy);
       set("rx", data.rx); set("ry", data.ry);
       set("fill", data.fill || "#4AD94A");
+      if (data.stroke !== undefined) set("stroke", data.stroke);
       this._components.set(id, {
         type, el,
         x: data.cx - data.rx, y: data.cy - data.ry,
@@ -151,8 +210,20 @@ class CanvasControl extends Control {
       set("x", data.x); set("y", data.y);
       set("fill", data.fill || "#1A1A1A");
       set("font-size", data.fontSize || "16");
+      if (data.stroke !== undefined) set("stroke", data.stroke);
       el.textContent = data.text || "Text";
-      this._components.set(id, { type, el, x: data.x, y: data.y, width: 100, height: 24, text: data.text || "Text", fill: data.fill });
+      this._components.set(id, {
+        type,
+        el,
+        x: data.x,
+        y: data.y,
+        width: 100,
+        height: 24,
+        text: data.text || "Text",
+        fontSize: data.fontSize || "16",
+        fill: data.fill,
+        stroke: data.stroke
+      });
     }
     
     if (el) {
@@ -223,6 +294,40 @@ class CanvasControl extends Control {
       stroke: c.stroke
     };
   }
+
+  /**
+   * Public: return current selection data (or null).
+   * @returns {object|null}
+   */
+  getSelectionData() {
+    return this._getSelectionData();
+  }
+
+  /**
+   * Public: select a component by id.
+   * @param {string} id
+   */
+  selectComponent(id) {
+    this._select(id);
+  }
+
+  /**
+   * Public: return the current layers list (topmost first).
+   * @returns {Array<{id:string,type:string,name:string,selected:boolean}>}
+   */
+  getLayers() {
+    if (!this._components) return [];
+    const layers = [];
+    this._components.forEach((comp, id) => {
+      layers.push({
+        id,
+        type: comp.type,
+        name: `${comp.type} ${id}`,
+        selected: id === this._selectedId
+      });
+    });
+    return layers.reverse();
+  }
   
   _updateHandles() {
     const c = this._components.get(this._selectedId);
@@ -272,6 +377,9 @@ class CanvasControl extends Control {
   }
   
   _endResize() {
+    if (this._resizeState) {
+      this.raise("selection-change", this._getSelectionData());
+    }
     this._resizeState = null;
   }
   
@@ -296,14 +404,226 @@ class CanvasControl extends Control {
     }
     this._select(id);
   }
+
+  /**
+   * Public: return a serialisable snapshot of a component (for undo/redo).
+   * @param {string} id
+   * @returns {object|null}
+   */
+  getComponentSnapshot(id) {
+    const c = this._components.get(id);
+    if (!c) return null;
+
+    const fill = typeof c.fill === "string" ? c.fill : c.el?.getAttribute?.("fill");
+    const stroke = typeof c.stroke === "string" ? c.stroke : c.el?.getAttribute?.("stroke");
+    const fontSize = c.fontSize ?? c.el?.getAttribute?.("font-size");
+    const text = c.text ?? c.el?.textContent;
+    return {
+      id,
+      type: c.type,
+      x: c.x,
+      y: c.y,
+      width: c.width,
+      height: c.height,
+      fill,
+      stroke,
+      text,
+      fontSize
+    };
+  }
+
+  _ensureNextIdAfterId(id) {
+    if (typeof id !== "string") return;
+    const m = /^comp(\d+)$/.exec(id);
+    if (!m) return;
+    const n = parseInt(m[1], 10);
+    if (Number.isFinite(n)) this._nextId = Math.max(this._nextId, n + 1);
+  }
+
+  /**
+   * Public: create a component from a snapshot-like object.
+   * If id is omitted, a new id is generated.
+   * @param {object} data
+   * @returns {string|null} id
+   */
+  createComponent(data = {}) {
+    if (typeof document === "undefined") return null;
+    if (!this._componentsGroup) return null;
+
+    const type = data.type;
+    if (!type) return null;
+
+    const rand = () => 200 + Math.random() * 100;
+    const id = data.id || `comp${this._nextId++}`;
+    this._ensureNextIdAfterId(id);
+
+    if (type === "rect") {
+      this._renderComponent({
+        id,
+        type,
+        x: data.x ?? rand(),
+        y: data.y ?? rand(),
+        width: data.width ?? 120,
+        height: data.height ?? 80,
+        fill: data.fill,
+        stroke: data.stroke
+      });
+    } else if (type === "ellipse") {
+      const width = data.width ?? (100 + Math.random() * 60);
+      const height = data.height ?? (80 + Math.random() * 40);
+      const x = data.x ?? rand();
+      const y = data.y ?? rand();
+      this._renderComponent({
+        id,
+        type,
+        cx: x + width / 2,
+        cy: y + height / 2,
+        rx: width / 2,
+        ry: height / 2,
+        fill: data.fill,
+        stroke: data.stroke
+      });
+
+      const c = this._components.get(id);
+      if (c) {
+        c.x = x;
+        c.y = y;
+        c.width = width;
+        c.height = height;
+        c.fill = data.fill ?? c.fill;
+        c.stroke = data.stroke;
+      }
+    } else if (type === "text") {
+      const x = data.x ?? rand();
+      const y = data.y ?? rand();
+      this._renderComponent({
+        id,
+        type,
+        x,
+        y,
+        text: data.text ?? "New Text",
+        fill: data.fill,
+        stroke: data.stroke,
+        fontSize: data.fontSize
+      });
+    } else {
+      return null;
+    }
+
+    // Ensure any remaining fields are applied consistently.
+    if (data.fill !== undefined || data.stroke !== undefined || data.x !== undefined || data.y !== undefined || data.width !== undefined || data.height !== undefined) {
+      this.updateComponent(id, data);
+    }
+
+    this._select(id);
+    return id;
+  }
+
+  /**
+   * Public: remove a component by id and return its snapshot.
+   * @param {string} id
+   * @returns {object|null}
+   */
+  removeComponent(id) {
+    if (!id) return null;
+    const snap = this.getComponentSnapshot(id);
+    const c = this._components.get(id);
+    c?.el?.remove?.();
+    this._components.delete(id);
+
+    if (this._selectedId === id) {
+      this._selectedId = null;
+      const hEl = this._selectionHandles.dom?.el;
+      if (hEl) hEl.style.display = "none";
+      this.raise("selection-change", null);
+    }
+
+    return snap;
+  }
   
   deleteSelected() {
     if (!this._selectedId) return;
-    this._components.get(this._selectedId)?.el?.remove();
-    this._components.delete(this._selectedId);
-    this._selectedId = null;
-    const hEl = this._selectionHandles.dom?.el;
-    if (hEl) hEl.style.display = "none";
+    this.removeComponent(this._selectedId);
+  }
+
+  /**
+   * Export the current SVG markup.
+   * @returns {string} SVG markup (empty string if unavailable)
+   */
+  exportSvg() {
+    const svgEl = this._svg || this.dom?.el?.querySelector?.(".art-canvas__svg");
+    return svgEl?.outerHTML || "";
+  }
+
+  /**
+   * Apply edited properties to the currently selected component.
+   * @param {object} patch - Any of { x, y, width, height, fill, stroke }
+   * @returns {boolean} true if applied
+   */
+  updateSelectedProperties(patch = {}) {
+    if (!this._selectedId) return false;
+    return this.updateComponent(this._selectedId, patch);
+  }
+
+  /**
+   * Update a component and its SVG element.
+   * @param {string} id
+   * @param {object} patch
+   * @returns {boolean}
+   */
+  updateComponent(id, patch = {}) {
+    const c = this._components.get(id);
+    if (!c) return false;
+
+    const next = { ...patch };
+    // Parse numeric fields when provided.
+    ["x", "y", "width", "height"].forEach((k) => {
+      if (next[k] === undefined) return;
+      const n = typeof next[k] === "number" ? next[k] : parseFloat(String(next[k]).trim());
+      if (!Number.isFinite(n)) delete next[k];
+      else next[k] = n;
+    });
+
+    if (typeof next.fill === "string") c.fill = next.fill;
+    if (typeof next.stroke === "string") c.stroke = next.stroke;
+    if (typeof next.x === "number") c.x = next.x;
+    if (typeof next.y === "number") c.y = next.y;
+    if (typeof next.width === "number") c.width = Math.max(1, next.width);
+    if (typeof next.height === "number") c.height = Math.max(1, next.height);
+
+    // Apply attributes based on component type.
+    if (c.type === "rect") {
+      if (typeof c.x === "number") c.el.setAttribute("x", c.x);
+      if (typeof c.y === "number") c.el.setAttribute("y", c.y);
+      if (typeof c.width === "number") c.el.setAttribute("width", c.width);
+      if (typeof c.height === "number") c.el.setAttribute("height", c.height);
+      if (c.fill !== undefined) c.el.setAttribute("fill", c.fill);
+      if (c.stroke !== undefined) c.el.setAttribute("stroke", c.stroke);
+    } else if (c.type === "ellipse") {
+      // Ellipse stored as box (x,y,width,height) plus derived center/radii.
+      c.rx = c.width / 2;
+      c.ry = c.height / 2;
+      c.cx = c.x + c.rx;
+      c.cy = c.y + c.ry;
+      c.el.setAttribute("cx", c.cx);
+      c.el.setAttribute("cy", c.cy);
+      c.el.setAttribute("rx", c.rx);
+      c.el.setAttribute("ry", c.ry);
+      if (c.fill !== undefined) c.el.setAttribute("fill", c.fill);
+      if (c.stroke !== undefined) c.el.setAttribute("stroke", c.stroke);
+    } else if (c.type === "text") {
+      if (typeof c.x === "number") c.el.setAttribute("x", c.x);
+      if (typeof c.y === "number") c.el.setAttribute("y", c.y);
+      if (c.fill !== undefined) c.el.setAttribute("fill", c.fill);
+      if (c.stroke !== undefined) c.el.setAttribute("stroke", c.stroke);
+    }
+
+    if (this._selectedId === id) {
+      this._updateHandles();
+      this.raise("selection-change", this._getSelectionData());
+    }
+
+    return true;
   }
   
   _randColor() { return COLORS[Math.floor(Math.random() * COLORS.length)]; }

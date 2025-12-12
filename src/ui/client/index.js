@@ -1,5 +1,11 @@
 "use strict";
 
+// jsgui3-client's legacy browser bootstrap expects a global `page_context` binding.
+// Ensure it exists before requiring the library so activation doesn't crash.
+if (typeof globalThis !== "undefined" && !globalThis.page_context) {
+  globalThis.page_context = {};
+}
+
 // jsgui3-client from npm (v0.0.121+ has browser compatibility fixes)
 const jsguiClient = require("jsgui3-client");
 const { installBindingPlugin } = require("../jsgui/bindingPlugin");

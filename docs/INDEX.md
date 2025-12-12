@@ -60,6 +60,10 @@ These guides are **authoritative sources** for their domains. When working in th
 
 - [Test Hanging Prevention Guide](guides/TEST_HANGING_PREVENTION_GUIDE.md) - **CRITICAL for E2E tests**: Preventing "Jest did not exit" warnings, server cleanup patterns, timeout strategies, and reliable async test structure.
 
+### Server Telemetry
+
+- [Server Telemetry Standard](guides/SERVER_TELEMETRY_STANDARD.md) - Standard JSONL events + `/api/status` for z-server ingestion and cross-server observability.
+
 ### Visualization & Diagrams
 
 - [SVG Creation Methodology](guides/SVG_CREATION_METHODOLOGY.md) - **6-stage pipeline** for AI agents to create complex SVG diagrams. JSON-first structure, layout algorithms, component library, Industrial Luxury Obsidian theme.

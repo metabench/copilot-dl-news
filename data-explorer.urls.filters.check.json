@@ -1,0 +1,40 @@
+{
+  "relativeDb": "data\\news.db",
+  "variants": [
+    {
+      "label": "default",
+      "query": {},
+      "elapsedMs": 1845,
+      "rowCount": 1000,
+      "totalRows": 237010
+    },
+    {
+      "label": "hasFetches",
+      "query": {
+        "hasFetches": "1"
+      },
+      "elapsedMs": 9016,
+      "rowCount": 1000,
+      "totalRows": 34059
+    },
+    {
+      "label": "host_example.com",
+      "query": {
+        "host": "example.com"
+      },
+      "elapsedMs": 5861,
+      "rowCount": 335,
+      "totalRows": 335
+    },
+    {
+      "label": "host_example.com_hasFetches",
+      "query": {
+        "host": "example.com",
+        "hasFetches": "1"
+      },
+      "elapsedMs": 1772,
+      "rowCount": 334,
+      "totalRows": 334
+    }
+  ]
+}

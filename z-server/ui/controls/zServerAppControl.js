@@ -1,5 +1,7 @@
 "use strict";
 
+const { splitJsonlChunk, tryFormatTelemetryLine } = require("../lib/telemetryJsonl");
+
 function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, ContentAreaControl }) {
   class ZServerAppControl extends jsgui.Control {
     constructor(spec = {}) {
@@ -14,6 +16,11 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
       this._servers = [];
       this._selectedServer = null;
       this._logs = new Map();
+      this._jsonlBuffers = new Map();
+
+      this._scanTotal = 0;
+      this._scanCurrent = 0;
+      this._scanLastFile = "";
       
       this._api = spec.api || null;
       
@@ -57,19 +64,38 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
       }
       
       try {
+        this._scanTotal = 0;
+        this._scanCurrent = 0;
+        this._scanLastFile = "";
+
         this._contentArea.setScanning(true);
         console.log("[ZServerApp] Starting scan...");
         
         this._api.onScanProgress((progress) => {
           console.log("[ZServerApp] Scan progress:", progress);
           if (progress.type === 'count-start') {
+            this._scanTotal = 0;
+            this._scanCurrent = 0;
+            this._scanLastFile = "";
             this._contentArea.setScanCounting();
           } else if (progress.type === 'count-progress') {
+            this._scanCurrent = progress.current || 0;
+            this._scanLastFile = progress.file || "";
             this._contentArea.setScanCountingProgress(progress.current, progress.file);
           } else if (progress.type === 'count') {
+            this._scanTotal = progress.total || 0;
+            this._scanCurrent = 0;
             this._contentArea.setScanTotal(progress.total);
           } else if (progress.type === 'progress') {
+            this._scanTotal = progress.total || this._scanTotal;
+            this._scanCurrent = progress.current || 0;
+            this._scanLastFile = progress.file || "";
             this._contentArea.setScanProgress(progress.current, progress.total, progress.file);
+          } else if (progress.type === 'complete') {
+            // Make completion visually truthful even if we hide the indicator immediately after.
+            if (this._scanTotal > 0 && this._scanCurrent < this._scanTotal) {
+              this._contentArea.setScanProgress(this._scanTotal, this._scanTotal, this._scanLastFile);
+            }
           }
         });
         
@@ -117,32 +143,65 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
     }
 
     _addLog(filePath, type, data) {
+      const text = data == null ? "" : String(data);
+      const key = `${filePath}:${type}`;
+      const prevBuffer = this._jsonlBuffers.get(key) || "";
+      const trimmed = text.trim();
+
+      const isLikelyJson = prevBuffer.length > 0 || trimmed.startsWith("{");
+      if (isLikelyJson) {
+        const { lines, buffer } = splitJsonlChunk(prevBuffer, text);
+        if (buffer.length > 20000) {
+          // Safety valve: avoid unbounded memory if something writes huge JSON without newlines.
+          this._jsonlBuffers.set(key, "");
+          this._addLogLine(filePath, type, buffer);
+          return;
+        }
+
+        this._jsonlBuffers.set(key, buffer);
+
+        if (lines.length === 0) {
+          // Buffer until we get a newline terminator.
+          return;
+        }
+
+        lines.forEach((line) => {
+          const formatted = tryFormatTelemetryLine(line);
+          this._addLogLine(filePath, type, formatted || line);
+        });
+        return;
+      }
+
+      this._addLogLine(filePath, type, text);
+    }
+
+    _addLogLine(filePath, type, data) {
       console.log("[ZServerApp] _addLog called:", { filePath, type, dataLen: data?.length });
-      
+
       if (!this._logs.has(filePath)) {
         this._logs.set(filePath, []);
       }
       this._logs.get(filePath).push({ type, data });
-      
+
       const isSelectedServer = this._selectedServer && this._selectedServer.file === filePath;
-      console.log("[ZServerApp] _addLog isSelectedServer:", isSelectedServer, 
-        "selected:", this._selectedServer?.file, 
+      console.log("[ZServerApp] _addLog isSelectedServer:", isSelectedServer,
+        "selected:", this._selectedServer?.file,
         "incoming:", filePath);
-      
+
       if (isSelectedServer) {
         this._contentArea.addLog(type, data);
-        
-        if (type === 'stderr' && data.includes('EADDRINUSE')) {
+
+        if (type === "stderr" && data.includes("EADDRINUSE")) {
           const portMatch = data.match(/(?:port\s+)?(\d{4,5})/i);
           const port = portMatch ? portMatch[1] : this._selectedServer.metadata?.defaultPort;
-          
+
           if (port) {
             const url = `http://localhost:${port}`;
-            this._addLog(filePath, 'system', `\u26a0\ufe0f Port ${port} is already in use by another process.`);
-            this._addLog(filePath, 'system', `\ud83d\udccd The server might already be running at: ${url}`);
+            this._addLog(filePath, "system", `\u26a0\ufe0f Port ${port} is already in use by another process.`);
+            this._addLog(filePath, "system", `\ud83d\udccd The server might already be running at: ${url}`);
             this._setServerUrl(filePath, url);
           } else {
-            this._addLog(filePath, 'system', '⚠️ Port is already in use. Server may already be running.');
+            this._addLog(filePath, "system", "⚠️ Port is already in use. Server may already be running.");
           }
         }
       }

@@ -253,16 +253,15 @@ describe('Z-Server E2E', () => {
 
     it('should render UI or report bundling issue', async () => {
       const rendererOK = await checkRendererLoaded(window);
-      
+
       if (!rendererOK) {
-        // Known issue - log but don't fail
-        console.log('[E2E] Renderer not loaded - jsgui3-client bundling issue');
-        // Still pass - we detected the app launched
-        expect(true).toBe(true);
-        return;
+        const bodyText = await window.evaluate(() => document.body?.innerText?.slice(0, 500) || '');
+        throw new Error(
+          `[E2E] Renderer did not load expected UI (.zs-layout/.zs-sidebar/.zs-content). ` +
+          `This is a regression or bundling/runtime failure. Body text (first 500 chars):\n${bodyText}`
+        );
       }
-      
-      // If renderer loaded, verify UI elements
+
       const sidebar = await window.$('.zs-sidebar');
       const content = await window.$('.zs-content');
       expect(sidebar || content).toBeTruthy();
@@ -290,37 +289,27 @@ describe('Z-Server E2E', () => {
       await window.waitForTimeout(RENDERER_INIT_TIMEOUT);
       
       rendererLoaded = await checkRendererLoaded(window);
-      
-      if (rendererLoaded) {
-        // Wait for scan to complete
-        try {
-          await window.waitForSelector('.zs-server-item', { timeout: SCAN_TIMEOUT });
-        } catch {
-          // Scan may not find servers, that's OK
-        }
+      if (!rendererLoaded) {
+        const bodyText = await window.evaluate(() => document.body?.innerText?.slice(0, 500) || '');
+        throw new Error(
+          `[E2E] Renderer did not load for scanning tests. Body text (first 500 chars):\n${bodyText}`
+        );
       }
+
+      // Wait for scan to populate (may be empty if no servers found)
+      await window.waitForTimeout(500);
     }, SCAN_TEST_TIMEOUT);
 
     afterAll(async () => {
       await closeElectronApp(electronApp);
     });
 
-    it('should display servers after scan (if renderer loaded)', async () => {
-      if (!rendererLoaded) {
-        console.log('[E2E] Skipping - renderer not loaded');
-        return;
-      }
-      
+    it('should display servers after scan', async () => {
       const servers = await window.$$('.zs-server-item');
       expect(servers.length).toBeGreaterThanOrEqual(0);
     });
 
-    it('should show server names (if renderer loaded)', async () => {
-      if (!rendererLoaded) {
-        console.log('[E2E] Skipping - renderer not loaded');
-        return;
-      }
-      
+    it('should show server names', async () => {
       const names = await window.$$eval('.zs-server-item__name', 
         elements => elements.map(el => el.textContent.trim())
       ).catch(() => []);
@@ -354,15 +343,19 @@ describe('Z-Server E2E', () => {
       await window.waitForTimeout(RENDERER_INIT_TIMEOUT);
       
       rendererLoaded = await checkRendererLoaded(window);
-      
-      if (rendererLoaded) {
-        try {
-          await window.waitForSelector('.zs-server-item', { timeout: SCAN_TIMEOUT });
-          const servers = await window.$$('.zs-server-item');
-          hasServers = servers.length > 0;
-        } catch {
-          hasServers = false;
-        }
+      if (!rendererLoaded) {
+        const bodyText = await window.evaluate(() => document.body?.innerText?.slice(0, 500) || '');
+        throw new Error(
+          `[E2E] Renderer did not load for selection tests. Body text (first 500 chars):\n${bodyText}`
+        );
+      }
+
+      try {
+        await window.waitForSelector('.zs-server-item', { timeout: SCAN_TIMEOUT });
+        const servers = await window.$$('.zs-server-item');
+        hasServers = servers.length > 0;
+      } catch {
+        hasServers = false;
       }
     }, SCAN_TEST_TIMEOUT);
 
@@ -371,7 +364,7 @@ describe('Z-Server E2E', () => {
     });
 
     it('should select server when clicked (if available)', async () => {
-      if (!rendererLoaded || !hasServers) {
+      if (!hasServers) {
         console.log('[E2E] Skipping - no servers available');
         return;
       }
@@ -387,7 +380,7 @@ describe('Z-Server E2E', () => {
     });
 
     it('should show control panel when server selected (if available)', async () => {
-      if (!rendererLoaded || !hasServers) {
+      if (!hasServers) {
         console.log('[E2E] Skipping - no servers available');
         return;
       }

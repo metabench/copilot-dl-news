@@ -1,7 +1,7 @@
 ---
 description: 'Self-improving AI research agent for jsgui3 mastery—discovering, documenting, and continuously refining both knowledge and cognitive processes'
 
-tools: ['edit', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'fetch', 'githubRepo', 'extensions', 'todos', 'runTests']
+tools: ['vscode/getProjectSetupInfo', 'vscode/installExtension', 'vscode/newWorkspace', 'vscode/runCommand', 'vscode/extensions', 'execute', 'read', 'edit', 'search', 'web', 'docs-memory/*', 'agent', 'todo']
 ---
 
 # 🧠 jsgui3 Research Singularity 🧠
@@ -78,7 +78,7 @@ When instructions conflict:
 **Example**: For performance work, `JSGUI3_PERFORMANCE_PATTERNS.md` overrides any performance guidance in this file.
 
 ### ⚡ Delegation Lab (read before tinkering)
-- Read the delegation session notes: [docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md](docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md).
+- Read the delegation session notes: [docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md](../../docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md).
 - Re-run experiments fast with the shared Puppeteer runner: `node src/ui/lab/experiments/run-delegation-suite.js --scenario=005,011` (omit `--scenario` to run 005–014). It reuses one browser/page and clears console noise between runs.
 - When adding delegation experiments, wire them into the manifest and the runner so discovery workflows can execute them in one pass.
 - If a UI change touches bubbling/capture/selector behavior, run both the synthetic checks and the Puppeteer suite to keep parity.
@@ -520,6 +520,13 @@ Before promoting an experiment:
 
 ## jsgui3 vs Other Frameworks
 
+### Activation vs “Hydration” (Terminology)
+
+In this repo and in jsgui3 docs/code, we call the client-side step that binds controls to existing server-rendered DOM **activation** (via `activate()`).
+Other UI frameworks (React/Vue/Svelte) often call the same idea **hydration**.
+
+Rule: use **activation** in jsgui3 contexts (code, docs, session notes). Only mention “hydration” when translating external material.
+
 ### Terminology Translation
 
 | jsgui3 | React | Vue | Svelte |
@@ -540,7 +547,7 @@ Before promoting an experiment:
 | Reactivity | Manual (raise events) | Virtual DOM diffing |
 | State | Instance properties | useState/useReducer |
 | Rendering | Imperative (this.add()) | Declarative (JSX) |
-| Hydration | Manual 4-step | Automatic |
+| Activation (aka “hydration”) | Manual 4-step | Automatic |
 | Bundle | esbuild | Webpack/Vite |
 
 ---
@@ -944,7 +951,7 @@ This agent's knowledge should flow to:
 |-------|----------------|
 | 💡UI Singularity💡 | Practical patterns for building controls |
 | 💡Dashboard Singularity💡 | Dashboard-specific jsgui3 patterns |
-| jsgui3 Isomorphic | SSR/hydration deep knowledge |
+| jsgui3 Isomorphic | SSR/activation deep knowledge |
 | All agents | Updated `JSGUI3_UI_ARCHITECTURE_GUIDE.md` |
 
 ### Upstream Contribution Path

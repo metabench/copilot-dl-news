@@ -1,6 +1,7 @@
 "use strict";
 
 const jsgui = require("../jsgui");
+const { ListenerBag } = require("../../../../utils/listenerBag");
 const { Control, String_Control } = jsgui;
 
 /**
@@ -21,7 +22,18 @@ class ToolbarControl extends Control {
     this.add_class("art-toolbar");
     this.dom.attributes["data-jsgui-control"] = "art_toolbar";
     this._buttons = {};
+
+    this._domListenerBag = null;
+
     if (!spec.el) this.compose();
+  }
+
+  deactivate() {
+    if (this._domListenerBag) {
+      this._domListenerBag.dispose();
+      this._domListenerBag = null;
+    }
+    this.__active = false;
   }
   
   compose() {
@@ -103,13 +115,55 @@ class ToolbarControl extends Control {
   activate() {
     if (this.__active) return;
     this.__active = true;
-    
-    Object.values(this._buttons).forEach(btn => {
-      const el = btn.dom?.el;
-      el?.addEventListener?.("click", () => {
+
+    // Activation path: when constructed with { el }, compose() was skipped,
+    // so we need to reconnect button element references.
+    if (this.dom?.el) {
+      const anyButtonEl = Object.values(this._buttons).some((btn) => btn?.dom?.el);
+      if (!anyButtonEl) {
+        const root = this.dom.el;
+        const byAction = {};
+        root.querySelectorAll("button[data-action]").forEach((btnEl) => {
+          const action = btnEl.getAttribute("data-action");
+          if (!action) return;
+          byAction[action] = { dom: { el: btnEl } };
+        });
+
+        // Preserve the same keys used by compose(), but only DOM refs are required.
+        this._buttons = {
+          addRect: byAction["add-rect"],
+          addEllipse: byAction["add-ellipse"],
+          addText: byAction["add-text"],
+          undo: byAction.undo,
+          redo: byAction.redo,
+          delete: byAction.delete,
+          export: byAction.export
+        };
+      }
+    }
+
+    if (this._domListenerBag) this._domListenerBag.dispose();
+    this._domListenerBag = new ListenerBag();
+
+    Object.values(this._buttons).forEach((btn) => {
+      const el = btn?.dom?.el;
+      if (!el?.addEventListener) return;
+      this._domListenerBag.on(el, "click", () => {
         this._handleAction(el.getAttribute("data-action"));
       });
     });
+  }
+
+  _setButtonDisabled(action, disabled) {
+    const btn = this._buttons?.[action];
+    const el = btn?.dom?.el;
+    if (!el) return;
+    el.disabled = !!disabled;
+  }
+
+  setUndoRedoState({ canUndo, canRedo } = {}) {
+    this._setButtonDisabled("undo", !canUndo);
+    this._setButtonDisabled("redo", !canRedo);
   }
   
   _handleAction(action) {

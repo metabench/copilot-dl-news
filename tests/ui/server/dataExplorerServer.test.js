@@ -75,7 +75,7 @@ function buildInMemoryDb() {
       MAX(ca.word_count) AS last_word_count,
       COUNT(hr.id) AS fetch_count
     FROM urls u
-    LEFT JOIN http_responses hr ON hr.url_id = u.id
+    INNER JOIN http_responses hr ON hr.url_id = u.id
     LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
     LEFT JOIN content_analysis ca ON ca.content_id = cs.id
     GROUP BY u.id, u.url, u.host, u.canonical_url, u.created_at, u.last_seen_at;
@@ -146,6 +146,18 @@ function seedUrlWithFetches(db, { url = "https://example.com/article", host = "e
     null
   );
   return urlId;
+}
+
+function seedUrlOnly(db, { url = "https://example.com/seed", host = "example.com" } = {}) {
+  const insertUrl = db.prepare(
+    "INSERT INTO urls (url, host, canonical_url, created_at, last_seen_at, analysis) VALUES (?, ?, ?, ?, ?, ?)"
+  );
+  const timestamps = {
+    created: "2025-11-01T00:00:00.000Z",
+    lastSeen: "2025-11-02T12:00:00.000Z"
+  };
+  const result = insertUrl.run(url, host, url, timestamps.created, timestamps.lastSeen, null);
+  return Number(result.lastInsertRowid);
 }
 
 function createServer(seedFn) {
@@ -281,6 +293,109 @@ describe("dataExplorerServer /api/urls diagnostics", () => {
     expect(response.body.error.code).toBe("ERR_UI_SERVER");
     expect(response.body.diagnostics.requestId).toBeTruthy();
     expect(response.headers["x-copilot-error"]).toBe("1");
+
+    shutdown();
+  });
+});
+
+describe("dataExplorerServer /api/urls filtering", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test("filters urls by host (case-insensitive exact match)", async () => {
+    const hostA = "example.com";
+    const hostB = "other.example";
+
+    const { app, shutdown } = createServer((db) => {
+      seedUrlWithFetches(db, { url: "https://example.com/a", host: hostA });
+      seedUrlWithFetches(db, { url: "https://example.com/b", host: hostA });
+      seedUrlOnly(db, { url: "https://example.com/c", host: hostA });
+      seedUrlWithFetches(db, { url: "https://other.example/x", host: hostB });
+      return {};
+    });
+
+    const response = await request(app).get("/api/urls?host=Example.COM");
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.records.length).toBeGreaterThan(0);
+    expect(response.body.records.every((record) => record.host === hostA)).toBe(true);
+    expect(response.body.meta.pagination.totalRows).toBe(3);
+
+    shutdown();
+  });
+
+  test("filters fetched urls by host when hasFetches enabled", async () => {
+    const hostA = "example.com";
+    const hostB = "other.example";
+
+    const { app, shutdown } = createServer((db) => {
+      seedUrlWithFetches(db, { url: "https://example.com/a", host: hostA });
+      seedUrlWithFetches(db, { url: "https://other.example/x", host: hostB });
+      seedUrlOnly(db, { url: "https://example.com/unfetched", host: hostA });
+      return {};
+    });
+
+    const response = await request(app).get("/api/urls?host=example.com&hasFetches=1");
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.records.length).toBeGreaterThan(0);
+    expect(response.body.records.every((record) => record.host === hostA)).toBe(true);
+    expect(response.body.meta.pagination.totalRows).toBe(1);
+
+    shutdown();
+  });
+});
+
+describe("dataExplorerServer /api/domains/counts", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test("returns counts for multiple hosts using batched queries", async () => {
+    const hostA = "example.com";
+    const hostB = "other.example";
+    const hostBInput = "Other.Example";
+
+    const { app, shutdown, db } = createServer((db) => {
+      seedUrlWithFetches(db, { url: "https://example.com/story-1", host: hostA });
+      seedUrlWithFetches(db, { url: "https://example.com/story-2", host: hostA });
+      seedUrlWithFetches(db, { url: "https://other.example/story-1", host: hostB });
+      return {};
+    });
+
+    const callCounts = { get: 0, all: 0 };
+    const originalPrepare = db.prepare.bind(db);
+    db.prepare = (sql) => {
+      const stmt = originalPrepare(sql);
+      const originalGet = stmt.get.bind(stmt);
+      const originalAll = stmt.all.bind(stmt);
+      stmt.get = (...args) => {
+        callCounts.get += 1;
+        return originalGet(...args);
+      };
+      stmt.all = (...args) => {
+        callCounts.all += 1;
+        return originalAll(...args);
+      };
+      return stmt;
+    };
+
+    const response = await request(app)
+      .get(`/api/domains/counts?hosts=${encodeURIComponent(`${hostA}, ${hostBInput}`)}`)
+      .set("Accept", "application/json");
+
+    expect(response.status).toBe(200);
+    expect(response.type).toMatch(/json/);
+    expect(response.body.counts).toBeDefined();
+
+    expect(response.body.counts[hostA]).toEqual({ allArticles: 2, fetches: 4 });
+    expect(response.body.counts[hostBInput]).toEqual({ allArticles: 1, fetches: 2 });
+
+    expect(callCounts.get).toBe(0);
+    expect(callCounts.all).toBe(2);
 
     shutdown();
   });

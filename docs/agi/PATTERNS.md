@@ -138,3 +138,39 @@ AGI-accumulated knowledge catalog.
 **Example**: tmp/decision-tree-editor-v2.svg creation session
 
 ---
+
+## Lab-First jsgui3 Knowledge Gap Closure
+
+**Added**: 2025-12-11
+**Context**: jsgui3 work in this repo should default to small lab experiments for unknowns; treat the lab as the safe proving ground before touching production UI.
+
+**When to use**: You hit an undocumented jsgui3 behavior, UI lifecycle mystery, performance question, or event/delegation edge case; or you’ve spent >10–15 minutes debugging with low confidence.
+
+**Steps/Details**:
+1. Search existing docs first (fast): run md-scan on guides, then docs, then docs/sessions for the topic/keywords.
+1. If no clear answer emerges, create a minimal lab experiment under src/ui/lab/experiments/ (smallest reproduction; SSR + client activation if relevant).
+1. Add a check script alongside the experiment (under the experiment’s checks/ folder or the repo’s expected lab check harness) that renders/asserts the behavior deterministically.
+1. Wire the experiment into the lab manifest/catalog (keep status: proposed|active|validated|promoted|deprecated) and update the lab README if required.
+1. Run the experiment check and record the finding (what worked, what failed, edge cases). Promote the discovery into a durable guide if it’s generally useful.
+1. If the behavior affects bubbling/capture/selector semantics, also run the delegation suite scenarios relevant to keep parity with existing experiments.
+
+
+
+---
+
+## Bundle Freshness Gate for E2E
+
+**Added**: 2025-12-11
+**Context**: Art Playground + Puppeteer undo/redo tests
+
+**When to use**: Any E2E test suite that depends on an ESBuild/Webpack/Vite/etc bundle served by the app (especially SSR+activation apps).
+
+**Steps/Details**:
+1. Add a deterministic bundle build step to the E2E workflow (pretest hook or test harness setup).
+1. Optionally embed a build stamp (timestamp/git hash) into the bundle and expose it to the page (e.g., `window.__BUILD_ID__`).
+1. In the E2E setup, assert the build stamp is present and matches expectations (or at least is non-empty), failing fast with a clear message if stale/missing.
+1. Keep the build step fast (<1s) and cacheable so CI costs stay low.
+
+**Example**: Build bundle with `node scripts/build-art-playground-client.js` before `npm run test:by-path tests/ui/e2e/art-playground.puppeteer.e2e.test.js`.
+
+---

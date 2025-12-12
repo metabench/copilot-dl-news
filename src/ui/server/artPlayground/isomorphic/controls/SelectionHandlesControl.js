@@ -2,6 +2,7 @@
 
 const jsgui = require("../jsgui");
 const { Control } = jsgui;
+const { ListenerBag } = require("../../../../utils/listenerBag");
 
 const HANDLE_SIZE = 8;
 const POSITIONS = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
@@ -19,7 +20,16 @@ class SelectionHandlesControl extends Control {
     this.dom.attributes["data-jsgui-control"] = "art_selection";
     this._bounds = { x: 0, y: 0, width: 100, height: 100 };
     this._handles = {};
+
+    this._domListenerBag = null;
+    this._activeResizeBag = null;
+    this._boundHandleDown = {};
     if (!spec.el) this.compose();
+  }
+
+  deactivate() {
+    this._disposeDomListeners();
+    this.__active = false;
   }
   
   compose() {
@@ -43,23 +53,76 @@ class SelectionHandlesControl extends Control {
   activate() {
     if (this.__active) return;
     this.__active = true;
-    
+
+    // Activation path: when constructed with { el }, compose() was skipped,
+    // so we must reconnect handle element references from the DOM.
+    if (this.dom?.el && (!this._handles || Object.keys(this._handles).length === 0)) {
+      const root = this.dom.el;
+      this._outline = this._outline || { dom: { el: root.querySelector(".art-selection__outline") } };
+      this._handles = this._handles || {};
+      POSITIONS.forEach((pos) => {
+        this._handles[pos] = this._handles[pos] || { dom: { el: root.querySelector(`[data-handle="${pos}"]`) } };
+      });
+    }
+
+    this._setupHandleEvents();
+  }
+
+  _setupHandleEvents() {
+    if (typeof document === "undefined") return;
+
+    this._disposeDomListeners();
+    this._domListenerBag = new ListenerBag();
+
     Object.entries(this._handles).forEach(([pos, handle]) => {
       const el = handle.dom?.el;
-      el?.addEventListener?.("mousedown", (e) => {
-        e.stopPropagation();
-        this.raise("resize-start", { handle: pos, mouseX: e.clientX, mouseY: e.clientY });
-        
-        const onMove = (ev) => this.raise("resize-move", { handle: pos, mouseX: ev.clientX, mouseY: ev.clientY });
-        const onUp = () => {
-          this.raise("resize-end");
-          document.removeEventListener("mousemove", onMove);
-          document.removeEventListener("mouseup", onUp);
-        };
-        document.addEventListener("mousemove", onMove);
-        document.addEventListener("mouseup", onUp);
-      });
+      if (!el?.addEventListener) return;
+
+      const bound = this._boundHandleDown[pos] || ((e) => this._onHandleMouseDown(pos, e));
+      this._boundHandleDown[pos] = bound;
+      this._domListenerBag.on(el, "mousedown", bound);
     });
+  }
+
+  _onHandleMouseDown(pos, e) {
+    e?.stopPropagation?.();
+    this.raise("resize-start", { handle: pos, mouseX: e.clientX, mouseY: e.clientY });
+
+    if (typeof document === "undefined") return;
+
+    if (this._activeResizeBag) {
+      this._activeResizeBag.dispose();
+      this._activeResizeBag = null;
+    }
+
+    const resizeBag = new ListenerBag();
+    this._activeResizeBag = resizeBag;
+
+    const onMove = (ev) => {
+      this.raise("resize-move", { handle: pos, mouseX: ev.clientX, mouseY: ev.clientY });
+    };
+
+    const onUp = () => {
+      this.raise("resize-end");
+      if (this._activeResizeBag === resizeBag) {
+        resizeBag.dispose();
+        this._activeResizeBag = null;
+      }
+    };
+
+    resizeBag.on(document, "mousemove", onMove);
+    resizeBag.on(document, "mouseup", onUp);
+  }
+
+  _disposeDomListeners() {
+    if (this._domListenerBag) {
+      this._domListenerBag.dispose();
+      this._domListenerBag = null;
+    }
+    if (this._activeResizeBag) {
+      this._activeResizeBag.dispose();
+      this._activeResizeBag = null;
+    }
   }
   
   updateBounds({ x, y, width, height }) {

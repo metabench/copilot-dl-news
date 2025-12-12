@@ -3,12 +3,22 @@
 const puppeteer = require("puppeteer");
 const Database = require("better-sqlite3");
 
+const { ensureClientBundle } = require("../../../src/ui/server/utils/ensureClientBundle");
+
 jest.mock("../../../src/db/dbAccess", () => ({
   openNewsDb: jest.fn()
 }));
 
 const { openNewsDb } = require("../../../src/db/dbAccess");
 const { createDataExplorerServer } = require("../../../src/ui/server/dataExplorerServer");
+
+let _uiClientBundleEnsured = false;
+function ensureUiClientBundleBuiltOnce() {
+  if (_uiClientBundleEnsured) return;
+  if (process.env.SKIP_UI_CLIENT_BUNDLE_BUILD === "1") return;
+  ensureClientBundle({ silent: true });
+  _uiClientBundleEnsured = true;
+}
 
 async function pause(page, ms) {
   if (page && typeof page.waitForTimeout === "function") {
@@ -106,6 +116,7 @@ function seedUrlData(db) {
 }
 
 async function startServer() {
+  ensureUiClientBundleBuiltOnce();
   const db = buildInMemoryDb();
   seedUrlData(db);
   openNewsDb.mockImplementationOnce(() => ({
@@ -169,7 +180,10 @@ describe("Url filter toggle · Puppeteer e2e", () => {
       page.on("pageerror", (error) => {
         console.error("[browser-error]", error);
       });
-      await page.goto(`${serverHandle.baseUrl}/urls`, { waitUntil: "networkidle0" });
+      await page.goto(`${serverHandle.baseUrl}/urls`, { waitUntil: "domcontentloaded" });
+
+      await page.waitForSelector('[data-meta-field="rowCount"]', { timeout: 5000 });
+      await page.waitForSelector('table.ui-table tbody tr', { timeout: 5000 });
 
       const fallbackStatus = await page.evaluate(() => window.__COPILOT_FALLBACK_STATUS__ || null);
       console.log("[fallback-status]", fallbackStatus);

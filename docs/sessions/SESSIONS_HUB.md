@@ -31,6 +31,272 @@
 
 ## Current Session
 
+### Session 2025-12-12: Telemetry: process handler idempotency
+
+**Duration**: Active
+**Type**: bugfix
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Avoid MaxListeners warnings by wiring process handlers once
+
+**Location**: `docs/sessions/2025-12-12-telemetry-process-handlers-idempotent/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-telemetry-process-handlers-idempotent/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-telemetry-process-handlers-idempotent/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-telemetry-process-handlers-idempotent/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-telemetry-process-handlers-idempotent/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-telemetry-process-handlers-idempotent/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Data Explorer gaps: plan + first implementation
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Plan Data Explorer gaps and implement first high-leverage improvement (domain counts batching) with tests
+
+**Location**: `docs/sessions/2025-12-12-data-explorer-gaps-impl/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-data-explorer-gaps-impl/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-data-explorer-gaps-impl/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-data-explorer-gaps-impl/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-data-explorer-gaps-impl/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-data-explorer-gaps-impl/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: When to use js-scan (agent guidance)
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Clarify when agents should prefer js-scan vs grep/read, with concrete examples like Data Explorer feature inventory.
+
+**Location**: `docs/sessions/2025-12-12-js-scan-when-to-use/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-js-scan-when-to-use/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-js-scan-when-to-use/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-js-scan-when-to-use/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-js-scan-when-to-use/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-js-scan-when-to-use/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Standard server telemetry + z-server ingestion
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add shared structured telemetry (logs + status/health) so z-server can reliably observe and display server activity.
+
+**Location**: `docs/sessions/2025-12-11-server-telemetry/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-server-telemetry/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-server-telemetry/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-server-telemetry/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-server-telemetry/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-server-telemetry/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Bundle freshness gates: first three
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Validate docsViewer server gate end-to-end and confirm Data Explorer + WYSIWYG E2E remain green
+
+**Location**: `docs/sessions/2025-12-11-bundle-gates-first-three-continue/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-bundle-gates-first-three-continue/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-bundle-gates-first-three-continue/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-bundle-gates-first-three-continue/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-bundle-gates-first-three-continue/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-bundle-gates-first-three-continue/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Bundle Freshness Gates (url-toggle, wysiwyg, docsViewer)
+
+**Duration**: Active
+**Type**: ui-tests
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add bundle freshness gates to selected UI tests/servers to avoid stale-bundle false failures.
+
+**Location**: `docs/sessions/2025-12-11-bundle-freshness-gates-3/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-bundle-freshness-gates-3/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-bundle-freshness-gates-3/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-bundle-freshness-gates-3/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-bundle-freshness-gates-3/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-bundle-freshness-gates-3/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Art Playground: Fix fill undo/redo E2E
+
+**Duration**: Active
+**Type**: debug
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make property edit undo/redo work reliably and keep Puppeteer E2E green
+
+**Location**: `docs/sessions/2025-12-11-art-playground-undo-e2e-fix/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-art-playground-undo-e2e-fix/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-art-playground-undo-e2e-fix/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-art-playground-undo-e2e-fix/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-art-playground-undo-e2e-fix/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-art-playground-undo-e2e-fix/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Art Playground: ListenerBag promotion
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Promote lifecycle-safe event binding helper into production and refactor one control; keep SSR+activation stable
+
+**Location**: `docs/sessions/2025-12-11-art-playground-listener-bag/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-art-playground-listener-bag/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-art-playground-listener-bag/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-art-playground-listener-bag/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-art-playground-listener-bag/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-art-playground-listener-bag/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Art Playground: Quality & Idioms Pass
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Continue improving Art Playground code quality and idiomatic jsgui3 patterns beyond activation, keeping checks/E2E green.
+
+**Location**: `docs/sessions/2025-12-11-art-playground-quality-pass/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-art-playground-quality-pass/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-art-playground-quality-pass/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-art-playground-quality-pass/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-art-playground-quality-pass/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-art-playground-quality-pass/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Art Playground: Idiomatic Activation Refactor
+
+**Duration**: Active
+**Type**: UI
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Refactor Art Playground controls to use idiomatic jsgui3 activation patterns (SSR + client activation), simplify client boot, and keep check + E2E green.
+
+**Location**: `docs/sessions/2025-12-11-art-playground-idiomatic-activation/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-art-playground-idiomatic-activation/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-art-playground-idiomatic-activation/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-art-playground-idiomatic-activation/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-art-playground-idiomatic-activation/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-art-playground-idiomatic-activation/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Art Playground Improvements
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Review the Art Playground app and implement high-impact UX/perf/test improvements.
+
+**Location**: `docs/sessions/2025-12-11-art-playground-improvements/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-art-playground-improvements/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-art-playground-improvements/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-art-playground-improvements/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-art-playground-improvements/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-art-playground-improvements/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: z-server status/progress truthfulness
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Define and verify a truth table for z-server status/progress indicators and add targeted tests so UI reflects actual backend state.
+
+**Location**: `docs/sessions/2025-12-11-z-server-status-progress-truth/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-z-server-status-progress-truth/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-z-server-status-progress-truth/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-z-server-status-progress-truth/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-z-server-status-progress-truth/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-z-server-status-progress-truth/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Add docs-memory MCP usage to AGENTS.md
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Document how agents should use the docs-memory MCP server (preflight, common writes, and when to use it).
+
+**Location**: `docs/sessions/2025-12-11-agents-md-memory-mcp/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-agents-md-memory-mcp/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-agents-md-memory-mcp/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-agents-md-memory-mcp/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-agents-md-memory-mcp/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-agents-md-memory-mcp/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: z-server Review: Bugs, Status/Progress, Testing
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Review z-server for bugs, define expected behaviors, and design test harnesses for status/progress
+
+**Location**: `docs/sessions/2025-12-11-z-server-review/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-z-server-review/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-z-server-review/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-z-server-review/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-z-server-review/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-z-server-review/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-11: AGENTS: Research Gap Protocol
 
 **Duration**: Active

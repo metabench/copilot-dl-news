@@ -1,5 +1,7 @@
 "use strict";
 
+const { extractUrl } = require("../lib/extractUrl");
+
 function createContentAreaControl(jsgui, {
   ControlPanelControl,
   ServerUrlControl,
@@ -116,30 +118,11 @@ function createContentAreaControl(jsgui, {
       }
     }
 
-    _extractUrl(text) {
-      const urlPatterns = [
-        /https?:\/\/localhost:\d+[^\s]*/gi,
-        /https?:\/\/127\.0\.0\.1:\d+[^\s]*/gi,
-        /https?:\/\/0\.0\.0\.0:\d+[^\s]*/gi,
-        /Server (?:running|listening|started) (?:on|at) (https?:\/\/[^\s]+)/gi,
-        /listening on (https?:\/\/[^\s]+)/gi,
-        /available at (https?:\/\/[^\s]+)/gi
-      ];
-      
-      for (const pattern of urlPatterns) {
-        const match = pattern.exec(text);
-        if (match) {
-          return match[1] || match[0];
-        }
-      }
-      return null;
-    }
-
     addLog(type, data) {
       this._logViewer.addLog(type, data);
       
       if (!this._detectedUrl && (type === 'stdout' || type === 'system')) {
-        const url = this._extractUrl(data);
+        const url = extractUrl(data);
         if (url && this._selectedServer) {
           this._detectedUrl = url;
           this._serverUrl.setUrl(url);
@@ -157,7 +140,7 @@ function createContentAreaControl(jsgui, {
       this._detectedUrl = null;
       for (const log of logs) {
         if (log.type === 'stdout' || log.type === 'system') {
-          const url = this._extractUrl(log.data);
+          const url = extractUrl(log.data);
           if (url && this._selectedServer) {
             this._detectedUrl = url;
             this._serverUrl.setUrl(url);

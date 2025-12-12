@@ -54,7 +54,13 @@ function checkServerResponds(port, host = "127.0.0.1", path = "/", timeout = 200
         port: port,
         path: path,
         method: "GET",
-        timeout: timeout
+        timeout: timeout,
+        // Prevent keep-alive sockets from keeping the server open in --check mode.
+        // Without this, server.close() can hang waiting for pooled connections.
+        agent: false,
+        headers: {
+          Connection: "close"
+        }
       },
       (res) => {
         // Consume response data to prevent memory leak

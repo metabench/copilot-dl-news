@@ -1,6 +1,6 @@
 # JSGUI3 Debugging Guide
 
-This guide is a concise playbook for debugging jsgui3 controls, activation (hydration), and UI servers in this repo. It aligns with AGENTS.md and the UI Singularity workflow.
+This guide is a concise playbook for debugging jsgui3 controls, activation (called “hydration” in some other frameworks), and UI servers in this repo. It aligns with AGENTS.md and the UI Singularity workflow.
 
 ## Core Principles
 - **Session-first, plan-first.** Create a session folder before work; note commands in `WORKING_NOTES.md`.
@@ -13,7 +13,7 @@ This guide is a concise playbook for debugging jsgui3 controls, activation (hydr
 - Server start/stop flow understood? (`--check`, `--detached`, `--stop`, `--status`)
 - Client bundle up-to-date? (`node <server>/build-client.js`)
 - Controls registered on client? (`context.map_Controls[...] = ControlClass`)
-- Hydration logs enabled? (`page.on('console', ...)` in tests; temporary `console.log` in client activation)
+- Activation logs enabled? (`page.on('console', ...)` in tests; temporary `console.log` in client activation)
 - Pointer events enabled where needed? (e.g., `CanvasControl` element layer)
 
 ## Server-Side Debugging
@@ -26,8 +26,8 @@ This guide is a concise playbook for debugging jsgui3 controls, activation (hydr
 ## Client-Side Debugging
 - **Early globals:** Expose `window.jsgui` (and `window.page` if hydrated) early for tests/console.
 - **Control registration:** Ensure `context.map_Controls` contains all controls (`canvas_control`, `draggable_control`, etc.) before `pre_activate`.
-- **Hydration tracing:** Log `pre_activate`/`activate` control counts and IDs; watch for missing `__ctrl` on DOM nodes.
-- **Fallbacks:** When hydration is unreliable, add temporary fallback event handlers (e.g., manual drag listeners) but log and remove after root cause is fixed.
+- **Activation tracing:** Log `pre_activate`/`activate` control counts and IDs; watch for missing `__ctrl` on DOM nodes.
+- **Fallbacks:** When activation wiring is unreliable, add temporary fallback event handlers (e.g., manual drag listeners) but log and remove after root cause is fixed.
 - **Console capture:** In Puppeteer tests, capture page console and errors:
   ```js
   page.on('console', msg => { console.log('PAGE LOG:', ...msg.args().map(a => a.jsonValue())) });

@@ -6,6 +6,7 @@ const { ToolbarControl } = require("./ToolbarControl");
 const { ToolPanelControl } = require("./ToolPanelControl");
 const { PropertiesPanelControl } = require("./PropertiesPanelControl");
 const { StatusBarControl } = require("./StatusBarControl");
+const { CommandStack } = require("../../../../utils/commandStack");
 
 const { Control } = jsgui;
 
@@ -29,6 +30,9 @@ class ArtPlaygroundAppControl extends Control {
     this.add_class("art-app");
     this.add_class("ap-cover");
     this.dom.attributes["data-jsgui-control"] = "art_app";
+
+    this._commandStack = new CommandStack();
+
     if (!spec.el) this.compose();
   }
   
@@ -67,7 +71,7 @@ class ArtPlaygroundAppControl extends Control {
     
     const el = this.dom.el;
     
-    // Find child controls from DOM if hydrating
+    // Find child controls from DOM when activating existing DOM
     if (el) {
       const toolbarEl = el.querySelector("[data-jsgui-control='art_toolbar']");
       const canvasEl = el.querySelector("[data-jsgui-control='art_canvas']");
@@ -89,14 +93,23 @@ class ArtPlaygroundAppControl extends Control {
   _wireEvents() {
     // Toolbar → Canvas (legacy, keep for compatibility)
     if (this._toolbar && this._canvas) {
-      this._toolbar.on("tool-change", (tool) => this._canvas.setTool(tool));
       this._toolbar.on("add-component", (type) => {
-        this._canvas.addComponent(type);
-        this._updatePanels();
+        this._doCommandAddComponent(type);
       });
       this._toolbar.on("delete", () => {
-        this._canvas.deleteSelected();
-        this._updatePanels();
+        this._doCommandDeleteSelected();
+      });
+
+      this._toolbar.on("undo", () => {
+        this._doUndo();
+      });
+      this._toolbar.on("redo", () => {
+        this._doRedo();
+      });
+      this._toolbar.on("export", () => {
+        const svg = this._canvas?.exportSvg?.() || "";
+        if (!svg) return;
+        this._downloadTextFile("art-playground.svg", svg, "image/svg+xml");
       });
     }
     
@@ -106,8 +119,7 @@ class ArtPlaygroundAppControl extends Control {
         this._canvas.setTool(tool);
       });
       this._toolPanel.on("add-shape", (shapeType) => {
-        this._canvas.addComponent(shapeType);
-        this._updatePanels();
+        this._doCommandAddComponent(shapeType);
       });
     }
     
@@ -121,18 +133,170 @@ class ArtPlaygroundAppControl extends Control {
     // Properties Panel → Canvas
     if (this._propertiesPanel && this._canvas) {
       this._propertiesPanel.on("layer-select", (id) => {
-        this._canvas._select(id);
+        this._canvas.selectComponent?.(id);
         this._updatePanels();
+      });
+
+      this._propertiesPanel.on("property-change", ({ id, prop, value }) => {
+        if (!prop) return;
+        this._doCommandUpdateProperties(id, { [prop]: value });
       });
     }
     
     // Initial panel update
     this._updatePanels();
   }
+
+  _updateUndoRedoUi() {
+    if (!this._toolbar?.setUndoRedoState) return;
+    this._toolbar.setUndoRedoState({
+      canUndo: this._commandStack.canUndo(),
+      canRedo: this._commandStack.canRedo()
+    });
+  }
+
+  _doCommandAddComponent(type) {
+    if (!this._canvas?.createComponent) return;
+    if (!type) return;
+
+    const cmd = {
+      _snapshot: null,
+      do: () => {
+        if (!cmd._snapshot) {
+          const id = this._canvas.createComponent({ type });
+          cmd._snapshot = this._canvas.getComponentSnapshot(id);
+        } else {
+          this._canvas.createComponent(cmd._snapshot);
+        }
+      },
+      undo: () => {
+        if (!cmd._snapshot?.id) return;
+        this._canvas.removeComponent(cmd._snapshot.id);
+      }
+    };
+
+    this._commandStack.do(cmd);
+    this._updatePanels();
+    this._updateUndoRedoUi();
+  }
+
+  _doCommandDeleteSelected() {
+    if (!this._canvas?.removeComponent) return;
+    const sel = this._canvas.getSelectionData?.();
+    const id = sel?.id;
+    if (!id) return;
+
+    const cmd = {
+      _snapshot: null,
+      do: () => {
+        cmd._snapshot = this._canvas.removeComponent(id);
+      },
+      undo: () => {
+        if (!cmd._snapshot) return;
+        this._canvas.createComponent(cmd._snapshot);
+      }
+    };
+
+    this._commandStack.do(cmd);
+    this._updatePanels();
+    this._updateUndoRedoUi();
+  }
+
+  _doCommandUpdateProperties(id, patch) {
+    if (!this._canvas?.updateComponent) return;
+    if (!id) return;
+
+    // Prevent duplicate commands when the UI emits the same value twice
+    // (e.g. change + blur). If the patch is a no-op, skip pushing a command.
+    const current = this._canvas.getComponentSnapshot?.(id);
+    if (current && patch && typeof patch === "object") {
+      const keys = Object.keys(patch);
+      const isNoOp = keys.length > 0 && keys.every((k) => {
+        const nextVal = patch[k];
+        if (nextVal === undefined) return true;
+
+        if (k === "x" || k === "y" || k === "width" || k === "height") {
+          const n = typeof nextVal === "number" ? nextVal : parseFloat(String(nextVal).trim());
+          if (!Number.isFinite(n)) return true;
+          return typeof current[k] === "number" && current[k] === n;
+        }
+
+        if (k === "fill" || k === "stroke") {
+          if (typeof nextVal !== "string") return true;
+          return String(current[k] ?? "") === nextVal;
+        }
+
+        return String(current[k] ?? "") === String(nextVal);
+      });
+      if (isNoOp) return;
+    }
+
+    const prev = this._canvas.getComponentSnapshot?.(id);
+    if (!prev) return;
+
+    const cmd = {
+      _prev: prev,
+      _next: null,
+      do: () => {
+        if (cmd._next) {
+          this._canvas.updateComponent(id, cmd._next);
+          return;
+        }
+        this._canvas.updateComponent(id, patch);
+        cmd._next = this._canvas.getComponentSnapshot?.(id);
+      },
+      undo: () => {
+        if (!cmd._prev) return;
+        this._canvas.updateComponent(id, cmd._prev);
+      }
+    };
+
+    this._commandStack.do(cmd);
+    this._updatePanels();
+    this._updateUndoRedoUi();
+  }
+
+  _doCommandUpdateSelectedProperties(patch) {
+    const sel = this._canvas?.getSelectionData?.();
+    const id = sel?.id;
+    if (!id) return;
+    this._doCommandUpdateProperties(id, patch);
+  }
+
+  _doUndo() {
+    if (this._commandStack.undo()) {
+      this._updatePanels();
+      this._updateUndoRedoUi();
+    }
+  }
+
+  _doRedo() {
+    if (this._commandStack.redo()) {
+      this._updatePanels();
+      this._updateUndoRedoUi();
+    }
+  }
+
+  _downloadTextFile(filename, text, mimeType) {
+    if (typeof document === "undefined") return;
+    try {
+      const blob = new Blob([text], { type: mimeType || "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename || "download.txt";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      // noop
+    }
+  }
   
   _updatePanels() {
-    const selection = this._canvas?._getSelectionData?.() || this._getSelectionFromCanvas();
-    const layers = this._getLayersFromCanvas();
+    const selection = this._canvas?.getSelectionData?.() || this._getSelectionFromCanvas();
+    const layers = this._canvas?.getLayers?.() || this._getLayersFromCanvas();
     
     // Update status bar
     if (this._statusBar) {
@@ -144,6 +308,8 @@ class ArtPlaygroundAppControl extends Control {
       this._propertiesPanel.updateSelection(selection);
       this._propertiesPanel.updateLayers(layers);
     }
+
+    this._updateUndoRedoUi();
   }
   
   _getSelectionFromCanvas() {

@@ -26959,12 +26959,12 @@
           return typeof __require == "function" && typeof exports == "object" && typeof module == "object" && typeof __filename == "string" && typeof __dirname == "string";
         }
         if (!runningInNode()) {
-          if (!this.Tautologistics)
-            this.Tautologistics = {};
-          else if (this.Tautologistics.NodeHtmlParser)
+          if (!globalThis.Tautologistics)
+            globalThis.Tautologistics = {};
+          else if (globalThis.Tautologistics.NodeHtmlParser)
             return;
-          this.Tautologistics.NodeHtmlParser = {};
-          exports = this.Tautologistics.NodeHtmlParser;
+          globalThis.Tautologistics.NodeHtmlParser = {};
+          exports = globalThis.Tautologistics.NodeHtmlParser;
         }
         var ElementType = {
           Text: "text",
@@ -50740,6 +50740,9 @@ body {
   });
 
   // src/ui/client/index.js
+  if (typeof globalThis !== "undefined" && !globalThis.page_context) {
+    globalThis.page_context = {};
+  }
   var jsguiClient = require_client();
   var { installBindingPlugin } = require_bindingPlugin();
   var { ensureControlsRegistered, listControlTypes } = require_controlManifest();

@@ -44,7 +44,12 @@ class StatusBarControl extends Control {
   activate() {
     if (this.__active) return;
     this.__active = true;
-    // Status bar is mostly display-only, no events needed yet
+
+    // Activation path: cache the left/right containers for direct text updates.
+    if (this.dom?.el) {
+      this._leftEl = this._leftEl || this.dom.el.querySelector(".ap-status-bar__left");
+      this._rightEl = this._rightEl || this.dom.el.querySelector(".ap-status-bar__right");
+    }
   }
   
   /**
@@ -60,11 +65,9 @@ class StatusBarControl extends Control {
       this._selectionText = `${typeName} | ${Math.round(x)}, ${Math.round(y)} | ${Math.round(width)} × ${Math.round(height)}`;
     }
     
-    // Update DOM if active
-    const el = this._selectionInfo?.dom?.el;
-    if (el) {
-      el.textContent = this._selectionText;
-    }
+    // Update DOM if active (supports both composed + hydrated variants)
+    const el = this._selectionInfo?.dom?.el || this._leftEl;
+    if (el) el.textContent = this._selectionText;
   }
   
   /**
@@ -73,10 +76,8 @@ class StatusBarControl extends Control {
    */
   updateZoom(zoom) {
     this._zoom = zoom;
-    const el = this._zoomInfo?.dom?.el;
-    if (el) {
-      el.textContent = `Zoom: ${zoom}%`;
-    }
+    const el = this._zoomInfo?.dom?.el || this._rightEl;
+    if (el) el.textContent = `Zoom: ${zoom}%`;
   }
 }
 

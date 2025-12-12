@@ -1,9 +1,27 @@
 const puppeteer = require('puppeteer');
 const path = require('path');
 const { spawn } = require('child_process');
+const { spawnSync } = require('child_process');
 const net = require('net');
 
 jest.setTimeout(30000);
+
+let _wysiwygBundleEnsured = false;
+function ensureWysiwygClientBundleBuiltOnce() {
+    if (_wysiwygBundleEnsured) return;
+    if (process.env.SKIP_WYSIWYG_BUNDLE_BUILD === '1') return;
+
+    const projectRoot = process.cwd();
+    const buildScript = path.join(projectRoot, 'scripts', 'build-wysiwyg-client.js');
+    const result = spawnSync(process.execPath, [buildScript], {
+        cwd: projectRoot,
+        stdio: 'inherit'
+    });
+
+    if (result.error) throw result.error;
+    if (result.status !== 0) throw new Error(`wysiwyg client build failed with exit code ${result.status}`);
+    _wysiwygBundleEnsured = true;
+}
 
 // Find an available ephemeral port to avoid EADDRINUSE flakiness across runs.
 const getFreePort = () => new Promise((resolve, reject) => {
@@ -73,6 +91,7 @@ describe('WYSIWYG Demo E2E', () => {
 
     beforeAll(async () => {
         port = await getFreePort();
+        ensureWysiwygClientBundleBuiltOnce();
         serverProcess = await startServer(port);
         browser = await puppeteer.launch({
             headless: true, // Set to false to see the browser

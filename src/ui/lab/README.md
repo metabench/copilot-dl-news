@@ -24,6 +24,9 @@
 | 012 | [Dynamic Children Delegation](experiments/012-dynamic-children-delegation/) | proposed | Delegation coverage after add/remove children |
 | 013 | [Custom Events Bubbling](experiments/013-custom-events-bubbling/) | proposed | Bubbling behavior of custom events vs native |
 | 014 | [Delegation Performance Batch](experiments/014-delegation-performance-batch/) | proposed | Performance of delegated vs per-node listeners |
+| 016 | [AP: Lifecycle Event Bag](experiments/016-ap-lifecycle-event-bag/) | proposed | Lifecycle-safe event binding + teardown (DOM/document listeners) |
+| 017 | [AP: Component Store](experiments/017-ap-component-store/) | proposed | DOM-free component store for selection + layers |
+| 018 | [AP: Undo/Redo Stack](experiments/018-ap-undo-redo-stack/) | proposed | Minimal command stack semantics for undo/redo |
 
 ### Mixin storage pattern (lab mixins)
 

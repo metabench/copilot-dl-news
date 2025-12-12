@@ -39136,6 +39136,7 @@ body .overlay {
             this._onSelect = spec.onSelect || null;
             this._onOpenUrl = spec.onOpenUrl || null;
             this._runningUrl = null;
+            this._clickHandlerAttached = false;
             if (!spec.el) {
               this.compose();
             }
@@ -39255,21 +39256,22 @@ body .overlay {
             return this._runningUrl;
           }
           activate() {
-            if (typeof this.dom.el !== "undefined") {
-              this.dom.el.addEventListener("click", (e) => {
-                const urlContainer = this._urlContainer?.dom?.el;
-                if (urlContainer && (e.target === urlContainer || urlContainer.contains(e.target))) {
-                  if (this._runningUrl && this._onOpenUrl) {
-                    e.stopPropagation();
-                    this._onOpenUrl(this._runningUrl);
-                    return;
-                  }
+            if (this._clickHandlerAttached) return;
+            if (!this.dom || !this.dom.el) return;
+            this.dom.el.addEventListener("click", (e) => {
+              const urlContainer = this._urlContainer?.dom?.el;
+              if (urlContainer && (e.target === urlContainer || urlContainer.contains(e.target))) {
+                if (this._runningUrl && this._onOpenUrl) {
+                  e.stopPropagation();
+                  this._onOpenUrl(this._runningUrl);
+                  return;
                 }
-                if (this._onSelect) {
-                  this._onSelect(this._server);
-                }
-              });
-            }
+              }
+              if (this._onSelect) {
+                this._onSelect(this._server);
+              }
+            });
+            this._clickHandlerAttached = true;
           }
         }
         return ServerItemControl;
@@ -40300,10 +40302,37 @@ body .overlay {
     }
   });
 
+  // ui/lib/extractUrl.js
+  var require_extractUrl = __commonJS({
+    "ui/lib/extractUrl.js"(exports, module) {
+      "use strict";
+      function extractUrl(text) {
+        if (!text || typeof text !== "string") return null;
+        const urlPatterns = [
+          /https?:\/\/localhost:\d+[^\s]*/i,
+          /https?:\/\/127\.0\.0\.1:\d+[^\s]*/i,
+          /https?:\/\/0\.0\.0\.0:\d+[^\s]*/i,
+          /Server (?:running|listening|started) (?:on|at) (https?:\/\/[^\s]+)/i,
+          /listening on (https?:\/\/[^\s]+)/i,
+          /available at (https?:\/\/[^\s]+)/i
+        ];
+        for (const pattern of urlPatterns) {
+          const match = pattern.exec(text);
+          if (match) {
+            return match[1] || match[0];
+          }
+        }
+        return null;
+      }
+      module.exports = { extractUrl };
+    }
+  });
+
   // ui/controls/contentAreaControl.js
   var require_contentAreaControl = __commonJS({
     "ui/controls/contentAreaControl.js"(exports, module) {
       "use strict";
+      var { extractUrl } = require_extractUrl();
       function createContentAreaControl(jsgui2, {
         ControlPanelControl,
         ServerUrlControl,
@@ -40398,27 +40427,10 @@ body .overlay {
               }
             }
           }
-          _extractUrl(text) {
-            const urlPatterns = [
-              /https?:\/\/localhost:\d+[^\s]*/gi,
-              /https?:\/\/127\.0\.0\.1:\d+[^\s]*/gi,
-              /https?:\/\/0\.0\.0\.0:\d+[^\s]*/gi,
-              /Server (?:running|listening|started) (?:on|at) (https?:\/\/[^\s]+)/gi,
-              /listening on (https?:\/\/[^\s]+)/gi,
-              /available at (https?:\/\/[^\s]+)/gi
-            ];
-            for (const pattern of urlPatterns) {
-              const match = pattern.exec(text);
-              if (match) {
-                return match[1] || match[0];
-              }
-            }
-            return null;
-          }
           addLog(type, data) {
             this._logViewer.addLog(type, data);
             if (!this._detectedUrl && (type === "stdout" || type === "system")) {
-              const url = this._extractUrl(data);
+              const url = extractUrl(data);
               if (url && this._selectedServer) {
                 this._detectedUrl = url;
                 this._serverUrl.setUrl(url);
@@ -40434,7 +40446,7 @@ body .overlay {
             this._detectedUrl = null;
             for (const log of logs) {
               if (log.type === "stdout" || log.type === "system") {
-                const url = this._extractUrl(log.data);
+                const url = extractUrl(log.data);
                 if (url && this._selectedServer) {
                   this._detectedUrl = url;
                   this._serverUrl.setUrl(url);

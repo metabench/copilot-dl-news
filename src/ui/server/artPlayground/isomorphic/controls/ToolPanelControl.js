@@ -72,6 +72,21 @@ class ToolPanelControl extends Control {
   activate() {
     if (this.__active) return;
     this.__active = true;
+
+    // Activation path: when constructed with { el }, compose() was skipped.
+    // Reconnect the existing DOM buttons so event binding works.
+    if (this.dom?.el && (!this._buttons || Object.keys(this._buttons).length === 0)) {
+      this._buttons = {};
+      const root = this.dom.el;
+      root.querySelectorAll("button[data-tool]").forEach((btnEl) => {
+        const id = btnEl.getAttribute("data-tool");
+        if (!id) return;
+        this._buttons[id] = { dom: { el: btnEl } };
+        if (btnEl.classList.contains("ap-tool-panel__btn--active")) {
+          this._currentTool = id;
+        }
+      });
+    }
     
     // Bind click events
     Object.entries(this._buttons).forEach(([id, btn]) => {

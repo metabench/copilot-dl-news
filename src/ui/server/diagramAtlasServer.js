@@ -22,6 +22,11 @@ const {
 } = require("../controls/DiagramAtlasControls");
 const { findProjectRoot } = require("../../utils/project-root");
 const { ensureClientBundle } = require("./utils/ensureClientBundle");
+const {
+  createTelemetry,
+  attachTelemetryEndpoints,
+  attachTelemetryMiddleware
+} = require("./utils/telemetry");
 
 const StringControl = jsgui.String_Control;
 const DEFAULT_PORT = 4620;
@@ -297,11 +302,21 @@ function renderDiagramAtlasHtml(diagramData = null, options = {}) {
 function createDiagramAtlasServer(options = {}) {
   ensureClientBundle({ silent: options.quietClientBuild });
   const app = express();
+  const telemetry = createTelemetry({
+    name: "Diagram Atlas",
+    entry: "src/ui/server/diagramAtlasServer.js"
+  });
+  telemetry.wireProcessHandlers();
+
   const dataService = new DiagramDataService(options.dataService || {});
   const projectRoot = findProjectRoot(__dirname);
   const assetsDir = path.join(projectRoot, "public", "assets");
   app.use(compression());
   app.use(express.json({ limit: "1mb" }));
+
+  attachTelemetryMiddleware(app, telemetry);
+  attachTelemetryEndpoints(app, telemetry);
+
   app.use("/assets", express.static(assetsDir, { maxAge: "1h" }));
 
   app.get("/diagram-atlas", async (req, res, next) => {
@@ -351,10 +366,11 @@ function createDiagramAtlasServer(options = {}) {
 
   app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
     console.error("Diagram Atlas server error", err);
+    telemetry.error("server.error", err);
     res.status(500).json({ error: err.message || "Server error" });
   });
 
-  return { app, dataService };
+  return { app, dataService, telemetry };
 }
 
 function parseServerArgs(argv = [], env = process.env) {
@@ -451,9 +467,15 @@ function listenOnPort(app, host, port) {
 
 async function main() {
   const args = parseServerArgs(process.argv.slice(2));
-  const { app } = createDiagramAtlasServer({ title: args.title });
+  const { app, telemetry } = createDiagramAtlasServer({ title: args.title });
   let server;
   let activePort = args.port;
+
+  telemetry.info("server.starting", undefined, {
+    host: args.host,
+    port: args.port,
+    title: args.title || null
+  });
 
   try {
     server = await listenOnPort(app, args.host, args.port);
@@ -471,6 +493,14 @@ async function main() {
   const displayHost = formatDisplayHost(args.host);
   const link = `http://${displayHost}:${activePort}/diagram-atlas`;
   const bindLabel = `${args.host}:${activePort}`;
+
+  telemetry.setPort(activePort);
+  telemetry.info("server.listening", `Diagram Atlas listening on ${link}`, {
+    url: link,
+    bind: bindLabel,
+    root
+  });
+
   console.log(`Diagram Atlas listening on ${link} (bind: ${bindLabel}, root: ${root})`);
   console.log("Press Ctrl+C to stop the server.");
   return server;

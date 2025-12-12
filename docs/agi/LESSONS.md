@@ -64,3 +64,8 @@
 
 ## 2025-01-25
 - **2D SVG Spatial Reasoning Book Complete** - Created comprehensive 14-chapter book at /docs/books/2d-svg-spatial-reasoning/ covering: coordinate systems, geometric primitives, transforms, paths, Bézier curves, arcs, bounding boxes, collision detection, containment, positioning, spacing, tree/graph layouts, layer order, and repair toolkit. Each chapter includes formulas, code examples, decision trees, and checklists designed for AI models of varying capability levels.
+
+## 2025-12-11
+- For jsgui3 work, prefer md-scan discovery + lab experiments over ad-hoc debugging: search guides/docs/sessions first, then build a minimal src/ui/lab experiment with a check script and (when event semantics matter) run the delegation suite scenarios to validate bubbling/capture/selector behavior before promoting changes into production code.
+- When bundling isomorphic controls, prefer small shared utilities (e.g. ListenerBag) but verify the relative require path works for both Node runtime and esbuild browser bundling; rebuild the client bundle before E2E to ensure the browser path uses the updated code.
+- When a Puppeteer E2E exercises bundled client JS, always confirm `client.bundle.js` is current. If behavior contradicts recent code edits (or in-browser debug hooks never appear), rebuild the bundle first (`node scripts/build-art-playground-client.js`) before chasing app-level logic.

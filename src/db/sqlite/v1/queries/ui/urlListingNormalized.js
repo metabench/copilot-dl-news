@@ -35,7 +35,26 @@ function prepareStatements(db) {
             ORDER BY u.id ASC
             LIMIT ? OFFSET ?
           `),
+          selectPageByHost: handle.prepare(`
+            SELECT
+              u.id,
+              u.url,
+              u.host,
+              u.canonical_url AS canonicalUrl,
+              u.created_at AS createdAt,
+              u.last_seen_at AS lastSeenAt,
+              lf.ts AS lastFetchAt,
+              lf.http_status AS httpStatus,
+              lf.classification AS classification,
+              lf.word_count AS wordCount
+            FROM urls u
+            LEFT JOIN latest_fetch lf ON lf.url = u.url
+            WHERE u.host = ? COLLATE NOCASE
+            ORDER BY u.id ASC
+            LIMIT ? OFFSET ?
+          `),
           countAll: handle.prepare(`SELECT COUNT(1) AS total FROM urls`),
+          countAllByHost: handle.prepare(`SELECT COUNT(1) AS total FROM urls WHERE host = ? COLLATE NOCASE`),
           hasLatestFetch: true
         };
       } catch (_) {
@@ -56,7 +75,25 @@ function prepareStatements(db) {
             ORDER BY u.id ASC
             LIMIT ? OFFSET ?
           `),
+          selectPageByHost: handle.prepare(`
+            SELECT
+              u.id,
+              u.url,
+              u.host,
+              u.canonical_url AS canonicalUrl,
+              u.created_at AS createdAt,
+              u.last_seen_at AS lastSeenAt,
+              NULL AS lastFetchAt,
+              NULL AS httpStatus,
+              NULL AS classification,
+              NULL AS wordCount
+            FROM urls u
+            WHERE u.host = ? COLLATE NOCASE
+            ORDER BY u.id ASC
+            LIMIT ? OFFSET ?
+          `),
           countAll: handle.prepare(`SELECT COUNT(1) AS total FROM urls`),
+          countAllByHost: handle.prepare(`SELECT COUNT(1) AS total FROM urls WHERE host = ? COLLATE NOCASE`),
           hasLatestFetch: false
         };
       }
@@ -82,33 +119,129 @@ function prepareStatements(db) {
             ORDER BY fu.url_id ASC
             LIMIT ? OFFSET ?
           `),
+          selectFetchedPageByHost: handle.prepare(`
+            SELECT
+              fu.url_id AS id,
+              fu.url,
+              fu.host,
+              fu.canonical_url AS canonicalUrl,
+              fu.url_created_at AS createdAt,
+              fu.url_last_seen_at AS lastSeenAt,
+              fu.last_fetched_at AS lastFetchAt,
+              fu.last_http_status AS httpStatus,
+              fu.last_classification AS classification,
+              fu.last_word_count AS wordCount,
+              fu.fetch_count AS fetchCount
+            FROM fetched_urls fu
+            WHERE fu.host = ? COLLATE NOCASE
+            ORDER BY fu.url_id ASC
+            LIMIT ? OFFSET ?
+          `),
           countFetched: handle.prepare(`SELECT COUNT(1) AS total FROM fetched_urls`),
+          countFetchedByHost: handle.prepare(`SELECT COUNT(1) AS total FROM fetched_urls WHERE host = ? COLLATE NOCASE`),
           hasFetchedView: true
         };
       } catch (_) {
-        const selectFetchedPage = handle.prepare(`
-          SELECT
-            url_id AS id,
-            url,
-            host,
-            canonical_url AS canonicalUrl,
-            url_created_at AS createdAt,
-            url_last_seen_at AS lastSeenAt,
-            last_fetched_at AS lastFetchAt,
-            last_http_status AS httpStatus,
-            last_classification AS classification,
-            last_word_count AS wordCount,
-            fetch_count AS fetchCount
-          FROM fetched_urls
-          ORDER BY url_id ASC
-          LIMIT ? OFFSET ?
-        `);
-        const countFetched = handle.prepare(`SELECT COUNT(*) AS total FROM fetched_urls`);
-        return {
-          selectFetchedPage,
-          countFetched,
-          hasFetchedView: true
-        };
+        try {
+          const selectFetchedPage = handle.prepare(`
+            SELECT
+              u.id,
+              u.url,
+              u.host,
+              u.canonical_url AS canonicalUrl,
+              u.created_at AS createdAt,
+              u.last_seen_at AS lastSeenAt,
+              NULL AS lastFetchAt,
+              NULL AS httpStatus,
+              NULL AS classification,
+              NULL AS wordCount,
+              COUNT(f.id) AS fetchCount
+            FROM urls u
+            INNER JOIN fetches f ON f.url_id = u.id
+            GROUP BY u.id
+            ORDER BY u.id ASC
+            LIMIT ? OFFSET ?
+          `);
+          const selectFetchedPageByHost = handle.prepare(`
+            SELECT
+              u.id,
+              u.url,
+              u.host,
+              u.canonical_url AS canonicalUrl,
+              u.created_at AS createdAt,
+              u.last_seen_at AS lastSeenAt,
+              NULL AS lastFetchAt,
+              NULL AS httpStatus,
+              NULL AS classification,
+              NULL AS wordCount,
+              COUNT(f.id) AS fetchCount
+            FROM urls u
+            INNER JOIN fetches f ON f.url_id = u.id
+            WHERE u.host = ? COLLATE NOCASE
+            GROUP BY u.id
+            ORDER BY u.id ASC
+            LIMIT ? OFFSET ?
+          `);
+          const countFetched = handle.prepare(`
+            SELECT COUNT(DISTINCT url_id) AS total
+            FROM fetches
+          `);
+          const countFetchedByHost = handle.prepare(`
+            SELECT COUNT(DISTINCT u.id) AS total
+            FROM urls u
+            INNER JOIN fetches f ON f.url_id = u.id
+            WHERE u.host = ? COLLATE NOCASE
+          `);
+          return {
+            selectFetchedPage,
+            selectFetchedPageByHost,
+            countFetched,
+            countFetchedByHost,
+            hasFetchedView: false
+          };
+        } catch (_) {
+          return {
+            selectFetchedPage: handle.prepare(`
+              SELECT
+                u.id,
+                u.url,
+                u.host,
+                u.canonical_url AS canonicalUrl,
+                u.created_at AS createdAt,
+                u.last_seen_at AS lastSeenAt,
+                NULL AS lastFetchAt,
+                NULL AS httpStatus,
+                NULL AS classification,
+                NULL AS wordCount,
+                NULL AS fetchCount
+              FROM urls u
+              WHERE 1=0
+              ORDER BY u.id ASC
+              LIMIT ? OFFSET ?
+            `),
+            selectFetchedPageByHost: handle.prepare(`
+              SELECT
+                u.id,
+                u.url,
+                u.host,
+                u.canonical_url AS canonicalUrl,
+                u.created_at AS createdAt,
+                u.last_seen_at AS lastSeenAt,
+                NULL AS lastFetchAt,
+                NULL AS httpStatus,
+                NULL AS classification,
+                NULL AS wordCount,
+                NULL AS fetchCount
+              FROM urls u
+              WHERE 1=0
+              ORDER BY u.id ASC
+              LIMIT ? OFFSET ?
+            `),
+            countFetched: handle.prepare(`SELECT 0 AS total`),
+            countFetchedByHost: handle.prepare(`SELECT 0 AS total`),
+            hasFetchedView: false
+          };
+        }
       }
     })();
 
@@ -155,6 +288,30 @@ function countUrls(db) {
   return Number.isFinite(totalValue) ? totalValue : 0;
 }
 
+function selectUrlPageByHost(db, options = {}) {
+  if (!db || typeof db.prepare !== "function") {
+    throw new TypeError("selectUrlPageByHost requires a better-sqlite3 database handle");
+  }
+  const host = options.host != null ? String(options.host).trim() : "";
+  if (!host) return [];
+  const limit = sanitizeLimit(options.limit, { min: 1, max: 5000, fallback: 1000 });
+  const offset = sanitizeOffset(options.offset, { min: 0, fallback: 0 });
+  const { selectPageByHost } = prepareStatements(db);
+  return selectPageByHost.all(host, limit, offset).map(mapRow);
+}
+
+function countUrlsByHost(db, host) {
+  if (!db || typeof db.prepare !== "function") {
+    throw new TypeError("countUrlsByHost requires a better-sqlite3 database handle");
+  }
+  const normalized = host != null ? String(host).trim() : "";
+  if (!normalized) return 0;
+  const { countAllByHost } = prepareStatements(db);
+  const row = countAllByHost.get(normalized);
+  const totalValue = row && row.total != null ? Number(row.total) : 0;
+  return Number.isFinite(totalValue) ? totalValue : 0;
+}
+
 function selectFetchedUrlPage(db, options = {}) {
   if (!db || typeof db.prepare !== "function") {
     throw new TypeError("selectFetchedUrlPage requires a better-sqlite3 database handle");
@@ -175,6 +332,30 @@ function countFetchedUrls(db) {
   return Number.isFinite(totalValue) ? totalValue : 0;
 }
 
+function selectFetchedUrlPageByHost(db, options = {}) {
+  if (!db || typeof db.prepare !== "function") {
+    throw new TypeError("selectFetchedUrlPageByHost requires a better-sqlite3 database handle");
+  }
+  const host = options.host != null ? String(options.host).trim() : "";
+  if (!host) return [];
+  const limit = sanitizeLimit(options.limit, { min: 1, max: 5000, fallback: 1000 });
+  const offset = sanitizeOffset(options.offset, { min: 0, fallback: 0 });
+  const { selectFetchedPageByHost } = prepareStatements(db);
+  return selectFetchedPageByHost.all(host, limit, offset).map(mapRow);
+}
+
+function countFetchedUrlsByHost(db, host) {
+  if (!db || typeof db.prepare !== "function") {
+    throw new TypeError("countFetchedUrlsByHost requires a better-sqlite3 database handle");
+  }
+  const normalized = host != null ? String(host).trim() : "";
+  if (!normalized) return 0;
+  const { countFetchedByHost } = prepareStatements(db);
+  const row = countFetchedByHost.get(normalized);
+  const totalValue = row && row.total != null ? Number(row.total) : 0;
+  return Number.isFinite(totalValue) ? totalValue : 0;
+}
+
 function selectInitialUrls(db, options = {}) {
   return selectUrlPage(db, { ...options, offset: 0 });
 }
@@ -182,7 +363,11 @@ function selectInitialUrls(db, options = {}) {
 module.exports = {
   selectInitialUrls,
   selectUrlPage,
+  selectUrlPageByHost,
   countUrls,
+  countUrlsByHost,
   selectFetchedUrlPage,
-  countFetchedUrls
+  selectFetchedUrlPageByHost,
+  countFetchedUrls,
+  countFetchedUrlsByHost
 };

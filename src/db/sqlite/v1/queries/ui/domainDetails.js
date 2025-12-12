@@ -11,15 +11,25 @@ function assertDb(db) {
 function selectHostSummary(db, host) {
   assertDb(db);
   if (!host) return null;
-  const stmt = db.prepare(`
-    SELECT LOWER(host) AS host,
+  const stmtFast = db.prepare(`
+    SELECT host,
            COUNT(*) AS urlCount,
            MIN(created_at) AS firstSeenAt,
            MAX(last_seen_at) AS lastSeenAt
     FROM urls
-    WHERE LOWER(host) = ?
+    WHERE host = ?
   `);
-  const row = stmt.get(host);
+  const fastRow = stmtFast.get(host);
+  const row = fastRow && Number(fastRow.urlCount) > 0
+    ? { ...fastRow, host: (fastRow.host || host || "").toLowerCase() }
+    : db.prepare(`
+        SELECT LOWER(host) AS host,
+               COUNT(*) AS urlCount,
+               MIN(created_at) AS firstSeenAt,
+               MAX(last_seen_at) AS lastSeenAt
+        FROM urls
+        WHERE LOWER(host) = ?
+      `).get(host);
   if (!row || row.urlCount == null || Number(row.urlCount) === 0) {
     return null;
   }
@@ -36,7 +46,7 @@ function selectHostDownloads(db, host, options = {}) {
   if (!host) return [];
   const limit = sanitizeLimit(options.limit, { min: 1, max: 500, fallback: 200 });
   const offset = Number.isFinite(Number(options.offset)) ? Math.max(0, Math.trunc(Number(options.offset))) : 0;
-  const stmt = db.prepare(`
+  const stmtFast = db.prepare(`
     SELECT
       hr.id,
       hr.url_id AS urlId,
@@ -52,11 +62,35 @@ function selectHostDownloads(db, host, options = {}) {
     JOIN urls u ON u.id = hr.url_id
     LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
     LEFT JOIN content_analysis ca ON ca.content_id = cs.id
-    WHERE LOWER(u.host) = ?
+    WHERE u.host = ?
     ORDER BY COALESCE(hr.fetched_at, hr.request_started_at) DESC, hr.id DESC
     LIMIT ? OFFSET ?
   `);
-  return stmt.all(host, limit, offset).map((row) => ({
+  let rows = stmtFast.all(host, limit, offset);
+  if (rows.length === 0) {
+    rows = db.prepare(`
+      SELECT
+        hr.id,
+        hr.url_id AS urlId,
+        u.url,
+        hr.fetched_at AS fetchedAt,
+        hr.request_started_at AS requestedAt,
+        hr.http_status AS httpStatus,
+        cs.uncompressed_size AS contentLength,
+        hr.bytes_downloaded AS bytesDownloaded,
+        ca.word_count AS wordCount,
+        ca.classification
+      FROM http_responses hr
+      JOIN urls u ON u.id = hr.url_id
+      LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+      LEFT JOIN content_analysis ca ON ca.content_id = cs.id
+      WHERE LOWER(u.host) = ?
+      ORDER BY COALESCE(hr.fetched_at, hr.request_started_at) DESC, hr.id DESC
+      LIMIT ? OFFSET ?
+    `).all(host, limit, offset);
+  }
+
+  return rows.map((row) => ({
     id: row.id,
     urlId: row.urlId,
     url: row.url,

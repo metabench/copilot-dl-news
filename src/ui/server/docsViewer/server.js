@@ -14,7 +14,7 @@
  * with a 2-column layout: navigation on left, content on right.
  * 
  * Usage:
- *   node src/ui/server/docsViewer/server.js [--port 4700] [--docs ./docs] [--detached]
+ *   node src/ui/server/docsViewer/server.js [--port 4700] [--docs ./docs] [--detached] [--check]
  */
 
 const fs = require("fs");
@@ -23,6 +23,13 @@ const { spawn } = require("child_process");
 const express = require("express");
 const jsgui = require("jsgui3-html");
 const { Command } = require("commander");
+
+const { ensureClientBundle } = require("../utils/ensureClientBundle");
+const {
+  createTelemetry,
+  attachTelemetryEndpoints,
+  attachTelemetryMiddleware
+} = require("../utils/telemetry");
 
 const { DocAppControl } = require("./isomorphic/controls");
 const { buildDocTree, sortTree, findNodeByPath } = require("./utils/docTree");
@@ -47,7 +54,8 @@ function createProgram() {
     .option("-d, --docs <path>", "Path to documentation directory", DEFAULT_DOCS_PATH)
     .option("--detached", "Run server as a detached background process")
     .option("--stop", "Stop a running detached server")
-    .option("--status", "Check if a detached server is running");
+    .option("--status", "Check if a detached server is running")
+    .option("--check", "Start server, verify it responds, then exit (for CI/agents)");
   
   return program;
 }
@@ -65,7 +73,8 @@ function parseArgs(argv = process.argv) {
     docsPath: opts.docs || DEFAULT_DOCS_PATH,
     detached: !!opts.detached,
     stop: !!opts.stop,
-    status: !!opts.status
+    status: !!opts.status,
+    check: !!opts.check
   };
 }
 
@@ -166,6 +175,14 @@ function createDocsViewerServer(options = {}) {
   }
 
   const app = express();
+  const telemetry = createTelemetry({
+    name: "Docs Viewer",
+    entry: "src/ui/server/docsViewer/server.js"
+  });
+  telemetry.wireProcessHandlers();
+
+  attachTelemetryMiddleware(app, telemetry);
+  attachTelemetryEndpoints(app, telemetry);
 
   // Serve static assets
   const publicDir = path.join(__dirname, "public");
@@ -335,10 +352,11 @@ function createDocsViewerServer(options = {}) {
   // Error handler
   app.use((err, req, res, next) => {
     console.error("Docs viewer error:", err);
+    telemetry.error("server.error", err);
     res.status(500).type("text/plain").send("Internal server error");
   });
 
-  return { app, docsPath };
+  return { app, docsPath, telemetry };
 }
 
 /**
@@ -522,13 +540,45 @@ if (require.main === module) {
     spawnDetached(args);
     process.exit(0);
   }
+
+  if (args.check) {
+    process.env.SERVER_NAME = "Docs Viewer";
+  }
+
+  try {
+    if (process.env.SKIP_DOCS_VIEWER_BUNDLE_BUILD !== "1") {
+      ensureClientBundle({
+        bundlePath: path.join(__dirname, "public", "docs-viewer-client.js"),
+        entryPath: path.join(__dirname, "client", "index.js"),
+        buildScript: path.join(process.cwd(), "scripts", "build-docs-viewer-client.js"),
+        force: process.env.FORCE_DOCS_VIEWER_BUNDLE_BUILD === "1",
+        silent: true
+      });
+    }
+  } catch (e) {
+    if (args.check) {
+      console.error("[docs-viewer] Client bundle build failed in --check mode:", e && e.message ? e.message : e);
+      process.exit(1);
+    }
+    console.warn("[docs-viewer] Could not build client bundle:", e && e.message ? e.message : e);
+  }
   
   // Normal foreground server
-  const { app, docsPath } = createDocsViewerServer({ docsPath: args.docsPath });
-  
-  app.listen(args.port, () => {
-    console.log(`📚 Documentation Viewer running at http://localhost:${args.port}`);
-    console.log(`   Serving docs from: ${docsPath}`);
+  const { app, docsPath, telemetry } = createDocsViewerServer({ docsPath: args.docsPath });
+
+  const { wrapServerForCheck } = require("../utils/serverStartupCheck");
+  telemetry.info("server.starting", undefined, { port: args.port, docsPath });
+  telemetry.setPort(args.port);
+
+  wrapServerForCheck(app, args.port, undefined, () => {
+    telemetry.info("server.listening", `Documentation Viewer running at http://localhost:${args.port}`, {
+      url: `http://localhost:${args.port}`,
+      docsPath
+    });
+    if (!args.check) {
+      console.log(`📚 Documentation Viewer running at http://localhost:${args.port}`);
+      console.log(`   Serving docs from: ${docsPath}`);
+    }
   });
 }
 

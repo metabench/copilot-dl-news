@@ -16,6 +16,7 @@ function createServerItemControl(jsgui, { StringControl }) {
       this._onSelect = spec.onSelect || null;
       this._onOpenUrl = spec.onOpenUrl || null;
       this._runningUrl = null;
+      this._clickHandlerAttached = false;
       
       if (!spec.el) {
         this.compose();
@@ -169,22 +170,25 @@ function createServerItemControl(jsgui, { StringControl }) {
     }
 
     activate() {
-      if (typeof this.dom.el !== "undefined") {
-        this.dom.el.addEventListener("click", (e) => {
-          const urlContainer = this._urlContainer?.dom?.el;
-          if (urlContainer && (e.target === urlContainer || urlContainer.contains(e.target))) {
-            if (this._runningUrl && this._onOpenUrl) {
-              e.stopPropagation();
-              this._onOpenUrl(this._runningUrl);
-              return;
-            }
+      if (this._clickHandlerAttached) return;
+      if (!this.dom || !this.dom.el) return;
+
+      this.dom.el.addEventListener("click", (e) => {
+        const urlContainer = this._urlContainer?.dom?.el;
+        if (urlContainer && (e.target === urlContainer || urlContainer.contains(e.target))) {
+          if (this._runningUrl && this._onOpenUrl) {
+            e.stopPropagation();
+            this._onOpenUrl(this._runningUrl);
+            return;
           }
-          
-          if (this._onSelect) {
-            this._onSelect(this._server);
-          }
-        });
-      }
+        }
+
+        if (this._onSelect) {
+          this._onSelect(this._server);
+        }
+      });
+
+      this._clickHandlerAttached = true;
     }
   }
 

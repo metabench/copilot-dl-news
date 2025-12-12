@@ -23,15 +23,20 @@ const { openNewsDb } = require("../../db/dbAccess");
 const { findProjectRoot } = require("../../utils/project-root");
 const {
   selectUrlPage,
+  selectUrlPageByHost,
   countUrls,
+  countUrlsByHost,
   selectFetchedUrlPage,
-  countFetchedUrls
+  selectFetchedUrlPageByHost,
+  countFetchedUrls,
+  countFetchedUrlsByHost
 } = require("../../db/sqlite/v1/queries/ui/urlListingNormalized");
 const {
   getArticleCount,
   getFetchCountDirect,
   getFetchCountViaJoin
 } = require("../../db/sqlite/v1/queries/ui/domainSummary");
+const { selectDomainCountsByHosts } = require("../../db/sqlite/v1/queries/ui/domainCounts");
 const { listRecentCrawls } = require("../../db/sqlite/v1/queries/ui/crawls");
 const { listRecentErrors } = require("../../db/sqlite/v1/queries/ui/errors");
 const { selectUrlById, selectFetchHistory, selectFetchById } = require("../../db/sqlite/v1/queries/ui/urlDetails");
@@ -81,6 +86,11 @@ const {
 } = require("./navigation");
 const { ensureClientBundle } = require("./utils/ensureClientBundle");
 const { getClassificationDisplay } = require("../utils/classificationEmoji");
+const {
+  createTelemetry,
+  attachTelemetryEndpoints,
+  attachTelemetryMiddleware
+} = require("./utils/telemetry");
 
 const StringControl = jsgui.String_Control;
 
@@ -148,9 +158,30 @@ function toBooleanQueryFlag(value) {
   return Boolean(value);
 }
 
+function takeFirstQueryValue(value) {
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i += 1) {
+      const next = takeFirstQueryValue(value[i]);
+      if (next != null) return next;
+    }
+    return null;
+  }
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text ? text : null;
+}
+
+function sanitizeHostFilter(value) {
+  const host = takeFirstQueryValue(value);
+  if (!host) return null;
+  if (host.length > 255) return host.slice(0, 255);
+  return host;
+}
+
 function resolveUrlFilterState(query = {}) {
   return {
-    hasFetches: toBooleanQueryFlag(query.hasFetches)
+    hasFetches: toBooleanQueryFlag(query.hasFetches),
+    host: sanitizeHostFilter(query.host)
   };
 }
 
@@ -223,10 +254,19 @@ function tryGetCachedUrlTotals(db) {
 }
 
 function buildUrlTotals(db, options = {}) {
+  const host = options.host != null ? String(options.host).trim() : "";
+  const hasHost = Boolean(host);
   if (options.hasFetches) {
     return {
       source: "live",
-      totalRows: countFetchedUrls(db),
+      totalRows: hasHost ? countFetchedUrlsByHost(db, host) : countFetchedUrls(db),
+      cache: null
+    };
+  }
+  if (hasHost) {
+    return {
+      source: "live",
+      totalRows: countUrlsByHost(db, host),
       cache: null
     };
   }
@@ -239,6 +279,46 @@ function buildUrlTotals(db, options = {}) {
     totalRows: countUrls(db),
     cache: null
   };
+}
+
+function buildUrlHostFilterControls({ context, basePath, filters }) {
+  if (!context) return null;
+  const form = new jsgui.form({ context });
+  form.dom.attributes.method = "get";
+  form.dom.attributes.action = basePath;
+  form.add_class("filter-controls");
+
+  const group = new jsgui.div({ context, class: "filter-controls__group" });
+  const label = new jsgui.label({ context, class: "filter-controls__label" });
+  label.dom.attributes["for"] = "host-filter";
+  label.add(new jsgui.String_Control({ context, text: "Host" }));
+  group.add(label);
+
+  const input = new jsgui.input({ context });
+  input.dom.attributes.type = "search";
+  input.dom.attributes.name = "host";
+  input.dom.attributes.id = "host-filter";
+  input.dom.attributes.placeholder = "example.com";
+  input.dom.attributes.value = (filters && filters.host) ? String(filters.host) : "";
+  input.add_class("filter-controls__input");
+  group.add(input);
+
+  if (filters && filters.hasFetches) {
+    const hidden = new jsgui.input({ context });
+    hidden.dom.attributes.type = "hidden";
+    hidden.dom.attributes.name = "hasFetches";
+    hidden.dom.attributes.value = "1";
+    group.add(hidden);
+  }
+
+  const button = new jsgui.button({ context });
+  button.dom.attributes.type = "submit";
+  button.add_class("filter-controls__button");
+  button.add(new jsgui.String_Control({ context, text: "Apply" }));
+  group.add(button);
+
+  form.add(group);
+  return form;
 }
 
 function buildPagination(basePath, query, { totalRows, pageSize, currentPage }) {
@@ -633,7 +713,7 @@ function buildUrlListingPayload({ req, db, relativeDb, pageSize, now, basePathOv
   }
   const query = req.query || {};
   const filters = resolveUrlFilterState(query);
-  const totals = buildUrlTotals(db, { hasFetches: filters.hasFetches });
+  const totals = buildUrlTotals(db, { hasFetches: filters.hasFetches, host: filters.host });
   const requestedPage = sanitizePage(query.page);
   const basePath = basePathOverride || (((req.baseUrl || "") + (req.path || "")) || "/urls");
   const querySnapshot = snapshotQueryParams(query);
@@ -642,8 +722,18 @@ function buildUrlListingPayload({ req, db, relativeDb, pageSize, now, basePathOv
     pageSize,
     currentPage: requestedPage
   });
-  const selector = filters.hasFetches ? selectFetchedUrlPage : selectUrlPage;
-  const records = selector(db, { limit: pageSize, offset: pagination.offset });
+  const selector = (() => {
+    if (filters.hasFetches) {
+      return filters.host ? selectFetchedUrlPageByHost : selectFetchedUrlPage;
+    }
+    return filters.host ? selectUrlPageByHost : selectUrlPage;
+  })();
+  const selectorOptions = {
+    limit: pageSize,
+    offset: pagination.offset
+  };
+  if (filters.host) selectorOptions.host = filters.host;
+  const records = selector(db, selectorOptions);
   const rows = buildDisplayRows(records, { startIndex: pagination.startRow > 0 ? pagination.startRow : 1 });
   const subtitle = totals.totalRows === 0
     ? filters.hasFetches
@@ -817,6 +907,11 @@ function renderUrlListingView({ req, db, relativeDb, pageSize, now }) {
     totals,
     now
   });
+  decoratedMeta.filterControlsFactory = (context) => buildUrlHostFilterControls({
+    context,
+    basePath,
+    filters
+  });
   const filterOptions = buildUrlFilterOptions({
     req,
     basePath,
@@ -889,6 +984,9 @@ function buildUrlSummarySubtitle({ startRow, endRow, totalRows, currentPage, tot
   }
   if (filters && filters.hasFetches) {
     parts.push("Fetched URLs only");
+  }
+  if (filters && filters.host) {
+    parts.push(`Host ${filters.host}`);
   }
   return parts.join(" • ");
 }
@@ -992,8 +1090,18 @@ function renderErrorLogView({ req, db, relativeDb, now }) {
 function createDataExplorerServer(options = {}) {
   ensureClientBundle({ silent: options.quietClientBuild });
   const app = express();
+  const telemetry = createTelemetry({
+    name: "Data Explorer",
+    entry: "src/ui/server/dataExplorerServer.js"
+  });
+  telemetry.wireProcessHandlers();
+
   app.use(express.urlencoded({ extended: true, limit: "2mb" }));
   app.use(express.json({ limit: "2mb" }));
+
+  attachTelemetryMiddleware(app, telemetry);
+  attachTelemetryEndpoints(app, telemetry);
+
   const resolvedDbPath = resolveDbPath(options.dbPath);
   const dbAccess = openNewsDb(resolvedDbPath);
   const projectRoot = findProjectRoot(__dirname);
@@ -1192,13 +1300,19 @@ function createDataExplorerServer(options = {}) {
       }
       // Limit to prevent abuse
       const limitedHosts = hosts.slice(0, 50);
+      const normalizedHosts = limitedHosts
+        .map((host) => toLowerHost(host))
+        .filter(Boolean);
+
+      const countsByHost = selectDomainCountsByHosts(dbAccess.db, normalizedHosts);
       const counts = {};
       for (const host of limitedHosts) {
         const normalizedHost = toLowerHost(host);
         if (!normalizedHost) continue;
+        const record = countsByHost[normalizedHost] || { allArticles: 0, fetches: 0 };
         counts[host] = {
-          allArticles: getArticleCount(dbAccess.db, normalizedHost),
-          fetches: getFetchCountForHost(dbAccess.db, normalizedHost)
+          allArticles: record.allArticles || 0,
+          fetches: record.fetches || 0
         };
       }
       res.json({ counts });
@@ -1630,14 +1744,19 @@ function createDataExplorerServer(options = {}) {
 
   app.use((err, req, res, _next) => {
     console.error("Data explorer server error:", err);
+    telemetry.error("server.error", err && err.message ? err.message : "Data explorer server error", {
+      code: err && err.code ? err.code : undefined,
+      statusCode: Number.isFinite(err && err.statusCode) ? err.statusCode : 500,
+      path: req && req.path ? req.path : undefined
+    });
     const statusCode = Number.isFinite(err && err.statusCode) ? err.statusCode : 500;
     const diagnostics = buildRequestDiagnostics(req, {
       status: statusCode,
       error: err && err.message ? err.message : "Internal server error"
     });
     const wantsJson = (req && req.path && req.path.startsWith("/api/")) || acceptsJson(req);
+    applyDiagnosticsHeaders(res, { ...diagnostics, error: true });
     if (wantsJson) {
-      applyDiagnosticsHeaders(res, { ...diagnostics, error: true });
       res
         .status(statusCode)
         .type("application/json")
@@ -1651,7 +1770,7 @@ function createDataExplorerServer(options = {}) {
         });
       return;
     }
-    applyDiagnosticsHeaders(res, { ...diagnostics, error: true });
+
     res.status(statusCode).type("text/plain").send("Internal server error");
   });
 
@@ -1661,7 +1780,8 @@ function createDataExplorerServer(options = {}) {
     } catch (_) {}
   };
 
-  return { app, close };
+  return { app, telemetry, close };
+
 }
 
 function parseServerArgs(argv) {
@@ -1822,14 +1942,26 @@ if (require.main === module) {
   
   console.log("Server args:", args);
   const pageSize = sanitizePageSize(args.pageSize);
-  const { app, close } = createDataExplorerServer({
+  const { app, close, telemetry } = createDataExplorerServer({
     dbPath: args.db,
     pageSize,
     title: args.title
   });
   const port = Number.isFinite(args.port) ? args.port : DEFAULT_PORT;
   const host = args.host || "127.0.0.1";
+
+  telemetry.info("server.starting", undefined, {
+    host,
+    port,
+    pageSize
+  });
+
   const server = app.listen(port, host, () => {
+    telemetry.setPort(port);
+    telemetry.info("server.listening", `Crawler data explorer listening on http://${host}:${port}/urls`, {
+      url: `http://${host}:${port}/urls`,
+      pageSize
+    });
     console.log(`Crawler data explorer listening on http://${host}:${port}/urls (page size ${pageSize})`);
   });
 
@@ -1837,6 +1969,7 @@ if (require.main === module) {
   const handleShutdown = () => {
     if (shuttingDown) return;
     shuttingDown = true;
+    telemetry.info("server.shutdown", "Shutting down crawler data explorer...");
     console.log("Shutting down crawler data explorer...");
     server.close(() => {
       close();

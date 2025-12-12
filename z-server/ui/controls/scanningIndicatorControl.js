@@ -88,6 +88,9 @@ function createScanningIndicatorControl(jsgui, { StringControl }) {
     setTotal(total) {
       this._total = total;
       this._current = 0;
+      // Once we know the total, we can switch from counting (indeterminate)
+      // to determinate progress immediately.
+      this._isCounting = false;
       this._updateProgress();
     }
 

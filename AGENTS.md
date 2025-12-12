@@ -19,7 +19,18 @@ Quick anchors (UI/tooling)
 - jsgui3 controls: extract interactive/stateful pieces into controls, use emoji icons for actions (🔍/⚙️/➕/🗑️/✏️/🔄), and keep control counts lean—lazy load or virtualise when lists exceed ~200 items. See [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md).
 - SVGs: before shipping, run `node tools/dev/svg-collisions.js <file> --strict` to ensure no overlaps; follow [docs/guides/SVG_CREATION_METHODOLOGY.md](docs/guides/SVG_CREATION_METHODOLOGY.md).
 - MCP pre-flight: before calling MCP tools, run `node tools/dev/mcp-check.js --quick --json` to verify servers are responsive; if unhealthy, use CLI fallbacks.
+- docs-memory (MCP): use the memory server for durable agent hygiene, not scratch notes.
+  - Prefer “search/find existing” before creating new work: look for related sessions and continue them when possible.
+  - Write small, reusable updates: add a Pattern/Anti-Pattern/Lesson, update the Knowledge Map, or append to the current session notes.
+  - Default targets: `docs/agi/*` (patterns/lessons/knowledge map) and `docs/sessions/<yyyy-mm-dd>-<slug>/*` (session notes).
+  - Keep entries tight (one idea + context); avoid dumping large transcripts.
 - Tier-1 JS tooling: prefer `js-scan` for discovery and `js-edit` for guarded batch edits (dry-run → fix). Reference [tools/dev/README.md](tools/dev/README.md).
+- When to use `js-scan` (vs `grep`/`read_file`):
+  - Use `js-scan` when you need a **multi-file inventory** ("what does this subsystem cover?"), to find **entrypoints/routes**, or to answer **dependency questions** ("what imports this?").
+  - Use `js-scan --what-imports <file>` before refactors so you don’t miss downstream callers.
+  - Use `grep_search`/`read_file` when you already know the exact file/symbol and just need **local context** for a small change.
+  - Example (feature inventory like Data Explorer): start with `node tools/dev/js-scan.js --dir src/ui/server --search "DATA_VIEWS" "app.get(" "create.*Server" --json` then pivot with `node tools/dev/js-scan.js --what-imports src/ui/server/dataExplorerServer.js --json`.
+  - Multi-lens follow-through: after a scan, **read the top hits**, then run the closest `checks/*.check.js`, then the smallest relevant Jest suite (`npm run test:by-path ...`) to confirm your understanding matches reality.
 - Present choices with `ui-pick`: `node tools/dev/ui-pick.js <options…>` (or `--options '[{"label":"A","value":"a","icon":"✨","phase":"implement"}]'`). Treat the selection as consent to proceed; use `--json` to capture `{selection, option, phase}` and auto-advance without re-asking.
 
 ## ⚠️ SESSION FIRST — NON-NEGOTIABLE

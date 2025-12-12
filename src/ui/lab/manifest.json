@@ -148,5 +148,35 @@
     "path": "src/ui/lab/experiments/015-streaming-virtual-harness",
     "check": "src/ui/lab/experiments/015-streaming-virtual-harness/check.all.js",
     "readme": null
+  },
+  {
+    "id": "016",
+    "slug": "ap-lifecycle-event-bag",
+    "name": "Art Playground: Lifecycle Event Bag",
+    "status": "proposed",
+    "description": "Prototype lifecycle-safe event binding + teardown for DOM/document listeners",
+    "path": "src/ui/lab/experiments/016-ap-lifecycle-event-bag",
+    "check": "src/ui/lab/experiments/016-ap-lifecycle-event-bag/check.js",
+    "readme": "src/ui/lab/experiments/016-ap-lifecycle-event-bag/README.md"
+  },
+  {
+    "id": "017",
+    "slug": "ap-component-store",
+    "name": "Art Playground: Component Store",
+    "status": "proposed",
+    "description": "DOM-free component store for selection + layers; enables undo/redo",
+    "path": "src/ui/lab/experiments/017-ap-component-store",
+    "check": "src/ui/lab/experiments/017-ap-component-store/check.js",
+    "readme": "src/ui/lab/experiments/017-ap-component-store/README.md"
+  },
+  {
+    "id": "018",
+    "slug": "ap-undo-redo-stack",
+    "name": "Art Playground: Undo/Redo Stack",
+    "status": "proposed",
+    "description": "Command stack semantics for undo/redo on a pure component store",
+    "path": "src/ui/lab/experiments/018-ap-undo-redo-stack",
+    "check": "src/ui/lab/experiments/018-ap-undo-redo-stack/check.js",
+    "readme": "src/ui/lab/experiments/018-ap-undo-redo-stack/README.md"
   }
 ]

@@ -11,9 +11,9 @@
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
   };
 
-  // ../jsgui3-html/node_modules/lang-tools/node_modules/lang-mini/lang-mini.js
+  // node_modules/lang-mini/lang-mini.js
   var require_lang_mini = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/node_modules/lang-mini/lang-mini.js"(exports, module) {
+    "node_modules/lang-mini/lang-mini.js"(exports, module) {
       var running_in_browser = typeof window !== "undefined";
       var running_in_node = !running_in_browser;
       var Readable_Stream;
@@ -59,7996 +59,9 @@
             return res2;
           } else {
             let name, res2 = {};
-            for (name in collection) {
-              if (ctu === false) break;
-              if (context2) {
-                res2[name] = fn.call(context2, collection[name], name, stop);
-              } else {
-                res2[name] = fn(collection[name], name, stop);
-              }
-              if (ctu === false) break;
-            }
-            return res2;
-          }
-        }
-      };
-      var is_array = Array.isArray;
-      var is_dom_node = function isDomNode(obj2) {
-        return !!obj2 && typeof obj2.nodeType !== "undefined" && typeof obj2.childNodes !== "undefined";
-      };
-      var get_truth_map_from_arr = function(arr) {
-        let res2 = {};
-        each(arr, function(v, i) {
-          res2[v] = true;
-        });
-        return res2;
-      };
-      var get_arr_from_truth_map = function(truth_map) {
-        let res2 = [];
-        each(truth_map, function(v, i) {
-          res2.push(i);
-        });
-        return res2;
-      };
-      var get_map_from_arr = function(arr) {
-        let res2 = {};
-        for (let c2 = 0, l2 = arr.length; c2 < l2; c2++) {
-          res2[arr[c2]] = c2;
-        }
-        return res2;
-      };
-      var arr_like_to_arr = function(arr_like) {
-        let res2 = new Array(arr_like.length);
-        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
-          res2[c2] = arr_like[c2];
-        }
-        ;
-        return res2;
-      };
-      var is_ctrl = function(obj2) {
-        return typeof obj2 !== "undefined" && obj2 !== null && is_defined(obj2.__type_name) && is_defined(obj2.content) && is_defined(obj2.dom);
-      };
-      var map_loaded_type_fn_checks = {};
-      var map_loaded_type_abbreviations = {
-        "object": "o",
-        "number": "n",
-        "string": "s",
-        "function": "f",
-        "boolean": "b",
-        "undefined": "u",
-        "null": "N",
-        "array": "a",
-        "arguments": "A",
-        "date": "d",
-        "regex": "r",
-        "error": "e",
-        "buffer": "B",
-        "promise": "p",
-        "observable": "O",
-        "readable_stream": "R",
-        "writable_stream": "W",
-        "data_value": "V"
-      };
-      var using_type_plugins = false;
-      var invert = (obj2) => {
-        if (!is_array(obj2)) {
-          let res2 = {};
-          each(obj2, (v, k) => {
-            res2[v] = k;
-          });
-          return res2;
-        } else {
-          console.trace();
-          throw "invert(obj) not supported on arrays";
-        }
-      };
-      var map_loaded_type_names = invert(map_loaded_type_abbreviations);
-      var load_type = (name, abbreviation, fn_detect_instance) => {
-        map_loaded_type_fn_checks[name] = fn_detect_instance;
-        map_loaded_type_names[abbreviation] = name;
-        map_loaded_type_abbreviations[name] = abbreviation;
-        using_type_plugins = true;
-      };
-      var tof = (obj2, t12) => {
-        let res2 = t12 || typeof obj2;
-        if (using_type_plugins) {
-          let res3;
-          each(map_loaded_type_fn_checks, (fn_check, name, stop) => {
-            if (fn_check(obj2)) {
-              res3 = name;
-              stop();
-            }
-          });
-          if (res3) {
-            return res3;
-          }
-        }
-        if (res2 === "number" || res2 === "string" || res2 === "function" || res2 === "boolean") {
-          return res2;
-        }
-        if (res2 === "object") {
-          if (typeof obj2 !== "undefined") {
-            if (obj2 === null) {
-              return "null";
-            }
-            if (obj2.__type) {
-              return obj2.__type;
-            } else if (obj2.__type_name) {
-              return obj2.__type_name;
-            } else {
-              if (obj2 instanceof Promise) {
-                return "promise";
-              }
-              if (is_ctrl(obj2)) {
-                return "control";
-              }
-              if (obj2 instanceof Date) {
-                return "date";
-              }
-              if (is_array(obj2)) {
-                return "array";
-              } else {
-                if (obj2 instanceof Error) {
-                  res2 = "error";
-                } else if (obj2 instanceof RegExp) res2 = "regex";
-                if (typeof window === "undefined") {
-                  if (obj2 && obj2.readInt8) res2 = "buffer";
-                }
-              }
-              return res2;
-            }
-          } else {
-            return "undefined";
-          }
-        }
-        return res2;
-      };
-      var tf2 = (obj2) => {
-        let res2 = typeof obj2;
-        if (using_type_plugins) {
-          let res3;
-          each(map_loaded_type_fn_checks, (fn_check, name, stop) => {
-            if (fn_check(obj2)) {
-              res3 = map_loaded_type_abbreviations[name];
-              stop();
-            }
-          });
-          if (res3) {
-            return res3;
-          }
-        }
-        if (res2 === "number" || res2 === "string" || res2 === "function" || res2 === "boolean" || res2 === "undefined") {
-          return res2[0];
-        } else {
-          if (obj2 === null) {
-            return "N";
-          } else {
-            if (running_in_node) {
-              if (obj2 instanceof Readable_Stream) {
-                return "R";
-              } else if (obj2 instanceof Writable_Stream) {
-                return "W";
-              } else if (obj2 instanceof Transform_Stream) {
-                return "T";
-              }
-            }
-            if (typeof Buffer !== "undefined" && obj2 instanceof Buffer) {
-              return "B";
-            } else if (obj2 instanceof Promise) {
-              return "p";
-            } else if (obj2 instanceof Date) {
-              return "d";
-            } else if (is_array(obj2)) {
-              return "a";
-            } else {
-              if (obj2._is_observable === true) {
-                return "O";
-              } else {
-                if (typeof obj2.callee === "function") {
-                  return "A";
-                } else if (obj2 instanceof Error) {
-                  return "e";
-                } else if (obj2 instanceof RegExp) return "r";
-                return "o";
-              }
-            }
-            return res2;
-          }
-        }
-        console.trace();
-        console.log("item", item);
-        throw "type not found";
-        return res2;
-      };
-      var atof = (arr) => {
-        let res2 = new Array(arr.length);
-        for (let c2 = 0, l2 = arr.length; c2 < l2; c2++) {
-          res2[c2] = tof(arr[c2]);
-        }
-        return res2;
-      };
-      var is_defined = (value2) => {
-        return typeof value2 != "undefined";
-      };
-      var stringify = JSON.stringify;
-      var _get_item_sig = (i, arr_depth) => {
-        let res2;
-        let t12 = typeof i;
-        if (t12 === "string") {
-          res2 = "s";
-        } else if (t12 === "number") {
-          res2 = "n";
-        } else if (t12 === "boolean") {
-          res2 = "b";
-        } else if (t12 === "function") {
-          res2 = "f";
-        } else {
-          let t = tof(i, t12);
-          if (t === "array") {
-            if (arr_depth) {
-              res2 = "[";
-              for (let c2 = 0, l2 = i.length; c2 < l2; c2++) {
-                if (c2 > 0) res2 = res2 + ",";
-                res2 = res2 + get_item_sig(i[c2], arr_depth - 1);
-              }
-              res2 = res2 + "]";
-            } else {
-              res2 = "a";
-            }
-          } else if (t === "control") {
-            res2 = "c";
-          } else if (t === "date") {
-            res2 = "d";
-          } else if (t === "observable") {
-            res2 = "O";
-          } else if (t === "regex") {
-            res2 = "r";
-          } else if (t === "buffer") {
-            res2 = "B";
-          } else if (t === "readable_stream") {
-            res2 = "R";
-          } else if (t === "writable_stream") {
-            res2 = "W";
-          } else if (t === "object") {
-            res2 = "o";
-          } else if (t === "undefined") {
-            res2 = "u";
-          } else {
-            if (t === "collection_index") {
-              return "X";
-            } else if (t === "data_object") {
-              if (i._abstract) {
-                res2 = "~D";
-              } else {
-                res2 = "D";
-              }
-            } else {
-              if (t === "data_value") {
-                if (i._abstract) {
-                  res2 = "~V";
-                } else {
-                  res2 = "V";
-                }
-              } else if (t === "null") {
-                res2 = "!";
-              } else if (t === "collection") {
-                if (i._abstract) {
-                  res2 = "~C";
-                } else {
-                  res2 = "C";
-                }
-              } else {
-                res2 = "?";
-              }
-            }
-          }
-        }
-        return res2;
-      };
-      var get_item_sig = (item2, arr_depth) => {
-        if (arr_depth) {
-          return _get_item_sig(item2, arr_depth);
-        }
-        const t = tof(item2);
-        if (map_loaded_type_abbreviations[t]) {
-          return map_loaded_type_abbreviations[t];
-        } else {
-          let bt = typeof item2;
-          if (bt === "object") {
-            if (is_array(item2)) {
-              return "a";
-            } else {
-              return "o";
-            }
-          } else {
-            console.log("map_loaded_type_abbreviations type name not found", t);
-            console.log("bt", bt);
-            console.trace();
-            throw "stop";
-          }
-        }
-      };
-      var get_a_sig2 = (a) => {
-        let c2 = 0, l2 = a.length;
-        let res2 = "[";
-        let first = true;
-        for (c2 = 0; c2 < l2; c2++) {
-          if (!first) {
-            res2 = res2 + ",";
-          }
-          first = false;
-          res2 = res2 + get_item_sig(a[c2]);
-        }
-        res2 = res2 + "]";
-        return res2;
-      };
-      var deep_sig = (item2, max_depth = -1, depth = 0) => {
-        const t = tf2(item2);
-        let res2 = "";
-        if (t === "a") {
-          const l2 = item2.length;
-          if (max_depth === -1 || depth <= max_depth) {
-            res2 = res2 + "[";
-            let first = true;
-            for (let c2 = 0; c2 < l2; c2++) {
-              if (!first) res2 = res2 + ",";
-              res2 = res2 + deep_sig(item2[c2], max_depth, depth + 1);
-              first = false;
-            }
-            res2 = res2 + "]";
-          } else {
-            return "a";
-          }
-        } else if (t === "A") {
-          const l2 = item2.length;
-          let first = true;
-          for (let c2 = 0; c2 < l2; c2++) {
-            if (!first) res2 = res2 + ",";
-            res2 = res2 + deep_sig(item2[c2], max_depth, depth + 1);
-            first = false;
-          }
-        } else if (t === "o") {
-          if (max_depth === -1 || depth <= max_depth) {
-            let res3 = "{";
-            let first = true;
-            each(item2, (v, k) => {
-              if (!first) res3 = res3 + ",";
-              res3 = res3 + '"' + k + '":' + deep_sig(v, max_depth, depth + 1);
-              first = false;
-            });
-            res3 = res3 + "}";
-            return res3;
-          } else {
-            return "o";
-          }
-        } else {
-          res2 = res2 + t;
-        }
-        return res2;
-      };
-      var trim_sig_brackets = function(sig) {
-        if (tof(sig) === "string") {
-          if (sig.charAt(0) == "[" && sig.charAt(sig.length - 1) == "]") {
-            return sig.substring(1, sig.length - 1);
-          } else {
-            return sig;
-          }
-        }
-      };
-      var arr_trim_undefined = function(arr_like) {
-        let res2 = [];
-        let last_defined = -1;
-        let t, v;
-        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
-          v = arr_like[c2];
-          t = tof(v);
-          if (t == "undefined") {
-          } else {
-            last_defined = c2;
-          }
-        }
-        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
-          if (c2 <= last_defined) {
-            res2.push(arr_like[c2]);
-          }
-        }
-        return res2;
-      };
-      var functional_polymorphism = function(options, fn) {
-        let a0 = arguments;
-        if (a0.length === 1) {
-          fn = a0[0];
-          options = null;
-        }
-        let arr_slice = Array.prototype.slice;
-        let arr, sig, a2, l2, a;
-        return function() {
-          a = arguments;
-          l2 = a.length;
-          if (l2 === 1) {
-            sig = get_item_sig([a[0]], 1);
-            a2 = [a[0]];
-            a2.l = 1;
-            return fn.call(this, a2, sig);
-          } else if (l2 > 1) {
-            arr = arr_trim_undefined(arr_slice.call(a, 0));
-            sig = get_item_sig(arr, 1);
-            arr.l = arr.length;
-            return fn.call(this, arr, sig);
-          } else if (a.length === 0) {
-            arr = new Array(0);
-            arr.l = 0;
-            return fn.call(this, arr, "[]");
-          }
-        };
-      };
-      var fp = functional_polymorphism;
-      var parse_sig = (str_sig, opts = {}) => {
-        const sig2 = str_sig.split(", ").join(",");
-        const sig_items = sig2.split(",");
-        const res2 = [];
-        each(sig_items, (sig_item) => {
-          if (sig_item.length === 1) {
-            let type_name = map_loaded_type_names[sig_item];
-            res2.push({
-              abbreviation: sig_item,
-              type_name
-            });
-          } else {
-            let suffix_modifiers;
-            let zero_or_more = false;
-            let one_or_more = false;
-            let type_name = sig_item;
-            const obj_res = {
-              type_name
-            };
-            const distil_suffix_modifiers = () => {
-              let last_char = type_name.substr(type_name.length - 1);
-              if (last_char === "*") {
-                type_name = type_name.substr(0, type_name.length - 1);
-                zero_or_more = true;
-                obj_res.zero_or_more = true;
-                obj_res.modifiers = obj_res.modifiers || [];
-                obj_res.modifiers.push("*");
-                distil_suffix_modifiers();
-              } else if (last_char === "+") {
-                type_name = type_name.substr(0, type_name.length - 1);
-                one_or_more = true;
-                obj_res.one_or_more = true;
-                obj_res.modifiers = obj_res.modifiers || [];
-                obj_res.modifiers.push("+");
-                distil_suffix_modifiers();
-              } else {
-              }
-            };
-            distil_suffix_modifiers();
-            obj_res.type_name = type_name;
-            res2.push(obj_res);
-          }
-        });
-        return res2;
-      };
-      var mfp_not_sigs = get_truth_map_from_arr(["pre", "default", "post"]);
-      var log = () => {
-      };
-      var combinations = (arr, arr_idxs_to_ignore) => {
-        const map_ignore_idxs = {};
-        if (arr_idxs_to_ignore) {
-          each(arr_idxs_to_ignore, (idx_to_ignore) => {
-            map_ignore_idxs[idx_to_ignore] = true;
-          });
-        }
-        if (arr.some((subArray) => subArray.length === 0)) {
-          return [];
-        }
-        const res2 = [];
-        const l2 = arr.length;
-        const arr_idxs_num_options = new Uint32Array(l2);
-        each(arr, (arr_item1, i1) => {
-          arr_idxs_num_options[i1] = arr_item1.length;
-        });
-        const arr_current_option_idxs = new Uint32Array(l2).fill(0);
-        const result_from_indexes = (arr2, arg_indexes) => {
-          const res3 = new Array(l2);
-          if (arg_indexes.length === l2) {
-            for (var c2 = 0; c2 < l2; c2++) {
-              res3[c2] = arr2[c2][arg_indexes[c2]];
-            }
-          } else {
-            console.trace();
-            throw "Arguments length mismatch";
-          }
-          return res3;
-        };
-        const incr = () => {
-          for (c = l2 - 1; c >= 0; c--) {
-            const ival = arr_current_option_idxs[c];
-            const max = arr_idxs_num_options[c] - 1;
-            if (ival < max) {
-              arr_current_option_idxs[c]++;
-              break;
-            } else {
-              if (c === 0) {
-                return false;
-              } else {
-                arr_current_option_idxs.fill(0, c);
-              }
-            }
-          }
-          return true;
-        };
-        let vals = result_from_indexes(arr, arr_current_option_idxs);
-        res2.push(vals);
-        while (incr()) {
-          let vals2 = result_from_indexes(arr, arr_current_option_idxs);
-          res2.push(vals2);
-        }
-        return res2;
-      };
-      var map_native_types = {
-        "string": true,
-        "boolean": true,
-        "number": true,
-        "object": true
-      };
-      var mfp = function() {
-        const a1 = arguments;
-        const sig1 = get_a_sig2(a1);
-        let options = {};
-        let fn_pre, provided_map_sig_fns, inner_map_sig_fns = {}, inner_map_parsed_sigs = {}, arr_sig_parsed_sig_fns = [], fn_post;
-        let tm_sig_fns;
-        let fn_default;
-        let single_fn;
-        let req_sig_single_fn;
-        if (sig1 === "[o]") {
-          provided_map_sig_fns = a1[0];
-        } else if (sig1 === "[o,o]") {
-          options = a1[0];
-          provided_map_sig_fns = a1[1];
-        } else if (sig1 === "[o,f]") {
-          options = a1[0];
-          single_fn = a1[1];
-        } else if (sig1 === "[o,s,f]") {
-          options = a1[0];
-          req_sig_single_fn = a1[1];
-          single_fn = a1[2];
-          provided_map_sig_fns = {};
-          provided_map_sig_fns[req_sig_single_fn] = single_fn;
-        } else if (sig1 === "[f,o]") {
-          single_fn = a1[0];
-          options = a1[1];
-        } else if (sig1 === "[f]") {
-          single_fn = a1[0];
-        } else {
-          console.log("sig1", sig1);
-          console.trace();
-          throw "mfp NYI";
-        }
-        let {
-          single,
-          name,
-          grammar,
-          verb,
-          noun,
-          return_type,
-          return_subtype,
-          pure,
-          main,
-          skip
-        } = options;
-        let parsed_grammar;
-        let identify, validate;
-        let dsig = deep_sig;
-        (() => {
-          if (provided_map_sig_fns) {
-            if (provided_map_sig_fns.default) fn_default = provided_map_sig_fns.default;
-            each(provided_map_sig_fns, (fn, sig) => {
-              if (typeof fn === "function") {
-                if (!mfp_not_sigs[sig]) {
-                  const parsed_sig = parse_sig(sig);
-                  const arr_args_with_modifiers = [];
-                  const arr_args_all_modification_versions = [];
-                  each(parsed_sig, (arg, i) => {
-                    arr_args_all_modification_versions[i] = [];
-                    if (arg.modifiers) {
-                      const arg_num_modifiers = arg.modifiers.length;
-                      if (arg_num_modifiers > 1) {
-                        throw "Use of more than 1 modifier is currently unsupported.";
-                      } else if (arg_num_modifiers === 1) {
-                        arr_args_with_modifiers.push([i, arg]);
-                        const single_modifier = arg.modifiers[0];
-                        if (single_modifier === "*") {
-                          arr_args_all_modification_versions[i].push("");
-                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                          const plural_name = grammar.maps.sing_plur[arg.type_name];
-                          arr_args_all_modification_versions[i].push(plural_name);
-                        }
-                        if (single_modifier === "+") {
-                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                          const plural_name = grammar.maps.sing_plur[arg.type_name];
-                          arr_args_all_modification_versions[i].push(plural_name);
-                        }
-                        if (single_modifier === "?") {
-                          arr_args_all_modification_versions[i].push("");
-                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                        }
-                      }
-                    } else {
-                      arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                    }
-                  });
-                  const combo_args = combinations(arr_args_all_modification_versions);
-                  const combo_sigs = [];
-                  let i_first_of_last_undefined = -1;
-                  each(combo_args, (arg_set) => {
-                    let combo_sig = "";
-                    each(arg_set, (arg, i) => {
-                      let lsigb4 = combo_sig.length;
-                      if (i > 0) {
-                        combo_sig = combo_sig + ",";
-                      }
-                      if (arg === "") {
-                        combo_sig = combo_sig + "u";
-                        if (i_first_of_last_undefined === -1) {
-                          i_first_of_last_undefined = lsigb4;
-                        }
-                      } else {
-                        combo_sig = combo_sig + arg;
-                        i_first_of_last_undefined = -1;
-                      }
-                    });
-                    if (i_first_of_last_undefined > 0) {
-                      const combo_sig_no_last_undefined = combo_sig.substr(0, i_first_of_last_undefined);
-                      combo_sigs.push(combo_sig_no_last_undefined);
-                    }
-                    combo_sigs.push(combo_sig);
-                  });
-                  if (combo_sigs.length > 0) {
-                    each(combo_sigs, (combo_sig) => {
-                      inner_map_sig_fns[combo_sig] = fn;
-                    });
-                  } else {
-                    inner_map_sig_fns[sig] = fn;
-                  }
-                  inner_map_parsed_sigs[sig] = parsed_sig;
-                  arr_sig_parsed_sig_fns.push([sig, parsed_sig, fn]);
-                } else {
-                  console.log("ommiting, not parsing sig", sig);
-                }
-              } else {
-                console.log("fn", fn);
-                console.trace();
-                throw "Expected: function";
-              }
-              ;
-            });
-          }
-          each(inner_map_sig_fns, (fn, sig) => {
-            tm_sig_fns = tm_sig_fns || {};
-            tm_sig_fns[sig] = true;
-          });
-        })();
-        const res2 = function() {
-          const a2 = arguments;
-          const l2 = a2.length;
-          console.log("");
-          console.log("calling mfp function");
-          console.log("--------------------");
-          console.log("");
-          let mfp_fn_call_deep_sig;
-          let ltof = tof;
-          const lsig = dsig;
-          let ltf = tf2;
-          mfp_fn_call_deep_sig = lsig(a2);
-          const mfp_fn_call_shallow_sig = (() => {
-            if (!a2 || a2.length === 0) return "";
-            let res3 = "";
-            for (let i = 0; i < a2.length; i++) {
-              if (i > 0) res3 = res3 + ",";
-              res3 = res3 + ltf(a2[i]);
-            }
-            return res3;
-          })();
-          let do_skip = false;
-          if (skip) {
-            if (skip(a2)) {
-              do_skip = true;
-            } else {
-            }
-          }
-          if (!do_skip) {
-            if (inner_map_sig_fns[mfp_fn_call_deep_sig]) {
-              return inner_map_sig_fns[mfp_fn_call_deep_sig].apply(this, a2);
-            } else if (mfp_fn_call_shallow_sig && inner_map_sig_fns[mfp_fn_call_shallow_sig]) {
-              return inner_map_sig_fns[mfp_fn_call_shallow_sig].apply(this, a2);
-            } else {
-              let idx_last_fn = -1;
-              let idx_last_obj = -1;
-              each(a2, (arg, i_arg) => {
-                i_arg = parseInt(i_arg, 10);
-                const targ = tf2(arg);
-                if (targ === "o") {
-                  idx_last_obj = i_arg;
-                }
-                if (targ === "f") {
-                  idx_last_fn = i_arg;
-                }
-              });
-              const last_arg_is_fn = idx_last_fn > -1 && idx_last_fn === a2.length - 1;
-              const last_arg_is_obj = idx_last_obj > -1 && idx_last_obj === a2.length - 1;
-              const second_last_arg_is_obj = idx_last_obj > -1 && idx_last_obj === a2.length - 2;
-              let possible_options_obj;
-              if (last_arg_is_obj) possible_options_obj = a2[idx_last_obj];
-              const new_args_arrangement = [];
-              for (let f = 0; f < idx_last_obj; f++) {
-                new_args_arrangement.push(a2[f]);
-              }
-              each(possible_options_obj, (value2, key2) => {
-                new_args_arrangement.push(value2);
-              });
-              let naa_sig = lsig(new_args_arrangement);
-              naa_sig = naa_sig.substring(1, naa_sig.length - 1);
-              if (inner_map_sig_fns[naa_sig]) {
-                return inner_map_sig_fns[naa_sig].apply(this, new_args_arrangement);
-              } else {
-                if (fn_default) {
-                  return fn_default.call(this, a2, mfp_fn_call_deep_sig);
-                } else {
-                  if (single_fn) {
-                    console.log("pre apply single_fn");
-                    return single_fn.apply(this, a2);
-                  } else {
-                    console.log("Object.keys(inner_map_parsed_sigs)", Object.keys(inner_map_parsed_sigs));
-                    console.trace();
-                    console.log("mfp_fn_call_deep_sig", mfp_fn_call_deep_sig);
-                    console.log("provided_map_sig_fns", provided_map_sig_fns);
-                    if (provided_map_sig_fns) log("Object.keys(provided_map_sig_fns)", Object.keys(provided_map_sig_fns));
-                    console.log("Object.keys(inner_map_sig_fns)", Object.keys(inner_map_sig_fns));
-                    console.trace();
-                    throw "no signature match found. consider using a default signature. mfp_fn_call_deep_sig: " + mfp_fn_call_deep_sig;
-                  }
-                }
-              }
-            }
-          }
-        };
-        const _ = {};
-        if (name) _.name = name;
-        if (single) _.single = single;
-        if (skip) _.skip = skip;
-        if (grammar) _.grammar = grammar;
-        if (typeof options !== "undefined" && options.async) _.async = options.async;
-        if (main === true) _.main = true;
-        if (return_type) _.return_type = return_type;
-        if (return_subtype) _.return_subtype = return_subtype;
-        if (pure) _.pure = pure;
-        if (tm_sig_fns) _.map_sigs = tm_sig_fns;
-        if (Object.keys(_).length > 0) {
-          res2._ = _;
-        }
-        return res2;
-      };
-      var arrayify = fp(function(a, sig) {
-        let param_index, num_parallel = 1, delay = 0, fn;
-        let res2;
-        let process_as_fn = function() {
-          res2 = function() {
-            let a2 = arr_like_to_arr(arguments), ts = atof(a2), t = this;
-            let last_arg = a2[a2.length - 1];
-            if (tof(last_arg) == "function") {
-              if (typeof param_index !== "undefined" && ts[param_index] == "array") {
-                let res3 = [];
-                let fns = [];
-                each(a2[param_index], function(v, i) {
-                  let new_params = a2.slice(0, a2.length - 1);
-                  new_params[param_index] = v;
-                  fns.push([t, fn, new_params]);
-                });
-                call_multiple_callback_functions(fns, num_parallel, delay, (err, res4) => {
-                  if (err) {
-                    console.trace();
-                    throw err;
-                  } else {
-                    let a3 = [];
-                    a3 = a3.concat.apply(a3, res4);
-                    let callback2 = last_arg;
-                    callback2(null, a3);
-                  }
-                });
-              } else {
-                return fn.apply(t, a2);
-              }
-            } else {
-              if (typeof param_index !== "undefined" && ts[param_index] == "array") {
-                let res3 = [];
-                for (let c2 = 0, l2 = a2[param_index].length; c2 < l2; c2++) {
-                  a2[param_index] = arguments[param_index][c2];
-                  let result = fn.apply(t, a2);
-                  res3.push(result);
-                }
-                return res3;
-              } else {
-                return fn.apply(t, a2);
-              }
-            }
-          };
-        };
-        if (sig == "[o]") {
-          let res3 = [];
-          each(a[0], function(v, i) {
-            res3.push([v, i]);
-          });
-        } else if (sig == "[f]") {
-          param_index = 0, fn = a[0];
-          process_as_fn();
-        } else if (sig == "[n,f]") {
-          param_index = a[0], fn = a[1];
-          process_as_fn();
-        } else if (sig == "[n,n,f]") {
-          param_index = a[0], num_parallel = a[1], fn = a[2];
-          process_as_fn();
-        } else if (sig == "[n,n,n,f]") {
-          param_index = a[0], num_parallel = a[1], delay = a[2], fn = a[3];
-          process_as_fn();
-        }
-        return res2;
-      });
-      var mapify = (target) => {
-        let tt = tof(target);
-        if (tt == "function") {
-          let res2 = fp(function(a, sig) {
-            let that2 = this;
-            if (sig == "[o]") {
-              let map = a[0];
-              each(map, function(v, i) {
-                target.call(that2, v, i);
-              });
-            } else if (sig == "[o,f]") {
-              let map = a[0];
-              let callback2 = a[1];
-              let fns = [];
-              each(map, function(v, i) {
-                fns.push([target, [v, i]]);
-              });
-              call_multi(fns, function(err_multi, res_multi) {
-                if (err_multi) {
-                  callback2(err_multi);
-                } else {
-                  callback2(null, res_multi);
-                }
-              });
-            } else if (a.length >= 2) {
-              target.apply(this, a);
-            }
-          });
-          return res2;
-        } else if (tt == "array") {
-          let res2 = {};
-          if (arguments.length == 1) {
-            if (is_arr_of_strs(target)) {
-              each(target, function(v, i) {
-                res2[v] = true;
-              });
-            } else {
-              each(target, function(v, i) {
-                res2[v[0]] = v[1];
-              });
-            }
-          } else {
-            let by_property_name = arguments[1];
-            each(target, function(v, i) {
-              res2[v[by_property_name]] = v;
-            });
-          }
-          return res2;
-        }
-      };
-      var clone = fp((a, sig) => {
-        let obj2 = a[0];
-        if (a.l === 1) {
-          if (obj2 && typeof obj2.clone === "function") {
-            return obj2.clone();
-          } else {
-            let t = tof(obj2);
-            if (t === "array") {
-              let res2 = [];
-              each(obj2, (v) => {
-                res2.push(clone(v));
-              });
-              return res2;
-            } else if (t === "undefined") {
-              return void 0;
-            } else if (t === "string") {
-              return obj2;
-            } else if (t === "number") {
-              return obj2;
-            } else if (t === "function") {
-              return obj2;
-            } else if (t === "boolean") {
-              return obj2;
-            } else if (t === "null") {
-              return obj2;
-            } else if (t === "date") {
-              return new Date(obj2.getTime());
-            } else if (t === "regex") {
-              return new RegExp(obj2.source, obj2.flags);
-            } else if (t === "buffer") {
-              if (typeof Buffer !== "undefined" && Buffer.from) {
-                return Buffer.from(obj2);
-              } else if (obj2 && typeof obj2.slice === "function") {
-                return obj2.slice(0);
-              } else {
-                return obj2;
-              }
-            } else if (t === "error") {
-              const cloned_error = new obj2.constructor(obj2.message);
-              cloned_error.name = obj2.name;
-              cloned_error.stack = obj2.stack;
-              each(obj2, (value2, key2) => {
-                if (key2 !== "message" && key2 !== "name" && key2 !== "stack") {
-                  cloned_error[key2] = clone(value2);
-                }
-              });
-              return cloned_error;
-            } else if (t === "object") {
-              const res2 = {};
-              each(obj2, (value2, key2) => {
-                res2[key2] = clone(value2);
-              });
-              return res2;
-            } else {
-              return obj2;
-            }
-          }
-        } else if (a.l === 2 && tof(a[1]) === "number") {
-          let res2 = [];
-          for (let c2 = 0; c2 < a[1]; c2++) {
-            res2.push(clone(obj2));
-          }
-          return res2;
-        }
-      });
-      var set_vals = function(obj2, map) {
-        each(map, function(v, i) {
-          obj2[i] = v;
-        });
-      };
-      var ll_set = (obj2, prop_name2, prop_value) => {
-        let arr = prop_name2.split(".");
-        let c2 = 0, l2 = arr.length;
-        let i = obj2._ || obj2, s;
-        while (c2 < l2) {
-          s = arr[c2];
-          if (typeof i[s] == "undefined") {
-            if (c2 - l2 == -1) {
-              i[s] = prop_value;
-            } else {
-              i[s] = {};
-            }
-          } else {
-            if (c2 - l2 == -1) {
-              i[s] = prop_value;
-            }
-          }
-          i = i[s];
-          c2++;
-        }
-        ;
-        return prop_value;
-      };
-      var ll_get = (a0, a1) => {
-        if (a0 && a1) {
-          let i = a0._ || a0;
-          if (a1 == ".") {
-            if (typeof i["."] == "undefined") {
-              return void 0;
-            } else {
-              return i["."];
-            }
-          } else {
-            let arr = a1.split(".");
-            let c2 = 0, l2 = arr.length, s;
-            while (c2 < l2) {
-              s = arr[c2];
-              if (typeof i[s] == "undefined") {
-                if (c2 - l2 == -1) {
-                } else {
-                  throw "object " + s + " not found";
-                }
-              } else {
-                if (c2 - l2 == -1) {
-                  return i[s];
-                }
-              }
-              i = i[s];
-              c2++;
-            }
-          }
-        }
-      };
-      var truth = function(value2) {
-        return value2 === true;
-      };
-      var iterate_ancestor_classes = (obj2, callback2) => {
-        let ctu = true;
-        let stop = () => {
-          ctu = false;
-        };
-        callback2(obj2, stop);
-        if (obj2._superclass && ctu) {
-          iterate_ancestor_classes(obj2._superclass, callback2);
-        }
-      };
-      var is_arr_of_t = function(obj2, type_name) {
-        let t = tof(obj2), tv;
-        if (t === "array") {
-          let res2 = true;
-          each(obj2, function(v, i) {
-            tv = tof(v);
-            if (tv != type_name) res2 = false;
-          });
-          return res2;
-        } else {
-          return false;
-        }
-      };
-      var is_arr_of_arrs = function(obj2) {
-        return is_arr_of_t(obj2, "array");
-      };
-      var is_arr_of_strs = function(obj2) {
-        return is_arr_of_t(obj2, "string");
-      };
-      var input_processors = {};
-      var output_processors = {};
-      var call_multiple_callback_functions = fp(function(a, sig) {
-        let arr_functions_params_pairs, callback2, return_params = false;
-        let delay;
-        let num_parallel = 1;
-        if (a.l === 1) {
-        } else if (a.l === 2) {
-          arr_functions_params_pairs = a[0];
-          callback2 = a[1];
-        } else if (a.l === 3) {
-          if (sig === "[a,n,f]") {
-            arr_functions_params_pairs = a[0];
-            num_parallel = a[1];
-            callback2 = a[2];
-          } else if (sig === "[n,a,f]") {
-            arr_functions_params_pairs = a[1];
-            num_parallel = a[0];
-            callback2 = a[2];
-          } else if (sig === "[a,f,b]") {
-            arr_functions_params_pairs = a[0];
-            callback2 = a[1];
-            return_params = a[2];
-          }
-        } else if (a.l === 4) {
-          if (sig === "[a,n,n,f]") {
-            arr_functions_params_pairs = a[0];
-            num_parallel = a[1];
-            delay = a[2];
-            callback2 = a[3];
-          } else if (sig == "[n,n,a,f]") {
-            arr_functions_params_pairs = a[2];
-            num_parallel = a[0];
-            delay = a[1];
-            callback2 = a[3];
-          }
-        }
-        let res2 = [];
-        let l2 = arr_functions_params_pairs.length;
-        let c2 = 0;
-        let count_unfinished = l2;
-        let num_currently_executing = 0;
-        let process2 = (delay2) => {
-          num_currently_executing++;
-          let main = () => {
-            let pair = arr_functions_params_pairs[c2];
-            let context2;
-            let fn, params, fn_callback;
-            let pair_sig = get_item_sig(pair);
-            let t_pair = tof(pair);
-            if (t_pair == "function") {
-              fn = pair;
-              params = [];
-            } else {
-              if (pair) {
-                if (pair.length == 1) {
-                }
-                if (pair.length == 2) {
-                  if (tof(pair[1]) == "function") {
-                    context2 = pair[0];
-                    fn = pair[1];
-                    params = [];
-                  } else {
-                    fn = pair[0];
-                    params = pair[1];
-                  }
-                }
-                if (pair.length == 3) {
-                  if (tof(pair[0]) === "function" && tof(pair[1]) === "array" && tof(pair[2]) === "function") {
-                    fn = pair[0];
-                    params = pair[1];
-                    fn_callback = pair[2];
-                  }
-                  if (tof(pair[1]) === "function" && tof(pair[2]) === "array") {
-                    context2 = pair[0];
-                    fn = pair[1];
-                    params = pair[2];
-                  }
-                }
-                if (pair.length == 4) {
-                  context2 = pair[0];
-                  fn = pair[1];
-                  params = pair[2];
-                  fn_callback = pair[3];
-                }
-              } else {
-              }
-            }
-            let i = c2;
-            c2++;
-            let cb = (err, res22) => {
-              num_currently_executing--;
-              count_unfinished--;
-              if (err) {
-                let stack = new Error().stack;
-                callback2(err);
-              } else {
-                if (return_params) {
-                  res2[i] = [params, res22];
-                } else {
-                  res2[i] = res22;
-                }
-                if (fn_callback) {
-                  fn_callback(null, res22);
-                }
-                if (c2 < l2) {
-                  if (num_currently_executing < num_parallel) {
-                    process2(delay2);
-                  }
-                } else {
-                  if (count_unfinished <= 0) {
-                    callback2(null, res2);
-                  }
-                }
-              }
-            };
-            let arr_to_call = params || [];
-            arr_to_call.push(cb);
-            if (fn) {
-              if (context2) {
-                fn.apply(context2, arr_to_call);
-              } else {
-                fn.apply(this, arr_to_call);
-              }
-            } else {
-            }
-          };
-          if (arr_functions_params_pairs[c2]) {
-            if (delay2) {
-              setTimeout(main, delay2);
-            } else {
-              main();
-            }
-          }
-        };
-        if (arr_functions_params_pairs.length > 0) {
-          while (c2 < l2 && num_currently_executing < num_parallel) {
-            if (delay) {
-              process2(delay * c2);
-            } else {
-              process2();
-            }
-          }
-        } else {
-          if (callback2) {
-          }
-        }
-      });
-      var call_multi = call_multiple_callback_functions;
-      var Fns = function(arr) {
-        let fns = arr || [];
-        fns.go = function(parallel, delay, callback2) {
-          let a = arguments;
-          let al = a.length;
-          if (al == 1) {
-            call_multi(fns, a[0]);
-          }
-          if (al == 2) {
-            call_multi(parallel, fns, delay);
-          }
-          if (al == 3) {
-            call_multi(parallel, delay, fns, callback2);
-          }
-        };
-        return fns;
-      };
-      var native_constructor_tof = function(value2) {
-        if (value2 === String) {
-          return "String";
-        }
-        if (value2 === Number) {
-          return "Number";
-        }
-        if (value2 === Boolean) {
-          return "Boolean";
-        }
-        if (value2 === Array) {
-          return "Array";
-        }
-        if (value2 === Object) {
-          return "Object";
-        }
-      };
-      var sig_match = function(sig1, sig2) {
-        let sig1_inner = sig1.substr(1, sig1.length - 2);
-        let sig2_inner = sig2.substr(1, sig2.length - 2);
-        if (sig1_inner.indexOf("[") > -1 || sig1_inner.indexOf("]") > -1 || sig2_inner.indexOf("[") > -1 || sig2_inner.indexOf("]") > -1) {
-          throw "sig_match only supports flat signatures.";
-        }
-        let sig1_parts = sig1_inner.split(",");
-        let sig2_parts = sig2_inner.split(",");
-        let res2 = true;
-        if (sig1_parts.length == sig2_parts.length) {
-          let c2 = 0, l2 = sig1_parts.length, i1, i2;
-          while (res2 && c2 < l2) {
-            i1 = sig1_parts[c2];
-            i2 = sig2_parts[c2];
-            if (i1 === i2) {
-            } else {
-              if (i1 !== "?") {
-                res2 = false;
-              }
-            }
-            c2++;
-          }
-          return res2;
-        } else {
-          return false;
-        }
-      };
-      var remove_sig_from_arr_shell = function(sig) {
-        if (sig[0] == "[" && sig[sig.length - 1] == "]") {
-          return sig.substring(1, sig.length - 1);
-        }
-        return sig;
-      };
-      var str_arr_mapify = function(fn) {
-        let res2 = fp(function(a, sig) {
-          if (a.l == 1) {
-            if (sig == "[s]") {
-              let s_pn = a[0].split(" ");
-              if (s_pn.length > 1) {
-                return res2.call(this, s_pn);
-              } else {
-                return fn.call(this, a[0]);
-              }
-            }
-            if (tof(a[0]) == "array") {
-              let res22 = {}, that2 = this;
-              each(a[0], function(v, i) {
-                res22[v] = fn.call(that2, v);
-              });
-              return res22;
-            }
-          }
-        });
-        return res2;
-      };
-      var to_arr_strip_keys = (obj2) => {
-        let res2 = [];
-        each(obj2, (v) => {
-          res2.push(v);
-        });
-        return res2;
-      };
-      var arr_objs_to_arr_keys_values_table = (arr_objs) => {
-        let keys = Object.keys(arr_objs[0]);
-        let arr_items = [], arr_values;
-        each(arr_objs, (item2) => {
-          arr_items.push(to_arr_strip_keys(item2));
-        });
-        return [keys, arr_items];
-      };
-      var set_arr_tree_value = (arr_tree, arr_path, value2) => {
-        let item_current = arr_tree;
-        let last_item_current, last_path_item;
-        each(arr_path, (path_item) => {
-          last_item_current = item_current;
-          item_current = item_current[path_item];
-          last_path_item = path_item;
-        });
-        last_item_current[last_path_item] = value2;
-      };
-      var get_arr_tree_value = (arr_tree, arr_path) => {
-        let item_current = arr_tree;
-        each(arr_path, (path_item) => {
-          item_current = item_current[path_item];
-        });
-        return item_current;
-      };
-      var deep_arr_iterate = (arr, path = [], callback2) => {
-        if (arguments.length === 2) {
-          callback2 = path;
-          path = [];
-        }
-        each(arr, (item2, i) => {
-          let c_path = clone(path);
-          c_path.push(i);
-          let t = tof(item2);
-          if (t === "array") {
-            deep_arr_iterate(item2, c_path, callback2);
-          } else {
-            callback2(c_path, item2);
-          }
-        });
-      };
-      var prom = (fn) => {
-        let fn_res = function() {
-          const a = arguments;
-          const t_a_last = typeof a[a.length - 1];
-          if (t_a_last === "function") {
-            fn.apply(this, a);
-          } else {
-            return new Promise((resolve, reject) => {
-              [].push.call(a, (err, res2) => {
-                if (err) {
-                  reject(err);
-                } else {
-                  resolve(res2);
-                }
-              });
-              fn.apply(this, a);
-            });
-          }
-        };
-        return fn_res;
-      };
-      var vectorify = (n_fn) => {
-        let fn_res = fp(function(a, sig) {
-          if (a.l > 2) {
-            throw "stop - need to check.";
-            let res2 = a[0];
-            for (let c2 = 1, l2 = a.l; c2 < l2; c2++) {
-              res2 = fn_res(res2, a[c2]);
-            }
-            return res2;
-          } else {
-            if (sig === "[n,n]") {
-              return n_fn(a[0], a[1]);
-            } else {
-              const ats = atof(a);
-              if (ats[0] === "array") {
-                if (ats[1] === "number") {
-                  const res2 = [], n = a[1], l2 = a[0].length;
-                  let c2;
-                  for (c2 = 0; c2 < l2; c2++) {
-                    res2.push(fn_res(a[0][c2], n));
-                  }
-                  return res2;
-                } else if (ats[1] === "array") {
-                  if (ats[0].length !== ats[1].length) {
-                    throw "vector array lengths mismatch";
-                  } else {
-                    const l2 = a[0].length, res2 = new Array(l2), arr2 = a[1];
-                    for (let c2 = 0; c2 < l2; c2++) {
-                      res2[c2] = fn_res(a[0][c2], arr2[c2]);
-                    }
-                    return res2;
-                  }
-                }
-              }
-            }
-          }
-          ;
-        });
-        return fn_res;
-      };
-      var n_add = (n1, n2) => n1 + n2;
-      var n_subtract = (n1, n2) => n1 - n2;
-      var n_multiply = (n1, n2) => n1 * n2;
-      var n_divide = (n1, n2) => n1 / n2;
-      var v_add = vectorify(n_add);
-      var v_subtract2 = vectorify(n_subtract);
-      var v_multiply = vectorify(n_multiply);
-      var v_divide = vectorify(n_divide);
-      var vector_magnitude = function(vector) {
-        var res2 = Math.sqrt(Math.pow(vector[0], 2) + Math.pow(vector[1], 2));
-        return res2;
-      };
-      var distance_between_points = function(points) {
-        var offset2 = v_subtract2(points[1], points[0]);
-        return vector_magnitude(offset2);
-      };
-      var map_tas_by_type = {
-        "c": Uint8ClampedArray,
-        "ui8": Uint8Array,
-        "i16": Int16Array,
-        "i32": Int32Array,
-        "ui16": Uint16Array,
-        "ui32": Uint32Array,
-        "f32": Float32Array,
-        "f64": Float64Array
-      };
-      var get_typed_array = function() {
-        const a = arguments;
-        let length, input_array;
-        const type = a[0];
-        if (is_array(a[1])) {
-          input_array = a[1];
-        } else {
-          length = a[1];
-        }
-        const ctr = map_tas_by_type[type];
-        if (ctr) {
-          if (input_array) {
-            return new ctr(input_array);
-          } else if (length) {
-            return new ctr(length);
-          }
-        }
-      };
-      var Grammar = class {
-        constructor(spec) {
-          const eg_spec = {
-            name: "User Auth Grammar"
-          };
-          const {
-            name
-          } = spec;
-          this.name = name;
-          const eg_indexing = () => {
-            let map_sing_plur = {};
-            let map_plur_sing = {};
-            let map_sing_def = {};
-            let map_sig_sing = {};
-            let map_sig0_sing = {};
-            let map_sig1_sing = {};
-            let map_sig2_sing = {};
-          };
-          this.maps = {
-            sing_plur: {},
-            plur_sing: {},
-            sing_def: {},
-            deep_sig_sing: {},
-            obj_sig_sing: {},
-            sig_levels_sing: {}
-          };
-          this.load_grammar(spec.def);
-        }
-        load_grammar(grammar_def) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          const resolve_def = (def) => {
-            const td = tf2(def);
-            if (td === "a") {
-              const res2 = [];
-              each(def, (def_item) => {
-                res2.push(resolve_def(def_item));
-              });
-              return res2;
-            } else if (td === "s") {
-              if (def === "string") {
-                return "string";
-              } else if (def === "number") {
-                return "number";
-              } else if (def === "boolean") {
-                return "boolean";
-              } else {
-                const found_sing_def = sing_def[def];
-                return found_sing_def;
-              }
-            } else if (td === "n") {
-              console.trace();
-              throw "NYI";
-            } else if (td === "b") {
-              console.trace();
-              throw "NYI";
-            }
-          };
-          const resolved_def_to_sig = (resolved_def, level = 0) => {
-            const trd = tf2(resolved_def);
-            if (trd === "s") {
-              if (resolved_def === "string") {
-                return "s";
-              } else if (resolved_def === "number") {
-                return "n";
-              } else if (resolved_def === "boolean") {
-                return "b";
-              }
-            } else if (trd === "a") {
-              let res2 = "";
-              if (level === 0) {
-              } else {
-                res2 = res2 + "[";
-              }
-              each(resolved_def, (item2, c2) => {
-                if (c2 > 0) {
-                  res2 = res2 + ",";
-                }
-                res2 = res2 + resolved_def_to_sig(item2, level + 1);
-              });
-              if (level === 0) {
-              } else {
-                res2 = res2 + "]";
-              }
-              return res2;
-            } else {
-              console.trace();
-              throw "NYI";
-            }
-            return res;
-          };
-          each(grammar_def, (def1, sing_word) => {
-            const {
-              def,
-              plural
-            } = def1;
-            sing_def[sing_word] = def;
-            sing_plur[sing_word] = plural;
-            plur_sing[plural] = sing_word;
-            const tdef = tf2(def);
-            const resolved_def = resolve_def(def);
-            const resolved_def_sig = resolved_def_to_sig(resolved_def);
-            deep_sig_sing[resolved_def_sig] = deep_sig_sing[resolved_def_sig] || [];
-            deep_sig_sing[resolved_def_sig].push(sing_word);
-            let def_is_all_custom_types = true;
-            each(def, (def_item, c2, stop) => {
-              const tdi = tf2(def_item);
-              if (tdi === "s") {
-                if (sing_def[def_item]) {
-                } else {
-                  def_is_all_custom_types = false;
-                  stop();
-                }
-              } else {
-                def_is_all_custom_types = false;
-                stop();
-              }
-            });
-            let obj_sig;
-            if (def_is_all_custom_types) {
-              obj_sig = "{";
-              each(def, (def_item, c2, stop) => {
-                if (c2 > 0) {
-                  obj_sig = obj_sig + ",";
-                }
-                const resolved = resolve_def(def_item);
-                const abr_resolved = resolved_def_to_sig(resolved);
-                obj_sig = obj_sig + '"' + def_item + '":';
-                obj_sig = obj_sig + abr_resolved;
-              });
-              obj_sig = obj_sig + "}";
-            }
-            if (obj_sig) {
-              obj_sig_sing[obj_sig] = obj_sig_sing[obj_sig] || [];
-              obj_sig_sing[obj_sig].push(sing_word);
-            }
-          });
-        }
-        tof(item2) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          const titem = tf2(item2);
-          console.log("titem", titem);
-          if (titem === "a") {
-            let all_arr_items_type;
-            each(item2, (subitem, c2, stop) => {
-              const subitem_type = this.tof(subitem);
-              console.log("subitem_type", subitem_type);
-              if (c2 === 0) {
-                all_arr_items_type = subitem_type;
-              } else {
-                if (all_arr_items_type === subitem_type) {
-                } else {
-                  all_arr_items_type = null;
-                  stop();
-                }
-              }
-            });
-            if (all_arr_items_type) {
-              console.log("has all_arr_items_type", all_arr_items_type);
-              if (!map_native_types[all_arr_items_type]) {
-                const res2 = sing_plur[all_arr_items_type];
-                return res2;
-              }
-            } else {
-              console.log("no all_arr_items_type");
-            }
-          } else {
-            return tof(item2);
-          }
-          const item_deep_sig = deep_sig(item2);
-          console.log("Grammar tof() item_deep_sig", item_deep_sig);
-          let arr_sing;
-          if (titem === "a") {
-            const unenclosed_sig = item_deep_sig.substring(1, item_deep_sig.length - 1);
-            console.log("unenclosed_sig", unenclosed_sig);
-            arr_sing = deep_sig_sing[unenclosed_sig];
-          } else {
-            arr_sing = deep_sig_sing[item_deep_sig];
-          }
-          if (arr_sing) {
-            if (arr_sing.length === 1) {
-              return arr_sing[0];
-            } else {
-              console.trace();
-              throw "NYI";
-            }
-          }
-        }
-        sig(item2, max_depth = -1, depth = 0) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          const extended_sig = (item3) => {
-            const ti = tf2(item3);
-            let res2 = "";
-            let same_grammar_type;
-            const record_subitem_sigs = (item4) => {
-              same_grammar_type = void 0;
-              let same_sig = void 0;
-              each(item4, (subitem, c2) => {
-                if (c2 > 0) {
-                  res2 = res2 + ",";
-                }
-                const sig_subitem = this.sig(subitem, max_depth, depth + 1);
-                if (same_sig === void 0) {
-                  same_sig = sig_subitem;
-                } else {
-                  if (sig_subitem !== same_sig) {
-                    same_sig = false;
-                    same_grammar_type = false;
-                  }
-                }
-                if (same_sig) {
-                  if (sing_def[sig_subitem]) {
-                    if (same_grammar_type === void 0) {
-                      same_grammar_type = sig_subitem;
-                    } else {
-                      if (same_grammar_type === sig_subitem) {
-                      } else {
-                        same_grammar_type = false;
-                      }
-                    }
-                  } else {
-                  }
-                }
-                res2 = res2 + sig_subitem;
-              });
-            };
-            if (ti === "A") {
-              record_subitem_sigs(item3);
-              return res2;
-            } else if (ti === "a") {
-              record_subitem_sigs(item3);
-              if (same_grammar_type) {
-                const plur_name = sing_plur[same_grammar_type];
-                return plur_name;
-              } else {
-                const found_obj_type = obj_sig_sing[res2];
-                const found_deep_sig_type = deep_sig_sing[res2];
-                let found_type_sing;
-                if (found_deep_sig_type) {
-                  if (found_deep_sig_type.length === 1) {
-                    found_type_sing = found_deep_sig_type[0];
-                  }
-                }
-                if (found_type_sing) {
-                  return found_type_sing;
-                } else {
-                  const enclosed_res = "[" + res2 + "]";
-                  return enclosed_res;
-                }
-              }
-            } else if (ti === "o") {
-              if (max_depth === -1 || depth <= max_depth) {
-                res2 = res2 + "{";
-                let first = true;
-                each(item3, (value2, key2) => {
-                  const vsig = this.sig(value2, max_depth, depth + 1);
-                  if (!first) {
-                    res2 = res2 + ",";
-                  } else {
-                    first = false;
-                  }
-                  res2 = res2 + '"' + key2 + '":' + vsig;
-                });
-                res2 = res2 + "}";
-                return res2;
-              } else {
-                return "o";
-              }
-            } else if (ti === "s" || ti === "n" || ti === "b") {
-              return ti;
-            } else {
-              return ti;
-            }
-          };
-          return extended_sig(item2);
-        }
-        single_forms_sig(item2) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          let sig = this.sig(item2);
-          let s_sig = sig.split(",");
-          const arr_res = [];
-          each(s_sig, (sig_item, c2) => {
-            const sing = plur_sing[sig_item] || sig_item;
-            arr_res.push(sing);
-          });
-          const res2 = arr_res.join(",");
-          return res2;
-        }
-      };
-      var Evented_Class = class {
-        "constructor"() {
-          Object.defineProperty(this, "_bound_events", {
-            value: {}
-          });
-        }
-        "raise_event"() {
-          let a = Array.prototype.slice.call(arguments), sig = get_a_sig2(a);
-          a.l = a.length;
-          let target = this;
-          let c2, l2, res2;
-          if (sig === "[s]") {
-            let target2 = this;
-            let event_name = a[0];
-            let bgh = this._bound_general_handler;
-            let be = this._bound_events;
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target2, event_name));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) == "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target2));
-                }
-                return res2;
-              }
-            }
-          }
-          if (sig === "[s,a]") {
-            let be = this._bound_events;
-            let bgh = this._bound_general_handler;
-            let event_name = a[0];
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target, event_name, a[1]));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) === "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target, a[1]));
-                }
-              }
-            }
-          }
-          if (sig === "[s,b]" || sig === "[s,s]" || sig === "[s,n]" || sig === "[s,B]" || sig === "[s,O]" || sig === "[s,e]") {
-            let be = this._bound_events;
-            let bgh = this._bound_general_handler;
-            let event_name = a[0];
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target, event_name, a[1]));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) === "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target, a[1]));
-                }
-              }
-            }
-          }
-          if (sig === "[s,o]" || sig === "[s,?]") {
-            let be = this._bound_events;
-            let bgh = this._bound_general_handler;
-            let event_name = a[0];
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target, event_name, a[1]));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) === "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target, a[1]));
-                }
-              }
-            }
-          } else {
-            if (a.l > 2) {
-              let event_name = a[0];
-              let additional_args = [];
-              let bgh_args = [event_name];
-              for (c2 = 1, l2 = a.l; c2 < l2; c2++) {
-                additional_args.push(a[c2]);
-                bgh_args.push(a[c2]);
-              }
-              let be = this._bound_events;
-              let bgh = this._bound_general_handler;
-              res2 = [];
-              if (bgh) {
-                for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                  res2.push(bgh[c2].apply(target, bgh_args));
-                }
-              }
-              if (be) {
-                let bei = be[event_name];
-                if (tof(bei) == "array") {
-                  if (bei.length > 0) {
-                    for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                      if (bei[c2]) res2.push(bei[c2].apply(target, additional_args));
-                    }
-                    return res2;
-                  } else {
-                    return res2;
-                  }
-                }
-              }
-            } else {
-            }
-          }
-          return res2;
-        }
-        "add_event_listener"() {
-          const {
-            event_events
-          } = this;
-          let a = Array.prototype.slice.call(arguments), sig = get_a_sig2(a);
-          if (sig === "[f]") {
-            this._bound_general_handler = this._bound_general_handler || [];
-            if (is_array(this._bound_general_handler)) {
-              this._bound_general_handler.push(a[0]);
-            }
-            ;
-          }
-          if (sig === "[s,f]") {
-            let event_name = a[0], fn_listener = a[1];
-            if (!this._bound_events[event_name]) this._bound_events[event_name] = [];
-            let bei = this._bound_events[event_name];
-            if (is_array(bei)) {
-              bei.push(fn_listener);
-              if (event_events) {
-                this.raise("add-event-listener", {
-                  "name": event_name
-                });
-              }
-            } else {
-              console.trace();
-              throw "Expected: array";
-            }
-          }
-          return this;
-        }
-        "remove_event_listener"(event_name, fn_listener) {
-          const {
-            event_events
-          } = this;
-          if (this._bound_events) {
-            let bei = this._bound_events[event_name] || [];
-            if (is_array(bei)) {
-              let c2 = 0, l2 = bei.length, found = false;
-              while (!found && c2 < l2) {
-                if (bei[c2] === fn_listener) {
-                  found = true;
-                } else {
-                  c2++;
-                }
-              }
-              if (found) {
-                bei.splice(c2, 1);
-                if (event_events) {
-                  this.raise("remove-event-listener", {
-                    "name": event_name
-                  });
-                }
-              }
-            } else {
-              console.trace();
-              throw "Expected: array";
-            }
-          }
-          return this;
-        }
-        get bound_named_event_counts() {
-          const res2 = {};
-          if (this._bound_events) {
-            const keys = Object.keys(this._bound_events);
-            each(keys, (key2) => {
-              res2[key2] = this._bound_events[key2].length;
-            });
-          }
-          return res2;
-        }
-        "one"(event_name, fn_handler) {
-          let inner_handler = function(e) {
-            fn_handler.call(this, e);
-            this.off(event_name, inner_handler);
-          };
-          this.on(event_name, inner_handler);
-        }
-        "changes"(obj_changes) {
-          if (!this.map_changes) {
-            this.map_changes = {};
-          }
-          each(obj_changes, (handler, name) => {
-            this.map_changes[name] = this.map_changes[name] || [];
-            this.map_changes[name].push(handler);
-          });
-          if (!this._using_changes) {
-            this._using_changes = true;
-            this.on("change", (e_change) => {
-              const {
-                name,
-                value: value2
-              } = e_change;
-              if (this.map_changes[name]) {
-                each(this.map_changes[name], (h_change) => {
-                  h_change(value2);
-                });
-              }
-            });
-          }
-        }
-      };
-      var p = Evented_Class.prototype;
-      p.raise = p.raise_event;
-      p.trigger = p.raise_event;
-      p.subscribe = p.add_event_listener;
-      p.on = p.add_event_listener;
-      p.off = p.remove_event_listener;
-      var eventify = (obj2) => {
-        const bound_events = {};
-        const add_event_listener = (name, handler) => {
-          if (handler === void 0 && typeof name === "function") {
-            handler = name;
-            name = "";
-          }
-          if (!bound_events[name]) bound_events[name] = [];
-          bound_events[name].push(handler);
-        };
-        const remove_event_listener = (name, handler) => {
-          if (bound_events[name]) {
-            const i = bound_events[name].indexOf(handler);
-            if (i > -1) {
-              bound_events[name].splice(i, 1);
-            }
-          }
-        };
-        const raise_event = (name, optional_param) => {
-          const arr_named_events = bound_events[name];
-          if (arr_named_events !== void 0) {
-            if (optional_param !== void 0) {
-              const l2 = arr_named_events.length;
-              for (let c2 = 0; c2 < l2; c2++) {
-                arr_named_events[c2].call(obj2, optional_param);
-              }
-            } else {
-              const l2 = arr_named_events.length;
-              for (let c2 = 0; c2 < l2; c2++) {
-                arr_named_events[c2].call(obj2);
-              }
-            }
-          }
-        };
-        obj2.on = obj2.add_event_listener = add_event_listener;
-        obj2.off = obj2.remove_event_listener = remove_event_listener;
-        obj2.raise = obj2.raise_event = raise_event;
-        return obj2;
-      };
-      var Publisher = class extends Evented_Class {
-        constructor(spec = {}) {
-          super({});
-          this.one("ready", () => {
-            this.is_ready = true;
-          });
-        }
-        get when_ready() {
-          return new Promise((solve, jettison) => {
-            if (this.is_ready === true) {
-              solve();
-            } else {
-              this.one("ready", () => {
-                solve();
-              });
-            }
-          });
-        }
-      };
-      var prop = (...a) => {
-        let s = get_a_sig2(a);
-        const raise_change_events = true;
-        const ifn = (item2) => typeof item2 === "function";
-        if (s === "[a]") {
-          each(a[0], (item_params2) => {
-            prop.apply(exports, item_params2);
-          });
-        } else {
-          if (a.length === 2) {
-            if (ia(a[1])) {
-              const target = a[0];
-              each(a[1], (item2) => {
-                if (ia(item2)) {
-                  throw "NYI 468732";
-                } else {
-                  prop(target, item2);
-                }
-              });
-            } else {
-              const ta1 = tof(a[1]);
-              if (ta1 === "string") {
-                [obj, prop_name] = a;
-              } else {
-                throw "NYI 468732b";
-              }
-            }
-          } else if (a.length > 2) {
-            if (is_array(a[0])) {
-              throw "stop";
-              let objs = a.shift();
-              each(objs, (obj2) => {
-                prop.apply(exports, [obj2].concat(item_params));
-              });
-            } else {
-              let obj2, prop_name2, default_value, fn_onchange, fn_transform, fn_on_ready, options;
-              const load_options = (options2) => {
-                prop_name2 = prop_name2 || options2.name || options2.prop_name;
-                fn_onchange = options2.fn_onchange || options2.onchange || options2.change;
-                fn_transform = options2.fn_transform || options2.ontransform || options2.transform;
-                fn_on_ready = options2.ready || options2.on_ready;
-                default_value = default_value || options2.default_value || options2.default;
-              };
-              if (a.length === 2) {
-                [obj2, options] = a;
-                load_options(options);
-              } else if (a.length === 3) {
-                if (ifn(a[2])) {
-                  [obj2, prop_name2, fn_onchange] = a;
-                } else {
-                  if (a[2].change || a[2].ready) {
-                    load_options(a[2]);
-                    [obj2, prop_name2] = a;
-                  } else {
-                    [obj2, prop_name2, default_value] = a;
-                  }
-                }
-              } else if (a.length === 4) {
-                if (ifn(a[2]) && ifn(a[3])) {
-                  [obj2, prop_name2, fn_transform, fn_onchange] = a;
-                } else if (ifn(a[3])) {
-                  [obj2, prop_name2, default_value, fn_onchange] = a;
-                } else {
-                  [obj2, prop_name2, default_value, options] = a;
-                  load_options(options);
-                }
-              } else if (a.length === 5) {
-                [obj2, prop_name2, default_value, fn_transform, fn_onchange] = a;
-              }
-              let _prop_value;
-              if (typeof default_value !== "undefined") _prop_value = default_value;
-              const _silent_set = (value2) => {
-                let _value;
-                if (fn_transform) {
-                  _value = fn_transform(value2);
-                } else {
-                  _value = value2;
-                }
-                _prop_value = _value;
-              };
-              const _set = (value2) => {
-                let _value;
-                if (fn_transform) {
-                  _value = fn_transform(value2);
-                } else {
-                  _value = value2;
-                }
-                let old = _prop_value;
-                _prop_value = _value;
-                if (fn_onchange) {
-                  fn_onchange({
-                    old,
-                    value: _prop_value
-                  });
-                }
-                if (obj2.raise && raise_change_events) {
-                  obj2.raise("change", {
-                    name: prop_name2,
-                    old,
-                    value: _prop_value
-                  });
-                }
-              };
-              if (is_defined(default_value)) {
-                _prop_value = default_value;
-              }
-              const t_prop_name = tf2(prop_name2);
-              if (t_prop_name === "s") {
-                Object.defineProperty(obj2, prop_name2, {
-                  get() {
-                    return _prop_value;
-                  },
-                  set(value2) {
-                    _set(value2);
-                  }
-                });
-              } else if (t_prop_name === "a") {
-                const l2 = prop_name2.length;
-                let item_prop_name;
-                for (let c2 = 0; c2 < l2; c2++) {
-                  item_prop_name = prop_name2[c2];
-                  Object.defineProperty(obj2, item_prop_name, {
-                    get() {
-                      return _prop_value;
-                    },
-                    set(value2) {
-                      _set(value2);
-                    }
-                  });
-                }
-              } else {
-                throw "Unexpected name type: " + t_prop_name;
-              }
-              if (fn_on_ready) {
-                fn_on_ready({
-                  silent_set: _silent_set
-                });
-              }
-            }
-          }
-        }
-      };
-      var Data_Type = class {
-      };
-      var Functional_Data_Type = class extends Data_Type {
-        constructor(spec) {
-          super(spec);
-          if (spec.supertype) this.supertype = spec.supertype;
-          if (spec.name) this.name = spec.name;
-          if (spec.abbreviated_name) this.abbreviated_name = spec.abbreviated_name;
-          if (spec.named_property_access) this.named_property_access = spec.named_property_access;
-          if (spec.numbered_property_access) this.numbered_property_access = spec.numbered_property_access;
-          if (spec.property_names) this.property_names = spec.property_names;
-          if (spec.property_data_types) this.property_data_types = spec.property_data_types;
-          if (spec.wrap_properties) this.wrap_properties = spec.wrap_properties;
-          if (spec.wrap_value_inner_values) this.wrap_value_inner_values = spec.wrap_value_inner_values;
-          if (spec.value_js_type) this.value_js_type = spec.value_js_type;
-          if (spec.abbreviated_property_names) this.abbreviated_property_names = spec.abbreviated_property_names;
-          if (spec.validate) this.validate = spec.validate;
-          if (spec.validate_explain) this.validate_explain = spec.validate_explain;
-          if (spec.parse_string) this.parse_string = spec.parse_string;
-          if (spec.parse) this.parse = spec.parse;
-        }
-      };
-      Functional_Data_Type.number = new Functional_Data_Type({
-        name: "number",
-        abbreviated_name: "n",
-        validate: (x) => {
-          return !isNaN(x);
-        },
-        parse_string(str) {
-          const p2 = parseFloat(str);
-          if (p2 + "" === str) {
-            const parsed_is_valid = this.validate(p2);
-            if (parsed_is_valid) {
-              return p2;
-            }
-          }
-        }
-      });
-      Functional_Data_Type.integer = new Functional_Data_Type({
-        name: "integer",
-        abbreviated_name: "int",
-        validate: (x) => {
-          return Number.isInteger(x);
-        },
-        parse_string(str) {
-          const p2 = parseInt(str, 10);
-          if (!isNaN(p2) && p2.toString() === str) {
-            return p2;
-          }
-          return void 0;
-        }
-      });
-      var field = (...a) => {
-        const raise_change_events = true;
-        const ifn = (item2) => typeof item2 === "function";
-        let s = get_a_sig2(a);
-        if (s === "[a]") {
-          each(a[0], (item_params2) => {
-            prop.apply(exports, item_params2);
-          });
-        } else {
-          if (a.length > 1) {
-            if (is_array(a[0])) {
-              throw "stop - need to fix";
-              let objs = a.shift();
-              each(objs, (obj2) => {
-                field.apply(exports, [obj2].concat(item_params));
-              });
-            } else {
-              let obj2, prop_name2, data_type, default_value, fn_transform;
-              if (a.length === 2) {
-                [obj2, prop_name2] = a;
-              } else if (a.length === 3) {
-                if (a[2] instanceof Data_Type) {
-                  [obj2, prop_name2, data_type, default_value] = a;
-                } else {
-                  if (ifn(a[2])) {
-                    [obj2, prop_name2, fn_transform] = a;
-                  } else {
-                    [obj2, prop_name2, default_value] = a;
-                  }
-                }
-              } else if (a.length === 4) {
-                if (a[2] instanceof Data_Type) {
-                  [obj2, prop_name2, data_type, default_value] = a;
-                } else {
-                  [obj2, prop_name2, default_value, fn_transform] = a;
-                }
-              }
-              if (obj2 !== void 0) {
-                Object.defineProperty(obj2, prop_name2, {
-                  get() {
-                    if (is_defined(obj2._)) {
-                      return obj2._[prop_name2];
-                    } else {
-                      return void 0;
-                    }
-                  },
-                  set(value2) {
-                    let old = (obj2._ = obj2._ || {})[prop_name2];
-                    if (old !== value2) {
-                      let is_valid = true;
-                      if (data_type) {
-                        const t_value = typeof value2;
-                        is_valid = data_type.validate(value2);
-                        if (t_value === "string") {
-                          const parsed_value = data_type.parse_string(value2);
-                          is_valid = data_type.validate(parsed_value);
-                          if (is_valid) value2 = parsed_value;
-                        }
-                        console.log("t_value", t_value);
-                      }
-                      if (is_valid) {
-                        let _value;
-                        if (fn_transform) {
-                          _value = fn_transform(value2);
-                        } else {
-                          _value = value2;
-                        }
-                        obj2._[prop_name2] = _value;
-                        if (raise_change_events) {
-                          obj2.raise("change", {
-                            name: prop_name2,
-                            old,
-                            value: _value
-                          });
-                        }
-                      }
-                    } else {
-                    }
-                  }
-                });
-                if (is_defined(default_value)) {
-                  let is_valid = true;
-                  if (data_type) {
-                    is_valid = data_type.validate(default_value);
-                  }
-                  if (is_valid) {
-                    (obj2._ = obj2._ || {})[prop_name2] = default_value;
-                  }
-                }
-              } else {
-                throw "stop";
-              }
-            }
-          }
-        }
-      };
-      var KEYWORD_LITERALS = /* @__PURE__ */ new Set(["true", "false", "null", "undefined"]);
-      var KEYWORD_OPERATORS = /* @__PURE__ */ new Set(["typeof", "void", "delete", "in", "instanceof"]);
-      var MULTI_CHAR_OPERATORS = [
-        "===",
-        "!==",
-        "==",
-        "!=",
-        "<=",
-        ">=",
-        "&&",
-        "||",
-        "??",
-        "++",
-        "--",
-        "+=",
-        "-=",
-        "*=",
-        "/=",
-        "%=",
-        "&=",
-        "|=",
-        "^=",
-        "<<",
-        ">>",
-        ">>>",
-        "**"
-      ];
-      var SINGLE_CHAR_OPERATORS = /* @__PURE__ */ new Set(["+", "-", "*", "/", "%", "=", "!", "<", ">", "&", "|", "^", "~"]);
-      var PUNCTUATION_CHARS = /* @__PURE__ */ new Set(["(", ")", "{", "}", "[", "]", ",", ":", "?", "."]);
-      var GLOBAL_SCOPE = typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
-      var DEFAULT_ALLOWED_GLOBALS = ["Math"];
-      var EXPRESSION_PARSER_DEFAULTS = {
-        cache: true,
-        cacheSize: 64,
-        cacheKeyResolver: null,
-        maxExpressionLength: 1e4,
-        maxMemberDepth: 2,
-        helpers: {},
-        allowedFunctions: [],
-        allowedGlobals: DEFAULT_ALLOWED_GLOBALS,
-        allowCall: null,
-        strict: false
-      };
-      var NORMALIZED_OPTIONS_FLAG = Symbol("ExpressionParserOptions");
-      var DISALLOWED_IDENTIFIERS = /* @__PURE__ */ new Set(["this", "new"]);
-      var ExpressionParserError = class extends Error {
-        constructor(code, message, details = {}) {
-          super(message);
-          this.name = "ExpressionParserError";
-          this.code = code;
-          this.details = details;
-        }
-      };
-      var ExpressionCache = class {
-        constructor(limit = 0) {
-          this.limit = Math.max(0, limit || 0);
-          this.map = /* @__PURE__ */ new Map();
-        }
-        get(key2) {
-          if (!this.limit || !this.map.has(key2)) {
-            return void 0;
-          }
-          const value2 = this.map.get(key2);
-          this.map.delete(key2);
-          this.map.set(key2, value2);
-          return value2;
-        }
-        set(key2, value2) {
-          if (!this.limit) {
-            return;
-          }
-          if (this.map.has(key2)) {
-            this.map.delete(key2);
-          }
-          this.map.set(key2, value2);
-          while (this.map.size > this.limit) {
-            const oldestKey = this.map.keys().next().value;
-            this.map.delete(oldestKey);
-          }
-        }
-        clear() {
-          this.map.clear();
-        }
-        get size() {
-          return this.map.size;
-        }
-      };
-      var Tokenizer = class {
-        constructor(expression) {
-          this.expression = typeof expression === "string" ? expression : String(expression || "");
-          this.length = this.expression.length;
-          this.position = 0;
-          this.line = 1;
-          this.column = 1;
-        }
-        tokenize() {
-          const tokens = [];
-          if (!this.expression.trim()) {
-            return tokens;
-          }
-          while (!this.isAtEnd()) {
-            this.skipWhitespace();
-            if (this.isAtEnd()) break;
-            const ch = this.peek();
-            if (this.isIdentifierStart(ch)) {
-              tokens.push(this.tokenizeIdentifier());
-            } else if (this.isDigit(ch) || ch === "." && this.isDigit(this.peek(1))) {
-              tokens.push(this.tokenizeNumber());
-            } else if (ch === '"' || ch === "'") {
-              tokens.push(this.tokenizeString());
-            } else if (this.isOperatorStart(ch)) {
-              tokens.push(this.tokenizeOperator());
-            } else if (PUNCTUATION_CHARS.has(ch)) {
-              tokens.push(this.tokenizePunctuation());
-            } else {
-              this.throwError("TOKEN_INVALID_CHAR", `Unexpected character: ${ch}`);
-            }
-          }
-          return tokens;
-        }
-        isAtEnd() {
-          return this.position >= this.length;
-        }
-        skipWhitespace() {
-          while (!this.isAtEnd()) {
-            const ch = this.peek();
-            if (/\s/.test(ch)) {
-              this.advance();
-              continue;
-            }
-            if (ch === "/" && this.peek(1) === "/") {
-              while (!this.isAtEnd() && this.peek() !== "\n") {
-                this.advance();
-              }
-              continue;
-            }
-            if (ch === "/" && this.peek(1) === "*") {
-              this.advance();
-              this.advance();
-              while (!this.isAtEnd()) {
-                if (this.peek() === "*" && this.peek(1) === "/") {
-                  this.advance();
-                  this.advance();
-                  break;
-                }
-                this.advance();
-              }
-              continue;
-            }
-            break;
-          }
-        }
-        peek(offset2 = 0) {
-          if (this.position + offset2 >= this.length) return "\0";
-          return this.expression[this.position + offset2];
-        }
-        advance() {
-          if (this.isAtEnd()) {
-            return "\0";
-          }
-          const char = this.expression[this.position++];
-          if (char === "\n") {
-            this.line += 1;
-            this.column = 1;
-          } else {
-            this.column += 1;
-          }
-          return char;
-        }
-        getLocationSnapshot() {
-          return { index: this.position, line: this.line, column: this.column };
-        }
-        createToken(type, value2, start, end) {
-          return { type, value: value2, start, end };
-        }
-        throwError(code, message) {
-          throw new ExpressionParserError(code, message, { location: this.getLocationSnapshot() });
-        }
-        isIdentifierStart(ch) {
-          return /[A-Za-z_$]/.test(ch);
-        }
-        isIdentifierPart(ch) {
-          return /[A-Za-z0-9_$]/.test(ch);
-        }
-        isDigit(ch) {
-          return /[0-9]/.test(ch);
-        }
-        isOperatorStart(ch) {
-          if (ch === "." && this.peek(1) === "." && this.peek(2) === ".") {
-            this.throwError("SYNTAX_UNSUPPORTED", "Spread syntax is not supported");
-          }
-          if (ch === "?" && this.peek(1) === "?") {
-            return true;
-          }
-          return SINGLE_CHAR_OPERATORS.has(ch);
-        }
-        tokenizeIdentifier() {
-          const start = this.getLocationSnapshot();
-          let value2 = "";
-          while (!this.isAtEnd() && this.isIdentifierPart(this.peek())) {
-            value2 += this.advance();
-          }
-          const end = this.getLocationSnapshot();
-          if (KEYWORD_LITERALS.has(value2)) {
-            return this.createToken("KEYWORD", value2, start, end);
-          }
-          if (KEYWORD_OPERATORS.has(value2)) {
-            return this.createToken("OPERATOR", value2, start, end);
-          }
-          return this.createToken("IDENTIFIER", value2, start, end);
-        }
-        tokenizeNumber() {
-          const start = this.getLocationSnapshot();
-          let value2 = "";
-          let hasDot = false;
-          while (!this.isAtEnd()) {
-            const ch = this.peek();
-            if (this.isDigit(ch)) {
-              value2 += this.advance();
-            } else if (ch === "." && !hasDot) {
-              hasDot = true;
-              value2 += this.advance();
-            } else {
-              break;
-            }
-          }
-          const end = this.getLocationSnapshot();
-          return this.createToken("NUMBER", Number(value2), start, end);
-        }
-        tokenizeString() {
-          const quote = this.advance();
-          const start = this.getLocationSnapshot();
-          let value2 = "";
-          while (!this.isAtEnd()) {
-            const ch = this.advance();
-            if (ch === quote) {
-              return this.createToken("STRING", value2, start, this.getLocationSnapshot());
-            }
-            if (ch === "\\") {
-              const next = this.advance();
-              switch (next) {
-                case "n":
-                  value2 += "\n";
-                  break;
-                case "r":
-                  value2 += "\r";
-                  break;
-                case "t":
-                  value2 += "	";
-                  break;
-                case "\\":
-                  value2 += "\\";
-                  break;
-                case '"':
-                  value2 += '"';
-                  break;
-                case "'":
-                  value2 += "'";
-                  break;
-                default:
-                  value2 += next;
-              }
-            } else {
-              value2 += ch;
-            }
-          }
-          this.throwError("TOKEN_UNTERMINATED_STRING", "Unterminated string literal");
-        }
-        tokenizeOperator() {
-          const remaining = this.expression.slice(this.position);
-          const start = this.getLocationSnapshot();
-          for (const op of MULTI_CHAR_OPERATORS) {
-            if (remaining.startsWith(op)) {
-              if (op === "=>") {
-                this.throwError("SYNTAX_UNSUPPORTED", "Arrow functions are not supported");
-              }
-              this.position += op.length;
-              this.column += op.length;
-              return this.createToken("OPERATOR", op, start, this.getLocationSnapshot());
-            }
-          }
-          const ch = this.advance();
-          if (ch === "=" && this.peek() === ">") {
-            this.throwError("SYNTAX_UNSUPPORTED", "Arrow functions are not supported");
-          }
-          if (!SINGLE_CHAR_OPERATORS.has(ch) && ch !== "?") {
-            this.throwError("TOKEN_UNEXPECTED_OPERATOR", "Unexpected operator");
-          }
-          return this.createToken("OPERATOR", ch, start, this.getLocationSnapshot());
-        }
-        tokenizePunctuation() {
-          const start = this.getLocationSnapshot();
-          const ch = this.advance();
-          if (ch === "." && this.peek() === "." && this.peek(1) === ".") {
-            this.throwError("SYNTAX_UNSUPPORTED", "Spread syntax is not supported");
-          }
-          return this.createToken("PUNCTUATION", ch, start, this.getLocationSnapshot());
-        }
-      };
-      var Parser = class {
-        constructor(tokens, options = {}) {
-          this.tokens = tokens;
-          this.pos = 0;
-          this.maxMemberDepth = options.maxMemberDepth || EXPRESSION_PARSER_DEFAULTS.maxMemberDepth;
-          const disallowed = new Set(DISALLOWED_IDENTIFIERS);
-          if (options.disallowedIdentifiers) {
-            options.disallowedIdentifiers.forEach((identifier) => disallowed.add(identifier));
-          }
-          this.disallowedIdentifiers = disallowed;
-        }
-        parse() {
-          if (!this.tokens.length) {
-            throw new ExpressionParserError("EMPTY_EXPRESSION", "Empty expression");
-          }
-          const ast = this.parseExpression();
-          if (!this.isAtEnd()) {
-            this.error("UNEXPECTED_TOKEN", `Unexpected token: ${this.peek().value}`, this.peek());
-          }
-          return ast;
-        }
-        parseExpression() {
-          return this.parseConditionalExpression();
-        }
-        parseConditionalExpression() {
-          let expr = this.parseLogicalOrExpression();
-          if (this.matchPunctuation("?")) {
-            const consequent = this.parseExpression();
-            this.consume("PUNCTUATION", ":");
-            const alternate = this.parseExpression();
-            expr = {
-              type: "ConditionalExpression",
-              test: expr,
-              consequent,
-              alternate
-            };
-          }
-          return expr;
-        }
-        parseLogicalOrExpression() {
-          let expr = this.parseLogicalAndExpression();
-          while (this.matchOperator("||")) {
-            const operator = this.previous().value;
-            const right = this.parseLogicalAndExpression();
-            expr = this.buildLogicalExpression(operator, expr, right);
-          }
-          return expr;
-        }
-        parseLogicalAndExpression() {
-          let expr = this.parseNullishExpression();
-          while (this.matchOperator("&&")) {
-            const operator = this.previous().value;
-            const right = this.parseNullishExpression();
-            expr = this.buildLogicalExpression(operator, expr, right);
-          }
-          return expr;
-        }
-        parseNullishExpression() {
-          let expr = this.parseEqualityExpression();
-          while (this.matchOperator("??")) {
-            const operator = this.previous().value;
-            const right = this.parseEqualityExpression();
-            expr = this.buildLogicalExpression(operator, expr, right);
-          }
-          return expr;
-        }
-        parseEqualityExpression() {
-          let expr = this.parseRelationalExpression();
-          while (this.matchOperator("===", "!==", "==", "!=")) {
-            const operator = this.previous().value;
-            const right = this.parseRelationalExpression();
-            expr = this.buildBinaryExpression(operator, expr, right);
-          }
-          return expr;
-        }
-        parseRelationalExpression() {
-          let expr = this.parseShiftExpression();
-          while (this.matchOperator("<", ">", "<=", ">=", "instanceof", "in")) {
-            const operator = this.previous().value;
-            const right = this.parseShiftExpression();
-            expr = this.buildBinaryExpression(operator, expr, right);
-          }
-          return expr;
-        }
-        parseShiftExpression() {
-          let expr = this.parseAdditiveExpression();
-          while (this.matchOperator("<<", ">>", ">>>")) {
-            const operator = this.previous().value;
-            const right = this.parseAdditiveExpression();
-            expr = this.buildBinaryExpression(operator, expr, right);
-          }
-          return expr;
-        }
-        parseAdditiveExpression() {
-          let expr = this.parseMultiplicativeExpression();
-          while (this.matchOperator("+", "-")) {
-            const operator = this.previous().value;
-            const right = this.parseMultiplicativeExpression();
-            expr = this.buildBinaryExpression(operator, expr, right);
-          }
-          return expr;
-        }
-        parseMultiplicativeExpression() {
-          let expr = this.parseUnaryExpression();
-          while (this.matchOperator("*", "/", "%")) {
-            const operator = this.previous().value;
-            const right = this.parseUnaryExpression();
-            expr = this.buildBinaryExpression(operator, expr, right);
-          }
-          return expr;
-        }
-        parseUnaryExpression() {
-          if (this.matchOperator("+", "-", "!", "~", "typeof", "void", "delete")) {
-            const operator = this.previous().value;
-            const argument = this.parseUnaryExpression();
-            return { type: "UnaryExpression", operator, argument };
-          }
-          return this.parseLeftHandSideExpression();
-        }
-        parseLeftHandSideExpression() {
-          let expr = this.parsePrimaryExpression();
-          while (true) {
-            if (this.matchPunctuation(".")) {
-              const operatorToken = this.previous();
-              const property = this.consumePropertyIdentifier();
-              const depth = this.getChainDepth(expr) + 1;
-              this.assertMemberDepth(depth, operatorToken);
-              expr = {
-                type: "MemberExpression",
-                object: expr,
-                property,
-                computed: false
-              };
-              this.setChainDepth(expr, depth);
-            } else if (this.matchPunctuation("[")) {
-              const operatorToken = this.previous();
-              const property = this.parseExpression();
-              this.consume("PUNCTUATION", "]");
-              const depth = this.getChainDepth(expr) + 1;
-              this.assertMemberDepth(depth, operatorToken);
-              expr = {
-                type: "MemberExpression",
-                object: expr,
-                property,
-                computed: true
-              };
-              this.setChainDepth(expr, depth);
-            } else if (this.matchPunctuation("(")) {
-              const args = this.parseArguments();
-              expr = {
-                type: "CallExpression",
-                callee: expr,
-                arguments: args
-              };
-              this.setChainDepth(expr, this.getChainDepth(expr.callee));
-            } else {
-              break;
-            }
-          }
-          return expr;
-        }
-        parsePrimaryExpression() {
-          const token = this.peek();
-          if (!token) {
-            this.error("UNEXPECTED_END", "Unexpected end of expression", token);
-          }
-          if (token.type === "NUMBER" || token.type === "STRING") {
-            this.advance();
-            return { type: "Literal", value: token.value };
-          }
-          if (token.type === "KEYWORD") {
-            this.advance();
-            return { type: "Literal", value: this.literalFromKeyword(token.value) };
-          }
-          if (token.type === "IDENTIFIER") {
-            this.advance();
-            this.assertIdentifierAllowed(token);
-            return { type: "Identifier", value: token.value };
-          }
-          if (this.matchPunctuation("(")) {
-            const expr = this.parseExpression();
-            this.consume("PUNCTUATION", ")");
-            return expr;
-          }
-          if (this.matchPunctuation("[")) {
-            const elements = [];
-            if (!this.check("PUNCTUATION", "]")) {
-              do {
-                elements.push(this.parseExpression());
-              } while (this.matchPunctuation(","));
-            }
-            this.consume("PUNCTUATION", "]");
-            return { type: "ArrayExpression", elements };
-          }
-          if (this.matchPunctuation("{")) {
-            const properties = [];
-            if (!this.check("PUNCTUATION", "}")) {
-              do {
-                const key2 = this.parsePropertyKey();
-                this.consume("PUNCTUATION", ":");
-                const value2 = this.parseExpression();
-                properties.push({ key: key2, value: value2 });
-              } while (this.matchPunctuation(","));
-            }
-            this.consume("PUNCTUATION", "}");
-            return { type: "ObjectExpression", properties };
-          }
-          this.error("UNEXPECTED_TOKEN", `Unexpected token: ${token.value}`, token);
-        }
-        parsePropertyKey() {
-          const token = this.peek();
-          if (token.type === "IDENTIFIER") {
-            this.advance();
-            return { type: "Identifier", value: token.value };
-          }
-          if (token.type === "STRING" || token.type === "NUMBER" || token.type === "KEYWORD") {
-            this.advance();
-            const value2 = token.type === "KEYWORD" ? this.literalFromKeyword(token.value) : token.value;
-            return { type: "Literal", value: value2 };
-          }
-          this.error("INVALID_OBJECT_KEY", "Invalid object property key", token);
-        }
-        parseArguments() {
-          const args = [];
-          if (!this.check("PUNCTUATION", ")")) {
-            do {
-              args.push(this.parseExpression());
-            } while (this.matchPunctuation(","));
-          }
-          this.consume("PUNCTUATION", ")");
-          return args;
-        }
-        literalFromKeyword(value2) {
-          switch (value2) {
-            case "true":
-              return true;
-            case "false":
-              return false;
-            case "null":
-              return null;
-            case "undefined":
-              return void 0;
-            default:
-              return value2;
-          }
-        }
-        consume(type, value2) {
-          if (this.check(type, value2)) {
-            return this.advance();
-          }
-          const expected = value2 ? `${type} '${value2}'` : type;
-          this.error("MISSING_TOKEN", `Expected ${expected}`, this.peek());
-        }
-        check(type, value2) {
-          if (this.isAtEnd()) return false;
-          const token = this.peek();
-          if (token.type !== type) return false;
-          if (typeof value2 === "undefined") return true;
-          return token.value === value2;
-        }
-        matchOperator(...operators) {
-          if (this.check("OPERATOR") && operators.includes(this.peek().value)) {
-            this.advance();
-            return true;
-          }
-          return false;
-        }
-        matchPunctuation(value2) {
-          if (this.check("PUNCTUATION", value2)) {
-            this.advance();
-            return true;
-          }
-          return false;
-        }
-        consumePropertyIdentifier() {
-          const token = this.peek();
-          if (token.type === "IDENTIFIER") {
-            this.advance();
-            return { type: "Identifier", value: token.value };
-          }
-          if (token.type === "STRING" || token.type === "NUMBER" || token.type === "KEYWORD") {
-            this.advance();
-            const value2 = token.type === "KEYWORD" ? this.literalFromKeyword(token.value) : token.value;
-            return { type: "Literal", value: value2 };
-          }
-          this.error("INVALID_PROPERTY", "Expected property name", token);
-        }
-        buildBinaryExpression(operator, left, right) {
-          return { type: "BinaryExpression", operator, left, right };
-        }
-        buildLogicalExpression(operator, left, right) {
-          return { type: "LogicalExpression", operator, left, right };
-        }
-        getChainDepth(node) {
-          if (!node || typeof node !== "object") {
-            return 0;
-          }
-          return node.__chainDepth || 0;
-        }
-        setChainDepth(node, depth) {
-          if (!node || typeof node !== "object") {
-            return;
-          }
-          Object.defineProperty(node, "__chainDepth", {
-            value: depth,
-            enumerable: false,
-            configurable: true
-          });
-        }
-        assertMemberDepth(depth, token) {
-          if (depth > this.maxMemberDepth) {
-            this.error("MEMBER_DEPTH_EXCEEDED", `Member access depth ${depth} exceeds maximum of ${this.maxMemberDepth}`, token);
-          }
-        }
-        assertIdentifierAllowed(token) {
-          if (this.disallowedIdentifiers.has(token.value)) {
-            this.error("DISALLOWED_IDENTIFIER", `Identifier '${token.value}' is not allowed in expressions`, token);
-          }
-        }
-        error(code, message, token) {
-          throw new ExpressionParserError(code, message, token ? { location: token.start } : void 0);
-        }
-        advance() {
-          if (!this.isAtEnd()) {
-            this.pos += 1;
-          }
-          return this.tokens[this.pos - 1];
-        }
-        peek() {
-          if (this.isAtEnd()) return null;
-          return this.tokens[this.pos];
-        }
-        previous() {
-          return this.tokens[this.pos - 1];
-        }
-        isAtEnd() {
-          return this.pos >= this.tokens.length;
-        }
-      };
-      var Evaluator = class {
-        constructor(context2 = {}, options = {}) {
-          this.context = context2 || {};
-          this.helpers = options.helpers || {};
-          this.strict = options.strict || false;
-          this.allowCall = options.allowCall || null;
-          this.allowedFunctions = new Set(options.allowedFunctions || []);
-          this.allowedGlobals = new Set(options.allowedGlobals || []);
-          Object.values(this.helpers).forEach((value2) => {
-            if (typeof value2 === "function") {
-              this.allowedFunctions.add(value2);
-            }
-          });
-        }
-        evaluate(node) {
-          switch (node.type) {
-            case "Literal":
-              return node.value;
-            case "Identifier":
-              return this.evaluateIdentifier(node);
-            case "MemberExpression":
-              return this.evaluateMemberExpression(node);
-            case "CallExpression":
-              return this.evaluateCallExpression(node);
-            case "UnaryExpression":
-              return this.evaluateUnaryExpression(node);
-            case "BinaryExpression":
-              return this.evaluateBinaryExpression(node);
-            case "LogicalExpression":
-              return this.evaluateLogicalExpression(node);
-            case "ArrayExpression":
-              return node.elements.map((element) => this.evaluate(element));
-            case "ObjectExpression":
-              return this.evaluateObjectExpression(node);
-            case "ConditionalExpression":
-              return this.evaluateConditionalExpression(node);
-            default:
-              throw new ExpressionParserError("UNSUPPORTED_NODE", `Unsupported AST node type: ${node.type}`);
-          }
-        }
-        evaluateIdentifier(node) {
-          const name = node.value;
-          if (Object.prototype.hasOwnProperty.call(this.helpers, name)) {
-            return this.helpers[name];
-          }
-          if (this.context && Object.prototype.hasOwnProperty.call(this.context, name)) {
-            return this.context[name];
-          }
-          if (this.allowedGlobals.has(name) && name in GLOBAL_SCOPE) {
-            return GLOBAL_SCOPE[name];
-          }
-          if (this.strict) {
-            throw new ExpressionParserError("UNDEFINED_IDENTIFIER", `Undefined identifier: ${name}`);
-          }
-          console.error(`Undefined identifier: ${name}`);
-          return void 0;
-        }
-        evaluateMemberExpression(node) {
-          const object = this.evaluate(node.object);
-          if (object === null || object === void 0) {
-            throw new ExpressionParserError("NULL_MEMBER_ACCESS", "Cannot read property of null or undefined");
-          }
-          const property = node.computed ? this.evaluate(node.property) : node.property.type === "Identifier" ? node.property.value : node.property.value;
-          return object[property];
-        }
-        evaluateCallExpression(node) {
-          let callee;
-          let thisArg;
-          if (node.callee.type === "MemberExpression") {
-            const object = this.evaluate(node.callee.object);
-            if (object === null || object === void 0) {
-              throw new ExpressionParserError("NULL_MEMBER_CALL", "Cannot call property of null or undefined");
-            }
-            const property = node.callee.computed ? this.evaluate(node.callee.property) : node.callee.property.type === "Identifier" ? node.callee.property.value : node.callee.property.value;
-            callee = object[property];
-            thisArg = object;
-          } else {
-            callee = this.evaluate(node.callee);
-            thisArg = void 0;
-          }
-          if (typeof callee !== "function") {
-            throw new ExpressionParserError("CALL_NON_FUNCTION", "Attempted to call a non-function");
-          }
-          if (!this.isCallAllowed(callee, thisArg)) {
-            throw new ExpressionParserError("CALL_NOT_ALLOWED", "Function call not allowed by policy");
-          }
-          const args = node.arguments.map((arg) => this.evaluate(arg));
-          return callee.apply(thisArg, args);
-        }
-        isCallAllowed(fn, thisArg) {
-          if (this.allowCall) {
-            const decision = this.allowCall(fn, thisArg);
-            if (decision === true) return true;
-            if (decision === false) return false;
-          }
-          return this.allowedFunctions.has(fn);
-        }
-        evaluateUnaryExpression(node) {
-          let argumentValue;
-          if (node.operator === "delete") {
-            argumentValue = node.argument;
-          } else if (node.operator === "typeof" && node.argument.type === "Identifier" && !this.isIdentifierDefined(node.argument.value)) {
-            argumentValue = void 0;
-          } else {
-            argumentValue = this.evaluate(node.argument);
-          }
-          switch (node.operator) {
-            case "+":
-              return +argumentValue;
-            case "-":
-              return -argumentValue;
-            case "!":
-              return !argumentValue;
-            case "~":
-              return ~argumentValue;
-            case "typeof":
-              if (node.argument.type === "Identifier" && !this.isIdentifierDefined(node.argument.value)) {
-                return "undefined";
-              }
-              return typeof argumentValue;
-            case "void":
-              return void argumentValue;
-            case "delete":
-              return this.performDelete(node.argument);
-            default:
-              throw new ExpressionParserError("UNSUPPORTED_UNARY", `Unsupported unary operator: ${node.operator}`);
-          }
-        }
-        isIdentifierDefined(name) {
-          return Object.prototype.hasOwnProperty.call(this.helpers, name) || this.context && Object.prototype.hasOwnProperty.call(this.context, name) || this.allowedGlobals.has(name) && name in GLOBAL_SCOPE;
-        }
-        performDelete(argument) {
-          if (argument.type === "Identifier" && this.context && typeof this.context === "object") {
-            return delete this.context[argument.value];
-          }
-          if (argument.type === "MemberExpression") {
-            const target = this.evaluate(argument.object);
-            if (target === null || target === void 0) {
-              return true;
-            }
-            const property = argument.computed ? this.evaluate(argument.property) : argument.property.type === "Identifier" ? argument.property.value : argument.property.value;
-            return delete target[property];
-          }
-          this.evaluate(argument);
-          return true;
-        }
-        evaluateBinaryExpression(node) {
-          const left = this.evaluate(node.left);
-          const right = this.evaluate(node.right);
-          switch (node.operator) {
-            case "+":
-              return left + right;
-            case "-":
-              return left - right;
-            case "*":
-              return left * right;
-            case "/":
-              return left / right;
-            case "%":
-              return left % right;
-            case "==":
-              return left == right;
-            case "!=":
-              return left != right;
-            case "===":
-              return left === right;
-            case "!==":
-              return left !== right;
-            case "<":
-              return left < right;
-            case ">":
-              return left > right;
-            case "<=":
-              return left <= right;
-            case ">=":
-              return left >= right;
-            case "in":
-              return left in right;
-            case "instanceof":
-              return left instanceof right;
-            default:
-              throw new ExpressionParserError("UNSUPPORTED_BINARY", `Unsupported binary operator: ${node.operator}`);
-          }
-        }
-        evaluateLogicalExpression(node) {
-          switch (node.operator) {
-            case "&&": {
-              const left = this.evaluate(node.left);
-              return left ? this.evaluate(node.right) : left;
-            }
-            case "||": {
-              const left = this.evaluate(node.left);
-              return left ? left : this.evaluate(node.right);
-            }
-            case "??": {
-              const left = this.evaluate(node.left);
-              return left !== null && left !== void 0 ? left : this.evaluate(node.right);
-            }
-            default:
-              throw new ExpressionParserError("UNSUPPORTED_LOGICAL", `Unsupported logical operator: ${node.operator}`);
-          }
-        }
-        evaluateObjectExpression(node) {
-          const obj2 = {};
-          node.properties.forEach((property) => {
-            const key2 = this.evaluatePropertyKey(property.key);
-            obj2[key2] = this.evaluate(property.value);
-          });
-          return obj2;
-        }
-        evaluatePropertyKey(node) {
-          if (node.type === "Identifier") {
-            return node.value;
-          }
-          return node.value;
-        }
-        evaluateConditionalExpression(node) {
-          const test = this.evaluate(node.test);
-          return test ? this.evaluate(node.consequent) : this.evaluate(node.alternate);
-        }
-      };
-      var ExpressionParser = class {
-        constructor(options = {}) {
-          this.options = normalizeOptions(null, options);
-          const cacheLimit = this.options.cache !== false ? this.options.cacheSize : 0;
-          this.astCache = new ExpressionCache(cacheLimit);
-          this.valueCache = new ExpressionCache(cacheLimit);
-        }
-        tokenize(expression) {
-          return new Tokenizer(expression).tokenize();
-        }
-        parse(expression, overrideOptions) {
-          const options = this.ensureNormalizedOptions(overrideOptions);
-          this.ensureExpressionLength(expression, options);
-          const useCache = this.shouldUseCache(options);
-          if (useCache) {
-            const cachedAst = this.astCache.get(expression);
-            if (cachedAst) {
-              return cachedAst;
-            }
-          }
-          const tokens = this.tokenize(expression);
-          if (!tokens.length) {
-            throw new ExpressionParserError("EMPTY_EXPRESSION", "Empty expression");
-          }
-          const parser = new Parser(tokens, options);
-          const ast = parser.parse();
-          Object.defineProperty(ast, "tokens", {
-            value: tokens,
-            enumerable: false,
-            configurable: true
-          });
-          if (useCache) {
-            this.astCache.set(expression, ast);
-          }
-          return ast;
-        }
-        evaluate(expression, context2 = {}, overrideOptions = {}) {
-          const mergedOptions = this.mergeOptions(overrideOptions);
-          const useCache = this.shouldUseCache(mergedOptions);
-          if (useCache) {
-            const cached = this.getCachedValue(expression, context2, mergedOptions);
-            if (cached.hit) {
-              return cached.value;
-            }
-          }
-          const ast = this.parse(expression, mergedOptions);
-          const evaluator = new Evaluator(context2, mergedOptions);
-          const result = evaluator.evaluate(ast);
-          if (useCache) {
-            this.storeCachedValue(expression, context2, result, mergedOptions);
-          }
-          return result;
-        }
-        compile(expression, overrideOptions = {}) {
-          const baseOptions = this.mergeOptions(overrideOptions);
-          const ast = this.parse(expression, baseOptions);
-          return (context2 = {}, runtimeOptions = {}) => {
-            const invocationOptions = this.mergeOptions(runtimeOptions, baseOptions);
-            const evaluator = new Evaluator(context2, invocationOptions);
-            return evaluator.evaluate(ast);
-          };
-        }
-        shouldUseCache(options) {
-          return options.cache !== false && options.cacheSize > 0;
-        }
-        ensureNormalizedOptions(options) {
-          if (options && options[NORMALIZED_OPTIONS_FLAG]) {
-            return options;
-          }
-          if (!options) {
-            return this.options;
-          }
-          return this.mergeOptions(options);
-        }
-        ensureExpressionLength(expression, options) {
-          if (expression.length > options.maxExpressionLength) {
-            throw new ExpressionParserError(
-              "EXPRESSION_TOO_LONG",
-              `Expression exceeds maximum length of ${options.maxExpressionLength} characters`
-            );
-          }
-        }
-        mergeOptions(override = {}, baseOptions) {
-          const base = baseOptions && baseOptions[NORMALIZED_OPTIONS_FLAG] ? baseOptions : baseOptions || this.options;
-          return normalizeOptions(base, override);
-        }
-        getCachedValue(expression, context2, options) {
-          const bucket = this.valueCache.get(expression);
-          if (!bucket) {
-            return { hit: false };
-          }
-          if (this.isObjectLike(context2)) {
-            if (bucket.objectCache && bucket.objectCache.has(context2)) {
-              return { hit: true, value: bucket.objectCache.get(context2) };
-            }
-            return { hit: false };
-          }
-          const key2 = this.resolvePrimitiveKey(context2, options);
-          if (key2 === void 0) {
-            return { hit: false };
-          }
-          if (bucket.primitiveCache && bucket.primitiveCache.has(key2)) {
-            return { hit: true, value: bucket.primitiveCache.get(key2) };
-          }
-          return { hit: false };
-        }
-        storeCachedValue(expression, context2, value2, options) {
-          if (!this.shouldUseCache(options)) {
-            return;
-          }
-          let bucket = this.valueCache.get(expression);
-          if (!bucket) {
-            bucket = { objectCache: /* @__PURE__ */ new WeakMap(), primitiveCache: /* @__PURE__ */ new Map() };
-            this.valueCache.set(expression, bucket);
-          }
-          if (this.isObjectLike(context2)) {
-            bucket.objectCache.set(context2, value2);
-            return;
-          }
-          const key2 = this.resolvePrimitiveKey(context2, options);
-          if (key2 === void 0) {
-            return;
-          }
-          bucket.primitiveCache.set(key2, value2);
-        }
-        resolvePrimitiveKey(context2, options) {
-          if (options.cacheKeyResolver) {
-            return options.cacheKeyResolver(context2);
-          }
-          return context2;
-        }
-        isObjectLike(value2) {
-          return value2 !== null && (typeof value2 === "object" || typeof value2 === "function");
-        }
-        getCacheStats() {
-          return {
-            astEntries: this.astCache.size,
-            valueEntries: this.valueCache.size
-          };
-        }
-      };
-      function normalizeOptions(baseOptions, overrideOptions = {}) {
-        const base = baseOptions && baseOptions[NORMALIZED_OPTIONS_FLAG] ? baseOptions : { ...EXPRESSION_PARSER_DEFAULTS, ...baseOptions || {} };
-        const helpers = { ...base.helpers || {}, ...overrideOptions.helpers || {} };
-        const allowedFunctions = /* @__PURE__ */ new Set([
-          ...base.allowedFunctions || [],
-          ...overrideOptions.allowedFunctions || []
-        ]);
-        const allowedGlobals = /* @__PURE__ */ new Set([
-          ...base.allowedGlobals || DEFAULT_ALLOWED_GLOBALS,
-          ...overrideOptions.allowedGlobals || []
-        ]);
-        const normalized = {
-          ...EXPRESSION_PARSER_DEFAULTS,
-          ...base,
-          ...overrideOptions,
-          helpers,
-          allowedFunctions: Array.from(allowedFunctions),
-          allowedGlobals: Array.from(allowedGlobals)
-        };
-        Object.defineProperty(normalized, NORMALIZED_OPTIONS_FLAG, {
-          value: true,
-          enumerable: false
-        });
-        return normalized;
-      }
-      var lang_mini_props = {
-        each,
-        is_array,
-        is_dom_node,
-        is_ctrl,
-        clone,
-        get_truth_map_from_arr,
-        tm: get_truth_map_from_arr,
-        get_arr_from_truth_map,
-        arr_trim_undefined,
-        get_map_from_arr,
-        arr_like_to_arr,
-        tof,
-        atof,
-        tf: tf2,
-        load_type,
-        is_defined,
-        def: is_defined,
-        Grammar,
-        stringify,
-        functional_polymorphism,
-        fp,
-        mfp,
-        arrayify,
-        mapify,
-        str_arr_mapify,
-        get_a_sig: get_a_sig2,
-        deep_sig,
-        get_item_sig,
-        set_vals,
-        truth,
-        trim_sig_brackets,
-        ll_set,
-        ll_get,
-        iterate_ancestor_classes,
-        is_arr_of_t,
-        is_arr_of_arrs,
-        is_arr_of_strs,
-        input_processors,
-        output_processors,
-        call_multiple_callback_functions,
-        call_multi,
-        multi: call_multi,
-        native_constructor_tof,
-        Fns,
-        sig_match,
-        remove_sig_from_arr_shell,
-        to_arr_strip_keys,
-        arr_objs_to_arr_keys_values_table,
-        set_arr_tree_value,
-        get_arr_tree_value,
-        deep_arr_iterate,
-        prom,
-        combinations,
-        combos: combinations,
-        Evented_Class,
-        eventify,
-        vectorify,
-        v_add,
-        v_subtract: v_subtract2,
-        v_multiply,
-        v_divide,
-        vector_magnitude,
-        distance_between_points,
-        get_typed_array,
-        gta: get_typed_array,
-        Publisher,
-        field,
-        prop,
-        Data_Type,
-        Functional_Data_Type,
-        ExpressionParser,
-        ExpressionParserError
-      };
-      var lang_mini = new Evented_Class();
-      Object.assign(lang_mini, lang_mini_props);
-      lang_mini.note = (str_name, str_state, obj_properties) => {
-        obj_properties = obj_properties || {};
-        obj_properties.name = str_name;
-        obj_properties.state = str_state;
-        lang_mini.raise("note", obj_properties);
-      };
-      module.exports = lang_mini;
-      if (__require.main === module) {
-        let test_evented_class2 = function(test_data2) {
-          const res2 = create_empty_test_res();
-          const evented_class = new Evented_Class();
-          test_data2.forEach((test_event) => {
-            const event_name = test_event.event_name;
-            const event_data = test_event.event_data;
-            const listener = (data) => {
-              if (data === event_data) {
-                res2.passed.push(event_name);
-              } else {
-                res2.failed.push(event_name);
-              }
-            };
-            evented_class.on(event_name, listener);
-            evented_class.raise_event(event_name, event_data);
-          });
-          return res2;
-        };
-        test_evented_class = test_evented_class2;
-        const test_data = [
-          {
-            event_name: "foo",
-            event_data: "hello"
-          },
-          {
-            event_name: "bar",
-            event_data: "world"
-          },
-          {
-            event_name: "baz",
-            event_data: true
-          }
-        ];
-        const create_empty_test_res = () => ({
-          passed: [],
-          failed: []
-        });
-        const result = test_evented_class2(test_data);
-        console.log("Passed:", result.passed);
-        console.log("Failed:", result.failed);
-      }
-      var test_evented_class;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/node_modules/lang-mini/lib-lang-mini.js
-  var require_lib_lang_mini = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
-      var lang = require_lang_mini();
-      var { each, tof } = lang;
-      var Type_Signifier = class _Type_Signifier {
-        // Name
-        constructor(spec = {}) {
-          const name = spec.name;
-          Object.defineProperty(this, "name", {
-            get() {
-              return name;
-            }
-          });
-          const parent = spec.parent;
-          Object.defineProperty(this, "parent", {
-            get() {
-              return parent;
-            }
-          });
-          const map_reserved_property_names = {
-            name: true,
-            parent: true
-          };
-          const _ = {};
-          each(spec, (value2, name2) => {
-            if (map_reserved_property_names[name2]) {
-            } else {
-              _[name2] = value2;
-            }
-          });
-        }
-        extend(o_extension) {
-          const o = {
-            parent: this
-          };
-          Object.assign(o, o_extension);
-          const res2 = new _Type_Signifier(o_extension);
-          return res2;
-        }
-        //  Other options?
-        //  Disambiguiation? Descriptive text?
-        //    Or is naming them the main thing there?
-        // Color representation
-        //   And that is simple, does not go into internal representation.
-      };
-      var Type_Representation = class _Type_Representation {
-        // Name
-        //  Other options?
-        //  Disambiguiation? Descriptive text?
-        //    Or is naming them the main thing there?
-        // Color representation
-        //   And that is simple, does not go into internal representation.
-        // This should be able to represent types and lang features not available to JS.
-        //   Names may be optional? May be autogenerated and quite long?
-        constructor(spec = {}) {
-          const name = spec.name;
-          Object.defineProperty(this, "name", {
-            get() {
-              return name;
-            }
-          });
-          const parent = spec.parent;
-          Object.defineProperty(this, "parent", {
-            get() {
-              return parent;
-            }
-          });
-          const _ = {};
-          const map_reserved_property_names = {
-            "name": true
-          };
-          each(spec, (value2, name2) => {
-            if (map_reserved_property_names[name2]) {
-            } else {
-              _[name2] = value2;
-              Object.defineProperty(this, name2, {
-                get() {
-                  return _[name2];
-                },
-                enumerable: true
-              });
-            }
-          });
-        }
-        extend(o_extension) {
-          const o = {
-            parent: this
-          };
-          Object.assign(o, o_extension);
-          const res2 = new _Type_Representation(o_extension);
-          return res2;
-        }
-      };
-      var st_color = new Type_Signifier({ "name": "color" });
-      var st_24bit_color = st_color.extend({ "bits": 24 });
-      var st_24bit_rgb_color = st_24bit_color.extend({ "components": ["red byte", "green byte", "blue byte"] });
-      var tr_string = new Type_Representation({ "name": "string" });
-      var tr_binary = new Type_Representation({ "name": "binary" });
-      var rt_bin_24bit_rgb_color = new Type_Representation({
-        // A binary type representation.
-        "signifier": st_24bit_rgb_color,
-        "bytes": [
-          [0, "red", "ui8"],
-          [1, "green", "ui8"],
-          [2, "blue", "ui8"]
-        ]
-      });
-      var rt_hex_24bit_rgb_color = new Type_Representation({
-        // Likely some kind of string template.
-        //  Or a function?
-        //  Best to keep this function free here.
-        //  Or maybe make a few quite standard ones.
-        "signifier": st_24bit_rgb_color,
-        // Or could just have the sequence / template literal even.
-        "bytes": [
-          [0, "#", "char"],
-          [1, "hex(red)", "string(2)"],
-          [3, "hex(green)", "string(2)"],
-          [5, "hex(blue)", "string(2)"]
-        ]
-      });
-      var st_date = new Type_Signifier({ "name": "date", "components": ["day uint", "month uint", "year int"] });
-      var rt_string_date_uk_ddmmyy = new Type_Representation({
-        "signifier": st_date,
-        "bytes": [
-          [0, "#", "char"],
-          [1, "day", "string(2)"],
-          [3, "/", "char"],
-          [4, "month", "string(2)"],
-          [6, "/", "char"],
-          [7, "year", "string(2)"]
-        ]
-      });
-      lang.Type_Signifier = Type_Signifier;
-      lang.Type_Representation = Type_Representation;
-      module.exports = lang;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/collective.js
-  var require_collective = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/collective.js"(exports, module) {
-      var { each, is_array } = require_lib_lang_mini();
-      var collective = (arr) => {
-        if (is_array(arr)) {
-          const target = {};
-          const handler2 = {
-            get(target2, prop, receiver) {
-              if (arr.length > 0 && arr[0] && typeof arr[0][prop] === "function") {
-                return (...a) => {
-                  const res3 = [];
-                  each(arr, (item2) => {
-                    res3.push(item2[prop](...a));
-                  });
-                  return res3;
-                };
-              }
-              if (prop in arr) {
-                const val = arr[prop];
-                if (typeof val === "function") return val.bind(arr);
-                return val;
-              }
-              const res2 = [];
-              each(arr, (item2) => {
-                res2.push(item2[prop]);
-              });
-              return res2;
-            }
-          };
-          const proxy2 = new Proxy(target, handler2);
-          return proxy2;
-        } else {
-          console.trace();
-          throw "NYI";
-        }
-      };
-      module.exports = collective;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/Data_Model.js
-  var require_Data_Model = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/Data_Model.js"(exports, module) {
-      var { Evented_Class } = require_lib_lang_mini();
-      var Data_Model = class extends Evented_Class {
-        constructor(spec = {}) {
-          super(spec);
-          this.__data_model = true;
-          if (spec && spec.context) {
-            this.context = spec.context;
-          }
-          if (spec && spec.name) {
-            this.name = spec.name;
-          }
-          this.__type = "data_model";
-        }
-      };
-      module.exports = Data_Model;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/new/tools.js
-  var require_tools = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/new/tools.js"(exports, module) {
-      var Data_Model = require_Data_Model();
-      var { tof } = require_lib_lang_mini();
-      var more_general_equals = (that2, other) => {
-        const t_that = tof(that2), t_other = tof(other);
-        if (t_that !== t_other) return false;
-        if (t_that === "number" || t_that === "string" || t_that === "boolean" || t_that === "undefined" || t_that === "null") {
-          return Object.is(that2, other);
-        }
-        if (t_that === "array") {
-          if (!Array.isArray(other) || that2.length !== other.length) return false;
-          for (let i = 0; i < that2.length; i++) {
-            if (!more_general_equals(that2[i], other[i])) return false;
-          }
-          return true;
-        }
-        if (that2 instanceof Data_Model && other instanceof Data_Model) {
-          if (typeof that2.toJSON === "function" && typeof other.toJSON === "function") {
-            return that2.toJSON() === other.toJSON();
-          }
-          if (that2 === other) return true;
-          return false;
-        }
-        if (t_that === "object" && "value" in that2) {
-          return more_general_equals(that2.value, other);
-        }
-        if (t_that === "object") {
-          const keysA = Object.keys(that2);
-          const keysB = Object.keys(other);
-          if (keysA.length !== keysB.length) return false;
-          for (const k of keysA) {
-            if (!Object.prototype.hasOwnProperty.call(other, k)) return false;
-            if (!more_general_equals(that2[k], other[k])) return false;
-          }
-          return true;
-        }
-        return Object.is(that2, other);
-      };
-      module.exports = {
-        more_general_equals
-      };
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/b-plus-tree/stiffarray.js
-  var require_stiffarray = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/b-plus-tree/stiffarray.js"(exports, module) {
-      var StiffArray = function(capacity) {
-        var m_public = {
-          items: new Array(capacity),
-          // internal storage array
-          count: 0,
-          // items count
-          first: function() {
-            if (this.count == 0) throw "StiffArray.first()";
-            return this.items[0];
-          },
-          last: function() {
-            if (this.count == 0) throw "StiffArray.last()";
-            return this.items[this.count - 1];
-          },
-          add: function(item2) {
-            if (this.count >= capacity) throw "StiffArray.add()";
-            this.items[this.count++] = item2;
-          },
-          add_from: function(source) {
-            if (this.count + source.count > capacity) throw "StiffArray.add_from()";
-            for (var i = 0; i < source.count; i++) this.items[this.count++] = source.items[i];
-          },
-          insert: function(index, item2) {
-            if (index < 0 || index > this.count) throw "StiffArray.insert(): index";
-            if (this.count >= capacity) throw "StiffArray.insert(): overflow";
-            for (var i = this.count; i > index; i--) this.items[i] = this.items[i - 1];
-            this.items[index] = item2;
-            this.count++;
-          },
-          removeAt: function(index) {
-            if (index < 0 || index >= this.count) throw "StiffArray.removeAt()";
-            this.count--;
-            for (var i = index; i < this.count; i++) this.items[i] = this.items[i + 1];
-          },
-          removeFirst: function() {
-            this.removeAt(0);
-          },
-          removeLast: function() {
-            this.removeAt(this.count - 1);
-          },
-          copy_from: function(source, index, count) {
-            for (var i = 0; i < count; i++) {
-              this.items[i] = source.items[i + index];
-            }
-            this.count = count;
-          },
-          search_first: function(item2) {
-            var cnt = this.count;
-            var first = 0;
-            while (cnt > 0) {
-              var step = Math.floor(cnt / 2);
-              var index = first + step;
-              if (this.items[index] < item2) {
-                first = index + 1;
-                cnt -= step + 1;
-              } else {
-                cnt = step;
-              }
-            }
-            if (first < this.count) {
-              return { found: this.items[first] == item2, index: first };
-            }
-            return { found: false, index: first };
-          },
-          search_last: function(item2) {
-            var cnt = this.count;
-            var first = 0;
-            while (cnt > 0) {
-              var step = Math.floor(cnt / 2);
-              var index = first + step;
-              if (item2 >= this.items[index]) {
-                first = index + 1;
-                cnt -= step + 1;
-              } else {
-                cnt = step;
-              }
-            }
-            if (first > 0 && first <= this.count) {
-              if (this.items[first - 1] == item2) {
-                return { found: true, index: first - 1 };
-              }
-            }
-            return { found: false, index: first };
-          },
-          search_last_prefix: function(prefix) {
-            var prefix_length = prefix.length;
-            var check_prefix = function(item3) {
-              if (prefix_length > item3.length) return false;
-              return item3.substr(0, prefix_length) == prefix;
-            };
-            var cnt = this.count;
-            var first = 0;
-            while (cnt > 0) {
-              var step = Math.floor(cnt / 2);
-              var index = first + step;
-              var item2 = this.items[index];
-              if (prefix > item2 || check_prefix(item2)) {
-                first = index + 1;
-                cnt -= step + 1;
-              } else {
-                cnt = step;
-              }
-            }
-            if (first > 0 && first <= this.count) {
-              if (check_prefix(this.items[first - 1])) {
-                return { found: true, index: first - 1 };
-              }
-            }
-            return { found: false, index: first };
-          },
-          toString: function() {
-            return this.items.slice(0, this.count).toString();
-          }
-        };
-        return m_public;
-      };
-      module.exports = StiffArray;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/b-plus-tree/b-plus-tree.js
-  var require_b_plus_tree = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/b-plus-tree/b-plus-tree.js"(exports, module) {
-      var StiffArray = require_stiffarray();
-      var B_Plus_Node = function(nodeCapacity) {
-        var m_public = {
-          isLeaf: false,
-          parent: null,
-          keys: new StiffArray(nodeCapacity + 1),
-          // +1: to allow temporary owerflow
-          children: new StiffArray(nodeCapacity + 2)
-          // +2: children.length == keys.length + 1
-        };
-        return m_public;
-      };
-      var B_Plus_Leaf = function(nodeCapacity) {
-        var m_public = {
-          isLeaf: true,
-          parent: null,
-          keys: new StiffArray(nodeCapacity + 1),
-          values: new StiffArray(nodeCapacity + 1),
-          //
-          // leafs chain:
-          prevLeaf: null,
-          nextLeaf: null
-        };
-        return m_public;
-      };
-      var FindInfo = (key2, value2, isPrefixSearch) => {
-        isPrefixSearch = !!isPrefixSearch;
-        var isKeyPresent = key2 != void 0;
-        var isValuePresent = value2 != void 0;
-        var prefixLength = 0;
-        if (isPrefixSearch) {
-          if (typeof key2 != "string") {
-            isPrefixSearch = false;
-          } else {
-            prefixLength = key2.length;
-          }
-        }
-        return {
-          key: key2,
-          // key to find (if present)
-          value: value2,
-          // value to find (if present)
-          isPrefixSearch,
-          // prefix search mode
-          leaf: null,
-          // found leaf
-          index: -1,
-          // found leaf item index
-          isKeyPresent,
-          // function () { return this.key !== undefined; }, // is the search criteria contains key
-          isValuePresent,
-          // function () { return this.value !== undefined; }, // is the search criteria contains value
-          foundKey: function() {
-            return this.leaf.keys.items[this.index];
-          },
-          // found items's key
-          foundValue: function() {
-            return this.leaf.values.items[this.index];
-          },
-          // found item's value
-          //
-          prefix_length: prefixLength,
-          // prefix length
-          check_prefix: function() {
-            if (!isPrefixSearch) return false;
-            if (this.index >= this.leaf.keys.count) return false;
-            var keyToCheck = this.foundKey();
-            if (this.prefix_length > keyToCheck.length) return false;
-            return keyToCheck.substr(0, this.prefix_length) == this.key;
-          }
-        };
-      };
-      var B_Plus_Tree = function(nodeCapacity) {
-        if (nodeCapacity === void 0) nodeCapacity = 10;
-        if (nodeCapacity < 4) throw "B_Plus_Tree(): node capacity must be >= 4";
-        var m_public = {
-          // tree root:
-          root: new B_Plus_Leaf(nodeCapacity),
-          //
-          // leafs chain:
-          firstLeaf: null,
-          //
-          lastLeaf: null,
-          //
-          // ---------------------
-          //     editing:
-          // ---------------------
-          //
-          // clear the tree:
-          clear: function() {
-            p_Clear();
-          },
-          //
-          // insert(key, value)
-          // insert([key, value])
-          insert: function(key2, value2) {
-            if (arguments.length == 2) {
-              return p_Insert(key2, value2);
-            } else {
-              return p_Insert(key2[0], key2[1]);
-            }
-          },
-          //
-          // remove(key) - remove all values with given key
-          // remove(key, value) - remove one value occurrence
-          remove: function(key2, value2) {
-            if (arguments.length == 2) {
-              return p_Remove(key2, value2);
-            } else {
-              p_RemoveKey(key2);
-            }
-          },
-          //
-          // ---------------------
-          //       finding:
-          // ---------------------
-          //
-          // findFirst() - find the very first item
-          // findFirst(key) - find the first item for the given key
-          // findFirst(key, value) - find the first key+value occurrence
-          //
-          // returns the FindInfo object:
-          //    key: key,     // key to find (if present)
-          //    value: value, // value to find (if present)
-          //
-          //    leaf: null,   // the current found leaf
-          //    index: -1,    // the current found index
-          //
-          //    foundKey():   // the current found key
-          //    foundValue(): // the current found value
-          //
-          findFirst: function(key2, value2) {
-            return p_FindFirst(key2, value2);
-          },
-          //
-          // find first key matching the prefix:
-          findFirstPrefix: function(prefix) {
-            return p_FindFirst(prefix, void 0, true);
-          },
-          //
-          // find next search conditions occurence
-          findNext: function(findInfo) {
-            return p_FindNext(findInfo);
-          },
-          //
-          // findLast() - find the very last item
-          // findLast(key) - find the last item for the given key
-          // findLast(key, value) - find the last key+value occurrence
-          findLast: function(key2, value2) {
-            return p_FindLast(key2, value2);
-          },
-          //
-          // find last key matching the prefix:
-          findLastPrefix: function(prefix) {
-            return p_FindLast(prefix, void 0, true);
-          },
-          //
-          // find previous search conditions occurence
-          findPrevious: function(findInfo) {
-            return p_FindPrev(findInfo);
-          },
-          //
-          // ---------------------
-          // dictionary-like usage:
-          // ---------------------
-          //
-          // get one value by key (or null):
-          getValue: function(key2) {
-            return p_GetValue(key2);
-          },
-          // set one value by key (insert or update):
-          setValue: function(key2, value2) {
-            p_SetValue(key2, value2);
-          },
-          //
-          //
-          // ---------------------
-          //   other functions:
-          // ---------------------
-          //
-          // count() - count all values
-          // count(key) - count values with the given key
-          count: function(key2) {
-            if (arguments.length == 1) {
-              return p_CountKey(key2);
-            } else {
-              return p_Count();
-            }
-          },
-          //
-          // tree capacity:
-          getCapacity: function() {
-            return m_nodeMaxCount;
-          },
-          //
-          // ---------------------
-          // additional functions:
-          // ---------------------
-          //
-          // iterate through each key + value pair
-          // callback is function(key, value)
-          "each": function(callback2) {
-            return p_each(callback2);
-          },
-          //
-          // get all keys
-          "keys": function() {
-            return p_keys();
-          },
-          //
-          // get all [key, value] pairs
-          "keys_and_values": function() {
-            return p_keys_and_values();
-          },
-          //
-          //
-          // get keys and values by prefix
-          "get_by_prefix": function(prefix) {
-            return p_get_by_prefix(prefix);
-          },
-          //
-          // get keys by prefix
-          "get_keys_by_prefix": function(prefix) {
-            return p_get_keys_by_prefix(prefix);
-          },
-          //
-          // get values at key...
-          "get_values_by_key": function(key2) {
-            return p_get_values_by_key(key2);
-          }
-        };
-        m_public.firstLeaf = m_public.root;
-        m_public.lastLeaf = m_public.root;
-        var m_nodeMaxCount = nodeCapacity;
-        var m_nodeMinCount = Math.floor(m_nodeMaxCount / 2);
-        var p_Clear = function() {
-          m_public.root = new B_Plus_Leaf(m_nodeMaxCount);
-          m_public.firstLeaf = m_public.root;
-          m_public.lastLeaf = m_public.root;
-        };
-        var p_keys = function() {
-          var res2 = [];
-          _p_each_key(function(key2) {
-            res2.push(key2);
-          });
-          return res2;
-        };
-        var p_keys_and_values = function() {
-          var res2 = [];
-          p_each(function(key2, value2) {
-            res2.push([key2, value2]);
-          });
-          return res2;
-        };
-        var _p_each_key = function(callback2) {
-          var findInfo = p_FindFirst();
-          while (findInfo != null) {
-            var fk = findInfo.foundKey();
-            callback2(fk);
-            findInfo = p_FindNext(findInfo);
-          }
-        };
-        var p_each = function(callback2) {
-          var findInfo = p_FindFirst();
-          var doStop = false;
-          while (findInfo != null) {
-            var fk = findInfo.foundKey();
-            var fv = findInfo.foundValue();
-            callback2(fk, fv, function() {
-              doStop = true;
-            });
-            if (doStop) {
-              findInfo = null;
-            } else {
-              findInfo = p_FindNext(findInfo);
-            }
-          }
-        };
-        var p_Insert = function(key2, value2) {
-          var searchResult = searchLeaf(key2);
-          var leaf = searchResult.node;
-          leaf.keys.insert(searchResult.index, key2);
-          leaf.values.insert(searchResult.index, value2);
-          if (leaf.keys.count > m_nodeMaxCount) {
-            if (leaf.prevLeaf != null && leaf.prevLeaf.keys.count < m_nodeMaxCount && leaf.prevLeaf.parent == leaf.parent) {
-              rotateAmongLeavesToLeft(leaf.prevLeaf, leaf);
-            } else if (leaf.nextLeaf != null && leaf.nextLeaf.keys.count < m_nodeMaxCount && leaf.nextLeaf.parent == leaf.parent) {
-              rotateAmongLeavesToRight(leaf, leaf.nextLeaf);
-            } else {
-              splitLeaf(leaf);
-            }
-          }
-        };
-        var splitLeaf = function(leaf) {
-          var leftCount = m_nodeMinCount;
-          var rightCount = leaf.keys.count - leftCount;
-          var newRightLeaf = new B_Plus_Leaf(m_nodeMaxCount);
-          newRightLeaf.parent = leaf.parent;
-          newRightLeaf.keys.copy_from(leaf.keys, leftCount, rightCount);
-          newRightLeaf.values.copy_from(leaf.values, leftCount, rightCount);
-          leaf.keys.count = leftCount;
-          leaf.values.count = leftCount;
-          newRightLeaf.nextLeaf = leaf.nextLeaf;
-          if (newRightLeaf.nextLeaf != null) newRightLeaf.nextLeaf.prevLeaf = newRightLeaf;
-          newRightLeaf.prevLeaf = leaf;
-          leaf.nextLeaf = newRightLeaf;
-          if (m_public.lastLeaf == leaf) m_public.lastLeaf = newRightLeaf;
-          if (leaf.parent != null) {
-            var leafIndex = calcChildIndex(leaf.parent, leaf);
-            insertToParent(leaf.parent, newRightLeaf, newRightLeaf.keys.first(), leafIndex + 1);
-          } else {
-            createNewRoot(leaf, newRightLeaf, newRightLeaf.keys.first());
-          }
-        };
-        var createNewRoot = function(nodeLeft, nodeRight, key2) {
-          var newRoot = new B_Plus_Node(m_nodeMaxCount);
-          newRoot.keys.add(key2);
-          newRoot.children.add(nodeLeft);
-          newRoot.children.add(nodeRight);
-          nodeLeft.parent = newRoot;
-          nodeRight.parent = newRoot;
-          m_public.root = newRoot;
-        };
-        var insertToParent = function(parentNode, newChildNode, newChildFirstKey, newChildIndex) {
-          parentNode.keys.insert(newChildIndex - 1, newChildFirstKey);
-          parentNode.children.insert(newChildIndex, newChildNode);
-          newChildNode.parent = parentNode;
-          if (parentNode.keys.count > m_nodeMaxCount) {
-            splitNode(parentNode);
-          }
-        };
-        var splitNode = function(node) {
-          var newLeftCount = m_nodeMinCount;
-          var newRightCount = m_nodeMaxCount - newLeftCount;
-          var middleKey = node.keys.items[newLeftCount];
-          var newRightNode = new B_Plus_Node(m_nodeMaxCount);
-          newRightNode.keys.copy_from(node.keys, newLeftCount + 1, newRightCount);
-          newRightNode.children.copy_from(node.children, newLeftCount + 1, newRightCount + 1);
-          node.keys.count = newLeftCount;
-          node.children.count = newLeftCount + 1;
-          for (var i = 0; i < newRightNode.children.count; i++) newRightNode.children.items[i].parent = newRightNode;
-          if (node.parent == null) {
-            createNewRoot(node, newRightNode, middleKey);
-          } else {
-            var nodeIndex = calcChildIndex(node.parent, node);
-            insertToParent(node.parent, newRightNode, middleKey, nodeIndex + 1);
-          }
-        };
-        var p_Remove = function(key2, value2) {
-          var searchResult = searchLeafValue(key2, value2);
-          if (!searchResult.found) return false;
-          removeFromLeaf(searchResult.node, searchResult.index);
-          return true;
-        };
-        var p_RemoveKey = function(key2) {
-          while (true) {
-            var searchResult = searchLeaf(key2);
-            if (!searchResult.found) break;
-            removeFromLeaf(searchResult.node, searchResult.index);
-          }
-        };
-        var removeFromLeaf = function(leaf, index) {
-          leaf.keys.removeAt(index);
-          leaf.values.removeAt(index);
-          if (leaf.keys.count < m_nodeMinCount) {
-            if (leaf.prevLeaf != null && leaf.parent == leaf.prevLeaf.parent && leaf.prevLeaf.keys.count > m_nodeMinCount) {
-              rotateAmongLeavesToRight(leaf.prevLeaf, leaf);
-            } else if (leaf.nextLeaf != null && leaf.parent == leaf.nextLeaf.parent && leaf.nextLeaf.keys.count > m_nodeMinCount) {
-              rotateAmongLeavesToLeft(leaf, leaf.nextLeaf);
-            } else {
-              mergeLeaf(leaf);
-            }
-          }
-          return true;
-        };
-        var mergeLeaf = function(leaf) {
-          if (leaf.parent == null) {
-            return;
-          }
-          var leftCount = m_nodeMaxCount + 1;
-          var rightCount = m_nodeMaxCount + 1;
-          if (leaf.prevLeaf != null && leaf.prevLeaf.parent == leaf.parent) {
-            leftCount = leaf.prevLeaf.keys.count;
-          }
-          if (leaf.nextLeaf != null && leaf.nextLeaf.parent == leaf.parent) {
-            rightCount = leaf.nextLeaf.keys.count;
-          }
-          if (leftCount < rightCount) {
-            if (leftCount + leaf.keys.count > m_nodeMaxCount) throw "B_Plus_Tree.mergeLeaf(): leftCount";
-            mergeLeaves(leaf.prevLeaf, leaf);
-          } else {
-            if (rightCount + leaf.keys.count > m_nodeMaxCount) throw "B_Plus_Tree.mergeLeaf(): rightCount";
-            mergeLeaves(leaf, leaf.nextLeaf);
-          }
-        };
-        var mergeLeaves = function(leafLeft, leafRight) {
-          leafLeft.keys.add_from(leafRight.keys);
-          leafLeft.values.add_from(leafRight.values);
-          leafLeft.nextLeaf = leafRight.nextLeaf;
-          if (leafLeft.nextLeaf != null) leafLeft.nextLeaf.prevLeaf = leafLeft;
-          if (m_public.lastLeaf == leafRight) m_public.lastLeaf = leafLeft;
-          var parent = leafRight.parent;
-          var leafRightIndex = calcChildIndex(parent, leafRight);
-          parent.keys.removeAt(leafRightIndex - 1);
-          parent.children.removeAt(leafRightIndex);
-          if (parent.keys.count < m_nodeMinCount) {
-            mergeNode(parent);
-          }
-          ;
-        };
-        var mergeNode = function(node) {
-          var parent = node.parent;
-          if (node.parent == null) {
-            if (node.keys.count == 0) {
-              m_public.root = node.children.items[0];
-              m_public.root.parent = null;
-            }
-            return;
-          }
-          var nodeIndex = calcChildIndex(parent, node);
-          var leftSibling = nodeIndex > 0 ? parent.children.items[nodeIndex - 1] : null;
-          var rightSibling = nodeIndex + 1 < parent.children.count ? parent.children.items[nodeIndex + 1] : null;
-          if (leftSibling != null && leftSibling.keys.count > m_nodeMinCount) {
-            rotateAmongNodesToRight(leftSibling, node);
-            return;
-          }
-          if (rightSibling != null && rightSibling.keys.count > m_nodeMinCount) {
-            rotateAmongNodesToLeft(node, rightSibling);
-            return;
-          }
-          var leftCount = m_nodeMaxCount + 1;
-          var rightCount = m_nodeMaxCount + 1;
-          if (leftSibling != null) {
-            leftCount = leftSibling.keys.count;
-          }
-          if (rightSibling != null) {
-            rightCount = rightSibling.keys.count;
-          }
-          if (leftCount < rightCount) {
-            if (leftSibling == null) throw "B_Plus_Tree.mergeNode(): leftSibling";
-            mergeNodes(leftSibling, node, nodeIndex);
-          } else {
-            if (rightSibling == null) throw "B_Plus_Tree.mergeNode(): rightSibling";
-            mergeNodes(node, rightSibling, nodeIndex + 1);
-          }
-        };
-        var mergeNodes = function(nodeLeft, nodeRight, nodeRightIndex) {
-          var parent = nodeLeft.parent;
-          for (var i = 0; i < nodeRight.children.count; i++) nodeRight.children.items[i].parent = nodeLeft;
-          nodeLeft.keys.add(nodeLeft.parent.keys.items[nodeRightIndex - 1]);
-          nodeLeft.keys.add_from(nodeRight.keys);
-          nodeLeft.children.add_from(nodeRight.children);
-          parent.keys.removeAt(nodeRightIndex - 1);
-          parent.children.removeAt(nodeRightIndex);
-          if (parent.keys.count < m_nodeMinCount) {
-            mergeNode(parent);
-          }
-          ;
-        };
-        var p_FindFirst = function(key2, value2, isPrefixSearch) {
-          var findInfo = FindInfo(key2, value2, isPrefixSearch);
-          if (findInfo.isKeyPresent) {
-            if (findInfo.isPrefixSearch && findInfo.isValuePresent) throw "B_Plus_Tree.p_FindFirst(): arguments error: isPrefixSearch, but value is present";
-            var searchResult = findInfo.isValuePresent ? searchLeafValue(key2, value2) : searchLeaf(key2);
-            findInfo.leaf = searchResult.node;
-            findInfo.index = searchResult.index;
-            if (!searchResult.found) {
-              if (!findInfo.check_prefix()) {
-                return null;
-              }
-            }
-          } else {
-            if (findInfo.isValuePresent) throw "B_Plus_Tree.findFirst(): arguments error: key is not present, but value is present";
-            findInfo.leaf = m_public.firstLeaf;
-            findInfo.index = 0;
-            if (findInfo.leaf.keys.count <= 0) return null;
-          }
-          return findInfo;
-        };
-        var p_FindLast = function(key2, value2, isPrefixSearch) {
-          var findInfo = new FindInfo(key2, value2, isPrefixSearch);
-          if (findInfo.isKeyPresent) {
-            if (findInfo.isPrefixSearch && findInfo.isValuePresent) throw "B_Plus_Tree.p_FindLast(): arguments error: isPrefixSearch, but value is present";
-            if (findInfo.isPrefixSearch) {
-              var searchResult = searchLastLeafByPrefix(key2);
-              findInfo.leaf = searchResult.node;
-              findInfo.index = searchResult.index;
-              if (!searchResult.found) {
-                return null;
-              }
-            } else {
-              var searchResult = findInfo.isValuePresent ? searchLastLeafValue(key2, value2) : searchLastLeaf(key2);
-              findInfo.leaf = searchResult.node;
-              findInfo.index = searchResult.index;
-              if (!searchResult.found) {
-                return null;
-              }
-            }
-          } else {
-            if (findInfo.isValuePresent) throw "B_Plus_Tree.findLast(): arguments error: key is not present, but value is present";
-            findInfo.leaf = m_public.lastLeaf;
-            findInfo.index = findInfo.leaf.keys.count - 1;
-            if (findInfo.index < 0) return null;
-          }
-          return findInfo;
-        };
-        var findGoToNext = function(findInfo) {
-          findInfo.index++;
-          if (findInfo.index >= findInfo.leaf.keys.count) {
-            findInfo.leaf = findInfo.leaf.nextLeaf;
-            findInfo.index = 0;
-          }
-          return findInfo.leaf != null;
-        };
-        var findGoToPrev = function(findInfo) {
-          findInfo.index--;
-          if (findInfo.index < 0) {
-            findInfo.leaf = findInfo.leaf.prevLeaf;
-            if (findInfo.leaf == null) return false;
-            findInfo.index = findInfo.leaf.keys.count - 1;
-          }
-          return true;
-        };
-        var p_FindNext = function(findInfo) {
-          while (true) {
-            if (!findGoToNext(findInfo)) return null;
-            if (findInfo.isPrefixSearch) {
-              if (!findInfo.check_prefix()) return null;
-            } else {
-              if (findInfo.isKeyPresent && findInfo.key != findInfo.foundKey()) return null;
-            }
-            if (findInfo.isValuePresent) {
-              if (findInfo.value == findInfo.foundValue()) return findInfo;
-            } else {
-              return findInfo;
-            }
-          }
-        };
-        var p_FindPrev = function(findInfo) {
-          while (true) {
-            if (!findGoToPrev(findInfo)) return null;
-            if (findInfo.isPrefixSearch) {
-              if (!findInfo.check_prefix()) return null;
-            } else {
-              if (findInfo.isKeyPresent && findInfo.key != findInfo.foundKey()) return null;
-            }
-            if (findInfo.isValuePresent) {
-              if (findInfo.value == findInfo.foundValue()) return findInfo;
-            } else {
-              return findInfo;
-            }
-          }
-        };
-        var p_get_values_by_key = function(key2) {
-          var res2 = [];
-          var findInfo = p_FindFirst(key2);
-          while (findInfo != null) {
-            res2.push(findInfo.foundValue());
-            findInfo = p_FindNext(findInfo);
-          }
-          return res2;
-        };
-        var p_get_by_prefix = function(prefix) {
-          var res2 = [];
-          var findInfo = m_public.findFirstPrefix(prefix);
-          while (findInfo != null) {
-            res2.push([findInfo.foundKey(), findInfo.foundValue()]);
-            findInfo = m_public.findNext(findInfo);
-          }
-          return res2;
-        };
-        var p_get_keys_by_prefix = function(prefix) {
-          var res2 = [];
-          var findInfo = m_public.findFirstPrefix(prefix);
-          while (findInfo != null) {
-            res2.push(findInfo.foundKey());
-            findInfo = m_public.findNext(findInfo);
-          }
-          return res2;
-        };
-        var p_GetValue = function(key2) {
-          var searchResult = searchLeaf(key2);
-          if (!searchResult.found) return null;
-          return searchResult.node.values.items[searchResult.index];
-        };
-        var p_SetValue = function(key2, value2) {
-          var searchResult = searchLeaf(key2);
-          if (searchResult.found) {
-            removeFromLeaf(searchResult.node, searchResult.index);
-          }
-          p_Insert(key2, value2);
-        };
-        var p_Count = function() {
-          var result = 0;
-          var leaf = m_public.firstLeaf;
-          while (leaf != null) {
-            result += leaf.keys.count;
-            leaf = leaf.nextLeaf;
-          }
-          return result;
-        };
-        var p_CountKey = function(key2) {
-          var result = 0;
-          var findInfo = m_public.findFirst(key2);
-          while (findInfo != null) {
-            result++;
-            findInfo = m_public.findNext(findInfo);
-          }
-          return result;
-        };
-        var rotateAmongNodesToLeft = function(leftNode, rightNode) {
-          var parent = rightNode.parent;
-          var rightIndex = calcChildIndex(parent, rightNode);
-          leftNode.keys.add(parent.keys.items[rightIndex - 1]);
-          parent.keys.items[rightIndex - 1] = rightNode.keys.first();
-          rightNode.keys.removeFirst();
-          rightNode.children.first().parent = leftNode;
-          leftNode.children.add(rightNode.children.first());
-          rightNode.children.removeFirst();
-        };
-        var rotateAmongNodesToRight = function(leftNode, rightNode) {
-          var parent = rightNode.parent;
-          var rightIndex = calcChildIndex(parent, rightNode);
-          rightNode.keys.insert(0, parent.keys.items[rightIndex - 1]);
-          parent.keys.items[rightIndex - 1] = leftNode.keys.last();
-          leftNode.keys.removeLast();
-          rightNode.children.insert(0, leftNode.children.last());
-          rightNode.children.first().parent = rightNode;
-          leftNode.children.removeLast();
-        };
-        var rotateAmongLeavesToLeft = function(leftLeaf, rightLeaf) {
-          var rightIndex = calcChildIndex(rightLeaf.parent, rightLeaf);
-          leftLeaf.keys.add(rightLeaf.keys.first());
-          leftLeaf.values.add(rightLeaf.values.first());
-          rightLeaf.keys.removeFirst();
-          rightLeaf.values.removeFirst();
-          rightLeaf.parent.keys.items[rightIndex - 1] = rightLeaf.keys.first();
-        };
-        var rotateAmongLeavesToRight = function(leftLeaf, rightLeaf) {
-          var rightIndex = calcChildIndex(rightLeaf.parent, rightLeaf);
-          rightLeaf.keys.insert(0, leftLeaf.keys.last());
-          rightLeaf.values.insert(0, leftLeaf.values.last());
-          leftLeaf.keys.removeLast();
-          leftLeaf.values.removeLast();
-          rightLeaf.parent.keys.items[rightIndex - 1] = rightLeaf.keys.first();
-        };
-        var calcChildIndex = function(node, child) {
-          var key2 = child.keys.first();
-          var searchResult = node.keys.search_first(key2);
-          if (!searchResult.found) {
-            if (node.children.items[searchResult.index] != child) throw "B_PlusTree.calcChildIndex(): 1";
-            return searchResult.index;
-          }
-          var index = searchResult.index;
-          for (; ; ) {
-            if (node.children.items[index] == child) return index;
-            index++;
-            if (index >= node.children.count) break;
-            if (node.keys.items[index - 1] != key2) break;
-          }
-          throw "B_PlusTree.calcChildIndex(): 2";
-        };
-        var searchLeaf = function(key2) {
-          var doSearchLeaf = function(node, key3) {
-            var searchResult = node.keys.search_first(key3);
-            if (node.isLeaf) {
-              return { node, found: searchResult.found, index: searchResult.index };
-            }
-            if (searchResult.found) {
-              var resultLeft = doSearchLeaf(node.children.items[searchResult.index], key3);
-              if (resultLeft.found) return resultLeft;
-              return doSearchLeaf(node.children.items[searchResult.index + 1], key3);
-            } else {
-              return doSearchLeaf(node.children.items[searchResult.index], key3);
-            }
-          };
-          return doSearchLeaf(m_public.root, key2);
-        };
-        var searchLastLeaf = function(key2) {
-          var doSearchLastLeaf = function(node, key3) {
-            var searchResult = node.keys.search_last(key3);
-            if (node.isLeaf) {
-              return { node, found: searchResult.found, index: searchResult.index };
-            }
-            if (searchResult.found) {
-              var resultRight = doSearchLastLeaf(node.children.items[searchResult.index + 1], key3);
-              if (resultRight.found) return resultRight;
-              return doSearchLastLeaf(node.children.items[searchResult.index], key3);
-            } else {
-              return doSearchLastLeaf(node.children.items[searchResult.index], key3);
-            }
-          };
-          return doSearchLastLeaf(m_public.root, key2);
-        };
-        var searchLastLeafByPrefix = function(prefix) {
-          var doSearchLastLeafByPrefix = function(node, prefix2) {
-            var searchResult = node.keys.search_last_prefix(prefix2);
-            if (node.isLeaf) {
-              return { node, found: searchResult.found, index: searchResult.index };
-            }
-            if (searchResult.found) {
-              var resultRight = doSearchLastLeafByPrefix(node.children.items[searchResult.index + 1], prefix2);
-              if (resultRight.found) return resultRight;
-              return doSearchLastLeafByPrefix(node.children.items[searchResult.index], prefix2);
-            } else {
-              return doSearchLastLeafByPrefix(node.children.items[searchResult.index], prefix2);
-            }
-          };
-          return doSearchLastLeafByPrefix(m_public.root, prefix);
-        };
-        var searchLeafValue = function(key2, value2) {
-          var searchResult = searchLeaf(key2);
-          if (!searchResult.found) return searchResult;
-          var valueFound = false;
-          var leaf = searchResult.node;
-          var index = searchResult.index;
-          for (; ; ) {
-            if (index >= leaf.values.count) {
-              leaf = leaf.nextLeaf;
-              if (leaf == null) break;
-              index = 0;
-            }
-            if (leaf.keys.items[index] != key2) break;
-            if (leaf.values.items[index] == value2) {
-              valueFound = true;
-              break;
-            }
-            index++;
-          }
-          return { node: leaf, found: valueFound, index };
-        };
-        var searchLastLeafValue = function(key2, value2) {
-          var searchResult = searchLastLeaf(key2);
-          if (!searchResult.found) return searchResult;
-          var valueFound = false;
-          var leaf = searchResult.node;
-          var index = searchResult.index;
-          for (; ; ) {
-            if (index < 0) {
-              leaf = leaf.prevLeaf;
-              if (leaf == null) break;
-              index = leaf.values.count - 1;
-            }
-            if (leaf.keys.items[index] != key2) break;
-            if (leaf.values.items[index] == value2) {
-              valueFound = true;
-              break;
-            }
-            index--;
-          }
-          return { node: leaf, found: valueFound, index };
-        };
-        return m_public;
-      };
-      B_Plus_Tree.FindInfo = FindInfo;
-      module.exports = B_Plus_Tree;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Value.js
-  var require_Data_Value = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Value.js"(exports, module) {
-      var jsgui2 = require_lib_lang_mini();
-      var Data_Model = require_Data_Model();
-      var j = jsgui2;
-      var Evented_Class = j.Evented_Class;
-      var each = j.each;
-      var is_array = j.is_array;
-      var is_dom_node = j.is_dom_node;
-      var is_ctrl = j.is_ctrl;
-      var extend = j.extend;
-      var get_truth_map_from_arr = j.get_truth_map_from_arr;
-      var get_map_from_arr = j.get_map_from_arr;
-      var arr_like_to_arr = j.arr_like_to_arr;
-      var tof = j.tof;
-      var is_defined = j.is_defined;
-      var stringify = j.stringify;
-      var functional_polymorphism = j.functional_polymorphism;
-      var fp = j.fp;
-      var arrayify = j.arrayify;
-      var mapify = j.mapify;
-      var are_equal = j.are_equal;
-      var get_item_sig = j.get_item_sig;
-      var set_vals = j.set_vals;
-      var truth = j.truth;
-      var trim_sig_brackets = j.trim_sig_brackets;
-      var ll_set = j.ll_set;
-      var ll_get = j.ll_get;
-      var input_processors = j.input_processors;
-      var iterate_ancestor_classes = j.iterate_ancestor_classes;
-      var is_arr_of_arrs = j.is_arr_of_arrs;
-      var is_arr_of_strs = j.is_arr_of_strs;
-      var is_arr_of_t = j.is_arr_of_t;
-      var clone = jsgui2.clone;
-      var input_processors = jsgui2.input_processors;
-      var is_plain_object = (value2) => value2 !== null && typeof value2 === "object" && !Array.isArray(value2);
-      var Data_Value2 = class _Data_Value extends Data_Model {
-        constructor(spec = {}) {
-          const actual_spec = is_plain_object(spec) ? spec : { value: spec };
-          super(actual_spec);
-          this.__data_value = true;
-          if (actual_spec.context) {
-            this.context = actual_spec.context;
-          }
-          if (is_defined(actual_spec.value)) {
-            this._ = actual_spec.value;
-          } else {
-            this._ = void 0;
-          }
-          this.__type = "data_value";
-          this._relationships = {};
-        }
-        // Get but with a format change?
-        //   Get and validate???
-        "get"() {
-          return this._;
-        }
-        // get value and set value.
-        "value"() {
-          return this._;
-        }
-        "toObject"() {
-          return this._;
-        }
-        // .value =
-        //   Though .set could have more input, eg a format shifter????
-        "set"(val) {
-          var input_processor = input_processors[this.__type_name];
-          if (input_processor) {
-            val = input_processor(val);
-          }
-          var old_val = this._;
-          this._ = val;
-          this.raise("change", {
-            "old": old_val,
-            "value": val
-          });
-          return val;
-        }
-        "toString"() {
-          return this.get();
-        }
-        // Maybe a particular stringify function?
-        "toJSON"() {
-          var val = this.get();
-          var tval = typeof val;
-          if (tval == "string") {
-            return '"' + val + '"';
-          } else {
-            return val;
-          }
-        }
-        // Need to copy / clone the ._ value
-        "clone"() {
-          var res2 = new _Data_Value({
-            "value": this._
-          });
-          return res2;
-        }
-        // This is important to the running of jsgui3.
-        "_id"() {
-          if (this.__id) return this.__id;
-          if (this.context) {
-            this.__id = this.context.new_id(this.__type_name || this.__type);
-          } else {
-            if (!is_defined(this.__id)) {
-              throw "DataValue should have context";
-              this.__id = new_data_value_id();
-            }
-          }
-          return this.__id;
-        }
-        "parent"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig(a, 1);
-          var obj2, index;
-          if (a.l == 0) {
-            return this._parent;
-          } else if (a.l == 1) {
-            obj2 = a[0];
-            if (!this.context && obj2.context) {
-              this.context = obj2.context;
-            }
-            var relate_by_id = function(that2) {
-              var obj_id = obj2._id();
-              that2._relationships[obj_id] = true;
-            };
-            var relate_by_ref = function(that2) {
-              that2._parent = obj2;
-            };
-            relate_by_ref(this);
-          } else if (a.l == 2) {
-            obj2 = a[0];
-            index = a[1];
-            if (!this.context && obj2.context) {
-              this.context = obj2.context;
-            }
-            this._parent = obj2;
-            this._index = index;
-          }
-        }
-      };
-      module.exports = Data_Value2;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/Mini_Context.js
-  var require_Mini_Context = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/Mini_Context.js"(exports, module) {
-      var Mini_Context = class {
-        // Need quite a simple mechanism to get IDs for objects.
-        // They will be typed objects/
-        constructor(spec) {
-          const map_typed_counts = /* @__PURE__ */ Object.create(null);
-          this.new_id = (str_type = "item") => {
-            const current = map_typed_counts[str_type] || 0;
-            map_typed_counts[str_type] = current + 1;
-            return `${str_type}_${current}`;
-          };
-        }
-        "make"(abstract_object) {
-          if (abstract_object._abstract) {
-            var constructor = abstract_object.constructor;
-            var aos = abstract_object._spec;
-            aos.abstract = null;
-            aos.context = this;
-            var res2 = new constructor(aos);
-            return res2;
-          } else {
-            throw "Object must be abstract, having ._abstract == true";
-          }
-        }
-      };
-      module.exports = Mini_Context;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Object.js
-  var require_Data_Object = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Object.js"(exports, module) {
-      var jsgui2 = require_lib_lang_mini();
-      var Data_Value2 = require_Data_Value();
-      var j = jsgui2;
-      var Evented_Class = j.Evented_Class;
-      var Class = j.Class;
-      var each = j.each;
-      var is_array = j.is_array;
-      var is_dom_node = j.is_dom_node;
-      var is_ctrl = j.is_ctrl;
-      var extend = j.extend;
-      var get_truth_map_from_arr = j.get_truth_map_from_arr;
-      var get_map_from_arr = j.get_map_from_arr;
-      var arr_like_to_arr = j.arr_like_to_arr;
-      var tof = j.tof;
-      var is_defined = j.is_defined;
-      var stringify = j.stringify;
-      var functional_polymorphism = j.functional_polymorphism;
-      var fp = j.fp;
-      var arrayify = j.arrayify;
-      var mapify = j.mapify;
-      var are_equal = j.are_equal;
-      var get_item_sig = j.get_item_sig;
-      var get_a_sig2 = j.get_a_sig;
-      var set_vals = j.set_vals;
-      var truth = j.truth;
-      var trim_sig_brackets = j.trim_sig_brackets;
-      var ll_set = j.ll_set;
-      var ll_get = j.ll_get;
-      var input_processors = j.input_processors;
-      var iterate_ancestor_classes = j.iterate_ancestor_classes;
-      var is_arr_of_arrs = j.is_arr_of_arrs;
-      var is_arr_of_strs = j.is_arr_of_strs;
-      var is_arr_of_t = j.is_arr_of_t;
-      var clone = jsgui2.clone;
-      jsgui2.__data_id_method = "init";
-      var Mini_Context = require_Mini_Context();
-      var Data_Model = require_Data_Model();
-      var is_js_native = function(obj2) {
-        var t = tof(obj2);
-        return t == "number" || t == "string" || t == "boolean" || t == "array";
-      };
-      var Data_Object = class extends Data_Model {
-        constructor(spec = {}, fields) {
-          super(spec);
-          this._ = this._ || {};
-          if (spec.id) {
-            this.__id = spec.id;
-          }
-          if (spec.__id) {
-            this.__id = spec.__id;
-          }
-          this.__type_name = spec.__type_name || "data_object";
-          if (fields) this.set_fields_from_spec(fields, spec);
-          this.__data_object = true;
-          if (spec.abstract === true) {
-            this._abstract = true;
-            var tSpec = tof(spec);
-            if (tSpec == "function") {
-              this._type_constructor = spec;
-            } else if (tSpec == "object") {
-              this._spec = spec;
-            }
-          } else {
-            var t_spec = tof(spec);
-            if (!this.__type) {
-              this.__type = "data_object";
-            }
-            if (t_spec === "object" || t_spec === "control") {
-              if (spec.context) {
-                this.context = spec.context;
-              }
-              if (spec.id) {
-                this.__id = spec.id;
-              }
-              if (spec._id) {
-                this.__id = spec._id;
-              }
-              if (spec.__id) {
-                this.__id = spec.__id;
-              }
-            } else if (t_spec == "data_object") {
-              if (spec.context) this.context = spec.context;
-            }
-            if (is_defined(spec.parent)) {
-              this.parent = spec.parent;
-            }
-            if (this.context) {
-              this.init_default_events();
-            }
-          }
-        }
-        "set_fields_from_spec"(fields, spec) {
-          each(fields, (field) => {
-            if (typeof spec[field[0]] !== "undefined") {
-              this[field[0]] = spec[field[0]];
-            } else {
-              this[field[0]] = field[2];
-            }
-          });
-        }
-        "init_default_events"() {
-        }
-        /*
-             'data_def': fp(function(a, sig) {
-             if (sig == '[o]') {
-             // create the new data_def constraint.
-        
-        
-             }
-             }),
-             */
-        "keys"() {
-          return Object.keys(this._);
-        }
-        "toJSON"() {
-          var res2 = [];
-          res2.push("Data_Object(" + JSON.stringify(this._) + ")");
-          return res2.join("");
-        }
-        // using_fields_connection()
-        //  will search up the object heirachy, to see if the Data_Objects fields need to be connected through the use of functions.
-        //  that will make the fields easy to change by calling a function. Should make things much faster to access than when programming with Backbone.
-        // then will connect the fields with connect_fields()
-        /*
-        'using_fields_connection'() {
-            var res = false;
-            iterate_ancestor_classes(this.constructor, function (a_class, stop) {
-                if (is_defined(a_class._connect_fields)) {
-                    res = a_class._connect_fields;
-                    stop();
-                }
-            });
-            return res;
-        }
-        */
-        get parent() {
-          return this._parent;
-        }
-        set parent(value2) {
-          return this._parent = value2;
-        }
-        "_id"() {
-          if (this.__id) return this.__id;
-          if (this.context) {
-            this.__id = this.context.new_id(this.__type_name || this.__type);
-          } else {
-            if (this._abstract) {
-              return void 0;
-            } else if (!is_defined(this.__id)) {
-              return void 0;
-            }
-          }
-          return this.__id;
-        }
-        // Problems with name (fields).
-        //  Fields are given as a description of the fields.
-        //   Gets more complicated when we have a function to access the fields as well.
-        //   What if we want to override that function?
-        // Will call it field
-        //  18/12/2016 - Getting rid of this confusion, will mostly remove / greatly simplify field functionality.
-        //  Just need to know which fields any class has, keeping track of this will use some data structures like Sorted_KVS,
-        //   but not much complex code within this part.
-        // Not so sure what a field function will do right now.
-        //  Does not seem like such an essential part of the API.
-        //   Can just define the fields, then they act a bit differently.
-        //   Have field handling in Data_Object.
-        //   Collection would have the same field capabilities. Fields should not be so important anyway.
-        // 18/12/2016 Will remove constraints, then make them much more functional.
-        "each"(callback2) {
-          each(this._, callback2);
-        }
-        // could make this polymorphic so that it
-        "position_within"(parent) {
-          var p_id = parent._id();
-          if (this._parents && is_defined(this._parents[p_id])) {
-            var parent_rel_info = this._parents[p_id];
-            var pos_within = parent_rel_info[1];
-            return pos_within;
-          }
-        }
-        // Maybe just 'remove' function.
-        //  This may be needed with multiple parents, which are not being used at the moment.
-        "remove_from"(parent) {
-          var p_id = parent._id();
-          if (this._parents && is_defined(this._parents[p_id])) {
-            var parent = this._parents[p_id][0];
-            var pos_within = this._parents[p_id][1];
-            var item2 = parent._arr[pos_within];
-            parent.remove(pos_within);
-            delete this._parents[p_id];
-          }
-        }
-        //  
-        // Maybe only do this with the fields anyway
-        "load_from_spec"(spec, arr_item_names) {
-          each(arr_item_names, (v) => {
-            var spec_item = spec[v];
-            if (is_defined(spec_item)) {
-              this.set(v, spec_item);
-            }
-          });
-        }
-        // They will be treated as values in many cases anyway.
-        //  Will turn them to different types of object where possible.
-        /*
-            'value'() {
-                var a = arguments; a.l = arguments.length; var sig = get_a_sig(a, 1);
-                // could operate like both get and set, but does not return data_objects, returns the value itself.
-                var name;
-                //var res;
-                if (sig === '[s]') {
-                    name = a[0];
-                    var possibly_dobj = this.get(name);
-                    //var t_obj = tof(possibly_dobj);
-        
-                    if (possibly_dobj) {
-                        if (possibly_dobj.value && typeof possibly_dobj.value === 'function') {
-                            return possibly_dobj.value();
-                        } else {
-                            return possibly_dobj;
-                        }
-                    }
-                }
-            }
-            */
-        // Get could be greatly simplified as well.
-        //  Input and output processing will be more streamlined in a functional way.
-        // 19/12/2016 - Not using get or set nearly as much anyway.
-        "get"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          var do_typed_processing = false;
-          if (do_typed_processing) {
-            if (a.l === 0) {
-              var output_obj = jsgui2.output_processors[this.__type_name](this._);
-              return output_obj;
-            } else {
-              console.log("a", a);
-              console.trace();
-              throw "not yet implemented";
-            }
-          } else {
-            if (sig == "[s,f]") {
-              throw "Asyncronous access not allowed on Data_Object get.";
-              var res2 = this.get(a[0]);
-              var callback2 = a[1];
-              if (typeof res2 == "function") {
-                res2(callback2);
-              } else {
-                return res2;
-              }
-            } else if (sig == "[s]") {
-              var res2 = ll_get(this, a[0]);
-              return res2;
-            } else if (a.l === 0) {
-              return this._;
-            }
-          }
-        }
-        // Or don't use / support get and set for the moment?
-        //   Only use property / field access?
-        //   Define property, with getter and setter, seems like a more cleanly defined system.
-        // May see about making a new simplified implementation of this and running it through tests.
-        //   Though the new Data_Value seems like the more appropriate way for the moment.
-        // May look into seeing where Data_Value is used in the current system too.
-        //   Could see about further incorportating its use (in places).
-        //'set': fp(function(a, sig) {
-        "set"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          if (this._abstract) return false;
-          var that2 = this, res2;
-          var input_processors2 = jsgui2.input_processors;
-          if (a.l == 2 || a.l == 3) {
-            var property_name = a[0], value2 = a[1];
-            var ta2 = tof(a[2]);
-            var silent = false;
-            var source;
-            if (ta2 == "string" || ta2 == "boolean") {
-              silent = a[2];
-            }
-            if (ta2 == "control") {
-              source = a[2];
-            }
-            if (!this._initializing && this._map_read_only && this._map_read_only[property_name]) {
-              throw 'Property "' + property_name + '" is read-only.';
-            } else {
-              var split_pn = property_name.split(".");
-              if (split_pn.length > 1 && property_name != ".") {
-                var spn_first = split_pn[0];
-                var spn_arr_next = split_pn.slice(1);
-                var data_object_next = this.get(spn_first);
-                if (data_object_next) {
-                  res2 = data_object_next.set(spn_arr_next.join("."), value2);
-                  if (!silent) {
-                    var e_change = {
-                      "name": property_name,
-                      "value": value2,
-                      "bubbled": true
-                    };
-                    if (source) {
-                      e_change.source = source;
-                    }
-                    this.raise_event("change", e_change);
-                  }
-                } else {
-                  throw "No data object at this level.";
-                }
-              } else {
-                var data_object_next = this.get(property_name);
-                if (data_object_next) {
-                  var field = this[property_name];
-                  if (field) {
-                    data_object_next.__type_name = field[1] || data_object_next.__type_name;
-                  }
-                  data_object_next.set(value2);
-                }
-                if (!is_defined(data_object_next)) {
-                  var tv = typeof value2;
-                  var dv;
-                  if (tv === "string" || tv === "number" || tv === "boolean" || tv === "date") {
-                    dv = new Data_Value2({
-                      "value": value2
-                    });
-                  } else {
-                    if (tv === "array") {
-                      dv = new Data_Value2({
-                        "value": value2
-                      });
-                    } else {
-                      if (tv === "object") {
-                        if (value2.__data_object || value2.__data_value || value2.__data_grid) {
-                          dv = value2;
-                        } else {
-                          dv = new Data_Value2({
-                            "value": value2
-                          });
-                        }
-                      } else {
-                        dv = value2;
-                      }
-                    }
-                  }
-                  this._[property_name] = dv;
-                  if (!silent) {
-                    e_change = {
-                      "name": property_name,
-                      "value": dv
-                    };
-                    if (source) {
-                      e_change.source = source;
-                    }
-                    this.raise_event("change", e_change);
-                  }
-                  return value2;
-                } else {
-                  var next_is_js_native = is_js_native(data_object_next);
-                  if (next_is_js_native) {
-                    this._[property_name] = value2;
-                    res2 = value2;
-                  } else {
-                    res2 = data_object_next;
-                    this._[property_name] = data_object_next;
-                  }
-                  if (!silent) {
-                    var e_change = {
-                      "name": property_name,
-                      "value": data_object_next.value()
-                    };
-                    if (source) {
-                      e_change.source = source;
-                    }
-                    this.trigger("change", e_change);
-                  }
-                  return res2;
-                }
-              }
-            }
-          } else {
-            var value2 = a[0];
-            var property_name = a[1];
-            var input_processor = input_processors2[this.__type_name];
-            if (input_processor) {
-              var processed_input = input_processor(value2);
-              value2 = processed_input;
-              this._[property_name] = value2;
-              this.raise_event("change", {
-                "value": value2
-              });
-              return value2;
-            } else {
-              if (sig === "[D]") {
-                this._[property_name] = value2;
-                this.raise_event("change", [property_name, value2]);
-                return value2;
-              } else if (sig === "[o]") {
-                res2 = {};
-                each(a[0], function(v, i) {
-                  res2[i] = that2.set(i, v);
-                });
-                return res2;
-              }
-              if (sig === "[c]") {
-                this._[property_name] = value2;
-                this.raise_event("change", [property_name, value2]);
-                return value2;
-              }
-            }
-          }
-        }
-        "has"(property_name) {
-          return is_defined(this.get(property_name));
-        }
-      };
-      jsgui2.map_classes = jsgui2.map_classes || {};
-      var dobj = (obj2, data_def) => {
-        var cstr = Data_Object;
-        var res2;
-        if (data_def) {
-          res2 = new cstr({
-            "data_def": data_def
-          });
-        } else {
-          res2 = new cstr({});
-        }
-        var tobj = tof(obj2);
-        if (tobj == "object") {
-          var res_set = res2.set;
-          each(obj2, (v, i) => {
-            res_set.call(res2, i, v);
-          });
-        }
-        return res2;
-      };
-      Data_Object.dobj = dobj;
-      Data_Object.Mini_Context = Mini_Context;
-      module.exports = Data_Object;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/sorted-kvs.js
-  var require_sorted_kvs = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/sorted-kvs.js"(exports, module) {
-      var jsgui2 = require_lib_lang_mini();
-      var mapify = jsgui2.mapify;
-      var B_Plus_Tree = require_b_plus_tree();
-      var Sorted_KVS = class {
-        constructor(spec) {
-          spec = spec || {};
-          if (typeof spec.unique_keys !== "undefined") this.unique_keys = spec.unique_keys;
-          this.tree = B_Plus_Tree(12);
-        }
-        "clear"() {
-          this.tree.clear();
-        }
-        /*
-        	'put': mapify(function (key, value) {
-        		// inserting a bunch of things at once... could that be done more efficiently, such as in one traversal?
-        		//  sort the items, then can skip through the tree a bit quicker?
-        
-        
-        		var insert_res = this.tree.insert(key, value);
-        		// with tree.insert - nice if we can keep the treenode as a result.
-        		//  the tree does not store objects in the node.
-        		//   could make the tree node hold a reference to the object?
-        
-        		//console.log('put insert_res ' + insert_res);
-        		//this.dict[key] = value;
-        	}),
-        	*/
-        "out"(key2) {
-          this.tree.remove(key2);
-        }
-        "get"(key2) {
-          return this.tree.get_values_by_key(key2);
-        }
-        "has"(key2) {
-          return this.key_count(key2) > 0;
-        }
-        "get_cursor"() {
-        }
-        "keys"() {
-          return this.tree.keys();
-        }
-        "keys_and_values"() {
-          return this.tree.keys_and_values();
-        }
-        /*
-        	 'values': function() {
-        	 var keys = this.keys();
-        	 var res = [];
-        	 var that = this;
-        	 console.log('keys.length ' + keys.length );
-        	 console.log('keys ' + jsgui.stringify(keys));
-        
-        	 each(keys, function(i, v) {
-        	 res.push(that.dict[v]);
-        	 });
-        	 return res;
-        	 },
-        	 */
-        "key_count"(key2) {
-          if (typeof key2 !== "undefined") {
-            return this.tree.count(key2);
-          } else {
-            return this.tree.count();
-          }
-        }
-        "get_keys_by_prefix"(prefix) {
-          return this.tree.get_keys_by_prefix(prefix);
-        }
-        "each"(callback2) {
-          return this.tree.each(callback2);
-        }
-        "get_by_prefix"(prefix) {
-          return this.tree.get_by_prefix(prefix);
-        }
-      };
-      Sorted_KVS.prototype.put = mapify(function(key2, value2) {
-        var insert_res = this.tree.insert(key2, value2);
-      });
-      module.exports = Sorted_KVS;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/old/Collection.js
-  var require_Collection = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/old/Collection.js"(exports, module) {
-      var lang = require_lib_lang_mini();
-      var Data_Value2 = require_Data_Value();
-      var Data_Object = require_Data_Object();
-      var Sorted_KVS = require_sorted_kvs();
-      var dobj = Data_Object.dobj;
-      var Constraint = Data_Object.Constraint;
-      var each = lang.each;
-      var tof = lang.tof;
-      var is_defined = lang.is_defined;
-      var stringify = lang.stringify;
-      var get_a_sig2 = lang.get_a_sig;
-      var native_constructor_tof = lang.native_constructor_tof;
-      var dop = Data_Object.prototype;
-      var Collection = class _Collection extends Data_Object {
-        constructor(spec = {}, arr_values) {
-          super(spec);
-          this.__type = "collection";
-          this.__type_name = "collection";
-          var t_spec = tof(spec);
-          if (spec.abstract === true) {
-            if (t_spec === "function") {
-              this.constraint(spec);
-            }
-          } else {
-            this._relationships = this._relationships || {};
-            this._arr_idx = 0;
-            this._arr = [];
-            this.index = new Sorted_KVS();
-            this.fn_index = spec.fn_index;
-            if (t_spec === "array") {
-              spec = {
-                "load_array": spec
-              };
-            } else {
-              if (t_spec === "function") {
-                if (spec.abstract === true) {
-                  this._abstract = true;
-                } else {
-                }
-              } else if (t_spec === "string") {
-                var map_native_constructors = {
-                  "array": Array,
-                  "boolean": Boolean,
-                  "number": Number,
-                  "string": String,
-                  "object": Object
-                };
-                var nc = map_native_constructors[spec];
-                if (nc) {
-                  spec = {
-                    "constraint": nc
-                  };
-                  if (nc == String) {
-                    spec.index_by = "value";
-                  }
-                }
-              }
-            }
-            if (is_defined(spec.items)) {
-              spec.load_array = spec.load_array || spec.items;
-            }
-            if (arr_values) {
-              spec.load_array = arr_values;
-            }
-            if (is_defined(spec.accepts)) {
-              this._accepts = spec.accepts;
-            }
-            if (lang.__data_id_method === "init") {
-              if (this.context) {
-                this.__id = this.context.new_id(this.__type_name || this.__type);
-                this.context.map_objects[this.__id] = this;
-              } else {
-              }
-            }
-            if (!this.__type) {
-            }
-            if (spec.load_array) {
-              this.load_array(spec.load_array);
-            }
-          }
-        }
-        // maybe use fp, and otherwise apply with the same params and context.
-        "set"(value2) {
-          var tval = tof(value2);
-          if (tval === "data_object" || tval === "data_value") {
-            this.clear();
-            return this.push(value2);
-          } else if (tval === "array") {
-            this.clear();
-            each(value2, (v, i) => {
-              this.push(v);
-            });
-          } else {
-            if (tval === "collection") {
-              throw "stop";
-              this.clear();
-              value2.each(function(v, i) {
-                that.push(v);
-              });
-            } else if (tval === "string" || tval === "number" || tval === "boolean" || tval === "null" || tval === "undefined") {
-              this.clear();
-              return this.push(value2);
-            } else {
-              const Data_Object2 = require_Data_Object();
-              return Data_Object2.prototype.set.call(this, value2);
-            }
-          }
-        }
-        "clear"() {
-          this._arr_idx = 0;
-          this._arr = [];
-          this.index.clear();
-          this.raise("change", {
-            "name": "clear"
-          });
-        }
-        "stringify"() {
-          var res2 = [];
-          if (this._abstract) {
-            var ncto = native_constructor_tof(this._type_constructor);
-            res2.push("~Collection(");
-            if (ncto) {
-              res2.push(ncto);
-            } else {
-            }
-            res2.push(")");
-          } else {
-            res2.push("Collection(");
-            var first = true;
-            this.each(function(v, i) {
-              if (!first) {
-                res2.push(", ");
-              } else {
-                first = false;
-              }
-              res2.push(stringify(v));
-            });
-            res2.push(")");
-          }
-          return res2.join("");
-        }
-        "toString"() {
-          return stringify(this._arr);
-        }
-        "toObject"() {
-          var res2 = [];
-          this.each(function(v, i) {
-            res2.push(v.toObject());
-          });
-          return res2;
-        }
-        "each"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          if (sig == "[f]") {
-            return each(this._arr, a[0]);
-          } else {
-            if (sig == "[X,f]") {
-              var index = a[0];
-              var callback2 = a[1];
-              return index.each(callback2);
-            } else {
-              if (a.l == 2) {
-                return each(this._arr, a[0], a[1]);
-              }
-            }
-          }
-        }
-        "_id"() {
-          if (this.context) {
-            this.__id = this.context.new_id(this.__type_name || this.__type);
-          } else {
-          }
-          return this.__id;
-        }
-        "length"() {
-          return this._arr.length;
-        }
-        get len() {
-          return this._arr.length;
-        }
-        "find"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          if (a.l == 1) {
-            var pos = this.index.get(a[0])[0];
-            var item2 = this._arr[pos];
-            return item2;
-          }
-          if (sig == "[o,s]") {
-            return this.index_system.find(a[0], a[1]);
-          }
-          if (sig == "[s,s]") {
-            return this.index_system.find(a[0], a[1]);
-          }
-          if (sig == "[a,s]") {
-            return this.index_system.find(a[0], a[1]);
-          }
-          if (sig == "[s,o]") {
-            var propertyName = a[0];
-            var query = a[1];
-            var foundItems = [];
-            each(this, (item3, index) => {
-              if (item3.get) {
-                var itemProperty = item3.get(propertyName);
-              } else {
-                var itemProperty = item3[propertyName];
-              }
-              var tip = tof(itemProperty);
-              var tip2;
-              var ip2;
-              if (tip === "data_value") {
-                var ip2 = itemProperty.value();
-                tip2 = tof(ip2);
-              } else {
-                ip2 = itemProperty;
-                tip2 = tip;
-              }
-              if (tip2 === "array") {
-                each(ip2, (v, i) => {
-                  var matches = obj_matches_query_obj(v, query);
-                  if (matches) {
-                    foundItems.push(v);
-                  }
-                });
-              }
-              ;
-            });
-            var res2 = new _Collection(foundItems);
-            return res2;
-          }
-        }
-        // get seems like the way to get unique values.
-        "get"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          if (sig == "[n]" || sig == "[i]") {
-            return this._arr[a[0]];
-          }
-          if (sig == "[s]") {
-            var ix_sys = this.index_system;
-            var res2;
-            if (ix_sys) {
-              var pui = ix_sys._primary_unique_index;
-              res2 = pui.get(a[0])[0];
-            }
-            if (res2) {
-              return res2;
-            }
-            return Data_Object.prototype.get.apply(this, a);
-          }
-        }
-        "insert"(item2, pos) {
-          this._arr.splice(pos, 0, item2);
-          this.raise("change", {
-            "name": "insert",
-            "item": item2,
-            "value": item2,
-            "pos": pos
-          });
-        }
-        swap(item2, replacement) {
-          let r_parent = replacement.parent;
-          let repl_pos = replacement.parent.content.remove(replacement);
-          let i_parent = item2.parent;
-          let item_pos = item2.parent.content.remove(item2);
-          let item_index;
-          i_parent.content.insert(replacement, item_pos);
-          r_parent.content.insert(item2, repl_pos);
-        }
-        // may have efficiencies for adding and removing multiple items at once.
-        //  can be sorted for insertion into index with more rapid algorithmic time.
-        "remove"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          if (sig === "[n]") {
-            var pos = a[0];
-            var item2 = this._arr[pos];
-            var spliced_pos = pos;
-            this._arr.splice(pos, 1);
-            this._arr_idx--;
-            var e = {
-              "target": this,
-              "value": item2,
-              "position": spliced_pos,
-              "name": "remove"
-            };
-            this.raise("change", e);
-            return pos;
-          } else if (sig === "[s]") {
-            var key2 = a[0];
-            var obj2 = this.index_system.find([
-              ["value", key2]
-            ]);
-            var my_id = this.__id;
-            var item_pos_within_this = obj2[0]._relationships[my_id];
-            this._arr.splice(item_pos_within_this, 1);
-            for (var c2 = item_pos_within_this, l2 = this._arr.length; c2 < l2; c2++) {
-              var item2 = this._arr[c2];
-              item2._relationships[my_id]--;
-            }
-            var e = {
-              "target": this,
-              "value": obj2[0],
-              "position": item_pos_within_this,
-              "name": "remove"
-            };
-            this.raise("change", e);
-          } else {
-            let item_index;
-            const item3 = a[0];
-            let arr = this._arr, l3 = arr.length;
-            if (typeof item3 === "number") {
-              item_index = item3;
-            } else {
-              let found = false, c3 = 0;
-              while (!found && c3 < l3) {
-                found = arr[c3] === item3;
-                if (found) {
-                  item_index = c3;
-                }
-                c3++;
-              }
-              if (is_defined(item_index)) {
-                return this.remove(item_index);
-              }
-            }
-          }
-        }
-        "has"(obj_key) {
-          if (this.get_index(obj_key) === void 0) {
-            return false;
-          } else {
-            return true;
-          }
-        }
-        "get_index"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          if (sig === "[s]") {
-            if (this.index_system) {
-              return this.index_system.search(a[0]);
-            } else {
-              if (this._arr.length === 0) {
-                return void 0;
-              } else {
-                for (let c2 = 0; c2 < this._arr.length; c2++) {
-                  const item2 = this._arr[c2];
-                  if (item2?.name === a[0]) {
-                    return c2;
-                  }
-                }
-                return void 0;
-              }
-            }
-          } else {
-            console.trace();
-            throw "Expected [s]";
-          }
-        }
-        // More fp way of indexing.
-        "index_by"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          console.log("Indexing not implemented (like this)");
-          console.trace();
-        }
-        "push"(value2) {
-          const { silent } = this;
-          let tv = tof(value2);
-          let fn_index = this.fn_index;
-          let idx_key, has_idx_key = false, pos;
-          if (fn_index) {
-            idx_key = fn_index(value2);
-            has_idx_key = true;
-          }
-          if (tv === "object" || tv === "function") {
-            pos = this._arr.length;
-            this._arr.push(value2);
-            this._arr_idx++;
-            if (!silent) {
-              const e = {
-                "target": this,
-                "item": value2,
-                "value": value2,
-                "position": pos,
-                "name": "insert"
-              };
-              this.raise("change", e);
-            }
-          } else if (tv === "data_value") {
-            pos = this._arr.length;
-            this._arr.push(value2);
-            this._arr_idx++;
-            if (!silent) {
-              const e = {
-                "target": this,
-                "item": value2,
-                "value": value2,
-                "position": pos,
-                "name": "insert"
-              };
-              this.raise("change", e);
-            }
-          } else if (tv === "collection") {
-            pos = this._arr.length;
-            this._arr.push(value2);
-            this._arr_idx++;
-            if (!silent) {
-              const e = {
-                "target": this,
-                "item": value2,
-                "value": value2,
-                "position": pos,
-                "name": "insert"
-              };
-              this.raise("change", e);
-            }
-          } else if (tv === "data_object" || tv === "control") {
-            pos = this._arr.length;
-            this._arr.push(value2);
-            this._arr_idx++;
-            if (!silent) {
-              const e = {
-                "target": this,
-                "item": value2,
-                "value": value2,
-                "position": pos,
-                "name": "insert"
-              };
-              this.raise("change", e);
-            }
-          } else if (tv === "array") {
-            const new_coll = new _Collection(value2);
-            pos = this._arr.length;
-            this._arr.push(new_coll);
-            if (!silent) {
-              const e = {
-                "target": this,
-                "item": value2,
-                "value": value2,
-                "position": pos,
-                "name": "insert"
-              };
-              this.raise("change", e);
-            }
-          }
-          if (tv === "string" || tv === "number" || tv === "boolean" || tv === "null" || tv === "undefined") {
-            const dv = new Data_Value2({
-              "value": value2
-            });
-            pos = this._arr.length;
-            this._arr.push(dv);
-            if (!silent) {
-              const e = {
-                "target": this,
-                "item": value2,
-                "value": value2,
-                "position": pos,
-                "name": "insert"
-              };
-              this.raise("change", e);
-            }
-          }
-          if (has_idx_key) {
-            this.index.put(idx_key, pos);
-          }
-          return value2;
-        }
-        "load_array"(arr) {
-          for (var c2 = 0, l2 = arr.length; c2 < l2; c2++) {
-            this.push(arr[c2]);
-          }
-          this.raise("load");
-        }
-        "values"() {
-          var a = arguments;
-          a.l = a.length;
-          if (a.l === 0) {
-            return this._arr;
-          } else {
-            var stack = new Error().stack;
-            throw "not yet implemented";
-          }
-        }
-        "value"() {
-          const res2 = [];
-          this.each((v, i) => {
-            if (typeof v.value == "function") {
-              res2.push(v.value());
-            } else {
-              res2.push(v);
-            }
-          });
-          return res2;
-        }
-      };
-      var p = Collection.prototype;
-      p.add = p.push;
-      module.exports = Collection;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/Data_Object.js
-  var require_Data_Object2 = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/Data_Object.js"(exports, module) {
-      module.exports = require_Data_Object();
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js
-  var require_Immutable_Data_Model = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js"(exports, module) {
-      var Data_Model = require_Data_Model();
-      var Immutable_Data_Model = class extends Data_Model {
-        constructor(...a) {
-          super(...a);
-        }
-      };
-      module.exports = Immutable_Data_Model;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Result.js
-  var require_Validation_Result = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Result.js"(exports, module) {
-      var Validation_Result = class {
-      };
-      module.exports = Validation_Result;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Success.js
-  var require_Validation_Success = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Success.js"(exports, module) {
-      var Validation_Result = require_Validation_Result();
-      var Validation_Success = class extends Validation_Result {
-        constructor(spec) {
-          super(spec);
-        }
-      };
-      module.exports = Validation_Success;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Failure.js
-  var require_Validation_Failure = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Failure.js"(exports, module) {
-      var Validation_Result = require_Validation_Result();
-      var Validation_Failure = class extends Validation_Result {
-        constructor(spec) {
-          super(spec);
-        }
-      };
-      module.exports = Validation_Failure;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js
-  var require_setup_base_data_value_value_property = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js"(exports, module) {
-      var Validation_Success = require_Validation_Success();
-      var Validation_Failure = require_Validation_Failure();
-      var setup_base_data_value_value_property = (data_value) => {
-        let local_js_value;
-        const set_value_with_valid_and_changed_value = (valid_and_changed_value) => {
-          const old = local_js_value;
-          local_js_value = valid_and_changed_value;
-          data_value.raise("change", {
-            name: "value",
-            old,
-            value: local_js_value
-          });
-        };
-        const create_validation_error = (validation, value2) => {
-          const failure = validation instanceof Validation_Failure ? validation : new Validation_Failure({ value: value2 });
-          const error2 = new Error("Validation failed for value assignment");
-          error2.validation = failure;
-          error2.value = value2;
-          return error2;
-        };
-        Object.defineProperty(data_value, "value", {
-          configurable: true,
-          get() {
-            return local_js_value;
-          },
-          set(value2) {
-            if (data_value.transform_validate_value) {
-              const obj_transform_and_validate_value_results = data_value.transform_validate_value(value2);
-              const validation = obj_transform_and_validate_value_results && obj_transform_and_validate_value_results.validation;
-              if (!(validation instanceof Validation_Success)) {
-                throw create_validation_error(validation, value2);
-              }
-              const next_value = Object.prototype.hasOwnProperty.call(obj_transform_and_validate_value_results, "transformed_value") ? obj_transform_and_validate_value_results.transformed_value : obj_transform_and_validate_value_results.value;
-              if (!Object.is(local_js_value, next_value)) {
-                set_value_with_valid_and_changed_value(next_value);
-              }
-            } else {
-              if (!Object.is(local_js_value, value2)) {
-                set_value_with_valid_and_changed_value(value2);
-              }
-            }
-          }
-        });
-      };
-      module.exports = setup_base_data_value_value_property;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/new/Base_Data_Value.js
-  var require_Base_Data_Value = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/new/Base_Data_Value.js"(exports, module) {
-      var jsgui2 = require_lib_lang_mini();
-      var { more_general_equals } = require_tools();
-      var Data_Model = require_Data_Model();
-      var Immutable_Data_Model = require_Immutable_Data_Model();
-      var { is_defined, input_processors, field, tof, each } = jsgui2;
-      var setup_base_data_value_value_property = require_setup_base_data_value_value_property();
-      var util;
-      if (typeof window === "undefined") {
-        const str_utl = "util";
-        util = __require(str_utl);
-      }
-      var Base_Data_Value = class extends Data_Model {
-        constructor(spec = {}) {
-          super(spec);
-          this.__data_value = true;
-          if (spec.data_type) this.data_type = spec.data_type;
-          if (spec.context) {
-            this.context = spec.context;
-          }
-          this.__type = "data_value";
-          this._relationships = {};
-          const { data_type, context: context2 } = this;
-          setup_base_data_value_value_property(this);
-        }
-        equals(other) {
-          return more_general_equals(this, other);
-        }
-        // Maybe see about immutable mode Data_Values / Data_Models.
-        //   Or do make the immutable versions of all of them!!!
-        //     And could make core functionality for both the immutable and mutable versions.
-        //       Mutability Independent Code.
-        // Immutable_Data_Integer does seem like it would in principle be (really?) simple.
-        /*
-            toImmutable() {
-                // May be slightly difficult / tricky / complex.
-                const {context, data_type, value} = this;
-        
-                // Create the new item...
-                // Needs to copy the inner value....?
-        
-                const res = new Immutable_Data_Value({
-                    context, data_type, value
-                });
-                return res;
-            }
-            */
-        "get"() {
-          return this.value;
-        }
-        "toString"() {
-          return this.get() + "";
-        }
-        // Maybe a particular stringify function?
-        "toJSON"() {
-          return JSON.stringify(this.get());
-        }
-        // Need to copy / clone the ._ value
-        /*
-            'clone'() {
-        
-                //return this.toImmutable();
-            }
-            */
-        // This is important to the running of jsgui3.
-        //   Move to the lower level of Data_Model?
-        "_id"() {
-          if (this.__id) return this.__id;
-          if (this.context) {
-            this.__id = this.context.new_id(this.__type_name || this.__type);
-          } else {
-            if (!is_defined(this.__id)) {
-              throw "Data_Value should have context";
-              this.__id = new_data_value_id();
-            }
-          }
-          return this.__id;
-        }
-      };
-      module.exports = Base_Data_Value;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js
-  var require_Value_Set_Attempt = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js"(exports, module) {
-      var Value_Set_Attempt = class {
-        constructor(spec = {}) {
-          Object.assign(this, spec);
-        }
-      };
-      module.exports = Value_Set_Attempt;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js
-  var require_Immutable_Base_Data_Value = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js"(exports, module) {
-      var jsgui2 = require_lib_lang_mini();
-      var { more_general_equals } = require_tools();
-      var Data_Model = require_Data_Model();
-      var Immutable_Data_Model = require_Immutable_Data_Model();
-      var { is_defined, input_processors, field, tof, each } = jsgui2;
-      var util;
-      if (typeof window === "undefined") {
-        const str_utl = "util";
-        util = __require(str_utl);
-      }
-      var Immutable_Base_Data_Value = class extends Immutable_Data_Model {
-        constructor(spec = {}) {
-          super(spec);
-          this.__data_value = true;
-          if (spec.data_type) this.data_type = spec.data_type;
-          if (spec.context) {
-            this.context = spec.context;
-          }
-          this.__type = "data_value";
-          this._relationships = {};
-          const { data_type, context: context2 } = this;
-        }
-        equals(other) {
-          return more_general_equals(this, other);
-        }
-        // Maybe see about immutable mode Data_Values / Data_Models.
-        //   Or do make the immutable versions of all of them!!!
-        //     And could make core functionality for both the immutable and mutable versions.
-        //       Mutability Independent Code.
-        // Immutable_Data_Integer does seem like it would in principle be (really?) simple.
-        /*
-            toImmutable() {
-                // May be slightly difficult / tricky / complex.
-                const {context, data_type, value} = this;
-        
-                // Create the new item...
-                // Needs to copy the inner value....?
-        
-                const res = new Immutable_Data_Value({
-                    context, data_type, value
-                });
-                return res;
-            }
-            */
-        "get"() {
-          return this.value;
-        }
-        "toString"() {
-          return this.get() + "";
-        }
-        // Maybe a particular stringify function?
-        "toJSON"() {
-          return JSON.stringify(this.get());
-        }
-        // Need to copy / clone the ._ value
-        /*
-            'clone'() {
-        
-                //return this.toImmutable();
-            }
-            */
-        // This is important to the running of jsgui3.
-        //   Move to the lower level of Data_Model?
-        "_id"() {
-          if (this.__id) return this.__id;
-          if (this.context) {
-            this.__id = this.context.new_id(this.__type_name || this.__type);
-          } else {
-            if (!is_defined(this.__id)) {
-              throw "Immutable_Base_Data_Value should have context";
-              this.__id = new_data_value_id();
-            }
-          }
-          return this.__id;
-        }
-      };
-      module.exports = Immutable_Base_Data_Value;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js
-  var require_Immutable_Data_Value = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js"(exports, module) {
-      var jsgui2 = require_lib_lang_mini();
-      var { more_general_equals } = require_tools();
-      var Data_Model = require_Data_Model();
-      var Immutable_Data_Model = require_Immutable_Data_Model();
-      var Immutable_Base_Data_Value = require_Immutable_Base_Data_Value();
-      var throw_immutable_assignment = () => {
-        throw new TypeError("Cannot modify immutable Data_Value");
-      };
-      var { is_defined, input_processors, field, tof, each } = jsgui2;
-      var util;
-      if (typeof window === "undefined") {
-        const str_utl = "util";
-        util = __require(str_utl);
-      }
-      var ldarkPurple = (x) => `\x1B[38;5;54m${x}\x1B[0m`;
-      var Immutable_Data_Value = class _Immutable_Data_Value extends Immutable_Base_Data_Value {
-        constructor(spec = {}) {
-          super(spec);
-          this.__data_value = true;
-          this.__immutable = true;
-          this.__type_name = "data_value";
-          if (spec.data_type) this.data_type = spec.data_type;
-          if (spec.context) {
-            this.context = spec.context;
-          }
-          const { data_type, context: context2 } = this;
-          if (data_type) {
-            const to_local_js_value = (value2) => {
-              if (value2 !== void 0) {
-                const t = tof(value2);
-                if (t === "number" || t === "string" || t === "boolean") {
-                  return value2;
-                } else {
-                  if (t === "array") {
-                    const l2 = value2.length;
-                    const res2 = new Array(l2);
-                    for (let c2 = 0; c2 < l2; c2++) {
-                      res2[c2] = to_local_js_value(value2[c2]);
-                    }
-                    return res2;
-                  } else if (t === "data_value") {
-                    return value2.toImmutable();
-                  } else {
-                    console.log("to_local_js_value value", value2);
-                    console.log("t", t);
-                    console.trace();
-                    throw "NYI";
-                  }
-                }
-              }
-            };
-            const local_js_value = to_local_js_value(spec.value);
-            Object.defineProperty(this, "value", {
-              get() {
-                return local_js_value;
-              },
-              set: throw_immutable_assignment
-            });
-          } else {
-            let value2;
-            if (spec.value instanceof Array) {
-              value2 = spec.value.map((x) => {
-                if (x instanceof Data_Model) {
-                  return x.toImmutable();
-                } else {
-                  return x;
-                }
-              });
-            } else {
-              value2 = spec.value;
-            }
-            Object.defineProperty(this, "value", {
-              get() {
-                return value2;
-              },
-              set: throw_immutable_assignment
-            });
-          }
-          this.__type = "data_value";
-          this._relationships = {};
-        }
-        equals(other) {
-          return more_general_equals(this, other);
-        }
-        toImmutable() {
-          const { context: context2, data_type, value: value2 } = this;
-          const res2 = new _Immutable_Data_Value({
-            context: context2,
-            data_type,
-            value: value2
-          });
-          return res2;
-        }
-        "get"() {
-          return this.value;
-        }
-        "toString"() {
-          return this.get() + "";
-        }
-        // Maybe a particular stringify function?
-        "toJSON"() {
-          const t_value = tof(this.value);
-          if (t_value === "string") {
-            return JSON.stringify(this.value);
-          } else if (t_value === "number") {
-            return this.value + "";
-          } else if (t_value === "boolean") {
-            this.value ? "true" : "false";
-          } else if (t_value === "array") {
-            let res2 = "[";
-            const l2 = this.value.length;
-            for (let c2 = 0; c2 < l2; c2++) {
-              const item2 = this.value[c2];
-              if (c2 > 0) res2 += ",";
-              if (item2.toJSON) {
-                res2 += item2.toJSON();
-              } else {
-                res2 += JSON.stringify(item2);
-              }
-            }
-            res2 = res2 + "]";
-            return res2;
-          } else if (t_value === "data_value") {
-            return this.value.toJSON();
-          } else if (t_value === "undefined") {
-            return "null";
-          } else if (t_value === "null") {
-            return "null";
-          } else {
-            console.log("toJSON this.value", this.value);
-            console.log("t_value", t_value);
-            console.trace();
-            throw "NYI";
-          }
-        }
-        // Need to copy / clone the ._ value
-        "clone"() {
-          return this.toImmutable();
-        }
-        // This is important to the running of jsgui3.
-        //   Move to the lower level of Data_Model?
-        "_id"() {
-          if (this.__id) return this.__id;
-          if (this.context) {
-            this.__id = this.context.new_id(this.__type_name || this.__type);
-          } else {
-            if (!is_defined(this.__id)) {
-              throw "Data_Value should have context";
-              this.__id = new_data_value_id();
-            }
-          }
-          return this.__id;
-        }
-        "toObject"() {
-          return this._;
-        }
-      };
-      if (util) {
-        Immutable_Data_Value.prototype[util.inspect.custom] = function(depth, opts) {
-          const { value: value2 } = this;
-          if (value2 instanceof Array) {
-            let res2 = ldarkPurple("[ ");
-            let first = true;
-            each(value2, (item2) => {
-              if (!first) {
-                res2 = res2 + ldarkPurple(", ");
-              } else {
-                first = false;
-              }
-              if (item2 instanceof Data_Model) {
-                const item_value = item2.value;
-                res2 = res2 + ldarkPurple(item_value);
-              } else [
-                res2 = res2 + ldarkPurple(item2)
-              ];
-            });
-            res2 = res2 + ldarkPurple(" ]");
-            return res2;
-          } else {
-            return ldarkPurple(this.value);
-          }
-        };
-      }
-      module.exports = Immutable_Data_Value;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js
-  var require_setup_data_value_data_type_set = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js"(exports, module) {
-      var jsgui2 = require_lib_lang_mini();
-      var { more_general_equals } = require_tools();
-      var Base_Data_Value = require_Base_Data_Value();
-      var Data_Model = require_Data_Model();
-      var Immutable_Data_Model = require_Immutable_Data_Model();
-      var Immutable_Data_Value = require_Immutable_Data_Value();
-      var { is_defined, input_processors, field, tof, each, is_array } = jsgui2;
-      var Validation_Success = require_Validation_Success();
-      var setup_data_value_data_type_set = (data_value, data_type) => {
-        let local_js_value;
-        const validation_success = (value2, transformed_value) => {
-          const res2 = {
-            validation: new Validation_Success(),
-            value: value2
-          };
-          if (transformed_value !== void 0) {
-            res2.transformed_value = transformed_value;
-          }
-          return res2;
-        };
-        const unwrap_data_value = (value2) => value2 instanceof Base_Data_Value ? value2.value : value2;
-        const is_functional_data_type = (dt) => !!dt && typeof dt.validate === "function";
-        const define_string_value_property = () => {
-          if (!Object.getOwnPropertyDescriptor(data_value, "value")) {
-            Object.defineProperty(data_value, "value", {
-              get() {
-                return local_js_value;
-              },
-              set(value2) {
-                const old_value = local_js_value;
-                const immu = data_value.toImmutable();
-                const value_equals_current = immu.equals(value2);
-                if (!value_equals_current) {
-                  const t_value = tof(value2);
-                  let made_change = false;
-                  if (t_value === "string") {
-                    if (local_js_value instanceof Base_Data_Value) {
-                      console.log("existing local_js_value instanceof Data_Value");
-                      console.log("local_js_value.value", local_js_value.value);
-                      console.log("local_js_value.data_type.name", local_js_value.data_type.name);
-                      console.trace();
-                      throw "NYI";
-                    } else if (local_js_value === void 0) {
-                      local_js_value = value2;
-                      made_change = true;
-                    } else if (typeof local_js_value === "string") {
-                      local_js_value = value2;
-                      made_change = true;
-                    } else {
-                      console.trace();
-                      throw "stop";
-                    }
-                  } else {
-                    if (value2 instanceof Base_Data_Value) {
-                      console.log("t_value", t_value);
-                      console.log("value", value2);
-                      console.trace();
-                      throw "stop";
-                    } else {
-                      const tval = tof(value2);
-                      if (tval === "number") {
-                        local_js_value = value2 + "";
-                        made_change = true;
-                      } else {
-                        console.log("-- INVALID TYPE --");
-                        console.log("tof(old_value)", tof(old_value));
-                        console.log("tof(value)", tof(value2));
-                        data_value.raise("validate", {
-                          valid: false,
-                          reason: "Invalid Type",
-                          value: value2,
-                          old: local_js_value
-                        });
-                      }
-                    }
-                  }
-                  if (made_change) {
-                    const my_e = {
-                      name: "value",
-                      old: old_value,
-                      value: local_js_value
-                    };
-                    data_value.raise("change", my_e);
-                  }
-                }
-              }
-            });
-          } else {
-            const transform_string_value = (raw) => {
-              const candidate = unwrap_data_value(raw);
-              if (candidate === void 0 || candidate === null) {
-                return validation_success(candidate);
-              }
-              if (typeof candidate === "string") {
-                return validation_success(candidate);
-              }
-              if (typeof candidate === "number" || typeof candidate === "boolean") {
-                return validation_success(candidate, candidate + "");
-              }
-              return {
-                validation: false,
-                value: candidate
-              };
-            };
-            data_value.transform_validate_value = transform_string_value;
-          }
-        };
-        const define_number_value_property = () => {
-          const transform_number_value = (raw) => {
-            const candidate = unwrap_data_value(raw);
-            if (candidate === void 0 || candidate === null) {
-              return validation_success(candidate);
-            }
-            if (typeof candidate === "number") {
-              if (Number.isNaN(candidate)) {
-                return {
-                  validation: false,
-                  value: candidate
-                };
-              }
-              return validation_success(candidate);
-            }
-            if (typeof candidate === "string") {
-              const trimmed = candidate.trim();
-              if (trimmed.length === 0) {
-                return {
-                  validation: false,
-                  value: candidate
-                };
-              }
-              const parsed = Number(trimmed);
-              if (!Number.isNaN(parsed)) {
-                return validation_success(candidate, parsed);
-              }
-              return {
-                validation: false,
-                value: candidate
-              };
-            }
-            return {
-              validation: false,
-              value: candidate
-            };
-          };
-          data_value.transform_validate_value = transform_number_value;
-        };
-        const define_data_type_typed_value_property = () => {
-          const descriptor = Object.getOwnPropertyDescriptor(data_value, "value");
-          if (descriptor) {
-            const transform_data_type_value = (raw) => {
-              const candidate = unwrap_data_value(raw);
-              if (data_type.validate(candidate)) {
-                return validation_success(candidate);
-              }
-              if (typeof candidate === "string" && typeof data_type.parse_string === "function") {
-                const parsed = data_type.parse_string(candidate);
-                if (parsed !== void 0 && data_type.validate(parsed)) {
-                  return validation_success(candidate, parsed);
-                }
-              }
-              return {
-                validation: false,
-                value: candidate
-              };
-            };
-            data_value.transform_validate_value = transform_data_type_value;
-            return;
-          }
-          const {
-            wrap_properties,
-            property_names,
-            property_data_types,
-            wrap_value_inner_values,
-            value_js_type,
-            abbreviated_property_names,
-            named_property_access,
-            numbered_property_access,
-            parse_string
-          } = data_type;
-          let num_properties;
-          if (property_names && property_data_types) {
-            if (property_names.length === property_data_types.length) {
-              num_properties = property_names.length;
-              if (numbered_property_access) {
-              }
-            }
-          } else if (property_names) {
-            num_properties = property_names.length;
-          }
-          let _current_immutable_value, _previous_immutable_value;
-          let prev_outer_value, current_outer_value;
-          let _numbered_property_access_has_been_set_up = false, _named_property_access_has_been_set_up = false;
-          Object.defineProperty(data_value, "value", {
-            get() {
-              return local_js_value;
-            },
-            set(value2) {
-              const immu = data_value.toImmutable();
-              const value_equals_current = immu.equals(value2);
-              if (value_equals_current) {
-              } else {
-                const passed_first_validation = data_type.validate(value2);
-                let passed_validation = passed_first_validation;
-                if (!passed_first_validation) {
-                  const t_value = tof(value2);
-                  if (t_value === "string" && data_type.parse_string) {
-                    const parsed_value = data_type.parse_string(value2);
-                    if (parsed_value !== void 0) {
-                      if (data_type.validate(parsed_value)) {
-                        if (!immu.equals(parsed_value)) {
-                          value2 = parsed_value;
-                          passed_validation = true;
-                        }
-                      }
-                    }
-                  }
-                }
-                if (passed_validation) {
-                  data_value.raise("validate", {
-                    valid: true,
-                    value: value2
-                  });
-                } else {
-                  data_value.raise("validate", {
-                    valid: false,
-                    value: value2
-                  });
-                }
-                if (passed_validation) {
-                  const do_actual_set = (value3) => {
-                    const array_specific_value_processing = () => {
-                      if (value_js_type === Array) {
-                        let t = tof(local_js_value);
-                        if (t === "undefined") {
-                          const create_array_with_wrapped_items = () => {
-                            if (num_properties) {
-                              if (wrap_value_inner_values) {
-                                if (property_data_types) {
-                                  let i = 0;
-                                  if (value3.__immutable) {
-                                    const l2 = value3.length;
-                                    const arr_wrapped_value_values = new Array(l2);
-                                    const value_value = value3.value;
-                                    do_actual_set(value_value);
-                                  } else {
-                                    if (value3 instanceof Data_Value) {
-                                      const arr_wrapped_value_values = new Array(num_properties);
-                                      const arr_dv_value = value3.value;
-                                      console.log("arr_dv_value", arr_dv_value);
-                                      console.trace();
-                                      throw "stop";
-                                    } else if (is_array(value3)) {
-                                      const arr_wrapped_value_values = value3.map((value4) => {
-                                        const property_index = i;
-                                        let property_name;
-                                        if (property_names) {
-                                          property_name = property_names[property_index];
-                                        }
-                                        const wrapped_value = new Data_Value({ context, value: value4, data_type: property_data_types[i] });
-                                        wrapped_value.on("change", (e) => {
-                                          const { name } = e;
-                                          if (name === "value") {
-                                            current_outer_value = data_value.toImmutable();
-                                            const my_e2 = {
-                                              name,
-                                              event_originator: wrapped_value,
-                                              parent_event: e,
-                                              value: current_outer_value
-                                            };
-                                            if (property_name) {
-                                              my_e2.property_name = property_name;
-                                            }
-                                            my_e2.property_index = property_index;
-                                            data_value.raise("change", my_e2);
-                                            prev_outer_value = current_outer_value;
-                                          }
-                                        });
-                                        i++;
-                                        return wrapped_value;
-                                      });
-                                      local_js_value = arr_wrapped_value_values;
-                                      const my_e = {
-                                        name: "value",
-                                        old: _previous_immutable_value,
-                                        value: data_value.toImmutable()
-                                      };
-                                      data_value.raise("change", my_e);
-                                    }
-                                  }
-                                } else {
-                                  let i = 0;
-                                  const arr_wrapped_value_values = value3.map((value4) => {
-                                    const property_index = i;
-                                    let property_name;
-                                    if (property_names) {
-                                      property_name = property_names[property_index];
-                                    }
-                                    const wrapped_value = new Data_Value({ context, value: value4 });
-                                    wrapped_value.on("change", (e) => {
-                                      const { name } = e;
-                                      if (name === "value") {
-                                        const my_e = {
-                                          name,
-                                          event_originator: wrapped_value,
-                                          parent_event: e,
-                                          value: data_value.toImmutable()
-                                        };
-                                        if (property_name) {
-                                          my_e.property_name = property_name;
-                                        }
-                                        my_e.property_index = property_index;
-                                        data_value.raise("change", my_e);
-                                      }
-                                    });
-                                    i++;
-                                    return wrapped_value;
-                                  });
-                                  local_js_value = arr_wrapped_value_values;
-                                }
-                              } else {
-                                local_js_value = value3;
-                              }
-                            } else {
-                              console.trace();
-                              throw "stop - number of properties not found";
-                            }
-                          };
-                          create_array_with_wrapped_items();
-                        } else if (t === "array") {
-                          const t_value = tof(value3);
-                          if (t_value === "data_value") {
-                            if (is_array(value3.value)) {
-                              if (value3.value.length === local_js_value.length) {
-                                each(value3.value, (inner_value, idx) => {
-                                  if (inner_value instanceof Data_Model) {
-                                    const matching_local_inner_value = local_js_value[idx];
-                                    if (inner_value.equals(matching_local_inner_value)) {
-                                    } else {
-                                      matching_local_inner_value.value = inner_value;
-                                    }
-                                  } else {
-                                    console.trace();
-                                    throw "NYI";
-                                  }
-                                });
-                              } else {
-                                console.trace();
-                                throw "NYI";
-                              }
-                            } else {
-                              console.trace();
-                              throw "NYI";
-                            }
-                          } else {
-                            if (t_value === "array") {
-                              if (local_js_value.length === value3.length) {
-                                const l2 = value3.length;
-                                let all_local_js_items_are_data_model = true, c2 = 0;
-                                do {
-                                  const local_item = local_js_value[c2];
-                                  if (!(local_item instanceof Data_Model)) {
-                                    all_local_js_items_are_data_model = false;
-                                  }
-                                  c2++;
-                                } while (all_local_js_items_are_data_model && c2 < l2);
-                                if (all_local_js_items_are_data_model) {
-                                  let c3 = 0;
-                                  do {
-                                    const local_item = local_js_value[c3];
-                                    local_item.value = value3[c3];
-                                    c3++;
-                                  } while (c3 < l2);
-                                } else {
-                                  console.trace();
-                                  throw "NYI";
-                                }
-                              } else {
-                                console.trace();
-                                throw "NYI";
-                              }
-                            } else {
-                              console.log("value", value3);
-                              console.trace();
-                              throw "NYI";
-                            }
-                          }
-                        } else {
-                        }
-                      } else {
-                      }
-                    };
-                    array_specific_value_processing();
-                    const general_value_processing = () => {
-                      if (local_js_value instanceof Base_Data_Value) {
-                        console.log("existing local_js_value instanceof Data_Value");
-                        console.log("local_js_value.value", local_js_value.value);
-                        console.log("local_js_value.data_type.name", local_js_value.data_type.name);
-                        console.trace();
-                        throw "NYI";
-                      } else if (local_js_value instanceof Array) {
-                        if (value3 instanceof Data_Model) {
-                          if (value3.equals(local_js_value)) {
-                          } else {
-                            console.log("value", value3);
-                            console.log("local_js_value", local_js_value);
-                            console.trace();
-                            throw "NYI";
-                          }
-                        } else if (value3 instanceof Array) {
-                          if (property_names.length === value3.length) {
-                            if (property_data_types) {
-                              const num_properties2 = property_names.length;
-                              for (let i_property = 0; i_property < num_properties2; i_property++) {
-                                const name = property_names[i_property];
-                                const data_type2 = property_data_types[i_property];
-                                if (local_js_value[i_property] instanceof Data_Value) {
-                                  local_js_value[i_property].value = value3[i_property];
-                                } else {
-                                  console.trace();
-                                  throw "NYI";
-                                }
-                              }
-                              if (numbered_property_access && !_numbered_property_access_has_been_set_up) {
-                                for (let i_property = 0; i_property < num_properties2; i_property++) {
-                                  const name = property_names[i_property];
-                                  const data_type2 = property_data_types[i_property];
-                                  Object.defineProperty(data_value, i_property, {
-                                    get() {
-                                      return local_js_value[i_property];
-                                    },
-                                    set(value4) {
-                                      const item_already_there = local_js_value[i_property];
-                                      if (item_already_there instanceof Data_Model) {
-                                        item_already_there.value = value4;
-                                      } else {
-                                        console.log("item_already_there", item_already_there);
-                                        console.trace();
-                                        throw "stop";
-                                      }
-                                      if (value4 instanceof Data_Model) {
-                                      } else {
-                                      }
-                                    }
-                                  });
-                                }
-                                Object.defineProperty(data_value, "length", {
-                                  get() {
-                                    return local_js_value.length;
-                                  }
-                                });
-                                _numbered_property_access_has_been_set_up = true;
-                              }
-                              if (named_property_access && !_named_property_access_has_been_set_up) {
-                                if (numbered_property_access) {
-                                  if (property_names) {
-                                    for (let i_property = 0; i_property < num_properties2; i_property++) {
-                                      const name = property_names[i_property];
-                                      const data_type2 = property_data_types[i_property];
-                                      Object.defineProperty(data_value, name, {
-                                        get() {
-                                          return local_js_value[i_property];
-                                        },
-                                        set(value4) {
-                                          const item_already_there = local_js_value[i_property];
-                                          if (item_already_there instanceof Data_Model) {
-                                            item_already_there.value = value4;
-                                          } else {
-                                            console.log("item_already_there", item_already_there);
-                                            console.trace();
-                                            throw "stop";
-                                          }
-                                        }
-                                      });
-                                    }
-                                  }
-                                  if (abbreviated_property_names) {
-                                    for (let i_property = 0; i_property < num_properties2; i_property++) {
-                                      const name = abbreviated_property_names[i_property];
-                                      const data_type2 = property_data_types[i_property];
-                                      Object.defineProperty(data_value, name, {
-                                        get() {
-                                          return local_js_value[i_property];
-                                        },
-                                        set(value4) {
-                                          const item_already_there = local_js_value[i_property];
-                                          if (item_already_there instanceof Data_Model) {
-                                            item_already_there.value = value4;
-                                          } else {
-                                            console.log("item_already_there", item_already_there);
-                                            console.trace();
-                                            throw "stop";
-                                          }
-                                          if (value4 instanceof Data_Model) {
-                                          } else {
-                                          }
-                                        }
-                                      });
-                                    }
-                                  }
-                                }
-                                _named_property_access_has_been_set_up = true;
-                              }
-                            }
-                          } else {
-                            console.trace();
-                            throw "NYI";
-                          }
-                        } else {
-                          console.log("value", value3);
-                          console.log("local_js_value", local_js_value);
-                          console.log("value_equals_current", value_equals_current);
-                          console.log("immu", immu);
-                          console.trace();
-                          throw "NYI";
-                        }
-                      } else {
-                        if (value3 instanceof Data_Model) {
-                          if (value3.data_type === data_value.data_type) {
-                            const tvv = tof(value3.value);
-                            if (tvv === "number" || tvv === "string" || tvv === "boolean") {
-                              local_js_value = value3.value;
-                            } else {
-                              console.trace();
-                              throw "NYI";
-                            }
-                          } else {
-                            console.trace();
-                            throw "NYI";
-                          }
-                        } else {
-                          local_js_value = value3;
-                        }
-                        data_value.raise("change", {
-                          name: "value",
-                          old: immu,
-                          value: value3
-                        });
-                        prev_outer_value = current_outer_value;
-                      }
-                    };
-                    general_value_processing();
-                  };
-                  do_actual_set(value2);
-                } else {
-                }
-              }
-            }
-          });
-        };
-        if (data_type === String) {
-          define_string_value_property();
-        } else if (data_type === Number) {
-          define_number_value_property();
-        } else if (is_functional_data_type(data_type)) {
-          define_data_type_typed_value_property();
-        } else {
-          console.trace();
-          throw "NYI";
-        }
-      };
-      module.exports = setup_data_value_data_type_set;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/new/Data_Value.js
-  var require_Data_Value2 = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/new/Data_Value.js"(exports, module) {
-      var jsgui2 = require_lib_lang_mini();
-      var { more_general_equals } = require_tools();
-      var Base_Data_Value = require_Base_Data_Value();
-      var Value_Set_Attempt = require_Value_Set_Attempt();
-      var Data_Model = require_Data_Model();
-      var Immutable_Data_Model = require_Immutable_Data_Model();
-      var Immutable_Data_Value = require_Immutable_Data_Value();
-      var { is_defined, input_processors, tof, each, is_array, Data_Type } = jsgui2;
-      var setup_data_value_data_type_set = require_setup_data_value_data_type_set();
-      var util;
-      if (typeof window === "undefined") {
-        const str_utl = "util";
-        util = __require(str_utl);
-      }
-      var lpurple = (x) => "\x1B[38;5;129m" + x + "\x1B[0m";
-      var Data_Value2 = class _Data_Value extends Base_Data_Value {
-        constructor(spec = {}) {
-          const spec_is_plain_object = spec !== null && typeof spec === "object" && !Array.isArray(spec);
-          const actual_spec = spec_is_plain_object ? spec : { value: spec };
-          super(actual_spec);
-          const initial_value_is_present = Object.prototype.hasOwnProperty.call(actual_spec, "value");
-          const initial_value = initial_value_is_present ? actual_spec.value : void 0;
-          const { data_type } = this;
-          if (data_type) {
-            setup_data_value_data_type_set(this, data_type);
-            if (initial_value_is_present && is_defined(initial_value)) {
-              this.value = initial_value;
-            }
-          } else {
-            if (initial_value_is_present) {
-              this.value = actual_spec.value;
-            }
-          }
-          const attempt_set_value = this.attempt_set_value = (value2) => {
-            const get_local_js_value_copy = () => {
-              const lv = this.value;
-              const tljsv = tof(lv);
-              if (tljsv === "undefined" || tljsv === "string" || tljsv === "number" || tljsv === "array" || tljsv === "object" || tljsv === "data_value") {
-                return lv;
-              } else {
-                return lv;
-              }
-            };
-            const old_local_js_value = get_local_js_value_copy();
-            const old_equals_new = more_general_equals(old_local_js_value, value2);
-            if (old_equals_new === true) {
-              return new Value_Set_Attempt({ success: false, equal_values: true });
-            }
-            try {
-              this.value = value2;
-            } catch (error2) {
-              return new Value_Set_Attempt({ success: false, value: old_local_js_value, error: error2 });
-            }
-            const new_local_js_value = get_local_js_value_copy();
-            const changed = !more_general_equals(old_local_js_value, new_local_js_value);
-            return new Value_Set_Attempt({
-              success: changed,
-              old: old_local_js_value,
-              value: new_local_js_value
-            });
-          };
-          this.__type = "data_value";
-          this._relationships = {};
-        }
-        toImmutable() {
-          const { context: context2, data_type, value: value2 } = this;
-          const res2 = new Immutable_Data_Value({
-            context: context2,
-            data_type,
-            value: value2
-          });
-          return res2;
-        }
-        "toObject"() {
-          return this._;
-        }
-        "set"(val) {
-          this.value = val;
-        }
-        "get"() {
-          return this.value;
-        }
-        equals(other) {
-          return more_general_equals(this, other);
-        }
-        "toString"() {
-          return this.get() + "";
-        }
-        "toJSON"() {
-          const t_value = tof(this.value);
-          if (t_value === "string") {
-            return JSON.stringify(this.value);
-          } else if (t_value === "number") {
-            return this.value + "";
-          } else if (t_value === "boolean") {
-            this.value ? "true" : "false";
-          } else if (t_value === "array") {
-            return JSON.stringify(this.value);
-          } else if (t_value === "data_value") {
-            return this.value.toJSON();
-          } else if (t_value === "undefined") {
-            return "null";
-          } else if (t_value === "null") {
-            return "null";
-          } else {
-            console.log("toJSON this.value", this.value);
-            console.log("t_value", t_value);
-            console.trace();
-            throw "NYI";
-          }
-        }
-        "clone"() {
-          console.trace();
-          throw "NYI";
-          var res2 = new _Data_Value({
-            "value": this._
-          });
-          return res2;
-        }
-        "_id"() {
-          if (this.__id) return this.__id;
-          if (this.context) {
-            this.__id = this.context.new_id(this.__type_name || this.__type);
-          } else {
-            if (!is_defined(this.__id)) {
-              throw "Data_Value should have context";
-              this.__id = new_data_value_id();
-            }
-          }
-          return this.__id;
-        }
-      };
-      var ensure_sync_state = (data_value) => {
-        if (!data_value.__sync_state) {
-          Object.defineProperty(data_value, "__sync_state", {
-            value: {
-              updatingFrom: /* @__PURE__ */ new Set()
-            },
-            enumerable: false
-          });
-        }
-        return data_value.__sync_state;
-      };
-      var has_defined_value = (data_value) => typeof data_value.value !== "undefined";
-      var copy_initial_value = (from, to) => {
-        const source_state = ensure_sync_state(from);
-        source_state.updatingFrom.add(to);
-        try {
-          to.value = from.value;
-        } finally {
-          source_state.updatingFrom.delete(to);
-        }
-      };
-      var propagate_sync_value = (source, target) => {
-        source.on("change", (e) => {
-          if (e.name !== "value") {
-            return;
-          }
-          const { updatingFrom } = ensure_sync_state(target);
-          if (updatingFrom.has(source)) {
-            return;
-          }
-          updatingFrom.add(source);
-          try {
-            target.value = e.value;
-          } finally {
-            updatingFrom.delete(source);
-          }
-        });
-      };
-      var align_initial_values = (a, b) => {
-        const a_has_value = has_defined_value(a);
-        const b_has_value = has_defined_value(b);
-        if (a_has_value && !b_has_value) {
-          copy_initial_value(a, b);
-        } else if (!a_has_value && b_has_value) {
-          copy_initial_value(b, a);
-        }
-      };
-      Data_Value2.sync = (a, b) => {
-        if (a instanceof Base_Data_Value && b instanceof Base_Data_Value) {
-          propagate_sync_value(a, b);
-          propagate_sync_value(b, a);
-          align_initial_values(a, b);
-        } else {
-          console.trace();
-          throw "Unexpected types";
-        }
-      };
-      if (util) {
-        Data_Value2.prototype[util.inspect.custom] = function(depth, opts) {
-          const { value: value2 } = this;
-          const tv = tof(value2);
-          if (tv === "number" || tv === "string" || tv === "boolean") {
-            return lpurple(value2);
-          } else {
-            if (value2 instanceof Array) {
-              let res2 = lpurple("[ ");
-              let first = true;
-              each(value2, (item2) => {
-                if (!first) {
-                  res2 = res2 + lpurple(", ");
-                } else {
-                  first = false;
-                }
-                if (item2 instanceof Data_Model) {
-                  const item_value = item2.value;
-                  res2 = res2 + lpurple(item_value);
-                } else [
-                  res2 = res2 + lpurple(item2)
-                ];
-              });
-              res2 = res2 + lpurple(" ]");
-              return res2;
-            } else if (value2 instanceof Data_Model) {
-              return value2[util.inspect.custom]();
-            } else {
-              return lpurple(this.value);
-            }
-          }
-        };
-      }
-      module.exports = Data_Value2;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/Data_Value.js
-  var require_Data_Value3 = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/Data_Value.js"(exports, module) {
-      module.exports = require_Data_Value2();
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/doubly-linked-list.js
-  var require_doubly_linked_list = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/doubly-linked-list.js"(exports, module) {
-      var Node = class {
-        constructor(spec) {
-          this.neighbours = spec.neighbours || [];
-          this.value = spec.value;
-        }
-        "previous"() {
-          return this.neighbours[0];
-        }
-        "next"() {
-          return this.neighbours[1];
-        }
-      };
-      var Doubly_Linked_List = class {
-        constructor(spec) {
-          this.first = null;
-          this.last = null;
-          this.length = 0;
-        }
-        "each_node"(callback2) {
-          var node = this.first;
-          var ctu = true;
-          var stop = function() {
-            ctu = false;
-          };
-          while (node && ctu) {
-            callback2(node, stop);
-            node = node.neighbours[1];
-          }
-        }
-        "each"(callback2) {
-          this.each_node(function(node, stop) {
-            callback2(node.value, stop);
-          });
-        }
-        "remove"(node) {
-          if (node.neighbours[0]) {
-            node.neighbours[0].neighbours[1] = node.neighbours[1];
-          } else {
-            this.first = node.neighbours[1];
-          }
-          if (node.neighbours[1]) {
-            node.neighbours[1].neighbours[0] = node.neighbours[0];
-          } else {
-            this.last = node.neighbours[0];
-          }
-          node.neighbours = [];
-          if (node.parent == this) {
-            delete node.parent;
-            this.length--;
-          }
-        }
-        // check to see if the item is a 'node' object.
-        //  if it is, can insert it as a node, otherwise create the node object and insert it.
-        //   a bit like wrapping values in Data_Value.
-        "insert_beginning"(val) {
-          if (val instanceof Node) {
-            if (this.first == null) {
-              this.first = val;
-              this.last = val;
-              val.neighbours = [];
-              if (val.parent != this) {
-                val.parent = this;
-                this.length++;
-              }
-            } else {
-              this.insert_before(val, this.first);
-            }
-            return val;
-          } else {
-            var node = new Node({ "value": val });
-            return this.insert_beginning(node);
-          }
-        }
-        // could use a nodify function.
-        //  or ensure_data_wrapper
-        "insert_before"(val, node) {
-          if (val instanceof Node) {
-            val.neighbours = [node.neighbours[0], node];
-            if (node.neighbours[0] == null) {
-              this.first = val;
-            } else {
-              node.neighbours[0].neighbours[1] = val;
-            }
-            node.neighbours[0] = val;
-            if (val.parent != this) {
-              val.parent = this;
-              this.length++;
-            }
-            return val;
-          } else {
-            var new_node = new Node({ "value": val });
-            return this.insert_before(new_node, node);
-          }
-        }
-        "insert_after"(val, node) {
-          if (val instanceof Node) {
-            val.neighbours = [node, node.neighbours[1]];
-            if (node.neighbours[1] == null) {
-              this.last = val;
-            } else {
-              node.neighbours[1].neighbours[0] = val;
-            }
-            node.neighbours[1] = val;
-            if (val.parent != this) {
-              val.parent = this;
-              this.length++;
-            }
-            return val;
-          } else {
-            var new_node = new Node({ "value": val });
-            return this.insert_after(new_node, node);
-          }
-        }
-        // not wrapping the item in a node?
-        // want one where we are not pushing nodes, but items stored in nodes.
-        //  Perhaps this is a Data_Value?
-        // Or a doubly_linked_node.
-        // Doubly_Linked_Node could take the form [prev, item, next]
-        //  [prev, item, key, next]? probably not
-        //  Maybe we could put more private variables, such as 'neighbours' as a var within the init statement.
-        "push"(val) {
-          if (val instanceof Node) {
-            if (this.last == null) {
-              this.insert_beginning(val);
-            } else {
-              return this.insert_after(val, this.last);
-            }
-            return val;
-          } else {
-            var new_node = new Node({ "value": val });
-            return this.push(new_node);
-          }
-        }
-      };
-      Doubly_Linked_List.Node = Node;
-      module.exports = Doubly_Linked_List;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/ordered-kvs.js
-  var require_ordered_kvs = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/ordered-kvs.js"(exports, module) {
-      var Doubly_Linked_List = require_doubly_linked_list();
-      var Ordered_KVS = class {
-        constructor() {
-          this.dll = new Doubly_Linked_List();
-          this.node_map = {};
-        }
-        "length"() {
-          return this.dll.length;
-        }
-        "put"(key2, value2) {
-          return this.push(key2, value2);
-        }
-        "get"(key2) {
-          var kvs_node = this.node_map[key2];
-          if (kvs_node) {
-            return kvs_node.value;
-          } else {
-            return void 0;
-          }
-        }
-        "push"(key2, value2) {
-          var node = this.dll.push(value2);
-          node.key = key2;
-          this.node_map[key2] = node;
-        }
-        "out"(key2) {
-          var node = this.node_map[key2];
-          delete this.node_map[key2];
-          this.dll.remove(node);
-        }
-        "each"(callback2) {
-          this.dll.each_node(function(node, stop) {
-            callback2(node.key, node.value, stop);
-          });
-        }
-        "values"() {
-          var res2 = [];
-          this.each(function(key2, value2) {
-            res2.push(value2);
-          });
-          return res2;
-        }
-        "keys"() {
-          var res2 = [];
-          this.each(function(key2, value2) {
-            res2.push(key2);
-          });
-          return res2;
-        }
-        "keys_and_values"() {
-          var res2 = [];
-          this.each(function(key2, value2) {
-            res2.push([key2, value2]);
-          });
-          return res2;
-        }
-        // will not need to deal with nodes on the user level.
-        // want to be able to add and remove items, normally items will get pushed to the end of the list.
-        // will provide a key and value in order to do this.
-      };
-      module.exports = Ordered_KVS;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/ordered-string-list.js
-  var require_ordered_string_list = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/ordered-string-list.js"(exports, module) {
-      var Ordered_String_List = class {
-        constructor() {
-          var arr = [];
-          var dict_indexes = {};
-          var reindex_dict_indexes = function() {
-            dict_indexes = {};
-            for (var c2 = 0, l2 = arr.length; c2 < l2; c2++) {
-              dict_indexes[arr[c2]] = c2;
-            }
-          };
-          this.has = function(value2) {
-            return typeof dict_indexes[value2] !== "undefined";
-          };
-          this.put = function(value2) {
-            if (this.has(value2)) {
-            } else {
-              var index = arr.length;
-              arr.push(value2);
-              dict_indexes[value2] = index;
-            }
-          };
-          this.out = function(value2) {
-            if (this.has(value2)) {
-              var idx = dict_indexes[value2];
-              arr.splice(idx, 1);
-              delete dict_indexes[value2];
-              for (var c2 = idx, l2 = arr.length; c2 < l2; c2++) {
-                var i = arr[c2];
-                dict_indexes[i]--;
-              }
-            }
-          };
-          this.toggle = function(value2) {
-            if (this.has(value2)) {
-              this.out(value2);
-            } else {
-              this.put(value2);
-            }
-          };
-          this.move_value = function(value2, index) {
-            if (this.has(value2) && dict_indexes[value2] != index) {
-              var old_index = dict_indexes[value2];
-              arr.splice(old_index, 1);
-              arr.splice(index, 0, value2);
-              if (index < old_index) {
-                dict_indexes[arr[index]] = index;
-                for (var c2 = index + 1; c2 <= old_index; c2++) {
-                  dict_indexes[arr[c2]]++;
-                }
-              } else if (index > old_index) {
-                dict_indexes[arr[index]] = index;
-                for (var c2 = old_index; c2 < index; c2++) {
-                  dict_indexes[arr[c2]]--;
-                }
-              }
-            }
-          };
-          this._index_scan = function() {
-            for (var c2 = 0, l2 = arr.length; c2 < l2; c2++) {
-              console.log("c " + c2 + " arr[c] " + arr[c2] + " idx " + dict_indexes[arr[c2]]);
-            }
-            ;
-          };
-          this.toString = function() {
-            var res2 = arr.join(" ");
-            return res2;
-          };
-          this.toString.stringify = true;
-          this.set = (function(val) {
-            if (typeof val === "string") {
-              arr = val.split(" ");
-              reindex_dict_indexes();
-            }
-          });
-          var a = arguments;
-          if (a.length == 1) {
-            var spec = a[0];
-            if (typeof spec === "string") {
-              this.set(spec);
-            }
-          }
-        }
-      };
-      module.exports = Ordered_String_List;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/Data_Model/Collection.js
-  var require_Collection2 = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/Data_Model/Collection.js"(exports, module) {
-      module.exports = require_Collection();
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/util.js
-  var require_util = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/util.js"(exports, module) {
-      var jsgui2 = require_lib_lang_mini();
-      var Collection = require_Collection2();
-      var j = jsgui2;
-      var each = j.each;
-      var tof = j.tof;
-      var atof = j.atof;
-      var is_defined = j.is_defined;
-      var fp = j.fp;
-      var arrayify = j.arrayify;
-      var mapify = j.mapify;
-      var get_item_sig = j.get_item_sig;
-      var vectorify = function(n_fn) {
-        var fn_res = fp(function(a, sig) {
-          if (a.l > 2) {
-            var res2 = a[0];
-            for (var c2 = 1, l2 = a.l; c2 < l2; c2++) {
-              res2 = fn_res(res2, a[c2]);
-            }
-            return res2;
-          } else {
-            if (sig == "[n,n]") {
-              return n_fn(a[0], a[1]);
-            } else {
-              var ats = atof(a);
-              if (ats[0] == "array") {
-                if (ats[1] == "number") {
-                  var res2 = [], n = a[1];
-                  each(a[0], function(v, i) {
-                    res2.push(fn_res(v, n));
-                  });
-                  return res2;
-                }
-                if (ats[1] == "array") {
-                  if (ats[0].length != ats[1].length) {
-                    throw "vector array lengths mismatch";
-                  } else {
-                    var res2 = [], arr2 = a[1];
-                    each(a[0], function(v, i) {
-                      res2.push(fn_res(v, arr2[i]));
-                    });
-                    return res2;
-                  }
-                }
-              }
-            }
-          }
-        });
-        return fn_res;
-      };
-      var n_add = function(n1, n2) {
-        return n1 + n2;
-      };
-      var n_subtract = function(n1, n2) {
-        return n1 - n2;
-      };
-      var n_multiply = function(n1, n2) {
-        return n1 * n2;
-      };
-      var n_divide = function(n1, n2) {
-        return n1 / n2;
-      };
-      var v_add = vectorify(n_add);
-      var v_subtract2 = vectorify(n_subtract);
-      var v_multiply = vectorify(n_multiply);
-      var v_divide = vectorify(n_divide);
-      var vector_magnitude = function(vector) {
-        var res2 = Math.sqrt(Math.pow(vector[0], 2) + Math.pow(vector[1], 2));
-        return res2;
-      };
-      var distance_between_points = function(points) {
-        var offset2 = v_subtract2(points[1], points[0]);
-        return vector_magnitude(offset2);
-      };
-      var execute_on_each_simple = function(items, fn) {
-        var res2 = [], that2 = this;
-        each(items, function(i, v) {
-          res2.push(fn.call(that2, i));
-        });
-        return res2;
-      };
-      var filter_map_by_regex = function(map, regex) {
-        var res2 = {};
-        each(map, function(v, i) {
-          if (i.match(regex)) {
-            res2[i] = v;
-          }
-        });
-        return res2;
-      };
-      var npx = arrayify(function(value2) {
-        var res2, a = arguments, t = tof(a[0]);
-        if (t === "string") {
-          res2 = a[0];
-        } else if (t === "number") {
-          res2 = a[0] + "px";
-        }
-        return res2;
-      });
-      var no_px = arrayify(fp(function(a, sig) {
-        var re = /px$/, res2;
-        if (sig == "[s]" && re.test(a[0])) {
-          res2 = parseInt(a[0]);
-        } else {
-          res2 = a[0];
-        }
-        ;
-        return res2;
-      }));
-      var arr_ltrb = ["left", "top", "right", "bottom"];
-      var str_arr_mapify = function(fn) {
-        var res2 = fp(function(a, sig) {
-          if (a.l == 1) {
-            if (sig == "[s]") {
-              var s_pn = a[0].split(" ");
-              if (s_pn.length > 1) {
-                return res2.call(this, s_pn);
-              } else {
-                return fn.call(this, a[0]);
-              }
-            }
-            if (tof(a[0]) == "array") {
-              var res22 = {}, that2 = this;
-              each(a[0], function(i, v) {
-                res22[v] = fn.call(that2, v);
-              });
-              return res22;
-            }
-          }
-        });
-        return res2;
-      };
-      var arr_hex_chars = [
-        "0",
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "A",
-        "B",
-        "C",
-        "D",
-        "E",
-        "F"
-      ];
-      var dict_hex_to_bin = {
-        "0": 0,
-        "1": 1,
-        "2": 2,
-        "3": 3,
-        "4": 4,
-        "5": 5,
-        "6": 6,
-        "7": 7,
-        "8": 8,
-        "9": 9,
-        "A": 10,
-        "B": 11,
-        "C": 12,
-        "D": 13,
-        "E": 14,
-        "F": 15
-      };
-      var str_hex_to_int = function(str_hex) {
-        str_hex = str_hex.toUpperCase();
-        var i = str_hex.length;
-        var res2 = 0, exp = 1;
-        while (i--) {
-          var i_part = dict_hex_to_bin[str_hex.charAt(i)];
-          var ip2 = i_part * exp;
-          res2 = res2 + ip2;
-          exp = exp * 16;
-        }
-        ;
-        return res2;
-      };
-      var byte_int_to_str_hex_2 = function(byte_int) {
-        var a = Math.floor(byte_int / 16), b = byte_int % 16, sa = arr_hex_chars[a], sb = arr_hex_chars[b], res2 = sa + sb;
-        return res2;
-      };
-      var arr_rgb_to_str_hex_6 = function(arr_rgb) {
-        var r = byte_int_to_str_hex_2(arr_rgb[0]);
-        var res2 = r + byte_int_to_str_hex_2(arr_rgb[1]) + byte_int_to_str_hex_2(arr_rgb[2]);
-        return res2;
-      };
-      var arr_rgb_to_css_hex_6 = function(arr_rgb) {
-        return "#" + arr_rgb_to_str_hex_6(arr_rgb);
-      };
-      var input_processors = {};
-      var validators = {
-        "number": function(value2) {
-          return tof(value2) == "number";
-        }
-      };
-      var extend = jsgui2.extend;
-      var fp = jsgui2.fp;
-      var stringify = jsgui2.stringify;
-      var tof = jsgui2.tof;
-      var data_types_info = {
-        "color": ["indexed_array", [
-          ["red", "number"],
-          ["green", "number"],
-          ["blue", "number"]
-        ]],
-        "oltrb": ["optional_array", ["left", "top", "right", "bottom"]]
-      };
-      jsgui2.data_types_info = data_types_info;
-      var color_preprocessor_parser = fp(function(a, sig) {
-        if (sig == "[s]") {
-          var input = a[0];
-          var rx_hex = /(#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2}))/;
-          var m = input.match(rx_hex);
-          if (m) {
-            var r = jsgui2.str_hex_to_int(m[2]);
-            var g = jsgui2.str_hex_to_int(m[3]);
-            var b = jsgui2.str_hex_to_int(m[4]);
-            var res2 = [r, g, b];
-            return res2;
-          }
-        }
-      });
-      input_processors["optional_array"] = fp(function(a, sig) {
-        if (a.l == 2) {
-          var oa_params = a[0], input = a[1];
-          if (tof(input) == "array") {
-            if (input.length <= oa_params.length) {
-              return input;
-            }
-          } else {
-            return input;
-          }
-        }
-        if (a.l == 3) {
-          var oa_params = a[0], items_data_type_name = a[1], input = a[2];
-          var input_processor_for_items = jsgui2.input_processors[items_data_type_name];
-          if (tof(input) == "array") {
-            if (input.length <= oa_params.length) {
-              var res2 = [];
-              each(input, function(i, v) {
-                res2.push(input_processor_for_items(v));
-              });
-              return res2;
-            }
-          } else {
-            return input_processor_for_items(input);
-          }
-        }
-      });
-      input_processors["indexed_array"] = fp(function(a, sig) {
-        console.log("indexed_array sig", sig);
-        if (a.l == 2) {
-          var ia_params = a[0], input = a[1];
-          if (tof(input) == "array") {
-            if (input.length <= ia_params.length) {
-              return input;
-            }
-          }
-        }
-        if (a.l == 3) {
-          var ia_params = a[0], items_data_type_name = a[1], input = a[2];
-          var input_processor_for_items = jsgui2.input_processors[items_data_type_name];
-          if (tof(input) == "array") {
-            if (input.length <= ia_params.length) {
-              var res2 = [];
-              each(input, function(i, v) {
-                res2.push(input_processor_for_items(v));
-              });
-              return res2;
-            }
-          }
-        }
-      });
-      input_processors["n_units"] = function(str_units, input) {
-        if (tof(input) == "number") {
-          return [input, str_units];
-        }
-        if (tof(input) == "string") {
-          var rx_n_units = /^(\d+)(\w+)$/;
-          var match = input.match(rx_n_units);
-          if (match) {
-            return [parseInt(match[1]), match[2]];
-          }
-          rx_n_units = /^(\d*\.\d+)(\w+)$/;
-          match = input.match(rx_n_units);
-          if (match) {
-            return [parseFloat(match[1]), match[2]];
-          }
-        }
-      };
-      var dti_color = jsgui2.data_types_info["color"];
-      input_processors["color"] = function(input) {
-        var res2;
-        console.log("processing color input: " + stringify(input));
-        var input_sig = get_item_sig(input, 2);
-        if (input_sig == "[s]") {
-          res2 = color_preprocessor_parser(input[0]);
-        }
-        if (input_sig == "[n,n,n]") {
-          res2 = input;
-        }
-        console.log("res " + stringify(res2));
-        console.log("color input_processors output", res2);
-        return res2;
-      };
-      jsgui2.output_processors["color"] = function(jsgui_color) {
-        var res2 = jsgui2.arr_rgb_to_css_hex_6(jsgui_color);
-        return res2;
-      };
-      var group = function() {
-        var a = arguments;
-        if (a.length == 1 && tof(a[0]) == "array") {
-          return group.apply(this, a[0]);
-        }
-        var res2;
-        for (var c2 = 0, l2 = a.length; c2 < l2; c2++) {
-          var item2 = a[c2];
-          if (c2 == 0) {
-            res2 = new Collection({ "context": item2.context });
-          }
-          res2.push(item2);
-        }
-        var C = a[0].constructor;
-        var p = C.prototype;
-        var i;
-        for (i in p) {
-          var tpi = tof(p[i]);
-          if (tpi == "function") {
-            (function(i2) {
-              if (i2 != "each" && i2 != "get" && i2 != "add_event_listener") {
-                res2[i2] = function() {
-                  var a2 = arguments;
-                  res2.each(function(v, i22) {
-                    v[i2].apply(v, a2);
-                  });
-                };
-              }
-            })(i);
-          }
-        }
-        return res2;
-      };
-      var true_vals = function(map) {
-        var res2 = [];
-        for (var i in map) {
-          if (map[i]) res2.push(map[i]);
-        }
-        return res2;
-      };
-      var Ui16toUi32 = (ui16) => {
-        let res2 = new Uint32Array(ui16.length / 2);
-        let dv = new DataView(ui16.buffer);
-        let l2 = ui16.length;
-        let hl = l2 / 2;
-        let resw = 0;
-        for (let c2 = 0; c2 < hl; c2++) {
-          res2[resw++] = dv.getUint32(c2 * 4);
-        }
-        return res2;
-      };
-      var Ui32toUi16 = (ui32) => {
-        let res2 = new Uint16Array(ui32.length * 2);
-        let dv = new DataView(ui32.buffer);
-        let l2 = ui32.length;
-        let resw = 0;
-        for (let c2 = 0; c2 < l2; c2++) {
-          res2[resw++] = dv.getUint16(c2 * 4 + 2);
-          res2[resw++] = dv.getUint16(c2 * 4);
-        }
-        console.log("res", res2);
-        return res2;
-      };
-      var util = {
-        "Ui16toUi32": Ui16toUi32,
-        "Ui32toUi16": Ui32toUi16,
-        "vectorify": vectorify,
-        "v_add": v_add,
-        "v_subtract": v_subtract2,
-        "v_multiply": v_multiply,
-        "v_divide": v_divide,
-        "vector_magnitude": vector_magnitude,
-        "distance_between_points": distance_between_points,
-        "execute_on_each_simple": execute_on_each_simple,
-        "mapify": mapify,
-        "filter_map_by_regex": filter_map_by_regex,
-        "atof": atof,
-        "npx": npx,
-        "no_px": no_px,
-        "str_arr_mapify": str_arr_mapify,
-        "arr_ltrb": arr_ltrb,
-        "true_vals": true_vals,
-        "validators": validators,
-        "__data_id_method": "lazy",
-        "str_hex_to_int": str_hex_to_int,
-        "arr_rgb_to_css_hex_6": arr_rgb_to_css_hex_6,
-        "group": group
-      };
-      module.exports = util;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-tools/lang.js
-  var require_lang = __commonJS({
-    "../jsgui3-html/node_modules/lang-tools/lang.js"(exports, module) {
-      var lang_mini = require_lib_lang_mini();
-      var collective = require_collective();
-      var { more_general_equals } = require_tools();
-      lang_mini.equals = more_general_equals;
-      lang_mini.collective = collective;
-      lang_mini.collect = collective;
-      var Evented_Class = lang_mini.Evented_Class;
-      var B_Plus_Tree = require_b_plus_tree();
-      var Collection = require_Collection();
-      var Data_Object = require_Data_Object2();
-      var Data_Value2 = require_Data_Value3();
-      var Data_Model = require_Data_Model();
-      var Immutable_Data_Value = require_Immutable_Data_Value();
-      var Immutable_Data_Model = require_Immutable_Data_Model();
-      var Doubly_Linked_List = require_doubly_linked_list();
-      var Ordered_KVS = require_ordered_kvs();
-      var Ordered_String_List = require_ordered_string_list();
-      var Sorted_KVS = require_sorted_kvs();
-      var util = require_util();
-      lang_mini.util = util;
-      lang_mini.B_Plus_Tree = B_Plus_Tree;
-      lang_mini.Collection = Collection;
-      lang_mini.Data_Object = Data_Object;
-      lang_mini.Data_Value = Data_Value2;
-      lang_mini.Immutable_Data_Model = Immutable_Data_Model;
-      lang_mini.Immutable_Data_Value = Immutable_Data_Value;
-      lang_mini.Data_Model = Data_Model;
-      lang_mini.Doubly_Linked_List = Doubly_Linked_List;
-      lang_mini.Ordered_KVS = Ordered_KVS;
-      lang_mini.Ordered_String_List = Ordered_String_List;
-      lang_mini.Sorted_KVS = Sorted_KVS;
-      var ec = new Evented_Class();
-      Object.assign(ec, lang_mini);
-      module.exports = ec;
-    }
-  });
-
-  // ../jsgui3-html/html-core/text-node.js
-  var require_text_node = __commonJS({
-    "../jsgui3-html/html-core/text-node.js"(exports, module) {
-      var { tof, Evented_Class } = require_lang();
-      var escape_html_replacements = [
-        [/&/g, "&amp;"],
-        [/</g, "&lt;"],
-        [/>/g, "&gt;"],
-        [/"/g, "&quot;"],
-        //"
-        [/'/g, "&#x27;"],
-        //'
-        [/\//g, "&#x2F;"]
-      ];
-      var escape_html = (str) => {
-        if (tof(str) == "data_value") str = str.get();
-        var single_replacement;
-        for (var c2 = 0, l2 = escape_html_replacements.length; c2 < l2; c2++) {
-          single_replacement = escape_html_replacements[c2];
-          str = str.replace(single_replacement[0], single_replacement[1]);
-        }
-        return str;
-      };
-      var textNode = class extends Evented_Class {
-        //class textNode extends Control {
-        constructor(spec) {
-          spec.__type_name = spec.__type_name || "text_node";
-          super();
-          if (typeof spec == "string") {
-            spec = {
-              "text": spec
-            };
-          }
-          spec.nodeType = 3;
-          spec = spec || {};
-          if (spec.el) {
-            this.dom = {
-              el: spec.el
-            };
-          } else {
-            this.dom = {};
-          }
-          if (spec.sibling_index) this.sibling_index = spec.sibling_index;
-          if (typeof spec.text !== "undefined") {
-            this._text = spec.text;
-          }
-          this.on("change", (e_change) => {
-            if (this.dom.el) {
-              this.dom.el.nodeValue = e_change.value;
-            }
-          });
-        }
-        activate() {
-          if (!this.__active) {
-            this.__active = true;
-          }
-        }
-        get text() {
-          return this._text;
-        }
-        set text(value2) {
-          this._text = value2;
-          this.raise("change", {
-            "name": "text",
-            "value": value2
-          });
-        }
-        "all_html_render"() {
-          return this.nx ? this._text || "" : escape_html(this._text || "") || "";
-        }
-        // getter and setter for the text itself?
-        //  A variety of properties will use getters and setters so that the updates get noted.
-      };
-      module.exports = textNode;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/fnl/node_modules/lang-mini/lang-mini.js
-  var require_lang_mini2 = __commonJS({
-    "../jsgui3-html/node_modules/fnl/node_modules/lang-mini/lang-mini.js"(exports, module) {
-      var running_in_browser = typeof window !== "undefined";
-      var running_in_node = !running_in_browser;
-      var Readable_Stream;
-      var Writable_Stream;
-      var Transform_Stream;
-      var get_stream = () => {
-        if (running_in_node) {
-          return (() => {
-            const str_libname = "stream";
-            const stream2 = __require(str_libname);
-            Readable_Stream = stream2.Readable;
-            Writable_Stream = stream2.Writable;
-            Transform_Stream = stream2.Transform;
-            return stream2;
-          })();
-        } else {
-          return void 0;
-        }
-      };
-      var stream = get_stream();
-      var each = (collection, fn, context2) => {
-        if (collection) {
-          if (collection.__type == "collection") {
-            return collection.each(fn, context2);
-          }
-          let ctu = true;
-          let stop = function() {
-            ctu = false;
-          };
-          if (is_array(collection)) {
-            let res2 = [], res_item;
-            for (let c2 = 0, l2 = collection.length; c2 < l2; c2++) {
-              res_item;
-              if (ctu == false) break;
-              if (context2) {
-                res_item = fn.call(context2, collection[c2], c2, stop);
-              } else {
-                res_item = fn(collection[c2], c2, stop);
-              }
-              if (ctu == false) break;
-              res2.push(res_item);
-            }
-            return res2;
-          } else {
-            let name, res2 = {};
-            for (name in collection) {
+            const keys = Object.keys(collection);
+            for (let i = 0; i < keys.length; i++) {
+              name = keys[i];
               if (ctu === false) break;
               if (context2) {
                 res2[name] = fn.call(context2, collection[name], name, stop);
@@ -10460,10 +2473,10 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/fnl/node_modules/lang-mini/lib-lang-mini.js
-  var require_lib_lang_mini2 = __commonJS({
-    "../jsgui3-html/node_modules/fnl/node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
-      var lang = require_lang_mini2();
+  // node_modules/lang-mini/lib-lang-mini.js
+  var require_lib_lang_mini = __commonJS({
+    "node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
+      var lang = require_lang_mini();
       var { each, tof } = lang;
       var Type_Signifier = class _Type_Signifier {
         // Name
@@ -10600,10 +2613,4258 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/fnl/fn-io-transform.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/collective.js
+  var require_collective = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/collective.js"(exports, module) {
+      var { each, is_array } = require_lib_lang_mini();
+      var collective = (arr) => {
+        if (is_array(arr)) {
+          const target = {};
+          const handler2 = {
+            get(target2, prop, receiver) {
+              if (arr.hasOwnProperty(prop)) {
+                return arr[prop];
+              } else {
+                if (typeof arr[0][prop] === "function") {
+                  return (...a) => {
+                    const res2 = [];
+                    each(arr, (item2) => {
+                      res2.push(item2[prop](...a));
+                    });
+                    return res2;
+                  };
+                } else {
+                  const res2 = [];
+                  each(arr, (item2) => {
+                    res2.push(item2[prop]);
+                  });
+                  return res2;
+                }
+              }
+            }
+          };
+          const proxy2 = new Proxy(target, handler2);
+          return proxy2;
+        } else {
+          console.trace();
+          throw "NYI";
+        }
+      };
+      module.exports = collective;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Model.js
+  var require_Data_Model = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Model.js"(exports, module) {
+      var { Evented_Class } = require_lib_lang_mini();
+      var Data_Model = class extends Evented_Class {
+        constructor(spec = {}) {
+          super(spec);
+          this.__data_model = true;
+          if (spec && spec.context) {
+            this.context = spec.context;
+          }
+          if (spec && spec.name) {
+            this.name = spec.name;
+          }
+          this.__type = "data_model";
+        }
+      };
+      module.exports = Data_Model;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/tools.js
+  var require_tools = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/tools.js"(exports, module) {
+      var Data_Model = require_Data_Model();
+      var { tof } = require_lib_lang_mini();
+      var more_general_equals = (that2, other) => {
+        if (other instanceof Data_Model) {
+          const my_json = that2.toJSON();
+          const other_json = other.toJSON();
+          return my_json === other_json;
+        } else {
+          if (that2 === other) {
+            return true;
+          } else {
+            if (that2 === void 0) {
+              return false;
+            } else {
+              const { value: value2 } = that2;
+              const t_value = tof(value2), t_other = tof(other);
+              if (t_value === t_other) {
+                if (value2 === other) {
+                  return true;
+                } else {
+                  if (typeof value2.equals === "function" && typeof other.equals === "function") {
+                    return value2.equals(other);
+                  } else {
+                    if (value2 === other) {
+                      return true;
+                    } else {
+                      if (t_value === "number" || t_value === "string" || t_value === "boolean") {
+                        return value2 === other;
+                      } else {
+                        if (t_value === "array") {
+                          if (value2.length === other.length) {
+                            let res2 = true, c2 = 0, l2 = value2.length;
+                            do {
+                              res2 = more_general_equals(value2[c2], other[c2]);
+                              c2++;
+                            } while (res2 === true && c2 < l2);
+                            return res2;
+                          } else {
+                            return false;
+                          }
+                        } else {
+                          console.log("[value, other]", [value2, other]);
+                          console.trace();
+                          throw "NYI";
+                        }
+                      }
+                    }
+                  }
+                }
+              } else {
+                return false;
+              }
+            }
+          }
+        }
+      };
+      module.exports = {
+        more_general_equals
+      };
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/stiffarray.js
+  var require_stiffarray = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/stiffarray.js"(exports, module) {
+      var StiffArray = function(capacity) {
+        var m_public = {
+          items: new Array(capacity),
+          // internal storage array
+          count: 0,
+          // items count
+          first: function() {
+            if (this.count == 0) throw "StiffArray.first()";
+            return this.items[0];
+          },
+          last: function() {
+            if (this.count == 0) throw "StiffArray.last()";
+            return this.items[this.count - 1];
+          },
+          add: function(item2) {
+            if (this.count >= capacity) throw "StiffArray.add()";
+            this.items[this.count++] = item2;
+          },
+          add_from: function(source) {
+            if (this.count + source.count > capacity) throw "StiffArray.add_from()";
+            for (var i = 0; i < source.count; i++) this.items[this.count++] = source.items[i];
+          },
+          insert: function(index, item2) {
+            if (index < 0 || index > this.count) throw "StiffArray.insert(): index";
+            if (this.count >= capacity) throw "StiffArray.insert(): overflow";
+            for (var i = this.count; i > index; i--) this.items[i] = this.items[i - 1];
+            this.items[index] = item2;
+            this.count++;
+          },
+          removeAt: function(index) {
+            if (index < 0 || index >= this.count) throw "StiffArray.removeAt()";
+            this.count--;
+            for (var i = index; i < this.count; i++) this.items[i] = this.items[i + 1];
+          },
+          removeFirst: function() {
+            this.removeAt(0);
+          },
+          removeLast: function() {
+            this.removeAt(this.count - 1);
+          },
+          copy_from: function(source, index, count) {
+            for (var i = 0; i < count; i++) {
+              this.items[i] = source.items[i + index];
+            }
+            this.count = count;
+          },
+          search_first: function(item2) {
+            var cnt = this.count;
+            var first = 0;
+            while (cnt > 0) {
+              var step = Math.floor(cnt / 2);
+              var index = first + step;
+              if (this.items[index] < item2) {
+                first = index + 1;
+                cnt -= step + 1;
+              } else {
+                cnt = step;
+              }
+            }
+            if (first < this.count) {
+              return { found: this.items[first] == item2, index: first };
+            }
+            return { found: false, index: first };
+          },
+          search_last: function(item2) {
+            var cnt = this.count;
+            var first = 0;
+            while (cnt > 0) {
+              var step = Math.floor(cnt / 2);
+              var index = first + step;
+              if (item2 >= this.items[index]) {
+                first = index + 1;
+                cnt -= step + 1;
+              } else {
+                cnt = step;
+              }
+            }
+            if (first > 0 && first <= this.count) {
+              if (this.items[first - 1] == item2) {
+                return { found: true, index: first - 1 };
+              }
+            }
+            return { found: false, index: first };
+          },
+          search_last_prefix: function(prefix) {
+            var prefix_length = prefix.length;
+            var check_prefix = function(item3) {
+              if (prefix_length > item3.length) return false;
+              return item3.substr(0, prefix_length) == prefix;
+            };
+            var cnt = this.count;
+            var first = 0;
+            while (cnt > 0) {
+              var step = Math.floor(cnt / 2);
+              var index = first + step;
+              var item2 = this.items[index];
+              if (prefix > item2 || check_prefix(item2)) {
+                first = index + 1;
+                cnt -= step + 1;
+              } else {
+                cnt = step;
+              }
+            }
+            if (first > 0 && first <= this.count) {
+              if (check_prefix(this.items[first - 1])) {
+                return { found: true, index: first - 1 };
+              }
+            }
+            return { found: false, index: first };
+          },
+          toString: function() {
+            return this.items.slice(0, this.count).toString();
+          }
+        };
+        return m_public;
+      };
+      module.exports = StiffArray;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/b-plus-tree.js
+  var require_b_plus_tree = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/b-plus-tree.js"(exports, module) {
+      var StiffArray = require_stiffarray();
+      var B_Plus_Node = function(nodeCapacity) {
+        var m_public = {
+          isLeaf: false,
+          parent: null,
+          keys: new StiffArray(nodeCapacity + 1),
+          // +1: to allow temporary owerflow
+          children: new StiffArray(nodeCapacity + 2)
+          // +2: children.length == keys.length + 1
+        };
+        return m_public;
+      };
+      var B_Plus_Leaf = function(nodeCapacity) {
+        var m_public = {
+          isLeaf: true,
+          parent: null,
+          keys: new StiffArray(nodeCapacity + 1),
+          values: new StiffArray(nodeCapacity + 1),
+          //
+          // leafs chain:
+          prevLeaf: null,
+          nextLeaf: null
+        };
+        return m_public;
+      };
+      var FindInfo = (key2, value2, isPrefixSearch) => {
+        isPrefixSearch = !!isPrefixSearch;
+        var isKeyPresent = key2 != void 0;
+        var isValuePresent = value2 != void 0;
+        var prefixLength = 0;
+        if (isPrefixSearch) {
+          if (typeof key2 != "string") {
+            isPrefixSearch = false;
+          } else {
+            prefixLength = key2.length;
+          }
+        }
+        return {
+          key: key2,
+          // key to find (if present)
+          value: value2,
+          // value to find (if present)
+          isPrefixSearch,
+          // prefix search mode
+          leaf: null,
+          // found leaf
+          index: -1,
+          // found leaf item index
+          isKeyPresent,
+          // function () { return this.key !== undefined; }, // is the search criteria contains key
+          isValuePresent,
+          // function () { return this.value !== undefined; }, // is the search criteria contains value
+          foundKey: function() {
+            return this.leaf.keys.items[this.index];
+          },
+          // found items's key
+          foundValue: function() {
+            return this.leaf.values.items[this.index];
+          },
+          // found item's value
+          //
+          prefix_length: prefixLength,
+          // prefix length
+          check_prefix: function() {
+            if (!isPrefixSearch) return false;
+            if (this.index >= this.leaf.keys.count) return false;
+            var keyToCheck = this.foundKey();
+            if (this.prefix_length > keyToCheck.length) return false;
+            return keyToCheck.substr(0, this.prefix_length) == this.key;
+          }
+        };
+      };
+      var B_Plus_Tree = function(nodeCapacity) {
+        if (nodeCapacity === void 0) nodeCapacity = 10;
+        if (nodeCapacity < 4) throw "B_Plus_Tree(): node capacity must be >= 4";
+        var m_public = {
+          // tree root:
+          root: new B_Plus_Leaf(nodeCapacity),
+          //
+          // leafs chain:
+          firstLeaf: null,
+          //
+          lastLeaf: null,
+          //
+          // ---------------------
+          //     editing:
+          // ---------------------
+          //
+          // clear the tree:
+          clear: function() {
+            p_Clear();
+          },
+          //
+          // insert(key, value)
+          // insert([key, value])
+          insert: function(key2, value2) {
+            if (arguments.length == 2) {
+              return p_Insert(key2, value2);
+            } else {
+              return p_Insert(key2[0], key2[1]);
+            }
+          },
+          //
+          // remove(key) - remove all values with given key
+          // remove(key, value) - remove one value occurrence
+          remove: function(key2, value2) {
+            if (arguments.length == 2) {
+              return p_Remove(key2, value2);
+            } else {
+              p_RemoveKey(key2);
+            }
+          },
+          //
+          // ---------------------
+          //       finding:
+          // ---------------------
+          //
+          // findFirst() - find the very first item
+          // findFirst(key) - find the first item for the given key
+          // findFirst(key, value) - find the first key+value occurrence
+          //
+          // returns the FindInfo object:
+          //    key: key,     // key to find (if present)
+          //    value: value, // value to find (if present)
+          //
+          //    leaf: null,   // the current found leaf
+          //    index: -1,    // the current found index
+          //
+          //    foundKey():   // the current found key
+          //    foundValue(): // the current found value
+          //
+          findFirst: function(key2, value2) {
+            return p_FindFirst(key2, value2);
+          },
+          //
+          // find first key matching the prefix:
+          findFirstPrefix: function(prefix) {
+            return p_FindFirst(prefix, void 0, true);
+          },
+          //
+          // find next search conditions occurence
+          findNext: function(findInfo) {
+            return p_FindNext(findInfo);
+          },
+          //
+          // findLast() - find the very last item
+          // findLast(key) - find the last item for the given key
+          // findLast(key, value) - find the last key+value occurrence
+          findLast: function(key2, value2) {
+            return p_FindLast(key2, value2);
+          },
+          //
+          // find last key matching the prefix:
+          findLastPrefix: function(prefix) {
+            return p_FindLast(prefix, void 0, true);
+          },
+          //
+          // find previous search conditions occurence
+          findPrevious: function(findInfo) {
+            return p_FindPrev(findInfo);
+          },
+          //
+          // ---------------------
+          // dictionary-like usage:
+          // ---------------------
+          //
+          // get one value by key (or null):
+          getValue: function(key2) {
+            return p_GetValue(key2);
+          },
+          // set one value by key (insert or update):
+          setValue: function(key2, value2) {
+            p_SetValue(key2, value2);
+          },
+          //
+          //
+          // ---------------------
+          //   other functions:
+          // ---------------------
+          //
+          // count() - count all values
+          // count(key) - count values with the given key
+          count: function(key2) {
+            if (arguments.length == 1) {
+              return p_CountKey(key2);
+            } else {
+              return p_Count();
+            }
+          },
+          //
+          // tree capacity:
+          getCapacity: function() {
+            return m_nodeMaxCount;
+          },
+          //
+          // ---------------------
+          // additional functions:
+          // ---------------------
+          //
+          // iterate through each key + value pair
+          // callback is function(key, value)
+          "each": function(callback2) {
+            return p_each(callback2);
+          },
+          //
+          // get all keys
+          "keys": function() {
+            return p_keys();
+          },
+          //
+          // get all [key, value] pairs
+          "keys_and_values": function() {
+            return p_keys_and_values();
+          },
+          //
+          //
+          // get keys and values by prefix
+          "get_by_prefix": function(prefix) {
+            return p_get_by_prefix(prefix);
+          },
+          //
+          // get keys by prefix
+          "get_keys_by_prefix": function(prefix) {
+            return p_get_keys_by_prefix(prefix);
+          },
+          //
+          // get values at key...
+          "get_values_by_key": function(key2) {
+            return p_get_values_by_key(key2);
+          }
+        };
+        m_public.firstLeaf = m_public.root;
+        m_public.lastLeaf = m_public.root;
+        var m_nodeMaxCount = nodeCapacity;
+        var m_nodeMinCount = Math.floor(m_nodeMaxCount / 2);
+        var p_Clear = function() {
+          m_public.root = new B_Plus_Leaf(m_nodeMaxCount);
+          m_public.firstLeaf = m_public.root;
+          m_public.lastLeaf = m_public.root;
+        };
+        var p_keys = function() {
+          var res2 = [];
+          _p_each_key(function(key2) {
+            res2.push(key2);
+          });
+          return res2;
+        };
+        var p_keys_and_values = function() {
+          var res2 = [];
+          p_each(function(key2, value2) {
+            res2.push([key2, value2]);
+          });
+          return res2;
+        };
+        var _p_each_key = function(callback2) {
+          var findInfo = p_FindFirst();
+          while (findInfo != null) {
+            var fk = findInfo.foundKey();
+            callback2(fk);
+            findInfo = p_FindNext(findInfo);
+          }
+        };
+        var p_each = function(callback2) {
+          var findInfo = p_FindFirst();
+          var doStop = false;
+          while (findInfo != null) {
+            var fk = findInfo.foundKey();
+            var fv = findInfo.foundValue();
+            callback2(fk, fv, function() {
+              doStop = true;
+            });
+            if (doStop) {
+              findInfo = null;
+            } else {
+              findInfo = p_FindNext(findInfo);
+            }
+          }
+        };
+        var p_Insert = function(key2, value2) {
+          var searchResult = searchLeaf(key2);
+          var leaf = searchResult.node;
+          leaf.keys.insert(searchResult.index, key2);
+          leaf.values.insert(searchResult.index, value2);
+          if (leaf.keys.count > m_nodeMaxCount) {
+            if (leaf.prevLeaf != null && leaf.prevLeaf.keys.count < m_nodeMaxCount && leaf.prevLeaf.parent == leaf.parent) {
+              rotateAmongLeavesToLeft(leaf.prevLeaf, leaf);
+            } else if (leaf.nextLeaf != null && leaf.nextLeaf.keys.count < m_nodeMaxCount && leaf.nextLeaf.parent == leaf.parent) {
+              rotateAmongLeavesToRight(leaf, leaf.nextLeaf);
+            } else {
+              splitLeaf(leaf);
+            }
+          }
+        };
+        var splitLeaf = function(leaf) {
+          var leftCount = m_nodeMinCount;
+          var rightCount = leaf.keys.count - leftCount;
+          var newRightLeaf = new B_Plus_Leaf(m_nodeMaxCount);
+          newRightLeaf.parent = leaf.parent;
+          newRightLeaf.keys.copy_from(leaf.keys, leftCount, rightCount);
+          newRightLeaf.values.copy_from(leaf.values, leftCount, rightCount);
+          leaf.keys.count = leftCount;
+          leaf.values.count = leftCount;
+          newRightLeaf.nextLeaf = leaf.nextLeaf;
+          if (newRightLeaf.nextLeaf != null) newRightLeaf.nextLeaf.prevLeaf = newRightLeaf;
+          newRightLeaf.prevLeaf = leaf;
+          leaf.nextLeaf = newRightLeaf;
+          if (m_public.lastLeaf == leaf) m_public.lastLeaf = newRightLeaf;
+          if (leaf.parent != null) {
+            var leafIndex = calcChildIndex(leaf.parent, leaf);
+            insertToParent(leaf.parent, newRightLeaf, newRightLeaf.keys.first(), leafIndex + 1);
+          } else {
+            createNewRoot(leaf, newRightLeaf, newRightLeaf.keys.first());
+          }
+        };
+        var createNewRoot = function(nodeLeft, nodeRight, key2) {
+          var newRoot = new B_Plus_Node(m_nodeMaxCount);
+          newRoot.keys.add(key2);
+          newRoot.children.add(nodeLeft);
+          newRoot.children.add(nodeRight);
+          nodeLeft.parent = newRoot;
+          nodeRight.parent = newRoot;
+          m_public.root = newRoot;
+        };
+        var insertToParent = function(parentNode, newChildNode, newChildFirstKey, newChildIndex) {
+          parentNode.keys.insert(newChildIndex - 1, newChildFirstKey);
+          parentNode.children.insert(newChildIndex, newChildNode);
+          newChildNode.parent = parentNode;
+          if (parentNode.keys.count > m_nodeMaxCount) {
+            splitNode(parentNode);
+          }
+        };
+        var splitNode = function(node) {
+          var newLeftCount = m_nodeMinCount;
+          var newRightCount = m_nodeMaxCount - newLeftCount;
+          var middleKey = node.keys.items[newLeftCount];
+          var newRightNode = new B_Plus_Node(m_nodeMaxCount);
+          newRightNode.keys.copy_from(node.keys, newLeftCount + 1, newRightCount);
+          newRightNode.children.copy_from(node.children, newLeftCount + 1, newRightCount + 1);
+          node.keys.count = newLeftCount;
+          node.children.count = newLeftCount + 1;
+          for (var i = 0; i < newRightNode.children.count; i++) newRightNode.children.items[i].parent = newRightNode;
+          if (node.parent == null) {
+            createNewRoot(node, newRightNode, middleKey);
+          } else {
+            var nodeIndex = calcChildIndex(node.parent, node);
+            insertToParent(node.parent, newRightNode, middleKey, nodeIndex + 1);
+          }
+        };
+        var p_Remove = function(key2, value2) {
+          var searchResult = searchLeafValue(key2, value2);
+          if (!searchResult.found) return false;
+          removeFromLeaf(searchResult.node, searchResult.index);
+          return true;
+        };
+        var p_RemoveKey = function(key2) {
+          while (true) {
+            var searchResult = searchLeaf(key2);
+            if (!searchResult.found) break;
+            removeFromLeaf(searchResult.node, searchResult.index);
+          }
+        };
+        var removeFromLeaf = function(leaf, index) {
+          leaf.keys.removeAt(index);
+          leaf.values.removeAt(index);
+          if (leaf.keys.count < m_nodeMinCount) {
+            if (leaf.prevLeaf != null && leaf.parent == leaf.prevLeaf.parent && leaf.prevLeaf.keys.count > m_nodeMinCount) {
+              rotateAmongLeavesToRight(leaf.prevLeaf, leaf);
+            } else if (leaf.nextLeaf != null && leaf.parent == leaf.nextLeaf.parent && leaf.nextLeaf.keys.count > m_nodeMinCount) {
+              rotateAmongLeavesToLeft(leaf, leaf.nextLeaf);
+            } else {
+              mergeLeaf(leaf);
+            }
+          }
+          return true;
+        };
+        var mergeLeaf = function(leaf) {
+          if (leaf.parent == null) {
+            return;
+          }
+          var leftCount = m_nodeMaxCount + 1;
+          var rightCount = m_nodeMaxCount + 1;
+          if (leaf.prevLeaf != null && leaf.prevLeaf.parent == leaf.parent) {
+            leftCount = leaf.prevLeaf.keys.count;
+          }
+          if (leaf.nextLeaf != null && leaf.nextLeaf.parent == leaf.parent) {
+            rightCount = leaf.nextLeaf.keys.count;
+          }
+          if (leftCount < rightCount) {
+            if (leftCount + leaf.keys.count > m_nodeMaxCount) throw "B_Plus_Tree.mergeLeaf(): leftCount";
+            mergeLeaves(leaf.prevLeaf, leaf);
+          } else {
+            if (rightCount + leaf.keys.count > m_nodeMaxCount) throw "B_Plus_Tree.mergeLeaf(): rightCount";
+            mergeLeaves(leaf, leaf.nextLeaf);
+          }
+        };
+        var mergeLeaves = function(leafLeft, leafRight) {
+          leafLeft.keys.add_from(leafRight.keys);
+          leafLeft.values.add_from(leafRight.values);
+          leafLeft.nextLeaf = leafRight.nextLeaf;
+          if (leafLeft.nextLeaf != null) leafLeft.nextLeaf.prevLeaf = leafLeft;
+          if (m_public.lastLeaf == leafRight) m_public.lastLeaf = leafLeft;
+          var parent = leafRight.parent;
+          var leafRightIndex = calcChildIndex(parent, leafRight);
+          parent.keys.removeAt(leafRightIndex - 1);
+          parent.children.removeAt(leafRightIndex);
+          if (parent.keys.count < m_nodeMinCount) {
+            mergeNode(parent);
+          }
+          ;
+        };
+        var mergeNode = function(node) {
+          var parent = node.parent;
+          if (node.parent == null) {
+            if (node.keys.count == 0) {
+              m_public.root = node.children.items[0];
+              m_public.root.parent = null;
+            }
+            return;
+          }
+          var nodeIndex = calcChildIndex(parent, node);
+          var leftSibling = nodeIndex > 0 ? parent.children.items[nodeIndex - 1] : null;
+          var rightSibling = nodeIndex + 1 < parent.children.count ? parent.children.items[nodeIndex + 1] : null;
+          if (leftSibling != null && leftSibling.keys.count > m_nodeMinCount) {
+            rotateAmongNodesToRight(leftSibling, node);
+            return;
+          }
+          if (rightSibling != null && rightSibling.keys.count > m_nodeMinCount) {
+            rotateAmongNodesToLeft(node, rightSibling);
+            return;
+          }
+          var leftCount = m_nodeMaxCount + 1;
+          var rightCount = m_nodeMaxCount + 1;
+          if (leftSibling != null) {
+            leftCount = leftSibling.keys.count;
+          }
+          if (rightSibling != null) {
+            rightCount = rightSibling.keys.count;
+          }
+          if (leftCount < rightCount) {
+            if (leftSibling == null) throw "B_Plus_Tree.mergeNode(): leftSibling";
+            mergeNodes(leftSibling, node, nodeIndex);
+          } else {
+            if (rightSibling == null) throw "B_Plus_Tree.mergeNode(): rightSibling";
+            mergeNodes(node, rightSibling, nodeIndex + 1);
+          }
+        };
+        var mergeNodes = function(nodeLeft, nodeRight, nodeRightIndex) {
+          var parent = nodeLeft.parent;
+          for (var i = 0; i < nodeRight.children.count; i++) nodeRight.children.items[i].parent = nodeLeft;
+          nodeLeft.keys.add(nodeLeft.parent.keys.items[nodeRightIndex - 1]);
+          nodeLeft.keys.add_from(nodeRight.keys);
+          nodeLeft.children.add_from(nodeRight.children);
+          parent.keys.removeAt(nodeRightIndex - 1);
+          parent.children.removeAt(nodeRightIndex);
+          if (parent.keys.count < m_nodeMinCount) {
+            mergeNode(parent);
+          }
+          ;
+        };
+        var p_FindFirst = function(key2, value2, isPrefixSearch) {
+          var findInfo = FindInfo(key2, value2, isPrefixSearch);
+          if (findInfo.isKeyPresent) {
+            if (findInfo.isPrefixSearch && findInfo.isValuePresent) throw "B_Plus_Tree.p_FindFirst(): arguments error: isPrefixSearch, but value is present";
+            var searchResult = findInfo.isValuePresent ? searchLeafValue(key2, value2) : searchLeaf(key2);
+            findInfo.leaf = searchResult.node;
+            findInfo.index = searchResult.index;
+            if (!searchResult.found) {
+              if (!findInfo.check_prefix()) {
+                return null;
+              }
+            }
+          } else {
+            if (findInfo.isValuePresent) throw "B_Plus_Tree.findFirst(): arguments error: key is not present, but value is present";
+            findInfo.leaf = m_public.firstLeaf;
+            findInfo.index = 0;
+            if (findInfo.leaf.keys.count <= 0) return null;
+          }
+          return findInfo;
+        };
+        var p_FindLast = function(key2, value2, isPrefixSearch) {
+          var findInfo = new FindInfo(key2, value2, isPrefixSearch);
+          if (findInfo.isKeyPresent) {
+            if (findInfo.isPrefixSearch && findInfo.isValuePresent) throw "B_Plus_Tree.p_FindLast(): arguments error: isPrefixSearch, but value is present";
+            if (findInfo.isPrefixSearch) {
+              var searchResult = searchLastLeafByPrefix(key2);
+              findInfo.leaf = searchResult.node;
+              findInfo.index = searchResult.index;
+              if (!searchResult.found) {
+                return null;
+              }
+            } else {
+              var searchResult = findInfo.isValuePresent ? searchLastLeafValue(key2, value2) : searchLastLeaf(key2);
+              findInfo.leaf = searchResult.node;
+              findInfo.index = searchResult.index;
+              if (!searchResult.found) {
+                return null;
+              }
+            }
+          } else {
+            if (findInfo.isValuePresent) throw "B_Plus_Tree.findLast(): arguments error: key is not present, but value is present";
+            findInfo.leaf = m_public.lastLeaf;
+            findInfo.index = findInfo.leaf.keys.count - 1;
+            if (findInfo.index < 0) return null;
+          }
+          return findInfo;
+        };
+        var findGoToNext = function(findInfo) {
+          findInfo.index++;
+          if (findInfo.index >= findInfo.leaf.keys.count) {
+            findInfo.leaf = findInfo.leaf.nextLeaf;
+            findInfo.index = 0;
+          }
+          return findInfo.leaf != null;
+        };
+        var findGoToPrev = function(findInfo) {
+          findInfo.index--;
+          if (findInfo.index < 0) {
+            findInfo.leaf = findInfo.leaf.prevLeaf;
+            if (findInfo.leaf == null) return false;
+            findInfo.index = findInfo.leaf.keys.count - 1;
+          }
+          return true;
+        };
+        var p_FindNext = function(findInfo) {
+          while (true) {
+            if (!findGoToNext(findInfo)) return null;
+            if (findInfo.isPrefixSearch) {
+              if (!findInfo.check_prefix()) return null;
+            } else {
+              if (findInfo.isKeyPresent && findInfo.key != findInfo.foundKey()) return null;
+            }
+            if (findInfo.isValuePresent) {
+              if (findInfo.value == findInfo.foundValue()) return findInfo;
+            } else {
+              return findInfo;
+            }
+          }
+        };
+        var p_FindPrev = function(findInfo) {
+          while (true) {
+            if (!findGoToPrev(findInfo)) return null;
+            if (findInfo.isPrefixSearch) {
+              if (!findInfo.check_prefix()) return null;
+            } else {
+              if (findInfo.isKeyPresent && findInfo.key != findInfo.foundKey()) return null;
+            }
+            if (findInfo.isValuePresent) {
+              if (findInfo.value == findInfo.foundValue()) return findInfo;
+            } else {
+              return findInfo;
+            }
+          }
+        };
+        var p_get_values_by_key = function(key2) {
+          var res2 = [];
+          var findInfo = p_FindFirst(key2);
+          while (findInfo != null) {
+            res2.push(findInfo.foundValue());
+            findInfo = p_FindNext(findInfo);
+          }
+          return res2;
+        };
+        var p_get_by_prefix = function(prefix) {
+          var res2 = [];
+          var findInfo = m_public.findFirstPrefix(prefix);
+          while (findInfo != null) {
+            res2.push([findInfo.foundKey(), findInfo.foundValue()]);
+            findInfo = m_public.findNext(findInfo);
+          }
+          return res2;
+        };
+        var p_get_keys_by_prefix = function(prefix) {
+          var res2 = [];
+          var findInfo = m_public.findFirstPrefix(prefix);
+          while (findInfo != null) {
+            res2.push(findInfo.foundKey());
+            findInfo = m_public.findNext(findInfo);
+          }
+          return res2;
+        };
+        var p_GetValue = function(key2) {
+          var searchResult = searchLeaf(key2);
+          if (!searchResult.found) return null;
+          return searchResult.node.values.items[searchResult.index];
+        };
+        var p_SetValue = function(key2, value2) {
+          var searchResult = searchLeaf(key2);
+          if (searchResult.found) {
+            removeFromLeaf(searchResult.node, searchResult.index);
+          }
+          p_Insert(key2, value2);
+        };
+        var p_Count = function() {
+          var result = 0;
+          var leaf = m_public.firstLeaf;
+          while (leaf != null) {
+            result += leaf.keys.count;
+            leaf = leaf.nextLeaf;
+          }
+          return result;
+        };
+        var p_CountKey = function(key2) {
+          var result = 0;
+          var findInfo = m_public.findFirst(key2);
+          while (findInfo != null) {
+            result++;
+            findInfo = m_public.findNext(findInfo);
+          }
+          return result;
+        };
+        var rotateAmongNodesToLeft = function(leftNode, rightNode) {
+          var parent = rightNode.parent;
+          var rightIndex = calcChildIndex(parent, rightNode);
+          leftNode.keys.add(parent.keys.items[rightIndex - 1]);
+          parent.keys.items[rightIndex - 1] = rightNode.keys.first();
+          rightNode.keys.removeFirst();
+          rightNode.children.first().parent = leftNode;
+          leftNode.children.add(rightNode.children.first());
+          rightNode.children.removeFirst();
+        };
+        var rotateAmongNodesToRight = function(leftNode, rightNode) {
+          var parent = rightNode.parent;
+          var rightIndex = calcChildIndex(parent, rightNode);
+          rightNode.keys.insert(0, parent.keys.items[rightIndex - 1]);
+          parent.keys.items[rightIndex - 1] = leftNode.keys.last();
+          leftNode.keys.removeLast();
+          rightNode.children.insert(0, leftNode.children.last());
+          rightNode.children.first().parent = rightNode;
+          leftNode.children.removeLast();
+        };
+        var rotateAmongLeavesToLeft = function(leftLeaf, rightLeaf) {
+          var rightIndex = calcChildIndex(rightLeaf.parent, rightLeaf);
+          leftLeaf.keys.add(rightLeaf.keys.first());
+          leftLeaf.values.add(rightLeaf.values.first());
+          rightLeaf.keys.removeFirst();
+          rightLeaf.values.removeFirst();
+          rightLeaf.parent.keys.items[rightIndex - 1] = rightLeaf.keys.first();
+        };
+        var rotateAmongLeavesToRight = function(leftLeaf, rightLeaf) {
+          var rightIndex = calcChildIndex(rightLeaf.parent, rightLeaf);
+          rightLeaf.keys.insert(0, leftLeaf.keys.last());
+          rightLeaf.values.insert(0, leftLeaf.values.last());
+          leftLeaf.keys.removeLast();
+          leftLeaf.values.removeLast();
+          rightLeaf.parent.keys.items[rightIndex - 1] = rightLeaf.keys.first();
+        };
+        var calcChildIndex = function(node, child) {
+          var key2 = child.keys.first();
+          var searchResult = node.keys.search_first(key2);
+          if (!searchResult.found) {
+            if (node.children.items[searchResult.index] != child) throw "B_PlusTree.calcChildIndex(): 1";
+            return searchResult.index;
+          }
+          var index = searchResult.index;
+          for (; ; ) {
+            if (node.children.items[index] == child) return index;
+            index++;
+            if (index >= node.children.count) break;
+            if (node.keys.items[index - 1] != key2) break;
+          }
+          throw "B_PlusTree.calcChildIndex(): 2";
+        };
+        var searchLeaf = function(key2) {
+          var doSearchLeaf = function(node, key3) {
+            var searchResult = node.keys.search_first(key3);
+            if (node.isLeaf) {
+              return { node, found: searchResult.found, index: searchResult.index };
+            }
+            if (searchResult.found) {
+              var resultLeft = doSearchLeaf(node.children.items[searchResult.index], key3);
+              if (resultLeft.found) return resultLeft;
+              return doSearchLeaf(node.children.items[searchResult.index + 1], key3);
+            } else {
+              return doSearchLeaf(node.children.items[searchResult.index], key3);
+            }
+          };
+          return doSearchLeaf(m_public.root, key2);
+        };
+        var searchLastLeaf = function(key2) {
+          var doSearchLastLeaf = function(node, key3) {
+            var searchResult = node.keys.search_last(key3);
+            if (node.isLeaf) {
+              return { node, found: searchResult.found, index: searchResult.index };
+            }
+            if (searchResult.found) {
+              var resultRight = doSearchLastLeaf(node.children.items[searchResult.index + 1], key3);
+              if (resultRight.found) return resultRight;
+              return doSearchLastLeaf(node.children.items[searchResult.index], key3);
+            } else {
+              return doSearchLastLeaf(node.children.items[searchResult.index], key3);
+            }
+          };
+          return doSearchLastLeaf(m_public.root, key2);
+        };
+        var searchLastLeafByPrefix = function(prefix) {
+          var doSearchLastLeafByPrefix = function(node, prefix2) {
+            var searchResult = node.keys.search_last_prefix(prefix2);
+            if (node.isLeaf) {
+              return { node, found: searchResult.found, index: searchResult.index };
+            }
+            if (searchResult.found) {
+              var resultRight = doSearchLastLeafByPrefix(node.children.items[searchResult.index + 1], prefix2);
+              if (resultRight.found) return resultRight;
+              return doSearchLastLeafByPrefix(node.children.items[searchResult.index], prefix2);
+            } else {
+              return doSearchLastLeafByPrefix(node.children.items[searchResult.index], prefix2);
+            }
+          };
+          return doSearchLastLeafByPrefix(m_public.root, prefix);
+        };
+        var searchLeafValue = function(key2, value2) {
+          var searchResult = searchLeaf(key2);
+          if (!searchResult.found) return searchResult;
+          var valueFound = false;
+          var leaf = searchResult.node;
+          var index = searchResult.index;
+          for (; ; ) {
+            if (index >= leaf.values.count) {
+              leaf = leaf.nextLeaf;
+              if (leaf == null) break;
+              index = 0;
+            }
+            if (leaf.keys.items[index] != key2) break;
+            if (leaf.values.items[index] == value2) {
+              valueFound = true;
+              break;
+            }
+            index++;
+          }
+          return { node: leaf, found: valueFound, index };
+        };
+        var searchLastLeafValue = function(key2, value2) {
+          var searchResult = searchLastLeaf(key2);
+          if (!searchResult.found) return searchResult;
+          var valueFound = false;
+          var leaf = searchResult.node;
+          var index = searchResult.index;
+          for (; ; ) {
+            if (index < 0) {
+              leaf = leaf.prevLeaf;
+              if (leaf == null) break;
+              index = leaf.values.count - 1;
+            }
+            if (leaf.keys.items[index] != key2) break;
+            if (leaf.values.items[index] == value2) {
+              valueFound = true;
+              break;
+            }
+            index--;
+          }
+          return { node: leaf, found: valueFound, index };
+        };
+        return m_public;
+      };
+      B_Plus_Tree.FindInfo = FindInfo;
+      module.exports = B_Plus_Tree;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Value.js
+  var require_Data_Value = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Value.js"(exports, module) {
+      var jsgui2 = require_lib_lang_mini();
+      var Data_Model = require_Data_Model();
+      var j = jsgui2;
+      var Evented_Class = j.Evented_Class;
+      var each = j.each;
+      var is_array = j.is_array;
+      var is_dom_node = j.is_dom_node;
+      var is_ctrl = j.is_ctrl;
+      var extend = j.extend;
+      var get_truth_map_from_arr = j.get_truth_map_from_arr;
+      var get_map_from_arr = j.get_map_from_arr;
+      var arr_like_to_arr = j.arr_like_to_arr;
+      var tof = j.tof;
+      var is_defined = j.is_defined;
+      var stringify = j.stringify;
+      var functional_polymorphism = j.functional_polymorphism;
+      var fp = j.fp;
+      var arrayify = j.arrayify;
+      var mapify = j.mapify;
+      var are_equal = j.are_equal;
+      var get_item_sig = j.get_item_sig;
+      var set_vals = j.set_vals;
+      var truth = j.truth;
+      var trim_sig_brackets = j.trim_sig_brackets;
+      var ll_set = j.ll_set;
+      var ll_get = j.ll_get;
+      var input_processors = j.input_processors;
+      var iterate_ancestor_classes = j.iterate_ancestor_classes;
+      var is_arr_of_arrs = j.is_arr_of_arrs;
+      var is_arr_of_strs = j.is_arr_of_strs;
+      var is_arr_of_t = j.is_arr_of_t;
+      var clone = jsgui2.clone;
+      var input_processors = jsgui2.input_processors;
+      var Data_Value2 = class _Data_Value extends Data_Model {
+        constructor(spec = {}) {
+          super(spec);
+          this.__data_value = true;
+          if (spec.context) {
+            this.context = spec.context;
+          }
+          if (is_defined(spec.value)) {
+            this._ = spec.value;
+          }
+          this.__type = "data_value";
+          this._relationships = {};
+        }
+        // Get but with a format change?
+        //   Get and validate???
+        "get"() {
+          return this._;
+        }
+        // get value and set value.
+        "value"() {
+          return this._;
+        }
+        "toObject"() {
+          return this._;
+        }
+        // .value =
+        //   Though .set could have more input, eg a format shifter????
+        "set"(val) {
+          var input_processor = input_processors[this.__type_name];
+          if (input_processor) {
+            val = input_processor(val);
+          }
+          var old_val = this._;
+          this._ = val;
+          this.raise("change", {
+            "old": old_val,
+            "value": val
+          });
+          return val;
+        }
+        "toString"() {
+          return this.get();
+        }
+        // Maybe a particular stringify function?
+        "toJSON"() {
+          var val = this.get();
+          var tval = typeof val;
+          if (tval == "string") {
+            return '"' + val + '"';
+          } else {
+            return val;
+          }
+        }
+        // Need to copy / clone the ._ value
+        "clone"() {
+          var res2 = new _Data_Value({
+            "value": this._
+          });
+          return res2;
+        }
+        // This is important to the running of jsgui3.
+        "_id"() {
+          if (this.__id) return this.__id;
+          if (this.context) {
+            this.__id = this.context.new_id(this.__type_name || this.__type);
+          } else {
+            if (!is_defined(this.__id)) {
+              throw "DataValue should have context";
+              this.__id = new_data_value_id();
+            }
+          }
+          return this.__id;
+        }
+        "parent"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig(a, 1);
+          var obj2, index;
+          if (a.l == 0) {
+            return this._parent;
+          } else if (a.l == 1) {
+            obj2 = a[0];
+            if (!this.context && obj2.context) {
+              this.context = obj2.context;
+            }
+            var relate_by_id = function(that2) {
+              var obj_id = obj2._id();
+              that2._relationships[obj_id] = true;
+            };
+            var relate_by_ref = function(that2) {
+              that2._parent = obj2;
+            };
+            relate_by_ref(this);
+          } else if (a.l == 2) {
+            obj2 = a[0];
+            index = a[1];
+            if (!this.context && obj2.context) {
+              this.context = obj2.context;
+            }
+            this._parent = obj2;
+            this._index = index;
+          }
+        }
+      };
+      module.exports = Data_Value2;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Mini_Context.js
+  var require_Mini_Context = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Mini_Context.js"(exports, module) {
+      var Mini_Context = class {
+        // Need quite a simple mechanism to get IDs for objects.
+        // They will be typed objects/
+        constructor(spec) {
+          var map_typed_counts = {};
+          var typed_id = function(str_type) {
+            throw "stop Mini_Context typed id";
+            var res2;
+            if (!map_typed_counts[str_type]) {
+              res2 = str_type + "_0";
+              map_typed_counts[str_type] = 1;
+            } else {
+              res2 = str_type + "_" + map_typed_counts[str_type];
+              map_typed_counts[str_type]++;
+            }
+            return res2;
+          };
+          this.new_id = typed_id;
+        }
+        "make"(abstract_object) {
+          if (abstract_object._abstract) {
+            var constructor = abstract_object.constructor;
+            var aos = abstract_object._spec;
+            aos.abstract = null;
+            aos.context = this;
+            var res2 = new constructor(aos);
+            return res2;
+          } else {
+            throw "Object must be abstract, having ._abstract == true";
+          }
+        }
+      };
+      module.exports = Mini_Context;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Object.js
+  var require_Data_Object = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Object.js"(exports, module) {
+      var jsgui2 = require_lib_lang_mini();
+      var Data_Value2 = require_Data_Value();
+      var j = jsgui2;
+      var Evented_Class = j.Evented_Class;
+      var Class = j.Class;
+      var each = j.each;
+      var is_array = j.is_array;
+      var is_dom_node = j.is_dom_node;
+      var is_ctrl = j.is_ctrl;
+      var extend = j.extend;
+      var get_truth_map_from_arr = j.get_truth_map_from_arr;
+      var get_map_from_arr = j.get_map_from_arr;
+      var arr_like_to_arr = j.arr_like_to_arr;
+      var tof = j.tof;
+      var is_defined = j.is_defined;
+      var stringify = j.stringify;
+      var functional_polymorphism = j.functional_polymorphism;
+      var fp = j.fp;
+      var arrayify = j.arrayify;
+      var mapify = j.mapify;
+      var are_equal = j.are_equal;
+      var get_item_sig = j.get_item_sig;
+      var get_a_sig2 = j.get_a_sig;
+      var set_vals = j.set_vals;
+      var truth = j.truth;
+      var trim_sig_brackets = j.trim_sig_brackets;
+      var ll_set = j.ll_set;
+      var ll_get = j.ll_get;
+      var input_processors = j.input_processors;
+      var iterate_ancestor_classes = j.iterate_ancestor_classes;
+      var is_arr_of_arrs = j.is_arr_of_arrs;
+      var is_arr_of_strs = j.is_arr_of_strs;
+      var is_arr_of_t = j.is_arr_of_t;
+      var clone = jsgui2.clone;
+      jsgui2.__data_id_method = "init";
+      var Mini_Context = require_Mini_Context();
+      var Data_Model = require_Data_Model();
+      var is_js_native = function(obj2) {
+        var t = tof(obj2);
+        return t == "number" || t == "string" || t == "boolean" || t == "array";
+      };
+      var Data_Object = class extends Data_Model {
+        constructor(spec = {}, fields) {
+          super(spec);
+          if (spec.id) {
+            this.__id = spec.id;
+          }
+          if (spec.__id) {
+            this.__id = spec.__id;
+          }
+          this.__type_name = spec.__type_name || "data_object";
+          if (fields) this.set_fields_from_spec(fields, spec);
+          this.__data_object = true;
+          if (spec.abstract === true) {
+            this._abstract = true;
+            var tSpec = tof(spec);
+            if (tSpec == "function") {
+              this._type_constructor = spec;
+            } else if (tSpec == "object") {
+              this._spec = spec;
+            }
+          } else {
+            var t_spec = tof(spec);
+            if (!this.__type) {
+              this.__type = "data_object";
+            }
+            if (t_spec === "object" || t_spec === "control") {
+              if (spec.context) {
+                this.context = spec.context;
+              }
+              if (spec.id) {
+                this.__id = spec.id;
+              }
+              if (spec._id) {
+                this.__id = spec._id;
+              }
+              if (spec.__id) {
+                this.__id = spec.__id;
+              }
+            } else if (t_spec == "data_object") {
+              if (spec.context) this.context = spec.context;
+            }
+            if (is_defined(spec.parent)) {
+              this.parent = spec.parent;
+            }
+            if (this.context) {
+              this.init_default_events();
+            }
+          }
+        }
+        "set_fields_from_spec"(fields, spec) {
+          each(fields, (field) => {
+            if (typeof spec[field[0]] !== "undefined") {
+              this[field[0]] = spec[field[0]];
+            } else {
+              this[field[0]] = field[2];
+            }
+          });
+        }
+        "init_default_events"() {
+        }
+        /*
+             'data_def': fp(function(a, sig) {
+             if (sig == '[o]') {
+             // create the new data_def constraint.
+        
+        
+             }
+             }),
+             */
+        "keys"() {
+          return Object.keys(this._);
+        }
+        "toJSON"() {
+          var res2 = [];
+          res2.push("Data_Object(" + JSON.stringify(this._) + ")");
+          return res2.join("");
+        }
+        // using_fields_connection()
+        //  will search up the object heirachy, to see if the Data_Objects fields need to be connected through the use of functions.
+        //  that will make the fields easy to change by calling a function. Should make things much faster to access than when programming with Backbone.
+        // then will connect the fields with connect_fields()
+        /*
+        'using_fields_connection'() {
+            var res = false;
+            iterate_ancestor_classes(this.constructor, function (a_class, stop) {
+                if (is_defined(a_class._connect_fields)) {
+                    res = a_class._connect_fields;
+                    stop();
+                }
+            });
+            return res;
+        }
+        */
+        get parent() {
+          return this._parent;
+        }
+        set parent(value2) {
+          return this._parent = value2;
+        }
+        "_id"() {
+          if (this.__id) return this.__id;
+          if (this.context) {
+            this.__id = this.context.new_id(this.__type_name || this.__type);
+          } else {
+            if (this._abstract) {
+              return void 0;
+            } else if (!is_defined(this.__id)) {
+              return void 0;
+            }
+          }
+          return this.__id;
+        }
+        // Problems with name (fields).
+        //  Fields are given as a description of the fields.
+        //   Gets more complicated when we have a function to access the fields as well.
+        //   What if we want to override that function?
+        // Will call it field
+        //  18/12/2016 - Getting rid of this confusion, will mostly remove / greatly simplify field functionality.
+        //  Just need to know which fields any class has, keeping track of this will use some data structures like Sorted_KVS,
+        //   but not much complex code within this part.
+        // Not so sure what a field function will do right now.
+        //  Does not seem like such an essential part of the API.
+        //   Can just define the fields, then they act a bit differently.
+        //   Have field handling in Data_Object.
+        //   Collection would have the same field capabilities. Fields should not be so important anyway.
+        // 18/12/2016 Will remove constraints, then make them much more functional.
+        "each"(callback2) {
+          each(this._, callback2);
+        }
+        // could make this polymorphic so that it
+        "position_within"(parent) {
+          var p_id = parent._id();
+          if (this._parents && is_defined(this._parents[p_id])) {
+            var parent_rel_info = this._parents[p_id];
+            var pos_within = parent_rel_info[1];
+            return pos_within;
+          }
+        }
+        // Maybe just 'remove' function.
+        //  This may be needed with multiple parents, which are not being used at the moment.
+        "remove_from"(parent) {
+          var p_id = parent._id();
+          if (this._parents && is_defined(this._parents[p_id])) {
+            var parent = this._parents[p_id][0];
+            var pos_within = this._parents[p_id][1];
+            var item2 = parent._arr[pos_within];
+            parent.remove(pos_within);
+            delete this._parents[p_id];
+          }
+        }
+        //  
+        // Maybe only do this with the fields anyway
+        "load_from_spec"(spec, arr_item_names) {
+          each(arr_item_names, (v) => {
+            var spec_item = spec[v];
+            if (is_defined(spec_item)) {
+              this.set(v, spec_item);
+            }
+          });
+        }
+        // They will be treated as values in many cases anyway.
+        //  Will turn them to different types of object where possible.
+        /*
+            'value'() {
+                var a = arguments; a.l = arguments.length; var sig = get_a_sig(a, 1);
+                // could operate like both get and set, but does not return data_objects, returns the value itself.
+                var name;
+                //var res;
+                if (sig === '[s]') {
+                    name = a[0];
+                    var possibly_dobj = this.get(name);
+                    //var t_obj = tof(possibly_dobj);
+        
+                    if (possibly_dobj) {
+                        if (possibly_dobj.value && typeof possibly_dobj.value === 'function') {
+                            return possibly_dobj.value();
+                        } else {
+                            return possibly_dobj;
+                        }
+                    }
+                }
+            }
+            */
+        // Get could be greatly simplified as well.
+        //  Input and output processing will be more streamlined in a functional way.
+        // 19/12/2016 - Not using get or set nearly as much anyway.
+        "get"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig2(a, 1);
+          var do_typed_processing = false;
+          if (do_typed_processing) {
+            if (a.l === 0) {
+              var output_obj = jsgui2.output_processors[this.__type_name](this._);
+              return output_obj;
+            } else {
+              console.log("a", a);
+              console.trace();
+              throw "not yet implemented";
+            }
+          } else {
+            if (sig == "[s,f]") {
+              throw "Asyncronous access not allowed on Data_Object get.";
+              var res2 = this.get(a[0]);
+              var callback2 = a[1];
+              if (typeof res2 == "function") {
+                res2(callback2);
+              } else {
+                return res2;
+              }
+            } else if (sig == "[s]") {
+              var res2 = ll_get(this, a[0]);
+              return res2;
+            } else if (a.l === 0) {
+              return this._;
+            }
+          }
+        }
+        // Or don't use / support get and set for the moment?
+        //   Only use property / field access?
+        //   Define property, with getter and setter, seems like a more cleanly defined system.
+        // May see about making a new simplified implementation of this and running it through tests.
+        //   Though the new Data_Value seems like the more appropriate way for the moment.
+        // May look into seeing where Data_Value is used in the current system too.
+        //   Could see about further incorportating its use (in places).
+        //'set': fp(function(a, sig) {
+        "set"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig2(a, 1);
+          if (this._abstract) return false;
+          var that2 = this, res2;
+          var input_processors2 = jsgui2.input_processors;
+          if (a.l == 2 || a.l == 3) {
+            var property_name = a[0], value2 = a[1];
+            var ta2 = tof(a[2]);
+            var silent = false;
+            var source;
+            if (ta2 == "string" || ta2 == "boolean") {
+              silent = a[2];
+            }
+            if (ta2 == "control") {
+              source = a[2];
+            }
+            if (!this._initializing && this._map_read_only && this._map_read_only[property_name]) {
+              throw 'Property "' + property_name + '" is read-only.';
+            } else {
+              var split_pn = property_name.split(".");
+              if (split_pn.length > 1 && property_name != ".") {
+                var spn_first = split_pn[0];
+                var spn_arr_next = split_pn.slice(1);
+                var data_object_next = this.get(spn_first);
+                if (data_object_next) {
+                  res2 = data_object_next.set(spn_arr_next.join("."), value2);
+                  if (!silent) {
+                    var e_change = {
+                      "name": property_name,
+                      "value": value2,
+                      "bubbled": true
+                    };
+                    if (source) {
+                      e_change.source = source;
+                    }
+                    this.raise_event("change", e_change);
+                  }
+                } else {
+                  throw "No data object at this level.";
+                }
+              } else {
+                var data_object_next = this.get(property_name);
+                if (data_object_next) {
+                  var field = this[property_name];
+                  if (field) {
+                    data_object_next.__type_name = field[1] || data_object_next.__type_name;
+                  }
+                  data_object_next.set(value2);
+                }
+                if (!is_defined(data_object_next)) {
+                  var tv = typeof value2;
+                  var dv;
+                  if (tv === "string" || tv === "number" || tv === "boolean" || tv === "date") {
+                    dv = new Data_Value2({
+                      "value": value2
+                    });
+                  } else {
+                    if (tv === "array") {
+                      dv = new Data_Value2({
+                        "value": value2
+                      });
+                    } else {
+                      if (tv === "object") {
+                        if (value2.__data_object || value2.__data_value || value2.__data_grid) {
+                          dv = value2;
+                        } else {
+                          dv = new Data_Value2({
+                            "value": value2
+                          });
+                        }
+                      } else {
+                        dv = value2;
+                      }
+                    }
+                  }
+                  this[property_name] = dv;
+                  if (!silent) {
+                    e_change = {
+                      "name": property_name,
+                      "value": dv
+                    };
+                    if (source) {
+                      e_change.source = source;
+                    }
+                    this.raise_event("change", e_change);
+                  }
+                  return value2;
+                } else {
+                  var next_is_js_native = is_js_native(data_object_next);
+                  if (next_is_js_native) {
+                    this[property_name] = value2;
+                    res2 = value2;
+                  } else {
+                    res2 = data_object_next;
+                    this[property_name] = data_object_next;
+                  }
+                  if (!silent) {
+                    var e_change = {
+                      "name": property_name,
+                      "value": data_object_next.value()
+                    };
+                    if (source) {
+                      e_change.source = source;
+                    }
+                    this.trigger("change", e_change);
+                  }
+                  return res2;
+                }
+              }
+            }
+          } else {
+            var value2 = a[0];
+            var property_name = a[1];
+            var input_processor = input_processors2[this.__type_name];
+            if (input_processor) {
+              var processed_input = input_processor(value2);
+              value2 = processed_input;
+              this._[property_name] = value2;
+              this.raise_event("change", {
+                "value": value2
+              });
+              return value2;
+            } else {
+              if (sig === "[D]") {
+                this._[property_name] = value2;
+                this.raise_event("change", [property_name, value2]);
+                return value2;
+              } else if (sig === "[o]") {
+                res2 = {};
+                each(a[0], function(v, i) {
+                  res2[i] = that2.set(i, v);
+                });
+                return res2;
+              }
+              if (sig === "[c]") {
+                this._[property_name] = value2;
+                this.raise_event("change", [property_name, value2]);
+                return value2;
+              }
+            }
+          }
+        }
+        "has"(property_name) {
+          return is_defined(this.get(property_name));
+        }
+      };
+      jsgui2.map_classes = jsgui2.map_classes || {};
+      var dobj = (obj2, data_def) => {
+        var cstr = Data_Object;
+        var res2;
+        if (data_def) {
+          res2 = new cstr({
+            "data_def": data_def
+          });
+        } else {
+          res2 = new cstr({});
+        }
+        var tobj = tof(obj2);
+        if (tobj == "object") {
+          var res_set = res2.set;
+          each(obj2, (v, i) => {
+            res_set.call(res2, i, v);
+          });
+        }
+        return res2;
+      };
+      Data_Object.dobj = dobj;
+      Data_Object.Mini_Context = Mini_Context;
+      module.exports = Data_Object;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/sorted-kvs.js
+  var require_sorted_kvs = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/sorted-kvs.js"(exports, module) {
+      var jsgui2 = require_lib_lang_mini();
+      var mapify = jsgui2.mapify;
+      var B_Plus_Tree = require_b_plus_tree();
+      var Sorted_KVS = class {
+        constructor(spec) {
+          spec = spec || {};
+          if (typeof spec.unique_keys !== "undefined") this.unique_keys = spec.unique_keys;
+          this.tree = B_Plus_Tree(12);
+        }
+        "clear"() {
+          this.tree.clear();
+        }
+        /*
+        	'put': mapify(function (key, value) {
+        		// inserting a bunch of things at once... could that be done more efficiently, such as in one traversal?
+        		//  sort the items, then can skip through the tree a bit quicker?
+        
+        
+        		var insert_res = this.tree.insert(key, value);
+        		// with tree.insert - nice if we can keep the treenode as a result.
+        		//  the tree does not store objects in the node.
+        		//   could make the tree node hold a reference to the object?
+        
+        		//console.log('put insert_res ' + insert_res);
+        		//this.dict[key] = value;
+        	}),
+        	*/
+        "out"(key2) {
+          this.tree.remove(key2);
+        }
+        "get"(key2) {
+          return this.tree.get_values_by_key(key2);
+        }
+        "has"(key2) {
+          return this.key_count(key2) > 0;
+        }
+        "get_cursor"() {
+        }
+        "keys"() {
+          return this.tree.keys();
+        }
+        "keys_and_values"() {
+          return this.tree.keys_and_values();
+        }
+        /*
+        	 'values': function() {
+        	 var keys = this.keys();
+        	 var res = [];
+        	 var that = this;
+        	 console.log('keys.length ' + keys.length );
+        	 console.log('keys ' + jsgui.stringify(keys));
+        
+        	 each(keys, function(i, v) {
+        	 res.push(that.dict[v]);
+        	 });
+        	 return res;
+        	 },
+        	 */
+        "key_count"(key2) {
+          if (typeof key2 !== "undefined") {
+            return this.tree.count(key2);
+          } else {
+            return this.tree.count();
+          }
+        }
+        "get_keys_by_prefix"(prefix) {
+          return this.tree.get_keys_by_prefix(prefix);
+        }
+        "each"(callback2) {
+          return this.tree.each(callback2);
+        }
+        "get_by_prefix"(prefix) {
+          return this.tree.get_by_prefix(prefix);
+        }
+      };
+      Sorted_KVS.prototype.put = mapify(function(key2, value2) {
+        var insert_res = this.tree.insert(key2, value2);
+      });
+      module.exports = Sorted_KVS;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Collection.js
+  var require_Collection = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Collection.js"(exports, module) {
+      var lang = require_lib_lang_mini();
+      var Data_Value2 = require_Data_Value();
+      var Data_Object = require_Data_Object();
+      var Sorted_KVS = require_sorted_kvs();
+      var dobj = Data_Object.dobj;
+      var Constraint = Data_Object.Constraint;
+      var each = lang.each;
+      var tof = lang.tof;
+      var is_defined = lang.is_defined;
+      var stringify = lang.stringify;
+      var get_a_sig2 = lang.get_a_sig;
+      var native_constructor_tof = lang.native_constructor_tof;
+      var dop = Data_Object.prototype;
+      var Collection = class _Collection extends Data_Object {
+        constructor(spec = {}, arr_values) {
+          super(spec);
+          this.__type = "collection";
+          this.__type_name = "collection";
+          var t_spec = tof(spec);
+          if (spec.abstract === true) {
+            if (t_spec === "function") {
+              this.constraint(spec);
+            }
+          } else {
+            this._relationships = this._relationships || {};
+            this._arr_idx = 0;
+            this._arr = [];
+            this.index = new Sorted_KVS();
+            this.fn_index = spec.fn_index;
+            if (t_spec === "array") {
+              spec = {
+                "load_array": spec
+              };
+            } else {
+              if (t_spec === "function") {
+                if (spec.abstract === true) {
+                  this._abstract = true;
+                } else {
+                }
+              } else if (t_spec === "string") {
+                var map_native_constructors = {
+                  "array": Array,
+                  "boolean": Boolean,
+                  "number": Number,
+                  "string": String,
+                  "object": Object
+                };
+                var nc = map_native_constructors[spec];
+                if (nc) {
+                  spec = {
+                    "constraint": nc
+                  };
+                  if (nc == String) {
+                    spec.index_by = "value";
+                  }
+                }
+              }
+            }
+            if (is_defined(spec.items)) {
+              spec.load_array = spec.load_array || spec.items;
+            }
+            if (arr_values) {
+              spec.load_array = arr_values;
+            }
+            if (is_defined(spec.accepts)) {
+              this._accepts = spec.accepts;
+            }
+            if (lang.__data_id_method === "init") {
+              if (this.context) {
+                this.__id = this.context.new_id(this.__type_name || this.__type);
+                this.context.map_objects[this.__id] = this;
+              } else {
+              }
+            }
+            if (!this.__type) {
+            }
+            if (spec.load_array) {
+              this.load_array(spec.load_array);
+            }
+          }
+        }
+        // maybe use fp, and otherwise apply with the same params and context.
+        "set"(value2) {
+          var tval = tof(value2);
+          if (tval === "data_object" || tval === "data_value") {
+            this.clear();
+            return this.push(value2);
+          } else if (tval === "array") {
+            this.clear();
+            each(value2, (v, i) => {
+              this.push(v);
+            });
+          } else {
+            if (tval === "collection") {
+              throw "stop";
+              this.clear();
+              value2.each(function(v, i) {
+                that.push(v);
+              });
+            } else if (tval === "string" || tval === "number" || tval === "boolean" || tval === "null" || tval === "undefined") {
+              this.clear();
+              return this.push(value2);
+            } else {
+              const Data_Object2 = require_Data_Object();
+              return Data_Object2.prototype.set.call(this, value2);
+            }
+          }
+        }
+        "clear"() {
+          this._arr_idx = 0;
+          this._arr = [];
+          this.index.clear();
+          this.raise("change", {
+            "name": "clear"
+          });
+        }
+        "stringify"() {
+          var res2 = [];
+          if (this._abstract) {
+            var ncto = native_constructor_tof(this._type_constructor);
+            res2.push("~Collection(");
+            if (ncto) {
+              res2.push(ncto);
+            } else {
+            }
+            res2.push(")");
+          } else {
+            res2.push("Collection(");
+            var first = true;
+            this.each(function(v, i) {
+              if (!first) {
+                res2.push(", ");
+              } else {
+                first = false;
+              }
+              res2.push(stringify(v));
+            });
+            res2.push(")");
+          }
+          return res2.join("");
+        }
+        "toString"() {
+          return stringify(this._arr);
+        }
+        "toObject"() {
+          var res2 = [];
+          this.each(function(v, i) {
+            res2.push(v.toObject());
+          });
+          return res2;
+        }
+        "each"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig2(a, 1);
+          if (sig == "[f]") {
+            return each(this._arr, a[0]);
+          } else {
+            if (sig == "[X,f]") {
+              var index = a[0];
+              var callback2 = a[1];
+              return index.each(callback2);
+            } else {
+              if (a.l == 2) {
+                return each(this._arr, a[0], a[1]);
+              }
+            }
+          }
+        }
+        "_id"() {
+          if (this.context) {
+            this.__id = this.context.new_id(this.__type_name || this.__type);
+          } else {
+          }
+          return this.__id;
+        }
+        "length"() {
+          return this._arr.length;
+        }
+        get len() {
+          return this._arr.length;
+        }
+        "find"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig2(a, 1);
+          if (a.l == 1) {
+            var pos = this.index.get(a[0])[0];
+            var item2 = this._arr[pos];
+            return item2;
+          }
+          if (sig == "[o,s]") {
+            return this.index_system.find(a[0], a[1]);
+          }
+          if (sig == "[s,s]") {
+            return this.index_system.find(a[0], a[1]);
+          }
+          if (sig == "[a,s]") {
+            return this.index_system.find(a[0], a[1]);
+          }
+          if (sig == "[s,o]") {
+            var propertyName = a[0];
+            var query = a[1];
+            var foundItems = [];
+            each(this, (item3, index) => {
+              if (item3.get) {
+                var itemProperty = item3.get(propertyName);
+              } else {
+                var itemProperty = item3[propertyName];
+              }
+              var tip = tof(itemProperty);
+              var tip2;
+              var ip2;
+              if (tip === "data_value") {
+                var ip2 = itemProperty.value();
+                tip2 = tof(ip2);
+              } else {
+                ip2 = itemProperty;
+                tip2 = tip;
+              }
+              if (tip2 === "array") {
+                each(ip2, (v, i) => {
+                  var matches = obj_matches_query_obj(v, query);
+                  if (matches) {
+                    foundItems.push(v);
+                  }
+                });
+              }
+              ;
+            });
+            var res2 = new _Collection(foundItems);
+            return res2;
+          }
+        }
+        // get seems like the way to get unique values.
+        "get"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig2(a, 1);
+          if (sig == "[n]" || sig == "[i]") {
+            return this._arr[a[0]];
+          }
+          if (sig == "[s]") {
+            var ix_sys = this.index_system;
+            var res2;
+            if (ix_sys) {
+              var pui = ix_sys._primary_unique_index;
+              res2 = pui.get(a[0])[0];
+            }
+            if (res2) {
+              return res2;
+            }
+            return Data_Object.prototype.get.apply(this, a);
+          }
+        }
+        "insert"(item2, pos) {
+          this._arr.splice(pos, 0, item2);
+          this.raise("change", {
+            "name": "insert",
+            "item": item2,
+            "value": item2,
+            "pos": pos
+          });
+        }
+        swap(item2, replacement) {
+          let r_parent = replacement.parent;
+          let repl_pos = replacement.parent.content.remove(replacement);
+          let i_parent = item2.parent;
+          let item_pos = item2.parent.content.remove(item2);
+          let item_index;
+          i_parent.content.insert(replacement, item_pos);
+          r_parent.content.insert(item2, repl_pos);
+        }
+        // may have efficiencies for adding and removing multiple items at once.
+        //  can be sorted for insertion into index with more rapid algorithmic time.
+        "remove"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig2(a, 1);
+          if (sig === "[n]") {
+            var pos = a[0];
+            var item2 = this._arr[pos];
+            var spliced_pos = pos;
+            this._arr.splice(pos, 1);
+            this._arr_idx--;
+            var e = {
+              "target": this,
+              "value": item2,
+              "position": spliced_pos,
+              "name": "remove"
+            };
+            this.raise("change", e);
+            return pos;
+          } else if (sig === "[s]") {
+            var key2 = a[0];
+            var obj2 = this.index_system.find([
+              ["value", key2]
+            ]);
+            var my_id = this.__id;
+            var item_pos_within_this = obj2[0]._relationships[my_id];
+            this._arr.splice(item_pos_within_this, 1);
+            for (var c2 = item_pos_within_this, l2 = this._arr.length; c2 < l2; c2++) {
+              var item2 = this._arr[c2];
+              item2._relationships[my_id]--;
+            }
+            var e = {
+              "target": this,
+              "value": obj2[0],
+              "position": item_pos_within_this,
+              "name": "remove"
+            };
+            this.raise("change", e);
+          } else {
+            let item_index;
+            const item3 = a[0];
+            let arr = this._arr, l3 = arr.length;
+            if (typeof item3 === "number") {
+              item_index = item3;
+            } else {
+              let found = false, c3 = 0;
+              while (!found && c3 < l3) {
+                found = arr[c3] === item3;
+                if (found) {
+                  item_index = c3;
+                }
+                c3++;
+              }
+              if (is_defined(item_index)) {
+                return this.remove(item_index);
+              }
+            }
+          }
+        }
+        "has"(obj_key) {
+          if (this.get_index(obj_key) === void 0) {
+            return false;
+          } else {
+            return true;
+          }
+        }
+        "get_index"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig2(a, 1);
+          if (sig === "[s]") {
+            if (this.index_system) {
+              return this.index_system.search(a[0]);
+            } else {
+              if (this._arr.length === 0) {
+                return void 0;
+              } else {
+                for (let c2 = 0; c2 < this._arr.length; c2++) {
+                  const item2 = this._arr[c2];
+                  if (item2?.name === a[0]) {
+                    return c2;
+                  }
+                }
+                return void 0;
+              }
+            }
+          } else {
+            console.trace();
+            throw "Expected [s]";
+          }
+        }
+        // More fp way of indexing.
+        "index_by"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig2(a, 1);
+          console.log("Indexing not implemented (like this)");
+          console.trace();
+        }
+        "push"(value2) {
+          const { silent } = this;
+          let tv = tof(value2);
+          let fn_index = this.fn_index;
+          let idx_key, has_idx_key = false, pos;
+          if (fn_index) {
+            idx_key = fn_index(value2);
+            has_idx_key = true;
+          }
+          if (tv === "object" || tv === "function") {
+            pos = this._arr.length;
+            this._arr.push(value2);
+            this._arr_idx++;
+            if (!silent) {
+              const e = {
+                "target": this,
+                "item": value2,
+                "value": value2,
+                "position": pos,
+                "name": "insert"
+              };
+              this.raise("change", e);
+            }
+          } else if (tv === "collection") {
+            pos = this._arr.length;
+            this._arr.push(value2);
+            this._arr_idx++;
+            if (!silent) {
+              const e = {
+                "target": this,
+                "item": value2,
+                "value": value2,
+                "position": pos,
+                "name": "insert"
+              };
+              this.raise("change", e);
+            }
+          } else if (tv === "data_object" || tv === "control") {
+            pos = this._arr.length;
+            this._arr.push(value2);
+            this._arr_idx++;
+            if (!silent) {
+              const e = {
+                "target": this,
+                "item": value2,
+                "value": value2,
+                "position": pos,
+                "name": "insert"
+              };
+              this.raise("change", e);
+            }
+          } else if (tv === "array") {
+            const new_coll = new _Collection(value2);
+            pos = this._arr.length;
+            this._arr.push(new_coll);
+            if (!silent) {
+              const e = {
+                "target": this,
+                "item": value2,
+                "value": value2,
+                "position": pos,
+                "name": "insert"
+              };
+              this.raise("change", e);
+            }
+          }
+          if (tv === "string" || tv === "number" || tv === "boolean" || tv === "null" || tv === "undefined") {
+            const dv = new Data_Value2({
+              "value": value2
+            });
+            pos = this._arr.length;
+            this._arr.push(dv);
+            if (!silent) {
+              const e = {
+                "target": this,
+                "item": value2,
+                "value": value2,
+                "position": pos,
+                "name": "insert"
+              };
+              this.raise("change", e);
+            }
+          }
+          if (has_idx_key) {
+            this.index.put(idx_key, pos);
+          }
+          return value2;
+        }
+        "load_array"(arr) {
+          for (var c2 = 0, l2 = arr.length; c2 < l2; c2++) {
+            this.push(arr[c2]);
+          }
+          this.raise("load");
+        }
+        "values"() {
+          var a = arguments;
+          a.l = a.length;
+          if (a.l === 0) {
+            return this._arr;
+          } else {
+            var stack = new Error().stack;
+            throw "not yet implemented";
+          }
+        }
+        "value"() {
+          const res2 = [];
+          this.each((v, i) => {
+            if (typeof v.value == "function") {
+              res2.push(v.value());
+            } else {
+              res2.push(v);
+            }
+          });
+          return res2;
+        }
+      };
+      var p = Collection.prototype;
+      p.add = p.push;
+      module.exports = Collection;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Object.js
+  var require_Data_Object2 = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Object.js"(exports, module) {
+      module.exports = require_Data_Object();
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js
+  var require_Immutable_Data_Model = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js"(exports, module) {
+      var Data_Model = require_Data_Model();
+      var Immutable_Data_Model = class extends Data_Model {
+        constructor(...a) {
+          super(...a);
+        }
+      };
+      module.exports = Immutable_Data_Model;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Result.js
+  var require_Validation_Result = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Result.js"(exports, module) {
+      var Validation_Result = class {
+      };
+      module.exports = Validation_Result;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Success.js
+  var require_Validation_Success = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Success.js"(exports, module) {
+      var Validation_Result = require_Validation_Result();
+      var Validation_Success = class extends Validation_Result {
+        constructor(spec) {
+          super(spec);
+        }
+      };
+      module.exports = Validation_Success;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js
+  var require_setup_base_data_value_value_property = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js"(exports, module) {
+      var Validation_Success = require_Validation_Success();
+      var setup_base_data_value_value_property = (data_value) => {
+        let local_js_value2;
+        const set_value_with_valid_and_changed_value = (valid_and_changed_value) => {
+          const old = local_js_value2;
+          local_js_value2 = valid_and_changed_value;
+          data_value.raise("change", {
+            name: "value",
+            old,
+            value: local_js_value2
+          });
+        };
+        Object.defineProperty(data_value, "value", {
+          get() {
+            return local_js_value2;
+          },
+          set(value2) {
+            if (data_value.transform_validate_value) {
+              const obj_transform_and_validate_value_results = data_value.transform_validate_value(value2);
+              if (obj_transform_and_validate_value_results.validation instanceof Validation_Success) {
+                if (obj_transform_and_validate_value_results.transformed_value !== void 0) {
+                  const value_has_changed = local_js_value2 !== obj_transform_and_validate_value_results.transformed_value;
+                  if (value_has_changed) {
+                    set_value_with_valid_and_changed_value(obj_transform_and_validate_value_results.transformed_value);
+                  } else {
+                  }
+                } else {
+                  const value_has_changed = local_js_value2 !== obj_transform_and_validate_value_results.value;
+                  if (value_has_changed) {
+                    set_value_with_valid_and_changed_value(obj_transform_and_validate_value_results.value);
+                  } else {
+                  }
+                }
+              }
+            } else {
+              set_value_with_valid_and_changed_value(value2);
+            }
+          }
+        });
+      };
+      module.exports = setup_base_data_value_value_property;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Base_Data_Value.js
+  var require_Base_Data_Value = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Base_Data_Value.js"(exports, module) {
+      var jsgui2 = require_lib_lang_mini();
+      var { more_general_equals } = require_tools();
+      var Data_Model = require_Data_Model();
+      var Immutable_Data_Model = require_Immutable_Data_Model();
+      var { is_defined, input_processors, field, tof, each } = jsgui2;
+      var setup_base_data_value_value_property = require_setup_base_data_value_value_property();
+      var util;
+      if (typeof window === "undefined") {
+        const str_utl = "util";
+        util = __require(str_utl);
+      }
+      var Base_Data_Value = class extends Data_Model {
+        constructor(spec = {}) {
+          super(spec);
+          this.__data_value = true;
+          if (spec.data_type) this.data_type = spec.data_type;
+          if (spec.context) {
+            this.context = spec.context;
+          }
+          this.__type = "data_value";
+          this._relationships = {};
+          const { data_type, context: context2 } = this;
+        }
+        equals(other) {
+          return more_general_equals(this, other);
+        }
+        // Maybe see about immutable mode Data_Values / Data_Models.
+        //   Or do make the immutable versions of all of them!!!
+        //     And could make core functionality for both the immutable and mutable versions.
+        //       Mutability Independent Code.
+        // Immutable_Data_Integer does seem like it would in principle be (really?) simple.
+        /*
+            toImmutable() {
+                // May be slightly difficult / tricky / complex.
+                const {context, data_type, value} = this;
+        
+                // Create the new item...
+                // Needs to copy the inner value....?
+        
+                const res = new Immutable_Data_Value({
+                    context, data_type, value
+                });
+                return res;
+            }
+            */
+        "get"() {
+          return this.value;
+        }
+        "toString"() {
+          return this.get() + "";
+        }
+        // Maybe a particular stringify function?
+        "toJSON"() {
+          return JSON.stringify(this.get());
+        }
+        // Need to copy / clone the ._ value
+        /*
+            'clone'() {
+        
+                //return this.toImmutable();
+            }
+            */
+        // This is important to the running of jsgui3.
+        //   Move to the lower level of Data_Model?
+        "_id"() {
+          if (this.__id) return this.__id;
+          if (this.context) {
+            this.__id = this.context.new_id(this.__type_name || this.__type);
+          } else {
+            if (!is_defined(this.__id)) {
+              throw "Data_Value should have context";
+              this.__id = new_data_value_id();
+            }
+          }
+          return this.__id;
+        }
+      };
+      module.exports = Base_Data_Value;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js
+  var require_Value_Set_Attempt = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js"(exports, module) {
+      var Value_Set_Attempt = class {
+        constructor(spec = {}) {
+          Object.assign(this, spec);
+        }
+      };
+      module.exports = Value_Set_Attempt;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js
+  var require_Immutable_Base_Data_Value = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js"(exports, module) {
+      var jsgui2 = require_lib_lang_mini();
+      var { more_general_equals } = require_tools();
+      var Data_Model = require_Data_Model();
+      var Immutable_Data_Model = require_Immutable_Data_Model();
+      var { is_defined, input_processors, field, tof, each } = jsgui2;
+      var util;
+      if (typeof window === "undefined") {
+        const str_utl = "util";
+        util = __require(str_utl);
+      }
+      var Immutable_Base_Data_Value = class extends Immutable_Data_Model {
+        constructor(spec = {}) {
+          super(spec);
+          this.__data_value = true;
+          if (spec.data_type) this.data_type = spec.data_type;
+          if (spec.context) {
+            this.context = spec.context;
+          }
+          this.__type = "data_value";
+          this._relationships = {};
+          const { data_type, context: context2 } = this;
+        }
+        equals(other) {
+          return more_general_equals(this, other);
+        }
+        // Maybe see about immutable mode Data_Values / Data_Models.
+        //   Or do make the immutable versions of all of them!!!
+        //     And could make core functionality for both the immutable and mutable versions.
+        //       Mutability Independent Code.
+        // Immutable_Data_Integer does seem like it would in principle be (really?) simple.
+        /*
+            toImmutable() {
+                // May be slightly difficult / tricky / complex.
+                const {context, data_type, value} = this;
+        
+                // Create the new item...
+                // Needs to copy the inner value....?
+        
+                const res = new Immutable_Data_Value({
+                    context, data_type, value
+                });
+                return res;
+            }
+            */
+        "get"() {
+          return this.value;
+        }
+        "toString"() {
+          return this.get() + "";
+        }
+        // Maybe a particular stringify function?
+        "toJSON"() {
+          return JSON.stringify(this.get());
+        }
+        // Need to copy / clone the ._ value
+        /*
+            'clone'() {
+        
+                //return this.toImmutable();
+            }
+            */
+        // This is important to the running of jsgui3.
+        //   Move to the lower level of Data_Model?
+        "_id"() {
+          if (this.__id) return this.__id;
+          if (this.context) {
+            this.__id = this.context.new_id(this.__type_name || this.__type);
+          } else {
+            if (!is_defined(this.__id)) {
+              throw "Immutable_Base_Data_Value should have context";
+              this.__id = new_data_value_id();
+            }
+          }
+          return this.__id;
+        }
+      };
+      module.exports = Immutable_Base_Data_Value;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js
+  var require_Immutable_Data_Value = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js"(exports, module) {
+      var jsgui2 = require_lib_lang_mini();
+      var { more_general_equals } = require_tools();
+      var Data_Model = require_Data_Model();
+      var Immutable_Data_Model = require_Immutable_Data_Model();
+      var Immutable_Base_Data_Value = require_Immutable_Base_Data_Value();
+      var { is_defined, input_processors, field, tof, each } = jsgui2;
+      var util;
+      if (typeof window === "undefined") {
+        const str_utl = "util";
+        util = __require(str_utl);
+      }
+      var ldarkPurple = (x) => `\x1B[38;5;54m${x}\x1B[0m`;
+      var Immutable_Data_Value = class _Immutable_Data_Value extends Immutable_Base_Data_Value {
+        constructor(spec = {}) {
+          super(spec);
+          this.__data_value = true;
+          this.__immutable = true;
+          this.__type_name = "data_value";
+          if (spec.data_type) this.data_type = spec.data_type;
+          if (spec.context) {
+            this.context = spec.context;
+          }
+          const { data_type, context: context2 } = this;
+          if (data_type) {
+            const to_local_js_value = (value2) => {
+              if (value2 !== void 0) {
+                const t = tof(value2);
+                if (t === "number" || t === "string" || t === "boolean") {
+                  return value2;
+                } else {
+                  if (t === "array") {
+                    const l2 = value2.length;
+                    const res2 = new Array(l2);
+                    for (let c2 = 0; c2 < l2; c2++) {
+                      res2[c2] = to_local_js_value(value2[c2]);
+                    }
+                    return res2;
+                  } else if (t === "data_value") {
+                    return value2.toImmutable();
+                  } else {
+                    console.log("to_local_js_value value", value2);
+                    console.log("t", t);
+                    console.trace();
+                    throw "NYI";
+                  }
+                }
+              }
+            };
+            const local_js_value2 = to_local_js_value(spec.value);
+            Object.defineProperty(this, "value", {
+              get() {
+                return local_js_value2;
+              }
+              // MISSING: set() { throw new TypeError('Cannot modify immutable Data_Value'); }
+            });
+          } else {
+            let value2;
+            if (spec.value instanceof Array) {
+              value2 = spec.value.map((x) => {
+                if (x instanceof Data_Model) {
+                  return x.toImmutable();
+                } else {
+                  return x;
+                }
+              });
+            } else {
+              value2 = spec.value;
+            }
+            Object.defineProperty(this, "value", {
+              get() {
+                return value2;
+              }
+              // MISSING: set() { throw new TypeError('Cannot modify immutable Data_Value'); }
+            });
+          }
+          this.__type = "data_value";
+          this._relationships = {};
+        }
+        equals(other) {
+          return more_general_equals(this, other);
+        }
+        toImmutable() {
+          const { context: context2, data_type, value: value2 } = this;
+          const res2 = new _Immutable_Data_Value({
+            context: context2,
+            data_type,
+            value: value2
+          });
+          return res2;
+        }
+        "get"() {
+          return this.value;
+        }
+        "toString"() {
+          return this.get() + "";
+        }
+        // Maybe a particular stringify function?
+        "toJSON"() {
+          const t_value = tof(this.value);
+          if (t_value === "string") {
+            return JSON.stringify(this.value);
+          } else if (t_value === "number") {
+            return this.value + "";
+          } else if (t_value === "boolean") {
+            this.value ? "true" : "false";
+          } else if (t_value === "array") {
+            let res2 = "[";
+            const l2 = this.value.length;
+            for (let c2 = 0; c2 < l2; c2++) {
+              const item2 = this.value[c2];
+              if (c2 > 0) res2 += ",";
+              if (item2.toJSON) {
+                res2 += item2.toJSON();
+              } else {
+                res2 += JSON.stringify(item2);
+              }
+            }
+            res2 = res2 + "]";
+            return res2;
+          } else if (t_value === "data_value") {
+            return this.value.toJSON();
+          } else if (t_value === "undefined") {
+            return "null";
+          } else if (t_value === "null") {
+            return "null";
+          } else {
+            console.log("toJSON this.value", this.value);
+            console.log("t_value", t_value);
+            console.trace();
+            throw "NYI";
+          }
+        }
+        // Need to copy / clone the ._ value
+        "clone"() {
+          return this.toImmutable();
+        }
+        // This is important to the running of jsgui3.
+        //   Move to the lower level of Data_Model?
+        "_id"() {
+          if (this.__id) return this.__id;
+          if (this.context) {
+            this.__id = this.context.new_id(this.__type_name || this.__type);
+          } else {
+            if (!is_defined(this.__id)) {
+              throw "Data_Value should have context";
+              this.__id = new_data_value_id();
+            }
+          }
+          return this.__id;
+        }
+        "toObject"() {
+          return this._;
+        }
+      };
+      if (util) {
+        Immutable_Data_Value.prototype[util.inspect.custom] = function(depth, opts) {
+          const { value: value2 } = this;
+          if (value2 instanceof Array) {
+            let res2 = ldarkPurple("[ ");
+            let first = true;
+            each(value2, (item2) => {
+              if (!first) {
+                res2 = res2 + ldarkPurple(", ");
+              } else {
+                first = false;
+              }
+              if (item2 instanceof Data_Model) {
+                const item_value = item2.value;
+                res2 = res2 + ldarkPurple(item_value);
+              } else [
+                res2 = res2 + ldarkPurple(item2)
+              ];
+            });
+            res2 = res2 + ldarkPurple(" ]");
+            return res2;
+          } else {
+            return ldarkPurple(this.value);
+          }
+        };
+      }
+      module.exports = Immutable_Data_Value;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js
+  var require_setup_data_value_data_type_set = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js"(exports, module) {
+      var jsgui2 = require_lib_lang_mini();
+      var { more_general_equals } = require_tools();
+      var Base_Data_Value = require_Base_Data_Value();
+      var Value_Set_Attempt = require_Value_Set_Attempt();
+      var Data_Model = require_Data_Model();
+      var Immutable_Data_Model = require_Immutable_Data_Model();
+      var Immutable_Data_Value = require_Immutable_Data_Value();
+      var { is_defined, input_processors, field, tof, each, is_array, Data_Type } = jsgui2;
+      var setup_data_value_data_type_set = (data_value, data_type) => {
+        let local_js_value2;
+        const define_string_value_property = () => {
+          Object.defineProperty(data_value, "value", {
+            get() {
+              return local_js_value2;
+            },
+            set(value2) {
+              const old_value = local_js_value2;
+              const immu = data_value.toImmutable();
+              const value_equals_current = immu.equals(value2);
+              if (!value_equals_current) {
+                const t_value = tof(value2);
+                let made_change = false;
+                if (t_value === "string") {
+                  if (local_js_value2 instanceof Base_Data_Value) {
+                    console.log("existing local_js_value instanceof Data_Value");
+                    console.log("local_js_value.value", local_js_value2.value);
+                    console.log("local_js_value.data_type.name", local_js_value2.data_type.name);
+                    console.trace();
+                    throw "NYI";
+                  } else if (local_js_value2 === void 0) {
+                    local_js_value2 = value2;
+                    made_change = true;
+                  } else if (typeof local_js_value2 === "string") {
+                    local_js_value2 = value2;
+                    made_change = true;
+                  } else {
+                    console.trace();
+                    throw "stop";
+                  }
+                } else {
+                  if (value2 instanceof Base_Data_Value) {
+                    console.log("t_value", t_value);
+                    console.log("value", value2);
+                    console.trace();
+                    throw "stop";
+                  } else {
+                    const tval = tof(value2);
+                    if (tval === "number") {
+                      local_js_value2 = value2 + "";
+                      made_change = true;
+                    } else {
+                      console.log("-- INVALID TYPE --");
+                      console.log("tof(old_value)", tof(old_value));
+                      console.log("tof(value)", tof(value2));
+                      data_value.raise("validate", {
+                        valid: false,
+                        reason: "Invalid Type",
+                        value: value2,
+                        old: local_js_value2
+                      });
+                    }
+                  }
+                }
+                if (made_change) {
+                  const my_e = {
+                    name: "value",
+                    old: old_value,
+                    value: local_js_value2
+                  };
+                  data_value.raise("change", my_e);
+                }
+              }
+            }
+          });
+        };
+        const define_data_type_typed_value_property = () => {
+          const {
+            wrap_properties,
+            property_names,
+            property_data_types,
+            wrap_value_inner_values,
+            value_js_type,
+            abbreviated_property_names,
+            named_property_access,
+            numbered_property_access,
+            parse_string
+          } = data_type;
+          let num_properties;
+          if (property_names && property_data_types) {
+            if (property_names.length === property_data_types.length) {
+              num_properties = property_names.length;
+              if (numbered_property_access) {
+              }
+            }
+          } else if (property_names) {
+            num_properties = property_names.length;
+          }
+          let _current_immutable_value, _previous_immutable_value;
+          let prev_outer_value, current_outer_value;
+          let _numbered_property_access_has_been_set_up = false, _named_property_access_has_been_set_up = false;
+          Object.defineProperty(data_value, "value", {
+            get() {
+              return local_js_value2;
+            },
+            set(value2) {
+              const immu = data_value.toImmutable();
+              const value_equals_current = immu.equals(value2);
+              if (value_equals_current) {
+              } else {
+                const passed_first_validation = data_type.validate(value2);
+                let passed_validation = passed_first_validation;
+                if (!passed_first_validation) {
+                  const t_value = tof(value2);
+                  if (t_value === "string" && data_type.parse_string) {
+                    const parsed_value = data_type.parse_string(value2);
+                    if (parsed_value !== void 0) {
+                      if (data_type.validate(parsed_value)) {
+                        if (!immu.equals(parsed_value)) {
+                          value2 = parsed_value;
+                          passed_validation = true;
+                        }
+                      }
+                    }
+                  }
+                }
+                if (passed_validation) {
+                  data_value.raise("validate", {
+                    valid: true,
+                    value: value2
+                  });
+                } else {
+                  data_value.raise("validate", {
+                    valid: false,
+                    value: value2
+                  });
+                }
+                if (passed_validation) {
+                  const do_actual_set = (value3) => {
+                    const array_specific_value_processing = () => {
+                      if (value_js_type === Array) {
+                        let t = tof(local_js_value2);
+                        if (t === "undefined") {
+                          const create_array_with_wrapped_items = () => {
+                            if (num_properties) {
+                              if (wrap_value_inner_values) {
+                                if (property_data_types) {
+                                  let i = 0;
+                                  if (value3.__immutable) {
+                                    const l2 = value3.length;
+                                    const arr_wrapped_value_values = new Array(l2);
+                                    const value_value = value3.value;
+                                    do_actual_set(value_value);
+                                  } else {
+                                    if (value3 instanceof Data_Value) {
+                                      const arr_wrapped_value_values = new Array(num_properties);
+                                      const arr_dv_value = value3.value;
+                                      console.log("arr_dv_value", arr_dv_value);
+                                      console.trace();
+                                      throw "stop";
+                                    } else if (is_array(value3)) {
+                                      const arr_wrapped_value_values = value3.map((value4) => {
+                                        const property_index = i;
+                                        let property_name;
+                                        if (property_names) {
+                                          property_name = property_names[property_index];
+                                        }
+                                        const wrapped_value = new Data_Value({ context, value: value4, data_type: property_data_types[i] });
+                                        wrapped_value.on("change", (e) => {
+                                          const { name } = e;
+                                          if (name === "value") {
+                                            current_outer_value = data_value.toImmutable();
+                                            const my_e2 = {
+                                              name,
+                                              event_originator: wrapped_value,
+                                              parent_event: e,
+                                              value: current_outer_value
+                                            };
+                                            if (property_name) {
+                                              my_e2.property_name = property_name;
+                                            }
+                                            my_e2.property_index = property_index;
+                                            data_value.raise("change", my_e2);
+                                            prev_outer_value = current_outer_value;
+                                          }
+                                        });
+                                        i++;
+                                        return wrapped_value;
+                                      });
+                                      local_js_value2 = arr_wrapped_value_values;
+                                      const my_e = {
+                                        name: "value",
+                                        old: _previous_immutable_value,
+                                        value: data_value.toImmutable()
+                                      };
+                                      data_value.raise("change", my_e);
+                                    }
+                                  }
+                                } else {
+                                  let i = 0;
+                                  const arr_wrapped_value_values = value3.map((value4) => {
+                                    const property_index = i;
+                                    let property_name;
+                                    if (property_names) {
+                                      property_name = property_names[property_index];
+                                    }
+                                    const wrapped_value = new Data_Value({ context, value: value4 });
+                                    wrapped_value.on("change", (e) => {
+                                      const { name } = e;
+                                      if (name === "value") {
+                                        const my_e = {
+                                          name,
+                                          event_originator: wrapped_value,
+                                          parent_event: e,
+                                          value: data_value.toImmutable()
+                                        };
+                                        if (property_name) {
+                                          my_e.property_name = property_name;
+                                        }
+                                        my_e.property_index = property_index;
+                                        data_value.raise("change", my_e);
+                                      }
+                                    });
+                                    i++;
+                                    return wrapped_value;
+                                  });
+                                  local_js_value2 = arr_wrapped_value_values;
+                                }
+                              } else {
+                                local_js_value2 = value3;
+                              }
+                            } else {
+                              console.trace();
+                              throw "stop - number of properties not found";
+                            }
+                          };
+                          create_array_with_wrapped_items();
+                        } else if (t === "array") {
+                          const t_value = tof(value3);
+                          if (t_value === "data_value") {
+                            if (is_array(value3.value)) {
+                              if (value3.value.length === local_js_value2.length) {
+                                each(value3.value, (inner_value, idx) => {
+                                  if (inner_value instanceof Data_Model) {
+                                    const matching_local_inner_value = local_js_value2[idx];
+                                    if (inner_value.equals(matching_local_inner_value)) {
+                                    } else {
+                                      matching_local_inner_value.value = inner_value;
+                                    }
+                                  } else {
+                                    console.trace();
+                                    throw "NYI";
+                                  }
+                                });
+                              } else {
+                                console.trace();
+                                throw "NYI";
+                              }
+                            } else {
+                              console.trace();
+                              throw "NYI";
+                            }
+                          } else {
+                            if (t_value === "array") {
+                              if (local_js_value2.length === value3.length) {
+                                const l2 = value3.length;
+                                let all_local_js_items_are_data_model = true, c2 = 0;
+                                do {
+                                  const local_item = local_js_value2[c2];
+                                  if (!(local_item instanceof Data_Model)) {
+                                    all_local_js_items_are_data_model = false;
+                                  }
+                                  c2++;
+                                } while (all_local_js_items_are_data_model && c2 < l2);
+                                if (all_local_js_items_are_data_model) {
+                                  let c3 = 0;
+                                  do {
+                                    const local_item = local_js_value2[c3];
+                                    local_item.value = value3[c3];
+                                    c3++;
+                                  } while (c3 < l2);
+                                } else {
+                                  console.trace();
+                                  throw "NYI";
+                                }
+                              } else {
+                                console.trace();
+                                throw "NYI";
+                              }
+                            } else {
+                              console.log("value", value3);
+                              console.trace();
+                              throw "NYI";
+                            }
+                          }
+                        } else {
+                        }
+                      } else {
+                      }
+                    };
+                    array_specific_value_processing();
+                    const general_value_processing = () => {
+                      if (local_js_value2 instanceof Base_Data_Value) {
+                        console.log("existing local_js_value instanceof Data_Value");
+                        console.log("local_js_value.value", local_js_value2.value);
+                        console.log("local_js_value.data_type.name", local_js_value2.data_type.name);
+                        console.trace();
+                        throw "NYI";
+                      } else if (local_js_value2 instanceof Array) {
+                        if (value3 instanceof Data_Model) {
+                          if (value3.equals(local_js_value2)) {
+                          } else {
+                            console.log("value", value3);
+                            console.log("local_js_value", local_js_value2);
+                            console.trace();
+                            throw "NYI";
+                          }
+                        } else if (value3 instanceof Array) {
+                          if (property_names.length === value3.length) {
+                            if (property_data_types) {
+                              const num_properties2 = property_names.length;
+                              for (let i_property = 0; i_property < num_properties2; i_property++) {
+                                const name = property_names[i_property];
+                                const data_type2 = property_data_types[i_property];
+                                if (local_js_value2[i_property] instanceof Data_Value) {
+                                  local_js_value2[i_property].value = value3[i_property];
+                                } else {
+                                  console.trace();
+                                  throw "NYI";
+                                }
+                              }
+                              if (numbered_property_access && !_numbered_property_access_has_been_set_up) {
+                                for (let i_property = 0; i_property < num_properties2; i_property++) {
+                                  const name = property_names[i_property];
+                                  const data_type2 = property_data_types[i_property];
+                                  Object.defineProperty(data_value, i_property, {
+                                    get() {
+                                      return local_js_value2[i_property];
+                                    },
+                                    set(value4) {
+                                      const item_already_there = local_js_value2[i_property];
+                                      if (item_already_there instanceof Data_Model) {
+                                        item_already_there.value = value4;
+                                      } else {
+                                        console.log("item_already_there", item_already_there);
+                                        console.trace();
+                                        throw "stop";
+                                      }
+                                      if (value4 instanceof Data_Model) {
+                                      } else {
+                                      }
+                                    }
+                                  });
+                                }
+                                Object.defineProperty(data_value, "length", {
+                                  get() {
+                                    return local_js_value2.length;
+                                  }
+                                });
+                                _numbered_property_access_has_been_set_up = true;
+                              }
+                              if (named_property_access && !_named_property_access_has_been_set_up) {
+                                if (numbered_property_access) {
+                                  if (property_names) {
+                                    for (let i_property = 0; i_property < num_properties2; i_property++) {
+                                      const name = property_names[i_property];
+                                      const data_type2 = property_data_types[i_property];
+                                      Object.defineProperty(data_value, name, {
+                                        get() {
+                                          return local_js_value2[i_property];
+                                        },
+                                        set(value4) {
+                                          const item_already_there = local_js_value2[i_property];
+                                          if (item_already_there instanceof Data_Model) {
+                                            item_already_there.value = value4;
+                                          } else {
+                                            console.log("item_already_there", item_already_there);
+                                            console.trace();
+                                            throw "stop";
+                                          }
+                                        }
+                                      });
+                                    }
+                                  }
+                                  if (abbreviated_property_names) {
+                                    for (let i_property = 0; i_property < num_properties2; i_property++) {
+                                      const name = abbreviated_property_names[i_property];
+                                      const data_type2 = property_data_types[i_property];
+                                      Object.defineProperty(data_value, name, {
+                                        get() {
+                                          return local_js_value2[i_property];
+                                        },
+                                        set(value4) {
+                                          const item_already_there = local_js_value2[i_property];
+                                          if (item_already_there instanceof Data_Model) {
+                                            item_already_there.value = value4;
+                                          } else {
+                                            console.log("item_already_there", item_already_there);
+                                            console.trace();
+                                            throw "stop";
+                                          }
+                                          if (value4 instanceof Data_Model) {
+                                          } else {
+                                          }
+                                        }
+                                      });
+                                    }
+                                  }
+                                }
+                                _named_property_access_has_been_set_up = true;
+                              }
+                            }
+                          } else {
+                            console.trace();
+                            throw "NYI";
+                          }
+                        } else {
+                          console.log("value", value3);
+                          console.log("local_js_value", local_js_value2);
+                          console.log("value_equals_current", value_equals_current);
+                          console.log("immu", immu);
+                          console.trace();
+                          throw "NYI";
+                        }
+                      } else {
+                        if (value3 instanceof Data_Model) {
+                          if (value3.data_type === data_value.data_type) {
+                            const tvv = tof(value3.value);
+                            if (tvv === "number" || tvv === "string" || tvv === "boolean") {
+                              local_js_value2 = value3.value;
+                            } else {
+                              console.trace();
+                              throw "NYI";
+                            }
+                          } else {
+                            console.trace();
+                            throw "NYI";
+                          }
+                        } else {
+                          local_js_value2 = value3;
+                        }
+                        data_value.raise("change", {
+                          name: "value",
+                          old: immu,
+                          value: value3
+                        });
+                        prev_outer_value = current_outer_value;
+                      }
+                    };
+                    general_value_processing();
+                  };
+                  do_actual_set(value2);
+                } else {
+                }
+              }
+            }
+          });
+        };
+        if (data_type === String) {
+          define_string_value_property();
+        } else if (data_type instanceof Data_Type) {
+          define_data_type_typed_value_property();
+        } else {
+          console.trace();
+          throw "NYI";
+        }
+      };
+      module.exports = setup_data_value_data_type_set;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Data_Value.js
+  var require_Data_Value2 = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Data_Value.js"(exports, module) {
+      var jsgui2 = require_lib_lang_mini();
+      var { more_general_equals } = require_tools();
+      var Base_Data_Value = require_Base_Data_Value();
+      var Value_Set_Attempt = require_Value_Set_Attempt();
+      var Data_Model = require_Data_Model();
+      var Immutable_Data_Model = require_Immutable_Data_Model();
+      var Immutable_Data_Value = require_Immutable_Data_Value();
+      var { is_defined, input_processors, field, tof, each, is_array, Data_Type } = jsgui2;
+      var setup_data_value_data_type_set = require_setup_data_value_data_type_set();
+      var util;
+      if (typeof window === "undefined") {
+        const str_utl = "util";
+        util = __require(str_utl);
+      }
+      var lpurple = (x) => "\x1B[38;5;129m" + x + "\x1B[0m";
+      var Data_Value2 = class _Data_Value extends Base_Data_Value {
+        constructor(spec = {}) {
+          if (typeof spec !== "object") {
+            spec = {
+              value: spec
+            };
+          }
+          super(spec);
+          this.__data_value = true;
+          this.__type_name = "data_value";
+          const that2 = this;
+          if (spec.data_type) {
+            this.data_type = spec.data_type;
+          } else if (spec.value?.data_type) {
+            this.data_type = spec.value.data_type;
+          }
+          if (spec.context) {
+            this.context = spec.context;
+          }
+          const { data_type, context: context2 } = this;
+          if (data_type) {
+            setup_data_value_data_type_set(this, data_type);
+            if (spec.value) {
+              this.value = spec.value;
+            }
+          } else {
+            field(this, "value", spec.value);
+          }
+          const attempt_set_value = this.attempt_set_value = (value2) => {
+            const get_local_js_value_copy = () => {
+              const tljsv = tof(local_js_value);
+              if (tljsv === "undefined" || tljsv === "string" || tljsv === "number") {
+                return local_js_value;
+              } else {
+                console.log("local_js_value", local_js_value);
+                console.log("tljsv", tljsv);
+                console.trace();
+                throw "stop";
+              }
+            };
+            const old_local_js_value = get_local_js_value_copy();
+            const old_equals_new = more_general_equals(old_local_js_value, value2);
+            if (old_equals_new === true) {
+              return new Value_Set_Attempt({ success: false, equal_values: true });
+            } else {
+              if (this.data_type === void 0) {
+                local_js_value = value2;
+                const o_change = {
+                  name: "value",
+                  old: old_local_js_value,
+                  value: value2
+                };
+                this.raise("change", o_change);
+                return new Value_Set_Attempt({ success: true, value: value2 });
+              } else if (this.data_type instanceof Data_Type) {
+                const t_value = tof(value2);
+                if (t_value === "string") {
+                  if (this.data_type.parse_string) {
+                    const parsed_value = this.data_type.parse_string(value2);
+                    if (parsed_value !== void 0) {
+                      const res2 = attempt_set_value(parsed_value);
+                      res2.parsed = true;
+                      return res2;
+                    } else {
+                      return new Value_Set_Attempt({ success: false, value: value2 });
+                    }
+                  } else {
+                    console.trace();
+                    throw "NYI";
+                  }
+                } else {
+                  if (t_value === "number") {
+                    const validation = this.data_type.validate(value2);
+                    if (validation === true) {
+                      local_js_value = value2;
+                      const o_change = {
+                        name: "value",
+                        old: old_local_js_value,
+                        value: value2
+                      };
+                      this.raise("change", o_change);
+                      return new Value_Set_Attempt({ success: true, old: old_local_js_value, value: value2 });
+                    } else {
+                      return new Value_Set_Attempt({ success: false, value: value2 });
+                    }
+                  } else {
+                    console.log("t_value", t_value);
+                    console.trace();
+                    throw "NYI";
+                  }
+                }
+              } else if (this.data_type === String) {
+                if (typeof value2 === "number") {
+                  const res2 = attempt_set_value(value2 + "");
+                  res2.data_type_transformation = ["number", "string"];
+                  return res2;
+                } else if (typeof value2 === "string") {
+                  local_js_value = value2;
+                  const o_change = {
+                    name: "value",
+                    old: old_local_js_value,
+                    value: value2
+                  };
+                  this.raise("change", o_change);
+                  return new Value_Set_Attempt({ success: true, old: old_local_js_value, value: value2 });
+                } else {
+                  console.trace();
+                  throw "NYI";
+                }
+              } else {
+                console.log("this.data_type", this.data_type);
+                console.trace();
+                throw "NYI";
+              }
+            }
+          };
+          this.__type = "data_value";
+          this._relationships = {};
+        }
+        toImmutable() {
+          const { context: context2, data_type, value: value2 } = this;
+          const res2 = new Immutable_Data_Value({
+            context: context2,
+            data_type,
+            value: value2
+          });
+          return res2;
+        }
+        "toObject"() {
+          return this._;
+        }
+        "set"(val) {
+          this.value = val;
+        }
+        "get"() {
+          return this.value;
+        }
+        equals(other) {
+          return more_general_equals(this, other);
+        }
+        "toString"() {
+          return this.get() + "";
+        }
+        "toJSON"() {
+          const t_value = tof(this.value);
+          if (t_value === "string") {
+            return JSON.stringify(this.value);
+          } else if (t_value === "number") {
+            return this.value + "";
+          } else if (t_value === "boolean") {
+            this.value ? "true" : "false";
+          } else if (t_value === "array") {
+            return JSON.stringify(this.value);
+          } else if (t_value === "data_value") {
+            return this.value.toJSON();
+          } else if (t_value === "undefined") {
+            return "null";
+          } else if (t_value === "null") {
+            return "null";
+          } else {
+            console.log("toJSON this.value", this.value);
+            console.log("t_value", t_value);
+            console.trace();
+            throw "NYI";
+          }
+        }
+        "clone"() {
+          console.trace();
+          throw "NYI";
+          var res2 = new _Data_Value({
+            "value": this._
+          });
+          return res2;
+        }
+        "_id"() {
+          if (this.__id) return this.__id;
+          if (this.context) {
+            this.__id = this.context.new_id(this.__type_name || this.__type);
+          } else {
+            if (!is_defined(this.__id)) {
+              throw "Data_Value should have context";
+              this.__id = new_data_value_id();
+            }
+          }
+          return this.__id;
+        }
+      };
+      Data_Value2.sync = (a, b) => {
+        if (a instanceof Base_Data_Value && b instanceof Base_Data_Value) {
+          a.on("change", (e) => {
+            const { name, old, value: value2 } = e;
+            if (name === "value") {
+              b.value = value2;
+            }
+          });
+          b.on("change", (e) => {
+            const { name, old, value: value2 } = e;
+            if (name === "value") {
+              a.value = value2;
+            }
+          });
+        } else {
+          console.trace();
+          throw "Unexpected types";
+        }
+      };
+      if (util) {
+        Data_Value2.prototype[util.inspect.custom] = function(depth, opts) {
+          const { value: value2 } = this;
+          const tv = tof(value2);
+          if (tv === "number" || tv === "string" || tv === "boolean") {
+            return lpurple(value2);
+          } else {
+            if (value2 instanceof Array) {
+              let res2 = lpurple("[ ");
+              let first = true;
+              each(value2, (item2) => {
+                if (!first) {
+                  res2 = res2 + lpurple(", ");
+                } else {
+                  first = false;
+                }
+                if (item2 instanceof Data_Model) {
+                  const item_value = item2.value;
+                  res2 = res2 + lpurple(item_value);
+                } else [
+                  res2 = res2 + lpurple(item2)
+                ];
+              });
+              res2 = res2 + lpurple(" ]");
+              return res2;
+            } else if (value2 instanceof Data_Model) {
+              return value2[util.inspect.custom]();
+            } else {
+              return lpurple(this.value);
+            }
+          }
+        };
+      }
+      module.exports = Data_Value2;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Value.js
+  var require_Data_Value3 = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Value.js"(exports, module) {
+      module.exports = require_Data_Value2();
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/doubly-linked-list.js
+  var require_doubly_linked_list = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/doubly-linked-list.js"(exports, module) {
+      var Node = class {
+        constructor(spec) {
+          this.neighbours = spec.neighbours || [];
+          this.value = spec.value;
+        }
+        "previous"() {
+          return this.neighbours[0];
+        }
+        "next"() {
+          return this.neighbours[1];
+        }
+      };
+      var Doubly_Linked_List = class {
+        constructor(spec) {
+          this.first = null;
+          this.last = null;
+          this.length = 0;
+        }
+        "each_node"(callback2) {
+          var node = this.first;
+          var ctu = true;
+          var stop = function() {
+            ctu = false;
+          };
+          while (node && ctu) {
+            callback2(node, stop);
+            node = node.neighbours[1];
+          }
+        }
+        "each"(callback2) {
+          this.each_node(function(node, stop) {
+            callback2(node.value, stop);
+          });
+        }
+        "remove"(node) {
+          if (node.neighbours[0]) {
+            node.neighbours[0].neighbours[1] = node.neighbours[1];
+          } else {
+            this.first = node.neighbours[1];
+          }
+          if (node.neighbours[1]) {
+            node.neighbours[1].neighbours[0] = node.neighbours[0];
+          } else {
+            this.last = node.neighbours[0];
+          }
+          node.neighbours = [];
+          if (node.parent == this) {
+            delete node.parent;
+            this.length--;
+          }
+        }
+        // check to see if the item is a 'node' object.
+        //  if it is, can insert it as a node, otherwise create the node object and insert it.
+        //   a bit like wrapping values in Data_Value.
+        "insert_beginning"(val) {
+          if (val instanceof Node) {
+            if (this.first == null) {
+              this.first = val;
+              this.last = val;
+              val.neighbours = [];
+              if (val.parent != this) {
+                val.parent = this;
+                this.length++;
+              }
+            } else {
+              this.insert_before(val, this.first);
+            }
+            return val;
+          } else {
+            var node = new Node({ "value": val });
+            return this.insert_beginning(node);
+          }
+        }
+        // could use a nodify function.
+        //  or ensure_data_wrapper
+        "insert_before"(val, node) {
+          if (val instanceof Node) {
+            val.neighbours = [node.neighbours[0], node];
+            if (node.neighbours[0] == null) {
+              this.first = val;
+            } else {
+              node.neighbours[0].neighbours[1] = val;
+            }
+            node.neighbours[0] = val;
+            if (val.parent != this) {
+              val.parent = this;
+              this.length++;
+            }
+            return val;
+          } else {
+            var new_node = new Node({ "value": val });
+            return this.insert_before(new_node, node);
+          }
+        }
+        "insert_after"(val, node) {
+          if (val instanceof Node) {
+            val.neighbours = [node, node.neighbours[1]];
+            if (node.neighbours[1] == null) {
+              this.last = val;
+            } else {
+              node.neighbours[1].neighbours[0] = val;
+            }
+            node.neighbours[1] = val;
+            if (val.parent != this) {
+              val.parent = this;
+              this.length++;
+            }
+            return val;
+          } else {
+            var new_node = new Node({ "value": val });
+            return this.insert_after(new_node, node);
+          }
+        }
+        // not wrapping the item in a node?
+        // want one where we are not pushing nodes, but items stored in nodes.
+        //  Perhaps this is a Data_Value?
+        // Or a doubly_linked_node.
+        // Doubly_Linked_Node could take the form [prev, item, next]
+        //  [prev, item, key, next]? probably not
+        //  Maybe we could put more private variables, such as 'neighbours' as a var within the init statement.
+        "push"(val) {
+          if (val instanceof Node) {
+            if (this.last == null) {
+              this.insert_beginning(val);
+            } else {
+              return this.insert_after(val, this.last);
+            }
+            return val;
+          } else {
+            var new_node = new Node({ "value": val });
+            return this.push(new_node);
+          }
+        }
+      };
+      Doubly_Linked_List.Node = Node;
+      module.exports = Doubly_Linked_List;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/ordered-kvs.js
+  var require_ordered_kvs = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/ordered-kvs.js"(exports, module) {
+      var Doubly_Linked_List = require_doubly_linked_list();
+      var Ordered_KVS = class {
+        constructor() {
+          this.dll = new Doubly_Linked_List();
+          this.node_map = {};
+        }
+        "length"() {
+          return this.dll.length;
+        }
+        "put"(key2, value2) {
+          return this.push(key2, value2);
+        }
+        "get"(key2) {
+          var kvs_node = this.node_map[key2];
+          if (kvs_node) {
+            return kvs_node.value;
+          } else {
+            return void 0;
+          }
+        }
+        "push"(key2, value2) {
+          var node = this.dll.push(value2);
+          node.key = key2;
+          this.node_map[key2] = node;
+        }
+        "out"(key2) {
+          var node = this.node_map[key2];
+          delete this.node_map[key2];
+          this.dll.remove(node);
+        }
+        "each"(callback2) {
+          this.dll.each_node(function(node, stop) {
+            callback2(node.key, node.value, stop);
+          });
+        }
+        "values"() {
+          var res2 = [];
+          this.each(function(key2, value2) {
+            res2.push(value2);
+          });
+          return res2;
+        }
+        "keys"() {
+          var res2 = [];
+          this.each(function(key2, value2) {
+            res2.push(key2);
+          });
+          return res2;
+        }
+        "keys_and_values"() {
+          var res2 = [];
+          this.each(function(key2, value2) {
+            res2.push([key2, value2]);
+          });
+          return res2;
+        }
+        // will not need to deal with nodes on the user level.
+        // want to be able to add and remove items, normally items will get pushed to the end of the list.
+        // will provide a key and value in order to do this.
+      };
+      module.exports = Ordered_KVS;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/ordered-string-list.js
+  var require_ordered_string_list = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/ordered-string-list.js"(exports, module) {
+      var Ordered_String_List = class {
+        constructor() {
+          var arr = [];
+          var dict_indexes = {};
+          var reindex_dict_indexes = function() {
+            dict_indexes = {};
+            for (var c2 = 0, l2 = arr.length; c2 < l2; c2++) {
+              dict_indexes[arr[c2]] = c2;
+            }
+          };
+          this.has = function(value2) {
+            return typeof dict_indexes[value2] !== "undefined";
+          };
+          this.put = function(value2) {
+            if (this.has(value2)) {
+            } else {
+              var index = arr.length;
+              arr.push(value2);
+              dict_indexes[value2] = index;
+            }
+          };
+          this.out = function(value2) {
+            if (this.has(value2)) {
+              var idx = dict_indexes[value2];
+              arr.splice(idx, 1);
+              delete dict_indexes[value2];
+              for (var c2 = idx, l2 = arr.length; c2 < l2; c2++) {
+                var i = arr[c2];
+                dict_indexes[i]--;
+              }
+            }
+          };
+          this.toggle = function(value2) {
+            if (this.has(value2)) {
+              this.out(value2);
+            } else {
+              this.put(value2);
+            }
+          };
+          this.move_value = function(value2, index) {
+            if (this.has(value2) && dict_indexes[value2] != index) {
+              var old_index = dict_indexes[value2];
+              arr.splice(old_index, 1);
+              arr.splice(index, 0, value2);
+              if (index < old_index) {
+                dict_indexes[arr[index]] = index;
+                for (var c2 = index + 1; c2 <= old_index; c2++) {
+                  dict_indexes[arr[c2]]++;
+                }
+              } else if (index > old_index) {
+                dict_indexes[arr[index]] = index;
+                for (var c2 = old_index; c2 < index; c2++) {
+                  dict_indexes[arr[c2]]--;
+                }
+              }
+            }
+          };
+          this._index_scan = function() {
+            for (var c2 = 0, l2 = arr.length; c2 < l2; c2++) {
+              console.log("c " + c2 + " arr[c] " + arr[c2] + " idx " + dict_indexes[arr[c2]]);
+            }
+            ;
+          };
+          this.toString = function() {
+            var res2 = arr.join(" ");
+            return res2;
+          };
+          this.toString.stringify = true;
+          this.set = (function(val) {
+            if (typeof val === "string") {
+              arr = val.split(" ");
+              reindex_dict_indexes();
+            }
+          });
+          var a = arguments;
+          if (a.length == 1) {
+            var spec = a[0];
+            if (typeof spec === "string") {
+              this.set(spec);
+            }
+          }
+        }
+      };
+      module.exports = Ordered_String_List;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Collection.js
+  var require_Collection2 = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Collection.js"(exports, module) {
+      module.exports = require_Collection();
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/util.js
+  var require_util = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/util.js"(exports, module) {
+      var jsgui2 = require_lib_lang_mini();
+      var Collection = require_Collection2();
+      var j = jsgui2;
+      var each = j.each;
+      var tof = j.tof;
+      var atof = j.atof;
+      var is_defined = j.is_defined;
+      var fp = j.fp;
+      var arrayify = j.arrayify;
+      var mapify = j.mapify;
+      var get_item_sig = j.get_item_sig;
+      var vectorify = function(n_fn) {
+        var fn_res = fp(function(a, sig) {
+          if (a.l > 2) {
+            var res2 = a[0];
+            for (var c2 = 1, l2 = a.l; c2 < l2; c2++) {
+              res2 = fn_res(res2, a[c2]);
+            }
+            return res2;
+          } else {
+            if (sig == "[n,n]") {
+              return n_fn(a[0], a[1]);
+            } else {
+              var ats = atof(a);
+              if (ats[0] == "array") {
+                if (ats[1] == "number") {
+                  var res2 = [], n = a[1];
+                  each(a[0], function(v, i) {
+                    res2.push(fn_res(v, n));
+                  });
+                  return res2;
+                }
+                if (ats[1] == "array") {
+                  if (ats[0].length != ats[1].length) {
+                    throw "vector array lengths mismatch";
+                  } else {
+                    var res2 = [], arr2 = a[1];
+                    each(a[0], function(v, i) {
+                      res2.push(fn_res(v, arr2[i]));
+                    });
+                    return res2;
+                  }
+                }
+              }
+            }
+          }
+        });
+        return fn_res;
+      };
+      var n_add = function(n1, n2) {
+        return n1 + n2;
+      };
+      var n_subtract = function(n1, n2) {
+        return n1 - n2;
+      };
+      var n_multiply = function(n1, n2) {
+        return n1 * n2;
+      };
+      var n_divide = function(n1, n2) {
+        return n1 / n2;
+      };
+      var v_add = vectorify(n_add);
+      var v_subtract2 = vectorify(n_subtract);
+      var v_multiply = vectorify(n_multiply);
+      var v_divide = vectorify(n_divide);
+      var vector_magnitude = function(vector) {
+        var res2 = Math.sqrt(Math.pow(vector[0], 2) + Math.pow(vector[1], 2));
+        return res2;
+      };
+      var distance_between_points = function(points) {
+        var offset2 = v_subtract2(points[1], points[0]);
+        return vector_magnitude(offset2);
+      };
+      var execute_on_each_simple = function(items, fn) {
+        var res2 = [], that2 = this;
+        each(items, function(i, v) {
+          res2.push(fn.call(that2, i));
+        });
+        return res2;
+      };
+      var filter_map_by_regex = function(map, regex) {
+        var res2 = {};
+        each(map, function(v, i) {
+          if (i.match(regex)) {
+            res2[i] = v;
+          }
+        });
+        return res2;
+      };
+      var npx = arrayify(function(value2) {
+        var res2, a = arguments, t = tof(a[0]);
+        if (t === "string") {
+          res2 = a[0];
+        } else if (t === "number") {
+          res2 = a[0] + "px";
+        }
+        return res2;
+      });
+      var no_px = arrayify(fp(function(a, sig) {
+        var re = /px$/, res2;
+        if (sig == "[s]" && re.test(a[0])) {
+          res2 = parseInt(a[0]);
+        } else {
+          res2 = a[0];
+        }
+        ;
+        return res2;
+      }));
+      var arr_ltrb = ["left", "top", "right", "bottom"];
+      var str_arr_mapify = function(fn) {
+        var res2 = fp(function(a, sig) {
+          if (a.l == 1) {
+            if (sig == "[s]") {
+              var s_pn = a[0].split(" ");
+              if (s_pn.length > 1) {
+                return res2.call(this, s_pn);
+              } else {
+                return fn.call(this, a[0]);
+              }
+            }
+            if (tof(a[0]) == "array") {
+              var res22 = {}, that2 = this;
+              each(a[0], function(i, v) {
+                res22[v] = fn.call(that2, v);
+              });
+              return res22;
+            }
+          }
+        });
+        return res2;
+      };
+      var arr_hex_chars = [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ];
+      var dict_hex_to_bin = {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 6,
+        "7": 7,
+        "8": 8,
+        "9": 9,
+        "A": 10,
+        "B": 11,
+        "C": 12,
+        "D": 13,
+        "E": 14,
+        "F": 15
+      };
+      var str_hex_to_int = function(str_hex) {
+        str_hex = str_hex.toUpperCase();
+        var i = str_hex.length;
+        var res2 = 0, exp = 1;
+        while (i--) {
+          var i_part = dict_hex_to_bin[str_hex.charAt(i)];
+          var ip2 = i_part * exp;
+          res2 = res2 + ip2;
+          exp = exp * 16;
+        }
+        ;
+        return res2;
+      };
+      var byte_int_to_str_hex_2 = function(byte_int) {
+        var a = Math.floor(byte_int / 16), b = byte_int % 16, sa = arr_hex_chars[a], sb = arr_hex_chars[b], res2 = sa + sb;
+        return res2;
+      };
+      var arr_rgb_to_str_hex_6 = function(arr_rgb) {
+        var r = byte_int_to_str_hex_2(arr_rgb[0]);
+        var res2 = r + byte_int_to_str_hex_2(arr_rgb[1]) + byte_int_to_str_hex_2(arr_rgb[2]);
+        return res2;
+      };
+      var arr_rgb_to_css_hex_6 = function(arr_rgb) {
+        return "#" + arr_rgb_to_str_hex_6(arr_rgb);
+      };
+      var input_processors = {};
+      var validators = {
+        "number": function(value2) {
+          return tof(value2) == "number";
+        }
+      };
+      var extend = jsgui2.extend;
+      var fp = jsgui2.fp;
+      var stringify = jsgui2.stringify;
+      var tof = jsgui2.tof;
+      var data_types_info = {
+        "color": ["indexed_array", [
+          ["red", "number"],
+          ["green", "number"],
+          ["blue", "number"]
+        ]],
+        "oltrb": ["optional_array", ["left", "top", "right", "bottom"]]
+      };
+      jsgui2.data_types_info = data_types_info;
+      var color_preprocessor_parser = fp(function(a, sig) {
+        if (sig == "[s]") {
+          var input = a[0];
+          var rx_hex = /(#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2}))/;
+          var m = input.match(rx_hex);
+          if (m) {
+            var r = jsgui2.str_hex_to_int(m[2]);
+            var g = jsgui2.str_hex_to_int(m[3]);
+            var b = jsgui2.str_hex_to_int(m[4]);
+            var res2 = [r, g, b];
+            return res2;
+          }
+        }
+      });
+      input_processors["optional_array"] = fp(function(a, sig) {
+        if (a.l == 2) {
+          var oa_params = a[0], input = a[1];
+          if (tof(input) == "array") {
+            if (input.length <= oa_params.length) {
+              return input;
+            }
+          } else {
+            return input;
+          }
+        }
+        if (a.l == 3) {
+          var oa_params = a[0], items_data_type_name = a[1], input = a[2];
+          var input_processor_for_items = jsgui2.input_processors[items_data_type_name];
+          if (tof(input) == "array") {
+            if (input.length <= oa_params.length) {
+              var res2 = [];
+              each(input, function(i, v) {
+                res2.push(input_processor_for_items(v));
+              });
+              return res2;
+            }
+          } else {
+            return input_processor_for_items(input);
+          }
+        }
+      });
+      input_processors["indexed_array"] = fp(function(a, sig) {
+        console.log("indexed_array sig", sig);
+        if (a.l == 2) {
+          var ia_params = a[0], input = a[1];
+          if (tof(input) == "array") {
+            if (input.length <= ia_params.length) {
+              return input;
+            }
+          }
+        }
+        if (a.l == 3) {
+          var ia_params = a[0], items_data_type_name = a[1], input = a[2];
+          var input_processor_for_items = jsgui2.input_processors[items_data_type_name];
+          if (tof(input) == "array") {
+            if (input.length <= ia_params.length) {
+              var res2 = [];
+              each(input, function(i, v) {
+                res2.push(input_processor_for_items(v));
+              });
+              return res2;
+            }
+          }
+        }
+      });
+      input_processors["n_units"] = function(str_units, input) {
+        if (tof(input) == "number") {
+          return [input, str_units];
+        }
+        if (tof(input) == "string") {
+          var rx_n_units = /^(\d+)(\w+)$/;
+          var match = input.match(rx_n_units);
+          if (match) {
+            return [parseInt(match[1]), match[2]];
+          }
+          rx_n_units = /^(\d*\.\d+)(\w+)$/;
+          match = input.match(rx_n_units);
+          if (match) {
+            return [parseFloat(match[1]), match[2]];
+          }
+        }
+      };
+      var dti_color = jsgui2.data_types_info["color"];
+      input_processors["color"] = function(input) {
+        var res2;
+        console.log("processing color input: " + stringify(input));
+        var input_sig = get_item_sig(input, 2);
+        if (input_sig == "[s]") {
+          res2 = color_preprocessor_parser(input[0]);
+        }
+        if (input_sig == "[n,n,n]") {
+          res2 = input;
+        }
+        console.log("res " + stringify(res2));
+        console.log("color input_processors output", res2);
+        return res2;
+      };
+      jsgui2.output_processors["color"] = function(jsgui_color) {
+        var res2 = jsgui2.arr_rgb_to_css_hex_6(jsgui_color);
+        return res2;
+      };
+      var group = function() {
+        var a = arguments;
+        if (a.length == 1 && tof(a[0]) == "array") {
+          return group.apply(this, a[0]);
+        }
+        var res2;
+        for (var c2 = 0, l2 = a.length; c2 < l2; c2++) {
+          var item2 = a[c2];
+          if (c2 == 0) {
+            res2 = new Collection({ "context": item2.context });
+          }
+          res2.push(item2);
+        }
+        var C = a[0].constructor;
+        var p = C.prototype;
+        var i;
+        for (i in p) {
+          var tpi = tof(p[i]);
+          if (tpi == "function") {
+            (function(i2) {
+              if (i2 != "each" && i2 != "get" && i2 != "add_event_listener") {
+                res2[i2] = function() {
+                  var a2 = arguments;
+                  res2.each(function(v, i22) {
+                    v[i2].apply(v, a2);
+                  });
+                };
+              }
+            })(i);
+          }
+        }
+        return res2;
+      };
+      var true_vals = function(map) {
+        var res2 = [];
+        for (var i in map) {
+          if (map[i]) res2.push(map[i]);
+        }
+        return res2;
+      };
+      var Ui16toUi32 = (ui16) => {
+        let res2 = new Uint32Array(ui16.length / 2);
+        let dv = new DataView(ui16.buffer);
+        let l2 = ui16.length;
+        let hl = l2 / 2;
+        let resw = 0;
+        for (let c2 = 0; c2 < hl; c2++) {
+          res2[resw++] = dv.getUint32(c2 * 4);
+        }
+        return res2;
+      };
+      var Ui32toUi16 = (ui32) => {
+        let res2 = new Uint16Array(ui32.length * 2);
+        let dv = new DataView(ui32.buffer);
+        let l2 = ui32.length;
+        let resw = 0;
+        for (let c2 = 0; c2 < l2; c2++) {
+          res2[resw++] = dv.getUint16(c2 * 4 + 2);
+          res2[resw++] = dv.getUint16(c2 * 4);
+        }
+        console.log("res", res2);
+        return res2;
+      };
+      var util = {
+        "Ui16toUi32": Ui16toUi32,
+        "Ui32toUi16": Ui32toUi16,
+        "vectorify": vectorify,
+        "v_add": v_add,
+        "v_subtract": v_subtract2,
+        "v_multiply": v_multiply,
+        "v_divide": v_divide,
+        "vector_magnitude": vector_magnitude,
+        "distance_between_points": distance_between_points,
+        "execute_on_each_simple": execute_on_each_simple,
+        "mapify": mapify,
+        "filter_map_by_regex": filter_map_by_regex,
+        "atof": atof,
+        "npx": npx,
+        "no_px": no_px,
+        "str_arr_mapify": str_arr_mapify,
+        "arr_ltrb": arr_ltrb,
+        "true_vals": true_vals,
+        "validators": validators,
+        "__data_id_method": "lazy",
+        "str_hex_to_int": str_hex_to_int,
+        "arr_rgb_to_css_hex_6": arr_rgb_to_css_hex_6,
+        "group": group
+      };
+      module.exports = util;
+    }
+  });
+
+  // node_modules/jsgui3-html/node_modules/lang-tools/lang.js
+  var require_lang = __commonJS({
+    "node_modules/jsgui3-html/node_modules/lang-tools/lang.js"(exports, module) {
+      var lang_mini = require_lib_lang_mini();
+      var collective = require_collective();
+      var { more_general_equals } = require_tools();
+      lang_mini.equals = more_general_equals;
+      lang_mini.collective = collective;
+      lang_mini.collect = collective;
+      var Evented_Class = lang_mini.Evented_Class;
+      var B_Plus_Tree = require_b_plus_tree();
+      var Collection = require_Collection();
+      var Data_Object = require_Data_Object2();
+      var Data_Value2 = require_Data_Value3();
+      var Data_Model = require_Data_Model();
+      var Immutable_Data_Value = require_Immutable_Data_Value();
+      var Immutable_Data_Model = require_Immutable_Data_Model();
+      var Doubly_Linked_List = require_doubly_linked_list();
+      var Ordered_KVS = require_ordered_kvs();
+      var Ordered_String_List = require_ordered_string_list();
+      var Sorted_KVS = require_sorted_kvs();
+      var util = require_util();
+      lang_mini.util = util;
+      lang_mini.B_Plus_Tree = B_Plus_Tree;
+      lang_mini.Collection = Collection;
+      lang_mini.Data_Object = Data_Object;
+      lang_mini.Data_Value = Data_Value2;
+      lang_mini.Immutable_Data_Model = Immutable_Data_Model;
+      lang_mini.Immutable_Data_Value = Immutable_Data_Value;
+      lang_mini.Data_Model = Data_Model;
+      lang_mini.Doubly_Linked_List = Doubly_Linked_List;
+      lang_mini.Ordered_KVS = Ordered_KVS;
+      lang_mini.Ordered_String_List = Ordered_String_List;
+      lang_mini.Sorted_KVS = Sorted_KVS;
+      var ec = new Evented_Class();
+      Object.assign(ec, lang_mini);
+      module.exports = ec;
+    }
+  });
+
+  // node_modules/jsgui3-html/html-core/text-node.js
+  var require_text_node = __commonJS({
+    "node_modules/jsgui3-html/html-core/text-node.js"(exports, module) {
+      var { tof, Evented_Class } = require_lang();
+      var escape_html_replacements = [
+        [/&/g, "&amp;"],
+        [/</g, "&lt;"],
+        [/>/g, "&gt;"],
+        [/"/g, "&quot;"],
+        //"
+        [/'/g, "&#x27;"],
+        //'
+        [/\//g, "&#x2F;"]
+      ];
+      var escape_html = (str) => {
+        if (tof(str) == "data_value") str = str.get();
+        var single_replacement;
+        for (var c2 = 0, l2 = escape_html_replacements.length; c2 < l2; c2++) {
+          single_replacement = escape_html_replacements[c2];
+          str = str.replace(single_replacement[0], single_replacement[1]);
+        }
+        return str;
+      };
+      var textNode = class extends Evented_Class {
+        //class textNode extends Control {
+        constructor(spec) {
+          spec.__type_name = spec.__type_name || "text_node";
+          super();
+          if (typeof spec == "string") {
+            spec = {
+              "text": spec
+            };
+          }
+          spec.nodeType = 3;
+          spec = spec || {};
+          if (spec.el) {
+            this.dom = {
+              el: spec.el
+            };
+          } else {
+            this.dom = {};
+          }
+          if (spec.sibling_index) this.sibling_index = spec.sibling_index;
+          if (typeof spec.text !== "undefined") {
+            this._text = spec.text;
+          }
+          this.on("change", (e_change) => {
+            if (this.dom.el) {
+              this.dom.el.nodeValue = e_change.value;
+            }
+          });
+        }
+        activate() {
+          if (!this.__active) {
+            this.__active = true;
+          }
+        }
+        get text() {
+          return this._text;
+        }
+        set text(value2) {
+          this._text = value2;
+          this.raise("change", {
+            "name": "text",
+            "value": value2
+          });
+        }
+        "all_html_render"() {
+          return this.nx ? this._text || "" : escape_html(this._text || "") || "";
+        }
+        // getter and setter for the text itself?
+        //  A variety of properties will use getters and setters so that the updates get noted.
+      };
+      module.exports = textNode;
+    }
+  });
+
+  // node_modules/fnl/fn-io-transform.js
   var require_fn_io_transform = __commonJS({
-    "../jsgui3-html/node_modules/fnl/fn-io-transform.js"(exports, module) {
-      var { deep_sig } = require_lib_lang_mini2();
+    "node_modules/fnl/fn-io-transform.js"(exports, module) {
+      var { deep_sig } = require_lib_lang_mini();
       var isArguments = (item2) => Object.prototype.toString.call(item2) === "[object Arguments]";
       var fn_transformation = (fn, map_transformations) => {
         const input_transformations = map_transformations.i;
@@ -10714,10 +6975,10 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/fnl/monitor-item.js
+  // node_modules/fnl/monitor-item.js
   var require_monitor_item = __commonJS({
-    "../jsgui3-html/node_modules/fnl/monitor-item.js"(exports, module) {
-      var { tf: tf2, deep_sig, each, def } = require_lib_lang_mini2();
+    "node_modules/fnl/monitor-item.js"(exports, module) {
+      var { tf: tf2, deep_sig, each, def } = require_lib_lang_mini();
       var monitor_item = (item2, cb_evt_monitoring) => {
         const ti = tf2(item2);
         if (ti === "A") {
@@ -10834,10 +7095,10 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/fnl/default-arg-transformations.js
+  // node_modules/fnl/default-arg-transformations.js
   var require_default_arg_transformations = __commonJS({
-    "../jsgui3-html/node_modules/fnl/default-arg-transformations.js"(exports, module) {
-      var { deep_sig } = require_lib_lang_mini2();
+    "node_modules/fnl/default-arg-transformations.js"(exports, module) {
+      var { deep_sig } = require_lib_lang_mini();
       var transformations = {
         "O": (obs, cb_events) => {
           obs.then((res2) => {
@@ -10898,10 +7159,10 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/fnl/fnl.js
+  // node_modules/fnl/fnl.js
   var require_fnl = __commonJS({
-    "../jsgui3-html/node_modules/fnl/fnl.js"(exports, module) {
-      var { each, Evented_Class, get_a_sig: get_a_sig2, get_truth_map_from_arr, tof, tf: tf2, mfp, deep_sig, clone, def, is_array } = require_lib_lang_mini2();
+    "node_modules/fnl/fnl.js"(exports, module) {
+      var { each, Evented_Class, get_a_sig: get_a_sig2, get_truth_map_from_arr, tof, tf: tf2, mfp, deep_sig, clone, def, is_array } = require_lib_lang_mini();
       var fn_io_transform = require_fn_io_transform();
       var log = () => {
       };
@@ -11770,9 +8031,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/obext/node_modules/lang-mini/lang-mini.js
-  var require_lang_mini3 = __commonJS({
-    "../jsgui3-html/node_modules/obext/node_modules/lang-mini/lang-mini.js"(exports, module) {
+  // node_modules/obext/node_modules/lang-mini/lang-mini.js
+  var require_lang_mini2 = __commonJS({
+    "node_modules/obext/node_modules/lang-mini/lang-mini.js"(exports, module) {
       var running_in_browser = typeof window !== "undefined";
       var running_in_node = !running_in_browser;
       var Readable_Stream;
@@ -14225,10 +10486,10 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/obext/node_modules/lang-mini/lib-lang-mini.js
-  var require_lib_lang_mini3 = __commonJS({
-    "../jsgui3-html/node_modules/obext/node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
-      var lang = require_lang_mini3();
+  // node_modules/obext/node_modules/lang-mini/lib-lang-mini.js
+  var require_lib_lang_mini2 = __commonJS({
+    "node_modules/obext/node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
+      var lang = require_lang_mini2();
       var { each, tof } = lang;
       var Type_Signifier = class _Type_Signifier {
         // Name
@@ -14365,9 +10626,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/obext/oext.js
+  // node_modules/obext/oext.js
   var require_oext = __commonJS({
-    "../jsgui3-html/node_modules/obext/oext.js"(exports, module) {
+    "node_modules/obext/oext.js"(exports, module) {
       var {
         each,
         get_a_sig: get_a_sig2,
@@ -14375,7 +10636,7 @@
         is_array,
         tof,
         tf: tf2
-      } = require_lib_lang_mini3();
+      } = require_lib_lang_mini2();
       var ifn = (item2) => typeof item2 === "function";
       var ia2 = is_array;
       var get_instance = function() {
@@ -14630,9 +10891,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/control-core.js
+  // node_modules/jsgui3-html/html-core/control-core.js
   var require_control_core = __commonJS({
-    "../jsgui3-html/html-core/control-core.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/control-core.js"(exports, module) {
       var jsgui2 = require_lang();
       var oext = require_oext();
       var { Data_Model, Data_Object, Collection, tof, stringify, get_a_sig: get_a_sig2, each, Evented_Class } = jsgui2;
@@ -15592,6 +11853,7 @@
             svg.add(circle);
             passed.push("Add circle to SVG control");
           } catch (error2) {
+            console.log("error", error2);
             failed.push("Add circle to SVG control");
           }
           try {
@@ -15607,17 +11869,20 @@
             svg.add(rect);
             passed.push("Add rectangle to SVG control");
           } catch (error2) {
+            console.log("error", error2);
             failed.push("Add rectangle to SVG control");
           }
           try {
             const expected = '<svg><circle cx="100" cy="100" r="50"></circle><rect x="150" y="150" width="100" height="100"></rect></svg>';
             const actual = svg.all_html_render();
+            console.log("actual", actual);
             if (expected === actual) {
               passed.push("Check rendering of SVG control");
             } else {
               failed.push("Check rendering of SVG control");
             }
           } catch (error2) {
+            console.log("error", error2);
             failed.push("Check rendering of SVG control");
           }
           return {
@@ -15627,6 +11892,7 @@
         };
         test_svg = test_svg2;
         const Control2 = Control_Core;
+        console.log(test_svg2());
         const test_background_color = () => {
           const expectedColor = "#ff0000";
           const passed = [];
@@ -15676,23 +11942,25 @@
           };
         };
         const rtest = test_background_color();
+        console.log(rtest);
+        console.log(rtest.failed);
       }
       var test_svg;
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/Shape.js
+  // node_modules/jsgui3-gfx-core/core/shapes/Shape.js
   var require_Shape = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/Shape.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/Shape.js"(exports, module) {
       var Shape = class {
       };
       module.exports = Shape;
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/node_modules/lang-mini/lang-mini.js
-  var require_lang_mini4 = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/node_modules/lang-mini/lang-mini.js"(exports, module) {
+  // node_modules/jsgui3-gfx-core/node_modules/lang-mini/lang-mini.js
+  var require_lang_mini3 = __commonJS({
+    "node_modules/jsgui3-gfx-core/node_modules/lang-mini/lang-mini.js"(exports, module) {
       var running_in_browser = typeof window !== "undefined";
       var running_in_node = !running_in_browser;
       var Readable_Stream;
@@ -18981,10 +15249,10 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/node_modules/lang-mini/lib-lang-mini.js
-  var require_lib_lang_mini4 = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
-      var lang = require_lang_mini4();
+  // node_modules/jsgui3-gfx-core/node_modules/lang-mini/lib-lang-mini.js
+  var require_lib_lang_mini3 = __commonJS({
+    "node_modules/jsgui3-gfx-core/node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
+      var lang = require_lang_mini3();
       var { each, tof } = lang;
       var Type_Signifier = class _Type_Signifier {
         // Name
@@ -19121,11 +15389,11 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/Rectangle.js
+  // node_modules/jsgui3-gfx-core/core/shapes/Rectangle.js
   var require_Rectangle = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/Rectangle.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/Rectangle.js"(exports, module) {
       var Shape = require_Shape();
-      var { tof, get_item_sig, is_arr_of_t } = require_lib_lang_mini4();
+      var { tof, get_item_sig, is_arr_of_t } = require_lib_lang_mini3();
       var { prop, get_set } = require_oext();
       var Rectangle = class _Rectangle extends Shape {
         // y_axis_up_direction = -1 for example?
@@ -19248,9 +15516,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-pos-list.js
+  // node_modules/jsgui3-gfx-core/core/pixel-pos-list.js
   var require_pixel_pos_list = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-pos-list.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-pos-list.js"(exports, module) {
       var inspect = Symbol.for("nodejs.util.inspect.custom");
       var Ui16toUi32 = (ui16) => {
         let res2 = new Uint32Array(ui16.length / 2);
@@ -19616,9 +15884,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/Typed_Array_Binary_Read_Write.js
+  // node_modules/jsgui3-gfx-core/core/Typed_Array_Binary_Read_Write.js
   var require_Typed_Array_Binary_Read_Write = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/Typed_Array_Binary_Read_Write.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/Typed_Array_Binary_Read_Write.js"(exports, module) {
       var Typed_Array_Binary_Read_Write = class {
         constructor(ta2) {
           this.ta = ta2;
@@ -19645,9 +15913,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math/copy.js
+  // node_modules/jsgui3-gfx-core/core/ta-math/copy.js
   var require_copy = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math/copy.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math/copy.js"(exports, module) {
       var get_instance = () => {
         const copy_ta_byte_range = (ta_source2, ta_dest, byte_idx_source_start, byte_idx_dest_start, length) => {
           ta_dest.set(ta_source2.subarray(byte_idx_source_start, byte_idx_source_start + length), byte_idx_dest_start);
@@ -19729,9 +15997,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math/info.js
+  // node_modules/jsgui3-gfx-core/core/ta-math/info.js
   var require_info = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math/info.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math/info.js"(exports, module) {
       var get_instance = () => {
         const byi_from_cs_pos2 = (colorspace, pos) => {
           const [width, height2, bypp2, bypr2, bipp, bipr] = colorspace;
@@ -19754,9 +16022,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math/read.js
+  // node_modules/jsgui3-gfx-core/core/ta-math/read.js
   var require_read = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math/read.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math/read.js"(exports, module) {
       var get_instance = () => {
         const read_px = (ta_source2, ta_colorspace, ta_pos) => {
           const bipp = ta_colorspace[4];
@@ -19946,9 +16214,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math/transform.js
+  // node_modules/jsgui3-gfx-core/core/ta-math/transform.js
   var require_transform = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math/transform.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math/transform.js"(exports, module) {
       var each_source_dest_pixels_resized_limited_further_info$inline = (source_colorspace, dest_size, callback2) => {
         const dest_to_source_ratio = new Float32Array([source_colorspace[0] / dest_size[0], source_colorspace[1] / dest_size[1]]);
         const source_edge_distances = new Float32Array(4);
@@ -20448,9 +16716,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math/write.js
+  // node_modules/jsgui3-gfx-core/core/ta-math/write.js
   var require_write = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math/write.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math/write.js"(exports, module) {
       var get_instance = () => {
         const fill_solid_rect_by_bounds_8bipp = (ta_dest, bypr_dest, ta_bounds, ui8_color) => {
           const row_width = ta_bounds[2] - ta_bounds[0];
@@ -20503,9 +16771,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math/bitwise.js
+  // node_modules/jsgui3-gfx-core/core/ta-math/bitwise.js
   var require_bitwise = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math/bitwise.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math/bitwise.js"(exports, module) {
       var to_binary_string = (uint8Array) => {
         return Array.from(uint8Array).map((byte) => byte.toString(2).padStart(8, "0")).join("");
       };
@@ -20769,9 +17037,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math/draw.js
+  // node_modules/jsgui3-gfx-core/core/ta-math/draw.js
   var require_draw = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math/draw.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math/draw.js"(exports, module) {
       var is_integer_typed_array = (obj2) => {
         if (ArrayBuffer.isView(obj2)) {
           return obj2 instanceof Int8Array || obj2 instanceof Uint8Array || obj2 instanceof Int16Array || obj2 instanceof Uint16Array || obj2 instanceof Int32Array || obj2 instanceof Uint32Array || obj2 instanceof BigInt64Array || obj2 instanceof BigUint64Array;
@@ -20991,9 +17259,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math.js
+  // node_modules/jsgui3-gfx-core/core/ta-math.js
   var require_ta_math = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/ta-math.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math.js"(exports, module) {
       var copy = require_copy();
       var info = require_info();
       var read = require_read();
@@ -21060,9 +17328,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-painter.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-painter.js
   var require_pixel_buffer_painter = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-painter.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-painter.js"(exports, module) {
       var ta_math2 = require_ta_math();
       var { fill_solid_rect_by_bounds } = ta_math2;
       var Pixel_Buffer_Painter = class {
@@ -21084,10 +17352,10 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-0-core-inner-structures.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-0-core-inner-structures.js
   var require_pixel_buffer_0_core_inner_structures = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-0-core-inner-structures.js"(exports, module) {
-      var lang = require_lib_lang_mini4();
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-0-core-inner-structures.js"(exports, module) {
+      var lang = require_lib_lang_mini3();
       var {
         each,
         fp,
@@ -21577,10 +17845,10 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-1-core-get-set-pixel.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-1-core-get-set-pixel.js
   var require_pixel_buffer_1_core_get_set_pixel = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-1-core-get-set-pixel.js"(exports, module) {
-      var lang = require_lib_lang_mini4();
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-1-core-get-set-pixel.js"(exports, module) {
+      var lang = require_lib_lang_mini3();
       var {
         each,
         fp,
@@ -21801,10 +18069,10 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-1.1-core-draw-line.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-1.1-core-draw-line.js
   var require_pixel_buffer_1_1_core_draw_line = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-1.1-core-draw-line.js"(exports, module) {
-      var lang = require_lib_lang_mini4();
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-1.1-core-draw-line.js"(exports, module) {
+      var lang = require_lib_lang_mini3();
       var {
         each,
         fp,
@@ -22127,16 +18395,16 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/is_debug.js
+  // node_modules/jsgui3-gfx-core/core/shapes/is_debug.js
   var require_is_debug = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/is_debug.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/is_debug.js"(exports, module) {
       module.exports = false;
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/TA_Table_8_Columns.js
+  // node_modules/jsgui3-gfx-core/core/shapes/TA_Table_8_Columns.js
   var require_TA_Table_8_Columns = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/TA_Table_8_Columns.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/TA_Table_8_Columns.js"(exports, module) {
       var TA_Table_8_Columns = class {
         constructor(row_count) {
           this.row_size = 8;
@@ -22161,9 +18429,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/Polygon_Edges.js
+  // node_modules/jsgui3-gfx-core/core/shapes/Polygon_Edges.js
   var require_Polygon_Edges = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/Polygon_Edges.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/Polygon_Edges.js"(exports, module) {
       var DEBUG = require_is_debug();
       var TA_Table_8_Columns = require_TA_Table_8_Columns();
       var Polygon_Edges = class extends TA_Table_8_Columns {
@@ -22246,9 +18514,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/Polygon_Scanline_Edges.js
+  // node_modules/jsgui3-gfx-core/core/shapes/Polygon_Scanline_Edges.js
   var require_Polygon_Scanline_Edges = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/Polygon_Scanline_Edges.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/Polygon_Scanline_Edges.js"(exports, module) {
       var DEBUG = require_is_debug();
       var Polygon_Edges = require_Polygon_Edges();
       var Scanline_Polygon_Edges = class extends Polygon_Edges {
@@ -22311,11 +18579,11 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/Polygon.js
+  // node_modules/jsgui3-gfx-core/core/shapes/Polygon.js
   var require_Polygon = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/Polygon.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/Polygon.js"(exports, module) {
       var Shape = require_Shape();
-      var { tof, is_array, get_item_sig, is_arr_of_t } = require_lib_lang_mini4();
+      var { tof, is_array, get_item_sig, is_arr_of_t } = require_lib_lang_mini3();
       var Rectangle = require_Rectangle();
       var {
         draw_polygon_outline_to_ta_1bipp,
@@ -22663,9 +18931,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/ScanlineProcessor.js
+  // node_modules/jsgui3-gfx-core/core/shapes/ScanlineProcessor.js
   var require_ScanlineProcessor = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/shapes/ScanlineProcessor.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/ScanlineProcessor.js"(exports, module) {
       var DEBUG = require_is_debug();
       var ScanlineProcessor = class {
         constructor(polygon_scanline_edges, width, height2, bitmap, options = {}) {
@@ -22834,9 +19102,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-1.2-core-draw-polygon.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-1.2-core-draw-polygon.js
   var require_pixel_buffer_1_2_core_draw_polygon = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-1.2-core-draw-polygon.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-1.2-core-draw-polygon.js"(exports, module) {
       var Pixel_Buffer_Core_Draw_Lines = require_pixel_buffer_1_1_core_draw_line();
       var Polygon_Scanline_Edges = require_Polygon_Scanline_Edges();
       var {
@@ -23026,9 +19294,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-1.5-core-mask.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-1.5-core-mask.js
   var require_pixel_buffer_1_5_core_mask = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-1.5-core-mask.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-1.5-core-mask.js"(exports, module) {
       var Pixel_Buffer_Core_Draw_Polygons = require_pixel_buffer_1_2_core_draw_polygon();
       var Polygon_Scanline_Edges = require_Polygon_Scanline_Edges();
       var ScanlineProcessor = require_ScanlineProcessor();
@@ -23226,10 +19494,10 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-2-core-reference-implementations.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-2-core-reference-implementations.js
   var require_pixel_buffer_2_core_reference_implementations = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-2-core-reference-implementations.js"(exports, module) {
-      var lang = require_lib_lang_mini4();
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-2-core-reference-implementations.js"(exports, module) {
+      var lang = require_lib_lang_mini3();
       var {
         each,
         fp,
@@ -23783,10 +20051,10 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-3-core.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-3-core.js
   var require_pixel_buffer_3_core = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-3-core.js"(exports, module) {
-      var lang = require_lib_lang_mini4();
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-3-core.js"(exports, module) {
+      var lang = require_lib_lang_mini3();
       var {
         each,
         fp,
@@ -24743,10 +21011,10 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-4-advanced-typedarray-properties.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-4-advanced-typedarray-properties.js
   var require_pixel_buffer_4_advanced_typedarray_properties = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-4-advanced-typedarray-properties.js"(exports, module) {
-      var lang = require_lib_lang_mini4();
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-4-advanced-typedarray-properties.js"(exports, module) {
+      var lang = require_lib_lang_mini3();
       var {
         each,
         fp,
@@ -24941,9 +21209,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/convolution-kernels/kernels.js
+  // node_modules/jsgui3-gfx-core/core/convolution-kernels/kernels.js
   var require_kernels = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/convolution-kernels/kernels.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/convolution-kernels/kernels.js"(exports, module) {
       function generateGaussianKernel(dimension, sigma) {
         function hypotenuse(x1, y1, x2, y2) {
           var xSquare = Math.pow(x1 - x2, 2);
@@ -25066,9 +21334,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-5-idiomatic-enh.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-5-idiomatic-enh.js
   var require_pixel_buffer_5_idiomatic_enh = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-5-idiomatic-enh.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-5-idiomatic-enh.js"(exports, module) {
       var Pixel_Buffer_Advanced_TypedArray_Properties = require_pixel_buffer_4_advanced_typedarray_properties();
       var kernels = require_kernels();
       var Pixel_Buffer_Idiomatic_Enh = class extends Pixel_Buffer_Advanced_TypedArray_Properties {
@@ -25134,9 +21402,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-6-perf-focus-enh.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-6-perf-focus-enh.js
   var require_pixel_buffer_6_perf_focus_enh = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-6-perf-focus-enh.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-6-perf-focus-enh.js"(exports, module) {
       var Pixel_Buffer_Idiomatic_Enh = require_pixel_buffer_5_idiomatic_enh();
       var Pixel_Pos_List = require_pixel_pos_list();
       var get_idx_movement_vectors = (f32a_convolution, bpp, bpr) => {
@@ -26938,9 +23206,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-7-specialised-enh.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-7-specialised-enh.js
   var require_pixel_buffer_7_specialised_enh = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-7-specialised-enh.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-7-specialised-enh.js"(exports, module) {
       var Pixel_Buffer_Perf_Focus_Enh = require_pixel_buffer_6_perf_focus_enh();
       var {
         resize_ta_colorspace,
@@ -28038,24 +24306,24 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-8-enh.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-8-enh.js
   var require_pixel_buffer_8_enh = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer-8-enh.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-8-enh.js"(exports, module) {
       var Pixel_Buffer_Enh = require_pixel_buffer_7_specialised_enh();
       module.exports = Pixel_Buffer_Enh;
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer.js
   var require_pixel_buffer = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/pixel-buffer.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer.js"(exports, module) {
       module.exports = require_pixel_buffer_8_enh();
     }
   });
 
-  // ../jsgui3-html/node_modules/jsgui3-gfx-core/core/gfx-core.js
+  // node_modules/jsgui3-gfx-core/core/gfx-core.js
   var require_gfx_core = __commonJS({
-    "../jsgui3-html/node_modules/jsgui3-gfx-core/core/gfx-core.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/gfx-core.js"(exports, module) {
       var Rectangle = require_Rectangle();
       var gfx_core = {
         Pixel_Pos_List: require_pixel_pos_list(),
@@ -28070,9 +24338,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Data.js
+  // node_modules/jsgui3-html/html-core/Data.js
   var require_Data = __commonJS({
-    "../jsgui3-html/html-core/Data.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Data.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Data_Model, Evented_Class } = require_lang();
       var Data = class extends Evented_Class {
         constructor(...a) {
@@ -28117,9 +24385,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Control_Data.js
+  // node_modules/jsgui3-html/html-core/Control_Data.js
   var require_Control_Data = __commonJS({
-    "../jsgui3-html/html-core/Control_Data.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_Data.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class } = require_lang();
       var Data = require_Data();
       var Control_Data = class extends Data {
@@ -28143,9 +24411,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Control_View_UI_Low_Level_Data.js
+  // node_modules/jsgui3-html/html-core/Control_View_UI_Low_Level_Data.js
   var require_Control_View_UI_Low_Level_Data = __commonJS({
-    "../jsgui3-html/html-core/Control_View_UI_Low_Level_Data.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_View_UI_Low_Level_Data.js"(exports, module) {
       var Control_Data = require_Control_Data();
       var Control_View_UI_Low_Level_Data = class extends Control_Data {
         constructor(spec) {
@@ -28156,9 +24424,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Control_View_UI_Low_Level.js
+  // node_modules/jsgui3-html/html-core/Control_View_UI_Low_Level.js
   var require_Control_View_UI_Low_Level = __commonJS({
-    "../jsgui3-html/html-core/Control_View_UI_Low_Level.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_View_UI_Low_Level.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class } = require_lang();
       var Control_View_UI_Low_Level_Data = require_Control_View_UI_Low_Level_Data();
       var Control_View_UI_Low_Level = class extends Data_Object {
@@ -28176,116 +24444,11 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Control_View_UI.js
+  // node_modules/jsgui3-html/html-core/Control_View_UI.js
   var require_Control_View_UI = __commonJS({
-    "../jsgui3-html/html-core/Control_View_UI.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_View_UI.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class } = require_lang();
       var Control_View_UI_Low_Level = require_Control_View_UI_Low_Level();
-      var Control_View_UI_Slot = class extends Data_Object {
-        constructor(spec = {}) {
-          super(spec);
-          if (!spec.name) {
-            throw new Error("Control_View_UI_Slot requires a name");
-          }
-          this.name = spec.name;
-          this.accepts = spec.accepts || ["*"];
-          this.multiple = spec.multiple !== void 0 ? spec.multiple : true;
-          this.required = !!spec.required;
-          this.description = spec.description;
-          this.template = spec.template;
-          this.meta = spec.meta || {};
-          this._items = [];
-        }
-        get_items() {
-          return this._items.slice();
-        }
-        assign(item2, options = {}) {
-          this._validate_item(item2);
-          let previous;
-          let index;
-          let action = "insert";
-          if (this.multiple) {
-            if (typeof options.index === "number") {
-              index = Math.max(0, Math.min(options.index, this._items.length));
-              this._items.splice(index, 0, item2);
-            } else if (options.prepend) {
-              this._items.unshift(item2);
-              index = 0;
-            } else {
-              this._items.push(item2);
-              index = this._items.length - 1;
-            }
-          } else {
-            previous = this._items[0];
-            this._items = [item2];
-            index = 0;
-            action = "replace";
-          }
-          this.raise("change", {
-            name: "content",
-            slot: this.name,
-            action,
-            value: item2,
-            index,
-            old: previous
-          });
-          return item2;
-        }
-        clear() {
-          if (!this._items.length) return [];
-          const removed = this._items.slice();
-          this._items.length = 0;
-          this.raise("change", {
-            name: "content",
-            slot: this.name,
-            action: "clear",
-            old: removed
-          });
-          return removed;
-        }
-        remove(item2) {
-          const idx = this._items.indexOf(item2);
-          if (idx === -1) return null;
-          const removed = this._items.splice(idx, 1)[0];
-          this.raise("change", {
-            name: "content",
-            slot: this.name,
-            action: "remove",
-            value: removed,
-            index: idx
-          });
-          return removed;
-        }
-        has_content() {
-          return this._items.length > 0;
-        }
-        _validate_item(item2) {
-          if (!this.accepts || this.accepts.length === 0 || this.accepts.includes("*")) {
-            return true;
-          }
-          const signature = this._get_signature(item2);
-          const matches = this.accepts.some((token) => {
-            if (token === "Control") {
-              return item2 && typeof item2 === "object" && !!(item2.__type_name || item2._is_control);
-            }
-            return token === signature;
-          });
-          if (!matches) {
-            throw new Error(`Slot "${this.name}" does not accept value of type "${signature}"`);
-          }
-          return true;
-        }
-        _get_signature(item2) {
-          if (item2 === null) return "null";
-          if (item2 === void 0) return "undefined";
-          if (item2 && item2.__type_name) return item2.__type_name;
-          const type = typeof item2;
-          if (type === "object") {
-            return item2.constructor && item2.constructor.name ? item2.constructor.name : "object";
-          }
-          return type;
-        }
-      };
       var Control_View_UI_Compositional = class extends Data_Object {
         constructor(...a) {
           super(...a);
@@ -28312,61 +24475,15 @@
           Object.defineProperty(this, "active", { get: () => active });
           const compositional = new Control_View_UI_Compositional();
           Object.defineProperty(this, "compositional", { get: () => compositional });
-          this._slots = /* @__PURE__ */ Object.create(null);
-        }
-        define_slot(name, spec = {}) {
-          if (!name) {
-            throw new Error("define_slot requires a slot name");
-          }
-          let slot = this._slots[name];
-          if (slot) {
-            slot.accepts = spec.accepts || slot.accepts;
-            slot.multiple = spec.multiple !== void 0 ? spec.multiple : slot.multiple;
-            slot.required = spec.required !== void 0 ? spec.required : slot.required;
-            slot.description = spec.description || slot.description;
-            slot.template = spec.template || slot.template;
-            slot.meta = spec.meta || slot.meta;
-          } else {
-            slot = new Control_View_UI_Slot(Object.assign({}, spec, {
-              name,
-              context: this.context
-            }));
-            slot.on("change", (e) => {
-              this.raise("slot-change", Object.assign({ slot: name }, e));
-            });
-            this._slots[name] = slot;
-            this.raise("slot-defined", { slot: name, definition: slot });
-          }
-          return slot;
-        }
-        get_slot(name) {
-          return this._slots[name];
-        }
-        assign_slot(name, value2, options = {}) {
-          const slot = this.get_slot(name) || this.define_slot(name, {});
-          slot.assign(value2, options);
-          return slot;
-        }
-        clear_slot(name) {
-          const slot = this.get_slot(name);
-          if (!slot) return [];
-          return slot.clear();
-        }
-        get_slot_content(name) {
-          const slot = this.get_slot(name);
-          return slot ? slot.get_items() : [];
-        }
-        list_slots() {
-          return Object.keys(this._slots);
         }
       };
       module.exports = Control_View_UI;
     }
   });
 
-  // ../jsgui3-html/html-core/Control_View_Data.js
+  // node_modules/jsgui3-html/html-core/Control_View_Data.js
   var require_Control_View_Data = __commonJS({
-    "../jsgui3-html/html-core/Control_View_Data.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_View_Data.js"(exports, module) {
       var Control_Data = require_Control_Data();
       var Control_View_Data = class extends Control_Data {
         constructor(spec) {
@@ -28377,9 +24494,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Control_View_Low_Level_Data.js
+  // node_modules/jsgui3-html/html-core/Control_View_Low_Level_Data.js
   var require_Control_View_Low_Level_Data = __commonJS({
-    "../jsgui3-html/html-core/Control_View_Low_Level_Data.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_View_Low_Level_Data.js"(exports, module) {
       var Control_Data = require_Control_Data();
       var Control_View_Low_Level_Data = class extends Control_Data {
         constructor(spec) {
@@ -28390,9 +24507,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Control_View_Low_Level.js
+  // node_modules/jsgui3-html/html-core/Control_View_Low_Level.js
   var require_Control_View_Low_Level = __commonJS({
-    "../jsgui3-html/html-core/Control_View_Low_Level.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_View_Low_Level.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class } = require_lang();
       var Control_View_Low_Level_Data = require_Control_View_Low_Level_Data();
       var Control_View_Low_Level = class extends Data_Object {
@@ -28413,9 +24530,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Control_View.js
+  // node_modules/jsgui3-html/html-core/Control_View.js
   var require_Control_View = __commonJS({
-    "../jsgui3-html/html-core/Control_View.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_View.js"(exports, module) {
       var { field, Data_Object, Evented_Class } = require_lang();
       var Data = require_Data();
       var Control_View_UI = require_Control_View_UI();
@@ -28451,9 +24568,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Control_Validation_Data.js
+  // node_modules/jsgui3-html/html-core/Control_Validation_Data.js
   var require_Control_Validation_Data = __commonJS({
-    "../jsgui3-html/html-core/Control_Validation_Data.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_Validation_Data.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class } = require_lang();
       var Data = require_Data();
       var Control_Validation_Data = class extends Data {
@@ -28465,9 +24582,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Validation_State.js
+  // node_modules/jsgui3-html/html-core/Validation_State.js
   var require_Validation_State = __commonJS({
-    "../jsgui3-html/html-core/Validation_State.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Validation_State.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class, tof } = require_lang();
       var Validation_State = class extends Evented_Class {
         constructor(spec = {}) {
@@ -28493,9 +24610,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Control_Validation_Target.js
+  // node_modules/jsgui3-html/html-core/Control_Validation_Target.js
   var require_Control_Validation_Target = __commonJS({
-    "../jsgui3-html/html-core/Control_Validation_Target.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_Validation_Target.js"(exports, module) {
       var { Evented_Class } = require_lang();
       var Control_Validation_Target = class {
         // will target 'data'.
@@ -28506,9 +24623,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Control_Validation_Validator.js
+  // node_modules/jsgui3-html/html-core/Control_Validation_Validator.js
   var require_Control_Validation_Validator = __commonJS({
-    "../jsgui3-html/html-core/Control_Validation_Validator.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_Validation_Validator.js"(exports, module) {
       var { Evented_Class } = require_lang();
       var Control_Validation_Validator = class extends Evented_Class {
         constructor(spec) {
@@ -28521,9 +24638,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Control_Validation.js
+  // node_modules/jsgui3-html/html-core/Control_Validation.js
   var require_Control_Validation = __commonJS({
-    "../jsgui3-html/html-core/Control_Validation.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_Validation.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class } = require_lang();
       var Control_Validation_Data = require_Control_Validation_Data();
       var Validation_State = require_Validation_State();
@@ -28619,9 +24736,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/control_model_factory.js
+  // node_modules/jsgui3-html/html-core/control_model_factory.js
   var require_control_model_factory = __commonJS({
-    "../jsgui3-html/html-core/control_model_factory.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/control_model_factory.js"(exports, module) {
       var { Data_Object } = require_lang();
       var Control_Data = require_Control_Data();
       var Control_View = require_Control_View();
@@ -28664,9 +24781,9 @@
     }
   });
 
-  // ../jsgui3-html/control_mixins/model_data_view_compositional_representation.js
+  // node_modules/jsgui3-html/control_mixins/model_data_view_compositional_representation.js
   var require_model_data_view_compositional_representation = __commonJS({
-    "../jsgui3-html/control_mixins/model_data_view_compositional_representation.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/model_data_view_compositional_representation.js"(exports, module) {
       var {
         tof,
         each,
@@ -28713,6 +24830,7 @@
           });
         } else {
           console.trace();
+          console.log("ctrl", ctrl2);
           throw "model_data_view_compositional_representation(ctrl) - ctrl must not have .data or .view properties";
         }
       };
@@ -28720,9 +24838,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/control-enh.js
+  // node_modules/jsgui3-html/html-core/control-enh.js
   var require_control_enh = __commonJS({
-    "../jsgui3-html/html-core/control-enh.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/control-enh.js"(exports, module) {
       var jsgui2 = require_lang();
       var {
         get_a_sig: get_a_sig2,
@@ -28925,6 +25043,7 @@
                       this._ctrl_fields = this._ctrl_fields || {};
                       this._ctrl_fields[composition_item[0]] = ctrl2;
                     } else {
+                      console.log("[t0, t1]", [t0, t12]);
                       console.trace();
                       throw "stop / nyi";
                     }
@@ -28937,6 +25056,7 @@
                       this._ctrl_fields = this._ctrl_fields || {};
                       this._ctrl_fields[composition_item[0]] = ctrl2;
                     } else {
+                      console.log("[t0, t1, t2]", [t0, t12, t2]);
                       console.trace();
                       throw "stop / nyi";
                     }
@@ -29040,6 +25160,7 @@
           if (sig == "[]") {
             var left, top, right, bottom;
             var c_border = this.computed_style("border");
+            console.log("c_border", c_border);
             throw "stop";
           } else {
             console.trace();
@@ -29216,6 +25337,7 @@
                 const context_referenced_data_model = this.context.map_data_models[this.dom.attributes["data-jsgui-data-model-id"]];
                 if (context_referenced_data_model) {
                   this.data.model = context_referenced_data_model;
+                  console.log("have used data.model referenced from context: " + context_referenced_data_model.__id);
                 }
               }
               this.pre_activate_content_controls();
@@ -29460,9 +25582,11 @@
                           corresponding_ctrl.dom.el = cn;
                         }
                       } else {
+                        console.log("&&& no corresponding control");
                       }
                       const do_add = () => {
                         let val = cn.nodeValue;
+                        console.log("adding Text_Node control", val);
                         const tn = new Text_Node({
                           context: this.context,
                           text: val,
@@ -29583,9 +25707,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/ModelBinder.js
+  // node_modules/jsgui3-html/html-core/ModelBinder.js
   var require_ModelBinder = __commonJS({
-    "../jsgui3-html/html-core/ModelBinder.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/ModelBinder.js"(exports, module) {
       var { Data_Object, Data_Value: Data_Value2, tof, each } = require_lang();
       var ModelBinder = class _ModelBinder {
         constructor(sourceModel, targetModel, bindings = {}, options = {}) {
@@ -29635,6 +25759,7 @@
             this._setupBinding(sourceProp, binding);
           });
           if (this.options.debug) {
+            console.log("[ModelBinder] Activated bindings:", Object.keys(this.bindings));
           }
         }
         /**
@@ -29650,6 +25775,7 @@
           });
           this._listeners = [];
           if (this.options.debug) {
+            console.log("[ModelBinder] Deactivated bindings");
           }
         }
         /**
@@ -29677,6 +25803,7 @@
                 if (this._acquire(lock_key)) {
                   this.targetModel[targetProp] = transformedValue;
                   if (this.options.debug) {
+                    console.log(`[ModelBinder] ${sourceProp} \u2192 ${targetProp}:`, value2, "\u2192", transformedValue);
                   }
                   this._release(lock_key);
                 }
@@ -29699,6 +25826,7 @@
                   if (this._acquire(lock_key)) {
                     this.sourceModel[sourceProp] = reversedValue;
                     if (this.options.debug) {
+                      console.log(`[ModelBinder] ${targetProp} \u2192 ${sourceProp}:`, value2, "\u2192", reversedValue);
                     }
                     this._release(lock_key);
                   }
@@ -29792,6 +25920,7 @@
           this.model.on("change", handler);
           this._listeners.push({ model: this.model, event: "change", handler });
           if (this.options.debug) {
+            console.log("[ComputedProperty] Activated for dependencies:", this.dependencies);
           }
         }
         deactivate() {
@@ -29811,6 +25940,7 @@
             this._lastValue = newValue;
             this.model[this.options.propertyName] = newValue;
             if (this.options.debug) {
+              console.log("[ComputedProperty] Updated:", this.options.propertyName, "=", newValue);
             }
           }
           return newValue;
@@ -29847,6 +25977,7 @@
             if (this.properties.includes(e.name)) {
               this.callback(e.value, e.old, e.name);
               if (this.options.debug) {
+                console.log("[PropertyWatcher] Property changed:", e.name, e.old, "\u2192", e.value);
               }
             }
           };
@@ -29967,9 +26098,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Transformations.js
+  // node_modules/jsgui3-html/html-core/Transformations.js
   var require_Transformations = __commonJS({
-    "../jsgui3-html/html-core/Transformations.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Transformations.js"(exports, module) {
       var { tof } = require_lang();
       var Transformations = {
         /**
@@ -30364,9 +26495,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/Data_Model_View_Model_Control.js
+  // node_modules/jsgui3-html/html-core/Data_Model_View_Model_Control.js
   var require_Data_Model_View_Model_Control = __commonJS({
-    "../jsgui3-html/html-core/Data_Model_View_Model_Control.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Data_Model_View_Model_Control.js"(exports, module) {
       var Ctrl_Enh = require_control_enh();
       var { Data_Object } = require_lang();
       var { ModelBinder, ComputedProperty, PropertyWatcher, BindingManager } = require_ModelBinder();
@@ -30383,6 +26514,7 @@
           ensure_control_models(this, spec);
           if (this.data && this.data.model) {
             this.data.model.on("change", (e) => {
+              console.log("Data_Model_View_Model_Control this.data.model change e:", e);
             });
             if (this.dom && this.dom.attributes) {
               this.dom.attributes["data-jsgui-data-model"] = this.data.model._id();
@@ -30390,6 +26522,7 @@
           }
           if (this.view && this.view.data && this.view.data.model) {
             this.view.data.model.on("change", (e) => {
+              console.log("Data_Model_View_Model_Control this.view.data.model change e:", e);
             });
             if (this.dom && this.dom.attributes) {
               this.dom.attributes["data-jsgui-view-data-model"] = this.view.data.model._id();
@@ -30398,6 +26531,7 @@
           if (spec.view && spec.view.model) {
             this.view.model = spec.view.model;
             this.view.model.on("change", (e) => {
+              console.log("Data_Model_View_Model_Control this.view.model change e:", e);
             });
             if (this.dom && this.dom.attributes) {
               this.dom.attributes["data-jsgui-view-model"] = this.view.model._id();
@@ -30436,6 +26570,7 @@
         }
         pre_activate() {
           super.pre_activate();
+          console.log("Data_Model_View_Model_Control pre_activate complete");
         }
         /**
          * Create a binding between data model and view model
@@ -30489,7 +26624,7 @@
          * @param {Object} options - Watch options
          * @example
          * this.watch(this.data.model, 'selectedItem', (newVal, oldVal) => {
-        // console.log('Selection changed:', oldVal, '→', newVal);
+         *     console.log('Selection changed:', oldVal, '→', newVal);
          * });
          */
         watch(model, property, callback2, options = {}) {
@@ -30529,17 +26664,17 @@
     }
   });
 
-  // ../jsgui3-html/html-core/control.js
+  // node_modules/jsgui3-html/html-core/control.js
   var require_control = __commonJS({
-    "../jsgui3-html/html-core/control.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/control.js"(exports, module) {
       var Control2 = require_Data_Model_View_Model_Control();
       module.exports = Control2;
     }
   });
 
-  // ../jsgui3-html/html-core/selection-scope.js
+  // node_modules/jsgui3-html/html-core/selection-scope.js
   var require_selection_scope = __commonJS({
-    "../jsgui3-html/html-core/selection-scope.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/selection-scope.js"(exports, module) {
       var jsgui2 = require_lang();
       var each = jsgui2.each;
       var tof = jsgui2.tof;
@@ -30657,6 +26792,7 @@
           if (!sel) {
             var sel_anc = ctrl2.find_selected_ancestor_in_scope();
             if (sel_anc) {
+              console.log("1) not selecting because a selected ancestor in the selection scope has been found.");
             } else {
               ctrl2.selected = true;
               this.deselect_ctrl_content(ctrl2, silent);
@@ -30671,6 +26807,7 @@
               } else {
                 var sel_anc = ctrl2.find_selected_ancestor_in_scope();
                 if (sel_anc) {
+                  console.log("2) not selecting because a selected ancestor in the selection scope has been found.");
                 } else {
                   this.deselect_ctrl_content(ctrl2, silent);
                   ctrl2.selected = true;
@@ -30688,9 +26825,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/page-context.js
+  // node_modules/jsgui3-html/html-core/page-context.js
   var require_page_context = __commonJS({
-    "../jsgui3-html/html-core/page-context.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/page-context.js"(exports, module) {
       var jsgui2 = require_lang();
       var { each, tof, is_defined, get_a_sig: get_a_sig2, Evented_Class, Data_Model } = jsgui2;
       var Selection_Scope = require_selection_scope();
@@ -30818,9 +26955,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/parse-mount.js
+  // node_modules/jsgui3-html/html-core/parse-mount.js
   var require_parse_mount = __commonJS({
-    "../jsgui3-html/html-core/parse-mount.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/parse-mount.js"(exports, module) {
       var htmlparser = require_htmlparser();
       var { tof, each } = require_lang();
       var map_jsgui_attr_names = {
@@ -31005,9 +27142,9 @@
     }
   });
 
-  // ../jsgui3-html/html-core/html-core.js
+  // node_modules/jsgui3-html/html-core/html-core.js
   var require_html_core = __commonJS({
-    "../jsgui3-html/html-core/html-core.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/html-core.js"(exports, module) {
       var jsgui2 = require_lang();
       var Text_Node = require_text_node();
       var Page_Context = require_page_context();
@@ -31070,6 +27207,7 @@
         callback2(el);
       };
       var pre_activate = (context2) => {
+        console.log("jsgui html-core pre_activate");
         if (!context2) {
           throw "jsgui-html-enh pre_activate(context) - need to supply context parameter.";
         }
@@ -31174,6 +27312,8 @@
       };
       var activate = function(context2) {
         const map_controls = context2.map_controls;
+        console.log("jsgui html-core activate");
+        console.log("jsgui.def_server_resources", jsgui2.def_server_resources);
         if (!context2) {
           throw "jsgui-html-enh activate(context) - need to supply context parameter.";
         }
@@ -31208,6 +27348,7 @@
               } else {
                 if (this.content._arr.length === 0) {
                 } else {
+                  console.log("this.content._arr", this.content._arr);
                   console.trace();
                   throw "NYI";
                 }
@@ -31380,9 +27521,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/requires-port/index.js
+  // node_modules/requires-port/index.js
   var require_requires_port = __commonJS({
-    "../jsgui3-html/node_modules/requires-port/index.js"(exports, module) {
+    "node_modules/requires-port/index.js"(exports, module) {
       "use strict";
       module.exports = function required(port, protocol) {
         protocol = protocol.split(":")[0];
@@ -31407,9 +27548,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/querystringify/index.js
+  // node_modules/querystringify/index.js
   var require_querystringify = __commonJS({
-    "../jsgui3-html/node_modules/querystringify/index.js"(exports) {
+    "node_modules/querystringify/index.js"(exports) {
       "use strict";
       var has = Object.prototype.hasOwnProperty;
       var undef;
@@ -31459,9 +27600,9 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/url-parse/index.js
+  // node_modules/url-parse/index.js
   var require_url_parse = __commonJS({
-    "../jsgui3-html/node_modules/url-parse/index.js"(exports, module) {
+    "node_modules/url-parse/index.js"(exports, module) {
       "use strict";
       var required = require_requires_port();
       var qs = require_querystringify();
@@ -31767,9 +27908,9 @@
     }
   });
 
-  // ../jsgui3-html/router/routing-tree.js
+  // node_modules/jsgui3-html/router/routing-tree.js
   var require_routing_tree = __commonJS({
-    "../jsgui3-html/router/routing-tree.js"(exports, module) {
+    "node_modules/jsgui3-html/router/routing-tree.js"(exports, module) {
       var Routing_Tree_Node = class {
         constructor(spec) {
           spec = spec || {};
@@ -31796,6 +27937,7 @@
           const res2 = [];
           const iterate = (node) => {
             if (node.mapNormalPathChildren) {
+              console.log("node.name", node.name);
               const children = Object.entries(node.mapNormalPathChildren);
               if (children.length > 0) {
                 for (let c2 = 0; c2 < children.length; c2++) {
@@ -31979,9 +28121,9 @@
     }
   });
 
-  // ../jsgui3-html/router/router.js
+  // node_modules/jsgui3-html/router/router.js
   var require_router = __commonJS({
-    "../jsgui3-html/router/router.js"(exports, module) {
+    "node_modules/jsgui3-html/router/router.js"(exports, module) {
       var url = require_url_parse();
       var jsgui2 = require_lang();
       var tof = jsgui2.tof;
@@ -31993,6 +28135,8 @@
           console.error("[router]", message, log_meta || "");
         } else if (level === "warn" && console.warn) {
           console.warn("[router]", message, log_meta || "");
+        } else if (console.log) {
+          console.log("[router]", message, log_meta || "");
         }
       };
       var default_not_found_handler = (req, res2) => {
@@ -32242,9 +28386,9 @@
     }
   });
 
-  // ../jsgui3-html/resource/pool.js
+  // node_modules/jsgui3-html/resource/pool.js
   var require_pool = __commonJS({
-    "../jsgui3-html/resource/pool.js"(exports, module) {
+    "node_modules/jsgui3-html/resource/pool.js"(exports, module) {
       var jsgui2 = require_lang();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -32271,9 +28415,13 @@
         "add"(obj2) {
           var obj_name = obj2.name;
           let log_trace = () => {
+            console.log("");
+            console.log("** obj_name " + obj_name);
             console.trace();
+            console.log("");
           };
           if (obj_name === void 0) {
+            console.log("obj", obj2);
             console.trace();
             throw "Resource_Pool.add(undefined) error";
           }
@@ -32358,9 +28506,9 @@
     }
   });
 
-  // ../jsgui3-html/resource/resource.js
+  // node_modules/jsgui3-html/resource/resource.js
   var require_resource = __commonJS({
-    "../jsgui3-html/resource/resource.js"(exports, module) {
+    "node_modules/jsgui3-html/resource/resource.js"(exports, module) {
       var jsgui2 = require_lang();
       var Pool = require_pool();
       var Evented_Class = jsgui2.Evented_Class;
@@ -32376,7 +28524,7 @@
       var Resource = class extends Evented_Class {
         // The link between the abstract resource and the resource on the internet / network / computer.
         //'fields': {
-        // 'meta': Data_Object
+        //	//'meta': Data_Object
         //	'meta': 'data_object'
         //},
         // Problem with how it sets the fields.
@@ -32440,9 +28588,9 @@
     }
   });
 
-  // ../jsgui3-html/resource/data-kv-resource.js
+  // node_modules/jsgui3-html/resource/data-kv-resource.js
   var require_data_kv_resource = __commonJS({
-    "../jsgui3-html/resource/data-kv-resource.js"(exports, module) {
+    "node_modules/jsgui3-html/resource/data-kv-resource.js"(exports, module) {
       var jsgui2 = require_lang();
       var Pool = require_pool();
       var Evented_Class = jsgui2.Evented_Class;
@@ -32459,7 +28607,7 @@
       var Data_KV_Resource = class extends Resource {
         // The link between the abstract resource and the resource on the internet / network / computer.
         //'fields': {
-        // 'meta': Data_Object
+        //	//'meta': Data_Object
         //	'meta': 'data_object'
         //},
         // Problem with how it sets the fields.
@@ -32517,9 +28665,9 @@
     }
   });
 
-  // ../jsgui3-html/resource/data-transform-resource.js
+  // node_modules/jsgui3-html/resource/data-transform-resource.js
   var require_data_transform_resource = __commonJS({
-    "../jsgui3-html/resource/data-transform-resource.js"(exports, module) {
+    "node_modules/jsgui3-html/resource/data-transform-resource.js"(exports, module) {
       var jsgui2 = require_lang();
       var Pool = require_pool();
       var Evented_Class = jsgui2.Evented_Class;
@@ -32536,7 +28684,7 @@
       var Data_Transform_Resource = class extends Resource {
         // The link between the abstract resource and the resource on the internet / network / computer.
         //'fields': {
-        // 'meta': Data_Object
+        //	//'meta': Data_Object
         //	'meta': 'data_object'
         //},
         // Problem with how it sets the fields.
@@ -32630,9 +28778,9 @@
     }
   });
 
-  // ../jsgui3-html/resource/compilation-resource.js
+  // node_modules/jsgui3-html/resource/compilation-resource.js
   var require_compilation_resource = __commonJS({
-    "../jsgui3-html/resource/compilation-resource.js"(exports, module) {
+    "node_modules/jsgui3-html/resource/compilation-resource.js"(exports, module) {
       var Data_Transform_Resource = require_data_transform_resource();
       var Compilation_Resource = class extends Data_Transform_Resource {
         constructor(spec) {
@@ -32651,9 +28799,9 @@
     }
   });
 
-  // ../jsgui3-html/resource/compiler-resource.js
+  // node_modules/jsgui3-html/resource/compiler-resource.js
   var require_compiler_resource = __commonJS({
-    "../jsgui3-html/resource/compiler-resource.js"(exports, module) {
+    "node_modules/jsgui3-html/resource/compiler-resource.js"(exports, module) {
       var Data_Transform_Resource = require_data_transform_resource();
       var Compiler_Resource = class extends Data_Transform_Resource {
         constructor(spec) {
@@ -32672,9 +28820,9 @@
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/5-ui/Active_HTML_Document.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/Active_HTML_Document.js
   var require_Active_HTML_Document = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/5-ui/Active_HTML_Document.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/Active_HTML_Document.js"(exports, module) {
       var jsgui2 = require_html_core();
       var { Blank_HTML_Document } = jsgui2;
       var Active_HTML_Document = class extends Blank_HTML_Document {
@@ -32742,9 +28890,9 @@
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/button.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/button.js
   var require_button = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/button.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/button.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Control2 = jsgui2.Control;
       var Button = class extends Control2 {
@@ -32778,13 +28926,14 @@
           }
         }
         const lbtn = new London_Button();
+        console.log(lbtn.all_html_render());
       }
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/1-advanced/vector/arrow-button.js
+  // node_modules/jsgui3-html/controls/organised/0-core/1-advanced/vector/arrow-button.js
   var require_arrow_button = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/1-advanced/vector/arrow-button.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/1-advanced/vector/arrow-button.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Control2 = jsgui2.Control;
       var def = jsgui2.is_defined;
@@ -32887,9 +29036,9 @@
     }
   });
 
-  // ../jsgui3-html/control_mixins/dragable.js
+  // node_modules/jsgui3-html/control_mixins/dragable.js
   var require_dragable = __commonJS({
-    "../jsgui3-html/control_mixins/dragable.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/dragable.js"(exports, module) {
       var {
         prop,
         field
@@ -32989,6 +29138,7 @@
                 bounds_offset = [bounds2.dom.el.offsetLeft, bounds2.dom.el.offsetTop];
                 ctrl2.pos = [item_start_pos[0] + movement_offset[0], item_start_pos[1]];
               } else {
+                console.log("drag_mode", drag_mode);
                 throw "NYI";
               }
             }
@@ -33137,9 +29287,9 @@
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/5-ui/horizontal-slider.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/horizontal-slider.js
   var require_horizontal_slider = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/5-ui/horizontal-slider.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/horizontal-slider.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -33204,6 +29354,7 @@
         "activate"() {
           if (!this.__active) {
             super.activate();
+            console.log("Horizontal Slider activate");
             var h_bar = this.h_bar;
             var v_bar = this.v_bar;
             mx_dragable(v_bar, {
@@ -33258,9 +29409,9 @@
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/5-ui/audio-volume.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/audio-volume.js
   var require_audio_volume = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/5-ui/audio-volume.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/audio-volume.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Horizontal_Slider = require_horizontal_slider();
       var stringify = jsgui2.stringify;
@@ -33294,6 +29445,7 @@
         }
         "activate"() {
           super.activate();
+          console.log("Audio Volume activate");
           var h_slider = this.h_slider;
         }
       };
@@ -33301,2611 +29453,14 @@
     }
   });
 
-  // ../jsgui3-html/node_modules/lang-mini/lang-mini.js
-  var require_lang_mini5 = __commonJS({
-    "../jsgui3-html/node_modules/lang-mini/lang-mini.js"(exports, module) {
-      var running_in_browser = typeof window !== "undefined";
-      var running_in_node = !running_in_browser;
-      var Readable_Stream;
-      var Writable_Stream;
-      var Transform_Stream;
-      var get_stream = () => {
-        if (running_in_node) {
-          return (() => {
-            const str_libname = "stream";
-            const stream2 = __require(str_libname);
-            Readable_Stream = stream2.Readable;
-            Writable_Stream = stream2.Writable;
-            Transform_Stream = stream2.Transform;
-            return stream2;
-          })();
-        } else {
-          return void 0;
-        }
-      };
-      var stream = get_stream();
-      var each = (collection, fn, context2) => {
-        if (collection) {
-          if (collection.__type == "collection") {
-            return collection.each(fn, context2);
-          }
-          let ctu = true;
-          let stop = function() {
-            ctu = false;
-          };
-          if (is_array(collection)) {
-            let res2 = [], res_item;
-            for (let c2 = 0, l2 = collection.length; c2 < l2; c2++) {
-              res_item;
-              if (ctu == false) break;
-              if (context2) {
-                res_item = fn.call(context2, collection[c2], c2, stop);
-              } else {
-                res_item = fn(collection[c2], c2, stop);
-              }
-              res2.push(res_item);
-            }
-            return res2;
-          } else {
-            let name, res2 = {};
-            for (name in collection) {
-              if (ctu === false) break;
-              if (context2) {
-                res2[name] = fn.call(context2, collection[name], name, stop);
-              } else {
-                res2[name] = fn(collection[name], name, stop);
-              }
-            }
-            return res2;
-          }
-        }
-      };
-      var is_array = Array.isArray;
-      var is_dom_node = function isDomNode(obj2) {
-        return !!obj2 && typeof obj2.nodeType !== "undefined" && typeof obj2.childNodes !== "undefined";
-      };
-      var get_truth_map_from_arr = function(arr) {
-        let res2 = {};
-        each(arr, function(v, i) {
-          res2[v] = true;
-        });
-        return res2;
-      };
-      var get_arr_from_truth_map = function(truth_map) {
-        let res2 = [];
-        each(truth_map, function(v, i) {
-          res2.push(i);
-        });
-        return res2;
-      };
-      var get_map_from_arr = function(arr) {
-        let res2 = {};
-        for (let c2 = 0, l2 = arr.length; c2 < l2; c2++) {
-          res2[arr[c2]] = c2;
-        }
-        return res2;
-      };
-      var arr_like_to_arr = function(arr_like) {
-        let res2 = new Array(arr_like.length);
-        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
-          res2[c2] = arr_like[c2];
-        }
-        ;
-        return res2;
-      };
-      var is_ctrl = function(obj2) {
-        return typeof obj2 !== "undefined" && obj2 !== null && is_defined(obj2.__type_name) && is_defined(obj2.content) && is_defined(obj2.dom);
-      };
-      var map_loaded_type_fn_checks = {};
-      var map_loaded_type_abbreviations = {
-        "object": "o",
-        "number": "n",
-        "string": "s",
-        "function": "f",
-        "boolean": "b",
-        "undefined": "u",
-        "array": "a",
-        "arguments": "A",
-        "date": "d",
-        "regex": "r",
-        "error": "e",
-        "buffer": "B",
-        "promise": "p",
-        "observable": "O",
-        "readable_stream": "R",
-        "writable_stream": "W",
-        "data_value": "V"
-      };
-      var using_type_plugins = false;
-      var invert = (obj2) => {
-        if (!is_array(obj2)) {
-          let res2 = {};
-          each(obj2, (v, k) => {
-            res2[v] = k;
-          });
-          return res2;
-        } else {
-          console.trace();
-          throw "invert(obj) not supported on arrays";
-        }
-      };
-      var map_loaded_type_names = invert(map_loaded_type_abbreviations);
-      var load_type = (name, abbreviation, fn_detect_instance) => {
-        map_loaded_type_fn_checks[name] = fn_detect_instance;
-        map_loaded_type_names[abbreviation] = name;
-        map_loaded_type_abbreviations[name] = abbreviation;
-        using_type_plugins = true;
-      };
-      var tof = (obj2, t12) => {
-        let res2 = t12 || typeof obj2;
-        if (using_type_plugins) {
-          let res3;
-          each(map_loaded_type_fn_checks, (fn_check, name, stop) => {
-            if (fn_check(obj2)) {
-              res3 = name;
-              stop();
-            }
-          });
-          if (res3) {
-            return res3;
-          }
-        }
-        if (res2 === "number" || res2 === "string" || res2 === "function" || res2 === "boolean") {
-          return res2;
-        }
-        if (res2 === "object") {
-          if (typeof obj2 !== "undefined") {
-            if (obj2 === null) {
-              return "null";
-            }
-            if (obj2.__type) {
-              return obj2.__type;
-            } else if (obj2.__type_name) {
-              return obj2.__type_name;
-            } else {
-              if (obj2 instanceof Promise) {
-                return "promise";
-              }
-              if (is_ctrl(obj2)) {
-                return "control";
-              }
-              if (obj2 instanceof Date) {
-                return "date";
-              }
-              if (is_array(obj2)) {
-                return "array";
-              } else {
-                if (obj2 instanceof Error) {
-                  res2 = "error";
-                } else if (obj2 instanceof RegExp) res2 = "regex";
-                if (typeof window === "undefined") {
-                  if (obj2 && obj2.readInt8) res2 = "buffer";
-                }
-              }
-              return res2;
-            }
-          } else {
-            return "undefined";
-          }
-        }
-        return res2;
-      };
-      var tf2 = (obj2) => {
-        let res2 = typeof obj2;
-        if (using_type_plugins) {
-          let res3;
-          each(map_loaded_type_fn_checks, (fn_check, name, stop) => {
-            if (fn_check(obj2)) {
-              res3 = map_loaded_type_abbreviations[name];
-              stop();
-            }
-          });
-          if (res3) {
-            return res3;
-          }
-        }
-        if (res2 === "number" || res2 === "string" || res2 === "function" || res2 === "boolean" || res2 === "undefined") {
-          return res2[0];
-        } else {
-          if (obj2 === null) {
-            return "N";
-          } else {
-            if (running_in_node) {
-              if (obj2 instanceof Readable_Stream) {
-                return "R";
-              } else if (obj2 instanceof Writable_Stream) {
-                return "W";
-              } else if (obj2 instanceof Transform_Stream) {
-                return "T";
-              }
-            }
-            if (typeof Buffer !== "undefined" && obj2 instanceof Buffer) {
-              return "B";
-            } else if (obj2 instanceof Promise) {
-              return "p";
-            } else if (obj2 instanceof Date) {
-              return "d";
-            } else if (is_array(obj2)) {
-              return "a";
-            } else {
-              if (obj2._is_observable === true) {
-                return "O";
-              } else {
-                if (typeof obj2.callee === "function") {
-                  return "A";
-                } else if (obj2 instanceof Error) {
-                  return "e";
-                } else if (obj2 instanceof RegExp) return "r";
-                return "o";
-              }
-            }
-            return res2;
-          }
-        }
-        console.trace();
-        console.log("item", item);
-        throw "type not found";
-        return res2;
-      };
-      var atof = (arr) => {
-        let res2 = new Array(arr.length);
-        for (let c2 = 0, l2 = arr.length; c2 < l2; c2++) {
-          res2[c2] = tof(arr[c2]);
-        }
-        return res2;
-      };
-      var is_defined = (value2) => {
-        return typeof value2 != "undefined";
-      };
-      var stringify = JSON.stringify;
-      var _get_item_sig = (i, arr_depth) => {
-        let res2;
-        let t12 = typeof i;
-        if (t12 === "string") {
-          res2 = "s";
-        } else if (t12 === "number") {
-          res2 = "n";
-        } else if (t12 === "boolean") {
-          res2 = "b";
-        } else if (t12 === "function") {
-          res2 = "f";
-        } else {
-          let t = tof(i, t12);
-          if (t === "array") {
-            if (arr_depth) {
-              res2 = "[";
-              for (let c2 = 0, l2 = i.length; c2 < l2; c2++) {
-                if (c2 > 0) res2 = res2 + ",";
-                res2 = res2 + get_item_sig(i[c2], arr_depth - 1);
-              }
-              res2 = res2 + "]";
-            } else {
-              res2 = "a";
-            }
-          } else if (t === "control") {
-            res2 = "c";
-          } else if (t === "date") {
-            res2 = "d";
-          } else if (t === "observable") {
-            res2 = "O";
-          } else if (t === "regex") {
-            res2 = "r";
-          } else if (t === "buffer") {
-            res2 = "B";
-          } else if (t === "readable_stream") {
-            res2 = "R";
-          } else if (t === "writable_stream") {
-            res2 = "W";
-          } else if (t === "object") {
-            res2 = "o";
-          } else if (t === "undefined") {
-            res2 = "u";
-          } else {
-            if (t === "collection_index") {
-              return "X";
-            } else if (t === "data_object") {
-              if (i._abstract) {
-                res2 = "~D";
-              } else {
-                res2 = "D";
-              }
-            } else {
-              if (t === "data_value") {
-                if (i._abstract) {
-                  res2 = "~V";
-                } else {
-                  res2 = "V";
-                }
-              } else if (t === "null") {
-                res2 = "!";
-              } else if (t === "collection") {
-                if (i._abstract) {
-                  res2 = "~C";
-                } else {
-                  res2 = "C";
-                }
-              } else {
-                res2 = "?";
-              }
-            }
-          }
-        }
-        return res2;
-      };
-      var get_item_sig = (item2, arr_depth) => {
-        if (arr_depth) {
-          return _get_item_sig(item2, arr_depth);
-        }
-        const t = tof(item2);
-        if (map_loaded_type_abbreviations[t]) {
-          return map_loaded_type_abbreviations[t];
-        } else {
-          let bt = typeof item2;
-          if (bt === "object") {
-            if (is_array(item2)) {
-              return "a";
-            } else {
-              return "o";
-            }
-          } else {
-            console.log("map_loaded_type_abbreviations type name not found", t);
-            console.log("bt", bt);
-            console.trace();
-            throw "stop";
-          }
-        }
-      };
-      var get_a_sig2 = (a) => {
-        let c2 = 0, l2 = a.length;
-        let res2 = "[";
-        let first = true;
-        for (c2 = 0; c2 < l2; c2++) {
-          if (!first) {
-            res2 = res2 + ",";
-          } else {
-            first = false;
-          }
-          res2 = res2 + get_item_sig(a[c2]);
-        }
-        res2 = res2 + "]";
-        return res2;
-      };
-      var deep_sig = (item2, max_depth = -1, depth = 0) => {
-        const t = tf2(item2);
-        let res2 = "";
-        if (t === "a") {
-          const l2 = item2.length;
-          if (max_depth === -1 || depth <= max_depth) {
-            res2 = res2 + "[";
-            let first = true;
-            for (let c2 = 0; c2 < l2; c2++) {
-              if (!first) res2 = res2 + ",";
-              res2 = res2 + deep_sig(item2[c2], max_depth, depth + 1);
-              first = false;
-            }
-            res2 = res2 + "]";
-          } else {
-            return "a";
-          }
-        } else if (t === "A") {
-          const l2 = item2.length;
-          let first = true;
-          for (let c2 = 0; c2 < l2; c2++) {
-            if (!first) res2 = res2 + ",";
-            res2 = res2 + deep_sig(item2[c2], max_depth, depth + 1);
-            first = false;
-          }
-        } else if (t === "o") {
-          if (max_depth === -1 || depth <= max_depth) {
-            let res3 = "{";
-            let first = true;
-            each(item2, (v, k) => {
-              if (!first) res3 = res3 + ",";
-              res3 = res3 + '"' + k + '":' + deep_sig(v, max_depth, depth + 1);
-              first = false;
-            });
-            res3 = res3 + "}";
-            return res3;
-          } else {
-            return "o";
-          }
-        } else {
-          res2 = res2 + t;
-        }
-        return res2;
-      };
-      var trim_sig_brackets = function(sig) {
-        if (tof(sig) === "string") {
-          if (sig.charAt(0) == "[" && sig.charAt(sig.length - 1) == "]") {
-            return sig.substring(1, sig.length - 1);
-          } else {
-            return sig;
-          }
-        }
-      };
-      var arr_trim_undefined = function(arr_like) {
-        let res2 = [];
-        let last_defined = -1;
-        let t, v;
-        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
-          v = arr_like[c2];
-          t = tof(v);
-          if (t == "undefined") {
-          } else {
-            last_defined = c2;
-          }
-        }
-        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
-          if (c2 <= last_defined) {
-            res2.push(arr_like[c2]);
-          }
-        }
-        return res2;
-      };
-      var functional_polymorphism = function(options, fn) {
-        let a0 = arguments;
-        if (a0.length === 1) {
-          fn = a0[0];
-          options = null;
-        }
-        let arr_slice = Array.prototype.slice;
-        let arr, sig, a2, l2, a;
-        return function() {
-          a = arguments;
-          l2 = a.length;
-          if (l2 === 1) {
-            sig = get_item_sig([a[0]], 1);
-            a2 = [a[0]];
-            a2.l = 1;
-            return fn.call(this, a2, sig);
-          } else if (l2 > 1) {
-            arr = arr_trim_undefined(arr_slice.call(a, 0));
-            sig = get_item_sig(arr, 1);
-            arr.l = arr.length;
-            return fn.call(this, arr, sig);
-          } else if (a.length === 0) {
-            arr = new Array(0);
-            arr.l = 0;
-            return fn.call(this, arr, "[]");
-          }
-        };
-      };
-      var fp = functional_polymorphism;
-      var parse_sig = (str_sig, opts = {}) => {
-        const sig2 = str_sig.split(", ").join(",");
-        const sig_items = sig2.split(",");
-        const res2 = [];
-        each(sig_items, (sig_item) => {
-          if (sig_item.length === 1) {
-            let type_name = map_loaded_type_names[sig_item];
-            res2.push({
-              abbreviation: sig_item,
-              type_name
-            });
-          } else {
-            let suffix_modifiers;
-            let zero_or_more = false;
-            let one_or_more = false;
-            let type_name = sig_item;
-            const obj_res = {
-              type_name
-            };
-            const distil_suffix_modifiers = () => {
-              let last_char = type_name.substr(type_name.length - 1);
-              if (last_char === "*") {
-                type_name = type_name.substr(0, type_name.length - 1);
-                zero_or_more = true;
-                obj_res.zero_or_more = true;
-                obj_res.modifiers = obj_res.modifiers || [];
-                obj_res.modifiers.push("*");
-                distil_suffix_modifiers();
-              } else if (last_char === "+") {
-                type_name = type_name.substr(0, type_name.length - 1);
-                one_or_more = true;
-                obj_res.one_or_more = true;
-                obj_res.modifiers = obj_res.modifiers || [];
-                obj_res.modifiers.push("+");
-                distil_suffix_modifiers();
-              } else {
-              }
-            };
-            distil_suffix_modifiers();
-            obj_res.type_name = type_name;
-            res2.push(obj_res);
-          }
-        });
-        return res2;
-      };
-      var mfp_not_sigs = get_truth_map_from_arr(["pre", "default", "post"]);
-      var log = () => {
-      };
-      var combinations = (arr, arr_idxs_to_ignore) => {
-        const map_ignore_idxs = {};
-        if (arr_idxs_to_ignore) {
-          each(arr_idxs_to_ignore, (idx_to_ignore) => {
-            map_ignore_idxs[idx_to_ignore] = true;
-          });
-        }
-        const res2 = [];
-        const l2 = arr.length;
-        const arr_idxs_num_options = new Uint32Array(l2);
-        each(arr, (arr_item1, i1) => {
-          arr_idxs_num_options[i1] = arr_item1.length;
-        });
-        const arr_current_option_idxs = new Uint32Array(l2).fill(0);
-        const result_from_indexes = (arr2, arg_indexes) => {
-          const res3 = new Array(l2);
-          if (arg_indexes.length === l2) {
-            for (var c2 = 0; c2 < l2; c2++) {
-              res3[c2] = arr2[c2][arg_indexes[c2]];
-            }
-          } else {
-            console.trace();
-            throw "Arguments length mismatch";
-          }
-          return res3;
-        };
-        const incr = () => {
-          for (c = l2 - 1; c >= 0; c--) {
-            const ival = arr_current_option_idxs[c];
-            const max = arr_idxs_num_options[c] - 1;
-            if (ival < max) {
-              arr_current_option_idxs[c]++;
-              break;
-            } else {
-              if (c === 0) {
-                return false;
-              } else {
-                arr_current_option_idxs.fill(0, c);
-              }
-            }
-          }
-          return true;
-        };
-        let vals = result_from_indexes(arr, arr_current_option_idxs);
-        res2.push(vals);
-        while (incr()) {
-          let vals2 = result_from_indexes(arr, arr_current_option_idxs);
-          res2.push(vals2);
-        }
-        return res2;
-      };
-      var map_native_types = {
-        "string": true,
-        "boolean": true,
-        "number": true,
-        "object": true
-      };
-      var mfp = function() {
-        const a1 = arguments;
-        const sig1 = get_a_sig2(a1);
-        let options = {};
-        let fn_pre, provided_map_sig_fns, inner_map_sig_fns = {}, inner_map_parsed_sigs = {}, arr_sig_parsed_sig_fns = [], fn_post;
-        let tm_sig_fns;
-        let fn_default;
-        let single_fn;
-        let req_sig_single_fn;
-        if (sig1 === "[o]") {
-          provided_map_sig_fns = a1[0];
-        } else if (sig1 === "[o,o]") {
-          options = a1[0];
-          provided_map_sig_fns = a1[1];
-        } else if (sig1 === "[o,f]") {
-          options = a1[0];
-          single_fn = a1[1];
-        } else if (sig1 === "[o,s,f]") {
-          options = a1[0];
-          req_sig_single_fn = a1[1];
-          single_fn = a1[2];
-          provided_map_sig_fns = {};
-          provided_map_sig_fns[req_sig_single_fn] = single_fn;
-        } else if (sig1 === "[f,o]") {
-          single_fn = a1[0];
-          options = a1[1];
-        } else if (sig1 === "[f]") {
-          single_fn = a1[0];
-        } else {
-          console.log("sig1", sig1);
-          console.trace();
-          throw "mfp NYI";
-        }
-        let {
-          single,
-          name,
-          grammar,
-          verb,
-          noun,
-          return_type,
-          return_subtype,
-          pure,
-          main,
-          skip
-        } = options;
-        let parsed_grammar;
-        let identify, validate;
-        let dsig = deep_sig;
-        (() => {
-          if (provided_map_sig_fns) {
-            if (provided_map_sig_fns.default) fn_default = provided_map_sig_fns.default;
-            each(provided_map_sig_fns, (fn, sig) => {
-              if (typeof fn === "function") {
-                if (!mfp_not_sigs[sig]) {
-                  const parsed_sig = parse_sig(sig);
-                  const arr_args_with_modifiers = [];
-                  const arr_args_all_modification_versions = [];
-                  each(parsed_sig, (arg, i) => {
-                    arr_args_all_modification_versions[i] = [];
-                    if (arg.modifiers) {
-                      const arg_num_modifiers = arg.modifiers.length;
-                      if (arg_num_modifiers > 1) {
-                        throw "Use of more than 1 modifier is currently unsupported.";
-                      } else if (arg_num_modifiers === 1) {
-                        arr_args_with_modifiers.push([i, arg]);
-                        const single_modifier = arg.modifiers[0];
-                        if (single_modifier === "*") {
-                          arr_args_all_modification_versions[i].push("");
-                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                          const plural_name = grammar.maps.sing_plur[arg.type_name];
-                          arr_args_all_modification_versions[i].push(plural_name);
-                        }
-                        if (single_modifier === "+") {
-                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                          const plural_name = grammar.maps.sing_plur[arg.type_name];
-                          arr_args_all_modification_versions[i].push(plural_name);
-                        }
-                        if (single_modifier === "?") {
-                          arr_args_all_modification_versions[i].push("");
-                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                        }
-                      }
-                    } else {
-                      arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                    }
-                  });
-                  const combo_args = combinations(arr_args_all_modification_versions);
-                  const combo_sigs = [];
-                  let i_first_of_last_undefined = -1;
-                  each(combo_args, (arg_set) => {
-                    let combo_sig = "";
-                    each(arg_set, (arg, i) => {
-                      let lsigb4 = combo_sig.length;
-                      if (i > 0) {
-                        combo_sig = combo_sig + ",";
-                      }
-                      if (arg === "") {
-                        combo_sig = combo_sig + "u";
-                        if (i_first_of_last_undefined === -1) {
-                          i_first_of_last_undefined = lsigb4;
-                        }
-                      } else {
-                        combo_sig = combo_sig + arg;
-                        i_first_of_last_undefined = -1;
-                      }
-                    });
-                    if (i_first_of_last_undefined > 0) {
-                      const combo_sig_no_last_undefined = combo_sig.substr(0, i_first_of_last_undefined);
-                      combo_sigs.push(combo_sig_no_last_undefined);
-                    }
-                    combo_sigs.push(combo_sig);
-                  });
-                  if (combo_sigs.length > 0) {
-                    each(combo_sigs, (combo_sig) => {
-                      inner_map_sig_fns[combo_sig] = fn;
-                    });
-                  } else {
-                    inner_map_sig_fns[sig] = fn;
-                  }
-                  inner_map_parsed_sigs[sig] = parsed_sig;
-                  arr_sig_parsed_sig_fns.push([sig, parsed_sig, fn]);
-                } else {
-                  console.log("ommiting, not parsing sig", sig);
-                }
-              } else {
-                console.log("fn", fn);
-                console.trace();
-                throw "Expected: function";
-              }
-              ;
-            });
-          }
-          each(inner_map_sig_fns, (fn, sig) => {
-            tm_sig_fns = tm_sig_fns || {};
-            tm_sig_fns[sig] = true;
-          });
-        })();
-        const res2 = function() {
-          const a2 = arguments;
-          const l2 = a2.length;
-          console.log("");
-          console.log("calling mfp function");
-          console.log("--------------------");
-          console.log("");
-          let mfp_fn_call_deep_sig;
-          let ltof = tof;
-          const lsig = dsig;
-          let ltf = tf2;
-          mfp_fn_call_deep_sig = lsig(a2);
-          let do_skip = false;
-          if (skip) {
-            if (skip(a2)) {
-              do_skip = true;
-            } else {
-            }
-          }
-          if (!do_skip) {
-            if (inner_map_sig_fns[mfp_fn_call_deep_sig]) {
-              return inner_map_sig_fns[mfp_fn_call_deep_sig].apply(this, a2);
-            } else {
-              let idx_last_fn = -1;
-              let idx_last_obj = -1;
-              each(a2, (arg, i_arg) => {
-                i_arg = parseInt(i_arg, 10);
-                const targ = tf2(arg);
-                if (targ === "o") {
-                  idx_last_obj = i_arg;
-                }
-                if (targ === "f") {
-                  idx_last_fn = i_arg;
-                }
-              });
-              const last_arg_is_fn = idx_last_fn > -1 && idx_last_fn === a2.length - 1;
-              const last_arg_is_obj = idx_last_obj > -1 && idx_last_obj === a2.length - 1;
-              const second_last_arg_is_obj = idx_last_obj > -1 && idx_last_obj === a2.length - 2;
-              let possible_options_obj;
-              if (last_arg_is_obj) possible_options_obj = a2[idx_last_obj];
-              const new_args_arrangement = [];
-              for (let f = 0; f < idx_last_obj; f++) {
-                new_args_arrangement.push(a2[f]);
-              }
-              each(possible_options_obj, (value2, key2) => {
-                new_args_arrangement.push(value2);
-              });
-              let naa_sig = lsig(new_args_arrangement);
-              naa_sig = naa_sig.substring(1, naa_sig.length - 1);
-              if (inner_map_sig_fns[naa_sig]) {
-                return inner_map_sig_fns[naa_sig].apply(this, new_args_arrangement);
-              } else {
-                if (fn_default) {
-                  return fn_default.call(this, a2, mfp_fn_call_deep_sig);
-                } else {
-                  if (single_fn) {
-                    console.log("pre apply single_fn");
-                    return single_fn.apply(this, a2);
-                  } else {
-                    console.log("Object.keys(inner_map_parsed_sigs)", Object.keys(inner_map_parsed_sigs));
-                    console.trace();
-                    console.log("mfp_fn_call_deep_sig", mfp_fn_call_deep_sig);
-                    console.log("provided_map_sig_fns", provided_map_sig_fns);
-                    if (provided_map_sig_fns) log("Object.keys(provided_map_sig_fns)", Object.keys(provided_map_sig_fns));
-                    console.log("Object.keys(inner_map_sig_fns)", Object.keys(inner_map_sig_fns));
-                    console.trace();
-                    throw "no signature match found. consider using a default signature. mfp_fn_call_deep_sig: " + mfp_fn_call_deep_sig;
-                  }
-                }
-              }
-            }
-          }
-        };
-        const _ = {};
-        if (name) _.name = name;
-        if (single) _.single = single;
-        if (skip) _.skip = skip;
-        if (grammar) _.grammar = grammar;
-        if (typeof options !== "undefined" && options.async) _.async = options.async;
-        if (main === true) _.main = true;
-        if (return_type) _.return_type = return_type;
-        if (return_subtype) _.return_subtype = return_subtype;
-        if (pure) _.pure = pure;
-        if (tm_sig_fns) _.map_sigs = tm_sig_fns;
-        if (Object.keys(_).length > 0) {
-          res2._ = _;
-        }
-        return res2;
-      };
-      var arrayify = fp(function(a, sig) {
-        let param_index, num_parallel = 1, delay = 0, fn;
-        let res2;
-        let process_as_fn = function() {
-          res2 = function() {
-            let a2 = arr_like_to_arr(arguments), ts = atof(a2), t = this;
-            let last_arg = a2[a2.length - 1];
-            if (tof(last_arg) == "function") {
-              if (typeof param_index !== "undefined" && ts[param_index] == "array") {
-                let res3 = [];
-                let fns = [];
-                each(a2[param_index], function(v, i) {
-                  let new_params = a2.slice(0, a2.length - 1);
-                  new_params[param_index] = v;
-                  fns.push([t, fn, new_params]);
-                });
-                call_multiple_callback_functions(fns, num_parallel, delay, (err, res4) => {
-                  if (err) {
-                    console.trace();
-                    throw err;
-                  } else {
-                    let a3 = [];
-                    a3 = a3.concat.apply(a3, res4);
-                    let callback2 = last_arg;
-                    callback2(null, a3);
-                  }
-                });
-              } else {
-                return fn.apply(t, a2);
-              }
-            } else {
-              if (typeof param_index !== "undefined" && ts[param_index] == "array") {
-                let res3 = [];
-                for (let c2 = 0, l2 = a2[param_index].length; c2 < l2; c2++) {
-                  a2[param_index] = arguments[param_index][c2];
-                  let result = fn.apply(t, a2);
-                  res3.push(result);
-                }
-                return res3;
-              } else {
-                return fn.apply(t, a2);
-              }
-            }
-          };
-        };
-        if (sig == "[o]") {
-          let res3 = [];
-          each(a[0], function(v, i) {
-            res3.push([v, i]);
-          });
-        } else if (sig == "[f]") {
-          param_index = 0, fn = a[0];
-          process_as_fn();
-        } else if (sig == "[n,f]") {
-          param_index = a[0], fn = a[1];
-          process_as_fn();
-        } else if (sig == "[n,n,f]") {
-          param_index = a[0], num_parallel = a[1], fn = a[2];
-          process_as_fn();
-        } else if (sig == "[n,n,n,f]") {
-          param_index = a[0], num_parallel = a[1], delay = a[2], fn = a[3];
-          process_as_fn();
-        }
-        return res2;
-      });
-      var mapify = (target) => {
-        let tt = tof(target);
-        if (tt == "function") {
-          let res2 = fp(function(a, sig) {
-            let that2 = this;
-            if (sig == "[o]") {
-              let map = a[0];
-              each(map, function(v, i) {
-                target.call(that2, v, i);
-              });
-            } else if (sig == "[o,f]") {
-              let map = a[0];
-              let callback2 = a[1];
-              let fns = [];
-              each(map, function(v, i) {
-                fns.push([target, [v, i]]);
-              });
-              call_multi(fns, function(err_multi, res_multi) {
-                if (err_multi) {
-                  callback2(err_multi);
-                } else {
-                  callback2(null, res_multi);
-                }
-              });
-            } else if (a.length >= 2) {
-              target.apply(this, a);
-            }
-          });
-          return res2;
-        } else if (tt == "array") {
-          let res2 = {};
-          if (arguments.length == 1) {
-            if (is_arr_of_strs(target)) {
-              each(target, function(v, i) {
-                res2[v] = true;
-              });
-            } else {
-              each(target, function(v, i) {
-                res2[v[0]] = v[1];
-              });
-            }
-          } else {
-            let by_property_name = arguments[1];
-            each(target, function(v, i) {
-              res2[v[by_property_name]] = v;
-            });
-          }
-          return res2;
-        }
-      };
-      var clone = fp((a, sig) => {
-        let obj2 = a[0];
-        if (a.l === 1) {
-          if (obj2 && typeof obj2.clone === "function") {
-            return obj2.clone();
-          } else {
-            let t = tof(obj2);
-            if (t === "array") {
-              let res2 = [];
-              each(obj2, (v) => {
-                res2.push(clone(v));
-              });
-              return res2;
-            } else if (t === "undefined") {
-              return void 0;
-            } else if (t === "string") {
-              return obj2;
-            } else if (t === "number") {
-              return obj2;
-            } else if (t === "function") {
-              return obj2;
-            } else if (t === "boolean") {
-              return obj2;
-            } else if (t === "null") {
-              return obj2;
-            } else {
-              return Object.assign({}, obj2);
-            }
-          }
-        } else if (a.l === 2 && tof(a[1]) === "number") {
-          let res2 = [];
-          for (let c2 = 0; c2 < a[1]; c2++) {
-            res2.push(clone(obj2));
-          }
-          return res2;
-        }
-      });
-      var set_vals = function(obj2, map) {
-        each(map, function(v, i) {
-          obj2[i] = v;
-        });
-      };
-      var ll_set = (obj2, prop_name2, prop_value) => {
-        let arr = prop_name2.split(".");
-        let c2 = 0, l2 = arr.length;
-        let i = obj2._ || obj2, s;
-        while (c2 < l2) {
-          s = arr[c2];
-          if (typeof i[s] == "undefined") {
-            if (c2 - l2 == -1) {
-              i[s] = prop_value;
-            } else {
-              i[s] = {};
-            }
-          } else {
-            if (c2 - l2 == -1) {
-              i[s] = prop_value;
-            }
-          }
-          i = i[s];
-          c2++;
-        }
-        ;
-        return prop_value;
-      };
-      var ll_get = (a0, a1) => {
-        if (a0 && a1) {
-          let i = a0._ || a0;
-          if (a1 == ".") {
-            if (typeof i["."] == "undefined") {
-              return void 0;
-            } else {
-              return i["."];
-            }
-          } else {
-            let arr = a1.split(".");
-            let c2 = 0, l2 = arr.length, s;
-            while (c2 < l2) {
-              s = arr[c2];
-              if (typeof i[s] == "undefined") {
-                if (c2 - l2 == -1) {
-                } else {
-                  throw "object " + s + " not found";
-                }
-              } else {
-                if (c2 - l2 == -1) {
-                  return i[s];
-                }
-              }
-              i = i[s];
-              c2++;
-            }
-          }
-        }
-      };
-      var truth = function(value2) {
-        return value2 === true;
-      };
-      var iterate_ancestor_classes = (obj2, callback2) => {
-        let ctu = true;
-        let stop = () => {
-          ctu = false;
-        };
-        callback2(obj2, stop);
-        if (obj2._superclass && ctu) {
-          iterate_ancestor_classes(obj2._superclass, callback2);
-        }
-      };
-      var is_arr_of_t = function(obj2, type_name) {
-        let t = tof(obj2), tv;
-        if (t === "array") {
-          let res2 = true;
-          each(obj2, function(v, i) {
-            tv = tof(v);
-            if (tv != type_name) res2 = false;
-          });
-          return res2;
-        } else {
-          return false;
-        }
-      };
-      var is_arr_of_arrs = function(obj2) {
-        return is_arr_of_t(obj2, "array");
-      };
-      var is_arr_of_strs = function(obj2) {
-        return is_arr_of_t(obj2, "string");
-      };
-      var input_processors = {};
-      var output_processors = {};
-      var call_multiple_callback_functions = fp(function(a, sig) {
-        let arr_functions_params_pairs, callback2, return_params = false;
-        let delay;
-        let num_parallel = 1;
-        if (a.l === 1) {
-        } else if (a.l === 2) {
-          arr_functions_params_pairs = a[0];
-          callback2 = a[1];
-        } else if (a.l === 3) {
-          if (sig === "[a,n,f]") {
-            arr_functions_params_pairs = a[0];
-            num_parallel = a[1];
-            callback2 = a[2];
-          } else if (sig === "[n,a,f]") {
-            arr_functions_params_pairs = a[1];
-            num_parallel = a[0];
-            callback2 = a[2];
-          } else if (sig === "[a,f,b]") {
-            arr_functions_params_pairs = a[0];
-            callback2 = a[1];
-            return_params = a[2];
-          }
-        } else if (a.l === 4) {
-          if (sig === "[a,n,n,f]") {
-            arr_functions_params_pairs = a[0];
-            num_parallel = a[1];
-            delay = a[2];
-            callback2 = a[3];
-          } else if (sig == "[n,n,a,f]") {
-            arr_functions_params_pairs = a[2];
-            num_parallel = a[0];
-            delay = a[1];
-            callback2 = a[3];
-          }
-        }
-        let res2 = [];
-        let l2 = arr_functions_params_pairs.length;
-        let c2 = 0;
-        let count_unfinished = l2;
-        let num_currently_executing = 0;
-        let process2 = (delay2) => {
-          num_currently_executing++;
-          let main = () => {
-            let pair = arr_functions_params_pairs[c2];
-            let context2;
-            let fn, params, fn_callback;
-            let pair_sig = get_item_sig(pair);
-            let t_pair = tof(pair);
-            if (t_pair == "function") {
-              fn = pair;
-              params = [];
-            } else {
-              if (pair) {
-                if (pair.length == 1) {
-                }
-                if (pair.length == 2) {
-                  if (tof(pair[1]) == "function") {
-                    context2 = pair[0];
-                    fn = pair[1];
-                    params = [];
-                  } else {
-                    fn = pair[0];
-                    params = pair[1];
-                  }
-                }
-                if (pair.length == 3) {
-                  if (tof(pair[0]) === "function" && tof(pair[1]) === "array" && tof(pair[2]) === "function") {
-                    fn = pair[0];
-                    params = pair[1];
-                    fn_callback = pair[2];
-                  }
-                  if (tof(pair[1]) === "function" && tof(pair[2]) === "array") {
-                    context2 = pair[0];
-                    fn = pair[1];
-                    params = pair[2];
-                  }
-                }
-                if (pair.length == 4) {
-                  context2 = pair[0];
-                  fn = pair[1];
-                  params = pair[2];
-                  fn_callback = pair[3];
-                }
-              } else {
-              }
-            }
-            let i = c2;
-            c2++;
-            let cb = (err, res22) => {
-              num_currently_executing--;
-              count_unfinished--;
-              if (err) {
-                let stack = new Error().stack;
-                callback2(err);
-              } else {
-                if (return_params) {
-                  res2[i] = [params, res22];
-                } else {
-                  res2[i] = res22;
-                }
-                if (fn_callback) {
-                  fn_callback(null, res22);
-                }
-                if (c2 < l2) {
-                  if (num_currently_executing < num_parallel) {
-                    process2(delay2);
-                  }
-                } else {
-                  if (count_unfinished <= 0) {
-                    callback2(null, res2);
-                  }
-                }
-              }
-            };
-            let arr_to_call = params || [];
-            arr_to_call.push(cb);
-            if (fn) {
-              if (context2) {
-                fn.apply(context2, arr_to_call);
-              } else {
-                fn.apply(this, arr_to_call);
-              }
-            } else {
-            }
-          };
-          if (arr_functions_params_pairs[c2]) {
-            if (delay2) {
-              setTimeout(main, delay2);
-            } else {
-              main();
-            }
-          }
-        };
-        if (arr_functions_params_pairs.length > 0) {
-          while (c2 < l2 && num_currently_executing < num_parallel) {
-            if (delay) {
-              process2(delay * c2);
-            } else {
-              process2();
-            }
-          }
-        } else {
-          if (callback2) {
-          }
-        }
-      });
-      var call_multi = call_multiple_callback_functions;
-      var Fns = function(arr) {
-        let fns = arr || [];
-        fns.go = function(parallel, delay, callback2) {
-          let a = arguments;
-          let al = a.length;
-          if (al == 1) {
-            call_multi(fns, a[0]);
-          }
-          if (al == 2) {
-            call_multi(parallel, fns, delay);
-          }
-          if (al == 3) {
-            call_multi(parallel, delay, fns, callback2);
-          }
-        };
-        return fns;
-      };
-      var native_constructor_tof = function(value2) {
-        if (value2 === String) {
-          return "String";
-        }
-        if (value2 === Number) {
-          return "Number";
-        }
-        if (value2 === Boolean) {
-          return "Boolean";
-        }
-        if (value2 === Array) {
-          return "Array";
-        }
-        if (value2 === Object) {
-          return "Object";
-        }
-      };
-      var sig_match = function(sig1, sig2) {
-        let sig1_inner = sig1.substr(1, sig1.length - 2);
-        let sig2_inner = sig2.substr(1, sig2.length - 2);
-        if (sig1_inner.indexOf("[") > -1 || sig1_inner.indexOf("]") > -1 || sig2_inner.indexOf("[") > -1 || sig2_inner.indexOf("]") > -1) {
-          throw "sig_match only supports flat signatures.";
-        }
-        let sig1_parts = sig1_inner.split(",");
-        let sig2_parts = sig2_inner.split(",");
-        let res2 = true;
-        if (sig1_parts.length == sig2_parts.length) {
-          let c2 = 0, l2 = sig1_parts.length, i1, i2;
-          while (res2 && c2 < l2) {
-            i1 = sig1_parts[c2];
-            i2 = sig2_parts[c2];
-            if (i1 === i2) {
-            } else {
-              if (i1 !== "?") {
-                res2 = false;
-              }
-            }
-            c2++;
-          }
-          return res2;
-        } else {
-          return false;
-        }
-      };
-      var remove_sig_from_arr_shell = function(sig) {
-        if (sig[0] == "[" && sig[sig.length - 1] == "]") {
-          return sig.substring(1, sig.length - 1);
-        }
-        return sig;
-      };
-      var str_arr_mapify = function(fn) {
-        let res2 = fp(function(a, sig) {
-          if (a.l == 1) {
-            if (sig == "[s]") {
-              let s_pn = a[0].split(" ");
-              if (s_pn.length > 1) {
-                return res2.call(this, s_pn);
-              } else {
-                return fn.call(this, a[0]);
-              }
-            }
-            if (tof(a[0]) == "array") {
-              let res22 = {}, that2 = this;
-              each(a[0], function(v, i) {
-                res22[v] = fn.call(that2, v);
-              });
-              return res22;
-            }
-          }
-        });
-        return res2;
-      };
-      var to_arr_strip_keys = (obj2) => {
-        let res2 = [];
-        each(obj2, (v) => {
-          res2.push(v);
-        });
-        return res2;
-      };
-      var arr_objs_to_arr_keys_values_table = (arr_objs) => {
-        let keys = Object.keys(arr_objs[0]);
-        let arr_items = [], arr_values;
-        each(arr_objs, (item2) => {
-          arr_items.push(to_arr_strip_keys(item2));
-        });
-        return [keys, arr_items];
-      };
-      var set_arr_tree_value = (arr_tree, arr_path, value2) => {
-        let item_current = arr_tree;
-        let last_item_current, last_path_item;
-        each(arr_path, (path_item) => {
-          last_item_current = item_current;
-          item_current = item_current[path_item];
-          last_path_item = path_item;
-        });
-        last_item_current[last_path_item] = value2;
-      };
-      var get_arr_tree_value = (arr_tree, arr_path) => {
-        let item_current = arr_tree;
-        each(arr_path, (path_item) => {
-          item_current = item_current[path_item];
-        });
-        return item_current;
-      };
-      var deep_arr_iterate = (arr, path = [], callback2) => {
-        if (arguments.length === 2) {
-          callback2 = path;
-          path = [];
-        }
-        each(arr, (item2, i) => {
-          let c_path = clone(path);
-          c_path.push(i);
-          let t = tof(item2);
-          if (t === "array") {
-            deep_arr_iterate(item2, c_path, callback2);
-          } else {
-            callback2(c_path, item2);
-          }
-        });
-      };
-      var prom = (fn) => {
-        let fn_res = function() {
-          const a = arguments;
-          const t_a_last = typeof a[a.length - 1];
-          if (t_a_last === "function") {
-            fn.apply(this, a);
-          } else {
-            return new Promise((resolve, reject) => {
-              [].push.call(a, (err, res2) => {
-                if (err) {
-                  reject(err);
-                } else {
-                  resolve(res2);
-                }
-              });
-              fn.apply(this, a);
-            });
-          }
-        };
-        return fn_res;
-      };
-      var vectorify = (n_fn) => {
-        let fn_res = fp(function(a, sig) {
-          if (a.l > 2) {
-            throw "stop - need to check.";
-            let res2 = a[0];
-            for (let c2 = 1, l2 = a.l; c2 < l2; c2++) {
-              res2 = fn_res(res2, a[c2]);
-            }
-            return res2;
-          } else {
-            if (sig === "[n,n]") {
-              return n_fn(a[0], a[1]);
-            } else {
-              const ats = atof(a);
-              if (ats[0] === "array") {
-                if (ats[1] === "number") {
-                  const res2 = [], n = a[1], l2 = a[0].length;
-                  let c2;
-                  for (c2 = 0; c2 < l2; c2++) {
-                    res2.push(fn_res(a[0][c2], n));
-                  }
-                  return res2;
-                } else if (ats[1] === "array") {
-                  if (ats[0].length !== ats[1].length) {
-                    throw "vector array lengths mismatch";
-                  } else {
-                    const l2 = a[0].length, res2 = new Array(l2), arr2 = a[1];
-                    for (let c2 = 0; c2 < l2; c2++) {
-                      res2[c2] = fn_res(a[0][c2], arr2[c2]);
-                    }
-                    return res2;
-                  }
-                }
-              }
-            }
-          }
-          ;
-        });
-        return fn_res;
-      };
-      var n_add = (n1, n2) => n1 + n2;
-      var n_subtract = (n1, n2) => n1 - n2;
-      var n_multiply = (n1, n2) => n1 * n2;
-      var n_divide = (n1, n2) => n1 / n2;
-      var v_add = vectorify(n_add);
-      var v_subtract2 = vectorify(n_subtract);
-      var v_multiply = vectorify(n_multiply);
-      var v_divide = vectorify(n_divide);
-      var vector_magnitude = function(vector) {
-        var res2 = Math.sqrt(Math.pow(vector[0], 2) + Math.pow(vector[1], 2));
-        return res2;
-      };
-      var distance_between_points = function(points) {
-        var offset2 = v_subtract2(points[1], points[0]);
-        return vector_magnitude(offset2);
-      };
-      var map_tas_by_type = {
-        "c": Uint8ClampedArray,
-        "ui8": Uint8Array,
-        "i16": Int16Array,
-        "i32": Int32Array,
-        "ui16": Uint16Array,
-        "ui32": Uint32Array,
-        "f32": Float32Array,
-        "f64": Float64Array
-      };
-      var get_typed_array = function() {
-        const a = arguments;
-        let length, input_array;
-        const type = a[0];
-        if (is_array(a[1])) {
-          input_array = a[1];
-        } else {
-          length = a[1];
-        }
-        const ctr = map_tas_by_type[type];
-        if (ctr) {
-          if (input_array) {
-            return ctr(input_array);
-          } else if (length) {
-            return ctr(length);
-          }
-        }
-      };
-      var Grammar = class {
-        constructor(spec) {
-          const eg_spec = {
-            name: "User Auth Grammar"
-          };
-          const {
-            name
-          } = spec;
-          this.name = name;
-          const eg_indexing = () => {
-            let map_sing_plur = {};
-            let map_plur_sing = {};
-            let map_sing_def = {};
-            let map_sig_sing = {};
-            let map_sig0_sing = {};
-            let map_sig1_sing = {};
-            let map_sig2_sing = {};
-          };
-          this.maps = {
-            sing_plur: {},
-            plur_sing: {},
-            sing_def: {},
-            deep_sig_sing: {},
-            obj_sig_sing: {},
-            sig_levels_sing: {}
-          };
-          this.load_grammar(spec.def);
-        }
-        load_grammar(grammar_def) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          const resolve_def = (def) => {
-            const td = tf2(def);
-            if (td === "a") {
-              const res2 = [];
-              each(def, (def_item) => {
-                res2.push(resolve_def(def_item));
-              });
-              return res2;
-            } else if (td === "s") {
-              if (def === "string") {
-                return "string";
-              } else if (def === "number") {
-                return "number";
-              } else if (def === "boolean") {
-                return "boolean";
-              } else {
-                const found_sing_def = sing_def[def];
-                return found_sing_def;
-              }
-            } else if (td === "n") {
-              console.trace();
-              throw "NYI";
-            } else if (td === "b") {
-              console.trace();
-              throw "NYI";
-            }
-          };
-          const resolved_def_to_sig = (resolved_def, level = 0) => {
-            const trd = tf2(resolved_def);
-            if (trd === "s") {
-              if (resolved_def === "string") {
-                return "s";
-              } else if (resolved_def === "number") {
-                return "n";
-              } else if (resolved_def === "boolean") {
-                return "b";
-              }
-            } else if (trd === "a") {
-              let res2 = "";
-              if (level === 0) {
-              } else {
-                res2 = res2 + "[";
-              }
-              each(resolved_def, (item2, c2) => {
-                if (c2 > 0) {
-                  res2 = res2 + ",";
-                }
-                res2 = res2 + resolved_def_to_sig(item2, level + 1);
-              });
-              if (level === 0) {
-              } else {
-                res2 = res2 + "]";
-              }
-              return res2;
-            } else {
-              console.trace();
-              throw "NYI";
-            }
-            return res;
-          };
-          each(grammar_def, (def1, sing_word) => {
-            const {
-              def,
-              plural
-            } = def1;
-            sing_def[sing_word] = def;
-            sing_plur[sing_word] = plural;
-            plur_sing[plural] = sing_word;
-            const tdef = tf2(def);
-            const resolved_def = resolve_def(def);
-            const resolved_def_sig = resolved_def_to_sig(resolved_def);
-            deep_sig_sing[resolved_def_sig] = deep_sig_sing[resolved_def_sig] || [];
-            deep_sig_sing[resolved_def_sig].push(sing_word);
-            let def_is_all_custom_types = true;
-            each(def, (def_item, c2, stop) => {
-              const tdi = tf2(def_item);
-              if (tdi === "s") {
-                if (sing_def[def_item]) {
-                } else {
-                  def_is_all_custom_types = false;
-                  stop();
-                }
-              } else {
-                def_is_all_custom_types = false;
-                stop();
-              }
-            });
-            let obj_sig;
-            if (def_is_all_custom_types) {
-              obj_sig = "{";
-              each(def, (def_item, c2, stop) => {
-                if (c2 > 0) {
-                  obj_sig = obj_sig + ",";
-                }
-                const resolved = resolve_def(def_item);
-                const abr_resolved = resolved_def_to_sig(resolved);
-                obj_sig = obj_sig + '"' + def_item + '":';
-                obj_sig = obj_sig + abr_resolved;
-              });
-              obj_sig = obj_sig + "}";
-            }
-            if (obj_sig) {
-              obj_sig_sing[obj_sig] = obj_sig_sing[obj_sig] || [];
-              obj_sig_sing[obj_sig].push(sing_word);
-            }
-          });
-        }
-        tof(item2) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          const titem = tf2(item2);
-          console.log("titem", titem);
-          if (titem === "a") {
-            let all_arr_items_type;
-            each(item2, (subitem, c2, stop) => {
-              const subitem_type = this.tof(subitem);
-              console.log("subitem_type", subitem_type);
-              if (c2 === 0) {
-                all_arr_items_type = subitem_type;
-              } else {
-                if (all_arr_items_type === subitem_type) {
-                } else {
-                  all_arr_items_type = null;
-                  stop();
-                }
-              }
-            });
-            if (all_arr_items_type) {
-              console.log("has all_arr_items_type", all_arr_items_type);
-              if (!map_native_types[all_arr_items_type]) {
-                const res2 = sing_plur[all_arr_items_type];
-                return res2;
-              }
-            } else {
-              console.log("no all_arr_items_type");
-            }
-          } else {
-            return tof(item2);
-          }
-          const item_deep_sig = deep_sig(item2);
-          console.log("Grammar tof() item_deep_sig", item_deep_sig);
-          let arr_sing;
-          if (titem === "a") {
-            const unenclosed_sig = item_deep_sig.substring(1, item_deep_sig.length - 1);
-            console.log("unenclosed_sig", unenclosed_sig);
-            arr_sing = deep_sig_sing[unenclosed_sig];
-          } else {
-            arr_sing = deep_sig_sing[item_deep_sig];
-          }
-          if (arr_sing) {
-            if (arr_sing.length === 1) {
-              return arr_sing[0];
-            } else {
-              console.trace();
-              throw "NYI";
-            }
-          }
-        }
-        sig(item2, max_depth = -1, depth = 0) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          const extended_sig = (item3) => {
-            const ti = tf2(item3);
-            let res2 = "";
-            let same_grammar_type;
-            const record_subitem_sigs = (item4) => {
-              same_grammar_type = void 0;
-              let same_sig = void 0;
-              each(item4, (subitem, c2) => {
-                if (c2 > 0) {
-                  res2 = res2 + ",";
-                }
-                const sig_subitem = this.sig(subitem, max_depth, depth + 1);
-                if (same_sig === void 0) {
-                  same_sig = sig_subitem;
-                } else {
-                  if (sig_subitem !== same_sig) {
-                    same_sig = false;
-                    same_grammar_type = false;
-                  }
-                }
-                if (same_sig) {
-                  if (sing_def[sig_subitem]) {
-                    if (same_grammar_type === void 0) {
-                      same_grammar_type = sig_subitem;
-                    } else {
-                      if (same_grammar_type === sig_subitem) {
-                      } else {
-                        same_grammar_type = false;
-                      }
-                    }
-                  } else {
-                  }
-                }
-                res2 = res2 + sig_subitem;
-              });
-            };
-            if (ti === "A") {
-              record_subitem_sigs(item3);
-              return res2;
-            } else if (ti === "a") {
-              record_subitem_sigs(item3);
-              if (same_grammar_type) {
-                const plur_name = sing_plur[same_grammar_type];
-                return plur_name;
-              } else {
-                const found_obj_type = obj_sig_sing[res2];
-                const found_deep_sig_type = deep_sig_sing[res2];
-                let found_type_sing;
-                if (found_deep_sig_type) {
-                  if (found_deep_sig_type.length === 1) {
-                    found_type_sing = found_deep_sig_type[0];
-                  }
-                }
-                if (found_type_sing) {
-                  return found_type_sing;
-                } else {
-                  const enclosed_res = "[" + res2 + "]";
-                  return enclosed_res;
-                }
-              }
-            } else if (ti === "o") {
-              if (max_depth === -1 || depth <= max_depth) {
-                res2 = res2 + "{";
-                let first = true;
-                each(item3, (value2, key2) => {
-                  const vsig = this.sig(value2, max_depth, depth + 1);
-                  if (!first) {
-                    res2 = res2 + ",";
-                  } else {
-                    first = false;
-                  }
-                  res2 = res2 + '"' + key2 + '":' + vsig;
-                });
-                res2 = res2 + "}";
-                return res2;
-              } else {
-                return "o";
-              }
-            } else if (ti === "s" || ti === "n" || ti === "b") {
-              return ti;
-            } else {
-              return ti;
-            }
-          };
-          return extended_sig(item2);
-        }
-        single_forms_sig(item2) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          let sig = this.sig(item2);
-          let s_sig = sig.split(",");
-          const arr_res = [];
-          each(s_sig, (sig_item, c2) => {
-            const sing = plur_sing[sig_item] || sig_item;
-            arr_res.push(sing);
-          });
-          const res2 = arr_res.join(",");
-          return res2;
-        }
-      };
-      var Evented_Class = class {
-        "constructor"() {
-          Object.defineProperty(this, "_bound_events", {
-            value: {}
-          });
-        }
-        "raise_event"() {
-          let a = Array.prototype.slice.call(arguments), sig = get_a_sig2(a);
-          a.l = a.length;
-          let target = this;
-          let c2, l2, res2;
-          if (sig === "[s]") {
-            let target2 = this;
-            let event_name = a[0];
-            let bgh = this._bound_general_handler;
-            let be = this._bound_events;
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target2, event_name));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) == "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target2));
-                }
-                return res2;
-              }
-            }
-          }
-          if (sig === "[s,a]") {
-            let be = this._bound_events;
-            let bgh = this._bound_general_handler;
-            let event_name = a[0];
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target, event_name, a[1]));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) === "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target, a[1]));
-                }
-              }
-            }
-          }
-          if (sig === "[s,b]" || sig === "[s,s]" || sig === "[s,n]" || sig === "[s,B]" || sig === "[s,O]" || sig === "[s,e]") {
-            let be = this._bound_events;
-            let bgh = this._bound_general_handler;
-            let event_name = a[0];
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target, event_name, a[1]));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) === "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target, a[1]));
-                }
-              }
-            }
-          }
-          if (sig === "[s,o]" || sig === "[s,?]") {
-            let be = this._bound_events;
-            let bgh = this._bound_general_handler;
-            let event_name = a[0];
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target, event_name, a[1]));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) === "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target, a[1]));
-                }
-              }
-            }
-          } else {
-            if (a.l > 2) {
-              let event_name = a[0];
-              let additional_args = [];
-              let bgh_args = [event_name];
-              for (c2 = 1, l2 = a.l; c2 < l2; c2++) {
-                additional_args.push(a[c2]);
-                bgh_args.push(a[c2]);
-              }
-              let be = this._bound_events;
-              let bgh = this._bound_general_handler;
-              res2 = [];
-              if (bgh) {
-                for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                  res2.push(bgh[c2].apply(target, bgh_args));
-                }
-              }
-              if (be) {
-                let bei = be[event_name];
-                if (tof(bei) == "array") {
-                  if (bei.length > 0) {
-                    for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                      if (bei[c2]) res2.push(bei[c2].apply(target, additional_args));
-                    }
-                    return res2;
-                  } else {
-                    return res2;
-                  }
-                }
-              }
-            } else {
-            }
-          }
-          return res2;
-        }
-        "add_event_listener"() {
-          const {
-            event_events
-          } = this;
-          let a = Array.prototype.slice.call(arguments), sig = get_a_sig2(a);
-          if (sig === "[f]") {
-            this._bound_general_handler = this._bound_general_handler || [];
-            if (is_array(this._bound_general_handler)) {
-              this._bound_general_handler.push(a[0]);
-            }
-            ;
-          }
-          if (sig === "[s,f]") {
-            let event_name = a[0], fn_listener = a[1];
-            if (!this._bound_events[event_name]) this._bound_events[event_name] = [];
-            let bei = this._bound_events[event_name];
-            if (is_array(bei)) {
-              bei.push(fn_listener);
-              if (event_events) {
-                this.raise("add-event-listener", {
-                  "name": event_name
-                });
-              }
-            } else {
-              console.trace();
-              throw "Expected: array";
-            }
-          }
-          return this;
-        }
-        "remove_event_listener"(event_name, fn_listener) {
-          const {
-            event_events
-          } = this;
-          if (this._bound_events) {
-            let bei = this._bound_events[event_name] || [];
-            if (is_array(bei)) {
-              let c2 = 0, l2 = bei.length, found = false;
-              while (!found && c2 < l2) {
-                if (bei[c2] === fn_listener) {
-                  found = true;
-                } else {
-                  c2++;
-                }
-              }
-              if (found) {
-                bei.splice(c2, 1);
-                if (event_events) {
-                  this.raise("remove-event-listener", {
-                    "name": event_name
-                  });
-                }
-              }
-            } else {
-              console.trace();
-              throw "Expected: array";
-            }
-          }
-          return this;
-        }
-        get bound_named_event_counts() {
-          const res2 = {};
-          if (this._bound_events) {
-            const keys = Object.keys(this._bound_events);
-            each(keys, (key2) => {
-              res2[key2] = this._bound_events[key2].length;
-            });
-          }
-          return res2;
-        }
-        "one"(event_name, fn_handler) {
-          let inner_handler = function(e) {
-            fn_handler.call(this, e);
-            this.off(event_name, inner_handler);
-          };
-          this.on(event_name, inner_handler);
-        }
-        "changes"(obj_changes) {
-          if (!this.map_changes) {
-            this.map_changes = {};
-          }
-          each(obj_changes, (handler, name) => {
-            this.map_changes[name] = this.map_changes[name] || [];
-            this.map_changes[name].push(handler);
-          });
-          if (!this._using_changes) {
-            this._using_changes = true;
-            this.on("change", (e_change) => {
-              const {
-                name,
-                value: value2
-              } = e_change;
-              if (this.map_changes[name]) {
-                each(this.map_changes[name], (h_change) => {
-                  h_change(value2);
-                });
-              }
-            });
-          }
-        }
-      };
-      var p = Evented_Class.prototype;
-      p.raise = p.raise_event;
-      p.trigger = p.raise_event;
-      p.subscribe = p.add_event_listener;
-      p.on = p.add_event_listener;
-      p.off = p.remove_event_listener;
-      var eventify = (obj2) => {
-        const bound_events = {};
-        const add_event_listener = (name, handler) => {
-          if (handler === void 0 && typeof name === "function") {
-            handler = name;
-            name = "";
-          }
-          if (!bound_events[name]) bound_events[name] = [];
-          bound_events[name].push(handler);
-        };
-        const remove_event_listener = (name, handler) => {
-          if (bound_events[name]) {
-            const i = bound_events[name].indexOf(handler);
-            if (i > -1) {
-              bound_events[name].splice(i, 1);
-            }
-          }
-        };
-        const raise_event = (name, optional_param) => {
-          const arr_named_events = bound_events[name];
-          if (arr_named_events !== void 0) {
-            if (optional_param !== void 0) {
-              const l2 = arr_named_events.length;
-              for (let c2 = 0; c2 < l2; c2++) {
-                arr_named_events[c2].call(obj2, optional_param);
-              }
-            } else {
-              const l2 = arr_named_events.length;
-              for (let c2 = 0; c2 < l2; c2++) {
-                arr_named_events[c2].call(obj2);
-              }
-            }
-          }
-        };
-        obj2.on = obj2.add_event_listener = add_event_listener;
-        obj2.off = obj2.remove_event_listener = remove_event_listener;
-        obj2.raise = obj2.raise_event = raise_event;
-        return obj2;
-      };
-      var Publisher = class extends Evented_Class {
-        constructor(spec = {}) {
-          super({});
-          this.one("ready", () => {
-            this.is_ready = true;
-          });
-        }
-        get when_ready() {
-          return new Promise((solve, jettison) => {
-            if (this.is_ready === true) {
-              solve();
-            } else {
-              this.one("ready", () => {
-                solve();
-              });
-            }
-          });
-        }
-      };
-      var prop = (...a) => {
-        let s = get_a_sig2(a);
-        const raise_change_events = true;
-        const ifn = (item2) => typeof item2 === "function";
-        if (s === "[a]") {
-          each(a[0], (item_params2) => {
-            prop.apply(exports, item_params2);
-          });
-        } else {
-          if (a.length === 2) {
-            if (ia(a[1])) {
-              const target = a[0];
-              each(a[1], (item2) => {
-                if (ia(item2)) {
-                  throw "NYI 468732";
-                } else {
-                  prop(target, item2);
-                }
-              });
-            } else {
-              const ta1 = tof(a[1]);
-              if (ta1 === "string") {
-                [obj, prop_name] = a;
-              } else {
-                throw "NYI 468732b";
-              }
-            }
-          } else if (a.length > 2) {
-            if (is_array(a[0])) {
-              throw "stop";
-              let objs = a.shift();
-              each(objs, (obj2) => {
-                prop.apply(exports, [obj2].concat(item_params));
-              });
-            } else {
-              let obj2, prop_name2, default_value, fn_onchange, fn_transform, fn_on_ready, options;
-              const load_options = (options2) => {
-                prop_name2 = prop_name2 || options2.name || options2.prop_name;
-                fn_onchange = options2.fn_onchange || options2.onchange || options2.change;
-                fn_transform = options2.fn_transform || options2.ontransform || options2.transform;
-                fn_on_ready = options2.ready || options2.on_ready;
-                default_value = default_value || options2.default_value || options2.default;
-              };
-              if (a.length === 2) {
-                [obj2, options] = a;
-                load_options(options);
-              } else if (a.length === 3) {
-                if (ifn(a[2])) {
-                  [obj2, prop_name2, fn_onchange] = a;
-                } else {
-                  if (a[2].change || a[2].ready) {
-                    load_options(a[2]);
-                    [obj2, prop_name2] = a;
-                  } else {
-                    [obj2, prop_name2, default_value] = a;
-                  }
-                }
-              } else if (a.length === 4) {
-                if (ifn(a[2]) && ifn(a[3])) {
-                  [obj2, prop_name2, fn_transform, fn_onchange] = a;
-                } else if (ifn(a[3])) {
-                  [obj2, prop_name2, default_value, fn_onchange] = a;
-                } else {
-                  [obj2, prop_name2, default_value, options] = a;
-                  load_options(options);
-                }
-              } else if (a.length === 5) {
-                [obj2, prop_name2, default_value, fn_transform, fn_onchange] = a;
-              }
-              let _prop_value;
-              if (typeof default_value !== "undefined") _prop_value = default_value;
-              const _silent_set = (value2) => {
-                let _value;
-                if (fn_transform) {
-                  _value = fn_transform(value2);
-                } else {
-                  _value = value2;
-                }
-                _prop_value = _value;
-              };
-              const _set = (value2) => {
-                let _value;
-                if (fn_transform) {
-                  _value = fn_transform(value2);
-                } else {
-                  _value = value2;
-                }
-                let old = _prop_value;
-                _prop_value = _value;
-                if (fn_onchange) {
-                  fn_onchange({
-                    old,
-                    value: _prop_value
-                  });
-                }
-                if (obj2.raise && raise_change_events) {
-                  obj2.raise("change", {
-                    name: prop_name2,
-                    old,
-                    value: _prop_value
-                  });
-                }
-              };
-              if (is_defined(default_value)) {
-                _prop_value = default_value;
-              }
-              const t_prop_name = tf2(prop_name2);
-              if (t_prop_name === "s") {
-                Object.defineProperty(obj2, prop_name2, {
-                  get() {
-                    return _prop_value;
-                  },
-                  set(value2) {
-                    _set(value2);
-                  }
-                });
-              } else if (t_prop_name === "a") {
-                const l2 = prop_name2.length;
-                let item_prop_name;
-                for (let c2 = 0; c2 < l2; c2++) {
-                  item_prop_name = prop_name2[c2];
-                  Object.defineProperty(obj2, item_prop_name, {
-                    get() {
-                      return _prop_value;
-                    },
-                    set(value2) {
-                      _set(value2);
-                    }
-                  });
-                }
-              } else {
-                throw "Unexpected name type: " + t_prop_name;
-              }
-              if (fn_on_ready) {
-                fn_on_ready({
-                  silent_set: _silent_set
-                });
-              }
-            }
-          }
-        }
-      };
-      var Data_Type = class {
-      };
-      var Functional_Data_Type = class extends Data_Type {
-        constructor(spec) {
-          super(spec);
-          if (spec.supertype) this.supertype = spec.supertype;
-          if (spec.name) this.name = spec.name;
-          if (spec.abbreviated_name) this.abbreviated_name = spec.abbreviated_name;
-          if (spec.named_property_access) this.named_property_access = spec.named_property_access;
-          if (spec.numbered_property_access) this.numbered_property_access = spec.numbered_property_access;
-          if (spec.property_names) this.property_names = spec.property_names;
-          if (spec.property_data_types) this.property_data_types = spec.property_data_types;
-          if (spec.wrap_properties) this.wrap_properties = spec.wrap_properties;
-          if (spec.wrap_value_inner_values) this.wrap_value_inner_values = spec.wrap_value_inner_values;
-          if (spec.value_js_type) this.value_js_type = spec.value_js_type;
-          if (spec.abbreviated_property_names) this.abbreviated_property_names = spec.abbreviated_property_names;
-          if (spec.validate) this.validate = spec.validate;
-          if (spec.validate_explain) this.validate_explain = spec.validate_explain;
-          if (spec.parse_string) this.parse_string = spec.parse_string;
-          if (spec.parse) this.parse = spec.parse;
-        }
-      };
-      Functional_Data_Type.number = new Functional_Data_Type({
-        name: "number",
-        abbreviated_name: "n",
-        validate: (x) => {
-          return !isNaN(x);
-        },
-        parse_string(str) {
-          const p2 = parseFloat(str);
-          if (p2 + "" === str) {
-            const parsed_is_valid = this.validate(p2);
-            if (parsed_is_valid) {
-              return p2;
-            }
-          }
-        }
-      });
-      Functional_Data_Type.integer = new Functional_Data_Type({
-        name: "integer",
-        abbreviated_name: "int",
-        validate: (x) => {
-          return Number.isInteger(x);
-        },
-        parse_string(str) {
-          const p2 = parseInt(str);
-          if (p2 + "" === str) {
-            const parsed_is_valid = this.validate(p2);
-            if (parsed_is_valid) {
-              return p2;
-            }
-          }
-        }
-      });
-      var field = (...a) => {
-        const raise_change_events = true;
-        const ifn = (item2) => typeof item2 === "function";
-        let s = get_a_sig2(a);
-        if (s === "[a]") {
-          each(a[0], (item_params2) => {
-            prop.apply(exports, item_params2);
-          });
-        } else {
-          if (a.length > 1) {
-            if (is_array(a[0])) {
-              throw "stop - need to fix";
-              let objs = a.shift();
-              each(objs, (obj2) => {
-                field.apply(exports, [obj2].concat(item_params));
-              });
-            } else {
-              let obj2, prop_name2, data_type, default_value, fn_transform;
-              if (a.length === 2) {
-                [obj2, prop_name2] = a;
-              } else if (a.length === 3) {
-                if (a[2] instanceof Data_Type) {
-                  [obj2, prop_name2, data_type, default_value] = a;
-                } else {
-                  if (ifn(a[2])) {
-                    [obj2, prop_name2, fn_transform] = a;
-                  } else {
-                    [obj2, prop_name2, default_value] = a;
-                  }
-                }
-              } else if (a.length === 4) {
-                if (a[2] instanceof Data_Type) {
-                  [obj2, prop_name2, data_type, default_value] = a;
-                } else {
-                  [obj2, prop_name2, default_value, fn_transform] = a;
-                }
-              }
-              if (obj2 !== void 0) {
-                Object.defineProperty(obj2, prop_name2, {
-                  get() {
-                    if (is_defined(obj2._)) {
-                      return obj2._[prop_name2];
-                    } else {
-                      return void 0;
-                    }
-                  },
-                  set(value2) {
-                    let old = (obj2._ = obj2._ || {})[prop_name2];
-                    if (old !== value2) {
-                      let is_valid = true;
-                      if (data_type) {
-                        const t_value = typeof value2;
-                        is_valid = data_type.validate(value2);
-                        if (t_value === "string") {
-                          const parsed_value = data_type.parse_string(value2);
-                          is_valid = data_type.validate(parsed_value);
-                          if (is_valid) value2 = parsed_value;
-                        }
-                        console.log("t_value", t_value);
-                      }
-                      if (is_valid) {
-                        let _value;
-                        if (fn_transform) {
-                          _value = fn_transform(value2);
-                        } else {
-                          _value = value2;
-                        }
-                        obj2._[prop_name2] = _value;
-                        if (raise_change_events) {
-                          obj2.raise("change", {
-                            name: prop_name2,
-                            old,
-                            value: _value
-                          });
-                        }
-                      }
-                    } else {
-                    }
-                  }
-                });
-                if (is_defined(default_value)) {
-                  let is_valid = true;
-                  if (data_type) {
-                    is_valid = data_type.validate(default_value);
-                  }
-                  if (is_valid) {
-                    (obj2._ = obj2._ || {})[prop_name2] = default_value;
-                  }
-                }
-              } else {
-                throw "stop";
-              }
-            }
-          }
-        }
-      };
-      var lang_mini_props = {
-        each,
-        is_array,
-        is_dom_node,
-        is_ctrl,
-        clone,
-        get_truth_map_from_arr,
-        tm: get_truth_map_from_arr,
-        get_arr_from_truth_map,
-        arr_trim_undefined,
-        get_map_from_arr,
-        arr_like_to_arr,
-        tof,
-        atof,
-        tf: tf2,
-        load_type,
-        is_defined,
-        def: is_defined,
-        Grammar,
-        stringify,
-        functional_polymorphism,
-        fp,
-        mfp,
-        arrayify,
-        mapify,
-        str_arr_mapify,
-        get_a_sig: get_a_sig2,
-        deep_sig,
-        get_item_sig,
-        set_vals,
-        truth,
-        trim_sig_brackets,
-        ll_set,
-        ll_get,
-        iterate_ancestor_classes,
-        is_arr_of_t,
-        is_arr_of_arrs,
-        is_arr_of_strs,
-        input_processors,
-        output_processors,
-        call_multiple_callback_functions,
-        call_multi,
-        multi: call_multi,
-        native_constructor_tof,
-        Fns,
-        sig_match,
-        remove_sig_from_arr_shell,
-        to_arr_strip_keys,
-        arr_objs_to_arr_keys_values_table,
-        set_arr_tree_value,
-        get_arr_tree_value,
-        deep_arr_iterate,
-        prom,
-        combinations,
-        combos: combinations,
-        Evented_Class,
-        eventify,
-        vectorify,
-        v_add,
-        v_subtract: v_subtract2,
-        v_multiply,
-        v_divide,
-        vector_magnitude,
-        distance_between_points,
-        get_typed_array,
-        gta: get_typed_array,
-        Publisher,
-        field,
-        prop,
-        Data_Type,
-        Functional_Data_Type
-      };
-      var lang_mini = new Evented_Class();
-      Object.assign(lang_mini, lang_mini_props);
-      lang_mini.note = (str_name, str_state, obj_properties) => {
-        obj_properties = obj_properties || {};
-        obj_properties.name = str_name;
-        obj_properties.state = str_state;
-        lang_mini.raise("note", obj_properties);
-      };
-      module.exports = lang_mini;
-      if (__require.main === module) {
-        let test_evented_class2 = function(test_data2) {
-          const res2 = create_empty_test_res();
-          const evented_class = new Evented_Class();
-          test_data2.forEach((test_event) => {
-            const event_name = test_event.event_name;
-            const event_data = test_event.event_data;
-            const listener = (data) => {
-              if (data === event_data) {
-                res2.passed.push(event_name);
-              } else {
-                res2.failed.push(event_name);
-              }
-            };
-            evented_class.on(event_name, listener);
-            evented_class.raise_event(event_name, event_data);
-          });
-          return res2;
-        };
-        test_evented_class = test_evented_class2;
-        const test_data = [
-          {
-            event_name: "foo",
-            event_data: "hello"
-          },
-          {
-            event_name: "bar",
-            event_data: "world"
-          },
-          {
-            event_name: "baz",
-            event_data: true
-          }
-        ];
-        const create_empty_test_res = () => ({
-          passed: [],
-          failed: []
-        });
-        const result = test_evented_class2(test_data);
-        console.log("Passed:", result.passed);
-        console.log("Failed:", result.failed);
-      }
-      var test_evented_class;
-    }
-  });
-
-  // ../jsgui3-html/node_modules/lang-mini/lib-lang-mini.js
-  var require_lib_lang_mini5 = __commonJS({
-    "../jsgui3-html/node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
-      var lang = require_lang_mini5();
-      var { each, tof } = lang;
-      var Type_Signifier = class _Type_Signifier {
-        // Name
-        constructor(spec = {}) {
-          const name = spec.name;
-          Object.defineProperty(this, "name", {
-            get() {
-              return name;
-            }
-          });
-          const parent = spec.parent;
-          Object.defineProperty(this, "parent", {
-            get() {
-              return parent;
-            }
-          });
-          const map_reserved_property_names = {
-            name: true,
-            parent: true
-          };
-          const _ = {};
-          each(spec, (value2, name2) => {
-            if (map_reserved_property_names[name2]) {
-            } else {
-              _[name2] = value2;
-            }
-          });
-        }
-        extend(o_extension) {
-          const o = {
-            parent: this
-          };
-          Object.assign(o, o_extension);
-          const res2 = new _Type_Signifier(o_extension);
-          return res2;
-        }
-        //  Other options?
-        //  Disambiguiation? Descriptive text?
-        //    Or is naming them the main thing there?
-        // Color representation
-        //   And that is simple, does not go into internal representation.
-      };
-      var Type_Representation = class _Type_Representation {
-        // Name
-        //  Other options?
-        //  Disambiguiation? Descriptive text?
-        //    Or is naming them the main thing there?
-        // Color representation
-        //   And that is simple, does not go into internal representation.
-        // This should be able to represent types and lang features not available to JS.
-        //   Names may be optional? May be autogenerated and quite long?
-        constructor(spec = {}) {
-          const name = spec.name;
-          Object.defineProperty(this, "name", {
-            get() {
-              return name;
-            }
-          });
-          const parent = spec.parent;
-          Object.defineProperty(this, "parent", {
-            get() {
-              return parent;
-            }
-          });
-          const _ = {};
-          const map_reserved_property_names = {
-            "name": true
-          };
-          each(spec, (value2, name2) => {
-            if (map_reserved_property_names[name2]) {
-            } else {
-              _[name2] = value2;
-              Object.defineProperty(this, name2, {
-                get() {
-                  return _[name2];
-                },
-                enumerable: true
-              });
-            }
-          });
-        }
-        extend(o_extension) {
-          const o = {
-            parent: this
-          };
-          Object.assign(o, o_extension);
-          const res2 = new _Type_Representation(o_extension);
-          return res2;
-        }
-      };
-      var st_color = new Type_Signifier({ "name": "color" });
-      var st_24bit_color = st_color.extend({ "bits": 24 });
-      var st_24bit_rgb_color = st_24bit_color.extend({ "components": ["red byte", "green byte", "blue byte"] });
-      var tr_string = new Type_Representation({ "name": "string" });
-      var tr_binary = new Type_Representation({ "name": "binary" });
-      var rt_bin_24bit_rgb_color = new Type_Representation({
-        // A binary type representation.
-        "signifier": st_24bit_rgb_color,
-        "bytes": [
-          [0, "red", "ui8"],
-          [1, "green", "ui8"],
-          [2, "blue", "ui8"]
-        ]
-      });
-      var rt_hex_24bit_rgb_color = new Type_Representation({
-        // Likely some kind of string template.
-        //  Or a function?
-        //  Best to keep this function free here.
-        //  Or maybe make a few quite standard ones.
-        "signifier": st_24bit_rgb_color,
-        // Or could just have the sequence / template literal even.
-        "bytes": [
-          [0, "#", "char"],
-          [1, "hex(red)", "string(2)"],
-          [3, "hex(green)", "string(2)"],
-          [5, "hex(blue)", "string(2)"]
-        ]
-      });
-      var st_date = new Type_Signifier({ "name": "date", "components": ["day uint", "month uint", "year int"] });
-      var rt_string_date_uk_ddmmyy = new Type_Representation({
-        "signifier": st_date,
-        "bytes": [
-          [0, "#", "char"],
-          [1, "day", "string(2)"],
-          [3, "/", "char"],
-          [4, "month", "string(2)"],
-          [6, "/", "char"],
-          [7, "year", "string(2)"]
-        ]
-      });
-      lang.Type_Signifier = Type_Signifier;
-      lang.Type_Representation = Type_Representation;
-      module.exports = lang;
-    }
-  });
-
-  // ../jsgui3-html/control_mixins/selectable.js
+  // node_modules/jsgui3-html/control_mixins/selectable.js
   var require_selectable = __commonJS({
-    "../jsgui3-html/control_mixins/selectable.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/selectable.js"(exports, module) {
       var {
         prop,
         field
       } = require_oext();
-      var { each, is_array, is_def } = require_lib_lang_mini5();
+      var { each, is_array, is_def } = require_lib_lang_mini();
       var selectable = (ctrl2, ctrl_handle, opts) => {
         const setup_isomorphic = () => {
           const old_silent = ctrl2.view.data.model.mixins.silent;
@@ -36015,6 +29570,7 @@
                     e.preventDefault();
                   }
                 } else {
+                  console.log("failed condition check");
                 }
               } else {
               }
@@ -36108,9 +29664,9 @@
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Cell.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Cell.js
   var require_Cell = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Cell.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Cell.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -36151,9 +29707,9 @@
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/menu-node.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/menu-node.js
   var require_menu_node = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/menu-node.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/menu-node.js"(exports, module) {
       var jsgui2 = require_html_core();
       var { stringify, each, tof, Control: Control2 } = jsgui2;
       var Menu_Node = class _Menu_Node extends Control2 {
@@ -36199,6 +29755,7 @@
               if (spec.value) {
                 var obj_menu = spec.value;
                 var t_obj_menu = tof(obj_menu);
+                console.log("t_obj_menu", t_obj_menu);
                 if (t_obj_menu == "array") {
                   each(obj_menu, function(v) {
                     var tv = tof(v);
@@ -36240,6 +29797,7 @@
           }
         }
         "close_all"() {
+          console.log("menu-node close_all");
           var inner_control = this.inner_control;
           inner_control.content.each(function(v, i) {
             var tn = v.__type_name;
@@ -36265,9 +29823,9 @@
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/context-menu.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/context-menu.js
   var require_context_menu = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/context-menu.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/context-menu.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Menu_Node = require_menu_node();
       var stringify = jsgui2.stringify;
@@ -36316,6 +29874,7 @@
           super.activate();
         }
         "close_all"() {
+          console.log("menu close_all");
           this.content.each(function(v, i) {
             v.close_all();
           });
@@ -36325,9 +29884,9 @@
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/grid.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/grid.js
   var require_grid = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/grid.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/grid.js"(exports, module) {
       var jsgui2 = require_html_core();
       var {
         stringify,
@@ -36421,6 +29980,7 @@
                 cell.size = cell_size;
               });
             } else {
+              console.log(".size was not available");
             }
           }
         }
@@ -36702,9 +30262,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-grid.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-grid.js
   var require_color_grid = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-grid.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-grid.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Grid = require_grid();
       var stringify = jsgui2.stringify;
@@ -36797,16 +30357,17 @@ div.grid .row .cell span {
         }
       };
       if (__require.main === module) {
+        console.log("pal_crayola.length", pal_crayola.length);
       } else {
       }
       module.exports = Color_Grid;
     }
   });
 
-  // ../jsgui3-html/html-core/arr_colors.js
+  // node_modules/jsgui3-html/html-core/arr_colors.js
   var require_arr_colors = __commonJS({
-    "../jsgui3-html/html-core/arr_colors.js"(exports, module) {
-      var pal_crayola = [
+    "node_modules/jsgui3-html/html-core/arr_colors.js"(exports, module) {
+      var pal_crayola2 = [
         {
           "hex": "#EFDECD",
           "name": "Almond",
@@ -37473,13 +31034,13 @@ div.grid .row .cell span {
           "rgb": "(255, 174, 66)"
         }
       ];
-      module.exports = pal_crayola;
+      module.exports = pal_crayola2;
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-palette.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-palette.js
   var require_color_palette = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-palette.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-palette.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Color_Grid = require_color_grid();
       var { v_subtract: v_subtract2 } = jsgui2;
@@ -37488,14 +31049,14 @@ div.grid .row .cell span {
         field,
         prop
       } = require_oext();
-      var pal_crayola = require_arr_colors();
+      var pal_crayola2 = require_arr_colors();
       var Color_Palette = class extends Control2 {
         constructor(spec) {
           spec = spec || {};
           spec.__type_name = spec.__type_name || "color_palette";
           super(spec);
           this.add_class("color-palette");
-          prop(this, "palette", spec.palette || pal_crayola);
+          prop(this, "palette", spec.palette || pal_crayola2);
           prop(this, "grid_size", spec.grid_size || [12, 12]);
           if (!spec.abstract && !spec.el) {
             this.compose_color_grid();
@@ -37529,6 +31090,7 @@ div.grid .row .cell span {
           }
         }
         compose_color_grid() {
+          console.log("compose_color_grid");
           var padding = 6;
           const fg_bg_color_grid = new Color_Grid({
             "context": this.context,
@@ -37551,15 +31113,16 @@ div.grid .row .cell span {
         }
       };
       if (__require.main === module) {
+        console.log("pal_crayola.length", pal_crayola2.length);
       } else {
       }
       module.exports = Color_Palette;
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/checkbox.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/checkbox.js
   var require_checkbox = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/checkbox.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/checkbox.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -37610,6 +31173,7 @@ div.grid .row .cell span {
             var el_checkbox = html_check.dom.el;
             var label = this.label;
             html_check.on("change", (e_change) => {
+              console.log("el_radio.checked", el_radio.checked);
               this.raise("change", {
                 name: "checked",
                 value: el_checkbox.checked
@@ -37627,9 +31191,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/combo-box.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/combo-box.js
   var require_combo_box = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/combo-box.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/combo-box.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Control2 = jsgui2.Control;
       var Combo_Box = class extends Control2 {
@@ -37642,9 +31206,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/coverable.js
+  // node_modules/jsgui3-html/control_mixins/coverable.js
   var require_coverable = __commonJS({
-    "../jsgui3-html/control_mixins/coverable.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/coverable.js"(exports, module) {
       var jsgui2 = require_html_core();
       var { prop, field, Control: Control2 } = jsgui2;
       var coverable = (ctrl2, opts) => {
@@ -37685,9 +31249,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/typed_data/date.js
+  // node_modules/jsgui3-html/control_mixins/typed_data/date.js
   var require_date = __commonJS({
-    "../jsgui3-html/control_mixins/typed_data/date.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/typed_data/date.js"(exports, module) {
       var lang = require_lang();
       var is_defined = lang.is_defined;
       var date = (ctrl2, spec) => {
@@ -37826,9 +31390,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/display.js
+  // node_modules/jsgui3-html/control_mixins/display.js
   var require_display = __commonJS({
-    "../jsgui3-html/control_mixins/display.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/display.js"(exports, module) {
       var lang = require_lang();
       var { Evented_Class, tof, each } = lang;
       var Ctrl_Display_Mode_Category = class extends Evented_Class {
@@ -37912,18 +31476,18 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/display-modes.js
+  // node_modules/jsgui3-html/control_mixins/display-modes.js
   var require_display_modes = __commonJS({
-    "../jsgui3-html/control_mixins/display-modes.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/display-modes.js"(exports, module) {
       var display_modes = (ctrl2, opts = {}) => {
       };
       module.exports = display_modes;
     }
   });
 
-  // ../jsgui3-html/control_mixins/fast-touch-click.js
+  // node_modules/jsgui3-html/control_mixins/fast-touch-click.js
   var require_fast_touch_click = __commonJS({
-    "../jsgui3-html/control_mixins/fast-touch-click.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/fast-touch-click.js"(exports, module) {
       var fast_touch_click = (ctrl2) => {
         let has_moved_away = false;
         ctrl2.on("touchstart", (ets) => {
@@ -37943,9 +31507,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/popup.js
+  // node_modules/jsgui3-html/control_mixins/popup.js
   var require_popup = __commonJS({
-    "../jsgui3-html/control_mixins/popup.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/popup.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -37998,9 +31562,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/drag_like_events.js
+  // node_modules/jsgui3-html/control_mixins/drag_like_events.js
   var require_drag_like_events = __commonJS({
-    "../jsgui3-html/control_mixins/drag_like_events.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/drag_like_events.js"(exports, module) {
       var {
         prop,
         field
@@ -38150,9 +31714,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/resizable.js
+  // node_modules/jsgui3-html/control_mixins/resizable.js
   var require_resizable = __commonJS({
-    "../jsgui3-html/control_mixins/resizable.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/resizable.js"(exports, module) {
       var Control2 = require_control();
       var drag_like_events = require_drag_like_events();
       var { tof } = require_lang();
@@ -38171,6 +31735,7 @@ div.grid .row .cell span {
         if (resize_mode === "br_handle") {
           if (ctrl2.ctrl_relative) {
             if (ctrl2.ctrl_br_resize_handle) {
+              console.log("ctrl.ctrl_br_resize_handle already detected");
             } else {
               const ctrl_br_resize_handle = new Control2({
                 context: ctrl2.context
@@ -38226,9 +31791,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/deletable.js
+  // node_modules/jsgui3-html/control_mixins/deletable.js
   var require_deletable = __commonJS({
-    "../jsgui3-html/control_mixins/deletable.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/deletable.js"(exports, module) {
       var deletable = (ctrl2) => {
         ctrl2.delete = () => {
           ctrl2.remove();
@@ -38239,9 +31804,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/selected-deletable.js
+  // node_modules/jsgui3-html/control_mixins/selected-deletable.js
   var require_selected_deletable = __commonJS({
-    "../jsgui3-html/control_mixins/selected-deletable.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/selected-deletable.js"(exports, module) {
       var {
         prop,
         field
@@ -38285,9 +31850,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/selected-resizable.js
+  // node_modules/jsgui3-html/control_mixins/selected-resizable.js
   var require_selected_resizable = __commonJS({
-    "../jsgui3-html/control_mixins/selected-resizable.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/selected-resizable.js"(exports, module) {
       var {
         prop,
         field
@@ -38298,6 +31863,7 @@ div.grid .row .cell span {
         };
         let press_handler = (event) => {
           const keyName = event.key;
+          console.log("event", event);
           if (keyName === "Control") {
             return;
           }
@@ -38332,9 +31898,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/selection-box-host.js
+  // node_modules/jsgui3-html/control_mixins/selection-box-host.js
   var require_selection_box_host = __commonJS({
-    "../jsgui3-html/control_mixins/selection-box-host.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/selection-box-host.js"(exports, module) {
       var {
         prop,
         field
@@ -38396,6 +31962,7 @@ div.grid .row .cell span {
             return selection_box;
           };
           ctrl2.drag_events((md) => {
+            console.log("md", md);
             let main_boxes = ctrl2.$(".main-box");
             let do_begin_selection_box = true;
             if (md.target.tagName.toLowerCase() === "span") {
@@ -38451,9 +32018,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/press-events.js
+  // node_modules/jsgui3-html/control_mixins/press-events.js
   var require_press_events = __commonJS({
-    "../jsgui3-html/control_mixins/press-events.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/press-events.js"(exports, module) {
       var { get_truth_map_from_arr, each } = require_lang();
       var press_events = (ctrl2, options = {}) => {
         ctrl2.__mx = ctrl2.__mx || {};
@@ -38601,7 +32168,10 @@ div.grid .row .cell span {
                 ctrl2.on("remove-event-listener", (e) => {
                   const { name } = e;
                   if (map_press_event_names[name]) {
+                    console.log("ctrl remove-event-listener", name);
                     const bnec = ctrl2.bound_named_event_counts;
+                    console.log("bound_named_event_counts bnec", bnec);
+                    console.log("name", name);
                     let count_bound_press_events = 0;
                     each(bnec, (count, event_name) => {
                       if (map_press_event_names[event_name]) count_bound_press_events += count;
@@ -38640,12 +32210,13 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/press-outside.js
+  // node_modules/jsgui3-html/control_mixins/press-outside.js
   var require_press_outside = __commonJS({
-    "../jsgui3-html/control_mixins/press-outside.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/press-outside.js"(exports, module) {
       var press_events = require_press_events();
       var press_outside = (ctrl2, options = {}) => {
         let once = options.one || options.once || false;
+        console.log("press_outside");
         ctrl2.__mx = ctrl2.__mx || {};
         if (!ctrl2.__mx || !ctrl2.__mx.press_events) {
           press_events(ctrl2);
@@ -38657,6 +32228,7 @@ div.grid .row .cell span {
         }
         ctrl2.event_events = true;
         const body_press = (e) => {
+          console.log("press_outside body press e", e);
           const { ctrl_target } = e;
           const match = ctrl_target === ctrl2 || ctrl_target.ancestor(ctrl2);
           if (!match) {
@@ -38686,9 +32258,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/pressed-state.js
+  // node_modules/jsgui3-html/control_mixins/pressed-state.js
   var require_pressed_state = __commonJS({
-    "../jsgui3-html/control_mixins/pressed-state.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/pressed-state.js"(exports, module) {
       var {
         field,
         prop
@@ -38728,9 +32300,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/control_mixins/mx.js
+  // node_modules/jsgui3-html/control_mixins/mx.js
   var require_mx = __commonJS({
-    "../jsgui3-html/control_mixins/mx.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/mx.js"(exports, module) {
       var mx = {
         coverable: require_coverable(),
         date: require_date(),
@@ -38754,9 +32326,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Dropdown_Menu.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Dropdown_Menu.js
   var require_Dropdown_Menu = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Dropdown_Menu.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Dropdown_Menu.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -38922,15 +32494,16 @@ div.grid .row .cell span {
 `;
       if (__require.main === module) {
         const ddm = new Dropdown_Menu();
+        console.log(ddm.all_html_render());
       } else {
       }
       module.exports = Dropdown_Menu;
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Text_Input.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Text_Input.js
   var require_Text_Input = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Text_Input.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Text_Input.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -39082,9 +32655,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/text-item.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/text-item.js
   var require_text_item = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/text-item.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/text-item.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -39112,9 +32685,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Indicator.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Indicator.js
   var require_Indicator = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Indicator.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Indicator.js"(exports, module) {
       var jsgui2 = require_html_core();
       var {
         Control: Control2,
@@ -39143,21 +32716,24 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Status_Indicator.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Status_Indicator.js
   var require_Status_Indicator = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Status_Indicator.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Status_Indicator.js"(exports, module) {
       var Indicator = require_Indicator();
       var Status_Indicator = class extends Indicator {
         constructor(spec) {
           super(spec);
           this.on("change", (e) => {
             const { name, value: value2 } = e;
+            console.log("status indicator change", name, value2);
           });
           this.data.on("change", (e) => {
             const { name, value: value2 } = e;
+            console.log("status indicator .data change", name, value2);
           });
           this.data.model.on("change", (e) => {
             const { name, value: value2 } = e;
+            console.log("status indicator .data.model change", name, value2);
           });
         }
         // bind this to a data value?
@@ -39191,9 +32767,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Validation_Status_Indicator.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Validation_Status_Indicator.js
   var require_Validation_Status_Indicator = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Validation_Status_Indicator.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Validation_Status_Indicator.js"(exports, module) {
       var Status_Indicator = require_Status_Indicator();
       var Control_Validation = require_Control_Validation();
       var Validation_Status_Indicator = class extends Status_Indicator {
@@ -39232,15 +32808,24 @@ div.grid .row .cell span {
             });
           };
           this.data.on("change", (e) => {
+            console.log("V_S_I change e:", e);
             const { name, old, value: value2 } = e;
             if (name === "model") {
+              console.log("vsi data model change e", e);
             }
           });
           this.data.model.validation.state.on("change", (e) => {
+            console.log("Validation_Status_Indicator .data.model.validation.state change e:", e);
           });
         }
         activate() {
           const log_some_things = () => {
+            console.log("Validation_Status_Indicator activate");
+            console.log("this.validation", this.validation);
+            console.log("this.validation.state", this.validation.state);
+            console.log("this.validation.data.model", this.validation.data.model);
+            console.log("this.data.model", this.data.model);
+            console.log("this.data.model.value", this.data.model.value);
           };
         }
         // And activation????
@@ -39267,9 +32852,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Text_Field.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Text_Field.js
   var require_Text_Field = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Text_Field.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Text_Field.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Text_Input = require_Text_Input();
       var Text_Item = require_text_item();
@@ -39298,6 +32883,7 @@ div.grid .row .cell span {
           if (spec.placeholder) this.placeholder = spec.placeholder;
           const { context: context2 } = this;
           const data_model_change_handler = (e) => {
+            console.log("Text_Field data_model_change_handler e", e);
             const { name, old, value: value2 } = e;
             if (name === "value") {
               this.view.data.model.value = value2;
@@ -39306,6 +32892,7 @@ div.grid .row .cell span {
           this.data.model.on("change", data_model_change_handler);
           this.data.on("change", (e) => {
             const { name, value: value2, old } = e;
+            console.log("Text_Field data change e:", e);
             if (name === "model") {
               if (old instanceof Data_Model) {
                 old.off("change", data_model_change_handler);
@@ -39459,9 +33046,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/file-upload.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/file-upload.js
   var require_file_upload = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/file-upload.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/file-upload.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Text_Field = require_Text_Field();
       var Button = require_button();
@@ -39515,12 +33102,14 @@ div.grid .row .cell span {
         }
         "activate"() {
           super.activate();
+          console.log("activate File_Upload");
           var mode = this.mode;
           var autosubmit = this.autosubmit;
           var input_file = this.input_file;
           var form = this.form;
           if (autosubmit) {
             input_file.add_event_listener("change", function(e_change) {
+              console.log("e_change", e_change);
               form.dom.el.submit();
             });
           }
@@ -39530,9 +33119,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/1-editor/form_field.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/1-editor/form_field.js
   var require_form_field = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/1-editor/form_field.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/1-editor/form_field.js"(exports, module) {
       var Control2 = require_control();
       var Text_Input = require_Text_Input();
       var Validation_Status_Indicator = require_Validation_Status_Indicator();
@@ -39681,9 +33270,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/5-ui/horizontal-menu.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/horizontal-menu.js
   var require_horizontal_menu = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/5-ui/horizontal-menu.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/horizontal-menu.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Menu_Node = require_menu_node();
       var stringify = jsgui2.stringify;
@@ -39738,6 +33327,7 @@ div.grid .row .cell span {
           }
         }
         "close_all"() {
+          console.log("menu close_all");
           this.content.each((v, i) => {
             v.close_all();
           });
@@ -39747,9 +33337,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/4-data/data-item.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/4-data/data-item.js
   var require_data_item = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/4-data/data-item.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/4-data/data-item.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -39779,9 +33369,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/4-data/data-row.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/4-data/data-row.js
   var require_data_row = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/4-data/data-row.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/4-data/data-row.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -39812,9 +33402,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/date-picker.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/date-picker.js
   var require_date_picker = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/date-picker.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/date-picker.js"(exports, module) {
       var jsgui2 = require_html_core();
       var { Control: Control2, Control_Data, Control_View, Data_Object } = jsgui2;
       var { field } = require_oext();
@@ -39907,9 +33497,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/dropdown-list.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/dropdown-list.js
   var require_dropdown_list = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/dropdown-list.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/dropdown-list.js"(exports, module) {
       var jsgui2 = require_html_core();
       var each = jsgui2.each;
       var tof = jsgui2.tof;
@@ -39940,9 +33530,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/6-layout/panel.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/panel.js
   var require_panel = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/6-layout/panel.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/panel.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -39982,8 +33572,8 @@ div.grid .row .cell span {
                 if (!this.__active) {
                     super.activate();
                     this.content.on('change', e => {
-                       // console.log('e', e);
-                       // console.log('this', this);
+                        console.log('e', e);
+                        console.log('this', this);
                     })
                 }
                 
@@ -39994,9 +33584,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/6-layout/title-bar.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/title-bar.js
   var require_title_bar = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/6-layout/title-bar.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/title-bar.js"(exports, module) {
       var jsgui2 = require_html_core();
       var { stringify, each, tof, def, Control: Control2 } = jsgui2;
       var fields = [
@@ -40021,9 +33611,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/toggle-button.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/toggle-button.js
   var require_toggle_button = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/toggle-button.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/toggle-button.js"(exports, module) {
       var jsgui2 = require_html_core();
       var { stringify, each, tof, def, Control: Control2 } = jsgui2;
       var { prop, field } = require_oext();
@@ -40083,9 +33673,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/plus-minus-toggle-button.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/plus-minus-toggle-button.js
   var require_plus_minus_toggle_button = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/plus-minus-toggle-button.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/plus-minus-toggle-button.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Toggle_Button = require_toggle_button();
       var stringify = jsgui2.stringify;
@@ -40106,9 +33696,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/6-layout/vertical-expander.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/vertical-expander.js
   var require_vertical_expander = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/6-layout/vertical-expander.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/vertical-expander.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Control2 = jsgui2.Control;
       var { prop, field } = require_oext();
@@ -40161,6 +33751,7 @@ div.grid .row .cell span {
               }
             });
           } else {
+            console.log("WARNING: vertical_expander expected el to activate");
             console.trace();
           }
         }
@@ -40186,9 +33777,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/5-ui/tree-node.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/tree-node.js
   var require_tree_node = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/5-ui/tree-node.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/tree-node.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Plus_Minus_Toggle_Button = require_plus_minus_toggle_button();
       var Vertical_Expander = require_vertical_expander();
@@ -40370,9 +33961,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/5-ui/tree.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/tree.js
   var require_tree = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/5-ui/tree.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/tree.js"(exports, module) {
       var jsgui2 = require_html_core();
       var { stringify, each, tof, def, Control: Control2 } = jsgui2;
       var Panel = require_panel();
@@ -40439,9 +34030,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/5-ui/file-tree.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/file-tree.js
   var require_file_tree = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/5-ui/file-tree.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/file-tree.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Tree = require_tree();
       var File_Tree = class extends Tree {
@@ -40455,6 +34046,9 @@ div.grid .row .cell span {
             this.fs_resource = fs_resource;
           } else {
             let resources = context2.resources;
+            console.log("File_Tree context resources", resources);
+            console.log("File_Tree context.resource_pool", context2.resource_pool);
+            console.log("Object.keys(context)", Object.keys(context2));
           }
           if (!spec.el) {
             this.compose_file_tree();
@@ -40469,9 +34063,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/5-ui/file-tree-node.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/file-tree-node.js
   var require_file_tree_node = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/5-ui/file-tree-node.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/file-tree-node.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Tree_Node = require_tree_node();
       var File_Tree_Node = class extends Tree_Node {
@@ -40493,9 +34087,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/icon.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/icon.js
   var require_icon = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/icon.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/icon.js"(exports, module) {
       var jsgui2 = require_html_core();
       var {
         Control: Control2,
@@ -40553,9 +34147,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item.js
   var require_item = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item.js"(exports, module) {
       var jsgui2 = require_html_core();
       var { Control: Control2, controls, tf: tf2, are_equal, each } = jsgui2;
       var { span } = controls;
@@ -40572,9 +34166,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/list.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/list.js
   var require_list = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/list.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/list.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Item = require_item();
       var { each } = jsgui2;
@@ -40649,9 +34243,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item-selector.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item-selector.js
   var require_item_selector = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item-selector.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item-selector.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -40848,9 +34442,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/2-misc/left-right-arrows-selector.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/2-misc/left-right-arrows-selector.js
   var require_left_right_arrows_selector = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/2-misc/left-right-arrows-selector.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/2-misc/left-right-arrows-selector.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Control2 = jsgui2.Control;
       var def = jsgui2.is_defined;
@@ -40948,9 +34542,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/5-ui/line-chart.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/line-chart.js
   var require_line_chart = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/5-ui/line-chart.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/line-chart.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -41018,6 +34612,7 @@ div.grid .row .cell span {
           var w = size[0][0];
           var h = size[1][0];
           var range = this.get("range").value();
+          console.log("range", range);
           var y_axis_x, x_axis_y;
           var x_min = range[0][0], y_min = range[0][1], x_max = range[1][0], y_max = range[1][1];
           var x_range = x_max - x_min, y_range = y_max - y_min;
@@ -41249,6 +34844,7 @@ div.grid .row .cell span {
             add_y_notch_group(y_major_notch_spacing, 20);
           };
           var add_y_axis_minor_notches = function() {
+            console.log("x_minor_notch_spacing", y_minor_notch_spacing);
             add_y_notch_group(y_minor_notch_spacing, 10);
           };
           var add_major_x_axis_labels = function() {
@@ -41351,6 +34947,14 @@ div.grid .row .cell span {
             var x_scale = x_range / x_axis_length;
             var y_scale = y_range / y_axis_length;
             var log_values = function() {
+              console.log("x_range", x_range);
+              console.log("y_range", y_range);
+              console.log("x_scale", x_scale);
+              console.log("y_scale", y_scale);
+              console.log("left_margin", left_margin);
+              console.log("right_margin", right_margin);
+              console.log("range", range);
+              console.log("tof range", tof(range));
             };
             var context2 = this.context;
             var values_from_pixel_location = function(px_loc) {
@@ -41409,9 +35013,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/1-advanced/login.js
+  // node_modules/jsgui3-html/controls/organised/0-core/1-advanced/login.js
   var require_login = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/1-advanced/login.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/1-advanced/login.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Text_Field = require_Text_Field();
       var stringify = jsgui2.stringify;
@@ -41426,8 +35030,11 @@ div.grid .row .cell span {
           var make = this.make;
           this.add_class("login-control");
           var req = this.context.req;
+          console.log("--- Within Login Control ---");
           var headers = req.headers;
+          console.log("headers " + stringify(headers));
           var auth = this.context.auth;
+          console.log("auth " + stringify(auth));
           if (auth && auth.verified) {
             var div_logged_in = new jsgui2.div({
               "context": this.context
@@ -41500,9 +35107,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/6-layout/modal.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/modal.js
   var require_modal = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/6-layout/modal.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/modal.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -41520,9 +35127,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/6-layout/tile-slide.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/tile-slide.js
   var require_tile_slide = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/6-layout/tile-slide.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/tile-slide.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -41626,6 +35233,7 @@ div.grid .row .cell span {
             super.activate();
             setTimeout(async () => {
               await this.slide_to_right();
+              console.log("awaited slide to right");
             }, 2e3);
           }
         }
@@ -41687,9 +35295,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/month-view.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/month-view.js
   var require_month_view = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/month-view.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/month-view.js"(exports, module) {
       var jsgui2 = require_html_core();
       var clone = jsgui2.clone;
       var each = jsgui2.each;
@@ -41856,9 +35464,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/radio-button.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/radio-button.js
   var require_radio_button = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/radio-button.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/radio-button.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -41919,9 +35527,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/radio-button-group.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/radio-button-group.js
   var require_radio_button_group = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/radio-button-group.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/radio-button-group.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -41978,9 +35586,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/6-layout/tabbed-panel.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/tabbed-panel.js
   var require_tabbed_panel = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/6-layout/tabbed-panel.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/tabbed-panel.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Control2 = jsgui2.Control;
       var mx_selectable = require_selectable();
@@ -42116,6 +35724,8 @@ div.grid .row .cell span {
                 const tab_page = add_tab(tab_label_text, group_name);
                 tab_page.add(tab_content);
               } else {
+                console.log("tab", tab);
+                console.log("t", t);
                 throw "NYI";
               }
             }
@@ -42135,6 +35745,7 @@ div.grid .row .cell span {
               }
             });
             this.tab_pages = tab_pages;
+            console.log("tab_pages.length", tab_pages.length);
           }
         }
       };
@@ -42192,9 +35803,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/6-layout/app/multi-layout-mode.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/app/multi-layout-mode.js
   var require_multi_layout_mode = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/6-layout/app/multi-layout-mode.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/app/multi-layout-mode.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Panel = require_panel();
       var Tabbed_Panel = require_tabbed_panel();
@@ -42326,9 +35937,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/1-editor/property_editor.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/1-editor/property_editor.js
   var require_property_editor = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/1-editor/property_editor.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/1-editor/property_editor.js"(exports, module) {
       var Panel = require_panel();
       var Control2 = require_control();
       var Text_Input = require_Text_Input();
@@ -42463,9 +36074,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/1-advanced/popup-menu-button.js
+  // node_modules/jsgui3-html/controls/organised/0-core/1-advanced/popup-menu-button.js
   var require_popup_menu_button = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/1-advanced/popup-menu-button.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/1-advanced/popup-menu-button.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -42547,6 +36158,7 @@ div.grid .row .cell span {
               if (val === "open") {
                 root_menu_item.inner.pop_into_body();
                 this.one_mousedown_elsewhere((e_mousedown_elsewhere) => {
+                  console.log("e_mousedown_elsewhere", e_mousedown_elsewhere);
                   setTimeout(function() {
                     this.i_state = 0;
                     this.state.set("closed");
@@ -42577,9 +36189,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/1-editor/Rich_Text_Editor.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/1-editor/Rich_Text_Editor.js
   var require_Rich_Text_Editor = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/1-editor/Rich_Text_Editor.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/1-editor/Rich_Text_Editor.js"(exports, module) {
       var Control2 = require_control();
       var Rich_Text_Editor = class extends Control2 {
         constructor(options = {}) {
@@ -42884,9 +36496,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scrollbar.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scrollbar.js
   var require_scrollbar = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scrollbar.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scrollbar.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -42953,9 +36565,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scroll-view.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scroll-view.js
   var require_scroll_view = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scroll-view.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scroll-view.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -43005,9 +36617,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/5-ui/search-bar.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/search-bar.js
   var require_search_bar = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/5-ui/search-bar.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/search-bar.js"(exports, module) {
       var jsgui2 = require_html_core();
       var { Control: Control2 } = jsgui2;
       var view_model_spec = {
@@ -43050,9 +36662,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Select_Options.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Select_Options.js
   var require_Select_Options = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Select_Options.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Select_Options.js"(exports, module) {
       var jsgui2 = require_html_core();
       var { Control: Control2, Control_Data, Control_View, Data_Object, is_array, is_arr_of_strs, each } = jsgui2;
       var { field } = require_oext();
@@ -43121,6 +36733,7 @@ div.grid .row .cell span {
             const { dom } = this;
             const activate_view_model_to_dom_model_sync = () => {
               this.add_dom_event_listener("change", (e) => {
+                console.log("dom.el.value", dom.el.value);
                 this.view.data.model.value = dom.el.value;
               });
             };
@@ -43132,6 +36745,7 @@ div.grid .row .cell span {
           const dm_options = this.data.model.options;
           if (is_array(dm_options)) {
             if (is_arr_of_strs(dm_options)) {
+              console.log("dm_options is an array of strings");
               each(dm_options, (str_option) => {
                 const ctrl_option = new jsgui2.option({
                   context: context2
@@ -43148,9 +36762,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/6-layout/single-line.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/single-line.js
   var require_single_line = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/6-layout/single-line.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/single-line.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -43197,9 +36811,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/3-page/standard-web-page.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/3-page/standard-web-page.js
   var require_standard_web_page = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/3-page/standard-web-page.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/3-page/standard-web-page.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Standard_Web_Page = class extends jsgui2.Blank_HTML_Document {
         constructor(spec) {
@@ -43210,9 +36824,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/5-ui/start-stop-toggle-button.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/start-stop-toggle-button.js
   var require_start_stop_toggle_button = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/5-ui/start-stop-toggle-button.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/start-stop-toggle-button.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Toggle_Button = require_toggle_button();
       var stringify = jsgui2.stringify;
@@ -43252,9 +36866,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/1-advanced/string-span.js
+  // node_modules/jsgui3-html/controls/organised/0-core/1-advanced/string-span.js
   var require_string_span = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/1-advanced/string-span.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/1-advanced/string-span.js"(exports, module) {
       var jsgui2 = require_html_core();
       var { controls, parse, each, are_equal } = jsgui2;
       var { Control: Control2, Text_Node } = controls;
@@ -43287,6 +36901,7 @@ div.grid .row .cell span {
         const { offset: offset2 } = opts;
         const measure_ctrl = () => {
           const bcr = ctrl2.bcr();
+          console.log("bcr", bcr);
           return bcr;
         };
         const clear = () => {
@@ -43319,6 +36934,7 @@ div.grid .row .cell span {
         };
         const add = (ctrl_to_add, pos) => {
           const docpos = get_suspended_ctrl_doc_pos(ctrl_to_add, pos);
+          console.log("docpos", docpos);
           ctrl_to_add.style({
             "position": "absolute",
             "left": docpos[0] + "px",
@@ -43354,6 +36970,7 @@ div.grid .row .cell span {
         field(ctrl2, "editing", false);
         const { context: context2 } = ctrl2;
         ctrl2.on("activate", (e) => {
+          console.log("new mini mixin editable ctrl on activate");
           let initial_text = ctrl2.dom.el.textContent;
           press_events(ctrl2);
           const sframe = suspended_frame(ctrl2, {
@@ -43383,6 +37000,7 @@ div.grid .row .cell span {
             "font-weight": "bold"
           });
           const cancel_editing = () => {
+            console.log("cancel_editing");
             sframe.clear();
             ctrl2.remove_class("editing");
             ctrl2.editing = false;
@@ -43390,7 +37008,9 @@ div.grid .row .cell span {
             ctrl2.dom.el.textContent = initial_text;
           };
           const save_editing = () => {
+            console.log("save_editing");
             const new_text = ctrl2.dom.el.textContent;
+            console.log("new_text", new_text);
             sframe.clear();
             ctrl2.remove_class("editing");
             ctrl2.editing = false;
@@ -43420,6 +37040,7 @@ div.grid .row .cell span {
           };
           ctrl2.on({
             "press-end": (e_press_end) => {
+              console.log("e_press_end", e_press_end);
               if (!ctrl2.editing) {
                 start_editing();
               }
@@ -43479,9 +37100,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/timespan-selector.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/timespan-selector.js
   var require_timespan_selector = __commonJS({
-    "../jsgui3-html/controls/organised/0-core/0-basic/1-compositional/timespan-selector.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/timespan-selector.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -43526,9 +37147,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/6-layout/titled-panel.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/titled-panel.js
   var require_titled_panel = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/6-layout/titled-panel.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/titled-panel.js"(exports, module) {
       var jsgui2 = require_html_core();
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -43564,9 +37185,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/5-ui/Toolbar.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/Toolbar.js
   var require_Toolbar = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/5-ui/Toolbar.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/Toolbar.js"(exports, module) {
       var Control2 = require_control();
       var Button = require_button();
       var Toolbar = class extends Control2 {
@@ -43652,9 +37273,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/5-ui/toolbox.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/toolbox.js
   var require_toolbox = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/5-ui/toolbox.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/toolbox.js"(exports, module) {
       var jsgui2 = require_html_core();
       var { Control: Control2 } = jsgui2;
       var { prop, field } = require_oext();
@@ -43669,9 +37290,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/organised/1-standard/6-layout/window.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/window.js
   var require_window = __commonJS({
-    "../jsgui3-html/controls/organised/1-standard/6-layout/window.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/window.js"(exports, module) {
       var jsgui2 = require_html_core();
       var Horizontal_Menu = require_horizontal_menu();
       var Button = require_button();
@@ -44127,9 +37748,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/controls/controls.js
+  // node_modules/jsgui3-html/controls/controls.js
   var require_controls = __commonJS({
-    "../jsgui3-html/controls/controls.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/controls.js"(exports, module) {
       var controls = {
         Active_HTML_Document: require_Active_HTML_Document(),
         Arrow_Button: require_arrow_button(),
@@ -44224,9 +37845,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-html/html.js
+  // node_modules/jsgui3-html/html.js
   var require_html = __commonJS({
-    "../jsgui3-html/html.js"(exports, module) {
+    "node_modules/jsgui3-html/html.js"(exports, module) {
       var jsgui2 = require_html_core();
       jsgui2.Router = require_router();
       jsgui2.Resource = require_resource();
@@ -44247,3779 +37868,12 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-client/node_modules/lang-mini/lang-mini.js
-  var require_lang_mini6 = __commonJS({
-    "../jsgui3-client/node_modules/lang-mini/lang-mini.js"(exports, module) {
-      var running_in_browser = typeof window !== "undefined";
-      var running_in_node = !running_in_browser;
-      var Readable_Stream;
-      var Writable_Stream;
-      var Transform_Stream;
-      var get_stream = () => {
-        if (running_in_node) {
-          return (() => {
-            const str_libname = "stream";
-            const stream2 = __require(str_libname);
-            Readable_Stream = stream2.Readable;
-            Writable_Stream = stream2.Writable;
-            Transform_Stream = stream2.Transform;
-            return stream2;
-          })();
-        } else {
-          return void 0;
-        }
-      };
-      var stream = get_stream();
-      var each = (collection, fn, context2) => {
-        if (collection) {
-          if (collection.__type == "collection") {
-            return collection.each(fn, context2);
-          }
-          let ctu = true;
-          let stop = function() {
-            ctu = false;
-          };
-          if (is_array(collection)) {
-            let res2 = [], res_item;
-            for (let c2 = 0, l2 = collection.length; c2 < l2; c2++) {
-              res_item;
-              if (ctu == false) break;
-              if (context2) {
-                res_item = fn.call(context2, collection[c2], c2, stop);
-              } else {
-                res_item = fn(collection[c2], c2, stop);
-              }
-              res2.push(res_item);
-            }
-            return res2;
-          } else {
-            let name, res2 = {};
-            for (name in collection) {
-              if (ctu === false) break;
-              if (context2) {
-                res2[name] = fn.call(context2, collection[name], name, stop);
-              } else {
-                res2[name] = fn(collection[name], name, stop);
-              }
-            }
-            return res2;
-          }
-        }
-      };
-      var is_array = Array.isArray;
-      var is_dom_node = function isDomNode(obj2) {
-        return !!obj2 && typeof obj2.nodeType !== "undefined" && typeof obj2.childNodes !== "undefined";
-      };
-      var get_truth_map_from_arr = function(arr) {
-        let res2 = {};
-        each(arr, function(v, i) {
-          res2[v] = true;
-        });
-        return res2;
-      };
-      var get_arr_from_truth_map = function(truth_map) {
-        let res2 = [];
-        each(truth_map, function(v, i) {
-          res2.push(i);
-        });
-        return res2;
-      };
-      var get_map_from_arr = function(arr) {
-        let res2 = {};
-        for (let c2 = 0, l2 = arr.length; c2 < l2; c2++) {
-          res2[arr[c2]] = c2;
-        }
-        return res2;
-      };
-      var arr_like_to_arr = function(arr_like) {
-        let res2 = new Array(arr_like.length);
-        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
-          res2[c2] = arr_like[c2];
-        }
-        ;
-        return res2;
-      };
-      var is_ctrl = function(obj2) {
-        return typeof obj2 !== "undefined" && obj2 !== null && is_defined(obj2.__type_name) && is_defined(obj2.content) && is_defined(obj2.dom);
-      };
-      var map_loaded_type_fn_checks = {};
-      var map_loaded_type_abbreviations = {
-        "object": "o",
-        "number": "n",
-        "string": "s",
-        "function": "f",
-        "boolean": "b",
-        "undefined": "u",
-        "array": "a",
-        "arguments": "A",
-        "date": "d",
-        "regex": "r",
-        "error": "e",
-        "buffer": "B",
-        "promise": "p",
-        "observable": "O",
-        "readable_stream": "R",
-        "writable_stream": "W",
-        "data_value": "V"
-      };
-      var using_type_plugins = false;
-      var invert = (obj2) => {
-        if (!is_array(obj2)) {
-          let res2 = {};
-          each(obj2, (v, k) => {
-            res2[v] = k;
-          });
-          return res2;
-        } else {
-          console.trace();
-          throw "invert(obj) not supported on arrays";
-        }
-      };
-      var map_loaded_type_names = invert(map_loaded_type_abbreviations);
-      var load_type = (name, abbreviation, fn_detect_instance) => {
-        map_loaded_type_fn_checks[name] = fn_detect_instance;
-        map_loaded_type_names[abbreviation] = name;
-        map_loaded_type_abbreviations[name] = abbreviation;
-        using_type_plugins = true;
-      };
-      var tof = (obj2, t12) => {
-        let res2 = t12 || typeof obj2;
-        if (using_type_plugins) {
-          let res3;
-          each(map_loaded_type_fn_checks, (fn_check, name, stop) => {
-            if (fn_check(obj2)) {
-              res3 = name;
-              stop();
-            }
-          });
-          if (res3) {
-            return res3;
-          }
-        }
-        if (res2 === "number" || res2 === "string" || res2 === "function" || res2 === "boolean") {
-          return res2;
-        }
-        if (res2 === "object") {
-          if (typeof obj2 !== "undefined") {
-            if (obj2 === null) {
-              return "null";
-            }
-            if (obj2.__type) {
-              return obj2.__type;
-            } else if (obj2.__type_name) {
-              return obj2.__type_name;
-            } else {
-              if (obj2 instanceof Promise) {
-                return "promise";
-              }
-              if (is_ctrl(obj2)) {
-                return "control";
-              }
-              if (obj2 instanceof Date) {
-                return "date";
-              }
-              if (is_array(obj2)) {
-                return "array";
-              } else {
-                if (obj2 instanceof Error) {
-                  res2 = "error";
-                } else if (obj2 instanceof RegExp) res2 = "regex";
-                if (typeof window === "undefined") {
-                  if (obj2 && obj2.readInt8) res2 = "buffer";
-                }
-              }
-              return res2;
-            }
-          } else {
-            return "undefined";
-          }
-        }
-        return res2;
-      };
-      var tf2 = (obj2) => {
-        let res2 = typeof obj2;
-        if (using_type_plugins) {
-          let res3;
-          each(map_loaded_type_fn_checks, (fn_check, name, stop) => {
-            if (fn_check(obj2)) {
-              res3 = map_loaded_type_abbreviations[name];
-              stop();
-            }
-          });
-          if (res3) {
-            return res3;
-          }
-        }
-        if (res2 === "number" || res2 === "string" || res2 === "function" || res2 === "boolean" || res2 === "undefined") {
-          return res2[0];
-        } else {
-          if (obj2 === null) {
-            return "N";
-          } else {
-            if (running_in_node) {
-              if (obj2 instanceof Readable_Stream) {
-                return "R";
-              } else if (obj2 instanceof Writable_Stream) {
-                return "W";
-              } else if (obj2 instanceof Transform_Stream) {
-                return "T";
-              }
-            }
-            if (typeof Buffer !== "undefined" && obj2 instanceof Buffer) {
-              return "B";
-            } else if (obj2 instanceof Promise) {
-              return "p";
-            } else if (obj2 instanceof Date) {
-              return "d";
-            } else if (is_array(obj2)) {
-              return "a";
-            } else {
-              if (obj2._is_observable === true) {
-                return "O";
-              } else {
-                if (typeof obj2.callee === "function") {
-                  return "A";
-                } else if (obj2 instanceof Error) {
-                  return "e";
-                } else if (obj2 instanceof RegExp) return "r";
-                return "o";
-              }
-            }
-            return res2;
-          }
-        }
-        console.trace();
-        console.log("item", item);
-        throw "type not found";
-        return res2;
-      };
-      var atof = (arr) => {
-        let res2 = new Array(arr.length);
-        for (let c2 = 0, l2 = arr.length; c2 < l2; c2++) {
-          res2[c2] = tof(arr[c2]);
-        }
-        return res2;
-      };
-      var is_defined = (value2) => {
-        return typeof value2 != "undefined";
-      };
-      var stringify = JSON.stringify;
-      var _get_item_sig = (i, arr_depth) => {
-        let res2;
-        let t12 = typeof i;
-        if (t12 === "string") {
-          res2 = "s";
-        } else if (t12 === "number") {
-          res2 = "n";
-        } else if (t12 === "boolean") {
-          res2 = "b";
-        } else if (t12 === "function") {
-          res2 = "f";
-        } else {
-          let t = tof(i, t12);
-          if (t === "array") {
-            if (arr_depth) {
-              res2 = "[";
-              for (let c2 = 0, l2 = i.length; c2 < l2; c2++) {
-                if (c2 > 0) res2 = res2 + ",";
-                res2 = res2 + get_item_sig(i[c2], arr_depth - 1);
-              }
-              res2 = res2 + "]";
-            } else {
-              res2 = "a";
-            }
-          } else if (t === "control") {
-            res2 = "c";
-          } else if (t === "date") {
-            res2 = "d";
-          } else if (t === "observable") {
-            res2 = "O";
-          } else if (t === "regex") {
-            res2 = "r";
-          } else if (t === "buffer") {
-            res2 = "B";
-          } else if (t === "readable_stream") {
-            res2 = "R";
-          } else if (t === "writable_stream") {
-            res2 = "W";
-          } else if (t === "object") {
-            res2 = "o";
-          } else if (t === "undefined") {
-            res2 = "u";
-          } else {
-            if (t === "collection_index") {
-              return "X";
-            } else if (t === "data_object") {
-              if (i._abstract) {
-                res2 = "~D";
-              } else {
-                res2 = "D";
-              }
-            } else {
-              if (t === "data_value") {
-                if (i._abstract) {
-                  res2 = "~V";
-                } else {
-                  res2 = "V";
-                }
-              } else if (t === "null") {
-                res2 = "!";
-              } else if (t === "collection") {
-                if (i._abstract) {
-                  res2 = "~C";
-                } else {
-                  res2 = "C";
-                }
-              } else {
-                res2 = "?";
-              }
-            }
-          }
-        }
-        return res2;
-      };
-      var get_item_sig = (item2, arr_depth) => {
-        if (arr_depth) {
-          return _get_item_sig(item2, arr_depth);
-        }
-        const t = tof(item2);
-        if (map_loaded_type_abbreviations[t]) {
-          return map_loaded_type_abbreviations[t];
-        } else {
-          let bt = typeof item2;
-          if (bt === "object") {
-            if (is_array(item2)) {
-              return "a";
-            } else {
-              return "o";
-            }
-          } else {
-            console.log("map_loaded_type_abbreviations type name not found", t);
-            console.log("bt", bt);
-            console.trace();
-            throw "stop";
-          }
-        }
-      };
-      var get_a_sig2 = (a) => {
-        let c2 = 0, l2 = a.length;
-        let res2 = "[";
-        let first = true;
-        for (c2 = 0; c2 < l2; c2++) {
-          if (!first) {
-            res2 = res2 + ",";
-          } else {
-            first = false;
-          }
-          res2 = res2 + get_item_sig(a[c2]);
-        }
-        res2 = res2 + "]";
-        return res2;
-      };
-      var deep_sig = (item2, max_depth = -1, depth = 0) => {
-        const t = tf2(item2);
-        let res2 = "";
-        if (t === "a") {
-          const l2 = item2.length;
-          if (max_depth === -1 || depth <= max_depth) {
-            res2 = res2 + "[";
-            let first = true;
-            for (let c2 = 0; c2 < l2; c2++) {
-              if (!first) res2 = res2 + ",";
-              res2 = res2 + deep_sig(item2[c2], max_depth, depth + 1);
-              first = false;
-            }
-            res2 = res2 + "]";
-          } else {
-            return "a";
-          }
-        } else if (t === "A") {
-          const l2 = item2.length;
-          let first = true;
-          for (let c2 = 0; c2 < l2; c2++) {
-            if (!first) res2 = res2 + ",";
-            res2 = res2 + deep_sig(item2[c2], max_depth, depth + 1);
-            first = false;
-          }
-        } else if (t === "o") {
-          if (max_depth === -1 || depth <= max_depth) {
-            let res3 = "{";
-            let first = true;
-            each(item2, (v, k) => {
-              if (!first) res3 = res3 + ",";
-              res3 = res3 + '"' + k + '":' + deep_sig(v, max_depth, depth + 1);
-              first = false;
-            });
-            res3 = res3 + "}";
-            return res3;
-          } else {
-            return "o";
-          }
-        } else {
-          res2 = res2 + t;
-        }
-        return res2;
-      };
-      var trim_sig_brackets = function(sig) {
-        if (tof(sig) === "string") {
-          if (sig.charAt(0) == "[" && sig.charAt(sig.length - 1) == "]") {
-            return sig.substring(1, sig.length - 1);
-          } else {
-            return sig;
-          }
-        }
-      };
-      var arr_trim_undefined = function(arr_like) {
-        let res2 = [];
-        let last_defined = -1;
-        let t, v;
-        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
-          v = arr_like[c2];
-          t = tof(v);
-          if (t == "undefined") {
-          } else {
-            last_defined = c2;
-          }
-        }
-        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
-          if (c2 <= last_defined) {
-            res2.push(arr_like[c2]);
-          }
-        }
-        return res2;
-      };
-      var functional_polymorphism = function(options, fn) {
-        let a0 = arguments;
-        if (a0.length === 1) {
-          fn = a0[0];
-          options = null;
-        }
-        let arr_slice = Array.prototype.slice;
-        let arr, sig, a2, l2, a;
-        return function() {
-          a = arguments;
-          l2 = a.length;
-          if (l2 === 1) {
-            sig = get_item_sig([a[0]], 1);
-            a2 = [a[0]];
-            a2.l = 1;
-            return fn.call(this, a2, sig);
-          } else if (l2 > 1) {
-            arr = arr_trim_undefined(arr_slice.call(a, 0));
-            sig = get_item_sig(arr, 1);
-            arr.l = arr.length;
-            return fn.call(this, arr, sig);
-          } else if (a.length === 0) {
-            arr = new Array(0);
-            arr.l = 0;
-            return fn.call(this, arr, "[]");
-          }
-        };
-      };
-      var fp = functional_polymorphism;
-      var parse_sig = (str_sig, opts = {}) => {
-        const sig2 = str_sig.split(", ").join(",");
-        const sig_items = sig2.split(",");
-        const res2 = [];
-        each(sig_items, (sig_item) => {
-          if (sig_item.length === 1) {
-            let type_name = map_loaded_type_names[sig_item];
-            res2.push({
-              abbreviation: sig_item,
-              type_name
-            });
-          } else {
-            let suffix_modifiers;
-            let zero_or_more = false;
-            let one_or_more = false;
-            let type_name = sig_item;
-            const obj_res = {
-              type_name
-            };
-            const distil_suffix_modifiers = () => {
-              let last_char = type_name.substr(type_name.length - 1);
-              if (last_char === "*") {
-                type_name = type_name.substr(0, type_name.length - 1);
-                zero_or_more = true;
-                obj_res.zero_or_more = true;
-                obj_res.modifiers = obj_res.modifiers || [];
-                obj_res.modifiers.push("*");
-                distil_suffix_modifiers();
-              } else if (last_char === "+") {
-                type_name = type_name.substr(0, type_name.length - 1);
-                one_or_more = true;
-                obj_res.one_or_more = true;
-                obj_res.modifiers = obj_res.modifiers || [];
-                obj_res.modifiers.push("+");
-                distil_suffix_modifiers();
-              } else {
-              }
-            };
-            distil_suffix_modifiers();
-            obj_res.type_name = type_name;
-            res2.push(obj_res);
-          }
-        });
-        return res2;
-      };
-      var mfp_not_sigs = get_truth_map_from_arr(["pre", "default", "post"]);
-      var log = () => {
-      };
-      var combinations = (arr, arr_idxs_to_ignore) => {
-        const map_ignore_idxs = {};
-        if (arr_idxs_to_ignore) {
-          each(arr_idxs_to_ignore, (idx_to_ignore) => {
-            map_ignore_idxs[idx_to_ignore] = true;
-          });
-        }
-        const res2 = [];
-        const l2 = arr.length;
-        const arr_idxs_num_options = new Uint32Array(l2);
-        each(arr, (arr_item1, i1) => {
-          arr_idxs_num_options[i1] = arr_item1.length;
-        });
-        const arr_current_option_idxs = new Uint32Array(l2).fill(0);
-        const result_from_indexes = (arr2, arg_indexes) => {
-          const res3 = new Array(l2);
-          if (arg_indexes.length === l2) {
-            for (var c2 = 0; c2 < l2; c2++) {
-              res3[c2] = arr2[c2][arg_indexes[c2]];
-            }
-          } else {
-            console.trace();
-            throw "Arguments length mismatch";
-          }
-          return res3;
-        };
-        const incr = () => {
-          for (c = l2 - 1; c >= 0; c--) {
-            const ival = arr_current_option_idxs[c];
-            const max = arr_idxs_num_options[c] - 1;
-            if (ival < max) {
-              arr_current_option_idxs[c]++;
-              break;
-            } else {
-              if (c === 0) {
-                return false;
-              } else {
-                arr_current_option_idxs.fill(0, c);
-              }
-            }
-          }
-          return true;
-        };
-        let vals = result_from_indexes(arr, arr_current_option_idxs);
-        res2.push(vals);
-        while (incr()) {
-          let vals2 = result_from_indexes(arr, arr_current_option_idxs);
-          res2.push(vals2);
-        }
-        return res2;
-      };
-      var map_native_types = {
-        "string": true,
-        "boolean": true,
-        "number": true,
-        "object": true
-      };
-      var mfp = function() {
-        const a1 = arguments;
-        const sig1 = get_a_sig2(a1);
-        let options = {};
-        let fn_pre, provided_map_sig_fns, inner_map_sig_fns = {}, inner_map_parsed_sigs = {}, arr_sig_parsed_sig_fns = [], fn_post;
-        let tm_sig_fns;
-        let fn_default;
-        let single_fn;
-        let req_sig_single_fn;
-        if (sig1 === "[o]") {
-          provided_map_sig_fns = a1[0];
-        } else if (sig1 === "[o,o]") {
-          options = a1[0];
-          provided_map_sig_fns = a1[1];
-        } else if (sig1 === "[o,f]") {
-          options = a1[0];
-          single_fn = a1[1];
-        } else if (sig1 === "[o,s,f]") {
-          options = a1[0];
-          req_sig_single_fn = a1[1];
-          single_fn = a1[2];
-          provided_map_sig_fns = {};
-          provided_map_sig_fns[req_sig_single_fn] = single_fn;
-        } else if (sig1 === "[f,o]") {
-          single_fn = a1[0];
-          options = a1[1];
-        } else if (sig1 === "[f]") {
-          single_fn = a1[0];
-        } else {
-          console.log("sig1", sig1);
-          console.trace();
-          throw "mfp NYI";
-        }
-        let {
-          single,
-          name,
-          grammar,
-          verb,
-          noun,
-          return_type,
-          return_subtype,
-          pure,
-          main,
-          skip
-        } = options;
-        let parsed_grammar;
-        let identify, validate;
-        let dsig = deep_sig;
-        (() => {
-          if (provided_map_sig_fns) {
-            if (provided_map_sig_fns.default) fn_default = provided_map_sig_fns.default;
-            each(provided_map_sig_fns, (fn, sig) => {
-              if (typeof fn === "function") {
-                if (!mfp_not_sigs[sig]) {
-                  const parsed_sig = parse_sig(sig);
-                  const arr_args_with_modifiers = [];
-                  const arr_args_all_modification_versions = [];
-                  each(parsed_sig, (arg, i) => {
-                    arr_args_all_modification_versions[i] = [];
-                    if (arg.modifiers) {
-                      const arg_num_modifiers = arg.modifiers.length;
-                      if (arg_num_modifiers > 1) {
-                        throw "Use of more than 1 modifier is currently unsupported.";
-                      } else if (arg_num_modifiers === 1) {
-                        arr_args_with_modifiers.push([i, arg]);
-                        const single_modifier = arg.modifiers[0];
-                        if (single_modifier === "*") {
-                          arr_args_all_modification_versions[i].push("");
-                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                          const plural_name = grammar.maps.sing_plur[arg.type_name];
-                          arr_args_all_modification_versions[i].push(plural_name);
-                        }
-                        if (single_modifier === "+") {
-                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                          const plural_name = grammar.maps.sing_plur[arg.type_name];
-                          arr_args_all_modification_versions[i].push(plural_name);
-                        }
-                        if (single_modifier === "?") {
-                          arr_args_all_modification_versions[i].push("");
-                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                        }
-                      }
-                    } else {
-                      arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                    }
-                  });
-                  const combo_args = combinations(arr_args_all_modification_versions);
-                  const combo_sigs = [];
-                  let i_first_of_last_undefined = -1;
-                  each(combo_args, (arg_set) => {
-                    let combo_sig = "";
-                    each(arg_set, (arg, i) => {
-                      let lsigb4 = combo_sig.length;
-                      if (i > 0) {
-                        combo_sig = combo_sig + ",";
-                      }
-                      if (arg === "") {
-                        combo_sig = combo_sig + "u";
-                        if (i_first_of_last_undefined === -1) {
-                          i_first_of_last_undefined = lsigb4;
-                        }
-                      } else {
-                        combo_sig = combo_sig + arg;
-                        i_first_of_last_undefined = -1;
-                      }
-                    });
-                    if (i_first_of_last_undefined > 0) {
-                      const combo_sig_no_last_undefined = combo_sig.substr(0, i_first_of_last_undefined);
-                      combo_sigs.push(combo_sig_no_last_undefined);
-                    }
-                    combo_sigs.push(combo_sig);
-                  });
-                  if (combo_sigs.length > 0) {
-                    each(combo_sigs, (combo_sig) => {
-                      inner_map_sig_fns[combo_sig] = fn;
-                    });
-                  } else {
-                    inner_map_sig_fns[sig] = fn;
-                  }
-                  inner_map_parsed_sigs[sig] = parsed_sig;
-                  arr_sig_parsed_sig_fns.push([sig, parsed_sig, fn]);
-                } else {
-                  console.log("ommiting, not parsing sig", sig);
-                }
-              } else {
-                console.log("fn", fn);
-                console.trace();
-                throw "Expected: function";
-              }
-              ;
-            });
-          }
-          each(inner_map_sig_fns, (fn, sig) => {
-            tm_sig_fns = tm_sig_fns || {};
-            tm_sig_fns[sig] = true;
-          });
-        })();
-        const res2 = function() {
-          const a2 = arguments;
-          const l2 = a2.length;
-          console.log("");
-          console.log("calling mfp function");
-          console.log("--------------------");
-          console.log("");
-          let mfp_fn_call_deep_sig;
-          let ltof = tof;
-          const lsig = dsig;
-          let ltf = tf2;
-          mfp_fn_call_deep_sig = lsig(a2);
-          let do_skip = false;
-          if (skip) {
-            if (skip(a2)) {
-              do_skip = true;
-            } else {
-            }
-          }
-          if (!do_skip) {
-            if (inner_map_sig_fns[mfp_fn_call_deep_sig]) {
-              return inner_map_sig_fns[mfp_fn_call_deep_sig].apply(this, a2);
-            } else {
-              let idx_last_fn = -1;
-              let idx_last_obj = -1;
-              each(a2, (arg, i_arg) => {
-                i_arg = parseInt(i_arg, 10);
-                const targ = tf2(arg);
-                if (targ === "o") {
-                  idx_last_obj = i_arg;
-                }
-                if (targ === "f") {
-                  idx_last_fn = i_arg;
-                }
-              });
-              const last_arg_is_fn = idx_last_fn > -1 && idx_last_fn === a2.length - 1;
-              const last_arg_is_obj = idx_last_obj > -1 && idx_last_obj === a2.length - 1;
-              const second_last_arg_is_obj = idx_last_obj > -1 && idx_last_obj === a2.length - 2;
-              let possible_options_obj;
-              if (last_arg_is_obj) possible_options_obj = a2[idx_last_obj];
-              const new_args_arrangement = [];
-              for (let f = 0; f < idx_last_obj; f++) {
-                new_args_arrangement.push(a2[f]);
-              }
-              each(possible_options_obj, (value2, key2) => {
-                new_args_arrangement.push(value2);
-              });
-              let naa_sig = lsig(new_args_arrangement);
-              naa_sig = naa_sig.substring(1, naa_sig.length - 1);
-              if (inner_map_sig_fns[naa_sig]) {
-                return inner_map_sig_fns[naa_sig].apply(this, new_args_arrangement);
-              } else {
-                if (fn_default) {
-                  return fn_default.call(this, a2, mfp_fn_call_deep_sig);
-                } else {
-                  if (single_fn) {
-                    console.log("pre apply single_fn");
-                    return single_fn.apply(this, a2);
-                  } else {
-                    console.log("Object.keys(inner_map_parsed_sigs)", Object.keys(inner_map_parsed_sigs));
-                    console.trace();
-                    console.log("mfp_fn_call_deep_sig", mfp_fn_call_deep_sig);
-                    console.log("provided_map_sig_fns", provided_map_sig_fns);
-                    if (provided_map_sig_fns) log("Object.keys(provided_map_sig_fns)", Object.keys(provided_map_sig_fns));
-                    console.log("Object.keys(inner_map_sig_fns)", Object.keys(inner_map_sig_fns));
-                    console.trace();
-                    throw "no signature match found. consider using a default signature. mfp_fn_call_deep_sig: " + mfp_fn_call_deep_sig;
-                  }
-                }
-              }
-            }
-          }
-        };
-        const _ = {};
-        if (name) _.name = name;
-        if (single) _.single = single;
-        if (skip) _.skip = skip;
-        if (grammar) _.grammar = grammar;
-        if (typeof options !== "undefined" && options.async) _.async = options.async;
-        if (main === true) _.main = true;
-        if (return_type) _.return_type = return_type;
-        if (return_subtype) _.return_subtype = return_subtype;
-        if (pure) _.pure = pure;
-        if (tm_sig_fns) _.map_sigs = tm_sig_fns;
-        if (Object.keys(_).length > 0) {
-          res2._ = _;
-        }
-        return res2;
-      };
-      var arrayify = fp(function(a, sig) {
-        let param_index, num_parallel = 1, delay = 0, fn;
-        let res2;
-        let process_as_fn = function() {
-          res2 = function() {
-            let a2 = arr_like_to_arr(arguments), ts = atof(a2), t = this;
-            let last_arg = a2[a2.length - 1];
-            if (tof(last_arg) == "function") {
-              if (typeof param_index !== "undefined" && ts[param_index] == "array") {
-                let res3 = [];
-                let fns = [];
-                each(a2[param_index], function(v, i) {
-                  let new_params = a2.slice(0, a2.length - 1);
-                  new_params[param_index] = v;
-                  fns.push([t, fn, new_params]);
-                });
-                call_multiple_callback_functions(fns, num_parallel, delay, (err, res4) => {
-                  if (err) {
-                    console.trace();
-                    throw err;
-                  } else {
-                    let a3 = [];
-                    a3 = a3.concat.apply(a3, res4);
-                    let callback2 = last_arg;
-                    callback2(null, a3);
-                  }
-                });
-              } else {
-                return fn.apply(t, a2);
-              }
-            } else {
-              if (typeof param_index !== "undefined" && ts[param_index] == "array") {
-                let res3 = [];
-                for (let c2 = 0, l2 = a2[param_index].length; c2 < l2; c2++) {
-                  a2[param_index] = arguments[param_index][c2];
-                  let result = fn.apply(t, a2);
-                  res3.push(result);
-                }
-                return res3;
-              } else {
-                return fn.apply(t, a2);
-              }
-            }
-          };
-        };
-        if (sig == "[o]") {
-          let res3 = [];
-          each(a[0], function(v, i) {
-            res3.push([v, i]);
-          });
-        } else if (sig == "[f]") {
-          param_index = 0, fn = a[0];
-          process_as_fn();
-        } else if (sig == "[n,f]") {
-          param_index = a[0], fn = a[1];
-          process_as_fn();
-        } else if (sig == "[n,n,f]") {
-          param_index = a[0], num_parallel = a[1], fn = a[2];
-          process_as_fn();
-        } else if (sig == "[n,n,n,f]") {
-          param_index = a[0], num_parallel = a[1], delay = a[2], fn = a[3];
-          process_as_fn();
-        }
-        return res2;
-      });
-      var mapify = (target) => {
-        let tt = tof(target);
-        if (tt == "function") {
-          let res2 = fp(function(a, sig) {
-            let that2 = this;
-            if (sig == "[o]") {
-              let map = a[0];
-              each(map, function(v, i) {
-                target.call(that2, v, i);
-              });
-            } else if (sig == "[o,f]") {
-              let map = a[0];
-              let callback2 = a[1];
-              let fns = [];
-              each(map, function(v, i) {
-                fns.push([target, [v, i]]);
-              });
-              call_multi(fns, function(err_multi, res_multi) {
-                if (err_multi) {
-                  callback2(err_multi);
-                } else {
-                  callback2(null, res_multi);
-                }
-              });
-            } else if (a.length >= 2) {
-              target.apply(this, a);
-            }
-          });
-          return res2;
-        } else if (tt == "array") {
-          let res2 = {};
-          if (arguments.length == 1) {
-            if (is_arr_of_strs(target)) {
-              each(target, function(v, i) {
-                res2[v] = true;
-              });
-            } else {
-              each(target, function(v, i) {
-                res2[v[0]] = v[1];
-              });
-            }
-          } else {
-            let by_property_name = arguments[1];
-            each(target, function(v, i) {
-              res2[v[by_property_name]] = v;
-            });
-          }
-          return res2;
-        }
-      };
-      var clone = fp((a, sig) => {
-        let obj2 = a[0];
-        if (a.l === 1) {
-          if (obj2 && typeof obj2.clone === "function") {
-            return obj2.clone();
-          } else {
-            let t = tof(obj2);
-            if (t === "array") {
-              let res2 = [];
-              each(obj2, (v) => {
-                res2.push(clone(v));
-              });
-              return res2;
-            } else if (t === "undefined") {
-              return void 0;
-            } else if (t === "string") {
-              return obj2;
-            } else if (t === "number") {
-              return obj2;
-            } else if (t === "function") {
-              return obj2;
-            } else if (t === "boolean") {
-              return obj2;
-            } else if (t === "null") {
-              return obj2;
-            } else {
-              return Object.assign({}, obj2);
-            }
-          }
-        } else if (a.l === 2 && tof(a[1]) === "number") {
-          let res2 = [];
-          for (let c2 = 0; c2 < a[1]; c2++) {
-            res2.push(clone(obj2));
-          }
-          return res2;
-        }
-      });
-      var set_vals = function(obj2, map) {
-        each(map, function(v, i) {
-          obj2[i] = v;
-        });
-      };
-      var ll_set = (obj2, prop_name2, prop_value) => {
-        let arr = prop_name2.split(".");
-        let c2 = 0, l2 = arr.length;
-        let i = obj2._ || obj2, s;
-        while (c2 < l2) {
-          s = arr[c2];
-          if (typeof i[s] == "undefined") {
-            if (c2 - l2 == -1) {
-              i[s] = prop_value;
-            } else {
-              i[s] = {};
-            }
-          } else {
-            if (c2 - l2 == -1) {
-              i[s] = prop_value;
-            }
-          }
-          i = i[s];
-          c2++;
-        }
-        ;
-        return prop_value;
-      };
-      var ll_get = (a0, a1) => {
-        if (a0 && a1) {
-          let i = a0._ || a0;
-          if (a1 == ".") {
-            if (typeof i["."] == "undefined") {
-              return void 0;
-            } else {
-              return i["."];
-            }
-          } else {
-            let arr = a1.split(".");
-            let c2 = 0, l2 = arr.length, s;
-            while (c2 < l2) {
-              s = arr[c2];
-              if (typeof i[s] == "undefined") {
-                if (c2 - l2 == -1) {
-                } else {
-                  throw "object " + s + " not found";
-                }
-              } else {
-                if (c2 - l2 == -1) {
-                  return i[s];
-                }
-              }
-              i = i[s];
-              c2++;
-            }
-          }
-        }
-      };
-      var truth = function(value2) {
-        return value2 === true;
-      };
-      var iterate_ancestor_classes = (obj2, callback2) => {
-        let ctu = true;
-        let stop = () => {
-          ctu = false;
-        };
-        callback2(obj2, stop);
-        if (obj2._superclass && ctu) {
-          iterate_ancestor_classes(obj2._superclass, callback2);
-        }
-      };
-      var is_arr_of_t = function(obj2, type_name) {
-        let t = tof(obj2), tv;
-        if (t === "array") {
-          let res2 = true;
-          each(obj2, function(v, i) {
-            tv = tof(v);
-            if (tv != type_name) res2 = false;
-          });
-          return res2;
-        } else {
-          return false;
-        }
-      };
-      var is_arr_of_arrs = function(obj2) {
-        return is_arr_of_t(obj2, "array");
-      };
-      var is_arr_of_strs = function(obj2) {
-        return is_arr_of_t(obj2, "string");
-      };
-      var input_processors = {};
-      var output_processors = {};
-      var call_multiple_callback_functions = fp(function(a, sig) {
-        let arr_functions_params_pairs, callback2, return_params = false;
-        let delay;
-        let num_parallel = 1;
-        if (a.l === 1) {
-        } else if (a.l === 2) {
-          arr_functions_params_pairs = a[0];
-          callback2 = a[1];
-        } else if (a.l === 3) {
-          if (sig === "[a,n,f]") {
-            arr_functions_params_pairs = a[0];
-            num_parallel = a[1];
-            callback2 = a[2];
-          } else if (sig === "[n,a,f]") {
-            arr_functions_params_pairs = a[1];
-            num_parallel = a[0];
-            callback2 = a[2];
-          } else if (sig === "[a,f,b]") {
-            arr_functions_params_pairs = a[0];
-            callback2 = a[1];
-            return_params = a[2];
-          }
-        } else if (a.l === 4) {
-          if (sig === "[a,n,n,f]") {
-            arr_functions_params_pairs = a[0];
-            num_parallel = a[1];
-            delay = a[2];
-            callback2 = a[3];
-          } else if (sig == "[n,n,a,f]") {
-            arr_functions_params_pairs = a[2];
-            num_parallel = a[0];
-            delay = a[1];
-            callback2 = a[3];
-          }
-        }
-        let res2 = [];
-        let l2 = arr_functions_params_pairs.length;
-        let c2 = 0;
-        let count_unfinished = l2;
-        let num_currently_executing = 0;
-        let process2 = (delay2) => {
-          num_currently_executing++;
-          let main = () => {
-            let pair = arr_functions_params_pairs[c2];
-            let context2;
-            let fn, params, fn_callback;
-            let pair_sig = get_item_sig(pair);
-            let t_pair = tof(pair);
-            if (t_pair == "function") {
-              fn = pair;
-              params = [];
-            } else {
-              if (pair) {
-                if (pair.length == 1) {
-                }
-                if (pair.length == 2) {
-                  if (tof(pair[1]) == "function") {
-                    context2 = pair[0];
-                    fn = pair[1];
-                    params = [];
-                  } else {
-                    fn = pair[0];
-                    params = pair[1];
-                  }
-                }
-                if (pair.length == 3) {
-                  if (tof(pair[0]) === "function" && tof(pair[1]) === "array" && tof(pair[2]) === "function") {
-                    fn = pair[0];
-                    params = pair[1];
-                    fn_callback = pair[2];
-                  }
-                  if (tof(pair[1]) === "function" && tof(pair[2]) === "array") {
-                    context2 = pair[0];
-                    fn = pair[1];
-                    params = pair[2];
-                  }
-                }
-                if (pair.length == 4) {
-                  context2 = pair[0];
-                  fn = pair[1];
-                  params = pair[2];
-                  fn_callback = pair[3];
-                }
-              } else {
-              }
-            }
-            let i = c2;
-            c2++;
-            let cb = (err, res22) => {
-              num_currently_executing--;
-              count_unfinished--;
-              if (err) {
-                let stack = new Error().stack;
-                callback2(err);
-              } else {
-                if (return_params) {
-                  res2[i] = [params, res22];
-                } else {
-                  res2[i] = res22;
-                }
-                if (fn_callback) {
-                  fn_callback(null, res22);
-                }
-                if (c2 < l2) {
-                  if (num_currently_executing < num_parallel) {
-                    process2(delay2);
-                  }
-                } else {
-                  if (count_unfinished <= 0) {
-                    callback2(null, res2);
-                  }
-                }
-              }
-            };
-            let arr_to_call = params || [];
-            arr_to_call.push(cb);
-            if (fn) {
-              if (context2) {
-                fn.apply(context2, arr_to_call);
-              } else {
-                fn.apply(this, arr_to_call);
-              }
-            } else {
-            }
-          };
-          if (arr_functions_params_pairs[c2]) {
-            if (delay2) {
-              setTimeout(main, delay2);
-            } else {
-              main();
-            }
-          }
-        };
-        if (arr_functions_params_pairs.length > 0) {
-          while (c2 < l2 && num_currently_executing < num_parallel) {
-            if (delay) {
-              process2(delay * c2);
-            } else {
-              process2();
-            }
-          }
-        } else {
-          if (callback2) {
-          }
-        }
-      });
-      var call_multi = call_multiple_callback_functions;
-      var Fns = function(arr) {
-        let fns = arr || [];
-        fns.go = function(parallel, delay, callback2) {
-          let a = arguments;
-          let al = a.length;
-          if (al == 1) {
-            call_multi(fns, a[0]);
-          }
-          if (al == 2) {
-            call_multi(parallel, fns, delay);
-          }
-          if (al == 3) {
-            call_multi(parallel, delay, fns, callback2);
-          }
-        };
-        return fns;
-      };
-      var native_constructor_tof = function(value2) {
-        if (value2 === String) {
-          return "String";
-        }
-        if (value2 === Number) {
-          return "Number";
-        }
-        if (value2 === Boolean) {
-          return "Boolean";
-        }
-        if (value2 === Array) {
-          return "Array";
-        }
-        if (value2 === Object) {
-          return "Object";
-        }
-      };
-      var sig_match = function(sig1, sig2) {
-        let sig1_inner = sig1.substr(1, sig1.length - 2);
-        let sig2_inner = sig2.substr(1, sig2.length - 2);
-        if (sig1_inner.indexOf("[") > -1 || sig1_inner.indexOf("]") > -1 || sig2_inner.indexOf("[") > -1 || sig2_inner.indexOf("]") > -1) {
-          throw "sig_match only supports flat signatures.";
-        }
-        let sig1_parts = sig1_inner.split(",");
-        let sig2_parts = sig2_inner.split(",");
-        let res2 = true;
-        if (sig1_parts.length == sig2_parts.length) {
-          let c2 = 0, l2 = sig1_parts.length, i1, i2;
-          while (res2 && c2 < l2) {
-            i1 = sig1_parts[c2];
-            i2 = sig2_parts[c2];
-            if (i1 === i2) {
-            } else {
-              if (i1 !== "?") {
-                res2 = false;
-              }
-            }
-            c2++;
-          }
-          return res2;
-        } else {
-          return false;
-        }
-      };
-      var remove_sig_from_arr_shell = function(sig) {
-        if (sig[0] == "[" && sig[sig.length - 1] == "]") {
-          return sig.substring(1, sig.length - 1);
-        }
-        return sig;
-      };
-      var str_arr_mapify = function(fn) {
-        let res2 = fp(function(a, sig) {
-          if (a.l == 1) {
-            if (sig == "[s]") {
-              let s_pn = a[0].split(" ");
-              if (s_pn.length > 1) {
-                return res2.call(this, s_pn);
-              } else {
-                return fn.call(this, a[0]);
-              }
-            }
-            if (tof(a[0]) == "array") {
-              let res22 = {}, that2 = this;
-              each(a[0], function(v, i) {
-                res22[v] = fn.call(that2, v);
-              });
-              return res22;
-            }
-          }
-        });
-        return res2;
-      };
-      var to_arr_strip_keys = (obj2) => {
-        let res2 = [];
-        each(obj2, (v) => {
-          res2.push(v);
-        });
-        return res2;
-      };
-      var arr_objs_to_arr_keys_values_table = (arr_objs) => {
-        let keys = Object.keys(arr_objs[0]);
-        let arr_items = [], arr_values;
-        each(arr_objs, (item2) => {
-          arr_items.push(to_arr_strip_keys(item2));
-        });
-        return [keys, arr_items];
-      };
-      var set_arr_tree_value = (arr_tree, arr_path, value2) => {
-        let item_current = arr_tree;
-        let last_item_current, last_path_item;
-        each(arr_path, (path_item) => {
-          last_item_current = item_current;
-          item_current = item_current[path_item];
-          last_path_item = path_item;
-        });
-        last_item_current[last_path_item] = value2;
-      };
-      var get_arr_tree_value = (arr_tree, arr_path) => {
-        let item_current = arr_tree;
-        each(arr_path, (path_item) => {
-          item_current = item_current[path_item];
-        });
-        return item_current;
-      };
-      var deep_arr_iterate = (arr, path = [], callback2) => {
-        if (arguments.length === 2) {
-          callback2 = path;
-          path = [];
-        }
-        each(arr, (item2, i) => {
-          let c_path = clone(path);
-          c_path.push(i);
-          let t = tof(item2);
-          if (t === "array") {
-            deep_arr_iterate(item2, c_path, callback2);
-          } else {
-            callback2(c_path, item2);
-          }
-        });
-      };
-      var prom = (fn) => {
-        let fn_res = function() {
-          const a = arguments;
-          const t_a_last = typeof a[a.length - 1];
-          if (t_a_last === "function") {
-            fn.apply(this, a);
-          } else {
-            return new Promise((resolve, reject) => {
-              [].push.call(a, (err, res2) => {
-                if (err) {
-                  reject(err);
-                } else {
-                  resolve(res2);
-                }
-              });
-              fn.apply(this, a);
-            });
-          }
-        };
-        return fn_res;
-      };
-      var vectorify = (n_fn) => {
-        let fn_res = fp(function(a, sig) {
-          if (a.l > 2) {
-            throw "stop - need to check.";
-            let res2 = a[0];
-            for (let c2 = 1, l2 = a.l; c2 < l2; c2++) {
-              res2 = fn_res(res2, a[c2]);
-            }
-            return res2;
-          } else {
-            if (sig === "[n,n]") {
-              return n_fn(a[0], a[1]);
-            } else {
-              const ats = atof(a);
-              if (ats[0] === "array") {
-                if (ats[1] === "number") {
-                  const res2 = [], n = a[1], l2 = a[0].length;
-                  let c2;
-                  for (c2 = 0; c2 < l2; c2++) {
-                    res2.push(fn_res(a[0][c2], n));
-                  }
-                  return res2;
-                } else if (ats[1] === "array") {
-                  if (ats[0].length !== ats[1].length) {
-                    throw "vector array lengths mismatch";
-                  } else {
-                    const l2 = a[0].length, res2 = new Array(l2), arr2 = a[1];
-                    for (let c2 = 0; c2 < l2; c2++) {
-                      res2[c2] = fn_res(a[0][c2], arr2[c2]);
-                    }
-                    return res2;
-                  }
-                }
-              }
-            }
-          }
-          ;
-        });
-        return fn_res;
-      };
-      var n_add = (n1, n2) => n1 + n2;
-      var n_subtract = (n1, n2) => n1 - n2;
-      var n_multiply = (n1, n2) => n1 * n2;
-      var n_divide = (n1, n2) => n1 / n2;
-      var v_add = vectorify(n_add);
-      var v_subtract2 = vectorify(n_subtract);
-      var v_multiply = vectorify(n_multiply);
-      var v_divide = vectorify(n_divide);
-      var vector_magnitude = function(vector) {
-        var res2 = Math.sqrt(Math.pow(vector[0], 2) + Math.pow(vector[1], 2));
-        return res2;
-      };
-      var distance_between_points = function(points) {
-        var offset2 = v_subtract2(points[1], points[0]);
-        return vector_magnitude(offset2);
-      };
-      var map_tas_by_type = {
-        "c": Uint8ClampedArray,
-        "ui8": Uint8Array,
-        "i16": Int16Array,
-        "i32": Int32Array,
-        "ui16": Uint16Array,
-        "ui32": Uint32Array,
-        "f32": Float32Array,
-        "f64": Float64Array
-      };
-      var get_typed_array = function() {
-        const a = arguments;
-        let length, input_array;
-        const type = a[0];
-        if (is_array(a[1])) {
-          input_array = a[1];
-        } else {
-          length = a[1];
-        }
-        const ctr = map_tas_by_type[type];
-        if (ctr) {
-          if (input_array) {
-            return ctr(input_array);
-          } else if (length) {
-            return ctr(length);
-          }
-        }
-      };
-      var Grammar = class {
-        constructor(spec) {
-          const eg_spec = {
-            name: "User Auth Grammar"
-          };
-          const {
-            name
-          } = spec;
-          this.name = name;
-          const eg_indexing = () => {
-            let map_sing_plur = {};
-            let map_plur_sing = {};
-            let map_sing_def = {};
-            let map_sig_sing = {};
-            let map_sig0_sing = {};
-            let map_sig1_sing = {};
-            let map_sig2_sing = {};
-          };
-          this.maps = {
-            sing_plur: {},
-            plur_sing: {},
-            sing_def: {},
-            deep_sig_sing: {},
-            obj_sig_sing: {},
-            sig_levels_sing: {}
-          };
-          this.load_grammar(spec.def);
-        }
-        load_grammar(grammar_def) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          const resolve_def = (def) => {
-            const td = tf2(def);
-            if (td === "a") {
-              const res2 = [];
-              each(def, (def_item) => {
-                res2.push(resolve_def(def_item));
-              });
-              return res2;
-            } else if (td === "s") {
-              if (def === "string") {
-                return "string";
-              } else if (def === "number") {
-                return "number";
-              } else if (def === "boolean") {
-                return "boolean";
-              } else {
-                const found_sing_def = sing_def[def];
-                return found_sing_def;
-              }
-            } else if (td === "n") {
-              console.trace();
-              throw "NYI";
-            } else if (td === "b") {
-              console.trace();
-              throw "NYI";
-            }
-          };
-          const resolved_def_to_sig = (resolved_def, level = 0) => {
-            const trd = tf2(resolved_def);
-            if (trd === "s") {
-              if (resolved_def === "string") {
-                return "s";
-              } else if (resolved_def === "number") {
-                return "n";
-              } else if (resolved_def === "boolean") {
-                return "b";
-              }
-            } else if (trd === "a") {
-              let res2 = "";
-              if (level === 0) {
-              } else {
-                res2 = res2 + "[";
-              }
-              each(resolved_def, (item2, c2) => {
-                if (c2 > 0) {
-                  res2 = res2 + ",";
-                }
-                res2 = res2 + resolved_def_to_sig(item2, level + 1);
-              });
-              if (level === 0) {
-              } else {
-                res2 = res2 + "]";
-              }
-              return res2;
-            } else {
-              console.trace();
-              throw "NYI";
-            }
-            return res;
-          };
-          each(grammar_def, (def1, sing_word) => {
-            const {
-              def,
-              plural
-            } = def1;
-            sing_def[sing_word] = def;
-            sing_plur[sing_word] = plural;
-            plur_sing[plural] = sing_word;
-            const tdef = tf2(def);
-            const resolved_def = resolve_def(def);
-            const resolved_def_sig = resolved_def_to_sig(resolved_def);
-            deep_sig_sing[resolved_def_sig] = deep_sig_sing[resolved_def_sig] || [];
-            deep_sig_sing[resolved_def_sig].push(sing_word);
-            let def_is_all_custom_types = true;
-            each(def, (def_item, c2, stop) => {
-              const tdi = tf2(def_item);
-              if (tdi === "s") {
-                if (sing_def[def_item]) {
-                } else {
-                  def_is_all_custom_types = false;
-                  stop();
-                }
-              } else {
-                def_is_all_custom_types = false;
-                stop();
-              }
-            });
-            let obj_sig;
-            if (def_is_all_custom_types) {
-              obj_sig = "{";
-              each(def, (def_item, c2, stop) => {
-                if (c2 > 0) {
-                  obj_sig = obj_sig + ",";
-                }
-                const resolved = resolve_def(def_item);
-                const abr_resolved = resolved_def_to_sig(resolved);
-                obj_sig = obj_sig + '"' + def_item + '":';
-                obj_sig = obj_sig + abr_resolved;
-              });
-              obj_sig = obj_sig + "}";
-            }
-            if (obj_sig) {
-              obj_sig_sing[obj_sig] = obj_sig_sing[obj_sig] || [];
-              obj_sig_sing[obj_sig].push(sing_word);
-            }
-          });
-        }
-        tof(item2) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          const titem = tf2(item2);
-          console.log("titem", titem);
-          if (titem === "a") {
-            let all_arr_items_type;
-            each(item2, (subitem, c2, stop) => {
-              const subitem_type = this.tof(subitem);
-              console.log("subitem_type", subitem_type);
-              if (c2 === 0) {
-                all_arr_items_type = subitem_type;
-              } else {
-                if (all_arr_items_type === subitem_type) {
-                } else {
-                  all_arr_items_type = null;
-                  stop();
-                }
-              }
-            });
-            if (all_arr_items_type) {
-              console.log("has all_arr_items_type", all_arr_items_type);
-              if (!map_native_types[all_arr_items_type]) {
-                const res2 = sing_plur[all_arr_items_type];
-                return res2;
-              }
-            } else {
-              console.log("no all_arr_items_type");
-            }
-          } else {
-            return tof(item2);
-          }
-          const item_deep_sig = deep_sig(item2);
-          console.log("Grammar tof() item_deep_sig", item_deep_sig);
-          let arr_sing;
-          if (titem === "a") {
-            const unenclosed_sig = item_deep_sig.substring(1, item_deep_sig.length - 1);
-            console.log("unenclosed_sig", unenclosed_sig);
-            arr_sing = deep_sig_sing[unenclosed_sig];
-          } else {
-            arr_sing = deep_sig_sing[item_deep_sig];
-          }
-          if (arr_sing) {
-            if (arr_sing.length === 1) {
-              return arr_sing[0];
-            } else {
-              console.trace();
-              throw "NYI";
-            }
-          }
-        }
-        sig(item2, max_depth = -1, depth = 0) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          const extended_sig = (item3) => {
-            const ti = tf2(item3);
-            let res2 = "";
-            let same_grammar_type;
-            const record_subitem_sigs = (item4) => {
-              same_grammar_type = void 0;
-              let same_sig = void 0;
-              each(item4, (subitem, c2) => {
-                if (c2 > 0) {
-                  res2 = res2 + ",";
-                }
-                const sig_subitem = this.sig(subitem, max_depth, depth + 1);
-                if (same_sig === void 0) {
-                  same_sig = sig_subitem;
-                } else {
-                  if (sig_subitem !== same_sig) {
-                    same_sig = false;
-                    same_grammar_type = false;
-                  }
-                }
-                if (same_sig) {
-                  if (sing_def[sig_subitem]) {
-                    if (same_grammar_type === void 0) {
-                      same_grammar_type = sig_subitem;
-                    } else {
-                      if (same_grammar_type === sig_subitem) {
-                      } else {
-                        same_grammar_type = false;
-                      }
-                    }
-                  } else {
-                  }
-                }
-                res2 = res2 + sig_subitem;
-              });
-            };
-            if (ti === "A") {
-              record_subitem_sigs(item3);
-              return res2;
-            } else if (ti === "a") {
-              record_subitem_sigs(item3);
-              if (same_grammar_type) {
-                const plur_name = sing_plur[same_grammar_type];
-                return plur_name;
-              } else {
-                const found_obj_type = obj_sig_sing[res2];
-                const found_deep_sig_type = deep_sig_sing[res2];
-                let found_type_sing;
-                if (found_deep_sig_type) {
-                  if (found_deep_sig_type.length === 1) {
-                    found_type_sing = found_deep_sig_type[0];
-                  }
-                }
-                if (found_type_sing) {
-                  return found_type_sing;
-                } else {
-                  const enclosed_res = "[" + res2 + "]";
-                  return enclosed_res;
-                }
-              }
-            } else if (ti === "o") {
-              if (max_depth === -1 || depth <= max_depth) {
-                res2 = res2 + "{";
-                let first = true;
-                each(item3, (value2, key2) => {
-                  const vsig = this.sig(value2, max_depth, depth + 1);
-                  if (!first) {
-                    res2 = res2 + ",";
-                  } else {
-                    first = false;
-                  }
-                  res2 = res2 + '"' + key2 + '":' + vsig;
-                });
-                res2 = res2 + "}";
-                return res2;
-              } else {
-                return "o";
-              }
-            } else if (ti === "s" || ti === "n" || ti === "b") {
-              return ti;
-            } else {
-              return ti;
-            }
-          };
-          return extended_sig(item2);
-        }
-        single_forms_sig(item2) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          let sig = this.sig(item2);
-          let s_sig = sig.split(",");
-          const arr_res = [];
-          each(s_sig, (sig_item, c2) => {
-            const sing = plur_sing[sig_item] || sig_item;
-            arr_res.push(sing);
-          });
-          const res2 = arr_res.join(",");
-          return res2;
-        }
-      };
-      var Evented_Class = class {
-        "constructor"() {
-          Object.defineProperty(this, "_bound_events", {
-            value: {}
-          });
-        }
-        "raise_event"() {
-          let a = Array.prototype.slice.call(arguments), sig = get_a_sig2(a);
-          a.l = a.length;
-          let target = this;
-          let c2, l2, res2;
-          if (sig === "[s]") {
-            let target2 = this;
-            let event_name = a[0];
-            let bgh = this._bound_general_handler;
-            let be = this._bound_events;
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target2, event_name));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) == "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target2));
-                }
-                return res2;
-              }
-            }
-          }
-          if (sig === "[s,a]") {
-            let be = this._bound_events;
-            let bgh = this._bound_general_handler;
-            let event_name = a[0];
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target, event_name, a[1]));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) === "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target, a[1]));
-                }
-              }
-            }
-          }
-          if (sig === "[s,b]" || sig === "[s,s]" || sig === "[s,n]" || sig === "[s,B]" || sig === "[s,O]" || sig === "[s,e]") {
-            let be = this._bound_events;
-            let bgh = this._bound_general_handler;
-            let event_name = a[0];
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target, event_name, a[1]));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) === "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target, a[1]));
-                }
-              }
-            }
-          }
-          if (sig === "[s,o]" || sig === "[s,?]") {
-            let be = this._bound_events;
-            let bgh = this._bound_general_handler;
-            let event_name = a[0];
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target, event_name, a[1]));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) === "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target, a[1]));
-                }
-              }
-            }
-          } else {
-            if (a.l > 2) {
-              let event_name = a[0];
-              let additional_args = [];
-              let bgh_args = [event_name];
-              for (c2 = 1, l2 = a.l; c2 < l2; c2++) {
-                additional_args.push(a[c2]);
-                bgh_args.push(a[c2]);
-              }
-              let be = this._bound_events;
-              let bgh = this._bound_general_handler;
-              res2 = [];
-              if (bgh) {
-                for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                  res2.push(bgh[c2].apply(target, bgh_args));
-                }
-              }
-              if (be) {
-                let bei = be[event_name];
-                if (tof(bei) == "array") {
-                  if (bei.length > 0) {
-                    for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                      if (bei[c2]) res2.push(bei[c2].apply(target, additional_args));
-                    }
-                    return res2;
-                  } else {
-                    return res2;
-                  }
-                }
-              }
-            } else {
-            }
-          }
-          return res2;
-        }
-        "add_event_listener"() {
-          const {
-            event_events
-          } = this;
-          let a = Array.prototype.slice.call(arguments), sig = get_a_sig2(a);
-          if (sig === "[f]") {
-            this._bound_general_handler = this._bound_general_handler || [];
-            if (is_array(this._bound_general_handler)) {
-              this._bound_general_handler.push(a[0]);
-            }
-            ;
-          }
-          if (sig === "[s,f]") {
-            let event_name = a[0], fn_listener = a[1];
-            if (!this._bound_events[event_name]) this._bound_events[event_name] = [];
-            let bei = this._bound_events[event_name];
-            if (is_array(bei)) {
-              bei.push(fn_listener);
-              if (event_events) {
-                this.raise("add-event-listener", {
-                  "name": event_name
-                });
-              }
-            } else {
-              console.trace();
-              throw "Expected: array";
-            }
-          }
-          return this;
-        }
-        "remove_event_listener"(event_name, fn_listener) {
-          const {
-            event_events
-          } = this;
-          if (this._bound_events) {
-            let bei = this._bound_events[event_name] || [];
-            if (is_array(bei)) {
-              let c2 = 0, l2 = bei.length, found = false;
-              while (!found && c2 < l2) {
-                if (bei[c2] === fn_listener) {
-                  found = true;
-                } else {
-                  c2++;
-                }
-              }
-              if (found) {
-                bei.splice(c2, 1);
-                if (event_events) {
-                  this.raise("remove-event-listener", {
-                    "name": event_name
-                  });
-                }
-              }
-            } else {
-              console.trace();
-              throw "Expected: array";
-            }
-          }
-          return this;
-        }
-        get bound_named_event_counts() {
-          const res2 = {};
-          if (this._bound_events) {
-            const keys = Object.keys(this._bound_events);
-            each(keys, (key2) => {
-              res2[key2] = this._bound_events[key2].length;
-            });
-          }
-          return res2;
-        }
-        "one"(event_name, fn_handler) {
-          let inner_handler = function(e) {
-            fn_handler.call(this, e);
-            this.off(event_name, inner_handler);
-          };
-          this.on(event_name, inner_handler);
-        }
-        "changes"(obj_changes) {
-          if (!this.map_changes) {
-            this.map_changes = {};
-          }
-          each(obj_changes, (handler, name) => {
-            this.map_changes[name] = this.map_changes[name] || [];
-            this.map_changes[name].push(handler);
-          });
-          if (!this._using_changes) {
-            this._using_changes = true;
-            this.on("change", (e_change) => {
-              const {
-                name,
-                value: value2
-              } = e_change;
-              if (this.map_changes[name]) {
-                each(this.map_changes[name], (h_change) => {
-                  h_change(value2);
-                });
-              }
-            });
-          }
-        }
-      };
-      var p = Evented_Class.prototype;
-      p.raise = p.raise_event;
-      p.trigger = p.raise_event;
-      p.subscribe = p.add_event_listener;
-      p.on = p.add_event_listener;
-      p.off = p.remove_event_listener;
-      var eventify = (obj2) => {
-        const bound_events = {};
-        const add_event_listener = (name, handler) => {
-          if (handler === void 0 && typeof name === "function") {
-            handler = name;
-            name = "";
-          }
-          if (!bound_events[name]) bound_events[name] = [];
-          bound_events[name].push(handler);
-        };
-        const remove_event_listener = (name, handler) => {
-          if (bound_events[name]) {
-            const i = bound_events[name].indexOf(handler);
-            if (i > -1) {
-              bound_events[name].splice(i, 1);
-            }
-          }
-        };
-        const raise_event = (name, optional_param) => {
-          const arr_named_events = bound_events[name];
-          if (arr_named_events !== void 0) {
-            if (optional_param !== void 0) {
-              const l2 = arr_named_events.length;
-              for (let c2 = 0; c2 < l2; c2++) {
-                arr_named_events[c2].call(obj2, optional_param);
-              }
-            } else {
-              const l2 = arr_named_events.length;
-              for (let c2 = 0; c2 < l2; c2++) {
-                arr_named_events[c2].call(obj2);
-              }
-            }
-          }
-        };
-        obj2.on = obj2.add_event_listener = add_event_listener;
-        obj2.off = obj2.remove_event_listener = remove_event_listener;
-        obj2.raise = obj2.raise_event = raise_event;
-        return obj2;
-      };
-      var Publisher = class extends Evented_Class {
-        constructor(spec = {}) {
-          super({});
-          this.one("ready", () => {
-            this.is_ready = true;
-          });
-        }
-        get when_ready() {
-          return new Promise((solve, jettison) => {
-            if (this.is_ready === true) {
-              solve();
-            } else {
-              this.one("ready", () => {
-                solve();
-              });
-            }
-          });
-        }
-      };
-      var prop = (...a) => {
-        let s = get_a_sig2(a);
-        const raise_change_events = true;
-        const ifn = (item2) => typeof item2 === "function";
-        if (s === "[a]") {
-          each(a[0], (item_params2) => {
-            prop.apply(exports, item_params2);
-          });
-        } else {
-          if (a.length === 2) {
-            if (ia(a[1])) {
-              const target = a[0];
-              each(a[1], (item2) => {
-                if (ia(item2)) {
-                  throw "NYI 468732";
-                } else {
-                  prop(target, item2);
-                }
-              });
-            } else {
-              const ta1 = tof(a[1]);
-              if (ta1 === "string") {
-                [obj, prop_name] = a;
-              } else {
-                throw "NYI 468732b";
-              }
-            }
-          } else if (a.length > 2) {
-            if (is_array(a[0])) {
-              throw "stop";
-              let objs = a.shift();
-              each(objs, (obj2) => {
-                prop.apply(exports, [obj2].concat(item_params));
-              });
-            } else {
-              let obj2, prop_name2, default_value, fn_onchange, fn_transform, fn_on_ready, options;
-              const load_options = (options2) => {
-                prop_name2 = prop_name2 || options2.name || options2.prop_name;
-                fn_onchange = options2.fn_onchange || options2.onchange || options2.change;
-                fn_transform = options2.fn_transform || options2.ontransform || options2.transform;
-                fn_on_ready = options2.ready || options2.on_ready;
-                default_value = default_value || options2.default_value || options2.default;
-              };
-              if (a.length === 2) {
-                [obj2, options] = a;
-                load_options(options);
-              } else if (a.length === 3) {
-                if (ifn(a[2])) {
-                  [obj2, prop_name2, fn_onchange] = a;
-                } else {
-                  if (a[2].change || a[2].ready) {
-                    load_options(a[2]);
-                    [obj2, prop_name2] = a;
-                  } else {
-                    [obj2, prop_name2, default_value] = a;
-                  }
-                }
-              } else if (a.length === 4) {
-                if (ifn(a[2]) && ifn(a[3])) {
-                  [obj2, prop_name2, fn_transform, fn_onchange] = a;
-                } else if (ifn(a[3])) {
-                  [obj2, prop_name2, default_value, fn_onchange] = a;
-                } else {
-                  [obj2, prop_name2, default_value, options] = a;
-                  load_options(options);
-                }
-              } else if (a.length === 5) {
-                [obj2, prop_name2, default_value, fn_transform, fn_onchange] = a;
-              }
-              let _prop_value;
-              if (typeof default_value !== "undefined") _prop_value = default_value;
-              const _silent_set = (value2) => {
-                let _value;
-                if (fn_transform) {
-                  _value = fn_transform(value2);
-                } else {
-                  _value = value2;
-                }
-                _prop_value = _value;
-              };
-              const _set = (value2) => {
-                let _value;
-                if (fn_transform) {
-                  _value = fn_transform(value2);
-                } else {
-                  _value = value2;
-                }
-                let old = _prop_value;
-                _prop_value = _value;
-                if (fn_onchange) {
-                  fn_onchange({
-                    old,
-                    value: _prop_value
-                  });
-                }
-                if (obj2.raise && raise_change_events) {
-                  obj2.raise("change", {
-                    name: prop_name2,
-                    old,
-                    value: _prop_value
-                  });
-                }
-              };
-              if (is_defined(default_value)) {
-                _prop_value = default_value;
-              }
-              const t_prop_name = tf2(prop_name2);
-              if (t_prop_name === "s") {
-                Object.defineProperty(obj2, prop_name2, {
-                  get() {
-                    return _prop_value;
-                  },
-                  set(value2) {
-                    _set(value2);
-                  }
-                });
-              } else if (t_prop_name === "a") {
-                const l2 = prop_name2.length;
-                let item_prop_name;
-                for (let c2 = 0; c2 < l2; c2++) {
-                  item_prop_name = prop_name2[c2];
-                  Object.defineProperty(obj2, item_prop_name, {
-                    get() {
-                      return _prop_value;
-                    },
-                    set(value2) {
-                      _set(value2);
-                    }
-                  });
-                }
-              } else {
-                throw "Unexpected name type: " + t_prop_name;
-              }
-              if (fn_on_ready) {
-                fn_on_ready({
-                  silent_set: _silent_set
-                });
-              }
-            }
-          }
-        }
-      };
-      var Data_Type = class {
-      };
-      var Functional_Data_Type = class extends Data_Type {
-        constructor(spec) {
-          super(spec);
-          if (spec.supertype) this.supertype = spec.supertype;
-          if (spec.name) this.name = spec.name;
-          if (spec.abbreviated_name) this.abbreviated_name = spec.abbreviated_name;
-          if (spec.named_property_access) this.named_property_access = spec.named_property_access;
-          if (spec.numbered_property_access) this.numbered_property_access = spec.numbered_property_access;
-          if (spec.property_names) this.property_names = spec.property_names;
-          if (spec.property_data_types) this.property_data_types = spec.property_data_types;
-          if (spec.wrap_properties) this.wrap_properties = spec.wrap_properties;
-          if (spec.wrap_value_inner_values) this.wrap_value_inner_values = spec.wrap_value_inner_values;
-          if (spec.value_js_type) this.value_js_type = spec.value_js_type;
-          if (spec.abbreviated_property_names) this.abbreviated_property_names = spec.abbreviated_property_names;
-          if (spec.validate) this.validate = spec.validate;
-          if (spec.validate_explain) this.validate_explain = spec.validate_explain;
-          if (spec.parse_string) this.parse_string = spec.parse_string;
-          if (spec.parse) this.parse = spec.parse;
-        }
-      };
-      Functional_Data_Type.number = new Functional_Data_Type({
-        name: "number",
-        abbreviated_name: "n",
-        validate: (x) => {
-          return !isNaN(x);
-        },
-        parse_string(str) {
-          const p2 = parseFloat(str);
-          if (p2 + "" === str) {
-            const parsed_is_valid = this.validate(p2);
-            if (parsed_is_valid) {
-              return p2;
-            }
-          }
-        }
-      });
-      Functional_Data_Type.integer = new Functional_Data_Type({
-        name: "integer",
-        abbreviated_name: "int",
-        validate: (x) => {
-          return Number.isInteger(x);
-        },
-        parse_string(str) {
-          const p2 = parseInt(str);
-          if (p2 + "" === str) {
-            const parsed_is_valid = this.validate(p2);
-            if (parsed_is_valid) {
-              return p2;
-            }
-          }
-        }
-      });
-      var field = (...a) => {
-        const raise_change_events = true;
-        const ifn = (item2) => typeof item2 === "function";
-        let s = get_a_sig2(a);
-        if (s === "[a]") {
-          each(a[0], (item_params2) => {
-            prop.apply(exports, item_params2);
-          });
-        } else {
-          if (a.length > 1) {
-            if (is_array(a[0])) {
-              throw "stop - need to fix";
-              let objs = a.shift();
-              each(objs, (obj2) => {
-                field.apply(exports, [obj2].concat(item_params));
-              });
-            } else {
-              let obj2, prop_name2, data_type, default_value, fn_transform;
-              if (a.length === 2) {
-                [obj2, prop_name2] = a;
-              } else if (a.length === 3) {
-                if (a[2] instanceof Data_Type) {
-                  [obj2, prop_name2, data_type, default_value] = a;
-                } else {
-                  if (ifn(a[2])) {
-                    [obj2, prop_name2, fn_transform] = a;
-                  } else {
-                    [obj2, prop_name2, default_value] = a;
-                  }
-                }
-              } else if (a.length === 4) {
-                if (a[2] instanceof Data_Type) {
-                  [obj2, prop_name2, data_type, default_value] = a;
-                } else {
-                  [obj2, prop_name2, default_value, fn_transform] = a;
-                }
-              }
-              if (obj2 !== void 0) {
-                Object.defineProperty(obj2, prop_name2, {
-                  get() {
-                    if (is_defined(obj2._)) {
-                      return obj2._[prop_name2];
-                    } else {
-                      return void 0;
-                    }
-                  },
-                  set(value2) {
-                    let old = (obj2._ = obj2._ || {})[prop_name2];
-                    if (old !== value2) {
-                      let is_valid = true;
-                      if (data_type) {
-                        const t_value = typeof value2;
-                        is_valid = data_type.validate(value2);
-                        if (t_value === "string") {
-                          const parsed_value = data_type.parse_string(value2);
-                          is_valid = data_type.validate(parsed_value);
-                          if (is_valid) value2 = parsed_value;
-                        }
-                        console.log("t_value", t_value);
-                      }
-                      if (is_valid) {
-                        let _value;
-                        if (fn_transform) {
-                          _value = fn_transform(value2);
-                        } else {
-                          _value = value2;
-                        }
-                        obj2._[prop_name2] = _value;
-                        if (raise_change_events) {
-                          obj2.raise("change", {
-                            name: prop_name2,
-                            old,
-                            value: _value
-                          });
-                        }
-                      }
-                    } else {
-                    }
-                  }
-                });
-                if (is_defined(default_value)) {
-                  let is_valid = true;
-                  if (data_type) {
-                    is_valid = data_type.validate(default_value);
-                  }
-                  if (is_valid) {
-                    (obj2._ = obj2._ || {})[prop_name2] = default_value;
-                  }
-                }
-              } else {
-                throw "stop";
-              }
-            }
-          }
-        }
-      };
-      var lang_mini_props = {
-        each,
-        is_array,
-        is_dom_node,
-        is_ctrl,
-        clone,
-        get_truth_map_from_arr,
-        tm: get_truth_map_from_arr,
-        get_arr_from_truth_map,
-        arr_trim_undefined,
-        get_map_from_arr,
-        arr_like_to_arr,
-        tof,
-        atof,
-        tf: tf2,
-        load_type,
-        is_defined,
-        def: is_defined,
-        Grammar,
-        stringify,
-        functional_polymorphism,
-        fp,
-        mfp,
-        arrayify,
-        mapify,
-        str_arr_mapify,
-        get_a_sig: get_a_sig2,
-        deep_sig,
-        get_item_sig,
-        set_vals,
-        truth,
-        trim_sig_brackets,
-        ll_set,
-        ll_get,
-        iterate_ancestor_classes,
-        is_arr_of_t,
-        is_arr_of_arrs,
-        is_arr_of_strs,
-        input_processors,
-        output_processors,
-        call_multiple_callback_functions,
-        call_multi,
-        multi: call_multi,
-        native_constructor_tof,
-        Fns,
-        sig_match,
-        remove_sig_from_arr_shell,
-        to_arr_strip_keys,
-        arr_objs_to_arr_keys_values_table,
-        set_arr_tree_value,
-        get_arr_tree_value,
-        deep_arr_iterate,
-        prom,
-        combinations,
-        combos: combinations,
-        Evented_Class,
-        eventify,
-        vectorify,
-        v_add,
-        v_subtract: v_subtract2,
-        v_multiply,
-        v_divide,
-        vector_magnitude,
-        distance_between_points,
-        get_typed_array,
-        gta: get_typed_array,
-        Publisher,
-        field,
-        prop,
-        Data_Type,
-        Functional_Data_Type
-      };
-      var lang_mini = new Evented_Class();
-      Object.assign(lang_mini, lang_mini_props);
-      lang_mini.note = (str_name, str_state, obj_properties) => {
-        obj_properties = obj_properties || {};
-        obj_properties.name = str_name;
-        obj_properties.state = str_state;
-        lang_mini.raise("note", obj_properties);
-      };
-      module.exports = lang_mini;
-      if (__require.main === module) {
-        let test_evented_class2 = function(test_data2) {
-          const res2 = create_empty_test_res();
-          const evented_class = new Evented_Class();
-          test_data2.forEach((test_event) => {
-            const event_name = test_event.event_name;
-            const event_data = test_event.event_data;
-            const listener = (data) => {
-              if (data === event_data) {
-                res2.passed.push(event_name);
-              } else {
-                res2.failed.push(event_name);
-              }
-            };
-            evented_class.on(event_name, listener);
-            evented_class.raise_event(event_name, event_data);
-          });
-          return res2;
-        };
-        test_evented_class = test_evented_class2;
-        const test_data = [
-          {
-            event_name: "foo",
-            event_data: "hello"
-          },
-          {
-            event_name: "bar",
-            event_data: "world"
-          },
-          {
-            event_name: "baz",
-            event_data: true
-          }
-        ];
-        const create_empty_test_res = () => ({
-          passed: [],
-          failed: []
-        });
-        const result = test_evented_class2(test_data);
-        console.log("Passed:", result.passed);
-        console.log("Failed:", result.failed);
-      }
-      var test_evented_class;
-    }
-  });
-
-  // ../jsgui3-client/node_modules/lang-mini/lib-lang-mini.js
-  var require_lib_lang_mini6 = __commonJS({
-    "../jsgui3-client/node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
-      var lang = require_lang_mini6();
-      var { each, tof } = lang;
-      var Type_Signifier = class _Type_Signifier {
-        // Name
-        constructor(spec = {}) {
-          const name = spec.name;
-          Object.defineProperty(this, "name", {
-            get() {
-              return name;
-            }
-          });
-          const parent = spec.parent;
-          Object.defineProperty(this, "parent", {
-            get() {
-              return parent;
-            }
-          });
-          const map_reserved_property_names = {
-            name: true,
-            parent: true
-          };
-          const _ = {};
-          each(spec, (value2, name2) => {
-            if (map_reserved_property_names[name2]) {
-            } else {
-              _[name2] = value2;
-            }
-          });
-        }
-        extend(o_extension) {
-          const o = {
-            parent: this
-          };
-          Object.assign(o, o_extension);
-          const res2 = new _Type_Signifier(o_extension);
-          return res2;
-        }
-        //  Other options?
-        //  Disambiguiation? Descriptive text?
-        //    Or is naming them the main thing there?
-        // Color representation
-        //   And that is simple, does not go into internal representation.
-      };
-      var Type_Representation = class _Type_Representation {
-        // Name
-        //  Other options?
-        //  Disambiguiation? Descriptive text?
-        //    Or is naming them the main thing there?
-        // Color representation
-        //   And that is simple, does not go into internal representation.
-        // This should be able to represent types and lang features not available to JS.
-        //   Names may be optional? May be autogenerated and quite long?
-        constructor(spec = {}) {
-          const name = spec.name;
-          Object.defineProperty(this, "name", {
-            get() {
-              return name;
-            }
-          });
-          const parent = spec.parent;
-          Object.defineProperty(this, "parent", {
-            get() {
-              return parent;
-            }
-          });
-          const _ = {};
-          const map_reserved_property_names = {
-            "name": true
-          };
-          each(spec, (value2, name2) => {
-            if (map_reserved_property_names[name2]) {
-            } else {
-              _[name2] = value2;
-              Object.defineProperty(this, name2, {
-                get() {
-                  return _[name2];
-                },
-                enumerable: true
-              });
-            }
-          });
-        }
-        extend(o_extension) {
-          const o = {
-            parent: this
-          };
-          Object.assign(o, o_extension);
-          const res2 = new _Type_Representation(o_extension);
-          return res2;
-        }
-      };
-      var st_color = new Type_Signifier({ "name": "color" });
-      var st_24bit_color = st_color.extend({ "bits": 24 });
-      var st_24bit_rgb_color = st_24bit_color.extend({ "components": ["red byte", "green byte", "blue byte"] });
-      var tr_string = new Type_Representation({ "name": "string" });
-      var tr_binary = new Type_Representation({ "name": "binary" });
-      var rt_bin_24bit_rgb_color = new Type_Representation({
-        // A binary type representation.
-        "signifier": st_24bit_rgb_color,
-        "bytes": [
-          [0, "red", "ui8"],
-          [1, "green", "ui8"],
-          [2, "blue", "ui8"]
-        ]
-      });
-      var rt_hex_24bit_rgb_color = new Type_Representation({
-        // Likely some kind of string template.
-        //  Or a function?
-        //  Best to keep this function free here.
-        //  Or maybe make a few quite standard ones.
-        "signifier": st_24bit_rgb_color,
-        // Or could just have the sequence / template literal even.
-        "bytes": [
-          [0, "#", "char"],
-          [1, "hex(red)", "string(2)"],
-          [3, "hex(green)", "string(2)"],
-          [5, "hex(blue)", "string(2)"]
-        ]
-      });
-      var st_date = new Type_Signifier({ "name": "date", "components": ["day uint", "month uint", "year int"] });
-      var rt_string_date_uk_ddmmyy = new Type_Representation({
-        "signifier": st_date,
-        "bytes": [
-          [0, "#", "char"],
-          [1, "day", "string(2)"],
-          [3, "/", "char"],
-          [4, "month", "string(2)"],
-          [6, "/", "char"],
-          [7, "year", "string(2)"]
-        ]
-      });
-      lang.Type_Signifier = Type_Signifier;
-      lang.Type_Representation = Type_Representation;
-      module.exports = lang;
-    }
-  });
-
-  // ../jsgui3-client/node_modules/fnl/fn-io-transform.js
-  var require_fn_io_transform2 = __commonJS({
-    "../jsgui3-client/node_modules/fnl/fn-io-transform.js"(exports, module) {
-      var { deep_sig } = require_lib_lang_mini6();
-      var isArguments = (item2) => Object.prototype.toString.call(item2) === "[object Arguments]";
-      var fn_transformation = (fn, map_transformations) => {
-        const input_transformations = map_transformations.i;
-        const output_transformations = map_transformations.o;
-        const fn_res = function() {
-          const args = arguments;
-          if (args.length === 2 && typeof args[1] === "function") {
-            let [a, cb_transform_exec_events] = args;
-            if (isArguments(a)) {
-              if (a.length === 1) {
-                a = a[0];
-              }
-            }
-            const sig_called_with = deep_sig(a);
-            const sig_arguments = deep_sig(arguments);
-            const exec_fn = () => {
-              cb_transform_exec_events({
-                "name": "exec-start"
-                //,
-                //sig: evt_output_transform.sig,
-                //value: evt_output_transform.value
-              });
-              const fn_res2 = fn.call(null, a);
-              cb_transform_exec_events({
-                "name": "exec-complete"
-                //,
-                //sig: evt_output_transform.sig,
-                //value: evt_output_transform.value
-              });
-              const sig_fn_res = deep_sig(fn_res2);
-              if (output_transformations) {
-                if (output_transformations[sig_fn_res]) {
-                  output_transformations[sig_fn_res].call(null, fn_res2, (evt_output_transform) => {
-                    cb_transform_exec_events({
-                      "name": "complete",
-                      sig: evt_output_transform.sig,
-                      value: evt_output_transform.value
-                    });
-                  });
-                } else {
-                  cb_transform_exec_events({
-                    "name": "complete",
-                    sig: sig_fn_res,
-                    value: fn_res2
-                  });
-                }
-              } else {
-                cb_transform_exec_events({
-                  "name": "complete",
-                  sig: sig_fn_res,
-                  value: fn_res2
-                });
-              }
-            };
-            const skip_fn = () => {
-              cb_transform_exec_events({
-                "name": "complete",
-                //sig: sig_fn_res,
-                value: a,
-                skipped: true
-              });
-            };
-            if (input_transformations) {
-              let do_skip = false;
-              if (fn.skip) {
-                do_skip = fn.skip(a);
-              }
-              if (do_skip) {
-                skip_fn();
-              } else {
-                if (fn.map_sigs && fn.map_sigs[sig_called_with]) {
-                  exec_fn();
-                } else {
-                  if (input_transformations[sig_called_with]) {
-                    cb_transform_exec_events({
-                      "name": "input-transform-start"
-                    });
-                    input_transformations[sig_called_with].call(null, a, (evt_input_transform) => {
-                      const { name, sig, value: value2, io_sigs } = evt_input_transform;
-                      if (name === "complete") {
-                        a = value2;
-                        evt_input_transform.name = "input-transform-complete";
-                        cb_transform_exec_events(evt_input_transform);
-                        exec_fn();
-                      } else {
-                        console.trace();
-                        throw "NYI";
-                      }
-                    });
-                  } else {
-                    exec_fn();
-                  }
-                }
-              }
-            } else {
-              exec_fn();
-            }
-          } else {
-            throw "Expected args: normal_args, cb_transform_event";
-          }
-        };
-        if (fn.name) fn_res.name = fn.name;
-        if (fn.main) fn_res.main = fn.main;
-        if (fn.skip) fn_res.skip = fn.skip;
-        return fn_res;
-      };
-      module.exports = fn_transformation;
-    }
-  });
-
-  // ../jsgui3-client/node_modules/fnl/monitor-item.js
-  var require_monitor_item2 = __commonJS({
-    "../jsgui3-client/node_modules/fnl/monitor-item.js"(exports, module) {
-      var { tf: tf2, deep_sig, each, def } = require_lib_lang_mini6();
-      var monitor_item = (item2, cb_evt_monitoring) => {
-        const ti = tf2(item2);
-        if (ti === "A") {
-          const l2 = item2.length;
-          for (let c2 = 0; c2 < l2; c2++) {
-            const arg = item2[c2];
-            ((arg2, c3) => {
-              monitor_item(arg2, (evt_arg_monitor) => {
-                evt_arg_monitor.arg_index = c3;
-                cb_evt_monitoring(evt_arg_monitor);
-              });
-            })(arg, c2);
-          }
-        } else if (ti === "s") {
-          cb_evt_monitoring({
-            name: "complete",
-            t: "s",
-            bytes: item2.length * 2
-          });
-        } else if (ti === "o") {
-          cb_evt_monitoring({
-            name: "complete",
-            t: "o"
-            //,
-            //bytes: item.length * 2
-          });
-        } else if (ti === "R") {
-          const rs = item2;
-          let bytes = 0;
-          const ms_start = Date.now();
-          let content_length, bytes_remaining;
-          const { headers } = item2;
-          if (headers && headers["content-length"]) {
-            content_length = parseInt(headers["content-length"], 10);
-            bytes_remaining = content_length;
-          }
-          const o_evt = {
-            name: "available",
-            t: "R",
-            ms: ms_start,
-            headers
-            //,
-            //bytes: item.length * 2
-          };
-          if (def(content_length)) {
-            o_evt.content_length = content_length;
-          }
-          cb_evt_monitoring(o_evt);
-          rs.on("data", (data) => {
-            bytes += data.length;
-            bytes_remaining -= data.length;
-            const ms = Date.now();
-            const ms_taken = ms - ms_start;
-            const byte_rate = bytes / (ms_taken / 1e3);
-            const est_remaining = bytes_remaining / byte_rate * 1e3;
-            const proportion = bytes / content_length;
-            const ms_est_complete = ms + est_remaining;
-            cb_evt_monitoring({
-              name: "data",
-              t: "B",
-              bytes: data.length,
-              bytes_total: bytes,
-              byte_rate,
-              content_length,
-              bytes_remaining,
-              ms_est_remaining: est_remaining,
-              ms_est_complete,
-              ms_taken,
-              proportion
-            });
-          });
-          rs.on("end", () => {
-            const ms_complete = Date.now();
-            const ms_taken = ms_complete - ms_start;
-            const byte_rate = bytes / (ms_taken / 1e3);
-            cb_evt_monitoring({
-              name: "complete",
-              ms: ms_complete,
-              ms_taken,
-              t: "R",
-              "bytes": bytes,
-              byte_rate
-              //,
-              //bytes: item.length * 2
-            });
-          });
-          rs.on("error", (err) => {
-            cb_evt_monitoring({
-              name: "error",
-              value: err,
-              t: "R"
-              //,
-              //bytes: item.length * 2
-            });
-          });
-        } else if (ti === "B") {
-          cb_evt_monitoring({
-            name: "complete",
-            t: "B",
-            bytes: item2.length
-          });
-        } else if (ti === "a") {
-          cb_evt_monitoring({
-            name: "complete",
-            t: "a"
-          });
-        } else {
-          console.log("ti", ti);
-          console.trace();
-          throw "stop";
-        }
-      };
-      module.exports = monitor_item;
-    }
-  });
-
-  // ../jsgui3-client/node_modules/fnl/default-arg-transformations.js
-  var require_default_arg_transformations2 = __commonJS({
-    "../jsgui3-client/node_modules/fnl/default-arg-transformations.js"(exports, module) {
-      var { deep_sig } = require_lib_lang_mini6();
-      var transformations = {
-        "O": (obs, cb_events) => {
-          obs.then((res2) => {
-            const sig = deep_sig(res2);
-            if (cb_events) cb_events({
-              name: "complete",
-              io_sigs: ["O", sig],
-              sig,
-              value: res2
-            });
-          }, (err) => {
-          });
-        },
-        "p": (p, cb_events) => {
-          p.then((res2) => {
-            const sig = deep_sig(res2);
-            if (cb_events) cb_events({
-              name: "complete",
-              io_sigs: ["p", sig],
-              sig,
-              value: res2
-            });
-          }, (err) => {
-          });
-        },
-        "R": (input_readable_stream, cb_events) => {
-          const chunks = [];
-          const ms_start = Date.now();
-          input_readable_stream.on("data", (data) => {
-            chunks.push(data);
-          });
-          input_readable_stream.on("end", () => {
-            const ms_complete = Date.now();
-            const buf = Buffer.concat(chunks);
-            const ms_taken = ms_complete - ms_start;
-            const byte_rate = buf.length / (ms_taken / 1e3);
-            if (cb_events) cb_events({
-              name: "complete",
-              sig: "B",
-              io_sigs: ["R", "B"],
-              value: buf,
-              bytes: buf.length,
-              ms: ms_complete,
-              ms_taken,
-              byte_rate
-            });
-          });
-          input_readable_stream.on("error", (err) => {
-            console.log("error reading stream for param transformation in stages()");
-            error(err);
-          });
-        }
-        // this level: param sig required
-        // this level: param sig given: function to transform
-        // promise resolution here?
-      };
-      module.exports = transformations;
-    }
-  });
-
-  // ../jsgui3-client/node_modules/fnl/fnl.js
-  var require_fnl2 = __commonJS({
-    "../jsgui3-client/node_modules/fnl/fnl.js"(exports, module) {
-      var { each, Evented_Class, get_a_sig: get_a_sig2, get_truth_map_from_arr, tof, tf: tf2, mfp, deep_sig, clone, def, is_array } = require_lib_lang_mini6();
-      var fn_io_transform = require_fn_io_transform2();
-      var log = () => {
-      };
-      var nce = (obs, next, complete, error2) => {
-        obs.on("next", next);
-        obs.on("complete", complete);
-        obs.on("error", error2);
-        return obs;
-      };
-      var monitor_item = require_monitor_item2();
-      var tm_status_strings = {
-        "init": true,
-        "ok": true,
-        "complete": true,
-        "error": true,
-        "paused": true
-      };
-      var observable = function(fn_inner, opts) {
-        const a = arguments;
-        const l2 = a.length;
-        const sig = get_a_sig2(a);
-        let _opts, _fn_inner;
-        if (sig === "[f]" || sig === "[f,u]") {
-          _opts = {};
-          _fn_inner = a[0];
-        } else if (sig === "[f,o]") {
-          _fn_inner = a[0];
-          _opts = a[1];
-        } else if (sig === "[o,f]") {
-          _opts = a[0];
-          _fn_inner = a[1];
-        } else {
-          if (sig === "[O]" || sig === "[O,u]") {
-            return a[0];
-          } else {
-            console.log("sig", sig);
-            console.trace();
-            throw "NYI";
-          }
-        }
-        const obs_res = ((opts2, fn_inner2) => {
-          const ms_start = Date.now();
-          const ms_since_start = () => Date.now() - ms_start;
-          const res2 = new Evented_Class();
-          const io = res2.io = new Evented_Class();
-          let llog = [];
-          let _status = "init";
-          Object.defineProperty(res2, "ms_start", {
-            value: ms_start,
-            writable: false
-          });
-          let ms_ok, ms_complete, ms_error;
-          let ms_to_ok, ms_to_complete, ms_to_error;
-          const map_status_data = {};
-          const map_ms_reached_status = {};
-          let stage_number = -1;
-          let stage_name = "init";
-          const log2 = (data) => {
-            const log_item = [Date.now(), data];
-            llog.push(log_item);
-            res2.raise("log", log_item);
-          };
-          const status = (str_status, data) => {
-            if (tm_status_strings[str_status]) {
-              const old_status = _status;
-              if (!map_ms_reached_status[str_status]) {
-                map_ms_reached_status[str_status] = Date.now();
-              }
-              map_status_data[str_status] = data;
-              _status = str_status;
-              res2.raise("status", {
-                old: old_status,
-                value: str_status,
-                data
-              });
-            } else {
-              console.trace();
-              log2("str_status", str_status);
-              throw "invalid str_status " + str_status;
-            }
-          };
-          let _stage;
-          let current_stage_info;
-          Object.defineProperty(res2, "log", {
-            get() {
-              return llog;
-            }
-          });
-          Object.defineProperty(res2, "status", {
-            get() {
-              return _status;
-            }
-          });
-          let had_next = false, had_complete = false, had_error = false;
-          setTimeout(() => {
-            const res_fn_inner = fn_inner2((data) => {
-              let passes = true;
-              had_next = true;
-              if (!had_complete && !had_error) {
-                if (this.filters) {
-                  for (let filter of this.filters) {
-                    passes = filter(data);
-                    if (!passes) break;
-                  }
-                }
-              } else {
-                if (had_complete) {
-                  console.warn('Observable can not raise "next" event after having raised its "complete" event.');
-                }
-                if (had_error) {
-                  console.warn('Observable can not raise "next" event after having raised its "error" event.');
-                }
-              }
-              if (passes) {
-                res2.raise("next", data);
-                res2.raise("data", data);
-              }
-            }, (last_data) => {
-              if (!had_complete && !had_error) {
-                had_complete = true;
-                const tld = tf2(last_data);
-                const ms_complete2 = Date.now();
-                res2.ms_complete = ms_complete2;
-                res2.ms_taken = ms_complete2 - ms_start;
-                if (tld !== "u") {
-                  if (tld === "R") {
-                    io.ongoing = true;
-                    last_data.on("complete", () => {
-                      io.ongoing = false;
-                      io.raise("complete");
-                    });
-                  } else {
-                    res2.raise("complete", last_data);
-                    io.raise("complete");
-                  }
-                } else {
-                  res2.raise("complete");
-                }
-              } else {
-                if (had_complete) {
-                  console.warn('WARNING: Observable can not raise "complete" event after having raised it already.');
-                }
-                if (had_error) {
-                  console.warn('WARNING: Observable can not raise "complete" event after having raised its "error" event.');
-                }
-              }
-            }, (error2) => {
-              if (!had_complete && !had_error) {
-                had_error = true;
-                res2.raise("error", error2);
-              } else {
-                if (had_complete) {
-                  console.warn('WARNING: Observable can not raise "error" event after having raised its "complete" event.');
-                }
-                if (had_error) {
-                  console.warn('WARNING: Observable can not raise "error" event after having raised it already.');
-                }
-              }
-            }, status, log2) || [];
-            if (is_array(res_fn_inner)) {
-              const [stop, pause, resume] = res_fn_inner;
-              if (stop) res2.stop = stop;
-              if (pause) res2.pause = pause;
-              if (resume) res2.resume = resume;
-              if (pause && resume) {
-                res2.delay = (ms) => {
-                  pause();
-                  res2.raise("paused");
-                  setTimeout(() => {
-                    res2.resume();
-                    res2.raise("resumed");
-                  }, ms);
-                };
-              }
-            }
-          }, 0);
-          res2.next = (handler) => {
-            res2.on("next", handler);
-            return res2;
-          };
-          res2.data = res2.next;
-          res2.complete = (handler) => {
-            res2.on("complete", handler);
-            return res2;
-          };
-          res2.on("complete", (data) => {
-            status("complete");
-            const store_res = () => {
-              if (data) {
-                if (data.data) {
-                  res2.res = data.data;
-                } else {
-                  res2.res = data;
-                }
-              }
-            };
-          });
-          res2.done = res2.end = res2.complete;
-          res2.error = (handler) => {
-            res2.on("error", handler);
-            return res2;
-          };
-          res2.then = (handler) => {
-            let res_all = [];
-            res2.next((data) => {
-              res_all.push(data);
-              had_next = true;
-            });
-            if (res2.completed) {
-              if (res2.singular_result) {
-                handler(res_all[0]);
-              } else {
-                handler(res_all);
-              }
-            } else {
-              res2.complete((last) => {
-                if (had_next && res_all.length > 0) {
-                  if (res2.singular_result) {
-                    handler(res_all[0]);
-                  } else {
-                    handler(res_all);
-                  }
-                } else {
-                  handler(last);
-                }
-              });
-            }
-          };
-          res2.__type_name = "observable";
-          res2._is_obs = res2._is_observable = true;
-          res2._ = new Evented_Class();
-          res2.meta = (k, v) => {
-            if (v === void 0) {
-            } else {
-              res2._[key] = value;
-              res2._.raise("change", {
-                key: k,
-                value: v
-              });
-            }
-          };
-          return res2;
-        })(_opts, _fn_inner);
-        return obs_res;
-      };
-      observable._ = {
-        name: "observable",
-        return_type: "observable",
-        async: true
-      };
-      var obsfilter = (obs, next_filter) => observable((next, complete, error2) => {
-        obs.on("next", (data) => {
-          if (next_filter(data)) {
-            next(data);
-          }
-        });
-        obs.on("complete", (data) => {
-          if (data) {
-            complete(data);
-          } else {
-            complete();
-          }
-        });
-        obs.on("error", (err) => {
-          error2(err);
-        });
-      });
-      var obsmap = (obs, fn_map) => observable((next, complete, error2) => {
-        obs.on("next", (data) => next(fn_map(data)));
-        obs.on("complete", complete);
-        obs.on("error", error2);
-      });
-      var obsalias = (obs_like, mapping) => {
-        let next, complete, error2;
-        const tmapping = tof(mapping);
-        if (tmapping === "array") {
-          [next, complete, error2] = mapping;
-        } else if (tmapping === "object") {
-          next = mapping.next;
-          complete = mapping.complete;
-          error2 = mapping.error;
-        }
-        return observable((n, c2, e) => {
-          if (next) {
-            obs_like.on(next, n);
-          } else {
-            obs_like.on("next", n);
-          }
-          if (complete) {
-            obs_like.on(complete, c2);
-          } else {
-            obs_like.on("complete", c2);
-          }
-          if (error2) {
-            obs_like.on(error2, e);
-          } else {
-            obs_like.on("error", e);
-          }
-        });
-      };
-      var obscollect = (obs, fn_collect, arr_res) => {
-        obs.on("next", (data) => {
-          const item_res = fn_collect(data);
-          arr_res.push(item_res);
-        });
-        return obs;
-      };
-      var obspool = () => {
-        console.trace();
-        throw "out of order";
-      };
-      var seq = (q_obs) => {
-        return observable((next, complete, error2) => {
-          let c2 = 0, obs_q_item;
-          let process2 = () => {
-            if (c2 < q_obs.length) {
-              let q_item = q_obs[c2];
-              obs_q_item = q_item[1].apply(q_item[0], q_item[2]);
-              obs_q_item.on("next", (data) => {
-                next(data);
-              });
-              obs_q_item.on("error", (error3) => {
-                error3(error3);
-              });
-              obs_q_item.on("complete", (data) => {
-                c2++;
-                process2();
-              });
-            } else {
-              complete();
-            }
-          };
-          process2();
-          let stop = () => {
-            obs_q_item.stop();
-            complete();
-          };
-          let pause = () => {
-            obs_q_item.pause();
-          };
-          let resume = () => {
-            obs_q_item.resume();
-          };
-          return [stop, pause, resume];
-        });
-      };
-      var obs_to_cb = (obs, callback2) => {
-        let _obs = observable(obs);
-        let arr_all = [];
-        _obs.on("next", (data) => arr_all.push(data));
-        _obs.on("error", (err) => callback2(err));
-        _obs.on("complete", (last) => {
-          if (typeof last !== "undefined") {
-            callback2(null, last, arr_all);
-          } else {
-            callback2(null, arr_all);
-          }
-        });
-      };
-      var unpage = (obs) => {
-        return observable((next, complete, error2) => {
-          obs.on("next", (arr_data) => {
-            if ("unpaged" in arr_data) {
-              let unpaged = arr_data.unpaged;
-              for (let c2 = 0, l2 = unpaged.length; c2 < l2; c2++) {
-                next(unpaged[c2]);
-              }
-            } else {
-              for (let c2 = 0, l2 = arr_data.length; c2 < l2; c2++) {
-                next(arr_data[c2]);
-              }
-            }
-          });
-          obs.on("complete", () => {
-            complete();
-          });
-          obs.on("error", (err) => error2(err));
-          return [];
-        });
-      };
-      var obs_or_cb = (obs, callback2, always_plural) => {
-        if (callback2) {
-          obs_to_cb(obs, callback2);
-        } else {
-          return observable(obs, always_plural);
-        }
-      };
-      var sig_obs_or_cb = (a, inner) => {
-        let a2;
-        let callback2;
-        if (typeof a[a.length - 1] === "function") {
-          a2 = Array.prototype.slice.call(a, 0, -1);
-          callback2 = a[a.length - 1];
-        } else if (typeof a[a.length - 1] === "undefined") {
-          a2 = Array.prototype.slice.call(a, 0, -1);
-        } else {
-          a2 = Array.prototype.slice.call(a);
-        }
-        let sig = get_a_sig2(a2);
-        let obs = observable((next, complete, error2) => {
-          return inner(a2, sig, next, complete, error2, a2.length);
-        });
-        return obs_or_cb(obs, callback2);
-      };
-      var cb_to_prom_or_cb = (inner_with_cb, opt_cb) => {
-        if (typeof opt_cb !== "undefined") {
-          inner_with_cb(opt_cb);
-        } else {
-          return new Promise((resolve, reject) => {
-            inner_with_cb((err, res2) => {
-              if (err) {
-                reject(err);
-              } else {
-                resolve(res2);
-              }
-            });
-          });
-        }
-      };
-      var prom_or_cb = (prom2, opt_cb) => {
-        let _prom;
-        if (prom2 instanceof Promise) {
-          _prom = prom2;
-        } else {
-          _prom = new Promise(prom2);
-        }
-        if (opt_cb) {
-          _prom.then((res2) => {
-            opt_cb(null, res2);
-          }, (err) => {
-            opt_cb(err);
-          });
-        } else {
-          return _prom;
-        }
-      };
-      var prom = (prom2) => {
-        if (prom2 instanceof Promise) {
-          return prom2;
-        } else {
-          return new Promise(prom2);
-        }
-      };
-      var is_obs = (obj2) => {
-        return obj2.is_obs === true;
-      };
-      var is_prom = (obj2) => {
-        return obj2 instanceof Promise || obj2.is_obs === true;
-      };
-      var obs_prom_arr_item = (obj2, obs, prom2, arr, item2) => {
-        if (obj2.is_obs === true) {
-          return obs(obj2);
-        } else {
-          if (obj2 instanceof Promise) {
-            return prom2(obj2);
-          } else {
-            if (Array.isArray(obj2)) {
-              return arr(obj2);
-            } else {
-              return item2(obj2);
-            }
-          }
-        }
-      };
-      var arg_transformation = require_default_arg_transformations2();
-      var transform_stage_input = {
-        "R": arg_transformation.R
-      };
-      var stages = mfp({
-        name: "stages",
-        return_type: "function"
-        // function that returns an observable.
-      }, function() {
-        const a = arguments, l2 = a.length;
-        const sig = get_a_sig2(a);
-        let arr_stages;
-        let num_stages;
-        let fn_inner;
-        const prepare_arr_fns = (ofns) => {
-          const input_ofns2 = (ofns2) => {
-            const map_stage_reserved_names = {
-              _raise_stage_event: true
-            };
-            const res2 = [];
-            const o_filtered_stage_fns = {};
-            let num_stages2 = 0;
-            let last_stage_name;
-            each(ofns2, (fn_stage, stage_name) => {
-              if (!map_stage_reserved_names[stage_name]) {
-                o_filtered_stage_fns[stage_name] = fn_stage;
-                num_stages2++;
-                last_stage_name = stage_name;
-              }
-            });
-            each(o_filtered_stage_fns, (fn_stage, stage_name) => {
-              const is_last_stage = stage_name === last_stage_name;
-              const map_sigs = fn_stage.map_sigs;
-              if (Object.keys(fn_stage).length === 0) {
-                const io_transform = {};
-                if (!is_last_stage) {
-                  io_transform.o = {
-                    p: arg_transformation.p
-                  };
-                }
-                const io_transformed_stage = fn_io_transform(fn_stage, io_transform);
-                io_transformed_stage.name = stage_name;
-                res2.push([stage_name, io_transformed_stage]);
-              } else {
-                if (map_sigs) {
-                  const io_transform = {
-                    i: transform_stage_input
-                  };
-                  io_transform.o = {
-                    "p": arg_transformation.p,
-                    "O": arg_transformation.O
-                  };
-                  const io_transformed_stage = fn_io_transform(fn_stage, io_transform);
-                  io_transformed_stage.name = stage_name;
-                  res2.push([stage_name, io_transformed_stage]);
-                } else {
-                  const io_transform = {};
-                  io_transform.o = {
-                    "p": arg_transformation.p,
-                    "O": arg_transformation.O
-                  };
-                  const io_transformed_stage = fn_io_transform(fn_stage, io_transform);
-                  io_transformed_stage.name = stage_name;
-                  res2.push([stage_name, io_transformed_stage]);
-                }
-              }
-            });
-            return res2;
-          };
-          return input_ofns2(ofns);
-        };
-        const prepare = () => {
-          if (sig === "[a]") {
-            valid = true;
-            each(a[0], (stage) => {
-              if (get_a_sig2(stage) === "[s,f]") {
-                const [stage_name, fn_stage] = stage;
-                if (!fn_stage.name) fn_stage.name = stage_name;
-              } else {
-                valid = false;
-                console.trace();
-                throw "expected stage to be specified as an array [s,f]";
-              }
-            });
-            if (valid) {
-              arr_stages = prepare_arr_fns(a[0]);
-              num_stages = arr_stages.length;
-            }
-          } else if (sig === "[o]") {
-            input_ofns(a[0]);
-          } else if (sig === "[f]") {
-            arr_stages = prepare_arr_fns(a[0]());
-            num_stages = arr_stages.length;
-          } else {
-            console.trace();
-            throw "stages expected an array or object (may become more flexible in the future)";
-          }
-        };
-        const ms_pre_prepare = Date.now();
-        let res_prepare = prepare();
-        const ms_prep_time = Date.now() - ms_pre_prepare;
-        if (res_prepare) {
-          log("ms_prep_time", ms_prep_time);
-          return res_prepare;
-        }
-        const arr_stages_info = new Array(arr_stages.length);
-        each(arr_stages, (arr_stage, i) => {
-          const stage_name = arr_stage[0];
-          arr_stages_info[i] = {
-            name: stage_name
-          };
-        });
-        const process2 = () => {
-          const res2 = function() {
-            const a2 = arguments, l22 = a2.length;
-            const sig2 = get_a_sig2(a2);
-            let next_apply_args = a2.length === 0 ? void 0 : a2;
-            const obs_res = observable((next, complete, error2, status, log2, stage) => {
-              const log_stage_events = [];
-              obs_res.log_stage_events = log_stage_events;
-              const map_stage_events_by_name = {};
-              let ms_last_stage_event;
-              let c2 = 0;
-              const cb_stage_event = (name, evt) => {
-                evt = evt || {
-                  name
-                };
-                const now = Date.now();
-                evt.ms = now;
-                evt.i_stage = c2;
-                evt.stage_name = arr_stages2[c2][0];
-                if (ms_last_stage_event) {
-                  evt.ms_since_last = now - ms_last_stage_event;
-                }
-                ms_last_stage_event = now;
-                log_stage_events.push(evt);
-                map_stage_events_by_name[name] = evt;
-                if (name === "have-response") {
-                  obs_res.ms_latency = now - map_stage_events_by_name["make-request"].ms;
-                }
-                obs_res.raise("stage", evt);
-              };
-              const t12 = Date.now();
-              const new_obj_fns = a[0](cb_stage_event);
-              const newly_prepared_stages = prepare_arr_fns(new_obj_fns);
-              const arr_stages2 = newly_prepared_stages;
-              const reprep_time = Date.now() - t12;
-              log2("reprep_time", reprep_time);
-              const res_input = obs_res.input = {};
-              const res_output = obs_res.output = {};
-              const res_stages = obs_res.stages = clone(arr_stages_info);
-              monitor_item(a2, (evt_input_args) => {
-                const event_name = evt_input_args.name;
-              });
-              let i_last_unskipped_stage = -1;
-              let exec_is_complete = false;
-              const process_next = () => {
-                const have_next_stage = !!arr_stages2[c2];
-                const i_stage = c2;
-                log2("have_next_stage", have_next_stage);
-                if (have_next_stage) {
-                  const stage_name = arr_stages2[c2][0];
-                  const fn_stage = arr_stages2[c2][1];
-                  const is_main_stage = fn_stage.main === true;
-                  const is_last_stage = c2 === arr_stages2.length - 1;
-                  const res_stage = res_stages[c2];
-                  const res_prev_stage = res_stages[c2 - 1];
-                  const res_next_stage = res_stages[c2 + 1];
-                  res_stage.ms_start = Date.now();
-                  if (is_main_stage) {
-                    res_stage.main = true;
-                  }
-                  let fn_ready_args;
-                  const exec_fn = () => {
-                    const i_stage2 = c2;
-                    console.log("calling exec_fn " + stage_name);
-                    console.trace();
-                    const stage_res = fn_stage.call(this, fn_ready_args, (transform_call_event) => {
-                      const { name, sig: sig3, value: value2 } = transform_call_event;
-                      if (name === "complete") {
-                        if (transform_call_event.skipped === true) {
-                          res_stage.skipped = true;
-                        } else {
-                          if (i_stage2 > i_last_unskipped_stage) i_last_unskipped_stage = i_stage2;
-                          let content_length;
-                          monitor_item(value2, (evt_stage_res) => {
-                            const cl_evt = clone(evt_stage_res);
-                            const event_name = evt_stage_res.name;
-                            if (event_name === "complete") {
-                              console.log("c", c2);
-                              console.log("stage item complete");
-                              const ms_output_complete = Date.now();
-                              const ms_taken = ms_output_complete - res_stage.ms_start;
-                              res_stage.ms_output_complete = ms_output_complete;
-                              if (res_stage.ms_output_start) {
-                                const ms_output_taken = res_stage.ms_output_taken = ms_output_complete - res_stage.ms_output_start;
-                                if (ms_output_taken > 0) {
-                                  if (res_stage.bytes_out) {
-                                    const output_rate = res_stage.bytes_out / (ms_output_taken / 1e3);
-                                    res_stage.output_rate = output_rate;
-                                    if (is_main_stage) {
-                                      obs_res.main_rate = output_rate;
-                                    }
-                                  }
-                                }
-                              }
-                              res_stage.ms_taken = ms_taken;
-                              console.log("c", c2);
-                              console.log("i_stage", i_stage2);
-                              console.log("is_last_stage", is_last_stage);
-                            } else if (event_name === "available") {
-                              if (evt_stage_res.content_length) {
-                                res_stage.content_length = evt_stage_res.content_length;
-                                if (is_main_stage) {
-                                  content_length = obs_res.content_length = evt_stage_res.content_length;
-                                }
-                              }
-                              res_stage.ms_output_start = Date.now();
-                            } else if (event_name === "data") {
-                              const { bytes, bytes_total, byte_rate, content_length: content_length2, bytes_remaining, ms_est_remaining, ms_est_complete, ms_taken, proportion } = evt_stage_res;
-                              const ms_processing_output = ms_taken;
-                              const out_rate = byte_rate;
-                              res_stage.bytes_out = bytes_total;
-                              if (res_stage.bytes_in) {
-                                res_stage.bytes_oi_ratio = res_stage.bytes_out / res_stage.bytes_in;
-                              }
-                              if (is_main_stage) {
-                                obs_res.main_bytes_out = bytes_total;
-                                obs_res.main_output_rate = out_rate;
-                              }
-                              if (i_last_unskipped_stage === i_stage2) {
-                                obs_res.bytes_out = bytes_total;
-                                obs_res.output_rate = out_rate;
-                                if (def(proportion)) obs_res.proportion = proportion;
-                                if (def(bytes_remaining)) obs_res.bytes_remaining = bytes_remaining;
-                                if (def(ms_est_remaining)) obs_res.ms_est_remaining = ms_est_remaining;
-                                if (def(ms_est_complete)) obs_res.ms_est_complete = ms_est_complete;
-                              }
-                              if (res_next_stage) {
-                                res_next_stage.bytes_in = res_next_stage.bytes_in || 0;
-                                res_next_stage.bytes_in += cl_evt.bytes;
-                              }
-                            } else {
-                              log2("event_name", event_name);
-                              console.trace();
-                              throw "stop";
-                            }
-                          });
-                        }
-                        next_apply_args = value2;
-                        c2++;
-                        log2("pre process next stage");
-                        process_next();
-                      } else {
-                        log2("transform_call_event", transform_call_event);
-                        if (name === "input-transform-complete") {
-                          const ms_input_transform_complete = Date.now();
-                          res_stage.ms_input_transform_complete = ms_input_transform_complete;
-                          res_stage.ms_input_transform_taken = ms_input_transform_complete - res_stage.ms_input_transform_start;
-                        } else if (name === "input-transform-start") {
-                          res_stage.ms_input_transform_start = Date.now();
-                        } else if (name === "exec-start") {
-                          res_stage.ms_exec_start = Date.now();
-                        } else if (name === "exec-complete") {
-                          const ms_exec_complete = Date.now();
-                          res_stage.ms_exec_complete = ms_exec_complete;
-                          res_stage.ms_exec_taken = ms_exec_complete - res_stage.ms_exec_start;
-                        } else {
-                          log2("name", name);
-                          log2("transform_call_event", transform_call_event);
-                          console.trace();
-                          throw "stop";
-                        }
-                      }
-                    });
-                  };
-                  fn_ready_args = next_apply_args;
-                  log2("pre exec_fn");
-                  exec_fn();
-                } else {
-                  const tsr = tf2(next_apply_args);
-                  c2++;
-                  log2("tsr", tsr);
-                  console.log("the stages exec is complete");
-                  console.log("i_last_unskipped_stage", i_last_unskipped_stage);
-                  exec_is_complete = true;
-                  complete(next_apply_args);
-                }
-              };
-              process_next();
-            });
-            return obs_res;
-          };
-          res2.is_staged = true;
-          res2.return_type = "observable";
-          return res2;
-        };
-        return process2();
-      });
-      module.exports = {
-        "observable": observable,
-        "nce": nce,
-        "obs": observable,
-        "obsalias": obsalias,
-        "obscollect": obscollect,
-        "obsfilter": obsfilter,
-        "obspool": obspool,
-        "obsmap": obsmap,
-        "seq": seq,
-        "sequence": seq,
-        "sig_obs_or_cb": sig_obs_or_cb,
-        "cb_to_prom_or_cb": cb_to_prom_or_cb,
-        "prom_or_cb": prom_or_cb,
-        "prom": prom,
-        "obs_or_cb": obs_or_cb,
-        "unpage": unpage,
-        "is_obs": is_obs,
-        "is_prom": is_prom,
-        "obs_prom_arr_item": obs_prom_arr_item,
-        "stages": stages
-      };
-      if (__require.main === module) {
-        console.log("running fnl as main");
-        const make_timer_obs = () => observable((next, complete, error2) => {
-          let c2 = 2;
-          let paused = false;
-          let cease = () => {
-            clearInterval(ivl);
-          };
-          let stop = () => {
-            clearInterval(ivl);
-            complete();
-          };
-          let ivl = setInterval(() => {
-            if (!paused) {
-              let v = c2 * 2;
-              next({
-                "v": v
-              });
-              c2++;
-              if (c2 > 6) {
-                error2(new Error("A problem"));
-                cease();
-              }
-              if (c2 > 8) {
-                stop();
-              }
-            }
-          }, 1e3);
-          return [stop, () => {
-            paused = true;
-          }, () => {
-            paused = false;
-          }];
-        });
-        let obs = make_timer_obs();
-        let test_obs = () => {
-          obs.on("paused", () => log("* paused"));
-          obs.on("resumed", () => log("* resumed"));
-          obs.on("error", (err) => log("* error", err));
-          obs.next((data) => {
-            log("data", data);
-          });
-        };
-        test_obs();
-        let test_then = () => {
-          (async () => {
-            let res2 = await obs;
-            log("awaited res", res2);
-          })();
-        };
-        log("stages", stages);
-        let test_split = () => {
-          obs.on("paused", () => log("* paused"));
-          obs.on("resumed", () => log("* resumed"));
-          let [obs1, obs2] = obs.split((data) => data.v % 3 === 0);
-          obs1.on("next", (data) => log("obs1 data", data));
-          obs2.on("next", (data) => log("obs2 data", data));
-        };
-        let test_filter = () => {
-          obs.filter((data) => {
-            return data.v !== 8;
-          }).filter((data) => {
-            return data.v % 3 !== 0;
-          });
-          obs.next((data) => {
-            if (data === 8) {
-              obs.delay(5e3);
-              obs.pause();
-              log("paused");
-              setTimeout(() => {
-                log("wait over");
-                obs.resume();
-              }, 2e3);
-            }
-          }).end(() => {
-            log("end");
-          });
-        };
-      } else {
-      }
-    }
-  });
-
-  // ../jsgui3-client/client-resource-pool.js
+  // node_modules/jsgui3-client/client-resource-pool.js
   var require_client_resource_pool = __commonJS({
-    "../jsgui3-client/client-resource-pool.js"(exports, module) {
+    "node_modules/jsgui3-client/client-resource-pool.js"(exports, module) {
       var jsgui2 = require_html();
       var Resource_Pool = jsgui2.Resource_Pool;
-      var fnl = require_fnl2();
+      var fnl = require_fnl();
       var prom_or_cb = fnl.prom_or_cb;
       var Client_Resource_Pool = class extends Resource_Pool {
         //'fields': ,
@@ -48036,9 +37890,9 @@ div.grid .row .cell span {
     }
   });
 
-  // ../jsgui3-client/page-context.js
+  // node_modules/jsgui3-client/page-context.js
   var require_page_context2 = __commonJS({
-    "../jsgui3-client/page-context.js"(exports, module) {
+    "node_modules/jsgui3-client/page-context.js"(exports, module) {
       var jsgui2 = require_html();
       var {
         Control: Control2,
@@ -48376,12 +38230,12 @@ body .overlay {
     }
   });
 
-  // ../jsgui3-client/resource.js
+  // node_modules/jsgui3-client/resource.js
   var require_resource2 = __commonJS({
-    "../jsgui3-client/resource.js"(exports, module) {
+    "node_modules/jsgui3-client/resource.js"(exports, module) {
       var jsgui2 = require_html();
       var Resource = jsgui2.Resource;
-      var fnl = require_fnl2();
+      var fnl = require_fnl();
       var prom_or_cb = fnl.prom_or_cb;
       var stringify = jsgui2.stringify;
       var each = jsgui2.each;
@@ -48459,14 +38313,14 @@ body .overlay {
     }
   });
 
-  // ../jsgui3-client/client.js
+  // node_modules/jsgui3-client/client.js
   var require_client = __commonJS({
-    "../jsgui3-client/client.js"(exports, module) {
+    "node_modules/jsgui3-client/client.js"(exports, module) {
       var jsgui2 = require_html();
       jsgui2.Resource_Pool = require_client_resource_pool();
       jsgui2.Client_Page_Context = require_page_context2();
       jsgui2.Client_Resource = require_resource2();
-      var fnl = require_fnl2();
+      var fnl = require_fnl();
       var prom_or_cb = fnl.prom_or_cb;
       var { each, tf: tf2 } = jsgui2;
       if (typeof window !== "undefined") {
@@ -48720,22 +38574,69 @@ body .overlay {
     }
   });
 
+  // src/ui/utils/listenerBag.js
+  var require_listenerBag = __commonJS({
+    "src/ui/utils/listenerBag.js"(exports, module) {
+      "use strict";
+      var ListenerBag = class {
+        constructor() {
+          this._active = true;
+          this._bindings = [];
+        }
+        /**
+         * @param {object} target Object supporting addEventListener/removeEventListener.
+         * @param {string} type
+         * @param {Function} handler
+         * @param {any} [options]
+         */
+        on(target, type, handler, options) {
+          if (!this._active) return;
+          if (!target?.addEventListener || !target?.removeEventListener) return;
+          if (typeof type !== "string") return;
+          if (typeof handler !== "function") return;
+          target.addEventListener(type, handler, options);
+          this._bindings.push({ target, type, handler, options });
+        }
+        dispose() {
+          if (!this._active) return;
+          this._active = false;
+          for (const { target, type, handler, options } of this._bindings) {
+            try {
+              target.removeEventListener(type, handler, options);
+            } catch (e) {
+            }
+          }
+          this._bindings.length = 0;
+        }
+      };
+      module.exports = { ListenerBag };
+    }
+  });
+
   // src/ui/server/artPlayground/isomorphic/controls/SelectionHandlesControl.js
   var require_SelectionHandlesControl = __commonJS({
     "src/ui/server/artPlayground/isomorphic/controls/SelectionHandlesControl.js"(exports, module) {
       "use strict";
       var jsgui2 = require_jsgui2();
       var { Control: Control2 } = jsgui2;
+      var { ListenerBag } = require_listenerBag();
       var HANDLE_SIZE = 8;
       var POSITIONS = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
-      var SelectionHandlesControl2 = class extends Control2 {
+      var SelectionHandlesControl = class extends Control2 {
         constructor(spec = {}) {
           super({ ...spec, tagName: "div" });
           this.add_class("art-selection");
           this.dom.attributes["data-jsgui-control"] = "art_selection";
           this._bounds = { x: 0, y: 0, width: 100, height: 100 };
           this._handles = {};
+          this._domListenerBag = null;
+          this._activeResizeBag = null;
+          this._boundHandleDown = {};
           if (!spec.el) this.compose();
+        }
+        deactivate() {
+          this._disposeDomListeners();
+          this.__active = false;
         }
         compose() {
           const ctx = this.context;
@@ -48753,21 +38654,60 @@ body .overlay {
         activate() {
           if (this.__active) return;
           this.__active = true;
+          if (this.dom?.el && (!this._handles || Object.keys(this._handles).length === 0)) {
+            const root = this.dom.el;
+            this._outline = this._outline || { dom: { el: root.querySelector(".art-selection__outline") } };
+            this._handles = this._handles || {};
+            POSITIONS.forEach((pos) => {
+              this._handles[pos] = this._handles[pos] || { dom: { el: root.querySelector(`[data-handle="${pos}"]`) } };
+            });
+          }
+          this._setupHandleEvents();
+        }
+        _setupHandleEvents() {
+          if (typeof document === "undefined") return;
+          this._disposeDomListeners();
+          this._domListenerBag = new ListenerBag();
           Object.entries(this._handles).forEach(([pos, handle]) => {
             const el = handle.dom?.el;
-            el?.addEventListener?.("mousedown", (e) => {
-              e.stopPropagation();
-              this.raise("resize-start", { handle: pos, mouseX: e.clientX, mouseY: e.clientY });
-              const onMove = (ev) => this.raise("resize-move", { handle: pos, mouseX: ev.clientX, mouseY: ev.clientY });
-              const onUp = () => {
-                this.raise("resize-end");
-                document.removeEventListener("mousemove", onMove);
-                document.removeEventListener("mouseup", onUp);
-              };
-              document.addEventListener("mousemove", onMove);
-              document.addEventListener("mouseup", onUp);
-            });
+            if (!el?.addEventListener) return;
+            const bound = this._boundHandleDown[pos] || ((e) => this._onHandleMouseDown(pos, e));
+            this._boundHandleDown[pos] = bound;
+            this._domListenerBag.on(el, "mousedown", bound);
           });
+        }
+        _onHandleMouseDown(pos, e) {
+          e?.stopPropagation?.();
+          this.raise("resize-start", { handle: pos, mouseX: e.clientX, mouseY: e.clientY });
+          if (typeof document === "undefined") return;
+          if (this._activeResizeBag) {
+            this._activeResizeBag.dispose();
+            this._activeResizeBag = null;
+          }
+          const resizeBag = new ListenerBag();
+          this._activeResizeBag = resizeBag;
+          const onMove = (ev) => {
+            this.raise("resize-move", { handle: pos, mouseX: ev.clientX, mouseY: ev.clientY });
+          };
+          const onUp = () => {
+            this.raise("resize-end");
+            if (this._activeResizeBag === resizeBag) {
+              resizeBag.dispose();
+              this._activeResizeBag = null;
+            }
+          };
+          resizeBag.on(document, "mousemove", onMove);
+          resizeBag.on(document, "mouseup", onUp);
+        }
+        _disposeDomListeners() {
+          if (this._domListenerBag) {
+            this._domListenerBag.dispose();
+            this._domListenerBag = null;
+          }
+          if (this._activeResizeBag) {
+            this._activeResizeBag.dispose();
+            this._activeResizeBag = null;
+          }
         }
         updateBounds({ x, y, width, height: height2 }) {
           this._bounds = { x, y, width, height: height2 };
@@ -48788,7 +38728,7 @@ body .overlay {
           setPos("e", x + width - half, y + height2 / 2 - half);
         }
       };
-      module.exports = { SelectionHandlesControl: SelectionHandlesControl2 };
+      module.exports = { SelectionHandlesControl };
     }
   });
 
@@ -48798,7 +38738,8 @@ body .overlay {
       "use strict";
       var jsgui2 = require_jsgui2();
       var { ComponentControl } = require_ComponentControl();
-      var { SelectionHandlesControl: SelectionHandlesControl2 } = require_SelectionHandlesControl();
+      var { SelectionHandlesControl } = require_SelectionHandlesControl();
+      var { ListenerBag } = require_listenerBag();
       var { Control: Control2, String_Control } = jsgui2;
       var COLORS = ["#4A90D9", "#D94A4A", "#4AD94A", "#D9D94A", "#9B4AD9", "#4AD9D9", "#D94A9B"];
       var SVG_NS = "http://www.w3.org/2000/svg";
@@ -48813,7 +38754,20 @@ body .overlay {
           this._nextId = 1;
           this._dragState = null;
           this._resizeState = null;
+          this._domListenerBag = null;
+          this._boundOnMouseDown = null;
+          this._boundOnMouseMove = null;
+          this._boundOnMouseUp = null;
+          this._pendingComponents = this._pendingComponents || [
+            { id: "rect1", type: "rect", x: 100, y: 100, width: 150, height: 100, fill: "#4A90D9" },
+            { id: "rect2", type: "rect", x: 300, y: 150, width: 120, height: 80, fill: "#D94A4A" },
+            { id: "ellipse1", type: "ellipse", cx: 550, cy: 200, rx: 70, ry: 50, fill: "#4AD94A" }
+          ];
           if (!spec.el) this.compose();
+        }
+        deactivate() {
+          this._disposeDomListeners();
+          this.__active = false;
         }
         compose() {
           const ctx = this.context;
@@ -48830,33 +38784,57 @@ body .overlay {
       </svg>`
           }));
           this.add(wrapper);
-          const handles = this._selectionHandles = new SelectionHandlesControl2({ context: ctx });
+          const handles = this._selectionHandles = new SelectionHandlesControl({ context: ctx });
           handles.dom.attributes.style = "display: none;";
           this.add(handles);
-          this._pendingComponents = [
-            { id: "rect1", type: "rect", x: 100, y: 100, width: 150, height: 100, fill: "#4A90D9" },
-            { id: "rect2", type: "rect", x: 300, y: 150, width: 120, height: 80, fill: "#D94A4A" },
-            { id: "ellipse1", type: "ellipse", cx: 550, cy: 200, rx: 70, ry: 50, fill: "#4AD94A" }
-          ];
         }
         activate() {
           if (this.__active) return;
           this.__active = true;
-          const el = this.dom.el;
+          const el = this.dom?.el;
+          if (!el) return;
+          if (!this._svgWrapper?.dom?.el) {
+            const wrapperEl = el.querySelector(".art-canvas__svg-wrapper");
+            if (wrapperEl) this._svgWrapper = { dom: { el: wrapperEl } };
+          }
+          if (!this._selectionHandles?.dom?.el) {
+            const selectionEl = el.querySelector(".art-selection");
+            if (selectionEl) {
+              this._selectionHandles = selectionEl.__jsgui_control || new SelectionHandlesControl({ el: selectionEl, context: this.context });
+              this._selectionHandles.dom = this._selectionHandles.dom || {};
+              this._selectionHandles.dom.el = selectionEl;
+              selectionEl.__jsgui_control = this._selectionHandles;
+            }
+          }
           this._svg = el.querySelector(".art-canvas__svg");
-          this._componentsGroup = this._svg.querySelector(".art-canvas__components");
+          this._componentsGroup = this._svg?.querySelector?.(".art-canvas__components");
           this._pendingComponents?.forEach((c2) => this._renderComponent(c2));
           this._pendingComponents = null;
-          this._selectionHandles.activate?.();
+          this._selectionHandles?.activate?.();
           this._setupEvents();
         }
         _setupEvents() {
-          this._svg.addEventListener("mousedown", (e) => this._onMouseDown(e));
-          document.addEventListener("mousemove", (e) => this._onMouseMove(e));
-          document.addEventListener("mouseup", () => this._onMouseUp());
-          this._selectionHandles.on("resize-start", (d) => this._startResize(d));
-          this._selectionHandles.on("resize-move", (d) => this._doResize(d));
-          this._selectionHandles.on("resize-end", () => this._endResize());
+          if (!this._svg?.addEventListener) return;
+          if (typeof document === "undefined") return;
+          this._disposeDomListeners();
+          this._domListenerBag = new ListenerBag();
+          this._boundOnMouseDown = this._boundOnMouseDown || ((e) => this._onMouseDown(e));
+          this._boundOnMouseMove = this._boundOnMouseMove || ((e) => this._onMouseMove(e));
+          this._boundOnMouseUp = this._boundOnMouseUp || (() => this._onMouseUp());
+          this._domListenerBag.on(this._svg, "mousedown", this._boundOnMouseDown);
+          this._domListenerBag.on(document, "mousemove", this._boundOnMouseMove);
+          this._domListenerBag.on(document, "mouseup", this._boundOnMouseUp);
+          if (this._selectionHandles?.on) {
+            this._selectionHandles.on("resize-start", (d) => this._startResize(d));
+            this._selectionHandles.on("resize-move", (d) => this._doResize(d));
+            this._selectionHandles.on("resize-end", () => this._endResize());
+          }
+        }
+        _disposeDomListeners() {
+          if (this._domListenerBag) {
+            this._domListenerBag.dispose();
+            this._domListenerBag = null;
+          }
         }
         _onMouseDown(e) {
           if (this._tool !== "select") return;
@@ -48893,9 +38871,14 @@ body .overlay {
           }
         }
         _onMouseUp() {
+          if (this._dragState) {
+            this.raise("selection-change", this._getSelectionData());
+          }
           this._dragState = null;
         }
         _renderComponent({ id, type, ...data }) {
+          if (typeof document === "undefined") return;
+          if (!this._componentsGroup) return;
           let el;
           const set = (k, v) => el.setAttribute(k, v);
           if (type === "rect") {
@@ -48906,6 +38889,7 @@ body .overlay {
             set("height", data.height);
             set("fill", data.fill || "#4A90D9");
             set("rx", "4");
+            if (data.stroke !== void 0) set("stroke", data.stroke);
             this._components.set(id, { type, el, ...data });
           } else if (type === "ellipse") {
             el = document.createElementNS(SVG_NS, "ellipse");
@@ -48914,6 +38898,7 @@ body .overlay {
             set("rx", data.rx);
             set("ry", data.ry);
             set("fill", data.fill || "#4AD94A");
+            if (data.stroke !== void 0) set("stroke", data.stroke);
             this._components.set(id, {
               type,
               el,
@@ -48933,8 +38918,20 @@ body .overlay {
             set("y", data.y);
             set("fill", data.fill || "#1A1A1A");
             set("font-size", data.fontSize || "16");
+            if (data.stroke !== void 0) set("stroke", data.stroke);
             el.textContent = data.text || "Text";
-            this._components.set(id, { type, el, x: data.x, y: data.y, width: 100, height: 24, text: data.text || "Text", fill: data.fill });
+            this._components.set(id, {
+              type,
+              el,
+              x: data.x,
+              y: data.y,
+              width: 100,
+              height: 24,
+              text: data.text || "Text",
+              fontSize: data.fontSize || "16",
+              fill: data.fill,
+              stroke: data.stroke
+            });
           }
           if (el) {
             set("data-component-id", id);
@@ -49000,6 +38997,37 @@ body .overlay {
             stroke: c2.stroke
           };
         }
+        /**
+         * Public: return current selection data (or null).
+         * @returns {object|null}
+         */
+        getSelectionData() {
+          return this._getSelectionData();
+        }
+        /**
+         * Public: select a component by id.
+         * @param {string} id
+         */
+        selectComponent(id) {
+          this._select(id);
+        }
+        /**
+         * Public: return the current layers list (topmost first).
+         * @returns {Array<{id:string,type:string,name:string,selected:boolean}>}
+         */
+        getLayers() {
+          if (!this._components) return [];
+          const layers = [];
+          this._components.forEach((comp, id) => {
+            layers.push({
+              id,
+              type: comp.type,
+              name: `${comp.type} ${id}`,
+              selected: id === this._selectedId
+            });
+          });
+          return layers.reverse();
+        }
         _updateHandles() {
           const c2 = this._components.get(this._selectedId);
           if (!c2) return;
@@ -49064,6 +39092,9 @@ body .overlay {
           this._updateHandles();
         }
         _endResize() {
+          if (this._resizeState) {
+            this.raise("selection-change", this._getSelectionData());
+          }
           this._resizeState = null;
         }
         // === Public API ===
@@ -49084,13 +39115,200 @@ body .overlay {
           }
           this._select(id);
         }
+        /**
+         * Public: return a serialisable snapshot of a component (for undo/redo).
+         * @param {string} id
+         * @returns {object|null}
+         */
+        getComponentSnapshot(id) {
+          const c2 = this._components.get(id);
+          if (!c2) return null;
+          const fill = typeof c2.fill === "string" ? c2.fill : c2.el?.getAttribute?.("fill");
+          const stroke = typeof c2.stroke === "string" ? c2.stroke : c2.el?.getAttribute?.("stroke");
+          const fontSize = c2.fontSize ?? c2.el?.getAttribute?.("font-size");
+          const text = c2.text ?? c2.el?.textContent;
+          return {
+            id,
+            type: c2.type,
+            x: c2.x,
+            y: c2.y,
+            width: c2.width,
+            height: c2.height,
+            fill,
+            stroke,
+            text,
+            fontSize
+          };
+        }
+        _ensureNextIdAfterId(id) {
+          if (typeof id !== "string") return;
+          const m = /^comp(\d+)$/.exec(id);
+          if (!m) return;
+          const n = parseInt(m[1], 10);
+          if (Number.isFinite(n)) this._nextId = Math.max(this._nextId, n + 1);
+        }
+        /**
+         * Public: create a component from a snapshot-like object.
+         * If id is omitted, a new id is generated.
+         * @param {object} data
+         * @returns {string|null} id
+         */
+        createComponent(data = {}) {
+          if (typeof document === "undefined") return null;
+          if (!this._componentsGroup) return null;
+          const type = data.type;
+          if (!type) return null;
+          const rand = () => 200 + Math.random() * 100;
+          const id = data.id || `comp${this._nextId++}`;
+          this._ensureNextIdAfterId(id);
+          if (type === "rect") {
+            this._renderComponent({
+              id,
+              type,
+              x: data.x ?? rand(),
+              y: data.y ?? rand(),
+              width: data.width ?? 120,
+              height: data.height ?? 80,
+              fill: data.fill,
+              stroke: data.stroke
+            });
+          } else if (type === "ellipse") {
+            const width = data.width ?? 100 + Math.random() * 60;
+            const height2 = data.height ?? 80 + Math.random() * 40;
+            const x = data.x ?? rand();
+            const y = data.y ?? rand();
+            this._renderComponent({
+              id,
+              type,
+              cx: x + width / 2,
+              cy: y + height2 / 2,
+              rx: width / 2,
+              ry: height2 / 2,
+              fill: data.fill,
+              stroke: data.stroke
+            });
+            const c2 = this._components.get(id);
+            if (c2) {
+              c2.x = x;
+              c2.y = y;
+              c2.width = width;
+              c2.height = height2;
+              c2.fill = data.fill ?? c2.fill;
+              c2.stroke = data.stroke;
+            }
+          } else if (type === "text") {
+            const x = data.x ?? rand();
+            const y = data.y ?? rand();
+            this._renderComponent({
+              id,
+              type,
+              x,
+              y,
+              text: data.text ?? "New Text",
+              fill: data.fill,
+              stroke: data.stroke,
+              fontSize: data.fontSize
+            });
+          } else {
+            return null;
+          }
+          if (data.fill !== void 0 || data.stroke !== void 0 || data.x !== void 0 || data.y !== void 0 || data.width !== void 0 || data.height !== void 0) {
+            this.updateComponent(id, data);
+          }
+          this._select(id);
+          return id;
+        }
+        /**
+         * Public: remove a component by id and return its snapshot.
+         * @param {string} id
+         * @returns {object|null}
+         */
+        removeComponent(id) {
+          if (!id) return null;
+          const snap = this.getComponentSnapshot(id);
+          const c2 = this._components.get(id);
+          c2?.el?.remove?.();
+          this._components.delete(id);
+          if (this._selectedId === id) {
+            this._selectedId = null;
+            const hEl = this._selectionHandles.dom?.el;
+            if (hEl) hEl.style.display = "none";
+            this.raise("selection-change", null);
+          }
+          return snap;
+        }
         deleteSelected() {
           if (!this._selectedId) return;
-          this._components.get(this._selectedId)?.el?.remove();
-          this._components.delete(this._selectedId);
-          this._selectedId = null;
-          const hEl = this._selectionHandles.dom?.el;
-          if (hEl) hEl.style.display = "none";
+          this.removeComponent(this._selectedId);
+        }
+        /**
+         * Export the current SVG markup.
+         * @returns {string} SVG markup (empty string if unavailable)
+         */
+        exportSvg() {
+          const svgEl = this._svg || this.dom?.el?.querySelector?.(".art-canvas__svg");
+          return svgEl?.outerHTML || "";
+        }
+        /**
+         * Apply edited properties to the currently selected component.
+         * @param {object} patch - Any of { x, y, width, height, fill, stroke }
+         * @returns {boolean} true if applied
+         */
+        updateSelectedProperties(patch = {}) {
+          if (!this._selectedId) return false;
+          return this.updateComponent(this._selectedId, patch);
+        }
+        /**
+         * Update a component and its SVG element.
+         * @param {string} id
+         * @param {object} patch
+         * @returns {boolean}
+         */
+        updateComponent(id, patch = {}) {
+          const c2 = this._components.get(id);
+          if (!c2) return false;
+          const next = { ...patch };
+          ["x", "y", "width", "height"].forEach((k) => {
+            if (next[k] === void 0) return;
+            const n = typeof next[k] === "number" ? next[k] : parseFloat(String(next[k]).trim());
+            if (!Number.isFinite(n)) delete next[k];
+            else next[k] = n;
+          });
+          if (typeof next.fill === "string") c2.fill = next.fill;
+          if (typeof next.stroke === "string") c2.stroke = next.stroke;
+          if (typeof next.x === "number") c2.x = next.x;
+          if (typeof next.y === "number") c2.y = next.y;
+          if (typeof next.width === "number") c2.width = Math.max(1, next.width);
+          if (typeof next.height === "number") c2.height = Math.max(1, next.height);
+          if (c2.type === "rect") {
+            if (typeof c2.x === "number") c2.el.setAttribute("x", c2.x);
+            if (typeof c2.y === "number") c2.el.setAttribute("y", c2.y);
+            if (typeof c2.width === "number") c2.el.setAttribute("width", c2.width);
+            if (typeof c2.height === "number") c2.el.setAttribute("height", c2.height);
+            if (c2.fill !== void 0) c2.el.setAttribute("fill", c2.fill);
+            if (c2.stroke !== void 0) c2.el.setAttribute("stroke", c2.stroke);
+          } else if (c2.type === "ellipse") {
+            c2.rx = c2.width / 2;
+            c2.ry = c2.height / 2;
+            c2.cx = c2.x + c2.rx;
+            c2.cy = c2.y + c2.ry;
+            c2.el.setAttribute("cx", c2.cx);
+            c2.el.setAttribute("cy", c2.cy);
+            c2.el.setAttribute("rx", c2.rx);
+            c2.el.setAttribute("ry", c2.ry);
+            if (c2.fill !== void 0) c2.el.setAttribute("fill", c2.fill);
+            if (c2.stroke !== void 0) c2.el.setAttribute("stroke", c2.stroke);
+          } else if (c2.type === "text") {
+            if (typeof c2.x === "number") c2.el.setAttribute("x", c2.x);
+            if (typeof c2.y === "number") c2.el.setAttribute("y", c2.y);
+            if (c2.fill !== void 0) c2.el.setAttribute("fill", c2.fill);
+            if (c2.stroke !== void 0) c2.el.setAttribute("stroke", c2.stroke);
+          }
+          if (this._selectedId === id) {
+            this._updateHandles();
+            this.raise("selection-change", this._getSelectionData());
+          }
+          return true;
         }
         _randColor() {
           return COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -49105,6 +39323,7 @@ body .overlay {
     "src/ui/server/artPlayground/isomorphic/controls/ToolbarControl.js"(exports, module) {
       "use strict";
       var jsgui2 = require_jsgui2();
+      var { ListenerBag } = require_listenerBag();
       var { Control: Control2, String_Control } = jsgui2;
       var ToolbarControl2 = class extends Control2 {
         constructor(spec = {}) {
@@ -49112,7 +39331,15 @@ body .overlay {
           this.add_class("art-toolbar");
           this.dom.attributes["data-jsgui-control"] = "art_toolbar";
           this._buttons = {};
+          this._domListenerBag = null;
           if (!spec.el) this.compose();
+        }
+        deactivate() {
+          if (this._domListenerBag) {
+            this._domListenerBag.dispose();
+            this._domListenerBag = null;
+          }
+          this.__active = false;
         }
         compose() {
           const ctx = this.context;
@@ -49177,12 +39404,46 @@ body .overlay {
         activate() {
           if (this.__active) return;
           this.__active = true;
+          if (this.dom?.el) {
+            const anyButtonEl = Object.values(this._buttons).some((btn) => btn?.dom?.el);
+            if (!anyButtonEl) {
+              const root = this.dom.el;
+              const byAction = {};
+              root.querySelectorAll("button[data-action]").forEach((btnEl) => {
+                const action = btnEl.getAttribute("data-action");
+                if (!action) return;
+                byAction[action] = { dom: { el: btnEl } };
+              });
+              this._buttons = {
+                addRect: byAction["add-rect"],
+                addEllipse: byAction["add-ellipse"],
+                addText: byAction["add-text"],
+                undo: byAction.undo,
+                redo: byAction.redo,
+                delete: byAction.delete,
+                export: byAction.export
+              };
+            }
+          }
+          if (this._domListenerBag) this._domListenerBag.dispose();
+          this._domListenerBag = new ListenerBag();
           Object.values(this._buttons).forEach((btn) => {
-            const el = btn.dom?.el;
-            el?.addEventListener?.("click", () => {
+            const el = btn?.dom?.el;
+            if (!el?.addEventListener) return;
+            this._domListenerBag.on(el, "click", () => {
               this._handleAction(el.getAttribute("data-action"));
             });
           });
+        }
+        _setButtonDisabled(action, disabled) {
+          const btn = this._buttons?.[action];
+          const el = btn?.dom?.el;
+          if (!el) return;
+          el.disabled = !!disabled;
+        }
+        setUndoRedoState({ canUndo, canRedo } = {}) {
+          this._setButtonDisabled("undo", !canUndo);
+          this._setButtonDisabled("redo", !canRedo);
         }
         _handleAction(action) {
           const actions = {
@@ -49218,7 +39479,7 @@ body .overlay {
         { id: "zoom-in", icon: "\u{1F50D}+", label: "Zoom In", group: "nav" },
         { id: "zoom-out", icon: "\u{1F50D}\u2212", label: "Zoom Out", group: "nav" }
       ];
-      var ToolPanelControl = class extends Control2 {
+      var ToolPanelControl2 = class extends Control2 {
         constructor(spec = {}) {
           super({ ...spec, tagName: "aside" });
           this.add_class("ap-tool-panel");
@@ -49257,6 +39518,18 @@ body .overlay {
         activate() {
           if (this.__active) return;
           this.__active = true;
+          if (this.dom?.el && (!this._buttons || Object.keys(this._buttons).length === 0)) {
+            this._buttons = {};
+            const root = this.dom.el;
+            root.querySelectorAll("button[data-tool]").forEach((btnEl) => {
+              const id = btnEl.getAttribute("data-tool");
+              if (!id) return;
+              this._buttons[id] = { dom: { el: btnEl } };
+              if (btnEl.classList.contains("ap-tool-panel__btn--active")) {
+                this._currentTool = id;
+              }
+            });
+          }
           Object.entries(this._buttons).forEach(([id, btn]) => {
             const el = btn.dom?.el;
             el?.addEventListener?.("click", () => this._handleClick(id));
@@ -49295,7 +39568,7 @@ body .overlay {
           this._setActiveTool(toolId);
         }
       };
-      module.exports = { ToolPanelControl };
+      module.exports = { ToolPanelControl: ToolPanelControl2 };
     }
   });
 
@@ -49305,7 +39578,7 @@ body .overlay {
       "use strict";
       var jsgui2 = require_jsgui2();
       var { Control: Control2, String_Control } = jsgui2;
-      var PropertiesPanelControl = class extends Control2 {
+      var PropertiesPanelControl2 = class extends Control2 {
         constructor(spec = {}) {
           super({ ...spec, tagName: "aside" });
           this.add_class("ap-properties-panel");
@@ -49314,6 +39587,7 @@ body .overlay {
           this._selection = null;
           this._layers = [];
           this._inputs = {};
+          this._lastEmitted = { id: null, byProp: /* @__PURE__ */ Object.create(null) };
           if (!spec.el) this.compose();
         }
         compose() {
@@ -49322,29 +39596,29 @@ body .overlay {
           const posSection = this._section();
           posSection.add(this._label("Position"));
           const posRow = this._row();
-          posRow.add(this._inputs.x = this._input("X", "0"));
-          posRow.add(this._inputs.y = this._input("Y", "0"));
+          posRow.add(this._inputs.x = this._input("X", "0", "x"));
+          posRow.add(this._inputs.y = this._input("Y", "0", "y"));
           posSection.add(posRow);
           this.add(posSection);
           const sizeSection = this._section();
           sizeSection.add(this._label("Size"));
           const sizeRow = this._row();
-          sizeRow.add(this._inputs.width = this._input("W", "0"));
-          sizeRow.add(this._inputs.height = this._input("H", "0"));
+          sizeRow.add(this._inputs.width = this._input("W", "0", "width"));
+          sizeRow.add(this._inputs.height = this._input("H", "0", "height"));
           sizeSection.add(sizeRow);
           this.add(sizeSection);
           const fillSection = this._section();
           fillSection.add(this._label("Fill"));
           const fillRow = this._row();
-          fillRow.add(this._fillSwatch = this._colorSwatch("#4A90D9"));
-          fillRow.add(this._inputs.fill = this._input("", "#4A90D9"));
+          fillRow.add(this._fillSwatch = this._colorSwatch("#4A90D9", "fill"));
+          fillRow.add(this._inputs.fill = this._input("", "#4A90D9", "fill"));
           fillSection.add(fillRow);
           this.add(fillSection);
           const strokeSection = this._section();
           strokeSection.add(this._label("Stroke"));
           const strokeRow = this._row();
-          strokeRow.add(this._strokeSwatch = this._colorSwatch("transparent"));
-          strokeRow.add(this._inputs.stroke = this._input("", "none"));
+          strokeRow.add(this._strokeSwatch = this._colorSwatch("transparent", "stroke"));
+          strokeRow.add(this._inputs.stroke = this._input("", "none", "stroke"));
           strokeSection.add(strokeRow);
           this.add(strokeSection);
           this.add(this._header("Layers"));
@@ -49376,7 +39650,7 @@ body .overlay {
           row.add_class("ap-properties-panel__row");
           return row;
         }
-        _input(prefix, value2) {
+        _input(prefix, value2, propName) {
           const ctx = this.context;
           const wrapper = new Control2({ context: ctx, tagName: "div" });
           wrapper.dom.attributes.style = "flex: 1; display: flex; align-items: center; gap: 4px;";
@@ -49390,19 +39664,86 @@ body .overlay {
           input.add_class("ap-properties-panel__input");
           input.dom.attributes.type = "text";
           input.dom.attributes.value = value2;
+          if (propName) input.dom.attributes["data-prop"] = propName;
           wrapper.add(input);
           wrapper._inputEl = input;
           return wrapper;
         }
-        _colorSwatch(color) {
+        _colorSwatch(color, propName) {
           const swatch = new Control2({ context: this.context, tagName: "div" });
           swatch.add_class("ap-properties-panel__color-swatch");
           swatch.dom.attributes.style = `background: ${color};`;
+          if (propName) swatch.dom.attributes["data-prop"] = propName;
           return swatch;
         }
         activate() {
           if (this.__active) return;
           this.__active = true;
+          if (this.dom?.el) {
+            const root = this.dom.el;
+            if (!this._inputs || Object.keys(this._inputs).length === 0) {
+              this._inputs = {};
+              const inputEls = Array.from(root.querySelectorAll("input.ap-properties-panel__input"));
+              inputEls.forEach((inputEl) => {
+                const prop = inputEl.getAttribute("data-prop");
+                if (!prop) return;
+                this._inputs[prop] = { _inputEl: { dom: { el: inputEl } } };
+              });
+              const orderedProps = ["x", "y", "width", "height", "fill", "stroke"];
+              orderedProps.forEach((prop, idx) => {
+                if (this._inputs[prop]?._inputEl?.dom?.el) return;
+                const inputEl = inputEls[idx];
+                if (!inputEl) return;
+                this._inputs[prop] = { _inputEl: { dom: { el: inputEl } } };
+              });
+            }
+            if (!this._fillSwatch || !this._strokeSwatch) {
+              const swatches = Array.from(root.querySelectorAll(".ap-properties-panel__color-swatch"));
+              const byProp = new Map(swatches.map((el) => [el.getAttribute("data-prop"), el]));
+              this._fillSwatch = this._fillSwatch || { dom: { el: byProp.get("fill") || swatches[0] } };
+              this._strokeSwatch = this._strokeSwatch || { dom: { el: byProp.get("stroke") || swatches[1] } };
+            }
+            if (!this._layersContainer) {
+              this._layersContainer = { dom: { el: root.querySelector(".ap-layers") } };
+            }
+          }
+          this._bindInputHandlers();
+        }
+        _bindInputHandlers() {
+          if (typeof document === "undefined") return;
+          if (this._inputsBound) return;
+          this._inputsBound = true;
+          const bind = (prop) => {
+            const inputEl = this._inputs?.[prop]?._inputEl?.dom?.el;
+            if (!inputEl) return;
+            const emit = () => {
+              const selectionId = this._selection?.id;
+              if (!selectionId) return;
+              const raw = String(inputEl.value ?? "").trim();
+              if (this._lastEmitted.id !== selectionId) {
+                this._lastEmitted.id = selectionId;
+                this._lastEmitted.byProp = /* @__PURE__ */ Object.create(null);
+              }
+              const last = this._lastEmitted.byProp[prop];
+              if (last === raw) return;
+              const sel = this._selection;
+              if (sel && Object.prototype.hasOwnProperty.call(sel, prop)) {
+                const current = sel[prop];
+                const currentStr = current === void 0 || current === null ? null : String(current);
+                if (currentStr !== null && currentStr === raw) return;
+              }
+              this._lastEmitted.byProp[prop] = raw;
+              this.raise("property-change", { id: selectionId, prop, value: raw });
+            };
+            inputEl.addEventListener("change", emit);
+            inputEl.addEventListener("keydown", (e) => {
+              if (e.key === "Enter") {
+                emit();
+                inputEl.blur();
+              }
+            });
+          };
+          ["x", "y", "width", "height", "fill", "stroke"].forEach(bind);
         }
         /**
          * Update the properties panel with selection data.
@@ -49479,7 +39820,7 @@ body .overlay {
           return icons[type] || "?";
         }
       };
-      module.exports = { PropertiesPanelControl };
+      module.exports = { PropertiesPanelControl: PropertiesPanelControl2 };
     }
   });
 
@@ -49489,7 +39830,7 @@ body .overlay {
       "use strict";
       var jsgui2 = require_jsgui2();
       var { Control: Control2, String_Control } = jsgui2;
-      var StatusBarControl = class extends Control2 {
+      var StatusBarControl2 = class extends Control2 {
         constructor(spec = {}) {
           super({ ...spec, tagName: "footer" });
           this.add_class("ap-status-bar");
@@ -49514,6 +39855,10 @@ body .overlay {
         activate() {
           if (this.__active) return;
           this.__active = true;
+          if (this.dom?.el) {
+            this._leftEl = this._leftEl || this.dom.el.querySelector(".ap-status-bar__left");
+            this._rightEl = this._rightEl || this.dom.el.querySelector(".ap-status-bar__right");
+          }
         }
         /**
          * Update selection info display.
@@ -49527,10 +39872,8 @@ body .overlay {
             const typeName = type.charAt(0).toUpperCase() + type.slice(1);
             this._selectionText = `${typeName} | ${Math.round(x)}, ${Math.round(y)} | ${Math.round(width)} \xD7 ${Math.round(height2)}`;
           }
-          const el = this._selectionInfo?.dom?.el;
-          if (el) {
-            el.textContent = this._selectionText;
-          }
+          const el = this._selectionInfo?.dom?.el || this._leftEl;
+          if (el) el.textContent = this._selectionText;
         }
         /**
          * Update zoom level display.
@@ -49538,13 +39881,57 @@ body .overlay {
          */
         updateZoom(zoom) {
           this._zoom = zoom;
-          const el = this._zoomInfo?.dom?.el;
-          if (el) {
-            el.textContent = `Zoom: ${zoom}%`;
-          }
+          const el = this._zoomInfo?.dom?.el || this._rightEl;
+          if (el) el.textContent = `Zoom: ${zoom}%`;
         }
       };
-      module.exports = { StatusBarControl };
+      module.exports = { StatusBarControl: StatusBarControl2 };
+    }
+  });
+
+  // src/ui/utils/commandStack.js
+  var require_commandStack = __commonJS({
+    "src/ui/utils/commandStack.js"(exports, module) {
+      "use strict";
+      var CommandStack = class {
+        constructor() {
+          this._done = [];
+          this._undone = [];
+        }
+        do(command) {
+          if (!command || typeof command.do !== "function" || typeof command.undo !== "function") {
+            throw new TypeError("CommandStack.do expects { do, undo } functions");
+          }
+          command.do();
+          this._done.push(command);
+          this._undone.length = 0;
+        }
+        undo() {
+          const cmd = this._done.pop();
+          if (!cmd) return false;
+          cmd.undo();
+          this._undone.push(cmd);
+          return true;
+        }
+        redo() {
+          const cmd = this._undone.pop();
+          if (!cmd) return false;
+          cmd.do();
+          this._done.push(cmd);
+          return true;
+        }
+        canUndo() {
+          return this._done.length > 0;
+        }
+        canRedo() {
+          return this._undone.length > 0;
+        }
+        clear() {
+          this._done.length = 0;
+          this._undone.length = 0;
+        }
+      };
+      module.exports = { CommandStack };
     }
   });
 
@@ -49555,9 +39942,10 @@ body .overlay {
       var jsgui2 = require_jsgui2();
       var { CanvasControl: CanvasControl2 } = require_CanvasControl();
       var { ToolbarControl: ToolbarControl2 } = require_ToolbarControl();
-      var { ToolPanelControl } = require_ToolPanelControl();
-      var { PropertiesPanelControl } = require_PropertiesPanelControl();
-      var { StatusBarControl } = require_StatusBarControl();
+      var { ToolPanelControl: ToolPanelControl2 } = require_ToolPanelControl();
+      var { PropertiesPanelControl: PropertiesPanelControl2 } = require_PropertiesPanelControl();
+      var { StatusBarControl: StatusBarControl2 } = require_StatusBarControl();
+      var { CommandStack } = require_commandStack();
       var { Control: Control2 } = jsgui2;
       var ArtPlaygroundAppControl2 = class extends Control2 {
         constructor(spec = {}) {
@@ -49565,6 +39953,7 @@ body .overlay {
           this.add_class("art-app");
           this.add_class("ap-cover");
           this.dom.attributes["data-jsgui-control"] = "art_app";
+          this._commandStack = new CommandStack();
           if (!spec.el) this.compose();
         }
         compose() {
@@ -49573,14 +39962,14 @@ body .overlay {
           const workspace = new Control2({ context: ctx, tagName: "main" });
           workspace.add_class("ap-workspace");
           workspace.dom.attributes["data-jsgui-control"] = "ap_workspace";
-          workspace.add(this._toolPanel = new ToolPanelControl({ context: ctx }));
+          workspace.add(this._toolPanel = new ToolPanelControl2({ context: ctx }));
           const canvasWrapper = new Control2({ context: ctx, tagName: "div" });
           canvasWrapper.add_class("ap-canvas-wrapper");
           canvasWrapper.add(this._canvas = new CanvasControl2({ context: ctx }));
           workspace.add(canvasWrapper);
-          workspace.add(this._propertiesPanel = new PropertiesPanelControl({ context: ctx }));
+          workspace.add(this._propertiesPanel = new PropertiesPanelControl2({ context: ctx }));
           this.add(workspace);
-          this.add(this._statusBar = new StatusBarControl({ context: ctx }));
+          this.add(this._statusBar = new StatusBarControl2({ context: ctx }));
         }
         activate() {
           if (this.__active) return;
@@ -49602,14 +39991,22 @@ body .overlay {
         }
         _wireEvents() {
           if (this._toolbar && this._canvas) {
-            this._toolbar.on("tool-change", (tool) => this._canvas.setTool(tool));
             this._toolbar.on("add-component", (type) => {
-              this._canvas.addComponent(type);
-              this._updatePanels();
+              this._doCommandAddComponent(type);
             });
             this._toolbar.on("delete", () => {
-              this._canvas.deleteSelected();
-              this._updatePanels();
+              this._doCommandDeleteSelected();
+            });
+            this._toolbar.on("undo", () => {
+              this._doUndo();
+            });
+            this._toolbar.on("redo", () => {
+              this._doRedo();
+            });
+            this._toolbar.on("export", () => {
+              const svg = this._canvas?.exportSvg?.() || "";
+              if (!svg) return;
+              this._downloadTextFile("art-playground.svg", svg, "image/svg+xml");
             });
           }
           if (this._toolPanel && this._canvas) {
@@ -49617,8 +40014,7 @@ body .overlay {
               this._canvas.setTool(tool);
             });
             this._toolPanel.on("add-shape", (shapeType) => {
-              this._canvas.addComponent(shapeType);
-              this._updatePanels();
+              this._doCommandAddComponent(shapeType);
             });
           }
           if (this._canvas) {
@@ -49628,15 +40024,144 @@ body .overlay {
           }
           if (this._propertiesPanel && this._canvas) {
             this._propertiesPanel.on("layer-select", (id) => {
-              this._canvas._select(id);
+              this._canvas.selectComponent?.(id);
               this._updatePanels();
+            });
+            this._propertiesPanel.on("property-change", ({ id, prop, value: value2 }) => {
+              if (!prop) return;
+              this._doCommandUpdateProperties(id, { [prop]: value2 });
             });
           }
           this._updatePanels();
         }
+        _updateUndoRedoUi() {
+          if (!this._toolbar?.setUndoRedoState) return;
+          this._toolbar.setUndoRedoState({
+            canUndo: this._commandStack.canUndo(),
+            canRedo: this._commandStack.canRedo()
+          });
+        }
+        _doCommandAddComponent(type) {
+          if (!this._canvas?.createComponent) return;
+          if (!type) return;
+          const cmd = {
+            _snapshot: null,
+            do: () => {
+              if (!cmd._snapshot) {
+                const id = this._canvas.createComponent({ type });
+                cmd._snapshot = this._canvas.getComponentSnapshot(id);
+              } else {
+                this._canvas.createComponent(cmd._snapshot);
+              }
+            },
+            undo: () => {
+              if (!cmd._snapshot?.id) return;
+              this._canvas.removeComponent(cmd._snapshot.id);
+            }
+          };
+          this._commandStack.do(cmd);
+          this._updatePanels();
+          this._updateUndoRedoUi();
+        }
+        _doCommandDeleteSelected() {
+          if (!this._canvas?.removeComponent) return;
+          const sel = this._canvas.getSelectionData?.();
+          const id = sel?.id;
+          if (!id) return;
+          const cmd = {
+            _snapshot: null,
+            do: () => {
+              cmd._snapshot = this._canvas.removeComponent(id);
+            },
+            undo: () => {
+              if (!cmd._snapshot) return;
+              this._canvas.createComponent(cmd._snapshot);
+            }
+          };
+          this._commandStack.do(cmd);
+          this._updatePanels();
+          this._updateUndoRedoUi();
+        }
+        _doCommandUpdateProperties(id, patch) {
+          if (!this._canvas?.updateComponent) return;
+          if (!id) return;
+          const current = this._canvas.getComponentSnapshot?.(id);
+          if (current && patch && typeof patch === "object") {
+            const keys = Object.keys(patch);
+            const isNoOp = keys.length > 0 && keys.every((k) => {
+              const nextVal = patch[k];
+              if (nextVal === void 0) return true;
+              if (k === "x" || k === "y" || k === "width" || k === "height") {
+                const n = typeof nextVal === "number" ? nextVal : parseFloat(String(nextVal).trim());
+                if (!Number.isFinite(n)) return true;
+                return typeof current[k] === "number" && current[k] === n;
+              }
+              if (k === "fill" || k === "stroke") {
+                if (typeof nextVal !== "string") return true;
+                return String(current[k] ?? "") === nextVal;
+              }
+              return String(current[k] ?? "") === String(nextVal);
+            });
+            if (isNoOp) return;
+          }
+          const prev = this._canvas.getComponentSnapshot?.(id);
+          if (!prev) return;
+          const cmd = {
+            _prev: prev,
+            _next: null,
+            do: () => {
+              if (cmd._next) {
+                this._canvas.updateComponent(id, cmd._next);
+                return;
+              }
+              this._canvas.updateComponent(id, patch);
+              cmd._next = this._canvas.getComponentSnapshot?.(id);
+            },
+            undo: () => {
+              if (!cmd._prev) return;
+              this._canvas.updateComponent(id, cmd._prev);
+            }
+          };
+          this._commandStack.do(cmd);
+          this._updatePanels();
+          this._updateUndoRedoUi();
+        }
+        _doCommandUpdateSelectedProperties(patch) {
+          const sel = this._canvas?.getSelectionData?.();
+          const id = sel?.id;
+          if (!id) return;
+          this._doCommandUpdateProperties(id, patch);
+        }
+        _doUndo() {
+          if (this._commandStack.undo()) {
+            this._updatePanels();
+            this._updateUndoRedoUi();
+          }
+        }
+        _doRedo() {
+          if (this._commandStack.redo()) {
+            this._updatePanels();
+            this._updateUndoRedoUi();
+          }
+        }
+        _downloadTextFile(filename, text, mimeType) {
+          if (typeof document === "undefined") return;
+          try {
+            const blob = new Blob([text], { type: mimeType || "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename || "download.txt";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+          } catch (e) {
+          }
+        }
         _updatePanels() {
-          const selection = this._canvas?._getSelectionData?.() || this._getSelectionFromCanvas();
-          const layers = this._getLayersFromCanvas();
+          const selection = this._canvas?.getSelectionData?.() || this._getSelectionFromCanvas();
+          const layers = this._canvas?.getLayers?.() || this._getLayersFromCanvas();
           if (this._statusBar) {
             this._statusBar.updateSelection(selection);
           }
@@ -49644,6 +40169,7 @@ body .overlay {
             this._propertiesPanel.updateSelection(selection);
             this._propertiesPanel.updateLayers(layers);
           }
+          this._updateUndoRedoUi();
         }
         _getSelectionFromCanvas() {
           if (!this._canvas?._selectedId) return null;
@@ -49686,7 +40212,9 @@ body .overlay {
   var { ArtPlaygroundAppControl } = require_ArtPlaygroundAppControl();
   var { ToolbarControl } = require_ToolbarControl();
   var { CanvasControl } = require_CanvasControl();
-  var { SelectionHandlesControl } = require_SelectionHandlesControl();
+  var { ToolPanelControl } = require_ToolPanelControl();
+  var { PropertiesPanelControl } = require_PropertiesPanelControl();
+  var { StatusBarControl } = require_StatusBarControl();
   function ensureContext() {
     if (typeof document === "undefined") return null;
     if (jsgui.context) return jsgui.context;
@@ -49718,131 +40246,43 @@ body .overlay {
     app.dom = app.dom || {};
     app.dom.el = appEl;
     appEl.__jsgui_control = app;
-    const toolbarEl = appEl.querySelector(".art-toolbar");
-    if (toolbarEl) {
-      app._toolbar = new ToolbarControl({ el: toolbarEl, context: context2 });
-      app._toolbar.dom = app._toolbar.dom || {};
-      app._toolbar.dom.el = toolbarEl;
-      toolbarEl.__jsgui_control = app._toolbar;
-      app._toolbar._buttons = {
-        select: { dom: { el: toolbarEl.querySelector('[data-action="select"]') } },
-        pan: { dom: { el: toolbarEl.querySelector('[data-action="pan"]') } },
-        addRect: { dom: { el: toolbarEl.querySelector('[data-action="add-rect"]') } },
-        addEllipse: { dom: { el: toolbarEl.querySelector('[data-action="add-ellipse"]') } },
-        addText: { dom: { el: toolbarEl.querySelector('[data-action="add-text"]') } },
-        delete: { dom: { el: toolbarEl.querySelector('[data-action="delete"]') } }
-      };
-    }
-    const canvasEl = appEl.querySelector(".art-canvas");
-    if (canvasEl) {
-      app._canvas = new CanvasControl({ el: canvasEl, context: context2 });
-      app._canvas.dom = app._canvas.dom || {};
-      app._canvas.dom.el = canvasEl;
-      canvasEl.__jsgui_control = app._canvas;
-      const svgWrapperEl = canvasEl.querySelector(".art-canvas__svg-wrapper");
-      if (svgWrapperEl) {
-        app._canvas._svgWrapper = { dom: { el: svgWrapperEl } };
-      }
-      const selectionEl = canvasEl.querySelector(".art-selection");
-      if (selectionEl) {
-        app._canvas._selectionHandles = new SelectionHandlesControl({ el: selectionEl, context: context2 });
-        app._canvas._selectionHandles.dom = app._canvas._selectionHandles.dom || {};
-        app._canvas._selectionHandles.dom.el = selectionEl;
-        app._canvas._selectionHandles._outline = { dom: { el: selectionEl.querySelector(".art-selection__outline") } };
-        app._canvas._selectionHandles._handles = {};
-        ["nw", "n", "ne", "e", "se", "s", "sw", "w"].forEach((pos) => {
-          const handleEl = selectionEl.querySelector(`[data-handle="${pos}"]`);
-          if (handleEl) {
-            app._canvas._selectionHandles._handles[pos] = { dom: { el: handleEl } };
-          }
-        });
-      }
-    }
-    if (app._toolbar) {
-      console.log("[Art Playground] Activating toolbar...");
-      const toolbarEl2 = app._toolbar.dom.el;
-      Object.entries(app._toolbar._buttons).forEach(([key2, btn]) => {
-        const btnEl = btn.dom?.el;
-        if (!btnEl) return;
-        const action = btnEl.getAttribute("data-action");
-        btnEl.addEventListener("click", () => {
-          console.log("[Art Playground] Button clicked:", action);
-          app._toolbar._handleAction(action);
-        });
-      });
-    }
+    const attachChildControl = (ControlClass, selector, assignKey) => {
+      const childEl = appEl.querySelector(selector);
+      if (!childEl) return null;
+      const ctrl2 = new ControlClass({ el: childEl, context: context2 });
+      ctrl2.dom = ctrl2.dom || {};
+      ctrl2.dom.el = childEl;
+      childEl.__jsgui_control = ctrl2;
+      app[assignKey] = ctrl2;
+      return ctrl2;
+    };
+    attachChildControl(ToolbarControl, ".art-toolbar", "_toolbar");
+    attachChildControl(CanvasControl, ".art-canvas", "_canvas");
+    attachChildControl(ToolPanelControl, ".ap-tool-panel", "_toolPanel");
+    attachChildControl(PropertiesPanelControl, ".ap-properties-panel", "_propertiesPanel");
+    attachChildControl(StatusBarControl, ".ap-status-bar", "_statusBar");
+    if (app._toolbar) app._toolbar.activate();
+    if (app._toolPanel) app._toolPanel.activate();
+    if (app._propertiesPanel) app._propertiesPanel.activate();
+    if (app._statusBar) app._statusBar.activate();
     if (app._canvas) {
-      console.log("[Art Playground] Activating canvas...");
-      const canvasEl2 = app._canvas.dom.el;
-      if (!app._canvas._components) {
-        app._canvas._components = /* @__PURE__ */ new Map();
-        console.log("[Art Playground] Initialized _components Map");
-      }
-      app._canvas._svg = canvasEl2.querySelector(".art-canvas__svg");
-      app._canvas._componentsGroup = app._canvas._svg?.querySelector(".art-canvas__components");
-      console.log("[Art Playground] SVG found:", !!app._canvas._svg);
-      console.log("[Art Playground] Components group found:", !!app._canvas._componentsGroup);
-      if (app._canvas._svg) {
-        app._canvas._svg.addEventListener("mousedown", (e) => app._canvas._onMouseDown(e));
-        document.addEventListener("mousemove", (e) => app._canvas._onMouseMove(e));
-        document.addEventListener("mouseup", () => app._canvas._onMouseUp());
-      }
-      if (app._canvas._selectionHandles) {
-        const selEl = app._canvas._selectionHandles.dom.el;
-        if (selEl) {
-          Object.entries(app._canvas._selectionHandles._handles || {}).forEach(([pos, handle]) => {
-            const handleEl = handle.dom?.el;
-            if (!handleEl) return;
-            handleEl.addEventListener("mousedown", (e) => {
-              e.stopPropagation();
-              console.log("[Art Playground] Resize start:", pos, e.clientX, e.clientY);
-              app._canvas._selectionHandles.raise("resize-start", {
-                handle: pos,
-                mouseX: e.clientX,
-                mouseY: e.clientY
-              });
-              const onMove = (ev) => {
-                app._canvas._selectionHandles.raise("resize-move", {
-                  handle: pos,
-                  mouseX: ev.clientX,
-                  mouseY: ev.clientY
-                });
-              };
-              const onUp = () => {
-                console.log("[Art Playground] Resize end");
-                app._canvas._selectionHandles.raise("resize-end");
-                document.removeEventListener("mousemove", onMove);
-                document.removeEventListener("mouseup", onUp);
-              };
-              document.addEventListener("mousemove", onMove);
-              document.addEventListener("mouseup", onUp);
-            });
-          });
-          app._canvas._selectionHandles.on("resize-start", (data) => {
-            console.log("[Art Playground] Canvas _startResize:", data);
-            app._canvas._startResize(data);
-          });
-          app._canvas._selectionHandles.on("resize-move", (data) => app._canvas._doResize(data));
-          app._canvas._selectionHandles.on("resize-end", () => app._canvas._endResize());
-        }
-      }
+      app._canvas.activate();
     }
-    console.log("[Art Playground] Wiring toolbar to canvas...");
-    if (app._toolbar && app._canvas) {
-      app._toolbar.on("tool-change", (toolName) => {
-        console.log("[Art Playground] Tool changed to:", toolName);
-        app._canvas.setTool(toolName);
-      });
-      app._toolbar.on("add-component", (componentType) => {
-        console.log("[Art Playground] Adding component:", componentType);
-        console.log("[Art Playground] Canvas components Map:", app._canvas._components);
-        console.log("[Art Playground] Components group:", app._canvas._componentsGroup);
-        app._canvas.addComponent(componentType);
-        console.log("[Art Playground] After addComponent, count:", app._canvas._components?.size);
-      });
-      app._toolbar.on("delete", () => {
-        console.log("[Art Playground] Deleting selected");
-        app._canvas.deleteSelected();
+    app.activate();
+    if (!window.__artPlaygroundShortcutsBound) {
+      window.__artPlaygroundShortcutsBound = true;
+      document.addEventListener("keydown", (e) => {
+        const activeTag = document.activeElement?.tagName?.toLowerCase();
+        if (activeTag === "input" || activeTag === "textarea") return;
+        if (e.key === "Delete" || e.key === "Backspace") {
+          app._canvas?.deleteSelected?.();
+          app._updatePanels?.();
+        }
+        if ((e.ctrlKey || e.metaKey) && (e.key === "e" || e.key === "E")) {
+          e.preventDefault();
+          const svg = app._canvas?.exportSvg?.() || "";
+          if (svg) app._downloadTextFile?.("art-playground.svg", svg, "image/svg+xml");
+        }
       });
     }
     console.log("[Art Playground] Client activated");
