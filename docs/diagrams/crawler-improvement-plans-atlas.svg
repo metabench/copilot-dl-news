@@ -1,0 +1,489 @@
+<svg viewBox="0 0 2400 3400" xmlns="http://www.w3.org/2000/svg">
+	<defs>
+		<style>
+			.title { font-size: 40px; font-weight: 800; fill: #e8edf5; letter-spacing: -0.6px; font-family: "Inter", "Segoe UI", system-ui, sans-serif; }
+			.subtitle { font-size: 14px; font-weight: 450; fill: #7f8c9f; letter-spacing: 0.3px; font-family: "Inter", system-ui, sans-serif; }
+			.section-title { font-size: 14px; font-weight: 750; fill: #5eccc3; text-transform: uppercase; letter-spacing: 1.6px; font-family: "Inter", system-ui, sans-serif; }
+			.card-title { font-size: 16px; font-weight: 750; fill: #d7e3f5; letter-spacing: -0.2px; font-family: "Inter", system-ui, sans-serif; }
+			.small { font-size: 11px; fill: #7f8c9f; font-family: "Inter", system-ui, sans-serif; }
+			.text { font-size: 12px; fill: #a8b8cc; font-family: "Inter", system-ui, sans-serif; }
+			.text2 { font-size: 12px; fill: #b7c6d9; font-family: "Inter", system-ui, sans-serif; }
+			.text-bold { font-size: 12px; fill: #d0d9e8; font-weight: 650; font-family: "Inter", system-ui, sans-serif; }
+			.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+			.box { fill: #0d1220; stroke: #1e2d42; stroke-width: 1; }
+			.box2 { fill: #0b1122; stroke: #1e2d42; stroke-width: 1; }
+			.box-header { fill: #141d30; stroke: #2a3f5a; stroke-width: 1; }
+			.box-glow { fill: #0d1220; stroke: #3d5a80; stroke-width: 1.5; filter: url(#glow); }
+
+			.pill-text { font-size: 11px; font-weight: 750; fill: #0b1020; font-family: "Inter", system-ui, sans-serif; letter-spacing: 0.4px; }
+			.pill-implemented { fill: #5eccc3; }
+			.pill-inprogress { fill: #f6c177; }
+			.pill-future { fill: #b48ead; }
+			.pill-proposed { fill: #94a1b2; }
+
+			.connector { stroke: #2a3f5a; stroke-width: 1; stroke-dasharray: 5,5; opacity: 0.65; }
+
+			svg { background-color: #080c18; }
+		</style>
+
+		<filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+			<feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+			<feMerge>
+				<feMergeNode in="coloredBlur"/>
+				<feMergeNode in="SourceGraphic"/>
+			</feMerge>
+		</filter>
+
+		<filter id="softShadow" x="-10%" y="-10%" width="120%" height="130%">
+			<feDropShadow dx="0" dy="5" stdDeviation="10" flood-color="#000" flood-opacity="0.45"/>
+		</filter>
+
+		<linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+			<stop offset="0%" style="stop-color:#0a1020;stop-opacity:1" />
+			<stop offset="50%" style="stop-color:#080c18;stop-opacity:1" />
+			<stop offset="100%" style="stop-color:#0c1428;stop-opacity:1" />
+		</linearGradient>
+
+		<linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+			<stop offset="0%" style="stop-color:#5eccc3;stop-opacity:0.18" />
+			<stop offset="60%" style="stop-color:#5eccc3;stop-opacity:0.06" />
+			<stop offset="100%" style="stop-color:#5eccc3;stop-opacity:0" />
+		</linearGradient>
+
+		<pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+			<path d="M 44 0 L 0 0 0 44" fill="none" stroke="#5eccc3" stroke-width="0.6" opacity="0.7"/>
+		</pattern>
+	</defs>
+
+	<!-- Background -->
+	<rect width="2400" height="3400" fill="url(#bgGradient)"/>
+	<g opacity="0.035">
+		<rect width="2400" height="3400" fill="url(#grid)"/>
+	</g>
+
+	<!-- Header -->
+	<rect x="0" y="0" width="2400" height="120" fill="url(#headerGradient)"/>
+	<line x1="0" y1="120" x2="2400" y2="120" stroke="#1e2d42" stroke-width="1"/>
+
+	<g filter="url(#softShadow)">
+		<text x="40" y="60" class="title">Crawler Improvement Plans Atlas</text>
+		<text x="42" y="92" class="subtitle">Info-dense synthesis of documented crawler refactors, reliability work, and future architecture • Last updated 2025-12-12</text>
+	</g>
+
+	<!-- Legend -->
+	<g>
+		<text x="1480" y="42" class="small">LEGEND</text>
+
+		<rect x="1480" y="52" width="150" height="24" rx="12" class="pill-implemented"/>
+		<text x="1555" y="69" text-anchor="middle" class="pill-text">DOCUMENTED + DONE</text>
+
+		<rect x="1640" y="52" width="170" height="24" rx="12" class="pill-inprogress"/>
+		<text x="1725" y="69" text-anchor="middle" class="pill-text">DOCUMENTED + ACTIVE</text>
+
+		<rect x="1820" y="52" width="150" height="24" rx="12" class="pill-future"/>
+		<text x="1895" y="69" text-anchor="middle" class="pill-text">FUTURE VISION</text>
+
+		<rect x="1980" y="52" width="150" height="24" rx="12" class="pill-proposed"/>
+		<text x="2055" y="69" text-anchor="middle" class="pill-text">PROPOSED IDEAS</text>
+
+		<text x="1480" y="104" class="subtitle">All “documented” cards trace to repo docs or session notes (see Sources panel).</text>
+	</g>
+
+	<!-- Column headers -->
+	<g filter="url(#softShadow)">
+		<text x="40" y="160" class="section-title">Documented Foundations</text>
+		<text x="830" y="160" class="section-title">Documented Next</text>
+		<text x="1620" y="160" class="section-title">Documented Future Vision</text>
+	</g>
+
+	<!-- ===== Column 1: Documented Foundations ===== -->
+	<g filter="url(#softShadow)">
+		<!-- Card 1: Crawler Abstraction Refactoring Plan -->
+		<rect x="40" y="180" width="740" height="660" rx="16" class="box-glow"/>
+		<rect x="40" y="180" width="740" height="58" rx="16" class="box-header"/>
+
+		<rect x="58" y="183" width="168" height="26" rx="13" class="pill-implemented"/>
+		<text x="142" y="201" text-anchor="middle" class="pill-text">DOCUMENTED + DONE</text>
+
+		<text x="58" y="228" class="card-title">Crawler Abstraction Refactoring (Phases 1–6)</text>
+		<text x="58" y="256" class="subtitle">Plan status: complete • Updated progress note: 2025-12-07 • Tests: 122 (Phase 6 components)</text>
+
+		<text x="58" y="288" class="text-bold">What landed (high-level)</text>
+		<text x="58" y="312" class="text2">• Phase 1: Unified CrawlContext (single source of truth for state)</text>
+		<text x="58" y="332" class="text2">• Phase 2: Unified SequenceRunner (crawler orchestration)</text>
+		<text x="58" y="352" class="text2">• Phase 3: UrlDecisionOrchestrator (explicit decision stage)</text>
+		<text x="58" y="372" class="text2">• Phase 4: RetryCoordinator (centralized retry policy)</text>
+		<text x="58" y="392" class="text2">• Phase 5: Service groups + DI container (Policy/Planning/Processing/Telemetry/Storage)</text>
+		<text x="58" y="412" class="text2">• Phase 6: Planning &amp; Monitoring abstractions</text>
+
+		<text x="58" y="450" class="text-bold">Phase 6 highlights (explicit abstractions)</text>
+		<text x="58" y="474" class="text2">• CrawlPlan: first-class intent representation (tests: 39)</text>
+		<text x="58" y="494" class="text2">• ProgressModel: unified progress + ETA (tests: 37)</text>
+		<text x="58" y="514" class="text2">• ResourceBudget: resource limits &amp; enforcement (tests: 46)</text>
+
+		<text x="58" y="552" class="text-bold">Why this matters to future improvements</text>
+		<text x="58" y="576" class="text2">• Reduces duplicate “crawl state” bugs by centralizing mutations</text>
+		<text x="58" y="596" class="text2">• Makes retries + telemetry composable, testable, and consistent</text>
+		<text x="58" y="616" class="text2">• Creates clear seams for new strategies without touching core loops</text>
+
+		<text x="58" y="654" class="small">Primary doc: docs/CRAWLER_ABSTRACTION_REFACTORING_PLAN.md</text>
+		<text x="58" y="676" class="small">Key code: src/crawler/context/, src/crawler/sequence/, src/crawler/decisions/, src/crawler/retry/, src/crawler/plan/</text>
+
+		<!-- Card 2: Crawl facade + sequences + CLI modularization -->
+		<rect x="40" y="860" width="740" height="520" rx="16" class="box"/>
+		<rect x="40" y="860" width="740" height="58" rx="16" class="box-header"/>
+
+		<rect x="58" y="863" width="168" height="26" rx="13" class="pill-implemented"/>
+		<text x="142" y="881" text-anchor="middle" class="pill-text">DOCUMENTED + DONE</text>
+
+		<text x="58" y="908" class="card-title">Crawl Facade + Sequence Config + Legacy CLI Modularization</text>
+		<text x="58" y="936" class="subtitle">Phases 1–3 complete • 128+ tests passing across facade/sequence/CLI modules</text>
+
+		<text x="58" y="968" class="text-bold">Delivered surfaces</text>
+		<text x="58" y="992" class="text2">• CrawlOperations facade: small orchestration surface around NewsCrawler</text>
+		<text x="58" y="1012" class="text2">• executeSequence + presets: deterministic step lists with overrides</text>
+		<text x="58" y="1032" class="text2">• SequenceConfigLoader/Runner + resolvers: JSON/YAML + @playbook/@config/@cli tokens</text>
+		<text x="58" y="1052" class="text2">• Legacy CLI split into modules (bootstrap, argumentNormalizer, progressAdapter, runLegacyCommand)</text>
+
+		<text x="58" y="1090" class="text-bold">Why it’s a crawler improvement (not just tooling)</text>
+		<text x="58" y="1114" class="text2">• Makes crawl behaviour reproducible (same sequence =&gt; same steps)</text>
+		<text x="58" y="1134" class="text2">• Shrinks risk when adding new operations (isolated modules + tests)</text>
+		<text x="58" y="1154" class="text2">• Enables host-aware configs without hard-coding playbook dependencies</text>
+
+		<text x="58" y="1192" class="text-bold">Validation (documented)</text>
+		<text x="58" y="1216" class="text2">• CLI probe: <tspan class="mono">node src/tools/crawl-operations.js --list-operations</tspan></text>
+		<text x="58" y="1236" class="text2">• Sequence listing: <tspan class="mono">node src/tools/crawl-operations.js --list-sequences</tspan></text>
+
+		<text x="58" y="1274" class="small">Primary doc: docs/CRAWL_REFACTORING_TASKS.md</text>
+
+		<!-- Card 3: Service layer Phase 3–4 -->
+		<rect x="40" y="1400" width="740" height="540" rx="16" class="box"/>
+		<rect x="40" y="1400" width="740" height="58" rx="16" class="box-header"/>
+
+		<rect x="58" y="1403" width="168" height="26" rx="13" class="pill-implemented"/>
+		<text x="142" y="1421" text-anchor="middle" class="pill-text">DOCUMENTED + DONE</text>
+
+		<text x="58" y="1448" class="card-title">Service Layer Architecture (Express/API boundary)</text>
+		<text x="58" y="1476" class="subtitle">Phase 3 plan + Phase 4 completion summary • Improves crawl start/resume/control reliability</text>
+
+		<text x="58" y="1508" class="text-bold">Key documented services</text>
+		<text x="58" y="1532" class="text2">• CrawlOrchestrationService / lifecycle services (thin route controllers)</text>
+		<text x="58" y="1552" class="text2">• QueuePlannerService: resume planning (42 tests)</text>
+		<text x="58" y="1572" class="text2">• JobControlService: pause/resume/stop (30 tests)</text>
+
+		<text x="58" y="1610" class="text-bold">Why it matters to crawler improvements</text>
+		<text x="58" y="1634" class="text2">• Extracts queue planning logic from routes into testable units</text>
+		<text x="58" y="1654" class="text2">• Standardizes job control errors (stdin unavailable, ambiguous selection, etc.)</text>
+		<text x="58" y="1674" class="text2">• Sets pattern for future crawl orchestration refactors</text>
+
+		<text x="58" y="1712" class="small">Primary docs: docs/SERVICE_LAYER_ARCHITECTURE.md • docs/PHASE_4_REFACTORING_COMPLETE.md</text>
+		<text x="58" y="1734" class="small">Key code: src/ui/express/services/… (queue planner, job control)</text>
+
+		<!-- Card 4: Reliable crawler phase 1 services -->
+		<rect x="40" y="1960" width="740" height="560" rx="16" class="box"/>
+		<rect x="40" y="1960" width="740" height="58" rx="16" class="box-header"/>
+
+		<rect x="58" y="1963" width="168" height="26" rx="13" class="pill-implemented"/>
+		<text x="142" y="1981" text-anchor="middle" class="pill-text">DOCUMENTED + DONE</text>
+
+		<text x="58" y="2008" class="card-title">Reliable Crawler Phase 1 (Core reliability + discovery services)</text>
+		<text x="58" y="2036" class="subtitle">Delivered 2025-12-07/08 • Adds validation, circuit breakers, and discovery heuristics</text>
+
+		<text x="58" y="2068" class="text-bold">Services (documented)</text>
+		<text x="58" y="2092" class="text2">• ContentValidationService (16 tests): detects garbage pages (JS required, Cloudflare, paywall, etc.)</text>
+		<text x="58" y="2112" class="text2">• ResilienceService (16 tests): heartbeat + per-domain circuit breaker + backoff w/ jitter</text>
+		<text x="58" y="2132" class="text2">• ArchiveDiscoveryStrategy (25 tests): archive/sitemap/robots discovery with cooldowns</text>
+		<text x="58" y="2152" class="text2">• PaginationPredictorService (33 tests): speculates next pages + pattern exhaustion</text>
+
+		<text x="58" y="2190" class="text-bold">Integration points</text>
+		<text x="58" y="2214" class="text2">• Wired via CrawlerServiceWiring → FetchPipeline → NewsCrawler lifecycle hooks</text>
+		<text x="58" y="2234" class="text2">• Records activity/success/failure for stall detection + domain recovery</text>
+
+		<text x="58" y="2272" class="small">Primary source: docs/sessions/2025-12-07-reliable-crawler-phase1-impl/WORKING_NOTES.md</text>
+	</g>
+
+	<!-- ===== Column 2: Documented Next ===== -->
+	<g filter="url(#softShadow)">
+		<!-- Card 1: Hub Freshness Control -->
+		<rect x="830" y="180" width="740" height="900" rx="16" class="box"/>
+		<rect x="830" y="180" width="740" height="58" rx="16" class="box-header"/>
+
+		<rect x="848" y="183" width="190" height="26" rx="13" class="pill-inprogress"/>
+		<text x="943" y="201" text-anchor="middle" class="pill-text">DOCUMENTED + ACTIVE</text>
+
+		<text x="848" y="228" class="card-title">Phase 4: Hub Freshness Control</text>
+		<text x="848" y="256" class="subtitle">Goal: enable network-first hub refresh passes while preserving cache fallback + rate-limit behaviour</text>
+
+		<text x="848" y="288" class="text-bold">Documented task spine (from tracker)</text>
+		<text x="848" y="312" class="text2">• 4.1–4.5: discovery + documentation + configuration schema (hubFreshness)</text>
+		<text x="848" y="332" class="text2">• 4.6: propagate fetch-policy metadata through queue/worker context</text>
+		<text x="848" y="352" class="text2">• 4.7: enforce policy in FetchPipeline with cache fallback + telemetry</text>
+		<text x="848" y="372" class="text2">• 4.8: apply hubFreshness defaults via ConfigManager + seed logic</text>
+		<text x="848" y="392" class="text2">• 4.9: focused tests for policy plumbing (in-progress in tracker)</text>
+
+		<text x="848" y="430" class="text-bold">Key constraints called out</text>
+		<text x="848" y="454" class="text2">• Forced cache under host rate-limit must co-exist with new “network-first” intent</text>
+		<text x="848" y="474" class="text2">• Queue items need fetch-policy metadata to survive through WorkerRunner → PageExecutionService</text>
+
+		<text x="848" y="512" class="text-bold">Expected outcomes</text>
+		<text x="848" y="536" class="text2">• Hubs can be refreshed on demand (network-first) without breaking cache fallbacks</text>
+		<text x="848" y="556" class="text2">• Telemetry explains when/why cached fallback was used</text>
+
+		<text x="848" y="594" class="text-bold">Evidence discipline</text>
+		<text x="848" y="618" class="text2">• Pair each policy change with a focused Jest test covering matrix edge cases</text>
+		<text x="848" y="638" class="text2">• Track in tracker to avoid “invisible drift” between docs and code</text>
+
+		<text x="848" y="676" class="small">Primary source: docs/CRAWL_REFACTORING_TASKS.md (Phase 4: Hub Freshness Control)</text>
+
+		<!-- Card 2: Crawl platform surfaces -->
+		<rect x="830" y="1100" width="740" height="520" rx="16" class="box"/>
+		<rect x="830" y="1100" width="740" height="58" rx="16" class="box-header"/>
+
+		<rect x="848" y="1103" width="168" height="26" rx="13" class="pill-implemented"/>
+		<text x="932" y="1121" text-anchor="middle" class="pill-text">DOCUMENTED + DONE</text>
+
+		<text x="848" y="1148" class="card-title">Phase 5: Crawl Platform Surfaces (Architecture Plan)</text>
+		<text x="848" y="1176" class="subtitle">Documented capability matrix + plan for a smaller “platform SDK” layer</text>
+
+		<text x="848" y="1208" class="text-bold">Documented intent</text>
+		<text x="848" y="1232" class="text2">• Expose composable APIs (queue adapters, fetch policy, telemetry, state machine hooks)</text>
+		<text x="848" y="1252" class="text2">• Reduce per-operation bespoke wiring by standardizing milestones/metrics</text>
+
+		<text x="848" y="1290" class="text-bold">Documented tasks</text>
+		<text x="848" y="1314" class="text2">• 5.1: capability matrix (map components → desired platform services)</text>
+		<text x="848" y="1334" class="text2">• 5.2: author platform architecture plan + example SDK usage</text>
+		<text x="848" y="1354" class="text2">• 5.3: sync change plan + follow-up validation strategy</text>
+
+		<text x="848" y="1392" class="text-bold">Why this is a force multiplier</text>
+		<text x="848" y="1416" class="text2">• Future improvements become “new operation configs” rather than large refactors</text>
+		<text x="848" y="1436" class="text2">• Keeps correctness: platform owns guardrails (timeouts, budgets, retry discipline)</text>
+
+		<text x="848" y="1474" class="small">Primary source: docs/CRAWL_REFACTORING_TASKS.md (Phase 5: Crawl Platform Surfaces)</text>
+
+		<!-- Card 3: Offline/deterministic reliability -->
+		<rect x="830" y="1640" width="740" height="520" rx="16" class="box"/>
+		<rect x="830" y="1640" width="740" height="58" rx="16" class="box-header"/>
+
+		<rect x="848" y="1643" width="168" height="26" rx="13" class="pill-implemented"/>
+		<text x="932" y="1661" text-anchor="middle" class="pill-text">DOCUMENTED + DONE</text>
+
+		<text x="848" y="1688" class="card-title">Offline &amp; Deterministic Crawler Tests (Reliability Notes)</text>
+		<text x="848" y="1716" class="subtitle">Eliminate network access + open-handle hangs in unit tests; stabilize URL policy context</text>
+
+		<text x="848" y="1748" class="text-bold">Documented fixes (Dec 2025)</text>
+		<text x="848" y="1772" class="text2">• Stub crawler.robotsCoordinator BEFORE crawler.init() (avoid hitting real robots fetch)</text>
+		<text x="848" y="1792" class="text2">• Set robots fields in loadRobotsTxt(): robotsTxtLoaded / robotsRules / sitemapUrls</text>
+		<text x="848" y="1812" class="text2">• Call processPage(url, depth, { type: 'nav', allowRevisit: true }) to avoid policy skip</text>
+		<text x="848" y="1832" class="text2">• Disable shadow-mode adapter intervals in tests; ensure crawler.close() in finally</text>
+
+		<text x="848" y="1870" class="text-bold">Why it matters to crawler evolution</text>
+		<text x="848" y="1894" class="text2">• Makes future refactors safer: fast deterministic tests catch regressions early</text>
+		<text x="848" y="1914" class="text2">• Prevents “flaky by network” failures when improving robots/sitemap/queue logic</text>
+
+		<text x="848" y="1952" class="text-bold">Evidence (commands captured in notes)</text>
+		<text x="848" y="1976" class="text2"><tspan class="mono">npm run test:by-path src/__tests__/crawl.process.test.js</tspan> (PASS)</text>
+
+		<text x="848" y="2014" class="small">Primary source: docs/sessions/2025-12-12-crawler-reliability/WORKING_NOTES.md</text>
+
+		<!-- Card 4: DB queries during crawls -->
+		<rect x="830" y="2180" width="740" height="340" rx="16" class="box"/>
+		<rect x="830" y="2180" width="740" height="58" rx="16" class="box-header"/>
+
+		<rect x="848" y="2183" width="168" height="26" rx="13" class="pill-implemented"/>
+		<text x="932" y="2201" text-anchor="middle" class="pill-text">DOCUMENTED + DONE</text>
+
+		<text x="848" y="2228" class="card-title">Data &amp; Telemetry Surfaces Used During Crawls</text>
+		<text x="848" y="2256" class="subtitle">Database operations map (what the crawler reads/writes) + indexing/trigger notes</text>
+
+		<text x="848" y="2288" class="text-bold">Core tables touched by crawling</text>
+		<text x="848" y="2312" class="text2">• urls, http_responses, content_storage, content_analysis</text>
+		<text x="848" y="2332" class="text2">• discovery_events, crawl_jobs, queue_events, errors, links</text>
+		<text x="848" y="2352" class="text2">• fetches + latest_fetch (trigger-maintained dedup/telemetry view)</text>
+
+		<text x="848" y="2390" class="small">Primary doc: docs/DB_QUERIES_DURING_CRAWLS.md</text>
+	</g>
+
+	<!-- ===== Column 3: Documented Future Vision ===== -->
+	<g filter="url(#softShadow)">
+		<!-- Card 1: Navigation-first model -->
+		<rect x="1620" y="180" width="740" height="700" rx="16" class="box"/>
+		<rect x="1620" y="180" width="740" height="58" rx="16" class="box-header"/>
+
+		<rect x="1638" y="183" width="150" height="26" rx="13" class="pill-future"/>
+		<text x="1713" y="201" text-anchor="middle" class="pill-text">FUTURE VISION</text>
+
+		<text x="1638" y="228" class="card-title">Navigation-First Crawling (Discover → Plan → Acquire)</text>
+		<text x="1638" y="256" class="subtitle">Long-term architecture direction: separate navigation discovery from article acquisition</text>
+
+		<text x="1638" y="288" class="text-bold">Target phases</text>
+		<text x="1638" y="312" class="text2">1) Discovery phase: map site structure without full downloads</text>
+		<text x="1638" y="332" class="text2">2) Planning phase: analyze discovered URLs, prioritize targets</text>
+		<text x="1638" y="352" class="text2">3) Acquisition phase: selectively fetch high-value articles</text>
+
+		<text x="1638" y="390" class="text-bold">Why this plan exists (stated benefits)</text>
+		<text x="1638" y="414" class="text2">• Faster site mapping (archive/category hubs)</text>
+		<text x="1638" y="434" class="text2">• Bandwidth focus (skip low-value pages)</text>
+		<text x="1638" y="454" class="text2">• Incremental crawling (discover today, acquire later)</text>
+		<text x="1638" y="474" class="text2">• Knowledge reuse (patterns guide future crawls)</text>
+
+		<text x="1638" y="512" class="text-bold">Conceptual new seams</text>
+		<text x="1638" y="536" class="text2">• NavigationDiscoveryService: link discovery with minimal fetch strategy</text>
+		<text x="1638" y="556" class="text2">• ContentAcquisitionService: full fetch only for confirmed article URLs</text>
+
+		<text x="1638" y="594" class="text-bold">Compatibility note</text>
+		<text x="1638" y="618" class="text2">• Document explicitly states: planning vision, not current system state</text>
+
+		<text x="1638" y="656" class="small">Primary doc: docs/REFACTORING_PLAN.md</text>
+
+		<!-- Card 2: Refactor targets -->
+		<rect x="1620" y="900" width="740" height="880" rx="16" class="box"/>
+		<rect x="1620" y="900" width="740" height="58" rx="16" class="box-header"/>
+
+		<rect x="1638" y="903" width="150" height="26" rx="13" class="pill-future"/>
+		<text x="1713" y="921" text-anchor="middle" class="pill-text">FUTURE VISION</text>
+
+		<text x="1638" y="948" class="card-title">Planned Refactor Targets (Problems → Proposed Solutions)</text>
+		<text x="1638" y="976" class="subtitle">A catalog of architectural pain points and the proposed patterns to remove them</text>
+
+		<text x="1638" y="1008" class="text-bold">1) Tight coupling: discovery + acquisition</text>
+		<text x="1638" y="1032" class="text2">• Today: PageExecutionService does full fetch then extracts links</text>
+		<text x="1638" y="1052" class="text2">• Plan: split into discovery-only vs acquisition-only services</text>
+
+		<text x="1638" y="1090" class="text-bold">2) Resume endpoint: hardcoded strategies</text>
+		<text x="1638" y="1114" class="text2">• Plan: ResumeStrategy interface (DiscoveryResumeStrategy, AcquisitionResumeStrategy)</text>
+
+		<text x="1638" y="1152" class="text-bold">3) URL eligibility: implicit classification</text>
+		<text x="1638" y="1176" class="text2">• Today: UrlEligibilityService mixes robots, normalization, hub/article detection</text>
+		<text x="1638" y="1196" class="text2">• Plan: UrlClassificationPipeline stages (robots, structure, priority, fetch-strategy)</text>
+
+		<text x="1638" y="1234" class="text-bold">4) Queue management: single queue type</text>
+		<text x="1638" y="1258" class="text2">• Plan: MultiQueueManager with discovery/acquisition/validation queues + stats</text>
+		<text x="1638" y="1278" class="text2">• DB evolution: persist queue type, show separate counts, balance dequeue ratios</text>
+
+		<text x="1638" y="1316" class="text-bold">5) Domain extraction: copy-pasted logic</text>
+		<text x="1638" y="1340" class="text2">• Plan: centralized domain utilities (consistent grouping + edge-case handling)</text>
+
+		<text x="1638" y="1378" class="text-bold">Verification goals (from plan)</text>
+		<text x="1638" y="1402" class="text2">• Can resume different crawl types correctly; stays backward compatible</text>
+		<text x="1638" y="1422" class="text2">• Queue stats show separate counts; workers pull from multiple queues safely</text>
+
+		<text x="1638" y="1460" class="small">Primary doc: docs/REFACTORING_PLAN.md</text>
+
+		<!-- Card 3: Bridge from foundations to vision -->
+		<rect x="1620" y="1800" width="740" height="720" rx="16" class="box2"/>
+		<rect x="1620" y="1800" width="740" height="58" rx="16" class="box-header"/>
+
+		<rect x="1638" y="1803" width="220" height="26" rx="13" class="pill-inprogress"/>
+		<text x="1748" y="1821" text-anchor="middle" class="pill-text">DOCUMENTED BRIDGE POINTS</text>
+
+		<text x="1638" y="1848" class="card-title">How Current Foundations Enable the Vision</text>
+		<text x="1638" y="1876" class="subtitle">Concrete connectors: which landed components make navigation-first feasible</text>
+
+		<text x="1638" y="1908" class="text-bold">Enabling seams already in place</text>
+		<text x="1638" y="1932" class="text2">• CrawlContext + CrawlPlan: explicit state + intent are prerequisites for multi-phase crawling</text>
+		<text x="1638" y="1952" class="text2">• RetryCoordinator + ResilienceService: required to safely run discovery at scale</text>
+		<text x="1638" y="1972" class="text2">• Sequence config system: lets you model “discover then acquire” as explicit steps</text>
+		<text x="1638" y="1992" class="text2">• Hub freshness policy: starts encoding “fetch strategy” as first-class metadata</text>
+
+		<text x="1638" y="2030" class="text-bold">Hard parts called out by the plan</text>
+		<text x="1638" y="2054" class="text2">• Classification pipeline must remain explainable (stage outputs, reasons, telemetry)</text>
+		<text x="1638" y="2074" class="text2">• Multi-queue balancing requires durable metrics + DB-backed queue types</text>
+		<text x="1638" y="2094" class="text2">• Resume strategy selection becomes the “policy brain” for crawl continuation</text>
+
+		<text x="1638" y="2132" class="text-bold">Recommended evidence loop</text>
+		<text x="1638" y="2156" class="text2">• Start by implementing one stage as a pure classifier with fixtures + tests</text>
+		<text x="1638" y="2176" class="text2">• Use offline/deterministic harnesses so refactors don’t depend on network luck</text>
+		<text x="1638" y="2196" class="text2">• Integrate stage telemetry into queue_events to preserve explainability</text>
+
+		<text x="1638" y="2234" class="small">Bridge sources: docs/CRAWL_REFACTORING_TASKS.md + docs/CRAWLER_ABSTRACTION_REFACTORING_PLAN.md</text>
+	</g>
+
+	<!-- Connectors across columns (high-level) -->
+	<path d="M780,520 C830,520 800,520 830,520" class="connector"/>
+	<path d="M1570,520 C1620,520 1590,520 1620,520" class="connector"/>
+
+	<!-- ===== Bottom row: Validation / Ideas / Sources ===== -->
+	<g filter="url(#softShadow)">
+		<!-- Bottom panel 1: Validation ladder -->
+		<rect x="40" y="2620" width="740" height="740" rx="16" class="box"/>
+		<rect x="40" y="2620" width="740" height="58" rx="16" class="box-header"/>
+
+		<text x="58" y="2668" class="card-title">Validation Ladder (Make refactors safe)</text>
+		<text x="58" y="2696" class="subtitle">Use the smallest proof first; widen only when confidence grows</text>
+
+		<text x="58" y="2728" class="text-bold">Level 1 — Unit tests (pure logic)</text>
+		<text x="58" y="2752" class="text2">• RetryCoordinator / Fetch policy matrices / classifier stages</text>
+
+		<text x="58" y="2790" class="text-bold">Level 2 — Offline integration tests (no network)</text>
+		<text x="58" y="2814" class="text2">• Ensure robots + sitemap flows are stubbed before crawler.init()</text>
+		<text x="58" y="2834" class="text2">• Always close crawler &amp; stop any intervals to avoid open handles</text>
+
+		<text x="58" y="2872" class="text-bold">Level 3 — CLI smoke (deterministic)</text>
+		<text x="58" y="2896" class="text2">• <tspan class="mono">node src/tools/crawl-operations.js --list-operations</tspan></text>
+		<text x="58" y="2916" class="text2">• <tspan class="mono">node src/tools/crawl-operations.js --list-sequences</tspan></text>
+
+		<text x="58" y="2954" class="text-bold">Level 4 — DB + telemetry invariants</text>
+		<text x="58" y="2978" class="text2">• queue_events and crawl_jobs reflect new policies (types, reasons, fallback signals)</text>
+		<text x="58" y="2998" class="text2">• latest_fetch trigger keeps dedup stable when fetch strategy changes</text>
+
+		<text x="58" y="3036" class="text-bold">Level 5 — Live crawl (operator-run)</text>
+		<text x="58" y="3060" class="text2">• Run after unit/offline proofs pass; track failures as new fixtures/tests</text>
+
+		<text x="58" y="3100" class="small">This ladder is derived from the repo’s emphasis on deterministic checks + focused tests.</text>
+
+		<!-- Bottom panel 2: Proposed ideas -->
+		<rect x="830" y="2620" width="740" height="740" rx="16" class="box2"/>
+		<rect x="830" y="2620" width="740" height="58" rx="16" class="box-header"/>
+
+		<rect x="848" y="2623" width="150" height="26" rx="13" class="pill-proposed"/>
+		<text x="923" y="2641" text-anchor="middle" class="pill-text">PROPOSED IDEAS</text>
+
+		<text x="848" y="2668" class="card-title">Extra Ideas to Make the Plans Land Faster</text>
+		<text x="848" y="2696" class="subtitle">Not explicitly documented as plans yet — included as optional next enhancements</text>
+
+		<text x="848" y="2728" class="text-bold">A) Crawler “record/replay” harness</text>
+		<text x="848" y="2752" class="text2">• Capture HTTP response fixtures (status, headers, body) for deterministic discovery/acquisition tests</text>
+		<text x="848" y="2772" class="text2">• Helps validate classification + queue policies without hitting real sites</text>
+
+		<text x="848" y="2810" class="text-bold">B) Decision explainability pipeline</text>
+		<text x="848" y="2834" class="text2">• Standardize “decision traces” (stage outputs + reasons) and persist in queue_events</text>
+		<text x="848" y="2854" class="text2">• Makes multi-queue balancing and resume strategies auditable</text>
+
+		<text x="848" y="2892" class="text-bold">C) Property-based tests for URL normalization</text>
+		<text x="848" y="2916" class="text2">• Generate tricky URLs (params, fragments, encodings) to prove canonicalization stability</text>
+
+		<text x="848" y="2954" class="text-bold">D) Budget-first crawling defaults</text>
+		<text x="848" y="2978" class="text2">• Wire ResourceBudget into sequence presets so every crawl has explicit ceilings (bytes/time/errors)</text>
+
+		<text x="848" y="3016" class="text-bold">E) Per-domain “crawl contracts”</text>
+		<text x="848" y="3040" class="text2">• Encode robots/sitemap/hub patterns in configs; auto-select resume strategy + discovery depth</text>
+
+		<text x="848" y="3088" class="small">If you want, I can turn these into a documented plan (new doc + tasks + tests).</text>
+
+		<!-- Bottom panel 3: Sources -->
+		<rect x="1620" y="2620" width="740" height="740" rx="16" class="box"/>
+		<rect x="1620" y="2620" width="740" height="58" rx="16" class="box-header"/>
+
+		<text x="1638" y="2668" class="card-title">Sources (What this SVG is based on)</text>
+		<text x="1638" y="2696" class="subtitle">Primary repo docs and sessions referenced directly in the panels above</text>
+
+		<text x="1638" y="2728" class="text-bold">Core crawler plans / architecture</text>
+		<text x="1638" y="2752" class="text2">• docs/CRAWLER_ABSTRACTION_REFACTORING_PLAN.md</text>
+		<text x="1638" y="2772" class="text2">• docs/CRAWL_REFACTORING_TASKS.md</text>
+		<text x="1638" y="2792" class="text2">• docs/REFACTORING_PLAN.md (navigation-first future vision)</text>
+
+		<text x="1638" y="2830" class="text-bold">Service layer boundary plans</text>
+		<text x="1638" y="2854" class="text2">• docs/SERVICE_LAYER_ARCHITECTURE.md</text>
+		<text x="1638" y="2874" class="text2">• docs/PHASE_4_REFACTORING_COMPLETE.md</text>
+
+		<text x="1638" y="2912" class="text-bold">Data model &amp; crawl DB behaviour</text>
+		<text x="1638" y="2936" class="text2">• docs/DB_QUERIES_DURING_CRAWLS.md</text>
+
+		<text x="1638" y="2974" class="text-bold">Recent reliability sessions</text>
+		<text x="1638" y="2998" class="text2">• docs/sessions/2025-12-07-reliable-crawler-phase1-impl/WORKING_NOTES.md</text>
+		<text x="1638" y="3018" class="text2">• docs/sessions/2025-12-12-crawler-reliability/WORKING_NOTES.md</text>
+
+		<text x="1638" y="3070" class="small">Generated by: session 2025-12-12-crawler-improvements-svg</text>
+	</g>
+</svg>

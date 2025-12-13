@@ -7,7 +7,6 @@ tools: ['execute/testFailure', 'execute/getTerminalOutput', 'execute/runTask', '
 
 # Handoff buttons for sub-agent coordination.
 handoffs:
-  # Implementation agents
   - label: 'Refactor according to this plan'
     agent: 'Careful js-edit refactor'
     prompt: 'Use the plan above to refactor the codebase. Keep changes scoped and reversible, and update or add tests as needed.'

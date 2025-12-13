@@ -31,6 +31,120 @@
 
 ## Current Session
 
+### Session 2025-12-13: HTTP Record/Replay Harness + Decision Trace Milestones
+
+**Duration**: Completed
+**Type**: crawler
+**Completion**: ✅ Complete
+
+**Focus**:
+- Add opt-in HTTP fixture record/replay for deterministic crawler tests, and standardize decision traces persisted as milestones (opt-in).
+
+**Location**: `docs/sessions/2025-12-13-http-record-replay-decision-traces/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-http-record-replay-decision-traces/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-http-record-replay-decision-traces/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-http-record-replay-decision-traces/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-http-record-replay-decision-traces/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-http-record-replay-decision-traces/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Phase 4 Hub Freshness Control (Fetch Policy)
+
+**Duration**: Completed
+**Type**: crawler
+**Completion**: ✅ Complete
+
+**Focus**:
+- Implement fetchPolicy propagation + FetchPipeline enforcement + telemetry + focused tests per docs/CRAWL_REFACTORING_TASKS.md
+
+**Location**: `docs/sessions/2025-12-12-hub-freshness-phase4-impl/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-hub-freshness-phase4-impl/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-hub-freshness-phase4-impl/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-hub-freshness-phase4-impl/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-hub-freshness-phase4-impl/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-hub-freshness-phase4-impl/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Crawler Plans Atlas Landscape WLILO V2
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create a denser, landscape, WLILO-styled version of the crawler improvement plans atlas SVG and validate with svg-collisions --strict
+
+**Location**: `docs/sessions/2025-12-12-crawler-plans-atlas-landscape-wlilo-v2/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-crawler-plans-atlas-landscape-wlilo-v2/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-crawler-plans-atlas-landscape-wlilo-v2/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-crawler-plans-atlas-landscape-wlilo-v2/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-crawler-plans-atlas-landscape-wlilo-v2/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-crawler-plans-atlas-landscape-wlilo-v2/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Crawler Plans Atlas SVG Polish
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Clear remaining svg-collisions strict findings for crawler-improvement-plans-atlas.svg
+
+**Location**: `docs/sessions/2025-12-12-crawler-plans-atlas-svg-polish/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-crawler-plans-atlas-svg-polish/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-crawler-plans-atlas-svg-polish/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-crawler-plans-atlas-svg-polish/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-crawler-plans-atlas-svg-polish/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-crawler-plans-atlas-svg-polish/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Crawler improvements plan SVG
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create an info-dense SVG diagram summarizing documented crawler improvement plans and suggested next ideas.
+
+**Location**: `docs/sessions/2025-12-12-crawler-improvements-svg/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-crawler-improvements-svg/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-crawler-improvements-svg/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-crawler-improvements-svg/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-crawler-improvements-svg/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-crawler-improvements-svg/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Investigate unexpected terminal windows
+
+**Duration**: Active
+**Type**: recon
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Identify what is spawning external terminal windows (MCP/Jest/etc.) and rule out Git.
+
+**Location**: `docs/sessions/2025-12-12-terminal-window-spawns/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-terminal-window-spawns/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-terminal-window-spawns/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-terminal-window-spawns/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-terminal-window-spawns/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-terminal-window-spawns/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-12: Crawler reliability improvements
 
 **Duration**: Active

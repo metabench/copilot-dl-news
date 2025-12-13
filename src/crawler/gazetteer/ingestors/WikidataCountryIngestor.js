@@ -11,7 +11,7 @@ const {
   DEFAULT_LABEL_LANGUAGES,
   buildCountryDiscoveryQuery
 } = require('../queries/geographyQueries');
-const { HttpRequestResponseFacade } = require('../../../utils/HttpRequestResponseFacade');
+const { HttpRequestResponseFacadeInstance } = require('../../../utils/HttpRequestResponseFacade');
 
 /**
  * WikidataCountryIngestor
@@ -97,7 +97,7 @@ class WikidataCountryIngestor {
     this.labelLanguages = [...DEFAULT_LABEL_LANGUAGES];
 
     // Initialize HTTP request/response facade for caching
-    this.httpFacade = new HttpRequestResponseFacade({ db: this.db });
+    this.httpFacade = new HttpRequestResponseFacadeInstance({ db: this.db });
 
     this.id = 'wikidata-countries';
     this.name = 'Wikidata Country Ingestor';

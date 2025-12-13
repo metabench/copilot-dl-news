@@ -1223,7 +1223,7 @@ class NewsCrawler extends Crawler {
     });
   }
 
-  _applyHubFreshnessPolicy({ depth, type, meta }) {
+  _applyHubFreshnessPolicy({ url, depth, type, meta }) {
     if (!this.hubFreshnessConfig) {
       return meta;
     }
@@ -1234,6 +1234,7 @@ class NewsCrawler extends Crawler {
 
     const config = this.hubFreshnessConfig || {};
     const baseMeta = meta && typeof meta === 'object' ? { ...meta } : {};
+    const originalMeta = meta && typeof meta === 'object' ? { ...meta } : {};
     const isHubLike = this._isHubLikeRequest({ depth, type, meta: baseMeta });
 
     if (!isHubLike) {
@@ -1267,6 +1268,41 @@ class NewsCrawler extends Crawler {
 
     if (!changed) {
       return meta;
+    }
+
+    if (config.persistDecisionTraces === true) {
+      try {
+        const host = url ? this._safeHostFromUrl(url) : null;
+        const details = {
+          url: url || null,
+          host,
+          depth,
+          hubLike: true,
+          effectiveMaxAge,
+          refreshOnStartup: depth === 0 ? (config.refreshOnStartup !== false) : null,
+          fallbackToCacheOnFailure: fallbackPrefersCache,
+          hadFetchPolicy: Boolean(hasFetchPolicy),
+          before: {
+            fetchPolicy: originalMeta.fetchPolicy,
+            maxCacheAgeMs: originalMeta.maxCacheAgeMs,
+            fallbackToCache: originalMeta.fallbackToCache
+          },
+          after: {
+            fetchPolicy: baseMeta.fetchPolicy,
+            maxCacheAgeMs: baseMeta.maxCacheAgeMs,
+            fallbackToCache: baseMeta.fallbackToCache
+          }
+        };
+
+        this.telemetry?.milestone?.({
+          kind: 'hub-freshness-decision',
+          scope: host || this.domain,
+          target: url || null,
+          message: 'Applied hub freshness policy',
+          details,
+          persist: true
+        });
+      } catch (_) {}
     }
 
     return baseMeta;
