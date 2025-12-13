@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-label="Z-Server UX to IPC map">
+  <defs>
+    <style>
+      .bg { fill: #0b0f16; }
+      .panel { fill: #111827; stroke: #2b3345; stroke-width: 2; rx: 14; }
+      .title { fill: #e5e7eb; font: 700 20px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; }
+      .sub { fill: #a8b0bf; font: 500 13px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; }
+      .mono { fill: #d1d5db; font: 600 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .call { fill: #0b1220; stroke: #3b82f6; stroke-width: 2; rx: 10; }
+      .event { fill: #071a17; stroke: #10b981; stroke-width: 2; rx: 10; }
+      .guard { fill: #1a1320; stroke: #a855f7; stroke-width: 2; rx: 10; }
+      .warn { fill: #1b1408; stroke: #f59e0b; stroke-width: 2; rx: 10; }
+      .arrow { stroke: #94a3b8; stroke-width: 2.2; fill: none; marker-end: url(#arrowHead); }
+      .arrowEvent { stroke: #34d399; stroke-width: 2.2; fill: none; marker-end: url(#arrowHeadEvent); }
+      .arrowGuard { stroke: #c084fc; stroke-width: 2.2; fill: none; marker-end: url(#arrowHeadGuard); }
+      .label { fill: #cbd5e1; font: 600 12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; }
+      .small { fill: #94a3b8; font: 500 11px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; }
+    </style>
+
+    <marker id="arrowHead" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#94a3b8" />
+    </marker>
+    <marker id="arrowHeadEvent" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#34d399" />
+    </marker>
+    <marker id="arrowHeadGuard" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#c084fc" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1400" height="900" />
+
+  <!-- Header -->
+  <text class="title" x="40" y="48">Z-Server UX → Preload → IPC → Main (Contract Map)</text>
+  <text class="sub" x="40" y="72">Focus: state flow + IPC boundaries + guardrails (allowlist, safe URLs, conservative PID stop)</text>
+
+  <!-- Column panels -->
+  <rect class="panel" x="40" y="110" width="360" height="740" />
+  <rect class="panel" x="430" y="110" width="320" height="740" />
+  <rect class="panel" x="780" y="110" width="580" height="740" />
+
+  <text class="title" x="60" y="150">Renderer UX</text>
+  <text class="sub" x="60" y="172">jsgui3 controls</text>
+
+  <text class="title" x="450" y="150">Preload Bridge</text>
+  <text class="sub" x="450" y="172">window.electronAPI</text>
+
+  <text class="title" x="800" y="150">Main Process</text>
+  <text class="sub" x="800" y="172">ipcMain handlers + OS side effects</text>
+
+  <!-- Renderer UX nodes -->
+  <rect class="call" x="60" y="210" width="320" height="88" />
+  <text class="label" x="80" y="238">ZServerAppControl</text>
+  <text class="small" x="80" y="260">Orchestrates scanning, selection, start/stop</text>
+  <text class="small" x="80" y="280">Subscribes: scan-progress, server-log, status</text>
+
+  <rect class="call" x="60" y="318" width="320" height="92" />
+  <text class="label" x="80" y="346">SidebarControl → ServerList → ServerItem</text>
+  <text class="small" x="80" y="368">Select server; click runningUrl to open</text>
+
+  <rect class="call" x="60" y="430" width="320" height="118" />
+  <text class="label" x="80" y="458">ContentAreaControl</text>
+  <text class="small" x="80" y="480">ControlPanelControl: Start/Stop buttons</text>
+  <text class="small" x="80" y="500">ServerUrlControl: prominent URL panel</text>
+  <text class="small" x="80" y="520">ScanningIndicatorControl + LogViewerControl</text>
+
+  <!-- Preload nodes -->
+  <rect class="call" x="450" y="210" width="280" height="160" />
+  <text class="label" x="470" y="238">Invoke methods</text>
+  <text class="mono" x="470" y="262">scanServers()</text>
+  <text class="mono" x="470" y="282">startServer(filePath)</text>
+  <text class="mono" x="470" y="302">stopServer(filePath, detectedPid)</text>
+  <text class="mono" x="470" y="322">openInBrowser(url)</text>
+  <text class="mono" x="470" y="342">getActivityLogs(count)</text>
+  <text class="mono" x="470" y="362">getPortStatus()</text>
+
+  <rect class="event" x="450" y="395" width="280" height="120" />
+  <text class="label" x="470" y="423">Event subscriptions</text>
+  <text class="mono" x="470" y="447">onScanProgress(cb)</text>
+  <text class="mono" x="470" y="467">onServerLog(cb)</text>
+  <text class="mono" x="470" y="487">onServerStatusChange(cb)</text>
+
+  <!-- Main process handlers -->
+  <rect class="call" x="800" y="210" width="540" height="148" />
+  <text class="label" x="820" y="238">scan-servers</text>
+  <text class="small" x="820" y="260">Spawns js-server-scan (JSONL progress) → returns servers[]</text>
+  <text class="small" x="820" y="280">Updates allowlist from scan results</text>
+  <text class="small" x="820" y="300">Detects running servers via ports + cmdline</text>
+  <text class="small" x="820" y="320">Emits: scan-progress {count/progress/complete}</text>
+
+  <rect class="call" x="800" y="378" width="540" height="160" />
+  <text class="label" x="820" y="406">start-server</text>
+  <text class="small" x="820" y="428">Validates filePath (inside base + allowlisted)</text>
+  <text class="small" x="820" y="448">spawn('node', [filePath]) → track runningProcesses</text>
+  <text class="small" x="820" y="468">Streams stdout/stderr → emits server-log</text>
+  <text class="small" x="820" y="488">On exit → emits status-change running:false</text>
+
+  <rect class="call" x="800" y="558" width="540" height="168" />
+  <text class="label" x="820" y="586">stop-server</text>
+  <text class="small" x="820" y="608">Validates filePath (inside base + allowlisted)</text>
+  <text class="small" x="820" y="628">If tracked → treeKill(trackedPid)</text>
+  <text class="small" x="820" y="648">If external detectedPid → only kill if confirmed node+cmdline match</text>
+  <text class="small" x="820" y="668">Otherwise refuse (prevents arbitrary PID stop)</text>
+
+  <rect class="call" x="800" y="746" width="540" height="82" />
+  <text class="label" x="820" y="774">open-in-browser</text>
+  <text class="small" x="820" y="796">Validates URL (http/https + localhost-ish) → shell/openExternal</text>
+
+  <!-- Guardrail callouts -->
+  <rect class="guard" x="450" y="540" width="280" height="150" />
+  <text class="label" x="470" y="568">Guardrails (main)</text>
+  <text class="small" x="470" y="590">- Allowlist from scan results</text>
+  <text class="small" x="470" y="610">- Safe URL policy (local http/s)</text>
+  <text class="small" x="470" y="630">- Conservative external PID stop</text>
+  <text class="small" x="470" y="650">- Quit-time cleanup for tracked servers</text>
+
+  <rect class="warn" x="60" y="575" width="320" height="110" />
+  <text class="label" x="80" y="603">UX Invariants</text>
+  <text class="small" x="80" y="625">- Scanning shows counting → determinate → complete</text>
+  <text class="small" x="80" y="645">- Start disabled when running; Stop disabled when stopped</text>
+  <text class="small" x="80" y="665">- URL shown only when detected/known runningUrl</text>
+
+  <!-- Arrows: UX -> preload -> main -->
+  <path class="arrow" d="M380 254 C410 254, 420 254, 450 254" />
+  <text class="small" x="120" y="200">scan/start/stop/open</text>
+
+  <path class="arrow" d="M730 262 C760 262, 770 262, 800 262" />
+
+  <path class="arrow" d="M380 476 C410 476, 420 476, 450 476" />
+
+  <path class="arrowEvent" d="M800 330 C760 330, 750 452, 730 452" />
+  <path class="arrowEvent" d="M730 452 C690 452, 640 452, 380 452" />
+  <text class="small" x="820" y="372">scan-progress</text>
+
+  <path class="arrowEvent" d="M800 460 C760 460, 750 510, 730 510" />
+  <path class="arrowEvent" d="M730 510 C690 510, 640 510, 380 510" />
+  <text class="small" x="820" y="532">server-log / status-change</text>
+
+  <!-- Arrows: guardrails into main handlers -->
+  <path class="arrowGuard" d="M730 612 C760 612, 770 430, 800 430" />
+
+  <path class="arrowGuard" d="M730 630 C760 630, 770 610, 800 610" />
+  <text class="small" x="760" y="738">validate external pid</text>
+
+  <path class="arrowGuard" d="M730 676 C760 676, 770 790, 800 790" />
+  <text class="small" x="1120" y="820">validate url</text>
+
+  <!-- Footer -->
+  <text class="sub" x="40" y="876">Generated for docs/sessions/2025-12-13-z-server-ux-map • Keep renderer inputs untrusted; enforce in main.</text>
+</svg>

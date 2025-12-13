@@ -47,6 +47,18 @@ function createCrawlLogViewerControl(jsgui) {
       this._filterBtn.set("title", "Filter log types");
       this._header.add(this._filterBtn);
 
+      this._copyBtn = new jsgui.Control({ context: this.context, tagName: "button" });
+      this._copyBtn.add_class("cw-log-action-btn", "cw-log-action-btn--copy");
+      this._copyBtn.add(new StringControl({ context: this.context, text: "⧉" }));
+      this._copyBtn.dom.attributes.title = "Copy visible log lines";
+      this._header.add(this._copyBtn);
+
+      this._clearBtn = new jsgui.Control({ context: this.context, tagName: "button" });
+      this._clearBtn.add_class("cw-log-action-btn", "cw-log-action-btn--clear");
+      this._clearBtn.add(new StringControl({ context: this.context, text: "🗑" }));
+      this._clearBtn.dom.attributes.title = "Clear log";
+      this._header.add(this._clearBtn);
+
       this._filterBadge = new jsgui.Control({ context: this.context, tagName: "span" });
       this._filterBadge.add_class("cw-log-filter-badge");
       this._filterBadge.add_class("cw-hidden");
@@ -103,6 +115,41 @@ function createCrawlLogViewerControl(jsgui) {
       this._logContainer = new jsgui.Control({ context: this.context, tagName: "div" });
       this._logContainer.add_class("cw-log-viewer__container");
       this.add(this._logContainer);
+    }
+
+    _getVisibleLines() {
+      const filteredLines = this._lines.filter((line) => this._activeFilters.has(line.activityType));
+      const visibleCount = Math.max(3, this._visibleLines || 3);
+      return filteredLines.slice(-visibleCount);
+    }
+
+    async _copyVisibleLines() {
+      const visible = this._getVisibleLines();
+      const text = visible
+        .map((line) => `[${line.timestamp}] ${line.text}`)
+        .join("\n")
+        .trim();
+
+      if (!text) return;
+
+      try {
+        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "readonly");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      } catch (err) {
+        console.warn("[CrawlWidget] Failed to copy log lines:", err?.message || err);
+      }
     }
 
     addLine(text, type = "stdout") {
@@ -163,9 +210,7 @@ function createCrawlLogViewerControl(jsgui) {
     }
 
     _renderLines(containerEl) {
-      const filteredLines = this._lines.filter((line) => this._activeFilters.has(line.activityType));
-      const visibleCount = Math.max(3, this._visibleLines || 3);
-      const visibleLines = filteredLines.slice(-visibleCount);
+      const visibleLines = this._getVisibleLines();
 
       while (containerEl.firstChild) {
         containerEl.removeChild(containerEl.firstChild);
@@ -275,6 +320,16 @@ function createCrawlLogViewerControl(jsgui) {
       this._filterBtn?.on("click", (e) => {
         e.stopPropagation();
         this._toggleFilterPopup();
+      });
+
+      this._copyBtn?.on("click", async (e) => {
+        e?.stopPropagation?.();
+        await this._copyVisibleLines();
+      });
+
+      this._clearBtn?.on("click", (e) => {
+        e?.stopPropagation?.();
+        this.clear();
       });
 
       this._allBtn?.on("click", () => this._setAllFilters(true));

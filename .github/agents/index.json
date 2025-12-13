@@ -86,5 +86,117 @@
     "tags": ["crawler", "observatory", "debugging", "decision-trees", "interactive", "ai-operable"],
     "last_review": "2025-12-08",
     "path": ".github/agents/🔬 Interactive Crawl Observatory 🔬.agent.md"
+  },
+  {
+    "doc_slug": "knowledge-consolidator-prime",
+    "title": "🧠📚 Knowledge Consolidator Prime 🧠📚",
+    "purpose": "Consolidates duplicate docs/session learnings into canonical workflows and durable guides; reduces doc sprawl without losing nuance",
+    "tags": ["docs", "workflows", "knowledge", "maintenance", "singularity"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🧠📚 Knowledge Consolidator Prime 🧠📚.agent.md"
+  },
+  {
+    "doc_slug": "deterministic-testwright",
+    "title": "🧬 Deterministic Testwright 🧬",
+    "purpose": "Owns network-offline determinism: record/replay fixtures, redaction, and regression tests that never silently hit network",
+    "tags": ["testing", "fixtures", "determinism", "crawler", "http"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🧬 Deterministic Testwright 🧬.agent.md"
+  },
+  {
+    "doc_slug": "telemetry-drift-sentinel",
+    "title": "🛰️ Telemetry & Drift Sentinel 🛰️",
+    "purpose": "Prevents silent behavior drift via budgets and invariants (retries, traces, queries, performance) backed by targeted tests/checks",
+    "tags": ["telemetry", "invariants", "testing", "crawler", "db", "performance"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🛰️ Telemetry & Drift Sentinel 🛰️.agent.md"
+  },
+  {
+    "doc_slug": "architecture-contract-keeper",
+    "title": "🧭 Architecture Contract Keeper 🧭",
+    "purpose": "Defines and enforces module contracts (crawler↔db↔ui) with compatibility shims and contract tests to prevent refactor breakage",
+    "tags": ["architecture", "contracts", "testing", "crawler", "db", "ui"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🧭 Architecture Contract Keeper 🧭.agent.md"
+  },
+  {
+    "doc_slug": "ci-flake-firefighter",
+    "title": "🧯 CI Flake Firefighter 🧯",
+    "purpose": "Eliminates flaky tests and CI hangs by building minimal repros, enforcing cleanup contracts, and removing nondeterminism",
+    "tags": ["ci", "testing", "reliability", "puppeteer", "cleanup"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🧯 CI Flake Firefighter 🧯.agent.md"
+  },
+  {
+    "doc_slug": "prof-edge-case",
+    "title": "🦉 Prof. Edge-Case 🦉",
+    "purpose": "Boundary-condition hunter: turns weird edge cases into minimal repros and permanent regression guards",
+    "tags": ["testing", "edge-cases", "debugging", "repro", "reliability"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🦉 Prof. Edge-Case 🦉.agent.md"
+  },
+  {
+    "doc_slug": "refactor-locksmith",
+    "title": "🧰 Refactor Locksmith 🧰",
+    "purpose": "Surgical refactor specialist: creates seams, adds contract tests, and refactors without breaking callers",
+    "tags": ["refactor", "architecture", "contracts", "testing", "maintenance"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🧰 Refactor Locksmith 🧰.agent.md"
+  },
+  {
+    "doc_slug": "dependency-noir-detective",
+    "title": "🕵️ Dependency Noir Detective 🕵️",
+    "purpose": "Dependency investigator: maps import graphs, finds hidden coupling/cycles, and proposes refactor-safe seams",
+    "tags": ["dependencies", "imports", "architecture", "coupling", "refactor"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🕵️ Dependency Noir Detective 🕵️.agent.md"
+  },
+  {
+    "doc_slug": "fixture-alchemist",
+    "title": "🧪 Fixture Alchemist 🧪",
+    "purpose": "Fixture engineer: crafts minimal, realistic, deterministic fixtures (HTTP/DB/files) with redaction and replay rules",
+    "tags": ["fixtures", "testing", "determinism", "http", "db"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🧪 Fixture Alchemist 🧪.agent.md"
+  },
+  {
+    "doc_slug": "ux-cartographer",
+    "title": "🗺️ UX Cartographer 🗺️",
+    "purpose": "UX mapping agent: turns complex UI flows into diagrams, checks, and invariants so behavior stays understandable and testable",
+    "tags": ["ui", "ux", "documentation", "checks", "e2e"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🗺️ UX Cartographer 🗺️.agent.md"
+  },
+  {
+    "doc_slug": "gofai-plugin-implementer",
+    "title": "🧬 GOFAI Plugin Implementer 🧬",
+    "purpose": "Implements PlannerHost plugins with strict time budgets, blackboard hygiene, and deterministic tests + preview harness",
+    "tags": ["planner", "gofai", "plugins", "testing", "telemetry"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🧬 GOFAI Plugin Implementer 🧬.agent.md"
+  },
+  {
+    "doc_slug": "config-schema-gatekeeper",
+    "title": "🧱 Config Schema Gatekeeper 🧱",
+    "purpose": "Owns config defaults + validation rules; ships schema checks and clear invalid-config tests",
+    "tags": ["config", "schema", "validation", "testing"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🧱 Config Schema Gatekeeper 🧱.agent.md"
+  },
+  {
+    "doc_slug": "git-hygiene-janitor",
+    "title": "🧹 Git Hygiene Janitor 🧹",
+    "purpose": "Maintains git/workspace hygiene: worktree recovery, safe cherry-picks, branch cleanup, and noise reduction",
+    "tags": ["git", "workflow", "recovery", "cleanup"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🧹 Git Hygiene Janitor 🧹.agent.md"
+  },
+  {
+    "doc_slug": "db-injection-wrangler",
+    "title": "🧩 DB Injection Wrangler 🧩",
+    "purpose": "Solves DB injection boundary problems cleanly (constructors/factories/adapters) with contract tests and dry-run stubs",
+    "tags": ["db", "adapters", "architecture", "testing"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🧩 DB Injection Wrangler 🧩.agent.md"
   }
 ]

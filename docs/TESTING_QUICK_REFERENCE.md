@@ -205,6 +205,41 @@ function startCrawl() {
 }
 ```
 
+### Puppeteer E2E: Wait for Client Activation (jsgui3)
+
+For jsgui3 pages, **don’t** assume that `DOMContentLoaded` means controls are interactive.
+Activation can fail silently (e.g., missing DOM linkage or missing constructor registration), so E2E tests should wait on an explicit readiness signal.
+
+Canonical background + failure modes: `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md#client-side-activation-flow-critical`.
+
+```javascript
+// Prefer deterministic “bundle ran + controls registered” signals
+await page.waitForFunction(
+  () => {
+    const registered = window.__COPILOT_REGISTERED_CONTROLS__;
+    if (!Array.isArray(registered)) return false;
+    // Example: wait for a specific control type + app state store
+    return registered.includes('url_filter_toggle') && !!window.__COPILOT_URL_LISTING_STORE__;
+  },
+  { timeout: 15000 }
+);
+```
+
+If you want to keep tests fast when activation is already complete, use a “fast path + readiness retry”:
+
+```javascript
+try {
+  // Do the action immediately (fast path)
+  await clickOrToggle();
+  await waitForExpectedNetworkOrUiChange({ timeout: 5000 });
+} catch (_) {
+  // Fall back to waiting for activation signals, then retry
+  await waitForActivationSignals({ timeout: 15000 });
+  await clickOrToggle();
+  await waitForExpectedNetworkOrUiChange({ timeout: 15000 });
+}
+```
+
 ---
 
 ## Debugging Test Failures
@@ -362,5 +397,6 @@ node tests/analyze-test-logs.js --test "specific-pattern"
 
 **Specialized**:
 - `docs/GEOGRAPHY_E2E_TESTING.md` - Long-running E2E
+- `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md#client-side-activation-flow-critical` - jsgui3 client activation failure modes + fixes
 - `DEBUGGING_CHILD_PROCESSES.md` - SSE/milestone events
 - `tools/debug/README.md` - Debugging utilities

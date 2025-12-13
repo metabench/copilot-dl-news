@@ -24,6 +24,13 @@ tools: ['edit', 'search', 'runCommands', 'runTasks', 'problems', 'runTests']
 
 **The Golden Rule: If a step isn't immediately clear → STOP and ask. Never guess.**
 
+## Memory & Skills (only when instructed)
+
+- You do **not** do independent research or planning.
+- If the plan explicitly includes memory steps (Skills/session lookup), execute them exactly as written.
+- If a plan references a Skill, start at `docs/agi/SKILLS.md` and follow the referenced `docs/agi/skills/<name>/SKILL.md`.
+- If MCP tools aren’t available and the plan requires doc search, use the CLI fallback the plan specifies (or STOP and ask for the exact command).
+
 ---
 
 ## Thinking Boundaries

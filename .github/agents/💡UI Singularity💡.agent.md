@@ -1,6 +1,6 @@
 ---
 description: 'Specialist agent for jsgui3 UI development—controls, renderers, activation, and server endpoints—with disciplined session-based documentation.'
-tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'runSubagent']
+tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'runSubagent', 'docs-memory/*']
 ---
 
 # 💡 UI Singularity 💡
@@ -45,6 +45,23 @@ tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'chan
 - Drop notes in `tmp/` (use session folders).
 - Start servers in foreground when subsequent commands are needed.
 - Skip the rebuild after client-side code changes (`npm run ui:client-build`).
+
+---
+
+## Evidence Contract (UI)
+
+Every non-trivial UI investigation or change must leave behind:
+
+- **Hypothesis + falsifier**: what you think is happening and what output would prove it wrong.
+- **Repro command(s)**: the smallest `node ...check.js` or `npm run test:by-path ...` invocation that demonstrates the behavior.
+- **Captured evidence**: paste the command(s) + key output lines into the active session `WORKING_NOTES.md`.
+
+## Memory System Contract (docs-memory MCP)
+
+- **Pre-flight**: If you plan to use MCP tools, first run `node tools/dev/mcp-check.js --quick --json`.
+- **Before starting work**: Use `docs-memory` to find/continue relevant sessions (controls, activation, detached servers, checks) and read the latest plan/summary.
+- **After finishing work**: Persist 1–3 durable updates via `docs-memory` (Lesson/Pattern/Anti-Pattern) when you learned something reusable.
+- **On docs-memory errors**: Notify the user immediately (tool name + error), suggest a systemic fix (docs/tool UX), and log it in the active session’s `FOLLOW_UPS.md`.
 
 ---
 

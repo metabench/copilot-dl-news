@@ -4,7 +4,7 @@
     {
       "label": "default",
       "query": {},
-      "elapsedMs": 1845,
+      "elapsedMs": 1126,
       "rowCount": 1000,
       "totalRows": 237010
     },
@@ -13,7 +13,7 @@
       "query": {
         "hasFetches": "1"
       },
-      "elapsedMs": 9016,
+      "elapsedMs": 1715,
       "rowCount": 1000,
       "totalRows": 34059
     },
@@ -22,7 +22,7 @@
       "query": {
         "host": "example.com"
       },
-      "elapsedMs": 5861,
+      "elapsedMs": 548,
       "rowCount": 335,
       "totalRows": 335
     },
@@ -32,7 +32,7 @@
         "host": "example.com",
         "hasFetches": "1"
       },
-      "elapsedMs": 1772,
+      "elapsedMs": 997,
       "rowCount": 334,
       "totalRows": 334
     }

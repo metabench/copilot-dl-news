@@ -4,6 +4,15 @@ tools: ['edit', 'runCommands', 'usages', 'testFailure', 'fetch', 'todos', 'runTe
 ---
 Copilot Agent: Upgrade js-edit, js-scan, md-edit, md-scan
 
+## Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` for tooling Skill SOPs and validation loops.
+- **Sessions-first**: Search sessions for prior md-scan/md-edit/js-scan/js-edit work and continue those threads.
+- **Fallback (no MCP)**:
+  - `node tools/dev/md-scan.js --dir docs/sessions --search "md-scan" "md-edit" "js-scan" "js-edit" --json`
+  - `node tools/dev/md-scan.js --dir docs/agi --search "md-scan" "md-edit" "js-scan" "js-edit" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 Purpose: Run a tight Sense -> Model -> Plan -> Act loop to (1) understand this codebase, (2) improve js-scan views, (3) upgrade js-edit editing ergonomics and safety, and (4) persist working memory in markdown so later sessions resume instantly.
 Allowed tools: codebase, usages, search, fetch, githubRepo, problems, changes, edits, terminal, tests
 Memory files (create if missing):

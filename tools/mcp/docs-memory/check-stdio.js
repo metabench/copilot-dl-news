@@ -31,6 +31,9 @@ const finish = (ok, message) => {
 const validate = () => {
     const initResp = messages.find((msg) => msg.id === 1);
     const listResp = messages.find((msg) => msg.id === 2);
+    const skillsResp = messages.find((msg) => msg.id === 3);
+    const topicsResp = messages.find((msg) => msg.id === 4);
+    const objectiveGetResp = messages.find((msg) => msg.id === 5);
 
     if (!initResp) {
         finish(false, "No initialize response received");
@@ -47,7 +50,38 @@ const validate = () => {
         return;
     }
 
-    finish(true, "docs-memory stdio headerless batching check passed");
+    const toolNames = new Set(listResp.result.tools.map((t) => t.name));
+    const requiredTools = [
+        "docs_memory_listSkills",
+        "docs_memory_searchSkills",
+        "docs_memory_getSkill",
+        "docs_memory_recommendSkills",
+        "docs_memory_listTopics",
+        "docs_memory_getObjectiveState",
+        "docs_memory_updateObjectiveState"
+    ];
+
+    for (const name of requiredTools) {
+        if (!toolNames.has(name)) {
+            finish(false, `Missing required tool: ${name}`);
+            return;
+        }
+    }
+
+    if (!skillsResp?.result?.content?.[0]?.text) {
+        finish(false, "Missing skills list response (tools/call id=3)");
+        return;
+    }
+    if (!topicsResp?.result?.content?.[0]?.text) {
+        finish(false, "Missing topics list response (tools/call id=4)");
+        return;
+    }
+    if (!objectiveGetResp?.result?.content?.[0]?.text) {
+        finish(false, "Missing objective state response (tools/call id=5)");
+        return;
+    }
+
+    finish(true, "docs-memory stdio headerless batching check passed (skills + objective tools present)");
 };
 
 child.stdout.on("data", (chunk) => {
@@ -66,7 +100,7 @@ child.stdout.on("data", (chunk) => {
         }
     }
 
-    if (messages.length >= 2) {
+    if (messages.length >= 5) {
         validate();
     }
 });
@@ -99,7 +133,37 @@ const listMessage = JSON.stringify({
     params: {}
 });
 
-child.stdin.write(`${initMessage}\n${listMessage}\n`);
+const callListSkills = JSON.stringify({
+    jsonrpc: "2.0",
+    id: 3,
+    method: "tools/call",
+    params: {
+        name: "docs_memory_listSkills",
+        arguments: { limit: 20 }
+    }
+});
+
+const callListTopics = JSON.stringify({
+    jsonrpc: "2.0",
+    id: 4,
+    method: "tools/call",
+    params: {
+        name: "docs_memory_listTopics",
+        arguments: { limit: 50 }
+    }
+});
+
+const callObjectiveState = JSON.stringify({
+    jsonrpc: "2.0",
+    id: 5,
+    method: "tools/call",
+    params: {
+        name: "docs_memory_getObjectiveState",
+        arguments: {}
+    }
+});
+
+child.stdin.write(`${initMessage}\n${listMessage}\n${callListSkills}\n${callListTopics}\n${callObjectiveState}\n`);
 child.stdin.end();
 
 setTimeout(() => {

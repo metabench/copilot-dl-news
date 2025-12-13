@@ -10,31 +10,123 @@
  */
 
 const puppeteer = require("puppeteer");
+const path = require("path");
+const express = require("express");
+const fs = require("fs");
+const { execFileSync } = require("child_process");
 
-const BASE_URL = "http://localhost:4950";
+const jsgui = require("jsgui3-html");
+const { ArtPlaygroundAppControl } = require("../../../src/ui/server/artPlayground/isomorphic/controls");
+
 const TIMEOUT = 30000;
 
 // Helper for puppeteer wait
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+let _artPlaygroundBundleEnsured = false;
+
+function ensureArtPlaygroundClientBundleBuilt() {
+  if (_artPlaygroundBundleEnsured) return;
+  if (process.env.SKIP_ART_PLAYGROUND_BUNDLE_BUILD === "1") return;
+
+  const repoRoot = process.cwd();
+  const buildScript = path.join(repoRoot, "scripts", "build-art-playground-client.js");
+
+  try {
+    execFileSync(process.execPath, [buildScript], {
+      cwd: repoRoot,
+      stdio: "inherit",
+      env: process.env,
+    });
+    _artPlaygroundBundleEnsured = true;
+  } catch (error) {
+    _artPlaygroundBundleEnsured = false;
+    throw error;
+  }
+}
+
+function createTestApp() {
+  const app = express();
+  const publicPath = path.join(__dirname, "../../../src/ui/server/artPlayground/public");
+  app.use("/public", express.static(publicPath));
+
+  const bundlePath = path.join(__dirname, "../../../src/ui/server/artPlayground/client.bundle.js");
+  app.get("/client.bundle.js", (req, res) => {
+    if (fs.existsSync(bundlePath)) {
+      res.type("application/javascript").sendFile(bundlePath);
+    } else {
+      res.status(404).send("// Client bundle not built");
+    }
+  });
+
+  app.get("/", (req, res) => {
+    const context = new jsgui.Page_Context();
+    const appControl = new ArtPlaygroundAppControl({ context });
+    const html = renderPage(appControl, { title: "Art Playground Resize Test" });
+    res.type("html").send(html);
+  });
+
+  return app;
+}
+
+function renderPage(control, options = {}) {
+  const title = options.title || "Art Playground";
+  const html = control.all_html_render();
+  const bundlePath = path.join(__dirname, "../../../src/ui/server/artPlayground/client.bundle.js");
+  const hasBundle = fs.existsSync(bundlePath);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <link rel="stylesheet" href="/public/art-playground.css">
+</head>
+<body>
+  ${html}
+  ${hasBundle ? '<script src="/client.bundle.js" defer></script>' : ''}
+</body>
+</html>`;
+}
+
+async function startServer() {
+  ensureArtPlaygroundClientBundleBuilt();
+  const app = createTestApp();
+  const server = await new Promise((resolve) => {
+    const listener = app.listen(0, "127.0.0.1", () => resolve(listener));
+  });
+  const address = server.address();
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  return {
+    baseUrl,
+    async shutdown() {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  };
+}
+
 describe("Art Playground · Resize Handles E2E", () => {
   let browser, page;
+  let serverHandle;
   
   beforeAll(async () => {
     browser = await puppeteer.launch({
       headless: "new",
       args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
+    serverHandle = await startServer();
   }, TIMEOUT);
   
   afterAll(async () => {
     if (browser) await browser.close();
+    if (serverHandle) await serverHandle.shutdown();
   });
   
   beforeEach(async () => {
     page = await browser.newPage();
     await page.setViewport({ width: 1200, height: 800 });
-    await page.goto(BASE_URL, { waitUntil: "networkidle0", timeout: TIMEOUT });
+    await page.goto(serverHandle.baseUrl, { waitUntil: "networkidle0", timeout: TIMEOUT });
     // Wait for client to initialize
     await page.waitForSelector(".art-app");
     await wait(500);

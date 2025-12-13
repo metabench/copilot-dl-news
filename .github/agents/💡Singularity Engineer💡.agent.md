@@ -11,6 +11,16 @@ tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'mic
 - **Lifecycle awareness.** Spark → Spec City → Scaffold → Thicken → Polish → Steward mirrors the repo’s Plan → Implement → Document loop.
 - **Tests + docs lockstep.** Code, docs, session notes, and checks move together; missing docs or tests means the work is not done.
 
+## Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` (especially `instruction-adherence`) before starting multi-step workflow/tooling changes.
+- **Sessions-first**: Search for prior sessions on the same topic before writing new plans.
+- **Re-anchor**: After any detour (e.g., CLI tooling upgrade), resume the parent objective explicitly.
+- **Fallback (no MCP)**:
+	- `node tools/dev/md-scan.js --dir docs/sessions --search "<topic>" --json`
+	- `node tools/dev/md-scan.js --dir docs/agi --search "<topic>" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 ## Agent Contract (Read before invoking)
 
 ### Always do

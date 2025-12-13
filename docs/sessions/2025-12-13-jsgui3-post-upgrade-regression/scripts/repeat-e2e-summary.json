@@ -1,0 +1,39 @@
+{
+  "startedAt": "2025-12-13T18:19:45.307Z",
+  "finishedAt": "2025-12-13T18:19:57.549Z",
+  "runs": 3,
+  "tests": [
+    "tests/ui/e2e/url-filter-toggle.puppeteer.e2e.test.js"
+  ],
+  "results": [
+    {
+      "testPath": "tests/ui/e2e/url-filter-toggle.puppeteer.e2e.test.js",
+      "runIndex": 1,
+      "ok": true,
+      "exitCode": 0,
+      "stdoutLog": "docs\\sessions\\2025-12-13-jsgui3-post-upgrade-regression\\scripts\\logs\\repeat-e2e\\url-filter-toggle.puppeteer.e2e.test.js_1.stdout.log",
+      "stderrLog": "docs\\sessions\\2025-12-13-jsgui3-post-upgrade-regression\\scripts\\logs\\repeat-e2e\\url-filter-toggle.puppeteer.e2e.test.js_1.stderr.log"
+    },
+    {
+      "testPath": "tests/ui/e2e/url-filter-toggle.puppeteer.e2e.test.js",
+      "runIndex": 2,
+      "ok": true,
+      "exitCode": 0,
+      "stdoutLog": "docs\\sessions\\2025-12-13-jsgui3-post-upgrade-regression\\scripts\\logs\\repeat-e2e\\url-filter-toggle.puppeteer.e2e.test.js_2.stdout.log",
+      "stderrLog": "docs\\sessions\\2025-12-13-jsgui3-post-upgrade-regression\\scripts\\logs\\repeat-e2e\\url-filter-toggle.puppeteer.e2e.test.js_2.stderr.log"
+    },
+    {
+      "testPath": "tests/ui/e2e/url-filter-toggle.puppeteer.e2e.test.js",
+      "runIndex": 3,
+      "ok": true,
+      "exitCode": 0,
+      "stdoutLog": "docs\\sessions\\2025-12-13-jsgui3-post-upgrade-regression\\scripts\\logs\\repeat-e2e\\url-filter-toggle.puppeteer.e2e.test.js_3.stdout.log",
+      "stderrLog": "docs\\sessions\\2025-12-13-jsgui3-post-upgrade-regression\\scripts\\logs\\repeat-e2e\\url-filter-toggle.puppeteer.e2e.test.js_3.stderr.log"
+    }
+  ],
+  "stats": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0
+  }
+}

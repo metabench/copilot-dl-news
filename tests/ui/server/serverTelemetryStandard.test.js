@@ -72,9 +72,11 @@ describe("Server telemetry standard (v1)", () => {
     expect(status.body).toHaveProperty("server.name", "Test Server");
     expect(status.body).toHaveProperty("server.runId");
     expect(typeof status.body.server.runId).toBe("string");
+    expect(status.body).toHaveProperty("server.startedAt");
+    expect(status.body).toHaveProperty("server.uptimeMs");
   });
 
-  test("emits http.request events via middleware", async () => {
+  test("emits http.response events via middleware", async () => {
     const app = express();
     const capture = createCaptureStream();
     const telemetry = createTelemetry({ name: "Test Server", entry: "tests", stream: capture.stream });
@@ -90,13 +92,14 @@ describe("Server telemetry standard (v1)", () => {
     expect(response.status).toBe(200);
 
     const records = capture.getJsonLines();
-    const httpRecords = records.filter((rec) => rec && rec.v === 1 && rec.event === "http.request");
+    const httpRecords = records.filter((rec) => rec && rec.v === 1 && rec.event === "http.response");
 
     expect(httpRecords.length).toBeGreaterThan(0);
     const last = httpRecords[httpRecords.length - 1];
     expect(last).toHaveProperty("level", "info");
     expect(last).toHaveProperty("server.name", "Test Server");
     expect(last).toHaveProperty("data.method", "GET");
+    expect(last).toHaveProperty("data.status", 200);
     expect(last).toHaveProperty("data.statusCode", 200);
   });
 });

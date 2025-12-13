@@ -28,7 +28,8 @@ describeIfDb("dataExplorerServer production snapshot coverage", () => {
     { path: "/urls", title: "Crawler URL Snapshot" },
     { path: "/domains", title: "Recent Domain Activity" },
     { path: "/crawls", title: "Recent Crawl Jobs" },
-    { path: "/errors", title: "Recent Crawl Errors" }
+    { path: "/errors", title: "Recent Crawl Errors" },
+    { path: "/decisions", title: "Crawler Decisions" }
   ];
 
   routes.forEach(({ path: route, title }) => {

@@ -9,10 +9,11 @@
 const puppeteer = require("puppeteer");
 const path = require("path");
 const { spawn } = require("child_process");
+const net = require("net");
 
 const SERVER_PATH = path.join(__dirname, "..", "..", "..", "src", "ui", "server", "decisionTreeViewer", "server.js");
-const PORT = 3030;
-const URL = `http://localhost:${PORT}`;
+let PORT;
+let URL;
 
 let browser;
 let page;
@@ -21,26 +22,89 @@ let serverProcess;
 // Quick delay helper
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-function startServer() {
+function getAvailablePort() {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error("Server timeout")), 8000);
+    const server = net.createServer();
+    server.unref();
+    server.on("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      const port = address && typeof address === "object" ? address.port : null;
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+async function waitForHealth(url, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  let lastErr = null;
+
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`${url}/health`, { method: "GET" });
+      if (res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (body && body.status === "ok") return;
+      }
+    } catch (err) {
+      lastErr = err;
+    }
+    await delay(150);
+  }
+
+  const suffix = lastErr ? ` (last error: ${lastErr.message})` : "";
+  throw new Error(`Server health check timeout${suffix}`);
+}
+
+function startServer({ port }) {
+  return new Promise((resolve, reject) => {
+    const stderrChunks = [];
+    const stdoutChunks = [];
+    const timeout = setTimeout(() => {
+      const stdout = Buffer.concat(stdoutChunks).toString("utf8").trim();
+      const stderr = Buffer.concat(stderrChunks).toString("utf8").trim();
+      reject(new Error(`Server timeout (stdout: ${stdout || "<empty>"}) (stderr: ${stderr || "<empty>"})`));
+    }, 15000);
     
     serverProcess = spawn("node", [SERVER_PATH], {
       stdio: ["ignore", "pipe", "pipe"],
-      detached: false  // Don't create process group
+      detached: false,  // Don't create process group
+      env: {
+        ...process.env,
+        DECISION_TREE_VIEWER_PORT: String(port)
+      }
     });
     
     serverProcess.stdout.on("data", (data) => {
-      if (data.toString().includes("running at")) {
-        clearTimeout(timeout);
-        resolve();
-      }
+      stdoutChunks.push(Buffer.from(data));
+    });
+
+    serverProcess.stderr.on("data", (data) => {
+      stderrChunks.push(Buffer.from(data));
+    });
+
+    serverProcess.once("exit", (code) => {
+      if (code === 0) return;
+      clearTimeout(timeout);
+      const stderr = Buffer.concat(stderrChunks).toString("utf8").trim();
+      reject(new Error(`Server exited early with code ${code} (stderr: ${stderr || "<empty>"})`));
     });
     
     serverProcess.on("error", (err) => {
       clearTimeout(timeout);
       reject(err);
     });
+
+    // Readiness: don't depend on stdout formatting; poll /health instead.
+    waitForHealth(`http://localhost:${port}`, 15000)
+      .then(() => {
+        clearTimeout(timeout);
+        resolve();
+      })
+      .catch((err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
   });
 }
 
@@ -54,13 +118,16 @@ function stopServer() {
     const pid = serverProcess.pid;
     
     const timeout = setTimeout(() => {
-      // Force kill on Windows
-      try { 
-        process.kill(pid, "SIGKILL");
+      try {
+        if (process.platform === "win32") {
+          spawn("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
+        } else {
+          process.kill(pid, "SIGKILL");
+        }
       } catch (e) {}
       serverProcess = null;
       resolve();
-    }, 1000);
+    }, 1500);
     
     serverProcess.once("close", () => {
       clearTimeout(timeout);
@@ -80,7 +147,9 @@ function stopServer() {
 
 // Single setup/teardown for all tests
 beforeAll(async () => {
-  await startServer();
+  PORT = await getAvailablePort();
+  URL = `http://localhost:${PORT}`;
+  await startServer({ port: PORT });
   
   browser = await puppeteer.launch({
     headless: true,
@@ -185,10 +254,20 @@ describe("Node Dragging", () => {
   });
   
   test("can drag a node and connections remain valid", async () => {
-    const nodeEl = await page.$('[data-node-id="check-word-count"]');
+    // Don't hard-code a specific node id; pick a rendered branch node.
+    await page.waitForSelector('[data-jsgui-control="dt_branch_node"]', { timeout: 3000 });
+    const nodeEl = await page.$('[data-jsgui-control="dt_branch_node"]');
     expect(nodeEl).not.toBeNull();
+
+    await nodeEl.evaluate((el) => {
+      el.scrollIntoView({ block: "center", inline: "center" });
+    });
+
+    const nodeId = await nodeEl.evaluate((el) => el.getAttribute("data-node-id"));
+    expect(nodeId).toBeTruthy();
     
     const rect = await nodeEl.boundingBox();
+    expect(rect).not.toBeNull();
     
     // Perform drag
     await page.mouse.move(rect.x + rect.width / 2, rect.y + rect.height / 2);

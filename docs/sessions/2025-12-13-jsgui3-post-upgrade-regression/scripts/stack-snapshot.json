@@ -1,0 +1,105 @@
+{
+  "timestamp": "2025-12-13T18:06:41.930Z",
+  "workspaceRoot": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news",
+  "node": "v25.2.1",
+  "platform": {
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "packages": {
+    "jsgui3-client": {
+      "resolved": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-client",
+      "version": "0.0.121",
+      "nodeModulesPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-client",
+      "nodeModules": {
+        "exists": true,
+        "isSymlink": false,
+        "realpath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-client",
+        "kind": "dir"
+      },
+      "packageJson": {
+        "exists": true,
+        "isSymlink": false,
+        "realpath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-client\\package.json",
+        "kind": "file"
+      }
+    },
+    "jsgui3-html": {
+      "resolved": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-html",
+      "version": "0.0.170",
+      "nodeModulesPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-html",
+      "nodeModules": {
+        "exists": true,
+        "isSymlink": false,
+        "realpath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-html",
+        "kind": "dir"
+      },
+      "packageJson": {
+        "exists": true,
+        "isSymlink": false,
+        "realpath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-html\\package.json",
+        "kind": "file"
+      }
+    },
+    "jsgui3-html-ssr": {
+      "resolved": null,
+      "version": null,
+      "nodeModulesPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-html-ssr",
+      "nodeModules": {
+        "exists": false,
+        "error": "ENOENT: no such file or directory, lstat 'C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-html-ssr'"
+      },
+      "packageJson": {
+        "exists": false
+      }
+    },
+    "jsgui3-html-core": {
+      "resolved": null,
+      "version": null,
+      "nodeModulesPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-html-core",
+      "nodeModules": {
+        "exists": false,
+        "error": "ENOENT: no such file or directory, lstat 'C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-html-core'"
+      },
+      "packageJson": {
+        "exists": false
+      }
+    },
+    "jsgui3-html-enh": {
+      "resolved": null,
+      "version": null,
+      "nodeModulesPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-html-enh",
+      "nodeModules": {
+        "exists": false,
+        "error": "ENOENT: no such file or directory, lstat 'C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-html-enh'"
+      },
+      "packageJson": {
+        "exists": false
+      }
+    },
+    "jsgui3-html-page-context": {
+      "resolved": null,
+      "version": null,
+      "nodeModulesPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-html-page-context",
+      "nodeModules": {
+        "exists": false,
+        "error": "ENOENT: no such file or directory, lstat 'C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-html-page-context'"
+      },
+      "packageJson": {
+        "exists": false
+      }
+    },
+    "jsgui3-client-bundle": {
+      "resolved": null,
+      "version": null,
+      "nodeModulesPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-client-bundle",
+      "nodeModules": {
+        "exists": false,
+        "error": "ENOENT: no such file or directory, lstat 'C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\node_modules\\jsgui3-client-bundle'"
+      },
+      "packageJson": {
+        "exists": false
+      }
+    }
+  }
+}

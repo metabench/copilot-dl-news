@@ -1,5 +1,7 @@
 # Control Registration Flow (`map_Controls`)
 
+Canonical reference: the consolidated “activation” workflow and registry distinctions live in [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](../../guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md#client-side-activation-flow-critical). This session note preserves the deep dive and historical debugging context.
+
 This note explains how jsgui3 client contexts discover control constructors and why our bundle hooks into that pipeline. The goal is to show how new controls (UrlListingTable, UrlFilterToggle, PagerButton, etc.) make their way into `context.map_Controls` so hydration and Puppeteer tests can construct them.
 
 ## 1. Global constructor registry (`jsgui.controls` and `jsgui.map_Controls`)

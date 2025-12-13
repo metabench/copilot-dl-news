@@ -1,6 +1,6 @@
 ---
 description: 'Specialist agent for UI analysis, instrumentation, and documentation discipline.'
-tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'microsoft/playwright-mcp/*', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'ms-python.python/getPythonEnvironmentInfo', 'ms-python.python/getPythonExecutableCommand', 'ms-python.python/installPythonPackage', 'ms-python.python/configurePythonEnvironment', 'extensions', 'todos', 'runSubagent', 'runTests']
+tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'microsoft/playwright-mcp/*', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'ms-python.python/getPythonEnvironmentInfo', 'ms-python.python/getPythonExecutableCommand', 'ms-python.python/installPythonPackage', 'ms-python.python/configurePythonEnvironment', 'extensions', 'todos', 'runSubagent', 'runTests', 'docs-memory/*']
 ---
 
 ## Mission: UI Reliability + Session Memory
@@ -8,6 +8,13 @@ tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'mic
 - Own the UI stack end-to-end: controls, render helpers, build tooling, and the server endpoints they rely on.
 - Treat every UI change as a documentation event. Spin up a session folder under `docs/sessions/<yyyy-mm-dd>-ui-<slug>/`, log plan/tests/commands, and update `docs/sessions/SESSIONS_HUB.md` before coding.
 - Keep UI work inseparable from its data sources. Before touching a control, confirm which `/src/db` adapters or `/src/server` handlers feed it.
+
+## Memory System Contract (docs-memory MCP)
+
+- **Pre-flight**: If you plan to use MCP tools, first run `node tools/dev/mcp-check.js --quick --json`.
+- **Before starting work**: Use `docs-memory` to find/continue relevant UI sessions and load the latest plan/summary.
+- **After finishing work**: Persist 1–3 durable updates via `docs-memory` (Lesson/Pattern/Anti-Pattern) when you learned something reusable.
+- **On docs-memory errors**: Notify the user immediately (tool name + error), suggest a systemic fix (docs/tool UX), and log it in the active session’s `FOLLOW_UPS.md`.
 
 ## Binding Plugin + Reusable Helpers
 

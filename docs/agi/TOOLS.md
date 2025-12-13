@@ -13,6 +13,13 @@ _All commands run from repository root unless noted. Categories: `static_analysi
 | `docs/sessions` conventions | planning_support | `docs/sessions/` | Stores per-session plans; AGI work should reference or create these before acting. | `docs/sessions/2025-11-16-plan.md` (manual)
 | `ingest-historical-names` | knowledge_ingestion | `tools/gazetteer/ingest-historical-names.js` | Fetches place data from Wikidata and populates historical names from a candidate list. | `node tools/gazetteer/ingest-historical-names.js`
 
+## Docs-memory MCP (when available)
+
+If your agent has `docs-memory/*` tools enabled, prefer them for fast, structured memory retrieval and append-only updates.
+
+- **Pre-flight check**: `node tools/dev/mcp-check.js --quick --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 ## Proposed Tooling Extensions
 
 | Proposal | Category | Outline | Expected Impact |

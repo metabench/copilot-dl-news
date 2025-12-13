@@ -681,6 +681,35 @@ body {
   color: var(--cw-gold);
 }
 
+.cw-log-action-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: var(--cw-text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 6px;
+  transition: all 0.15s ease;
+}
+
+.cw-log-action-btn:hover {
+  background: rgba(201, 162, 39, 0.12);
+  border-color: rgba(201, 162, 39, 0.28);
+  color: var(--cw-gold);
+}
+
+.cw-log-action-btn--clear:hover {
+  background: rgba(255, 107, 107, 0.12);
+  border-color: rgba(255, 107, 107, 0.35);
+  color: var(--cw-ruby);
+}
+
+.cw-log-filter-btn:focus-visible,
+.cw-log-action-btn:focus-visible {
+  outline: 2px solid rgba(201, 162, 39, 0.55);
+  outline-offset: 1px;
+}
+
 .cw-log-filter-badge {
   background: var(--cw-sapphire);
   color: var(--cw-bg);
@@ -780,6 +809,8 @@ body {
   font-family: var(--cw-font-mono);
   font-size: 11px;
   line-height: 1.5;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .cw-log-line {
@@ -816,6 +847,8 @@ body {
   white-space: nowrap;
   flex: 1;
   min-width: 0;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* Activity-based log line styling */

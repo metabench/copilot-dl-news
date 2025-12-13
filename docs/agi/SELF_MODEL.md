@@ -14,6 +14,7 @@ Describe how this repository can host an AGI-style, tool-enabled workflow where 
   - `node tools/dev/js-scan.js` for semantic code discovery.
   - `node tools/dev/js-edit.js` for guarded batch modifications.
 - Minimal MCP surface: `node tools/mcp/docs-memory/server.js` streams SELF_MODEL, LESSONS, and session excerpts for agent memory priming.
+- “Skill packs” (capability bundles) captured as docs-first artifacts under `docs/agi/skills/` and indexed in `docs/agi/SKILLS.md`.
 - Established directives in `AGENTS.md` enforcing Plan → Implement → Verify loops.
 - Data-oriented adapters and service layering (per AGENTS.md) enabling clean abstraction points for future automation.
 - Canonical agent governance captured in `docs/agents/agent_policy.md` and companions (e.g., `docs_indexer_and_agents_refactorer.md`), which define research-first behavior and documentation upkeep.
@@ -33,6 +34,7 @@ Describe how this repository can host an AGI-style, tool-enabled workflow where 
 - Maintain a living knowledge graph of modules, services, and contracts derived from `js-scan` outputs.
 - Formalize stateful workflows where plans persist between sessions (leveraging planned `--from-plan` capabilities in `js-edit`).
 - Establish specialized agents (e.g., Static Analysis Scout, Knowledge Archivist) to own slices of the AGI roadmap.
+- Add MCP-facing “skills registry” discovery so agents can list/search/get skill packs without relying on human recall.
 
 ## Usage Notes
 - Treat this document as the “identity card” for AGI initiatives. Update it whenever capabilities, limitations, or core workflows shift.

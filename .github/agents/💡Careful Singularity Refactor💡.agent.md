@@ -6,6 +6,16 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 
 # 💡 Careful Singularity Refactor 💡
 
+## Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` (especially `instruction-adherence`, `targeted-testing`, `session-discipline`) before refactoring.
+- **Sessions-first**: Search for prior refactors on the same subsystem before editing.
+- **Re-anchor**: If you improve tooling mid-refactor, return to the parent refactor plan and continue.
+- **Fallback (no MCP)**:
+  - `node tools/dev/md-scan.js --dir docs/sessions --search "refactor" "js-edit" "js-scan" --json`
+  - `node tools/dev/md-scan.js --dir docs/agi --search "refactor" "patterns" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 ## ⚠️ CRITICAL: Session First
 
 **Before writing ANY code, run:**

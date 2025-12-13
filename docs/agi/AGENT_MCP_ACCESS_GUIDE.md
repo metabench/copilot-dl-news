@@ -1,10 +1,33 @@
 # Agent MCP Access Guide
 
-> **TL;DR**: Agents with MCP tool functions available in their toolset can invoke them directly to query the memory system and documentation servers. No client setup required—just call the tools.
+> **TL;DR**: If MCP tools are present in your tool list, invoke them directly—no client setup required.
+>
+> If you *don’t* see the expected docs-memory tools (sessions/workflows/patterns), your environment may be exposing only a subset. In that case:
+> - Use the relevant tool-category “activation” functions (if available), or
+> - Fall back to the repo CLIs (`md-scan`, `what-next`).
 
 ---
 
 ## Overview
+
+## Memory Retrieval Ritual (Skills → Sessions → Lessons)
+
+Use this as your default “don’t reinvent it” sequence:
+
+1. **Skills first**: Check the Skills registry at `docs/agi/SKILLS.md`. If a Skill matches the task, follow its SOP.
+2. **Then sessions**: Find/continue a prior session on the topic and read the latest `PLAN.md` + `SESSION_SUMMARY.md` (avoid duplicating work).
+3. **Then stable memory**: Pull relevant snippets from `docs/agi/LESSONS.md`, `PATTERNS.md`, and `ANTI_PATTERNS.md`.
+4. **Write back**: When you learn something reusable, append 1–3 durable updates (Lesson/Pattern/Anti-Pattern) and record evidence in the active session’s `WORKING_NOTES.md`.
+
+## Instruction Adherence Loop (Snapshot → Task Ledger → Re-anchor)
+
+This repo has a lot of instruction sources (system/developer/mode files, AGENTS.md, Skills, sessions). To avoid drift:
+
+1. **Snapshot**: In the active session `WORKING_NOTES.md`, capture an “Instruction Snapshot” (objective, must-do, must-not, evidence).
+2. **Task ledger**: Keep a small task list that separates the *parent objective* from *detours*.
+3. **Re-anchor**: After each subtask (or every 3–5 tool calls), re-check the snapshot and confirm the next step still advances the parent objective.
+
+Recommended Skill: `docs/agi/skills/instruction-adherence/SKILL.md`.
 
 MCP (Model Context Protocol) servers run in the repo and expose tools that agents can invoke directly. If an agent has these tools in its function list, it can query and update the AGI documentation and session system without any additional setup or client.
 
@@ -43,6 +66,20 @@ mcp_docs-memory_docs_memory_appendLessons({
 })
 ```
 
+### Skills Discovery (recommended entry point)
+
+If you’re not sure which workflow applies, start by looking for a Skill:
+
+- List/search via docs-memory (recommended):
+  - `mcp_docs-memory_docs_memory_listSkills`
+  - `mcp_docs-memory_docs_memory_searchSkills`
+  - `mcp_docs-memory_docs_memory_recommendSkills`
+  - `mcp_docs-memory_docs_memory_getSkill`
+  - `mcp_docs-memory_docs_memory_listTopics` (browse topics/keywords)
+- Or open `docs/agi/SKILLS.md` and choose the closest match.
+
+Skill SOPs intentionally link to checks/tests/scripts so you can verify quickly.
+
 ### Tool Naming Convention
 
 All docs-memory tools follow the pattern:
@@ -56,10 +93,17 @@ Examples:
 - `mcp_docs-memory_docs_memory_getLessons` — Read LESSONS.md with stats/filtering
 - `mcp_docs-memory_docs_memory_getSession` — Read session by slug or latest
 - `mcp_docs-memory_docs_memory_searchSessions` — Full-text search across session files
+- `mcp_docs-memory_docs_memory_listSkills` — List Skills from SKILLS.md
+- `mcp_docs-memory_docs_memory_searchSkills` — Search skills + Skill docs
+- `mcp_docs-memory_docs_memory_getSkill` — Read a specific Skill SOP
+- `mcp_docs-memory_docs_memory_recommendSkills` — Recommend Skills for a topic (registry + session similarity)
+- `mcp_docs-memory_docs_memory_listTopics` — List topics derived from skills/triggers
 - `mcp_docs-memory_docs_memory_listWorkflows` — List available workflows
 - `mcp_docs-memory_docs_memory_getWorkflow` — Read workflow content + parsed metadata
 - `mcp_docs-memory_docs_memory_appendLessons` — Add lesson to LESSONS.md
 - `mcp_docs-memory_docs_memory_appendToSession` — Append to WORKING_NOTES or FOLLOW_UPS
+- `mcp_docs-memory_docs_memory_getObjectiveState` — Read session objective state (parent objective, detours, return step)
+- `mcp_docs-memory_docs_memory_updateObjectiveState` — Update objective state (persisted per session)
 - `mcp_docs-memory_docs_memory_updateKnowledgeMap` — Track refactoring status
 - `mcp_docs-memory_docs_memory_proposeWorkflowImprovement` — Suggest workflow optimizations
 
@@ -373,9 +417,30 @@ await mcp_docs-memory_docs_memory_appendToSession({
 ## Limitations & Notes
 
 - **Availability**: MCP tools are only available if your agent's toolset explicitly includes them. If you see these functions listed in your available tools, you can use them.
+- **Tool gating (important)**: Some agent environments expose MCP tools in groups (e.g., sessions vs workflows). If you can’t call `getSession`/`searchSessions`/`appendToSession` even though MCP is configured, activate the relevant category (or use CLI fallbacks).
 - **Performance**: Queries are synchronous file reads. Large LESSONS.md or session files may take a few milliseconds; consider filtering with `maxLines` if needed.
 - **Consistency**: All writes append to files; there is no transactional update. Multiple agents writing simultaneously is safe (files use append-only semantics), but reads during writes may see partial updates.
 - **Paths**: All paths are relative to the repo root (`docs/agi/`, `docs/sessions/`, etc.). Agents do not need to compute absolute paths.
+
+---
+
+## If you can’t see session/workflow tools
+
+If your environment supports tool-category activation, you may need to enable these groups before the full docs-memory surface is available:
+
+- Session tools: `activate_session_management_tools`
+- Workflow tools: `activate_workflow_management_tools`
+- Patterns/anti-patterns: `activate_refactoring_pattern_management`
+- Knowledge map: `activate_knowledge_map_management`
+
+If activation isn’t available, use the repo CLIs:
+
+- Search sessions: `node tools/dev/md-scan.js --dir docs/sessions --search "<topic>" --json`
+- Search AGI docs (workflows/skills/patterns): `node tools/dev/md-scan.js --dir docs/agi --search "<topic>" --json`
+- Find active sessions / next steps: `node tools/dev/what-next.js --json`
+
+If the task seems procedural (debugging a known class of issue), prefer Skills discovery before doing broad doc searches.
+
 
 ---
 

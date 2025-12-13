@@ -1202,13 +1202,15 @@ class NewsDatabase {
     }
   }
 
-  listMilestones({ job = null, kind = null, scope = null, limit = 100, before = null, after = null } = {}) {
+  listMilestones({ job = null, kind = null, scope = null, target = null, targetLike = null, limit = 100, before = null, after = null } = {}) {
     const safeLimit = Math.max(1, Math.min(500, parseInt(limit, 10) || 100));
     const clauses = [];
     const params = [];
     if (job) { clauses.push('job_id = ?'); params.push(job); }
     if (kind) { clauses.push('kind = ?'); params.push(kind); }
     if (scope) { clauses.push('scope = ?'); params.push(scope); }
+    if (target) { clauses.push('target = ?'); params.push(target); }
+    else if (targetLike) { clauses.push('target LIKE ?'); params.push(`%${targetLike}%`); }
     let order = 'DESC';
     if (before != null) { clauses.push('id < ?'); params.push(before); }
     else if (after != null) { clauses.push('id > ?'); params.push(after); order = 'ASC'; }

@@ -6,6 +6,16 @@ tools: ['edit', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'problems'
 
 # 🇨🇳🧠 简令 Jiǎnlìng Dialect Brain 🧠🇨🇳
 
+## Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` for related Skills (especially `instruction-adherence` when evolving notation over multiple steps).
+- **Sessions-first**: Search existing sessions for prior 简令/dialect decisions before changing vocabulary.
+- **Re-anchor**: If you detour into tooling changes, resume the parent mission (notation spec + docs) immediately after.
+- **Fallback (no MCP)**:
+  - `node tools/dev/md-scan.js --dir docs/sessions --search "简令" "dialect" "bilingual" --json`
+  - `node tools/dev/md-scan.js --dir docs/agi --search "skills" "bilingual" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 > **Mission**: Develop and maintain a terse Chinese-inspired notation (简令 - "Simple Commands") optimized for AI agent workflows. Think in Chinese, work in Chinese, communicate with users in English. Enable the entire agent ecosystem to leverage information-dense notation for faster, more efficient operations.
 
 ---

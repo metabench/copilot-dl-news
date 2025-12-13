@@ -6,6 +6,7 @@
 - Need commands? [docs/COMMAND_EXECUTION_GUIDE.md](docs/COMMAND_EXECUTION_GUIDE.md)
 - Running tests? [docs/TESTING_QUICK_REFERENCE.md](docs/TESTING_QUICK_REFERENCE.md)
 - DB changes? [docs/DATABASE_QUICK_REFERENCE.md](docs/DATABASE_QUICK_REFERENCE.md)
+- Shared sessions across repos? [docs/workflows/shared-sessions-across-repos.md](docs/workflows/shared-sessions-across-repos.md)
 - UI/jsgui3? [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md)
 - SVGs? [docs/guides/SVG_CREATION_METHODOLOGY.md](docs/guides/SVG_CREATION_METHODOLOGY.md)
 - WLILO style? [docs/guides/WLILO_STYLE_GUIDE.md](docs/guides/WLILO_STYLE_GUIDE.md)
@@ -17,6 +18,7 @@ Mode/persona rules
 
 Quick anchors (UI/tooling)
 - jsgui3 controls: extract interactive/stateful pieces into controls, use emoji icons for actions (🔍/⚙️/➕/🗑️/✏️/🔄), and keep control counts lean—lazy load or virtualise when lists exceed ~200 items. See [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md).
+- jsgui3 activation (client-side): if SSR output renders but clicks don’t work / `this.dom.el` is null / you see `Missing context.map_Controls`, start with the activation flow section in [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md#client-side-activation-flow-critical).
 - SVGs: before shipping, run `node tools/dev/svg-collisions.js <file> --strict` to ensure no overlaps; follow [docs/guides/SVG_CREATION_METHODOLOGY.md](docs/guides/SVG_CREATION_METHODOLOGY.md).
 - MCP pre-flight: before calling MCP tools, run `node tools/dev/mcp-check.js --quick --json` to verify servers are responsive; if unhealthy, use CLI fallbacks.
 - docs-memory (MCP): use the memory server for durable agent hygiene, not scratch notes.

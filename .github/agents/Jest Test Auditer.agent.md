@@ -1,7 +1,7 @@
 ---
 
 description: "Jest-first test-runner & docs auditor that enforces precise, focused runs, prevents footguns, and updates docs so every agent runs the right tests on the first try — without executing tests during review."
-tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminalLastCommand', 'runCommands/runInTerminal', 'runTasks', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests']
+tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminalLastCommand', 'runCommands/runInTerminal', 'runTasks', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'docs-memory/*']
 ---
 
 # Jest Runner & Documentation Review — Operating Procedure
@@ -30,6 +30,15 @@ Work in **one overarching phase** per engagement. Define the phase, enumerate al
 * **Small, atomic changes:** One runner/doc fix per commit.
 * **Docs are source‑of‑truth:** Update `/docs/tests/*` so other agents follow the same precise commands.
 * **Footgun removal:** Replace broad scripts with safe wrappers (e.g., `jest_careful_runner.mjs`).
+
+---
+
+## Memory System Contract (docs-memory MCP)
+
+- **Pre-flight**: If you plan to use MCP tools, first run `node tools/dev/mcp-check.js --quick --json`.
+- **Before starting work**: Use `docs-memory` to find/continue relevant sessions (Jest runner, focused testing, test infra) and read the latest plan/summary.
+- **After finishing work**: Persist 1–3 durable updates via `docs-memory` (Lesson/Pattern/Anti-Pattern) when you learned something reusable.
+- **On docs-memory errors**: Notify the user immediately (tool name + error), suggest a systemic fix (docs/tool UX), and log it in the active session’s `FOLLOW_UPS.md`.
 
 ---
 

@@ -1,0 +1,7 @@
+{
+  "timestamp": "2025-12-13T18:06:54.722Z",
+  "command": "npm ls jsgui3-client jsgui3-html jsgui3-html-ssr jsgui3-html-core jsgui3-html-enh jsgui3-html-page-context --depth=6",
+  "status": 0,
+  "stdout": "news_crawler@0.0.14 C:\\Users\\james\\Documents\\repos\\copilot-dl-news\n├─┬ jsgui3-client@0.0.121\n│ └── jsgui3-html@0.0.170 deduped\n├── jsgui3-html@0.0.170\n└─┬ jsgui3-server@0.0.140\n  ├─┬ jsgui3-client@0.0.120\n  │ └── jsgui3-html@0.0.166\n  └── jsgui3-html@0.0.170 deduped\n\n",
+  "stderr": ""
+}

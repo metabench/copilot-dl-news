@@ -77,6 +77,34 @@ function run() {
       console.log(`Saved Data Explorer Dashboard preview to ${dashboardTarget}`);
     }
 
+    // Render Decisions view
+    const decisionsView = DATA_VIEWS.find(v => v.key === "decisions");
+    if (decisionsView) {
+      const decisionsPayload = decisionsView.render({
+        req: createRequest("/decisions"),
+        db: dbAccess.db,
+        newsDb: dbAccess,
+        relativeDb,
+        pageSize: DEFAULT_PAGE_SIZE,
+        now: new Date()
+      });
+      const decisionsHtml = renderHtml(
+        {
+          columns: decisionsPayload.columns,
+          rows: decisionsPayload.rows,
+          meta: decisionsPayload.meta,
+          title: decisionsPayload.title
+        },
+        {
+          navLinks: buildNavLinks("decisions", DATA_VIEWS),
+          clientScriptPath: "/assets/ui-client.js"
+        }
+      );
+      const decisionsTarget = path.join(process.cwd(), "data-explorer.decisions.check.html");
+      fs.writeFileSync(decisionsTarget, decisionsHtml, "utf8");
+      console.log(`Saved Data Explorer Decisions preview to ${decisionsTarget}`);
+    }
+
   } finally {
     dbAccess.close();
   }

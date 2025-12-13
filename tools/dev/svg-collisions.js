@@ -837,6 +837,8 @@ async function analyzeSvg(browser, svgPath) {
     const elements = await page.evaluate(() => {
       const svg = document.querySelector("svg");
       if (!svg) return [];
+
+      const rootBounds = svg.getBoundingClientRect();
       
       const results = [];
       let docOrder = 0;
@@ -902,6 +904,15 @@ async function analyzeSvg(browser, svgPath) {
           const tagName = el.tagName.toLowerCase();
           const textContent = el.textContent ? el.textContent.trim() : "";
           const isText = ["text", "tspan", "textpath"].includes(tagName);
+
+          // Many diagrams include a full-canvas background rect as the first child.
+          // It will overlap everything by design, so it should not count as a collision.
+          const isCanvasBackground =
+            tagName === "rect" &&
+            depth === 1 &&
+            docOrder < 3 &&
+            bbox.width >= rootBounds.width * 0.9 &&
+            bbox.height >= rootBounds.height * 0.9;
           
           // Only track text elements for text, or meaningful text for containers
           const relevantText = isText ? textContent.slice(0, 100) : null;
@@ -914,6 +925,7 @@ async function analyzeSvg(browser, svgPath) {
             textContent: relevantText,
             depth: depth,
             docOrder: docOrder++,
+            isCanvasBackground,
             fill: el.getAttribute("fill") || window.getComputedStyle(el).fill,
             stroke: el.getAttribute("stroke"),
             opacity: parseFloat(window.getComputedStyle(el).opacity) || 1,
@@ -934,6 +946,17 @@ async function analyzeSvg(browser, svgPath) {
     // Find PROBLEMATIC collisions only
     const collisions = [];
     const analyzed = { total: 0, skipped: 0 };
+
+    function isTransparentFill(fill) {
+      if (!fill) return true;
+      const normalized = String(fill).trim().toLowerCase();
+      return normalized === "none" || normalized === "transparent";
+    }
+
+    function isStrokeOnlyPath(el) {
+      if (!el || el.tagName !== "path") return false;
+      return el.fillOpacity < 0.1 || isTransparentFill(el.fill);
+    }
     
     for (let i = 0; i < elements.length; i++) {
       for (let j = i + 1; j < elements.length; j++) {
@@ -956,6 +979,19 @@ async function analyzeSvg(browser, svgPath) {
         
         // Skip very transparent fills
         if (el1.fillOpacity < 0.1 && el2.fillOpacity < 0.1) {
+          analyzed.skipped++;
+          continue;
+        }
+
+        // Skip full-canvas background rectangles (intentional overlaps)
+        if (el1.isCanvasBackground || el2.isCanvasBackground) {
+          analyzed.skipped++;
+          continue;
+        }
+
+        // Connector/arrow paths routinely overlap by design; bbox-based overlap is noisy.
+        // Skip stroke-only path/path collisions so strict mode stays focused on text/layout issues.
+        if (isStrokeOnlyPath(el1) && isStrokeOnlyPath(el2)) {
           analyzed.skipped++;
           continue;
         }

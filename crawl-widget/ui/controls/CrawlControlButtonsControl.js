@@ -36,6 +36,46 @@ function createCrawlControlButtonsControl(jsgui) {
       this.add(this._stopBtn);
     }
 
+    _emitStateChange() {
+      if (this._onStateChange) {
+        this._onStateChange({ running: this._isRunning, paused: this._isPaused });
+      }
+    }
+
+    async startCrawl() {
+      if (!this._api?.startCrawl) return;
+      if (this._isRunning) return;
+
+      const crawlType = this._getSelectedType();
+      const startUrl = this._getSelectedUrl();
+      const result = await this._api.startCrawl({ crawlType, startUrl });
+      if (result?.success) {
+        this.setRunning(true);
+        this.setPaused(false);
+        this._emitStateChange();
+      }
+    }
+
+    async togglePause() {
+      if (!this._api?.togglePause) return;
+      if (!this._isRunning) return;
+
+      await this._api.togglePause();
+      this._isPaused = !this._isPaused;
+      this._updateButtonStates();
+      this._emitStateChange();
+    }
+
+    async stopCrawl() {
+      if (!this._api?.stopCrawl) return;
+      if (!this._isRunning) return;
+
+      await this._api.stopCrawl();
+      this.setRunning(false);
+      this.setPaused(false);
+      this._emitStateChange();
+    }
+
     setRunning(running) {
       this._isRunning = running;
       this._updateButtonStates();
@@ -78,42 +118,11 @@ function createCrawlControlButtonsControl(jsgui) {
 
       console.log("[ControlButtons] activate - start:", !!this._startBtn, "pause:", !!this._pauseBtn, "stop:", !!this._stopBtn);
 
-      this._startBtn?.on("click", async () => {
-        if (this._api?.startCrawl) {
-          const crawlType = this._getSelectedType();
-          const startUrl = this._getSelectedUrl();
-          const result = await this._api.startCrawl({ crawlType, startUrl });
-          if (result.success) {
-            this.setRunning(true);
-            this.setPaused(false);
-            if (this._onStateChange) {
-              this._onStateChange({ running: true, paused: false });
-            }
-          }
-        }
-      });
+      this._startBtn?.on("click", () => this.startCrawl());
 
-      this._pauseBtn?.on("click", async () => {
-        if (this._api?.togglePause) {
-          await this._api.togglePause();
-          this._isPaused = !this._isPaused;
-          this._updateButtonStates();
-          if (this._onStateChange) {
-            this._onStateChange({ running: this._isRunning, paused: this._isPaused });
-          }
-        }
-      });
+      this._pauseBtn?.on("click", () => this.togglePause());
 
-      this._stopBtn?.on("click", async () => {
-        if (this._api?.stopCrawl) {
-          await this._api.stopCrawl();
-          this.setRunning(false);
-          this.setPaused(false);
-          if (this._onStateChange) {
-            this._onStateChange({ running: false, paused: false });
-          }
-        }
-      });
+      this._stopBtn?.on("click", () => this.stopCrawl());
     }
   }
 

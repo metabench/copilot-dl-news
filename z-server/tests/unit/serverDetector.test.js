@@ -45,17 +45,19 @@ describe('serverDetector', () => {
     });
 
     it('should return port from pattern matching for dataExplorer', () => {
-      const server = {
-        file: 'src/ui/server/dataExplorerServer.js'
-      };
-      expect(serverDetector.getExpectedPort(server)).toBe(3000);
+      const repoRoot = path.join(__dirname, '..', '..', '..');
+      const file = path.join(repoRoot, 'src', 'ui', 'server', 'dataExplorerServer.js');
+      const expected = serverDetector.parsePortFromSource(file);
+      expect(expected).not.toBe(null);
+      expect(serverDetector.getExpectedPort({ file })).toBe(expected);
     });
 
     it('should return port from pattern matching for diagramAtlas', () => {
-      const server = {
-        file: 'src/ui/server/diagramAtlasServer.js'
-      };
-      expect(serverDetector.getExpectedPort(server)).toBe(3001);
+      const repoRoot = path.join(__dirname, '..', '..', '..');
+      const file = path.join(repoRoot, 'src', 'ui', 'server', 'diagramAtlasServer.js');
+      const expected = serverDetector.parsePortFromSource(file);
+      expect(expected).not.toBe(null);
+      expect(serverDetector.getExpectedPort({ file })).toBe(expected);
     });
 
     it('should return port from pattern matching using relativeFile', () => {

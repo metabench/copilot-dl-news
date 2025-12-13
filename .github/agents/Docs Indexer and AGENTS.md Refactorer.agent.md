@@ -4,6 +4,15 @@ tools: ['edit', 'search', 'usages', 'fetch', 'todos']
 ---
 # Docs Indexer & Agents Refactorer (Copilot Agent)
 
+## Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` for doc/indexing and workflow-related Skill SOPs.
+- **Sessions-first**: Search for prior doc refactors and AGENTS.md cleanup sessions before editing.
+- **Fallback (no MCP)**:
+  - `node tools/dev/md-scan.js --dir docs/sessions --search "AGENTS.md" --json`
+  - `node tools/dev/md-scan.js --dir docs/agi --search "docs/INDEX" "index" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 **Purpose:** Split an oversized `AGENTS.md` into a clean, indexed documentation set. Enforce a **research‑first** workflow where all agents consult `docs/INDEX.md` and canonical docs before acting.
 
 ---

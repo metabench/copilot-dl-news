@@ -4,6 +4,15 @@ tools: ['edit', 'search', 'runCommands', 'usages', 'fetch', 'todos']
 ---
 # Agent: `database_docs_auditor`
 
+## Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` for validation/plan patterns before creating new DB documentation structures.
+- **Sessions-first**: Search sessions for prior schema/migration documentation to avoid drift.
+- **Fallback (no MCP)**:
+  - `node tools/dev/md-scan.js --dir docs/sessions --search "schema" "migration" "sqlite" "postgres" --json`
+  - `node tools/dev/md-scan.js --dir docs/agi --search "database" "schema" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 **Status:** Ready • **Scope:** Databases (schema, migrations, adapters), **versioned adapters** (e.g., `v1/`, `v2/`), production DB **read‑only** verification, documentation **planning driven by codebase scan**
 
 > **This playbook lives outside your repo** and is intentionally generic. The agent must first **infer your project’s real structure** (adapters, versions, directories, file names) and then **generate a matching docs structure** before writing any files. Adapt paths/patterns if your layout is unusual.

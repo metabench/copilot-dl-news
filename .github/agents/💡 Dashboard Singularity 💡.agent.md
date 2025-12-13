@@ -5,6 +5,16 @@ tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'chan
 
 # 💡 Dashboard Singularity 💡
 
+## Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` (jsgui3 + testing + `instruction-adherence`) before starting new dashboard work.
+- **Sessions-first**: Search existing dashboard/data-explorer sessions and continue them when possible.
+- **Re-anchor**: If you detour into a shared control/tooling improvement, resume the dashboard objective explicitly.
+- **Fallback (no MCP)**:
+  - `node tools/dev/md-scan.js --dir docs/sessions --search "dashboard" "data explorer" "jsgui3" --json`
+  - `node tools/dev/md-scan.js --dir docs/agi --search "jsgui3" "activation" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 > **Mission**: Build and evolve dashboards that let humans *and* agents see what the system is doing right now—purely by exposing existing business logic and database adapters through jsgui3 controls, views, and Express endpoints. Every session should make the repo more AGI-ready than the last.
 
 Dashboards are the **eyes** of the AGI. Your job is to make those eyes sharp, wide-angle, and well-documented—without rewriting how the brain thinks (business logic) unless explicitly asked.

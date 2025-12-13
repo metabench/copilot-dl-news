@@ -2553,11 +2553,26 @@ When rendering jsgui3 controls on the client side (e.g., in Electron or browser)
 
 jsgui3 requires a specific activation sequence:
 
-1. Controls must be **registered** in `context.map_controls`
+1. Control instances must be **registered** in `context.map_controls`
 2. Control instances must be **linked** to their DOM elements (`this.dom.el`)
-3. Only then will `activate()` properly bind events
+3. Only then will `activate()` reliably bind events
+
+Separately, some flows (notably `pre_activate()` reconstruction from server-rendered markup) require control **constructors** to be registered in `context.map_Controls`.
 
 The `all_html_render()` method generates HTML with `data-jsgui-id` attributes, but it does NOT automatically link controls to DOM elements.
+
+### Two Registries You Must Not Confuse
+
+These two names look similar but serve different purposes:
+
+| Name | What it stores | Key type | When it matters |
+|------|----------------|----------|-----------------|
+| `context.map_controls` | **Control instances** | `data-jsgui-id` (instance ids) | Your existing controls need `activate()` to work reliably |
+| `context.map_Controls` | **Control constructors** | `__type_name` (type ids, typically lowercased) | `pre_activate()` / “reconstruct from DOM” flows need this |
+
+Rule of thumb:
+- If you *already* constructed the control instances yourself, you mostly care about `map_controls` + `map_els` (DOM linkage).
+- If you see logs like `Missing context.map_Controls for type X` and interactivity is broken, you likely have a **constructor registration** problem (your client bundle isn’t registering custom control types).
 
 ### The Solution: Proper Activation Sequence
 
@@ -2704,6 +2719,15 @@ If controls aren't working after render:
 - [ ] Check `console.log(Object.keys(context.map_els).length)` - should be close to control count
 - [ ] In your control's method, check `console.log("DOM el:", this.dom.el)` - should NOT be null
 
+### Test / Automation Readiness Signals (Recommended)
+
+When you need a deterministic “client bundle noticed + registered controls” signal (e.g., Puppeteer E2E tests), prefer a simple global exported by the client entry:
+
+- `window.__COPILOT_REGISTERED_CONTROLS__` — array of registered type names (lowercased)
+- `window.__COPILOT_EXPECTED_CONTROLS__` — optional expected type list used to warn about missing controls
+
+These are safer than waiting on “a click handler works”, because activation may fail silently when DOM linkage or constructor registration is incomplete.
+
 ---
 
 ## Troubleshooting
@@ -2744,9 +2768,16 @@ const jsgui = require("jsgui3-client");
 
 **Symptom**: Console logs `"Missing context.map_Controls for type my_control, using generic Control"`
 
-**Cause**: jsgui3's internal activation tries to reconstruct controls from DOM but can't find the custom control types. This is informational - your controls are still registered via `register_this_and_subcontrols()`.
+**Cause**: jsgui3's internal activation tried to reconstruct controls from DOM but couldn't find the custom control constructor in `context.map_Controls`.
 
-**Solution**: This warning is harmless if you're using the proper activation sequence. The custom controls are already instantiated - jsgui3 is just warning that it can't re-instantiate them from DOM alone.
+**When it's harmless**: If you are **not** relying on reconstruction (you already instantiated the controls, registered them via `register_this_and_subcontrols()`, and linked DOM via `rec_desc_ensure_ctrl_el_refs()`), this warning can be informational.
+
+**When it's a real bug**: If your UI depends on `pre_activate()` reconstruction (common for server-rendered markup + client activation) and constructors aren't registered, custom controls may be instantiated as generic `Control`, and event wiring can break.
+
+**Fix**: Ensure your client bundle imports/registers custom control classes and remembering that `map_Controls` is keyed by **lowercased** `__type_name`. See session writeups for the constructor-registration pipeline:
+- `docs/sessions/2025-11-15-control-map-registration/CONTROL_MAP.md`
+- `docs/sessions/2025-11-19-client-control-hydration/`
+- `docs/sessions/2025-11-20-client-activation/`
 
 ---
 

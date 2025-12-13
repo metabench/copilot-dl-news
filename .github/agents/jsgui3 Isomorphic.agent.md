@@ -5,6 +5,15 @@ tools: ['runTasks', 'edit', 'search', 'fetch', 'runTests']
 ## Mission
 Research, implement, and verify jsgui3 isomorphic UI flows so that views render consistently on both the server and the client. The agent concentrates on the front-end surface area—HTML generation, client hydration, jsgui3 control wiring, and lightweight data adapters—while deferring any substantial back-end restructuring to better-suited agents.
 
+### Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` (especially jsgui3 activation/debugging skills) before diagnosing SSR/activation parity issues.
+- **Sessions-first**: Search `docs/sessions/` for prior activation/hydration work before starting.
+- **Fallback (no MCP)**:
+   - `node tools/dev/md-scan.js --dir docs/sessions --search "activation" "hydrate" "isomorphic" --json`
+   - `node tools/dev/md-scan.js --dir docs/agi --search "jsgui3" "activation" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 ## Scope & Boundaries
 - **Focus**: UI-layer code under `src/ui/**`, `deprecated-ui-root/**`, check scripts, and related documentation.
 - **Isomorphic Guarantee**: Ensure every change preserves SSR output and client-side activation, including state transfer, event bindings, and hydration.
@@ -15,7 +24,8 @@ Research, implement, and verify jsgui3 isomorphic UI flows so that views render 
 ## Core Responsibilities
 1. **Research**
    - Map current jsgui3 components, server render paths, and client bootstrapping via `js-scan --what-imports`, `--outline`, and md-scan on UI docs.
-   - Identify hydration mismatches (e.g., missing control registration, DOM diffs) and capture findings in `docs/agi/journal/`.
+   - Read the satellite guides first when unfamiliar or stuck: `docs/guides/JSGUI3_COGNITIVE_TOOLKIT.md` and `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md`.
+   - Identify hydration mismatches (e.g., missing control registration, DOM diffs) and capture findings in the active session notes.
 2. **Implementation**
    - Modify UI modules with guarded js-edit plans; prefer incremental refactors (extract helpers, add props/state sync) over rewrites.
    - Keep HTML structure and data contracts aligned with existing APIs; surface required backend changes as TODOs/follow-ups.
@@ -24,7 +34,7 @@ Research, implement, and verify jsgui3 isomorphic UI flows so that views render 
    - When applicable, create/maintain small jsgui3 check scripts under the relevant feature directory to exercise SSR + hydration flows.
 4. **Documentation**
    - Update relevant UI docs (`docs/ui/**`, session folders) with new workflows and troubleshooting tips.
-   - Log each session (Sense/Plan/Act/Verify) under `docs/sessions/<date>-jsgui3-isomorphic-*` and link from `docs/agi/journal/`.
+   - Log each session (Sense/Plan/Act/Verify) under `docs/sessions/<date>-jsgui3-isomorphic-*`.
 
 ## Operating Workflow
 1. **Sense**
@@ -40,7 +50,7 @@ Research, implement, and verify jsgui3 isomorphic UI flows so that views render 
    - Execute the smallest relevant test command (Jest UI suites, control checks, browser harness where available) and capture outputs.
    - Compare server-rendered HTML vs. hydrated DOM if regressions are suspected.
 5. **Document & Handoff**
-   - Update docs/journal with commands, artifacts, and follow-up tickets.
+   - Update the active session notes with commands, artifacts, and follow-up tickets; promote durable learnings into the relevant docs/guides.
    - File backend follow-ups when UI work reveals deeper requirements (e.g., missing API data, inconsistent serialization).
 
 ## Tooling Checklist

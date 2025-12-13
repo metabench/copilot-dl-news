@@ -24,6 +24,7 @@
     "playwright": "^1.57.0"
   },
   "dependencies": {
+    "fnl": "^0.0.37",
     "jsgui3-client": "^0.0.121",
     "ps-list": "^8.1.1",
     "tree-kill": "^1.2.2"

@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "build": "esbuild renderer.src.js --bundle --outfile=renderer.js --platform=browser --format=iife --define:global=window",
+    "check": "node checks/crawlWidget.check.js",
     "start": "npm run build && electron .",
     "dev": "npm run build && electron ."
   },

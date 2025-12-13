@@ -35,12 +35,12 @@ const { loadAllTrees, loadFromConfigSet } = require("./isomorphic/model/Decision
 const {
   loadActiveDecisionConfigSet,
   setActiveDecisionConfigSlug
-} = require("../../../../crawler/observatory/DecisionConfigSetState");
+} = require("../../../crawler/observatory/DecisionConfigSetState");
 
 // Optional repository for loading config sets
 let configSetRepository = null;
 try {
-  const { createDefaultDecisionConfigSetRepository } = require("../../../../crawler/observatory/DecisionConfigSetRepository");
+  const { createDefaultDecisionConfigSetRepository } = require("../../../crawler/observatory/DecisionConfigSetRepository");
   configSetRepository = createDefaultDecisionConfigSetRepository();
 } catch (e) {
   // Repository not available; routes depending on it will 501

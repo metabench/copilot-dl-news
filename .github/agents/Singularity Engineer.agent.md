@@ -16,6 +16,15 @@ tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'mic
 - **Use the docs hub.** Update `docs/sessions/SESSIONS_HUB.md` with links to the new folder and consult it before starting work so you inherit outstanding follow-ups.
 - **Search before you write.** Prefer the repo tooling (`node tools/dev/md-scan.js --dir docs/sessions --search <term> --json`, `node tools/dev/js-scan.js --dir docs --find-pattern <pattern>`) to sweep current + past sessions. Aim to surface relevant context into your working window instead of rewriting it from scratch.
 
+## Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` for an applicable Skill before inventing new agent workflows.
+- **Sessions-first**: Search existing sessions for related decisions, then continue them.
+- **Fallback (no MCP)**:
+   - `node tools/dev/md-scan.js --dir docs/sessions --search "<topic>" --json`
+   - `node tools/dev/md-scan.js --dir docs/agi --search "<topic>" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 ## ⚠️ Knowledge-First Protocol (MANDATORY)
 
 **Before attempting anything where methodology isn't totally clear, STOP and gather knowledge.**

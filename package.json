@@ -48,6 +48,7 @@
     "diagram:check": "node src/ui/server/checks/diagramAtlas.check.js",
     "diagram:screenshot": "node scripts/ui/capture-diagram-atlas-screenshot.js",
     "ui:decision-tree:check": "node src/ui/server/decisionTreeViewer/checks/decisionTreeViewer.check.js",
+    "svg:check:z-server-ux": "node tools/dev/svg-collisions.js docs/sessions/2025-12-13-z-server-ux-map/z-server-ux-ipc-map.svg --strict",
     "mcp:docs-memory": "node tools/mcp/docs-memory/mcp-server.js",
     "mcp:docs-memory:http": "node tools/mcp/docs-memory/mcp-server.js --http",
     "mcp:svg-editor": "node tools/mcp/svg-editor/mcp-server.js",

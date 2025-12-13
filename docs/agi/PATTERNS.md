@@ -210,3 +210,84 @@ AGI-accumulated knowledge catalog.
 **Example**: src/db/sqlite/v1/queries/helpers/queryTimeBudget.js - timedQuery(), instrumentStatement(), createTimedDb()
 
 ---
+
+## Skill Pack as Capability SOP
+
+**Added**: 2025-12-13
+**Context**: Repo-native emulation of Claude-like skills; improves agent handover + discoverability
+
+**When to use**: When a workflow recurs across sessions/agents, or when handovers are failing because the procedure lives only in ephemeral chat context.
+
+**Steps/Details**:
+1. Create docs/agi/skills/<slug>/SKILL.md with: intent, when-to-use triggers, prerequisites, step-by-step commands, validation steps, and common failure modes.
+1. Add the skill to the registry (docs/agi/SKILLS.md) with tags and a one-line purpose.
+1. Reference at least one concrete check/test command (e.g., node <checks/*.check.js> or npm run test:by-path …) so the skill is self-verifying.
+1. Link to the best prior session(s) in docs/sessions/ as ‘evidence’ and to avoid rewriting deep context.
+1. After using the skill successfully, append one improvement note to LESSONS.md (tight, single idea).
+
+**Example**: docs/agi/skills/*/SKILL.md + docs/agi/SKILLS.md registry
+
+---
+
+## jsgui3 Shared Control Template
+
+**Added**: 2025-12-13
+**Context**: jsgui3 isomorphic UI development
+
+**When to use**: Creating a new reusable jsgui3 control for SSR + client activation
+
+**Steps/Details**:
+1. 1. Define CONTROL_TYPE constant for registration key
+1. 2. Create class extending jsgui.Control with __type_name in constructor
+1. 3. Store config (immutable) and state (mutable) in separate private objects
+1. 4. Only call compose() if !spec.el (SSR path)
+1. 5. In compose(): build child controls and store references with _xxxEl naming
+1. 6. Implement activate(el): guard with __activated flag, bind events to this._rootEl
+1. 7. Add public methods (getValue/setValue pattern) that update both state and DOM
+1. 8. Export class and call registerControlType()
+1. 9. Add to controlManifest.js if client activation is needed
+1. 10. Create checks/XxxControl.check.js with test fixtures and assertions
+
+**Example**: See src/ui/controls/UrlFilterToggle.js for complete implementation
+
+---
+
+## jsgui3 DOM Reference Pattern
+
+**Added**: 2025-12-13
+**Context**: jsgui3 control state synchronization
+
+**When to use**: Control needs to update DOM after activation without full re-render
+
+**Steps/Details**:
+1. 1. In compose(), store child control references: this._labelEl = new jsgui.span(...)
+1. 2. In activate(), resolve DOM elements: this._rootEl = el || this.dom.el
+1. 3. For nested elements, use querySelector: this._labelEl.dom.el = this._rootEl.querySelector('.my-class')
+1. 4. Create ensureDomRefs() helper for lazy DOM resolution
+1. 5. In update methods, check existence before access: if (this._labelEl?.dom?.el) { ... }
+1. 6. For text updates, use textContent: this._labelEl.dom.el.textContent = newValue
+1. 7. For class updates, use classList: this._rootEl.classList.add/remove/toggle()
+
+**Example**: z-server/ui/controls/scanningIndicatorControl.js ensureDomRefs() method
+
+---
+
+## jsgui3 Table Cell Value Types
+
+**Added**: 2025-12-13
+**Context**: Data display in jsgui3 tables
+
+**When to use**: Populating TableControl rows with different content types
+
+**Steps/Details**:
+1. 1. Plain text: { key: 'col' } with row data { col: 'text' }
+1. 2. Link cell: { col: { text: 'Label', href: '/path', title: 'Tooltip', target: '_blank' } }
+1. 3. Control cell: { col: { control: new jsgui.Control(...) } }
+1. 4. Styled text: { col: { text: 'value', classNames: ['highlight'], align: 'right' } }
+1. 5. Raw HTML (escape carefully): { col: { html: '<span class="badge">New</span>' } }
+1. 6. Stacked content: use html with <br> or nested spans for multi-line cells
+1. 7. Empty/null: returns empty string, renders as blank cell
+
+**Example**: src/ui/controls/Table.js _normalizeCellSpec() method
+
+---

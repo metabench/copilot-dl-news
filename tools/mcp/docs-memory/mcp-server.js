@@ -39,6 +39,8 @@ const lessonsPath = path.join(repoRoot, "docs", "agi", "LESSONS.md");
 const patternsPath = path.join(repoRoot, "docs", "agi", "PATTERNS.md");
 const antiPatternsPath = path.join(repoRoot, "docs", "agi", "ANTI_PATTERNS.md");
 const knowledgeMapPath = path.join(repoRoot, "docs", "agi", "KNOWLEDGE_MAP.md");
+const skillsIndexPath = path.join(repoRoot, "docs", "agi", "SKILLS.md");
+const skillsDir = path.join(repoRoot, "docs", "agi", "skills");
 const sessionsDir = path.join(repoRoot, "docs", "sessions");
 const workflowsDir = path.join(repoRoot, "docs", "workflows");
 const workflowImprovementsDir = path.join(repoRoot, "docs", "agi", "workflow-improvements");
@@ -435,6 +437,168 @@ ${entry.example ? `**Example**: ${entry.example}` : ""}
     
     const result = appendToFile(filePath, newEntry);
     return { ...result, entryName: entry.name };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Skills Helpers (Claude Skills-inspired)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const parseSkillsRegistry = () => {
+    const data = readFileSafe(skillsIndexPath);
+    if (!data.exists) {
+        return { exists: false, error: data.error, skills: [] };
+    }
+
+    const lines = data.content.split(/\r?\n/);
+    const skills = [];
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("|")) continue;
+        if (trimmed.includes("| Skill |")) continue;
+        if (trimmed.includes("| ---")) continue;
+
+        // Expect: | skill-name | triggers | `docs/agi/skills/<name>/SKILL.md` |
+        const cells = trimmed
+            .split("|")
+            .slice(1, -1)
+            .map((c) => c.trim());
+
+        if (cells.length < 3) continue;
+        const name = cells[0];
+        if (!name || name.toLowerCase() === "skill") continue;
+
+        const triggers = cells[1];
+        const locationRaw = cells[2];
+        const location = locationRaw.replace(/^`|`$/g, "");
+
+        skills.push({ name, triggers, location });
+    }
+
+    return {
+        exists: true,
+        path: path.relative(repoRoot, skillsIndexPath),
+        updatedAt: data.updatedAt,
+        skills
+    };
+};
+
+const safeResolveRepoPath = (relativePath) => {
+    const normalized = (relativePath || "").replace(/\\/g, "/");
+    const resolved = path.resolve(repoRoot, normalized);
+    const rel = path.relative(repoRoot, resolved);
+    if (rel.startsWith("..") || path.isAbsolute(rel)) {
+        return null;
+    }
+    return resolved;
+};
+
+const resolveSkillFilePath = (skill) => {
+    const registry = parseSkillsRegistry();
+    if (!registry.exists) return null;
+    const entry = registry.skills.find((s) => s.name === skill);
+    const preferred = entry?.location;
+    if (preferred) {
+        return safeResolveRepoPath(preferred);
+    }
+    // Fallback: docs/agi/skills/<skill>/SKILL.md
+    return path.join(skillsDir, skill, "SKILL.md");
+};
+
+const tokenize = (text) => {
+    if (!text) return [];
+    return String(text)
+        .toLowerCase()
+        .split(/[^a-z0-9\-]+/g)
+        .map((t) => t.trim())
+        .filter(Boolean);
+};
+
+const scoreSkillForTopic = ({ skill, topicTokens, sessionSlugs }) => {
+    const nameTokens = tokenize(skill.name);
+    const triggerTokens = tokenize(skill.triggers);
+
+    let score = 0;
+    const reasons = [];
+
+    const nameHits = topicTokens.filter((t) => nameTokens.includes(t));
+    if (nameHits.length) {
+        score += nameHits.length * 6;
+        reasons.push(`name matches: ${nameHits.join(", ")}`);
+    }
+
+    const triggerHits = topicTokens.filter((t) => triggerTokens.includes(t));
+    if (triggerHits.length) {
+        score += triggerHits.length * 3;
+        reasons.push(`trigger matches: ${triggerHits.join(", ")}`);
+    }
+
+    // Session similarity boost (cheap heuristic): if the skill name appears in
+    // topic-matching sessions, boost.
+    if (Array.isArray(sessionSlugs) && sessionSlugs.length > 0) {
+        let sessionBoost = 0;
+        for (const slug of sessionSlugs) {
+            const base = path.join(sessionsDir, slug);
+            const files = ["PLAN.md", "SESSION_SUMMARY.md", "WORKING_NOTES.md"];
+            for (const file of files) {
+                const filePath = path.join(base, file);
+                if (!fs.existsSync(filePath)) continue;
+                const content = fs.readFileSync(filePath, "utf8").toLowerCase();
+                if (content.includes(skill.name.toLowerCase())) {
+                    sessionBoost += 4;
+                } else {
+                    // Small boost if any trigger token shows up.
+                    const hit = triggerTokens.find((t) => t.length > 2 && content.includes(t));
+                    if (hit) sessionBoost += 1;
+                }
+            }
+        }
+
+        if (sessionBoost > 0) {
+            score += Math.min(sessionBoost, 12);
+            reasons.push(`session similarity boost: +${Math.min(sessionBoost, 12)}`);
+        }
+    }
+
+    return { score, reasons };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Objective State Helpers (resume parent objective)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const resolveObjectiveStatePath = (slug) => {
+    const dirs = listSessionDirs();
+    const sessionSlug = slug ?? dirs[0];
+    if (!sessionSlug) return { error: "No sessions found" };
+    const base = path.join(sessionsDir, sessionSlug);
+    if (!fs.existsSync(base)) return { error: `Session ${sessionSlug} not found` };
+    return { slug: sessionSlug, filePath: path.join(base, "OBJECTIVE_STATE.json") };
+};
+
+const readJsonSafe = (filePath) => {
+    try {
+        if (!fs.existsSync(filePath)) {
+            return { exists: false };
+        }
+        const raw = fs.readFileSync(filePath, "utf8");
+        return {
+            exists: true,
+            value: JSON.parse(raw),
+            updatedAt: fs.statSync(filePath).mtime.toISOString()
+        };
+    } catch (err) {
+        return { exists: false, error: err.message };
+    }
+};
+
+const writeJsonSafe = (filePath, value) => {
+    try {
+        fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+        return { success: true, updatedAt: new Date().toISOString() };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1170,6 +1334,375 @@ const tools = {
                 hint: nextAction 
                     ? `Resume at Task ${nextAction.taskId}: ${nextAction.nextSubtask}`
                     : "All tasks completed! Update SESSION_SUMMARY.md."
+            };
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Skills Tools (MCP-first Skills access)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    docs_memory_listSkills: {
+        description: "List Skills from docs/agi/SKILLS.md (Claude Skills-inspired). Use this first to discover available Skills.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                limit: {
+                    type: "number",
+                    description: "Maximum skills to return (default 50)"
+                }
+            },
+            required: []
+        },
+        handler: (params) => {
+            const registry = parseSkillsRegistry();
+            if (!registry.exists) {
+                return { exists: false, error: registry.error, hint: "SKILLS.md not found" };
+            }
+            const limit = params?.limit ?? 50;
+            return {
+                type: "skills-list",
+                path: registry.path,
+                updatedAt: registry.updatedAt,
+                count: registry.skills.length,
+                skills: registry.skills.slice(0, limit)
+            };
+        }
+    },
+
+    docs_memory_searchSkills: {
+        description: "Search Skills registry and Skill docs for a query. Use this to find the right Skill SOP quickly.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                query: {
+                    type: "string",
+                    description: "Search term (matches skill name, triggers, and SKILL.md contents)"
+                },
+                maxResults: {
+                    type: "number",
+                    description: "Maximum results to return (default 10)"
+                }
+            },
+            required: ["query"]
+        },
+        handler: (params) => {
+            if (!params?.query) return { error: "query parameter is required" };
+            const registry = parseSkillsRegistry();
+            if (!registry.exists) {
+                return { exists: false, error: registry.error, hint: "SKILLS.md not found" };
+            }
+
+            const lower = params.query.toLowerCase();
+            const maxResults = params?.maxResults ?? 10;
+            const results = [];
+
+            for (const skill of registry.skills) {
+                if (results.length >= maxResults) break;
+
+                const nameHit = skill.name.toLowerCase().includes(lower);
+                const triggersHit = (skill.triggers || "").toLowerCase().includes(lower);
+                let docHit = false;
+                let docPreview = null;
+
+                const skillPath = resolveSkillFilePath(skill.name);
+                if (skillPath && fs.existsSync(skillPath)) {
+                    const content = fs.readFileSync(skillPath, "utf8");
+                    const idx = content.toLowerCase().indexOf(lower);
+                    if (idx !== -1) {
+                        docHit = true;
+                        const start = Math.max(0, idx - 80);
+                        const end = Math.min(content.length, idx + 200);
+                        docPreview = content.slice(start, end).replace(/\r?\n/g, " ").trim();
+                    }
+                }
+
+                if (nameHit || triggersHit || docHit) {
+                    results.push({
+                        name: skill.name,
+                        triggers: skill.triggers,
+                        location: skill.location,
+                        matches: { name: nameHit, triggers: triggersHit, doc: docHit },
+                        docPreview
+                    });
+                }
+            }
+
+            return {
+                type: "skills-search",
+                query: params.query,
+                resultCount: results.length,
+                results,
+                hint: results.length ? "Use getSkill with a name to read the full SKILL.md." : "No matches. Try a broader query or listSkills." 
+            };
+        }
+    },
+
+    docs_memory_getSkill: {
+        description: "Get a Skill SOP by name (reads docs/agi/skills/<skill>/SKILL.md).",
+        inputSchema: {
+            type: "object",
+            properties: {
+                skill: {
+                    type: "string",
+                    description: "Skill name (as listed in SKILLS.md)"
+                }
+            },
+            required: ["skill"]
+        },
+        handler: (params) => {
+            if (!params?.skill) return { error: "skill parameter is required" };
+
+            const registry = parseSkillsRegistry();
+            if (!registry.exists) {
+                return { exists: false, error: registry.error, hint: "SKILLS.md not found" };
+            }
+            const entry = registry.skills.find((s) => s.name === params.skill);
+            if (!entry) {
+                return { error: `Unknown skill: ${params.skill}`, hint: "Use listSkills or searchSkills to discover available names." };
+            }
+
+            const skillPath = resolveSkillFilePath(params.skill);
+            if (!skillPath) {
+                return { error: "Skill path resolution failed" };
+            }
+
+            const data = readFileSafe(skillPath);
+            if (!data.exists) {
+                return { error: "SKILL.md not found", details: data.error, expected: path.relative(repoRoot, skillPath) };
+            }
+
+            return {
+                type: "skill",
+                skill: entry.name,
+                triggers: entry.triggers,
+                path: path.relative(repoRoot, skillPath),
+                updatedAt: data.updatedAt,
+                content: data.content
+            };
+        }
+    },
+
+    docs_memory_recommendSkills: {
+        description: "Recommend Skills for a topic using the Skills registry plus session similarity. Returns ranked suggestions with reasons.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                topic: {
+                    type: "string",
+                    description: "Topic / task description"
+                },
+                limit: {
+                    type: "number",
+                    description: "Maximum recommendations (default 5)"
+                },
+                sessionSample: {
+                    type: "number",
+                    description: "How many topic-matching sessions to consider for similarity (default 3)"
+                }
+            },
+            required: ["topic"]
+        },
+        handler: (params) => {
+            if (!params?.topic) return { error: "topic parameter is required" };
+            const registry = parseSkillsRegistry();
+            if (!registry.exists) {
+                return { exists: false, error: registry.error, hint: "SKILLS.md not found" };
+            }
+
+            const topicTokens = tokenize(params.topic);
+            const sessions = findSessionsByTopic(params.topic, params?.sessionSample ?? 3);
+            const sessionSlugs = sessions.map((s) => s.slug);
+
+            const scored = registry.skills
+                .map((skill) => {
+                    const { score, reasons } = scoreSkillForTopic({ skill, topicTokens, sessionSlugs });
+                    return { skill: skill.name, triggers: skill.triggers, location: skill.location, score, reasons };
+                })
+                .filter((r) => r.score > 0)
+                .sort((a, b) => b.score - a.score);
+
+            const limit = params?.limit ?? 5;
+            const top = scored.slice(0, limit);
+
+            return {
+                type: "skill-recommendations",
+                topic: params.topic,
+                consideredSessions: sessionSlugs,
+                recommendations: top,
+                hint: top.length ? `Use getSkill with skill:'${top[0].skill}' to load the SOP.` : "No strong matches. Use listSkills or searchSkills." 
+            };
+        }
+    },
+
+    docs_memory_listTopics: {
+        description: "List topics derived from Skills (skill names + trigger keywords) for fast browsing.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                limit: {
+                    type: "number",
+                    description: "Maximum topics to return (default 200)"
+                }
+            },
+            required: []
+        },
+        handler: (params) => {
+            const registry = parseSkillsRegistry();
+            if (!registry.exists) {
+                return { exists: false, error: registry.error, hint: "SKILLS.md not found" };
+            }
+
+            const topics = new Set();
+            for (const skill of registry.skills) {
+                topics.add(skill.name);
+                for (const token of tokenize(skill.triggers)) {
+                    if (token.length < 3) continue;
+                    topics.add(token);
+                }
+            }
+
+            const list = Array.from(topics).sort((a, b) => a.localeCompare(b));
+            const limit = params?.limit ?? 200;
+            return {
+                type: "topics",
+                source: path.relative(repoRoot, skillsIndexPath),
+                count: list.length,
+                topics: list.slice(0, limit)
+            };
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Objective Resume Tools (parent objective + detours + return step)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    docs_memory_getObjectiveState: {
+        description: "Get the current objective state for a session (parent objective, active detours, return step). Stored in docs/sessions/<slug>/OBJECTIVE_STATE.json.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                slug: {
+                    type: "string",
+                    description: "Session slug. If omitted, uses latest session."
+                }
+            },
+            required: []
+        },
+        handler: (params) => {
+            const resolved = resolveObjectiveStatePath(params?.slug);
+            if (resolved.error) return { error: resolved.error };
+            const data = readJsonSafe(resolved.filePath);
+            if (!data.exists) {
+                return {
+                    exists: false,
+                    session: resolved.slug,
+                    path: path.relative(repoRoot, resolved.filePath),
+                    hint: "No objective state yet. Use updateObjectiveState to set parentObjective/returnStep and track detours."
+                };
+            }
+            return {
+                exists: true,
+                type: "objective-state",
+                session: resolved.slug,
+                path: path.relative(repoRoot, resolved.filePath),
+                updatedAt: data.updatedAt,
+                state: data.value
+            };
+        }
+    },
+
+    docs_memory_updateObjectiveState: {
+        description: "Update objective state for a session (set parent objective, add/complete detours, set return step). Writes OBJECTIVE_STATE.json in the session folder.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                slug: {
+                    type: "string",
+                    description: "Session slug. If omitted, uses latest session."
+                },
+                parentObjective: {
+                    type: "string",
+                    description: "High-level objective to return to after detours"
+                },
+                returnStep: {
+                    type: "string",
+                    description: "Concrete next step to resume once detours are complete"
+                },
+                addDetour: {
+                    type: "string",
+                    description: "Add an active detour (short description)"
+                },
+                completeDetour: {
+                    type: "string",
+                    description: "Mark an active detour as completed (by exact title match)"
+                },
+                clearDetours: {
+                    type: "boolean",
+                    description: "If true, clears all detours"
+                }
+            },
+            required: []
+        },
+        handler: (params) => {
+            const resolved = resolveObjectiveStatePath(params?.slug);
+            if (resolved.error) return { error: resolved.error };
+
+            const current = readJsonSafe(resolved.filePath);
+            const state = current.exists && current.value && typeof current.value === "object"
+                ? current.value
+                : { parentObjective: "", returnStep: "", detours: [] };
+
+            if (typeof params?.parentObjective === "string") state.parentObjective = params.parentObjective;
+            if (typeof params?.returnStep === "string") state.returnStep = params.returnStep;
+
+            if (params?.clearDetours) state.detours = [];
+
+            if (typeof params?.addDetour === "string" && params.addDetour.trim()) {
+                const title = params.addDetour.trim();
+                const existsActive = Array.isArray(state.detours) && state.detours.some((d) => d?.title === title && d?.status !== "completed");
+                if (!existsActive) {
+                    state.detours = Array.isArray(state.detours) ? state.detours : [];
+                    state.detours.push({
+                        title,
+                        status: "active",
+                        addedAt: new Date().toISOString()
+                    });
+                }
+            }
+
+            if (typeof params?.completeDetour === "string" && params.completeDetour.trim()) {
+                const title = params.completeDetour.trim();
+                if (Array.isArray(state.detours)) {
+                    const detour = state.detours.find((d) => d?.title === title && d?.status !== "completed");
+                    if (detour) {
+                        detour.status = "completed";
+                        detour.completedAt = new Date().toISOString();
+                    }
+                }
+            }
+
+            state.updatedAt = new Date().toISOString();
+            const result = writeJsonSafe(resolved.filePath, state);
+            if (!result.success) {
+                return { error: "Failed to write objective state", details: result.error };
+            }
+
+            const activeDetours = Array.isArray(state.detours)
+                ? state.detours.filter((d) => d?.status !== "completed")
+                : [];
+
+            return {
+                success: true,
+                type: "objective-state-updated",
+                session: resolved.slug,
+                path: path.relative(repoRoot, resolved.filePath),
+                updatedAt: result.updatedAt,
+                state,
+                activeDetours,
+                hint: activeDetours.length
+                    ? `Detours active: ${activeDetours.length}. Complete them then resume: ${state.returnStep || "(set returnStep)"}`
+                    : `No active detours. Resume: ${state.returnStep || "(set returnStep)"}`
             };
         }
     },
@@ -1917,6 +2450,13 @@ Tools exposed (READ - Memory):
   docs_memory_listSessions       List available sessions
   docs_memory_searchSessions     Search across all sessions
 
+Tools exposed (READ - Skills):
+    docs_memory_listSkills         List Skills from SKILLS.md
+    docs_memory_searchSkills       Search Skills + SKILL.md docs
+    docs_memory_getSkill           Read a specific Skill SOP
+    docs_memory_recommendSkills    Recommend Skills for a topic
+    docs_memory_listTopics         List topics derived from skills/triggers
+
 Tools exposed (READ - Workflows):
   docs_memory_listWorkflows      List available workflows
   docs_memory_getWorkflow        Read workflow with structured metadata
@@ -1926,6 +2466,9 @@ Tools exposed (READ - Session Continuity):
   docs_memory_findOrContinueSession   Find existing sessions on a topic (USE FIRST!)
   docs_memory_getTaskProgress         Get detailed task progress from PLAN.md
 
+Tools exposed (READ - Objective Resume):
+    docs_memory_getObjectiveState       Read objective state for a session
+
 Tools exposed (READ - Pattern Catalogs):
   docs_memory_getPatterns        Read refactoring patterns catalog
   docs_memory_getAntiPatterns    Read anti-patterns catalog
@@ -1934,6 +2477,9 @@ Tools exposed (READ - Pattern Catalogs):
 Tools exposed (WRITE - Memory):
   docs_memory_appendLessons      Add new lesson to LESSONS.md
   docs_memory_appendToSession    Append to WORKING_NOTES or FOLLOW_UPS
+
+Tools exposed (WRITE - Objective Resume):
+    docs_memory_updateObjectiveState     Update objective state for a session
 
 Tools exposed (WRITE - Pattern Catalogs):
   docs_memory_addPattern         Add refactoring pattern to catalog

@@ -17,6 +17,7 @@ const { setupPowerShellEncoding } = require('./shared/powershellEncoding');
 setupPowerShellEncoding();
 
 const path = require('path');
+const fs = require('fs');
 const { CliFormatter } = require('../../src/utils/CliFormatter');
 const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
 const { translateCliArgs } = require('./i18n/dialect');
@@ -45,6 +46,8 @@ const fmt = new CliFormatter();
 const DEFAULT_SEARCH_LIMIT = 20;
 const DEFAULT_CONTEXT_LINES = 5;
 const DEFAULT_PREVIEW_LINES = 10;
+const DEFAULT_BATCH_MAX_FILES = 500;
+const DEFAULT_DIFF_CONTEXT_LINES = 3;
 
 const CHINESE_HELP_ROWS = Object.freeze([
   { flag: '--list-sections', lexKey: 'list_sections', note: '节列: 标题清单' },
@@ -147,7 +150,20 @@ function createCliParser() {
     .add('--with-file <path>', 'Read replacement content from file')
     .add('--expect-hash <hash>', 'Guard: require section hash to match before mutation')
     .add('--allow-multiple', 'Allow operations on multiple matching sections', false, 'boolean')
+    .add('--allow-missing', 'Treat missing section as a no-op (batch-safe)', false, 'boolean')
     .add('--fix', 'Write changes to file (default is dry-run preview)', false, 'boolean')
+
+  // Batch options (mutation-only)
+    .add('--dir <path>', 'Batch: apply mutation ops to all .md files under directory')
+    .add('--include-path <pattern>', 'Batch: include only files whose relative path contains this substring (comma-separated)')
+    .add('--exclude-path <pattern>', 'Batch: exclude files whose relative path contains this substring (comma-separated)')
+    .add('--max-files <n>', 'Batch: maximum number of files to process', DEFAULT_BATCH_MAX_FILES, 'number')
+    .add('--emit-manifest <path>', 'Batch: write per-file results manifest JSON')
+    .add('--emit-diff', 'Include unified diffs in output (batch + single-file previews)', false, 'boolean')
+    .add('--diff-context <n>', 'Unified diff context lines', DEFAULT_DIFF_CONTEXT_LINES, 'number')
+    .add('--max-diffs <n>', 'Batch: maximum diffs to print (still stored in manifest/json)', 10, 'number')
+    .add('--diff-max-lines <n>', 'Diff truncation: maximum lines per diff', 500, 'number')
+    .add('--diff-max-chars <n>', 'Diff truncation: maximum characters per diff', 20000, 'number')
 
   // I/O options
     .add('--output <path>', 'Write result to file instead of stdout')
@@ -203,7 +219,123 @@ function validateOptions(options) {
     errors.push('--fix requires a mutation operation');
   }
 
+  if (options.dir && mutationOps.length === 0) {
+    errors.push('--dir is only supported with a mutation operation');
+  }
+
+  if (options.emitManifest && !options.dir) {
+    errors.push('--emit-manifest requires --dir (batch mode)');
+  }
+
+  if (options.emitDiff && mutationOps.length === 0) {
+    errors.push('--emit-diff requires a mutation operation');
+  }
+
+  if (options.maxFiles !== null && options.maxFiles !== undefined) {
+    const max = Number(options.maxFiles);
+    if (!Number.isFinite(max) || max <= 0) {
+      errors.push('--max-files must be a positive number');
+    }
+  }
+
+  if (options.diffContext !== null && options.diffContext !== undefined) {
+    const ctx = Number(options.diffContext);
+    if (!Number.isFinite(ctx) || ctx < 0 || ctx > 20) {
+      errors.push('--diff-context must be between 0 and 20');
+    }
+  }
+
+  if (options.maxDiffs !== null && options.maxDiffs !== undefined) {
+    const maxDiffs = Number(options.maxDiffs);
+    if (!Number.isFinite(maxDiffs) || maxDiffs < 0) {
+      errors.push('--max-diffs must be a non-negative number');
+    }
+  }
+
+  if (options.diffMaxLines !== null && options.diffMaxLines !== undefined) {
+    const maxLines = Number(options.diffMaxLines);
+    if (!Number.isFinite(maxLines) || maxLines <= 0) {
+      errors.push('--diff-max-lines must be a positive number');
+    }
+  }
+
+  if (options.diffMaxChars !== null && options.diffMaxChars !== undefined) {
+    const maxChars = Number(options.diffMaxChars);
+    if (!Number.isFinite(maxChars) || maxChars <= 0) {
+      errors.push('--diff-max-chars must be a positive number');
+    }
+  }
+
   return errors;
+}
+
+function findMarkdownFiles(dirPath, options = {}) {
+  const results = [];
+
+  function scan(currentPath) {
+    let entries;
+    try {
+      entries = fs.readdirSync(currentPath, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      const fullPath = path.join(currentPath, entry.name);
+
+      if (entry.isDirectory()) {
+        if (entry.name === 'node_modules' || entry.name === '.git') {
+          continue;
+        }
+        scan(fullPath);
+        continue;
+      }
+
+      if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
+        results.push(fullPath);
+      }
+    }
+  }
+
+  scan(dirPath);
+  if (options.sort !== false) {
+    results.sort();
+  }
+  return results;
+}
+
+function splitPatterns(value) {
+  if (!value) return [];
+  return String(value)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function resolveBatchFiles(options) {
+  const dirRoot = path.resolve(process.cwd(), options.dir);
+  const include = splitPatterns(options.includePath);
+  const exclude = splitPatterns(options.excludePath);
+  const maxFiles = Number(options.maxFiles || DEFAULT_BATCH_MAX_FILES);
+
+  let files = findMarkdownFiles(dirRoot);
+
+  files = files.filter((filePath) => {
+    const rel = path.relative(dirRoot, filePath).replace(/\\/g, '/');
+    if (include.length > 0 && !include.some((p) => rel.includes(p))) {
+      return false;
+    }
+    if (exclude.length > 0 && exclude.some((p) => rel.includes(p))) {
+      return false;
+    }
+    return true;
+  });
+
+  if (files.length > maxFiles) {
+    throw new Error(`Batch resolved ${files.length} files, exceeding --max-files ${maxFiles}`);
+  }
+
+  return { dirRoot, files };
 }
 
 async function main() {
@@ -243,9 +375,44 @@ async function main() {
   const positional = options.positional || [];
   const inputFile = positional[0];
 
-  if (!inputFile) {
+  const batchFromPositionals = positional.length > 1;
+
+  if (!inputFile && !options.dir) {
     fmt.error('Usage: md-edit <file.md> [options]');
     fmt.info('Run with --help for usage information');
+    process.exitCode = 1;
+    return;
+  }
+
+  if (options.dir) {
+    // Batch mode (directory)
+    try {
+      const { dirRoot, files } = resolveBatchFiles(options);
+
+      if (options.removeSection) {
+        await mutationOperations.removeSectionBatch(files, { ...options, _batch: { dirRoot } }, fmt);
+        return;
+      }
+
+      if (options.replaceSection) {
+        await mutationOperations.replaceSectionBatch(files, { ...options, _batch: { dirRoot } }, fmt);
+        return;
+      }
+
+      if (options.extractSection) {
+        fmt.error('--extract-section is not supported with --dir (batch mode)');
+        process.exitCode = 1;
+        return;
+      }
+    } catch (error) {
+      fmt.error(error.message || String(error));
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  if (batchFromPositionals) {
+    fmt.error('Batch mode from multiple positional files is not implemented yet; use --dir for batch mutations.');
     process.exitCode = 1;
     return;
   }

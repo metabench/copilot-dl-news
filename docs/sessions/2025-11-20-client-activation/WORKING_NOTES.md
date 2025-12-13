@@ -1,5 +1,7 @@
 # Working Notes: 2025-11-20 Client Activation
 
+Canonical reference: see [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](../../guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md#client-side-activation-flow-critical) for the consolidated activation workflow and the `map_controls` vs `map_Controls` distinction.
+
 ## 2025-11-20 09:00
 - Created session folder + plan targeting client activation wiring.
 - Next: catalog existing client bundle hooks (js-scan) and plot implementation steps.

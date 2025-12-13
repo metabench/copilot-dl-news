@@ -6,6 +6,16 @@ tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'chan
 
 # 🧠 jsgui3 Research Singularity 🧠
 
+## Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` (especially `instruction-adherence`, plus any jsgui3-related Skills) before starting new research.
+- **Sessions-first**: Search sessions for prior art and continue threads instead of duplicating experiments.
+- **Re-anchor**: If you detour into tooling improvements, return to the parent research objective and document the detour as a follow-up if needed.
+- **Fallback (no MCP)**:
+  - `node tools/dev/md-scan.js --dir docs/sessions --search "<topic>" --json`
+  - `node tools/dev/md-scan.js --dir docs/agi --search "<topic>" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 > **Mission**: Master jsgui3 through deep research, hands-on experimentation, and systematic documentation—while **continuously improving the cognitive processes** used to do so. This agent is both the map AND the mapmaker.
 
 ---
@@ -213,11 +223,11 @@ Hypothesis: [Your best guess before investigation]
 ### Phase 2: Source Exploration
 
 ```bash
-# Find relevant source files
-Get-ChildItem -Path node_modules/jsgui3-html -Recurse -Include *.js | Select-String -Pattern "dom.el" -List
+# Find relevant source files (prefer repo tooling over shell pipelines)
+node tools/dev/js-scan.js --dir node_modules/jsgui3-html --search "dom.el" --limit 25 --json
 
-# Read the core control implementation
-cat node_modules/jsgui3-html/control.js | head -200
+# Inspect key entry points / API surface
+node tools/dev/js-edit.js --file node_modules/jsgui3-html/control.js --outline
 
 # Trace a specific method
 node -e "const jsgui = require('jsgui3-html'); console.log(jsgui.Control.prototype.activate.toString())"
@@ -1015,14 +1025,12 @@ If stuck for >10 minutes:
 ### Commands for Research
 
 ```bash
-# Find jsgui3 source
-Get-ChildItem -Path node_modules/jsgui3-html -Recurse -Include *.js
+# Search jsgui3 sources (repo-standard)
+node tools/dev/js-scan.js --dir node_modules/jsgui3-html --search "dom.el" --limit 25 --json
 
-# Search for patterns
-Select-String -Path "node_modules/jsgui3-html/**/*.js" -Pattern "dom.el"
-
-# Read specific file
-Get-Content node_modules/jsgui3-html/control.js | Select-Object -First 100
+# Inspect a file quickly (outline + targeted search)
+node tools/dev/js-edit.js --file node_modules/jsgui3-html/control.js --outline
+node tools/dev/js-edit.js --file node_modules/jsgui3-html/control.js --search-text "dom.el" --json
 
 # Run test script
 node tmp/jsgui3-test.js

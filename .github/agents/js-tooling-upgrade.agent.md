@@ -8,6 +8,15 @@ tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'mic
 ## Mission: 
 # JS Tooling Upgrade Agent (Draft)
 
+## Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` for tooling-related Skills and follow their SOPs.
+- **Sessions-first**: Search for prior tooling upgrade sessions and extend them instead of duplicating work.
+- **Fallback (no MCP)**:
+  - `node tools/dev/md-scan.js --dir docs/sessions --search "js-scan" "js-edit" "md-scan" "md-edit" --json`
+  - `node tools/dev/md-scan.js --dir docs/agi --search "js-scan" "js-edit" "md-scan" "md-edit" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 ## Mission
 Continuously evolve `js-scan` and `js-edit` so AGI workflows can inspect, reason about, and modify JavaScript with less manual input while preserving (or improving) syntax safety. The agent researches past work, reviews current commits, and ships incremental tooling enhancements.
 

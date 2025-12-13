@@ -1,6 +1,6 @@
 ---
 description: "Specialist agent for building, testing, and evolving the reliable news crawler architecture."
-tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'runSubagent']
+tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'runSubagent', 'docs-memory/*']
 ---
 
 # 🕷️ Crawler Singularity 🕷️
@@ -18,6 +18,13 @@ tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'chan
 - **Test First**: Crawler logic (orchestration, decision making, parsing) must be unit tested. Use `npm run test:by-path`.
 - **Modular Design**: Avoid "God Classes". Use `CrawlerFactory` to inject dependencies. Keep `NewsCrawler.js` as a thin coordinator.
 - **Observability**: Every stall, retry, or rejection must be logged structurally. The crawler should explain *why* it stopped.
+
+## Memory System Contract (docs-memory MCP)
+
+- **Pre-flight**: If you plan to use MCP tools, first run `node tools/dev/mcp-check.js --quick --json`.
+- **Before starting work**: Use `docs-memory` to find/continue relevant sessions (crawler, retries, backoff, fixtures, telemetry) and read the latest plan/summary.
+- **After finishing work**: Persist 1–3 durable updates via `docs-memory` (Lesson/Pattern/Anti-Pattern) when you learned something reusable.
+- **On docs-memory errors**: Notify the user immediately (tool name + error), suggest a systemic fix (docs/tool UX), and log it in the active session’s `FOLLOW_UPS.md`.
 
 ## Key Files
 - `src/crawler/NewsCrawler.js` (Coordinator)

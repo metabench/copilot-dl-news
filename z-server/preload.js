@@ -7,7 +7,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openInBrowser: (url) => ipcRenderer.invoke('open-in-browser', url),
   getActivityLogs: (count) => ipcRenderer.invoke('get-activity-logs', count),
   getPortStatus: () => ipcRenderer.invoke('get-port-status'),
-  onServerLog: (callback) => ipcRenderer.on('server-log', (_event, value) => callback(value)),
-  onServerStatusChange: (callback) => ipcRenderer.on('server-status-change', (_event, value) => callback(value)),
-  onScanProgress: (callback) => ipcRenderer.on('scan-progress', (_event, value) => callback(value))
+  onServerLog: (callback) => {
+    const handler = (_event, value) => callback(value);
+    ipcRenderer.on('server-log', handler);
+    return () => ipcRenderer.removeListener('server-log', handler);
+  },
+  onServerStatusChange: (callback) => {
+    const handler = (_event, value) => callback(value);
+    ipcRenderer.on('server-status-change', handler);
+    return () => ipcRenderer.removeListener('server-status-change', handler);
+  },
+  onScanProgress: (callback) => {
+    const handler = (_event, value) => callback(value);
+    ipcRenderer.on('scan-progress', handler);
+    return () => ipcRenderer.removeListener('scan-progress', handler);
+  }
 });

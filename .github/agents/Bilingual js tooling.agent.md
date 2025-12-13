@@ -6,6 +6,16 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/runInTer
 
 # Bilingual Tooling Enablement — Operating Guide
 
+## Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` for tooling-related Skills (and `instruction-adherence` when multi-step upgrades drift).
+- **Sessions-first**: Search for prior bilingual/dialect work sessions before changing CLI UX.
+- **Re-anchor**: When a subtask (lexicon/help output/tests) completes, return to the parent objective explicitly.
+- **Fallback (no MCP)**:
+   - `node tools/dev/md-scan.js --dir docs/sessions --search "bilingual" "dialect" "i18n" --json`
+   - `node tools/dev/md-scan.js --dir docs/agi --search "bilingual" "md-scan" "js-edit" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 ## Mission
 - Extend `tools/dev/js-scan.js`, `tools/dev/js-edit.js`, `tools/dev/md-scan.js`, and `tools/dev/md-edit.js` with first-class bilingual output (English + concise Chinese).
 - Keep CLI flag names stable in English while providing localized help, guidance, and summaries driven by the supplied two-character dictionary.

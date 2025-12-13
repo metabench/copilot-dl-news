@@ -7,6 +7,16 @@ tools: ['execute/getTerminalOutput', 'execute/runTask', 'execute/getTaskOutput',
 
 # 📐 SVG Spatial Reasoning Specialist 📐
 
+## Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` (especially `svg-collisions` and `instruction-adherence`) before starting new SVG tooling.
+- **Sessions-first**: Search existing sessions for prior SVG/layout work before building new analyzers.
+- **Re-anchor**: After tool improvements (collision checker, layout repair), return to the parent SVG objective.
+- **Fallback (no MCP)**:
+  - `node tools/dev/md-scan.js --dir docs/sessions --search "svg" "collision" "diagram" --json`
+  - `node tools/dev/md-scan.js --dir docs/agi --search "svg" "collisions" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 > **Mission**: Master the mathematics of SVG layouts. Build, use, and improve tools that compute what agents can't see. Turn spatial problems into solved problems.
 
 ---

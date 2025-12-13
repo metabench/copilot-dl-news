@@ -1,6 +1,6 @@
 # Project Documentation Index
 
-_Last updated: 2025-12-12_
+_Last updated: 2025-12-13_
 
 ## Agents
 - [Agent Policy](agents/agent_policy.md)
@@ -32,6 +32,10 @@ _Last updated: 2025-12-12_
 - [Add a New Agent](how_tos/add_new_agent.md)
 - [Update the Index](how_tos/update_index.md)
 
+## Architecture
+
+- [Architectural Contracts](arch/README.md) - Explicit, test-backed subsystem boundaries (crawler ↔ db ↔ ui).
+
 ## Crawling
 
 High-signal entry points for the crawler subsystem. Start with the architecture doc, then use the CLI quick reference and the roadmap.
@@ -54,7 +58,8 @@ High-signal entry points for the crawler subsystem. Start with the architecture 
 
 These guides are **authoritative sources** for their domains. When working in these areas, **read the relevant guide first** — they take precedence over general agent instructions.
 
-- [jsgui3 UI Architecture Guide](guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md) - Isomorphic component architecture, control composition, SSR/hydration patterns, **jsgui3-server experiments**, and verification scripts for jsgui3-html UIs.
+- [jsgui3 UI Architecture Guide](guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md) - Isomorphic component architecture, control composition, SSR/activation patterns, **jsgui3-server experiments**, and verification scripts for jsgui3-html UIs.
+- [jsgui3 Shared Controls Catalog](guides/JSGUI3_SHARED_CONTROLS_CATALOG.md) - **Complete inventory** of all reusable controls (Table, Sparkline, ProgressBar, UrlFilterToggle, etc.), usage examples, patterns, and check scripts. Consult before creating new controls.
 - [jsgui3 Window Control Guide](guides/JSGUI3_WINDOW_CONTROL_GUIDE.md) - **Built-in floating window**: Draggable, resizable, minimize/maximize/close, z-index management. Use for tool panels, dialogs, result viewers.
 - [jsgui3 Performance Patterns](guides/JSGUI3_PERFORMANCE_PATTERNS.md) - **🔴 CRITICAL for optimization**: Lazy rendering, control counting, performance diagnostics, decision matrix by dataset size.
 - [jsgui3 MVVM Patterns](guides/JSGUI3_MVVM_PATTERNS.md) - Data binding, computed properties, validators, transformations. Use for forms and complex state.

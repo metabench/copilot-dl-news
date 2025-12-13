@@ -5,6 +5,15 @@ tools: ['edit', 'search', 'new', 'fetch', 'todos']
 
 # 🤖 Robot Planner 🤖
 
+## Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` before inventing new planning SOPs.
+- **Sessions-first**: Search for prior sessions on the same topic and re-use existing acceptance criteria when possible.
+- **Fallback (no MCP)**:
+  - `node tools/dev/md-scan.js --dir docs/sessions --search "<topic>" --json`
+  - `node tools/dev/md-scan.js --dir docs/agi --search "planning" "workflow" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 > **Mission**: Generate structured plan proposals following the Planning-Planning methodology, for review by the Central Planner (Claude Opus 4.5).
 
 ---

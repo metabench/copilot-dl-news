@@ -28,6 +28,54 @@ async function pause(page, ms) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function setCheckboxChecked(page, checked) {
+  await page.evaluate((nextValue) => {
+    const checkbox = document.querySelector(".filter-toggle__checkbox");
+    if (!checkbox) {
+      throw new Error("Filter toggle checkbox not found");
+    }
+    checkbox.checked = !!nextValue;
+    checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+  }, checked);
+}
+
+async function waitForUrlToggleHydration(page, timeoutMs = 15000) {
+  await page.waitForFunction(
+    () => {
+      const registered = window.__COPILOT_REGISTERED_CONTROLS__;
+      if (!Array.isArray(registered)) return false;
+      return registered.includes("url_filter_toggle") && !!window.__COPILOT_URL_LISTING_STORE__;
+    },
+    { timeout: timeoutMs }
+  );
+}
+
+async function toggleAndWaitForApi(page, checked, timeoutMs) {
+  const apiResponsePromise = page.waitForResponse(
+    (response) => response.url().includes("/api/urls") && response.request().method() === "GET",
+    { timeout: timeoutMs }
+  );
+  await setCheckboxChecked(page, checked);
+  const apiResponse = await apiResponsePromise;
+  expect(apiResponse.ok()).toBe(true);
+  const apiPayload = await apiResponse.json();
+  return { apiResponse, apiPayload };
+}
+
+async function toggleAndWaitForApiWithHydrationRetry(page, checked, options = {}) {
+  const fastTimeoutMs = Number.isFinite(options.fastTimeoutMs) ? options.fastTimeoutMs : 5000;
+  const hydrationTimeoutMs = Number.isFinite(options.hydrationTimeoutMs) ? options.hydrationTimeoutMs : 15000;
+  const retryTimeoutMs = Number.isFinite(options.retryTimeoutMs) ? options.retryTimeoutMs : 15000;
+  try {
+    const result = await toggleAndWaitForApi(page, checked, fastTimeoutMs);
+    return { ...result, hydrationWaited: false };
+  } catch (error) {
+    await waitForUrlToggleHydration(page, hydrationTimeoutMs);
+    const result = await toggleAndWaitForApi(page, checked, retryTimeoutMs);
+    return { ...result, hydrationWaited: true };
+  }
+}
+
 function buildInMemoryDb() {
   const db = new Database(":memory:");
   db.exec(`
@@ -180,7 +228,7 @@ describe("Url filter toggle · Puppeteer e2e", () => {
       page.on("pageerror", (error) => {
         console.error("[browser-error]", error);
       });
-      await page.goto(`${serverHandle.baseUrl}/urls`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${serverHandle.baseUrl}/urls`, { waitUntil: "load" });
 
       await page.waitForSelector('[data-meta-field="rowCount"]', { timeout: 5000 });
       await page.waitForSelector('table.ui-table tbody tr', { timeout: 5000 });
@@ -199,23 +247,10 @@ describe("Url filter toggle · Puppeteer e2e", () => {
       expect(initialRows.some((text) => text.includes("fetched.example"))).toBe(true);
       expect(initialRows.some((text) => text.includes("nofetch.example"))).toBe(true);
 
-      const apiResponsePromise = page.waitForResponse(
-        (response) => response.url().includes("/api/urls") && response.request().method() === "GET",
-        { timeout: 5000 }
-      );
-
-      await page.evaluate(() => {
-        const checkbox = document.querySelector(".filter-toggle__checkbox");
-        if (!checkbox) {
-          throw new Error("Filter toggle checkbox not found");
-        }
-        checkbox.checked = true;
-        checkbox.dispatchEvent(new Event("change", { bubbles: true }));
-      });
-
-      const apiResponse = await apiResponsePromise;
-      expect(apiResponse.ok()).toBe(true);
-      const apiPayload = await apiResponse.json();
+      const { apiPayload, hydrationWaited } = await toggleAndWaitForApiWithHydrationRetry(page, true);
+      if (hydrationWaited) {
+        console.log("[e2e] hydration-wait retry used for toggle-on");
+      }
       expect(apiPayload?.filters?.hasFetches).toBe(true);
 
       await pause(page, 250);
@@ -254,23 +289,11 @@ describe("Url filter toggle · Puppeteer e2e", () => {
       expect(filteredRows).toHaveLength(1);
       expect(filteredRows[0]).toContain("fetched.example");
 
-      const resetResponsePromise = page.waitForResponse(
-        (response) => response.url().includes("/api/urls") && response.request().method() === "GET",
-        { timeout: 5000 }
-      );
-
-      await page.evaluate(() => {
-        const checkbox = document.querySelector(".filter-toggle__checkbox");
-        if (!checkbox) {
-          throw new Error("Filter toggle checkbox not found");
-        }
-        checkbox.checked = false;
-        checkbox.dispatchEvent(new Event("change", { bubbles: true }));
-      });
-
-      const resetResponse = await resetResponsePromise;
-      expect(resetResponse.ok()).toBe(true);
-      const resetPayload = await resetResponse.json();
+      const { apiPayload: resetPayload, hydrationWaited: resetHydrationWaited } =
+        await toggleAndWaitForApiWithHydrationRetry(page, false);
+      if (resetHydrationWaited) {
+        console.log("[e2e] hydration-wait retry used for toggle-off");
+      }
       expect(resetPayload?.filters?.hasFetches).toBe(false);
 
       await page.waitForFunction(

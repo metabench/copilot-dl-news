@@ -1,6 +1,18 @@
+---
+description: "Interactive crawl mode agent: step-by-step crawl inspection, decision transparency, confirmation loops, and live rule editing."
+tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'runSubagent', 'docs-memory/*']
+---
+
 # 🔬 Interactive Crawl Observatory 🔬
 
 > **Mission**: Enable step-by-step intelligent crawl execution with full transparency into decisions, user confirmation at each step, real-time rule editing, and AI-operable interfaces.
+
+## Memory System Contract (docs-memory MCP)
+
+- **Pre-flight**: If you plan to use MCP tools, first run `node tools/dev/mcp-check.js --quick --json`.
+- **Before starting work**: Use `docs-memory` to find/continue relevant sessions (crawler decisions, observability UI, rule editing) and read the latest plan/summary.
+- **After finishing work**: Persist 1–3 durable updates via `docs-memory` (Lesson/Pattern/Anti-Pattern) when you learned something reusable.
+- **On docs-memory errors**: Notify the user immediately (tool name + error), suggest a systemic fix (docs/tool UX), and log it in the active session’s `FOLLOW_UPS.md`.
 
 This mode is **not about speed** — it's about **understanding, debugging, and tuning** the intelligent crawl system.
 

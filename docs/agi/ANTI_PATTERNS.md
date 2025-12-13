@@ -94,3 +94,63 @@ AGI-accumulated knowledge catalog.
 **Example**: Test checked response.body.pagination but actual structure was response.body.meta.pagination
 
 ---
+
+## Hidden Skill in Prompt-Only Lore
+
+**Added**: 2025-12-13
+**Context**: AGI docs + handover reliability
+
+**When to use**: Symptoms: Agents repeatedly ask how to do the same workflow; success depends on a specific prompt incantation; sessions show duplicate investigations.
+
+**Steps/Details**:
+1. Why it's bad: Knowledge isn’t discoverable or reusable; handovers fail because the procedure isn’t indexed and can’t be searched/validated reliably.
+1. Better approach: Create a small skill pack (SKILL.md) with runnable commands + validation, link it from the skills registry, and record a one-line lesson after each improvement.
+
+**Example**: Replace repeated ad-hoc ‘how do I run X’ chat with a skill pack + registry entry.
+
+---
+
+## Composing During Activation
+
+**Added**: 2025-12-13
+**Context**: jsgui3 control development
+
+**When to use**: Symptoms: Control calls compose() or creates child controls inside activate(). Results in duplicate DOM elements or missing children on SSR-rendered pages.
+
+**Steps/Details**:
+1. Why it's bad: SSR-rendered HTML already has the DOM structure. Composing again creates duplicates and breaks hydration. Activation should only bind events, not create structure.
+1. Better approach: Only call compose() in constructor when `!spec.el`. In activate(), query existing DOM elements and bind event handlers. Pattern: `if (!spec.el) { this.compose(); }`
+
+
+
+---
+
+## Forgetting __type_name Registration
+
+**Added**: 2025-12-13
+**Context**: jsgui3 control development
+
+**When to use**: Symptoms: Control works in check scripts and Jest but fails with `Missing context.map_Controls[type]` or silently renders without interactivity in the browser.
+
+**Steps/Details**:
+1. Why it's bad: Without __type_name, jsgui3-client cannot find the constructor to activate the SSR markup. The HTML renders but events never bind.
+1. Better approach: Always set `__type_name` in constructor: `super({ ...spec, __type_name: 'my_control' })`, then call `registerControlType('my_control', MyControl)` and add to `controlManifest.js`.
+
+
+
+---
+
+## Direct DOM Mutation in Constructor
+
+**Added**: 2025-12-13
+**Context**: jsgui3 control development
+
+**When to use**: Symptoms: Control tries to access `this.dom.el.querySelector()` or `document.querySelector()` in the constructor. Throws errors on server-side rendering where DOM doesn't exist.
+
+**Steps/Details**:
+1. Why it's bad: On the server, there's no real DOM. `this.dom.el` is null until the HTML is rendered and parsed in the browser. Direct DOM access breaks SSR.
+1. Better approach: Use jsgui control composition in constructor/compose(). Only access real DOM in activate() which runs client-side. Store control references (`this._labelEl`), not DOM nodes, during compose.
+
+
+
+---

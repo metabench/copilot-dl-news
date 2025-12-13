@@ -85,6 +85,17 @@ function buildInMemoryDb() {
       value TEXT,
       updated_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE crawl_milestones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id TEXT,
+      ts TEXT DEFAULT (datetime('now')),
+      kind TEXT,
+      scope TEXT,
+      target TEXT,
+      message TEXT,
+      details TEXT
+    );
   `);
 
   db.setSetting = (key, value) => {
@@ -93,6 +104,21 @@ function buildInMemoryDb() {
       "INSERT INTO crawler_settings(key, value, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')"
     ).run(key, value != null ? String(value) : null);
     return true;
+  };
+
+  db.listMilestones = ({ job = null, kind = null, scope = null, target = null, targetLike = null, limit = 100 } = {}) => {
+    const clauses = [];
+    const params = [];
+    if (job) { clauses.push('job_id = ?'); params.push(job); }
+    if (kind) { clauses.push('kind = ?'); params.push(kind); }
+    if (scope) { clauses.push('scope = ?'); params.push(scope); }
+    if (target) { clauses.push('target = ?'); params.push(target); }
+    else if (targetLike) { clauses.push('target LIKE ?'); params.push(`%${targetLike}%`); }
+    const sql = `SELECT id, ts, kind, scope, target, message, details, job_id AS jobId FROM crawl_milestones ${clauses.length ? 'WHERE ' + clauses.join(' AND ') : ''} ORDER BY id DESC LIMIT ?`;
+    try {
+      const rows = db.prepare(sql).all(...params, Math.min(500, limit));
+      return { items: rows, cursors: {} };
+    } catch (_) { return { items: [], cursors: {} }; }
   };
 
   return db;
@@ -166,6 +192,7 @@ function createServer(seedFn) {
   const dbAccess = {
     db,
     setSetting: (key, value) => db.setSetting(key, value),
+    listMilestones: (options) => (typeof db.listMilestones === "function" ? db.listMilestones(options) : { items: [], cursors: {} }),
     close: jest.fn(() => db.close())
   };
   openNewsDb.mockReturnValueOnce(dbAccess);
@@ -660,6 +687,89 @@ describe("dataExplorerServer config editing", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.success).toBe(false);
+
+    shutdown();
+  });
+});
+
+describe("dataExplorerServer /decisions route", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test("renders decisions view with empty state", async () => {
+    const { app, shutdown } = createServer();
+
+    const response = await request(app).get("/decisions");
+
+    expect(response.status).toBe(200);
+    expect(response.type).toMatch(/html/);
+    expect(response.text).toContain("Crawler Decisions");
+    expect(response.text).toContain("No decision traces found");
+
+    shutdown();
+  });
+
+  test("renders decisions view with milestone data", async () => {
+    const { app, shutdown } = createServer((db) => {
+      db.prepare(
+        "INSERT INTO crawl_milestones (job_id, ts, kind, scope, target, message) VALUES (?, ?, ?, ?, ?, ?)"
+      ).run("job-123", "2025-12-01T10:00:00.000Z", "fetch-policy-decision", "crawler", "https://example.com/article", "Fetched due to freshness policy");
+      return {};
+    });
+
+    const response = await request(app).get("/decisions");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("Crawler Decisions");
+    expect(response.text).toContain("fetch-policy-decision");
+    expect(response.text).toContain("Fetched due to freshness policy");
+    expect(response.text).toContain("example.com/article");
+
+    shutdown();
+  });
+
+  test("filters decisions by kind query param", async () => {
+    const { app, shutdown } = createServer((db) => {
+      db.prepare(
+        "INSERT INTO crawl_milestones (job_id, ts, kind, scope, target, message) VALUES (?, ?, ?, ?, ?, ?)"
+      ).run("job-1", "2025-12-01T10:00:00Z", "fetch-policy-decision", "crawler", "https://a.com/", "msg1");
+      db.prepare(
+        "INSERT INTO crawl_milestones (job_id, ts, kind, scope, target, message) VALUES (?, ?, ?, ?, ?, ?)"
+      ).run("job-2", "2025-12-01T11:00:00Z", "skip-reason-decision", "crawler", "https://b.com/", "msg2");
+      return {};
+    });
+
+    const response = await request(app).get("/decisions?kind=skip-reason-decision");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("skip-reason-decision");
+    expect(response.text).not.toContain("fetch-policy-decision");
+
+    shutdown();
+  });
+});
+
+describe("dataExplorerServer URL detail with decisions", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test("shows decision count card when traces exist for URL", async () => {
+    const { app, shutdown, urlId } = createServer((db) => {
+      const urlId = seedUrlWithFetches(db);
+      db.prepare(
+        "INSERT INTO crawl_milestones (job_id, ts, kind, scope, target, message) VALUES (?, ?, ?, ?, ?, ?)"
+      ).run("job-1", "2025-12-01T10:00:00Z", "fetch-policy-decision", "crawler", "https://example.com/article", "Fetched fresh");
+      return { urlId };
+    });
+
+    const response = await request(app).get(`/urls/${urlId}`);
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("Decisions");
+    expect(response.text).toContain("Why traces");
+    expect(response.text).toContain("Why (Decision Traces)");
 
     shutdown();
   });

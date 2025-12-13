@@ -31,6 +31,405 @@
 
 ## Current Session
 
+### Session 2025-12-13: Memory access improvements
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Audit and improve agent instructions + memory structure for reliable retrieval; align zero-cost with Claude Skills ideas.
+
+**Location**: `docs/sessions/2025-12-13-memory-access-improvements/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-memory-access-improvements/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-memory-access-improvements/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-memory-access-improvements/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-memory-access-improvements/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-memory-access-improvements/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: z-server scan as observable
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make js-server scanning importable by z-server with an observable-style API (fnl-like), validated via small lab experiments
+
+**Location**: `docs/sessions/2025-12-13-z-server-scan-observable/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-z-server-scan-observable/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-z-server-scan-observable/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-z-server-scan-observable/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-z-server-scan-observable/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-z-server-scan-observable/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Agent Files CLI Tooling
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Improve CLI tooling for understanding, validating, and safely editing .github/agents/*.agent.md files
+
+**Location**: `docs/sessions/2025-12-13-agent-files-cli/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-agent-files-cli/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-agent-files-cli/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-agent-files-cli/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-agent-files-cli/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-agent-files-cli/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: AGI + jsgui3 Research Behaviour Upgrades
+
+**Duration**: Active
+**Type**: agents
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Improve research discipline, memory use, evidence capture, and jsgui3-specific debugging workflows across key agents.
+
+**Location**: `docs/sessions/2025-12-13-agi-jsgui3-agent-research-upgrades/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-agi-jsgui3-agent-research-upgrades/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-agi-jsgui3-agent-research-upgrades/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-agi-jsgui3-agent-research-upgrades/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-agi-jsgui3-agent-research-upgrades/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-agi-jsgui3-agent-research-upgrades/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: md-scan agent feature matrix + md-edit multi-file operations
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Design improvements to md-scan/md-edit for scanning agent capabilities and applying the same content across many agent files safely.
+
+**Location**: `docs/sessions/2025-12-13-md-scan-agent-feature-matrix/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-md-scan-agent-feature-matrix/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-md-scan-agent-feature-matrix/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-md-scan-agent-feature-matrix/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-md-scan-agent-feature-matrix/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-md-scan-agent-feature-matrix/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Review docs-memory MCP adoption
+
+**Duration**: Active
+**Type**: review
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Assess why docs-memory MCP is underused and propose improvements
+
+**Location**: `docs/sessions/2025-12-13-mcp-memory-review/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-mcp-memory-review/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-mcp-memory-review/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-mcp-memory-review/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-mcp-memory-review/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-mcp-memory-review/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Anthropic skill systems vs Copilot
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Research Anthropic skill systems and map learnings to Copilot agents + MCP memory improvements
+
+**Location**: `docs/sessions/2025-12-13-anthropic-skill-systems/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-anthropic-skill-systems/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-anthropic-skill-systems/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-anthropic-skill-systems/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-anthropic-skill-systems/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-anthropic-skill-systems/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Telemetry Setup Explainer + WLILO Diagram
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Explain telemetry systems, drift risks, and how z-server consumes events, with a dense WLILO SVG diagram.
+
+**Location**: `docs/sessions/2025-12-13-telemetry-setup-explainer/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-telemetry-setup-explainer/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-telemetry-setup-explainer/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-telemetry-setup-explainer/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-telemetry-setup-explainer/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-telemetry-setup-explainer/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Integrate session lessons into knowledgebase
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Consolidate repeated session learnings into canonical docs and add pointers
+
+**Location**: `docs/sessions/2025-12-13-knowledgebase-integrate-session-lessons/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-knowledgebase-integrate-session-lessons/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-knowledgebase-integrate-session-lessons/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-knowledgebase-integrate-session-lessons/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-knowledgebase-integrate-session-lessons/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-knowledgebase-integrate-session-lessons/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: z-server: file scan progress with counted calibration
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Count files first, then emit progress updates to UI with calibrated progress bar
+
+**Location**: `docs/sessions/2025-12-13-z-server-scan-progress/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-z-server-scan-progress/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-z-server-scan-progress/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-z-server-scan-progress/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-z-server-scan-progress/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-z-server-scan-progress/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Shared sessions: self-install + agent management
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add self-install and cross-repo agent upsert to session-link
+
+**Location**: `docs/sessions/2025-12-13-shared-sessions-self-install-agents/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-shared-sessions-self-install-agents/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-shared-sessions-self-install-agents/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-shared-sessions-self-install-agents/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-shared-sessions-self-install-agents/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-shared-sessions-self-install-agents/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Shared sessions across repos
+
+**Duration**: Active
+**Type**: workflow
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Enable continuing a docs/sessions work log across multiple repos with minimal friction
+
+**Location**: `docs/sessions/2025-12-13-shared-sessions/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-shared-sessions/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-shared-sessions/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-shared-sessions/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-shared-sessions/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-shared-sessions/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: jsgui3 Post-upgrade Regression Sweep
+
+**Duration**: Active
+**Type**: maintenance
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Re-run UI baseline after npm install and triage any regressions vs jsgui3 ecosystem
+
+**Location**: `docs/sessions/2025-12-13-jsgui3-post-upgrade-regression/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-jsgui3-post-upgrade-regression/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-jsgui3-post-upgrade-regression/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-jsgui3-post-upgrade-regression/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-jsgui3-post-upgrade-regression/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-jsgui3-post-upgrade-regression/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: jsgui3 Stack Regression Sweep
+
+**Duration**: Active
+**Type**: tests
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Run a broad UI test+check baseline pre-update, then re-run post-update and fix regressions.
+
+**Location**: `docs/sessions/2025-12-13-jsgui3-regression-sweep/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-jsgui3-regression-sweep/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-jsgui3-regression-sweep/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-jsgui3-regression-sweep/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-jsgui3-regression-sweep/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-jsgui3-regression-sweep/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Compact Crawler UI Polish
+
+**Duration**: Active
+**Type**: ux
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Improve the compact crawler UI layout, clarity, and usability with regression checks.
+
+**Location**: `docs/sessions/2025-12-13-compact-crawler-ui-polish/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-compact-crawler-ui-polish/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-compact-crawler-ui-polish/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-compact-crawler-ui-polish/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-compact-crawler-ui-polish/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-compact-crawler-ui-polish/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Data Explorer: Decision/Reason Surfacing
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Surface crawler decision reasons (milestones/decision traces) in the UI with checks/tests
+
+**Location**: `docs/sessions/2025-12-13-data-explorer-decision-surfacing/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-data-explorer-decision-surfacing/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-data-explorer-decision-surfacing/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-data-explorer-decision-surfacing/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-data-explorer-decision-surfacing/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-data-explorer-decision-surfacing/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Z-Server UX  IPC Map
+
+**Duration**: Active
+**Type**: ux
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Document the UX-to-IPC contract for z-server and add guardrail checks/tests to prevent regressions.
+
+**Location**: `docs/sessions/2025-12-13-z-server-ux-map/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-z-server-ux-map/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-z-server-ux-map/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-z-server-ux-map/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-z-server-ux-map/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-z-server-ux-map/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: z-server analysis
+
+**Duration**: Active
+**Type**: analysis
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Analyze z-server build/run surface and identify issues + mitigation options
+
+**Location**: `docs/sessions/2025-12-13-z-server-analysis/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-z-server-analysis/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-z-server-analysis/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-z-server-analysis/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-z-server-analysis/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-z-server-analysis/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Architectural Contracts Docs
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create docs/arch contract docs and index existing contract data
+
+**Location**: `docs/sessions/2025-12-13-docs-arch-contracts/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-docs-arch-contracts/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-docs-arch-contracts/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-docs-arch-contracts/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-docs-arch-contracts/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-docs-arch-contracts/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Add four specialist agents
+
+**Duration**: Active
+**Type**: agents
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create four new agent files and register them in the agents index.
+
+**Location**: `docs/sessions/2025-12-13-new-agents-gofai-config-git-db/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-new-agents-gofai-config-git-db/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-new-agents-gofai-config-git-db/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-new-agents-gofai-config-git-db/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-new-agents-gofai-config-git-db/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-new-agents-gofai-config-git-db/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Add advanced agent personas
+
+**Duration**: Active
+**Type**: agents
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add five new advanced agent files (4 requested + 1 extra) and register them; propose five additional advanced agent ideas
+
+**Location**: `docs/sessions/2025-12-13-add-advanced-agents/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-add-advanced-agents/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-add-advanced-agents/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-add-advanced-agents/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-add-advanced-agents/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-add-advanced-agents/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-13: Merge HTTP record/replay into main
 
 **Duration**: Active

@@ -676,6 +676,30 @@ The tool walks each directory breadth-first, skips `.gitkeep`, and reports any W
 - `node tools/dev/md-edit.js docs/AGENTS.md --节列 --紧凑` — use glyph-based flags to list sections with compact bilingual headings; the CLI stays in dry-run mode until `--改` (`--fix`) is supplied.
 - `node tools/dev/md-edit.js docs/AGENTS.md --节列 --lang zh` — section inventories, stats, and search output now translate headings and summaries (`节`, `段`, `匹数`) while preserving JSON structures.
 - `node tools/dev/md-edit.js --助 --语 zh` — render the Chinese alias grid highlighting `--搜题`, `--显节`, and `--替节` so Markdown plan/replacement workflows line up with the js-edit conventions.
+- Batch replace/remove across a directory with diff previews: `node tools/dev/md-edit.js docs/AGENTS.md --dir docs --replace-section "Validation" --with-file replacements/validation.md --emit-diff`
+- Batch resilience: add `--allow-missing` so files without the target section become no-ops (instead of errors).
+- Diff safety: use `--diff-max-lines`, `--diff-max-chars`, and `--max-diffs` to cap output size while still emitting a manifest.
+
+## `agent-files` — Agent File Management (understand/verify/edit)
+
+`agent-files` complements `agent-validate`, `agent-matrix`, and `agent-rename` by providing agent-specific search, optional link checking, and a safe batch-edit wrapper around `md-edit`.
+
+- List agents: `node tools/dev/agent-files.js --list`
+- Validate frontmatter + handoffs: `node tools/dev/agent-files.js --validate --check-handoffs`
+- Validate + link targets: `node tools/dev/agent-files.js --validate --check-links`
+- Search within agents: `node tools/dev/agent-files.js --search Evidence Contract --limit 25`
+- Batch replace a section (dry-run): `node tools/dev/agent-files.js --replace-section "Evidence Contract" --with-file replacements/evidence-contract.md`
+- Apply the batch replace: `node tools/dev/agent-files.js --replace-section "Evidence Contract" --with-file replacements/evidence-contract.md --fix`
+
+## `agent-matrix` — Agent Capability Matrix
+
+`agent-matrix` scans `.github/agents/*.agent.md` and produces a tools/capabilities inventory that agents can use to decide what to hand off to whom.
+
+- `node tools/dev/agent-matrix.js --json` — emit a JSON manifest (per-agent tools + derived flags).
+- `node tools/dev/agent-matrix.js --show-agents` — show a compact per-agent list in text mode.
+- `node tools/dev/agent-matrix.js --view matrix` — show an ASCII table of derived capabilities.
+- Filters: `--tool docs-memory/*`, `--tool-mode all`, `--has-browser`, `--has-svg`, `--missing-frontmatter`, `--missing-tools`, `--errors-only`.
+- `node tools/dev/agent-matrix.js --strict --json` — fail (exit 1) if warnings exist.
 
 ## `ui-console-capture` — Puppeteer Log Capture
 

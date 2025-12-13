@@ -31,6 +31,7 @@ function createCrawlWidgetControls(jsgui) {
       super({ ...spec, tagName: "div" });
       this.add_class("cw-app");
       this._api = spec.api || null;
+      this._runState = { running: false, paused: false };
       if (!spec.el) this.compose();
     }
 
@@ -67,14 +68,28 @@ function createCrawlWidgetControls(jsgui) {
         api: this._api,
         getSelectedType: () => this._typeSelector.getSelectedType(),
         getSelectedUrl: () => this._urlSelector.getSelectedUrl(),
-        onStateChange: (state) => {
-          console.log("[CrawlWidget] State:", state);
-          if (state === "stopped") {
-            this._progressPanel.updateProgress({ visited: 0, queued: 0, errors: 0, articles: 0 });
-            this._progressPanel.setIdle();
-          } else if (state === "started") {
+        onStateChange: (nextState) => {
+          const prevState = this._runState;
+          const running = Boolean(nextState?.running);
+          const paused = Boolean(nextState?.paused);
+          this._runState = { running, paused };
+
+          console.log("[CrawlWidget] State:", this._runState);
+
+          if (running && !prevState.running) {
             this._logViewer.clear();
             this._logViewer.addLine("Crawl started", "system");
+            this._progressPanel.setPaused(false);
+          }
+
+          if (!running && prevState.running) {
+            this._progressPanel.updateProgress({ visited: 0, queued: 0, errors: 0, articles: 0 });
+            this._progressPanel.setIdle();
+          }
+
+          if (running && paused !== prevState.paused) {
+            this._progressPanel.setPaused(paused);
+            this._logViewer.addLine(paused ? "Paused" : "Resumed", "system");
           }
         }
       });
@@ -135,6 +150,8 @@ function createCrawlWidgetControls(jsgui) {
           this._controlButtons.setRunning(false);
           this._controlButtons.setPaused(false);
           this._logViewer.addLine(`Crawl stopped (code: ${data.code})`, "system");
+          this._progressPanel.setIdle();
+          this._runState = { running: false, paused: false };
         });
       }
 
@@ -147,6 +164,12 @@ function createCrawlWidgetControls(jsgui) {
       const status = await this._api.getCrawlStatus();
       if (status.isRunning) {
         this._controlButtons.setRunning(true);
+        this._runState.running = true;
+        if (status.isPaused) {
+          this._controlButtons.setPaused(true);
+          this._progressPanel.setPaused(true);
+          this._runState.paused = true;
+        }
       }
     }
 

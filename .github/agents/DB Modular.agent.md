@@ -1,6 +1,6 @@
 ---
 description: "DB‑first modularization + adapters‑only data access, plan‑first migrations, and focused contract tests across API and UI surfaces."
-tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests']
+tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'docs-memory/*']
 ---
 
 # DB Layer Review, Normalisation & Plan‑First Refactor — Operating Procedure
@@ -41,6 +41,13 @@ Focused validation: Contract tests for adapters; route/UI tests only where touch
 **Normalisation when warranted**: If duplication or denormalised fields cause drift, plan a migration with backward‑compat shims and dual‑read/dual‑write if needed.
 
 **Respect conventions**: Keep existing library choices (e.g., pg, better-sqlite3, knex, sequelize, etc.). Introduce thin wrappers, not frameworks.
+
+## Memory System Contract (docs-memory MCP)
+
+- **Pre-flight**: If you plan to use MCP tools, first run `node tools/dev/mcp-check.js --quick --json`.
+- **Before starting work**: Use `docs-memory` to find/continue relevant sessions (schema sync, migrations, adapters, query budgets) and read the latest plan/summary.
+- **After finishing work**: Persist 1–3 durable updates via `docs-memory` (Lesson/Pattern/Anti-Pattern) when you learned something reusable.
+- **On docs-memory errors**: Notify the user immediately (tool name + error), suggest a systemic fix (docs/tool UX), and log it in the active session’s `FOLLOW_UPS.md`.
 
 ## Facts vs Classifications (Data Layer Principle)
 

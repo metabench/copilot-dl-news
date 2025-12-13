@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <rect x="0" y="0" width="1400" height="900" fill="#ffffff"/>
+  <text x="40" y="60" font-family="Arial" font-size="28" fill="#111">Telemetry Systems + Drift Points (Dense)</text>
+  <text x="40" y="88" font-family="Arial" font-size="14" fill="#444">Goal: show the two telemetry families + where spec/impl drift can silently happen</text>
+
+  <!-- Column frames removed (strict collision tool treats large rect bounds as overlaps with connectors) -->
+
+  <text x="60" y="155" font-family="Arial" font-size="16" font-weight="700" fill="#111">A) UI Server Telemetry (JSONL v1)</text>
+  <text x="510" y="155" font-family="Arial" font-size="16" font-weight="700" fill="#111">B) z-server (Ingestion + UI)</text>
+  <text x="960" y="155" font-family="Arial" font-size="16" font-weight="700" fill="#111">C) Crawler Telemetry (events + SSE)</text>
+
+  <!-- A: server telemetry -->
+  <rect x="60" y="175" width="380" height="150" fill="#fff" stroke="#999"/>
+  <text x="75" y="205" font-family="Arial" font-size="13" font-weight="700">Spec</text>
+  <text x="75" y="228" font-family="Arial" font-size="12">docs/guides/SERVER_TELEMETRY_STANDARD.md</text>
+  <text x="75" y="250" font-family="Arial" font-size="12">JSONL envelope: v, ts, level, event, server, msg?, data?, err?</text>
+  <text x="75" y="272" font-family="Arial" font-size="12">Endpoints: GET /api/health, GET /api/status</text>
+  <text x="75" y="294" font-family="Arial" font-size="12">HTTP summary event: http.response {method,path,status,durationMs}</text>
+
+  <rect x="60" y="340" width="380" height="190" fill="#fff" stroke="#999"/>
+  <text x="75" y="370" font-family="Arial" font-size="13" font-weight="700">Implementation helper</text>
+  <text x="75" y="392" font-family="Arial" font-size="12">src/ui/server/utils/telemetry/index.js</text>
+  <text x="75" y="414" font-family="Arial" font-size="12">createTelemetry({name, entry, port, stream})</text>
+  <text x="75" y="436" font-family="Arial" font-size="12">attachTelemetryEndpoints(app, telemetry)</text>
+  <text x="75" y="458" font-family="Arial" font-size="12">attachTelemetryMiddleware(app, telemetry)</text>
+  <text x="75" y="480" font-family="Arial" font-size="12">Emits: server.* + http.response (response summaries)</text>
+  <text x="75" y="502" font-family="Arial" font-size="12">/api/status includes server.runId, server.startedAt, server.uptimeMs</text>
+
+  <rect x="60" y="545" width="380" height="120" fill="#fff" stroke="#999"/>
+  <text x="75" y="575" font-family="Arial" font-size="13" font-weight="700">Adopters (examples)</text>
+  <text x="75" y="597" font-family="Arial" font-size="12">src/ui/server/docsViewer/server.js</text>
+  <text x="75" y="617" font-family="Arial" font-size="12">src/ui/server/diagramAtlasServer.js</text>
+  <text x="75" y="637" font-family="Arial" font-size="12">src/ui/server/dataExplorerServer.js</text>
+
+  <!-- B: z-server ingestion -->
+  <rect x="510" y="175" width="380" height="170" fill="#fff" stroke="#999"/>
+  <text x="525" y="205" font-family="Arial" font-size="13" font-weight="700">Spawned processes (best path)</text>
+  <text x="525" y="228" font-family="Arial" font-size="12">Electron main captures stdout/stderr chunks</text>
+  <text x="525" y="250" font-family="Arial" font-size="12">Renderer splits JSONL and parses telemetry v1</text>
+  <text x="525" y="272" font-family="Arial" font-size="12">z-server/ui/lib/telemetryJsonl</text>
+  <text x="525" y="294" font-family="Arial" font-size="12">Fallback: treat as plain text</text>
+
+  <rect x="510" y="365" width="380" height="160" fill="#fff" stroke="#999"/>
+  <text x="525" y="395" font-family="Arial" font-size="13" font-weight="700">Externally started servers</text>
+  <text x="525" y="418" font-family="Arial" font-size="12">z-server can’t read stdout → polls /api/status</text>
+  <text x="525" y="440" font-family="Arial" font-size="12">Health badge + uptime + request trend</text>
+  <text x="525" y="462" font-family="Arial" font-size="12">(Optional future) tail tmp/telemetry/*.jsonl</text>
+
+  <rect x="510" y="540" width="380" height="140" fill="#fff" stroke="#999"/>
+  <text x="525" y="570" font-family="Arial" font-size="13" font-weight="700">Why drift matters here</text>
+  <text x="525" y="592" font-family="Arial" font-size="12">If event names change silently → UI parsing breaks</text>
+  <text x="525" y="614" font-family="Arial" font-size="12">If /api/status shape changes → polling UI breaks</text>
+  <text x="525" y="636" font-family="Arial" font-size="12">So we encode invariants as tests (shape + key fields)</text>
+
+  <!-- C: crawler telemetry -->
+  <rect x="960" y="175" width="380" height="190" fill="#fff" stroke="#999"/>
+  <text x="975" y="205" font-family="Arial" font-size="13" font-weight="700">Crawler telemetry facade</text>
+  <text x="975" y="228" font-family="Arial" font-size="12">src/crawler/CrawlerTelemetry.js</text>
+  <text x="975" y="250" font-family="Arial" font-size="12">progress / queueEvent / problem / milestone / milestoneOnce / plannerStage</text>
+  <text x="975" y="272" font-family="Arial" font-size="12">Forwards to: src/crawler/CrawlerEvents.js</text>
+  <text x="975" y="294" font-family="Arial" font-size="12">Milestones can persist to DB (when persist:true)</text>
+  <text x="975" y="316" font-family="Arial" font-size="12">Planner bridge: src/crawler/planner/PlannerTelemetryBridge.js</text>
+
+  <rect x="960" y="385" width="380" height="180" fill="#fff" stroke="#999"/>
+  <text x="975" y="415" font-family="Arial" font-size="13" font-weight="700">Crawler stream telemetry (schema + batching)</text>
+  <text x="975" y="438" font-family="Arial" font-size="12">src/crawler/telemetry/CrawlTelemetrySchema.js</text>
+  <text x="975" y="460" font-family="Arial" font-size="12">src/crawler/telemetry/CrawlTelemetryBridge.js</text>
+  <text x="975" y="482" font-family="Arial" font-size="12">Batches high-frequency progress, optional URL events</text>
+  <text x="975" y="504" font-family="Arial" font-size="12">Broadcast target is typically SSE to UI</text>
+
+  <rect x="960" y="585" width="380" height="160" fill="#fff" stroke="#999"/>
+  <text x="975" y="615" font-family="Arial" font-size="13" font-weight="700">Where it reaches UI</text>
+  <text x="975" y="637" font-family="Arial" font-size="12">Deprecated UI had SSE handlers for MILESTONE/PROGRESS</text>
+  <text x="975" y="659" font-family="Arial" font-size="12">src/deprecated-ui/public/index/crawlProgressIntegration.js</text>
+  <text x="975" y="681" font-family="Arial" font-size="12">Modern UI can consume crawl telemetry via an integration layer</text>
+
+  <!-- Connectors -->
+  <line x1="440" y1="430" x2="475" y2="270" stroke="#333" stroke-width="2"/>
+  <polygon points="475,270 463,264 463,276" fill="#333"/>
+  <text x="525" y="342" font-family="Arial" font-size="11" fill="#333">JSONL stdout</text>
+
+  <line x1="890" y1="430" x2="925" y2="475" stroke="#333" stroke-width="2"/>
+  <polygon points="925,475 913,469 913,481" fill="#333"/>
+  <text x="525" y="358" font-family="Arial" font-size="11" fill="#333">SSE / stream</text>
+
+  <!-- Drift callouts -->
+  <rect x="40" y="860" width="1320" height="30" fill="#fff" stroke="#bbb"/>
+  <text x="60" y="880" font-family="Arial" font-size="12" fill="#111">Drift signals to guard: event naming (http.response), /api/status shape stability, crawler milestone/progress payload shapes</text>
+</svg>

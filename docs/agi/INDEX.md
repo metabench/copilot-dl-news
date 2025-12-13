@@ -6,6 +6,7 @@ This directory describes how the copilot-dl-news project can evolve toward an AG
 - [SELF_MODEL.md](SELF_MODEL.md) – Current understanding of the agent ecosystem, capabilities, and limits.
 - [WORKFLOWS.md](WORKFLOWS.md) – Canonical Sense → Plan → Act loops for key activities.
 - [TOOLS.md](TOOLS.md) – Catalog of existing and proposed static-analysis and orchestration tools.
+- [SKILLS.md](SKILLS.md) – Registry of “capability pack” Skills (discoverable SOPs + scripts + validation).
 - [LIBRARY_OVERVIEW.md](LIBRARY_OVERVIEW.md) – Project architecture from an AGI enablement lens.
 - [RESEARCH_BACKLOG.md](RESEARCH_BACKLOG.md) – Open questions and investigations to unlock AGI-grade automation.
 - [LESSONS.md](LESSONS.md) – Patterns and anti-patterns distilled from prior work.

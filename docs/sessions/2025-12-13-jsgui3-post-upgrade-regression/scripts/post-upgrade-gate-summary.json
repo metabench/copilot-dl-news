@@ -1,0 +1,87 @@
+{
+  "timestamp": "2025-12-13T18:08:46.139Z",
+  "workspaceRoot": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news",
+  "steps": [
+    {
+      "id": 1,
+      "name": "ui client build",
+      "commandLine": "npm run ui:client-build",
+      "status": 0,
+      "signal": null,
+      "durationMs": 636
+    },
+    {
+      "id": 10,
+      "name": "SSR diagram atlas",
+      "commandLine": "npm run diagram:check",
+      "status": 0,
+      "signal": null,
+      "durationMs": 35598
+    },
+    {
+      "id": 11,
+      "name": "SSR decision tree",
+      "commandLine": "npm run ui:decision-tree:check",
+      "status": 0,
+      "signal": null,
+      "durationMs": 1193
+    },
+    {
+      "id": 12,
+      "name": "SSR data explorer",
+      "commandLine": "node src/ui/server/checks/dataExplorer.check.js",
+      "status": 0,
+      "signal": null,
+      "durationMs": 2081
+    },
+    {
+      "id": 13,
+      "name": "SSR data explorer url filters",
+      "commandLine": "node src/ui/server/checks/dataExplorerUrlFilters.check.js",
+      "status": 0,
+      "signal": null,
+      "durationMs": 4981
+    },
+    {
+      "id": 14,
+      "name": "SSR facts",
+      "commandLine": "node src/ui/server/checks/facts.check.js",
+      "status": 0,
+      "signal": null,
+      "durationMs": 465
+    },
+    {
+      "id": 15,
+      "name": "SSR home",
+      "commandLine": "node src/ui/server/checks/homeDashboard.check.js",
+      "status": 0,
+      "signal": null,
+      "durationMs": 595
+    },
+    {
+      "id": 20,
+      "name": "server e2e (diagram atlas + decision tree)",
+      "commandLine": "npm run test:by-path tests/server/diagram-atlas.e2e.test.js tests/ui/server/decisionTreeViewer.connection.e2e.test.js",
+      "status": 0,
+      "signal": null,
+      "durationMs": 12012
+    },
+    {
+      "id": 21,
+      "name": "puppeteer e2e suite",
+      "commandLine": "npm run test:by-path tests/ui/e2e/art-playground.puppeteer.e2e.test.js tests/ui/e2e/art-playground-resize.puppeteer.e2e.test.js tests/ui/e2e/url-filter-toggle.puppeteer.e2e.test.js tests/ui/e2e/wysiwyg-demo.puppeteer.e2e.test.js",
+      "status": 0,
+      "signal": null,
+      "durationMs": 28040
+    },
+    {
+      "id": 22,
+      "name": "data explorer server tests",
+      "commandLine": "npm run test:by-path tests/ui/server/dataExplorerServer.test.js tests/ui/server/dataExplorerServer.production.test.js",
+      "status": 0,
+      "signal": null,
+      "durationMs": 6708
+    }
+  ],
+  "success": true
+}

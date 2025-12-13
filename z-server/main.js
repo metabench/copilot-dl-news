@@ -7,10 +7,13 @@ const treeKill = require('tree-kill');
 // Logging and detection modules
 const serverLogger = require('./lib/serverLogger');
 const serverDetector = require('./lib/serverDetector');
+const ipcGuards = require('./lib/ipcGuards');
+const { createScanServersObservable } = require('./lib/scanServersObservable');
 
 let mainWindow;
 const runningProcesses = new Map(); // filePath -> { pid, process, port }
 const BASE_PATH = path.join(__dirname, '..');
+let allowedServerFiles = new Set(); // absolute, resolved server file paths from last scan
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -48,6 +51,21 @@ app.whenReady().then(() => {
   
   createWindow();
 
+  app.on('before-quit', () => {
+    // Best-effort cleanup: stop any servers started by this z-server session.
+    for (const [filePath, procInfo] of runningProcesses.entries()) {
+      try {
+        if (procInfo && procInfo.pid) {
+          serverLogger.logActivity(`CLEANUP_STOP: ${path.relative(BASE_PATH, filePath)} (PID ${procInfo.pid})`);
+          treeKill(procInfo.pid, 'SIGKILL', () => {});
+        }
+      } catch {
+        // Best-effort cleanup only
+      }
+    }
+    runningProcesses.clear();
+  });
+
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -61,104 +79,61 @@ app.on('window-all-closed', function () {
 
 ipcMain.handle('scan-servers', async () => {
   return new Promise((resolve, reject) => {
-    const tool = path.join(__dirname, '..', 'tools', 'dev', 'js-server-scan.js');
-    const child = spawn('node', [tool, '--progress', '--html-only'], {
-      cwd: path.join(__dirname, '..')
+    const obs = createScanServersObservable({
+      basePath: BASE_PATH,
+      cwd: BASE_PATH,
+      htmlOnly: true
     });
 
     let servers = null;
-    let error = '';
-    let buffer = '';
+    let completed = false;
 
-    child.stdout.on('data', (data) => {
-      buffer += data.toString();
-      
-      // Process complete JSON lines
-      const lines = buffer.split('\n');
-      buffer = lines.pop(); // Keep incomplete line in buffer
-      
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        
-        try {
-          const msg = JSON.parse(line);
-          
-          if (msg.type === 'count-start') {
-            if (mainWindow) {
-              mainWindow.webContents.send('scan-progress', { type: 'count-start' });
-            }
-          } else if (msg.type === 'count-progress') {
-            if (mainWindow) {
-              mainWindow.webContents.send('scan-progress', {
-                type: 'count-progress',
-                current: msg.current,
-                file: msg.file || null
-              });
-            }
-          } else if (msg.type === 'count') {
-            // Initial count - send to renderer
-            if (mainWindow) {
-              mainWindow.webContents.send('scan-progress', { type: 'count', total: msg.total });
-            }
-          } else if (msg.type === 'progress') {
-            // Progress update - already debounced at source, forward directly
-            if (mainWindow) {
-              mainWindow.webContents.send('scan-progress', {
-                type: 'progress',
-                current: msg.current,
-                total: msg.total,
-                file: msg.file
-              });
-            }
-          } else if (msg.type === 'result') {
-            // Final result
-            servers = msg.servers;
-          }
-        } catch (e) {
-          // Not JSON, ignore
-        }
-      }
-    });
+    obs.on('next', (msg) => {
+      if (!msg || typeof msg !== 'object') return;
 
-    child.stderr.on('data', (data) => {
-      error += data.toString();
-    });
-
-    child.on('close', (code) => {
-      // Process any remaining buffer
-      if (buffer.trim()) {
-        try {
-          const msg = JSON.parse(buffer);
-          if (msg.type === 'result') {
-            servers = msg.servers;
-          }
-        } catch (e) {
-          // Ignore
-        }
-      }
-      
-      if (servers === null) {
-        console.error('Scan failed:', error);
-        reject(new Error(`Scan failed with code ${code}: ${error}`));
+      if (msg.type === 'result') {
+        servers = msg.servers;
         return;
       }
-      
-      // Use async IIFE for detection
+
+      if (mainWindow) {
+        mainWindow.webContents.send('scan-progress', msg);
+      }
+    });
+
+    obs.on('error', (err) => {
+      if (completed) return;
+      completed = true;
+      reject(err);
+    });
+
+    obs.on('complete', () => {
+      if (completed) return;
+      completed = true;
+
+      if (servers === null) {
+        reject(new Error('Scan completed without result'));
+        return;
+      }
+
       (async () => {
         try {
           // Filter out the tool itself and test files if desired
           const filtered = servers.filter(s => !s.file.includes('js-server-scan.js'));
-          
+
+          // Update allowlist from scan results (absolute, resolved paths)
+          allowedServerFiles = new Set(filtered.map(s => path.resolve(s.file)));
+
           // Detect already-running servers by checking ports
           const withDetection = await serverDetector.detectRunningServers(filtered);
-          
+
           // Log any detected running servers
           for (const s of withDetection) {
             if (s.running && s.detectedPid) {
               serverLogger.logDetectedRunning(s.file, BASE_PATH, s.detectedPort, s.detectedPid, s.detectionMethod);
             }
           }
-          
+
           // Merge with our tracked processes (in case we started them this session)
           const result = withDetection.map(s => {
             const tracked = runningProcesses.get(s.file);
@@ -175,12 +150,12 @@ ipcMain.handle('scan-servers', async () => {
               pid: s.detectedPid || null
             };
           });
-          
+
           // Send completion signal
           if (mainWindow) {
             mainWindow.webContents.send('scan-progress', { type: 'complete' });
           }
-          
+
           resolve(result);
         } catch (e) {
           serverLogger.logError('Scan post-processing failed', e);
@@ -192,6 +167,16 @@ ipcMain.handle('scan-servers', async () => {
 });
 
 ipcMain.handle('start-server', async (event, filePath) => {
+  const validated = ipcGuards.validateServerFilePath(filePath, {
+    basePath: BASE_PATH,
+    allowedServerFiles
+  });
+  if (!validated.ok) {
+    serverLogger.logActivity(`START_REJECTED: ${validated.message}`);
+    return { success: false, message: validated.message };
+  }
+
+  filePath = validated.filePath;
   serverLogger.logStartRequest(filePath, BASE_PATH);
   
   if (runningProcesses.has(filePath)) {
@@ -279,20 +264,41 @@ ipcMain.handle('start-server', async (event, filePath) => {
 });
 
 ipcMain.handle('stop-server', async (event, filePath, detectedPid) => {
+  const validated = ipcGuards.validateServerFilePath(filePath, {
+    basePath: BASE_PATH,
+    allowedServerFiles
+  });
+  if (!validated.ok) {
+    serverLogger.logActivity(`STOP_REJECTED: ${validated.message}`);
+    return { success: false, message: validated.message };
+  }
+
+  filePath = validated.filePath;
   serverLogger.logStopRequest(filePath, BASE_PATH);
   
   const procInfo = runningProcesses.get(filePath);
   
-  // If we don't have it tracked but were given a detected PID, try to stop that
+  // If we don't have it tracked but were given a detected PID, attempt a conservative external stop.
   if (!procInfo && detectedPid) {
-    serverLogger.logActivity(`STOP_EXTERNAL: Attempting to stop externally-detected server PID ${detectedPid}`);
+    const pid = Number(detectedPid);
+    const allowed = await ipcGuards.isPidLikelyRunningServer(pid, filePath, {
+      getProcessInfo: serverDetector.getProcessInfo,
+      getProcessCommandLine: serverDetector.getProcessCommandLine
+    });
+
+    if (!allowed) {
+      serverLogger.logActivity(`STOP_EXTERNAL_REJECTED: Could not confirm PID ${pid} is running ${path.basename(filePath)}`);
+      return { success: false, message: 'Refusing to stop external PID (not confirmed)' };
+    }
+
+    serverLogger.logActivity(`STOP_EXTERNAL_CONFIRMED: Stopping PID ${pid} for ${path.relative(BASE_PATH, filePath)}`);
     return new Promise((resolve) => {
-      treeKill(detectedPid, 'SIGKILL', (err) => {
+      treeKill(pid, 'SIGKILL', (err) => {
         if (err) {
           serverLogger.logStopFailure(filePath, BASE_PATH, err);
           resolve({ success: false, message: err.message });
         } else {
-          serverLogger.logStopSuccess(filePath, BASE_PATH, detectedPid);
+          serverLogger.logStopSuccess(filePath, BASE_PATH, pid);
           resolve({ success: true, wasExternal: true });
         }
       });
@@ -321,6 +327,13 @@ ipcMain.handle('stop-server', async (event, filePath, detectedPid) => {
 });
 
 ipcMain.handle('open-in-browser', async (event, url) => {
+  const validated = ipcGuards.validateExternalUrl(url);
+  if (!validated.ok) {
+    serverLogger.logActivity(`OPEN_BROWSER_REJECTED: ${validated.message}`);
+    return { success: false, message: validated.message };
+  }
+
+  url = validated.url;
   serverLogger.logActivity(`OPEN_BROWSER: ${url}`);
   
   // Try Chrome Canary first, fall back to default browser

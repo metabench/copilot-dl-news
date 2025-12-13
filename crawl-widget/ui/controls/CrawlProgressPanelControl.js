@@ -9,6 +9,8 @@ function createCrawlProgressPanelControl(jsgui, ProgressBarControl = createProgr
     constructor(spec = {}) {
       super({ ...spec, tagName: "div" });
       this.add_class("cw-progress-panel");
+      this._lastActivity = { action: "idle", url: null };
+      this._isPaused = false;
       if (!spec.el) this.compose();
     }
 
@@ -138,6 +140,13 @@ function createCrawlProgressPanelControl(jsgui, ProgressBarControl = createProgr
         this._updateActivityStatus(currentAction || "crawling", currentUrl);
       }
 
+      if (!this._isPaused) {
+        this._lastActivity = {
+          action: currentAction || (currentUrl ? "crawling" : this._lastActivity.action) || "crawling",
+          url: currentUrl || this._lastActivity.url || null
+        };
+      }
+
       let progress = 0;
       if (percentComplete != null) {
         progress = percentComplete / 100;
@@ -199,6 +208,28 @@ function createCrawlProgressPanelControl(jsgui, ProgressBarControl = createProgr
       }
     }
 
+    setPaused(paused = true) {
+      this._isPaused = Boolean(paused);
+      const iconEl = this._el(this._activityIcon);
+      const textEl = this._el(this._activityText);
+      if (!iconEl || !textEl) return;
+
+      if (this._isPaused) {
+        iconEl.textContent = "⏸️";
+        textEl.textContent = "Paused";
+        textEl.title = "";
+        this._progressBar.setColor("gold");
+        return;
+      }
+
+      if (this._lastActivity?.action || this._lastActivity?.url) {
+        this._updateActivityStatus(this._lastActivity.action || "crawling", this._lastActivity.url || null);
+        return;
+      }
+
+      this._updateActivityStatus("crawling", null);
+    }
+
     _updatePhaseIndicators(phase) {
       const phases = {
         discovery: ["discovery", "discover-structure"],
@@ -245,6 +276,7 @@ function createCrawlProgressPanelControl(jsgui, ProgressBarControl = createProgr
     }
 
     setIdle() {
+      this._isPaused = false;
       this._updateActivityStatus("idle", null);
       Object.values(this._phaseIndicators).forEach((pi) => {
         const el = this._el(pi.container);

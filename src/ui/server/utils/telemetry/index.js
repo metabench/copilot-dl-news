@@ -124,7 +124,9 @@ function createTelemetry(options = {}) {
         entry: state.entry,
         port: state.port,
         pid: state.pid,
-        runId: state.runId
+        runId: state.runId,
+        startedAt: state.startedAt,
+        uptimeMs
       },
       startedAt: state.startedAt,
       lastEventAt: state.lastEventAt,
@@ -202,18 +204,26 @@ function attachTelemetryEndpoints(app, telemetry, options = {}) {
 function attachTelemetryMiddleware(app, telemetry, options = {}) {
   if (!app || !telemetry) return;
   const excludePaths = new Set(options.excludePaths || ["/api/health", "/api/status"]);
+  const emitLegacyHttpRequestEvent = options.emitLegacyHttpRequestEvent === true;
 
   app.use((req, res, next) => {
     const start = Date.now();
     res.on("finish", () => {
       if (excludePaths.has(req.path)) return;
       const durationMs = Math.max(0, Date.now() - start);
-      telemetry.info("http.request", undefined, {
+      const data = {
         method: req.method,
         path: req.originalUrl || req.url,
+        status: res.statusCode,
         statusCode: res.statusCode,
         durationMs
-      });
+      };
+
+      telemetry.info("http.response", undefined, data);
+
+      if (emitLegacyHttpRequestEvent) {
+        telemetry.info("http.request", undefined, data);
+      }
     });
     next();
   });

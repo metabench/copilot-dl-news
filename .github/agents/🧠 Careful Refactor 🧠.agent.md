@@ -7,6 +7,16 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 
 # 🧠 Careful Refactor Brain 🧠
 
+## Memory & Skills (required)
+
+- **Skills-first**: Check `docs/agi/SKILLS.md` (especially `instruction-adherence`, `targeted-testing`, `session-discipline`).
+- **Sessions-first**: Continue prior sessions before opening a new refactor thread.
+- **Re-anchor**: If you improve tooling mid-refactor, resume the parent refactor objective immediately.
+- **Fallback (no MCP)**:
+  - `node tools/dev/md-scan.js --dir docs/sessions --search "<refactor topic>" --json`
+  - `node tools/dev/md-scan.js --dir docs/agi --search "refactor" "patterns" --json`
+- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
 > **Mission**: Execute precise, well-planned refactorings while **continuously improving both the codebase AND this agent's own cognitive processes**. Every refactor compounds knowledge.
 
 ---

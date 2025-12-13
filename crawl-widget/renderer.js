@@ -39521,6 +39521,39 @@ body .overlay {
             this.add(this._pauseBtn);
             this.add(this._stopBtn);
           }
+          _emitStateChange() {
+            if (this._onStateChange) {
+              this._onStateChange({ running: this._isRunning, paused: this._isPaused });
+            }
+          }
+          async startCrawl() {
+            if (!this._api?.startCrawl) return;
+            if (this._isRunning) return;
+            const crawlType = this._getSelectedType();
+            const startUrl = this._getSelectedUrl();
+            const result = await this._api.startCrawl({ crawlType, startUrl });
+            if (result?.success) {
+              this.setRunning(true);
+              this.setPaused(false);
+              this._emitStateChange();
+            }
+          }
+          async togglePause() {
+            if (!this._api?.togglePause) return;
+            if (!this._isRunning) return;
+            await this._api.togglePause();
+            this._isPaused = !this._isPaused;
+            this._updateButtonStates();
+            this._emitStateChange();
+          }
+          async stopCrawl() {
+            if (!this._api?.stopCrawl) return;
+            if (!this._isRunning) return;
+            await this._api.stopCrawl();
+            this.setRunning(false);
+            this.setPaused(false);
+            this._emitStateChange();
+          }
           setRunning(running) {
             this._isRunning = running;
             this._updateButtonStates();
@@ -39554,40 +39587,9 @@ body .overlay {
             if (this.__active) return;
             super.activate();
             console.log("[ControlButtons] activate - start:", !!this._startBtn, "pause:", !!this._pauseBtn, "stop:", !!this._stopBtn);
-            this._startBtn?.on("click", async () => {
-              if (this._api?.startCrawl) {
-                const crawlType = this._getSelectedType();
-                const startUrl = this._getSelectedUrl();
-                const result = await this._api.startCrawl({ crawlType, startUrl });
-                if (result.success) {
-                  this.setRunning(true);
-                  this.setPaused(false);
-                  if (this._onStateChange) {
-                    this._onStateChange({ running: true, paused: false });
-                  }
-                }
-              }
-            });
-            this._pauseBtn?.on("click", async () => {
-              if (this._api?.togglePause) {
-                await this._api.togglePause();
-                this._isPaused = !this._isPaused;
-                this._updateButtonStates();
-                if (this._onStateChange) {
-                  this._onStateChange({ running: this._isRunning, paused: this._isPaused });
-                }
-              }
-            });
-            this._stopBtn?.on("click", async () => {
-              if (this._api?.stopCrawl) {
-                await this._api.stopCrawl();
-                this.setRunning(false);
-                this.setPaused(false);
-                if (this._onStateChange) {
-                  this._onStateChange({ running: false, paused: false });
-                }
-              }
-            });
+            this._startBtn?.on("click", () => this.startCrawl());
+            this._pauseBtn?.on("click", () => this.togglePause());
+            this._stopBtn?.on("click", () => this.stopCrawl());
           }
         }
         return CrawlControlButtonsControl;
@@ -39709,6 +39711,8 @@ body .overlay {
           constructor(spec = {}) {
             super({ ...spec, tagName: "div" });
             this.add_class("cw-progress-panel");
+            this._lastActivity = { action: "idle", url: null };
+            this._isPaused = false;
             if (!spec.el) this.compose();
           }
           compose() {
@@ -39810,6 +39814,12 @@ body .overlay {
             if (currentUrl || currentAction) {
               this._updateActivityStatus(currentAction || "crawling", currentUrl);
             }
+            if (!this._isPaused) {
+              this._lastActivity = {
+                action: currentAction || (currentUrl ? "crawling" : this._lastActivity.action) || "crawling",
+                url: currentUrl || this._lastActivity.url || null
+              };
+            }
             let progress = 0;
             if (percentComplete != null) {
               progress = percentComplete / 100;
@@ -39861,6 +39871,24 @@ body .overlay {
               textEl.title = "";
             }
           }
+          setPaused(paused = true) {
+            this._isPaused = Boolean(paused);
+            const iconEl = this._el(this._activityIcon);
+            const textEl = this._el(this._activityText);
+            if (!iconEl || !textEl) return;
+            if (this._isPaused) {
+              iconEl.textContent = "\u23F8\uFE0F";
+              textEl.textContent = "Paused";
+              textEl.title = "";
+              this._progressBar.setColor("gold");
+              return;
+            }
+            if (this._lastActivity?.action || this._lastActivity?.url) {
+              this._updateActivityStatus(this._lastActivity.action || "crawling", this._lastActivity.url || null);
+              return;
+            }
+            this._updateActivityStatus("crawling", null);
+          }
           _updatePhaseIndicators(phase) {
             const phases = {
               discovery: ["discovery", "discover-structure"],
@@ -39894,6 +39922,7 @@ body .overlay {
             if (statusEl) statusEl.style.display = "none";
           }
           setIdle() {
+            this._isPaused = false;
             this._updateActivityStatus("idle", null);
             Object.values(this._phaseIndicators).forEach((pi) => {
               const el = this._el(pi.container);
@@ -39966,6 +39995,16 @@ body .overlay {
             this._filterBtn.add(new StringControl({ context: this.context, text: "\u{1F53D}" }));
             this._filterBtn.set("title", "Filter log types");
             this._header.add(this._filterBtn);
+            this._copyBtn = new jsgui2.Control({ context: this.context, tagName: "button" });
+            this._copyBtn.add_class("cw-log-action-btn", "cw-log-action-btn--copy");
+            this._copyBtn.add(new StringControl({ context: this.context, text: "\u29C9" }));
+            this._copyBtn.dom.attributes.title = "Copy visible log lines";
+            this._header.add(this._copyBtn);
+            this._clearBtn = new jsgui2.Control({ context: this.context, tagName: "button" });
+            this._clearBtn.add_class("cw-log-action-btn", "cw-log-action-btn--clear");
+            this._clearBtn.add(new StringControl({ context: this.context, text: "\u{1F5D1}" }));
+            this._clearBtn.dom.attributes.title = "Clear log";
+            this._header.add(this._clearBtn);
             this._filterBadge = new jsgui2.Control({ context: this.context, tagName: "span" });
             this._filterBadge.add_class("cw-log-filter-badge");
             this._filterBadge.add_class("cw-hidden");
@@ -40011,6 +40050,33 @@ body .overlay {
             this._logContainer = new jsgui2.Control({ context: this.context, tagName: "div" });
             this._logContainer.add_class("cw-log-viewer__container");
             this.add(this._logContainer);
+          }
+          _getVisibleLines() {
+            const filteredLines = this._lines.filter((line) => this._activeFilters.has(line.activityType));
+            const visibleCount = Math.max(3, this._visibleLines || 3);
+            return filteredLines.slice(-visibleCount);
+          }
+          async _copyVisibleLines() {
+            const visible = this._getVisibleLines();
+            const text = visible.map((line) => `[${line.timestamp}] ${line.text}`).join("\n").trim();
+            if (!text) return;
+            try {
+              if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(text);
+                return;
+              }
+              const textarea = document.createElement("textarea");
+              textarea.value = text;
+              textarea.setAttribute("readonly", "readonly");
+              textarea.style.position = "fixed";
+              textarea.style.opacity = "0";
+              document.body.appendChild(textarea);
+              textarea.select();
+              document.execCommand("copy");
+              document.body.removeChild(textarea);
+            } catch (err) {
+              console.warn("[CrawlWidget] Failed to copy log lines:", err?.message || err);
+            }
           }
           addLine(text, type = "stdout") {
             const timestamp = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-GB", {
@@ -40061,9 +40127,7 @@ body .overlay {
             return icons[activityType] || "\u2022";
           }
           _renderLines(containerEl) {
-            const filteredLines = this._lines.filter((line) => this._activeFilters.has(line.activityType));
-            const visibleCount = Math.max(3, this._visibleLines || 3);
-            const visibleLines = filteredLines.slice(-visibleCount);
+            const visibleLines = this._getVisibleLines();
             while (containerEl.firstChild) {
               containerEl.removeChild(containerEl.firstChild);
             }
@@ -40153,6 +40217,14 @@ body .overlay {
               e.stopPropagation();
               this._toggleFilterPopup();
             });
+            this._copyBtn?.on("click", async (e) => {
+              e?.stopPropagation?.();
+              await this._copyVisibleLines();
+            });
+            this._clearBtn?.on("click", (e) => {
+              e?.stopPropagation?.();
+              this.clear();
+            });
             this._allBtn?.on("click", () => this._setAllFilters(true));
             this._noneBtn?.on("click", () => this._setAllFilters(false));
             for (const type of this._activityTypes) {
@@ -40214,6 +40286,7 @@ body .overlay {
             super({ ...spec, tagName: "div" });
             this.add_class("cw-app");
             this._api = spec.api || null;
+            this._runState = { running: false, paused: false };
             if (!spec.el) this.compose();
           }
           compose() {
@@ -40246,14 +40319,24 @@ body .overlay {
               api: this._api,
               getSelectedType: () => this._typeSelector.getSelectedType(),
               getSelectedUrl: () => this._urlSelector.getSelectedUrl(),
-              onStateChange: (state) => {
-                console.log("[CrawlWidget] State:", state);
-                if (state === "stopped") {
-                  this._progressPanel.updateProgress({ visited: 0, queued: 0, errors: 0, articles: 0 });
-                  this._progressPanel.setIdle();
-                } else if (state === "started") {
+              onStateChange: (nextState) => {
+                const prevState = this._runState;
+                const running = Boolean(nextState?.running);
+                const paused = Boolean(nextState?.paused);
+                this._runState = { running, paused };
+                console.log("[CrawlWidget] State:", this._runState);
+                if (running && !prevState.running) {
                   this._logViewer.clear();
                   this._logViewer.addLine("Crawl started", "system");
+                  this._progressPanel.setPaused(false);
+                }
+                if (!running && prevState.running) {
+                  this._progressPanel.updateProgress({ visited: 0, queued: 0, errors: 0, articles: 0 });
+                  this._progressPanel.setIdle();
+                }
+                if (running && paused !== prevState.paused) {
+                  this._progressPanel.setPaused(paused);
+                  this._logViewer.addLine(paused ? "Paused" : "Resumed", "system");
                 }
               }
             });
@@ -40306,6 +40389,8 @@ body .overlay {
                 this._controlButtons.setRunning(false);
                 this._controlButtons.setPaused(false);
                 this._logViewer.addLine(`Crawl stopped (code: ${data.code})`, "system");
+                this._progressPanel.setIdle();
+                this._runState = { running: false, paused: false };
               });
             }
             if (this._api.onCrawlError) {
@@ -40316,6 +40401,12 @@ body .overlay {
             const status = await this._api.getCrawlStatus();
             if (status.isRunning) {
               this._controlButtons.setRunning(true);
+              this._runState.running = true;
+              if (status.isPaused) {
+                this._controlButtons.setPaused(true);
+                this._progressPanel.setPaused(true);
+                this._runState.paused = true;
+              }
             }
           }
           _el(ctrl2 = this) {

@@ -1,6 +1,6 @@
 ---
 description: "Read-first agent that writes/iterates a change plan, then safely implements it with narrowly-scoped Jest runs."
-tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests']
+tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'docs-memory/*']
 # Tip: you can also define tool sets and reference them here; VS Code honors these in agent mode.
 # Handoffs optional; this agent is single-phase by design.
 ---
@@ -59,6 +59,17 @@ You are an
 3. 
 **Exit criterion**
 : Only proceed when the plan is coherent and implementation steps are small, serializable, and testable.
+
+### Memory & Skills-first (quick, low-cost)
+
+Before writing a new plan:
+- Check `docs/agi/SKILLS.md` for a matching Skill and follow its SOP.
+- Search for prior sessions/lessons on the topic using docs-memory if available, otherwise use:
+     - `node tools/dev/md-scan.js --dir docs/sessions --search "<topic>" --json`
+     - `node tools/dev/md-scan.js --dir docs/agi --search "<topic>" --json`
+
+After completing a meaningful fix/feature:
+- Append 1–2 concise lessons (single idea each), and record any reusable refactoring/testing pattern in the active session notes.
 
 
 ## Phase B — Implement Carefully (small, validated steps)

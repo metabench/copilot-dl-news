@@ -624,6 +624,168 @@ function renderConfigView({ db, relativeDb, now }) {
 }
 
 /**
+ * Build table columns for decisions/milestones listing
+ */
+function buildDecisionColumns() {
+  return [
+    { key: "kind", label: "Kind", width: "160px" },
+    { key: "message", label: "Decision", sortable: false },
+    { key: "target", label: "Target", width: "240px" },
+    { key: "scope", label: "Scope", width: "100px" },
+    { key: "ts", label: "When", width: "180px", cellClass: "is-timestamp" }
+  ];
+}
+
+/**
+ * Build display rows for decisions/milestones
+ */
+function buildDecisionRows(milestones) {
+  return milestones.map((m) => {
+    const targetText = m.target || "";
+    const targetCell = targetText
+      ? (targetText.startsWith("http://") || targetText.startsWith("https://")
+        ? { text: targetText, href: targetText }
+        : targetText)
+      : "—";
+    return {
+      kind: m.kind || "—",
+      message: m.message || "—",
+      target: targetCell,
+      scope: m.scope || "—",
+      ts: formatDateTime(m.ts, true)
+    };
+  });
+}
+
+function buildDecisionFilterControls({ context, basePath, currentKind, currentScope, currentTargetLike, currentLimit }) {
+  const form = new jsgui.form({ context });
+  form.dom.attributes.method = "get";
+  form.dom.attributes.action = basePath;
+  form.add_class("filter-controls");
+  form.dom.attributes["data-jsgui-control"] = "decisions_filter";
+
+  const row = new jsgui.div({ context });
+  row.add_class("filter-controls__group");
+
+  const kindInput = new jsgui.input({ context });
+  kindInput.dom.attributes.type = "text";
+  kindInput.dom.attributes.name = "kind";
+  kindInput.dom.attributes.placeholder = "kind (e.g. decision-kind)";
+  if (currentKind) kindInput.dom.attributes.value = String(currentKind);
+  kindInput.add_class("filter-controls__input");
+  row.add(kindInput);
+
+  const scopeInput = new jsgui.input({ context });
+  scopeInput.dom.attributes.type = "text";
+  scopeInput.dom.attributes.name = "scope";
+  scopeInput.dom.attributes.placeholder = "scope";
+  if (currentScope) scopeInput.dom.attributes.value = String(currentScope);
+  scopeInput.add_class("filter-controls__input");
+  row.add(scopeInput);
+
+  const targetInput = new jsgui.input({ context });
+  targetInput.dom.attributes.type = "text";
+  targetInput.dom.attributes.name = "targetLike";
+  targetInput.dom.attributes.placeholder = "target contains…";
+  if (currentTargetLike) targetInput.dom.attributes.value = String(currentTargetLike);
+  targetInput.add_class("filter-controls__input");
+  row.add(targetInput);
+
+  const limitInput = new jsgui.input({ context });
+  limitInput.dom.attributes.type = "number";
+  limitInput.dom.attributes.name = "limit";
+  limitInput.dom.attributes.min = "1";
+  limitInput.dom.attributes.max = "200";
+  limitInput.dom.attributes.value = String(currentLimit);
+  limitInput.add_class("filter-controls__input");
+  row.add(limitInput);
+
+  form.add(row);
+
+  const submitBtn = new jsgui.button({ context });
+  submitBtn.dom.attributes.type = "submit";
+  submitBtn.add_class("filter-controls__submit");
+  submitBtn.add(new StringControl({ context, text: "Apply" }));
+  form.add(submitBtn);
+
+  return form;
+}
+
+/**
+ * Render the decisions/milestones listing view
+ */
+function renderDecisionsView({ db, newsDb, req, relativeDb, now }) {
+  const query = (req && req.query) || {};
+  const kindFilter = query.kind || null;
+  const scopeFilter = query.scope || null;
+  const targetLike = query.targetLike || null;
+  const limit = Math.min(200, Math.max(1, parseInt(query.limit, 10) || 100));
+
+  const filterOpts = { limit };
+  if (kindFilter) filterOpts.kind = kindFilter;
+  if (scopeFilter) filterOpts.scope = scopeFilter;
+  if (targetLike) filterOpts.targetLike = targetLike;
+
+  let milestones = [];
+  try {
+    const accessor = (newsDb && typeof newsDb.listMilestones === "function")
+      ? newsDb
+      : (db && typeof db.listMilestones === "function" ? db : null);
+    const result = accessor ? accessor.listMilestones(filterOpts) : { items: [] };
+    milestones = (result && result.items) || [];
+  } catch (_) {
+    milestones = [];
+  }
+
+  const subtitle = milestones.length === 0
+    ? `No decision traces found in ${relativeDb}`
+    : `${milestones.length} decision traces` +
+      (kindFilter ? ` (kind: ${kindFilter})` : "") +
+      (scopeFilter ? ` (scope: ${scopeFilter})` : "") +
+      (targetLike ? ` (target contains: ${targetLike})` : "");
+
+  return {
+    title: "Crawler Decisions",
+    columns: buildDecisionColumns(),
+    rows: buildDecisionRows(milestones),
+    meta: {
+      rowCount: milestones.length,
+      limit,
+      dbLabel: relativeDb,
+      generatedAt: formatDateTime(now, true),
+      subtitle,
+      filterControlsFactory: (context) => buildDecisionFilterControls({
+        context,
+        basePath: "/decisions",
+        currentKind: kindFilter,
+        currentScope: scopeFilter,
+        currentTargetLike: targetLike,
+        currentLimit: limit
+      })
+    }
+  };
+}
+
+function createDecisionTraceList(context, decisionTraces) {
+  const wrap = new jsgui.div({ context });
+  wrap.add_class("decision-trace-list");
+  const list = new jsgui.ul({ context });
+  list.add_class("decision-trace-list__items");
+  decisionTraces.forEach((m) => {
+    const li = new jsgui.li({ context });
+    li.add_class("decision-trace-list__item");
+    const kind = m.kind || "—";
+    const message = m.message || "—";
+    const formatted = formatDateTime(m.ts, true);
+    const when = (formatted && formatted.text) || "";
+    li.add(new StringControl({ context, text: `${kind}: ${message}${when ? ` (${when})` : ""}` }));
+    list.add(li);
+  });
+  wrap.add(list);
+  return wrap;
+}
+
+/**
  * Build table columns for classification types listing
  */
 function buildClassificationColumns() {
@@ -720,6 +882,13 @@ const DATA_VIEWS = [
     navLabel: "Classifications",
     title: "Document Classifications",
     render: renderClassificationsView
+  },
+  {
+    key: "decisions",
+    path: "/decisions",
+    navLabel: "Decisions",
+    title: "Crawler Decisions",
+    render: renderDecisionsView
   },
   {
     key: "config",
@@ -1270,6 +1439,7 @@ function createDataExplorerServer(options = {}) {
         const payload = view.render({
           req,
           db: dbAccess.db,
+          newsDb: dbAccess,
           relativeDb,
           pageSize,
           now
@@ -1539,6 +1709,17 @@ function createDataExplorerServer(options = {}) {
       const fetches = selectFetchHistory(dbAccess.db, id, { limit: 200 });
       const spark = buildHourlySparkline(fetches, { nowMs: now.getTime() });
 
+      // Fetch decision traces for this URL (Why panel)
+      let decisionTraces = [];
+      try {
+        if (dbAccess && typeof dbAccess.listMilestones === "function") {
+          const result = dbAccess.listMilestones({ target: urlRow.url, limit: 20 });
+          decisionTraces = (result && result.items) || [];
+        }
+      } catch (_) {
+        decisionTraces = [];
+      }
+
       const DOWNLOAD_COLUMNS = [
         { key: "index", label: "#", align: "right", cellClass: "is-index" },
         { key: "fetchedAt", label: "Fetched At", cellClass: "is-timestamp" },
@@ -1559,27 +1740,59 @@ function createDataExplorerServer(options = {}) {
         details: { text: "View", href: `/fetches/${f.id}` }
       }));
 
+      // Build extra cards including decision count
+      const extraCards = [{ label: "Fetches (24h)", series: spark }];
+      if (decisionTraces.length > 0) {
+        extraCards.push({ label: "Decisions", value: String(decisionTraces.length), subtitle: "Why traces" });
+      }
+
       const meta = {
         rowCount: rows.length,
         limit: rows.length,
         dbLabel: relativeDb,
         generatedAt: formatDateTime(now, true),
         subtitle: `Last ${rows.length} fetches for ${urlRow.url}`,
-        extraCards: [{ label: "Fetches (24h)", series: spark }]
+        extraCards
       };
+
+      // Build decision traces section as dashboardSections if any exist
+      let dashboardSections = [];
+      if (decisionTraces.length > 0) {
+        const target = encodeURIComponent(urlRow.url);
+        dashboardSections = [
+          {
+            key: "url-decisions",
+            title: "Why (Decision Traces)",
+            meta: `${decisionTraces.length} traces`,
+            content: ({ context }) => createDecisionTraceList(context, decisionTraces),
+            footer: ({ context }) => {
+              const link = new jsgui.a({ context });
+              link.dom.attributes.href = `/decisions?targetLike=${target}`;
+              link.add(new StringControl({ context, text: "View all matching traces" }));
+              return link;
+            }
+          }
+        ];
+      }
 
       const breadcrumbTrail = [{ label: "URLs", href: "/urls" }];
       const backLink = deriveBackLink(req, breadcrumbTrail[0]);
       const breadcrumbs = buildBreadcrumbs({ trail: breadcrumbTrail, backLink, current: { label: urlRow.url } });
 
+      const renderOptions = {
+        clientScriptPath: hasClientBundle ? normalizedScriptPath : undefined,
+        bindingPlugin: bindingPluginEnabled,
+        navLinks: buildNavLinks("urls", DATA_VIEWS),
+        breadcrumbs
+      };
+      if (dashboardSections.length > 0) {
+        renderOptions.dashboardSections = dashboardSections;
+        renderOptions.includeDashboardScaffold = true;
+      }
+
       const html = renderHtml(
         { columns: DOWNLOAD_COLUMNS, rows, meta, title: `URL: ${urlRow.url}` },
-        {
-          clientScriptPath: hasClientBundle ? normalizedScriptPath : undefined,
-          bindingPlugin: bindingPluginEnabled,
-          navLinks: buildNavLinks("urls", DATA_VIEWS),
-          breadcrumbs
-        }
+        renderOptions
       );
       res.type("html").send(html);
     } catch (error) {

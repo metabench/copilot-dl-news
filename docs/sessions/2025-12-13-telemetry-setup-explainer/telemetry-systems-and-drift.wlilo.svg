@@ -1,0 +1,210 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="920" viewBox="0 0 1400 920">
+  <defs>
+    <!-- Refined leather gradient with warmer midtone -->
+    <linearGradient id="leather" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#fdfcfa"/>
+      <stop offset="40%" stop-color="#f7f5f0"/>
+      <stop offset="100%" stop-color="#e9e5dc"/>
+    </linearGradient>
+
+    <!-- Subtle grain texture -->
+    <pattern id="grain" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="4" r="0.8" fill="#2d2d2d" opacity="0.025"/>
+      <circle cx="12" cy="9" r="0.6" fill="#2d2d2d" opacity="0.02"/>
+      <circle cx="7" cy="16" r="0.7" fill="#2d2d2d" opacity="0.022"/>
+      <circle cx="17" cy="2" r="0.5" fill="#2d2d2d" opacity="0.018"/>
+    </pattern>
+
+    <!-- Panel shadow with soft blur -->
+    <filter id="panelShadow" x="-15%" y="-15%" width="130%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.22"/>
+    </filter>
+
+    <!-- Warm gold glow for callouts -->
+    <filter id="warmGlow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#c9a962" flood-opacity="0.25"/>
+    </filter>
+
+    <!-- Inner shadow for depth on chips -->
+    <filter id="chipShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+
+    <!-- Gold arrow marker -->
+    <marker id="arrowGold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 L 2 5 Z" fill="#c9a962"/>
+    </marker>
+
+    <!-- Obsidian gradient for panels -->
+    <linearGradient id="obsidian" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#242424"/>
+      <stop offset="100%" stop-color="#181818"/>
+    </linearGradient>
+
+    <!-- Chip gradient -->
+    <linearGradient id="chipGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#333"/>
+      <stop offset="100%" stop-color="#252525"/>
+    </linearGradient>
+
+    <style>
+      .title { font-family: Georgia, serif; font-size: 32px; fill: #2d2d2d; letter-spacing: -0.5px; }
+      .subtitle { font-family: Arial, sans-serif; font-size: 13px; fill: #666; }
+      .panel { fill: url(#obsidian); stroke: #c9a962; stroke-width: 1.5; filter: url(#panelShadow); }
+      .panelTitle { font-family: Georgia, serif; font-size: 15px; font-weight: 400; fill: #e8d5a3; letter-spacing: 0.3px; }
+      .panelIcon { font-family: Arial, sans-serif; font-size: 18px; fill: #c9a962; }
+      .text { font-family: Arial, sans-serif; font-size: 11.5px; fill: #f4f4f4; }
+      .muted { font-family: Arial, sans-serif; font-size: 11px; fill: #c8c8c8; }
+      .code { font-family: Consolas, monospace; font-size: 10.5px; fill: #aee8a0; }
+      .chip { fill: url(#chipGrad); stroke: #8a7d55; stroke-width: 0.8; filter: url(#chipShadow); }
+      .chipTitle { font-family: Arial, sans-serif; font-size: 11px; font-weight: 700; fill: #e8d5a3; text-transform: uppercase; letter-spacing: 0.8px; }
+      .goldLine { stroke: #c9a962; stroke-width: 2.5; fill: none; marker-end: url(#arrowGold); }
+      .thinGold { stroke: #c9a962; stroke-width: 1; fill: none; }
+      .callout { fill: url(#obsidian); stroke: #c9a962; stroke-width: 1.5; filter: url(#warmGlow); }
+      .calloutTitle { font-family: Georgia, serif; font-size: 13px; fill: #e8d5a3; }
+      .calloutText { font-family: Arial, sans-serif; font-size: 11px; fill: #ddd; }
+      .badge { fill: #c9a962; }
+      .badgeText { font-family: Arial, sans-serif; font-size: 9px; font-weight: 700; fill: #1a1a1a; }
+      .connector-label { font-family: Arial, sans-serif; font-size: 10px; fill: #c9a962; font-weight: 600; }
+    </style>
+  </defs>
+
+  <!-- WLILO leather background -->
+  <rect x="0" y="0" width="1400" height="920" fill="url(#leather)"/>
+  <rect x="0" y="0" width="1400" height="920" fill="url(#grain)"/>
+
+  <!-- Header with gold accent bar -->
+  <rect x="40" y="48" width="6" height="32" rx="3" class="badge"/>
+  <text x="58" y="74" class="title">Telemetry Systems and Drift Points</text>
+  <text x="58" y="96" class="subtitle">Two telemetry families: (A) UI Server JSONL v1 - (B) z-server ingestion - (C) Crawler events + SSE</text>
+  <line x1="40" y1="112" x2="1360" y2="112" class="thinGold"/>
+
+  <!-- Main columns (three obsidian panels) -->
+  <rect x="40" y="130" width="420" height="720" rx="12" class="panel"/>
+  <rect x="490" y="130" width="420" height="720" rx="12" class="panel"/>
+  <rect x="940" y="130" width="420" height="720" rx="12" class="panel"/>
+
+  <!-- Panel headers with icons -->
+  <text x="60" y="160" class="panelIcon">A</text>
+  <text x="82" y="160" class="panelTitle">UI Server Telemetry (JSONL v1)</text>
+  
+  <text x="510" y="160" class="panelIcon">B</text>
+  <text x="534" y="160" class="panelTitle">z-server (Ingestion + Display)</text>
+  
+  <text x="960" y="160" class="panelIcon">C</text>
+  <text x="984" y="160" class="panelTitle">Crawler Telemetry (Events + SSE)</text>
+
+  <!-- Column A: Server Telemetry -->
+  <rect x="55" y="180" width="390" height="155" rx="8" class="chip"/>
+  <text x="70" y="202" class="chipTitle">Spec</text>
+  <text x="70" y="224" class="code">docs/guides/SERVER_TELEMETRY_STANDARD.md</text>
+  <text x="70" y="246" class="muted">Envelope: v, ts, level, event, server, msg?, data?, err?</text>
+  <text x="70" y="266" class="muted">Endpoints: GET /api/health - GET /api/status</text>
+  <text x="70" y="286" class="muted">HTTP summary: http.response {method, path, status, durationMs}</text>
+  <text x="70" y="306" class="text">Stable contract for any observer (z-server, CI, dashboards)</text>
+
+  <rect x="55" y="350" width="390" height="195" rx="8" class="chip"/>
+  <text x="70" y="372" class="chipTitle">Implementation</text>
+  <text x="70" y="394" class="code">src/ui/server/utils/telemetry/index.js</text>
+  <text x="70" y="416" class="muted">createTelemetry({ name, entry, port, stream })</text>
+  <text x="70" y="436" class="muted">attachTelemetryEndpoints(app, telemetry)</text>
+  <text x="70" y="456" class="muted">attachTelemetryMiddleware(app, telemetry)</text>
+  <text x="70" y="478" class="text">Emits: server.* lifecycle + http.response summaries</text>
+  <text x="70" y="500" class="text">/api/status: runId, startedAt, uptimeMs, node version</text>
+  <text x="70" y="520" class="muted">Middleware excludes /api/health and /api/status from logging</text>
+
+  <rect x="55" y="560" width="390" height="130" rx="8" class="chip"/>
+  <text x="70" y="582" class="chipTitle">Adopters</text>
+  <text x="70" y="604" class="code">src/ui/server/docsViewer/server.js</text>
+  <text x="70" y="624" class="code">src/ui/server/diagramAtlasServer.js</text>
+  <text x="70" y="644" class="code">src/ui/server/dataExplorerServer.js</text>
+  <text x="70" y="664" class="muted">All share identical telemetry wiring pattern</text>
+
+  <rect x="55" y="705" width="390" height="130" rx="8" class="chip"/>
+  <text x="70" y="727" class="chipTitle">Tests</text>
+  <text x="70" y="749" class="code">tests/ui/server/serverTelemetryStandard.test.js</text>
+  <text x="70" y="769" class="muted">Validates: /api/health shape, /api/status keys,</text>
+  <text x="70" y="789" class="muted">http.response event emission, middleware exclusions</text>
+  <text x="70" y="809" class="text">Drift guard: shape changes fail tests loudly</text>
+
+  <!-- Column B: z-server -->
+  <rect x="505" y="180" width="390" height="175" rx="8" class="chip"/>
+  <text x="520" y="202" class="chipTitle">Spawned Processes (Best Path)</text>
+  <text x="520" y="224" class="muted">Electron main captures stdout/stderr chunks via IPC</text>
+  <text x="520" y="244" class="muted">Renderer splits by newline, JSON.parse each line</text>
+  <text x="520" y="264" class="text">If v===1 and has event+server: structured telemetry</text>
+  <text x="520" y="284" class="code">z-server/ui/lib/telemetryJsonl.js</text>
+  <text x="520" y="304" class="muted">Else: render as plain text log line</text>
+  <text x="520" y="324" class="text">Unified log view regardless of event structure</text>
+
+  <rect x="505" y="370" width="390" height="155" rx="8" class="chip"/>
+  <text x="520" y="392" class="chipTitle">External Servers</text>
+  <text x="520" y="414" class="muted">No stdout access: poll http://127.0.0.1:PORT/api/status</text>
+  <text x="520" y="434" class="text">Display: health badge, uptime, request trend, last error</text>
+  <text x="520" y="454" class="muted">Future option: tail tmp/telemetry/*.jsonl (file-based)</text>
+  <text x="520" y="476" class="code">tests/z-server/telemetryJsonl.test.js</text>
+  <text x="520" y="496" class="text">Covers JSONL parsing, CRLF handling, v1 detection</text>
+
+  <rect x="505" y="540" width="390" height="155" rx="8" class="chip"/>
+  <text x="520" y="562" class="chipTitle">Drift Risk Surface</text>
+  <text x="520" y="584" class="text">Event names changing: UI parsing breaks silently</text>
+  <text x="520" y="604" class="text">/api/status shape drift: dashboard polling fails</text>
+  <text x="520" y="624" class="text">Middleware behavior changes: log gaps or floods</text>
+  <text x="520" y="646" class="muted">Mitigation: contract tests encode expected shapes</text>
+  <text x="520" y="668" class="muted">Tripwires fail loudly before drift reaches production</text>
+
+  <rect x="505" y="710" width="390" height="125" rx="8" class="chip"/>
+  <text x="520" y="732" class="chipTitle">Data Flow Summary</text>
+  <text x="520" y="754" class="text">A to B: stdout JSONL (spawned) or /api/status (external)</text>
+  <text x="520" y="774" class="text">C to B: SSE stream or polling (crawler progress UI)</text>
+  <text x="520" y="794" class="muted">z-server normalizes both into unified log/status views</text>
+  <text x="520" y="814" class="muted">UI components consume normalized events</text>
+
+  <!-- Column C: Crawler Telemetry -->
+  <rect x="955" y="180" width="390" height="195" rx="8" class="chip"/>
+  <text x="970" y="202" class="chipTitle">Crawler Facade</text>
+  <text x="970" y="224" class="code">src/crawler/CrawlerTelemetry.js</text>
+  <text x="970" y="246" class="muted">progress, queueEvent, problem, milestone</text>
+  <text x="970" y="266" class="muted">milestoneOnce, plannerStage, enhancedQueueEvent</text>
+  <text x="970" y="288" class="text">Forwards to: CrawlerEvents.js (logging + persistence)</text>
+  <text x="970" y="308" class="muted">milestoneOnce enforces "emit once" semantics by key</text>
+  <text x="970" y="328" class="muted">Milestones persist to DB when persist:true</text>
+  <text x="970" y="348" class="code">src/crawler/planner/PlannerTelemetryBridge.js</text>
+
+  <rect x="955" y="390" width="390" height="175" rx="8" class="chip"/>
+  <text x="970" y="412" class="chipTitle">Stream Telemetry</text>
+  <text x="970" y="434" class="code">src/crawler/telemetry/*</text>
+  <text x="970" y="456" class="text">CrawlTelemetrySchema: typed events</text>
+  <text x="970" y="476" class="muted">progress, phase-change, url-visited, url-error</text>
+  <text x="970" y="496" class="text">CrawlTelemetryBridge: batching + history + broadcast</text>
+  <text x="970" y="516" class="muted">High-frequency events batched to prevent SSE flooding</text>
+  <text x="970" y="536" class="muted">Maintains history for late-joining clients</text>
+
+  <rect x="955" y="580" width="390" height="130" rx="8" class="chip"/>
+  <text x="970" y="602" class="chipTitle">Legacy UI Consumption</text>
+  <text x="970" y="624" class="code">src/deprecated-ui/public/index/crawlProgressIntegration.js</text>
+  <text x="970" y="646" class="muted">SSE handlers: MILESTONE, PROGRESS, PROBLEM</text>
+  <text x="970" y="666" class="muted">Feeds progress indicators and telemetry displays</text>
+  <text x="970" y="686" class="text">Modern UI can use same integration layer pattern</text>
+
+  <rect x="955" y="725" width="390" height="110" rx="8" class="chip"/>
+  <text x="970" y="747" class="chipTitle">Tests</text>
+  <text x="970" y="769" class="code">src/crawler/__tests__/CrawlerTelemetry.test.js</text>
+  <text x="970" y="789" class="muted">Covers: progress forwarding, milestoneOnce semantics,</text>
+  <text x="970" y="809" class="muted">queueEvent payloads, enhanced queue events</text>
+
+  <!-- Cross-system connectors -->
+  <path d="M 460 420 Q 475 380 475 320 Q 475 280 505 250" class="goldLine"/>
+  <rect x="460" y="332" width="115" height="18" rx="4" fill="#1a1a1a" opacity="0.85"/>
+  <text x="467" y="345" class="connector-label">stdout JSONL</text>
+
+  <path d="M 940 480 Q 920 480 920 500 Q 920 520 895 520" class="goldLine" style="marker-end: none; marker-start: url(#arrowGold);"/>
+  <rect x="816" y="508" width="85" height="18" rx="4" fill="#1a1a1a" opacity="0.85"/>
+  <text x="823" y="521" class="connector-label">SSE / broadcast</text>
+
+  <!-- Drift callouts footer -->
+  <rect x="40" y="862" width="1320" height="48" rx="10" class="callout"/>
+  <text x="60" y="886" class="calloutTitle">Drift Tripwires</text>
+  <text x="180" y="886" class="calloutText">drift:decision-trace-shape (milestone payloads), drift:query-budget (/api/status response time + shape), drift:perf-regression (middleware exclusion rules)</text>
+  <text x="60" y="902" class="muted">Encode invariants as tests: silent drift becomes loud failure, fix before production</text>
+</svg>
