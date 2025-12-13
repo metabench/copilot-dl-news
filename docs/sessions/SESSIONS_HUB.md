@@ -31,6 +31,44 @@
 
 ## Current Session
 
+### Session 2025-12-13: Merge HTTP record/replay into main
+
+**Duration**: Active
+**Type**: integration
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Merge safe HTTP record/replay + decision trace changes into main, validate tests, and delete merged branches
+
+**Location**: `docs/sessions/2025-12-13-merge-http-record-replay-into-main/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-merge-http-record-replay-into-main/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-merge-http-record-replay-into-main/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-merge-http-record-replay-into-main/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-merge-http-record-replay-into-main/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-merge-http-record-replay-into-main/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Integrate HTTP record/replay commit
+
+**Duration**: Active
+**Type**: integration
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Cherry-picked 0480388 onto current branch and validated tests
+
+**Location**: `docs/sessions/2025-12-13-integrate-http-record-replay/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-integrate-http-record-replay/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-integrate-http-record-replay/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-integrate-http-record-replay/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-integrate-http-record-replay/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-integrate-http-record-replay/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-13: HTTP Record/Replay Harness + Decision Trace Milestones
 
 **Duration**: Completed
