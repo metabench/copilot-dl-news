@@ -38,6 +38,7 @@ const START_URL = 'https://example.com';
 function createCrawler(options = {}) {
   const crawler = new NewsCrawler(START_URL, {
     concurrency: 2,
+    jobId: 'test-job',
     enableDb: false,
     preferCache: false,
     useSitemap: false,
@@ -47,6 +48,7 @@ function createCrawler(options = {}) {
 
   jest.spyOn(crawler.telemetry, 'queueEvent').mockImplementation(() => {});
   jest.spyOn(crawler.telemetry, 'problem').mockImplementation(() => {});
+  jest.spyOn(crawler.telemetry, 'milestone');
   jest.spyOn(crawler.cache, 'get').mockResolvedValue(null);
 
   return crawler;
@@ -220,5 +222,54 @@ describe('NewsCrawler queue behaviour (pre-extraction)', () => {
     const queued = crawler.queue.peek();
     expect(queued.meta?.maxCacheAgeMs).toBe(300000);
     expect(queued.meta?.fetchPolicy).toBeUndefined();
+  });
+
+  it('does not persist hub freshness decision traces by default', () => {
+    const crawler = createCrawler({ jobId: 'job-no-trace' });
+    const adapter = { insertMilestone: jest.fn() };
+    crawler.events.getEnhancedDbAdapter = () => adapter;
+    crawler._cleanupHubFreshnessConfig();
+    crawler.hubFreshnessConfig = {
+      refreshOnStartup: true,
+      maxCacheAgeMs: 600000,
+      firstPageMaxAgeMs: 120000,
+      fallbackToCacheOnFailure: false
+    };
+
+    crawler.enqueueRequest({
+      url: START_URL,
+      depth: 0,
+      type: 'nav'
+    });
+
+    expect(adapter.insertMilestone).not.toHaveBeenCalled();
+  });
+
+  it('persists hub freshness decision traces when enabled', () => {
+    const crawler = createCrawler({ jobId: 'job-trace' });
+    const adapter = { insertMilestone: jest.fn() };
+    crawler.events.getEnhancedDbAdapter = () => adapter;
+    crawler._cleanupHubFreshnessConfig();
+    crawler.hubFreshnessConfig = {
+      refreshOnStartup: true,
+      maxCacheAgeMs: 600000,
+      firstPageMaxAgeMs: 120000,
+      fallbackToCacheOnFailure: false,
+      persistDecisionTraces: true
+    };
+
+    crawler.enqueueRequest({
+      url: START_URL,
+      depth: 0,
+      type: 'nav'
+    });
+
+    expect(adapter.insertMilestone).toHaveBeenCalledWith(
+      expect.objectContaining({
+        jobId: 'job-trace',
+        kind: 'hub-freshness-decision',
+        target: START_URL
+      })
+    );
   });
 });

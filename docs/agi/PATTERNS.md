@@ -174,3 +174,39 @@ AGI-accumulated knowledge catalog.
 **Example**: Build bundle with `node scripts/build-art-playground-client.js` before `npm run test:by-path tests/ui/e2e/art-playground.puppeteer.e2e.test.js`.
 
 ---
+
+## Query Param Preservation in Pagination Links
+
+**Added**: 2025-12-12
+**Context**: General
+
+**When to use**: Building pagination or navigation links that should preserve filter/sort state
+
+**Steps/Details**:
+1. 1. Create a base href builder that copies ALL query params from the original request
+1. 2. Override only the params that change (e.g., page number)
+1. 3. Use URLSearchParams or similar to handle encoding automatically
+1. 4. For back-links, preserve everything except navigation-specific params (back, backLabel)
+1. 5. Test with multiple filter combinations to verify preservation
+
+**Example**: buildHref() in dataExplorerServer.js copies req.query then sets page; buildBackLinkTarget() in navigation.js copies all except back/backLabel
+
+---
+
+## Query Time Budget Instrumentation
+
+**Added**: 2025-12-12
+**Context**: General
+
+**When to use**: Need to detect slow database queries without adding full APM overhead
+
+**Steps/Details**:
+1. 1. Create a timedQuery(fn, {label, thresholdMs, onSlow}) wrapper
+1. 2. Use process.hrtime.bigint() for nanosecond precision
+1. 3. Compare duration to threshold and call onSlow or console.warn if exceeded
+1. 4. Optionally wrap statement objects to instrument .all()/.get()/.run() methods
+1. 5. Keep threshold configurable (default 200ms is reasonable for UI queries)
+
+**Example**: src/db/sqlite/v1/queries/helpers/queryTimeBudget.js - timedQuery(), instrumentStatement(), createTimedDb()
+
+---

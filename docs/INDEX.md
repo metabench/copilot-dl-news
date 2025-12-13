@@ -1,6 +1,6 @@
 # Project Documentation Index
 
-_Last updated: 2025-12-10_
+_Last updated: 2025-12-12_
 
 ## Agents
 - [Agent Policy](agents/agent_policy.md)
@@ -31,6 +31,20 @@ _Last updated: 2025-12-10_
 ## How-tos
 - [Add a New Agent](how_tos/add_new_agent.md)
 - [Update the Index](how_tos/update_index.md)
+
+## Crawling
+
+High-signal entry points for the crawler subsystem. Start with the architecture doc, then use the CLI quick reference and the roadmap.
+
+- [Architecture: Crawls vs Background Tasks](ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md)
+- [Crawler Runbook (Ops)](RUNBOOK.md)
+- [Debugging Child Processes](DEBUGGING_CHILD_PROCESSES.md)
+- [Crawl CLI Quick Reference](cli/crawl.md)
+- [DB Queries During Crawls](DB_QUERIES_DURING_CRAWLS.md)
+- [Enhanced Features](ENHANCED_FEATURES.md)
+- [Geography Crawl Type](GEOGRAPHY_CRAWL_TYPE.md)
+- [Reliable Crawler Roadmap](goals/RELIABLE_CRAWLER_ROADMAP.md)
+- [Intelligent Crawl Startup](agents/intelligent-crawl-startup.md) - Agent workflow for iterating on startup output and preflight.
 
 ## Guides
 

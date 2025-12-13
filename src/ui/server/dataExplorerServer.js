@@ -29,7 +29,14 @@ const {
   selectFetchedUrlPage,
   selectFetchedUrlPageByHost,
   countFetchedUrls,
-  countFetchedUrlsByHost
+  countFetchedUrlsByHost,
+  // Extended filtering
+  selectUrlPageFiltered,
+  countUrlsFiltered,
+  selectFetchedUrlPageFiltered,
+  countFetchedUrlsFiltered,
+  normalizeHostMode,
+  parseHosts
 } = require("../../db/sqlite/v1/queries/ui/urlListingNormalized");
 const {
   getArticleCount,
@@ -37,6 +44,12 @@ const {
   getFetchCountViaJoin
 } = require("../../db/sqlite/v1/queries/ui/domainSummary");
 const { selectDomainCountsByHosts } = require("../../db/sqlite/v1/queries/ui/domainCounts");
+const {
+  selectDomainPage,
+  countDomains,
+  normalizeSortColumn,
+  normalizeSortDirection
+} = require("../../db/sqlite/v1/queries/ui/domainListing");
 const { listRecentCrawls } = require("../../db/sqlite/v1/queries/ui/crawls");
 const { listRecentErrors } = require("../../db/sqlite/v1/queries/ui/errors");
 const { selectUrlById, selectFetchHistory, selectFetchById } = require("../../db/sqlite/v1/queries/ui/urlDetails");
@@ -179,9 +192,15 @@ function sanitizeHostFilter(value) {
 }
 
 function resolveUrlFilterState(query = {}) {
+  // Parse multi-host from `hosts` param (comma-separated) or single `host`
+  const rawHosts = query.hosts || query.host;
+  const hosts = parseHosts(rawHosts);
+  const hostMode = normalizeHostMode(query.hostMode);
   return {
     hasFetches: toBooleanQueryFlag(query.hasFetches),
-    host: sanitizeHostFilter(query.host)
+    host: hosts.length === 1 ? hosts[0] : null, // backward compat
+    hosts,
+    hostMode
   };
 }
 
@@ -254,19 +273,23 @@ function tryGetCachedUrlTotals(db) {
 }
 
 function buildUrlTotals(db, options = {}) {
-  const host = options.host != null ? String(options.host).trim() : "";
-  const hasHost = Boolean(host);
+  const hosts = options.hosts || [];
+  const hostMode = options.hostMode || "exact";
+  const hasFilter = hosts.length > 0;
+
   if (options.hasFetches) {
     return {
       source: "live",
-      totalRows: hasHost ? countFetchedUrlsByHost(db, host) : countFetchedUrls(db),
+      totalRows: hasFilter
+        ? countFetchedUrlsFiltered(db, { hosts, hostMode })
+        : countFetchedUrls(db),
       cache: null
     };
   }
-  if (hasHost) {
+  if (hasFilter) {
     return {
       source: "live",
-      totalRows: countUrlsByHost(db, host),
+      totalRows: countUrlsFiltered(db, { hosts, hostMode }),
       cache: null
     };
   }
@@ -713,7 +736,7 @@ function buildUrlListingPayload({ req, db, relativeDb, pageSize, now, basePathOv
   }
   const query = req.query || {};
   const filters = resolveUrlFilterState(query);
-  const totals = buildUrlTotals(db, { hasFetches: filters.hasFetches, host: filters.host });
+  const totals = buildUrlTotals(db, { hasFetches: filters.hasFetches, hosts: filters.hosts, hostMode: filters.hostMode });
   const requestedPage = sanitizePage(query.page);
   const basePath = basePathOverride || (((req.baseUrl || "") + (req.path || "")) || "/urls");
   const querySnapshot = snapshotQueryParams(query);
@@ -722,18 +745,42 @@ function buildUrlListingPayload({ req, db, relativeDb, pageSize, now, basePathOv
     pageSize,
     currentPage: requestedPage
   });
-  const selector = (() => {
-    if (filters.hasFetches) {
-      return filters.host ? selectFetchedUrlPageByHost : selectFetchedUrlPage;
-    }
-    return filters.host ? selectUrlPageByHost : selectUrlPage;
-  })();
+
+  // Decide which selector to use based on filter shape
+  const hasHostFilter = filters.hosts && filters.hosts.length > 0;
+  const needsExtendedFilter = hasHostFilter && (filters.hostMode !== "exact" || filters.hosts.length > 1);
+
   const selectorOptions = {
     limit: pageSize,
     offset: pagination.offset
   };
-  if (filters.host) selectorOptions.host = filters.host;
-  const records = selector(db, selectorOptions);
+
+  let records;
+  if (needsExtendedFilter) {
+    selectorOptions.hosts = filters.hosts;
+    selectorOptions.hostMode = filters.hostMode;
+    if (filters.hasFetches) {
+      records = selectFetchedUrlPageFiltered(db, selectorOptions);
+    } else {
+      records = selectUrlPageFiltered(db, selectorOptions);
+    }
+  } else if (hasHostFilter) {
+    // Single host exact match - use legacy optimized path
+    selectorOptions.host = filters.hosts[0];
+    if (filters.hasFetches) {
+      records = selectFetchedUrlPageByHost(db, selectorOptions);
+    } else {
+      records = selectUrlPageByHost(db, selectorOptions);
+    }
+  } else {
+    // No host filter
+    if (filters.hasFetches) {
+      records = selectFetchedUrlPage(db, selectorOptions);
+    } else {
+      records = selectUrlPage(db, selectorOptions);
+    }
+  }
+
   const rows = buildDisplayRows(records, { startIndex: pagination.startRow > 0 ? pagination.startRow : 1 });
   const subtitle = totals.totalRows === 0
     ? filters.hasFetches
@@ -993,44 +1040,121 @@ function buildUrlSummarySubtitle({ startRow, endRow, totalRows, currentPage, tot
 
 
 function renderDomainSummaryView({ req, db, relativeDb, now }) {
-  const snapshot = buildDomainSnapshot(db, { windowSize: DOMAIN_WINDOW_SIZE, limit: DOMAIN_LIMIT });
-  // Skip slow per-host queries (getArticleCount, getFetchCountForHost) on initial render.
-  // These would cause N+1 queries that take several seconds. Instead, render placeholders
-  // and let the client load these counts asynchronously in the future.
-  const entries = snapshot.hosts.map((domain) => {
-    return {
-      host: domain.host || null,
-      windowArticles: domain.articleCount || 0,
-      allArticles: null,  // Deferred: would be getArticleCount(db, host)
-      fetches: null,      // Deferred: would be getFetchCountForHost(db, host)
-      lastSavedAt: domain.lastSavedAt
+  const query = req.query || {};
+  const searchTerm = typeof query.search === "string" ? query.search.trim() : "";
+  const isSearchMode = searchTerm.length > 0;
+
+  // Parse pagination and sort params for search mode
+  const pageSize = 25;
+  const requestedPage = sanitizePage(query.page);
+  const sortBy = normalizeSortColumn(query.sortBy || query.sort);
+  const sortDir = normalizeSortDirection(query.sortDir || query.dir);
+
+  let rows, subtitle, pagination, totalRows;
+
+  if (isSearchMode) {
+    // Search mode: use new domain listing API with pagination
+    totalRows = countDomains(db, { search: searchTerm });
+    const offset = (requestedPage - 1) * pageSize;
+    const records = selectDomainPage(db, {
+      search: searchTerm,
+      sortBy,
+      sortDir,
+      limit: pageSize,
+      offset
+    });
+
+    // Transform records to match buildDomainSummaryRows format
+    const entries = records.map((r) => ({
+      host: r.host,
+      windowArticles: null,
+      allArticles: r.url_count,
+      fetches: null,
+      lastSavedAt: r.last_seen
+    }));
+    rows = buildDomainSummaryRows(entries);
+
+    // Build pagination
+    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+    const safePage = Math.min(requestedPage, totalPages);
+    const startRow = totalRows === 0 ? 0 : offset + 1;
+    const endRow = totalRows === 0 ? 0 : offset + Math.min(pageSize, totalRows - offset);
+
+    const makeHref = (page) => {
+      const params = new URLSearchParams();
+      if (searchTerm) params.set("search", searchTerm);
+      if (sortBy !== "url_count") params.set("sortBy", sortBy);
+      if (sortDir !== "DESC") params.set("sortDir", sortDir);
+      if (page > 1) params.set("page", String(page));
+      const qs = params.toString();
+      return qs ? `/domains?${qs}` : "/domains";
     };
-  });
-  const rows = buildDomainSummaryRows(entries);
+
+    pagination = {
+      currentPage: safePage,
+      totalPages,
+      totalRows,
+      pageSize,
+      startRow,
+      endRow,
+      prevHref: safePage > 1 ? makeHref(safePage - 1) : null,
+      nextHref: safePage < totalPages ? makeHref(safePage + 1) : null,
+      firstHref: safePage > 1 ? makeHref(1) : null,
+      lastHref: safePage < totalPages ? makeHref(totalPages) : null
+    };
+
+    subtitle = totalRows === 0
+      ? `No domains match "${searchTerm}"`
+      : `Showing ${startRow}-${endRow} of ${formatCount(totalRows)} domains matching "${searchTerm}"`;
+  } else {
+    // Default mode: show recent domain activity (original behavior)
+    const snapshot = buildDomainSnapshot(db, { windowSize: DOMAIN_WINDOW_SIZE, limit: DOMAIN_LIMIT });
+    // Skip slow per-host queries (getArticleCount, getFetchCountForHost) on initial render.
+    // These would cause N+1 queries that take several seconds. Instead, render placeholders
+    // and let the client load these counts asynchronously in the future.
+    const entries = snapshot.hosts.map((domain) => {
+      return {
+        host: domain.host || null,
+        windowArticles: domain.articleCount || 0,
+        allArticles: null,  // Deferred: would be getArticleCount(db, host)
+        fetches: null,      // Deferred: would be getFetchCountForHost(db, host)
+        lastSavedAt: domain.lastSavedAt
+      };
+    });
+    rows = buildDomainSummaryRows(entries);
+    subtitle = rows.length === 0
+      ? `No recent domain saves found in ${relativeDb}`
+      : buildDomainSubtitle(rows.length, snapshot);
+    totalRows = rows.length;
+    pagination = null;
+  }
+
   const backTarget = buildBackLinkTarget(req, { defaultLabel: "Domains" });
   attachBackLink(rows, "host", backTarget);
-  const subtitle = rows.length === 0
-    ? `No recent domain saves found in ${relativeDb}`
-    : buildDomainSubtitle(rows.length, snapshot);
+
   return {
-    title: "Recent Domain Activity",
+    title: isSearchMode ? `Domain Search: "${searchTerm}"` : "Recent Domain Activity",
     columns: buildDomainSummaryColumns(),
     rows,
     meta: {
       rowCount: rows.length,
-      limit: DOMAIN_LIMIT,
+      limit: isSearchMode ? pageSize : DOMAIN_LIMIT,
       dbLabel: relativeDb,
       generatedAt: formatDateTime(now, true),
       subtitle,
-      metrics: snapshot.cache
-        ? {
-            statKey: snapshot.cache.statKey,
-            generatedAt: snapshot.cache.generatedAt,
-            stale: snapshot.cache.stale,
-            maxAgeMs: snapshot.cache.maxAgeMs,
-            source: snapshot.source
-          }
-        : undefined
+      pagination,
+      filters: {
+        search: searchTerm || null,
+        sortBy: isSearchMode ? sortBy : null,
+        sortDir: isSearchMode ? sortDir : null
+      }
+    },
+    renderOptions: {
+      searchForm: {
+        action: "/domains",
+        currentSearch: searchTerm,
+        placeholder: "Search domains..."
+      }
     }
   };
 }
@@ -1316,6 +1440,88 @@ function createDataExplorerServer(options = {}) {
         };
       }
       res.json({ counts });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Domain listing API with search, sort, and pagination
+  app.get("/api/domains", (req, res, next) => {
+    try {
+      const now = new Date();
+      const query = req.query || {};
+
+      // Parse pagination params
+      const requestedPage = sanitizePage(query.page);
+      const limit = 25;
+      const offset = (requestedPage - 1) * limit;
+
+      // Parse sort params
+      const sortBy = normalizeSortColumn(query.sortBy || query.sort);
+      const sortDir = normalizeSortDirection(query.sortDir || query.dir);
+
+      // Parse search param
+      const search = typeof query.search === "string" ? query.search.trim() : "";
+
+      // Fetch data
+      const totalRows = countDomains(dbAccess.db, { search });
+      const records = selectDomainPage(dbAccess.db, {
+        search,
+        sortBy,
+        sortDir,
+        limit,
+        offset
+      });
+
+      // Build pagination
+      const totalPages = Math.max(1, Math.ceil(totalRows / limit));
+      const safePage = Math.min(requestedPage, totalPages);
+      const startRow = totalRows === 0 ? 0 : offset + 1;
+      const endRow = totalRows === 0 ? 0 : offset + Math.min(limit, totalRows - offset);
+
+      const makeHref = (page) => {
+        const params = new URLSearchParams();
+        if (search) params.set("search", search);
+        if (sortBy !== "url_count") params.set("sortBy", sortBy);
+        if (sortDir !== "DESC") params.set("sortDir", sortDir);
+        if (page > 1) params.set("page", String(page));
+        const qs = params.toString();
+        return qs ? `/api/domains?${qs}` : "/api/domains";
+      };
+
+      const pagination = {
+        currentPage: safePage,
+        totalPages,
+        totalRows,
+        pageSize: limit,
+        startRow,
+        endRow,
+        prevHref: safePage > 1 ? makeHref(safePage - 1) : null,
+        nextHref: safePage < totalPages ? makeHref(safePage + 1) : null,
+        firstHref: safePage > 1 ? makeHref(1) : null,
+        lastHref: safePage < totalPages ? makeHref(totalPages) : null
+      };
+
+      // Build response
+      const diagnostics = buildRequestDiagnostics(req, { route: "/api/domains" });
+      applyDiagnosticsHeaders(res, diagnostics);
+
+      res.json({
+        ok: true,
+        records,
+        meta: {
+          rowCount: records.length,
+          limit,
+          generatedAt: formatDateTime(now, true),
+          pagination,
+          filters: {
+            search: search || null,
+            sortBy,
+            sortDir
+          }
+        },
+        diagnostics
+      });
     } catch (error) {
       next(error);
     }

@@ -412,4 +412,58 @@ class HttpRequestResponseFacade {
   }
 }
 
-module.exports = { HttpRequestResponseFacade, CACHE_CONFIG };
+/**
+ * Instance wrapper for HttpRequestResponseFacade
+ * Provides instance-level API that delegates to static methods
+ * Used by gazetteer ingestors and other modules that instantiate the facade
+ */
+class HttpRequestResponseFacadeInstance {
+  constructor(dbOrOptions) {
+    // Support both `new Facade(db)` and `new Facade({ db })`
+    this.db = dbOrOptions && typeof dbOrOptions === 'object' && 'db' in dbOrOptions
+      ? dbOrOptions.db
+      : dbOrOptions;
+    
+    if (!this.db) {
+      throw new Error('HttpRequestResponseFacadeInstance requires a database connection');
+    }
+  }
+
+  /**
+   * Instance wrapper for cacheHttpResponse
+   * @param {Object} params - Same as static method, but db is pre-bound
+   */
+  async cacheHttpResponse(params) {
+    return HttpRequestResponseFacade.cacheHttpResponse(this.db, params);
+  }
+
+  /**
+   * Instance wrapper for getCachedHttpResponse
+   * @param {string|Object} urlOrParams - URL string or params object
+   * @param {Object} [options] - Options if first param is URL
+   */
+  async getCachedHttpResponse(urlOrParams, options) {
+    // Support both signatures:
+    // - getCachedHttpResponse(url, options)
+    // - getCachedHttpResponse({ url, ...options })
+    if (typeof urlOrParams === 'string') {
+      return HttpRequestResponseFacade.getCachedHttpResponse(this.db, urlOrParams, options);
+    } else {
+      const { url, ...opts } = urlOrParams;
+      return HttpRequestResponseFacade.getCachedHttpResponse(this.db, url, opts);
+    }
+  }
+
+  /**
+   * Generate cache key (delegates to static method)
+   */
+  generateCacheKey(url, request, metadata) {
+    return HttpRequestResponseFacade.generateCacheKey(url, request, metadata);
+  }
+}
+
+module.exports = { 
+  HttpRequestResponseFacade,
+  HttpRequestResponseFacadeInstance,
+  CACHE_CONFIG 
+};

@@ -39588,6 +39588,7 @@ body .overlay {
           this._layers = [];
           this._inputs = {};
           this._lastEmitted = { id: null, byProp: /* @__PURE__ */ Object.create(null) };
+          this._palettes = {};
           if (!spec.el) this.compose();
         }
         compose() {
@@ -39613,6 +39614,7 @@ body .overlay {
           fillRow.add(this._fillSwatch = this._colorSwatch("#4A90D9", "fill"));
           fillRow.add(this._inputs.fill = this._input("", "#4A90D9", "fill"));
           fillSection.add(fillRow);
+          fillSection.add(this._palettes.fill = this._colorPalette("fill"));
           this.add(fillSection);
           const strokeSection = this._section();
           strokeSection.add(this._label("Stroke"));
@@ -39620,6 +39622,7 @@ body .overlay {
           strokeRow.add(this._strokeSwatch = this._colorSwatch("transparent", "stroke"));
           strokeRow.add(this._inputs.stroke = this._input("", "none", "stroke"));
           strokeSection.add(strokeRow);
+          strokeSection.add(this._palettes.stroke = this._colorPalette("stroke"));
           this.add(strokeSection);
           this.add(this._header("Layers"));
           this._layersContainer = new Control2({ context: ctx, tagName: "div" });
@@ -39676,6 +39679,54 @@ body .overlay {
           if (propName) swatch.dom.attributes["data-prop"] = propName;
           return swatch;
         }
+        _getPaletteSpec(propName) {
+          const base = [
+            { label: "Cool highlight", value: "#4a9eff" },
+            { label: "Cool highlight (deep)", value: "#2d7dd2" },
+            { label: "Gold", value: "#c9a962" },
+            { label: "Gold (light)", value: "#e8d5a3" },
+            { label: "Success", value: "#2ecc71" },
+            { label: "Danger", value: "#d94a4a" },
+            { label: "Obsidian", value: "#2d2d2d" },
+            { label: "Gray (secondary)", value: "#888888" },
+            { label: "Gray (tertiary)", value: "#666666" },
+            { label: "Leather", value: "#ebe8e2" },
+            { label: "White", value: "#faf9f7" }
+          ];
+          if (propName === "stroke") {
+            return [{ label: "None", value: "none", kind: "none" }, ...base];
+          }
+          return base;
+        }
+        _colorPalette(propName) {
+          const palette = new Control2({ context: this.context, tagName: "div" });
+          palette.add_class("ap-color-palette");
+          palette.dom.attributes["data-role"] = propName === "fill" ? "ap-fill-palette" : "ap-stroke-palette";
+          palette.dom.attributes["data-prop"] = propName;
+          palette.dom.attributes.role = "radiogroup";
+          palette.dom.attributes["aria-label"] = propName === "fill" ? "Fill color" : "Stroke color";
+          const swatches = this._getPaletteSpec(propName);
+          swatches.forEach((s, idx) => {
+            const btn = new Control2({ context: this.context, tagName: "button" });
+            btn.add_class("ap-color-palette__swatch");
+            btn.dom.attributes.type = "button";
+            btn.dom.attributes["data-role"] = "ap-color-swatch";
+            btn.dom.attributes["data-prop"] = propName;
+            btn.dom.attributes["data-value"] = s.value;
+            btn.dom.attributes.title = s.label;
+            btn.dom.attributes["aria-label"] = `${propName}: ${s.label}`;
+            btn.dom.attributes.role = "radio";
+            btn.dom.attributes["aria-checked"] = "false";
+            btn.dom.attributes.tabindex = idx === 0 ? "0" : "-1";
+            if (s.kind === "none") {
+              btn.add_class("ap-color-palette__swatch--none");
+            } else {
+              btn.dom.attributes.style = `background: ${s.value};`;
+            }
+            palette.add(btn);
+          });
+          return palette;
+        }
         activate() {
           if (this.__active) return;
           this.__active = true;
@@ -39706,8 +39757,61 @@ body .overlay {
             if (!this._layersContainer) {
               this._layersContainer = { dom: { el: root.querySelector(".ap-layers") } };
             }
+            if (!this._palettes || Object.keys(this._palettes).length === 0) {
+              this._palettes = {};
+            }
+            if (!this._palettes.fill) {
+              const el = root.querySelector('[data-role="ap-fill-palette"]');
+              if (el) this._palettes.fill = { dom: { el } };
+            }
+            if (!this._palettes.stroke) {
+              const el = root.querySelector('[data-role="ap-stroke-palette"]');
+              if (el) this._palettes.stroke = { dom: { el } };
+            }
           }
           this._bindInputHandlers();
+          this._bindPaletteHandlers();
+          this._syncPaletteA11yFromUi();
+        }
+        _getPaletteButtons(paletteEl) {
+          if (!paletteEl) return [];
+          return Array.from(paletteEl.querySelectorAll('button[data-role="ap-color-swatch"]'));
+        }
+        _getPaletteColumns(paletteEl) {
+          try {
+            const style = window.getComputedStyle(paletteEl);
+            const cols = String(style.gridTemplateColumns || "").trim();
+            if (cols) {
+              const count = cols.split(/\s+/).filter(Boolean).length;
+              if (count > 0) return count;
+            }
+          } catch (_e) {
+          }
+          return 6;
+        }
+        _setPaletteRovingTabindex(paletteEl, activeBtn) {
+          const buttons = this._getPaletteButtons(paletteEl);
+          if (buttons.length === 0) return;
+          const fallback = buttons[0];
+          const active = activeBtn && buttons.includes(activeBtn) ? activeBtn : fallback;
+          buttons.forEach((b) => {
+            b.setAttribute("tabindex", b === active ? "0" : "-1");
+          });
+        }
+        _activatePaletteSwatchButton(btn) {
+          if (!btn) return;
+          const prop = btn.getAttribute("data-prop");
+          const value2 = btn.getAttribute("data-value");
+          if (!prop || value2 == null) return;
+          this._applyPropToUi(prop, value2);
+          this._emitPropertyChange(prop, value2);
+        }
+        _syncPaletteA11yFromUi() {
+          if (typeof document === "undefined") return;
+          const fillVal = this._inputs?.fill?._inputEl?.dom?.el?.value;
+          const strokeVal = this._inputs?.stroke?._inputEl?.dom?.el?.value;
+          this._updatePaletteSelected("fill", fillVal ?? "");
+          this._updatePaletteSelected("stroke", strokeVal ?? "none");
         }
         _bindInputHandlers() {
           if (typeof document === "undefined") return;
@@ -39720,20 +39824,7 @@ body .overlay {
               const selectionId = this._selection?.id;
               if (!selectionId) return;
               const raw = String(inputEl.value ?? "").trim();
-              if (this._lastEmitted.id !== selectionId) {
-                this._lastEmitted.id = selectionId;
-                this._lastEmitted.byProp = /* @__PURE__ */ Object.create(null);
-              }
-              const last = this._lastEmitted.byProp[prop];
-              if (last === raw) return;
-              const sel = this._selection;
-              if (sel && Object.prototype.hasOwnProperty.call(sel, prop)) {
-                const current = sel[prop];
-                const currentStr = current === void 0 || current === null ? null : String(current);
-                if (currentStr !== null && currentStr === raw) return;
-              }
-              this._lastEmitted.byProp[prop] = raw;
-              this.raise("property-change", { id: selectionId, prop, value: raw });
+              this._emitPropertyChange(prop, raw);
             };
             inputEl.addEventListener("change", emit);
             inputEl.addEventListener("keydown", (e) => {
@@ -39744,6 +39835,104 @@ body .overlay {
             });
           };
           ["x", "y", "width", "height", "fill", "stroke"].forEach(bind);
+        }
+        _bindPaletteHandlers() {
+          if (typeof document === "undefined") return;
+          if (this._palettesBound) return;
+          this._palettesBound = true;
+          const root = this.dom?.el;
+          if (!root) return;
+          root.addEventListener("click", (e) => {
+            const target = e.target;
+            if (!target) return;
+            const btn = target.closest?.('button[data-role="ap-color-swatch"]');
+            if (!btn) return;
+            this._activatePaletteSwatchButton(btn);
+          });
+          root.addEventListener("keydown", (e) => {
+            const target = e.target;
+            if (!target) return;
+            const btn = target.closest?.('button[data-role="ap-color-swatch"]');
+            if (!btn) return;
+            const paletteEl = btn.closest?.(".ap-color-palette");
+            if (!paletteEl) return;
+            const buttons = this._getPaletteButtons(paletteEl);
+            if (buttons.length === 0) return;
+            const idx = buttons.indexOf(btn);
+            if (idx < 0) return;
+            const key2 = e.key;
+            const cols = this._getPaletteColumns(paletteEl);
+            if (key2 === "Enter" || key2 === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              this._activatePaletteSwatchButton(btn);
+              return;
+            }
+            let nextIdx = null;
+            if (key2 === "ArrowLeft") nextIdx = idx - 1;
+            if (key2 === "ArrowRight") nextIdx = idx + 1;
+            if (key2 === "ArrowUp") nextIdx = idx - cols;
+            if (key2 === "ArrowDown") nextIdx = idx + cols;
+            if (key2 === "Home") nextIdx = 0;
+            if (key2 === "End") nextIdx = buttons.length - 1;
+            if (nextIdx === null) return;
+            e.preventDefault();
+            e.stopPropagation();
+            nextIdx = Math.max(0, Math.min(buttons.length - 1, nextIdx));
+            const nextBtn = buttons[nextIdx];
+            if (!nextBtn) return;
+            this._setPaletteRovingTabindex(paletteEl, nextBtn);
+            nextBtn.focus();
+          });
+        }
+        _emitPropertyChange(prop, rawValue) {
+          const selectionId = this._selection?.id;
+          if (!selectionId) return;
+          const raw = String(rawValue ?? "").trim();
+          if (this._lastEmitted.id !== selectionId) {
+            this._lastEmitted.id = selectionId;
+            this._lastEmitted.byProp = /* @__PURE__ */ Object.create(null);
+          }
+          const last = this._lastEmitted.byProp[prop];
+          if (last === raw) return;
+          const sel = this._selection;
+          if (sel && Object.prototype.hasOwnProperty.call(sel, prop)) {
+            const current = sel[prop];
+            const currentStr = current === void 0 || current === null ? null : String(current);
+            if (currentStr !== null && currentStr === raw) return;
+          }
+          this._lastEmitted.byProp[prop] = raw;
+          this.raise("property-change", { id: selectionId, prop, value: raw });
+        }
+        _applyPropToUi(prop, value2) {
+          if (prop === "fill") {
+            this._setInputValue("fill", value2);
+            this._updateSwatch(this._fillSwatch, value2);
+            this._updatePaletteSelected("fill", value2);
+          }
+          if (prop === "stroke") {
+            this._setInputValue("stroke", value2);
+            this._updateSwatch(this._strokeSwatch, value2 === "none" ? "transparent" : value2);
+            this._updatePaletteSelected("stroke", value2);
+          }
+        }
+        _updatePaletteSelected(prop, value2) {
+          const paletteEl = this._palettes?.[prop]?.dom?.el;
+          if (!paletteEl) return;
+          const normalized = String(value2 ?? "").trim().toLowerCase();
+          const buttons = Array.from(paletteEl.querySelectorAll('button[data-role="ap-color-swatch"]'));
+          buttons.forEach((b) => {
+            b.classList.remove("ap-color-palette__swatch--selected");
+            b.setAttribute("aria-checked", "false");
+          });
+          const match = buttons.find((b) => String(b.getAttribute("data-value") ?? "").trim().toLowerCase() === normalized);
+          if (match) {
+            match.classList.add("ap-color-palette__swatch--selected");
+            match.setAttribute("aria-checked", "true");
+            this._setPaletteRovingTabindex(paletteEl, match);
+          } else {
+            this._setPaletteRovingTabindex(paletteEl, buttons[0]);
+          }
         }
         /**
          * Update the properties panel with selection data.
@@ -39760,6 +39949,8 @@ body .overlay {
             this._setInputValue("stroke", "\u2014");
             this._updateSwatch(this._fillSwatch, "#ccc");
             this._updateSwatch(this._strokeSwatch, "#ccc");
+            this._updatePaletteSelected("fill", "");
+            this._updatePaletteSelected("stroke", "");
             return;
           }
           this._setInputValue("x", Math.round(selection.x));
@@ -39770,6 +39961,8 @@ body .overlay {
           this._setInputValue("stroke", selection.stroke || "none");
           this._updateSwatch(this._fillSwatch, selection.fill || "#ccc");
           this._updateSwatch(this._strokeSwatch, selection.stroke || "transparent");
+          this._updatePaletteSelected("fill", selection.fill || "");
+          this._updatePaletteSelected("stroke", selection.stroke || "none");
         }
         _setInputValue(name, value2) {
           const wrapper = this._inputs[name];

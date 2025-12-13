@@ -303,6 +303,30 @@ class CrawlerEvents {
     try {
       this._log('log', 'MILESTONE ' + JSON.stringify(milestone));
     } catch (_) {}
+
+    if (!milestone || milestone.persist !== true) {
+      return;
+    }
+
+    const adapter = this.getEnhancedDbAdapter();
+    const jobId = this.getJobId();
+    if (!adapter || !jobId || typeof adapter.insertMilestone !== 'function') {
+      return;
+    }
+
+    try {
+      adapter.insertMilestone({
+        jobId,
+        ts: milestone.ts || new Date().toISOString(),
+        kind: milestone.kind || 'unknown',
+        scope: milestone.scope || this.domain,
+        target: milestone.target || null,
+        message: milestone.message || null,
+        details: milestone.details
+      });
+    } catch (error) {
+      this._log('warn', 'Failed to persist milestone:', error && error.message ? error.message : error);
+    }
   }
 
   emitMilestoneOnce(key, milestone) {

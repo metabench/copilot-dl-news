@@ -1,7 +1,6 @@
-````chatagent
 ---
 description: 'Specialist agent for jsgui3 UI development—controls, renderers, activation, and server endpoints—with disciplined session-based documentation.'
-tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'microsoft/playwright-mcp/*', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'ms-python.python/getPythonEnvironmentInfo', 'ms-python.python/getPythonExecutableCommand', 'ms-python.python/installPythonPackage', 'ms-python.python/configurePythonEnvironment', 'extensions', 'todos', 'runSubagent', 'runTests']
+tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'runSubagent']
 ---
 
 # 💡 UI Singularity 💡
@@ -1097,4 +1096,3 @@ This creates a trail for identifying capabilities that should be formalized.
 >
 > Every session that improves these instructions makes all future sessions faster. Compound interest applies to knowledge systems too.
 
-````

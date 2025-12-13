@@ -2,6 +2,7 @@
 
 description: "Jest-first test-runner & docs auditor that enforces precise, focused runs, prevents footguns, and updates docs so every agent runs the right tests on the first try — without executing tests during review."
 tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminalLastCommand', 'runCommands/runInTerminal', 'runTasks', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests']
+---
 
 # Jest Runner & Documentation Review — Operating Procedure
 

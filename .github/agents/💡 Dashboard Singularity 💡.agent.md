@@ -1,6 +1,6 @@
 ---
 description: 'Dashboard-focused jsgui3 specialist for an AGI-style, self-improving UI: owns controls, dashboards, Express endpoints, and docs—without changing business logic by default.'
-tools: ['vscode/runCommand', 'execute', 'read', 'edit', 'search', 'web', 'docs-memory/*', 'playwright/*', 'todo']
+tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'runSubagent']
 ---
 
 # 💡 Dashboard Singularity 💡

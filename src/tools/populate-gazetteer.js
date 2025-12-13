@@ -33,7 +33,7 @@ const { fetchCountries } = require('./restcountries');
 const { findProjectRoot } = require('../utils/project-root');
 const { CliFormatter } = require('../utils/CliFormatter');
 const { CliArgumentParser } = require('../utils/CliArgumentParser');
-const { HttpRequestResponseFacade } = require('../utils/HttpRequestResponseFacade');
+const { HttpRequestResponseFacadeInstance } = require('../utils/HttpRequestResponseFacade');
 const { GazetteerTelemetry } = require('./gazetteer/GazetteerTelemetry');
 
 // Multi-capital countries with correct coordinates per capital
@@ -204,7 +204,7 @@ function normalizeOptions(rawArgs) {
   const raw = ensureDb(dbPath);
   try { ensureGazetteer(raw); } catch (_) {}
 
-  const facade = new HttpRequestResponseFacade(raw);
+  const facade = new HttpRequestResponseFacadeInstance(raw);
 
   const dedupStmts = createDeduplicationStatements(raw);
   const populateQueries = createPopulateGazetteerQueries(raw);

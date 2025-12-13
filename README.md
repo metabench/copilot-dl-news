@@ -155,17 +155,37 @@ node src/tools/crawl-query-benchmark.js --iterations=10
 
 By default the script opens `data/news.db`. Use `--db=PATH` to benchmark a different database, `--only=id1,id2` to restrict the query set, or `--list` to print the available identifiers. Set `--json=true` to emit machine-readable output (helpful for CI checks and historical tracking).
 
-### GUI (Express)
+### UI (Data Explorer)
 
-A minimal dashboard to run and monitor crawls locally.
+The active UI is the Data Explorer, served by `src/ui/server/dataExplorerServer.js`.
 
-1) Start the GUI server:
+1) Start the server:
 
 ```bash
-npm run gui
+npm run ui:data-explorer
 ```
 
-2) Watch the console for the `GUI server listening on http://localhost:<port>` message and open that URL. The server auto-selects a high-numbered free port (defaults to the 41000+ range) unless you override it with `PORT`.
+2) Open `http://localhost:3001`.
+
+For development notes (SSR vs hydration, control checks, E2E workflow), see `src/ui/README.md`.
+
+### Deprecated UI (Express)
+
+The legacy Express dashboard is deprecated as of October 2025 and kept for reference.
+
+Start it directly:
+
+```bash
+node src/deprecated-ui/express/server.js
+```
+
+Or detached:
+
+```bash
+node src/deprecated-ui/express/server.js --detached
+```
+
+Watch the console for the `GUI server listening on http://localhost:<port>` message and open that URL. The server auto-selects a high-numbered free port (defaults to the 41000+ range) unless you override it with `PORT`.
 
 What you’ll see:
 
@@ -178,9 +198,9 @@ What you’ll see:
 - Intelligent pipeline summary that reflects planner-stage telemetry and live coverage/goal insights
 - Health strip: DB size, disk free, CPU %, memory (RSS), SQLite journal mode and WAL autocheckpoint
 
-### Styling workflow
+### Styling workflow (deprecated UI)
 
-Crawler dashboard styles now originate from `src/ui/express/public/styles/crawler.scss`. After editing the SCSS, run `npm run sass:build` to regenerate `src/ui/express/public/crawler.css`, or `npm run sass:watch` while iterating. The Express server and tests continue to load the compiled CSS from `/assets/crawler.css`.
+Deprecated Express dashboard styles originate from `src/deprecated-ui/express/public/styles/crawler.scss` and compile to `src/deprecated-ui/express/public/crawler.css`.
 
 #### Sitemap options
 
@@ -358,16 +378,17 @@ npm run validate:gazetteer
 # Start crawler (same as npm start)
 npm run start
 
-# GUI server (DEPRECATED - see src/ui/README.md)
-npm run gui
-npm run gui:detached
+# Data Explorer UI (active)
+npm run ui:data-explorer
 
-# Build scripts (DEPRECATED - UI build system deprecated)
-npm run sass:build
-npm run sass:watch
-npm run components:build
-npm run components:watch
-npm run ui:build
+# Diagram Atlas (UI)
+npm run diagram:server
+
+# Docs viewer (UI)
+npm run ui:docs
+
+# Client bundle for interactive controls (Data Explorer)
+npm run ui:client-build
 ```
 
 ### Benchmarking Scripts
@@ -382,7 +403,7 @@ npm run benchmarks
 npm run ui:capture-screens
 ```
 
-**Note**: Many UI-related scripts are deprecated as of October 2025. See `src/ui/README.md` for new UI development information.
+**Note**: The legacy Express dashboard is deprecated as of October 2025; see `src/deprecated-ui/express/server.js` and `src/ui/README.md`.
 
 ## Background Tasks
 

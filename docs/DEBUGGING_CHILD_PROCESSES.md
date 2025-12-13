@@ -15,8 +15,8 @@ The UI server spawns crawlers as **child processes**. Understanding how output i
 ```
 Browser Client
     ↓ HTTP POST /api/crawl
-UI Server (Express)
-    ↓ spawn('node', ['crawl.js', ...args])
+UI Server (Express, deprecated dashboard)
+  ↓ spawn(process.execPath, args)
 Child Process (Crawler)
     ↓ stdout/stderr
 JobEventHandlerService
@@ -26,7 +26,7 @@ SSE Stream → Browser
 
 ### Output Handling
 
-**File**: `src/ui/express/services/core/JobEventHandlerService.js`
+**File**: `src/deprecated-ui/express/services/core/JobEventHandlerService.js`
 
 The `JobEventHandlerService` attaches to child process stdout/stderr and handles two types of output:
 
@@ -139,8 +139,8 @@ Geography crawl starts but never emits telemetry → appears to hang.
 
 ### How to Verify
 
-1. Start server: `npm run gui`
-2. Open browser: http://localhost:41001
+1. Start server: `node src/deprecated-ui/express/server.js`
+2. Open browser: http://localhost:41001 (or watch console for the chosen port)
 3. Open browser DevTools → Console tab
 4. Select "Geography" crawl type
 5. Click "Start Crawl"

@@ -1,0 +1,509 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3600 2200">
+  <title>Crawler Improvement Plans Atlas — Landscape WLILO V2</title>
+  <desc>Landscape, WLILO-styled, information-dense synthesis of documented crawler refactors, reliability work, and architecture vision.</desc>
+
+  <defs>
+    <!-- Gradients (WLILO / obsidian) -->
+    <linearGradient id="obsidianGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1320"/>
+      <stop offset="100%" style="stop-color:#0a0f1a"/>
+    </linearGradient>
+
+    <linearGradient id="panelGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e232c"/>
+      <stop offset="100%" style="stop-color:#14181f"/>
+    </linearGradient>
+
+    <linearGradient id="panelGradDeep" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#141b26"/>
+      <stop offset="100%" style="stop-color:#0f1520"/>
+    </linearGradient>
+
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#9a7b1c"/>
+      <stop offset="50%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#9a7b1c"/>
+    </linearGradient>
+
+    <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feFlood flood-color="#c9a227" flood-opacity="0.35"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="purpleGlow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#a855f7" flood-opacity="0.45"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="2" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.55"/>
+    </filter>
+
+    <marker id="arrowGold" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#c9a227"/>
+    </marker>
+
+    <marker id="arrowSlate" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+
+    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+      <path d="M 44 0 L 0 0 0 44" fill="none" stroke="#c9a227" stroke-width="0.4" opacity="0.08"/>
+    </pattern>
+
+    <pattern id="rivetPattern" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="10" cy="10" r="3" fill="#2d3548"/>
+      <circle cx="10" cy="10" r="2" fill="#3d4558"/>
+      <circle cx="9" cy="9" r="1" fill="#4d5568"/>
+    </pattern>
+
+    <style>
+      .title { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 34px; font-weight: 800; fill: #e2e8f0; letter-spacing: -0.6px; }
+      .subtitle { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px; fill: #94a3b8; }
+      .section-title { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 15px; font-weight: 750; fill: #c9a227; letter-spacing: 1.4px; text-transform: uppercase; }
+      .card-title { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 16px; font-weight: 750; fill: #e2e8f0; }
+      .small { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 11px; fill: #94a3b8; }
+      .text { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 12px; fill: #a9b7c8; }
+      .text2 { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 12px; fill: #cbd5e1; }
+      .text-bold { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 12px; font-weight: 700; fill: #e2e8f0; }
+      .code { font-family: ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 11px; fill: #64748b; }
+
+      .panel { fill: url(#panelGrad); stroke: #2d3548; stroke-width: 1; }
+      .panel-deep { fill: url(#panelGradDeep); stroke: #2d3548; stroke-width: 1; }
+      .panel-gold { fill: url(#panelGrad); stroke: #c9a227; stroke-width: 2; stroke-dasharray: 10,6; filter: url(#goldGlow); }
+      .panel-header { fill: #1a1f2e; }
+
+      .pill-text { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 11px; font-weight: 800; fill: #0b0f17; letter-spacing: 0.5px; }
+      .pill-done { fill: #22c55e; }
+      .pill-active { fill: #f59e0b; }
+      .pill-future { fill: #a855f7; }
+      .pill-proposed { fill: #94a3b8; }
+      .pill-bridge { fill: #c9a227; }
+      .pill-next { fill: #a855f7; filter: url(#purpleGlow); }
+      .next-text { fill: #a855f7; }
+      .next-text-strong { fill: #c084fc; font-weight: 750; }
+      .next-outline { stroke: #a855f7; stroke-width: 1.6; fill: none; filter: url(#purpleGlow); }
+
+      .connector { stroke: #64748b; stroke-width: 1.2; opacity: 0.65; stroke-dasharray: 6,6; }
+      .connector-gold { stroke: #c9a227; stroke-width: 1.6; opacity: 0.7; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="3600" height="2200" fill="url(#obsidianGrad)"/>
+  <rect width="3600" height="2200" fill="url(#grid)" opacity="0.85"/>
+
+  <!-- Header -->
+  <g filter="url(#softShadow)">
+    <rect x="30" y="20" width="3540" height="90" rx="8" fill="url(#panelGrad)"/>
+    <rect x="30" y="20" width="3540" height="90" rx="8" fill="none" stroke="#2d3548" stroke-width="1"/>
+
+    <!-- Rivets -->
+    <rect x="30" y="20" width="3540" height="90" rx="8" fill="url(#rivetPattern)" opacity="0.10"/>
+    <circle cx="60" cy="50" r="4" fill="#2d3548"/><circle cx="60" cy="50" r="2.5" fill="#3d4558"/>
+    <circle cx="80" cy="50" r="4" fill="#2d3548"/><circle cx="80" cy="50" r="2.5" fill="#3d4558"/>
+    <circle cx="3540" cy="50" r="4" fill="#2d3548"/><circle cx="3540" cy="50" r="2.5" fill="#3d4558"/>
+    <circle cx="3520" cy="50" r="4" fill="#2d3548"/><circle cx="3520" cy="50" r="2.5" fill="#3d4558"/>
+
+    <text x="140" y="56" class="title">Crawler Improvement Plans Atlas</text>
+    <text x="140" y="84" class="subtitle">Landscape WLILO V2 • Denser synthesis of documented crawler refactors + reliability work + future architecture • Updated 2025-12-13</text>
+
+    <!-- Legend -->
+    <text x="2540" y="44" class="small">LEGEND</text>
+
+    <rect x="2540" y="54" width="155" height="26" rx="13" class="pill-done"/>
+    <text x="2617" y="72" text-anchor="middle" class="pill-text">DONE</text>
+
+    <rect x="2705" y="54" width="155" height="26" rx="13" class="pill-active"/>
+    <text x="2782" y="72" text-anchor="middle" class="pill-text">ACTIVE</text>
+
+    <rect x="2870" y="54" width="155" height="26" rx="13" class="pill-future"/>
+    <text x="2947" y="72" text-anchor="middle" class="pill-text">FUTURE</text>
+
+    <rect x="3035" y="54" width="190" height="26" rx="13" class="pill-bridge"/>
+    <text x="3130" y="72" text-anchor="middle" class="pill-text">BRIDGE POINTS</text>
+
+    <rect x="3235" y="54" width="240" height="26" rx="13" class="pill-proposed"/>
+    <text x="3355" y="72" text-anchor="middle" class="pill-text">OPTIONAL IDEAS</text>
+  </g>
+
+  <!-- Column headers -->
+  <g filter="url(#softShadow)">
+    <text x="40" y="150" class="section-title">Foundations (Documented + Done)</text>
+    <text x="920" y="150" class="section-title">Reliability &amp; Testability</text>
+    <text x="1800" y="150" class="section-title">Completed: Hub Freshness</text>
+    <text x="2680" y="150" class="section-title">Future Vision: Navigation-First</text>
+  </g>
+
+  <!-- ===== Row 1: Primary panels ===== -->
+  <g filter="url(#softShadow)">
+    <!-- Col 1: Abstraction refactor -->
+    <g transform="translate(40, 170)">
+      <rect width="850" height="560" rx="10" class="panel-gold"/>
+      <rect width="850" height="46" rx="10" class="panel-header"/>
+      <text x="18" y="30" class="card-title">Crawler Abstraction Refactoring (Phases 1–6)</text>
+
+      <rect x="18" y="58" width="150" height="24" rx="12" class="pill-done"/>
+      <text x="93" y="75" text-anchor="middle" class="pill-text">DONE</text>
+      <text x="186" y="75" class="small">Primary: docs/CRAWLER_ABSTRACTION_REFACTORING_PLAN.md</text>
+
+      <text x="18" y="110" class="text-bold">High-level phases</text>
+      <text x="18" y="132" class="text2">• P1 CrawlContext • P2 SequenceRunner • P3 UrlDecisionOrchestrator</text>
+      <text x="18" y="152" class="text2">• P4 RetryCoordinator • P5 Service groups + DI • P6 Plan/Progress/Budget</text>
+
+      <text x="18" y="188" class="text-bold">Phase 6 (explicit abstractions + tests)</text>
+      <text x="18" y="210" class="text2">• CrawlPlan (39) • ProgressModel (37) • ResourceBudget (46) → 122 tests</text>
+
+      <text x="18" y="246" class="text-bold">Why this unlocks density safely</text>
+      <text x="18" y="268" class="text">• State becomes explicit (less “hidden shared mutable”)</text>
+      <text x="18" y="288" class="text">• Retries + telemetry become composable policy layers</text>
+      <text x="18" y="308" class="text">• Crawl behaviour is configurable via sequences, not rewrites</text>
+
+      <text x="18" y="344" class="text-bold">Concrete seams now available</text>
+      <text x="18" y="366" class="text">• Decision stage emits explainable outcomes (reasons + stage)</text>
+      <text x="18" y="386" class="text">• Retry policy centralized (no scattered backoff logic)</text>
+      <text x="18" y="406" class="text">• Budgets can become defaults on every sequence preset</text>
+
+      <text x="18" y="442" class="text-bold">Key code areas</text>
+      <text x="18" y="464" class="code">src/crawler/context/ • src/crawler/sequence/ • src/crawler/decisions/</text>
+      <text x="18" y="484" class="code">src/crawler/retry/ • src/crawler/plan/ • src/crawler/orchestration/</text>
+
+      <text x="18" y="524" class="small">Note: this panel intentionally mirrors the portrait atlas content, but compresses it for landscape density.</text>
+    </g>
+
+    <!-- Col 2: Reliability phase 1 + deterministic tests -->
+    <g transform="translate(920, 170)">
+      <rect width="850" height="560" rx="10" class="panel"/>
+      <rect width="850" height="46" rx="10" class="panel-header"/>
+      <text x="18" y="30" class="card-title">Reliability Services + Offline/Deterministic Tests</text>
+
+      <rect x="18" y="58" width="150" height="24" rx="12" class="pill-done"/>
+      <text x="93" y="75" text-anchor="middle" class="pill-text">DONE</text>
+      <text x="186" y="75" class="small">Sources: sessions + Dec 2025 reliability notes</text>
+
+      <text x="18" y="110" class="text-bold">Reliable crawler Phase 1 services (documented)</text>
+      <text x="18" y="132" class="text2">• ContentValidationService (16) • ResilienceService (16)</text>
+      <text x="18" y="152" class="text2">• ArchiveDiscoveryStrategy (25) • PaginationPredictorService (33)</text>
+
+      <text x="18" y="188" class="text-bold">Deterministic test hygiene (documented)</text>
+      <text x="18" y="210" class="text">• Stub robots coordinator BEFORE crawler.init() (avoid live fetch)</text>
+      <text x="18" y="230" class="text">• Set robots fields in loadRobotsTxt(): loaded/rules/sitemapUrls</text>
+      <text x="18" y="250" class="text">• Use processPage(url, depth, { type: 'nav', allowRevisit: true })</text>
+      <text x="18" y="270" class="text">• Ensure crawler.close() in finally; stop any adapter intervals</text>
+
+      <text x="18" y="306" class="text-bold">Why it matters to future refactors</text>
+      <text x="18" y="328" class="text">• Offline tests allow aggressive modularization without flaky network risk</text>
+      <text x="18" y="348" class="text">• “Open handle” discipline prevents CI hangs during large changes</text>
+
+      <text x="18" y="384" class="text-bold">Evidence (documented command)</text>
+      <text x="18" y="406" class="code">npm run test:by-path src/__tests__/crawl.process.test.js</text>
+
+      <text x="18" y="442" class="small">Primary sessions: docs/sessions/2025-12-07-reliable-crawler-phase1-impl/WORKING_NOTES.md</text>
+      <text x="18" y="462" class="small">Also: docs/sessions/2025-12-12-crawler-reliability/WORKING_NOTES.md</text>
+    </g>
+
+    <!-- Col 3: Hub freshness control -->
+    <g transform="translate(1800, 170)">
+      <rect width="850" height="560" rx="10" class="panel"/>
+      <rect width="850" height="46" rx="10" class="panel-header"/>
+      <text x="18" y="30" class="card-title">Phase 4: Hub Freshness Control (Fetch Policy)</text>
+
+      <rect x="18" y="58" width="155" height="24" rx="12" class="pill-done"/>
+      <text x="95" y="75" text-anchor="middle" class="pill-text">DONE</text>
+      <text x="190" y="75" class="small">Primary: docs/CRAWL_REFACTORING_TASKS.md (Phase 4)</text>
+
+      <rect x="650" y="58" width="182" height="24" rx="12" class="pill-done"/>
+      <text x="741" y="75" text-anchor="middle" class="pill-text">SHIPPED</text>
+
+      <text x="18" y="110" class="text-bold">Task spine (documented)</text>
+      <text x="18" y="132" class="text2">• 4.1–4.5 discovery+docs+schema (hubFreshness)</text>
+      <text x="18" y="152" class="text2">• 4.6 propagate fetchPolicy metadata through queue/worker context</text>
+      <text x="18" y="172" class="text2">• 4.7 enforce policy in FetchPipeline with cache fallback + telemetry</text>
+      <text x="18" y="192" class="text2">• 4.8 apply defaults via ConfigManager + seeding</text>
+      <text x="18" y="212" class="text2">• 4.9 focused tests for policy plumbing (tracker: completed)</text>
+
+      <text x="18" y="248" class="text-bold">Policy model (documented)</text>
+      <text x="18" y="270" class="text">• fetchPolicy enum idea: cache-preferred / network-first / cache-only</text>
+      <text x="18" y="290" class="text">• forced cache under rate-limit must co-exist with “network-first intent”</text>
+
+      <text x="18" y="326" class="text-bold">Telemetry expectation</text>
+      <text x="18" y="348" class="text">• Explain when/why cached fallback was used (decision trace)</text>
+      <text x="18" y="368" class="text">• Persist decision traces as milestones (opt-in via hubFreshness.persistDecisionTraces)</text>
+
+      <text x="18" y="404" class="text-bold">Integration hints</text>
+      <text x="18" y="426" class="code">src/crawler/HubFreshnessController.js • src/crawler/FetchPipeline.js</text>
+      <text x="18" y="446" class="code">WorkerRunner → PageExecutionService must preserve metadata</text>
+
+      <text x="18" y="512" class="small">This panel is intentionally operator-focused: “what must be true” and “how we prove it”.</text>
+    </g>
+
+    <!-- Col 4: Navigation-first vision -->
+    <g transform="translate(2680, 170)">
+      <rect width="850" height="560" rx="10" class="panel-deep"/>
+      <rect width="850" height="46" rx="10" class="panel-header"/>
+      <text x="18" y="30" class="card-title">Navigation-First Crawling (Discover → Plan → Acquire)</text>
+
+      <rect x="18" y="58" width="155" height="24" rx="12" class="pill-future"/>
+      <text x="95" y="75" text-anchor="middle" class="pill-text">FUTURE</text>
+      <text x="190" y="75" class="small">Primary: docs/REFACTORING_PLAN.md</text>
+
+      <text x="18" y="110" class="text-bold">Target phases</text>
+      <text x="18" y="132" class="text">1) Discover: map site structure with minimal fetch strategy</text>
+      <text x="18" y="152" class="text">2) Plan: classify + prioritize discovered URLs (explainable pipeline)</text>
+      <text x="18" y="172" class="text">3) Acquire: fetch high-value articles selectively</text>
+
+      <text x="18" y="208" class="text-bold">Refactor targets (compressed)</text>
+      <text x="18" y="230" class="text2">• Split discovery vs acquisition services (today tightly coupled)</text>
+      <text x="18" y="250" class="text2">• ResumeStrategy interface per crawl type (discovery/acquisition)</text>
+      <text x="18" y="270" class="text2">• UrlClassificationPipeline: robots/structure/priority/fetch-strategy stages</text>
+      <text x="18" y="290" class="text2">• MultiQueueManager: discovery/acquisition/validation queues + DB-backed types</text>
+
+      <text x="18" y="326" class="text-bold">Compatibility constraints called out</text>
+      <text x="18" y="348" class="text">• Vision doc notes: direction, not current state</text>
+      <text x="18" y="368" class="text">• Backward-compatible resume remains a hard requirement</text>
+
+      <text x="18" y="404" class="text-bold">Why the current foundations matter</text>
+      <text x="18" y="426" class="text">• CrawlPlan/Progress/Budget: prerequisites for multi-phase operations</text>
+      <text x="18" y="446" class="text">• Hub freshness: begins encoding fetch strategy as first-class metadata</text>
+
+      <text x="18" y="512" class="small">Bridge panel below maps “landed seams” → “vision requirements”.</text>
+    </g>
+  </g>
+
+  <!-- Cross-column connectors -->
+  <g>
+    <path d="M890,470 C980,470 1720,470 1800,470" class="connector" marker-end="url(#arrowSlate)"/>
+    <path d="M2650,520 C2700,520 2700,520 2680,520" opacity="0"/>
+    <path d="M2650,510 C2655,510 2670,510 2680,510" class="connector-gold" marker-end="url(#arrowGold)"/>
+  </g>
+
+  <!-- ===== Row 2: Cross-cutting detail panels ===== -->
+  <g filter="url(#softShadow)">
+    <!-- Col 1: Facade + sequences + CLI -->
+    <g transform="translate(40, 750)">
+      <rect width="850" height="540" rx="10" class="panel"/>
+      <rect width="850" height="46" rx="10" class="panel-header"/>
+      <text x="18" y="30" class="card-title">Crawl Facade + Sequences + Legacy CLI Modularization</text>
+
+      <rect x="18" y="58" width="150" height="24" rx="12" class="pill-done"/>
+      <text x="93" y="75" text-anchor="middle" class="pill-text">DONE</text>
+      <text x="186" y="75" class="small">Primary: docs/CRAWL_REFACTORING_TASKS.md</text>
+
+      <text x="18" y="110" class="text-bold">Delivered surfaces</text>
+      <text x="18" y="132" class="text">• CrawlOperations facade: smaller orchestration surface around NewsCrawler</text>
+      <text x="18" y="152" class="text">• executeSequence + presets: deterministic step lists with overrides</text>
+      <text x="18" y="172" class="text">• SequenceConfigLoader/Runner: JSON/YAML + @playbook/@config/@cli tokens</text>
+      <text x="18" y="192" class="text">• Legacy CLI split: bootstrap/argumentNormalizer/progressAdapter/runLegacyCommand</text>
+
+      <text x="18" y="228" class="text-bold">Why this enables the vision</text>
+      <text x="18" y="250" class="text">• “Discover then acquire” can start as a new sequence preset</text>
+      <text x="18" y="270" class="text">• Operators can reproduce behaviours by pinning a named sequence</text>
+
+      <text x="18" y="306" class="text-bold">Proof commands (documented)</text>
+      <text x="18" y="328" class="code">node src/tools/crawl-operations.js --list-operations</text>
+      <text x="18" y="348" class="code">node src/tools/crawl-operations.js --list-sequences</text>
+
+      <text x="18" y="392" class="text-bold">Implementation hints</text>
+      <text x="18" y="414" class="code">config/crawl-sequences/ • src/tools/crawl-operations.js</text>
+      <text x="18" y="434" class="code">src/modules/crawl-runner/* (tokens + resolvers)</text>
+    </g>
+
+    <!-- Col 2: Service layer architecture -->
+    <g transform="translate(920, 750)">
+      <rect width="850" height="540" rx="10" class="panel"/>
+      <rect width="850" height="46" rx="10" class="panel-header"/>
+      <text x="18" y="30" class="card-title">Service Layer Architecture (Express/API boundary)</text>
+
+      <rect x="18" y="58" width="150" height="24" rx="12" class="pill-done"/>
+      <text x="93" y="75" text-anchor="middle" class="pill-text">DONE</text>
+      <text x="186" y="75" class="small">Sources: docs/SERVICE_LAYER_ARCHITECTURE.md + Phase completions</text>
+
+      <text x="18" y="110" class="text-bold">Core idea (documented)</text>
+      <text x="18" y="132" class="text">• Routes stay thin; services own behaviour and are unit-testable</text>
+      <text x="18" y="152" class="text">• Dependency injection wires implementations (swap adapters safely)</text>
+
+      <text x="18" y="188" class="text-bold">Representative services</text>
+      <text x="18" y="210" class="text2">• CrawlOrchestrationService • QueuePlannerService (42 tests) • JobControlService (30 tests)</text>
+
+      <text x="18" y="246" class="text-bold">Why it matters to crawler evolution</text>
+      <text x="18" y="268" class="text">• Makes “resume strategy” and “multi-queue manager” implementable without route churn</text>
+      <text x="18" y="288" class="text">• Provides a stable contract layer for UI + automation clients</text>
+
+      <text x="18" y="324" class="text-bold">Implementation hints</text>
+      <text x="18" y="346" class="code">src/ui/express/services/… (queue planner, job control, orchestration)</text>
+      <text x="18" y="366" class="code">src/ui/express/routes/… should mostly validate + call services</text>
+
+      <text x="18" y="410" class="small">Recommended rule: adapter/DB calls remain behind services and repositories.</text>
+    </g>
+
+    <!-- Col 3: Data + telemetry surfaces -->
+    <g transform="translate(1800, 750)">
+      <rect width="850" height="540" rx="10" class="panel"/>
+      <rect width="850" height="46" rx="10" class="panel-header"/>
+      <text x="18" y="30" class="card-title">Data &amp; Telemetry Surfaces Used During Crawls</text>
+
+      <rect x="18" y="58" width="150" height="24" rx="12" class="pill-done"/>
+      <text x="93" y="75" text-anchor="middle" class="pill-text">DONE</text>
+      <text x="186" y="75" class="small">Primary: docs/DB_QUERIES_DURING_CRAWLS.md</text>
+
+      <text x="18" y="110" class="text-bold">Core tables (frequent)</text>
+      <text x="18" y="132" class="text2">• urls • http_responses • content_storage • content_analysis</text>
+      <text x="18" y="152" class="text2">• discovery_events • crawl_jobs • queue_events • errors • links</text>
+
+      <text x="18" y="188" class="text-bold">Telemetry/derived surfaces</text>
+      <text x="18" y="210" class="text">• fetches + latest_fetch (trigger-maintained dedup/telemetry view)</text>
+      <text x="18" y="230" class="text">• queue_events reasons become critical for explainable policy (hub freshness)</text>
+
+      <text x="18" y="266" class="text-bold">Why this matters to Hub Freshness + future multi-queue</text>
+      <text x="18" y="288" class="text">• Policies must be queryable: “what did we fetch, why, and with what strategy?”</text>
+      <text x="18" y="308" class="text">• Multi-queue requires durable queue type + balancing telemetry</text>
+
+      <text x="18" y="344" class="text-bold">Evidence discipline (documented direction)</text>
+      <text x="18" y="366" class="text">• Pair new policy with DB invariants and a focused Jest test matrix</text>
+      <text x="18" y="386" class="text">• Keep schema synced after DB changes (schema:sync / schema:check)</text>
+
+      <text x="18" y="430" class="small">Good follow-up panel in V3: add a mini-ERD snippet; kept text-only here for collision safety.</text>
+    </g>
+
+    <!-- Col 4: Bridge points -->
+    <g transform="translate(2680, 750)">
+      <rect width="850" height="540" rx="10" class="panel-deep"/>
+      <rect width="850" height="46" rx="10" class="panel-header"/>
+      <text x="18" y="30" class="card-title">Bridge: How Landed Work Enables the Vision</text>
+
+      <rect x="18" y="58" width="190" height="24" rx="12" class="pill-bridge"/>
+      <text x="113" y="75" text-anchor="middle" class="pill-text">BRIDGE POINTS</text>
+      <text x="228" y="75" class="small">Sources: refactoring plan + crawler abstraction plan</text>
+
+      <text x="18" y="110" class="text-bold">Enabling seams already in place</text>
+      <text x="18" y="132" class="text">• CrawlContext + CrawlPlan: explicit state + intent</text>
+      <text x="18" y="152" class="text">• RetryCoordinator + ResilienceService: safe large-scale discovery runs</text>
+      <text x="18" y="172" class="text">• Sequence config system: model “discover then acquire” as steps</text>
+      <text x="18" y="192" class="text">• Hub freshness policy: encodes fetch strategy metadata</text>
+
+      <text x="18" y="228" class="text-bold">Hard parts called out by the vision doc</text>
+      <text x="18" y="250" class="text">• Explainability: classification pipeline needs stage outputs + reasons</text>
+      <text x="18" y="270" class="text">• Multi-queue balancing needs durable metrics + DB-backed queue types</text>
+      <text x="18" y="290" class="text">• Resume strategy becomes the policy “brain” for continuation</text>
+
+      <text x="18" y="326" class="text-bold">Recommended evidence loop</text>
+      <text x="18" y="348" class="text">• Implement one stage as pure classifier (fixtures + unit tests)</text>
+      <text x="18" y="368" class="text">• Use deterministic harnesses; avoid network dependence</text>
+      <text x="18" y="388" class="text">• Persist decision traces as milestones (opt-in) for auditability</text>
+
+      <text x="18" y="432" class="small">This panel is designed to be the “why these plans fit together” map.</text>
+    </g>
+  </g>
+
+  <!-- ===== Row 3: Wide panels ===== -->
+  <g filter="url(#softShadow)">
+    <!-- Wide left: Validation ladder -->
+    <g transform="translate(40, 1320)">
+      <rect width="1730" height="840" rx="10" class="panel"/>
+      <rect width="1730" height="46" rx="10" class="panel-header"/>
+      <text x="18" y="30" class="card-title">Validation Ladder (Make refactors safe)</text>
+
+      <text x="18" y="78" class="subtitle">Use the smallest proof first; widen only when confidence grows. Designed for crawl refactors that touch policy + DB + concurrency.</text>
+
+      <text x="18" y="120" class="text-bold">Level 1 — Unit tests (pure logic)</text>
+      <text x="18" y="142" class="text">• RetryCoordinator matrices • fetchPolicy decision matrices • classifier stages</text>
+
+      <text x="18" y="178" class="text-bold">Level 2 — Offline integration (no network)</text>
+      <text x="18" y="200" class="text">• Stub robots before init • Close crawler in finally • Ensure no open-handle intervals</text>
+
+      <text x="18" y="236" class="text-bold">Level 3 — CLI smoke (deterministic)</text>
+      <text x="18" y="258" class="code">node src/tools/crawl-operations.js --list-operations</text>
+      <text x="18" y="278" class="code">node src/tools/crawl-operations.js --list-sequences</text>
+
+      <text x="18" y="314" class="text-bold">Level 4 — DB + telemetry invariants</text>
+      <text x="18" y="336" class="text">• queue_events + crawl_jobs reflect new policies (types, reasons, fallback signals)</text>
+      <text x="18" y="356" class="text">• latest_fetch trigger keeps dedup stable when fetch strategy changes</text>
+
+      <text x="18" y="392" class="text-bold">Level 5 — Live crawl (operator-run)</text>
+      <text x="18" y="414" class="text">• Run only after levels 1–4 are green; convert failures into fixtures + tests</text>
+
+      <text x="18" y="456" class="text-bold">Dense “done vs next” checklist (for Hub Freshness)</text>
+      <text x="18" y="478" class="text">• Propagation: queue item → worker → page execution retains fetchPolicy + maxCacheAgeMs</text>
+      <text x="18" y="498" class="text">• Enforcement: FetchPipeline chooses network vs cache, but safe-downgrades under throttling</text>
+      <text x="18" y="518" class="text">• Observability: decision reasons recorded (explainability for operators and later tuning)</text>
+
+      <text x="18" y="560" class="small">Derived from repo practices: deterministic checks, focused Jest runs, and evidence recorded in sessions.</text>
+
+      <!-- Right-side mini box: Optional ideas (kept separate from documented claims) -->
+      <g transform="translate(930, 92)">
+        <rect width="780" height="700" rx="10" class="panel-deep"/>
+        <rect width="780" height="46" rx="10" class="panel-header"/>
+        <text x="18" y="30" class="card-title">Optional Ideas (Not yet formalized as plans)</text>
+
+        <rect x="18" y="58" width="170" height="24" rx="12" class="pill-proposed"/>
+        <text x="103" y="75" text-anchor="middle" class="pill-text">OPTIONAL</text>
+        <text x="206" y="75" class="small">Included for completeness; not asserted as “documented plans”.</text>
+
+        <rect x="598" y="58" width="164" height="24" rx="12" class="pill-next"/>
+        <text x="680" y="75" text-anchor="middle" class="pill-text">I’D DO NEXT</text>
+
+        <text x="18" y="110" class="text-bold next-text-strong">A) Record/Replay harness</text>
+        <text x="18" y="132" class="text">• Capture HTTP fixtures for deterministic discovery/acquisition tests</text>
+
+        <text x="18" y="168" class="text-bold next-text-strong">B) Decision explainability pipeline</text>
+        <text x="18" y="190" class="text next-text">• Standardize decision traces; persist as milestones (opt-in) for auditability</text>
+
+        <text x="18" y="226" class="text-bold">C) Property-based URL normalization tests</text>
+        <text x="18" y="248" class="text">• Generated URLs (params/fragments/encodings) to harden canonicalization</text>
+
+        <text x="18" y="284" class="text-bold">D) Budget-first defaults</text>
+        <text x="18" y="306" class="text">• Wire ResourceBudget into sequence presets as explicit ceilings</text>
+
+        <text x="18" y="342" class="text-bold">E) Per-domain “crawl contracts”</text>
+        <text x="18" y="364" class="text">• Encode robots/sitemap/hub patterns in configs; auto-select resume strategy</text>
+      </g>
+    </g>
+
+    <!-- Wide right: Sources -->
+    <g transform="translate(1800, 1320)">
+      <rect width="1730" height="840" rx="10" class="panel"/>
+      <rect width="1730" height="46" rx="10" class="panel-header"/>
+      <text x="18" y="30" class="card-title">Sources (What this diagram is grounded in)</text>
+
+      <text x="18" y="78" class="subtitle">Primary repo docs and sessions referenced in the panels above (landscape V2). This list is intentionally explicit to avoid “invented roadmap” drift.</text>
+
+      <text x="18" y="120" class="text-bold">Core crawler plans / architecture</text>
+      <text x="18" y="142" class="text2">• docs/CRAWLER_ABSTRACTION_REFACTORING_PLAN.md</text>
+      <text x="18" y="162" class="text2">• docs/CRAWL_REFACTORING_TASKS.md</text>
+      <text x="18" y="182" class="text2">• docs/REFACTORING_PLAN.md</text>
+
+      <text x="18" y="218" class="text-bold">Service layer boundary</text>
+      <text x="18" y="240" class="text2">• docs/SERVICE_LAYER_ARCHITECTURE.md</text>
+      <text x="18" y="260" class="text2">• docs/PHASE_4_REFACTORING_COMPLETE.md</text>
+      <text x="18" y="280" class="text2">• docs/PHASE_3_REFACTORING_COMPLETE.md</text>
+
+      <text x="18" y="316" class="text-bold">Data model &amp; crawl DB behaviour</text>
+      <text x="18" y="338" class="text2">• docs/DB_QUERIES_DURING_CRAWLS.md</text>
+      <text x="18" y="358" class="text2">• docs/database/schema/main.md (schema reference)</text>
+
+      <text x="18" y="394" class="text-bold">Sessions that informed reliability/test guidance</text>
+      <text x="18" y="416" class="text2">• docs/sessions/2025-12-07-reliable-crawler-phase1-impl/WORKING_NOTES.md</text>
+      <text x="18" y="436" class="text2">• docs/sessions/2025-12-12-crawler-reliability/WORKING_NOTES.md</text>
+
+      <text x="18" y="472" class="text-bold">Styling reference (WLILO look)</text>
+      <text x="18" y="494" class="text2">• docs/designs/observatory-architecture-v2.svg</text>
+
+      <text x="18" y="540" class="small">Generated in session: docs/sessions/2025-12-12-crawler-plans-atlas-landscape-wlilo-v2/</text>
+      <text x="18" y="562" class="small">File: docs/diagrams/crawler-improvement-plans-atlas-landscape-wlilo-v2.svg</text>
+
+      <!-- Small footer hint -->
+      <text x="18" y="800" class="small">Quality gate: run svg-collisions strict before shipping (tools/dev/svg-collisions.js --strict).</text>
+    </g>
+  </g>
+</svg>

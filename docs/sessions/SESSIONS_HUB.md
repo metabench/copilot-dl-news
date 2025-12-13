@@ -31,6 +31,306 @@
 
 ## Current Session
 
+### Session 2025-12-13: Merge HTTP record/replay into main
+
+**Duration**: Active
+**Type**: integration
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Merge safe HTTP record/replay + decision trace changes into main, validate tests, and delete merged branches
+
+**Location**: `docs/sessions/2025-12-13-merge-http-record-replay-into-main/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-merge-http-record-replay-into-main/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-merge-http-record-replay-into-main/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-merge-http-record-replay-into-main/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-merge-http-record-replay-into-main/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-merge-http-record-replay-into-main/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Integrate HTTP record/replay commit
+
+**Duration**: Active
+**Type**: integration
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Cherry-picked 0480388 onto current branch and validated tests
+
+**Location**: `docs/sessions/2025-12-13-integrate-http-record-replay/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-integrate-http-record-replay/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-integrate-http-record-replay/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-integrate-http-record-replay/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-integrate-http-record-replay/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-integrate-http-record-replay/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: HTTP Record/Replay Harness + Decision Trace Milestones
+
+**Duration**: Completed
+**Type**: crawler
+**Completion**: ✅ Complete
+
+**Focus**:
+- Add opt-in HTTP fixture record/replay for deterministic crawler tests, and standardize decision traces persisted as milestones (opt-in).
+
+**Location**: `docs/sessions/2025-12-13-http-record-replay-decision-traces/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-http-record-replay-decision-traces/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-http-record-replay-decision-traces/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-http-record-replay-decision-traces/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-http-record-replay-decision-traces/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-http-record-replay-decision-traces/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Phase 4 Hub Freshness Control (Fetch Policy)
+
+**Duration**: Completed
+**Type**: crawler
+**Completion**: ✅ Complete
+
+**Focus**:
+- Implement fetchPolicy propagation + FetchPipeline enforcement + telemetry + focused tests per docs/CRAWL_REFACTORING_TASKS.md
+
+**Location**: `docs/sessions/2025-12-12-hub-freshness-phase4-impl/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-hub-freshness-phase4-impl/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-hub-freshness-phase4-impl/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-hub-freshness-phase4-impl/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-hub-freshness-phase4-impl/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-hub-freshness-phase4-impl/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Crawler Plans Atlas Landscape WLILO V2
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create a denser, landscape, WLILO-styled version of the crawler improvement plans atlas SVG and validate with svg-collisions --strict
+
+**Location**: `docs/sessions/2025-12-12-crawler-plans-atlas-landscape-wlilo-v2/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-crawler-plans-atlas-landscape-wlilo-v2/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-crawler-plans-atlas-landscape-wlilo-v2/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-crawler-plans-atlas-landscape-wlilo-v2/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-crawler-plans-atlas-landscape-wlilo-v2/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-crawler-plans-atlas-landscape-wlilo-v2/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Crawler Plans Atlas SVG Polish
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Clear remaining svg-collisions strict findings for crawler-improvement-plans-atlas.svg
+
+**Location**: `docs/sessions/2025-12-12-crawler-plans-atlas-svg-polish/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-crawler-plans-atlas-svg-polish/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-crawler-plans-atlas-svg-polish/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-crawler-plans-atlas-svg-polish/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-crawler-plans-atlas-svg-polish/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-crawler-plans-atlas-svg-polish/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Crawler improvements plan SVG
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create an info-dense SVG diagram summarizing documented crawler improvement plans and suggested next ideas.
+
+**Location**: `docs/sessions/2025-12-12-crawler-improvements-svg/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-crawler-improvements-svg/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-crawler-improvements-svg/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-crawler-improvements-svg/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-crawler-improvements-svg/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-crawler-improvements-svg/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Investigate unexpected terminal windows
+
+**Duration**: Active
+**Type**: recon
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Identify what is spawning external terminal windows (MCP/Jest/etc.) and rule out Git.
+
+**Location**: `docs/sessions/2025-12-12-terminal-window-spawns/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-terminal-window-spawns/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-terminal-window-spawns/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-terminal-window-spawns/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-terminal-window-spawns/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-terminal-window-spawns/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Crawler reliability improvements
+
+**Duration**: Active
+**Type**: crawler
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Improve crawler resilience and observability with focused, tested changes
+
+**Location**: `docs/sessions/2025-12-12-crawler-reliability/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-crawler-reliability/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-crawler-reliability/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-crawler-reliability/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-crawler-reliability/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-crawler-reliability/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Art Playground swatch palettes accessibility (keyboard + ARIA)
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add roving-tabindex + arrow-key navigation and radio-like ARIA semantics for Fill/Stroke palettes
+
+**Location**: `docs/sessions/2025-12-12-ui-art-playground-palette-a11y/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-12-12-ui-art-playground-palette-a11y/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-ui-art-playground-palette-a11y/WORKING_NOTES.md)
+
+### Session 2025-12-12: Art Splayground: color palette + selection
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Improve the art-splayground colour palette and selection UX in a consistent, reusable way
+
+**Location**: `docs/sessions/2025-12-12-art-splayground-palette/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-art-splayground-palette/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-art-splayground-palette/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-art-splayground-palette/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-art-splayground-palette/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-art-splayground-palette/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Fix AGI-Orchestrator agent frontmatter
+
+**Duration**: Active
+**Type**: agents
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Verify and correct AGI-Orchestrator.agent.md parsing/tool metadata while preserving intent
+
+**Location**: `docs/sessions/2025-12-12-fix-agi-orchestrator-agent/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-fix-agi-orchestrator-agent/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-fix-agi-orchestrator-agent/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-fix-agi-orchestrator-agent/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-fix-agi-orchestrator-agent/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-fix-agi-orchestrator-agent/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Fix agent YAML frontmatter for validation
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make .agent.md frontmatter parse correctly so handoff tooling/validation is reliable
+
+**Location**: `docs/sessions/2025-12-12-agent-frontmatter-validate/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-agent-frontmatter-validate/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-agent-frontmatter-validate/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-agent-frontmatter-validate/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-agent-frontmatter-validate/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-agent-frontmatter-validate/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Fix AGI-Orchestrator Handoff Frontmatter
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make subagent coordination YAML/frontmatter reliably produce handoff buttons
+
+**Location**: `docs/sessions/2025-12-12-agent-orchestrator-handoffs/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-agent-orchestrator-handoffs/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-agent-orchestrator-handoffs/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-agent-orchestrator-handoffs/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-agent-orchestrator-handoffs/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-agent-orchestrator-handoffs/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Crawler Documentation Coverage & Accuracy
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Audit crawler docs and improve coverage, accuracy, and long-term planning guidance
+
+**Location**: `docs/sessions/2025-12-12-crawler-docs-coverage/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-crawler-docs-coverage/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-crawler-docs-coverage/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-crawler-docs-coverage/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-crawler-docs-coverage/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-crawler-docs-coverage/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Data Explorer PR2: URL filters, domains API, DB perf
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add hostMode/multi-host URL filters, /api/domains with search/sort, and verify UI indexes
+
+**Location**: `docs/sessions/2025-12-12-data-explorer-pr2-filters-domains-perf/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-data-explorer-pr2-filters-domains-perf/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-data-explorer-pr2-filters-domains-perf/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-data-explorer-pr2-filters-domains-perf/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-data-explorer-pr2-filters-domains-perf/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-data-explorer-pr2-filters-domains-perf/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-12: Telemetry: process handler idempotency
 
 **Duration**: Active

@@ -5,7 +5,7 @@ const path = require('path');
 const { tof, is_array, each } = require('lang-tools');
 const { compact } = require('../../../utils/pipelines');
 const ingestQueries = require('../../../db/sqlite/v1/queries/gazetteer.ingest');
-const { HttpRequestResponseFacade } = require('../../../utils/HttpRequestResponseFacade');
+const { HttpRequestResponseFacadeInstance } = require('../../../utils/HttpRequestResponseFacade');
 const {
   DEFAULT_LABEL_LANGUAGES,
   DEFAULT_REGION_CLASS_QIDS,
@@ -82,7 +82,7 @@ class WikidataAdm1Ingestor {
     this.statements = ingestQueries.createIngestionStatements(this.db);
     
     // Initialize HTTP caching facade
-    this.httpFacade = new HttpRequestResponseFacade(this.db);
+    this.httpFacade = new HttpRequestResponseFacadeInstance(this.db);
   }
 
   async execute({ signal = null, emitProgress = null } = {}) {

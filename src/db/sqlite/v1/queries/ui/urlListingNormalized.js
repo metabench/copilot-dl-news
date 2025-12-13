@@ -360,6 +360,147 @@ function selectInitialUrls(db, options = {}) {
   return selectUrlPage(db, { ...options, offset: 0 });
 }
 
+// ---------------------------------------------------------------------------
+// Extended filtering with hostMode (exact|prefix|contains) and multi-host
+// ---------------------------------------------------------------------------
+const VALID_HOST_MODES = new Set(["exact", "prefix", "contains"]);
+
+function normalizeHostMode(value) {
+  if (!value) return "exact";
+  const lower = String(value).trim().toLowerCase();
+  return VALID_HOST_MODES.has(lower) ? lower : "exact";
+}
+
+function parseHosts(value) {
+  if (!value) return [];
+  const items = (Array.isArray(value) ? value : [value])
+    .flatMap((v) => (v ? String(v).split(",") : []))
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return [...new Set(items)].slice(0, 50); // limit 50
+}
+
+function buildHostWhere(hostMode, hosts) {
+  if (!hosts || hosts.length === 0) return { clause: "", params: [] };
+  const mode = normalizeHostMode(hostMode);
+  const placeholders = hosts.map(() => {
+    if (mode === "prefix") return "host LIKE ? ESCAPE '\\'";
+    if (mode === "contains") return "host LIKE ? ESCAPE '\\'";
+    return "host = ? COLLATE NOCASE";
+  });
+  const clause = `(${placeholders.join(" OR ")})`;
+  const params = hosts.map((h) => {
+    const escaped = h.replace(/([%_\\])/g, "\\$1");
+    if (mode === "prefix") return `${escaped}%`;
+    if (mode === "contains") return `%${escaped}%`;
+    return h;
+  });
+  return { clause, params };
+}
+
+function selectUrlPageFiltered(db, options = {}) {
+  if (!db || typeof db.prepare !== "function") {
+    throw new TypeError("selectUrlPageFiltered requires a better-sqlite3 database handle");
+  }
+  const hosts = parseHosts(options.hosts || options.host);
+  const hostMode = normalizeHostMode(options.hostMode);
+  const limit = sanitizeLimit(options.limit, { min: 1, max: 5000, fallback: 1000 });
+  const offset = sanitizeOffset(options.offset, { min: 0, fallback: 0 });
+
+  const baseCols = `
+    u.id,
+    u.url,
+    u.host,
+    u.canonical_url AS canonicalUrl,
+    u.created_at AS createdAt,
+    u.last_seen_at AS lastSeenAt
+  `;
+
+  const { clause, params } = buildHostWhere(hostMode, hosts);
+  const whereClause = clause ? `WHERE ${clause}` : "";
+  const sql = `
+    SELECT ${baseCols},
+           NULL AS lastFetchAt,
+           NULL AS httpStatus,
+           NULL AS classification,
+           NULL AS wordCount
+    FROM urls u
+    ${whereClause}
+    ORDER BY u.id ASC
+    LIMIT ? OFFSET ?
+  `;
+  return db.prepare(sql).all(...params, limit, offset).map(mapRow);
+}
+
+function countUrlsFiltered(db, options = {}) {
+  if (!db || typeof db.prepare !== "function") {
+    throw new TypeError("countUrlsFiltered requires a better-sqlite3 database handle");
+  }
+  const hosts = parseHosts(options.hosts || options.host);
+  const hostMode = normalizeHostMode(options.hostMode);
+  const { clause, params } = buildHostWhere(hostMode, hosts);
+  const whereClause = clause ? `WHERE ${clause}` : "";
+  const sql = `SELECT COUNT(1) AS total FROM urls ${whereClause}`;
+  const row = db.prepare(sql).get(...params);
+  const totalValue = row && row.total != null ? Number(row.total) : 0;
+  return Number.isFinite(totalValue) ? totalValue : 0;
+}
+
+function selectFetchedUrlPageFiltered(db, options = {}) {
+  if (!db || typeof db.prepare !== "function") {
+    throw new TypeError("selectFetchedUrlPageFiltered requires a better-sqlite3 database handle");
+  }
+  const hosts = parseHosts(options.hosts || options.host);
+  const hostMode = normalizeHostMode(options.hostMode);
+  const limit = sanitizeLimit(options.limit, { min: 1, max: 5000, fallback: 1000 });
+  const offset = sanitizeOffset(options.offset, { min: 0, fallback: 0 });
+  const { clause, params } = buildHostWhere(hostMode, hosts);
+  const whereClause = clause ? `WHERE ${clause}` : "";
+
+  // Try fetched_urls view first
+  try {
+    const sql = `
+      SELECT
+        fu.url_id AS id,
+        fu.url,
+        fu.host,
+        fu.canonical_url AS canonicalUrl,
+        fu.url_created_at AS createdAt,
+        fu.url_last_seen_at AS lastSeenAt,
+        fu.last_fetched_at AS lastFetchAt,
+        fu.last_http_status AS httpStatus,
+        fu.last_classification AS classification,
+        fu.last_word_count AS wordCount,
+        fu.fetch_count AS fetchCount
+      FROM fetched_urls fu
+      ${whereClause}
+      ORDER BY fu.url_id ASC
+      LIMIT ? OFFSET ?
+    `;
+    return db.prepare(sql).all(...params, limit, offset).map(mapRow);
+  } catch (_) {
+    return [];
+  }
+}
+
+function countFetchedUrlsFiltered(db, options = {}) {
+  if (!db || typeof db.prepare !== "function") {
+    throw new TypeError("countFetchedUrlsFiltered requires a better-sqlite3 database handle");
+  }
+  const hosts = parseHosts(options.hosts || options.host);
+  const hostMode = normalizeHostMode(options.hostMode);
+  const { clause, params } = buildHostWhere(hostMode, hosts);
+  const whereClause = clause ? `WHERE ${clause}` : "";
+  try {
+    const sql = `SELECT COUNT(1) AS total FROM fetched_urls ${whereClause}`;
+    const row = db.prepare(sql).get(...params);
+    const totalValue = row && row.total != null ? Number(row.total) : 0;
+    return Number.isFinite(totalValue) ? totalValue : 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
 module.exports = {
   selectInitialUrls,
   selectUrlPage,
@@ -369,5 +510,12 @@ module.exports = {
   selectFetchedUrlPage,
   selectFetchedUrlPageByHost,
   countFetchedUrls,
-  countFetchedUrlsByHost
+  countFetchedUrlsByHost,
+  // Extended filtering
+  selectUrlPageFiltered,
+  countUrlsFiltered,
+  selectFetchedUrlPageFiltered,
+  countFetchedUrlsFiltered,
+  normalizeHostMode,
+  parseHosts
 };

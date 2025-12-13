@@ -1,6 +1,6 @@
 ---
 description: "Specialist agent for building, testing, and evolving the reliable news crawler architecture."
-tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'docs-memory/*', 'svg-editor/*', 'agent']
+tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'runSubagent']
 ---
 
 # 🕷️ Crawler Singularity 🕷️

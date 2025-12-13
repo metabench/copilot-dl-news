@@ -79,3 +79,18 @@ AGI-accumulated knowledge catalog.
 **Example**: `tests/ui/e2e/art-playground.puppeteer.e2e.test.js` failed until running `node scripts/build-art-playground-client.js`.
 
 ---
+
+## Testing Wrong Response Structure Path
+
+**Added**: 2025-12-12
+**Context**: General
+
+**When to use**: Symptoms: Test assertions fail on properties that should exist; undefined or null when accessing nested objects
+
+**Steps/Details**:
+1. Why it's bad: API response structures often wrap data in envelopes (meta, data, pagination). Assuming the wrong nesting level causes false failures and wastes debugging time.
+1. Better approach: Before writing assertions, log or inspect the actual response body structure. Check existing tests for the same endpoint to see the correct path. Use optional chaining in diagnostics: console.log(response.body?.meta?.pagination).
+
+**Example**: Test checked response.body.pagination but actual structure was response.body.meta.pagination
+
+---

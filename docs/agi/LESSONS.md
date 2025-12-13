@@ -69,3 +69,7 @@
 - For jsgui3 work, prefer md-scan discovery + lab experiments over ad-hoc debugging: search guides/docs/sessions first, then build a minimal src/ui/lab experiment with a check script and (when event semantics matter) run the delegation suite scenarios to validate bubbling/capture/selector behavior before promoting changes into production code.
 - When bundling isomorphic controls, prefer small shared utilities (e.g. ListenerBag) but verify the relative require path works for both Node runtime and esbuild browser bundling; rebuild the client bundle before E2E to ensure the browser path uses the updated code.
 - When a Puppeteer E2E exercises bundled client JS, always confirm `client.bundle.js` is current. If behavior contradicts recent code edits (or in-browser debug hooks never appear), rebuild the bundle first (`node scripts/build-art-playground-client.js`) before chasing app-level logic.
+
+## 2025-12-12
+- **JavaScript backslash escaping for SQL ESCAPE clauses**: `'\\'` produces a single backslash, `'\\\\'` produces two. When SQLite expects `ESCAPE '\'` in the SQL string, use `ESCAPE '\\'` in JS code (one level of escaping). Using `ESCAPE '\\\\'` sends two backslashes and fails with "ESCAPE expression must be a single character".
+- **Jest testPathIgnorePatterns catches test files too**: The pattern `/helpers/` in Jest config is meant to skip test helper utilities, but it also blocks any test file placed in a `helpers/` directory. Place tests in the parent directory or rename the folder.

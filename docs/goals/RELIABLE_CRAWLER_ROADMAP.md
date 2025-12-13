@@ -2,6 +2,18 @@
 
 > **Vision**: A tenacious, domain-aware crawler that learns site layouts to extract high-quality news data from the long tail of the web.
 
+## How to use this roadmap in this repo
+
+- Treat this as the **long-term direction**. For day-to-day operation and architecture, start with:
+	- [Architecture: Crawls vs Background Tasks](../ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md)
+	- [Crawl CLI Quick Reference](../cli/crawl.md)
+- For any non-trivial crawler work, create a session under `docs/sessions/` and capture:
+	- the objective and done-when criteria (PLAN)
+	- commands, checks, and test runs (WORKING_NOTES)
+	- outcomes + follow-ups (SESSION_SUMMARY / FOLLOW_UPS)
+	See [Session Documentation Hub](../sessions/SESSIONS_HUB.md).
+- When a roadmap item requires a design choice, write an ADR-lite in `docs/decisions/` and link it here.
+
 ## Phase 1: Foundation & Reliability (The "Tenacious" Crawler)
 *Focus: Ensure the crawler never gives up and recovers from failures.*
 *Spec: [RELIABLE_CRAWLER_PHASE_1_SPEC.md](../designs/RELIABLE_CRAWLER_PHASE_1_SPEC.md)*
