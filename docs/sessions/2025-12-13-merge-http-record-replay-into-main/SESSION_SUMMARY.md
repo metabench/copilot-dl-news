@@ -1,13 +1,18 @@
 # Session Summary – Merge HTTP record/replay into main
 
 ## Accomplishments
-- _Fill in key deliverables and outcomes._
+- Merged `chore/plan-http-record-replay-decision-traces` into `main`.
+- Confirmed HTTP record/replay + decision trace helper are present on `main` and validated by focused Jest runs.
+- Deleted merged branches locally and deleted `chore/plan-crawler-offline-test` on origin.
 
 ## Metrics / Evidence
-- _Link to tests, benchmarks, or telemetry supporting the results._
+- `npm run test:by-path tests/crawler/httpRecordReplay.test.js` (PASS)
+- `npm run test:by-path tests/crawler/decisionTraceHelper.test.js` (PASS)
+- `main` pushed to origin (two pushes: merge commit(s) and then merge-session docs).
 
 ## Decisions
-- _Reference entries inside `DECISIONS.md`._
+- No design changes; merge-only session.
 
 ## Next Steps
-- _Summarize remaining work or follow-ups._
+- Optional: review and drop the local stash created before cherry-pick (`git stash list`).
+- If you want remote cleanup parity, consider deleting any remaining `copilot/*` branches intentionally.
