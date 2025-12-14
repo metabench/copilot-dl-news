@@ -1,6 +1,7 @@
 "use strict";
 
 const adapters = new Map();
+let globalInstance = null;
 
 function normalizeOptions(input) {
   const envEngine = process.env.DB_ENGINE || process.env.NEWS_DB_ENGINE;
@@ -46,6 +47,64 @@ function createDatabase(inputOptions) {
   return factory({ engine, ...adapterOptions });
 }
 
+/**
+ * Get or create the singleton database instance.
+ * If options are provided, they are used to create the instance if it doesn't exist.
+ * If no options are provided and no instance exists, it attempts to find default paths.
+ */
+function getDb(options = null) {
+  if (globalInstance) {
+    return globalInstance;
+  }
+
+  // If options provided, use them
+  if (options) {
+    globalInstance = createDatabase(options);
+    return globalInstance;
+  }
+
+  // Try to auto-discover defaults
+  const path = require('path');
+  const fs = require('fs');
+  
+  // Common locations for the DB
+  const candidates = [
+    process.env.NEWS_DB_PATH,
+    path.join(process.cwd(), 'data', 'news.db'),
+    path.join(__dirname, '../../data/news.db')
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      try {
+        globalInstance = createDatabase({
+          engine: 'sqlite',
+          dbPath: candidate
+        });
+        return globalInstance;
+      } catch (err) {
+        // Continue to next candidate
+      }
+    }
+  }
+
+  throw new Error('getDb(): Could not find database. Please pass options or ensure data/news.db exists.');
+}
+
+/**
+ * Reset the global singleton (useful for testing)
+ */
+function resetDb() {
+  if (globalInstance && typeof globalInstance.close === 'function') {
+    try {
+      globalInstance.close();
+    } catch (e) {
+      // Ignore close errors
+    }
+  }
+  globalInstance = null;
+}
+
 class NewsDatabaseFacade {
   constructor(inputOptions) {
     const instance = createDatabase(inputOptions);
@@ -60,6 +119,8 @@ registerAdapter("sqlite", (options) => {
 
 module.exports = NewsDatabaseFacade;
 module.exports.createDatabase = createDatabase;
+module.exports.getDb = getDb;
+module.exports.resetDb = resetDb;
 module.exports.registerAdapter = registerAdapter;
 module.exports.getRegisteredAdapters = getRegisteredAdapters;
 module.exports.normalizeOptions = normalizeOptions;

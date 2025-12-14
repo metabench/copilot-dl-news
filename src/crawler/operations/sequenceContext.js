@@ -12,6 +12,7 @@
  */
 
 const { CrawlPlaybookService } = require('../CrawlPlaybookService');
+const { getDb } = require('../../db');
 
 class SequenceContextAdapter {
   constructor({ playbookService, dbPath } = {}) {
@@ -25,8 +26,24 @@ class SequenceContextAdapter {
       this._playbook = new CrawlPlaybookService({ db });
       this._ownedPlaybook = true;
     } else {
-      this._playbook = null;
-      this._ownedPlaybook = false;
+      // Try to use the shared database connection
+      try {
+        let db = getDb();
+        if (db && typeof db.getHandle === 'function') {
+          db = db.getHandle();
+        }
+        
+        if (db) {
+          this._playbook = new CrawlPlaybookService({ db });
+          this._ownedPlaybook = false; // Shared connection, do not close
+        } else {
+          this._playbook = null;
+          this._ownedPlaybook = false;
+        }
+      } catch (err) {
+        this._playbook = null;
+        this._ownedPlaybook = false;
+      }
     }
   }
 

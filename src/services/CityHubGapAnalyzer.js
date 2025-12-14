@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('path');
+const { getDb } = require('../db');
 const { getTopCities } = require('../db/sqlite/v1/queries/gazetteer.places');
 const { slugify } = require('../tools/slugify');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
@@ -16,7 +17,11 @@ class CityHubGapAnalyzer extends HubGapAnalyzerBase {
    * @param {string} [options.dsplDir] - Directory containing DSPL JSON files.
    */
   constructor({ db, logger = console, dsplDir = path.join(__dirname, '..', '..', 'data', 'dspls') } = {}) {
-    super({ db, logger, dsplDir });
+    let _db = db;
+    if (!_db) _db = getDb();
+    if (_db && typeof _db.getHandle === 'function') _db = _db.getHandle();
+
+    super({ db: _db, logger, dsplDir });
   }
 
   /**

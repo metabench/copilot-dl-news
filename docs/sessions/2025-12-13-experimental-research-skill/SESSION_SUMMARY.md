@@ -1,15 +1,17 @@
-# Session Summary – Experimental Research Skill (Metacognition + Tooling)
+# Session Summary: Experimental Research Skill
 
-## Accomplishments
-- Added a new Skill for experiment-driven research + metacognition: `docs/agi/skills/experimental-research-metacognition/SKILL.md`.
-- Registered the Skill in `docs/agi/SKILLS.md` and cross-linked it from `jsgui3-lab-experimentation`.
-- Clarified that tooling improvements are optional-by-default but can be autonomous when ROI is high.
+## Overview
+Created the `experimental-research-metacognition` Skill to codify the "Research Loop" (Sense → Think → Act → Reflect) and provide a standard operating procedure for agents facing uncertainty. This Skill bridges the gap between "guessing" and "knowing" by enforcing hypothesis-driven experimentation.
 
-## Metrics / Evidence
-- _Link to tests, benchmarks, or telemetry supporting the results._
+## Key Deliverables
+- `docs/agi/skills/experimental-research-metacognition/SKILL.md`: The core SOP document.
+- `docs/agi/SKILLS.md`: Updated registry (verified).
 
-## Decisions
-- Tooling improvements: optional by default; autonomously promote repeat workflows when triggers are met (documented in the Skill).
+## Key Decisions
+- **Metacognition Focus**: Explicitly added a "Metacognition" section to teach agents *how* to think about their research process (stop rules, confidence calibration).
+- **Tooling Autonomy**: Empowered agents to improve tooling autonomously when they encounter friction, rather than just complaining about it.
+- **Integration**: Linked to `jsgui3-lab-experimentation` for UI-specifics and `session-discipline` for process.
 
 ## Next Steps
-- _Summarize remaining work or follow-ups._
+- Agents should use this Skill when encountering ambiguous bugs or undocumented subsystems.
+- Future sessions should refine the "Tooling" section based on what tools agents actually build.

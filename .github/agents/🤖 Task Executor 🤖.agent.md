@@ -1,6 +1,6 @@
 ---
 description: 'Executor agent for precise task implementation. Follows plans created by thinking agents (🧠). Optimized for fast models like Grok Fast, Raptor Mini, GPT-4o mini. Does not plan—only executes.'
-tools: ['edit', 'search', 'runCommands', 'runTasks', 'problems', 'runTests']
+tools: ['execute/testFailure', 'execute/getTerminalOutput', 'execute/runTask', 'execute/createAndRunTask', 'execute/runInTerminal', 'execute/runTests', 'read/problems', 'read/readFile', 'read/terminalSelection', 'read/terminalLastCommand', 'read/getTaskOutput', 'edit', 'search', 'docs-memory/*', 'todo']
 ---
 
 # 🤖 Task Executor 🤖

@@ -7,6 +7,8 @@
  * Provides standardized prediction strategies that can be configured for different entity types.
  */
 
+const { getDb } = require('../../db');
+
 class PredictionStrategyManager {
   /**
    * @param {Object} config - Configuration for prediction strategies
@@ -18,6 +20,9 @@ class PredictionStrategyManager {
    */
   constructor({ db, dspls, entityType, buildMetadata, logger = console }) {
     this.db = db;
+    if (!this.db) this.db = getDb();
+    if (this.db && typeof this.db.getHandle === 'function') this.db = this.db.getHandle();
+
     this.dspls = dspls;
     this.entityType = entityType;
     this.buildMetadata = buildMetadata;

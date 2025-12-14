@@ -154,3 +154,18 @@ AGI-accumulated knowledge catalog.
 
 
 ---
+
+## Hidden Wrapper Incompatibility
+
+**Added**: 2025-12-14
+**Context**: DB Facade Refactoring
+
+**When to use**: Symptoms: Runtime errors like 'db.prepare is not a function' when passing a wrapped object to a component expecting a raw handle.
+
+**Steps/Details**:
+1. Why it's bad: It breaks existing code that relies on the specific API of the underlying object (e.g., better-sqlite3), requiring invasive changes to all consumers.
+1. Better approach: Expose the raw handle via a method (e.g., getHandle()) or ensure the wrapper implements the full interface required by consumers. Consumers should check for the wrapper and unwrap it if necessary.
+
+
+
+---

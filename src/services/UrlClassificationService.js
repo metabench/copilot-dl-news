@@ -12,6 +12,8 @@
 
 const { URL } = require('url');
 
+const { getDb } = require('../db');
+
 /**
  * @typedef {Object} ClassificationPrediction
  * @property {string} classification - Predicted classification
@@ -42,10 +44,13 @@ class UrlClassificationService {
      * @param {Object} [options.logger] - Logger instance
      */
     constructor({ db, signalsService = null, logger = console } = {}) {
-        if (!db) {
+        this.db = db;
+        if (!this.db) this.db = getDb();
+        if (this.db && typeof this.db.getHandle === 'function') this.db = this.db.getHandle();
+
+        if (!this.db) {
             throw new Error('UrlClassificationService requires db instance');
         }
-        this.db = db;
         this.signalsService = signalsService;
         this.logger = logger;
         

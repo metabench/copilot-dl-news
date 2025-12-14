@@ -1,3 +1,5 @@
+const { getDb } = require('../db');
+
 /**
  * Budget Allocator - Intelligent resource allocation
  * 
@@ -11,6 +13,9 @@
 class BudgetAllocator {
   constructor({ db, logger = console } = {}) {
     this.db = db;
+    if (!this.db) this.db = getDb();
+    if (this.db && typeof this.db.getHandle === 'function') this.db = this.db.getHandle();
+
     this.logger = logger;
 
     // Budget tracking

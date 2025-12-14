@@ -9,9 +9,14 @@
  * - Maintain multiple plan hypotheses, prune low-probability branches
  */
 
+const { getDb } = require('../db');
+
 class HierarchicalPlanner {
   constructor({ db, logger = console, maxLookahead = 5, maxBranches = 10, features = {} } = {}) {
     this.db = db;
+    if (!this.db) this.db = getDb();
+    if (this.db && typeof this.db.getHandle === 'function') this.db = this.db.getHandle();
+
     this.logger = logger;
     this.maxLookahead = maxLookahead;
     this.maxBranches = maxBranches;

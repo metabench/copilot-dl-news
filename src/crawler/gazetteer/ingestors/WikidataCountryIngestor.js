@@ -7,6 +7,7 @@ const { tof, each, is_array } = require('lang-tools');
 const { compact } = require('../../../utils/pipelines');
 const { AttributeBuilder } = require('../../../utils/attributeBuilder');
 const ingestQueries = require('../../../db/sqlite/v1/queries/gazetteer.ingest');
+const { getDb } = require('../../../db');
 const {
   DEFAULT_LABEL_LANGUAGES,
   buildCountryDiscoveryQuery
@@ -71,6 +72,21 @@ class WikidataCountryIngestor {
     };
 
     if (this.verbose) this.logger.info('[WikidataCountryIngestor] Constructor starting...');
+    
+    // Auto-resolve DB if not provided
+    if (!db) {
+      try {
+        db = getDb();
+      } catch (err) {
+        // Fall through to validation error
+      }
+    }
+
+    // Unwrap NewsDatabase wrapper if present
+    if (db && typeof db.getHandle === 'function') {
+      db = db.getHandle();
+    }
+
     if (!db) {
       throw new Error('WikidataCountryIngestor requires a database handle (pass backgroundTaskManager.db or getDbRW())');
     }

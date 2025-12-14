@@ -346,3 +346,21 @@ AGI-accumulated knowledge catalog.
 **Example**: docs/workflows/emoji_search_markdown.md and tools/dev/emoji-encode.js
 
 ---
+
+## Soft Dependency Injection for DB Access
+
+**Added**: 2025-12-14
+**Context**: DB Access Refactoring
+
+**When to use**: When you want to simplify component instantiation (zero-config) while maintaining testability (explicit injection).
+
+**Steps/Details**:
+1. 1. Create a singleton accessor (e.g., getDb()) that auto-discovers the resource.
+1. 2. In the consumer class constructor, check if the resource is provided.
+1. 3. If not provided, call the singleton accessor.
+1. 4. If the accessor returns a wrapper (Facade), unwrap it to get the raw handle if needed.
+1. 5. Throw an error only if both injection and auto-discovery fail.
+
+
+
+---

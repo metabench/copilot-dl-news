@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const { recordPlaceHubSeed } = require('./data/placeHubs');
 const NewsWebsiteService = require('../services/NewsWebsiteService');
 const { safeCall } = require('./utils');
+const { getDb } = require('../db');
 
 let NewsDatabase = null;
 
@@ -85,8 +86,14 @@ class CrawlerDb {
       return { db: this.db, stats: this._stats };
     }
     try {
-      const DatabaseCtor = loadNewsDatabase();
-      this.db = new DatabaseCtor(this.dbPath);
+      if (!this.dbPath) {
+        this.db = getDb();
+        this._log(`SQLite DB initialized via getDb() singleton`);
+      } else {
+        const DatabaseCtor = loadNewsDatabase();
+        this.db = new DatabaseCtor(this.dbPath);
+        this._log(`SQLite DB initialized at: ${this.dbPath}`);
+      }
       
       // Initialize news website service for cache updates
       try {
@@ -100,9 +107,9 @@ class CrawlerDb {
         safeCall(() => this.cache.setDb(this.db));
       }
       if (this.fastStart) {
-        this._log(`SQLite DB initialized at: ${this.dbPath} (fast-start)`);
+        // this._log(`SQLite DB initialized at: ${this.dbPath} (fast-start)`); // Already logged above or irrelevant
       } else {
-        this._log(`SQLite DB initialized at: ${this.dbPath}`);
+        // this._log(`SQLite DB initialized at: ${this.dbPath}`); // Already logged above
         this._stats = await this._collectStats();
         if (this._stats) {
           this._log(`Database size: ${this._stats.sizeHuman} — stored pages: ${this._stats.fetchCount}, articles detected: ${this._stats.articleFetchCount}`);

@@ -1,12 +1,12 @@
 {
-  "generated_at": "2025-11-27T01:33:06.728Z",
+  "generated_at": "2025-12-14T01:38:30.087Z",
   "database": "news.db",
   "summary": {
-    "tables": 75,
-    "indexes": 210,
+    "tables": 79,
+    "indexes": 215,
     "triggers": 25,
     "views": 3,
-    "total_rows": 7841263
+    "total_rows": 7882639
   },
   "tables": [
     {
@@ -19,31 +19,31 @@
     },
     {
       "name": "place_names",
-      "rows": 731397
+      "rows": 731647
     },
     {
       "name": "urls",
-      "rows": 264128
+      "rows": 287883
     },
     {
       "name": "http_responses",
-      "rows": 53162
+      "rows": 60480
     },
     {
       "name": "content_storage",
-      "rows": 40578
+      "rows": 43905
     },
     {
       "name": "content_analysis",
-      "rows": 40554
+      "rows": 43881
+    },
+    {
+      "name": "discovery_events",
+      "rows": 39044
     },
     {
       "name": "place_attribute_values",
       "rows": 36720
-    },
-    {
-      "name": "discovery_events",
-      "rows": 35720
     },
     {
       "name": "crawl_jobs",
@@ -126,6 +126,14 @@
       "rows": 54
     },
     {
+      "name": "news_websites",
+      "rows": 36
+    },
+    {
+      "name": "layout_signatures",
+      "rows": 30
+    },
+    {
       "name": "classification_types",
       "rows": 24
     },
@@ -139,7 +147,7 @@
     },
     {
       "name": "domains",
-      "rows": 9
+      "rows": 11
     },
     {
       "name": "ingestion_runs",
@@ -152,6 +160,10 @@
     {
       "name": "schema_migrations",
       "rows": 8
+    },
+    {
+      "name": "page_categories",
+      "rows": 5
     },
     {
       "name": "gazetteer_crawl_state",
@@ -175,6 +187,10 @@
     },
     {
       "name": "place_hub_determinations",
+      "rows": 2
+    },
+    {
+      "name": "ui_themes",
       "rows": 2
     },
     {
@@ -254,11 +270,11 @@
       "rows": 0
     },
     {
-      "name": "news_websites",
+      "name": "news_websites_stats_cache",
       "rows": 0
     },
     {
-      "name": "news_websites_stats_cache",
+      "name": "page_category_map",
       "rows": 0
     },
     {
@@ -321,31 +337,31 @@
     },
     {
       "name": "place_names",
-      "rows": 731397
+      "rows": 731647
     },
     {
       "name": "urls",
-      "rows": 264128
+      "rows": 287883
     },
     {
       "name": "http_responses",
-      "rows": 53162
+      "rows": 60480
     },
     {
       "name": "content_storage",
-      "rows": 40578
+      "rows": 43905
     },
     {
       "name": "content_analysis",
-      "rows": 40554
+      "rows": 43881
+    },
+    {
+      "name": "discovery_events",
+      "rows": 39044
     },
     {
       "name": "place_attribute_values",
       "rows": 36720
-    },
-    {
-      "name": "discovery_events",
-      "rows": 35720
     },
     {
       "name": "crawl_jobs",

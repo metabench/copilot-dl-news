@@ -1,5 +1,6 @@
 'use strict';
 
+const { getDb } = require('../db');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 const { slugify } = require('../tools/slugify');
 
@@ -14,7 +15,11 @@ const { slugify } = require('../tools/slugify');
  */
 class TopicHubGapAnalyzer extends HubGapAnalyzerBase {
   constructor({ db, logger, dsplDir } = {}) {
-    super({ db, logger, dsplDir });
+    let _db = db;
+    if (!_db) _db = getDb();
+    if (_db && typeof _db.getHandle === 'function') _db = _db.getHandle();
+
+    super({ db: _db, logger, dsplDir });
     this.topicCache = null;
     this.cacheExpiry = 0;
     this.cacheDurationMs = 60000; // 1 minute

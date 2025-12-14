@@ -900,10 +900,10 @@ node src/ui/controls/checks/<control>.check.js
 **What I Should Have Done**:
 ```bash
 # 1. Extract all hardcoded colors from the CSS template literal
-grep -oE '#[0-9a-fA-F]{3,8}' src/ui/render-url-table.js | sort -u > colors.txt
+node tools/dev/js-edit.js --file src/ui/render-url-table.js --search-text "#[0-9a-fA-F]{3,8}" --json > colors.json
 
 # 2. Create a mapping file
-node scripts/generate-color-mapping.js colors.txt > color-map.json
+node scripts/generate-color-mapping.js colors.json > color-map.json
 
 # 3. Generate batch replacements and dry-run
 node scripts/apply-css-theming.js --input src/ui/render-url-table.js --map color-map.json --dry-run

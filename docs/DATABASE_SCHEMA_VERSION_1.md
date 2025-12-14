@@ -1,7 +1,9 @@
-# Database Schema Version 1 (Current)
+# [DEPRECATED] Database Schema Version 1
 
-**Status**: Production  
-**Version**: 1 (implicit - no version tracking yet implemented)  
+> **⚠️ DEPRECATED**: This document is outdated. Please refer to [docs/database/schema/main.md](database/schema/main.md) for the current schema documentation.
+
+**Status**: Archived  
+**Version**: 1 (Legacy)  
 **Date Established**: 2024-2025  
 **Last Updated**: October 11, 2025
 

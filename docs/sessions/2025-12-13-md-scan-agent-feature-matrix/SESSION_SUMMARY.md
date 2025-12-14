@@ -6,6 +6,7 @@
 - Extended `tools/dev/md-edit.js` with batch mutation mode via `--dir` for `--replace-section` and `--remove-section`, with optional unified diff previews (`--emit-diff`).
 - Improved batch resilience + output control in `md-edit` (`--allow-missing`, `--diff-max-lines`, `--diff-max-chars`, `--max-diffs`).
 - Added a tiny shared helper `tools/dev/shared/unifiedDiff.js` so batch previews can show patch-style output without external deps.
+- Added `tools/dev/agent-files.js` as a safe wrapper for agent file management (validate, search, replace-section).
 - Added focused Jest tests for the new tool + batch behavior.
 
 ## Metrics / Evidence

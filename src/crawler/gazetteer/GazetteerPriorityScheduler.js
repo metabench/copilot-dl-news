@@ -2,6 +2,7 @@
 
 const { tof, is_array } = require('lang-tools');
 const progressQueries = require('../../db/sqlite/v1/queries/gazetteer.progress');
+const { getDb } = require('../../db');
 
 const DEFAULT_STAGE_DEFS = Object.freeze([
   { name: 'countries', priority: 1000, crawlDepth: 0, kind: 'country' },
@@ -90,10 +91,13 @@ function normalizeStages(inputStages) {
 
 class GazetteerPriorityScheduler {
   constructor({ db, logger = console, stages = null } = {}) {
-    if (!db) {
+    this.db = db;
+    if (!this.db) this.db = getDb();
+    if (this.db && typeof this.db.getHandle === 'function') this.db = this.db.getHandle();
+
+    if (!this.db) {
       throw new Error('GazetteerPriorityScheduler requires a database handle');
     }
-    this.db = db;
     this.logger = logger;
 
     // Stage definitions

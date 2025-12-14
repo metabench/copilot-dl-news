@@ -4,9 +4,9 @@
 Create a reusable Skill that teaches agents how to do experiment-driven research and continuously improve research methods + tooling.
 
 ## Done When
-- [ ] Key deliverables are complete and documented in `SESSION_SUMMARY.md`.
-- [ ] Tests and validations (if any) are captured in `WORKING_NOTES.md`.
-- [ ] Follow-ups are recorded in `FOLLOW_UPS.md`.
+- [x] Key deliverables are complete and documented in `SESSION_SUMMARY.md`.
+- [x] Tests and validations (if any) are captured in `WORKING_NOTES.md`.
+- [x] Follow-ups are recorded in `FOLLOW_UPS.md`.
 
 ## Change Set (initial sketch)
 - `docs/agi/skills/experimental-research-metacognition/SKILL.md` (new)

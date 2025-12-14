@@ -11,6 +11,7 @@
 'use strict';
 
 const { URL } = require('url');
+const { getDb } = require('../db');
 
 /**
  * @typedef {Object} LearnedPattern
@@ -29,10 +30,13 @@ class UrlPatternLearningService {
      * @param {Object} [options.config] - Configuration options
      */
     constructor({ db, logger = console, config = {} } = {}) {
-        if (!db) {
+        this.db = db;
+        if (!this.db) this.db = getDb();
+        if (this.db && typeof this.db.getHandle === 'function') this.db = this.db.getHandle();
+
+        if (!this.db) {
             throw new Error('UrlPatternLearningService requires db instance');
         }
-        this.db = db;
         this.logger = logger;
         this.config = {
             minSampleSize: config.minSampleSize || 3,      // Minimum URLs to create a pattern

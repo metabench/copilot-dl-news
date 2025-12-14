@@ -1,3 +1,5 @@
+const { getDb } = require('../db');
+
 /**
  * Adaptive Exploration vs Exploitation - Dynamic strategy switching
  * 
@@ -12,6 +14,9 @@
 class AdaptiveExplorer {
   constructor({ db, logger = console, initialEpsilon = 0.2 } = {}) {
     this.db = db;
+    if (!this.db) this.db = getDb();
+    if (this.db && typeof this.db.getHandle === 'function') this.db = this.db.getHandle();
+
     this.logger = logger;
 
     // Exploration parameters

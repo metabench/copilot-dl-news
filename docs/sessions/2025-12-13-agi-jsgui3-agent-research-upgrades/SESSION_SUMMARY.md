@@ -4,9 +4,11 @@
 - Standardized an evidence-first loop across selected jsgui3/UI agent personas (hypothesis + falsifier + smallest repro command captured in session notes).
 - Reduced reliance on non-replayable shell pipeline snippets by switching examples to repo-standard Node CLIs (`tools/dev/js-scan.js`, `tools/dev/js-edit.js`).
 - Reinforced “link to authoritative docs” behavior (satellite guides + shared workflows) to avoid duplicative/bloated agent files.
+- **Specific Fix**: Replaced `grep` usage in `💡UI Singularity💡.agent.md` with `js-edit --search-text` to ensure cross-platform compatibility.
 
 ## Metrics / Evidence
 - Evidence trail captured in `WORKING_NOTES.md` for discovery commands and edited files.
+- `💡UI Singularity💡.agent.md` updated to use Tier 1 tooling.
 
 ## Decisions
 - No new architecture decisions; changes were constrained to documentation/agent persona behavior.

@@ -4,14 +4,14 @@
 Document repeatable single-browser Puppeteer workflows and fixtures for UI verification
 
 ## Done When
-- [ ] Key deliverables are complete and documented in `SESSION_SUMMARY.md`.
-- [ ] Tests and validations (if any) are captured in `WORKING_NOTES.md`.
-- [ ] Follow-ups are recorded in `FOLLOW_UPS.md`.
+- [x] Key deliverables are complete and documented in `SESSION_SUMMARY.md`.
+- [x] Tests and validations (if any) are captured in `WORKING_NOTES.md`.
+- [x] Follow-ups are recorded in `FOLLOW_UPS.md`.
 
 ## Change Set (initial sketch)
-- Add durable guide: `docs/guides/PUPPETEER_SCENARIO_SUITES.md`
-- Add Skill: `docs/agi/skills/puppeteer-efficient-ui-verification/SKILL.md`
-- Wire discovery links:
+- [x] Add durable guide: `docs/guides/PUPPETEER_SCENARIO_SUITES.md`
+- [x] Add Skill: `docs/agi/skills/puppeteer-efficient-ui-verification/SKILL.md`
+- [x] Wire discovery links:
 	- `docs/agi/SKILLS.md`
 	- `docs/INDEX.md`
 	- `docs/guides/PUPPETEER_UI_WORKFLOW.md`

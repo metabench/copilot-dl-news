@@ -15,3 +15,8 @@ Tracks what areas of the codebase have been refactored and documented.
 | `tools/dev/md-scan.js` | ✅ completed | 2025-12-13-emoji-search-md | Added b16/b64 encoded search term decoding and --find-emojis inventory mode; documented workflow and added emoji-encode helper + tests. |
 | `tools/dev/emoji-encode.js` | ✅ completed | 2025-12-13-emoji-search-md | New helper CLI to encode/decode emoji text to UTF-8 hex/base64 using codepoints (Windows-safe), with Jest coverage. |
 | `docs/guides/JSGUI3_SHARED_CONTROLS_CATALOG.md` | ✅ completed | 2025-12-13-shared-controls-catalog | Added entries for SearchFormControl and MetricCardControl. |
+| `src/db` | 🔄 in-progress | 2025-12-14-db-access-simplification | Implemented getDb() singleton and refactored key consumers (WikidataCountryIngestor, GazetteerPriorityScheduler) to use soft dependency injection. |
+| `src/crawler` | 🔄 in-progress | 2025-12-14-db-access-simplification | Refactored HierarchicalPlanner, MultiGoalOptimizer, and PredictiveHubDiscovery to use soft dependency injection for DB access. |
+
+
+**Update 2025-12-14**: src/crawler → completed: Refactored TemporalPatternLearner, AdaptiveExplorer, BudgetAllocator, CrawlStrategyTemplates, TopicHubGapAnalyzer, CityHubGapAnalyzer, RegionHubGapAnalyzer, UrlPatternLearningService, ArticleCache, and CrawlerDb to use soft dependency injection for DB access.

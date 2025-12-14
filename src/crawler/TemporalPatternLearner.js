@@ -1,3 +1,5 @@
+const { getDb } = require('../db');
+
 /**
  * Temporal Pattern Learner - Learn when and how often to revisit hubs
  * 
@@ -12,6 +14,9 @@
 class TemporalPatternLearner {
   constructor({ db, logger = console } = {}) {
     this.db = db;
+    if (!this.db) this.db = getDb();
+    if (this.db && typeof this.db.getHandle === 'function') this.db = this.db.getHandle();
+
     this.logger = logger;
 
     // Temporal patterns

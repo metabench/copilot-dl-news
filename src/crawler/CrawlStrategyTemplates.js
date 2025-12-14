@@ -1,3 +1,5 @@
+const { getDb } = require('../db');
+
 /**
  * Crawl Strategy Templates - Specialized strategies per use case
  * 
@@ -12,6 +14,9 @@
 class CrawlStrategyTemplates {
   constructor({ db, logger = console } = {}) {
     this.db = db;
+    if (!this.db) this.db = getDb();
+    if (this.db && typeof this.db.getHandle === 'function') this.db = this.db.getHandle();
+
     this.logger = logger;
 
     // Template cache

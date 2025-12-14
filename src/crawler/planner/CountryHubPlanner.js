@@ -1,5 +1,7 @@
 'use strict';
 
+const { getDb } = require('../../db');
+
 const DEFAULT_COUNTRY_NAMES = [
   'France', 'Germany', 'Spain', 'Italy', 'China', 'India', 'United States', 'Russia', 'Brazil', 'Canada',
   'Australia', 'Japan', 'South Africa', 'Mexico', 'Nigeria', 'Argentina', 'Poland', 'Netherlands', 'Sweden',
@@ -41,7 +43,10 @@ const COUNTRY_SLUG_PREFIXES = [
 class CountryHubPlanner {
   constructor({ baseUrl, db, knowledgeService = null, maxCountryCount = 100 } = {}) {
     this.baseUrl = baseUrl || null;
-    this.db = db || null;
+    this.db = db;
+    if (!this.db) this.db = getDb();
+    if (this.db && typeof this.db.getHandle === 'function') this.db = this.db.getHandle();
+
     this.knowledgeService = knowledgeService;
     this.maxCountryCount = Math.max(1, maxCountryCount);
   }

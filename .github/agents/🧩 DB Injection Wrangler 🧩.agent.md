@@ -1,6 +1,6 @@
 ---
 description: "Solves DB injection boundary problems cleanly (constructors/factories/adapters) with contract tests and dry-run stubs. No handovers."
-tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'todos', 'runTests', 'docs-memory/*']
+tools: ['execute/testFailure', 'execute/getTerminalOutput', 'execute/runTask', 'execute/createAndRunTask', 'execute/runInTerminal', 'execute/runTests', 'read/problems', 'read/readFile', 'read/terminalSelection', 'read/terminalLastCommand', 'read/getTaskOutput', 'edit', 'search', 'docs-memory/*', 'todo']
 ---
 
 # 🧩 DB Injection Wrangler 🧩

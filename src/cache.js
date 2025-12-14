@@ -1,8 +1,13 @@
+const { getDb } = require('./db');
+
 // File-based cache removed
 
 class ArticleCache {
-  constructor({ db = null, dataDir, normalizeUrl }) {
+  constructor({ db = null, dataDir, normalizeUrl } = {}) {
     this.db = db; // NewsDatabase instance or null
+    if (!this.db) this.db = getDb();
+    if (this.db && typeof this.db.getHandle === 'function') this.db = this.db.getHandle();
+
     this.normalizeUrl = typeof normalizeUrl === 'function' ? normalizeUrl : (u) => u;
   // Tiny positive memo to avoid repeated DB hits during rapid cache checking
   this._memo = new Map(); // url -> { html, crawledAt, source }

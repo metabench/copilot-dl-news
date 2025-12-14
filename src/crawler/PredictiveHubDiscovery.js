@@ -8,9 +8,14 @@
  * - Domain-specific strategy learning
  */
 
+const { getDb } = require('../db');
+
 class PredictiveHubDiscovery {
   constructor({ db, logger = console } = {}) {
     this.db = db;
+    if (!this.db) this.db = getDb();
+    if (this.db && typeof this.db.getHandle === 'function') this.db = this.db.getHandle();
+
     this.logger = logger;
 
     // Prediction caches

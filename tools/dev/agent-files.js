@@ -446,8 +446,8 @@ async function runCli() {
     }
 
     fmt.header('Agent Files');
-    fmt.keyValue('Directory', path.relative(process.cwd(), agentDir));
-    fmt.keyValue('Agents', String(agents.length));
+    fmt.stat('Directory', path.relative(process.cwd(), agentDir));
+    fmt.stat('Agents', String(agents.length));
     fmt.blank();
     agents.forEach((agent) => {
       console.log(`${fmt.COLORS.cyan(agent.agentName)}  ${fmt.COLORS.muted(agent.relativePath)}`);
@@ -479,10 +479,10 @@ async function runCli() {
     }
 
     fmt.header('Agent Search');
-    fmt.keyValue('Directory', path.relative(process.cwd(), agentDir));
-    fmt.keyValue('Terms', options.search.join(', '));
-    fmt.keyValue('Files matched', String(result.summary.filesMatched));
-    fmt.keyValue('Matches', String(result.summary.matchCount));
+    fmt.stat('Directory', path.relative(process.cwd(), agentDir));
+    fmt.stat('Terms', options.search.join(', '));
+    fmt.stat('Files matched', String(result.summary.filesMatched));
+    fmt.stat('Matches', String(result.summary.matchCount));
     fmt.blank();
 
     for (const match of result.matches) {
@@ -560,10 +560,10 @@ async function runCli() {
       console.log(JSON.stringify(result, null, 2));
     } else {
       fmt.header('Agent Validation');
-      fmt.keyValue('Directory', path.relative(process.cwd(), agentDir));
-      fmt.keyValue('Files scanned', String(validateResult.filesScanned));
-      fmt.keyValue('Errors', String(errorCount));
-      fmt.keyValue('Warnings', String(warningCount));
+      fmt.stat('Directory', path.relative(process.cwd(), agentDir));
+      fmt.stat('Files scanned', String(validateResult.filesScanned));
+      fmt.stat('Errors', String(errorCount));
+      fmt.stat('Warnings', String(warningCount));
 
       const filesWithErrors = enrichedFiles.filter((f) => (f.issues || []).length > 0);
       const filesWithWarnings = enrichedFiles.filter((f) => (f.warnings || []).length > 0);

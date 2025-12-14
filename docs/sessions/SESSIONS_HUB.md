@@ -31,11 +31,49 @@
 
 ## Current Session
 
-### Session 2025-12-14: z-server Main-Area Progress Bars
+### Session 2025-12-14: Simplify DB Access Patterns
 
 **Duration**: Active
-**Type**: ui
+**Type**: refactor
 **Completion**: 🔄 In progress
+
+**Focus**:
+- Simplify database access code while maintaining injection/testability principles, verified via lab experiments.
+
+**Location**: `docs/sessions/2025-12-14-db-access-simplification/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-db-access-simplification/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-db-access-simplification/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-db-access-simplification/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-db-access-simplification/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-db-access-simplification/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Update DB Schema Documentation and SVG
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Update DB schema docs and create a WLILO SVG diagram
+
+**Location**: `docs/sessions/2025-12-14-docs-db-schema-update/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-docs-db-schema-update/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-docs-db-schema-update/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-docs-db-schema-update/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-docs-db-schema-update/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-docs-db-schema-update/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: z-server Main-Area Progress Bars
+
+**Duration**: Completed
+**Type**: ui
+**Completion**: ✅ Complete
 
 **Focus**:
 - Ensure z-server shows green progress bars during scan, and renders them in the main area when nothing else is displayed.
@@ -52,9 +90,9 @@
 
 ### Session 2025-12-14: jsgui3 Control Scenario Suite
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: ui
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Add a second Puppeteer scenario suite for a pure jsgui3 control and wire it into lab experimentation practices.
@@ -71,9 +109,9 @@
 
 ### Session 2025-12-14: Puppeteer Efficient UI Workflow Docs
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: docs
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Document repeatable single-browser Puppeteer workflows and fixtures for UI verification
@@ -90,9 +128,9 @@
 
 ### Session 2025-12-13: Fast UI verification harness (no repeated Puppeteer reloads)
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: research
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Invent and prototype a fast UI verification workflow using reusable browser sessions and richer control fixtures.
@@ -109,9 +147,9 @@
 
 ### Session 2025-12-13: UI Verification (Fixtures + E2E)
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: research
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete (Superseded)
 
 **Focus**:
 - Research and document how agents should verify UI + interactive elements, including full crawler workflows, using layered fixtures + E2E.
@@ -128,9 +166,9 @@
 
 ### Session 2025-12-13: Experimental Research Skill (Metacognition + Tooling)
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: docs
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Create a reusable Skill that teaches agents how to do experiment-driven research and continuously improve research methods + tooling.
@@ -147,9 +185,9 @@
 
 ### Session 2025-12-13: Lab Experiments  Skills Consolidation
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: research
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Inventory existing jsgui3 lab experiments, run key checks, and distill stable findings into the Skills system with pointers for future experiments.
@@ -166,9 +204,9 @@
 
 ### Session 2025-12-13: Update Shared Controls Catalog
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: docs
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Consolidate newly added reusable jsgui3 controls into the canonical shared-controls catalog and add quick routing pointers.
@@ -185,9 +223,9 @@
 
 ### Session 2025-12-13: Emoji Search in Markdown (md-scan)
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: tooling
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Consolidate canonical workflow for emoji search in markdown and add a helper CLI to encode/decode emojis.
@@ -204,9 +242,9 @@
 
 ### Session 2025-12-13: md-scan encoded emoji search
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: tooling
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Allow md-scan to accept base16/base64 encoded search terms (b16:/b64:) so agents can find emoji strings reliably on Windows terminals
@@ -223,9 +261,9 @@
 
 ### Session 2025-12-13: Memory Feedback Badge Format
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: docs
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Standardize user-visible memory-load badge format across AGENTS/docs/agents
@@ -242,9 +280,9 @@
 
 ### Session 2025-12-13: Data Explorer WLILO Theme + Shared Controls
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: ui
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Improve Data Explorer presentation using WLILO theming abstractions and extract reusable jsgui3 controls.
@@ -261,9 +299,9 @@
 
 ### Session 2025-12-13: WLILO Design Skills Agent
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: docs
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Create an emoji Design Skills agent + WLILO Skill SOP and add user-visible memory load feedback.
@@ -280,9 +318,9 @@
 
 ### Session 2025-12-13: MCP memory server surgery + SVG theming SOPs
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: docs
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Capture durable Skills/workflows for safely modifying MCP memory servers and for building themeable SVGs with agent-assisted pipelines.
@@ -299,9 +337,9 @@
 
 ### Session 2025-12-13: Memory access improvements
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: docs
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Audit and improve agent instructions + memory structure for reliable retrieval; align zero-cost with Claude Skills ideas.
@@ -318,9 +356,9 @@
 
 ### Session 2025-12-13: z-server scan as observable
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: research
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Make js-server scanning importable by z-server with an observable-style API (fnl-like), validated via small lab experiments
@@ -337,9 +375,9 @@
 
 ### Session 2025-12-13: Agent Files CLI Tooling
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: tooling
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Improve CLI tooling for understanding, validating, and safely editing .github/agents/*.agent.md files
@@ -356,9 +394,9 @@
 
 ### Session 2025-12-13: AGI + jsgui3 Research Behaviour Upgrades
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: agents
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Improve research discipline, memory use, evidence capture, and jsgui3-specific debugging workflows across key agents.
@@ -375,9 +413,9 @@
 
 ### Session 2025-12-13: md-scan agent feature matrix + md-edit multi-file operations
 
-**Duration**: Active
+**Duration**: Completed
 **Type**: tooling
-**Completion**: 🔄 In progress
+**Completion**: ✅ Complete
 
 **Focus**:
 - Design improvements to md-scan/md-edit for scanning agent capabilities and applying the same content across many agent files safely.
