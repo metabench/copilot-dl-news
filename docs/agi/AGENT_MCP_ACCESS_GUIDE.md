@@ -19,6 +19,25 @@ Use this as your default “don’t reinvent it” sequence:
 3. **Then stable memory**: Pull relevant snippets from `docs/agi/LESSONS.md`, `PATTERNS.md`, and `ANTI_PATTERNS.md`.
 4. **Write back**: When you learn something reusable, append 1–3 durable updates (Lesson/Pattern/Anti-Pattern) and record evidence in the active session’s `WORKING_NOTES.md`.
 
+If you are about to **modify an MCP server that touches memory** (especially `tools/mcp/docs-memory/mcp-server.js`), consult the Skill:
+
+- `docs/agi/skills/mcp-memory-server-surgery/SKILL.md`
+
+## User-Visible Memory Load Feedback (required)
+
+When you consult the memory system, emit a **short, emoji-based “memory loaded” summary** so the user can see what you accessed.
+
+Rules:
+- Keep it **1–2 lines max**.
+- Include the **source** (docs-memory vs CLI fallback) and **what you loaded** (Skill names, session hits count, etc.).
+- Avoid spam: emit the badge **once per distinct retrieval** (or when the source/loaded items change). Don’t repeat it every message.
+- If MCP tools are missing/unhealthy, explicitly say you fell back.
+
+Copy/paste templates:
+- `🧠 MEMORY — Skills=<name1>, <name2> | Sessions=<n> hits | Lessons/Patterns=<skimmed|none>`
+- `🧠 MEMORY — docs-memory: OK | Skills=<...> | Sessions=<...>`
+- `🧠 MEMORY — docs-memory: unavailable → fallback md-scan (docs/agi: <n> hits, docs/sessions: <n> hits)`
+
 ## Instruction Adherence Loop (Snapshot → Task Ledger → Re-anchor)
 
 This repo has a lot of instruction sources (system/developer/mode files, AGENTS.md, Skills, sessions). To avoid drift:

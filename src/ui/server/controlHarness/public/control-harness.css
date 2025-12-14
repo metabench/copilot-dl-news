@@ -1,0 +1,64 @@
+body {
+  font-family: "Inter", "Segoe UI", sans-serif;
+  background: #0b1220;
+  color: #e2e8f0;
+  margin: 0;
+  padding: 24px;
+}
+
+.counter-demo {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 18px;
+  border: 1px solid #1f2937;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0b1220, #0f172a);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.counter-demo__label {
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.counter-demo__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.counter-demo__value {
+  display: inline-flex;
+  min-width: 56px;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 18px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #1f2937;
+}
+
+.counter-demo__btn,
+.counter-demo__reset {
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid #1f2937;
+  background: rgba(255, 255, 255, 0.03);
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+
+.counter-demo__btn:hover,
+.counter-demo__reset:hover {
+  transform: translateY(-1px);
+  border-color: #334155;
+}
+
+.counter-demo__reset {
+  color: #fef08a;
+  border-color: rgba(234, 179, 8, 0.4);
+  background: rgba(234, 179, 8, 0.08);
+}

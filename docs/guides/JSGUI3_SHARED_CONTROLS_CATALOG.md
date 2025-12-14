@@ -148,6 +148,32 @@ const dashboard = new GeoImportDashboard({
 
 ## Data Display Controls
 
+### MetricCardControl
+
+**Path**: `src/ui/controls/MetricCardControl.js`  \
+**Purpose**: Themeable “metric card” primitive for dashboards and home tiles  \
+**Type**: `metric_card`
+
+```javascript
+const { MetricCardControl, CARD_VARIANTS } = require("./MetricCardControl");
+
+const card = new MetricCardControl({
+  context,
+  title: "Domains",
+  value: 123,
+  subtitle: "Total",
+  variant: CARD_VARIANTS.PRIMARY,
+  href: "/domains"
+});
+```
+
+**Variants**:
+- `CARD_VARIANTS.DEFAULT | PRIMARY | SUCCESS | WARNING | DANGER`
+
+**Notes**:
+- Designed for SSR output with optional link title (`href`).
+- Styling is driven by class names: `metric-card` + `metric-card--<variant>`.
+
 ### TableControl
 
 **Path**: `src/ui/controls/Table.js`  
@@ -202,6 +228,40 @@ const table = new TableControl({
 ---
 
 ## Input & Interaction Controls
+
+### SearchFormControl
+
+**Path**: `src/ui/controls/SearchFormControl.js`  \
+**Purpose**: Shared, themeable search form for SSR pages  \
+**Type**: `search_form`
+
+```javascript
+const { SearchFormControl } = require("./SearchFormControl");
+
+const form = new SearchFormControl({
+  context,
+  action: "/urls",
+  method: "get",
+  home: { text: "Home", href: "/" },
+  input: { name: "q", value: "example", placeholder: "Search..." },
+  selects: [
+    {
+      name: "status",
+      value: "200",
+      options: [
+        { value: "", label: "Any" },
+        { value: "200", label: "200" },
+        { value: "404", label: "404" }
+      ]
+    }
+  ],
+  button: { text: "\uD83D\uDD0D", ariaLabel: "Search" }
+});
+```
+
+**Notes**:
+- Uses class names (not inline styles): `search-form__input`, `search-form__select`, etc.
+- Prefer `--search b16:/b64:` workflows when searching for the emoji button label in docs/tools.
 
 ### UrlFilterToggle
 

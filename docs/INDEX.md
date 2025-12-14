@@ -21,6 +21,7 @@ _Last updated: 2025-12-13_
 - [Kilo Agent Handbook](workflows/kilo-agent-handbook.md) - Directory layout + workflow for running Kilo Code in this repo.
 - [Session Bootstrap Workflow](workflows/session_bootstrap_workflow.md) - Step-by-step guide for creating session folders, plans, and hub links.
 - [Tier 1 Tooling Loop](workflows/tier1_tooling_loop.md) - js-scan/js-edit discovery, dry-run, apply, and verification loop for JS changes.
+- [Emoji Search in Markdown (Windows-safe)](workflows/emoji_search_markdown.md) - Find emojis in docs without relying on literal emoji input.
 
 ## Standards
 - [Commit & PR Standards](standards/commit_pr_standards.md)
@@ -78,6 +79,8 @@ These guides are **authoritative sources** for their domains. When working in th
 ### Testing Guides
 
 - [Test Hanging Prevention Guide](guides/TEST_HANGING_PREVENTION_GUIDE.md) - **CRITICAL for E2E tests**: Preventing "Jest did not exit" warnings, server cleanup patterns, timeout strategies, and reliable async test structure.
+- [Puppeteer UI Workflow Guide](guides/PUPPETEER_UI_WORKFLOW.md) - One-shot browser console/network capture for debugging UI routes without writing a full E2E.
+- [Puppeteer Scenario Suites](guides/PUPPETEER_SCENARIO_SUITES.md) - Fast UI verification by running many scenarios per browser session (deterministic fixtures + artifacts on failure).
 
 ### Server Telemetry
 

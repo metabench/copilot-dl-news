@@ -24,6 +24,10 @@ description: Pick and run the smallest correct validation step (checks → focus
 3. Only then widen to broader suites if needed.
 4. Record the exact commands and outcomes in `WORKING_NOTES.md`.
 
+If you need browser semantics but don’t want full Jest E2E yet, prefer the single-browser scenario runner:
+
+- `node tools/dev/ui-scenario-suite.js --suite=scripts/ui/scenarios/<suite>.suite.js --scenario=001 --print-logs-on-failure`
+
 ## Validation
 
 - Official Jest invocation rule (repo policy): use `npm run test:by-path <file>`.

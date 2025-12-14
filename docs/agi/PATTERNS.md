@@ -153,6 +153,7 @@ AGI-accumulated knowledge catalog.
 1. Wire the experiment into the lab manifest/catalog (keep status: proposed|active|validated|promoted|deprecated) and update the lab README if required.
 1. Run the experiment check and record the finding (what worked, what failed, edge cases). Promote the discovery into a durable guide if it’s generally useful.
 1. If the behavior affects bubbling/capture/selector semantics, also run the delegation suite scenarios relevant to keep parity with existing experiments.
+1. Distill the validated outcome into a Skill (SOP + commands + validation) so future work starts from a known-good recipe (see `docs/agi/skills/jsgui3-lab-experimentation/SKILL.md`).
 
 
 
@@ -172,6 +173,25 @@ AGI-accumulated knowledge catalog.
 1. Keep the build step fast (<1s) and cacheable so CI costs stay low.
 
 **Example**: Build bundle with `node scripts/build-art-playground-client.js` before `npm run test:by-path tests/ui/e2e/art-playground.puppeteer.e2e.test.js`.
+
+---
+
+## WLILO Tokens + Panels for jsgui3 UI
+
+**Added**: 2025-12-13
+**Context**: WLILO (White Leather + Industrial Luxury Obsidian) design system Skills
+
+**When to use**: Styling or polishing a jsgui3 UI (dashboards/tables/detail views) and you want a consistent WLILO look without per-element ad-hoc colors
+
+**Steps/Details**:
+1. Define a small CSS token set on a root container (e.g., `.wlilo-app`) using CSS variables (bg, panel, border, text, muted, gold accent).
+2. Apply layout hierarchy: leather page background → obsidian panels → content.
+3. Use semantic classes (`.wlilo-panel`, `.wlilo-table`, `.wlilo-table__row`) instead of inline styles.
+4. Use emoji action icons consistently: 🔍/⚙️/➕/🗑️/✏️/🔄.
+5. Keep control counts lean: render repeated rows/cells as plain HTML when possible; paginate/virtualize beyond ~200 rows.
+6. Validate via the nearest `checks/*.check.js` and a focused Jest suite if behavior changed.
+
+**Example**: Skills `wlilo-design-system` + `jsgui3-wlilo-ui`
 
 ---
 
@@ -289,5 +309,40 @@ AGI-accumulated knowledge catalog.
 1. 7. Empty/null: returns empty string, renders as blank cell
 
 **Example**: src/ui/controls/Table.js _normalizeCellSpec() method
+
+---
+
+## Dual-Surface Theme Tokens (WLILO)
+
+**Added**: 2025-12-13
+**Context**: Data Explorer / themeService + dataExplorerCss
+
+**When to use**: UI uses a light page background with dark panels (WLILO) and needs correct text contrast on both surfaces.
+
+**Steps/Details**:
+1. Add theme tokens for both contexts: bg (light) + surface (dark) text variants (e.g., `text*` for bg, `surfaceText*` for panels).
+1. In CSS, keep body using `--theme-bg`/`--theme-text` and make panel-like containers set `color: var(--theme-surface-text, var(--theme-text))`.
+1. For components with `background: var(--theme-surface)` (nav pills, panels, inputs), use `--theme-surface-text*` for `color` and placeholders.
+1. If you want gradients, add `bgGradient` (or `bgImage`) instead of overloading `bg` (since `bg` may be used as a text color elsewhere).
+1. Seed system themes (e.g., `wlilo`, `obsidian`) so apps can select via `?theme=` and checks stay deterministic.
+
+**Example**: src/ui/server/services/themeService.js + src/ui/styles/dataExplorerCss.js
+
+---
+
+## Encoded Search Tokens for Unicode-Unfriendly Shells
+
+**Added**: 2025-12-13
+**Context**: md-scan + emoji-encode
+
+**When to use**: You need to search for emoji/unusual Unicode tokens but the terminal/shell may strip or normalize characters (common on Windows/PowerShell, CI logs, or copy/paste pipelines).
+
+**Steps/Details**:
+1. Provide an encoder that accepts codepoints (not literal emoji) and emits UTF-8 `hex` + `base64`.
+1. Teach the search tool to accept prefixed encoded tokens (e.g., `b16:`/`b64:`) and decode to the real Unicode string before matching.
+1. Add an inventory mode to list all emojis in a directory with locations and encodings for copy/paste into searches.
+1. Add regression tests that avoid literal emoji (use codepoints/encoded bytes).
+
+**Example**: docs/workflows/emoji_search_markdown.md and tools/dev/emoji-encode.js
 
 ---

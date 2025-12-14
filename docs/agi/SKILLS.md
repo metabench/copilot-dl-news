@@ -26,11 +26,18 @@ This repo does not have Anthropic Claude Code “Skills” support directly, but
 | Skill | Primary use / triggers | Location |
 | --- | --- | --- |
 | telemetry-contracts | telemetry, drift, status/health endpoints, event naming | `docs/agi/skills/telemetry-contracts/SKILL.md` |
+| wlilo-design-system | WLILO, white leather, industrial luxury, obsidian, design system, palette, theme tokens, UI chrome | `docs/agi/skills/wlilo-design-system/SKILL.md` |
+| jsgui3-wlilo-ui | jsgui3 UI design, WLILO UI, dashboard styling, table styling, obsidian panels, white leather | `docs/agi/skills/jsgui3-wlilo-ui/SKILL.md` |
 | svg-collisions | svg, overlap, collisions, diagrams, WLILO, layout repair | `docs/agi/skills/svg-collisions/SKILL.md` |
+| svg-theme-system | svg, theme, theming, tokens, style variants, WLILO, obsidian, white-leather, palettes | `docs/agi/skills/svg-theme-system/SKILL.md` |
 | jsgui3-activation-debug | jsgui3, clicks don’t work, activation, Missing context.map_Controls | `docs/agi/skills/jsgui3-activation-debug/SKILL.md` |
+| jsgui3-lab-experimentation | lab experiments, src/ui/lab, check.js, delegation suite, proving ground, research | `docs/agi/skills/jsgui3-lab-experimentation/SKILL.md` |
+| experimental-research-metacognition | experimental research, hypothesis, minimal repro, evidence, tooling, metacognition, confidence calibration | `docs/agi/skills/experimental-research-metacognition/SKILL.md` |
+| puppeteer-efficient-ui-verification | puppeteer, ui verification, scenario suite, fast e2e, fixtures, single browser reuse | `docs/agi/skills/puppeteer-efficient-ui-verification/SKILL.md` |
 | session-discipline | session-init, session notes, evidence, follow-ups, continuity | `docs/agi/skills/session-discipline/SKILL.md` |
 | targeted-testing | run tests, pick smallest suite, puppeteer/e2e, validate changes | `docs/agi/skills/targeted-testing/SKILL.md` |
 | instruction-adherence | stay on track, instruction drift, resume main task after detour, re-anchor loop | `docs/agi/skills/instruction-adherence/SKILL.md` |
+| mcp-memory-server-surgery | mcp, docs-memory, memory server, mcp-server, tools/list, tools/call, stdio, headerless, protocol changes | `docs/agi/skills/mcp-memory-server-surgery/SKILL.md` |
 
 ## Adding a new Skill (template)
 

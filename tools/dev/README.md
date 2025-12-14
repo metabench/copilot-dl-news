@@ -670,6 +670,14 @@ The tool walks each directory breadth-first, skips `.gitkeep`, and reports any W
 - `node tools/dev/md-scan.js --径 docs --搜 planner telemetry` — Chinese aliases (`--径`, `--搜`) auto-enable succinct Chinese summaries without explicitly setting `--lang zh`.
 - `node tools/dev/md-scan.js --dir docs --search planner --lang zh` — bilingual search headers (`搜果`, `匹数`, `节`) plus compact section listings with Chinese labels.
 - `node tools/dev/md-scan.js --助 --语 zh` — display the bilingual help table (English flags plus two-character aliases) to cross-reference `--链图`, `--优专`, and other terse flags.
+- Emoji search workflow (Windows-safe): see `docs/workflows/emoji_search_markdown.md`.
+
+## `emoji-encode` — Emoji UTF-8 Encoding Helper
+
+`emoji-encode` prints UTF-8 hex/base64 for emoji text. Prefer `--codepoint` inputs so you don’t need to type literal emoji into a shell.
+
+- `node tools/dev/emoji-encode.js --codepoint U+1F9E0 --json`
+- `node tools/dev/emoji-encode.js --codepoint U+2699,U+FE0F --json`
 
 ## `md-edit` — Markdown Refactoring
 

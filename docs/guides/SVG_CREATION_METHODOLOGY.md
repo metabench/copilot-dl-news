@@ -348,6 +348,19 @@ function wrapText(text, maxChars) {
 
 ## Stage 4: Theme System (Industrial Luxury Obsidian)
 
+### Theme Selection (Build-time vs Runtime)
+
+SVG theming depends on **how the SVG is embedded**:
+
+- **Build-time theming (recommended default)**: Your generator (or MCP plan) selects a theme and outputs a fully-resolved SVG with concrete colors.
+  - Works reliably for markdown, docs, and `<img src="...">` embedding.
+- **Runtime theming (advanced)**: Use CSS variables inside the SVG and change them from the embedding page.
+  - Works best when you inline SVG markup into HTML (not always for file-based `<img>` usage).
+
+Rule: Prefer build-time theming unless you control the embedding and can confirm runtime CSS variables apply.
+
+See Skill: `docs/agi/skills/svg-theme-system/SKILL.md`.
+
 ### Color Palette
 
 ```javascript

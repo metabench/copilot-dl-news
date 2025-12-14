@@ -8,6 +8,7 @@ const { findProjectRoot } = require("../../../utils/project-root");
 const { renderHtml, resolveDbPath } = require("../../render-url-table");
 const { DEFAULT_PAGE_SIZE, renderUrlListingView, DATA_VIEWS } = require("../dataExplorerServer");
 const { buildNavLinks } = require("../navigation");
+const { getDefaultTheme } = require("../services/themeService");
 
 function createRequest(path = "/urls") {
   return { baseUrl: "", path, query: {} };
@@ -36,6 +37,7 @@ function run() {
       },
       {
         navLinks: buildNavLinks("urls", DATA_VIEWS),
+        themeConfig: getDefaultTheme(dbAccess.db).config,
         filterOptions: listingPayload.renderOptions.filterOptions,
         listingState: listingPayload.renderOptions.listingState,
         clientScriptPath: "/assets/ui-client.js"
@@ -64,6 +66,7 @@ function run() {
         },
         {
           navLinks: buildNavLinks("home", DATA_VIEWS),
+          themeConfig: getDefaultTheme(dbAccess.db).config,
           homeCards: dashboardPayload.renderOptions.homeCards,
           layoutMode: dashboardPayload.renderOptions.layoutMode,
           hideListingPanel: dashboardPayload.renderOptions.hideListingPanel,
@@ -97,6 +100,7 @@ function run() {
         },
         {
           navLinks: buildNavLinks("decisions", DATA_VIEWS),
+          themeConfig: getDefaultTheme(dbAccess.db).config,
           clientScriptPath: "/assets/ui-client.js"
         }
       );

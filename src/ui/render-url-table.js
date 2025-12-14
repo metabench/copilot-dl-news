@@ -17,6 +17,7 @@ const {
 const { PagerButtonControl } = require("./controls/PagerButton");
 const { SparklineControl } = require("./controls");
 const { UrlFilterToggleControl } = require("./controls/UrlFilterToggle");
+const { SearchFormControl } = require("./controls/SearchFormControl");
 const { buildHomeCards } = require("./homeCards");
 const { createHomeCardLoaders } = require("./homeCardData");
 const { listControlTypes } = require("./controls/controlManifest");
@@ -133,28 +134,22 @@ function injectControlManifestScript(context, body, controlTypes) {
  */
 function buildSearchFormControl(context, options = {}) {
   const { action = "/", currentSearch = "", placeholder = "Search..." } = options;
-  
-  const form = new jsgui.form({ context });
-  form.dom.attributes.method = "get";
-  form.dom.attributes.action = action;
-  form.add_class("search-form");
-  form.dom.attributes.style = "display: flex; gap: 0.5rem; align-items: center;";
-  
-  const input = new jsgui.input({ context });
-  input.dom.attributes.type = "search";
-  input.dom.attributes.name = "search";
-  input.dom.attributes.placeholder = placeholder;
-  input.dom.attributes.value = currentSearch || "";
-  input.dom.attributes.style = "padding: 0.5rem 0.75rem; border: 1px solid var(--border-color, #d0d0d0); border-radius: 4px; font-size: 0.875rem; min-width: 200px;";
-  form.add(input);
-  
-  const button = new jsgui.button({ context });
-  button.dom.attributes.type = "submit";
-  button.dom.attributes.style = "padding: 0.5rem 1rem; background: var(--primary-color, #4a90d9); color: white; border: none; border-radius: 4px; font-size: 0.875rem; cursor: pointer;";
-  button.add(new StringControl({ context, text: "🔍" }));
-  form.add(button);
-  
-  return form;
+
+  return new SearchFormControl({
+    context,
+    action,
+    method: "get",
+    input: {
+      name: "search",
+      value: currentSearch || "",
+      placeholder,
+      type: "search"
+    },
+    button: {
+      text: "🔍",
+      ariaLabel: "Search"
+    }
+  });
 }
 
 function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {}) {

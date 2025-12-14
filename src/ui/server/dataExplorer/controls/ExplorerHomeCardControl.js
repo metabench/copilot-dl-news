@@ -10,20 +10,7 @@
  * - Optional variant styling
  */
 
-const jsgui = require("jsgui3-html");
-
-const StringControl = jsgui.String_Control;
-
-/**
- * Card variants for different visual styles
- */
-const CARD_VARIANTS = Object.freeze({
-  DEFAULT: "default",
-  PRIMARY: "primary",
-  SUCCESS: "success",
-  WARNING: "warning",
-  DANGER: "danger"
-});
+const { MetricCardControl, CARD_VARIANTS } = require("../../../controls/MetricCardControl");
 
 /**
  * Dashboard card control for home/dashboard views
@@ -37,7 +24,7 @@ const CARD_VARIANTS = Object.freeze({
  *   variant: "primary"
  * });
  */
-class ExplorerHomeCardControl extends jsgui.Control {
+class ExplorerHomeCardControl extends MetricCardControl {
   /**
    * @param {Object} spec - Control specification
    * @param {Object} spec.context - jsgui context
@@ -50,88 +37,11 @@ class ExplorerHomeCardControl extends jsgui.Control {
   constructor(spec = {}) {
     super({
       ...spec,
-      tagName: "div",
       __type_name: "explorer_home_card"
     });
-    
+
+    // Legacy class for existing CSS/layout hooks.
     this.add_class("data-explorer__card");
-    
-    this.title = spec.title || "Card";
-    this.value = spec.value;
-    this.subtitle = spec.subtitle || null;
-    this.variant = spec.variant || null;
-    this.href = spec.href || null;
-    
-    if (this.variant) {
-      this.add_class(`data-explorer__card--${this.variant}`);
-    }
-    
-    if (!spec.el) {
-      this.compose();
-    }
-  }
-
-  /**
-   * Compose the card structure
-   */
-  compose() {
-    // Card header with title
-    const header = this._buildHeader();
-    this.add(header);
-    
-    // Card content with value and subtitle
-    const content = this._buildContent();
-    this.add(content);
-  }
-
-  /**
-   * Build the card header
-   * @private
-   */
-  _buildHeader() {
-    const header = new jsgui.Control({ context: this.context, tagName: "div" });
-    header.add_class("data-explorer__card-header");
-    
-    const title = new jsgui.Control({ context: this.context, tagName: "h3" });
-    title.add_class("data-explorer__card-title");
-    
-    if (this.href) {
-      const link = new jsgui.Control({ context: this.context, tagName: "a" });
-      link.dom.attributes.href = this.href;
-      link.add(new StringControl({ context: this.context, text: this.title }));
-      title.add(link);
-    } else {
-      title.add(new StringControl({ context: this.context, text: this.title }));
-    }
-    
-    header.add(title);
-    
-    return header;
-  }
-
-  /**
-   * Build the card content
-   * @private
-   */
-  _buildContent() {
-    const content = new jsgui.Control({ context: this.context, tagName: "div" });
-    content.add_class("data-explorer__card-content");
-    
-    if (this.value !== undefined) {
-      const value = new jsgui.Control({ context: this.context, tagName: "span" });
-      value.add_class("data-explorer__card-value");
-      value.add(new StringControl({ context: this.context, text: String(this.value) }));
-      content.add(value);
-    }
-    
-    if (this.subtitle) {
-      const sub = new jsgui.Control({ context: this.context, tagName: "span" });
-      sub.add_class("data-explorer__card-subtitle");
-      sub.add(new StringControl({ context: this.context, text: this.subtitle }));
-      content.add(sub);
-    }
-    
-    return content;
   }
 }
 

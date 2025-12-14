@@ -13,8 +13,8 @@
 const fs = require("fs");
 const path = require("path");
 
-// Default theme configuration (Obsidian) - used if DB not available
-const DEFAULT_THEME_CONFIG = {
+// System theme configurations (used when DB not available)
+const OBSIDIAN_THEME_CONFIG = {
   colors: {
     primary: "#1e293b",
     primaryLight: "#334155",
@@ -34,6 +34,12 @@ const DEFAULT_THEME_CONFIG = {
     textSecondary: "#cbd5e1",
     textMuted: "#94a3b8",
     textSubtle: "#64748b",
+    // Optional: mixed-surface tokens (dark theme keeps these aligned)
+    bgGradient: "#0f172a",
+    surfaceText: "#f8fafc",
+    surfaceTextSecondary: "#cbd5e1",
+    surfaceTextMuted: "#94a3b8",
+    surfaceTextSubtle: "#64748b",
     success: "#22c55e",
     successBg: "#14532d",
     warning: "#f59e0b",
@@ -97,6 +103,160 @@ const DEFAULT_THEME_CONFIG = {
   }
 };
 
+const WLILO_THEME_CONFIG = {
+  colors: {
+    // Leather background + obsidian panels + gold accents
+    bg: "#faf9f7",
+    bgGradient: "linear-gradient(135deg, #faf9f7 0%, #f5f3ef 55%, #ebe8e2 100%)",
+    bgAlt: "#f5f3ef",
+    surface: "#1a1a1a",
+    surfaceElevated: "#2d2d2d",
+    surfaceHover: "#343434",
+    border: "rgba(201, 169, 98, 0.55)",
+    borderLight: "rgba(232, 213, 163, 0.75)",
+    accent: "#c9a962",
+    accentLight: "#e8d5a3",
+    accentDark: "#a8873e",
+    accentHover: "#e8d5a3",
+    // Text on leather
+    text: "#2d2d2d",
+    textSecondary: "#666666",
+    textMuted: "#888888",
+    textSubtle: "#666666",
+    // Text on obsidian surfaces
+    surfaceText: "#f5f3ef",
+    surfaceTextSecondary: "#d7d3cc",
+    surfaceTextMuted: "#a8a29e",
+    surfaceTextSubtle: "#8b8580",
+    // Status colors (optional)
+    success: "#27ae60",
+    successBg: "rgba(39, 174, 96, 0.15)",
+    warning: "#f59e0b",
+    warningBg: "rgba(245, 158, 11, 0.16)",
+    error: "#ef4444",
+    errorBg: "rgba(239, 68, 68, 0.16)",
+    info: "#2d7dd2",
+    infoBg: "rgba(45, 125, 210, 0.16)",
+    primary: "#1a1a1a",
+    primaryLight: "#2d2d2d",
+    primaryDark: "#0f0f0f"
+  },
+  typography: {
+    fontDisplay: '"Playfair Display", Georgia, serif',
+    fontBody: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontMono: '"JetBrains Mono", "Fira Code", Consolas, monospace',
+    fontSizeBase: "16px",
+    fontSizeXs: "0.75rem",
+    fontSizeSm: "0.875rem",
+    fontSizeMd: "1rem",
+    fontSizeLg: "1.125rem",
+    fontSizeXl: "1.25rem",
+    fontSize2xl: "1.5rem",
+    fontSize3xl: "2rem",
+    fontSize4xl: "2.5rem",
+    fontWeightNormal: "400",
+    fontWeightMedium: "500",
+    fontWeightSemibold: "600",
+    fontWeightBold: "700",
+    lineHeightTight: "1.2",
+    lineHeightNormal: "1.5",
+    lineHeightRelaxed: "1.7",
+    letterSpacingTight: "-0.02em",
+    letterSpacingNormal: "0",
+    letterSpacingWide: "0.05em"
+  },
+  spacing: {
+    xs: "4px",
+    sm: "8px",
+    md: "16px",
+    lg: "24px",
+    xl: "32px",
+    "2xl": "48px",
+    "3xl": "64px"
+  },
+  radii: {
+    sm: "6px",
+    md: "12px",
+    lg: "20px",
+    xl: "28px",
+    full: "9999px"
+  },
+  shadows: {
+    sm: "0 2px 8px rgba(0, 0, 0, 0.15)",
+    md: "0 8px 24px rgba(0, 0, 0, 0.18)",
+    lg: "0 16px 48px rgba(0, 0, 0, 0.22)",
+    glow: "0 0 20px rgba(201, 169, 98, 0.25)",
+    inner: "inset 0 2px 4px rgba(0, 0, 0, 0.12)"
+  },
+  transitions: {
+    fast: "0.15s ease",
+    normal: "0.25s ease",
+    slow: "0.4s ease"
+  }
+};
+
+// Default theme configuration - used if DB not available
+const DEFAULT_THEME_CONFIG = WLILO_THEME_CONFIG;
+
+function ensureSystemThemes(db) {
+  if (!db) return false;
+  try {
+    ensureThemeTable(db);
+
+    const hasDefault = !!db.prepare("SELECT 1 FROM ui_themes WHERE is_default = 1 LIMIT 1").get();
+
+    const upsertTheme = (name, displayName, description, config, isDefault) => {
+      const existing = db.prepare("SELECT id, is_system, is_default FROM ui_themes WHERE name = ?").get(name);
+      const payload = {
+        name,
+        display_name: displayName,
+        description,
+        config: JSON.stringify(config),
+        is_default: isDefault ? 1 : 0,
+        is_system: 1
+      };
+      if (!existing) {
+        db.prepare(
+          "INSERT INTO ui_themes (name, display_name, description, config, is_default, is_system) VALUES (@name, @display_name, @description, @config, @is_default, @is_system)"
+        ).run(payload);
+        return;
+      }
+      if (!existing.is_system) {
+        // Don't overwrite user themes that happen to share a name.
+        return;
+      }
+      db.prepare(
+        "UPDATE ui_themes SET display_name = @display_name, description = @description, config = @config, is_default = @is_default, is_system = @is_system, updated_at = datetime('now') WHERE name = @name"
+      ).run(payload);
+    };
+
+    upsertTheme(
+      "obsidian",
+      "Obsidian",
+      "Dark luxury theme with gold accents",
+      OBSIDIAN_THEME_CONFIG,
+      false
+    );
+
+    upsertTheme(
+      "wlilo",
+      "WLILO",
+      "White Leather + Industrial Luxury Obsidian",
+      WLILO_THEME_CONFIG,
+      !hasDefault
+    );
+
+    if (!hasDefault) {
+      db.prepare("UPDATE ui_themes SET is_default = 0 WHERE name <> 'wlilo'").run();
+    }
+
+    return true;
+  } catch (err) {
+    console.error("Failed to ensure system themes:", err.message);
+    return false;
+  }
+}
+
 /**
  * Ensure the ui_themes table exists
  * @param {Object} db - SQLite database handle
@@ -154,7 +314,7 @@ function listThemes(db) {
   if (!db) return [];
   
   try {
-    ensureThemeTable(db);
+    ensureSystemThemes(db);
     const stmt = db.prepare(`
       SELECT id, name, display_name, description, is_default, is_system, created_at, updated_at
       FROM ui_themes
@@ -177,7 +337,7 @@ function getTheme(db, identifier) {
   if (!db) return null;
   
   try {
-    ensureThemeTable(db);
+    ensureSystemThemes(db);
     const isNumeric = typeof identifier === "number" || /^\d+$/.test(identifier);
     const stmt = isNumeric
       ? db.prepare("SELECT * FROM ui_themes WHERE id = ?")
@@ -205,9 +365,9 @@ function getDefaultTheme(db) {
   if (!db) {
     return {
       id: 0,
-      name: "obsidian",
-      display_name: "Obsidian",
-      description: "Dark luxury theme with gold accents",
+      name: "wlilo",
+      display_name: "WLILO",
+      description: "White Leather + Industrial Luxury Obsidian",
       config: DEFAULT_THEME_CONFIG,
       is_default: 1,
       is_system: 1
@@ -215,7 +375,7 @@ function getDefaultTheme(db) {
   }
   
   try {
-    ensureThemeTable(db);
+    ensureSystemThemes(db);
     const stmt = db.prepare(`
       SELECT * FROM ui_themes 
       WHERE is_default = 1 
@@ -224,16 +384,18 @@ function getDefaultTheme(db) {
     const row = stmt.get();
     
     if (!row) {
-      // No default set, try obsidian
+      // No default set, try WLILO then obsidian
+      const wlilo = getTheme(db, "wlilo");
+      if (wlilo) return wlilo;
       const obsidian = getTheme(db, "obsidian");
       if (obsidian) return obsidian;
       
       // Return hardcoded default
       return {
         id: 0,
-        name: "obsidian",
-        display_name: "Obsidian",
-        description: "Dark luxury theme with gold accents",
+        name: "wlilo",
+        display_name: "WLILO",
+        description: "White Leather + Industrial Luxury Obsidian",
         config: DEFAULT_THEME_CONFIG,
         is_default: 1,
         is_system: 1
@@ -248,8 +410,8 @@ function getDefaultTheme(db) {
     console.error("Failed to get default theme:", err.message);
     return {
       id: 0,
-      name: "obsidian",
-      display_name: "Obsidian",
+      name: "wlilo",
+      display_name: "WLILO",
       config: DEFAULT_THEME_CONFIG,
       is_default: 1,
       is_system: 1
@@ -451,8 +613,11 @@ function getGoogleFontsLink() {
 }
 
 module.exports = {
+  OBSIDIAN_THEME_CONFIG,
+  WLILO_THEME_CONFIG,
   DEFAULT_THEME_CONFIG,
   ensureThemeTable,
+  ensureSystemThemes,
   listThemes,
   getTheme,
   getDefaultTheme,

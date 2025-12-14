@@ -40,3 +40,4 @@ Ask for dedicated research if:
 
 - jsgui3 activation flow: `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md`
 - AGENTS.md quick anchor (“Client-side activation flow critical”)
+- Fast browser verification (single browser, many scenarios): `docs/guides/PUPPETEER_SCENARIO_SUITES.md`

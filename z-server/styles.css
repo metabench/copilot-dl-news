@@ -159,6 +159,152 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
+/* SCANNING INDICATOR (MAIN AREA EMPTY STATE)                                  */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.zs-scanning {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  flex: 1;
+}
+
+.zs-scanning__svg {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 20px;
+}
+
+.zs-scanning__ring {
+  fill: none;
+  stroke: rgba(80, 200, 120, 0.18);
+  stroke-width: 2;
+}
+
+.zs-scanning__ring-inner {
+  fill: none;
+  stroke: rgba(80, 200, 120, 0.10);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  animation: zs-spin-reverse 10s linear infinite;
+  transform-origin: 50px 50px;
+}
+
+.zs-scanning__sweep {
+  fill: rgba(80, 200, 120, 0.14);
+  transform-origin: 50px 50px;
+  animation: zs-spin 2s linear infinite;
+}
+
+.zs-scanning__dot {
+  fill: var(--zs-emerald);
+  filter: drop-shadow(0 0 4px var(--zs-emerald));
+  animation: zs-pulse-fast 1s ease-in-out infinite;
+}
+
+.zs-scanning__text {
+  font-family: var(--zs-font-mono);
+  font-size: 14px;
+  color: var(--zs-emerald);
+  letter-spacing: 3px;
+  animation: zs-pulse 2s ease-in-out infinite;
+}
+
+.zs-scanning__subtitle {
+  font-family: var(--zs-font-body);
+  font-size: 12px;
+  color: var(--zs-text-muted);
+  margin-top: 8px;
+  letter-spacing: 0.5px;
+  max-width: 400px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Progress Bar Styles (green) */
+.zs-scanning__progress-container {
+  width: 100%;
+  max-width: 520px;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.zs-scanning__progress-bg {
+  width: 100%;
+  height: 10px;
+  background: rgba(80, 200, 120, 0.08);
+  border: 1px solid rgba(80, 200, 120, 0.35);
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.zs-scanning__progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg,
+    var(--zs-emerald-dark) 0%,
+    var(--zs-emerald) 55%,
+    rgba(183, 255, 208, 0.95) 100%
+  );
+  border-radius: 999px;
+  transition: width 0.05s ease-out;
+  box-shadow:
+    0 0 10px rgba(80, 200, 120, 0.45),
+    0 0 24px rgba(80, 200, 120, 0.18);
+  position: relative;
+}
+
+.zs-scanning__progress-fill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.28) 50%,
+    transparent 100%
+  );
+  animation: zs-shimmer 1.5s infinite;
+}
+
+@keyframes zs-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.zs-scanning__progress-text {
+  font-family: var(--zs-font-mono);
+  font-size: 12px;
+  color: var(--zs-text-muted);
+  letter-spacing: 1px;
+}
+
+@keyframes zs-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes zs-spin-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes zs-pulse-fast {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
 /* SERVER LIST                                                                 */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 

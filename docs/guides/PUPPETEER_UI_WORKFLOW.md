@@ -2,6 +2,10 @@
 
 This guide describes how to use Puppeteer and the `ui-console-capture` tool to develop and debug UI applications in this repository.
 
+If you want to run *multiple* interactions without re-launching Puppeteer, use the scenario suite runner instead:
+
+- `tools/dev/ui-scenario-suite.js` (guide: `docs/guides/PUPPETEER_SCENARIO_SUITES.md`)
+
 ## The Problem
 
 When developing UI servers (like `gazetteerInfoServer.js` or `dataExplorerServer.js`), errors often happen in the browser (client-side JavaScript). These errors are not visible in the Node.js terminal output.
@@ -49,6 +53,8 @@ AI agents should use this tool to "see" the result of their UI changes.
 1. Modify client-side code (`views/*.js`, `controls/*.js`).
 2. Run `ui-console-capture` to verify no console errors occur.
 3. If errors occur, read the JSON output to diagnose.
+
+If you need multiple steps (click → wait → assert → repeat), prefer a scenario suite so the browser stays warm and failures produce screenshots/HTML snapshots.
 
 ## Example Output
 

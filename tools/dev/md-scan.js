@@ -36,6 +36,101 @@ const {
 
 const fmt = new CliFormatter();
 
+function decodeEncodedSearchTerm(term) {
+  if (typeof term !== 'string') {
+    return term;
+  }
+
+  const trimmed = term.trim();
+  const b16Match = trimmed.match(/^(?:b16|hex):(.+)$/i);
+  if (b16Match) {
+    const rawHex = b16Match[1].replace(/\s+/g, '').replace(/^0x/i, '');
+    if (!rawHex) {
+      throw new Error('Invalid b16: search term: empty payload');
+    }
+    if (rawHex.length % 2 !== 0) {
+      throw new Error(`Invalid b16: search term: expected even-length hex, got ${rawHex.length}`);
+    }
+    if (!/^[0-9a-f]+$/i.test(rawHex)) {
+      throw new Error('Invalid b16: search term: payload must be hex');
+    }
+    return Buffer.from(rawHex, 'hex').toString('utf8');
+  }
+
+  const b64Match = trimmed.match(/^(?:b64|base64):(.+)$/i);
+  if (b64Match) {
+    const rawBase64 = b64Match[1].trim().replace(/\s+/g, '');
+    if (!rawBase64) {
+      throw new Error('Invalid b64: search term: empty payload');
+    }
+    const normalized = rawBase64.replace(/-/g, '+').replace(/_/g, '/');
+    return Buffer.from(normalized, 'base64').toString('utf8');
+  }
+
+  return term;
+}
+
+function shouldUseWordBoundaries(term) {
+  if (typeof term !== 'string') {
+    return false;
+  }
+
+  // Only apply \b...\b when the token is purely word-like.
+  // This keeps emoji/punctuation searches reliable (\b does not behave as expected for them).
+  return /^[A-Za-z0-9_]+$/.test(term);
+}
+
+function buildEmojiRegex() {
+  // Prefer Unicode property escapes (handles many emoji sequences); fall back to a coarse range regex.
+  try {
+    return new RegExp(
+      '(?:' +
+        // Flags
+        '\\p{Regional_Indicator}{2}' +
+        '|' +
+        // Keycaps
+        '[0-9#*]\\uFE0F?\\u20E3' +
+        '|' +
+        // ZWJ sequences + modifiers
+        '\\p{Extended_Pictographic}(?:\\uFE0F|\\uFE0E)?(?:\\p{Emoji_Modifier})?(?:\\u200D\\p{Extended_Pictographic}(?:\\uFE0F|\\uFE0E)?(?:\\p{Emoji_Modifier})?)*' +
+      ')',
+      'gu'
+    );
+  } catch {
+    // Covers many common emoji blocks, but will miss complex sequences.
+    return /[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
+  }
+}
+
+function buildLineIndex(source) {
+  const lineStarts = [0];
+  for (let i = 0; i < source.length; i += 1) {
+    if (source[i] === '\n') {
+      lineStarts.push(i + 1);
+    }
+  }
+
+  function locate(offset) {
+    let low = 0;
+    let high = lineStarts.length - 1;
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      const start = lineStarts[mid];
+      const nextStart = mid + 1 < lineStarts.length ? lineStarts[mid + 1] : source.length + 1;
+      if (offset < start) {
+        high = mid - 1;
+      } else if (offset >= nextStart) {
+        low = mid + 1;
+      } else {
+        return { line: mid + 1, column: offset - start + 1 };
+      }
+    }
+    return { line: 1, column: offset + 1 };
+  }
+
+  return { locate };
+}
+
 const CHINESE_HELP_ROWS = Object.freeze([
   { flag: '--dir', lexKey: 'path', note: '径: 设定目录' },
   { flag: '--search', lexKey: 'search', note: '搜: 多词检索' },
@@ -239,9 +334,13 @@ function multiTermSearch(documents, terms, options = {}) {
     };
     
     for (const term of terms) {
-      // Escape special regex characters and add word boundaries for whole-word matching
+      if (!term) {
+        continue;
+      }
+
+      // Escape special regex characters; only apply word boundaries for word-like tokens.
       const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const pattern = `\\b${escapedTerm}\\b`;
+      const pattern = shouldUseWordBoundaries(term) ? `\\b${escapedTerm}\\b` : escapedTerm;
       const regex = new RegExp(
         pattern,
         caseSensitive ? 'g' : 'gi'
@@ -341,6 +440,57 @@ function findSections(documents, patterns, options = {}) {
   });
   
   return results;
+}
+
+function findEmojiInventory(documents, options = {}) {
+  const occurrenceLimit = typeof options.emojiOccurrenceLimit === 'number' ? options.emojiOccurrenceLimit : 25;
+  const emojiRegex = buildEmojiRegex();
+
+  const byEmoji = new Map();
+  let totalMatches = 0;
+
+  for (const doc of documents) {
+    const relPath = path.relative(process.cwd(), doc.filePath);
+    const lineIndex = buildLineIndex(doc.source);
+    emojiRegex.lastIndex = 0;
+
+    let match;
+    while ((match = emojiRegex.exec(doc.source)) !== null) {
+      const emoji = match[0];
+      const offset = match.index;
+      const { line, column } = lineIndex.locate(offset);
+      totalMatches += 1;
+
+      let entry = byEmoji.get(emoji);
+      if (!entry) {
+        const utf8 = Buffer.from(emoji, 'utf8');
+        entry = {
+          emoji,
+          count: 0,
+          utf8Hex: utf8.toString('hex'),
+          utf8Base64: utf8.toString('base64'),
+          codepoints: Array.from(emoji).map((ch) => `U+${ch.codePointAt(0).toString(16).toUpperCase()}`),
+          occurrences: []
+        };
+        byEmoji.set(emoji, entry);
+      }
+
+      entry.count += 1;
+      if (entry.occurrences.length < occurrenceLimit) {
+        entry.occurrences.push({ relativePath: relPath, line, column });
+      }
+    }
+  }
+
+  const emojis = Array.from(byEmoji.values()).sort((a, b) => b.count - a.count);
+  return {
+    operation: 'find-emojis',
+    scannedFiles: documents.length,
+    uniqueEmojis: emojis.length,
+    totalMatches,
+    occurrenceLimit,
+    emojis
+  };
 }
 
 /**
@@ -555,6 +705,7 @@ function createCliParser() {
     // Operations (note: --search expects full terms as separate invocations)
     .add('--search <term...>', 'Search terms (space-separated or multiple --search flags)')
     .add('--find-sections <pattern...>', 'Find sections matching patterns')
+    .add('--find-emojis', 'Find all emojis in scanned markdown files', false, 'boolean')
     .add('--build-index', 'Build and display document index', false, 'boolean')
     .add('--map-links', 'Show cross-reference map', false, 'boolean')
     
@@ -565,6 +716,7 @@ function createCliParser() {
     
     // Output
     .add('--search-limit <n>', 'Maximum search results to display', 20, 'number')
+    .add('--emoji-occurrence-limit <n>', 'Max locations stored per emoji (for --find-emojis)', 25, 'number')
     .add('--compact', 'Use compact output format', false, 'boolean')
     .add('--json', 'Output results as JSON', false, 'boolean')
     .add('--verbose', 'Show detailed processing information', false, 'boolean');
@@ -614,6 +766,14 @@ async function main() {
   } else {
     options.search = [];
   }
+
+  try {
+    options.search = options.search.map(decodeEncodedSearchTerm);
+  } catch (error) {
+    fmt.error(error.message || String(error));
+    process.exitCode = 1;
+    return;
+  }
   
   // Normalize find-sections patterns
   if (options.findSections) {
@@ -624,6 +784,14 @@ async function main() {
     }
   } else {
     options.findSections = [];
+  }
+
+  try {
+    options.findSections = options.findSections.map(decodeEncodedSearchTerm);
+  } catch (error) {
+    fmt.error(error.message || String(error));
+    process.exitCode = 1;
+    return;
   }
 
   // Find all markdown files
@@ -680,6 +848,40 @@ async function main() {
   }
 
   // Execute operations
+  if (options.findEmojis) {
+    if (options.search.length > 0 || options.findSections.length > 0 || options.buildIndex || options.mapLinks) {
+      fmt.error('Operation flags are mutually exclusive. Use only one of --search, --find-sections, --find-emojis, --build-index, --map-links.');
+      process.exitCode = 1;
+      return;
+    }
+
+    const inventory = findEmojiInventory(documents, options);
+    if (options.json) {
+      console.log(JSON.stringify(inventory, null, 2));
+    } else {
+      fmt.header('Emoji Inventory');
+      fmt.summary({
+        'Scanned files': inventory.scannedFiles,
+        'Unique emojis': inventory.uniqueEmojis,
+        'Total matches': inventory.totalMatches,
+        'Occurrences stored per emoji': inventory.occurrenceLimit
+      });
+
+      const limit = options.searchLimit || 20;
+      const slice = inventory.emojis.slice(0, limit);
+      slice.forEach((entry) => {
+        const first = entry.occurrences[0];
+        const loc = first ? `${first.relativePath}:${first.line}:${first.column}` : '';
+        console.log(`  ${entry.emoji}  ${fmt.COLORS.muted(`count=${entry.count}`)}  ${fmt.COLORS.muted(entry.utf8Hex)}  ${fmt.COLORS.muted(loc)}`);
+      });
+      if (inventory.emojis.length > slice.length) {
+        fmt.blank();
+        fmt.info(`Showing first ${slice.length} of ${inventory.emojis.length} emojis (use --search-limit to adjust)`);
+      }
+    }
+    return;
+  }
+
   if (options.search.length > 0) {
     const results = multiTermSearch(documents, options.search, options);
     

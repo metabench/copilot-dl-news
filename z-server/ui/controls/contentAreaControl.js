@@ -18,6 +18,9 @@ function createContentAreaControl(jsgui, {
       };
       super(normalized);
       this.add_class("zs-content");
+
+      this._defaultTitleText = "Select a Server";
+      this._scanningTitleText = "Scanning for servers...";
       
       this._selectedServer = null;
       this._onStart = spec.onStart || null;
@@ -37,7 +40,7 @@ function createContentAreaControl(jsgui, {
       const header = new jsgui.div({ context: ctx, class: "zs-content__header" });
       
       this._title = new jsgui.h1({ context: ctx, class: "zs-content__title" });
-      this._title.add(new StringControl({ context: ctx, text: "Select a Server" }));
+      this._title.add(new StringControl({ context: ctx, text: this._defaultTitleText }));
       header.add(this._title);
       
       this._controlPanel = new ControlPanelControl({
@@ -161,10 +164,19 @@ function createContentAreaControl(jsgui, {
     
     setScanning(isScanning) {
       if (isScanning) {
+        if (this._title?.dom?.el) this._title.dom.el.textContent = this._scanningTitleText;
+        this._controlPanel.setVisible(false);
+        this._serverUrl.setUrl(null);
+        this._serverUrl.setVisible(false);
+
         this._scanningIndicator.remove_class("zs-hidden");
         this._scanningIndicator.reset();
         this._logViewer.add_class("zs-hidden");
       } else {
+        if (!this._selectedServer && this._title?.dom?.el) {
+          this._title.dom.el.textContent = this._defaultTitleText;
+        }
+
         this._scanningIndicator.add_class("zs-hidden");
         this._logViewer.remove_class("zs-hidden");
       }

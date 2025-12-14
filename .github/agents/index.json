@@ -198,5 +198,13 @@
     "tags": ["db", "adapters", "architecture", "testing"],
     "last_review": "2025-12-13",
     "path": ".github/agents/🧩 DB Injection Wrangler 🧩.agent.md"
+  },
+  {
+    "doc_slug": "design-skills-curator",
+    "title": "🎨🧠 Design Skills Curator 🧠🎨",
+    "purpose": "Curates WLILO + theming knowledge into Skills so other agents ship better HTML/SVG/jsgui3 design with user-visible memory-load feedback",
+    "tags": ["design", "wlilo", "jsgui3", "svg", "html", "theming", "skills", "docs-memory"],
+    "last_review": "2025-12-13",
+    "path": ".github/agents/🎨🧠 Design Skills Curator 🧠🎨.agent.md"
   }
 ]

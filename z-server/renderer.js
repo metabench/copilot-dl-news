@@ -40131,6 +40131,7 @@ body .overlay {
           setTotal(total) {
             this._total = total;
             this._current = 0;
+            this._isCounting = false;
             this._updateProgress();
           }
           startCounting() {
@@ -40349,6 +40350,8 @@ body .overlay {
             };
             super(normalized);
             this.add_class("zs-content");
+            this._defaultTitleText = "Select a Server";
+            this._scanningTitleText = "Scanning for servers...";
             this._selectedServer = null;
             this._onStart = spec.onStart || null;
             this._onStop = spec.onStop || null;
@@ -40363,7 +40366,7 @@ body .overlay {
             const ctx = this.context;
             const header = new jsgui2.div({ context: ctx, class: "zs-content__header" });
             this._title = new jsgui2.h1({ context: ctx, class: "zs-content__title" });
-            this._title.add(new StringControl({ context: ctx, text: "Select a Server" }));
+            this._title.add(new StringControl({ context: ctx, text: this._defaultTitleText }));
             header.add(this._title);
             this._controlPanel = new ControlPanelControl({
               context: ctx,
@@ -40465,10 +40468,17 @@ body .overlay {
           }
           setScanning(isScanning) {
             if (isScanning) {
+              if (this._title?.dom?.el) this._title.dom.el.textContent = this._scanningTitleText;
+              this._controlPanel.setVisible(false);
+              this._serverUrl.setUrl(null);
+              this._serverUrl.setVisible(false);
               this._scanningIndicator.remove_class("zs-hidden");
               this._scanningIndicator.reset();
               this._logViewer.add_class("zs-hidden");
             } else {
+              if (!this._selectedServer && this._title?.dom?.el) {
+                this._title.dom.el.textContent = this._defaultTitleText;
+              }
               this._scanningIndicator.add_class("zs-hidden");
               this._logViewer.remove_class("zs-hidden");
             }
@@ -40537,10 +40547,65 @@ body .overlay {
     }
   });
 
+  // ui/lib/telemetryJsonl.js
+  var require_telemetryJsonl = __commonJS({
+    "ui/lib/telemetryJsonl.js"(exports, module) {
+      "use strict";
+      function splitJsonlChunk(buffer, chunk) {
+        const prev = buffer ? String(buffer) : "";
+        const next = chunk == null ? "" : String(chunk);
+        const combined = prev + next;
+        const parts = combined.split(/\r?\n/);
+        const trailing = parts.pop() || "";
+        const lines = parts.filter((line) => line !== "");
+        return { lines, buffer: trailing };
+      }
+      function looksLikeJsonObject(line) {
+        const trimmed = String(line || "").trim();
+        return trimmed.startsWith("{") && trimmed.endsWith("}");
+      }
+      function isTelemetryV1(obj2) {
+        if (!obj2 || typeof obj2 !== "object") return false;
+        if (obj2.v !== 1) return false;
+        if (!obj2.event || typeof obj2.event !== "string") return false;
+        if (!obj2.level || typeof obj2.level !== "string") return false;
+        if (!obj2.server || typeof obj2.server !== "object") return false;
+        if (!obj2.server.name || typeof obj2.server.name !== "string") return false;
+        if (!obj2.server.runId || typeof obj2.server.runId !== "string") return false;
+        return true;
+      }
+      function formatTelemetryEvent(obj2) {
+        const ts = obj2.ts ? String(obj2.ts) : "";
+        const level = obj2.level ? String(obj2.level).toUpperCase() : "INFO";
+        const event = obj2.event ? String(obj2.event) : "event";
+        const msg = obj2.msg ? String(obj2.msg) : "";
+        const suffix = msg ? ` - ${msg}` : "";
+        return ts ? `${ts} ${level} ${event}${suffix}` : `${level} ${event}${suffix}`;
+      }
+      function tryFormatTelemetryLine(line) {
+        if (!looksLikeJsonObject(line)) return null;
+        try {
+          const parsed = JSON.parse(String(line));
+          if (!isTelemetryV1(parsed)) return null;
+          return formatTelemetryEvent(parsed);
+        } catch (_) {
+          return null;
+        }
+      }
+      module.exports = {
+        splitJsonlChunk,
+        tryFormatTelemetryLine,
+        formatTelemetryEvent,
+        isTelemetryV1
+      };
+    }
+  });
+
   // ui/controls/zServerAppControl.js
   var require_zServerAppControl = __commonJS({
     "ui/controls/zServerAppControl.js"(exports, module) {
       "use strict";
+      var { splitJsonlChunk, tryFormatTelemetryLine } = require_telemetryJsonl();
       function createZServerAppControl(jsgui2, { TitleBarControl, SidebarControl, ContentAreaControl }) {
         class ZServerAppControl2 extends jsgui2.Control {
           constructor(spec = {}) {
@@ -40554,6 +40619,10 @@ body .overlay {
             this._servers = [];
             this._selectedServer = null;
             this._logs = /* @__PURE__ */ new Map();
+            this._jsonlBuffers = /* @__PURE__ */ new Map();
+            this._scanTotal = 0;
+            this._scanCurrent = 0;
+            this._scanLastFile = "";
             this._api = spec.api || null;
             if (!spec.el) {
               this.compose();
@@ -40587,18 +40656,35 @@ body .overlay {
               return;
             }
             try {
+              this._scanTotal = 0;
+              this._scanCurrent = 0;
+              this._scanLastFile = "";
               this._contentArea.setScanning(true);
               console.log("[ZServerApp] Starting scan...");
               this._api.onScanProgress((progress) => {
                 console.log("[ZServerApp] Scan progress:", progress);
                 if (progress.type === "count-start") {
+                  this._scanTotal = 0;
+                  this._scanCurrent = 0;
+                  this._scanLastFile = "";
                   this._contentArea.setScanCounting();
                 } else if (progress.type === "count-progress") {
+                  this._scanCurrent = progress.current || 0;
+                  this._scanLastFile = progress.file || "";
                   this._contentArea.setScanCountingProgress(progress.current, progress.file);
                 } else if (progress.type === "count") {
+                  this._scanTotal = progress.total || 0;
+                  this._scanCurrent = 0;
                   this._contentArea.setScanTotal(progress.total);
                 } else if (progress.type === "progress") {
+                  this._scanTotal = progress.total || this._scanTotal;
+                  this._scanCurrent = progress.current || 0;
+                  this._scanLastFile = progress.file || "";
                   this._contentArea.setScanProgress(progress.current, progress.total, progress.file);
+                } else if (progress.type === "complete") {
+                  if (this._scanTotal > 0 && this._scanCurrent < this._scanTotal) {
+                    this._contentArea.setScanProgress(this._scanTotal, this._scanTotal, this._scanLastFile);
+                  }
                 }
               });
               this._servers = await this._api.scanServers();
@@ -40637,6 +40723,31 @@ body .overlay {
             }
           }
           _addLog(filePath, type, data) {
+            const text = data == null ? "" : String(data);
+            const key2 = `${filePath}:${type}`;
+            const prevBuffer = this._jsonlBuffers.get(key2) || "";
+            const trimmed = text.trim();
+            const isLikelyJson = prevBuffer.length > 0 || trimmed.startsWith("{");
+            if (isLikelyJson) {
+              const { lines, buffer } = splitJsonlChunk(prevBuffer, text);
+              if (buffer.length > 2e4) {
+                this._jsonlBuffers.set(key2, "");
+                this._addLogLine(filePath, type, buffer);
+                return;
+              }
+              this._jsonlBuffers.set(key2, buffer);
+              if (lines.length === 0) {
+                return;
+              }
+              lines.forEach((line) => {
+                const formatted = tryFormatTelemetryLine(line);
+                this._addLogLine(filePath, type, formatted || line);
+              });
+              return;
+            }
+            this._addLogLine(filePath, type, text);
+          }
+          _addLogLine(filePath, type, data) {
             console.log("[ZServerApp] _addLog called:", { filePath, type, dataLen: data?.length });
             if (!this._logs.has(filePath)) {
               this._logs.set(filePath, []);

@@ -3,7 +3,8 @@
 const {
   TABLE_DEFINITIONS,
   INDEX_DEFINITIONS,
-  TRIGGER_DEFINITIONS
+  TRIGGER_DEFINITIONS,
+  applySchema
 } = require('./schema-definitions');
 
 const DEFAULT_LOGGER = console;
@@ -133,6 +134,9 @@ function replaySubset(db, label, definitions, ctx) {
 }
 
 function initCoreTables(db, options = {}) {
+  if (!Array.isArray(TABLE_DEFINITIONS) || !Array.isArray(INDEX_DEFINITIONS) || !Array.isArray(TRIGGER_DEFINITIONS)) {
+    return;
+  }
   const ctx = normalizeOptions(options);
   replaySubset(
     db,
@@ -147,6 +151,9 @@ function initCoreTables(db, options = {}) {
 }
 
 function initGazetteerTables(db, options = {}) {
+  if (!Array.isArray(TABLE_DEFINITIONS) || !Array.isArray(INDEX_DEFINITIONS) || !Array.isArray(TRIGGER_DEFINITIONS)) {
+    return;
+  }
   const ctx = normalizeOptions(options);
   replaySubset(
     db,
@@ -161,6 +168,9 @@ function initGazetteerTables(db, options = {}) {
 }
 
 function initPlaceHubsTables(db, options = {}) {
+  if (!Array.isArray(TABLE_DEFINITIONS) || !Array.isArray(INDEX_DEFINITIONS) || !Array.isArray(TRIGGER_DEFINITIONS)) {
+    return;
+  }
   const ctx = normalizeOptions(options);
   const tables = filterDefinitions(TABLE_DEFINITIONS, { include: PLACE_HUB_TARGETS });
   const indexes = filterDefinitions(INDEX_DEFINITIONS, { include: PLACE_HUB_TARGETS });
@@ -179,6 +189,9 @@ function initPlaceHubsTables(db, options = {}) {
 }
 
 function initCompressionTables(db, options = {}) {
+  if (!Array.isArray(TABLE_DEFINITIONS) || !Array.isArray(INDEX_DEFINITIONS) || !Array.isArray(TRIGGER_DEFINITIONS)) {
+    return;
+  }
   const ctx = normalizeOptions(options);
   replaySubset(
     db,
@@ -195,6 +208,9 @@ function initCompressionTables(db, options = {}) {
 }
 
 function initBackgroundTasksTables(db, options = {}) {
+  if (!Array.isArray(TABLE_DEFINITIONS) || !Array.isArray(INDEX_DEFINITIONS)) {
+    return;
+  }
   const ctx = normalizeOptions(options);
   replaySubset(
     db,
@@ -231,6 +247,20 @@ function initViews(db, options = {}) {
 function initializeSchema(db, options = {}) {
   const ctx = normalizeOptions(options);
   const { verbose, logger } = ctx;
+
+  // Back-compat: schema-definitions used to export structured {name,target,sql} lists.
+  // The current generator exports raw SQL arrays + applySchema().
+  if (!Array.isArray(TABLE_DEFINITIONS) && typeof applySchema === 'function') {
+    if (verbose) {
+      logger.log('[schema] Initializing database schema (applySchema fallback)...');
+    }
+    applySchema(db, { skipErrors: false });
+    initViews(db, options);
+    if (verbose) {
+      logger.log('[schema] \u2713 Schema applied');
+    }
+    return;
+  }
 
   if (verbose) {
     logger.log('[schema] Initializing database schema...');

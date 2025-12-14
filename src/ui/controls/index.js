@@ -11,6 +11,8 @@ const { ErrorLogTableControl } = require("./ErrorLogTable");
 const { ConfigMatrixControl } = require("./ConfigMatrixControl");
 const { CrawlBehaviorPanelControl } = require("./CrawlBehaviorPanel");
 const { CrawlConfigWorkspaceControl } = require("./CrawlConfigWorkspaceControl");
+const { SearchFormControl } = require("./SearchFormControl");
+const { MetricCardControl } = require("./MetricCardControl");
 
 module.exports = {
   TableControl,
@@ -23,5 +25,7 @@ module.exports = {
   ErrorLogTableControl,
   ConfigMatrixControl,
   CrawlBehaviorPanelControl,
-  CrawlConfigWorkspaceControl
+  CrawlConfigWorkspaceControl,
+  SearchFormControl,
+  MetricCardControl
 };

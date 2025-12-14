@@ -31,6 +31,272 @@
 
 ## Current Session
 
+### Session 2025-12-14: z-server Main-Area Progress Bars
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Ensure z-server shows green progress bars during scan, and renders them in the main area when nothing else is displayed.
+
+**Location**: `docs/sessions/2025-12-14-z-server-progress-bars/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-z-server-progress-bars/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-z-server-progress-bars/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-z-server-progress-bars/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-z-server-progress-bars/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-z-server-progress-bars/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: jsgui3 Control Scenario Suite
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add a second Puppeteer scenario suite for a pure jsgui3 control and wire it into lab experimentation practices.
+
+**Location**: `docs/sessions/2025-12-14-jsgui3-control-scenario-suite/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-jsgui3-control-scenario-suite/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-jsgui3-control-scenario-suite/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-jsgui3-control-scenario-suite/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-jsgui3-control-scenario-suite/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-jsgui3-control-scenario-suite/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Puppeteer Efficient UI Workflow Docs
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Document repeatable single-browser Puppeteer workflows and fixtures for UI verification
+
+**Location**: `docs/sessions/2025-12-14-puppeteer-efficient-workflows/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-puppeteer-efficient-workflows/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-puppeteer-efficient-workflows/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-puppeteer-efficient-workflows/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-puppeteer-efficient-workflows/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-puppeteer-efficient-workflows/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Fast UI verification harness (no repeated Puppeteer reloads)
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Invent and prototype a fast UI verification workflow using reusable browser sessions and richer control fixtures.
+
+**Location**: `docs/sessions/2025-12-13-fast-ui-verification-harness/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-fast-ui-verification-harness/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-fast-ui-verification-harness/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-fast-ui-verification-harness/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-fast-ui-verification-harness/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-fast-ui-verification-harness/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: UI Verification (Fixtures + E2E)
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Research and document how agents should verify UI + interactive elements, including full crawler workflows, using layered fixtures + E2E.
+
+**Location**: `docs/sessions/2025-12-13-ui-verification-research/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-ui-verification-research/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-ui-verification-research/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-ui-verification-research/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-ui-verification-research/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-ui-verification-research/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Experimental Research Skill (Metacognition + Tooling)
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create a reusable Skill that teaches agents how to do experiment-driven research and continuously improve research methods + tooling.
+
+**Location**: `docs/sessions/2025-12-13-experimental-research-skill/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-experimental-research-skill/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-experimental-research-skill/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-experimental-research-skill/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-experimental-research-skill/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-experimental-research-skill/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Lab Experiments  Skills Consolidation
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Inventory existing jsgui3 lab experiments, run key checks, and distill stable findings into the Skills system with pointers for future experiments.
+
+**Location**: `docs/sessions/2025-12-13-lab-to-skills/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-lab-to-skills/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-lab-to-skills/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-lab-to-skills/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-lab-to-skills/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-lab-to-skills/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Update Shared Controls Catalog
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Consolidate newly added reusable jsgui3 controls into the canonical shared-controls catalog and add quick routing pointers.
+
+**Location**: `docs/sessions/2025-12-13-shared-controls-catalog/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-shared-controls-catalog/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-shared-controls-catalog/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-shared-controls-catalog/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-shared-controls-catalog/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-shared-controls-catalog/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Emoji Search in Markdown (md-scan)
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Consolidate canonical workflow for emoji search in markdown and add a helper CLI to encode/decode emojis.
+
+**Location**: `docs/sessions/2025-12-13-emoji-search-md/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-emoji-search-md/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-emoji-search-md/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-emoji-search-md/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-emoji-search-md/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-emoji-search-md/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: md-scan encoded emoji search
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Allow md-scan to accept base16/base64 encoded search terms (b16:/b64:) so agents can find emoji strings reliably on Windows terminals
+
+**Location**: `docs/sessions/2025-12-13-md-scan-encoded-emoji/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-md-scan-encoded-emoji/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-md-scan-encoded-emoji/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-md-scan-encoded-emoji/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-md-scan-encoded-emoji/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-md-scan-encoded-emoji/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Memory Feedback Badge Format
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Standardize user-visible memory-load badge format across AGENTS/docs/agents
+
+**Location**: `docs/sessions/2025-12-13-memory-feedback-badge/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-memory-feedback-badge/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-memory-feedback-badge/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-memory-feedback-badge/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-memory-feedback-badge/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-memory-feedback-badge/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: Data Explorer WLILO Theme + Shared Controls
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Improve Data Explorer presentation using WLILO theming abstractions and extract reusable jsgui3 controls.
+
+**Location**: `docs/sessions/2025-12-13-data-explorer-wlilo-theme/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-data-explorer-wlilo-theme/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-data-explorer-wlilo-theme/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-data-explorer-wlilo-theme/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-data-explorer-wlilo-theme/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-data-explorer-wlilo-theme/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: WLILO Design Skills Agent
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create an emoji Design Skills agent + WLILO Skill SOP and add user-visible memory load feedback.
+
+**Location**: `docs/sessions/2025-12-13-wlilo-design-skills-agent/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-wlilo-design-skills-agent/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-wlilo-design-skills-agent/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-wlilo-design-skills-agent/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-wlilo-design-skills-agent/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-wlilo-design-skills-agent/FOLLOW_UPS.md)
+
+
+### Session 2025-12-13: MCP memory server surgery + SVG theming SOPs
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Capture durable Skills/workflows for safely modifying MCP memory servers and for building themeable SVGs with agent-assisted pipelines.
+
+**Location**: `docs/sessions/2025-12-13-mcp-svg-memory-sops/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-13-mcp-svg-memory-sops/INDEX.md)
+- 🗺️ [Plan](./2025-12-13-mcp-svg-memory-sops/PLAN.md)
+- 📝 [Working Notes](./2025-12-13-mcp-svg-memory-sops/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-13-mcp-svg-memory-sops/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-13-mcp-svg-memory-sops/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-13: Memory access improvements
 
 **Duration**: Active

@@ -21,6 +21,19 @@ Quick anchors (UI/tooling)
 - jsgui3 activation (client-side): if SSR output renders but clicks don’t work / `this.dom.el` is null / you see `Missing context.map_Controls`, start with the activation flow section in [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md#client-side-activation-flow-critical).
 - SVGs: before shipping, run `node tools/dev/svg-collisions.js <file> --strict` to ensure no overlaps; follow [docs/guides/SVG_CREATION_METHODOLOGY.md](docs/guides/SVG_CREATION_METHODOLOGY.md).
 - MCP pre-flight: before calling MCP tools, run `node tools/dev/mcp-check.js --quick --json` to verify servers are responsive; if unhealthy, use CLI fallbacks.
+
+Memory access feedback (REQUIRED)
+- When you consult the memory system (Skills/sessions/lessons/patterns), emit a **very short** status so the user can see what you loaded.
+- Keep it to **1–2 lines max**, use emojis, and include counts/names when possible.
+- Avoid spam: emit this badge **once per distinct retrieval** (or when the source/loaded items change). Don’t repeat it every message.
+- If memory access fails or is unavailable, say so and name the fallback you used.
+
+Suggested format (examples):
+- `🧠 MEMORY — Skills=svg-theme-system, svg-collisions | Sessions=2 hits | Lessons/Patterns=skimmed`
+- `🧠 MEMORY — docs-memory: unavailable → fallback md-scan (docs/sessions: 14 hits)`
+
+MCP server edits (memory-related)
+- Before modifying `tools/mcp/docs-memory/*` (or other memory MCP servers), consult `docs/agi/skills/mcp-memory-server-surgery/SKILL.md`.
 - docs-memory (MCP): use the memory server for durable agent hygiene, not scratch notes.
   - Prefer “search/find existing” before creating new work: look for related sessions and continue them when possible.
   - Write small, reusable updates: add a Pattern/Anti-Pattern/Lesson, update the Knowledge Map, or append to the current session notes.

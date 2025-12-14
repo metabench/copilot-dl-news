@@ -104,6 +104,7 @@ const {
   attachTelemetryEndpoints,
   attachTelemetryMiddleware
 } = require("./utils/telemetry");
+const { getDefaultTheme, getTheme } = require("./services/themeService");
 
 const StringControl = jsgui.String_Control;
 
@@ -131,6 +132,18 @@ const HOME_CARD_ERROR_LIMIT = 50;
 const DEFAULT_TITLE = "Crawler Data Explorer";
 const DOMAIN_DOWNLOAD_LIMIT = 200;
 const API_HEADER_NAME = "dataExplorer";
+
+function resolveThemeConfig(req, dbHandle) {
+  const requested = req && req.query && typeof req.query.theme === "string" ? req.query.theme.trim() : "";
+  if (requested) {
+    const theme = getTheme(dbHandle, requested);
+    if (theme && theme.config) {
+      return theme.config;
+    }
+  }
+  const fallback = getDefaultTheme(dbHandle);
+  return fallback && fallback.config ? fallback.config : null;
+}
 
 function sanitizePage(value) {
   const numeric = Number(value);
@@ -1455,7 +1468,8 @@ function createDataExplorerServer(options = {}) {
         const baseRenderOptions = {
           clientScriptPath: hasClientBundle ? normalizedScriptPath : undefined,
           bindingPlugin: bindingPluginEnabled,
-          navLinks: buildNavLinks(view.key, DATA_VIEWS)
+          navLinks: buildNavLinks(view.key, DATA_VIEWS),
+          themeConfig: resolveThemeConfig(req, dbAccess.db)
         };
         const mergedRenderOptions = {
           ...baseRenderOptions,
