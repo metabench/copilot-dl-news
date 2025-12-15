@@ -29,6 +29,11 @@ description: Fast, repeatable UI verification using Puppeteer without paying bro
    - Command:
      - `node tools/dev/ui-console-capture.js --server="src/ui/server/<server>.js" --url="http://localhost:3000"`
 
+2.5. If you need **numeric layout facts** (text overflow, bounding boxes), run a purpose-built Puppeteer inspector
+    - Prefer a dedicated script that prints JSON metrics (rects, computed styles, overflow flags).
+    - Example (Decision Tree Viewer):
+       - `node scripts/ui/inspect-decision-tree-layout.js`
+
 3. If you need multiple interactions, use a scenario suite (single browser)
    - Use the runner:
      - `node tools/dev/ui-scenario-suite.js --suite=scripts/ui/scenarios/url-filter-toggle.suite.js --timeout=60000`
@@ -75,6 +80,7 @@ Ask for dedicated research if:
 
 - Scenario suite guide: `docs/guides/PUPPETEER_SCENARIO_SUITES.md`
 - One-shot console capture: `docs/guides/PUPPETEER_UI_WORKFLOW.md`
+- Visual + numeric inspection workflow: `docs/workflows/ui-inspection-workflow.md`
 - Hanging prevention discipline: `docs/guides/TEST_HANGING_PREVENTION_GUIDE.md`
 - jsgui3 activation failure modes: `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md`
 - Example deterministic suite: `scripts/ui/scenarios/url-filter-toggle.suite.js`

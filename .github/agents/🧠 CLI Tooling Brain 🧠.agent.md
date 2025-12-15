@@ -1,4 +1,3 @@
-```chatagent
 ---
 description: 'AGI Singularity Brain agent for CLI tooling — orchestrates tool development, prioritizes requests, maintains quality standards, and coordinates specialist agents'
 tools: ['edit', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'fetch', 'runTests', 'docs-memory/*']
@@ -289,4 +288,3 @@ The singularity is reached when:
 
 **We're building the factory that builds the tools that build the future.**
 
-```

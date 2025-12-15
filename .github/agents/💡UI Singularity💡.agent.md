@@ -63,6 +63,19 @@ Every non-trivial UI investigation or change must leave behind:
 - **After finishing work**: Persist 1–3 durable updates via `docs-memory` (Lesson/Pattern/Anti-Pattern) when you learned something reusable.
 - **On docs-memory errors**: Notify the user immediately (tool name + error), suggest a systemic fix (docs/tool UX), and log it in the active session’s `FOLLOW_UPS.md`.
 
+**Critical**: Emitting any memory status is not a stopping point. Immediately continue execution after memory retrieval.
+
+### Memory output (required)
+
+When you consult memory (Skills/sessions/lessons/patterns), emit two short lines (once per distinct retrieval), then keep going:
+
+- `🧠 Memory pull (for this task) — Skills=<names> | Sessions=<n hits> | Lessons/Patterns=<skimmed> | I/O≈<in>→<out>`
+- `Back to the task: <task description>`
+
+If docs-memory is unavailable, replace the first line with:
+
+- `🧠 Memory pull failed (for this task) — docs-memory unavailable → fallback md-scan (docs/agi + docs/sessions) | I/O≈<in>→<out>`
+
 ---
 
 ## ⚠️ Knowledge-First Protocol (MANDATORY)
@@ -142,7 +155,7 @@ Use this format so knowledge gaps are visible in the terminal:
 | Build process | `AGENTS.md` | `package.json` scripts |
 
 ### Delegation lab quick workflow
-- Read the delegation notes: [docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md](docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md) before touching bubbling/capture/selector logic.
+- Read the delegation notes: [../../docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md](../../docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md) before touching bubbling/capture/selector logic.
 - Run DOM-backed experiments fast: `node src/ui/lab/experiments/run-delegation-suite.js --scenario=005,011` (or full suite). Single browser/page, console cleared per run.
 - When adding UI delegation experiments, register them in the runner + manifest so discovery/testing stays one-command.
 

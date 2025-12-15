@@ -84,13 +84,22 @@ function createDefaultState() {
       visited: 0,
       queued: 0,
       errors: 0,
+      total: null,
       downloaded: 0,
       articles: 0,
       skipped: 0,
       requestsPerSec: null,
       bytesPerSec: null,
       percentComplete: null,
-      estimatedRemaining: null
+      estimatedRemaining: null,
+
+      // Optional UI hints (snapshot fields)
+      currentUrl: null,
+      currentAction: null,
+      throttled: null,
+      throttleReason: null,
+      throttleDomain: null,
+      phase: null
     },
     
     // Goals
@@ -371,13 +380,22 @@ function createCrawlDisplayAdapter(options = {}) {
       visited: data.visited ?? state.progress.visited,
       queued: data.queued ?? state.progress.queued,
       errors: data.errors ?? state.progress.errors,
+      total: data.total ?? state.progress.total,
       downloaded: data.downloaded ?? state.progress.downloaded,
       articles: data.articles ?? state.progress.articles,
       skipped: data.skipped ?? state.progress.skipped,
       requestsPerSec: data.requestsPerSec ?? state.progress.requestsPerSec,
       bytesPerSec: data.bytesPerSec ?? state.progress.bytesPerSec,
       percentComplete: data.percentComplete ?? state.progress.percentComplete,
-      estimatedRemaining: data.estimatedRemaining ?? state.progress.estimatedRemaining
+      estimatedRemaining: data.estimatedRemaining ?? state.progress.estimatedRemaining,
+
+      // Optional UI hints
+      currentUrl: data.currentUrl ?? state.progress.currentUrl,
+      currentAction: data.currentAction ?? state.progress.currentAction,
+      throttled: data.throttled ?? state.progress.throttled,
+      throttleReason: data.throttleReason ?? state.progress.throttleReason,
+      throttleDomain: data.throttleDomain ?? state.progress.throttleDomain,
+      phase: data.phase ?? state.progress.phase
     };
     
     updateState(jobId, { progress });

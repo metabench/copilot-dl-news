@@ -56,7 +56,48 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
   const options = rawOptions || {};
   const opts = Object.keys(resolvedOptions || {}).length ? resolvedOptions : (crawler._resolvedOptions || {});
 
-  crawler.articleSignals = new ArticleSignalsService({ baseUrl: crawler.baseUrl, logger: console });
+  let decisionConfigSet = null;
+  const decisionConfigSetSlug = (typeof opts.decisionConfigSetSlug === 'string' && opts.decisionConfigSetSlug.trim())
+    ? opts.decisionConfigSetSlug.trim()
+    : (typeof process.env.DECISION_CONFIG_SET_SLUG === 'string' && process.env.DECISION_CONFIG_SET_SLUG.trim())
+      ? process.env.DECISION_CONFIG_SET_SLUG.trim()
+      : null;
+
+  if (decisionConfigSetSlug) {
+    try {
+      const { createDefaultDecisionConfigSetRepository } = require('./observatory/DecisionConfigSetRepository');
+      const repo = createDefaultDecisionConfigSetRepository();
+      if (typeof repo.loadSync === 'function') {
+        decisionConfigSet = repo.loadSync(decisionConfigSetSlug);
+      }
+    } catch (error) {
+      console.warn('Failed to load decision config set for ArticleSignalsService:', error?.message || error);
+    }
+  }
+
+  crawler.articleSignals = new ArticleSignalsService({ baseUrl: crawler.baseUrl, logger: console, decisionConfigSet });
+
+  // Best-effort: if the config set wasn't explicitly provided, try to load the
+  // active slug from DB (async) and apply it when available.
+  if (!decisionConfigSet && crawler.dbPath) {
+    (async () => {
+      try {
+        const { createDefaultDecisionConfigSetRepository } = require('./observatory/DecisionConfigSetRepository');
+        const { loadActiveDecisionConfigSet } = require('./observatory/DecisionConfigSetState');
+        const repo = createDefaultDecisionConfigSetRepository();
+        const { configSet } = await loadActiveDecisionConfigSet({
+          repository: repo,
+          dbPath: crawler.dbPath,
+          fallbackToProduction: false
+        });
+        if (configSet?.articleSignals) {
+          crawler.articleSignals.setArticleSignalsConfig(configSet.articleSignals);
+        }
+      } catch (error) {
+        console.warn('Failed to load active decision config set for ArticleSignalsService (DB):', error?.message || error);
+      }
+    })();
+  }
   crawler.enhancedFeatures = new EnhancedFeaturesManager({
     ConfigManager,
     EnhancedDatabaseAdapter: require('../db/EnhancedDatabaseAdapter'),

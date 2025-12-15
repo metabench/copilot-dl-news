@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('crawlAPI', {
   
   // Telemetry
   connectTelemetry: (options) => ipcRenderer.invoke('connect-telemetry', options),
+  getTelemetryInfo: () => ipcRenderer.invoke('get-telemetry-info'),
   
   // Window control
   closeWidget: () => ipcRenderer.invoke('close-widget'),

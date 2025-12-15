@@ -31,24 +31,16 @@ const { ensureDb } = require('../db/sqlite/ensureDb');
 const { createWritableDbAccessor } = require('../deprecated-ui/express/db/writableDb');
 const { JobRegistry } = require('../deprecated-ui/express/services/jobRegistry');
 const { RealtimeBroadcaster } = require('../deprecated-ui/express/services/realtimeBroadcaster');
-const { BackgroundTaskManager } = require('../background/BackgroundTaskManager');
-const { CompressionWorkerPool } = require('../background/workers/CompressionWorkerPool');
-const { CompressionTask } = require('../background/tasks/CompressionTask');
-const { AnalysisTask } = require('../background/tasks/AnalysisTask');
-const { CompressionLifecycleTask } = require('../background/tasks/CompressionLifecycleTask');
-const { GuessPlaceHubsTask } = require('../background/tasks/GuessPlaceHubsTask');
-
-// Load OpenAPI specification
-const openApiPath = path.join(__dirname, 'openapi.yaml');
-const openApiSpec = YAML.load(fs.readFileSync(openApiPath, 'utf8'));
-
-// Import route modules
 const { createHealthRouter } = require('./routes/health');
 const { createPlaceHubsRouter } = require('./routes/place-hubs');
 const { createBackgroundTasksRouter } = require('./routes/background-tasks');
 const { createAnalysisRouter } = require('./routes/analysis');
 const { createCrawlsRouter } = require('./routes/crawls');
 const { createDecisionConfigSetRoutes } = require('./routes/decisionConfigSetRoutes');
+const { createEventsRouter } = require('../deprecated-ui/express/routes/events');
+const { renderCrawlStatusPageHtml } = require('../ui/server/crawlStatus/CrawlStatusPage');
+const { TelemetryIntegration } = require('../crawler/telemetry/TelemetryIntegration');
+const { InProcessCrawlJobRegistry } = require('../server/crawl-api/v1/core/InProcessCrawlJobRegistry');
 
 function parseEnvBoolean(value, fallback = false) {
   if (value === undefined || value === null) {
@@ -164,6 +156,18 @@ function initializeBackgroundInfrastructure({
   realtime = null,
   metricsSink = null
 } = {}) {
+  const isTestEnv = Boolean(process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test');
+
+  // Tests that exercise server wiring (routes, SSE headers, etc.) shouldn't need to load
+  // heavyweight background task modules (some depend on jsdom/ESM-only deps).
+  // Enable explicitly when a test suite needs it.
+  if (isTestEnv && !providedManager && !parseEnvBoolean(process.env.API_ENABLE_BACKGROUND_TASKS_IN_TESTS, false)) {
+    return {
+      backgroundTaskManager: null,
+      compressionWorkerPool: null
+    };
+  }
+
   if (providedManager) {
     return {
       backgroundTaskManager: providedManager,
@@ -201,6 +205,13 @@ function initializeBackgroundInfrastructure({
 
   const metricsReporter = typeof metricsSink === 'function' ? metricsSink : () => {};
 
+  const { BackgroundTaskManager } = require('../background/BackgroundTaskManager');
+  const { CompressionWorkerPool } = require('../background/workers/CompressionWorkerPool');
+  const { CompressionTask } = require('../background/tasks/CompressionTask');
+  const { AnalysisTask } = require('../background/tasks/AnalysisTask');
+  const { CompressionLifecycleTask } = require('../background/tasks/CompressionLifecycleTask');
+  const { GuessPlaceHubsTask } = require('../background/tasks/GuessPlaceHubsTask');
+
   const manager = new BackgroundTaskManager({
     db,
     broadcastEvent: realtime
@@ -219,7 +230,6 @@ function initializeBackgroundInfrastructure({
     emitTelemetry: realtime ? realtime.getBroadcastTelemetry() : null
   });
 
-  const isTestEnv = Boolean(process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test');
   let compressionWorkerPool = null;
 
   if (!isTestEnv) {
@@ -275,6 +285,15 @@ function initializeBackgroundInfrastructure({
 async function cleanupAppResources(app, logger) {
   if (!app || !app.locals) {
     return;
+  }
+
+  if (typeof app.locals.destroyCrawlTelemetry === 'function') {
+    try {
+      app.locals.destroyCrawlTelemetry();
+    } catch (error) {
+      const warn = logger?.warn || console.warn;
+      warn('[api] Failed to shut down crawl telemetry cleanly:', error);
+    }
   }
 
   const pool = app.locals.compressionWorkerPool;
@@ -378,6 +397,68 @@ function createApiServer(options = {}) {
   app.locals.broadcastProgress = jobInfrastructure.broadcastProgress;
   app.locals.broadcastJobs = jobInfrastructure.broadcastJobs;
 
+  // Canonical crawler telemetry (observable) -> legacy SSE broadcaster (/events).
+  // This keeps /events as the "one place" clients can subscribe for crawl status.
+  const crawlTelemetry = options.crawlTelemetry instanceof TelemetryIntegration
+    ? options.crawlTelemetry
+    : new TelemetryIntegration({
+        historyLimit: parseNumber(options.crawlTelemetryHistoryLimit, 500),
+        bridgeOptions: {
+          defaultCrawlType: 'standard'
+        }
+      });
+
+  app.locals.crawlTelemetry = crawlTelemetry;
+
+  // Canonical telemetry SSE (preferred over legacy /events).
+  // This endpoint replays telemetry history on connect.
+  crawlTelemetry.mountSSE(app, '/api/crawl-telemetry/events');
+
+  // JSON history snapshot for clients without EventSource.
+  app.get('/api/crawl-telemetry/history', (req, res) => {
+    const limitRaw = req.query && req.query.limit != null ? Number(req.query.limit) : undefined;
+    const limit = Number.isFinite(limitRaw) ? Math.max(0, Math.trunc(limitRaw)) : undefined;
+    const history = crawlTelemetry?.bridge?.getHistory ? crawlTelemetry.bridge.getHistory(limit) : [];
+    res.json({
+      status: 'ok',
+      items: history
+    });
+  });
+
+  let crawlTelemetryUnsubscribe = null;
+  if (app.locals.realtime && typeof app.locals.realtime.broadcastTelemetry === 'function') {
+    crawlTelemetryUnsubscribe = crawlTelemetry.subscribe(
+      (event) => {
+        if (!event || typeof event !== 'object') return;
+
+        const jobId = event.jobId || null;
+        const severity = event.severity || 'info';
+        const message = event.message || event.type || 'crawl:telemetry';
+
+        app.locals.realtime.broadcastTelemetry({
+          source: event.source || 'crawler',
+          event: event.type || 'telemetry',
+          severity,
+          message,
+          data: event,
+          taskId: jobId,
+          taskType: 'crawl',
+          status: event.type || undefined
+        });
+      },
+      { replayHistory: false }
+    );
+  }
+
+  app.locals.destroyCrawlTelemetry = () => {
+    try {
+      crawlTelemetryUnsubscribe?.();
+    } catch (_) {}
+    try {
+      crawlTelemetry.destroy();
+    } catch (_) {}
+  };
+
   const backgroundInfrastructure = initializeBackgroundInfrastructure({
     backgroundTaskManager: options.backgroundTaskManager,
     getDbRW,
@@ -392,6 +473,21 @@ function createApiServer(options = {}) {
 
   app.locals.backgroundTaskManager = backgroundInfrastructure.backgroundTaskManager;
   app.locals.compressionWorkerPool = backgroundInfrastructure.compressionWorkerPool;
+
+  const openApiPath = path.join(__dirname, 'openapi.yaml');
+  let openApiSpec = null;
+
+  try {
+    openApiSpec = YAML.load(fs.readFileSync(openApiPath, 'utf8'));
+  } catch (error) {
+    const warn = logger?.warn || console.warn;
+    warn('[api] Failed to load OpenAPI spec; /api-docs will be limited:', error);
+    openApiSpec = {
+      openapi: '3.0.0',
+      info: { title: 'News Crawler API', version: 'unknown' },
+      paths: {}
+    };
+  }
 
   // Swagger UI customization options
   const swaggerOptions = {
@@ -441,12 +537,58 @@ function createApiServer(options = {}) {
     broadcastJobs: app.locals.broadcastJobs,
     logger
   }));
+
+  // SSE status stream for crawl jobs and telemetry (reuses the legacy broadcaster).
+  if (app.locals.realtime && app.locals.jobRegistry) {
+    app.use(
+      createEventsRouter({
+        realtime: app.locals.realtime,
+        jobRegistry: app.locals.jobRegistry,
+        QUIET: !app.locals.verbose,
+        analysisProgress: null
+      })
+    );
+  }
+
+  // Minimal status UI hosted by the crawl server.
+  app.get('/crawl-status', (req, res) => {
+    res
+      .type('html')
+      .send(renderCrawlStatusPageHtml({
+        jobsApiPath: '/api/crawls',
+        extraJobsApiPath: '/api/v1/crawl/jobs',
+        eventsPath: '/api/crawl-telemetry/events',
+        telemetryHistoryPath: '/api/crawl-telemetry/history'
+      }));
+  });
+
+  const crawlServiceOptions = {
+    ...(options.crawlServiceOptions && typeof options.crawlServiceOptions === 'object'
+      ? options.crawlServiceOptions
+      : {}),
+    telemetryIntegration: app.locals.crawlTelemetry
+  };
+
+  app.locals.inProcessCrawlJobRegistry = options.inProcessCrawlJobRegistry
+    ? options.inProcessCrawlJobRegistry
+    : new InProcessCrawlJobRegistry({
+        createCrawlService: options.createCrawlService,
+        serviceOptions: crawlServiceOptions,
+        telemetryIntegration: app.locals.crawlTelemetry,
+        allowMultiJobs: parseEnvBoolean(
+          process.env.API_ALLOW_MULTI_JOBS ?? process.env.UI_ALLOW_MULTI_JOBS,
+          false
+        ),
+        historyLimit: parseNumber(process.env.API_IN_PROCESS_JOB_HISTORY_LIMIT, 200)
+      });
+
   registerCrawlApiV1Routes(app, {
     basePath: options.crawlBasePath || '/api/v1/crawl',
     logger,
     crawlService: options.crawlService,
     createCrawlService: options.createCrawlService,
-    serviceOptions: options.crawlServiceOptions
+    serviceOptions: crawlServiceOptions,
+    inProcessJobRegistry: app.locals.inProcessCrawlJobRegistry
   });
 
   // Root endpoint - redirect to API docs

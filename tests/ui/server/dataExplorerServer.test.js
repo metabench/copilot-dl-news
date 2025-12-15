@@ -291,6 +291,20 @@ describe("dataExplorerServer /urls/:id routes", () => {
   });
 });
 
+describe("dataExplorerServer health endpoint", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test("returns ok payload", async () => {
+    const { app, shutdown } = createServer();
+    const response = await request(app).get("/health");
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ ok: true, service: "data-explorer" });
+    shutdown();
+  });
+});
+
 describe("dataExplorerServer /api/urls diagnostics", () => {
   afterEach(() => {
     jest.clearAllMocks();
@@ -745,6 +759,42 @@ describe("dataExplorerServer /decisions route", () => {
     expect(response.status).toBe(200);
     expect(response.text).toContain("skip-reason-decision");
     expect(response.text).not.toContain("fetch-policy-decision");
+
+    shutdown();
+  });
+
+  test("hides cache reflex milestones by default", async () => {
+    const { app, shutdown } = createServer((db) => {
+      db.prepare(
+        "INSERT INTO crawl_milestones (job_id, ts, kind, scope, target, message) VALUES (?, ?, ?, ?, ?, ?)"
+      ).run("job-1", "2025-12-01T10:00:00Z", "cache-priority-hit", "crawler", "https://cached.example/", "Served cached page while rate limited");
+      db.prepare(
+        "INSERT INTO crawl_milestones (job_id, ts, kind, scope, target, message) VALUES (?, ?, ?, ?, ?, ?)"
+      ).run("job-2", "2025-12-01T11:00:00Z", "fetch-policy-decision", "crawler", "https://fresh.example/", "Fetched due to freshness policy");
+      return {};
+    });
+
+    const response = await request(app).get("/decisions");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("fetch-policy-decision");
+    expect(response.text).not.toContain("cache-priority-hit");
+
+    shutdown();
+  });
+
+  test("shows cache reflex milestones when includeReflexes=true", async () => {
+    const { app, shutdown } = createServer((db) => {
+      db.prepare(
+        "INSERT INTO crawl_milestones (job_id, ts, kind, scope, target, message) VALUES (?, ?, ?, ?, ?, ?)"
+      ).run("job-1", "2025-12-01T10:00:00Z", "cache-priority-hit", "crawler", "https://cached.example/", "Served cached page while rate limited");
+      return {};
+    });
+
+    const response = await request(app).get("/decisions?includeReflexes=true");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("cache-priority-hit");
 
     shutdown();
   });

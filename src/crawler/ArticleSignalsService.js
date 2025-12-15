@@ -1,16 +1,20 @@
 const { extractSchemaSignals } = require('./schemaSignals');
 
 class ArticleSignalsService {
-  constructor({ baseUrl = null, logger = console } = {}) {
+  constructor({ baseUrl = null, logger = console, decisionConfigSet = null, articleSignalsConfig = null } = {}) {
     this.baseUrl = baseUrl;
     this.logger = logger || console;
+    this.articleSignalsConfig = articleSignalsConfig || decisionConfigSet?.articleSignals || null;
+    this._compiledDatePathRegex = this._compileDatePathRegex(this.articleSignalsConfig);
   }
 
-  looksLikeArticle(url) {
-    if (!url || typeof url !== 'string') return false;
-    const urlStr = url.toLowerCase();
+  setArticleSignalsConfig(articleSignalsConfig) {
+    this.articleSignalsConfig = articleSignalsConfig || null;
+    this._compiledDatePathRegex = this._compileDatePathRegex(this.articleSignalsConfig);
+  }
 
-    const skipPatterns = [
+  _getDefaultSkipPatterns() {
+    return [
       '/search', '/login', '/register', '/subscribe', '/newsletter',
       '/contact', '/about', '/privacy', '/terms', '/cookies',
       '/rss', '/feed', '.xml', '.json', '/api/', '/admin/',
@@ -19,23 +23,56 @@ class ArticleSignalsService {
       '/page/', '/index', '/sitemap', '/archive',
       '.pdf', '.jpg', '.png', '.gif', '.css', '.js'
     ];
+  }
 
-    if (skipPatterns.some(pattern => urlStr.includes(pattern))) {
-      return false;
-    }
-
-    const articlePatterns = [
+  _getDefaultArticlePatterns() {
+    return [
       '/article', '/story', '/news', '/post',
       '/world', '/politics', '/business', '/sport',
       '/culture', '/opinion', '/lifestyle', '/technology',
       '/commentisfree', '/uk-news', '/us-news'
     ];
+  }
 
-    if (articlePatterns.some(pattern => urlStr.includes(pattern))) {
+  _getSkipPatterns() {
+    const provided = this.articleSignalsConfig?.skipPatterns;
+    const patterns = Array.isArray(provided) ? provided : this._getDefaultSkipPatterns();
+    return patterns.filter((value) => typeof value === 'string' && value.length);
+  }
+
+  _getArticlePatterns() {
+    const provided = this.articleSignalsConfig?.articlePatterns;
+    const patterns = Array.isArray(provided) ? provided : this._getDefaultArticlePatterns();
+    return patterns.filter((value) => typeof value === 'string' && value.length);
+  }
+
+  _compileDatePathRegex(config) {
+    const raw = config?.datePathRegex;
+    if (raw && typeof raw === 'string') {
+      try {
+        return new RegExp(raw);
+      } catch (err) {
+        this._warn('Invalid datePathRegex in articleSignalsConfig; using default', err);
+      }
+    }
+    return /\/\d{4}\/\d{2}\/\d{2}\//;
+  }
+
+  looksLikeArticle(url) {
+    if (!url || typeof url !== 'string') return false;
+    const urlStr = url.toLowerCase();
+
+    const skipPatterns = this._getSkipPatterns();
+    if (skipPatterns.some(pattern => urlStr.includes(String(pattern).toLowerCase()))) {
+      return false;
+    }
+
+    const articlePatterns = this._getArticlePatterns();
+    if (articlePatterns.some(pattern => urlStr.includes(String(pattern).toLowerCase()))) {
       return true;
     }
 
-    return /\/\d{4}\/\d{2}\/\d{2}\//.test(urlStr);
+    return this._compiledDatePathRegex.test(urlStr);
   }
 
   computeUrlSignals(rawUrl) {

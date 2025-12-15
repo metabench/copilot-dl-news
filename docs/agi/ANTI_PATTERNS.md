@@ -169,3 +169,18 @@ AGI-accumulated knowledge catalog.
 
 
 ---
+
+## Memory Badge Then Stop
+
+**Added**: 2025-12-14
+**Context**: .github/agents/* memory-badge guidance
+
+**When to use**: Symptoms: Agent emits a `🧠 Memory pull (for this task) — ...` line and then stops without continuing the planned work (no tool calls, no code changes, no next step).
+
+**Steps/Details**:
+1. Why it's bad: It breaks user expectations of autonomy/persistence, wastes time, and truncates execution right after context loading (the worst moment to stop).
+1. Better approach: Treat the memory badge as a transparency note only. Immediately proceed to the next step: continue scanning/implementation/testing. Only stop if explicitly asked or genuinely blocked needing a user decision.
+
+
+
+---

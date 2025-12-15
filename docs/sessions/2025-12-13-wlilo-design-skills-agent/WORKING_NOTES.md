@@ -6,7 +6,8 @@
 - Must-do: Agents emit 1–2 line emoji memory-load summaries.
 
 ## Memory loaded
-- 🧠 MEMORY — Skills=svg-theme-system, svg-collisions, mcp-memory-server-surgery, jsgui3-activation-debug | Guides=WLILO_STYLE_GUIDE
+- 🧠 Memory pull (for this task) — Skills=svg-theme-system, svg-collisions, mcp-memory-server-surgery, jsgui3-activation-debug | Guides=WLILO_STYLE_GUIDE | I/O≈<in>→<out>
+- Back to the task: Add design skills to the memory system
 
 ## Changes made
 - Added Skill: `wlilo-design-system`.

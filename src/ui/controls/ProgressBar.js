@@ -44,7 +44,7 @@ function createProgressBarControl(jsgui) {
      * @param {boolean} [spec.animated=true] - Enable smooth animation
      */
     constructor(spec = {}) {
-      super({ ...spec, tagName: "div" });
+      super({ ...spec, tagName: "div", __type_name: spec.__type_name || "progress_bar" });
       
       this._value = Math.max(0, Math.min(1, spec.value || 0));
       this._label = spec.label || null;
@@ -52,10 +52,15 @@ function createProgressBarControl(jsgui) {
       this._color = spec.color || "emerald";
       this._showPercentage = spec.showPercentage || false;
       this._animated = spec.animated !== false;
+      this._indeterminate = !!spec.indeterminate;
       
       this.add_class("progress-bar");
       this.add_class(`progress-bar--${this._variant}`);
       this.add_class(`progress-bar--${this._color}`);
+
+      if (this._indeterminate) {
+        this.add_class("progress-bar--indeterminate");
+      }
       
       if (this._animated) {
         this.add_class("progress-bar--animated");
@@ -93,6 +98,11 @@ function createProgressBarControl(jsgui) {
 
     _updateFillWidth() {
       if (this._fill) {
+        if (this._indeterminate) {
+          // Width is fixed; animation handled via CSS.
+          this._fill.dom.attributes.style = "width: 30%;";
+          return;
+        }
         const width = `${Math.round(this._value * 100)}%`;
         this._fill.dom.attributes.style = `width: ${width};`;
       }
@@ -108,12 +118,17 @@ function createProgressBarControl(jsgui) {
      */
     setValue(value) {
       this._value = Math.max(0, Math.min(1, value));
-      this._updateFillWidth();
+
+      if (!this._indeterminate) {
+        this._updateFillWidth();
+      }
       
       // Update DOM if activated
       const fillEl = this._el(this._fill);
       if (fillEl) {
-        fillEl.style.width = `${Math.round(this._value * 100)}%`;
+        if (!this._indeterminate) {
+          fillEl.style.width = `${Math.round(this._value * 100)}%`;
+        }
       }
       
       // Update percentage label if showing
@@ -121,6 +136,41 @@ function createProgressBarControl(jsgui) {
         const labelEl = this._el(this._labelEl);
         if (labelEl) {
           labelEl.textContent = this._formatPercentage();
+        }
+      }
+    }
+
+    /**
+     * Toggle indeterminate mode (useful when total is unknown).
+     * @param {boolean} enabled
+     */
+    setIndeterminate(enabled) {
+      const next = !!enabled;
+      if (next === this._indeterminate) return;
+      this._indeterminate = next;
+
+      const el = this._el();
+      if (el) {
+        if (this._indeterminate) {
+          el.classList.add("progress-bar--indeterminate");
+        } else {
+          el.classList.remove("progress-bar--indeterminate");
+        }
+      } else {
+        if (this._indeterminate) {
+          this.add_class("progress-bar--indeterminate");
+        }
+      }
+
+      // Ensure fill style matches the new mode.
+      this._updateFillWidth();
+
+      const fillEl = this._el(this._fill);
+      if (fillEl) {
+        if (this._indeterminate) {
+          fillEl.style.width = "30%";
+        } else {
+          fillEl.style.width = `${Math.round(this._value * 100)}%`;
         }
       }
     }
@@ -202,6 +252,17 @@ const PROGRESS_BAR_STYLES = `
   height: 100%;
   border-radius: 4px;
   transition: width 0.3s ease-out;
+}
+
+.progress-bar--indeterminate .progress-bar__fill {
+  width: 30%;
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.12));
+  animation: progress-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes progress-indeterminate {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(380%); }
 }
 
 .progress-bar--animated .progress-bar__fill {

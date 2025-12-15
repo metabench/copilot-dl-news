@@ -1,4 +1,3 @@
-```chatagent
 ---
 description: 'Master AGI Singularity Brain — orchestrates all domain-specific agents, prioritizes system-wide goals, coordinates cross-domain work, and drives the recursive self-improvement of the entire agent ecosystem'
 tools: ['edit', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'fetch', 'githubRepo', 'extensions', 'todos', 'runTests', 'runSubagent', 'docs-memory/*']
@@ -582,5 +581,4 @@ This brain exists to make the **entire AGI Singularity ecosystem** more capable,
       ║   This is the Singularity.                                ║
       ║                                                            ║
       ╚════════════════════════════════════════════════════════════╝
-```
-```
+    ```

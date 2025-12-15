@@ -1,6 +1,7 @@
 "use strict";
 
 const path = require("path");
+const { createRequire } = require("module");
 
 function assert(condition, message) {
   if (!condition) {
@@ -12,31 +13,11 @@ function assert(condition, message) {
 
 async function main() {
   const crawlWidgetRoot = path.resolve(__dirname, "..");
-  const jsguiPath = path.join(crawlWidgetRoot, "node_modules", "jsgui3-client");
 
-  if (typeof document === "undefined") {
-    try {
-      const jsdomPath = path.join(crawlWidgetRoot, "..", "node_modules", "jsdom");
-      const { JSDOM } = require(jsdomPath);
-      const dom = new JSDOM("<!doctype html><html><body></body></html>");
-      global.window = dom.window;
-      global.document = dom.window.document;
-      global.navigator = dom.window.navigator;
-    } catch (err) {
-      console.log("[crawlWidget.check] Skipping: no DOM available (jsdom not installed at repo root).");
-      console.log("[crawlWidget.check] Install with: npm i -D jsdom");
-      return;
-    }
-  }
-
-  let jsgui;
-  try {
-    jsgui = require(jsguiPath);
-  } catch (err) {
-    console.log("[crawlWidget.check] Skipping: crawl-widget dependencies not installed.");
-    console.log("[crawlWidget.check] Run: cd crawl-widget && npm i");
-    return;
-  }
+  // Use server-side jsgui3-html to keep the check deterministic and avoid
+  // client activation side-effects (which require a full browser environment).
+  const rootRequire = createRequire(path.join(crawlWidgetRoot, "..", "package.json"));
+  const jsgui = rootRequire("jsgui3-html");
 
   const { createCrawlWidgetControls } = require(path.join(crawlWidgetRoot, "ui", "crawlWidgetControlsFactory"));
 
@@ -65,7 +46,7 @@ async function main() {
   const controls = createCrawlWidgetControls(jsgui);
   const { CrawlWidgetAppControl } = controls;
 
-  const context = new jsgui.Client_Page_Context();
+  const context = new jsgui.Page_Context();
   const app = new CrawlWidgetAppControl({ context, api: apiStub });
 
   const html = app.all_html_render();

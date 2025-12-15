@@ -4,7 +4,7 @@
 
 ## Changes
 
-- Standardized user-visible memory-load badge format to `🧠 MEMORY — ...`.
+- Standardized user-visible memory-load badge format to the two-line snippet: `🧠 Memory pull (for this task) — ...` + `Back to the task: ...`.
 - Added anti-spam guidance (emit only once per distinct retrieval).
 
 ## Evidence

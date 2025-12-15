@@ -33,7 +33,8 @@ Load:
 - `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md`
 
 Then emit (1–2 lines):
-- `🧠 MEMORY — Skills=jsgui3-wlilo-ui, wlilo-design-system | Guides=WLILO_STYLE_GUIDE, JSGUI3_UI_ARCHITECTURE_GUIDE`
+- `🧠 Memory pull (for this task) — Skills=jsgui3-wlilo-ui, wlilo-design-system | Guides=WLILO_STYLE_GUIDE, JSGUI3_UI_ARCHITECTURE_GUIDE | I/O≈<in>→<out>`
+- `Back to the task: <task description>`
 
 ### 1) Use a small UI token set
 

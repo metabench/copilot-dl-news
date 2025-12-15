@@ -332,6 +332,82 @@ const detectCollisions = (doc, options = {}) => {
     return collisions;
 };
 
+/**
+ * Estimate size for content
+ */
+const estimateContentSize = (content, type, style = {}) => {
+    const fontSize = parseFloat(style.fontSize) || 14;
+    const padding = parseFloat(style.padding) || 10;
+    
+    if (type === "text" || type === "note") {
+        const lines = content.split('\n');
+        const maxLineLength = Math.max(...lines.map(l => l.length));
+        const width = (maxLineLength * fontSize * 0.6) + (padding * 2);
+        const height = (lines.length * fontSize * 1.2) + (padding * 2);
+        return { width, height };
+    }
+    
+    return { width: 100, height: 100 }; // Default
+};
+
+/**
+ * Check if a rectangle collides with any element in the document
+ */
+const checkRectCollision = (doc, rect, ignoreIds = []) => {
+    const elements = listElements(doc, { recursive: true });
+    
+    for (const el of elements) {
+        if (ignoreIds.includes(el.id)) continue;
+        
+        const elRect = {
+            x: el.position.x,
+            y: el.position.y,
+            width: el.size.width,
+            height: el.size.height
+        };
+        
+        if (rect.x < elRect.x + elRect.width &&
+            rect.x + rect.width > elRect.x &&
+            rect.y < elRect.y + elRect.height &&
+            rect.y + rect.height > elRect.y) {
+            return true;
+        }
+    }
+    return false;
+};
+
+/**
+ * Find a free space for a rectangle near a preferred position
+ */
+const findFreeSpace = (doc, width, height, preferredX, preferredY, padding = 10) => {
+    const startX = preferredX;
+    const startY = preferredY;
+    
+    // Try preferred position first
+    if (!checkRectCollision(doc, { x: startX, y: startY, width, height })) {
+        return { x: startX, y: startY, moved: false };
+    }
+    
+    // Spiral search
+    let angle = 0;
+    let radius = 10;
+    const maxRadius = 2000; // Limit search
+    
+    while (radius < maxRadius) {
+        const x = startX + Math.cos(angle) * radius;
+        const y = startY + Math.sin(angle) * radius;
+        
+        if (!checkRectCollision(doc, { x, y, width, height })) {
+            return { x: Math.round(x), y: Math.round(y), moved: true };
+        }
+        
+        angle += 0.5;
+        radius += 10; // Increase step size for faster search
+    }
+    
+    return { x: startX, y: startY, moved: true, failed: true }; // Fallback
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool Implementations
 // ─────────────────────────────────────────────────────────────────────────────
@@ -528,6 +604,117 @@ const tools = {
                     id: el.id, 
                     tag: params.tag 
                 } 
+            };
+        }
+    },
+
+    svg_smart_add: {
+        description: "Smartly add content (text, notes) to the SVG. Automatically sizes elements, avoids collisions, and suggests future placement points.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                fileId: { type: "string", description: "File ID from svg_open" },
+                content: { type: "string", description: "Text content" },
+                type: { type: "string", enum: ["text", "note", "box"], description: "Type of element (default: note)" },
+                x: { type: "number", description: "Preferred X position (default: center)" },
+                y: { type: "number", description: "Preferred Y position (default: center)" },
+                style: { 
+                    type: "object", 
+                    properties: {
+                        fill: { type: "string" },
+                        stroke: { type: "string" },
+                        fontSize: { type: "number" },
+                        padding: { type: "number" }
+                    }
+                }
+            },
+            required: ["fileId", "content"]
+        },
+        handler: (params) => {
+            const doc = getSvgDoc(params.fileId);
+            if (!doc) return { error: "File not open" };
+            
+            saveUndoState(params.fileId);
+            
+            const type = params.type || "note";
+            const style = params.style || {};
+            
+            // 1. Estimate Size
+            const size = estimateContentSize(params.content, type, style);
+            
+            // 2. Determine Preferred Position
+            let x = params.x;
+            let y = params.y;
+            
+            if (x === undefined || y === undefined) {
+                const svg = doc.querySelector("svg");
+                const viewBox = svg.getAttribute("viewBox");
+                if (viewBox) {
+                    const [, , w, h] = viewBox.split(" ").map(Number);
+                    x = x ?? w / 2 - size.width / 2;
+                    y = y ?? h / 2 - size.height / 2;
+                } else {
+                    x = x ?? 0;
+                    y = y ?? 0;
+                }
+            }
+            
+            // 3. Find Free Space
+            const placement = findFreeSpace(doc, size.width, size.height, x, y);
+            
+            // 4. Create Elements
+            const group = doc.createElementNS("http://www.w3.org/2000/svg", "g");
+            const id = `smart-${type}-${Date.now()}`;
+            group.id = id;
+            group.setAttribute("transform", `translate(${placement.x}, ${placement.y})`);
+            
+            if (type === "note" || type === "box") {
+                const rect = doc.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("width", size.width);
+                rect.setAttribute("height", size.height);
+                rect.setAttribute("fill", style.fill || (type === "note" ? "#fff9c4" : "none")); // Yellow for notes
+                rect.setAttribute("stroke", style.stroke || "#000");
+                rect.setAttribute("rx", "5"); // Rounded corners
+                group.appendChild(rect);
+            }
+            
+            if (type === "note" || type === "text") {
+                const text = doc.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", style.padding || 10);
+                text.setAttribute("y", (style.padding || 10) + (style.fontSize || 14));
+                text.setAttribute("font-family", "sans-serif");
+                text.setAttribute("font-size", style.fontSize || 14);
+                
+                // Simple multiline support
+                const lines = params.content.split('\n');
+                lines.forEach((line, i) => {
+                    const tspan = doc.createElementNS("http://www.w3.org/2000/svg", "tspan");
+                    tspan.setAttribute("x", style.padding || 10);
+                    tspan.setAttribute("dy", i === 0 ? 0 : "1.2em");
+                    tspan.textContent = line;
+                    text.appendChild(tspan);
+                });
+                
+                group.appendChild(text);
+            }
+            
+            doc.querySelector("svg").appendChild(group);
+            
+            // 5. Calculate Suggestions
+            const suggestions = [
+                { label: "right", x: placement.x + size.width + 20, y: placement.y },
+                { label: "bottom", x: placement.x, y: placement.y + size.height + 20 },
+                { label: "left", x: placement.x - size.width - 20, y: placement.y },
+                { label: "top", x: placement.x, y: placement.y - size.height - 20 }
+            ].filter(pos => !checkRectCollision(doc, { x: pos.x, y: pos.y, width: size.width, height: size.height }, [id]));
+            
+            return {
+                success: true,
+                elementId: id,
+                position: { x: placement.x, y: placement.y },
+                size,
+                moved: placement.moved,
+                suggestions: suggestions.map(s => ({ label: s.label, x: Math.round(s.x), y: Math.round(s.y) }))
             };
         }
     },

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" width="1400" height="900">
+	<title>UI Progress from Telemetry SSE — Findings</title>
+	<desc>Findings from Labs 027/028: stable SSE envelope, deterministic streaming, and jsgui3-server routing approach.</desc>
+
+	<defs>
+		<linearGradient id="obsidianGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+			<stop offset="0%" style="stop-color:#0d1320"/>
+			<stop offset="100%" style="stop-color:#0a0f1a"/>
+		</linearGradient>
+
+		<linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+			<stop offset="0%" style="stop-color:#1e232c"/>
+			<stop offset="100%" style="stop-color:#14181f"/>
+		</linearGradient>
+
+		<linearGradient id="cardGradDeep" x1="0%" y1="0%" x2="0%" y2="100%">
+			<stop offset="0%" style="stop-color:#141b26"/>
+			<stop offset="100%" style="stop-color:#0f1520"/>
+		</linearGradient>
+
+		<filter id="softShadow" x="-10%" y="-10%" width="120%" height="125%">
+			<feDropShadow dx="2" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.55"/>
+		</filter>
+
+		<pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+			<path d="M 44 0 L 0 0 0 44" fill="none" stroke="#c9a227" stroke-width="0.35" opacity="0.07"/>
+		</pattern>
+
+		<style>
+			.title { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 30px; font-weight: 800; fill: #e2e8f0; letter-spacing: -0.5px; }
+			.subtitle { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 13px; fill: #94a3b8; }
+			.section { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px; font-weight: 750; fill: #c9a227; letter-spacing: 1.3px; text-transform: uppercase; }
+			.card-title { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 15px; font-weight: 750; fill: #e2e8f0; }
+			.text { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 12px; fill: #a9b7c8; }
+			.text2 { font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 12px; fill: #cbd5e1; }
+			.code { font-family: ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 11px; fill: #94a3b8; }
+
+			.header { fill: url(#cardGrad); stroke: #2d3548; stroke-width: 1; }
+			.card { fill: url(#cardGrad); stroke: #2d3548; stroke-width: 1; }
+			.card-deep { fill: url(#cardGradDeep); stroke: #2d3548; stroke-width: 1; }
+			.card-gold { fill: url(#cardGradDeep); stroke: #c9a227; stroke-width: 1.8; }
+
+			.ok { fill: #22c55e; }
+			.warn { fill: #f59e0b; }
+			.info { fill: #38bdf8; }
+		</style>
+	</defs>
+
+	<!-- Background -->
+	<rect width="1400" height="900" fill="url(#obsidianGrad)"/>
+	<rect width="1400" height="900" fill="url(#grid)"/>
+
+	<!-- Header -->
+	<g filter="url(#softShadow)">
+		<rect x="30" y="20" width="1340" height="78" rx="10" class="header"/>
+		<text x="60" y="54" class="title">UI Progress from Telemetry SSE — Findings</text>
+		<text x="60" y="78" class="subtitle">Validated behaviors + friction points turned into actionable improvements</text>
+	</g>
+
+	<!-- Left: Validated -->
+	<text x="30" y="148" class="section">Validated</text>
+
+	<g filter="url(#softShadow)">
+		<rect x="30" y="170" width="650" height="178" rx="12" class="card-deep"/>
+		<text x="46" y="200" class="card-title">1) Stable SSE envelope</text>
+		<text x="46" y="226" class="text">Client adapter stays simple if the envelope is consistent.</text>
+		<text x="46" y="254" class="code">{ "type": "crawl:telemetry", "data": &lt;crawl:* event&gt;, "timestampMs": 123 }</text>
+		<text x="46" y="292" class="text2">✓ Outcome: EventSource → adapter.handleEvent(payload.data)</text>
+
+		<rect x="30" y="372" width="650" height="190" rx="12" class="card"/>
+		<text x="46" y="402" class="card-title">2) ProgressBarControl: indeterminate → determinate</text>
+		<text x="46" y="428" class="text">Start in indeterminate; switch once progress is known.</text>
+		<text x="46" y="456" class="code">indeterminate: true  →  setValue(0.2); indeterminate: false</text>
+		<text x="46" y="496" class="text2">✓ Outcome: UI conveys “working” immediately then becomes precise</text>
+
+		<rect x="30" y="586" width="650" height="230" rx="12" class="card"/>
+		<text x="46" y="616" class="card-title">3) jsgui3-server can host SSE routes (Lab 028)</text>
+		<text x="46" y="642" class="text">SSE without Express by attaching directly to the router.</text>
+		<text x="46" y="670" class="code">server.router.set_route("/events", responder, responder.handle_http)</text>
+		<text x="46" y="710" class="text2">✓ Determinism: start emitting only after first SSE client connects</text>
+		<text x="46" y="738" class="text">Also: prefer explicit &lt;style&gt; injection in head for lab SSR.</text>
+	</g>
+
+	<!-- Right: Improve -->
+	<text x="720" y="148" class="section">Improve</text>
+
+	<g filter="url(#softShadow)">
+		<rect x="720" y="170" width="650" height="210" rx="12" class="card-gold"/>
+		<text x="736" y="200" class="card-title">A) First-class SSE helper for jsgui3-server</text>
+		<text x="736" y="226" class="text">Standardize headers, client tracking, keepalive, and cleanup.</text>
+		<text x="736" y="254" class="code">createSseRoute({ path, onConnect, onClose, format, replay })</text>
+		<text x="736" y="292" class="text2">⚠ Bonus: replay buffer prevents race conditions + improves UX</text>
+
+		<rect x="720" y="404" width="650" height="190" rx="12" class="card"/>
+		<text x="736" y="434" class="card-title">B) Routing ergonomics + responder contract docs</text>
+		<text x="736" y="460" class="text">Clarify leading-slash handling and responder signature expectations.</text>
+		<text x="736" y="488" class="code">set_route(path, responder, responder.handle_http)</text>
+		<text x="736" y="526" class="text2">ℹ Outcome: fewer route surprises, quicker streaming endpoints</text>
+
+		<rect x="720" y="618" width="650" height="198" rx="12" class="card"/>
+		<text x="736" y="648" class="card-title">C) Reduce activation warning noise</text>
+		<text x="736" y="674" class="text">Warnings can appear even when activation succeeds; tighten contracts.</text>
+		<text x="736" y="710" class="text2">⚠ Next: add a “console budget” assertion in lab checks</text>
+		<text x="736" y="738" class="text">(or explicitly whitelist known benign warnings with rationale)</text>
+	</g>
+</svg>

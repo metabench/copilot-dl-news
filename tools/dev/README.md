@@ -644,6 +644,51 @@ When `--fix` is used, the tool automatically applies repair suggestions:
 
 The tool walks each directory breadth-first, skips `.gitkeep`, and reports any Windows locking errors so you can rerun once handles release.
 
+## `session-archive` — Session Folder Archival & Search
+
+`session-archive` archives old session folders into a ZIP file, reducing docs sprawl while preserving searchable access to historical sessions. The CLI defaults to dry-run previews; supply `--fix` to apply changes.
+
+**Quick Examples:**
+```powershell
+# Preview sessions older than 30 days that would be archived
+node tools/dev/session-archive.js --archive --older-than 30
+
+# Actually archive them (removes originals, adds to ZIP + manifest)
+node tools/dev/session-archive.js --archive --older-than 30 --fix
+
+# List all archived sessions
+node tools/dev/session-archive.js --list
+
+# Search archived sessions for content
+node tools/dev/session-archive.js --search "jsgui3 activation"
+
+# Read an archived session's summary and plan
+node tools/dev/session-archive.js --read 2025-11-14-binding-plugin
+
+# Read multiple sessions at once (single ZIP extraction, more efficient)
+node tools/dev/session-archive.js --read 2025-11-14-binding-plugin 2025-11-15-client-activation --json
+
+# Restore a session from archive to docs/sessions/
+node tools/dev/session-archive.js --extract 2025-11-14-binding-plugin --fix
+
+# Remove a session from the archive permanently
+node tools/dev/session-archive.js --remove 2025-11-14-binding-plugin --fix
+```
+
+**Options:**
+- `--archive` — Archive sessions older than N days
+- `--older-than <days>` — Age threshold for archiving (default: 30)
+- `--list` — List all archived sessions
+- `--search <query>` — Full-text search archived session content
+- `--read <slug> [<slug2> ...]` — Read one or more archived sessions (single extraction)
+- `--extract <slug>` — Restore a session from archive
+- `--remove <slug>` — Remove a session from archive
+- `--fix` — Apply changes (default is dry-run)
+- `--json` — Output as JSON for automation
+- `--limit <number>` — Limit results (default: 20)
+
+**Archive Location:** `docs/sessions/archive/sessions-archive.zip` + `archive-manifest.json`
+
 ## `what-next` — Active Session Summary
 
 `what-next` parses the `SESSIONS_HUB.md` to identify active sessions and summarize the current plan, now with a past/present/future view that surfaces related sessions and next actions.

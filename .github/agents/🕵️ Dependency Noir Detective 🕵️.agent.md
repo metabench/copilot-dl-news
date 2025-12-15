@@ -20,6 +20,18 @@ tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'chan
 - **After finishing work**: Persist 1–3 durable updates via `docs-memory` (Lesson/Pattern/Anti-Pattern) when you learned something reusable.
 - **On docs-memory errors**: Notify the user immediately (tool name + error), suggest a systemic fix (docs/tool UX), and log it in the active session’s `FOLLOW_UPS.md`.
 
+### Memory output (required)
+
+When you consult the memory system (Skills/sessions/lessons/patterns), emit a **very short** status so the user can see what you loaded.
+
+`🧠 Memory pull (for this task) — Skills=<names> | Sessions=<n hits> | Lessons/Patterns=<skimmed> | I/O≈<in>→<out>`
+`Back to the task: <task description>`
+
+(If docs-memory is unavailable)
+
+`🧠 Memory pull failed (for this task) — docs-memory unavailable → fallback md-scan (docs/agi + docs/sessions) | I/O≈<in>→<out>`
+`Back to the task: <task description>`
+
 ## Key questions you answer
 - Who imports this file/symbol?
 - Is this dependency necessary, or incidental?

@@ -5,15 +5,92 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const { spawn, exec } = require('child_process');
+const http = require('http');
 
 let mainWindow;
 let crawlProcess = null;
 let sseConnection = null;
 let newsDb = null;
 
+let telemetryHttpServer = null;
+let telemetryExpressApp = null;
+let telemetryIntegration = null;
+let telemetryJob = null;
+let telemetryCrawlType = null;
+let telemetryIsPaused = false;
+let telemetryLastPhase = null;
+
 const BASE_PATH = path.join(__dirname, '..');
 const DEFAULT_SERVER_PORT = 3099; // Port for the telemetry server
 const DB_PATH = path.join(BASE_PATH, 'data', 'news.db');
+
+function ensureTelemetryServer(port = DEFAULT_SERVER_PORT) {
+  if (telemetryHttpServer && telemetryIntegration && telemetryExpressApp) {
+    return getTelemetryInfo(port);
+  }
+
+  // Express lives in the repo root (Node resolution finds ../node_modules).
+  const express = require('express');
+  const { TelemetryIntegration } = require(path.join(BASE_PATH, 'src', 'crawler', 'telemetry'));
+
+  telemetryExpressApp = express();
+  telemetryIntegration = new TelemetryIntegration({
+    allowOrigin: '*',
+    historyLimit: 1000,
+    heartbeatInterval: 25_000
+  });
+
+  telemetryIntegration.mountSSE(telemetryExpressApp, '/api/crawl-events');
+
+  telemetryExpressApp.get('/api/health', (req, res) => {
+    res.json({
+      ok: true,
+      hasCrawl: Boolean(crawlProcess),
+      jobId: telemetryJob,
+      crawlType: telemetryCrawlType,
+      paused: telemetryIsPaused,
+      clients: telemetryIntegration.getClientCount()
+    });
+  });
+
+  telemetryHttpServer = http.createServer(telemetryExpressApp);
+  telemetryHttpServer.listen(port, '127.0.0.1', () => {
+    console.log(`[CrawlWidget] Telemetry SSE server listening on http://127.0.0.1:${port}`);
+  });
+
+  return getTelemetryInfo(port);
+}
+
+function getTelemetryInfo(port = DEFAULT_SERVER_PORT) {
+  const baseUrl = `http://127.0.0.1:${port}`;
+  return {
+    baseUrl,
+    sseUrl: `${baseUrl}/api/crawl-events`,
+    healthUrl: `${baseUrl}/api/health`
+  };
+}
+
+function shutdownTelemetryServer() {
+  if (telemetryHttpServer) {
+    try {
+      telemetryHttpServer.close();
+    } catch {}
+    telemetryHttpServer = null;
+  }
+
+  if (telemetryIntegration) {
+    try {
+      telemetryIntegration.destroy();
+    } catch {}
+    telemetryIntegration = null;
+  }
+
+  telemetryExpressApp = null;
+  telemetryJob = null;
+  telemetryCrawlType = null;
+  telemetryIsPaused = false;
+  telemetryLastPhase = null;
+}
 
 /**
  * Initialize database connection for news sources
@@ -99,6 +176,9 @@ function createWindow() {
 app.whenReady().then(() => {
   // Initialize database before creating window
   initDatabase();
+
+  // Start telemetry server (Express SSE) so the renderer can use EventSource.
+  ensureTelemetryServer(DEFAULT_SERVER_PORT);
   
   createWindow();
 
@@ -113,6 +193,9 @@ app.on('window-all-closed', function () {
     crawlProcess.kill();
     crawlProcess = null;
   }
+
+  shutdownTelemetryServer();
+
   // Close database connection
   if (newsDb) {
     try { newsDb.close(); } catch {}
@@ -139,6 +222,10 @@ ipcMain.handle('get-crawl-types', async () => {
     { id: 'wikidata', label: 'Wikidata', icon: '📚', description: 'Only ingest gazetteer data from Wikidata' },
     { id: 'geography', label: 'Geography', icon: '🗺️', description: 'Aggregate gazetteer data from Wikidata plus OpenStreetMap' }
   ];
+});
+
+ipcMain.handle('get-telemetry-info', async () => {
+  return { success: true, ...ensureTelemetryServer(DEFAULT_SERVER_PORT) };
 });
 
 /**
@@ -173,7 +260,23 @@ ipcMain.handle('start-crawl', async (event, { crawlType, startUrl, config = {} }
 
     const pid = crawlProcess.pid;
 
-    // Stream stdout to renderer
+    // Telemetry session setup for this crawl
+    ensureTelemetryServer(DEFAULT_SERVER_PORT);
+    telemetryJob = `widget-${pid}-${Date.now()}`;
+    telemetryCrawlType = crawlType || 'basic';
+    telemetryIsPaused = false;
+    telemetryLastPhase = null;
+
+    if (telemetryIntegration?.bridge) {
+      telemetryIntegration.bridge.emitStarted({
+        jobId: telemetryJob,
+        crawlType: telemetryCrawlType,
+        startUrl: startUrl || null,
+        config: config || null
+      }, { jobId: telemetryJob, crawlType: telemetryCrawlType });
+    }
+
+    // Stream stdout to renderer + feed standardized telemetry
     crawlProcess.stdout.on('data', (data) => {
       const output = data.toString();
       if (mainWindow) {
@@ -186,6 +289,30 @@ ipcMain.handle('start-crawl', async (event, { crawlType, startUrl, config = {} }
           if (jsonMatch) {
             const progress = JSON.parse(jsonMatch[0]);
             mainWindow.webContents.send('crawl-progress', progress);
+
+            if (telemetryIntegration?.bridge) {
+              telemetryIntegration.bridge.emitProgress({
+                visited: progress.visited,
+                queued: progress.queued,
+                errors: progress.errors,
+                downloaded: progress.downloaded,
+                articles: progress.articles,
+                skipped: progress.skipped,
+                percentComplete: progress.percentComplete,
+                total: progress.total,
+                currentUrl: progress.currentUrl,
+                currentAction: progress.currentAction,
+                phase: progress.phase,
+                throttled: progress.throttled,
+                throttleReason: progress.throttleReason,
+                throttleDomain: progress.throttleDomain
+              }, { jobId: telemetryJob, crawlType: telemetryCrawlType });
+
+              if (progress.phase && progress.phase !== telemetryLastPhase) {
+                telemetryLastPhase = progress.phase;
+                telemetryIntegration.bridge.emitPhaseChange(progress.phase, { jobId: telemetryJob, crawlType: telemetryCrawlType });
+              }
+            }
             return;
           }
           
@@ -210,6 +337,28 @@ ipcMain.handle('start-crawl', async (event, { crawlType, startUrl, config = {} }
                 currentUrl: currentUrl,
                 currentAction: currentDownloads.length > 0 ? 'downloading' : null
               });
+
+              if (telemetryIntegration?.bridge) {
+                telemetryIntegration.bridge.emitProgress({
+                  visited: progress.visited || 0,
+                  queued: progress.queueSize || 0,
+                  errors: progress.errors || 0,
+                  downloaded: progress.downloaded || 0,
+                  articles: progress.saved || progress.found || 0,
+                  percentComplete: progress.percentComplete,
+                  total: progress.total,
+                  currentUrl,
+                  currentAction: currentDownloads.length > 0 ? 'downloading' : null,
+                  throttled: progress.slowMode || false,
+                  throttleReason: progress.slowModeReason || null,
+                  phase: progress.phase || null
+                }, { jobId: telemetryJob, crawlType: telemetryCrawlType });
+
+                if (progress.phase && progress.phase !== telemetryLastPhase) {
+                  telemetryLastPhase = progress.phase;
+                  telemetryIntegration.bridge.emitPhaseChange(progress.phase, { jobId: telemetryJob, crawlType: telemetryCrawlType });
+                }
+              }
               return;
             } catch (e) {
               // Continue to other formats if JSON parse fails
@@ -222,6 +371,10 @@ ipcMain.handle('start-crawl', async (event, { crawlType, startUrl, config = {} }
             const dataStr = '{' + telemetryMatch[1] + '}';
             const progress = JSON.parse(dataStr);
             mainWindow.webContents.send('crawl-progress', progress);
+
+            if (telemetryIntegration?.bridge) {
+              telemetryIntegration.bridge.emitProgress(progress, { jobId: telemetryJob, crawlType: telemetryCrawlType });
+            }
             return;
           }
           
@@ -242,12 +395,18 @@ ipcMain.handle('start-crawl', async (event, { crawlType, startUrl, config = {} }
           const articles = output.match(/articles?[:\s]+(\d+)/i);
           
           if (visited || queued || downloaded) {
-            mainWindow.webContents.send('crawl-progress', {
+            const progress = {
               visited: visited ? parseInt(visited[1], 10) : undefined,
               queued: queued ? parseInt(queued[1], 10) : undefined,
               errors: errors ? parseInt(errors[1], 10) : undefined,
               articles: articles ? parseInt(articles[1], 10) : (downloaded ? parseInt(downloaded[1], 10) : undefined)
-            });
+            };
+
+            mainWindow.webContents.send('crawl-progress', progress);
+
+            if (telemetryIntegration?.bridge) {
+              telemetryIntegration.bridge.emitProgress(progress, { jobId: telemetryJob, crawlType: telemetryCrawlType });
+            }
             return;
           }
           
@@ -263,10 +422,16 @@ ipcMain.handle('start-crawl', async (event, { crawlType, startUrl, config = {} }
           for (const [action, pattern] of Object.entries(activityPatterns)) {
             const match = output.match(pattern);
             if (match) {
-              mainWindow.webContents.send('crawl-progress', {
+              const progress = {
                 currentAction: action,
                 currentUrl: match[1]?.trim().substring(0, 200)
-              });
+              };
+
+              mainWindow.webContents.send('crawl-progress', progress);
+
+              if (telemetryIntegration?.bridge) {
+                telemetryIntegration.bridge.emitProgress(progress, { jobId: telemetryJob, crawlType: telemetryCrawlType });
+              }
               break;
             }
           }
@@ -285,6 +450,14 @@ ipcMain.handle('start-crawl', async (event, { crawlType, startUrl, config = {} }
 
     crawlProcess.on('close', (code, signal) => {
       crawlProcess = null;
+
+      if (telemetryIntegration?.bridge && telemetryJob) {
+        telemetryIntegration.bridge.emitStopped({
+          reason: signal || (code === 0 ? 'completed' : `exit:${code}`),
+          stats: { code, signal }
+        }, { jobId: telemetryJob, crawlType: telemetryCrawlType });
+      }
+
       if (mainWindow) {
         mainWindow.webContents.send('crawl-stopped', { code, signal });
       }
@@ -314,6 +487,16 @@ ipcMain.handle('toggle-pause', async () => {
   // Send SIGUSR1 to toggle pause (if supported by crawler)
   try {
     crawlProcess.kill('SIGUSR1');
+
+    telemetryIsPaused = !telemetryIsPaused;
+    if (telemetryIntegration?.bridge && telemetryJob) {
+      if (telemetryIsPaused) {
+        telemetryIntegration.bridge.emitPaused({ jobId: telemetryJob, crawlType: telemetryCrawlType });
+      } else {
+        telemetryIntegration.bridge.emitResumed({ jobId: telemetryJob, crawlType: telemetryCrawlType });
+      }
+    }
+
     return { success: true };
   } catch (err) {
     return { success: false, message: err.message };
@@ -329,6 +512,10 @@ ipcMain.handle('stop-crawl', async () => {
   }
 
   try {
+    if (telemetryIntegration?.bridge && telemetryJob) {
+      telemetryIntegration.bridge.emitStopped({ reason: 'user-stop' }, { jobId: telemetryJob, crawlType: telemetryCrawlType });
+    }
+
     crawlProcess.kill('SIGTERM');
     // Force kill after 3 seconds if still running
     setTimeout(() => {

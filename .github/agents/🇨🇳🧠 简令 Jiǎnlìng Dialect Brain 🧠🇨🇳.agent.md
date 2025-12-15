@@ -1,4 +1,3 @@
-```chatagent
 ---
 description: 'Bilingual AGI agent that thinks and works in terse Chinese notation (简令) for maximum information density, communicates with users in English, and enables other agents to leverage Chinese-optimized workflows'
 tools: ['edit', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'fetch', 'githubRepo', 'extensions', 'todos', 'runTests', 'runSubagent']
@@ -565,4 +564,3 @@ This SVG demonstrates the 82% character reduction and can be shown to other agen
 | 1.0 | 2025-12-02 | Initial specification, 80 root characters |
 | 1.1 | 2025-12-02 | Added existing infrastructure references |
 
-```

@@ -108,6 +108,63 @@ function createLogControls(jsgui, { StringControl }) {
       }
     }
 
+    activate() {
+      if (super.activate) super.activate();
+      if (!this.dom.el) return;
+      
+      this.dom.el.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        this._showContextMenu(e.clientX, e.clientY);
+      });
+    }
+
+    _showContextMenu(x, y) {
+      // Remove any existing menus
+      document.querySelectorAll('.zs-context-menu').forEach(el => el.remove());
+      
+      // Select all text
+      const range = document.createRange();
+      range.selectNodeContents(this.dom.el);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      
+      // Create menu
+      const menu = document.createElement('div');
+      menu.className = 'zs-context-menu';
+      menu.style.left = `${x}px`;
+      menu.style.top = `${y}px`;
+      
+      const copyItem = document.createElement('div');
+      copyItem.className = 'zs-context-menu__item';
+      copyItem.innerHTML = '<span class="zs-context-menu__item-icon">📋</span> Copy';
+      
+      copyItem.addEventListener('click', () => {
+        const text = this.dom.el.innerText;
+        navigator.clipboard.writeText(text).then(() => {
+          // Optional: visual feedback
+        });
+        menu.remove();
+      });
+      
+      menu.appendChild(copyItem);
+      document.body.appendChild(menu);
+      
+      // Close on click elsewhere
+      const closeHandler = (e) => {
+        if (!menu.contains(e.target)) {
+          menu.remove();
+          document.removeEventListener('click', closeHandler);
+          document.removeEventListener('contextmenu', closeHandler);
+        }
+      };
+      
+      setTimeout(() => {
+        document.addEventListener('click', closeHandler);
+        document.addEventListener('contextmenu', closeHandler);
+      }, 0);
+    }
+
     clear() {
       while (this.content && this.content.length > 0) {
         this.content.pop();

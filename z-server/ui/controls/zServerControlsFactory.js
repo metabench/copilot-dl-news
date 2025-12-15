@@ -33,7 +33,7 @@ function createZServerControls(jsgui) {
   const { LogEntryControl, LogViewerControl } = createLogControls(jsgui, { StringControl });
   const ServerLogWindowControl = createServerLogWindowControl(jsgui, { LogViewerControl });
   const ControlButtonControl = createControlButtonControl(jsgui, { StringControl });
-  const ControlPanelControl = createControlPanelControl(jsgui, { ControlButtonControl });
+  const ControlPanelControl = createControlPanelControl(jsgui, { ControlButtonControl, StringControl });
   const ScanningIndicatorControl = createScanningIndicatorControl(jsgui, { StringControl });
   const SidebarControl = createSidebarControl(jsgui, { ServerListControl, StringControl });
   const ContentAreaControl = createContentAreaControl(jsgui, {
@@ -1187,6 +1187,43 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, var(--zs-gold), var(--zs-gold-dim));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* CONTEXT MENU                                                                */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.zs-context-menu {
+  position: fixed;
+  background: var(--zs-bg-elevated);
+  border: 1px solid var(--zs-gold-dim);
+  border-radius: 4px;
+  padding: 4px 0;
+  min-width: 120px;
+  box-shadow: var(--zs-shadow-lg);
+  z-index: 1000;
+  animation: zs-fade-in 0.1s ease-out;
+}
+
+.zs-context-menu__item {
+  padding: 8px 16px;
+  font-family: var(--zs-font-body);
+  font-size: 12px;
+  color: var(--zs-text);
+  cursor: pointer;
+  transition: background 0.1s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zs-context-menu__item:hover {
+  background: rgba(201, 162, 39, 0.15);
+  color: var(--zs-gold);
+}
+
+.zs-context-menu__item-icon {
+  font-size: 14px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */

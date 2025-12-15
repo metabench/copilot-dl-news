@@ -429,9 +429,20 @@ app.get("/health", (req, res) => {
 
 // Start server
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`🌲 Decision Tree Viewer running at http://localhost:${PORT}`);
-  });
+  const args = process.argv.slice(2);
+  
+  // Handle --check flag for AI agent verification
+  if (args.includes("--check")) {
+    const { runStartupCheck } = require("../utils/serverStartupCheck");
+    runStartupCheck(__filename, PORT, {
+      serverName: "Decision Tree Viewer",
+      healthEndpoint: "/health"
+    });
+  } else {
+    app.listen(PORT, () => {
+      console.log(`🌲 Decision Tree Viewer running at http://localhost:${PORT}`);
+    });
+  }
 }
 
 module.exports = { app, renderPage, createContext };

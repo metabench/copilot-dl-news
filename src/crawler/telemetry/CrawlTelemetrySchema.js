@@ -130,9 +130,16 @@ function createTelemetryEvent(type, data = {}, options = {}) {
  * @param {number} stats.visited - URLs visited
  * @param {number} stats.queued - URLs in queue
  * @param {number} stats.errors - Error count
+ * @param {number} [stats.total] - Optional known total count for determinate progress
  * @param {number} [stats.downloaded] - Successfully downloaded count
  * @param {number} [stats.articles] - Articles found
  * @param {number} [stats.skipped] - Skipped URLs
+ * @param {string} [stats.currentUrl] - Optional current URL being processed (UI hint)
+ * @param {string} [stats.currentAction] - Optional current action (UI hint)
+ * @param {string} [stats.phase] - Optional phase hint (UI hint)
+ * @param {boolean} [stats.throttled] - Optional throttle flag (UI hint)
+ * @param {string} [stats.throttleReason] - Optional throttle reason (UI hint)
+ * @param {string} [stats.throttleDomain] - Optional throttle domain (UI hint)
  * @param {Object} [options] - Event options
  * @returns {Object} Progress event payload
  */
@@ -141,6 +148,7 @@ function createProgressEvent(stats, options = {}) {
     visited: stats.visited ?? 0,
     queued: stats.queued ?? 0,
     errors: stats.errors ?? 0,
+    total: stats.total ?? null,
     downloaded: stats.downloaded ?? stats.visited ?? 0,
     articles: stats.articles ?? 0,
     skipped: stats.skipped ?? 0,
@@ -149,7 +157,15 @@ function createProgressEvent(stats, options = {}) {
     bytesPerSec: stats.bytesPerSec ?? null,
     // Completion estimate (if available)
     estimatedRemaining: stats.estimatedRemaining ?? null,
-    percentComplete: stats.percentComplete ?? null
+    percentComplete: stats.percentComplete ?? null,
+
+    // Optional UI hints (snapshot fields)
+    currentUrl: stats.currentUrl ?? null,
+    currentAction: stats.currentAction ?? null,
+    phase: stats.phase ?? null,
+    throttled: stats.throttled ?? null,
+    throttleReason: stats.throttleReason ?? null,
+    throttleDomain: stats.throttleDomain ?? null
   };
 
   return createTelemetryEvent(CRAWL_EVENT_TYPES.PROGRESS, data, {

@@ -23,9 +23,46 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
       this._scanLastFile = "";
       
       this._api = spec.api || null;
+
+      this._autoRebuildUiClient = false;
+
+      this._debug = false;
       
       if (!spec.el) {
         this.compose();
+      }
+    }
+
+    _loadDebugSetting() {
+      try {
+        const raw = globalThis.localStorage && globalThis.localStorage.getItem("zserver:debug");
+        return raw === "1" || raw === "true";
+      } catch {
+        return false;
+      }
+    }
+
+    _debugLog(...args) {
+      if (this._debug !== true) return;
+      // eslint-disable-next-line no-console
+      console.log(...args);
+    }
+
+    _loadAutoRebuildUiClientSetting() {
+      try {
+        const raw = globalThis.localStorage && globalThis.localStorage.getItem("zserver:autoRebuildUiClient");
+        return raw === "1" || raw === "true";
+      } catch {
+        return false;
+      }
+    }
+
+    _saveAutoRebuildUiClientSetting(enabled) {
+      try {
+        if (!globalThis.localStorage) return;
+        globalThis.localStorage.setItem("zserver:autoRebuildUiClient", enabled ? "1" : "0");
+      } catch {
+        // Best-effort only.
       }
     }
 
@@ -50,7 +87,10 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
         onStart: () => this._startServer(),
         onStop: () => this._stopServer(),
         onUrlDetected: (filePath, url) => this._setServerUrl(filePath, url),
-        onOpenUrl: (url) => this._openInBrowser(url)
+        onOpenUrl: (url) => this._openInBrowser(url),
+        autoRebuildUiClient: this._autoRebuildUiClient,
+        onRebuildUiClient: () => this._rebuildUiClient(),
+        onToggleAutoRebuildUiClient: (enabled) => this._setAutoRebuildUiClient(enabled)
       });
       container.add(this._contentArea);
       
@@ -62,6 +102,10 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
         console.error("No electronAPI provided");
         return;
       }
+
+      this._debug = this._loadDebugSetting();
+      this._autoRebuildUiClient = this._loadAutoRebuildUiClientSetting();
+      this._contentArea.setAutoRebuildUiClient(this._autoRebuildUiClient);
       
       try {
         this._scanTotal = 0;
@@ -69,10 +113,10 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
         this._scanLastFile = "";
 
         this._contentArea.setScanning(true);
-        console.log("[ZServerApp] Starting scan...");
+        this._debugLog("[ZServerApp] Starting scan...");
         
         this._api.onScanProgress((progress) => {
-          console.log("[ZServerApp] Scan progress:", progress);
+          this._debugLog("[ZServerApp] Scan progress:", progress);
           if (progress.type === 'count-start') {
             this._scanTotal = 0;
             this._scanCurrent = 0;
@@ -100,7 +144,7 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
         });
         
         this._servers = await this._api.scanServers();
-        console.log("[ZServerApp] Scan complete, found servers:", this._servers.length, this._servers);
+        this._debugLog("[ZServerApp] Scan complete, found servers:", this._servers.length, this._servers);
         
         for (const server of this._servers) {
           if (server.running && server.detectedPort) {
@@ -112,14 +156,14 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
         }
         
         this._sidebar.setServers(this._servers);
-        console.log("[ZServerApp] Servers set on sidebar");
+        this._debugLog("[ZServerApp] Servers set on sidebar");
         
         this._api.onServerLog(({ filePath, type, data }) => {
           this._addLog(filePath, type, data);
         });
         
-        this._api.onServerStatusChange(({ filePath, running }) => {
-          this._updateServerStatus(filePath, running);
+        this._api.onServerStatusChange((payload) => {
+          this._updateServerStatus(payload);
         });
       } catch (error) {
         console.error("Failed to scan servers:", error);
@@ -140,6 +184,45 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
         this._contentArea.setRunningUrl(server.runningUrl);
         this._sidebar.setServerRunningUrl(server.file, server.runningUrl);
       }
+
+      this._refreshUiClientStatusForSelectedServer();
+    }
+
+    async _refreshUiClientStatusForSelectedServer() {
+      try {
+        if (!this._api || !this._selectedServer) return;
+        if (this._selectedServer.hasHtmlInterface !== true) {
+          this._contentArea.setUiClientStatus(null);
+          return;
+        }
+
+        const result = await this._api.getUiClientStatus();
+        if (result && result.success && result.status) {
+          this._contentArea.setUiClientStatus(result.status);
+        }
+      } catch (err) {
+        // Non-fatal: keep UI responsive.
+        this._addLog(this._selectedServer?.file || "system", "stderr", `[ui-client] Status check failed: ${err.message}`);
+      }
+    }
+
+    _setAutoRebuildUiClient(enabled) {
+      this._autoRebuildUiClient = enabled === true;
+      this._saveAutoRebuildUiClientSetting(this._autoRebuildUiClient);
+      this._contentArea.setAutoRebuildUiClient(this._autoRebuildUiClient);
+    }
+
+    async _rebuildUiClient() {
+      if (!this._selectedServer || !this._api) return;
+      if (this._selectedServer.hasHtmlInterface !== true) return;
+
+      this._addLog(this._selectedServer.file, "system", "[ui-client] Rebuild requested...");
+      const result = await this._api.rebuildUiClient({ force: true, logToFilePath: this._selectedServer.file });
+      if (!result || result.success !== true) {
+        this._addLog(this._selectedServer.file, "stderr", `[ui-client] Rebuild failed: ${result?.message || 'unknown error'}`);
+        return;
+      }
+      await this._refreshUiClientStatusForSelectedServer();
     }
 
     _addLog(filePath, type, data) {
@@ -176,15 +259,13 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
     }
 
     _addLogLine(filePath, type, data) {
-      console.log("[ZServerApp] _addLog called:", { filePath, type, dataLen: data?.length });
-
       if (!this._logs.has(filePath)) {
         this._logs.set(filePath, []);
       }
       this._logs.get(filePath).push({ type, data });
 
       const isSelectedServer = this._selectedServer && this._selectedServer.file === filePath;
-      console.log("[ZServerApp] _addLog isSelectedServer:", isSelectedServer,
+      this._debugLog("[ZServerApp] _addLog isSelectedServer:", isSelectedServer,
         "selected:", this._selectedServer?.file,
         "incoming:", filePath);
 
@@ -220,16 +301,57 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
       }
     }
 
-    _updateServerStatus(filePath, running) {
+    _updateServerStatus(updateOrFilePath, runningLegacy) {
+      const update = (updateOrFilePath && typeof updateOrFilePath === "object")
+        ? updateOrFilePath
+        : { filePath: updateOrFilePath, running: runningLegacy };
+
+      const filePath = update.filePath;
+      const running = update.running === true;
+      const pid = Number.isFinite(update.pid) ? update.pid : null;
+      const port = Number.isFinite(update.port) ? update.port : null;
+      const url = typeof update.url === "string" && update.url.trim() ? update.url.trim() : null;
+
       const server = this._servers.find(s => s.file === filePath);
-      if (server) {
-        server.running = running;
-        if (!running) server.pid = null;
-        
-        this._sidebar.updateServerStatus(filePath, running);
-        
+      if (!server) return;
+
+      const wasRunning = server.running === true;
+      const prevPid = server.pid || null;
+      const prevUrl = server.runningUrl || null;
+
+      server.running = running;
+
+      if (running) {
+        if (pid) {
+          server.pid = pid;
+        }
+
+        const nextUrl = url || (port ? `http://localhost:${port}` : null);
+        if (nextUrl) {
+          server.runningUrl = nextUrl;
+          this._sidebar.setServerRunningUrl(filePath, nextUrl);
+          if (this._selectedServer && this._selectedServer.file === filePath) {
+            this._contentArea.setRunningUrl(nextUrl);
+          }
+        }
+
+        if (wasRunning && prevPid && pid && pid !== prevPid) {
+            this._addLog(filePath, "system", `Restart detected (PID changed: ${prevPid} → ${pid})`);
+        }
+      } else {
+        server.pid = null;
+        server.runningUrl = null;
+      }
+
+      this._sidebar.updateServerStatus(filePath, running);
+      if (this._selectedServer && this._selectedServer.file === filePath) {
+        this._contentArea.setServerRunning(running);
+      }
+
+      if (prevUrl && !running) {
+        // Force the selected view to drop any stale URL if we didn't have a direct URL update.
         if (this._selectedServer && this._selectedServer.file === filePath) {
-          this._contentArea.setServerRunning(running);
+          this._contentArea.setRunningUrl(null);
         }
       }
     }
@@ -239,7 +361,11 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
       
       this._addLog(this._selectedServer.file, "system", "Starting server...");
       
-      const result = await this._api.startServer(this._selectedServer.file);
+      const result = await this._api.startServer(this._selectedServer.file, {
+        isUiServer: this._selectedServer.hasHtmlInterface === true,
+        ensureUiClientBundle: this._autoRebuildUiClient === true,
+        logToFilePath: this._selectedServer.file
+      });
       
       if (result.success) {
         this._selectedServer.running = true;

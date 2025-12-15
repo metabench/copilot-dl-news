@@ -1,7 +1,7 @@
 ---
 description: 'Self-improving AI research agent for jsgui3 mastery—discovering, documenting, and continuously refining both knowledge and cognitive processes'
 
-tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'runSubagent']
+tools: ['execute/testFailure', 'execute/getTerminalOutput', 'execute/runTask', 'execute/createAndRunTask', 'execute/runInTerminal', 'execute/runTests', 'read/problems', 'read/readFile', 'read/terminalSelection', 'read/terminalLastCommand', 'read/getTaskOutput', 'edit', 'search', 'web', 'docs-memory/*', 'playwright/*', 'agent', 'todo']
 ---
 
 # 🧠 jsgui3 Research Singularity 🧠

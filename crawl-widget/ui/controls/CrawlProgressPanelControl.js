@@ -147,16 +147,20 @@ function createCrawlProgressPanelControl(jsgui, ProgressBarControl = createProgr
         };
       }
 
-      let progress = 0;
-      if (percentComplete != null) {
-        progress = percentComplete / 100;
-      } else if (total > 0) {
-        progress = visited / total;
-      } else if (visited > 0 && queued >= 0) {
-        progress = visited / (visited + queued);
-      }
+      // Prefer determinate bars only when we have a reliable total or explicit percent.
+      // Otherwise show an indeterminate bar (stats still show counts).
+      const hasDeterministicTotal = typeof total === "number" && Number.isFinite(total) && total > 0;
+      const hasPercent = typeof percentComplete === "number" && Number.isFinite(percentComplete);
 
-      this._progressBar.setValue(Math.min(1, progress));
+      if (hasPercent || hasDeterministicTotal) {
+        this._progressBar.setIndeterminate(false);
+        const progress = hasPercent
+          ? percentComplete / 100
+          : visited / total;
+        this._progressBar.setValue(Math.min(1, Math.max(0, progress)));
+      } else {
+        this._progressBar.setIndeterminate(true);
+      }
 
       if (phase) {
         this._updatePhaseIndicators(phase);

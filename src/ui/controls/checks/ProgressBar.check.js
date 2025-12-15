@@ -22,6 +22,7 @@ const FIXTURES = {
   percentage: { value: 0.33, showPercentage: true },
   compact: { value: 0.6, variant: "compact" },
   striped: { value: 0.8, variant: "striped" },
+  indeterminate: { value: 0, indeterminate: true },
   emerald: { value: 0.5, color: "emerald" },
   gold: { value: 0.5, color: "gold" },
   ruby: { value: 0.5, color: "ruby" },
@@ -94,6 +95,11 @@ function main() {
   testCase("striped", FIXTURES.striped, {
     "variant": "progress-bar--striped"
   });
+
+  // Indeterminate
+  testCase("indeterminate", FIXTURES.indeterminate, {
+    "variant": "progress-bar--indeterminate"
+  });
   
   // Colors
   testCase("emerald", FIXTURES.emerald, { "color": "progress-bar--emerald" });
@@ -114,6 +120,9 @@ function main() {
   // Verify CSS styles export
   if (!PROGRESS_BAR_STYLES.includes(".progress-bar")) {
     throw new Error("PROGRESS_BAR_STYLES export is missing expected CSS");
+  }
+  if (!PROGRESS_BAR_STYLES.includes(".progress-bar--indeterminate")) {
+    throw new Error("PROGRESS_BAR_STYLES export is missing indeterminate styles");
   }
   console.log("\n✓ PROGRESS_BAR_STYLES export contains expected CSS");
   

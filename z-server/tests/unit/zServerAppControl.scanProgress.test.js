@@ -56,6 +56,9 @@ class ContentAreaControlStub {
     this._calls = spec._calls;
   }
 
+  setAutoRebuildUiClient() {}
+  setUiClientStatus() {}
+
   setScanning(isScanning) {
     this._calls.push(["content.setScanning", isScanning]);
   }
@@ -82,8 +85,13 @@ class ContentAreaControlStub {
 
   setSelectedServer() {}
   setLogs() {}
-  setServerRunning() {}
-  setRunningUrl() {}
+  setServerRunning(running) {
+    this._calls.push(["content.setServerRunning", running]);
+  }
+
+  setRunningUrl(url) {
+    this._calls.push(["content.setRunningUrl", url]);
+  }
 
   activate() {}
 }
@@ -136,5 +144,72 @@ describe("ZServerAppControl scan-progress mapping", () => {
 
     // Scanning indicator should end hidden (finally block)
     expect(calls[calls.length - 1]).toEqual(["content.setScanning", false]);
+  });
+});
+
+describe("ZServerAppControl server-status-change mapping", () => {
+  test("applies pid/port/url updates and reflects restarts", async () => {
+    const calls = [];
+    const jsgui = createStubJsgui();
+    const ZServerAppControl = createZServerAppControl(jsgui, {
+      TitleBarControl: TitleBarControlStub,
+      SidebarControl: class extends SidebarControlStub {
+        constructor(spec = {}) {
+          super({ ...spec, _calls: calls });
+        }
+      },
+      ContentAreaControl: class extends ContentAreaControlStub {
+        constructor(spec = {}) {
+          super({ ...spec, _calls: calls });
+        }
+      }
+    });
+
+    let statusHandler = null;
+
+    const serverFile = "C:\\repo\\src\\ui\\server\\dataExplorerServer.js";
+
+    const api = {
+      onScanProgress: () => {},
+      scanServers: async () => {
+        return [
+          {
+            file: serverFile,
+            relativeFile: "src/ui/server/dataExplorerServer.js",
+            running: false,
+            pid: null,
+            detectedPort: 4600,
+            metadata: { name: "Data Explorer", defaultPort: 4600 },
+            hasHtmlInterface: true
+          }
+        ];
+      },
+      onServerLog: () => {},
+      onServerStatusChange: (cb) => {
+        statusHandler = cb;
+      }
+    };
+
+    const ctrl = new ZServerAppControl({ context: {}, api });
+    await ctrl.init();
+
+    // Select the server so ContentArea updates fire.
+    ctrl._selectServer(ctrl._servers[0]);
+
+    statusHandler({ filePath: serverFile, running: true, pid: 111, port: 4600, url: "http://127.0.0.1:4600" });
+
+    expect(calls).toContainEqual(["sidebar.updateServerStatus", serverFile, true]);
+    expect(calls).toContainEqual(["sidebar.setServerRunningUrl", serverFile, "http://127.0.0.1:4600"]);
+    expect(calls).toContainEqual(["content.setServerRunning", true]);
+    expect(calls).toContainEqual(["content.setRunningUrl", "http://127.0.0.1:4600"]);
+
+    // Restart: PID changes, still running.
+    statusHandler({ filePath: serverFile, running: true, pid: 222, port: 4600 });
+    expect(calls).toContainEqual(["sidebar.updateServerStatus", serverFile, true]);
+
+    // Stop should reflect running=false in the UI.
+    statusHandler({ filePath: serverFile, running: false });
+    expect(calls).toContainEqual(["sidebar.updateServerStatus", serverFile, false]);
+    expect(calls).toContainEqual(["content.setServerRunning", false]);
   });
 });

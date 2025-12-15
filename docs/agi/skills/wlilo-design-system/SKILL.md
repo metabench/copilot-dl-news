@@ -37,7 +37,8 @@ Out of scope:
    - `docs/agi/skills/svg-collisions/SKILL.md`
 
 Then emit a 1–2 line summary so the user can see what you loaded:
-- `🧠 MEMORY — Skills=wlilo-design-system, svg-theme-system | Sessions=<n> hits | Guides=WLILO_STYLE_GUIDE`
+- `🧠 Memory pull (for this task) — Skills=wlilo-design-system, svg-theme-system | Sessions=<n> hits | Guides=WLILO_STYLE_GUIDE | I/O≈<in>→<out>`
+- `Back to the task: <task description>`
 
 ### 1) Use a small token schema (don’t freestyle colors)
 

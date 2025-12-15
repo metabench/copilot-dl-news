@@ -2182,6 +2182,8 @@ class EverythingControl extends jsgui.Control {
 
 ### ❌ 7. Interactive Components as Plain JS/CSS (Context Menu Case Study)
 
+> **See also**: [docs/agi/skills/jsgui3-context-menu-patterns/SKILL.md](../../agi/skills/jsgui3-context-menu-patterns/SKILL.md) for the complete, validated pattern.
+
 **Bad**: Building interactive components (context menus, tooltips, modals) as plain JavaScript functions with CSS.
 
 ```javascript

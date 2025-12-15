@@ -22,6 +22,7 @@ _Last updated: 2025-12-13_
 - [Session Bootstrap Workflow](workflows/session_bootstrap_workflow.md) - Step-by-step guide for creating session folders, plans, and hub links.
 - [Tier 1 Tooling Loop](workflows/tier1_tooling_loop.md) - js-scan/js-edit discovery, dry-run, apply, and verification loop for JS changes.
 - [Emoji Search in Markdown (Windows-safe)](workflows/emoji_search_markdown.md) - Find emojis in docs without relying on literal emoji input.
+- [UI Inspection Workflow](workflows/ui-inspection-workflow.md) - Autonomous visual (MCP/Playwright) + numeric (Puppeteer) UI inspection loop.
 
 ## Standards
 - [Commit & PR Standards](standards/commit_pr_standards.md)
@@ -96,6 +97,7 @@ These guides are **authoritative sources** for their domains. When working in th
 Architecture and system design documents for proposed or implemented features.
 
 - [NPM Link Development Nexus](designs/NPM_LINK_DEVELOPMENT_NEXUS.md) - Using npm link for cross-module AI agent development across jsgui3 stack.
+- [Crawler Improvement Strategies](designs/CRAWLER_IMPROVEMENT_STRATEGIES.md) - Deep research on 7 improvement opportunities with lab experiment proposals (Puppeteer Teacher, Confidence Scoring, Rate Learning, SkeletonHash integration)
 
 ## Reference
 - [Adapters Overview](reference/adapters_overview.md)
@@ -121,6 +123,7 @@ Architecture and system design documents for proposed or implemented features.
 - [Plan Proposals](plans/proposals/README.md) - Pending proposals awaiting Central Planner review.
 
 ## Reports
+- [Crawler State Report (Dec 15, 2025)](reports/2025-12-15-CRAWLER_STATE_REPORT.md) - Comprehensive overview of the crawler subsystem: 259 files, 4-phase roadmap, Phase 1 complete, 7+ improvement opportunities identified.
 - [20-Session Retrospective (Nov 29, 2025)](reports/20-SESSION-RETROSPECTIVE-2025-11-29.md) - **REQUIRED READING**: Analysis of 20 recent sessions with patterns, solutions, and agent instruction improvements. Covers UI hydration fixes, tooling enhancements, and workflow violations.
 
 ## Legacy Collections

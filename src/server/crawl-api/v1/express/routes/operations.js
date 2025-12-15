@@ -96,8 +96,114 @@ function registerOperationRoutes(app, context = {}) {
   } = context;
 
   const service = createService(context);
+  const inProcessJobRegistry = context.inProcessJobRegistry && typeof context.inProcessJobRegistry.list === 'function'
+    ? context.inProcessJobRegistry
+    : null;
   const router = express.Router();
   router.use(express.json({ limit: '1mb' }));
+
+  if (inProcessJobRegistry) {
+    router.get(
+      '/jobs',
+      asyncHandler(async (req, res) => {
+        res.json({
+          status: 'ok',
+          items: inProcessJobRegistry.list()
+        });
+      })
+    );
+
+    router.get(
+      '/jobs/:jobId',
+      asyncHandler(async (req, res) => {
+        const job = inProcessJobRegistry.get(req.params.jobId);
+        if (!job) {
+          res.status(404).json({
+            status: 'error',
+            error: {
+              code: 'NOT_FOUND',
+              message: 'Job not found.'
+            }
+          });
+          return;
+        }
+        res.json({ status: 'ok', job });
+      })
+    );
+
+    router.post(
+      '/jobs/:jobId/:action',
+      asyncHandler(async (req, res) => {
+        const { jobId, action } = req.params;
+
+        if (action !== 'pause' && action !== 'resume' && action !== 'stop') {
+          res.status(400).json({
+            status: 'error',
+            error: {
+              code: 'BAD_REQUEST',
+              message: 'Unknown job action.'
+            }
+          });
+          return;
+        }
+
+        const ok = action === 'pause'
+          ? await inProcessJobRegistry.pause(jobId)
+          : action === 'resume'
+            ? await inProcessJobRegistry.resume(jobId)
+            : await inProcessJobRegistry.stop(jobId);
+
+        if (!ok) {
+          res.status(404).json({
+            status: 'error',
+            error: {
+              code: 'NOT_FOUND',
+              message: 'Job not found.'
+            }
+          });
+          return;
+        }
+
+        res.json({ status: 'ok' });
+      })
+    );
+
+    router.post(
+      '/operations/:operationName/start',
+      asyncHandler(async (req, res) => {
+        const { operationName } = req.params;
+        const { startUrl, overrides } = req.body || {};
+
+        if (!operationName) {
+          const error = new Error('operationName path parameter is required.');
+          error.statusCode = 400;
+          error.code = 'BAD_REQUEST';
+          throw error;
+        }
+        if (!startUrl) {
+          const error = new Error('startUrl is required to start an operation.');
+          error.statusCode = 400;
+          error.code = 'BAD_REQUEST';
+          throw error;
+        }
+
+        const normalizedOverrides = ensurePlainObject(overrides, 'overrides') || {};
+        const { jobId, job } = inProcessJobRegistry.startOperation({
+          logger,
+          operationName,
+          startUrl,
+          overrides: normalizedOverrides
+        });
+
+        res.json({
+          status: 'ok',
+          mode: 'operation-job',
+          jobId,
+          job
+        });
+      })
+    );
+  }
 
   router.get(
     '/availability',

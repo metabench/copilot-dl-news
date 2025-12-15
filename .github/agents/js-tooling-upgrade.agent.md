@@ -1,5 +1,5 @@
 ---
-name: js_tooling_upgrade_agent_draft
+name: js-tooling-upgrade
 description: Designs and delivers upgrades to js-scan/js-edit so agents can analyze and edit JavaScript faster with stronger guardrails; draft requires human promotion
 target: github-copilot
 tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'microsoft/playwright-mcp/*', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'ms-python.python/getPythonEnvironmentInfo', 'ms-python.python/getPythonExecutableCommand', 'ms-python.python/installPythonPackage', 'ms-python.python/configurePythonEnvironment', 'extensions', 'todos', 'runSubagent', 'runTests']

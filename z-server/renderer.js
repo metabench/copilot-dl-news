@@ -39677,6 +39677,48 @@ body .overlay {
               this.dom.el.scrollTop = this.dom.el.scrollHeight;
             }
           }
+          activate() {
+            if (super.activate) super.activate();
+            if (!this.dom.el) return;
+            this.dom.el.addEventListener("contextmenu", (e) => {
+              e.preventDefault();
+              this._showContextMenu(e.clientX, e.clientY);
+            });
+          }
+          _showContextMenu(x, y) {
+            document.querySelectorAll(".zs-context-menu").forEach((el) => el.remove());
+            const range = document.createRange();
+            range.selectNodeContents(this.dom.el);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            const menu = document.createElement("div");
+            menu.className = "zs-context-menu";
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+            const copyItem = document.createElement("div");
+            copyItem.className = "zs-context-menu__item";
+            copyItem.innerHTML = '<span class="zs-context-menu__item-icon">\u{1F4CB}</span> Copy';
+            copyItem.addEventListener("click", () => {
+              const text = this.dom.el.innerText;
+              navigator.clipboard.writeText(text).then(() => {
+              });
+              menu.remove();
+            });
+            menu.appendChild(copyItem);
+            document.body.appendChild(menu);
+            const closeHandler = (e) => {
+              if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener("click", closeHandler);
+                document.removeEventListener("contextmenu", closeHandler);
+              }
+            };
+            setTimeout(() => {
+              document.addEventListener("click", closeHandler);
+              document.addEventListener("contextmenu", closeHandler);
+            }, 0);
+          }
           clear() {
             while (this.content && this.content.length > 0) {
               this.content.pop();
@@ -39985,7 +40027,7 @@ body .overlay {
   var require_controlPanelControl = __commonJS({
     "ui/controls/controlPanelControl.js"(exports, module) {
       "use strict";
-      function createControlPanelControl(jsgui2, { ControlButtonControl }) {
+      function createControlPanelControl(jsgui2, { ControlButtonControl, StringControl }) {
         class ControlPanelControl extends jsgui2.Control {
           constructor(spec = {}) {
             const normalized = {
@@ -39999,6 +40041,11 @@ body .overlay {
             this._serverRunning = spec.serverRunning || false;
             this._onStart = spec.onStart || null;
             this._onStop = spec.onStop || null;
+            this._isUiServer = spec.isUiServer === true;
+            this._uiClientStatus = spec.uiClientStatus || null;
+            this._onRebuildUiClient = spec.onRebuildUiClient || null;
+            this._autoRebuildUiClient = spec.autoRebuildUiClient === true;
+            this._onToggleAutoRebuildUiClient = spec.onToggleAutoRebuildUiClient || null;
             if (!spec.el) {
               this.compose();
             }
@@ -40022,6 +40069,59 @@ body .overlay {
               onClick: () => this._onStop && this._onStop()
             });
             this.add(this._stopBtn);
+            this._rebuildUiBtn = new ControlButtonControl({
+              context: ctx,
+              label: "\u{1F528} Rebuild UI",
+              variant: "rebuild",
+              disabled: true,
+              onClick: () => this._onRebuildUiClient && this._onRebuildUiClient()
+            });
+            this.add(this._rebuildUiBtn);
+            this._autoRebuildWrap = new jsgui2.div({ context: ctx, class: "zs-autorebuild zs-control-panel__autorebuild" });
+            this._autoRebuildLabel = new jsgui2.Control({ context: ctx, tagName: "label", class: "zs-autorebuild__label" });
+            this._autoRebuildCheckbox = new jsgui2.Control({ context: ctx, tagName: "input", class: "zs-autorebuild__checkbox" });
+            this._autoRebuildCheckbox.dom.attributes.type = "checkbox";
+            if (this._autoRebuildUiClient) {
+              this._autoRebuildCheckbox.dom.attributes.checked = "checked";
+            }
+            this._autoRebuildText = new jsgui2.span({ context: ctx, class: "zs-autorebuild__text" });
+            this._autoRebuildText.add(new StringControl({ context: ctx, text: "Auto rebuild UI on start" }));
+            this._autoRebuildLabel.add(this._autoRebuildCheckbox);
+            this._autoRebuildLabel.add(this._autoRebuildText);
+            this._autoRebuildWrap.add(this._autoRebuildLabel);
+            this.add(this._autoRebuildWrap);
+            this._syncUiControls();
+          }
+          _syncUiControls() {
+            const isUi = this._isUiServer === true;
+            if (this._rebuildUiBtn) {
+              if (isUi) {
+                this._rebuildUiBtn.remove_class("zs-hidden");
+              } else {
+                this._rebuildUiBtn.add_class("zs-hidden");
+              }
+            }
+            if (this._autoRebuildWrap) {
+              if (isUi) {
+                this._autoRebuildWrap.remove_class("zs-hidden");
+              } else {
+                this._autoRebuildWrap.add_class("zs-hidden");
+              }
+            }
+            this._syncUiClientStatus();
+          }
+          _syncUiClientStatus() {
+            if (!this._rebuildUiBtn) return;
+            if (!this._isUiServer) {
+              this._rebuildUiBtn.setDisabled(true);
+              return;
+            }
+            const status = this._uiClientStatus;
+            if (!status || typeof status !== "object") {
+              this._rebuildUiBtn.setDisabled(true);
+              return;
+            }
+            this._rebuildUiBtn.setDisabled(status.needsBuild !== true);
           }
           _syncState() {
             if (this._visible) {
@@ -40046,9 +40146,56 @@ body .overlay {
             this._startBtn.setDisabled(running);
             this._stopBtn.setDisabled(!running);
           }
+          setUiServer(isUiServer) {
+            this._isUiServer = isUiServer === true;
+            this._syncUiControls();
+            if (this.dom.el) {
+              const rebuildBtn = this.dom.el.querySelector(".zs-btn--rebuild");
+              const wrap = this.dom.el.querySelector(".zs-control-panel__autorebuild");
+              if (rebuildBtn) {
+                rebuildBtn.classList.toggle("zs-hidden", !this._isUiServer);
+              }
+              if (wrap) {
+                wrap.classList.toggle("zs-hidden", !this._isUiServer);
+              }
+            }
+          }
+          setUiClientStatus(status) {
+            this._uiClientStatus = status;
+            this._syncUiClientStatus();
+          }
+          setAutoRebuildUiClient(enabled) {
+            this._autoRebuildUiClient = enabled === true;
+            if (this._autoRebuildCheckbox) {
+              if (this._autoRebuildUiClient) {
+                this._autoRebuildCheckbox.dom.attributes.checked = "checked";
+              } else {
+                delete this._autoRebuildCheckbox.dom.attributes.checked;
+              }
+            }
+            if (this.dom.el) {
+              const el = this.dom.el.querySelector(".zs-autorebuild__checkbox");
+              if (el) el.checked = this._autoRebuildUiClient;
+            }
+          }
           activate() {
             this._startBtn.activate();
             this._stopBtn.activate();
+            this._rebuildUiBtn.activate();
+            if (this.dom.el) {
+              const checkbox = this.dom.el.querySelector(".zs-autorebuild__checkbox");
+              if (checkbox && !checkbox.__zsBound) {
+                checkbox.checked = this._autoRebuildUiClient;
+                checkbox.addEventListener("change", () => {
+                  const enabled = checkbox.checked === true;
+                  this._autoRebuildUiClient = enabled;
+                  if (this._onToggleAutoRebuildUiClient) {
+                    this._onToggleAutoRebuildUiClient(enabled);
+                  }
+                });
+                checkbox.__zsBound = true;
+              }
+            }
           }
         }
         return ControlPanelControl;
@@ -40231,14 +40378,6 @@ body .overlay {
               const subEl = rootEl.querySelector(".zs-scanning__subtitle");
               if (subEl) this._subtitleEl.dom.el = subEl;
             }
-            console.log(
-              "[ScanningIndicator] ensureDomRefs: progressFill=",
-              !!this._progressFillEl?.dom?.el,
-              "progressText=",
-              !!this._progressTextEl?.dom?.el,
-              "subtitle=",
-              !!this._subtitleEl?.dom?.el
-            );
           }
         }
         return ScanningIndicatorControl;
@@ -40357,6 +40496,9 @@ body .overlay {
             this._onStop = spec.onStop || null;
             this._onUrlDetected = spec.onUrlDetected || null;
             this._onOpenUrl = spec.onOpenUrl || null;
+            this._onRebuildUiClient = spec.onRebuildUiClient || null;
+            this._onToggleAutoRebuildUiClient = spec.onToggleAutoRebuildUiClient || null;
+            this._autoRebuildUiClient = spec.autoRebuildUiClient === true;
             this._detectedUrl = null;
             if (!spec.el) {
               this.compose();
@@ -40372,7 +40514,16 @@ body .overlay {
               context: ctx,
               visible: false,
               onStart: () => this._onStart && this._onStart(),
-              onStop: () => this._onStop && this._onStop()
+              onStop: () => this._onStop && this._onStop(),
+              isUiServer: false,
+              onRebuildUiClient: () => this._onRebuildUiClient && this._onRebuildUiClient(),
+              autoRebuildUiClient: this._autoRebuildUiClient,
+              onToggleAutoRebuildUiClient: (enabled) => {
+                this._autoRebuildUiClient = enabled === true;
+                if (this._onToggleAutoRebuildUiClient) {
+                  this._onToggleAutoRebuildUiClient(this._autoRebuildUiClient);
+                }
+              }
             });
             header.add(this._controlPanel);
             this.add(header);
@@ -40406,23 +40557,29 @@ body .overlay {
             }
             this._controlPanel.setVisible(true);
             this._controlPanel.setServerRunning(server.running || false);
+            this._controlPanel.setUiServer(server.hasHtmlInterface === true);
             if (server.running && server.runningUrl) {
               this._detectedUrl = server.runningUrl;
               this._serverUrl.setUrl(server.runningUrl);
               this._serverUrl.setVisible(true);
             }
           }
+          setUiClientStatus(status) {
+            this._controlPanel.setUiClientStatus(status);
+          }
+          setAutoRebuildUiClient(enabled) {
+            this._autoRebuildUiClient = enabled === true;
+            this._controlPanel.setAutoRebuildUiClient(this._autoRebuildUiClient);
+          }
           setRunningUrl(url) {
             this._detectedUrl = url;
             this._serverUrl.setUrl(url);
             this._serverUrl.setVisible(!!url);
-            console.log("[ContentArea] setRunningUrl called, url:", url, "visible:", !!url);
           }
           setServerRunning(running) {
             if (this._selectedServer) {
               this._selectedServer.running = running;
               this._controlPanel.setServerRunning(running);
-              console.log("[ContentArea] setServerRunning:", running);
               if (!running) {
                 this._detectedUrl = null;
                 this._serverUrl.setUrl(null);
@@ -40482,7 +40639,7 @@ body .overlay {
               this._scanningIndicator.add_class("zs-hidden");
               this._logViewer.remove_class("zs-hidden");
             }
-            if (this._scanningIndicator.dom.el) {
+            if (this._scanningIndicator.dom.el && this._logViewer.dom.el) {
               if (isScanning) {
                 this._scanningIndicator.dom.el.classList.remove("zs-hidden");
                 this._logViewer.dom.el.classList.add("zs-hidden");
@@ -40624,8 +40781,37 @@ body .overlay {
             this._scanCurrent = 0;
             this._scanLastFile = "";
             this._api = spec.api || null;
+            this._autoRebuildUiClient = false;
+            this._debug = false;
             if (!spec.el) {
               this.compose();
+            }
+          }
+          _loadDebugSetting() {
+            try {
+              const raw = globalThis.localStorage && globalThis.localStorage.getItem("zserver:debug");
+              return raw === "1" || raw === "true";
+            } catch {
+              return false;
+            }
+          }
+          _debugLog(...args) {
+            if (this._debug !== true) return;
+            console.log(...args);
+          }
+          _loadAutoRebuildUiClientSetting() {
+            try {
+              const raw = globalThis.localStorage && globalThis.localStorage.getItem("zserver:autoRebuildUiClient");
+              return raw === "1" || raw === "true";
+            } catch {
+              return false;
+            }
+          }
+          _saveAutoRebuildUiClientSetting(enabled) {
+            try {
+              if (!globalThis.localStorage) return;
+              globalThis.localStorage.setItem("zserver:autoRebuildUiClient", enabled ? "1" : "0");
+            } catch {
             }
           }
           compose() {
@@ -40645,7 +40831,10 @@ body .overlay {
               onStart: () => this._startServer(),
               onStop: () => this._stopServer(),
               onUrlDetected: (filePath, url) => this._setServerUrl(filePath, url),
-              onOpenUrl: (url) => this._openInBrowser(url)
+              onOpenUrl: (url) => this._openInBrowser(url),
+              autoRebuildUiClient: this._autoRebuildUiClient,
+              onRebuildUiClient: () => this._rebuildUiClient(),
+              onToggleAutoRebuildUiClient: (enabled) => this._setAutoRebuildUiClient(enabled)
             });
             container.add(this._contentArea);
             this.add(container);
@@ -40655,14 +40844,17 @@ body .overlay {
               console.error("No electronAPI provided");
               return;
             }
+            this._debug = this._loadDebugSetting();
+            this._autoRebuildUiClient = this._loadAutoRebuildUiClientSetting();
+            this._contentArea.setAutoRebuildUiClient(this._autoRebuildUiClient);
             try {
               this._scanTotal = 0;
               this._scanCurrent = 0;
               this._scanLastFile = "";
               this._contentArea.setScanning(true);
-              console.log("[ZServerApp] Starting scan...");
+              this._debugLog("[ZServerApp] Starting scan...");
               this._api.onScanProgress((progress) => {
-                console.log("[ZServerApp] Scan progress:", progress);
+                this._debugLog("[ZServerApp] Scan progress:", progress);
                 if (progress.type === "count-start") {
                   this._scanTotal = 0;
                   this._scanCurrent = 0;
@@ -40688,7 +40880,7 @@ body .overlay {
                 }
               });
               this._servers = await this._api.scanServers();
-              console.log("[ZServerApp] Scan complete, found servers:", this._servers.length, this._servers);
+              this._debugLog("[ZServerApp] Scan complete, found servers:", this._servers.length, this._servers);
               for (const server of this._servers) {
                 if (server.running && server.detectedPort) {
                   const url = `http://localhost:${server.detectedPort}`;
@@ -40698,12 +40890,12 @@ body .overlay {
                 }
               }
               this._sidebar.setServers(this._servers);
-              console.log("[ZServerApp] Servers set on sidebar");
+              this._debugLog("[ZServerApp] Servers set on sidebar");
               this._api.onServerLog(({ filePath, type, data }) => {
                 this._addLog(filePath, type, data);
               });
-              this._api.onServerStatusChange(({ filePath, running }) => {
-                this._updateServerStatus(filePath, running);
+              this._api.onServerStatusChange((payload) => {
+                this._updateServerStatus(payload);
               });
             } catch (error2) {
               console.error("Failed to scan servers:", error2);
@@ -40721,6 +40913,38 @@ body .overlay {
               this._contentArea.setRunningUrl(server.runningUrl);
               this._sidebar.setServerRunningUrl(server.file, server.runningUrl);
             }
+            this._refreshUiClientStatusForSelectedServer();
+          }
+          async _refreshUiClientStatusForSelectedServer() {
+            try {
+              if (!this._api || !this._selectedServer) return;
+              if (this._selectedServer.hasHtmlInterface !== true) {
+                this._contentArea.setUiClientStatus(null);
+                return;
+              }
+              const result = await this._api.getUiClientStatus();
+              if (result && result.success && result.status) {
+                this._contentArea.setUiClientStatus(result.status);
+              }
+            } catch (err) {
+              this._addLog(this._selectedServer?.file || "system", "stderr", `[ui-client] Status check failed: ${err.message}`);
+            }
+          }
+          _setAutoRebuildUiClient(enabled) {
+            this._autoRebuildUiClient = enabled === true;
+            this._saveAutoRebuildUiClientSetting(this._autoRebuildUiClient);
+            this._contentArea.setAutoRebuildUiClient(this._autoRebuildUiClient);
+          }
+          async _rebuildUiClient() {
+            if (!this._selectedServer || !this._api) return;
+            if (this._selectedServer.hasHtmlInterface !== true) return;
+            this._addLog(this._selectedServer.file, "system", "[ui-client] Rebuild requested...");
+            const result = await this._api.rebuildUiClient({ force: true, logToFilePath: this._selectedServer.file });
+            if (!result || result.success !== true) {
+              this._addLog(this._selectedServer.file, "stderr", `[ui-client] Rebuild failed: ${result?.message || "unknown error"}`);
+              return;
+            }
+            await this._refreshUiClientStatusForSelectedServer();
           }
           _addLog(filePath, type, data) {
             const text = data == null ? "" : String(data);
@@ -40748,13 +40972,12 @@ body .overlay {
             this._addLogLine(filePath, type, text);
           }
           _addLogLine(filePath, type, data) {
-            console.log("[ZServerApp] _addLog called:", { filePath, type, dataLen: data?.length });
             if (!this._logs.has(filePath)) {
               this._logs.set(filePath, []);
             }
             this._logs.get(filePath).push({ type, data });
             const isSelectedServer = this._selectedServer && this._selectedServer.file === filePath;
-            console.log(
+            this._debugLog(
               "[ZServerApp] _addLog isSelectedServer:",
               isSelectedServer,
               "selected:",
@@ -40788,21 +41011,56 @@ body .overlay {
               server.runningUrl = url;
             }
           }
-          _updateServerStatus(filePath, running) {
+          _updateServerStatus(updateOrFilePath, runningLegacy) {
+            const update = updateOrFilePath && typeof updateOrFilePath === "object" ? updateOrFilePath : { filePath: updateOrFilePath, running: runningLegacy };
+            const filePath = update.filePath;
+            const running = update.running === true;
+            const pid = Number.isFinite(update.pid) ? update.pid : null;
+            const port = Number.isFinite(update.port) ? update.port : null;
+            const url = typeof update.url === "string" && update.url.trim() ? update.url.trim() : null;
             const server = this._servers.find((s) => s.file === filePath);
-            if (server) {
-              server.running = running;
-              if (!running) server.pid = null;
-              this._sidebar.updateServerStatus(filePath, running);
+            if (!server) return;
+            const wasRunning = server.running === true;
+            const prevPid = server.pid || null;
+            const prevUrl = server.runningUrl || null;
+            server.running = running;
+            if (running) {
+              if (pid) {
+                server.pid = pid;
+              }
+              const nextUrl = url || (port ? `http://localhost:${port}` : null);
+              if (nextUrl) {
+                server.runningUrl = nextUrl;
+                this._sidebar.setServerRunningUrl(filePath, nextUrl);
+                if (this._selectedServer && this._selectedServer.file === filePath) {
+                  this._contentArea.setRunningUrl(nextUrl);
+                }
+              }
+              if (wasRunning && prevPid && pid && pid !== prevPid) {
+                this._addLog(filePath, "system", `Restart detected (PID changed: ${prevPid} \u2192 ${pid})`);
+              }
+            } else {
+              server.pid = null;
+              server.runningUrl = null;
+            }
+            this._sidebar.updateServerStatus(filePath, running);
+            if (this._selectedServer && this._selectedServer.file === filePath) {
+              this._contentArea.setServerRunning(running);
+            }
+            if (prevUrl && !running) {
               if (this._selectedServer && this._selectedServer.file === filePath) {
-                this._contentArea.setServerRunning(running);
+                this._contentArea.setRunningUrl(null);
               }
             }
           }
           async _startServer() {
             if (!this._selectedServer || !this._api) return;
             this._addLog(this._selectedServer.file, "system", "Starting server...");
-            const result = await this._api.startServer(this._selectedServer.file);
+            const result = await this._api.startServer(this._selectedServer.file, {
+              isUiServer: this._selectedServer.hasHtmlInterface === true,
+              ensureUiClientBundle: this._autoRebuildUiClient === true,
+              logToFilePath: this._selectedServer.file
+            });
             if (result.success) {
               this._selectedServer.running = true;
               this._selectedServer.pid = result.pid;
@@ -40892,7 +41150,7 @@ body .overlay {
         const { LogEntryControl, LogViewerControl } = createLogControls(jsgui2, { StringControl });
         const ServerLogWindowControl = createServerLogWindowControl(jsgui2, { LogViewerControl });
         const ControlButtonControl = createControlButtonControl(jsgui2, { StringControl });
-        const ControlPanelControl = createControlPanelControl(jsgui2, { ControlButtonControl });
+        const ControlPanelControl = createControlPanelControl(jsgui2, { ControlButtonControl, StringControl });
         const ScanningIndicatorControl = createScanningIndicatorControl(jsgui2, { StringControl });
         const SidebarControl = createSidebarControl(jsgui2, { ServerListControl, StringControl });
         const ContentAreaControl = createContentAreaControl(jsgui2, {
@@ -42045,6 +42303,43 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, var(--zs-gold), var(--zs-gold-dim));
+}
+
+/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
+/* CONTEXT MENU                                                                */
+/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
+
+.zs-context-menu {
+  position: fixed;
+  background: var(--zs-bg-elevated);
+  border: 1px solid var(--zs-gold-dim);
+  border-radius: 4px;
+  padding: 4px 0;
+  min-width: 120px;
+  box-shadow: var(--zs-shadow-lg);
+  z-index: 1000;
+  animation: zs-fade-in 0.1s ease-out;
+}
+
+.zs-context-menu__item {
+  padding: 8px 16px;
+  font-family: var(--zs-font-body);
+  font-size: 12px;
+  color: var(--zs-text);
+  cursor: pointer;
+  transition: background 0.1s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zs-context-menu__item:hover {
+  background: rgba(201, 162, 39, 0.15);
+  color: var(--zs-gold);
+}
+
+.zs-context-menu__item-icon {
+  font-size: 14px;
 }
 
 /* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */

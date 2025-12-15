@@ -30,13 +30,18 @@ When you consult the memory system, emit a **short, emoji-based “memory loaded
 Rules:
 - Keep it **1–2 lines max**.
 - Include the **source** (docs-memory vs CLI fallback) and **what you loaded** (Skill names, session hits count, etc.).
+- Always follow with: `Back to the task: <task description>` so memory retrieval can’t become a stopping point.
 - Avoid spam: emit the badge **once per distinct retrieval** (or when the source/loaded items change). Don’t repeat it every message.
 - If MCP tools are missing/unhealthy, explicitly say you fell back.
 
 Copy/paste templates:
-- `🧠 MEMORY — Skills=<name1>, <name2> | Sessions=<n> hits | Lessons/Patterns=<skimmed|none>`
-- `🧠 MEMORY — docs-memory: OK | Skills=<...> | Sessions=<...>`
-- `🧠 MEMORY — docs-memory: unavailable → fallback md-scan (docs/agi: <n> hits, docs/sessions: <n> hits)`
+- `🧠 Memory pull (for this task) — Skills=<name1>, <name2> | Sessions=<n> hits | Lessons/Patterns=<skimmed|none> | I/O≈<in>→<out>`
+- `Back to the task: <task description>`
+
+(If docs-memory is unavailable)
+
+- `🧠 Memory pull failed (for this task) — docs-memory unavailable → fallback md-scan (docs/agi + docs/sessions) | I/O≈<in>→<out>`
+- `Back to the task: <task description>`
 
 ## Instruction Adherence Loop (Snapshot → Task Ledger → Re-anchor)
 

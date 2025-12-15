@@ -1,7 +1,7 @@
 const { EnhancedFeaturesManager } = require('../EnhancedFeaturesManager');
 
 describe('EnhancedFeaturesManager', () => {
-  const createManager = ({ flags = {}, dbEnabled = true } = {}) => {
+  const createManager = ({ flags = {}, hubFreshness = null, dbEnabled = true } = {}) => {
     const closed = {
       config: false,
       scorer: false,
@@ -16,6 +16,9 @@ describe('EnhancedFeaturesManager', () => {
       }
       getFeatureFlags() {
         return flags;
+      }
+      getHubFreshnessConfig() {
+        return hubFreshness;
       }
       close() {
         closed.config = true;
@@ -178,5 +181,16 @@ describe('EnhancedFeaturesManager', () => {
     await manager.initialize({ dbAdapter, jobId: 'job-flag' });
     expect(manager.getProblemResolutionService()).toBeNull();
     expect(manager.getEnabledFeatures().problemResolution).toBe(false);
+  });
+
+  test('initializes enhanced DB adapter when hub freshness decision traces are enabled', async () => {
+    const { manager, dbAdapter } = createManager({
+      flags: {},
+      hubFreshness: { persistDecisionTraces: true }
+    });
+
+    await manager.initialize({ dbAdapter, jobId: 'job-trace-only' });
+
+    expect(manager.getEnhancedDbAdapter()).toBeTruthy();
   });
 });

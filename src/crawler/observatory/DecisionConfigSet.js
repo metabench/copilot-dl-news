@@ -45,6 +45,7 @@ class DecisionConfigSet {
     this.priorityConfig = spec.priorityConfig || { queue: { bonuses: {}, weights: {} }, features: {} };
     this.decisionTrees = spec.decisionTrees || {};
     this.classificationPatterns = spec.classificationPatterns || {};
+    this.articleSignals = spec.articleSignals || {};
     
     // Extracted feature flags (also in priorityConfig.features)
     this.features = spec.features || spec.priorityConfig?.features || {};
@@ -77,6 +78,7 @@ class DecisionConfigSet {
       priorityConfig: JSON.parse(JSON.stringify(this.priorityConfig)),
       decisionTrees: JSON.parse(JSON.stringify(this.decisionTrees)),
       classificationPatterns: JSON.parse(JSON.stringify(this.classificationPatterns)),
+      articleSignals: JSON.parse(JSON.stringify(this.articleSignals || {})),
       features: JSON.parse(JSON.stringify(this.features)),
       metadata: {
         createdAt: new Date().toISOString(),
@@ -358,6 +360,7 @@ class DecisionConfigSet {
       priorityConfig: this.priorityConfig,
       decisionTrees: this.decisionTrees,
       classificationPatterns: this.classificationPatterns,
+      articleSignals: this.articleSignals,
       features: this.features,
       metadata: this.metadata,
       _changeLog: this._changeLog

@@ -2,6 +2,8 @@
 
 const fs = require("fs");
 const path = require("path");
+const net = require("net");
+const { spawnSync } = require("child_process");
 
 const { openNewsDb } = require("../../../db/dbAccess");
 const { findProjectRoot } = require("../../../utils/project-root");
@@ -14,7 +16,55 @@ function createRequest(path = "/urls") {
   return { baseUrl: "", path, query: {} };
 }
 
-function run() {
+function getFreePort() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.on("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      const port = address && typeof address === "object" ? address.port : null;
+      server.close(() => {
+        if (!port) {
+          reject(new Error("Unable to allocate free port"));
+          return;
+        }
+        resolve(port);
+      });
+    });
+  });
+}
+
+function assertServerStarts({ port, dbPath }) {
+  const serverPath = path.join(__dirname, "..", "dataExplorerServer.js");
+  const args = [
+    serverPath,
+    "--check",
+    "--port",
+    String(port),
+    "--host",
+    "127.0.0.1",
+    "--db",
+    dbPath
+  ];
+
+  const result = spawnSync(process.execPath, args, {
+    cwd: process.cwd(),
+    encoding: "utf8"
+  });
+
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    const stderr = (result.stderr || "").trim();
+    const stdout = (result.stdout || "").trim();
+    throw new Error(
+      `Data Explorer --check failed (exit ${result.status})\n${stderr || stdout || "(no output)"}`
+    );
+  }
+}
+
+async function run() {
   const dbPath = resolveDbPath();
   const projectRoot = findProjectRoot(__dirname);
   const relativeDb = path.relative(projectRoot, dbPath) || path.basename(dbPath);
@@ -112,15 +162,17 @@ function run() {
   } finally {
     dbAccess.close();
   }
+
+  const port = await getFreePort();
+  assertServerStarts({ port, dbPath });
+  console.log(`Verified Data Explorer server --check on port ${port}`);
 }
 
 if (require.main === module) {
-  try {
-    run();
-  } catch (error) {
+  run().catch((error) => {
     console.error("Failed to build Data Explorer preview:", error.message);
     process.exitCode = 1;
-  }
+  });
 }
 
 module.exports = { run };

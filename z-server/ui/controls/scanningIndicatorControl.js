@@ -210,10 +210,6 @@ function createScanningIndicatorControl(jsgui, { StringControl }) {
         const subEl = rootEl.querySelector('.zs-scanning__subtitle');
         if (subEl) this._subtitleEl.dom.el = subEl;
       }
-      
-      console.log("[ScanningIndicator] ensureDomRefs: progressFill=", !!this._progressFillEl?.dom?.el,
-                  "progressText=", !!this._progressTextEl?.dom?.el,
-                  "subtitle=", !!this._subtitleEl?.dom?.el);
     }
   }
 

@@ -97,11 +97,22 @@ class EnhancedFeaturesManager {
       const featureFlags = this.configManager.getFeatureFlags();
       this.logger.log('Enhanced features configuration:', featureFlags);
 
+      let hubFreshness = null;
+      try {
+        hubFreshness = typeof this.configManager.getHubFreshnessConfig === 'function'
+          ? this.configManager.getHubFreshnessConfig()
+          : null;
+      } catch (_) {
+        hubFreshness = null;
+      }
+
+      const shouldPersistDecisionTraces = Boolean(hubFreshness && hubFreshness.persistDecisionTraces === true);
+
       const anyFeatureRequested = Object.values(featureFlags || {}).some(Boolean);
       const dbHasIsEnabled = typeof dbAdapter?.isEnabled === 'function';
       const dbEnabled = dbHasIsEnabled ? dbAdapter.isEnabled() : Boolean(dbAdapter);
 
-      if (anyFeatureRequested && dbEnabled) {
+      if ((anyFeatureRequested || shouldPersistDecisionTraces) && dbEnabled) {
         try {
           this.logger.log('Initializing enhanced database adapter...');
           this.enhancedDbAdapter = new this.EnhancedDatabaseAdapter(dbAdapter);

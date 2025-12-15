@@ -16,6 +16,8 @@ const compression = require("compression");
 const jsgui = require("jsgui3-html");
 const { spawn } = require("child_process");
 
+const { TelemetryIntegration } = require("../../crawler/telemetry/TelemetryIntegration");
+
 // PID file for detached mode management
 const PID_FILE = path.join(process.cwd(), "tmp", ".data-explorer.pid");
 
@@ -98,6 +100,7 @@ const {
   buildBreadcrumbs
 } = require("./navigation");
 const { ensureClientBundle } = require("./utils/ensureClientBundle");
+const { runStartupCheck } = require("./utils/serverStartupCheck");
 const { getClassificationDisplay } = require("../utils/classificationEmoji");
 const {
   createTelemetry,
@@ -732,6 +735,7 @@ function renderDecisionsView({ db, newsDb, req, relativeDb, now }) {
   const kindFilter = query.kind || null;
   const scopeFilter = query.scope || null;
   const targetLike = query.targetLike || null;
+  const includeReflexes = query.includeReflexes === "true" || query.includeReflexes === "1";
   const limit = Math.min(200, Math.max(1, parseInt(query.limit, 10) || 100));
 
   const filterOpts = { limit };
@@ -748,6 +752,10 @@ function renderDecisionsView({ db, newsDb, req, relativeDb, now }) {
     milestones = (result && result.items) || [];
   } catch (_) {
     milestones = [];
+  }
+
+  if (!includeReflexes) {
+    milestones = milestones.filter((m) => (m && m.kind) !== "cache-priority-hit");
   }
 
   const subtitle = milestones.length === 0
@@ -1421,6 +1429,10 @@ function createDataExplorerServer(options = {}) {
   const bindingPluginEnabled = options.bindingPlugin !== false;
   const serverTitle = options.title || DEFAULT_TITLE;
 
+  app.get("/health", (req, res) => {
+    res.json({ ok: true, service: "data-explorer", db: relativeDb });
+  });
+
   app.use((req, res, next) => {
     req.__copilotRequestId = generateRequestId();
     req.__copilotRequestStart = markRequestStart();
@@ -1563,29 +1575,15 @@ function createDataExplorerServer(options = {}) {
     }
   });
 
-  // SSE events endpoint - stub for client compatibility
-  // The client-side sseHandlers.js connects to this endpoint for real-time updates.
-  // Currently this is a stub that keeps the connection alive without sending events.
-  app.get("/api/events", (req, res) => {
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
-    res.flushHeaders();
-
-    // Send initial comment to establish connection
-    res.write(": connected\n\n");
-
-    // Send periodic heartbeat to keep connection alive
-    const heartbeatInterval = setInterval(() => {
-      res.write(": heartbeat\n\n");
-    }, 30000);
-
-    // Clean up on client disconnect
-    req.on("close", () => {
-      clearInterval(heartbeatInterval);
-    });
+  // SSE events endpoint - now backed by canonical crawler telemetry.
+  // Client expects message events with JSON payloads: { type, data }.
+  // TelemetryIntegration emits { type: 'crawl:telemetry', data: <event> }.
+  const crawlTelemetry = new TelemetryIntegration({
+    historyLimit: 200,
+    allowOrigin: null
   });
+  app.locals.crawlTelemetry = crawlTelemetry;
+  crawlTelemetry.mountSSE(app, "/api/events");
 
   // Stub /api/crawls endpoint - data explorer doesn't manage crawls
   // The client-side jobsManager.js polls this endpoint for active crawl jobs.
@@ -2243,6 +2241,9 @@ function parseServerArgs(argv) {
       case "--title":
         args.title = tokens[++i];
         break;
+      case "--check":
+        args.check = true;
+        break;
       case "--detached":
         args.detached = true;
         break;
@@ -2260,6 +2261,7 @@ function parseServerArgs(argv) {
           if (key === "--db" && value) args.db = value;
           if (key === "--page-size" && value) args.pageSize = Number(value);
           if (key === "--title" && value) args.title = value;
+          if (key === "--check") args.check = value == null || value !== "0";
         }
         break;
     }
@@ -2354,64 +2356,77 @@ function checkStatus() {
 
 if (require.main === module) {
   const args = parseServerArgs(process.argv.slice(2));
-  
-  // Handle --stop flag
-  if (args.stop) {
-    stopDetached();
-    process.exit(0);
-  }
-  
-  // Handle --status flag
-  if (args.status) {
-    checkStatus();
-    process.exit(0);
-  }
-  
-  // Handle --detached flag
-  if (args.detached) {
-    spawnDetached(args);
-    process.exit(0);
-  }
-  
-  console.log("Server args:", args);
-  const pageSize = sanitizePageSize(args.pageSize);
-  const { app, close, telemetry } = createDataExplorerServer({
-    dbPath: args.db,
-    pageSize,
-    title: args.title
-  });
-  const port = Number.isFinite(args.port) ? args.port : DEFAULT_PORT;
-  const host = args.host || "127.0.0.1";
 
-  telemetry.info("server.starting", undefined, {
-    host,
-    port,
-    pageSize
-  });
+  if (args.check) {
+    const port = Number.isFinite(args.port) ? args.port : DEFAULT_PORT;
+    const forwardedArgs = ["--host", "127.0.0.1"];
+    if (args.db) forwardedArgs.push("--db", args.db);
+    if (args.pageSize) forwardedArgs.push("--page-size", String(args.pageSize));
+    if (args.title) forwardedArgs.push("--title", args.title);
+    runStartupCheck(__filename, port, {
+      serverName: "Data Explorer",
+      healthEndpoint: "/health",
+      args: forwardedArgs
+    });
+  } else {
+    // Handle --stop flag
+    if (args.stop) {
+      stopDetached();
+      process.exit(0);
+    }
+    
+    // Handle --status flag
+    if (args.status) {
+      checkStatus();
+      process.exit(0);
+    }
+    
+    // Handle --detached flag
+    if (args.detached) {
+      spawnDetached(args);
+      process.exit(0);
+    }
+    
+    console.log("Server args:", args);
+    const pageSize = sanitizePageSize(args.pageSize);
+    const { app, close, telemetry } = createDataExplorerServer({
+      dbPath: args.db,
+      pageSize,
+      title: args.title
+    });
+    const port = Number.isFinite(args.port) ? args.port : DEFAULT_PORT;
+    const host = args.host || "127.0.0.1";
 
-  const server = app.listen(port, host, () => {
-    telemetry.setPort(port);
-    telemetry.info("server.listening", `Crawler data explorer listening on http://${host}:${port}/urls`, {
-      url: `http://${host}:${port}/urls`,
+    telemetry.info("server.starting", undefined, {
+      host,
+      port,
       pageSize
     });
-    console.log(`Crawler data explorer listening on http://${host}:${port}/urls (page size ${pageSize})`);
-  });
 
-  let shuttingDown = false;
-  const handleShutdown = () => {
-    if (shuttingDown) return;
-    shuttingDown = true;
-    telemetry.info("server.shutdown", "Shutting down crawler data explorer...");
-    console.log("Shutting down crawler data explorer...");
-    server.close(() => {
-      close();
-      process.exit(0);
+    const server = app.listen(port, host, () => {
+      telemetry.setPort(port);
+      telemetry.info("server.listening", `Crawler data explorer listening on http://${host}:${port}/urls`, {
+        url: `http://${host}:${port}/urls`,
+        pageSize
+      });
+      console.log(`Crawler data explorer listening on http://${host}:${port}/urls (page size ${pageSize})`);
     });
-  };
 
-  process.on("SIGINT", handleShutdown);
-  process.on("SIGTERM", handleShutdown);
+    let shuttingDown = false;
+    const handleShutdown = () => {
+      if (shuttingDown) return;
+      shuttingDown = true;
+      telemetry.info("server.shutdown", "Shutting down crawler data explorer...");
+      console.log("Shutting down crawler data explorer...");
+      server.close(() => {
+        close();
+        process.exit(0);
+      });
+    };
+
+    process.on("SIGINT", handleShutdown);
+    process.on("SIGTERM", handleShutdown);
+  }
 }
 
 module.exports = {

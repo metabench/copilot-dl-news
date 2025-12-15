@@ -27,6 +27,14 @@
 | 016 | [AP: Lifecycle Event Bag](experiments/016-ap-lifecycle-event-bag/) | proposed | Lifecycle-safe event binding + teardown (DOM/document listeners) |
 | 017 | [AP: Component Store](experiments/017-ap-component-store/) | proposed | DOM-free component store for selection + layers |
 | 018 | [AP: Undo/Redo Stack](experiments/018-ap-undo-redo-stack/) | proposed | Minimal command stack semantics for undo/redo |
+| 019 | [Context Menu Patterns](experiments/019-context-menu-patterns/) | proposed | Standard `contextmenu` open/close/action pattern |
+| 020 | [jsgui3-server Activation + ctrl_fields](experiments/020-jsgui3-server-activation/) | active | SSR + activation + persisted fields + ctrl_fields |
+| 021 | [Data_Model Bridge (MVC)](experiments/021-data-model-mvc/) | ✅ validated | Data_Model encoded SSR→client bridge with MVC wiring |
+| 022 | [Data_Model Bridge (MVVM)](experiments/022-data-model-mvvm/) | ✅ validated | Data_Model encoded SSR→client bridge with MVVM wiring |
+| 023 | [Advanced MVVM Patterns](experiments/023-advanced-mvvm-patterns/) | active | Staged edits + computed + safe two-way binding (uses set() for change events) |
+| 024 | [Fibonacci Server Observable → MVVM (SSE)](experiments/024-fib-observable-mvvm/) | active | Server-side observable publishes Fibonacci ticks every ~330ms; MVVM displays latest index + value |
+| 025 | [MVVM Bindings Library](experiments/025-mvvm-bindings-library/) | active | Small reusable MVVM bindings helpers (model→view model, view model→DOM) with deterministic check |
+| 026 | [Activation Contract Lab](experiments/026-activation-contract-lab/) | active | Enforces activation invariants: data-jsgui-type coverage, constructor registration, activate() actually runs |
 
 ### Mixin storage pattern (lab mixins)
 

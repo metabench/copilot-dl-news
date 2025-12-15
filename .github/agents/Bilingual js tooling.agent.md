@@ -1,4 +1,3 @@
-```chatagent
 ---
 description: "Specialist agent chartered to deliver bilingual (EN/zh) UX across js-scan, js-edit, md-scan, and md-edit using concise Chinese lexicon."
 tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/runInTerminal', 'runCommands/terminalLastCommand', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests']
@@ -183,4 +182,3 @@ Use the supplied mapping verbatim; prefer the first alias when rendering labels,
 - All four CLIs support bilingual output with passing tests and updated docs.
 - Optional font-scaling capability documented (either implemented or marked as unsupported with rationale).
 - Follow-on tasks (additional languages, dynamic loading) recorded in `CHANGE_PLAN.md` for future cycles.
-```

@@ -14,6 +14,34 @@ function statMtime(filePath) {
   }
 }
 
+function getClientBundleStatus(options = {}) {
+  const projectRoot = options.projectRoot || findProjectRoot(__dirname);
+  const bundlePath = options.bundlePath || path.join(projectRoot, "public", "assets", "ui-client.js");
+  const entryPath = options.entryPath || path.join(projectRoot, "src", "ui", "client", "index.js");
+  const buildScript = options.buildScript || path.join(projectRoot, "scripts", "build-ui-client.js");
+
+  const exists = fs.existsSync(bundlePath);
+  const bundleMtime = exists ? statMtime(bundlePath) : 0;
+  const entryMtime = statMtime(entryPath);
+  const scriptMtime = statMtime(buildScript);
+  const referenceMtime = Math.max(entryMtime, scriptMtime);
+
+  const needsBuild = !exists || referenceMtime === 0 || referenceMtime > bundleMtime;
+
+  return {
+    projectRoot,
+    bundlePath,
+    entryPath,
+    buildScript,
+    exists,
+    bundleMtime,
+    entryMtime,
+    scriptMtime,
+    referenceMtime,
+    needsBuild
+  };
+}
+
 function ensureClientBundle(options = {}) {
   const projectRoot = options.projectRoot || findProjectRoot(__dirname);
   const bundlePath = options.bundlePath || path.join(projectRoot, "public", "assets", "ui-client.js");
@@ -22,20 +50,8 @@ function ensureClientBundle(options = {}) {
   const force = options.force === true;
   const silent = options.silent === true;
 
-  let needsBuild = force;
-  if (!needsBuild) {
-    if (!fs.existsSync(bundlePath)) {
-      needsBuild = true;
-    } else {
-      const bundleMtime = statMtime(bundlePath);
-      const entryMtime = statMtime(entryPath);
-      const scriptMtime = statMtime(buildScript);
-      const referenceMtime = Math.max(entryMtime, scriptMtime);
-      if (referenceMtime === 0 || referenceMtime > bundleMtime) {
-        needsBuild = true;
-      }
-    }
-  }
+  const status = getClientBundleStatus({ projectRoot, bundlePath, entryPath, buildScript });
+  const needsBuild = force || status.needsBuild;
 
   if (!needsBuild) {
     return false;
@@ -65,5 +81,6 @@ function ensureClientBundle(options = {}) {
 }
 
 module.exports = {
+  getClientBundleStatus,
   ensureClientBundle
 };

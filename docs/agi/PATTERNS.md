@@ -364,3 +364,95 @@ AGI-accumulated knowledge catalog.
 
 
 ---
+
+## Smart SVG Diagramming
+
+**Added**: 2025-12-14
+**Context**: SVG Diagram Creation
+
+**When to use**: Creating architectural diagrams or flowcharts via MCP
+
+**Steps/Details**:
+1. Use svg_create_new to initialize a canvas
+1. Use svg_smart_add to place nodes without manual coordinate math
+1. Use svg_smart_add suggestions to place related nodes nearby
+1. Connect nodes with paths using standard SVG commands
+1. Validate with svg-collisions tool before shipping
+
+**Example**: node tools/dev/svg-collisions.js diagram.svg --strict
+
+---
+
+## Dual-Channel UI Inspection (Visual + Numeric)
+
+**Added**: 2025-12-14
+**Context**: Decision Tree Viewer / general jsgui3 UIs
+
+**When to use**: You need to understand or improve UI layout/spacing and want agent-friendly evidence before changing styles. Especially useful for jsgui3 SSR+activation UIs where screenshots alone can miss the root cause.
+
+**Steps/Details**:
+1. Ensure the target UI server supports `--check` via `src/ui/server/utils/serverStartupCheck.js`.
+1. Capture a baseline screenshot via Playwright MCP (navigate + fullPage screenshot).
+1. Run a Puppeteer inspector script that emits JSON layout metrics (bounding boxes, computed styles, overflow flags).
+1. Use the metrics to identify which nodes overflow / misalign; then apply targeted presentation changes.
+1. Re-run both screenshot + metrics to validate improvements and reduce regressions.
+
+**Example**: docs/workflows/ui-inspection-workflow.md + scripts/ui/inspect-decision-tree-layout.js
+
+---
+
+## jsgui3 Persisted Fields + ctrl_fields SSR Bridge
+
+**Added**: 2025-12-14
+**Context**: jsgui3-server activation lab (experiment 020) + post-npm-update verification
+
+**When to use**: You need server-rendered UI state available on the client during activation without extra RPC calls (e.g., counters, selected ids, simple UI flags), and you want named access to child controls after hydration.
+
+**Steps/Details**:
+1. On the server, ensure each control renders a stable `data-jsgui-id` (default) and (when needed) a meaningful `data-jsgui-type` by setting `__type_name` on the control/tag.
+1. Persist scalar state into `data-jsgui-fields` (via jsgui3 Control fields/persisted fields) so the client can hydrate it into `_persisted_fields`.
+1. Expose named child refs by emitting `data-jsgui-ctrl-fields` mapping (key→childId) so `pre_activate_content_controls` binds `this[key]` to the hydrated child control.
+1. In the control’s `activate()`, read `_persisted_fields` to restore state, then attach handlers using the hydrated ctrl_fields refs (e.g., `this.btn.on('click', ...)`).
+1. Validate end-to-end with a deterministic Puppeteer check (use experiment-style scripts like `src/ui/lab/.../check.js`) and keep it as a regression guard for dependency upgrades.
+
+
+
+---
+
+## Data_Model SSR→Client Bridge via Persisted Fields
+
+**Added**: 2025-12-14
+**Context**: jsgui3 lab experiments 021/022
+
+**When to use**: When you need to transfer Data_Object state from server-side rendering to client-side activation in jsgui3 isomorphic applications.
+
+**Steps/Details**:
+1. 1. Server-side: call `this.data.model.toJSON()` to get encoded string like `"Data_Object({...})"`
+1. 2. Embed the encoded string in `data-jsgui-fields` attribute: `this.dom.attributes["data-jsgui-fields"] = toSingleQuoteJson({ encodedDataModel: encoded })`
+1. 3. Client-side activate(): access `this._persisted_fields.encodedDataModel`
+1. 4. Decode using regex: `const m = encoded.match(/^Data_Object\((.*)\)$/); const data = JSON.parse(m[1]);`
+1. 5. Populate the live model: `Object.entries(data).forEach(([k, v]) => this.data.model.set(k, v, true));` (silent=true for initial population)
+1. 6. Set up change listeners after population to react to future updates
+
+**Example**: src/ui/lab/experiments/021-data-model-mvc/client.js
+
+---
+
+## Safe two-way binding for Data_Object (use set, not assignment)
+
+**Added**: 2025-12-14
+**Context**: src/ui/lab/experiments/023-advanced-mvvm-patterns/client.js
+
+**When to use**: You need two-way sync between a `Data_Object` and a view-model field, and you rely on `change` events (raw property assignment may not emit `change`).
+
+**Steps/Details**:
+1. Read initial source value and write it to target using `model.set(prop, value, true)` (silent) when seeding.
+1. Listen to `sourceModel.on('change', e => ...)` and when `e.name` matches, write to target with `targetModel.set(...)` (not `targetModel[prop]=...`).
+1. Listen to `targetModel.on('change', e => ...)` and when `e.name` matches, write to source with `sourceModel.set(...)`.
+1. Use a lock key (`sourceProp->targetProp`, `targetProp->sourceProp`) to suppress infinite loops.
+1. If string values are JSON-quoted (e.g. `"Ada"`), normalize before comparing, formatting, or validating.
+1. Optionally expose an `unbind()` to remove listeners for cleanup.
+
+
+
+---

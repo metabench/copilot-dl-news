@@ -6,6 +6,9 @@ if (typeof globalThis !== "undefined" && !globalThis.page_context) {
   globalThis.page_context = {};
 }
 
+const { installConsoleNoiseFilter } = require("./consoleNoiseFilter");
+installConsoleNoiseFilter();
+
 // jsgui3-client from npm (v0.0.121+ has browser compatibility fixes)
 const jsguiClient = require("jsgui3-client");
 const { installBindingPlugin } = require("../jsgui/bindingPlugin");
@@ -69,7 +72,11 @@ function injectControlsIntoContext(context) {
   if (!map) {
     return;
   }
-  if (typeof window !== "undefined" && !window.__COPILOT_LOGGED_CONTROLS__) {
+  const shouldLogControls =
+    typeof window !== "undefined" &&
+    window.__COPILOT_UI_DEBUG__ === true &&
+    !window.__COPILOT_LOGGED_CONTROLS__;
+  if (shouldLogControls) {
     window.__COPILOT_LOGGED_CONTROLS__ = true;
     try {
       console.log("[copilot] context.map_Controls keys", Object.keys(map));

@@ -478,6 +478,9 @@ body {
 .zs-control-panel {
   display: flex;
   gap: 12px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .zs-control-panel--hidden {
@@ -539,6 +542,49 @@ body {
   background: var(--zs-ruby);
   color: var(--zs-bg);
   box-shadow: var(--zs-shadow-glow-ruby);
+}
+
+/* Rebuild Button */
+.zs-btn--rebuild {
+  background: transparent;
+  border: 1px solid var(--zs-sapphire-dark);
+  color: var(--zs-sapphire);
+}
+
+.zs-btn--rebuild:hover {
+  background: var(--zs-sapphire);
+  color: var(--zs-bg);
+  box-shadow: 0 0 20px rgba(111, 168, 220, 0.35);
+}
+
+/* Auto-rebuild toggle */
+.zs-control-panel__autorebuild {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 6px;
+}
+
+.zs-autorebuild__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--zs-text-muted);
+}
+
+.zs-autorebuild__checkbox {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--zs-gold);
+}
+
+.zs-autorebuild__text {
+  display: inline-block;
 }
 
 /* Disabled State */

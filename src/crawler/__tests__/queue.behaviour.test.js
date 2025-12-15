@@ -272,4 +272,51 @@ describe('NewsCrawler queue behaviour (pre-extraction)', () => {
       })
     );
   });
+
+  it('does not persist URL policy skip decision traces by default', () => {
+    const crawler = createCrawler({ jobId: 'job-skip-no-trace' });
+    crawler._cleanupHubFreshnessConfig();
+    crawler.hubFreshnessConfig = {
+      persistDecisionTraces: false
+    };
+
+    crawler._handlePolicySkip({
+      allow: false,
+      reason: 'query-skip',
+      analysis: {
+        raw: `${START_URL}/?utm_source=test`,
+        normalized: `${START_URL}/`
+      }
+    }, { depth: 1, queueSize: 5 });
+
+    expect(crawler.telemetry.milestone).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'skip-reason-decision' })
+    );
+  });
+
+  it('persists URL policy skip decision traces when enabled', () => {
+    const crawler = createCrawler({ jobId: 'job-skip-trace' });
+    crawler._cleanupHubFreshnessConfig();
+    crawler.hubFreshnessConfig = {
+      persistDecisionTraces: true
+    };
+
+    crawler._handlePolicySkip({
+      allow: false,
+      reason: 'query-skip',
+      analysis: {
+        raw: `${START_URL}/?utm_source=test`,
+        normalized: `${START_URL}/`
+      },
+      guessedUrl: `${START_URL}/`
+    }, { depth: 2, queueSize: 7 });
+
+    expect(crawler.telemetry.milestone).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'skip-reason-decision',
+        persist: true,
+        target: `${START_URL}/`
+      })
+    );
+  });
 });

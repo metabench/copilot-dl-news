@@ -71,7 +71,8 @@ node tools/dev/emoji-encode.js --codepoint U+1F9E0 --json
 
 When using emojis as “visual beacons” in docs, pair them with a stable word token so both work:
 
-- `🧠 MEMORY — ...`
+- `🧠 Memory pull (for this task) — ...`
+- `Back to the task: ...`
 - `⚙️ CONFIG — ...`
 
 That way, searches remain possible even if emoji gets removed by a toolchain.

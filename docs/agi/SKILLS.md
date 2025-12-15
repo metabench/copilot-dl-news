@@ -31,9 +31,12 @@ This repo does not have Anthropic Claude Code “Skills” support directly, but
 | svg-collisions | svg, overlap, collisions, diagrams, WLILO, layout repair | `docs/agi/skills/svg-collisions/SKILL.md` |
 | svg-theme-system | svg, theme, theming, tokens, style variants, WLILO, obsidian, white-leather, palettes | `docs/agi/skills/svg-theme-system/SKILL.md` |
 | jsgui3-activation-debug | jsgui3, clicks don’t work, activation, Missing context.map_Controls | `docs/agi/skills/jsgui3-activation-debug/SKILL.md` |
+| jsgui3-ssr-activation-data-bridge | data-jsgui-fields, data-jsgui-ctrl-fields, SSR hydration, activation pipeline, server→client data | `docs/agi/skills/jsgui3-ssr-activation-data-bridge/SKILL.md` |
+| jsgui3-context-menu-patterns | context menu, right-click, popup menu, positioning, dismissal | `docs/agi/skills/jsgui3-context-menu-patterns/SKILL.md` |
 | jsgui3-lab-experimentation | lab experiments, src/ui/lab, check.js, delegation suite, proving ground, research | `docs/agi/skills/jsgui3-lab-experimentation/SKILL.md` |
 | experimental-research-metacognition | experimental research, hypothesis, minimal repro, evidence, tooling, metacognition, confidence calibration | `docs/agi/skills/experimental-research-metacognition/SKILL.md` |
 | puppeteer-efficient-ui-verification | puppeteer, ui verification, scenario suite, fast e2e, fixtures, single browser reuse | `docs/agi/skills/puppeteer-efficient-ui-verification/SKILL.md` |
+| autonomous-ui-inspection | ui inspection, screenshots, numeric layout metrics, playwright mcp, puppeteer, server check | `docs/agi/skills/autonomous-ui-inspection/SKILL.md` |
 | session-discipline | session-init, session notes, evidence, follow-ups, continuity | `docs/agi/skills/session-discipline/SKILL.md` |
 | targeted-testing | run tests, pick smallest suite, puppeteer/e2e, validate changes | `docs/agi/skills/targeted-testing/SKILL.md` |
 | instruction-adherence | stay on track, instruction drift, resume main task after detour, re-anchor loop | `docs/agi/skills/instruction-adherence/SKILL.md` |

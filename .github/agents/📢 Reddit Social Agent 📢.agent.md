@@ -1,4 +1,3 @@
-```chatagent
 ---
 description: 'Social media agent for crafting and managing Reddit posts—understands subreddit cultures, timing, and engagement patterns'
 tools: ['edit', 'search', 'new', 'fetch', 'todos', 'runSubagent']
@@ -256,4 +255,3 @@ Update this agent file when:
 - New subreddit discovered → Add profile
 - Timing insights gained → Update timing notes
 - New project features → Update Project Context
-```

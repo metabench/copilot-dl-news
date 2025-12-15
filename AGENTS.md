@@ -25,12 +25,16 @@ Quick anchors (UI/tooling)
 Memory access feedback (REQUIRED)
 - When you consult the memory system (Skills/sessions/lessons/patterns), emit a **very short** status so the user can see what you loaded.
 - Keep it to **1–2 lines max**, use emojis, and include counts/names when possible.
+- Always follow the memory status with: `Back to the task: <task description>` (this is how we prevent “memory retrieval” from becoming a stopping point).
 - Avoid spam: emit this badge **once per distinct retrieval** (or when the source/loaded items change). Don’t repeat it every message.
 - If memory access fails or is unavailable, say so and name the fallback you used.
 
 Suggested format (examples):
-- `🧠 MEMORY — Skills=svg-theme-system, svg-collisions | Sessions=2 hits | Lessons/Patterns=skimmed`
-- `🧠 MEMORY — docs-memory: unavailable → fallback md-scan (docs/sessions: 14 hits)`
+- `🧠 Memory pull (for this task) — Skills=svg-theme-system, svg-collisions | Sessions=2 hits | Lessons/Patterns=skimmed | I/O≈12KB→4KB`
+- `Back to the task: <task description>`
+
+- `🧠 Memory pull failed (for this task) — docs-memory unavailable → fallback md-scan (docs/sessions: 14 hits) | I/O≈12KB→2KB`
+- `Back to the task: <task description>`
 
 MCP server edits (memory-related)
 - Before modifying `tools/mcp/docs-memory/*` (or other memory MCP servers), consult `docs/agi/skills/mcp-memory-server-surgery/SKILL.md`.

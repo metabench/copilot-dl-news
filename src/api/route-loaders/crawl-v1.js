@@ -12,6 +12,7 @@ const { registerOperationRoutes } = require('../../server/crawl-api/v1/express/r
  * @param {Object} [options.crawlService] - Optional prebuilt crawl service instance.
  * @param {Function} [options.createCrawlService] - Factory used to create the crawl service.
  * @param {Object} [options.serviceOptions] - Options forwarded into the crawl service factory.
+ * @param {Object} [options.inProcessJobRegistry] - Optional in-process job registry for long-running crawl jobs.
  */
 function registerCrawlApiV1Routes(app, options = {}) {
   if (!app || typeof app.use !== 'function') {
@@ -23,7 +24,8 @@ function registerCrawlApiV1Routes(app, options = {}) {
     logger = console,
     crawlService,
     createCrawlService,
-    serviceOptions
+    serviceOptions,
+    inProcessJobRegistry
   } = options;
 
   registerOperationRoutes(app, {
@@ -32,7 +34,8 @@ function registerCrawlApiV1Routes(app, options = {}) {
     version: 'v1',
     crawlService,
     createCrawlService,
-    serviceOptions
+    serviceOptions,
+    inProcessJobRegistry
   });
 }
 

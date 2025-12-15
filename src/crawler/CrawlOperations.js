@@ -18,11 +18,15 @@ class CrawlOperations {
   constructor({
     defaults = {},
     logger = console,
-    crawlerFactory
+    crawlerFactory,
+    telemetryIntegration
   } = {}) {
     this.defaults = buildFacadeDefaults(defaults);
 
     this.logger = logger || console;
+    this.telemetryIntegration = telemetryIntegration && typeof telemetryIntegration.connectCrawler === 'function'
+      ? telemetryIntegration
+      : null;
     this.operations = new Map();
     this._customOperation = new CustomCrawlOperation();
 
@@ -37,7 +41,27 @@ class CrawlOperations {
     this.listSequencePresets = listSequencePresets;
     this.getSequencePreset = getSequencePreset;
 
-    this._createCrawler = createCrawlerFactory(crawlerFactory);
+    const baseCreateCrawler = createCrawlerFactory(crawlerFactory);
+    this._createCrawler = (startUrl, options, services) => {
+      const crawler = baseCreateCrawler(startUrl, options, services);
+
+      if (this.telemetryIntegration && crawler && typeof crawler.on === 'function') {
+        try {
+          const disconnect = this.telemetryIntegration.connectCrawler(crawler, {
+            jobId: crawler.jobId || options?.jobId,
+            crawlType: options?.crawlType
+          });
+
+          if (typeof disconnect === 'function') {
+            crawler.__crawlTelemetryDisconnect = disconnect;
+          }
+        } catch (error) {
+          this.logger?.warn?.('[CrawlOperations] Failed to connect crawler telemetry:', error);
+        }
+      }
+
+      return crawler;
+    };
   }
 
   registerOperation(operation) {

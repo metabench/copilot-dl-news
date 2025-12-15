@@ -16,6 +16,19 @@ tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'mic
 - **After finishing work**: Persist 1–3 durable updates via `docs-memory` (Lesson/Pattern/Anti-Pattern) when you learned something reusable.
 - **On docs-memory errors**: Notify the user immediately (tool name + error), suggest a systemic fix (docs/tool UX), and log it in the active session’s `FOLLOW_UPS.md`.
 
+**Critical**: Emitting any memory status is not a stopping point. Immediately continue execution after memory retrieval.
+
+### Memory output (required)
+
+When you consult memory (Skills/sessions/lessons/patterns), emit two short lines (once per distinct retrieval), then keep going:
+
+- `🧠 Memory pull (for this task) — Skills=<names> | Sessions=<n hits> | Lessons/Patterns=<skimmed> | I/O≈<in>→<out>`
+- `Back to the task: <task description>`
+
+If docs-memory is unavailable, replace the first line with:
+
+- `🧠 Memory pull failed (for this task) — docs-memory unavailable → fallback md-scan (docs/agi + docs/sessions) | I/O≈<in>→<out>`
+
 ## Binding Plugin + Reusable Helpers
 
 - Binding plugin enhancements here are official jsgui3 extensions. Use plugin hooks, keep upstream compatibility, and extract shared behavior into helpers/plugins so other apps can adopt them without copy/paste.

@@ -21,13 +21,17 @@ class DecisionConfigSetRepository {
     return path.join(this.rootDir, this.configSetsDir, `${slug}.json`);
   }
 
-  async load(slug) {
+  loadSync(slug) {
     const setPath = this.getSetPath(slug);
     if (!fs.existsSync(setPath)) {
       throw new Error(`Config set not found: ${slug}`);
     }
     const spec = JSON.parse(fs.readFileSync(setPath, 'utf8'));
     return new DecisionConfigSet(spec);
+  }
+
+  async load(slug) {
+    return this.loadSync(slug);
   }
 
   async list() {
@@ -87,6 +91,7 @@ class DecisionConfigSetRepository {
       priorityConfig: {},
       decisionTrees: {},
       classificationPatterns: {},
+      articleSignals: {},
       metadata: {
         isProduction: true,
         createdAt: new Date().toISOString(),

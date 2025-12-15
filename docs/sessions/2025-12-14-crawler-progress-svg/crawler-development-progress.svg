@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="740" viewBox="0 0 1200 740" role="img" aria-label="Crawler development progress overview">
+  <defs>
+    <style>
+      .bg { fill: #0b1020; }
+      .panel { fill: #111a33; stroke: #2a3563; stroke-width: 2; }
+      .panelTitle { fill: #e6edf3; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; font-size: 18px; font-weight: 700; }
+      .text { fill: #c9d1d9; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; font-size: 14px; }
+      .muted { fill: #8b949e; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; font-size: 12px; }
+      .emoji { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", ui-sans-serif, system-ui, sans-serif; }
+      .ok { fill: #7ee787; }
+      .todo { fill: #ffa657; }
+      .chip { fill: #0d1117; stroke: #30363d; stroke-width: 1; }
+      .chipText { fill: #e6edf3; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; font-size: 12px; }
+      .divider { stroke: #223055; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="740" />
+
+  <!-- Header -->
+  <text x="70" y="88" class="emoji" font-size="72">🕷️</text>
+  <text x="150" y="60" class="panelTitle" font-size="26">Crawler Development Progress</text>
+  <text x="150" y="86" class="muted">Snapshot: implemented vs planned work across core crawling, reliability, and observability.</text>
+
+  <!-- Summary chips -->
+  <g>
+    <rect class="chip" x="150" y="105" width="275" height="34" rx="10" />
+    <text class="chipText" x="165" y="127"><tspan class="ok">✓</tspan> Core crawl facade + CLI refactors shipped</text>
+
+    <rect class="chip" x="440" y="105" width="240" height="34" rx="10" />
+    <text class="chipText" x="455" y="127"><tspan class="ok">✓</tspan> Reliable crawler Phase 1 shipped</text>
+
+    <rect class="chip" x="695" y="105" width="430" height="34" rx="10" />
+    <text class="chipText" x="710" y="127"><tspan class="todo">→</tspan> Next: wire canonical telemetry into SSE + triggers</text>
+  </g>
+
+  <line class="divider" x1="60" y1="155" x2="1140" y2="155" />
+
+  <!-- Panels row 1 -->
+  <rect class="panel" x="60" y="180" width="520" height="250" rx="16" />
+  <text class="panelTitle" x="85" y="215">Implemented (high confidence)</text>
+
+  <text class="text" x="90" y="245"><tspan class="ok">✓</tspan> Crawl facade + sequences + CLI modularization</text>
+  <text class="text" x="90" y="268"><tspan class="ok">✓</tspan> Evented crawler base adapter (EventEmitter parity)</text>
+  <text class="text" x="90" y="291"><tspan class="ok">✓</tspan> Hub freshness controls (fetch-policy + cache fallback)</text>
+  <text class="text" x="90" y="314"><tspan class="ok">✓</tspan> Reliable crawler Phase 1 services (90 tests)</text>
+  <text class="text" x="120" y="336">• ContentValidationService (garbage / paywall / JS-required)</text>
+  <text class="text" x="120" y="356">• ResilienceService (heartbeat, circuit breakers, diagnostics)</text>
+  <text class="text" x="120" y="376">• ArchiveDiscoveryStrategy + PaginationPredictorService</text>
+  <text class="text" x="90" y="404"><tspan class="ok">✓</tspan> Crawl server status surface: /events SSE + /crawl-status UI</text>
+
+  <rect class="panel" x="620" y="180" width="520" height="250" rx="16" />
+  <text class="panelTitle" x="645" y="215">Planned but not implemented yet</text>
+
+  <text class="text" x="650" y="245"><tspan class="todo">→</tspan> Canonical telemetry broadcast wiring</text>
+  <text class="text" x="680" y="267">• Bridge TelemetryIntegration observable → /events SSE broadcaster</text>
+  <text class="text" x="680" y="287">• Decide event name/envelope for crawl telemetry vs heartbeats</text>
+
+  <text class="text" x="650" y="315"><tspan class="todo">→</tspan> Replace stub SSE in data explorer</text>
+  <text class="text" x="680" y="337">• Remove /api/events stub; mount real telemetry-backed SSE</text>
+
+  <text class="text" x="650" y="365"><tspan class="todo">→</tspan> Ensure real crawl entrypoints connect telemetry</text>
+  <text class="text" x="680" y="387">• TelemetryIntegration.connectCrawler / CrawlTelemetryBridge.connectCrawler</text>
+
+  <text class="text" x="650" y="415"><tspan class="todo">→</tspan> Add an integration/E2E test for SSE progress events</text>
+
+  <!-- Panels row 2 -->
+  <rect class="panel" x="60" y="455" width="520" height="235" rx="16" />
+  <text class="panelTitle" x="85" y="490">Phase 1 follow-through (still pending)</text>
+
+  <text class="text" x="90" y="520"><tspan class="todo">→</tspan> Trigger discovery services in orchestration</text>
+  <text class="text" x="120" y="542">• Wire ArchiveDiscoveryStrategy + PaginationPredictorService</text>
+  <text class="text" x="120" y="562">  into UrlDecisionOrchestrator/QueueManager trigger points</text>
+  <text class="text" x="90" y="592"><tspan class="todo">→</tspan> Decide persistence for learned pagination rules</text>
+  <text class="muted" x="120" y="612">(Spec mentions url_classification_patterns or new pagination table.)</text>
+
+  <rect class="panel" x="620" y="455" width="520" height="235" rx="16" />
+  <text class="panelTitle" x="645" y="490">Roadmap (planned phases)</text>
+
+  <text class="text" x="650" y="520"><tspan class="todo">→</tspan> Phase 2: Hybrid “Teacher” architecture</text>
+  <text class="text" x="680" y="542">• Puppeteer integration + src/teacher module</text>
+  <text class="text" x="680" y="562">• Visual analyzer, skeleton hash, structure mining</text>
+  <text class="text" x="680" y="582">• Signature storage tables (layout_signatures/templates)</text>
+
+  <text class="text" x="650" y="612"><tspan class="todo">→</tspan> Phase 3: Quality feedback loops</text>
+  <text class="text" x="680" y="634">• Visual diff tool, confidence scoring, golden set testing</text>
+
+  <text class="text" x="650" y="664"><tspan class="todo">→</tspan> Phase 4: Scale</text>
+  <text class="text" x="680" y="686">• Proxy rotation, distributed queues (beyond SQLite)</text>
+
+  <!-- Footer -->
+  <text class="muted" x="60" y="722">Notes: “Planned” items are sourced from docs sessions and roadmap, including TelemetryIntegration bridging and Reliable Crawler roadmap phases.</text>
+</svg>

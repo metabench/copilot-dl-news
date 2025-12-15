@@ -263,6 +263,45 @@ describe('CrawlTelemetryBridge', () => {
       expect(broadcastedEvents.length).toBe(1);
       expect(broadcastedEvents[0].data.visited).toBe(30);
     });
+
+    test('normalizes base crawler progress shape', async () => {
+      bridge.emitProgress({
+        stats: {
+          pagesVisited: 5,
+          pagesDownloaded: 3,
+          articlesFound: 1,
+          errors: 2
+        }
+      });
+
+      await new Promise(r => setTimeout(r, 100));
+
+      expect(broadcastedEvents.length).toBe(1);
+      expect(broadcastedEvents[0].type).toBe('crawl:progress');
+      expect(broadcastedEvents[0].data.visited).toBe(5);
+      expect(broadcastedEvents[0].data.downloaded).toBe(3);
+      expect(broadcastedEvents[0].data.articles).toBe(1);
+      expect(broadcastedEvents[0].data.errors).toBe(2);
+    });
+
+    test('normalizes orchestrator progress shape', async () => {
+      bridge.emitProgress({
+        completion: 0.5,
+        eta: 123,
+        phase: 'crawling',
+        rate: 7
+      });
+
+      await new Promise(r => setTimeout(r, 100));
+
+      expect(broadcastedEvents.length).toBe(1);
+      expect(broadcastedEvents[0].type).toBe('crawl:progress');
+      expect(broadcastedEvents[0].data.visited).toBe(0);
+      expect(broadcastedEvents[0].data.percentComplete).toBe(0.5);
+      expect(broadcastedEvents[0].data.estimatedRemaining).toBe(123);
+      expect(broadcastedEvents[0].data.phase).toBe('crawling');
+      expect(broadcastedEvents[0].data.requestsPerSec).toBe(7);
+    });
   });
   
   describe('emitUrlVisited (batching)', () => {
@@ -330,6 +369,58 @@ describe('CrawlTelemetryBridge', () => {
     
     test('throws for non-EventEmitter', () => {
       expect(() => bridge.connectCrawler({})).toThrow('EventEmitter');
+    });
+
+    test('maps finished(completed) to crawl:completed', () => {
+      const crawler = new EventEmitter();
+      bridge.connectCrawler(crawler, { jobId: 'job-finish-1', crawlType: 'standard' });
+
+      crawler.emit('finished', { status: 'completed', duration: 1234 });
+
+      expect(broadcastedEvents.length).toBe(1);
+      expect(broadcastedEvents[0].type).toBe('crawl:completed');
+      expect(broadcastedEvents[0].jobId).toBe('job-finish-1');
+      expect(broadcastedEvents[0].data.duration).toBe(1234);
+    });
+
+    test('maps finished(failed) to crawl:failed', () => {
+      const crawler = new EventEmitter();
+      bridge.connectCrawler(crawler, { jobId: 'job-finish-2', crawlType: 'standard' });
+
+      crawler.emit('finished', { status: 'failed', reason: 'boom', duration: 500 });
+
+      expect(broadcastedEvents.length).toBe(1);
+      expect(broadcastedEvents[0].type).toBe('crawl:failed');
+      expect(broadcastedEvents[0].jobId).toBe('job-finish-2');
+      expect(broadcastedEvents[0].severity).toBe('error');
+      expect(broadcastedEvents[0].data.reason).toBe('boom');
+      expect(broadcastedEvents[0].data.duration).toBe(500);
+    });
+  });
+
+  describe('observable stream', () => {
+    test('emits events to subscribers', () => {
+      const received = [];
+      const unsubscribe = bridge.subscribe((event) => received.push(event), { replayHistory: false });
+
+      bridge.emitStarted({}, { jobId: 'job-obs-1' });
+
+      unsubscribe();
+
+      expect(received.length).toBe(1);
+      expect(received[0].type).toBe('crawl:started');
+      expect(received[0].jobId).toBe('job-obs-1');
+    });
+
+    test('can replay history to late subscribers', () => {
+      bridge.emitStarted({}, { jobId: 'job-obs-2' });
+      bridge.emitPhaseChange('crawling', { jobId: 'job-obs-2' });
+
+      const received = [];
+      const unsubscribe = bridge.subscribe((event) => received.push(event), { replayHistory: true });
+      unsubscribe();
+
+      expect(received.map(e => e.type)).toEqual(['crawl:started', 'crawl:phase:changed']);
     });
   });
   

@@ -27,6 +27,11 @@ function createContentAreaControl(jsgui, {
       this._onStop = spec.onStop || null;
       this._onUrlDetected = spec.onUrlDetected || null;
       this._onOpenUrl = spec.onOpenUrl || null;
+
+      this._onRebuildUiClient = spec.onRebuildUiClient || null;
+      this._onToggleAutoRebuildUiClient = spec.onToggleAutoRebuildUiClient || null;
+      this._autoRebuildUiClient = spec.autoRebuildUiClient === true;
+
       this._detectedUrl = null;
       
       if (!spec.el) {
@@ -47,7 +52,16 @@ function createContentAreaControl(jsgui, {
         context: ctx,
         visible: false,
         onStart: () => this._onStart && this._onStart(),
-        onStop: () => this._onStop && this._onStop()
+        onStop: () => this._onStop && this._onStop(),
+        isUiServer: false,
+        onRebuildUiClient: () => this._onRebuildUiClient && this._onRebuildUiClient(),
+        autoRebuildUiClient: this._autoRebuildUiClient,
+        onToggleAutoRebuildUiClient: (enabled) => {
+          this._autoRebuildUiClient = enabled === true;
+          if (this._onToggleAutoRebuildUiClient) {
+            this._onToggleAutoRebuildUiClient(this._autoRebuildUiClient);
+          }
+        }
       });
       header.add(this._controlPanel);
       
@@ -92,6 +106,7 @@ function createContentAreaControl(jsgui, {
       
       this._controlPanel.setVisible(true);
       this._controlPanel.setServerRunning(server.running || false);
+      this._controlPanel.setUiServer(server.hasHtmlInterface === true);
       
       if (server.running && server.runningUrl) {
         this._detectedUrl = server.runningUrl;
@@ -99,19 +114,26 @@ function createContentAreaControl(jsgui, {
         this._serverUrl.setVisible(true);
       }
     }
+
+    setUiClientStatus(status) {
+      this._controlPanel.setUiClientStatus(status);
+    }
+
+    setAutoRebuildUiClient(enabled) {
+      this._autoRebuildUiClient = enabled === true;
+      this._controlPanel.setAutoRebuildUiClient(this._autoRebuildUiClient);
+    }
     
     setRunningUrl(url) {
       this._detectedUrl = url;
       this._serverUrl.setUrl(url);
       this._serverUrl.setVisible(!!url);
-      console.log("[ContentArea] setRunningUrl called, url:", url, "visible:", !!url);
     }
 
     setServerRunning(running) {
       if (this._selectedServer) {
         this._selectedServer.running = running;
         this._controlPanel.setServerRunning(running);
-        console.log("[ContentArea] setServerRunning:", running);
         
         if (!running) {
           this._detectedUrl = null;
@@ -180,7 +202,8 @@ function createContentAreaControl(jsgui, {
         this._scanningIndicator.add_class("zs-hidden");
         this._logViewer.remove_class("zs-hidden");
       }
-      if (this._scanningIndicator.dom.el) {
+      // Sync live DOM immediately when elements are linked
+      if (this._scanningIndicator.dom.el && this._logViewer.dom.el) {
         if (isScanning) {
           this._scanningIndicator.dom.el.classList.remove("zs-hidden");
           this._logViewer.dom.el.classList.add("zs-hidden");

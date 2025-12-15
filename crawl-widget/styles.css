@@ -607,6 +607,18 @@ body {
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Indeterminate animation (used when total/percent is unknown) */
+.progress-bar--indeterminate .progress-bar__fill {
+  width: 35% !important;
+  animation: cw-indeterminate-sweep 1.25s ease-in-out infinite;
+}
+
+@keyframes cw-indeterminate-sweep {
+  0% { transform: translateX(-120%); }
+  50% { transform: translateX(120%); }
+  100% { transform: translateX(320%); }
+}
+
 .progress-bar__label {
   position: absolute;
   top: 50%;

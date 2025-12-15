@@ -1,4 +1,3 @@
-```chatagent
 ---
 description: "Focused agent that extends tools/dev/js-edit.js with richer static analysis so refactors stay fast, precise, and low-noise."
 tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminalLastCommand', 'runCommands/runInTerminal', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests']
@@ -78,4 +77,3 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 - Tracker entries reflecting discovery sources, design decisions, implementation notes, and validation commands.
 - Example outputs checked into docs to set expectations for future users.
 - Summary note of residual opportunities (e.g., richer data flow, cross-file SSA) logged for next iteration.
-```

@@ -157,8 +157,14 @@ class Crawler extends EventedCrawlerBase {
    * Emits 'paused' event.
    */
   pause() {
+    if (this._paused) {
+      return;
+    }
     this._paused = true;
     this.emit('paused');
+    try {
+      this.emitProgress(true);
+    } catch (_) {}
   }
 
   /**
@@ -166,8 +172,14 @@ class Crawler extends EventedCrawlerBase {
    * Emits 'resumed' event.
    */
   resume() {
+    if (!this._paused) {
+      return;
+    }
     this._paused = false;
     this.emit('resumed');
+    try {
+      this.emitProgress(true);
+    } catch (_) {}
   }
 
   /**
@@ -183,8 +195,14 @@ class Crawler extends EventedCrawlerBase {
    * Emits 'abort-requested' event.
    */
   requestAbort() {
+    if (this._abortRequested) {
+      return;
+    }
     this._abortRequested = true;
     this.emit('abort-requested');
+    try {
+      this.emitProgress(true);
+    } catch (_) {}
   }
 
   /**

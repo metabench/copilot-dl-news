@@ -61,11 +61,21 @@ function buildAvailabilityPayload(availability, options = {}, includeAll = false
 }
 
 function createCrawlService({
-  createFacade = ({ logger }) => new CrawlOperations({ logger }),
+  createFacade = ({ logger, telemetryIntegration: telemetry }) => new CrawlOperations({ logger, telemetryIntegration: telemetry }),
   createSequenceLoader = (loaderOptions = {}) => createSequenceConfigLoader(loaderOptions),
-  sequenceConfigRunner = runSequenceConfig
+  sequenceConfigRunner = runSequenceConfig,
+  telemetryIntegration
 } = {}) {
+  const resolvedTelemetry = telemetryIntegration && typeof telemetryIntegration.connectCrawler === 'function'
+    ? telemetryIntegration
+    : null;
+
   function instantiateFacade({ logger }) {
+    if (resolvedTelemetry && createFacade) {
+      // Backward compatible: only inject telemetryIntegration when using the default facade shape.
+      // Custom createFacade implementations can choose to accept or ignore the extra field.
+      return createFacade({ logger, telemetryIntegration: resolvedTelemetry });
+    }
     return createFacade({ logger });
   }
 

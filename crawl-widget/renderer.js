@@ -39613,9 +39613,13 @@ body .overlay {
             this._color = spec.color || "emerald";
             this._showPercentage = spec.showPercentage || false;
             this._animated = spec.animated !== false;
+            this._indeterminate = Boolean(spec.indeterminate);
             this.add_class("progress-bar");
             this.add_class(`progress-bar--${this._variant}`);
             this.add_class(`progress-bar--${this._color}`);
+            if (this._indeterminate) {
+              this.add_class("progress-bar--indeterminate");
+            }
             if (this._animated) {
               this.add_class("progress-bar--animated");
             }
@@ -39643,14 +39647,22 @@ body .overlay {
           }
           _updateFillWidth() {
             if (this._fill) {
+              if (this._indeterminate) {
+                this._fill.dom.attributes.style = "width: 35%;";
+                return;
+              }
               const width = `${Math.round(this._value * 100)}%`;
               this._fill.dom.attributes.style = `width: ${width};`;
             }
           }
           _formatPercentage() {
+            if (this._indeterminate) return "\u2026";
             return `${Math.round(this._value * 100)}%`;
           }
           setValue(value2) {
+            if (this._indeterminate) {
+              return;
+            }
             this._value = Math.max(0, Math.min(1, value2));
             this._updateFillWidth();
             const fillEl = this._el(this._fill);
@@ -39661,6 +39673,24 @@ body .overlay {
               const labelEl = this._el(this._labelEl);
               if (labelEl) {
                 labelEl.textContent = this._formatPercentage();
+              }
+            }
+          }
+          setIndeterminate(indeterminate = true) {
+            const next = Boolean(indeterminate);
+            if (this._indeterminate === next) return;
+            this._indeterminate = next;
+            const el = this._el();
+            if (el) {
+              el.classList.toggle("progress-bar--indeterminate", this._indeterminate);
+            } else {
+              if (this._indeterminate) this.add_class("progress-bar--indeterminate");
+            }
+            this._updateFillWidth();
+            if (this._labelEl) {
+              const labelEl = this._el(this._labelEl);
+              if (labelEl) {
+                labelEl.textContent = this._label || this._formatPercentage();
               }
             }
           }
@@ -39820,15 +39850,15 @@ body .overlay {
                 url: currentUrl || this._lastActivity.url || null
               };
             }
-            let progress = 0;
-            if (percentComplete != null) {
-              progress = percentComplete / 100;
-            } else if (total > 0) {
-              progress = visited / total;
-            } else if (visited > 0 && queued >= 0) {
-              progress = visited / (visited + queued);
+            const hasDeterministicTotal = typeof total === "number" && Number.isFinite(total) && total > 0;
+            const hasPercent = typeof percentComplete === "number" && Number.isFinite(percentComplete);
+            if (hasPercent || hasDeterministicTotal) {
+              this._progressBar.setIndeterminate(false);
+              const progress = hasPercent ? percentComplete / 100 : visited / total;
+              this._progressBar.setValue(Math.min(1, Math.max(0, progress)));
+            } else {
+              this._progressBar.setIndeterminate(true);
             }
-            this._progressBar.setValue(Math.min(1, progress));
             if (phase) {
               this._updatePhaseIndicators(phase);
             }
@@ -39996,12 +40026,14 @@ body .overlay {
             this._filterBtn.set("title", "Filter log types");
             this._header.add(this._filterBtn);
             this._copyBtn = new jsgui2.Control({ context: this.context, tagName: "button" });
-            this._copyBtn.add_class("cw-log-action-btn", "cw-log-action-btn--copy");
+            this._copyBtn.add_class("cw-log-action-btn");
+            this._copyBtn.add_class("cw-log-action-btn--copy");
             this._copyBtn.add(new StringControl({ context: this.context, text: "\u29C9" }));
             this._copyBtn.dom.attributes.title = "Copy visible log lines";
             this._header.add(this._copyBtn);
             this._clearBtn = new jsgui2.Control({ context: this.context, tagName: "button" });
-            this._clearBtn.add_class("cw-log-action-btn", "cw-log-action-btn--clear");
+            this._clearBtn.add_class("cw-log-action-btn");
+            this._clearBtn.add_class("cw-log-action-btn--clear");
             this._clearBtn.add(new StringControl({ context: this.context, text: "\u{1F5D1}" }));
             this._clearBtn.dom.attributes.title = "Clear log";
             this._header.add(this._clearBtn);
@@ -40259,6 +40291,473 @@ body .overlay {
     }
   });
 
+  // ../src/ui/client/crawlDisplayAdapter.js
+  var require_crawlDisplayAdapter = __commonJS({
+    "../src/ui/client/crawlDisplayAdapter.js"(exports, module) {
+      "use strict";
+      var PHASE_DISPLAY = {
+        idle: { label: "Idle", icon: "\u23F8\uFE0F", color: "gray" },
+        initializing: { label: "Initializing", icon: "\u2699\uFE0F", color: "blue" },
+        planning: { label: "Planning", icon: "\u{1F4CB}", color: "blue" },
+        discovering: { label: "Discovering", icon: "\u{1F50D}", color: "cyan" },
+        crawling: { label: "Crawling", icon: "\u{1F577}\uFE0F", color: "green" },
+        processing: { label: "Processing", icon: "\u26A1", color: "yellow" },
+        finalizing: { label: "Finalizing", icon: "\u{1F4E6}", color: "yellow" },
+        completed: { label: "Completed", icon: "\u2705", color: "green" },
+        failed: { label: "Failed", icon: "\u274C", color: "red" },
+        paused: { label: "Paused", icon: "\u23F8\uFE0F", color: "orange" },
+        stopped: { label: "Stopped", icon: "\u{1F6D1}", color: "gray" }
+      };
+      var EVENT_CATEGORIES = {
+        lifecycle: ["crawl:started", "crawl:stopped", "crawl:paused", "crawl:resumed", "crawl:completed", "crawl:failed"],
+        phase: ["crawl:phase:changed"],
+        progress: ["crawl:progress"],
+        url: ["crawl:url:visited", "crawl:url:queued", "crawl:url:error", "crawl:url:skipped", "crawl:url:batch"],
+        goal: ["crawl:goal:satisfied", "crawl:goal:progress"],
+        budget: ["crawl:budget:updated", "crawl:budget:exhausted"],
+        worker: ["crawl:worker:spawned", "crawl:worker:stopped", "crawl:worker:scaled"],
+        system: ["crawl:checkpoint:saved", "crawl:checkpoint:restored", "crawl:metrics:snapshot", "crawl:rate:limited", "crawl:stalled"]
+      };
+      function createDefaultState() {
+        return {
+          // Identity
+          jobId: null,
+          crawlType: "standard",
+          // Lifecycle
+          phase: "idle",
+          phaseDisplay: PHASE_DISPLAY.idle,
+          isActive: false,
+          isPaused: false,
+          startedAt: null,
+          endedAt: null,
+          duration: null,
+          // Progress
+          progress: {
+            visited: 0,
+            queued: 0,
+            errors: 0,
+            total: null,
+            downloaded: 0,
+            articles: 0,
+            skipped: 0,
+            requestsPerSec: null,
+            bytesPerSec: null,
+            percentComplete: null,
+            estimatedRemaining: null,
+            // Optional UI hints (snapshot fields)
+            currentUrl: null,
+            currentAction: null,
+            throttled: null,
+            throttleReason: null,
+            throttleDomain: null,
+            phase: null
+          },
+          // Goals
+          goals: [],
+          goalsProgress: {},
+          // Budget
+          budget: {
+            limits: {},
+            spent: {},
+            percentages: {},
+            exhausted: false
+          },
+          // Workers
+          workers: {
+            count: 0,
+            active: 0,
+            idle: 0
+          },
+          // Recent events (for timeline display)
+          recentEvents: [],
+          // Last update
+          lastUpdatedAt: null
+        };
+      }
+      function createCrawlDisplayAdapter(options = {}) {
+        const {
+          onStateChange,
+          onProgress,
+          onPhaseChange,
+          onEvent,
+          onError,
+          onComplete,
+          recentEventsLimit = 50,
+          trackMultiple = false
+        } = options;
+        let primaryState = createDefaultState();
+        const crawlStates = trackMultiple ? /* @__PURE__ */ new Map() : null;
+        function getState(jobId = null) {
+          if (trackMultiple && jobId) {
+            return crawlStates.get(jobId) || createDefaultState();
+          }
+          return { ...primaryState };
+        }
+        function getAllStates() {
+          if (trackMultiple) {
+            return Object.fromEntries(crawlStates);
+          }
+          return { primary: primaryState };
+        }
+        function updateState(jobId, updates) {
+          let state;
+          if (trackMultiple && jobId) {
+            state = crawlStates.get(jobId) || createDefaultState();
+            Object.assign(state, updates, { lastUpdatedAt: Date.now() });
+            crawlStates.set(jobId, state);
+          } else {
+            Object.assign(primaryState, updates, { lastUpdatedAt: Date.now() });
+            state = primaryState;
+          }
+          if (onStateChange) {
+            try {
+              onStateChange(state, jobId);
+            } catch (e) {
+              console.error("[CrawlDisplayAdapter] onStateChange error:", e);
+            }
+          }
+          return state;
+        }
+        function handleEvent(event) {
+          if (!event || !event.type) return;
+          const jobId = event.jobId;
+          if (onEvent) {
+            try {
+              onEvent(event);
+            } catch (e) {
+              console.error("[CrawlDisplayAdapter] onEvent error:", e);
+            }
+          }
+          switch (event.type) {
+            case "crawl:started":
+              handleStarted(event, jobId);
+              break;
+            case "crawl:stopped":
+            case "crawl:completed":
+            case "crawl:failed":
+              handleEnded(event, jobId);
+              break;
+            case "crawl:paused":
+              handlePaused(event, jobId);
+              break;
+            case "crawl:resumed":
+              handleResumed(event, jobId);
+              break;
+            case "crawl:phase:changed":
+              handlePhaseChanged(event, jobId);
+              break;
+            case "crawl:progress":
+              handleProgress(event, jobId);
+              break;
+            case "crawl:goal:satisfied":
+              handleGoalSatisfied(event, jobId);
+              break;
+            case "crawl:budget:updated":
+            case "crawl:budget:exhausted":
+              handleBudget(event, jobId);
+              break;
+            case "crawl:worker:scaled":
+              handleWorkerScaled(event, jobId);
+              break;
+            case "crawl:url:error":
+              handleUrlError(event, jobId);
+              break;
+            case "crawl:stalled":
+              handleStalled(event, jobId);
+              break;
+            default:
+              addRecentEvent(event, jobId);
+          }
+        }
+        function handleStarted(event, jobId) {
+          const phaseDisplay = PHASE_DISPLAY.initializing;
+          updateState(jobId, {
+            jobId: event.data?.jobId || jobId,
+            crawlType: event.data?.crawlType || event.crawlType || "standard",
+            phase: "initializing",
+            phaseDisplay,
+            isActive: true,
+            isPaused: false,
+            startedAt: event.timestampMs || Date.now(),
+            endedAt: null,
+            duration: null,
+            progress: { visited: 0, queued: 0, errors: 0, downloaded: 0, articles: 0, skipped: 0 },
+            recentEvents: []
+          });
+          addRecentEvent(event, jobId);
+        }
+        function handleEnded(event, jobId) {
+          const state = getState(jobId);
+          const phase = event.type === "crawl:completed" ? "completed" : event.type === "crawl:failed" ? "failed" : "stopped";
+          const phaseDisplay = PHASE_DISPLAY[phase];
+          const endedAt = event.timestampMs || Date.now();
+          const duration = state.startedAt ? endedAt - state.startedAt : null;
+          updateState(jobId, {
+            phase,
+            phaseDisplay,
+            isActive: false,
+            endedAt,
+            duration
+          });
+          addRecentEvent(event, jobId);
+          if (onComplete) {
+            try {
+              onComplete(getState(jobId), event);
+            } catch (e) {
+              console.error("[CrawlDisplayAdapter] onComplete error:", e);
+            }
+          }
+        }
+        function handlePaused(event, jobId) {
+          updateState(jobId, {
+            phase: "paused",
+            phaseDisplay: PHASE_DISPLAY.paused,
+            isPaused: true
+          });
+          addRecentEvent(event, jobId);
+          if (onPhaseChange) {
+            try {
+              onPhaseChange("paused", PHASE_DISPLAY.paused, jobId);
+            } catch (e) {
+              console.error("[CrawlDisplayAdapter] onPhaseChange error:", e);
+            }
+          }
+        }
+        function handleResumed(event, jobId) {
+          const phase = event.data?.phase || "crawling";
+          const phaseDisplay = PHASE_DISPLAY[phase] || PHASE_DISPLAY.crawling;
+          updateState(jobId, {
+            phase,
+            phaseDisplay,
+            isPaused: false
+          });
+          addRecentEvent(event, jobId);
+          if (onPhaseChange) {
+            try {
+              onPhaseChange(phase, phaseDisplay, jobId);
+            } catch (e) {
+              console.error("[CrawlDisplayAdapter] onPhaseChange error:", e);
+            }
+          }
+        }
+        function handlePhaseChanged(event, jobId) {
+          const phase = event.data?.phase || "crawling";
+          const phaseDisplay = PHASE_DISPLAY[phase] || {
+            label: phase,
+            icon: "\u{1F504}",
+            color: "gray"
+          };
+          updateState(jobId, {
+            phase,
+            phaseDisplay
+          });
+          addRecentEvent(event, jobId);
+          if (onPhaseChange) {
+            try {
+              onPhaseChange(phase, phaseDisplay, jobId);
+            } catch (e) {
+              console.error("[CrawlDisplayAdapter] onPhaseChange error:", e);
+            }
+          }
+        }
+        function handleProgress(event, jobId) {
+          const data = event.data || {};
+          const state = getState(jobId);
+          const progress = {
+            visited: data.visited ?? state.progress.visited,
+            queued: data.queued ?? state.progress.queued,
+            errors: data.errors ?? state.progress.errors,
+            total: data.total ?? state.progress.total,
+            downloaded: data.downloaded ?? state.progress.downloaded,
+            articles: data.articles ?? state.progress.articles,
+            skipped: data.skipped ?? state.progress.skipped,
+            requestsPerSec: data.requestsPerSec ?? state.progress.requestsPerSec,
+            bytesPerSec: data.bytesPerSec ?? state.progress.bytesPerSec,
+            percentComplete: data.percentComplete ?? state.progress.percentComplete,
+            estimatedRemaining: data.estimatedRemaining ?? state.progress.estimatedRemaining,
+            // Optional UI hints
+            currentUrl: data.currentUrl ?? state.progress.currentUrl,
+            currentAction: data.currentAction ?? state.progress.currentAction,
+            throttled: data.throttled ?? state.progress.throttled,
+            throttleReason: data.throttleReason ?? state.progress.throttleReason,
+            throttleDomain: data.throttleDomain ?? state.progress.throttleDomain,
+            phase: data.phase ?? state.progress.phase
+          };
+          updateState(jobId, { progress });
+          if (onProgress) {
+            try {
+              onProgress(progress, jobId);
+            } catch (e) {
+              console.error("[CrawlDisplayAdapter] onProgress error:", e);
+            }
+          }
+        }
+        function handleGoalSatisfied(event, jobId) {
+          const state = getState(jobId);
+          const goalId = event.data?.goalId;
+          if (goalId) {
+            const goalsProgress = { ...state.goalsProgress };
+            goalsProgress[goalId] = {
+              satisfied: true,
+              current: event.data?.current,
+              target: event.data?.target
+            };
+            updateState(jobId, { goalsProgress });
+          }
+          addRecentEvent(event, jobId);
+        }
+        function handleBudget(event, jobId) {
+          const data = event.data || {};
+          updateState(jobId, {
+            budget: {
+              limits: data.limits || {},
+              spent: data.spent || {},
+              percentages: data.percentages || {},
+              exhausted: data.exhausted || false
+            }
+          });
+          addRecentEvent(event, jobId);
+        }
+        function handleWorkerScaled(event, jobId) {
+          updateState(jobId, {
+            workers: {
+              count: event.data?.to || 0,
+              active: event.data?.active || 0,
+              idle: event.data?.idle || 0
+            }
+          });
+          addRecentEvent(event, jobId);
+        }
+        function handleUrlError(event, jobId) {
+          addRecentEvent(event, jobId);
+          if (onError) {
+            try {
+              onError(event.data, jobId);
+            } catch (e) {
+              console.error("[CrawlDisplayAdapter] onError error:", e);
+            }
+          }
+        }
+        function handleStalled(event, jobId) {
+          addRecentEvent(event, jobId);
+          if (onError) {
+            try {
+              onError({ type: "stalled", ...event.data }, jobId);
+            } catch (e) {
+              console.error("[CrawlDisplayAdapter] onError error:", e);
+            }
+          }
+        }
+        function addRecentEvent(event, jobId) {
+          let state;
+          if (trackMultiple && jobId) {
+            state = crawlStates.get(jobId);
+          } else {
+            state = primaryState;
+          }
+          if (!state) return;
+          const recentEvents = [...state.recentEvents, {
+            id: event.id,
+            type: event.type,
+            timestamp: event.timestamp,
+            message: event.message,
+            severity: event.severity
+          }];
+          while (recentEvents.length > recentEventsLimit) {
+            recentEvents.shift();
+          }
+          if (trackMultiple && jobId) {
+            state.recentEvents = recentEvents;
+            crawlStates.set(jobId, state);
+          } else {
+            primaryState.recentEvents = recentEvents;
+          }
+        }
+        function formatDuration(ms) {
+          if (!ms || !Number.isFinite(ms)) return "\u2014";
+          const seconds = Math.floor(ms / 1e3);
+          const minutes = Math.floor(seconds / 60);
+          const hours = Math.floor(minutes / 60);
+          if (hours > 0) {
+            return `${hours}h ${minutes % 60}m`;
+          }
+          if (minutes > 0) {
+            return `${minutes}m ${seconds % 60}s`;
+          }
+          return `${seconds}s`;
+        }
+        function formatNumber(num) {
+          if (!Number.isFinite(num)) return "\u2014";
+          return num.toLocaleString();
+        }
+        function getSummaryText(jobId = null) {
+          const state = getState(jobId);
+          const { phase, progress, isActive } = state;
+          if (!isActive && phase === "idle") {
+            return "No active crawl";
+          }
+          if (phase === "completed") {
+            return `Completed: ${formatNumber(progress.visited)} URLs visited`;
+          }
+          if (phase === "failed") {
+            return `Failed: ${formatNumber(progress.errors)} errors`;
+          }
+          return `${state.phaseDisplay.label}: ${formatNumber(progress.visited)} visited, ${formatNumber(progress.queued)} queued`;
+        }
+        function reset(jobId = null) {
+          if (trackMultiple && jobId) {
+            crawlStates.delete(jobId);
+          } else {
+            primaryState = createDefaultState();
+          }
+          if (onStateChange) {
+            onStateChange(createDefaultState(), jobId);
+          }
+        }
+        function cleanup(maxAge = 36e5) {
+          if (!trackMultiple) return;
+          const now = Date.now();
+          for (const [jobId, state] of crawlStates) {
+            if (!state.isActive && state.endedAt && now - state.endedAt > maxAge) {
+              crawlStates.delete(jobId);
+            }
+          }
+        }
+        return {
+          // Event handling
+          handleEvent,
+          // State access
+          getState,
+          getAllStates,
+          reset,
+          cleanup,
+          // Display helpers
+          formatDuration,
+          formatNumber,
+          getSummaryText,
+          // Constants
+          PHASE_DISPLAY,
+          EVENT_CATEGORIES
+        };
+      }
+      if (typeof module !== "undefined" && module.exports) {
+        module.exports = {
+          createCrawlDisplayAdapter,
+          PHASE_DISPLAY,
+          EVENT_CATEGORIES,
+          createDefaultState
+        };
+      }
+      if (typeof window !== "undefined") {
+        window.CrawlDisplayAdapter = {
+          create: createCrawlDisplayAdapter,
+          PHASE_DISPLAY,
+          EVENT_CATEGORIES
+        };
+      }
+    }
+  });
+
   // ui/crawlWidgetControlsFactory.js
   var require_crawlWidgetControlsFactory = __commonJS({
     "ui/crawlWidgetControlsFactory.js"(exports, module) {
@@ -40287,6 +40786,9 @@ body .overlay {
             this.add_class("cw-app");
             this._api = spec.api || null;
             this._runState = { running: false, paused: false };
+            this._preferSseTelemetry = false;
+            this._eventSource = null;
+            this._telemetryAdapter = null;
             if (!spec.el) this.compose();
           }
           compose() {
@@ -40374,6 +40876,9 @@ body .overlay {
             } catch (err) {
               console.error("[CrawlWidget] Failed to load news sources:", err);
             }
+            await this._initTelemetrySse().catch((e) => {
+              console.warn("[CrawlWidget] Telemetry SSE init failed:", e?.message || e);
+            });
             if (this._api.onCrawlLog) {
               this._api.onCrawlLog((data) => {
                 this._logViewer.addLine(data.data, data.type);
@@ -40381,6 +40886,7 @@ body .overlay {
             }
             if (this._api.onCrawlProgress) {
               this._api.onCrawlProgress((progress) => {
+                if (this._preferSseTelemetry) return;
                 this._progressPanel.updateProgress(progress);
               });
             }
@@ -40408,6 +40914,38 @@ body .overlay {
                 this._runState.paused = true;
               }
             }
+          }
+          async _initTelemetrySse() {
+            if (!this._api || typeof this._api.getTelemetryInfo !== "function") return;
+            if (typeof EventSource !== "function") return;
+            const { createCrawlDisplayAdapter } = require_crawlDisplayAdapter();
+            const info = await this._api.getTelemetryInfo();
+            if (!info || info.success !== true || !info.sseUrl) return;
+            this._telemetryAdapter = createCrawlDisplayAdapter({
+              onProgress: (progress) => {
+                this._progressPanel.updateProgress(progress);
+              },
+              onPhaseChange: (phase) => {
+                this._progressPanel.updateProgress({ phase });
+              }
+            });
+            const es = new EventSource(info.sseUrl);
+            this._eventSource = es;
+            es.addEventListener("open", () => {
+              this._preferSseTelemetry = true;
+            });
+            es.addEventListener("message", (evt) => {
+              try {
+                const payload = JSON.parse(evt.data);
+                if (payload && payload.type === "crawl:telemetry" && payload.data && this._telemetryAdapter) {
+                  this._telemetryAdapter.handleEvent(payload.data);
+                }
+              } catch (e) {
+              }
+            });
+            es.addEventListener("error", () => {
+              this._preferSseTelemetry = false;
+            });
           }
           _el(ctrl2 = this) {
             return ctrl2?.dom?.el || null;

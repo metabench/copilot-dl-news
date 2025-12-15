@@ -4,7 +4,7 @@
 Standardize user-visible memory-load badge format across AGENTS/docs/agents
 
 ## Done When
-- [x] All key instruction surfaces use the same `🧠 MEMORY — ...` format.
+- [x] All key instruction surfaces use the same two-line memory output format (`🧠 Memory pull (for this task) — ...` + `Back to the task: ...`).
 - [x] Anti-spam guidance exists in AGENTS + the general guide + at least one agent persona file.
 - [x] Evidence commands are captured in `WORKING_NOTES.md`.
 - [x] `SESSION_SUMMARY.md` and `FOLLOW_UPS.md` are filled.
@@ -23,4 +23,4 @@ Standardize user-visible memory-load badge format across AGENTS/docs/agents
 - Confirm no legacy badge remains:
 	- Search for the legacy badge prefix (`Memory:`) across docs.
 - Confirm new badge appears where expected:
-	- Search for `🧠 MEMORY —` across docs.
+	- Search for `🧠 Memory pull (for this task) —` across docs.

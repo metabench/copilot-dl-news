@@ -38,6 +38,8 @@ const {
   isValidTelemetryEvent
 } = require('./CrawlTelemetrySchema');
 
+const { observable } = require('fnl');
+
 /**
  * Default options for the telemetry bridge
  */
@@ -67,8 +69,9 @@ const DEFAULT_OPTIONS = {
 class CrawlTelemetryBridge {
   /**
    * @param {Object} options
-   * @param {Function} options.broadcast - Function to broadcast events: (eventType, data) => void
+   * @param {Function} options.broadcast - Function to broadcast events: (event) => void
    * @param {number} [options.historyLimit=200] - Maximum events to keep in history
+   * @param {number} [options.maxHistorySize] - Deprecated alias for historyLimit
    * @param {number} [options.progressBatchInterval=500] - Progress batch interval in ms
    * @param {number} [options.urlEventBatchInterval=200] - URL event batch interval in ms
    * @param {number} [options.urlEventBatchSize=50] - Max URL events per batch
@@ -77,7 +80,12 @@ class CrawlTelemetryBridge {
    * @param {string} [options.defaultCrawlType='standard'] - Default crawl type
    */
   constructor(options = {}) {
-    const opts = { ...DEFAULT_OPTIONS, ...options };
+    const normalizedOptions = { ...options };
+    if (normalizedOptions.historyLimit == null && normalizedOptions.maxHistorySize != null) {
+      normalizedOptions.historyLimit = normalizedOptions.maxHistorySize;
+    }
+
+    const opts = { ...DEFAULT_OPTIONS, ...normalizedOptions };
     
     if (typeof opts.broadcast !== 'function') {
       throw new Error('CrawlTelemetryBridge requires a broadcast function');
@@ -94,6 +102,11 @@ class CrawlTelemetryBridge {
     
     // Event history for late-joining clients
     this._history = [];
+
+    // In-process observable stream of telemetry events.
+    // This allows the crawler to expose telemetry as an observable while
+    // keeping transport (SSE/stdout/etc) separate.
+    this._eventStream = observable(() => {});
     
     // Current state (latest values)
     this._currentState = {
@@ -117,6 +130,134 @@ class CrawlTelemetryBridge {
     this._connectedCrawlers = new Map();
   }
 
+  _toFiniteNumber(value) {
+    const numeric = typeof value === 'string' ? Number(value) : value;
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  _toNonNegativeInt(value, fallback = 0) {
+    const numeric = typeof value === 'string' ? Number(value) : value;
+    if (!Number.isFinite(numeric)) return fallback;
+    const intVal = Math.trunc(numeric);
+    return intVal >= 0 ? intVal : fallback;
+  }
+
+  _normalizeProgressStats(progress) {
+    if (!progress || typeof progress !== 'object') {
+      return { visited: 0, queued: 0, errors: 0 };
+    }
+
+    // Already schema-shaped.
+    const hasSchemaFields = 'visited' in progress || 'queued' in progress || 'errors' in progress;
+    if (hasSchemaFields) {
+      return {
+        ...progress,
+        visited: this._toNonNegativeInt(progress.visited, 0),
+        queued: this._toNonNegativeInt(progress.queued, 0),
+        errors: this._toNonNegativeInt(progress.errors, 0)
+      };
+    }
+
+    // Base Crawler payload: { stats: { pagesVisited, pagesDownloaded, articlesFound, errors, ... }, ...metadata }
+    const stats = progress.stats && typeof progress.stats === 'object' ? progress.stats : null;
+    if (stats) {
+      return {
+        visited: this._toNonNegativeInt(stats.pagesVisited ?? stats.visited, 0),
+        queued: this._toNonNegativeInt(progress.queued ?? stats.queued ?? stats.pagesQueued, 0),
+        errors: this._toNonNegativeInt(stats.errors, 0),
+        downloaded: this._toNonNegativeInt(stats.pagesDownloaded ?? stats.downloaded, undefined),
+        articles: this._toNonNegativeInt(stats.articlesFound ?? stats.articles, 0),
+        skipped: this._toNonNegativeInt(stats.skipped ?? stats.pagesSkipped, 0),
+        bytesPerSec: this._toFiniteNumber(stats.bytesPerSec),
+        requestsPerSec: this._toFiniteNumber(stats.requestsPerSec),
+        currentUrl: progress.currentUrl ?? null,
+        currentAction: progress.currentAction ?? null,
+        phase: progress.phase ?? null,
+        throttled: progress.throttled ?? null,
+        throttleReason: progress.throttleReason ?? null,
+        throttleDomain: progress.throttleDomain ?? null
+      };
+    }
+
+    // Orchestrator payload: { completion, eta, phase, rate, healthScore, ... }
+    const hasOrchestratorFields = 'completion' in progress || 'eta' in progress || 'rate' in progress || 'healthScore' in progress;
+    if (hasOrchestratorFields) {
+      return {
+        visited: 0,
+        queued: 0,
+        errors: 0,
+        percentComplete: this._toFiniteNumber(progress.completion ?? progress.percentComplete),
+        estimatedRemaining: this._toFiniteNumber(progress.eta ?? progress.estimatedRemaining),
+        phase: progress.phase ?? null,
+        requestsPerSec: this._toFiniteNumber(progress.rate ?? progress.requestsPerSec),
+        currentAction: progress.currentAction ?? null,
+        currentUrl: progress.currentUrl ?? null
+      };
+    }
+
+    // Unknown shape: don't drop everything, but ensure schema-required counters exist.
+    return { ...progress, visited: 0, queued: 0, errors: 0 };
+  }
+
+  /**
+   * Get the in-process observable stream of telemetry events.
+   *
+   * The returned value is an `fnl` observable (Evented-style) that emits:
+   * - `next` events with a telemetry event payload
+   * - `complete` when the bridge is destroyed
+   *
+   * Prefer `subscribe()` unless you need low-level access.
+   * @returns {any}
+   */
+  getObservable() {
+    return this._eventStream;
+  }
+
+  /**
+   * Subscribe to telemetry events emitted by this bridge.
+   *
+   * @param {(event: object) => void} onNext
+   * @param {object} [options]
+   * @param {boolean} [options.replayHistory=true] - Immediately replay bridge history to the subscriber.
+   * @returns {() => void} Unsubscribe function
+   */
+  subscribe(onNext, options = {}) {
+    if (typeof onNext !== 'function') {
+      throw new Error('subscribe(onNext) requires a function');
+    }
+
+    const replayHistory = options.replayHistory !== false;
+
+    const safeHandler = (event) => {
+      try {
+        onNext(event);
+      } catch (e) {
+        // Telemetry must never crash the crawler.
+        try {
+          console.error('[CrawlTelemetryBridge] Subscriber error:', e && e.message ? e.message : e);
+        } catch (_) {
+          // ignore
+        }
+      }
+    };
+
+    if (replayHistory) {
+      const history = this.getHistory();
+      for (const event of history) {
+        safeHandler(event);
+      }
+    }
+
+    this._eventStream.on('next', safeHandler);
+    return () => {
+      try {
+        this._eventStream.off('next', safeHandler);
+      } catch (_) {
+        // ignore
+      }
+    };
+  }
+
   /**
    * Get the current crawl state.
    * Useful for late-joining clients to get initial state.
@@ -124,6 +265,14 @@ class CrawlTelemetryBridge {
    */
   getState() {
     return { ...this._currentState };
+  }
+
+  /**
+   * Backwards-compatible alias for older integrations.
+   * @returns {Object} Current state snapshot
+   */
+  getCurrentState() {
+    return this.getState();
   }
 
   /**
@@ -156,6 +305,22 @@ class CrawlTelemetryBridge {
     const eventOpts = { jobId, crawlType };
     
     const handlers = new Map();
+    const handleFinished = (data) => {
+      const status = data?.status;
+      if (status === 'completed') {
+        this.emitCompleted(data, eventOpts);
+        return;
+      }
+      if (status === 'failed') {
+        this.emitFailed(data, eventOpts);
+        return;
+      }
+      this.emitStopped({
+        reason: data?.reason || status || 'aborted',
+        stats: data?.stats || null,
+        duration: data?.duration || null
+      }, eventOpts);
+    };
     
     // Map crawler events to telemetry events
     const eventMappings = [
@@ -170,6 +335,10 @@ class CrawlTelemetryBridge {
       ['url:error', (data) => this.emitUrlError(data, eventOpts)],
       ['checkpoint:saved', (data) => this.emitCheckpointSaved(data, eventOpts)],
       ['checkpoint:restored', (data) => this.emitCheckpointRestored(data, eventOpts)],
+      // CrawlContext and other implementations emit a consolidated finished event.
+      ['finished', handleFinished],
+      // CrawlOrchestrator emits checkpoints as a raw object.
+      ['checkpoint', (data) => this.emitCheckpointSaved({ checkpointId: data?.timestamp || data?.checkpointId || null }, eventOpts)],
       ['stalled', (data) => this.emitStalled(data, eventOpts)],
       // Progress events from CrawlOrchestrator's internal emitter
       ['progress', (data) => this.emitProgress(data, eventOpts)]
@@ -306,23 +475,76 @@ class CrawlTelemetryBridge {
    * Emit a progress event (batched).
    */
   emitProgress(stats, options = {}) {
-    this._currentState.progress = { ...stats };
+    const normalized = this._normalizeProgressStats(stats);
+
+    this._currentState.progress = { ...normalized };
     this._currentState.lastUpdatedAt = Date.now();
     
     // Batch progress events
     this._pendingProgress = {
-      stats,
+      stats: normalized,
       options: {
         jobId: options.jobId || this._currentState.jobId,
         crawlType: options.crawlType || this._currentState.crawlType
       }
     };
-    
     if (!this._progressTimer) {
       this._progressTimer = setTimeout(() => {
         this._flushProgress();
       }, this._progressBatchInterval);
+
+      try {
+        this._progressTimer.unref?.();
+      } catch (_) {
+        // ignore
+      }
     }
+  }
+
+  /**
+   * Emit a crawl completed event.
+   */
+  emitCompleted(data = {}, options = {}) {
+    this._currentState.phase = CRAWL_PHASES.COMPLETED;
+    this._currentState.lastUpdatedAt = Date.now();
+
+    const duration = data.duration ?? (this._currentState.startedAt ? Date.now() - this._currentState.startedAt : null);
+    const event = createTelemetryEvent(CRAWL_EVENT_TYPES.COMPLETED, {
+      reason: data.reason || null,
+      stats: data.stats || null,
+      duration
+    }, {
+      jobId: options.jobId || this._currentState.jobId,
+      crawlType: options.crawlType || this._currentState.crawlType,
+      message: 'Crawl completed'
+    });
+
+    this._flushBatches();
+    this._recordAndBroadcast(event);
+  }
+
+  /**
+   * Emit a crawl failed event.
+   */
+  emitFailed(data = {}, options = {}) {
+    this._currentState.phase = CRAWL_PHASES.FAILED;
+    this._currentState.lastUpdatedAt = Date.now();
+
+    const duration = data.duration ?? (this._currentState.startedAt ? Date.now() - this._currentState.startedAt : null);
+    const event = createTelemetryEvent(CRAWL_EVENT_TYPES.FAILED, {
+      reason: data.reason || null,
+      error: data.error || null,
+      stats: data.stats || null,
+      duration
+    }, {
+      jobId: options.jobId || this._currentState.jobId,
+      crawlType: options.crawlType || this._currentState.crawlType,
+      severity: 'error',
+      message: `Crawl failed: ${data.reason || 'unknown'}`
+    });
+
+    this._flushBatches();
+    this._recordAndBroadcast(event);
   }
 
   /**
@@ -483,6 +705,12 @@ class CrawlTelemetryBridge {
       this._urlEventTimer = setTimeout(() => {
         this._flushUrlEvents();
       }, this._urlEventBatchInterval);
+
+      try {
+        this._urlEventTimer.unref?.();
+      } catch (_) {
+        // ignore
+      }
     }
   }
 
@@ -521,6 +749,17 @@ class CrawlTelemetryBridge {
     if (this._history.length > this._historyLimit) {
       this._history.shift();
     }
+
+    // Notify in-process subscribers.
+    try {
+      this._eventStream.raise('next', event);
+    } catch (error) {
+      try {
+        console.error('[CrawlTelemetryBridge] Observable error:', error && error.message ? error.message : error);
+      } catch (_) {
+        // ignore
+      }
+    }
     
     // Broadcast via SSE
     try {
@@ -535,6 +774,13 @@ class CrawlTelemetryBridge {
    * Disconnect all crawlers and clean up.
    */
   destroy() {
+    // Complete observable stream first so subscribers can detach.
+    try {
+      this._eventStream.complete();
+    } catch (_) {
+      // ignore
+    }
+
     // Disconnect all crawlers
     for (const [id, connection] of this._connectedCrawlers) {
       for (const [event, handler] of connection.handlers) {

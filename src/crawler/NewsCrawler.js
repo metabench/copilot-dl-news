@@ -1158,6 +1158,30 @@ class NewsCrawler extends Crawler {
     try {
       if (normalized) host = new URL(normalized).hostname;
     } catch (_) {}
+
+    if (this.hubFreshnessConfig && this.hubFreshnessConfig.persistDecisionTraces === true) {
+      try {
+        const reason = decision?.reason || 'policy';
+        const target = normalized || analysis.raw || null;
+        this.telemetry?.milestone?.({
+          kind: 'skip-reason-decision',
+          scope: host || this.domain,
+          target,
+          message: `Skipped by URL policy (${reason})`,
+          details: {
+            reason,
+            depth,
+            queueSize,
+            rawUrl: analysis.raw || null,
+            normalizedUrl: analysis.normalized || null,
+            guessedUrl: decision?.guessedUrl || null,
+            orchestration: decision?.orchestration || null
+          },
+          persist: true
+        });
+      } catch (_) {}
+    }
+
     this.telemetry.queueEvent({
       action: 'drop',
       url: normalized || analysis.raw,

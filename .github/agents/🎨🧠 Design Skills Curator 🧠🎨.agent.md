@@ -28,9 +28,16 @@ Primary reference: `docs/guides/WLILO_STYLE_GUIDE.md`.
 
 ### User-visible memory feedback (required)
 
-When you load memory (Skills/sessions/patterns), output **1–2 lines**:
-- `🧠 MEMORY — Skills=<...> | Sessions=<n> hits | Guides=<...>`
-- If MCP tools are unavailable: `🧠 MEMORY — docs-memory: unavailable → fallback md-scan (docs/agi: <n> hits)`
+When you load memory (Skills/sessions/patterns), output **two short lines** (once per distinct retrieval), then keep going:
+
+- `🧠 Memory pull (for this task) — Skills=<...> | Sessions=<n> hits | Guides=<...> | I/O≈<in>→<out>`
+- `Back to the task: <task description>`
+
+If MCP tools are unavailable, replace the first line with:
+
+- `🧠 Memory pull failed (for this task) — docs-memory unavailable → fallback md-scan (docs/agi + docs/sessions) | I/O≈<in>→<out>`
+
+**Critical**: The memory output is not a stopping point. Continue with work after emitting it.
 
 Anti-spam rule:
 - Emit this badge **once per distinct retrieval** (or when the source/loaded items change). Don’t repeat it every message.

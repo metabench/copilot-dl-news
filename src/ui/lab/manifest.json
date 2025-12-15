@@ -178,5 +178,115 @@
     "path": "src/ui/lab/experiments/018-ap-undo-redo-stack",
     "check": "src/ui/lab/experiments/018-ap-undo-redo-stack/check.js",
     "readme": "src/ui/lab/experiments/018-ap-undo-redo-stack/README.md"
+  },
+  {
+    "id": "019",
+    "slug": "context-menu-patterns",
+    "name": "Context Menu Patterns",
+    "status": "proposed",
+    "description": "Standard DOM/jsgui3 contextmenu open/close/action pattern",
+    "path": "src/ui/lab/experiments/019-context-menu-patterns",
+    "check": "src/ui/lab/experiments/019-context-menu-patterns/check.js",
+    "readme": "src/ui/lab/experiments/019-context-menu-patterns/README.md"
+  },
+  {
+    "id": "020",
+    "slug": "jsgui3-server-activation",
+    "name": "jsgui3-server Activation + ctrl_fields",
+    "status": "active",
+    "description": "SSR + client activation + data-jsgui-fields + data-jsgui-ctrl-fields",
+    "path": "src/ui/lab/experiments/020-jsgui3-server-activation",
+    "check": "src/ui/lab/experiments/020-jsgui3-server-activation/check.js",
+    "readme": "src/ui/lab/experiments/020-jsgui3-server-activation/README.md"
+  },
+  {
+    "id": "021",
+    "slug": "data-model-mvc",
+    "name": "Data_Model server→client bridge (MVC)",
+    "status": "active",
+    "description": "SSR + client activation + Data_Object encoded/decoded via persisted fields + MVC pattern",
+    "path": "src/ui/lab/experiments/021-data-model-mvc",
+    "check": "src/ui/lab/experiments/021-data-model-mvc/check.js",
+    "readme": "src/ui/lab/experiments/021-data-model-mvc/README.md"
+  },
+  {
+    "id": "022",
+    "slug": "data-model-mvvm",
+    "name": "Data_Model server→client bridge (MVVM)",
+    "status": "active",
+    "description": "SSR + client activation + Data_Object encoded/decoded + data.model → view.data.model binding",
+    "path": "src/ui/lab/experiments/022-data-model-mvvm",
+    "check": "src/ui/lab/experiments/022-data-model-mvvm/check.js",
+    "readme": "src/ui/lab/experiments/022-data-model-mvvm/README.md"
+  },
+  {
+    "id": "023",
+    "slug": "advanced-mvvm-patterns",
+    "name": "Advanced MVVM Patterns",
+    "status": "active",
+    "description": "Staged edits + computed + safe two-way binding (uses set() for change events)",
+    "path": "src/ui/lab/experiments/023-advanced-mvvm-patterns",
+    "check": "src/ui/lab/experiments/023-advanced-mvvm-patterns/check.js",
+    "readme": "src/ui/lab/experiments/023-advanced-mvvm-patterns/README.md"
+  },
+  {
+    "id": "024",
+    "slug": "fib-observable-mvvm",
+    "name": "Fibonacci Server Observable → MVVM (SSE)",
+    "status": "active",
+    "description": "Server-side fnl.observable publishes Fibonacci ticks via SSE; client MVVM displays latest index + value",
+    "path": "src/ui/lab/experiments/024-fib-observable-mvvm",
+    "check": "src/ui/lab/experiments/024-fib-observable-mvvm/check.js",
+    "readme": "src/ui/lab/experiments/024-fib-observable-mvvm/README.md"
+  },
+  {
+    "id": "025",
+    "slug": "mvvm-bindings-library",
+    "name": "MVVM Bindings Library",
+    "status": "active",
+    "description": "Small reusable MVVM bindings helpers (model→view model, view model→DOM) with deterministic check",
+    "path": "src/ui/lab/experiments/025-mvvm-bindings-library",
+    "check": "src/ui/lab/experiments/025-mvvm-bindings-library/check.js",
+    "readme": "src/ui/lab/experiments/025-mvvm-bindings-library/README.md"
+  },
+  {
+    "id": "026",
+    "slug": "activation-contract-lab",
+    "name": "Activation Contract Lab",
+    "status": "active",
+    "description": "Enforces activation invariants: data-jsgui-type coverage, constructor registration, activate() actually runs",
+    "path": "src/ui/lab/experiments/026-activation-contract-lab",
+    "check": "src/ui/lab/experiments/026-activation-contract-lab/check.js",
+    "readme": "src/ui/lab/experiments/026-activation-contract-lab/README.md"
+  },
+  {
+    "id": "027",
+    "slug": "progressbar-sse-telemetry",
+    "name": "ProgressBar + Telemetry SSE",
+    "status": "active",
+    "description": "SSE crawl telemetry (bridge + integration) drives a ProgressBar via CrawlDisplayAdapter; includes indeterminate→determinate toggle",
+    "path": "src/ui/lab/experiments/027-progressbar-sse-telemetry",
+    "check": "src/ui/lab/experiments/027-progressbar-sse-telemetry/check.js",
+    "readme": "src/ui/lab/experiments/027-progressbar-sse-telemetry/README.md"
+  },
+  {
+    "id": "028",
+    "slug": "jsgui3-server-sse-telemetry",
+    "name": "jsgui3-server SSE + Telemetry",
+    "status": "active",
+    "description": "Host /events (SSE) directly on jsgui3-server (no Express) and stream server-side observable telemetry to a ProgressBar via CrawlDisplayAdapter",
+    "path": "src/ui/lab/experiments/028-jsgui3-server-sse-telemetry",
+    "check": "src/ui/lab/experiments/028-jsgui3-server-sse-telemetry/check.js",
+    "readme": "src/ui/lab/experiments/028-jsgui3-server-sse-telemetry/README.md"
+  },
+  {
+    "id": "029",
+    "slug": "mixed-builtins-custom-activation",
+    "name": "Mixed Built-ins + Custom Activation",
+    "status": "active",
+    "description": "Mix a built-in jsgui3-html control (Color_Grid) with custom controls and emit structured activation diagnostics (gated debug output)",
+    "path": "src/ui/lab/experiments/029-mixed-builtins-custom-activation",
+    "check": "src/ui/lab/experiments/029-mixed-builtins-custom-activation/check.js",
+    "readme": "src/ui/lab/experiments/029-mixed-builtins-custom-activation/README.md"
   }
 ]

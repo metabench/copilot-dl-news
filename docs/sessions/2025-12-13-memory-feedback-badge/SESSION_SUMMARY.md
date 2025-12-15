@@ -1,7 +1,7 @@
 # Session Summary – Memory Feedback Badge Format
 
 ## Accomplishments
-- Standardized the repo’s user-visible memory-load “badge line” to a simpler, higher-contrast format: `🧠 MEMORY — ...`.
+- Standardized the repo’s user-visible memory-load output to a continuation-friendly two-line format: `🧠 Memory pull (for this task) — ...` + `Back to the task: ...`.
 - Added anti-spam rules so agents don’t repeat the badge unless something changed.
 - Updated the key instruction surfaces (AGENTS + general guide + Design Skills agent + WLILO skills) to match.
 

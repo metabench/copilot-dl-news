@@ -134,6 +134,14 @@ class CrawlOperation {
   async disposeCrawler(crawler, logger = console) {
     try {
       if (crawler) {
+        if (typeof crawler.__crawlTelemetryDisconnect === 'function') {
+          try {
+            crawler.__crawlTelemetryDisconnect();
+          } catch (err) {
+            // Ignore disconnect errors
+          }
+        }
+
         if (typeof crawler.dispose === 'function') {
           await crawler.dispose();
         } else if (crawler.dbAdapter && typeof crawler.dbAdapter.close === 'function') {

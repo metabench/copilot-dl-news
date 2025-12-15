@@ -32,6 +32,9 @@ function createCrawlWidgetControls(jsgui) {
       this.add_class("cw-app");
       this._api = spec.api || null;
       this._runState = { running: false, paused: false };
+      this._preferSseTelemetry = false;
+      this._eventSource = null;
+      this._telemetryAdapter = null;
       if (!spec.el) this.compose();
     }
 
@@ -133,6 +136,12 @@ function createCrawlWidgetControls(jsgui) {
         console.error("[CrawlWidget] Failed to load news sources:", err);
       }
 
+      // Prefer standardized telemetry via SSE when available.
+      // (IPC progress remains as fallback / legacy.)
+      await this._initTelemetrySse().catch((e) => {
+        console.warn("[CrawlWidget] Telemetry SSE init failed:", e?.message || e);
+      });
+
       if (this._api.onCrawlLog) {
         this._api.onCrawlLog((data) => {
           this._logViewer.addLine(data.data, data.type);
@@ -141,6 +150,7 @@ function createCrawlWidgetControls(jsgui) {
 
       if (this._api.onCrawlProgress) {
         this._api.onCrawlProgress((progress) => {
+          if (this._preferSseTelemetry) return;
           this._progressPanel.updateProgress(progress);
         });
       }
@@ -171,6 +181,49 @@ function createCrawlWidgetControls(jsgui) {
           this._runState.paused = true;
         }
       }
+    }
+
+    async _initTelemetrySse() {
+      if (!this._api || typeof this._api.getTelemetryInfo !== "function") return;
+      if (typeof EventSource !== "function") return;
+
+      const { createCrawlDisplayAdapter } = require("../../src/ui/client/crawlDisplayAdapter");
+
+      const info = await this._api.getTelemetryInfo();
+      if (!info || info.success !== true || !info.sseUrl) return;
+
+      this._telemetryAdapter = createCrawlDisplayAdapter({
+        onProgress: (progress) => {
+          this._progressPanel.updateProgress(progress);
+        },
+        onPhaseChange: (phase) => {
+          // The panel can infer phase indicator states from the string.
+          this._progressPanel.updateProgress({ phase });
+        }
+      });
+
+      const es = new EventSource(info.sseUrl);
+      this._eventSource = es;
+
+      es.addEventListener("open", () => {
+        this._preferSseTelemetry = true;
+      });
+
+      es.addEventListener("message", (evt) => {
+        try {
+          const payload = JSON.parse(evt.data);
+          if (payload && payload.type === "crawl:telemetry" && payload.data && this._telemetryAdapter) {
+            this._telemetryAdapter.handleEvent(payload.data);
+          }
+        } catch (e) {
+          // Ignore malformed messages
+        }
+      });
+
+      es.addEventListener("error", () => {
+        // Allow IPC progress to continue if SSE disconnects.
+        this._preferSseTelemetry = false;
+      });
     }
 
     _el(ctrl = this) {

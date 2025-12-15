@@ -37,12 +37,16 @@ const { CrawlTelemetryBridge } = require('./CrawlTelemetryBridge');
 class TelemetryIntegration {
   /**
    * @param {Object} options
-   * @param {number} [options.maxHistorySize=500] - Max events to keep for late-joining clients
+   * @param {number} [options.historyLimit=500] - Max events to keep for late-joining clients
+   * @param {number} [options.maxHistorySize] - Deprecated alias for historyLimit
    * @param {number} [options.heartbeatInterval=30000] - Heartbeat interval for SSE (ms)
+   * @param {string|null} [options.allowOrigin=null] - Optional Access-Control-Allow-Origin value
+   * @param {Object} [options.bridgeOptions] - Extra options forwarded to CrawlTelemetryBridge
    */
   constructor(options = {}) {
-    this.maxHistorySize = options.maxHistorySize ?? 500;
+    this.historyLimit = options.historyLimit ?? options.maxHistorySize ?? 500;
     this.heartbeatInterval = options.heartbeatInterval ?? 30000;
+    this.allowOrigin = options.allowOrigin ?? null;
     
     /** @type {Set<import('http').ServerResponse>} */
     this.sseClients = new Set();
@@ -52,11 +56,16 @@ class TelemetryIntegration {
     
     /** @type {Function[]} Disconnect functions for connected crawlers */
     this.crawlerDisconnects = [];
+
+    const bridgeOptions = options.bridgeOptions && typeof options.bridgeOptions === 'object'
+      ? options.bridgeOptions
+      : {};
     
     // Create the bridge with our broadcast function
     this.bridge = new CrawlTelemetryBridge({
-      broadcast: this._broadcast.bind(this),
-      maxHistorySize: this.maxHistorySize
+      ...bridgeOptions,
+      historyLimit: this.historyLimit,
+      broadcast: this._broadcast.bind(this)
     });
   }
   
@@ -66,7 +75,12 @@ class TelemetryIntegration {
    * @private
    */
   _broadcast(event) {
-    const message = `data: ${JSON.stringify(event)}\n\n`;
+    const payload = {
+      type: 'crawl:telemetry',
+      data: event
+    };
+
+    const message = `data: ${JSON.stringify(payload)}\n\n`;
     const deadClients = [];
     
     for (const client of this.sseClients) {
@@ -130,32 +144,29 @@ class TelemetryIntegration {
     
     app.get(path, (req, res) => {
       // Set SSE headers
-      res.writeHead(200, {
+      const headers = {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
         'X-Accel-Buffering': 'no'
-      });
+      };
+
+      if (this.allowOrigin) {
+        headers['Access-Control-Allow-Origin'] = this.allowOrigin;
+      }
+
+      res.writeHead(200, headers);
       
       // Send initial data
       res.write(':ok\n\n');
       
-      // Send current state and history
-      const state = this.bridge.getCurrentState();
-      if (state) {
-        res.write(`data: ${JSON.stringify({
-          type: 'crawl:state',
-          data: state,
-          timestamp: new Date().toISOString()
-        })}\n\n`);
-      }
-      
+      // Replay history so late-joining clients reconstruct state.
+      // (Each item is already a telemetry event from the bridge.)
       const history = this.bridge.getHistory();
-      if (history.length > 0) {
+      for (const event of history) {
         res.write(`data: ${JSON.stringify({
-          type: 'crawl:history',
-          data: history,
-          timestamp: new Date().toISOString()
+          type: 'crawl:telemetry',
+          data: event
         })}\n\n`);
       }
       
@@ -184,6 +195,26 @@ class TelemetryIntegration {
     const disconnect = this.bridge.connectCrawler(crawler, options);
     this.crawlerDisconnects.push(disconnect);
     return disconnect;
+  }
+
+  /**
+   * Get the in-process observable stream of telemetry events.
+   * @returns {any}
+   */
+  getObservable() {
+    return this.bridge.getObservable();
+  }
+
+  /**
+   * Subscribe to in-process telemetry events.
+   *
+   * @param {(event: object) => void} onNext
+   * @param {object} [options]
+   * @param {boolean} [options.replayHistory=true]
+   * @returns {() => void}
+   */
+  subscribe(onNext, options = {}) {
+    return this.bridge.subscribe(onNext, options);
   }
   
   /**

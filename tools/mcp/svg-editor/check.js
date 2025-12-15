@@ -40,6 +40,14 @@ async function runCheck() {
                 const collisions = tools.svg_detect_collisions.handler({ fileId: openResult.fileId });
                 console.log(`  svg_detect_collisions: ${collisions.total} (H:${collisions.high} M:${collisions.medium} L:${collisions.low})`);
                 
+                // Test Smart Add (Dry run effectively since we don't save)
+                const smartResult = tools.svg_smart_add.handler({
+                    fileId: openResult.fileId,
+                    content: "Test Note",
+                    type: "note"
+                });
+                console.log(`  svg_smart_add: ${smartResult.success ? "✅" : "❌"} (Moved: ${smartResult.moved}, Suggestions: ${smartResult.suggestions?.length})`);
+
                 // Close
                 tools.svg_close.handler({ fileId: openResult.fileId });
                 console.log(`  svg_close: ✅`);

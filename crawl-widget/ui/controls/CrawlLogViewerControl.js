@@ -48,13 +48,15 @@ function createCrawlLogViewerControl(jsgui) {
       this._header.add(this._filterBtn);
 
       this._copyBtn = new jsgui.Control({ context: this.context, tagName: "button" });
-      this._copyBtn.add_class("cw-log-action-btn", "cw-log-action-btn--copy");
+      this._copyBtn.add_class("cw-log-action-btn");
+      this._copyBtn.add_class("cw-log-action-btn--copy");
       this._copyBtn.add(new StringControl({ context: this.context, text: "⧉" }));
       this._copyBtn.dom.attributes.title = "Copy visible log lines";
       this._header.add(this._copyBtn);
 
       this._clearBtn = new jsgui.Control({ context: this.context, tagName: "button" });
-      this._clearBtn.add_class("cw-log-action-btn", "cw-log-action-btn--clear");
+      this._clearBtn.add_class("cw-log-action-btn");
+      this._clearBtn.add_class("cw-log-action-btn--clear");
       this._clearBtn.add(new StringControl({ context: this.context, text: "🗑" }));
       this._clearBtn.dom.attributes.title = "Clear log";
       this._header.add(this._clearBtn);

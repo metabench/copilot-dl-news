@@ -40,6 +40,17 @@ Work in **one overarching phase** per engagement. Define the phase, enumerate al
 - **After finishing work**: Persist 1–3 durable updates via `docs-memory` (Lesson/Pattern/Anti-Pattern) when you learned something reusable.
 - **On docs-memory errors**: Notify the user immediately (tool name + error), suggest a systemic fix (docs/tool UX), and log it in the active session’s `FOLLOW_UPS.md`.
 
+### Memory output (required)
+
+When you consult memory (Skills/sessions/lessons/patterns), emit two short lines (once per distinct retrieval), then keep going:
+
+- `🧠 Memory pull (for this task) — Skills=<names> | Sessions=<n hits> | Lessons/Patterns=<skimmed> | I/O≈<in>→<out>`
+- `Back to the task: <task description>`
+
+If docs-memory is unavailable, replace the first line with:
+
+- `🧠 Memory pull failed (for this task) — docs-memory unavailable → fallback md-scan (docs/agi + docs/sessions) | I/O≈<in>→<out>`
+
 ---
 
 ## Task Document — `TEST_RUNNER_TASKS.md`

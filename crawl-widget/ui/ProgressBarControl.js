@@ -23,10 +23,14 @@ function createProgressBarControl(jsgui) {
       this._color = spec.color || "emerald";
       this._showPercentage = spec.showPercentage || false;
       this._animated = spec.animated !== false;
+      this._indeterminate = Boolean(spec.indeterminate);
       
       this.add_class("progress-bar");
       this.add_class(`progress-bar--${this._variant}`);
       this.add_class(`progress-bar--${this._color}`);
+      if (this._indeterminate) {
+        this.add_class("progress-bar--indeterminate");
+      }
       
       if (this._animated) {
         this.add_class("progress-bar--animated");
@@ -61,16 +65,27 @@ function createProgressBarControl(jsgui) {
 
     _updateFillWidth() {
       if (this._fill) {
+        if (this._indeterminate) {
+          // CSS animation handles the perceived progress movement.
+          this._fill.dom.attributes.style = "width: 35%;";
+          return;
+        }
+
         const width = `${Math.round(this._value * 100)}%`;
         this._fill.dom.attributes.style = `width: ${width};`;
       }
     }
 
     _formatPercentage() {
+      if (this._indeterminate) return "…";
       return `${Math.round(this._value * 100)}%`;
     }
 
     setValue(value) {
+      if (this._indeterminate) {
+        // Ignore determinate updates while indeterminate.
+        return;
+      }
       this._value = Math.max(0, Math.min(1, value));
       this._updateFillWidth();
       
@@ -83,6 +98,29 @@ function createProgressBarControl(jsgui) {
         const labelEl = this._el(this._labelEl);
         if (labelEl) {
           labelEl.textContent = this._formatPercentage();
+        }
+      }
+    }
+
+    setIndeterminate(indeterminate = true) {
+      const next = Boolean(indeterminate);
+      if (this._indeterminate === next) return;
+
+      this._indeterminate = next;
+
+      const el = this._el();
+      if (el) {
+        el.classList.toggle("progress-bar--indeterminate", this._indeterminate);
+      } else {
+        if (this._indeterminate) this.add_class("progress-bar--indeterminate");
+      }
+
+      this._updateFillWidth();
+
+      if (this._labelEl) {
+        const labelEl = this._el(this._labelEl);
+        if (labelEl) {
+          labelEl.textContent = this._label || this._formatPercentage();
         }
       }
     }

@@ -80,6 +80,14 @@
     "path": ".github/agents/🕷️ Crawler Singularity 🕷️.agent.md"
   },
   {
+    "doc_slug": "crawler-improvement-implementer",
+    "title": "🧭🕷️ Crawler Improvement Implementer 🧠",
+    "purpose": "Executes docs/designs/CRAWLER_IMPROVEMENT_STRATEGIES.md as an implementation program: small verified slices, decision visibility, and memory-backed continuity",
+    "tags": ["crawler", "roadmap", "implementation", "decision-visibility", "config", "docs-memory", "sessions"],
+    "last_review": "2025-12-15",
+    "path": ".github/agents/🧭🕷️ Crawler Improvement Implementer 🧠.agent.md"
+  },
+  {
     "doc_slug": "interactive-crawl-observatory",
     "title": "🔬 Interactive Crawl Observatory 🔬",
     "purpose": "Step-by-step intelligent crawl execution with decision transparency, user confirmation, and live rule editing",
@@ -206,5 +214,21 @@
     "tags": ["design", "wlilo", "jsgui3", "svg", "html", "theming", "skills", "docs-memory"],
     "last_review": "2025-12-13",
     "path": ".github/agents/🎨🧠 Design Skills Curator 🧠🎨.agent.md"
+  },
+  {
+    "doc_slug": "memory-agent",
+    "title": "🧠 Memory Agent 🧠",
+    "purpose": "Memory-first execution: capture user intent, track progress, and reuse Skills/sessions/lessons via docs-memory",
+    "tags": ["memory", "docs-memory", "sessions", "skills", "lessons", "patterns"],
+    "last_review": "2025-12-14",
+    "path": ".github/agents/🧠 Memory Agent 🧠.agent.md"
+  },
+  {
+    "doc_slug": "memory-svg-researcher",
+    "title": "🧠📐 Memory + SVG Researcher 📐🧠",
+    "purpose": "Specialist researcher focused on upgrading repo memory via docs-memory and documenting research as SVG diagrams via svg-editor, while executing jsgui3 lab experiments",
+    "tags": ["memory", "docs-memory", "svg", "svg-editor", "diagrams", "jsgui3", "lab", "research"],
+    "last_review": "2025-12-14",
+    "path": ".github/agents/🧠📐 Memory + SVG Researcher 📐🧠.agent.md"
   }
 ]

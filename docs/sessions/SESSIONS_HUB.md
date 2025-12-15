@@ -31,6 +31,671 @@
 
 ## Current Session
 
+### Session 2025-12-15: Crawler Improvement Strategies Agent
+
+**Duration**: Active
+**Type**: agents
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create a new emoji agent file to execute CRAWLER_IMPROVEMENT_STRATEGIES.md with memory/session discipline.
+
+**Location**: `docs/sessions/2025-12-15-crawler-improvement-strategies-agent/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-15-crawler-improvement-strategies-agent/INDEX.md)
+- 🗺️ [Plan](./2025-12-15-crawler-improvement-strategies-agent/PLAN.md)
+- 📝 [Working Notes](./2025-12-15-crawler-improvement-strategies-agent/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-15-crawler-improvement-strategies-agent/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-15-crawler-improvement-strategies-agent/FOLLOW_UPS.md)
+
+
+### Session 2025-12-15: Decision audit persistence + Data Explorer decisions
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Persist decision traces/milestones reliably and surface them via Data Explorer /decisions.
+
+**Location**: `docs/sessions/2025-12-15-crawler-decision-audit-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-15-crawler-decision-audit-ui/INDEX.md)
+- 🗺️ [Plan](./2025-12-15-crawler-decision-audit-ui/PLAN.md)
+- 📝 [Working Notes](./2025-12-15-crawler-decision-audit-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-15-crawler-decision-audit-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-15-crawler-decision-audit-ui/FOLLOW_UPS.md)
+
+
+### Session 2025-12-15: Decision audit trail + Data Explorer decisions view
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Persist crawler decision events to DB and expose them in Data Explorer UI with tests
+
+**Location**: `docs/sessions/2025-12-15-decision-audit-dashboard/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-15-decision-audit-dashboard/INDEX.md)
+- 🗺️ [Plan](./2025-12-15-decision-audit-dashboard/PLAN.md)
+- 📝 [Working Notes](./2025-12-15-decision-audit-dashboard/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-15-decision-audit-dashboard/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-15-decision-audit-dashboard/FOLLOW_UPS.md)
+
+
+### Session 2025-12-15: Config-driven ArticleSignals patterns
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Move article/skip URL patterns out of hardcoded code into active DecisionConfigSet, with tests and safe defaults
+
+**Location**: `docs/sessions/2025-12-15-crawler-config-driven-article-signals/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-15-crawler-config-driven-article-signals/INDEX.md)
+- 🗺️ [Plan](./2025-12-15-crawler-config-driven-article-signals/PLAN.md)
+- 📝 [Working Notes](./2025-12-15-crawler-config-driven-article-signals/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-15-crawler-config-driven-article-signals/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-15-crawler-config-driven-article-signals/FOLLOW_UPS.md)
+
+
+### Session 2025-12-15: Crawler Improvement Strategies - Deep Research & Lab Proposals
+
+**Duration**: Active
+**Type**: analysis
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Research 7 improvement opportunities, document current status vs roadmap, and propose lab experiments for safe integration
+
+**Location**: `docs/sessions/2025-12-15-crawler-improvement-strategies/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-15-crawler-improvement-strategies/INDEX.md)
+- 🗺️ [Plan](./2025-12-15-crawler-improvement-strategies/PLAN.md)
+- 📝 [Working Notes](./2025-12-15-crawler-improvement-strategies/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-15-crawler-improvement-strategies/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-15-crawler-improvement-strategies/FOLLOW_UPS.md)
+
+
+### Session 2025-12-15: z-server: bug review + fixes
+
+**Duration**: Active
+**Type**: bugfix
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Review recently changed z-server files for bugs and apply minimal verified fixes.
+
+**Location**: `docs/sessions/2025-12-15-z-server-bugfix-review/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-15-z-server-bugfix-review/INDEX.md)
+- 🗺️ [Plan](./2025-12-15-z-server-bugfix-review/PLAN.md)
+- 📝 [Working Notes](./2025-12-15-z-server-bugfix-review/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-15-z-server-bugfix-review/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-15-z-server-bugfix-review/FOLLOW_UPS.md)
+
+
+### Session 2025-12-15: Activation debugging with mixed controls
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add a lab that mixes built-in and custom controls and produces structured activation diagnostics with gated debug output.
+
+**Location**: `docs/sessions/2025-12-15-activation-debug-mixed-controls/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-15-activation-debug-mixed-controls/INDEX.md)
+- 🗺️ [Plan](./2025-12-15-activation-debug-mixed-controls/PLAN.md)
+- 📝 [Working Notes](./2025-12-15-activation-debug-mixed-controls/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-15-activation-debug-mixed-controls/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-15-activation-debug-mixed-controls/FOLLOW_UPS.md)
+
+
+### Session 2025-12-15: Silence jsgui activation noise
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Suppress noisy jsgui3 activation console logs (pre_activate/activate/fallback) without hiding real errors.
+
+**Location**: `docs/sessions/2025-12-15-quiet-activation-noise/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-15-quiet-activation-noise/INDEX.md)
+- 🗺️ [Plan](./2025-12-15-quiet-activation-noise/PLAN.md)
+- 📝 [Working Notes](./2025-12-15-quiet-activation-noise/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-15-quiet-activation-noise/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-15-quiet-activation-noise/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Eliminate activation noise + add lab runner
+
+**Duration**: Active
+**Type**: jsgui3
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Remove noisy activation console logs and add one-command runner for multiple lab checks
+
+**Location**: `docs/sessions/2025-12-14-activation-noise-and-lab-runner/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-activation-noise-and-lab-runner/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-activation-noise-and-lab-runner/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-activation-noise-and-lab-runner/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-activation-noise-and-lab-runner/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-activation-noise-and-lab-runner/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Lab validation: activation + MVVM + SSE
+
+**Duration**: Active
+**Type**: jsgui3
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Run lab checks 025028 and fix any regressions
+
+**Location**: `docs/sessions/2025-12-14-lab-activation-sse-validation/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-lab-activation-sse-validation/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-lab-activation-sse-validation/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-lab-activation-sse-validation/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-lab-activation-sse-validation/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-lab-activation-sse-validation/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: z-server restart detection
+
+**Duration**: Active
+**Type**: debug
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Investigate why z-server fails to notice a stopped+restarted server and improve telemetry/handshake so restarts are detected reliably.
+
+**Location**: `docs/sessions/2025-12-14-z-server-restart-detection/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-z-server-restart-detection/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-z-server-restart-detection/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-z-server-restart-detection/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-z-server-restart-detection/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-z-server-restart-detection/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Crawl observable in-process jobs regression tests
+
+**Duration**: Active
+**Type**: tests
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add missing regression tests for v1 in-process crawl jobs start/control routes and registry behavior.
+
+**Location**: `docs/sessions/2025-12-14-crawl-observable-regression-tests/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-crawl-observable-regression-tests/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-crawl-observable-regression-tests/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-crawl-observable-regression-tests/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-crawl-observable-regression-tests/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-crawl-observable-regression-tests/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Crawl as fnl observable process
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Expose in-process crawl jobs as fnl observables with stop/pause/resume and stream canonical telemetry via SSE
+
+**Location**: `docs/sessions/2025-12-14-crawl-observable-process/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-crawl-observable-process/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-crawl-observable-process/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-crawl-observable-process/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-crawl-observable-process/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-crawl-observable-process/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Wire Crawler Telemetry into SSE
+
+**Duration**: Active
+**Type**: crawler
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Bridge canonical crawler telemetry (TelemetryIntegration) into /events and data explorer SSE, with regression tests.
+
+**Location**: `docs/sessions/2025-12-14-crawl-sse-telemetry-bridge/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-crawl-sse-telemetry-bridge/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-crawl-sse-telemetry-bridge/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-crawl-sse-telemetry-bridge/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-crawl-sse-telemetry-bridge/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-crawl-sse-telemetry-bridge/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Crawler Development Progress Diagram
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Inventory planned-but-unimplemented crawler work and produce an SVG progress diagram.
+
+**Location**: `docs/sessions/2025-12-14-crawler-progress-svg/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-crawler-progress-svg/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-crawler-progress-svg/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-crawler-progress-svg/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-crawler-progress-svg/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-crawler-progress-svg/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Crawl server live crawl status
+
+**Duration**: Active
+**Type**: ui-server
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Wire crawler telemetry into crawl server and display ongoing crawl statuses (SSE + UI)
+
+**Location**: `docs/sessions/2025-12-14-crawl-server-live-status/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-crawl-server-live-status/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-crawl-server-live-status/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-crawl-server-live-status/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-crawl-server-live-status/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-crawl-server-live-status/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Fix CrawlTelemetryBridge progress normalization
+
+**Duration**: Active
+**Type**: telemetry
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Repair CrawlTelemetryBridge structure and validate progress normalization + finished mappings with tests
+
+**Location**: `docs/sessions/2025-12-14-crawler-telemetry-normalization-fix/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-crawler-telemetry-normalization-fix/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-crawler-telemetry-normalization-fix/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-crawler-telemetry-normalization-fix/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-crawler-telemetry-normalization-fix/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-crawler-telemetry-normalization-fix/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Crawler telemetry as observable + broadcast
+
+**Duration**: Active
+**Type**: crawler
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make crawler emit telemetry via an observable stream and broadcast it consistently (SSE/CLI/Electron adapters).
+
+**Location**: `docs/sessions/2025-12-14-crawler-telemetry-observable/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-crawler-telemetry-observable/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-crawler-telemetry-observable/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-crawler-telemetry-observable/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-crawler-telemetry-observable/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-crawler-telemetry-observable/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Crawl Widget Telemetry (Express SSE + UI Patterns)
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make crawler telemetry easy to serve over Express SSE and easy to render in the Electron crawl widget UI
+
+**Location**: `docs/sessions/2025-12-14-crawl-widget-telemetry-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-crawl-widget-telemetry-ui/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-crawl-widget-telemetry-ui/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-crawl-widget-telemetry-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-crawl-widget-telemetry-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-crawl-widget-telemetry-ui/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: UI Progress Bars from Server Observables
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Prove and ship an SSE progress bar that streams server-published observable progress for crawl operations.
+
+**Location**: `docs/sessions/2025-12-14-ui-progress-observable/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-ui-progress-observable/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-ui-progress-observable/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-ui-progress-observable/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-ui-progress-observable/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-ui-progress-observable/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Memory + SVG Researcher Agent
+
+**Duration**: Active
+**Type**: agents
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create a new specialist researcher agent focused on docs-memory curation and SVG-editor-backed diagram documentation.
+
+**Location**: `docs/sessions/2025-12-14-memory-svg-researcher-agent/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-memory-svg-researcher-agent/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-memory-svg-researcher-agent/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-memory-svg-researcher-agent/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-memory-svg-researcher-agent/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-memory-svg-researcher-agent/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Lab: Activation Contract + MVVM Bindings
+
+**Duration**: Active
+**Type**: ui-lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Validate and harden experiments 025/026 checks so they are deterministic and catch real activation regressions.
+
+**Location**: `docs/sessions/2025-12-14-lab-activation-contract-mvvm-bindings/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-lab-activation-contract-mvvm-bindings/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-lab-activation-contract-mvvm-bindings/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-lab-activation-contract-mvvm-bindings/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-lab-activation-contract-mvvm-bindings/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-lab-activation-contract-mvvm-bindings/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: jsgui3 Activation Contract + MVVM Bindings Labs
+
+**Duration**: Active
+**Type**: jsgui3
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add a strict activation contract lab and a reusable MVVM bindings helper + demo lab with deterministic checks.
+
+**Location**: `docs/sessions/2025-12-14-jsgui3-activation-contract-mvvm-bindings/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-jsgui3-activation-contract-mvvm-bindings/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-jsgui3-activation-contract-mvvm-bindings/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-jsgui3-activation-contract-mvvm-bindings/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-jsgui3-activation-contract-mvvm-bindings/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-jsgui3-activation-contract-mvvm-bindings/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: jsgui3 Fibonacci Observable MVVM Lab
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create a lab that streams Fibonacci numbers from a server-side observable to an MVVM client via jsgui3, with deterministic checks.
+
+**Location**: `docs/sessions/2025-12-14-jsgui3-fib-observable-lab/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-jsgui3-fib-observable-lab/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-jsgui3-fib-observable-lab/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-jsgui3-fib-observable-lab/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-jsgui3-fib-observable-lab/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-jsgui3-fib-observable-lab/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: jsgui3 advanced MVVM lab
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build a new lab experiment exploring more complex MVVM patterns (computed fields, two-way binding, nested state) with deterministic checks.
+
+**Location**: `docs/sessions/2025-12-14-jsgui3-advanced-mvvm-lab/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-jsgui3-advanced-mvvm-lab/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-jsgui3-advanced-mvvm-lab/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-jsgui3-advanced-mvvm-lab/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-jsgui3-advanced-mvvm-lab/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-jsgui3-advanced-mvvm-lab/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: jsgui3 Data_Model serverclient bridge labs (MVC + MVVM)
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build two lab experiments showing how Data_Model-encoded state crosses SSRclient activation and drives a view via MVC and MVVM.
+
+**Location**: `docs/sessions/2025-12-14-jsgui3-data-model-bridge-labs/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-jsgui3-data-model-bridge-labs/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-jsgui3-data-model-bridge-labs/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-jsgui3-data-model-bridge-labs/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-jsgui3-data-model-bridge-labs/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-jsgui3-data-model-bridge-labs/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: jsgui3-server activation lab after npm update
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Re-run experiment 020 checks after npm update, fix any regressions, and move activation demo forward.
+
+**Location**: `docs/sessions/2025-12-14-jsgui3-server-activation-npm-update/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-jsgui3-server-activation-npm-update/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-jsgui3-server-activation-npm-update/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-jsgui3-server-activation-npm-update/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-jsgui3-server-activation-npm-update/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-jsgui3-server-activation-npm-update/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Agent memory badge continuation phrasing
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Update agent files to use a continuation-friendly memory retrieval badge and include 'Back to the task: '
+
+**Location**: `docs/sessions/2025-12-14-memory-badge-continuation/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-memory-badge-continuation/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-memory-badge-continuation/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-memory-badge-continuation/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-memory-badge-continuation/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-memory-badge-continuation/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: jsgui3-server activation + ctrl_fields lab
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Prove (or falsify) that jsgui3-server can SSR existing controls and activate them with ctrl_fields/persisted fields.
+
+**Location**: `docs/sessions/2025-12-14-jsgui3-server-activation-lab/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-jsgui3-server-activation-lab/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-jsgui3-server-activation-lab/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-jsgui3-server-activation-lab/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-jsgui3-server-activation-lab/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-jsgui3-server-activation-lab/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: z-server UI auto-rebuild + build status
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Ensure z-server can detect stale UI client builds, offer one-click rebuild, and optionally auto-rebuild before starting UI apps.
+
+**Location**: `docs/sessions/2025-12-14-z-server-ui-autorebuild/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-z-server-ui-autorebuild/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-z-server-ui-autorebuild/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-z-server-ui-autorebuild/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-z-server-ui-autorebuild/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-z-server-ui-autorebuild/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Data Explorer UI Review
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Review Data Explorer UI for reliability, usability, and DB coverage gaps; propose improvements with evidence.
+
+**Location**: `docs/sessions/2025-12-14-data-explorer-ui-review/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-data-explorer-ui-review/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-data-explorer-ui-review/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-data-explorer-ui-review/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-data-explorer-ui-review/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-data-explorer-ui-review/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Memory Agent (docs-memory-driven)
+
+**Duration**: Active
+**Type**: agents
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add an emoji-named Memory Agent focused on memory-driven workflows and docs-memory usage.
+
+**Location**: `docs/sessions/2025-12-14-memory-agent/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-memory-agent/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-memory-agent/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-memory-agent/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-memory-agent/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-memory-agent/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Enhanced UI Inspection Workflow
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Establish robust workflows for visual (Playwright/MCP) and numeric (Puppeteer) UI inspection
+
+**Location**: `docs/sessions/2025-12-14-ui-inspection-workflow/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-ui-inspection-workflow/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-ui-inspection-workflow/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-ui-inspection-workflow/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-ui-inspection-workflow/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-ui-inspection-workflow/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: MCP SVG Smart Add Tool
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement a smart content addition tool for SVG MCP that handles sizing, collision avoidance, and placement suggestions.
+
+**Location**: `docs/sessions/2025-12-14-mcp-svg-smart-add/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-mcp-svg-smart-add/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-mcp-svg-smart-add/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-mcp-svg-smart-add/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-mcp-svg-smart-add/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-mcp-svg-smart-add/FOLLOW_UPS.md)
+
+
+### Session 2025-12-14: Lab Research: Context Menu Patterns
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create a lab experiment to research and document jsgui3 context menu patterns
+
+**Location**: `docs/sessions/2025-12-14-lab-context-menu-research/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-14-lab-context-menu-research/INDEX.md)
+- 🗺️ [Plan](./2025-12-14-lab-context-menu-research/PLAN.md)
+- 📝 [Working Notes](./2025-12-14-lab-context-menu-research/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-14-lab-context-menu-research/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-14-lab-context-menu-research/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-14: Simplify DB Access Patterns
 
 **Duration**: Active

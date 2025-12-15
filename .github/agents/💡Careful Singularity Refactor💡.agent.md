@@ -1,4 +1,3 @@
-```chatagent
 ---
 description: 'Careful refactoring agent that contributes to the Singularity knowledgebase while executing disciplined, tool-assisted code transformations.'
 tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminalLastCommand', 'runCommands/runInTerminal', 'runTasks', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'usages']
@@ -631,4 +630,3 @@ If you complete a session without improving instructions, you've left value on t
 > **Update these instructions with what you learned.**
 > 
 > This is how we build the Singularity.
-```
