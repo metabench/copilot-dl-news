@@ -1,0 +1,269 @@
+{
+  "repoRoot": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news",
+  "mode": "(includes heavy dirs)",
+  "elapsedMs": 7610,
+  "topFiles": [
+    {
+      "rel": "migration-export/content_storage.ndjson",
+      "top": "migration-export",
+      "size": 5388882461
+    },
+    {
+      "rel": "data/backups/content_storage.ndjson",
+      "top": "data",
+      "size": 5388882461
+    },
+    {
+      "rel": "data/news.db",
+      "top": "data",
+      "size": 5375500288
+    },
+    {
+      "rel": "data/perf-snapshots/baseline/news.db",
+      "top": "data",
+      "size": 4937523200
+    },
+    {
+      "rel": "migration-temp/db-view-test.db",
+      "top": "migration-temp",
+      "size": 4937519104
+    },
+    {
+      "rel": "data/backups/news-20251114-035031.db",
+      "top": "data",
+      "size": 4937519104
+    },
+    {
+      "rel": "data/backups/news-20251114-034257.db",
+      "top": "data",
+      "size": 4937515008
+    },
+    {
+      "rel": "data/backups/news-backup-2025-11-03-201130.db",
+      "top": "data",
+      "size": 4617641984
+    },
+    {
+      "rel": "data/backups/news-backup-2025-10-20-010838.db",
+      "top": "data",
+      "size": 2842701824
+    },
+    {
+      "rel": "migration-export/content_analysis.ndjson",
+      "top": "migration-export",
+      "size": 1843999035
+    },
+    {
+      "rel": "data/backups/content_analysis.ndjson",
+      "top": "data",
+      "size": 1843999035
+    },
+    {
+      "rel": "migration-export/links.ndjson",
+      "top": "migration-export",
+      "size": 818636648
+    },
+    {
+      "rel": "data/backups/links.ndjson",
+      "top": "data",
+      "size": 818636648
+    },
+    {
+      "rel": "migration-export/queue_events.ndjson",
+      "top": "migration-export",
+      "size": 425891003
+    },
+    {
+      "rel": "data/backups/queue_events.ndjson",
+      "top": "data",
+      "size": 425891003
+    },
+    {
+      "rel": "migration-export/urls.ndjson",
+      "top": "migration-export",
+      "size": 180958863
+    },
+    {
+      "rel": "data/backups/urls.ndjson",
+      "top": "data",
+      "size": 180958863
+    },
+    {
+      "rel": "z-server/node_modules/electron/dist/electron.exe",
+      "top": "z-server",
+      "size": 176813568
+    },
+    {
+      "rel": "tools/ui/quick-picker/node_modules/electron/dist/electron.exe",
+      "top": "tools",
+      "size": 176813568
+    },
+    {
+      "rel": "crawl-widget/node_modules/electron/dist/electron.exe",
+      "top": "crawl-widget",
+      "size": 176813568
+    },
+    {
+      "rel": "migration-export/place_names.ndjson",
+      "top": "migration-export",
+      "size": 135321339
+    },
+    {
+      "rel": "data/backups/place_names.ndjson",
+      "top": "data",
+      "size": 135317676
+    },
+    {
+      "rel": "gazetteer-backup/place_names.ndjson",
+      "top": "gazetteer-backup",
+      "size": 110438168
+    },
+    {
+      "rel": "migration-export/place_attribute_values.ndjson",
+      "top": "migration-export",
+      "size": 55242053
+    },
+    {
+      "rel": "data/backups/place_attribute_values.ndjson",
+      "top": "data",
+      "size": 55242053
+    },
+    {
+      "rel": "gazetteer-backup/place_attribute_values.ndjson",
+      "top": "gazetteer-backup",
+      "size": 41342143
+    },
+    {
+      "rel": "node_modules/@swc/core-win32-x64-msvc/swc.win32-x64-msvc.node",
+      "top": "node_modules",
+      "size": 37694976
+    },
+    {
+      "rel": "src/data/news.db",
+      "top": "src",
+      "size": 28835840
+    },
+    {
+      "rel": "full-analysis-complete.log",
+      "top": "full-analysis-complete.log",
+      "size": 26222606
+    },
+    {
+      "rel": "migration-export/http_responses.ndjson",
+      "top": "migration-export",
+      "size": 23609059
+    },
+    {
+      "rel": "data/backups/http_responses.ndjson",
+      "top": "data",
+      "size": 23609059
+    },
+    {
+      "rel": "node_modules/@img/sharp-win32-x64/lib/libvips-42.dll",
+      "top": "node_modules",
+      "size": 19112960
+    },
+    {
+      "rel": "crawl-widget/node_modules/better-sqlite3/build/Release/better_sqlite3.iobj",
+      "top": "crawl-widget",
+      "size": 13857369
+    },
+    {
+      "rel": "node_modules/@esbuild/win32-x64/esbuild.exe",
+      "top": "node_modules",
+      "size": 11352064
+    },
+    {
+      "rel": "crawl-widget/node_modules/@esbuild/win32-x64/esbuild.exe",
+      "top": "crawl-widget",
+      "size": 11352064
+    },
+    {
+      "rel": "z-server/node_modules/@esbuild/win32-x64/esbuild.exe",
+      "top": "z-server",
+      "size": 11346944
+    },
+    {
+      "rel": "z-server/node_modules/electron/dist/icudtl.dat",
+      "top": "z-server",
+      "size": 10717392
+    },
+    {
+      "rel": "tools/ui/quick-picker/node_modules/electron/dist/icudtl.dat",
+      "top": "tools",
+      "size": 10717392
+    },
+    {
+      "rel": "crawl-widget/node_modules/electron/dist/icudtl.dat",
+      "top": "crawl-widget",
+      "size": 10717392
+    },
+    {
+      "rel": "crawl-widget/node_modules/better-sqlite3/build/Release/better_sqlite3.pdb",
+      "top": "crawl-widget",
+      "size": 10309632
+    }
+  ],
+  "grouped": [
+    {
+      "label": "data",
+      "bytes": 36580571129,
+      "human": "34.07 GB"
+    },
+    {
+      "label": "migration-export",
+      "bytes": 8910751184,
+      "human": "8.30 GB"
+    },
+    {
+      "label": "migration-temp",
+      "bytes": 4939091968,
+      "human": "4.60 GB"
+    },
+    {
+      "label": "crawl-widget",
+      "bytes": 336960929,
+      "human": "321.4 MB"
+    },
+    {
+      "label": "z-server",
+      "bytes": 269526393,
+      "human": "257.0 MB"
+    },
+    {
+      "label": "tools",
+      "bytes": 261428987,
+      "human": "249.3 MB"
+    },
+    {
+      "label": "gazetteer-backup",
+      "bytes": 166658647,
+      "human": "158.9 MB"
+    },
+    {
+      "label": "node_modules",
+      "bytes": 119262265,
+      "human": "113.7 MB"
+    },
+    {
+      "label": "src",
+      "bytes": 84995886,
+      "human": "81.1 MB"
+    },
+    {
+      "label": "full-analysis-complete.log",
+      "bytes": 26222606,
+      "human": "25.0 MB"
+    },
+    {
+      "label": "tmp",
+      "bytes": 17148534,
+      "human": "16.4 MB"
+    },
+    {
+      "label": "public",
+      "bytes": 10594546,
+      "human": "10.1 MB"
+    }
+  ]
+}

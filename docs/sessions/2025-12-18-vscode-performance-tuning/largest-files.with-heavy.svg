@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="344" viewBox="0 0 980 344">
+<rect x="0" y="0" width="980" height="344" fill="#0b1020"/>
+<text x="24" y="42" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="18" font-weight="600">Largest files by folder (includes heavy dirs)</text>
+<text x="24" y="62" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">Bars show total size contributed by the largest files (grouped by top-level folder).</text>
+<line x1="244" y1="48" x2="244" y2="320" stroke="#1c2540" stroke-width="1"/>
+<line x1="364" y1="48" x2="364" y2="320" stroke="#1c2540" stroke-width="1"/>
+<line x1="485" y1="48" x2="485" y2="320" stroke="#1c2540" stroke-width="1"/>
+<line x1="605" y1="48" x2="605" y2="320" stroke="#1c2540" stroke-width="1"/>
+<line x1="726" y1="48" x2="726" y2="320" stroke="#1c2540" stroke-width="1"/>
+<line x1="846" y1="48" x2="846" y2="320" stroke="#1c2540" stroke-width="1"/>
+<text x="24" y="71" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">data</text>
+<rect x="244" y="61" width="602" height="12" rx="3" fill="#4e79a7"/>
+<text x="854" y="71" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">34.07 GB</text>
+<text x="24" y="93" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">migration-export</text>
+<rect x="244" y="83" width="147" height="12" rx="3" fill="#4e79a7"/>
+<text x="854" y="93" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">8.30 GB</text>
+<text x="24" y="115" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">migration-temp</text>
+<rect x="244" y="105" width="81" height="12" rx="3" fill="#4e79a7"/>
+<text x="854" y="115" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">4.60 GB</text>
+<text x="24" y="137" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">crawl-widget</text>
+<rect x="244" y="127" width="6" height="12" rx="3" fill="#4e79a7"/>
+<text x="854" y="137" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">321.4 MB</text>
+<text x="24" y="159" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">z-server</text>
+<rect x="244" y="149" width="4" height="12" rx="3" fill="#4e79a7"/>
+<text x="854" y="159" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">257.0 MB</text>
+<text x="24" y="181" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">tools</text>
+<rect x="244" y="171" width="4" height="12" rx="3" fill="#4e79a7"/>
+<text x="854" y="181" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">249.3 MB</text>
+<text x="24" y="203" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">gazetteer-backup</text>
+<rect x="244" y="193" width="3" height="12" rx="3" fill="#4e79a7"/>
+<text x="854" y="203" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">158.9 MB</text>
+<text x="24" y="225" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">node_modules</text>
+<rect x="244" y="215" width="2" height="12" rx="3" fill="#4e79a7"/>
+<text x="854" y="225" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">113.7 MB</text>
+<text x="24" y="247" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">src</text>
+<rect x="244" y="237" width="1" height="12" rx="3" fill="#4e79a7"/>
+<text x="854" y="247" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">81.1 MB</text>
+<text x="24" y="269" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">full-analysis-complete.log</text>
+<rect x="244" y="259" width="1" height="12" rx="3" fill="#4e79a7"/>
+<text x="854" y="269" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">25.0 MB</text>
+<text x="24" y="291" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">tmp</text>
+<rect x="244" y="281" width="1" height="12" rx="3" fill="#4e79a7"/>
+<text x="854" y="291" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">16.4 MB</text>
+<text x="24" y="313" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">public</text>
+<rect x="244" y="303" width="1" height="12" rx="3" fill="#4e79a7"/>
+<text x="854" y="313" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">10.1 MB</text>
+</svg>

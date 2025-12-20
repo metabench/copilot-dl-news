@@ -1,0 +1,269 @@
+{
+  "repoRoot": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news",
+  "mode": "(heavy dirs excluded)",
+  "elapsedMs": 769,
+  "topFiles": [
+    {
+      "rel": "full-analysis-complete.log",
+      "top": "full-analysis-complete.log",
+      "size": 26222606
+    },
+    {
+      "rel": "src/music/2. Kemetic Queen (Dub Ragga Remix) (Remix) (1).mp3",
+      "top": "src",
+      "size": 7454850
+    },
+    {
+      "rel": "tools/bin/sqlite3_analyzer.exe",
+      "top": "tools",
+      "size": 4387840
+    },
+    {
+      "rel": "data-explorer.urls.hasFetches.check.html",
+      "top": "data-explorer.urls.hasFetches.check.html",
+      "size": 4315895
+    },
+    {
+      "rel": "tmp_crawl_log.txt",
+      "top": "tmp_crawl_log.txt",
+      "size": 4260456
+    },
+    {
+      "rel": "data-explorer.urls.check.html",
+      "top": "data-explorer.urls.check.html",
+      "size": 3972209
+    },
+    {
+      "rel": "data-explorer.urls.default.check.html",
+      "top": "data-explorer.urls.default.check.html",
+      "size": 3968319
+    },
+    {
+      "rel": "public/assets/ui-client.js.map",
+      "top": "public",
+      "size": 3951606
+    },
+    {
+      "rel": "src/ui/server/decisionTreeViewer/public/decision-tree-client.js.map",
+      "top": "src",
+      "size": 3859808
+    },
+    {
+      "rel": "tools/bin/sqlite3.exe",
+      "top": "tools",
+      "size": 3773440
+    },
+    {
+      "rel": "src/ui/server/docsViewer/public/docs-viewer-client.js.map",
+      "top": "src",
+      "size": 3328512
+    },
+    {
+      "rel": "public/assets/geo-import.js.map",
+      "top": "public",
+      "size": 3167996
+    },
+    {
+      "rel": "src/ui/server/wysiwyg-demo/public/js/bundle.js.map",
+      "top": "src",
+      "size": 3161165
+    },
+    {
+      "rel": "src/ui/server/artPlayground/client.bundle.js.map",
+      "top": "src",
+      "size": 3157161
+    },
+    {
+      "rel": "tools/bin/sqldiff.exe",
+      "top": "tools",
+      "size": 3115008
+    },
+    {
+      "rel": "src/ui/server/designStudio/public/design-studio-client.js.map",
+      "top": "src",
+      "size": 3081519
+    },
+    {
+      "rel": "src/ui/server/controlHarness/public/control-harness-client.js.map",
+      "top": "src",
+      "size": 3029957
+    },
+    {
+      "rel": "src/deprecated-ui/express/__tests__/tmp_gaz_ui.db-wal",
+      "top": "src",
+      "size": 2439072
+    },
+    {
+      "rel": "public/assets/ui-client.js",
+      "top": "public",
+      "size": 1934814
+    },
+    {
+      "rel": "src/ui/server/decisionTreeViewer/public/decision-tree-client.js",
+      "top": "src",
+      "size": 1897379
+    },
+    {
+      "rel": "src/ui/server/docsViewer/public/docs-viewer-client.js",
+      "top": "src",
+      "size": 1634858
+    },
+    {
+      "rel": "z-server/renderer.js",
+      "top": "z-server",
+      "size": 1620413
+    },
+    {
+      "rel": "public/assets/geo-import.js",
+      "top": "public",
+      "size": 1540130
+    },
+    {
+      "rel": "src/ui/server/artPlayground/client.bundle.js",
+      "top": "src",
+      "size": 1538990
+    },
+    {
+      "rel": "crawl-widget/renderer.js",
+      "top": "crawl-widget",
+      "size": 1530340
+    },
+    {
+      "rel": "crawl-widget/public/renderer.bundle.js",
+      "top": "crawl-widget",
+      "size": 1504415
+    },
+    {
+      "rel": "src/ui/server/designStudio/public/design-studio-client.js",
+      "top": "src",
+      "size": 1496158
+    },
+    {
+      "rel": "src/ui/server/wysiwyg-demo/public/js/bundle.js",
+      "top": "src",
+      "size": 1492410
+    },
+    {
+      "rel": "src/ui/server/controlHarness/public/control-harness-client.js",
+      "top": "src",
+      "size": 1423521
+    },
+    {
+      "rel": "data-explorer.urls.host_example.com_hasFetches.check.html",
+      "top": "data-explorer.urls.host_example.com_hasFetches.check.html",
+      "size": 1374419
+    },
+    {
+      "rel": "data-explorer.urls.host_example.com.check.html",
+      "top": "data-explorer.urls.host_example.com.check.html",
+      "size": 1264513
+    },
+    {
+      "rel": "src/deprecated-ui/express/__tests__/tmp_gazetteer.db",
+      "top": "src",
+      "size": 794624
+    },
+    {
+      "rel": "src/deprecated-ui/express/__tests__/tmp_urls.db",
+      "top": "src",
+      "size": 708608
+    },
+    {
+      "rel": "src/deprecated-ui/express/__tests__/tmp_ui_db_endpoints.db",
+      "top": "src",
+      "size": 708608
+    },
+    {
+      "rel": "src/deprecated-ui/express/__tests__/tmp_recent_domains.db",
+      "top": "src",
+      "size": 708608
+    },
+    {
+      "rel": "src/deprecated-ui/express/__tests__/tmp_nav.db",
+      "top": "src",
+      "size": 708608
+    },
+    {
+      "rel": "src/deprecated-ui/express/__tests__/tmp_gaz_ssr.db",
+      "top": "src",
+      "size": 708608
+    },
+    {
+      "rel": "src/deprecated-ui/express/__tests__/tmp_gaz_places_storage.db",
+      "top": "src",
+      "size": 708608
+    },
+    {
+      "rel": "src/deprecated-ui/express/__tests__/tmp_gaz_places_pager_storage.db",
+      "top": "src",
+      "size": 708608
+    },
+    {
+      "rel": "src/deprecated-ui/express/__tests__/tmp_gaz_kind_storage.db",
+      "top": "src",
+      "size": 708608
+    }
+  ],
+  "grouped": [
+    {
+      "label": "src",
+      "bytes": 53507091,
+      "human": "51.0 MB"
+    },
+    {
+      "label": "full-analysis-complete.log",
+      "bytes": 26222606,
+      "human": "25.0 MB"
+    },
+    {
+      "label": "tools",
+      "bytes": 12671766,
+      "human": "12.1 MB"
+    },
+    {
+      "label": "public",
+      "bytes": 10772704,
+      "human": "10.3 MB"
+    },
+    {
+      "label": "data-explorer.urls.hasFetches.check.html",
+      "bytes": 4315895,
+      "human": "4.1 MB"
+    },
+    {
+      "label": "tmp_crawl_log.txt",
+      "bytes": 4260456,
+      "human": "4.1 MB"
+    },
+    {
+      "label": "docs",
+      "bytes": 4030095,
+      "human": "3.8 MB"
+    },
+    {
+      "label": "data-explorer.urls.check.html",
+      "bytes": 3972209,
+      "human": "3.8 MB"
+    },
+    {
+      "label": "data-explorer.urls.default.check.html",
+      "bytes": 3968319,
+      "human": "3.8 MB"
+    },
+    {
+      "label": "crawl-widget",
+      "bytes": 3150292,
+      "human": "3.0 MB"
+    },
+    {
+      "label": "z-server",
+      "bytes": 1965737,
+      "human": "1.9 MB"
+    },
+    {
+      "label": "data-explorer.urls.host_example.com_hasFetches.check.html",
+      "bytes": 1374419,
+      "human": "1.3 MB"
+    }
+  ]
+}

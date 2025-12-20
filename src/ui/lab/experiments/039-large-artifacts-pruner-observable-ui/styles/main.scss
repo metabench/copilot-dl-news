@@ -1,0 +1,52 @@
+@use "../../../../styles/sass/shared/tokens";
+@use "../../../../styles/sass/shared/base";
+@use "../../../../styles/sass/shared/components";
+
+.large-artifacts-pruner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-sm);
+  width: min(860px, calc(100vw - 40px));
+  @extend .ui-panel;
+}
+
+.large-artifacts-pruner__title {
+  font-weight: 650;
+  letter-spacing: 0.2px;
+}
+
+.large-artifacts-pruner__controls {
+  @extend .ui-row;
+}
+
+.large-artifacts-pruner__label {
+  @extend .ui-muted;
+  font-size: 12px;
+}
+
+.large-artifacts-pruner__maxexport {
+  @extend .ui-input;
+  width: 110px;
+}
+
+.large-artifacts-pruner__status,
+.large-artifacts-pruner__listtitle {
+  @extend .ui-muted;
+  font-size: 12px;
+}
+
+.large-artifacts-pruner__summary {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.95;
+}
+
+.large-artifacts-pruner__list {
+  @extend .ui-mono;
+  padding: 10px;
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-bg-0);
+  border: 1px solid color-mix(in srgb, var(--ui-border) 85%, transparent);
+  font-size: 12px;
+  overflow: auto;
+  max-height: 360px;
+}

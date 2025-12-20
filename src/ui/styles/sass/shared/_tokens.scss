@@ -1,0 +1,48 @@
+/* Shared UI tokens (Sass) */
+
+$ui-bg-0: #050508;
+$ui-bg-1: #0a0d14;
+$ui-bg-2: #0f1420;
+$ui-surface-0: #141824;
+$ui-surface-1: #1a1f2e;
+
+$ui-accent: #c9a227;
+$ui-accent-2: #6fa8dc;
+
+$ui-text: #cbd5e1;
+$ui-text-muted: #64748b;
+
+$ui-border: #334155;
+
+$ui-radius-sm: 8px;
+$ui-radius-md: 12px;
+
+$ui-space-xs: 6px;
+$ui-space-sm: 10px;
+$ui-space-md: 14px;
+$ui-space-lg: 18px;
+
+:root {
+  --ui-bg-0: #{$ui-bg-0};
+  --ui-bg-1: #{$ui-bg-1};
+  --ui-bg-2: #{$ui-bg-2};
+
+  --ui-surface-0: #{$ui-surface-0};
+  --ui-surface-1: #{$ui-surface-1};
+
+  --ui-accent: #{$ui-accent};
+  --ui-accent-2: #{$ui-accent-2};
+
+  --ui-text: #{$ui-text};
+  --ui-text-muted: #{$ui-text-muted};
+
+  --ui-border: #{$ui-border};
+
+  --ui-radius-sm: #{$ui-radius-sm};
+  --ui-radius-md: #{$ui-radius-md};
+
+  --ui-space-xs: #{$ui-space-xs};
+  --ui-space-sm: #{$ui-space-sm};
+  --ui-space-md: #{$ui-space-md};
+  --ui-space-lg: #{$ui-space-lg};
+}

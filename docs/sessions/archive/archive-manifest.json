@@ -1,0 +1,431 @@
+{
+  "sessions": [
+    {
+      "slug": "2025-05-19-svg-tooling-improvements",
+      "archivedAt": "2025-12-19T08:32:59.717Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-06-20-gazetteer-ingestion-robustness",
+      "archivedAt": "2025-12-19T08:33:01.050Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-10-23-gazetteer-db-cache",
+      "archivedAt": "2025-12-19T08:33:02.441Z",
+      "objective": "",
+      "outcome": "The Gazetteer tools now fully rely on the SQLite database for caching HTTP responses, improving portability and cleanliness of the project structure."
+    },
+    {
+      "slug": "2025-10-24-gazetteer-tooling",
+      "archivedAt": "2025-12-19T08:33:03.846Z",
+      "objective": "Create CLI tooling to navigate and find gazetteer data for human and AI use.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-13-agent-docs-improvements",
+      "archivedAt": "2025-12-19T08:33:05.367Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-13-basic-crawl-health",
+      "archivedAt": "2025-12-19T08:33:06.913Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-13-cached-seed-refactor",
+      "archivedAt": "2025-12-19T08:33:08.425Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-13-crawl-config-runner",
+      "archivedAt": "2025-12-19T08:33:09.890Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-13-frontpage-seeding",
+      "archivedAt": "2025-12-19T08:33:11.415Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-13-gap5-scouting",
+      "archivedAt": "2025-12-19T08:33:12.992Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-13-guardian-crawl-verification",
+      "archivedAt": "2025-12-19T08:33:14.466Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-13-strategic-planning",
+      "archivedAt": "2025-12-19T08:33:15.952Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-14-basic-crawl-run",
+      "archivedAt": "2025-12-19T08:33:17.400Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-14-binding-plugin",
+      "archivedAt": "2025-12-19T08:33:18.902Z",
+      "objective": "",
+      "outcome": "- Reproduced pager regression: server HTML rendered `<a data-kind=\"kind\">` for every button, so snapshot script could not locate first/prev/next/last controls.\r"
+    },
+    {
+      "slug": "2025-11-14-binding-plugin-review",
+      "archivedAt": "2025-12-19T08:33:20.416Z",
+      "objective": "Diagnose and fix the Data_Model_View_Model_Control runtime failure by correcting the binding plugin/model wiring so the UI can activate cleanly.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-14-crawl-verbosity-controls",
+      "archivedAt": "2025-12-19T08:33:21.867Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-14-db-view-implementation",
+      "archivedAt": "2025-12-19T08:33:23.497Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-14-download-investigation",
+      "archivedAt": "2025-12-19T08:33:25.216Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-14-jsgui-transform-fix",
+      "archivedAt": "2025-12-19T08:33:26.739Z",
+      "objective": "Restore runtime stability by declaring the vendored resize helpers so the esbuild UI bundle no longer throws `each_source_dest_pixels_resized` ReferenceErrors.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-14-page-log-resilience",
+      "archivedAt": "2025-12-19T08:33:28.456Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-14-place-cli",
+      "archivedAt": "2025-12-19T08:33:30.072Z",
+      "objective": "Allow agents to run place-focused discovery workflows (GuessPlaceHubs, place hub exploration) directly from the CLI without needing ad-hoc scripts.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-14-session-bootstrap-cli",
+      "archivedAt": "2025-12-19T08:33:31.513Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-14-strategic-analysis-mode",
+      "archivedAt": "2025-12-19T08:33:33.070Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-14-ui-controls-table",
+      "archivedAt": "2025-12-19T08:33:34.758Z",
+      "objective": "Render the first 1000 URLs from the crawler DB into a styled HTML table using new jsgui3-html based controls under src/ui/controls.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-14-ui-data-explorer",
+      "archivedAt": "2025-12-19T08:33:36.561Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-14-ui-express-server",
+      "archivedAt": "2025-12-19T08:33:38.199Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-14-url-fetch-filter",
+      "archivedAt": "2025-12-19T08:33:39.739Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-15-api-server-bootstrap",
+      "archivedAt": "2025-12-19T08:33:41.389Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-15-client-controls-bundle",
+      "archivedAt": "2025-12-19T08:33:42.969Z",
+      "objective": "Understand how client controls are registered so esbuild includes them, and align our bundle process with the jsgui3-server examples.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-15-control-map-registration",
+      "archivedAt": "2025-12-19T08:33:45.013Z",
+      "objective": "Document and align the client control registration flow so custom controls populate `context.map_Controls` the same way as upstream jsgui3.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-15-front-page-home-grid",
+      "archivedAt": "2025-12-19T08:33:46.718Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-15-intelligent-crawl-defaults",
+      "archivedAt": "2025-12-19T08:33:48.308Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-15-kilo-agent-readiness",
+      "archivedAt": "2025-12-19T08:33:49.777Z",
+      "objective": "Prepare this repo to adopt Kilo Code by establishing instruction folders and a reusable agent-writer mode tailored to the codebase.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-15-puppeteer-e2e",
+      "archivedAt": "2025-12-19T08:33:51.351Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-15-ui-home-grid-refresh",
+      "archivedAt": "2025-12-19T08:33:52.892Z",
+      "objective": "Improve the `/urls` landing experience by enhancing the home cards/back-links, adding lightweight render checks for the core controls, and correcting the `src/ui/README.md` guidance so future UI work is easier to onboard.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-15-ui-reliability",
+      "archivedAt": "2025-12-19T08:33:54.417Z",
+      "objective": "Improve the UI’s reliability/debuggability through targeted code and tooling updates.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-15-url-filter-client",
+      "archivedAt": "2025-12-19T08:33:55.910Z",
+      "objective": "Finish the fetched-URL toggle by wiring the jsgui activation flow and client refresh logic so the `/urls` page updates via `/api/urls` without a full reload.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-15-url-filter-debug",
+      "archivedAt": "2025-12-19T08:33:57.549Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-15-url-filter-e2e-improvements",
+      "archivedAt": "2025-12-19T08:33:58.997Z",
+      "objective": "Strengthen the URL filter e2e test by verifying that toggling back to \"all URLs\" restores the table and meta summary.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-16-diagram-atlas-async-loading",
+      "archivedAt": "2025-12-19T08:34:00.469Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-16-diagram-atlas-e2e",
+      "archivedAt": "2025-12-19T08:34:01.934Z",
+      "objective": "ensure the diagram atlas server boots cleanly and returns HTML by adding a runnable e2e test plus automation to execute it.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-16-diagram-ui",
+      "archivedAt": "2025-12-19T08:34:03.429Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-16-doc-migration",
+      "archivedAt": "2025-12-19T08:34:04.901Z",
+      "objective": "Relocate misplaced root-level documentation files (including `AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md`) into `docs/` while keeping references and guidance consistent with AGENTS.md.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-16-intelligent-crawl-behavior",
+      "archivedAt": "2025-12-19T08:34:06.403Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-16-js-improvements",
+      "archivedAt": "2025-12-19T08:34:07.898Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-16-js-scan-terse-output",
+      "archivedAt": "2025-12-19T08:34:09.381Z",
+      "objective": "Strengthen `tools/dev/js-scan.js` so it can read TypeScript sources more effectively and emit terser, direct output for the required sections the user wants surfaced.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-16-js-ts-scan-edit-brainstorm",
+      "archivedAt": "2025-12-19T08:34:10.857Z",
+      "objective": "Review existing js-scan and js-edit tools, analyze their capabilities and limitations, and brainstorm enhancements to enable better code editing for AI agents, potentially extending to TypeScript support.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-16-jsgui3-isomorphic-diagram-atlas",
+      "archivedAt": "2025-12-19T08:34:12.348Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-16-scan-edit-remnants",
+      "archivedAt": "2025-12-19T08:34:13.899Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-16-singularity-agent-refresh",
+      "archivedAt": "2025-12-19T08:34:15.407Z",
+      "objective": "Infuse the Singularity Engineer agent brief with the actionable, reader-friendly methodology patterns observed on vibebible.org so agents get faster context and consistent practice steps.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-16-typescript-support-copy-functions",
+      "archivedAt": "2025-12-19T08:34:16.913Z",
+      "objective": "1. Add TypeScript support to js-edit and js-scan tools using patterns from external repo",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-16-workflow-docs",
+      "archivedAt": "2025-12-19T08:34:18.407Z",
+      "objective": "Create reusable workflow guides under `docs/workflows/` so other agents can follow the session setup + Tier 1 tooling patterns without rereading AGENTS.md each time.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-17-agi-agents",
+      "archivedAt": "2025-12-19T08:34:19.899Z",
+      "objective": "Align orchestrator, scout, refactor, and tooling agents with the repo's Singularity + AGI workflows.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-17-hub-eligibility-refresh",
+      "archivedAt": "2025-12-19T08:34:21.504Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-17-jsgui-forward",
+      "archivedAt": "2025-12-19T08:34:22.969Z",
+      "objective": "Ship the next round of jsgui UI upgrades (control registry hardening, Diagram Atlas telemetry-aware refresh, Data Explorer shared state) so SSR + hydration stay aligned with the Singularity workflow expectations.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-17-jsgui3-isomorphic-screenshots",
+      "archivedAt": "2025-12-19T08:34:24.448Z",
+      "objective": "add reliable screenshot coverage for the primary jsgui3 server-rendered surfaces so design/state can be reviewed without booting the full stack.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-17-ui-dashboard-routing",
+      "archivedAt": "2025-12-19T08:34:26.021Z",
+      "objective": "Separate the dashboard summary UI from the URLs table so the landing page stays light and paging works reliably on narrow displays, while moving the URLs list to its own screen with responsive layout fixes.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-17-ui-home-cleanup",
+      "archivedAt": "2025-12-19T08:34:27.483Z",
+      "objective": "Remove the legacy URL table snippet from the dashboard view so the home page renders only the dashboard shell/cards while the table lives exclusively on `/urls`.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-18-crawl-output-refresh",
+      "archivedAt": "2025-12-19T08:34:29.099Z",
+      "objective": "Trim crawl output to a single readable PAGE line per download while leaning on cached hub seeds and enforcing a 10-minute freshness window.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-18-selector-suggestions-status",
+      "archivedAt": "2025-12-19T08:34:30.539Z",
+      "objective": "Determine the implementation and documentation status of `--suggest-selectors` in `js-edit`.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-18-ui-fetched-urls-bug",
+      "archivedAt": "2025-12-19T08:34:31.965Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-18-ui-fetched-urls-view-refactor",
+      "archivedAt": "2025-12-19T08:34:33.424Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-18-ui-url-details-fetch-history-fix",
+      "archivedAt": "2025-12-19T08:34:35.014Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-19-client-control-hydration",
+      "archivedAt": "2025-12-19T08:34:36.672Z",
+      "objective": "populate browser contexts with UrlListingTable, UrlFilterToggle, and PagerButton constructors so Puppeteer toggle test passes.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-19-jsgui-binding-report",
+      "archivedAt": "2025-12-19T08:34:38.304Z",
+      "objective": "Document a practical data-binding simplification path for jsgui3-html consumers powering the URL table UI.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-20-client-activation",
+      "archivedAt": "2025-12-19T08:34:39.873Z",
+      "objective": "Ensure the UI client bundle properly activates custom controls (UrlListingTable, UrlFilterToggle, PagerButton) so the `/urls` page hydrates and responds to filter toggles without a reload.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-20-crawl-config-workspace",
+      "archivedAt": "2025-12-19T08:34:41.589Z",
+      "objective": "Ship the first four crawl configuration UI features (workspace, drawer, timeline/impact, diff mini-map) inside the jsgui3 controls library so agents can inspect live config data quickly.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-20-js-scan-continuation",
+      "archivedAt": "2025-12-19T08:34:43.170Z",
+      "objective": "Upgrade js-scan continuation tokens so follow-up actions (analyze/trace/ripple) execute real work without manual reseeding, and capture guidance for downstream agents.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-20-ui-data-explorer-tests",
+      "archivedAt": "2025-12-19T08:34:45.057Z",
+      "objective": "Ensure every Data Explorer view (/urls, /domains, /crawls, /errors, and targeted drilldowns) renders without runtime errors by exercising them against the production-sized SQLite snapshot and fixing any regressions surfaced by the new coverage.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-20-ui-e2e-testing",
+      "archivedAt": "2025-12-19T08:34:46.850Z",
+      "objective": "Make the UI Puppeteer coverage easy to run and extend by documenting the workflow, validating the current toggle test, and outlining the next two high-value scenarios to automate.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-20-ui-home-card-cli",
+      "archivedAt": "2025-12-19T08:34:48.598Z",
+      "objective": "Align the CLI-rendered `/urls` HTML with the shared home card helper so diagnostics and badges match the server output, then capture future UI improvements.",
+      "outcome": ""
+    }
+  ],
+  "lastUpdated": "2025-12-19T08:34:48.598Z"
+}

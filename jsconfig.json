@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "maxNodeModuleJsDepth": 0,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "target": "ES2020",
+    "module": "ES2020"
+  },
+  "include": [
+    "src/**/*",
+    "tools/**/*",
+    "scripts/**/*",
+    ".vscode/**/*",
+    "*.js",
+    "*.cjs",
+    "*.mjs"
+  ],
+  "exclude": [
+    "**/.git/**",
+    "**/node_modules/**",
+    "data/**",
+    "migration-export/**",
+    "migration-temp/**",
+    "tmp/**",
+    "tmp-debug/**",
+    "testlogs/**",
+    "screenshots/**",
+    "analysis-charts/**",
+    "dist/**",
+    "build/**",
+    "coverage/**",
+    "deprecated-ui-root/**",
+    "gazetteer-backup/**",
+    "crawl-widget/**",
+    "z-server/**"
+  ]
+}

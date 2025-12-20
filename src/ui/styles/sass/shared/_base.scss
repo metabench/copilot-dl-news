@@ -1,0 +1,31 @@
+@use "tokens";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+body.ui-theme--obsidian {
+  background: linear-gradient(135deg, var(--ui-bg-0) 0%, var(--ui-bg-1) 40%, var(--ui-bg-2) 100%);
+  color: var(--ui-text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+a {
+  color: var(--ui-accent-2);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}

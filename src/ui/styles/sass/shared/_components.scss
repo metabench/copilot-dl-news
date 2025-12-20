@@ -1,0 +1,48 @@
+@use "tokens";
+
+.ui-panel {
+  border: 1px solid color-mix(in srgb, var(--ui-border) 85%, transparent);
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-surface-0);
+  padding: var(--ui-space-md);
+}
+
+.ui-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-sm);
+  align-items: center;
+}
+
+.ui-btn {
+  padding: 8px 12px;
+  border-radius: var(--ui-radius-sm);
+  border: 1px solid color-mix(in srgb, var(--ui-border) 80%, transparent);
+  background: var(--ui-surface-1);
+  color: var(--ui-text);
+  cursor: pointer;
+}
+
+.ui-btn:hover {
+  border-color: color-mix(in srgb, var(--ui-accent) 55%, var(--ui-border));
+}
+
+.ui-btn--primary {
+  border-color: color-mix(in srgb, var(--ui-accent) 70%, var(--ui-border));
+}
+
+.ui-input {
+  padding: 7px 10px;
+  border-radius: var(--ui-radius-sm);
+  border: 1px solid color-mix(in srgb, var(--ui-border) 80%, transparent);
+  background: var(--ui-bg-2);
+  color: var(--ui-text);
+}
+
+.ui-muted {
+  color: var(--ui-text-muted);
+}
+
+.ui-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}

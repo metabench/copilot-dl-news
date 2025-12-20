@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="344" viewBox="0 0 1180 344">
+<rect x="0" y="0" width="1180" height="344" fill="#0b1020"/>
+<text x="24" y="42" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="18" font-weight="600">Top 12 largest files (includes heavy dirs)</text>
+<text x="24" y="62" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">Bars show total size contributed by the largest files (grouped by top-level folder).</text>
+<line x1="734" y1="48" x2="734" y2="320" stroke="#1c2540" stroke-width="1"/>
+<line x1="794" y1="48" x2="794" y2="320" stroke="#1c2540" stroke-width="1"/>
+<line x1="855" y1="48" x2="855" y2="320" stroke="#1c2540" stroke-width="1"/>
+<line x1="915" y1="48" x2="915" y2="320" stroke="#1c2540" stroke-width="1"/>
+<line x1="976" y1="48" x2="976" y2="320" stroke="#1c2540" stroke-width="1"/>
+<line x1="1036" y1="48" x2="1036" y2="320" stroke="#1c2540" stroke-width="1"/>
+<text x="24" y="71" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">migration-export/content_storage.ndjson</text>
+<rect x="734" y="61" width="302" height="12" rx="3" fill="#4e79a7"/>
+<text x="1044" y="71" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">5.02 GB</text>
+<text x="24" y="93" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">data/backups/content_storage.ndjson</text>
+<rect x="734" y="83" width="302" height="12" rx="3" fill="#4e79a7"/>
+<text x="1044" y="93" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">5.02 GB</text>
+<text x="24" y="115" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">data/news.db</text>
+<rect x="734" y="105" width="301" height="12" rx="3" fill="#4e79a7"/>
+<text x="1044" y="115" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">5.01 GB</text>
+<text x="24" y="137" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">data/perf-snapshots/baseline/news.db</text>
+<rect x="734" y="127" width="277" height="12" rx="3" fill="#4e79a7"/>
+<text x="1044" y="137" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">4.60 GB</text>
+<text x="24" y="159" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">migration-temp/db-view-test.db</text>
+<rect x="734" y="149" width="277" height="12" rx="3" fill="#4e79a7"/>
+<text x="1044" y="159" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">4.60 GB</text>
+<text x="24" y="181" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">data/backups/news-20251114-035031.db</text>
+<rect x="734" y="171" width="277" height="12" rx="3" fill="#4e79a7"/>
+<text x="1044" y="181" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">4.60 GB</text>
+<text x="24" y="203" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">data/backups/news-20251114-034257.db</text>
+<rect x="734" y="193" width="277" height="12" rx="3" fill="#4e79a7"/>
+<text x="1044" y="203" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">4.60 GB</text>
+<text x="24" y="225" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">data/backups/news-backup-2025-11-03-201130.db</text>
+<rect x="734" y="215" width="259" height="12" rx="3" fill="#4e79a7"/>
+<text x="1044" y="225" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">4.30 GB</text>
+<text x="24" y="247" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">data/backups/news-backup-2025-10-20-010838.db</text>
+<rect x="734" y="237" width="159" height="12" rx="3" fill="#4e79a7"/>
+<text x="1044" y="247" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">2.65 GB</text>
+<text x="24" y="269" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">migration-export/content_analysis.ndjson</text>
+<rect x="734" y="259" width="103" height="12" rx="3" fill="#4e79a7"/>
+<text x="1044" y="269" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">1.72 GB</text>
+<text x="24" y="291" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">data/backups/content_analysis.ndjson</text>
+<rect x="734" y="281" width="103" height="12" rx="3" fill="#4e79a7"/>
+<text x="1044" y="291" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">1.72 GB</text>
+<text x="24" y="313" fill="#e8edf7" font-family="Segoe UI, Arial" font-size="12">migration-export/links.ndjson</text>
+<rect x="734" y="303" width="46" height="12" rx="3" fill="#4e79a7"/>
+<text x="1044" y="313" fill="#9aa6c2" font-family="Segoe UI, Arial" font-size="12">780.7 MB</text>
+</svg>
