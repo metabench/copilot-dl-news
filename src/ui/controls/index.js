@@ -13,6 +13,7 @@ const { CrawlBehaviorPanelControl } = require("./CrawlBehaviorPanel");
 const { CrawlConfigWorkspaceControl } = require("./CrawlConfigWorkspaceControl");
 const { SearchFormControl } = require("./SearchFormControl");
 const { MetricCardControl } = require("./MetricCardControl");
+const { ThemeEditorControl } = require("./ThemeEditorControl");
 
 module.exports = {
   TableControl,
@@ -27,5 +28,6 @@ module.exports = {
   CrawlBehaviorPanelControl,
   CrawlConfigWorkspaceControl,
   SearchFormControl,
-  MetricCardControl
+  MetricCardControl,
+  ThemeEditorControl
 };

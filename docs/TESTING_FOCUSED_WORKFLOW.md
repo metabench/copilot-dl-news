@@ -192,7 +192,7 @@ grep_search query:"analysis_runs" includePattern:"**/schema.js"
 grep_search query:"CREATE TABLE.*analysis_runs" includePattern:"**/*.js"
 
 # 3. Add schema initialization to failing tests
-# (Use replace_string_in_file or multi_replace_string_in_file)
+# (Use apply_patch, or js-edit for guarded JS-only edits)
 
 # 4. Run ONLY the schema-related tests
 node tests/run-tests.js unit --files="src/ui/express/__tests__/analysis.api.ssr.test.js,src/tools/__tests__/analysis-run.run.test.js"
@@ -244,7 +244,7 @@ await run_in_terminal({
 // Analyze output → categorize failures → pick strategy
 
 // PHASE 2: Fix batch of related tests
-// (Use replace_string_in_file, multi_replace_string_in_file, etc.)
+// (Use apply_patch, or js-edit for guarded JS-only edits)
 
 // PHASE 3: Run ONLY the tests you fixed
 await run_in_terminal({

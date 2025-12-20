@@ -285,7 +285,7 @@ const { createApp } = require('./src/ui/express/server');
 
 const app = createApp({
   // Database
-  dbPath: '/path/to/db.sqlite',
+  dbPath: 'data/news.db',
   
   // Server
   port: 3000,

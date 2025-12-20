@@ -89,28 +89,11 @@ The script outputs a JSON object containing:
 
 ## 3. Standardized Server Check
 
-All UI servers should support the `--check` flag for fast verification by agents.
+Server lifecycle guidance (how to verify servers without hanging, and how to safely run long-lived UI servers) is canonical in:
 
-```bash
-node src/ui/server/myServer.js --check
-```
+- `docs/COMMAND_EXECUTION_GUIDE.md` → "🚨 Server Verification - CRITICAL FOR AGENTS 🚨"
 
-This will:
-1.  Start the server
-2.  Verify it responds on the expected port
-3.  Exit with code 0 (success) or 1 (failure)
+For UI inspection specifically:
 
-To implement this in a new server:
-
-```javascript
-const { runStartupCheck } = require("../utils/serverStartupCheck");
-
-if (require.main === module) {
-  const args = process.argv.slice(2);
-  if (args.includes("--check")) {
-    runStartupCheck(__filename, PORT);
-  } else {
-    app.listen(PORT, ...);
-  }
-}
-```
+- Prefer the repo's existing `scripts/ui/*` helpers for the target app.
+- If you need to add `--check` to a UI server, implement it using the shared helper `src/ui/server/utils/serverStartupCheck.js` and keep the workflow docs thin (link back to the command guide).

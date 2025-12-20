@@ -31,26 +31,26 @@ This document contains critical testing guidelines, patterns, and workflows that
 
 ## Procedure
 
-### Golden Rules
+### Canonical entry points (don’t duplicate)
 
-**🚨 GOLDEN RULE**: Tests Must Never Hang Silently
-- Set explicit timeouts: `test('name', async () => {...}, 30000)`
-- Add progress logging for operations >5s
-- Use AbortController with timeouts for network calls
-- See `docs/TESTING_ASYNC_CLEANUP_GUIDE.md` for patterns
+This page focuses on **principles + common pitfalls**. For step-by-step commands and the “what to run now” flow, use:
 
-**🚨 CRITICAL**: Verify Test Results After Every Run
-- VS Code task messages are UNRELIABLE (shows "succeeded" even when tests fail)
-- ALWAYS use `terminal_last_command` tool to check exit code
-- Exit code 0 = pass, exit code 1 = fail
-- Read terminal output for details
+- `docs/TESTING_QUICK_REFERENCE.md`
 
-**🔥 CRITICAL**: Check Logs BEFORE Running Tests
-```bash
-# Saves 5-10 min per session
-node tests/analyze-test-logs.js --summary  # Current status (5s)
-node tests/get-failing-tests.js            # List failures (5s)
-```
+For deep test triage and long-form repair patterns, use:
+
+- `docs/TESTING_REVIEW_AND_IMPROVEMENT_GUIDE.md`
+
+For hangs / cleanup patterns, use:
+
+- `docs/TESTING_ASYNC_CLEANUP_GUIDE.md`
+- `docs/guides/TEST_HANGING_PREVENTION_GUIDE.md`
+
+### Golden rules (keep these in your head)
+
+- **Never hang silently**: explicit per-test timeouts + progress logs for >5s work.
+- **Always trust exit codes over VS Code task UI**: confirm the process exit status.
+- **Check analyzer output before rerunning**: prefer `tests/analyze-test-logs.js --summary` over blind retries.
 
 **🔥 CRITICAL**: Single DB Connection in Tests (WAL Mode)
 ```javascript

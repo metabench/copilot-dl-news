@@ -430,7 +430,7 @@ console.log(JSON.stringify({
 
 **Query pattern performance**:
 ```bash
-sqlite3 urls.db "
+node tools/db-query.js "
 SELECT 
   domain, 
   pattern_signature, 

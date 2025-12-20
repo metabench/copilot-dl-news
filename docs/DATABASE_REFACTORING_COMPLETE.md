@@ -89,13 +89,13 @@ ensureDatabase() → wrapWithTelemetry() (optional) → getDb()
 1. **Simple Usage** (most common)
    ```javascript
    const { ensureDatabase } = require('../db/sqlite');
-   const db = ensureDatabase('/path/to/db.sqlite');
+   const db = ensureDatabase('data/news.db');
    ```
 
 2. **With Query Telemetry** (for cost estimation)
    ```javascript
    const { ensureDatabase, wrapWithTelemetry } = require('../db/sqlite');
-   const db = ensureDatabase('/path/to/db.sqlite');
+   const db = ensureDatabase('data/news.db');
    const instrumentedDb = wrapWithTelemetry(db, { trackQueries: true });
    ```
 

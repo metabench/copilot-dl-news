@@ -644,7 +644,7 @@ Document new pattern:
 **Simple**:
 ```javascript
 const { ensureDatabase } = require('../db/sqlite/connection');
-const db = ensureDatabase('/path/to/db.sqlite');
+const db = ensureDatabase('data/news.db');
 // Done! Use db.prepare(), db.exec(), etc.
 ```
 
@@ -653,7 +653,7 @@ const db = ensureDatabase('/path/to/db.sqlite');
 const { ensureDatabase } = require('../db/sqlite/connection');
 const { wrapWithTelemetry } = require('../db/sqlite/instrumentation');
 
-const db = ensureDatabase('/path/to/db.sqlite');
+const db = ensureDatabase('data/news.db');
 const instrumentedDb = wrapWithTelemetry(db, { trackQueries: true });
 // Queries are now tracked in query_telemetry table
 ```

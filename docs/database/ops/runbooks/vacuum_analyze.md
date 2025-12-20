@@ -21,6 +21,10 @@ Keep `news.db` performant by reclaiming free space and refreshing SQLite statist
    node tools/db-maintenance.js
    ```
    - Performs `wal_checkpoint(TRUNCATE)` followed by `VACUUM`.
+   - If you only need to consolidate/truncate the WAL (no VACUUM), run:
+     ```powershell
+     node tools/db-maintenance.js --checkpoint-only
+     ```
 2. **Refresh statistics**
    ```powershell
    node -e "const Database=require('better-sqlite3'); const db=new Database('data/news.db'); db.exec('ANALYZE;'); db.close();"

@@ -2,6 +2,11 @@
 
 _Last updated: 2025-12-13_
 
+## Quick References
+- [Command Execution Guide](COMMAND_EXECUTION_GUIDE.md)
+- [Testing Quick Reference](TESTING_QUICK_REFERENCE.md)
+- [Database Quick Reference](DATABASE_QUICK_REFERENCE.md)
+
 ## Agents
 - [Agent Policy](agents/agent_policy.md)
 - [Command Execution Rules](agents/command-rules.md)

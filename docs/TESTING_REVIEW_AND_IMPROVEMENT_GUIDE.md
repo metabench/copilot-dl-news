@@ -1152,7 +1152,7 @@ afterAll(async () => {
 
 **Fix Implementation Steps**:
 - [ ] Make ONE focused change (don't fix multiple things at once)
-- [ ] Use `replace_string_in_file` for code changes (never PowerShell commands)
+- [ ] Use `apply_patch` for code changes (never PowerShell commands)
 - [ ] Add comments explaining why fix was needed
 - [ ] Update TESTING_STATUS.md: Add to "Attempted Fixes" with timestamp
 
@@ -1658,10 +1658,10 @@ Step 5: Determine correct behavior
   → 404 is more appropriate
 
 Step 6: Fix implementation
-  replace_string_in_file: Change route to return 404
+  apply_patch: Change route to return 404
 
 Step 7: Update documentation
-  replace_string_in_file: Update API_ENDPOINT_REFERENCE.md
+  apply_patch: Update API_ENDPOINT_REFERENCE.md
 
 Step 8: Verify test now passes
   npm run test:file "pause-resume.api"
@@ -1913,32 +1913,25 @@ npm test                                # Hangs indefinitely, no output
 
 **Lesson**: NEVER run full test suite. Always use `npm run test:file "pattern"` for targeted testing.
 
-#### 6. Multi-Replace is Safer Than Sequential Edits
+#### 6. Guarded batch edits beat "edit drift"
 
-**Pattern Discovered**: Using `multi_replace_string_in_file` for 10 identical temporal dead zone fixes
-- **Attempt 1**: Failed because oldString patterns didn't match (included code after my attempted fix)
-- **Lesson**: Multi-replace requires EXACT current file state, not assumed state
-- **Better Approach**: Read file, verify exact text, THEN multi-replace
+**Pattern Discovered**: Batch edits are safer than repeated small manual edits
+- **Failure mode**: Applying multiple edits based on assumed file state causes mismatches and wasted cycles.
+- **Better approach**: Read current source, verify the exact target, then apply a guarded/batched change.
 
 **Prevention Strategy**:
 ```javascript
-// ❌ RISKY: Multi-replace with assumed file state
-multi_replace_string_in_file([
-  { oldString: "code I think exists", newString: "fixed code" }
-]);
-
-// ✅ SAFE: Read first, verify, then replace
+// ✅ SAFE: Read first, then apply a guarded change
 read_file({ filePath, offset, limit }); // See actual current state
-// Verify oldString matches exactly what's in file
-multi_replace_string_in_file([
-  { oldString: "exact text from file", newString: "fixed code" }
-]);
 
-// ✅ SAFEST: Sequential replace for tricky edits
-replace_string_in_file({ oldString, newString }); // One at a time when unsure
+// Prefer js-edit for JS-only guarded edits across many files
+// node tools/dev/js-edit.js --file <file> --locate <selector> --replace <selector> --with <snippet> --expect-hash <hash> --preview-edit
+
+// Prefer apply_patch for small, explicit edits
+apply_patch({ input: "*** Begin Patch\n*** Update File: <file>\n@@\n-old\n+new\n*** End Patch" });
 ```
 
-**Lesson**: Multi-replace is efficient but requires perfect string matching. When first attempt fails, switch to sequential single replacements.
+**Lesson**: If the first attempt fails, stop and re-locate the exact span before retrying.
 
 #### 7. Schema Evolution Bugs Are Silent (Session 2, 2025-10-10)
 

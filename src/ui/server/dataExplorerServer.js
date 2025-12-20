@@ -107,7 +107,16 @@ const {
   attachTelemetryEndpoints,
   attachTelemetryMiddleware
 } = require("./utils/telemetry");
-const { getDefaultTheme, getTheme } = require("./services/themeService");
+const {
+  listThemes,
+  getDefaultTheme,
+  getTheme,
+  createTheme,
+  updateTheme,
+  setDefaultTheme,
+  deleteTheme
+} = require("./services/themeService");
+const { ThemeEditorControl } = require("../controls/ThemeEditorControl");
 
 const StringControl = jsgui.String_Control;
 
@@ -639,6 +648,39 @@ function renderConfigView({ db, relativeDb, now }) {
   };
 }
 
+function renderThemeEditorView({ req, db, relativeDb, now }) {
+  const themes = listThemes(db);
+  const requested = req && req.query && typeof req.query.theme === "string" ? req.query.theme.trim() : "";
+  const active = requested ? getTheme(db, requested) : getDefaultTheme(db);
+  const activeTheme = active || getDefaultTheme(db);
+
+  const subtitle = themes.length === 0
+    ? `No themes found in ${relativeDb}`
+    : `${themes.length} themes available (default: ${(themes.find(t => t && t.is_default) || {}).name || activeTheme.name || "—"})`;
+
+  return {
+    title: "Theme Editor",
+    columns: [],
+    rows: [],
+    meta: {
+      rowCount: themes.length,
+      limit: themes.length,
+      dbLabel: relativeDb,
+      generatedAt: formatDateTime(now, true),
+      subtitle
+    },
+    renderOptions: {
+      layoutMode: "single-control",
+      mainControlFactory: (context) => new ThemeEditorControl({
+        context,
+        themes,
+        activeTheme,
+        apiBase: `${(req && req.baseUrl) || ""}/api/themes`
+      })
+    }
+  };
+}
+
 /**
  * Build table columns for decisions/milestones listing
  */
@@ -910,6 +952,13 @@ const DATA_VIEWS = [
     navLabel: "Decisions",
     title: "Crawler Decisions",
     render: renderDecisionsView
+  },
+  {
+    key: "theme",
+    path: "/theme",
+    navLabel: "Theme",
+    title: "Theme Editor",
+    render: renderThemeEditorView
   },
   {
     key: "config",
@@ -1572,6 +1621,86 @@ function createDataExplorerServer(options = {}) {
       res.redirect(303, redirectTo);
     } catch (error) {
       next(error);
+    }
+  });
+
+  // Theme API (ui_themes)
+  app.get("/api/themes", (req, res, next) => {
+    try {
+      const themes = listThemes(dbAccess.db);
+      res.json({ ok: true, themes });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/themes/:identifier", (req, res, next) => {
+    try {
+      const identifier = req.params.identifier;
+      const theme = getTheme(dbAccess.db, identifier);
+      if (!theme) {
+        return res.status(404).json({ ok: false, error: `Theme not found: ${identifier}` });
+      }
+      res.json({ ok: true, theme });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/themes", (req, res, next) => {
+    try {
+      const body = req.body || {};
+      const theme = createTheme(dbAccess.db, {
+        name: body.name,
+        displayName: body.displayName,
+        description: body.description,
+        config: body.config
+      });
+      res.status(201).json({ ok: true, theme });
+    } catch (error) {
+      const message = error && error.message ? error.message : "Unable to create theme";
+      res.status(400).json({ ok: false, error: message });
+    }
+  });
+
+  app.put("/api/themes/:identifier", (req, res, next) => {
+    try {
+      const identifier = req.params.identifier;
+      const body = req.body || {};
+      const theme = updateTheme(dbAccess.db, identifier, {
+        displayName: body.displayName,
+        description: body.description,
+        config: body.config
+      });
+      res.json({ ok: true, theme });
+    } catch (error) {
+      const message = error && error.message ? error.message : "Unable to update theme";
+      const status = /not found/i.test(message) ? 404 : 400;
+      res.status(status).json({ ok: false, error: message });
+    }
+  });
+
+  app.post("/api/themes/:identifier/default", (req, res, next) => {
+    try {
+      const identifier = req.params.identifier;
+      const theme = setDefaultTheme(dbAccess.db, identifier);
+      res.json({ ok: true, theme });
+    } catch (error) {
+      const message = error && error.message ? error.message : "Unable to set default theme";
+      const status = /not found/i.test(message) ? 404 : 400;
+      res.status(status).json({ ok: false, error: message });
+    }
+  });
+
+  app.delete("/api/themes/:identifier", (req, res, next) => {
+    try {
+      const identifier = req.params.identifier;
+      const success = deleteTheme(dbAccess.db, identifier);
+      res.json({ ok: true, success: !!success });
+    } catch (error) {
+      const message = error && error.message ? error.message : "Unable to delete theme";
+      const status = /not found/i.test(message) ? 404 : 400;
+      res.status(status).json({ ok: false, error: message });
     }
   });
 

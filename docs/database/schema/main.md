@@ -198,7 +198,7 @@ Full row counts are available in `news_db_stats.json` and should be consulted be
 Refer to `src/db/sqlite/v1/schema-definitions.js` for the full list and SQL definitions.
 
 ## Maintenance Tips
-- **Vacuum cadence:** Run `node tools/db-vacuum.js` (or manual `VACUUM;`) monthly or after large deletes. Keep in sync with WAL checkpoint SLO above.
+- **Vacuum cadence:** Run `node tools/vacuum-db.js` (or manual `VACUUM;`) monthly or after large deletes. Keep in sync with WAL checkpoint SLO above.
 - **Index review:** High-velocity tables (`links`, `queue_events`) rely on their composite indexes for reporting. Before dropping indexes, analyse `query_telemetry` for actual impact.
 - **Migration staging:** Use `tools/migration-cli.js migrate` with a temp copy (e.g., `migration-temp/news-migrated.db`) before touching production data.
 - **Row count monitoring:** The stats artifact is regenerated whenever the docs are refreshed. Recompute after bulk imports to spot anomalies early.

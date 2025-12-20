@@ -10,6 +10,10 @@ const manifest = [
     loader: () => require("./UrlFilterToggle").UrlFilterToggleControl
   },
   {
+    type: "theme_editor",
+    loader: () => require("./ThemeEditorControl").ThemeEditorControl
+  },
+  {
     type: "pager_button",
     loader: () => require("./PagerButton").PagerButtonControl
   },

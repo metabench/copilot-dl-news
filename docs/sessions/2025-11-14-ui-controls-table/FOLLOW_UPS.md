@@ -1,3 +1,0 @@
-# Follow Ups
-
-- Pending.

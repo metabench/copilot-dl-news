@@ -5,12 +5,12 @@ This guide is a concise playbook for debugging jsgui3 controls, activation (call
 ## Core Principles
 - **Session-first, plan-first.** Create a session folder before work; note commands in `WORKING_NOTES.md`.
 - **js-scan/js-edit-first.** Use `node tools/dev/js-scan.js --what-imports <control>` to map usage before editing; prefer batch edits via js-edit.
-- **Safe server lifecycle.** Never run servers ad-hoc; use `--check` or `--detached` + `--stop/--status`.
+- **Safe server lifecycle.** Follow `docs/COMMAND_EXECUTION_GUIDE.md` → "🚨 Server Verification - CRITICAL FOR AGENTS 🚨".
 - **Checks beside controls.** Every control/renderer gets a tiny `checks/*.check.js` script to render or assert HTML.
 - **Isomorphic awareness.** Always consider server render + client activation paths.
 
 ## Quick Checklist (before debugging)
-- Server start/stop flow understood? (`--check`, `--detached`, `--stop`, `--status`)
+- Server start/stop flow understood? (see `docs/COMMAND_EXECUTION_GUIDE.md`)
 - Client bundle up-to-date? (`node <server>/build-client.js`)
 - Controls registered on client? (`context.map_Controls[...] = ControlClass`)
 - Activation logs enabled? (`page.on('console', ...)` in tests; temporary `console.log` in client activation)

@@ -3,9 +3,11 @@
 const DEFAULT_PATTERNS = Object.freeze([
   "jsgui html-core pre_activate",
   "jsgui html-core activate",
+  "&&& no corresponding control",
   "jsgui.def_server_resources",
   "Missing context.map_Controls for type",
-  "Data_Model_View_Model_Control pre_activate complete"
+  "Data_Model_View_Model_Control pre_activate complete",
+  "Data_Model_View_Model_Control this.data.model change"
 ]);
 
 function isBrowserRuntime() {

@@ -45,7 +45,7 @@ node tools/migration-cli.js emit-schema --target docs/database/_artifacts/news_d
 2. **Run migration** – Use the Phase 0 CLI with `--export-dir migration-export` to capture artifacts.
 3. **Run validator** – `node tools/migration-cli.js validate` comparing pre/post counts.
 4. **Smoke tests** – Execute targeted Jest suites plus crawler smoke tests touching the modified tables.
-5. **Checkpoint WAL** – `node tools/db-maintenance.js --checkpoint --vacuum-if-needed` to reset WAL size.
+5. **Checkpoint WAL** – `node tools/db-maintenance.js` (checkpoint + VACUUM), or `node tools/db-maintenance.js --checkpoint-only` if you only need to truncate the WAL.
 6. **Update docs** – Refresh `docs/database/_artifacts/news_db_stats.json` and mark checkboxes in `DB_DOCS_PLAN.md`.
 
 ## Rollback Strategy

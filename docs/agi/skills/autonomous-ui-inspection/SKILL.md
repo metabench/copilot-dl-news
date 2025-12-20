@@ -33,19 +33,9 @@ This Skill is about **inspection and evidence collection**. It intentionally avo
 
 - `src/ui/server/utils/serverStartupCheck.js`
 
-Recommended integration snippet:
+Canonical workflow + implementation guidance lives in:
 
-```js
-if (require.main === module) {
-  const args = process.argv.slice(2);
-  if (args.includes('--check')) {
-    const { runStartupCheck } = require('../utils/serverStartupCheck');
-    runStartupCheck(__filename, PORT, { serverName: '<Name>', healthEndpoint: '/health' });
-  } else {
-    app.listen(PORT, () => console.log(`Listening on ${PORT}`));
-  }
-}
-```
+- `docs/COMMAND_EXECUTION_GUIDE.md` → "🚨 Server Verification - CRITICAL FOR AGENTS 🚨"
 
 Why: agents must be able to validate startup **without** long-lived processes blocking.
 

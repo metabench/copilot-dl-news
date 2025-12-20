@@ -21,7 +21,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync, spawn } = require('child_process');
+const { execSync } = require('child_process');
 const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
 const { CliFormatter } = require('../../src/utils/CliFormatter');
 
@@ -31,6 +31,38 @@ const ARCHIVE_FILE = path.join(ARCHIVE_DIR, 'sessions-archive.zip');
 const MANIFEST_FILE = path.join(ARCHIVE_DIR, 'archive-manifest.json');
 
 const SESSION_FILES = ['PLAN.md', 'SESSION_SUMMARY.md', 'WORKING_NOTES.md', 'FOLLOW_UPS.md', 'INDEX.md', 'DECISIONS.md'];
+
+function writeJsonOutput({ payload, outputPath }) {
+  const text = JSON.stringify(payload, null, 2);
+  if (!outputPath) {
+    console.log(text);
+    return;
+  }
+
+  const abs = path.isAbsolute(outputPath) ? outputPath : path.resolve(process.cwd(), outputPath);
+  fs.mkdirSync(path.dirname(abs), { recursive: true });
+  fs.writeFileSync(abs, text, 'utf8');
+  console.log(text);
+}
+
+async function copyDirectoryRecursive(srcDir, destDir) {
+  const entries = await fs.promises.readdir(srcDir, { withFileTypes: true });
+  await fs.promises.mkdir(destDir, { recursive: true });
+
+  for (const entry of entries) {
+    const srcPath = path.join(srcDir, entry.name);
+    const destPath = path.join(destDir, entry.name);
+
+    if (entry.isDirectory()) {
+      await copyDirectoryRecursive(srcPath, destPath);
+      continue;
+    }
+
+    if (entry.isFile()) {
+      await fs.promises.copyFile(srcPath, destPath);
+    }
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Utilities
@@ -152,17 +184,8 @@ async function addToArchive(sessionPath, slug, dryRun) {
   const tempSessionDir = path.join(tempDir, slug);
   
   try {
-    // Copy session to temp
-    await ensureDirectory(tempSessionDir);
-    const files = await fs.promises.readdir(sessionPath);
-    for (const file of files) {
-      const srcPath = path.join(sessionPath, file);
-      const destPath = path.join(tempSessionDir, file);
-      const stat = await fs.promises.stat(srcPath);
-      if (stat.isFile()) {
-        await fs.promises.copyFile(srcPath, destPath);
-      }
-    }
+    // Copy entire session tree to temp (sessions may contain nested folders like snippets/)
+    await copyDirectoryRecursive(sessionPath, tempSessionDir);
     
     // Add to ZIP using PowerShell
     const archiveExists = await pathExists(ARCHIVE_FILE);
@@ -463,8 +486,10 @@ async function runCli() {
     .add('--list', 'List all archived sessions', false, 'boolean')
     .add('--search <query>', 'Search archived sessions for content')
     .add('--read <slugs...>', 'Read one or more archived sessions (space-separated)')
+    .add('--keep-original', 'When used with --archive --fix, keep original session folders (do not delete)', false, 'boolean')
     .add('--fix', 'Apply changes (default is dry-run)', false, 'boolean')
     .add('--json', 'Output as JSON', false, 'boolean')
+    .add('--output <file>', 'When used with --json, also write JSON to a file (UTF-8, no BOM)')
     .add('--quiet', 'Suppress formatted output', false, 'boolean')
     .add('--limit <number>', 'Limit results', 20, 'number');
   
@@ -476,10 +501,11 @@ async function runCli() {
   // Command: --archive
   // ─────────────────────────────────────────────────────────────────────────
   if (args.archive) {
-    const olderThan = args.olderThan || 30;
+    const olderThan = Number.isFinite(args.olderThan) ? args.olderThan : 30;
     const now = new Date();
     const sessions = await getSessionFolders();
     const manifest = await readManifest();
+    const keepOriginal = args.keepOriginal === true;
     
     const toArchive = sessions.filter(s => {
       if (!s.date) return false;
@@ -503,8 +529,10 @@ async function runCli() {
           const archiveResult = await addToArchive(session.path, session.slug, false);
           
           if (archiveResult.success) {
-            // Remove original folder
-            await fs.promises.rm(session.path, { recursive: true, force: true });
+            if (!keepOriginal) {
+              // Remove original folder
+              await fs.promises.rm(session.path, { recursive: true, force: true });
+            }
             
             // Update manifest
             manifest.sessions.push({
@@ -522,13 +550,14 @@ async function runCli() {
         await writeManifest(manifest);
       }
       
-      console.log(JSON.stringify(result, null, 2));
+      writeJsonOutput({ payload: result, outputPath: args.output });
       return;
     }
     
     if (!args.quiet) {
       formatter.header('Session Archive');
       formatter.stat('Mode', dryRun ? 'preview (dry-run)' : 'archive (--fix)');
+      formatter.stat('Keep original', keepOriginal ? 'YES' : 'NO');
       formatter.stat('Threshold', `${olderThan} days`);
       formatter.stat('Total sessions', sessions.length, 'number');
       formatter.stat('Sessions to archive', toArchive.length, 'number');
@@ -554,7 +583,9 @@ async function runCli() {
           const archiveResult = await addToArchive(session.path, session.slug, false);
           
           if (archiveResult.success) {
-            await fs.promises.rm(session.path, { recursive: true, force: true });
+            if (!keepOriginal) {
+              await fs.promises.rm(session.path, { recursive: true, force: true });
+            }
             
             manifest.sessions.push({
               slug: session.slug,
@@ -583,7 +614,7 @@ async function runCli() {
     const sessions = await listArchivedSessions();
     
     if (args.json) {
-      console.log(JSON.stringify({ sessions, count: sessions.length }, null, 2));
+      writeJsonOutput({ payload: { sessions, count: sessions.length }, outputPath: args.output });
       return;
     }
     
@@ -616,7 +647,7 @@ async function runCli() {
     const result = await searchArchive(args.search, args.limit);
     
     if (args.json) {
-      console.log(JSON.stringify(result, null, 2));
+      writeJsonOutput({ payload: result, outputPath: args.output });
       return;
     }
     
@@ -655,7 +686,7 @@ async function runCli() {
     const result = await readArchivedSessions(slugs);
     
     if (args.json) {
-      console.log(JSON.stringify(result, null, 2));
+      writeJsonOutput({ payload: result, outputPath: args.output });
       return;
     }
     
@@ -721,7 +752,7 @@ async function runCli() {
     const result = await extractFromArchive(args.extract, dryRun);
     
     if (args.json) {
-      console.log(JSON.stringify(result, null, 2));
+      writeJsonOutput({ payload: result, outputPath: args.output });
       return;
     }
     
@@ -751,7 +782,7 @@ async function runCli() {
     const result = await removeFromArchive(args.remove, dryRun);
     
     if (args.json) {
-      console.log(JSON.stringify(result, null, 2));
+      writeJsonOutput({ payload: result, outputPath: args.output });
       return;
     }
     

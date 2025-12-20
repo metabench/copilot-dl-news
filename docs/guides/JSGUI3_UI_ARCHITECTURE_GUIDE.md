@@ -854,23 +854,13 @@ node src/ui/server/dataExplorer/checks/ExplorerAppControl.check.js
 
 jsgui3 UI applications run on Express servers that serve SSR pages and API endpoints. The primary server for the Data Explorer is `dataExplorerServer.js`.
 
-### The Problem: Servers Die When Terminal Commands Run
+General server lifecycle rules for agents (how to avoid hanging on long-running servers, `--check`, and safe background processes) are canonical in:
 
-**Critical for AI Agents**: When you start a server in a terminal and then run another command, the server process often terminates. This happens because:
+- `docs/COMMAND_EXECUTION_GUIDE.md` → "🚨 Server Verification - CRITICAL FOR AGENTS 🚨"
 
-1. Running a new command in the same terminal may send signals to child processes
-2. PowerShell/shell may propagate interrupt signals
-3. The agent's next action kills the previous process
+### Data Explorer Detached Mode
 
-**Symptoms**:
-- Server starts successfully, shows "listening on port 4600"
-- Agent runs another command (e.g., `npm run build`)
-- Subsequent requests to `http://127.0.0.1:4600/` fail with connection refused
-- Agent wastes time debugging "why isn't the server working"
-
-### Solution: Detached Mode
-
-The `dataExplorerServer.js` supports **detached mode** for running independently of the terminal:
+The Data Explorer server (`src/ui/server/dataExplorerServer.js`) supports **detached mode** for running independently of the terminal:
 
 ```bash
 # Start server in detached mode (runs in background)
@@ -953,60 +943,6 @@ node src/ui/server/dataExplorerServer.js --port 4600
 | `--status` | Check if detached server is running |
 | `--stop` | Stop detached server |
 | `--port <n>` | Specify port (default: 4600) |
-
-### Adding Detached Mode to Other Servers
-
-If you need to add detached mode to another server, the pattern is:
-
-```javascript
-const { spawn } = require("child_process");
-const fs = require("fs");
-const path = require("path");
-
-const PID_FILE = path.join(__dirname, "../../../tmp/.my-server.pid");
-
-function spawnDetached(port) {
-  const child = spawn(process.execPath, [__filename, "--port", String(port)], {
-    detached: true,
-    stdio: "ignore",
-    cwd: process.cwd()
-  });
-  child.unref();
-  fs.mkdirSync(path.dirname(PID_FILE), { recursive: true });
-  fs.writeFileSync(PID_FILE, String(child.pid));
-  console.log(`Server started in background (PID: ${child.pid})`);
-}
-
-function stopDetached() {
-  if (!fs.existsSync(PID_FILE)) {
-    console.log("No detached server found");
-    return;
-  }
-  const pid = parseInt(fs.readFileSync(PID_FILE, "utf8"), 10);
-  try {
-    process.kill(pid, "SIGTERM");
-    fs.unlinkSync(PID_FILE);
-    console.log(`Server stopped (was PID: ${pid})`);
-  } catch (e) {
-    fs.unlinkSync(PID_FILE);
-    console.log("Server was not running (stale PID file cleaned)");
-  }
-}
-
-function checkStatus() {
-  if (!fs.existsSync(PID_FILE)) {
-    console.log("Server: not running");
-    return;
-  }
-  const pid = parseInt(fs.readFileSync(PID_FILE, "utf8"), 10);
-  try {
-    process.kill(pid, 0); // Check if process exists
-    console.log(`Server: running (PID: ${pid})`);
-  } catch {
-    console.log("Server: not running (stale PID file)");
-  }
-}
-```
 
 ---
 

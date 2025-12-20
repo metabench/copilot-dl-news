@@ -44,7 +44,7 @@ When writing Node.js code that might run elsewhere:
 
 ```
 Need to edit a file?
-  ✅ Use: replace_string_in_file tool (95% of cases)
+  ✅ Use: apply_patch tool (95% of cases)
   ❌ Don't: Get-Content | Set-Content pipelines
 
 Need to read a file?
@@ -229,6 +229,23 @@ npm run test:by-path tests/server/myServer.e2e.test.js  # Step 3: Full E2E
 
 ### When You MUST Run a Long-Running Server
 
+Prefer the server's own lifecycle flags when available:
+
+- `--detached` starts the server in the background (survives running other commands)
+- `--status` reports whether the detached server is running
+- `--stop` shuts down the detached server
+- `--auto-shutdown-seconds <n>` runs temporarily then exits (useful for smoke checks)
+
+Examples:
+
+```bash
+node server.js --detached --auto-shutdown-seconds 10
+node server.js --status
+node server.js --stop
+```
+
+If a server does **not** implement these flags, fall back to starting it as a background process (see below).
+
 Use `isBackground: true` in run_in_terminal:
 
 ```javascript
@@ -240,7 +257,22 @@ run_in_terminal({
 });
 
 // Later, check output with get_terminal_output
-// Stop with: Stop-Process -Name node -Force
+// Prefer a server's own --stop flag when available.
+// Otherwise stop with: Stop-Process -Name node -Force
+
+### Restart After Code Changes
+
+Servers do not automatically reload server-side changes.
+
+- If the server supports detached mode: `--stop` then start again with `--detached`.
+- If you started it as a background process: stop it (server flag or `Stop-Process`) then start it again.
+
+Example (detached mode):
+
+```bash
+node src/ui/server/dataExplorerServer.js --stop
+node src/ui/server/dataExplorerServer.js --detached --port 4600
+```
 ```
 
 ---
@@ -264,21 +296,20 @@ Invoke-WebRequest -Uri "http://localhost:3000/api/crawl" -Method POST -ContentTy
 
 ## Use Tools Instead of Commands
 
-### Primary Tool: replace_string_in_file
+### Primary Tool: apply_patch
 
 **Use for 95% of file editing operations:**
 
 ```javascript
 // Instead of PowerShell replace commands
-replace_string_in_file({
-  filePath: "c:\\path\\to\\file.js",
-  oldString: "exact text to replace\nincluding newlines",
-  newString: "replacement text\nalso with newlines"
-})
-
-// For multiple replacements in same file
-replace_string_in_file({ filePath, oldString: "pattern1", newString: "replacement1" })
-replace_string_in_file({ filePath, oldString: "pattern2", newString: "replacement2" })
+apply_patch({
+  input: `*** Begin Patch
+*** Update File: c:\\path\\to\\file.js
+@@
+-old line
++new line
+*** End Patch`
+});
 ```
 
 ### Why Tools Don't Require Approval
@@ -319,7 +350,7 @@ GEOGRAPHY_E2E=1 npm test
 
 **STOP and follow this checklist:**
 
-1. ✅ Can I use `replace_string_in_file` tool? (95% of cases - PRIMARY)
+1. ✅ Can I use `apply_patch` tool? (95% of cases - PRIMARY)
 2. ✅ Can I use `read_file` tool? (not Get-Content with logic)
 3. ✅ Can I use `grep_search` tool? (not Select-String with regex)
 4. ✅ Can I use `file_search` tool? (not Get-ChildItem with ForEach)
@@ -329,6 +360,8 @@ GEOGRAPHY_E2E=1 npm test
 8. ❌ **NEVER** use complex regex in PowerShell commands
 9. ❌ **NEVER** chain multiple commands with semicolons
 10. ❌ **NEVER** use ForEach-Object with complex logic
+
+**Note**: In this repo's agent tooling, file edits are performed via `apply_patch`.
 
 **Key Principle**: If you're about to write a PowerShell command longer than ONE line or with ANY piping beyond simple filtering, STOP and use a tool instead.
 

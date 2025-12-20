@@ -163,14 +163,7 @@ Measuring quality (so accuracy improves over time):
 - Hang rate: how often scripts/tests “pass but don’t exit”.
 - Time-to-confidence: time from first edit to “all relevant validations green”.
 
-**🚨 Server Verification (CRITICAL FOR AGENTS)**. Servers are long-running processes that **block forever**. NEVER run `node server.js` directly—it will hang the terminal indefinitely. Instead:
-- ✅ Use `--check` flag: `node src/ui/server/myServer.js --check` — starts, verifies, then exits (~500ms)
-- ✅ Use `isBackground: true` in run_in_terminal if you need the server running
-- ✅ Run check scripts: `node src/ui/server/checks/myServer.check.js`
-- ✅ Run E2E tests that manage their own server lifecycle
-- ❌ NEVER: `node server.js` without --check or isBackground
-
-See `docs/COMMAND_EXECUTION_GUIDE.md` for implementation details and the `src/ui/server/utils/serverStartupCheck.js` utility.
+**Server verification (don’t duplicate here)**: See `docs/COMMAND_EXECUTION_GUIDE.md` → “🚨 Server Verification - CRITICAL FOR AGENTS 🚨” for the canonical rules and examples.
 
 Server Restart After Changes. When modifying server-side code (Express routes, jsgui3 controls, renderers, utilities), always restart the relevant server after applying changes. For the docs viewer: `node src/ui/server/docsViewer/server.js --stop; node src/ui/server/docsViewer/server.js --detached`. For other UI servers, use `Stop-Process -Name node -Force` followed by the appropriate start command. The user cannot see your changes until the server picks up the new code.
 

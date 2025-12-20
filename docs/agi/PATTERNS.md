@@ -456,3 +456,21 @@ AGI-accumulated knowledge catalog.
 
 
 ---
+
+## Thin Pointer Agent Docs
+
+**Added**: 2025-12-19
+**Context**: docs consolidation (commands/testing)
+
+**When to use**: Multiple documents repeat the same workflow steps (especially under docs/agents vs root quick references), causing drift.
+
+**Steps/Details**:
+1. Pick the canonical doc for the workflow (prefer a single quick reference or guide).
+1. Update docs/INDEX.md and AGENTS.md to route to the canonical doc.
+1. Convert duplicate docs into thin pointer pages: keep frontmatter + 5-bullet TL;DR, then link to canonical doc/section.
+1. Update canonical doc examples to match the actual toolchain (e.g., apply_patch/js-edit).
+1. Run a repo-wide grep for the old tool/API name to ensure only archives still mention it.
+
+**Example**: docs/agents/command-rules.md -> pointer to docs/COMMAND_EXECUTION_GUIDE.md
+
+---

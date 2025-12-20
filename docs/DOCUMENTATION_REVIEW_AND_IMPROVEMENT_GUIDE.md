@@ -169,7 +169,7 @@ For each documentation file, measure:
 - EXHAUSTIVE: All architecture docs (ARCHITECTURE_*.md, *_ARCHITECTURE.md)
 
 For each doc in scope:
-- [ ] **Verify and Fix Accuracy**: Does it match the current codebase? Cross-reference claims with the actual code. **If an inaccuracy is found, fix it immediately.** Use `grep_search` and `read_file` to verify, and `replace_string_in_file` to correct the documentation.
+- [ ] **Verify and Fix Accuracy**: Does it match the current codebase? Cross-reference claims with the actual code. **If an inaccuracy is found, fix it immediately.** Use `grep_search` and `read_file` to verify, and `apply_patch` to correct the documentation.
 - [ ] **Search for Deprecated Names**: Look for references to removed/renamed classes or services (for example `CrawlerManager`) and update them to current equivalents.
 - [ ] **Completeness** (EXHAUSTIVE only): Are all major components covered? If not, add placeholder sections for what's missing.
 - [ ] **Clarity** (EXHAUSTIVE only): Can an AI agent understand the system in <10 min? If not, add summaries or simplify complex language.

@@ -28,63 +28,19 @@ This document outlines critical rules for executing commands in VS Code terminal
 - When executing scripts or build processes
 - When you encounter approval dialog blocks
 
-## Procedure
+## Canonical workflow
 
-### NEVER USE These PowerShell Patterns
+This page is intentionally a **thin pointer**. The canonical, kept-up-to-date workflow lives in:
 
-- `Get-Content | Set-Content` pipelines
-- Complex regex with `-replace`
-- Chained commands with semicolons (`;`)
-- Piping to `Select-String`, `ForEach-Object`
-- Multi-line commands with backticks (`` ` ``)
+- `docs/COMMAND_EXECUTION_GUIDE.md`
 
-### USE TOOLS Instead (PRIMARY APPROACH)
+## TL;DR (safe defaults)
 
-- ✅ `replace_string_in_file` - for editing files (95% of cases)
-- ✅ `read_file` - for reading file contents
-- ✅ `grep_search` - for searching in files
-- ✅ `file_search` - for finding files
-
-### Safe Commands (OK to run)
-
-- `Test-Path "file.js"`
-- `Get-ChildItem`
-- `node script.js arg1 arg2`
-- `npm run test:file "pattern"`
-
-### Critical Rules
-
-1. ❌ Never run commands in terminals with background processes (kills the server)
-2. ❌ PowerShell `curl` is NOT Unix curl (use E2E tests instead)
-3. ✅ Use `get_terminal_output` tool to check background process logs (read-only)
-
-### Decision Rule
-
-If command is >1 line OR uses piping/chaining → Use a tool instead.
-
-## Gotchas
-
-- **Background processes get killed** when running ANY command in the same terminal
-- **PowerShell curl syntax differs** from Unix curl - use E2E tests for HTTP testing
-- **Complex regex triggers approval** - use `replace_string_in_file` for file edits
-- **Multi-line commands require approval** - use tools instead
-- **Piping always requires approval** - use tools instead
-
-## Examples
-
-### ✅ RIGHT: Use replace_string_in_file
-```javascript
-replace_string_in_file({
-  filePath: "file.js",
-  oldString: "old code",
-  newString: "new code"
-})
-```
-
-### ❌ WRONG: Complex PowerShell
-```powershell
-(Get-Content "file.js") -replace 'pattern', 'replacement' | Set-Content "file.js"
-```
+- Edit files with `apply_patch` (not PowerShell replace pipelines)
+- Read/search with tools (`read_file`, `grep_search`, `file_search`)
+- Avoid PowerShell pipes/chains/backticks unless trivial
+- Never reuse a terminal running a background server; inspect with `get_terminal_output`
+- Prefer E2E/tests/check scripts over manual `curl`-style API poking
 
 ## Related Documentation
 

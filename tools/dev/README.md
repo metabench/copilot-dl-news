@@ -644,6 +644,41 @@ When `--fix` is used, the tool automatically applies repair suggestions:
 
 The tool walks each directory breadth-first, skips `.gitkeep`, and reports any Windows locking errors so you can rerun once handles release.
 
+## `dir-sizes` — Directory Size Summary
+
+`dir-sizes` measures directory sizes (bytes + file count) to guide what should be pruned vs archived.
+
+```powershell
+# Default set (tmp/tmp-debug/testlogs/screenshots/analysis-charts/data)
+node tools/dev/dir-sizes.js
+
+# Target a few dirs explicitly
+node tools/dev/dir-sizes.js --dir testlogs screenshots tmp --top 15 --json
+```
+
+## `artifact-archive` — Artifact Archival (Logs/Screenshots/Charts)
+
+`artifact-archive` buckets older artifacts into ZIP files (default: monthly buckets) and writes a small manifest so archives remain listable/extractable later.
+
+Targets are intended for **ignored** local artifact folders (so the working tree stays lean) while preserving access to older evidence.
+
+```powershell
+# Preview archiving test logs older than 28 days
+node tools/dev/artifact-archive.js --target testlogs --archive --older-than 28
+
+# Apply (moves files into an archive zip, deletes originals)
+node tools/dev/artifact-archive.js --target testlogs --archive --older-than 28 --fix
+
+# List known archive buckets
+node tools/dev/artifact-archive.js --target testlogs --list
+
+# Extract a bucket to a safe location (default: <root>/archive/extracted/<bucket>)
+node tools/dev/artifact-archive.js --target testlogs --extract 2025-10 --fix
+
+# Search text content inside archives (extract + scan)
+node tools/dev/artifact-archive.js --target testlogs --search "EADDRINUSE" --limit 10
+```
+
 ## `session-archive` — Session Folder Archival & Search
 
 `session-archive` archives old session folders into a ZIP file, reducing docs sprawl while preserving searchable access to historical sessions. The CLI defaults to dry-run previews; supply `--fix` to apply changes.
@@ -655,6 +690,9 @@ node tools/dev/session-archive.js --archive --older-than 30
 
 # Actually archive them (removes originals, adds to ZIP + manifest)
 node tools/dev/session-archive.js --archive --older-than 30 --fix
+
+# Create/update the ZIP but keep the original session folders (non-destructive)
+node tools/dev/session-archive.js --archive --older-than 30 --fix --keep-original
 
 # List all archived sessions
 node tools/dev/session-archive.js --list
@@ -678,6 +716,7 @@ node tools/dev/session-archive.js --remove 2025-11-14-binding-plugin --fix
 **Options:**
 - `--archive` — Archive sessions older than N days
 - `--older-than <days>` — Age threshold for archiving (default: 30)
+- `--keep-original` — When used with `--archive --fix`, keep original session folders (do not delete)
 - `--list` — List all archived sessions
 - `--search <query>` — Full-text search archived session content
 - `--read <slug> [<slug2> ...]` — Read one or more archived sessions (single extraction)

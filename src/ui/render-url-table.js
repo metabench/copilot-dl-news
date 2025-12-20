@@ -168,7 +168,8 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
   const listingState = options.listingState || null;
   const layoutMode = typeof options.layoutMode === "string" && options.layoutMode.trim() ? options.layoutMode : "listing";
   const hideListingPanel = options.hideListingPanel === true || layoutMode === "dashboard";
-  const mainControl = options.mainControl;
+  let mainControl = options.mainControl;
+  const mainControlFactory = options.mainControlFactory;
   const dashboardSections = Array.isArray(options.dashboardSections) ? options.dashboardSections.slice() : [];
   const includeDashboardScaffold = options.includeDashboardScaffold === true || dashboardSections.length > 0;
   const safeMeta = {
@@ -189,6 +190,10 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
 
   const context = new jsgui.Page_Context();
   const document = new jsgui.Blank_HTML_Document({ context });
+
+  if (!mainControl && typeof mainControlFactory === "function") {
+    mainControl = mainControlFactory(context);
+  }
 
   document.title.add(new StringControl({ context, text: title }));
   const head = document.head;
@@ -214,6 +219,11 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
   fontsStylesheet.dom.attributes.rel = "stylesheet";
   fontsStylesheet.dom.attributes.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@600;700&display=swap";
   head.add(fontsStylesheet);
+
+  const controlsStylesheet = new jsgui.link({ context });
+  controlsStylesheet.dom.attributes.rel = "stylesheet";
+  controlsStylesheet.dom.attributes.href = "/assets/controls.css";
+  head.add(controlsStylesheet);
   
   head.add(createStyleTag(context, themeConfigToCss(themeConfig)));
   head.add(createStyleTag(context, buildDataExplorerCss()));

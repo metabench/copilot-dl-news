@@ -31,6 +31,215 @@
 
 ## Current Session
 
+### Session 2025-12-20: Theme Editor UI + ui:watch dev loop
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement a functional /theme editor for Data Explorer themes and add a fast UI watch workflow (CSS + client bundle rebuild).
+
+**Location**: `docs/sessions/2025-12-20-theme-editor-ui-watch/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-20-theme-editor-ui-watch/INDEX.md)
+- 🗺️ [Plan](./2025-12-20-theme-editor-ui-watch/PLAN.md)
+- 📝 [Working Notes](./2025-12-20-theme-editor-ui-watch/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-20-theme-editor-ui-watch/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-20-theme-editor-ui-watch/FOLLOW_UPS.md)
+
+
+### Session 2025-12-20: UI + UI Dev Process Improvements
+
+**Duration**: Active
+**Type**: brainstorm
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Identify high-leverage improvements to the UI and the UI development workflow, and record ranked options with next experiments.
+
+**Location**: `docs/sessions/2025-12-20-ui-dev-improvements/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-20-ui-dev-improvements/INDEX.md)
+- 🗺️ [Plan](./2025-12-20-ui-dev-improvements/PLAN.md)
+- 📝 [Working Notes](./2025-12-20-ui-dev-improvements/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-20-ui-dev-improvements/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-20-ui-dev-improvements/FOLLOW_UPS.md)
+
+
+### Session 2025-12-19: Data consolidation + archival tooling
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Consolidate/prune low-value generated data and ensure archived artifacts remain accessible via CLI tools
+
+**Location**: `docs/sessions/2025-12-19-data-archival/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-19-data-archival/INDEX.md)
+- 🗺️ [Plan](./2025-12-19-data-archival/PLAN.md)
+- 📝 [Working Notes](./2025-12-19-data-archival/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-19-data-archival/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-19-data-archival/FOLLOW_UPS.md)
+
+
+### Session 2025-12-19: Documentation Consolidation
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Reduce duplicated guidance across docs by choosing canonical workflows and replacing duplicates with pointers.
+
+**Location**: `docs/sessions/2025-12-19-docs-consolidation/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-19-docs-consolidation/INDEX.md)
+- 🗺️ [Plan](./2025-12-19-docs-consolidation/PLAN.md)
+- 📝 [Working Notes](./2025-12-19-docs-consolidation/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-19-docs-consolidation/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-19-docs-consolidation/FOLLOW_UPS.md)
+
+
+### Session 2025-12-19: Archive docs into ZIPs
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Identify large doc artifacts and provide safe CLIs to archive/list/search/extract them (dry-run default).
+
+**Location**: `docs/sessions/2025-12-19-docs-zip-archival/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-19-docs-zip-archival/INDEX.md)
+- 🗺️ [Plan](./2025-12-19-docs-zip-archival/PLAN.md)
+- 📝 [Working Notes](./2025-12-19-docs-zip-archival/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-19-docs-zip-archival/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-19-docs-zip-archival/FOLLOW_UPS.md)
+
+
+### Session 2025-12-19: Tune VS Code excludes for fewer freezes
+
+**Duration**: Active
+**Type**: debug
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Reduce VS Code/tsserver churn by refining workspace and jsconfig exclusions without breaking day-to-day editing.
+
+**Location**: `docs/sessions/2025-12-19-vscode-exclusions-tuning/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-19-vscode-exclusions-tuning/INDEX.md)
+- 🗺️ [Plan](./2025-12-19-vscode-exclusions-tuning/PLAN.md)
+- 📝 [Working Notes](./2025-12-19-vscode-exclusions-tuning/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-19-vscode-exclusions-tuning/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-19-vscode-exclusions-tuning/FOLLOW_UPS.md)
+
+
+### Session 2025-12-19: VS Code UI freeze investigation
+
+**Duration**: Active
+**Type**: debug
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Reduce intermittent VS Code Insiders UI freezes by identifying hot processes and tightening workspace watcher/search excludes (especially large DB/artifacts).
+
+**Location**: `docs/sessions/2025-12-19-vscode-ui-freeze/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-19-vscode-ui-freeze/INDEX.md)
+- 🗺️ [Plan](./2025-12-19-vscode-ui-freeze/PLAN.md)
+- 📝 [Working Notes](./2025-12-19-vscode-ui-freeze/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-19-vscode-ui-freeze/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-19-vscode-ui-freeze/FOLLOW_UPS.md)
+
+
+### Session 2025-12-19: Prune saved database backups
+
+**Duration**: Active
+**Type**: maintenance
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Remove excessive saved database/backup files while keeping data/news.db; reduce repo size below 9GB if possible.
+
+**Location**: `docs/sessions/2025-12-19-repo-size-db-prune/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-19-repo-size-db-prune/INDEX.md)
+- 🗺️ [Plan](./2025-12-19-repo-size-db-prune/PLAN.md)
+- 📝 [Working Notes](./2025-12-19-repo-size-db-prune/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-19-repo-size-db-prune/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-19-repo-size-db-prune/FOLLOW_UPS.md)
+
+
+### Session 2025-12-18: UI Consistency: shared Sass + controls
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Introduce shared Sass tokens/components and align key UIs + silence noisy client logs
+
+**Location**: `docs/sessions/2025-12-18-ui-consistency-sass-controls/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-18-ui-consistency-sass-controls/INDEX.md)
+- 🗺️ [Plan](./2025-12-18-ui-consistency-sass-controls/PLAN.md)
+- 📝 [Working Notes](./2025-12-18-ui-consistency-sass-controls/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-18-ui-consistency-sass-controls/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-18-ui-consistency-sass-controls/FOLLOW_UPS.md)
+
+
+### Session 2025-12-18: Large Artifacts Pruner Observable UI
+
+**Duration**: Active
+**Type**: ui-lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build lab 039: expose prune-large-artifacts observable via SSE and bind to a small UI
+
+**Location**: `docs/sessions/2025-12-18-large-artifacts-pruner-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-18-large-artifacts-pruner-ui/INDEX.md)
+- 🗺️ [Plan](./2025-12-18-large-artifacts-pruner-ui/PLAN.md)
+- 📝 [Working Notes](./2025-12-18-large-artifacts-pruner-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-18-large-artifacts-pruner-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-18-large-artifacts-pruner-ui/FOLLOW_UPS.md)
+
+
+### Session 2025-12-18: VS Code performance tuning for large repo
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Reduce VS Code/Copilot Chat slowdown by excluding heavy folders from watching/search and tuning TS/Git settings
+
+**Location**: `docs/sessions/2025-12-18-vscode-performance-tuning/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-18-vscode-performance-tuning/INDEX.md)
+- 🗺️ [Plan](./2025-12-18-vscode-performance-tuning/PLAN.md)
+- 📝 [Working Notes](./2025-12-18-vscode-performance-tuning/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-18-vscode-performance-tuning/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-18-vscode-performance-tuning/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-15: Crawler Improvement Strategies Agent
 
 **Duration**: Active

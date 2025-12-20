@@ -11,7 +11,8 @@ Use this checklist before running schema migrations, large imports, or data corr
 
 ## Pre-Backup
 
-- [ ] Confirm target databases: `news.db`, `gazetteer.db`, and `urls.db`.
+- [ ] Confirm target database: `news.db`.
+- [ ] If present/needed, include `gazetteer.db` (optional tooling scratch DB).
 - [ ] Verify sufficient disk space in `data/backups/`.
 
 ## Backup Commands

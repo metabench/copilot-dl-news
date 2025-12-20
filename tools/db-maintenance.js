@@ -15,6 +15,11 @@ const { ensureDatabase } = require('../src/db/sqlite');
  *
  * Usage:
  *   node tools/db-maintenance.js
+ *   node tools/db-maintenance.js --checkpoint-only
+ *
+ * Options:
+ *   --checkpoint-only   Run WAL checkpoint but skip VACUUM (safer/faster for large DBs)
+ *   --no-vacuum         Alias for --checkpoint-only
  */
 function getDbPath() {
   const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'news.db');
@@ -22,7 +27,16 @@ function getDbPath() {
   return dbPath;
 }
 
-function runMaintenance() {
+function parseOptions(argv = process.argv) {
+  const args = new Set(argv.slice(2));
+  const skipVacuum = args.has('--checkpoint-only') || args.has('--no-vacuum');
+  return {
+    skipVacuum
+  };
+}
+
+function runMaintenance(argv = process.argv) {
+  const options = parseOptions(argv);
   const dbPath = getDbPath();
   let db;
 
@@ -34,7 +48,35 @@ function runMaintenance() {
     console.log('Attempting to run WAL checkpoint (TRUNCATE)...');
     try {
       const checkpointResult = db.pragma('wal_checkpoint(TRUNCATE)');
-      const [status, logSize, checkpointed] = checkpointResult;
+
+      // better-sqlite3 has returned multiple shapes across versions:
+      // - [busy, log, checkpointed]
+      // - [{ busy, log, checkpointed }]
+      // - { busy, log, checkpointed }
+      let status;
+      let logSize;
+      let checkpointed;
+
+      if (Array.isArray(checkpointResult)) {
+        if (checkpointResult.length === 3 && checkpointResult.every((v) => typeof v === 'number')) {
+          [status, logSize, checkpointed] = checkpointResult;
+        } else if (checkpointResult.length > 0 && checkpointResult[0] && typeof checkpointResult[0] === 'object') {
+          const row = checkpointResult[0];
+          status = row.busy ?? row.status;
+          logSize = row.log ?? row.logSize;
+          checkpointed = row.checkpointed;
+        }
+      } else if (checkpointResult && typeof checkpointResult === 'object') {
+        status = checkpointResult.busy ?? checkpointResult.status;
+        logSize = checkpointResult.log ?? checkpointResult.logSize;
+        checkpointed = checkpointResult.checkpointed;
+      }
+
+      // Coerce any missing values so output stays readable.
+      if (typeof status !== 'number') status = Number.isFinite(status) ? status : 0;
+      if (typeof logSize !== 'number') logSize = Number.isFinite(logSize) ? logSize : 0;
+      if (typeof checkpointed !== 'number') checkpointed = Number.isFinite(checkpointed) ? checkpointed : 0;
+
       if (status === 0) {
         console.log(`  ✅ Success: WAL checkpoint completed. WAL pages: ${logSize}, Checkpointed pages: ${checkpointed}.`);
         console.log('  WAL file should now be truncated.');
@@ -48,12 +90,16 @@ function runMaintenance() {
     }
 
     // 2. Run VACUUM to reclaim space and defragment the main database file
-    console.log('\nAttempting to run VACUUM...');
-    try {
-      db.exec('VACUUM');
-      console.log('  ✅ Success: VACUUM command completed.');
-    } catch (err) {
-      console.error(`  ❌ Error during VACUUM: ${err.message}`);
+    if (options.skipVacuum) {
+      console.log('\nSkipping VACUUM (--checkpoint-only).');
+    } else {
+      console.log('\nAttempting to run VACUUM...');
+      try {
+        db.exec('VACUUM');
+        console.log('  ✅ Success: VACUUM command completed.');
+      } catch (err) {
+        console.error(`  ❌ Error during VACUUM: ${err.message}`);
+      }
     }
 
   } catch (err) {
