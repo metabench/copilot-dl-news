@@ -1,0 +1,716 @@
+﻿{
+  "title": "Phase 8: Analytics, Intelligence & API",
+  "version": "5.0.0",
+  "created": "2025-12-25T14:00:00Z",
+  "updated": "2025-12-25T14:00:00Z",
+  "description": "Transform crawl data into actionable insights with powerful analytics, expose crawler capabilities through APIs, and enable intelligent content curation.",
+  "previousPhases": [
+    {
+      "title": "Phase 6: Scale, Distribution & Production Polish",
+      "status": "completed",
+      "completedDate": "2025-12-25",
+      "items": [
+        "Distributed Queue Backend (IUrlQueue + Postgres adapter)",
+        "Multi-Worker Coordinator (WorkerRegistry, DomainLockManager)",
+        "Production Monitoring Dashboard (port 3099)",
+        "Golden Set Real HTML (populate-fixtures.js)",
+        "Rate Limit Intelligence (RateLimitTracker)",
+        "Extraction Benchmarking (extraction-benchmark.js)"
+      ]
+    },
+    {
+      "title": "Phase 7: Production Hardening & Intelligent Orchestration",
+      "status": "completed",
+      "completedDate": "2025-12-25",
+      "items": [
+        "Crawl Performance Profiler (CrawlProfiler - 56 tests)",
+        "Self-Healing Error Recovery (SelfHealingService - 61 tests)",
+        "Intelligent Crawl Scheduler (CrawlScheduler - 56 tests)",
+        "Extraction Quality Dashboard (port 3100 - 29 checks)",
+        "Domain Learning Pipeline (DomainLearningPipeline - 61 tests)",
+        "Production Config & Deployment (deploy/)"
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": 1,
+      "title": "Article Full-Text Search",
+      "priority": "high",
+      "status": "not-started",
+      "estimatedHours": 10,
+      "category": "search",
+      "icon": "🔍",
+      "description": "Fast full-text search across article content using SQLite FTS5 with BM25 ranking. Searchable fields: title, body_text, byline, and authors. Does NOT search raw HTML or other metadata.",
+      "tasks": [
+        {"id": "byline-columns", "title": "Add byline/authors columns", "done": false, "description": "Add byline TEXT and authors TEXT (JSON array) columns to content_analysis table"},
+        {"id": "extractor-persist", "title": "Persist byline/authors during extraction", "done": false, "description": "Update HtmlArticleExtractor to save byline/authors to new columns"},
+        {"id": "fts-table", "title": "Create FTS5 virtual table", "done": false, "description": "articles_fts with title, body_text, byline, authors columns"},
+        {"id": "search-service", "title": "SearchService implementation", "done": false, "description": "Query parsing, FTS5 MATCH, BM25 scoring"},
+        {"id": "facets", "title": "Faceted filtering", "done": false, "description": "Filter by domain, date range, author (post-FTS filter)"},
+        {"id": "highlighting", "title": "Result highlighting", "done": false, "description": "Highlight matched terms with <mark> tags"}
+      ],
+      "relatedFiles": ["src/search/SearchService.js", "src/search/FullTextIndex.js", "src/db/sqlite/v1/queries/searchAdapter.js", "src/utils/HtmlArticleExtractor.js"],
+      "acceptanceCriteria": ["FTS5 index on title, body_text, byline, authors", "Search by author name returns matching articles", "Search <100ms for 100k articles", "Facets: domain, date range, author", "Highlighted snippets"],
+      "implementationNotes": {
+        "schemaChanges": [
+          "Migration: ALTER TABLE content_analysis ADD COLUMN byline TEXT",
+          "Migration: ALTER TABLE content_analysis ADD COLUMN authors TEXT (store as JSON array string)",
+          "Run npm run schema:sync after migration to update schema-definitions.js"
+        ],
+        "existingCode": {
+          "HtmlArticleExtractor": "src/utils/HtmlArticleExtractor.js already has _extractAuthors() method (lines 620-700) that extracts authors from JSON-LD, meta tags, and .byline/.author CSS selectors. Returns array of {name, source} objects.",
+          "contentAnalysis": "content_analysis table already stores title, date, section, word_count. Add byline/authors alongside these.",
+          "articlesView": "articles_view (see sqlite_master) joins urls → http_responses → content_storage → content_analysis. Update view to include new byline/authors columns."
+        },
+        "fts5Details": {
+          "createTable": "CREATE VIRTUAL TABLE articles_fts USING fts5(title, body_text, byline, authors, content='', content_rowid='id', tokenize='porter unicode61')",
+          "contentlessReason": "Use contentless FTS (content='') to avoid data duplication - we already store text in content_analysis",
+          "triggers": "Create INSERT/UPDATE/DELETE triggers on content_analysis to sync FTS index",
+          "rebuildCommand": "INSERT INTO articles_fts(articles_fts) VALUES('rebuild') to reindex all",
+          "bm25Ranking": "SELECT *, bm25(articles_fts, 10.0, 5.0, 2.0, 1.0) as rank - weights: title=10, body=5, byline=2, authors=1"
+        },
+        "queryParsing": {
+          "simpleSearch": "SELECT * FROM articles_fts WHERE articles_fts MATCH ? ORDER BY rank",
+          "fieldSpecific": "Support author:\"John Smith\" syntax → authors:\"John Smith\" in FTS5 MATCH",
+          "phraseQuotes": "FTS5 handles \"quoted phrases\" natively",
+          "booleanOps": "FTS5 supports AND, OR, NOT natively"
+        },
+        "highlighting": {
+          "function": "Use FTS5 highlight(articles_fts, column_idx, '<mark>', '</mark>') function",
+          "snippet": "Use FTS5 snippet(articles_fts, column_idx, '<mark>', '</mark>', '...', 64) for excerpts"
+        },
+        "gotchas": [
+          "body_text is in content_storage.body_text, not content_analysis - need JOIN or denormalize",
+          "Authors array must be flattened to searchable string: JSON_EXTRACT + GROUP_CONCAT or store as space-separated names",
+          "FTS5 contentless tables require manual trigger management for INSERT/UPDATE/DELETE",
+          "Test with real bylines containing special chars: 'By John O'Brien, Staff Writer'"
+        ],
+        "testStrategy": {
+          "location": "tests/search/SearchService.test.js",
+          "cases": ["Search by title keyword", "Search by author name", "Search by byline text", "Phrase search", "Boolean AND/OR", "Highlight output", "Facet filtering", "Performance with 10k articles"]
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "REST API Gateway",
+      "priority": "high",
+      "status": "completed",
+      "completedDate": "2025-12-26",
+      "estimatedHours": 8,
+      "category": "api",
+      "icon": "🌐",
+      "description": "Versioned REST API at port 4000 with authentication, rate limiting, and OpenAPI specification.",
+      "tasks": [
+        {"id": "api-server", "title": "Express API server", "done": true, "description": "Port 4000 with /api/v1/ prefix"},
+        {"id": "auth-middleware", "title": "API key authentication", "done": true, "description": "X-API-Key header validation"},
+        {"id": "rate-limiter", "title": "Per-key rate limiting", "done": true, "description": "100 req/min free, 1000 req/min premium"},
+        {"id": "openapi-spec", "title": "OpenAPI 3.0 specification", "done": true, "description": "Full spec at /api/docs"}
+      ],
+      "relatedFiles": ["src/api/server.js", "src/api/v1/articles.js", "src/api/middleware/auth.js", "src/api/openapi.yaml"],
+      "acceptanceCriteria": ["API at localhost:4000/api/v1/", "401 on invalid key", "429 on rate limit", "OpenAPI validates"],
+      "implementationNotes": {
+        "serverSetup": {
+          "port": 4000,
+          "pattern": "Follow src/ui/server/qualityDashboard/server.js as template",
+          "healthCheck": "GET /health returns {status:'ok', uptime, version}",
+          "cors": "Enable CORS for all origins in dev, restrict in production"
+        },
+        "authentication": {
+          "header": "X-API-Key",
+          "storage": "api_keys table: id, key_hash (bcrypt), tier (free/premium), created_at, last_used_at, requests_today",
+          "keyFormat": "dlnews_<32 random hex chars>",
+          "hashKeys": "Never store plaintext keys - bcrypt hash on creation",
+          "middleware": "Check header, lookup key hash, attach req.apiKey = {tier, id}"
+        },
+        "rateLimiting": {
+          "library": "Use express-rate-limit with custom store",
+          "tiers": {"free": "100/min", "premium": "1000/min", "unlimited": "no limit"},
+          "keyFunction": "Rate limit by API key, not IP",
+          "headers": "Return X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset",
+          "429Response": "{error: 'Rate limit exceeded', retryAfter: seconds}"
+        },
+        "endpoints": {
+          "articles": [
+            "GET /api/v1/articles - list with pagination (?page=1&limit=20)",
+            "GET /api/v1/articles/:id - single article",
+            "GET /api/v1/articles/search?q=term - full-text search (uses Item 1)",
+            "GET /api/v1/articles/:id/similar - similar articles (uses Item 3)"
+          ],
+          "domains": [
+            "GET /api/v1/domains - list crawled domains",
+            "GET /api/v1/domains/:host/articles - articles from domain"
+          ],
+          "stats": [
+            "GET /api/v1/stats - overall statistics",
+            "GET /api/v1/stats/daily - daily crawl counts"
+          ]
+        },
+        "openapi": {
+          "location": "src/api/openapi.yaml",
+          "serveAt": "GET /api/docs serves Swagger UI",
+          "validate": "Use swagger-jsdoc to generate from JSDoc comments OR maintain yaml manually",
+          "exampleTool": "npm install swagger-ui-express"
+        },
+        "existingPatterns": {
+          "dbAccess": "Use ensureDatabase() from src/db/sqlite/connection.js",
+          "errorHandling": "Wrap routes in asyncHandler, return {error: message, code: 'ERROR_CODE'}",
+          "pagination": "Return {items: [], total: n, page: p, limit: l, hasMore: bool}"
+        },
+        "gotchas": [
+          "Don't conflict with existing UI servers (3000, 3099, 3100, 3101)",
+          "API keys table needs migration - create src/db/sqlite/v1/migrations/add-api-keys.js",
+          "Rate limit state should survive server restarts - use SQLite, not memory",
+          "Test 429 response includes Retry-After header"
+        ],
+        "testStrategy": {
+          "location": "tests/api/v1/articles.test.js, tests/api/middleware/auth.test.js",
+          "cases": ["Valid key succeeds", "Invalid key returns 401", "Missing key returns 401", "Rate limit returns 429", "Pagination works", "Search endpoint integrates with FTS"]
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Content Similarity Engine",
+      "priority": "high",
+      "status": "completed",
+      "completedDate": "2025-12-28",
+      "estimatedHours": 8,
+      "category": "intelligence",
+      "icon": "🔗",
+      "description": "Detect duplicate/similar articles across domains using MinHash and SimHash algorithms.",
+      "tasks": [
+        {"id": "minhash", "title": "MinHash implementation", "done": true, "description": "128 hash functions, Jaccard similarity"},
+        {"id": "simhash", "title": "SimHash implementation", "done": true, "description": "64-bit fingerprint, Hamming distance"},
+        {"id": "lsh-index", "title": "LSH index", "done": true, "description": "Band/row structure for fast lookup"},
+        {"id": "duplicate-api", "title": "Duplicate detection API", "done": true, "description": "GET /api/v1/articles/:id/similar"}
+      ],
+      "relatedFiles": ["src/analysis/similarity/MinHasher.js", "src/analysis/similarity/SimHasher.js", "src/analysis/similarity/SimilarityIndex.js"],
+      "acceptanceCriteria": ["100% recall on exact duplicates", ">95% recall on near duplicates", "<1% false positives", "<50ms lookup"],
+      "implementationNotes": {
+        "algorithmChoice": {
+          "minhash": "Best for Jaccard similarity (set overlap). Tokenize text into shingles (3-5 word n-grams), apply 128 random hash functions, keep minimum of each.",
+          "simhash": "Best for near-duplicate detection. Creates 64-bit fingerprint where similar docs have low Hamming distance (<3 bits = likely duplicate).",
+          "recommendation": "Use SimHash for fast duplicate screening, MinHash for similarity scoring"
+        },
+        "schemaChanges": [
+          "CREATE TABLE article_fingerprints (content_id INTEGER PRIMARY KEY, simhash BLOB NOT NULL, minhash_signature BLOB, computed_at TEXT)",
+          "CREATE INDEX idx_simhash ON article_fingerprints(simhash)",
+          "Store simhash as 8-byte BLOB, minhash as 128*4=512 byte BLOB"
+        ],
+        "simhashImplementation": {
+          "steps": [
+            "1. Tokenize body_text into words",
+            "2. For each word, compute 64-bit hash (use xxhash or murmurhash)",
+            "3. For each bit position, sum +1 if bit is 1, -1 if bit is 0",
+            "4. Final fingerprint: bit i = 1 if sum[i] > 0, else 0"
+          ],
+          "comparison": "Hamming distance = popcount(fp1 XOR fp2). Distance ≤3 suggests near-duplicate.",
+          "library": "Consider xxhash-wasm for fast hashing"
+        },
+        "minhashImplementation": {
+          "shingleSize": 3,
+          "numHashFunctions": 128,
+          "hashSeeds": "Generate 128 random seeds at startup, store in config for reproducibility",
+          "similarity": "Jaccard ≈ (matching mins) / 128"
+        },
+        "lshIndex": {
+          "purpose": "Avoid O(n²) pairwise comparison",
+          "bandRowStructure": "Split 128 minhash values into b=16 bands of r=8 rows",
+          "buckets": "Hash each band to bucket. Articles in same bucket are candidates.",
+          "falsePositiveRate": "With b=16, r=8: 50% chance of collision at Jaccard=0.5"
+        },
+        "batchProcessing": {
+          "compute": "Process in batches of 1000 articles",
+          "incremental": "On new article: compute fingerprint, query LSH for candidates, store fingerprint",
+          "recompute": "Provide CLI: node tools/recompute-fingerprints.js --batch-size 5000"
+        },
+        "apiIntegration": {
+          "endpoint": "GET /api/v1/articles/:id/similar",
+          "response": "{similar: [{id, title, host, similarity_score, match_type: 'exact'|'near'}]}",
+          "limit": "Return top 10 similar articles"
+        },
+        "gotchas": [
+          "Very short articles (<50 words) produce noisy fingerprints - handle separately",
+          "Different domains republishing same wire story is valid duplicate",
+          "Boilerplate text (nav, footer) should be stripped before fingerprinting",
+          "Test with articles that are ~80% similar but legitimately different (updates, corrections)"
+        ],
+        "testStrategy": {
+          "location": "tests/analysis/similarity/",
+          "cases": ["Identical text → 100% match", "Same text + minor edits → >95% match", "Completely different → <10% match", "LSH finds candidates efficiently", "API returns ranked results"]
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Content Tagging & Categorization",
+      "priority": "medium",
+      "status": "not-started",
+      "estimatedHours": 8,
+      "category": "intelligence",
+      "icon": "🏷️",
+      "description": "Automatic categorization using keyword extraction and rule-based classification.",
+      "tasks": [
+        {"id": "keyword-extractor", "title": "TF-IDF keywords", "done": false, "description": "Top 10 keywords per article"},
+        {"id": "category-classifier", "title": "Topic classifier", "done": false, "description": "7 topics: Politics, Tech, Sports, etc."},
+        {"id": "entity-recognizer", "title": "Named entities", "done": false, "description": "People, organizations, locations"},
+        {"id": "tag-persistence", "title": "Tag storage", "done": false, "description": "article_tags table"}
+      ],
+      "relatedFiles": ["src/analysis/tagging/TaggingService.js", "src/analysis/tagging/KeywordExtractor.js", "src/db/sqlite/v1/queries/tagAdapter.js"],
+      "acceptanceCriteria": ["Keywords for all articles", ">80% category accuracy", "Entities with gazetteer", "Tags queryable via API"],
+      "implementationNotes": {
+        "tfidfKeywords": {
+          "algorithm": "TF-IDF: term_freq * log(total_docs / docs_with_term)",
+          "preprocessing": ["Lowercase", "Remove stopwords (common words)", "Stem/lemmatize (optional)"],
+          "topN": 10,
+          "storage": "article_keywords table: content_id, keyword, tfidf_score, position",
+          "corpusStats": "Maintain document_frequencies table: term TEXT PRIMARY KEY, doc_count INTEGER"
+        },
+        "categoryClassification": {
+          "categories": ["Politics", "Technology", "Sports", "Business", "Entertainment", "Science", "Health"],
+          "approach": "Rule-based with keyword lists per category",
+          "keywordLists": "config/category-keywords.json with weighted terms per category",
+          "scoring": "Sum weights of matched keywords, assign top-scoring category",
+          "threshold": "Require minimum score to assign; otherwise 'Uncategorized'",
+          "multiLabel": "Consider allowing 2 categories if scores are close"
+        },
+        "entityRecognition": {
+          "types": ["PERSON", "ORG", "GPE (location)"],
+          "approach1": "Gazetteer lookup - use existing places table for GPE entities",
+          "approach2": "Pattern matching - titles (Mr., Dr., Sen.), company suffixes (Inc., Ltd., Corp.)",
+          "approach3": "Capitalization heuristics - sequences of capitalized words",
+          "existingCode": "src/matching/ArticlePlaceMatcher.js already does location entity matching",
+          "storage": "article_entities table: content_id, entity_text, entity_type, start_offset, end_offset"
+        },
+        "schemaChanges": [
+          "CREATE TABLE article_keywords (id INTEGER PRIMARY KEY, content_id INTEGER, keyword TEXT, score REAL, FOREIGN KEY(content_id) REFERENCES content_analysis(id))",
+          "CREATE TABLE article_categories (content_id INTEGER PRIMARY KEY, category TEXT, confidence REAL, secondary_category TEXT)",
+          "CREATE TABLE article_entities (id INTEGER PRIMARY KEY, content_id INTEGER, entity_text TEXT, entity_type TEXT CHECK(entity_type IN ('PERSON','ORG','GPE')))",
+          "CREATE INDEX idx_keywords_content ON article_keywords(content_id)",
+          "CREATE INDEX idx_entities_content ON article_entities(content_id)"
+        ],
+        "batchProcessing": {
+          "trigger": "Run after content_analysis insert/update",
+          "cli": "node tools/tag-articles.js --batch-size 1000 --since '2025-01-01'",
+          "incremental": "Track last_tagged_at in content_analysis or separate table"
+        },
+        "existingPatterns": {
+          "gazetteerLookup": "src/matching/gazetteer.js has place name matching",
+          "placeMatching": "src/matching/ArticlePlaceMatcher.js extracts locations from text"
+        },
+        "gotchas": [
+          "TF-IDF needs corpus statistics - precompute and cache doc frequencies",
+          "Category keywords may need tuning - start with obvious terms, refine with false positives",
+          "Entity extraction is hard without ML - accept lower accuracy with rule-based approach",
+          "Handle multi-word entities: 'New York Times' should be one ORG, not GPE+ORG"
+        ],
+        "testStrategy": {
+          "location": "tests/analysis/tagging/",
+          "cases": ["TF-IDF extracts meaningful keywords", "Politics article gets Politics category", "Known person name detected as PERSON", "Known company detected as ORG", "Location linked to gazetteer"]
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Historical Analytics Dashboard",
+      "priority": "medium",
+      "status": "not-started",
+      "estimatedHours": 6,
+      "category": "analytics",
+      "icon": "📊",
+      "description": "Aggregate view of crawl history with trends, patterns, and insights at port 3101.",
+      "tasks": [
+        {"id": "analytics-service", "title": "AnalyticsService", "done": false, "description": "Time-series aggregation"},
+        {"id": "trend-charts", "title": "Trend visualization", "done": false, "description": "Line charts over time"},
+        {"id": "leaderboard", "title": "Domain leaderboard", "done": false, "description": "Top 50 domains"},
+        {"id": "heatmap", "title": "Activity heatmap", "done": false, "description": "By hour/day"}
+      ],
+      "relatedFiles": ["src/ui/server/analyticsHub/server.js", "src/ui/server/analyticsHub/AnalyticsService.js"],
+      "acceptanceCriteria": ["<2s load with 1M articles", "7d/30d/90d trends", "Sortable leaderboard", "Peak hours heatmap"],
+      "implementationNotes": {
+        "serverSetup": {
+          "port": 3101,
+          "template": "Follow src/ui/server/qualityDashboard/server.js pattern",
+          "jsgui3": "Use jsgui3 controls for tables and charts"
+        },
+        "analyticsService": {
+          "location": "src/analysis/AnalyticsService.js",
+          "methods": [
+            "getArticleCountsByDate(startDate, endDate, granularity='day')",
+            "getDomainLeaderboard(limit=50, period='30d')",
+            "getHourlyActivity(period='7d')",
+            "getCategoryBreakdown(period='30d')",
+            "getExtractionSuccessRate(period='7d')"
+          ],
+          "caching": "Cache expensive aggregations for 5 minutes"
+        },
+        "queries": {
+          "dailyCounts": "SELECT date(fetched_at) as day, COUNT(*) as count FROM http_responses WHERE fetched_at > date('now', '-30 days') GROUP BY day ORDER BY day",
+          "domainLeaderboard": "SELECT host, COUNT(*) as count FROM urls u JOIN http_responses hr ON hr.url_id = u.id WHERE hr.fetched_at > ? GROUP BY host ORDER BY count DESC LIMIT ?",
+          "hourlyActivity": "SELECT strftime('%H', fetched_at) as hour, strftime('%w', fetched_at) as dow, COUNT(*) as count FROM http_responses GROUP BY hour, dow",
+          "performanceIndexes": "Ensure idx_http_responses_fetched_at exists for date queries"
+        },
+        "visualizations": {
+          "trendChart": {
+            "type": "Line chart",
+            "xAxis": "Date",
+            "yAxis": "Article count",
+            "series": ["Total", "Per-domain breakdown option"],
+            "library": "Use Chart.js or jsgui3 native charting if available"
+          },
+          "heatmap": {
+            "type": "7x24 grid (day of week × hour)",
+            "color": "Gradient from low (light) to high (dark)",
+            "data": "Count of articles crawled at each hour/day combination"
+          },
+          "leaderboard": {
+            "type": "Sortable table",
+            "columns": ["Rank", "Domain", "Article Count", "Avg per Day", "Last Crawled"],
+            "interaction": "Click domain to see its articles"
+          }
+        },
+        "periodSelectors": {
+          "options": ["7d", "30d", "90d", "custom"],
+          "implementation": "Radio buttons or dropdown, triggers data reload",
+          "urlParam": "?period=30d for shareable links"
+        },
+        "existingPatterns": {
+          "dashboardServer": "src/ui/server/qualityDashboard/server.js",
+          "jsgui3Tables": "Use Data_Grid or similar jsgui3 control",
+          "chartRendering": "src/ui/server/chartRenderer.js if exists, otherwise embed Chart.js"
+        },
+        "gotchas": [
+          "Large date range queries can be slow - add indexes and consider materialized views",
+          "Heatmap needs careful timezone handling - store/display in user's timezone or UTC",
+          "Domain leaderboard should exclude test/development domains",
+          "Cache invalidation when new data arrives"
+        ],
+        "testStrategy": {
+          "location": "tests/ui/server/analyticsHub.test.js, checks/analytics-dashboard.check.js",
+          "cases": ["Daily counts query returns expected shape", "Leaderboard sorts correctly", "Heatmap has 7×24 cells", "Period selector updates data", "Page loads in <2s with test data"]
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Real-Time Event Stream",
+      "priority": "medium",
+      "status": "not-started",
+      "estimatedHours": 6,
+      "category": "api",
+      "icon": "📡",
+      "description": "WebSocket and SSE streams for live crawl events.",
+      "tasks": [
+        {"id": "event-broadcaster", "title": "EventBroadcaster", "done": false, "description": "Pub/sub for crawl events"},
+        {"id": "sse-endpoint", "title": "SSE endpoint", "done": false, "description": "GET /api/v1/stream"},
+        {"id": "websocket-server", "title": "WebSocket server", "done": false, "description": "Bidirectional WS"},
+        {"id": "event-filter", "title": "Filtering", "done": false, "description": "By domain, event type"}
+      ],
+      "relatedFiles": ["src/api/streaming/EventBroadcaster.js", "src/api/streaming/SSEController.js"],
+      "acceptanceCriteria": ["<500ms event latency", "WS subscribe/unsubscribe", "Filtering works", "Graceful reconnect"],
+      "implementationNotes": {
+        "eventTypes": {
+          "crawl": ["crawl:started", "crawl:completed", "crawl:failed", "crawl:progress"],
+          "article": ["article:new", "article:updated", "article:classified"],
+          "system": ["system:healthcheck", "system:stats"]
+        },
+        "eventBroadcaster": {
+          "pattern": "Singleton EventEmitter that crawler/analysis code emits to",
+          "interface": "broadcaster.emit(eventType, payload)",
+          "example": "broadcaster.emit('article:new', {id, url, title, host})",
+          "existingHook": "Look for where crawler already emits events - may just need to wire up"
+        },
+        "sseImplementation": {
+          "endpoint": "GET /api/v1/stream",
+          "headers": {"Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive"},
+          "format": "data: {json}\\n\\n",
+          "keepalive": "Send :keepalive\\n every 30s to prevent timeout",
+          "filtering": "?types=article:new,crawl:completed&domains=example.com"
+        },
+        "websocketImplementation": {
+          "library": "ws (npm install ws)",
+          "path": "ws://localhost:4000/api/v1/ws",
+          "auth": "Validate API key in upgrade request headers",
+          "protocol": {
+            "subscribe": "{action:'subscribe', types:['article:new'], domains:['example.com']}",
+            "unsubscribe": "{action:'unsubscribe', types:['article:new']}",
+            "event": "{type:'article:new', timestamp, payload}"
+          },
+          "heartbeat": "Ping/pong every 30s, disconnect on 3 missed pongs"
+        },
+        "filtering": {
+          "byType": "Client specifies which event types to receive",
+          "byDomain": "Client specifies domains to filter (empty = all)",
+          "serverSide": "Filter before sending to reduce bandwidth"
+        },
+        "scalability": {
+          "inProcess": "For single-server, use Node EventEmitter",
+          "multiProcess": "For clustering, use Redis pub/sub",
+          "recommendation": "Start with in-process, abstract broadcaster interface for future Redis"
+        },
+        "existingCode": {
+          "taskEvents": "task_events table stores crawl events - could replay recent events on connect",
+          "backgroundTasks": "src/background/BackgroundTaskManager.js emits progress events"
+        },
+        "clientExample": {
+          "sse": "const es = new EventSource('/api/v1/stream?types=article:new'); es.onmessage = e => console.log(JSON.parse(e.data));",
+          "ws": "const ws = new WebSocket('ws://localhost:4000/api/v1/ws'); ws.onopen = () => ws.send(JSON.stringify({action:'subscribe',types:['article:new']}));"
+        },
+        "gotchas": [
+          "SSE doesn't work well through proxies that buffer responses - document this",
+          "WebSocket upgrade needs special handling in Express (use express-ws or separate ws server)",
+          "Memory leak risk: clean up listeners when clients disconnect",
+          "Rate limit events to prevent flooding (max 10 events/sec per client)"
+        ],
+        "testStrategy": {
+          "location": "tests/api/streaming/",
+          "cases": ["SSE connects and receives events", "WS subscribe/unsubscribe works", "Filtering reduces event volume", "Disconnected clients are cleaned up", "Keepalive prevents timeout"]
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Article Recommendation Engine",
+      "priority": "low",
+      "status": "not-started",
+      "estimatedHours": 8,
+      "category": "intelligence",
+      "icon": "💡",
+      "description": "Recommend related articles based on content similarity, tags, and trending signals.",
+      "tasks": [
+        {"id": "content-recommender", "title": "Content-based", "done": false, "description": "SimHash similarity"},
+        {"id": "tag-recommender", "title": "Tag-based", "done": false, "description": "Tag overlap"},
+        {"id": "trending-calculator", "title": "Trending", "done": false, "description": "Recency-weighted"},
+        {"id": "recommendation-api", "title": "API endpoint", "done": false, "description": "GET /api/v1/articles/:id/recommendations"}
+      ],
+      "relatedFiles": ["src/analysis/recommendations/RecommendationEngine.js", "src/analysis/recommendations/TrendingCalculator.js"],
+      "acceptanceCriteria": [">70% relevance", "Trending reflects recent", "<200ms API response"],
+      "implementationNotes": {
+        "dependsOn": ["Item 3 (Content Similarity Engine)", "Item 4 (Content Tagging)"],
+        "recommendationStrategies": {
+          "contentBased": {
+            "source": "Use SimHash from Item 3",
+            "query": "Find articles with Hamming distance ≤5 from target",
+            "weight": 0.5
+          },
+          "tagBased": {
+            "source": "Use categories and keywords from Item 4",
+            "scoring": "Jaccard similarity of keyword sets",
+            "categoryBoost": "Same category = +0.3 boost",
+            "weight": 0.3
+          },
+          "trending": {
+            "signal": "Articles with high access/view count in last 24h",
+            "decay": "Exponential decay: score * e^(-age_hours/24)",
+            "weight": 0.2
+          }
+        },
+        "hybridScoring": {
+          "formula": "final_score = (content_sim * 0.5) + (tag_sim * 0.3) + (trending * 0.2)",
+          "normalization": "All component scores should be 0-1 range",
+          "diversification": "Don't recommend >2 articles from same domain"
+        },
+        "trendingCalculator": {
+          "table": "article_trending: content_id, view_count, last_view_at, trend_score, computed_at",
+          "updateFrequency": "Recompute trend_score every hour",
+          "viewTracking": "content_access_log table already exists - use for view counts",
+          "decayFormula": "trend_score = log(view_count + 1) * e^(-(now - last_view) / 86400)"
+        },
+        "apiDesign": {
+          "endpoint": "GET /api/v1/articles/:id/recommendations",
+          "queryParams": "?limit=10&strategy=hybrid|content|tag|trending",
+          "response": {
+            "recommendations": [
+              {"id": 123, "title": "...", "host": "...", "score": 0.85, "reasons": ["Similar content", "Same category"]}
+            ],
+            "strategy": "hybrid",
+            "computedAt": "2025-12-26T..."
+          }
+        },
+        "caching": {
+          "strategy": "Precompute top 20 recommendations per article nightly",
+          "table": "article_recommendations: source_id, target_id, score, strategy, computed_at",
+          "invalidation": "Recompute when article is updated or new similar article arrives",
+          "fallback": "Compute on-demand if not cached (slower)"
+        },
+        "coldStart": {
+          "newArticles": "No view history → rely on content+tag similarity only",
+          "popularFallback": "If no good matches, return trending articles in same category"
+        },
+        "gotchas": [
+          "Recommendations can be stale - show computed_at timestamp",
+          "Avoid recommending the same article back",
+          "Filter out articles from same domain if user already on that domain",
+          "Handle articles with no tags gracefully - fall back to content similarity"
+        ],
+        "testStrategy": {
+          "location": "tests/analysis/recommendations/",
+          "cases": ["Content-similar articles appear first", "Same-category articles ranked higher", "Trending articles included", "No self-recommendation", "Domain diversification works", "Cold start returns results"]
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "Data Export & Syndication",
+      "priority": "low",
+      "status": "not-started",
+      "estimatedHours": 6,
+      "category": "api",
+      "icon": "📤",
+      "description": "Export articles in JSON, CSV, RSS, Atom formats with scheduled export support.",
+      "tasks": [
+        {"id": "json-export", "title": "JSON/JSONL", "done": false, "description": "Full article data"},
+        {"id": "csv-export", "title": "CSV export", "done": false, "description": "Column selection"},
+        {"id": "rss-feed", "title": "RSS 2.0", "done": false, "description": "Per-domain feeds"},
+        {"id": "scheduled-export", "title": "Scheduled", "done": false, "description": "Cron-based exports"}
+      ],
+      "relatedFiles": ["src/export/ExportService.js", "src/export/formatters/RssFormatter.js", "src/export/ScheduledExporter.js"],
+      "acceptanceCriteria": ["100k articles in <30s", "Configurable CSV columns", "Valid RSS/Atom", "Cron exports work"],
+      "implementationNotes": {
+        "exportFormats": {
+          "json": {
+            "contentType": "application/json",
+            "streaming": "Use JSONStream for large exports to avoid memory issues",
+            "fields": "All article fields by default, allow ?fields=id,title,url,date"
+          },
+          "jsonl": {
+            "contentType": "application/x-ndjson",
+            "format": "One JSON object per line, newline-delimited",
+            "advantage": "Streamable, easy to process line-by-line"
+          },
+          "csv": {
+            "contentType": "text/csv",
+            "library": "csv-stringify or fast-csv",
+            "headers": "Include header row, configurable columns",
+            "escaping": "Properly escape quotes and newlines in content"
+          },
+          "rss": {
+            "contentType": "application/rss+xml",
+            "spec": "RSS 2.0 with <channel>, <item>, <title>, <link>, <description>, <pubDate>",
+            "description": "Use first 500 chars of body_text as description",
+            "limit": "Max 100 items per feed (RSS best practice)"
+          },
+          "atom": {
+            "contentType": "application/atom+xml",
+            "spec": "Atom 1.0 with <feed>, <entry>, <title>, <link>, <summary>, <updated>",
+            "advantage": "Better spec than RSS, supports more metadata"
+          }
+        },
+        "apiEndpoints": {
+          "bulk": [
+            "GET /api/v1/export/articles.json?since=2025-01-01&limit=10000",
+            "GET /api/v1/export/articles.jsonl?domain=example.com",
+            "GET /api/v1/export/articles.csv?fields=id,title,url,date,host"
+          ],
+          "feeds": [
+            "GET /api/v1/feeds/rss.xml - global feed, last 100 articles",
+            "GET /api/v1/feeds/rss/:domain.xml - per-domain feed",
+            "GET /api/v1/feeds/atom.xml - global Atom feed"
+          ]
+        },
+        "streamingExport": {
+          "why": "100k articles × ~5KB each = 500MB - can't buffer in memory",
+          "how": "Use Node streams: db cursor → transform → response",
+          "chunking": "Process 1000 articles at a time, write to response stream",
+          "progress": "For async exports, track progress in background_tasks table"
+        },
+        "scheduledExports": {
+          "table": "scheduled_exports: id, name, format, filters, destination, cron, last_run_at, next_run_at, enabled",
+          "cron": "Use node-cron or node-schedule for scheduling",
+          "destinations": ["file (local path)", "s3 (bucket/key)", "webhook (POST URL)"],
+          "filters": "Store as JSON: {domain: 'example.com', since: '7d', category: 'Politics'}"
+        },
+        "filterOptions": {
+          "domain": "?domain=example.com",
+          "dateRange": "?since=2025-01-01&until=2025-12-31",
+          "category": "?category=Politics",
+          "limit": "?limit=10000 (default 1000, max 100000)"
+        },
+        "existingCode": {
+          "csvExport": "Check if src/export/ or tools/ already has CSV export functionality",
+          "backgroundTasks": "Use BackgroundTaskManager for long-running exports"
+        },
+        "gotchas": [
+          "Large exports can timeout - use streaming or async with progress",
+          "RSS/Atom dates must be RFC 2822/ISO 8601 respectively",
+          "CSV with body_text can be huge - consider excluding by default",
+          "S3 destination requires aws-sdk and credentials",
+          "Rate limit bulk exports to prevent abuse"
+        ],
+        "testStrategy": {
+          "location": "tests/export/",
+          "cases": ["JSON export includes all fields", "CSV columns match request", "RSS validates against spec", "JSONL is valid line-by-line", "Streaming doesn't OOM with 100k articles", "Scheduled export runs on cron"]
+        }
+      }
+    }
+  ],
+  "summary": {
+    "totalItems": 8,
+    "totalHours": 60,
+    "totalTasks": 34,
+    "categories": {"search": 1, "api": 3, "intelligence": 3, "analytics": 1},
+    "priorities": {"high": 3, "medium": 3, "low": 2}
+  },
+  "notes": [
+    "Phase 8 focuses on making crawl data accessible and useful",
+    "Search covers: title, body_text, byline, authors (NOT raw HTML or other metadata)",
+    "API enables external integrations",
+    "Similarity engine helps deduplicate stories",
+    "Order: Search → API → Similarity → Tagging → Analytics → Stream → Recommendations → Export"
+  ],
+  "implementationOrder": {
+    "phase1_foundations": {
+      "items": [1, 2],
+      "reason": "Search and API are foundational - other items depend on them"
+    },
+    "phase2_intelligence": {
+      "items": [3, 4],
+      "reason": "Similarity and Tagging feed into Recommendations",
+      "parallelizable": true
+    },
+    "phase3_realtime": {
+      "items": [5, 6],
+      "reason": "Analytics Dashboard and Event Stream are independent",
+      "parallelizable": true
+    },
+    "phase4_advanced": {
+      "items": [7, 8],
+      "reason": "Recommendations depends on Items 3+4; Export is standalone",
+      "parallelizable": false
+    }
+  },
+  "globalGuidance": {
+    "codePatterns": {
+      "serviceLocation": "src/analysis/ for analysis services, src/api/ for API, src/search/ for search",
+      "testLocation": "tests/<module>/<Component>.test.js - mirror src structure",
+      "checkLocation": "checks/<feature>.check.js for quick validation scripts",
+      "serverPattern": "Follow src/ui/server/qualityDashboard/server.js as template for new servers"
+    },
+    "databaseRules": {
+      "migrations": "Create src/db/sqlite/v1/migrations/<name>.js for schema changes",
+      "schemaSync": "Run npm run schema:sync after ANY schema change",
+      "adapters": "All DB access through src/db/sqlite/v1/queries/*.js adapters",
+      "noRawSql": "Never write SQL in services - use adapter methods"
+    },
+    "testingRules": {
+      "runner": "npm run test:by-path tests/path/to/test.js - NEVER use pipes or npx jest directly",
+      "minCoverage": "Aim for >80% branch coverage on new code",
+      "checkScripts": "Create checks/<feature>.check.js for quick sanity tests"
+    },
+    "portAssignments": {
+      "3000": "Main UI (data explorer)",
+      "3099": "Production monitoring dashboard",
+      "3100": "Quality dashboard (Phase 7)",
+      "3101": "Analytics hub (Item 5)",
+      "4000": "REST API (Item 2)"
+    },
+    "existingInfrastructure": {
+      "dbConnection": "const { ensureDatabase } = require('../db/sqlite/connection')",
+      "backgroundTasks": "Use BackgroundTaskManager for long-running operations",
+      "taskEvents": "Log to task_events table for observability",
+      "jsgui3": "Use jsgui3 controls for UI components"
+    }
+  }
+}

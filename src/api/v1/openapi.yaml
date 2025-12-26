@@ -1,0 +1,815 @@
+openapi: 3.0.3
+info:
+  title: News Crawler REST API
+  version: 1.0.0
+  description: |
+    REST API for accessing crawled news articles, domains, and statistics.
+    
+    ## Authentication
+    All `/api/v1/*` endpoints require an API key via the `X-API-Key` header.
+    
+    To create an API key:
+    ```bash
+    curl -X POST http://localhost:4000/api/admin/keys \
+      -H "Content-Type: application/json" \
+      -d '{"tier": "free", "name": "My App"}'
+    ```
+    
+    ## Rate Limits
+    - **free** tier: 100 requests/minute
+    - **premium** tier: 1,000 requests/minute
+    - **unlimited** tier: no limit
+    
+    Rate limit headers are included in all authenticated responses:
+    - `X-RateLimit-Limit`: Maximum requests per minute
+    - `X-RateLimit-Remaining`: Requests remaining in current window
+    - `X-RateLimit-Reset`: Unix timestamp when the window resets
+    
+  contact:
+    name: API Support
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:4000
+    description: Development server
+
+tags:
+  - name: Articles
+    description: Article retrieval and search
+  - name: Domains
+    description: Domain information
+  - name: Stats
+    description: Crawl statistics
+  - name: Admin
+    description: API key management
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns server health status. No authentication required.
+      operationId: getHealth
+      tags: [Admin]
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+                uptime: 3600
+                version: "1.0.0"
+                timestamp: "2025-01-01T12:00:00.000Z"
+
+  /api/v1/articles:
+    get:
+      summary: List articles
+      description: Returns a paginated list of crawled articles, sorted by crawl time (newest first).
+      operationId: listArticles
+      tags: [Articles]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: host
+          in: query
+          description: Filter by domain host
+          schema:
+            type: string
+            example: example.com
+      responses:
+        '200':
+          description: Paginated article list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v1/articles/search:
+    get:
+      summary: Search articles
+      description: |
+        Full-text search across article titles and content.
+        
+        **Note**: This endpoint returns 501 until Phase 8 Item 1 (search infrastructure) is implemented.
+      operationId: searchArticles
+      tags: [Articles]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query
+          schema:
+            type: string
+            minLength: 2
+            example: climate change
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleSearchResponse'
+        '400':
+          description: Invalid search query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: INVALID_QUERY
+                message: Search query must be at least 2 characters
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '501':
+          description: Search not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: NOT_IMPLEMENTED
+                message: Full-text search not yet available
+
+  /api/v1/articles/{id}:
+    get:
+      summary: Get article by ID
+      description: Returns detailed information for a single article.
+      operationId: getArticleById
+      tags: [Articles]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Article ID
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Article details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Article not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: NOT_FOUND
+                message: Article not found
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v1/articles/{id}/similar:
+    get:
+      summary: Find similar articles
+      description: |
+        Returns articles similar to the specified article based on content fingerprinting.
+        
+        Uses a combination of SimHash (64-bit fingerprint) and MinHash (128 hash functions)
+        to detect near-duplicates and similar content across domains.
+        
+        **Match Types**:
+        - `exact`: Identical content (Hamming distance = 0)
+        - `near`: Near-duplicate (Hamming distance 1-3)
+        - `similar`: Similar content (Hamming distance 4-10 or high Jaccard similarity)
+      operationId: getSimilarArticles
+      tags: [Articles]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Article ID
+          schema:
+            type: integer
+            minimum: 1
+        - $ref: '#/components/parameters/LimitParam'
+        - name: minSimilarity
+          in: query
+          description: Minimum similarity threshold (0.0 to 1.0)
+          schema:
+            type: number
+            format: float
+            minimum: 0
+            maximum: 1
+            default: 0.5
+      responses:
+        '200':
+          description: Similar articles found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimilarArticlesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Article not found or no fingerprint computed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v1/domains:
+    get:
+      summary: List domains
+      description: Returns all crawled domains with article counts.
+      operationId: listDomains
+      tags: [Domains]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Domain list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v1/domains/{host}/articles:
+    get:
+      summary: List articles for domain
+      description: Returns articles from a specific domain.
+      operationId: listDomainArticles
+      tags: [Domains]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: host
+          in: path
+          required: true
+          description: Domain host
+          schema:
+            type: string
+            example: example.com
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Domain articles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v1/stats:
+    get:
+      summary: Get overall statistics
+      description: Returns aggregate statistics about crawled content.
+      operationId: getStats
+      tags: [Stats]
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v1/stats/daily:
+    get:
+      summary: Get daily crawl counts
+      description: Returns article counts per day.
+      operationId: getDailyCounts
+      tags: [Stats]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: days
+          in: query
+          description: Number of days to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 30
+      responses:
+        '200':
+          description: Daily counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyCountsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/admin/keys:
+    post:
+      summary: Create API key
+      description: Creates a new API key. Returns the key once - it cannot be retrieved later!
+      operationId: createApiKey
+      tags: [Admin]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tier:
+                  type: string
+                  enum: [free, premium, unlimited]
+                  default: free
+                  description: Rate limit tier
+                name:
+                  type: string
+                  description: Friendly name for the key
+                  example: My Application
+                ownerEmail:
+                  type: string
+                  format: email
+                  description: Owner's email
+            example:
+              tier: free
+              name: My Application
+              ownerEmail: developer@example.com
+      responses:
+        '201':
+          description: API key created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyCreatedResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: List API keys
+      description: Lists all API keys (hashed). Actual keys cannot be retrieved.
+      operationId: listApiKeys
+      tags: [Admin]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Key list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyListResponse'
+
+  /api/admin/keys/{id}:
+    delete:
+      summary: Revoke API key
+      description: Revokes an API key. The key will immediately stop working.
+      operationId: revokeApiKey
+      tags: [Admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Reason for revocation
+      responses:
+        '200':
+          description: Key revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: API key revoked
+        '404':
+          description: Key not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key obtained from /api/admin/keys
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Page number (1-indexed)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      description: Items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  responses:
+    Unauthorized:
+      description: Authentication required or invalid
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+            example: 'API-Key realm="api"'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missing:
+              summary: Missing API key
+              value:
+                success: false
+                error: UNAUTHORIZED
+                message: API key required. Include X-API-Key header.
+            invalid:
+              summary: Invalid API key
+              value:
+                success: false
+                error: INVALID_KEY
+                message: Invalid or revoked API key
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: Maximum requests per minute
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Requests remaining
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Unix timestamp when limit resets
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until rate limit resets
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: RATE_LIMITED
+            message: Rate limit exceeded. Retry in 45 seconds.
+            retryAfter: 45
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [success, error, message]
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error code
+          example: NOT_FOUND
+        message:
+          type: string
+          description: Human-readable message
+          example: Resource not found
+        retryAfter:
+          type: integer
+          description: Seconds until retry (for rate limits)
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        uptime:
+          type: integer
+          description: Server uptime in seconds
+        version:
+          type: string
+          description: API version
+        timestamp:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Current page
+        limit:
+          type: integer
+          description: Items per page
+        total:
+          type: integer
+          description: Total items
+        totalPages:
+          type: integer
+          description: Total pages
+
+    ArticleSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        url:
+          type: string
+          format: uri
+        title:
+          type: string
+        host:
+          type: string
+          description: Domain host
+        crawledAt:
+          type: string
+          format: date-time
+        wordCount:
+          type: integer
+          nullable: true
+
+    ArticleDetail:
+      allOf:
+        - $ref: '#/components/schemas/ArticleSummary'
+        - type: object
+          properties:
+            description:
+              type: string
+              nullable: true
+            publishedDate:
+              type: string
+              format: date-time
+              nullable: true
+            author:
+              type: string
+              nullable: true
+            content:
+              type: string
+              nullable: true
+              description: Full article text
+            urlId:
+              type: integer
+              description: Internal URL ID
+
+    ArticleListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        articles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArticleSummary'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ArticleSearchResponse:
+      allOf:
+        - $ref: '#/components/schemas/ArticleListResponse'
+        - type: object
+          properties:
+            query:
+              type: string
+              description: Original search query
+
+    ArticleDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        article:
+          $ref: '#/components/schemas/ArticleDetail'
+
+    SimilarArticlesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        similar:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              title:
+                type: string
+                nullable: true
+              host:
+                type: string
+              url:
+                type: string
+                format: uri
+                nullable: true
+              similarity:
+                type: number
+                format: float
+                description: Similarity score (0-1) based on MinHash Jaccard similarity
+              simhashDistance:
+                type: integer
+                description: Hamming distance between SimHash fingerprints (0-64)
+              matchType:
+                type: string
+                enum: [exact, near, similar]
+                description: Classification of similarity level
+
+    DomainInfo:
+      type: object
+      properties:
+        host:
+          type: string
+          example: example.com
+        articleCount:
+          type: integer
+        lastCrawled:
+          type: string
+          format: date-time
+          nullable: true
+
+    DomainListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        domains:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainInfo'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    StatsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        stats:
+          type: object
+          properties:
+            totalArticles:
+              type: integer
+            totalDomains:
+              type: integer
+            totalWords:
+              type: integer
+            lastCrawled:
+              type: string
+              format: date-time
+              nullable: true
+            firstCrawled:
+              type: string
+              format: date-time
+              nullable: true
+
+    DailyCountsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        daily:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              count:
+                type: integer
+
+    ApiKeyCreatedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: API key created. Save this key - it cannot be retrieved later!
+        apiKey:
+          type: string
+          description: The API key (only shown once!)
+          example: dlnews_a1b2c3d4e5f67890abcdef1234567890
+        keyId:
+          type: integer
+          description: Key ID for management
+        tier:
+          type: string
+          enum: [free, premium, unlimited]
+        rateLimit:
+          type: integer
+          description: Requests per minute
+
+    ApiKeyInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        keyPrefix:
+          type: string
+          description: First 12 chars of key
+          example: dlnews_a1b2c3
+        name:
+          type: string
+          nullable: true
+        tier:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+        totalRequests:
+          type: integer
+        requestsThisMinute:
+          type: integer
+
+    ApiKeyListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiKeyInfo'
