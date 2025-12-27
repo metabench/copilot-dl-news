@@ -28,6 +28,7 @@ const jsgui = require('jsgui3-html');
 const { Control, controls } = jsgui;
 const createControlFactory = require('./helpers/controlFactory');
 const { createTwoColumnLayoutControls } = require('./layouts/TwoColumnLayoutFactory');
+const { createProgressBarControl } = require('./ProgressBar');
 
 // Initialize factories with jsgui instance
 const {
@@ -36,6 +37,7 @@ const {
 } = createControlFactory(jsgui);
 
 const { TwoColumnLayout, Sidebar, ContentArea, NavItem, DetailHeader } = createTwoColumnLayoutControls(jsgui);
+const ProgressBarControl = createProgressBarControl(jsgui);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Label Constants
@@ -646,6 +648,7 @@ class GeoImportDashboard extends Control {
     const ctx = this.context;
     const { current, total } = this.importState.progress;
     const percent = total > 0 ? (current / total) * 100 : 0;
+    const ratio = total > 0 ? (current / total) : 0;
     
     // Stages stepper
     this._stagesStepper = new StagesStepper({
@@ -667,6 +670,22 @@ class GeoImportDashboard extends Control {
       color: this._getProgressColor(percent)
     });
     progressContainer.add(this._progressRing);
+
+    // Linear progress bar (primary determinate indicator)
+    this._progressBar = new ProgressBarControl({
+      context: ctx,
+      value: ratio,
+      showPercentage: true,
+      variant: 'compact',
+      color: 'gold',
+      indeterminate: !(total > 0)
+    });
+    progressContainer.add(this._progressBar);
+
+    // Stall / stale indicator (client will fill)
+    const stall = el(ctx, 'div', '', 'progress-stall');
+    stall.dom.attributes['data-role'] = 'progress-stall';
+    progressContainer.add(stall);
     
     // Stats
     const stats = el(ctx, 'div', null, 'progress-stats-compact');
@@ -688,6 +707,12 @@ class GeoImportDashboard extends Control {
       grid.add(card);
     }
     container.add(grid);
+
+    // Plan preview panel (client fills via /api/geo-import/plan)
+    const planPanel = el(ctx, 'div', null, 'plan-preview');
+    planPanel.dom.attributes['data-role'] = 'plan-preview';
+    planPanel.add(el(ctx, 'div', '🧭 Plan preview will appear here. Click “Plan” in the sidebar to load.', 'plan-preview__placeholder'));
+    container.add(planPanel);
   }
   
   _composeCoverageView(container) {
@@ -735,6 +760,7 @@ class GeoImportDashboard extends Control {
     // Actions panel at bottom of sidebar
     const actionsPanel = el(ctx, 'div', null, 'sidebar-actions');
     
+    actionsPanel.add(createActionButton(ctx, '🧭', 'Plan', 'preview-plan', 'secondary'));
     actionsPanel.add(createActionButton(ctx, '🚀', 'Start', 'start-import', 'primary'));
     actionsPanel.add(createActionButton(ctx, '⏸️', 'Pause', 'pause-import', 'secondary', true));
     actionsPanel.add(createActionButton(ctx, '🛑', 'Cancel', 'cancel-import', 'danger', true));

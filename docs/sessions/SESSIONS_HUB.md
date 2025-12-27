@@ -31,6 +31,994 @@
 
 ## Current Session
 
+### Session 2025-12-26: Team Workspaces & Collaboration
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement multi-user workspaces with shared feeds, annotations, and RBAC
+
+**Location**: `docs/sessions/2025-12-26-team-workspaces/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-26-team-workspaces/INDEX.md)
+- 🗺️ [Plan](./2025-12-26-team-workspaces/PLAN.md)
+- 📝 [Working Notes](./2025-12-26-team-workspaces/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-26-team-workspaces/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-26-team-workspaces/FOLLOW_UPS.md)
+
+
+### Session 2025-12-26: Phase 9 Item 6: Alert & Notification System
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement alert engine, rule evaluator, breaking news detector, notification service, DB adapter, and API routes
+
+**Location**: `docs/sessions/2025-12-26-phase9-alert-notification/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-26-phase9-alert-notification/INDEX.md)
+- 🗺️ [Plan](./2025-12-26-phase9-alert-notification/PLAN.md)
+- 📝 [Working Notes](./2025-12-26-phase9-alert-notification/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-26-phase9-alert-notification/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-26-phase9-alert-notification/FOLLOW_UPS.md)
+
+
+### Session 2025-12-26: Real-Time Event Stream (Phase 8 Item 6)
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement WebSocket and SSE streams for live crawl events
+
+**Location**: `docs/sessions/2025-12-26-realtime-event-stream/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-26-realtime-event-stream/INDEX.md)
+- 🗺️ [Plan](./2025-12-26-realtime-event-stream/PLAN.md)
+- 📝 [Working Notes](./2025-12-26-realtime-event-stream/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-26-realtime-event-stream/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-26-realtime-event-stream/FOLLOW_UPS.md)
+
+
+### Session 2025-12-26: Content Similarity Engine - Phase 8 Item 3
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement MinHash, SimHash, LSH index, and duplicate detection API
+
+**Location**: `docs/sessions/2025-12-26-content-similarity-engine/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-26-content-similarity-engine/INDEX.md)
+- 🗺️ [Plan](./2025-12-26-content-similarity-engine/PLAN.md)
+- 📝 [Working Notes](./2025-12-26-content-similarity-engine/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-26-content-similarity-engine/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-26-content-similarity-engine/FOLLOW_UPS.md)
+
+
+### Session 2025-12-26: Article Full-Text Search with FTS5
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement full-text search across articles using SQLite FTS5 with BM25 ranking
+
+**Location**: `docs/sessions/2025-12-26-fts5-article-search/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-26-fts5-article-search/INDEX.md)
+- 🗺️ [Plan](./2025-12-26-fts5-article-search/PLAN.md)
+- 📝 [Working Notes](./2025-12-26-fts5-article-search/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-26-fts5-article-search/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-26-fts5-article-search/FOLLOW_UPS.md)
+
+
+### Session 2025-12-25: Domain Learning Pipeline
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create template learning system with generator, review queue, tester, and orchestration
+
+**Location**: `docs/sessions/2025-12-25-domain-learning-pipeline/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-25-domain-learning-pipeline/INDEX.md)
+- 🗺️ [Plan](./2025-12-25-domain-learning-pipeline/PLAN.md)
+- 📝 [Working Notes](./2025-12-25-domain-learning-pipeline/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-25-domain-learning-pipeline/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-25-domain-learning-pipeline/FOLLOW_UPS.md)
+
+
+### Session 2025-12-25: Crawl Scheduler Implementation
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create CrawlScheduler, UpdatePatternAnalyzer, ScheduleStore, and scheduleAdapter with 20+ tests
+
+**Location**: `docs/sessions/2025-12-25-crawl-scheduler/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-25-crawl-scheduler/INDEX.md)
+- 🗺️ [Plan](./2025-12-25-crawl-scheduler/PLAN.md)
+- 📝 [Working Notes](./2025-12-25-crawl-scheduler/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-25-crawl-scheduler/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-25-crawl-scheduler/FOLLOW_UPS.md)
+
+
+### Session 2025-12-25: Intelligent Crawl Scheduler
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement scheduler with pattern learning, optimal time prediction, and priority-based batching
+
+**Location**: `docs/sessions/2025-12-25-crawler-scheduler/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-25-crawler-scheduler/INDEX.md)
+- 🗺️ [Plan](./2025-12-25-crawler-scheduler/PLAN.md)
+- 📝 [Working Notes](./2025-12-25-crawler-scheduler/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-25-crawler-scheduler/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-25-crawler-scheduler/FOLLOW_UPS.md)
+
+
+### Session 2025-12-25: Self-Healing Error Recovery
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement DiagnosticEngine, RemediationStrategies, SelfHealingService, and HealingReport
+
+**Location**: `docs/sessions/2025-12-25-self-healing-crawler/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-25-self-healing-crawler/INDEX.md)
+- 🗺️ [Plan](./2025-12-25-self-healing-crawler/PLAN.md)
+- 📝 [Working Notes](./2025-12-25-self-healing-crawler/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-25-self-healing-crawler/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-25-self-healing-crawler/FOLLOW_UPS.md)
+
+
+### Session 2025-12-25: Phase 7: Crawl Profiler & Self-Healing Recovery
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement CrawlProfiler system and SelfHealingService for production-hardened crawler
+
+**Location**: `docs/sessions/2025-12-25-phase7-profiler-healing/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-25-phase7-profiler-healing/INDEX.md)
+- 🗺️ [Plan](./2025-12-25-phase7-profiler-healing/PLAN.md)
+- 📝 [Working Notes](./2025-12-25-phase7-profiler-healing/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-25-phase7-profiler-healing/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-25-phase7-profiler-healing/FOLLOW_UPS.md)
+
+
+### Session 2025-12-25: Phase 6: Multi-Worker Coordinator + Monitoring Dashboard
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement WorkerRegistry, DomainLockManager, WorkDistributor and real-time monitoring dashboard
+
+**Location**: `docs/sessions/2025-12-25-phase6-coordinator-monitor/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-25-phase6-coordinator-monitor/INDEX.md)
+- 🗺️ [Plan](./2025-12-25-phase6-coordinator-monitor/PLAN.md)
+- 📝 [Working Notes](./2025-12-25-phase6-coordinator-monitor/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-25-phase6-coordinator-monitor/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-25-phase6-coordinator-monitor/FOLLOW_UPS.md)
+
+
+### Session 2025-12-25: Phase 5: Layout Intelligence & Quality Feedback
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement all 6 roadmap items: Structure Miner, Signature Storage, Visual Diff Tool, Confidence Scoring, Proxy Full Integration, Golden Set Expansion
+
+**Location**: `docs/sessions/2025-12-25-phase5-layout-intelligence/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-25-phase5-layout-intelligence/INDEX.md)
+- 🗺️ [Plan](./2025-12-25-phase5-layout-intelligence/PLAN.md)
+- 📝 [Working Notes](./2025-12-25-phase5-layout-intelligence/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-25-phase5-layout-intelligence/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-25-phase5-layout-intelligence/FOLLOW_UPS.md)
+
+
+### Session 2025-12-25: Roadmap Progress Tracker UI
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build a small todo-list style UI to track progress on implementation options
+
+**Location**: `docs/sessions/2025-12-25-roadmap-tracker-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-25-roadmap-tracker-ui/INDEX.md)
+- 🗺️ [Plan](./2025-12-25-roadmap-tracker-ui/PLAN.md)
+- 📝 [Working Notes](./2025-12-25-roadmap-tracker-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-25-roadmap-tracker-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-25-roadmap-tracker-ui/FOLLOW_UPS.md)
+
+
+### Session 2025-12-24: Puppeteer Fallback Integration in FetchPipeline
+
+**Duration**: Active
+**Type**: crawler
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add automatic Puppeteer fallback when ECONNRESET occurs in FetchPipeline.js
+
+**Location**: `docs/sessions/2025-12-24-puppeteer-fallback-integration/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-24-puppeteer-fallback-integration/INDEX.md)
+- 🗺️ [Plan](./2025-12-24-puppeteer-fallback-integration/PLAN.md)
+- 📝 [Working Notes](./2025-12-24-puppeteer-fallback-integration/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-24-puppeteer-fallback-integration/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-24-puppeteer-fallback-integration/FOLLOW_UPS.md)
+
+
+### Session 2025-12-23: Guardian Crawl Analysis & ECONNRESET Investigation
+
+**Duration**: Active
+**Type**: crawler
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Analyze crawl telemetry, investigate Guardian anti-bot blocking, and design Puppeteer fallback with DB tracking
+
+**Location**: `docs/sessions/2025-12-23-guardian-crawl-analysis/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-23-guardian-crawl-analysis/INDEX.md)
+- 🗺️ [Plan](./2025-12-23-guardian-crawl-analysis/PLAN.md)
+- 📝 [Working Notes](./2025-12-23-guardian-crawl-analysis/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-23-guardian-crawl-analysis/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-23-guardian-crawl-analysis/FOLLOW_UPS.md)
+
+
+### Session 2025-12-22: Promote remote observable client adapters
+
+**Duration**: Active
+**Type**: ui-lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Extract Lab 043 client observable adapters into reusable module and keep Lab 043 as regression harness.
+
+**Location**: `docs/sessions/2025-12-22-remote-observable-client-module/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-22-remote-observable-client-module/INDEX.md)
+- 🗺️ [Plan](./2025-12-22-remote-observable-client-module/PLAN.md)
+- 📝 [Working Notes](./2025-12-22-remote-observable-client-module/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-22-remote-observable-client-module/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-22-remote-observable-client-module/FOLLOW_UPS.md)
+
+
+### Session 2025-12-22: Lab 043: Client Observable Interface
+
+**Duration**: Active
+**Type**: lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Research and prototype a client-side observable interface over SSE remote streams (EventSource) that fits jsgui3 patterns.
+
+**Location**: `docs/sessions/2025-12-22-lab-client-observable-interface/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-22-lab-client-observable-interface/INDEX.md)
+- 🗺️ [Plan](./2025-12-22-lab-client-observable-interface/PLAN.md)
+- 📝 [Working Notes](./2025-12-22-lab-client-observable-interface/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-22-lab-client-observable-interface/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-22-lab-client-observable-interface/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Lab: Remote Observable on Both Ends
+
+**Duration**: Active
+**Type**: ui-lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Research and prototype an observableSSEobservable framework (server+client) and propose jsgui3 platform hooks.
+
+**Location**: `docs/sessions/2025-12-21-lab-remote-observable-both-ends/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-lab-remote-observable-both-ends/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-lab-remote-observable-both-ends/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-lab-remote-observable-both-ends/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-lab-remote-observable-both-ends/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-lab-remote-observable-both-ends/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Docs-Memory: Full-Stack Methodology for Crawler+UI Wrappers
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add durable patterns/anti-patterns/workflows in docs-memory to prevent crawl-mode feature bleed and standardize UI-consumable backend wrappers.
+
+**Location**: `docs/sessions/2025-12-21-memory-fullstack-methodology/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-memory-fullstack-methodology/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-memory-fullstack-methodology/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-memory-fullstack-methodology/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-memory-fullstack-methodology/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-memory-fullstack-methodology/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Geo Import Step Mode + Control Wrapper
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add a reusable server-side control wrapper (pause/resume/stop/step) and wire a click-to-proceed mode into Geo Import with tests.
+
+**Location**: `docs/sessions/2025-12-21-geo-import-step-mode/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-geo-import-step-mode/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-geo-import-step-mode/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-geo-import-step-mode/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-geo-import-step-mode/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-geo-import-step-mode/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Pause/Resume Ingestion with UI Catch-up
+
+**Duration**: Active
+**Type**: crawler-ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Allow background ingestion (starting with Geo Import) to be paused/resumed while UI continues to update and catch up on state.
+
+**Location**: `docs/sessions/2025-12-21-pause-resume-ingestion/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-pause-resume-ingestion/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-pause-resume-ingestion/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-pause-resume-ingestion/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-pause-resume-ingestion/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-pause-resume-ingestion/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Lab 041: Batch vs Single SSE Transport
+
+**Duration**: Active
+**Type**: ui-lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add single-message vs batched SSE modes to Lab 041 and capture comparative performance evidence.
+
+**Location**: `docs/sessions/2025-12-21-jsgui3-perf-lab-041-transport-modes/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-jsgui3-perf-lab-041-transport-modes/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-jsgui3-perf-lab-041-transport-modes/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-jsgui3-perf-lab-041-transport-modes/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-jsgui3-perf-lab-041-transport-modes/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-jsgui3-perf-lab-041-transport-modes/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: jsgui3 Live Update Performance Lab
+
+**Duration**: Active
+**Type**: lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build a lab + measurement harness for jsgui3 SSR + client activation + high-rate incremental updates (e.g., 1000 nodes/sec) without UI crashes.
+
+**Location**: `docs/sessions/2025-12-21-jsgui3-perf-lab/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-jsgui3-perf-lab/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-jsgui3-perf-lab/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-jsgui3-perf-lab/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-jsgui3-perf-lab/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-jsgui3-perf-lab/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Live Geo Import Explorer (Incremental Graph UI)
+
+**Duration**: Active
+**Type**: design
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Design the features and integration needed to explore geo data live while it imports, with progressive graph/tree rendering and high-performance summarization.
+
+**Location**: `docs/sessions/2025-12-21-geo-import-live-explorer/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-geo-import-live-explorer/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-geo-import-live-explorer/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-geo-import-live-explorer/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-geo-import-live-explorer/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-geo-import-live-explorer/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Geo Import Plan Preview: Wikidata + OSM
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Extend geo import dry-run plan preview to cover Wikidata and OSM with request estimates and endpoints.
+
+**Location**: `docs/sessions/2025-12-21-geo-import-plan-preview-wikidata-osm/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-geo-import-plan-preview-wikidata-osm/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-geo-import-plan-preview-wikidata-osm/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-geo-import-plan-preview-wikidata-osm/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-geo-import-plan-preview-wikidata-osm/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-geo-import-plan-preview-wikidata-osm/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Geo import plan preview UI
+
+**Duration**: Active
+**Type**: crawler
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Expose a dry-run plan view for geo ingestion (sources, URLs, algorithms, expected request counts) without running the import.
+
+**Location**: `docs/sessions/2025-12-21-geo-import-plan-preview/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-geo-import-plan-preview/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-geo-import-plan-preview/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-geo-import-plan-preview/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-geo-import-plan-preview/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-geo-import-plan-preview/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Resilient crawl telemetry UI + progress bars
+
+**Duration**: Active
+**Type**: crawler
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Ensure crawl/background-process errors never break telemetry/UI; show compact status + drill-down and progress bars where possible
+
+**Location**: `docs/sessions/2025-12-21-crawl-telemetry-robust-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-crawl-telemetry-robust-ui/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-crawl-telemetry-robust-ui/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-crawl-telemetry-robust-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-crawl-telemetry-robust-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-crawl-telemetry-robust-ui/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Geo Import progress UI + bundling alignment
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Ensure geo import dashboard uses rebuilt client bundle and validate new progress/stall UI end-to-end
+
+**Location**: `docs/sessions/2025-12-21-geo-import-progress-bundling/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-geo-import-progress-bundling/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-geo-import-progress-bundling/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-geo-import-progress-bundling/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-geo-import-progress-bundling/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-geo-import-progress-bundling/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Geo Import Dashboard Progress Bar Architecture
+
+**Duration**: Active
+**Type**: investigation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Investigate and plan progress bar improvements for geo import using observables and reusable abstractions
+
+**Location**: `docs/sessions/2025-12-21-geo-import-dashboard-progress/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-geo-import-dashboard-progress/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-geo-import-dashboard-progress/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-geo-import-dashboard-progress/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-geo-import-dashboard-progress/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-geo-import-dashboard-progress/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Batch GPU-Accelerated Clustering Research
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Research and illustrate batch-loaded, compute-intensive clustering with GPU potential
+
+**Location**: `docs/sessions/2025-12-21-batch-gpu-clustering-research/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-batch-gpu-clustering-research/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-batch-gpu-clustering-research/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-batch-gpu-clustering-research/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-batch-gpu-clustering-research/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-batch-gpu-clustering-research/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Space-Efficient Clustering Architecture SVG
+
+**Duration**: Active
+**Type**: documentation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create WLILO SVG showing minimal-storage clustering approach
+
+**Location**: `docs/sessions/2025-12-21-space-efficient-clustering-svg/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-space-efficient-clustering-svg/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-space-efficient-clustering-svg/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-space-efficient-clustering-svg/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-space-efficient-clustering-svg/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-space-efficient-clustering-svg/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Hybrid Clustering Architecture SVG
+
+**Duration**: Active
+**Type**: documentation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create detailed WLILO SVG showing the recommended Hash+LSH+Leader hybrid approach
+
+**Location**: `docs/sessions/2025-12-21-hybrid-clustering-architecture-diagram/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-hybrid-clustering-architecture-diagram/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-hybrid-clustering-architecture-diagram/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-hybrid-clustering-architecture-diagram/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-hybrid-clustering-architecture-diagram/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-hybrid-clustering-architecture-diagram/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Structural Cluster Determination Diagram
+
+**Duration**: Active
+**Type**: design
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create WLILO-styled SVG diagram for efficient structural clustering at scale
+
+**Location**: `docs/sessions/2025-12-21-structural-cluster-determination-diagram/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-structural-cluster-determination-diagram/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-structural-cluster-determination-diagram/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-structural-cluster-determination-diagram/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-structural-cluster-determination-diagram/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-structural-cluster-determination-diagram/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Complete z-server improvements
+
+**Duration**: Active
+**Type**: maintenance
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Finish the unfinished z-server improvements left by a previous agent and validate with checks/tests
+
+**Location**: `docs/sessions/2025-12-21-z-server-improvements/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-z-server-improvements/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-z-server-improvements/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-z-server-improvements/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-z-server-improvements/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-z-server-improvements/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: z-server: Featured App SVG Labels
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add big themed SVG label cards for key server apps in z-server UI.
+
+**Location**: `docs/sessions/2025-12-21-z-server-app-labels/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-z-server-app-labels/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-z-server-app-labels/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-z-server-app-labels/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-z-server-app-labels/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-z-server-app-labels/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: z-server App Cards (SVG Labels)
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Improve z-server overview with rich app info and large themed SVG labels for major apps.
+
+**Location**: `docs/sessions/2025-12-21-z-server-app-cards/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-z-server-app-cards/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-z-server-app-cards/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-z-server-app-cards/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-z-server-app-cards/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-z-server-app-cards/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Crawl Widget Telemetry UI Neatness
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Polish crawl-widget LIVE TELEMETRY feed/panels for fetch/cache activity events
+
+**Location**: `docs/sessions/2025-12-21-crawl-widget-telemetry-neatness/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-crawl-widget-telemetry-neatness/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-crawl-widget-telemetry-neatness/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-crawl-widget-telemetry-neatness/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-crawl-widget-telemetry-neatness/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-crawl-widget-telemetry-neatness/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Crawl Widget: Activity Telemetry
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Emit high-signal fetch/cache telemetry into crawl-widget live feed via stdout JSON lines and existing SSE bridge
+
+**Location**: `docs/sessions/2025-12-21-crawl-widget-activity-telemetry/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-crawl-widget-activity-telemetry/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-crawl-widget-activity-telemetry/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-crawl-widget-activity-telemetry/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-crawl-widget-activity-telemetry/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-crawl-widget-activity-telemetry/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Improve crawl UI visibility
+
+**Duration**: Active
+**Type**: ui+telemetry
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Improve crawl-widget visibility with live activity feed + progress/queue telemetry backed by existing crawler events.
+
+**Location**: `docs/sessions/2025-12-21-crawl-ui-visibility/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-crawl-ui-visibility/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-crawl-ui-visibility/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-crawl-ui-visibility/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-crawl-ui-visibility/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-crawl-ui-visibility/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Process Contracts for Intelligent Crawl
+
+**Duration**: Active
+**Type**: design
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make intelligent crawl + place hub prioritisation predictable via contracts + checks
+
+**Location**: `docs/sessions/2025-12-21-process-contracts-intelligent-crawl/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-process-contracts-intelligent-crawl/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-process-contracts-intelligent-crawl/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-process-contracts-intelligent-crawl/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-process-contracts-intelligent-crawl/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-process-contracts-intelligent-crawl/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Geo Import Progress Tree Telemetry
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Emit crawl:progress-tree:* telemetry during geo import so the widget Nested Progress panel shows real progress.
+
+**Location**: `docs/sessions/2025-12-21-geo-import-progress-tree/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-geo-import-progress-tree/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-geo-import-progress-tree/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-geo-import-progress-tree/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-geo-import-progress-tree/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-geo-import-progress-tree/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Standardized Nested Progress Bars
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Design and implement a standardized progress-tree telemetry shape + premium UI panel (with lab checks) for nested progress bars.
+
+**Location**: `docs/sessions/2025-12-21-nested-progress-bars/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-nested-progress-bars/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-nested-progress-bars/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-nested-progress-bars/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-nested-progress-bars/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-nested-progress-bars/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Migrate UI SQL to DB layer + Telemetry Auto Feed
+
+**Duration**: Active
+**Type**: db-vertical-slice
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Move all non-deprecated UI SQL into src/db, make sql:check-ui pass, and improve telemetry envelope + widget auto-display.
+
+**Location**: `docs/sessions/2025-12-21-sql-boundary-migrate-telemetry/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-sql-boundary-migrate-telemetry/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-sql-boundary-migrate-telemetry/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-sql-boundary-migrate-telemetry/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-sql-boundary-migrate-telemetry/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-sql-boundary-migrate-telemetry/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: UI SQL migration + telemetry contract
+
+**Duration**: Active
+**Type**: db
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Move non-deprecated UI SQL into DB adapters and improve telemetry event contract for auto-UI representation
+
+**Location**: `docs/sessions/2025-12-21-ui-sql-migration-telemetry/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-ui-sql-migration-telemetry/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-ui-sql-migration-telemetry/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-ui-sql-migration-telemetry/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-ui-sql-migration-telemetry/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-ui-sql-migration-telemetry/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Electron UI: Place hubs + hub detection progress
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Expose place hubs from DB in the crawl-widget UI and stream ongoing place hub detection progress to the renderer via observables/IPC
+
+**Location**: `docs/sessions/2025-12-21-electron-place-hubs-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-electron-place-hubs-ui/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-electron-place-hubs-ui/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-electron-place-hubs-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-electron-place-hubs-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-electron-place-hubs-ui/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Multilingual Place Names UI
+
+**Duration**: Active
+**Type**: ui+db
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Assess current support for multilingual place names and matching; propose an intuitive compact UI view + SVG mock.
+
+**Location**: `docs/sessions/2025-12-21-multilingual-place-names-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-multilingual-place-names-ui/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-multilingual-place-names-ui/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-multilingual-place-names-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-multilingual-place-names-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-multilingual-place-names-ui/FOLLOW_UPS.md)
+
+
+### Session 2025-12-21: Decision Tree access in crawl-widget + SQL encapsulation
+
+**Duration**: Active
+**Type**: integration
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Inventory remaining SQL leakage and propose next safe encapsulation/enforcement steps after integrating Decision Tree access into crawl-widget.
+
+**Location**: `docs/sessions/2025-12-21-decision-tree-widget-encapsulation/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-21-decision-tree-widget-encapsulation/INDEX.md)
+- 🗺️ [Plan](./2025-12-21-decision-tree-widget-encapsulation/PLAN.md)
+- 📝 [Working Notes](./2025-12-21-decision-tree-widget-encapsulation/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-21-decision-tree-widget-encapsulation/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-21-decision-tree-widget-encapsulation/FOLLOW_UPS.md)
+
+
+### Session 2025-12-20: Audit crawl-widget for decision tree viewer
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Determine whether the Electron crawl-widget has an existing decision-tree viewer feature and outline minimal integration options
+
+**Location**: `docs/sessions/2025-12-20-crawl-widget-decision-trees/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-20-crawl-widget-decision-trees/INDEX.md)
+- 🗺️ [Plan](./2025-12-20-crawl-widget-decision-trees/PLAN.md)
+- 📝 [Working Notes](./2025-12-20-crawl-widget-decision-trees/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-20-crawl-widget-decision-trees/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-20-crawl-widget-decision-trees/FOLLOW_UPS.md)
+
+
+### Session 2025-12-20: Connect crawler to decision tree viewer
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make crawler UI link into decision tree viewer with real decision traces
+
+**Location**: `docs/sessions/2025-12-20-decision-tree-viewer-crawler-integration/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-20-decision-tree-viewer-crawler-integration/INDEX.md)
+- 🗺️ [Plan](./2025-12-20-decision-tree-viewer-crawler-integration/PLAN.md)
+- 📝 [Working Notes](./2025-12-20-decision-tree-viewer-crawler-integration/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-20-decision-tree-viewer-crawler-integration/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-20-decision-tree-viewer-crawler-integration/FOLLOW_UPS.md)
+
+
+### Session 2025-12-20: Quest Map: Add 100 Details
+
+**Duration**: Active
+**Type**: svg
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add 25-100 extra landscape + project-concept details to quest-map.svg and revalidate collisions
+
+**Location**: `docs/sessions/2025-12-20-quest-map-details/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-20-quest-map-details/INDEX.md)
+- 🗺️ [Plan](./2025-12-20-quest-map-details/PLAN.md)
+- 📝 [Working Notes](./2025-12-20-quest-map-details/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-20-quest-map-details/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-20-quest-map-details/FOLLOW_UPS.md)
+
+
+### Session 2025-12-20: Phase 2: Structure Miner + Layout Signature Storage
+
+**Duration**: Active
+**Type**: crawler
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Plan and stage implementation for Structure Miner clustering + DB tables for layout signatures/templates.
+
+**Location**: `docs/sessions/2025-12-20-phase2-structure-miner-layout-signatures/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-20-phase2-structure-miner-layout-signatures/INDEX.md)
+- 🗺️ [Plan](./2025-12-20-phase2-structure-miner-layout-signatures/PLAN.md)
+- 📝 [Working Notes](./2025-12-20-phase2-structure-miner-layout-signatures/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-20-phase2-structure-miner-layout-signatures/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-20-phase2-structure-miner-layout-signatures/FOLLOW_UPS.md)
+
+
+### Session 2025-12-20: Crawler Improvements and Observables Integration
+
+**Duration**: Active
+**Type**: refactor
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement planned crawler abstractions (CrawlPlan, ProgressModel, ResourceBudget) and integrate observables for better state tracking.
+
+**Location**: `docs/sessions/2025-12-20-crawler-improvements-observables/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-20-crawler-improvements-observables/INDEX.md)
+- 🗺️ [Plan](./2025-12-20-crawler-improvements-observables/PLAN.md)
+- 📝 [Working Notes](./2025-12-20-crawler-improvements-observables/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-20-crawler-improvements-observables/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-20-crawler-improvements-observables/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-20: Theme Editor UI + ui:watch dev loop
 
 **Duration**: Active

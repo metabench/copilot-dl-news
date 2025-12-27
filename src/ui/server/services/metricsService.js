@@ -2,6 +2,12 @@
 
 const { countUrls } = require("../../../db/sqlite/v1/queries/ui/urlListingNormalized");
 const { selectRecentDomains } = require("../../../db/sqlite/v1/queries/ui/recentDomains");
+const {
+  resolveDbHandle,
+  ensureUiCachedMetricsTable,
+  selectMetricRow,
+  upsertCachedMetricRow
+} = require("../../../db/sqlite/v1/queries/ui/uiCachedMetrics");
 
 const DEFAULT_MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -110,42 +116,9 @@ function safeJsonParse(value) {
   }
 }
 
-function selectMetricRow(db, statKey) {
-  const stmt = db.prepare(`
-    SELECT stat_key AS statKey,
-           payload,
-           generated_at AS generatedAt,
-           source_window AS sourceWindow,
-           duration_ms AS durationMs,
-           max_age_ms AS maxAgeMs,
-           error,
-           metadata
-    FROM ui_cached_metrics
-    WHERE stat_key = ?
-  `);
-  return stmt.get(statKey) || null;
-}
-
-function upsertCachedMetric(db, entry) {
-  const stmt = db.prepare(`
-    INSERT INTO ui_cached_metrics (
-      stat_key, payload, generated_at, source_window,
-      duration_ms, max_age_ms, error, metadata
-    ) VALUES (
-      @statKey, @payload, @generatedAt, @sourceWindow,
-      @durationMs, @maxAgeMs, @error, @metadata
-    )
-    ON CONFLICT(stat_key) DO UPDATE SET
-      payload = excluded.payload,
-      generated_at = excluded.generated_at,
-      source_window = excluded.source_window,
-      duration_ms = excluded.duration_ms,
-      max_age_ms = excluded.max_age_ms,
-      error = excluded.error,
-      metadata = excluded.metadata
-  `);
-
-  return stmt.run({
+function upsertCachedMetric(dbOrWrapper, entry) {
+  ensureUiCachedMetricsTable(dbOrWrapper);
+  return upsertCachedMetricRow(dbOrWrapper, {
     statKey: entry.statKey,
     payload: serializeJson(entry.payload),
     generatedAt: entry.generatedAt,
@@ -171,10 +144,12 @@ function buildStaleness(row, definition, now = new Date(), fallbackMaxAgeMs) {
 }
 
 function getCachedMetric(db, statKey, options = {}) {
-  if (!db || typeof db.prepare !== "function") {
-    throw new TypeError("getCachedMetric requires a better-sqlite3 handle");
+  const dbHandle = resolveDbHandle(db);
+  if (!dbHandle) {
+    throw new TypeError("getCachedMetric requires a sqlite db handle");
   }
-  const row = selectMetricRow(db, statKey);
+  ensureUiCachedMetricsTable(dbHandle);
+  const row = selectMetricRow(dbHandle, statKey);
   if (!row) {
     return null;
   }
@@ -204,6 +179,7 @@ async function computeStat(db, definition, ctx = {}) {
 }
 
 async function refreshStat(db, statKeyOrDefinition, options = {}) {
+  ensureUiCachedMetricsTable(db);
   const definition = typeof statKeyOrDefinition === "string"
     ? getStatDefinition(statKeyOrDefinition)
     : statKeyOrDefinition;

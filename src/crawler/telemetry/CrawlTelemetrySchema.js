@@ -68,6 +68,13 @@ const CRAWL_EVENT_TYPES = Object.freeze({
   WORKER_STOPPED: 'crawl:worker:stopped',
   WORKER_SCALED: 'crawl:worker:scaled',
 
+  // Standardized nested progress (tree)
+  // Use these when progress is naturally hierarchical (e.g. countries → cities).
+  // Note: topic is derived from the second segment (progress-tree), enabling
+  // the UI to route events into a dedicated nested progress panel.
+  PROGRESS_TREE_UPDATED: 'crawl:progress-tree:updated',
+  PROGRESS_TREE_COMPLETED: 'crawl:progress-tree:completed',
+
   // Checkpoint events
   CHECKPOINT_SAVED: 'crawl:checkpoint:saved',
   CHECKPOINT_RESTORED: 'crawl:checkpoint:restored',
@@ -75,7 +82,15 @@ const CRAWL_EVENT_TYPES = Object.freeze({
   // Metrics/telemetry
   METRICS_SNAPSHOT: 'crawl:metrics:snapshot',
   RATE_LIMITED: 'crawl:rate:limited',
-  STALLED: 'crawl:stalled'
+  STALLED: 'crawl:stalled',
+
+  // Place hub guessing / detection
+  PLACE_HUB_GUESS_STARTED: 'crawl:place-hubs:guess:started',
+  PLACE_HUB_GUESS_PROGRESS: 'crawl:place-hubs:guess:progress',
+  PLACE_HUB_CANDIDATE: 'crawl:place-hubs:candidate',
+  PLACE_HUB_DETERMINATION: 'crawl:place-hubs:determination',
+  PLACE_HUB_GUESS_COMPLETED: 'crawl:place-hubs:guess:completed',
+  PLACE_HUB_GUESS_FAILED: 'crawl:place-hubs:guess:failed'
 });
 
 /**
@@ -90,6 +105,20 @@ const SEVERITY_LEVELS = Object.freeze({
   ERROR: 'error',
   CRITICAL: 'critical'
 });
+
+/**
+ * Telemetry schema version for forward-compatible UI rendering.
+ * Increment when event envelope fields or meaning changes.
+ */
+const TELEMETRY_SCHEMA_VERSION = 1;
+
+function inferTopicFromType(type) {
+  if (typeof type !== 'string') return 'unknown';
+  if (!type.startsWith('crawl:')) return 'unknown';
+  const parts = type.split(':');
+  // crawl:<topic>:...
+  return parts[1] || 'unknown';
+}
 
 /**
  * Create a standardized telemetry event payload.
@@ -109,8 +138,11 @@ function createTelemetryEvent(type, data = {}, options = {}) {
   const now = new Date();
   
   return {
+    schemaVersion: TELEMETRY_SCHEMA_VERSION,
     id: `${type}-${now.getTime()}-${Math.random().toString(16).slice(2, 8)}`,
     type,
+    topic: options.topic || inferTopicFromType(type),
+    tags: Array.isArray(options.tags) ? options.tags.slice(0, 12) : [],
     timestamp: now.toISOString(),
     timestampMs: now.getTime(),
     jobId: options.jobId || null,
@@ -251,6 +283,44 @@ function createBudgetEvent(budget, options = {}) {
 }
 
 /**
+ * Create a nested progress "tree" event.
+ *
+ * Standard shape (minimal):
+ * {
+ *   root: {
+ *     id: string,
+ *     label: string,
+ *     current?: number|null,
+ *     total?: number|null,
+ *     unit?: string,
+ *     status?: 'running'|'done'|'warn'|'error'|'critical',
+ *     children?: [ ...same node shape... ]
+ *   },
+ *   activePath?: string[]  // optional list of node ids currently being worked
+ * }
+ *
+ * The UI renders this as nested progress bars with indentation.
+ *
+ * @param {Object} tree - Progress tree payload
+ * @param {Object} [options] - Event options
+ * @param {boolean} [options.completed=false] - Mark the tree as completed
+ * @returns {Object} Telemetry event payload
+ */
+function createProgressTreeEvent(tree, options = {}) {
+  const completed = Boolean(options.completed);
+  const type = completed ? CRAWL_EVENT_TYPES.PROGRESS_TREE_COMPLETED : CRAWL_EVENT_TYPES.PROGRESS_TREE_UPDATED;
+  return createTelemetryEvent(type, {
+    root: tree?.root || null,
+    activePath: Array.isArray(tree?.activePath) ? tree.activePath.slice(0, 50) : []
+  }, {
+    ...options,
+    // Keep severity low-noise unless explicitly overridden.
+    severity: options.severity || (completed ? SEVERITY_LEVELS.INFO : SEVERITY_LEVELS.DEBUG),
+    message: options.message || (completed ? 'Progress tree completed' : 'Progress tree updated')
+  });
+}
+
+/**
  * Create a worker scaling event.
  * 
  * @param {Object} scaling - Scaling info
@@ -356,6 +426,7 @@ module.exports = {
   createPhaseChangeEvent,
   createGoalSatisfiedEvent,
   createBudgetEvent,
+  createProgressTreeEvent,
   createWorkerScaledEvent,
   createUrlVisitedEvent,
   createUrlErrorEvent,

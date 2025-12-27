@@ -79,12 +79,15 @@ function createContext() {
 /**
  * Render the full HTML page with embedded controls.
  */
-function renderPage(context, trees) {
+function renderPage(context, trees, { baseUrl = "" } = {}) {
   const viewer = new DecisionTreeViewerControl({ context, trees });
   const html = viewer.all_html_render();
   
   // Serialize tree data for client
   const treeDataJSON = JSON.stringify(trees.map(t => t.toJSON()));
+
+  const safeBaseUrl = typeof baseUrl === "string" ? baseUrl : "";
+  const assetPrefix = safeBaseUrl.endsWith("/") ? safeBaseUrl.slice(0, -1) : safeBaseUrl;
   
   return `<!DOCTYPE html>
 <html lang="en">
@@ -92,7 +95,7 @@ function renderPage(context, trees) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Decision Tree Viewer - Luxury Industrial Obsidian</title>
-  <link rel="stylesheet" href="/public/decision-tree.css">
+  <link rel="stylesheet" href="${assetPrefix}/public/decision-tree.css">
   <style>
     /* Layout styles */
     html, body {
@@ -263,7 +266,7 @@ function renderPage(context, trees) {
   </script>
   
   <!-- jsgui3 client activation -->
-  <script src="/public/decision-tree-client.js"></script>
+  <script src="${assetPrefix}/public/decision-tree-client.js"></script>
 </body>
 </html>`;
 }
@@ -303,7 +306,7 @@ app.get("/", async (req, res) => {
   const { trees, source } = await loadTreesWithFallback();
   console.log(`Loaded ${trees.length} decision trees from ${source}`);
 
-  const html = renderPage(context, trees);
+  const html = renderPage(context, trees, { baseUrl: req.baseUrl || "" });
   res.type("html").send(html);
 });
 
@@ -329,7 +332,7 @@ app.get("/set/:slug", async (req, res) => {
     }
     
     const context = createContext();
-    const html = renderPage(context, trees);
+    const html = renderPage(context, trees, { baseUrl: req.baseUrl || "" });
     res.type("html").send(html);
   } catch (err) {
     res.status(404).json({ error: err.message });

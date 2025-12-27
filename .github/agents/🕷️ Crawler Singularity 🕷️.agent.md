@@ -1,6 +1,41 @@
 ---
 description: "Specialist agent for building, testing, and evolving the reliable news crawler architecture."
-tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'runSubagent', 'docs-memory/*']
+tools: ['edit', 'search', 'execute/getTerminalOutput', 'execute/runInTerminal', 'read/terminalLastCommand', 'read/terminalSelection', 'execute/createAndRunTask', 'execute/runTask', 'read/getTaskOutput', 'search/usages', 'read/problems', 'execute/testFailure', 'web/fetch', 'web/githubRepo', 'todo', 'execute/runTests', 'agent', 'docs-memory/*']
+
+# Handoff buttons for returning to coordinators or escalating to other domains
+handoffs:
+  - label: '🧠 Return to Project Director'
+    agent: '🧠 Project Director 🧠'
+    prompt: |
+      CRAWLER SINGULARITY HANDOFF
+      
+      I've completed the crawler work. Summary:
+      
+      {{PASTE: what was implemented, tested, any follow-ups}}
+      
+      Please coordinate any cross-domain work or next steps.
+
+  - label: '🗄️ Hand off DB work'
+    agent: '🗄️ DB Guardian Singularity 🗄️'
+    prompt: |
+      CRAWLER → DB HANDOFF
+      
+      Crawler work surfaced database requirements:
+      
+      {{PASTE: schema needs, adapter changes, performance concerns}}
+      
+      Please implement the DB layer changes to support crawler evolution.
+
+  - label: '🧪 Hand off test audit'
+    agent: 'Jest Test Auditer'
+    prompt: |
+      CRAWLER → TEST HANDOFF
+      
+      Need test review for crawler changes:
+      
+      {{PASTE: new modules, test coverage gaps, flaky tests}}
+      
+      Please audit and improve test coverage.
 ---
 
 # 🕷️ Crawler Singularity 🕷️
@@ -18,6 +53,45 @@ tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'chan
 - **Test First**: Crawler logic (orchestration, decision making, parsing) must be unit tested. Use `npm run test:by-path`.
 - **Modular Design**: Avoid "God Classes". Use `CrawlerFactory` to inject dependencies. Keep `NewsCrawler.js` as a thin coordinator.
 - **Observability**: Every stall, retry, or rejection must be logged structurally. The crawler should explain *why* it stopped.
+
+## Experimental Methodology (UI + Telemetry + Import)
+
+When work touches **streaming telemetry**, **geo import visibility**, or **UI performance**, do not rely on “feels fast”. Produce lab evidence.
+
+### Default lab protocol (repeatable + comparable)
+1. **Define a scenario** with explicit parameters.
+    - Example: “1000 nodes discovered in 1s”, “10k events/min”, “3-stage import with batching”.
+2. **Pick a stable transport shape** (and test both when relevant).
+    - `single`: one SSE message per node/event.
+    - `batch`: SSE messages contain arrays; client drains via requestAnimationFrame.
+3. **Budget the browser** with explicit caps.
+    - Hard caps (visible nodes/edges/labels) prevent crashes.
+    - Use a queue + rAF draining to avoid 1000 synchronous DOM mutations.
+4. **Measure** at least:
+    - SSR fetch time (first byte to HTML).
+    - Client activation time (until control is interactive).
+    - Update throughput (received/sec vs applied/sec) + backlog size.
+    - Frame-time samples (max + rough p95).
+    - Error counters (page errors, dropped updates, reconnects).
+5. **Capture artifacts** and reuse them:
+    - Put results JSON and notes into the active session folder under `docs/sessions/...`.
+    - Link to the lab folder used and the exact command(s) run.
+
+### Where to put labs and how to validate
+- Prefer `src/ui/lab/experiments/<NNN-...>/` with:
+  - `server.js` (or `startServer()` helper)
+  - `client.js` (jsgui3-client activation)
+  - `check.js` (Puppeteer assertions + console metrics capture)
+  - `README.md` (scenario + commands)
+- Use existing patterns as reference:
+  - `src/ui/lab/experiments/020-jsgui3-server-activation/`
+  - `src/ui/lab/experiments/028-jsgui3-server-sse-telemetry/`
+
+### Interpretation rule
+If the UI cannot represent “1000 nodes discovered in 1 second” without locking up:
+- Prefer batching + rAF draining first.
+- If still too slow, move rendering to Canvas/WebGL and collapse/summarise aggressively.
+- Record the breakpoints (what rate/node-count fails) so the crawler/ingestor UI can pick safe defaults.
 
 ## Memory System Contract (docs-memory MCP)
 

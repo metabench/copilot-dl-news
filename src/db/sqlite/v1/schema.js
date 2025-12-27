@@ -1,11 +1,18 @@
 'use strict';
 
+const schemaDefinitions = require('./schema-definitions');
+
 const {
+  // Legacy (object) format
   TABLE_DEFINITIONS,
   INDEX_DEFINITIONS,
   TRIGGER_DEFINITIONS,
+  // Current (string) format
+  TABLE_STATEMENTS,
+  INDEX_STATEMENTS,
+  TRIGGER_STATEMENTS,
   applySchema
-} = require('./schema-definitions');
+} = schemaDefinitions;
 
 const DEFAULT_LOGGER = console;
 
@@ -94,6 +101,72 @@ function filterDefinitions(definitions, { include, exclude }) {
   });
 }
 
+function parseTargetFromTableStatement(sql) {
+  const match = sql.match(/CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+(\w+)/i);
+  return match ? match[1] : null;
+}
+
+function parseTargetFromIndexStatement(sql) {
+  const match = sql.match(/\sON\s+(\w+)\s*\(/i);
+  return match ? match[1] : null;
+}
+
+function parseTargetFromTriggerStatement(sql) {
+  const match = sql.match(/\sON\s+(\w+)\b/i);
+  return match ? match[1] : null;
+}
+
+function replaySubsetFromStatements(db, label, targets, ctx) {
+  const { verbose, logger } = ctx;
+
+  const tables = Array.isArray(TABLE_STATEMENTS)
+    ? TABLE_STATEMENTS.filter((sql) => {
+        const target = parseTargetFromTableStatement(sql);
+        return target && targets.has(target);
+      })
+    : [];
+
+  const indexes = Array.isArray(INDEX_STATEMENTS)
+    ? INDEX_STATEMENTS.filter((sql) => {
+        const target = parseTargetFromIndexStatement(sql);
+        return target && targets.has(target);
+      })
+    : [];
+
+  const triggers = Array.isArray(TRIGGER_STATEMENTS)
+    ? TRIGGER_STATEMENTS.filter((sql) => {
+        const target = parseTargetFromTriggerStatement(sql);
+        return target && targets.has(target);
+      })
+    : [];
+
+  if (tables.length === 0 && typeof applySchema === 'function') {
+    // Fall back to full schema application when we cannot reliably filter.
+    // Prefer correctness (tests + local runs) over partial initialisation.
+    if (verbose) {
+      logger.log(`[schema] Applying full schema (fallback) for ${label}...`);
+    }
+    applySchema(db, { skipErrors: false });
+    return;
+  }
+
+  if (verbose) {
+    logger.log(`[schema] Applying ${label} statements (statement-mode)...`);
+  }
+
+  const apply = db.transaction(() => {
+    for (const sql of tables) db.exec(sql);
+    for (const sql of indexes) db.exec(sql);
+    for (const sql of triggers) db.exec(sql);
+  });
+
+  apply();
+
+  if (verbose) {
+    logger.log(`[schema] \u2713 ${label} applied (${tables.length} tables, ${indexes.length} indexes, ${triggers.length} triggers)`);
+  }
+}
+
 function runStatements(db, statements, type, ctx) {
   const { verbose, logger } = ctx;
   for (const { name, sql } of statements) {
@@ -134,10 +207,18 @@ function replaySubset(db, label, definitions, ctx) {
 }
 
 function initCoreTables(db, options = {}) {
+  const ctx = normalizeOptions(options);
+
+  if (!Array.isArray(TABLE_DEFINITIONS) && typeof applySchema === 'function') {
+    // Statement-mode schema generator: apply a filtered subset.
+    replaySubsetFromStatements(db, 'core schema blueprint', new Set([...getNonCoreTargetsInverse()]), ctx);
+    return;
+  }
+
   if (!Array.isArray(TABLE_DEFINITIONS) || !Array.isArray(INDEX_DEFINITIONS) || !Array.isArray(TRIGGER_DEFINITIONS)) {
     return;
   }
-  const ctx = normalizeOptions(options);
+
   replaySubset(
     db,
     'core schema blueprint',
@@ -150,11 +231,31 @@ function initCoreTables(db, options = {}) {
   );
 }
 
+function getNonCoreTargetsInverse() {
+  // Build the inverse of NON_CORE_TARGETS using schema-derived table names.
+  // If we can't read table names, return an empty set and let caller fallback.
+  const tableNames = typeof schemaDefinitions.getTableNames === 'function' ? schemaDefinitions.getTableNames() : [];
+  const coreTargets = new Set();
+  for (const tableName of tableNames) {
+    if (!NON_CORE_TARGETS.has(tableName)) {
+      coreTargets.add(tableName);
+    }
+  }
+  return coreTargets;
+}
+
 function initGazetteerTables(db, options = {}) {
+  const ctx = normalizeOptions(options);
+
+  if (!Array.isArray(TABLE_DEFINITIONS) && typeof applySchema === 'function') {
+    replaySubsetFromStatements(db, 'gazetteer schema blueprint', GAZETTEER_TARGETS, ctx);
+    return;
+  }
+
   if (!Array.isArray(TABLE_DEFINITIONS) || !Array.isArray(INDEX_DEFINITIONS) || !Array.isArray(TRIGGER_DEFINITIONS)) {
     return;
   }
-  const ctx = normalizeOptions(options);
+
   replaySubset(
     db,
     'gazetteer schema blueprint',
@@ -168,10 +269,17 @@ function initGazetteerTables(db, options = {}) {
 }
 
 function initPlaceHubsTables(db, options = {}) {
+  const ctx = normalizeOptions(options);
+
+  if (!Array.isArray(TABLE_DEFINITIONS) && typeof applySchema === 'function') {
+    replaySubsetFromStatements(db, 'place hub schema blueprint', PLACE_HUB_TARGETS, ctx);
+    return;
+  }
+
   if (!Array.isArray(TABLE_DEFINITIONS) || !Array.isArray(INDEX_DEFINITIONS) || !Array.isArray(TRIGGER_DEFINITIONS)) {
     return;
   }
-  const ctx = normalizeOptions(options);
+
   const tables = filterDefinitions(TABLE_DEFINITIONS, { include: PLACE_HUB_TARGETS });
   const indexes = filterDefinitions(INDEX_DEFINITIONS, { include: PLACE_HUB_TARGETS });
   const triggers = filterDefinitions(TRIGGER_DEFINITIONS, { include: PLACE_HUB_TARGETS });
@@ -189,10 +297,18 @@ function initPlaceHubsTables(db, options = {}) {
 }
 
 function initCompressionTables(db, options = {}) {
+  const ctx = normalizeOptions(options);
+
+  if (!Array.isArray(TABLE_DEFINITIONS) && typeof applySchema === 'function') {
+    replaySubsetFromStatements(db, 'compression schema blueprint', COMPRESSION_TARGETS, ctx);
+    seedCompressionTypes(db, ctx);
+    return;
+  }
+
   if (!Array.isArray(TABLE_DEFINITIONS) || !Array.isArray(INDEX_DEFINITIONS) || !Array.isArray(TRIGGER_DEFINITIONS)) {
     return;
   }
-  const ctx = normalizeOptions(options);
+
   replaySubset(
     db,
     'compression schema blueprint',
@@ -208,10 +324,17 @@ function initCompressionTables(db, options = {}) {
 }
 
 function initBackgroundTasksTables(db, options = {}) {
+  const ctx = normalizeOptions(options);
+
+  if (!Array.isArray(TABLE_DEFINITIONS) && typeof applySchema === 'function') {
+    replaySubsetFromStatements(db, 'background task schema blueprint', BACKGROUND_TASK_TARGETS, ctx);
+    return;
+  }
+
   if (!Array.isArray(TABLE_DEFINITIONS) || !Array.isArray(INDEX_DEFINITIONS)) {
     return;
   }
-  const ctx = normalizeOptions(options);
+
   replaySubset(
     db,
     'background task schema blueprint',

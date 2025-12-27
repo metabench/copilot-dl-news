@@ -721,6 +721,13 @@ class NewsCrawler extends Crawler {
       }
     }
 
+    // Cleanup Puppeteer browser (async but fire-and-forget for sync close)
+    if (this.fetchPipeline && typeof this.fetchPipeline.destroyPuppeteer === 'function') {
+      this.fetchPipeline.destroyPuppeteer().catch(err => {
+        console.error('Error closing Puppeteer:', err);
+      });
+    }
+
     // Cleanup enhanced features (timers, observers)
     try {
       this._cleanupEnhancedFeatures();
@@ -890,10 +897,16 @@ class NewsCrawler extends Crawler {
             structure: snapshot
           }
         });
+        // Also emit EventEmitter 'progress' event for TelemetryIntegration bridge
+        // Pass force to bypass parent's throttle
+        super.emitProgress(force);
         return;
       }
     }
     this.telemetry.progress(force);
+    // Also emit EventEmitter 'progress' event for TelemetryIntegration bridge
+    // Pass force to bypass parent's throttle
+    super.emitProgress(force);
   }
 
   _emitStartupProgress(progressPayload, statusText = null) {
@@ -1952,6 +1965,15 @@ class NewsCrawler extends Crawler {
       const count = this.dbAdapter.getArticleCount();
       log.stat('Database articles', count);
       this.dbAdapter.close();
+    }
+
+    // Cleanup Puppeteer browser if it was used
+    if (this.fetchPipeline && typeof this.fetchPipeline.destroyPuppeteer === 'function') {
+      try {
+        await this.fetchPipeline.destroyPuppeteer();
+      } catch (err) {
+        log.warn(`[puppeteer] Error during cleanup: ${err.message}`);
+      }
     }
 
     if (includeCleanup) {

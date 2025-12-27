@@ -29,6 +29,10 @@ const jsgui = require('jsgui3-html');
 const { GeoImportDashboard } = require('../controls/GeoImportDashboard');
 const { DatabaseSelector } = require('../controls/DatabaseSelector');
 const { GeoImportStateManager, IMPORT_STAGES } = require('../../services/GeoImportStateManager');
+const {
+  getBasicDbInfo,
+  getDatabaseStats
+} = require('../../db/sqlite/tools/databaseIntrospection');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Configuration
@@ -57,7 +61,6 @@ function invalidateDbCache() {
 const { 
   createGazetteerDatabase, 
   getDefaultGazetteerPath,
-  initializeGazetteerSchema
 } = require('../../db/sqlite/gazetteer/v1');
 
 /**
@@ -68,19 +71,10 @@ const {
  * @returns {Object} { db, gazetteer }
  */
 function openDatabase(dbPath, options = {}) {
-  const Database = require('better-sqlite3');
-  
-  if (options.standalone) {
-    // Create standalone gazetteer database with GazetteerDatabase wrapper
-    const gazetteer = createGazetteerDatabase(dbPath, { verbose: true });
-    return { db: gazetteer.db, gazetteer };
-  }
-  
-  // Standard mode - open existing database
-  const db = new Database(dbPath);
-  // Ensure gazetteer schema exists
-  initializeGazetteerSchema(db, { verbose: true });
-  return { db, gazetteer: null };
+  // Always open via the gazetteer adapter (in src/db) to keep UI code free of
+  // direct sqlite driver usage. The adapter accepts either a path or a handle.
+  const gazetteer = createGazetteerDatabase(dbPath, { verbose: true });
+  return { db: gazetteer.db, gazetteer };
 }
 
 function getDefaultDbPath(standalone = false) {
@@ -184,211 +178,6 @@ function invalidateDbListCache() {
   dbListCache.timestamp = 0;
 }
 
-/**
- * Get basic info from a database (optimized for speed)
- * Uses fast queries: table existence check, approximate counts for large DBs
- * Handles both gazetteer databases and other database types (news.db, etc.)
- * @param {string} dbPath
- * @returns {Object}
- */
-function getBasicDbInfo(dbPath) {
-  const Database = require('better-sqlite3');
-  let db;
-  
-  try {
-    // Quick file size check - very large DBs get approximate counts
-    const fileStats = fs.statSync(dbPath);
-    const isLargeDb = fileStats.size > 100 * 1024 * 1024; // > 100MB
-    
-    db = new Database(dbPath, { readonly: true, timeout: 5000 });
-    
-    // Get all tables (fast query)
-    const allTables = db.prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-    ).all().map(t => t.name);
-    
-    // Check if it has gazetteer tables
-    const hasPlaces = allTables.includes('places');
-    const hasPlaceNames = allTables.includes('place_names');
-    const hasGazetteerTables = hasPlaces || hasPlaceNames;
-    
-    // Filter out gazetteer tables for "other tables" count
-    const otherTables = allTables.filter(t => t !== 'places' && t !== 'place_names' && !t.startsWith('sqlite_'));
-    
-    // Base result with table info (useful for ALL databases)
-    const result = {
-      hasGazetteerTables,
-      tableCount: allTables.length,
-      otherTableCount: otherTables.length,
-      tables: otherTables.slice(0, 10), // First 10 non-gazetteer tables as preview
-      places: 0,
-      names: 0,
-      sources: [],
-      totalRows: 0,
-      tableCounts: []
-    };
-    
-    // Get row counts for non-gazetteer tables (up to 5, for preview)
-    const tablesToCheck = otherTables.slice(0, 5);
-    for (const tableName of tablesToCheck) {
-      try {
-        if (isLargeDb) {
-          // Try sqlite_stat1 first for approximate count
-          const stat = db.prepare(
-            `SELECT stat FROM sqlite_stat1 WHERE tbl=? AND idx IS NULL LIMIT 1`
-          ).get(tableName);
-          if (stat && stat.stat) {
-            const count = parseInt(stat.stat.split(' ')[0], 10) || 0;
-            result.tableCounts.push({ table: tableName, count });
-            result.totalRows += count;
-          } else {
-            // Fallback: quick check if table has data
-            const hasRows = db.prepare(`SELECT 1 FROM "${tableName}" LIMIT 1`).get();
-            if (hasRows) {
-              result.tableCounts.push({ table: tableName, count: -1 }); // -1 = has data
-              result.totalRows += 1; // Mark as having data
-            }
-          }
-        } else {
-          // Small DB - get actual counts
-          const count = db.prepare(`SELECT COUNT(*) as c FROM "${tableName}"`).get()?.c || 0;
-          result.tableCounts.push({ table: tableName, count });
-          result.totalRows += count;
-        }
-      } catch (e) { /* skip problematic tables */ }
-    }
-    
-    // Check if sqlite_stat1 exists (for large DB optimization)
-    const hasStat1 = db.prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='sqlite_stat1'"
-    ).get();
-    
-    // Gazetteer-specific: Count places and names
-    if (hasPlaces) {
-      try {
-        if (isLargeDb && hasStat1) {
-          // Use approximate count from sqlite_stat1 if available
-          const stat = db.prepare(
-            "SELECT stat FROM sqlite_stat1 WHERE tbl='places' AND idx IS NULL LIMIT 1"
-          ).get();
-          if (stat && stat.stat) {
-            result.places = parseInt(stat.stat.split(' ')[0], 10) || 0;
-          } else {
-            // sqlite_stat1 exists but no entry for places - do actual count
-            result.places = db.prepare('SELECT COUNT(*) as count FROM places').get()?.count || 0;
-          }
-        } else {
-          // No sqlite_stat1 or small DB - do actual count
-          result.places = db.prepare('SELECT COUNT(*) as count FROM places').get()?.count || 0;
-        }
-      } catch (e) { /* table might not exist */ }
-    }
-    
-    if (hasPlaceNames) {
-      try {
-        if (isLargeDb && hasStat1) {
-          const stat = db.prepare(
-            "SELECT stat FROM sqlite_stat1 WHERE tbl='place_names' AND idx IS NULL LIMIT 1"
-          ).get();
-          if (stat && stat.stat) {
-            result.names = parseInt(stat.stat.split(' ')[0], 10) || 0;
-          } else {
-            // Fallback: Do actual count - accuracy matters for user display
-            result.names = db.prepare('SELECT COUNT(*) as count FROM place_names').get()?.count || 0;
-          }
-        } else {
-          result.names = db.prepare('SELECT COUNT(*) as count FROM place_names').get()?.count || 0;
-        }
-      } catch (e) { /* table might not exist */ }
-    }
-    
-    // Get sources (fast - usually few distinct values)
-    if (hasPlaces) {
-      try {
-        result.sources = db.prepare('SELECT DISTINCT source FROM places WHERE source IS NOT NULL LIMIT 20').all()
-          .map(r => r.source);
-      } catch (e) { /* table might not exist */ }
-    }
-    
-    return result;
-  } catch (err) {
-    // Database might be locked, corrupted, or inaccessible
-    return { 
-      hasGazetteerTables: false, 
-      tableCount: 0,
-      otherTableCount: 0,
-      tables: [],
-      places: 0, 
-      names: 0, 
-      sources: [], 
-      totalRows: 0,
-      tableCounts: [],
-      error: err.message 
-    };
-  } finally {
-    if (db) {
-      try { db.close(); } catch (e) { /* ignore close errors */ }
-    }
-  }
-}
-/**
- * Get detailed stats for a database
- * @param {string} dbPath
- * @returns {Object}
- */
-function getDatabaseStats(dbPath) {
-  const Database = require('better-sqlite3');
-  let db;
-  
-  try {
-    db = new Database(dbPath, { readonly: true });
-    const stats = fs.statSync(dbPath);
-    
-    let places = 0, names = 0, bySource = [], byKind = [], lastImport = null;
-    
-    try {
-      places = db.prepare('SELECT COUNT(*) as count FROM places').get()?.count || 0;
-    } catch (e) { /* ignore */ }
-    
-    try {
-      names = db.prepare('SELECT COUNT(*) as count FROM place_names').get()?.count || 0;
-    } catch (e) { /* ignore */ }
-    
-    try {
-      bySource = db.prepare('SELECT source, COUNT(*) as count FROM places GROUP BY source').all();
-    } catch (e) { /* ignore */ }
-    
-    try {
-      byKind = db.prepare('SELECT kind, COUNT(*) as count FROM places GROUP BY kind ORDER BY count DESC LIMIT 10').all();
-    } catch (e) { /* ignore */ }
-    
-    try {
-      const lastRun = db.prepare('SELECT * FROM ingestion_runs ORDER BY started_at DESC LIMIT 1').get();
-      if (lastRun) {
-        lastImport = {
-          source: lastRun.source,
-          date: lastRun.started_at,
-          status: lastRun.status,
-          recordsInserted: lastRun.records_inserted
-        };
-      }
-    } catch (e) { /* ignore */ }
-    
-    return {
-      places,
-      names,
-      bySource,
-      byKind,
-      lastImport,
-      size: stats.size,
-      modified: stats.mtime.toISOString()
-    };
-  } catch (err) {
-    return { error: err.message, places: 0, names: 0 };
-  } finally {
-    if (db) db.close();
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Server Factory
@@ -488,11 +277,23 @@ function createServer(options = {}) {
     const check = stateManager.checkGeoNamesReady();
     res.json(check);
   });
+
+  // Plan preview (dry-run) - explain what would happen without running the import
+  app.get('/api/geo-import/plan', async (req, res) => {
+    try {
+      const source = typeof req.query.source === 'string' ? req.query.source : 'geonames';
+      const detail = req.query.detail === 'fast' ? 'fast' : 'full';
+      const plan = await stateManager.getPlan({ source, detail });
+      res.json({ ok: true, plan });
+    } catch (err) {
+      res.status(400).json({ ok: false, error: err.message });
+    }
+  });
   
   // Start import
   app.post('/api/geo-import/start', async (req, res) => {
     try {
-      const { source = 'geonames' } = req.body || {};
+      const { source = 'geonames', stepMode = false } = req.body || {};
       
       if (!stateManager.canStart()) {
         return res.status(400).json({
@@ -514,7 +315,7 @@ function createServer(options = {}) {
       }
       
       // Start asynchronously (don't await)
-      stateManager.startImport({ source }).catch(err => {
+      stateManager.startImport({ source, stepMode: !!stepMode }).catch(err => {
         console.error('[GeoImportServer] Import error:', err);
       });
       
@@ -526,6 +327,15 @@ function createServer(options = {}) {
         instructions: err.instructions
       });
     }
+  });
+
+  // Step-by-step: advance to next stage when awaiting user input
+  app.post('/api/geo-import/next', (req, res) => {
+    const result = stateManager.nextStep();
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+    res.json(result);
   });
   
   // Pause import
@@ -679,64 +489,8 @@ function createServer(options = {}) {
       res.json({
         path: dbPath,
         name: path.basename(dbPath),
-        ...stats
+        stats
       });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-  
-  /**
-   * Open database directory in system file explorer
-   * Cross-platform: Windows Explorer, macOS Finder, Linux file manager
-   */
-  app.post('/api/geo-import/open-in-explorer', (req, res) => {
-    try {
-      const { path: dbPathParam } = req.body;
-      if (!dbPathParam) {
-        return res.status(400).json({ error: 'Database path is required' });
-      }
-      
-      const fullPath = path.isAbsolute(dbPathParam) 
-        ? dbPathParam 
-        : path.join(PROJECT_ROOT, dbPathParam);
-      
-      // Get the directory containing the file
-      const dirPath = fs.statSync(fullPath).isDirectory() 
-        ? fullPath 
-        : path.dirname(fullPath);
-      
-      if (!fs.existsSync(dirPath)) {
-        return res.status(404).json({ error: 'Directory not found', path: dirPath });
-      }
-      
-      // Platform-specific command to open file explorer
-      // Use spawn to avoid shell interpretation issues
-      let prog, args;
-      
-      switch (process.platform) {
-        case 'win32':
-          // Windows: explorer with /select, to highlight the file
-          // Note: /select, must be followed directly by the path without additional quoting
-          prog = 'explorer';
-          args = ['/select,' + fullPath.replace(/\//g, '\\')];
-          break;
-        case 'darwin':
-          // macOS: open in Finder with -R to reveal the file
-          prog = 'open';
-          args = ['-R', fullPath];
-          break;
-        default:
-          // Linux: xdg-open the directory (can't select file)
-          prog = 'xdg-open';
-          args = [dirPath];
-      }
-      
-      const child = spawn(prog, args, { detached: true, stdio: 'ignore' });
-      child.unref();
-      
-      // Explorer returns immediately but may report error, so just respond success
-      res.json({ success: true, path: fullPath, directory: dirPath });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

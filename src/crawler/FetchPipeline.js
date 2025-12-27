@@ -2,6 +2,21 @@ const { shouldUseCache } = require('../cache');
 const { safeCall, safeCallAsync } = require('./utils');
 const NetworkRetryPolicy = require('./NetworkRetryPolicy');
 const HostRetryBudgetManager = require('./HostRetryBudgetManager');
+const EventEmitter = require('events');
+const { PuppeteerDomainManager } = require('./PuppeteerDomainManager');
+
+// Lazy-load PuppeteerFetcher to avoid requiring puppeteer when not needed
+let PuppeteerFetcher = null;
+function getPuppeteerFetcher() {
+  if (!PuppeteerFetcher) {
+    try {
+      PuppeteerFetcher = require('./PuppeteerFetcher').PuppeteerFetcher;
+    } catch {
+      PuppeteerFetcher = null;
+    }
+  }
+  return PuppeteerFetcher;
+}
 
 const fetchImpl = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
@@ -30,7 +45,7 @@ function defaultLogger() {
   };
 }
 
-class FetchPipeline {
+class FetchPipeline extends EventEmitter {
   /**
    * @param {object} opts
    * @param {(url: string, ctx: object) => object} opts.getUrlDecision
@@ -67,6 +82,7 @@ class FetchPipeline {
   * @param {(decision: object, extras: object) => void} [opts.handlePolicySkip]
    */
   constructor(opts) {
+    super();
     this.getUrlDecision = opts.getUrlDecision;
     this.urlDecisionOrchestrator = opts.urlDecisionOrchestrator || null;
     this.normalizeUrl = opts.normalizeUrl;
@@ -96,6 +112,12 @@ class FetchPipeline {
     // Phase 1: Resilience services
     this.resilienceService = opts.resilienceService || null;
     this.contentValidationService = opts.contentValidationService || null;
+    // Phase 2: Teacher service for JS-dependent pages
+    this.teacherService = opts.teacherService || null;
+    // Phase 5: Proxy rotation for IP-based rate limiting/blocking
+    this.proxyManager = opts.proxyManager || null;
+    this._currentProxyInfo = null; // Track current proxy for success/failure reporting
+    this.onSoftFailure = typeof opts.onSoftFailure === 'function' ? opts.onSoftFailure : null;
     this.articleHeaderCache = opts.articleHeaderCache;
     this.knownArticlesCache = opts.knownArticlesCache;
     this.getDbAdapter = typeof opts.getDbAdapter === 'function'
@@ -149,6 +171,169 @@ class FetchPipeline {
     this.fetchFn = typeof opts.fetchFn === 'function' ? opts.fetchFn : fetchImpl;
     this.logger = opts.logger || defaultLogger();
     this.handlePolicySkip = typeof opts.handlePolicySkip === 'function' ? opts.handlePolicySkip : null;
+    
+    // Puppeteer fallback configuration for TLS-fingerprinting sites
+    const puppeteerOpts = opts.puppeteerFallback || {};
+    this.puppeteerFallbackEnabled = puppeteerOpts.enabled !== false; // Enabled by default
+    this.puppeteerFallbackOnEconnreset = puppeteerOpts.onEconnreset !== false; // Enabled by default
+    this._puppeteerFetcher = null; // Lazy-initialized
+    this._puppeteerConfig = puppeteerOpts; // Store config for lazy initialization
+    
+    // Legacy fallback: use static domains if manager not available
+    // When custom domains are explicitly passed, use those instead of the manager
+    const hasCustomDomains = Array.isArray(puppeteerOpts.domains) && puppeteerOpts.domains.length > 0;
+    this.puppeteerFallbackDomains = hasCustomDomains
+      ? puppeteerOpts.domains.map(d => d.toLowerCase())
+      : ['theguardian.com', 'bloomberg.com', 'wsj.com']; // Default TLS-fingerprinting sites
+    
+    // Initialize PuppeteerDomainManager for auto-learning (only when not using custom domain list)
+    this._puppeteerDomainManager = puppeteerOpts.domainManager || null;
+    if (!this._puppeteerDomainManager && this.puppeteerFallbackEnabled && !hasCustomDomains) {
+      try {
+        this._puppeteerDomainManager = new PuppeteerDomainManager({ 
+          logger: this.logger,
+          autoSave: true
+        });
+        this._puppeteerDomainManager.load();
+        
+        // Wire up domain learning telemetry events
+        this._puppeteerDomainManager.on('domain:learned', (data) => {
+          this.emit('puppeteer:domain-learned', data);
+          if (this.telemetry?.telemetry) {
+            this.telemetry.telemetry({
+              event: 'puppeteer.domain-learned',
+              severity: 'info',
+              domain: data.domain,
+              reason: data.entry?.reason || 'ECONNRESET auto-learning',
+              autoApproved: data.autoApproved,
+              failureCount: data.entry?.failureCount
+            });
+          }
+        });
+        
+        this._puppeteerDomainManager.on('domain:pending', (data) => {
+          this.emit('puppeteer:domain-pending', data);
+          if (this.telemetry?.telemetry) {
+            this.telemetry.telemetry({
+              event: 'puppeteer.domain-pending',
+              severity: 'info',
+              domain: data.domain,
+              reason: data.entry?.reason || 'ECONNRESET threshold reached'
+            });
+          }
+        });
+        
+        this._puppeteerDomainManager.on('failure:recorded', (data) => {
+          // Only emit telemetry when approaching threshold (avoid log spam)
+          if (data.count >= data.threshold - 1) {
+            this.emit('puppeteer:failure-recorded', data);
+          }
+        });
+      } catch (err) {
+        this.logger.warn(`[puppeteer] Failed to initialize domain manager: ${err.message}`);
+        this._puppeteerDomainManager = null;
+      }
+    }
+  }
+
+  /**
+   * Get or create PuppeteerFetcher instance (lazy initialization)
+   * @returns {Promise<Object|null>}
+   */
+  async _getPuppeteerFetcher() {
+    if (this._puppeteerFetcher) return this._puppeteerFetcher;
+    
+    const PuppeteerFetcherClass = getPuppeteerFetcher();
+    if (!PuppeteerFetcherClass) {
+      this.logger.warn('[puppeteer] PuppeteerFetcher not available (puppeteer not installed?)');
+      return null;
+    }
+    
+    // Get lifecycle options from puppeteer fallback config
+    const puppeteerOpts = this._puppeteerConfig || {};
+    
+    this._puppeteerFetcher = new PuppeteerFetcherClass({
+      reuseSession: true,
+      logger: this.logger,
+      // Browser lifecycle options (with sensible defaults)
+      maxPagesPerSession: puppeteerOpts.maxPagesPerSession || 50,
+      maxSessionAgeMs: puppeteerOpts.maxSessionAgeMs || 10 * 60000,  // 10 minutes
+      healthCheckEnabled: puppeteerOpts.healthCheckEnabled !== false,
+      healthCheckIntervalMs: puppeteerOpts.healthCheckIntervalMs || 30000,
+      restartOnError: puppeteerOpts.restartOnError !== false,
+      maxConsecutiveErrors: puppeteerOpts.maxConsecutiveErrors || 3
+    });
+    
+    // Wire up telemetry events
+    this._puppeteerFetcher.on('browser:launched', (data) => {
+      this.emit('puppeteer:browser-launched', data);
+    });
+    this._puppeteerFetcher.on('browser:closed', () => {
+      this.emit('puppeteer:browser-closed');
+    });
+    this._puppeteerFetcher.on('fetch:success', (data) => {
+      const reusedLabel = data.browserReused ? 'reused' : 'new';
+      this.logger.debug(`[puppeteer] Fetch success (${reusedLabel} browser, page #${data.sessionPageNumber})`, { type: 'PUPPETEER' });
+    });
+    
+    await this._puppeteerFetcher.init();
+    return this._puppeteerFetcher;
+  }
+
+  /**
+   * Get Puppeteer telemetry stats
+   * @returns {Object|null} Telemetry data or null if Puppeteer not initialized
+   */
+  getPuppeteerTelemetry() {
+    if (!this._puppeteerFetcher) return null;
+    return this._puppeteerFetcher.getTelemetry();
+  }
+
+  /**
+   * Check if a host should use Puppeteer fallback
+   * @param {string} host
+   * @returns {boolean}
+   */
+  _shouldUsePuppeteerFallback(host) {
+    if (!this.puppeteerFallbackEnabled) return false;
+    const lowerHost = host.toLowerCase();
+    
+    // Use domain manager if available (supports auto-learning)
+    if (this._puppeteerDomainManager) {
+      return this._puppeteerDomainManager.shouldUsePuppeteer(lowerHost);
+    }
+    
+    // Legacy fallback: static domain list
+    return this.puppeteerFallbackDomains.some(domain => 
+      lowerHost === domain || lowerHost.endsWith('.' + domain)
+    );
+  }
+
+  /**
+   * Cleanup Puppeteer resources (call when crawler is done)
+   * @returns {Promise<Object|null>} Final telemetry stats or null
+   */
+  async destroyPuppeteer() {
+    let telemetry = null;
+    if (this._puppeteerFetcher) {
+      try {
+        telemetry = this._puppeteerFetcher.getTelemetry();
+        await this._puppeteerFetcher.destroy();
+        
+        // Log summary telemetry
+        if (telemetry) {
+          const t = telemetry;
+          this.logger.info(`[puppeteer] Session complete: ${t.browserLaunches} launches, ${t.browserReuses} reuses, ${t.pagesFetched} pages`, { type: 'PUPPETEER' });
+          if (t.autoRestarts > 0 || t.errorRestarts > 0) {
+            this.logger.info(`[puppeteer] Restarts: ${t.autoRestarts} auto, ${t.errorRestarts} error-based`, { type: 'PUPPETEER' });
+          }
+        }
+      } catch (err) {
+        this.logger.warn(`[puppeteer] Error closing browser: ${err.message}`);
+      }
+      this._puppeteerFetcher = null;
+    }
+    return telemetry;
   }
 
   /**
@@ -158,6 +343,7 @@ class FetchPipeline {
    */
   async fetch(params) {
     const { url, context = {}, retryCount = 0 } = params || {};
+    this.emit('fetch:start', { url, context, retryCount });
     const depth = context.depth || 0;
     const allowRevisit = !!context.allowRevisit;
     const decisionContext = { ...context };
@@ -354,6 +540,14 @@ class FetchPipeline {
       });
     }
 
+    this.emit('cache:hit', {
+      url: normalizedUrl,
+      source: cached.source,
+      ageSeconds,
+      reason,
+      forced: forcedCache
+    });
+
     return this._buildResult({
       status: 'cache',
       source: 'cache',
@@ -505,16 +699,44 @@ class FetchPipeline {
     try {
       const attemptSuffix = totalAttempts > 1 ? ` (attempt ${attempt}/${totalAttempts})` : '';
       this.logger.info(`Fetching: ${normalizedUrl}${attemptSuffix}`, { type: 'FETCHING' });
+      
+      // Browser-like headers to avoid bot detection (especially on Guardian, BBC)
       const headers = {
-        'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1'
       };
 
       const conditionalHeaders = this._buildConditionalHeaders(normalizedUrl);
       if (conditionalHeaders) Object.assign(headers, conditionalHeaders);
 
+      // Determine which agent to use (proxy or direct)
+      let fetchAgent = parsedUrl.protocol === 'http:' ? this.httpAgent : this.httpsAgent;
+      this._currentProxyInfo = null;
+      
+      if (this.proxyManager && this.proxyManager.isEnabled()) {
+        const proxyResult = this.proxyManager.getAgent(host);
+        if (proxyResult) {
+          fetchAgent = proxyResult.agent;
+          this._currentProxyInfo = proxyResult.proxyInfo;
+          this.logger.info(`[proxy] Using ${this._currentProxyInfo.name} for ${normalizedUrl}`, { type: 'PROXY' });
+        }
+      }
+
       const response = await this.fetchFn(normalizedUrl, {
         headers,
-        agent: parsedUrl.protocol === 'http:' ? this.httpAgent : this.httpsAgent,
+        agent: fetchAgent,
         signal: abortController.signal,
         redirect: 'manual'  // Handle redirects manually to fix protocol
       });
@@ -663,6 +885,11 @@ class FetchPipeline {
           this.note429(host, retryAfterMs);
         }
 
+        // Phase 5: Report proxy failure for banning status codes
+        if (this._currentProxyInfo && this.proxyManager) {
+          this.proxyManager.recordFailure(this._currentProxyInfo.name, { httpStatus: status });
+        }
+
         const failureHost = this._safeHost(finalUrl, host);
         const shouldCountTowardsHostBudget = !(status === 404 || status === 410);
         if (shouldCountTowardsHostBudget) {
@@ -680,6 +907,7 @@ class FetchPipeline {
             return fallbackResult;
           }
         }
+        this.emit('fetch:error', { url: finalUrl, kind: 'http', status });
         return this._buildResult({
           status: 'error',
           source: 'error',
@@ -752,6 +980,11 @@ class FetchPipeline {
       this._noteHostSuccess(this._safeHost(finalUrl, host));
       this.noteSuccess(host);
 
+      // Phase 5: Report proxy success
+      if (this._currentProxyInfo && this.proxyManager) {
+        this.proxyManager.recordSuccess(this._currentProxyInfo.name);
+      }
+
       // Phase 1: Record activity and validate content
       if (this.resilienceService) {
         this.resilienceService.recordActivity();
@@ -780,6 +1013,17 @@ class FetchPipeline {
           if (validation.failureType === 'hard' && this.resilienceService) {
             this.resilienceService.recordFailure(host, 'content-rejection', validation.reason);
           }
+          // Phase 2: Soft failures (JS-required, etc.) can be re-queued for Teacher rendering
+          if (validation.failureType === 'soft' && this.onSoftFailure) {
+            this.onSoftFailure({
+              url: finalUrl,
+              reason: validation.reason,
+              details: validation.details,
+              host
+            });
+            this.emit('fetch:soft-failure', { url: finalUrl, reason: validation.reason });
+          }
+          this.emit('fetch:error', { url: finalUrl, kind: 'validation', reason: validation.reason });
           return this._buildResult({
             status: 'skipped',
             source: 'validation-failed',
@@ -792,6 +1036,7 @@ class FetchPipeline {
         }
       }
 
+      this.emit('fetch:success', { url: finalUrl, status, fetchMeta });
       return this._buildResult({
         status: 'success',
         source: 'network',
@@ -817,6 +1062,7 @@ class FetchPipeline {
         this.logger.warn(`[network] ${strategy}: retrying ${normalizedUrl} (attempt ${attempt + 1}/${totalAttempts}) in ${delayMs}ms [code=${errorCode || 'unknown'} message="${errorMessage}"]`, { type: 'NETWORK' });
         const retryUrl = originalUrl || normalizedUrl;
         const nextContext = { ...(context || {}), __networkRetry: { attempt, strategy, delayMs, errorCode, errorMessage } };
+        this.emit('fetch:retry', { url: retryUrl, attempt: retryCount + 1, delayMs, strategy });
         await new Promise((resolve) => setTimeout(resolve, delayMs));
         return this.fetch({ url: retryUrl, context: nextContext, retryCount: retryCount + 1 });
       }
@@ -836,6 +1082,13 @@ class FetchPipeline {
         this.resilienceService.recordFailure(host, strategy, errorMessage);
       }
 
+      // Phase 5: Report proxy failure for network errors
+      if (this._currentProxyInfo && this.proxyManager) {
+        this.proxyManager.recordFailure(this._currentProxyInfo.name, { code: errorCode || 'NETWORK_ERROR' });
+      }
+
+      this.emit('fetch:error', { url: normalizedUrl, kind: strategy, error });
+
       this.recordError({
         kind: 'exception',
         classification: strategy,
@@ -847,6 +1100,75 @@ class FetchPipeline {
       });
       if (isConnectionReset) {
         this.handleConnectionReset(normalizedUrl, error);
+        
+        // Record failure for auto-learning (tracks domains that repeatedly fail with ECONNRESET)
+        if (this._puppeteerDomainManager && this._puppeteerDomainManager.isTrackingEnabled()) {
+          const learnResult = this._puppeteerDomainManager.recordFailure(host, normalizedUrl, errorMessage);
+          if (learnResult.learned) {
+            this.logger.info(`[puppeteer-learn] Domain ${host} auto-learned after ${learnResult.failureCount} ECONNRESET failures`, { type: 'PUPPETEER_LEARN' });
+          } else if (learnResult.pending) {
+            this.logger.info(`[puppeteer-learn] Domain ${host} pending approval after ${learnResult.failureCount} failures`, { type: 'PUPPETEER_LEARN' });
+          } else if (learnResult.tracked) {
+            this.logger.debug(`[puppeteer-learn] Tracked failure ${learnResult.failureCount}/${this._puppeteerDomainManager.config.settings.autoLearnThreshold} for ${host}`, { type: 'PUPPETEER_LEARN' });
+          }
+        }
+        
+        // Puppeteer fallback for TLS-fingerprinting sites (ECONNRESET often means JA3/JA4 blocking)
+        if (this.puppeteerFallbackOnEconnreset && this._shouldUsePuppeteerFallback(host)) {
+          this.logger.info(`[puppeteer] Attempting Puppeteer fallback for ${normalizedUrl} (ECONNRESET on TLS-fingerprinting site)`, { type: 'PUPPETEER' });
+          try {
+            const puppeteer = await this._getPuppeteerFetcher();
+            if (puppeteer) {
+              const puppeteerResult = await puppeteer.fetch(normalizedUrl, {
+                timeout: this.requestTimeoutMs
+              });
+              
+              if (puppeteerResult.success) {
+                this.logger.info(`[puppeteer] Success for ${normalizedUrl}: ${puppeteerResult.httpStatus}`, { type: 'PUPPETEER' });
+                this._noteHostSuccess(this._safeHost(normalizedUrl, host));
+                this.noteSuccess(host);
+                
+                // Build fetchMeta compatible with standard network fetch
+                const fetchMeta = {
+                  requestStartedIso: new Date().toISOString(),
+                  fetchedAtIso: new Date().toISOString(),
+                  httpStatus: puppeteerResult.httpStatus,
+                  contentType: 'text/html',
+                  contentLength: puppeteerResult.contentLength,
+                  contentEncoding: null,
+                  etag: null,
+                  lastModified: null,
+                  redirectChain: puppeteerResult.finalUrl !== normalizedUrl
+                    ? JSON.stringify([normalizedUrl, puppeteerResult.finalUrl])
+                    : null,
+                  referrerUrl: context.referrerUrl || null,
+                  crawlDepth: context.depth ?? null,
+                  ttfbMs: null,
+                  downloadMs: puppeteerResult.durationMs,
+                  totalMs: puppeteerResult.durationMs,
+                  bytesDownloaded: puppeteerResult.contentLength,
+                  transferKbps: null,
+                  conditional: false,
+                  fetchMethod: 'puppeteer-fallback'
+                };
+                
+                this.emit('fetch:success', { url: puppeteerResult.finalUrl, status: puppeteerResult.httpStatus, fetchMeta });
+                return this._buildResult({
+                  status: 'success',
+                  source: 'network',
+                  url: puppeteerResult.finalUrl,
+                  html: puppeteerResult.html,
+                  fetchMeta,
+                  decision
+                });
+              } else {
+                this.logger.warn(`[puppeteer] Failed for ${normalizedUrl}: ${puppeteerResult.error}`, { type: 'PUPPETEER' });
+              }
+            }
+          } catch (puppeteerError) {
+            this.logger.warn(`[puppeteer] Error during fallback for ${normalizedUrl}: ${puppeteerError.message}`, { type: 'PUPPETEER' });
+          }
+        }
       }
       const lastRetryMeta = context && typeof context === 'object' && context.__networkRetry ? context.__networkRetry : null;
       this._recordNetworkError(normalizedUrl, isTimeoutError ? 'timeout' : 'network', error, {

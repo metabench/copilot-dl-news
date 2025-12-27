@@ -88,6 +88,7 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
         onStop: () => this._stopServer(),
         onUrlDetected: (filePath, url) => this._setServerUrl(filePath, url),
         onOpenUrl: (url) => this._openInBrowser(url),
+        onSelectServer: (server) => this._selectServer(server),
         autoRebuildUiClient: this._autoRebuildUiClient,
         onRebuildUiClient: () => this._rebuildUiClient(),
         onToggleAutoRebuildUiClient: (enabled) => this._setAutoRebuildUiClient(enabled)
@@ -156,6 +157,7 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
         }
         
         this._sidebar.setServers(this._servers);
+        this._contentArea.setServers(this._servers);
         this._debugLog("[ZServerApp] Servers set on sidebar");
         
         this._api.onServerLog(({ filePath, type, data }) => {

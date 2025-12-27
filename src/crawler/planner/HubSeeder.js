@@ -14,7 +14,8 @@ class HubSeeder {
     baseUrl,
     logger = console,
     planCapture = null,
-    disableDbRecording = false
+    disableDbRecording = false,
+    costEstimates = null
   } = {}) {
     this.enqueueRequest = typeof enqueueRequest === 'function' ? enqueueRequest : null;
     this.normalizeUrl = typeof normalizeUrl === 'function' ? normalizeUrl : null;
@@ -25,9 +26,10 @@ class HubSeeder {
     this.logger = logger;
     this.planCapture = planCapture || null;
     this.disableDbRecording = !!disableDbRecording;
+    this.costEstimates = costEstimates || null;
   }
 
-  async seedPlan({ host, sectionSlugs = [], countryCandidates = [], navigationLinks = [], maxSeeds = 50 }) {
+  async seedPlan({ host, sectionSlugs = [], countryCandidates = [], navigationLinks = [], maxSeeds = 50, costEstimates = null }) {
     if (!this.enqueueRequest) {
       return {
         seededCount: 0,
@@ -37,9 +39,13 @@ class HubSeeder {
         navigationCandidateCount: Array.isArray(navigationLinks) ? navigationLinks.length : 0,
         navigationSeededCount: 0,
         navigationSample: [],
-        sampleSeeded: []
+        sampleSeeded: [],
+        costAwareRanking: false
       };
     }
+
+    // Merge costEstimates from constructor or method param (method param takes precedence)
+    const activeCostEstimates = costEstimates || this.costEstimates;
 
     const totalPrioritisation = isTotalPrioritisationEnabled();
 
@@ -47,12 +53,18 @@ class HubSeeder {
       ? []
       : sectionSlugs.map((slug) => this._buildAbsolutePathUrl([slug])).filter(Boolean);
 
-    const entries = this._buildHubEntries({
+    let entries = this._buildHubEntries({
       sectionSlugs,
       countryCandidates,
       navigationLinks,
       totalPrioritisation
     });
+
+    // Apply cost-aware ranking if cost estimates are available
+    const costAwareRanking = this._applyCostAwareRanking(entries, activeCostEstimates);
+    if (costAwareRanking.applied) {
+      entries = costAwareRanking.sortedEntries;
+    }
 
     const baseCap = typeof maxSeeds === 'number' && maxSeeds > 0 ? maxSeeds : 50;
     const cap = totalPrioritisation
@@ -168,7 +180,9 @@ class HubSeeder {
       navigationCandidateCount: totalPrioritisation ? 0 : (Array.isArray(navigationLinks) ? navigationLinks.length : 0),
       navigationSeededCount: navigationSeeded.length,
       navigationSample: navigationSeeded.slice(0, 5),
-      sampleSeeded: seeded.slice(0, 5)
+      sampleSeeded: seeded.slice(0, 5),
+      costAwareRanking: costAwareRanking.applied,
+      costStats: costAwareRanking.stats
     };
   }
 
@@ -334,6 +348,101 @@ class HubSeeder {
     } catch (_) {
       return url;
     }
+  }
+
+  /**
+   * Apply cost-aware ranking to hub entries using query cost estimates.
+   * Sorts entries by estimated query cost (lowest first) to prioritize
+   * low-cost operations, while preserving existing priority bias logic.
+   * 
+   * @param {Array} entries - Hub entries to rank
+   * @param {Object|null} costEstimates - Cost model from QueryCostEstimatorPlugin
+   * @returns {Object} { applied: boolean, sortedEntries: Array, stats: Object }
+   */
+  _applyCostAwareRanking(entries, costEstimates) {
+    // No cost estimates available - return original order
+    if (!costEstimates || !costEstimates.available) {
+      return {
+        applied: false,
+        sortedEntries: entries,
+        stats: {
+          reason: costEstimates ? (costEstimates.reason || 'no-telemetry') : 'no-cost-estimates',
+          totalEntries: entries.length
+        }
+      };
+    }
+
+    const model = costEstimates.model || {};
+    const hubCosts = costEstimates.hubCosts || [];
+    
+    // Build a URL -> estimatedCost map for quick lookup
+    const costByUrl = new Map();
+    for (const hc of hubCosts) {
+      if (hc.hubUrl && typeof hc.estimatedMs === 'number') {
+        costByUrl.set(hc.hubUrl, hc.estimatedMs);
+      }
+    }
+
+    // Default cost for entries without estimates (use average or fallback)
+    const defaultCost = model.totalSamples > 0
+      ? Math.round(costEstimates.totalEstimatedMs / Math.max(1, hubCosts.length))
+      : 100; // Conservative fallback
+
+    // Enrich entries with estimated cost
+    const enrichedEntries = entries.map(entry => {
+      const estimatedCost = costByUrl.get(entry.url) ?? defaultCost;
+      return {
+        ...entry,
+        meta: {
+          ...entry.meta,
+          estimatedCostMs: estimatedCost
+        }
+      };
+    });
+
+    // Sort by estimated cost (ascending), then by priorityBias (descending) as tiebreaker
+    const sortedEntries = enrichedEntries.slice().sort((a, b) => {
+      const costA = a.meta.estimatedCostMs ?? defaultCost;
+      const costB = b.meta.estimatedCostMs ?? defaultCost;
+      
+      // Primary: sort by cost ascending (lower cost first)
+      if (costA !== costB) {
+        return costA - costB;
+      }
+      
+      // Secondary: sort by priorityBias descending (higher priority first)
+      const biasA = a.meta.priorityBias ?? 0;
+      const biasB = b.meta.priorityBias ?? 0;
+      return biasB - biasA;
+    });
+
+    // Calculate stats
+    const costs = sortedEntries.map(e => e.meta.estimatedCostMs ?? defaultCost);
+    const stats = {
+      reason: 'cost-aware-ranking-applied',
+      totalEntries: sortedEntries.length,
+      totalSamples: model.totalSamples || 0,
+      avgCostMs: costs.length > 0 ? Math.round(costs.reduce((a, b) => a + b, 0) / costs.length) : 0,
+      minCostMs: costs.length > 0 ? Math.min(...costs) : 0,
+      maxCostMs: costs.length > 0 ? Math.max(...costs) : 0,
+      withEstimates: hubCosts.length,
+      withoutEstimates: sortedEntries.length - hubCosts.length
+    };
+
+    // Emit telemetry for cost-aware ranking
+    this._emitMilestone({
+      kind: 'hub-seeder.cost-aware-ranking',
+      message: `Applied cost-aware ranking to ${sortedEntries.length} hubs (avg ${stats.avgCostMs}ms, range ${stats.minCostMs}-${stats.maxCostMs}ms)`,
+      details: stats
+    });
+
+    this._log(`HubSeeder: Cost-aware ranking applied — ${sortedEntries.length} hubs, avg ${stats.avgCostMs}ms`);
+
+    return {
+      applied: true,
+      sortedEntries,
+      stats
+    };
   }
 
   _alreadySeededHub(normalized) {

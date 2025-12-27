@@ -3,6 +3,7 @@
 const { CrawlContext } = require('../context');
 const { RetryCoordinator } = require('../retry');
 const { UrlDecisionOrchestrator } = require('../decisions');
+const ProgressModel = require('../progress/ProgressModel');
 
 /**
  * NewAbstractionsAdapter - Bridge between new abstractions and existing crawler.
@@ -59,6 +60,11 @@ class NewAbstractionsAdapter {
         skipQueryUrls: !crawler.config?.allowQueryUrls,
         respectRobots: crawler.config?.respectRobots ?? true
       }
+    });
+
+    this.progressModel = new ProgressModel(this.context, null, {
+      etaAlpha: 0.2,
+      maxEtaHistory: 20
     });
 
     // Track inconsistencies
@@ -220,9 +226,27 @@ class NewAbstractionsAdapter {
       ctx.resume();
     });
 
+    // Wire FetchPipeline events if available
+    if (crawler.fetchPipeline && typeof crawler.fetchPipeline.on === 'function') {
+      crawler.fetchPipeline.on('fetch:start', (data) => {
+        ctx.emit('fetch:start', data);
+      });
+      crawler.fetchPipeline.on('fetch:success', (data) => {
+        ctx.emit('fetch:success', data);
+      });
+      crawler.fetchPipeline.on('fetch:error', (data) => {
+        ctx.emit('fetch:error', data);
+      });
+      crawler.fetchPipeline.on('cache:hit', (data) => {
+        ctx.recordCacheHit();
+        ctx.emit('cache:hit', data);
+      });
+    }
+
     // Expose context on crawler for inspection
     crawler._shadowContext = ctx;
     crawler._abstractionsAdapter = this;
+    crawler.progressModel = this.progressModel;
 
     // Periodically check consistency
     this._consistencyInterval = setInterval(() => {

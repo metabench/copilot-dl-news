@@ -474,3 +474,43 @@ AGI-accumulated knowledge catalog.
 **Example**: docs/agents/command-rules.md -> pointer to docs/COMMAND_EXECUTION_GUIDE.md
 
 ---
+
+## Controlled Process Wrapper (Snapshot + SSE + Commands)
+
+**Added**: 2025-12-21
+**Context**: Full-stack methodology for jsgui3-server + UI dashboards
+
+**When to use**: Any long-running backend job (crawl, ingest, geo import) needs to be safely controllable (start/pause/resume/stop/step) and observable by a UI without coupling the UI to internal job implementation.
+
+**Steps/Details**:
+1. Define a small, stable state envelope: {status, stageId, progress, stall, logs, startedAt, elapsed, error, controls:{pausePending,...}, step:{enabled,awaiting,token,fromStageId,nextStageId}}.
+1. Expose a read path and a stream path: GET /state returns the latest snapshot; GET /events is SSE that emits init + subsequent typed events (stage-change, progress, log, stall, awaiting-step, complete, error).
+1. Expose command endpoints as the ONLY write surface: POST /start (options), POST /pause, POST /resume, POST /cancel, POST /next (for step mode).
+1. Implement a thin server-side wrapper around the real job that (a) owns the state envelope, (b) translates internal events into typed UI events, and (c) binds control hooks (stop/pause/resume/next).
+1. Keep job internals free of HTTP/UI concerns: the wrapper injects callbacks (emitProgress, emitStage, checkPaused, awaitStep) or uses an observable/event emitter adapter.
+1. Add unit tests for the wrapper primitives (e.g., step gate, pausePending) and a small check script for the UI page to validate end-to-end wiring deterministically (no ‘debug-by-guessing’).
+1. Make options explicit and namespaced; return the resolved options in the init event so the UI can render what it’s actually running.
+
+**Example**: GeoImportStateManager + SSE (/api/geo-import/events) + command endpoints; step mode via StepGate + /api/geo-import/next
+
+---
+
+## Mode Isolation via Namespaced Config + Plugin Contracts
+
+**Added**: 2025-12-21
+**Context**: Prevent ‘feature bleed’ between intelligent crawl and geo crawl
+
+**When to use**: You have multiple crawl “modes” (e.g., intelligent crawl, geo-focused crawl) and features/decision rules must not leak across modes, while still allowing shared primitives (fetching, persistence, telemetry).
+
+**Steps/Details**:
+1. Define a first-class mode identifier (e.g., modeId: 'intelligent'|'geo'|'basic') and require it in every run config.
+1. Split config into namespaced blocks per mode (config.intelligent.*, config.geo.*). Never share a single ‘smart’ boolean flag across modes.
+1. Create a plugin/contract boundary: each mode supplies (a) decision sets, (b) prioritization policy, (c) hub discovery strategy, (d) optional enrichers. Shared core only calls through the interface.
+1. At runtime, validate and log the resolved mode + decision-set IDs at startup (and expose them in the UI state envelope). Fail fast on unknown/unsupported combinations.
+1. Keep mode-specific code in mode-specific modules/directories; forbid cross-imports via code review + dependency scans (js-scan ripple analysis) when refactoring.
+1. Write contract tests per mode: same shared harness, different plugin implementations; test that geo mode does not activate intelligent-only features unless explicitly enabled in geo namespace.
+1. Surface configuration in the UI: show active mode, active decision sets, and which optional features are ON/OFF so operators can confirm behavior before crawling.
+
+**Example**: Separate decision-set registries: geo:place-hub-search vs intelligent:news-hub-search; shared runner consumes IModePlugin interface
+
+---

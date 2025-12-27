@@ -53,6 +53,8 @@ async function main() {
 
   assert(typeof html === "string" && html.length > 100, "Expected rendered HTML output");
   assert(html.includes("cw-title-bar"), "Expected title bar markup");
+  assert(html.includes("cw-title-bar__btn--tools"), "Expected tools button markup");
+  assert(html.includes("cw-tools-panel"), "Expected tools panel markup");
   assert(html.includes("cw-control-buttons"), "Expected control buttons markup");
   assert(html.includes("cw-progress-panel"), "Expected progress panel markup");
   assert(html.includes("cw-log-viewer"), "Expected log viewer markup");

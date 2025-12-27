@@ -1,5 +1,7 @@
 "use strict";
 
+const { getAppCardSpecForServer } = require("../appCatalog");
+
 function createServerItemControl(jsgui, { StringControl }) {
   class ServerItemControl extends jsgui.Control {
     constructor(spec = {}) {
@@ -18,6 +20,9 @@ function createServerItemControl(jsgui, { StringControl }) {
       this._runningUrl = null;
       this._clickHandlerAttached = false;
       
+      // Get app card spec to check if this is a featured app
+      this._appSpec = getAppCardSpecForServer(this._server);
+      
       if (!spec.el) {
         this.compose();
       }
@@ -26,6 +31,27 @@ function createServerItemControl(jsgui, { StringControl }) {
 
     compose() {
       const ctx = this.context;
+      const isFeatured = this._appSpec && this._appSpec.isMajor;
+      
+      // Add featured class for special styling
+      if (isFeatured) {
+        this.add_class("zs-server-item--featured");
+        this.add_class(`zs-server-item--${this._appSpec.accent}`);
+      }
+      
+      // Large card image for featured apps
+      if (isFeatured && this._appSpec.svgPath) {
+        const cardImage = new jsgui.div({ context: ctx, class: "zs-server-item__card-image" });
+        const cardImg = new jsgui.img({
+          context: ctx,
+          class: "zs-server-item__card-img"
+        });
+        cardImg.dom.attributes.src = this._appSpec.svgPath;
+        cardImg.dom.attributes.alt = this._appSpec.title || "";
+        cardImage.add(cardImg);
+        this.add(cardImage);
+        this._cardImage = cardImage;
+      }
       
       // Status indicator (running/stopped)
       const statusIndicator = new jsgui.div({ context: ctx, class: "zs-server-item__status" });

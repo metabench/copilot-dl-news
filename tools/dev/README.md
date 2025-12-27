@@ -585,6 +585,35 @@ node tools/dev/mcp-check.js --quick --json
 - `1` — One or more servers failed
 - `2` — Configuration error
 
+## `svg-scan` — SVG Element Discovery & Query Tool
+
+`svg-scan` scans SVG files for elements matching specific criteria (colors, types, patterns). Useful for analyzing road networks, bridge positions, and other structural elements in complex diagrams.
+
+**Quick Examples:**
+```powershell
+# Find all road paths (by stroke color)
+node tools/dev/svg-scan.js diagram.svg --roads
+
+# Find bridge groups (by comment/id patterns)
+node tools/dev/svg-scan.js diagram.svg --bridges
+
+# List all elements of a type
+node tools/dev/svg-scan.js diagram.svg --elements path --verbose
+
+# Custom attribute query
+node tools/dev/svg-scan.js diagram.svg --query "stroke=#9a5519"
+
+# JSON output for automation
+node tools/dev/svg-scan.js diagram.svg --roads --json
+```
+
+**Features:**
+- **Road detection**: Finds paths with road-like stroke colors and extracts start/end coordinates
+- **Duplicate detection**: Groups roads with similar endpoints to identify redundant paths
+- **Bridge detection**: Finds groups with bridge-related comments and extracts translate positions
+- **Context awareness**: Extracts preceding XML comments for each element
+- **JSON output**: Machine-readable output for pipeline integration
+
 ## `svg-collisions` — SVG Collision Detection & Auto-Fix
 
 `svg-collisions` detects problematic overlapping elements in SVG files using Puppeteer for accurate bounding box computation. It intelligently filters intentional design patterns (text on backgrounds, nested containers) to focus on real issues like text overlapping text.
@@ -632,6 +661,118 @@ When `--fix` is used, the tool automatically applies repair suggestions:
 - Adjusts `x`, `y` attributes for direct positioning
 - Modifies `transform="translate()"` for transformed elements
 - Use `--dry-run` to preview changes without modifying files
+
+## `svg-overflow` — Text Boundary & Padding Validation
+
+`svg-overflow` detects text content that overflows its container boundaries or has insufficient padding. Unlike `svg-collisions` (which finds overlapping elements), this tool focuses on text-to-boundary violations that are invisible to overlap detection.
+
+**Quick Examples:**
+```powershell
+# Basic overflow check (estimation mode)
+node tools/dev/svg-overflow.js diagram.svg
+
+# JSON output for automation
+node tools/dev/svg-overflow.js diagram.svg --json
+
+# Custom minimum padding requirement
+node tools/dev/svg-overflow.js diagram.svg --min-padding 10
+```
+
+**Puppeteer Mode (accurate rendered measurements):**
+```powershell
+# Use Puppeteer for precise bounding boxes
+node tools/dev/svg-overflow.js diagram.svg --puppeteer
+
+# Check a specific named container
+node tools/dev/svg-overflow.js diagram.svg --container "Server Detection Logic"
+
+# List all detected containers in the SVG
+node tools/dev/svg-overflow.js diagram.svg --list-containers
+
+# Check all labeled containers at once
+node tools/dev/svg-overflow.js diagram.svg --all-containers --json
+```
+
+**What it detects:**
+- 🔴 **HIGH**: Text extending beyond container rect bounds (left, right, top, or bottom overflow)
+- 🟠 **MEDIUM**: Insufficient padding between text and container edge
+
+**How it works (estimation mode):**
+1. Parses SVG and identifies text elements with >10 characters
+2. Estimates text width based on font-size, font-family, and character metrics
+3. Finds the nearest container rect (prioritizes sibling rects, then closest ancestor)
+4. Calculates text position relative to container using transform accumulation
+5. Checks if text extends beyond container bounds in all directions (left, right, top, bottom)
+6. Validates minimum padding requirements (default: 5px)
+
+**Vertical overflow detection:**
+- Estimates text height using font-size (baseline model: ascenders ≈ 0.8×fontSize, descenders ≈ 0.2×fontSize)
+- Accumulates Y transforms from nested groups to compute text position relative to container
+- Uses proportional margins (50% of container dimension) to catch significantly overflowing text
+- Filters out panel titles that intentionally sit at the container's top edge
+
+**How it works (Puppeteer mode):**
+1. Renders the SVG in a headless browser
+2. Uses `getBBox()` + `getScreenCTM()` for accurate bounding box measurements
+3. Finds labeled containers (groups with rect + title text)
+4. Checks all text within each container for overflows in all directions
+5. No font-width estimation needed — uses real rendered widths
+
+**Smart filtering:**
+- Skips "floating" labels (centered text with no explicit x position that aren't siblings of container rects)
+- Prioritizes sibling rects over ancestor rects for accurate container detection
+- Handles nested transform chains correctly
+
+**Why this matters for AI agents:**
+- `svg-collisions` misses boundary violations because the text isn't overlapping another element
+- Long technical terms (like "application_layer_protocol_negotiation") often overflow unnoticed
+- Nested transforms make manual position calculation error-prone
+- Estimation mode now handles both horizontal AND vertical overflows via transform accumulation
+
+**Best Practice:** Run both tools when validating SVGs:
+```powershell
+# Full SVG validation pipeline
+node tools/dev/svg-collisions.js diagram.svg --strict
+node tools/dev/svg-overflow.js diagram.svg
+node tools/dev/svg-contrast.js diagram.svg
+
+# Or use Puppeteer for more accurate measurements (slower)
+node tools/dev/svg-overflow.js diagram.svg --all-containers
+```
+
+## `svg-contrast` — Color Contrast Analyzer & Fixer
+
+`svg-contrast` analyzes text-on-background color combinations for WCAG compliance. It detects contrast failures and can auto-fix by adjusting text fill colors to meet accessibility requirements.
+
+**Quick Examples:**
+```powershell
+# Analyze contrast issues
+node tools/dev/svg-contrast.js diagram.svg
+
+# JSON output for automation
+node tools/dev/svg-contrast.js diagram.svg --json
+
+# Auto-fix contrast failures (preview first)
+node tools/dev/svg-contrast.js diagram.svg --fix --dry-run
+node tools/dev/svg-contrast.js diagram.svg --fix
+```
+
+**What it detects:**
+- 🔴 **FAIL**: Contrast < 3:1 (inaccessible)
+- 🟠 **AA-large**: 3:1 - 4.5:1 (only passes for large text 18pt+)
+- 🟢 **AA**: 4.5:1 - 7:1 (normal text minimum)
+- 🟢 **AAA**: ≥ 7:1 (enhanced accessibility)
+
+**Metrics provided:**
+- Contrast ratio (WCAG formula)
+- Relative luminance for both text and background
+- WCAG compliance level
+- Suggested fix color with improved ratio
+
+**Auto-fix behavior:**
+- Generates dark variants for light/mid backgrounds
+- Generates light variants for dark backgrounds
+- Falls back to black or white when variants don't achieve AA
 
 ## `tmp-prune` — Scratch Directory Pruning
 
@@ -727,6 +868,99 @@ node tools/dev/session-archive.js --remove 2025-11-14-binding-plugin --fix
 - `--limit <number>` — Limit results (default: 20)
 
 **Archive Location:** `docs/sessions/archive/sessions-archive.zip` + `archive-manifest.json`
+
+## `task-events` — Crawl & Task Event Query Tool
+
+`task-events` queries the `task_events` table for crawl telemetry, background task events, and other long-running operations. Designed for AI agents to analyze crawl behavior without parsing logs.
+
+**Quick Examples:**
+```powershell
+# List all tasks (crawls, background jobs)
+node tools/dev/task-events.js --list
+node tools/dev/task-events.js --list --type crawl
+
+# Get events for a specific task
+node tools/dev/task-events.js --get crawl-2025-01-01-001
+node tools/dev/task-events.js --get crawl-2025-01-01-001 --severity error
+
+# Get summary statistics
+node tools/dev/task-events.js --summary crawl-2025-01-01-001
+
+# Find problems (errors + warnings)
+node tools/dev/task-events.js --problems crawl-2025-01-01-001
+
+# Get lifecycle timeline
+node tools/dev/task-events.js --timeline crawl-2025-01-01-001
+
+# Search across all events
+node tools/dev/task-events.js --search example.com
+node tools/dev/task-events.js --search "rate limit" --type crawl
+
+# Storage statistics
+node tools/dev/task-events.js --stats
+
+# Prune old events (dry-run first)
+node tools/dev/task-events.js --prune 30
+node tools/dev/task-events.js --prune 30 --fix
+
+# JSON output for automation
+node tools/dev/task-events.js --list --json
+node tools/dev/task-events.js --summary crawl-001 --json
+```
+
+**Filters:**
+- `--type <type>` — Filter by task type (crawl, analysis, compression)
+- `--category <cat>` — Filter by event category (lifecycle, work, error, metric)
+- `--severity <sev>` — Filter by severity (info, warn, error)
+- `--scope <scope>` — Filter by scope (domain:example.com, phase:discovery)
+- `--since-seq <n>` — Pagination cursor (get events after sequence N)
+- `--limit <n>` — Max results (default: 50)
+
+**Chinese Aliases:**
+- `--列` (list), `--取` (get), `--简` (summary), `--错` (problems), `--线` (timeline), `--搜` (search), `--统` (stats), `--清` (prune)
+
+**Use Cases for AI Agents:**
+1. **Crawl debugging**: Find why a crawl failed with `--problems`
+2. **Performance analysis**: Check per-domain timing in `--summary` output
+3. **Pattern detection**: Search for recurring errors across crawls
+4. **Cleanup**: Prune old events to keep database lean
+
+## `mini-crawl` — Small Test Crawl with Event Logging
+
+`mini-crawl` runs a small test crawl with full event persistence to `task_events`, enabling detailed post-crawl analysis.
+
+**Quick Examples:**
+```powershell
+# Crawl a single page (up to 3 pages by default)
+node tools/dev/mini-crawl.js https://example.com
+
+# Crawl up to 10 pages
+node tools/dev/mini-crawl.js https://example.com --max-pages 10
+
+# Use a specific operation
+node tools/dev/mini-crawl.js https://example.com --operation discovery
+
+# List available operations
+node tools/dev/mini-crawl.js --list-operations
+
+# Verbose output
+node tools/dev/mini-crawl.js https://example.com -v
+```
+
+**Workflow:**
+1. Run a mini-crawl: `node tools/dev/mini-crawl.js https://example.com`
+2. Note the job ID printed at completion
+3. Analyze: `node tools/dev/task-events.js --summary <jobId>`
+4. Debug problems: `node tools/dev/task-events.js --problems <jobId>`
+5. View in UI: `npm run ui:crawl-observer` → http://localhost:3007
+
+**Options:**
+- `--operation <name>` — Crawl operation (default: quickDiscovery)
+- `--max-pages <n>` — Max pages to fetch (default: 3)
+- `--max-depth <n>` — Max link depth (default: 1)
+- `--timeout <ms>` — Timeout in ms (default: 30000)
+- `-v, --verbose` — Verbose logging
+- `--json` — Output results as JSON
 
 ## `what-next` — Active Session Summary
 

@@ -8,6 +8,9 @@
  * - GET /api/v1/articles/:id - Get single article
  * - GET /api/v1/articles/search - Full-text search
  * - GET /api/v1/articles/:id/similar - Similar articles (Content Similarity Engine)
+ * - GET /api/v1/articles/:id/recommendations - Recommended articles (Hybrid scoring)
+ * - GET /api/v1/articles/:id/summary - Article summary (TextRank extractive)
+ * - GET /api/v1/articles/:id/sentiment - Article sentiment analysis
  */
 
 const express = require('express');
@@ -18,6 +21,9 @@ const express = require('express');
  * @param {Object} options.articlesAdapter - Articles database adapter
  * @param {Object} [options.searchAdapter] - Search adapter for FTS
  * @param {Object} [options.duplicateDetector] - Duplicate detector for similarity
+ * @param {Object} [options.recommendationEngine] - Recommendation engine for hybrid recommendations
+ * @param {Object} [options.summarizer] - Summarizer for article summaries
+ * @param {Object} [options.sentimentAnalyzer] - Sentiment analyzer for article sentiment
  * @param {Object} [options.logger] - Logger instance
  * @returns {express.Router} Articles router
  */
@@ -26,6 +32,9 @@ function createArticlesRouter(options = {}) {
     articlesAdapter, 
     searchAdapter = null, 
     duplicateDetector = null,
+    recommendationEngine = null,
+    summarizer = null,
+    sentimentAnalyzer = null,
     logger = console 
   } = options;
 
@@ -230,6 +239,288 @@ function createArticlesRouter(options = {}) {
         success: false,
         error: 'INTERNAL_ERROR',
         message: 'Failed to get similar articles'
+      });
+    }
+  });
+
+  /**
+   * GET /api/v1/articles/:id/recommendations
+   * Get recommended articles using hybrid scoring (content + tags + trending)
+   * 
+   * Query params:
+   * - limit: Maximum results (default: 10, max: 50)
+   * - strategy: Recommendation strategy (default: 'hybrid')
+   *   - 'hybrid': Combines content similarity, tag overlap, and trending
+   *   - 'content': Content-based only (SimHash similarity)
+   *   - 'tag': Tag-based only (keyword/category overlap)
+   *   - 'trending': Trending articles in same category
+   */
+  router.get('/:id/recommendations', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+
+      if (!id || isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          error: 'BAD_REQUEST',
+          message: 'Invalid article ID'
+        });
+      }
+
+      // Verify article exists
+      const article = articlesAdapter.getArticleById(id);
+
+      if (!article) {
+        return res.status(404).json({
+          success: false,
+          error: 'NOT_FOUND',
+          message: `Article ${id} not found`
+        });
+      }
+
+      // Check if recommendation engine is available
+      if (!recommendationEngine) {
+        return res.status(501).json({
+          success: false,
+          error: 'NOT_IMPLEMENTED',
+          message: 'Recommendation Engine not configured. Initialize with recommendationEngine.'
+        });
+      }
+
+      // Parse options
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
+      const strategy = req.query.strategy || 'hybrid';
+      
+      // Validate strategy
+      const validStrategies = ['hybrid', 'content', 'tag', 'trending'];
+      if (!validStrategies.includes(strategy)) {
+        return res.status(400).json({
+          success: false,
+          error: 'BAD_REQUEST',
+          message: `Invalid strategy. Must be one of: ${validStrategies.join(', ')}`
+        });
+      }
+
+      // Get recommendations
+      const result = await recommendationEngine.getRecommendations(id, {
+        strategy,
+        limit
+      });
+
+      // Format response according to spec
+      res.json({
+        success: true,
+        articleId: id,
+        articleTitle: article.title,
+        recommendations: result.recommendations.map(rec => ({
+          id: rec.contentId,
+          title: rec.title,
+          host: rec.host,
+          url: rec.url,
+          score: Math.round(rec.score * 100) / 100,
+          reasons: rec.reasons
+        })),
+        strategy: result.strategy,
+        computedAt: result.computedAt,
+        cached: result.cached,
+        count: result.recommendations.length,
+        options: { limit, strategy }
+      });
+    } catch (err) {
+      logger.error('[articles] Error getting recommendations:', err);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Failed to get recommendations'
+      });
+    }
+  });
+
+  /**
+   * GET /api/v1/articles/:id/summary
+   * Get article summary using TextRank extractive summarization
+   * 
+   * Query params:
+   * - length: Summary length (default: 'short')
+   *   - 'brief': 1 sentence (~25 words)
+   *   - 'short': 3 sentences (~75 words)
+   *   - 'full': ~150 words (paragraph)
+   *   - 'bullets': 5 key points as bullet list
+   * - format: Output format (default: 'text')
+   *   - 'text': Plain text summary
+   *   - 'bullets': Bullet point format (same as length=bullets)
+   *   - 'json': Full metadata
+   * - regenerate: Force regeneration, ignore cache (default: false)
+   */
+  router.get('/:id/summary', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+
+      if (!id || isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          error: 'BAD_REQUEST',
+          message: 'Invalid article ID'
+        });
+      }
+
+      // Verify article exists
+      const article = articlesAdapter.getArticleById(id);
+
+      if (!article) {
+        return res.status(404).json({
+          success: false,
+          error: 'NOT_FOUND',
+          message: `Article ${id} not found`
+        });
+      }
+
+      // Check if summarizer is available
+      if (!summarizer) {
+        return res.status(501).json({
+          success: false,
+          error: 'NOT_IMPLEMENTED',
+          message: 'Summarization Engine not configured. Initialize with summarizer.'
+        });
+      }
+
+      // Parse options
+      let lengthType = req.query.length || 'short';
+      const format = req.query.format || 'text';
+      const regenerate = req.query.regenerate === 'true';
+      
+      // Validate length type
+      const validLengths = ['brief', 'short', 'full', 'bullets'];
+      if (!validLengths.includes(lengthType)) {
+        return res.status(400).json({
+          success: false,
+          error: 'BAD_REQUEST',
+          message: `Invalid length. Must be one of: ${validLengths.join(', ')}`
+        });
+      }
+
+      // If format is 'bullets', override length type
+      if (format === 'bullets' && lengthType !== 'bullets') {
+        lengthType = 'bullets';
+      }
+
+      // Generate or retrieve summary
+      const result = await summarizer.summarizeArticle(id, {
+        length: lengthType,
+        regenerate
+      });
+
+      // Format response based on format parameter
+      if (format === 'json') {
+        res.json({
+          success: true,
+          articleId: id,
+          articleTitle: article.title,
+          length: result.length,
+          summary: result.summary,
+          sentenceCount: result.sentenceCount,
+          wordCount: result.wordCount,
+          method: result.method,
+          cached: result.cached,
+          generatedAt: result.generatedAt || result.createdAt
+        });
+      } else {
+        // Simple text or bullets format
+        res.json({
+          success: true,
+          articleId: id,
+          length: result.length,
+          summary: result.summary,
+          sentenceCount: result.sentenceCount,
+          wordCount: result.wordCount,
+          method: result.method,
+          cached: result.cached,
+          generatedAt: result.generatedAt || result.createdAt
+        });
+      }
+    } catch (err) {
+      logger.error('[articles] Error getting summary:', err);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Failed to generate summary'
+      });
+    }
+  });
+
+  /**
+   * GET /api/v1/articles/:id/sentiment
+   * Get article sentiment analysis
+   * 
+   * Query params:
+   * - includeEntities: Include entity-level sentiment (default: false)
+   * - regenerate: Force regeneration, ignore cache (default: false)
+   * - includeDetails: Include word-level details (default: false)
+   */
+  router.get('/:id/sentiment', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+
+      if (!id || isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          error: 'BAD_REQUEST',
+          message: 'Invalid article ID'
+        });
+      }
+
+      // Verify article exists
+      const article = articlesAdapter.getArticleById(id);
+
+      if (!article) {
+        return res.status(404).json({
+          success: false,
+          error: 'NOT_FOUND',
+          message: `Article ${id} not found`
+        });
+      }
+
+      // Check if sentiment analyzer is available
+      if (!sentimentAnalyzer) {
+        return res.status(501).json({
+          success: false,
+          error: 'NOT_IMPLEMENTED',
+          message: 'Sentiment Analyzer not configured. Initialize with sentimentAnalyzer.'
+        });
+      }
+
+      // Parse options
+      const includeEntities = req.query.includeEntities === 'true';
+      const regenerate = req.query.regenerate === 'true';
+      const includeDetails = req.query.includeDetails === 'true';
+
+      // Generate or retrieve sentiment analysis
+      const result = await sentimentAnalyzer.analyzeArticle(id, {
+        includeEntities,
+        regenerate,
+        includeDetails
+      });
+
+      res.json({
+        success: true,
+        articleId: id,
+        articleTitle: article.title,
+        overallScore: result.overallScore,
+        confidence: result.confidence,
+        breakdown: result.breakdown,
+        sentimentWordCount: result.sentimentWordCount,
+        sentenceCount: result.sentenceCount,
+        method: result.method,
+        entitySentiments: result.entitySentiments,
+        cached: result.cached,
+        analyzedAt: result.analyzedAt
+      });
+    } catch (err) {
+      logger.error('[articles] Error getting sentiment:', err);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Failed to analyze sentiment'
       });
     }
   });

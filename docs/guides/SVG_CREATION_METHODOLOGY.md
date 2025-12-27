@@ -529,7 +529,7 @@ module.exports = { SvgGenerator };
 
 ## Stage 6: Validation (MANDATORY QUALITY GATE)
 
-> ⚠️ **NON-NEGOTIABLE**: You MUST run both validation tools and resolve ALL high-severity issues before declaring an SVG complete. No exceptions.
+> ⚠️ **NON-NEGOTIABLE**: You MUST run all validation tools and resolve ALL high-severity issues before declaring an SVG complete. No exceptions.
 
 ### Pre-commit Validation Workflow
 
@@ -540,7 +540,10 @@ node tools/dev/svg-validate.js docs/diagrams/my-diagram.svg
 # 2. MANDATORY: Check for collisions and overlaps
 node tools/dev/svg-collisions.js docs/diagrams/my-diagram.svg --strict
 
-# 3. Validate all diagrams in a directory
+# 3. MANDATORY: Check for text overflow and padding issues
+node tools/dev/svg-overflow.js docs/diagrams/my-diagram.svg
+
+# 4. Validate all diagrams in a directory
 node tools/dev/svg-validate.js --dir docs/diagrams
 ```
 
@@ -551,12 +554,18 @@ node tools/dev/svg-validate.js --dir docs/diagrams
 | **XML Valid** | `svg-validate.js` | Zero errors |
 | **No Collisions** | `svg-collisions.js` | Zero 🔴 HIGH issues |
 | **Readable Text** | `svg-collisions.js` | No `[text-overlap]` issues |
+| **No Overflows** | `svg-overflow.js` | Zero 🔴 HIGH issues |
+| **Proper Padding** | `svg-overflow.js` | Review 🟠 MEDIUM issues |
 
 ### Why This Matters
 
-AI agents cannot "see" SVG output—they can only reason about coordinates mathematically. **Without running collision detection, layout bugs are invisible to the agent.** The tools provide the "eyes" that agents lack.
+AI agents cannot "see" SVG output—they can only reason about coordinates mathematically. **Without running validation tools, layout bugs are invisible to the agent.** The tools provide the "eyes" that agents lack.
 
-**Failure mode**: An agent creates an SVG, declares it complete, and delivers it with overlapping text or mispositioned boxes—because the agent trusted its mental model instead of objective measurement.
+**Two complementary tools:**
+- `svg-collisions.js` — Detects elements overlapping each other (text on text, shapes on shapes)
+- `svg-overflow.js` — Detects text that extends beyond its container boundaries (text-to-boundary violations)
+
+**Failure mode**: An agent creates an SVG, declares it complete, and delivers it with overlapping text or text that overflows boxes—because the agent trusted its mental model instead of objective measurement.
 
 ### Validation Checklist
 
@@ -574,11 +583,18 @@ AI agents cannot "see" SVG output—they can only reason about coordinates mathe
 - [ ] No `[text-clipped]` that truncates important content
 - [ ] Review all 🟡 LOW issues (intentional overlaps are okay, e.g., icons on containers)
 
+**Overflow (svg-overflow.js) — CRITICAL:**
+- [ ] Zero 🔴 HIGH severity issues (text extending beyond container)
+- [ ] Review all 🟠 MEDIUM issues (insufficient padding may be intentional)
+- [ ] Long technical terms fit within their boxes (abbreviate if needed)
+
+> **Note for themed diagrams (quest maps, D&D style):** These often have intentionally overlapping elements (step numbers in circles, decorative flourishes, paths over backgrounds). See the "Themed Diagrams" section below for specific validation guidance.
+
 ### What To Do When Issues Are Found
 
-1. **Read the issue report** — it gives element types and overlap dimensions
+1. **Read the issue report** — it gives element types and overflow/overlap dimensions
 2. **Identify the cause** — usually: wrong translate(), element too wide, text too long
-3. **Fix in the SVG** — adjust positions, reduce text, increase container size
+3. **Fix in the SVG** — adjust positions, reduce/abbreviate text, increase container size
 4. **Re-run validation** — iterate until zero HIGH issues
 
 ---
@@ -615,6 +631,7 @@ AI agents cannot "see" SVG output—they can only reason about coordinates mathe
 |------|---------|---------|
 | `svg-validate.js` | Structure validation | `node tools/dev/svg-validate.js <file>` |
 | `svg-collisions.js` | Visual collision detection | `node tools/dev/svg-collisions.js <file>` |
+| `svg-overflow.js` | Text boundary/overflow detection | `node tools/dev/svg-overflow.js <file>` |
 | `svg-gen.js` | Generate SVG from JSON | `node tools/dev/svg-gen.js <data> <output>` |
 
 ### Supported Templates (svg-gen.js)
@@ -625,6 +642,59 @@ AI agents cannot "see" SVG output—they can only reason about coordinates mathe
 - **timeline**: Roadmap/timeline with milestones
 - **hierarchy**: Organizational chart or tree structure
 - **comparison**: Side-by-side comparison of options
+
+---
+
+## Text Sizing Guidelines (Critical for AI Agents)
+
+> **The #1 cause of SVG defects is text overflow.** AI agents cannot measure rendered text width, so you must use conservative estimates.
+
+### Character Width Estimates
+
+Use these multipliers (character_count × font_size × ratio = estimated_width):
+
+| Font Family | Ratio | Example |
+|-------------|-------|---------|
+| Monospace (Consolas, Monaco) | 0.60 | 40 chars × 10px × 0.60 = 240px |
+| Sans-serif (Arial, Helvetica) | 0.52 | 40 chars × 10px × 0.52 = 208px |
+| Serif (Georgia, Times) | 0.55 | 40 chars × 10px × 0.55 = 220px |
+
+### Safe Container Sizing
+
+When creating text inside containers:
+
+```
+Container Width = (max_chars × font_size × ratio) + (2 × padding)
+```
+
+**Example**: Fitting "application_layer_protocol_negotiation" (40 chars) in a monospace box:
+- Estimated width: 40 × 10px × 0.6 = 240px
+- With 10px padding each side: 240 + 20 = 260px minimum
+- Safe container width: 280px (with margin for error)
+
+### Abbreviation Strategy
+
+When text is too long for its container, abbreviate using standard conventions:
+
+| Full Term | Abbreviation |
+|-----------|--------------|
+| `application_layer_protocol_negotiation` | `ALPN` |
+| `elliptic_curves` | `EC` |
+| `supported_versions` | `versions` |
+| `signature_algorithms` | `sig_algs` |
+
+### Text Positioning Rules
+
+1. **Left-aligned text (`text-anchor="start"`)**: Position at `x = padding`
+2. **Centered text (`text-anchor="middle"`)**: Position at `x = container_width / 2`
+3. **Right-aligned text (`text-anchor="end"`)**: Position at `x = container_width - padding`
+
+### Validation Workflow
+
+1. Create text with estimated sizing
+2. Run `svg-overflow.js` to detect issues
+3. Address HIGH issues (shorten text or widen container)
+4. Review MEDIUM issues (adjust padding if needed)
 
 ---
 
@@ -720,8 +790,120 @@ AI agents cannot "see" SVG output—they can only reason about coordinates mathe
 
 ---
 
+## Themed Diagrams (Quest Maps, D&D Style, etc.)
+
+Themed diagrams like quest maps, game-style visualizations, or gamified progress trackers have **intentionally overlapping design elements** that the collision tool may flag as issues. This section explains how to handle them correctly.
+
+### Understanding Collision Tool Output for Themed SVGs
+
+**What the tool considers "collisions":**
+- Any two elements with bounding boxes that overlap
+
+**What's actually a problem (🔴 HIGH severity):**
+- **Text overlapping text** — always unreadable, always fix
+- **Nodes/boxes overlapping each other** — content obscured
+
+**What's intentional design (🟡 LOW severity, can ignore):**
+- Step numbers inside circles (e.g., `<circle cx="22" cy="22"><text x="22" y="28">1</text>`)
+- Decorative corner flourishes overlapping the border rect
+- Path connectors crossing the background
+- Text labels on colored backgrounds
+- Icons inside containers
+
+### Quest Map Layout Rules
+
+When creating D&D/Zelda-style quest maps:
+
+1. **Minimum node spacing**: 30px gap between adjacent node edges
+2. **Flow direction**: Clear visual path START → node 1 → node 2 → ... → FINISH
+3. **Avoid stacking**: Never place one node directly above/below another unless there's >100px vertical gap
+4. **Road connections**: Paths should logically connect adjacent steps, not cross the whole diagram randomly
+
+### Validation Approach for Themed SVGs
+
+```bash
+# Run with --strict to get full report
+node tools/dev/svg-collisions.js my-quest-map.svg --strict
+
+# Check the severity breakdown:
+# - 🔴 HIGH: 0   ← MUST be zero (text-on-text collisions)
+# - 🟠 MEDIUM: 0 ← Should be zero
+# - 🟡 LOW: n    ← Can be non-zero for intentional design patterns
+```
+
+**Pass criteria for themed diagrams:**
+- ✅ Zero 🔴 HIGH severity issues
+- ✅ Zero 🟠 MEDIUM severity issues
+- ✅ Review each 🟡 LOW issue — confirm it's an intentional design pattern
+
+### Common Quest Map Patterns (Allowed to "Collide")
+
+```xml
+<!-- Step number in circle (intentional overlap) -->
+<g transform="translate(100, 200)">
+  <rect width="160" height="100" rx="8" class="node-complete"/>
+  <circle cx="22" cy="22" r="16" fill="#4a7c59"/>
+  <text fill="#fff" text-anchor="middle" x="22" y="28">1</text>
+</g>
+
+<!-- Decorative corner flourishes (intentional overlap with border) -->
+<g class="decoration">
+  <path d="M 40 55 Q 55 40, 70 40 M 40 55 Q 40 70, 40 85"/>
+</g>
+
+<!-- Road paths (intentional overlap with background rect) -->
+<path class="quest-path" d="M 280 400 C 330 400, 350 400, 380 400"/>
+```
+
+### Parchment Theme Starter Template
+
+```xml
+<defs>
+  <!-- Parchment gradient -->
+  <linearGradient id="parchment" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#f5ecd8"/>
+    <stop offset="50%" stop-color="#ebe0c8"/>
+    <stop offset="100%" stop-color="#ddd0b0"/>
+  </linearGradient>
+
+  <!-- Subtle drop shadow for nodes -->
+  <filter id="nodeShadow" x="-10%" y="-10%" width="120%" height="130%">
+    <feDropShadow dx="2" dy="3" stdDeviation="3" flood-color="#5c4a32" flood-opacity="0.25"/>
+  </filter>
+
+  <!-- Path arrow marker -->
+  <marker id="pathArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b5744"/>
+  </marker>
+
+  <style>
+    .parchment-bg { fill: url(#parchment); }
+    .border { fill: none; stroke: #8b7355; stroke-width: 4; }
+    .quest-path { fill: none; stroke: #6b5744; stroke-width: 3; stroke-dasharray: 12 6; }
+    .node-complete { fill: #e8f5e9; stroke: #4a7c59; stroke-width: 2; }
+    .node-active { fill: #fff8e1; stroke: #c9a227; stroke-width: 3; }
+    .node-pending { fill: #f5f5f5; stroke: #9e9e9e; stroke-width: 2; }
+    .title { font-family: "Palatino Linotype", serif; font-size: 28px; font-weight: bold; fill: #3d2e1f; }
+    .node-title { font-family: "Palatino Linotype", serif; font-size: 15px; font-weight: bold; fill: #3d2e1f; }
+    .node-desc { font-family: Georgia, serif; font-size: 11px; fill: #5c4a32; }
+  </style>
+</defs>
+```
+
+### Node Status Colors (Consistent Across All Themed SVGs)
+
+| Status | Fill | Stroke | Meaning |
+|--------|------|--------|---------|
+| Complete | `#e8f5e9` | `#4a7c59` | Task finished successfully |
+| Active | `#fff8e1` | `#c9a227` | Currently in progress |
+| Pending | `#f5f5f5` | `#9e9e9e` | Not yet started |
+| Blocked | `#ffebee` | `#c62828` | Blocked by dependency |
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1 | 2025-12-20 | Added Themed Diagrams section (quest maps, D&D style) |
 | 1.0 | 2025-12-02 | Initial methodology document |

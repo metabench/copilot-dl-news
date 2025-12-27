@@ -43,7 +43,12 @@ const { createRateLimitMiddleware, cleanupStaleEntries } = require('./middleware
 const { createArticlesRouter } = require('./routes/articles');
 const { createDomainsRouter } = require('./routes/domains');
 const { createStatsRouter } = require('./routes/stats');
+const { createExportRouter, createFeedRouter } = require('./routes/export');
 const { DuplicateDetector } = require('../../analysis/similarity/DuplicateDetector');
+const { createSSEHandler, getBroadcaster } = require('../streaming');
+const { createWebSocketServer } = require('../streaming');
+const { Summarizer } = require('../../analysis/summarization');
+const { createSummaryAdapter } = require('../../db/sqlite/v1/queries/summaryAdapter');
 
 // Default configuration
 const DEFAULT_PORT = 4000;
@@ -153,6 +158,24 @@ function createGatewayApp(options = {}) {
     }
   }
 
+  // Create Summarizer for article summaries
+  let summarizer = null;
+  try {
+    const summaryAdapter = createSummaryAdapter(db);
+    summarizer = new Summarizer({
+      summaryAdapter,
+      articlesAdapter,
+      logger
+    });
+    if (verbose) {
+      logger.log('[gateway] Summarizer initialized');
+    }
+  } catch (err) {
+    if (verbose) {
+      logger.log('[gateway] Summarizer not available:', err.message);
+    }
+  }
+
   // Store adapters for testing
   app.locals.db = db;
   app.locals.apiKeyAdapter = apiKeyAdapter;
@@ -160,7 +183,12 @@ function createGatewayApp(options = {}) {
   app.locals.searchAdapter = searchAdapter;
   app.locals.similarityAdapter = similarityAdapter;
   app.locals.duplicateDetector = duplicateDetector;
+  app.locals.summarizer = summarizer;
   app.locals.startTime = startTime;
+
+  // Event broadcaster for streaming
+  const broadcaster = options.broadcaster || getBroadcaster();
+  app.locals.broadcaster = broadcaster;
 
   // Middleware
   app.use(compression());
@@ -234,11 +262,20 @@ function createGatewayApp(options = {}) {
   // Apply auth and rate limit to all /api/v1 routes
   app.use('/api/v1', authMiddleware, rateLimitMiddleware);
 
+  // SSE stream endpoint (after auth/rate limit)
+  const sseHandler = createSSEHandler({
+    broadcaster,
+    logger
+  });
+  app.get('/api/v1/stream', sseHandler);
+  app.get('/api/v1/stream/stats', sseHandler.stats);
+
   // Mount API routes
   app.use('/api/v1/articles', createArticlesRouter({
     articlesAdapter,
     searchAdapter,
     duplicateDetector,
+    summarizer,
     logger
   }));
 
@@ -248,6 +285,19 @@ function createGatewayApp(options = {}) {
   }));
 
   app.use('/api/v1/stats', createStatsRouter({
+    articlesAdapter,
+    logger
+  }));
+
+  // Export endpoints
+  app.use('/api/v1/export', createExportRouter({
+    articlesAdapter,
+    domainsAdapter: articlesAdapter,
+    logger
+  }));
+
+  // Feed endpoints (RSS/Atom)
+  app.use('/api/v1/feed', createFeedRouter({
     articlesAdapter,
     logger
   }));
@@ -372,6 +422,8 @@ function createGatewayApp(options = {}) {
 async function startGatewayServer(options = {}) {
   const port = options.port || process.env.API_GATEWAY_PORT || DEFAULT_PORT;
   const { app, db, apiKeyAdapter, articlesAdapter } = createGatewayApp(options);
+  const broadcaster = app.locals.broadcaster;
+  const logger = options.logger || console;
 
   // Start periodic cleanup of rate limit store
   const cleanupInterval = setInterval(() => {
@@ -385,6 +437,18 @@ async function startGatewayServer(options = {}) {
         return reject(err);
       }
 
+      // Create WebSocket server attached to HTTP server
+      const wsServer = createWebSocketServer({
+        server,
+        path: '/api/v1/ws',
+        broadcaster,
+        logger,
+        validateApiKey: options.requireAuth !== false
+          ? (key) => apiKeyAdapter.validateKey(key)
+          : null
+      });
+      app.locals.wsServer = wsServer;
+
       console.log('┌─────────────────────────────────────────────────────────────┐');
       console.log('│                                                             │');
       console.log('│  🌐 News Crawler REST API Gateway                          │');
@@ -393,6 +457,8 @@ async function startGatewayServer(options = {}) {
       console.log(`│  Server:          http://localhost:${port}                        │`);
       console.log(`│  API Docs:        http://localhost:${port}/api/docs              │`);
       console.log(`│  Health:          http://localhost:${port}/health                │`);
+      console.log(`│  SSE Stream:      http://localhost:${port}/api/v1/stream         │`);
+      console.log(`│  WebSocket:       ws://localhost:${port}/api/v1/ws               │`);
       console.log('│                                                             │');
       console.log('│  Authentication:  X-API-Key header required                 │');
       console.log('│  Rate Limits:     100/min (free), 1000/min (premium)        │');
@@ -407,8 +473,11 @@ async function startGatewayServer(options = {}) {
         db,
         apiKeyAdapter,
         articlesAdapter,
+        broadcaster,
+        wsServer,
         close: async () => {
           clearInterval(cleanupInterval);
+          wsServer.close();
           return new Promise((resolveClose) => {
             server.close(() => {
               try {
@@ -473,6 +542,17 @@ Endpoints:
   GET /api/v1/domains/:host/articles Domain articles
   GET /api/v1/stats               Overall stats
   GET /api/v1/stats/daily         Daily counts
+
+Real-Time Streaming:
+  GET /api/v1/stream              SSE event stream
+  GET /api/v1/stream?types=article:new,crawl:completed
+  GET /api/v1/stream?domains=example.com
+  ws://localhost:4000/api/v1/ws   WebSocket (bidirectional)
+
+Event Types:
+  crawl:started, crawl:completed, crawl:failed, crawl:progress
+  article:new, article:updated, article:classified
+  system:healthcheck, system:stats
 `);
       process.exit(0);
     }

@@ -4873,7 +4873,7 @@ body .overlay {
 /* Source: src\ui\server\geoImport\styles.css */
 /* ═══════════════════════════════════════════════════════════════════ */
 
-/* styles (798 lines) */
+/* styles (1017 lines) */
 :root {
       --bg-color: #0d1117;
       --surface-color: #161b22;
@@ -5026,6 +5026,152 @@ body .overlay {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 8px;
+    }
+
+    /* Plan Preview (dry-run) */
+    .plan-preview {
+      margin-top: 16px;
+      padding: 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    .plan-preview__placeholder,
+    .plan-preview__loading {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .plan-preview__error {
+      color: var(--error-color);
+      font-size: 0.9rem;
+    }
+
+    .plan-preview__header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+
+    .plan-preview__title {
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .plan-preview__meta {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    .plan-preview__summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .plan-preview__pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-color);
+      background: rgba(88, 166, 255, 0.08);
+      font-size: 0.85rem;
+    }
+
+    .plan-preview__warning {
+      margin: 10px 0;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(210, 153, 34, 0.35);
+      background: rgba(210, 153, 34, 0.12);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+
+    .plan-preview__warning a {
+      color: var(--accent-color);
+      text-decoration: none;
+    }
+
+    .plan-preview__details {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: rgba(0, 0, 0, 0.12);
+      margin-top: 10px;
+    }
+
+    .plan-preview__details summary {
+      cursor: pointer;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .plan-preview__stages {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .plan-preview__stage {
+      border: 1px solid rgba(48, 54, 61, 0.9);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: rgba(13, 17, 23, 0.55);
+    }
+
+    .plan-preview__stage-head {
+      display: grid;
+      grid-template-columns: 120px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .plan-preview__stage-id {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    .plan-preview__stage-label {
+      font-weight: 600;
+    }
+
+    .plan-preview__stage-badges {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    .plan-preview__badge {
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+    }
+
+    .plan-preview__stage-details summary {
+      cursor: pointer;
+      color: var(--accent-color);
+      font-size: 0.85rem;
+      margin-top: 6px;
+    }
+
+    .plan-preview pre {
+      margin-top: 8px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: rgba(0, 0, 0, 0.2);
+      color: var(--text-primary);
+      overflow: auto;
+      font-size: 0.8rem;
+      line-height: 1.35;
     }
     
     .stat-item {
@@ -5453,6 +5599,79 @@ body .overlay {
     @keyframes countPulse {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.05); }
+    }
+
+    /* Linear progress bar (reusable ProgressBarControl styles) */
+    .progress-bar {
+      position: relative;
+      width: 100%;
+      height: 14px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      margin-top: 10px;
+    }
+
+    .progress-bar__track {
+      position: absolute;
+      inset: 0;
+    }
+
+    .progress-bar__fill {
+      height: 100%;
+      width: 0%;
+      transition: width 200ms ease;
+      background: linear-gradient(90deg, #8b7500, #c9a227);
+      box-shadow: 0 0 10px rgba(201, 162, 39, 0.25);
+    }
+
+    .progress-bar__label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+      pointer-events: none;
+    }
+
+    .progress-bar--compact {
+      height: 12px;
+    }
+
+    .progress-bar--indeterminate .progress-bar__fill {
+      width: 30%;
+      animation: progressIndeterminate 1.2s ease-in-out infinite;
+    }
+
+    @keyframes progressIndeterminate {
+      0% { transform: translateX(-40%); }
+      50% { transform: translateX(120%); }
+      100% { transform: translateX(260%); }
+    }
+
+    /* Stale-progress indicator */
+    .progress-stall {
+      margin-top: 10px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      min-height: 1.2em;
+    }
+
+    .progress-stall.is-stale {
+      color: var(--warning-color);
+    }
+
+    /* Stepper pause/terminal state hints */
+    .stages-stepper.is-paused {
+      opacity: 0.95;
+    }
+
+    .stages-stepper.is-terminal {
+      opacity: 0.9;
     }
     
     /* Database Selector */

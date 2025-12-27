@@ -33,6 +33,62 @@
  */
 
 const { CrawlTelemetryBridge } = require('./CrawlTelemetryBridge');
+const { TaskEventWriter } = require('../../db/TaskEventWriter');
+
+function createSafeJsonReplacer() {
+  const seen = new WeakSet();
+  return function safeJsonReplacer(key, value) {
+    if (typeof value === 'bigint') {
+      return String(value);
+    }
+
+    if (value && typeof value === 'object') {
+      if (seen.has(value)) {
+        return '[Circular]';
+      }
+      seen.add(value);
+    }
+
+    return value;
+  };
+}
+
+function safeJsonStringify(value) {
+  try {
+    const json = JSON.stringify(value, createSafeJsonReplacer());
+    return typeof json === 'string' ? json : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function buildTelemetrySerializationErrorEvent({ error, originalEvent }) {
+  const now = new Date();
+  const timestampMs = now.getTime();
+  const originalType = originalEvent && typeof originalEvent.type === 'string' ? originalEvent.type : null;
+  const jobId = originalEvent && (originalEvent.jobId || (originalEvent.data && originalEvent.data.jobId)) ? (originalEvent.jobId || originalEvent.data.jobId) : null;
+  const crawlType = originalEvent && typeof originalEvent.crawlType === 'string' ? originalEvent.crawlType : 'unknown';
+
+  return {
+    schemaVersion: 1,
+    id: `crawl:telemetry:error-${timestampMs}-${Math.random().toString(16).slice(2, 8)}`,
+    type: 'crawl:telemetry:error',
+    topic: 'telemetry',
+    tags: ['telemetry', 'serialization'],
+    timestamp: now.toISOString(),
+    timestampMs,
+    jobId,
+    crawlType,
+    severity: 'error',
+    message: 'Telemetry serialization failed; event was sanitized.',
+    source: 'TelemetryIntegration',
+    data: Object.freeze({
+      error: error && error.message ? error.message : String(error || 'unknown error'),
+      originalType,
+      originalId: originalEvent && originalEvent.id ? String(originalEvent.id) : null
+    })
+  };
+}
 
 class TelemetryIntegration {
   /**
@@ -42,6 +98,8 @@ class TelemetryIntegration {
    * @param {number} [options.heartbeatInterval=30000] - Heartbeat interval for SSE (ms)
    * @param {string|null} [options.allowOrigin=null] - Optional Access-Control-Allow-Origin value
    * @param {Object} [options.bridgeOptions] - Extra options forwarded to CrawlTelemetryBridge
+   * @param {Object} [options.db] - Optional better-sqlite3 database handle for event persistence
+   * @param {Object} [options.eventWriterOptions] - Options forwarded to TaskEventWriter
    */
   constructor(options = {}) {
     this.historyLimit = options.historyLimit ?? options.maxHistorySize ?? 500;
@@ -50,12 +108,22 @@ class TelemetryIntegration {
     
     /** @type {Set<import('http').ServerResponse>} */
     this.sseClients = new Set();
+
+    /** @type {Set<import('http').ServerResponse>} */
+    this.remoteObservableClients = new Set();
     
     /** @type {NodeJS.Timeout|null} */
     this.heartbeatTimer = null;
     
     /** @type {Function[]} Disconnect functions for connected crawlers */
     this.crawlerDisconnects = [];
+
+    // Create TaskEventWriter for database persistence if db is provided
+    /** @type {TaskEventWriter|null} */
+    this.eventWriter = null;
+    if (options.db) {
+      this.eventWriter = new TaskEventWriter(options.db, options.eventWriterOptions || {});
+    }
 
     const bridgeOptions = options.bridgeOptions && typeof options.bridgeOptions === 'object'
       ? options.bridgeOptions
@@ -75,12 +143,32 @@ class TelemetryIntegration {
    * @private
    */
   _broadcast(event) {
-    const payload = {
-      type: 'crawl:telemetry',
-      data: event
-    };
+    // Write event to database if we have a writer
+    if (this.eventWriter) {
+      this.eventWriter.writeTelemetryEvent(event);
+    }
 
-    const message = `data: ${JSON.stringify(payload)}\n\n`;
+    const payload = { type: 'crawl:telemetry', data: event };
+    let json = safeJsonStringify(payload);
+
+    if (!json) {
+      // If we can't serialize a telemetry event, emit a sanitized error event instead.
+      // Never let serialization failures break the SSE stream.
+      if (event && event.type === 'crawl:telemetry:error') {
+        return;
+      }
+
+      const fallback = {
+        type: 'crawl:telemetry',
+        data: buildTelemetrySerializationErrorEvent({ error: new Error('JSON.stringify failed'), originalEvent: event })
+      };
+      json = safeJsonStringify(fallback);
+      if (!json) {
+        return;
+      }
+    }
+
+    const message = `data: ${json}\n\n`;
     const deadClients = [];
     
     for (const client of this.sseClients) {
@@ -98,6 +186,41 @@ class TelemetryIntegration {
     // Clean up dead clients
     for (const client of deadClients) {
       this.sseClients.delete(client);
+    }
+
+    // Also broadcast as a remote-observable stream (Lab 042/043 compatible).
+    // Consumers will receive `next` payloads where `value` is the telemetry event.
+    if (this.remoteObservableClients.size) {
+      const remoteTimestampMs = event && Number.isFinite(event.timestampMs) ? event.timestampMs : Date.now();
+      const remotePayload = { type: 'next', value: event, timestampMs: remoteTimestampMs };
+      let remoteJson = safeJsonStringify(remotePayload);
+      if (!remoteJson) {
+        const fallbackEvent = buildTelemetrySerializationErrorEvent({
+          error: new Error('JSON.stringify failed (remote-observable broadcast)'),
+          originalEvent: event
+        });
+        remoteJson = safeJsonStringify({ type: 'next', value: fallbackEvent, timestampMs: fallbackEvent.timestampMs });
+      }
+
+      if (remoteJson) {
+        const remoteMessage = `data: ${remoteJson}\n\n`;
+        const deadRemoteClients = [];
+        for (const client of this.remoteObservableClients) {
+          try {
+            if (client.writable) {
+              client.write(remoteMessage);
+            } else {
+              deadRemoteClients.push(client);
+            }
+          } catch (_) {
+            deadRemoteClients.push(client);
+          }
+        }
+
+        for (const client of deadRemoteClients) {
+          this.remoteObservableClients.delete(client);
+        }
+      }
     }
   }
   
@@ -126,6 +249,23 @@ class TelemetryIntegration {
       
       for (const client of deadClients) {
         this.sseClients.delete(client);
+      }
+
+      const deadRemoteClients = [];
+      for (const client of this.remoteObservableClients) {
+        try {
+          if (client.writable) {
+            client.write(heartbeat);
+          } else {
+            deadRemoteClients.push(client);
+          }
+        } catch (_) {
+          deadRemoteClients.push(client);
+        }
+      }
+
+      for (const client of deadRemoteClients) {
+        this.remoteObservableClients.delete(client);
       }
     }, this.heartbeatInterval);
     
@@ -164,10 +304,26 @@ class TelemetryIntegration {
       // (Each item is already a telemetry event from the bridge.)
       const history = this.bridge.getHistory();
       for (const event of history) {
-        res.write(`data: ${JSON.stringify({
-          type: 'crawl:telemetry',
-          data: event
-        })}\n\n`);
+        const payload = { type: 'crawl:telemetry', data: event };
+        let json = safeJsonStringify(payload);
+        if (!json) {
+          if (event && event.type === 'crawl:telemetry:error') {
+            continue;
+          }
+          const fallback = {
+            type: 'crawl:telemetry',
+            data: buildTelemetrySerializationErrorEvent({ error: new Error('JSON.stringify failed (history replay)'), originalEvent: event })
+          };
+          json = safeJsonStringify(fallback);
+          if (!json) {
+            continue;
+          }
+        }
+        try {
+          res.write(`data: ${json}\n\n`);
+        } catch (_) {
+          // Ignore; client may have disconnected mid-replay.
+        }
       }
       
       // Add to clients set
@@ -179,6 +335,74 @@ class TelemetryIntegration {
       });
     });
     
+    return app;
+  }
+
+  /**
+   * Mount a Lab 042/043 compatible remote-observable SSE endpoint.
+   *
+   * The stream emits messages shaped like:
+   *   { type: 'next', value: <telemetryEvent>, timestampMs }
+   *
+   * This allows UIs to consume canonical crawl telemetry through
+   * the shared RemoteObservable client adapters.
+   *
+   * @param {import('express').Application} app
+   * @param {string} basePath - Base path; the endpoint will be `${basePath}/events`
+   * @returns {import('express').Application}
+   */
+  mountRemoteObservable(app, basePath = '/api/crawl-telemetry/remote-obs') {
+    this._startHeartbeat();
+
+    const base = typeof basePath === 'string' ? basePath.replace(/\/$/, '') : '/api/crawl-telemetry/remote-obs';
+    const eventsPath = `${base}/events`;
+    const commandPath = `${base}/command`;
+
+    app.get(eventsPath, (req, res) => {
+      const headers = {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no'
+      };
+
+      if (this.allowOrigin) {
+        headers['Access-Control-Allow-Origin'] = this.allowOrigin;
+      }
+
+      res.writeHead(200, headers);
+      res.write(':ok\n\n');
+
+      const history = this.bridge.getHistory();
+      for (const event of history) {
+        const ts = event && Number.isFinite(event.timestampMs) ? event.timestampMs : Date.now();
+        let json = safeJsonStringify({ type: 'next', value: event, timestampMs: ts });
+        if (!json) {
+          const fallbackEvent = buildTelemetrySerializationErrorEvent({
+            error: new Error('JSON.stringify failed (remote-observable history replay)'),
+            originalEvent: event
+          });
+          json = safeJsonStringify({ type: 'next', value: fallbackEvent, timestampMs: fallbackEvent.timestampMs });
+        }
+        if (!json) continue;
+        try {
+          res.write(`data: ${json}\n\n`);
+        } catch (_) {
+          // Ignore; client may have disconnected mid-replay.
+        }
+      }
+
+      this.remoteObservableClients.add(res);
+      req.on('close', () => {
+        this.remoteObservableClients.delete(res);
+      });
+    });
+
+    // Optional command endpoint for adapter compatibility.
+    app.post(commandPath, (req, res) => {
+      res.status(400).json({ ok: false, error: 'Remote observable commands are not supported for crawl telemetry.' });
+    });
+
     return app;
   }
   
@@ -261,9 +485,32 @@ class TelemetryIntegration {
       }
     }
     this.sseClients.clear();
+
+    for (const client of this.remoteObservableClients) {
+      try {
+        client.end();
+      } catch (_) {
+        // Ignore
+      }
+    }
+    this.remoteObservableClients.clear();
+    
+    // Flush and destroy event writer
+    if (this.eventWriter) {
+      this.eventWriter.destroy();
+      this.eventWriter = null;
+    }
     
     // Destroy bridge
     this.bridge.destroy();
+  }
+
+  /**
+   * Get the TaskEventWriter for direct access (AI query helpers, etc.).
+   * @returns {TaskEventWriter|null}
+   */
+  getEventWriter() {
+    return this.eventWriter;
   }
 }
 

@@ -4,6 +4,7 @@ const Database = require('better-sqlite3');
 const { is_array, tof } = require('lang-tools');
 const { ensureDb, ensureGazetteer } = require('./ensureDb');
 const { seedCrawlTypes } = require('./seeders');
+const { seedNewsSources } = require('./newsSourcesSeeder');
 const { Readable } = require('stream');
 
 // Import extracted modules
@@ -77,6 +78,27 @@ class NewsDatabase {
     this._updateTaskStatusStmt = this.statements.get('_updateTaskStatusStmt');
     this._clearTasksByJobStmt = this.statements.get('_clearTasksByJobStmt');
     this._getTaskByIdStmt = this.statements.get('_getTaskByIdStmt');
+  }
+
+  ensureNewsWebsiteFaviconColumns() {
+    const statements = [
+      'ALTER TABLE news_websites ADD COLUMN favicon_data TEXT',
+      'ALTER TABLE news_websites ADD COLUMN favicon_content_type TEXT',
+      'ALTER TABLE news_websites ADD COLUMN favicon_updated_at TEXT',
+      'ALTER TABLE news_websites ADD COLUMN favicon_fetch_error TEXT'
+    ];
+
+    for (const sql of statements) {
+      try {
+        this.db.exec(sql);
+      } catch (_) {
+        // Column likely already exists.
+      }
+    }
+  }
+
+  seedDefaultNewsSources({ logger = console } = {}) {
+    return seedNewsSources(this.db, { logger });
   }
 
   _init() {

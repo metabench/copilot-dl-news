@@ -2,6 +2,7 @@
 
 const { is_array } = require('lang-tools');
 const { GazetteerPriorityScheduler, DEFAULT_STAGE_DEFS } = require('./GazetteerPriorityScheduler');
+const { createProgressTreeEvent } = require('../telemetry/CrawlTelemetrySchema');
 
 function normalizeStageConfig(stage, index = 0) {
   if (!stage || !stage.name) {
@@ -81,6 +82,10 @@ class StagedGazetteerCoordinator {
     this._stages = normalizedStages;
     this._lastSummary = null;
     this._lastPlanSummary = null;
+
+    // Progress-tree emission state (used to build nested progress bars)
+    // Keyed by `${stage}:${ingestorId}`.
+    this._progressTreeStateByKey = new Map();
   }
 
   registerStage(stageName, ingestors = [], stageOptions = {}) {
@@ -273,6 +278,13 @@ class StagedGazetteerCoordinator {
                 ingestor: ingestorId,
                 payload
               });
+
+              this._maybeEmitProgressTreeTelemetry({
+                stage: stageName,
+                ingestor: ingestorId,
+                payload
+              });
+
               if (payload.recordsProcessed != null || payload.recordsUpserted != null || payload.errors != null) {
                 this.scheduler.updateStageProgress(stageName, {
                   recordsProcessed: payload.recordsProcessed != null ? payload.recordsProcessed : undefined,
@@ -474,6 +486,153 @@ class StagedGazetteerCoordinator {
     } catch (_) {
       // Best effort only
     }
+  }
+
+  _maybeEmitProgressTreeTelemetry({ stage, ingestor, payload }) {
+    const telemetryEvents = this.telemetry?.events;
+    if (!telemetryEvents || typeof telemetryEvents.emitEvent !== 'function') {
+      return;
+    }
+
+    // Current use-case: countries → cities nested progress.
+    // We scope this to the Wikidata cities ingestor to avoid flooding.
+    if (ingestor !== 'wikidata-cities') {
+      return;
+    }
+    if (!payload || typeof payload !== 'object') {
+      return;
+    }
+
+    const key = `${stage}:${ingestor}`;
+    let state = this._progressTreeStateByKey.get(key);
+    if (!state) {
+      state = {
+        lastEmitAt: 0,
+        totalCountries: null,
+        maxCitiesPerCountry: null,
+        minPopulation: null,
+        lastCountryCode: null,
+        countryOrder: [],
+        countryNodesById: new Map()
+      };
+      this._progressTreeStateByKey.set(key, state);
+    }
+
+    // Throttle to keep the telemetry stream light.
+    const now = Date.now();
+    const minIntervalMs = 250;
+    if (payload.phase === 'processing' && (now - state.lastEmitAt) < minIntervalMs) {
+      return;
+    }
+
+    if (payload.phase === 'discovery') {
+      state.totalCountries = Number.isFinite(payload.totalCountries) ? payload.totalCountries : null;
+      state.maxCitiesPerCountry = Number.isFinite(payload.maxCitiesPerCountry) ? payload.maxCitiesPerCountry : null;
+      state.minPopulation = Number.isFinite(payload.minPopulation) ? payload.minPopulation : null;
+      state.lastCountryCode = null;
+      state.countryOrder = [];
+      state.countryNodesById = new Map();
+    }
+
+    const rootId = `${ingestor}`;
+    const rootLabel = stage ? `Wikidata Cities (${stage})` : 'Wikidata Cities';
+
+    let rootCurrent = null;
+    let rootTotal = null;
+    let activeCountryCode = null;
+    let activeCountryProcessed = null;
+
+    if (payload.phase === 'processing') {
+      rootCurrent = Number.isFinite(payload.current) ? payload.current : null;
+      rootTotal = Number.isFinite(payload.totalItems) ? payload.totalItems : (Number.isFinite(state.totalCountries) ? state.totalCountries : null);
+      activeCountryCode = payload.countryCode ? String(payload.countryCode).toLowerCase() : null;
+      activeCountryProcessed = Number.isFinite(payload.citiesProcessed) ? payload.citiesProcessed : null;
+
+      if (state.lastCountryCode && activeCountryCode && state.lastCountryCode !== activeCountryCode) {
+        const lastId = `country:${state.lastCountryCode}`;
+        const lastNode = state.countryNodesById.get(lastId);
+        if (lastNode) {
+          lastNode.status = 'done';
+          // Prefer showing a "full" bar on completed nodes.
+          if (lastNode.total != null) {
+            lastNode.current = lastNode.total;
+          }
+        }
+      }
+      if (activeCountryCode) {
+        const countryId = `country:${activeCountryCode}`;
+        let node = state.countryNodesById.get(countryId);
+        if (!node) {
+          node = {
+            id: countryId,
+            label: activeCountryCode.toUpperCase(),
+            current: null,
+            total: null,
+            unit: 'cities',
+            status: 'running'
+          };
+          state.countryNodesById.set(countryId, node);
+          state.countryOrder.push(countryId);
+        }
+        node.status = 'running';
+        node.current = activeCountryProcessed;
+        node.total = Number.isFinite(state.maxCitiesPerCountry) ? state.maxCitiesPerCountry : null;
+
+        state.lastCountryCode = activeCountryCode;
+      }
+    } else if (payload.phase === 'discovery') {
+      rootCurrent = 0;
+      rootTotal = Number.isFinite(state.totalCountries) ? state.totalCountries : null;
+    } else if (payload.phase === 'complete') {
+      rootCurrent = Number.isFinite(state.totalCountries) ? state.totalCountries : null;
+      rootTotal = Number.isFinite(state.totalCountries) ? state.totalCountries : null;
+      if (state.lastCountryCode) {
+        const lastId = `country:${state.lastCountryCode}`;
+        const lastNode = state.countryNodesById.get(lastId);
+        if (lastNode) {
+          lastNode.status = 'done';
+          if (lastNode.total != null) {
+            lastNode.current = lastNode.total;
+          }
+        }
+      }
+    }
+
+    // Keep the payload bounded: last N countries + current.
+    const maxCountryNodes = 80;
+    const keepIds = state.countryOrder.slice(-maxCountryNodes);
+    const children = [];
+    for (const countryId of keepIds) {
+      const node = state.countryNodesById.get(countryId);
+      if (node) children.push(node);
+    }
+
+    const tree = {
+      root: {
+        id: rootId,
+        label: rootLabel,
+        current: rootCurrent,
+        total: rootTotal,
+        unit: 'countries',
+        status: payload.phase === 'complete' ? 'done' : 'running',
+        children
+      },
+      activePath: activeCountryCode
+        ? [rootId, `country:${activeCountryCode}`]
+        : [rootId]
+    };
+
+    const completed = payload.phase === 'complete';
+    const message = completed
+      ? 'Wikidata cities ingestion completed'
+      : (payload.message || 'Wikidata cities ingestion progress');
+
+    telemetryEvents.emitEvent(createProgressTreeEvent(tree, {
+      completed,
+      message,
+      source: 'StagedGazetteerCoordinator'
+    }));
+    state.lastEmitAt = now;
   }
 
   _syncSchedulerStages() {

@@ -211,6 +211,10 @@ function initializeBackgroundInfrastructure({
   const { AnalysisTask } = require('../background/tasks/AnalysisTask');
   const { CompressionLifecycleTask } = require('../background/tasks/CompressionLifecycleTask');
   const { GuessPlaceHubsTask } = require('../background/tasks/GuessPlaceHubsTask');
+  const { TaskEventWriter } = require('../db/TaskEventWriter');
+
+  // Create TaskEventWriter for background task event persistence
+  const backgroundTaskEventWriter = new TaskEventWriter(db, { batchWrites: true });
 
   const manager = new BackgroundTaskManager({
     db,
@@ -227,7 +231,18 @@ function initializeBackgroundInfrastructure({
     updateMetrics: (stats) => {
       metricsReporter(stats);
     },
-    emitTelemetry: realtime ? realtime.getBroadcastTelemetry() : null
+    // Combined emitter: broadcast via realtime + persist to task_events table
+    emitTelemetry: (entry) => {
+      // Persist to database for AI queryability
+      backgroundTaskEventWriter.writeBackgroundTaskEvent(entry);
+      // Also broadcast via SSE if available
+      if (realtime && typeof realtime.getBroadcastTelemetry === 'function') {
+        const broadcaster = realtime.getBroadcastTelemetry();
+        if (typeof broadcaster === 'function') {
+          broadcaster(entry);
+        }
+      }
+    }
   });
 
   let compressionWorkerPool = null;
@@ -327,6 +342,12 @@ async function cleanupAppResources(app, logger) {
  */
 function createApiServer(options = {}) {
   const app = express();
+
+  // Shared client modules (plain browser scripts) used by labs and lightweight UIs.
+  app.use(
+    '/shared-remote-obs',
+    express.static(path.join(__dirname, '..', 'ui', 'client', 'remoteObservable', 'browser'))
+  );
   const port = options.port || process.env.PORT || 3000;
   const dbPath = options.dbPath || path.join(process.cwd(), 'data', 'news.db');
   const logger = options.logger || console;
@@ -399,10 +420,18 @@ function createApiServer(options = {}) {
 
   // Canonical crawler telemetry (observable) -> legacy SSE broadcaster (/events).
   // This keeps /events as the "one place" clients can subscribe for crawl status.
+  // When db is available, events are also persisted for AI queryability and replay.
+  let telemetryDb = null;
+  try {
+    telemetryDb = getDbRW();
+  } catch (_) {
+    // DB unavailable - telemetry will still work but events won't persist
+  }
   const crawlTelemetry = options.crawlTelemetry instanceof TelemetryIntegration
     ? options.crawlTelemetry
     : new TelemetryIntegration({
         historyLimit: parseNumber(options.crawlTelemetryHistoryLimit, 500),
+        db: telemetryDb,
         bridgeOptions: {
           defaultCrawlType: 'standard'
         }
@@ -414,6 +443,9 @@ function createApiServer(options = {}) {
   // This endpoint replays telemetry history on connect.
   crawlTelemetry.mountSSE(app, '/api/crawl-telemetry/events');
 
+  // Remote observable bridge for UIs that want an Evented/Rx/async-iterator interface.
+  crawlTelemetry.mountRemoteObservable(app, '/api/crawl-telemetry/remote-obs');
+
   // JSON history snapshot for clients without EventSource.
   app.get('/api/crawl-telemetry/history', (req, res) => {
     const limitRaw = req.query && req.query.limit != null ? Number(req.query.limit) : undefined;
@@ -423,6 +455,114 @@ function createApiServer(options = {}) {
       status: 'ok',
       items: history
     });
+  });
+
+  // ========== Task Events API (DB-persisted events) ==========
+  // These endpoints query persisted events from the task_events table.
+  // Useful for AI agents, debugging, and historical analysis.
+
+  // List recent tasks with event counts
+  app.get('/api/task-events', (req, res) => {
+    const writer = crawlTelemetry.getEventWriter();
+    if (!writer) {
+      return res.json({ status: 'ok', tasks: [], message: 'Event persistence not configured' });
+    }
+    const taskType = req.query.taskType || undefined;
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const tasks = writer.listTasks({ taskType, limit });
+    res.json({ status: 'ok', tasks });
+  });
+
+  // Get events for a specific task
+  app.get('/api/task-events/:taskId', (req, res) => {
+    const writer = crawlTelemetry.getEventWriter();
+    if (!writer) {
+      return res.json({ status: 'ok', events: [], message: 'Event persistence not configured' });
+    }
+    const { taskId } = req.params;
+    const options = {
+      eventType: req.query.eventType || undefined,
+      category: req.query.category || undefined,
+      severity: req.query.severity || undefined,
+      scope: req.query.scope || undefined,
+      sinceSeq: req.query.sinceSeq ? parseInt(req.query.sinceSeq, 10) : undefined,
+      limit: Math.min(1000, Math.max(1, parseInt(req.query.limit, 10) || 500))
+    };
+    const events = writer.getEvents(taskId, options);
+    res.json({ status: 'ok', taskId, events });
+  });
+
+  // Get summary for a task
+  app.get('/api/task-events/:taskId/summary', (req, res) => {
+    const writer = crawlTelemetry.getEventWriter();
+    if (!writer) {
+      return res.json({ status: 'ok', summary: null, message: 'Event persistence not configured' });
+    }
+    const { taskId } = req.params;
+    const summary = writer.getSummary(taskId);
+    res.json({ status: 'ok', taskId, summary });
+  });
+
+  // Get problems (errors/warnings) for a task
+  app.get('/api/task-events/:taskId/problems', (req, res) => {
+    const writer = crawlTelemetry.getEventWriter();
+    if (!writer) {
+      return res.json({ status: 'ok', problems: [], message: 'Event persistence not configured' });
+    }
+    const { taskId } = req.params;
+    const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
+    const problems = writer.getProblems(taskId, limit);
+    res.json({ status: 'ok', taskId, problems });
+  });
+
+  // Get timeline (lifecycle events) for a task
+  app.get('/api/task-events/:taskId/timeline', (req, res) => {
+    const writer = crawlTelemetry.getEventWriter();
+    if (!writer) {
+      return res.json({ status: 'ok', timeline: [], message: 'Event persistence not configured' });
+    }
+    const { taskId } = req.params;
+    const timeline = writer.getTimeline(taskId);
+    res.json({ status: 'ok', taskId, timeline });
+  });
+
+  // Get storage stats
+  app.get('/api/task-events-stats', (req, res) => {
+    const writer = crawlTelemetry.getEventWriter();
+    if (!writer) {
+      return res.json({ status: 'ok', stats: null, message: 'Event persistence not configured' });
+    }
+    const stats = writer.getStorageStats();
+    res.json({ status: 'ok', stats });
+  });
+
+  // Prune old events (admin endpoint)
+  app.delete('/api/task-events/prune', (req, res) => {
+    const writer = crawlTelemetry.getEventWriter();
+    if (!writer) {
+      return res.status(400).json({ status: 'error', message: 'Event persistence not configured' });
+    }
+    const days = Math.max(1, parseInt(req.query.days, 10) || 30);
+    const completedOnly = req.query.completedOnly === 'true';
+    
+    let result;
+    if (completedOnly) {
+      result = writer.pruneCompletedTasks(days);
+    } else {
+      result = writer.pruneOlderThan(days);
+    }
+    res.json({ status: 'ok', ...result });
+  });
+
+  // Delete events for a specific task
+  app.delete('/api/task-events/:taskId', (req, res) => {
+    const writer = crawlTelemetry.getEventWriter();
+    if (!writer) {
+      return res.status(400).json({ status: 'error', message: 'Event persistence not configured' });
+    }
+    const { taskId } = req.params;
+    const result = writer.deleteTask(taskId);
+    res.json({ status: 'ok', taskId, ...result });
   });
 
   let crawlTelemetryUnsubscribe = null;

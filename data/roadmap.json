@@ -1,9 +1,18 @@
 ﻿{
   "title": "Phase 8: Analytics, Intelligence & API",
   "version": "5.0.0",
+  "status": "completed",
+  "completedDate": "2025-12-27",
   "created": "2025-12-25T14:00:00Z",
-  "updated": "2025-12-25T14:00:00Z",
+  "updated": "2025-12-27T00:00:00Z",
   "description": "Transform crawl data into actionable insights with powerful analytics, expose crawler capabilities through APIs, and enable intelligent content curation.",
+  "nextPhase": {
+    "file": "roadmap-phase9.json",
+    "title": "Phase 9: Advanced NLP, Personalization & Multi-Source Intelligence",
+    "status": "planning",
+    "items": 8,
+    "hours": 80
+  },
   "previousPhases": [
     {
       "title": "Phase 6: Scale, Distribution & Production Polish",
@@ -37,18 +46,19 @@
       "id": 1,
       "title": "Article Full-Text Search",
       "priority": "high",
-      "status": "not-started",
+      "status": "completed",
+      "completedDate": "2025-12-26",
       "estimatedHours": 10,
       "category": "search",
       "icon": "🔍",
       "description": "Fast full-text search across article content using SQLite FTS5 with BM25 ranking. Searchable fields: title, body_text, byline, and authors. Does NOT search raw HTML or other metadata.",
       "tasks": [
-        {"id": "byline-columns", "title": "Add byline/authors columns", "done": false, "description": "Add byline TEXT and authors TEXT (JSON array) columns to content_analysis table"},
-        {"id": "extractor-persist", "title": "Persist byline/authors during extraction", "done": false, "description": "Update HtmlArticleExtractor to save byline/authors to new columns"},
-        {"id": "fts-table", "title": "Create FTS5 virtual table", "done": false, "description": "articles_fts with title, body_text, byline, authors columns"},
-        {"id": "search-service", "title": "SearchService implementation", "done": false, "description": "Query parsing, FTS5 MATCH, BM25 scoring"},
-        {"id": "facets", "title": "Faceted filtering", "done": false, "description": "Filter by domain, date range, author (post-FTS filter)"},
-        {"id": "highlighting", "title": "Result highlighting", "done": false, "description": "Highlight matched terms with <mark> tags"}
+        {"id": "byline-columns", "title": "Add byline/authors columns", "done": true, "description": "Add byline TEXT and authors TEXT (JSON array) columns to content_analysis table"},
+        {"id": "extractor-persist", "title": "Persist byline/authors during extraction", "done": true, "description": "Update HtmlArticleExtractor to save byline/authors to new columns"},
+        {"id": "fts-table", "title": "Create FTS5 virtual table", "done": true, "description": "articles_fts with title, body_text, byline, authors columns"},
+        {"id": "search-service", "title": "SearchService implementation", "done": true, "description": "Query parsing, FTS5 MATCH, BM25 scoring"},
+        {"id": "facets", "title": "Faceted filtering", "done": true, "description": "Filter by domain, date range, author (post-FTS filter)"},
+        {"id": "highlighting", "title": "Result highlighting", "done": true, "description": "Highlight matched terms with <mark> tags"}
       ],
       "relatedFiles": ["src/search/SearchService.js", "src/search/FullTextIndex.js", "src/db/sqlite/v1/queries/searchAdapter.js", "src/utils/HtmlArticleExtractor.js"],
       "acceptanceCriteria": ["FTS5 index on title, body_text, byline, authors", "Search by author name returns matching articles", "Search <100ms for 100k articles", "Facets: domain, date range, author", "Highlighted snippets"],
@@ -247,16 +257,17 @@
       "id": 4,
       "title": "Content Tagging & Categorization",
       "priority": "medium",
-      "status": "not-started",
+      "status": "completed",
+      "completedDate": "2025-12-29",
       "estimatedHours": 8,
       "category": "intelligence",
       "icon": "🏷️",
       "description": "Automatic categorization using keyword extraction and rule-based classification.",
       "tasks": [
-        {"id": "keyword-extractor", "title": "TF-IDF keywords", "done": false, "description": "Top 10 keywords per article"},
-        {"id": "category-classifier", "title": "Topic classifier", "done": false, "description": "7 topics: Politics, Tech, Sports, etc."},
-        {"id": "entity-recognizer", "title": "Named entities", "done": false, "description": "People, organizations, locations"},
-        {"id": "tag-persistence", "title": "Tag storage", "done": false, "description": "article_tags table"}
+        {"id": "keyword-extractor", "title": "TF-IDF keywords", "done": true, "description": "Top 10 keywords per article"},
+        {"id": "category-classifier", "title": "Topic classifier", "done": true, "description": "7 topics: Politics, Tech, Sports, etc."},
+        {"id": "entity-recognizer", "title": "Named entities", "done": true, "description": "People, organizations, locations"},
+        {"id": "tag-persistence", "title": "Tag storage", "done": true, "description": "article_tags table"}
       ],
       "relatedFiles": ["src/analysis/tagging/TaggingService.js", "src/analysis/tagging/KeywordExtractor.js", "src/db/sqlite/v1/queries/tagAdapter.js"],
       "acceptanceCriteria": ["Keywords for all articles", ">80% category accuracy", "Entities with gazetteer", "Tags queryable via API"],
@@ -316,16 +327,17 @@
       "id": 5,
       "title": "Historical Analytics Dashboard",
       "priority": "medium",
-      "status": "not-started",
+      "status": "completed",
+      "completedDate": "2025-12-26",
       "estimatedHours": 6,
       "category": "analytics",
       "icon": "📊",
       "description": "Aggregate view of crawl history with trends, patterns, and insights at port 3101.",
       "tasks": [
-        {"id": "analytics-service", "title": "AnalyticsService", "done": false, "description": "Time-series aggregation"},
-        {"id": "trend-charts", "title": "Trend visualization", "done": false, "description": "Line charts over time"},
-        {"id": "leaderboard", "title": "Domain leaderboard", "done": false, "description": "Top 50 domains"},
-        {"id": "heatmap", "title": "Activity heatmap", "done": false, "description": "By hour/day"}
+        {"id": "analytics-service", "title": "AnalyticsService", "done": true, "description": "Time-series aggregation"},
+        {"id": "trend-charts", "title": "Trend visualization", "done": true, "description": "Line charts over time"},
+        {"id": "leaderboard", "title": "Domain leaderboard", "done": true, "description": "Top 50 domains"},
+        {"id": "heatmap", "title": "Activity heatmap", "done": true, "description": "By hour/day"}
       ],
       "relatedFiles": ["src/ui/server/analyticsHub/server.js", "src/ui/server/analyticsHub/AnalyticsService.js"],
       "acceptanceCriteria": ["<2s load with 1M articles", "7d/30d/90d trends", "Sortable leaderboard", "Peak hours heatmap"],
@@ -397,18 +409,18 @@
       "id": 6,
       "title": "Real-Time Event Stream",
       "priority": "medium",
-      "status": "not-started",
+      "status": "done",
       "estimatedHours": 6,
       "category": "api",
       "icon": "📡",
       "description": "WebSocket and SSE streams for live crawl events.",
       "tasks": [
-        {"id": "event-broadcaster", "title": "EventBroadcaster", "done": false, "description": "Pub/sub for crawl events"},
-        {"id": "sse-endpoint", "title": "SSE endpoint", "done": false, "description": "GET /api/v1/stream"},
-        {"id": "websocket-server", "title": "WebSocket server", "done": false, "description": "Bidirectional WS"},
-        {"id": "event-filter", "title": "Filtering", "done": false, "description": "By domain, event type"}
+        {"id": "event-broadcaster", "title": "EventBroadcaster", "done": true, "description": "Pub/sub for crawl events"},
+        {"id": "sse-endpoint", "title": "SSE endpoint", "done": true, "description": "GET /api/v1/stream"},
+        {"id": "websocket-server", "title": "WebSocket server", "done": true, "description": "Bidirectional WS"},
+        {"id": "event-filter", "title": "Filtering", "done": true, "description": "By domain, event type"}
       ],
-      "relatedFiles": ["src/api/streaming/EventBroadcaster.js", "src/api/streaming/SSEController.js"],
+      "relatedFiles": ["src/api/streaming/EventBroadcaster.js", "src/api/streaming/SSEController.js", "src/api/streaming/WebSocketServer.js"],
       "acceptanceCriteria": ["<500ms event latency", "WS subscribe/unsubscribe", "Filtering works", "Graceful reconnect"],
       "implementationNotes": {
         "eventTypes": {
@@ -474,16 +486,17 @@
       "id": 7,
       "title": "Article Recommendation Engine",
       "priority": "low",
-      "status": "not-started",
+      "status": "completed",
+      "completedDate": "2025-12-27",
       "estimatedHours": 8,
       "category": "intelligence",
       "icon": "💡",
       "description": "Recommend related articles based on content similarity, tags, and trending signals.",
       "tasks": [
-        {"id": "content-recommender", "title": "Content-based", "done": false, "description": "SimHash similarity"},
-        {"id": "tag-recommender", "title": "Tag-based", "done": false, "description": "Tag overlap"},
-        {"id": "trending-calculator", "title": "Trending", "done": false, "description": "Recency-weighted"},
-        {"id": "recommendation-api", "title": "API endpoint", "done": false, "description": "GET /api/v1/articles/:id/recommendations"}
+        {"id": "content-recommender", "title": "Content-based", "done": true, "description": "SimHash similarity"},
+        {"id": "tag-recommender", "title": "Tag-based", "done": true, "description": "Tag overlap"},
+        {"id": "trending-calculator", "title": "Trending", "done": true, "description": "Recency-weighted"},
+        {"id": "recommendation-api", "title": "API endpoint", "done": true, "description": "GET /api/v1/articles/:id/recommendations"}
       ],
       "relatedFiles": ["src/analysis/recommendations/RecommendationEngine.js", "src/analysis/recommendations/TrendingCalculator.js"],
       "acceptanceCriteria": [">70% relevance", "Trending reflects recent", "<200ms API response"],
@@ -555,18 +568,19 @@
       "id": 8,
       "title": "Data Export & Syndication",
       "priority": "low",
-      "status": "not-started",
+      "status": "completed",
       "estimatedHours": 6,
       "category": "api",
       "icon": "📤",
       "description": "Export articles in JSON, CSV, RSS, Atom formats with scheduled export support.",
       "tasks": [
-        {"id": "json-export", "title": "JSON/JSONL", "done": false, "description": "Full article data"},
-        {"id": "csv-export", "title": "CSV export", "done": false, "description": "Column selection"},
-        {"id": "rss-feed", "title": "RSS 2.0", "done": false, "description": "Per-domain feeds"},
-        {"id": "scheduled-export", "title": "Scheduled", "done": false, "description": "Cron-based exports"}
+        {"id": "json-export", "title": "JSON/JSONL", "done": true, "description": "Full article data"},
+        {"id": "csv-export", "title": "CSV export", "done": true, "description": "Column selection"},
+        {"id": "rss-feed", "title": "RSS 2.0", "done": true, "description": "Per-domain feeds"},
+        {"id": "atom-feed", "title": "Atom 1.0", "done": true, "description": "Standard Atom feed"},
+        {"id": "scheduled-export", "title": "Scheduled", "done": true, "description": "Cron-based exports"}
       ],
-      "relatedFiles": ["src/export/ExportService.js", "src/export/formatters/RssFormatter.js", "src/export/ScheduledExporter.js"],
+      "relatedFiles": ["src/export/ExportService.js", "src/export/formatters/RssFormatter.js", "src/export/formatters/AtomFormatter.js", "src/export/ScheduledExporter.js", "src/api/v1/routes/export.js", "tools/export-data.js"],
       "acceptanceCriteria": ["100k articles in <30s", "Configurable CSV columns", "Valid RSS/Atom", "Cron exports work"],
       "implementationNotes": {
         "exportFormats": {
@@ -648,8 +662,11 @@
   ],
   "summary": {
     "totalItems": 8,
+    "completedItems": 8,
     "totalHours": 60,
     "totalTasks": 34,
+    "completedTasks": 34,
+    "testsCreated": 469,
     "categories": {"search": 1, "api": 3, "intelligence": 3, "analytics": 1},
     "priorities": {"high": 3, "medium": 3, "low": 2}
   },

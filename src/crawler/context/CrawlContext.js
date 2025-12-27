@@ -227,8 +227,16 @@ class CrawlContext extends EventEmitter {
     if (!(name in this._stats)) {
       throw new Error(`Unknown stat: ${name}`);
     }
+    const oldValue = this._stats[name];
     this._stats[name] += amount;
     this._timing.lastActivityAt = Date.now();
+
+    this.emit('stats:change', {
+      name,
+      oldValue,
+      newValue: this._stats[name],
+      delta: amount
+    });
   }
 
   // ============================================================
@@ -277,6 +285,7 @@ class CrawlContext extends EventEmitter {
   markVisited(url, metadata = {}) {
     if (this._urls.visited.has(url)) return false;
 
+    const oldState = this.isQueued(url) ? 'queued' : 'discovered';
     this._urls.visited.add(url);
     this._urls.queued.delete(url);
     this._urls.discovered.add(url);
@@ -290,6 +299,8 @@ class CrawlContext extends EventEmitter {
 
     this._timing.lastActivityAt = Date.now();
     this.emit('url:visited', { url, ...metadata });
+    this.emit('url:state-change', { url, oldState, newState: 'visited', ...metadata });
+    this.emit('stats:change', { name: 'visited', newValue: this._stats.visited, delta: 1 });
     return true;
   }
 
@@ -302,6 +313,7 @@ class CrawlContext extends EventEmitter {
       return false;
     }
 
+    const oldState = this.hasSeen(url) ? 'discovered' : 'new';
     this._urls.queued.add(url);
     this._urls.discovered.add(url);
     this._stats.queued++;
@@ -311,6 +323,8 @@ class CrawlContext extends EventEmitter {
     }
 
     this.emit('url:queued', { url, ...metadata });
+    this.emit('url:state-change', { url, oldState, newState: 'queued', ...metadata });
+    this.emit('stats:change', { name: 'queued', newValue: this._stats.queued, delta: 1 });
     return true;
   }
 
@@ -318,17 +332,24 @@ class CrawlContext extends EventEmitter {
    * Mark URL as dequeued (about to process).
    */
   markDequeued(url) {
-    this._urls.queued.delete(url);
-    this._stats.dequeued++;
+    if (this._urls.queued.has(url)) {
+      this._urls.queued.delete(url);
+      this._stats.dequeued++;
+      this.emit('url:state-change', { url, oldState: 'queued', newState: 'dequeued' });
+      this.emit('stats:change', { name: 'dequeued', newValue: this._stats.dequeued, delta: 1 });
+    }
   }
 
   /**
    * Mark URL as skipped (won't be processed).
    */
   markSkipped(url, reason) {
+    const oldState = this.isQueued(url) ? 'queued' : (this.hasSeen(url) ? 'discovered' : 'new');
     this._urls.discovered.add(url);
     this._stats.skipped++;
     this.setUrlDecision(url, 'skip', reason);
+    this.emit('url:state-change', { url, oldState, newState: 'skipped', reason });
+    this.emit('stats:change', { name: 'skipped', newValue: this._stats.skipped, delta: 1 });
   }
 
   /**
@@ -521,6 +542,7 @@ class CrawlContext extends EventEmitter {
     this._content.articleUrls.add(url);
     this._stats.articles++;
     this.emit('article:found', { url, ...metadata });
+    this.emit('stats:change', { name: 'articles', newValue: this._stats.articles, delta: 1 });
   }
 
   /**
@@ -537,6 +559,7 @@ class CrawlContext extends EventEmitter {
     this._content.hubUrls.add(url);
     this._stats.navigation++;
     this.emit('hub:found', { url, ...metadata });
+    this.emit('stats:change', { name: 'navigation', newValue: this._stats.navigation, delta: 1 });
   }
 
   /**
@@ -567,6 +590,7 @@ class CrawlContext extends EventEmitter {
     this._stats.bytesDownloaded += bytes;
     this._timing.totalFetchMs += fetchMs;
     this._timing.fetchCount++;
+    this.emit('stats:change', { name: 'bytesDownloaded', newValue: this._stats.bytesDownloaded, delta: bytes });
   }
 
   /**
@@ -574,6 +598,7 @@ class CrawlContext extends EventEmitter {
    */
   recordCacheHit() {
     this._stats.cacheHits++;
+    this.emit('stats:change', { name: 'cacheHits', newValue: this._stats.cacheHits, delta: 1 });
   }
 
   /**
@@ -581,6 +606,7 @@ class CrawlContext extends EventEmitter {
    */
   recordCacheMiss() {
     this._stats.cacheMisses++;
+    this.emit('stats:change', { name: 'cacheMisses', newValue: this._stats.cacheMisses, delta: 1 });
   }
 
   /**
@@ -593,6 +619,7 @@ class CrawlContext extends EventEmitter {
       error: error?.message || String(error),
       timestamp: Date.now()
     });
+    this.emit('stats:change', { name: 'errors', newValue: this._stats.errors, delta: 1 });
   }
 
   /**
@@ -601,6 +628,7 @@ class CrawlContext extends EventEmitter {
   recordRetry(url, attempt) {
     this._stats.retries++;
     this.emit('retry', { url, attempt });
+    this.emit('stats:change', { name: 'retries', newValue: this._stats.retries, delta: 1 });
   }
 
   // ============================================================

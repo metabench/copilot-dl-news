@@ -10,9 +10,9 @@
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
   };
 
-  // node_modules/lang-mini/lang-mini.js
+  // node_modules/lang-tools/node_modules/lang-mini/lang-mini.js
   var require_lang_mini = __commonJS({
-    "node_modules/lang-mini/lang-mini.js"(exports, module) {
+    "node_modules/lang-tools/node_modules/lang-mini/lang-mini.js"(exports, module) {
       var running_in_browser = typeof window !== "undefined";
       var running_in_node = !running_in_browser;
       var Readable_Stream;
@@ -367,7 +367,7 @@
           }
         }
       };
-      var get_a_sig2 = (a) => {
+      var get_a_sig = (a) => {
         let c2 = 0, l2 = a.length;
         let res2 = "[";
         let first = true;
@@ -592,7 +592,7 @@
       };
       var mfp = function() {
         const a1 = arguments;
-        const sig1 = get_a_sig2(a1);
+        const sig1 = get_a_sig(a1);
         let options = {};
         let fn_pre, provided_map_sig_fns, inner_map_sig_fns = {}, inner_map_parsed_sigs = {}, arr_sig_parsed_sig_fns = [], fn_post;
         let tm_sig_fns;
@@ -739,6 +739,15 @@
           const lsig = dsig;
           let ltf = tf2;
           mfp_fn_call_deep_sig = lsig(a2);
+          const mfp_fn_call_shallow_sig = (() => {
+            if (!a2 || a2.length === 0) return "";
+            let res3 = "";
+            for (let i = 0; i < a2.length; i++) {
+              if (i > 0) res3 = res3 + ",";
+              res3 = res3 + ltf(a2[i]);
+            }
+            return res3;
+          })();
           let do_skip = false;
           if (skip) {
             if (skip(a2)) {
@@ -749,6 +758,8 @@
           if (!do_skip) {
             if (inner_map_sig_fns[mfp_fn_call_deep_sig]) {
               return inner_map_sig_fns[mfp_fn_call_deep_sig].apply(this, a2);
+            } else if (mfp_fn_call_shallow_sig && inner_map_sig_fns[mfp_fn_call_shallow_sig]) {
+              return inner_map_sig_fns[mfp_fn_call_shallow_sig].apply(this, a2);
             } else {
               let idx_last_fn = -1;
               let idx_last_obj = -1;
@@ -956,8 +967,36 @@
               return obj2;
             } else if (t === "null") {
               return obj2;
+            } else if (t === "date") {
+              return new Date(obj2.getTime());
+            } else if (t === "regex") {
+              return new RegExp(obj2.source, obj2.flags);
+            } else if (t === "buffer") {
+              if (typeof Buffer !== "undefined" && Buffer.from) {
+                return Buffer.from(obj2);
+              } else if (obj2 && typeof obj2.slice === "function") {
+                return obj2.slice(0);
+              } else {
+                return obj2;
+              }
+            } else if (t === "error") {
+              const cloned_error = new obj2.constructor(obj2.message);
+              cloned_error.name = obj2.name;
+              cloned_error.stack = obj2.stack;
+              each(obj2, (value2, key2) => {
+                if (key2 !== "message" && key2 !== "name" && key2 !== "stack") {
+                  cloned_error[key2] = clone(value2);
+                }
+              });
+              return cloned_error;
+            } else if (t === "object") {
+              const res2 = {};
+              each(obj2, (value2, key2) => {
+                res2[key2] = clone(value2);
+              });
+              return res2;
             } else {
-              return Object.assign({}, obj2);
+              return obj2;
             }
           }
         } else if (a.l === 2 && tof(a[1]) === "number") {
@@ -1772,7 +1811,7 @@
           });
         }
         "raise_event"() {
-          let a = Array.prototype.slice.call(arguments), sig = get_a_sig2(a);
+          let a = Array.prototype.slice.call(arguments), sig = get_a_sig(a);
           a.l = a.length;
           let target = this;
           let c2, l2, res2;
@@ -1892,7 +1931,7 @@
           const {
             event_events
           } = this;
-          let a = Array.prototype.slice.call(arguments), sig = get_a_sig2(a);
+          let a = Array.prototype.slice.call(arguments), sig = get_a_sig(a);
           if (sig === "[f]") {
             this._bound_general_handler = this._bound_general_handler || [];
             if (is_array(this._bound_general_handler)) {
@@ -2054,7 +2093,7 @@
         }
       };
       var prop = (...a) => {
-        let s = get_a_sig2(a);
+        let s = get_a_sig(a);
         const raise_change_events = true;
         const ifn = (item2) => typeof item2 === "function";
         if (s === "[a]") {
@@ -2250,7 +2289,7 @@
       var field = (...a) => {
         const raise_change_events = true;
         const ifn = (item2) => typeof item2 === "function";
-        let s = get_a_sig2(a);
+        let s = get_a_sig(a);
         if (s === "[a]") {
           each(a[0], (item_params2) => {
             prop.apply(exports, item_params2);
@@ -2343,6 +2382,1031 @@
           }
         }
       };
+      var KEYWORD_LITERALS = /* @__PURE__ */ new Set(["true", "false", "null", "undefined"]);
+      var KEYWORD_OPERATORS = /* @__PURE__ */ new Set(["typeof", "void", "delete", "in", "instanceof"]);
+      var MULTI_CHAR_OPERATORS = [
+        "===",
+        "!==",
+        "==",
+        "!=",
+        "<=",
+        ">=",
+        "&&",
+        "||",
+        "??",
+        "++",
+        "--",
+        "+=",
+        "-=",
+        "*=",
+        "/=",
+        "%=",
+        "&=",
+        "|=",
+        "^=",
+        "<<",
+        ">>",
+        ">>>",
+        "**"
+      ];
+      var SINGLE_CHAR_OPERATORS = /* @__PURE__ */ new Set(["+", "-", "*", "/", "%", "=", "!", "<", ">", "&", "|", "^", "~"]);
+      var PUNCTUATION_CHARS = /* @__PURE__ */ new Set(["(", ")", "{", "}", "[", "]", ",", ":", "?", "."]);
+      var GLOBAL_SCOPE = typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
+      var DEFAULT_ALLOWED_GLOBALS = ["Math"];
+      var EXPRESSION_PARSER_DEFAULTS = {
+        cache: true,
+        cacheSize: 64,
+        cacheKeyResolver: null,
+        maxExpressionLength: 1e4,
+        maxMemberDepth: 2,
+        helpers: {},
+        allowedFunctions: [],
+        allowedGlobals: DEFAULT_ALLOWED_GLOBALS,
+        allowCall: null,
+        strict: false
+      };
+      var NORMALIZED_OPTIONS_FLAG = /* @__PURE__ */ Symbol("ExpressionParserOptions");
+      var DISALLOWED_IDENTIFIERS = /* @__PURE__ */ new Set(["this", "new"]);
+      var ExpressionParserError = class extends Error {
+        constructor(code, message, details = {}) {
+          super(message);
+          this.name = "ExpressionParserError";
+          this.code = code;
+          this.details = details;
+        }
+      };
+      var ExpressionCache = class {
+        constructor(limit = 0) {
+          this.limit = Math.max(0, limit || 0);
+          this.map = /* @__PURE__ */ new Map();
+        }
+        get(key2) {
+          if (!this.limit || !this.map.has(key2)) {
+            return void 0;
+          }
+          const value2 = this.map.get(key2);
+          this.map.delete(key2);
+          this.map.set(key2, value2);
+          return value2;
+        }
+        set(key2, value2) {
+          if (!this.limit) {
+            return;
+          }
+          if (this.map.has(key2)) {
+            this.map.delete(key2);
+          }
+          this.map.set(key2, value2);
+          while (this.map.size > this.limit) {
+            const oldestKey = this.map.keys().next().value;
+            this.map.delete(oldestKey);
+          }
+        }
+        clear() {
+          this.map.clear();
+        }
+        get size() {
+          return this.map.size;
+        }
+      };
+      var Tokenizer = class {
+        constructor(expression) {
+          this.expression = typeof expression === "string" ? expression : String(expression || "");
+          this.length = this.expression.length;
+          this.position = 0;
+          this.line = 1;
+          this.column = 1;
+        }
+        tokenize() {
+          const tokens = [];
+          if (!this.expression.trim()) {
+            return tokens;
+          }
+          while (!this.isAtEnd()) {
+            this.skipWhitespace();
+            if (this.isAtEnd()) break;
+            const ch = this.peek();
+            if (this.isIdentifierStart(ch)) {
+              tokens.push(this.tokenizeIdentifier());
+            } else if (this.isDigit(ch) || ch === "." && this.isDigit(this.peek(1))) {
+              tokens.push(this.tokenizeNumber());
+            } else if (ch === '"' || ch === "'") {
+              tokens.push(this.tokenizeString());
+            } else if (this.isOperatorStart(ch)) {
+              tokens.push(this.tokenizeOperator());
+            } else if (PUNCTUATION_CHARS.has(ch)) {
+              tokens.push(this.tokenizePunctuation());
+            } else {
+              this.throwError("TOKEN_INVALID_CHAR", `Unexpected character: ${ch}`);
+            }
+          }
+          return tokens;
+        }
+        isAtEnd() {
+          return this.position >= this.length;
+        }
+        skipWhitespace() {
+          while (!this.isAtEnd()) {
+            const ch = this.peek();
+            if (/\s/.test(ch)) {
+              this.advance();
+              continue;
+            }
+            if (ch === "/" && this.peek(1) === "/") {
+              while (!this.isAtEnd() && this.peek() !== "\n") {
+                this.advance();
+              }
+              continue;
+            }
+            if (ch === "/" && this.peek(1) === "*") {
+              this.advance();
+              this.advance();
+              while (!this.isAtEnd()) {
+                if (this.peek() === "*" && this.peek(1) === "/") {
+                  this.advance();
+                  this.advance();
+                  break;
+                }
+                this.advance();
+              }
+              continue;
+            }
+            break;
+          }
+        }
+        peek(offset2 = 0) {
+          if (this.position + offset2 >= this.length) return "\0";
+          return this.expression[this.position + offset2];
+        }
+        advance() {
+          if (this.isAtEnd()) {
+            return "\0";
+          }
+          const char = this.expression[this.position++];
+          if (char === "\n") {
+            this.line += 1;
+            this.column = 1;
+          } else {
+            this.column += 1;
+          }
+          return char;
+        }
+        getLocationSnapshot() {
+          return { index: this.position, line: this.line, column: this.column };
+        }
+        createToken(type, value2, start, end) {
+          return { type, value: value2, start, end };
+        }
+        throwError(code, message) {
+          throw new ExpressionParserError(code, message, { location: this.getLocationSnapshot() });
+        }
+        isIdentifierStart(ch) {
+          return /[A-Za-z_$]/.test(ch);
+        }
+        isIdentifierPart(ch) {
+          return /[A-Za-z0-9_$]/.test(ch);
+        }
+        isDigit(ch) {
+          return /[0-9]/.test(ch);
+        }
+        isOperatorStart(ch) {
+          if (ch === "." && this.peek(1) === "." && this.peek(2) === ".") {
+            this.throwError("SYNTAX_UNSUPPORTED", "Spread syntax is not supported");
+          }
+          if (ch === "?" && this.peek(1) === "?") {
+            return true;
+          }
+          return SINGLE_CHAR_OPERATORS.has(ch);
+        }
+        tokenizeIdentifier() {
+          const start = this.getLocationSnapshot();
+          let value2 = "";
+          while (!this.isAtEnd() && this.isIdentifierPart(this.peek())) {
+            value2 += this.advance();
+          }
+          const end = this.getLocationSnapshot();
+          if (KEYWORD_LITERALS.has(value2)) {
+            return this.createToken("KEYWORD", value2, start, end);
+          }
+          if (KEYWORD_OPERATORS.has(value2)) {
+            return this.createToken("OPERATOR", value2, start, end);
+          }
+          return this.createToken("IDENTIFIER", value2, start, end);
+        }
+        tokenizeNumber() {
+          const start = this.getLocationSnapshot();
+          let value2 = "";
+          let hasDot = false;
+          while (!this.isAtEnd()) {
+            const ch = this.peek();
+            if (this.isDigit(ch)) {
+              value2 += this.advance();
+            } else if (ch === "." && !hasDot) {
+              hasDot = true;
+              value2 += this.advance();
+            } else {
+              break;
+            }
+          }
+          const end = this.getLocationSnapshot();
+          return this.createToken("NUMBER", Number(value2), start, end);
+        }
+        tokenizeString() {
+          const quote = this.advance();
+          const start = this.getLocationSnapshot();
+          let value2 = "";
+          while (!this.isAtEnd()) {
+            const ch = this.advance();
+            if (ch === quote) {
+              return this.createToken("STRING", value2, start, this.getLocationSnapshot());
+            }
+            if (ch === "\\") {
+              const next = this.advance();
+              switch (next) {
+                case "n":
+                  value2 += "\n";
+                  break;
+                case "r":
+                  value2 += "\r";
+                  break;
+                case "t":
+                  value2 += "	";
+                  break;
+                case "\\":
+                  value2 += "\\";
+                  break;
+                case '"':
+                  value2 += '"';
+                  break;
+                case "'":
+                  value2 += "'";
+                  break;
+                default:
+                  value2 += next;
+              }
+            } else {
+              value2 += ch;
+            }
+          }
+          this.throwError("TOKEN_UNTERMINATED_STRING", "Unterminated string literal");
+        }
+        tokenizeOperator() {
+          const remaining = this.expression.slice(this.position);
+          const start = this.getLocationSnapshot();
+          for (const op of MULTI_CHAR_OPERATORS) {
+            if (remaining.startsWith(op)) {
+              if (op === "=>") {
+                this.throwError("SYNTAX_UNSUPPORTED", "Arrow functions are not supported");
+              }
+              this.position += op.length;
+              this.column += op.length;
+              return this.createToken("OPERATOR", op, start, this.getLocationSnapshot());
+            }
+          }
+          const ch = this.advance();
+          if (ch === "=" && this.peek() === ">") {
+            this.throwError("SYNTAX_UNSUPPORTED", "Arrow functions are not supported");
+          }
+          if (!SINGLE_CHAR_OPERATORS.has(ch) && ch !== "?") {
+            this.throwError("TOKEN_UNEXPECTED_OPERATOR", "Unexpected operator");
+          }
+          return this.createToken("OPERATOR", ch, start, this.getLocationSnapshot());
+        }
+        tokenizePunctuation() {
+          const start = this.getLocationSnapshot();
+          const ch = this.advance();
+          if (ch === "." && this.peek() === "." && this.peek(1) === ".") {
+            this.throwError("SYNTAX_UNSUPPORTED", "Spread syntax is not supported");
+          }
+          return this.createToken("PUNCTUATION", ch, start, this.getLocationSnapshot());
+        }
+      };
+      var Parser = class {
+        constructor(tokens, options = {}) {
+          this.tokens = tokens;
+          this.pos = 0;
+          this.maxMemberDepth = options.maxMemberDepth || EXPRESSION_PARSER_DEFAULTS.maxMemberDepth;
+          const disallowed = new Set(DISALLOWED_IDENTIFIERS);
+          if (options.disallowedIdentifiers) {
+            options.disallowedIdentifiers.forEach((identifier) => disallowed.add(identifier));
+          }
+          this.disallowedIdentifiers = disallowed;
+        }
+        parse() {
+          if (!this.tokens.length) {
+            throw new ExpressionParserError("EMPTY_EXPRESSION", "Empty expression");
+          }
+          const ast = this.parseExpression();
+          if (!this.isAtEnd()) {
+            this.error("UNEXPECTED_TOKEN", `Unexpected token: ${this.peek().value}`, this.peek());
+          }
+          return ast;
+        }
+        parseExpression() {
+          return this.parseConditionalExpression();
+        }
+        parseConditionalExpression() {
+          let expr = this.parseLogicalOrExpression();
+          if (this.matchPunctuation("?")) {
+            const consequent = this.parseExpression();
+            this.consume("PUNCTUATION", ":");
+            const alternate = this.parseExpression();
+            expr = {
+              type: "ConditionalExpression",
+              test: expr,
+              consequent,
+              alternate
+            };
+          }
+          return expr;
+        }
+        parseLogicalOrExpression() {
+          let expr = this.parseLogicalAndExpression();
+          while (this.matchOperator("||")) {
+            const operator = this.previous().value;
+            const right = this.parseLogicalAndExpression();
+            expr = this.buildLogicalExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseLogicalAndExpression() {
+          let expr = this.parseNullishExpression();
+          while (this.matchOperator("&&")) {
+            const operator = this.previous().value;
+            const right = this.parseNullishExpression();
+            expr = this.buildLogicalExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseNullishExpression() {
+          let expr = this.parseEqualityExpression();
+          while (this.matchOperator("??")) {
+            const operator = this.previous().value;
+            const right = this.parseEqualityExpression();
+            expr = this.buildLogicalExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseEqualityExpression() {
+          let expr = this.parseRelationalExpression();
+          while (this.matchOperator("===", "!==", "==", "!=")) {
+            const operator = this.previous().value;
+            const right = this.parseRelationalExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseRelationalExpression() {
+          let expr = this.parseShiftExpression();
+          while (this.matchOperator("<", ">", "<=", ">=", "instanceof", "in")) {
+            const operator = this.previous().value;
+            const right = this.parseShiftExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseShiftExpression() {
+          let expr = this.parseAdditiveExpression();
+          while (this.matchOperator("<<", ">>", ">>>")) {
+            const operator = this.previous().value;
+            const right = this.parseAdditiveExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseAdditiveExpression() {
+          let expr = this.parseMultiplicativeExpression();
+          while (this.matchOperator("+", "-")) {
+            const operator = this.previous().value;
+            const right = this.parseMultiplicativeExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseMultiplicativeExpression() {
+          let expr = this.parseUnaryExpression();
+          while (this.matchOperator("*", "/", "%")) {
+            const operator = this.previous().value;
+            const right = this.parseUnaryExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseUnaryExpression() {
+          if (this.matchOperator("+", "-", "!", "~", "typeof", "void", "delete")) {
+            const operator = this.previous().value;
+            const argument = this.parseUnaryExpression();
+            return { type: "UnaryExpression", operator, argument };
+          }
+          return this.parseLeftHandSideExpression();
+        }
+        parseLeftHandSideExpression() {
+          let expr = this.parsePrimaryExpression();
+          while (true) {
+            if (this.matchPunctuation(".")) {
+              const operatorToken = this.previous();
+              const property = this.consumePropertyIdentifier();
+              const depth = this.getChainDepth(expr) + 1;
+              this.assertMemberDepth(depth, operatorToken);
+              expr = {
+                type: "MemberExpression",
+                object: expr,
+                property,
+                computed: false
+              };
+              this.setChainDepth(expr, depth);
+            } else if (this.matchPunctuation("[")) {
+              const operatorToken = this.previous();
+              const property = this.parseExpression();
+              this.consume("PUNCTUATION", "]");
+              const depth = this.getChainDepth(expr) + 1;
+              this.assertMemberDepth(depth, operatorToken);
+              expr = {
+                type: "MemberExpression",
+                object: expr,
+                property,
+                computed: true
+              };
+              this.setChainDepth(expr, depth);
+            } else if (this.matchPunctuation("(")) {
+              const args = this.parseArguments();
+              expr = {
+                type: "CallExpression",
+                callee: expr,
+                arguments: args
+              };
+              this.setChainDepth(expr, this.getChainDepth(expr.callee));
+            } else {
+              break;
+            }
+          }
+          return expr;
+        }
+        parsePrimaryExpression() {
+          const token = this.peek();
+          if (!token) {
+            this.error("UNEXPECTED_END", "Unexpected end of expression", token);
+          }
+          if (token.type === "NUMBER" || token.type === "STRING") {
+            this.advance();
+            return { type: "Literal", value: token.value };
+          }
+          if (token.type === "KEYWORD") {
+            this.advance();
+            return { type: "Literal", value: this.literalFromKeyword(token.value) };
+          }
+          if (token.type === "IDENTIFIER") {
+            this.advance();
+            this.assertIdentifierAllowed(token);
+            return { type: "Identifier", value: token.value };
+          }
+          if (this.matchPunctuation("(")) {
+            const expr = this.parseExpression();
+            this.consume("PUNCTUATION", ")");
+            return expr;
+          }
+          if (this.matchPunctuation("[")) {
+            const elements = [];
+            if (!this.check("PUNCTUATION", "]")) {
+              do {
+                elements.push(this.parseExpression());
+              } while (this.matchPunctuation(","));
+            }
+            this.consume("PUNCTUATION", "]");
+            return { type: "ArrayExpression", elements };
+          }
+          if (this.matchPunctuation("{")) {
+            const properties = [];
+            if (!this.check("PUNCTUATION", "}")) {
+              do {
+                const key2 = this.parsePropertyKey();
+                this.consume("PUNCTUATION", ":");
+                const value2 = this.parseExpression();
+                properties.push({ key: key2, value: value2 });
+              } while (this.matchPunctuation(","));
+            }
+            this.consume("PUNCTUATION", "}");
+            return { type: "ObjectExpression", properties };
+          }
+          this.error("UNEXPECTED_TOKEN", `Unexpected token: ${token.value}`, token);
+        }
+        parsePropertyKey() {
+          const token = this.peek();
+          if (token.type === "IDENTIFIER") {
+            this.advance();
+            return { type: "Identifier", value: token.value };
+          }
+          if (token.type === "STRING" || token.type === "NUMBER" || token.type === "KEYWORD") {
+            this.advance();
+            const value2 = token.type === "KEYWORD" ? this.literalFromKeyword(token.value) : token.value;
+            return { type: "Literal", value: value2 };
+          }
+          this.error("INVALID_OBJECT_KEY", "Invalid object property key", token);
+        }
+        parseArguments() {
+          const args = [];
+          if (!this.check("PUNCTUATION", ")")) {
+            do {
+              args.push(this.parseExpression());
+            } while (this.matchPunctuation(","));
+          }
+          this.consume("PUNCTUATION", ")");
+          return args;
+        }
+        literalFromKeyword(value2) {
+          switch (value2) {
+            case "true":
+              return true;
+            case "false":
+              return false;
+            case "null":
+              return null;
+            case "undefined":
+              return void 0;
+            default:
+              return value2;
+          }
+        }
+        consume(type, value2) {
+          if (this.check(type, value2)) {
+            return this.advance();
+          }
+          const expected = value2 ? `${type} '${value2}'` : type;
+          this.error("MISSING_TOKEN", `Expected ${expected}`, this.peek());
+        }
+        check(type, value2) {
+          if (this.isAtEnd()) return false;
+          const token = this.peek();
+          if (token.type !== type) return false;
+          if (typeof value2 === "undefined") return true;
+          return token.value === value2;
+        }
+        matchOperator(...operators) {
+          if (this.check("OPERATOR") && operators.includes(this.peek().value)) {
+            this.advance();
+            return true;
+          }
+          return false;
+        }
+        matchPunctuation(value2) {
+          if (this.check("PUNCTUATION", value2)) {
+            this.advance();
+            return true;
+          }
+          return false;
+        }
+        consumePropertyIdentifier() {
+          const token = this.peek();
+          if (token.type === "IDENTIFIER") {
+            this.advance();
+            return { type: "Identifier", value: token.value };
+          }
+          if (token.type === "STRING" || token.type === "NUMBER" || token.type === "KEYWORD") {
+            this.advance();
+            const value2 = token.type === "KEYWORD" ? this.literalFromKeyword(token.value) : token.value;
+            return { type: "Literal", value: value2 };
+          }
+          this.error("INVALID_PROPERTY", "Expected property name", token);
+        }
+        buildBinaryExpression(operator, left, right) {
+          return { type: "BinaryExpression", operator, left, right };
+        }
+        buildLogicalExpression(operator, left, right) {
+          return { type: "LogicalExpression", operator, left, right };
+        }
+        getChainDepth(node) {
+          if (!node || typeof node !== "object") {
+            return 0;
+          }
+          return node.__chainDepth || 0;
+        }
+        setChainDepth(node, depth) {
+          if (!node || typeof node !== "object") {
+            return;
+          }
+          Object.defineProperty(node, "__chainDepth", {
+            value: depth,
+            enumerable: false,
+            configurable: true
+          });
+        }
+        assertMemberDepth(depth, token) {
+          if (depth > this.maxMemberDepth) {
+            this.error("MEMBER_DEPTH_EXCEEDED", `Member access depth ${depth} exceeds maximum of ${this.maxMemberDepth}`, token);
+          }
+        }
+        assertIdentifierAllowed(token) {
+          if (this.disallowedIdentifiers.has(token.value)) {
+            this.error("DISALLOWED_IDENTIFIER", `Identifier '${token.value}' is not allowed in expressions`, token);
+          }
+        }
+        error(code, message, token) {
+          throw new ExpressionParserError(code, message, token ? { location: token.start } : void 0);
+        }
+        advance() {
+          if (!this.isAtEnd()) {
+            this.pos += 1;
+          }
+          return this.tokens[this.pos - 1];
+        }
+        peek() {
+          if (this.isAtEnd()) return null;
+          return this.tokens[this.pos];
+        }
+        previous() {
+          return this.tokens[this.pos - 1];
+        }
+        isAtEnd() {
+          return this.pos >= this.tokens.length;
+        }
+      };
+      var Evaluator = class {
+        constructor(context2 = {}, options = {}) {
+          this.context = context2 || {};
+          this.helpers = options.helpers || {};
+          this.strict = options.strict || false;
+          this.allowCall = options.allowCall || null;
+          this.allowedFunctions = new Set(options.allowedFunctions || []);
+          this.allowedGlobals = new Set(options.allowedGlobals || []);
+          Object.values(this.helpers).forEach((value2) => {
+            if (typeof value2 === "function") {
+              this.allowedFunctions.add(value2);
+            }
+          });
+        }
+        evaluate(node) {
+          switch (node.type) {
+            case "Literal":
+              return node.value;
+            case "Identifier":
+              return this.evaluateIdentifier(node);
+            case "MemberExpression":
+              return this.evaluateMemberExpression(node);
+            case "CallExpression":
+              return this.evaluateCallExpression(node);
+            case "UnaryExpression":
+              return this.evaluateUnaryExpression(node);
+            case "BinaryExpression":
+              return this.evaluateBinaryExpression(node);
+            case "LogicalExpression":
+              return this.evaluateLogicalExpression(node);
+            case "ArrayExpression":
+              return node.elements.map((element) => this.evaluate(element));
+            case "ObjectExpression":
+              return this.evaluateObjectExpression(node);
+            case "ConditionalExpression":
+              return this.evaluateConditionalExpression(node);
+            default:
+              throw new ExpressionParserError("UNSUPPORTED_NODE", `Unsupported AST node type: ${node.type}`);
+          }
+        }
+        evaluateIdentifier(node) {
+          const name = node.value;
+          if (Object.prototype.hasOwnProperty.call(this.helpers, name)) {
+            return this.helpers[name];
+          }
+          if (this.context && Object.prototype.hasOwnProperty.call(this.context, name)) {
+            return this.context[name];
+          }
+          if (this.allowedGlobals.has(name) && name in GLOBAL_SCOPE) {
+            return GLOBAL_SCOPE[name];
+          }
+          if (this.strict) {
+            throw new ExpressionParserError("UNDEFINED_IDENTIFIER", `Undefined identifier: ${name}`);
+          }
+          console.error(`Undefined identifier: ${name}`);
+          return void 0;
+        }
+        evaluateMemberExpression(node) {
+          const object = this.evaluate(node.object);
+          if (object === null || object === void 0) {
+            throw new ExpressionParserError("NULL_MEMBER_ACCESS", "Cannot read property of null or undefined");
+          }
+          const property = node.computed ? this.evaluate(node.property) : node.property.type === "Identifier" ? node.property.value : node.property.value;
+          return object[property];
+        }
+        evaluateCallExpression(node) {
+          let callee;
+          let thisArg;
+          if (node.callee.type === "MemberExpression") {
+            const object = this.evaluate(node.callee.object);
+            if (object === null || object === void 0) {
+              throw new ExpressionParserError("NULL_MEMBER_CALL", "Cannot call property of null or undefined");
+            }
+            const property = node.callee.computed ? this.evaluate(node.callee.property) : node.callee.property.type === "Identifier" ? node.callee.property.value : node.callee.property.value;
+            callee = object[property];
+            thisArg = object;
+          } else {
+            callee = this.evaluate(node.callee);
+            thisArg = void 0;
+          }
+          if (typeof callee !== "function") {
+            throw new ExpressionParserError("CALL_NON_FUNCTION", "Attempted to call a non-function");
+          }
+          if (!this.isCallAllowed(callee, thisArg)) {
+            throw new ExpressionParserError("CALL_NOT_ALLOWED", "Function call not allowed by policy");
+          }
+          const args = node.arguments.map((arg) => this.evaluate(arg));
+          return callee.apply(thisArg, args);
+        }
+        isCallAllowed(fn, thisArg) {
+          if (this.allowCall) {
+            const decision = this.allowCall(fn, thisArg);
+            if (decision === true) return true;
+            if (decision === false) return false;
+          }
+          return this.allowedFunctions.has(fn);
+        }
+        evaluateUnaryExpression(node) {
+          let argumentValue;
+          if (node.operator === "delete") {
+            argumentValue = node.argument;
+          } else if (node.operator === "typeof" && node.argument.type === "Identifier" && !this.isIdentifierDefined(node.argument.value)) {
+            argumentValue = void 0;
+          } else {
+            argumentValue = this.evaluate(node.argument);
+          }
+          switch (node.operator) {
+            case "+":
+              return +argumentValue;
+            case "-":
+              return -argumentValue;
+            case "!":
+              return !argumentValue;
+            case "~":
+              return ~argumentValue;
+            case "typeof":
+              if (node.argument.type === "Identifier" && !this.isIdentifierDefined(node.argument.value)) {
+                return "undefined";
+              }
+              return typeof argumentValue;
+            case "void":
+              return void argumentValue;
+            case "delete":
+              return this.performDelete(node.argument);
+            default:
+              throw new ExpressionParserError("UNSUPPORTED_UNARY", `Unsupported unary operator: ${node.operator}`);
+          }
+        }
+        isIdentifierDefined(name) {
+          return Object.prototype.hasOwnProperty.call(this.helpers, name) || this.context && Object.prototype.hasOwnProperty.call(this.context, name) || this.allowedGlobals.has(name) && name in GLOBAL_SCOPE;
+        }
+        performDelete(argument) {
+          if (argument.type === "Identifier" && this.context && typeof this.context === "object") {
+            return delete this.context[argument.value];
+          }
+          if (argument.type === "MemberExpression") {
+            const target = this.evaluate(argument.object);
+            if (target === null || target === void 0) {
+              return true;
+            }
+            const property = argument.computed ? this.evaluate(argument.property) : argument.property.type === "Identifier" ? argument.property.value : argument.property.value;
+            return delete target[property];
+          }
+          this.evaluate(argument);
+          return true;
+        }
+        evaluateBinaryExpression(node) {
+          const left = this.evaluate(node.left);
+          const right = this.evaluate(node.right);
+          switch (node.operator) {
+            case "+":
+              return left + right;
+            case "-":
+              return left - right;
+            case "*":
+              return left * right;
+            case "/":
+              return left / right;
+            case "%":
+              return left % right;
+            case "==":
+              return left == right;
+            case "!=":
+              return left != right;
+            case "===":
+              return left === right;
+            case "!==":
+              return left !== right;
+            case "<":
+              return left < right;
+            case ">":
+              return left > right;
+            case "<=":
+              return left <= right;
+            case ">=":
+              return left >= right;
+            case "in":
+              return left in right;
+            case "instanceof":
+              return left instanceof right;
+            default:
+              throw new ExpressionParserError("UNSUPPORTED_BINARY", `Unsupported binary operator: ${node.operator}`);
+          }
+        }
+        evaluateLogicalExpression(node) {
+          switch (node.operator) {
+            case "&&": {
+              const left = this.evaluate(node.left);
+              return left ? this.evaluate(node.right) : left;
+            }
+            case "||": {
+              const left = this.evaluate(node.left);
+              return left ? left : this.evaluate(node.right);
+            }
+            case "??": {
+              const left = this.evaluate(node.left);
+              return left !== null && left !== void 0 ? left : this.evaluate(node.right);
+            }
+            default:
+              throw new ExpressionParserError("UNSUPPORTED_LOGICAL", `Unsupported logical operator: ${node.operator}`);
+          }
+        }
+        evaluateObjectExpression(node) {
+          const obj2 = {};
+          node.properties.forEach((property) => {
+            const key2 = this.evaluatePropertyKey(property.key);
+            obj2[key2] = this.evaluate(property.value);
+          });
+          return obj2;
+        }
+        evaluatePropertyKey(node) {
+          if (node.type === "Identifier") {
+            return node.value;
+          }
+          return node.value;
+        }
+        evaluateConditionalExpression(node) {
+          const test = this.evaluate(node.test);
+          return test ? this.evaluate(node.consequent) : this.evaluate(node.alternate);
+        }
+      };
+      var ExpressionParser = class {
+        constructor(options = {}) {
+          this.options = normalizeOptions(null, options);
+          const cacheLimit = this.options.cache !== false ? this.options.cacheSize : 0;
+          this.astCache = new ExpressionCache(cacheLimit);
+          this.valueCache = new ExpressionCache(cacheLimit);
+        }
+        tokenize(expression) {
+          return new Tokenizer(expression).tokenize();
+        }
+        parse(expression, overrideOptions) {
+          const options = this.ensureNormalizedOptions(overrideOptions);
+          this.ensureExpressionLength(expression, options);
+          const useCache = this.shouldUseCache(options);
+          if (useCache) {
+            const cachedAst = this.astCache.get(expression);
+            if (cachedAst) {
+              return cachedAst;
+            }
+          }
+          const tokens = this.tokenize(expression);
+          if (!tokens.length) {
+            throw new ExpressionParserError("EMPTY_EXPRESSION", "Empty expression");
+          }
+          const parser = new Parser(tokens, options);
+          const ast = parser.parse();
+          Object.defineProperty(ast, "tokens", {
+            value: tokens,
+            enumerable: false,
+            configurable: true
+          });
+          if (useCache) {
+            this.astCache.set(expression, ast);
+          }
+          return ast;
+        }
+        evaluate(expression, context2 = {}, overrideOptions = {}) {
+          const mergedOptions = this.mergeOptions(overrideOptions);
+          const useCache = this.shouldUseCache(mergedOptions);
+          if (useCache) {
+            const cached = this.getCachedValue(expression, context2, mergedOptions);
+            if (cached.hit) {
+              return cached.value;
+            }
+          }
+          const ast = this.parse(expression, mergedOptions);
+          const evaluator = new Evaluator(context2, mergedOptions);
+          const result = evaluator.evaluate(ast);
+          if (useCache) {
+            this.storeCachedValue(expression, context2, result, mergedOptions);
+          }
+          return result;
+        }
+        compile(expression, overrideOptions = {}) {
+          const baseOptions = this.mergeOptions(overrideOptions);
+          const ast = this.parse(expression, baseOptions);
+          return (context2 = {}, runtimeOptions = {}) => {
+            const invocationOptions = this.mergeOptions(runtimeOptions, baseOptions);
+            const evaluator = new Evaluator(context2, invocationOptions);
+            return evaluator.evaluate(ast);
+          };
+        }
+        shouldUseCache(options) {
+          return options.cache !== false && options.cacheSize > 0;
+        }
+        ensureNormalizedOptions(options) {
+          if (options && options[NORMALIZED_OPTIONS_FLAG]) {
+            return options;
+          }
+          if (!options) {
+            return this.options;
+          }
+          return this.mergeOptions(options);
+        }
+        ensureExpressionLength(expression, options) {
+          if (expression.length > options.maxExpressionLength) {
+            throw new ExpressionParserError(
+              "EXPRESSION_TOO_LONG",
+              `Expression exceeds maximum length of ${options.maxExpressionLength} characters`
+            );
+          }
+        }
+        mergeOptions(override = {}, baseOptions) {
+          const base = baseOptions && baseOptions[NORMALIZED_OPTIONS_FLAG] ? baseOptions : baseOptions || this.options;
+          return normalizeOptions(base, override);
+        }
+        getCachedValue(expression, context2, options) {
+          const bucket = this.valueCache.get(expression);
+          if (!bucket) {
+            return { hit: false };
+          }
+          if (this.isObjectLike(context2)) {
+            if (bucket.objectCache && bucket.objectCache.has(context2)) {
+              return { hit: true, value: bucket.objectCache.get(context2) };
+            }
+            return { hit: false };
+          }
+          const key2 = this.resolvePrimitiveKey(context2, options);
+          if (key2 === void 0) {
+            return { hit: false };
+          }
+          if (bucket.primitiveCache && bucket.primitiveCache.has(key2)) {
+            return { hit: true, value: bucket.primitiveCache.get(key2) };
+          }
+          return { hit: false };
+        }
+        storeCachedValue(expression, context2, value2, options) {
+          if (!this.shouldUseCache(options)) {
+            return;
+          }
+          let bucket = this.valueCache.get(expression);
+          if (!bucket) {
+            bucket = { objectCache: /* @__PURE__ */ new WeakMap(), primitiveCache: /* @__PURE__ */ new Map() };
+            this.valueCache.set(expression, bucket);
+          }
+          if (this.isObjectLike(context2)) {
+            bucket.objectCache.set(context2, value2);
+            return;
+          }
+          const key2 = this.resolvePrimitiveKey(context2, options);
+          if (key2 === void 0) {
+            return;
+          }
+          bucket.primitiveCache.set(key2, value2);
+        }
+        resolvePrimitiveKey(context2, options) {
+          if (options.cacheKeyResolver) {
+            return options.cacheKeyResolver(context2);
+          }
+          return context2;
+        }
+        isObjectLike(value2) {
+          return value2 !== null && (typeof value2 === "object" || typeof value2 === "function");
+        }
+        getCacheStats() {
+          return {
+            astEntries: this.astCache.size,
+            valueEntries: this.valueCache.size
+          };
+        }
+      };
+      function normalizeOptions(baseOptions, overrideOptions = {}) {
+        const base = baseOptions && baseOptions[NORMALIZED_OPTIONS_FLAG] ? baseOptions : { ...EXPRESSION_PARSER_DEFAULTS, ...baseOptions || {} };
+        const helpers = { ...base.helpers || {}, ...overrideOptions.helpers || {} };
+        const allowedFunctions = /* @__PURE__ */ new Set([
+          ...base.allowedFunctions || [],
+          ...overrideOptions.allowedFunctions || []
+        ]);
+        const allowedGlobals = /* @__PURE__ */ new Set([
+          ...base.allowedGlobals || DEFAULT_ALLOWED_GLOBALS,
+          ...overrideOptions.allowedGlobals || []
+        ]);
+        const normalized = {
+          ...EXPRESSION_PARSER_DEFAULTS,
+          ...base,
+          ...overrideOptions,
+          helpers,
+          allowedFunctions: Array.from(allowedFunctions),
+          allowedGlobals: Array.from(allowedGlobals)
+        };
+        Object.defineProperty(normalized, NORMALIZED_OPTIONS_FLAG, {
+          value: true,
+          enumerable: false
+        });
+        return normalized;
+      }
       var lang_mini_props = {
         each,
         is_array,
@@ -2369,7 +3433,7 @@
         arrayify,
         mapify,
         str_arr_mapify,
-        get_a_sig: get_a_sig2,
+        get_a_sig,
         deep_sig,
         get_item_sig,
         set_vals,
@@ -2413,7 +3477,9 @@
         field,
         prop,
         Data_Type,
-        Functional_Data_Type
+        Functional_Data_Type,
+        ExpressionParser,
+        ExpressionParserError
       };
       var lang_mini = new Evented_Class();
       Object.assign(lang_mini, lang_mini_props);
@@ -2470,9 +3536,9 @@
     }
   });
 
-  // node_modules/lang-mini/lib-lang-mini.js
+  // node_modules/lang-tools/node_modules/lang-mini/lib-lang-mini.js
   var require_lib_lang_mini = __commonJS({
-    "node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
+    "node_modules/lang-tools/node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
       var lang = require_lang_mini();
       var { each, tof } = lang;
       var Type_Signifier = class _Type_Signifier {
@@ -2610,34 +3676,34 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/collective.js
+  // node_modules/lang-tools/collective.js
   var require_collective = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/collective.js"(exports, module) {
+    "node_modules/lang-tools/collective.js"(exports, module) {
       var { each, is_array } = require_lib_lang_mini();
       var collective = (arr) => {
         if (is_array(arr)) {
           const target = {};
           const handler2 = {
             get(target2, prop, receiver) {
-              if (arr.hasOwnProperty(prop)) {
-                return arr[prop];
-              } else {
-                if (typeof arr[0][prop] === "function") {
-                  return (...a) => {
-                    const res2 = [];
-                    each(arr, (item2) => {
-                      res2.push(item2[prop](...a));
-                    });
-                    return res2;
-                  };
-                } else {
-                  const res2 = [];
+              if (arr.length > 0 && arr[0] && typeof arr[0][prop] === "function") {
+                return (...a) => {
+                  const res3 = [];
                   each(arr, (item2) => {
-                    res2.push(item2[prop]);
+                    res3.push(item2[prop](...a));
                   });
-                  return res2;
-                }
+                  return res3;
+                };
               }
+              if (prop in arr) {
+                const val = arr[prop];
+                if (typeof val === "function") return val.bind(arr);
+                return val;
+              }
+              const res2 = [];
+              each(arr, (item2) => {
+                res2.push(item2[prop]);
+              });
+              return res2;
             }
           };
           const proxy2 = new Proxy(target, handler2);
@@ -2651,9 +3717,9 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Model.js
+  // node_modules/lang-tools/Data_Model/Data_Model.js
   var require_Data_Model = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Model.js"(exports, module) {
+    "node_modules/lang-tools/Data_Model/Data_Model.js"(exports, module) {
       var { Evented_Class } = require_lib_lang_mini();
       var Data_Model = class extends Evented_Class {
         constructor(spec = {}) {
@@ -2672,64 +3738,45 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/tools.js
+  // node_modules/lang-tools/Data_Model/new/tools.js
   var require_tools = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/tools.js"(exports, module) {
+    "node_modules/lang-tools/Data_Model/new/tools.js"(exports, module) {
       var Data_Model = require_Data_Model();
       var { tof } = require_lib_lang_mini();
       var more_general_equals = (that2, other) => {
-        if (other instanceof Data_Model) {
-          const my_json = that2.toJSON();
-          const other_json = other.toJSON();
-          return my_json === other_json;
-        } else {
-          if (that2 === other) {
-            return true;
-          } else {
-            if (that2 === void 0) {
-              return false;
-            } else {
-              const { value: value2 } = that2;
-              const t_value = tof(value2), t_other = tof(other);
-              if (t_value === t_other) {
-                if (value2 === other) {
-                  return true;
-                } else {
-                  if (typeof value2.equals === "function" && typeof other.equals === "function") {
-                    return value2.equals(other);
-                  } else {
-                    if (value2 === other) {
-                      return true;
-                    } else {
-                      if (t_value === "number" || t_value === "string" || t_value === "boolean") {
-                        return value2 === other;
-                      } else {
-                        if (t_value === "array") {
-                          if (value2.length === other.length) {
-                            let res2 = true, c2 = 0, l2 = value2.length;
-                            do {
-                              res2 = more_general_equals(value2[c2], other[c2]);
-                              c2++;
-                            } while (res2 === true && c2 < l2);
-                            return res2;
-                          } else {
-                            return false;
-                          }
-                        } else {
-                          console.log("[value, other]", [value2, other]);
-                          console.trace();
-                          throw "NYI";
-                        }
-                      }
-                    }
-                  }
-                }
-              } else {
-                return false;
-              }
-            }
-          }
+        const t_that = tof(that2), t_other = tof(other);
+        if (t_that !== t_other) return false;
+        if (t_that === "number" || t_that === "string" || t_that === "boolean" || t_that === "undefined" || t_that === "null") {
+          return Object.is(that2, other);
         }
+        if (t_that === "array") {
+          if (!Array.isArray(other) || that2.length !== other.length) return false;
+          for (let i = 0; i < that2.length; i++) {
+            if (!more_general_equals(that2[i], other[i])) return false;
+          }
+          return true;
+        }
+        if (that2 instanceof Data_Model && other instanceof Data_Model) {
+          if (typeof that2.toJSON === "function" && typeof other.toJSON === "function") {
+            return that2.toJSON() === other.toJSON();
+          }
+          if (that2 === other) return true;
+          return false;
+        }
+        if (t_that === "object" && "value" in that2) {
+          return more_general_equals(that2.value, other);
+        }
+        if (t_that === "object") {
+          const keysA = Object.keys(that2);
+          const keysB = Object.keys(other);
+          if (keysA.length !== keysB.length) return false;
+          for (const k of keysA) {
+            if (!Object.prototype.hasOwnProperty.call(other, k)) return false;
+            if (!more_general_equals(that2[k], other[k])) return false;
+          }
+          return true;
+        }
+        return Object.is(that2, other);
       };
       module.exports = {
         more_general_equals
@@ -2737,9 +3784,9 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/stiffarray.js
+  // node_modules/lang-tools/b-plus-tree/stiffarray.js
   var require_stiffarray = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/stiffarray.js"(exports, module) {
+    "node_modules/lang-tools/b-plus-tree/stiffarray.js"(exports, module) {
       var StiffArray = function(capacity) {
         var m_public = {
           items: new Array(capacity),
@@ -2860,9 +3907,9 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/b-plus-tree.js
+  // node_modules/lang-tools/b-plus-tree/b-plus-tree.js
   var require_b_plus_tree = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/b-plus-tree.js"(exports, module) {
+    "node_modules/lang-tools/b-plus-tree/b-plus-tree.js"(exports, module) {
       var StiffArray = require_stiffarray();
       var B_Plus_Node = function(nodeCapacity) {
         var m_public = {
@@ -3622,1226 +4669,9 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Value.js
-  var require_Data_Value = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Value.js"(exports, module) {
-      var jsgui2 = require_lib_lang_mini();
-      var Data_Model = require_Data_Model();
-      var j = jsgui2;
-      var Evented_Class = j.Evented_Class;
-      var each = j.each;
-      var is_array = j.is_array;
-      var is_dom_node = j.is_dom_node;
-      var is_ctrl = j.is_ctrl;
-      var extend = j.extend;
-      var get_truth_map_from_arr = j.get_truth_map_from_arr;
-      var get_map_from_arr = j.get_map_from_arr;
-      var arr_like_to_arr = j.arr_like_to_arr;
-      var tof = j.tof;
-      var is_defined = j.is_defined;
-      var stringify = j.stringify;
-      var functional_polymorphism = j.functional_polymorphism;
-      var fp = j.fp;
-      var arrayify = j.arrayify;
-      var mapify = j.mapify;
-      var are_equal = j.are_equal;
-      var get_item_sig = j.get_item_sig;
-      var set_vals = j.set_vals;
-      var truth = j.truth;
-      var trim_sig_brackets = j.trim_sig_brackets;
-      var ll_set = j.ll_set;
-      var ll_get = j.ll_get;
-      var input_processors = j.input_processors;
-      var iterate_ancestor_classes = j.iterate_ancestor_classes;
-      var is_arr_of_arrs = j.is_arr_of_arrs;
-      var is_arr_of_strs = j.is_arr_of_strs;
-      var is_arr_of_t = j.is_arr_of_t;
-      var clone = jsgui2.clone;
-      var input_processors = jsgui2.input_processors;
-      var Data_Value2 = class _Data_Value extends Data_Model {
-        constructor(spec = {}) {
-          super(spec);
-          this.__data_value = true;
-          if (spec.context) {
-            this.context = spec.context;
-          }
-          if (is_defined(spec.value)) {
-            this._ = spec.value;
-          }
-          this.__type = "data_value";
-          this._relationships = {};
-        }
-        // Get but with a format change?
-        //   Get and validate???
-        "get"() {
-          return this._;
-        }
-        // get value and set value.
-        "value"() {
-          return this._;
-        }
-        "toObject"() {
-          return this._;
-        }
-        // .value =
-        //   Though .set could have more input, eg a format shifter????
-        "set"(val) {
-          var input_processor = input_processors[this.__type_name];
-          if (input_processor) {
-            val = input_processor(val);
-          }
-          var old_val = this._;
-          this._ = val;
-          this.raise("change", {
-            "old": old_val,
-            "value": val
-          });
-          return val;
-        }
-        "toString"() {
-          return this.get();
-        }
-        // Maybe a particular stringify function?
-        "toJSON"() {
-          var val = this.get();
-          var tval = typeof val;
-          if (tval == "string") {
-            return '"' + val + '"';
-          } else {
-            return val;
-          }
-        }
-        // Need to copy / clone the ._ value
-        "clone"() {
-          var res2 = new _Data_Value({
-            "value": this._
-          });
-          return res2;
-        }
-        // This is important to the running of jsgui3.
-        "_id"() {
-          if (this.__id) return this.__id;
-          if (this.context) {
-            this.__id = this.context.new_id(this.__type_name || this.__type);
-          } else {
-            if (!is_defined(this.__id)) {
-              throw "DataValue should have context";
-              this.__id = new_data_value_id();
-            }
-          }
-          return this.__id;
-        }
-        "parent"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig(a, 1);
-          var obj2, index;
-          if (a.l == 0) {
-            return this._parent;
-          } else if (a.l == 1) {
-            obj2 = a[0];
-            if (!this.context && obj2.context) {
-              this.context = obj2.context;
-            }
-            var relate_by_id = function(that2) {
-              var obj_id = obj2._id();
-              that2._relationships[obj_id] = true;
-            };
-            var relate_by_ref = function(that2) {
-              that2._parent = obj2;
-            };
-            relate_by_ref(this);
-          } else if (a.l == 2) {
-            obj2 = a[0];
-            index = a[1];
-            if (!this.context && obj2.context) {
-              this.context = obj2.context;
-            }
-            this._parent = obj2;
-            this._index = index;
-          }
-        }
-      };
-      module.exports = Data_Value2;
-    }
-  });
-
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Mini_Context.js
-  var require_Mini_Context = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Mini_Context.js"(exports, module) {
-      var Mini_Context = class {
-        // Need quite a simple mechanism to get IDs for objects.
-        // They will be typed objects/
-        constructor(spec) {
-          var map_typed_counts = {};
-          var typed_id = function(str_type) {
-            throw "stop Mini_Context typed id";
-            var res2;
-            if (!map_typed_counts[str_type]) {
-              res2 = str_type + "_0";
-              map_typed_counts[str_type] = 1;
-            } else {
-              res2 = str_type + "_" + map_typed_counts[str_type];
-              map_typed_counts[str_type]++;
-            }
-            return res2;
-          };
-          this.new_id = typed_id;
-        }
-        "make"(abstract_object) {
-          if (abstract_object._abstract) {
-            var constructor = abstract_object.constructor;
-            var aos = abstract_object._spec;
-            aos.abstract = null;
-            aos.context = this;
-            var res2 = new constructor(aos);
-            return res2;
-          } else {
-            throw "Object must be abstract, having ._abstract == true";
-          }
-        }
-      };
-      module.exports = Mini_Context;
-    }
-  });
-
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Object.js
-  var require_Data_Object = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Object.js"(exports, module) {
-      var jsgui2 = require_lib_lang_mini();
-      var Data_Value2 = require_Data_Value();
-      var j = jsgui2;
-      var Evented_Class = j.Evented_Class;
-      var Class = j.Class;
-      var each = j.each;
-      var is_array = j.is_array;
-      var is_dom_node = j.is_dom_node;
-      var is_ctrl = j.is_ctrl;
-      var extend = j.extend;
-      var get_truth_map_from_arr = j.get_truth_map_from_arr;
-      var get_map_from_arr = j.get_map_from_arr;
-      var arr_like_to_arr = j.arr_like_to_arr;
-      var tof = j.tof;
-      var is_defined = j.is_defined;
-      var stringify = j.stringify;
-      var functional_polymorphism = j.functional_polymorphism;
-      var fp = j.fp;
-      var arrayify = j.arrayify;
-      var mapify = j.mapify;
-      var are_equal = j.are_equal;
-      var get_item_sig = j.get_item_sig;
-      var get_a_sig2 = j.get_a_sig;
-      var set_vals = j.set_vals;
-      var truth = j.truth;
-      var trim_sig_brackets = j.trim_sig_brackets;
-      var ll_set = j.ll_set;
-      var ll_get = j.ll_get;
-      var input_processors = j.input_processors;
-      var iterate_ancestor_classes = j.iterate_ancestor_classes;
-      var is_arr_of_arrs = j.is_arr_of_arrs;
-      var is_arr_of_strs = j.is_arr_of_strs;
-      var is_arr_of_t = j.is_arr_of_t;
-      var clone = jsgui2.clone;
-      jsgui2.__data_id_method = "init";
-      var Mini_Context = require_Mini_Context();
-      var Data_Model = require_Data_Model();
-      var is_js_native = function(obj2) {
-        var t = tof(obj2);
-        return t == "number" || t == "string" || t == "boolean" || t == "array";
-      };
-      var Data_Object = class extends Data_Model {
-        constructor(spec = {}, fields) {
-          super(spec);
-          if (spec.id) {
-            this.__id = spec.id;
-          }
-          if (spec.__id) {
-            this.__id = spec.__id;
-          }
-          this.__type_name = spec.__type_name || "data_object";
-          if (fields) this.set_fields_from_spec(fields, spec);
-          this.__data_object = true;
-          if (spec.abstract === true) {
-            this._abstract = true;
-            var tSpec = tof(spec);
-            if (tSpec == "function") {
-              this._type_constructor = spec;
-            } else if (tSpec == "object") {
-              this._spec = spec;
-            }
-          } else {
-            var t_spec = tof(spec);
-            if (!this.__type) {
-              this.__type = "data_object";
-            }
-            if (t_spec === "object" || t_spec === "control") {
-              if (spec.context) {
-                this.context = spec.context;
-              }
-              if (spec.id) {
-                this.__id = spec.id;
-              }
-              if (spec._id) {
-                this.__id = spec._id;
-              }
-              if (spec.__id) {
-                this.__id = spec.__id;
-              }
-            } else if (t_spec == "data_object") {
-              if (spec.context) this.context = spec.context;
-            }
-            if (is_defined(spec.parent)) {
-              this.parent = spec.parent;
-            }
-            if (this.context) {
-              this.init_default_events();
-            }
-          }
-        }
-        "set_fields_from_spec"(fields, spec) {
-          each(fields, (field) => {
-            if (typeof spec[field[0]] !== "undefined") {
-              this[field[0]] = spec[field[0]];
-            } else {
-              this[field[0]] = field[2];
-            }
-          });
-        }
-        "init_default_events"() {
-        }
-        /*
-             'data_def': fp(function(a, sig) {
-             if (sig == '[o]') {
-             // create the new data_def constraint.
-        
-        
-             }
-             }),
-             */
-        "keys"() {
-          return Object.keys(this._);
-        }
-        "toJSON"() {
-          var res2 = [];
-          res2.push("Data_Object(" + JSON.stringify(this._) + ")");
-          return res2.join("");
-        }
-        // using_fields_connection()
-        //  will search up the object heirachy, to see if the Data_Objects fields need to be connected through the use of functions.
-        //  that will make the fields easy to change by calling a function. Should make things much faster to access than when programming with Backbone.
-        // then will connect the fields with connect_fields()
-        /*
-        'using_fields_connection'() {
-            var res = false;
-            iterate_ancestor_classes(this.constructor, function (a_class, stop) {
-                if (is_defined(a_class._connect_fields)) {
-                    res = a_class._connect_fields;
-                    stop();
-                }
-            });
-            return res;
-        }
-        */
-        get parent() {
-          return this._parent;
-        }
-        set parent(value2) {
-          return this._parent = value2;
-        }
-        "_id"() {
-          if (this.__id) return this.__id;
-          if (this.context) {
-            this.__id = this.context.new_id(this.__type_name || this.__type);
-          } else {
-            if (this._abstract) {
-              return void 0;
-            } else if (!is_defined(this.__id)) {
-              return void 0;
-            }
-          }
-          return this.__id;
-        }
-        // Problems with name (fields).
-        //  Fields are given as a description of the fields.
-        //   Gets more complicated when we have a function to access the fields as well.
-        //   What if we want to override that function?
-        // Will call it field
-        //  18/12/2016 - Getting rid of this confusion, will mostly remove / greatly simplify field functionality.
-        //  Just need to know which fields any class has, keeping track of this will use some data structures like Sorted_KVS,
-        //   but not much complex code within this part.
-        // Not so sure what a field function will do right now.
-        //  Does not seem like such an essential part of the API.
-        //   Can just define the fields, then they act a bit differently.
-        //   Have field handling in Data_Object.
-        //   Collection would have the same field capabilities. Fields should not be so important anyway.
-        // 18/12/2016 Will remove constraints, then make them much more functional.
-        "each"(callback2) {
-          each(this._, callback2);
-        }
-        // could make this polymorphic so that it
-        "position_within"(parent) {
-          var p_id = parent._id();
-          if (this._parents && is_defined(this._parents[p_id])) {
-            var parent_rel_info = this._parents[p_id];
-            var pos_within = parent_rel_info[1];
-            return pos_within;
-          }
-        }
-        // Maybe just 'remove' function.
-        //  This may be needed with multiple parents, which are not being used at the moment.
-        "remove_from"(parent) {
-          var p_id = parent._id();
-          if (this._parents && is_defined(this._parents[p_id])) {
-            var parent = this._parents[p_id][0];
-            var pos_within = this._parents[p_id][1];
-            var item2 = parent._arr[pos_within];
-            parent.remove(pos_within);
-            delete this._parents[p_id];
-          }
-        }
-        //  
-        // Maybe only do this with the fields anyway
-        "load_from_spec"(spec, arr_item_names) {
-          each(arr_item_names, (v) => {
-            var spec_item = spec[v];
-            if (is_defined(spec_item)) {
-              this.set(v, spec_item);
-            }
-          });
-        }
-        // They will be treated as values in many cases anyway.
-        //  Will turn them to different types of object where possible.
-        /*
-            'value'() {
-                var a = arguments; a.l = arguments.length; var sig = get_a_sig(a, 1);
-                // could operate like both get and set, but does not return data_objects, returns the value itself.
-                var name;
-                //var res;
-                if (sig === '[s]') {
-                    name = a[0];
-                    var possibly_dobj = this.get(name);
-                    //var t_obj = tof(possibly_dobj);
-        
-                    if (possibly_dobj) {
-                        if (possibly_dobj.value && typeof possibly_dobj.value === 'function') {
-                            return possibly_dobj.value();
-                        } else {
-                            return possibly_dobj;
-                        }
-                    }
-                }
-            }
-            */
-        // Get could be greatly simplified as well.
-        //  Input and output processing will be more streamlined in a functional way.
-        // 19/12/2016 - Not using get or set nearly as much anyway.
-        "get"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          var do_typed_processing = false;
-          if (do_typed_processing) {
-            if (a.l === 0) {
-              var output_obj = jsgui2.output_processors[this.__type_name](this._);
-              return output_obj;
-            } else {
-              console.log("a", a);
-              console.trace();
-              throw "not yet implemented";
-            }
-          } else {
-            if (sig == "[s,f]") {
-              throw "Asyncronous access not allowed on Data_Object get.";
-              var res2 = this.get(a[0]);
-              var callback2 = a[1];
-              if (typeof res2 == "function") {
-                res2(callback2);
-              } else {
-                return res2;
-              }
-            } else if (sig == "[s]") {
-              var res2 = ll_get(this, a[0]);
-              return res2;
-            } else if (a.l === 0) {
-              return this._;
-            }
-          }
-        }
-        // Or don't use / support get and set for the moment?
-        //   Only use property / field access?
-        //   Define property, with getter and setter, seems like a more cleanly defined system.
-        // May see about making a new simplified implementation of this and running it through tests.
-        //   Though the new Data_Value seems like the more appropriate way for the moment.
-        // May look into seeing where Data_Value is used in the current system too.
-        //   Could see about further incorportating its use (in places).
-        //'set': fp(function(a, sig) {
-        "set"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          if (this._abstract) return false;
-          var that2 = this, res2;
-          var input_processors2 = jsgui2.input_processors;
-          if (a.l == 2 || a.l == 3) {
-            var property_name = a[0], value2 = a[1];
-            var ta2 = tof(a[2]);
-            var silent = false;
-            var source;
-            if (ta2 == "string" || ta2 == "boolean") {
-              silent = a[2];
-            }
-            if (ta2 == "control") {
-              source = a[2];
-            }
-            if (!this._initializing && this._map_read_only && this._map_read_only[property_name]) {
-              throw 'Property "' + property_name + '" is read-only.';
-            } else {
-              var split_pn = property_name.split(".");
-              if (split_pn.length > 1 && property_name != ".") {
-                var spn_first = split_pn[0];
-                var spn_arr_next = split_pn.slice(1);
-                var data_object_next = this.get(spn_first);
-                if (data_object_next) {
-                  res2 = data_object_next.set(spn_arr_next.join("."), value2);
-                  if (!silent) {
-                    var e_change = {
-                      "name": property_name,
-                      "value": value2,
-                      "bubbled": true
-                    };
-                    if (source) {
-                      e_change.source = source;
-                    }
-                    this.raise_event("change", e_change);
-                  }
-                } else {
-                  throw "No data object at this level.";
-                }
-              } else {
-                var data_object_next = this.get(property_name);
-                if (data_object_next) {
-                  var field = this[property_name];
-                  if (field) {
-                    data_object_next.__type_name = field[1] || data_object_next.__type_name;
-                  }
-                  data_object_next.set(value2);
-                }
-                if (!is_defined(data_object_next)) {
-                  var tv = typeof value2;
-                  var dv;
-                  if (tv === "string" || tv === "number" || tv === "boolean" || tv === "date") {
-                    dv = new Data_Value2({
-                      "value": value2
-                    });
-                  } else {
-                    if (tv === "array") {
-                      dv = new Data_Value2({
-                        "value": value2
-                      });
-                    } else {
-                      if (tv === "object") {
-                        if (value2.__data_object || value2.__data_value || value2.__data_grid) {
-                          dv = value2;
-                        } else {
-                          dv = new Data_Value2({
-                            "value": value2
-                          });
-                        }
-                      } else {
-                        dv = value2;
-                      }
-                    }
-                  }
-                  this[property_name] = dv;
-                  if (!silent) {
-                    e_change = {
-                      "name": property_name,
-                      "value": dv
-                    };
-                    if (source) {
-                      e_change.source = source;
-                    }
-                    this.raise_event("change", e_change);
-                  }
-                  return value2;
-                } else {
-                  var next_is_js_native = is_js_native(data_object_next);
-                  if (next_is_js_native) {
-                    this[property_name] = value2;
-                    res2 = value2;
-                  } else {
-                    res2 = data_object_next;
-                    this[property_name] = data_object_next;
-                  }
-                  if (!silent) {
-                    var e_change = {
-                      "name": property_name,
-                      "value": data_object_next.value()
-                    };
-                    if (source) {
-                      e_change.source = source;
-                    }
-                    this.trigger("change", e_change);
-                  }
-                  return res2;
-                }
-              }
-            }
-          } else {
-            var value2 = a[0];
-            var property_name = a[1];
-            var input_processor = input_processors2[this.__type_name];
-            if (input_processor) {
-              var processed_input = input_processor(value2);
-              value2 = processed_input;
-              this._[property_name] = value2;
-              this.raise_event("change", {
-                "value": value2
-              });
-              return value2;
-            } else {
-              if (sig === "[D]") {
-                this._[property_name] = value2;
-                this.raise_event("change", [property_name, value2]);
-                return value2;
-              } else if (sig === "[o]") {
-                res2 = {};
-                each(a[0], function(v, i) {
-                  res2[i] = that2.set(i, v);
-                });
-                return res2;
-              }
-              if (sig === "[c]") {
-                this._[property_name] = value2;
-                this.raise_event("change", [property_name, value2]);
-                return value2;
-              }
-            }
-          }
-        }
-        "has"(property_name) {
-          return is_defined(this.get(property_name));
-        }
-      };
-      jsgui2.map_classes = jsgui2.map_classes || {};
-      var dobj = (obj2, data_def) => {
-        var cstr = Data_Object;
-        var res2;
-        if (data_def) {
-          res2 = new cstr({
-            "data_def": data_def
-          });
-        } else {
-          res2 = new cstr({});
-        }
-        var tobj = tof(obj2);
-        if (tobj == "object") {
-          var res_set = res2.set;
-          each(obj2, (v, i) => {
-            res_set.call(res2, i, v);
-          });
-        }
-        return res2;
-      };
-      Data_Object.dobj = dobj;
-      Data_Object.Mini_Context = Mini_Context;
-      module.exports = Data_Object;
-    }
-  });
-
-  // node_modules/jsgui3-html/node_modules/lang-tools/sorted-kvs.js
-  var require_sorted_kvs = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/sorted-kvs.js"(exports, module) {
-      var jsgui2 = require_lib_lang_mini();
-      var mapify = jsgui2.mapify;
-      var B_Plus_Tree = require_b_plus_tree();
-      var Sorted_KVS = class {
-        constructor(spec) {
-          spec = spec || {};
-          if (typeof spec.unique_keys !== "undefined") this.unique_keys = spec.unique_keys;
-          this.tree = B_Plus_Tree(12);
-        }
-        "clear"() {
-          this.tree.clear();
-        }
-        /*
-        	'put': mapify(function (key, value) {
-        		// inserting a bunch of things at once... could that be done more efficiently, such as in one traversal?
-        		//  sort the items, then can skip through the tree a bit quicker?
-        
-        
-        		var insert_res = this.tree.insert(key, value);
-        		// with tree.insert - nice if we can keep the treenode as a result.
-        		//  the tree does not store objects in the node.
-        		//   could make the tree node hold a reference to the object?
-        
-        		//console.log('put insert_res ' + insert_res);
-        		//this.dict[key] = value;
-        	}),
-        	*/
-        "out"(key2) {
-          this.tree.remove(key2);
-        }
-        "get"(key2) {
-          return this.tree.get_values_by_key(key2);
-        }
-        "has"(key2) {
-          return this.key_count(key2) > 0;
-        }
-        "get_cursor"() {
-        }
-        "keys"() {
-          return this.tree.keys();
-        }
-        "keys_and_values"() {
-          return this.tree.keys_and_values();
-        }
-        /*
-        	 'values': function() {
-        	 var keys = this.keys();
-        	 var res = [];
-        	 var that = this;
-        	 console.log('keys.length ' + keys.length );
-        	 console.log('keys ' + jsgui.stringify(keys));
-        
-        	 each(keys, function(i, v) {
-        	 res.push(that.dict[v]);
-        	 });
-        	 return res;
-        	 },
-        	 */
-        "key_count"(key2) {
-          if (typeof key2 !== "undefined") {
-            return this.tree.count(key2);
-          } else {
-            return this.tree.count();
-          }
-        }
-        "get_keys_by_prefix"(prefix) {
-          return this.tree.get_keys_by_prefix(prefix);
-        }
-        "each"(callback2) {
-          return this.tree.each(callback2);
-        }
-        "get_by_prefix"(prefix) {
-          return this.tree.get_by_prefix(prefix);
-        }
-      };
-      Sorted_KVS.prototype.put = mapify(function(key2, value2) {
-        var insert_res = this.tree.insert(key2, value2);
-      });
-      module.exports = Sorted_KVS;
-    }
-  });
-
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Collection.js
-  var require_Collection = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Collection.js"(exports, module) {
-      var lang = require_lib_lang_mini();
-      var Data_Value2 = require_Data_Value();
-      var Data_Object = require_Data_Object();
-      var Sorted_KVS = require_sorted_kvs();
-      var dobj = Data_Object.dobj;
-      var Constraint = Data_Object.Constraint;
-      var each = lang.each;
-      var tof = lang.tof;
-      var is_defined = lang.is_defined;
-      var stringify = lang.stringify;
-      var get_a_sig2 = lang.get_a_sig;
-      var native_constructor_tof = lang.native_constructor_tof;
-      var dop = Data_Object.prototype;
-      var Collection = class _Collection extends Data_Object {
-        constructor(spec = {}, arr_values) {
-          super(spec);
-          this.__type = "collection";
-          this.__type_name = "collection";
-          var t_spec = tof(spec);
-          if (spec.abstract === true) {
-            if (t_spec === "function") {
-              this.constraint(spec);
-            }
-          } else {
-            this._relationships = this._relationships || {};
-            this._arr_idx = 0;
-            this._arr = [];
-            this.index = new Sorted_KVS();
-            this.fn_index = spec.fn_index;
-            if (t_spec === "array") {
-              spec = {
-                "load_array": spec
-              };
-            } else {
-              if (t_spec === "function") {
-                if (spec.abstract === true) {
-                  this._abstract = true;
-                } else {
-                }
-              } else if (t_spec === "string") {
-                var map_native_constructors = {
-                  "array": Array,
-                  "boolean": Boolean,
-                  "number": Number,
-                  "string": String,
-                  "object": Object
-                };
-                var nc = map_native_constructors[spec];
-                if (nc) {
-                  spec = {
-                    "constraint": nc
-                  };
-                  if (nc == String) {
-                    spec.index_by = "value";
-                  }
-                }
-              }
-            }
-            if (is_defined(spec.items)) {
-              spec.load_array = spec.load_array || spec.items;
-            }
-            if (arr_values) {
-              spec.load_array = arr_values;
-            }
-            if (is_defined(spec.accepts)) {
-              this._accepts = spec.accepts;
-            }
-            if (lang.__data_id_method === "init") {
-              if (this.context) {
-                this.__id = this.context.new_id(this.__type_name || this.__type);
-                this.context.map_objects[this.__id] = this;
-              } else {
-              }
-            }
-            if (!this.__type) {
-            }
-            if (spec.load_array) {
-              this.load_array(spec.load_array);
-            }
-          }
-        }
-        // maybe use fp, and otherwise apply with the same params and context.
-        "set"(value2) {
-          var tval = tof(value2);
-          if (tval === "data_object" || tval === "data_value") {
-            this.clear();
-            return this.push(value2);
-          } else if (tval === "array") {
-            this.clear();
-            each(value2, (v, i) => {
-              this.push(v);
-            });
-          } else {
-            if (tval === "collection") {
-              throw "stop";
-              this.clear();
-              value2.each(function(v, i) {
-                that.push(v);
-              });
-            } else if (tval === "string" || tval === "number" || tval === "boolean" || tval === "null" || tval === "undefined") {
-              this.clear();
-              return this.push(value2);
-            } else {
-              const Data_Object2 = require_Data_Object();
-              return Data_Object2.prototype.set.call(this, value2);
-            }
-          }
-        }
-        "clear"() {
-          this._arr_idx = 0;
-          this._arr = [];
-          this.index.clear();
-          this.raise("change", {
-            "name": "clear"
-          });
-        }
-        "stringify"() {
-          var res2 = [];
-          if (this._abstract) {
-            var ncto = native_constructor_tof(this._type_constructor);
-            res2.push("~Collection(");
-            if (ncto) {
-              res2.push(ncto);
-            } else {
-            }
-            res2.push(")");
-          } else {
-            res2.push("Collection(");
-            var first = true;
-            this.each(function(v, i) {
-              if (!first) {
-                res2.push(", ");
-              } else {
-                first = false;
-              }
-              res2.push(stringify(v));
-            });
-            res2.push(")");
-          }
-          return res2.join("");
-        }
-        "toString"() {
-          return stringify(this._arr);
-        }
-        "toObject"() {
-          var res2 = [];
-          this.each(function(v, i) {
-            res2.push(v.toObject());
-          });
-          return res2;
-        }
-        "each"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          if (sig == "[f]") {
-            return each(this._arr, a[0]);
-          } else {
-            if (sig == "[X,f]") {
-              var index = a[0];
-              var callback2 = a[1];
-              return index.each(callback2);
-            } else {
-              if (a.l == 2) {
-                return each(this._arr, a[0], a[1]);
-              }
-            }
-          }
-        }
-        "_id"() {
-          if (this.context) {
-            this.__id = this.context.new_id(this.__type_name || this.__type);
-          } else {
-          }
-          return this.__id;
-        }
-        "length"() {
-          return this._arr.length;
-        }
-        get len() {
-          return this._arr.length;
-        }
-        "find"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          if (a.l == 1) {
-            var pos = this.index.get(a[0])[0];
-            var item2 = this._arr[pos];
-            return item2;
-          }
-          if (sig == "[o,s]") {
-            return this.index_system.find(a[0], a[1]);
-          }
-          if (sig == "[s,s]") {
-            return this.index_system.find(a[0], a[1]);
-          }
-          if (sig == "[a,s]") {
-            return this.index_system.find(a[0], a[1]);
-          }
-          if (sig == "[s,o]") {
-            var propertyName = a[0];
-            var query = a[1];
-            var foundItems = [];
-            each(this, (item3, index) => {
-              if (item3.get) {
-                var itemProperty = item3.get(propertyName);
-              } else {
-                var itemProperty = item3[propertyName];
-              }
-              var tip = tof(itemProperty);
-              var tip2;
-              var ip2;
-              if (tip === "data_value") {
-                var ip2 = itemProperty.value();
-                tip2 = tof(ip2);
-              } else {
-                ip2 = itemProperty;
-                tip2 = tip;
-              }
-              if (tip2 === "array") {
-                each(ip2, (v, i) => {
-                  var matches = obj_matches_query_obj(v, query);
-                  if (matches) {
-                    foundItems.push(v);
-                  }
-                });
-              }
-              ;
-            });
-            var res2 = new _Collection(foundItems);
-            return res2;
-          }
-        }
-        // get seems like the way to get unique values.
-        "get"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          if (sig == "[n]" || sig == "[i]") {
-            return this._arr[a[0]];
-          }
-          if (sig == "[s]") {
-            var ix_sys = this.index_system;
-            var res2;
-            if (ix_sys) {
-              var pui = ix_sys._primary_unique_index;
-              res2 = pui.get(a[0])[0];
-            }
-            if (res2) {
-              return res2;
-            }
-            return Data_Object.prototype.get.apply(this, a);
-          }
-        }
-        "insert"(item2, pos) {
-          this._arr.splice(pos, 0, item2);
-          this.raise("change", {
-            "name": "insert",
-            "item": item2,
-            "value": item2,
-            "pos": pos
-          });
-        }
-        swap(item2, replacement) {
-          let r_parent = replacement.parent;
-          let repl_pos = replacement.parent.content.remove(replacement);
-          let i_parent = item2.parent;
-          let item_pos = item2.parent.content.remove(item2);
-          let item_index;
-          i_parent.content.insert(replacement, item_pos);
-          r_parent.content.insert(item2, repl_pos);
-        }
-        // may have efficiencies for adding and removing multiple items at once.
-        //  can be sorted for insertion into index with more rapid algorithmic time.
-        "remove"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          if (sig === "[n]") {
-            var pos = a[0];
-            var item2 = this._arr[pos];
-            var spliced_pos = pos;
-            this._arr.splice(pos, 1);
-            this._arr_idx--;
-            var e = {
-              "target": this,
-              "value": item2,
-              "position": spliced_pos,
-              "name": "remove"
-            };
-            this.raise("change", e);
-            return pos;
-          } else if (sig === "[s]") {
-            var key2 = a[0];
-            var obj2 = this.index_system.find([
-              ["value", key2]
-            ]);
-            var my_id = this.__id;
-            var item_pos_within_this = obj2[0]._relationships[my_id];
-            this._arr.splice(item_pos_within_this, 1);
-            for (var c2 = item_pos_within_this, l2 = this._arr.length; c2 < l2; c2++) {
-              var item2 = this._arr[c2];
-              item2._relationships[my_id]--;
-            }
-            var e = {
-              "target": this,
-              "value": obj2[0],
-              "position": item_pos_within_this,
-              "name": "remove"
-            };
-            this.raise("change", e);
-          } else {
-            let item_index;
-            const item3 = a[0];
-            let arr = this._arr, l3 = arr.length;
-            if (typeof item3 === "number") {
-              item_index = item3;
-            } else {
-              let found = false, c3 = 0;
-              while (!found && c3 < l3) {
-                found = arr[c3] === item3;
-                if (found) {
-                  item_index = c3;
-                }
-                c3++;
-              }
-              if (is_defined(item_index)) {
-                return this.remove(item_index);
-              }
-            }
-          }
-        }
-        "has"(obj_key) {
-          if (this.get_index(obj_key) === void 0) {
-            return false;
-          } else {
-            return true;
-          }
-        }
-        "get_index"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          if (sig === "[s]") {
-            if (this.index_system) {
-              return this.index_system.search(a[0]);
-            } else {
-              if (this._arr.length === 0) {
-                return void 0;
-              } else {
-                for (let c2 = 0; c2 < this._arr.length; c2++) {
-                  const item2 = this._arr[c2];
-                  if ((item2 == null ? void 0 : item2.name) === a[0]) {
-                    return c2;
-                  }
-                }
-                return void 0;
-              }
-            }
-          } else {
-            console.trace();
-            throw "Expected [s]";
-          }
-        }
-        // More fp way of indexing.
-        "index_by"() {
-          var a = arguments;
-          a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
-          console.log("Indexing not implemented (like this)");
-          console.trace();
-        }
-        "push"(value2) {
-          const { silent } = this;
-          let tv = tof(value2);
-          let fn_index = this.fn_index;
-          let idx_key, has_idx_key = false, pos;
-          if (fn_index) {
-            idx_key = fn_index(value2);
-            has_idx_key = true;
-          }
-          if (tv === "object" || tv === "function") {
-            pos = this._arr.length;
-            this._arr.push(value2);
-            this._arr_idx++;
-            if (!silent) {
-              const e = {
-                "target": this,
-                "item": value2,
-                "value": value2,
-                "position": pos,
-                "name": "insert"
-              };
-              this.raise("change", e);
-            }
-          } else if (tv === "collection") {
-            pos = this._arr.length;
-            this._arr.push(value2);
-            this._arr_idx++;
-            if (!silent) {
-              const e = {
-                "target": this,
-                "item": value2,
-                "value": value2,
-                "position": pos,
-                "name": "insert"
-              };
-              this.raise("change", e);
-            }
-          } else if (tv === "data_object" || tv === "control") {
-            pos = this._arr.length;
-            this._arr.push(value2);
-            this._arr_idx++;
-            if (!silent) {
-              const e = {
-                "target": this,
-                "item": value2,
-                "value": value2,
-                "position": pos,
-                "name": "insert"
-              };
-              this.raise("change", e);
-            }
-          } else if (tv === "array") {
-            const new_coll = new _Collection(value2);
-            pos = this._arr.length;
-            this._arr.push(new_coll);
-            if (!silent) {
-              const e = {
-                "target": this,
-                "item": value2,
-                "value": value2,
-                "position": pos,
-                "name": "insert"
-              };
-              this.raise("change", e);
-            }
-          }
-          if (tv === "string" || tv === "number" || tv === "boolean" || tv === "null" || tv === "undefined") {
-            const dv = new Data_Value2({
-              "value": value2
-            });
-            pos = this._arr.length;
-            this._arr.push(dv);
-            if (!silent) {
-              const e = {
-                "target": this,
-                "item": value2,
-                "value": value2,
-                "position": pos,
-                "name": "insert"
-              };
-              this.raise("change", e);
-            }
-          }
-          if (has_idx_key) {
-            this.index.put(idx_key, pos);
-          }
-          return value2;
-        }
-        "load_array"(arr) {
-          for (var c2 = 0, l2 = arr.length; c2 < l2; c2++) {
-            this.push(arr[c2]);
-          }
-          this.raise("load");
-        }
-        "values"() {
-          var a = arguments;
-          a.l = a.length;
-          if (a.l === 0) {
-            return this._arr;
-          } else {
-            var stack = new Error().stack;
-            throw "not yet implemented";
-          }
-        }
-        "value"() {
-          const res2 = [];
-          this.each((v, i) => {
-            if (typeof v.value == "function") {
-              res2.push(v.value());
-            } else {
-              res2.push(v);
-            }
-          });
-          return res2;
-        }
-      };
-      var p = Collection.prototype;
-      p.add = p.push;
-      module.exports = Collection;
-    }
-  });
-
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Object.js
-  var require_Data_Object2 = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Object.js"(exports, module) {
-      module.exports = require_Data_Object();
-    }
-  });
-
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js
+  // node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js
   var require_Immutable_Data_Model = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js"(exports, module) {
+    "node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js"(exports, module) {
       var Data_Model = require_Data_Model();
       var Immutable_Data_Model = class extends Data_Model {
         constructor(...a) {
@@ -4852,18 +4682,18 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Result.js
+  // node_modules/lang-tools/Data_Model/new/Validation_Result.js
   var require_Validation_Result = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Result.js"(exports, module) {
+    "node_modules/lang-tools/Data_Model/new/Validation_Result.js"(exports, module) {
       var Validation_Result = class {
       };
       module.exports = Validation_Result;
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Success.js
+  // node_modules/lang-tools/Data_Model/new/Validation_Success.js
   var require_Validation_Success = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Success.js"(exports, module) {
+    "node_modules/lang-tools/Data_Model/new/Validation_Success.js"(exports, module) {
       var Validation_Result = require_Validation_Result();
       var Validation_Success = class extends Validation_Result {
         constructor(spec) {
@@ -4874,45 +4704,62 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js
+  // node_modules/lang-tools/Data_Model/new/Validation_Failure.js
+  var require_Validation_Failure = __commonJS({
+    "node_modules/lang-tools/Data_Model/new/Validation_Failure.js"(exports, module) {
+      var Validation_Result = require_Validation_Result();
+      var Validation_Failure = class extends Validation_Result {
+        constructor(spec) {
+          super(spec);
+        }
+      };
+      module.exports = Validation_Failure;
+    }
+  });
+
+  // node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js
   var require_setup_base_data_value_value_property = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js"(exports, module) {
+    "node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js"(exports, module) {
       var Validation_Success = require_Validation_Success();
+      var Validation_Failure = require_Validation_Failure();
       var setup_base_data_value_value_property = (data_value) => {
-        let local_js_value2;
+        let local_js_value;
         const set_value_with_valid_and_changed_value = (valid_and_changed_value) => {
-          const old = local_js_value2;
-          local_js_value2 = valid_and_changed_value;
+          const old = local_js_value;
+          local_js_value = valid_and_changed_value;
           data_value.raise("change", {
             name: "value",
             old,
-            value: local_js_value2
+            value: local_js_value
           });
         };
+        const create_validation_error = (validation, value2) => {
+          const failure = validation instanceof Validation_Failure ? validation : new Validation_Failure({ value: value2 });
+          const error2 = new Error("Validation failed for value assignment");
+          error2.validation = failure;
+          error2.value = value2;
+          return error2;
+        };
         Object.defineProperty(data_value, "value", {
+          configurable: true,
           get() {
-            return local_js_value2;
+            return local_js_value;
           },
           set(value2) {
             if (data_value.transform_validate_value) {
               const obj_transform_and_validate_value_results = data_value.transform_validate_value(value2);
-              if (obj_transform_and_validate_value_results.validation instanceof Validation_Success) {
-                if (obj_transform_and_validate_value_results.transformed_value !== void 0) {
-                  const value_has_changed = local_js_value2 !== obj_transform_and_validate_value_results.transformed_value;
-                  if (value_has_changed) {
-                    set_value_with_valid_and_changed_value(obj_transform_and_validate_value_results.transformed_value);
-                  } else {
-                  }
-                } else {
-                  const value_has_changed = local_js_value2 !== obj_transform_and_validate_value_results.value;
-                  if (value_has_changed) {
-                    set_value_with_valid_and_changed_value(obj_transform_and_validate_value_results.value);
-                  } else {
-                  }
-                }
+              const validation = obj_transform_and_validate_value_results && obj_transform_and_validate_value_results.validation;
+              if (!(validation instanceof Validation_Success)) {
+                throw create_validation_error(validation, value2);
+              }
+              const next_value = Object.prototype.hasOwnProperty.call(obj_transform_and_validate_value_results, "transformed_value") ? obj_transform_and_validate_value_results.transformed_value : obj_transform_and_validate_value_results.value;
+              if (!Object.is(local_js_value, next_value)) {
+                set_value_with_valid_and_changed_value(next_value);
               }
             } else {
-              set_value_with_valid_and_changed_value(value2);
+              if (!Object.is(local_js_value, value2)) {
+                set_value_with_valid_and_changed_value(value2);
+              }
             }
           }
         });
@@ -4921,9 +4768,9 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Base_Data_Value.js
+  // node_modules/lang-tools/Data_Model/new/Base_Data_Value.js
   var require_Base_Data_Value = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Base_Data_Value.js"(exports, module) {
+    "node_modules/lang-tools/Data_Model/new/Base_Data_Value.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Data_Model = require_Data_Model();
@@ -4946,6 +4793,7 @@
           this.__type = "data_value";
           this._relationships = {};
           const { data_type, context: context2 } = this;
+          setup_base_data_value_value_property(this);
         }
         equals(other) {
           return more_general_equals(this, other);
@@ -4992,22 +4840,18 @@
           if (this.__id) return this.__id;
           if (this.context) {
             this.__id = this.context.new_id(this.__type_name || this.__type);
-          } else {
-            if (!is_defined(this.__id)) {
-              throw "Data_Value should have context";
-              this.__id = new_data_value_id();
-            }
+            return this.__id;
           }
-          return this.__id;
+          return void 0;
         }
       };
       module.exports = Base_Data_Value;
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js
+  // node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js
   var require_Value_Set_Attempt = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js"(exports, module) {
+    "node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js"(exports, module) {
       var Value_Set_Attempt = class {
         constructor(spec = {}) {
           Object.assign(this, spec);
@@ -5017,9 +4861,9 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js
+  // node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js
   var require_Immutable_Base_Data_Value = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js"(exports, module) {
+    "node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Data_Model = require_Data_Model();
@@ -5100,14 +4944,17 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js
+  // node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js
   var require_Immutable_Data_Value = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js"(exports, module) {
+    "node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Data_Model = require_Data_Model();
       var Immutable_Data_Model = require_Immutable_Data_Model();
       var Immutable_Base_Data_Value = require_Immutable_Base_Data_Value();
+      var throw_immutable_assignment = () => {
+        throw new TypeError("Cannot modify immutable Data_Value");
+      };
       var { is_defined, input_processors, field, tof, each } = jsgui2;
       var util;
       if (typeof window === "undefined") {
@@ -5151,12 +4998,12 @@
                 }
               }
             };
-            const local_js_value2 = to_local_js_value(spec.value);
+            const local_js_value = to_local_js_value(spec.value);
             Object.defineProperty(this, "value", {
               get() {
-                return local_js_value2;
-              }
-              // MISSING: set() { throw new TypeError('Cannot modify immutable Data_Value'); }
+                return local_js_value;
+              },
+              set: throw_immutable_assignment
             });
           } else {
             let value2;
@@ -5174,8 +5021,8 @@
             Object.defineProperty(this, "value", {
               get() {
                 return value2;
-              }
-              // MISSING: set() { throw new TypeError('Cannot modify immutable Data_Value'); }
+              },
+              set: throw_immutable_assignment
             });
           }
           this.__type = "data_value";
@@ -5287,85 +5134,177 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js
+  // node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js
   var require_setup_data_value_data_type_set = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js"(exports, module) {
+    "node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Base_Data_Value = require_Base_Data_Value();
-      var Value_Set_Attempt = require_Value_Set_Attempt();
       var Data_Model = require_Data_Model();
       var Immutable_Data_Model = require_Immutable_Data_Model();
       var Immutable_Data_Value = require_Immutable_Data_Value();
-      var { is_defined, input_processors, field, tof, each, is_array, Data_Type } = jsgui2;
+      var { is_defined, input_processors, field, tof, each, is_array } = jsgui2;
+      var Validation_Success = require_Validation_Success();
       var setup_data_value_data_type_set = (data_value, data_type) => {
-        let local_js_value2;
+        let local_js_value;
+        const validation_success = (value2, transformed_value) => {
+          const res2 = {
+            validation: new Validation_Success(),
+            value: value2
+          };
+          if (transformed_value !== void 0) {
+            res2.transformed_value = transformed_value;
+          }
+          return res2;
+        };
+        const unwrap_data_value = (value2) => value2 instanceof Base_Data_Value ? value2.value : value2;
+        const is_functional_data_type = (dt) => !!dt && typeof dt.validate === "function";
         const define_string_value_property = () => {
-          Object.defineProperty(data_value, "value", {
-            get() {
-              return local_js_value2;
-            },
-            set(value2) {
-              const old_value = local_js_value2;
-              const immu = data_value.toImmutable();
-              const value_equals_current = immu.equals(value2);
-              if (!value_equals_current) {
-                const t_value = tof(value2);
-                let made_change = false;
-                if (t_value === "string") {
-                  if (local_js_value2 instanceof Base_Data_Value) {
-                    console.log("existing local_js_value instanceof Data_Value");
-                    console.log("local_js_value.value", local_js_value2.value);
-                    console.log("local_js_value.data_type.name", local_js_value2.data_type.name);
-                    console.trace();
-                    throw "NYI";
-                  } else if (local_js_value2 === void 0) {
-                    local_js_value2 = value2;
-                    made_change = true;
-                  } else if (typeof local_js_value2 === "string") {
-                    local_js_value2 = value2;
-                    made_change = true;
-                  } else {
-                    console.trace();
-                    throw "stop";
-                  }
-                } else {
-                  if (value2 instanceof Base_Data_Value) {
-                    console.log("t_value", t_value);
-                    console.log("value", value2);
-                    console.trace();
-                    throw "stop";
-                  } else {
-                    const tval = tof(value2);
-                    if (tval === "number") {
-                      local_js_value2 = value2 + "";
+          if (!Object.getOwnPropertyDescriptor(data_value, "value")) {
+            Object.defineProperty(data_value, "value", {
+              get() {
+                return local_js_value;
+              },
+              set(value2) {
+                const old_value = local_js_value;
+                const immu = data_value.toImmutable();
+                const value_equals_current = immu.equals(value2);
+                if (!value_equals_current) {
+                  const t_value = tof(value2);
+                  let made_change = false;
+                  if (t_value === "string") {
+                    if (local_js_value instanceof Base_Data_Value) {
+                      console.log("existing local_js_value instanceof Data_Value");
+                      console.log("local_js_value.value", local_js_value.value);
+                      console.log("local_js_value.data_type.name", local_js_value.data_type.name);
+                      console.trace();
+                      throw "NYI";
+                    } else if (local_js_value === void 0) {
+                      local_js_value = value2;
+                      made_change = true;
+                    } else if (typeof local_js_value === "string") {
+                      local_js_value = value2;
                       made_change = true;
                     } else {
-                      console.log("-- INVALID TYPE --");
-                      console.log("tof(old_value)", tof(old_value));
-                      console.log("tof(value)", tof(value2));
-                      data_value.raise("validate", {
-                        valid: false,
-                        reason: "Invalid Type",
-                        value: value2,
-                        old: local_js_value2
-                      });
+                      console.trace();
+                      throw "stop";
+                    }
+                  } else {
+                    if (value2 instanceof Base_Data_Value) {
+                      console.log("t_value", t_value);
+                      console.log("value", value2);
+                      console.trace();
+                      throw "stop";
+                    } else {
+                      const tval = tof(value2);
+                      if (tval === "number") {
+                        local_js_value = value2 + "";
+                        made_change = true;
+                      } else {
+                        console.log("-- INVALID TYPE --");
+                        console.log("tof(old_value)", tof(old_value));
+                        console.log("tof(value)", tof(value2));
+                        data_value.raise("validate", {
+                          valid: false,
+                          reason: "Invalid Type",
+                          value: value2,
+                          old: local_js_value
+                        });
+                      }
                     }
                   }
-                }
-                if (made_change) {
-                  const my_e = {
-                    name: "value",
-                    old: old_value,
-                    value: local_js_value2
-                  };
-                  data_value.raise("change", my_e);
+                  if (made_change) {
+                    const my_e = {
+                      name: "value",
+                      old: old_value,
+                      value: local_js_value
+                    };
+                    data_value.raise("change", my_e);
+                  }
                 }
               }
+            });
+          } else {
+            const transform_string_value = (raw) => {
+              const candidate = unwrap_data_value(raw);
+              if (candidate === void 0 || candidate === null) {
+                return validation_success(candidate);
+              }
+              if (typeof candidate === "string") {
+                return validation_success(candidate);
+              }
+              if (typeof candidate === "number" || typeof candidate === "boolean") {
+                return validation_success(candidate, candidate + "");
+              }
+              return {
+                validation: false,
+                value: candidate
+              };
+            };
+            data_value.transform_validate_value = transform_string_value;
+          }
+        };
+        const define_number_value_property = () => {
+          const transform_number_value = (raw) => {
+            const candidate = unwrap_data_value(raw);
+            if (candidate === void 0 || candidate === null) {
+              return validation_success(candidate);
             }
-          });
+            if (typeof candidate === "number") {
+              if (Number.isNaN(candidate)) {
+                return {
+                  validation: false,
+                  value: candidate
+                };
+              }
+              return validation_success(candidate);
+            }
+            if (typeof candidate === "string") {
+              const trimmed = candidate.trim();
+              if (trimmed.length === 0) {
+                return {
+                  validation: false,
+                  value: candidate
+                };
+              }
+              const parsed = Number(trimmed);
+              if (!Number.isNaN(parsed)) {
+                return validation_success(candidate, parsed);
+              }
+              return {
+                validation: false,
+                value: candidate
+              };
+            }
+            return {
+              validation: false,
+              value: candidate
+            };
+          };
+          data_value.transform_validate_value = transform_number_value;
         };
         const define_data_type_typed_value_property = () => {
+          const descriptor = Object.getOwnPropertyDescriptor(data_value, "value");
+          if (descriptor) {
+            const transform_data_type_value = (raw) => {
+              const candidate = unwrap_data_value(raw);
+              if (data_type.validate(candidate)) {
+                return validation_success(candidate);
+              }
+              if (typeof candidate === "string" && typeof data_type.parse_string === "function") {
+                const parsed = data_type.parse_string(candidate);
+                if (parsed !== void 0 && data_type.validate(parsed)) {
+                  return validation_success(candidate, parsed);
+                }
+              }
+              return {
+                validation: false,
+                value: candidate
+              };
+            };
+            data_value.transform_validate_value = transform_data_type_value;
+            return;
+          }
           const {
             wrap_properties,
             property_names,
@@ -5392,7 +5331,7 @@
           let _numbered_property_access_has_been_set_up = false, _named_property_access_has_been_set_up = false;
           Object.defineProperty(data_value, "value", {
             get() {
-              return local_js_value2;
+              return local_js_value;
             },
             set(value2) {
               const immu = data_value.toImmutable();
@@ -5430,7 +5369,7 @@
                   const do_actual_set = (value3) => {
                     const array_specific_value_processing = () => {
                       if (value_js_type === Array) {
-                        let t = tof(local_js_value2);
+                        let t = tof(local_js_value);
                         if (t === "undefined") {
                           const create_array_with_wrapped_items = () => {
                             if (num_properties) {
@@ -5478,7 +5417,7 @@
                                         i++;
                                         return wrapped_value;
                                       });
-                                      local_js_value2 = arr_wrapped_value_values;
+                                      local_js_value = arr_wrapped_value_values;
                                       const my_e = {
                                         name: "value",
                                         old: _previous_immutable_value,
@@ -5515,10 +5454,10 @@
                                     i++;
                                     return wrapped_value;
                                   });
-                                  local_js_value2 = arr_wrapped_value_values;
+                                  local_js_value = arr_wrapped_value_values;
                                 }
                               } else {
-                                local_js_value2 = value3;
+                                local_js_value = value3;
                               }
                             } else {
                               console.trace();
@@ -5530,10 +5469,10 @@
                           const t_value = tof(value3);
                           if (t_value === "data_value") {
                             if (is_array(value3.value)) {
-                              if (value3.value.length === local_js_value2.length) {
+                              if (value3.value.length === local_js_value.length) {
                                 each(value3.value, (inner_value, idx) => {
                                   if (inner_value instanceof Data_Model) {
-                                    const matching_local_inner_value = local_js_value2[idx];
+                                    const matching_local_inner_value = local_js_value[idx];
                                     if (inner_value.equals(matching_local_inner_value)) {
                                     } else {
                                       matching_local_inner_value.value = inner_value;
@@ -5553,11 +5492,11 @@
                             }
                           } else {
                             if (t_value === "array") {
-                              if (local_js_value2.length === value3.length) {
+                              if (local_js_value.length === value3.length) {
                                 const l2 = value3.length;
                                 let all_local_js_items_are_data_model = true, c2 = 0;
                                 do {
-                                  const local_item = local_js_value2[c2];
+                                  const local_item = local_js_value[c2];
                                   if (!(local_item instanceof Data_Model)) {
                                     all_local_js_items_are_data_model = false;
                                   }
@@ -5566,7 +5505,7 @@
                                 if (all_local_js_items_are_data_model) {
                                   let c3 = 0;
                                   do {
-                                    const local_item = local_js_value2[c3];
+                                    const local_item = local_js_value[c3];
                                     local_item.value = value3[c3];
                                     c3++;
                                   } while (c3 < l2);
@@ -5591,18 +5530,18 @@
                     };
                     array_specific_value_processing();
                     const general_value_processing = () => {
-                      if (local_js_value2 instanceof Base_Data_Value) {
+                      if (local_js_value instanceof Base_Data_Value) {
                         console.log("existing local_js_value instanceof Data_Value");
-                        console.log("local_js_value.value", local_js_value2.value);
-                        console.log("local_js_value.data_type.name", local_js_value2.data_type.name);
+                        console.log("local_js_value.value", local_js_value.value);
+                        console.log("local_js_value.data_type.name", local_js_value.data_type.name);
                         console.trace();
                         throw "NYI";
-                      } else if (local_js_value2 instanceof Array) {
+                      } else if (local_js_value instanceof Array) {
                         if (value3 instanceof Data_Model) {
-                          if (value3.equals(local_js_value2)) {
+                          if (value3.equals(local_js_value)) {
                           } else {
                             console.log("value", value3);
-                            console.log("local_js_value", local_js_value2);
+                            console.log("local_js_value", local_js_value);
                             console.trace();
                             throw "NYI";
                           }
@@ -5613,8 +5552,8 @@
                               for (let i_property = 0; i_property < num_properties2; i_property++) {
                                 const name = property_names[i_property];
                                 const data_type2 = property_data_types[i_property];
-                                if (local_js_value2[i_property] instanceof Data_Value) {
-                                  local_js_value2[i_property].value = value3[i_property];
+                                if (local_js_value[i_property] instanceof Data_Value) {
+                                  local_js_value[i_property].value = value3[i_property];
                                 } else {
                                   console.trace();
                                   throw "NYI";
@@ -5626,10 +5565,10 @@
                                   const data_type2 = property_data_types[i_property];
                                   Object.defineProperty(data_value, i_property, {
                                     get() {
-                                      return local_js_value2[i_property];
+                                      return local_js_value[i_property];
                                     },
                                     set(value4) {
-                                      const item_already_there = local_js_value2[i_property];
+                                      const item_already_there = local_js_value[i_property];
                                       if (item_already_there instanceof Data_Model) {
                                         item_already_there.value = value4;
                                       } else {
@@ -5645,7 +5584,7 @@
                                 }
                                 Object.defineProperty(data_value, "length", {
                                   get() {
-                                    return local_js_value2.length;
+                                    return local_js_value.length;
                                   }
                                 });
                                 _numbered_property_access_has_been_set_up = true;
@@ -5658,10 +5597,10 @@
                                       const data_type2 = property_data_types[i_property];
                                       Object.defineProperty(data_value, name, {
                                         get() {
-                                          return local_js_value2[i_property];
+                                          return local_js_value[i_property];
                                         },
                                         set(value4) {
-                                          const item_already_there = local_js_value2[i_property];
+                                          const item_already_there = local_js_value[i_property];
                                           if (item_already_there instanceof Data_Model) {
                                             item_already_there.value = value4;
                                           } else {
@@ -5679,10 +5618,10 @@
                                       const data_type2 = property_data_types[i_property];
                                       Object.defineProperty(data_value, name, {
                                         get() {
-                                          return local_js_value2[i_property];
+                                          return local_js_value[i_property];
                                         },
                                         set(value4) {
-                                          const item_already_there = local_js_value2[i_property];
+                                          const item_already_there = local_js_value[i_property];
                                           if (item_already_there instanceof Data_Model) {
                                             item_already_there.value = value4;
                                           } else {
@@ -5707,7 +5646,7 @@
                           }
                         } else {
                           console.log("value", value3);
-                          console.log("local_js_value", local_js_value2);
+                          console.log("local_js_value", local_js_value);
                           console.log("value_equals_current", value_equals_current);
                           console.log("immu", immu);
                           console.trace();
@@ -5718,7 +5657,7 @@
                           if (value3.data_type === data_value.data_type) {
                             const tvv = tof(value3.value);
                             if (tvv === "number" || tvv === "string" || tvv === "boolean") {
-                              local_js_value2 = value3.value;
+                              local_js_value = value3.value;
                             } else {
                               console.trace();
                               throw "NYI";
@@ -5728,7 +5667,7 @@
                             throw "NYI";
                           }
                         } else {
-                          local_js_value2 = value3;
+                          local_js_value = value3;
                         }
                         data_value.raise("change", {
                           name: "value",
@@ -5749,7 +5688,9 @@
         };
         if (data_type === String) {
           define_string_value_property();
-        } else if (data_type instanceof Data_Type) {
+        } else if (data_type === Number) {
+          define_number_value_property();
+        } else if (is_functional_data_type(data_type)) {
           define_data_type_typed_value_property();
         } else {
           console.trace();
@@ -5760,9 +5701,9 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Data_Value.js
-  var require_Data_Value2 = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Data_Value.js"(exports, module) {
+  // node_modules/lang-tools/Data_Model/new/Data_Value.js
+  var require_Data_Value = __commonJS({
+    "node_modules/lang-tools/Data_Model/new/Data_Value.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Base_Data_Value = require_Base_Data_Value();
@@ -5770,7 +5711,7 @@
       var Data_Model = require_Data_Model();
       var Immutable_Data_Model = require_Immutable_Data_Model();
       var Immutable_Data_Value = require_Immutable_Data_Value();
-      var { is_defined, input_processors, field, tof, each, is_array, Data_Type } = jsgui2;
+      var { is_defined, input_processors, tof, each, is_array, Data_Type } = jsgui2;
       var setup_data_value_data_type_set = require_setup_data_value_data_type_set();
       var util;
       if (typeof window === "undefined") {
@@ -5780,120 +5721,49 @@
       var lpurple = (x) => "\x1B[38;5;129m" + x + "\x1B[0m";
       var Data_Value2 = class _Data_Value extends Base_Data_Value {
         constructor(spec = {}) {
-          var _a;
-          if (typeof spec !== "object") {
-            spec = {
-              value: spec
-            };
-          }
-          super(spec);
-          this.__data_value = true;
-          this.__type_name = "data_value";
-          const that2 = this;
-          if (spec.data_type) {
-            this.data_type = spec.data_type;
-          } else if ((_a = spec.value) == null ? void 0 : _a.data_type) {
-            this.data_type = spec.value.data_type;
-          }
-          if (spec.context) {
-            this.context = spec.context;
-          }
-          const { data_type, context: context2 } = this;
+          const spec_is_plain_object = spec !== null && typeof spec === "object" && !Array.isArray(spec);
+          const actual_spec = spec_is_plain_object ? spec : { value: spec };
+          super(actual_spec);
+          const initial_value_is_present = Object.prototype.hasOwnProperty.call(actual_spec, "value");
+          const initial_value = initial_value_is_present ? actual_spec.value : void 0;
+          const { data_type } = this;
           if (data_type) {
             setup_data_value_data_type_set(this, data_type);
-            if (spec.value) {
-              this.value = spec.value;
+            if (initial_value_is_present && is_defined(initial_value)) {
+              this.value = initial_value;
             }
           } else {
-            field(this, "value", spec.value);
+            if (initial_value_is_present) {
+              this.value = actual_spec.value;
+            }
           }
           const attempt_set_value = this.attempt_set_value = (value2) => {
             const get_local_js_value_copy = () => {
-              const tljsv = tof(local_js_value);
-              if (tljsv === "undefined" || tljsv === "string" || tljsv === "number") {
-                return local_js_value;
+              const lv = this.value;
+              const tljsv = tof(lv);
+              if (tljsv === "undefined" || tljsv === "string" || tljsv === "number" || tljsv === "array" || tljsv === "object" || tljsv === "data_value") {
+                return lv;
               } else {
-                console.log("local_js_value", local_js_value);
-                console.log("tljsv", tljsv);
-                console.trace();
-                throw "stop";
+                return lv;
               }
             };
             const old_local_js_value = get_local_js_value_copy();
             const old_equals_new = more_general_equals(old_local_js_value, value2);
             if (old_equals_new === true) {
               return new Value_Set_Attempt({ success: false, equal_values: true });
-            } else {
-              if (this.data_type === void 0) {
-                local_js_value = value2;
-                const o_change = {
-                  name: "value",
-                  old: old_local_js_value,
-                  value: value2
-                };
-                this.raise("change", o_change);
-                return new Value_Set_Attempt({ success: true, value: value2 });
-              } else if (this.data_type instanceof Data_Type) {
-                const t_value = tof(value2);
-                if (t_value === "string") {
-                  if (this.data_type.parse_string) {
-                    const parsed_value = this.data_type.parse_string(value2);
-                    if (parsed_value !== void 0) {
-                      const res2 = attempt_set_value(parsed_value);
-                      res2.parsed = true;
-                      return res2;
-                    } else {
-                      return new Value_Set_Attempt({ success: false, value: value2 });
-                    }
-                  } else {
-                    console.trace();
-                    throw "NYI";
-                  }
-                } else {
-                  if (t_value === "number") {
-                    const validation = this.data_type.validate(value2);
-                    if (validation === true) {
-                      local_js_value = value2;
-                      const o_change = {
-                        name: "value",
-                        old: old_local_js_value,
-                        value: value2
-                      };
-                      this.raise("change", o_change);
-                      return new Value_Set_Attempt({ success: true, old: old_local_js_value, value: value2 });
-                    } else {
-                      return new Value_Set_Attempt({ success: false, value: value2 });
-                    }
-                  } else {
-                    console.log("t_value", t_value);
-                    console.trace();
-                    throw "NYI";
-                  }
-                }
-              } else if (this.data_type === String) {
-                if (typeof value2 === "number") {
-                  const res2 = attempt_set_value(value2 + "");
-                  res2.data_type_transformation = ["number", "string"];
-                  return res2;
-                } else if (typeof value2 === "string") {
-                  local_js_value = value2;
-                  const o_change = {
-                    name: "value",
-                    old: old_local_js_value,
-                    value: value2
-                  };
-                  this.raise("change", o_change);
-                  return new Value_Set_Attempt({ success: true, old: old_local_js_value, value: value2 });
-                } else {
-                  console.trace();
-                  throw "NYI";
-                }
-              } else {
-                console.log("this.data_type", this.data_type);
-                console.trace();
-                throw "NYI";
-              }
             }
+            try {
+              this.value = value2;
+            } catch (error2) {
+              return new Value_Set_Attempt({ success: false, value: old_local_js_value, error: error2 });
+            }
+            const new_local_js_value = get_local_js_value_copy();
+            const changed = !more_general_equals(old_local_js_value, new_local_js_value);
+            return new Value_Set_Attempt({
+              success: changed,
+              old: old_local_js_value,
+              value: new_local_js_value
+            });
           };
           this.__type = "data_value";
           this._relationships = {};
@@ -5957,29 +5827,63 @@
           if (this.__id) return this.__id;
           if (this.context) {
             this.__id = this.context.new_id(this.__type_name || this.__type);
-          } else {
-            if (!is_defined(this.__id)) {
-              throw "Data_Value should have context";
-              this.__id = new_data_value_id();
-            }
+            return this.__id;
           }
-          return this.__id;
+          return void 0;
+        }
+      };
+      var ensure_sync_state = (data_value) => {
+        if (!data_value.__sync_state) {
+          Object.defineProperty(data_value, "__sync_state", {
+            value: {
+              updatingFrom: /* @__PURE__ */ new Set()
+            },
+            enumerable: false
+          });
+        }
+        return data_value.__sync_state;
+      };
+      var has_defined_value = (data_value) => typeof data_value.value !== "undefined";
+      var copy_initial_value = (from, to) => {
+        const source_state = ensure_sync_state(from);
+        source_state.updatingFrom.add(to);
+        try {
+          to.value = from.value;
+        } finally {
+          source_state.updatingFrom.delete(to);
+        }
+      };
+      var propagate_sync_value = (source, target) => {
+        source.on("change", (e) => {
+          if (e.name !== "value") {
+            return;
+          }
+          const { updatingFrom } = ensure_sync_state(target);
+          if (updatingFrom.has(source)) {
+            return;
+          }
+          updatingFrom.add(source);
+          try {
+            target.value = e.value;
+          } finally {
+            updatingFrom.delete(source);
+          }
+        });
+      };
+      var align_initial_values = (a, b) => {
+        const a_has_value = has_defined_value(a);
+        const b_has_value = has_defined_value(b);
+        if (a_has_value && !b_has_value) {
+          copy_initial_value(a, b);
+        } else if (!a_has_value && b_has_value) {
+          copy_initial_value(b, a);
         }
       };
       Data_Value2.sync = (a, b) => {
         if (a instanceof Base_Data_Value && b instanceof Base_Data_Value) {
-          a.on("change", (e) => {
-            const { name, old, value: value2 } = e;
-            if (name === "value") {
-              b.value = value2;
-            }
-          });
-          b.on("change", (e) => {
-            const { name, old, value: value2 } = e;
-            if (name === "value") {
-              a.value = value2;
-            }
-          });
+          propagate_sync_value(a, b);
+          propagate_sync_value(b, a);
+          align_initial_values(a, b);
         } else {
           console.trace();
           throw "Unexpected types";
@@ -6022,16 +5926,1100 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Value.js
-  var require_Data_Value3 = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Value.js"(exports, module) {
-      module.exports = require_Data_Value2();
+  // node_modules/lang-tools/Data_Model/Mini_Context.js
+  var require_Mini_Context = __commonJS({
+    "node_modules/lang-tools/Data_Model/Mini_Context.js"(exports, module) {
+      var Mini_Context = class {
+        // Need quite a simple mechanism to get IDs for objects.
+        // They will be typed objects/
+        constructor(spec) {
+          const map_typed_counts = /* @__PURE__ */ Object.create(null);
+          this.new_id = (str_type = "item") => {
+            const current = map_typed_counts[str_type] || 0;
+            map_typed_counts[str_type] = current + 1;
+            return `${str_type}_${current}`;
+          };
+        }
+        "make"(abstract_object) {
+          if (abstract_object._abstract) {
+            var constructor = abstract_object.constructor;
+            var aos = abstract_object._spec;
+            aos.abstract = null;
+            aos.context = this;
+            var res2 = new constructor(aos);
+            return res2;
+          } else {
+            throw "Object must be abstract, having ._abstract == true";
+          }
+        }
+      };
+      module.exports = Mini_Context;
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/doubly-linked-list.js
+  // node_modules/lang-tools/Data_Model/new/Data_Object.js
+  var require_Data_Object = __commonJS({
+    "node_modules/lang-tools/Data_Model/new/Data_Object.js"(exports, module) {
+      var jsgui2 = require_lib_lang_mini();
+      var { each, tof, is_defined, get_a_sig, ll_get } = jsgui2;
+      var Mini_Context = require_Mini_Context();
+      var Data_Model = require_Data_Model();
+      var Data_Value2 = require_Data_Value();
+      jsgui2.__data_id_method = "init";
+      var Data_Object = class extends Data_Model {
+        constructor(spec = {}, fields) {
+          super(spec);
+          this._ = this._ || {};
+          if (spec.id) {
+            this.__id = spec.id;
+          }
+          if (spec.__id) {
+            this.__id = spec.__id;
+          }
+          this.__type_name = spec.__type_name || "data_object";
+          if (fields) this.set_fields_from_spec(fields, spec);
+          this.__data_object = true;
+          if (spec.abstract === true) {
+            this._abstract = true;
+            var tSpec = tof(spec);
+            if (tSpec == "function") {
+              this._type_constructor = spec;
+            } else if (tSpec == "object") {
+              this._spec = spec;
+            }
+          } else {
+            var t_spec = tof(spec);
+            this.__type = "data_object";
+            if (t_spec === "object" || t_spec === "control") {
+              if (spec.context) {
+                this.context = spec.context;
+              }
+              if (spec.id) {
+                this.__id = spec.id;
+              }
+              if (spec._id) {
+                this.__id = spec._id;
+              }
+              if (spec.__id) {
+                this.__id = spec.__id;
+              }
+            } else if (t_spec == "data_object") {
+              if (spec.context) this.context = spec.context;
+            }
+            if (is_defined(spec.parent)) {
+              this.parent = spec.parent;
+            }
+            if (this.context) {
+              this.init_default_events();
+            }
+            const reserved_keys = {
+              "context": true,
+              "id": true,
+              "_id": true,
+              "__id": true,
+              "parent": true,
+              "__type": true,
+              "__type_name": true,
+              "abstract": true,
+              "data_def": true,
+              "load_array": true,
+              "items": true,
+              "fn_index": true,
+              "constraint": true,
+              "index_by": true,
+              "accepts": true
+            };
+            if (t_spec === "object" && spec) {
+              Object.keys(spec).forEach((key2) => {
+                if (reserved_keys[key2] || key2.startsWith("__")) return;
+                this.set(key2, spec[key2], true);
+              });
+            }
+          }
+        }
+        "set_fields_from_spec"(fields, spec) {
+          const normalized = [];
+          if (Array.isArray(fields)) {
+            each(fields, (field) => {
+              if (Array.isArray(field)) {
+                normalized.push(field);
+              } else if (typeof field === "object" && field.name) {
+                normalized.push([field.name, field.type, field.default]);
+              }
+            });
+          } else if (typeof fields === "object") {
+            each(fields, (val, key2) => {
+              if (Array.isArray(val)) {
+                normalized.push([key2, val[0], val[1]]);
+              } else {
+                normalized.push([key2, val]);
+              }
+            });
+          }
+          each(normalized, (field) => {
+            const field_name = field[0];
+            const field_default = field[2];
+            let value_to_set;
+            if (spec && typeof spec[field_name] !== "undefined") {
+              value_to_set = spec[field_name];
+            } else if (typeof field_default !== "undefined") {
+              value_to_set = field_default;
+            }
+            if (typeof value_to_set !== "undefined") {
+              if (typeof this.set === "function") {
+                this.set(field_name, value_to_set, true);
+              } else {
+                this._[field_name] = value_to_set;
+              }
+            }
+          });
+        }
+        "init_default_events"() {
+        }
+        /*
+             'data_def': fp(function(a, sig) {
+             if (sig == '[o]') {
+             // create the new data_def constraint.
+        
+        
+             }
+             }),
+             */
+        "keys"() {
+          return Object.keys(this._);
+        }
+        // fromJSON
+        "toJSON"() {
+          var res2 = [];
+          res2.push("Data_Object(" + JSON.stringify(this._) + ")");
+          return res2.join("");
+        }
+        // using_fields_connection()
+        //  will search up the object heirachy, to see if the Data_Objects fields need to be connected through the use of functions.
+        //  that will make the fields easy to change by calling a function. Should make things much faster to access than when programming with Backbone.
+        // then will connect the fields with connect_fields()
+        /*
+        'using_fields_connection'() {
+            var res = false;
+            iterate_ancestor_classes(this.constructor, function (a_class, stop) {
+                if (is_defined(a_class._connect_fields)) {
+                    res = a_class._connect_fields;
+                    stop();
+                }
+            });
+            return res;
+        }
+        */
+        // using _relationships or whatever
+        get parent() {
+          return this._parent;
+        }
+        set parent(value2) {
+          return this._parent = value2;
+        }
+        "_id"() {
+          if (this.__id) return this.__id;
+          if (this.context) {
+            this.__id = this.context.new_id(this.__type_name || this.__type);
+          } else {
+            if (this._abstract) {
+              return void 0;
+            } else if (!is_defined(this.__id)) {
+              return void 0;
+            }
+          }
+          return this.__id;
+        }
+        // Problems with name (fields).
+        //  Fields are given as a description of the fields.
+        //   Gets more complicated when we have a function to access the fields as well.
+        //   What if we want to override that function?
+        // Will call it field
+        //  18/12/2016 - Getting rid of this confusion, will mostly remove / greatly simplify field functionality.
+        //  Just need to know which fields any class has, keeping track of this will use some data structures like Sorted_KVS,
+        //   but not much complex code within this part.
+        // Not so sure what a field function will do right now.
+        //  Does not seem like such an essential part of the API.
+        //   Can just define the fields, then they act a bit differently.
+        //   Have field handling in Data_Object.
+        //   Collection would have the same field capabilities. Fields should not be so important anyway.
+        // 18/12/2016 Will remove constraints, then make them much more functional.
+        //  Go through the keys....
+        "each"(callback2) {
+          each(this._, callback2);
+        }
+        // could make this polymorphic so that it
+        //   sibling_index I think.
+        "position_within"(parent) {
+          var p_id = parent._id();
+          if (this._parents && is_defined(this._parents[p_id])) {
+            var parent_rel_info = this._parents[p_id];
+            var pos_within = parent_rel_info[1];
+            return pos_within;
+          }
+        }
+        // Maybe just 'remove' function.
+        //  This may be needed with multiple parents, which are not being used at the moment.
+        // ???? late 2023
+        "remove_from"(parent) {
+          var p_id = parent._id();
+          if (this._parents && is_defined(this._parents[p_id])) {
+            var parent = this._parents[p_id][0];
+            var pos_within = this._parents[p_id][1];
+            var item2 = parent._arr[pos_within];
+            parent.remove(pos_within);
+            delete this._parents[p_id];
+          }
+        }
+        //  
+        // Maybe only do this with the fields anyway
+        "load_from_spec"(spec, arr_item_names) {
+          console.trace();
+          throw "Deprecated in new Data_Object version";
+          each(arr_item_names, (v) => {
+            var spec_item = spec[v];
+            if (is_defined(spec_item)) {
+              this.set(v, spec_item);
+            }
+          });
+        }
+        // They will be treated as values in many cases anyway.
+        //  Will turn them to different types of object where possible.
+        /*
+            'value'() {
+                var a = arguments; a.l = arguments.length; var sig = get_a_sig(a, 1);
+                // could operate like both get and set, but does not return data_objects, returns the value itself.
+                var name;
+                //var res;
+                if (sig === '[s]') {
+                    name = a[0];
+                    var possibly_dobj = this.get(name);
+                    //var t_obj = tof(possibly_dobj);
+        
+                    if (possibly_dobj) {
+                        if (possibly_dobj.value && typeof possibly_dobj.value === 'function') {
+                            return possibly_dobj.value();
+                        } else {
+                            return possibly_dobj;
+                        }
+                    }
+                }
+            }
+            */
+        // Get could be greatly simplified as well.
+        //  Input and output processing will be more streamlined in a functional way.
+        // 19/12/2016 - Not using get or set nearly as much anyway.
+        "get"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig(a, 1);
+          var do_typed_processing = false;
+          if (do_typed_processing) {
+            if (a.l === 0) {
+              var output_obj = jsgui2.output_processors[this.__type_name](this._);
+              return output_obj;
+            } else {
+              console.log("a", a);
+              console.trace();
+              throw "not yet implemented";
+            }
+          } else {
+            if (sig == "[s,f]") {
+              throw "Asyncronous access not allowed on Data_Object get.";
+              var res2 = this.get(a[0]);
+              var callback2 = a[1];
+              if (typeof res2 == "function") {
+                res2(callback2);
+              } else {
+                return res2;
+              }
+            } else if (sig == "[s]") {
+              var res2 = ll_get(this, a[0]);
+              return res2;
+            } else if (a.l === 0) {
+              return this._;
+            }
+          }
+        }
+        "ensure_data_value"(property_name, default_value) {
+          if (this._abstract) return void 0;
+          if (!property_name || typeof property_name !== "string") throw "property_name expected: string";
+          if (property_name.indexOf(".") > -1 && property_name !== ".") throw "ensure_data_value does not support dotted paths (yet)";
+          const has_key = this._ && Object.prototype.hasOwnProperty.call(this._, property_name);
+          const existing = has_key ? this._[property_name] : void 0;
+          if (existing && existing.__data_value) return existing;
+          const initial_value = has_key ? existing : default_value;
+          const dv = new Data_Value2({
+            value: initial_value
+          });
+          this._[property_name] = dv;
+          return dv;
+        }
+        // Or don't use / support get and set for the moment?
+        //   Only use property / field access?
+        //   Define property, with getter and setter, seems like a more cleanly defined system.
+        // May see about making a new simplified implementation of this and running it through tests.
+        //   Though the new Data_Value seems like the more appropriate way for the moment.
+        // May look into seeing where Data_Value is used in the current system too.
+        //   Could see about further incorportating its use (in places).
+        //'set': fp(function(a, sig) {
+        "set"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig(a, 1);
+          if (this._abstract) return false;
+          var that2 = this, res2;
+          var input_processors = jsgui2.input_processors;
+          if (a.l === 2 || a.l === 3) {
+            var property_name = a[0], value2 = a[1];
+            var ta2 = tof(a[2]);
+            var silent = false;
+            var source;
+            if (ta2 == "string" || ta2 == "boolean") {
+              silent = a[2];
+            }
+            if (ta2 == "control") {
+              source = a[2];
+            }
+            if (!this._initializing && this._map_read_only && this._map_read_only[property_name]) {
+              throw 'Property "' + property_name + '" is read-only.';
+            } else {
+              var split_pn = property_name.split(".");
+              if (split_pn.length > 1 && property_name != ".") {
+                var spn_first = split_pn[0];
+                var spn_arr_next = split_pn.slice(1);
+                var data_object_next = this.get(spn_first);
+                if (data_object_next) {
+                  res2 = data_object_next.set(spn_arr_next.join("."), value2);
+                  if (!silent) {
+                    const bubbled_stored = this.get(property_name);
+                    var e_change = {
+                      "name": property_name,
+                      // Back-compat: bubbled events historically provided the input value.
+                      "value": value2,
+                      // MVVM-friendly additions:
+                      "data_value": bubbled_stored && bubbled_stored.__data_value ? bubbled_stored : void 0,
+                      "raw_value": bubbled_stored && bubbled_stored.__data_value ? bubbled_stored.value : bubbled_stored && typeof bubbled_stored.value === "function" ? bubbled_stored.value() : value2,
+                      "bubbled": true
+                    };
+                    if (source) {
+                      e_change.source = source;
+                    }
+                    this.raise_event("change", e_change);
+                  }
+                } else {
+                  throw "No data object at this level.";
+                }
+              } else {
+                var data_object_next = this.get(property_name);
+                const had_existing = is_defined(data_object_next) && data_object_next !== null;
+                const incoming_is_node = value2 && (value2.__data_object || value2.__data_value || value2.__data_grid);
+                const existing_is_data_value = data_object_next && data_object_next.__data_value;
+                const existing_is_data_object = data_object_next && data_object_next.__data_object;
+                const incoming_t = tof(value2);
+                let stored;
+                if (existing_is_data_value) {
+                  data_object_next.set(value2);
+                  stored = data_object_next;
+                  res2 = data_object_next;
+                } else if (existing_is_data_object && incoming_t === "object" && value2 !== null && !incoming_is_node && incoming_t !== "array") {
+                  data_object_next.set(value2);
+                  stored = data_object_next;
+                  res2 = data_object_next;
+                } else {
+                  if (incoming_is_node) {
+                    stored = value2;
+                  } else {
+                    if (!had_existing) {
+                      stored = this.ensure_data_value(property_name);
+                      stored.set(value2);
+                    } else {
+                      stored = value2;
+                    }
+                  }
+                  this._[property_name] = stored;
+                  res2 = stored;
+                }
+                if (!silent) {
+                  var e_change = {
+                    "name": property_name,
+                    // Back-compat: historically sometimes emitted Data_Value (when creating) and sometimes raw JS value (when updating).
+                    "value": !had_existing ? stored : stored && stored.__data_value ? stored.value : stored && typeof stored.value === "function" ? stored.value() : stored,
+                    // MVVM-friendly additions:
+                    "data_value": stored && stored.__data_value ? stored : void 0,
+                    "raw_value": stored && stored.__data_value ? stored.value : stored && typeof stored.value === "function" ? stored.value() : stored
+                  };
+                  if (source) {
+                    e_change.source = source;
+                  }
+                  this.raise_event("change", e_change);
+                }
+                return had_existing ? res2 : value2;
+              }
+            }
+          } else {
+            var value2 = a[0];
+            var property_name = a[1];
+            var input_processor = input_processors[this.__type_name];
+            if (input_processor) {
+              var processed_input = input_processor(value2);
+              value2 = processed_input;
+              this._[property_name] = value2;
+              this.raise_event("change", {
+                "value": value2
+              });
+              return value2;
+            } else {
+              if (sig === "[D]") {
+                this._[property_name] = value2;
+                this.raise_event("change", [property_name, value2]);
+                return value2;
+              } else if (sig === "[o]") {
+                res2 = {};
+                each(a[0], function(v, i) {
+                  res2[i] = that2.set(i, v);
+                });
+                return res2;
+              } else if (sig === "[c]") {
+                this._[property_name] = value2;
+                this.raise_event("change", [property_name, value2]);
+                return value2;
+              }
+            }
+          }
+        }
+        "has"(property_name) {
+          return is_defined(this.get(property_name));
+        }
+      };
+      jsgui2.map_classes = jsgui2.map_classes || {};
+      var dobj = (obj2, data_def) => {
+        var cstr = Data_Object;
+        var res2;
+        if (data_def) {
+          res2 = new cstr({
+            "data_def": data_def
+          });
+        } else {
+          res2 = new cstr({});
+        }
+        var tobj = tof(obj2);
+        if (tobj == "object") {
+          var res_set = res2.set;
+          each(obj2, (v, i) => {
+            res_set.call(res2, i, v);
+          });
+        }
+        return res2;
+      };
+      Data_Object.dobj = dobj;
+      Data_Object.Mini_Context = Mini_Context;
+      module.exports = Data_Object;
+    }
+  });
+
+  // node_modules/lang-tools/sorted-kvs.js
+  var require_sorted_kvs = __commonJS({
+    "node_modules/lang-tools/sorted-kvs.js"(exports, module) {
+      var jsgui2 = require_lib_lang_mini();
+      var mapify = jsgui2.mapify;
+      var B_Plus_Tree = require_b_plus_tree();
+      var Sorted_KVS = class {
+        constructor(spec) {
+          spec = spec || {};
+          if (typeof spec.unique_keys !== "undefined") this.unique_keys = spec.unique_keys;
+          this.tree = B_Plus_Tree(12);
+        }
+        "clear"() {
+          this.tree.clear();
+        }
+        /*
+        	'put': mapify(function (key, value) {
+        		// inserting a bunch of things at once... could that be done more efficiently, such as in one traversal?
+        		//  sort the items, then can skip through the tree a bit quicker?
+        
+        
+        		var insert_res = this.tree.insert(key, value);
+        		// with tree.insert - nice if we can keep the treenode as a result.
+        		//  the tree does not store objects in the node.
+        		//   could make the tree node hold a reference to the object?
+        
+        		//console.log('put insert_res ' + insert_res);
+        		//this.dict[key] = value;
+        	}),
+        	*/
+        "out"(key2) {
+          this.tree.remove(key2);
+        }
+        "get"(key2) {
+          return this.tree.get_values_by_key(key2);
+        }
+        "has"(key2) {
+          return this.key_count(key2) > 0;
+        }
+        "get_cursor"() {
+        }
+        "keys"() {
+          return this.tree.keys();
+        }
+        "keys_and_values"() {
+          return this.tree.keys_and_values();
+        }
+        /*
+        	 'values': function() {
+        	 var keys = this.keys();
+        	 var res = [];
+        	 var that = this;
+        	 console.log('keys.length ' + keys.length );
+        	 console.log('keys ' + jsgui.stringify(keys));
+        
+        	 each(keys, function(i, v) {
+        	 res.push(that.dict[v]);
+        	 });
+        	 return res;
+        	 },
+        	 */
+        "key_count"(key2) {
+          if (typeof key2 !== "undefined") {
+            return this.tree.count(key2);
+          } else {
+            return this.tree.count();
+          }
+        }
+        "get_keys_by_prefix"(prefix) {
+          return this.tree.get_keys_by_prefix(prefix);
+        }
+        "each"(callback2) {
+          return this.tree.each(callback2);
+        }
+        "get_by_prefix"(prefix) {
+          return this.tree.get_by_prefix(prefix);
+        }
+      };
+      Sorted_KVS.prototype.put = mapify(function(key2, value2) {
+        var insert_res = this.tree.insert(key2, value2);
+      });
+      module.exports = Sorted_KVS;
+    }
+  });
+
+  // node_modules/lang-tools/Data_Model/new/Collection.js
+  var require_Collection = __commonJS({
+    "node_modules/lang-tools/Data_Model/new/Collection.js"(exports, module) {
+      var lang = require_lib_lang_mini();
+      var Data_Value2 = require_Data_Value();
+      var Data_Object = require_Data_Object();
+      var Sorted_KVS = require_sorted_kvs();
+      var dobj = Data_Object.dobj;
+      var Constraint = Data_Object.Constraint;
+      var each = lang.each;
+      var tof = lang.tof;
+      var is_defined = lang.is_defined;
+      var stringify = lang.stringify;
+      var get_a_sig = lang.get_a_sig;
+      var native_constructor_tof = lang.native_constructor_tof;
+      var dop = Data_Object.prototype;
+      var Collection = class _Collection extends Data_Object {
+        constructor(spec = {}, arr_values) {
+          super(spec);
+          this.__type = "collection";
+          this.__type_name = "collection";
+          var t_spec = tof(spec);
+          if (spec.abstract === true) {
+            if (t_spec === "function") {
+              this.constraint(spec);
+            }
+          } else {
+            this._relationships = this._relationships || {};
+            this._arr_idx = 0;
+            this._arr = [];
+            this.index = new Sorted_KVS();
+            this.fn_index = spec.fn_index;
+            if (t_spec === "array") {
+              spec = {
+                "load_array": spec
+              };
+            } else {
+              if (t_spec === "function") {
+                if (spec.abstract === true) {
+                  this._abstract = true;
+                } else {
+                }
+              } else if (t_spec === "string") {
+                var map_native_constructors = {
+                  "array": Array,
+                  "boolean": Boolean,
+                  "number": Number,
+                  "string": String,
+                  "object": Object
+                };
+                var nc = map_native_constructors[spec];
+                if (nc) {
+                  spec = {
+                    "constraint": nc
+                  };
+                  if (nc == String) {
+                    spec.index_by = "value";
+                  }
+                }
+              }
+            }
+            if (is_defined(spec.items)) {
+              spec.load_array = spec.load_array || spec.items;
+            }
+            if (arr_values) {
+              spec.load_array = arr_values;
+            }
+            if (is_defined(spec.accepts)) {
+              this._accepts = spec.accepts;
+            }
+            if (lang.__data_id_method === "init") {
+              if (this.context) {
+                this.__id = this.context.new_id(this.__type_name || this.__type);
+                this.context.map_objects[this.__id] = this;
+              } else {
+              }
+            }
+            if (!this.__type) {
+            }
+            if (spec.load_array) {
+              this.load_array(spec.load_array);
+            }
+          }
+        }
+        // maybe use fp, and otherwise apply with the same params and context.
+        "set"(value2) {
+          var tval = tof(value2);
+          if (tval === "data_object" || tval === "data_value" || tval === "data_model") {
+            this.clear();
+            return this.push(value2);
+          } else if (tval === "array") {
+            this.clear();
+            each(value2, (v, i) => {
+              this.push(v);
+            });
+          } else {
+            if (tval === "collection") {
+              throw "stop";
+              this.clear();
+              value2.each(function(v, i) {
+                that.push(v);
+              });
+            } else if (tval === "string" || tval === "number" || tval === "boolean" || tval === "null" || tval === "undefined") {
+              this.clear();
+              return this.push(value2);
+            } else {
+              const Data_Object2 = require_Data_Object();
+              return Data_Object2.prototype.set.call(this, value2);
+            }
+          }
+        }
+        "clear"() {
+          this._arr_idx = 0;
+          this._arr = [];
+          this.index.clear();
+          this.raise("change", {
+            "name": "clear"
+          });
+        }
+        "stringify"() {
+          var res2 = [];
+          if (this._abstract) {
+            var ncto = native_constructor_tof(this._type_constructor);
+            res2.push("~Collection(");
+            if (ncto) {
+              res2.push(ncto);
+            } else {
+            }
+            res2.push(")");
+          } else {
+            res2.push("Collection(");
+            var first = true;
+            this.each(function(v, i) {
+              if (!first) {
+                res2.push(", ");
+              } else {
+                first = false;
+              }
+              res2.push(stringify(v));
+            });
+            res2.push(")");
+          }
+          return res2.join("");
+        }
+        "toString"() {
+          return stringify(this._arr);
+        }
+        "toObject"() {
+          var res2 = [];
+          this.each(function(v, i) {
+            res2.push(v.toObject());
+          });
+          return res2;
+        }
+        "each"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig(a, 1);
+          if (sig == "[f]") {
+            return each(this._arr, a[0]);
+          } else {
+            if (sig == "[X,f]") {
+              var index = a[0];
+              var callback2 = a[1];
+              return index.each(callback2);
+            } else {
+              if (a.l == 2) {
+                return each(this._arr, a[0], a[1]);
+              }
+            }
+          }
+        }
+        "_id"() {
+          if (this.context) {
+            this.__id = this.context.new_id(this.__type_name || this.__type);
+          } else {
+          }
+          return this.__id;
+        }
+        "length"() {
+          return this._arr.length;
+        }
+        get len() {
+          return this._arr.length;
+        }
+        "find"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig(a, 1);
+          if (a.l == 1) {
+            var pos = this.index.get(a[0])[0];
+            var item2 = this._arr[pos];
+            return item2;
+          }
+          if (sig == "[o,s]") {
+            return this.index_system.find(a[0], a[1]);
+          }
+          if (sig == "[s,s]") {
+            return this.index_system.find(a[0], a[1]);
+          }
+          if (sig == "[a,s]") {
+            return this.index_system.find(a[0], a[1]);
+          }
+          if (sig == "[s,o]") {
+            var propertyName = a[0];
+            var query = a[1];
+            var foundItems = [];
+            each(this, (item3, index) => {
+              if (item3.get) {
+                var itemProperty = item3.get(propertyName);
+              } else {
+                var itemProperty = item3[propertyName];
+              }
+              var tip = tof(itemProperty);
+              var tip2;
+              var ip2;
+              if (tip === "data_value") {
+                var ip2 = itemProperty.value;
+                tip2 = tof(ip2);
+              } else {
+                ip2 = itemProperty;
+                tip2 = tip;
+              }
+              if (tip2 === "array") {
+                each(ip2, (v, i) => {
+                  var matches = obj_matches_query_obj(v, query);
+                  if (matches) {
+                    foundItems.push(v);
+                  }
+                });
+              }
+              ;
+            });
+            var res2 = new _Collection(foundItems);
+            return res2;
+          }
+        }
+        // get seems like the way to get unique values.
+        "get"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig(a, 1);
+          if (sig == "[n]" || sig == "[i]") {
+            return this._arr[a[0]];
+          }
+          if (sig == "[s]") {
+            var ix_sys = this.index_system;
+            var res2;
+            if (ix_sys) {
+              var pui = ix_sys._primary_unique_index;
+              res2 = pui.get(a[0])[0];
+            }
+            if (res2) {
+              return res2;
+            }
+            return Data_Object.prototype.get.apply(this, a);
+          }
+        }
+        "insert"(item2, pos) {
+          this._arr.splice(pos, 0, item2);
+          this.raise("change", {
+            "name": "insert",
+            "item": item2,
+            "value": item2,
+            "pos": pos
+          });
+        }
+        swap(item2, replacement) {
+          let r_parent = replacement.parent;
+          let repl_pos = replacement.parent.content.remove(replacement);
+          let i_parent = item2.parent;
+          let item_pos = item2.parent.content.remove(item2);
+          let item_index;
+          i_parent.content.insert(replacement, item_pos);
+          r_parent.content.insert(item2, repl_pos);
+        }
+        // may have efficiencies for adding and removing multiple items at once.
+        //  can be sorted for insertion into index with more rapid algorithmic time.
+        "remove"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig(a, 1);
+          if (sig === "[n]") {
+            var pos = a[0];
+            var item2 = this._arr[pos];
+            var spliced_pos = pos;
+            this._arr.splice(pos, 1);
+            this._arr_idx--;
+            var e = {
+              "target": this,
+              "value": item2,
+              "position": spliced_pos,
+              "name": "remove"
+            };
+            this.raise("change", e);
+            return pos;
+          } else if (sig === "[s]") {
+            var key2 = a[0];
+            var obj2 = this.index_system.find([
+              ["value", key2]
+            ]);
+            var my_id = this.__id;
+            var item_pos_within_this = obj2[0]._relationships[my_id];
+            this._arr.splice(item_pos_within_this, 1);
+            for (var c2 = item_pos_within_this, l2 = this._arr.length; c2 < l2; c2++) {
+              var item2 = this._arr[c2];
+              item2._relationships[my_id]--;
+            }
+            var e = {
+              "target": this,
+              "value": obj2[0],
+              "position": item_pos_within_this,
+              "name": "remove"
+            };
+            this.raise("change", e);
+          } else {
+            let item_index;
+            const item3 = a[0];
+            let arr = this._arr, l3 = arr.length;
+            if (typeof item3 === "number") {
+              item_index = item3;
+            } else {
+              let found = false, c3 = 0;
+              while (!found && c3 < l3) {
+                found = arr[c3] === item3;
+                if (found) {
+                  item_index = c3;
+                }
+                c3++;
+              }
+              if (is_defined(item_index)) {
+                return this.remove(item_index);
+              }
+            }
+          }
+        }
+        "has"(obj_key) {
+          if (this.get_index(obj_key) === void 0) {
+            return false;
+          } else {
+            return true;
+          }
+        }
+        "get_index"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig(a, 1);
+          if (sig === "[s]") {
+            if (this.index_system) {
+              return this.index_system.search(a[0]);
+            } else {
+              if (this._arr.length === 0) {
+                return void 0;
+              } else {
+                for (let c2 = 0; c2 < this._arr.length; c2++) {
+                  const item2 = this._arr[c2];
+                  if ((item2 == null ? void 0 : item2.name) === a[0]) {
+                    return c2;
+                  }
+                }
+                return void 0;
+              }
+            }
+          } else {
+            console.trace();
+            throw "Expected [s]";
+          }
+        }
+        // More fp way of indexing.
+        "index_by"() {
+          var a = arguments;
+          a.l = arguments.length;
+          var sig = get_a_sig(a, 1);
+          console.log("Indexing not implemented (like this)");
+          console.trace();
+        }
+        "push"(value2) {
+          const { silent } = this;
+          let tv = tof(value2);
+          let fn_index = this.fn_index;
+          let idx_key, has_idx_key = false, pos;
+          if (fn_index) {
+            idx_key = fn_index(value2);
+            has_idx_key = true;
+          }
+          if (tv === "object" || tv === "function") {
+            pos = this._arr.length;
+            this._arr.push(value2);
+            this._arr_idx++;
+            if (!silent) {
+              const e = {
+                "target": this,
+                "item": value2,
+                "value": value2,
+                "position": pos,
+                "name": "insert"
+              };
+              this.raise("change", e);
+            }
+          } else if (tv === "data_value") {
+            pos = this._arr.length;
+            this._arr.push(value2);
+            this._arr_idx++;
+            if (!silent) {
+              const e = {
+                "target": this,
+                "item": value2,
+                "value": value2,
+                "position": pos,
+                "name": "insert"
+              };
+              this.raise("change", e);
+            }
+          } else if (tv === "collection") {
+            pos = this._arr.length;
+            this._arr.push(value2);
+            this._arr_idx++;
+            if (!silent) {
+              const e = {
+                "target": this,
+                "item": value2,
+                "value": value2,
+                "position": pos,
+                "name": "insert"
+              };
+              this.raise("change", e);
+            }
+          } else if (tv === "data_object" || tv === "control" || tv === "data_model") {
+            pos = this._arr.length;
+            this._arr.push(value2);
+            this._arr_idx++;
+            if (!silent) {
+              const e = {
+                "target": this,
+                "item": value2,
+                "value": value2,
+                "position": pos,
+                "name": "insert"
+              };
+              this.raise("change", e);
+            }
+          } else if (tv === "array") {
+            const new_coll = new _Collection(value2);
+            pos = this._arr.length;
+            this._arr.push(new_coll);
+            if (!silent) {
+              const e = {
+                "target": this,
+                "item": value2,
+                "value": value2,
+                "position": pos,
+                "name": "insert"
+              };
+              this.raise("change", e);
+            }
+          }
+          if (tv === "string" || tv === "number" || tv === "boolean" || tv === "null" || tv === "undefined") {
+            const dv = new Data_Value2({
+              "value": value2
+            });
+            pos = this._arr.length;
+            this._arr.push(dv);
+            if (!silent) {
+              const e = {
+                "target": this,
+                "item": value2,
+                "value": value2,
+                "position": pos,
+                "name": "insert"
+              };
+              this.raise("change", e);
+            }
+          }
+          if (has_idx_key) {
+            this.index.put(idx_key, pos);
+          }
+          return value2;
+        }
+        "load_array"(arr) {
+          for (var c2 = 0, l2 = arr.length; c2 < l2; c2++) {
+            this.push(arr[c2]);
+          }
+          this.raise("load");
+        }
+        "values"() {
+          var a = arguments;
+          a.l = a.length;
+          if (a.l === 0) {
+            return this._arr;
+          } else {
+            var stack = new Error().stack;
+            throw "not yet implemented";
+          }
+        }
+        "value"() {
+          const res2 = [];
+          this.each((v, i) => {
+            if (v && typeof v.value !== "undefined") {
+              res2.push(v.value);
+            } else {
+              res2.push(v);
+            }
+          });
+          return res2;
+        }
+      };
+      var p = Collection.prototype;
+      p.add = function(value2) {
+        return this.push(value2);
+      };
+      module.exports = Collection;
+    }
+  });
+
+  // node_modules/lang-tools/doubly-linked-list.js
   var require_doubly_linked_list = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/doubly-linked-list.js"(exports, module) {
+    "node_modules/lang-tools/doubly-linked-list.js"(exports, module) {
       var Node = class {
         constructor(spec) {
           this.neighbours = spec.neighbours || [];
@@ -6171,9 +7159,9 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/ordered-kvs.js
+  // node_modules/lang-tools/ordered-kvs.js
   var require_ordered_kvs = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/ordered-kvs.js"(exports, module) {
+    "node_modules/lang-tools/ordered-kvs.js"(exports, module) {
       var Doubly_Linked_List = require_doubly_linked_list();
       var Ordered_KVS = class {
         constructor() {
@@ -6238,9 +7226,9 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/ordered-string-list.js
+  // node_modules/lang-tools/ordered-string-list.js
   var require_ordered_string_list = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/ordered-string-list.js"(exports, module) {
+    "node_modules/lang-tools/ordered-string-list.js"(exports, module) {
       var Ordered_String_List = class {
         constructor() {
           var arr = [];
@@ -6328,16 +7316,16 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Collection.js
+  // node_modules/lang-tools/Data_Model/Collection.js
   var require_Collection2 = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Collection.js"(exports, module) {
+    "node_modules/lang-tools/Data_Model/Collection.js"(exports, module) {
       module.exports = require_Collection();
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/util.js
+  // node_modules/lang-tools/util.js
   var require_util = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/util.js"(exports, module) {
+    "node_modules/lang-tools/util.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var Collection = require_Collection2();
       var j = jsgui2;
@@ -6742,9 +7730,9 @@
     }
   });
 
-  // node_modules/jsgui3-html/node_modules/lang-tools/lang.js
+  // node_modules/lang-tools/lang.js
   var require_lang = __commonJS({
-    "node_modules/jsgui3-html/node_modules/lang-tools/lang.js"(exports, module) {
+    "node_modules/lang-tools/lang.js"(exports, module) {
       var lang_mini = require_lib_lang_mini();
       var collective = require_collective();
       var { more_general_equals } = require_tools();
@@ -6754,8 +7742,8 @@
       var Evented_Class = lang_mini.Evented_Class;
       var B_Plus_Tree = require_b_plus_tree();
       var Collection = require_Collection();
-      var Data_Object = require_Data_Object2();
-      var Data_Value2 = require_Data_Value3();
+      var Data_Object = require_Data_Object();
+      var Data_Value2 = require_Data_Value();
       var Data_Model = require_Data_Model();
       var Immutable_Data_Value = require_Immutable_Data_Value();
       var Immutable_Data_Model = require_Immutable_Data_Model();
@@ -6779,6 +7767,376 @@
       var ec = new Evented_Class();
       Object.assign(ec, lang_mini);
       module.exports = ec;
+    }
+  });
+
+  // node_modules/jsgui3-html/html-core/lang_tools_compat.js
+  var require_lang_tools_compat = __commonJS({
+    "node_modules/jsgui3-html/html-core/lang_tools_compat.js"(exports, module) {
+      var lang_tools = require_lang();
+      var {
+        Data_Object: Base_Data_Object,
+        Data_Value: Data_Value2,
+        tof
+      } = lang_tools;
+      var data_object_set_patched = false;
+      var data_value_id_patched = false;
+      var data_object_fields_patched = false;
+      var collection_data_model_push_patched = false;
+      var needs_patch_cached = null;
+      var unwrap_value = (value2) => {
+        if (value2 && value2.__data_value) {
+          return value2.value;
+        }
+        return value2;
+      };
+      var ensure_property_access = (obj2, prop_name2) => {
+        if (typeof prop_name2 !== "string") return;
+        if (prop_name2.indexOf(".") !== -1) return;
+        if (prop_name2.startsWith("_") || prop_name2.startsWith("__")) return;
+        const existing_descriptor = Object.getOwnPropertyDescriptor(obj2, prop_name2);
+        if (existing_descriptor) {
+          if (typeof existing_descriptor.get === "function" || typeof existing_descriptor.set === "function") return;
+          if (typeof existing_descriptor.value === "function") return;
+        } else {
+          if (prop_name2 in obj2) return;
+        }
+        Object.defineProperty(obj2, prop_name2, {
+          enumerable: true,
+          configurable: true,
+          get() {
+            if (typeof obj2.get === "function") {
+              return unwrap_value(obj2.get(prop_name2));
+            }
+          },
+          set(value2) {
+            if (typeof obj2.set === "function") {
+              obj2.set(prop_name2, value2);
+            } else {
+              obj2[prop_name2] = value2;
+            }
+          }
+        });
+      };
+      var patch_data_object_set = () => {
+        if (data_object_set_patched) return;
+        data_object_set_patched = true;
+        const original_set = Base_Data_Object.prototype.set;
+        Base_Data_Object.prototype.set = function() {
+          const a = arguments;
+          const prop_name2 = a[0];
+          if (typeof prop_name2 === "string" && a.length >= 2) {
+            const value2 = a[1];
+            const silent_arg = a[2];
+            const silent = typeof silent_arg === "boolean" || typeof silent_arg === "string" ? !!silent_arg : false;
+            const old_raw = typeof this.get === "function" ? this.get(prop_name2) : this[prop_name2];
+            const old_val = unwrap_value(old_raw);
+            const has_existing = typeof old_raw !== "undefined";
+            let safe_value = value2;
+            if (value2 === null && !has_existing) {
+              safe_value = new Data_Value2({ value: null });
+            }
+            if (!silent) {
+              original_set.call(this, prop_name2, safe_value, true);
+              const stored_after_set = typeof this.get === "function" ? this.get(prop_name2) : void 0;
+              if (stored_after_set && stored_after_set.__data_value && !stored_after_set.context && this.context) {
+                stored_after_set.context = this.context;
+              }
+              ensure_property_access(this, prop_name2);
+              const new_raw = typeof this.get === "function" ? this.get(prop_name2) : value2;
+              const new_val = unwrap_value(new_raw);
+              if (typeof this.raise_event === "function") {
+                this.raise_event("change", {
+                  name: prop_name2,
+                  old: old_val,
+                  value: new_val
+                });
+              }
+              return new_val;
+            } else {
+              const res2 = original_set.call(this, prop_name2, safe_value, true);
+              const stored_after_set = typeof this.get === "function" ? this.get(prop_name2) : void 0;
+              if (stored_after_set && stored_after_set.__data_value && !stored_after_set.context && this.context) {
+                stored_after_set.context = this.context;
+              }
+              ensure_property_access(this, prop_name2);
+              return res2;
+            }
+          }
+          return original_set.apply(this, a);
+        };
+      };
+      var patch_data_object_set_light = () => {
+        if (data_object_set_patched) return;
+        data_object_set_patched = true;
+        const original_set = Base_Data_Object.prototype.set;
+        Base_Data_Object.prototype.set = function() {
+          const a = arguments;
+          const prop_name2 = a[0];
+          const res2 = original_set.apply(this, a);
+          if (typeof prop_name2 === "string" && a.length >= 2) {
+            ensure_property_access(this, prop_name2);
+          }
+          return res2;
+        };
+      };
+      var patch_data_value_id = () => {
+        if (data_value_id_patched) return;
+        data_value_id_patched = true;
+        const original_id = Data_Value2.prototype._id;
+        if (typeof original_id !== "function") return;
+        Data_Value2.prototype._id = function() {
+          if (this.__id) return this.__id;
+          if (this.context) {
+            return original_id.call(this);
+          }
+          return void 0;
+        };
+      };
+      var patch_collection_data_model_push = () => {
+        if (collection_data_model_push_patched) return;
+        collection_data_model_push_patched = true;
+        const { Collection } = lang_tools;
+        if (!Collection || !Collection.prototype || typeof Collection.prototype.push !== "function") return;
+        const original_push = Collection.prototype.push;
+        Collection.prototype.push = function(value2) {
+          const tv = tof(value2);
+          if (tv === "data_model") {
+            const { silent } = this;
+            const fn_index = this.fn_index;
+            let idx_key;
+            let has_idx_key = false;
+            if (fn_index) {
+              idx_key = fn_index(value2);
+              has_idx_key = true;
+            }
+            const pos = this._arr.length;
+            this._arr.push(value2);
+            this._arr_idx++;
+            if (!silent) {
+              this.raise("change", {
+                target: this,
+                item: value2,
+                value: value2,
+                position: pos,
+                name: "insert"
+              });
+            }
+            if (has_idx_key && this.index && typeof this.index.put === "function") {
+              this.index.put(idx_key, pos);
+            }
+            return value2;
+          }
+          return original_push.call(this, value2);
+        };
+        Collection.prototype.add = Collection.prototype.push;
+      };
+      var normalize_fields_spec = (fields) => {
+        if (!fields) return [];
+        if (Array.isArray(fields)) return fields;
+        if (typeof fields === "object") {
+          return Object.keys(fields).map((key2) => [key2, fields[key2]]);
+        }
+        return [];
+      };
+      var patch_set_fields_from_spec = () => {
+        if (data_object_fields_patched) return;
+        data_object_fields_patched = true;
+        Base_Data_Object.prototype.set_fields_from_spec = function(fields, spec = {}) {
+          const normalized = normalize_fields_spec(fields);
+          normalized.forEach((field_def) => {
+            const field_name = field_def[0];
+            if (typeof field_name !== "string") return;
+            const has_value = spec && Object.prototype.hasOwnProperty.call(spec, field_name);
+            const default_value = field_def.length >= 3 ? field_def[2] : void 0;
+            const value_to_set = has_value ? spec[field_name] : default_value;
+            if (typeof value_to_set === "undefined") return;
+            if (typeof this.set === "function") {
+              try {
+                this.set(field_name, value_to_set, true);
+              } catch (e) {
+                this[field_name] = value_to_set;
+              }
+            } else {
+              this[field_name] = value_to_set;
+            }
+            ensure_property_access(this, field_name);
+          });
+        };
+      };
+      var Data_Object_Compat = class extends Base_Data_Object {
+        constructor(spec = {}, fields) {
+          super(spec, fields);
+          const reserved_keys = /* @__PURE__ */ new Set([
+            "context",
+            "id",
+            "__id",
+            "_id",
+            "__type_name",
+            "__type",
+            "parent",
+            "abstract"
+          ]);
+          if (spec && typeof spec === "object" && !Array.isArray(spec)) {
+            Object.keys(spec).forEach((key2) => {
+              if (reserved_keys.has(key2)) return;
+              if (key2.startsWith("__")) return;
+              let v = spec[key2];
+              try {
+                this.set(key2, v, true);
+                ensure_property_access(this, key2);
+              } catch (e) {
+                this[key2] = v;
+              }
+            });
+          }
+        }
+      };
+      var detect_needs_patch = () => {
+        if (needs_patch_cached !== null) return needs_patch_cached;
+        const with_suppressed_console_trace = (fn) => {
+          const orig_trace = console.trace;
+          console.trace = () => {
+          };
+          try {
+            return fn();
+          } finally {
+            console.trace = orig_trace;
+          }
+        };
+        const requirements = {
+          needs_heavy_set_patch: false,
+          needs_accessors_patch: false,
+          needs_data_value_id_patch: false,
+          needs_data_object_compat: false,
+          needs_set_fields_patch: false,
+          needs_collection_data_model_patch: false
+        };
+        try {
+          const inst = new Base_Data_Object({ a: 1 });
+          const got = typeof inst.get === "function" ? inst.get("a") : void 0;
+          const got_val = got && got.__data_value ? got.value : got;
+          if (got_val !== 1) {
+            requirements.needs_data_object_compat = true;
+          }
+        } catch (e) {
+          requirements.needs_data_object_compat = true;
+        }
+        try {
+          const inst = new Base_Data_Object();
+          if (typeof inst.set === "function") {
+            inst.set("n", null, true);
+          } else {
+            requirements.needs_heavy_set_patch = true;
+          }
+        } catch (e) {
+          requirements.needs_heavy_set_patch = true;
+        }
+        if (!requirements.needs_heavy_set_patch) {
+          try {
+            const inst = new Base_Data_Object();
+            inst.set("dv", new Data_Value2({ value: 2 }), true);
+            inst.set("dv", 3, true);
+          } catch (e) {
+            requirements.needs_heavy_set_patch = true;
+          }
+        }
+        if (!requirements.needs_heavy_set_patch) {
+          try {
+            const inst = new Base_Data_Object({ a: 1 });
+            let evt;
+            inst.on("change", (e) => {
+              evt = e;
+            });
+            inst.set("a", 2);
+            const old_is_data_value = evt && evt.old && evt.old.__data_value;
+            const value_is_data_value = evt && evt.value && evt.value.__data_value;
+            if (!evt || !Object.prototype.hasOwnProperty.call(evt, "old") || old_is_data_value || value_is_data_value) {
+              requirements.needs_heavy_set_patch = true;
+            }
+          } catch (e) {
+            requirements.needs_heavy_set_patch = true;
+          }
+        }
+        if (!requirements.needs_heavy_set_patch) {
+          try {
+            const inst = new Base_Data_Object();
+            inst.set("x", 1, true);
+            const desc = Object.getOwnPropertyDescriptor(inst, "x");
+            if (!desc || typeof desc.get !== "function" || typeof desc.set !== "function") {
+              requirements.needs_accessors_patch = true;
+            } else {
+              inst.x = 2;
+              const got = inst.get("x");
+              const got_val = got && got.__data_value ? got.value : got;
+              if (got_val !== 2) requirements.needs_accessors_patch = true;
+            }
+          } catch (e) {
+            requirements.needs_accessors_patch = true;
+          }
+        }
+        try {
+          const dv = new Data_Value2({ value: 1 });
+          if (typeof dv._id === "function") dv._id();
+        } catch (e) {
+          requirements.needs_data_value_id_patch = true;
+        }
+        if (typeof Base_Data_Object.prototype.set_fields_from_spec === "function") {
+          try {
+            with_suppressed_console_trace(() => {
+              new Base_Data_Object({}, [["__compat_test", String]]);
+            });
+          } catch (e) {
+            requirements.needs_set_fields_patch = true;
+          }
+        }
+        try {
+          const { Collection, Data_Object } = lang_tools;
+          if (Collection && Data_Object) {
+            const col = new Collection({});
+            col.add(new Data_Object({}));
+            if (typeof col.length === "function" && col.length() === 0) {
+              requirements.needs_collection_data_model_patch = true;
+            }
+          }
+        } catch (e) {
+          requirements.needs_collection_data_model_patch = true;
+        }
+        needs_patch_cached = requirements;
+        return requirements;
+      };
+      var apply_patches_if_needed = () => {
+        const requirements = detect_needs_patch();
+        if (requirements.needs_heavy_set_patch) {
+          patch_data_object_set();
+        } else if (requirements.needs_accessors_patch) {
+          patch_data_object_set_light();
+        }
+        if (requirements.needs_data_value_id_patch) {
+          patch_data_value_id();
+        }
+        if (requirements.needs_set_fields_patch) {
+          patch_set_fields_from_spec();
+        }
+        if (requirements.needs_data_object_compat) {
+          lang_tools.Data_Object = Data_Object_Compat;
+        }
+        if (requirements.needs_collection_data_model_patch) {
+          patch_collection_data_model_push();
+        }
+      };
+      var patch_lang_tools = () => {
+        apply_patches_if_needed();
+        return lang_tools;
+      };
+      apply_patches_if_needed();
+      module.exports = {
+        Base_Data_Object,
+        Data_Object_Compat,
+        patch_lang_tools,
+        unwrap_value,
+        ensure_property_access
+      };
     }
   });
 
@@ -6808,15 +8166,15 @@
       var textNode = class extends Evented_Class {
         //class textNode extends Control {
         constructor(spec) {
-          spec.__type_name = spec.__type_name || "text_node";
           super();
-          if (typeof spec == "string") {
+          if (typeof spec === "string") {
             spec = {
               "text": spec
             };
           }
-          spec.nodeType = 3;
           spec = spec || {};
+          spec.__type_name = spec.__type_name || "text_node";
+          spec.nodeType = 3;
           if (spec.el) {
             this.dom = {
               el: spec.el
@@ -6859,5107 +8217,9 @@
     }
   });
 
-  // node_modules/fnl/fn-io-transform.js
-  var require_fn_io_transform = __commonJS({
-    "node_modules/fnl/fn-io-transform.js"(exports, module) {
-      var { deep_sig } = require_lib_lang_mini();
-      var isArguments = (item2) => Object.prototype.toString.call(item2) === "[object Arguments]";
-      var fn_transformation = (fn, map_transformations) => {
-        const input_transformations = map_transformations.i;
-        const output_transformations = map_transformations.o;
-        const fn_res = function() {
-          const args = arguments;
-          if (args.length === 2 && typeof args[1] === "function") {
-            let [a, cb_transform_exec_events] = args;
-            if (isArguments(a)) {
-              if (a.length === 1) {
-                a = a[0];
-              }
-            }
-            const sig_called_with = deep_sig(a);
-            const sig_arguments = deep_sig(arguments);
-            const exec_fn = () => {
-              cb_transform_exec_events({
-                "name": "exec-start"
-                //,
-                //sig: evt_output_transform.sig,
-                //value: evt_output_transform.value
-              });
-              const fn_res2 = fn.call(null, a);
-              cb_transform_exec_events({
-                "name": "exec-complete"
-                //,
-                //sig: evt_output_transform.sig,
-                //value: evt_output_transform.value
-              });
-              const sig_fn_res = deep_sig(fn_res2);
-              if (output_transformations) {
-                if (output_transformations[sig_fn_res]) {
-                  output_transformations[sig_fn_res].call(null, fn_res2, (evt_output_transform) => {
-                    cb_transform_exec_events({
-                      "name": "complete",
-                      sig: evt_output_transform.sig,
-                      value: evt_output_transform.value
-                    });
-                  });
-                } else {
-                  cb_transform_exec_events({
-                    "name": "complete",
-                    sig: sig_fn_res,
-                    value: fn_res2
-                  });
-                }
-              } else {
-                cb_transform_exec_events({
-                  "name": "complete",
-                  sig: sig_fn_res,
-                  value: fn_res2
-                });
-              }
-            };
-            const skip_fn = () => {
-              cb_transform_exec_events({
-                "name": "complete",
-                //sig: sig_fn_res,
-                value: a,
-                skipped: true
-              });
-            };
-            if (input_transformations) {
-              let do_skip = false;
-              if (fn.skip) {
-                do_skip = fn.skip(a);
-              }
-              if (do_skip) {
-                skip_fn();
-              } else {
-                if (fn.map_sigs && fn.map_sigs[sig_called_with]) {
-                  exec_fn();
-                } else {
-                  if (input_transformations[sig_called_with]) {
-                    cb_transform_exec_events({
-                      "name": "input-transform-start"
-                    });
-                    input_transformations[sig_called_with].call(null, a, (evt_input_transform) => {
-                      const { name, sig, value: value2, io_sigs } = evt_input_transform;
-                      if (name === "complete") {
-                        a = value2;
-                        evt_input_transform.name = "input-transform-complete";
-                        cb_transform_exec_events(evt_input_transform);
-                        exec_fn();
-                      } else {
-                        console.trace();
-                        throw "NYI";
-                      }
-                    });
-                  } else {
-                    exec_fn();
-                  }
-                }
-              }
-            } else {
-              exec_fn();
-            }
-          } else {
-            throw "Expected args: normal_args, cb_transform_event";
-          }
-        };
-        if (fn.name) fn_res.name = fn.name;
-        if (fn.main) fn_res.main = fn.main;
-        if (fn.skip) fn_res.skip = fn.skip;
-        return fn_res;
-      };
-      module.exports = fn_transformation;
-    }
-  });
-
-  // node_modules/fnl/monitor-item.js
-  var require_monitor_item = __commonJS({
-    "node_modules/fnl/monitor-item.js"(exports, module) {
-      var { tf: tf2, deep_sig, each, def } = require_lib_lang_mini();
-      var monitor_item = (item2, cb_evt_monitoring) => {
-        const ti = tf2(item2);
-        if (ti === "A") {
-          const l2 = item2.length;
-          for (let c2 = 0; c2 < l2; c2++) {
-            const arg = item2[c2];
-            ((arg2, c3) => {
-              monitor_item(arg2, (evt_arg_monitor) => {
-                evt_arg_monitor.arg_index = c3;
-                cb_evt_monitoring(evt_arg_monitor);
-              });
-            })(arg, c2);
-          }
-        } else if (ti === "s") {
-          cb_evt_monitoring({
-            name: "complete",
-            t: "s",
-            bytes: item2.length * 2
-          });
-        } else if (ti === "o") {
-          cb_evt_monitoring({
-            name: "complete",
-            t: "o"
-            //,
-            //bytes: item.length * 2
-          });
-        } else if (ti === "R") {
-          const rs = item2;
-          let bytes = 0;
-          const ms_start = Date.now();
-          let content_length, bytes_remaining;
-          const { headers } = item2;
-          if (headers && headers["content-length"]) {
-            content_length = parseInt(headers["content-length"], 10);
-            bytes_remaining = content_length;
-          }
-          const o_evt = {
-            name: "available",
-            t: "R",
-            ms: ms_start,
-            headers
-            //,
-            //bytes: item.length * 2
-          };
-          if (def(content_length)) {
-            o_evt.content_length = content_length;
-          }
-          cb_evt_monitoring(o_evt);
-          rs.on("data", (data) => {
-            bytes += data.length;
-            bytes_remaining -= data.length;
-            const ms = Date.now();
-            const ms_taken = ms - ms_start;
-            const byte_rate = bytes / (ms_taken / 1e3);
-            const est_remaining = bytes_remaining / byte_rate * 1e3;
-            const proportion = bytes / content_length;
-            const ms_est_complete = ms + est_remaining;
-            cb_evt_monitoring({
-              name: "data",
-              t: "B",
-              bytes: data.length,
-              bytes_total: bytes,
-              byte_rate,
-              content_length,
-              bytes_remaining,
-              ms_est_remaining: est_remaining,
-              ms_est_complete,
-              ms_taken,
-              proportion
-            });
-          });
-          rs.on("end", () => {
-            const ms_complete = Date.now();
-            const ms_taken = ms_complete - ms_start;
-            const byte_rate = bytes / (ms_taken / 1e3);
-            cb_evt_monitoring({
-              name: "complete",
-              ms: ms_complete,
-              ms_taken,
-              t: "R",
-              "bytes": bytes,
-              byte_rate
-              //,
-              //bytes: item.length * 2
-            });
-          });
-          rs.on("error", (err) => {
-            cb_evt_monitoring({
-              name: "error",
-              value: err,
-              t: "R"
-              //,
-              //bytes: item.length * 2
-            });
-          });
-        } else if (ti === "B") {
-          cb_evt_monitoring({
-            name: "complete",
-            t: "B",
-            bytes: item2.length
-          });
-        } else if (ti === "a") {
-          cb_evt_monitoring({
-            name: "complete",
-            t: "a"
-          });
-        } else {
-          console.log("ti", ti);
-          console.trace();
-          throw "stop";
-        }
-      };
-      module.exports = monitor_item;
-    }
-  });
-
-  // node_modules/fnl/default-arg-transformations.js
-  var require_default_arg_transformations = __commonJS({
-    "node_modules/fnl/default-arg-transformations.js"(exports, module) {
-      var { deep_sig } = require_lib_lang_mini();
-      var transformations = {
-        "O": (obs, cb_events) => {
-          obs.then((res2) => {
-            const sig = deep_sig(res2);
-            if (cb_events) cb_events({
-              name: "complete",
-              io_sigs: ["O", sig],
-              sig,
-              value: res2
-            });
-          }, (err) => {
-          });
-        },
-        "p": (p, cb_events) => {
-          p.then((res2) => {
-            const sig = deep_sig(res2);
-            if (cb_events) cb_events({
-              name: "complete",
-              io_sigs: ["p", sig],
-              sig,
-              value: res2
-            });
-          }, (err) => {
-          });
-        },
-        "R": (input_readable_stream, cb_events) => {
-          const chunks = [];
-          const ms_start = Date.now();
-          input_readable_stream.on("data", (data) => {
-            chunks.push(data);
-          });
-          input_readable_stream.on("end", () => {
-            const ms_complete = Date.now();
-            const buf = Buffer.concat(chunks);
-            const ms_taken = ms_complete - ms_start;
-            const byte_rate = buf.length / (ms_taken / 1e3);
-            if (cb_events) cb_events({
-              name: "complete",
-              sig: "B",
-              io_sigs: ["R", "B"],
-              value: buf,
-              bytes: buf.length,
-              ms: ms_complete,
-              ms_taken,
-              byte_rate
-            });
-          });
-          input_readable_stream.on("error", (err) => {
-            console.log("error reading stream for param transformation in stages()");
-            error(err);
-          });
-        }
-        // this level: param sig required
-        // this level: param sig given: function to transform
-        // promise resolution here?
-      };
-      module.exports = transformations;
-    }
-  });
-
-  // node_modules/fnl/fnl.js
-  var require_fnl = __commonJS({
-    "node_modules/fnl/fnl.js"(exports, module) {
-      var { each, Evented_Class, get_a_sig: get_a_sig2, get_truth_map_from_arr, tof, tf: tf2, mfp, deep_sig, clone, def, is_array } = require_lib_lang_mini();
-      var fn_io_transform = require_fn_io_transform();
-      var log = () => {
-      };
-      var nce = (obs, next, complete, error2) => {
-        obs.on("next", next);
-        obs.on("complete", complete);
-        obs.on("error", error2);
-        return obs;
-      };
-      var monitor_item = require_monitor_item();
-      var tm_status_strings = {
-        "init": true,
-        "ok": true,
-        "complete": true,
-        "error": true,
-        "paused": true
-      };
-      var observable = function(fn_inner, opts) {
-        const a = arguments;
-        const l2 = a.length;
-        const sig = get_a_sig2(a);
-        let _opts, _fn_inner;
-        if (sig === "[f]" || sig === "[f,u]") {
-          _opts = {};
-          _fn_inner = a[0];
-        } else if (sig === "[f,o]") {
-          _fn_inner = a[0];
-          _opts = a[1];
-        } else if (sig === "[o,f]") {
-          _opts = a[0];
-          _fn_inner = a[1];
-        } else {
-          if (sig === "[O]" || sig === "[O,u]") {
-            return a[0];
-          } else {
-            console.log("sig", sig);
-            console.trace();
-            throw "NYI";
-          }
-        }
-        const obs_res = ((opts2, fn_inner2) => {
-          const ms_start = Date.now();
-          const ms_since_start = () => Date.now() - ms_start;
-          const res2 = new Evented_Class();
-          const io = res2.io = new Evented_Class();
-          let llog = [];
-          let _status = "init";
-          Object.defineProperty(res2, "ms_start", {
-            value: ms_start,
-            writable: false
-          });
-          let ms_ok, ms_complete, ms_error;
-          let ms_to_ok, ms_to_complete, ms_to_error;
-          const map_status_data = {};
-          const map_ms_reached_status = {};
-          let stage_number = -1;
-          let stage_name = "init";
-          const log2 = (data) => {
-            const log_item = [Date.now(), data];
-            llog.push(log_item);
-            res2.raise("log", log_item);
-          };
-          const status = (str_status, data) => {
-            if (tm_status_strings[str_status]) {
-              const old_status = _status;
-              if (!map_ms_reached_status[str_status]) {
-                map_ms_reached_status[str_status] = Date.now();
-              }
-              map_status_data[str_status] = data;
-              _status = str_status;
-              res2.raise("status", {
-                old: old_status,
-                value: str_status,
-                data
-              });
-            } else {
-              console.trace();
-              log2("str_status", str_status);
-              throw "invalid str_status " + str_status;
-            }
-          };
-          let _stage;
-          let current_stage_info;
-          Object.defineProperty(res2, "log", {
-            get() {
-              return llog;
-            }
-          });
-          Object.defineProperty(res2, "status", {
-            get() {
-              return _status;
-            }
-          });
-          let had_next = false, had_complete = false, had_error = false;
-          setTimeout(() => {
-            const res_fn_inner = fn_inner2((data) => {
-              let passes = true;
-              had_next = true;
-              if (!had_complete && !had_error) {
-                if (this.filters) {
-                  for (let filter of this.filters) {
-                    passes = filter(data);
-                    if (!passes) break;
-                  }
-                }
-              } else {
-                if (had_complete) {
-                  console.warn('Observable can not raise "next" event after having raised its "complete" event.');
-                }
-                if (had_error) {
-                  console.warn('Observable can not raise "next" event after having raised its "error" event.');
-                }
-              }
-              if (passes) {
-                res2.raise("next", data);
-                res2.raise("data", data);
-              }
-            }, (last_data) => {
-              if (!had_complete && !had_error) {
-                had_complete = true;
-                const tld = tf2(last_data);
-                const ms_complete2 = Date.now();
-                res2.ms_complete = ms_complete2;
-                res2.ms_taken = ms_complete2 - ms_start;
-                if (tld !== "u") {
-                  if (tld === "R") {
-                    io.ongoing = true;
-                    last_data.on("complete", () => {
-                      io.ongoing = false;
-                      io.raise("complete");
-                    });
-                  } else {
-                    res2.raise("complete", last_data);
-                    io.raise("complete");
-                  }
-                } else {
-                  res2.raise("complete");
-                }
-              } else {
-                if (had_complete) {
-                  console.warn('WARNING: Observable can not raise "complete" event after having raised it already.');
-                }
-                if (had_error) {
-                  console.warn('WARNING: Observable can not raise "complete" event after having raised its "error" event.');
-                }
-              }
-            }, (error2) => {
-              if (!had_complete && !had_error) {
-                had_error = true;
-                res2.raise("error", error2);
-              } else {
-                if (had_complete) {
-                  console.warn('WARNING: Observable can not raise "error" event after having raised its "complete" event.');
-                }
-                if (had_error) {
-                  console.warn('WARNING: Observable can not raise "error" event after having raised it already.');
-                }
-              }
-            }, status, log2) || [];
-            if (is_array(res_fn_inner)) {
-              const [stop, pause, resume] = res_fn_inner;
-              if (stop) res2.stop = stop;
-              if (pause) res2.pause = pause;
-              if (resume) res2.resume = resume;
-              if (pause && resume) {
-                res2.delay = (ms) => {
-                  pause();
-                  res2.raise("paused");
-                  setTimeout(() => {
-                    res2.resume();
-                    res2.raise("resumed");
-                  }, ms);
-                };
-              }
-            }
-          }, 0);
-          res2.next = (handler) => {
-            res2.on("next", handler);
-            return res2;
-          };
-          res2.data = res2.next;
-          res2.complete = (handler) => {
-            res2.on("complete", handler);
-            return res2;
-          };
-          res2.on("complete", (data) => {
-            status("complete");
-            const store_res = () => {
-              if (data) {
-                if (data.data) {
-                  res2.res = data.data;
-                } else {
-                  res2.res = data;
-                }
-              }
-            };
-          });
-          res2.done = res2.end = res2.complete;
-          res2.error = (handler) => {
-            res2.on("error", handler);
-            return res2;
-          };
-          res2.then = (handler) => {
-            let res_all = [];
-            res2.next((data) => {
-              res_all.push(data);
-              had_next = true;
-            });
-            if (res2.completed) {
-              if (res2.singular_result) {
-                handler(res_all[0]);
-              } else {
-                handler(res_all);
-              }
-            } else {
-              res2.complete((last) => {
-                if (had_next && res_all.length > 0) {
-                  if (res2.singular_result) {
-                    handler(res_all[0]);
-                  } else {
-                    handler(res_all);
-                  }
-                } else {
-                  handler(last);
-                }
-              });
-            }
-          };
-          res2.__type_name = "observable";
-          res2._is_obs = res2._is_observable = true;
-          res2._ = new Evented_Class();
-          res2.meta = (k, v) => {
-            if (v === void 0) {
-            } else {
-              res2._[key] = value;
-              res2._.raise("change", {
-                key: k,
-                value: v
-              });
-            }
-          };
-          return res2;
-        })(_opts, _fn_inner);
-        return obs_res;
-      };
-      observable._ = {
-        name: "observable",
-        return_type: "observable",
-        async: true
-      };
-      var obsfilter = (obs, next_filter) => observable((next, complete, error2) => {
-        obs.on("next", (data) => {
-          if (next_filter(data)) {
-            next(data);
-          }
-        });
-        obs.on("complete", (data) => {
-          if (data) {
-            complete(data);
-          } else {
-            complete();
-          }
-        });
-        obs.on("error", (err) => {
-          error2(err);
-        });
-      });
-      var obsmap = (obs, fn_map) => observable((next, complete, error2) => {
-        obs.on("next", (data) => next(fn_map(data)));
-        obs.on("complete", complete);
-        obs.on("error", error2);
-      });
-      var obsalias = (obs_like, mapping) => {
-        let next, complete, error2;
-        const tmapping = tof(mapping);
-        if (tmapping === "array") {
-          [next, complete, error2] = mapping;
-        } else if (tmapping === "object") {
-          next = mapping.next;
-          complete = mapping.complete;
-          error2 = mapping.error;
-        }
-        return observable((n, c2, e) => {
-          if (next) {
-            obs_like.on(next, n);
-          } else {
-            obs_like.on("next", n);
-          }
-          if (complete) {
-            obs_like.on(complete, c2);
-          } else {
-            obs_like.on("complete", c2);
-          }
-          if (error2) {
-            obs_like.on(error2, e);
-          } else {
-            obs_like.on("error", e);
-          }
-        });
-      };
-      var obscollect = (obs, fn_collect, arr_res) => {
-        obs.on("next", (data) => {
-          const item_res = fn_collect(data);
-          arr_res.push(item_res);
-        });
-        return obs;
-      };
-      var obspool = () => {
-        console.trace();
-        throw "out of order";
-      };
-      var seq = (q_obs) => {
-        return observable((next, complete, error2) => {
-          let c2 = 0, obs_q_item;
-          let process2 = () => {
-            if (c2 < q_obs.length) {
-              let q_item = q_obs[c2];
-              obs_q_item = q_item[1].apply(q_item[0], q_item[2]);
-              obs_q_item.on("next", (data) => {
-                next(data);
-              });
-              obs_q_item.on("error", (error3) => {
-                error3(error3);
-              });
-              obs_q_item.on("complete", (data) => {
-                c2++;
-                process2();
-              });
-            } else {
-              complete();
-            }
-          };
-          process2();
-          let stop = () => {
-            obs_q_item.stop();
-            complete();
-          };
-          let pause = () => {
-            obs_q_item.pause();
-          };
-          let resume = () => {
-            obs_q_item.resume();
-          };
-          return [stop, pause, resume];
-        });
-      };
-      var obs_to_cb = (obs, callback2) => {
-        let _obs = observable(obs);
-        let arr_all = [];
-        _obs.on("next", (data) => arr_all.push(data));
-        _obs.on("error", (err) => callback2(err));
-        _obs.on("complete", (last) => {
-          if (typeof last !== "undefined") {
-            callback2(null, last, arr_all);
-          } else {
-            callback2(null, arr_all);
-          }
-        });
-      };
-      var unpage = (obs) => {
-        return observable((next, complete, error2) => {
-          obs.on("next", (arr_data) => {
-            if ("unpaged" in arr_data) {
-              let unpaged = arr_data.unpaged;
-              for (let c2 = 0, l2 = unpaged.length; c2 < l2; c2++) {
-                next(unpaged[c2]);
-              }
-            } else {
-              for (let c2 = 0, l2 = arr_data.length; c2 < l2; c2++) {
-                next(arr_data[c2]);
-              }
-            }
-          });
-          obs.on("complete", () => {
-            complete();
-          });
-          obs.on("error", (err) => error2(err));
-          return [];
-        });
-      };
-      var obs_or_cb = (obs, callback2, always_plural) => {
-        if (callback2) {
-          obs_to_cb(obs, callback2);
-        } else {
-          return observable(obs, always_plural);
-        }
-      };
-      var sig_obs_or_cb = (a, inner) => {
-        let a2;
-        let callback2;
-        if (typeof a[a.length - 1] === "function") {
-          a2 = Array.prototype.slice.call(a, 0, -1);
-          callback2 = a[a.length - 1];
-        } else if (typeof a[a.length - 1] === "undefined") {
-          a2 = Array.prototype.slice.call(a, 0, -1);
-        } else {
-          a2 = Array.prototype.slice.call(a);
-        }
-        let sig = get_a_sig2(a2);
-        let obs = observable((next, complete, error2) => {
-          return inner(a2, sig, next, complete, error2, a2.length);
-        });
-        return obs_or_cb(obs, callback2);
-      };
-      var cb_to_prom_or_cb = (inner_with_cb, opt_cb) => {
-        if (typeof opt_cb !== "undefined") {
-          inner_with_cb(opt_cb);
-        } else {
-          return new Promise((resolve, reject) => {
-            inner_with_cb((err, res2) => {
-              if (err) {
-                reject(err);
-              } else {
-                resolve(res2);
-              }
-            });
-          });
-        }
-      };
-      var prom_or_cb = (prom2, opt_cb) => {
-        let _prom;
-        if (prom2 instanceof Promise) {
-          _prom = prom2;
-        } else {
-          _prom = new Promise(prom2);
-        }
-        if (opt_cb) {
-          _prom.then((res2) => {
-            opt_cb(null, res2);
-          }, (err) => {
-            opt_cb(err);
-          });
-        } else {
-          return _prom;
-        }
-      };
-      var prom = (prom2) => {
-        if (prom2 instanceof Promise) {
-          return prom2;
-        } else {
-          return new Promise(prom2);
-        }
-      };
-      var is_obs = (obj2) => {
-        return obj2.is_obs === true;
-      };
-      var is_prom = (obj2) => {
-        return obj2 instanceof Promise || obj2.is_obs === true;
-      };
-      var obs_prom_arr_item = (obj2, obs, prom2, arr, item2) => {
-        if (obj2.is_obs === true) {
-          return obs(obj2);
-        } else {
-          if (obj2 instanceof Promise) {
-            return prom2(obj2);
-          } else {
-            if (Array.isArray(obj2)) {
-              return arr(obj2);
-            } else {
-              return item2(obj2);
-            }
-          }
-        }
-      };
-      var arg_transformation = require_default_arg_transformations();
-      var transform_stage_input = {
-        "R": arg_transformation.R
-      };
-      var stages = mfp({
-        name: "stages",
-        return_type: "function"
-        // function that returns an observable.
-      }, function() {
-        const a = arguments, l2 = a.length;
-        const sig = get_a_sig2(a);
-        let arr_stages;
-        let num_stages;
-        let fn_inner;
-        const prepare_arr_fns = (ofns) => {
-          const input_ofns2 = (ofns2) => {
-            const map_stage_reserved_names = {
-              _raise_stage_event: true
-            };
-            const res2 = [];
-            const o_filtered_stage_fns = {};
-            let num_stages2 = 0;
-            let last_stage_name;
-            each(ofns2, (fn_stage, stage_name) => {
-              if (!map_stage_reserved_names[stage_name]) {
-                o_filtered_stage_fns[stage_name] = fn_stage;
-                num_stages2++;
-                last_stage_name = stage_name;
-              }
-            });
-            each(o_filtered_stage_fns, (fn_stage, stage_name) => {
-              const is_last_stage = stage_name === last_stage_name;
-              const map_sigs = fn_stage.map_sigs;
-              if (Object.keys(fn_stage).length === 0) {
-                const io_transform = {};
-                if (!is_last_stage) {
-                  io_transform.o = {
-                    p: arg_transformation.p
-                  };
-                }
-                const io_transformed_stage = fn_io_transform(fn_stage, io_transform);
-                io_transformed_stage.name = stage_name;
-                res2.push([stage_name, io_transformed_stage]);
-              } else {
-                if (map_sigs) {
-                  const io_transform = {
-                    i: transform_stage_input
-                  };
-                  io_transform.o = {
-                    "p": arg_transformation.p,
-                    "O": arg_transformation.O
-                  };
-                  const io_transformed_stage = fn_io_transform(fn_stage, io_transform);
-                  io_transformed_stage.name = stage_name;
-                  res2.push([stage_name, io_transformed_stage]);
-                } else {
-                  const io_transform = {};
-                  io_transform.o = {
-                    "p": arg_transformation.p,
-                    "O": arg_transformation.O
-                  };
-                  const io_transformed_stage = fn_io_transform(fn_stage, io_transform);
-                  io_transformed_stage.name = stage_name;
-                  res2.push([stage_name, io_transformed_stage]);
-                }
-              }
-            });
-            return res2;
-          };
-          return input_ofns2(ofns);
-        };
-        const prepare = () => {
-          if (sig === "[a]") {
-            valid = true;
-            each(a[0], (stage) => {
-              if (get_a_sig2(stage) === "[s,f]") {
-                const [stage_name, fn_stage] = stage;
-                if (!fn_stage.name) fn_stage.name = stage_name;
-              } else {
-                valid = false;
-                console.trace();
-                throw "expected stage to be specified as an array [s,f]";
-              }
-            });
-            if (valid) {
-              arr_stages = prepare_arr_fns(a[0]);
-              num_stages = arr_stages.length;
-            }
-          } else if (sig === "[o]") {
-            input_ofns(a[0]);
-          } else if (sig === "[f]") {
-            arr_stages = prepare_arr_fns(a[0]());
-            num_stages = arr_stages.length;
-          } else {
-            console.trace();
-            throw "stages expected an array or object (may become more flexible in the future)";
-          }
-        };
-        const ms_pre_prepare = Date.now();
-        let res_prepare = prepare();
-        const ms_prep_time = Date.now() - ms_pre_prepare;
-        if (res_prepare) {
-          log("ms_prep_time", ms_prep_time);
-          return res_prepare;
-        }
-        const arr_stages_info = new Array(arr_stages.length);
-        each(arr_stages, (arr_stage, i) => {
-          const stage_name = arr_stage[0];
-          arr_stages_info[i] = {
-            name: stage_name
-          };
-        });
-        const process2 = () => {
-          const res2 = function() {
-            const a2 = arguments, l22 = a2.length;
-            const sig2 = get_a_sig2(a2);
-            let next_apply_args = a2.length === 0 ? void 0 : a2;
-            const obs_res = observable((next, complete, error2, status, log2, stage) => {
-              const log_stage_events = [];
-              obs_res.log_stage_events = log_stage_events;
-              const map_stage_events_by_name = {};
-              let ms_last_stage_event;
-              let c2 = 0;
-              const cb_stage_event = (name, evt) => {
-                evt = evt || {
-                  name
-                };
-                const now = Date.now();
-                evt.ms = now;
-                evt.i_stage = c2;
-                evt.stage_name = arr_stages2[c2][0];
-                if (ms_last_stage_event) {
-                  evt.ms_since_last = now - ms_last_stage_event;
-                }
-                ms_last_stage_event = now;
-                log_stage_events.push(evt);
-                map_stage_events_by_name[name] = evt;
-                if (name === "have-response") {
-                  obs_res.ms_latency = now - map_stage_events_by_name["make-request"].ms;
-                }
-                obs_res.raise("stage", evt);
-              };
-              const t12 = Date.now();
-              const new_obj_fns = a[0](cb_stage_event);
-              const newly_prepared_stages = prepare_arr_fns(new_obj_fns);
-              const arr_stages2 = newly_prepared_stages;
-              const reprep_time = Date.now() - t12;
-              log2("reprep_time", reprep_time);
-              const res_input = obs_res.input = {};
-              const res_output = obs_res.output = {};
-              const res_stages = obs_res.stages = clone(arr_stages_info);
-              monitor_item(a2, (evt_input_args) => {
-                const event_name = evt_input_args.name;
-              });
-              let i_last_unskipped_stage = -1;
-              let exec_is_complete = false;
-              const process_next = () => {
-                const have_next_stage = !!arr_stages2[c2];
-                const i_stage = c2;
-                log2("have_next_stage", have_next_stage);
-                if (have_next_stage) {
-                  const stage_name = arr_stages2[c2][0];
-                  const fn_stage = arr_stages2[c2][1];
-                  const is_main_stage = fn_stage.main === true;
-                  const is_last_stage = c2 === arr_stages2.length - 1;
-                  const res_stage = res_stages[c2];
-                  const res_prev_stage = res_stages[c2 - 1];
-                  const res_next_stage = res_stages[c2 + 1];
-                  res_stage.ms_start = Date.now();
-                  if (is_main_stage) {
-                    res_stage.main = true;
-                  }
-                  let fn_ready_args;
-                  const exec_fn = () => {
-                    const i_stage2 = c2;
-                    console.log("calling exec_fn " + stage_name);
-                    console.trace();
-                    const stage_res = fn_stage.call(this, fn_ready_args, (transform_call_event) => {
-                      const { name, sig: sig3, value: value2 } = transform_call_event;
-                      if (name === "complete") {
-                        if (transform_call_event.skipped === true) {
-                          res_stage.skipped = true;
-                        } else {
-                          if (i_stage2 > i_last_unskipped_stage) i_last_unskipped_stage = i_stage2;
-                          let content_length;
-                          monitor_item(value2, (evt_stage_res) => {
-                            const cl_evt = clone(evt_stage_res);
-                            const event_name = evt_stage_res.name;
-                            if (event_name === "complete") {
-                              console.log("c", c2);
-                              console.log("stage item complete");
-                              const ms_output_complete = Date.now();
-                              const ms_taken = ms_output_complete - res_stage.ms_start;
-                              res_stage.ms_output_complete = ms_output_complete;
-                              if (res_stage.ms_output_start) {
-                                const ms_output_taken = res_stage.ms_output_taken = ms_output_complete - res_stage.ms_output_start;
-                                if (ms_output_taken > 0) {
-                                  if (res_stage.bytes_out) {
-                                    const output_rate = res_stage.bytes_out / (ms_output_taken / 1e3);
-                                    res_stage.output_rate = output_rate;
-                                    if (is_main_stage) {
-                                      obs_res.main_rate = output_rate;
-                                    }
-                                  }
-                                }
-                              }
-                              res_stage.ms_taken = ms_taken;
-                              console.log("c", c2);
-                              console.log("i_stage", i_stage2);
-                              console.log("is_last_stage", is_last_stage);
-                            } else if (event_name === "available") {
-                              if (evt_stage_res.content_length) {
-                                res_stage.content_length = evt_stage_res.content_length;
-                                if (is_main_stage) {
-                                  content_length = obs_res.content_length = evt_stage_res.content_length;
-                                }
-                              }
-                              res_stage.ms_output_start = Date.now();
-                            } else if (event_name === "data") {
-                              const { bytes, bytes_total, byte_rate, content_length: content_length2, bytes_remaining, ms_est_remaining, ms_est_complete, ms_taken, proportion } = evt_stage_res;
-                              const ms_processing_output = ms_taken;
-                              const out_rate = byte_rate;
-                              res_stage.bytes_out = bytes_total;
-                              if (res_stage.bytes_in) {
-                                res_stage.bytes_oi_ratio = res_stage.bytes_out / res_stage.bytes_in;
-                              }
-                              if (is_main_stage) {
-                                obs_res.main_bytes_out = bytes_total;
-                                obs_res.main_output_rate = out_rate;
-                              }
-                              if (i_last_unskipped_stage === i_stage2) {
-                                obs_res.bytes_out = bytes_total;
-                                obs_res.output_rate = out_rate;
-                                if (def(proportion)) obs_res.proportion = proportion;
-                                if (def(bytes_remaining)) obs_res.bytes_remaining = bytes_remaining;
-                                if (def(ms_est_remaining)) obs_res.ms_est_remaining = ms_est_remaining;
-                                if (def(ms_est_complete)) obs_res.ms_est_complete = ms_est_complete;
-                              }
-                              if (res_next_stage) {
-                                res_next_stage.bytes_in = res_next_stage.bytes_in || 0;
-                                res_next_stage.bytes_in += cl_evt.bytes;
-                              }
-                            } else {
-                              log2("event_name", event_name);
-                              console.trace();
-                              throw "stop";
-                            }
-                          });
-                        }
-                        next_apply_args = value2;
-                        c2++;
-                        log2("pre process next stage");
-                        process_next();
-                      } else {
-                        log2("transform_call_event", transform_call_event);
-                        if (name === "input-transform-complete") {
-                          const ms_input_transform_complete = Date.now();
-                          res_stage.ms_input_transform_complete = ms_input_transform_complete;
-                          res_stage.ms_input_transform_taken = ms_input_transform_complete - res_stage.ms_input_transform_start;
-                        } else if (name === "input-transform-start") {
-                          res_stage.ms_input_transform_start = Date.now();
-                        } else if (name === "exec-start") {
-                          res_stage.ms_exec_start = Date.now();
-                        } else if (name === "exec-complete") {
-                          const ms_exec_complete = Date.now();
-                          res_stage.ms_exec_complete = ms_exec_complete;
-                          res_stage.ms_exec_taken = ms_exec_complete - res_stage.ms_exec_start;
-                        } else {
-                          log2("name", name);
-                          log2("transform_call_event", transform_call_event);
-                          console.trace();
-                          throw "stop";
-                        }
-                      }
-                    });
-                  };
-                  fn_ready_args = next_apply_args;
-                  log2("pre exec_fn");
-                  exec_fn();
-                } else {
-                  const tsr = tf2(next_apply_args);
-                  c2++;
-                  log2("tsr", tsr);
-                  console.log("the stages exec is complete");
-                  console.log("i_last_unskipped_stage", i_last_unskipped_stage);
-                  exec_is_complete = true;
-                  complete(next_apply_args);
-                }
-              };
-              process_next();
-            });
-            return obs_res;
-          };
-          res2.is_staged = true;
-          res2.return_type = "observable";
-          return res2;
-        };
-        return process2();
-      });
-      module.exports = {
-        "observable": observable,
-        "nce": nce,
-        "obs": observable,
-        "obsalias": obsalias,
-        "obscollect": obscollect,
-        "obsfilter": obsfilter,
-        "obspool": obspool,
-        "obsmap": obsmap,
-        "seq": seq,
-        "sequence": seq,
-        "sig_obs_or_cb": sig_obs_or_cb,
-        "cb_to_prom_or_cb": cb_to_prom_or_cb,
-        "prom_or_cb": prom_or_cb,
-        "prom": prom,
-        "obs_or_cb": obs_or_cb,
-        "unpage": unpage,
-        "is_obs": is_obs,
-        "is_prom": is_prom,
-        "obs_prom_arr_item": obs_prom_arr_item,
-        "stages": stages
-      };
-      if (__require.main === module) {
-        console.log("running fnl as main");
-        const make_timer_obs = () => observable((next, complete, error2) => {
-          let c2 = 2;
-          let paused = false;
-          let cease = () => {
-            clearInterval(ivl);
-          };
-          let stop = () => {
-            clearInterval(ivl);
-            complete();
-          };
-          let ivl = setInterval(() => {
-            if (!paused) {
-              let v = c2 * 2;
-              next({
-                "v": v
-              });
-              c2++;
-              if (c2 > 6) {
-                error2(new Error("A problem"));
-                cease();
-              }
-              if (c2 > 8) {
-                stop();
-              }
-            }
-          }, 1e3);
-          return [stop, () => {
-            paused = true;
-          }, () => {
-            paused = false;
-          }];
-        });
-        let obs = make_timer_obs();
-        let test_obs = () => {
-          obs.on("paused", () => log("* paused"));
-          obs.on("resumed", () => log("* resumed"));
-          obs.on("error", (err) => log("* error", err));
-          obs.next((data) => {
-            log("data", data);
-          });
-        };
-        test_obs();
-        let test_then = () => {
-          (async () => {
-            let res2 = await obs;
-            log("awaited res", res2);
-          })();
-        };
-        log("stages", stages);
-        let test_split = () => {
-          obs.on("paused", () => log("* paused"));
-          obs.on("resumed", () => log("* resumed"));
-          let [obs1, obs2] = obs.split((data) => data.v % 3 === 0);
-          obs1.on("next", (data) => log("obs1 data", data));
-          obs2.on("next", (data) => log("obs2 data", data));
-        };
-        let test_filter = () => {
-          obs.filter((data) => {
-            return data.v !== 8;
-          }).filter((data) => {
-            return data.v % 3 !== 0;
-          });
-          obs.next((data) => {
-            if (data === 8) {
-              obs.delay(5e3);
-              obs.pause();
-              log("paused");
-              setTimeout(() => {
-                log("wait over");
-                obs.resume();
-              }, 2e3);
-            }
-          }).end(() => {
-            log("end");
-          });
-        };
-      } else {
-      }
-    }
-  });
-
-  // node_modules/obext/node_modules/lang-mini/lang-mini.js
+  // node_modules/lang-mini/lang-mini.js
   var require_lang_mini2 = __commonJS({
-    "node_modules/obext/node_modules/lang-mini/lang-mini.js"(exports, module) {
-      var running_in_browser = typeof window !== "undefined";
-      var running_in_node = !running_in_browser;
-      var Readable_Stream;
-      var Writable_Stream;
-      var Transform_Stream;
-      var get_stream = () => {
-        if (running_in_node) {
-          return (() => {
-            const str_libname = "stream";
-            const stream2 = __require(str_libname);
-            Readable_Stream = stream2.Readable;
-            Writable_Stream = stream2.Writable;
-            Transform_Stream = stream2.Transform;
-            return stream2;
-          })();
-        } else {
-          return void 0;
-        }
-      };
-      var stream = get_stream();
-      var each = (collection, fn, context2) => {
-        if (collection) {
-          if (collection.__type == "collection") {
-            return collection.each(fn, context2);
-          }
-          let ctu = true;
-          let stop = function() {
-            ctu = false;
-          };
-          if (is_array(collection)) {
-            let res2 = [], res_item;
-            for (let c2 = 0, l2 = collection.length; c2 < l2; c2++) {
-              res_item;
-              if (ctu == false) break;
-              if (context2) {
-                res_item = fn.call(context2, collection[c2], c2, stop);
-              } else {
-                res_item = fn(collection[c2], c2, stop);
-              }
-              res2.push(res_item);
-            }
-            return res2;
-          } else {
-            let name, res2 = {};
-            for (name in collection) {
-              if (ctu === false) break;
-              if (context2) {
-                res2[name] = fn.call(context2, collection[name], name, stop);
-              } else {
-                res2[name] = fn(collection[name], name, stop);
-              }
-            }
-            return res2;
-          }
-        }
-      };
-      var is_array = Array.isArray;
-      var is_dom_node = function isDomNode(obj2) {
-        return !!obj2 && typeof obj2.nodeType !== "undefined" && typeof obj2.childNodes !== "undefined";
-      };
-      var get_truth_map_from_arr = function(arr) {
-        let res2 = {};
-        each(arr, function(v, i) {
-          res2[v] = true;
-        });
-        return res2;
-      };
-      var get_arr_from_truth_map = function(truth_map) {
-        let res2 = [];
-        each(truth_map, function(v, i) {
-          res2.push(i);
-        });
-        return res2;
-      };
-      var get_map_from_arr = function(arr) {
-        let res2 = {};
-        for (let c2 = 0, l2 = arr.length; c2 < l2; c2++) {
-          res2[arr[c2]] = c2;
-        }
-        return res2;
-      };
-      var arr_like_to_arr = function(arr_like) {
-        let res2 = new Array(arr_like.length);
-        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
-          res2[c2] = arr_like[c2];
-        }
-        ;
-        return res2;
-      };
-      var is_ctrl = function(obj2) {
-        return typeof obj2 !== "undefined" && obj2 !== null && is_defined(obj2.__type_name) && is_defined(obj2.content) && is_defined(obj2.dom);
-      };
-      var map_loaded_type_fn_checks = {};
-      var map_loaded_type_abbreviations = {
-        "object": "o",
-        "number": "n",
-        "string": "s",
-        "function": "f",
-        "boolean": "b",
-        "undefined": "u",
-        "array": "a",
-        "arguments": "A",
-        "date": "d",
-        "regex": "r",
-        "error": "e",
-        "buffer": "B",
-        "promise": "p",
-        "observable": "O",
-        "readable_stream": "R",
-        "writable_stream": "W",
-        "data_value": "V"
-      };
-      var using_type_plugins = false;
-      var invert = (obj2) => {
-        if (!is_array(obj2)) {
-          let res2 = {};
-          each(obj2, (v, k) => {
-            res2[v] = k;
-          });
-          return res2;
-        } else {
-          console.trace();
-          throw "invert(obj) not supported on arrays";
-        }
-      };
-      var map_loaded_type_names = invert(map_loaded_type_abbreviations);
-      var load_type = (name, abbreviation, fn_detect_instance) => {
-        map_loaded_type_fn_checks[name] = fn_detect_instance;
-        map_loaded_type_names[abbreviation] = name;
-        map_loaded_type_abbreviations[name] = abbreviation;
-        using_type_plugins = true;
-      };
-      var tof = (obj2, t12) => {
-        let res2 = t12 || typeof obj2;
-        if (using_type_plugins) {
-          let res3;
-          each(map_loaded_type_fn_checks, (fn_check, name, stop) => {
-            if (fn_check(obj2)) {
-              res3 = name;
-              stop();
-            }
-          });
-          if (res3) {
-            return res3;
-          }
-        }
-        if (res2 === "number" || res2 === "string" || res2 === "function" || res2 === "boolean") {
-          return res2;
-        }
-        if (res2 === "object") {
-          if (typeof obj2 !== "undefined") {
-            if (obj2 === null) {
-              return "null";
-            }
-            if (obj2.__type) {
-              return obj2.__type;
-            } else if (obj2.__type_name) {
-              return obj2.__type_name;
-            } else {
-              if (obj2 instanceof Promise) {
-                return "promise";
-              }
-              if (is_ctrl(obj2)) {
-                return "control";
-              }
-              if (obj2 instanceof Date) {
-                return "date";
-              }
-              if (is_array(obj2)) {
-                return "array";
-              } else {
-                if (obj2 instanceof Error) {
-                  res2 = "error";
-                } else if (obj2 instanceof RegExp) res2 = "regex";
-                if (typeof window === "undefined") {
-                  if (obj2 && obj2.readInt8) res2 = "buffer";
-                }
-              }
-              return res2;
-            }
-          } else {
-            return "undefined";
-          }
-        }
-        return res2;
-      };
-      var tf2 = (obj2) => {
-        let res2 = typeof obj2;
-        if (using_type_plugins) {
-          let res3;
-          each(map_loaded_type_fn_checks, (fn_check, name, stop) => {
-            if (fn_check(obj2)) {
-              res3 = map_loaded_type_abbreviations[name];
-              stop();
-            }
-          });
-          if (res3) {
-            return res3;
-          }
-        }
-        if (res2 === "number" || res2 === "string" || res2 === "function" || res2 === "boolean" || res2 === "undefined") {
-          return res2[0];
-        } else {
-          if (obj2 === null) {
-            return "N";
-          } else {
-            if (running_in_node) {
-              if (obj2 instanceof Readable_Stream) {
-                return "R";
-              } else if (obj2 instanceof Writable_Stream) {
-                return "W";
-              } else if (obj2 instanceof Transform_Stream) {
-                return "T";
-              }
-            }
-            if (typeof Buffer !== "undefined" && obj2 instanceof Buffer) {
-              return "B";
-            } else if (obj2 instanceof Promise) {
-              return "p";
-            } else if (obj2 instanceof Date) {
-              return "d";
-            } else if (is_array(obj2)) {
-              return "a";
-            } else {
-              if (obj2._is_observable === true) {
-                return "O";
-              } else {
-                if (typeof obj2.callee === "function") {
-                  return "A";
-                } else if (obj2 instanceof Error) {
-                  return "e";
-                } else if (obj2 instanceof RegExp) return "r";
-                return "o";
-              }
-            }
-            return res2;
-          }
-        }
-        console.trace();
-        console.log("item", item);
-        throw "type not found";
-        return res2;
-      };
-      var atof = (arr) => {
-        let res2 = new Array(arr.length);
-        for (let c2 = 0, l2 = arr.length; c2 < l2; c2++) {
-          res2[c2] = tof(arr[c2]);
-        }
-        return res2;
-      };
-      var is_defined = (value2) => {
-        return typeof value2 != "undefined";
-      };
-      var stringify = JSON.stringify;
-      var _get_item_sig = (i, arr_depth) => {
-        let res2;
-        let t12 = typeof i;
-        if (t12 === "string") {
-          res2 = "s";
-        } else if (t12 === "number") {
-          res2 = "n";
-        } else if (t12 === "boolean") {
-          res2 = "b";
-        } else if (t12 === "function") {
-          res2 = "f";
-        } else {
-          let t = tof(i, t12);
-          if (t === "array") {
-            if (arr_depth) {
-              res2 = "[";
-              for (let c2 = 0, l2 = i.length; c2 < l2; c2++) {
-                if (c2 > 0) res2 = res2 + ",";
-                res2 = res2 + get_item_sig(i[c2], arr_depth - 1);
-              }
-              res2 = res2 + "]";
-            } else {
-              res2 = "a";
-            }
-          } else if (t === "control") {
-            res2 = "c";
-          } else if (t === "date") {
-            res2 = "d";
-          } else if (t === "observable") {
-            res2 = "O";
-          } else if (t === "regex") {
-            res2 = "r";
-          } else if (t === "buffer") {
-            res2 = "B";
-          } else if (t === "readable_stream") {
-            res2 = "R";
-          } else if (t === "writable_stream") {
-            res2 = "W";
-          } else if (t === "object") {
-            res2 = "o";
-          } else if (t === "undefined") {
-            res2 = "u";
-          } else {
-            if (t === "collection_index") {
-              return "X";
-            } else if (t === "data_object") {
-              if (i._abstract) {
-                res2 = "~D";
-              } else {
-                res2 = "D";
-              }
-            } else {
-              if (t === "data_value") {
-                if (i._abstract) {
-                  res2 = "~V";
-                } else {
-                  res2 = "V";
-                }
-              } else if (t === "null") {
-                res2 = "!";
-              } else if (t === "collection") {
-                if (i._abstract) {
-                  res2 = "~C";
-                } else {
-                  res2 = "C";
-                }
-              } else {
-                res2 = "?";
-              }
-            }
-          }
-        }
-        return res2;
-      };
-      var get_item_sig = (item2, arr_depth) => {
-        if (arr_depth) {
-          return _get_item_sig(item2, arr_depth);
-        }
-        const t = tof(item2);
-        if (map_loaded_type_abbreviations[t]) {
-          return map_loaded_type_abbreviations[t];
-        } else {
-          let bt = typeof item2;
-          if (bt === "object") {
-            if (is_array(item2)) {
-              return "a";
-            } else {
-              return "o";
-            }
-          } else {
-            console.log("map_loaded_type_abbreviations type name not found", t);
-            console.log("bt", bt);
-            console.trace();
-            throw "stop";
-          }
-        }
-      };
-      var get_a_sig2 = (a) => {
-        let c2 = 0, l2 = a.length;
-        let res2 = "[";
-        let first = true;
-        for (c2 = 0; c2 < l2; c2++) {
-          if (!first) {
-            res2 = res2 + ",";
-          } else {
-            first = false;
-          }
-          res2 = res2 + get_item_sig(a[c2]);
-        }
-        res2 = res2 + "]";
-        return res2;
-      };
-      var deep_sig = (item2, max_depth = -1, depth = 0) => {
-        const t = tf2(item2);
-        let res2 = "";
-        if (t === "a") {
-          const l2 = item2.length;
-          if (max_depth === -1 || depth <= max_depth) {
-            res2 = res2 + "[";
-            let first = true;
-            for (let c2 = 0; c2 < l2; c2++) {
-              if (!first) res2 = res2 + ",";
-              res2 = res2 + deep_sig(item2[c2], max_depth, depth + 1);
-              first = false;
-            }
-            res2 = res2 + "]";
-          } else {
-            return "a";
-          }
-        } else if (t === "A") {
-          const l2 = item2.length;
-          let first = true;
-          for (let c2 = 0; c2 < l2; c2++) {
-            if (!first) res2 = res2 + ",";
-            res2 = res2 + deep_sig(item2[c2], max_depth, depth + 1);
-            first = false;
-          }
-        } else if (t === "o") {
-          if (max_depth === -1 || depth <= max_depth) {
-            let res3 = "{";
-            let first = true;
-            each(item2, (v, k) => {
-              if (!first) res3 = res3 + ",";
-              res3 = res3 + '"' + k + '":' + deep_sig(v, max_depth, depth + 1);
-              first = false;
-            });
-            res3 = res3 + "}";
-            return res3;
-          } else {
-            return "o";
-          }
-        } else {
-          res2 = res2 + t;
-        }
-        return res2;
-      };
-      var trim_sig_brackets = function(sig) {
-        if (tof(sig) === "string") {
-          if (sig.charAt(0) == "[" && sig.charAt(sig.length - 1) == "]") {
-            return sig.substring(1, sig.length - 1);
-          } else {
-            return sig;
-          }
-        }
-      };
-      var arr_trim_undefined = function(arr_like) {
-        let res2 = [];
-        let last_defined = -1;
-        let t, v;
-        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
-          v = arr_like[c2];
-          t = tof(v);
-          if (t == "undefined") {
-          } else {
-            last_defined = c2;
-          }
-        }
-        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
-          if (c2 <= last_defined) {
-            res2.push(arr_like[c2]);
-          }
-        }
-        return res2;
-      };
-      var functional_polymorphism = function(options, fn) {
-        let a0 = arguments;
-        if (a0.length === 1) {
-          fn = a0[0];
-          options = null;
-        }
-        let arr_slice = Array.prototype.slice;
-        let arr, sig, a2, l2, a;
-        return function() {
-          a = arguments;
-          l2 = a.length;
-          if (l2 === 1) {
-            sig = get_item_sig([a[0]], 1);
-            a2 = [a[0]];
-            a2.l = 1;
-            return fn.call(this, a2, sig);
-          } else if (l2 > 1) {
-            arr = arr_trim_undefined(arr_slice.call(a, 0));
-            sig = get_item_sig(arr, 1);
-            arr.l = arr.length;
-            return fn.call(this, arr, sig);
-          } else if (a.length === 0) {
-            arr = new Array(0);
-            arr.l = 0;
-            return fn.call(this, arr, "[]");
-          }
-        };
-      };
-      var fp = functional_polymorphism;
-      var parse_sig = (str_sig, opts = {}) => {
-        const sig2 = str_sig.split(", ").join(",");
-        const sig_items = sig2.split(",");
-        const res2 = [];
-        each(sig_items, (sig_item) => {
-          if (sig_item.length === 1) {
-            let type_name = map_loaded_type_names[sig_item];
-            res2.push({
-              abbreviation: sig_item,
-              type_name
-            });
-          } else {
-            let suffix_modifiers;
-            let zero_or_more = false;
-            let one_or_more = false;
-            let type_name = sig_item;
-            const obj_res = {
-              type_name
-            };
-            const distil_suffix_modifiers = () => {
-              let last_char = type_name.substr(type_name.length - 1);
-              if (last_char === "*") {
-                type_name = type_name.substr(0, type_name.length - 1);
-                zero_or_more = true;
-                obj_res.zero_or_more = true;
-                obj_res.modifiers = obj_res.modifiers || [];
-                obj_res.modifiers.push("*");
-                distil_suffix_modifiers();
-              } else if (last_char === "+") {
-                type_name = type_name.substr(0, type_name.length - 1);
-                one_or_more = true;
-                obj_res.one_or_more = true;
-                obj_res.modifiers = obj_res.modifiers || [];
-                obj_res.modifiers.push("+");
-                distil_suffix_modifiers();
-              } else {
-              }
-            };
-            distil_suffix_modifiers();
-            obj_res.type_name = type_name;
-            res2.push(obj_res);
-          }
-        });
-        return res2;
-      };
-      var mfp_not_sigs = get_truth_map_from_arr(["pre", "default", "post"]);
-      var log = () => {
-      };
-      var combinations = (arr, arr_idxs_to_ignore) => {
-        const map_ignore_idxs = {};
-        if (arr_idxs_to_ignore) {
-          each(arr_idxs_to_ignore, (idx_to_ignore) => {
-            map_ignore_idxs[idx_to_ignore] = true;
-          });
-        }
-        const res2 = [];
-        const l2 = arr.length;
-        const arr_idxs_num_options = new Uint32Array(l2);
-        each(arr, (arr_item1, i1) => {
-          arr_idxs_num_options[i1] = arr_item1.length;
-        });
-        const arr_current_option_idxs = new Uint32Array(l2).fill(0);
-        const result_from_indexes = (arr2, arg_indexes) => {
-          const res3 = new Array(l2);
-          if (arg_indexes.length === l2) {
-            for (var c2 = 0; c2 < l2; c2++) {
-              res3[c2] = arr2[c2][arg_indexes[c2]];
-            }
-          } else {
-            console.trace();
-            throw "Arguments length mismatch";
-          }
-          return res3;
-        };
-        const incr = () => {
-          for (c = l2 - 1; c >= 0; c--) {
-            const ival = arr_current_option_idxs[c];
-            const max = arr_idxs_num_options[c] - 1;
-            if (ival < max) {
-              arr_current_option_idxs[c]++;
-              break;
-            } else {
-              if (c === 0) {
-                return false;
-              } else {
-                arr_current_option_idxs.fill(0, c);
-              }
-            }
-          }
-          return true;
-        };
-        let vals = result_from_indexes(arr, arr_current_option_idxs);
-        res2.push(vals);
-        while (incr()) {
-          let vals2 = result_from_indexes(arr, arr_current_option_idxs);
-          res2.push(vals2);
-        }
-        return res2;
-      };
-      var map_native_types = {
-        "string": true,
-        "boolean": true,
-        "number": true,
-        "object": true
-      };
-      var mfp = function() {
-        const a1 = arguments;
-        const sig1 = get_a_sig2(a1);
-        let options = {};
-        let fn_pre, provided_map_sig_fns, inner_map_sig_fns = {}, inner_map_parsed_sigs = {}, arr_sig_parsed_sig_fns = [], fn_post;
-        let tm_sig_fns;
-        let fn_default;
-        let single_fn;
-        let req_sig_single_fn;
-        if (sig1 === "[o]") {
-          provided_map_sig_fns = a1[0];
-        } else if (sig1 === "[o,o]") {
-          options = a1[0];
-          provided_map_sig_fns = a1[1];
-        } else if (sig1 === "[o,f]") {
-          options = a1[0];
-          single_fn = a1[1];
-        } else if (sig1 === "[o,s,f]") {
-          options = a1[0];
-          req_sig_single_fn = a1[1];
-          single_fn = a1[2];
-          provided_map_sig_fns = {};
-          provided_map_sig_fns[req_sig_single_fn] = single_fn;
-        } else if (sig1 === "[f,o]") {
-          single_fn = a1[0];
-          options = a1[1];
-        } else if (sig1 === "[f]") {
-          single_fn = a1[0];
-        } else {
-          console.log("sig1", sig1);
-          console.trace();
-          throw "mfp NYI";
-        }
-        let {
-          single,
-          name,
-          grammar,
-          verb,
-          noun,
-          return_type,
-          return_subtype,
-          pure,
-          main,
-          skip
-        } = options;
-        let parsed_grammar;
-        let identify, validate;
-        let dsig = deep_sig;
-        (() => {
-          if (provided_map_sig_fns) {
-            if (provided_map_sig_fns.default) fn_default = provided_map_sig_fns.default;
-            each(provided_map_sig_fns, (fn, sig) => {
-              if (typeof fn === "function") {
-                if (!mfp_not_sigs[sig]) {
-                  const parsed_sig = parse_sig(sig);
-                  const arr_args_with_modifiers = [];
-                  const arr_args_all_modification_versions = [];
-                  each(parsed_sig, (arg, i) => {
-                    arr_args_all_modification_versions[i] = [];
-                    if (arg.modifiers) {
-                      const arg_num_modifiers = arg.modifiers.length;
-                      if (arg_num_modifiers > 1) {
-                        throw "Use of more than 1 modifier is currently unsupported.";
-                      } else if (arg_num_modifiers === 1) {
-                        arr_args_with_modifiers.push([i, arg]);
-                        const single_modifier = arg.modifiers[0];
-                        if (single_modifier === "*") {
-                          arr_args_all_modification_versions[i].push("");
-                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                          const plural_name = grammar.maps.sing_plur[arg.type_name];
-                          arr_args_all_modification_versions[i].push(plural_name);
-                        }
-                        if (single_modifier === "+") {
-                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                          const plural_name = grammar.maps.sing_plur[arg.type_name];
-                          arr_args_all_modification_versions[i].push(plural_name);
-                        }
-                        if (single_modifier === "?") {
-                          arr_args_all_modification_versions[i].push("");
-                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                        }
-                      }
-                    } else {
-                      arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
-                    }
-                  });
-                  const combo_args = combinations(arr_args_all_modification_versions);
-                  const combo_sigs = [];
-                  let i_first_of_last_undefined = -1;
-                  each(combo_args, (arg_set) => {
-                    let combo_sig = "";
-                    each(arg_set, (arg, i) => {
-                      let lsigb4 = combo_sig.length;
-                      if (i > 0) {
-                        combo_sig = combo_sig + ",";
-                      }
-                      if (arg === "") {
-                        combo_sig = combo_sig + "u";
-                        if (i_first_of_last_undefined === -1) {
-                          i_first_of_last_undefined = lsigb4;
-                        }
-                      } else {
-                        combo_sig = combo_sig + arg;
-                        i_first_of_last_undefined = -1;
-                      }
-                    });
-                    if (i_first_of_last_undefined > 0) {
-                      const combo_sig_no_last_undefined = combo_sig.substr(0, i_first_of_last_undefined);
-                      combo_sigs.push(combo_sig_no_last_undefined);
-                    }
-                    combo_sigs.push(combo_sig);
-                  });
-                  if (combo_sigs.length > 0) {
-                    each(combo_sigs, (combo_sig) => {
-                      inner_map_sig_fns[combo_sig] = fn;
-                    });
-                  } else {
-                    inner_map_sig_fns[sig] = fn;
-                  }
-                  inner_map_parsed_sigs[sig] = parsed_sig;
-                  arr_sig_parsed_sig_fns.push([sig, parsed_sig, fn]);
-                } else {
-                  console.log("ommiting, not parsing sig", sig);
-                }
-              } else {
-                console.log("fn", fn);
-                console.trace();
-                throw "Expected: function";
-              }
-              ;
-            });
-          }
-          each(inner_map_sig_fns, (fn, sig) => {
-            tm_sig_fns = tm_sig_fns || {};
-            tm_sig_fns[sig] = true;
-          });
-        })();
-        const res2 = function() {
-          const a2 = arguments;
-          const l2 = a2.length;
-          console.log("");
-          console.log("calling mfp function");
-          console.log("--------------------");
-          console.log("");
-          let mfp_fn_call_deep_sig;
-          let ltof = tof;
-          const lsig = dsig;
-          let ltf = tf2;
-          mfp_fn_call_deep_sig = lsig(a2);
-          let do_skip = false;
-          if (skip) {
-            if (skip(a2)) {
-              do_skip = true;
-            } else {
-            }
-          }
-          if (!do_skip) {
-            if (inner_map_sig_fns[mfp_fn_call_deep_sig]) {
-              return inner_map_sig_fns[mfp_fn_call_deep_sig].apply(this, a2);
-            } else {
-              let idx_last_fn = -1;
-              let idx_last_obj = -1;
-              each(a2, (arg, i_arg) => {
-                i_arg = parseInt(i_arg, 10);
-                const targ = tf2(arg);
-                if (targ === "o") {
-                  idx_last_obj = i_arg;
-                }
-                if (targ === "f") {
-                  idx_last_fn = i_arg;
-                }
-              });
-              const last_arg_is_fn = idx_last_fn > -1 && idx_last_fn === a2.length - 1;
-              const last_arg_is_obj = idx_last_obj > -1 && idx_last_obj === a2.length - 1;
-              const second_last_arg_is_obj = idx_last_obj > -1 && idx_last_obj === a2.length - 2;
-              let possible_options_obj;
-              if (last_arg_is_obj) possible_options_obj = a2[idx_last_obj];
-              const new_args_arrangement = [];
-              for (let f = 0; f < idx_last_obj; f++) {
-                new_args_arrangement.push(a2[f]);
-              }
-              each(possible_options_obj, (value2, key2) => {
-                new_args_arrangement.push(value2);
-              });
-              let naa_sig = lsig(new_args_arrangement);
-              naa_sig = naa_sig.substring(1, naa_sig.length - 1);
-              if (inner_map_sig_fns[naa_sig]) {
-                return inner_map_sig_fns[naa_sig].apply(this, new_args_arrangement);
-              } else {
-                if (fn_default) {
-                  return fn_default.call(this, a2, mfp_fn_call_deep_sig);
-                } else {
-                  if (single_fn) {
-                    console.log("pre apply single_fn");
-                    return single_fn.apply(this, a2);
-                  } else {
-                    console.log("Object.keys(inner_map_parsed_sigs)", Object.keys(inner_map_parsed_sigs));
-                    console.trace();
-                    console.log("mfp_fn_call_deep_sig", mfp_fn_call_deep_sig);
-                    console.log("provided_map_sig_fns", provided_map_sig_fns);
-                    if (provided_map_sig_fns) log("Object.keys(provided_map_sig_fns)", Object.keys(provided_map_sig_fns));
-                    console.log("Object.keys(inner_map_sig_fns)", Object.keys(inner_map_sig_fns));
-                    console.trace();
-                    throw "no signature match found. consider using a default signature. mfp_fn_call_deep_sig: " + mfp_fn_call_deep_sig;
-                  }
-                }
-              }
-            }
-          }
-        };
-        const _ = {};
-        if (name) _.name = name;
-        if (single) _.single = single;
-        if (skip) _.skip = skip;
-        if (grammar) _.grammar = grammar;
-        if (typeof options !== "undefined" && options.async) _.async = options.async;
-        if (main === true) _.main = true;
-        if (return_type) _.return_type = return_type;
-        if (return_subtype) _.return_subtype = return_subtype;
-        if (pure) _.pure = pure;
-        if (tm_sig_fns) _.map_sigs = tm_sig_fns;
-        if (Object.keys(_).length > 0) {
-          res2._ = _;
-        }
-        return res2;
-      };
-      var arrayify = fp(function(a, sig) {
-        let param_index, num_parallel = 1, delay = 0, fn;
-        let res2;
-        let process_as_fn = function() {
-          res2 = function() {
-            let a2 = arr_like_to_arr(arguments), ts = atof(a2), t = this;
-            let last_arg = a2[a2.length - 1];
-            if (tof(last_arg) == "function") {
-              if (typeof param_index !== "undefined" && ts[param_index] == "array") {
-                let res3 = [];
-                let fns = [];
-                each(a2[param_index], function(v, i) {
-                  let new_params = a2.slice(0, a2.length - 1);
-                  new_params[param_index] = v;
-                  fns.push([t, fn, new_params]);
-                });
-                call_multiple_callback_functions(fns, num_parallel, delay, (err, res4) => {
-                  if (err) {
-                    console.trace();
-                    throw err;
-                  } else {
-                    let a3 = [];
-                    a3 = a3.concat.apply(a3, res4);
-                    let callback2 = last_arg;
-                    callback2(null, a3);
-                  }
-                });
-              } else {
-                return fn.apply(t, a2);
-              }
-            } else {
-              if (typeof param_index !== "undefined" && ts[param_index] == "array") {
-                let res3 = [];
-                for (let c2 = 0, l2 = a2[param_index].length; c2 < l2; c2++) {
-                  a2[param_index] = arguments[param_index][c2];
-                  let result = fn.apply(t, a2);
-                  res3.push(result);
-                }
-                return res3;
-              } else {
-                return fn.apply(t, a2);
-              }
-            }
-          };
-        };
-        if (sig == "[o]") {
-          let res3 = [];
-          each(a[0], function(v, i) {
-            res3.push([v, i]);
-          });
-        } else if (sig == "[f]") {
-          param_index = 0, fn = a[0];
-          process_as_fn();
-        } else if (sig == "[n,f]") {
-          param_index = a[0], fn = a[1];
-          process_as_fn();
-        } else if (sig == "[n,n,f]") {
-          param_index = a[0], num_parallel = a[1], fn = a[2];
-          process_as_fn();
-        } else if (sig == "[n,n,n,f]") {
-          param_index = a[0], num_parallel = a[1], delay = a[2], fn = a[3];
-          process_as_fn();
-        }
-        return res2;
-      });
-      var mapify = (target) => {
-        let tt = tof(target);
-        if (tt == "function") {
-          let res2 = fp(function(a, sig) {
-            let that2 = this;
-            if (sig == "[o]") {
-              let map = a[0];
-              each(map, function(v, i) {
-                target.call(that2, v, i);
-              });
-            } else if (sig == "[o,f]") {
-              let map = a[0];
-              let callback2 = a[1];
-              let fns = [];
-              each(map, function(v, i) {
-                fns.push([target, [v, i]]);
-              });
-              call_multi(fns, function(err_multi, res_multi) {
-                if (err_multi) {
-                  callback2(err_multi);
-                } else {
-                  callback2(null, res_multi);
-                }
-              });
-            } else if (a.length >= 2) {
-              target.apply(this, a);
-            }
-          });
-          return res2;
-        } else if (tt == "array") {
-          let res2 = {};
-          if (arguments.length == 1) {
-            if (is_arr_of_strs(target)) {
-              each(target, function(v, i) {
-                res2[v] = true;
-              });
-            } else {
-              each(target, function(v, i) {
-                res2[v[0]] = v[1];
-              });
-            }
-          } else {
-            let by_property_name = arguments[1];
-            each(target, function(v, i) {
-              res2[v[by_property_name]] = v;
-            });
-          }
-          return res2;
-        }
-      };
-      var clone = fp((a, sig) => {
-        let obj2 = a[0];
-        if (a.l === 1) {
-          if (obj2 && typeof obj2.clone === "function") {
-            return obj2.clone();
-          } else {
-            let t = tof(obj2);
-            if (t === "array") {
-              let res2 = [];
-              each(obj2, (v) => {
-                res2.push(clone(v));
-              });
-              return res2;
-            } else if (t === "undefined") {
-              return void 0;
-            } else if (t === "string") {
-              return obj2;
-            } else if (t === "number") {
-              return obj2;
-            } else if (t === "function") {
-              return obj2;
-            } else if (t === "boolean") {
-              return obj2;
-            } else if (t === "null") {
-              return obj2;
-            } else {
-              return Object.assign({}, obj2);
-            }
-          }
-        } else if (a.l === 2 && tof(a[1]) === "number") {
-          let res2 = [];
-          for (let c2 = 0; c2 < a[1]; c2++) {
-            res2.push(clone(obj2));
-          }
-          return res2;
-        }
-      });
-      var set_vals = function(obj2, map) {
-        each(map, function(v, i) {
-          obj2[i] = v;
-        });
-      };
-      var ll_set = (obj2, prop_name2, prop_value) => {
-        let arr = prop_name2.split(".");
-        let c2 = 0, l2 = arr.length;
-        let i = obj2._ || obj2, s;
-        while (c2 < l2) {
-          s = arr[c2];
-          if (typeof i[s] == "undefined") {
-            if (c2 - l2 == -1) {
-              i[s] = prop_value;
-            } else {
-              i[s] = {};
-            }
-          } else {
-            if (c2 - l2 == -1) {
-              i[s] = prop_value;
-            }
-          }
-          i = i[s];
-          c2++;
-        }
-        ;
-        return prop_value;
-      };
-      var ll_get = (a0, a1) => {
-        if (a0 && a1) {
-          let i = a0._ || a0;
-          if (a1 == ".") {
-            if (typeof i["."] == "undefined") {
-              return void 0;
-            } else {
-              return i["."];
-            }
-          } else {
-            let arr = a1.split(".");
-            let c2 = 0, l2 = arr.length, s;
-            while (c2 < l2) {
-              s = arr[c2];
-              if (typeof i[s] == "undefined") {
-                if (c2 - l2 == -1) {
-                } else {
-                  throw "object " + s + " not found";
-                }
-              } else {
-                if (c2 - l2 == -1) {
-                  return i[s];
-                }
-              }
-              i = i[s];
-              c2++;
-            }
-          }
-        }
-      };
-      var truth = function(value2) {
-        return value2 === true;
-      };
-      var iterate_ancestor_classes = (obj2, callback2) => {
-        let ctu = true;
-        let stop = () => {
-          ctu = false;
-        };
-        callback2(obj2, stop);
-        if (obj2._superclass && ctu) {
-          iterate_ancestor_classes(obj2._superclass, callback2);
-        }
-      };
-      var is_arr_of_t = function(obj2, type_name) {
-        let t = tof(obj2), tv;
-        if (t === "array") {
-          let res2 = true;
-          each(obj2, function(v, i) {
-            tv = tof(v);
-            if (tv != type_name) res2 = false;
-          });
-          return res2;
-        } else {
-          return false;
-        }
-      };
-      var is_arr_of_arrs = function(obj2) {
-        return is_arr_of_t(obj2, "array");
-      };
-      var is_arr_of_strs = function(obj2) {
-        return is_arr_of_t(obj2, "string");
-      };
-      var input_processors = {};
-      var output_processors = {};
-      var call_multiple_callback_functions = fp(function(a, sig) {
-        let arr_functions_params_pairs, callback2, return_params = false;
-        let delay;
-        let num_parallel = 1;
-        if (a.l === 1) {
-        } else if (a.l === 2) {
-          arr_functions_params_pairs = a[0];
-          callback2 = a[1];
-        } else if (a.l === 3) {
-          if (sig === "[a,n,f]") {
-            arr_functions_params_pairs = a[0];
-            num_parallel = a[1];
-            callback2 = a[2];
-          } else if (sig === "[n,a,f]") {
-            arr_functions_params_pairs = a[1];
-            num_parallel = a[0];
-            callback2 = a[2];
-          } else if (sig === "[a,f,b]") {
-            arr_functions_params_pairs = a[0];
-            callback2 = a[1];
-            return_params = a[2];
-          }
-        } else if (a.l === 4) {
-          if (sig === "[a,n,n,f]") {
-            arr_functions_params_pairs = a[0];
-            num_parallel = a[1];
-            delay = a[2];
-            callback2 = a[3];
-          } else if (sig == "[n,n,a,f]") {
-            arr_functions_params_pairs = a[2];
-            num_parallel = a[0];
-            delay = a[1];
-            callback2 = a[3];
-          }
-        }
-        let res2 = [];
-        let l2 = arr_functions_params_pairs.length;
-        let c2 = 0;
-        let count_unfinished = l2;
-        let num_currently_executing = 0;
-        let process2 = (delay2) => {
-          num_currently_executing++;
-          let main = () => {
-            let pair = arr_functions_params_pairs[c2];
-            let context2;
-            let fn, params, fn_callback;
-            let pair_sig = get_item_sig(pair);
-            let t_pair = tof(pair);
-            if (t_pair == "function") {
-              fn = pair;
-              params = [];
-            } else {
-              if (pair) {
-                if (pair.length == 1) {
-                }
-                if (pair.length == 2) {
-                  if (tof(pair[1]) == "function") {
-                    context2 = pair[0];
-                    fn = pair[1];
-                    params = [];
-                  } else {
-                    fn = pair[0];
-                    params = pair[1];
-                  }
-                }
-                if (pair.length == 3) {
-                  if (tof(pair[0]) === "function" && tof(pair[1]) === "array" && tof(pair[2]) === "function") {
-                    fn = pair[0];
-                    params = pair[1];
-                    fn_callback = pair[2];
-                  }
-                  if (tof(pair[1]) === "function" && tof(pair[2]) === "array") {
-                    context2 = pair[0];
-                    fn = pair[1];
-                    params = pair[2];
-                  }
-                }
-                if (pair.length == 4) {
-                  context2 = pair[0];
-                  fn = pair[1];
-                  params = pair[2];
-                  fn_callback = pair[3];
-                }
-              } else {
-              }
-            }
-            let i = c2;
-            c2++;
-            let cb = (err, res22) => {
-              num_currently_executing--;
-              count_unfinished--;
-              if (err) {
-                let stack = new Error().stack;
-                callback2(err);
-              } else {
-                if (return_params) {
-                  res2[i] = [params, res22];
-                } else {
-                  res2[i] = res22;
-                }
-                if (fn_callback) {
-                  fn_callback(null, res22);
-                }
-                if (c2 < l2) {
-                  if (num_currently_executing < num_parallel) {
-                    process2(delay2);
-                  }
-                } else {
-                  if (count_unfinished <= 0) {
-                    callback2(null, res2);
-                  }
-                }
-              }
-            };
-            let arr_to_call = params || [];
-            arr_to_call.push(cb);
-            if (fn) {
-              if (context2) {
-                fn.apply(context2, arr_to_call);
-              } else {
-                fn.apply(this, arr_to_call);
-              }
-            } else {
-            }
-          };
-          if (arr_functions_params_pairs[c2]) {
-            if (delay2) {
-              setTimeout(main, delay2);
-            } else {
-              main();
-            }
-          }
-        };
-        if (arr_functions_params_pairs.length > 0) {
-          while (c2 < l2 && num_currently_executing < num_parallel) {
-            if (delay) {
-              process2(delay * c2);
-            } else {
-              process2();
-            }
-          }
-        } else {
-          if (callback2) {
-          }
-        }
-      });
-      var call_multi = call_multiple_callback_functions;
-      var Fns = function(arr) {
-        let fns = arr || [];
-        fns.go = function(parallel, delay, callback2) {
-          let a = arguments;
-          let al = a.length;
-          if (al == 1) {
-            call_multi(fns, a[0]);
-          }
-          if (al == 2) {
-            call_multi(parallel, fns, delay);
-          }
-          if (al == 3) {
-            call_multi(parallel, delay, fns, callback2);
-          }
-        };
-        return fns;
-      };
-      var native_constructor_tof = function(value2) {
-        if (value2 === String) {
-          return "String";
-        }
-        if (value2 === Number) {
-          return "Number";
-        }
-        if (value2 === Boolean) {
-          return "Boolean";
-        }
-        if (value2 === Array) {
-          return "Array";
-        }
-        if (value2 === Object) {
-          return "Object";
-        }
-      };
-      var sig_match = function(sig1, sig2) {
-        let sig1_inner = sig1.substr(1, sig1.length - 2);
-        let sig2_inner = sig2.substr(1, sig2.length - 2);
-        if (sig1_inner.indexOf("[") > -1 || sig1_inner.indexOf("]") > -1 || sig2_inner.indexOf("[") > -1 || sig2_inner.indexOf("]") > -1) {
-          throw "sig_match only supports flat signatures.";
-        }
-        let sig1_parts = sig1_inner.split(",");
-        let sig2_parts = sig2_inner.split(",");
-        let res2 = true;
-        if (sig1_parts.length == sig2_parts.length) {
-          let c2 = 0, l2 = sig1_parts.length, i1, i2;
-          while (res2 && c2 < l2) {
-            i1 = sig1_parts[c2];
-            i2 = sig2_parts[c2];
-            if (i1 === i2) {
-            } else {
-              if (i1 !== "?") {
-                res2 = false;
-              }
-            }
-            c2++;
-          }
-          return res2;
-        } else {
-          return false;
-        }
-      };
-      var remove_sig_from_arr_shell = function(sig) {
-        if (sig[0] == "[" && sig[sig.length - 1] == "]") {
-          return sig.substring(1, sig.length - 1);
-        }
-        return sig;
-      };
-      var str_arr_mapify = function(fn) {
-        let res2 = fp(function(a, sig) {
-          if (a.l == 1) {
-            if (sig == "[s]") {
-              let s_pn = a[0].split(" ");
-              if (s_pn.length > 1) {
-                return res2.call(this, s_pn);
-              } else {
-                return fn.call(this, a[0]);
-              }
-            }
-            if (tof(a[0]) == "array") {
-              let res22 = {}, that2 = this;
-              each(a[0], function(v, i) {
-                res22[v] = fn.call(that2, v);
-              });
-              return res22;
-            }
-          }
-        });
-        return res2;
-      };
-      var to_arr_strip_keys = (obj2) => {
-        let res2 = [];
-        each(obj2, (v) => {
-          res2.push(v);
-        });
-        return res2;
-      };
-      var arr_objs_to_arr_keys_values_table = (arr_objs) => {
-        let keys = Object.keys(arr_objs[0]);
-        let arr_items = [], arr_values;
-        each(arr_objs, (item2) => {
-          arr_items.push(to_arr_strip_keys(item2));
-        });
-        return [keys, arr_items];
-      };
-      var set_arr_tree_value = (arr_tree, arr_path, value2) => {
-        let item_current = arr_tree;
-        let last_item_current, last_path_item;
-        each(arr_path, (path_item) => {
-          last_item_current = item_current;
-          item_current = item_current[path_item];
-          last_path_item = path_item;
-        });
-        last_item_current[last_path_item] = value2;
-      };
-      var get_arr_tree_value = (arr_tree, arr_path) => {
-        let item_current = arr_tree;
-        each(arr_path, (path_item) => {
-          item_current = item_current[path_item];
-        });
-        return item_current;
-      };
-      var deep_arr_iterate = (arr, path = [], callback2) => {
-        if (arguments.length === 2) {
-          callback2 = path;
-          path = [];
-        }
-        each(arr, (item2, i) => {
-          let c_path = clone(path);
-          c_path.push(i);
-          let t = tof(item2);
-          if (t === "array") {
-            deep_arr_iterate(item2, c_path, callback2);
-          } else {
-            callback2(c_path, item2);
-          }
-        });
-      };
-      var prom = (fn) => {
-        let fn_res = function() {
-          const a = arguments;
-          const t_a_last = typeof a[a.length - 1];
-          if (t_a_last === "function") {
-            fn.apply(this, a);
-          } else {
-            return new Promise((resolve, reject) => {
-              [].push.call(a, (err, res2) => {
-                if (err) {
-                  reject(err);
-                } else {
-                  resolve(res2);
-                }
-              });
-              fn.apply(this, a);
-            });
-          }
-        };
-        return fn_res;
-      };
-      var vectorify = (n_fn) => {
-        let fn_res = fp(function(a, sig) {
-          if (a.l > 2) {
-            throw "stop - need to check.";
-            let res2 = a[0];
-            for (let c2 = 1, l2 = a.l; c2 < l2; c2++) {
-              res2 = fn_res(res2, a[c2]);
-            }
-            return res2;
-          } else {
-            if (sig === "[n,n]") {
-              return n_fn(a[0], a[1]);
-            } else {
-              const ats = atof(a);
-              if (ats[0] === "array") {
-                if (ats[1] === "number") {
-                  const res2 = [], n = a[1], l2 = a[0].length;
-                  let c2;
-                  for (c2 = 0; c2 < l2; c2++) {
-                    res2.push(fn_res(a[0][c2], n));
-                  }
-                  return res2;
-                }
-                if (ats[1] === "array") {
-                  if (ats[0].length !== ats[1].length) {
-                    throw "vector array lengths mismatch";
-                  } else {
-                    const l2 = a[0].length, res2 = new Array(l2), arr2 = a[1];
-                    for (let c2 = 0; c2 < l2; c2++) {
-                      res2[c2] = fn_res(a[0][c2], arr2[c2]);
-                    }
-                    return res2;
-                  }
-                }
-              }
-            }
-          }
-          ;
-        });
-        return fn_res;
-      };
-      var n_add = (n1, n2) => n1 + n2;
-      var n_subtract = (n1, n2) => n1 - n2;
-      var n_multiply = (n1, n2) => n1 * n2;
-      var n_divide = (n1, n2) => n1 / n2;
-      var v_add = vectorify(n_add);
-      var v_subtract2 = vectorify(n_subtract);
-      var v_multiply = vectorify(n_multiply);
-      var v_divide = vectorify(n_divide);
-      var vector_magnitude = function(vector) {
-        var res2 = Math.sqrt(Math.pow(vector[0], 2) + Math.pow(vector[1], 2));
-        return res2;
-      };
-      var distance_between_points = function(points) {
-        var offset2 = v_subtract2(points[1], points[0]);
-        return vector_magnitude(offset2);
-      };
-      var map_tas_by_type = {
-        "c": Uint8ClampedArray,
-        "ui8": Uint8Array,
-        "i16": Int16Array,
-        "i32": Int32Array,
-        "ui16": Uint16Array,
-        "ui32": Uint32Array,
-        "f32": Float32Array,
-        "f64": Float64Array
-      };
-      var get_typed_array = function() {
-        const a = arguments;
-        let length, input_array;
-        const type = a[0];
-        if (is_array(a[1])) {
-          input_array = a[1];
-        } else {
-          length = a[1];
-        }
-        const ctr = map_tas_by_type[type];
-        if (ctr) {
-          if (input_array) {
-            return ctr(input_array);
-          } else if (length) {
-            return ctr(length);
-          }
-        }
-      };
-      var Grammar = class {
-        constructor(spec) {
-          const eg_spec = {
-            name: "User Auth Grammar"
-          };
-          const {
-            name
-          } = spec;
-          this.name = name;
-          const eg_indexing = () => {
-            let map_sing_plur = {};
-            let map_plur_sing = {};
-            let map_sing_def = {};
-            let map_sig_sing = {};
-            let map_sig0_sing = {};
-            let map_sig1_sing = {};
-            let map_sig2_sing = {};
-          };
-          this.maps = {
-            sing_plur: {},
-            plur_sing: {},
-            sing_def: {},
-            deep_sig_sing: {},
-            obj_sig_sing: {},
-            sig_levels_sing: {}
-          };
-          this.load_grammar(spec.def);
-        }
-        load_grammar(grammar_def) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          const resolve_def = (def) => {
-            const td = tf2(def);
-            if (td === "a") {
-              const res2 = [];
-              each(def, (def_item) => {
-                res2.push(resolve_def(def_item));
-              });
-              return res2;
-            } else if (td === "s") {
-              if (def === "string") {
-                return "string";
-              } else if (def === "number") {
-                return "number";
-              } else if (def === "boolean") {
-                return "boolean";
-              } else {
-                const found_sing_def = sing_def[def];
-                return found_sing_def;
-              }
-            } else if (td === "n") {
-              console.trace();
-              throw "NYI";
-            } else if (td === "b") {
-              console.trace();
-              throw "NYI";
-            }
-          };
-          const resolved_def_to_sig = (resolved_def, level = 0) => {
-            const trd = tf2(resolved_def);
-            if (trd === "s") {
-              if (resolved_def === "string") {
-                return "s";
-              } else if (resolved_def === "number") {
-                return "n";
-              } else if (resolved_def === "boolean") {
-                return "b";
-              }
-            } else if (trd === "a") {
-              let res2 = "";
-              if (level === 0) {
-              } else {
-                res2 = res2 + "[";
-              }
-              each(resolved_def, (item2, c2) => {
-                if (c2 > 0) {
-                  res2 = res2 + ",";
-                }
-                res2 = res2 + resolved_def_to_sig(item2, level + 1);
-              });
-              if (level === 0) {
-              } else {
-                res2 = res2 + "]";
-              }
-              return res2;
-            } else {
-              console.trace();
-              throw "NYI";
-            }
-            return res;
-          };
-          each(grammar_def, (def1, sing_word) => {
-            const {
-              def,
-              plural
-            } = def1;
-            sing_def[sing_word] = def;
-            sing_plur[sing_word] = plural;
-            plur_sing[plural] = sing_word;
-            const tdef = tf2(def);
-            const resolved_def = resolve_def(def);
-            const resolved_def_sig = resolved_def_to_sig(resolved_def);
-            deep_sig_sing[resolved_def_sig] = deep_sig_sing[resolved_def_sig] || [];
-            deep_sig_sing[resolved_def_sig].push(sing_word);
-            let def_is_all_custom_types = true;
-            each(def, (def_item, c2, stop) => {
-              const tdi = tf2(def_item);
-              if (tdi === "s") {
-                if (sing_def[def_item]) {
-                } else {
-                  def_is_all_custom_types = false;
-                  stop();
-                }
-              } else {
-                def_is_all_custom_types = false;
-                stop();
-              }
-            });
-            let obj_sig;
-            if (def_is_all_custom_types) {
-              obj_sig = "{";
-              each(def, (def_item, c2, stop) => {
-                if (c2 > 0) {
-                  obj_sig = obj_sig + ",";
-                }
-                const resolved = resolve_def(def_item);
-                const abr_resolved = resolved_def_to_sig(resolved);
-                obj_sig = obj_sig + '"' + def_item + '":';
-                obj_sig = obj_sig + abr_resolved;
-              });
-              obj_sig = obj_sig + "}";
-            }
-            if (obj_sig) {
-              obj_sig_sing[obj_sig] = obj_sig_sing[obj_sig] || [];
-              obj_sig_sing[obj_sig].push(sing_word);
-            }
-          });
-        }
-        tof(item2) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          const titem = tf2(item2);
-          console.log("titem", titem);
-          if (titem === "a") {
-            let all_arr_items_type;
-            each(item2, (subitem, c2, stop) => {
-              const subitem_type = this.tof(subitem);
-              console.log("subitem_type", subitem_type);
-              if (c2 === 0) {
-                all_arr_items_type = subitem_type;
-              } else {
-                if (all_arr_items_type === subitem_type) {
-                } else {
-                  all_arr_items_type = null;
-                  stop();
-                }
-              }
-            });
-            if (all_arr_items_type) {
-              console.log("has all_arr_items_type", all_arr_items_type);
-              if (!map_native_types[all_arr_items_type]) {
-                const res2 = sing_plur[all_arr_items_type];
-                return res2;
-              }
-            } else {
-              console.log("no all_arr_items_type");
-            }
-          } else {
-            return tof(item2);
-          }
-          const item_deep_sig = deep_sig(item2);
-          console.log("Grammar tof() item_deep_sig", item_deep_sig);
-          let arr_sing;
-          if (titem === "a") {
-            const unenclosed_sig = item_deep_sig.substring(1, item_deep_sig.length - 1);
-            console.log("unenclosed_sig", unenclosed_sig);
-            arr_sing = deep_sig_sing[unenclosed_sig];
-          } else {
-            arr_sing = deep_sig_sing[item_deep_sig];
-          }
-          if (arr_sing) {
-            if (arr_sing.length === 1) {
-              return arr_sing[0];
-            } else {
-              console.trace();
-              throw "NYI";
-            }
-          }
-        }
-        sig(item2, max_depth = -1, depth = 0) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          const extended_sig = (item3) => {
-            const ti = tf2(item3);
-            let res2 = "";
-            let same_grammar_type;
-            const record_subitem_sigs = (item4) => {
-              same_grammar_type = void 0;
-              let same_sig = void 0;
-              each(item4, (subitem, c2) => {
-                if (c2 > 0) {
-                  res2 = res2 + ",";
-                }
-                const sig_subitem = this.sig(subitem, max_depth, depth + 1);
-                if (same_sig === void 0) {
-                  same_sig = sig_subitem;
-                } else {
-                  if (sig_subitem !== same_sig) {
-                    same_sig = false;
-                    same_grammar_type = false;
-                  }
-                }
-                if (same_sig) {
-                  if (sing_def[sig_subitem]) {
-                    if (same_grammar_type === void 0) {
-                      same_grammar_type = sig_subitem;
-                    } else {
-                      if (same_grammar_type === sig_subitem) {
-                      } else {
-                        same_grammar_type = false;
-                      }
-                    }
-                  } else {
-                  }
-                }
-                res2 = res2 + sig_subitem;
-              });
-            };
-            if (ti === "A") {
-              record_subitem_sigs(item3);
-              return res2;
-            } else if (ti === "a") {
-              record_subitem_sigs(item3);
-              if (same_grammar_type) {
-                const plur_name = sing_plur[same_grammar_type];
-                return plur_name;
-              } else {
-                const found_obj_type = obj_sig_sing[res2];
-                const found_deep_sig_type = deep_sig_sing[res2];
-                let found_type_sing;
-                if (found_deep_sig_type) {
-                  if (found_deep_sig_type.length === 1) {
-                    found_type_sing = found_deep_sig_type[0];
-                  }
-                }
-                if (found_type_sing) {
-                  return found_type_sing;
-                } else {
-                  const enclosed_res = "[" + res2 + "]";
-                  return enclosed_res;
-                }
-              }
-            } else if (ti === "o") {
-              if (max_depth === -1 || depth <= max_depth) {
-                res2 = res2 + "{";
-                let first = true;
-                each(item3, (value2, key2) => {
-                  const vsig = this.sig(value2, max_depth, depth + 1);
-                  if (!first) {
-                    res2 = res2 + ",";
-                  } else {
-                    first = false;
-                  }
-                  res2 = res2 + '"' + key2 + '":' + vsig;
-                });
-                res2 = res2 + "}";
-                return res2;
-              } else {
-                return "o";
-              }
-            } else if (ti === "s" || ti === "n" || ti === "b") {
-              return ti;
-            } else {
-              return ti;
-            }
-          };
-          return extended_sig(item2);
-        }
-        single_forms_sig(item2) {
-          const {
-            sing_plur,
-            plur_sing,
-            sing_def,
-            sig_levels_sing,
-            deep_sig_sing,
-            obj_sig_sing
-          } = this.maps;
-          let sig = this.sig(item2);
-          let s_sig = sig.split(",");
-          const arr_res = [];
-          each(s_sig, (sig_item, c2) => {
-            const sing = plur_sing[sig_item] || sig_item;
-            arr_res.push(sing);
-          });
-          const res2 = arr_res.join(",");
-          return res2;
-        }
-      };
-      var Evented_Class = class {
-        "constructor"() {
-          Object.defineProperty(this, "_bound_events", {
-            value: {}
-          });
-        }
-        "raise_event"() {
-          let a = Array.prototype.slice.call(arguments), sig = get_a_sig2(a);
-          a.l = a.length;
-          let target = this;
-          let c2, l2, res2;
-          if (sig === "[s]") {
-            let target2 = this;
-            let event_name = a[0];
-            let bgh = this._bound_general_handler;
-            let be = this._bound_events;
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target2, event_name));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) == "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target2));
-                }
-                return res2;
-              }
-            }
-          }
-          if (sig === "[s,a]") {
-            let be = this._bound_events;
-            let bgh = this._bound_general_handler;
-            let event_name = a[0];
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target, event_name, a[1]));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) === "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target, a[1]));
-                }
-              }
-            }
-          }
-          if (sig === "[s,b]" || sig === "[s,s]" || sig === "[s,n]" || sig === "[s,B]" || sig === "[s,O]" || sig === "[s,e]") {
-            let be = this._bound_events;
-            let bgh = this._bound_general_handler;
-            let event_name = a[0];
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target, event_name, a[1]));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) === "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target, a[1]));
-                }
-              }
-            }
-          }
-          if (sig === "[s,o]" || sig === "[s,?]") {
-            let be = this._bound_events;
-            let bgh = this._bound_general_handler;
-            let event_name = a[0];
-            res2 = [];
-            if (bgh) {
-              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                res2.push(bgh[c2].call(target, event_name, a[1]));
-              }
-            }
-            if (be) {
-              let bei = be[event_name];
-              if (tof(bei) === "array") {
-                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                  res2.push(bei[c2].call(target, a[1]));
-                }
-              }
-            }
-          } else {
-            if (a.l > 2) {
-              let event_name = a[0];
-              let additional_args = [];
-              let bgh_args = [event_name];
-              for (c2 = 1, l2 = a.l; c2 < l2; c2++) {
-                additional_args.push(a[c2]);
-                bgh_args.push(a[c2]);
-              }
-              let be = this._bound_events;
-              let bgh = this._bound_general_handler;
-              res2 = [];
-              if (bgh) {
-                for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
-                  res2.push(bgh[c2].apply(target, bgh_args));
-                }
-              }
-              if (be) {
-                let bei = be[event_name];
-                if (tof(bei) == "array") {
-                  if (bei.length > 0) {
-                    for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
-                      if (bei[c2]) res2.push(bei[c2].apply(target, additional_args));
-                    }
-                    return res2;
-                  } else {
-                    return res2;
-                  }
-                }
-              }
-            } else {
-            }
-          }
-          return res2;
-        }
-        "add_event_listener"() {
-          const {
-            event_events
-          } = this;
-          let a = Array.prototype.slice.call(arguments), sig = get_a_sig2(a);
-          if (sig === "[f]") {
-            this._bound_general_handler = this._bound_general_handler || [];
-            if (is_array(this._bound_general_handler)) {
-              this._bound_general_handler.push(a[0]);
-            }
-            ;
-          }
-          if (sig === "[s,f]") {
-            let event_name = a[0], fn_listener = a[1];
-            if (!this._bound_events[event_name]) this._bound_events[event_name] = [];
-            let bei = this._bound_events[event_name];
-            if (is_array(bei)) {
-              bei.push(fn_listener);
-              if (event_events) {
-                this.raise("add-event-listener", {
-                  "name": event_name
-                });
-              }
-            } else {
-              console.trace();
-              throw "Expected: array";
-            }
-          }
-          return this;
-        }
-        "remove_event_listener"(event_name, fn_listener) {
-          const {
-            event_events
-          } = this;
-          if (this._bound_events) {
-            let bei = this._bound_events[event_name] || [];
-            if (is_array(bei)) {
-              let c2 = 0, l2 = bei.length, found = false;
-              while (!found && c2 < l2) {
-                if (bei[c2] === fn_listener) {
-                  found = true;
-                } else {
-                  c2++;
-                }
-              }
-              if (found) {
-                bei.splice(c2, 1);
-                if (event_events) {
-                  this.raise("remove-event-listener", {
-                    "name": event_name
-                  });
-                }
-              }
-            } else {
-              console.trace();
-              throw "Expected: array";
-            }
-          }
-          return this;
-        }
-        get bound_named_event_counts() {
-          const res2 = {};
-          if (this._bound_events) {
-            const keys = Object.keys(this._bound_events);
-            each(keys, (key2) => {
-              res2[key2] = this._bound_events[key2].length;
-            });
-          }
-          return res2;
-        }
-        "one"(event_name, fn_handler) {
-          let inner_handler = function(e) {
-            fn_handler.call(this, e);
-            this.off(event_name, inner_handler);
-          };
-          this.on(event_name, inner_handler);
-        }
-        "changes"(obj_changes) {
-          if (!this.map_changes) {
-            this.map_changes = {};
-          }
-          each(obj_changes, (handler, name) => {
-            this.map_changes[name] = this.map_changes[name] || [];
-            this.map_changes[name].push(handler);
-          });
-          if (!this._using_changes) {
-            this._using_changes = true;
-            this.on("change", (e_change) => {
-              const {
-                name,
-                value: value2
-              } = e_change;
-              if (this.map_changes[name]) {
-                each(this.map_changes[name], (h_change) => {
-                  h_change(value2);
-                });
-              }
-            });
-          }
-        }
-      };
-      var p = Evented_Class.prototype;
-      p.raise = p.raise_event;
-      p.trigger = p.raise_event;
-      p.subscribe = p.add_event_listener;
-      p.on = p.add_event_listener;
-      p.off = p.remove_event_listener;
-      var eventify = (obj2) => {
-        const bound_events = {};
-        const add_event_listener = (name, handler) => {
-          if (handler === void 0 && typeof name === "function") {
-            handler = name;
-            name = "";
-          }
-          if (!bound_events[name]) bound_events[name] = [];
-          bound_events[name].push(handler);
-        };
-        const remove_event_listener = (name, handler) => {
-          if (bound_events[name]) {
-            const i = bound_events[name].indexOf(handler);
-            if (i > -1) {
-              bound_events[name].splice(i, 1);
-            }
-          }
-        };
-        const raise_event = (name, optional_param) => {
-          const arr_named_events = bound_events[name];
-          if (arr_named_events !== void 0) {
-            if (optional_param !== void 0) {
-              const l2 = arr_named_events.length;
-              for (let c2 = 0; c2 < l2; c2++) {
-                arr_named_events[c2].call(obj2, optional_param);
-              }
-            } else {
-              const l2 = arr_named_events.length;
-              for (let c2 = 0; c2 < l2; c2++) {
-                arr_named_events[c2].call(obj2);
-              }
-            }
-          }
-        };
-        obj2.on = obj2.add_event_listener = add_event_listener;
-        obj2.off = obj2.remove_event_listener = remove_event_listener;
-        obj2.raise = obj2.raise_event = raise_event;
-        return obj2;
-      };
-      var Publisher = class extends Evented_Class {
-        constructor(spec = {}) {
-          super({});
-          this.one("ready", () => {
-            this.is_ready = true;
-          });
-        }
-        get when_ready() {
-          return new Promise((solve, jettison) => {
-            if (this.is_ready === true) {
-              solve();
-            } else {
-              this.one("ready", () => {
-                solve();
-              });
-            }
-          });
-        }
-      };
-      var prop = (...a) => {
-        let s = get_a_sig2(a);
-        const raise_change_events = true;
-        const ifn = (item2) => typeof item2 === "function";
-        if (s === "[a]") {
-          each(a[0], (item_params2) => {
-            prop.apply(exports, item_params2);
-          });
-        } else {
-          if (a.length === 2) {
-            if (ia(a[1])) {
-              const target = a[0];
-              each(a[1], (item2) => {
-                if (ia(item2)) {
-                  throw "NYI 468732";
-                } else {
-                  prop(target, item2);
-                }
-              });
-            } else {
-              const ta1 = tof(a[1]);
-              if (ta1 === "string") {
-                [obj, prop_name] = a;
-              } else {
-                throw "NYI 468732b";
-              }
-            }
-          } else if (a.length > 2) {
-            if (is_array(a[0])) {
-              throw "stop";
-              let objs = a.shift();
-              each(objs, (obj2) => {
-                prop.apply(exports, [obj2].concat(item_params));
-              });
-            } else {
-              let obj2, prop_name2, default_value, fn_onchange, fn_transform, fn_on_ready, options;
-              const load_options = (options2) => {
-                prop_name2 = prop_name2 || options2.name || options2.prop_name;
-                fn_onchange = options2.fn_onchange || options2.onchange || options2.change;
-                fn_transform = options2.fn_transform || options2.ontransform || options2.transform;
-                fn_on_ready = options2.ready || options2.on_ready;
-                default_value = default_value || options2.default_value || options2.default;
-              };
-              if (a.length === 2) {
-                [obj2, options] = a;
-                load_options(options);
-              } else if (a.length === 3) {
-                if (ifn(a[2])) {
-                  [obj2, prop_name2, fn_onchange] = a;
-                } else {
-                  if (a[2].change || a[2].ready) {
-                    load_options(a[2]);
-                    [obj2, prop_name2] = a;
-                  } else {
-                    [obj2, prop_name2, default_value] = a;
-                  }
-                }
-              } else if (a.length === 4) {
-                if (ifn(a[2]) && ifn(a[3])) {
-                  [obj2, prop_name2, fn_transform, fn_onchange] = a;
-                } else if (ifn(a[3])) {
-                  [obj2, prop_name2, default_value, fn_onchange] = a;
-                } else {
-                  [obj2, prop_name2, default_value, options] = a;
-                  load_options(options);
-                }
-              } else if (a.length === 5) {
-                [obj2, prop_name2, default_value, fn_transform, fn_onchange] = a;
-              }
-              let _prop_value;
-              if (typeof default_value !== "undefined") _prop_value = default_value;
-              const _silent_set = (value2) => {
-                let _value;
-                if (fn_transform) {
-                  _value = fn_transform(value2);
-                } else {
-                  _value = value2;
-                }
-                _prop_value = _value;
-              };
-              const _set = (value2) => {
-                let _value;
-                if (fn_transform) {
-                  _value = fn_transform(value2);
-                } else {
-                  _value = value2;
-                }
-                let old = _prop_value;
-                _prop_value = _value;
-                if (fn_onchange) {
-                  fn_onchange({
-                    old,
-                    value: _prop_value
-                  });
-                }
-                if (obj2.raise && raise_change_events) {
-                  obj2.raise("change", {
-                    name: prop_name2,
-                    old,
-                    value: _prop_value
-                  });
-                }
-              };
-              if (is_defined(default_value)) {
-                _prop_value = default_value;
-              }
-              const t_prop_name = tf2(prop_name2);
-              if (t_prop_name === "s") {
-                Object.defineProperty(obj2, prop_name2, {
-                  get() {
-                    return _prop_value;
-                  },
-                  set(value2) {
-                    _set(value2);
-                  }
-                });
-              } else if (t_prop_name === "a") {
-                const l2 = prop_name2.length;
-                let item_prop_name;
-                for (let c2 = 0; c2 < l2; c2++) {
-                  item_prop_name = prop_name2[c2];
-                  Object.defineProperty(obj2, item_prop_name, {
-                    get() {
-                      return _prop_value;
-                    },
-                    set(value2) {
-                      _set(value2);
-                    }
-                  });
-                }
-              } else {
-                throw "Unexpected name type: " + t_prop_name;
-              }
-              if (fn_on_ready) {
-                fn_on_ready({
-                  silent_set: _silent_set
-                });
-              }
-            }
-          }
-        }
-      };
-      var Data_Type = class {
-      };
-      var Functional_Data_Type = class extends Data_Type {
-        constructor(spec) {
-          super(spec);
-          if (spec.supertype) this.supertype = spec.supertype;
-          if (spec.name) this.name = spec.name;
-          if (spec.abbreviated_name) this.abbreviated_name = spec.abbreviated_name;
-          if (spec.named_property_access) this.named_property_access = spec.named_property_access;
-          if (spec.numbered_property_access) this.numbered_property_access = spec.numbered_property_access;
-          if (spec.property_names) this.property_names = spec.property_names;
-          if (spec.property_data_types) this.property_data_types = spec.property_data_types;
-          if (spec.wrap_properties) this.wrap_properties = spec.wrap_properties;
-          if (spec.wrap_value_inner_values) this.wrap_value_inner_values = spec.wrap_value_inner_values;
-          if (spec.value_js_type) this.value_js_type = spec.value_js_type;
-          if (spec.abbreviated_property_names) this.abbreviated_property_names = spec.abbreviated_property_names;
-          if (spec.validate) this.validate = spec.validate;
-          if (spec.validate_explain) this.validate_explain = spec.validate_explain;
-          if (spec.parse_string) this.parse_string = spec.parse_string;
-          if (spec.parse) this.parse = spec.parse;
-        }
-      };
-      Functional_Data_Type.number = new Functional_Data_Type({
-        name: "number",
-        abbreviated_name: "n",
-        validate: (x) => {
-          return !isNaN(x);
-        },
-        parse_string(str) {
-          const p2 = parseFloat(str);
-          if (p2 + "" === str) {
-            const parsed_is_valid = this.validate(p2);
-            if (parsed_is_valid) {
-              return p2;
-            }
-          }
-        }
-      });
-      Functional_Data_Type.integer = new Functional_Data_Type({
-        name: "integer",
-        abbreviated_name: "int",
-        validate: (x) => {
-          return Number.isInteger(x);
-        },
-        parse_string(str) {
-          const p2 = parseInt(str);
-          if (p2 + "" === str) {
-            const parsed_is_valid = this.validate(p2);
-            if (parsed_is_valid) {
-              return p2;
-            }
-          }
-        }
-      });
-      var field = (...a) => {
-        const raise_change_events = true;
-        const ifn = (item2) => typeof item2 === "function";
-        let s = get_a_sig2(a);
-        if (s === "[a]") {
-          each(a[0], (item_params2) => {
-            prop.apply(exports, item_params2);
-          });
-        } else {
-          if (a.length > 1) {
-            if (is_array(a[0])) {
-              throw "stop - need to fix";
-              let objs = a.shift();
-              each(objs, (obj2) => {
-                field.apply(exports, [obj2].concat(item_params));
-              });
-            } else {
-              let obj2, prop_name2, data_type, default_value, fn_transform;
-              if (a.length === 2) {
-                [obj2, prop_name2] = a;
-              } else if (a.length === 3) {
-                if (a[2] instanceof Data_Type) {
-                  [obj2, prop_name2, data_type, default_value] = a;
-                } else {
-                  if (ifn(a[2])) {
-                    [obj2, prop_name2, fn_transform] = a;
-                  } else {
-                    [obj2, prop_name2, default_value] = a;
-                  }
-                }
-              } else if (a.length === 4) {
-                if (a[2] instanceof Data_Type) {
-                  [obj2, prop_name2, data_type, default_value] = a;
-                } else {
-                  [obj2, prop_name2, default_value, fn_transform] = a;
-                }
-              }
-              if (obj2 !== void 0) {
-                Object.defineProperty(obj2, prop_name2, {
-                  get() {
-                    if (is_defined(obj2._)) {
-                      return obj2._[prop_name2];
-                    } else {
-                      return void 0;
-                    }
-                  },
-                  set(value2) {
-                    let old = (obj2._ = obj2._ || {})[prop_name2];
-                    if (old !== value2) {
-                      let is_valid = true;
-                      if (data_type) {
-                        is_valid = data_type.validate(value2);
-                        if (typeof value2 === "string") {
-                          const parsed_value = data_type.parse_string(value2);
-                          is_valid = data_type.validate(parsed_value);
-                          if (is_valid) value2 = parsed_value;
-                        }
-                      }
-                      if (is_valid) {
-                        let _value;
-                        if (fn_transform) {
-                          _value = fn_transform(value2);
-                        } else {
-                          _value = value2;
-                        }
-                        obj2._[prop_name2] = _value;
-                        if (raise_change_events) {
-                          obj2.raise("change", {
-                            name: prop_name2,
-                            old,
-                            value: _value
-                          });
-                        }
-                      }
-                    }
-                  }
-                });
-                if (is_defined(default_value)) {
-                  let is_valid = true;
-                  if (data_type) {
-                    is_valid = data_type.validate(default_value);
-                  }
-                  if (is_valid) {
-                    (obj2._ = obj2._ || {})[prop_name2] = default_value;
-                  }
-                }
-              } else {
-                throw "stop";
-              }
-            }
-          }
-        }
-      };
-      var lang_mini_props = {
-        each,
-        is_array,
-        is_dom_node,
-        is_ctrl,
-        clone,
-        get_truth_map_from_arr,
-        tm: get_truth_map_from_arr,
-        get_arr_from_truth_map,
-        arr_trim_undefined,
-        get_map_from_arr,
-        arr_like_to_arr,
-        tof,
-        atof,
-        tf: tf2,
-        load_type,
-        is_defined,
-        def: is_defined,
-        Grammar,
-        stringify,
-        functional_polymorphism,
-        fp,
-        mfp,
-        arrayify,
-        mapify,
-        str_arr_mapify,
-        get_a_sig: get_a_sig2,
-        deep_sig,
-        get_item_sig,
-        set_vals,
-        truth,
-        trim_sig_brackets,
-        ll_set,
-        ll_get,
-        iterate_ancestor_classes,
-        is_arr_of_t,
-        is_arr_of_arrs,
-        is_arr_of_strs,
-        input_processors,
-        output_processors,
-        call_multiple_callback_functions,
-        call_multi,
-        multi: call_multi,
-        native_constructor_tof,
-        Fns,
-        sig_match,
-        remove_sig_from_arr_shell,
-        to_arr_strip_keys,
-        arr_objs_to_arr_keys_values_table,
-        set_arr_tree_value,
-        get_arr_tree_value,
-        deep_arr_iterate,
-        prom,
-        combinations,
-        combos: combinations,
-        Evented_Class,
-        eventify,
-        vectorify,
-        v_add,
-        v_subtract: v_subtract2,
-        v_multiply,
-        v_divide,
-        vector_magnitude,
-        distance_between_points,
-        get_typed_array,
-        gta: get_typed_array,
-        Publisher,
-        field,
-        prop,
-        Data_Type,
-        Functional_Data_Type
-      };
-      var lang_mini = new Evented_Class();
-      Object.assign(lang_mini, lang_mini_props);
-      lang_mini.note = (str_name, str_state, obj_properties) => {
-        obj_properties = obj_properties || {};
-        obj_properties.name = str_name;
-        obj_properties.state = str_state;
-        lang_mini.raise("note", obj_properties);
-      };
-      module.exports = lang_mini;
-      if (__require.main === module) {
-        let test_evented_class2 = function(test_data2) {
-          const res2 = create_empty_test_res();
-          const evented_class = new Evented_Class();
-          test_data2.forEach((test_event) => {
-            const event_name = test_event.event_name;
-            const event_data = test_event.event_data;
-            const listener = (data) => {
-              if (data === event_data) {
-                res2.passed.push(event_name);
-              } else {
-                res2.failed.push(event_name);
-              }
-            };
-            evented_class.on(event_name, listener);
-            evented_class.raise_event(event_name, event_data);
-          });
-          return res2;
-        };
-        test_evented_class = test_evented_class2;
-        const test_data = [
-          {
-            event_name: "foo",
-            event_data: "hello"
-          },
-          {
-            event_name: "bar",
-            event_data: "world"
-          },
-          {
-            event_name: "baz",
-            event_data: true
-          }
-        ];
-        const create_empty_test_res = () => ({
-          passed: [],
-          failed: []
-        });
-        const result = test_evented_class2(test_data);
-        console.log("Passed:", result.passed);
-        console.log("Failed:", result.failed);
-      }
-      var test_evented_class;
-    }
-  });
-
-  // node_modules/obext/node_modules/lang-mini/lib-lang-mini.js
-  var require_lib_lang_mini2 = __commonJS({
-    "node_modules/obext/node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
-      var lang = require_lang_mini2();
-      var { each, tof } = lang;
-      var Type_Signifier = class _Type_Signifier {
-        // Name
-        constructor(spec = {}) {
-          const name = spec.name;
-          Object.defineProperty(this, "name", {
-            get() {
-              return name;
-            }
-          });
-          const parent = spec.parent;
-          Object.defineProperty(this, "parent", {
-            get() {
-              return parent;
-            }
-          });
-          const map_reserved_property_names = {
-            name: true,
-            parent: true
-          };
-          const _ = {};
-          each(spec, (value2, name2) => {
-            if (map_reserved_property_names[name2]) {
-            } else {
-              _[name2] = value2;
-            }
-          });
-        }
-        extend(o_extension) {
-          const o = {
-            parent: this
-          };
-          Object.assign(o, o_extension);
-          const res2 = new _Type_Signifier(o_extension);
-          return res2;
-        }
-        //  Other options?
-        //  Disambiguiation? Descriptive text?
-        //    Or is naming them the main thing there?
-        // Color representation
-        //   And that is simple, does not go into internal representation.
-      };
-      var Type_Representation = class _Type_Representation {
-        // Name
-        //  Other options?
-        //  Disambiguiation? Descriptive text?
-        //    Or is naming them the main thing there?
-        // Color representation
-        //   And that is simple, does not go into internal representation.
-        // This should be able to represent types and lang features not available to JS.
-        //   Names may be optional? May be autogenerated and quite long?
-        constructor(spec = {}) {
-          const name = spec.name;
-          Object.defineProperty(this, "name", {
-            get() {
-              return name;
-            }
-          });
-          const parent = spec.parent;
-          Object.defineProperty(this, "parent", {
-            get() {
-              return parent;
-            }
-          });
-          const _ = {};
-          const map_reserved_property_names = {
-            "name": true
-          };
-          each(spec, (value2, name2) => {
-            if (map_reserved_property_names[name2]) {
-            } else {
-              _[name2] = value2;
-              Object.defineProperty(this, name2, {
-                get() {
-                  return _[name2];
-                },
-                enumerable: true
-              });
-            }
-          });
-        }
-        extend(o_extension) {
-          const o = {
-            parent: this
-          };
-          Object.assign(o, o_extension);
-          const res2 = new _Type_Representation(o_extension);
-          return res2;
-        }
-      };
-      var st_color = new Type_Signifier({ "name": "color" });
-      var st_24bit_color = st_color.extend({ "bits": 24 });
-      var st_24bit_rgb_color = st_24bit_color.extend({ "components": ["red byte", "green byte", "blue byte"] });
-      var tr_string = new Type_Representation({ "name": "string" });
-      var tr_binary = new Type_Representation({ "name": "binary" });
-      var rt_bin_24bit_rgb_color = new Type_Representation({
-        // A binary type representation.
-        "signifier": st_24bit_rgb_color,
-        "bytes": [
-          [0, "red", "ui8"],
-          [1, "green", "ui8"],
-          [2, "blue", "ui8"]
-        ]
-      });
-      var rt_hex_24bit_rgb_color = new Type_Representation({
-        // Likely some kind of string template.
-        //  Or a function?
-        //  Best to keep this function free here.
-        //  Or maybe make a few quite standard ones.
-        "signifier": st_24bit_rgb_color,
-        // Or could just have the sequence / template literal even.
-        "bytes": [
-          [0, "#", "char"],
-          [1, "hex(red)", "string(2)"],
-          [3, "hex(green)", "string(2)"],
-          [5, "hex(blue)", "string(2)"]
-        ]
-      });
-      var st_date = new Type_Signifier({ "name": "date", "components": ["day uint", "month uint", "year int"] });
-      var rt_string_date_uk_ddmmyy = new Type_Representation({
-        "signifier": st_date,
-        "bytes": [
-          [0, "#", "char"],
-          [1, "day", "string(2)"],
-          [3, "/", "char"],
-          [4, "month", "string(2)"],
-          [6, "/", "char"],
-          [7, "year", "string(2)"]
-        ]
-      });
-      lang.Type_Signifier = Type_Signifier;
-      lang.Type_Representation = Type_Representation;
-      module.exports = lang;
-    }
-  });
-
-  // node_modules/obext/oext.js
-  var require_oext = __commonJS({
-    "node_modules/obext/oext.js"(exports, module) {
-      var {
-        each,
-        get_a_sig: get_a_sig2,
-        def,
-        is_array,
-        tof,
-        tf: tf2
-      } = require_lib_lang_mini2();
-      var ifn = (item2) => typeof item2 === "function";
-      var ia2 = is_array;
-      var get_instance = function() {
-        const opts = {
-          raise_change_events: true
-        };
-        const states = (obj2, states2) => {
-        };
-        const get_set = (obj2, prop_name2, fn_get, fn_set) => {
-          const def2 = {
-            // Using shorthand method names (ES2015 feature).
-            // This is equivalent to:
-            // get: function() { return bValue; },
-            // set: function(newValue) { bValue = newValue; },
-            get: fn_get,
-            set: fn_set,
-            enumerable: true,
-            configurable: false
-          };
-          const t_prop_name = tf2(prop_name2);
-          if (t_prop_name === "a") {
-            each(prop_name2, (name) => Object.defineProperty(obj2, name, def2));
-          } else if (t_prop_name === "s") {
-            Object.defineProperty(obj2, prop_name2, def2);
-          } else {
-            console.trace();
-            throw "Unexpected prop_name, must be array or string";
-          }
-        };
-        const read_only = (obj2, prop_name2, fn_get) => {
-          Object.defineProperty(obj2, prop_name2, {
-            enumerable: true,
-            get: fn_get
-          });
-        };
-        const prop = (...a) => {
-          let s = get_a_sig2(a);
-          if (s === "[a]") {
-            each(a[0], (item_params2) => {
-              prop.apply(this, item_params2);
-            });
-          } else {
-            if (a.length === 2) {
-              if (ia2(a[1])) {
-                const target = a[0];
-                each(a[1], (item2) => {
-                  if (ia2(item2)) {
-                    throw "NYI 468732";
-                  } else {
-                    prop(target, item2);
-                  }
-                });
-              } else {
-                const ta1 = tof(a[1]);
-                if (ta1 === "string") {
-                  [obj, prop_name] = a;
-                } else {
-                  throw "NYI 468732b";
-                }
-              }
-            } else if (a.length > 2) {
-              if (ia2(a[0])) {
-                throw "stop";
-                let objs = a.shift();
-                each(objs, (obj2) => {
-                  prop.apply(this, [obj2].concat(item_params));
-                });
-              } else {
-                let obj2, prop_name2, default_value, fn_onchange, fn_transform, fn_on_ready, options;
-                const load_options = (options2) => {
-                  prop_name2 = prop_name2 || options2.name || options2.prop_name;
-                  fn_onchange = options2.fn_onchange || options2.onchange || options2.change;
-                  fn_transform = options2.fn_transform || options2.ontransform || options2.transform;
-                  fn_on_ready = options2.ready || options2.on_ready;
-                  default_value = default_value || options2.default_value || options2.default;
-                };
-                if (a.length === 2) {
-                  [obj2, options] = a;
-                  load_options(options);
-                } else if (a.length === 3) {
-                  if (ifn(a[2])) {
-                    [obj2, prop_name2, fn_onchange] = a;
-                  } else {
-                    if (a[2] !== void 0 && (a[2].change || a[2].ready)) {
-                      load_options(a[2]);
-                      [obj2, prop_name2] = a;
-                    } else {
-                      [obj2, prop_name2, default_value] = a;
-                    }
-                  }
-                } else if (a.length === 4) {
-                  if (ifn(a[2]) && ifn(a[3])) {
-                    [obj2, prop_name2, fn_transform, fn_onchange] = a;
-                  } else if (ifn(a[3])) {
-                    [obj2, prop_name2, default_value, fn_onchange] = a;
-                  } else {
-                    [obj2, prop_name2, default_value, options] = a;
-                    load_options(options);
-                  }
-                } else if (a.length === 5) {
-                  [obj2, prop_name2, default_value, fn_transform, fn_onchange] = a;
-                }
-                let _prop_value;
-                if (typeof default_value !== "undefined") _prop_value = default_value;
-                const _silent_set = (value2) => {
-                  let _value;
-                  if (fn_transform) {
-                    _value = fn_transform(value2);
-                  } else {
-                    _value = value2;
-                  }
-                  _prop_value = _value;
-                };
-                const _set = (value2) => {
-                  let _value;
-                  if (fn_transform) {
-                    _value = fn_transform(value2);
-                  } else {
-                    _value = value2;
-                  }
-                  let old = _prop_value;
-                  _prop_value = _value;
-                  if (fn_onchange) {
-                    fn_onchange({
-                      old,
-                      value: _prop_value
-                    });
-                  }
-                  if (obj2.raise && opts.raise_change_events) {
-                    obj2.raise("change", {
-                      name: prop_name2,
-                      old,
-                      value: _prop_value
-                    });
-                  }
-                };
-                if (def(default_value)) {
-                  _prop_value = default_value;
-                }
-                const t_prop_name = tf2(prop_name2);
-                if (t_prop_name === "s") {
-                  Object.defineProperty(obj2, prop_name2, {
-                    get() {
-                      return _prop_value;
-                    },
-                    set(value2) {
-                      _set(value2);
-                    }
-                  });
-                } else if (t_prop_name === "a") {
-                  const l2 = prop_name2.length;
-                  let item_prop_name;
-                  for (let c2 = 0; c2 < l2; c2++) {
-                    item_prop_name = prop_name2[c2];
-                    Object.defineProperty(obj2, item_prop_name, {
-                      get() {
-                        return _prop_value;
-                      },
-                      set(value2) {
-                        _set(value2);
-                      }
-                    });
-                  }
-                } else {
-                  throw "Unexpected name type: " + t_prop_name;
-                }
-                if (fn_on_ready) {
-                  fn_on_ready({
-                    silent_set: _silent_set
-                  });
-                }
-              }
-            }
-          }
-        };
-        const field = (...a) => {
-          let s = get_a_sig2(a);
-          if (s === "[a]") {
-            each(a[0], (item_params2) => {
-              prop.apply(this, item_params2);
-            });
-          } else {
-            if (a.length > 1) {
-              if (ia2(a[0])) {
-                let objs = a.shift();
-                each(objs, (obj2) => {
-                  prop.apply(this, [obj2].concat(item_params));
-                });
-              } else {
-                let obj2, prop_name2, default_value, fn_transform;
-                let raise_change_events = opts.raise_change_events;
-                if (a.length === 2) {
-                  [obj2, prop_name2] = a;
-                } else if (a.length === 3) {
-                  if (ifn(a[2])) {
-                    [obj2, prop_name2, fn_transform] = a;
-                  } else {
-                    [obj2, prop_name2, default_value] = a;
-                  }
-                } else if (a.length === 4) {
-                  [obj2, prop_name2, default_value, fn_transform] = a;
-                }
-                if (obj2 !== void 0) {
-                  Object.defineProperty(obj2, prop_name2, {
-                    get() {
-                      if (def(obj2._)) {
-                        return obj2._[prop_name2];
-                      } else {
-                        return void 0;
-                      }
-                    },
-                    set(value2) {
-                      let old = (obj2._ = obj2._ || {})[prop_name2];
-                      let _value;
-                      if (fn_transform) {
-                        _value = fn_transform(value2);
-                      } else {
-                        _value = value2;
-                      }
-                      obj2._[prop_name2] = _value;
-                      if (raise_change_events) {
-                        obj2.raise("change", {
-                          name: prop_name2,
-                          old,
-                          value: _value
-                        });
-                      }
-                    }
-                  });
-                  if (def(default_value)) {
-                    (obj2._ = obj2._ || {})[prop_name2] = default_value;
-                  }
-                } else {
-                  throw "stop";
-                }
-              }
-            }
-          }
-        };
-        return {
-          opts,
-          // module level options
-          prop,
-          field,
-          read_only,
-          ro: read_only,
-          get_set,
-          gs: get_set
-        };
-      };
-      module.exports = get_instance();
-    }
-  });
-
-  // node_modules/jsgui3-html/html-core/control-core.js
-  var require_control_core = __commonJS({
-    "node_modules/jsgui3-html/html-core/control-core.js"(exports, module) {
-      var jsgui2 = require_lang();
-      var oext = require_oext();
-      var { Data_Model, Data_Object, Collection, tof, stringify, get_a_sig: get_a_sig2, each, Evented_Class } = jsgui2;
-      var Text_Node = require_text_node();
-      var {
-        prop,
-        field
-      } = require_oext();
-      var px_handler = (target, property, value2, receiver) => {
-        let res2;
-        var t_val = tof(value2);
-        if (t_val === "number") {
-          res2 = value2 + "px";
-        } else if (t_val === "string") {
-          var match = value2.match(/(\d*\.?\d*)(.*)/);
-          if (match.length === 2) {
-            res2 = value2 + "px";
-          } else {
-            res2 = value2;
-          }
-        }
-        return res2;
-      };
-      var style_input_handlers = {
-        "width": px_handler,
-        "height": px_handler,
-        "left": px_handler,
-        "top": px_handler
-      };
-      var new_obj_style = () => {
-        let style = new Evented_Class({});
-        style.__empty = true;
-        style.toString = () => {
-          var res3 = [];
-          var first = true;
-          each(style, (value2, key2) => {
-            const tval = typeof value2;
-            if (tval !== "function" && key2 !== "toString" && key2 !== "__empty" && key2 !== "_bound_events" && key2 !== "on" && key2 !== "subscribe" && key2 !== "raise" && key2 !== "trigger") {
-              if (first) {
-                first = false;
-              } else {
-                res3.push(" ");
-              }
-              res3.push(key2 + ": " + value2 + ";");
-            }
-          });
-          return res3.join("");
-        };
-        const res2 = new Proxy(style, {
-          set: (target, property, value2, receiver) => {
-            let res3;
-            target["__empty"] = false;
-            var old_value = target[property];
-            if (style_input_handlers[property]) {
-              res3 = target[property] = style_input_handlers[property](target, property, value2, receiver);
-            } else {
-              res3 = target[property] = value2;
-            }
-            style.raise("change", {
-              "key": property,
-              "name": property,
-              "old": old_value,
-              "new": value2,
-              "value": value2
-            });
-            return res3;
-          },
-          get: (target, property, receiver) => {
-            if (property === "toString") {
-              return () => target + "";
-            } else {
-              return target[property];
-            }
-          }
-        });
-        return res2;
-      };
-      var DOM_Attributes = class extends Evented_Class {
-        constructor(spec) {
-          super(spec);
-          this.style = new_obj_style();
-          this.style.on("change", (e_change) => {
-            this.raise("change", {
-              "property": "style",
-              "key": "style",
-              "name": "style",
-              "value": this.style.toString()
-            });
-          });
-        }
-      };
-      var Control_DOM = class extends Evented_Class {
-        constructor() {
-          super();
-          var dom_attributes = new DOM_Attributes();
-          var attrs = this.attrs = this.attributes = new Proxy(dom_attributes, {
-            "set": (target, property, value2, receiver) => {
-              if (property === "style") {
-                var t_value = tof(value2);
-                if (t_value === "string") {
-                  var s_values = value2.trim().split(";");
-                  var kv;
-                  each(s_values, (s_value) => {
-                    kv = s_value.split(":");
-                    if (kv.length === 2) {
-                      kv[0] = kv[0].trim();
-                      kv[1] = kv[1].trim();
-                      target.style[kv[0]] = kv[1];
-                    }
-                  });
-                  dom_attributes.raise("change", {
-                    "property": property
-                  });
-                }
-              } else {
-                var old_value = target[property];
-                target[property] = value2;
-                dom_attributes.raise("change", {
-                  "key": property,
-                  "name": property,
-                  "old": old_value,
-                  "new": value2,
-                  "value": value2
-                });
-              }
-              return true;
-            },
-            get: (target, property, receiver) => {
-              return target[property];
-            }
-          });
-        }
-      };
-      var Control_Background = class extends Evented_Class {
-        constructor(spec = {}) {
-          super(spec);
-          let _color, _opacity;
-          Object.defineProperty(this, "color", {
-            get() {
-              return _color;
-            },
-            set(value2) {
-              const old = _color;
-              _color = value2;
-              this.raise("change", {
-                "name": "color",
-                "old": old,
-                "new": _color,
-                "value": _color
-              });
-            },
-            enumerable: true,
-            configurable: true
-          });
-        }
-        set(val) {
-        }
-      };
-      var Control_Core = class _Control_Core extends Data_Object {
-        constructor(spec = {}, fields) {
-          spec.__type_name = spec.__type_name || "control";
-          super(spec, fields);
-          if (spec.id) {
-            this.__id = spec.id;
-          }
-          if (spec.__id) {
-            this.__id = spec.__id;
-          }
-          this.mapListeners = {};
-          this.__type = "control";
-          var spec_content;
-          let d = this.dom = new Control_DOM();
-          prop(this, "background", new Control_Background(), (e_change) => {
-            let {
-              value: value2
-            } = e_change;
-          });
-          this.background.on("change", (evt) => {
-            if (evt.name === "color") {
-              d.attributes.style["background-color"] = evt.value;
-            }
-          });
-          prop(this, "disabled", false);
-          prop(this, "size", spec.size, (e_change) => {
-            let {
-              value: value2,
-              old
-            } = e_change;
-            let [width, height2] = value2;
-            const s = this.dom.attrs.style;
-            s.width = width;
-            s.height = height2;
-            this.raise("resize", {
-              "value": value2
-            });
-          });
-          prop(this, "pos", void 0, (e_change) => {
-            let {
-              value: value2,
-              old
-            } = e_change;
-            if (value2.length === 2) {
-            }
-            let [left, top] = value2;
-            let o_style = {
-              "left": left,
-              "top": top
-            };
-            this.style(o_style);
-            this.raise("move", {
-              "value": value2
-            });
-          });
-          if (spec.pos) this.pos = spec.pos;
-          this.on("change", (e) => {
-            if (e.name === "disabled") {
-              if (e.value === true) {
-                this.add_class("disabled");
-              } else {
-                this.remove_class("disabled");
-              }
-            }
-          });
-          let tagName = spec.tagName || spec.tag_name || "div";
-          d.tagName = tagName;
-          var content = this.content = new Collection({});
-          spec_content = spec.content;
-          if (spec_content) {
-            var tsc = tof(spec_content);
-            if (tsc === "array") {
-              each(spec.content, (item2) => {
-                content.add(item2);
-              });
-            } else if (tsc === "string" || tsc === "control") {
-              content.add(spec_content);
-            }
-          }
-          if (spec.el) {
-            d.el = spec.el;
-            if (spec.el.tagName) d.tagName = spec.el.tagName.toLowerCase();
-          }
-          var context2 = this.context || spec.context;
-          if (context2) {
-            if (context2.register_control) context2.register_control(this);
-          } else {
-          }
-          if (spec["class"]) {
-            this.add_class(spec["class"]);
-          }
-          if (spec["css_class"]) {
-            this.add_class(spec["css_class"]);
-          }
-          if (spec["cssClass"]) {
-            this.add_class(spec["cssClass"]);
-          }
-          if (spec.hide) {
-            this.hide();
-          }
-          if (spec.add) {
-            this.add(spec.add);
-          }
-          if (spec.attrs) {
-            this.dom.attributes = spec.attrs;
-          }
-        }
-        get left() {
-          const sl = this.dom.attributes.style.left;
-          if (sl) {
-            return parseInt(sl) + this.ta[6];
-          }
-        }
-        get top() {
-          const st = this.dom.attributes.style.top;
-          if (st) {
-            return parseInt(st) + this.ta[7];
-          }
-        }
-        set top(value2) {
-          if (typeof value2 === "number") {
-            const measured_current_top = this.top;
-            const diff = Math.round(value2 - measured_current_top);
-            this.ta[7] += diff;
-          }
-        }
-        "hide"() {
-          let e = {
-            cancelDefault: false
-          };
-          this.raise("hide", e);
-          if (!e.cancelDefault) {
-            this.add_class("hidden");
-          }
-        }
-        "show"() {
-          let e = {
-            cancelDefault: false
-          };
-          this.raise("show", e);
-          if (!e.cancelDefault) {
-            this.remove_class("hidden");
-          }
-        }
-        get html() {
-          return this.all_html_render();
-        }
-        get internal_relative_div() {
-          return this._internal_relative_div || false;
-        }
-        set internal_relative_div(value2) {
-          var old_value = this._internal_relative_div;
-          this._internal_relative_div = value2;
-          if (value2 === true) {
-          }
-        }
-        get color() {
-          return this.background.color;
-        }
-        set color(value2) {
-          this.background.color = value2;
-        }
-        "post_init"(spec) {
-          if (spec && spec.id === true) {
-            this.dom.attrs.id = this._id();
-          }
-        }
-        "has"(item_name) {
-          var arr = item_name.split(".");
-          var c2 = 0, l2 = arr.length;
-          var i = this;
-          var s;
-          while (c2 < l2) {
-            s = arr[c2];
-            if (typeof i[s] == "undefined") {
-              return false;
-            }
-            i = i[s];
-            c2++;
-          }
-          ;
-          return i;
-        }
-        "renderDomAttributes"() {
-          var _a, _b, _c, _d;
-          if (this.beforeRenderDomAttributes) {
-            this.beforeRenderDomAttributes();
-          }
-          var dom_attrs = this.dom.attributes;
-          if (!dom_attrs) {
-            throw "expecting dom_attrs";
-          } else {
-            if (this._) {
-              var keys = Object.keys(this._);
-              var key2;
-              for (var c2 = 0, l2 = keys.length; c2 < l2; c2++) {
-                key2 = keys[c2];
-                if (key2 !== "_bound_events") {
-                  if (key2 instanceof _Control_Core) {
-                    (this._ctrl_fields = this._ctrl_fields || {})[key2] = this._[key2];
-                  } else {
-                    this._fields = this._fields || {};
-                    this._fields[key2] = this._[key2];
-                  }
-                }
-              }
-            }
-            if (this._ctrl_fields) {
-              var obj_ctrl_fields = {};
-              var keys = Object.keys(this._ctrl_fields);
-              var key2;
-              for (var c2 = 0, l2 = keys.length; c2 < l2; c2++) {
-                key2 = keys[c2];
-                if (key2 !== "_bound_events") {
-                  obj_ctrl_fields[key2] = this._ctrl_fields[key2]._id();
-                }
-              }
-              let scf = stringify(obj_ctrl_fields).replace(/"/g, "'");
-              if (scf.length > 2) {
-                dom_attrs["data-jsgui-ctrl-fields"] = scf;
-              }
-            }
-            if (this._fields) {
-              let sf = stringify(this._fields).replace(/"/g, "'");
-              if (sf.length > 2) {
-                dom_attrs["data-jsgui-fields"] = sf;
-              }
-            }
-            if (this.view.data.model.mixins) {
-              let smxs = "[";
-              let first = true;
-              (_d = (_c = (_b = (_a = this.view) == null ? void 0 : _a.data) == null ? void 0 : _b.model) == null ? void 0 : _c.mixins) == null ? void 0 : _d.each((mx) => {
-                if (!first) {
-                  smxs += ",";
-                } else {
-                  first = false;
-                }
-                const smx = JSON.stringify(mx);
-                smxs += smx;
-              });
-              smxs += "]";
-              smxs = smxs.replace(/"/g, "'");
-              if (smxs.length > 2) {
-                dom_attrs["data-jsgui-mixins"] = smxs;
-              }
-            }
-            const arr = [];
-            const id = this._id();
-            if (id !== void 0) {
-              arr.push(' data-jsgui-id="' + this._id() + '"');
-            }
-            if (this.data && this.data._model instanceof Data_Model) {
-              const dmid = this.data._model.__id;
-              if (dmid) {
-                arr.push(' data-jsgui-data-model-id="' + dmid + '"');
-              }
-            }
-            const exempt_types = {
-              html: true,
-              head: true,
-              body: true
-            };
-            if (this.context && this.__type_name) {
-              if (!exempt_types[this.__type_name] && this.__type_name !== void 0) {
-                arr.push(' data-jsgui-type="' + this.__type_name + '"');
-              }
-            }
-            var dom_attrs_keys = Object.keys(dom_attrs);
-            var key2, item2;
-            for (var c2 = 0, l2 = dom_attrs_keys.length; c2 < l2; c2++) {
-              key2 = dom_attrs_keys[c2];
-              if (key2 == "_bound_events") {
-              } else if (key2 === "style") {
-                item2 = dom_attrs[key2];
-                if (typeof item2 !== "function") {
-                  if (typeof item2 === "object") {
-                    if (key2 === "style") {
-                      const sprops = [];
-                      each(item2, (v, k) => {
-                        const tval = typeof v;
-                        if (tval !== "function") {
-                          if (k !== "__empty") {
-                            const sprop = k + ":" + v;
-                            sprops.push(sprop);
-                          }
-                        }
-                      });
-                      if (sprops.length > 0) arr.push(" ", key2, '="', sprops.join(";"), '"');
-                    } else {
-                      console.trace();
-                      throw "NYI";
-                    }
-                  } else {
-                    let is = item2.toString();
-                    if (!item2.__empty && is.length > 0) {
-                      arr.push(" ", key2, '="', is, '"');
-                    }
-                  }
-                }
-              } else {
-                item2 = dom_attrs[key2];
-                if (item2 && item2.toString) {
-                  arr.push(" ", key2, '="', item2.toString(), '"');
-                }
-              }
-            }
-            return arr.join("");
-          }
-        }
-        "renderBeginTagToHtml"() {
-          const tagName = this.dom.tagName;
-          var res2;
-          if (tagName === false) {
-            res2 = "";
-          } else {
-            res2 = ["<", tagName, this.renderDomAttributes(), ">"].join("");
-          }
-          return res2;
-        }
-        "renderEndTagToHtml"() {
-          var res2;
-          const tagName = this.dom.tagName;
-          const noClosingTag = this.dom.noClosingTag;
-          if (tagName === false || noClosingTag) {
-            res2 = "";
-          } else {
-            res2 = ["</", tagName, ">"].join("");
-          }
-          return res2;
-        }
-        "renderHtmlAppendment"() {
-          return this.htmlAppendment || "";
-        }
-        "renderEmptyNodeJqo"() {
-          return [this.renderBeginTagToHtml(), this.renderEndTagToHtml(), this.renderHtmlAppendment()].join("");
-        }
-        "register_this_and_subcontrols"() {
-          const context2 = this.context;
-          this.iterate_this_and_subcontrols((ctrl2) => {
-            context2.register_control(ctrl2);
-          });
-        }
-        "iterate_subcontrols"(ctrl_callback) {
-          const content = this.content;
-          content.each((v) => {
-            ctrl_callback(v);
-            if (v && v.iterate_subcontrols) {
-              v.iterate_subcontrols(ctrl_callback);
-            }
-          });
-        }
-        "iterate_this_and_subcontrols"(ctrl_callback) {
-          ctrl_callback(this);
-          const content = this.content;
-          let tv;
-          if (typeof content !== "string") {
-            content.each((v) => {
-              tv = tof(v);
-              if (tv == "string") {
-              } else if (tv == "data_value") {
-              } else {
-                if (v && v.iterate_this_and_subcontrols) {
-                  v.iterate_this_and_subcontrols(ctrl_callback);
-                }
-              }
-            });
-          }
-        }
-        "all_html_render"(callback2) {
-          if (callback2) {
-            var arr_waiting_controls = [];
-            this.iterate_this_and_subcontrols((control) => {
-              if (control.__status == "waiting") arr_waiting_controls.push(control);
-            });
-            if (arr_waiting_controls.length == 0) {
-              callback2(null, this.all_html_render());
-            } else {
-              var c2 = arr_waiting_controls.length;
-              var complete = () => {
-                this.pre_all_html_render();
-                var dom2 = this.dom;
-                if (dom2) {
-                  callback2(null, [this.renderBeginTagToHtml(), this.all_html_render_internal_controls(), this.renderEndTagToHtml(), this.renderHtmlAppendment()].join(""));
-                }
-              };
-              each(arr_waiting_controls, (control, i) => {
-                control.on("ready", (e_ready) => {
-                  c2--;
-                  if (c2 == 0) {
-                    complete();
-                  }
-                });
-              });
-            }
-          } else {
-            this.pre_all_html_render();
-            var dom = this.dom;
-            if (dom) {
-              return [this.renderBeginTagToHtml(), this.all_html_render_internal_controls(), this.renderEndTagToHtml(), this.renderHtmlAppendment()].join("");
-            }
-          }
-        }
-        "render_content"() {
-          var content = this.content;
-          if (tof(content) === "string") {
-            return content;
-          } else {
-            var contentLength = content.length();
-            var res2 = new Array(contentLength);
-            var tn, output;
-            var arr = content._arr;
-            var c2, l2 = arr.length, n;
-            for (c2 = 0; c2 < l2; c2++) {
-              n = arr[c2];
-              tn = tof(n);
-              if (tn === "string") {
-                res2.push(jsgui2.output_processors["string"](n));
-              } else if (tn === "data_value") {
-                res2.push(n._);
-              } else {
-                if (tn === "data_object") {
-                  throw "stop";
-                } else {
-                  res2.push(n.all_html_render());
-                }
-              }
-            }
-            return res2.join("");
-          }
-        }
-        "all_html_render_internal_controls"() {
-          return this.render_content();
-        }
-        "render"() {
-          return this.all_html_render();
-        }
-        "pre_all_html_render"() {
-          if (typeof document === "undefined") {
-            this.raise("server-pre-render");
-          }
-        }
-        "compose"() {
-        }
-        "visible"(callback2) {
-          this.style("display", "block", callback2);
-        }
-        "transparent"(callback2) {
-          this.style("opacity", 0, callback2);
-        }
-        "opaque"(callback2) {
-          return this.style({
-            "opacity": 1
-          }, callback2);
-        }
-        "remove"() {
-          return this.parent.content.remove(this);
-        }
-        "add"(new_content) {
-          const tnc = tof(new_content);
-          let res2;
-          if (tnc === "array") {
-            let res3 = [];
-            each(new_content, (v) => {
-              res3.push(this.add(v));
-            });
-          } else {
-            if (new_content) {
-              if (tnc === "string") {
-                new_content = new Text_Node({
-                  "text": new_content,
-                  "context": this.context
-                });
-              } else {
-                if (!new_content.context) {
-                  if (this.context) {
-                    new_content.context = this.context;
-                  }
-                }
-              }
-              var inner_control = this.inner_control;
-              if (inner_control) {
-                res2 = inner_control.content.add(new_content);
-              } else {
-                res2 = this.content.add(new_content);
-              }
-              new_content.parent = this;
-            }
-          }
-          return res2;
-        }
-        "insert_before"(target) {
-          const target_parent = target.parent;
-          const target_index = target._index;
-          const content = target_parent.content;
-          content.insert(this, target_index);
-        }
-        "style"() {
-          const a = arguments, sig = get_a_sig2(a, 1), d = this.dom, da = d.attrs;
-          a.l = a.length;
-          let style_name, style_value, modify_dom = true;
-          if (sig == "[s]") {
-            style_name = a[0];
-            const res2 = getComputedStyle(d.el)[style_name];
-            return res2;
-          } else if (sig == "[s,s,b]") {
-            [style_name, style_value, modify_dom] = a;
-          } else if (sig == "[s,s]" || sig == "[s,n]") {
-            [style_name, style_value] = a;
-          }
-          ;
-          if (style_name && typeof style_value !== "undefined") {
-            if (da.style) {
-              da.style[style_name] = style_value;
-              da.raise("change", {
-                "property": "style",
-                "name": "style",
-                "value": da.style + ""
-              });
-            } else {
-            }
-          }
-          if (sig == "[o]") {
-            each(a[0], (v, i) => {
-              this.style(i, v);
-            });
-          }
-        }
-        "active"() {
-        }
-        "find_selection_scope"() {
-          var res2 = this.selection_scope;
-          if (res2) return res2;
-          if (this.parent && this.parent.find_selection_scope) return this.parent.find_selection_scope();
-        }
-        "click"(handler) {
-          this.on("click", handler);
-        }
-        "add_class"(class_name) {
-          let da = this.dom.attrs, cls = da["class"];
-          if (!cls) {
-            da["class"] = class_name;
-          } else {
-            const tCls = tof(cls);
-            if (tCls == "object") {
-              throw "removed";
-            } else if (tCls == "string") {
-              let arr_classes = cls.split(" "), already_has_class = false, l2 = arr_classes.length, c2 = 0;
-              while (c2 < l2 && !already_has_class) {
-                if (arr_classes[c2] === class_name) {
-                  already_has_class = true;
-                }
-                c2++;
-              }
-              if (!already_has_class) {
-                arr_classes.push(class_name);
-              }
-              da["class"] = arr_classes.join(" ");
-            }
-          }
-        }
-        "has_class"(class_name) {
-          let da = this.dom.attrs, cls = da["class"];
-          if (cls) {
-            var tCls = tof(cls);
-            if (tCls == "object") {
-              throw "removed";
-            }
-            if (tCls == "string") {
-              var arr_classes = cls.split(" ");
-              var arr_res = [];
-              var l2 = arr_classes.length, c2 = 0;
-              while (c2 < l2) {
-                if (arr_classes[c2] === class_name) {
-                  return true;
-                }
-                c2++;
-              }
-            }
-          }
-        }
-        "remove_class"(class_name) {
-          let da = this.dom.attrs, cls = da["class"];
-          if (cls) {
-            var tCls = tof(cls);
-            if (tCls == "object") {
-              throw "removed";
-            }
-            if (tCls == "string") {
-              var arr_classes = cls.split(" ");
-              var arr_res = [];
-              var l2 = arr_classes.length, c2 = 0;
-              while (c2 < l2) {
-                if (arr_classes[c2] != class_name) {
-                  arr_res.push(arr_classes[c2]);
-                }
-                c2++;
-              }
-              da["class"] = arr_res.join(" ");
-            }
-          }
-        }
-        "is_ancestor_of"(target) {
-          var t_target = tof(target);
-          var el = this.dom.el;
-          var inner = (target2) => {
-            if (target2 == el) {
-              return true;
-            }
-            var parent2 = target2.parentNode;
-            if (!parent2) {
-              return false;
-            } else {
-              return inner(parent2);
-            }
-          };
-          if (t_target === "object") {
-            if (el !== target) {
-              var parent = target.parentNode;
-              if (parent) {
-                return inner(parent);
-              }
-            }
-          } else {
-            if (t_target === "control") {
-            }
-          }
-        }
-        "find_selected_ancestor_in_scope"() {
-          var s = this.selection_scope;
-          var ps = this.parent.selection_scope;
-          if (s === ps) {
-            var psel = this.parent.selected;
-            if (psel && psel.value && psel.value() == true) {
-              return this.parent;
-            } else {
-              return this.parent.find_selected_ancestor_in_scope();
-            }
-          }
-        }
-        "closest"(match) {
-          let tmatch = tof(match);
-          if (tmatch === "string") {
-          }
-          if (tmatch === "function") {
-            let search = (ctrl2) => {
-              if (match(ctrl2)) {
-                return ctrl2;
-              } else {
-                if (ctrl2.parent) {
-                  return search(ctrl2.parent);
-                } else {
-                  return void 0;
-                }
-              }
-            };
-            return search(this);
-          }
-        }
-        "shallow_copy"() {
-          var res2 = new Control({
-            "context": this.context
-          });
-          var da = this.dom.attributes;
-          var cl = da.class;
-          var map_class_exclude = {
-            "selected": true
-          };
-          each(cl.split(" "), (v, i) => {
-            if (i && !map_class_exclude[i]) res2.add_class(i);
-          });
-          var res_content = res2.content;
-          this.content.each((v, i) => {
-            if (tof(v) == "data_value") {
-              res_content.add(v.value());
-            } else {
-              res_content.add(v.shallow_copy());
-            }
-          });
-          return res2;
-        }
-        "matches_selector"(selector) {
-          throw "NYI";
-        }
-        "find"(selector) {
-          const res2 = [];
-          const desc = (node, callback2) => {
-            if (node.$match(selector)) {
-              callback2(node);
-            }
-            node.content.each((child) => {
-              desc(child, callback2);
-            });
-          };
-          desc(this, ((node) => res2.push(node)));
-          return res2;
-        }
-        "$match"(selector) {
-          if (typeof selector === "function") {
-            return selector(this);
-          } else {
-            let parse_word = (word) => {
-              if (word[0] === ".") {
-                return () => this.has_class(word.substr(1));
-              } else {
-                return () => this.__type_name === word;
-              }
-            };
-            let parse_selector = (selector2) => {
-              let words = selector2.split(" ");
-              let res3 = words.map((x) => parse_word(x));
-              return res3;
-            };
-            let parsed = parse_selector(selector);
-            if (parsed.length === 1) {
-              return parsed[0]();
-            } else {
-              console.trace();
-              throw "NYI";
-            }
-          }
-          let res2 = false;
-          let tn = this.__type_name;
-          if (tn) {
-            if (tn === selector) res2 = true;
-          }
-          return res2;
-        }
-        "$"(selector, handler) {
-          let match = this.$match(selector);
-          let res2 = [];
-          if (match) {
-            if (handler) handler(this);
-            res2.push(this);
-          }
-          this.content.each((item2) => {
-            if (item2.$) {
-              let nested_res = item2.$(selector, handler);
-              Array.prototype.push.apply(res2, nested_res);
-            }
-          });
-          return res2;
-        }
-        "clear"() {
-          this.content.clear();
-        }
-        "activate"() {
-        }
-        get this_and_descendents() {
-          const res2 = [];
-          this.iterate_this_and_subcontrols((ctrl2) => res2.push(ctrl2));
-          return res2;
-        }
-        get descendents() {
-          const res2 = [];
-          this.iterate_subcontrols((ctrl2) => res2.push(ctrl2));
-          return res2;
-        }
-        get siblings() {
-          const res2 = [];
-          if (this.parent) {
-            const _ = this.parent.content._arr;
-            _.forEach((x) => {
-              if (x !== this) res2.push(x);
-            });
-          }
-          return res2;
-        }
-      };
-      var p = Control_Core.prototype;
-      p.connect_fields = true;
-      var customInspectSymbol = Symbol.for("nodejs.util.inspect.custom");
-      if (jsgui2.custom_rendering === "very-simple") {
-        p[customInspectSymbol] = function(depth, inspectOptions, inspect) {
-          return "< " + this.dom.tagName + " " + this.__type_name + " >";
-        };
-      }
-      module.exports = Control_Core;
-      if (__require.main === module) {
-        let test_svg2 = function() {
-          const passed = [];
-          const failed = [];
-          let svg;
-          try {
-            svg = new Control2({
-              tagName: "svg"
-            });
-            passed.push("Create SVG control");
-          } catch (error2) {
-            failed.push("Create SVG control");
-          }
-          try {
-            const circle = new Control2({
-              tagName: "circle",
-              attrs: {
-                cx: 100,
-                cy: 100,
-                r: 50
-              }
-            });
-            svg.add(circle);
-            passed.push("Add circle to SVG control");
-          } catch (error2) {
-            console.log("error", error2);
-            failed.push("Add circle to SVG control");
-          }
-          try {
-            const rect = new Control2({
-              tagName: "rect",
-              attrs: {
-                x: 150,
-                y: 150,
-                width: 100,
-                height: 100
-              }
-            });
-            svg.add(rect);
-            passed.push("Add rectangle to SVG control");
-          } catch (error2) {
-            console.log("error", error2);
-            failed.push("Add rectangle to SVG control");
-          }
-          try {
-            const expected = '<svg><circle cx="100" cy="100" r="50"></circle><rect x="150" y="150" width="100" height="100"></rect></svg>';
-            const actual = svg.all_html_render();
-            console.log("actual", actual);
-            if (expected === actual) {
-              passed.push("Check rendering of SVG control");
-            } else {
-              failed.push("Check rendering of SVG control");
-            }
-          } catch (error2) {
-            console.log("error", error2);
-            failed.push("Check rendering of SVG control");
-          }
-          return {
-            passed,
-            failed
-          };
-        };
-        test_svg = test_svg2;
-        const Control2 = Control_Core;
-        console.log(test_svg2());
-        const test_background_color = () => {
-          const expectedColor = "#ff0000";
-          const passed = [];
-          const failed = [];
-          let div;
-          try {
-            div = new Control2({
-              tagName: "div"
-            });
-            passed.push("Create div control");
-          } catch (error2) {
-            failed.push(["Create div control", error2]);
-          }
-          try {
-            div.background.color = expectedColor;
-            passed.push("Set background color of div control");
-          } catch (error2) {
-            failed.push(["Set background color of div control", error2]);
-          }
-          try {
-            const validationColor = div.background.color;
-            if (validationColor === expectedColor) {
-              passed.push("Validate background color of div control");
-            } else {
-              failed.push(["Validate background color of div control", "Background color is not as expected"]);
-            }
-          } catch (error2) {
-            failed.push(["Validate background color of div control", error2]);
-          }
-          try {
-            const expected = `<div style="background-color:${expectedColor}"></div>`;
-            const actual = div.all_html_render();
-            if (expected === actual) {
-              passed.push("Check rendering of div control");
-            } else {
-              failed.push(["Check rendering of div control", "Rendering does not match expected output", {
-                expected,
-                actual
-              }]);
-            }
-          } catch (error2) {
-            failed.push(["Check rendering of div control", error2]);
-          }
-          return {
-            passed,
-            failed
-          };
-        };
-        const rtest = test_background_color();
-        console.log(rtest);
-        console.log(rtest.failed);
-      }
-      var test_svg;
-    }
-  });
-
-  // node_modules/jsgui3-gfx-core/core/shapes/Shape.js
-  var require_Shape = __commonJS({
-    "node_modules/jsgui3-gfx-core/core/shapes/Shape.js"(exports, module) {
-      var Shape = class {
-      };
-      module.exports = Shape;
-    }
-  });
-
-  // node_modules/jsgui3-gfx-core/node_modules/lang-mini/lang-mini.js
-  var require_lang_mini3 = __commonJS({
-    "node_modules/jsgui3-gfx-core/node_modules/lang-mini/lang-mini.js"(exports, module) {
+    "node_modules/lang-mini/lang-mini.js"(exports, module) {
       var running_in_browser = typeof window !== "undefined";
       var running_in_node = !running_in_browser;
       var Readable_Stream;
@@ -12005,7 +8265,9 @@
             return res2;
           } else {
             let name, res2 = {};
-            for (name in collection) {
+            const keys = Object.keys(collection);
+            for (let i = 0; i < keys.length; i++) {
+              name = keys[i];
               if (ctu === false) break;
               if (context2) {
                 res2[name] = fn.call(context2, collection[name], name, stop);
@@ -12314,7 +8576,7 @@
           }
         }
       };
-      var get_a_sig2 = (a) => {
+      var get_a_sig = (a) => {
         let c2 = 0, l2 = a.length;
         let res2 = "[";
         let first = true;
@@ -12539,7 +8801,7 @@
       };
       var mfp = function() {
         const a1 = arguments;
-        const sig1 = get_a_sig2(a1);
+        const sig1 = get_a_sig(a1);
         let options = {};
         let fn_pre, provided_map_sig_fns, inner_map_sig_fns = {}, inner_map_parsed_sigs = {}, arr_sig_parsed_sig_fns = [], fn_post;
         let tm_sig_fns;
@@ -13719,7 +9981,7 @@
           });
         }
         "raise_event"() {
-          let a = Array.prototype.slice.call(arguments), sig = get_a_sig2(a);
+          let a = Array.prototype.slice.call(arguments), sig = get_a_sig(a);
           a.l = a.length;
           let target = this;
           let c2, l2, res2;
@@ -13839,7 +10101,7 @@
           const {
             event_events
           } = this;
-          let a = Array.prototype.slice.call(arguments), sig = get_a_sig2(a);
+          let a = Array.prototype.slice.call(arguments), sig = get_a_sig(a);
           if (sig === "[f]") {
             this._bound_general_handler = this._bound_general_handler || [];
             if (is_array(this._bound_general_handler)) {
@@ -14001,7 +10263,7 @@
         }
       };
       var prop = (...a) => {
-        let s = get_a_sig2(a);
+        let s = get_a_sig(a);
         const raise_change_events = true;
         const ifn = (item2) => typeof item2 === "function";
         if (s === "[a]") {
@@ -14197,7 +10459,3816 @@
       var field = (...a) => {
         const raise_change_events = true;
         const ifn = (item2) => typeof item2 === "function";
-        let s = get_a_sig2(a);
+        let s = get_a_sig(a);
+        if (s === "[a]") {
+          each(a[0], (item_params2) => {
+            prop.apply(exports, item_params2);
+          });
+        } else {
+          if (a.length > 1) {
+            if (is_array(a[0])) {
+              throw "stop - need to fix";
+              let objs = a.shift();
+              each(objs, (obj2) => {
+                field.apply(exports, [obj2].concat(item_params));
+              });
+            } else {
+              let obj2, prop_name2, data_type, default_value, fn_transform;
+              if (a.length === 2) {
+                [obj2, prop_name2] = a;
+              } else if (a.length === 3) {
+                if (a[2] instanceof Data_Type) {
+                  [obj2, prop_name2, data_type, default_value] = a;
+                } else {
+                  if (ifn(a[2])) {
+                    [obj2, prop_name2, fn_transform] = a;
+                  } else {
+                    [obj2, prop_name2, default_value] = a;
+                  }
+                }
+              } else if (a.length === 4) {
+                if (a[2] instanceof Data_Type) {
+                  [obj2, prop_name2, data_type, default_value] = a;
+                } else {
+                  [obj2, prop_name2, default_value, fn_transform] = a;
+                }
+              }
+              if (obj2 !== void 0) {
+                Object.defineProperty(obj2, prop_name2, {
+                  get() {
+                    if (is_defined(obj2._)) {
+                      return obj2._[prop_name2];
+                    } else {
+                      return void 0;
+                    }
+                  },
+                  set(value2) {
+                    let old = (obj2._ = obj2._ || {})[prop_name2];
+                    if (old !== value2) {
+                      let is_valid = true;
+                      if (data_type) {
+                        const t_value = typeof value2;
+                        is_valid = data_type.validate(value2);
+                        if (t_value === "string") {
+                          const parsed_value = data_type.parse_string(value2);
+                          is_valid = data_type.validate(parsed_value);
+                          if (is_valid) value2 = parsed_value;
+                        }
+                        console.log("t_value", t_value);
+                      }
+                      if (is_valid) {
+                        let _value;
+                        if (fn_transform) {
+                          _value = fn_transform(value2);
+                        } else {
+                          _value = value2;
+                        }
+                        obj2._[prop_name2] = _value;
+                        if (raise_change_events) {
+                          obj2.raise("change", {
+                            name: prop_name2,
+                            old,
+                            value: _value
+                          });
+                        }
+                      }
+                    } else {
+                    }
+                  }
+                });
+                if (is_defined(default_value)) {
+                  let is_valid = true;
+                  if (data_type) {
+                    is_valid = data_type.validate(default_value);
+                  }
+                  if (is_valid) {
+                    (obj2._ = obj2._ || {})[prop_name2] = default_value;
+                  }
+                }
+              } else {
+                throw "stop";
+              }
+            }
+          }
+        }
+      };
+      var lang_mini_props = {
+        each,
+        is_array,
+        is_dom_node,
+        is_ctrl,
+        clone,
+        get_truth_map_from_arr,
+        tm: get_truth_map_from_arr,
+        get_arr_from_truth_map,
+        arr_trim_undefined,
+        get_map_from_arr,
+        arr_like_to_arr,
+        tof,
+        atof,
+        tf: tf2,
+        load_type,
+        is_defined,
+        def: is_defined,
+        Grammar,
+        stringify,
+        functional_polymorphism,
+        fp,
+        mfp,
+        arrayify,
+        mapify,
+        str_arr_mapify,
+        get_a_sig,
+        deep_sig,
+        get_item_sig,
+        set_vals,
+        truth,
+        trim_sig_brackets,
+        ll_set,
+        ll_get,
+        iterate_ancestor_classes,
+        is_arr_of_t,
+        is_arr_of_arrs,
+        is_arr_of_strs,
+        input_processors,
+        output_processors,
+        call_multiple_callback_functions,
+        call_multi,
+        multi: call_multi,
+        native_constructor_tof,
+        Fns,
+        sig_match,
+        remove_sig_from_arr_shell,
+        to_arr_strip_keys,
+        arr_objs_to_arr_keys_values_table,
+        set_arr_tree_value,
+        get_arr_tree_value,
+        deep_arr_iterate,
+        prom,
+        combinations,
+        combos: combinations,
+        Evented_Class,
+        eventify,
+        vectorify,
+        v_add,
+        v_subtract: v_subtract2,
+        v_multiply,
+        v_divide,
+        vector_magnitude,
+        distance_between_points,
+        get_typed_array,
+        gta: get_typed_array,
+        Publisher,
+        field,
+        prop,
+        Data_Type,
+        Functional_Data_Type
+      };
+      var lang_mini = new Evented_Class();
+      Object.assign(lang_mini, lang_mini_props);
+      lang_mini.note = (str_name, str_state, obj_properties) => {
+        obj_properties = obj_properties || {};
+        obj_properties.name = str_name;
+        obj_properties.state = str_state;
+        lang_mini.raise("note", obj_properties);
+      };
+      module.exports = lang_mini;
+      if (__require.main === module) {
+        let test_evented_class2 = function(test_data2) {
+          const res2 = create_empty_test_res();
+          const evented_class = new Evented_Class();
+          test_data2.forEach((test_event) => {
+            const event_name = test_event.event_name;
+            const event_data = test_event.event_data;
+            const listener = (data) => {
+              if (data === event_data) {
+                res2.passed.push(event_name);
+              } else {
+                res2.failed.push(event_name);
+              }
+            };
+            evented_class.on(event_name, listener);
+            evented_class.raise_event(event_name, event_data);
+          });
+          return res2;
+        };
+        test_evented_class = test_evented_class2;
+        const test_data = [
+          {
+            event_name: "foo",
+            event_data: "hello"
+          },
+          {
+            event_name: "bar",
+            event_data: "world"
+          },
+          {
+            event_name: "baz",
+            event_data: true
+          }
+        ];
+        const create_empty_test_res = () => ({
+          passed: [],
+          failed: []
+        });
+        const result = test_evented_class2(test_data);
+        console.log("Passed:", result.passed);
+        console.log("Failed:", result.failed);
+      }
+      var test_evented_class;
+    }
+  });
+
+  // node_modules/lang-mini/lib-lang-mini.js
+  var require_lib_lang_mini2 = __commonJS({
+    "node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
+      var lang = require_lang_mini2();
+      var { each, tof } = lang;
+      var Type_Signifier = class _Type_Signifier {
+        // Name
+        constructor(spec = {}) {
+          const name = spec.name;
+          Object.defineProperty(this, "name", {
+            get() {
+              return name;
+            }
+          });
+          const parent = spec.parent;
+          Object.defineProperty(this, "parent", {
+            get() {
+              return parent;
+            }
+          });
+          const map_reserved_property_names = {
+            name: true,
+            parent: true
+          };
+          const _ = {};
+          each(spec, (value2, name2) => {
+            if (map_reserved_property_names[name2]) {
+            } else {
+              _[name2] = value2;
+            }
+          });
+        }
+        extend(o_extension) {
+          const o = {
+            parent: this
+          };
+          Object.assign(o, o_extension);
+          const res2 = new _Type_Signifier(o_extension);
+          return res2;
+        }
+        //  Other options?
+        //  Disambiguiation? Descriptive text?
+        //    Or is naming them the main thing there?
+        // Color representation
+        //   And that is simple, does not go into internal representation.
+      };
+      var Type_Representation = class _Type_Representation {
+        // Name
+        //  Other options?
+        //  Disambiguiation? Descriptive text?
+        //    Or is naming them the main thing there?
+        // Color representation
+        //   And that is simple, does not go into internal representation.
+        // This should be able to represent types and lang features not available to JS.
+        //   Names may be optional? May be autogenerated and quite long?
+        constructor(spec = {}) {
+          const name = spec.name;
+          Object.defineProperty(this, "name", {
+            get() {
+              return name;
+            }
+          });
+          const parent = spec.parent;
+          Object.defineProperty(this, "parent", {
+            get() {
+              return parent;
+            }
+          });
+          const _ = {};
+          const map_reserved_property_names = {
+            "name": true
+          };
+          each(spec, (value2, name2) => {
+            if (map_reserved_property_names[name2]) {
+            } else {
+              _[name2] = value2;
+              Object.defineProperty(this, name2, {
+                get() {
+                  return _[name2];
+                },
+                enumerable: true
+              });
+            }
+          });
+        }
+        extend(o_extension) {
+          const o = {
+            parent: this
+          };
+          Object.assign(o, o_extension);
+          const res2 = new _Type_Representation(o_extension);
+          return res2;
+        }
+      };
+      var st_color = new Type_Signifier({ "name": "color" });
+      var st_24bit_color = st_color.extend({ "bits": 24 });
+      var st_24bit_rgb_color = st_24bit_color.extend({ "components": ["red byte", "green byte", "blue byte"] });
+      var tr_string = new Type_Representation({ "name": "string" });
+      var tr_binary = new Type_Representation({ "name": "binary" });
+      var rt_bin_24bit_rgb_color = new Type_Representation({
+        // A binary type representation.
+        "signifier": st_24bit_rgb_color,
+        "bytes": [
+          [0, "red", "ui8"],
+          [1, "green", "ui8"],
+          [2, "blue", "ui8"]
+        ]
+      });
+      var rt_hex_24bit_rgb_color = new Type_Representation({
+        // Likely some kind of string template.
+        //  Or a function?
+        //  Best to keep this function free here.
+        //  Or maybe make a few quite standard ones.
+        "signifier": st_24bit_rgb_color,
+        // Or could just have the sequence / template literal even.
+        "bytes": [
+          [0, "#", "char"],
+          [1, "hex(red)", "string(2)"],
+          [3, "hex(green)", "string(2)"],
+          [5, "hex(blue)", "string(2)"]
+        ]
+      });
+      var st_date = new Type_Signifier({ "name": "date", "components": ["day uint", "month uint", "year int"] });
+      var rt_string_date_uk_ddmmyy = new Type_Representation({
+        "signifier": st_date,
+        "bytes": [
+          [0, "#", "char"],
+          [1, "day", "string(2)"],
+          [3, "/", "char"],
+          [4, "month", "string(2)"],
+          [6, "/", "char"],
+          [7, "year", "string(2)"]
+        ]
+      });
+      lang.Type_Signifier = Type_Signifier;
+      lang.Type_Representation = Type_Representation;
+      module.exports = lang;
+    }
+  });
+
+  // node_modules/fnl/fn-io-transform.js
+  var require_fn_io_transform = __commonJS({
+    "node_modules/fnl/fn-io-transform.js"(exports, module) {
+      var { deep_sig } = require_lib_lang_mini2();
+      var isArguments = (item2) => Object.prototype.toString.call(item2) === "[object Arguments]";
+      var fn_transformation = (fn, map_transformations) => {
+        const input_transformations = map_transformations.i;
+        const output_transformations = map_transformations.o;
+        const fn_res = function() {
+          const args = arguments;
+          if (args.length === 2 && typeof args[1] === "function") {
+            let [a, cb_transform_exec_events] = args;
+            if (isArguments(a)) {
+              if (a.length === 1) {
+                a = a[0];
+              }
+            }
+            const sig_called_with = deep_sig(a);
+            const sig_arguments = deep_sig(arguments);
+            const exec_fn = () => {
+              cb_transform_exec_events({
+                "name": "exec-start"
+                //,
+                //sig: evt_output_transform.sig,
+                //value: evt_output_transform.value
+              });
+              const fn_res2 = fn.call(null, a);
+              cb_transform_exec_events({
+                "name": "exec-complete"
+                //,
+                //sig: evt_output_transform.sig,
+                //value: evt_output_transform.value
+              });
+              const sig_fn_res = deep_sig(fn_res2);
+              if (output_transformations) {
+                if (output_transformations[sig_fn_res]) {
+                  output_transformations[sig_fn_res].call(null, fn_res2, (evt_output_transform) => {
+                    cb_transform_exec_events({
+                      "name": "complete",
+                      sig: evt_output_transform.sig,
+                      value: evt_output_transform.value
+                    });
+                  });
+                } else {
+                  cb_transform_exec_events({
+                    "name": "complete",
+                    sig: sig_fn_res,
+                    value: fn_res2
+                  });
+                }
+              } else {
+                cb_transform_exec_events({
+                  "name": "complete",
+                  sig: sig_fn_res,
+                  value: fn_res2
+                });
+              }
+            };
+            const skip_fn = () => {
+              cb_transform_exec_events({
+                "name": "complete",
+                //sig: sig_fn_res,
+                value: a,
+                skipped: true
+              });
+            };
+            if (input_transformations) {
+              let do_skip = false;
+              if (fn.skip) {
+                do_skip = fn.skip(a);
+              }
+              if (do_skip) {
+                skip_fn();
+              } else {
+                if (fn.map_sigs && fn.map_sigs[sig_called_with]) {
+                  exec_fn();
+                } else {
+                  if (input_transformations[sig_called_with]) {
+                    cb_transform_exec_events({
+                      "name": "input-transform-start"
+                    });
+                    input_transformations[sig_called_with].call(null, a, (evt_input_transform) => {
+                      const { name, sig, value: value2, io_sigs } = evt_input_transform;
+                      if (name === "complete") {
+                        a = value2;
+                        evt_input_transform.name = "input-transform-complete";
+                        cb_transform_exec_events(evt_input_transform);
+                        exec_fn();
+                      } else {
+                        console.trace();
+                        throw "NYI";
+                      }
+                    });
+                  } else {
+                    exec_fn();
+                  }
+                }
+              }
+            } else {
+              exec_fn();
+            }
+          } else {
+            throw "Expected args: normal_args, cb_transform_event";
+          }
+        };
+        if (fn.name) fn_res.name = fn.name;
+        if (fn.main) fn_res.main = fn.main;
+        if (fn.skip) fn_res.skip = fn.skip;
+        return fn_res;
+      };
+      module.exports = fn_transformation;
+    }
+  });
+
+  // node_modules/fnl/monitor-item.js
+  var require_monitor_item = __commonJS({
+    "node_modules/fnl/monitor-item.js"(exports, module) {
+      var { tf: tf2, deep_sig, each, def } = require_lib_lang_mini2();
+      var monitor_item = (item2, cb_evt_monitoring) => {
+        const ti = tf2(item2);
+        if (ti === "A") {
+          const l2 = item2.length;
+          for (let c2 = 0; c2 < l2; c2++) {
+            const arg = item2[c2];
+            ((arg2, c3) => {
+              monitor_item(arg2, (evt_arg_monitor) => {
+                evt_arg_monitor.arg_index = c3;
+                cb_evt_monitoring(evt_arg_monitor);
+              });
+            })(arg, c2);
+          }
+        } else if (ti === "s") {
+          cb_evt_monitoring({
+            name: "complete",
+            t: "s",
+            bytes: item2.length * 2
+          });
+        } else if (ti === "o") {
+          cb_evt_monitoring({
+            name: "complete",
+            t: "o"
+            //,
+            //bytes: item.length * 2
+          });
+        } else if (ti === "R") {
+          const rs = item2;
+          let bytes = 0;
+          const ms_start = Date.now();
+          let content_length, bytes_remaining;
+          const { headers } = item2;
+          if (headers && headers["content-length"]) {
+            content_length = parseInt(headers["content-length"], 10);
+            bytes_remaining = content_length;
+          }
+          const o_evt = {
+            name: "available",
+            t: "R",
+            ms: ms_start,
+            headers
+            //,
+            //bytes: item.length * 2
+          };
+          if (def(content_length)) {
+            o_evt.content_length = content_length;
+          }
+          cb_evt_monitoring(o_evt);
+          rs.on("data", (data) => {
+            bytes += data.length;
+            bytes_remaining -= data.length;
+            const ms = Date.now();
+            const ms_taken = ms - ms_start;
+            const byte_rate = bytes / (ms_taken / 1e3);
+            const est_remaining = bytes_remaining / byte_rate * 1e3;
+            const proportion = bytes / content_length;
+            const ms_est_complete = ms + est_remaining;
+            cb_evt_monitoring({
+              name: "data",
+              t: "B",
+              bytes: data.length,
+              bytes_total: bytes,
+              byte_rate,
+              content_length,
+              bytes_remaining,
+              ms_est_remaining: est_remaining,
+              ms_est_complete,
+              ms_taken,
+              proportion
+            });
+          });
+          rs.on("end", () => {
+            const ms_complete = Date.now();
+            const ms_taken = ms_complete - ms_start;
+            const byte_rate = bytes / (ms_taken / 1e3);
+            cb_evt_monitoring({
+              name: "complete",
+              ms: ms_complete,
+              ms_taken,
+              t: "R",
+              "bytes": bytes,
+              byte_rate
+              //,
+              //bytes: item.length * 2
+            });
+          });
+          rs.on("error", (err) => {
+            cb_evt_monitoring({
+              name: "error",
+              value: err,
+              t: "R"
+              //,
+              //bytes: item.length * 2
+            });
+          });
+        } else if (ti === "B") {
+          cb_evt_monitoring({
+            name: "complete",
+            t: "B",
+            bytes: item2.length
+          });
+        } else if (ti === "a") {
+          cb_evt_monitoring({
+            name: "complete",
+            t: "a"
+          });
+        } else {
+          console.log("ti", ti);
+          console.trace();
+          throw "stop";
+        }
+      };
+      module.exports = monitor_item;
+    }
+  });
+
+  // node_modules/fnl/default-arg-transformations.js
+  var require_default_arg_transformations = __commonJS({
+    "node_modules/fnl/default-arg-transformations.js"(exports, module) {
+      var { deep_sig } = require_lib_lang_mini2();
+      var transformations = {
+        "O": (obs, cb_events) => {
+          obs.then((res2) => {
+            const sig = deep_sig(res2);
+            if (cb_events) cb_events({
+              name: "complete",
+              io_sigs: ["O", sig],
+              sig,
+              value: res2
+            });
+          }, (err) => {
+          });
+        },
+        "p": (p, cb_events) => {
+          p.then((res2) => {
+            const sig = deep_sig(res2);
+            if (cb_events) cb_events({
+              name: "complete",
+              io_sigs: ["p", sig],
+              sig,
+              value: res2
+            });
+          }, (err) => {
+          });
+        },
+        "R": (input_readable_stream, cb_events) => {
+          const chunks = [];
+          const ms_start = Date.now();
+          input_readable_stream.on("data", (data) => {
+            chunks.push(data);
+          });
+          input_readable_stream.on("end", () => {
+            const ms_complete = Date.now();
+            const buf = Buffer.concat(chunks);
+            const ms_taken = ms_complete - ms_start;
+            const byte_rate = buf.length / (ms_taken / 1e3);
+            if (cb_events) cb_events({
+              name: "complete",
+              sig: "B",
+              io_sigs: ["R", "B"],
+              value: buf,
+              bytes: buf.length,
+              ms: ms_complete,
+              ms_taken,
+              byte_rate
+            });
+          });
+          input_readable_stream.on("error", (err) => {
+            console.log("error reading stream for param transformation in stages()");
+            error(err);
+          });
+        }
+        // this level: param sig required
+        // this level: param sig given: function to transform
+        // promise resolution here?
+      };
+      module.exports = transformations;
+    }
+  });
+
+  // node_modules/fnl/fnl.js
+  var require_fnl = __commonJS({
+    "node_modules/fnl/fnl.js"(exports, module) {
+      var { each, Evented_Class, get_a_sig, get_truth_map_from_arr, tof, tf: tf2, mfp, deep_sig, clone, def, is_array } = require_lib_lang_mini2();
+      var fn_io_transform = require_fn_io_transform();
+      var log = () => {
+      };
+      var nce = (obs, next, complete, error2) => {
+        obs.on("next", next);
+        obs.on("complete", complete);
+        obs.on("error", error2);
+        return obs;
+      };
+      var monitor_item = require_monitor_item();
+      var tm_status_strings = {
+        "init": true,
+        "ok": true,
+        "complete": true,
+        "error": true,
+        "paused": true
+      };
+      var observable = function(fn_inner, opts) {
+        const a = arguments;
+        const l2 = a.length;
+        const sig = get_a_sig(a);
+        let _opts, _fn_inner;
+        if (sig === "[f]" || sig === "[f,u]") {
+          _opts = {};
+          _fn_inner = a[0];
+        } else if (sig === "[f,o]") {
+          _fn_inner = a[0];
+          _opts = a[1];
+        } else if (sig === "[o,f]") {
+          _opts = a[0];
+          _fn_inner = a[1];
+        } else {
+          if (sig === "[O]" || sig === "[O,u]") {
+            return a[0];
+          } else {
+            console.log("sig", sig);
+            console.trace();
+            throw "NYI";
+          }
+        }
+        const obs_res = ((opts2, fn_inner2) => {
+          const ms_start = Date.now();
+          const ms_since_start = () => Date.now() - ms_start;
+          const res2 = new Evented_Class();
+          const io = res2.io = new Evented_Class();
+          let llog = [];
+          let _status = "init";
+          Object.defineProperty(res2, "ms_start", {
+            value: ms_start,
+            writable: false
+          });
+          let ms_ok, ms_complete, ms_error;
+          let ms_to_ok, ms_to_complete, ms_to_error;
+          const map_status_data = {};
+          const map_ms_reached_status = {};
+          let stage_number = -1;
+          let stage_name = "init";
+          const log2 = (data) => {
+            const log_item = [Date.now(), data];
+            llog.push(log_item);
+            res2.raise("log", log_item);
+          };
+          const status = (str_status, data) => {
+            if (tm_status_strings[str_status]) {
+              const old_status = _status;
+              if (!map_ms_reached_status[str_status]) {
+                map_ms_reached_status[str_status] = Date.now();
+              }
+              map_status_data[str_status] = data;
+              _status = str_status;
+              res2.raise("status", {
+                old: old_status,
+                value: str_status,
+                data
+              });
+            } else {
+              console.trace();
+              log2("str_status", str_status);
+              throw "invalid str_status " + str_status;
+            }
+          };
+          let _stage;
+          let current_stage_info;
+          Object.defineProperty(res2, "log", {
+            get() {
+              return llog;
+            }
+          });
+          Object.defineProperty(res2, "status", {
+            get() {
+              return _status;
+            }
+          });
+          let had_next = false, had_complete = false, had_error = false;
+          setTimeout(() => {
+            const res_fn_inner = fn_inner2((data) => {
+              let passes = true;
+              had_next = true;
+              if (!had_complete && !had_error) {
+                if (this.filters) {
+                  for (let filter of this.filters) {
+                    passes = filter(data);
+                    if (!passes) break;
+                  }
+                }
+              } else {
+                if (had_complete) {
+                  console.warn('Observable can not raise "next" event after having raised its "complete" event.');
+                }
+                if (had_error) {
+                  console.warn('Observable can not raise "next" event after having raised its "error" event.');
+                }
+              }
+              if (passes) {
+                res2.raise("next", data);
+                res2.raise("data", data);
+              }
+            }, (last_data) => {
+              if (!had_complete && !had_error) {
+                had_complete = true;
+                const tld = tf2(last_data);
+                const ms_complete2 = Date.now();
+                res2.ms_complete = ms_complete2;
+                res2.ms_taken = ms_complete2 - ms_start;
+                if (tld !== "u") {
+                  if (tld === "R") {
+                    io.ongoing = true;
+                    last_data.on("complete", () => {
+                      io.ongoing = false;
+                      io.raise("complete");
+                    });
+                  } else {
+                    res2.raise("complete", last_data);
+                    io.raise("complete");
+                  }
+                } else {
+                  res2.raise("complete");
+                }
+              } else {
+                if (had_complete) {
+                  console.warn('WARNING: Observable can not raise "complete" event after having raised it already.');
+                }
+                if (had_error) {
+                  console.warn('WARNING: Observable can not raise "complete" event after having raised its "error" event.');
+                }
+              }
+            }, (error2) => {
+              if (!had_complete && !had_error) {
+                had_error = true;
+                res2.raise("error", error2);
+              } else {
+                if (had_complete) {
+                  console.warn('WARNING: Observable can not raise "error" event after having raised its "complete" event.');
+                }
+                if (had_error) {
+                  console.warn('WARNING: Observable can not raise "error" event after having raised it already.');
+                }
+              }
+            }, status, log2) || [];
+            if (is_array(res_fn_inner)) {
+              const [stop, pause, resume] = res_fn_inner;
+              if (stop) res2.stop = stop;
+              if (pause) res2.pause = pause;
+              if (resume) res2.resume = resume;
+              if (pause && resume) {
+                res2.delay = (ms) => {
+                  pause();
+                  res2.raise("paused");
+                  setTimeout(() => {
+                    res2.resume();
+                    res2.raise("resumed");
+                  }, ms);
+                };
+              }
+            }
+          }, 0);
+          res2.next = (handler) => {
+            res2.on("next", handler);
+            return res2;
+          };
+          res2.data = res2.next;
+          res2.complete = (handler) => {
+            res2.on("complete", handler);
+            return res2;
+          };
+          res2.on("complete", (data) => {
+            status("complete");
+            const store_res = () => {
+              if (data) {
+                if (data.data) {
+                  res2.res = data.data;
+                } else {
+                  res2.res = data;
+                }
+              }
+            };
+          });
+          res2.done = res2.end = res2.complete;
+          res2.error = (handler) => {
+            res2.on("error", handler);
+            return res2;
+          };
+          res2.then = (handler) => {
+            let res_all = [];
+            res2.next((data) => {
+              res_all.push(data);
+              had_next = true;
+            });
+            if (res2.completed) {
+              if (res2.singular_result) {
+                handler(res_all[0]);
+              } else {
+                handler(res_all);
+              }
+            } else {
+              res2.complete((last) => {
+                if (had_next && res_all.length > 0) {
+                  if (res2.singular_result) {
+                    handler(res_all[0]);
+                  } else {
+                    handler(res_all);
+                  }
+                } else {
+                  handler(last);
+                }
+              });
+            }
+          };
+          res2.__type_name = "observable";
+          res2._is_obs = res2._is_observable = true;
+          res2._ = new Evented_Class();
+          res2.meta = (k, v) => {
+            if (v === void 0) {
+            } else {
+              res2._[key] = value;
+              res2._.raise("change", {
+                key: k,
+                value: v
+              });
+            }
+          };
+          return res2;
+        })(_opts, _fn_inner);
+        return obs_res;
+      };
+      observable._ = {
+        name: "observable",
+        return_type: "observable",
+        async: true
+      };
+      var obsfilter = (obs, next_filter) => observable((next, complete, error2) => {
+        obs.on("next", (data) => {
+          if (next_filter(data)) {
+            next(data);
+          }
+        });
+        obs.on("complete", (data) => {
+          if (data) {
+            complete(data);
+          } else {
+            complete();
+          }
+        });
+        obs.on("error", (err) => {
+          error2(err);
+        });
+      });
+      var obsmap = (obs, fn_map) => observable((next, complete, error2) => {
+        obs.on("next", (data) => next(fn_map(data)));
+        obs.on("complete", complete);
+        obs.on("error", error2);
+      });
+      var obsalias = (obs_like, mapping) => {
+        let next, complete, error2;
+        const tmapping = tof(mapping);
+        if (tmapping === "array") {
+          [next, complete, error2] = mapping;
+        } else if (tmapping === "object") {
+          next = mapping.next;
+          complete = mapping.complete;
+          error2 = mapping.error;
+        }
+        return observable((n, c2, e) => {
+          if (next) {
+            obs_like.on(next, n);
+          } else {
+            obs_like.on("next", n);
+          }
+          if (complete) {
+            obs_like.on(complete, c2);
+          } else {
+            obs_like.on("complete", c2);
+          }
+          if (error2) {
+            obs_like.on(error2, e);
+          } else {
+            obs_like.on("error", e);
+          }
+        });
+      };
+      var obscollect = (obs, fn_collect, arr_res) => {
+        obs.on("next", (data) => {
+          const item_res = fn_collect(data);
+          arr_res.push(item_res);
+        });
+        return obs;
+      };
+      var obspool = () => {
+        console.trace();
+        throw "out of order";
+      };
+      var seq = (q_obs) => {
+        return observable((next, complete, error2) => {
+          let c2 = 0, obs_q_item;
+          let process2 = () => {
+            if (c2 < q_obs.length) {
+              let q_item = q_obs[c2];
+              obs_q_item = q_item[1].apply(q_item[0], q_item[2]);
+              obs_q_item.on("next", (data) => {
+                next(data);
+              });
+              obs_q_item.on("error", (error3) => {
+                error3(error3);
+              });
+              obs_q_item.on("complete", (data) => {
+                c2++;
+                process2();
+              });
+            } else {
+              complete();
+            }
+          };
+          process2();
+          let stop = () => {
+            obs_q_item.stop();
+            complete();
+          };
+          let pause = () => {
+            obs_q_item.pause();
+          };
+          let resume = () => {
+            obs_q_item.resume();
+          };
+          return [stop, pause, resume];
+        });
+      };
+      var obs_to_cb = (obs, callback2) => {
+        let _obs = observable(obs);
+        let arr_all = [];
+        _obs.on("next", (data) => arr_all.push(data));
+        _obs.on("error", (err) => callback2(err));
+        _obs.on("complete", (last) => {
+          if (typeof last !== "undefined") {
+            callback2(null, last, arr_all);
+          } else {
+            callback2(null, arr_all);
+          }
+        });
+      };
+      var unpage = (obs) => {
+        return observable((next, complete, error2) => {
+          obs.on("next", (arr_data) => {
+            if ("unpaged" in arr_data) {
+              let unpaged = arr_data.unpaged;
+              for (let c2 = 0, l2 = unpaged.length; c2 < l2; c2++) {
+                next(unpaged[c2]);
+              }
+            } else {
+              for (let c2 = 0, l2 = arr_data.length; c2 < l2; c2++) {
+                next(arr_data[c2]);
+              }
+            }
+          });
+          obs.on("complete", () => {
+            complete();
+          });
+          obs.on("error", (err) => error2(err));
+          return [];
+        });
+      };
+      var obs_or_cb = (obs, callback2, always_plural) => {
+        if (callback2) {
+          obs_to_cb(obs, callback2);
+        } else {
+          return observable(obs, always_plural);
+        }
+      };
+      var sig_obs_or_cb = (a, inner) => {
+        let a2;
+        let callback2;
+        if (typeof a[a.length - 1] === "function") {
+          a2 = Array.prototype.slice.call(a, 0, -1);
+          callback2 = a[a.length - 1];
+        } else if (typeof a[a.length - 1] === "undefined") {
+          a2 = Array.prototype.slice.call(a, 0, -1);
+        } else {
+          a2 = Array.prototype.slice.call(a);
+        }
+        let sig = get_a_sig(a2);
+        let obs = observable((next, complete, error2) => {
+          return inner(a2, sig, next, complete, error2, a2.length);
+        });
+        return obs_or_cb(obs, callback2);
+      };
+      var cb_to_prom_or_cb = (inner_with_cb, opt_cb) => {
+        if (typeof opt_cb !== "undefined") {
+          inner_with_cb(opt_cb);
+        } else {
+          return new Promise((resolve, reject) => {
+            inner_with_cb((err, res2) => {
+              if (err) {
+                reject(err);
+              } else {
+                resolve(res2);
+              }
+            });
+          });
+        }
+      };
+      var prom_or_cb = (prom2, opt_cb) => {
+        let _prom;
+        if (prom2 instanceof Promise) {
+          _prom = prom2;
+        } else {
+          _prom = new Promise(prom2);
+        }
+        if (opt_cb) {
+          _prom.then((res2) => {
+            opt_cb(null, res2);
+          }, (err) => {
+            opt_cb(err);
+          });
+        } else {
+          return _prom;
+        }
+      };
+      var prom = (prom2) => {
+        if (prom2 instanceof Promise) {
+          return prom2;
+        } else {
+          return new Promise(prom2);
+        }
+      };
+      var is_obs = (obj2) => {
+        return obj2.is_obs === true;
+      };
+      var is_prom = (obj2) => {
+        return obj2 instanceof Promise || obj2.is_obs === true;
+      };
+      var obs_prom_arr_item = (obj2, obs, prom2, arr, item2) => {
+        if (obj2.is_obs === true) {
+          return obs(obj2);
+        } else {
+          if (obj2 instanceof Promise) {
+            return prom2(obj2);
+          } else {
+            if (Array.isArray(obj2)) {
+              return arr(obj2);
+            } else {
+              return item2(obj2);
+            }
+          }
+        }
+      };
+      var arg_transformation = require_default_arg_transformations();
+      var transform_stage_input = {
+        "R": arg_transformation.R
+      };
+      var stages = mfp({
+        name: "stages",
+        return_type: "function"
+        // function that returns an observable.
+      }, function() {
+        const a = arguments, l2 = a.length;
+        const sig = get_a_sig(a);
+        let arr_stages;
+        let num_stages;
+        let fn_inner;
+        const prepare_arr_fns = (ofns) => {
+          const input_ofns2 = (ofns2) => {
+            const map_stage_reserved_names = {
+              _raise_stage_event: true
+            };
+            const res2 = [];
+            const o_filtered_stage_fns = {};
+            let num_stages2 = 0;
+            let last_stage_name;
+            each(ofns2, (fn_stage, stage_name) => {
+              if (!map_stage_reserved_names[stage_name]) {
+                o_filtered_stage_fns[stage_name] = fn_stage;
+                num_stages2++;
+                last_stage_name = stage_name;
+              }
+            });
+            each(o_filtered_stage_fns, (fn_stage, stage_name) => {
+              const is_last_stage = stage_name === last_stage_name;
+              const map_sigs = fn_stage.map_sigs;
+              if (Object.keys(fn_stage).length === 0) {
+                const io_transform = {};
+                if (!is_last_stage) {
+                  io_transform.o = {
+                    p: arg_transformation.p
+                  };
+                }
+                const io_transformed_stage = fn_io_transform(fn_stage, io_transform);
+                io_transformed_stage.name = stage_name;
+                res2.push([stage_name, io_transformed_stage]);
+              } else {
+                if (map_sigs) {
+                  const io_transform = {
+                    i: transform_stage_input
+                  };
+                  io_transform.o = {
+                    "p": arg_transformation.p,
+                    "O": arg_transformation.O
+                  };
+                  const io_transformed_stage = fn_io_transform(fn_stage, io_transform);
+                  io_transformed_stage.name = stage_name;
+                  res2.push([stage_name, io_transformed_stage]);
+                } else {
+                  const io_transform = {};
+                  io_transform.o = {
+                    "p": arg_transformation.p,
+                    "O": arg_transformation.O
+                  };
+                  const io_transformed_stage = fn_io_transform(fn_stage, io_transform);
+                  io_transformed_stage.name = stage_name;
+                  res2.push([stage_name, io_transformed_stage]);
+                }
+              }
+            });
+            return res2;
+          };
+          return input_ofns2(ofns);
+        };
+        const prepare = () => {
+          if (sig === "[a]") {
+            valid = true;
+            each(a[0], (stage) => {
+              if (get_a_sig(stage) === "[s,f]") {
+                const [stage_name, fn_stage] = stage;
+                if (!fn_stage.name) fn_stage.name = stage_name;
+              } else {
+                valid = false;
+                console.trace();
+                throw "expected stage to be specified as an array [s,f]";
+              }
+            });
+            if (valid) {
+              arr_stages = prepare_arr_fns(a[0]);
+              num_stages = arr_stages.length;
+            }
+          } else if (sig === "[o]") {
+            input_ofns(a[0]);
+          } else if (sig === "[f]") {
+            arr_stages = prepare_arr_fns(a[0]());
+            num_stages = arr_stages.length;
+          } else {
+            console.trace();
+            throw "stages expected an array or object (may become more flexible in the future)";
+          }
+        };
+        const ms_pre_prepare = Date.now();
+        let res_prepare = prepare();
+        const ms_prep_time = Date.now() - ms_pre_prepare;
+        if (res_prepare) {
+          log("ms_prep_time", ms_prep_time);
+          return res_prepare;
+        }
+        const arr_stages_info = new Array(arr_stages.length);
+        each(arr_stages, (arr_stage, i) => {
+          const stage_name = arr_stage[0];
+          arr_stages_info[i] = {
+            name: stage_name
+          };
+        });
+        const process2 = () => {
+          const res2 = function() {
+            const a2 = arguments, l22 = a2.length;
+            const sig2 = get_a_sig(a2);
+            let next_apply_args = a2.length === 0 ? void 0 : a2;
+            const obs_res = observable((next, complete, error2, status, log2, stage) => {
+              const log_stage_events = [];
+              obs_res.log_stage_events = log_stage_events;
+              const map_stage_events_by_name = {};
+              let ms_last_stage_event;
+              let c2 = 0;
+              const cb_stage_event = (name, evt) => {
+                evt = evt || {
+                  name
+                };
+                const now = Date.now();
+                evt.ms = now;
+                evt.i_stage = c2;
+                evt.stage_name = arr_stages2[c2][0];
+                if (ms_last_stage_event) {
+                  evt.ms_since_last = now - ms_last_stage_event;
+                }
+                ms_last_stage_event = now;
+                log_stage_events.push(evt);
+                map_stage_events_by_name[name] = evt;
+                if (name === "have-response") {
+                  obs_res.ms_latency = now - map_stage_events_by_name["make-request"].ms;
+                }
+                obs_res.raise("stage", evt);
+              };
+              const t12 = Date.now();
+              const new_obj_fns = a[0](cb_stage_event);
+              const newly_prepared_stages = prepare_arr_fns(new_obj_fns);
+              const arr_stages2 = newly_prepared_stages;
+              const reprep_time = Date.now() - t12;
+              log2("reprep_time", reprep_time);
+              const res_input = obs_res.input = {};
+              const res_output = obs_res.output = {};
+              const res_stages = obs_res.stages = clone(arr_stages_info);
+              monitor_item(a2, (evt_input_args) => {
+                const event_name = evt_input_args.name;
+              });
+              let i_last_unskipped_stage = -1;
+              let exec_is_complete = false;
+              const process_next = () => {
+                const have_next_stage = !!arr_stages2[c2];
+                const i_stage = c2;
+                log2("have_next_stage", have_next_stage);
+                if (have_next_stage) {
+                  const stage_name = arr_stages2[c2][0];
+                  const fn_stage = arr_stages2[c2][1];
+                  const is_main_stage = fn_stage.main === true;
+                  const is_last_stage = c2 === arr_stages2.length - 1;
+                  const res_stage = res_stages[c2];
+                  const res_prev_stage = res_stages[c2 - 1];
+                  const res_next_stage = res_stages[c2 + 1];
+                  res_stage.ms_start = Date.now();
+                  if (is_main_stage) {
+                    res_stage.main = true;
+                  }
+                  let fn_ready_args;
+                  const exec_fn = () => {
+                    const i_stage2 = c2;
+                    console.log("calling exec_fn " + stage_name);
+                    console.trace();
+                    const stage_res = fn_stage.call(this, fn_ready_args, (transform_call_event) => {
+                      const { name, sig: sig3, value: value2 } = transform_call_event;
+                      if (name === "complete") {
+                        if (transform_call_event.skipped === true) {
+                          res_stage.skipped = true;
+                        } else {
+                          if (i_stage2 > i_last_unskipped_stage) i_last_unskipped_stage = i_stage2;
+                          let content_length;
+                          monitor_item(value2, (evt_stage_res) => {
+                            const cl_evt = clone(evt_stage_res);
+                            const event_name = evt_stage_res.name;
+                            if (event_name === "complete") {
+                              console.log("c", c2);
+                              console.log("stage item complete");
+                              const ms_output_complete = Date.now();
+                              const ms_taken = ms_output_complete - res_stage.ms_start;
+                              res_stage.ms_output_complete = ms_output_complete;
+                              if (res_stage.ms_output_start) {
+                                const ms_output_taken = res_stage.ms_output_taken = ms_output_complete - res_stage.ms_output_start;
+                                if (ms_output_taken > 0) {
+                                  if (res_stage.bytes_out) {
+                                    const output_rate = res_stage.bytes_out / (ms_output_taken / 1e3);
+                                    res_stage.output_rate = output_rate;
+                                    if (is_main_stage) {
+                                      obs_res.main_rate = output_rate;
+                                    }
+                                  }
+                                }
+                              }
+                              res_stage.ms_taken = ms_taken;
+                              console.log("c", c2);
+                              console.log("i_stage", i_stage2);
+                              console.log("is_last_stage", is_last_stage);
+                            } else if (event_name === "available") {
+                              if (evt_stage_res.content_length) {
+                                res_stage.content_length = evt_stage_res.content_length;
+                                if (is_main_stage) {
+                                  content_length = obs_res.content_length = evt_stage_res.content_length;
+                                }
+                              }
+                              res_stage.ms_output_start = Date.now();
+                            } else if (event_name === "data") {
+                              const { bytes, bytes_total, byte_rate, content_length: content_length2, bytes_remaining, ms_est_remaining, ms_est_complete, ms_taken, proportion } = evt_stage_res;
+                              const ms_processing_output = ms_taken;
+                              const out_rate = byte_rate;
+                              res_stage.bytes_out = bytes_total;
+                              if (res_stage.bytes_in) {
+                                res_stage.bytes_oi_ratio = res_stage.bytes_out / res_stage.bytes_in;
+                              }
+                              if (is_main_stage) {
+                                obs_res.main_bytes_out = bytes_total;
+                                obs_res.main_output_rate = out_rate;
+                              }
+                              if (i_last_unskipped_stage === i_stage2) {
+                                obs_res.bytes_out = bytes_total;
+                                obs_res.output_rate = out_rate;
+                                if (def(proportion)) obs_res.proportion = proportion;
+                                if (def(bytes_remaining)) obs_res.bytes_remaining = bytes_remaining;
+                                if (def(ms_est_remaining)) obs_res.ms_est_remaining = ms_est_remaining;
+                                if (def(ms_est_complete)) obs_res.ms_est_complete = ms_est_complete;
+                              }
+                              if (res_next_stage) {
+                                res_next_stage.bytes_in = res_next_stage.bytes_in || 0;
+                                res_next_stage.bytes_in += cl_evt.bytes;
+                              }
+                            } else {
+                              log2("event_name", event_name);
+                              console.trace();
+                              throw "stop";
+                            }
+                          });
+                        }
+                        next_apply_args = value2;
+                        c2++;
+                        log2("pre process next stage");
+                        process_next();
+                      } else {
+                        log2("transform_call_event", transform_call_event);
+                        if (name === "input-transform-complete") {
+                          const ms_input_transform_complete = Date.now();
+                          res_stage.ms_input_transform_complete = ms_input_transform_complete;
+                          res_stage.ms_input_transform_taken = ms_input_transform_complete - res_stage.ms_input_transform_start;
+                        } else if (name === "input-transform-start") {
+                          res_stage.ms_input_transform_start = Date.now();
+                        } else if (name === "exec-start") {
+                          res_stage.ms_exec_start = Date.now();
+                        } else if (name === "exec-complete") {
+                          const ms_exec_complete = Date.now();
+                          res_stage.ms_exec_complete = ms_exec_complete;
+                          res_stage.ms_exec_taken = ms_exec_complete - res_stage.ms_exec_start;
+                        } else {
+                          log2("name", name);
+                          log2("transform_call_event", transform_call_event);
+                          console.trace();
+                          throw "stop";
+                        }
+                      }
+                    });
+                  };
+                  fn_ready_args = next_apply_args;
+                  log2("pre exec_fn");
+                  exec_fn();
+                } else {
+                  const tsr = tf2(next_apply_args);
+                  c2++;
+                  log2("tsr", tsr);
+                  console.log("the stages exec is complete");
+                  console.log("i_last_unskipped_stage", i_last_unskipped_stage);
+                  exec_is_complete = true;
+                  complete(next_apply_args);
+                }
+              };
+              process_next();
+            });
+            return obs_res;
+          };
+          res2.is_staged = true;
+          res2.return_type = "observable";
+          return res2;
+        };
+        return process2();
+      });
+      module.exports = {
+        "observable": observable,
+        "nce": nce,
+        "obs": observable,
+        "obsalias": obsalias,
+        "obscollect": obscollect,
+        "obsfilter": obsfilter,
+        "obspool": obspool,
+        "obsmap": obsmap,
+        "seq": seq,
+        "sequence": seq,
+        "sig_obs_or_cb": sig_obs_or_cb,
+        "cb_to_prom_or_cb": cb_to_prom_or_cb,
+        "prom_or_cb": prom_or_cb,
+        "prom": prom,
+        "obs_or_cb": obs_or_cb,
+        "unpage": unpage,
+        "is_obs": is_obs,
+        "is_prom": is_prom,
+        "obs_prom_arr_item": obs_prom_arr_item,
+        "stages": stages
+      };
+      if (__require.main === module) {
+        console.log("running fnl as main");
+        const make_timer_obs = () => observable((next, complete, error2) => {
+          let c2 = 2;
+          let paused = false;
+          let cease = () => {
+            clearInterval(ivl);
+          };
+          let stop = () => {
+            clearInterval(ivl);
+            complete();
+          };
+          let ivl = setInterval(() => {
+            if (!paused) {
+              let v = c2 * 2;
+              next({
+                "v": v
+              });
+              c2++;
+              if (c2 > 6) {
+                error2(new Error("A problem"));
+                cease();
+              }
+              if (c2 > 8) {
+                stop();
+              }
+            }
+          }, 1e3);
+          return [stop, () => {
+            paused = true;
+          }, () => {
+            paused = false;
+          }];
+        });
+        let obs = make_timer_obs();
+        let test_obs = () => {
+          obs.on("paused", () => log("* paused"));
+          obs.on("resumed", () => log("* resumed"));
+          obs.on("error", (err) => log("* error", err));
+          obs.next((data) => {
+            log("data", data);
+          });
+        };
+        test_obs();
+        let test_then = () => {
+          (async () => {
+            let res2 = await obs;
+            log("awaited res", res2);
+          })();
+        };
+        log("stages", stages);
+        let test_split = () => {
+          obs.on("paused", () => log("* paused"));
+          obs.on("resumed", () => log("* resumed"));
+          let [obs1, obs2] = obs.split((data) => data.v % 3 === 0);
+          obs1.on("next", (data) => log("obs1 data", data));
+          obs2.on("next", (data) => log("obs2 data", data));
+        };
+        let test_filter = () => {
+          obs.filter((data) => {
+            return data.v !== 8;
+          }).filter((data) => {
+            return data.v % 3 !== 0;
+          });
+          obs.next((data) => {
+            if (data === 8) {
+              obs.delay(5e3);
+              obs.pause();
+              log("paused");
+              setTimeout(() => {
+                log("wait over");
+                obs.resume();
+              }, 2e3);
+            }
+          }).end(() => {
+            log("end");
+          });
+        };
+      } else {
+      }
+    }
+  });
+
+  // node_modules/obext/node_modules/lang-mini/lang-mini.js
+  var require_lang_mini3 = __commonJS({
+    "node_modules/obext/node_modules/lang-mini/lang-mini.js"(exports, module) {
+      var running_in_browser = typeof window !== "undefined";
+      var running_in_node = !running_in_browser;
+      var Readable_Stream;
+      var Writable_Stream;
+      var Transform_Stream;
+      var get_stream = () => {
+        if (running_in_node) {
+          return (() => {
+            const str_libname = "stream";
+            const stream2 = __require(str_libname);
+            Readable_Stream = stream2.Readable;
+            Writable_Stream = stream2.Writable;
+            Transform_Stream = stream2.Transform;
+            return stream2;
+          })();
+        } else {
+          return void 0;
+        }
+      };
+      var stream = get_stream();
+      var each = (collection, fn, context2) => {
+        if (collection) {
+          if (collection.__type == "collection") {
+            return collection.each(fn, context2);
+          }
+          let ctu = true;
+          let stop = function() {
+            ctu = false;
+          };
+          if (is_array(collection)) {
+            let res2 = [], res_item;
+            for (let c2 = 0, l2 = collection.length; c2 < l2; c2++) {
+              res_item;
+              if (ctu == false) break;
+              if (context2) {
+                res_item = fn.call(context2, collection[c2], c2, stop);
+              } else {
+                res_item = fn(collection[c2], c2, stop);
+              }
+              if (ctu == false) break;
+              res2.push(res_item);
+            }
+            return res2;
+          } else {
+            let name, res2 = {};
+            for (name in collection) {
+              if (ctu === false) break;
+              if (context2) {
+                res2[name] = fn.call(context2, collection[name], name, stop);
+              } else {
+                res2[name] = fn(collection[name], name, stop);
+              }
+              if (ctu === false) break;
+            }
+            return res2;
+          }
+        }
+      };
+      var is_array = Array.isArray;
+      var is_dom_node = function isDomNode(obj2) {
+        return !!obj2 && typeof obj2.nodeType !== "undefined" && typeof obj2.childNodes !== "undefined";
+      };
+      var get_truth_map_from_arr = function(arr) {
+        let res2 = {};
+        each(arr, function(v, i) {
+          res2[v] = true;
+        });
+        return res2;
+      };
+      var get_arr_from_truth_map = function(truth_map) {
+        let res2 = [];
+        each(truth_map, function(v, i) {
+          res2.push(i);
+        });
+        return res2;
+      };
+      var get_map_from_arr = function(arr) {
+        let res2 = {};
+        for (let c2 = 0, l2 = arr.length; c2 < l2; c2++) {
+          res2[arr[c2]] = c2;
+        }
+        return res2;
+      };
+      var arr_like_to_arr = function(arr_like) {
+        let res2 = new Array(arr_like.length);
+        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
+          res2[c2] = arr_like[c2];
+        }
+        ;
+        return res2;
+      };
+      var is_ctrl = function(obj2) {
+        return typeof obj2 !== "undefined" && obj2 !== null && is_defined(obj2.__type_name) && is_defined(obj2.content) && is_defined(obj2.dom);
+      };
+      var map_loaded_type_fn_checks = {};
+      var map_loaded_type_abbreviations = {
+        "object": "o",
+        "number": "n",
+        "string": "s",
+        "function": "f",
+        "boolean": "b",
+        "undefined": "u",
+        "null": "N",
+        "array": "a",
+        "arguments": "A",
+        "date": "d",
+        "regex": "r",
+        "error": "e",
+        "buffer": "B",
+        "promise": "p",
+        "observable": "O",
+        "readable_stream": "R",
+        "writable_stream": "W",
+        "data_value": "V"
+      };
+      var using_type_plugins = false;
+      var invert = (obj2) => {
+        if (!is_array(obj2)) {
+          let res2 = {};
+          each(obj2, (v, k) => {
+            res2[v] = k;
+          });
+          return res2;
+        } else {
+          console.trace();
+          throw "invert(obj) not supported on arrays";
+        }
+      };
+      var map_loaded_type_names = invert(map_loaded_type_abbreviations);
+      var load_type = (name, abbreviation, fn_detect_instance) => {
+        map_loaded_type_fn_checks[name] = fn_detect_instance;
+        map_loaded_type_names[abbreviation] = name;
+        map_loaded_type_abbreviations[name] = abbreviation;
+        using_type_plugins = true;
+      };
+      var tof = (obj2, t12) => {
+        let res2 = t12 || typeof obj2;
+        if (using_type_plugins) {
+          let res3;
+          each(map_loaded_type_fn_checks, (fn_check, name, stop) => {
+            if (fn_check(obj2)) {
+              res3 = name;
+              stop();
+            }
+          });
+          if (res3) {
+            return res3;
+          }
+        }
+        if (res2 === "number" || res2 === "string" || res2 === "function" || res2 === "boolean") {
+          return res2;
+        }
+        if (res2 === "object") {
+          if (typeof obj2 !== "undefined") {
+            if (obj2 === null) {
+              return "null";
+            }
+            if (obj2.__type) {
+              return obj2.__type;
+            } else if (obj2.__type_name) {
+              return obj2.__type_name;
+            } else {
+              if (obj2 instanceof Promise) {
+                return "promise";
+              }
+              if (is_ctrl(obj2)) {
+                return "control";
+              }
+              if (obj2 instanceof Date) {
+                return "date";
+              }
+              if (is_array(obj2)) {
+                return "array";
+              } else {
+                if (obj2 instanceof Error) {
+                  res2 = "error";
+                } else if (obj2 instanceof RegExp) res2 = "regex";
+                if (typeof window === "undefined") {
+                  if (obj2 && obj2.readInt8) res2 = "buffer";
+                }
+              }
+              return res2;
+            }
+          } else {
+            return "undefined";
+          }
+        }
+        return res2;
+      };
+      var tf2 = (obj2) => {
+        let res2 = typeof obj2;
+        if (using_type_plugins) {
+          let res3;
+          each(map_loaded_type_fn_checks, (fn_check, name, stop) => {
+            if (fn_check(obj2)) {
+              res3 = map_loaded_type_abbreviations[name];
+              stop();
+            }
+          });
+          if (res3) {
+            return res3;
+          }
+        }
+        if (res2 === "number" || res2 === "string" || res2 === "function" || res2 === "boolean" || res2 === "undefined") {
+          return res2[0];
+        } else {
+          if (obj2 === null) {
+            return "N";
+          } else {
+            if (running_in_node) {
+              if (obj2 instanceof Readable_Stream) {
+                return "R";
+              } else if (obj2 instanceof Writable_Stream) {
+                return "W";
+              } else if (obj2 instanceof Transform_Stream) {
+                return "T";
+              }
+            }
+            if (typeof Buffer !== "undefined" && obj2 instanceof Buffer) {
+              return "B";
+            } else if (obj2 instanceof Promise) {
+              return "p";
+            } else if (obj2 instanceof Date) {
+              return "d";
+            } else if (is_array(obj2)) {
+              return "a";
+            } else {
+              if (obj2._is_observable === true) {
+                return "O";
+              } else {
+                if (typeof obj2.callee === "function") {
+                  return "A";
+                } else if (obj2 instanceof Error) {
+                  return "e";
+                } else if (obj2 instanceof RegExp) return "r";
+                return "o";
+              }
+            }
+            return res2;
+          }
+        }
+        console.trace();
+        console.log("item", item);
+        throw "type not found";
+        return res2;
+      };
+      var atof = (arr) => {
+        let res2 = new Array(arr.length);
+        for (let c2 = 0, l2 = arr.length; c2 < l2; c2++) {
+          res2[c2] = tof(arr[c2]);
+        }
+        return res2;
+      };
+      var is_defined = (value2) => {
+        return typeof value2 != "undefined";
+      };
+      var stringify = JSON.stringify;
+      var _get_item_sig = (i, arr_depth) => {
+        let res2;
+        let t12 = typeof i;
+        if (t12 === "string") {
+          res2 = "s";
+        } else if (t12 === "number") {
+          res2 = "n";
+        } else if (t12 === "boolean") {
+          res2 = "b";
+        } else if (t12 === "function") {
+          res2 = "f";
+        } else {
+          let t = tof(i, t12);
+          if (t === "array") {
+            if (arr_depth) {
+              res2 = "[";
+              for (let c2 = 0, l2 = i.length; c2 < l2; c2++) {
+                if (c2 > 0) res2 = res2 + ",";
+                res2 = res2 + get_item_sig(i[c2], arr_depth - 1);
+              }
+              res2 = res2 + "]";
+            } else {
+              res2 = "a";
+            }
+          } else if (t === "control") {
+            res2 = "c";
+          } else if (t === "date") {
+            res2 = "d";
+          } else if (t === "observable") {
+            res2 = "O";
+          } else if (t === "regex") {
+            res2 = "r";
+          } else if (t === "buffer") {
+            res2 = "B";
+          } else if (t === "readable_stream") {
+            res2 = "R";
+          } else if (t === "writable_stream") {
+            res2 = "W";
+          } else if (t === "object") {
+            res2 = "o";
+          } else if (t === "undefined") {
+            res2 = "u";
+          } else {
+            if (t === "collection_index") {
+              return "X";
+            } else if (t === "data_object") {
+              if (i._abstract) {
+                res2 = "~D";
+              } else {
+                res2 = "D";
+              }
+            } else {
+              if (t === "data_value") {
+                if (i._abstract) {
+                  res2 = "~V";
+                } else {
+                  res2 = "V";
+                }
+              } else if (t === "null") {
+                res2 = "!";
+              } else if (t === "collection") {
+                if (i._abstract) {
+                  res2 = "~C";
+                } else {
+                  res2 = "C";
+                }
+              } else {
+                res2 = "?";
+              }
+            }
+          }
+        }
+        return res2;
+      };
+      var get_item_sig = (item2, arr_depth) => {
+        if (arr_depth) {
+          return _get_item_sig(item2, arr_depth);
+        }
+        const t = tof(item2);
+        if (map_loaded_type_abbreviations[t]) {
+          return map_loaded_type_abbreviations[t];
+        } else {
+          let bt = typeof item2;
+          if (bt === "object") {
+            if (is_array(item2)) {
+              return "a";
+            } else {
+              return "o";
+            }
+          } else {
+            console.log("map_loaded_type_abbreviations type name not found", t);
+            console.log("bt", bt);
+            console.trace();
+            throw "stop";
+          }
+        }
+      };
+      var get_a_sig = (a) => {
+        let c2 = 0, l2 = a.length;
+        let res2 = "[";
+        let first = true;
+        for (c2 = 0; c2 < l2; c2++) {
+          if (!first) {
+            res2 = res2 + ",";
+          }
+          first = false;
+          res2 = res2 + get_item_sig(a[c2]);
+        }
+        res2 = res2 + "]";
+        return res2;
+      };
+      var deep_sig = (item2, max_depth = -1, depth = 0) => {
+        const t = tf2(item2);
+        let res2 = "";
+        if (t === "a") {
+          const l2 = item2.length;
+          if (max_depth === -1 || depth <= max_depth) {
+            res2 = res2 + "[";
+            let first = true;
+            for (let c2 = 0; c2 < l2; c2++) {
+              if (!first) res2 = res2 + ",";
+              res2 = res2 + deep_sig(item2[c2], max_depth, depth + 1);
+              first = false;
+            }
+            res2 = res2 + "]";
+          } else {
+            return "a";
+          }
+        } else if (t === "A") {
+          const l2 = item2.length;
+          let first = true;
+          for (let c2 = 0; c2 < l2; c2++) {
+            if (!first) res2 = res2 + ",";
+            res2 = res2 + deep_sig(item2[c2], max_depth, depth + 1);
+            first = false;
+          }
+        } else if (t === "o") {
+          if (max_depth === -1 || depth <= max_depth) {
+            let res3 = "{";
+            let first = true;
+            each(item2, (v, k) => {
+              if (!first) res3 = res3 + ",";
+              res3 = res3 + '"' + k + '":' + deep_sig(v, max_depth, depth + 1);
+              first = false;
+            });
+            res3 = res3 + "}";
+            return res3;
+          } else {
+            return "o";
+          }
+        } else {
+          res2 = res2 + t;
+        }
+        return res2;
+      };
+      var trim_sig_brackets = function(sig) {
+        if (tof(sig) === "string") {
+          if (sig.charAt(0) == "[" && sig.charAt(sig.length - 1) == "]") {
+            return sig.substring(1, sig.length - 1);
+          } else {
+            return sig;
+          }
+        }
+      };
+      var arr_trim_undefined = function(arr_like) {
+        let res2 = [];
+        let last_defined = -1;
+        let t, v;
+        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
+          v = arr_like[c2];
+          t = tof(v);
+          if (t == "undefined") {
+          } else {
+            last_defined = c2;
+          }
+        }
+        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
+          if (c2 <= last_defined) {
+            res2.push(arr_like[c2]);
+          }
+        }
+        return res2;
+      };
+      var functional_polymorphism = function(options, fn) {
+        let a0 = arguments;
+        if (a0.length === 1) {
+          fn = a0[0];
+          options = null;
+        }
+        let arr_slice = Array.prototype.slice;
+        let arr, sig, a2, l2, a;
+        return function() {
+          a = arguments;
+          l2 = a.length;
+          if (l2 === 1) {
+            sig = get_item_sig([a[0]], 1);
+            a2 = [a[0]];
+            a2.l = 1;
+            return fn.call(this, a2, sig);
+          } else if (l2 > 1) {
+            arr = arr_trim_undefined(arr_slice.call(a, 0));
+            sig = get_item_sig(arr, 1);
+            arr.l = arr.length;
+            return fn.call(this, arr, sig);
+          } else if (a.length === 0) {
+            arr = new Array(0);
+            arr.l = 0;
+            return fn.call(this, arr, "[]");
+          }
+        };
+      };
+      var fp = functional_polymorphism;
+      var parse_sig = (str_sig, opts = {}) => {
+        const sig2 = str_sig.split(", ").join(",");
+        const sig_items = sig2.split(",");
+        const res2 = [];
+        each(sig_items, (sig_item) => {
+          if (sig_item.length === 1) {
+            let type_name = map_loaded_type_names[sig_item];
+            res2.push({
+              abbreviation: sig_item,
+              type_name
+            });
+          } else {
+            let suffix_modifiers;
+            let zero_or_more = false;
+            let one_or_more = false;
+            let type_name = sig_item;
+            const obj_res = {
+              type_name
+            };
+            const distil_suffix_modifiers = () => {
+              let last_char = type_name.substr(type_name.length - 1);
+              if (last_char === "*") {
+                type_name = type_name.substr(0, type_name.length - 1);
+                zero_or_more = true;
+                obj_res.zero_or_more = true;
+                obj_res.modifiers = obj_res.modifiers || [];
+                obj_res.modifiers.push("*");
+                distil_suffix_modifiers();
+              } else if (last_char === "+") {
+                type_name = type_name.substr(0, type_name.length - 1);
+                one_or_more = true;
+                obj_res.one_or_more = true;
+                obj_res.modifiers = obj_res.modifiers || [];
+                obj_res.modifiers.push("+");
+                distil_suffix_modifiers();
+              } else {
+              }
+            };
+            distil_suffix_modifiers();
+            obj_res.type_name = type_name;
+            res2.push(obj_res);
+          }
+        });
+        return res2;
+      };
+      var mfp_not_sigs = get_truth_map_from_arr(["pre", "default", "post"]);
+      var log = () => {
+      };
+      var combinations = (arr, arr_idxs_to_ignore) => {
+        const map_ignore_idxs = {};
+        if (arr_idxs_to_ignore) {
+          each(arr_idxs_to_ignore, (idx_to_ignore) => {
+            map_ignore_idxs[idx_to_ignore] = true;
+          });
+        }
+        if (arr.some((subArray) => subArray.length === 0)) {
+          return [];
+        }
+        const res2 = [];
+        const l2 = arr.length;
+        const arr_idxs_num_options = new Uint32Array(l2);
+        each(arr, (arr_item1, i1) => {
+          arr_idxs_num_options[i1] = arr_item1.length;
+        });
+        const arr_current_option_idxs = new Uint32Array(l2).fill(0);
+        const result_from_indexes = (arr2, arg_indexes) => {
+          const res3 = new Array(l2);
+          if (arg_indexes.length === l2) {
+            for (var c2 = 0; c2 < l2; c2++) {
+              res3[c2] = arr2[c2][arg_indexes[c2]];
+            }
+          } else {
+            console.trace();
+            throw "Arguments length mismatch";
+          }
+          return res3;
+        };
+        const incr = () => {
+          for (c = l2 - 1; c >= 0; c--) {
+            const ival = arr_current_option_idxs[c];
+            const max = arr_idxs_num_options[c] - 1;
+            if (ival < max) {
+              arr_current_option_idxs[c]++;
+              break;
+            } else {
+              if (c === 0) {
+                return false;
+              } else {
+                arr_current_option_idxs.fill(0, c);
+              }
+            }
+          }
+          return true;
+        };
+        let vals = result_from_indexes(arr, arr_current_option_idxs);
+        res2.push(vals);
+        while (incr()) {
+          let vals2 = result_from_indexes(arr, arr_current_option_idxs);
+          res2.push(vals2);
+        }
+        return res2;
+      };
+      var map_native_types = {
+        "string": true,
+        "boolean": true,
+        "number": true,
+        "object": true
+      };
+      var mfp = function() {
+        const a1 = arguments;
+        const sig1 = get_a_sig(a1);
+        let options = {};
+        let fn_pre, provided_map_sig_fns, inner_map_sig_fns = {}, inner_map_parsed_sigs = {}, arr_sig_parsed_sig_fns = [], fn_post;
+        let tm_sig_fns;
+        let fn_default;
+        let single_fn;
+        let req_sig_single_fn;
+        if (sig1 === "[o]") {
+          provided_map_sig_fns = a1[0];
+        } else if (sig1 === "[o,o]") {
+          options = a1[0];
+          provided_map_sig_fns = a1[1];
+        } else if (sig1 === "[o,f]") {
+          options = a1[0];
+          single_fn = a1[1];
+        } else if (sig1 === "[o,s,f]") {
+          options = a1[0];
+          req_sig_single_fn = a1[1];
+          single_fn = a1[2];
+          provided_map_sig_fns = {};
+          provided_map_sig_fns[req_sig_single_fn] = single_fn;
+        } else if (sig1 === "[f,o]") {
+          single_fn = a1[0];
+          options = a1[1];
+        } else if (sig1 === "[f]") {
+          single_fn = a1[0];
+        } else {
+          console.log("sig1", sig1);
+          console.trace();
+          throw "mfp NYI";
+        }
+        let {
+          single,
+          name,
+          grammar,
+          verb,
+          noun,
+          return_type,
+          return_subtype,
+          pure,
+          main,
+          skip
+        } = options;
+        let parsed_grammar;
+        let identify, validate;
+        let dsig = deep_sig;
+        (() => {
+          if (provided_map_sig_fns) {
+            if (provided_map_sig_fns.default) fn_default = provided_map_sig_fns.default;
+            each(provided_map_sig_fns, (fn, sig) => {
+              if (typeof fn === "function") {
+                if (!mfp_not_sigs[sig]) {
+                  const parsed_sig = parse_sig(sig);
+                  const arr_args_with_modifiers = [];
+                  const arr_args_all_modification_versions = [];
+                  each(parsed_sig, (arg, i) => {
+                    arr_args_all_modification_versions[i] = [];
+                    if (arg.modifiers) {
+                      const arg_num_modifiers = arg.modifiers.length;
+                      if (arg_num_modifiers > 1) {
+                        throw "Use of more than 1 modifier is currently unsupported.";
+                      } else if (arg_num_modifiers === 1) {
+                        arr_args_with_modifiers.push([i, arg]);
+                        const single_modifier = arg.modifiers[0];
+                        if (single_modifier === "*") {
+                          arr_args_all_modification_versions[i].push("");
+                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
+                          const plural_name = grammar.maps.sing_plur[arg.type_name];
+                          arr_args_all_modification_versions[i].push(plural_name);
+                        }
+                        if (single_modifier === "+") {
+                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
+                          const plural_name = grammar.maps.sing_plur[arg.type_name];
+                          arr_args_all_modification_versions[i].push(plural_name);
+                        }
+                        if (single_modifier === "?") {
+                          arr_args_all_modification_versions[i].push("");
+                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
+                        }
+                      }
+                    } else {
+                      arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
+                    }
+                  });
+                  const combo_args = combinations(arr_args_all_modification_versions);
+                  const combo_sigs = [];
+                  let i_first_of_last_undefined = -1;
+                  each(combo_args, (arg_set) => {
+                    let combo_sig = "";
+                    each(arg_set, (arg, i) => {
+                      let lsigb4 = combo_sig.length;
+                      if (i > 0) {
+                        combo_sig = combo_sig + ",";
+                      }
+                      if (arg === "") {
+                        combo_sig = combo_sig + "u";
+                        if (i_first_of_last_undefined === -1) {
+                          i_first_of_last_undefined = lsigb4;
+                        }
+                      } else {
+                        combo_sig = combo_sig + arg;
+                        i_first_of_last_undefined = -1;
+                      }
+                    });
+                    if (i_first_of_last_undefined > 0) {
+                      const combo_sig_no_last_undefined = combo_sig.substr(0, i_first_of_last_undefined);
+                      combo_sigs.push(combo_sig_no_last_undefined);
+                    }
+                    combo_sigs.push(combo_sig);
+                  });
+                  if (combo_sigs.length > 0) {
+                    each(combo_sigs, (combo_sig) => {
+                      inner_map_sig_fns[combo_sig] = fn;
+                    });
+                  } else {
+                    inner_map_sig_fns[sig] = fn;
+                  }
+                  inner_map_parsed_sigs[sig] = parsed_sig;
+                  arr_sig_parsed_sig_fns.push([sig, parsed_sig, fn]);
+                } else {
+                  console.log("ommiting, not parsing sig", sig);
+                }
+              } else {
+                console.log("fn", fn);
+                console.trace();
+                throw "Expected: function";
+              }
+              ;
+            });
+          }
+          each(inner_map_sig_fns, (fn, sig) => {
+            tm_sig_fns = tm_sig_fns || {};
+            tm_sig_fns[sig] = true;
+          });
+        })();
+        const res2 = function() {
+          const a2 = arguments;
+          const l2 = a2.length;
+          console.log("");
+          console.log("calling mfp function");
+          console.log("--------------------");
+          console.log("");
+          let mfp_fn_call_deep_sig;
+          let ltof = tof;
+          const lsig = dsig;
+          let ltf = tf2;
+          mfp_fn_call_deep_sig = lsig(a2);
+          const mfp_fn_call_shallow_sig = (() => {
+            if (!a2 || a2.length === 0) return "";
+            let res3 = "";
+            for (let i = 0; i < a2.length; i++) {
+              if (i > 0) res3 = res3 + ",";
+              res3 = res3 + ltf(a2[i]);
+            }
+            return res3;
+          })();
+          let do_skip = false;
+          if (skip) {
+            if (skip(a2)) {
+              do_skip = true;
+            } else {
+            }
+          }
+          if (!do_skip) {
+            if (inner_map_sig_fns[mfp_fn_call_deep_sig]) {
+              return inner_map_sig_fns[mfp_fn_call_deep_sig].apply(this, a2);
+            } else if (mfp_fn_call_shallow_sig && inner_map_sig_fns[mfp_fn_call_shallow_sig]) {
+              return inner_map_sig_fns[mfp_fn_call_shallow_sig].apply(this, a2);
+            } else {
+              let idx_last_fn = -1;
+              let idx_last_obj = -1;
+              each(a2, (arg, i_arg) => {
+                i_arg = parseInt(i_arg, 10);
+                const targ = tf2(arg);
+                if (targ === "o") {
+                  idx_last_obj = i_arg;
+                }
+                if (targ === "f") {
+                  idx_last_fn = i_arg;
+                }
+              });
+              const last_arg_is_fn = idx_last_fn > -1 && idx_last_fn === a2.length - 1;
+              const last_arg_is_obj = idx_last_obj > -1 && idx_last_obj === a2.length - 1;
+              const second_last_arg_is_obj = idx_last_obj > -1 && idx_last_obj === a2.length - 2;
+              let possible_options_obj;
+              if (last_arg_is_obj) possible_options_obj = a2[idx_last_obj];
+              const new_args_arrangement = [];
+              for (let f = 0; f < idx_last_obj; f++) {
+                new_args_arrangement.push(a2[f]);
+              }
+              each(possible_options_obj, (value2, key2) => {
+                new_args_arrangement.push(value2);
+              });
+              let naa_sig = lsig(new_args_arrangement);
+              naa_sig = naa_sig.substring(1, naa_sig.length - 1);
+              if (inner_map_sig_fns[naa_sig]) {
+                return inner_map_sig_fns[naa_sig].apply(this, new_args_arrangement);
+              } else {
+                if (fn_default) {
+                  return fn_default.call(this, a2, mfp_fn_call_deep_sig);
+                } else {
+                  if (single_fn) {
+                    console.log("pre apply single_fn");
+                    return single_fn.apply(this, a2);
+                  } else {
+                    console.log("Object.keys(inner_map_parsed_sigs)", Object.keys(inner_map_parsed_sigs));
+                    console.trace();
+                    console.log("mfp_fn_call_deep_sig", mfp_fn_call_deep_sig);
+                    console.log("provided_map_sig_fns", provided_map_sig_fns);
+                    if (provided_map_sig_fns) log("Object.keys(provided_map_sig_fns)", Object.keys(provided_map_sig_fns));
+                    console.log("Object.keys(inner_map_sig_fns)", Object.keys(inner_map_sig_fns));
+                    console.trace();
+                    throw "no signature match found. consider using a default signature. mfp_fn_call_deep_sig: " + mfp_fn_call_deep_sig;
+                  }
+                }
+              }
+            }
+          }
+        };
+        const _ = {};
+        if (name) _.name = name;
+        if (single) _.single = single;
+        if (skip) _.skip = skip;
+        if (grammar) _.grammar = grammar;
+        if (typeof options !== "undefined" && options.async) _.async = options.async;
+        if (main === true) _.main = true;
+        if (return_type) _.return_type = return_type;
+        if (return_subtype) _.return_subtype = return_subtype;
+        if (pure) _.pure = pure;
+        if (tm_sig_fns) _.map_sigs = tm_sig_fns;
+        if (Object.keys(_).length > 0) {
+          res2._ = _;
+        }
+        return res2;
+      };
+      var arrayify = fp(function(a, sig) {
+        let param_index, num_parallel = 1, delay = 0, fn;
+        let res2;
+        let process_as_fn = function() {
+          res2 = function() {
+            let a2 = arr_like_to_arr(arguments), ts = atof(a2), t = this;
+            let last_arg = a2[a2.length - 1];
+            if (tof(last_arg) == "function") {
+              if (typeof param_index !== "undefined" && ts[param_index] == "array") {
+                let res3 = [];
+                let fns = [];
+                each(a2[param_index], function(v, i) {
+                  let new_params = a2.slice(0, a2.length - 1);
+                  new_params[param_index] = v;
+                  fns.push([t, fn, new_params]);
+                });
+                call_multiple_callback_functions(fns, num_parallel, delay, (err, res4) => {
+                  if (err) {
+                    console.trace();
+                    throw err;
+                  } else {
+                    let a3 = [];
+                    a3 = a3.concat.apply(a3, res4);
+                    let callback2 = last_arg;
+                    callback2(null, a3);
+                  }
+                });
+              } else {
+                return fn.apply(t, a2);
+              }
+            } else {
+              if (typeof param_index !== "undefined" && ts[param_index] == "array") {
+                let res3 = [];
+                for (let c2 = 0, l2 = a2[param_index].length; c2 < l2; c2++) {
+                  a2[param_index] = arguments[param_index][c2];
+                  let result = fn.apply(t, a2);
+                  res3.push(result);
+                }
+                return res3;
+              } else {
+                return fn.apply(t, a2);
+              }
+            }
+          };
+        };
+        if (sig == "[o]") {
+          let res3 = [];
+          each(a[0], function(v, i) {
+            res3.push([v, i]);
+          });
+        } else if (sig == "[f]") {
+          param_index = 0, fn = a[0];
+          process_as_fn();
+        } else if (sig == "[n,f]") {
+          param_index = a[0], fn = a[1];
+          process_as_fn();
+        } else if (sig == "[n,n,f]") {
+          param_index = a[0], num_parallel = a[1], fn = a[2];
+          process_as_fn();
+        } else if (sig == "[n,n,n,f]") {
+          param_index = a[0], num_parallel = a[1], delay = a[2], fn = a[3];
+          process_as_fn();
+        }
+        return res2;
+      });
+      var mapify = (target) => {
+        let tt = tof(target);
+        if (tt == "function") {
+          let res2 = fp(function(a, sig) {
+            let that2 = this;
+            if (sig == "[o]") {
+              let map = a[0];
+              each(map, function(v, i) {
+                target.call(that2, v, i);
+              });
+            } else if (sig == "[o,f]") {
+              let map = a[0];
+              let callback2 = a[1];
+              let fns = [];
+              each(map, function(v, i) {
+                fns.push([target, [v, i]]);
+              });
+              call_multi(fns, function(err_multi, res_multi) {
+                if (err_multi) {
+                  callback2(err_multi);
+                } else {
+                  callback2(null, res_multi);
+                }
+              });
+            } else if (a.length >= 2) {
+              target.apply(this, a);
+            }
+          });
+          return res2;
+        } else if (tt == "array") {
+          let res2 = {};
+          if (arguments.length == 1) {
+            if (is_arr_of_strs(target)) {
+              each(target, function(v, i) {
+                res2[v] = true;
+              });
+            } else {
+              each(target, function(v, i) {
+                res2[v[0]] = v[1];
+              });
+            }
+          } else {
+            let by_property_name = arguments[1];
+            each(target, function(v, i) {
+              res2[v[by_property_name]] = v;
+            });
+          }
+          return res2;
+        }
+      };
+      var clone = fp((a, sig) => {
+        let obj2 = a[0];
+        if (a.l === 1) {
+          if (obj2 && typeof obj2.clone === "function") {
+            return obj2.clone();
+          } else {
+            let t = tof(obj2);
+            if (t === "array") {
+              let res2 = [];
+              each(obj2, (v) => {
+                res2.push(clone(v));
+              });
+              return res2;
+            } else if (t === "undefined") {
+              return void 0;
+            } else if (t === "string") {
+              return obj2;
+            } else if (t === "number") {
+              return obj2;
+            } else if (t === "function") {
+              return obj2;
+            } else if (t === "boolean") {
+              return obj2;
+            } else if (t === "null") {
+              return obj2;
+            } else if (t === "date") {
+              return new Date(obj2.getTime());
+            } else if (t === "regex") {
+              return new RegExp(obj2.source, obj2.flags);
+            } else if (t === "buffer") {
+              if (typeof Buffer !== "undefined" && Buffer.from) {
+                return Buffer.from(obj2);
+              } else if (obj2 && typeof obj2.slice === "function") {
+                return obj2.slice(0);
+              } else {
+                return obj2;
+              }
+            } else if (t === "error") {
+              const cloned_error = new obj2.constructor(obj2.message);
+              cloned_error.name = obj2.name;
+              cloned_error.stack = obj2.stack;
+              each(obj2, (value2, key2) => {
+                if (key2 !== "message" && key2 !== "name" && key2 !== "stack") {
+                  cloned_error[key2] = clone(value2);
+                }
+              });
+              return cloned_error;
+            } else if (t === "object") {
+              const res2 = {};
+              each(obj2, (value2, key2) => {
+                res2[key2] = clone(value2);
+              });
+              return res2;
+            } else {
+              return obj2;
+            }
+          }
+        } else if (a.l === 2 && tof(a[1]) === "number") {
+          let res2 = [];
+          for (let c2 = 0; c2 < a[1]; c2++) {
+            res2.push(clone(obj2));
+          }
+          return res2;
+        }
+      });
+      var set_vals = function(obj2, map) {
+        each(map, function(v, i) {
+          obj2[i] = v;
+        });
+      };
+      var ll_set = (obj2, prop_name2, prop_value) => {
+        let arr = prop_name2.split(".");
+        let c2 = 0, l2 = arr.length;
+        let i = obj2._ || obj2, s;
+        while (c2 < l2) {
+          s = arr[c2];
+          if (typeof i[s] == "undefined") {
+            if (c2 - l2 == -1) {
+              i[s] = prop_value;
+            } else {
+              i[s] = {};
+            }
+          } else {
+            if (c2 - l2 == -1) {
+              i[s] = prop_value;
+            }
+          }
+          i = i[s];
+          c2++;
+        }
+        ;
+        return prop_value;
+      };
+      var ll_get = (a0, a1) => {
+        if (a0 && a1) {
+          let i = a0._ || a0;
+          if (a1 == ".") {
+            if (typeof i["."] == "undefined") {
+              return void 0;
+            } else {
+              return i["."];
+            }
+          } else {
+            let arr = a1.split(".");
+            let c2 = 0, l2 = arr.length, s;
+            while (c2 < l2) {
+              s = arr[c2];
+              if (typeof i[s] == "undefined") {
+                if (c2 - l2 == -1) {
+                } else {
+                  throw "object " + s + " not found";
+                }
+              } else {
+                if (c2 - l2 == -1) {
+                  return i[s];
+                }
+              }
+              i = i[s];
+              c2++;
+            }
+          }
+        }
+      };
+      var truth = function(value2) {
+        return value2 === true;
+      };
+      var iterate_ancestor_classes = (obj2, callback2) => {
+        let ctu = true;
+        let stop = () => {
+          ctu = false;
+        };
+        callback2(obj2, stop);
+        if (obj2._superclass && ctu) {
+          iterate_ancestor_classes(obj2._superclass, callback2);
+        }
+      };
+      var is_arr_of_t = function(obj2, type_name) {
+        let t = tof(obj2), tv;
+        if (t === "array") {
+          let res2 = true;
+          each(obj2, function(v, i) {
+            tv = tof(v);
+            if (tv != type_name) res2 = false;
+          });
+          return res2;
+        } else {
+          return false;
+        }
+      };
+      var is_arr_of_arrs = function(obj2) {
+        return is_arr_of_t(obj2, "array");
+      };
+      var is_arr_of_strs = function(obj2) {
+        return is_arr_of_t(obj2, "string");
+      };
+      var input_processors = {};
+      var output_processors = {};
+      var call_multiple_callback_functions = fp(function(a, sig) {
+        let arr_functions_params_pairs, callback2, return_params = false;
+        let delay;
+        let num_parallel = 1;
+        if (a.l === 1) {
+        } else if (a.l === 2) {
+          arr_functions_params_pairs = a[0];
+          callback2 = a[1];
+        } else if (a.l === 3) {
+          if (sig === "[a,n,f]") {
+            arr_functions_params_pairs = a[0];
+            num_parallel = a[1];
+            callback2 = a[2];
+          } else if (sig === "[n,a,f]") {
+            arr_functions_params_pairs = a[1];
+            num_parallel = a[0];
+            callback2 = a[2];
+          } else if (sig === "[a,f,b]") {
+            arr_functions_params_pairs = a[0];
+            callback2 = a[1];
+            return_params = a[2];
+          }
+        } else if (a.l === 4) {
+          if (sig === "[a,n,n,f]") {
+            arr_functions_params_pairs = a[0];
+            num_parallel = a[1];
+            delay = a[2];
+            callback2 = a[3];
+          } else if (sig == "[n,n,a,f]") {
+            arr_functions_params_pairs = a[2];
+            num_parallel = a[0];
+            delay = a[1];
+            callback2 = a[3];
+          }
+        }
+        let res2 = [];
+        let l2 = arr_functions_params_pairs.length;
+        let c2 = 0;
+        let count_unfinished = l2;
+        let num_currently_executing = 0;
+        let process2 = (delay2) => {
+          num_currently_executing++;
+          let main = () => {
+            let pair = arr_functions_params_pairs[c2];
+            let context2;
+            let fn, params, fn_callback;
+            let pair_sig = get_item_sig(pair);
+            let t_pair = tof(pair);
+            if (t_pair == "function") {
+              fn = pair;
+              params = [];
+            } else {
+              if (pair) {
+                if (pair.length == 1) {
+                }
+                if (pair.length == 2) {
+                  if (tof(pair[1]) == "function") {
+                    context2 = pair[0];
+                    fn = pair[1];
+                    params = [];
+                  } else {
+                    fn = pair[0];
+                    params = pair[1];
+                  }
+                }
+                if (pair.length == 3) {
+                  if (tof(pair[0]) === "function" && tof(pair[1]) === "array" && tof(pair[2]) === "function") {
+                    fn = pair[0];
+                    params = pair[1];
+                    fn_callback = pair[2];
+                  }
+                  if (tof(pair[1]) === "function" && tof(pair[2]) === "array") {
+                    context2 = pair[0];
+                    fn = pair[1];
+                    params = pair[2];
+                  }
+                }
+                if (pair.length == 4) {
+                  context2 = pair[0];
+                  fn = pair[1];
+                  params = pair[2];
+                  fn_callback = pair[3];
+                }
+              } else {
+              }
+            }
+            let i = c2;
+            c2++;
+            let cb = (err, res22) => {
+              num_currently_executing--;
+              count_unfinished--;
+              if (err) {
+                let stack = new Error().stack;
+                callback2(err);
+              } else {
+                if (return_params) {
+                  res2[i] = [params, res22];
+                } else {
+                  res2[i] = res22;
+                }
+                if (fn_callback) {
+                  fn_callback(null, res22);
+                }
+                if (c2 < l2) {
+                  if (num_currently_executing < num_parallel) {
+                    process2(delay2);
+                  }
+                } else {
+                  if (count_unfinished <= 0) {
+                    callback2(null, res2);
+                  }
+                }
+              }
+            };
+            let arr_to_call = params || [];
+            arr_to_call.push(cb);
+            if (fn) {
+              if (context2) {
+                fn.apply(context2, arr_to_call);
+              } else {
+                fn.apply(this, arr_to_call);
+              }
+            } else {
+            }
+          };
+          if (arr_functions_params_pairs[c2]) {
+            if (delay2) {
+              setTimeout(main, delay2);
+            } else {
+              main();
+            }
+          }
+        };
+        if (arr_functions_params_pairs.length > 0) {
+          while (c2 < l2 && num_currently_executing < num_parallel) {
+            if (delay) {
+              process2(delay * c2);
+            } else {
+              process2();
+            }
+          }
+        } else {
+          if (callback2) {
+          }
+        }
+      });
+      var call_multi = call_multiple_callback_functions;
+      var Fns = function(arr) {
+        let fns = arr || [];
+        fns.go = function(parallel, delay, callback2) {
+          let a = arguments;
+          let al = a.length;
+          if (al == 1) {
+            call_multi(fns, a[0]);
+          }
+          if (al == 2) {
+            call_multi(parallel, fns, delay);
+          }
+          if (al == 3) {
+            call_multi(parallel, delay, fns, callback2);
+          }
+        };
+        return fns;
+      };
+      var native_constructor_tof = function(value2) {
+        if (value2 === String) {
+          return "String";
+        }
+        if (value2 === Number) {
+          return "Number";
+        }
+        if (value2 === Boolean) {
+          return "Boolean";
+        }
+        if (value2 === Array) {
+          return "Array";
+        }
+        if (value2 === Object) {
+          return "Object";
+        }
+      };
+      var sig_match = function(sig1, sig2) {
+        let sig1_inner = sig1.substr(1, sig1.length - 2);
+        let sig2_inner = sig2.substr(1, sig2.length - 2);
+        if (sig1_inner.indexOf("[") > -1 || sig1_inner.indexOf("]") > -1 || sig2_inner.indexOf("[") > -1 || sig2_inner.indexOf("]") > -1) {
+          throw "sig_match only supports flat signatures.";
+        }
+        let sig1_parts = sig1_inner.split(",");
+        let sig2_parts = sig2_inner.split(",");
+        let res2 = true;
+        if (sig1_parts.length == sig2_parts.length) {
+          let c2 = 0, l2 = sig1_parts.length, i1, i2;
+          while (res2 && c2 < l2) {
+            i1 = sig1_parts[c2];
+            i2 = sig2_parts[c2];
+            if (i1 === i2) {
+            } else {
+              if (i1 !== "?") {
+                res2 = false;
+              }
+            }
+            c2++;
+          }
+          return res2;
+        } else {
+          return false;
+        }
+      };
+      var remove_sig_from_arr_shell = function(sig) {
+        if (sig[0] == "[" && sig[sig.length - 1] == "]") {
+          return sig.substring(1, sig.length - 1);
+        }
+        return sig;
+      };
+      var str_arr_mapify = function(fn) {
+        let res2 = fp(function(a, sig) {
+          if (a.l == 1) {
+            if (sig == "[s]") {
+              let s_pn = a[0].split(" ");
+              if (s_pn.length > 1) {
+                return res2.call(this, s_pn);
+              } else {
+                return fn.call(this, a[0]);
+              }
+            }
+            if (tof(a[0]) == "array") {
+              let res22 = {}, that2 = this;
+              each(a[0], function(v, i) {
+                res22[v] = fn.call(that2, v);
+              });
+              return res22;
+            }
+          }
+        });
+        return res2;
+      };
+      var to_arr_strip_keys = (obj2) => {
+        let res2 = [];
+        each(obj2, (v) => {
+          res2.push(v);
+        });
+        return res2;
+      };
+      var arr_objs_to_arr_keys_values_table = (arr_objs) => {
+        let keys = Object.keys(arr_objs[0]);
+        let arr_items = [], arr_values;
+        each(arr_objs, (item2) => {
+          arr_items.push(to_arr_strip_keys(item2));
+        });
+        return [keys, arr_items];
+      };
+      var set_arr_tree_value = (arr_tree, arr_path, value2) => {
+        let item_current = arr_tree;
+        let last_item_current, last_path_item;
+        each(arr_path, (path_item) => {
+          last_item_current = item_current;
+          item_current = item_current[path_item];
+          last_path_item = path_item;
+        });
+        last_item_current[last_path_item] = value2;
+      };
+      var get_arr_tree_value = (arr_tree, arr_path) => {
+        let item_current = arr_tree;
+        each(arr_path, (path_item) => {
+          item_current = item_current[path_item];
+        });
+        return item_current;
+      };
+      var deep_arr_iterate = (arr, path = [], callback2) => {
+        if (arguments.length === 2) {
+          callback2 = path;
+          path = [];
+        }
+        each(arr, (item2, i) => {
+          let c_path = clone(path);
+          c_path.push(i);
+          let t = tof(item2);
+          if (t === "array") {
+            deep_arr_iterate(item2, c_path, callback2);
+          } else {
+            callback2(c_path, item2);
+          }
+        });
+      };
+      var prom = (fn) => {
+        let fn_res = function() {
+          const a = arguments;
+          const t_a_last = typeof a[a.length - 1];
+          if (t_a_last === "function") {
+            fn.apply(this, a);
+          } else {
+            return new Promise((resolve, reject) => {
+              [].push.call(a, (err, res2) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve(res2);
+                }
+              });
+              fn.apply(this, a);
+            });
+          }
+        };
+        return fn_res;
+      };
+      var vectorify = (n_fn) => {
+        let fn_res = fp(function(a, sig) {
+          if (a.l > 2) {
+            throw "stop - need to check.";
+            let res2 = a[0];
+            for (let c2 = 1, l2 = a.l; c2 < l2; c2++) {
+              res2 = fn_res(res2, a[c2]);
+            }
+            return res2;
+          } else {
+            if (sig === "[n,n]") {
+              return n_fn(a[0], a[1]);
+            } else {
+              const ats = atof(a);
+              if (ats[0] === "array") {
+                if (ats[1] === "number") {
+                  const res2 = [], n = a[1], l2 = a[0].length;
+                  let c2;
+                  for (c2 = 0; c2 < l2; c2++) {
+                    res2.push(fn_res(a[0][c2], n));
+                  }
+                  return res2;
+                } else if (ats[1] === "array") {
+                  if (ats[0].length !== ats[1].length) {
+                    throw "vector array lengths mismatch";
+                  } else {
+                    const l2 = a[0].length, res2 = new Array(l2), arr2 = a[1];
+                    for (let c2 = 0; c2 < l2; c2++) {
+                      res2[c2] = fn_res(a[0][c2], arr2[c2]);
+                    }
+                    return res2;
+                  }
+                }
+              }
+            }
+          }
+          ;
+        });
+        return fn_res;
+      };
+      var n_add = (n1, n2) => n1 + n2;
+      var n_subtract = (n1, n2) => n1 - n2;
+      var n_multiply = (n1, n2) => n1 * n2;
+      var n_divide = (n1, n2) => n1 / n2;
+      var v_add = vectorify(n_add);
+      var v_subtract2 = vectorify(n_subtract);
+      var v_multiply = vectorify(n_multiply);
+      var v_divide = vectorify(n_divide);
+      var vector_magnitude = function(vector) {
+        var res2 = Math.sqrt(Math.pow(vector[0], 2) + Math.pow(vector[1], 2));
+        return res2;
+      };
+      var distance_between_points = function(points) {
+        var offset2 = v_subtract2(points[1], points[0]);
+        return vector_magnitude(offset2);
+      };
+      var map_tas_by_type = {
+        "c": Uint8ClampedArray,
+        "ui8": Uint8Array,
+        "i16": Int16Array,
+        "i32": Int32Array,
+        "ui16": Uint16Array,
+        "ui32": Uint32Array,
+        "f32": Float32Array,
+        "f64": Float64Array
+      };
+      var get_typed_array = function() {
+        const a = arguments;
+        let length, input_array;
+        const type = a[0];
+        if (is_array(a[1])) {
+          input_array = a[1];
+        } else {
+          length = a[1];
+        }
+        const ctr = map_tas_by_type[type];
+        if (ctr) {
+          if (input_array) {
+            return new ctr(input_array);
+          } else if (length) {
+            return new ctr(length);
+          }
+        }
+      };
+      var Grammar = class {
+        constructor(spec) {
+          const eg_spec = {
+            name: "User Auth Grammar"
+          };
+          const {
+            name
+          } = spec;
+          this.name = name;
+          const eg_indexing = () => {
+            let map_sing_plur = {};
+            let map_plur_sing = {};
+            let map_sing_def = {};
+            let map_sig_sing = {};
+            let map_sig0_sing = {};
+            let map_sig1_sing = {};
+            let map_sig2_sing = {};
+          };
+          this.maps = {
+            sing_plur: {},
+            plur_sing: {},
+            sing_def: {},
+            deep_sig_sing: {},
+            obj_sig_sing: {},
+            sig_levels_sing: {}
+          };
+          this.load_grammar(spec.def);
+        }
+        load_grammar(grammar_def) {
+          const {
+            sing_plur,
+            plur_sing,
+            sing_def,
+            sig_levels_sing,
+            deep_sig_sing,
+            obj_sig_sing
+          } = this.maps;
+          const resolve_def = (def) => {
+            const td = tf2(def);
+            if (td === "a") {
+              const res2 = [];
+              each(def, (def_item) => {
+                res2.push(resolve_def(def_item));
+              });
+              return res2;
+            } else if (td === "s") {
+              if (def === "string") {
+                return "string";
+              } else if (def === "number") {
+                return "number";
+              } else if (def === "boolean") {
+                return "boolean";
+              } else {
+                const found_sing_def = sing_def[def];
+                return found_sing_def;
+              }
+            } else if (td === "n") {
+              console.trace();
+              throw "NYI";
+            } else if (td === "b") {
+              console.trace();
+              throw "NYI";
+            }
+          };
+          const resolved_def_to_sig = (resolved_def, level = 0) => {
+            const trd = tf2(resolved_def);
+            if (trd === "s") {
+              if (resolved_def === "string") {
+                return "s";
+              } else if (resolved_def === "number") {
+                return "n";
+              } else if (resolved_def === "boolean") {
+                return "b";
+              }
+            } else if (trd === "a") {
+              let res2 = "";
+              if (level === 0) {
+              } else {
+                res2 = res2 + "[";
+              }
+              each(resolved_def, (item2, c2) => {
+                if (c2 > 0) {
+                  res2 = res2 + ",";
+                }
+                res2 = res2 + resolved_def_to_sig(item2, level + 1);
+              });
+              if (level === 0) {
+              } else {
+                res2 = res2 + "]";
+              }
+              return res2;
+            } else {
+              console.trace();
+              throw "NYI";
+            }
+            return res;
+          };
+          each(grammar_def, (def1, sing_word) => {
+            const {
+              def,
+              plural
+            } = def1;
+            sing_def[sing_word] = def;
+            sing_plur[sing_word] = plural;
+            plur_sing[plural] = sing_word;
+            const tdef = tf2(def);
+            const resolved_def = resolve_def(def);
+            const resolved_def_sig = resolved_def_to_sig(resolved_def);
+            deep_sig_sing[resolved_def_sig] = deep_sig_sing[resolved_def_sig] || [];
+            deep_sig_sing[resolved_def_sig].push(sing_word);
+            let def_is_all_custom_types = true;
+            each(def, (def_item, c2, stop) => {
+              const tdi = tf2(def_item);
+              if (tdi === "s") {
+                if (sing_def[def_item]) {
+                } else {
+                  def_is_all_custom_types = false;
+                  stop();
+                }
+              } else {
+                def_is_all_custom_types = false;
+                stop();
+              }
+            });
+            let obj_sig;
+            if (def_is_all_custom_types) {
+              obj_sig = "{";
+              each(def, (def_item, c2, stop) => {
+                if (c2 > 0) {
+                  obj_sig = obj_sig + ",";
+                }
+                const resolved = resolve_def(def_item);
+                const abr_resolved = resolved_def_to_sig(resolved);
+                obj_sig = obj_sig + '"' + def_item + '":';
+                obj_sig = obj_sig + abr_resolved;
+              });
+              obj_sig = obj_sig + "}";
+            }
+            if (obj_sig) {
+              obj_sig_sing[obj_sig] = obj_sig_sing[obj_sig] || [];
+              obj_sig_sing[obj_sig].push(sing_word);
+            }
+          });
+        }
+        tof(item2) {
+          const {
+            sing_plur,
+            plur_sing,
+            sing_def,
+            sig_levels_sing,
+            deep_sig_sing,
+            obj_sig_sing
+          } = this.maps;
+          const titem = tf2(item2);
+          console.log("titem", titem);
+          if (titem === "a") {
+            let all_arr_items_type;
+            each(item2, (subitem, c2, stop) => {
+              const subitem_type = this.tof(subitem);
+              console.log("subitem_type", subitem_type);
+              if (c2 === 0) {
+                all_arr_items_type = subitem_type;
+              } else {
+                if (all_arr_items_type === subitem_type) {
+                } else {
+                  all_arr_items_type = null;
+                  stop();
+                }
+              }
+            });
+            if (all_arr_items_type) {
+              console.log("has all_arr_items_type", all_arr_items_type);
+              if (!map_native_types[all_arr_items_type]) {
+                const res2 = sing_plur[all_arr_items_type];
+                return res2;
+              }
+            } else {
+              console.log("no all_arr_items_type");
+            }
+          } else {
+            return tof(item2);
+          }
+          const item_deep_sig = deep_sig(item2);
+          console.log("Grammar tof() item_deep_sig", item_deep_sig);
+          let arr_sing;
+          if (titem === "a") {
+            const unenclosed_sig = item_deep_sig.substring(1, item_deep_sig.length - 1);
+            console.log("unenclosed_sig", unenclosed_sig);
+            arr_sing = deep_sig_sing[unenclosed_sig];
+          } else {
+            arr_sing = deep_sig_sing[item_deep_sig];
+          }
+          if (arr_sing) {
+            if (arr_sing.length === 1) {
+              return arr_sing[0];
+            } else {
+              console.trace();
+              throw "NYI";
+            }
+          }
+        }
+        sig(item2, max_depth = -1, depth = 0) {
+          const {
+            sing_plur,
+            plur_sing,
+            sing_def,
+            sig_levels_sing,
+            deep_sig_sing,
+            obj_sig_sing
+          } = this.maps;
+          const extended_sig = (item3) => {
+            const ti = tf2(item3);
+            let res2 = "";
+            let same_grammar_type;
+            const record_subitem_sigs = (item4) => {
+              same_grammar_type = void 0;
+              let same_sig = void 0;
+              each(item4, (subitem, c2) => {
+                if (c2 > 0) {
+                  res2 = res2 + ",";
+                }
+                const sig_subitem = this.sig(subitem, max_depth, depth + 1);
+                if (same_sig === void 0) {
+                  same_sig = sig_subitem;
+                } else {
+                  if (sig_subitem !== same_sig) {
+                    same_sig = false;
+                    same_grammar_type = false;
+                  }
+                }
+                if (same_sig) {
+                  if (sing_def[sig_subitem]) {
+                    if (same_grammar_type === void 0) {
+                      same_grammar_type = sig_subitem;
+                    } else {
+                      if (same_grammar_type === sig_subitem) {
+                      } else {
+                        same_grammar_type = false;
+                      }
+                    }
+                  } else {
+                  }
+                }
+                res2 = res2 + sig_subitem;
+              });
+            };
+            if (ti === "A") {
+              record_subitem_sigs(item3);
+              return res2;
+            } else if (ti === "a") {
+              record_subitem_sigs(item3);
+              if (same_grammar_type) {
+                const plur_name = sing_plur[same_grammar_type];
+                return plur_name;
+              } else {
+                const found_obj_type = obj_sig_sing[res2];
+                const found_deep_sig_type = deep_sig_sing[res2];
+                let found_type_sing;
+                if (found_deep_sig_type) {
+                  if (found_deep_sig_type.length === 1) {
+                    found_type_sing = found_deep_sig_type[0];
+                  }
+                }
+                if (found_type_sing) {
+                  return found_type_sing;
+                } else {
+                  const enclosed_res = "[" + res2 + "]";
+                  return enclosed_res;
+                }
+              }
+            } else if (ti === "o") {
+              if (max_depth === -1 || depth <= max_depth) {
+                res2 = res2 + "{";
+                let first = true;
+                each(item3, (value2, key2) => {
+                  const vsig = this.sig(value2, max_depth, depth + 1);
+                  if (!first) {
+                    res2 = res2 + ",";
+                  } else {
+                    first = false;
+                  }
+                  res2 = res2 + '"' + key2 + '":' + vsig;
+                });
+                res2 = res2 + "}";
+                return res2;
+              } else {
+                return "o";
+              }
+            } else if (ti === "s" || ti === "n" || ti === "b") {
+              return ti;
+            } else {
+              return ti;
+            }
+          };
+          return extended_sig(item2);
+        }
+        single_forms_sig(item2) {
+          const {
+            sing_plur,
+            plur_sing,
+            sing_def,
+            sig_levels_sing,
+            deep_sig_sing,
+            obj_sig_sing
+          } = this.maps;
+          let sig = this.sig(item2);
+          let s_sig = sig.split(",");
+          const arr_res = [];
+          each(s_sig, (sig_item, c2) => {
+            const sing = plur_sing[sig_item] || sig_item;
+            arr_res.push(sing);
+          });
+          const res2 = arr_res.join(",");
+          return res2;
+        }
+      };
+      var Evented_Class = class {
+        "constructor"() {
+          Object.defineProperty(this, "_bound_events", {
+            value: {}
+          });
+        }
+        "raise_event"() {
+          let a = Array.prototype.slice.call(arguments), sig = get_a_sig(a);
+          a.l = a.length;
+          let target = this;
+          let c2, l2, res2;
+          if (sig === "[s]") {
+            let target2 = this;
+            let event_name = a[0];
+            let bgh = this._bound_general_handler;
+            let be = this._bound_events;
+            res2 = [];
+            if (bgh) {
+              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
+                res2.push(bgh[c2].call(target2, event_name));
+              }
+            }
+            if (be) {
+              let bei = be[event_name];
+              if (tof(bei) == "array") {
+                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
+                  res2.push(bei[c2].call(target2));
+                }
+                return res2;
+              }
+            }
+          }
+          if (sig === "[s,a]") {
+            let be = this._bound_events;
+            let bgh = this._bound_general_handler;
+            let event_name = a[0];
+            res2 = [];
+            if (bgh) {
+              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
+                res2.push(bgh[c2].call(target, event_name, a[1]));
+              }
+            }
+            if (be) {
+              let bei = be[event_name];
+              if (tof(bei) === "array") {
+                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
+                  res2.push(bei[c2].call(target, a[1]));
+                }
+              }
+            }
+          }
+          if (sig === "[s,b]" || sig === "[s,s]" || sig === "[s,n]" || sig === "[s,B]" || sig === "[s,O]" || sig === "[s,e]") {
+            let be = this._bound_events;
+            let bgh = this._bound_general_handler;
+            let event_name = a[0];
+            res2 = [];
+            if (bgh) {
+              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
+                res2.push(bgh[c2].call(target, event_name, a[1]));
+              }
+            }
+            if (be) {
+              let bei = be[event_name];
+              if (tof(bei) === "array") {
+                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
+                  res2.push(bei[c2].call(target, a[1]));
+                }
+              }
+            }
+          }
+          if (sig === "[s,o]" || sig === "[s,?]") {
+            let be = this._bound_events;
+            let bgh = this._bound_general_handler;
+            let event_name = a[0];
+            res2 = [];
+            if (bgh) {
+              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
+                res2.push(bgh[c2].call(target, event_name, a[1]));
+              }
+            }
+            if (be) {
+              let bei = be[event_name];
+              if (tof(bei) === "array") {
+                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
+                  res2.push(bei[c2].call(target, a[1]));
+                }
+              }
+            }
+          } else {
+            if (a.l > 2) {
+              let event_name = a[0];
+              let additional_args = [];
+              let bgh_args = [event_name];
+              for (c2 = 1, l2 = a.l; c2 < l2; c2++) {
+                additional_args.push(a[c2]);
+                bgh_args.push(a[c2]);
+              }
+              let be = this._bound_events;
+              let bgh = this._bound_general_handler;
+              res2 = [];
+              if (bgh) {
+                for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
+                  res2.push(bgh[c2].apply(target, bgh_args));
+                }
+              }
+              if (be) {
+                let bei = be[event_name];
+                if (tof(bei) == "array") {
+                  if (bei.length > 0) {
+                    for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
+                      if (bei[c2]) res2.push(bei[c2].apply(target, additional_args));
+                    }
+                    return res2;
+                  } else {
+                    return res2;
+                  }
+                }
+              }
+            } else {
+            }
+          }
+          return res2;
+        }
+        "add_event_listener"() {
+          const {
+            event_events
+          } = this;
+          let a = Array.prototype.slice.call(arguments), sig = get_a_sig(a);
+          if (sig === "[f]") {
+            this._bound_general_handler = this._bound_general_handler || [];
+            if (is_array(this._bound_general_handler)) {
+              this._bound_general_handler.push(a[0]);
+            }
+            ;
+          }
+          if (sig === "[s,f]") {
+            let event_name = a[0], fn_listener = a[1];
+            if (!this._bound_events[event_name]) this._bound_events[event_name] = [];
+            let bei = this._bound_events[event_name];
+            if (is_array(bei)) {
+              bei.push(fn_listener);
+              if (event_events) {
+                this.raise("add-event-listener", {
+                  "name": event_name
+                });
+              }
+            } else {
+              console.trace();
+              throw "Expected: array";
+            }
+          }
+          return this;
+        }
+        "remove_event_listener"(event_name, fn_listener) {
+          const {
+            event_events
+          } = this;
+          if (this._bound_events) {
+            let bei = this._bound_events[event_name] || [];
+            if (is_array(bei)) {
+              let c2 = 0, l2 = bei.length, found = false;
+              while (!found && c2 < l2) {
+                if (bei[c2] === fn_listener) {
+                  found = true;
+                } else {
+                  c2++;
+                }
+              }
+              if (found) {
+                bei.splice(c2, 1);
+                if (event_events) {
+                  this.raise("remove-event-listener", {
+                    "name": event_name
+                  });
+                }
+              }
+            } else {
+              console.trace();
+              throw "Expected: array";
+            }
+          }
+          return this;
+        }
+        get bound_named_event_counts() {
+          const res2 = {};
+          if (this._bound_events) {
+            const keys = Object.keys(this._bound_events);
+            each(keys, (key2) => {
+              res2[key2] = this._bound_events[key2].length;
+            });
+          }
+          return res2;
+        }
+        "one"(event_name, fn_handler) {
+          let inner_handler = function(e) {
+            fn_handler.call(this, e);
+            this.off(event_name, inner_handler);
+          };
+          this.on(event_name, inner_handler);
+        }
+        "changes"(obj_changes) {
+          if (!this.map_changes) {
+            this.map_changes = {};
+          }
+          each(obj_changes, (handler, name) => {
+            this.map_changes[name] = this.map_changes[name] || [];
+            this.map_changes[name].push(handler);
+          });
+          if (!this._using_changes) {
+            this._using_changes = true;
+            this.on("change", (e_change) => {
+              const {
+                name,
+                value: value2
+              } = e_change;
+              if (this.map_changes[name]) {
+                each(this.map_changes[name], (h_change) => {
+                  h_change(value2);
+                });
+              }
+            });
+          }
+        }
+      };
+      var p = Evented_Class.prototype;
+      p.raise = p.raise_event;
+      p.trigger = p.raise_event;
+      p.subscribe = p.add_event_listener;
+      p.on = p.add_event_listener;
+      p.off = p.remove_event_listener;
+      var eventify = (obj2) => {
+        const bound_events = {};
+        const add_event_listener = (name, handler) => {
+          if (handler === void 0 && typeof name === "function") {
+            handler = name;
+            name = "";
+          }
+          if (!bound_events[name]) bound_events[name] = [];
+          bound_events[name].push(handler);
+        };
+        const remove_event_listener = (name, handler) => {
+          if (bound_events[name]) {
+            const i = bound_events[name].indexOf(handler);
+            if (i > -1) {
+              bound_events[name].splice(i, 1);
+            }
+          }
+        };
+        const raise_event = (name, optional_param) => {
+          const arr_named_events = bound_events[name];
+          if (arr_named_events !== void 0) {
+            if (optional_param !== void 0) {
+              const l2 = arr_named_events.length;
+              for (let c2 = 0; c2 < l2; c2++) {
+                arr_named_events[c2].call(obj2, optional_param);
+              }
+            } else {
+              const l2 = arr_named_events.length;
+              for (let c2 = 0; c2 < l2; c2++) {
+                arr_named_events[c2].call(obj2);
+              }
+            }
+          }
+        };
+        obj2.on = obj2.add_event_listener = add_event_listener;
+        obj2.off = obj2.remove_event_listener = remove_event_listener;
+        obj2.raise = obj2.raise_event = raise_event;
+        return obj2;
+      };
+      var Publisher = class extends Evented_Class {
+        constructor(spec = {}) {
+          super({});
+          this.one("ready", () => {
+            this.is_ready = true;
+          });
+        }
+        get when_ready() {
+          return new Promise((solve, jettison) => {
+            if (this.is_ready === true) {
+              solve();
+            } else {
+              this.one("ready", () => {
+                solve();
+              });
+            }
+          });
+        }
+      };
+      var prop = (...a) => {
+        let s = get_a_sig(a);
+        const raise_change_events = true;
+        const ifn = (item2) => typeof item2 === "function";
+        if (s === "[a]") {
+          each(a[0], (item_params2) => {
+            prop.apply(exports, item_params2);
+          });
+        } else {
+          if (a.length === 2) {
+            if (ia(a[1])) {
+              const target = a[0];
+              each(a[1], (item2) => {
+                if (ia(item2)) {
+                  throw "NYI 468732";
+                } else {
+                  prop(target, item2);
+                }
+              });
+            } else {
+              const ta1 = tof(a[1]);
+              if (ta1 === "string") {
+                [obj, prop_name] = a;
+              } else {
+                throw "NYI 468732b";
+              }
+            }
+          } else if (a.length > 2) {
+            if (is_array(a[0])) {
+              throw "stop";
+              let objs = a.shift();
+              each(objs, (obj2) => {
+                prop.apply(exports, [obj2].concat(item_params));
+              });
+            } else {
+              let obj2, prop_name2, default_value, fn_onchange, fn_transform, fn_on_ready, options;
+              const load_options = (options2) => {
+                prop_name2 = prop_name2 || options2.name || options2.prop_name;
+                fn_onchange = options2.fn_onchange || options2.onchange || options2.change;
+                fn_transform = options2.fn_transform || options2.ontransform || options2.transform;
+                fn_on_ready = options2.ready || options2.on_ready;
+                default_value = default_value || options2.default_value || options2.default;
+              };
+              if (a.length === 2) {
+                [obj2, options] = a;
+                load_options(options);
+              } else if (a.length === 3) {
+                if (ifn(a[2])) {
+                  [obj2, prop_name2, fn_onchange] = a;
+                } else {
+                  if (a[2].change || a[2].ready) {
+                    load_options(a[2]);
+                    [obj2, prop_name2] = a;
+                  } else {
+                    [obj2, prop_name2, default_value] = a;
+                  }
+                }
+              } else if (a.length === 4) {
+                if (ifn(a[2]) && ifn(a[3])) {
+                  [obj2, prop_name2, fn_transform, fn_onchange] = a;
+                } else if (ifn(a[3])) {
+                  [obj2, prop_name2, default_value, fn_onchange] = a;
+                } else {
+                  [obj2, prop_name2, default_value, options] = a;
+                  load_options(options);
+                }
+              } else if (a.length === 5) {
+                [obj2, prop_name2, default_value, fn_transform, fn_onchange] = a;
+              }
+              let _prop_value;
+              if (typeof default_value !== "undefined") _prop_value = default_value;
+              const _silent_set = (value2) => {
+                let _value;
+                if (fn_transform) {
+                  _value = fn_transform(value2);
+                } else {
+                  _value = value2;
+                }
+                _prop_value = _value;
+              };
+              const _set = (value2) => {
+                let _value;
+                if (fn_transform) {
+                  _value = fn_transform(value2);
+                } else {
+                  _value = value2;
+                }
+                let old = _prop_value;
+                _prop_value = _value;
+                if (fn_onchange) {
+                  fn_onchange({
+                    old,
+                    value: _prop_value
+                  });
+                }
+                if (obj2.raise && raise_change_events) {
+                  obj2.raise("change", {
+                    name: prop_name2,
+                    old,
+                    value: _prop_value
+                  });
+                }
+              };
+              if (is_defined(default_value)) {
+                _prop_value = default_value;
+              }
+              const t_prop_name = tf2(prop_name2);
+              if (t_prop_name === "s") {
+                Object.defineProperty(obj2, prop_name2, {
+                  get() {
+                    return _prop_value;
+                  },
+                  set(value2) {
+                    _set(value2);
+                  }
+                });
+              } else if (t_prop_name === "a") {
+                const l2 = prop_name2.length;
+                let item_prop_name;
+                for (let c2 = 0; c2 < l2; c2++) {
+                  item_prop_name = prop_name2[c2];
+                  Object.defineProperty(obj2, item_prop_name, {
+                    get() {
+                      return _prop_value;
+                    },
+                    set(value2) {
+                      _set(value2);
+                    }
+                  });
+                }
+              } else {
+                throw "Unexpected name type: " + t_prop_name;
+              }
+              if (fn_on_ready) {
+                fn_on_ready({
+                  silent_set: _silent_set
+                });
+              }
+            }
+          }
+        }
+      };
+      var Data_Type = class {
+      };
+      var Functional_Data_Type = class extends Data_Type {
+        constructor(spec) {
+          super(spec);
+          if (spec.supertype) this.supertype = spec.supertype;
+          if (spec.name) this.name = spec.name;
+          if (spec.abbreviated_name) this.abbreviated_name = spec.abbreviated_name;
+          if (spec.named_property_access) this.named_property_access = spec.named_property_access;
+          if (spec.numbered_property_access) this.numbered_property_access = spec.numbered_property_access;
+          if (spec.property_names) this.property_names = spec.property_names;
+          if (spec.property_data_types) this.property_data_types = spec.property_data_types;
+          if (spec.wrap_properties) this.wrap_properties = spec.wrap_properties;
+          if (spec.wrap_value_inner_values) this.wrap_value_inner_values = spec.wrap_value_inner_values;
+          if (spec.value_js_type) this.value_js_type = spec.value_js_type;
+          if (spec.abbreviated_property_names) this.abbreviated_property_names = spec.abbreviated_property_names;
+          if (spec.validate) this.validate = spec.validate;
+          if (spec.validate_explain) this.validate_explain = spec.validate_explain;
+          if (spec.parse_string) this.parse_string = spec.parse_string;
+          if (spec.parse) this.parse = spec.parse;
+        }
+      };
+      Functional_Data_Type.number = new Functional_Data_Type({
+        name: "number",
+        abbreviated_name: "n",
+        validate: (x) => {
+          return !isNaN(x);
+        },
+        parse_string(str) {
+          const p2 = parseFloat(str);
+          if (p2 + "" === str) {
+            const parsed_is_valid = this.validate(p2);
+            if (parsed_is_valid) {
+              return p2;
+            }
+          }
+        }
+      });
+      Functional_Data_Type.integer = new Functional_Data_Type({
+        name: "integer",
+        abbreviated_name: "int",
+        validate: (x) => {
+          return Number.isInteger(x);
+        },
+        parse_string(str) {
+          const p2 = parseInt(str, 10);
+          if (!isNaN(p2) && p2.toString() === str) {
+            return p2;
+          }
+          return void 0;
+        }
+      });
+      var field = (...a) => {
+        const raise_change_events = true;
+        const ifn = (item2) => typeof item2 === "function";
+        let s = get_a_sig(a);
         if (s === "[a]") {
           each(a[0], (item_params2) => {
             prop.apply(exports, item_params2);
@@ -14320,11 +14391,70 @@
       var SINGLE_CHAR_OPERATORS = /* @__PURE__ */ new Set(["+", "-", "*", "/", "%", "=", "!", "<", ">", "&", "|", "^", "~"]);
       var PUNCTUATION_CHARS = /* @__PURE__ */ new Set(["(", ")", "{", "}", "[", "]", ",", ":", "?", "."]);
       var GLOBAL_SCOPE = typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
+      var DEFAULT_ALLOWED_GLOBALS = ["Math"];
+      var EXPRESSION_PARSER_DEFAULTS = {
+        cache: true,
+        cacheSize: 64,
+        cacheKeyResolver: null,
+        maxExpressionLength: 1e4,
+        maxMemberDepth: 2,
+        helpers: {},
+        allowedFunctions: [],
+        allowedGlobals: DEFAULT_ALLOWED_GLOBALS,
+        allowCall: null,
+        strict: false
+      };
+      var NORMALIZED_OPTIONS_FLAG = /* @__PURE__ */ Symbol("ExpressionParserOptions");
+      var DISALLOWED_IDENTIFIERS = /* @__PURE__ */ new Set(["this", "new"]);
+      var ExpressionParserError = class extends Error {
+        constructor(code, message, details = {}) {
+          super(message);
+          this.name = "ExpressionParserError";
+          this.code = code;
+          this.details = details;
+        }
+      };
+      var ExpressionCache = class {
+        constructor(limit = 0) {
+          this.limit = Math.max(0, limit || 0);
+          this.map = /* @__PURE__ */ new Map();
+        }
+        get(key2) {
+          if (!this.limit || !this.map.has(key2)) {
+            return void 0;
+          }
+          const value2 = this.map.get(key2);
+          this.map.delete(key2);
+          this.map.set(key2, value2);
+          return value2;
+        }
+        set(key2, value2) {
+          if (!this.limit) {
+            return;
+          }
+          if (this.map.has(key2)) {
+            this.map.delete(key2);
+          }
+          this.map.set(key2, value2);
+          while (this.map.size > this.limit) {
+            const oldestKey = this.map.keys().next().value;
+            this.map.delete(oldestKey);
+          }
+        }
+        clear() {
+          this.map.clear();
+        }
+        get size() {
+          return this.map.size;
+        }
+      };
       var Tokenizer = class {
         constructor(expression) {
-          this.expression = expression || "";
+          this.expression = typeof expression === "string" ? expression : String(expression || "");
           this.length = this.expression.length;
           this.position = 0;
+          this.line = 1;
+          this.column = 1;
         }
         tokenize() {
           const tokens = [];
@@ -14346,20 +14476,13 @@
             } else if (PUNCTUATION_CHARS.has(ch)) {
               tokens.push(this.tokenizePunctuation());
             } else {
-              throw new Error(`Unexpected character: ${ch}`);
+              this.throwError("TOKEN_INVALID_CHAR", `Unexpected character: ${ch}`);
             }
           }
           return tokens;
         }
         isAtEnd() {
           return this.position >= this.length;
-        }
-        peek(offset2 = 0) {
-          if (this.position + offset2 >= this.length) return "\0";
-          return this.expression[this.position + offset2];
-        }
-        advance() {
-          return this.expression[this.position++];
         }
         skipWhitespace() {
           while (!this.isAtEnd()) {
@@ -14390,6 +14513,32 @@
             break;
           }
         }
+        peek(offset2 = 0) {
+          if (this.position + offset2 >= this.length) return "\0";
+          return this.expression[this.position + offset2];
+        }
+        advance() {
+          if (this.isAtEnd()) {
+            return "\0";
+          }
+          const char = this.expression[this.position++];
+          if (char === "\n") {
+            this.line += 1;
+            this.column = 1;
+          } else {
+            this.column += 1;
+          }
+          return char;
+        }
+        getLocationSnapshot() {
+          return { index: this.position, line: this.line, column: this.column };
+        }
+        createToken(type, value2, start, end) {
+          return { type, value: value2, start, end };
+        }
+        throwError(code, message) {
+          throw new ExpressionParserError(code, message, { location: this.getLocationSnapshot() });
+        }
         isIdentifierStart(ch) {
           return /[A-Za-z_$]/.test(ch);
         }
@@ -14401,7 +14550,7 @@
         }
         isOperatorStart(ch) {
           if (ch === "." && this.peek(1) === "." && this.peek(2) === ".") {
-            throw new Error("Spread syntax is not supported");
+            this.throwError("SYNTAX_UNSUPPORTED", "Spread syntax is not supported");
           }
           if (ch === "?" && this.peek(1) === "?") {
             return true;
@@ -14409,19 +14558,22 @@
           return SINGLE_CHAR_OPERATORS.has(ch);
         }
         tokenizeIdentifier() {
+          const start = this.getLocationSnapshot();
           let value2 = "";
           while (!this.isAtEnd() && this.isIdentifierPart(this.peek())) {
             value2 += this.advance();
           }
+          const end = this.getLocationSnapshot();
           if (KEYWORD_LITERALS.has(value2)) {
-            return { type: "KEYWORD", value: value2 };
+            return this.createToken("KEYWORD", value2, start, end);
           }
           if (KEYWORD_OPERATORS.has(value2)) {
-            return { type: "OPERATOR", value: value2 };
+            return this.createToken("OPERATOR", value2, start, end);
           }
-          return { type: "IDENTIFIER", value: value2 };
+          return this.createToken("IDENTIFIER", value2, start, end);
         }
         tokenizeNumber() {
+          const start = this.getLocationSnapshot();
           let value2 = "";
           let hasDot = false;
           while (!this.isAtEnd()) {
@@ -14435,15 +14587,17 @@
               break;
             }
           }
-          return { type: "NUMBER", value: Number(value2) };
+          const end = this.getLocationSnapshot();
+          return this.createToken("NUMBER", Number(value2), start, end);
         }
         tokenizeString() {
           const quote = this.advance();
+          const start = this.getLocationSnapshot();
           let value2 = "";
           while (!this.isAtEnd()) {
             const ch = this.advance();
             if (ch === quote) {
-              return { type: "STRING", value: value2 };
+              return this.createToken("STRING", value2, start, this.getLocationSnapshot());
             }
             if (ch === "\\") {
               const next = this.advance();
@@ -14473,48 +14627,57 @@
               value2 += ch;
             }
           }
-          throw new Error("Unterminated string literal");
+          this.throwError("TOKEN_UNTERMINATED_STRING", "Unterminated string literal");
         }
         tokenizeOperator() {
           const remaining = this.expression.slice(this.position);
+          const start = this.getLocationSnapshot();
           for (const op of MULTI_CHAR_OPERATORS) {
             if (remaining.startsWith(op)) {
               if (op === "=>") {
-                throw new Error("Arrow functions are not supported");
+                this.throwError("SYNTAX_UNSUPPORTED", "Arrow functions are not supported");
               }
               this.position += op.length;
-              return { type: "OPERATOR", value: op };
+              this.column += op.length;
+              return this.createToken("OPERATOR", op, start, this.getLocationSnapshot());
             }
           }
           const ch = this.advance();
           if (ch === "=" && this.peek() === ">") {
-            throw new Error("Arrow functions are not supported");
+            this.throwError("SYNTAX_UNSUPPORTED", "Arrow functions are not supported");
           }
           if (!SINGLE_CHAR_OPERATORS.has(ch) && ch !== "?") {
-            throw new Error("Unexpected operator");
+            this.throwError("TOKEN_UNEXPECTED_OPERATOR", "Unexpected operator");
           }
-          return { type: "OPERATOR", value: ch };
+          return this.createToken("OPERATOR", ch, start, this.getLocationSnapshot());
         }
         tokenizePunctuation() {
+          const start = this.getLocationSnapshot();
           const ch = this.advance();
           if (ch === "." && this.peek() === "." && this.peek(1) === ".") {
-            throw new Error("Spread syntax is not supported");
+            this.throwError("SYNTAX_UNSUPPORTED", "Spread syntax is not supported");
           }
-          return { type: "PUNCTUATION", value: ch };
+          return this.createToken("PUNCTUATION", ch, start, this.getLocationSnapshot());
         }
       };
       var Parser = class {
-        constructor(tokens) {
+        constructor(tokens, options = {}) {
           this.tokens = tokens;
           this.pos = 0;
+          this.maxMemberDepth = options.maxMemberDepth || EXPRESSION_PARSER_DEFAULTS.maxMemberDepth;
+          const disallowed = new Set(DISALLOWED_IDENTIFIERS);
+          if (options.disallowedIdentifiers) {
+            options.disallowedIdentifiers.forEach((identifier) => disallowed.add(identifier));
+          }
+          this.disallowedIdentifiers = disallowed;
         }
         parse() {
           if (!this.tokens.length) {
-            throw new Error("Empty expression");
+            throw new ExpressionParserError("EMPTY_EXPRESSION", "Empty expression");
           }
           const ast = this.parseExpression();
           if (!this.isAtEnd()) {
-            throw new Error(`Unexpected token: ${this.peek().value}`);
+            this.error("UNEXPECTED_TOKEN", `Unexpected token: ${this.peek().value}`, this.peek());
           }
           return ast;
         }
@@ -14565,7 +14728,7 @@
         }
         parseEqualityExpression() {
           let expr = this.parseRelationalExpression();
-          while (this.matchOperator("==", "!=", "===", "!==")) {
+          while (this.matchOperator("===", "!==", "==", "!=")) {
             const operator = this.previous().value;
             const right = this.parseRelationalExpression();
             expr = this.buildBinaryExpression(operator, expr, right);
@@ -14573,8 +14736,17 @@
           return expr;
         }
         parseRelationalExpression() {
+          let expr = this.parseShiftExpression();
+          while (this.matchOperator("<", ">", "<=", ">=", "instanceof", "in")) {
+            const operator = this.previous().value;
+            const right = this.parseShiftExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseShiftExpression() {
           let expr = this.parseAdditiveExpression();
-          while (this.matchOperator("<", ">", "<=", ">=", "in", "instanceof")) {
+          while (this.matchOperator("<<", ">>", ">>>")) {
             const operator = this.previous().value;
             const right = this.parseAdditiveExpression();
             expr = this.buildBinaryExpression(operator, expr, right);
@@ -14611,22 +14783,30 @@
           let expr = this.parsePrimaryExpression();
           while (true) {
             if (this.matchPunctuation(".")) {
+              const operatorToken = this.previous();
               const property = this.consumePropertyIdentifier();
+              const depth = this.getChainDepth(expr) + 1;
+              this.assertMemberDepth(depth, operatorToken);
               expr = {
                 type: "MemberExpression",
                 object: expr,
                 property,
                 computed: false
               };
+              this.setChainDepth(expr, depth);
             } else if (this.matchPunctuation("[")) {
+              const operatorToken = this.previous();
               const property = this.parseExpression();
               this.consume("PUNCTUATION", "]");
+              const depth = this.getChainDepth(expr) + 1;
+              this.assertMemberDepth(depth, operatorToken);
               expr = {
                 type: "MemberExpression",
                 object: expr,
                 property,
                 computed: true
               };
+              this.setChainDepth(expr, depth);
             } else if (this.matchPunctuation("(")) {
               const args = this.parseArguments();
               expr = {
@@ -14634,6 +14814,7 @@
                 callee: expr,
                 arguments: args
               };
+              this.setChainDepth(expr, this.getChainDepth(expr.callee));
             } else {
               break;
             }
@@ -14643,7 +14824,7 @@
         parsePrimaryExpression() {
           const token = this.peek();
           if (!token) {
-            throw new Error("Unexpected end of expression");
+            this.error("UNEXPECTED_END", "Unexpected end of expression", token);
           }
           if (token.type === "NUMBER" || token.type === "STRING") {
             this.advance();
@@ -14655,6 +14836,7 @@
           }
           if (token.type === "IDENTIFIER") {
             this.advance();
+            this.assertIdentifierAllowed(token);
             return { type: "Identifier", value: token.value };
           }
           if (this.matchPunctuation("(")) {
@@ -14685,7 +14867,7 @@
             this.consume("PUNCTUATION", "}");
             return { type: "ObjectExpression", properties };
           }
-          throw new Error(`Unexpected token: ${token.value}`);
+          this.error("UNEXPECTED_TOKEN", `Unexpected token: ${token.value}`, token);
         }
         parsePropertyKey() {
           const token = this.peek();
@@ -14698,7 +14880,7 @@
             const value2 = token.type === "KEYWORD" ? this.literalFromKeyword(token.value) : token.value;
             return { type: "Literal", value: value2 };
           }
-          throw new Error("Invalid object property key");
+          this.error("INVALID_OBJECT_KEY", "Invalid object property key", token);
         }
         parseArguments() {
           const args = [];
@@ -14729,7 +14911,7 @@
             return this.advance();
           }
           const expected = value2 ? `${type} '${value2}'` : type;
-          throw new Error(`Expected ${expected}`);
+          this.error("MISSING_TOKEN", `Expected ${expected}`, this.peek());
         }
         check(type, value2) {
           if (this.isAtEnd()) return false;
@@ -14763,13 +14945,42 @@
             const value2 = token.type === "KEYWORD" ? this.literalFromKeyword(token.value) : token.value;
             return { type: "Literal", value: value2 };
           }
-          throw new Error("Expected property name");
+          this.error("INVALID_PROPERTY", "Expected property name", token);
         }
         buildBinaryExpression(operator, left, right) {
           return { type: "BinaryExpression", operator, left, right };
         }
         buildLogicalExpression(operator, left, right) {
           return { type: "LogicalExpression", operator, left, right };
+        }
+        getChainDepth(node) {
+          if (!node || typeof node !== "object") {
+            return 0;
+          }
+          return node.__chainDepth || 0;
+        }
+        setChainDepth(node, depth) {
+          if (!node || typeof node !== "object") {
+            return;
+          }
+          Object.defineProperty(node, "__chainDepth", {
+            value: depth,
+            enumerable: false,
+            configurable: true
+          });
+        }
+        assertMemberDepth(depth, token) {
+          if (depth > this.maxMemberDepth) {
+            this.error("MEMBER_DEPTH_EXCEEDED", `Member access depth ${depth} exceeds maximum of ${this.maxMemberDepth}`, token);
+          }
+        }
+        assertIdentifierAllowed(token) {
+          if (this.disallowedIdentifiers.has(token.value)) {
+            this.error("DISALLOWED_IDENTIFIER", `Identifier '${token.value}' is not allowed in expressions`, token);
+          }
+        }
+        error(code, message, token) {
+          throw new ExpressionParserError(code, message, token ? { location: token.start } : void 0);
         }
         advance() {
           if (!this.isAtEnd()) {
@@ -14795,6 +15006,7 @@
           this.strict = options.strict || false;
           this.allowCall = options.allowCall || null;
           this.allowedFunctions = new Set(options.allowedFunctions || []);
+          this.allowedGlobals = new Set(options.allowedGlobals || []);
           Object.values(this.helpers).forEach((value2) => {
             if (typeof value2 === "function") {
               this.allowedFunctions.add(value2);
@@ -14824,7 +15036,7 @@
             case "ConditionalExpression":
               return this.evaluateConditionalExpression(node);
             default:
-              throw new Error(`Unsupported AST node type: ${node.type}`);
+              throw new ExpressionParserError("UNSUPPORTED_NODE", `Unsupported AST node type: ${node.type}`);
           }
         }
         evaluateIdentifier(node) {
@@ -14835,11 +15047,11 @@
           if (this.context && Object.prototype.hasOwnProperty.call(this.context, name)) {
             return this.context[name];
           }
-          if (name in GLOBAL_SCOPE) {
+          if (this.allowedGlobals.has(name) && name in GLOBAL_SCOPE) {
             return GLOBAL_SCOPE[name];
           }
           if (this.strict) {
-            throw new Error(`Undefined identifier: ${name}`);
+            throw new ExpressionParserError("UNDEFINED_IDENTIFIER", `Undefined identifier: ${name}`);
           }
           console.error(`Undefined identifier: ${name}`);
           return void 0;
@@ -14847,7 +15059,7 @@
         evaluateMemberExpression(node) {
           const object = this.evaluate(node.object);
           if (object === null || object === void 0) {
-            throw new Error("Cannot read property of null or undefined");
+            throw new ExpressionParserError("NULL_MEMBER_ACCESS", "Cannot read property of null or undefined");
           }
           const property = node.computed ? this.evaluate(node.property) : node.property.type === "Identifier" ? node.property.value : node.property.value;
           return object[property];
@@ -14858,7 +15070,7 @@
           if (node.callee.type === "MemberExpression") {
             const object = this.evaluate(node.callee.object);
             if (object === null || object === void 0) {
-              throw new Error("Cannot call property of null or undefined");
+              throw new ExpressionParserError("NULL_MEMBER_CALL", "Cannot call property of null or undefined");
             }
             const property = node.callee.computed ? this.evaluate(node.callee.property) : node.callee.property.type === "Identifier" ? node.callee.property.value : node.callee.property.value;
             callee = object[property];
@@ -14868,10 +15080,10 @@
             thisArg = void 0;
           }
           if (typeof callee !== "function") {
-            throw new Error("Attempted to call a non-function");
+            throw new ExpressionParserError("CALL_NON_FUNCTION", "Attempted to call a non-function");
           }
           if (!this.isCallAllowed(callee, thisArg)) {
-            throw new Error("Function call not allowed by policy");
+            throw new ExpressionParserError("CALL_NOT_ALLOWED", "Function call not allowed by policy");
           }
           const args = node.arguments.map((arg) => this.evaluate(arg));
           return callee.apply(thisArg, args);
@@ -14912,11 +15124,11 @@
             case "delete":
               return this.performDelete(node.argument);
             default:
-              throw new Error(`Unsupported unary operator: ${node.operator}`);
+              throw new ExpressionParserError("UNSUPPORTED_UNARY", `Unsupported unary operator: ${node.operator}`);
           }
         }
         isIdentifierDefined(name) {
-          return Object.prototype.hasOwnProperty.call(this.helpers, name) || this.context && Object.prototype.hasOwnProperty.call(this.context, name) || name in GLOBAL_SCOPE;
+          return Object.prototype.hasOwnProperty.call(this.helpers, name) || this.context && Object.prototype.hasOwnProperty.call(this.context, name) || this.allowedGlobals.has(name) && name in GLOBAL_SCOPE;
         }
         performDelete(argument) {
           if (argument.type === "Identifier" && this.context && typeof this.context === "object") {
@@ -14949,10 +15161,8 @@
               return left % right;
             case "==":
               return left == right;
-            // eslint-disable-line eqeqeq
             case "!=":
               return left != right;
-            // eslint-disable-line eqeqeq
             case "===":
               return left === right;
             case "!==":
@@ -14970,7 +15180,7 @@
             case "instanceof":
               return left instanceof right;
             default:
-              throw new Error(`Unsupported binary operator: ${node.operator}`);
+              throw new ExpressionParserError("UNSUPPORTED_BINARY", `Unsupported binary operator: ${node.operator}`);
           }
         }
         evaluateLogicalExpression(node) {
@@ -14988,7 +15198,7 @@
               return left !== null && left !== void 0 ? left : this.evaluate(node.right);
             }
             default:
-              throw new Error(`Unsupported logical operator: ${node.operator}`);
+              throw new ExpressionParserError("UNSUPPORTED_LOGICAL", `Unsupported logical operator: ${node.operator}`);
           }
         }
         evaluateObjectExpression(node) {
@@ -15012,23 +15222,29 @@
       };
       var ExpressionParser = class {
         constructor(options = {}) {
-          this.options = { cache: options.cache !== false, ...options };
-          this.astCache = /* @__PURE__ */ new Map();
-          this.valueCache = /* @__PURE__ */ new Map();
+          this.options = normalizeOptions(null, options);
+          const cacheLimit = this.options.cache !== false ? this.options.cacheSize : 0;
+          this.astCache = new ExpressionCache(cacheLimit);
+          this.valueCache = new ExpressionCache(cacheLimit);
         }
         tokenize(expression) {
           return new Tokenizer(expression).tokenize();
         }
-        parse(expression, options = this.options) {
+        parse(expression, overrideOptions) {
+          const options = this.ensureNormalizedOptions(overrideOptions);
+          this.ensureExpressionLength(expression, options);
           const useCache = this.shouldUseCache(options);
-          if (useCache && this.astCache.has(expression)) {
-            return this.astCache.get(expression);
+          if (useCache) {
+            const cachedAst = this.astCache.get(expression);
+            if (cachedAst) {
+              return cachedAst;
+            }
           }
           const tokens = this.tokenize(expression);
           if (!tokens.length) {
-            throw new Error("Empty expression");
+            throw new ExpressionParserError("EMPTY_EXPRESSION", "Empty expression");
           }
-          const parser = new Parser(tokens);
+          const parser = new Parser(tokens, options);
           const ast = parser.parse();
           Object.defineProperty(ast, "tokens", {
             value: tokens,
@@ -15040,8 +15256,8 @@
           }
           return ast;
         }
-        evaluate(expression, context2 = {}, options = {}) {
-          const mergedOptions = this.mergeOptions(options);
+        evaluate(expression, context2 = {}, overrideOptions = {}) {
+          const mergedOptions = this.mergeOptions(overrideOptions);
           const useCache = this.shouldUseCache(mergedOptions);
           if (useCache) {
             const cached = this.getCachedValue(expression, context2, mergedOptions);
@@ -15057,22 +15273,38 @@
           }
           return result;
         }
-        shouldUseCache(options) {
-          return options.cache !== false;
-        }
-        mergeOptions(override = {}) {
-          const base = this.options || {};
-          const helpers = { ...base.helpers || {}, ...override.helpers || {} };
-          const allowedFunctions = /* @__PURE__ */ new Set([
-            ...base.allowedFunctions || [],
-            ...override.allowedFunctions || []
-          ]);
-          return {
-            ...base,
-            ...override,
-            helpers,
-            allowedFunctions: Array.from(allowedFunctions)
+        compile(expression, overrideOptions = {}) {
+          const baseOptions = this.mergeOptions(overrideOptions);
+          const ast = this.parse(expression, baseOptions);
+          return (context2 = {}, runtimeOptions = {}) => {
+            const invocationOptions = this.mergeOptions(runtimeOptions, baseOptions);
+            const evaluator = new Evaluator(context2, invocationOptions);
+            return evaluator.evaluate(ast);
           };
+        }
+        shouldUseCache(options) {
+          return options.cache !== false && options.cacheSize > 0;
+        }
+        ensureNormalizedOptions(options) {
+          if (options && options[NORMALIZED_OPTIONS_FLAG]) {
+            return options;
+          }
+          if (!options) {
+            return this.options;
+          }
+          return this.mergeOptions(options);
+        }
+        ensureExpressionLength(expression, options) {
+          if (expression.length > options.maxExpressionLength) {
+            throw new ExpressionParserError(
+              "EXPRESSION_TOO_LONG",
+              `Expression exceeds maximum length of ${options.maxExpressionLength} characters`
+            );
+          }
+        }
+        mergeOptions(override = {}, baseOptions) {
+          const base = baseOptions && baseOptions[NORMALIZED_OPTIONS_FLAG] ? baseOptions : baseOptions || this.options;
+          return normalizeOptions(base, override);
         }
         getCachedValue(expression, context2, options) {
           const bucket = this.valueCache.get(expression);
@@ -15095,6 +15327,9 @@
           return { hit: false };
         }
         storeCachedValue(expression, context2, value2, options) {
+          if (!this.shouldUseCache(options)) {
+            return;
+          }
           let bucket = this.valueCache.get(expression);
           if (!bucket) {
             bucket = { objectCache: /* @__PURE__ */ new WeakMap(), primitiveCache: /* @__PURE__ */ new Map() };
@@ -15119,7 +15354,38 @@
         isObjectLike(value2) {
           return value2 !== null && (typeof value2 === "object" || typeof value2 === "function");
         }
+        getCacheStats() {
+          return {
+            astEntries: this.astCache.size,
+            valueEntries: this.valueCache.size
+          };
+        }
       };
+      function normalizeOptions(baseOptions, overrideOptions = {}) {
+        const base = baseOptions && baseOptions[NORMALIZED_OPTIONS_FLAG] ? baseOptions : { ...EXPRESSION_PARSER_DEFAULTS, ...baseOptions || {} };
+        const helpers = { ...base.helpers || {}, ...overrideOptions.helpers || {} };
+        const allowedFunctions = /* @__PURE__ */ new Set([
+          ...base.allowedFunctions || [],
+          ...overrideOptions.allowedFunctions || []
+        ]);
+        const allowedGlobals = /* @__PURE__ */ new Set([
+          ...base.allowedGlobals || DEFAULT_ALLOWED_GLOBALS,
+          ...overrideOptions.allowedGlobals || []
+        ]);
+        const normalized = {
+          ...EXPRESSION_PARSER_DEFAULTS,
+          ...base,
+          ...overrideOptions,
+          helpers,
+          allowedFunctions: Array.from(allowedFunctions),
+          allowedGlobals: Array.from(allowedGlobals)
+        };
+        Object.defineProperty(normalized, NORMALIZED_OPTIONS_FLAG, {
+          value: true,
+          enumerable: false
+        });
+        return normalized;
+      }
       var lang_mini_props = {
         each,
         is_array,
@@ -15146,7 +15412,7 @@
         arrayify,
         mapify,
         str_arr_mapify,
-        get_a_sig: get_a_sig2,
+        get_a_sig,
         deep_sig,
         get_item_sig,
         set_vals,
@@ -15191,7 +15457,5125 @@
         prop,
         Data_Type,
         Functional_Data_Type,
-        ExpressionParser
+        ExpressionParser,
+        ExpressionParserError
+      };
+      var lang_mini = new Evented_Class();
+      Object.assign(lang_mini, lang_mini_props);
+      lang_mini.note = (str_name, str_state, obj_properties) => {
+        obj_properties = obj_properties || {};
+        obj_properties.name = str_name;
+        obj_properties.state = str_state;
+        lang_mini.raise("note", obj_properties);
+      };
+      module.exports = lang_mini;
+      if (__require.main === module) {
+        let test_evented_class2 = function(test_data2) {
+          const res2 = create_empty_test_res();
+          const evented_class = new Evented_Class();
+          test_data2.forEach((test_event) => {
+            const event_name = test_event.event_name;
+            const event_data = test_event.event_data;
+            const listener = (data) => {
+              if (data === event_data) {
+                res2.passed.push(event_name);
+              } else {
+                res2.failed.push(event_name);
+              }
+            };
+            evented_class.on(event_name, listener);
+            evented_class.raise_event(event_name, event_data);
+          });
+          return res2;
+        };
+        test_evented_class = test_evented_class2;
+        const test_data = [
+          {
+            event_name: "foo",
+            event_data: "hello"
+          },
+          {
+            event_name: "bar",
+            event_data: "world"
+          },
+          {
+            event_name: "baz",
+            event_data: true
+          }
+        ];
+        const create_empty_test_res = () => ({
+          passed: [],
+          failed: []
+        });
+        const result = test_evented_class2(test_data);
+        console.log("Passed:", result.passed);
+        console.log("Failed:", result.failed);
+      }
+      var test_evented_class;
+    }
+  });
+
+  // node_modules/obext/node_modules/lang-mini/lib-lang-mini.js
+  var require_lib_lang_mini3 = __commonJS({
+    "node_modules/obext/node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
+      var lang = require_lang_mini3();
+      var { each, tof } = lang;
+      var Type_Signifier = class _Type_Signifier {
+        // Name
+        constructor(spec = {}) {
+          const name = spec.name;
+          Object.defineProperty(this, "name", {
+            get() {
+              return name;
+            }
+          });
+          const parent = spec.parent;
+          Object.defineProperty(this, "parent", {
+            get() {
+              return parent;
+            }
+          });
+          const map_reserved_property_names = {
+            name: true,
+            parent: true
+          };
+          const _ = {};
+          each(spec, (value2, name2) => {
+            if (map_reserved_property_names[name2]) {
+            } else {
+              _[name2] = value2;
+            }
+          });
+        }
+        extend(o_extension) {
+          const o = {
+            parent: this
+          };
+          Object.assign(o, o_extension);
+          const res2 = new _Type_Signifier(o_extension);
+          return res2;
+        }
+        //  Other options?
+        //  Disambiguiation? Descriptive text?
+        //    Or is naming them the main thing there?
+        // Color representation
+        //   And that is simple, does not go into internal representation.
+      };
+      var Type_Representation = class _Type_Representation {
+        // Name
+        //  Other options?
+        //  Disambiguiation? Descriptive text?
+        //    Or is naming them the main thing there?
+        // Color representation
+        //   And that is simple, does not go into internal representation.
+        // This should be able to represent types and lang features not available to JS.
+        //   Names may be optional? May be autogenerated and quite long?
+        constructor(spec = {}) {
+          const name = spec.name;
+          Object.defineProperty(this, "name", {
+            get() {
+              return name;
+            }
+          });
+          const parent = spec.parent;
+          Object.defineProperty(this, "parent", {
+            get() {
+              return parent;
+            }
+          });
+          const _ = {};
+          const map_reserved_property_names = {
+            "name": true
+          };
+          each(spec, (value2, name2) => {
+            if (map_reserved_property_names[name2]) {
+            } else {
+              _[name2] = value2;
+              Object.defineProperty(this, name2, {
+                get() {
+                  return _[name2];
+                },
+                enumerable: true
+              });
+            }
+          });
+        }
+        extend(o_extension) {
+          const o = {
+            parent: this
+          };
+          Object.assign(o, o_extension);
+          const res2 = new _Type_Representation(o_extension);
+          return res2;
+        }
+      };
+      var st_color = new Type_Signifier({ "name": "color" });
+      var st_24bit_color = st_color.extend({ "bits": 24 });
+      var st_24bit_rgb_color = st_24bit_color.extend({ "components": ["red byte", "green byte", "blue byte"] });
+      var tr_string = new Type_Representation({ "name": "string" });
+      var tr_binary = new Type_Representation({ "name": "binary" });
+      var rt_bin_24bit_rgb_color = new Type_Representation({
+        // A binary type representation.
+        "signifier": st_24bit_rgb_color,
+        "bytes": [
+          [0, "red", "ui8"],
+          [1, "green", "ui8"],
+          [2, "blue", "ui8"]
+        ]
+      });
+      var rt_hex_24bit_rgb_color = new Type_Representation({
+        // Likely some kind of string template.
+        //  Or a function?
+        //  Best to keep this function free here.
+        //  Or maybe make a few quite standard ones.
+        "signifier": st_24bit_rgb_color,
+        // Or could just have the sequence / template literal even.
+        "bytes": [
+          [0, "#", "char"],
+          [1, "hex(red)", "string(2)"],
+          [3, "hex(green)", "string(2)"],
+          [5, "hex(blue)", "string(2)"]
+        ]
+      });
+      var st_date = new Type_Signifier({ "name": "date", "components": ["day uint", "month uint", "year int"] });
+      var rt_string_date_uk_ddmmyy = new Type_Representation({
+        "signifier": st_date,
+        "bytes": [
+          [0, "#", "char"],
+          [1, "day", "string(2)"],
+          [3, "/", "char"],
+          [4, "month", "string(2)"],
+          [6, "/", "char"],
+          [7, "year", "string(2)"]
+        ]
+      });
+      lang.Type_Signifier = Type_Signifier;
+      lang.Type_Representation = Type_Representation;
+      module.exports = lang;
+    }
+  });
+
+  // node_modules/obext/oext.js
+  var require_oext = __commonJS({
+    "node_modules/obext/oext.js"(exports, module) {
+      var {
+        each,
+        get_a_sig,
+        def,
+        is_array,
+        tof,
+        tf: tf2
+      } = require_lib_lang_mini3();
+      var ifn = (item2) => typeof item2 === "function";
+      var ia2 = is_array;
+      var get_instance = function() {
+        const opts = {
+          raise_change_events: true
+        };
+        const states = (obj2, states2) => {
+        };
+        const get_set = (obj2, prop_name2, fn_get, fn_set) => {
+          const def2 = {
+            // Using shorthand method names (ES2015 feature).
+            // This is equivalent to:
+            // get: function() { return bValue; },
+            // set: function(newValue) { bValue = newValue; },
+            get: fn_get,
+            set: fn_set,
+            enumerable: true,
+            configurable: false
+          };
+          const t_prop_name = tf2(prop_name2);
+          if (t_prop_name === "a") {
+            each(prop_name2, (name) => Object.defineProperty(obj2, name, def2));
+          } else if (t_prop_name === "s") {
+            Object.defineProperty(obj2, prop_name2, def2);
+          } else {
+            console.trace();
+            throw "Unexpected prop_name, must be array or string";
+          }
+        };
+        const read_only = (obj2, prop_name2, fn_get) => {
+          Object.defineProperty(obj2, prop_name2, {
+            enumerable: true,
+            get: fn_get
+          });
+        };
+        const prop = (...a) => {
+          let s = get_a_sig(a);
+          if (s === "[a]") {
+            each(a[0], (item_params2) => {
+              prop.apply(this, item_params2);
+            });
+          } else {
+            if (a.length === 2) {
+              if (ia2(a[1])) {
+                const target = a[0];
+                each(a[1], (item2) => {
+                  if (ia2(item2)) {
+                    throw "NYI 468732";
+                  } else {
+                    prop(target, item2);
+                  }
+                });
+              } else {
+                const ta1 = tof(a[1]);
+                if (ta1 === "string") {
+                  [obj, prop_name] = a;
+                } else {
+                  throw "NYI 468732b";
+                }
+              }
+            } else if (a.length > 2) {
+              if (ia2(a[0])) {
+                throw "stop";
+                let objs = a.shift();
+                each(objs, (obj2) => {
+                  prop.apply(this, [obj2].concat(item_params));
+                });
+              } else {
+                let obj2, prop_name2, default_value, fn_onchange, fn_transform, fn_on_ready, options;
+                const load_options = (options2) => {
+                  prop_name2 = prop_name2 || options2.name || options2.prop_name;
+                  fn_onchange = options2.fn_onchange || options2.onchange || options2.change;
+                  fn_transform = options2.fn_transform || options2.ontransform || options2.transform;
+                  fn_on_ready = options2.ready || options2.on_ready;
+                  default_value = default_value || options2.default_value || options2.default;
+                };
+                if (a.length === 2) {
+                  [obj2, options] = a;
+                  load_options(options);
+                } else if (a.length === 3) {
+                  if (ifn(a[2])) {
+                    [obj2, prop_name2, fn_onchange] = a;
+                  } else {
+                    if (a[2] !== void 0 && (a[2].change || a[2].ready)) {
+                      load_options(a[2]);
+                      [obj2, prop_name2] = a;
+                    } else {
+                      [obj2, prop_name2, default_value] = a;
+                    }
+                  }
+                } else if (a.length === 4) {
+                  if (ifn(a[2]) && ifn(a[3])) {
+                    [obj2, prop_name2, fn_transform, fn_onchange] = a;
+                  } else if (ifn(a[3])) {
+                    [obj2, prop_name2, default_value, fn_onchange] = a;
+                  } else {
+                    [obj2, prop_name2, default_value, options] = a;
+                    load_options(options);
+                  }
+                } else if (a.length === 5) {
+                  [obj2, prop_name2, default_value, fn_transform, fn_onchange] = a;
+                }
+                let _prop_value;
+                if (typeof default_value !== "undefined") _prop_value = default_value;
+                const _silent_set = (value2) => {
+                  let _value;
+                  if (fn_transform) {
+                    _value = fn_transform(value2);
+                  } else {
+                    _value = value2;
+                  }
+                  _prop_value = _value;
+                };
+                const _set = (value2) => {
+                  let _value;
+                  if (fn_transform) {
+                    _value = fn_transform(value2);
+                  } else {
+                    _value = value2;
+                  }
+                  let old = _prop_value;
+                  _prop_value = _value;
+                  if (fn_onchange) {
+                    fn_onchange({
+                      old,
+                      value: _prop_value
+                    });
+                  }
+                  if (obj2.raise && opts.raise_change_events) {
+                    obj2.raise("change", {
+                      name: prop_name2,
+                      old,
+                      value: _prop_value
+                    });
+                  }
+                };
+                if (def(default_value)) {
+                  _prop_value = default_value;
+                }
+                const t_prop_name = tf2(prop_name2);
+                if (t_prop_name === "s") {
+                  Object.defineProperty(obj2, prop_name2, {
+                    get() {
+                      return _prop_value;
+                    },
+                    set(value2) {
+                      _set(value2);
+                    }
+                  });
+                } else if (t_prop_name === "a") {
+                  const l2 = prop_name2.length;
+                  let item_prop_name;
+                  for (let c2 = 0; c2 < l2; c2++) {
+                    item_prop_name = prop_name2[c2];
+                    Object.defineProperty(obj2, item_prop_name, {
+                      get() {
+                        return _prop_value;
+                      },
+                      set(value2) {
+                        _set(value2);
+                      }
+                    });
+                  }
+                } else {
+                  throw "Unexpected name type: " + t_prop_name;
+                }
+                if (fn_on_ready) {
+                  fn_on_ready({
+                    silent_set: _silent_set
+                  });
+                }
+              }
+            }
+          }
+        };
+        const field = (...a) => {
+          let s = get_a_sig(a);
+          if (s === "[a]") {
+            each(a[0], (item_params2) => {
+              prop.apply(this, item_params2);
+            });
+          } else {
+            if (a.length > 1) {
+              if (ia2(a[0])) {
+                let objs = a.shift();
+                each(objs, (obj2) => {
+                  prop.apply(this, [obj2].concat(item_params));
+                });
+              } else {
+                let obj2, prop_name2, default_value, fn_transform;
+                let raise_change_events = opts.raise_change_events;
+                if (a.length === 2) {
+                  [obj2, prop_name2] = a;
+                } else if (a.length === 3) {
+                  if (ifn(a[2])) {
+                    [obj2, prop_name2, fn_transform] = a;
+                  } else {
+                    [obj2, prop_name2, default_value] = a;
+                  }
+                } else if (a.length === 4) {
+                  [obj2, prop_name2, default_value, fn_transform] = a;
+                }
+                if (obj2 !== void 0) {
+                  Object.defineProperty(obj2, prop_name2, {
+                    get() {
+                      if (def(obj2._)) {
+                        return obj2._[prop_name2];
+                      } else {
+                        return void 0;
+                      }
+                    },
+                    set(value2) {
+                      let old = (obj2._ = obj2._ || {})[prop_name2];
+                      let _value;
+                      if (fn_transform) {
+                        _value = fn_transform(value2);
+                      } else {
+                        _value = value2;
+                      }
+                      obj2._[prop_name2] = _value;
+                      if (raise_change_events) {
+                        obj2.raise("change", {
+                          name: prop_name2,
+                          old,
+                          value: _value
+                        });
+                      }
+                    }
+                  });
+                  if (def(default_value)) {
+                    (obj2._ = obj2._ || {})[prop_name2] = default_value;
+                  }
+                } else {
+                  throw "stop";
+                }
+              }
+            }
+          }
+        };
+        return {
+          opts,
+          // module level options
+          prop,
+          field,
+          read_only,
+          ro: read_only,
+          get_set,
+          gs: get_set
+        };
+      };
+      module.exports = get_instance();
+    }
+  });
+
+  // node_modules/jsgui3-html/html-core/control-core.js
+  var require_control_core = __commonJS({
+    "node_modules/jsgui3-html/html-core/control-core.js"(exports, module) {
+      var jsgui2 = require_lang();
+      var oext = require_oext();
+      var { Base_Data_Object } = require_lang_tools_compat();
+      var { Data_Model, Collection, tof, stringify, get_a_sig, each, Evented_Class } = jsgui2;
+      var Text_Node = require_text_node();
+      var {
+        prop,
+        field
+      } = require_oext();
+      var px_handler = (target, property, value2, receiver) => {
+        let res2;
+        var t_val = tof(value2);
+        if (t_val === "number") {
+          res2 = value2 + "px";
+        } else if (t_val === "string") {
+          var match = value2.match(/(\d*\.?\d*)(.*)/);
+          if (match.length === 2) {
+            res2 = value2 + "px";
+          } else {
+            res2 = value2;
+          }
+        }
+        return res2;
+      };
+      var style_input_handlers = {
+        "width": px_handler,
+        "height": px_handler,
+        "left": px_handler,
+        "top": px_handler
+      };
+      var new_obj_style = () => {
+        let style = new Evented_Class({});
+        style.__empty = true;
+        style.toString = () => {
+          var res3 = [];
+          var first = true;
+          each(style, (value2, key2) => {
+            const tval = typeof value2;
+            if (tval !== "function" && key2 !== "toString" && key2 !== "__empty" && key2 !== "_bound_events" && key2 !== "on" && key2 !== "subscribe" && key2 !== "raise" && key2 !== "trigger") {
+              if (first) {
+                first = false;
+              } else {
+                res3.push(" ");
+              }
+              res3.push(key2 + ": " + value2 + ";");
+            }
+          });
+          return res3.join("");
+        };
+        const res2 = new Proxy(style, {
+          set: (target, property, value2, receiver) => {
+            let res3;
+            target["__empty"] = false;
+            var old_value = target[property];
+            if (style_input_handlers[property]) {
+              res3 = target[property] = style_input_handlers[property](target, property, value2, receiver);
+            } else {
+              res3 = target[property] = value2;
+            }
+            style.raise("change", {
+              "key": property,
+              "name": property,
+              "old": old_value,
+              "new": value2,
+              "value": value2
+            });
+            return res3;
+          },
+          get: (target, property, receiver) => {
+            if (property === "toString") {
+              return () => target + "";
+            } else {
+              return target[property];
+            }
+          }
+        });
+        return res2;
+      };
+      var DOM_Attributes = class extends Evented_Class {
+        constructor(spec) {
+          super(spec);
+          this.style = new_obj_style();
+          this.style.on("change", (e_change) => {
+            this.raise("change", {
+              "property": "style",
+              "key": "style",
+              "name": "style",
+              "value": this.style.toString()
+            });
+          });
+        }
+      };
+      var Control_DOM = class extends Evented_Class {
+        constructor() {
+          super();
+          var dom_attributes = new DOM_Attributes();
+          var attrs = this.attrs = this.attributes = new Proxy(dom_attributes, {
+            "set": (target, property, value2, receiver) => {
+              if (property === "style") {
+                var t_value = tof(value2);
+                if (t_value === "string") {
+                  var s_values = value2.trim().split(";");
+                  var kv;
+                  each(s_values, (s_value) => {
+                    kv = s_value.split(":");
+                    if (kv.length === 2) {
+                      kv[0] = kv[0].trim();
+                      kv[1] = kv[1].trim();
+                      target.style[kv[0]] = kv[1];
+                    }
+                  });
+                  dom_attributes.raise("change", {
+                    "property": property
+                  });
+                }
+              } else {
+                var old_value = target[property];
+                target[property] = value2;
+                dom_attributes.raise("change", {
+                  "key": property,
+                  "name": property,
+                  "old": old_value,
+                  "new": value2,
+                  "value": value2
+                });
+              }
+              return true;
+            },
+            get: (target, property, receiver) => {
+              return target[property];
+            }
+          });
+        }
+      };
+      var Control_Background = class extends Evented_Class {
+        constructor(spec = {}) {
+          super(spec);
+          let _color, _opacity;
+          Object.defineProperty(this, "color", {
+            get() {
+              return _color;
+            },
+            set(value2) {
+              const old = _color;
+              _color = value2;
+              this.raise("change", {
+                "name": "color",
+                "old": old,
+                "new": _color,
+                "value": _color
+              });
+            },
+            enumerable: true,
+            configurable: true
+          });
+        }
+        set(val) {
+        }
+      };
+      var Control_Core = class _Control_Core extends Base_Data_Object {
+        constructor(spec = {}, fields) {
+          spec.__type_name = spec.__type_name || "control";
+          super(spec, fields);
+          if (spec.id) {
+            this.__id = spec.id;
+          }
+          if (spec.__id) {
+            this.__id = spec.__id;
+          }
+          this.mapListeners = {};
+          this.__type = "control";
+          var spec_content;
+          let d = this.dom = new Control_DOM();
+          prop(this, "background", new Control_Background(), (e_change) => {
+            let {
+              value: value2
+            } = e_change;
+          });
+          this.background.on("change", (evt) => {
+            if (evt.name === "color") {
+              d.attributes.style["background-color"] = evt.value;
+            }
+          });
+          prop(this, "disabled", false);
+          prop(this, "size", spec.size, (e_change) => {
+            let {
+              value: value2,
+              old
+            } = e_change;
+            let [width, height2] = value2;
+            const s = this.dom.attrs.style;
+            s.width = width;
+            s.height = height2;
+            this.raise("resize", {
+              "value": value2
+            });
+          });
+          prop(this, "pos", void 0, (e_change) => {
+            let {
+              value: value2,
+              old
+            } = e_change;
+            if (value2.length === 2) {
+            }
+            let [left, top] = value2;
+            let o_style = {
+              "left": left,
+              "top": top
+            };
+            this.style(o_style);
+            this.raise("move", {
+              "value": value2
+            });
+          });
+          if (spec.pos) this.pos = spec.pos;
+          this.on("change", (e) => {
+            if (e.name === "disabled") {
+              if (e.value === true) {
+                this.add_class("disabled");
+              } else {
+                this.remove_class("disabled");
+              }
+            }
+          });
+          let tagName = spec.tagName || spec.tag_name || "div";
+          d.tagName = tagName;
+          var content = this.content = new Collection({});
+          spec_content = spec.content;
+          if (spec_content) {
+            var tsc = tof(spec_content);
+            if (tsc === "array") {
+              each(spec.content, (item2) => {
+                content.add(item2);
+              });
+            } else if (tsc === "string" || tsc === "control") {
+              content.add(spec_content);
+            }
+          }
+          if (spec.el) {
+            d.el = spec.el;
+            if (spec.el.tagName) d.tagName = spec.el.tagName.toLowerCase();
+          }
+          var context2 = this.context || spec.context;
+          if (context2) {
+            if (context2.register_control) context2.register_control(this);
+          } else {
+          }
+          if (spec["class"]) {
+            this.add_class(spec["class"]);
+          }
+          if (spec["css_class"]) {
+            this.add_class(spec["css_class"]);
+          }
+          if (spec["cssClass"]) {
+            this.add_class(spec["cssClass"]);
+          }
+          if (spec.hide) {
+            this.hide();
+          }
+          if (spec.add) {
+            this.add(spec.add);
+          }
+          if (spec.attrs) {
+            this.dom.attributes = spec.attrs;
+          }
+        }
+        get left() {
+          const sl = this.dom.attributes.style.left;
+          if (sl) {
+            return parseInt(sl) + this.ta[6];
+          }
+        }
+        get top() {
+          const st = this.dom.attributes.style.top;
+          if (st) {
+            return parseInt(st) + this.ta[7];
+          }
+        }
+        set top(value2) {
+          if (typeof value2 === "number") {
+            const measured_current_top = this.top;
+            const diff = Math.round(value2 - measured_current_top);
+            this.ta[7] += diff;
+          }
+        }
+        "hide"() {
+          let e = {
+            cancelDefault: false
+          };
+          this.raise("hide", e);
+          if (!e.cancelDefault) {
+            this.add_class("hidden");
+          }
+        }
+        "show"() {
+          let e = {
+            cancelDefault: false
+          };
+          this.raise("show", e);
+          if (!e.cancelDefault) {
+            this.remove_class("hidden");
+          }
+        }
+        get html() {
+          return this.all_html_render();
+        }
+        get internal_relative_div() {
+          return this._internal_relative_div || false;
+        }
+        set internal_relative_div(value2) {
+          var old_value = this._internal_relative_div;
+          this._internal_relative_div = value2;
+          if (value2 === true) {
+          }
+        }
+        get color() {
+          return this.background.color;
+        }
+        set color(value2) {
+          this.background.color = value2;
+        }
+        "post_init"(spec) {
+          if (spec && spec.id === true) {
+            this.dom.attrs.id = this._id();
+          }
+        }
+        "has"(item_name) {
+          var arr = item_name.split(".");
+          var c2 = 0, l2 = arr.length;
+          var i = this;
+          var s;
+          while (c2 < l2) {
+            s = arr[c2];
+            if (typeof i[s] == "undefined") {
+              return false;
+            }
+            i = i[s];
+            c2++;
+          }
+          ;
+          return i;
+        }
+        "renderDomAttributes"() {
+          var _a, _b, _c, _d;
+          if (this.beforeRenderDomAttributes) {
+            this.beforeRenderDomAttributes();
+          }
+          var dom_attrs = this.dom.attributes;
+          if (!dom_attrs) {
+            throw "expecting dom_attrs";
+          } else {
+            if (this._) {
+              var keys = Object.keys(this._);
+              var key2;
+              for (var c2 = 0, l2 = keys.length; c2 < l2; c2++) {
+                key2 = keys[c2];
+                if (key2 !== "_bound_events") {
+                  if (key2 instanceof _Control_Core) {
+                    (this._ctrl_fields = this._ctrl_fields || {})[key2] = this._[key2];
+                  } else {
+                    this._fields = this._fields || {};
+                    this._fields[key2] = this._[key2];
+                  }
+                }
+              }
+            }
+            if (this._ctrl_fields) {
+              var obj_ctrl_fields = {};
+              var keys = Object.keys(this._ctrl_fields);
+              var key2;
+              for (var c2 = 0, l2 = keys.length; c2 < l2; c2++) {
+                key2 = keys[c2];
+                if (key2 !== "_bound_events") {
+                  obj_ctrl_fields[key2] = this._ctrl_fields[key2]._id();
+                }
+              }
+              let scf = stringify(obj_ctrl_fields).replace(/"/g, "'");
+              if (scf.length > 2) {
+                dom_attrs["data-jsgui-ctrl-fields"] = scf;
+              }
+            }
+            if (this._fields) {
+              let sf = stringify(this._fields).replace(/"/g, "'");
+              if (sf.length > 2) {
+                dom_attrs["data-jsgui-fields"] = sf;
+              }
+            }
+            if (this.view.data.model.mixins) {
+              let smxs = "[";
+              let first = true;
+              (_d = (_c = (_b = (_a = this.view) == null ? void 0 : _a.data) == null ? void 0 : _b.model) == null ? void 0 : _c.mixins) == null ? void 0 : _d.each((mx) => {
+                if (!first) {
+                  smxs += ",";
+                } else {
+                  first = false;
+                }
+                const smx = JSON.stringify(mx);
+                smxs += smx;
+              });
+              smxs += "]";
+              smxs = smxs.replace(/"/g, "'");
+              if (smxs.length > 2) {
+                dom_attrs["data-jsgui-mixins"] = smxs;
+              }
+            }
+            const arr = [];
+            const id = this._id();
+            if (id !== void 0) {
+              arr.push(' data-jsgui-id="' + this._id() + '"');
+            }
+            if (this.data && this.data._model instanceof Data_Model) {
+              const dmid = this.data._model.__id;
+              if (dmid) {
+                arr.push(' data-jsgui-data-model-id="' + dmid + '"');
+              }
+            }
+            const exempt_types = {
+              html: true,
+              head: true,
+              body: true
+            };
+            if (this.context && this.__type_name) {
+              if (!exempt_types[this.__type_name] && this.__type_name !== void 0) {
+                arr.push(' data-jsgui-type="' + this.__type_name + '"');
+              }
+            }
+            var dom_attrs_keys = Object.keys(dom_attrs);
+            var key2, item2;
+            for (var c2 = 0, l2 = dom_attrs_keys.length; c2 < l2; c2++) {
+              key2 = dom_attrs_keys[c2];
+              if (key2 == "_bound_events") {
+              } else if (key2 === "style") {
+                item2 = dom_attrs[key2];
+                if (typeof item2 !== "function") {
+                  if (typeof item2 === "object") {
+                    if (key2 === "style") {
+                      const sprops = [];
+                      each(item2, (v, k) => {
+                        const tval = typeof v;
+                        if (tval !== "function") {
+                          if (k !== "__empty") {
+                            const sprop = k + ":" + v;
+                            sprops.push(sprop);
+                          }
+                        }
+                      });
+                      if (sprops.length > 0) arr.push(" ", key2, '="', sprops.join(";"), '"');
+                    } else {
+                      let s_obj;
+                      try {
+                        s_obj = stringify(item2);
+                      } catch (e) {
+                        if (item2 && item2.toString) {
+                          s_obj = item2.toString();
+                        } else {
+                          s_obj = "";
+                        }
+                      }
+                      if (s_obj && s_obj.length > 0) {
+                        s_obj = s_obj.replace(/\"/g, "'");
+                        arr.push(" ", key2, '="', s_obj, '"');
+                      }
+                    }
+                  } else {
+                    let is = item2.toString();
+                    if (!item2.__empty && is.length > 0) {
+                      arr.push(" ", key2, '="', is, '"');
+                    }
+                  }
+                }
+              } else {
+                item2 = dom_attrs[key2];
+                if (item2 && item2.toString) {
+                  if (typeof item2 === "object" && item2 !== null) {
+                    let s_obj;
+                    try {
+                      s_obj = stringify(item2);
+                    } catch (e) {
+                      s_obj = item2.toString();
+                    }
+                    if (s_obj && s_obj.length > 0) {
+                      s_obj = s_obj.replace(/\"/g, "'");
+                      arr.push(" ", key2, '="', s_obj, '"');
+                    }
+                  } else {
+                    arr.push(" ", key2, '="', item2.toString(), '"');
+                  }
+                }
+              }
+            }
+            return arr.join("");
+          }
+        }
+        "renderBeginTagToHtml"() {
+          const tagName = this.dom.tagName;
+          var res2;
+          if (tagName === false) {
+            res2 = "";
+          } else {
+            res2 = ["<", tagName, this.renderDomAttributes(), ">"].join("");
+          }
+          return res2;
+        }
+        "renderEndTagToHtml"() {
+          var res2;
+          const tagName = this.dom.tagName;
+          const noClosingTag = this.dom.noClosingTag;
+          if (tagName === false || noClosingTag) {
+            res2 = "";
+          } else {
+            res2 = ["</", tagName, ">"].join("");
+          }
+          return res2;
+        }
+        "renderHtmlAppendment"() {
+          return this.htmlAppendment || "";
+        }
+        "renderEmptyNodeJqo"() {
+          return [this.renderBeginTagToHtml(), this.renderEndTagToHtml(), this.renderHtmlAppendment()].join("");
+        }
+        "register_this_and_subcontrols"() {
+          const context2 = this.context;
+          this.iterate_this_and_subcontrols((ctrl) => {
+            context2.register_control(ctrl);
+          });
+        }
+        "iterate_subcontrols"(ctrl_callback) {
+          const content = this.content;
+          content.each((v) => {
+            ctrl_callback(v);
+            if (v && v.iterate_subcontrols) {
+              v.iterate_subcontrols(ctrl_callback);
+            }
+          });
+        }
+        "iterate_this_and_subcontrols"(ctrl_callback) {
+          ctrl_callback(this);
+          const content = this.content;
+          let tv;
+          if (typeof content !== "string") {
+            content.each((v) => {
+              tv = tof(v);
+              if (tv == "string") {
+              } else if (tv == "data_value") {
+              } else {
+                if (v && v.iterate_this_and_subcontrols) {
+                  v.iterate_this_and_subcontrols(ctrl_callback);
+                }
+              }
+            });
+          }
+        }
+        "all_html_render"(callback2) {
+          if (callback2) {
+            var arr_waiting_controls = [];
+            this.iterate_this_and_subcontrols((control) => {
+              if (control.__status == "waiting") arr_waiting_controls.push(control);
+            });
+            if (arr_waiting_controls.length == 0) {
+              callback2(null, this.all_html_render());
+            } else {
+              var c2 = arr_waiting_controls.length;
+              var complete = () => {
+                this.pre_all_html_render();
+                var dom2 = this.dom;
+                if (dom2) {
+                  callback2(null, [this.renderBeginTagToHtml(), this.all_html_render_internal_controls(), this.renderEndTagToHtml(), this.renderHtmlAppendment()].join(""));
+                }
+              };
+              each(arr_waiting_controls, (control, i) => {
+                control.on("ready", (e_ready) => {
+                  c2--;
+                  if (c2 == 0) {
+                    complete();
+                  }
+                });
+              });
+            }
+          } else {
+            this.pre_all_html_render();
+            var dom = this.dom;
+            if (dom) {
+              return [this.renderBeginTagToHtml(), this.all_html_render_internal_controls(), this.renderEndTagToHtml(), this.renderHtmlAppendment()].join("");
+            }
+          }
+        }
+        "render_content"() {
+          var content = this.content;
+          if (tof(content) === "string") {
+            return content;
+          } else {
+            var contentLength = content.length();
+            var res2 = new Array(contentLength);
+            var tn, output;
+            var arr = content._arr;
+            var c2, l2 = arr.length, n;
+            for (c2 = 0; c2 < l2; c2++) {
+              n = arr[c2];
+              if (n === null || typeof n === "undefined") {
+                res2.push("");
+                continue;
+              }
+              tn = tof(n);
+              if (tn === "string") {
+                const string_processor = jsgui2.output_processors && jsgui2.output_processors["string"];
+                if (string_processor) {
+                  res2.push(string_processor(n));
+                } else {
+                  res2.push(new Text_Node(n).all_html_render());
+                }
+              } else if (tn === "data_value") {
+                let dv_val;
+                if (typeof n.value !== "undefined") {
+                  dv_val = n.value;
+                } else if (typeof n._ !== "undefined") {
+                  dv_val = n._;
+                } else {
+                  dv_val = n.toString();
+                }
+                if (dv_val === null || typeof dv_val === "undefined") dv_val = "";
+                res2.push("" + dv_val);
+              } else if (tn === "data_model" || tn === "data_object") {
+                let s_val;
+                try {
+                  s_val = stringify(n);
+                } catch (e) {
+                  s_val = "" + n;
+                }
+                if (typeof s_val === "string" && s_val.length >= 2 && s_val[0] === '"' && s_val[s_val.length - 1] === '"') {
+                  s_val = s_val.slice(1, -1);
+                }
+                const string_processor = jsgui2.output_processors && jsgui2.output_processors["string"];
+                if (string_processor) {
+                  res2.push(string_processor(s_val));
+                } else {
+                  res2.push(new Text_Node(s_val).all_html_render());
+                }
+              } else if (tn === "number" || tn === "boolean") {
+                res2.push("" + n);
+              } else if (n && typeof n.all_html_render === "function") {
+                res2.push(n.all_html_render());
+              } else {
+                const string_processor = jsgui2.output_processors && jsgui2.output_processors["string"];
+                const fallback = "" + n;
+                if (string_processor) {
+                  res2.push(string_processor(fallback));
+                } else {
+                  res2.push(new Text_Node(fallback).all_html_render());
+                }
+              }
+            }
+            return res2.join("");
+          }
+        }
+        "all_html_render_internal_controls"() {
+          return this.render_content();
+        }
+        "render"() {
+          return this.all_html_render();
+        }
+        "pre_all_html_render"() {
+          if (typeof document === "undefined") {
+            this.raise("server-pre-render");
+          }
+        }
+        "compose"() {
+        }
+        "visible"(callback2) {
+          this.style("display", "block", callback2);
+        }
+        "transparent"(callback2) {
+          this.style("opacity", 0, callback2);
+        }
+        "opaque"(callback2) {
+          return this.style({
+            "opacity": 1
+          }, callback2);
+        }
+        "remove"() {
+          return this.parent.content.remove(this);
+        }
+        "add"(new_content) {
+          const tnc = tof(new_content);
+          let res2;
+          if (tnc === "array") {
+            let res3 = [];
+            each(new_content, (v) => {
+              res3.push(this.add(v));
+            });
+          } else {
+            if (new_content) {
+              if (tnc === "string") {
+                new_content = new Text_Node({
+                  "text": new_content,
+                  "context": this.context
+                });
+              } else {
+                if (!new_content.context) {
+                  if (this.context) {
+                    new_content.context = this.context;
+                  }
+                }
+              }
+              var inner_control = this.inner_control;
+              if (inner_control) {
+                res2 = inner_control.content.add(new_content);
+              } else {
+                res2 = this.content.add(new_content);
+              }
+              new_content.parent = this;
+            }
+          }
+          return res2;
+        }
+        "insert_before"(target) {
+          const target_parent = target.parent;
+          const target_index = target._index;
+          const content = target_parent.content;
+          content.insert(this, target_index);
+        }
+        "style"() {
+          const a = arguments, sig = get_a_sig(a, 1), d = this.dom, da = d.attrs;
+          a.l = a.length;
+          let style_name, style_value, modify_dom = true;
+          if (sig == "[s]") {
+            style_name = a[0];
+            const res2 = getComputedStyle(d.el)[style_name];
+            return res2;
+          } else if (sig == "[s,s,b]") {
+            [style_name, style_value, modify_dom] = a;
+          } else if (sig == "[s,s]" || sig == "[s,n]") {
+            [style_name, style_value] = a;
+          }
+          ;
+          if (style_name && typeof style_value !== "undefined") {
+            if (da.style) {
+              da.style[style_name] = style_value;
+              da.raise("change", {
+                "property": "style",
+                "name": "style",
+                "value": da.style + ""
+              });
+            } else {
+            }
+          }
+          if (sig == "[o]") {
+            each(a[0], (v, i) => {
+              this.style(i, v);
+            });
+          }
+        }
+        "active"() {
+        }
+        "find_selection_scope"() {
+          var res2 = this.selection_scope;
+          if (res2) return res2;
+          if (this.parent && this.parent.find_selection_scope) return this.parent.find_selection_scope();
+        }
+        "click"(handler) {
+          this.on("click", handler);
+        }
+        "add_class"(class_name) {
+          let da = this.dom.attrs, cls = da["class"];
+          if (!cls) {
+            da["class"] = class_name;
+          } else {
+            const tCls = tof(cls);
+            if (tCls == "object") {
+              throw "removed";
+            } else if (tCls == "string") {
+              let arr_classes = cls.split(" "), already_has_class = false, l2 = arr_classes.length, c2 = 0;
+              while (c2 < l2 && !already_has_class) {
+                if (arr_classes[c2] === class_name) {
+                  already_has_class = true;
+                }
+                c2++;
+              }
+              if (!already_has_class) {
+                arr_classes.push(class_name);
+              }
+              da["class"] = arr_classes.join(" ");
+            }
+          }
+        }
+        "has_class"(class_name) {
+          let da = this.dom.attrs, cls = da["class"];
+          if (cls) {
+            var tCls = tof(cls);
+            if (tCls == "object") {
+              throw "removed";
+            }
+            if (tCls == "string") {
+              var arr_classes = cls.split(" ");
+              var arr_res = [];
+              var l2 = arr_classes.length, c2 = 0;
+              while (c2 < l2) {
+                if (arr_classes[c2] === class_name) {
+                  return true;
+                }
+                c2++;
+              }
+            }
+          }
+        }
+        "remove_class"(class_name) {
+          let da = this.dom.attrs, cls = da["class"];
+          if (cls) {
+            var tCls = tof(cls);
+            if (tCls == "object") {
+              throw "removed";
+            }
+            if (tCls == "string") {
+              var arr_classes = cls.split(" ");
+              var arr_res = [];
+              var l2 = arr_classes.length, c2 = 0;
+              while (c2 < l2) {
+                if (arr_classes[c2] != class_name) {
+                  arr_res.push(arr_classes[c2]);
+                }
+                c2++;
+              }
+              da["class"] = arr_res.join(" ");
+            }
+          }
+        }
+        "toggle_class"(class_name, value2) {
+          const has_value = typeof value2 !== "undefined";
+          if (has_value) {
+            if (value2) {
+              this.add_class(class_name);
+            } else {
+              this.remove_class(class_name);
+            }
+          } else {
+            if (this.has_class(class_name)) {
+              this.remove_class(class_name);
+            } else {
+              this.add_class(class_name);
+            }
+          }
+        }
+        "is_ancestor_of"(target) {
+          var t_target = tof(target);
+          var el = this.dom.el;
+          var inner = (target2) => {
+            if (target2 == el) {
+              return true;
+            }
+            var parent2 = target2.parentNode;
+            if (!parent2) {
+              return false;
+            } else {
+              return inner(parent2);
+            }
+          };
+          if (t_target === "object") {
+            if (el !== target) {
+              var parent = target.parentNode;
+              if (parent) {
+                return inner(parent);
+              }
+            }
+          } else {
+            if (t_target === "control") {
+            }
+          }
+        }
+        "find_selected_ancestor_in_scope"() {
+          var s = this.selection_scope;
+          var ps = this.parent.selection_scope;
+          if (s === ps) {
+            var psel = this.parent.selected;
+            if (psel && psel.value && psel.value() == true) {
+              return this.parent;
+            } else {
+              return this.parent.find_selected_ancestor_in_scope();
+            }
+          }
+        }
+        "closest"(match) {
+          let tmatch = tof(match);
+          if (tmatch === "string") {
+          }
+          if (tmatch === "function") {
+            let search = (ctrl) => {
+              if (match(ctrl)) {
+                return ctrl;
+              } else {
+                if (ctrl.parent) {
+                  return search(ctrl.parent);
+                } else {
+                  return void 0;
+                }
+              }
+            };
+            return search(this);
+          }
+        }
+        "shallow_copy"() {
+          var res2 = new Control({
+            "context": this.context
+          });
+          var da = this.dom.attributes;
+          var cl = da.class;
+          var map_class_exclude = {
+            "selected": true
+          };
+          each(cl.split(" "), (v, i) => {
+            if (i && !map_class_exclude[i]) res2.add_class(i);
+          });
+          var res_content = res2.content;
+          this.content.each((v, i) => {
+            if (tof(v) == "data_value") {
+              res_content.add(v.value());
+            } else {
+              res_content.add(v.shallow_copy());
+            }
+          });
+          return res2;
+        }
+        "matches_selector"(selector) {
+          return this.$match(selector);
+        }
+        "find"(selector) {
+          const res2 = [];
+          const desc = (node, callback2) => {
+            if (node.$match(selector)) {
+              callback2(node);
+            }
+            node.content.each((child) => {
+              desc(child, callback2);
+            });
+          };
+          desc(this, ((node) => res2.push(node)));
+          return res2;
+        }
+        "$match"(selector) {
+          if (typeof selector === "function") {
+            return selector(this);
+          } else {
+            const str_selector = String(selector || "").trim();
+            if (str_selector === "") return false;
+            const parse_part = (part) => {
+              const str_part = String(part || "").trim();
+              if (str_part === "" || str_part === "*") return () => true;
+              if (str_part[0] === ".") {
+                const cls = str_part.substr(1);
+                return (node2) => node2 && typeof node2.has_class === "function" && node2.has_class(cls);
+              }
+              if (str_part[0] === ":") {
+                const type_name = str_part.substr(1);
+                return (node2) => node2 && node2.__type_name === type_name;
+              }
+              if (str_part[0] === "#") {
+                const id = str_part.substr(1);
+                return (node2) => {
+                  var _a, _b, _c;
+                  return node2 && (((_b = (_a = node2.dom) == null ? void 0 : _a.attributes) == null ? void 0 : _b.id) === id || ((_c = node2._id) == null ? void 0 : _c.call(node2)) === id);
+                };
+              }
+              if (str_part[0] === "[" && str_part[str_part.length - 1] === "]") {
+                const inner = str_part.substring(1, str_part.length - 1).trim();
+                const eq_pos = inner.indexOf("=");
+                if (eq_pos === -1) {
+                  const prop_name3 = inner;
+                  return (node2) => {
+                    if (!node2) return false;
+                    const v = node2[prop_name3];
+                    return typeof v !== "undefined" && v !== null && v !== false;
+                  };
+                }
+                const prop_name2 = inner.substring(0, eq_pos).trim();
+                let expected = inner.substring(eq_pos + 1).trim();
+                if (expected[0] === '"' && expected[expected.length - 1] === '"' || expected[0] === "'" && expected[expected.length - 1] === "'") {
+                  expected = expected.substring(1, expected.length - 1);
+                }
+                return (node2) => {
+                  if (!node2) return false;
+                  const actual = node2[prop_name2];
+                  return String(actual) === expected;
+                };
+              }
+              return (node2) => node2 && node2.__type_name === str_part;
+            };
+            const parts = str_selector.split(/\s+/).filter((part) => part.length > 0);
+            if (parts.length === 0) return false;
+            const match_fns = parts.map(parse_part);
+            if (match_fns.length === 1) {
+              return match_fns[0](this);
+            }
+            let node = this;
+            let idx = match_fns.length - 1;
+            if (!match_fns[idx](node)) return false;
+            for (idx = idx - 1; idx >= 0; idx--) {
+              node = node.parent;
+              while (node && !match_fns[idx](node)) {
+                node = node.parent;
+              }
+              if (!node) return false;
+            }
+            return true;
+          }
+        }
+        "$"(selector, handler) {
+          let match = this.$match(selector);
+          let res2 = [];
+          if (match) {
+            if (handler) handler(this);
+            res2.push(this);
+          }
+          this.content.each((item2) => {
+            if (item2.$) {
+              let nested_res = item2.$(selector, handler);
+              Array.prototype.push.apply(res2, nested_res);
+            }
+          });
+          return res2;
+        }
+        "clear"() {
+          this.content.clear();
+        }
+        "activate"() {
+        }
+        get this_and_descendents() {
+          const res2 = [];
+          this.iterate_this_and_subcontrols((ctrl) => res2.push(ctrl));
+          return res2;
+        }
+        get descendents() {
+          const res2 = [];
+          this.iterate_subcontrols((ctrl) => res2.push(ctrl));
+          return res2;
+        }
+        get siblings() {
+          const res2 = [];
+          if (this.parent) {
+            const _ = this.parent.content._arr;
+            _.forEach((x) => {
+              if (x !== this) res2.push(x);
+            });
+          }
+          return res2;
+        }
+      };
+      var p = Control_Core.prototype;
+      p.connect_fields = true;
+      var customInspectSymbol = /* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom");
+      if (jsgui2.custom_rendering === "very-simple") {
+        p[customInspectSymbol] = function(depth, inspectOptions, inspect) {
+          return "< " + this.dom.tagName + " " + this.__type_name + " >";
+        };
+      }
+      module.exports = Control_Core;
+      if (__require.main === module) {
+        let test_svg2 = function() {
+          const passed = [];
+          const failed = [];
+          let svg;
+          try {
+            svg = new Control2({
+              tagName: "svg"
+            });
+            passed.push("Create SVG control");
+          } catch (error2) {
+            failed.push("Create SVG control");
+          }
+          try {
+            const circle = new Control2({
+              tagName: "circle",
+              attrs: {
+                cx: 100,
+                cy: 100,
+                r: 50
+              }
+            });
+            svg.add(circle);
+            passed.push("Add circle to SVG control");
+          } catch (error2) {
+            console.log("error", error2);
+            failed.push("Add circle to SVG control");
+          }
+          try {
+            const rect = new Control2({
+              tagName: "rect",
+              attrs: {
+                x: 150,
+                y: 150,
+                width: 100,
+                height: 100
+              }
+            });
+            svg.add(rect);
+            passed.push("Add rectangle to SVG control");
+          } catch (error2) {
+            console.log("error", error2);
+            failed.push("Add rectangle to SVG control");
+          }
+          try {
+            const expected = '<svg><circle cx="100" cy="100" r="50"></circle><rect x="150" y="150" width="100" height="100"></rect></svg>';
+            const actual = svg.all_html_render();
+            console.log("actual", actual);
+            if (expected === actual) {
+              passed.push("Check rendering of SVG control");
+            } else {
+              failed.push("Check rendering of SVG control");
+            }
+          } catch (error2) {
+            console.log("error", error2);
+            failed.push("Check rendering of SVG control");
+          }
+          return {
+            passed,
+            failed
+          };
+        };
+        test_svg = test_svg2;
+        const Control2 = Control_Core;
+        console.log(test_svg2());
+        const test_background_color = () => {
+          const expectedColor = "#ff0000";
+          const passed = [];
+          const failed = [];
+          let div;
+          try {
+            div = new Control2({
+              tagName: "div"
+            });
+            passed.push("Create div control");
+          } catch (error2) {
+            failed.push(["Create div control", error2]);
+          }
+          try {
+            div.background.color = expectedColor;
+            passed.push("Set background color of div control");
+          } catch (error2) {
+            failed.push(["Set background color of div control", error2]);
+          }
+          try {
+            const validationColor = div.background.color;
+            if (validationColor === expectedColor) {
+              passed.push("Validate background color of div control");
+            } else {
+              failed.push(["Validate background color of div control", "Background color is not as expected"]);
+            }
+          } catch (error2) {
+            failed.push(["Validate background color of div control", error2]);
+          }
+          try {
+            const expected = `<div style="background-color:${expectedColor}"></div>`;
+            const actual = div.all_html_render();
+            if (expected === actual) {
+              passed.push("Check rendering of div control");
+            } else {
+              failed.push(["Check rendering of div control", "Rendering does not match expected output", {
+                expected,
+                actual
+              }]);
+            }
+          } catch (error2) {
+            failed.push(["Check rendering of div control", error2]);
+          }
+          return {
+            passed,
+            failed
+          };
+        };
+        const rtest = test_background_color();
+        console.log(rtest);
+        console.log(rtest.failed);
+      }
+      var test_svg;
+    }
+  });
+
+  // node_modules/jsgui3-gfx-core/core/shapes/Shape.js
+  var require_Shape = __commonJS({
+    "node_modules/jsgui3-gfx-core/core/shapes/Shape.js"(exports, module) {
+      var Shape = class {
+      };
+      module.exports = Shape;
+    }
+  });
+
+  // node_modules/jsgui3-gfx-core/node_modules/lang-mini/lang-mini.js
+  var require_lang_mini4 = __commonJS({
+    "node_modules/jsgui3-gfx-core/node_modules/lang-mini/lang-mini.js"(exports, module) {
+      var running_in_browser = typeof window !== "undefined";
+      var running_in_node = !running_in_browser;
+      var Readable_Stream;
+      var Writable_Stream;
+      var Transform_Stream;
+      var get_stream = () => {
+        if (running_in_node) {
+          return (() => {
+            const str_libname = "stream";
+            const stream2 = __require(str_libname);
+            Readable_Stream = stream2.Readable;
+            Writable_Stream = stream2.Writable;
+            Transform_Stream = stream2.Transform;
+            return stream2;
+          })();
+        } else {
+          return void 0;
+        }
+      };
+      var stream = get_stream();
+      var each = (collection, fn, context2) => {
+        if (collection) {
+          if (collection.__type == "collection") {
+            return collection.each(fn, context2);
+          }
+          let ctu = true;
+          let stop = function() {
+            ctu = false;
+          };
+          if (is_array(collection)) {
+            let res2 = [], res_item;
+            for (let c2 = 0, l2 = collection.length; c2 < l2; c2++) {
+              res_item;
+              if (ctu == false) break;
+              if (context2) {
+                res_item = fn.call(context2, collection[c2], c2, stop);
+              } else {
+                res_item = fn(collection[c2], c2, stop);
+              }
+              if (ctu == false) break;
+              res2.push(res_item);
+            }
+            return res2;
+          } else {
+            let name, res2 = {};
+            for (name in collection) {
+              if (ctu === false) break;
+              if (context2) {
+                res2[name] = fn.call(context2, collection[name], name, stop);
+              } else {
+                res2[name] = fn(collection[name], name, stop);
+              }
+              if (ctu === false) break;
+            }
+            return res2;
+          }
+        }
+      };
+      var is_array = Array.isArray;
+      var is_dom_node = function isDomNode(obj2) {
+        return !!obj2 && typeof obj2.nodeType !== "undefined" && typeof obj2.childNodes !== "undefined";
+      };
+      var get_truth_map_from_arr = function(arr) {
+        let res2 = {};
+        each(arr, function(v, i) {
+          res2[v] = true;
+        });
+        return res2;
+      };
+      var get_arr_from_truth_map = function(truth_map) {
+        let res2 = [];
+        each(truth_map, function(v, i) {
+          res2.push(i);
+        });
+        return res2;
+      };
+      var get_map_from_arr = function(arr) {
+        let res2 = {};
+        for (let c2 = 0, l2 = arr.length; c2 < l2; c2++) {
+          res2[arr[c2]] = c2;
+        }
+        return res2;
+      };
+      var arr_like_to_arr = function(arr_like) {
+        let res2 = new Array(arr_like.length);
+        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
+          res2[c2] = arr_like[c2];
+        }
+        ;
+        return res2;
+      };
+      var is_ctrl = function(obj2) {
+        return typeof obj2 !== "undefined" && obj2 !== null && is_defined(obj2.__type_name) && is_defined(obj2.content) && is_defined(obj2.dom);
+      };
+      var map_loaded_type_fn_checks = {};
+      var map_loaded_type_abbreviations = {
+        "object": "o",
+        "number": "n",
+        "string": "s",
+        "function": "f",
+        "boolean": "b",
+        "undefined": "u",
+        "null": "N",
+        "array": "a",
+        "arguments": "A",
+        "date": "d",
+        "regex": "r",
+        "error": "e",
+        "buffer": "B",
+        "promise": "p",
+        "observable": "O",
+        "readable_stream": "R",
+        "writable_stream": "W",
+        "data_value": "V"
+      };
+      var using_type_plugins = false;
+      var invert = (obj2) => {
+        if (!is_array(obj2)) {
+          let res2 = {};
+          each(obj2, (v, k) => {
+            res2[v] = k;
+          });
+          return res2;
+        } else {
+          console.trace();
+          throw "invert(obj) not supported on arrays";
+        }
+      };
+      var map_loaded_type_names = invert(map_loaded_type_abbreviations);
+      var load_type = (name, abbreviation, fn_detect_instance) => {
+        map_loaded_type_fn_checks[name] = fn_detect_instance;
+        map_loaded_type_names[abbreviation] = name;
+        map_loaded_type_abbreviations[name] = abbreviation;
+        using_type_plugins = true;
+      };
+      var tof = (obj2, t12) => {
+        let res2 = t12 || typeof obj2;
+        if (using_type_plugins) {
+          let res3;
+          each(map_loaded_type_fn_checks, (fn_check, name, stop) => {
+            if (fn_check(obj2)) {
+              res3 = name;
+              stop();
+            }
+          });
+          if (res3) {
+            return res3;
+          }
+        }
+        if (res2 === "number" || res2 === "string" || res2 === "function" || res2 === "boolean") {
+          return res2;
+        }
+        if (res2 === "object") {
+          if (typeof obj2 !== "undefined") {
+            if (obj2 === null) {
+              return "null";
+            }
+            if (obj2.__type) {
+              return obj2.__type;
+            } else if (obj2.__type_name) {
+              return obj2.__type_name;
+            } else {
+              if (obj2 instanceof Promise) {
+                return "promise";
+              }
+              if (is_ctrl(obj2)) {
+                return "control";
+              }
+              if (obj2 instanceof Date) {
+                return "date";
+              }
+              if (is_array(obj2)) {
+                return "array";
+              } else {
+                if (obj2 instanceof Error) {
+                  res2 = "error";
+                } else if (obj2 instanceof RegExp) res2 = "regex";
+                if (typeof window === "undefined") {
+                  if (obj2 && obj2.readInt8) res2 = "buffer";
+                }
+              }
+              return res2;
+            }
+          } else {
+            return "undefined";
+          }
+        }
+        return res2;
+      };
+      var tf2 = (obj2) => {
+        let res2 = typeof obj2;
+        if (using_type_plugins) {
+          let res3;
+          each(map_loaded_type_fn_checks, (fn_check, name, stop) => {
+            if (fn_check(obj2)) {
+              res3 = map_loaded_type_abbreviations[name];
+              stop();
+            }
+          });
+          if (res3) {
+            return res3;
+          }
+        }
+        if (res2 === "number" || res2 === "string" || res2 === "function" || res2 === "boolean" || res2 === "undefined") {
+          return res2[0];
+        } else {
+          if (obj2 === null) {
+            return "N";
+          } else {
+            if (running_in_node) {
+              if (obj2 instanceof Readable_Stream) {
+                return "R";
+              } else if (obj2 instanceof Writable_Stream) {
+                return "W";
+              } else if (obj2 instanceof Transform_Stream) {
+                return "T";
+              }
+            }
+            if (typeof Buffer !== "undefined" && obj2 instanceof Buffer) {
+              return "B";
+            } else if (obj2 instanceof Promise) {
+              return "p";
+            } else if (obj2 instanceof Date) {
+              return "d";
+            } else if (is_array(obj2)) {
+              return "a";
+            } else {
+              if (obj2._is_observable === true) {
+                return "O";
+              } else {
+                if (typeof obj2.callee === "function") {
+                  return "A";
+                } else if (obj2 instanceof Error) {
+                  return "e";
+                } else if (obj2 instanceof RegExp) return "r";
+                return "o";
+              }
+            }
+            return res2;
+          }
+        }
+        console.trace();
+        console.log("item", item);
+        throw "type not found";
+        return res2;
+      };
+      var atof = (arr) => {
+        let res2 = new Array(arr.length);
+        for (let c2 = 0, l2 = arr.length; c2 < l2; c2++) {
+          res2[c2] = tof(arr[c2]);
+        }
+        return res2;
+      };
+      var is_defined = (value2) => {
+        return typeof value2 != "undefined";
+      };
+      var stringify = JSON.stringify;
+      var _get_item_sig = (i, arr_depth) => {
+        let res2;
+        let t12 = typeof i;
+        if (t12 === "string") {
+          res2 = "s";
+        } else if (t12 === "number") {
+          res2 = "n";
+        } else if (t12 === "boolean") {
+          res2 = "b";
+        } else if (t12 === "function") {
+          res2 = "f";
+        } else {
+          let t = tof(i, t12);
+          if (t === "array") {
+            if (arr_depth) {
+              res2 = "[";
+              for (let c2 = 0, l2 = i.length; c2 < l2; c2++) {
+                if (c2 > 0) res2 = res2 + ",";
+                res2 = res2 + get_item_sig(i[c2], arr_depth - 1);
+              }
+              res2 = res2 + "]";
+            } else {
+              res2 = "a";
+            }
+          } else if (t === "control") {
+            res2 = "c";
+          } else if (t === "date") {
+            res2 = "d";
+          } else if (t === "observable") {
+            res2 = "O";
+          } else if (t === "regex") {
+            res2 = "r";
+          } else if (t === "buffer") {
+            res2 = "B";
+          } else if (t === "readable_stream") {
+            res2 = "R";
+          } else if (t === "writable_stream") {
+            res2 = "W";
+          } else if (t === "object") {
+            res2 = "o";
+          } else if (t === "undefined") {
+            res2 = "u";
+          } else {
+            if (t === "collection_index") {
+              return "X";
+            } else if (t === "data_object") {
+              if (i._abstract) {
+                res2 = "~D";
+              } else {
+                res2 = "D";
+              }
+            } else {
+              if (t === "data_value") {
+                if (i._abstract) {
+                  res2 = "~V";
+                } else {
+                  res2 = "V";
+                }
+              } else if (t === "null") {
+                res2 = "!";
+              } else if (t === "collection") {
+                if (i._abstract) {
+                  res2 = "~C";
+                } else {
+                  res2 = "C";
+                }
+              } else {
+                res2 = "?";
+              }
+            }
+          }
+        }
+        return res2;
+      };
+      var get_item_sig = (item2, arr_depth) => {
+        if (arr_depth) {
+          return _get_item_sig(item2, arr_depth);
+        }
+        const t = tof(item2);
+        if (map_loaded_type_abbreviations[t]) {
+          return map_loaded_type_abbreviations[t];
+        } else {
+          let bt = typeof item2;
+          if (bt === "object") {
+            if (is_array(item2)) {
+              return "a";
+            } else {
+              return "o";
+            }
+          } else {
+            console.log("map_loaded_type_abbreviations type name not found", t);
+            console.log("bt", bt);
+            console.trace();
+            throw "stop";
+          }
+        }
+      };
+      var get_a_sig = (a) => {
+        let c2 = 0, l2 = a.length;
+        let res2 = "[";
+        let first = true;
+        for (c2 = 0; c2 < l2; c2++) {
+          if (!first) {
+            res2 = res2 + ",";
+          }
+          first = false;
+          res2 = res2 + get_item_sig(a[c2]);
+        }
+        res2 = res2 + "]";
+        return res2;
+      };
+      var deep_sig = (item2, max_depth = -1, depth = 0) => {
+        const t = tf2(item2);
+        let res2 = "";
+        if (t === "a") {
+          const l2 = item2.length;
+          if (max_depth === -1 || depth <= max_depth) {
+            res2 = res2 + "[";
+            let first = true;
+            for (let c2 = 0; c2 < l2; c2++) {
+              if (!first) res2 = res2 + ",";
+              res2 = res2 + deep_sig(item2[c2], max_depth, depth + 1);
+              first = false;
+            }
+            res2 = res2 + "]";
+          } else {
+            return "a";
+          }
+        } else if (t === "A") {
+          const l2 = item2.length;
+          let first = true;
+          for (let c2 = 0; c2 < l2; c2++) {
+            if (!first) res2 = res2 + ",";
+            res2 = res2 + deep_sig(item2[c2], max_depth, depth + 1);
+            first = false;
+          }
+        } else if (t === "o") {
+          if (max_depth === -1 || depth <= max_depth) {
+            let res3 = "{";
+            let first = true;
+            each(item2, (v, k) => {
+              if (!first) res3 = res3 + ",";
+              res3 = res3 + '"' + k + '":' + deep_sig(v, max_depth, depth + 1);
+              first = false;
+            });
+            res3 = res3 + "}";
+            return res3;
+          } else {
+            return "o";
+          }
+        } else {
+          res2 = res2 + t;
+        }
+        return res2;
+      };
+      var trim_sig_brackets = function(sig) {
+        if (tof(sig) === "string") {
+          if (sig.charAt(0) == "[" && sig.charAt(sig.length - 1) == "]") {
+            return sig.substring(1, sig.length - 1);
+          } else {
+            return sig;
+          }
+        }
+      };
+      var arr_trim_undefined = function(arr_like) {
+        let res2 = [];
+        let last_defined = -1;
+        let t, v;
+        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
+          v = arr_like[c2];
+          t = tof(v);
+          if (t == "undefined") {
+          } else {
+            last_defined = c2;
+          }
+        }
+        for (let c2 = 0, l2 = arr_like.length; c2 < l2; c2++) {
+          if (c2 <= last_defined) {
+            res2.push(arr_like[c2]);
+          }
+        }
+        return res2;
+      };
+      var functional_polymorphism = function(options, fn) {
+        let a0 = arguments;
+        if (a0.length === 1) {
+          fn = a0[0];
+          options = null;
+        }
+        let arr_slice = Array.prototype.slice;
+        let arr, sig, a2, l2, a;
+        return function() {
+          a = arguments;
+          l2 = a.length;
+          if (l2 === 1) {
+            sig = get_item_sig([a[0]], 1);
+            a2 = [a[0]];
+            a2.l = 1;
+            return fn.call(this, a2, sig);
+          } else if (l2 > 1) {
+            arr = arr_trim_undefined(arr_slice.call(a, 0));
+            sig = get_item_sig(arr, 1);
+            arr.l = arr.length;
+            return fn.call(this, arr, sig);
+          } else if (a.length === 0) {
+            arr = new Array(0);
+            arr.l = 0;
+            return fn.call(this, arr, "[]");
+          }
+        };
+      };
+      var fp = functional_polymorphism;
+      var parse_sig = (str_sig, opts = {}) => {
+        const sig2 = str_sig.split(", ").join(",");
+        const sig_items = sig2.split(",");
+        const res2 = [];
+        each(sig_items, (sig_item) => {
+          if (sig_item.length === 1) {
+            let type_name = map_loaded_type_names[sig_item];
+            res2.push({
+              abbreviation: sig_item,
+              type_name
+            });
+          } else {
+            let suffix_modifiers;
+            let zero_or_more = false;
+            let one_or_more = false;
+            let type_name = sig_item;
+            const obj_res = {
+              type_name
+            };
+            const distil_suffix_modifiers = () => {
+              let last_char = type_name.substr(type_name.length - 1);
+              if (last_char === "*") {
+                type_name = type_name.substr(0, type_name.length - 1);
+                zero_or_more = true;
+                obj_res.zero_or_more = true;
+                obj_res.modifiers = obj_res.modifiers || [];
+                obj_res.modifiers.push("*");
+                distil_suffix_modifiers();
+              } else if (last_char === "+") {
+                type_name = type_name.substr(0, type_name.length - 1);
+                one_or_more = true;
+                obj_res.one_or_more = true;
+                obj_res.modifiers = obj_res.modifiers || [];
+                obj_res.modifiers.push("+");
+                distil_suffix_modifiers();
+              } else {
+              }
+            };
+            distil_suffix_modifiers();
+            obj_res.type_name = type_name;
+            res2.push(obj_res);
+          }
+        });
+        return res2;
+      };
+      var mfp_not_sigs = get_truth_map_from_arr(["pre", "default", "post"]);
+      var log = () => {
+      };
+      var combinations = (arr, arr_idxs_to_ignore) => {
+        const map_ignore_idxs = {};
+        if (arr_idxs_to_ignore) {
+          each(arr_idxs_to_ignore, (idx_to_ignore) => {
+            map_ignore_idxs[idx_to_ignore] = true;
+          });
+        }
+        if (arr.some((subArray) => subArray.length === 0)) {
+          return [];
+        }
+        const res2 = [];
+        const l2 = arr.length;
+        const arr_idxs_num_options = new Uint32Array(l2);
+        each(arr, (arr_item1, i1) => {
+          arr_idxs_num_options[i1] = arr_item1.length;
+        });
+        const arr_current_option_idxs = new Uint32Array(l2).fill(0);
+        const result_from_indexes = (arr2, arg_indexes) => {
+          const res3 = new Array(l2);
+          if (arg_indexes.length === l2) {
+            for (var c2 = 0; c2 < l2; c2++) {
+              res3[c2] = arr2[c2][arg_indexes[c2]];
+            }
+          } else {
+            console.trace();
+            throw "Arguments length mismatch";
+          }
+          return res3;
+        };
+        const incr = () => {
+          for (c = l2 - 1; c >= 0; c--) {
+            const ival = arr_current_option_idxs[c];
+            const max = arr_idxs_num_options[c] - 1;
+            if (ival < max) {
+              arr_current_option_idxs[c]++;
+              break;
+            } else {
+              if (c === 0) {
+                return false;
+              } else {
+                arr_current_option_idxs.fill(0, c);
+              }
+            }
+          }
+          return true;
+        };
+        let vals = result_from_indexes(arr, arr_current_option_idxs);
+        res2.push(vals);
+        while (incr()) {
+          let vals2 = result_from_indexes(arr, arr_current_option_idxs);
+          res2.push(vals2);
+        }
+        return res2;
+      };
+      var map_native_types = {
+        "string": true,
+        "boolean": true,
+        "number": true,
+        "object": true
+      };
+      var mfp = function() {
+        const a1 = arguments;
+        const sig1 = get_a_sig(a1);
+        let options = {};
+        let fn_pre, provided_map_sig_fns, inner_map_sig_fns = {}, inner_map_parsed_sigs = {}, arr_sig_parsed_sig_fns = [], fn_post;
+        let tm_sig_fns;
+        let fn_default;
+        let single_fn;
+        let req_sig_single_fn;
+        if (sig1 === "[o]") {
+          provided_map_sig_fns = a1[0];
+        } else if (sig1 === "[o,o]") {
+          options = a1[0];
+          provided_map_sig_fns = a1[1];
+        } else if (sig1 === "[o,f]") {
+          options = a1[0];
+          single_fn = a1[1];
+        } else if (sig1 === "[o,s,f]") {
+          options = a1[0];
+          req_sig_single_fn = a1[1];
+          single_fn = a1[2];
+          provided_map_sig_fns = {};
+          provided_map_sig_fns[req_sig_single_fn] = single_fn;
+        } else if (sig1 === "[f,o]") {
+          single_fn = a1[0];
+          options = a1[1];
+        } else if (sig1 === "[f]") {
+          single_fn = a1[0];
+        } else {
+          console.log("sig1", sig1);
+          console.trace();
+          throw "mfp NYI";
+        }
+        let {
+          single,
+          name,
+          grammar,
+          verb,
+          noun,
+          return_type,
+          return_subtype,
+          pure,
+          main,
+          skip
+        } = options;
+        let parsed_grammar;
+        let identify, validate;
+        let dsig = deep_sig;
+        (() => {
+          if (provided_map_sig_fns) {
+            if (provided_map_sig_fns.default) fn_default = provided_map_sig_fns.default;
+            each(provided_map_sig_fns, (fn, sig) => {
+              if (typeof fn === "function") {
+                if (!mfp_not_sigs[sig]) {
+                  const parsed_sig = parse_sig(sig);
+                  const arr_args_with_modifiers = [];
+                  const arr_args_all_modification_versions = [];
+                  each(parsed_sig, (arg, i) => {
+                    arr_args_all_modification_versions[i] = [];
+                    if (arg.modifiers) {
+                      const arg_num_modifiers = arg.modifiers.length;
+                      if (arg_num_modifiers > 1) {
+                        throw "Use of more than 1 modifier is currently unsupported.";
+                      } else if (arg_num_modifiers === 1) {
+                        arr_args_with_modifiers.push([i, arg]);
+                        const single_modifier = arg.modifiers[0];
+                        if (single_modifier === "*") {
+                          arr_args_all_modification_versions[i].push("");
+                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
+                          const plural_name = grammar.maps.sing_plur[arg.type_name];
+                          arr_args_all_modification_versions[i].push(plural_name);
+                        }
+                        if (single_modifier === "+") {
+                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
+                          const plural_name = grammar.maps.sing_plur[arg.type_name];
+                          arr_args_all_modification_versions[i].push(plural_name);
+                        }
+                        if (single_modifier === "?") {
+                          arr_args_all_modification_versions[i].push("");
+                          arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
+                        }
+                      }
+                    } else {
+                      arr_args_all_modification_versions[i].push(arg.abbreviation || arg.type_name);
+                    }
+                  });
+                  const combo_args = combinations(arr_args_all_modification_versions);
+                  const combo_sigs = [];
+                  let i_first_of_last_undefined = -1;
+                  each(combo_args, (arg_set) => {
+                    let combo_sig = "";
+                    each(arg_set, (arg, i) => {
+                      let lsigb4 = combo_sig.length;
+                      if (i > 0) {
+                        combo_sig = combo_sig + ",";
+                      }
+                      if (arg === "") {
+                        combo_sig = combo_sig + "u";
+                        if (i_first_of_last_undefined === -1) {
+                          i_first_of_last_undefined = lsigb4;
+                        }
+                      } else {
+                        combo_sig = combo_sig + arg;
+                        i_first_of_last_undefined = -1;
+                      }
+                    });
+                    if (i_first_of_last_undefined > 0) {
+                      const combo_sig_no_last_undefined = combo_sig.substr(0, i_first_of_last_undefined);
+                      combo_sigs.push(combo_sig_no_last_undefined);
+                    }
+                    combo_sigs.push(combo_sig);
+                  });
+                  if (combo_sigs.length > 0) {
+                    each(combo_sigs, (combo_sig) => {
+                      inner_map_sig_fns[combo_sig] = fn;
+                    });
+                  } else {
+                    inner_map_sig_fns[sig] = fn;
+                  }
+                  inner_map_parsed_sigs[sig] = parsed_sig;
+                  arr_sig_parsed_sig_fns.push([sig, parsed_sig, fn]);
+                } else {
+                  console.log("ommiting, not parsing sig", sig);
+                }
+              } else {
+                console.log("fn", fn);
+                console.trace();
+                throw "Expected: function";
+              }
+              ;
+            });
+          }
+          each(inner_map_sig_fns, (fn, sig) => {
+            tm_sig_fns = tm_sig_fns || {};
+            tm_sig_fns[sig] = true;
+          });
+        })();
+        const res2 = function() {
+          const a2 = arguments;
+          const l2 = a2.length;
+          console.log("");
+          console.log("calling mfp function");
+          console.log("--------------------");
+          console.log("");
+          let mfp_fn_call_deep_sig;
+          let ltof = tof;
+          const lsig = dsig;
+          let ltf = tf2;
+          mfp_fn_call_deep_sig = lsig(a2);
+          const mfp_fn_call_shallow_sig = (() => {
+            if (!a2 || a2.length === 0) return "";
+            let res3 = "";
+            for (let i = 0; i < a2.length; i++) {
+              if (i > 0) res3 = res3 + ",";
+              res3 = res3 + ltf(a2[i]);
+            }
+            return res3;
+          })();
+          let do_skip = false;
+          if (skip) {
+            if (skip(a2)) {
+              do_skip = true;
+            } else {
+            }
+          }
+          if (!do_skip) {
+            if (inner_map_sig_fns[mfp_fn_call_deep_sig]) {
+              return inner_map_sig_fns[mfp_fn_call_deep_sig].apply(this, a2);
+            } else if (mfp_fn_call_shallow_sig && inner_map_sig_fns[mfp_fn_call_shallow_sig]) {
+              return inner_map_sig_fns[mfp_fn_call_shallow_sig].apply(this, a2);
+            } else {
+              let idx_last_fn = -1;
+              let idx_last_obj = -1;
+              each(a2, (arg, i_arg) => {
+                i_arg = parseInt(i_arg, 10);
+                const targ = tf2(arg);
+                if (targ === "o") {
+                  idx_last_obj = i_arg;
+                }
+                if (targ === "f") {
+                  idx_last_fn = i_arg;
+                }
+              });
+              const last_arg_is_fn = idx_last_fn > -1 && idx_last_fn === a2.length - 1;
+              const last_arg_is_obj = idx_last_obj > -1 && idx_last_obj === a2.length - 1;
+              const second_last_arg_is_obj = idx_last_obj > -1 && idx_last_obj === a2.length - 2;
+              let possible_options_obj;
+              if (last_arg_is_obj) possible_options_obj = a2[idx_last_obj];
+              const new_args_arrangement = [];
+              for (let f = 0; f < idx_last_obj; f++) {
+                new_args_arrangement.push(a2[f]);
+              }
+              each(possible_options_obj, (value2, key2) => {
+                new_args_arrangement.push(value2);
+              });
+              let naa_sig = lsig(new_args_arrangement);
+              naa_sig = naa_sig.substring(1, naa_sig.length - 1);
+              if (inner_map_sig_fns[naa_sig]) {
+                return inner_map_sig_fns[naa_sig].apply(this, new_args_arrangement);
+              } else {
+                if (fn_default) {
+                  return fn_default.call(this, a2, mfp_fn_call_deep_sig);
+                } else {
+                  if (single_fn) {
+                    console.log("pre apply single_fn");
+                    return single_fn.apply(this, a2);
+                  } else {
+                    console.log("Object.keys(inner_map_parsed_sigs)", Object.keys(inner_map_parsed_sigs));
+                    console.trace();
+                    console.log("mfp_fn_call_deep_sig", mfp_fn_call_deep_sig);
+                    console.log("provided_map_sig_fns", provided_map_sig_fns);
+                    if (provided_map_sig_fns) log("Object.keys(provided_map_sig_fns)", Object.keys(provided_map_sig_fns));
+                    console.log("Object.keys(inner_map_sig_fns)", Object.keys(inner_map_sig_fns));
+                    console.trace();
+                    throw "no signature match found. consider using a default signature. mfp_fn_call_deep_sig: " + mfp_fn_call_deep_sig;
+                  }
+                }
+              }
+            }
+          }
+        };
+        const _ = {};
+        if (name) _.name = name;
+        if (single) _.single = single;
+        if (skip) _.skip = skip;
+        if (grammar) _.grammar = grammar;
+        if (typeof options !== "undefined" && options.async) _.async = options.async;
+        if (main === true) _.main = true;
+        if (return_type) _.return_type = return_type;
+        if (return_subtype) _.return_subtype = return_subtype;
+        if (pure) _.pure = pure;
+        if (tm_sig_fns) _.map_sigs = tm_sig_fns;
+        if (Object.keys(_).length > 0) {
+          res2._ = _;
+        }
+        return res2;
+      };
+      var arrayify = fp(function(a, sig) {
+        let param_index, num_parallel = 1, delay = 0, fn;
+        let res2;
+        let process_as_fn = function() {
+          res2 = function() {
+            let a2 = arr_like_to_arr(arguments), ts = atof(a2), t = this;
+            let last_arg = a2[a2.length - 1];
+            if (tof(last_arg) == "function") {
+              if (typeof param_index !== "undefined" && ts[param_index] == "array") {
+                let res3 = [];
+                let fns = [];
+                each(a2[param_index], function(v, i) {
+                  let new_params = a2.slice(0, a2.length - 1);
+                  new_params[param_index] = v;
+                  fns.push([t, fn, new_params]);
+                });
+                call_multiple_callback_functions(fns, num_parallel, delay, (err, res4) => {
+                  if (err) {
+                    console.trace();
+                    throw err;
+                  } else {
+                    let a3 = [];
+                    a3 = a3.concat.apply(a3, res4);
+                    let callback2 = last_arg;
+                    callback2(null, a3);
+                  }
+                });
+              } else {
+                return fn.apply(t, a2);
+              }
+            } else {
+              if (typeof param_index !== "undefined" && ts[param_index] == "array") {
+                let res3 = [];
+                for (let c2 = 0, l2 = a2[param_index].length; c2 < l2; c2++) {
+                  a2[param_index] = arguments[param_index][c2];
+                  let result = fn.apply(t, a2);
+                  res3.push(result);
+                }
+                return res3;
+              } else {
+                return fn.apply(t, a2);
+              }
+            }
+          };
+        };
+        if (sig == "[o]") {
+          let res3 = [];
+          each(a[0], function(v, i) {
+            res3.push([v, i]);
+          });
+        } else if (sig == "[f]") {
+          param_index = 0, fn = a[0];
+          process_as_fn();
+        } else if (sig == "[n,f]") {
+          param_index = a[0], fn = a[1];
+          process_as_fn();
+        } else if (sig == "[n,n,f]") {
+          param_index = a[0], num_parallel = a[1], fn = a[2];
+          process_as_fn();
+        } else if (sig == "[n,n,n,f]") {
+          param_index = a[0], num_parallel = a[1], delay = a[2], fn = a[3];
+          process_as_fn();
+        }
+        return res2;
+      });
+      var mapify = (target) => {
+        let tt = tof(target);
+        if (tt == "function") {
+          let res2 = fp(function(a, sig) {
+            let that2 = this;
+            if (sig == "[o]") {
+              let map = a[0];
+              each(map, function(v, i) {
+                target.call(that2, v, i);
+              });
+            } else if (sig == "[o,f]") {
+              let map = a[0];
+              let callback2 = a[1];
+              let fns = [];
+              each(map, function(v, i) {
+                fns.push([target, [v, i]]);
+              });
+              call_multi(fns, function(err_multi, res_multi) {
+                if (err_multi) {
+                  callback2(err_multi);
+                } else {
+                  callback2(null, res_multi);
+                }
+              });
+            } else if (a.length >= 2) {
+              target.apply(this, a);
+            }
+          });
+          return res2;
+        } else if (tt == "array") {
+          let res2 = {};
+          if (arguments.length == 1) {
+            if (is_arr_of_strs(target)) {
+              each(target, function(v, i) {
+                res2[v] = true;
+              });
+            } else {
+              each(target, function(v, i) {
+                res2[v[0]] = v[1];
+              });
+            }
+          } else {
+            let by_property_name = arguments[1];
+            each(target, function(v, i) {
+              res2[v[by_property_name]] = v;
+            });
+          }
+          return res2;
+        }
+      };
+      var clone = fp((a, sig) => {
+        let obj2 = a[0];
+        if (a.l === 1) {
+          if (obj2 && typeof obj2.clone === "function") {
+            return obj2.clone();
+          } else {
+            let t = tof(obj2);
+            if (t === "array") {
+              let res2 = [];
+              each(obj2, (v) => {
+                res2.push(clone(v));
+              });
+              return res2;
+            } else if (t === "undefined") {
+              return void 0;
+            } else if (t === "string") {
+              return obj2;
+            } else if (t === "number") {
+              return obj2;
+            } else if (t === "function") {
+              return obj2;
+            } else if (t === "boolean") {
+              return obj2;
+            } else if (t === "null") {
+              return obj2;
+            } else if (t === "date") {
+              return new Date(obj2.getTime());
+            } else if (t === "regex") {
+              return new RegExp(obj2.source, obj2.flags);
+            } else if (t === "buffer") {
+              if (typeof Buffer !== "undefined" && Buffer.from) {
+                return Buffer.from(obj2);
+              } else if (obj2 && typeof obj2.slice === "function") {
+                return obj2.slice(0);
+              } else {
+                return obj2;
+              }
+            } else if (t === "error") {
+              const cloned_error = new obj2.constructor(obj2.message);
+              cloned_error.name = obj2.name;
+              cloned_error.stack = obj2.stack;
+              each(obj2, (value2, key2) => {
+                if (key2 !== "message" && key2 !== "name" && key2 !== "stack") {
+                  cloned_error[key2] = clone(value2);
+                }
+              });
+              return cloned_error;
+            } else if (t === "object") {
+              const res2 = {};
+              each(obj2, (value2, key2) => {
+                res2[key2] = clone(value2);
+              });
+              return res2;
+            } else {
+              return obj2;
+            }
+          }
+        } else if (a.l === 2 && tof(a[1]) === "number") {
+          let res2 = [];
+          for (let c2 = 0; c2 < a[1]; c2++) {
+            res2.push(clone(obj2));
+          }
+          return res2;
+        }
+      });
+      var set_vals = function(obj2, map) {
+        each(map, function(v, i) {
+          obj2[i] = v;
+        });
+      };
+      var ll_set = (obj2, prop_name2, prop_value) => {
+        let arr = prop_name2.split(".");
+        let c2 = 0, l2 = arr.length;
+        let i = obj2._ || obj2, s;
+        while (c2 < l2) {
+          s = arr[c2];
+          if (typeof i[s] == "undefined") {
+            if (c2 - l2 == -1) {
+              i[s] = prop_value;
+            } else {
+              i[s] = {};
+            }
+          } else {
+            if (c2 - l2 == -1) {
+              i[s] = prop_value;
+            }
+          }
+          i = i[s];
+          c2++;
+        }
+        ;
+        return prop_value;
+      };
+      var ll_get = (a0, a1) => {
+        if (a0 && a1) {
+          let i = a0._ || a0;
+          if (a1 == ".") {
+            if (typeof i["."] == "undefined") {
+              return void 0;
+            } else {
+              return i["."];
+            }
+          } else {
+            let arr = a1.split(".");
+            let c2 = 0, l2 = arr.length, s;
+            while (c2 < l2) {
+              s = arr[c2];
+              if (typeof i[s] == "undefined") {
+                if (c2 - l2 == -1) {
+                } else {
+                  throw "object " + s + " not found";
+                }
+              } else {
+                if (c2 - l2 == -1) {
+                  return i[s];
+                }
+              }
+              i = i[s];
+              c2++;
+            }
+          }
+        }
+      };
+      var truth = function(value2) {
+        return value2 === true;
+      };
+      var iterate_ancestor_classes = (obj2, callback2) => {
+        let ctu = true;
+        let stop = () => {
+          ctu = false;
+        };
+        callback2(obj2, stop);
+        if (obj2._superclass && ctu) {
+          iterate_ancestor_classes(obj2._superclass, callback2);
+        }
+      };
+      var is_arr_of_t = function(obj2, type_name) {
+        let t = tof(obj2), tv;
+        if (t === "array") {
+          let res2 = true;
+          each(obj2, function(v, i) {
+            tv = tof(v);
+            if (tv != type_name) res2 = false;
+          });
+          return res2;
+        } else {
+          return false;
+        }
+      };
+      var is_arr_of_arrs = function(obj2) {
+        return is_arr_of_t(obj2, "array");
+      };
+      var is_arr_of_strs = function(obj2) {
+        return is_arr_of_t(obj2, "string");
+      };
+      var input_processors = {};
+      var output_processors = {};
+      var call_multiple_callback_functions = fp(function(a, sig) {
+        let arr_functions_params_pairs, callback2, return_params = false;
+        let delay;
+        let num_parallel = 1;
+        if (a.l === 1) {
+        } else if (a.l === 2) {
+          arr_functions_params_pairs = a[0];
+          callback2 = a[1];
+        } else if (a.l === 3) {
+          if (sig === "[a,n,f]") {
+            arr_functions_params_pairs = a[0];
+            num_parallel = a[1];
+            callback2 = a[2];
+          } else if (sig === "[n,a,f]") {
+            arr_functions_params_pairs = a[1];
+            num_parallel = a[0];
+            callback2 = a[2];
+          } else if (sig === "[a,f,b]") {
+            arr_functions_params_pairs = a[0];
+            callback2 = a[1];
+            return_params = a[2];
+          }
+        } else if (a.l === 4) {
+          if (sig === "[a,n,n,f]") {
+            arr_functions_params_pairs = a[0];
+            num_parallel = a[1];
+            delay = a[2];
+            callback2 = a[3];
+          } else if (sig == "[n,n,a,f]") {
+            arr_functions_params_pairs = a[2];
+            num_parallel = a[0];
+            delay = a[1];
+            callback2 = a[3];
+          }
+        }
+        let res2 = [];
+        let l2 = arr_functions_params_pairs.length;
+        let c2 = 0;
+        let count_unfinished = l2;
+        let num_currently_executing = 0;
+        let process2 = (delay2) => {
+          num_currently_executing++;
+          let main = () => {
+            let pair = arr_functions_params_pairs[c2];
+            let context2;
+            let fn, params, fn_callback;
+            let pair_sig = get_item_sig(pair);
+            let t_pair = tof(pair);
+            if (t_pair == "function") {
+              fn = pair;
+              params = [];
+            } else {
+              if (pair) {
+                if (pair.length == 1) {
+                }
+                if (pair.length == 2) {
+                  if (tof(pair[1]) == "function") {
+                    context2 = pair[0];
+                    fn = pair[1];
+                    params = [];
+                  } else {
+                    fn = pair[0];
+                    params = pair[1];
+                  }
+                }
+                if (pair.length == 3) {
+                  if (tof(pair[0]) === "function" && tof(pair[1]) === "array" && tof(pair[2]) === "function") {
+                    fn = pair[0];
+                    params = pair[1];
+                    fn_callback = pair[2];
+                  }
+                  if (tof(pair[1]) === "function" && tof(pair[2]) === "array") {
+                    context2 = pair[0];
+                    fn = pair[1];
+                    params = pair[2];
+                  }
+                }
+                if (pair.length == 4) {
+                  context2 = pair[0];
+                  fn = pair[1];
+                  params = pair[2];
+                  fn_callback = pair[3];
+                }
+              } else {
+              }
+            }
+            let i = c2;
+            c2++;
+            let cb = (err, res22) => {
+              num_currently_executing--;
+              count_unfinished--;
+              if (err) {
+                let stack = new Error().stack;
+                callback2(err);
+              } else {
+                if (return_params) {
+                  res2[i] = [params, res22];
+                } else {
+                  res2[i] = res22;
+                }
+                if (fn_callback) {
+                  fn_callback(null, res22);
+                }
+                if (c2 < l2) {
+                  if (num_currently_executing < num_parallel) {
+                    process2(delay2);
+                  }
+                } else {
+                  if (count_unfinished <= 0) {
+                    callback2(null, res2);
+                  }
+                }
+              }
+            };
+            let arr_to_call = params || [];
+            arr_to_call.push(cb);
+            if (fn) {
+              if (context2) {
+                fn.apply(context2, arr_to_call);
+              } else {
+                fn.apply(this, arr_to_call);
+              }
+            } else {
+            }
+          };
+          if (arr_functions_params_pairs[c2]) {
+            if (delay2) {
+              setTimeout(main, delay2);
+            } else {
+              main();
+            }
+          }
+        };
+        if (arr_functions_params_pairs.length > 0) {
+          while (c2 < l2 && num_currently_executing < num_parallel) {
+            if (delay) {
+              process2(delay * c2);
+            } else {
+              process2();
+            }
+          }
+        } else {
+          if (callback2) {
+          }
+        }
+      });
+      var call_multi = call_multiple_callback_functions;
+      var Fns = function(arr) {
+        let fns = arr || [];
+        fns.go = function(parallel, delay, callback2) {
+          let a = arguments;
+          let al = a.length;
+          if (al == 1) {
+            call_multi(fns, a[0]);
+          }
+          if (al == 2) {
+            call_multi(parallel, fns, delay);
+          }
+          if (al == 3) {
+            call_multi(parallel, delay, fns, callback2);
+          }
+        };
+        return fns;
+      };
+      var native_constructor_tof = function(value2) {
+        if (value2 === String) {
+          return "String";
+        }
+        if (value2 === Number) {
+          return "Number";
+        }
+        if (value2 === Boolean) {
+          return "Boolean";
+        }
+        if (value2 === Array) {
+          return "Array";
+        }
+        if (value2 === Object) {
+          return "Object";
+        }
+      };
+      var sig_match = function(sig1, sig2) {
+        let sig1_inner = sig1.substr(1, sig1.length - 2);
+        let sig2_inner = sig2.substr(1, sig2.length - 2);
+        if (sig1_inner.indexOf("[") > -1 || sig1_inner.indexOf("]") > -1 || sig2_inner.indexOf("[") > -1 || sig2_inner.indexOf("]") > -1) {
+          throw "sig_match only supports flat signatures.";
+        }
+        let sig1_parts = sig1_inner.split(",");
+        let sig2_parts = sig2_inner.split(",");
+        let res2 = true;
+        if (sig1_parts.length == sig2_parts.length) {
+          let c2 = 0, l2 = sig1_parts.length, i1, i2;
+          while (res2 && c2 < l2) {
+            i1 = sig1_parts[c2];
+            i2 = sig2_parts[c2];
+            if (i1 === i2) {
+            } else {
+              if (i1 !== "?") {
+                res2 = false;
+              }
+            }
+            c2++;
+          }
+          return res2;
+        } else {
+          return false;
+        }
+      };
+      var remove_sig_from_arr_shell = function(sig) {
+        if (sig[0] == "[" && sig[sig.length - 1] == "]") {
+          return sig.substring(1, sig.length - 1);
+        }
+        return sig;
+      };
+      var str_arr_mapify = function(fn) {
+        let res2 = fp(function(a, sig) {
+          if (a.l == 1) {
+            if (sig == "[s]") {
+              let s_pn = a[0].split(" ");
+              if (s_pn.length > 1) {
+                return res2.call(this, s_pn);
+              } else {
+                return fn.call(this, a[0]);
+              }
+            }
+            if (tof(a[0]) == "array") {
+              let res22 = {}, that2 = this;
+              each(a[0], function(v, i) {
+                res22[v] = fn.call(that2, v);
+              });
+              return res22;
+            }
+          }
+        });
+        return res2;
+      };
+      var to_arr_strip_keys = (obj2) => {
+        let res2 = [];
+        each(obj2, (v) => {
+          res2.push(v);
+        });
+        return res2;
+      };
+      var arr_objs_to_arr_keys_values_table = (arr_objs) => {
+        let keys = Object.keys(arr_objs[0]);
+        let arr_items = [], arr_values;
+        each(arr_objs, (item2) => {
+          arr_items.push(to_arr_strip_keys(item2));
+        });
+        return [keys, arr_items];
+      };
+      var set_arr_tree_value = (arr_tree, arr_path, value2) => {
+        let item_current = arr_tree;
+        let last_item_current, last_path_item;
+        each(arr_path, (path_item) => {
+          last_item_current = item_current;
+          item_current = item_current[path_item];
+          last_path_item = path_item;
+        });
+        last_item_current[last_path_item] = value2;
+      };
+      var get_arr_tree_value = (arr_tree, arr_path) => {
+        let item_current = arr_tree;
+        each(arr_path, (path_item) => {
+          item_current = item_current[path_item];
+        });
+        return item_current;
+      };
+      var deep_arr_iterate = (arr, path = [], callback2) => {
+        if (arguments.length === 2) {
+          callback2 = path;
+          path = [];
+        }
+        each(arr, (item2, i) => {
+          let c_path = clone(path);
+          c_path.push(i);
+          let t = tof(item2);
+          if (t === "array") {
+            deep_arr_iterate(item2, c_path, callback2);
+          } else {
+            callback2(c_path, item2);
+          }
+        });
+      };
+      var prom = (fn) => {
+        let fn_res = function() {
+          const a = arguments;
+          const t_a_last = typeof a[a.length - 1];
+          if (t_a_last === "function") {
+            fn.apply(this, a);
+          } else {
+            return new Promise((resolve, reject) => {
+              [].push.call(a, (err, res2) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve(res2);
+                }
+              });
+              fn.apply(this, a);
+            });
+          }
+        };
+        return fn_res;
+      };
+      var vectorify = (n_fn) => {
+        let fn_res = fp(function(a, sig) {
+          if (a.l > 2) {
+            throw "stop - need to check.";
+            let res2 = a[0];
+            for (let c2 = 1, l2 = a.l; c2 < l2; c2++) {
+              res2 = fn_res(res2, a[c2]);
+            }
+            return res2;
+          } else {
+            if (sig === "[n,n]") {
+              return n_fn(a[0], a[1]);
+            } else {
+              const ats = atof(a);
+              if (ats[0] === "array") {
+                if (ats[1] === "number") {
+                  const res2 = [], n = a[1], l2 = a[0].length;
+                  let c2;
+                  for (c2 = 0; c2 < l2; c2++) {
+                    res2.push(fn_res(a[0][c2], n));
+                  }
+                  return res2;
+                } else if (ats[1] === "array") {
+                  if (ats[0].length !== ats[1].length) {
+                    throw "vector array lengths mismatch";
+                  } else {
+                    const l2 = a[0].length, res2 = new Array(l2), arr2 = a[1];
+                    for (let c2 = 0; c2 < l2; c2++) {
+                      res2[c2] = fn_res(a[0][c2], arr2[c2]);
+                    }
+                    return res2;
+                  }
+                }
+              }
+            }
+          }
+          ;
+        });
+        return fn_res;
+      };
+      var n_add = (n1, n2) => n1 + n2;
+      var n_subtract = (n1, n2) => n1 - n2;
+      var n_multiply = (n1, n2) => n1 * n2;
+      var n_divide = (n1, n2) => n1 / n2;
+      var v_add = vectorify(n_add);
+      var v_subtract2 = vectorify(n_subtract);
+      var v_multiply = vectorify(n_multiply);
+      var v_divide = vectorify(n_divide);
+      var vector_magnitude = function(vector) {
+        var res2 = Math.sqrt(Math.pow(vector[0], 2) + Math.pow(vector[1], 2));
+        return res2;
+      };
+      var distance_between_points = function(points) {
+        var offset2 = v_subtract2(points[1], points[0]);
+        return vector_magnitude(offset2);
+      };
+      var map_tas_by_type = {
+        "c": Uint8ClampedArray,
+        "ui8": Uint8Array,
+        "i16": Int16Array,
+        "i32": Int32Array,
+        "ui16": Uint16Array,
+        "ui32": Uint32Array,
+        "f32": Float32Array,
+        "f64": Float64Array
+      };
+      var get_typed_array = function() {
+        const a = arguments;
+        let length, input_array;
+        const type = a[0];
+        if (is_array(a[1])) {
+          input_array = a[1];
+        } else {
+          length = a[1];
+        }
+        const ctr = map_tas_by_type[type];
+        if (ctr) {
+          if (input_array) {
+            return new ctr(input_array);
+          } else if (length) {
+            return new ctr(length);
+          }
+        }
+      };
+      var Grammar = class {
+        constructor(spec) {
+          const eg_spec = {
+            name: "User Auth Grammar"
+          };
+          const {
+            name
+          } = spec;
+          this.name = name;
+          const eg_indexing = () => {
+            let map_sing_plur = {};
+            let map_plur_sing = {};
+            let map_sing_def = {};
+            let map_sig_sing = {};
+            let map_sig0_sing = {};
+            let map_sig1_sing = {};
+            let map_sig2_sing = {};
+          };
+          this.maps = {
+            sing_plur: {},
+            plur_sing: {},
+            sing_def: {},
+            deep_sig_sing: {},
+            obj_sig_sing: {},
+            sig_levels_sing: {}
+          };
+          this.load_grammar(spec.def);
+        }
+        load_grammar(grammar_def) {
+          const {
+            sing_plur,
+            plur_sing,
+            sing_def,
+            sig_levels_sing,
+            deep_sig_sing,
+            obj_sig_sing
+          } = this.maps;
+          const resolve_def = (def) => {
+            const td = tf2(def);
+            if (td === "a") {
+              const res2 = [];
+              each(def, (def_item) => {
+                res2.push(resolve_def(def_item));
+              });
+              return res2;
+            } else if (td === "s") {
+              if (def === "string") {
+                return "string";
+              } else if (def === "number") {
+                return "number";
+              } else if (def === "boolean") {
+                return "boolean";
+              } else {
+                const found_sing_def = sing_def[def];
+                return found_sing_def;
+              }
+            } else if (td === "n") {
+              console.trace();
+              throw "NYI";
+            } else if (td === "b") {
+              console.trace();
+              throw "NYI";
+            }
+          };
+          const resolved_def_to_sig = (resolved_def, level = 0) => {
+            const trd = tf2(resolved_def);
+            if (trd === "s") {
+              if (resolved_def === "string") {
+                return "s";
+              } else if (resolved_def === "number") {
+                return "n";
+              } else if (resolved_def === "boolean") {
+                return "b";
+              }
+            } else if (trd === "a") {
+              let res2 = "";
+              if (level === 0) {
+              } else {
+                res2 = res2 + "[";
+              }
+              each(resolved_def, (item2, c2) => {
+                if (c2 > 0) {
+                  res2 = res2 + ",";
+                }
+                res2 = res2 + resolved_def_to_sig(item2, level + 1);
+              });
+              if (level === 0) {
+              } else {
+                res2 = res2 + "]";
+              }
+              return res2;
+            } else {
+              console.trace();
+              throw "NYI";
+            }
+            return res;
+          };
+          each(grammar_def, (def1, sing_word) => {
+            const {
+              def,
+              plural
+            } = def1;
+            sing_def[sing_word] = def;
+            sing_plur[sing_word] = plural;
+            plur_sing[plural] = sing_word;
+            const tdef = tf2(def);
+            const resolved_def = resolve_def(def);
+            const resolved_def_sig = resolved_def_to_sig(resolved_def);
+            deep_sig_sing[resolved_def_sig] = deep_sig_sing[resolved_def_sig] || [];
+            deep_sig_sing[resolved_def_sig].push(sing_word);
+            let def_is_all_custom_types = true;
+            each(def, (def_item, c2, stop) => {
+              const tdi = tf2(def_item);
+              if (tdi === "s") {
+                if (sing_def[def_item]) {
+                } else {
+                  def_is_all_custom_types = false;
+                  stop();
+                }
+              } else {
+                def_is_all_custom_types = false;
+                stop();
+              }
+            });
+            let obj_sig;
+            if (def_is_all_custom_types) {
+              obj_sig = "{";
+              each(def, (def_item, c2, stop) => {
+                if (c2 > 0) {
+                  obj_sig = obj_sig + ",";
+                }
+                const resolved = resolve_def(def_item);
+                const abr_resolved = resolved_def_to_sig(resolved);
+                obj_sig = obj_sig + '"' + def_item + '":';
+                obj_sig = obj_sig + abr_resolved;
+              });
+              obj_sig = obj_sig + "}";
+            }
+            if (obj_sig) {
+              obj_sig_sing[obj_sig] = obj_sig_sing[obj_sig] || [];
+              obj_sig_sing[obj_sig].push(sing_word);
+            }
+          });
+        }
+        tof(item2) {
+          const {
+            sing_plur,
+            plur_sing,
+            sing_def,
+            sig_levels_sing,
+            deep_sig_sing,
+            obj_sig_sing
+          } = this.maps;
+          const titem = tf2(item2);
+          console.log("titem", titem);
+          if (titem === "a") {
+            let all_arr_items_type;
+            each(item2, (subitem, c2, stop) => {
+              const subitem_type = this.tof(subitem);
+              console.log("subitem_type", subitem_type);
+              if (c2 === 0) {
+                all_arr_items_type = subitem_type;
+              } else {
+                if (all_arr_items_type === subitem_type) {
+                } else {
+                  all_arr_items_type = null;
+                  stop();
+                }
+              }
+            });
+            if (all_arr_items_type) {
+              console.log("has all_arr_items_type", all_arr_items_type);
+              if (!map_native_types[all_arr_items_type]) {
+                const res2 = sing_plur[all_arr_items_type];
+                return res2;
+              }
+            } else {
+              console.log("no all_arr_items_type");
+            }
+          } else {
+            return tof(item2);
+          }
+          const item_deep_sig = deep_sig(item2);
+          console.log("Grammar tof() item_deep_sig", item_deep_sig);
+          let arr_sing;
+          if (titem === "a") {
+            const unenclosed_sig = item_deep_sig.substring(1, item_deep_sig.length - 1);
+            console.log("unenclosed_sig", unenclosed_sig);
+            arr_sing = deep_sig_sing[unenclosed_sig];
+          } else {
+            arr_sing = deep_sig_sing[item_deep_sig];
+          }
+          if (arr_sing) {
+            if (arr_sing.length === 1) {
+              return arr_sing[0];
+            } else {
+              console.trace();
+              throw "NYI";
+            }
+          }
+        }
+        sig(item2, max_depth = -1, depth = 0) {
+          const {
+            sing_plur,
+            plur_sing,
+            sing_def,
+            sig_levels_sing,
+            deep_sig_sing,
+            obj_sig_sing
+          } = this.maps;
+          const extended_sig = (item3) => {
+            const ti = tf2(item3);
+            let res2 = "";
+            let same_grammar_type;
+            const record_subitem_sigs = (item4) => {
+              same_grammar_type = void 0;
+              let same_sig = void 0;
+              each(item4, (subitem, c2) => {
+                if (c2 > 0) {
+                  res2 = res2 + ",";
+                }
+                const sig_subitem = this.sig(subitem, max_depth, depth + 1);
+                if (same_sig === void 0) {
+                  same_sig = sig_subitem;
+                } else {
+                  if (sig_subitem !== same_sig) {
+                    same_sig = false;
+                    same_grammar_type = false;
+                  }
+                }
+                if (same_sig) {
+                  if (sing_def[sig_subitem]) {
+                    if (same_grammar_type === void 0) {
+                      same_grammar_type = sig_subitem;
+                    } else {
+                      if (same_grammar_type === sig_subitem) {
+                      } else {
+                        same_grammar_type = false;
+                      }
+                    }
+                  } else {
+                  }
+                }
+                res2 = res2 + sig_subitem;
+              });
+            };
+            if (ti === "A") {
+              record_subitem_sigs(item3);
+              return res2;
+            } else if (ti === "a") {
+              record_subitem_sigs(item3);
+              if (same_grammar_type) {
+                const plur_name = sing_plur[same_grammar_type];
+                return plur_name;
+              } else {
+                const found_obj_type = obj_sig_sing[res2];
+                const found_deep_sig_type = deep_sig_sing[res2];
+                let found_type_sing;
+                if (found_deep_sig_type) {
+                  if (found_deep_sig_type.length === 1) {
+                    found_type_sing = found_deep_sig_type[0];
+                  }
+                }
+                if (found_type_sing) {
+                  return found_type_sing;
+                } else {
+                  const enclosed_res = "[" + res2 + "]";
+                  return enclosed_res;
+                }
+              }
+            } else if (ti === "o") {
+              if (max_depth === -1 || depth <= max_depth) {
+                res2 = res2 + "{";
+                let first = true;
+                each(item3, (value2, key2) => {
+                  const vsig = this.sig(value2, max_depth, depth + 1);
+                  if (!first) {
+                    res2 = res2 + ",";
+                  } else {
+                    first = false;
+                  }
+                  res2 = res2 + '"' + key2 + '":' + vsig;
+                });
+                res2 = res2 + "}";
+                return res2;
+              } else {
+                return "o";
+              }
+            } else if (ti === "s" || ti === "n" || ti === "b") {
+              return ti;
+            } else {
+              return ti;
+            }
+          };
+          return extended_sig(item2);
+        }
+        single_forms_sig(item2) {
+          const {
+            sing_plur,
+            plur_sing,
+            sing_def,
+            sig_levels_sing,
+            deep_sig_sing,
+            obj_sig_sing
+          } = this.maps;
+          let sig = this.sig(item2);
+          let s_sig = sig.split(",");
+          const arr_res = [];
+          each(s_sig, (sig_item, c2) => {
+            const sing = plur_sing[sig_item] || sig_item;
+            arr_res.push(sing);
+          });
+          const res2 = arr_res.join(",");
+          return res2;
+        }
+      };
+      var Evented_Class = class {
+        "constructor"() {
+          Object.defineProperty(this, "_bound_events", {
+            value: {}
+          });
+        }
+        "raise_event"() {
+          let a = Array.prototype.slice.call(arguments), sig = get_a_sig(a);
+          a.l = a.length;
+          let target = this;
+          let c2, l2, res2;
+          if (sig === "[s]") {
+            let target2 = this;
+            let event_name = a[0];
+            let bgh = this._bound_general_handler;
+            let be = this._bound_events;
+            res2 = [];
+            if (bgh) {
+              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
+                res2.push(bgh[c2].call(target2, event_name));
+              }
+            }
+            if (be) {
+              let bei = be[event_name];
+              if (tof(bei) == "array") {
+                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
+                  res2.push(bei[c2].call(target2));
+                }
+                return res2;
+              }
+            }
+          }
+          if (sig === "[s,a]") {
+            let be = this._bound_events;
+            let bgh = this._bound_general_handler;
+            let event_name = a[0];
+            res2 = [];
+            if (bgh) {
+              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
+                res2.push(bgh[c2].call(target, event_name, a[1]));
+              }
+            }
+            if (be) {
+              let bei = be[event_name];
+              if (tof(bei) === "array") {
+                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
+                  res2.push(bei[c2].call(target, a[1]));
+                }
+              }
+            }
+          }
+          if (sig === "[s,b]" || sig === "[s,s]" || sig === "[s,n]" || sig === "[s,B]" || sig === "[s,O]" || sig === "[s,e]") {
+            let be = this._bound_events;
+            let bgh = this._bound_general_handler;
+            let event_name = a[0];
+            res2 = [];
+            if (bgh) {
+              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
+                res2.push(bgh[c2].call(target, event_name, a[1]));
+              }
+            }
+            if (be) {
+              let bei = be[event_name];
+              if (tof(bei) === "array") {
+                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
+                  res2.push(bei[c2].call(target, a[1]));
+                }
+              }
+            }
+          }
+          if (sig === "[s,o]" || sig === "[s,?]") {
+            let be = this._bound_events;
+            let bgh = this._bound_general_handler;
+            let event_name = a[0];
+            res2 = [];
+            if (bgh) {
+              for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
+                res2.push(bgh[c2].call(target, event_name, a[1]));
+              }
+            }
+            if (be) {
+              let bei = be[event_name];
+              if (tof(bei) === "array") {
+                for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
+                  res2.push(bei[c2].call(target, a[1]));
+                }
+              }
+            }
+          } else {
+            if (a.l > 2) {
+              let event_name = a[0];
+              let additional_args = [];
+              let bgh_args = [event_name];
+              for (c2 = 1, l2 = a.l; c2 < l2; c2++) {
+                additional_args.push(a[c2]);
+                bgh_args.push(a[c2]);
+              }
+              let be = this._bound_events;
+              let bgh = this._bound_general_handler;
+              res2 = [];
+              if (bgh) {
+                for (c2 = 0, l2 = bgh.length; c2 < l2; c2++) {
+                  res2.push(bgh[c2].apply(target, bgh_args));
+                }
+              }
+              if (be) {
+                let bei = be[event_name];
+                if (tof(bei) == "array") {
+                  if (bei.length > 0) {
+                    for (c2 = 0, l2 = bei.length; c2 < l2; c2++) {
+                      if (bei[c2]) res2.push(bei[c2].apply(target, additional_args));
+                    }
+                    return res2;
+                  } else {
+                    return res2;
+                  }
+                }
+              }
+            } else {
+            }
+          }
+          return res2;
+        }
+        "add_event_listener"() {
+          const {
+            event_events
+          } = this;
+          let a = Array.prototype.slice.call(arguments), sig = get_a_sig(a);
+          if (sig === "[f]") {
+            this._bound_general_handler = this._bound_general_handler || [];
+            if (is_array(this._bound_general_handler)) {
+              this._bound_general_handler.push(a[0]);
+            }
+            ;
+          }
+          if (sig === "[s,f]") {
+            let event_name = a[0], fn_listener = a[1];
+            if (!this._bound_events[event_name]) this._bound_events[event_name] = [];
+            let bei = this._bound_events[event_name];
+            if (is_array(bei)) {
+              bei.push(fn_listener);
+              if (event_events) {
+                this.raise("add-event-listener", {
+                  "name": event_name
+                });
+              }
+            } else {
+              console.trace();
+              throw "Expected: array";
+            }
+          }
+          return this;
+        }
+        "remove_event_listener"(event_name, fn_listener) {
+          const {
+            event_events
+          } = this;
+          if (this._bound_events) {
+            let bei = this._bound_events[event_name] || [];
+            if (is_array(bei)) {
+              let c2 = 0, l2 = bei.length, found = false;
+              while (!found && c2 < l2) {
+                if (bei[c2] === fn_listener) {
+                  found = true;
+                } else {
+                  c2++;
+                }
+              }
+              if (found) {
+                bei.splice(c2, 1);
+                if (event_events) {
+                  this.raise("remove-event-listener", {
+                    "name": event_name
+                  });
+                }
+              }
+            } else {
+              console.trace();
+              throw "Expected: array";
+            }
+          }
+          return this;
+        }
+        get bound_named_event_counts() {
+          const res2 = {};
+          if (this._bound_events) {
+            const keys = Object.keys(this._bound_events);
+            each(keys, (key2) => {
+              res2[key2] = this._bound_events[key2].length;
+            });
+          }
+          return res2;
+        }
+        "one"(event_name, fn_handler) {
+          let inner_handler = function(e) {
+            fn_handler.call(this, e);
+            this.off(event_name, inner_handler);
+          };
+          this.on(event_name, inner_handler);
+        }
+        "changes"(obj_changes) {
+          if (!this.map_changes) {
+            this.map_changes = {};
+          }
+          each(obj_changes, (handler, name) => {
+            this.map_changes[name] = this.map_changes[name] || [];
+            this.map_changes[name].push(handler);
+          });
+          if (!this._using_changes) {
+            this._using_changes = true;
+            this.on("change", (e_change) => {
+              const {
+                name,
+                value: value2
+              } = e_change;
+              if (this.map_changes[name]) {
+                each(this.map_changes[name], (h_change) => {
+                  h_change(value2);
+                });
+              }
+            });
+          }
+        }
+      };
+      var p = Evented_Class.prototype;
+      p.raise = p.raise_event;
+      p.trigger = p.raise_event;
+      p.subscribe = p.add_event_listener;
+      p.on = p.add_event_listener;
+      p.off = p.remove_event_listener;
+      var eventify = (obj2) => {
+        const bound_events = {};
+        const add_event_listener = (name, handler) => {
+          if (handler === void 0 && typeof name === "function") {
+            handler = name;
+            name = "";
+          }
+          if (!bound_events[name]) bound_events[name] = [];
+          bound_events[name].push(handler);
+        };
+        const remove_event_listener = (name, handler) => {
+          if (bound_events[name]) {
+            const i = bound_events[name].indexOf(handler);
+            if (i > -1) {
+              bound_events[name].splice(i, 1);
+            }
+          }
+        };
+        const raise_event = (name, optional_param) => {
+          const arr_named_events = bound_events[name];
+          if (arr_named_events !== void 0) {
+            if (optional_param !== void 0) {
+              const l2 = arr_named_events.length;
+              for (let c2 = 0; c2 < l2; c2++) {
+                arr_named_events[c2].call(obj2, optional_param);
+              }
+            } else {
+              const l2 = arr_named_events.length;
+              for (let c2 = 0; c2 < l2; c2++) {
+                arr_named_events[c2].call(obj2);
+              }
+            }
+          }
+        };
+        obj2.on = obj2.add_event_listener = add_event_listener;
+        obj2.off = obj2.remove_event_listener = remove_event_listener;
+        obj2.raise = obj2.raise_event = raise_event;
+        return obj2;
+      };
+      var Publisher = class extends Evented_Class {
+        constructor(spec = {}) {
+          super({});
+          this.one("ready", () => {
+            this.is_ready = true;
+          });
+        }
+        get when_ready() {
+          return new Promise((solve, jettison) => {
+            if (this.is_ready === true) {
+              solve();
+            } else {
+              this.one("ready", () => {
+                solve();
+              });
+            }
+          });
+        }
+      };
+      var prop = (...a) => {
+        let s = get_a_sig(a);
+        const raise_change_events = true;
+        const ifn = (item2) => typeof item2 === "function";
+        if (s === "[a]") {
+          each(a[0], (item_params2) => {
+            prop.apply(exports, item_params2);
+          });
+        } else {
+          if (a.length === 2) {
+            if (ia(a[1])) {
+              const target = a[0];
+              each(a[1], (item2) => {
+                if (ia(item2)) {
+                  throw "NYI 468732";
+                } else {
+                  prop(target, item2);
+                }
+              });
+            } else {
+              const ta1 = tof(a[1]);
+              if (ta1 === "string") {
+                [obj, prop_name] = a;
+              } else {
+                throw "NYI 468732b";
+              }
+            }
+          } else if (a.length > 2) {
+            if (is_array(a[0])) {
+              throw "stop";
+              let objs = a.shift();
+              each(objs, (obj2) => {
+                prop.apply(exports, [obj2].concat(item_params));
+              });
+            } else {
+              let obj2, prop_name2, default_value, fn_onchange, fn_transform, fn_on_ready, options;
+              const load_options = (options2) => {
+                prop_name2 = prop_name2 || options2.name || options2.prop_name;
+                fn_onchange = options2.fn_onchange || options2.onchange || options2.change;
+                fn_transform = options2.fn_transform || options2.ontransform || options2.transform;
+                fn_on_ready = options2.ready || options2.on_ready;
+                default_value = default_value || options2.default_value || options2.default;
+              };
+              if (a.length === 2) {
+                [obj2, options] = a;
+                load_options(options);
+              } else if (a.length === 3) {
+                if (ifn(a[2])) {
+                  [obj2, prop_name2, fn_onchange] = a;
+                } else {
+                  if (a[2].change || a[2].ready) {
+                    load_options(a[2]);
+                    [obj2, prop_name2] = a;
+                  } else {
+                    [obj2, prop_name2, default_value] = a;
+                  }
+                }
+              } else if (a.length === 4) {
+                if (ifn(a[2]) && ifn(a[3])) {
+                  [obj2, prop_name2, fn_transform, fn_onchange] = a;
+                } else if (ifn(a[3])) {
+                  [obj2, prop_name2, default_value, fn_onchange] = a;
+                } else {
+                  [obj2, prop_name2, default_value, options] = a;
+                  load_options(options);
+                }
+              } else if (a.length === 5) {
+                [obj2, prop_name2, default_value, fn_transform, fn_onchange] = a;
+              }
+              let _prop_value;
+              if (typeof default_value !== "undefined") _prop_value = default_value;
+              const _silent_set = (value2) => {
+                let _value;
+                if (fn_transform) {
+                  _value = fn_transform(value2);
+                } else {
+                  _value = value2;
+                }
+                _prop_value = _value;
+              };
+              const _set = (value2) => {
+                let _value;
+                if (fn_transform) {
+                  _value = fn_transform(value2);
+                } else {
+                  _value = value2;
+                }
+                let old = _prop_value;
+                _prop_value = _value;
+                if (fn_onchange) {
+                  fn_onchange({
+                    old,
+                    value: _prop_value
+                  });
+                }
+                if (obj2.raise && raise_change_events) {
+                  obj2.raise("change", {
+                    name: prop_name2,
+                    old,
+                    value: _prop_value
+                  });
+                }
+              };
+              if (is_defined(default_value)) {
+                _prop_value = default_value;
+              }
+              const t_prop_name = tf2(prop_name2);
+              if (t_prop_name === "s") {
+                Object.defineProperty(obj2, prop_name2, {
+                  get() {
+                    return _prop_value;
+                  },
+                  set(value2) {
+                    _set(value2);
+                  }
+                });
+              } else if (t_prop_name === "a") {
+                const l2 = prop_name2.length;
+                let item_prop_name;
+                for (let c2 = 0; c2 < l2; c2++) {
+                  item_prop_name = prop_name2[c2];
+                  Object.defineProperty(obj2, item_prop_name, {
+                    get() {
+                      return _prop_value;
+                    },
+                    set(value2) {
+                      _set(value2);
+                    }
+                  });
+                }
+              } else {
+                throw "Unexpected name type: " + t_prop_name;
+              }
+              if (fn_on_ready) {
+                fn_on_ready({
+                  silent_set: _silent_set
+                });
+              }
+            }
+          }
+        }
+      };
+      var Data_Type = class {
+      };
+      var Functional_Data_Type = class extends Data_Type {
+        constructor(spec) {
+          super(spec);
+          if (spec.supertype) this.supertype = spec.supertype;
+          if (spec.name) this.name = spec.name;
+          if (spec.abbreviated_name) this.abbreviated_name = spec.abbreviated_name;
+          if (spec.named_property_access) this.named_property_access = spec.named_property_access;
+          if (spec.numbered_property_access) this.numbered_property_access = spec.numbered_property_access;
+          if (spec.property_names) this.property_names = spec.property_names;
+          if (spec.property_data_types) this.property_data_types = spec.property_data_types;
+          if (spec.wrap_properties) this.wrap_properties = spec.wrap_properties;
+          if (spec.wrap_value_inner_values) this.wrap_value_inner_values = spec.wrap_value_inner_values;
+          if (spec.value_js_type) this.value_js_type = spec.value_js_type;
+          if (spec.abbreviated_property_names) this.abbreviated_property_names = spec.abbreviated_property_names;
+          if (spec.validate) this.validate = spec.validate;
+          if (spec.validate_explain) this.validate_explain = spec.validate_explain;
+          if (spec.parse_string) this.parse_string = spec.parse_string;
+          if (spec.parse) this.parse = spec.parse;
+        }
+      };
+      Functional_Data_Type.number = new Functional_Data_Type({
+        name: "number",
+        abbreviated_name: "n",
+        validate: (x) => {
+          return !isNaN(x);
+        },
+        parse_string(str) {
+          const p2 = parseFloat(str);
+          if (p2 + "" === str) {
+            const parsed_is_valid = this.validate(p2);
+            if (parsed_is_valid) {
+              return p2;
+            }
+          }
+        }
+      });
+      Functional_Data_Type.integer = new Functional_Data_Type({
+        name: "integer",
+        abbreviated_name: "int",
+        validate: (x) => {
+          return Number.isInteger(x);
+        },
+        parse_string(str) {
+          const p2 = parseInt(str, 10);
+          if (!isNaN(p2) && p2.toString() === str) {
+            return p2;
+          }
+          return void 0;
+        }
+      });
+      var field = (...a) => {
+        const raise_change_events = true;
+        const ifn = (item2) => typeof item2 === "function";
+        let s = get_a_sig(a);
+        if (s === "[a]") {
+          each(a[0], (item_params2) => {
+            prop.apply(exports, item_params2);
+          });
+        } else {
+          if (a.length > 1) {
+            if (is_array(a[0])) {
+              throw "stop - need to fix";
+              let objs = a.shift();
+              each(objs, (obj2) => {
+                field.apply(exports, [obj2].concat(item_params));
+              });
+            } else {
+              let obj2, prop_name2, data_type, default_value, fn_transform;
+              if (a.length === 2) {
+                [obj2, prop_name2] = a;
+              } else if (a.length === 3) {
+                if (a[2] instanceof Data_Type) {
+                  [obj2, prop_name2, data_type, default_value] = a;
+                } else {
+                  if (ifn(a[2])) {
+                    [obj2, prop_name2, fn_transform] = a;
+                  } else {
+                    [obj2, prop_name2, default_value] = a;
+                  }
+                }
+              } else if (a.length === 4) {
+                if (a[2] instanceof Data_Type) {
+                  [obj2, prop_name2, data_type, default_value] = a;
+                } else {
+                  [obj2, prop_name2, default_value, fn_transform] = a;
+                }
+              }
+              if (obj2 !== void 0) {
+                Object.defineProperty(obj2, prop_name2, {
+                  get() {
+                    if (is_defined(obj2._)) {
+                      return obj2._[prop_name2];
+                    } else {
+                      return void 0;
+                    }
+                  },
+                  set(value2) {
+                    let old = (obj2._ = obj2._ || {})[prop_name2];
+                    if (old !== value2) {
+                      let is_valid = true;
+                      if (data_type) {
+                        const t_value = typeof value2;
+                        is_valid = data_type.validate(value2);
+                        if (t_value === "string") {
+                          const parsed_value = data_type.parse_string(value2);
+                          is_valid = data_type.validate(parsed_value);
+                          if (is_valid) value2 = parsed_value;
+                        }
+                        console.log("t_value", t_value);
+                      }
+                      if (is_valid) {
+                        let _value;
+                        if (fn_transform) {
+                          _value = fn_transform(value2);
+                        } else {
+                          _value = value2;
+                        }
+                        obj2._[prop_name2] = _value;
+                        if (raise_change_events) {
+                          obj2.raise("change", {
+                            name: prop_name2,
+                            old,
+                            value: _value
+                          });
+                        }
+                      }
+                    } else {
+                    }
+                  }
+                });
+                if (is_defined(default_value)) {
+                  let is_valid = true;
+                  if (data_type) {
+                    is_valid = data_type.validate(default_value);
+                  }
+                  if (is_valid) {
+                    (obj2._ = obj2._ || {})[prop_name2] = default_value;
+                  }
+                }
+              } else {
+                throw "stop";
+              }
+            }
+          }
+        }
+      };
+      var KEYWORD_LITERALS = /* @__PURE__ */ new Set(["true", "false", "null", "undefined"]);
+      var KEYWORD_OPERATORS = /* @__PURE__ */ new Set(["typeof", "void", "delete", "in", "instanceof"]);
+      var MULTI_CHAR_OPERATORS = [
+        "===",
+        "!==",
+        "==",
+        "!=",
+        "<=",
+        ">=",
+        "&&",
+        "||",
+        "??",
+        "++",
+        "--",
+        "+=",
+        "-=",
+        "*=",
+        "/=",
+        "%=",
+        "&=",
+        "|=",
+        "^=",
+        "<<",
+        ">>",
+        ">>>",
+        "**"
+      ];
+      var SINGLE_CHAR_OPERATORS = /* @__PURE__ */ new Set(["+", "-", "*", "/", "%", "=", "!", "<", ">", "&", "|", "^", "~"]);
+      var PUNCTUATION_CHARS = /* @__PURE__ */ new Set(["(", ")", "{", "}", "[", "]", ",", ":", "?", "."]);
+      var GLOBAL_SCOPE = typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
+      var DEFAULT_ALLOWED_GLOBALS = ["Math"];
+      var EXPRESSION_PARSER_DEFAULTS = {
+        cache: true,
+        cacheSize: 64,
+        cacheKeyResolver: null,
+        maxExpressionLength: 1e4,
+        maxMemberDepth: 2,
+        helpers: {},
+        allowedFunctions: [],
+        allowedGlobals: DEFAULT_ALLOWED_GLOBALS,
+        allowCall: null,
+        strict: false
+      };
+      var NORMALIZED_OPTIONS_FLAG = /* @__PURE__ */ Symbol("ExpressionParserOptions");
+      var DISALLOWED_IDENTIFIERS = /* @__PURE__ */ new Set(["this", "new"]);
+      var ExpressionParserError = class extends Error {
+        constructor(code, message, details = {}) {
+          super(message);
+          this.name = "ExpressionParserError";
+          this.code = code;
+          this.details = details;
+        }
+      };
+      var ExpressionCache = class {
+        constructor(limit = 0) {
+          this.limit = Math.max(0, limit || 0);
+          this.map = /* @__PURE__ */ new Map();
+        }
+        get(key2) {
+          if (!this.limit || !this.map.has(key2)) {
+            return void 0;
+          }
+          const value2 = this.map.get(key2);
+          this.map.delete(key2);
+          this.map.set(key2, value2);
+          return value2;
+        }
+        set(key2, value2) {
+          if (!this.limit) {
+            return;
+          }
+          if (this.map.has(key2)) {
+            this.map.delete(key2);
+          }
+          this.map.set(key2, value2);
+          while (this.map.size > this.limit) {
+            const oldestKey = this.map.keys().next().value;
+            this.map.delete(oldestKey);
+          }
+        }
+        clear() {
+          this.map.clear();
+        }
+        get size() {
+          return this.map.size;
+        }
+      };
+      var Tokenizer = class {
+        constructor(expression) {
+          this.expression = typeof expression === "string" ? expression : String(expression || "");
+          this.length = this.expression.length;
+          this.position = 0;
+          this.line = 1;
+          this.column = 1;
+        }
+        tokenize() {
+          const tokens = [];
+          if (!this.expression.trim()) {
+            return tokens;
+          }
+          while (!this.isAtEnd()) {
+            this.skipWhitespace();
+            if (this.isAtEnd()) break;
+            const ch = this.peek();
+            if (this.isIdentifierStart(ch)) {
+              tokens.push(this.tokenizeIdentifier());
+            } else if (this.isDigit(ch) || ch === "." && this.isDigit(this.peek(1))) {
+              tokens.push(this.tokenizeNumber());
+            } else if (ch === '"' || ch === "'") {
+              tokens.push(this.tokenizeString());
+            } else if (this.isOperatorStart(ch)) {
+              tokens.push(this.tokenizeOperator());
+            } else if (PUNCTUATION_CHARS.has(ch)) {
+              tokens.push(this.tokenizePunctuation());
+            } else {
+              this.throwError("TOKEN_INVALID_CHAR", `Unexpected character: ${ch}`);
+            }
+          }
+          return tokens;
+        }
+        isAtEnd() {
+          return this.position >= this.length;
+        }
+        skipWhitespace() {
+          while (!this.isAtEnd()) {
+            const ch = this.peek();
+            if (/\s/.test(ch)) {
+              this.advance();
+              continue;
+            }
+            if (ch === "/" && this.peek(1) === "/") {
+              while (!this.isAtEnd() && this.peek() !== "\n") {
+                this.advance();
+              }
+              continue;
+            }
+            if (ch === "/" && this.peek(1) === "*") {
+              this.advance();
+              this.advance();
+              while (!this.isAtEnd()) {
+                if (this.peek() === "*" && this.peek(1) === "/") {
+                  this.advance();
+                  this.advance();
+                  break;
+                }
+                this.advance();
+              }
+              continue;
+            }
+            break;
+          }
+        }
+        peek(offset2 = 0) {
+          if (this.position + offset2 >= this.length) return "\0";
+          return this.expression[this.position + offset2];
+        }
+        advance() {
+          if (this.isAtEnd()) {
+            return "\0";
+          }
+          const char = this.expression[this.position++];
+          if (char === "\n") {
+            this.line += 1;
+            this.column = 1;
+          } else {
+            this.column += 1;
+          }
+          return char;
+        }
+        getLocationSnapshot() {
+          return { index: this.position, line: this.line, column: this.column };
+        }
+        createToken(type, value2, start, end) {
+          return { type, value: value2, start, end };
+        }
+        throwError(code, message) {
+          throw new ExpressionParserError(code, message, { location: this.getLocationSnapshot() });
+        }
+        isIdentifierStart(ch) {
+          return /[A-Za-z_$]/.test(ch);
+        }
+        isIdentifierPart(ch) {
+          return /[A-Za-z0-9_$]/.test(ch);
+        }
+        isDigit(ch) {
+          return /[0-9]/.test(ch);
+        }
+        isOperatorStart(ch) {
+          if (ch === "." && this.peek(1) === "." && this.peek(2) === ".") {
+            this.throwError("SYNTAX_UNSUPPORTED", "Spread syntax is not supported");
+          }
+          if (ch === "?" && this.peek(1) === "?") {
+            return true;
+          }
+          return SINGLE_CHAR_OPERATORS.has(ch);
+        }
+        tokenizeIdentifier() {
+          const start = this.getLocationSnapshot();
+          let value2 = "";
+          while (!this.isAtEnd() && this.isIdentifierPart(this.peek())) {
+            value2 += this.advance();
+          }
+          const end = this.getLocationSnapshot();
+          if (KEYWORD_LITERALS.has(value2)) {
+            return this.createToken("KEYWORD", value2, start, end);
+          }
+          if (KEYWORD_OPERATORS.has(value2)) {
+            return this.createToken("OPERATOR", value2, start, end);
+          }
+          return this.createToken("IDENTIFIER", value2, start, end);
+        }
+        tokenizeNumber() {
+          const start = this.getLocationSnapshot();
+          let value2 = "";
+          let hasDot = false;
+          while (!this.isAtEnd()) {
+            const ch = this.peek();
+            if (this.isDigit(ch)) {
+              value2 += this.advance();
+            } else if (ch === "." && !hasDot) {
+              hasDot = true;
+              value2 += this.advance();
+            } else {
+              break;
+            }
+          }
+          const end = this.getLocationSnapshot();
+          return this.createToken("NUMBER", Number(value2), start, end);
+        }
+        tokenizeString() {
+          const quote = this.advance();
+          const start = this.getLocationSnapshot();
+          let value2 = "";
+          while (!this.isAtEnd()) {
+            const ch = this.advance();
+            if (ch === quote) {
+              return this.createToken("STRING", value2, start, this.getLocationSnapshot());
+            }
+            if (ch === "\\") {
+              const next = this.advance();
+              switch (next) {
+                case "n":
+                  value2 += "\n";
+                  break;
+                case "r":
+                  value2 += "\r";
+                  break;
+                case "t":
+                  value2 += "	";
+                  break;
+                case "\\":
+                  value2 += "\\";
+                  break;
+                case '"':
+                  value2 += '"';
+                  break;
+                case "'":
+                  value2 += "'";
+                  break;
+                default:
+                  value2 += next;
+              }
+            } else {
+              value2 += ch;
+            }
+          }
+          this.throwError("TOKEN_UNTERMINATED_STRING", "Unterminated string literal");
+        }
+        tokenizeOperator() {
+          const remaining = this.expression.slice(this.position);
+          const start = this.getLocationSnapshot();
+          for (const op of MULTI_CHAR_OPERATORS) {
+            if (remaining.startsWith(op)) {
+              if (op === "=>") {
+                this.throwError("SYNTAX_UNSUPPORTED", "Arrow functions are not supported");
+              }
+              this.position += op.length;
+              this.column += op.length;
+              return this.createToken("OPERATOR", op, start, this.getLocationSnapshot());
+            }
+          }
+          const ch = this.advance();
+          if (ch === "=" && this.peek() === ">") {
+            this.throwError("SYNTAX_UNSUPPORTED", "Arrow functions are not supported");
+          }
+          if (!SINGLE_CHAR_OPERATORS.has(ch) && ch !== "?") {
+            this.throwError("TOKEN_UNEXPECTED_OPERATOR", "Unexpected operator");
+          }
+          return this.createToken("OPERATOR", ch, start, this.getLocationSnapshot());
+        }
+        tokenizePunctuation() {
+          const start = this.getLocationSnapshot();
+          const ch = this.advance();
+          if (ch === "." && this.peek() === "." && this.peek(1) === ".") {
+            this.throwError("SYNTAX_UNSUPPORTED", "Spread syntax is not supported");
+          }
+          return this.createToken("PUNCTUATION", ch, start, this.getLocationSnapshot());
+        }
+      };
+      var Parser = class {
+        constructor(tokens, options = {}) {
+          this.tokens = tokens;
+          this.pos = 0;
+          this.maxMemberDepth = options.maxMemberDepth || EXPRESSION_PARSER_DEFAULTS.maxMemberDepth;
+          const disallowed = new Set(DISALLOWED_IDENTIFIERS);
+          if (options.disallowedIdentifiers) {
+            options.disallowedIdentifiers.forEach((identifier) => disallowed.add(identifier));
+          }
+          this.disallowedIdentifiers = disallowed;
+        }
+        parse() {
+          if (!this.tokens.length) {
+            throw new ExpressionParserError("EMPTY_EXPRESSION", "Empty expression");
+          }
+          const ast = this.parseExpression();
+          if (!this.isAtEnd()) {
+            this.error("UNEXPECTED_TOKEN", `Unexpected token: ${this.peek().value}`, this.peek());
+          }
+          return ast;
+        }
+        parseExpression() {
+          return this.parseConditionalExpression();
+        }
+        parseConditionalExpression() {
+          let expr = this.parseLogicalOrExpression();
+          if (this.matchPunctuation("?")) {
+            const consequent = this.parseExpression();
+            this.consume("PUNCTUATION", ":");
+            const alternate = this.parseExpression();
+            expr = {
+              type: "ConditionalExpression",
+              test: expr,
+              consequent,
+              alternate
+            };
+          }
+          return expr;
+        }
+        parseLogicalOrExpression() {
+          let expr = this.parseLogicalAndExpression();
+          while (this.matchOperator("||")) {
+            const operator = this.previous().value;
+            const right = this.parseLogicalAndExpression();
+            expr = this.buildLogicalExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseLogicalAndExpression() {
+          let expr = this.parseNullishExpression();
+          while (this.matchOperator("&&")) {
+            const operator = this.previous().value;
+            const right = this.parseNullishExpression();
+            expr = this.buildLogicalExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseNullishExpression() {
+          let expr = this.parseEqualityExpression();
+          while (this.matchOperator("??")) {
+            const operator = this.previous().value;
+            const right = this.parseEqualityExpression();
+            expr = this.buildLogicalExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseEqualityExpression() {
+          let expr = this.parseRelationalExpression();
+          while (this.matchOperator("===", "!==", "==", "!=")) {
+            const operator = this.previous().value;
+            const right = this.parseRelationalExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseRelationalExpression() {
+          let expr = this.parseShiftExpression();
+          while (this.matchOperator("<", ">", "<=", ">=", "instanceof", "in")) {
+            const operator = this.previous().value;
+            const right = this.parseShiftExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseShiftExpression() {
+          let expr = this.parseAdditiveExpression();
+          while (this.matchOperator("<<", ">>", ">>>")) {
+            const operator = this.previous().value;
+            const right = this.parseAdditiveExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseAdditiveExpression() {
+          let expr = this.parseMultiplicativeExpression();
+          while (this.matchOperator("+", "-")) {
+            const operator = this.previous().value;
+            const right = this.parseMultiplicativeExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseMultiplicativeExpression() {
+          let expr = this.parseUnaryExpression();
+          while (this.matchOperator("*", "/", "%")) {
+            const operator = this.previous().value;
+            const right = this.parseUnaryExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseUnaryExpression() {
+          if (this.matchOperator("+", "-", "!", "~", "typeof", "void", "delete")) {
+            const operator = this.previous().value;
+            const argument = this.parseUnaryExpression();
+            return { type: "UnaryExpression", operator, argument };
+          }
+          return this.parseLeftHandSideExpression();
+        }
+        parseLeftHandSideExpression() {
+          let expr = this.parsePrimaryExpression();
+          while (true) {
+            if (this.matchPunctuation(".")) {
+              const operatorToken = this.previous();
+              const property = this.consumePropertyIdentifier();
+              const depth = this.getChainDepth(expr) + 1;
+              this.assertMemberDepth(depth, operatorToken);
+              expr = {
+                type: "MemberExpression",
+                object: expr,
+                property,
+                computed: false
+              };
+              this.setChainDepth(expr, depth);
+            } else if (this.matchPunctuation("[")) {
+              const operatorToken = this.previous();
+              const property = this.parseExpression();
+              this.consume("PUNCTUATION", "]");
+              const depth = this.getChainDepth(expr) + 1;
+              this.assertMemberDepth(depth, operatorToken);
+              expr = {
+                type: "MemberExpression",
+                object: expr,
+                property,
+                computed: true
+              };
+              this.setChainDepth(expr, depth);
+            } else if (this.matchPunctuation("(")) {
+              const args = this.parseArguments();
+              expr = {
+                type: "CallExpression",
+                callee: expr,
+                arguments: args
+              };
+              this.setChainDepth(expr, this.getChainDepth(expr.callee));
+            } else {
+              break;
+            }
+          }
+          return expr;
+        }
+        parsePrimaryExpression() {
+          const token = this.peek();
+          if (!token) {
+            this.error("UNEXPECTED_END", "Unexpected end of expression", token);
+          }
+          if (token.type === "NUMBER" || token.type === "STRING") {
+            this.advance();
+            return { type: "Literal", value: token.value };
+          }
+          if (token.type === "KEYWORD") {
+            this.advance();
+            return { type: "Literal", value: this.literalFromKeyword(token.value) };
+          }
+          if (token.type === "IDENTIFIER") {
+            this.advance();
+            this.assertIdentifierAllowed(token);
+            return { type: "Identifier", value: token.value };
+          }
+          if (this.matchPunctuation("(")) {
+            const expr = this.parseExpression();
+            this.consume("PUNCTUATION", ")");
+            return expr;
+          }
+          if (this.matchPunctuation("[")) {
+            const elements = [];
+            if (!this.check("PUNCTUATION", "]")) {
+              do {
+                elements.push(this.parseExpression());
+              } while (this.matchPunctuation(","));
+            }
+            this.consume("PUNCTUATION", "]");
+            return { type: "ArrayExpression", elements };
+          }
+          if (this.matchPunctuation("{")) {
+            const properties = [];
+            if (!this.check("PUNCTUATION", "}")) {
+              do {
+                const key2 = this.parsePropertyKey();
+                this.consume("PUNCTUATION", ":");
+                const value2 = this.parseExpression();
+                properties.push({ key: key2, value: value2 });
+              } while (this.matchPunctuation(","));
+            }
+            this.consume("PUNCTUATION", "}");
+            return { type: "ObjectExpression", properties };
+          }
+          this.error("UNEXPECTED_TOKEN", `Unexpected token: ${token.value}`, token);
+        }
+        parsePropertyKey() {
+          const token = this.peek();
+          if (token.type === "IDENTIFIER") {
+            this.advance();
+            return { type: "Identifier", value: token.value };
+          }
+          if (token.type === "STRING" || token.type === "NUMBER" || token.type === "KEYWORD") {
+            this.advance();
+            const value2 = token.type === "KEYWORD" ? this.literalFromKeyword(token.value) : token.value;
+            return { type: "Literal", value: value2 };
+          }
+          this.error("INVALID_OBJECT_KEY", "Invalid object property key", token);
+        }
+        parseArguments() {
+          const args = [];
+          if (!this.check("PUNCTUATION", ")")) {
+            do {
+              args.push(this.parseExpression());
+            } while (this.matchPunctuation(","));
+          }
+          this.consume("PUNCTUATION", ")");
+          return args;
+        }
+        literalFromKeyword(value2) {
+          switch (value2) {
+            case "true":
+              return true;
+            case "false":
+              return false;
+            case "null":
+              return null;
+            case "undefined":
+              return void 0;
+            default:
+              return value2;
+          }
+        }
+        consume(type, value2) {
+          if (this.check(type, value2)) {
+            return this.advance();
+          }
+          const expected = value2 ? `${type} '${value2}'` : type;
+          this.error("MISSING_TOKEN", `Expected ${expected}`, this.peek());
+        }
+        check(type, value2) {
+          if (this.isAtEnd()) return false;
+          const token = this.peek();
+          if (token.type !== type) return false;
+          if (typeof value2 === "undefined") return true;
+          return token.value === value2;
+        }
+        matchOperator(...operators) {
+          if (this.check("OPERATOR") && operators.includes(this.peek().value)) {
+            this.advance();
+            return true;
+          }
+          return false;
+        }
+        matchPunctuation(value2) {
+          if (this.check("PUNCTUATION", value2)) {
+            this.advance();
+            return true;
+          }
+          return false;
+        }
+        consumePropertyIdentifier() {
+          const token = this.peek();
+          if (token.type === "IDENTIFIER") {
+            this.advance();
+            return { type: "Identifier", value: token.value };
+          }
+          if (token.type === "STRING" || token.type === "NUMBER" || token.type === "KEYWORD") {
+            this.advance();
+            const value2 = token.type === "KEYWORD" ? this.literalFromKeyword(token.value) : token.value;
+            return { type: "Literal", value: value2 };
+          }
+          this.error("INVALID_PROPERTY", "Expected property name", token);
+        }
+        buildBinaryExpression(operator, left, right) {
+          return { type: "BinaryExpression", operator, left, right };
+        }
+        buildLogicalExpression(operator, left, right) {
+          return { type: "LogicalExpression", operator, left, right };
+        }
+        getChainDepth(node) {
+          if (!node || typeof node !== "object") {
+            return 0;
+          }
+          return node.__chainDepth || 0;
+        }
+        setChainDepth(node, depth) {
+          if (!node || typeof node !== "object") {
+            return;
+          }
+          Object.defineProperty(node, "__chainDepth", {
+            value: depth,
+            enumerable: false,
+            configurable: true
+          });
+        }
+        assertMemberDepth(depth, token) {
+          if (depth > this.maxMemberDepth) {
+            this.error("MEMBER_DEPTH_EXCEEDED", `Member access depth ${depth} exceeds maximum of ${this.maxMemberDepth}`, token);
+          }
+        }
+        assertIdentifierAllowed(token) {
+          if (this.disallowedIdentifiers.has(token.value)) {
+            this.error("DISALLOWED_IDENTIFIER", `Identifier '${token.value}' is not allowed in expressions`, token);
+          }
+        }
+        error(code, message, token) {
+          throw new ExpressionParserError(code, message, token ? { location: token.start } : void 0);
+        }
+        advance() {
+          if (!this.isAtEnd()) {
+            this.pos += 1;
+          }
+          return this.tokens[this.pos - 1];
+        }
+        peek() {
+          if (this.isAtEnd()) return null;
+          return this.tokens[this.pos];
+        }
+        previous() {
+          return this.tokens[this.pos - 1];
+        }
+        isAtEnd() {
+          return this.pos >= this.tokens.length;
+        }
+      };
+      var Evaluator = class {
+        constructor(context2 = {}, options = {}) {
+          this.context = context2 || {};
+          this.helpers = options.helpers || {};
+          this.strict = options.strict || false;
+          this.allowCall = options.allowCall || null;
+          this.allowedFunctions = new Set(options.allowedFunctions || []);
+          this.allowedGlobals = new Set(options.allowedGlobals || []);
+          Object.values(this.helpers).forEach((value2) => {
+            if (typeof value2 === "function") {
+              this.allowedFunctions.add(value2);
+            }
+          });
+        }
+        evaluate(node) {
+          switch (node.type) {
+            case "Literal":
+              return node.value;
+            case "Identifier":
+              return this.evaluateIdentifier(node);
+            case "MemberExpression":
+              return this.evaluateMemberExpression(node);
+            case "CallExpression":
+              return this.evaluateCallExpression(node);
+            case "UnaryExpression":
+              return this.evaluateUnaryExpression(node);
+            case "BinaryExpression":
+              return this.evaluateBinaryExpression(node);
+            case "LogicalExpression":
+              return this.evaluateLogicalExpression(node);
+            case "ArrayExpression":
+              return node.elements.map((element) => this.evaluate(element));
+            case "ObjectExpression":
+              return this.evaluateObjectExpression(node);
+            case "ConditionalExpression":
+              return this.evaluateConditionalExpression(node);
+            default:
+              throw new ExpressionParserError("UNSUPPORTED_NODE", `Unsupported AST node type: ${node.type}`);
+          }
+        }
+        evaluateIdentifier(node) {
+          const name = node.value;
+          if (Object.prototype.hasOwnProperty.call(this.helpers, name)) {
+            return this.helpers[name];
+          }
+          if (this.context && Object.prototype.hasOwnProperty.call(this.context, name)) {
+            return this.context[name];
+          }
+          if (this.allowedGlobals.has(name) && name in GLOBAL_SCOPE) {
+            return GLOBAL_SCOPE[name];
+          }
+          if (this.strict) {
+            throw new ExpressionParserError("UNDEFINED_IDENTIFIER", `Undefined identifier: ${name}`);
+          }
+          console.error(`Undefined identifier: ${name}`);
+          return void 0;
+        }
+        evaluateMemberExpression(node) {
+          const object = this.evaluate(node.object);
+          if (object === null || object === void 0) {
+            throw new ExpressionParserError("NULL_MEMBER_ACCESS", "Cannot read property of null or undefined");
+          }
+          const property = node.computed ? this.evaluate(node.property) : node.property.type === "Identifier" ? node.property.value : node.property.value;
+          return object[property];
+        }
+        evaluateCallExpression(node) {
+          let callee;
+          let thisArg;
+          if (node.callee.type === "MemberExpression") {
+            const object = this.evaluate(node.callee.object);
+            if (object === null || object === void 0) {
+              throw new ExpressionParserError("NULL_MEMBER_CALL", "Cannot call property of null or undefined");
+            }
+            const property = node.callee.computed ? this.evaluate(node.callee.property) : node.callee.property.type === "Identifier" ? node.callee.property.value : node.callee.property.value;
+            callee = object[property];
+            thisArg = object;
+          } else {
+            callee = this.evaluate(node.callee);
+            thisArg = void 0;
+          }
+          if (typeof callee !== "function") {
+            throw new ExpressionParserError("CALL_NON_FUNCTION", "Attempted to call a non-function");
+          }
+          if (!this.isCallAllowed(callee, thisArg)) {
+            throw new ExpressionParserError("CALL_NOT_ALLOWED", "Function call not allowed by policy");
+          }
+          const args = node.arguments.map((arg) => this.evaluate(arg));
+          return callee.apply(thisArg, args);
+        }
+        isCallAllowed(fn, thisArg) {
+          if (this.allowCall) {
+            const decision = this.allowCall(fn, thisArg);
+            if (decision === true) return true;
+            if (decision === false) return false;
+          }
+          return this.allowedFunctions.has(fn);
+        }
+        evaluateUnaryExpression(node) {
+          let argumentValue;
+          if (node.operator === "delete") {
+            argumentValue = node.argument;
+          } else if (node.operator === "typeof" && node.argument.type === "Identifier" && !this.isIdentifierDefined(node.argument.value)) {
+            argumentValue = void 0;
+          } else {
+            argumentValue = this.evaluate(node.argument);
+          }
+          switch (node.operator) {
+            case "+":
+              return +argumentValue;
+            case "-":
+              return -argumentValue;
+            case "!":
+              return !argumentValue;
+            case "~":
+              return ~argumentValue;
+            case "typeof":
+              if (node.argument.type === "Identifier" && !this.isIdentifierDefined(node.argument.value)) {
+                return "undefined";
+              }
+              return typeof argumentValue;
+            case "void":
+              return void argumentValue;
+            case "delete":
+              return this.performDelete(node.argument);
+            default:
+              throw new ExpressionParserError("UNSUPPORTED_UNARY", `Unsupported unary operator: ${node.operator}`);
+          }
+        }
+        isIdentifierDefined(name) {
+          return Object.prototype.hasOwnProperty.call(this.helpers, name) || this.context && Object.prototype.hasOwnProperty.call(this.context, name) || this.allowedGlobals.has(name) && name in GLOBAL_SCOPE;
+        }
+        performDelete(argument) {
+          if (argument.type === "Identifier" && this.context && typeof this.context === "object") {
+            return delete this.context[argument.value];
+          }
+          if (argument.type === "MemberExpression") {
+            const target = this.evaluate(argument.object);
+            if (target === null || target === void 0) {
+              return true;
+            }
+            const property = argument.computed ? this.evaluate(argument.property) : argument.property.type === "Identifier" ? argument.property.value : argument.property.value;
+            return delete target[property];
+          }
+          this.evaluate(argument);
+          return true;
+        }
+        evaluateBinaryExpression(node) {
+          const left = this.evaluate(node.left);
+          const right = this.evaluate(node.right);
+          switch (node.operator) {
+            case "+":
+              return left + right;
+            case "-":
+              return left - right;
+            case "*":
+              return left * right;
+            case "/":
+              return left / right;
+            case "%":
+              return left % right;
+            case "==":
+              return left == right;
+            case "!=":
+              return left != right;
+            case "===":
+              return left === right;
+            case "!==":
+              return left !== right;
+            case "<":
+              return left < right;
+            case ">":
+              return left > right;
+            case "<=":
+              return left <= right;
+            case ">=":
+              return left >= right;
+            case "in":
+              return left in right;
+            case "instanceof":
+              return left instanceof right;
+            default:
+              throw new ExpressionParserError("UNSUPPORTED_BINARY", `Unsupported binary operator: ${node.operator}`);
+          }
+        }
+        evaluateLogicalExpression(node) {
+          switch (node.operator) {
+            case "&&": {
+              const left = this.evaluate(node.left);
+              return left ? this.evaluate(node.right) : left;
+            }
+            case "||": {
+              const left = this.evaluate(node.left);
+              return left ? left : this.evaluate(node.right);
+            }
+            case "??": {
+              const left = this.evaluate(node.left);
+              return left !== null && left !== void 0 ? left : this.evaluate(node.right);
+            }
+            default:
+              throw new ExpressionParserError("UNSUPPORTED_LOGICAL", `Unsupported logical operator: ${node.operator}`);
+          }
+        }
+        evaluateObjectExpression(node) {
+          const obj2 = {};
+          node.properties.forEach((property) => {
+            const key2 = this.evaluatePropertyKey(property.key);
+            obj2[key2] = this.evaluate(property.value);
+          });
+          return obj2;
+        }
+        evaluatePropertyKey(node) {
+          if (node.type === "Identifier") {
+            return node.value;
+          }
+          return node.value;
+        }
+        evaluateConditionalExpression(node) {
+          const test = this.evaluate(node.test);
+          return test ? this.evaluate(node.consequent) : this.evaluate(node.alternate);
+        }
+      };
+      var ExpressionParser = class {
+        constructor(options = {}) {
+          this.options = normalizeOptions(null, options);
+          const cacheLimit = this.options.cache !== false ? this.options.cacheSize : 0;
+          this.astCache = new ExpressionCache(cacheLimit);
+          this.valueCache = new ExpressionCache(cacheLimit);
+        }
+        tokenize(expression) {
+          return new Tokenizer(expression).tokenize();
+        }
+        parse(expression, overrideOptions) {
+          const options = this.ensureNormalizedOptions(overrideOptions);
+          this.ensureExpressionLength(expression, options);
+          const useCache = this.shouldUseCache(options);
+          if (useCache) {
+            const cachedAst = this.astCache.get(expression);
+            if (cachedAst) {
+              return cachedAst;
+            }
+          }
+          const tokens = this.tokenize(expression);
+          if (!tokens.length) {
+            throw new ExpressionParserError("EMPTY_EXPRESSION", "Empty expression");
+          }
+          const parser = new Parser(tokens, options);
+          const ast = parser.parse();
+          Object.defineProperty(ast, "tokens", {
+            value: tokens,
+            enumerable: false,
+            configurable: true
+          });
+          if (useCache) {
+            this.astCache.set(expression, ast);
+          }
+          return ast;
+        }
+        evaluate(expression, context2 = {}, overrideOptions = {}) {
+          const mergedOptions = this.mergeOptions(overrideOptions);
+          const useCache = this.shouldUseCache(mergedOptions);
+          if (useCache) {
+            const cached = this.getCachedValue(expression, context2, mergedOptions);
+            if (cached.hit) {
+              return cached.value;
+            }
+          }
+          const ast = this.parse(expression, mergedOptions);
+          const evaluator = new Evaluator(context2, mergedOptions);
+          const result = evaluator.evaluate(ast);
+          if (useCache) {
+            this.storeCachedValue(expression, context2, result, mergedOptions);
+          }
+          return result;
+        }
+        compile(expression, overrideOptions = {}) {
+          const baseOptions = this.mergeOptions(overrideOptions);
+          const ast = this.parse(expression, baseOptions);
+          return (context2 = {}, runtimeOptions = {}) => {
+            const invocationOptions = this.mergeOptions(runtimeOptions, baseOptions);
+            const evaluator = new Evaluator(context2, invocationOptions);
+            return evaluator.evaluate(ast);
+          };
+        }
+        shouldUseCache(options) {
+          return options.cache !== false && options.cacheSize > 0;
+        }
+        ensureNormalizedOptions(options) {
+          if (options && options[NORMALIZED_OPTIONS_FLAG]) {
+            return options;
+          }
+          if (!options) {
+            return this.options;
+          }
+          return this.mergeOptions(options);
+        }
+        ensureExpressionLength(expression, options) {
+          if (expression.length > options.maxExpressionLength) {
+            throw new ExpressionParserError(
+              "EXPRESSION_TOO_LONG",
+              `Expression exceeds maximum length of ${options.maxExpressionLength} characters`
+            );
+          }
+        }
+        mergeOptions(override = {}, baseOptions) {
+          const base = baseOptions && baseOptions[NORMALIZED_OPTIONS_FLAG] ? baseOptions : baseOptions || this.options;
+          return normalizeOptions(base, override);
+        }
+        getCachedValue(expression, context2, options) {
+          const bucket = this.valueCache.get(expression);
+          if (!bucket) {
+            return { hit: false };
+          }
+          if (this.isObjectLike(context2)) {
+            if (bucket.objectCache && bucket.objectCache.has(context2)) {
+              return { hit: true, value: bucket.objectCache.get(context2) };
+            }
+            return { hit: false };
+          }
+          const key2 = this.resolvePrimitiveKey(context2, options);
+          if (key2 === void 0) {
+            return { hit: false };
+          }
+          if (bucket.primitiveCache && bucket.primitiveCache.has(key2)) {
+            return { hit: true, value: bucket.primitiveCache.get(key2) };
+          }
+          return { hit: false };
+        }
+        storeCachedValue(expression, context2, value2, options) {
+          if (!this.shouldUseCache(options)) {
+            return;
+          }
+          let bucket = this.valueCache.get(expression);
+          if (!bucket) {
+            bucket = { objectCache: /* @__PURE__ */ new WeakMap(), primitiveCache: /* @__PURE__ */ new Map() };
+            this.valueCache.set(expression, bucket);
+          }
+          if (this.isObjectLike(context2)) {
+            bucket.objectCache.set(context2, value2);
+            return;
+          }
+          const key2 = this.resolvePrimitiveKey(context2, options);
+          if (key2 === void 0) {
+            return;
+          }
+          bucket.primitiveCache.set(key2, value2);
+        }
+        resolvePrimitiveKey(context2, options) {
+          if (options.cacheKeyResolver) {
+            return options.cacheKeyResolver(context2);
+          }
+          return context2;
+        }
+        isObjectLike(value2) {
+          return value2 !== null && (typeof value2 === "object" || typeof value2 === "function");
+        }
+        getCacheStats() {
+          return {
+            astEntries: this.astCache.size,
+            valueEntries: this.valueCache.size
+          };
+        }
+      };
+      function normalizeOptions(baseOptions, overrideOptions = {}) {
+        const base = baseOptions && baseOptions[NORMALIZED_OPTIONS_FLAG] ? baseOptions : { ...EXPRESSION_PARSER_DEFAULTS, ...baseOptions || {} };
+        const helpers = { ...base.helpers || {}, ...overrideOptions.helpers || {} };
+        const allowedFunctions = /* @__PURE__ */ new Set([
+          ...base.allowedFunctions || [],
+          ...overrideOptions.allowedFunctions || []
+        ]);
+        const allowedGlobals = /* @__PURE__ */ new Set([
+          ...base.allowedGlobals || DEFAULT_ALLOWED_GLOBALS,
+          ...overrideOptions.allowedGlobals || []
+        ]);
+        const normalized = {
+          ...EXPRESSION_PARSER_DEFAULTS,
+          ...base,
+          ...overrideOptions,
+          helpers,
+          allowedFunctions: Array.from(allowedFunctions),
+          allowedGlobals: Array.from(allowedGlobals)
+        };
+        Object.defineProperty(normalized, NORMALIZED_OPTIONS_FLAG, {
+          value: true,
+          enumerable: false
+        });
+        return normalized;
+      }
+      var lang_mini_props = {
+        each,
+        is_array,
+        is_dom_node,
+        is_ctrl,
+        clone,
+        get_truth_map_from_arr,
+        tm: get_truth_map_from_arr,
+        get_arr_from_truth_map,
+        arr_trim_undefined,
+        get_map_from_arr,
+        arr_like_to_arr,
+        tof,
+        atof,
+        tf: tf2,
+        load_type,
+        is_defined,
+        def: is_defined,
+        Grammar,
+        stringify,
+        functional_polymorphism,
+        fp,
+        mfp,
+        arrayify,
+        mapify,
+        str_arr_mapify,
+        get_a_sig,
+        deep_sig,
+        get_item_sig,
+        set_vals,
+        truth,
+        trim_sig_brackets,
+        ll_set,
+        ll_get,
+        iterate_ancestor_classes,
+        is_arr_of_t,
+        is_arr_of_arrs,
+        is_arr_of_strs,
+        input_processors,
+        output_processors,
+        call_multiple_callback_functions,
+        call_multi,
+        multi: call_multi,
+        native_constructor_tof,
+        Fns,
+        sig_match,
+        remove_sig_from_arr_shell,
+        to_arr_strip_keys,
+        arr_objs_to_arr_keys_values_table,
+        set_arr_tree_value,
+        get_arr_tree_value,
+        deep_arr_iterate,
+        prom,
+        combinations,
+        combos: combinations,
+        Evented_Class,
+        eventify,
+        vectorify,
+        v_add,
+        v_subtract: v_subtract2,
+        v_multiply,
+        v_divide,
+        vector_magnitude,
+        distance_between_points,
+        get_typed_array,
+        gta: get_typed_array,
+        Publisher,
+        field,
+        prop,
+        Data_Type,
+        Functional_Data_Type,
+        ExpressionParser,
+        ExpressionParserError
       };
       var lang_mini = new Evented_Class();
       Object.assign(lang_mini, lang_mini_props);
@@ -15249,9 +20633,9 @@
   });
 
   // node_modules/jsgui3-gfx-core/node_modules/lang-mini/lib-lang-mini.js
-  var require_lib_lang_mini3 = __commonJS({
+  var require_lib_lang_mini4 = __commonJS({
     "node_modules/jsgui3-gfx-core/node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
-      var lang = require_lang_mini3();
+      var lang = require_lang_mini4();
       var { each, tof } = lang;
       var Type_Signifier = class _Type_Signifier {
         // Name
@@ -15392,7 +20776,7 @@
   var require_Rectangle = __commonJS({
     "node_modules/jsgui3-gfx-core/core/shapes/Rectangle.js"(exports, module) {
       var Shape = require_Shape();
-      var { tof, get_item_sig, is_arr_of_t } = require_lib_lang_mini3();
+      var { tof, get_item_sig, is_arr_of_t } = require_lib_lang_mini4();
       var { prop, get_set } = require_oext();
       var Rectangle = class _Rectangle extends Shape {
         // y_axis_up_direction = -1 for example?
@@ -15518,7 +20902,7 @@
   // node_modules/jsgui3-gfx-core/core/pixel-pos-list.js
   var require_pixel_pos_list = __commonJS({
     "node_modules/jsgui3-gfx-core/core/pixel-pos-list.js"(exports, module) {
-      var inspect = Symbol.for("nodejs.util.inspect.custom");
+      var inspect = /* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom");
       var Ui16toUi32 = (ui16) => {
         let res2 = new Uint32Array(ui16.length / 2);
         let dv = new DataView(ui16.buffer);
@@ -17354,12 +22738,12 @@
   // node_modules/jsgui3-gfx-core/core/pixel-buffer-0-core-inner-structures.js
   var require_pixel_buffer_0_core_inner_structures = __commonJS({
     "node_modules/jsgui3-gfx-core/core/pixel-buffer-0-core-inner-structures.js"(exports, module) {
-      var lang = require_lib_lang_mini3();
+      var lang = require_lib_lang_mini4();
       var {
         each,
         fp,
         tof,
-        get_a_sig: get_a_sig2,
+        get_a_sig,
         are_equal,
         tf: tf2
       } = lang;
@@ -17847,12 +23231,12 @@
   // node_modules/jsgui3-gfx-core/core/pixel-buffer-1-core-get-set-pixel.js
   var require_pixel_buffer_1_core_get_set_pixel = __commonJS({
     "node_modules/jsgui3-gfx-core/core/pixel-buffer-1-core-get-set-pixel.js"(exports, module) {
-      var lang = require_lib_lang_mini3();
+      var lang = require_lib_lang_mini4();
       var {
         each,
         fp,
         tof,
-        get_a_sig: get_a_sig2,
+        get_a_sig,
         are_equal,
         tf: tf2
       } = lang;
@@ -18071,12 +23455,12 @@
   // node_modules/jsgui3-gfx-core/core/pixel-buffer-1.1-core-draw-line.js
   var require_pixel_buffer_1_1_core_draw_line = __commonJS({
     "node_modules/jsgui3-gfx-core/core/pixel-buffer-1.1-core-draw-line.js"(exports, module) {
-      var lang = require_lib_lang_mini3();
+      var lang = require_lib_lang_mini4();
       var {
         each,
         fp,
         tof,
-        get_a_sig: get_a_sig2,
+        get_a_sig,
         are_equal,
         tf: tf2
       } = lang;
@@ -18582,7 +23966,7 @@
   var require_Polygon = __commonJS({
     "node_modules/jsgui3-gfx-core/core/shapes/Polygon.js"(exports, module) {
       var Shape = require_Shape();
-      var { tof, is_array, get_item_sig, is_arr_of_t } = require_lib_lang_mini3();
+      var { tof, is_array, get_item_sig, is_arr_of_t } = require_lib_lang_mini4();
       var Rectangle = require_Rectangle();
       var {
         draw_polygon_outline_to_ta_1bipp,
@@ -19496,12 +24880,12 @@
   // node_modules/jsgui3-gfx-core/core/pixel-buffer-2-core-reference-implementations.js
   var require_pixel_buffer_2_core_reference_implementations = __commonJS({
     "node_modules/jsgui3-gfx-core/core/pixel-buffer-2-core-reference-implementations.js"(exports, module) {
-      var lang = require_lib_lang_mini3();
+      var lang = require_lib_lang_mini4();
       var {
         each,
         fp,
         tof,
-        get_a_sig: get_a_sig2,
+        get_a_sig,
         are_equal,
         tf: tf2
       } = lang;
@@ -20053,12 +25437,12 @@
   // node_modules/jsgui3-gfx-core/core/pixel-buffer-3-core.js
   var require_pixel_buffer_3_core = __commonJS({
     "node_modules/jsgui3-gfx-core/core/pixel-buffer-3-core.js"(exports, module) {
-      var lang = require_lib_lang_mini3();
+      var lang = require_lib_lang_mini4();
       var {
         each,
         fp,
         tof,
-        get_a_sig: get_a_sig2,
+        get_a_sig,
         are_equal,
         tf: tf2
       } = lang;
@@ -21013,12 +26397,12 @@
   // node_modules/jsgui3-gfx-core/core/pixel-buffer-4-advanced-typedarray-properties.js
   var require_pixel_buffer_4_advanced_typedarray_properties = __commonJS({
     "node_modules/jsgui3-gfx-core/core/pixel-buffer-4-advanced-typedarray-properties.js"(exports, module) {
-      var lang = require_lib_lang_mini3();
+      var lang = require_lib_lang_mini4();
       var {
         each,
         fp,
         tof,
-        get_a_sig: get_a_sig2,
+        get_a_sig,
         are_equal,
         tf: tf2
       } = lang;
@@ -24351,7 +29735,7 @@
               this._model = spec.model;
             } else {
               console.trace();
-              throw "stop";
+              throw new Error("Data: Expected spec.model to be a Data_Model");
             }
           }
           if (spec.model_constructor) {
@@ -24584,25 +29968,121 @@
   // node_modules/jsgui3-html/html-core/Validation_State.js
   var require_Validation_State = __commonJS({
     "node_modules/jsgui3-html/html-core/Validation_State.js"(exports, module) {
-      var { field, Data_Object, Data_Value: Data_Value2, Evented_Class, tof } = require_lang();
-      var Validation_State = class extends Evented_Class {
+      var { Evented_Class, tof } = require_lang();
+      var Validation_State = class _Validation_State extends Evented_Class {
         constructor(spec = {}) {
           super(spec);
-        }
-        // a set() function????
-        //   because a few things at once get set.
-        set(value2) {
-          if (value2 === true) {
-            this._valid = true;
-          } else if (value2 === false) {
+          this._valid = void 0;
+          this._message = void 0;
+          this._code = void 0;
+          this._details = void 0;
+          const t_spec = tof(spec);
+          if (t_spec === "boolean") {
+            this._valid = spec;
+          } else if (t_spec === "string") {
             this._valid = false;
-          } else {
-            console.trace();
-            throw "NYI";
+            this._message = spec;
+          } else if (t_spec === "object" && spec) {
+            if (Object.prototype.hasOwnProperty.call(spec, "valid")) this._valid = spec.valid;
+            if (Object.prototype.hasOwnProperty.call(spec, "message")) this._message = spec.message;
+            if (Object.prototype.hasOwnProperty.call(spec, "code")) this._code = spec.code;
+            if (Object.prototype.hasOwnProperty.call(spec, "details")) this._details = spec.details;
           }
+        }
+        set(value2) {
+          const t_value = tof(value2);
+          if (t_value === "boolean") {
+            this.valid = value2;
+            return;
+          }
+          if (t_value === "undefined" || value2 === null) {
+            this.valid = void 0;
+            this.message = void 0;
+            this.code = void 0;
+            this.details = void 0;
+            return;
+          }
+          if (t_value === "string") {
+            const str = value2.trim().toLowerCase();
+            if (str === "valid" || str === "true" || str === "ok" || str === "pass") {
+              this.valid = true;
+              this.message = void 0;
+              return;
+            }
+            if (str === "invalid" || str === "false" || str === "error" || str === "fail") {
+              this.valid = false;
+              this.message = void 0;
+              return;
+            }
+            if (str === "neutral" || str === "unknown" || str === "") {
+              this.valid = void 0;
+              this.message = void 0;
+              return;
+            }
+            this.message = value2;
+            if (typeof this.valid === "undefined") this.valid = false;
+            return;
+          }
+          if (value2 instanceof _Validation_State) {
+            this.valid = value2.valid;
+            this.message = value2.message;
+            this.code = value2.code;
+            this.details = value2.details;
+            return;
+          }
+          if (value2 instanceof Error) {
+            this.message = value2.message;
+            this.details = value2;
+            if (typeof this.valid === "undefined") this.valid = false;
+            return;
+          }
+          if (t_value === "object" && value2) {
+            if (Object.prototype.hasOwnProperty.call(value2, "valid")) this.valid = value2.valid;
+            if (Object.prototype.hasOwnProperty.call(value2, "message")) this.message = value2.message;
+            if (Object.prototype.hasOwnProperty.call(value2, "code")) this.code = value2.code;
+            if (Object.prototype.hasOwnProperty.call(value2, "details")) this.details = value2.details;
+            return;
+          }
+          this.details = value2;
+          if (typeof this.valid === "undefined") this.valid = false;
         }
         get valid() {
           return this._valid;
+        }
+        set valid(value2) {
+          if (value2 === this._valid) return;
+          const old = this._valid;
+          this._valid = value2;
+          this.raise("change", { name: "valid", old, value: value2 });
+        }
+        get message() {
+          return this._message;
+        }
+        set message(value2) {
+          const message = value2 instanceof Error ? value2.message : value2;
+          const new_message = typeof message === "undefined" || message === null ? message : String(message);
+          if (new_message === this._message) return;
+          const old = this._message;
+          this._message = new_message;
+          this.raise("change", { name: "message", old, value: new_message });
+        }
+        get code() {
+          return this._code;
+        }
+        set code(value2) {
+          if (value2 === this._code) return;
+          const old = this._code;
+          this._code = value2;
+          this.raise("change", { name: "code", old, value: value2 });
+        }
+        get details() {
+          return this._details;
+        }
+        set details(value2) {
+          if (value2 === this._details) return;
+          const old = this._details;
+          this._details = value2;
+          this.raise("change", { name: "details", old, value: value2 });
         }
       };
       module.exports = Validation_State;
@@ -24743,36 +30223,36 @@
       var Control_View = require_Control_View();
       var Control_View_Data = require_Control_View_Data();
       var Control_View_UI = require_Control_View_UI();
-      var ensure_control_models = (ctrl2, spec = {}) => {
-        const context2 = ctrl2.context;
-        if (!ctrl2.data) {
-          ctrl2.data = new Control_Data({
+      var ensure_control_models = (ctrl, spec = {}) => {
+        const context2 = ctrl.context;
+        if (!ctrl.data) {
+          ctrl.data = new Control_Data({
             context: context2,
             model: spec.data && spec.data.model ? spec.data.model : void 0,
             model_constructor: Data_Object
           });
-        } else if (!ctrl2.data.model) {
-          ctrl2.data.model = spec.data && spec.data.model ? spec.data.model : new Data_Object({ context: context2 });
+        } else if (!ctrl.data.model) {
+          ctrl.data.model = spec.data && spec.data.model ? spec.data.model : new Data_Object({ context: context2 });
         }
-        if (!ctrl2.view) {
-          ctrl2.view = new Control_View({
+        if (!ctrl.view) {
+          ctrl.view = new Control_View({
             context: context2,
             data: spec.view && spec.view.data ? spec.view.data : void 0
           });
         } else {
-          if (!ctrl2.view.data) {
-            ctrl2.view.data = new Control_View_Data({
+          if (!ctrl.view.data) {
+            ctrl.view.data = new Control_View_Data({
               context: context2,
               model: spec.view && spec.view.data ? spec.view.data.model : void 0
             });
-          } else if (!ctrl2.view.data.model) {
-            ctrl2.view.data.model = spec.view && spec.view.data && spec.view.data.model ? spec.view.data.model : new Data_Object({ context: context2 });
+          } else if (!ctrl.view.data.model) {
+            ctrl.view.data.model = spec.view && spec.view.data && spec.view.data.model ? spec.view.data.model : new Data_Object({ context: context2 });
           }
-          if (!ctrl2.view.ui) {
-            ctrl2.view.ui = new Control_View_UI({ context: context2 });
+          if (!ctrl.view.ui) {
+            ctrl.view.ui = new Control_View_UI({ context: context2 });
           }
         }
-        return ctrl2;
+        return ctrl;
       };
       module.exports = {
         ensure_control_models
@@ -24796,40 +30276,40 @@
       var Control_View = require_Control_View();
       var Control_Validation = require_Control_Validation();
       var { ensure_control_models } = require_control_model_factory();
-      var model_data_view_compositional_representation = (ctrl2, options = {}) => {
+      var model_data_view_compositional_representation = (ctrl, options = {}) => {
         const { data } = options;
-        ctrl2.using_model_data_view_compositional_representation = true;
-        const verify_ctrl_conditions = (ctrl3) => {
-          if (ctrl3.data !== void 0) return false;
-          if (ctrl3.view !== void 0) return false;
-          if (ctrl3.validation !== void 0) return false;
+        ctrl.using_model_data_view_compositional_representation = true;
+        const verify_ctrl_conditions = (ctrl2) => {
+          if (ctrl2.data !== void 0) return false;
+          if (ctrl2.view !== void 0) return false;
+          if (ctrl2.validation !== void 0) return false;
           return true;
         };
-        const can_proceed = verify_ctrl_conditions(ctrl2);
+        const can_proceed = verify_ctrl_conditions(ctrl);
         if (can_proceed) {
-          const { context: context2 } = ctrl2;
-          ensure_control_models(ctrl2, { data });
-          ctrl2.validation = new Control_Validation();
-          ctrl2.view = ctrl2.view || new Control_View({
+          const { context: context2 } = ctrl;
+          ensure_control_models(ctrl, { data });
+          ctrl.validation = new Control_Validation();
+          ctrl.view = ctrl.view || new Control_View({
             context: context2
           });
-          ctrl2.view.data.model.mixins = ctrl2.view.data.model.mixins || new Collection();
-          ctrl2.view.data.model.mixins.on("change", (e_change) => {
+          ctrl.view.data.model.mixins = ctrl.view.data.model.mixins || new Collection();
+          ctrl.view.data.model.mixins.on("change", (e_change) => {
             const { name, value: value2 } = e_change;
             if (name === "insert") {
               const o_mxs = {};
-              ctrl2.view.data.model.mixins.each((mx) => {
+              ctrl.view.data.model.mixins.each((mx) => {
                 o_mxs[mx.name] = mx;
-                if (ctrl2.context.mixins) {
-                  const my_mx = ctrl2.context.mixins[mx.name];
-                  my_mx(ctrl2);
+                if (ctrl.context.mixins) {
+                  const my_mx = ctrl.context.mixins[mx.name];
+                  my_mx(ctrl);
                 }
               });
             }
           });
         } else {
           console.trace();
-          console.log("ctrl", ctrl2);
+          console.log("ctrl", ctrl);
           throw "model_data_view_compositional_representation(ctrl) - ctrl must not have .data or .view properties";
         }
       };
@@ -24842,7 +30322,7 @@
     "node_modules/jsgui3-html/html-core/control-enh.js"(exports, module) {
       var jsgui2 = require_lang();
       var {
-        get_a_sig: get_a_sig2,
+        get_a_sig,
         each,
         tof,
         def
@@ -24857,9 +30337,9 @@
       var gfx = require_gfx_core();
       var { Rect } = gfx;
       var model_data_view_compositional_representation = require_model_data_view_compositional_representation();
-      var desc = (ctrl2, callback2) => {
-        if (ctrl2.get) {
-          var content = ctrl2.get("content");
+      var desc = (ctrl, callback2) => {
+        if (ctrl.get) {
+          var content = ctrl.get("content");
           if (content) {
             var t_content = typeof content;
             if (t_content === "string" || t_content === "number") {
@@ -25026,42 +30506,60 @@
               for (let c2 = 0; c2 < l2; c2++) {
                 const composition_item = arr_cm[c2];
                 const tci = tof(composition_item);
-                if (tci === "function" || tci === "control") {
-                  const ctrl2 = new composition_item({ context: context2 });
-                  this.add(ctrl2);
+                if (tci === "function") {
+                  const ctrl = new composition_item({ context: context2 });
+                  this.add(ctrl);
+                } else if (tci === "control") {
+                  if (!composition_item.context) composition_item.context = context2;
+                  this.add(composition_item);
+                } else if (tci === "string" || tci === "number" || tci === "boolean") {
+                  this.add("" + composition_item);
                 } else if (tci === "array") {
                   if (composition_item.length === 2) {
                     const [t0, t12] = [tof(composition_item[0]), tof(composition_item[1])];
-                    if ((t0 === "function" || t0 === "control") && t12 === "object") {
-                      composition_item[1].context = context2;
-                      const ctrl2 = new composition_item[0](composition_item[1]);
-                      this.add(ctrl2);
-                    } else if (t0 === "string" && (t12 === "function" || t12 === "control")) {
-                      const ctrl2 = new composition_item[1]({ context: context2 });
-                      this.add(ctrl2);
+                    if (t0 === "function" && t12 === "object") {
+                      const ctrl_spec = composition_item[1];
+                      ctrl_spec.context = ctrl_spec.context || context2;
+                      const ctrl = new composition_item[0](ctrl_spec);
+                      this.add(ctrl);
+                    } else if (t0 === "string" && t12 === "function") {
+                      const ctrl = new composition_item[1]({ context: context2 });
+                      this.add(ctrl);
                       this._ctrl_fields = this._ctrl_fields || {};
-                      this._ctrl_fields[composition_item[0]] = ctrl2;
+                      this._ctrl_fields[composition_item[0]] = ctrl;
+                      this[composition_item[0]] = ctrl;
+                    } else if (t0 === "string" && t12 === "control") {
+                      const ctrl = composition_item[1];
+                      if (!ctrl.context) ctrl.context = context2;
+                      this.add(ctrl);
+                      this._ctrl_fields = this._ctrl_fields || {};
+                      this._ctrl_fields[composition_item[0]] = ctrl;
+                      this[composition_item[0]] = ctrl;
                     } else {
-                      console.log("[t0, t1]", [t0, t12]);
-                      console.trace();
-                      throw "stop / nyi";
+                      throw new Error("compose_using_compositional_model: Unsupported composition item (length 2)");
                     }
                   } else if (composition_item.length === 3) {
                     const [t0, t12, t2] = [tof(composition_item[0]), tof(composition_item[1]), tof(composition_item[2])];
-                    if (t0 === "string" && (t12 === "function" || t12 === "control") && t2 === "object") {
-                      composition_item[2].context = context2;
-                      const ctrl2 = new composition_item[1](composition_item[2]);
-                      this.add(ctrl2);
+                    if (t0 === "string" && t12 === "function" && t2 === "object") {
+                      const ctrl_spec = composition_item[2];
+                      ctrl_spec.context = ctrl_spec.context || context2;
+                      const ctrl = new composition_item[1](ctrl_spec);
+                      this.add(ctrl);
                       this._ctrl_fields = this._ctrl_fields || {};
-                      this._ctrl_fields[composition_item[0]] = ctrl2;
+                      this._ctrl_fields[composition_item[0]] = ctrl;
+                      this[composition_item[0]] = ctrl;
+                    } else if (t0 === "string" && t12 === "control" && t2 === "object") {
+                      const ctrl = composition_item[1];
+                      if (!ctrl.context) ctrl.context = context2;
+                      this.add(ctrl);
+                      this._ctrl_fields = this._ctrl_fields || {};
+                      this._ctrl_fields[composition_item[0]] = ctrl;
+                      this[composition_item[0]] = ctrl;
                     } else {
-                      console.log("[t0, t1, t2]", [t0, t12, t2]);
-                      console.trace();
-                      throw "stop / nyi";
+                      throw new Error("compose_using_compositional_model: Unsupported composition item (length 3)");
                     }
                   } else {
-                    console.trace();
-                    throw "stop / nyi";
+                    throw new Error("compose_using_compositional_model: Unsupported composition item length: " + composition_item.length);
                   }
                 }
               }
@@ -25074,16 +30572,16 @@
         "ctrls"(obj_ctrls) {
           this._ctrl_fields = this._ctrl_fields || {};
           let cf = this._ctrl_fields;
-          each(obj_ctrls, (ctrl2, name) => {
-            cf[name] = this[name] = ctrl2;
-            this.add(ctrl2);
+          each(obj_ctrls, (ctrl, name) => {
+            cf[name] = this[name] = ctrl;
+            this.add(ctrl);
           });
           return this;
         }
         "bcr"() {
           var a = arguments;
           a.l = a.length;
-          var sig = get_a_sig2(a, 1);
+          var sig = get_a_sig(a, 1);
           if (sig === "[]") {
             var el = this.dom.el;
             var bcr = el.getBoundingClientRect();
@@ -25121,7 +30619,7 @@
         "computed_style"() {
           var a = arguments;
           a.l = a.length;
-          var sig = get_a_sig2(a, 1);
+          var sig = get_a_sig(a, 1);
           var y;
           if (sig == "[s]") {
             var property_name = a[0];
@@ -25136,7 +30634,7 @@
         "padding"() {
           var a = arguments;
           a.l = a.length;
-          var sig = get_a_sig2(a, 1);
+          var sig = get_a_sig(a, 1);
           if (sig == "[]") {
             var left, top, right, bottom;
             var c_padding = this.computed_style("padding");
@@ -25155,12 +30653,19 @@
         "border"() {
           var a = arguments;
           a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
+          var sig = get_a_sig(a, 1);
           if (sig == "[]") {
-            var left, top, right, bottom;
-            var c_border = this.computed_style("border");
-            console.log("c_border", c_border);
-            throw "stop";
+            if (!has_window) return;
+            if (!this.dom.el) return;
+            const parse_px = (value2) => {
+              const parsed = parseFloat(value2);
+              return Number.isFinite(parsed) ? parsed : 0;
+            };
+            const left = parse_px(this.computed_style("border-left-width") || 0);
+            const top = parse_px(this.computed_style("border-top-width") || 0);
+            const right = parse_px(this.computed_style("border-right-width") || 0);
+            const bottom = parse_px(this.computed_style("border-bottom-width") || 0);
+            return [left, top, right, bottom];
           } else {
             console.trace();
             throw "Required argument: (array)";
@@ -25169,7 +30674,7 @@
         "border_thickness"() {
           var a = arguments;
           a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
+          var sig = get_a_sig(a, 1);
           if (sig == "[]") {
             var left, top, right, bottom;
             var c_border = this.computed_style("border");
@@ -25189,8 +30694,8 @@
             if (nt == 1) {
               var jsgui_id = el2.getAttribute("data-jsgui-id");
               if (jsgui_id) {
-                var ctrl2 = map_controls[jsgui_id];
-                if (!ctrl2.__active) ctrl2.activate(el2);
+                var ctrl = map_controls[jsgui_id];
+                if (!ctrl.__active) ctrl.activate(el2);
               }
             }
           });
@@ -25241,7 +30746,7 @@
         }
         "remove_event_listener"() {
           const a = arguments;
-          const sig = get_a_sig2(a, 1);
+          const sig = get_a_sig(a, 1);
           if (sig === "[s,f]") {
             let [event_name, fn_handler] = a;
             if (mapDomEventNames[event_name]) {
@@ -25257,7 +30762,7 @@
         "add_event_listener"() {
           const a = arguments;
           const l2 = a.length;
-          const sig = get_a_sig2(a, 1);
+          const sig = get_a_sig(a, 1);
           if (l2 === 1) {
             each(a[0], (v, i) => {
               this.add_event_listener(i, v);
@@ -25375,9 +30880,9 @@
           });
         }
         "activate_this_and_subcontrols"() {
-          this.iterate_this_and_subcontrols((ctrl2) => {
-            if (ctrl2.dom.el) {
-              ctrl2.activate();
+          this.iterate_this_and_subcontrols((ctrl) => {
+            if (ctrl.dom.el) {
+              ctrl.activate();
             }
           });
         }
@@ -25445,8 +30950,49 @@
                 e_change.value.dom.el.parentNode.removeChild(e_change.value.dom.el);
               }
             } else {
-              console.trace();
-              throw "NYI - Unexpected change type. e_change: " + e_change;
+              if (el) {
+                el.innerHTML = "";
+                this.content.each((item3) => {
+                  let item_dom_el;
+                  if (item3 instanceof Text_Node) {
+                    item_dom_el = document.createTextNode(item3.text || "");
+                    item3.dom.el = item_dom_el;
+                  } else {
+                    const retrieved_item_dom_el2 = item3.dom && item3.dom.el;
+                    if (retrieved_item_dom_el2) {
+                      item_dom_el = retrieved_item_dom_el2;
+                    } else if (item3 && typeof item3.all_html_render === "function") {
+                      let item_tag_name2 = "div";
+                      const dv_tag_name2 = item3.dom && item3.dom.tagName;
+                      if (dv_tag_name2) item_tag_name2 = dv_tag_name2;
+                      let temp_el2;
+                      if (item_tag_name2 === "circle" || item_tag_name2 === "line" || item_tag_name2 === "polyline") {
+                        const temp_svg_container2 = context2.document.createElement("div");
+                        temp_svg_container2.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" version="1.1">' + item3.all_html_render() + "</svg>";
+                        item_dom_el = temp_svg_container2.childNodes[0].childNodes[0];
+                      } else {
+                        temp_el2 = context2.document.createElement("div");
+                        temp_el2.innerHTML = item3.all_html_render();
+                        item_dom_el = temp_el2.childNodes[0];
+                      }
+                      item3.dom.el = item_dom_el;
+                      if (item3._id && typeof item3._id === "function") {
+                        context2.map_els[item3._id()] = item_dom_el;
+                      }
+                    }
+                  }
+                  const t_item_dom_el2 = tof(item_dom_el);
+                  if (t_item_dom_el2 === "string") {
+                    item_dom_el = document.createTextNode(item_dom_el);
+                  }
+                  if (item_dom_el) {
+                    el.appendChild(item_dom_el);
+                    if (item3 && typeof item3.register_this_and_subcontrols === "function") {
+                      item3.register_this_and_subcontrols();
+                    }
+                  }
+                });
+              }
             }
           });
         }
@@ -25466,26 +31012,26 @@
                 }
               }
             });
-            desc(this, (ctrl2) => {
-              var t_ctrl = tof(ctrl2);
-              if (ctrl2 !== this && t_ctrl === "control") {
-                var id = ctrl2._id();
+            desc(this, (ctrl) => {
+              var t_ctrl = tof(ctrl);
+              if (ctrl !== this && t_ctrl === "control") {
+                var id = ctrl._id();
                 if (map_els[id]) {
-                  if (ctrl2.dom.el !== map_els[id]) {
-                    ctrl2.dom.el = map_els[id];
+                  if (ctrl.dom.el !== map_els[id]) {
+                    ctrl.dom.el = map_els[id];
                   } else {
                   }
                 }
-                ctrl2.activate();
+                ctrl.activate();
               }
             });
           }
         }
         "rec_desc_activate"() {
-          desc(this, (ctrl2) => {
-            const t_ctrl = tof(ctrl2);
+          desc(this, (ctrl) => {
+            const t_ctrl = tof(ctrl);
             if (t_ctrl === "control") {
-              ctrl2.activate();
+              ctrl.activate();
             }
           });
         }
@@ -25621,8 +31167,8 @@
           }
         }
         "_search_descendents"(search) {
-          const recursive_iterate = (ctrl2, item_callback) => {
-            const content = ctrl2.content, t_content = tof(content);
+          const recursive_iterate = (ctrl, item_callback) => {
+            const content = ctrl.content, t_content = tof(content);
             if (t_content === "collection") {
               if (content.length() > 0) {
                 content.each((item2, i) => {
@@ -25667,9 +31213,9 @@
               each(new_content, (v) => {
                 const candd = v.this_and_descendents;
                 if (candd) {
-                  each(candd, (ctrl2) => {
-                    if (ctrl2._id) {
-                      m[ctrl2._id()] = ctrl2;
+                  each(candd, (ctrl) => {
+                    if (ctrl._id) {
+                      m[ctrl._id()] = ctrl;
                     }
                   });
                 }
@@ -25678,9 +31224,9 @@
               if (new_content) {
                 const candd = new_content.this_and_descendents;
                 if (candd) {
-                  each(candd, (ctrl2) => {
-                    if (ctrl2._id) {
-                      m[ctrl2._id()] = ctrl2;
+                  each(candd, (ctrl) => {
+                    if (ctrl._id) {
+                      m[ctrl._id()] = ctrl;
                     }
                   });
                 }
@@ -25694,8 +31240,8 @@
             context: context2
           } = this;
           context2.map_controls_being_removed_in_frame = context2.map_controls_being_removed_in_frame || {};
-          each(this.descendents, (ctrl2) => {
-            if (ctrl2._id) context2.map_controls_being_removed_in_frame[ctrl2._id()] = ctrl2;
+          each(this.descendents, (ctrl) => {
+            if (ctrl._id) context2.map_controls_being_removed_in_frame[ctrl._id()] = ctrl;
           });
           super.clear();
         }
@@ -25892,20 +31438,38 @@
         }
       };
       var ComputedProperty = class {
-        constructor(model, dependencies, computeFn, options = {}) {
-          this.model = model;
+        constructor(models, dependencies, computeFn, options = {}) {
+          this.models = Array.isArray(models) ? models : [models];
           this.dependencies = Array.isArray(dependencies) ? dependencies : [dependencies];
           this.computeFn = computeFn;
           this.options = Object.assign({
             propertyName: "computed",
             immediate: true,
-            debug: false
+            debug: false,
+            target: null
           }, options);
           this._listeners = [];
           this._active = false;
           this._lastValue = void 0;
           if (this.options.immediate) {
             this.activate();
+          }
+        }
+        _resolve_dependency(dep) {
+          for (const model of this.models) {
+            if (!model) continue;
+            if (typeof model.get === "function") {
+              const got = model.get(dep);
+              if (typeof got !== "undefined") {
+                return got && got.__data_value ? got.value : got;
+              }
+            }
+            if (dep in model) {
+              const val = model[dep];
+              if (typeof val !== "undefined") {
+                return val && val.__data_value ? val.value : val;
+              }
+            }
           }
         }
         activate() {
@@ -25917,8 +31481,12 @@
               this.compute();
             }
           };
-          this.model.on("change", handler);
-          this._listeners.push({ model: this.model, event: "change", handler });
+          this.models.forEach((model) => {
+            if (model && model.on) {
+              model.on("change", handler);
+              this._listeners.push({ model, event: "change", handler });
+            }
+          });
           if (this.options.debug) {
             console.log("[ComputedProperty] Activated for dependencies:", this.dependencies);
           }
@@ -25934,13 +31502,21 @@
           this._listeners = [];
         }
         compute() {
-          const args = this.dependencies.map((dep) => this.model[dep]);
+          const args = this.dependencies.map((dep) => this._resolve_dependency(dep));
           const newValue = this.computeFn(...args);
           if (newValue !== this._lastValue) {
             this._lastValue = newValue;
-            this.model[this.options.propertyName] = newValue;
+            const target_model = this.options.target || this.models[0];
+            const property_name = this.options.propertyName || this.options.property_name || "computed";
+            if (target_model) {
+              if (typeof target_model.set === "function") {
+                target_model.set(property_name, newValue);
+              } else {
+                target_model[property_name] = newValue;
+              }
+            }
             if (this.options.debug) {
-              console.log("[ComputedProperty] Updated:", this.options.propertyName, "=", newValue);
+              console.log("[ComputedProperty] Updated:", property_name, "=", newValue);
             }
           }
           return newValue;
@@ -26001,6 +31577,7 @@
           this.binders = [];
           this.computed = [];
           this.watchers = [];
+          this._bindings = this.binders;
         }
         /**
          * Create a new binding between models
@@ -26067,9 +31644,9 @@
           this.binders.forEach((b) => b.deactivate());
           this.computed.forEach((c2) => c2.deactivate());
           this.watchers.forEach((w) => w.deactivate());
-          this.binders = [];
-          this.computed = [];
-          this.watchers = [];
+          this.binders.length = 0;
+          this.computed.length = 0;
+          this.watchers.length = 0;
         }
         /**
          * Get inspection data for all bindings
@@ -26102,33 +31679,25 @@
   var require_Transformations = __commonJS({
     "node_modules/jsgui3-html/html-core/Transformations.js"(exports, module) {
       var { tof } = require_lang();
+      var add_commas = (num_str) => {
+        return num_str.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      };
       var Transformations = {
-        /**
-         * Date transformations
-         */
         date: {
-          /**
-           * Format a Date object to ISO string
-           */
           toISO: (date) => {
             if (!date) return "";
-            if (date instanceof Date) return date.toISOString();
-            return new Date(date).toISOString();
+            const d = date instanceof Date ? date : new Date(date);
+            return isNaN(d.getTime()) ? "" : d.toISOString();
           },
-          /**
-           * Format a Date object to locale string
-           */
           toLocale: (date, locale = "en-US", options = {}) => {
             if (!date) return "";
-            if (date instanceof Date) return date.toLocaleDateString(locale, options);
-            return new Date(date).toLocaleDateString(locale, options);
+            const d = date instanceof Date ? date : new Date(date);
+            return isNaN(d.getTime()) ? "" : d.toLocaleDateString(locale, options);
           },
-          /**
-           * Format a Date object to custom format
-           */
           format: (date, format = "YYYY-MM-DD") => {
             if (!date) return "";
             const d = date instanceof Date ? date : new Date(date);
+            if (isNaN(d.getTime())) return "";
             const map = {
               YYYY: d.getFullYear(),
               MM: String(d.getMonth() + 1).padStart(2, "0"),
@@ -26139,17 +31708,11 @@
             };
             return format.replace(/YYYY|MM|DD|HH|mm|ss/g, (matched) => map[matched]);
           },
-          /**
-           * Parse a date string
-           */
           parse: (str) => {
             if (!str) return null;
-            const date = new Date(str);
-            return isNaN(date.getTime()) ? null : date;
+            const d = new Date(str);
+            return isNaN(d.getTime()) ? null : d;
           },
-          /**
-           * Parse a date from custom format
-           */
           parseFormat: (str, format = "YYYY-MM-DD") => {
             if (!str) return null;
             const parts = {
@@ -26161,210 +31724,162 @@
             const month = parseInt(str.substr(parts.MM.start, parts.MM.length)) - 1;
             const day = parseInt(str.substr(parts.DD.start, parts.DD.length));
             return new Date(year, month, day);
+          },
+          relative: (date, now = /* @__PURE__ */ new Date()) => {
+            if (!date) return "";
+            const d = date instanceof Date ? date : new Date(date);
+            if (isNaN(d.getTime())) return "";
+            const diff_ms = now.getTime() - d.getTime();
+            const diff_s = Math.floor(Math.abs(diff_ms) / 1e3);
+            const is_past = diff_ms >= 0;
+            const units = [
+              ["year", 60 * 60 * 24 * 365],
+              ["month", 60 * 60 * 24 * 30],
+              ["day", 60 * 60 * 24],
+              ["hour", 60 * 60],
+              ["minute", 60],
+              ["second", 1]
+            ];
+            let unit_name = "second";
+            let unit_value = diff_s;
+            for (const [name, seconds] of units) {
+              if (diff_s >= seconds) {
+                unit_name = name;
+                unit_value = Math.floor(diff_s / seconds);
+                break;
+              }
+            }
+            const plural = unit_value === 1 ? "" : "s";
+            return is_past ? `${unit_value} ${unit_name}${plural} ago` : `in ${unit_value} ${unit_name}${plural}`;
           }
         },
-        /**
-         * Number transformations
-         */
         number: {
-          /**
-           * Format number to string with decimals
-           */
           toFixed: (num, decimals = 2) => {
-            if (num === null || num === void 0) return "";
+            if (num === null || num === void 0 || num === "") return "";
             return Number(num).toFixed(decimals);
           },
-          /**
-           * Format number with thousands separator
-           */
-          toLocale: (num, locale = "en-US", options = {}) => {
-            if (num === null || num === void 0) return "";
-            return Number(num).toLocaleString(locale, options);
+          round: (num, decimals = 0) => {
+            if (num === null || num === void 0 || num === "") return 0;
+            const factor = Math.pow(10, decimals);
+            return Math.round(Number(num) * factor) / factor;
           },
-          /**
-           * Format number as currency
-           */
-          toCurrency: (num, currency = "USD", locale = "en-US") => {
-            if (num === null || num === void 0) return "";
-            return Number(num).toLocaleString(locale, {
-              style: "currency",
-              currency
-            });
+          withCommas: (num) => {
+            if (num === null || num === void 0 || num === "") return "";
+            const n = Number(num);
+            if (isNaN(n)) return "";
+            const [int_part, dec_part] = String(n).split(".");
+            const int_with = add_commas(int_part);
+            return dec_part ? `${int_with}.${dec_part}` : int_with;
           },
-          /**
-           * Format number as percentage
-           */
-          toPercent: (num, decimals = 0) => {
-            if (num === null || num === void 0) return "";
+          toCurrency: (num, symbol = "$", decimals = 2) => {
+            const n = num === null || num === void 0 || num === "" ? 0 : Number(num);
+            if (isNaN(n)) return `${symbol}0.00`;
+            const sign = n < 0 ? "-" : "";
+            const abs = Math.abs(n);
+            const fixed = abs.toFixed(decimals);
+            const [int_part, dec_part] = fixed.split(".");
+            const int_with = add_commas(int_part);
+            return `${sign}${symbol}${int_with}.${dec_part}`;
+          },
+          toPercent: (num, decimals = 2) => {
+            if (num === null || num === void 0 || num === "") return "";
             return (Number(num) * 100).toFixed(decimals) + "%";
           },
-          /**
-           * Parse number from string
-           */
+          toLocale: (num, locale = "en-US", options = {}) => {
+            if (num === null || num === void 0 || num === "") return "";
+            return Number(num).toLocaleString(locale, options);
+          },
           parse: (str) => {
             if (str === null || str === void 0 || str === "") return null;
             const num = parseFloat(String(str).replace(/[^0-9.-]/g, ""));
             return isNaN(num) ? null : num;
           },
-          /**
-           * Parse integer from string
-           */
           parseInt: (str) => {
             if (str === null || str === void 0 || str === "") return null;
             const num = parseInt(String(str).replace(/[^0-9-]/g, ""));
             return isNaN(num) ? null : num;
           },
-          /**
-           * Clamp number between min and max
-           */
-          clamp: (min, max) => (num) => {
-            return Math.max(min, Math.min(max, Number(num)));
-          }
+          clamp: (num, min, max) => {
+            const n = Number(num);
+            if (isNaN(n)) return min;
+            return Math.max(min, Math.min(max, n));
+          },
+          clamp_fn: (min, max) => (num) => Transformations.number.clamp(num, min, max)
         },
-        /**
-         * String transformations
-         */
         string: {
-          /**
-           * Convert to uppercase
-           */
-          toUpper: (str) => {
+          toUpperCase: (str) => {
             return str ? String(str).toUpperCase() : "";
           },
-          /**
-           * Convert to lowercase
-           */
-          toLower: (str) => {
+          toLowerCase: (str) => {
             return str ? String(str).toLowerCase() : "";
           },
-          /**
-           * Capitalize first letter
-           */
+          toUpper: (str) => Transformations.string.toUpperCase(str),
+          toLower: (str) => Transformations.string.toLowerCase(str),
           capitalize: (str) => {
             if (!str) return "";
             const s = String(str);
             return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
           },
-          /**
-           * Capitalize each word
-           */
           titleCase: (str) => {
             if (!str) return "";
-            return String(str).split(" ").map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
+            return String(str).split(/\s+/).filter((v) => v.length > 0).map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
           },
-          /**
-           * Trim whitespace
-           */
           trim: (str) => {
             return str ? String(str).trim() : "";
           },
-          /**
-           * Truncate string to length
-           */
-          truncate: (maxLength, suffix = "...") => (str) => {
+          truncate: (str, maxLength, suffix = "...") => {
             if (!str) return "";
             const s = String(str);
             if (s.length <= maxLength) return s;
-            return s.substr(0, maxLength - suffix.length) + suffix;
+            const head = s.substr(0, maxLength).trimEnd();
+            return head + suffix;
           },
-          /**
-           * Default value if empty
-           */
+          truncate_fn: (maxLength, suffix = "...") => (str) => Transformations.string.truncate(str, maxLength, suffix),
+          slugify: (str) => {
+            if (!str) return "";
+            return String(str).toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").replace(/-+/g, "-");
+          },
           default: (defaultValue) => (str) => {
             return str ? String(str) : defaultValue;
           }
         },
-        /**
-         * Boolean transformations
-         */
         boolean: {
-          /**
-           * Convert to boolean
-           */
           toBool: (value2) => {
             if (value2 === null || value2 === void 0) return false;
             if (typeof value2 === "boolean") return value2;
             if (typeof value2 === "number") return value2 !== 0;
             const str = String(value2).toLowerCase();
-            return str === "true" || str === "1" || str === "yes";
+            return str === "true" || str === "1" || str === "yes" || str === "on" || str === "enabled";
           },
-          /**
-           * Convert to yes/no string
-           */
-          toYesNo: (value2) => {
-            return Transformations.boolean.toBool(value2) ? "Yes" : "No";
-          },
-          /**
-           * Convert to on/off string
-           */
-          toOnOff: (value2) => {
-            return Transformations.boolean.toBool(value2) ? "On" : "Off";
-          },
-          /**
-           * Invert boolean
-           */
-          not: (value2) => {
-            return !Transformations.boolean.toBool(value2);
-          }
+          parse: (value2) => Transformations.boolean.toBool(value2),
+          toYesNo: (value2) => Transformations.boolean.toBool(value2) ? "Yes" : "No",
+          toOnOff: (value2) => Transformations.boolean.toBool(value2) ? "On" : "Off",
+          toEnabledDisabled: (value2) => Transformations.boolean.toBool(value2) ? "Enabled" : "Disabled",
+          not: (value2) => !Transformations.boolean.toBool(value2)
         },
-        /**
-         * Array transformations
-         */
         array: {
-          /**
-           * Join array to string
-           */
-          join: (separator = ", ") => (arr) => {
-            if (!Array.isArray(arr)) return "";
+          join: (arr, separator = ", ") => {
+            if (!Array.isArray(arr) || arr.length === 0) return "";
             return arr.join(separator);
           },
-          /**
-           * Get array length
-           */
-          length: (arr) => {
-            return Array.isArray(arr) ? arr.length : 0;
-          },
-          /**
-           * Filter array
-           */
-          filter: (predicate) => (arr) => {
+          first: (arr) => Array.isArray(arr) && arr.length > 0 ? arr[0] : void 0,
+          last: (arr) => Array.isArray(arr) && arr.length > 0 ? arr[arr.length - 1] : void 0,
+          length: (arr) => Array.isArray(arr) ? arr.length : 0,
+          reverse: (arr) => Array.isArray(arr) ? arr.slice().reverse() : [],
+          sort: (arr, compare_fn) => {
             if (!Array.isArray(arr)) return [];
-            return arr.filter(predicate);
+            const copy = arr.slice();
+            if (compare_fn) return copy.sort(compare_fn);
+            return copy.sort((a, b) => {
+              const ta2 = tof(a), tb = tof(b);
+              if (ta2 === "number" && tb === "number") return a - b;
+              return String(a).localeCompare(String(b));
+            });
           },
-          /**
-           * Map array
-           */
-          map: (mapper) => (arr) => {
-            if (!Array.isArray(arr)) return [];
-            return arr.map(mapper);
-          },
-          /**
-           * Get first element
-           */
-          first: (arr) => {
-            return Array.isArray(arr) && arr.length > 0 ? arr[0] : null;
-          },
-          /**
-           * Get last element
-           */
-          last: (arr) => {
-            return Array.isArray(arr) && arr.length > 0 ? arr[arr.length - 1] : null;
-          },
-          /**
-           * Sort array
-           */
-          sort: (compareFn) => (arr) => {
-            if (!Array.isArray(arr)) return [];
-            return [...arr].sort(compareFn);
-          }
+          unique: (arr) => Array.isArray(arr) ? Array.from(new Set(arr)) : [],
+          pluck: (arr, prop) => Array.isArray(arr) ? arr.map((item2) => item2 && item2[prop]) : []
         },
-        /**
-         * Object transformations
-         */
         object: {
-          /**
-           * Get property value
-           */
           get: (propertyPath) => (obj2) => {
             if (!obj2) return null;
             const parts = propertyPath.split(".");
@@ -26375,123 +31890,81 @@
             }
             return value2;
           },
-          /**
-           * Check if object has property
-           */
-          has: (property) => (obj2) => {
-            return obj2 && obj2.hasOwnProperty(property);
+          has: (property) => (obj2) => obj2 && Object.prototype.hasOwnProperty.call(obj2, property),
+          keys: (obj2) => obj2 ? Object.keys(obj2) : [],
+          values: (obj2) => obj2 ? Object.values(obj2) : [],
+          entries: (obj2) => obj2 ? Object.entries(obj2) : [],
+          pick: (obj2, keys) => {
+            const res2 = {};
+            if (!obj2 || !Array.isArray(keys)) return res2;
+            keys.forEach((k) => {
+              if (Object.prototype.hasOwnProperty.call(obj2, k)) res2[k] = obj2[k];
+            });
+            return res2;
           },
-          /**
-           * Get object keys
-           */
-          keys: (obj2) => {
-            return obj2 ? Object.keys(obj2) : [];
-          },
-          /**
-           * Get object values
-           */
-          values: (obj2) => {
-            return obj2 ? Object.values(obj2) : [];
+          omit: (obj2, keys) => {
+            const res2 = {};
+            if (!obj2) return res2;
+            const omit_set = new Set(Array.isArray(keys) ? keys : []);
+            Object.keys(obj2).forEach((k) => {
+              if (!omit_set.has(k)) res2[k] = obj2[k];
+            });
+            return res2;
           }
         },
-        /**
-         * Compose multiple transformations
-         */
-        compose: (...fns) => {
-          return (value2) => {
-            return fns.reduce((acc, fn) => fn(acc), value2);
-          };
-        },
-        /**
-         * Identity transformation (returns input unchanged)
-         */
+        compose: (...fns) => (value2) => fns.reduce((acc, fn) => fn(acc), value2),
+        pipe: (...fns) => (value2) => fns.reduce((acc, fn) => fn(acc), value2),
         identity: (value2) => value2,
-        /**
-         * Default value transformation
-         */
-        defaultTo: (defaultValue) => (value2) => {
-          return value2 !== null && value2 !== void 0 ? value2 : defaultValue;
-        },
-        /**
-         * Conditional transformation
-         */
-        when: (condition, thenTransform, elseTransform = Transformations.identity) => {
-          return (value2) => {
-            return condition(value2) ? thenTransform(value2) : elseTransform(value2);
-          };
-        },
-        /**
-         * Create a bidirectional transformation pair
-         */
-        bidirectional: (forward, reverse) => {
-          return {
-            transform: forward,
-            reverse
-          };
-        }
+        defaultTo: (defaultValue) => (value2) => value2 !== null && value2 !== void 0 ? value2 : defaultValue,
+        when: (condition, thenTransform, elseTransform = Transformations.identity) => (value2) => condition(value2) ? thenTransform(value2) : elseTransform(value2),
+        bidirectional: (forward, reverse) => ({ transform: forward, reverse })
       };
       var Validators = {
-        /**
-         * Required field validator
-         */
         required: (value2) => {
           if (value2 === null || value2 === void 0) return false;
           if (typeof value2 === "string" && value2.trim() === "") return false;
           if (Array.isArray(value2) && value2.length === 0) return false;
           return true;
         },
-        /**
-         * Email validator
-         */
         email: (value2) => {
           if (!value2) return true;
           const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           return re.test(String(value2));
         },
-        /**
-         * URL validator
-         */
         url: (value2) => {
-          if (!value2) return true;
+          if (!value2) return false;
           try {
-            new URL(value2);
-            return true;
+            const u = new URL(value2);
+            return u.protocol === "http:" || u.protocol === "https:";
           } catch {
             return false;
           }
         },
-        /**
-         * Number range validator
-         */
-        range: (min, max) => (value2) => {
+        range: (value2, min, max) => {
           const num = Number(value2);
           if (isNaN(num)) return false;
           return num >= min && num <= max;
         },
-        /**
-         * String length validator
-         */
-        length: (min, max) => (value2) => {
-          if (!value2) return true;
+        length: (value2, min, max) => {
+          if (value2 === null || value2 === void 0) return false;
           const len = String(value2).length;
           return len >= min && len <= max;
         },
-        /**
-         * Pattern validator
-         */
-        pattern: (regex) => (value2) => {
-          if (!value2) return true;
+        pattern: (value2, regex) => {
+          if (value2 === null || value2 === void 0) return false;
           return regex.test(String(value2));
         },
-        /**
-         * Custom validator
-         */
+        min: (value2, min) => Number(value2) >= min,
+        max: (value2, max) => Number(value2) <= max,
         custom: (fn) => fn
       };
-      module.exports = {
+      Transformations.validators = Validators;
+      Transformations.Validators = Validators;
+      module.exports = Object.assign(Transformations, {
         Transformations,
-        Validators
-      };
+        Validators,
+        validators: Validators
+      });
     }
   });
 
@@ -26689,34 +32162,34 @@
           if (spec.control) this.control = spec.control;
           this.map_selected_controls = {};
         }
-        "select_only"(ctrl2, silent = false) {
+        "select_only"(ctrl, silent = false) {
           var currently_selected;
           var count_deselected = 0;
           var selected;
           each(this.map_selected_controls, (v, i) => {
-            if (v && v !== ctrl2 && v !== this.control) {
+            if (v && v !== ctrl && v !== this.control) {
               if (v.selected) {
                 v.selected = false;
                 count_deselected++;
               }
             }
-            if (v === ctrl2 && v !== this.control) {
+            if (v === ctrl && v !== this.control) {
               currently_selected = v.selected;
             }
           });
           this.map_selected_controls = {};
-          if (typeof ctrl2._id === "function") {
-            this.map_selected_controls[ctrl2._id()] = ctrl2;
+          if (typeof ctrl._id === "function") {
+            this.map_selected_controls[ctrl._id()] = ctrl;
           } else {
           }
           if (!currently_selected) {
-            ctrl2.selected = true;
+            ctrl.selected = true;
             if (!silent) {
               this.raise("change", {
                 name: "selected",
-                value: ctrl2
+                value: ctrl
               });
-              ctrl2.raise("select");
+              ctrl.raise("select");
             }
           }
           if (count_deselected > 0 & !currently_selected) {
@@ -26739,24 +32212,24 @@
           }
           this.map_selected_controls = {};
         }
-        "deselect"(ctrl2, silent = false) {
-          if (ctrl2.selected === true) {
-            ctrl2.selected = false;
+        "deselect"(ctrl, silent = false) {
+          if (ctrl.selected === true) {
+            ctrl.selected = false;
           }
           if (!silent) {
-            ctrl2.raise("deselected");
+            ctrl.raise("deselected");
             this.raise("change", {
               name: "selected",
               map_selected_controls: this.map_selected_controls
             });
           }
         }
-        "select"(ctrl2, silent = false) {
-          if (!ctrl2.selected) {
-            ctrl2.selected = true;
+        "select"(ctrl, silent = false) {
+          if (!ctrl.selected) {
+            ctrl.selected = true;
           }
           if (!silent) {
-            ctrl2.raise("selected");
+            ctrl.raise("selected");
             this.raise("change", {
               name: "selected",
               map_selected_controls: this.map_selected_controls
@@ -26766,10 +32239,10 @@
         // deselect controls internal to a control.
         // When selecting a control, we want to make it so that controls inside it, in the same selection context are not selected.
         //  The Selection Scope does a fair bit of the management of the selections.
-        "deselect_ctrl_content"(ctrl2, silent = false) {
-          var cs = ctrl2.selection_scope;
+        "deselect_ctrl_content"(ctrl, silent = false) {
+          var cs = ctrl.selection_scope;
           var msc = this.map_selected_controls;
-          ctrl2.content.each((v) => {
+          ctrl.content.each((v) => {
             if (v instanceof Control2) {
               v.selected = false;
               var id = v._id();
@@ -26785,33 +32258,33 @@
             });
           }
         }
-        "select_toggle"(ctrl2, silent = false) {
-          var sel = ctrl2.selected;
+        "select_toggle"(ctrl, silent = false) {
+          var sel = ctrl.selected;
           var msc = this.map_selected_controls;
-          var id = ctrl2._id();
+          var id = ctrl._id();
           if (!sel) {
-            var sel_anc = ctrl2.find_selected_ancestor_in_scope();
+            var sel_anc = ctrl.find_selected_ancestor_in_scope();
             if (sel_anc) {
               console.log("1) not selecting because a selected ancestor in the selection scope has been found.");
             } else {
-              ctrl2.selected = true;
-              this.deselect_ctrl_content(ctrl2, silent);
-              msc[id] = ctrl2;
+              ctrl.selected = true;
+              this.deselect_ctrl_content(ctrl, silent);
+              msc[id] = ctrl;
             }
           } else {
             var tsel = tof(sel);
             if (tsel === "boolean") {
               if (sel) {
-                ctrl2.selected = false;
+                ctrl.selected = false;
                 msc[id] = false;
               } else {
-                var sel_anc = ctrl2.find_selected_ancestor_in_scope();
+                var sel_anc = ctrl.find_selected_ancestor_in_scope();
                 if (sel_anc) {
                   console.log("2) not selecting because a selected ancestor in the selection scope has been found.");
                 } else {
-                  this.deselect_ctrl_content(ctrl2, silent);
-                  ctrl2.selected = true;
-                  msc[id] = ctrl2;
+                  this.deselect_ctrl_content(ctrl, silent);
+                  ctrl.selected = true;
+                  msc[id] = ctrl;
                 }
               }
             }
@@ -26829,12 +32302,18 @@
   var require_page_context = __commonJS({
     "node_modules/jsgui3-html/html-core/page-context.js"(exports, module) {
       var jsgui2 = require_lang();
-      var { each, tof, is_defined, get_a_sig: get_a_sig2, Evented_Class, Data_Model } = jsgui2;
+      var { each, tof, is_defined, get_a_sig, Evented_Class, Data_Model } = jsgui2;
       var Selection_Scope = require_selection_scope();
       var Page_Context = class extends Evented_Class {
         constructor(spec) {
           spec = spec || {};
           super(spec);
+          this.map_els = this.map_els || {};
+          if (spec.document) {
+            this.document = spec.document;
+          } else if (typeof document !== "undefined") {
+            this.document = document;
+          }
           if (spec.browser_info) {
             this.browser_info = spec.browser_info;
           }
@@ -26874,18 +32353,66 @@
           this.map_control_iids = {};
           this.next_iid = 1;
         }
-        "new_selection_scope"(ctrl2) {
+        "get_ctrl_el"(ctrl) {
+          if (!ctrl) return void 0;
+          const ctrl_el = ctrl.dom && ctrl.dom.el;
+          if (ctrl_el) return ctrl_el;
+          let ctrl_id;
+          if (typeof ctrl === "string") {
+            ctrl_id = ctrl;
+          } else if (typeof ctrl._id === "function") {
+            ctrl_id = ctrl._id();
+          } else if (ctrl.__id) {
+            ctrl_id = ctrl.__id;
+          }
+          if (!ctrl_id) return void 0;
+          const cached = this.map_els && this.map_els[ctrl_id];
+          if (cached) return cached;
+          const doc = this.document;
+          if (doc && typeof doc.querySelector === "function") {
+            const found = doc.querySelector('[data-jsgui-id="' + ctrl_id + '"]');
+            if (found) {
+              this.map_els[ctrl_id] = found;
+              return found;
+            }
+          }
+          return void 0;
+        }
+        "body"() {
+          if (this._body_control) return this._body_control;
+          const doc = this.document;
+          if (!doc || !doc.body) return void 0;
+          const Control2 = require_control();
+          const body_control = new Control2({
+            context: this,
+            __type_name: "body",
+            tag_name: "body",
+            el: doc.body
+          });
+          this._body_control = body_control;
+          if (typeof body_control._id === "function") {
+            this.map_els[body_control._id()] = doc.body;
+          }
+          if (typeof body_control.add_content_change_event_listener === "function") {
+            body_control.add_content_change_event_listener();
+          }
+          if (typeof body_control.add_dom_attributes_changes_listener === "function") {
+            body_control.add_dom_attributes_changes_listener();
+          }
+          return body_control;
+        }
+        "new_selection_scope"(ctrl) {
           var res2 = new Selection_Scope({
             "context": this,
             "id": this.selection_scope_id_counter++,
-            "ctrl": ctrl2
+            "ctrl": ctrl
           });
           this.selection_scopes[res2.id] = res2;
-          if (ctrl2) {
-            ctrl2.selection_scope = res2;
+          if (ctrl) {
+            ctrl.selection_scope = res2;
             if (typeof document === "undefined") {
-              ctrl2._fields = ctrl2._fields || {};
-              ctrl2._fields.selection_scope = res2.id;
+              ctrl._fields = ctrl._fields || {};
+              ctrl._fields.selection_scope = res2.id;
             }
           }
           return res2;
@@ -26899,7 +32426,7 @@
         "update_Controls"() {
           var a = arguments;
           a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
+          var sig = get_a_sig(a, 1);
           if (sig === "[o]") {
             var o = a[0];
             var map_Controls = this.map_Controls;
@@ -26935,10 +32462,10 @@
         }
         "first_ctrl_matching_type"(type_name) {
           var res2;
-          each(this.map_controls, (ctrl2, ctrl_id, fn_stop) => {
-            if (ctrl2.__type_name === type_name) {
+          each(this.map_controls, (ctrl, ctrl_id, fn_stop) => {
+            if (ctrl.__type_name === type_name) {
               fn_stop();
-              res2 = ctrl2;
+              res2 = ctrl;
             }
           });
           return res2;
@@ -26948,682 +32475,299 @@
     }
   });
 
-  // node_modules/htmlparser/lib/htmlparser.js
-  var require_htmlparser = __commonJS({
-    "node_modules/htmlparser/lib/htmlparser.js"(exports, module) {
-      (function() {
-        const root = typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
-        function runningInNode() {
-          return typeof __require == "function" && typeof exports == "object" && typeof module == "object" && typeof __filename == "string" && typeof __dirname == "string";
+  // node_modules/jsgui3-html/html-core/html_parser.js
+  var require_html_parser = __commonJS({
+    "node_modules/jsgui3-html/html-core/html_parser.js"(exports, module) {
+      var void_elements = /* @__PURE__ */ new Set([
+        "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "link",
+        "meta",
+        "param",
+        "source",
+        "track",
+        "wbr"
+      ]);
+      var raw_text_elements = /* @__PURE__ */ new Set(["script", "style"]);
+      var auto_close_on_start = {
+        li: /* @__PURE__ */ new Set(["li"]),
+        p: /* @__PURE__ */ new Set(["p"]),
+        td: /* @__PURE__ */ new Set(["td", "th"]),
+        th: /* @__PURE__ */ new Set(["td", "th"]),
+        tr: /* @__PURE__ */ new Set(["tr"]),
+        option: /* @__PURE__ */ new Set(["option"]),
+        optgroup: /* @__PURE__ */ new Set(["optgroup"])
+      };
+      var is_whitespace = (ch) => ch === " " || ch === "\n" || ch === "\r" || ch === "	" || ch === "\f";
+      var is_name_char = (ch) => {
+        const code = ch.charCodeAt(0);
+        return code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122 || ch === "_" || ch === "-" || ch === ":" || ch === ".";
+      };
+      var skip_whitespace = (str, pos) => {
+        const len = str.length;
+        while (pos < len && is_whitespace(str[pos])) pos++;
+        return pos;
+      };
+      var find_raw_text_close = (str_html, start_pos, tag_name, lowercase_tags) => {
+        const len = str_html.length;
+        const expected_name = lowercase_tags ? tag_name.toLowerCase() : tag_name;
+        for (let i = start_pos; i < len; i++) {
+          if (str_html[i] !== "<") continue;
+          let j = i + 1;
+          j = skip_whitespace(str_html, j);
+          if (str_html[j] !== "/") continue;
+          j++;
+          j = skip_whitespace(str_html, j);
+          const name_start = j;
+          while (j < len && is_name_char(str_html[j])) j++;
+          let found_name = str_html.slice(name_start, j);
+          if (lowercase_tags) found_name = found_name.toLowerCase();
+          if (found_name !== expected_name) continue;
+          const gt_index = str_html.indexOf(">", j);
+          if (gt_index === -1) return null;
+          return { start: i, end: gt_index + 1 };
         }
-        if (!runningInNode()) {
-          const tautologistics = root.Tautologistics || (root.Tautologistics = {});
-          if (tautologistics.NodeHtmlParser)
-            return;
-          tautologistics.NodeHtmlParser = {};
-          exports = tautologistics.NodeHtmlParser;
-        }
-        var ElementType = {
-          Text: "text",
-          Directive: "directive",
-          Comment: "comment",
-          Script: "script",
-          Style: "style",
-          Tag: "tag"
-          //Any tag that isn't special
+        return null;
+      };
+      var parse_html = (str_html, options = {}) => {
+        if (typeof str_html !== "string") str_html = String(str_html || "");
+        const ignore_whitespace = !!options.ignore_whitespace;
+        const lowercase_tags = options.lowercase_tags !== false;
+        const lowercase_attrs = options.lowercase_attrs !== false;
+        const len = str_html.length;
+        const root = [];
+        const stack = [{ name: null, children: root }];
+        let pos = 0;
+        const push_text_node = (raw_text) => {
+          if (raw_text.length === 0) return;
+          if (ignore_whitespace && raw_text.trim().length === 0) return;
+          stack[stack.length - 1].children.push({
+            raw: raw_text,
+            data: raw_text,
+            type: "text"
+          });
         };
-        function Parser(handler, options) {
-          this._options = options ? options : {};
-          if (this._options.includeLocation == void 0) {
-            this._options.includeLocation = false;
+        const push_node = (node) => {
+          stack[stack.length - 1].children.push(node);
+        };
+        while (pos < len) {
+          const ch = str_html[pos];
+          if (ch !== "<") {
+            const next_lt = str_html.indexOf("<", pos);
+            const text_end = next_lt === -1 ? len : next_lt;
+            push_text_node(str_html.slice(pos, text_end));
+            pos = text_end;
+            continue;
           }
-          this.validateHandler(handler);
-          this._handler = handler;
-          this.reset();
-        }
-        Parser._reTrim = /(^\s+|\s+$)/g;
-        Parser._reTrimComment = /(^\!--|--$)/g;
-        Parser._reWhitespace = /\s/g;
-        Parser._reTagName = /^\s*(\/?)\s*([^\s\/]+)/;
-        Parser._reAttrib = //Find attributes in a tag
-        /([^=<>\"\'\s]+)\s*=\s*"([^"]*)"|([^=<>\"\'\s]+)\s*=\s*'([^']*)'|([^=<>\"\'\s]+)\s*=\s*([^'"\s]+)|([^=<>\"\'\s\/]+)/g;
-        Parser._reTags = /[\<\>]/g;
-        Parser.prototype.parseComplete = function Parser$parseComplete(data) {
-          this.reset();
-          this.parseChunk(data);
-          this.done();
-        };
-        Parser.prototype.parseChunk = function Parser$parseChunk(data) {
-          if (this._done)
-            this.handleError(new Error("Attempted to parse chunk after parsing already done"));
-          this._buffer += data;
-          this.parseTags();
-        };
-        Parser.prototype.done = function Parser$done() {
-          if (this._done)
-            return;
-          this._done = true;
-          if (this._buffer.length) {
-            var rawData = this._buffer;
-            this._buffer = "";
-            var element = {
-              raw: rawData,
-              data: this._parseState == ElementType.Text ? rawData : rawData.replace(Parser._reTrim, ""),
-              type: this._parseState
-            };
-            if (this._parseState == ElementType.Tag || this._parseState == ElementType.Script || this._parseState == ElementType.Style)
-              element.name = this.parseTagName(element.data);
-            this.parseAttribs(element);
-            this._elements.push(element);
+          if (str_html.startsWith("<!--", pos)) {
+            const end_index = str_html.indexOf("-->", pos + 4);
+            const comment_end = end_index === -1 ? len : end_index + 3;
+            const raw_comment = str_html.slice(pos, comment_end);
+            push_node({
+              raw: raw_comment,
+              data: raw_comment,
+              type: "comment"
+            });
+            pos = comment_end;
+            continue;
           }
-          this.writeHandler();
-          this._handler.done();
-        };
-        Parser.prototype.reset = function Parser$reset() {
-          this._buffer = "";
-          this._done = false;
-          this._elements = [];
-          this._elementsCurrent = 0;
-          this._current = 0;
-          this._next = 0;
-          this._location = {
-            row: 0,
-            col: 0,
-            charOffset: 0,
-            inBuffer: 0
-          };
-          this._parseState = ElementType.Text;
-          this._prevTagSep = "";
-          this._tagStack = [];
-          this._handler.reset();
-        };
-        Parser.prototype._options = null;
-        Parser.prototype._handler = null;
-        Parser.prototype._buffer = null;
-        Parser.prototype._done = false;
-        Parser.prototype._elements = null;
-        Parser.prototype._elementsCurrent = 0;
-        Parser.prototype._current = 0;
-        Parser.prototype._next = 0;
-        Parser.prototype._location = null;
-        Parser.prototype._parseState = ElementType.Text;
-        Parser.prototype._prevTagSep = "";
-        Parser.prototype._tagStack = null;
-        Parser.prototype.parseTagAttribs = function Parser$parseTagAttribs(elements) {
-          var idxEnd = elements.length;
-          var idx = 0;
-          while (idx < idxEnd) {
-            var element = elements[idx++];
-            if (element.type == ElementType.Tag || element.type == ElementType.Script || element.type == ElementType.style)
-              this.parseAttribs(element);
-          }
-          return elements;
-        };
-        Parser.prototype.parseAttribs = function Parser$parseAttribs(element) {
-          if (element.type != ElementType.Script && element.type != ElementType.Style && element.type != ElementType.Tag)
-            return;
-          var tagName = element.data.split(Parser._reWhitespace, 1)[0];
-          var attribRaw = element.data.substring(tagName.length);
-          if (attribRaw.length < 1)
-            return;
-          var match;
-          Parser._reAttrib.lastIndex = 0;
-          while (match = Parser._reAttrib.exec(attribRaw)) {
-            if (element.attribs == void 0)
-              element.attribs = {};
-            if (typeof match[1] == "string" && match[1].length) {
-              element.attribs[match[1]] = match[2];
-            } else if (typeof match[3] == "string" && match[3].length) {
-              element.attribs[match[3].toString()] = match[4].toString();
-            } else if (typeof match[5] == "string" && match[5].length) {
-              element.attribs[match[5]] = match[6];
-            } else if (typeof match[7] == "string" && match[7].length) {
-              element.attribs[match[7]] = match[7];
+          if (str_html.startsWith("</", pos)) {
+            let close_pos = pos + 2;
+            close_pos = skip_whitespace(str_html, close_pos);
+            const name_start2 = close_pos;
+            while (close_pos < len && is_name_char(str_html[close_pos])) close_pos++;
+            let close_name = str_html.slice(name_start2, close_pos);
+            if (lowercase_tags) close_name = close_name.toLowerCase();
+            const gt_index = str_html.indexOf(">", close_pos);
+            pos = gt_index === -1 ? len : gt_index + 1;
+            if (close_name) {
+              for (let i = stack.length - 1; i > 0; i--) {
+                if (stack[i].name === close_name) {
+                  stack.length = i;
+                  break;
+                }
+              }
             }
+            continue;
           }
-        };
-        Parser.prototype.parseTagName = function Parser$parseTagName(data) {
-          if (data == null || data == "")
-            return "";
-          var match = Parser._reTagName.exec(data);
-          if (!match)
-            return "";
-          return (match[1] ? "/" : "") + match[2];
-        };
-        Parser.prototype.parseTags = function Parser$parseTags() {
-          var bufferEnd = this._buffer.length - 1;
-          while (Parser._reTags.test(this._buffer)) {
-            this._next = Parser._reTags.lastIndex - 1;
-            var tagSep = this._buffer.charAt(this._next);
-            var rawData = this._buffer.substring(this._current, this._next);
-            var element = {
-              raw: rawData,
-              data: this._parseState == ElementType.Text ? rawData : rawData.replace(Parser._reTrim, ""),
-              type: this._parseState
-            };
-            var elementName = this.parseTagName(element.data);
-            if (this._tagStack.length) {
-              if (this._tagStack[this._tagStack.length - 1] == ElementType.Script) {
-                if (elementName.toLowerCase() == "/script")
-                  this._tagStack.pop();
-                else {
-                  if (element.raw.indexOf("!--") != 0) {
-                    element.type = ElementType.Text;
-                    if (this._elements.length && this._elements[this._elements.length - 1].type == ElementType.Text) {
-                      var prevElement = this._elements[this._elements.length - 1];
-                      prevElement.raw = prevElement.data = prevElement.raw + this._prevTagSep + element.raw;
-                      element.raw = element.data = "";
-                    }
-                  }
-                }
-              } else if (this._tagStack[this._tagStack.length - 1] == ElementType.Style) {
-                if (elementName.toLowerCase() == "/style")
-                  this._tagStack.pop();
-                else {
-                  if (element.raw.indexOf("!--") != 0) {
-                    element.type = ElementType.Text;
-                    if (this._elements.length && this._elements[this._elements.length - 1].type == ElementType.Text) {
-                      var prevElement = this._elements[this._elements.length - 1];
-                      if (element.raw != "") {
-                        prevElement.raw = prevElement.data = prevElement.raw + this._prevTagSep + element.raw;
-                        element.raw = element.data = "";
-                      } else {
-                        prevElement.raw = prevElement.data = prevElement.raw + this._prevTagSep;
-                      }
-                    } else {
-                      if (element.raw != "") {
-                        element.raw = element.data = element.raw;
-                      }
-                    }
-                  }
-                }
-              } else if (this._tagStack[this._tagStack.length - 1] == ElementType.Comment) {
-                var rawLen = element.raw.length;
-                if (element.raw.charAt(rawLen - 2) == "-" && element.raw.charAt(rawLen - 1) == "-" && tagSep == ">") {
-                  this._tagStack.pop();
-                  if (this._elements.length && this._elements[this._elements.length - 1].type == ElementType.Comment) {
-                    var prevElement = this._elements[this._elements.length - 1];
-                    prevElement.raw = prevElement.data = (prevElement.raw + element.raw).replace(Parser._reTrimComment, "");
-                    element.raw = element.data = "";
-                    element.type = ElementType.Text;
-                  } else
-                    element.type = ElementType.Comment;
+          if (str_html.startsWith("<!", pos) && !str_html.startsWith("<!--", pos)) {
+            const gt_index = str_html.indexOf(">", pos + 2);
+            const dir_end = gt_index === -1 ? len : gt_index + 1;
+            const raw_dir = str_html.slice(pos, dir_end);
+            push_node({
+              raw: raw_dir,
+              data: raw_dir,
+              type: "directive"
+            });
+            pos = dir_end;
+            continue;
+          }
+          if (str_html.startsWith("<?", pos)) {
+            const end_index = str_html.indexOf("?>", pos + 2);
+            const pi_end = end_index === -1 ? len : end_index + 2;
+            const raw_pi = str_html.slice(pos, pi_end);
+            push_node({
+              raw: raw_pi,
+              data: raw_pi,
+              type: "directive"
+            });
+            pos = pi_end;
+            continue;
+          }
+          const tag_start = pos;
+          pos++;
+          pos = skip_whitespace(str_html, pos);
+          const name_start = pos;
+          while (pos < len && is_name_char(str_html[pos])) pos++;
+          let tag_name = str_html.slice(name_start, pos);
+          if (!tag_name) {
+            push_text_node("<");
+            continue;
+          }
+          if (lowercase_tags) tag_name = tag_name.toLowerCase();
+          const auto_close_set = auto_close_on_start[tag_name];
+          if (auto_close_set) {
+            const top = stack[stack.length - 1];
+            if (top.name && auto_close_set.has(top.name)) stack.pop();
+          }
+          const attribs = {};
+          let is_self_closing = false;
+          let tag_end_index = null;
+          while (pos < len) {
+            pos = skip_whitespace(str_html, pos);
+            if (pos >= len) break;
+            const c2 = str_html[pos];
+            if (c2 === ">") {
+              tag_end_index = pos;
+              pos++;
+              break;
+            }
+            if (c2 === "/") {
+              pos++;
+              pos = skip_whitespace(str_html, pos);
+              if (str_html[pos] === ">") {
+                is_self_closing = true;
+                tag_end_index = pos;
+                pos++;
+                break;
+              }
+              continue;
+            }
+            const attr_name_start = pos;
+            while (pos < len && !is_whitespace(str_html[pos]) && str_html[pos] !== "=" && str_html[pos] !== ">" && str_html[pos] !== "/") {
+              pos++;
+            }
+            let attr_name = str_html.slice(attr_name_start, pos);
+            if (!attr_name) continue;
+            if (lowercase_attrs) attr_name = attr_name.toLowerCase();
+            pos = skip_whitespace(str_html, pos);
+            let attr_value = attr_name;
+            if (str_html[pos] === "=") {
+              pos++;
+              pos = skip_whitespace(str_html, pos);
+              if (pos < len) {
+                const quote = str_html[pos];
+                if (quote === '"' || quote === "'") {
+                  pos++;
+                  const value_start = pos;
+                  while (pos < len && str_html[pos] !== quote) pos++;
+                  attr_value = str_html.slice(value_start, pos);
+                  if (str_html[pos] === quote) pos++;
                 } else {
-                  element.type = ElementType.Comment;
-                  if (this._elements.length && this._elements[this._elements.length - 1].type == ElementType.Comment) {
-                    var prevElement = this._elements[this._elements.length - 1];
-                    prevElement.raw = prevElement.data = prevElement.raw + element.raw + tagSep;
-                    element.raw = element.data = "";
-                    element.type = ElementType.Text;
-                  } else
-                    element.raw = element.data = element.raw + tagSep;
-                }
-              }
-            }
-            if (element.type == ElementType.Tag) {
-              element.name = elementName;
-              var elementNameCI = elementName.toLowerCase();
-              if (element.raw.indexOf("!--") == 0) {
-                element.type = ElementType.Comment;
-                delete element["name"];
-                var rawLen = element.raw.length;
-                if (element.raw.charAt(rawLen - 1) == "-" && element.raw.charAt(rawLen - 2) == "-" && tagSep == ">")
-                  element.raw = element.data = element.raw.replace(Parser._reTrimComment, "");
-                else {
-                  element.raw += tagSep;
-                  this._tagStack.push(ElementType.Comment);
-                }
-              } else if (element.raw.indexOf("!") == 0 || element.raw.indexOf("?") == 0) {
-                element.type = ElementType.Directive;
-              } else if (elementNameCI == "script") {
-                element.type = ElementType.Script;
-                if (element.data.charAt(element.data.length - 1) != "/")
-                  this._tagStack.push(ElementType.Script);
-              } else if (elementNameCI == "/script")
-                element.type = ElementType.Script;
-              else if (elementNameCI == "style") {
-                element.type = ElementType.Style;
-                if (element.data.charAt(element.data.length - 1) != "/")
-                  this._tagStack.push(ElementType.Style);
-              } else if (elementNameCI == "/style")
-                element.type = ElementType.Style;
-              if (element.name && element.name.charAt(0) == "/")
-                element.data = element.name;
-            }
-            if (element.raw != "" || element.type != ElementType.Text) {
-              if (this._options.includeLocation && !element.location) {
-                element.location = this.getLocation(element.type == ElementType.Tag);
-              }
-              this.parseAttribs(element);
-              this._elements.push(element);
-              if (element.type != ElementType.Text && element.type != ElementType.Comment && element.type != ElementType.Directive && element.data.charAt(element.data.length - 1) == "/")
-                this._elements.push({
-                  raw: "/" + element.name,
-                  data: "/" + element.name,
-                  name: "/" + element.name,
-                  type: element.type
-                });
-            }
-            this._parseState = tagSep == "<" ? ElementType.Tag : ElementType.Text;
-            this._current = this._next + 1;
-            this._prevTagSep = tagSep;
-          }
-          if (this._options.includeLocation) {
-            this.getLocation();
-            this._location.row += this._location.inBuffer;
-            this._location.inBuffer = 0;
-            this._location.charOffset = 0;
-          }
-          this._buffer = this._current <= bufferEnd ? this._buffer.substring(this._current) : "";
-          this._current = 0;
-          this.writeHandler();
-        };
-        Parser.prototype.getLocation = function Parser$getLocation(startTag) {
-          var c2, l2 = this._location, end = this._current - (startTag ? 1 : 0), chunk = startTag && l2.charOffset == 0 && this._current == 0;
-          for (; l2.charOffset < end; l2.charOffset++) {
-            c2 = this._buffer.charAt(l2.charOffset);
-            if (c2 == "\n") {
-              l2.inBuffer++;
-              l2.col = 0;
-            } else if (c2 != "\r") {
-              l2.col++;
-            }
-          }
-          return {
-            line: l2.row + l2.inBuffer + 1,
-            col: l2.col + (chunk ? 0 : 1)
-          };
-        };
-        Parser.prototype.validateHandler = function Parser$validateHandler(handler) {
-          if (typeof handler != "object")
-            throw new Error("Handler is not an object");
-          if (typeof handler.reset != "function")
-            throw new Error("Handler method 'reset' is invalid");
-          if (typeof handler.done != "function")
-            throw new Error("Handler method 'done' is invalid");
-          if (typeof handler.writeTag != "function")
-            throw new Error("Handler method 'writeTag' is invalid");
-          if (typeof handler.writeText != "function")
-            throw new Error("Handler method 'writeText' is invalid");
-          if (typeof handler.writeComment != "function")
-            throw new Error("Handler method 'writeComment' is invalid");
-          if (typeof handler.writeDirective != "function")
-            throw new Error("Handler method 'writeDirective' is invalid");
-        };
-        Parser.prototype.writeHandler = function Parser$writeHandler(forceFlush) {
-          forceFlush = !!forceFlush;
-          if (this._tagStack.length && !forceFlush)
-            return;
-          while (this._elements.length) {
-            var element = this._elements.shift();
-            switch (element.type) {
-              case ElementType.Comment:
-                this._handler.writeComment(element);
-                break;
-              case ElementType.Directive:
-                this._handler.writeDirective(element);
-                break;
-              case ElementType.Text:
-                this._handler.writeText(element);
-                break;
-              default:
-                this._handler.writeTag(element);
-                break;
-            }
-          }
-        };
-        Parser.prototype.handleError = function Parser$handleError(error2) {
-          if (typeof this._handler.error == "function")
-            this._handler.error(error2);
-          else
-            throw error2;
-        };
-        function RssHandler(callback2) {
-          RssHandler.super_.call(this, callback2, { ignoreWhitespace: true, verbose: false, enforceEmptyTags: false });
-        }
-        inherits(RssHandler, DefaultHandler);
-        RssHandler.prototype.done = function RssHandler$done() {
-          var feed = {};
-          var feedRoot;
-          var found = DomUtils.getElementsByTagName(function(value2) {
-            return value2 == "rss" || value2 == "feed";
-          }, this.dom, false);
-          if (found.length) {
-            feedRoot = found[0];
-          }
-          if (feedRoot) {
-            if (feedRoot.name == "rss") {
-              feed.type = "rss";
-              feedRoot = feedRoot.children[0];
-              feed.id = "";
-              try {
-                feed.title = DomUtils.getElementsByTagName("title", feedRoot.children, false)[0].children[0].data;
-              } catch (ex) {
-              }
-              try {
-                feed.link = DomUtils.getElementsByTagName("link", feedRoot.children, false)[0].children[0].data;
-              } catch (ex) {
-              }
-              try {
-                feed.description = DomUtils.getElementsByTagName("description", feedRoot.children, false)[0].children[0].data;
-              } catch (ex) {
-              }
-              try {
-                feed.updated = new Date(DomUtils.getElementsByTagName("lastBuildDate", feedRoot.children, false)[0].children[0].data);
-              } catch (ex) {
-              }
-              try {
-                feed.author = DomUtils.getElementsByTagName("managingEditor", feedRoot.children, false)[0].children[0].data;
-              } catch (ex) {
-              }
-              feed.items = [];
-              DomUtils.getElementsByTagName("item", feedRoot.children).forEach(function(item2, index, list) {
-                var entry = {};
-                try {
-                  entry.id = DomUtils.getElementsByTagName("guid", item2.children, false)[0].children[0].data;
-                } catch (ex) {
-                }
-                try {
-                  entry.title = DomUtils.getElementsByTagName("title", item2.children, false)[0].children[0].data;
-                } catch (ex) {
-                }
-                try {
-                  entry.link = DomUtils.getElementsByTagName("link", item2.children, false)[0].children[0].data;
-                } catch (ex) {
-                }
-                try {
-                  entry.description = DomUtils.getElementsByTagName("description", item2.children, false)[0].children[0].data;
-                } catch (ex) {
-                }
-                try {
-                  entry.pubDate = new Date(DomUtils.getElementsByTagName("pubDate", item2.children, false)[0].children[0].data);
-                } catch (ex) {
-                }
-                feed.items.push(entry);
-              });
-            } else {
-              feed.type = "atom";
-              try {
-                feed.id = DomUtils.getElementsByTagName("id", feedRoot.children, false)[0].children[0].data;
-              } catch (ex) {
-              }
-              try {
-                feed.title = DomUtils.getElementsByTagName("title", feedRoot.children, false)[0].children[0].data;
-              } catch (ex) {
-              }
-              try {
-                feed.link = DomUtils.getElementsByTagName("link", feedRoot.children, false)[0].attribs.href;
-              } catch (ex) {
-              }
-              try {
-                feed.description = DomUtils.getElementsByTagName("subtitle", feedRoot.children, false)[0].children[0].data;
-              } catch (ex) {
-              }
-              try {
-                feed.updated = new Date(DomUtils.getElementsByTagName("updated", feedRoot.children, false)[0].children[0].data);
-              } catch (ex) {
-              }
-              try {
-                feed.author = DomUtils.getElementsByTagName("email", feedRoot.children, true)[0].children[0].data;
-              } catch (ex) {
-              }
-              feed.items = [];
-              DomUtils.getElementsByTagName("entry", feedRoot.children).forEach(function(item2, index, list) {
-                var entry = {};
-                try {
-                  entry.id = DomUtils.getElementsByTagName("id", item2.children, false)[0].children[0].data;
-                } catch (ex) {
-                }
-                try {
-                  entry.title = DomUtils.getElementsByTagName("title", item2.children, false)[0].children[0].data;
-                } catch (ex) {
-                }
-                try {
-                  entry.link = DomUtils.getElementsByTagName("link", item2.children, false)[0].attribs.href;
-                } catch (ex) {
-                }
-                try {
-                  entry.description = DomUtils.getElementsByTagName("summary", item2.children, false)[0].children[0].data;
-                } catch (ex) {
-                }
-                try {
-                  entry.pubDate = new Date(DomUtils.getElementsByTagName("updated", item2.children, false)[0].children[0].data);
-                } catch (ex) {
-                }
-                feed.items.push(entry);
-              });
-            }
-            this.dom = feed;
-          }
-          RssHandler.super_.prototype.done.call(this);
-        };
-        function DefaultHandler(callback2, options) {
-          this.reset();
-          this._options = options ? options : {};
-          if (this._options.ignoreWhitespace == void 0)
-            this._options.ignoreWhitespace = false;
-          if (this._options.verbose == void 0)
-            this._options.verbose = true;
-          if (this._options.enforceEmptyTags == void 0)
-            this._options.enforceEmptyTags = true;
-          if (typeof callback2 == "function")
-            this._callback = callback2;
-        }
-        DefaultHandler._emptyTags = {
-          area: 1,
-          base: 1,
-          basefont: 1,
-          br: 1,
-          col: 1,
-          frame: 1,
-          hr: 1,
-          img: 1,
-          input: 1,
-          isindex: 1,
-          link: 1,
-          meta: 1,
-          param: 1,
-          embed: 1
-        };
-        DefaultHandler.reWhitespace = /^\s*$/;
-        DefaultHandler.prototype.dom = null;
-        DefaultHandler.prototype.reset = function DefaultHandler$reset() {
-          this.dom = [];
-          this._done = false;
-          this._tagStack = [];
-          this._tagStack.last = function DefaultHandler$_tagStack$last() {
-            return this.length ? this[this.length - 1] : null;
-          };
-        };
-        DefaultHandler.prototype.done = function DefaultHandler$done() {
-          this._done = true;
-          this.handleCallback(null);
-        };
-        DefaultHandler.prototype.writeTag = function DefaultHandler$writeTag(element) {
-          this.handleElement(element);
-        };
-        DefaultHandler.prototype.writeText = function DefaultHandler$writeText(element) {
-          if (this._options.ignoreWhitespace) {
-            if (DefaultHandler.reWhitespace.test(element.data))
-              return;
-          }
-          this.handleElement(element);
-        };
-        DefaultHandler.prototype.writeComment = function DefaultHandler$writeComment(element) {
-          this.handleElement(element);
-        };
-        DefaultHandler.prototype.writeDirective = function DefaultHandler$writeDirective(element) {
-          this.handleElement(element);
-        };
-        DefaultHandler.prototype.error = function DefaultHandler$error(error2) {
-          this.handleCallback(error2);
-        };
-        DefaultHandler.prototype._options = null;
-        DefaultHandler.prototype._callback = null;
-        DefaultHandler.prototype._done = false;
-        DefaultHandler.prototype._tagStack = null;
-        DefaultHandler.prototype.handleCallback = function DefaultHandler$handleCallback(error2) {
-          if (typeof this._callback != "function")
-            if (error2)
-              throw error2;
-            else
-              return;
-          this._callback(error2, this.dom);
-        };
-        DefaultHandler.prototype.isEmptyTag = function(element) {
-          var name = element.name.toLowerCase();
-          if (name.charAt(0) == "/") {
-            name = name.substring(1);
-          }
-          return this._options.enforceEmptyTags && !!DefaultHandler._emptyTags[name];
-        };
-        DefaultHandler.prototype.handleElement = function DefaultHandler$handleElement(element) {
-          if (this._done)
-            this.handleCallback(new Error("Writing to the handler after done() called is not allowed without a reset()"));
-          if (!this._options.verbose) {
-            delete element.raw;
-            if (element.type == "tag" || element.type == "script" || element.type == "style")
-              delete element.data;
-          }
-          if (!this._tagStack.last()) {
-            if (element.type != ElementType.Text && element.type != ElementType.Comment && element.type != ElementType.Directive) {
-              if (element.name.charAt(0) != "/") {
-                this.dom.push(element);
-                if (!this.isEmptyTag(element)) {
-                  this._tagStack.push(element);
-                }
-              }
-            } else
-              this.dom.push(element);
-          } else {
-            if (element.type != ElementType.Text && element.type != ElementType.Comment && element.type != ElementType.Directive) {
-              if (element.name.charAt(0) == "/") {
-                var baseName = element.name.substring(1);
-                if (!this.isEmptyTag(element)) {
-                  var pos = this._tagStack.length - 1;
-                  while (pos > -1 && this._tagStack[pos--].name != baseName) {
+                  const value_start = pos;
+                  while (pos < len && !is_whitespace(str_html[pos]) && str_html[pos] !== ">" && str_html[pos] !== "/") {
+                    pos++;
                   }
-                  if (pos > -1 || this._tagStack[0].name == baseName)
-                    while (pos < this._tagStack.length - 1)
-                      this._tagStack.pop();
+                  attr_value = str_html.slice(value_start, pos);
                 }
               } else {
-                if (!this._tagStack.last().children)
-                  this._tagStack.last().children = [];
-                this._tagStack.last().children.push(element);
-                if (!this.isEmptyTag(element))
-                  this._tagStack.push(element);
+                attr_value = "";
               }
-            } else {
-              if (!this._tagStack.last().children)
-                this._tagStack.last().children = [];
-              this._tagStack.last().children.push(element);
             }
+            attribs[attr_name] = attr_value;
           }
-        };
-        var DomUtils = {
-          testElement: function DomUtils$testElement(options, element) {
-            if (!element) {
-              return false;
-            }
-            for (var key2 in options) {
-              if (key2 == "tag_name") {
-                if (element.type != "tag" && element.type != "script" && element.type != "style") {
-                  return false;
-                }
-                if (!options["tag_name"](element.name)) {
-                  return false;
-                }
-              } else if (key2 == "tag_type") {
-                if (!options["tag_type"](element.type)) {
-                  return false;
-                }
-              } else if (key2 == "tag_contains") {
-                if (element.type != "text" && element.type != "comment" && element.type != "directive") {
-                  return false;
-                }
-                if (!options["tag_contains"](element.data)) {
-                  return false;
-                }
-              } else {
-                if (!element.attribs || !options[key2](element.attribs[key2])) {
-                  return false;
-                }
-              }
-            }
-            return true;
-          },
-          getElements: function DomUtils$getElements(options, currentElement, recurse, limit) {
-            recurse = recurse === void 0 || recurse === null || !!recurse;
-            limit = isNaN(parseInt(limit)) ? -1 : parseInt(limit);
-            if (!currentElement) {
-              return [];
-            }
-            var found = [];
-            var elementList;
-            function getTest(checkVal) {
-              return (function(value2) {
-                return value2 == checkVal;
+          if (tag_end_index === null) tag_end_index = len;
+          let raw_inner = str_html.slice(tag_start + 1, tag_end_index);
+          raw_inner = raw_inner.trim();
+          if (raw_inner.endsWith("/")) raw_inner = raw_inner.slice(0, -1).trim();
+          const node_type = raw_text_elements.has(tag_name) ? tag_name : "tag";
+          const node = {
+            raw: raw_inner,
+            data: raw_inner,
+            type: node_type,
+            name: tag_name,
+            attribs,
+            children: []
+          };
+          push_node(node);
+          if (raw_text_elements.has(tag_name)) {
+            const close_match = find_raw_text_close(str_html, pos, tag_name, lowercase_tags);
+            const text_end = close_match ? close_match.start : len;
+            const raw_text = str_html.slice(pos, text_end);
+            if (!(ignore_whitespace && raw_text.trim().length === 0) && raw_text.length > 0) {
+              node.children.push({
+                raw: raw_text,
+                data: raw_text,
+                type: "text"
               });
             }
-            for (var key2 in options) {
-              if (typeof options[key2] != "function") {
-                options[key2] = getTest(options[key2]);
-              }
-            }
-            if (DomUtils.testElement(options, currentElement)) {
-              found.push(currentElement);
-            }
-            if (limit >= 0 && found.length >= limit) {
-              return found;
-            }
-            if (recurse && currentElement.children) {
-              elementList = currentElement.children;
-            } else if (currentElement instanceof Array) {
-              elementList = currentElement;
-            } else {
-              return found;
-            }
-            for (var i = 0; i < elementList.length; i++) {
-              found = found.concat(DomUtils.getElements(options, elementList[i], recurse, limit));
-              if (limit >= 0 && found.length >= limit) {
-                break;
-              }
-            }
-            return found;
-          },
-          getElementById: function DomUtils$getElementById(id, currentElement, recurse) {
-            var result = DomUtils.getElements({ id }, currentElement, recurse, 1);
-            return result.length ? result[0] : null;
-          },
-          getElementsByTagName: function DomUtils$getElementsByTagName(name, currentElement, recurse, limit) {
-            return DomUtils.getElements({ tag_name: name }, currentElement, recurse, limit);
-          },
-          getElementsByTagType: function DomUtils$getElementsByTagType(type, currentElement, recurse, limit) {
-            return DomUtils.getElements({ tag_type: type }, currentElement, recurse, limit);
+            pos = close_match ? close_match.end : len;
+            continue;
           }
-        };
-        function inherits(ctor, superCtor) {
-          var tempCtor = function() {
-          };
-          tempCtor.prototype = superCtor.prototype;
-          ctor.super_ = superCtor;
-          ctor.prototype = new tempCtor();
-          ctor.prototype.constructor = ctor;
+          if (!is_self_closing && !void_elements.has(tag_name)) {
+            stack.push(node);
+          }
         }
-        exports.Parser = Parser;
-        exports.DefaultHandler = DefaultHandler;
-        exports.RssHandler = RssHandler;
-        exports.ElementType = ElementType;
-        exports.DomUtils = DomUtils;
-      })();
+        return root;
+      };
+      var Default_Handler = class {
+        constructor(callback2, options = {}) {
+          this.callback = callback2;
+          this.options = options;
+          this.dom = null;
+        }
+        on_complete(dom) {
+          this.dom = dom;
+          if (this.callback) this.callback(null, dom);
+        }
+        on_error(err) {
+          if (this.callback) this.callback(err);
+        }
+      };
+      var Html_Parser = class {
+        constructor(handler, options = {}) {
+          this.handler = handler;
+          this.options = options;
+        }
+        parse_complete(str_html) {
+          try {
+            const dom = parse_html(str_html, this.options);
+            if (this.handler && this.handler.on_complete) this.handler.on_complete(dom);
+            return dom;
+          } catch (err) {
+            if (this.handler && this.handler.on_error) this.handler.on_error(err);
+            else throw err;
+          }
+        }
+      };
+      module.exports = {
+        parse_html,
+        Default_Handler,
+        Html_Parser
+      };
     }
   });
 
   // node_modules/jsgui3-html/html-core/parse-mount.js
   var require_parse_mount = __commonJS({
     "node_modules/jsgui3-html/html-core/parse-mount.js"(exports, module) {
-      var htmlparser = require_htmlparser();
+      var { Default_Handler, Html_Parser } = require_html_parser();
       var { tof, each } = require_lang();
       var map_jsgui_attr_names = {
         "name": true,
@@ -27638,7 +32782,7 @@
       };
       var parse = function(str_content, context2, control_set, callback2) {
         str_content = str_content.trim();
-        const handler = new htmlparser.DefaultHandler(function(error2, dom) {
+        const handler = new Default_Handler(function(error2, dom) {
           if (error2) {
             log("parse error", error2);
           } else {
@@ -27697,13 +32841,13 @@
                   log("attribs a", a);
                   log("\n\n");
                   a.context = context2;
-                  let ctrl3 = new Ctrl(a);
+                  let ctrl2 = new Ctrl(a);
                   if (a.name) {
                     res_controls.named = res_controls.named || {};
-                    res_controls.named[a.name] = ctrl3;
+                    res_controls.named[a.name] = ctrl2;
                   } else {
                     res_controls.unnamed = res_controls.unnamed || [];
-                    res_controls.unnamed.push(ctrl3);
+                    res_controls.unnamed.push(ctrl2);
                   }
                   const arr_dom_attrs = [];
                   each(a, (a_value, a_name) => {
@@ -27713,34 +32857,34 @@
                   });
                   each(arr_dom_attrs, (attr) => {
                     const [name, value2] = attr;
-                    ctrl3.dom.attributes[name] = value2;
+                    ctrl2.dom.attributes[name] = value2;
                   });
-                  return ctrl3;
+                  return ctrl2;
                 } else {
                   console.trace();
                   throw "lacking jsgui control for " + tag2.name;
                 }
               };
               let my_children;
-              let ctrl2;
+              let ctrl;
               if (depth > last_depth) {
-                ctrl2 = create_ctrl(tag_with_no_children);
+                ctrl = create_ctrl(tag_with_no_children);
                 map_siblings_at_depth[depth] = [];
-                map_siblings_at_depth[depth].push(ctrl2);
+                map_siblings_at_depth[depth].push(ctrl);
               } else if (depth < last_depth) {
                 my_children = map_siblings_at_depth[last_depth];
                 if (my_children) {
-                  ctrl2 = create_ctrl(tag_with_no_children, my_children);
+                  ctrl = create_ctrl(tag_with_no_children, my_children);
                 } else {
-                  ctrl2 = create_ctrl(tag_with_no_children);
+                  ctrl = create_ctrl(tag_with_no_children);
                 }
                 map_siblings_at_depth[depth] = map_siblings_at_depth[depth] || [];
                 map_siblings_at_depth[last_depth] = null;
-                map_siblings_at_depth[depth].push(ctrl2);
+                map_siblings_at_depth[depth].push(ctrl);
               } else {
-                ctrl2 = create_ctrl(tag_with_no_children);
+                ctrl = create_ctrl(tag_with_no_children);
                 map_siblings_at_depth[depth] = map_siblings_at_depth[depth] || [];
-                map_siblings_at_depth[depth].push(ctrl2);
+                map_siblings_at_depth[depth].push(ctrl);
               }
               last_depth = depth;
             };
@@ -27750,7 +32894,7 @@
                 if (trimmed.length > 0) {
                   handle_text(item2.raw, depth, sibling_index);
                 }
-              } else if (item2.type === "tag") {
+              } else if (item2.type === "tag" || item2.type === "script" || item2.type === "style") {
                 handle_tag(item2, depth, sibling_index);
               }
             });
@@ -27758,8 +32902,8 @@
             callback2(null, [depth_0_ctrls, res_controls]);
           }
         });
-        var parser = new htmlparser.Parser(handler);
-        parser.parseComplete(str_content);
+        var parser = new Html_Parser(handler);
+        parser.parse_complete(str_content);
       };
       var parse_mount = function(str_content, target, control_set) {
         return new Promise(async (solve, jettison) => {
@@ -27778,8 +32922,8 @@
               jettison(err);
             } else {
               const [depth_0_ctrls, res_controls] = res_parse;
-              each(res_controls.named, (ctrl2, name) => {
-                target[name] = ctrl2;
+              each(res_controls.named, (ctrl, name) => {
+                target[name] = ctrl;
               });
               const is_active_context = context2.__is_active;
               each(depth_0_ctrls, (new_ctrl) => {
@@ -27811,13 +32955,15 @@
   var require_html_core = __commonJS({
     "node_modules/jsgui3-html/html-core/html-core.js"(exports, module) {
       var jsgui2 = require_lang();
+      var { patch_lang_tools } = require_lang_tools_compat();
+      patch_lang_tools();
       var Text_Node = require_text_node();
       var Page_Context = require_page_context();
       var Selection_Scope = require_selection_scope();
       var Control_Data = require_Control_Data();
       var Control_View = require_Control_View();
       var { parse_mount, parse } = require_parse_mount();
-      var { str_arr_mapify, get_a_sig: get_a_sig2, each, prop } = jsgui2;
+      var { str_arr_mapify, get_a_sig, each, prop } = jsgui2;
       var Control2 = jsgui2.Control = require_Data_Model_View_Model_Control();
       jsgui2.load_type("control", "C", (item2) => item2 instanceof Control2);
       var Evented_Class = jsgui2.Evented_Class;
@@ -27937,31 +33083,31 @@
                   if (map_controls[parent_jsgui_id]) {
                   }
                 }
-                var ctrl2 = new Cstr(ctrl_spec);
+                var ctrl = new Cstr(ctrl_spec);
                 if (parent_jsgui_id) {
                   if (map_controls[parent_jsgui_id]) {
                   }
                 }
-                arr_controls.push(ctrl2);
+                arr_controls.push(ctrl);
                 if (l_tag_name === "html") {
-                  context2.ctrl_document = ctrl2;
+                  context2.ctrl_document = ctrl;
                 }
-                map_controls[jsgui_id] = ctrl2;
+                map_controls[jsgui_id] = ctrl;
               } else {
                 console.log("Missing context.map_Controls for type " + type + ", using generic Control");
-                var ctrl2 = new Control2({
+                var ctrl = new Control2({
                   "context": context2,
                   "__type_name": type,
                   "id": jsgui_id,
                   "el": el
                 });
-                arr_controls.push(ctrl2);
-                map_controls[jsgui_id] = ctrl2;
+                arr_controls.push(ctrl);
+                map_controls[jsgui_id] = ctrl;
               }
             } else {
-              var ctrl2 = map_controls[jsgui_id];
-              ctrl2.dom.el = el;
-              if (ctrl2.attach_dom_events) ctrl2.attach_dom_events();
+              var ctrl = map_controls[jsgui_id];
+              ctrl.dom.el = el;
+              if (ctrl.attach_dom_events) ctrl.attach_dom_events();
             }
           }
         });
@@ -27970,8 +33116,8 @@
           if (nt === 1) {
             var jsgui_id = el.getAttribute("data-jsgui-id");
             if (jsgui_id) {
-              const ctrl2 = map_controls[jsgui_id];
-              ctrl2.pre_activate(ctrl2.dom.el);
+              const ctrl = map_controls[jsgui_id];
+              ctrl.pre_activate(ctrl.dom.el);
             }
           }
         });
@@ -27988,8 +33134,8 @@
           if (nt === 1) {
             var jsgui_id = el.getAttribute("data-jsgui-id");
             if (jsgui_id) {
-              const ctrl2 = map_controls[jsgui_id];
-              ctrl2.activate(ctrl2.dom.el);
+              const ctrl = map_controls[jsgui_id];
+              ctrl.activate(ctrl.dom.el);
             }
           }
         });
@@ -28007,16 +33153,31 @@
           this.on("change", (e_change) => {
             const { name } = e_change;
             if (name === "text") {
-              if (this.content._arr.length === 1) {
-                if (this.content._arr[0] instanceof Text_Node) {
-                  this.content._arr[0].text = e_change.value;
-                }
+              const new_text = typeof e_change.value === "undefined" || e_change.value === null ? "" : String(e_change.value);
+              const content_arr = this.content._arr;
+              if (content_arr.length === 1 && content_arr[0] instanceof Text_Node) {
+                content_arr[0].text = new_text;
               } else {
-                if (this.content._arr.length === 0) {
+                let existing_text_node;
+                for (let idx = 0; idx < content_arr.length; idx++) {
+                  if (content_arr[idx] instanceof Text_Node) {
+                    existing_text_node = content_arr[idx];
+                    break;
+                  }
+                }
+                if (existing_text_node) {
+                  existing_text_node.text = new_text;
                 } else {
-                  console.log("this.content._arr", this.content._arr);
-                  console.trace();
-                  throw "NYI";
+                  const tn = new Text_Node({
+                    context: this.context,
+                    text: new_text
+                  });
+                  if (this.content && typeof this.content.insert === "function") {
+                    this.content.insert(tn, 0);
+                  } else {
+                    this.add(tn);
+                  }
+                  this.tn = this.text_node = tn;
                 }
               }
             }
@@ -28099,7 +33260,7 @@
         "body"() {
           var a = arguments;
           a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
+          var sig = get_a_sig(a, 1);
           if (sig == "[]") {
             var content = this.content;
             var body = content.get(1);
@@ -28113,8 +33274,8 @@
           let coords_ctrls;
           let update_ctrl_coords = () => {
             coords_ctrls = [];
-            each(spec.controls || spec.ctrls, (ctrl2) => {
-              coords_ctrls.push([ctrl2.bcr(), ctrl2]);
+            each(spec.controls || spec.ctrls, (ctrl) => {
+              coords_ctrls.push([ctrl.bcr(), ctrl]);
             });
           };
           let map_selected = /* @__PURE__ */ new Map();
@@ -28124,19 +33285,19 @@
             ;
             let [btl, bbr] = coords;
             each(coords_ctrls, (cc) => {
-              let [ccoords, ctrl2] = cc;
+              let [ccoords, ctrl] = cc;
               let [cpos, cbr, csize] = ccoords;
               let intersect = cpos[0] <= bbr[0] && btl[0] <= cbr[0] && cpos[1] <= bbr[1] && btl[1] <= cbr[1];
               if (intersect) {
-                if (map_selected.get(ctrl2) !== true) {
-                  newly_intersecting.push(ctrl2);
-                  map_selected.set(ctrl2, true);
+                if (map_selected.get(ctrl) !== true) {
+                  newly_intersecting.push(ctrl);
+                  map_selected.set(ctrl, true);
                 }
-                intersecting.push(ctrl2);
+                intersecting.push(ctrl);
               } else {
-                if (map_selected.get(ctrl2) === true) {
-                  previously_intersecting.push(ctrl2);
-                  map_selected.set(ctrl2, false);
+                if (map_selected.get(ctrl) === true) {
+                  previously_intersecting.push(ctrl);
+                  map_selected.set(ctrl, false);
                 }
               }
             });
@@ -29060,7 +34221,7 @@
       var each = jsgui2.each;
       var arrayify = jsgui2.arrayify;
       var tof = jsgui2.tof;
-      var get_a_sig2 = jsgui2.get_a_sig;
+      var get_a_sig = jsgui2.get_a_sig;
       var filter_map_by_regex = jsgui2.filter_map_by_regex;
       var Evented_Class = jsgui2.Evented_Class;
       var Data_Object = jsgui2.Data_Object;
@@ -29111,7 +34272,7 @@
         }
         "has_resource"() {
           const a = arguments;
-          const sig = get_a_sig2(a, 1);
+          const sig = get_a_sig(a, 1);
           if (sig == "[s]") {
             const obj_lookup_val = a[0];
             return this.resources.has(obj_lookup_val);
@@ -29127,7 +34288,7 @@
         "get_resource"() {
           var a = arguments;
           a.l = arguments.length;
-          var sig = get_a_sig2(a, 1);
+          var sig = get_a_sig(a, 1);
           if (sig === "[s]") {
             var obj_lookup_val = a[0];
             var find_result = this.resources.find(obj_lookup_val);
@@ -29185,7 +34346,7 @@
       var stringify = jsgui2.stringify;
       var tof = jsgui2.tof;
       var call_multi = jsgui2.call_multi;
-      var get_a_sig2 = jsgui2.get_a_sig;
+      var get_a_sig = jsgui2.get_a_sig;
       var each = jsgui2.each;
       var Resource = class extends Evented_Class {
         // The link between the abstract resource and the resource on the internet / network / computer.
@@ -29267,7 +34428,7 @@
       var stringify = jsgui2.stringify;
       var tof = jsgui2.tof;
       var call_multi = jsgui2.call_multi;
-      var get_a_sig2 = jsgui2.get_a_sig;
+      var get_a_sig = jsgui2.get_a_sig;
       var each = jsgui2.each;
       var Resource = require_resource();
       var Data_KV_Resource = class extends Resource {
@@ -29344,7 +34505,7 @@
       var stringify = jsgui2.stringify;
       var tof = jsgui2.tof;
       var call_multi = jsgui2.call_multi;
-      var get_a_sig2 = jsgui2.get_a_sig;
+      var get_a_sig = jsgui2.get_a_sig;
       var each = jsgui2.each;
       var Resource = require_resource();
       var Data_Transform_Resource = class extends Resource {
@@ -29713,7 +34874,7 @@
         each,
         tof
       } = require_lang();
-      var dragable = (ctrl2, opts = {}) => {
+      var dragable = (ctrl, opts = {}) => {
         let {
           bounds: bounds2,
           handle,
@@ -29724,44 +34885,43 @@
         start_action = start_action || ["touchstart", "mousedown"];
         if (tof(start_action) === "string") start_action = [start_action];
         let bounds_pos;
-        let bounds_is_parent = bounds2 && bounds2 === ctrl2.parent;
+        let bounds_is_parent = bounds2 && bounds2 === ctrl.parent;
         if (bounds2 === "parent") {
-          bounds2 = ctrl2.parent;
+          bounds2 = ctrl.parent;
           bounds_is_parent = true;
         }
         if (bounds2) {
           bounds_pos = bounds2.pos || [bounds2.dom.el.offsetLeft, bounds2.dom.el.offsetTop];
         }
-        handle = handle || ctrl2;
-        const old_dragable = ctrl2.dragable;
+        handle = handle || ctrl;
+        const old_dragable = ctrl.dragable;
         if (old_dragable) {
-          console.trace();
-          throw "NYI / Deprecated";
+          return;
         }
         let drag_mode = opts.drag_mode || opts.mode || "translate";
         if (bounds_is_parent) {
         }
         let pos_md, pos_mm, pos_mu, pos_md_within_ctrl;
         const setup_isomorphic = () => {
-          const old_silent = ctrl2.view.data.model.mixins.silent;
-          ctrl2.view.data.model.mixins.silent = true;
-          ctrl2.view.data.model.mixins.push({
+          const old_silent = ctrl.view.data.model.mixins.silent;
+          ctrl.view.data.model.mixins.silent = true;
+          ctrl.view.data.model.mixins.push({
             name: "dragable"
           });
-          ctrl2.view.data.model.mixins.silent = old_silent;
-          field(ctrl2, "dragable");
+          ctrl.view.data.model.mixins.silent = old_silent;
+          field(ctrl, "dragable");
         };
         setup_isomorphic();
         if (typeof document === "undefined") {
-          ctrl2.on("server-pre-render", (e) => {
-            if (ctrl2.dragable === true) {
-              ctrl2._fields = ctrl2._fields || {};
-              ctrl2._fields.dragable = true;
+          ctrl.on("server-pre-render", (e) => {
+            if (ctrl.dragable === true) {
+              ctrl._fields = ctrl._fields || {};
+              ctrl._fields.dragable = true;
             }
           });
         }
-        if (ctrl2.dom.el) {
-          let ctrl_body = ctrl2.context.body();
+        if (ctrl.dom.el) {
+          let ctrl_body = ctrl.context.body();
           let dragging = false;
           let drag_offset_distance = opts.start_distance || 6;
           let movement_offset;
@@ -29771,12 +34931,12 @@
           let half_item_width, item_width;
           let initial_bounds_bcr2, initial_bcr;
           let initial_bcr_offset_from_bounds2;
-          const el = ctrl2.dom.el;
+          const el = ctrl.dom.el;
           let ctrl_translation3d = new Float32Array(3);
           let initial_ctrl_translation3d;
           let initial_ctrl_translate;
           const begin_drag = (pos) => {
-            initial_bcr = ctrl2.bcr();
+            initial_bcr = ctrl.bcr();
             if (bounds2) {
               if (typeof bounds2.bcr === "function") {
                 initial_bounds_bcr2 = bounds2.bcr();
@@ -29789,29 +34949,32 @@
             }
             if (drag_mode === "within-parent") {
               dragging = true;
-              item_start_pos = ctrl2.pos;
+              item_start_pos = ctrl.pos;
               const ctrl_pos_to_be = [item_start_pos[0] - movement_offset[0], item_start_pos[1] - movement_offset[1]];
-              ctrl2.pos = ctrl_pos_to_be;
+              ctrl.pos = ctrl_pos_to_be;
             } else if (drag_mode === "translate") {
-              initial_ctrl_translate = ctrl2.ta.slice(6, 8);
+              initial_ctrl_translate = ctrl.ta.slice(6, 8);
               dragging = true;
             } else {
-              if (drag_mode === "x") {
+              if (drag_mode === "y") {
                 dragging = true;
-                item_start_pos = ctrl2.pos || [ctrl2.dom.el.offsetLeft, ctrl2.dom.el.offsetTop];
-                half_item_width = Math.round(ctrl2.dom.el.offsetWidth / 2);
-                item_width = ctrl2.dom.el.offsetWidth;
+                item_start_pos = ctrl.pos || [ctrl.dom.el.offsetLeft, ctrl.dom.el.offsetTop];
+                ctrl.pos = [item_start_pos[0], item_start_pos[1] + movement_offset[1]];
+              } else if (drag_mode === "x") {
+                dragging = true;
+                item_start_pos = ctrl.pos || [ctrl.dom.el.offsetLeft, ctrl.dom.el.offsetTop];
+                half_item_width = Math.round(ctrl.dom.el.offsetWidth / 2);
+                item_width = ctrl.dom.el.offsetWidth;
                 bounds_offset = [bounds2.dom.el.offsetLeft, bounds2.dom.el.offsetTop];
-                ctrl2.pos = [item_start_pos[0] + movement_offset[0], item_start_pos[1]];
+                ctrl.pos = [item_start_pos[0] + movement_offset[0], item_start_pos[1]];
               } else {
-                console.log("drag_mode", drag_mode);
-                throw "NYI";
+                throw new Error("Unsupported drag_mode: " + drag_mode);
               }
             }
-            ctrl2.raise("dragstart");
+            ctrl.raise("dragstart");
           };
           const move_drag = (pos) => {
-            let ctrl_size = [ctrl2.dom.el.offsetWidth, ctrl2.dom.el.offsetHeight];
+            let ctrl_size = [ctrl.dom.el.offsetWidth, ctrl.dom.el.offsetHeight];
             if (drag_mode === "translate") {
               let tr_x = movement_offset[0] + initial_ctrl_translate[0];
               let tr_y = movement_offset[1] + initial_ctrl_translate[1];
@@ -29830,23 +34993,26 @@
                 if (tr_y < min_y_offset) tr_y = min_y_offset;
                 if (tr_y > max_y_offset) tr_y = max_y_offset;
               }
-              ctrl2.ta[6] = tr_x;
-              ctrl2.ta[7] = tr_y;
+              ctrl.ta[6] = tr_x;
+              ctrl.ta[7] = tr_y;
             } else if (drag_mode === "within-parent") {
-              bounds2 = bounds2 || ctrl2.parent;
+              bounds2 = bounds2 || ctrl.parent;
               bounds_size = bounds2.bcr()[2];
               let new_pos = [item_start_pos[0] + movement_offset[0], item_start_pos[1] + movement_offset[1]];
               if (new_pos[0] < 0) new_pos[0] = 0;
               if (new_pos[1] < 0) new_pos[1] = 0;
               if (new_pos[0] > bounds_size[0] - ctrl_size[0]) new_pos[0] = bounds_size[0] - ctrl_size[0];
               if (new_pos[1] > bounds_size[1] - ctrl_size[1]) new_pos[1] = bounds_size[1] - ctrl_size[1];
-              ctrl2.pos = new_pos;
+              ctrl.pos = new_pos;
+            } else if (drag_mode === "y") {
+              let new_pos = [item_start_pos[0], item_start_pos[1] + movement_offset[1]];
+              ctrl.pos = new_pos;
             } else if (drag_mode === "x") {
               bounds_size = [bounds2.dom.el.offsetWidth, bounds2.dom.el.offsetHeight];
               let new_pos = [item_start_pos[0] + movement_offset[0], item_start_pos[1]];
               if (new_pos[0] < bounds_pos[0] - half_item_width) new_pos[0] = bounds_pos[0] - half_item_width;
               if (new_pos[0] > bounds_size[0] - ctrl_size[0] + bounds_offset[0] + half_item_width) new_pos[0] = bounds_size[0] - ctrl_size[0] + bounds_offset[0] + half_item_width;
-              ctrl2.pos = new_pos;
+              ctrl.pos = new_pos;
             }
           };
           const body_mm = (e_mm) => {
@@ -29891,7 +35057,7 @@
             ctrl_body.off("touchend", body_mu);
             if (dragging) {
               dragging = false;
-              ctrl2.raise("dragend", {
+              ctrl.raise("dragend", {
                 movement_offset
               });
             }
@@ -29914,7 +35080,7 @@
               ctrl_body.on("touchend", body_mu);
             }
           };
-          ctrl2.on("change", (e_change) => {
+          ctrl.on("change", (e_change) => {
             let n = e_change.name, value2 = e_change.value;
             if (n === "dragable") {
               if (value2 === true) {
@@ -29928,7 +35094,7 @@
                       });
                     }
                   };
-                  ctrl2.once_active(() => {
+                  ctrl.once_active(() => {
                     apply_start_handlers(start_action);
                   });
                 }
@@ -30126,25 +35292,39 @@
         prop,
         field
       } = require_oext();
-      var { each, is_array, is_def } = require_lib_lang_mini();
-      var selectable = (ctrl2, ctrl_handle, opts) => {
+      var { each, is_array, is_def } = require_lib_lang_mini2();
+      var selectable = (ctrl, ctrl_handle, opts) => {
+        ctrl._selectable_mixin_state = ctrl._selectable_mixin_state || {};
+        const mx_state = ctrl._selectable_mixin_state;
         const setup_isomorphic = () => {
-          const old_silent = ctrl2.view.data.model.mixins.silent;
-          ctrl2.view.data.model.mixins.silent = true;
-          ctrl2.view.data.model.mixins.push({
-            name: "selectable"
-          });
-          ctrl2.view.data.model.mixins.silent = old_silent;
-          ctrl2.on("change", (e_change) => {
+          var _a, _b, _c;
+          if (mx_state.isomorphic_applied) return;
+          mx_state.isomorphic_applied = true;
+          const mixins = (_c = (_b = (_a = ctrl.view) == null ? void 0 : _a.data) == null ? void 0 : _b.model) == null ? void 0 : _c.mixins;
+          if (mixins && typeof mixins.each === "function" && typeof mixins.push === "function") {
+            let has_selectable = false;
+            mixins.each((mixin) => {
+              if (mixin && mixin.name === "selectable") has_selectable = true;
+            });
+            if (!has_selectable) {
+              const old_silent = mixins.silent;
+              mixins.silent = true;
+              mixins.push({
+                name: "selectable"
+              });
+              mixins.silent = old_silent;
+            }
+          }
+          ctrl.on("change", (e_change) => {
             let {
               name,
               value: value2
             } = e_change;
             if (name === "selected") {
               if (value2) {
-                ctrl2.add_class("selected");
+                ctrl.add_class("selected");
               } else {
-                ctrl2.remove_class("selected");
+                ctrl.remove_class("selected");
               }
             }
             ;
@@ -30153,177 +35333,176 @@
         };
         setup_isomorphic();
         if (typeof document === "undefined") {
-          ctrl2.on("server-pre-render", (e) => {
-            if (ctrl2.selectable === true) {
-              ctrl2._fields = ctrl2._fields || {};
-              ctrl2._fields.selectable = true;
-              if (ctrl2.selected === true) {
-                ctrl2._fields.selected = true;
+          if (!mx_state.server_pre_render_applied) {
+            mx_state.server_pre_render_applied = true;
+            ctrl.on("server-pre-render", (e) => {
+              if (ctrl.selectable === true) {
+                ctrl._fields = ctrl._fields || {};
+                ctrl._fields.selectable = true;
+                if (ctrl.selected === true) {
+                  ctrl._fields.selected = true;
+                }
               }
-            }
-          });
+            });
+          }
         }
-        if (ctrl2.dom.el) {
+        if (ctrl.dom.el) {
+          if (mx_state.dom_applied) return;
+          mx_state.dom_applied = true;
           let select_toggle = false;
           let select_multi = false;
           let condition;
           let preventDefault = true;
           let selection_action = ["mousedown", "touchstart"];
-          const old_selectable2 = ctrl2.selectable;
-          if (old_selectable2) {
-            console.trace();
-            throw "NYI / Deprecated";
-          } else {
-            if (!opts) {
-              if (ctrl_handle) {
-                if (!ctrl_handle.activate) {
-                  opts = ctrl_handle;
-                  ctrl_handle = void 0;
-                }
+          if (!opts) {
+            if (ctrl_handle) {
+              if (!ctrl_handle.activate) {
+                opts = ctrl_handle;
+                ctrl_handle = void 0;
               }
             }
-            if (opts) {
-              if (opts.handle) {
-                ctrl_handle = opts.handle;
-              }
-              if (opts.select_toggle || opts.toggle) {
-                select_toggle = true;
-              }
-              if (opts.select_multi || opts.multi) {
-                select_multi = true;
-              }
-              if (opts.single) {
-                select_multi = false;
-              }
-              if (opts.selection_action) {
-                selection_action = opts.selection_action;
-              }
-              if (opts.condition) {
-                condition = opts.condition;
-              }
-              if (opts.preventDefault === false) {
-                preventDefault = false;
-              }
+          }
+          if (opts) {
+            if (opts.handle) {
+              ctrl_handle = opts.handle;
             }
-            ctrl_handle = ctrl_handle || ctrl2;
-            let click_handler = (e) => {
-              if (ctrl2.selectable && !ctrl2.selection_scope && !ctrl2.disabled) {
-                if (!condition || condition()) {
-                  var ctrl_key = e.ctrlKey;
-                  var meta_key = e.metaKey;
-                  if (select_multi) {
-                    if (ctrl_key || meta_key) {
-                      ctrl2.action_select_toggle();
-                    } else {
-                      if (select_toggle) {
-                        ctrl2.action_select_toggle();
-                      } else {
-                        ctrl2.action_select_only();
-                      }
-                    }
+            if (opts.select_toggle || opts.toggle) {
+              select_toggle = true;
+            }
+            if (opts.select_multi || opts.multi) {
+              select_multi = true;
+            }
+            if (opts.single) {
+              select_multi = false;
+            }
+            if (opts.selection_action) {
+              selection_action = opts.selection_action;
+            }
+            if (opts.condition) {
+              condition = opts.condition;
+            }
+            if (opts.preventDefault === false) {
+              preventDefault = false;
+            }
+          }
+          ctrl_handle = ctrl_handle || ctrl;
+          let click_handler = (e) => {
+            if (ctrl.selectable && !ctrl.selection_scope && !ctrl.disabled) {
+              if (!condition || condition()) {
+                var ctrl_key = e.ctrlKey;
+                var meta_key = e.metaKey;
+                if (select_multi) {
+                  if (ctrl_key || meta_key) {
+                    ctrl.action_select_toggle();
                   } else {
                     if (select_toggle) {
-                      if (ctrl2.selected) {
-                        ctrl2.deselect();
-                      } else {
-                        ctrl2.action_select_only();
-                      }
+                      ctrl.action_select_toggle();
                     } else {
-                      ctrl2.action_select_only();
+                      ctrl.action_select_only();
                     }
                   }
-                  if (preventDefault) {
-                    e.preventDefault();
-                  }
                 } else {
-                  console.log("failed condition check");
+                  if (select_toggle) {
+                    if (ctrl.selected) {
+                      ctrl.deselect();
+                    } else {
+                      ctrl.action_select_only();
+                    }
+                  } else {
+                    ctrl.action_select_only();
+                  }
+                }
+                if (preventDefault) {
+                  e.preventDefault();
                 }
               } else {
+                console.log("failed condition check");
               }
-            };
-            let ss;
-            const apply_all = (ctrl3) => {
-              let id = ctrl3._id();
-              ctrl3.on("change", (e_change) => {
-                let n = e_change.name, value2 = e_change.value;
-                let ss2 = ctrl3.find_selection_scope();
-                if (n === "selected") {
-                  if (value2 === true) {
-                    ctrl3.add_class("selected");
-                    if (ss2) ss2.map_selected_controls[id] = ctrl3;
-                  } else {
-                    ctrl3.remove_class("selected");
-                    if (ss2) ss2.map_selected_controls[id] = null;
-                  }
-                }
-                if (n === "selectable") {
-                  if (value2 === true) {
-                    apply_active_selectable(ctrl3);
-                  } else {
-                    if (typeof document === "undefined") {
-                    } else {
-                      if (is_array(selection_action)) {
-                        selection_action.forEach((i) => {
-                          ctrl_handle.off(i, click_handler);
-                        });
-                      } else {
-                        ctrl_handle.off(selection_action, click_handler);
-                      }
-                      ctrl_handle.has_selection_click_handler = false;
-                    }
-                  }
-                }
-              });
-            };
-            const apply_active_selectable = (ctrl3) => {
-              ctrl3.deselect = ctrl3.deselect || (() => {
-                ss = ss || ctrl3.find_selection_scope();
-                if (ss) ss.deselect(ctrl3);
-                ctrl3.raise("deselect");
-              });
-              ctrl3.select = ctrl3.select || (() => {
-                ss = ss || ctrl3.find_selection_scope();
-                if (ss) ss.select(ctrl3);
-                ctrl3.raise("select");
-              });
-              ctrl3.action_select_only = ctrl3.action_select_only || (() => {
-                ss = ss || ctrl3.find_selection_scope();
-                if (ss) {
-                  ss.select_only(ctrl3);
+            } else {
+            }
+          };
+          let ss;
+          const apply_all = (ctrl2) => {
+            let id = ctrl2._id();
+            ctrl2.on("change", (e_change) => {
+              let n = e_change.name, value2 = e_change.value;
+              let ss2 = ctrl2.find_selection_scope();
+              if (n === "selected") {
+                if (value2 === true) {
+                  ctrl2.add_class("selected");
+                  if (ss2) ss2.map_selected_controls[id] = ctrl2;
                 } else {
-                  each(ctrl3.siblings, (sibling) => {
-                    sibling.selected = false;
-                  });
-                  ctrl3.selected = true;
+                  ctrl2.remove_class("selected");
+                  if (ss2) ss2.map_selected_controls[id] = null;
                 }
-              });
-              ctrl3.action_select_toggle = ctrl3.action_select_toggle || (() => {
-                ss = ss || ctrl3.find_selection_scope();
-                ss.select_toggle(ctrl3);
-              });
-              if (typeof document === "undefined") {
-              } else {
-                ctrl3.once_active(() => {
-                  if (!ctrl_handle.has_selection_click_handler) {
-                    ctrl_handle.has_selection_click_handler = true;
-                    if (Array.isArray(selection_action)) {
+              }
+              if (n === "selectable") {
+                if (value2 === true) {
+                  apply_active_selectable(ctrl2);
+                } else {
+                  if (typeof document === "undefined") {
+                  } else {
+                    if (is_array(selection_action)) {
                       selection_action.forEach((i) => {
-                        ctrl_handle.on(i, click_handler);
+                        ctrl_handle.off(i, click_handler);
                       });
                     } else {
-                      ctrl_handle.on(selection_action, click_handler);
+                      ctrl_handle.off(selection_action, click_handler);
                     }
+                    ctrl_handle.has_selection_click_handler = false;
                   }
-                });
+                }
               }
-            };
-            field(ctrl2, "selected");
-            field(ctrl2, "selectable");
-            apply_all(ctrl2);
-            ctrl2.on("activate", (e) => {
-              if (ctrl2.selectable) apply_all(ctrl2);
             });
-          }
+          };
+          const apply_active_selectable = (ctrl2) => {
+            ctrl2.deselect = ctrl2.deselect || (() => {
+              ss = ss || ctrl2.find_selection_scope();
+              if (ss) ss.deselect(ctrl2);
+              ctrl2.raise("deselect");
+            });
+            ctrl2.select = ctrl2.select || (() => {
+              ss = ss || ctrl2.find_selection_scope();
+              if (ss) ss.select(ctrl2);
+              ctrl2.raise("select");
+            });
+            ctrl2.action_select_only = ctrl2.action_select_only || (() => {
+              ss = ss || ctrl2.find_selection_scope();
+              if (ss) {
+                ss.select_only(ctrl2);
+              } else {
+                each(ctrl2.siblings, (sibling) => {
+                  sibling.selected = false;
+                });
+                ctrl2.selected = true;
+              }
+            });
+            ctrl2.action_select_toggle = ctrl2.action_select_toggle || (() => {
+              ss = ss || ctrl2.find_selection_scope();
+              ss.select_toggle(ctrl2);
+            });
+            if (typeof document === "undefined") {
+            } else {
+              ctrl2.once_active(() => {
+                if (!ctrl_handle.has_selection_click_handler) {
+                  ctrl_handle.has_selection_click_handler = true;
+                  if (Array.isArray(selection_action)) {
+                    selection_action.forEach((i) => {
+                      ctrl_handle.on(i, click_handler);
+                    });
+                  } else {
+                    ctrl_handle.on(selection_action, click_handler);
+                  }
+                }
+              });
+            }
+          };
+          field(ctrl, "selected");
+          field(ctrl, "selectable");
+          apply_all(ctrl);
+          ctrl.on("activate", (e) => {
+            if (ctrl.selectable) apply_all(ctrl);
+          });
         }
       };
       module.exports = selectable;
@@ -30661,8 +35840,35 @@
           });
         }
         "get_cell"(x, y) {
-          console.trace();
-          throw "NYI";
+          let cell_x = x;
+          let cell_y = y;
+          if (typeof cell_x === "object" && cell_x !== null) {
+            if (Array.isArray(cell_x)) {
+              cell_y = cell_x[1];
+              cell_x = cell_x[0];
+            } else if (typeof cell_y === "undefined") {
+              cell_y = cell_x.y;
+              cell_x = cell_x.x;
+            }
+          }
+          if (typeof cell_x === "undefined" || typeof cell_y === "undefined") return void 0;
+          const x_num = typeof cell_x === "number" ? cell_x : parseInt(cell_x, 10);
+          const y_num = typeof cell_y === "number" ? cell_y : parseInt(cell_y, 10);
+          if (!Number.isFinite(x_num) || !Number.isFinite(y_num)) return void 0;
+          const key2 = "[" + x_num + "," + y_num + "]";
+          if (this.map_cells && this.map_cells[key2]) return this.map_cells[key2];
+          if (this.arr_cells && this.arr_cells[x_num] && this.arr_cells[x_num][y_num]) {
+            return this.arr_cells[x_num][y_num];
+          }
+          if (this._arr_rows && this._arr_rows[y_num]) {
+            const row = this._arr_rows[y_num];
+            const offset2 = this.row_headers ? 1 : 0;
+            const idx = x_num + offset2;
+            if (row && row.content && row.content._arr && row.content._arr[idx]) {
+              return row.content._arr[idx];
+            }
+          }
+          return void 0;
         }
         "add_cell"(content) {
           var cell = new Grid_Cell({
@@ -30963,7 +36169,7 @@ div.grid .row .cell span {
           });
         }
         activate() {
-          if (!this.activate.__active) {
+          if (!this.__active) {
             super.activate();
             this.grid.selection_scope.on("change", (e) => {
               const {
@@ -31731,7 +36937,7 @@ div.grid .row .cell span {
           });
         }
         activate() {
-          if (!this.activate.__active) {
+          if (!this.__active) {
             super.activate();
             const attach_on_change_named_property_handler = (obj2, property_name, fn_handler) => {
               obj2.on("change", (e) => {
@@ -31878,7 +37084,7 @@ div.grid .row .cell span {
     "node_modules/jsgui3-html/control_mixins/coverable.js"(exports, module) {
       var jsgui2 = require_html_core();
       var { prop, field, Control: Control2 } = jsgui2;
-      var coverable = (ctrl2, opts) => {
+      var coverable = (ctrl, opts) => {
         let select_toggle = false;
         let select_multi = false;
         if (!opts) {
@@ -31886,31 +37092,31 @@ div.grid .row .cell span {
         if (opts) {
         }
         let ctrl_cover;
-        ctrl2.cover = (content) => {
+        ctrl.cover = (content) => {
           ctrl_cover = new Control2({
-            context: ctrl2.context,
+            context: ctrl.context,
             class: "cover"
           });
           let ctrl_cover_bg = new Control2({
-            context: ctrl2.context,
+            context: ctrl.context,
             class: "background"
           });
           let ctrl_cover_fg = new Control2({
-            context: ctrl2.context,
+            context: ctrl.context,
             class: "foreground"
           });
           content.remove();
           ctrl_cover.add(ctrl_cover_bg);
           ctrl_cover.add(ctrl_cover_fg);
           ctrl_cover_fg.add(content);
-          ctrl2.add(ctrl_cover);
+          ctrl.add(ctrl_cover);
           return ctrl_cover;
         };
-        ctrl2.uncover = () => {
+        ctrl.uncover = () => {
           ctrl_cover.remove();
           ctrl_cover = null;
         };
-        field(ctrl2, "covered");
+        field(ctrl, "covered");
       };
       module.exports = coverable;
     }
@@ -31921,10 +37127,10 @@ div.grid .row .cell span {
     "node_modules/jsgui3-html/control_mixins/typed_data/date.js"(exports, module) {
       var lang = require_lang();
       var is_defined = lang.is_defined;
-      var date = (ctrl2, spec) => {
+      var date = (ctrl, spec) => {
         let _date, _year, _month, _day;
         let constructor = () => {
-          Object.defineProperty(ctrl2, `date`, {
+          Object.defineProperty(ctrl, `date`, {
             get() {
               return _date;
             },
@@ -31932,10 +37138,10 @@ div.grid .row .cell span {
               let old = _date;
               _date = value2;
               if (typeof document === "undefined") {
-                ctrl2._fields = ctrl2._fields || {};
-                ctrl2._fields["date"] = value2;
+                ctrl._fields = ctrl._fields || {};
+                ctrl._fields["date"] = value2;
               }
-              ctrl2.raise("change", {
+              ctrl.raise("change", {
                 "name": "date",
                 "old": old,
                 //'new': _disabled,
@@ -31945,7 +37151,7 @@ div.grid .row .cell span {
             enumerable: true,
             configurable: false
           });
-          Object.defineProperty(ctrl2, `year`, {
+          Object.defineProperty(ctrl, `year`, {
             get() {
               return _year;
             },
@@ -31953,10 +37159,10 @@ div.grid .row .cell span {
               let old = _year;
               _year = value2;
               if (typeof document === "undefined") {
-                ctrl2._fields = ctrl2._fields || {};
-                ctrl2._fields["year"] = value2;
+                ctrl._fields = ctrl._fields || {};
+                ctrl._fields["year"] = value2;
               }
-              ctrl2.raise("change", {
+              ctrl.raise("change", {
                 "name": "year",
                 "old": old,
                 //'new': _disabled,
@@ -31966,7 +37172,7 @@ div.grid .row .cell span {
             enumerable: true,
             configurable: false
           });
-          Object.defineProperty(ctrl2, `month`, {
+          Object.defineProperty(ctrl, `month`, {
             get() {
               return _month;
             },
@@ -31974,10 +37180,10 @@ div.grid .row .cell span {
               let old = _month;
               _month = value2;
               if (typeof document === "undefined") {
-                ctrl2._fields = ctrl2._fields || {};
-                ctrl2._fields["month"] = value2;
+                ctrl._fields = ctrl._fields || {};
+                ctrl._fields["month"] = value2;
               }
-              ctrl2.raise("change", {
+              ctrl.raise("change", {
                 "name": "month",
                 "old": old,
                 //'new': _disabled,
@@ -31987,7 +37193,7 @@ div.grid .row .cell span {
             enumerable: true,
             configurable: false
           });
-          Object.defineProperty(ctrl2, `day`, {
+          Object.defineProperty(ctrl, `day`, {
             get() {
               return _day;
             },
@@ -31995,10 +37201,10 @@ div.grid .row .cell span {
               let old = _day;
               _day = value2;
               if (typeof document === "undefined") {
-                ctrl2._fields = ctrl2._fields || {};
-                ctrl2._fields["day"] = value2;
+                ctrl._fields = ctrl._fields || {};
+                ctrl._fields["day"] = value2;
               }
-              ctrl2.raise("change", {
+              ctrl.raise("change", {
                 "name": "day",
                 "old": old,
                 //'new': _disabled,
@@ -32009,39 +37215,39 @@ div.grid .row .cell span {
             configurable: false
           });
           if (is_defined(spec.year) && is_defined(spec.month)) {
-            ctrl2.month = spec.month;
-            ctrl2.year = spec.year;
+            ctrl.month = spec.month;
+            ctrl.year = spec.year;
           } else {
             let now = /* @__PURE__ */ new Date();
-            ctrl2.month = now.getMonth();
-            ctrl2.year = now.getFullYear();
+            ctrl.month = now.getMonth();
+            ctrl.year = now.getFullYear();
           }
-          Object.assign(ctrl2, {
+          Object.assign(ctrl, {
             next_month: () => {
-              if (ctrl2.month === 11) {
-                ctrl2.month = 0;
-                ctrl2.year = ctrl2.year + 1;
+              if (ctrl.month === 11) {
+                ctrl.month = 0;
+                ctrl.year = ctrl.year + 1;
               } else {
-                ctrl2.month = ctrl2.month + 1;
+                ctrl.month = ctrl.month + 1;
               }
-              ctrl2.refresh_month_view();
+              ctrl.refresh_month_view();
             },
             previous_month: () => {
-              if (ctrl2.month === 0) {
-                ctrl2.month = 11;
-                ctrl2.year = ctrl2.year - 1;
+              if (ctrl.month === 0) {
+                ctrl.month = 11;
+                ctrl.year = ctrl.year - 1;
               } else {
-                ctrl2.month = ctrl2.month - 1;
+                ctrl.month = ctrl.month - 1;
               }
-              ctrl2.refresh_month_view();
+              ctrl.refresh_month_view();
             },
             next_year: () => {
-              ctrl2.year = ctrl2.year + 1;
-              ctrl2.refresh_month_view();
+              ctrl.year = ctrl.year + 1;
+              ctrl.refresh_month_view();
             },
             previous_year: () => {
-              ctrl2.year = ctrl2.year - 1;
-              ctrl2.refresh_month_view();
+              ctrl.year = ctrl.year - 1;
+              ctrl.refresh_month_view();
             }
           });
         };
@@ -32065,9 +37271,8 @@ div.grid .row .cell span {
       var Ctrl_Display_Mode_Category = class extends Evented_Class {
         constructor(spec = {}) {
           super(spec);
-          let name;
           if (spec.name) {
-            name = spec.name;
+            this.name = spec.name;
           } else {
             throw "Ctrl_Display_Mode_Category requires a name property";
           }
@@ -32078,16 +37283,23 @@ div.grid .row .cell span {
           super(spec);
           const map_categories = {}, arr_categories = [];
           if (spec.names) {
+            const add_category = (name) => {
+              if (typeof name !== "string" || name.length === 0) return;
+              if (map_categories[name]) return;
+              const cat = new Ctrl_Display_Mode_Category({ name });
+              map_categories[name] = cat;
+              arr_categories.push(cat);
+            };
             if (tof(spec.names) === "array") {
-              each(spec.names, (name) => {
-                const cat = new Ctrl_Display_Mode_Category({ name });
-                map_categories[name] = cat;
-                arr_categories.push(cat);
-              });
-            } else {
-              throw "NYI";
+              each(spec.names, (name) => add_category(name));
+            } else if (tof(spec.names) === "string") {
+              add_category(spec.names);
+            } else if (tof(spec.names) === "object") {
+              each(spec.names, (_value, key2) => add_category(key2));
             }
           }
+          this.map = map_categories;
+          this.arr = arr_categories;
         }
       };
       var Ctrl_Display_Modes = class extends Evented_Class {
@@ -32095,12 +37307,16 @@ div.grid .row .cell span {
           super(spec);
           const arr_category_names = ["size", "layout", "colors", "interactivity"];
           const categories = new Ctrl_Display_Modes_Categories({ names: arr_category_names });
-          Object.defineProperty(ctrl, "categories", {
+          Object.defineProperty(this, "categories", { get: () => categories });
+          let _value;
+          Object.defineProperty(this, "value", {
             get() {
-              return categories;
+              return _value;
             },
             set(value2) {
-              throw "NYI";
+              const old = _value;
+              _value = value2;
+              this.raise("change", { name: "value", old, value: value2 });
             }
           });
         }
@@ -32109,35 +37325,33 @@ div.grid .row .cell span {
         // so it can have on change events.
         constructor(spec = {}) {
           super(spec);
-          let ctrl2;
-          if (spec.ctrl) ctrl2 = spec.ctrl;
-          const modes = new Ctrl_Display_Modes({});
+          let ctrl;
+          if (spec.ctrl) ctrl = spec.ctrl;
+          const modes = new Ctrl_Display_Modes({ ctrl });
           Object.defineProperty(this, "modes", {
             get() {
               return modes;
             },
             set(value2) {
-              throw "NYI";
+              modes.value = value2;
             }
           });
         }
       };
-      var display = (ctrl2, opts = {}) => {
-        if (ctrl2.display) {
-          throw "ctrl already has .display property";
-        } else {
-          const ctrl_display = new Ctrl_Display({
-            ctrl: ctrl2
-          });
-          Object.defineProperty(ctrl2, "display", {
-            get() {
-              return ctrl_display;
-            },
-            set(value2) {
-              throw "NYI";
-            }
-          });
-        }
+      var display = (ctrl, opts = {}) => {
+        if (ctrl.display) return ctrl.display;
+        const ctrl_display = new Ctrl_Display({
+          ctrl
+        });
+        Object.defineProperty(ctrl, "display", {
+          get() {
+            return ctrl_display;
+          },
+          set(value2) {
+            ctrl_display.modes = value2;
+          }
+        });
+        return ctrl_display;
       };
       module.exports = display;
     }
@@ -32146,7 +37360,7 @@ div.grid .row .cell span {
   // node_modules/jsgui3-html/control_mixins/display-modes.js
   var require_display_modes = __commonJS({
     "node_modules/jsgui3-html/control_mixins/display-modes.js"(exports, module) {
-      var display_modes = (ctrl2, opts = {}) => {
+      var display_modes = (ctrl, opts = {}) => {
       };
       module.exports = display_modes;
     }
@@ -32155,18 +37369,18 @@ div.grid .row .cell span {
   // node_modules/jsgui3-html/control_mixins/fast-touch-click.js
   var require_fast_touch_click = __commonJS({
     "node_modules/jsgui3-html/control_mixins/fast-touch-click.js"(exports, module) {
-      var fast_touch_click = (ctrl2) => {
+      var fast_touch_click = (ctrl) => {
         let has_moved_away = false;
-        ctrl2.on("touchstart", (ets) => {
+        ctrl.on("touchstart", (ets) => {
           ets.preventDefault();
         });
-        ctrl2.on("touchend", (ete) => {
+        ctrl.on("touchend", (ete) => {
           if (!has_moved_away) {
-            ctrl2.raise("click", ete);
+            ctrl.raise("click", ete);
           }
           has_moved_away = false;
         });
-        ctrl2.on("touchmove", (etm) => {
+        ctrl.on("touchmove", (etm) => {
           has_moved_away = true;
         });
       };
@@ -32195,9 +37409,9 @@ div.grid .row .cell span {
         }
         return body.popup_layer;
       };
-      var popup = (ctrl2) => {
-        let context2 = ctrl2.context;
-        ctrl2.popup = () => {
+      var popup = (ctrl) => {
+        let context2 = ctrl.context;
+        ctrl.popup = () => {
           let popup_layer = context_ensure_popup_layer(context2);
           let parent, placeholder;
           setTimeout(() => {
@@ -32205,22 +37419,22 @@ div.grid .row .cell span {
               "context": context2,
               "__type_name": "placeholder"
             });
-            parent = ctrl2.parent;
+            parent = ctrl.parent;
             let absolute_container = new Control2({
               "context": context2
             });
             popup_layer.add(absolute_container);
             absolute_container.add(placeholder);
-            parent.content.swap(ctrl2, placeholder);
+            parent.content.swap(ctrl, placeholder);
             let bcr = placeholder.dom.el.getBoundingClientRect();
             absolute_container.dom.attrs.style.position = "absolute";
             absolute_container.dom.attrs.style.left = bcr.left + "px";
             absolute_container.dom.attrs.style.top = bcr.top + "px";
-            ctrl2.remove_class("hidden");
+            ctrl.remove_class("hidden");
           }, 0);
           const replace = () => {
-            ctrl2.add_class("hidden");
-            parent.content.swap(placeholder, ctrl2);
+            ctrl.add_class("hidden");
+            parent.content.swap(placeholder, ctrl);
           };
           return replace;
         };
@@ -32240,25 +37454,25 @@ div.grid .row .cell span {
         each,
         tof
       } = require_lang();
-      var drag_like_events = (ctrl2, opts = {}) => {
+      var drag_like_events = (ctrl, opts = {}) => {
         let {
           //condition
         } = opts;
         let start_action;
-        if (!ctrl2.__using_drag_like_events) {
+        if (!ctrl.__using_drag_like_events) {
           start_action = start_action || ["touchstart", "mousedown"];
           if (tof(start_action) === "string") start_action = [start_action];
           let pos_md, pos_mm, pos_mu, pos_md_within_ctrl;
-          let ctrl_body = ctrl2.context.body();
+          let ctrl_body = ctrl.context.body();
           let dragging = false;
           let drag_offset_distance = opts.start_distance || 6;
           let movement_offset;
           let item_start_pos;
           let half_item_width, item_width, initial_bcr;
-          const el = ctrl2.dom.el;
+          const el = ctrl.dom.el;
           let initial_ctrl_translate;
           const begin_drag = (pos) => {
-            initial_bcr = ctrl2.bcr();
+            initial_bcr = ctrl.bcr();
             dragging = true;
             const old_bounds_handling_code = () => {
               if (bounds) {
@@ -32272,10 +37486,10 @@ div.grid .row .cell span {
                 }
               }
             };
-            ctrl2.raise("drag-like-action-start");
+            ctrl.raise("drag-like-action-start");
           };
           const move_drag = (pos) => {
-            ctrl2.raise("drag-like-action-move", {
+            ctrl.raise("drag-like-action-move", {
               offset: movement_offset
             });
           };
@@ -32321,7 +37535,7 @@ div.grid .row .cell span {
             ctrl_body.off("touchend", body_mu);
             if (dragging) {
               dragging = false;
-              ctrl2.raise("drag-like-action-end", {
+              ctrl.raise("drag-like-action-end", {
                 offset: movement_offset
               });
             }
@@ -32342,22 +37556,22 @@ div.grid .row .cell span {
             ctrl_body.on("touchmove", body_mm);
             ctrl_body.on("touchend", body_mu);
           };
-          field(ctrl2, "drag_like_events");
-          ctrl2.on("change", (e_change) => {
+          field(ctrl, "drag_like_events");
+          ctrl.on("change", (e_change) => {
             let n = e_change.name, value2 = e_change.value;
             if (n === "drag_like_events") {
               if (value2 === true) {
                 if (typeof document === "undefined") {
                 } else {
                   let apply_start_handlers = (start_action2) => {
-                    if (!ctrl2.has_drag_like_md_handler) {
-                      ctrl2.has_drag_like_md_handler = true;
+                    if (!ctrl.has_drag_like_md_handler) {
+                      ctrl.has_drag_like_md_handler = true;
                       each(start_action2, (sa) => {
-                        ctrl2.on(sa, h_md);
+                        ctrl.on(sa, h_md);
                       });
                     }
                   };
-                  ctrl2.once_active(() => {
+                  ctrl.once_active(() => {
                     apply_start_handlers(start_action);
                   });
                 }
@@ -32366,15 +37580,15 @@ div.grid .row .cell span {
                 } else {
                   ((start_action2) => {
                     each(start_action2, (sa) => {
-                      ctrl2.off(sa, h_md);
+                      ctrl.off(sa, h_md);
                     });
                   })(start_action);
-                  ctrl2.has_drag_md_handler = false;
+                  ctrl.has_drag_md_handler = false;
                 }
               }
             }
           });
-          ctrl2.__using_drag_like_events = true;
+          ctrl.__using_drag_like_events = true;
         }
       };
       module.exports = drag_like_events;
@@ -32387,70 +37601,115 @@ div.grid .row .cell span {
       var Control2 = require_control();
       var drag_like_events = require_drag_like_events();
       var { tof } = require_lang();
-      var resizable = (ctrl2, options = { resize_mode: "br_handle" }) => {
-        const extra_margin = options.extra_margin !== void 0 ? options.extra_margin : 2;
-        const { bounds: bounds2 } = options;
-        const extent_bounds = options.extent_bounds || options.extent;
+      var { field } = require_oext();
+      var resizable = (ctrl, options = { resize_mode: "br_handle" }) => {
+        const opts = options || {};
+        const ensure_isomorphic_mixin = () => {
+          var _a, _b, _c;
+          const mixins = (_c = (_b = (_a = ctrl.view) == null ? void 0 : _a.data) == null ? void 0 : _b.model) == null ? void 0 : _c.mixins;
+          if (!mixins || typeof mixins.each !== "function" || typeof mixins.push !== "function") return;
+          let has_resizable = false;
+          mixins.each((mixin) => {
+            if (mixin && mixin.name === "resizable") has_resizable = true;
+          });
+          if (has_resizable) return;
+          const old_silent = mixins.silent;
+          mixins.silent = true;
+          mixins.push({ name: "resizable" });
+          mixins.silent = old_silent;
+        };
+        ensure_isomorphic_mixin();
+        field(ctrl, "resizable");
+        ctrl.resizable = true;
+        const extra_margin = opts.extra_margin !== void 0 ? opts.extra_margin : 2;
+        const { bounds: bounds2 } = opts;
+        const extent_bounds = opts.extent_bounds || opts.extent;
         const t_extent_bounds = tof(extent_bounds);
         let min_bound, max_bound;
         if (bounds2) {
           [min_bound, max_bound] = bounds2;
         }
-        const { resize_mode } = options;
+        const { resize_mode } = opts;
         const start_action = ["touchstart", "mousedown"];
         let initial_size, initial_measured_pos_within_ctrl_bounds;
         if (resize_mode === "br_handle") {
-          if (ctrl2.ctrl_relative) {
-            if (ctrl2.ctrl_br_resize_handle) {
-              console.log("ctrl.ctrl_br_resize_handle already detected");
-            } else {
-              const ctrl_br_resize_handle = new Control2({
-                context: ctrl2.context
-              });
-              ctrl_br_resize_handle.add_class("bottom-right");
-              ctrl_br_resize_handle.add_class("resize-handle");
-              ctrl_br_resize_handle.add("\u25E2");
-              ctrl2.ctrl_relative.add(ctrl_br_resize_handle);
-              ctrl_br_resize_handle.pre_activate();
-              ctrl_br_resize_handle.activate();
-              ctrl2.ctrl_br_resize_handle = ctrl_br_resize_handle;
-              drag_like_events(ctrl_br_resize_handle);
-              ctrl_br_resize_handle.drag_like_events = true;
-              let css_transition;
-              ctrl_br_resize_handle.on("drag-like-action-start", () => {
-                initial_size = ctrl2.bcr()[2];
-                if (t_extent_bounds === "control") {
-                  const ctrl_bcr = ctrl2.bcr();
-                  const extent_bounds_ctrl_bcr = extent_bounds.bcr();
-                  const pos_offset = [ctrl_bcr[0][0] - extent_bounds_ctrl_bcr[0][0], ctrl_bcr[0][1] - extent_bounds_ctrl_bcr[0][1]];
-                  const extent_bounds_ctrl_measured_size = extent_bounds_ctrl_bcr[2];
-                  const bounded_max_size = [extent_bounds_ctrl_measured_size[0] - pos_offset[0] - extra_margin, extent_bounds_ctrl_measured_size[1] - pos_offset[1] - extra_margin];
-                  max_bound = bounded_max_size;
-                }
-                ctrl2.add_class("no-transitions");
-                ctrl_br_resize_handle.add_class("resizing");
-              });
-              ctrl_br_resize_handle.on("drag-like-action-move", (e_drag_like_action_move) => {
-                const { offset: offset2 } = e_drag_like_action_move;
-                const new_size = [initial_size[0] + offset2[0], initial_size[1] + offset2[1]];
-                if (min_bound) {
-                  if (new_size[0] < min_bound[0]) new_size[0] = min_bound[0];
-                  if (new_size[1] < min_bound[1]) new_size[1] = min_bound[1];
-                }
-                if (max_bound) {
-                  if (new_size[0] > max_bound[0]) new_size[0] = max_bound[0];
-                  if (new_size[1] > max_bound[1]) new_size[1] = max_bound[1];
-                }
-                ctrl2.size = new_size;
-              });
-              ctrl_br_resize_handle.on("drag-like-action-end", (e_drag_like_action_end) => {
-                ctrl_br_resize_handle.remove_class("resizing");
-                ctrl2.remove_class("no-transitions");
-              });
+          const ctrl_relative = ctrl.ctrl_relative || ctrl;
+          if (!ctrl.ctrl_relative) {
+            ctrl.ctrl_relative = ctrl_relative;
+            if (ctrl.dom && ctrl.dom.attributes && ctrl.dom.attributes.style && !ctrl.dom.attributes.style.position) {
+              ctrl.dom.attributes.style.position = "relative";
             }
+          }
+          const find_existing_resize_handle = () => {
+            var _a;
+            const arr = ((_a = ctrl_relative == null ? void 0 : ctrl_relative.content) == null ? void 0 : _a._arr) || [];
+            for (let idx = 0; idx < arr.length; idx++) {
+              const item2 = arr[idx];
+              if (item2 && typeof item2.has_class === "function") {
+                if (item2.has_class("resize-handle") && item2.has_class("bottom-right")) return item2;
+              }
+            }
+            return void 0;
+          };
+          if (!ctrl.ctrl_br_resize_handle) {
+            const found = find_existing_resize_handle();
+            if (found) ctrl.ctrl_br_resize_handle = found;
+          }
+          if (ctrl.ctrl_br_resize_handle) {
           } else {
-            console.trace();
-            throw "NYI";
+            const ctrl_br_resize_handle2 = new Control2({
+              context: ctrl.context
+            });
+            ctrl_br_resize_handle2.add_class("bottom-right");
+            ctrl_br_resize_handle2.add_class("resize-handle");
+            ctrl_br_resize_handle2.add("\u25E2");
+            ctrl_relative.add(ctrl_br_resize_handle2);
+            if (typeof document !== "undefined" && ctrl_relative.dom && ctrl_relative.dom.el && ctrl_relative.__active) {
+              ctrl_br_resize_handle2.pre_activate();
+              if (ctrl_br_resize_handle2.dom && ctrl_br_resize_handle2.dom.el) {
+                ctrl_br_resize_handle2.activate();
+              }
+            }
+            ctrl.ctrl_br_resize_handle = ctrl_br_resize_handle2;
+          }
+          const ctrl_br_resize_handle = ctrl.ctrl_br_resize_handle;
+          if (typeof document !== "undefined" && ctrl_br_resize_handle.context && typeof ctrl_br_resize_handle.context.body === "function") {
+            drag_like_events(ctrl_br_resize_handle);
+            ctrl_br_resize_handle.drag_like_events = true;
+          }
+          if (!ctrl_br_resize_handle.__has_resizable_handle_events) {
+            ctrl_br_resize_handle.__has_resizable_handle_events = true;
+            let css_transition;
+            ctrl_br_resize_handle.on("drag-like-action-start", () => {
+              initial_size = ctrl.bcr()[2];
+              if (t_extent_bounds === "control") {
+                const ctrl_bcr = ctrl.bcr();
+                const extent_bounds_ctrl_bcr = extent_bounds.bcr();
+                const pos_offset = [ctrl_bcr[0][0] - extent_bounds_ctrl_bcr[0][0], ctrl_bcr[0][1] - extent_bounds_ctrl_bcr[0][1]];
+                const extent_bounds_ctrl_measured_size = extent_bounds_ctrl_bcr[2];
+                const bounded_max_size = [extent_bounds_ctrl_measured_size[0] - pos_offset[0] - extra_margin, extent_bounds_ctrl_measured_size[1] - pos_offset[1] - extra_margin];
+                max_bound = bounded_max_size;
+              }
+              ctrl.add_class("no-transitions");
+              ctrl_br_resize_handle.add_class("resizing");
+            });
+            ctrl_br_resize_handle.on("drag-like-action-move", (e_drag_like_action_move) => {
+              const { offset: offset2 } = e_drag_like_action_move;
+              const new_size = [initial_size[0] + offset2[0], initial_size[1] + offset2[1]];
+              if (min_bound) {
+                if (new_size[0] < min_bound[0]) new_size[0] = min_bound[0];
+                if (new_size[1] < min_bound[1]) new_size[1] = min_bound[1];
+              }
+              if (max_bound) {
+                if (new_size[0] > max_bound[0]) new_size[0] = max_bound[0];
+                if (new_size[1] > max_bound[1]) new_size[1] = max_bound[1];
+              }
+              ctrl.size = new_size;
+            });
+            ctrl_br_resize_handle.on("drag-like-action-end", (e_drag_like_action_end) => {
+              ctrl_br_resize_handle.remove_class("resizing");
+              ctrl.remove_class("no-transitions");
+            });
           }
         }
       };
@@ -32461,10 +37720,10 @@ div.grid .row .cell span {
   // node_modules/jsgui3-html/control_mixins/deletable.js
   var require_deletable = __commonJS({
     "node_modules/jsgui3-html/control_mixins/deletable.js"(exports, module) {
-      var deletable = (ctrl2) => {
-        ctrl2.delete = () => {
-          ctrl2.remove();
-          ctrl2.raise("delete");
+      var deletable = (ctrl) => {
+        ctrl.delete = () => {
+          ctrl.remove();
+          ctrl.raise("delete");
         };
       };
       module.exports = deletable;
@@ -32479,24 +37738,24 @@ div.grid .row .cell span {
         field
       } = require_oext();
       var deletable = require_deletable();
-      var selected_deletable = (ctrl2) => {
-        deletable(ctrl2);
-        let old_selected_deletable = ctrl2.selected_deletable;
+      var selected_deletable = (ctrl) => {
+        deletable(ctrl);
+        let old_selected_deletable = ctrl.selected_deletable;
         let click_handler = (e) => {
         };
         let press_handler = (event) => {
           const keyName = event.key;
           if (keyName === "Delete") {
-            ctrl2.delete();
+            ctrl.delete();
           }
         };
-        ctrl2.on("change", (e_change) => {
+        ctrl.on("change", (e_change) => {
           let {
             name,
             value: value2
           } = e_change;
           if (name === "selected") {
-            ctrl2.once_active(() => {
+            ctrl.once_active(() => {
               if (value2) {
                 document.addEventListener("keydown", press_handler, false);
               } else {
@@ -32509,7 +37768,7 @@ div.grid .row .cell span {
         });
         if (true) {
           if (old_selected_deletable !== void 0) {
-            ctrl2.selected_deletable = old_selected_deletable;
+            ctrl.selected_deletable = old_selected_deletable;
           }
         }
       };
@@ -32524,8 +37783,8 @@ div.grid .row .cell span {
         prop,
         field
       } = require_oext();
-      var selected_resizable = (ctrl2, ctrl_handle) => {
-        let old_selected_resizable = ctrl2.old_selected_resizable;
+      var selected_resizable = (ctrl, ctrl_handle) => {
+        let old_selected_resizable = ctrl.old_selected_resizable;
         let click_handler = (e) => {
         };
         let press_handler = (event) => {
@@ -32538,13 +37797,13 @@ div.grid .row .cell span {
           } else {
           }
         };
-        ctrl2.on("change", (e_change) => {
+        ctrl.on("change", (e_change) => {
           let {
             name,
             value: value2
           } = e_change;
           if (name === "selected") {
-            ctrl2.once_active(() => {
+            ctrl.once_active(() => {
               if (value2) {
                 document.addEventListener("keypress", press_handler, false);
               } else {
@@ -32557,7 +37816,7 @@ div.grid .row .cell span {
         });
         if (true) {
           if (old_selectable !== void 0) {
-            ctrl2.selected_deletable = old_sselected_deletableelectable;
+            ctrl.selected_deletable = old_sselected_deletableelectable;
           }
         }
       };
@@ -32590,22 +37849,22 @@ div.grid .row .cell span {
           [w, h]
         ];
       };
-      var selection_box_host = (ctrl2) => {
+      var selection_box_host = (ctrl) => {
         let click_handler = (e) => {
-          if (ctrl2.selectable && !ctrl2.selection_scope) {
+          if (ctrl.selectable && !ctrl.selection_scope) {
             var ctrl_key = e.ctrlKey;
             var meta_key = e.metaKey;
             if (ctrl_key || meta_key) {
-              ctrl2.action_select_toggle();
+              ctrl.action_select_toggle();
             } else {
-              ctrl2.action_select_only();
+              ctrl.action_select_only();
             }
           }
         };
-        field(ctrl2, "selection_box_host");
-        ctrl2.selection_box_host = true;
-        let old_activate = ctrl2.activate;
-        ctrl2.activate = function(spec) {
+        field(ctrl, "selection_box_host");
+        ctrl.selection_box_host = true;
+        let old_activate = ctrl.activate;
+        ctrl.activate = function(spec) {
           if (old_activate) {
             old_activate.call(this, spec);
           }
@@ -32628,17 +37887,17 @@ div.grid .row .cell span {
             });
             return selection_box;
           };
-          ctrl2.drag_events((md) => {
+          ctrl.drag_events((md) => {
             console.log("md", md);
-            let main_boxes = ctrl2.$(".main-box");
+            let main_boxes = ctrl.$(".main-box");
             let do_begin_selection_box = true;
             if (md.target.tagName.toLowerCase() === "span") {
               do_begin_selection_box = false;
             }
             if (do_begin_selection_box) {
               md_pos = md.pos;
-              ctrl2.find_selection_scope().deselect_all();
-              let ctrl_pos = ctrl2.bcr()[0];
+              ctrl.find_selection_scope().deselect_all();
+              let ctrl_pos = ctrl.bcr()[0];
               md_offset_within_ctrl = v_subtract(md.pos, ctrl_pos);
               md_offset_within_ctrl[1] -= window.scrollY;
               md_pos[1] -= window.scrollY;
@@ -32648,14 +37907,14 @@ div.grid .row .cell span {
               isf.on("change", (e_change) => {
                 if (e_change.name === "intersections") {
                   let [intersecting, newly_intersecting, previously_intersecting] = e_change.value;
-                  each(newly_intersecting, (ctrl3) => {
-                    let sel = ctrl3.closest((cmatch) => {
+                  each(newly_intersecting, (ctrl2) => {
+                    let sel = ctrl2.closest((cmatch) => {
                       return cmatch.selectable === true;
                     });
                     if (sel) sel.selected = true;
                   });
-                  each(previously_intersecting, (ctrl3) => {
-                    let sel = ctrl3.closest((match) => match.selectable === true);
+                  each(previously_intersecting, (ctrl2) => {
+                    let sel = ctrl2.closest((match) => match.selectable === true);
                     if (sel) sel.selected = false;
                   });
                 }
@@ -32670,7 +37929,7 @@ div.grid .row .cell span {
             if (selection_box) {
               mm_pos = mm.pos;
               mm_pos[1] -= window.scrollY;
-              let ctrl_pos = ctrl2.bcr()[0];
+              let ctrl_pos = ctrl.bcr()[0];
               mm_offset_within_ctrl = v_subtract(mm.pos, ctrl_pos);
               selection_box.coords = [md_offset_within_ctrl, mm_offset_within_ctrl];
               isf.coords = [md_pos, mm_pos];
@@ -32689,23 +37948,23 @@ div.grid .row .cell span {
   var require_press_events = __commonJS({
     "node_modules/jsgui3-html/control_mixins/press-events.js"(exports, module) {
       var { get_truth_map_from_arr, each } = require_lang();
-      var press_events = (ctrl2, options = {}) => {
-        ctrl2.__mx = ctrl2.__mx || {};
-        ctrl2.__mx.press_events = true;
+      var press_events = (ctrl, options = {}) => {
+        ctrl.__mx = ctrl.__mx || {};
+        ctrl.__mx.press_events = true;
         const press_event_names = ["press-start", "press-move", "press-end", "press-hold", "press-drag-start"];
         const map_press_event_names = get_truth_map_from_arr(press_event_names);
         const setup_isomorphic = () => {
-          const old_silent = ctrl2.view.data.model.mixins.silent;
-          ctrl2.view.data.model.mixins.silent = true;
-          ctrl2.view.data.model.mixins.push({
+          const old_silent = ctrl.view.data.model.mixins.silent;
+          ctrl.view.data.model.mixins.silent = true;
+          ctrl.view.data.model.mixins.push({
             name: "press-events"
           });
-          ctrl2.view.data.model.mixins.silent = old_silent;
+          ctrl.view.data.model.mixins.silent = old_silent;
         };
         setup_isomorphic();
-        if (ctrl2.dom.el) {
-          ctrl2.once_active(() => {
-            const body = ctrl2.context.body();
+        if (ctrl.dom.el) {
+          ctrl.once_active(() => {
+            const body = ctrl.context.body();
             const { css } = options;
             let handling_is_setup = false;
             let pos_start;
@@ -32744,17 +38003,17 @@ div.grid .row .cell span {
               movement_offsets.push(movement_offset);
               e.movement_offsets = movement_offsets;
               e.move_mag = move_mag = Math.sqrt(Math.pow(movement_offset[0], 2) + Math.pow(movement_offset[1], 2));
-              e.ctrl = ctrl2;
-              ctrl2.raise("press-move", e);
+              e.ctrl = ctrl;
+              ctrl.raise("press-move", e);
               if (move_mag >= 4 && !drag_started) {
-                ctrl2.raise("press-drag-start", e);
+                ctrl.raise("press-drag-start", e);
                 drag_started = true;
               }
             };
             const pe = (e) => {
               e.movement_offsets = movement_offsets;
               e.move_mag = move_mag;
-              e.ctrl = ctrl2;
+              e.ctrl = ctrl;
               e.el = el;
               if (timeout_hold) clearTimeout(timeout_hold);
               body.off({
@@ -32763,7 +38022,7 @@ div.grid .row .cell span {
                 mouseup: mu,
                 mousemove: mm
               });
-              ctrl2.raise("press-end", e);
+              ctrl.raise("press-end", e);
             };
             const mu = (e) => {
               body.off({
@@ -32799,32 +38058,32 @@ div.grid .row .cell span {
                   mousemove: mm
                 });
               }
-              e.ctrl = ctrl2;
-              ctrl2.raise("press-start", e);
+              e.ctrl = ctrl;
+              ctrl.raise("press-start", e);
               timeout_hold = setTimeout(() => {
                 if (move_mag <= hold_movement_threshold) {
-                  ctrl2.raise("press-hold", e);
+                  ctrl.raise("press-hold", e);
                 }
               }, ms_short);
             };
             const setup = () => {
-              ctrl2.on({
+              ctrl.on({
                 "touchstart": ts,
                 "mousedown": md
               });
               handling_is_setup = true;
             };
             const unsetup = () => {
-              ctrl2.off({
+              ctrl.off({
                 "touchstart": ts,
                 "mousedown": md
               });
               handling_is_setup = false;
             };
             const outer_setup = () => {
-              ctrl2.event_events = true;
+              ctrl.event_events = true;
               const relying_on_recognising_adding_of_event_listeners = () => {
-                ctrl2.on("add-event-listener", (e) => {
+                ctrl.on("add-event-listener", (e) => {
                   const { name } = e;
                   if (map_press_event_names[name]) {
                     if (!handling_is_setup) {
@@ -32832,11 +38091,11 @@ div.grid .row .cell span {
                     }
                   }
                 });
-                ctrl2.on("remove-event-listener", (e) => {
+                ctrl.on("remove-event-listener", (e) => {
                   const { name } = e;
                   if (map_press_event_names[name]) {
                     console.log("ctrl remove-event-listener", name);
-                    const bnec = ctrl2.bound_named_event_counts;
+                    const bnec = ctrl.bound_named_event_counts;
                     console.log("bound_named_event_counts bnec", bnec);
                     console.log("name", name);
                     let count_bound_press_events = 0;
@@ -32859,11 +38118,11 @@ div.grid .row .cell span {
             outer_setup();
           });
         }
-        if (typeof window !== "undefined" && ctrl2.dom && ctrl2.dom.el) {
-          ctrl2.on("press-start", (e_ps) => {
+        if (typeof window !== "undefined" && ctrl.dom && ctrl.dom.el) {
+          ctrl.on("press-start", (e_ps) => {
             const outsideHandler = (e_pe) => {
-              if (!ctrl2.dom.el.contains(e_pe.target)) {
-                ctrl2.raise("press-outside", e_pe);
+              if (!ctrl.dom.el.contains(e_pe.target)) {
+                ctrl.raise("press-outside", e_pe);
               }
               window.removeEventListener("mouseup", outsideHandler);
               window.removeEventListener("touchend", outsideHandler);
@@ -32881,25 +38140,25 @@ div.grid .row .cell span {
   var require_press_outside = __commonJS({
     "node_modules/jsgui3-html/control_mixins/press-outside.js"(exports, module) {
       var press_events = require_press_events();
-      var press_outside = (ctrl2, options = {}) => {
+      var press_outside = (ctrl, options = {}) => {
         let once = options.one || options.once || false;
         console.log("press_outside");
-        ctrl2.__mx = ctrl2.__mx || {};
-        if (!ctrl2.__mx || !ctrl2.__mx.press_events) {
-          press_events(ctrl2);
+        ctrl.__mx = ctrl.__mx || {};
+        if (!ctrl.__mx || !ctrl.__mx.press_events) {
+          press_events(ctrl);
         }
-        ctrl2.__mx.press_outside = true;
-        const body = ctrl2.context.body();
+        ctrl.__mx.press_outside = true;
+        const body = ctrl.context.body();
         if (!body.__mx || !body.__mx.press_events) {
           press_events(body);
         }
-        ctrl2.event_events = true;
+        ctrl.event_events = true;
         const body_press = (e) => {
           console.log("press_outside body press e", e);
           const { ctrl_target } = e;
-          const match = ctrl_target === ctrl2 || ctrl_target.ancestor(ctrl2);
+          const match = ctrl_target === ctrl || ctrl_target.ancestor(ctrl);
           if (!match) {
-            ctrl2.raise("press-outside", e);
+            ctrl.raise("press-outside", e);
           }
         };
         const setup_body_press = () => {
@@ -32908,13 +38167,13 @@ div.grid .row .cell span {
         const remove_body_press = () => {
           body.off("press-end", body_press);
         };
-        ctrl2.on("add-event-listener", (e) => {
+        ctrl.on("add-event-listener", (e) => {
           const { name } = e;
           if (name === "press-outside") {
             setup_body_press();
           }
         });
-        ctrl2.on("remove-event-listener", (e) => {
+        ctrl.on("remove-event-listener", (e) => {
           const { name } = e;
           if (name === "press-outside") {
             remove_body_press();
@@ -32933,33 +38192,33 @@ div.grid .row .cell span {
         prop
       } = require_oext();
       var press_events = require_press_events();
-      var pressed_state = (ctrl2, options = {}) => {
-        ctrl2.__mx = ctrl2.__mx || {};
-        if (!ctrl2.__mx || !ctrl2.__mx.press_events) {
-          press_events(ctrl2);
+      var pressed_state = (ctrl, options = {}) => {
+        ctrl.__mx = ctrl.__mx || {};
+        if (!ctrl.__mx || !ctrl.__mx.press_events) {
+          press_events(ctrl);
         }
-        ctrl2.__mx.pressed_state = true;
+        ctrl.__mx.pressed_state = true;
         const setup_isomorphic = () => {
-          const old_silent = ctrl2.view.data.model.mixins.silent;
-          ctrl2.view.data.model.mixins.silent = true;
-          ctrl2.view.data.model.mixins.push({
+          const old_silent = ctrl.view.data.model.mixins.silent;
+          ctrl.view.data.model.mixins.silent = true;
+          ctrl.view.data.model.mixins.push({
             name: "pressed-state"
           });
-          ctrl2.view.data.model.mixins.silent = old_silent;
+          ctrl.view.data.model.mixins.silent = old_silent;
         };
         setup_isomorphic();
-        field(ctrl2.view.data.model, "state");
-        ctrl2.on("press-start", () => {
-          ctrl2.view.data.model.state = "pressed";
+        field(ctrl.view.data.model, "state");
+        ctrl.on("press-start", () => {
+          ctrl.view.data.model.state = "pressed";
         });
-        ctrl2.on("press-end", () => {
-          ctrl2.view.data.model.state = "not-pressed";
+        ctrl.on("press-end", () => {
+          ctrl.view.data.model.state = "not-pressed";
         });
-        ctrl2.view.data.model.on("change", (e) => {
+        ctrl.view.data.model.on("change", (e) => {
           const { name, value: value2 } = e;
           if (name === "state") {
-            if (value2 === "pressed") ctrl2.add_class("pressed");
-            else ctrl2.remove_class("pressed");
+            if (value2 === "pressed") ctrl.add_class("pressed");
+            else ctrl.remove_class("pressed");
           }
         });
       };
@@ -33184,11 +38443,15 @@ div.grid .row .cell span {
           super(spec);
           const { context: context2 } = this;
           if (spec.placeholder) this.placeholder = spec.placeholder;
+          if (this.placeholder) {
+            this.dom.attributes.placeholder = this.placeholder;
+          }
           if (!spec.el) {
           }
           const view_data_model_change_handler = (e) => {
             const { name, value: value2, old } = e;
             if (name === "value") {
+              this.dom.attributes.value = value2;
               if (this.dom.el) {
                 this.dom.el.value = value2 + "";
               }
@@ -33229,8 +38492,13 @@ div.grid .row .cell span {
           if (this.data.model.value !== void 0) {
             this.view.data.model.value = this.data.model.value;
           }
-          if (spec.value) {
-            this.data.model.value = spec.value;
+          if (spec.value !== void 0) {
+            if (this.data && this.data.model && typeof this.data.model.set === "function") {
+              this.data.model.set("value", spec.value, true);
+            } else {
+              this.data.model.value = spec.value;
+            }
+            this.dom.attributes.value = spec.value;
           }
           this.dom.tagName = "input";
           this.dom.attributes.type = "text";
@@ -33474,6 +38742,14 @@ div.grid .row .cell span {
               }
             });
           };
+          create_control_validation_but_maybe_we_dont_need_it();
+          if (this.data && this.data.model) {
+            try {
+              this.data.model.set("validation", this.validation, true);
+            } catch (e) {
+              this.data.model.validation = this.validation;
+            }
+          }
           this.data.on("change", (e) => {
             console.log("V_S_I change e:", e);
             const { name, old, value: value2 } = e;
@@ -33481,9 +38757,11 @@ div.grid .row .cell span {
               console.log("vsi data model change e", e);
             }
           });
-          this.data.model.validation.state.on("change", (e) => {
-            console.log("Validation_Status_Indicator .data.model.validation.state change e:", e);
-          });
+          if (this.data && this.data.model && this.data.model.validation && this.data.model.validation.state && this.data.model.validation.state.on) {
+            this.data.model.validation.state.on("change", (e) => {
+              console.log("Validation_Status_Indicator .data.model.validation.state change e:", e);
+            });
+          }
         }
         activate() {
           const log_some_things = () => {
@@ -33548,6 +38826,21 @@ div.grid .row .cell span {
           this.__type_name = "text_field";
           this.add_class("text-field");
           if (spec.placeholder) this.placeholder = spec.placeholder;
+          if (spec.label !== void 0 && spec.text === void 0) {
+            this.text = spec.label;
+          }
+          if (spec.value !== void 0) {
+            try {
+              this.set("value", spec.value, true);
+            } catch (e) {
+              this.value = spec.value;
+            }
+            if (this.data && this.data.model && typeof this.data.model.set === "function") {
+              this.data.model.set("value", spec.value, true);
+            } else if (this.data && this.data.model) {
+              this.data.model.value = spec.value;
+            }
+          }
           const { context: context2 } = this;
           const data_model_change_handler = (e) => {
             console.log("Text_Field data_model_change_handler e", e);
@@ -33611,9 +38904,6 @@ div.grid .row .cell span {
           };
           if (!spec.el) {
             this.compose_text_field();
-          }
-          if (spec.value !== void 0) {
-            this.data.model.value = spec.value;
           }
         }
         setup_inner_control_events() {
@@ -34221,12 +39511,28 @@ div.grid .row .cell span {
           if (def(spec.name)) {
             this.name = spec.name;
           }
+          if (def(spec.title)) {
+            this.title = spec.title;
+          }
           if (!spec.abstract && !spec.el) {
             var l2 = 0;
             let n = this.name;
             if (def(n)) {
               let f = this._fields = this._fields || {};
               f.name = n;
+            }
+            if (def(this.title)) {
+              const title_ctrl = new Control2({
+                context: this.context,
+                class: "panel-title"
+              });
+              title_ctrl.add(this.title);
+              this.add(title_ctrl);
+              this._ctrl_fields = this._ctrl_fields || {};
+              this._ctrl_fields.title = title_ctrl;
+            }
+            if (def(spec.content)) {
+              this.add(spec.content);
             }
           }
         }
@@ -34822,11 +40128,64 @@ div.grid .row .cell span {
       var { span } = controls;
       var { prop, field } = require_oext();
       var Icon = require_icon();
+      var c_left_right = (context2, l_content, r_content) => {
+        const left = new Control2({
+          context: context2,
+          class: "left"
+        });
+        left.add(l_content);
+        const right = new Control2({
+          context: context2,
+          class: "right"
+        });
+        right.add(r_content);
+        const res2 = [left, right];
+        return res2;
+      };
       var Item = class extends Control2 {
         constructor(spec) {
           spec.__type_name = spec.__type_name || "item";
           super(spec);
           this.add_class("item");
+          const { context: context2 } = this;
+          const item_value = typeof spec.value !== "undefined" ? spec.value : spec.item;
+          const compose_item = () => {
+            const t_item = tf2(item_value);
+            if (t_item === "s" || t_item === "n" || t_item === "b") {
+              this.add(String(item_value));
+              return;
+            }
+            if (item_value && (item_value instanceof Control2 || item_value.__type === "control")) {
+              this.add(item_value);
+              return;
+            }
+            if (t_item === "o" && item_value) {
+              const item_keys = Object.keys(item_value).sort();
+              if (item_keys.length === 2 && are_equal(item_keys, ["icon", "text"])) {
+                const main_content = new span({ context: context2 });
+                main_content.add(item_value.text);
+                const lr = c_left_right(context2, new Icon({
+                  context: context2,
+                  key: item_value.icon,
+                  size: [64, 64]
+                }), main_content);
+                each(lr, (ctrl) => this.add(ctrl));
+                return;
+              }
+              if (typeof item_value.text !== "undefined") {
+                this.add(String(item_value.text));
+                return;
+              }
+              this.add(JSON.stringify(item_value));
+              return;
+            }
+            if (t_item === "a") {
+              this.add(JSON.stringify(item_value));
+            }
+          };
+          if (!spec.el && typeof item_value !== "undefined") {
+            compose_item();
+          }
         }
       };
       module.exports = Item;
@@ -34868,7 +40227,8 @@ div.grid .row .cell span {
             this.dom.tagName = "ul";
           }
           this.add_class("list");
-          prop(this, "items", spec.items);
+          const items = spec.items || [];
+          prop(this, "items", items);
           if (!spec.el) {
             this.compose_list();
           }
@@ -35062,7 +40422,7 @@ div.grid .row .cell span {
           }
         }
         activate() {
-          let ctrl2 = this;
+          let ctrl = this;
           if (!this.__active) {
             super.activate();
             let item_list = this.item_list;
@@ -35816,32 +41176,32 @@ div.grid .row .cell span {
         compose_tile_slider() {
           const context2 = this.context;
           let above = new Control2({
-            "contect": context2
+            "context": context2
           });
           above.add_class("above");
           this.add(above);
           let left = new Control2({
-            "contect": context2
+            "context": context2
           });
           left.add_class("left");
           this.add(left);
           let right = new Control2({
-            "contect": context2
+            "context": context2
           });
           right.add_class("right");
           this.add(right);
           let below = new Control2({
-            "contect": context2
+            "context": context2
           });
           below.add_class("below");
           this.add(below);
           let central = new Control2({
-            "contect": context2
+            "context": context2
           });
           central.add_class("central");
           this.add(central);
           this.above = above;
-          this.left = left;
+          this.left_ctrl = left;
           this.central = central;
           this.right = right;
           this.below = below;
@@ -35888,9 +41248,9 @@ div.grid .row .cell span {
           return prom_or_cb((resolve, reject) => {
             this.central.dom.attributes.style.transition = "transform 0.33s";
             this.central.dom.attributes.style.transform = "translate(" + this.size[0] + "px, 0px)";
-            this.left.dom.attributes.style.transition = "transform 0.33s";
-            this.left.dom.attributes.style.transform = "translate(" + this.size[0] + "px, 0px)";
-            this.left.one("transitionend", (e_end) => {
+            this.left_ctrl.dom.attributes.style.transition = "transform 0.33s";
+            this.left_ctrl.dom.attributes.style.transform = "translate(" + this.size[0] + "px, 0px)";
+            this.left_ctrl.one("transitionend", (e_end) => {
               resolve();
             });
           }, callback2);
@@ -35934,19 +41294,19 @@ div.grid .row .cell span {
               this.central.size = this.spec.size;
               this.dom.attributes.style.overflow = "hidden";
               this.dom.attributes.style.position = "relative";
-              this.left.dom.attributes.style.position = "absolute";
-              this.left.dom.attributes.style.left = -1 * this.spec.size[0] + "px";
+              this.left_ctrl.dom.attributes.style.position = "absolute";
+              this.left_ctrl.dom.attributes.style.left = -1 * this.spec.size[0] + "px";
               this.right.dom.attributes.style.position = "absolute";
               this.right.dom.attributes.style.left = this.spec.size[0] + "px";
-              this.left.size = this.spec.size;
+              this.left_ctrl.size = this.spec.size;
               this.right.size = this.spec.size;
             }
             if (adjacencies.left === -1) {
               let left_ctrl_prev = new Ctrl(prev_spec);
-              this.left.add(left_ctrl_prev);
+              this.left_ctrl.add(left_ctrl_prev);
             }
-            let ctrl2 = new Ctrl(this.spec);
-            this.central.add(ctrl2);
+            let ctrl = new Ctrl(this.spec);
+            this.central.add(ctrl);
             if (adjacencies.right === 1) {
               let left_ctrl_prev = new Ctrl(next_spec);
               this.right.add(left_ctrl_prev);
@@ -36073,8 +41433,8 @@ div.grid .row .cell span {
                   cell.selectable = false;
                   if (cell.deselect) cell.deselect();
                   cell.value = null;
-                  cell.iterate_this_and_subcontrols((ctrl2) => {
-                    if (ctrl2.dom.tagName === "span") ctrl2.text = "";
+                  cell.iterate_this_and_subcontrols((ctrl) => {
+                    if (ctrl.dom.tagName === "span") ctrl.text = "";
                   });
                 } else {
                   cell.background.color = bgc_enabled;
@@ -36238,9 +41598,9 @@ div.grid .row .cell span {
             var that2 = this;
             super.activate();
             var ctrl_checked;
-            this.content.each(function(ctrl2, i) {
-              ctrl2.on("change", false, function(e_change) {
-                ctrl_checked = ctrl2;
+            this.content.each(function(ctrl, i) {
+              ctrl.on("change", false, function(e_change) {
+                ctrl_checked = ctrl;
                 that2.raise("change", {
                   "checked": ctrl_checked
                 });
@@ -36354,14 +41714,16 @@ div.grid .row .cell span {
         compose_tabbed_panel(tabs_def) {
           const { context: context2 } = this;
           this.tab_pages = [];
-          const add_tab = (name, group_name) => {
+          const tabs = tabs_def || this.tabs || [];
+          const add_tab = (name, group_name2, is_checked) => {
             var html_radio = new Control2({ context: context2 });
             {
               const { dom } = html_radio;
               dom.tagName = "input";
               const { attributes } = dom;
               attributes.type = "radio";
-              attributes.name = group_name;
+              attributes.name = group_name2;
+              if (is_checked) attributes.checked = "checked";
             }
             html_radio.add_class("tab-input");
             this.add(html_radio);
@@ -36377,24 +41739,31 @@ div.grid .row .cell span {
             this.add(tab_page);
             return tab_page;
           };
-          let i_tab = 0;
-          each(this.tabs, (tab) => {
-            const group_name = this._id();
+          const group_name = this._id();
+          const normalize_tab_def = (tab, idx_tab) => {
             const t = tof(tab);
-            if (t === "string") {
-              add_tab(tab, group_name);
-              i_tab++;
-            } else {
-              if (t === "array") {
-                const tab_label_text = tab[0];
-                const tab_content = tab[1];
-                const tab_page = add_tab(tab_label_text, group_name);
-                tab_page.add(tab_content);
-              } else {
-                console.log("tab", tab);
-                console.log("t", t);
-                throw "NYI";
-              }
+            if (t === "string") return { label_text: tab, content: void 0 };
+            if (t === "array") {
+              return { label_text: tab[0], content: tab[1] };
+            }
+            if (tab instanceof Control2) {
+              const label_text = tab.title || tab.name || tab.text || tab.__type_name || "Tab " + (idx_tab + 1);
+              return { label_text, content: tab };
+            }
+            if (t === "object") {
+              const label_text = tab.title || tab.name || tab.text || "Tab " + (idx_tab + 1);
+              const content = tab.content;
+              return { label_text, content };
+            }
+            return { label_text: String(tab), content: void 0 };
+          };
+          each(tabs, (tab, idx_tab) => {
+            const is_checked = idx_tab === 0;
+            const normalized = normalize_tab_def(tab, idx_tab);
+            const label_text = typeof normalized.label_text === "undefined" ? "" : normalized.label_text;
+            const tab_page = add_tab(label_text, group_name, is_checked);
+            if (typeof normalized.content !== "undefined") {
+              tab_page.add(normalized.content);
             }
           });
           const ctrl_break = new Control2({ context: context2 });
@@ -36404,15 +41773,14 @@ div.grid .row .cell span {
         }
         activate() {
           if (!this.__active) {
-            this.__active = true;
+            super.activate();
             const tab_pages = [];
-            each(this.content._arr, (ctrl2) => {
-              if (ctrl2.has_class("tab-page")) {
-                tab_pages.push(ctrl2);
+            each(this.content._arr, (ctrl) => {
+              if (ctrl.has_class("tab-page")) {
+                tab_pages.push(ctrl);
               }
             });
             this.tab_pages = tab_pages;
-            console.log("tab_pages.length", tab_pages.length);
           }
         }
       };
@@ -37542,15 +42910,15 @@ div.grid .row .cell span {
       var Button = require_button();
       var { field, prop } = require_oext();
       var press_events = require_press_events();
-      var watch_resize = (ctrl2) => {
-        let last_size = ctrl2.bcr();
+      var watch_resize = (ctrl) => {
+        let last_size = ctrl.bcr();
         const inner = () => {
           requestAnimationFrame((timestamp) => {
-            const current_size = ctrl2.bcr();
+            const current_size = ctrl.bcr();
             const same_size = are_equal(last_size, current_size);
             if (same_size) {
             } else {
-              ctrl2.raise("resize");
+              ctrl.raise("resize");
               last_size = current_size;
             }
             inner();
@@ -37558,22 +42926,22 @@ div.grid .row .cell span {
         };
         inner();
       };
-      var suspended_frame = (ctrl2, opts = {
+      var suspended_frame = (ctrl, opts = {
         offset: 0
       }) => {
-        const { context: context2 } = ctrl2;
+        const { context: context2 } = ctrl;
         const body = context2.body();
         let arr_ctrls = [];
         let arr_ctrls_with_poss = [];
         const { offset: offset2 } = opts;
         const measure_ctrl = () => {
-          const bcr = ctrl2.bcr();
+          const bcr = ctrl.bcr();
           console.log("bcr", bcr);
           return bcr;
         };
         const clear = () => {
-          each(arr_ctrls, (ctrl3) => {
-            ctrl3.remove();
+          each(arr_ctrls, (ctrl2) => {
+            ctrl2.remove();
           });
           arr_ctrls = [];
           arr_ctrls_with_poss = [];
@@ -37614,16 +42982,16 @@ div.grid .row .cell span {
         };
         const sync_dimensions = () => {
           each(arr_ctrls_with_poss, (cwp) => {
-            const [ctrl3, pos] = cwp;
-            const docpos = get_suspended_ctrl_doc_pos(ctrl3, pos);
-            ctrl3.style({
+            const [ctrl2, pos] = cwp;
+            const docpos = get_suspended_ctrl_doc_pos(ctrl2, pos);
+            ctrl2.style({
               "left": docpos[0] + "px",
               "top": docpos[1] + "px"
             });
           });
         };
-        watch_resize(ctrl2);
-        ctrl2.on("resize", (e_resize) => {
+        watch_resize(ctrl);
+        ctrl.on("resize", (e_resize) => {
           sync_dimensions();
         });
         const res2 = {
@@ -37632,15 +43000,15 @@ div.grid .row .cell span {
         };
         return res2;
       };
-      var editable = (ctrl2) => {
-        field(ctrl2, "editable", true);
-        field(ctrl2, "editing", false);
-        const { context: context2 } = ctrl2;
-        ctrl2.on("activate", (e) => {
+      var editable = (ctrl) => {
+        field(ctrl, "editable", true);
+        field(ctrl, "editing", false);
+        const { context: context2 } = ctrl;
+        ctrl.on("activate", (e) => {
           console.log("new mini mixin editable ctrl on activate");
-          let initial_text = ctrl2.dom.el.textContent;
-          press_events(ctrl2);
-          const sframe = suspended_frame(ctrl2, {
+          let initial_text = ctrl.dom.el.textContent;
+          press_events(ctrl);
+          const sframe = suspended_frame(ctrl, {
             offset: 8
           });
           const btn_cancel = new Button({
@@ -37669,29 +43037,29 @@ div.grid .row .cell span {
           const cancel_editing = () => {
             console.log("cancel_editing");
             sframe.clear();
-            ctrl2.remove_class("editing");
-            ctrl2.editing = false;
-            ctrl2.dom.attributes.contenteditable = false;
-            ctrl2.dom.el.textContent = initial_text;
+            ctrl.remove_class("editing");
+            ctrl.editing = false;
+            ctrl.dom.attributes.contenteditable = false;
+            ctrl.dom.el.textContent = initial_text;
           };
           const save_editing = () => {
             console.log("save_editing");
-            const new_text = ctrl2.dom.el.textContent;
+            const new_text = ctrl.dom.el.textContent;
             console.log("new_text", new_text);
             sframe.clear();
-            ctrl2.remove_class("editing");
-            ctrl2.editing = false;
-            ctrl2.dom.attributes.contenteditable = false;
-            ctrl2.raise("edit-complete", {
+            ctrl.remove_class("editing");
+            ctrl.editing = false;
+            ctrl.dom.attributes.contenteditable = false;
+            ctrl.raise("edit-complete", {
               old: initial_text,
               value: new_text
             });
           };
           let has_events = false;
           const start_editing = () => {
-            ctrl2.editing = true;
-            initial_text = ctrl2.dom.el.textContent;
-            ctrl2.add_class("editing");
+            ctrl.editing = true;
+            initial_text = ctrl.dom.el.textContent;
+            ctrl.add_class("editing");
             sframe.add(btn_cancel, "tl");
             sframe.add(btn_ok, "tr");
             if (!has_events) {
@@ -37703,12 +43071,12 @@ div.grid .row .cell span {
               });
               has_events = true;
             }
-            ctrl2.dom.attributes.contenteditable = true;
+            ctrl.dom.attributes.contenteditable = true;
           };
-          ctrl2.on({
+          ctrl.on({
             "press-end": (e_press_end) => {
               console.log("e_press_end", e_press_end);
-              if (!ctrl2.editing) {
+              if (!ctrl.editing) {
                 start_editing();
               }
             }
@@ -38044,9 +43412,9 @@ div.grid .row .cell span {
         }
         bring_to_front_z() {
           let max_z = 0;
-          each(this.parent.content, (ctrl2) => {
-            if (ctrl2 !== this) {
-              const z = parseInt(ctrl2.dom.attributes.style["z-index"]);
+          each(this.parent.content, (ctrl) => {
+            if (ctrl !== this) {
+              const z = parseInt(ctrl.dom.attributes.style["z-index"]);
               if (!isNaN(z) && z > max_z) max_z = z;
             }
           });
@@ -38122,10 +43490,10 @@ div.grid .row .cell span {
               }, 17);
               const determine_pos_to_minimize_to = () => {
                 let minimized_sibling_window_bcrs = [];
-                each(this.parent.content, (ctrl2) => {
-                  if (ctrl2 !== this) {
-                    if (ctrl2.has_class("window") && ctrl2.has_class("minimized")) {
-                      const ctrl_bcr = ctrl2.bcr();
+                each(this.parent.content, (ctrl) => {
+                  if (ctrl !== this) {
+                    if (ctrl.has_class("window") && ctrl.has_class("minimized")) {
+                      const ctrl_bcr = ctrl.bcr();
                       minimized_sibling_window_bcrs.push(ctrl_bcr);
                     }
                   }
@@ -38428,7 +43796,7 @@ div.grid .row .cell span {
         // Maybe more advanced?
         Context_Menu: require_context_menu(),
         //Control: 
-        Color_Grid: require_color_palette(),
+        Color_Grid: require_color_grid(),
         Color_Palette: require_color_palette(),
         Checkbox: require_checkbox(),
         Combo_Box: require_combo_box(),
@@ -38525,7 +43893,27 @@ div.grid .row .cell span {
       jsgui2.Resource.Compiler = require_compiler_resource();
       jsgui2.gfx = require_gfx_core();
       jsgui2.Resource.load_compiler = (name, jsfn, options) => {
-        throw "NYI";
+        const compiler_name = name;
+        const compiler_fn = jsfn;
+        const compiler_options = options || {};
+        if (typeof compiler_name !== "string" || compiler_name.length === 0) {
+          throw new Error("Resource.load_compiler(name, fn, options) requires a non-empty string name");
+        }
+        if (typeof compiler_fn !== "function") {
+          throw new Error("Resource.load_compiler(name, fn, options) requires a function compiler implementation");
+        }
+        const compiler_resource = new jsgui2.Resource.Compiler({ name: compiler_name });
+        compiler_resource.transform = (input, transform_options = {}) => {
+          const merged_options = Object.assign({}, compiler_options, transform_options);
+          return compiler_fn(input, merged_options);
+        };
+        jsgui2.Resource.compilers = jsgui2.Resource.compilers || {};
+        jsgui2.Resource.compilers[compiler_name] = compiler_resource;
+        const pool = compiler_options.pool || compiler_options.resource_pool;
+        if (pool && typeof pool.add === "function") {
+          pool.add(compiler_resource);
+        }
+        return compiler_resource;
       };
       jsgui2.controls = jsgui2.controls || {};
       Object.assign(jsgui2.controls, require_controls());
@@ -38619,7 +44007,7 @@ div.grid .row .cell span {
                   body.add(ctrl_overlay);
                   ctrl_overlay.activate();
                 }
-                ctrl_overlay.place = (ctrl2, location2) => {
+                ctrl_overlay.place = (ctrl, location2) => {
                   const sloc = deep_sig(location2);
                   let placement_abs_pos;
                   if (sloc === "[s,C]") {
@@ -38631,15 +44019,15 @@ div.grid .row .cell span {
                       const overlay_size = overlay_bcr[1];
                       const body_size = body.bcr()[1];
                       const height_left_below_placement = body_size[1] - placement_abs_pos[1];
-                      ctrl2.pos = placement_abs_pos;
-                      ctrl2.dom.attributes.style.position = "absolute";
-                      ctrl2.dom.attributes.style["max-height"] = height_left_below_placement + "px";
+                      ctrl.pos = placement_abs_pos;
+                      ctrl.dom.attributes.style.position = "absolute";
+                      ctrl.dom.attributes.style["max-height"] = height_left_below_placement + "px";
                     } else {
                       console.trace();
                       throw "NYI";
                     }
                   }
-                  ctrl_overlay.add(ctrl2);
+                  ctrl_overlay.add(ctrl);
                 };
                 return ctrl_overlay;
               }
@@ -38656,10 +44044,10 @@ div.grid .row .cell span {
           let count_dom_ctrls = 0;
           const num_data_points_per_ctrl = 32;
           this.on("activate", () => {
-            each(map_controls, (ctrl2, jsgui_id) => {
+            each(map_controls, (ctrl, jsgui_id) => {
               var _a;
-              if ((_a = ctrl2.dom) == null ? void 0 : _a.el) {
-                map_ctrls_in_last_frame[jsgui_id] = ctrl2;
+              if ((_a = ctrl.dom) == null ? void 0 : _a.el) {
+                map_ctrls_in_last_frame[jsgui_id] = ctrl;
                 count_dom_ctrls++;
               }
             });
@@ -38683,9 +44071,9 @@ div.grid .row .cell span {
               };
               map_current_dom_ctrl_iids = create_map_ctrls_iids(map_ctrls_in_last_frame);
               const record_ctrls_info = (map_dom_ctrls, map_dom_ctrl_iids, ta2) => {
-                each(map_dom_ctrls, (ctrl2, jsgui_id) => {
+                each(map_dom_ctrls, (ctrl, jsgui_id) => {
                   const iid = map_dom_ctrl_iids[jsgui_id];
-                  const el = ctrl2.dom.el;
+                  const el = ctrl.dom.el;
                   const bcr = el.getBoundingClientRect();
                   const start_pos = iid * num_data_points_per_ctrl;
                   let wpos = start_pos;
@@ -38701,11 +44089,11 @@ div.grid .row .cell span {
               return res2;
             };
             const assign_ctrls_ta_subarrays = (ta_current_frame_for_user2, map_dom_controls, map_iids) => {
-              each(map_dom_controls, (ctrl2, jsgui_id) => {
+              each(map_dom_controls, (ctrl, jsgui_id) => {
                 const ctrl_iid = map_iids[jsgui_id];
                 const pos_start = ctrl_iid * num_data_points_per_ctrl;
                 const pos_end = pos_start + num_data_points_per_ctrl;
-                ctrl2.ta = ta_current_frame_for_user2.subarray(pos_start, pos_end);
+                ctrl.ta = ta_current_frame_for_user2.subarray(pos_start, pos_end);
               });
             };
             const frame_process = (timestamp) => {
@@ -38777,24 +44165,23 @@ div.grid .row .cell span {
               }
               let count_add = 0;
               let count_remove = 0;
-              if (frame_num === 1) {
-              } else {
-                map_ctrls_in_this_frame = {};
-              }
               if (this.map_controls_being_removed_in_frame) {
+                const map_ctrls_being_removed = this.map_controls_being_removed_in_frame;
+                map_ctrls_in_this_frame = {};
                 each(map_ctrls_in_last_frame, (ctrl_in_last_frame, ctrl_id) => {
-                  if (!this.map_controls_being_removed_in_frame[ctrl_id]) {
+                  if (!map_ctrls_being_removed[ctrl_id]) {
                     map_ctrls_in_this_frame[ctrl_id] = ctrl_in_last_frame;
                   }
                 });
-                count_remove += Object.keys(this.map_controls_being_removed_in_frame).length;
+                count_remove += Object.keys(map_ctrls_being_removed).length;
                 this.map_controls_being_removed_in_frame = false;
               } else {
                 map_ctrls_in_this_frame = map_ctrls_in_last_frame;
               }
               if (this.map_controls_being_added_in_frame) {
+                const map_ctrls_being_added = this.map_controls_being_added_in_frame;
                 this.map_controls_being_added_in_frame = false;
-                each(this.map_controls_being_added_in_frame, (ctrl_added, ctrl_id) => {
+                each(map_ctrls_being_added, (ctrl_added, ctrl_id) => {
                   map_ctrls_in_this_frame[ctrl_id] = ctrl_added;
                   count_add++;
                 });
@@ -38833,11 +44220,11 @@ div.grid .row .cell span {
               const ctrl_length = 6;
               const ta_res = new Float32Array(next_iid2 * ctrl_length);
               let wpos = 0;
-              each(map_controls, (ctrl2, id) => {
-                const ctrl_iid = ctrl2.iid;
+              each(map_controls, (ctrl, id) => {
+                const ctrl_iid = ctrl.iid;
                 wpos = ctrl_iid * ctrl_length;
-                if (ctrl2.dom && ctrl2.dom.el) {
-                  const bcr = ctrl2.dom.el.getBoundingClientRect();
+                if (ctrl.dom && ctrl.dom.el) {
+                  const bcr = ctrl.dom.el.getBoundingClientRect();
                   ta_res[wpos++] = bcr.left;
                   ta_res[wpos++] = bcr.top;
                   ta_res[wpos++] = bcr.right;
@@ -38850,8 +44237,8 @@ div.grid .row .cell span {
             };
           };
         }
-        "get_ctrl_el"(ctrl2) {
-          return this.map_els[ctrl2._id()];
+        "get_ctrl_el"(ctrl) {
+          return this.map_els[ctrl._id()];
         }
         "register_el"(el) {
           let jsgui_id = el.getAttribute("data-jsgui-id");
@@ -38866,15 +44253,23 @@ div.grid .row .cell span {
             var existing_jsgui_id = bod.getAttribute("data-jsgui-id");
             if (!existing_jsgui_id) {
               var ctrl_body = new jsgui2.body({
-                "el": document.body,
+                "el": bod,
                 "context": this
               });
-              ctrl_body.dom.el.setAttribute("jsgui-id", ctrl_body._id());
+              ctrl_body.dom.el.setAttribute("data-jsgui-id", ctrl_body._id());
               this.register_control(ctrl_body);
               this._body = ctrl_body;
             } else {
               if (this.map_controls[existing_jsgui_id]) {
                 this._body = this.map_controls[existing_jsgui_id];
+              } else {
+                var ctrl_body = new jsgui2.body({
+                  "el": bod,
+                  "context": this
+                });
+                ctrl_body.dom.el.setAttribute("data-jsgui-id", ctrl_body._id());
+                this.register_control(ctrl_body);
+                this._body = ctrl_body;
               }
             }
           } else {
@@ -38909,7 +44304,7 @@ body .overlay {
       var each = jsgui2.each;
       var arrayify = jsgui2.arrayify;
       var tof = jsgui2.tof;
-      var get_a_sig2 = jsgui2.get_a_sig;
+      var get_a_sig = jsgui2.get_a_sig;
       var filter_map_by_regex = jsgui2.filter_map_by_regex;
       var Class = jsgui2.Class;
       var Data_Object = jsgui2.Data_Object;
@@ -38993,6 +44388,7 @@ body .overlay {
       var { each, tf: tf2 } = jsgui2;
       if (typeof window !== "undefined") {
         let context2;
+        let page_context;
         jsgui2.http = (url, callback2) => {
           return prom_or_cb((resolve, reject) => {
             let timeout = 2500;
@@ -39423,8 +44819,8 @@ body .overlay {
            * Add content to detail area
            * @param {Control} ctrl - Control to add
            */
-          addContent(ctrl2) {
-            this.contentArea.addContent(ctrl2);
+          addContent(ctrl) {
+            this.contentArea.addContent(ctrl);
           }
           /**
            * Set selected navigation item
@@ -39742,8 +45138,16 @@ body .overlay {
     const progressText = document.querySelector(".progress-ring-text");
     const progressStat = document.querySelector(".progress-stat");
     const progressPhase = document.querySelector(".progress-phase");
+    const progressBar = document.querySelector(".progress-bar");
+    const progressBarFill = document.querySelector(".progress-bar__fill");
+    const progressBarLabel = document.querySelector(".progress-bar__label");
+    const progressStall = document.querySelector('[data-role="progress-stall"], .progress-stall');
+    const planPreview = document.querySelector('[data-role="plan-preview"]');
     const logBody = document.querySelector(".log-body");
+    const liveLog = document.querySelector(".live-log");
+    const logFilterInputs = Array.from(document.querySelectorAll("[data-log-filter-level]"));
     const startBtn = document.querySelector('[data-action="start-import"]');
+    const planBtn = document.querySelector('[data-action="preview-plan"]');
     const pauseBtn = document.querySelector('[data-action="pause-import"]');
     const cancelBtn = document.querySelector('[data-action="cancel-import"]');
     const statusEl = document.createElement("div");
@@ -39752,6 +45156,7 @@ body .overlay {
     document.body.appendChild(statusEl);
     let currentState = null;
     let eventSource = null;
+    let logFilterState = null;
     let metricsHistory = [];
     let stageTimes = {};
     let lastProgressUpdate = Date.now();
@@ -39798,17 +45203,235 @@ body .overlay {
         updateUI(currentState);
       });
     }
+    let selectedPlanSource = "geonames";
+    let selectedPlanDetail = "full";
+    function setPlanPreviewLoading(message) {
+      if (!planPreview) return;
+      planPreview.innerHTML = "";
+      const box = document.createElement("div");
+      box.className = "plan-preview__loading";
+      box.textContent = message || "Loading plan\u2026";
+      planPreview.appendChild(box);
+    }
+    function setPlanPreviewError(message) {
+      if (!planPreview) return;
+      planPreview.innerHTML = "";
+      const box = document.createElement("div");
+      box.className = "plan-preview__error";
+      box.textContent = message || "Failed to load plan.";
+      planPreview.appendChild(box);
+    }
+    function fmtBytes(bytes) {
+      if (!Number.isFinite(bytes) || bytes <= 0) return null;
+      const mb = bytes / 1024 / 1024;
+      if (mb >= 1) return `${mb.toFixed(1)} MB`;
+      const kb = bytes / 1024;
+      return `${kb.toFixed(0)} KB`;
+    }
+    function renderPlanPreview(plan) {
+      var _a, _b, _c, _d, _e, _f;
+      if (!planPreview) return;
+      planPreview.innerHTML = "";
+      if (plan && typeof plan.source === "string") {
+        selectedPlanSource = plan.source;
+      }
+      if (plan && (plan.detail === "fast" || plan.detail === "full")) {
+        selectedPlanDetail = plan.detail;
+      }
+      const header = document.createElement("div");
+      header.className = "plan-preview__header";
+      header.innerHTML = `
+      <div class="plan-preview__title">\u{1F9ED} Plan preview</div>
+      <div class="plan-preview__meta">
+        Source:
+        <select class="plan-preview__select" data-role="plan-source">
+          <option value="geonames">geonames</option>
+          <option value="wikidata">wikidata</option>
+          <option value="osm">osm</option>
+        </select>
+        Detail:
+        <select class="plan-preview__select" data-role="plan-detail">
+          <option value="full">full</option>
+          <option value="fast">fast</option>
+        </select>
+        <span class="plan-preview__meta-spacer">\xB7</span>
+        Generated: <span>${plan.generatedAt}</span>
+      </div>
+    `;
+      planPreview.appendChild(header);
+      const sourceSelect = header.querySelector('[data-role="plan-source"]');
+      const detailSelect = header.querySelector('[data-role="plan-detail"]');
+      if (sourceSelect) {
+        sourceSelect.value = selectedPlanSource;
+        sourceSelect.addEventListener("change", () => {
+          selectedPlanSource = sourceSelect.value;
+          fetchPlanPreview({ source: selectedPlanSource, detail: selectedPlanDetail });
+        });
+      }
+      if (detailSelect) {
+        detailSelect.value = selectedPlanDetail;
+        detailSelect.addEventListener("change", () => {
+          selectedPlanDetail = detailSelect.value;
+          fetchPlanPreview({ source: selectedPlanSource, detail: selectedPlanDetail });
+        });
+      }
+      const summary = document.createElement("div");
+      summary.className = "plan-preview__summary";
+      const prereq = plan.prerequisite || {};
+      const networkRequests = (_a = plan == null ? void 0 : plan.expected) == null ? void 0 : _a.networkRequests;
+      const estimate = ((_b = plan == null ? void 0 : plan.expected) == null ? void 0 : _b.networkRequestsEstimate) || null;
+      const reqText = Number.isFinite(networkRequests) ? String(networkRequests) : estimate && Number.isFinite(estimate.min) ? `\u2265 ${estimate.min}` : "unknown";
+      const makePill = (html) => {
+        const pill = document.createElement("div");
+        pill.className = "plan-preview__pill";
+        pill.innerHTML = html;
+        return pill;
+      };
+      summary.appendChild(makePill(`\u{1F310} Network requests: <b>${reqText}</b>`));
+      const inputs = Array.isArray((_c = plan == null ? void 0 : plan.expected) == null ? void 0 : _c.inputs) ? plan.expected.inputs : [];
+      if (inputs.length) {
+        for (const input of inputs.slice(0, 2)) {
+          if (!input || typeof input !== "object") continue;
+          if (input.kind === "file") {
+            const sizeText = fmtBytes(input.sizeBytes);
+            const lineText = Number.isFinite(input.lineCount) ? `${input.lineCount.toLocaleString()} lines` : null;
+            summary.appendChild(makePill(
+              `\u{1F4C4} Input file: <b>${input.id || "file"}</b> \xB7 <b>${input.exists ? "present" : "missing"}</b>${sizeText ? ` \xB7 ${sizeText}` : ""}${lineText ? ` \xB7 ${lineText}` : ""}`
+            ));
+          } else if (input.kind === "db") {
+            const parts = [];
+            if (Number.isFinite(input.candidates)) parts.push(`candidates=${input.candidates}`);
+            if (Number.isFinite(input.existingCountries)) parts.push(`existing=${input.existingCountries}`);
+            if (Number.isFinite(input.freshWithinWindow)) parts.push(`fresh=${input.freshWithinWindow}`);
+            summary.appendChild(makePill(
+              `\u{1F5C3}\uFE0F DB input: <b>${input.id || "db"}</b>${parts.length ? ` \xB7 ${parts.join(" \xB7 ")}` : ""}`
+            ));
+          }
+        }
+      } else {
+        const file = ((_d = plan == null ? void 0 : plan.expected) == null ? void 0 : _d.file) || {};
+        const sizeText = fmtBytes(file.sizeBytes);
+        const lineText = Number.isFinite(file.lineCount) ? `${file.lineCount.toLocaleString()} lines` : null;
+        summary.appendChild(makePill(
+          `\u{1F4C4} Input: <b>${file.exists ? "cities15000.txt present" : "cities15000.txt missing"}</b>${sizeText ? ` \xB7 ${sizeText}` : ""}${file.exists && lineText ? ` \xB7 ${lineText}` : ""}`
+        ));
+      }
+      if (Array.isArray((_e = plan == null ? void 0 : plan.expected) == null ? void 0 : _e.endpoints) && plan.expected.endpoints.length) {
+        const endpoints = plan.expected.endpoints.slice(0, 2).join(" \xB7 ");
+        summary.appendChild(makePill(`\u{1F517} Endpoints: <b>${endpoints}</b>`));
+      }
+      summary.appendChild(makePill(`\u{1F5C4}\uFE0F Writes: <b>${plan.targets && plan.targets.tables ? plan.targets.tables.length : 0}</b> tables`));
+      planPreview.appendChild(summary);
+      if (estimate && typeof estimate.note === "string" && estimate.note.trim()) {
+        const note = document.createElement("div");
+        note.className = "plan-preview__meta";
+        note.textContent = estimate.note;
+        planPreview.appendChild(note);
+      }
+      if ((_f = plan == null ? void 0 : plan.algorithm) == null ? void 0 : _f.summary) {
+        const alg = document.createElement("div");
+        alg.className = "plan-preview__meta";
+        alg.textContent = plan.algorithm.summary;
+        planPreview.appendChild(alg);
+      }
+      if (!prereq.ready) {
+        const missing = document.createElement("div");
+        missing.className = "plan-preview__warning";
+        missing.innerHTML = `
+        <div><b>Prerequisite missing:</b> ${prereq.error || "GeoNames file not ready"}</div>
+        ${prereq.downloadUrl ? `<div>Download: <a href="${prereq.downloadUrl}" target="_blank" rel="noreferrer">${prereq.downloadUrl}</a></div>` : ""}
+      `;
+        planPreview.appendChild(missing);
+      }
+      const details = document.createElement("details");
+      details.className = "plan-preview__details";
+      details.open = true;
+      details.innerHTML = `<summary>Algorithm & planned actions</summary>`;
+      const stages = plan.algorithm && Array.isArray(plan.algorithm.stages) ? plan.algorithm.stages : [];
+      const list = document.createElement("div");
+      list.className = "plan-preview__stages";
+      for (const stage of stages) {
+        const row = document.createElement("div");
+        row.className = "plan-preview__stage";
+        const reads = Array.isArray(stage.reads) ? stage.reads.length : 0;
+        const writes = Array.isArray(stage.writes) ? stage.writes.length : 0;
+        row.innerHTML = `
+        <div class="plan-preview__stage-head">
+          <div class="plan-preview__stage-id">${stage.id}</div>
+          <div class="plan-preview__stage-label">${stage.label || ""}</div>
+          <div class="plan-preview__stage-badges">
+            <span class="plan-preview__badge">Reads: ${reads}</span>
+            <span class="plan-preview__badge">Writes: ${writes}</span>
+          </div>
+        </div>
+      `;
+        const stageDetails = document.createElement("details");
+        stageDetails.className = "plan-preview__stage-details";
+        stageDetails.innerHTML = `<summary>Details</summary>`;
+        const pre = document.createElement("pre");
+        pre.textContent = JSON.stringify(stage, null, 2);
+        stageDetails.appendChild(pre);
+        row.appendChild(stageDetails);
+        list.appendChild(row);
+      }
+      details.appendChild(list);
+      planPreview.appendChild(details);
+      const targetsDetails = document.createElement("details");
+      targetsDetails.className = "plan-preview__details";
+      targetsDetails.innerHTML = `<summary>DB targets</summary>`;
+      const targetsPre = document.createElement("pre");
+      targetsPre.textContent = JSON.stringify(plan.targets || {}, null, 2);
+      targetsDetails.appendChild(targetsPre);
+      planPreview.appendChild(targetsDetails);
+    }
+    async function fetchPlanPreview(detail = "full") {
+      const normalized = typeof detail === "object" && detail ? {
+        source: detail.source || selectedPlanSource,
+        detail: detail.detail || selectedPlanDetail
+      } : { source: selectedPlanSource, detail };
+      const source = typeof normalized.source === "string" ? normalized.source : "geonames";
+      const planDetail = normalized.detail === "fast" ? "fast" : "full";
+      setPlanPreviewLoading(`Loading ${source} plan\u2026`);
+      try {
+        const res2 = await fetch(`/api/geo-import/plan?source=${encodeURIComponent(source)}&detail=${encodeURIComponent(planDetail)}`);
+        const json = await res2.json();
+        if (!res2.ok || !json || json.ok !== true) {
+          throw new Error(json && json.error ? json.error : `HTTP ${res2.status}`);
+        }
+        renderPlanPreview(json.plan);
+      } catch (e) {
+        setPlanPreviewError(`Plan preview failed: ${e.message}`);
+      }
+    }
     function updateUI(state) {
       updateProgress(state);
       updateStagesStepper(state);
       updateButtons(state);
       updateSourceCards(state);
     }
+    if (planBtn) {
+      planBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        fetchPlanPreview({ source: selectedPlanSource, detail: selectedPlanDetail });
+      });
+    }
     function updateStagesStepper(state) {
       var _a, _b;
       const stepper = document.querySelector(".stages-stepper");
       if (!stepper) return;
-      const currentStageId = state.status || ((_a = state.stage) == null ? void 0 : _a.id) || "idle";
+      let currentStageId = state.status || ((_a = state.stage) == null ? void 0 : _a.id) || "idle";
+      if (currentStageId === "paused" && state.pausedFrom) {
+        currentStageId = state.pausedFrom;
+        stepper.classList.add("is-paused");
+      } else {
+        stepper.classList.remove("is-paused");
+      }
+      const isTerminal = currentStageId === "cancelled" || currentStageId === "error";
+      if (isTerminal) {
+        stepper.classList.add("is-terminal");
+      } else {
+        stepper.classList.remove("is-terminal");
+      }
       const prevStageId = stepper.getAttribute("data-current-stage");
       stepper.setAttribute("data-current-stage", currentStageId);
       const now = Date.now();
@@ -39828,7 +45451,8 @@ body .overlay {
       }
       const stages = stepper.querySelectorAll(".stage-item");
       const stageIds = ["idle", "validating", "counting", "preparing", "importing", "indexing", "verifying", "complete"];
-      const currentIndex = stageIds.indexOf(currentStageId);
+      const idx = stageIds.indexOf(currentStageId);
+      const currentIndex = idx >= 0 ? idx : 0;
       stages.forEach((stageEl, index) => {
         const stageId = stageIds[index];
         stageEl.classList.remove("stage-completed", "stage-current", "stage-pending");
@@ -39903,6 +45527,7 @@ body .overlay {
       const { progress, stage } = state;
       const percent = progress.percent || 0;
       const now = Date.now();
+      const ratio = (progress.total || 0) > 0 ? (progress.current || 0) / (progress.total || 1) : 0;
       if (progress.current > 0) {
         const timeDiff = (now - lastProgressUpdate) / 1e3;
         if (timeDiff > 0 && metricsHistory.length > 0) {
@@ -39928,11 +45553,32 @@ body .overlay {
       if (progressText) {
         progressText.textContent = percent + "%";
       }
+      if (progressBar) {
+        const determinate = (progress.total || 0) > 0;
+        progressBar.classList.toggle("progress-bar--indeterminate", !determinate);
+        if (determinate && progressBarFill) {
+          progressBarFill.style.width = `${Math.round(ratio * 100)}%`;
+        }
+        if (determinate && progressBarLabel) {
+          progressBarLabel.textContent = `${Math.round(ratio * 100)}%`;
+        }
+      }
       if (progressStat) {
         progressStat.innerHTML = '<span class="stat-value counting">' + formatNumber(progress.current) + '</span> / <span class="stat-total">' + formatNumber(progress.total) + "</span> records";
       }
       if (progressPhase && stage) {
         progressPhase.textContent = stage.emoji + " " + stage.description;
+      }
+      if (progressStall) {
+        const stall = state.stall || null;
+        if (stall && stall.stale) {
+          const s = Math.max(1, Math.round((stall.msSinceProgress || 0) / 1e3));
+          progressStall.textContent = `\u26A0\uFE0F No progress for ${s}s`;
+          progressStall.classList.add("is-stale");
+        } else {
+          progressStall.textContent = "";
+          progressStall.classList.remove("is-stale");
+        }
       }
       updateMetrics(etaFormatted, recordsPerSecond, state.elapsed);
     }
@@ -39999,10 +45645,37 @@ body .overlay {
         }
       }
     }
+    function applyLogFilters() {
+      if (!logBody) return;
+      const hasState = logFilterState && Object.keys(logFilterState).length > 0;
+      logBody.querySelectorAll(".log-entry").forEach((entry) => {
+        const level = (entry.dataset.logLevel || "").toLowerCase();
+        if (hasState && logFilterState[level] === false) {
+          entry.style.display = "none";
+        } else {
+          entry.style.display = "";
+        }
+      });
+    }
+    function syncLogFilterState() {
+      if (!logFilterInputs.length) return;
+      logFilterState = {};
+      logFilterInputs.forEach((input) => {
+        const level = (input.getAttribute("data-log-filter-level") || "").toLowerCase();
+        const enabled = input.checked !== false;
+        logFilterState[level] = enabled;
+        if (liveLog) {
+          liveLog.setAttribute(`data-allow-${level}`, enabled ? "true" : "false");
+        }
+      });
+      applyLogFilters();
+    }
     function appendLog(entry) {
       if (!logBody) return;
       const row = document.createElement("div");
-      row.className = "log-entry log-" + (entry.level || "info");
+      const level = (entry.level || "info").toLowerCase();
+      row.className = "log-entry log-" + level;
+      row.dataset.logLevel = level;
       const timestamp = document.createElement("span");
       timestamp.className = "log-timestamp";
       timestamp.textContent = entry.time;
@@ -40013,6 +45686,7 @@ body .overlay {
       row.appendChild(message);
       logBody.appendChild(row);
       logBody.scrollTop = logBody.scrollHeight;
+      applyLogFilters();
     }
     function handleStart() {
       fetch("/api/geo-import/preflight").then((r) => r.json()).then((preflight) => {
@@ -40123,6 +45797,10 @@ body .overlay {
     if (startBtn) startBtn.addEventListener("click", handleStart);
     if (pauseBtn) pauseBtn.addEventListener("click", handlePause);
     if (cancelBtn) cancelBtn.addEventListener("click", handleCancel);
+    if (logFilterInputs.length) {
+      logFilterInputs.forEach((input) => input.addEventListener("change", syncLogFilterState));
+      syncLogFilterState();
+    }
     connectSSE();
     const dbSelector = document.querySelector('[data-jsgui-control="database_selector"]') || document.querySelector(".database-selector") || document.querySelector(".db-selector-window");
     const dbContextMenu = dbSelector == null ? void 0 : dbSelector.querySelector('[data-context-menu="database"]');

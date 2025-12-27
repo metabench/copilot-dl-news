@@ -10,6 +10,7 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
   const extraJobsApiPathJson = JSON.stringify(extraJobsApiPath || null);
   const eventsPathJson = JSON.stringify(eventsPath);
   const telemetryHistoryPathJson = JSON.stringify(telemetryHistoryPath || null);
+  const remoteObsBasePathJson = JSON.stringify('/api/crawl-telemetry/remote-obs');
 
   // NOTE: Avoid nested template literals here because this file is loaded in Jest,
   // and nested backticks can be easy to break when embedding HTML fragments.
@@ -19,11 +20,19 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
   const extraJobsApiPath = ${extraJobsApiPathJson};
   const eventsPath = ${eventsPathJson};
   const telemetryHistoryPath = ${telemetryHistoryPathJson};
+  const remoteObsBasePath = ${remoteObsBasePathJson};
 
   const elStatus = document.getElementById('status');
   const elRows = document.getElementById('rows');
 
   const jobs = new Map();
+
+  const telemetryUiHealth = {
+    parseErrors: 0,
+    lastParseErrorAt: null,
+    lastParseErrorMessage: null,
+    orphanEvents: 0
+  };
 
   function escapeHtml(text) {
     return String(text || '')
@@ -43,6 +52,117 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
     return '';
   }
 
+  function clamp01(n) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return 0;
+    if (x < 0) return 0;
+    if (x > 1) return 1;
+    return x;
+  }
+
+  function formatPercent(ratio) {
+    const p = Math.round(clamp01(ratio) * 100);
+    return String(p) + '%';
+  }
+
+  function deriveProgressModel(job) {
+    if (!job || typeof job !== 'object') return null;
+
+    // Generic support for jobs that already expose progress.
+    const p = job.progress && typeof job.progress === 'object' ? job.progress : null;
+    const current = p && Number.isFinite(Number(p.current)) ? Number(p.current) : null;
+    const total = p && Number.isFinite(Number(p.total)) ? Number(p.total) : null;
+    if (current !== null && total !== null && total > 0) {
+      const ratio = clamp01(current / total);
+      return { mode: 'determinate', ratio, label: String(current) + '/' + String(total) };
+    }
+
+    // Prefer canonical crawl telemetry totals when present.
+    const percentComplete = Number(job.percentComplete ?? job.metrics?.percentComplete ?? null);
+    if (Number.isFinite(percentComplete)) {
+      const ratio = clamp01(percentComplete / 100);
+      return { mode: 'determinate', ratio, label: 'total ' + String(Math.round(ratio * 100)) + '%' };
+    }
+
+    const telemetryTotal = Number(job.total ?? job.metrics?.total ?? null);
+    const visitedForTotal = Number(job.visited ?? job.metrics?.visited ?? 0);
+    if (Number.isFinite(telemetryTotal) && telemetryTotal > 0 && Number.isFinite(visitedForTotal)) {
+      const ratio = clamp01(visitedForTotal / telemetryTotal);
+      return { mode: 'determinate', ratio, label: String(visitedForTotal) + '/' + String(telemetryTotal) };
+    }
+
+    // Prefer progress-tree root totals when available.
+    const tree = job._progressTree;
+    const root = tree && typeof tree === 'object' ? tree.root : null;
+    if (root && typeof root === 'object') {
+      const rc = Number(root.current ?? null);
+      const rt = Number(root.total ?? null);
+      if (Number.isFinite(rc) && Number.isFinite(rt) && rt > 0) {
+        const ratio = clamp01(rc / rt);
+        return { mode: 'determinate', ratio, label: String(root.label || 'tree') + ' ' + String(rc) + '/' + String(rt) };
+      }
+    }
+
+    // Crawl proxy: treat "visited out of visited+queue" as a queue-drain indicator.
+    const visited = Number(job.visited ?? job.metrics?.visited ?? 0);
+    const queued = Number(job.queueSize ?? job.metrics?.queueSize ?? 0);
+    const denom = visited + queued;
+    if (Number.isFinite(denom) && denom > 0) {
+      const ratio = clamp01(visited / denom);
+      return { mode: 'determinate', ratio, label: 'drain ' + formatPercent(ratio) };
+    }
+
+    // If the job is running but we can't compute a ratio, show indeterminate.
+    const status = String(job.status || job.stage || '').toLowerCase();
+    if (status.includes('run')) {
+      return { mode: 'indeterminate', ratio: null, label: 'running' };
+    }
+
+    return null;
+  }
+
+  function renderProgressBar(model) {
+    if (!model) return '';
+    if (model.mode === 'indeterminate') {
+      return '<div class="pbar pbar--indeterminate"><div class="pbar__fill"></div></div>';
+    }
+    const pct = Math.round(clamp01(model.ratio) * 100);
+    return '<div class="pbar" title="' + escapeHtml(model.label || '') + '"><div class="pbar__fill" style="width:' + pct + '%"></div></div>';
+  }
+
+  function formatEventSummary(evt) {
+    if (!evt || typeof evt !== 'object') return '';
+    const type = String(evt.type || 'telemetry');
+    const data = evt.data && typeof evt.data === 'object' ? evt.data : {};
+    if (type === 'crawl:progress') {
+      const v = Number(data.visited ?? 0);
+      const q = Number(data.queued ?? 0);
+      const e = Number(data.errors ?? 0);
+      const t = Number(data.total ?? null);
+      const pct = Number(data.percentComplete ?? null);
+      return 'progress v=' + String(v) + ' q=' + String(q) + ' e=' + String(e);
+    }
+    if (type === 'crawl:progress-tree:updated' || type === 'crawl:progress-tree:completed') {
+      const root = data && typeof data === 'object' ? data.root : null;
+      const label = root && root.label ? String(root.label) : 'tree';
+      const rc = root && root.current != null ? Number(root.current) : null;
+      const rt = root && root.total != null ? Number(root.total) : null;
+      if (Number.isFinite(rc) && Number.isFinite(rt) && rt > 0) {
+        return 'progress-tree ' + String(label) + ' ' + String(rc) + '/' + String(rt);
+      }
+      return 'progress-tree ' + String(label);
+    }
+    if (type === 'crawl:url:error') {
+      const u = data.url ? String(data.url) : '';
+      const m = data.error ? String(data.error) : '';
+      return ('url:error ' + (u ? u.slice(0, 80) : '') + ' ' + (m ? ('- ' + m.slice(0, 80)) : '')).trim();
+    }
+    if (evt.message) {
+      return String(evt.message).slice(0, 140);
+    }
+    return type;
+  }
+
   function render() {
     const items = Array.from(jobs.values()).sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
     elRows.innerHTML = items
@@ -57,6 +177,28 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
         const queueSize = Number(job.queueSize ?? job.metrics?.queueSize ?? 0);
         const last = escapeHtml(job.lastActivityAt || job.metrics?._lastProgressWall || '');
 
+        const progressModel = deriveProgressModel(job);
+        const progressHtml = renderProgressBar(progressModel);
+        const progressLabel = progressModel && progressModel.label ? escapeHtml(progressModel.label) : '';
+
+        const recent = Array.isArray(job._events) ? job._events : [];
+        const lastEvent = escapeHtml(job._lastEventSummary || '');
+
+        const tree = job._progressTree;
+        const treeHtml = tree ? renderProgressTreePanel(tree) : '';
+        const eventsHtml = recent.length
+          ? (
+              '<details class="job-events">' +
+              '<summary>Events (' + recent.length + ')</summary>' +
+              '<div class="job-events-body">' +
+              recent
+                .map((line) => '<div class="job-event-line">' + escapeHtml(line) + '</div>')
+                .join('') +
+              '</div>' +
+              '</details>'
+            )
+          : '';
+
         const detailHref = jobsApiPath + '/' + encodeURIComponent(job.id || '');
         return (
           '\n<tr>' +
@@ -64,8 +206,12 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
           '\n    <div class="mono">' + id + '</div>' +
           '\n    <div class="muted">' + (url ? url : '') + '</div>' +
           '\n    <div><a href="' + detailHref + '" class="muted">detail</a></div>' +
+          (treeHtml ? ('\n    ' + treeHtml) : '') +
+          (lastEvent ? ('\n    <div class="job-last">Last: <span class="mono">' + lastEvent + '</span></div>') : '') +
+          (eventsHtml ? ('\n    ' + eventsHtml) : '') +
           '\n  </td>' +
           '\n  <td><span class="badge ' + badge + '">' + status + '</span></td>' +
+          '\n  <td>' + progressHtml + (progressLabel ? ('<div class="muted">' + progressLabel + '</div>') : '') + '</td>' +
           '\n  <td class="mono">' + visited + '</td>' +
           '\n  <td class="mono">' + downloaded + '</td>' +
           '\n  <td class="mono">' + errors + '</td>' +
@@ -93,11 +239,116 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
     jobs.set(jobId, { ...prev, ...patch, id: jobId });
   }
 
+  function recordJobEvent(jobId, evt) {
+    const job = jobs.get(jobId) || { id: jobId };
+    const summary = formatEventSummary(evt);
+    const ts = evt && (evt.timestamp || evt.timestampMs) ? (evt.timestamp || evt.timestampMs) : '';
+    const line = (ts ? (String(ts) + ' ') : '') + String(evt && evt.type ? evt.type : 'telemetry') + (summary ? (' — ' + summary) : '');
+
+    const prev = Array.isArray(job._events) ? job._events : [];
+    const next = prev.slice(-19);
+    next.push(line);
+
+    jobs.set(jobId, {
+      ...job,
+      id: jobId,
+      _events: next,
+      _lastEventType: evt && evt.type ? String(evt.type) : null,
+      _lastEventSummary: summary || (evt && evt.type ? String(evt.type) : null)
+    });
+  }
+
+  function normalizeProgressTreeNode(node, { depth, maxDepth, maxChildren }) {
+    if (!node || typeof node !== 'object') return null;
+
+    const id = node.id != null ? String(node.id).slice(0, 120) : null;
+    const label = node.label != null ? String(node.label).slice(0, 200) : (id || '');
+    const current = node.current != null && Number.isFinite(Number(node.current)) ? Number(node.current) : null;
+    const total = node.total != null && Number.isFinite(Number(node.total)) ? Number(node.total) : null;
+    const unit = node.unit != null ? String(node.unit).slice(0, 24) : null;
+    const status = node.status != null ? String(node.status).slice(0, 16) : null;
+
+    let children = [];
+    if (depth < maxDepth && Array.isArray(node.children)) {
+      children = node.children
+        .slice(0, maxChildren)
+        .map((c) => normalizeProgressTreeNode(c, { depth: depth + 1, maxDepth, maxChildren }))
+        .filter(Boolean);
+    }
+
+    return { id, label, current, total, unit, status, children };
+  }
+
+  function normalizeProgressTreePayload(payload) {
+    if (!payload || typeof payload !== 'object') return null;
+    const maxDepth = 4;
+    const maxChildren = 30;
+    const root = normalizeProgressTreeNode(payload.root, { depth: 0, maxDepth, maxChildren });
+    if (!root) return null;
+    const activePath = Array.isArray(payload.activePath)
+      ? payload.activePath.map((x) => String(x).slice(0, 120)).slice(0, 80)
+      : [];
+    return { root, activePath };
+  }
+
+  function renderProgressTreeNode(node, activeSet, depth) {
+    if (!node) return '';
+    const indent = Math.min(24, depth * 12);
+    const hasTotals = Number.isFinite(node.current) && Number.isFinite(node.total) && node.total > 0;
+    const ratio = hasTotals ? clamp01(node.current / node.total) : null;
+    const isActive = node.id && activeSet && activeSet.has(node.id);
+
+    const label = escapeHtml(node.label || node.id || '');
+    const meta = hasTotals
+      ? escapeHtml(String(node.current) + '/' + String(node.total) + (node.unit ? (' ' + node.unit) : ''))
+      : (node.status ? escapeHtml(String(node.status)) : '');
+
+    const bar = hasTotals
+      ? ('<div class="ptree-bar"><div class="ptree-bar__fill" style="width:' + Math.round(ratio * 100) + '%"></div></div>')
+      : '<div class="ptree-bar ptree-bar--indeterminate"><div class="ptree-bar__fill"></div></div>';
+
+    const children = Array.isArray(node.children) ? node.children : [];
+    return (
+      '<div class="ptree-node' + (isActive ? ' is-active' : '') + '" style="margin-left:' + indent + 'px">' +
+      '<div class="ptree-row">' +
+      '<div class="ptree-label">' + label + '</div>' +
+      '<div class="ptree-meta">' + meta + '</div>' +
+      '</div>' +
+      bar +
+      (children.length ? ('<div class="ptree-children">' + children.map((c) => renderProgressTreeNode(c, activeSet, depth + 1)).join('') + '</div>') : '') +
+      '</div>'
+    );
+  }
+
+  function renderProgressTreePanel(tree) {
+    if (!tree || typeof tree !== 'object' || !tree.root) return '';
+    const active = new Set(Array.isArray(tree.activePath) ? tree.activePath : []);
+    const rootLabel = escapeHtml(tree.root.label || 'Progress');
+    const rootMeta = (Number.isFinite(tree.root.current) && Number.isFinite(tree.root.total) && tree.root.total > 0)
+      ? escapeHtml(String(tree.root.current) + '/' + String(tree.root.total))
+      : '';
+
+    return (
+      '<details class="job-tree">' +
+      '<summary>Progress tree' + (rootMeta ? (' — ' + rootMeta) : '') + '</summary>' +
+      '<div class="ptree">' +
+      '<div class="ptree-title">' + rootLabel + '</div>' +
+      renderProgressTreeNode(tree.root, active, 0) +
+      '</div>' +
+      '</details>'
+    );
+  }
+
   function applyTelemetryEvent(evt) {
     if (!evt || typeof evt !== 'object') return;
     const type = evt.type || '';
     const jobId = normalizeJobId(evt.jobId) || normalizeJobId(evt.data && evt.data.jobId);
-    if (!jobId) return;
+    if (!jobId) {
+      telemetryUiHealth.orphanEvents += 1;
+      return;
+    }
+
+    recordJobEvent(jobId, evt);
 
     const data = evt.data && typeof evt.data === 'object' ? evt.data : {};
     const ts = evt.timestamp || evt.timestampMs || null;
@@ -110,8 +361,24 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
         downloaded: Number(data.downloaded ?? 0),
         errors: Number(data.errors ?? 0),
         queueSize: Number(data.queued ?? 0),
+        total: data.total != null ? Number(data.total) : undefined,
+        percentComplete: data.percentComplete != null ? Number(data.percentComplete) : undefined,
         lastActivityAt: ts
       });
+      return;
+    }
+
+    if (type === 'crawl:progress-tree:updated' || type === 'crawl:progress-tree:completed') {
+      const tree = normalizeProgressTreePayload(data);
+      if (tree) {
+        mergeJob(jobId, {
+          status: 'running',
+          stage: 'running',
+          _progressTree: tree,
+          _progressTreeCompleted: type === 'crawl:progress-tree:completed',
+          lastActivityAt: ts
+        });
+      }
       return;
     }
 
@@ -232,7 +499,12 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
 
   replayTelemetryHistory();
 
-  if (typeof EventSource === 'function') {
+  function connectLiveUpdatesLegacy() {
+    if (typeof EventSource !== 'function') {
+      elStatus.textContent = 'This browser does not support EventSource; showing snapshots only.';
+      return;
+    }
+
     const es = new EventSource(eventsPath);
 
     es.onmessage = (e) => {
@@ -240,17 +512,54 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
         const payload = JSON.parse(e.data);
         if (payload && payload.type === 'crawl:telemetry' && payload.data) {
           applyTelemetryEvent(payload.data);
-          elStatus.textContent = 'Live update: ' + (payload.data.type || 'telemetry');
+          const healthBits = [];
+          if (telemetryUiHealth.parseErrors) healthBits.push('parseErrors=' + telemetryUiHealth.parseErrors);
+          if (telemetryUiHealth.orphanEvents) healthBits.push('orphanEvents=' + telemetryUiHealth.orphanEvents);
+          elStatus.textContent = 'Live update: ' + (payload.data.type || 'telemetry') + (healthBits.length ? (' (' + healthBits.join(', ') + ')') : '');
           render();
         }
-      } catch (_) {}
+      } catch (err) {
+        telemetryUiHealth.parseErrors += 1;
+        telemetryUiHealth.lastParseErrorAt = Date.now();
+        telemetryUiHealth.lastParseErrorMessage = err && err.message ? err.message : String(err || 'parse error');
+        elStatus.textContent = 'Live update parse error (' + telemetryUiHealth.parseErrors + '): ' + telemetryUiHealth.lastParseErrorMessage;
+      }
     };
 
     es.onerror = () => {
       elStatus.textContent = 'Live updates disconnected (SSE error). Refresh to retry.';
     };
-  } else {
-    elStatus.textContent = 'This browser does not support EventSource; showing snapshots only.';
+  }
+
+  function connectLiveUpdatesRemoteObservable() {
+    const adapters = window.RemoteObservableClientAdapters;
+    if (!adapters || typeof adapters.createRemoteObservableConnection !== 'function') {
+      return false;
+    }
+
+    try {
+      const conn = adapters.createRemoteObservableConnection({ basePath: remoteObsBasePath, autoConnect: true });
+      const ev = adapters.toEvented(conn);
+
+      ev.on('next', (evt) => {
+        applyTelemetryEvent(evt);
+        elStatus.textContent = 'Live update: ' + (evt && evt.type ? evt.type : 'telemetry');
+        render();
+      });
+
+      ev.on('error', () => {
+        elStatus.textContent = 'Live updates disconnected (remote observable error). Refresh to retry.';
+      });
+
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  const remoteOk = connectLiveUpdatesRemoteObservable();
+  if (!remoteOk) {
+    connectLiveUpdatesLegacy();
   }
 })();
 `;
@@ -277,6 +586,22 @@ class CrawlStatusPage extends Standard_Web_Page {
 
     const ctx = this.context;
 
+    // Shared RemoteObservable browser modules (plain scripts; no bundler required).
+    // These enable an Evented/Rx/async-iterator interface over the crawl telemetry stream.
+    if (this.head) {
+      const s1 = new Control({ context: ctx, tagName: 'script' });
+      s1.dom.attributes.src = '/shared-remote-obs/RemoteObservableShared.js';
+      this.head.add(s1);
+
+      const s2 = new Control({ context: ctx, tagName: 'script' });
+      s2.dom.attributes.src = '/shared-remote-obs/RemoteObservableClient.js';
+      this.head.add(s2);
+
+      const s3 = new Control({ context: ctx, tagName: 'script' });
+      s3.dom.attributes.src = '/shared-remote-obs/RemoteObservableClientAdapters.js';
+      this.head.add(s3);
+    }
+
     const style = new Control({ context: ctx, tagName: 'style' });
     style.add(`
 body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 16px; color: #111; }
@@ -296,6 +621,30 @@ th { text-align: left; background: #fafafa; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
 .row-actions button { font-size: 12px; padding: 4px 8px; margin-right: 6px; }
 .footer { margin-top: 12px; font-size: 12px; color: #666; }
+
+  .pbar { width: 140px; height: 8px; border-radius: 999px; background: #f0f0f0; border: 1px solid #ddd; overflow: hidden; position: relative; }
+  .pbar__fill { height: 100%; background: linear-gradient(90deg, #7aa7ff, #6cc070); width: 0%; }
+  .pbar--indeterminate .pbar__fill { width: 40%; position: absolute; left: -40%; animation: pbarSlide 1200ms ease-in-out infinite; }
+  @keyframes pbarSlide { 0% { left: -40%; } 50% { left: 60%; } 100% { left: 100%; } }
+
+  .job-last { margin-top: 6px; }
+  .job-events { margin-top: 6px; }
+  .job-events summary { cursor: pointer; color: #444; }
+  .job-events-body { margin-top: 6px; max-height: 160px; overflow: auto; border: 1px solid #eee; background: #fafafa; padding: 6px; }
+  .job-event-line { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 11px; margin-bottom: 4px; white-space: pre-wrap; }
+
+  .job-tree { margin-top: 6px; }
+  .job-tree summary { cursor: pointer; color: #444; }
+  .ptree { margin-top: 8px; border: 1px solid #eee; background: #fafafa; padding: 8px; }
+  .ptree-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+  .ptree-node { margin-bottom: 8px; }
+  .ptree-node.is-active .ptree-label { font-weight: 700; }
+  .ptree-row { display: flex; justify-content: space-between; gap: 8px; }
+  .ptree-label { font-size: 12px; color: #222; }
+  .ptree-meta { font-size: 11px; color: #666; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+  .ptree-bar { height: 8px; border-radius: 999px; border: 1px solid #ddd; background: #f0f0f0; overflow: hidden; margin-top: 4px; position: relative; }
+  .ptree-bar__fill { height: 100%; width: 0%; background: linear-gradient(90deg, #7aa7ff, #6cc070); }
+  .ptree-bar--indeterminate .ptree-bar__fill { width: 40%; position: absolute; left: -40%; animation: pbarSlide 1200ms ease-in-out infinite; }
 `);
     this.head.add(style);
 
@@ -371,7 +720,7 @@ th { text-align: left; background: #fafafa; }
     const headRow = new Control({ context: ctx, tagName: 'tr' });
     thead.add(headRow);
 
-    const columns = ['Job', 'Status', 'Visited', 'Downloaded', 'Errors', 'Queue', 'Last Activity', 'Controls'];
+    const columns = ['Job', 'Status', 'Progress', 'Visited', 'Downloaded', 'Errors', 'Queue', 'Last Activity', 'Controls'];
     for (const col of columns) {
       const th = new Control({ context: ctx, tagName: 'th' });
       th.add(col);

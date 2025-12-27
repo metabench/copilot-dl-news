@@ -1,5 +1,8 @@
 # Lessons & Patterns (Rolling)
 
+## 2025-12-21
+- **Prevent backsliding first**: If “SQL only in adapters” isn’t already true repo-wide, start by enforcing a narrow boundary (UI/Electron) via an automated guard + explicit allow-list, then migrate modules incrementally.
+
 ## 2025-11-16
 - **Document-First Success**: Creating `/docs/agi` before coding changes keeps AGI initiatives decoupled from production flows.
 - **Tool Awareness**: Re-reading `AGENTS.md` plus GitHub Copilot instructions provided enough context; no need for deep code scans yet. Respect the "stop researching early" directive.
@@ -122,3 +125,34 @@
 ## 2025-12-19
 - Keep one canonical workflow doc per recurring task; convert duplicates into pointer pages. While consolidating, verify examples match the actual agent tool surface (e.g., use apply_patch/js-edit instead of obsolete tool names) and validate with a grep sweep; leave archives as historical snapshots.
 - SQLite maintenance scripts should handle `better-sqlite3` pragma result shape drift (e.g., `wal_checkpoint(TRUNCATE)` returning `[busy,log,checkpointed]` vs `[{busy,log,checkpointed}]` vs `{busy,log,checkpointed}`) and offer a `--checkpoint-only` path to avoid long VACUUM runs on multi-GB DBs.
+
+## 2025-12-20
+- Quest maps and themed SVGs have intentionally overlapping elements (step numbers in circles, decorative flourishes, paths over backgrounds). These trigger LOW severity collision warnings. Pass criteria for themed SVGs: zero 🔴 HIGH severity issues only. Added dedicated "Themed Diagrams" section to SVG_CREATION_METHODOLOGY.md to guide future agents.
+- If an SVG renders in Chrome/Puppeteer but not in VS Code preview, sanitize Unicode-heavy punctuation/comments (e.g., box-drawing separators U+2550, smart quotes/em-dash, bullet glyphs, emoji variation selector U+FE0F) and add an XML declaration; some VS Code preview paths/extensions choke on these even when the SVG is valid XML.
+- When integrating “explainability” UIs, ship policy visibility first (deep-link to active config sets/trees) before building per-entity decision traces; it validates user demand and avoids premature trace schema/mapping work.
+- To make crawler/ingest behavior controllable and UI-reliable, standardize on a wrapper contract: snapshot state + SSE typed events + REST commands; always expose resolved mode + decision-set IDs in both logs and UI state, and avoid implicit/global decision registries to prevent cross-mode feature bleed.
+
+## 2025-12-22
+- Browser adapters should avoid reserved identifiers (e.g., `yield`) in strict-mode scripts; prefer option names like `yieldMode` to prevent SyntaxError and complete failure of downstream globals (e.g., SSE observable adapters).
+- A practical client-side “remote observable” can be exposed as three interchangeable surfaces over the same SSE stream: jsgui-style Evented (`on/off/raise`), Rx-ish (`subscribe/unsubscribe`), and async iterator (`for await`). Start with Evented as the primary ergonomic fit for jsgui3 controls; keep others as adapters.
+- **Task Events persistence**: Created `task_events` table + `TaskEventWriter` class for unified crawl/background-task event storage. Key patterns: (1) auto-incrementing seq per task for replay ordering, (2) denormalized fields (duration_ms, http_status) for fast queries without payload parsing, (3) batch writes with flush-on-destroy for efficiency, (4) AI query helpers (getSummary, getProblems, getTimeline) that return structured data, (5) REST endpoints under `/api/task-events` for remote access.
+
+## 2025-12-23
+- **TLS fingerprinting defeats browser headers**: Sites like The Guardian use JA3/JA4 TLS fingerprinting to detect bots. Node.js/undici has a distinctive TLS signature that reveals the client *before* any HTTP headers are sent. Browser-like headers (User-Agent, Sec-Ch-Ua, etc.) are useless against this. Solution: Use Puppeteer with real Chromium for fingerprinting-protected sites.
+
+## 2025-12-09 SVG Tooling
+- Created `svg-overflow.js` tool to detect text-boundary overflow issues that `svg-collisions.js` misses. Key insight: collision detection finds elements overlapping elements, but not text extending beyond its container box. Use both tools together: `svg-collisions.js --strict` + `svg-overflow.js`. Text width estimation formula: chars × fontSize × 0.55 (sans-serif) or 0.60 (monospace).
+
+## 2025-12-24
+- **Puppeteer fallback for TLS-fingerprinting (ECONNRESET)**: When sites use JA3/JA4 fingerprinting to detect/block Node.js clients, standard HTTP retry is futile. Solution: detect ECONNRESET, check against known TLS-fingerprinting domains, then retry with Puppeteer (headless Chrome). Implementation: lazy-load to avoid startup cost, reuse browser instance, track `fetchMethod: 'puppeteer-fallback'` for analytics.
+
+## 2025-12-25
+- **jsgui3-html SSR**: Custom controls extending `jsgui.Control` must have `compose()` called explicitly before rendering. The framework does NOT auto-invoke `compose()`. Pattern: create control → call `control.compose()` → add to parent. Also, pass the same `Page_Context` to all elements in the tree.
+- Domain Learning Pipeline: When building template learning systems, use confidence-weighted field scoring (title 30%, content 40%, date 15%, author 15%) and set auto-approval threshold at 90% to balance automation with quality. Support both in-memory and database backends for flexibility.
+
+## 2025-12-26
+- **FTS5 Migration**: When adding FTS5 full-text search, always check the highest schema_migrations version first to avoid conflicts. Use `content=` mode to create a contentless FTS table that syncs via triggers, avoiding data duplication. BM25 weights should prioritize title (10) > body (5) > byline (2) > authors (1).
+
+## 2025-12-27
+- **Phase 8 Complete** — Implemented all 8 items (Analytics, Intelligence & API) with 469 tests total. Key pattern: Agent dispatching in waves (foundations → intelligence → realtime → advanced) with clear dependency tracking worked well. Test counts per item: Search 42, API 36, Similarity 111, Tagging 88, Analytics 32, Stream 55, Recommendations 105.
+- **Alert System Mock Adapter**: When creating mock adapters for tests, carefully audit all methods the actual adapter needs. The AlertEngine test suite required these often-overlooked methods: `countRecentAlerts()` for throttling, `getBreakingNewsByStory()` and `updateBreakingNewsCount()` for breaking news tracking. Initialize mock rules by ID (not name) to match how the real adapter stores them.

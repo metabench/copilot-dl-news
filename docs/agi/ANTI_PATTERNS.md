@@ -184,3 +184,33 @@ AGI-accumulated knowledge catalog.
 
 
 ---
+
+## Feature Bleed Between Crawl Modes
+
+**Added**: 2025-12-21
+**Context**: Crawler mode configuration drift
+
+**When to use**: Symptoms: Intelligent-crawl heuristics or decision sets start affecting other crawl setups (e.g., geo crawl). Config flags are ambiguous (‘intelligent=true’) and reused across modes. Shared singletons or global registries accumulate rules over time.
+
+**Steps/Details**:
+1. Why it's bad: It destroys operator trust (“it didn’t do exactly what I asked”), makes regressions hard to diagnose, and prevents clean experimentation because you can’t attribute behavior to a specific mode/plugin.
+1. Better approach: Make crawl mode explicit and namespaced; enforce plugin contracts; validate at startup; log and display active mode+decision sets; keep mode code physically separated and covered by per-mode contract tests.
+
+**Example**: Geo-focused crawl accidentally enabling place-hub search logic inside the intelligent crawl path
+
+---
+
+## Implicit Shared Decision Registry
+
+**Added**: 2025-12-21
+**Context**: Decision set management for crawler/planner
+
+**When to use**: Symptoms: Decision rules/heuristics are registered globally (module-level arrays, singletons) and then reused across runs. Tests pass in isolation but behavior changes depending on import order or prior runs.
+
+**Steps/Details**:
+1. Why it's bad: Behavior becomes non-deterministic and hard to untangle; it encourages accidental coupling and ‘works on my machine’ outcomes.
+1. Better approach: Use per-run registries instantiated from config; pass them via constructor injection; keep registries immutable once a run starts; snapshot registry IDs in the UI state envelope.
+
+**Example**: A global ‘hub discovery’ registry mutated by geo import or geo crawl code
+
+---

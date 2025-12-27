@@ -95,10 +95,16 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
   const progressText = document.querySelector('.progress-ring-text');
   const progressStat = document.querySelector('.progress-stat');
   const progressPhase = document.querySelector('.progress-phase');
+  const progressBar = document.querySelector('.progress-bar');
+  const progressBarFill = document.querySelector('.progress-bar__fill');
+  const progressBarLabel = document.querySelector('.progress-bar__label');
+  const progressStall = document.querySelector('[data-role="progress-stall"], .progress-stall');
+  const planPreview = document.querySelector('[data-role="plan-preview"]');
   const logBody = document.querySelector('.log-body');
   const liveLog = document.querySelector('.live-log');
   const logFilterInputs = Array.from(document.querySelectorAll('[data-log-filter-level]'));
   const startBtn = document.querySelector('[data-action="start-import"]');
+  const planBtn = document.querySelector('[data-action="preview-plan"]');
   const pauseBtn = document.querySelector('[data-action="pause-import"]');
   const cancelBtn = document.querySelector('[data-action="cancel-import"]');
   
@@ -112,6 +118,12 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
   let currentState = null;
   let eventSource = null;
   let logFilterState = null;
+
+  // UI catch-up: buffer state updates and apply them on rAF.
+  let pendingState = null;
+  let pendingRenderKind = 'ui';
+  let renderScheduled = false;
+  let statePollTimer = null;
   
   // Metrics tracking
   let metricsHistory = [];
@@ -127,6 +139,53 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
   // ─────────────────────────────────────────────────────────────────────────
   // SSE Connection
   // ─────────────────────────────────────────────────────────────────────────
+
+  function enqueueState(nextState, kind) {
+    if (!nextState) return;
+    pendingState = nextState;
+    pendingRenderKind = kind || 'ui';
+    if (renderScheduled) return;
+    renderScheduled = true;
+    requestAnimationFrame(() => {
+      renderScheduled = false;
+      if (!pendingState) return;
+      const state = pendingState;
+      const renderKind = pendingRenderKind;
+      pendingState = null;
+      pendingRenderKind = 'ui';
+
+      currentState = state;
+      if (renderKind === 'progress') {
+        updateProgress(currentState);
+      } else {
+        updateUI(currentState);
+      }
+    });
+  }
+
+  async function pollStateOnce() {
+    try {
+      const res = await fetch('/api/geo-import/state', { cache: 'no-store' });
+      if (!res.ok) return;
+      const payload = await res.json();
+      if (payload && payload.state) {
+        enqueueState(payload.state, 'ui');
+      }
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  function startStatePoller() {
+    if (statePollTimer) {
+      clearInterval(statePollTimer);
+      statePollTimer = null;
+    }
+    // Keep polling even when paused so the UI can catch up (and to recover if SSE drops).
+    statePollTimer = setInterval(() => {
+      pollStateOnce();
+    }, 2000);
+  }
   
   function connectSSE() {
     eventSource = new EventSource('/api/geo-import/events');
@@ -135,6 +194,8 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
       statusEl.className = 'connection-status connected';
       statusEl.textContent = '🟢 Connected';
       console.log('[GeoImport] SSE connected');
+
+      startStatePoller();
     };
     
     eventSource.onerror = (err) => {
@@ -150,7 +211,7 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
     eventSource.addEventListener('init', (e) => {
       const data = JSON.parse(e.data);
       currentState = data.state;
-      updateUI(currentState);
+      enqueueState(currentState, 'ui');
       console.log('[GeoImport] Initial state:', currentState);
     });
     
@@ -158,14 +219,14 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
     eventSource.addEventListener('progress', (e) => {
       const data = JSON.parse(e.data);
       currentState = data.state;
-      updateProgress(currentState);
+      enqueueState(currentState, 'progress');
     });
     
     // Stage changes
     eventSource.addEventListener('stage-change', (e) => {
       const data = JSON.parse(e.data);
       currentState = data.state;
-      updateUI(currentState);
+      enqueueState(currentState, 'ui');
     });
     
     // Log entries
@@ -178,8 +239,251 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
     eventSource.addEventListener('state-change', (e) => {
       const data = JSON.parse(e.data);
       currentState = data.state;
-      updateUI(currentState);
+      enqueueState(currentState, 'ui');
     });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Plan Preview (Dry Run)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  let selectedPlanSource = 'geonames';
+  let selectedPlanDetail = 'full';
+
+  function setPlanPreviewLoading(message) {
+    if (!planPreview) return;
+    planPreview.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'plan-preview__loading';
+    box.textContent = message || 'Loading plan…';
+    planPreview.appendChild(box);
+  }
+
+  function setPlanPreviewError(message) {
+    if (!planPreview) return;
+    planPreview.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'plan-preview__error';
+    box.textContent = message || 'Failed to load plan.';
+    planPreview.appendChild(box);
+  }
+
+  function fmtBytes(bytes) {
+    if (!Number.isFinite(bytes) || bytes <= 0) return null;
+    const mb = bytes / 1024 / 1024;
+    if (mb >= 1) return `${mb.toFixed(1)} MB`;
+    const kb = bytes / 1024;
+    return `${kb.toFixed(0)} KB`;
+  }
+
+  function renderPlanPreview(plan) {
+    if (!planPreview) return;
+    planPreview.innerHTML = '';
+
+    if (plan && typeof plan.source === 'string') {
+      selectedPlanSource = plan.source;
+    }
+    if (plan && (plan.detail === 'fast' || plan.detail === 'full')) {
+      selectedPlanDetail = plan.detail;
+    }
+
+    const header = document.createElement('div');
+    header.className = 'plan-preview__header';
+    header.innerHTML = `
+      <div class="plan-preview__title">🧭 Plan preview</div>
+      <div class="plan-preview__meta">
+        Source:
+        <select class="plan-preview__select" data-role="plan-source">
+          <option value="geonames">geonames</option>
+          <option value="wikidata">wikidata</option>
+          <option value="osm">osm</option>
+        </select>
+        Detail:
+        <select class="plan-preview__select" data-role="plan-detail">
+          <option value="full">full</option>
+          <option value="fast">fast</option>
+        </select>
+        <span class="plan-preview__meta-spacer">·</span>
+        Generated: <span>${plan.generatedAt}</span>
+      </div>
+    `;
+    planPreview.appendChild(header);
+
+    const sourceSelect = header.querySelector('[data-role="plan-source"]');
+    const detailSelect = header.querySelector('[data-role="plan-detail"]');
+    if (sourceSelect) {
+      sourceSelect.value = selectedPlanSource;
+      sourceSelect.addEventListener('change', () => {
+        selectedPlanSource = sourceSelect.value;
+        fetchPlanPreview({ source: selectedPlanSource, detail: selectedPlanDetail });
+      });
+    }
+    if (detailSelect) {
+      detailSelect.value = selectedPlanDetail;
+      detailSelect.addEventListener('change', () => {
+        selectedPlanDetail = detailSelect.value;
+        fetchPlanPreview({ source: selectedPlanSource, detail: selectedPlanDetail });
+      });
+    }
+
+    const summary = document.createElement('div');
+    summary.className = 'plan-preview__summary';
+
+    const prereq = plan.prerequisite || {};
+    const networkRequests = plan?.expected?.networkRequests;
+    const estimate = plan?.expected?.networkRequestsEstimate || null;
+
+    const reqText = Number.isFinite(networkRequests)
+      ? String(networkRequests)
+      : (estimate && Number.isFinite(estimate.min))
+        ? `≥ ${estimate.min}`
+        : 'unknown';
+
+    const makePill = (html) => {
+      const pill = document.createElement('div');
+      pill.className = 'plan-preview__pill';
+      pill.innerHTML = html;
+      return pill;
+    };
+
+    summary.appendChild(makePill(`🌐 Network requests: <b>${reqText}</b>`));
+
+    const inputs = Array.isArray(plan?.expected?.inputs) ? plan.expected.inputs : [];
+    if (inputs.length) {
+      // Keep pills compact: show at most 2 input summaries.
+      for (const input of inputs.slice(0, 2)) {
+        if (!input || typeof input !== 'object') continue;
+        if (input.kind === 'file') {
+          const sizeText = fmtBytes(input.sizeBytes);
+          const lineText = Number.isFinite(input.lineCount) ? `${input.lineCount.toLocaleString()} lines` : null;
+          summary.appendChild(makePill(
+            `📄 Input file: <b>${input.id || 'file'}</b> · <b>${input.exists ? 'present' : 'missing'}</b>`
+            + `${sizeText ? ` · ${sizeText}` : ''}`
+            + `${lineText ? ` · ${lineText}` : ''}`
+          ));
+        } else if (input.kind === 'db') {
+          const parts = [];
+          if (Number.isFinite(input.candidates)) parts.push(`candidates=${input.candidates}`);
+          if (Number.isFinite(input.existingCountries)) parts.push(`existing=${input.existingCountries}`);
+          if (Number.isFinite(input.freshWithinWindow)) parts.push(`fresh=${input.freshWithinWindow}`);
+          summary.appendChild(makePill(
+            `🗃️ DB input: <b>${input.id || 'db'}</b>${parts.length ? ` · ${parts.join(' · ')}` : ''}`
+          ));
+        }
+      }
+    } else {
+      // Back-compat: GeoNames-only plan shape.
+      const file = plan?.expected?.file || {};
+      const sizeText = fmtBytes(file.sizeBytes);
+      const lineText = Number.isFinite(file.lineCount) ? `${file.lineCount.toLocaleString()} lines` : null;
+      summary.appendChild(makePill(
+        `📄 Input: <b>${file.exists ? 'cities15000.txt present' : 'cities15000.txt missing'}</b>`
+        + `${sizeText ? ` · ${sizeText}` : ''}`
+        + `${file.exists && lineText ? ` · ${lineText}` : ''}`
+      ));
+    }
+
+    if (Array.isArray(plan?.expected?.endpoints) && plan.expected.endpoints.length) {
+      const endpoints = plan.expected.endpoints.slice(0, 2).join(' · ');
+      summary.appendChild(makePill(`🔗 Endpoints: <b>${endpoints}</b>`));
+    }
+
+    summary.appendChild(makePill(`🗄️ Writes: <b>${(plan.targets && plan.targets.tables ? plan.targets.tables.length : 0)}</b> tables`));
+    planPreview.appendChild(summary);
+
+    if (estimate && typeof estimate.note === 'string' && estimate.note.trim()) {
+      const note = document.createElement('div');
+      note.className = 'plan-preview__meta';
+      note.textContent = estimate.note;
+      planPreview.appendChild(note);
+    }
+
+    if (plan?.algorithm?.summary) {
+      const alg = document.createElement('div');
+      alg.className = 'plan-preview__meta';
+      alg.textContent = plan.algorithm.summary;
+      planPreview.appendChild(alg);
+    }
+
+    if (!prereq.ready) {
+      const missing = document.createElement('div');
+      missing.className = 'plan-preview__warning';
+      missing.innerHTML = `
+        <div><b>Prerequisite missing:</b> ${prereq.error || 'GeoNames file not ready'}</div>
+        ${prereq.downloadUrl ? `<div>Download: <a href="${prereq.downloadUrl}" target="_blank" rel="noreferrer">${prereq.downloadUrl}</a></div>` : ''}
+      `;
+      planPreview.appendChild(missing);
+    }
+
+    const details = document.createElement('details');
+    details.className = 'plan-preview__details';
+    details.open = true;
+    details.innerHTML = `<summary>Algorithm & planned actions</summary>`;
+
+    const stages = (plan.algorithm && Array.isArray(plan.algorithm.stages)) ? plan.algorithm.stages : [];
+    const list = document.createElement('div');
+    list.className = 'plan-preview__stages';
+    for (const stage of stages) {
+      const row = document.createElement('div');
+      row.className = 'plan-preview__stage';
+      const reads = Array.isArray(stage.reads) ? stage.reads.length : 0;
+      const writes = Array.isArray(stage.writes) ? stage.writes.length : 0;
+      row.innerHTML = `
+        <div class="plan-preview__stage-head">
+          <div class="plan-preview__stage-id">${stage.id}</div>
+          <div class="plan-preview__stage-label">${stage.label || ''}</div>
+          <div class="plan-preview__stage-badges">
+            <span class="plan-preview__badge">Reads: ${reads}</span>
+            <span class="plan-preview__badge">Writes: ${writes}</span>
+          </div>
+        </div>
+      `;
+
+      const stageDetails = document.createElement('details');
+      stageDetails.className = 'plan-preview__stage-details';
+      stageDetails.innerHTML = `<summary>Details</summary>`;
+      const pre = document.createElement('pre');
+      pre.textContent = JSON.stringify(stage, null, 2);
+      stageDetails.appendChild(pre);
+      row.appendChild(stageDetails);
+
+      list.appendChild(row);
+    }
+
+    details.appendChild(list);
+    planPreview.appendChild(details);
+
+    const targetsDetails = document.createElement('details');
+    targetsDetails.className = 'plan-preview__details';
+    targetsDetails.innerHTML = `<summary>DB targets</summary>`;
+    const targetsPre = document.createElement('pre');
+    targetsPre.textContent = JSON.stringify(plan.targets || {}, null, 2);
+    targetsDetails.appendChild(targetsPre);
+    planPreview.appendChild(targetsDetails);
+  }
+
+  async function fetchPlanPreview(detail = 'full') {
+    const normalized = typeof detail === 'object' && detail
+      ? {
+        source: detail.source || selectedPlanSource,
+        detail: detail.detail || selectedPlanDetail
+      }
+      : { source: selectedPlanSource, detail: detail };
+
+    const source = typeof normalized.source === 'string' ? normalized.source : 'geonames';
+    const planDetail = normalized.detail === 'fast' ? 'fast' : 'full';
+
+    setPlanPreviewLoading(`Loading ${source} plan…`);
+    try {
+      const res = await fetch(`/api/geo-import/plan?source=${encodeURIComponent(source)}&detail=${encodeURIComponent(planDetail)}`);
+      const json = await res.json();
+      if (!res.ok || !json || json.ok !== true) {
+        throw new Error((json && json.error) ? json.error : `HTTP ${res.status}`);
+      }
+      renderPlanPreview(json.plan);
+    } catch (e) {
+      setPlanPreviewError(`Plan preview failed: ${e.message}`);
+    }
   }
   
   // ─────────────────────────────────────────────────────────────────────────
@@ -192,12 +496,35 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
     updateButtons(state);
     updateSourceCards(state);
   }
+
+  // Hook Plan button (if present)
+  if (planBtn) {
+    planBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      fetchPlanPreview({ source: selectedPlanSource, detail: selectedPlanDetail });
+    });
+  }
   
   function updateStagesStepper(state) {
     const stepper = document.querySelector('.stages-stepper');
     if (!stepper) return;
     
-    const currentStageId = state.status || state.stage?.id || 'idle';
+    let currentStageId = state.status || state.stage?.id || 'idle';
+    // Keep pipeline highlighting on the last active stage when paused.
+    if (currentStageId === 'paused' && state.pausedFrom) {
+      currentStageId = state.pausedFrom;
+      stepper.classList.add('is-paused');
+    } else {
+      stepper.classList.remove('is-paused');
+    }
+
+    // When cancelled/error, keep the stepper visible but don't try to move past known stages.
+    const isTerminal = currentStageId === 'cancelled' || currentStageId === 'error';
+    if (isTerminal) {
+      stepper.classList.add('is-terminal');
+    } else {
+      stepper.classList.remove('is-terminal');
+    }
     const prevStageId = stepper.getAttribute('data-current-stage');
     stepper.setAttribute('data-current-stage', currentStageId);
     
@@ -224,7 +551,8 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
     
     const stages = stepper.querySelectorAll('.stage-item');
     const stageIds = ['idle', 'validating', 'counting', 'preparing', 'importing', 'indexing', 'verifying', 'complete'];
-    const currentIndex = stageIds.indexOf(currentStageId);
+    const idx = stageIds.indexOf(currentStageId);
+    const currentIndex = idx >= 0 ? idx : 0;
     
     stages.forEach((stageEl, index) => {
       const stageId = stageIds[index];
@@ -301,6 +629,7 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
     const { progress, stage } = state;
     const percent = progress.percent || 0;
     const now = Date.now();
+    const ratio = (progress.total || 0) > 0 ? (progress.current || 0) / (progress.total || 1) : 0;
     
     // Calculate speed (records per second)
     if (progress.current > 0) {
@@ -335,6 +664,18 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
     if (progressText) {
       progressText.textContent = percent + '%';
     }
+
+    // Update linear progress bar
+    if (progressBar) {
+      const determinate = (progress.total || 0) > 0;
+      progressBar.classList.toggle('progress-bar--indeterminate', !determinate);
+      if (determinate && progressBarFill) {
+        progressBarFill.style.width = `${Math.round(ratio * 100)}%`;
+      }
+      if (determinate && progressBarLabel) {
+        progressBarLabel.textContent = `${Math.round(ratio * 100)}%`;
+      }
+    }
     
     // Update stats with animation
     if (progressStat) {
@@ -346,6 +687,19 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
     // Update phase
     if (progressPhase && stage) {
       progressPhase.textContent = stage.emoji + ' ' + stage.description;
+    }
+
+    // Stall indicator
+    if (progressStall) {
+      const stall = state.stall || null;
+      if (stall && stall.stale) {
+        const s = Math.max(1, Math.round((stall.msSinceProgress || 0) / 1000));
+        progressStall.textContent = `⚠️ No progress for ${s}s`;
+        progressStall.classList.add('is-stale');
+      } else {
+        progressStall.textContent = '';
+        progressStall.classList.remove('is-stale');
+      }
     }
     
     // Update metrics (ETA & Speed)
@@ -397,21 +751,26 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
   
   function updateButtons(state) {
     const { status } = state;
+    const isAwaiting = status === 'awaiting';
     const isRunning = ['validating', 'counting', 'preparing', 'importing', 'indexing', 'verifying'].includes(status);
     const isPaused = status === 'paused';
     
     if (startBtn) {
-      startBtn.disabled = isRunning || isPaused;
-      startBtn.textContent = isRunning ? '🔄 Running...' : '🚀 Start Import';
+      startBtn.disabled = (isRunning || isPaused) && !isAwaiting;
+      if (isAwaiting) {
+        startBtn.textContent = '⏭️ Next Step';
+      } else {
+        startBtn.textContent = isRunning ? '🔄 Running...' : '🚀 Start Import';
+      }
     }
     
     if (pauseBtn) {
-      pauseBtn.disabled = !isRunning && !isPaused;
+      pauseBtn.disabled = (!isRunning && !isPaused) || isAwaiting;
       pauseBtn.textContent = isPaused ? '▶️ Resume' : '⏸️ Pause';
     }
     
     if (cancelBtn) {
-      cancelBtn.disabled = !isRunning && !isPaused;
+      cancelBtn.disabled = !isRunning && !isPaused && !isAwaiting;
     }
   }
   
@@ -495,6 +854,20 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
   // ─────────────────────────────────────────────────────────────────────────
   
   function handleStart() {
+    // If we're in step mode and awaiting user input, advance the pipeline.
+    if (currentState?.status === 'awaiting') {
+      return fetch('/api/geo-import/next', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) {
+            addLogEntry({ time: new Date().toLocaleTimeString(), level: 'error', message: data.error });
+          }
+        })
+        .catch(err => {
+          addLogEntry({ time: new Date().toLocaleTimeString(), level: 'error', message: 'Failed to advance step: ' + err.message });
+        });
+    }
+
     // First do a preflight check
     fetch('/api/geo-import/preflight')
       .then(r => r.json())
@@ -505,8 +878,14 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
           return;
         }
         
+        const stepMode = !!document.querySelector('[data-geo-import-step-mode]')?.checked;
+
         // File exists, start the import
-        return fetch('/api/geo-import/start', { method: 'POST' })
+        return fetch('/api/geo-import/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stepMode })
+        })
           .then(r => r.json())
           .then(data => {
             if (data.error) {
@@ -579,6 +958,7 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
   function getStatusLabel(status) {
     const labels = {
       'idle': '⏸️ Idle',
+      'awaiting': '⏭️ Awaiting',
       'ready': '✅ Ready',
       'running': '🔄 Running',
       'validating': '🔍 Validating',
@@ -648,6 +1028,33 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
   // ─────────────────────────────────────────────────────────────────────────
   // Initialize
   // ─────────────────────────────────────────────────────────────────────────
+
+  // Inject a simple "Step mode" toggle next to the Start button.
+  try {
+    const actions = document.querySelector('.sidebar-actions');
+    if (actions && !actions.querySelector('[data-geo-import-step-mode]')) {
+      const row = document.createElement('label');
+      row.className = 'geo-import-step-mode-toggle';
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.gap = '8px';
+      row.style.marginBottom = '8px';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = false;
+      cb.setAttribute('data-geo-import-step-mode', 'true');
+
+      const text = document.createElement('span');
+      text.textContent = 'Step mode (click ⏭️ Next Step)';
+
+      row.appendChild(cb);
+      row.appendChild(text);
+      actions.prepend(row);
+    }
+  } catch {
+    // ignore
+  }
   
   // Bind buttons
   if (startBtn) startBtn.addEventListener('click', handleStart);

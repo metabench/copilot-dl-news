@@ -1,6 +1,7 @@
 "use strict";
 
 const { createWidgetTitleBarControl } = require("./controls/WidgetTitleBarControl");
+const { createToolsPanelControl } = require("./controls/ToolsPanelControl");
 const { createCrawlTypeSelectorControl } = require("./controls/CrawlTypeSelectorControl");
 const { createStartUrlSelectorControl } = require("./controls/StartUrlSelectorControl");
 const { createCrawlControlButtonsControl } = require("./controls/CrawlControlButtonsControl");
@@ -19,6 +20,7 @@ function createCrawlWidgetControls(jsgui) {
   }
 
   const WidgetTitleBarControl = createWidgetTitleBarControl(jsgui);
+  const ToolsPanelControl = createToolsPanelControl(jsgui);
   const CrawlTypeSelectorControl = createCrawlTypeSelectorControl(jsgui);
   const StartUrlSelectorControl = createStartUrlSelectorControl(jsgui);
   const CrawlControlButtonsControl = createCrawlControlButtonsControl(jsgui);
@@ -31,7 +33,9 @@ function createCrawlWidgetControls(jsgui) {
       super({ ...spec, tagName: "div" });
       this.add_class("cw-app");
       this._api = spec.api || null;
+      this._telemetryPanels = Array.isArray(spec.telemetryPanels) ? spec.telemetryPanels : null;
       this._runState = { running: false, paused: false };
+      this._toolsOpen = false;
       this._preferSseTelemetry = false;
       this._eventSource = null;
       this._telemetryAdapter = null;
@@ -41,9 +45,19 @@ function createCrawlWidgetControls(jsgui) {
     compose() {
       this._titleBar = new WidgetTitleBarControl({
         context: this.context,
-        api: this._api
+        api: this._api,
+        onToggleTools: () => this.toggleTools()
       });
       this.add(this._titleBar);
+
+      this._toolsPanel = new ToolsPanelControl({
+        context: this.context,
+        api: this._api,
+        isOpen: this._toolsOpen,
+        telemetryPanels: this._telemetryPanels,
+        getSelectedUrl: () => this._urlSelector?.getSelectedUrl?.() || ""
+      });
+      this.add(this._toolsPanel);
 
       this._typeSelector = new CrawlTypeSelectorControl({
         context: this.context,
@@ -214,6 +228,7 @@ function createCrawlWidgetControls(jsgui) {
           const payload = JSON.parse(evt.data);
           if (payload && payload.type === "crawl:telemetry" && payload.data && this._telemetryAdapter) {
             this._telemetryAdapter.handleEvent(payload.data);
+            this._toolsPanel?.handleTelemetryEvent?.(payload.data);
           }
         } catch (e) {
           // Ignore malformed messages
@@ -234,6 +249,13 @@ function createCrawlWidgetControls(jsgui) {
       if (this.__active) return;
       super.activate();
       console.log("[CrawlWidgetApp] activate called, children should be activated");
+    }
+
+    toggleTools() {
+      this._toolsOpen = !this._toolsOpen;
+      if (this._toolsPanel?.setOpen) {
+        this._toolsPanel.setOpen(this._toolsOpen);
+      }
     }
   }
 

@@ -6,12 +6,14 @@
  */
 
 const { ensureUrlId } = require('../urlHelpers');
+const { ContentConfidenceScorer } = require('../../../analysis/ContentConfidenceScorer');
 
 class ArticleOperations {
   constructor(db, statements, utilities) {
     this.db = db;
     this.statements = statements;
     this.utilities = utilities;
+    this._confidenceScorer = new ContentConfidenceScorer();
   }
 
   /**
@@ -287,12 +289,28 @@ class ArticleOperations {
    */
   _insertContentAnalysis(analysisData) {
     try {
+      // Compute confidence score using multi-factor analysis
+      let confidenceScore = null;
+      try {
+        const extraction = {
+          title: analysisData.title,
+          wordCount: analysisData.word_count,
+          date: analysisData.date,
+          section: analysisData.section,
+          readability: analysisData.analysis_json ? JSON.parse(analysisData.analysis_json).readability : null
+        };
+        const confidence = this._confidenceScorer.score(extraction);
+        confidenceScore = confidence.score;
+      } catch (_) {
+        // Non-fatal: proceed without confidence score
+      }
+
       const result = this.db.prepare(`
         INSERT INTO content_analysis (
           content_id, analysis_version, classification, title, date, section,
           word_count, language, article_xpath, nav_links_count, article_links_count,
-          analysis_json, analyzed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+          analysis_json, confidence_score, analyzed_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
       `).run(
         analysisData.content_id,
         analysisData.analysis_version,
@@ -305,7 +323,8 @@ class ArticleOperations {
         analysisData.article_xpath,
         analysisData.nav_links_count,
         analysisData.article_links_count,
-        analysisData.analysis_json
+        analysisData.analysis_json,
+        confidenceScore
       );
 
       return result.lastInsertRowid;

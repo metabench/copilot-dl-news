@@ -29,6 +29,7 @@ const { analyzePage } = require('../analysis/page-analyzer');
 const { buildGazetteerMatchers } = require('../analysis/place-extraction');
 const { loadNonGeoTopicSlugs } = require('./nonGeoTopicSlugs');
 const { ArticleXPathService } = require('../services/ArticleXPathService');
+const { ContentConfidenceScorer } = require('../analysis/ContentConfidenceScorer');
 const { DecompressionWorkerPool } = require('../background/workers/DecompressionWorkerPool');
 
 const projectRoot = findProjectRoot(__dirname);
@@ -301,17 +302,34 @@ async function analyzeByUrl(url, options) {
       const analysisJson = JSON.stringify(analysis);
       const analysisVersion = 1; // Use version 1 for single page
 
+      // Compute confidence score
+      let confidenceScore = null;
+      try {
+        const scorer = new ContentConfidenceScorer();
+        const extraction = {
+          title: analysis.title,
+          wordCount: analysis.wordCount,
+          date: analysis.date,
+          section: analysis.section,
+          readability: analysis.readability
+        };
+        const confidence = scorer.score(extraction);
+        confidenceScore = confidence.score;
+      } catch (_) {
+        // Non-fatal
+      }
+
       if (existingAnalysis) {
         db.prepare(`
           UPDATE content_analysis
-          SET analysis_json = ?, analysis_version = ?, analyzed_at = datetime('now')
+          SET analysis_json = ?, analysis_version = ?, confidence_score = ?, analyzed_at = datetime('now')
           WHERE id = ?
-        `).run(analysisJson, analysisVersion, existingAnalysis.id);
+        `).run(analysisJson, analysisVersion, confidenceScore, existingAnalysis.id);
       } else {
         db.prepare(`
-          INSERT INTO content_analysis (content_id, analysis_json, analysis_version, analyzed_at)
-          VALUES (?, ?, ?, datetime('now'))
-        `).run(contentRow.id, analysisJson, analysisVersion);
+          INSERT INTO content_analysis (content_id, analysis_json, analysis_version, confidence_score, analyzed_at)
+          VALUES (?, ?, ?, ?, datetime('now'))
+        `).run(contentRow.id, analysisJson, analysisVersion, confidenceScore);
       }
 
       updateMs = performance.now() - updateStart;

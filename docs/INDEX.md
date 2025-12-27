@@ -112,6 +112,7 @@ Architecture and system design documents for proposed or implemented features.
 - [Agent Tooling Enhancements Proposal](AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md) - js-scan/js-edit roadmap + priority matrix
 - [Database Schemas](reference/db_schemas.md)
 - [Enhanced Database Adapter](reference/enhanced_database_adapter.md)
+- [Task Events API](database/task-events-api.md) - Unified event storage for crawls and background tasks, with AI query helpers and REST endpoints.
 - [Project Overview](reference/project_overview.md)
 
 ## Checklists
