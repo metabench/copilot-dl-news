@@ -17,6 +17,27 @@ function runGit(args, options = {}) {
   return String(result).trim();
 }
 
+function resolveGitRef(candidates) {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const resolved = safeTry(() => runGit(['rev-parse', '--verify', candidate]));
+    if (resolved.ok) {
+      return { ref: candidate, sha: resolved.value };
+    }
+  }
+  return null;
+}
+
+function parseLeftRightCount(output) {
+  const raw = String(output || '').trim();
+  const match = raw.match(/^(\d+)\s+(\d+)$/);
+  if (!match) return null;
+  return {
+    left: Number(match[1]),
+    right: Number(match[2])
+  };
+}
+
 function parseGitHubRepoFromOrigin(originUrlRaw) {
   if (!originUrlRaw) return null;
   const originUrl = String(originUrlRaw).trim();
@@ -89,7 +110,8 @@ async function runCli() {
       head: null,
       originUrl: null,
       upstream: null,
-      isDirty: null
+      isDirty: null,
+      divergence: null
     },
     github: {
       owner: null,
@@ -133,6 +155,43 @@ async function runCli() {
 
   status.git.base = base;
   status.git.head = head;
+
+  const baseResolved = resolveGitRef([
+    `refs/remotes/origin/${base}`,
+    `origin/${base}`,
+    base,
+    `refs/heads/${base}`
+  ]);
+  const headResolved = resolveGitRef([
+    `refs/heads/${head}`,
+    head,
+    `refs/remotes/origin/${head}`,
+    `origin/${head}`
+  ]);
+
+  if (baseResolved && headResolved) {
+    const counts = safeTry(() => runGit(['rev-list', '--left-right', '--count', `${baseResolved.ref}...${headResolved.ref}`]));
+    if (counts.ok) {
+      const parsed = parseLeftRightCount(counts.value);
+      if (parsed) {
+        status.git.divergence = {
+          baseRef: baseResolved.ref,
+          headRef: headResolved.ref,
+          behind: parsed.left,
+          ahead: parsed.right
+        };
+
+        if (parsed.left > 0) {
+          status.warnings.push(`Head branch is behind base by ${parsed.left} commit(s).`);
+          status.nextCommands.push('git fetch origin');
+          status.nextCommands.push(`git rebase origin/${base}`);
+        }
+      }
+    }
+  } else {
+    status.warnings.push('Could not compute ahead/behind divergence (missing base/head refs locally).');
+    status.nextCommands.push('git fetch origin');
+  }
 
   const upstream = safeTry(() => runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']));
   status.git.upstream = upstream.ok ? upstream.value : null;
@@ -179,6 +238,14 @@ async function runCli() {
     fmt.stat('Base', status.git.base || '(unknown)');
     fmt.stat('Head', status.git.head || '(unknown)');
     fmt.stat('Origin', status.git.originUrl || '(missing)');
+
+    if (status.git.divergence) {
+      const { ahead, behind, baseRef, headRef } = status.git.divergence;
+      fmt.section('Divergence');
+      fmt.stat('Compare', `${baseRef}...${headRef}`);
+      fmt.stat('Ahead', ahead, 'number');
+      fmt.stat('Behind', behind, 'number');
+    }
 
     if (status.github.compareUrl) {
       fmt.section('Compare URL');

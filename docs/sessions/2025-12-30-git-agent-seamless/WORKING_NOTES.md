@@ -16,3 +16,7 @@ Commands / evidence:
 
 Focused test:
 - `npm run test:by-path tests/tools/__tests__/git-pr-link.test.js`
+
+Update (divergence):
+- `git-pr-link` now computes ahead/behind vs base using `git rev-list --left-right --count <base>...<head>`.
+	- Prefers `refs/remotes/origin/<base>` when available so results match the PR base.

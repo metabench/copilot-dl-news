@@ -1003,6 +1003,7 @@ npm run pr:link
 - Detects `origin` URL and parses GitHub owner/repo (supports HTTPS + SSH forms)
 - Detects base branch from `origin/HEAD` (defaults to `main` if missing)
 - Detects current branch as head
+- Computes ahead/behind vs base (best-effort using local/remote refs)
 - Warns when the worktree is dirty or when the branch has no upstream
 
 ## `md-scan` — Markdown Discovery

@@ -16,6 +16,7 @@ owner: engineering
 `git` can push branches, but a Pull Request is created on the GitHub server. Agents should use the compare-link helper to avoid stalls.
 
 - Print the PR compare link: `npm run pr:link`
+- If the tool reports the head branch is behind base, run: `git fetch origin` then `git rebase origin/<base>`
 - If the branch has no upstream, run: `git push -u origin HEAD`
 
 This keeps git usage seamless even when GitHub CLI (`gh`) is unavailable or unauthenticated.
