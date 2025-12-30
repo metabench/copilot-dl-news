@@ -13,6 +13,9 @@ function run() {
   const payload = collectDiagramData({
     sections: new Set(["db"])
   });
+  // Avoid per-run timestamp drift in the committed check artifact.
+  // The interactive server still reports the real snapshot timestamp.
+  payload.generatedAt = null;
   const html = renderDiagramAtlasHtml(payload, { title: "Diagram Atlas (check)" });
   const target = path.join(process.cwd(), "diagram-atlas.check.html");
   fs.writeFileSync(target, html, "utf8");
