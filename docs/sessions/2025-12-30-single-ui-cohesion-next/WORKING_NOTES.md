@@ -64,3 +64,13 @@ Verified startup-check runs (avoid port collisions by choosing non-default ports
 - `npm run test:by-path tests/tools/__tests__/schema-sync.line-endings.test.js tests/ui/unifiedApp.registry.test.js`
 	- Result: `2 passed, 0 failed` (exit `0`)
 	- Note: runner emits a warning about `--localstorage-file` without a valid path (non-fatal).
+
+### Post-packaging re-validation
+
+After splitting commits, reran the ladder:
+- `npm run schema:check` => ✅ in sync
+- `npm run diagram:check` => saved `diagram-atlas.check.html`, exits cleanly
+- `node src/ui/server/unifiedApp/server.js --check --port 3055` => ✅ pass
+- `node src/ui/server/opsHub/server.js --check --port 3056` => ✅ pass
+- `node src/ui/server/qualityDashboard/server.js --check --port 3057 --db-path "data/news.db"` => ✅ pass
+- `npm run test:by-path tests/tools/__tests__/schema-sync.line-endings.test.js tests/ui/unifiedApp.registry.test.js` => ✅ 2 suites pass
