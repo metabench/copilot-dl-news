@@ -389,8 +389,10 @@ function generateStats(schema, rowCounts) {
  * @returns {string} SHA256 hash
  */
 function contentHash(content) {
-    // Normalize by removing timestamp line for comparison
-    const normalized = content.replace(/Generated at .+\n/g, '');
+    // Normalize Windows CRLF -> LF so drift checks are stable across platforms.
+    // Also remove timestamp line so regenerations on the same schema compare equal.
+    const normalizedLineEndings = content.replace(/\r\n/g, '\n');
+    const normalized = normalizedLineEndings.replace(/Generated at .+\n/g, '');
     return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 16);
 }
 
@@ -453,8 +455,8 @@ async function main() {
                 console.log('\nRun "npm run schema:sync" to update schema definitions.');
                 
                 // Show what changed
-                const existingTables = existingContent.match(/\/\/ (\w+)\n/g) || [];
-                const newTables = newContent.match(/\/\/ (\w+)\n/g) || [];
+                const existingTables = existingContent.match(/\/\/ (\w+)\r?\n/g) || [];
+                const newTables = newContent.match(/\/\/ (\w+)\r?\n/g) || [];
                 
                 const existingSet = new Set(existingTables.map(t => t.replace(/\/\/ |\n/g, '')));
                 const newSet = new Set(newTables.map(t => t.replace(/\/\/ |\n/g, '')));
@@ -539,5 +541,6 @@ module.exports = {
     extractSchema,
     generateSchemaDefinitions,
     generateStats,
-    parseArgs
+    parseArgs,
+    contentHash
 };
