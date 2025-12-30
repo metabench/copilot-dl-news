@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 180">
+  <g id="dimension-visual">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">WHAT DOES "BITS" MEAN?</text>
+    
+    <!-- 64-bit -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="230" height="115" fill="#444" rx="6"/>
+      <text x="115" y="22" text-anchor="middle" font-size="11" font-weight="600" fill="#60a5fa">64-bit (8 bytes)</text>
+      <rect x="15" y="35" width="200" height="12" fill="#1e3a5f" rx="2"/>
+      <g fill="#60a5fa" font-size="6">
+        <text x="18" y="44">1</text><text x="28" y="44">0</text><text x="38" y="44">1</text><text x="48" y="44">1</text>
+        <text x="58" y="44">0</text><text x="68" y="44">0</text><text x="78" y="44">1</text><text x="88" y="44">0</text>
+        <text x="102" y="44">...</text>
+        <text x="180" y="44">1</text><text x="190" y="44">0</text><text x="200" y="44">1</text><text x="210" y="44">1</text>
+      </g>
+      <text x="15" y="68" font-size="8" fill="#aaa">64 binary decisions</text>
+      <text x="15" y="82" font-size="8" fill="#aaa">Hamming range: 0–64</text>
+      <text x="15" y="96" font-size="8" fill="#888">Resolution: ~1.5% per bit</text>
+      <text x="15" y="110" font-size="8" fill="#34d399">Speed: 10.4M pairs/sec</text>
+    </g>
+    
+    <!-- 128-bit -->
+    <g transform="translate(280, 50)">
+      <rect x="0" y="0" width="230" height="115" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="115" y="22" text-anchor="middle" font-size="11" font-weight="600" fill="#a78bfa">128-bit (16 bytes)</text>
+      <rect x="15" y="35" width="200" height="12" fill="#3d2f5a" rx="2"/>
+      <rect x="15" y="49" width="200" height="12" fill="#3d2f5a" rx="2"/>
+      <g fill="#a78bfa" font-size="6">
+        <text x="18" y="44">1</text><text x="28" y="44">0</text><text x="38" y="44">1</text><text x="48" y="44">1</text>
+        <text x="102" y="44">...</text>
+        <text x="180" y="44">1</text><text x="190" y="44">0</text><text x="200" y="44">1</text><text x="210" y="44">1</text>
+        <text x="18" y="58">0</text><text x="28" y="58">1</text><text x="38" y="58">0</text><text x="48" y="58">1</text>
+        <text x="102" y="58">...</text>
+        <text x="180" y="58">0</text><text x="190" y="58">1</text><text x="200" y="58">0</text><text x="210" y="58">0</text>
+      </g>
+      <text x="15" y="78" font-size="8" fill="#aaa">128 binary decisions</text>
+      <text x="15" y="92" font-size="8" fill="#aaa">Hamming range: 0–128</text>
+      <text x="15" y="106" font-size="8" fill="#fbbf24">RECOMMENDED</text>
+    </g>
+    
+    <!-- 256-bit -->
+    <g transform="translate(530, 50)">
+      <rect x="0" y="0" width="240" height="115" fill="#444" rx="6"/>
+      <text x="120" y="22" text-anchor="middle" font-size="11" font-weight="600" fill="#34d399">256-bit (32 bytes)</text>
+      <rect x="15" y="35" width="210" height="12" fill="#1a3a2a" rx="2"/>
+      <rect x="15" y="49" width="210" height="12" fill="#1a3a2a" rx="2"/>
+      <rect x="15" y="63" width="210" height="12" fill="#1a3a2a" rx="2"/>
+      <rect x="15" y="77" width="210" height="12" fill="#1a3a2a" rx="2"/>
+      <text x="120" y="60" text-anchor="middle" font-size="6" fill="#34d399">4 rows × 64 bits</text>
+      <text x="15" y="100" font-size="8" fill="#aaa">256 binary decisions</text>
+      <text x="15" y="112" font-size="8" fill="#888">Speed: 2.9M pairs/sec</text>
+    </g>
+  </g>
+</svg>

@@ -11,6 +11,7 @@ let mainWindow;
 let crawlProcess = null;
 let sseConnection = null;
 let newsDb = null;
+let newsDbHandle = null;
 
 let telemetryHttpServer = null;
 let telemetryExpressApp = null;
@@ -23,6 +24,17 @@ let telemetryLastPhase = null;
 const BASE_PATH = path.join(__dirname, '..');
 const DEFAULT_SERVER_PORT = 3099; // Port for the telemetry server
 const DB_PATH = path.join(BASE_PATH, 'data', 'news.db');
+
+const DEFAULT_DATA_EXPLORER_PORT = 4600;
+
+function getDataExplorerBaseUrl() {
+  const baseOverride = (process.env.DATA_EXPLORER_BASE_URL || '').trim();
+  if (baseOverride) return baseOverride.replace(/\/$/, '');
+
+  const port = parseInt(process.env.DATA_EXPLORER_PORT, 10);
+  const safePort = Number.isFinite(port) ? port : DEFAULT_DATA_EXPLORER_PORT;
+  return `http://localhost:${safePort}`;
+}
 
 function ensureTelemetryServer(port = DEFAULT_SERVER_PORT) {
   if (telemetryHttpServer && telemetryIntegration && telemetryExpressApp) {
@@ -103,25 +115,11 @@ function initDatabase() {
     
     // Open the database with better-sqlite3
     const dbHandle = new Database(DB_PATH);
+    newsDbHandle = dbHandle;
     newsDb = new NewsDatabase(dbHandle);
-    
-    // Run the favicon migration if needed
-    try {
-      newsDb.db.exec(`ALTER TABLE news_websites ADD COLUMN favicon_data TEXT`);
-    } catch (e) { /* Column may already exist */ }
-    try {
-      newsDb.db.exec(`ALTER TABLE news_websites ADD COLUMN favicon_content_type TEXT`);
-    } catch (e) { /* Column may already exist */ }
-    try {
-      newsDb.db.exec(`ALTER TABLE news_websites ADD COLUMN favicon_updated_at TEXT`);
-    } catch (e) { /* Column may already exist */ }
-    try {
-      newsDb.db.exec(`ALTER TABLE news_websites ADD COLUMN favicon_fetch_error TEXT`);
-    } catch (e) { /* Column may already exist */ }
-    
-    // Seed default news sources
-    const { seedNewsSources } = require(path.join(BASE_PATH, 'src', 'db', 'sqlite', 'v1', 'newsSourcesSeeder.js'));
-    seedNewsSources(newsDb.db, { logger: console });
+
+    newsDb.ensureNewsWebsiteFaviconColumns();
+    newsDb.seedDefaultNewsSources({ logger: console });
     
     console.log('[CrawlWidget] Database initialized');
     return true;
@@ -129,6 +127,10 @@ function initDatabase() {
     console.error('[CrawlWidget] Database init failed:', err.message);
     return false;
   }
+}
+
+function getDbHandle() {
+  return newsDbHandle;
 }
 
 // Widget dimensions - compact but readable (80% wider, 20% taller than original)
@@ -201,6 +203,10 @@ app.on('window-all-closed', function () {
     try { newsDb.close(); } catch {}
     newsDb = null;
   }
+  if (newsDbHandle) {
+    try { newsDbHandle.close(); } catch {}
+    newsDbHandle = null;
+  }
   if (process.platform !== 'darwin') app.quit();
 });
 
@@ -242,6 +248,9 @@ ipcMain.handle('start-crawl', async (event, { crawlType, startUrl, config = {} }
     
     // Enable JSON progress output for widget parsing
     args.push('--progress-json');
+
+    // Enable JSON telemetry output for activity feed (fetch/cache/errors)
+    args.push('--telemetry-json');
     
     // Pass crawl type to CLI
     if (crawlType && crawlType !== 'basic') {
@@ -277,47 +286,74 @@ ipcMain.handle('start-crawl', async (event, { crawlType, startUrl, config = {} }
     }
 
     // Stream stdout to renderer + feed standardized telemetry
+    let stdoutBuffer = '';
     crawlProcess.stdout.on('data', (data) => {
       const output = data.toString();
-      if (mainWindow) {
-        mainWindow.webContents.send('crawl-log', { type: 'stdout', data: output });
-        
-        // Parse progress from output - try multiple formats
-        try {
-          // Format 1: Explicit JSON progress {"type":"progress",...}
-          const jsonMatch = output.match(/\{"type":"progress"[^}]*\}/);
-          if (jsonMatch) {
-            const progress = JSON.parse(jsonMatch[0]);
-            mainWindow.webContents.send('crawl-progress', progress);
+      if (!mainWindow) return;
 
-            if (telemetryIntegration?.bridge) {
-              telemetryIntegration.bridge.emitProgress({
-                visited: progress.visited,
-                queued: progress.queued,
-                errors: progress.errors,
-                downloaded: progress.downloaded,
-                articles: progress.articles,
-                skipped: progress.skipped,
-                percentComplete: progress.percentComplete,
-                total: progress.total,
-                currentUrl: progress.currentUrl,
-                currentAction: progress.currentAction,
-                phase: progress.phase,
-                throttled: progress.throttled,
-                throttleReason: progress.throttleReason,
-                throttleDomain: progress.throttleDomain
-              }, { jobId: telemetryJob, crawlType: telemetryCrawlType });
+      mainWindow.webContents.send('crawl-log', { type: 'stdout', data: output });
 
-              if (progress.phase && progress.phase !== telemetryLastPhase) {
-                telemetryLastPhase = progress.phase;
-                telemetryIntegration.bridge.emitPhaseChange(progress.phase, { jobId: telemetryJob, crawlType: telemetryCrawlType });
+      stdoutBuffer += output;
+      const lines = stdoutBuffer.split(/\r?\n/);
+      stdoutBuffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        // Prefer newline-delimited JSON (progress + telemetry events)
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+          try {
+            const payload = JSON.parse(trimmed);
+
+            if (payload && payload.type === 'progress') {
+              const progress = payload;
+              mainWindow.webContents.send('crawl-progress', progress);
+
+              if (telemetryIntegration?.bridge) {
+                telemetryIntegration.bridge.emitProgress({
+                  visited: progress.visited,
+                  queued: progress.queued,
+                  errors: progress.errors,
+                  downloaded: progress.downloaded,
+                  articles: progress.articles,
+                  skipped: progress.skipped,
+                  percentComplete: progress.percentComplete,
+                  total: progress.total,
+                  currentUrl: progress.currentUrl,
+                  currentAction: progress.currentAction,
+                  phase: progress.phase,
+                  throttled: progress.throttled,
+                  throttleReason: progress.throttleReason,
+                  throttleDomain: progress.throttleDomain
+                }, { jobId: telemetryJob, crawlType: telemetryCrawlType });
+
+                if (progress.phase && progress.phase !== telemetryLastPhase) {
+                  telemetryLastPhase = progress.phase;
+                  telemetryIntegration.bridge.emitPhaseChange(progress.phase, { jobId: telemetryJob, crawlType: telemetryCrawlType });
+                }
               }
+              continue;
             }
-            return;
+
+            if (payload && payload.type === 'telemetry' && payload.event && typeof payload.event === 'object') {
+              const event = { ...payload.event };
+              if (!event.jobId && telemetryJob) event.jobId = telemetryJob;
+              if (!event.crawlType && telemetryCrawlType) event.crawlType = telemetryCrawlType;
+              if (telemetryIntegration?.bridge) {
+                telemetryIntegration.bridge.emitEvent(event);
+              }
+              continue;
+            }
+          } catch (_) {
+            // fall through to legacy parsing
           }
+        }
+
+        try {
           
           // Format 2: PROGRESS {...} format from CrawlerEvents
-          const progressLineMatch = output.match(/PROGRESS\s+(\{.*\})/);
+          const progressLineMatch = trimmed.match(/PROGRESS\s+(\{.*\})/);
           if (progressLineMatch) {
             try {
               const progress = JSON.parse(progressLineMatch[1]);
@@ -359,14 +395,14 @@ ipcMain.handle('start-crawl', async (event, { crawlType, startUrl, config = {} }
                   telemetryIntegration.bridge.emitPhaseChange(progress.phase, { jobId: telemetryJob, crawlType: telemetryCrawlType });
                 }
               }
-              return;
+              continue;
             } catch (e) {
               // Continue to other formats if JSON parse fails
             }
           }
           
           // Format 3: Telemetry progress event {"event":"crawl:progress",...}
-          const telemetryMatch = output.match(/\{"event":"crawl:progress"[^}]*"data":\{([^}]+)\}/);
+          const telemetryMatch = trimmed.match(/\{"event":"crawl:progress"[^}]*"data":\{([^}]+)\}/);
           if (telemetryMatch) {
             const dataStr = '{' + telemetryMatch[1] + '}';
             const progress = JSON.parse(dataStr);
@@ -375,7 +411,7 @@ ipcMain.handle('start-crawl', async (event, { crawlType, startUrl, config = {} }
             if (telemetryIntegration?.bridge) {
               telemetryIntegration.bridge.emitProgress(progress, { jobId: telemetryJob, crawlType: telemetryCrawlType });
             }
-            return;
+            continue;
           }
           
           // Format 4: Parse stats from log lines like "Visited: 123, Queued: 456"
@@ -388,11 +424,11 @@ ipcMain.handle('start-crawl', async (event, { crawlType, startUrl, config = {} }
             /articles?[:\s]+(\d+)/i
           ];
           
-          const visited = output.match(/visited[:\s]+(\d+)/i);
-          const queued = output.match(/queue(?:d)?[:\s]+(\d+)/i);
-          const errors = output.match(/errors?[:\s]+(\d+)/i);
-          const downloaded = output.match(/downloaded[:\s]+(\d+)/i);
-          const articles = output.match(/articles?[:\s]+(\d+)/i);
+          const visited = trimmed.match(/visited[:\s]+(\d+)/i);
+          const queued = trimmed.match(/queue(?:d)?[:\s]+(\d+)/i);
+          const errors = trimmed.match(/errors?[:\s]+(\d+)/i);
+          const downloaded = trimmed.match(/downloaded[:\s]+(\d+)/i);
+          const articles = trimmed.match(/articles?[:\s]+(\d+)/i);
           
           if (visited || queued || downloaded) {
             const progress = {
@@ -407,7 +443,7 @@ ipcMain.handle('start-crawl', async (event, { crawlType, startUrl, config = {} }
             if (telemetryIntegration?.bridge) {
               telemetryIntegration.bridge.emitProgress(progress, { jobId: telemetryJob, crawlType: telemetryCrawlType });
             }
-            return;
+            continue;
           }
           
           // Format 5: Detect activity from common log patterns
@@ -420,7 +456,7 @@ ipcMain.handle('start-crawl', async (event, { crawlType, startUrl, config = {} }
           };
           
           for (const [action, pattern] of Object.entries(activityPatterns)) {
-            const match = output.match(pattern);
+            const match = trimmed.match(pattern);
             if (match) {
               const progress = {
                 currentAction: action,
@@ -556,6 +592,129 @@ ipcMain.handle('close-widget', async () => {
  */
 ipcMain.handle('minimize-widget', async () => {
   mainWindow.minimize();
+});
+
+ipcMain.handle('open-data-explorer', async () => {
+  const url = `${getDataExplorerBaseUrl()}/`;
+  await shell.openExternal(url);
+  return { success: true, url };
+});
+
+ipcMain.handle('open-decision-trees', async () => {
+  const url = `${getDataExplorerBaseUrl()}/decision-trees`;
+  await shell.openExternal(url);
+  return { success: true, url };
+});
+
+ipcMain.handle('open-telemetry-health', async () => {
+  const info = getTelemetryInfo(DEFAULT_SERVER_PORT);
+  const url = info.healthUrl;
+  await shell.openExternal(url);
+  return { success: true, url };
+});
+
+ipcMain.handle('list-place-hubs', async (event, { host } = {}) => {
+  const db = getDbHandle();
+  if (!db) {
+    return { success: false, hubs: [], message: 'Database not initialized' };
+  }
+
+  try {
+    const { createCrawlPlaceHubsQueries } = require(path.join(BASE_PATH, 'src', 'db', 'sqlite', 'v1', 'queries', 'placeHubs.crawlTool.js'));
+    const queries = createCrawlPlaceHubsQueries(db);
+    const hubs = queries.listPlaceHubs({ host });
+    return { success: true, hubs };
+  } catch (err) {
+    return { success: false, hubs: [], message: err?.message || String(err) };
+  }
+});
+
+ipcMain.handle('guess-place-hubs', async (event, { domain, scheme = 'https', kinds = ['country'], apply = false } = {}) => {
+  const db = getDbHandle();
+  if (!db || !newsDb) {
+    return { success: false, message: 'Database not initialized' };
+  }
+  if (!telemetryIntegration?.bridge) {
+    return { success: false, message: 'Telemetry server not initialized' };
+  }
+
+  const trimmedDomain = typeof domain === 'string' ? domain.trim().toLowerCase() : '';
+  if (!trimmedDomain) {
+    return { success: false, message: 'domain is required' };
+  }
+
+  const fetchFn = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
+  const jobId = `place-hubs-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+
+  // Fire-and-forget: events stream via telemetry SSE.
+  void (async () => {
+    try {
+      const { createGuessPlaceHubsQueries } = require(path.join(BASE_PATH, 'src', 'db', 'sqlite', 'v1', 'queries', 'guessPlaceHubsQueries'));
+      const { createPlaceHubCandidatesStore } = require(path.join(BASE_PATH, 'src', 'db', 'placeHubCandidatesStore'));
+      const { CountryHubGapAnalyzer } = require(path.join(BASE_PATH, 'src', 'services', 'CountryHubGapAnalyzer'));
+      const { RegionHubGapAnalyzer } = require(path.join(BASE_PATH, 'src', 'services', 'RegionHubGapAnalyzer'));
+      const { CityHubGapAnalyzer } = require(path.join(BASE_PATH, 'src', 'services', 'CityHubGapAnalyzer'));
+      const { TopicHubGapAnalyzer } = require(path.join(BASE_PATH, 'src', 'services', 'TopicHubGapAnalyzer'));
+      const HubValidator = require(path.join(BASE_PATH, 'src', 'hub-validation', 'HubValidator'));
+      const { createFetchRecorder } = require(path.join(BASE_PATH, 'src', 'utils', 'fetch', 'fetchRecorder'));
+      const { guessPlaceHubsForDomain } = require(path.join(BASE_PATH, 'src', 'orchestration', 'placeHubGuessing'));
+
+      const logger = {
+        info: () => {},
+        warn: () => {},
+        error: console.error.bind(console)
+      };
+
+      const queries = createGuessPlaceHubsQueries(db);
+      const candidatesStore = createPlaceHubCandidatesStore(db);
+      const validator = new HubValidator(db);
+      if (typeof validator.initialize === 'function') {
+        try { validator.initialize(); } catch {}
+      }
+
+      const analyzers = {
+        country: new CountryHubGapAnalyzer({ db, logger }),
+        region: new RegionHubGapAnalyzer({ db, logger }),
+        city: new CityHubGapAnalyzer({ db, logger }),
+        topic: new TopicHubGapAnalyzer({ db, logger })
+      };
+
+      const fetchRecorder = createFetchRecorder({
+        newsDb,
+        legacyDb: db,
+        logger,
+        source: 'widget:guess-place-hubs'
+      });
+
+      await guessPlaceHubsForDomain({
+        domain: trimmedDomain,
+        scheme,
+        kinds,
+        apply,
+        runId: jobId,
+        telemetryCrawlType: 'place-hubs'
+      }, {
+        db,
+        newsDb,
+        logger,
+        fetchFn,
+        now: () => new Date(),
+        queries,
+        analyzers,
+        validator,
+        stores: {
+          candidates: candidatesStore,
+          fetchRecorder
+        },
+        telemetryBridge: telemetryIntegration.bridge
+      });
+    } catch (err) {
+      console.error('[CrawlWidget] guess-place-hubs failed:', err);
+    }
+  })();
+
+  return { success: true, jobId };
 });
 
 /**

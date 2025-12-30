@@ -1,0 +1,393 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="800" viewBox="0 0 1000 800" role="img" aria-label="Signature Cache Gate: Why DB storage prevents file sprawl">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="parchment" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0%" stop-color="#f8edd4"/>
+      <stop offset="50%" stop-color="#e8dab5"/>
+      <stop offset="100%" stop-color="#d0c498"/>
+    </linearGradient>
+    
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d4a84b"/>
+      <stop offset="50%" stop-color="#c49428"/>
+      <stop offset="100%" stop-color="#a67c1a"/>
+    </linearGradient>
+    
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b8b0a8"/>
+      <stop offset="30%" stop-color="#9a9490"/>
+      <stop offset="100%" stop-color="#6a6460"/>
+    </linearGradient>
+    
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8b6914"/>
+      <stop offset="50%" stop-color="#6d4c10"/>
+      <stop offset="100%" stop-color="#4a3208"/>
+    </linearGradient>
+    
+    <linearGradient id="dbGreen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4a9d68"/>
+      <stop offset="100%" stop-color="#2d6b4a"/>
+    </linearGradient>
+    
+    <linearGradient id="fileRed" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e57373"/>
+      <stop offset="100%" stop-color="#c62828"/>
+    </linearGradient>
+    
+    <linearGradient id="panelBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8f0e0"/>
+      <stop offset="100%" stop-color="#e8dcc8"/>
+    </linearGradient>
+    
+    <!-- Filters -->
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-color="#3d2814" flood-opacity="0.25"/>
+    </filter>
+    
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#d4a84b" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Arrow marker -->
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#5c4a32"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2d6b4a"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#c62828"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1000" height="800" fill="url(#parchment)"/>
+  
+  <!-- Border -->
+  <rect x="10" y="10" width="980" height="780" rx="5" fill="none" stroke="#8b7355" stroke-width="2.5"/>
+  <rect x="18" y="18" width="964" height="764" rx="3" fill="none" stroke="#a89070" stroke-width="1"/>
+  
+  <!-- Title Banner -->
+  <g transform="translate(500, 45)">
+    <path d="M -280,0 Q -300,-15 -280,-30 L 280,-30 Q 300,-15 280,0 L 280,35 Q 300,50 280,65 L -280,65 Q -300,50 -280,35 Z" fill="#f5e6c8" stroke="#8b7355" stroke-width="2"/>
+    <path d="M -260,4 L 260,4 L 260,55 L -260,55 Z" fill="#efe1c2"/>
+    <!-- Scroll rolls -->
+    <ellipse cx="-283" cy="-15" rx="7" ry="15" fill="#d4c8a0" stroke="#8b7355" stroke-width="1.2"/>
+    <ellipse cx="283" cy="-15" rx="7" ry="15" fill="#d4c8a0" stroke="#8b7355" stroke-width="1.2"/>
+    <ellipse cx="-283" cy="50" rx="7" ry="15" fill="#d4c8a0" stroke="#8b7355" stroke-width="1.2"/>
+    <ellipse cx="283" cy="50" rx="7" ry="15" fill="#d4c8a0" stroke="#8b7355" stroke-width="1.2"/>
+    <text x="0" y="28" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="22" font-weight="bold" fill="#2d1a08">🏰 The Signature Cache Gate 🏰</text>
+    <text x="0" y="50" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#5c4a32">Why Database Storage Prevents File Sprawl</text>
+  </g>
+  
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- THE GATE ILLUSTRATION -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(500, 280)">
+    <!-- Ground/path -->
+    <ellipse cx="0" cy="145" rx="180" ry="25" fill="#9a8a70" opacity="0.4"/>
+    
+    <!-- Left Tower -->
+    <g transform="translate(-130, 0)">
+      <rect x="-35" y="20" width="70" height="140" rx="4" fill="url(#stone)" stroke="#5a5450" stroke-width="1.5"/>
+      <!-- Battlements -->
+      <rect x="-35" y="8" width="18" height="16" fill="url(#stone)" stroke="#5a5450" stroke-width="1"/>
+      <rect x="-8" y="8" width="18" height="16" fill="url(#stone)" stroke="#5a5450" stroke-width="1"/>
+      <rect x="19" y="8" width="18" height="16" fill="url(#stone)" stroke="#5a5450" stroke-width="1"/>
+      <!-- Window -->
+      <rect x="-12" y="55" width="24" height="35" rx="12" fill="#2a2828"/>
+      <rect x="-8" y="60" width="16" height="25" rx="8" fill="#3d3a38"/>
+      <!-- Stone texture lines -->
+      <g stroke="#7a7470" stroke-width="0.6" opacity="0.5">
+        <line x1="-35" y1="50" x2="35" y2="50"/>
+        <line x1="-35" y1="80" x2="35" y2="80"/>
+        <line x1="-35" y1="110" x2="35" y2="110"/>
+        <line x1="-35" y1="140" x2="35" y2="140"/>
+        <line x1="0" y1="20" x2="0" y2="50"/>
+        <line x1="-18" y1="50" x2="-18" y2="80"/>
+        <line x1="18" y1="80" x2="18" y2="110"/>
+      </g>
+    </g>
+    
+    <!-- Right Tower -->
+    <g transform="translate(130, 0)">
+      <rect x="-35" y="20" width="70" height="140" rx="4" fill="url(#stone)" stroke="#5a5450" stroke-width="1.5"/>
+      <!-- Battlements -->
+      <rect x="-35" y="8" width="18" height="16" fill="url(#stone)" stroke="#5a5450" stroke-width="1"/>
+      <rect x="-8" y="8" width="18" height="16" fill="url(#stone)" stroke="#5a5450" stroke-width="1"/>
+      <rect x="19" y="8" width="18" height="16" fill="url(#stone)" stroke="#5a5450" stroke-width="1"/>
+      <!-- Window -->
+      <rect x="-12" y="55" width="24" height="35" rx="12" fill="#2a2828"/>
+      <rect x="-8" y="60" width="16" height="25" rx="8" fill="#3d3a38"/>
+      <!-- Stone texture lines -->
+      <g stroke="#7a7470" stroke-width="0.6" opacity="0.5">
+        <line x1="-35" y1="50" x2="35" y2="50"/>
+        <line x1="-35" y1="80" x2="35" y2="80"/>
+        <line x1="-35" y1="110" x2="35" y2="110"/>
+        <line x1="-35" y1="140" x2="35" y2="140"/>
+        <line x1="0" y1="20" x2="0" y2="50"/>
+        <line x1="-18" y1="50" x2="-18" y2="80"/>
+        <line x1="18" y1="80" x2="18" y2="110"/>
+      </g>
+    </g>
+    
+    <!-- Gate Arch -->
+    <path d="M -95,160 L -95,60 Q -95,20 0,20 Q 95,20 95,60 L 95,160" fill="url(#stone)" stroke="#5a5450" stroke-width="2"/>
+    <path d="M -80,160 L -80,65 Q -80,35 0,35 Q 80,35 80,65 L 80,160" fill="#2a2828"/>
+    
+    <!-- Gate (wooden, slightly open) -->
+    <g transform="translate(-40, 55)">
+      <rect x="0" y="0" width="35" height="105" fill="url(#wood)" stroke="#3d2814" stroke-width="1.5"/>
+      <!-- Wood planks -->
+      <g stroke="#4a3208" stroke-width="0.8" opacity="0.6">
+        <line x1="0" y1="0" x2="35" y2="0"/>
+        <line x1="0" y1="21" x2="35" y2="21"/>
+        <line x1="0" y1="42" x2="35" y2="42"/>
+        <line x1="0" y1="63" x2="35" y2="63"/>
+        <line x1="0" y1="84" x2="35" y2="84"/>
+      </g>
+      <!-- Iron bands -->
+      <rect x="0" y="15" width="35" height="4" fill="#4a4a4a"/>
+      <rect x="0" y="50" width="35" height="4" fill="#4a4a4a"/>
+      <rect x="0" y="85" width="35" height="4" fill="#4a4a4a"/>
+      <!-- Ring handle -->
+      <circle cx="28" cy="52" r="5" fill="none" stroke="#6a6a6a" stroke-width="2"/>
+    </g>
+    
+    <g transform="translate(5, 55)">
+      <rect x="0" y="0" width="35" height="105" fill="url(#wood)" stroke="#3d2814" stroke-width="1.5"/>
+      <!-- Wood planks -->
+      <g stroke="#4a3208" stroke-width="0.8" opacity="0.6">
+        <line x1="0" y1="0" x2="35" y2="0"/>
+        <line x1="0" y1="21" x2="35" y2="21"/>
+        <line x1="0" y1="42" x2="35" y2="42"/>
+        <line x1="0" y1="63" x2="35" y2="63"/>
+        <line x1="0" y1="84" x2="35" y2="84"/>
+      </g>
+      <!-- Iron bands -->
+      <rect x="0" y="15" width="35" height="4" fill="#4a4a4a"/>
+      <rect x="0" y="50" width="35" height="4" fill="#4a4a4a"/>
+      <rect x="0" y="85" width="35" height="4" fill="#4a4a4a"/>
+      <!-- Ring handle -->
+      <circle cx="7" cy="52" r="5" fill="none" stroke="#6a6a6a" stroke-width="2"/>
+    </g>
+    
+    <!-- Gate sigil (Σ for Signature) -->
+    <g filter="url(#glow)">
+      <circle cx="0" cy="0" r="22" fill="url(#gold)" stroke="#a67c1a" stroke-width="2"/>
+      <text x="0" y="9" text-anchor="middle" font-family="Georgia, serif" font-size="26" font-weight="bold" fill="#3d2814">Σ</text>
+    </g>
+    
+    <!-- Banner -->
+    <g transform="translate(0, -40)">
+      <path d="M -60,0 L 60,0 L 60,25 L 0,35 L -60,25 Z" fill="#8b4513" stroke="#5c3a1a" stroke-width="1"/>
+      <text x="0" y="18" text-anchor="middle" font-family="Georgia, serif" font-size="11" font-weight="bold" fill="#f5e6c8">SIGNATURE CACHE</text>
+    </g>
+  </g>
+  
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- LEFT SIDE: THE FILE SPRAWL PROBLEM -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(120, 480)">
+    <!-- Panel -->
+    <rect x="-5" y="-5" width="250" height="280" rx="8" fill="#3d2814" opacity="0.08"/>
+    <rect x="0" y="0" width="245" height="275" rx="8" fill="url(#panelBg)" stroke="#c62828" stroke-width="2"/>
+    <rect x="0" y="0" width="245" height="30" rx="8" fill="url(#fileRed)" opacity="0.15"/>
+    <path d="M 8,30 L 237,30" stroke="#c62828" stroke-width="0.8"/>
+    
+    <text x="122" y="20" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="13" font-weight="bold" fill="#8b2020">❌ File-Based Storage</text>
+    
+    <!-- Exploding files illustration -->
+    <g transform="translate(122, 100)">
+      <!-- Folder bursting -->
+      <rect x="-40" y="-20" width="80" height="50" rx="4" fill="#d4a84b" stroke="#a67c1a" stroke-width="1.5"/>
+      <rect x="-35" y="-28" width="30" height="10" rx="2" fill="#d4a84b" stroke="#a67c1a" stroke-width="1"/>
+      
+      <!-- Files flying out -->
+      <g font-family="monospace" font-size="6" fill="#5c4a32">
+        <g transform="translate(-70, -50) rotate(-15)">
+          <rect x="0" y="0" width="35" height="25" fill="#f5f5f5" stroke="#aaa" stroke-width="0.8"/>
+          <text x="17" y="14" text-anchor="middle">.json</text>
+        </g>
+        <g transform="translate(-85, -20) rotate(-25)">
+          <rect x="0" y="0" width="35" height="25" fill="#f5f5f5" stroke="#aaa" stroke-width="0.8"/>
+          <text x="17" y="14" text-anchor="middle">.json</text>
+        </g>
+        <g transform="translate(55, -55) rotate(20)">
+          <rect x="0" y="0" width="35" height="25" fill="#f5f5f5" stroke="#aaa" stroke-width="0.8"/>
+          <text x="17" y="14" text-anchor="middle">.json</text>
+        </g>
+        <g transform="translate(70, -25) rotate(30)">
+          <rect x="0" y="0" width="35" height="25" fill="#f5f5f5" stroke="#aaa" stroke-width="0.8"/>
+          <text x="17" y="14" text-anchor="middle">.json</text>
+        </g>
+        <g transform="translate(-60, 35) rotate(-10)">
+          <rect x="0" y="0" width="35" height="25" fill="#f5f5f5" stroke="#aaa" stroke-width="0.8"/>
+          <text x="17" y="14" text-anchor="middle">.json</text>
+        </g>
+        <g transform="translate(50, 40) rotate(15)">
+          <rect x="0" y="0" width="35" height="25" fill="#f5f5f5" stroke="#aaa" stroke-width="0.8"/>
+          <text x="17" y="14" text-anchor="middle">.json</text>
+        </g>
+      </g>
+    </g>
+    
+    <!-- Problem list -->
+    <g transform="translate(15, 175)" font-family="Georgia, serif" font-size="9" fill="#5c4a32">
+      <text x="0" y="0" font-weight="bold" fill="#8b2020">Problems:</text>
+      <text x="0" y="18">• 1 file per host = 10,000+ files</text>
+      <text x="0" y="33">• Slow directory listings</text>
+      <text x="0" y="48">• Filesystem inode exhaustion</text>
+      <text x="0" y="63">• Hard to query/search</text>
+      <text x="0" y="78">• No transactional updates</text>
+      <text x="0" y="93">• Backup nightmares</text>
+    </g>
+  </g>
+  
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- RIGHT SIDE: THE DB SOLUTION -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(635, 480)">
+    <!-- Panel -->
+    <rect x="-5" y="-5" width="250" height="280" rx="8" fill="#3d2814" opacity="0.08"/>
+    <rect x="0" y="0" width="245" height="275" rx="8" fill="url(#panelBg)" stroke="#2d6b4a" stroke-width="2"/>
+    <rect x="0" y="0" width="245" height="30" rx="8" fill="url(#dbGreen)" opacity="0.15"/>
+    <path d="M 8,30 L 237,30" stroke="#2d6b4a" stroke-width="0.8"/>
+    
+    <text x="122" y="20" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="13" font-weight="bold" fill="#1a5035">✓ Database Storage</text>
+    
+    <!-- DB cylinder illustration -->
+    <g transform="translate(122, 95)">
+      <!-- Shadow -->
+      <ellipse cx="3" cy="73" rx="52" ry="15" fill="#3d2814" opacity="0.15"/>
+      <!-- Cylinder body -->
+      <rect x="-50" y="5" width="100" height="60" fill="url(#dbGreen)"/>
+      <!-- Top ellipse -->
+      <ellipse cx="0" cy="5" rx="50" ry="15" fill="#5aad78" stroke="#2d6b4a" stroke-width="1.5"/>
+      <!-- Bottom ellipse -->
+      <ellipse cx="0" cy="65" rx="50" ry="15" fill="url(#dbGreen)" stroke="#2d6b4a" stroke-width="1.5"/>
+      <!-- Side lines -->
+      <line x1="-50" y1="5" x2="-50" y2="65" stroke="#2d6b4a" stroke-width="1.5"/>
+      <line x1="50" y1="5" x2="50" y2="65" stroke="#2d6b4a" stroke-width="1.5"/>
+      <!-- Horizontal stripes (data) -->
+      <ellipse cx="0" cy="25" rx="50" ry="12" fill="none" stroke="#3d8b55" stroke-width="0.8" opacity="0.6"/>
+      <ellipse cx="0" cy="45" rx="50" ry="12" fill="none" stroke="#3d8b55" stroke-width="0.8" opacity="0.6"/>
+      <!-- Label -->
+      <text x="0" y="40" text-anchor="middle" font-family="'Courier New', monospace" font-size="10" font-weight="bold" fill="#f5f5f5">news.db</text>
+    </g>
+    
+    <!-- Benefits list -->
+    <g transform="translate(15, 175)" font-family="Georgia, serif" font-size="9" fill="#5c4a32">
+      <text x="0" y="0" font-weight="bold" fill="#1a5035">Benefits:</text>
+      <text x="0" y="18">• 1 file = all signatures</text>
+      <text x="0" y="33">• Indexed queries (O(log n))</text>
+      <text x="0" y="48">• ACID transactions</text>
+      <text x="0" y="63">• Easy WHERE/JOIN</text>
+      <text x="0" y="78">• Atomic cache updates</text>
+      <text x="0" y="93">• Single backup target</text>
+    </g>
+  </g>
+  
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- CENTER: THE SIGNATURE CONCEPT -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(380, 500)">
+    <!-- Panel -->
+    <rect x="0" y="0" width="240" height="150" rx="6" fill="url(#panelBg)" stroke="#8b7355" stroke-width="1.5"/>
+    <rect x="0" y="0" width="240" height="24" rx="6" fill="url(#gold)" opacity="0.15"/>
+    <path d="M 8,24 L 232,24" stroke="#a89070" stroke-width="0.6"/>
+    
+    <text x="120" y="16" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="11" font-weight="bold" fill="#2d1a08">🔐 What is a Signature?</text>
+    
+    <g transform="translate(12, 36)" font-family="'Courier New', monospace" font-size="8" fill="#3d2814">
+      <text x="0" y="0" font-weight="bold">signature = hash(</text>
+      <text x="12" y="14">host,</text>
+      <text x="12" y="28">DOM_path,</text>
+      <text x="12" y="42">tag_chain,</text>
+      <text x="12" y="56">class_hints,</text>
+      <text x="12" y="70">attr_set</text>
+      <text x="0" y="84">)</text>
+    </g>
+    
+    <g transform="translate(125, 40)" font-family="Georgia, serif" font-size="8" fill="#5c4a32">
+      <text x="0" y="0">→ Unique ID for a</text>
+      <text x="0" y="14">   layout pattern</text>
+      <text x="0" y="32">→ Same sig = same</text>
+      <text x="0" y="46">   template reuse</text>
+      <text x="0" y="64">→ Enables caching</text>
+      <text x="0" y="78">   + diff detection</text>
+    </g>
+  </g>
+  
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- FLOW ARROWS -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  
+  <!-- Arrow from files panel to gate (X) -->
+  <path d="M 245,560 Q 320,480 370,380" stroke="#c62828" stroke-width="2" fill="none" marker-end="url(#arrowRed)" stroke-dasharray="6 3"/>
+  <text x="280" y="440" font-family="Georgia, serif" font-size="10" fill="#c62828" transform="rotate(-45 280 440)">sprawl!</text>
+  
+  <!-- Arrow from DB panel to gate (checkmark) -->
+  <path d="M 755,560 Q 680,480 630,380" stroke="#2d6b4a" stroke-width="2" fill="none" marker-end="url(#arrowGreen)" stroke-dasharray="6 3"/>
+  <text x="710" y="440" font-family="Georgia, serif" font-size="10" fill="#2d6b4a" transform="rotate(45 710 440)">tidy!</text>
+  
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- SCHEMA SNIPPET (bottom center) -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(380, 665)">
+    <rect x="0" y="0" width="240" height="90" rx="5" fill="#2a2a2a" stroke="#4a4a4a" stroke-width="1"/>
+    <text x="8" y="16" font-family="'Courier New', monospace" font-size="8" fill="#9cdcfe">-- layout_signatures table</text>
+    <text x="8" y="30" font-family="'Courier New', monospace" font-size="8" fill="#dcdcaa">CREATE TABLE</text>
+    <text x="80" y="30" font-family="'Courier New', monospace" font-size="8" fill="#4ec9b0"> layout_signatures</text>
+    <text x="8" y="44" font-family="'Courier New', monospace" font-size="8" fill="#d4d4d4">  id          INTEGER PRIMARY KEY,</text>
+    <text x="8" y="58" font-family="'Courier New', monospace" font-size="8" fill="#d4d4d4">  signature   TEXT UNIQUE,</text>
+    <text x="8" y="72" font-family="'Courier New', monospace" font-size="8" fill="#d4d4d4">  host        TEXT,</text>
+    <text x="8" y="86" font-family="'Courier New', monospace" font-size="8" fill="#d4d4d4">  template_id INTEGER REFERENCES...</text>
+  </g>
+  
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- STATS CALLOUT -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(55, 150)">
+    <rect x="0" y="0" width="120" height="70" rx="5" fill="url(#panelBg)" stroke="#8b7355" stroke-width="1"/>
+    <text x="60" y="18" text-anchor="middle" font-family="Georgia, serif" font-size="10" font-weight="bold" fill="#3d2814">📊 Scale Impact</text>
+    <line x1="8" y1="24" x2="112" y2="24" stroke="#a89070" stroke-width="0.5"/>
+    <g font-family="Georgia, serif" font-size="8" fill="#5c4a32">
+      <text x="10" y="40">10K hosts →</text>
+      <text x="10" y="54">  Files: 10,000+ .json</text>
+      <text x="10" y="66">  DB: 1 file, 1 table</text>
+    </g>
+  </g>
+  
+  <g transform="translate(825, 150)">
+    <rect x="0" y="0" width="120" height="70" rx="5" fill="url(#panelBg)" stroke="#8b7355" stroke-width="1"/>
+    <text x="60" y="18" text-anchor="middle" font-family="Georgia, serif" font-size="10" font-weight="bold" fill="#3d2814">⚡ Query Speed</text>
+    <line x1="8" y1="24" x2="112" y2="24" stroke="#a89070" stroke-width="0.5"/>
+    <g font-family="Georgia, serif" font-size="8" fill="#5c4a32">
+      <text x="10" y="40">Lookup by sig:</text>
+      <text x="10" y="54">  Files: O(n) scan</text>
+      <text x="10" y="66">  DB: O(log n) index</text>
+    </g>
+  </g>
+  
+  <!-- Cartographer stamp -->
+  <g transform="translate(950, 760)" opacity="0.4">
+    <circle r="18" fill="#d4c8a0" stroke="#8b7355" stroke-width="1.5"/>
+    <circle r="13" fill="none" stroke="#8b7355" stroke-width="0.6"/>
+    <text x="0" y="3" text-anchor="middle" font-family="Georgia, serif" font-size="7" font-weight="bold" fill="#5c4a32">SIG</text>
+    <text x="0" y="10" text-anchor="middle" font-family="Georgia, serif" font-size="4" fill="#8b7355">CACHE</text>
+  </g>
+</svg>

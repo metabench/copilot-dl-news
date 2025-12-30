@@ -12,9 +12,19 @@
 - WLILO style? [docs/guides/WLILO_STYLE_GUIDE.md](docs/guides/WLILO_STYLE_GUIDE.md)
 - Refactor tooling (js-scan/js-edit)? [tools/dev/README.md](tools/dev/README.md) and Gap-4 session summary
 - Facts vs classifications? [docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md](docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md)
+- Agent delegation (runSubagent)? See "Agent delegation" section below (NOT a true handoff)
 
 Mode/persona rules
 - If a persona or mode is active, note it in your plan and read the matching file under `.github/agents/` (or the current mode file noted by the system) for any extra constraints.
+
+Agent delegation (`runSubagent`)
+- `runSubagent` spawns a **worker AI** that uses another agent's instructions—it is **NOT** a true conversation handoff.
+- The worker executes autonomously (can edit files, run commands), returns ONE final report, then control returns to the calling agent.
+- User does NOT interact with the worker; user continues talking to the calling agent.
+- **Use for**: self-contained tasks, specialist expertise, multi-tool operations.
+- **Don't use for**: ongoing dialogue with specialist, user wanting to interact with another agent.
+- For true agent switching, tell the user: "Switch agents manually via Command Palette → Chat: Change Mode."
+- Full protocol with diagrams: see `🧠 Project Director 🧠.agent.md` → "runSubagent vs True Handoffs" section.
 
 Quick anchors (UI/tooling)
 - jsgui3 controls: extract interactive/stateful pieces into controls, use emoji icons for actions (🔍/⚙️/➕/🗑️/✏️/🔄), and keep control counts lean—lazy load or virtualise when lists exceed ~200 items. See [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md).

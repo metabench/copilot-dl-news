@@ -1,5 +1,6 @@
 const { PlanBlueprintBuilder } = require('./planner/PlanBlueprintBuilder');
 const { IntelligentPlanningFacade } = require('./IntelligentPlanningFacade');
+const { QueryCostEstimatorPlugin } = require('../planner/plugins/QueryCostEstimatorPlugin');
 
 class IntelligentPlanRunner {
   constructor({
@@ -466,6 +467,9 @@ class IntelligentPlanRunner {
       };
     });
 
+    // Run quick planner to get cost estimates for hub ranking
+    const costEstimates = await this._runQuickPlanner();
+
     const maxSeeds = this.intMaxSeeds;
     const hubSeeder = new this.HubSeeder({
       enqueueRequest: this.enqueueRequest,
@@ -476,19 +480,22 @@ class IntelligentPlanRunner {
       baseUrl: this.baseUrl,
       logger: this.logger,
       planCapture: blueprintBuilder,
-      disableDbRecording: this.planPreview || this.planCaptureOptions?.disableDbRecording
+      disableDbRecording: this.planPreview || this.planCaptureOptions?.disableDbRecording,
+      costEstimates
     });
 
     const seedResult = await orchestrator.runStage('seed-hubs', {
       sectionsFromPatterns: learnedSections.length,
       candidateCount: countryCandidates.length,
-      maxSeeds
+      maxSeeds,
+      hasCostEstimates: !!(costEstimates?.available)
     }, () => hubSeeder.seedPlan({
       host,
       sectionSlugs: learnedSections,
       countryCandidates,
       maxSeeds,
-      navigationLinks: navigationLinkCandidates
+      navigationLinks: navigationLinkCandidates,
+      costEstimates
     }), {
       mapResultForEvent: (res) => {
         if (!res) return null;
@@ -500,7 +507,8 @@ class IntelligentPlanRunner {
           navigationSeededCount: res.navigationSeededCount || 0,
           navigationCandidateCount: res.navigationCandidateCount || 0,
           sampleSeeded: Array.isArray(res.sampleSeeded) ? res.sampleSeeded.slice(0, 3) : undefined,
-          navigationSample: Array.isArray(res.navigationSample) ? res.navigationSample.slice(0, 3) : undefined
+          navigationSample: Array.isArray(res.navigationSample) ? res.navigationSample.slice(0, 3) : undefined,
+          costAwareRanking: res.costAwareRanking || false
         };
       },
       updateSummaryWithResult: (summary = {}, res) => ({
@@ -887,6 +895,60 @@ class IntelligentPlanRunner {
       baseConfig.sessionId = this.planCaptureOptions.sessionId;
     }
     return new PlanBlueprintBuilder(baseConfig);
+  }
+
+  /**
+   * Run a quick planner pass to estimate query costs for hub operations.
+   * Uses QueryCostEstimatorPlugin to analyze historical telemetry and
+   * build a cost model for prioritizing low-cost hubs first.
+   * 
+   * @returns {Object|null} Cost estimates object or null if unavailable
+   */
+  async _runQuickPlanner() {
+    if (!this.dbAdapter) {
+      return null;
+    }
+
+    try {
+      const plugin = new QueryCostEstimatorPlugin({
+        priority: 70,
+        budgetThresholdMs: 500
+      });
+
+      // Create a minimal context for the plugin
+      const ctx = {
+        dbAdapter: this.dbAdapter,
+        logger: this.logger,
+        emit: (event, data) => {
+          // Log trace events in verbose mode
+          if (this.plannerVerbosity >= 2 && event === 'gofai-trace') {
+            this._log(`[QuickPlanner] ${data?.message || event}`);
+          }
+        },
+        bb: {
+          proposedHubs: [],
+          rationale: []
+        }
+      };
+
+      // Initialize and run the plugin
+      await plugin.init(ctx);
+      await plugin.tick(ctx);
+      await plugin.teardown(ctx);
+
+      const costEstimates = ctx.bb.costEstimates;
+
+      if (costEstimates?.available) {
+        this._log(`QuickPlanner: Built cost model from ${costEstimates.model?.totalSamples || 0} samples`);
+      } else {
+        this._log('QuickPlanner: No historical telemetry available for cost estimation');
+      }
+
+      return costEstimates;
+    } catch (err) {
+      this._log(`QuickPlanner: Error building cost model - ${err.message}`);
+      return null;
+    }
   }
 }
 

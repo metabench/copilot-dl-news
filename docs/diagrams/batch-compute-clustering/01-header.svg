@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 170">
+  <g id="header">
+    <path d="M 50 22 L 50 10 L 62 10" fill="none" stroke="#c9a962" stroke-width="1.5" opacity="0.6"/>
+    <path d="M 750 22 L 750 10 L 738 10" fill="none" stroke="#c9a962" stroke-width="1.5" opacity="0.6"/>
+    <path d="M 50 148 L 50 160 L 62 160" fill="none" stroke="#c9a962" stroke-width="1.5" opacity="0.6"/>
+    <path d="M 750 148 L 750 160 L 738 160" fill="none" stroke="#c9a962" stroke-width="1.5" opacity="0.6"/>
+    
+    <text x="400" y="42" text-anchor="middle" font-size="26" font-weight="300" fill="#f0ede8" letter-spacing="3">BATCH-COMPUTE</text>
+    <text x="400" y="74" text-anchor="middle" font-size="26" font-weight="300" fill="#f0ede8" letter-spacing="3">CLUSTERING</text>
+    
+    <text x="400" y="100" text-anchor="middle" font-size="12" font-weight="500" fill="#c9a962" letter-spacing="2">Load 10K → Compute in Memory → Store Compact IDs</text>
+    
+    <line x1="200" y1="118" x2="300" y2="118" stroke="#c9a962" stroke-width="0.5" opacity="0.3"/>
+    <text x="400" y="122" text-anchor="middle" font-size="9" fill="#888" font-style="italic">"Trade compute for storage"</text>
+    <line x1="500" y1="118" x2="600" y2="118" stroke="#c9a962" stroke-width="0.5" opacity="0.3"/>
+    
+    <rect x="310" y="135" width="180" height="24" rx="12" fill="#8b5cf6"/>
+    <text x="400" y="151" text-anchor="middle" font-size="10" font-weight="600" fill="white">◉ COMPUTE-INTENSIVE</text>
+  </g>
+</svg>

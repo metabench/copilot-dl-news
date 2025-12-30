@@ -1,0 +1,23 @@
+{
+  "name": "sigcluster",
+  "version": "1.0.0",
+  "description": "SIMD-optimized signature clustering for news deduplication",
+  "main": "index.js",
+  "scripts": {
+    "install": "node-gyp rebuild",
+    "build": "node-gyp rebuild",
+    "build:debug": "node-gyp rebuild --debug",
+    "clean": "node-gyp clean",
+    "test": "node test/hamming.test.js"
+  },
+  "dependencies": {
+    "node-addon-api": "^7.0.0"
+  },
+  "devDependencies": {
+    "node-gyp": "^10.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "gypfile": true
+}

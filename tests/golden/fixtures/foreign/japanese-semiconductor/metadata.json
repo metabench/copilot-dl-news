@@ -1,0 +1,21 @@
+{
+  "url": "https://www.nikkei.com/article/DGXZQODL2210/",
+  "capturedAt": "2025-12-22T08:30:00Z",
+  "category": "foreign",
+  "edgeCaseType": "japanese-language",
+  "expected": {
+    "title": "日本、半導体産業強化へ大規模投資を発表",
+    "author": "田中太郎",
+    "publishDate": "2025-12-22T08:15:00+09:00",
+    "bodyWordCountMin": 100,
+    "bodyContains": ["半導体", "10兆円", "経済産業省", "2030年"],
+    "language": "ja"
+  },
+  "flags": {
+    "isForeignLanguage": true,
+    "language": "ja",
+    "hasComplexCharacters": true,
+    "requiresUnicodeHandling": true
+  },
+  "notes": "Japanese economic news article testing CJK character extraction and Unicode handling"
+}

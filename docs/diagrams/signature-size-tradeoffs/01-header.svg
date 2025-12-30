@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 90">
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#c9a962"/>
+      <stop offset="100%" style="stop-color:#a88b4a"/>
+    </linearGradient>
+  </defs>
+  <g id="header">
+    <rect x="0" y="0" width="800" height="90" fill="url(#headerGrad)" rx="12"/>
+    <text x="400" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="#2d2d2d">SIGNATURE SIZE TRADE-OFFS</text>
+    <text x="400" y="62" text-anchor="middle" font-size="12" fill="#3d3d3d">64-bit vs 128-bit vs 256-bit: Resolution, Speed, and Storage</text>
+    <text x="400" y="80" text-anchor="middle" font-size="10" fill="#4d4d4d">Lab Results: Batch Clustering Performance Comparison</text>
+  </g>
+</svg>

@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <g id="data-flow">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8 8 0 0"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">DATA FLOW PIPELINE</text>
+    
+    <!-- Row 1: Page → Skeleton → Fingerprint -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="90" height="50" fill="#444" rx="6"/>
+      <text x="45" y="22" text-anchor="middle" font-size="10" font-weight="500" fill="#f0ede8">HTML Page</text>
+      <text x="45" y="36" text-anchor="middle" font-size="8" fill="#888">from Teacher</text>
+      
+      <path d="M 95 25 L 115 25" stroke="#c9a962" stroke-width="2" fill="none"/>
+      <polygon points="113,21 121,25 113,29" fill="#c9a962"/>
+      
+      <g transform="translate(125, 0)">
+        <rect x="0" y="0" width="90" height="50" fill="#3b82f6" rx="6"/>
+        <text x="45" y="22" text-anchor="middle" font-size="10" font-weight="500" fill="white">Skeleton</text>
+        <text x="45" y="36" text-anchor="middle" font-size="8" fill="white" opacity="0.8">strip content</text>
+      </g>
+      
+      <path d="M 220 25 L 240 25" stroke="#c9a962" stroke-width="2" fill="none"/>
+      <polygon points="238,21 246,25 238,29" fill="#c9a962"/>
+      
+      <g transform="translate(250, 0)">
+        <rect x="0" y="0" width="120" height="50" fill="#8b5cf6" rx="6"/>
+        <text x="60" y="22" text-anchor="middle" font-size="10" font-weight="500" fill="white">Fingerprint</text>
+        <text x="60" y="36" text-anchor="middle" font-size="8" fill="white" opacity="0.8">104 bytes total</text>
+      </g>
+    </g>
+    
+    <!-- Vertical connector -->
+    <path d="M 325 105 L 325 125" stroke="#c9a962" stroke-width="2" fill="none"/>
+    <polygon points="321,123 325,131 329,123" fill="#c9a962"/>
+    
+    <!-- Row 2: Compare → Assign → Store -->
+    <g transform="translate(15, 135)">
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="120" height="50" fill="#f59e0b" rx="6"/>
+        <text x="60" y="22" text-anchor="middle" font-size="10" font-weight="500" fill="#1a1a1a">Compare</text>
+        <text x="60" y="36" text-anchor="middle" font-size="8" fill="#1a1a1a" opacity="0.8">find nearest cluster</text>
+      </g>
+      
+      <path d="M 125 25 L 145 25" stroke="#c9a962" stroke-width="2" fill="none"/>
+      <polygon points="143,21 151,25 143,29" fill="#c9a962"/>
+      
+      <g transform="translate(155, 0)">
+        <rect x="0" y="0" width="120" height="50" fill="#10b981" rx="6"/>
+        <text x="60" y="22" text-anchor="middle" font-size="10" font-weight="500" fill="#1a1a1a">Assign</text>
+        <text x="60" y="36" text-anchor="middle" font-size="8" fill="#1a1a1a" opacity="0.8">or create new</text>
+      </g>
+      
+      <path d="M 280 25 L 300 25" stroke="#c9a962" stroke-width="2" fill="none"/>
+      <polygon points="298,21 306,25 298,29" fill="#c9a962"/>
+      
+      <g transform="translate(310, 0)">
+        <rect x="0" y="0" width="60" height="50" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+        <text x="30" y="28" text-anchor="middle" font-size="18" fill="#34d399">💾</text>
+        <text x="30" y="42" text-anchor="middle" font-size="7" fill="#888">DB</text>
+      </g>
+    </g>
+    
+    <!-- Legend -->
+    <g transform="translate(15, 200)">
+      <rect x="0" y="0" width="370" height="85" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">PIPELINE STATS</text>
+      <text x="12" y="36" font-size="9" fill="#aaa">• Total time: ~5ms per page</text>
+      <text x="12" y="50" font-size="9" fill="#aaa">• Storage: 104B signature + 4B cluster_id</text>
+      <text x="12" y="64" font-size="9" fill="#aaa">• Alert: new cluster → manual review</text>
+      <text x="12" y="78" font-size="9" fill="#666">• Batch mode: 1000 pages/min</text>
+    </g>
+  </g>
+</svg>

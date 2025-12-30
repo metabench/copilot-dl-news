@@ -1,0 +1,856 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 865" width="1600" height="864.7375000000001">
+
+  <defs>
+    <!-- WLILO Leather Background -->
+    <linearGradient id="leather-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#faf9f7"/>
+      <stop offset="50%" style="stop-color:#f5f3ef"/>
+      <stop offset="100%" style="stop-color:#ebe8e2"/>
+    </linearGradient>
+    
+    <!-- Obsidian Panel -->
+    <linearGradient id="obsidian" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d2d2d"/>
+      <stop offset="100%" style="stop-color:#1a1a1a"/>
+    </linearGradient>
+    
+    <!-- Obsidian Inner (lighter) -->
+    <linearGradient id="obsidian-inner" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3a3a3a"/>
+      <stop offset="100%" style="stop-color:#252525"/>
+    </linearGradient>
+    
+    <!-- Gold Accent -->
+    <linearGradient id="gold-accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#c9a962"/>
+      <stop offset="100%" style="stop-color:#e8d5a3"/>
+    </linearGradient>
+    
+    <!-- Status: Complete (Emerald) -->
+    <linearGradient id="status-complete" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#34d399"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+    
+    <!-- Status: In Progress (Sapphire) -->
+    <linearGradient id="status-progress" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60a5fa"/>
+      <stop offset="100%" style="stop-color:#2563eb"/>
+    </linearGradient>
+    
+    <!-- Status: Planned (Amethyst) -->
+    <linearGradient id="status-planned" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#a78bfa"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+    
+    <!-- Status: Research (Topaz) -->
+    <linearGradient id="status-research" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24"/>
+      <stop offset="100%" style="stop-color:#d97706"/>
+    </linearGradient>
+    
+    <!-- Drop Shadow -->
+    <filter id="drop-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+    
+    <!-- Inner Card Shadow -->
+    <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    
+    <!-- Gold Glow -->
+    <filter id="gold-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#c9a962" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Emerald Glow -->
+    <filter id="emerald-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+      <feFlood flood-color="#10b981" flood-opacity="0.35"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Subtle Texture -->
+    <pattern id="leather-texture" patternUnits="userSpaceOnUse" width="100" height="100">
+      <rect width="100" height="100" fill="url(#leather-bg)"/>
+      <circle cx="25" cy="25" r="1" fill="#00000006"/>
+      <circle cx="75" cy="75" r="1" fill="#00000006"/>
+      <circle cx="50" cy="50" r="0.5" fill="#00000004"/>
+      <circle cx="10" cy="60" r="0.8" fill="#00000005"/>
+      <circle cx="90" cy="30" r="0.6" fill="#00000005"/>
+    </pattern>
+    
+    <!-- Grid Pattern for Obsidian -->
+    <pattern id="obsidian-grid" patternUnits="userSpaceOnUse" width="20" height="20">
+      <rect width="20" height="20" fill="transparent"/>
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#ffffff08" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+
+
+  <style>
+    /* Base Typography */
+    text { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    
+    /* Title Styling */
+    .title { 
+      font-size: 42px; 
+      font-weight: 300; 
+      fill: #1a1a1a; 
+      letter-spacing: 2px;
+    }
+    .subtitle { 
+      font-size: 18px; 
+      fill: #666; 
+      font-weight: 300;
+      letter-spacing: 1px;
+    }
+    
+    /* Panel Styling */
+    .wlilo-bg { fill: url(#leather-texture); }
+    .obsidian-panel { 
+      fill: url(#obsidian); 
+      stroke: url(#gold-accent); 
+      stroke-width: 1.5; 
+      filter: url(#drop-shadow); 
+    }
+    .obsidian-inner {
+      fill: url(#obsidian-inner);
+      stroke: #444;
+      stroke-width: 0.5;
+    }
+    
+    /* Gold Elements */
+    .gold-header { fill: #c9a962; font-family: Georgia, serif; filter: url(#gold-glow); }
+    .gold-bar { fill: url(#gold-accent); }
+    .gold-text { fill: url(#gold-accent); }
+    
+    /* Body Text */
+    .body-text { fill: #2d2d2d; font-family: Arial, sans-serif; }
+    .muted-text { fill: #666; font-family: Arial, sans-serif; }
+    .light-text { fill: #f0ede8; }
+    
+    /* Status Badges */
+    .status-complete { fill: url(#status-complete); filter: url(#emerald-glow); }
+    .status-progress { fill: url(#status-progress); }
+    .status-planned { fill: url(#status-planned); }
+    .status-research { fill: url(#status-research); }
+  </style>
+
+
+  <!-- WLILO Leather Background -->
+  <rect class="wlilo-bg" width="100%" height="100%"/>
+  
+  <!-- Outer Gold Frame -->
+  <rect x="15" y="15" width="1570" height="834.7375000000001" 
+        fill="none" stroke="url(#gold-accent)" stroke-width="3" rx="16" filter="url(#gold-glow)"/>
+  
+  <!-- Inner Frame -->
+  <rect x="22" y="22" width="1556" height="820.7375000000001" 
+        fill="none" stroke="#c9a96240" stroke-width="1" rx="14"/>
+  
+  <!-- Corner Ornaments -->
+  <g fill="url(#gold-accent)">
+    <!-- Top Left -->
+    <circle cx="35" cy="35" r="6"/>
+    <rect x="45" y="32" width="30" height="2" rx="1"/>
+    <rect x="32" y="45" width="2" height="30" rx="1"/>
+    
+    <!-- Top Right -->
+    <circle cx="1565" cy="35" r="6"/>
+    <rect x="1525" y="32" width="30" height="2" rx="1"/>
+    <rect x="1566" y="45" width="2" height="30" rx="1"/>
+    
+    <!-- Bottom Left -->
+    <circle cx="35" cy="829.7375000000001" r="6"/>
+    <rect x="45" y="830.7375000000001" width="30" height="2" rx="1"/>
+    <rect x="32" y="789.7375000000001" width="2" height="30" rx="1"/>
+    
+    <!-- Bottom Right -->
+    <circle cx="1565" cy="829.7375000000001" r="6"/>
+    <rect x="1525" y="830.7375000000001" width="30" height="2" rx="1"/>
+    <rect x="1566" y="789.7375000000001" width="2" height="30" rx="1"/>
+  </g>
+  
+  <!-- Header Panel -->
+  <g transform="translate(40, 40)">
+    <rect class="obsidian-panel" x="0" y="0" width="1520" height="180" rx="12"/>
+    
+    <!-- Header Gold Accent Line -->
+    <rect class="gold-bar" x="30" y="170" width="1460" height="3" rx="1.5"/>
+    
+    <g transform="translate(560, 20)">
+      <g id="header">
+    <rect x="0" y="0" width="800" height="95" fill="url(#headerGrad)" rx="12"/>
+    <text x="400" y="38" text-anchor="middle" font-size="20" font-weight="700" fill="url(#obsidian)">EXTENSIBLE 512-BIT SIGNATURES</text>
+    <text x="400" y="58" text-anchor="middle" font-size="12" fill="#3d3d3d">64 Bytes: Multi-Band Architecture for Topical + Structural Clustering</text>
+    <text x="400" y="78" text-anchor="middle" font-size="10" fill="#4d4d4d">Start Small → Reserve Bits → Extend Later | C++ Node.js Addon</text>
+  </g>
+    </g>
+  </g>
+  
+  <!-- Content Panels -->
+
+  <!-- 02-band-layout.svg -->
+  <g transform="translate(40, 260)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="115.42500000000001" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="115.42500000000001" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(0.608)">
+      <g id="band-layout">
+    <rect x="0" y="0" width="800" height="38" fill="url(#obsidian-inner)" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">512-BIT SIGNATURE BAND ALLOCATION</text>
+    
+    <!-- The 512-bit bar -->
+    <g transform="translate(30, 50)">
+      <text x="0" y="12" font-size="9" fill="#aaa">64 bytes = 512 bits, divided into purpose-specific bands:</text>
+      
+      <!-- Band visualization -->
+      <g transform="translate(0, 22)">
+        <!-- Structural (128 bits) -->
+        <rect x="0" y="0" width="185" height="35" fill="url(#status-progress)" rx="4"/>
+        <text x="92" y="15" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">STRUCTURAL</text>
+        <text x="92" y="28" text-anchor="middle" font-size="8" fill="#bfdbfe">128 bits (16B)</text>
+        
+        <!-- Content (128 bits) -->
+        <rect x="190" y="0" width="185" height="35" fill="url(#status-planned)" rx="4"/>
+        <text x="282" y="15" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">CONTENT</text>
+        <text x="282" y="28" text-anchor="middle" font-size="8" fill="#ddd6fe">128 bits (16B)</text>
+        
+        <!-- Semantic (128 bits) -->
+        <rect x="380" y="0" width="185" height="35" fill="url(#status-complete)" rx="4"/>
+        <text x="472" y="15" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">SEMANTIC</text>
+        <text x="472" y="28" text-anchor="middle" font-size="8" fill="#a7f3d0">128 bits (16B)</text>
+        
+        <!-- Reserved (128 bits) -->
+        <rect x="570" y="0" width="170" height="35" fill="url(#obsidian-inner)" rx="4" stroke="#888" stroke-dasharray="4,2"/>
+        <text x="655" y="15" text-anchor="middle" font-size="9" font-weight="600" fill="#888">RESERVED</text>
+        <text x="655" y="28" text-anchor="middle" font-size="8" fill="#666">128 bits (16B)</text>
+      </g>
+      
+      <!-- Scale markers -->
+      <g transform="translate(0, 62)">
+        <line x1="0" y1="0" x2="740" y2="0" stroke="#666" stroke-width="1"/>
+        <text x="0" y="12" font-size="7" fill="#888">0</text>
+        <text x="185" y="12" font-size="7" fill="#888">128</text>
+        <text x="375" y="12" font-size="7" fill="#888">256</text>
+        <text x="565" y="12" font-size="7" fill="#888">384</text>
+        <text x="730" y="12" font-size="7" fill="#888">512 bits</text>
+      </g>
+    </g>
+    
+    <!-- Key insight -->
+    <g transform="translate(30, 145)">
+      <rect x="0" y="0" width="740" height="30" fill="url(#obsidian)" rx="4"/>
+      <text x="370" y="19" text-anchor="middle" font-size="9" fill="url(#gold-accent)">💡 Start with 128-bit STRUCTURAL only → Enable bands as needed → Reserved bits = 0x00</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 03-structural-band.svg -->
+  <g transform="translate(556, 260)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="127.575" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="127.575" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(0.608)">
+      <g id="structural-band">
+    <rect x="0" y="0" width="800" height="38" fill="url(#obsidian-inner)" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">BAND 1: STRUCTURAL (128 bits)</text>
+    
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="740" height="145" fill="#1e3a5f" rx="6" stroke="#3b82f6" stroke-width="1"/>
+      <text x="370" y="22" text-anchor="middle" font-size="11" font-weight="600" fill="url(#status-progress)">HTML DOM Structure Fingerprint</text>
+      
+      <!-- What it captures -->
+      <g transform="translate(15, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Captures:</text>
+        <text x="15" y="28" font-size="9" fill="#aaa">• Tag hierarchy (depth, branching)</text>
+        <text x="15" y="42" font-size="9" fill="#aaa">• Element counts (div, article, nav, header)</text>
+        <text x="15" y="56" font-size="9" fill="#aaa">• Layout patterns (grid vs list vs article)</text>
+        <text x="15" y="70" font-size="9" fill="#aaa">• Template/CMS fingerprint</text>
+      </g>
+      
+      <!-- What it detects -->
+      <g transform="translate(250, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Detects:</text>
+        <text x="15" y="28" font-size="9" fill="url(#status-complete)">✓ Same site/template</text>
+        <text x="15" y="42" font-size="9" fill="url(#status-complete)">✓ Mirror sites</text>
+        <text x="15" y="56" font-size="9" fill="url(#status-complete)">✓ CMS platform clusters</text>
+        <text x="15" y="70" font-size="9" fill="url(#status-complete)">✓ Near-duplicate pages</text>
+      </g>
+      
+      <!-- SimHash approach -->
+      <g transform="translate(470, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Algorithm:</text>
+        <text x="15" y="28" font-size="9" fill="#aaa">SimHash of tag paths</text>
+        <text x="15" y="42" font-size="9" fill="#aaa">e.g. html/body/div/article</text>
+        <text x="15" y="56" font-size="9" fill="#aaa">→ 128-bit digest</text>
+        <rect x="15" y="62" width="100" height="16" fill="url(#status-progress)" rx="2"/>
+        <text x="65" y="74" text-anchor="middle" font-size="8" fill="#fff">O(N) computation</text>
+      </g>
+      
+      <!-- Status -->
+      <g transform="translate(15, 115)">
+        <rect x="0" y="0" width="150" height="22" fill="url(#status-complete)" rx="3"/>
+        <text x="75" y="15" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">IMPLEMENT FIRST</text>
+      </g>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 04-content-band.svg -->
+  <g transform="translate(1072, 260)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="127.575" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="127.575" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(0.608)">
+      <g id="content-band">
+    <rect x="0" y="0" width="800" height="38" fill="url(#obsidian-inner)" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">BAND 2: CONTENT (128 bits)</text>
+    
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="740" height="145" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="370" y="22" text-anchor="middle" font-size="11" font-weight="600" fill="#a78bfa">Text Content Fingerprint</text>
+      
+      <!-- What it captures -->
+      <g transform="translate(15, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Captures:</text>
+        <text x="15" y="28" font-size="9" fill="#aaa">• Word/n-gram shingles</text>
+        <text x="15" y="42" font-size="9" fill="#aaa">• Headline fingerprint</text>
+        <text x="15" y="56" font-size="9" fill="#aaa">• Body text density</text>
+        <text x="15" y="70" font-size="9" fill="#aaa">• Named entities (people, places)</text>
+      </g>
+      
+      <!-- What it detects -->
+      <g transform="translate(250, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Detects:</text>
+        <text x="15" y="28" font-size="9" fill="url(#status-complete)">✓ Syndicated articles</text>
+        <text x="15" y="42" font-size="9" fill="url(#status-complete)">✓ Rewrites/paraphrases</text>
+        <text x="15" y="56" font-size="9" fill="url(#status-complete)">✓ Wire service copies</text>
+        <text x="15" y="70" font-size="9" fill="url(#status-complete)">✓ Translations (partial)</text>
+      </g>
+      
+      <!-- SimHash approach -->
+      <g transform="translate(470, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Algorithm:</text>
+        <text x="15" y="28" font-size="9" fill="#aaa">SimHash of 3-grams</text>
+        <text x="15" y="42" font-size="9" fill="#aaa">Weighted by TF-IDF</text>
+        <text x="15" y="56" font-size="9" fill="#aaa">→ 128-bit digest</text>
+        <rect x="15" y="62" width="100" height="16" fill="url(#status-planned)" rx="2"/>
+        <text x="65" y="74" text-anchor="middle" font-size="8" fill="#fff">O(W) words</text>
+      </g>
+      
+      <!-- Status -->
+      <g transform="translate(15, 115)">
+        <rect x="0" y="0" width="150" height="22" fill="url(#status-research)" rx="3"/>
+        <text x="75" y="15" text-anchor="middle" font-size="9" font-weight="600" fill="#000">PHASE 2</text>
+      </g>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 05-semantic-band.svg -->
+  <g transform="translate(40, 400.425)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="127.575" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="127.575" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(0.608)">
+      <g id="semantic-band">
+    <rect x="0" y="0" width="800" height="38" fill="url(#obsidian-inner)" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">BAND 3: SEMANTIC (128 bits)</text>
+    
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="740" height="145" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="370" y="22" text-anchor="middle" font-size="11" font-weight="600" fill="url(#status-complete)">Topic/Meaning Fingerprint</text>
+      
+      <!-- What it captures -->
+      <g transform="translate(15, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Captures:</text>
+        <text x="15" y="28" font-size="9" fill="#aaa">• Topic categories</text>
+        <text x="15" y="42" font-size="9" fill="#aaa">• Event type (election, disaster...)</text>
+        <text x="15" y="56" font-size="9" fill="#aaa">• Geographic focus</text>
+        <text x="15" y="70" font-size="9" fill="#aaa">• Temporal markers</text>
+      </g>
+      
+      <!-- What it detects -->
+      <g transform="translate(250, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Detects:</text>
+        <text x="15" y="28" font-size="9" fill="url(#status-complete)">✓ Same story, different source</text>
+        <text x="15" y="42" font-size="9" fill="url(#status-complete)">✓ Topic clusters</text>
+        <text x="15" y="56" font-size="9" fill="url(#status-complete)">✓ Related breaking news</text>
+        <text x="15" y="70" font-size="9" fill="url(#status-complete)">✓ Cross-language matches</text>
+      </g>
+      
+      <!-- Embedding approach -->
+      <g transform="translate(470, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Algorithm:</text>
+        <text x="15" y="28" font-size="9" fill="#aaa">LSH of embeddings</text>
+        <text x="15" y="42" font-size="9" fill="#aaa">or Topic model hash</text>
+        <text x="15" y="56" font-size="9" fill="#aaa">→ 128-bit digest</text>
+        <rect x="15" y="62" width="100" height="16" fill="url(#status-complete)" rx="2"/>
+        <text x="65" y="74" text-anchor="middle" font-size="8" fill="#fff">O(1) inference</text>
+      </g>
+      
+      <!-- Status -->
+      <g transform="translate(15, 115)">
+        <rect x="0" y="0" width="150" height="22" fill="#888" rx="3"/>
+        <text x="75" y="15" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">FUTURE / OPTIONAL</text>
+      </g>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 06-reserved-band.svg -->
+  <g transform="translate(556, 412.575)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="127.575" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="127.575" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(0.608)">
+      <g id="reserved-band">
+    <rect x="0" y="0" width="800" height="38" fill="url(#obsidian-inner)" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">BAND 4: RESERVED (128 bits)</text>
+    
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="740" height="145" fill="url(#obsidian-inner)" rx="6" stroke="#888" stroke-dasharray="4,2"/>
+      <text x="370" y="22" text-anchor="middle" font-size="11" font-weight="600" fill="#888">Future Extensions</text>
+      
+      <!-- Potential uses -->
+      <g transform="translate(15, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Potential Uses:</text>
+        <text x="15" y="28" font-size="9" fill="#aaa">• Media fingerprint (images, video)</text>
+        <text x="15" y="42" font-size="9" fill="#aaa">• Author/source signature</text>
+        <text x="15" y="56" font-size="9" fill="#aaa">• Sentiment/tone hash</text>
+        <text x="15" y="70" font-size="9" fill="#aaa">• Schema.org/metadata hash</text>
+      </g>
+      
+      <!-- Why reserve -->
+      <g transform="translate(250, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Why Reserve Space?</text>
+        <text x="15" y="28" font-size="9" fill="#aaa">• Avoid schema migration</text>
+        <text x="15" y="42" font-size="9" fill="#aaa">• Add features without reindex</text>
+        <text x="15" y="56" font-size="9" fill="#aaa">• Backward compatible</text>
+        <text x="15" y="70" font-size="9" fill="#aaa">• Zero-fill = no match impact</text>
+      </g>
+      
+      <!-- Default state -->
+      <g transform="translate(470, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Default State:</text>
+        <rect x="15" y="22" width="200" height="24" fill="url(#obsidian)" rx="3"/>
+        <text x="115" y="38" text-anchor="middle" font-size="10" font-family="monospace" fill="#666">00 00 00 00 ... (16 bytes)</text>
+        <text x="15" y="72" font-size="8" fill="#888">All zeros = neutral for distance calc</text>
+      </g>
+      
+      <!-- Status -->
+      <g transform="translate(15, 115)">
+        <rect x="0" y="0" width="150" height="22" fill="url(#obsidian)" rx="3" stroke="#666" stroke-dasharray="3,2"/>
+        <text x="75" y="15" text-anchor="middle" font-size="9" font-weight="600" fill="#666">UNUSED (0x00)</text>
+      </g>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 07-extension-strategy.svg -->
+  <g transform="translate(1072, 412.575)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="112.3875" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="112.3875" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(0.608)">
+      <g id="extension-strategy">
+    <rect x="0" y="0" width="800" height="38" fill="url(#obsidian-inner)" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">EXTENSION STRATEGY: START SMALL</text>
+    
+    <!-- Phase 1 -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="170" height="120" fill="#1e3a5f" rx="6" stroke="#3b82f6" stroke-width="2"/>
+      <text x="85" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="url(#status-progress)">Phase 1</text>
+      <text x="85" y="40" text-anchor="middle" font-size="9" fill="#fff">128-bit only</text>
+      
+      <rect x="15" y="50" width="140" height="16" fill="url(#status-progress)" rx="2"/>
+      <rect x="15" y="68" width="140" height="16" fill="url(#obsidian)" rx="2"/>
+      <rect x="15" y="86" width="140" height="16" fill="url(#obsidian)" rx="2"/>
+      <text x="15" y="110" font-size="8" fill="#888">64 bytes stored, 48 unused</text>
+    </g>
+    
+    <!-- Arrow -->
+    <path d="M 215 110 L 245 110" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="243,106 251,110 243,114" fill="url(#gold-accent)"/>
+    
+    <!-- Phase 2 -->
+    <g transform="translate(260, 50)">
+      <rect x="0" y="0" width="170" height="120" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="85" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#a78bfa">Phase 2</text>
+      <text x="85" y="40" text-anchor="middle" font-size="9" fill="#fff">256-bit (add content)</text>
+      
+      <rect x="15" y="50" width="140" height="16" fill="url(#status-progress)" rx="2"/>
+      <rect x="15" y="68" width="140" height="16" fill="url(#status-planned)" rx="2"/>
+      <rect x="15" y="86" width="140" height="16" fill="url(#obsidian)" rx="2"/>
+      <text x="15" y="110" font-size="8" fill="#888">Backfill content band</text>
+    </g>
+    
+    <!-- Arrow -->
+    <path d="M 445 110 L 475 110" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="473,106 481,110 473,114" fill="url(#gold-accent)"/>
+    
+    <!-- Phase 3 -->
+    <g transform="translate(490, 50)">
+      <rect x="0" y="0" width="170" height="120" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="85" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="url(#status-complete)">Phase 3</text>
+      <text x="85" y="40" text-anchor="middle" font-size="9" fill="#fff">384-bit (add semantic)</text>
+      
+      <rect x="15" y="50" width="140" height="16" fill="url(#status-progress)" rx="2"/>
+      <rect x="15" y="68" width="140" height="16" fill="url(#status-planned)" rx="2"/>
+      <rect x="15" y="86" width="140" height="16" fill="url(#status-complete)" rx="2"/>
+      <text x="15" y="110" font-size="8" fill="#888">Optional semantic layer</text>
+    </g>
+    
+    <!-- Key point -->
+    <g transform="translate(680, 50)">
+      <rect x="0" y="0" width="90" height="120" fill="url(#obsidian)" rx="6"/>
+      <text x="45" y="22" text-anchor="middle" font-size="9" font-weight="600" fill="url(#gold-accent)">Key</text>
+      <text x="12" y="42" font-size="8" fill="#aaa">No schema</text>
+      <text x="12" y="55" font-size="8" fill="#aaa">change</text>
+      <text x="12" y="68" font-size="8" fill="#aaa">needed!</text>
+      <text x="12" y="88" font-size="8" fill="url(#status-complete)">Just fill</text>
+      <text x="12" y="101" font-size="8" fill="url(#status-complete)">the zeros</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 08-cpp-addon.svg -->
+  <g transform="translate(1072, 549.9625)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="121.50000000000001" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="121.50000000000001" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(0.608)">
+      <g id="cpp-addon">
+    <rect x="0" y="0" width="800" height="38" fill="url(#obsidian-inner)" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">C++ NODE.JS ADDON ARCHITECTURE</text>
+    
+    <!-- Node.js layer -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="220" height="135" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="110" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="url(#status-complete)">Node.js (JavaScript)</text>
+      <text x="15" y="45" font-size="9" fill="#aaa">const sig = require('sigcluster');</text>
+      <text x="15" y="65" font-size="9" fill="#f0ede8">// Compute signature</text>
+      <text x="15" y="80" font-size="9" fill="#aaa">const s = sig.compute(html);</text>
+      <text x="15" y="100" font-size="9" fill="#f0ede8">// Batch distance</text>
+      <text x="15" y="115" font-size="9" fill="#aaa">const d = sig.batchDistance(</text>
+      <text x="30" y="128" font-size="9" fill="#aaa">  sigs, target);</text>
+    </g>
+    
+    <!-- Arrow -->
+    <path d="M 265 117 L 295 117" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="293,113 301,117 293,121" fill="url(#gold-accent)"/>
+    <text x="280" y="105" text-anchor="middle" font-size="7" fill="#888">N-API</text>
+    
+    <!-- C++ layer -->
+    <g transform="translate(310, 50)">
+      <rect x="0" y="0" width="220" height="135" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="110" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#a78bfa">C++ Addon</text>
+      <text x="15" y="45" font-size="9" fill="#aaa">// SIMD-optimized Hamming</text>
+      <text x="15" y="60" font-size="9" fill="#f0ede8">uint32_t hamming512(</text>
+      <text x="30" y="73" font-size="9" fill="#aaa">const uint64_t* a,</text>
+      <text x="30" y="86" font-size="9" fill="#aaa">const uint64_t* b) {</text>
+      <text x="30" y="99" font-size="9" fill="#888">  // AVX2 / POPCNT</text>
+      <text x="30" y="112" font-size="9" fill="#aaa">  return __builtin_popcountll(</text>
+      <text x="45" y="125" font-size="9" fill="#aaa">    a[0]^b[0]) + ...</text>
+    </g>
+    
+    <!-- Benefits -->
+    <g transform="translate(550, 50)">
+      <rect x="0" y="0" width="220" height="135" fill="url(#obsidian)" rx="6"/>
+      <text x="110" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="url(#gold-accent)">Why C++ + N-API?</text>
+      <text x="15" y="45" font-size="9" fill="url(#status-complete)">✓ 10-100x faster than JS</text>
+      <text x="15" y="62" font-size="9" fill="url(#status-complete)">✓ SIMD (AVX2/AVX-512)</text>
+      <text x="15" y="79" font-size="9" fill="url(#status-complete)">✓ Stable ABI (node-addon-api)</text>
+      <text x="15" y="96" font-size="9" fill="url(#status-complete)">✓ Easy debugging (gdb/lldb)</text>
+      <text x="15" y="113" font-size="9" fill="url(#status-complete)">✓ Prebuild binaries (prebuildify)</text>
+      <text x="15" y="130" font-size="9" fill="#888">No Rust complexity!</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 09-performance.svg -->
+  <g transform="translate(40, 553)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="112.3875" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="112.3875" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(0.608)">
+      <g id="performance">
+    <rect x="0" y="0" width="800" height="38" fill="url(#obsidian-inner)" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">PERFORMANCE: 512-BIT WITH C++ SIMD</text>
+    
+    <!-- JS vs C++ comparison -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="360" height="120" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="180" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="url(#gold-accent)">JavaScript vs C++ (512-bit Hamming)</text>
+      
+      <!-- JS bar -->
+      <text x="15" y="46" font-size="9" fill="#888">JavaScript:</text>
+      <rect x="100" y="36" width="80" height="14" fill="#f87171" rx="2"/>
+      <text x="190" y="47" font-size="8" fill="#aaa">~500K/sec</text>
+      
+      <!-- C++ bar -->
+      <text x="15" y="68" font-size="9" fill="url(#status-complete)">C++ SIMD:</text>
+      <rect x="100" y="58" width="200" height="14" fill="url(#status-complete)" rx="2"/>
+      <text x="310" y="69" font-size="8" fill="#aaa">~50M/sec</text>
+      
+      <!-- C++ AVX-512 bar -->
+      <text x="15" y="90" font-size="9" fill="url(#status-progress)">C++ AVX-512:</text>
+      <rect x="100" y="80" width="230" height="14" fill="url(#status-progress)" rx="2"/>
+      <text x="340" y="91" font-size="8" fill="#aaa">~100M/sec</text>
+      
+      <text x="15" y="112" font-size="8" fill="#888">512-bit = 8 × 64-bit XOR + 8 × POPCNT + 7 × ADD</text>
+    </g>
+    
+    <!-- Batch processing -->
+    <g transform="translate(410, 50)">
+      <rect x="0" y="0" width="360" height="120" fill="url(#obsidian)" rx="6"/>
+      <text x="180" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="url(#gold-accent)">Batch Processing (10K × 10K)</text>
+      
+      <text x="15" y="48" font-size="9" fill="#aaa">Total pairs: 50,000,000</text>
+      
+      <text x="15" y="72" font-size="9" fill="#888">JavaScript:</text>
+      <text x="130" y="72" font-size="9" fill="#f87171">~100 seconds</text>
+      
+      <text x="15" y="92" font-size="9" fill="url(#status-complete)">C++ SIMD:</text>
+      <text x="130" y="92" font-size="9" fill="url(#status-complete)">~1 second</text>
+      
+      <text x="15" y="112" font-size="9" fill="url(#status-progress)">C++ AVX-512:</text>
+      <text x="130" y="112" font-size="9" fill="url(#status-progress)">~0.5 seconds</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 10-storage-math.svg -->
+  <g transform="translate(556, 565.15)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="106.3125" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="106.3125" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(0.608)">
+      <g id="storage-math">
+    <rect x="0" y="0" width="800" height="38" fill="url(#obsidian-inner)" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">STORAGE MATH: 512-BIT FOR 1M PAGES</text>
+    
+    <!-- Full signatures -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="230" height="110" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="115" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="url(#gold-accent)">If Storing All Signatures</text>
+      <text x="15" y="48" font-size="9" fill="#aaa">1M × 64 bytes = 64 MB</text>
+      <text x="15" y="68" font-size="9" fill="#aaa">Fits in RAM easily</text>
+      <text x="15" y="88" font-size="9" fill="#888">But: do we need all bands?</text>
+      <text x="15" y="102" font-size="8" fill="#888">Unused bands = wasted space</text>
+    </g>
+    
+    <!-- Compute on demand -->
+    <g transform="translate(280, 50)">
+      <rect x="0" y="0" width="240" height="110" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="120" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#a78bfa">Hybrid: Store + Compute</text>
+      <text x="15" y="48" font-size="9" fill="#f0ede8">Store: 64B signature (all bands)</text>
+      <text x="15" y="68" font-size="9" fill="#aaa">Distance: compare only enabled bands</text>
+      <text x="15" y="88" font-size="9" fill="url(#status-complete)">Band mask stored per-page:</text>
+      <text x="15" y="102" font-size="9" fill="url(#status-complete)">0x01 = structural only</text>
+    </g>
+    
+    <!-- Cluster ID approach -->
+    <g transform="translate(540, 50)">
+      <rect x="0" y="0" width="230" height="110" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="115" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="url(#status-complete)">Minimal: Cluster ID Only</text>
+      <text x="15" y="48" font-size="9" fill="#f0ede8">1M × 4 bytes = 4 MB</text>
+      <text x="15" y="68" font-size="9" fill="#aaa">+ 10K exemplars × 64B = 640KB</text>
+      <text x="15" y="88" font-size="9" fill="url(#status-complete)">Total: ~5 MB</text>
+      <text x="15" y="102" font-size="8" fill="#888">Recompute sig on demand</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 11-topical-power.svg -->
+  <g transform="translate(40, 690.3875)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="109.35000000000001" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="109.35000000000001" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(0.608)">
+      <g id="topical-power">
+    <rect x="0" y="0" width="800" height="38" fill="url(#obsidian-inner)" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">TOPICAL SIMILARITY: WHAT 512 BITS ENABLES</text>
+    
+    <!-- Example scenario -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="360" height="115" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="180" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="url(#gold-accent)">Example: Breaking News Event</text>
+      
+      <text x="15" y="45" font-size="9" fill="#f0ede8">Story: "Major earthquake hits California"</text>
+      <text x="15" y="62" font-size="8" fill="#aaa">Sources: BBC, CNN, Reuters, AP, local papers</text>
+      
+      <text x="15" y="82" font-size="9" fill="url(#status-progress)">Structural band: Different (5 sources)</text>
+      <text x="15" y="96" font-size="9" fill="#a78bfa">Content band: Similar (shared facts)</text>
+      <text x="15" y="110" font-size="9" fill="url(#status-complete)">Semantic band: Identical (same event)</text>
+    </g>
+    
+    <!-- Band combination -->
+    <g transform="translate(410, 50)">
+      <rect x="0" y="0" width="360" height="115" fill="url(#obsidian)" rx="6"/>
+      <text x="180" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="url(#gold-accent)">Multi-Band Query Power</text>
+      
+      <text x="15" y="45" font-size="9" fill="#aaa">"Find all coverage of this event":</text>
+      <text x="25" y="60" font-size="8" fill="url(#status-complete)">→ Match semantic band (ignore structure)</text>
+      
+      <text x="15" y="80" font-size="9" fill="#aaa">"Find exact copies":</text>
+      <text x="25" y="95" font-size="8" fill="url(#status-complete)">→ Match structural + content bands</text>
+      
+      <text x="15" y="112" font-size="8" fill="#888">Band mask controls which to compare</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 12-conclusion.svg -->
+  <g transform="translate(556, 696.4625)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="91.125" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="91.125" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(0.608)">
+      <g id="conclusion">
+    <rect x="0" y="0" width="800" height="38" fill="url(#gold-accent)" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="url(#obsidian)">SUMMARY: EXTENSIBLE 512-BIT ARCHITECTURE</text>
+    
+    <g transform="translate(30, 50)">
+      <!-- Design -->
+      <rect x="0" y="0" width="235" height="85" fill="url(#obsidian)" rx="6"/>
+      <text x="117" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="url(#gold-accent)">Design</text>
+      <text x="15" y="40" font-size="9" fill="#f0ede8">• 4 × 128-bit bands</text>
+      <text x="15" y="55" font-size="9" fill="#aaa">• Start with Band 1 only</text>
+      <text x="15" y="70" font-size="9" fill="#aaa">• Zero-fill reserved bits</text>
+      <text x="15" y="85" font-size="8" fill="#888">• Extend without migration</text>
+    </g>
+    
+    <g transform="translate(280, 50)">
+      <!-- Implementation -->
+      <rect x="0" y="0" width="235" height="85" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="117" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="#a78bfa">Implementation</text>
+      <text x="15" y="40" font-size="9" fill="#f0ede8">• C++ N-API addon</text>
+      <text x="15" y="55" font-size="9" fill="#aaa">• SIMD (AVX2) optimized</text>
+      <text x="15" y="70" font-size="9" fill="#aaa">• 50-100M pairs/sec</text>
+      <text x="15" y="85" font-size="8" fill="#888">• prebuildify for npm</text>
+    </g>
+    
+    <g transform="translate(530, 50)">
+      <!-- Value -->
+      <rect x="0" y="0" width="240" height="85" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="120" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="url(#status-complete)">Enables</text>
+      <text x="15" y="40" font-size="9" fill="#f0ede8">✓ Dedup + Structural + Topical</text>
+      <text x="15" y="55" font-size="9" fill="#aaa">✓ Same-event clustering</text>
+      <text x="15" y="70" font-size="9" fill="#aaa">✓ Cross-source matching</text>
+      <text x="15" y="85" font-size="8" fill="#888">✓ Future-proof capacity</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- Footer Decoration -->
+  <g transform="translate(800, 839.7375000000001)">
+    <rect fill="url(#gold-accent)" x="-60" y="-2" width="120" height="4" rx="2"/>
+    <circle fill="url(#gold-accent)" cx="-70" cy="0" r="4"/>
+    <circle fill="url(#gold-accent)" cx="70" cy="0" r="4"/>
+  </g>
+
+</svg>

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+  <g id="memory-layout">
+    <rect x="0" y="0" width="400" height="38" fill="#1e3a5f" rx="8"/>
+    <text x="200" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="white">IN-MEMORY DATA LAYOUT</text>
+    
+    <g transform="translate(15, 48)">
+      <rect x="0" y="0" width="370" height="140" fill="#444" rx="6"/>
+      
+      <!-- Signature array visualization -->
+      <text x="12" y="18" font-size="9" font-weight="600" fill="#60a5fa">Signature Array (contiguous)</text>
+      <rect x="12" y="26" width="346" height="30" fill="#1e3a5f" rx="3"/>
+      <text x="30" y="45" font-size="8" fill="#aaa" font-family="monospace">sig[0]</text>
+      <line x1="60" y1="30" x2="60" y2="52" stroke="#3b82f6" stroke-width="0.5"/>
+      <text x="75" y="45" font-size="8" fill="#aaa" font-family="monospace">sig[1]</text>
+      <line x1="105" y1="30" x2="105" y2="52" stroke="#3b82f6" stroke-width="0.5"/>
+      <text x="120" y="45" font-size="8" fill="#aaa" font-family="monospace">sig[2]</text>
+      <line x1="150" y1="30" x2="150" y2="52" stroke="#3b82f6" stroke-width="0.5"/>
+      <text x="170" y="45" font-size="8" fill="#666">...</text>
+      <line x1="200" y1="30" x2="200" y2="52" stroke="#3b82f6" stroke-width="0.5"/>
+      <text x="270" y="45" font-size="8" fill="#aaa" font-family="monospace">sig[9999]</text>
+      
+      <text x="12" y="75" font-size="8" fill="#888">10,000 × 8 bytes = 80KB (L2 cache fits!)</text>
+      
+      <!-- Union-Find array -->
+      <text x="12" y="95" font-size="9" font-weight="600" fill="#a78bfa">Union-Find Parent Array</text>
+      <rect x="12" y="103" width="346" height="24" fill="#2d1f4a" rx="3"/>
+      <text x="30" y="119" font-size="7" fill="#aaa" font-family="monospace">0 1 2 3 4 ... → cluster roots</text>
+      
+      <text x="12" y="135" font-size="8" fill="#888">10,000 × 4 bytes = 40KB</text>
+    </g>
+  </g>
+</svg>

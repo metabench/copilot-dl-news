@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 260" width="920" height="260">
+  <title>Geo Import</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#050508"/>
+      <stop offset="0.55" stop-color="#0a0d14"/>
+      <stop offset="1" stop-color="#141824"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2e8b57"/>
+      <stop offset="0.5" stop-color="#50c878"/>
+      <stop offset="1" stop-color="#b7ffd0"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect x="10" y="10" width="900" height="240" rx="18" fill="url(#bg)" stroke="url(#accent)" stroke-width="2"/>
+
+  <g transform="translate(50,54)">
+    <rect x="0" y="0" width="154" height="152" rx="18" fill="rgba(80,200,120,0.08)" stroke="rgba(80,200,120,0.30)"/>
+
+    <circle cx="77" cy="74" r="48" fill="rgba(10,13,20,0.60)" stroke="rgba(80,200,120,0.22)"/>
+    <path d="M 29 74 H 125" stroke="rgba(183,255,208,0.10)" stroke-width="2"/>
+    <path d="M 77 26 V 122" stroke="rgba(183,255,208,0.10)" stroke-width="2"/>
+    <path d="M 44 44 C 54 54 60 62 62 74 C 64 86 60 96 50 106" fill="none" stroke="rgba(183,255,208,0.10)" stroke-width="2"/>
+    <path d="M 110 44 C 100 54 94 62 92 74 C 90 86 94 96 104 106" fill="none" stroke="rgba(183,255,208,0.10)" stroke-width="2"/>
+
+    <g filter="url(#glow)">
+      <path d="M 77 54 C 66 54 58 62 58 72 C 58 86 77 100 77 100 C 77 100 96 86 96 72 C 96 62 88 54 77 54 Z" fill="rgba(80,200,120,0.18)" stroke="url(#accent)" stroke-width="3"/>
+      <circle cx="77" cy="72" r="7" fill="#50c878"/>
+      <path d="M 34 128 H 120" stroke="rgba(80,200,120,0.22)" stroke-width="3" stroke-linecap="round"/>
+      <path d="M 44 136 H 110" stroke="rgba(183,255,208,0.16)" stroke-width="3" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <g font-family="Georgia, Times New Roman, serif">
+    <text x="230" y="104" font-size="38" fill="#f0f4f8" letter-spacing="1.1">Geo Import</text>
+  </g>
+  <g font-family="Inter, Segoe UI, system-ui, sans-serif">
+    <text x="230" y="142" font-size="16" fill="#94a3b8" letter-spacing="0.4">NDJSON • geonames • shape merges</text>
+  </g>
+
+  <g>
+    <rect x="230" y="166" width="470" height="42" rx="12" fill="rgba(80,200,120,0.10)" stroke="rgba(80,200,120,0.22)"/>
+    <text x="250" y="193" font-family="JetBrains Mono, Consolas, monospace" font-size="14" fill="#50c878">http://localhost:3003</text>
+    <text x="420" y="193" font-family="JetBrains Mono, Consolas, monospace" font-size="14" fill="#94a3b8">• geo-import</text>
+  </g>
+</svg>

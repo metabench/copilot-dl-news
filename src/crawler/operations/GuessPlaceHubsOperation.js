@@ -155,6 +155,10 @@ class GuessPlaceHubsOperation extends CrawlOperation {
       ...(now ? { now } : {})
     });
 
+    if (overrides.telemetryBridge && typeof overrides.telemetryBridge.emitEvent === 'function') {
+      dependencies.telemetryBridge = overrides.telemetryBridge;
+    }
+
     const startedAt = Date.now();
     logger.info?.(`[CrawlOperations] guessPlaceHubs starting: ${domain}`);
 

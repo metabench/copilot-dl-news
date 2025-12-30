@@ -88,4 +88,74 @@ describe('StagedGazetteerCoordinator with planner orchestrator', () => {
     const secondStage = summary.plan.stages[1];
     expect(secondStage.totals.recordsProcessed).toBe(10);
   });
+
+  test('emits crawl:progress-tree events for wikidata-cities ingestor', async () => {
+    const crawlEvents = [];
+    const telemetry = {
+      events: {
+        emitEvent: (event) => crawlEvents.push(event)
+      },
+      problem: () => {}
+    };
+
+    const coordinator = new StagedGazetteerCoordinator({
+      db,
+      logger: console,
+      telemetry,
+      stages: [
+        {
+          name: 'cities',
+          priority: 100,
+          kind: 'city',
+          crawlDepth: 2,
+          ingestors: [
+            {
+              id: 'wikidata-cities',
+              name: 'wikidata-cities',
+              execute: jest.fn(async ({ emitProgress }) => {
+                emitProgress({
+                  phase: 'discovery',
+                  totalCountries: 25,
+                  maxCitiesPerCountry: 10,
+                  minPopulation: 10000,
+                  estimatedTotal: 250,
+                  message: 'Discovery'
+                });
+
+                for (let i = 1; i <= 25; i++) {
+                  emitProgress({
+                    phase: 'processing',
+                    current: i,
+                    totalItems: 25,
+                    countryCode: `c${i}`,
+                    citiesProcessed: i,
+                    percentComplete: Math.round((i / 25) * 100),
+                    message: `Processing c${i}`
+                  });
+                }
+
+                emitProgress({ phase: 'complete', summary: { countriesProcessed: 25 } });
+
+                return { recordsProcessed: 250, recordsUpserted: 250, errors: 0 };
+              })
+            }
+          ]
+        }
+      ]
+    });
+
+    await coordinator.execute();
+
+    const progressTreeEvents = crawlEvents.filter(
+      (evt) => evt && typeof evt.type === 'string' && evt.type.startsWith('crawl:progress-tree:')
+    );
+
+    // Throttling can coalesce fast progress loops down to just:
+    // - crawl:progress-tree:updated
+    // - crawl:progress-tree:completed
+    expect(progressTreeEvents.length).toBeGreaterThanOrEqual(2);
+    expect(progressTreeEvents.some((evt) => evt.type === 'crawl:progress-tree:updated')).toBe(true);
+    expect(progressTreeEvents[progressTreeEvents.length - 1].type).toBe('crawl:progress-tree:completed');
+    expect(progressTreeEvents[0].data?.root?.id).toBe('wikidata-cities');
+  });
 });

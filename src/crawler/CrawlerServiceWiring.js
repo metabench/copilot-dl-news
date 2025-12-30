@@ -28,7 +28,7 @@ const robotsParser = require('robots-parser');
 const { loadSitemaps } = require('./sitemap');
 const PriorityCalculator = require('./PriorityCalculator');
 const { GazetteerManager } = require('./components/GazetteerManager');
-const ConfigManager = require('../config/ConfigManager');
+const { ConfigManager } = require('../config/ConfigManager');
 const { setPriorityConfigProfile, resolvePriorityProfileFromCrawlType } = require('../utils/priorityConfig');
 const { is_array } = require('lang-tools');
 const { parseRetryAfter } = require('./utils');
@@ -41,6 +41,18 @@ const { ContentValidationService } = require('./services/ContentValidationServic
 // Phase 1: Discovery services
 const { ArchiveDiscoveryStrategy } = require('./services/ArchiveDiscoveryStrategy');
 const { PaginationPredictorService } = require('./services/PaginationPredictorService');
+
+// Phase 5: Proxy rotation
+const { ProxyManager } = require('./ProxyManager');
+
+// Phase 2: Teacher module for Puppeteer-based rendering
+let TeacherService;
+try {
+  TeacherService = require('../teacher/TeacherService').TeacherService;
+} catch (e) {
+  // TeacherService is optional (requires Puppeteer)
+  TeacherService = null;
+}
 
 function resolvePriorityProfileFromCrawlTypeLocal(crawlType) {
   if (typeof crawlType !== 'string') return 'basic';
@@ -100,14 +112,14 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
   }
   crawler.enhancedFeatures = new EnhancedFeaturesManager({
     ConfigManager,
-    EnhancedDatabaseAdapter: require('../db/EnhancedDatabaseAdapter'),
-    PriorityScorer: require('./PriorityScorer'),
-    ProblemClusteringService: require('./ProblemClusteringService'),
-    PlannerKnowledgeService: require('./PlannerKnowledgeService'),
-    ProblemResolutionService: require('./ProblemResolutionService'),
-    CrawlPlaybookService: require('./CrawlPlaybookService'),
-    CountryHubGapService: require('./CountryHubGapService'),
-    CountryHubBehavioralProfile: require('./CountryHubBehavioralProfile'),
+    EnhancedDatabaseAdapter: require('../db/EnhancedDatabaseAdapter').EnhancedDatabaseAdapter,
+    PriorityScorer: require('./PriorityScorer').PriorityScorer,
+    ProblemClusteringService: require('./ProblemClusteringService').ProblemClusteringService,
+    PlannerKnowledgeService: require('./PlannerKnowledgeService').PlannerKnowledgeService,
+    ProblemResolutionService: require('./ProblemResolutionService').ProblemResolutionService,
+    CrawlPlaybookService: require('./CrawlPlaybookService').CrawlPlaybookService,
+    CountryHubGapService: require('./CountryHubGapService').CountryHubGapService,
+    CountryHubBehavioralProfile: require('./CountryHubBehavioralProfile').CountryHubBehavioralProfile,
     logger: console
   });
   crawler.busyWorkers = 0;
@@ -182,6 +194,31 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     maxSpeculativePages: 3,
     patternTtlMs: 60 * 60 * 1000 // 1 hour
   });
+
+  // Phase 2: Teacher service for Puppeteer-based rendering of JS-dependent pages
+  // This is optional - only initialized if Puppeteer is available
+  if (TeacherService && TeacherService.isAvailable()) {
+    crawler.teacherService = new TeacherService({
+      headless: true,
+      poolSize: opts.teacherPoolSize ?? 2, // Conservative default
+      renderTimeout: opts.teacherTimeout ?? 30000,
+      logger: console
+    });
+    // Track soft failures that need Teacher rendering
+    crawler._teacherQueue = [];
+    crawler._teacherQueueMax = opts.teacherQueueMax ?? 100;
+  } else {
+    crawler.teacherService = null;
+    crawler._teacherQueue = [];
+  }
+
+  // Phase 5: Proxy rotation for IP-based rate limiting/blocking
+  // Loads config from config/proxies.json if it exists
+  crawler.proxyManager = new ProxyManager({
+    logger: console
+  });
+  // Only load if a config file exists (silent no-op otherwise)
+  crawler.proxyManager.load();
 
   crawler.domainThrottle = new DomainThrottleManager({ state: crawler.state, pacerJitterMinMs: crawler.pacerJitterMinMs, pacerJitterMaxMs: crawler.pacerJitterMaxMs, getDbAdapter: () => crawler.dbAdapter });
   crawler.articleProcessor = new ArticleProcessor({ linkExtractor: crawler.linkExtractor, normalizeUrl: (url, ctx) => crawler.normalizeUrl(url, ctx), looksLikeArticle: (url) => crawler.looksLikeArticle(url), computeUrlSignals: (url) => crawler._computeUrlSignals(url), computeContentSignals: ($, html) => crawler._computeContentSignals($, html), combineSignals: (urlSignals, contentSignals, opts) => crawler._combineSignals(urlSignals, contentSignals, opts), dbAdapter: () => crawler.dbAdapter, articleHeaderCache: crawler.state.getArticleHeaderCache(), knownArticlesCache: crawler.state.getKnownArticlesCache(), events: crawler.events, logger: console });
@@ -286,6 +323,25 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     // Phase 1: Resilience services for self-monitoring and content validation
     resilienceService: crawler.resilienceService,
     contentValidationService: crawler.contentValidationService,
+    // Phase 2: Teacher service for JS-dependent pages
+    teacherService: crawler.teacherService,
+    // Phase 5: Proxy rotation
+    proxyManager: crawler.proxyManager,
+    onSoftFailure: crawler.teacherService ? (info) => {
+      // Queue soft failures for Teacher rendering
+      if (crawler._teacherQueue.length < crawler._teacherQueueMax) {
+        crawler._teacherQueue.push({
+          url: info.url,
+          reason: info.reason,
+          timestamp: Date.now()
+        });
+        crawler.telemetry?.milestone?.(`teacher:queued:${info.url}`, {
+          kind: 'teacher-queue',
+          message: `Queued for Teacher: ${info.reason}`,
+          details: { url: info.url }
+        });
+      }
+    } : null,
     articleHeaderCache: crawler.state.getArticleHeaderCache(),
     knownArticlesCache: crawler.state.getKnownArticlesCache(),
     getDbAdapter: () => crawler.dbAdapter,
@@ -378,7 +434,14 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     hubOnlyMode: crawler.countryHubExclusiveMode,
     getCountryHubBehavioralProfile: () => crawler.countryHubBehavioralProfile,
     // Phase 1: Pagination prediction for speculative crawling
-    paginationPredictorService: crawler.paginationPredictorService
+    paginationPredictorService: crawler.paginationPredictorService,
+    // Emit url:visited event for telemetry persistence (timing data for DB queries)
+    emitPageEvent: (pageInfo) => {
+      try {
+        console.log('[CrawlerServiceWiring] emitting url:visited:', JSON.stringify(pageInfo));
+        crawler.emit('url:visited', pageInfo);
+      } catch (_) {}
+    }
   });
 }
 

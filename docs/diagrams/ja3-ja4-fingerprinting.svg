@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620">
+  <title>JA3/JA4 TLS Fingerprinting</title>
+  <desc>How TLS fingerprinting detects bots before HTTP headers arrive</desc>
+  
+  <!-- WLILO THEMED VERSION -->
+  
+  <defs>
+    <!-- Leather background gradient -->
+    <linearGradient id="leather-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#faf9f7"/>
+      <stop offset="50%" stop-color="#f5f3ef"/>
+      <stop offset="100%" stop-color="#ebe8e2"/>
+    </linearGradient>
+    
+    <!-- Obsidian panel gradient -->
+    <linearGradient id="obsidian" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3a3a3a"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+    
+    <!-- Gold accent gradient -->
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c9a962"/>
+      <stop offset="100%" stop-color="#e8d5a3"/>
+    </linearGradient>
+    
+    <!-- Success green gradient -->
+    <linearGradient id="success-green" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2ecc71"/>
+      <stop offset="100%" stop-color="#27ae60"/>
+    </linearGradient>
+    
+    <!-- Error red gradient -->
+    <linearGradient id="error-red" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e74c3c"/>
+      <stop offset="100%" stop-color="#c0392b"/>
+    </linearGradient>
+    
+    <!-- Drop shadow -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-opacity="0.25"/>
+    </filter>
+    
+    <!-- Subtle glow for highlight -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Gold arrowhead -->
+    <marker id="gold-arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="url(#gold)"/>
+    </marker>
+    
+    <!-- Red arrowhead for blocked -->
+    <marker id="red-arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+    </marker>
+    
+    <!-- Green arrowhead for allowed -->
+    <marker id="green-arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2ecc71"/>
+    </marker>
+  </defs>
+  
+  <style>
+    .title { font-family: Georgia, serif; font-size: 26px; font-weight: bold; fill: #2d2d2d; }
+    .subtitle { font-family: Arial, sans-serif; font-size: 13px; fill: #666; }
+    .panel-title { font-family: Georgia, serif; font-size: 14px; font-weight: bold; fill: #e8d5a3; }
+    .panel-text { font-family: Arial, sans-serif; font-size: 11px; fill: #ccc; }
+    .panel-mono { font-family: 'Consolas', monospace; font-size: 10px; fill: #aaa; }
+    .label { font-family: Arial, sans-serif; font-size: 11px; fill: #2d2d2d; }
+    .label-bold { font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; fill: #2d2d2d; }
+    .label-gold { font-family: Georgia, serif; font-size: 12px; font-weight: bold; fill: #c9a962; }
+    .small { font-family: 'Consolas', monospace; font-size: 10px; fill: #666; }
+    .insight-title { font-family: Georgia, serif; font-size: 13px; font-weight: bold; fill: #e8d5a3; }
+    .insight-text { font-family: Arial, sans-serif; font-size: 11px; fill: #ccc; }
+  </style>
+  
+  <!-- Leather background -->
+  <rect width="100%" height="100%" fill="url(#leather-bg)"/>
+  
+  <!-- Subtle texture overlay -->
+  <rect width="100%" height="100%" fill="url(#leather-bg)" opacity="0.3"/>
+  
+  <!-- Title area -->
+  <text x="450" y="38" text-anchor="middle" class="title">JA3/JA4 TLS Fingerprinting</text>
+  <line x1="280" y1="48" x2="620" y2="48" stroke="url(#gold)" stroke-width="2"/>
+  <text x="450" y="68" text-anchor="middle" class="subtitle">How servers detect bots before HTTP headers arrive</text>
+  
+  <!-- === LEFT SIDE: Clients === -->
+  
+  <!-- Node.js Client Panel -->
+  <g id="nodejs-client" filter="url(#shadow)">
+    <rect x="30" y="95" width="180" height="110" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1"/>
+    <text x="120" y="120" text-anchor="middle" class="panel-title">Node.js Client</text>
+    <line x1="50" y1="128" x2="190" y2="128" stroke="#c9a962" stroke-width="0.5" opacity="0.5"/>
+    <text x="120" y="148" text-anchor="middle" class="panel-text">TLS Fingerprint:</text>
+    <text x="120" y="165" text-anchor="middle" class="panel-mono">769,47-53-5-10-49171...</text>
+    <text x="120" y="185" text-anchor="middle" class="panel-mono">JA3: a0e9f5d64349...</text>
+  </g>
+  
+  <!-- Chrome Client Panel -->
+  <g id="chrome-client" filter="url(#shadow)">
+    <rect x="30" y="230" width="180" height="110" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1"/>
+    <text x="120" y="255" text-anchor="middle" class="panel-title">Chrome Browser</text>
+    <line x1="50" y1="263" x2="190" y2="263" stroke="#c9a962" stroke-width="0.5" opacity="0.5"/>
+    <text x="120" y="283" text-anchor="middle" class="panel-text">TLS Fingerprint:</text>
+    <text x="120" y="300" text-anchor="middle" class="panel-mono">771,4865-4866-4867...</text>
+    <text x="120" y="320" text-anchor="middle" class="panel-mono">JA3: cd08e31494f9...</text>
+  </g>
+  
+  <!-- === CENTER: Server === -->
+  
+  <g id="server" filter="url(#shadow)">
+    <rect x="320" y="120" width="220" height="180" rx="10" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="430" y="148" text-anchor="middle" class="panel-title">Guardian Server</text>
+    <line x1="340" y1="158" x2="520" y2="158" stroke="#c9a962" stroke-width="0.5" opacity="0.5"/>
+    
+    <!-- Fingerprint database inner panel -->
+    <rect x="340" y="170" width="180" height="115" rx="6" fill="#151515" stroke="#444" stroke-width="1"/>
+    <text x="430" y="192" text-anchor="middle" class="panel-text">Known Fingerprints:</text>
+    <line x1="360" y1="200" x2="500" y2="200" stroke="#444" stroke-width="0.5"/>
+    
+    <!-- Allowed fingerprints -->
+    <text x="365" y="220" class="panel-mono" fill="#2ecc71">✓ Chrome: cd08e314...</text>
+    <text x="365" y="240" class="panel-mono" fill="#2ecc71">✓ Firefox: e4f5a2c1...</text>
+    <text x="365" y="260" class="panel-mono" fill="#2ecc71">✓ Safari:  b32a1e46...</text>
+    
+    <!-- Blocked fingerprints -->
+    <text x="365" y="278" class="panel-mono" fill="#e74c3c">✗ Node.js: a0e9f5d6...</text>
+  </g>
+  
+  <!-- Arrows from clients to server -->
+  <path d="M 210 150 L 310 195" stroke="url(#gold)" stroke-width="2" fill="none" marker-end="url(#gold-arrow)"/>
+  <path d="M 210 285 L 310 245" stroke="url(#gold)" stroke-width="2" fill="none" marker-end="url(#gold-arrow)"/>
+  
+  <!-- Arrow labels -->
+  <text x="255" y="160" class="small" transform="rotate(-15, 255, 160)">ClientHello</text>
+  <text x="255" y="280" class="small" transform="rotate(15, 255, 280)">ClientHello</text>
+  
+  <!-- === RIGHT SIDE: Outcomes === -->
+  
+  <!-- Block outcome -->
+  <g id="block-outcome" filter="url(#shadow)">
+    <rect x="620" y="115" width="150" height="70" rx="8" fill="url(#obsidian)" stroke="#e74c3c" stroke-width="2"/>
+    <text x="695" y="145" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#e74c3c">BLOCKED</text>
+    <text x="695" y="168" text-anchor="middle" class="panel-mono" fill="#e74c3c">ECONNRESET</text>
+  </g>
+  
+  <!-- Allow outcome -->
+  <g id="allow-outcome" filter="url(#shadow)">
+    <rect x="620" y="245" width="150" height="70" rx="8" fill="url(#obsidian)" stroke="#2ecc71" stroke-width="2"/>
+    <text x="695" y="275" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#2ecc71">ALLOWED</text>
+    <text x="695" y="298" text-anchor="middle" class="panel-mono" fill="#2ecc71">HTTP 200 OK</text>
+  </g>
+  
+  <!-- Arrows from server to outcomes -->
+  <path d="M 540 175 L 610 150" stroke="#e74c3c" stroke-width="2" fill="none" marker-end="url(#red-arrow)"/>
+  <path d="M 540 260 L 610 280" stroke="#2ecc71" stroke-width="2" fill="none" marker-end="url(#green-arrow)"/>
+  
+  <!-- === BOTTOM: Timeline === -->
+  
+  <g id="timeline">
+    <text x="450" y="375" text-anchor="middle" class="label-gold">Connection Timeline</text>
+    
+    <!-- Timeline bar with gold gradient -->
+    <line x1="100" y1="410" x2="800" y2="410" stroke="url(#gold)" stroke-width="3"/>
+    
+    <!-- Timeline points -->
+    <g>
+      <circle cx="150" cy="410" r="10" fill="url(#obsidian)" stroke="#c9a962" stroke-width="2"/>
+      <text x="150" y="414" text-anchor="middle" font-family="Arial" font-size="8" fill="#e8d5a3">1</text>
+      <text x="150" y="435" text-anchor="middle" class="label-bold">TCP</text>
+      <text x="150" y="448" text-anchor="middle" class="small">Connect</text>
+    </g>
+    
+    <g filter="url(#glow)">
+      <circle cx="350" cy="410" r="12" fill="url(#gold)" stroke="#2d2d2d" stroke-width="2"/>
+      <text x="350" y="414" text-anchor="middle" font-family="Arial" font-size="9" font-weight="bold" fill="#2d2d2d">2</text>
+      <text x="350" y="435" text-anchor="middle" class="label-bold">TLS</text>
+      <text x="350" y="448" text-anchor="middle" class="small">ClientHello</text>
+    </g>
+    
+    <g>
+      <circle cx="550" cy="410" r="10" fill="url(#obsidian)" stroke="#c9a962" stroke-width="2"/>
+      <text x="550" y="414" text-anchor="middle" font-family="Arial" font-size="8" fill="#e8d5a3">3</text>
+      <text x="550" y="435" text-anchor="middle" class="label-bold">TLS</text>
+      <text x="550" y="448" text-anchor="middle" class="small">Finished</text>
+    </g>
+    
+    <g>
+      <circle cx="750" cy="410" r="10" fill="url(#obsidian)" stroke="#888" stroke-width="2"/>
+      <text x="750" y="414" text-anchor="middle" font-family="Arial" font-size="8" fill="#888">4</text>
+      <text x="750" y="435" text-anchor="middle" class="label" fill="#888">HTTP</text>
+      <text x="750" y="448" text-anchor="middle" class="small" fill="#888">Request</text>
+    </g>
+    
+    <!-- Highlight box around TLS ClientHello -->
+    <rect x="305" y="385" width="90" height="80" rx="6" fill="none" stroke="#c9a962" stroke-width="2" stroke-dasharray="5,3"/>
+    <text x="350" y="482" text-anchor="middle" class="label-gold">Fingerprint</text>
+    <text x="350" y="496" text-anchor="middle" class="label-gold">HERE</text>
+    
+    <!-- "Too late" annotation -->
+    <text x="750" y="478" text-anchor="middle" class="small" fill="#888">User-Agent</text>
+    <text x="750" y="492" text-anchor="middle" class="small" fill="#888">sent here</text>
+    <text x="750" y="510" text-anchor="middle" font-family="Georgia, serif" font-size="12" font-weight="bold" fill="#e74c3c">(too late!)</text>
+  </g>
+  
+  <!-- === Key insight box === -->
+  <g id="insight" filter="url(#shadow)">
+    <rect x="80" y="540" width="740" height="60" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1"/>
+    <text x="450" y="565" text-anchor="middle" class="insight-title">💡 Key Insight</text>
+    <text x="450" y="585" text-anchor="middle" class="insight-text">Spoofing User-Agent headers is useless. The server identifies your client from the TLS handshake</text>
+    <text x="450" y="598" text-anchor="middle" class="insight-text">before any HTTP data is sent. Use Puppeteer (real Chromium) to get a genuine browser fingerprint.</text>
+  </g>
+  
+</svg>

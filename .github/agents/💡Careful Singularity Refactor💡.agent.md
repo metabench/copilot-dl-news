@@ -199,7 +199,7 @@ See `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` → "Development Server & Deta
 **Key Principles:**
 1. **Facts are NEUTRAL** — Never treat structural observations as "positive" or "negative"
 2. **Facts are OBJECTIVE** — Verifiable, reproducible boolean values
-3. **No weighted signals** — Pure TRUE/FALSE, no scores or confidence levels
+3. **No weighted signals (Fact → Classification subsystem only)** — Pure TRUE/FALSE, no scores or confidence levels
 4. **Classifications CONSUME facts** — Rules combine facts with boolean logic
 
 **Refactoring guidance:**

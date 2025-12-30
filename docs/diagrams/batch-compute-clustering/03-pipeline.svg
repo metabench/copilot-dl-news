@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 160">
+  <g id="pipeline">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">BATCH PROCESSING PIPELINE</text>
+    
+    <g transform="translate(25, 50)">
+      <rect x="0" y="0" width="130" height="95" fill="#444" rx="6"/>
+      <circle cx="115" cy="15" r="11" fill="#3b82f6"/>
+      <text x="115" y="19" text-anchor="middle" font-size="9" font-weight="700" fill="white">1</text>
+      <text x="65" y="35" text-anchor="middle" font-size="9" font-weight="600" fill="#60a5fa">LOAD BATCH</text>
+      <text x="65" y="55" text-anchor="middle" font-size="8" fill="#aaa">10K pages</text>
+      <text x="65" y="68" text-anchor="middle" font-size="8" fill="#aaa">from DB</text>
+      <text x="65" y="85" text-anchor="middle" font-size="8" fill="#888">~640KB RAM</text>
+    </g>
+    
+    <path d="M 165 98 L 185 98" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="183,94 191,98 183,102" fill="#c9a962"/>
+    
+    <g transform="translate(195, 50)">
+      <rect x="0" y="0" width="130" height="95" fill="#1e3a5f" rx="6" stroke="#3b82f6" stroke-width="1"/>
+      <circle cx="115" cy="15" r="11" fill="#3b82f6"/>
+      <text x="115" y="19" text-anchor="middle" font-size="9" font-weight="700" fill="white">2</text>
+      <text x="65" y="35" text-anchor="middle" font-size="9" font-weight="600" fill="#60a5fa">COMPUTE</text>
+      <text x="65" y="55" text-anchor="middle" font-size="8" fill="#aaa">All-pairs</text>
+      <text x="65" y="68" text-anchor="middle" font-size="8" fill="#aaa">similarity</text>
+      <text x="65" y="85" text-anchor="middle" font-size="8" fill="#888">50M pairs</text>
+    </g>
+    
+    <path d="M 335 98 L 355 98" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="353,94 361,98 353,102" fill="#c9a962"/>
+    
+    <g transform="translate(365, 50)">
+      <rect x="0" y="0" width="130" height="95" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <circle cx="115" cy="15" r="11" fill="#8b5cf6"/>
+      <text x="115" y="19" text-anchor="middle" font-size="9" font-weight="700" fill="white">3</text>
+      <text x="65" y="35" text-anchor="middle" font-size="9" font-weight="600" fill="#a78bfa">CLUSTER</text>
+      <text x="65" y="55" text-anchor="middle" font-size="8" fill="#aaa">Union-Find</text>
+      <text x="65" y="68" text-anchor="middle" font-size="8" fill="#aaa">components</text>
+      <text x="65" y="85" text-anchor="middle" font-size="8" fill="#888">O(N·α(N))</text>
+    </g>
+    
+    <path d="M 505 98 L 525 98" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="523,94 531,98 523,102" fill="#c9a962"/>
+    
+    <g transform="translate(535, 50)">
+      <rect x="0" y="0" width="110" height="95" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <circle cx="95" cy="15" r="11" fill="#10b981"/>
+      <text x="95" y="19" text-anchor="middle" font-size="9" font-weight="700" fill="white">4</text>
+      <text x="55" y="35" text-anchor="middle" font-size="9" font-weight="600" fill="#34d399">EXTRACT</text>
+      <text x="55" y="55" text-anchor="middle" font-size="8" fill="#aaa">Exemplars</text>
+      <text x="55" y="68" text-anchor="middle" font-size="8" fill="#aaa">per cluster</text>
+      <text x="55" y="85" text-anchor="middle" font-size="8" fill="#888">~200 total</text>
+    </g>
+    
+    <path d="M 655 98 L 675 98" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="673,94 681,98 673,102" fill="#c9a962"/>
+    
+    <g transform="translate(685, 50)">
+      <rect x="0" y="0" width="90" height="95" fill="#444" rx="6"/>
+      <circle cx="75" cy="15" r="11" fill="#c9a962"/>
+      <text x="75" y="19" text-anchor="middle" font-size="9" font-weight="700" fill="#2d2d2d">5</text>
+      <text x="45" y="35" text-anchor="middle" font-size="9" font-weight="600" fill="#c9a962">STORE</text>
+      <text x="45" y="55" text-anchor="middle" font-size="8" fill="#aaa">IDs to DB</text>
+      <text x="45" y="68" text-anchor="middle" font-size="8" fill="#aaa">4B × 10K</text>
+      <text x="45" y="85" text-anchor="middle" font-size="8" fill="#888">= 40KB</text>
+    </g>
+  </g>
+</svg>

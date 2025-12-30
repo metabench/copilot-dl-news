@@ -1,0 +1,59 @@
+{
+  "name": "example-news-science-article",
+  "description": "A sample science/technology news article for golden set testing",
+  "source": "synthetic",
+  "domain": "example.com",
+  "category": "science",
+  
+  "extractionConfig": {
+    "version": 1,
+    "titleSelector": "h1.headline",
+    "titleFallback": ["h1", ".headline", "article h1"],
+    "bodySelector": ".article-body",
+    "bodyFallback": [".article-content", "article", "main"],
+    "dateSelector": "time[datetime]",
+    "dateFallback": [".publish-date", "meta[property='article:published_time']"],
+    "dateAttribute": "datetime",
+    "authorSelector": ".byline .author a",
+    "authorFallback": [".author", "meta[name='author']"],
+    "excludeSelectors": [".ad", ".related-articles", ".sidebar"]
+  },
+  
+  "expected": {
+    "title": {
+      "contains": "Major Scientific Discovery",
+      "exact": "Breaking: Major Scientific Discovery Announced"
+    },
+    "body": {
+      "minWordCount": 400,
+      "containsSnippets": [
+        "groundbreaking discovery",
+        "battery technology",
+        "electric vehicle",
+        "Environmental Impact"
+      ],
+      "excludes": [
+        "Advertisement",
+        "Related Articles"
+      ]
+    },
+    "date": {
+      "iso": "2025-12-25T10:30:00Z",
+      "year": 2025,
+      "month": 12,
+      "day": 25
+    },
+    "author": {
+      "contains": "Jane Smith"
+    },
+    "extraction": {
+      "success": true,
+      "minConfidence": 0.7
+    }
+  },
+  
+  "metadata": {
+    "createdAt": "2025-12-25",
+    "createdBy": "golden-set-init"
+  }
+}

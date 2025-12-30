@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 95">
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#c9a962"/>
+      <stop offset="100%" style="stop-color:#a88b4a"/>
+    </linearGradient>
+  </defs>
+  <g id="header">
+    <rect x="0" y="0" width="800" height="95" fill="url(#headerGrad)" rx="12"/>
+    <text x="400" y="38" text-anchor="middle" font-size="20" font-weight="700" fill="#2d2d2d">EXTENSIBLE 512-BIT SIGNATURES</text>
+    <text x="400" y="58" text-anchor="middle" font-size="12" fill="#3d3d3d">64 Bytes: Multi-Band Architecture for Topical + Structural Clustering</text>
+    <text x="400" y="78" text-anchor="middle" font-size="10" fill="#4d4d4d">Start Small → Reserve Bits → Extend Later | C++ Node.js Addon</text>
+  </g>
+</svg>

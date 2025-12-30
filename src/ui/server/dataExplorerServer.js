@@ -118,6 +118,8 @@ const {
 } = require("./services/themeService");
 const { ThemeEditorControl } = require("../controls/ThemeEditorControl");
 
+const { ACTIVE_SET_KEY } = require("../../crawler/observatory/DecisionConfigSetState");
+
 const StringControl = jsgui.String_Control;
 
 function attachBackLink(rows, key, backLink) {
@@ -903,6 +905,68 @@ function renderClassificationsView({ db, relativeDb, now }) {
   };
 }
 
+function renderDecisionTreesView({ req, newsDb, relativeDb, now }) {
+  const activeSlug = (newsDb && typeof newsDb.getSetting === "function")
+    ? (newsDb.getSetting(ACTIVE_SET_KEY, null) || null)
+    : null;
+
+  const viewerBase = "/decision-tree-viewer";
+  const viewerTarget = activeSlug
+    ? `${viewerBase}/set/${encodeURIComponent(activeSlug)}?persist=1`
+    : `${viewerBase}/`;
+
+  const subtitle = activeSlug
+    ? `Active decision config set: ${activeSlug}`
+    : `No active decision config set found in ${relativeDb}`;
+
+  return {
+    title: "Decision Trees",
+    columns: [],
+    rows: [],
+    meta: {
+      rowCount: 0,
+      limit: 0,
+      dbLabel: relativeDb,
+      generatedAt: formatDateTime(now, true),
+      subtitle
+    },
+    renderOptions: {
+      layoutMode: "single-control",
+      mainControlFactory: (context) => {
+        const wrap = new jsgui.div({ context });
+        wrap.add_class("decision-trees-view");
+
+        const hint = new jsgui.div({ context });
+        hint.add_class("panel");
+        hint.add(new StringControl({
+          context,
+          text: activeSlug
+            ? `Showing decision trees for active config set: ${activeSlug}`
+            : "Showing decision trees from config/decision-trees (no active config set selected)."
+        }));
+
+        const linkRow = new jsgui.div({ context });
+        linkRow.add_class("panel");
+        const link = new jsgui.a({ context });
+        link.dom.attributes.href = viewerTarget;
+        link.dom.attributes.target = "_blank";
+        link.dom.attributes.rel = "noopener noreferrer";
+        link.add(new StringControl({ context, text: "Open Decision Tree Viewer in new tab" }));
+        linkRow.add(link);
+
+        const iframe = new jsgui.Control({ context, tagName: "iframe" });
+        iframe.dom.attributes.src = viewerTarget;
+        iframe.dom.attributes.style = "width: 100%; height: 78vh; border: 0; background: #0b0f14;";
+
+        wrap.add(hint);
+        wrap.add(linkRow);
+        wrap.add(iframe);
+        return wrap;
+      }
+    }
+  };
+}
+
 const DATA_VIEWS = [
   {
     key: "home",
@@ -952,6 +1016,13 @@ const DATA_VIEWS = [
     navLabel: "Decisions",
     title: "Crawler Decisions",
     render: renderDecisionsView
+  },
+  {
+    key: "decisionTrees",
+    path: "/decision-trees",
+    navLabel: "Decision Trees",
+    title: "Decision Trees",
+    render: renderDecisionTreesView
   },
   {
     key: "theme",
@@ -1506,6 +1577,16 @@ function createDataExplorerServer(options = {}) {
     app.use(express.static(publicDir));
   }
 
+  // Host the Decision Tree Viewer under the Data Explorer server (no separate port).
+  try {
+    const { app: decisionTreeViewerApp } = require("./decisionTreeViewer/server");
+    if (decisionTreeViewerApp && typeof decisionTreeViewerApp === "function") {
+      app.use("/decision-tree-viewer", decisionTreeViewerApp);
+    }
+  } catch (error) {
+    console.warn("Decision Tree Viewer not mounted:", error?.message || error);
+  }
+
   DATA_VIEWS.forEach((view) => {
     app.get(view.path, (req, res, next) => {
       try {
@@ -1707,9 +1788,11 @@ function createDataExplorerServer(options = {}) {
   // SSE events endpoint - now backed by canonical crawler telemetry.
   // Client expects message events with JSON payloads: { type, data }.
   // TelemetryIntegration emits { type: 'crawl:telemetry', data: <event> }.
+  // Events are persisted to DB for AI queryability and replay.
   const crawlTelemetry = new TelemetryIntegration({
     historyLimit: 200,
-    allowOrigin: null
+    allowOrigin: null,
+    db: dbAccess.db
   });
   app.locals.crawlTelemetry = crawlTelemetry;
   crawlTelemetry.mountSSE(app, "/api/events");

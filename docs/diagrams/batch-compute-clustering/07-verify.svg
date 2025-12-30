@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 170">
+  <g id="verify">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">RAPID VERIFICATION (New Pages)</text>
+    
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="130" height="105" fill="#444" rx="6"/>
+      <text x="65" y="20" text-anchor="middle" font-size="9" font-weight="600" fill="#60a5fa">New Page</text>
+      <text x="65" y="45" text-anchor="middle" font-size="16" fill="#60a5fa">&lt;/&gt;</text>
+      <text x="65" y="68" text-anchor="middle" font-size="8" fill="#aaa">Compute sig</text>
+      <text x="65" y="82" text-anchor="middle" font-size="8" fill="#aaa">in memory</text>
+      <text x="65" y="98" text-anchor="middle" font-size="8" fill="#888">(8 bytes)</text>
+    </g>
+    
+    <path d="M 170 102 L 195 102" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="193,98 201,102 193,106" fill="#c9a962"/>
+    
+    <g transform="translate(205, 50)">
+      <rect x="0" y="0" width="200" height="105" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="100" y="20" text-anchor="middle" font-size="9" font-weight="600" fill="#a78bfa">Compare to Exemplars</text>
+      <text x="100" y="45" text-anchor="middle" font-size="8" fill="#aaa">Load ~1K exemplars (16KB)</text>
+      <text x="100" y="60" text-anchor="middle" font-size="8" fill="#aaa">XOR + popcount each</text>
+      <text x="100" y="75" text-anchor="middle" font-size="8" fill="#aaa">Find minimum distance</text>
+      <rect x="40" y="82" width="120" height="18" fill="#1a3a2a" rx="3"/>
+      <text x="100" y="95" text-anchor="middle" font-size="8" fill="#34d399">O(K) = ~0.01ms</text>
+    </g>
+    
+    <path d="M 415 102 L 440 102" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="438,98 446,102 438,106" fill="#c9a962"/>
+    
+    <g transform="translate(450, 50)">
+      <rect x="0" y="0" width="150" height="50" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="75" y="20" text-anchor="middle" font-size="9" font-weight="600" fill="#34d399">Match Found</text>
+      <text x="75" y="40" text-anchor="middle" font-size="8" fill="#aaa">→ Assign cluster ID</text>
+    </g>
+    
+    <g transform="translate(450, 105)">
+      <rect x="0" y="0" width="150" height="50" fill="#3a3a1a" rx="6" stroke="#fbbf24" stroke-width="1"/>
+      <text x="75" y="20" text-anchor="middle" font-size="9" font-weight="600" fill="#fbbf24">No Match</text>
+      <text x="75" y="40" text-anchor="middle" font-size="8" fill="#aaa">→ Queue for next batch</text>
+    </g>
+    
+    <g transform="translate(620, 50)">
+      <rect x="0" y="0" width="150" height="105" fill="#444" rx="6"/>
+      <text x="75" y="20" text-anchor="middle" font-size="9" font-weight="600" fill="#c9a962">Key Insight</text>
+      <text x="12" y="42" font-size="8" fill="#aaa">New pages can be</text>
+      <text x="12" y="55" font-size="8" fill="#aaa">verified against</text>
+      <text x="12" y="68" font-size="8" fill="#aaa">exemplars only</text>
+      <text x="12" y="88" font-size="8" fill="#34d399">No DB query needed!</text>
+      <text x="12" y="100" font-size="8" fill="#888">(exemplars in memory)</text>
+    </g>
+  </g>
+</svg>

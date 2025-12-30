@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 310">
+  <g id="docs">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="50" fill="#3a3a3a" rx="8 8 0 0"/>
+    <text x="200" y="25" text-anchor="middle" font-size="16" font-weight="600" fill="#f0ede8" letter-spacing="1">DOCUMENTATION</text>
+    <text x="200" y="42" text-anchor="middle" font-size="10" fill="#888">Self-Healing Docs • Session Memory</text>
+    
+    <!-- Doc Cards -->
+    <g transform="translate(15, 60)">
+      <rect x="0" y="0" width="370" height="44" fill="#10b981" rx="6"/>
+      <text x="12" y="28" font-size="11" font-weight="500" fill="#1a1a1a">✓ 180+ Session folders (short/long term memory)</text>
+    </g>
+    <g transform="translate(15, 112)">
+      <rect x="0" y="0" width="370" height="44" fill="#10b981" rx="6"/>
+      <text x="12" y="28" font-size="11" font-weight="500" fill="#1a1a1a">✓ 15+ Comprehensive guides (500-1000+ lines)</text>
+    </g>
+    <g transform="translate(15, 164)">
+      <rect x="0" y="0" width="370" height="44" fill="#10b981" rx="6"/>
+      <text x="12" y="28" font-size="11" font-weight="500" fill="#1a1a1a">✓ AGENTS.md (living playbook)</text>
+    </g>
+    <g transform="translate(15, 216)">
+      <rect x="0" y="0" width="370" height="44" fill="#10b981" rx="6"/>
+      <text x="12" y="28" font-size="11" font-weight="500" fill="#1a1a1a">✓ WLILO Style Guide + SVG Methodology</text>
+    </g>
+    <g transform="translate(15, 268)">
+      <rect x="0" y="0" width="370" height="40" fill="#10b981" rx="6"/>
+      <text x="12" y="26" font-size="11" font-weight="500" fill="#1a1a1a">✓ Pattern/Anti-Pattern/Lesson catalogs</text>
+    </g>
+  </g>
+</svg>

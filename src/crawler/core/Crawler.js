@@ -316,13 +316,24 @@ class Crawler extends EventedCrawlerBase {
 
   /**
    * Emit progress event with current state stats.
-   * Throttled to progressEmitIntervalMs (default: 5 seconds).
+   * Throttled to progressEmitIntervalMs (default: 5 seconds) unless force=true.
    * 
-   * @param {Object} [metadata={}] - Additional metadata to include in progress event
+   * @param {Object|boolean} [metadataOrForce={}] - Additional metadata, or boolean for legacy force support
+   * @param {Object} [options={}] - Emit options
+   * @param {boolean} [options.force=false] - If true, bypass throttle
    */
-  emitProgress(metadata = {}) {
+  emitProgress(metadataOrForce = {}, options = {}) {
+    // Support legacy API: emitProgress(true) means force bypass
+    let metadata = {};
+    let force = options.force || false;
+    if (typeof metadataOrForce === 'boolean') {
+      force = metadataOrForce;
+    } else if (metadataOrForce && typeof metadataOrForce === 'object') {
+      metadata = metadataOrForce;
+    }
+    
     const now = Date.now();
-    if (now - this._lastProgressEmitAt < this._progressEmitIntervalMs) {
+    if (!force && now - this._lastProgressEmitAt < this._progressEmitIntervalMs) {
       return; // Throttle progress events
     }
     this._lastProgressEmitAt = now;

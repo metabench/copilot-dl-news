@@ -39117,10 +39117,156 @@ body .overlay {
     }
   });
 
+  // ui/appCatalog.js
+  var require_appCatalog = __commonJS({
+    "ui/appCatalog.js"(exports, module) {
+      "use strict";
+      function normalizePath(p) {
+        if (!p) return "";
+        return String(p).replace(/\\/g, "/");
+      }
+      function getServerIdentity(server) {
+        const relativeFile = normalizePath(server && server.relativeFile);
+        const absoluteFile = normalizePath(server && server.file);
+        const name = server && server.metadata && server.metadata.name ? String(server.metadata.name) : "";
+        const description = server && server.metadata && server.metadata.description ? String(server.metadata.description) : "";
+        return {
+          relativeFile,
+          absoluteFile,
+          name,
+          description,
+          haystack: `${relativeFile}
+${absoluteFile}
+${name}
+${description}`.toLowerCase()
+        };
+      }
+      var APP_CARDS = [
+        {
+          id: "data-explorer",
+          title: "Data Explorer",
+          subtitle: "URLs \u2022 fetches \u2022 filters \u2022 decisions",
+          accent: "emerald",
+          svgPath: "ui/assets/app-cards/data-explorer.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/data-explorer.svg",
+          order: 10,
+          match: ["dataexplorerserver", "data-explorer", "ui:data-explorer", "src/ui/server/dataExplorerServer.js", "data explorer"]
+        },
+        {
+          id: "docs-viewer",
+          title: "Docs Viewer",
+          subtitle: "Docs \u2022 guides \u2022 sessions \u2022 diagrams",
+          accent: "sapphire",
+          svgPath: "ui/assets/app-cards/docs-viewer.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/docs-viewer.svg",
+          order: 20,
+          match: ["docsviewer", "docs-viewer", "src/ui/server/docsViewer/", "ui:docs", "docs viewer"]
+        },
+        {
+          id: "design-studio",
+          title: "Design Studio",
+          subtitle: "WLILO \u2022 themes \u2022 components",
+          accent: "amethyst",
+          svgPath: "ui/assets/app-cards/design-studio.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/design-studio.svg",
+          order: 30,
+          match: ["designstudio", "design-studio", "src/ui/server/designStudio/", "ui:design", "design studio"]
+        },
+        {
+          id: "diagram-atlas",
+          title: "Diagram Atlas",
+          subtitle: "SVG \u2022 maps \u2022 collision checks",
+          accent: "topaz",
+          svgPath: "ui/assets/app-cards/diagram-atlas.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/diagram-atlas.svg",
+          order: 40,
+          match: ["diagramatlas", "diagram-atlas", "diagramatlasserver", "src/ui/server/diagramAtlasServer.js", "diagram atlas"]
+        },
+        {
+          id: "geo-import",
+          title: "Geo Import",
+          subtitle: "NDJSON \u2022 geonames \u2022 shape merges",
+          accent: "emerald",
+          svgPath: "ui/assets/app-cards/geo-import.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/geo-import.svg",
+          order: 50,
+          match: ["geoimportserver", "geo-import", "geoimportdashboard", "src/ui/server/geoImportServer.js", "geo import dashboard"]
+        },
+        {
+          id: "gazetteer",
+          title: "Gazetteer Info",
+          subtitle: "Places \u2022 regions \u2022 admin levels",
+          accent: "ruby",
+          svgPath: "ui/assets/app-cards/gazetteer.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/gazetteer.svg",
+          order: 60,
+          match: ["gazetteerinfoserver", "gazetteer-info", "src/ui/server/gazetteerInfoServer.js", "gazetteer info"]
+        }
+      ];
+      function getAppCardSpecForServer(server) {
+        const id = getServerIdentity(server);
+        for (const card of APP_CARDS) {
+          const hit = card.match.some((m) => id.haystack.includes(String(m).toLowerCase()));
+          if (hit) {
+            return {
+              id: card.id,
+              title: card.title,
+              subtitle: card.subtitle,
+              accent: card.accent,
+              svgPath: card.svgPath,
+              sidebarIcon: card.sidebarIcon,
+              order: card.order,
+              isMajor: true
+            };
+          }
+        }
+        const fallbackTitle = server && server.metadata && server.metadata.name ? String(server.metadata.name) : id.relativeFile ? id.relativeFile.split("/").pop() : "Server";
+        return {
+          id: "generic",
+          title: fallbackTitle || "Server",
+          subtitle: server && server.metadata && server.metadata.description ? String(server.metadata.description) : id.relativeFile || "",
+          accent: "gold",
+          svgPath: "ui/assets/app-cards/generic.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/generic.svg",
+          order: 999,
+          isMajor: false
+        };
+      }
+      function getMajorServersWithCards(servers) {
+        if (!Array.isArray(servers)) return [];
+        const matches = [];
+        for (const server of servers) {
+          const spec = getAppCardSpecForServer(server);
+          if (spec.isMajor) {
+            matches.push({ server, card: spec });
+          }
+        }
+        matches.sort((a, b) => {
+          const ao = a.card.order || 999;
+          const bo = b.card.order || 999;
+          if (ao !== bo) return ao - bo;
+          return String(a.card.title || "").localeCompare(String(b.card.title || ""));
+        });
+        const seen = /* @__PURE__ */ new Set();
+        return matches.filter((m) => {
+          if (seen.has(m.card.id)) return false;
+          seen.add(m.card.id);
+          return true;
+        });
+      }
+      module.exports = {
+        APP_CARDS,
+        getAppCardSpecForServer,
+        getMajorServersWithCards
+      };
+    }
+  });
+
   // ui/controls/serverItemControl.js
   var require_serverItemControl = __commonJS({
     "ui/controls/serverItemControl.js"(exports, module) {
       "use strict";
+      var { getAppCardSpecForServer } = require_appCatalog();
       function createServerItemControl(jsgui2, { StringControl }) {
         class ServerItemControl extends jsgui2.Control {
           constructor(spec = {}) {
@@ -39137,6 +39283,7 @@ body .overlay {
             this._onOpenUrl = spec.onOpenUrl || null;
             this._runningUrl = null;
             this._clickHandlerAttached = false;
+            this._appSpec = getAppCardSpecForServer(this._server);
             if (!spec.el) {
               this.compose();
             }
@@ -39144,6 +39291,23 @@ body .overlay {
           }
           compose() {
             const ctx = this.context;
+            const isFeatured = this._appSpec && this._appSpec.isMajor;
+            if (isFeatured) {
+              this.add_class("zs-server-item--featured");
+              this.add_class(`zs-server-item--${this._appSpec.accent}`);
+            }
+            if (isFeatured && this._appSpec.svgPath) {
+              const cardImage = new jsgui2.div({ context: ctx, class: "zs-server-item__card-image" });
+              const cardImg = new jsgui2.img({
+                context: ctx,
+                class: "zs-server-item__card-img"
+              });
+              cardImg.dom.attributes.src = this._appSpec.svgPath;
+              cardImg.dom.attributes.alt = this._appSpec.title || "";
+              cardImage.add(cardImg);
+              this.add(cardImage);
+              this._cardImage = cardImage;
+            }
             const statusIndicator = new jsgui2.div({ context: ctx, class: "zs-server-item__status" });
             this.add(statusIndicator);
             this._statusEl = statusIndicator;
@@ -40473,6 +40637,10 @@ body .overlay {
     "ui/controls/contentAreaControl.js"(exports, module) {
       "use strict";
       var { extractUrl } = require_extractUrl();
+      var { getMajorServersWithCards } = require_appCatalog();
+      function escapeHtml(value2) {
+        return String(value2 == null ? "" : value2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
+      }
       function createContentAreaControl(jsgui2, {
         ControlPanelControl,
         ServerUrlControl,
@@ -40492,10 +40660,15 @@ body .overlay {
             this._defaultTitleText = "Select a Server";
             this._scanningTitleText = "Scanning for servers...";
             this._selectedServer = null;
+            this._servers = [];
+            this._majorServers = [];
+            this._serverByFile = /* @__PURE__ */ new Map();
             this._onStart = spec.onStart || null;
             this._onStop = spec.onStop || null;
             this._onUrlDetected = spec.onUrlDetected || null;
             this._onOpenUrl = spec.onOpenUrl || null;
+            this._onSelectServer = spec.onSelectServer || null;
+            this._isScanning = false;
             this._onRebuildUiClient = spec.onRebuildUiClient || null;
             this._onToggleAutoRebuildUiClient = spec.onToggleAutoRebuildUiClient || null;
             this._autoRebuildUiClient = spec.autoRebuildUiClient === true;
@@ -40537,6 +40710,19 @@ body .overlay {
               }
             });
             this.add(this._serverUrl);
+            this._overview = new jsgui2.div({ context: ctx, class: "zs-overview" });
+            this._overview.add_class("zs-hidden");
+            const overviewHeader = new jsgui2.div({ context: ctx, class: "zs-overview__header" });
+            const overviewTitle = new jsgui2.div({ context: ctx, class: "zs-overview__title" });
+            overviewTitle.add(new StringControl({ context: ctx, text: "Featured Apps" }));
+            overviewHeader.add(overviewTitle);
+            const overviewHint = new jsgui2.div({ context: ctx, class: "zs-overview__hint" });
+            overviewHint.add(new StringControl({ context: ctx, text: "Click a card to select; open if already running." }));
+            overviewHeader.add(overviewHint);
+            this._overview.add(overviewHeader);
+            this._overviewGrid = new jsgui2.div({ context: ctx, class: "zs-app-cards" });
+            this._overview.add(this._overviewGrid);
+            this.add(this._overview);
             this._scanningIndicator = new ScanningIndicatorControl({ context: ctx });
             this._scanningIndicator.add_class("zs-hidden");
             this.add(this._scanningIndicator);
@@ -40549,6 +40735,7 @@ body .overlay {
           setSelectedServer(server) {
             this._selectedServer = server;
             this._detectedUrl = null;
+            this._updateOverviewVisibility();
             this._serverUrl.setUrl(null);
             this._serverUrl.setVisible(false);
             const displayName = server.metadata && server.metadata.name ? server.metadata.name : server.relativeFile.split(/[\\/\\\\]/).pop();
@@ -40624,6 +40811,7 @@ body .overlay {
             }
           }
           setScanning(isScanning) {
+            this._isScanning = isScanning === true;
             if (isScanning) {
               if (this._title?.dom?.el) this._title.dom.el.textContent = this._scanningTitleText;
               this._controlPanel.setVisible(false);
@@ -40639,6 +40827,7 @@ body .overlay {
               this._scanningIndicator.add_class("zs-hidden");
               this._logViewer.remove_class("zs-hidden");
             }
+            this._updateOverviewVisibility();
             if (this._scanningIndicator.dom.el && this._logViewer.dom.el) {
               if (isScanning) {
                 this._scanningIndicator.dom.el.classList.remove("zs-hidden");
@@ -40649,6 +40838,77 @@ body .overlay {
                 this._logViewer.dom.el.classList.remove("zs-hidden");
               }
             }
+          }
+          setServers(servers) {
+            this._servers = Array.isArray(servers) ? servers : [];
+            this._serverByFile = new Map(this._servers.map((s) => [s.file, s]));
+            this._majorServers = getMajorServersWithCards(this._servers);
+            this._renderOverviewCards();
+            this._updateOverviewVisibility();
+          }
+          _updateOverviewVisibility() {
+            const shouldShow = !this._isScanning && !this._selectedServer;
+            if (shouldShow) {
+              this._overview?.remove_class?.("zs-hidden");
+            } else {
+              this._overview?.add_class?.("zs-hidden");
+            }
+            if (this._overview?.dom?.el) {
+              this._overview.dom.el.classList.toggle("zs-hidden", !shouldShow);
+            }
+          }
+          _renderOverviewCards() {
+            if (!this._overviewGrid?.dom?.el) return;
+            const cards = Array.isArray(this._majorServers) ? this._majorServers : [];
+            if (cards.length === 0) {
+              this._overviewGrid.dom.el.innerHTML = '<div class="zs-app-cards__empty">No featured apps detected.</div>';
+              return;
+            }
+            const html = cards.map(({ server, card }) => {
+              const file = escapeHtml(server && server.file);
+              const title = escapeHtml(card && card.title);
+              const subtitle = escapeHtml(card && card.subtitle);
+              const accent = escapeHtml(card && card.accent);
+              const svgPath = escapeHtml(card && card.svgPath);
+              const runningUrl = server && server.runningUrl ? String(server.runningUrl) : "";
+              const openBtn = runningUrl ? `<button class="zs-app-card__open" data-open-url="${escapeHtml(runningUrl)}" type="button">\u{1F310} Open</button>` : "";
+              return `
+<div class="zs-app-card zs-app-card--${accent}" data-server-file="${file}" tabindex="0" role="button">
+  <div class="zs-app-card__top">
+    <div class="zs-app-card__svg"><img src="${svgPath}" alt="${title}"></div>
+    <div class="zs-app-card__cta">${openBtn}</div>
+  </div>
+  <div class="zs-app-card__title">${title}</div>
+  <div class="zs-app-card__subtitle">${subtitle}</div>
+</div>`;
+            }).join("\n");
+            this._overviewGrid.dom.el.innerHTML = html;
+          }
+          _activateOverview() {
+            if (this._overviewActivated) return;
+            if (!this._overviewGrid?.dom?.el) return;
+            this._overviewGrid.dom.el.addEventListener("click", (e) => {
+              const target = e.target;
+              const openEl = target && target.closest ? target.closest("[data-open-url]") : null;
+              if (openEl) {
+                const url = openEl.getAttribute("data-open-url");
+                if (url && this._onOpenUrl) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  this._onOpenUrl(url);
+                }
+                return;
+              }
+              const cardEl = target && target.closest ? target.closest("[data-server-file]") : null;
+              if (!cardEl) return;
+              const file = cardEl.getAttribute("data-server-file");
+              if (!file) return;
+              const server = this._serverByFile.get(file);
+              if (server && this._onSelectServer) {
+                this._onSelectServer(server);
+              }
+            });
+            this._overviewActivated = true;
           }
           setScanProgress(current, total, file) {
             this._scanningIndicator.setProgress(current, total, file);
@@ -40665,6 +40925,7 @@ body .overlay {
           activate() {
             this._controlPanel.activate();
             this._serverUrl.activate();
+            this._activateOverview();
           }
         }
         return ContentAreaControl;
@@ -40832,6 +41093,7 @@ body .overlay {
               onStop: () => this._stopServer(),
               onUrlDetected: (filePath, url) => this._setServerUrl(filePath, url),
               onOpenUrl: (url) => this._openInBrowser(url),
+              onSelectServer: (server) => this._selectServer(server),
               autoRebuildUiClient: this._autoRebuildUiClient,
               onRebuildUiClient: () => this._rebuildUiClient(),
               onToggleAutoRebuildUiClient: (enabled) => this._setAutoRebuildUiClient(enabled)
@@ -40890,6 +41152,7 @@ body .overlay {
                 }
               }
               this._sidebar.setServers(this._servers);
+              this._contentArea.setServers(this._servers);
               this._debugLog("[ZServerApp] Servers set on sidebar");
               this._api.onServerLog(({ filePath, type, data }) => {
                 this._addLog(filePath, type, data);

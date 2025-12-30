@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff6347"/>
+      <stop offset="1" stop-color="#ff9966"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <rect x="2" y="2" width="36" height="36" rx="8" fill="rgba(255,99,71,0.12)" stroke="rgba(255,99,71,0.4)" stroke-width="1.5"/>
+  
+  <!-- Node network -->
+  <g filter="url(#glow)">
+    <!-- Center node -->
+    <circle cx="20" cy="20" r="4" fill="#ff6347"/>
+    
+    <!-- Corner nodes -->
+    <circle cx="10" cy="10" r="3" fill="#ff9966"/>
+    <circle cx="30" cy="10" r="3" fill="#ff9966"/>
+    <circle cx="10" cy="30" r="3" fill="#ff9966"/>
+    <circle cx="30" cy="30" r="3" fill="#ff9966"/>
+    
+    <!-- Connecting lines -->
+    <path d="M 20 20 L 10 10" stroke="url(#accent)" stroke-width="1.5"/>
+    <path d="M 20 20 L 30 10" stroke="url(#accent)" stroke-width="1.5"/>
+    <path d="M 20 20 L 10 30" stroke="url(#accent)" stroke-width="1.5"/>
+    <path d="M 20 20 L 30 30" stroke="url(#accent)" stroke-width="1.5"/>
+  </g>
+</svg>

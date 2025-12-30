@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 450">
+  <g id="path-b-contentless">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="50" fill="#3a3a3a" rx="8 8 0 0"/>
+    <text x="20" y="22" font-size="10" font-weight="500" fill="#a78bfa">PATH B</text>
+    <text x="200" y="35" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">CONTENTLESS SKELETON</text>
+    
+    <!-- Concept -->
+    <g transform="translate(15, 58)">
+      <rect x="0" y="0" width="370" height="75" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#a78bfa">CONCEPT</text>
+      <text x="12" y="34" font-size="10" fill="#ccc">Strip all text/attributes, keep only tag hierarchy:</text>
+      <text x="12" y="50" font-size="9" fill="#888" font-family="monospace">"div(div(h1,p,p),aside(ul(li,li,li)))"</text>
+      <text x="12" y="66" font-size="9" fill="#888">Serialize as parenthesized string or byte array</text>
+    </g>
+    
+    <!-- Pros -->
+    <g transform="translate(15, 140)">
+      <rect x="0" y="0" width="180" height="100" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="#34d399">✓ PROS</text>
+      <text x="10" y="36" font-size="9" fill="#aaa">• Tiny (~200-500B)</text>
+      <text x="10" y="50" font-size="9" fill="#aaa">• Content-agnostic</text>
+      <text x="10" y="64" font-size="9" fill="#aaa">• Fast tree distance</text>
+      <text x="10" y="78" font-size="9" fill="#aaa">• Handles dynamic text</text>
+      <text x="10" y="92" font-size="9" fill="#aaa">• Good for templates</text>
+    </g>
+    
+    <!-- Cons -->
+    <g transform="translate(205, 140)">
+      <rect x="0" y="0" width="180" height="100" fill="#3a1a1a" rx="6" stroke="#ef4444" stroke-width="1"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="#f87171">✗ CONS</text>
+      <text x="10" y="36" font-size="9" fill="#aaa">• Loses semantic info</text>
+      <text x="10" y="50" font-size="9" fill="#aaa">• class/id stripped</text>
+      <text x="10" y="64" font-size="9" fill="#aaa">• Can't locate content</text>
+      <text x="10" y="78" font-size="9" fill="#aaa">• Deep trees expensive</text>
+      <text x="10" y="92" font-size="9" fill="#aaa">• Needs depth limit</text>
+    </g>
+    
+    <!-- Encoding Options -->
+    <g transform="translate(15, 250)">
+      <rect x="0" y="0" width="370" height="95" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">ENCODING OPTIONS</text>
+      <text x="12" y="36" font-size="9" fill="#aaa">1. Parenthesized string: "div(h1,p)" → readable, ~300B</text>
+      <text x="12" y="50" font-size="9" fill="#aaa">2. Byte array: tag→byte map, depth bytes → ~150B</text>
+      <text x="12" y="64" font-size="9" fill="#aaa">3. Prufer sequence: tree→array encoding → ~100B</text>
+      <text x="12" y="78" font-size="9" fill="#aaa">4. MinHash: k-shingle set → fixed 64-256B</text>
+      <text x="12" y="92" font-size="9" fill="#888">Best: byte array + MinHash for clustering</text>
+    </g>
+    
+    <!-- Verdict -->
+    <g transform="translate(15, 355)">
+      <rect x="0" y="0" width="370" height="80" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">★ RECOMMENDED PRIMARY</text>
+      <text x="12" y="36" font-size="10" fill="#ccc">Good for: clustering, template detection, scale</text>
+      <text x="12" y="52" font-size="10" fill="#ccc">Combine with: semantic hints from class names</text>
+      <text x="12" y="68" font-size="9" fill="#888">Storage: skeleton + MinHash + semantic hints = ~500B</text>
+    </g>
+  </g>
+</svg>

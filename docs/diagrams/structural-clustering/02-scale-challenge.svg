@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 380">
+  <g id="scale-challenge">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">THE SCALE CHALLENGE</text>
+    
+    <!-- Problem Statement -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="75" fill="#3a1a1a" rx="6" stroke="#ef4444" stroke-width="1"/>
+      <text x="12" y="20" font-size="11" font-weight="600" fill="#ef4444">⚠ NAIVE PAIRWISE COMPARISON</text>
+      <text x="12" y="40" font-size="10" fill="#aaa">N pages → N(N-1)/2 comparisons</text>
+      <text x="12" y="56" font-size="10" fill="#888">1M pages = 500 billion comparisons</text>
+      <text x="12" y="72" font-size="10" fill="#666">@ 1μs each = 5.8 days of compute</text>
+    </g>
+    
+    <!-- Scale Tiers -->
+    <g transform="translate(15, 140)">
+      <rect x="0" y="0" width="370" height="120" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">DATASET SCALE TIERS</text>
+      
+      <g transform="translate(12, 32)">
+        <rect x="0" y="0" width="80" height="20" rx="4" fill="#10b981"/>
+        <text x="40" y="14" text-anchor="middle" font-size="9" font-weight="500" fill="white">Small</text>
+        <text x="90" y="14" font-size="9" fill="#aaa">&lt;10K pages — Naive OK (50M pairs)</text>
+      </g>
+      
+      <g transform="translate(12, 58)">
+        <rect x="0" y="0" width="80" height="20" rx="4" fill="#fbbf24"/>
+        <text x="40" y="14" text-anchor="middle" font-size="9" font-weight="500" fill="#1a1a1a">Medium</text>
+        <text x="90" y="14" font-size="9" fill="#aaa">10K-100K — Index required</text>
+      </g>
+      
+      <g transform="translate(12, 84)">
+        <rect x="0" y="0" width="80" height="20" rx="4" fill="#ef4444"/>
+        <text x="40" y="14" text-anchor="middle" font-size="9" font-weight="500" fill="white">Large</text>
+        <text x="90" y="14" font-size="9" fill="#aaa">100K+ — LSH/Approximate required</text>
+      </g>
+    </g>
+    
+    <!-- Goals -->
+    <g transform="translate(15, 270)">
+      <rect x="0" y="0" width="370" height="95" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">TARGET PROPERTIES</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">✓ Sub-linear query time: O(log N) or O(1)</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">✓ Incremental updates (online clustering)</text>
+      <text x="12" y="66" font-size="9" fill="#aaa">✓ Low memory: O(K) where K = cluster count</text>
+      <text x="12" y="80" font-size="9" fill="#aaa">✓ High recall: find &gt;95% of true matches</text>
+    </g>
+  </g>
+</svg>

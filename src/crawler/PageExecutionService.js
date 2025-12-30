@@ -36,7 +36,8 @@ class PageExecutionService {
     hubOnlyMode = false,
     getCountryHubBehavioralProfile = null,
     outputVerbosity = DEFAULT_OUTPUT_VERBOSITY,
-    paginationPredictorService = null
+    paginationPredictorService = null,
+    emitPageEvent = null
   } = {}) {
     if (!fetchPipeline) {
       throw new Error('PageExecutionService requires a fetch pipeline');
@@ -89,6 +90,12 @@ class PageExecutionService {
     this.outputVerbosity = normalizeOutputVerbosity(outputVerbosity);
     // Phase 1: Pagination prediction for speculative crawling
     this.paginationPredictorService = paginationPredictorService || null;
+    // Callback to emit page timing events (for telemetry/DB persistence)
+    this.emitPageEvent = typeof emitPageEvent === 'function' ? emitPageEvent : null;
+    // Debug: verify callback is wired
+    if (this.emitPageEvent) {
+      console.log('[PageExecutionService] emitPageEvent callback is wired');
+    }
   }
 
   async processPage({ url, depth = 0, context = {} }) {
@@ -798,6 +805,24 @@ class PageExecutionService {
         payload.error = typeof error === 'string' ? error : (error.message || error.kind || null);
       }
       this._logPerVerbosity(payload);
+      
+      // Emit page event for telemetry/DB persistence (url:visited compatible shape)
+      if (this.emitPageEvent) {
+        try {
+          const pageEvent = {
+            url: payload.url,
+            httpStatus: payload.httpStatus,
+            contentLength: payload.bytesDownloaded,
+            durationMs: payload.totalMs ?? payload.downloadMs,
+            cached: payload.source === 'cache',
+            depth: payload.depth,
+            status: payload.status,
+            cacheReason: payload.cacheReason
+          };
+          console.log('[PageExecutionService] emitPageEvent called:', JSON.stringify(pageEvent));
+          this.emitPageEvent(pageEvent);
+        } catch (_) {}
+      }
     } catch (_) {}
   }
 

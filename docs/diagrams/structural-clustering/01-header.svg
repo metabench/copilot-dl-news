@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 180">
+  <g id="header">
+    <!-- Decorative corner accents -->
+    <path d="M 50 30 L 50 15 L 65 15" fill="none" stroke="#c9a962" stroke-width="1.5" opacity="0.6"/>
+    <path d="M 750 30 L 750 15 L 735 15" fill="none" stroke="#c9a962" stroke-width="1.5" opacity="0.6"/>
+    <path d="M 50 150 L 50 165 L 65 165" fill="none" stroke="#c9a962" stroke-width="1.5" opacity="0.6"/>
+    <path d="M 750 150 L 750 165 L 735 165" fill="none" stroke="#c9a962" stroke-width="1.5" opacity="0.6"/>
+    
+    <!-- Title Block -->
+    <text x="400" y="45" text-anchor="middle" font-size="30" font-weight="300" fill="#f0ede8" letter-spacing="4">STRUCTURAL CLUSTER</text>
+    <text x="400" y="80" text-anchor="middle" font-size="30" font-weight="300" fill="#f0ede8" letter-spacing="4">DETERMINATION</text>
+    
+    <!-- Subtitle -->
+    <text x="400" y="108" text-anchor="middle" font-size="14" font-weight="500" fill="#c9a962" letter-spacing="2">Efficient Algorithms for Large-Scale Datasets</text>
+    
+    <!-- Decorative line with quote -->
+    <line x1="120" y1="125" x2="280" y2="125" stroke="#c9a962" stroke-width="0.5" opacity="0.3"/>
+    <text x="400" y="130" text-anchor="middle" font-size="11" fill="#888" font-style="italic">"Finding layout families without comparing every pair"</text>
+    <line x1="520" y1="125" x2="680" y2="125" stroke="#c9a962" stroke-width="0.5" opacity="0.3"/>
+    
+    <!-- Status Badge -->
+    <rect x="330" y="145" width="140" height="26" rx="13" fill="#fbbf24"/>
+    <text x="400" y="163" text-anchor="middle" font-size="12" font-weight="600" fill="#1a1a1a">◉ RESEARCH</text>
+  </g>
+</svg>

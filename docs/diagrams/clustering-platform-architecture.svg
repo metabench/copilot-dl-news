@@ -1,0 +1,443 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 820">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1a237e"/>
+      <stop offset="100%" style="stop-color:#283593"/>
+    </linearGradient>
+    <linearGradient id="doneGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#c8e6c9"/>
+      <stop offset="100%" style="stop-color:#a5d6a7"/>
+    </linearGradient>
+    <linearGradient id="inprogGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fff9c4"/>
+      <stop offset="100%" style="stop-color:#fff176"/>
+    </linearGradient>
+    <linearGradient id="todoGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffcdd2"/>
+      <stop offset="100%" style="stop-color:#ef9a9a"/>
+    </linearGradient>
+    <linearGradient id="structGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e3f2fd"/>
+      <stop offset="100%" style="stop-color:#bbdefb"/>
+    </linearGradient>
+    <linearGradient id="contentGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e8f5e9"/>
+      <stop offset="100%" style="stop-color:#c8e6c9"/>
+    </linearGradient>
+    <linearGradient id="semanticGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fff3e0"/>
+      <stop offset="100%" style="stop-color:#ffe0b2"/>
+    </linearGradient>
+    <linearGradient id="reservedGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f3e5f5"/>
+      <stop offset="100%" style="stop-color:#e1bee7"/>
+    </linearGradient>
+    <!-- Shadows -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.15"/>
+    </filter>
+    <filter id="shadowSmall" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.12"/>
+    </filter>
+    <!-- Arrows -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#546e7a"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1976d2"/>
+    </marker>
+  </defs>
+  <style>
+    .title { font: bold 24px 'Segoe UI', Arial, sans-serif; fill: white; }
+    .subtitle { font: 13px 'Segoe UI', Arial, sans-serif; fill: #b3e5fc; }
+    .section { font: bold 13px 'Segoe UI', Arial, sans-serif; fill: #37474f; }
+    .label { font: bold 11px 'Segoe UI', Arial, sans-serif; fill: #263238; }
+    .sublabel { font: bold 10px 'Segoe UI', Arial, sans-serif; fill: #1976d2; letter-spacing: 0.5px; }
+    .small { font: 9px 'Segoe UI', Arial, sans-serif; fill: #546e7a; }
+    .tiny { font: 8px 'Segoe UI', Arial, sans-serif; fill: #78909c; }
+    .done { fill: url(#doneGrad); stroke: #43a047; }
+    .inprog { fill: url(#inprogGrad); stroke: #f9a825; }
+    .todo { fill: url(#todoGrad); stroke: #e53935; }
+    .box { stroke-width: 1.5; rx: 8; filter: url(#shadowSmall); }
+    .band { stroke-width: 1.5; rx: 6; filter: url(#shadowSmall); }
+    .arrow { stroke: #546e7a; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+    .arrow-blue { stroke: #1976d2; stroke-width: 2; fill: none; marker-end: url(#arrow-blue); }
+    .sectionBg { fill: #fafafa; stroke: #e0e0e0; stroke-width: 1; rx: 12; filter: url(#shadow); }
+  </style>
+
+  <!-- Background -->
+  <rect width="1100" height="820" fill="#eceff1"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="1100" height="65" fill="url(#headerGrad)"/>
+  <text x="550" y="35" text-anchor="middle" class="title">Page Clustering Platform Architecture</text>
+  <text x="550" y="55" text-anchor="middle" class="subtitle">SimHash-based similarity detection • C++ acceleration • 512-bit signatures • LSH indexing</text>
+
+  <!-- Legend -->
+  <g transform="translate(30, 78)">
+    <rect x="0" y="0" width="235" height="32" rx="8" fill="white" stroke="#e0e0e0" filter="url(#shadowSmall)"/>
+    <rect x="12" y="9" width="16" height="14" rx="4" class="done"/>
+    <text x="34" y="20" class="small" style="fill:#263238;">Done</text>
+    <rect x="80" y="9" width="16" height="14" rx="4" class="inprog"/>
+    <text x="102" y="20" class="small" style="fill:#263238;">In Progress</text>
+    <rect x="175" y="9" width="16" height="14" rx="4" class="todo"/>
+    <text x="197" y="20" class="small" style="fill:#263238;">To Do</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- LEFT COLUMN: Main Pipeline -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <rect x="20" y="120" width="355" height="545" class="sectionBg"/>
+  <text x="197" y="143" text-anchor="middle" class="section">Processing Pipeline</text>
+
+  <!-- Layer 1: Data Sources -->
+  <text x="40" y="168" class="sublabel">① DATA SOURCES</text>
+  
+  <rect x="35" y="178" width="155" height="55" class="box done"/>
+  <text x="112" y="201" text-anchor="middle" class="label">http_responses</text>
+  <text x="112" y="216" text-anchor="middle" class="small">Raw HTML content</text>
+  <text x="112" y="228" text-anchor="middle" class="tiny">~500K pages</text>
+
+  <rect x="200" y="178" width="155" height="55" class="box done"/>
+  <text x="277" y="201" text-anchor="middle" class="label">layout_signatures</text>
+  <text x="277" y="216" text-anchor="middle" class="small">SHA-256 (64-bit)</text>
+  <text x="277" y="228" text-anchor="middle" class="tiny">Exact match only</text>
+
+  <!-- Arrow down -->
+  <path d="M 197 238 L 197 255" class="arrow"/>
+
+  <!-- Layer 2: Signature Generation -->
+  <text x="40" y="273" class="sublabel">② SIGNATURE GENERATION</text>
+  
+  <rect x="35" y="283" width="155" height="55" class="box done"/>
+  <text x="112" y="306" text-anchor="middle" class="label">SkeletonHash.js</text>
+  <text x="112" y="321" text-anchor="middle" class="small">DOM → String → SHA256</text>
+  <text x="112" y="333" text-anchor="middle" class="tiny">(truncated)</text>
+
+  <rect x="200" y="283" width="155" height="55" class="box todo"/>
+  <text x="277" y="306" text-anchor="middle" class="label">SimHash.js</text>
+  <text x="277" y="321" text-anchor="middle" class="small">Weighted shingles</text>
+  <text x="277" y="333" text-anchor="middle" class="tiny">→ 512-bit vector</text>
+
+  <!-- Arrow down -->
+  <path d="M 197 343 L 197 360" class="arrow"/>
+
+  <!-- Layer 3: Native Addon -->
+  <text x="40" y="378" class="sublabel">③ NATIVE C++ ADDON (sigcluster)</text>
+  
+  <rect x="35" y="388" width="100" height="58" class="box done"/>
+  <text x="85" y="408" text-anchor="middle" class="label">Hamming</text>
+  <text x="85" y="423" text-anchor="middle" class="small">POPCNT</text>
+  <text x="85" y="438" text-anchor="middle" class="tiny" style="fill:#43a047;">250M/sec</text>
+
+  <rect x="145" y="388" width="100" height="58" class="box done"/>
+  <text x="195" y="408" text-anchor="middle" class="label">LSH Index</text>
+  <text x="195" y="423" text-anchor="middle" class="small">32 bands</text>
+  <text x="195" y="438" text-anchor="middle" class="tiny" style="fill:#43a047;">0.02ms query</text>
+
+  <rect x="255" y="388" width="100" height="58" class="box todo"/>
+  <text x="305" y="408" text-anchor="middle" class="label">SimHash</text>
+  <text x="305" y="423" text-anchor="middle" class="small">Compute</text>
+  <text x="305" y="438" text-anchor="middle" class="tiny">in C++</text>
+
+  <!-- Arrow down -->
+  <path d="M 197 451 L 197 468" class="arrow"/>
+
+  <!-- Layer 4: Clustering -->
+  <text x="40" y="486" class="sublabel">④ CLUSTERING ENGINE</text>
+  
+  <rect x="35" y="496" width="155" height="55" class="box todo"/>
+  <text x="112" y="519" text-anchor="middle" class="label">Union-Find</text>
+  <text x="112" y="534" text-anchor="middle" class="small">Merge similar pairs</text>
+  <text x="112" y="546" text-anchor="middle" class="tiny">O(α(n)) per op</text>
+
+  <rect x="200" y="496" width="155" height="55" class="box todo"/>
+  <text x="277" y="519" text-anchor="middle" class="label">Cluster Store</text>
+  <text x="277" y="534" text-anchor="middle" class="small">clusters table</text>
+  <text x="277" y="546" text-anchor="middle" class="tiny">exemplar + members</text>
+
+  <!-- Arrow down -->
+  <path d="M 197 556 L 197 573" class="arrow"/>
+
+  <!-- Layer 5: API/UI -->
+  <text x="40" y="591" class="sublabel">⑤ API / UI</text>
+  
+  <rect x="35" y="601" width="155" height="55" class="box todo"/>
+  <text x="112" y="624" text-anchor="middle" class="label">Cluster Explorer</text>
+  <text x="112" y="639" text-anchor="middle" class="small">jsgui3 dashboard</text>
+  <text x="112" y="651" text-anchor="middle" class="tiny">Visual clusters</text>
+
+  <rect x="200" y="601" width="155" height="55" class="box todo"/>
+  <text x="277" y="624" text-anchor="middle" class="label">Similar Pages API</text>
+  <text x="277" y="639" text-anchor="middle" class="small">/api/similar/:url</text>
+  <text x="277" y="651" text-anchor="middle" class="tiny">Real-time lookup</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- CENTER: 512-bit Signature Bands -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <rect x="390" y="120" width="390" height="200" class="sectionBg"/>
+  <text x="585" y="143" text-anchor="middle" class="section">512-bit Signature Architecture (64 bytes)</text>
+
+  <!-- Band boxes with gradients -->
+  <g transform="translate(405, 155)">
+    <rect x="0" y="0" width="88" height="150" class="band" fill="url(#structGrad)" stroke="#1976d2"/>
+    <rect x="0" y="0" width="88" height="24" rx="6" fill="#1976d2"/>
+    <rect x="0" y="12" width="88" height="12" fill="#1976d2"/>
+    <text x="44" y="16" text-anchor="middle" class="small" style="fill:white; font-weight:bold;">STRUCTURAL</text>
+    <text x="44" y="42" text-anchor="middle" class="tiny" style="fill:#1565c0;">128 bits (16B)</text>
+    <line x1="10" y1="50" x2="78" y2="50" stroke="#1976d2" stroke-width="0.5" stroke-dasharray="2,2"/>
+    <text x="44" y="66" text-anchor="middle" class="tiny">Tag path shingles</text>
+    <text x="44" y="80" text-anchor="middle" class="tiny">DOM depth hist</text>
+    <text x="44" y="94" text-anchor="middle" class="tiny">Element ratios</text>
+    <text x="44" y="108" text-anchor="middle" class="tiny">ID/class patterns</text>
+    <rect x="14" y="120" width="60" height="20" rx="10" fill="#1976d2"/>
+    <text x="44" y="134" text-anchor="middle" class="tiny" style="fill:white; font-weight:bold;">Phase 1</text>
+  </g>
+
+  <g transform="translate(500, 155)">
+    <rect x="0" y="0" width="88" height="150" class="band" fill="url(#contentGrad)" stroke="#388e3c"/>
+    <rect x="0" y="0" width="88" height="24" rx="6" fill="#388e3c"/>
+    <rect x="0" y="12" width="88" height="12" fill="#388e3c"/>
+    <text x="44" y="16" text-anchor="middle" class="small" style="fill:white; font-weight:bold;">CONTENT</text>
+    <text x="44" y="42" text-anchor="middle" class="tiny" style="fill:#2e7d32;">128 bits (16B)</text>
+    <line x1="10" y1="50" x2="78" y2="50" stroke="#388e3c" stroke-width="0.5" stroke-dasharray="2,2"/>
+    <text x="44" y="66" text-anchor="middle" class="tiny">Word 3-grams</text>
+    <text x="44" y="80" text-anchor="middle" class="tiny">Headline hash</text>
+    <text x="44" y="94" text-anchor="middle" class="tiny">TF-IDF top terms</text>
+    <text x="44" y="108" text-anchor="middle" class="tiny">Text length bucket</text>
+    <rect x="14" y="120" width="60" height="20" rx="10" fill="#388e3c"/>
+    <text x="44" y="134" text-anchor="middle" class="tiny" style="fill:white; font-weight:bold;">Phase 2</text>
+  </g>
+
+  <g transform="translate(595, 155)">
+    <rect x="0" y="0" width="88" height="150" class="band" fill="url(#semanticGrad)" stroke="#f57c00"/>
+    <rect x="0" y="0" width="88" height="24" rx="6" fill="#f57c00"/>
+    <rect x="0" y="12" width="88" height="12" fill="#f57c00"/>
+    <text x="44" y="16" text-anchor="middle" class="small" style="fill:white; font-weight:bold;">SEMANTIC</text>
+    <text x="44" y="42" text-anchor="middle" class="tiny" style="fill:#e65100;">128 bits (16B)</text>
+    <line x1="10" y1="50" x2="78" y2="50" stroke="#f57c00" stroke-width="0.5" stroke-dasharray="2,2"/>
+    <text x="44" y="66" text-anchor="middle" class="tiny">Topic categories</text>
+    <text x="44" y="80" text-anchor="middle" class="tiny">Named entities</text>
+    <text x="44" y="94" text-anchor="middle" class="tiny">Event fingerprint</text>
+    <text x="44" y="108" text-anchor="middle" class="tiny">Geo locations</text>
+    <rect x="14" y="120" width="60" height="20" rx="10" fill="#f57c00"/>
+    <text x="44" y="134" text-anchor="middle" class="tiny" style="fill:white; font-weight:bold;">Phase 3</text>
+  </g>
+
+  <g transform="translate(690, 155)">
+    <rect x="0" y="0" width="88" height="150" class="band" fill="url(#reservedGrad)" stroke="#7b1fa2"/>
+    <rect x="0" y="0" width="88" height="24" rx="6" fill="#7b1fa2"/>
+    <rect x="0" y="12" width="88" height="12" fill="#7b1fa2"/>
+    <text x="44" y="16" text-anchor="middle" class="small" style="fill:white; font-weight:bold;">RESERVED</text>
+    <text x="44" y="42" text-anchor="middle" class="tiny" style="fill:#6a1b9a;">128 bits (16B)</text>
+    <line x1="10" y1="50" x2="78" y2="50" stroke="#7b1fa2" stroke-width="0.5" stroke-dasharray="2,2"/>
+    <text x="44" y="66" text-anchor="middle" class="tiny">Image pHash</text>
+    <text x="44" y="80" text-anchor="middle" class="tiny">Author signature</text>
+    <text x="44" y="94" text-anchor="middle" class="tiny">Source reputation</text>
+    <text x="44" y="108" text-anchor="middle" class="tiny">(Future signals)</text>
+    <rect x="14" y="120" width="60" height="20" rx="10" fill="#7b1fa2"/>
+    <text x="44" y="134" text-anchor="middle" class="tiny" style="fill:white; font-weight:bold;">Phase 4+</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- RIGHT COLUMN: Lab Experiments -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <rect x="795" y="120" width="285" height="340" class="sectionBg"/>
+  <text x="937" y="143" text-anchor="middle" class="section">Lab Experiments</text>
+  
+  <rect x="810" y="158" width="255" height="47" class="box done"/>
+  <text x="937" y="175" text-anchor="middle" class="label">Lab 1: JS vs C++ Hamming</text>
+  <text x="937" y="189" text-anchor="middle" class="small">✓ 45x speedup (250M pairs/sec)</text>
+  <text x="937" y="200" text-anchor="middle" class="tiny">OpenMP: 1.8x additional at 8 threads</text>
+
+  <rect x="810" y="212" width="255" height="47" class="box done"/>
+  <text x="937" y="229" text-anchor="middle" class="label">Lab 2: LSH Recall vs Speed</text>
+  <text x="937" y="243" text-anchor="middle" class="small">✓ 100% recall, 1864x query speedup</text>
+  <text x="937" y="254" text-anchor="middle" class="tiny">Config: 32 bands × 16 bits optimal</text>
+
+  <rect x="810" y="266" width="255" height="47" class="box todo"/>
+  <text x="937" y="283" text-anchor="middle" class="label">Lab 3: SimHash Quality</text>
+  <text x="937" y="297" text-anchor="middle" class="small">Measure: false positive/negative rates</text>
+  <text x="937" y="308" text-anchor="middle" class="tiny">Compare: SimHash vs MinHash vs SHA-256</text>
+
+  <rect x="810" y="320" width="255" height="47" class="box todo"/>
+  <text x="937" y="337" text-anchor="middle" class="label">Lab 4: Band Threshold Tuning</text>
+  <text x="937" y="351" text-anchor="middle" class="small">Per-band distance thresholds</text>
+  <text x="937" y="362" text-anchor="middle" class="tiny">Goal: struct≤20, content≤25, semantic≤30</text>
+
+  <rect x="810" y="374" width="255" height="47" class="box todo"/>
+  <text x="937" y="391" text-anchor="middle" class="label">Lab 5: Real Corpus Validation</text>
+  <text x="937" y="405" text-anchor="middle" class="small">Cluster 500K pages from news.db</text>
+  <text x="937" y="416" text-anchor="middle" class="tiny">Verify: known duplicates detected</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- Integration Points -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <rect x="390" y="335" width="390" height="130" class="sectionBg"/>
+  <text x="585" y="358" text-anchor="middle" class="section">Integration Points</text>
+
+  <g transform="translate(405, 370)">
+    <rect x="0" y="0" width="177" height="42" class="box todo"/>
+    <text x="88" y="17" text-anchor="middle" class="label">Crawler → SigGen</text>
+    <text x="88" y="32" text-anchor="middle" class="tiny">Hook: post-fetch callback</text>
+    
+    <rect x="185" y="0" width="177" height="42" class="box todo"/>
+    <text x="273" y="17" text-anchor="middle" class="label">SigGen → LSH Index</text>
+    <text x="273" y="32" text-anchor="middle" class="tiny">Hook: lshIndex.add()</text>
+    
+    <rect x="0" y="50" width="177" height="42" class="box todo"/>
+    <text x="88" y="67" text-anchor="middle" class="label">LSH → Cluster Engine</text>
+    <text x="88" y="82" text-anchor="middle" class="tiny">Query: find similar IDs</text>
+    
+    <rect x="185" y="50" width="177" height="42" class="box todo"/>
+    <text x="273" y="67" text-anchor="middle" class="label">Cluster → UI/API</text>
+    <text x="273" y="82" text-anchor="middle" class="tiny">WebSocket: cluster updates</text>
+
+    <!-- Arrows -->
+    <path d="M 179 21 L 183 21" class="arrow"/>
+    <path d="M 88 44 L 88 48" class="arrow"/>
+    <path d="M 273 44 L 273 48" class="arrow"/>
+    <path d="M 179 71 L 183 71" class="arrow"/>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- Bottom: Implementation Roadmap -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <rect x="390" y="480" width="690" height="130" class="sectionBg"/>
+  <text x="735" y="503" text-anchor="middle" class="section">Implementation Roadmap</text>
+
+  <!-- Phase boxes -->
+  <g transform="translate(405, 515)">
+    <rect x="0" y="0" width="160" height="85" class="box done"/>
+    <text x="80" y="18" text-anchor="middle" class="label" style="font-weight:bold;">Phase 0 ✓</text>
+    <line x1="15" y1="25" x2="145" y2="25" stroke="#43a047" stroke-width="0.5"/>
+    <text x="80" y="40" text-anchor="middle" class="tiny">• C++ Hamming (POPCNT)</text>
+    <text x="80" y="53" text-anchor="middle" class="tiny">• OpenMP parallelization</text>
+    <text x="80" y="66" text-anchor="middle" class="tiny">• LSH index (32×16)</text>
+    <text x="80" y="79" text-anchor="middle" class="tiny">• native-benchmark.js</text>
+
+    <path d="M 163 42 L 170 42" class="arrow"/>
+
+    <rect x="175" y="0" width="160" height="85" class="box inprog"/>
+    <text x="255" y="18" text-anchor="middle" class="label" style="font-weight:bold;">Phase 1 (Current)</text>
+    <line x1="190" y1="25" x2="320" y2="25" stroke="#f9a825" stroke-width="0.5"/>
+    <text x="255" y="40" text-anchor="middle" class="tiny">• SimHash.js compute</text>
+    <text x="255" y="53" text-anchor="middle" class="tiny">• Structural band only</text>
+    <text x="255" y="66" text-anchor="middle" class="tiny">• Lab 3 validation</text>
+    <text x="255" y="79" text-anchor="middle" class="tiny">• cluster_sigs table</text>
+
+    <path d="M 338 42 L 345 42" class="arrow"/>
+
+    <rect x="350" y="0" width="160" height="85" class="box todo"/>
+    <text x="430" y="18" text-anchor="middle" class="label" style="font-weight:bold;">Phase 2</text>
+    <line x1="365" y1="25" x2="495" y2="25" stroke="#e53935" stroke-width="0.5"/>
+    <text x="430" y="40" text-anchor="middle" class="tiny">• Content band</text>
+    <text x="430" y="53" text-anchor="middle" class="tiny">• Union-Find clustering</text>
+    <text x="430" y="66" text-anchor="middle" class="tiny">• Cluster store (SQLite)</text>
+    <text x="430" y="79" text-anchor="middle" class="tiny">• Lab 4+5 validation</text>
+
+    <path d="M 513 42 L 520 42" class="arrow"/>
+
+    <rect x="525" y="0" width="160" height="85" class="box todo"/>
+    <text x="605" y="18" text-anchor="middle" class="label" style="font-weight:bold;">Phase 3</text>
+    <line x1="540" y1="25" x2="670" y2="25" stroke="#e53935" stroke-width="0.5"/>
+    <text x="605" y="40" text-anchor="middle" class="tiny">• Semantic band</text>
+    <text x="605" y="53" text-anchor="middle" class="tiny">• Cluster Explorer UI</text>
+    <text x="605" y="66" text-anchor="middle" class="tiny">• Similar Pages API</text>
+    <text x="605" y="79" text-anchor="middle" class="tiny">• Production deploy</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- Bottom Stats Cards -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <g transform="translate(20, 680)">
+    <!-- Performance Card -->
+    <rect x="0" y="0" width="355" height="105" rx="10" fill="white" stroke="#43a047" stroke-width="1.5" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="355" height="26" rx="10" fill="#43a047"/>
+    <rect x="0" y="13" width="355" height="13" fill="#43a047"/>
+    <text x="177" y="18" text-anchor="middle" class="small" style="fill:white; font-weight:bold;">📊 Current Performance (Measured)</text>
+    <text x="15" y="46" class="small">• Hamming: 250M pairs/sec (C++ POPCNT + OpenMP)</text>
+    <text x="15" y="62" class="small">• LSH Query: 0.02ms per lookup (1864× vs brute)</text>
+    <text x="15" y="78" class="small">• LSH Recall: 100% at threshold=20 (32×16)</text>
+    <text x="15" y="94" class="small">• 100K corpus: 20 sec full cluster (vs 15 min JS)</text>
+  </g>
+
+  <g transform="translate(390, 620)">
+    <!-- Use Cases Card -->
+    <rect x="0" y="60" width="355" height="105" rx="10" fill="white" stroke="#1976d2" stroke-width="1.5" filter="url(#shadow)"/>
+    <rect x="0" y="60" width="355" height="26" rx="10" fill="#1976d2"/>
+    <rect x="0" y="73" width="355" height="13" fill="#1976d2"/>
+    <text x="177" y="78" text-anchor="middle" class="small" style="fill:white; font-weight:bold;">🎯 Target Use Cases</text>
+    <text x="15" y="106" class="small">• Deduplicate syndicated articles (1000+ sources)</text>
+    <text x="15" y="122" class="small">• Real-time "find similar" for any URL (&lt;1ms)</text>
+    <text x="15" y="138" class="small">• Template/CMS fingerprinting (same site clusters)</text>
+    <text x="15" y="154" class="small">• "Same event" grouping across sources</text>
+  </g>
+
+  <g transform="translate(760, 620)">
+    <!-- Files Card -->
+    <rect x="0" y="60" width="320" height="105" rx="10" fill="white" stroke="#546e7a" stroke-width="1.5" filter="url(#shadow)"/>
+    <rect x="0" y="60" width="320" height="26" rx="10" fill="#546e7a"/>
+    <rect x="0" y="73" width="320" height="13" fill="#546e7a"/>
+    <text x="160" y="78" text-anchor="middle" class="small" style="fill:white; font-weight:bold;">📁 Key Files</text>
+    <text x="15" y="106" class="small" style="font-family:monospace;">src/native/sigcluster/</text>
+    <text x="195" y="106" class="tiny">C++ addon</text>
+    <text x="15" y="122" class="small" style="font-family:monospace;">labs/batch-clustering/</text>
+    <text x="195" y="122" class="tiny">Benchmarks</text>
+    <text x="15" y="138" class="small" style="font-family:monospace;">src/analysis/structure/</text>
+    <text x="195" y="138" class="tiny">SkeletonHash</text>
+    <text x="15" y="154" class="small" style="font-family:monospace;">docs/designs/CLUSTERING*.md</text>
+    <text x="245" y="154" class="tiny">Designs</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- Data Flow -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <rect x="20" y="795" width="1060" height="60" rx="12" fill="#e3f2fd" stroke="#1976d2" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="550" y="815" text-anchor="middle" class="section" style="fill:#1565c0;">Data Flow: HTML → Signature → Index → Cluster → API</text>
+  
+  <g transform="translate(55, 825)">
+    <rect x="0" y="0" width="95" height="22" rx="5" class="done"/>
+    <text x="47" y="15" text-anchor="middle" class="tiny" style="fill:#1b5e20;">HTML</text>
+    <path d="M 100 11 L 120 11" class="arrow-blue"/>
+    
+    <rect x="125" y="0" width="95" height="22" rx="5" class="todo"/>
+    <text x="172" y="15" text-anchor="middle" class="tiny">SimHash</text>
+    <path d="M 225 11 L 245 11" class="arrow-blue"/>
+    
+    <rect x="250" y="0" width="95" height="22" rx="5" class="done"/>
+    <text x="297" y="15" text-anchor="middle" class="tiny" style="fill:#1b5e20;">512-bit sig</text>
+    <path d="M 350 11 L 370 11" class="arrow-blue"/>
+    
+    <rect x="375" y="0" width="95" height="22" rx="5" class="done"/>
+    <text x="422" y="15" text-anchor="middle" class="tiny" style="fill:#1b5e20;">LSH Index</text>
+    <path d="M 475 11 L 495 11" class="arrow-blue"/>
+    
+    <rect x="500" y="0" width="95" height="22" rx="5" class="todo"/>
+    <text x="547" y="15" text-anchor="middle" class="tiny">Candidates</text>
+    <path d="M 600 11 L 620 11" class="arrow-blue"/>
+    
+    <rect x="625" y="0" width="95" height="22" rx="5" class="todo"/>
+    <text x="672" y="15" text-anchor="middle" class="tiny">Union-Find</text>
+    <path d="M 725 11 L 745 11" class="arrow-blue"/>
+    
+    <rect x="750" y="0" width="95" height="22" rx="5" class="todo"/>
+    <text x="797" y="15" text-anchor="middle" class="tiny">Cluster</text>
+    <path d="M 850 11 L 870 11" class="arrow-blue"/>
+    
+    <rect x="875" y="0" width="95" height="22" rx="5" class="todo"/>
+    <text x="922" y="15" text-anchor="middle" class="tiny">REST API</text>
+  </g>
+
+  <!-- Version -->
+  <text x="1080" y="870" text-anchor="end" class="tiny" style="fill:#90a4ae;">v1.0 • December 2025</text>
+
+</svg>

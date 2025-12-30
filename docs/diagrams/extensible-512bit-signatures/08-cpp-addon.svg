@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200">
+  <g id="cpp-addon">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">C++ NODE.JS ADDON ARCHITECTURE</text>
+    
+    <!-- Node.js layer -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="220" height="135" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="110" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#34d399">Node.js (JavaScript)</text>
+      <text x="15" y="45" font-size="9" fill="#aaa">const sig = require('sigcluster');</text>
+      <text x="15" y="65" font-size="9" fill="#f0ede8">// Compute signature</text>
+      <text x="15" y="80" font-size="9" fill="#aaa">const s = sig.compute(html);</text>
+      <text x="15" y="100" font-size="9" fill="#f0ede8">// Batch distance</text>
+      <text x="15" y="115" font-size="9" fill="#aaa">const d = sig.batchDistance(</text>
+      <text x="30" y="128" font-size="9" fill="#aaa">  sigs, target);</text>
+    </g>
+    
+    <!-- Arrow -->
+    <path d="M 265 117 L 295 117" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="293,113 301,117 293,121" fill="#c9a962"/>
+    <text x="280" y="105" text-anchor="middle" font-size="7" fill="#888">N-API</text>
+    
+    <!-- C++ layer -->
+    <g transform="translate(310, 50)">
+      <rect x="0" y="0" width="220" height="135" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="110" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#a78bfa">C++ Addon</text>
+      <text x="15" y="45" font-size="9" fill="#aaa">// SIMD-optimized Hamming</text>
+      <text x="15" y="60" font-size="9" fill="#f0ede8">uint32_t hamming512(</text>
+      <text x="30" y="73" font-size="9" fill="#aaa">const uint64_t* a,</text>
+      <text x="30" y="86" font-size="9" fill="#aaa">const uint64_t* b) {</text>
+      <text x="30" y="99" font-size="9" fill="#888">  // AVX2 / POPCNT</text>
+      <text x="30" y="112" font-size="9" fill="#aaa">  return __builtin_popcountll(</text>
+      <text x="45" y="125" font-size="9" fill="#aaa">    a[0]^b[0]) + ...</text>
+    </g>
+    
+    <!-- Benefits -->
+    <g transform="translate(550, 50)">
+      <rect x="0" y="0" width="220" height="135" fill="#2d2d2d" rx="6"/>
+      <text x="110" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">Why C++ + N-API?</text>
+      <text x="15" y="45" font-size="9" fill="#34d399">✓ 10-100x faster than JS</text>
+      <text x="15" y="62" font-size="9" fill="#34d399">✓ SIMD (AVX2/AVX-512)</text>
+      <text x="15" y="79" font-size="9" fill="#34d399">✓ Stable ABI (node-addon-api)</text>
+      <text x="15" y="96" font-size="9" fill="#34d399">✓ Easy debugging (gdb/lldb)</text>
+      <text x="15" y="113" font-size="9" fill="#34d399">✓ Prebuild binaries (prebuildify)</text>
+      <text x="15" y="130" font-size="9" fill="#888">No Rust complexity!</text>
+    </g>
+  </g>
+</svg>

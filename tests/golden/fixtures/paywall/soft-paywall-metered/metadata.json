@@ -1,0 +1,22 @@
+{
+  "url": "https://premium-news.example.com/exclusive/ai-future-investigation",
+  "capturedAt": "2025-12-21T12:00:00Z",
+  "category": "paywall",
+  "edgeCaseType": "soft-paywall-metered",
+  "expected": {
+    "title": "Exclusive: Inside the Future of AI",
+    "author": "Sarah Mitchell",
+    "publishDate": "2025-12-21T10:00:00Z",
+    "bodyContains": ["groundbreaking investigation", "tech companies", "next generation"],
+    "bodyNotContains": ["$500 billion", "2030", "OpenAI"],
+    "isPaywalled": true,
+    "paywallType": "soft"
+  },
+  "flags": {
+    "hasPaywall": true,
+    "paywallType": "soft-metered",
+    "visibleContentOnly": true,
+    "hasHiddenContent": true
+  },
+  "notes": "Soft/metered paywall with teaser paragraphs visible. Tests extraction should only capture visible content, not hidden premium sections."
+}

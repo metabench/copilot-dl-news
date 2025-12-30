@@ -97,7 +97,7 @@ npm run schema:stats    # Regenerate with table statistics
 **Key Principles:**
 1. **Facts are NEUTRAL** — Observe structure without judging it as good/bad
 2. **Facts are OBJECTIVE** — Verifiable, reproducible, same input = same output
-3. **No weighted signals** — Pure boolean TRUE/FALSE, no scores
+3. **No weighted signals (Fact → Classification subsystem only)** — Pure boolean TRUE/FALSE, no scores
 4. **Classifications CONSUME facts** — Rules combine facts with AND/OR/NOT
 
 **Example**: `url.hasPaginationPattern: true` is a neutral observation. Whether pagination matters depends on what you're classifying—it's not inherently "negative."

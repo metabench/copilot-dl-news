@@ -661,6 +661,49 @@ code, pre, .mono {
   font-family: var(--theme-font-mono);
 }
 
+.job-card-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--theme-space-sm);
+  margin-top: 10px;
+}
+
+.job-card-progress-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-2, rgba(0, 0, 0, 0.04));
+  overflow: hidden;
+  position: relative;
+  min-width: 140px;
+}
+
+.job-card-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--theme-accent), var(--theme-success, #2ecc71));
+}
+
+.job-card-progress-value {
+  font-size: var(--theme-font-size-xs);
+  color: var(--theme-text-muted);
+  font-family: var(--theme-font-mono);
+}
+
+.job-card-progress-bar--indeterminate .job-card-progress-fill {
+  width: 40%;
+  position: absolute;
+  left: -40%;
+  animation: jobCardProgressSlide 1200ms ease-in-out infinite;
+}
+
+@keyframes jobCardProgressSlide {
+  0% { left: -40%; }
+  50% { left: 60%; }
+  100% { left: 100%; }
+}
+
 /* ========================================
    Home Cards (Premium Feature Cards)
    ======================================== */

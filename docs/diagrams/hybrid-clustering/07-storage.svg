@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+  <g id="storage">
+    <rect x="0" y="0" width="400" height="40" fill="#3a3a3a" rx="8"/>
+    <text x="200" y="26" text-anchor="middle" font-size="13" font-weight="600" fill="#f0ede8">DATABASE SCHEMA</text>
+    
+    <g transform="translate(15, 50)">
+      <rect x="0" y="0" width="175" height="135" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#60a5fa">layout_signatures</text>
+      <text x="12" y="36" font-size="8" fill="#aaa" font-family="monospace">id INTEGER PK</text>
+      <text x="12" y="50" font-size="8" fill="#aaa" font-family="monospace">skeleton_hash BLOB(16)</text>
+      <text x="12" y="64" font-size="8" fill="#aaa" font-family="monospace">minhash_sig BLOB(64)</text>
+      <text x="12" y="78" font-size="8" fill="#aaa" font-family="monospace">cluster_id INTEGER FK</text>
+      <text x="12" y="92" font-size="8" fill="#aaa" font-family="monospace">seen_count INTEGER</text>
+      <text x="12" y="110" font-size="8" fill="#34d399">INDEX: skeleton_hash</text>
+      <text x="12" y="124" font-size="8" fill="#34d399">INDEX: cluster_id</text>
+    </g>
+    
+    <g transform="translate(210, 50)">
+      <rect x="0" y="0" width="175" height="135" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#a78bfa">layout_clusters</text>
+      <text x="12" y="36" font-size="8" fill="#aaa" font-family="monospace">id INTEGER PK</text>
+      <text x="12" y="50" font-size="8" fill="#aaa" font-family="monospace">centroid BLOB(64)</text>
+      <text x="12" y="64" font-size="8" fill="#aaa" font-family="monospace">member_count INT</text>
+      <text x="12" y="78" font-size="8" fill="#aaa" font-family="monospace">domain TEXT</text>
+      <text x="12" y="92" font-size="8" fill="#aaa" font-family="monospace">created_at DATETIME</text>
+      <text x="12" y="110" font-size="8" fill="#34d399">INDEX: domain</text>
+    </g>
+  </g>
+</svg>

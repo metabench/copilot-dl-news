@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <g id="implementation-phases">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8 8 0 0"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">IMPLEMENTATION PHASES</text>
+    
+    <!-- Phase 1 -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="75" fill="#3b82f6" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="white">PHASE 1: FINGERPRINT EXTRACTION</text>
+      <text x="350" y="18" font-size="8" fill="white" opacity="0.7">2-3 days</text>
+      <text x="12" y="36" font-size="9" fill="white" opacity="0.9">• Extend SkeletonHasher with semantic bits</text>
+      <text x="12" y="50" font-size="9" fill="white" opacity="0.9">• Add structural metrics computation</text>
+      <text x="12" y="64" font-size="9" fill="white" opacity="0.9">• Create layout_signatures table + adapter</text>
+    </g>
+    
+    <!-- Phase 2 -->
+    <g transform="translate(15, 140)">
+      <rect x="0" y="0" width="370" height="75" fill="#8b5cf6" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="white">PHASE 2: COMPARISON ENGINE</text>
+      <text x="350" y="18" font-size="8" fill="white" opacity="0.7">2-3 days</text>
+      <text x="12" y="36" font-size="9" fill="white" opacity="0.9">• Implement MinHash for skeleton shingles</text>
+      <text x="12" y="50" font-size="9" fill="white" opacity="0.9">• Build two-phase comparison (filter + match)</text>
+      <text x="12" y="64" font-size="9" fill="white" opacity="0.9">• Add layout_clusters table + adapter</text>
+    </g>
+    
+    <!-- Phase 3 -->
+    <g transform="translate(15, 225)">
+      <rect x="0" y="0" width="370" height="75" fill="#f59e0b" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#1a1a1a">PHASE 3: ONLINE CLUSTERING</text>
+      <text x="350" y="18" font-size="8" fill="#1a1a1a" opacity="0.7">3-4 days</text>
+      <text x="12" y="36" font-size="9" fill="#1a1a1a" opacity="0.9">• Leader clustering with threshold tuning</text>
+      <text x="12" y="50" font-size="9" fill="#1a1a1a" opacity="0.9">• Integration with crawler pipeline</text>
+      <text x="12" y="64" font-size="9" fill="#1a1a1a" opacity="0.9">• Telemetry: cluster stats, new layout alerts</text>
+    </g>
+    
+    <!-- Phase 4 -->
+    <g transform="translate(15, 310)">
+      <rect x="0" y="0" width="370" height="75" fill="#444" rx="6" stroke="#888" stroke-width="1" stroke-dasharray="4,2"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#888">PHASE 4: TEMPLATE LEARNING (Future)</text>
+      <text x="350" y="18" font-size="8" fill="#666">5+ days</text>
+      <text x="12" y="36" font-size="9" fill="#666">• Extract common skeleton from cluster</text>
+      <text x="12" y="50" font-size="9" fill="#666">• Identify variable vs. fixed content regions</text>
+      <text x="12" y="64" font-size="9" fill="#666">• Generate extraction rules from templates</text>
+    </g>
+  </g>
+</svg>

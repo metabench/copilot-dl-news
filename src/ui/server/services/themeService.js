@@ -10,8 +10,19 @@
  * @module themeService
  */
 
-const fs = require("fs");
-const path = require("path");
+// path kept previously for migrations; SQL + migrations now live in src/db.
+
+const {
+  ensureUiThemesTable,
+  ensureSystemThemes: ensureSystemThemesInDb,
+  listThemes: listThemesFromDb,
+  getThemeRow,
+  getDefaultThemeRow,
+  createTheme: createThemeInDb,
+  updateTheme: updateThemeInDb,
+  setDefaultTheme: setDefaultThemeInDb,
+  deleteTheme: deleteThemeInDb
+} = require("../../../db/sqlite/v1/queries/ui/uiThemes");
 
 // System theme configurations (used when DB not available)
 const OBSIDIAN_THEME_CONFIG = {
@@ -198,59 +209,37 @@ const WLILO_THEME_CONFIG = {
 // Default theme configuration - used if DB not available
 const DEFAULT_THEME_CONFIG = WLILO_THEME_CONFIG;
 
+function parseThemeRow(row) {
+  if (!row) return null;
+  try {
+    return { ...row, config: JSON.parse(row.config) };
+  } catch (_) {
+    return { ...row, config: row.config };
+  }
+}
+
 function ensureSystemThemes(db) {
   if (!db) return false;
   try {
-    ensureThemeTable(db);
-
-    const hasDefault = !!db.prepare("SELECT 1 FROM ui_themes WHERE is_default = 1 LIMIT 1").get();
-
-    const upsertTheme = (name, displayName, description, config, isDefault) => {
-      const existing = db.prepare("SELECT id, is_system, is_default FROM ui_themes WHERE name = ?").get(name);
-      const payload = {
-        name,
-        display_name: displayName,
-        description,
-        config: JSON.stringify(config),
-        is_default: isDefault ? 1 : 0,
-        is_system: 1
-      };
-      if (!existing) {
-        db.prepare(
-          "INSERT INTO ui_themes (name, display_name, description, config, is_default, is_system) VALUES (@name, @display_name, @description, @config, @is_default, @is_system)"
-        ).run(payload);
-        return;
-      }
-      if (!existing.is_system) {
-        // Don't overwrite user themes that happen to share a name.
-        return;
-      }
-      db.prepare(
-        "UPDATE ui_themes SET display_name = @display_name, description = @description, config = @config, is_default = @is_default, is_system = @is_system, updated_at = datetime('now') WHERE name = @name"
-      ).run(payload);
-    };
-
-    upsertTheme(
-      "obsidian",
-      "Obsidian",
-      "Dark luxury theme with gold accents",
-      OBSIDIAN_THEME_CONFIG,
-      false
-    );
-
-    upsertTheme(
-      "wlilo",
-      "WLILO",
-      "White Leather + Industrial Luxury Obsidian",
-      WLILO_THEME_CONFIG,
-      !hasDefault
-    );
-
-    if (!hasDefault) {
-      db.prepare("UPDATE ui_themes SET is_default = 0 WHERE name <> 'wlilo'").run();
-    }
-
-    return true;
+    ensureUiThemesTable(db);
+    return ensureSystemThemesInDb(db, {
+      themes: [
+        {
+          name: "obsidian",
+          displayName: "Obsidian",
+          description: "Dark luxury theme with gold accents",
+          config: OBSIDIAN_THEME_CONFIG,
+          isDefault: false
+        },
+        {
+          name: "wlilo",
+          displayName: "WLILO",
+          description: "White Leather + Industrial Luxury Obsidian",
+          config: WLILO_THEME_CONFIG,
+          defaultIfNone: true
+        }
+      ]
+    });
   } catch (err) {
     console.error("Failed to ensure system themes:", err.message);
     return false;
@@ -263,46 +252,11 @@ function ensureSystemThemes(db) {
  */
 function ensureThemeTable(db) {
   if (!db) return false;
-  
-  try {
-    // Check if table exists
-    const tableCheck = db.prepare(`
-      SELECT name FROM sqlite_master 
-      WHERE type='table' AND name='ui_themes'
-    `).get();
-    
-    if (tableCheck) return true;
-    
-    // Run migration
-    const migrationPath = path.join(__dirname, "../../db/sqlite/v1/migrations/add_ui_themes_table.sql");
-    if (fs.existsSync(migrationPath)) {
-      const migrationSql = fs.readFileSync(migrationPath, "utf8");
-      db.exec(migrationSql);
-      return true;
-    }
-    
-    // Fallback: create table inline
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS ui_themes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
-        display_name TEXT NOT NULL,
-        description TEXT,
-        config TEXT NOT NULL,
-        is_default INTEGER NOT NULL DEFAULT 0,
-        is_system INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-      CREATE INDEX IF NOT EXISTS idx_ui_themes_is_default ON ui_themes (is_default DESC);
-      CREATE INDEX IF NOT EXISTS idx_ui_themes_name ON ui_themes (name);
-    `);
-    
-    return true;
-  } catch (err) {
-    console.error("Failed to ensure theme table:", err.message);
-    return false;
+  const ok = ensureUiThemesTable(db);
+  if (!ok) {
+    console.error("Failed to ensure theme table");
   }
+  return ok;
 }
 
 /**
@@ -315,12 +269,7 @@ function listThemes(db) {
   
   try {
     ensureSystemThemes(db);
-    const stmt = db.prepare(`
-      SELECT id, name, display_name, description, is_default, is_system, created_at, updated_at
-      FROM ui_themes
-      ORDER BY is_default DESC, display_name ASC
-    `);
-    return stmt.all();
+    return listThemesFromDb(db);
   } catch (err) {
     console.error("Failed to list themes:", err.message);
     return [];
@@ -338,18 +287,7 @@ function getTheme(db, identifier) {
   
   try {
     ensureSystemThemes(db);
-    const isNumeric = typeof identifier === "number" || /^\d+$/.test(identifier);
-    const stmt = isNumeric
-      ? db.prepare("SELECT * FROM ui_themes WHERE id = ?")
-      : db.prepare("SELECT * FROM ui_themes WHERE name = ?");
-    
-    const row = stmt.get(identifier);
-    if (!row) return null;
-    
-    return {
-      ...row,
-      config: JSON.parse(row.config)
-    };
+    return parseThemeRow(getThemeRow(db, identifier));
   } catch (err) {
     console.error("Failed to get theme:", err.message);
     return null;
@@ -376,12 +314,7 @@ function getDefaultTheme(db) {
   
   try {
     ensureSystemThemes(db);
-    const stmt = db.prepare(`
-      SELECT * FROM ui_themes 
-      WHERE is_default = 1 
-      LIMIT 1
-    `);
-    const row = stmt.get();
+    const row = getDefaultThemeRow(db);
     
     if (!row) {
       // No default set, try WLILO then obsidian
@@ -402,10 +335,7 @@ function getDefaultTheme(db) {
       };
     }
     
-    return {
-      ...row,
-      config: JSON.parse(row.config)
-    };
+    return parseThemeRow(row);
   } catch (err) {
     console.error("Failed to get default theme:", err.message);
     return {
@@ -434,20 +364,8 @@ function createTheme(db, themeData) {
   }
   
   ensureThemeTable(db);
-  
-  const stmt = db.prepare(`
-    INSERT INTO ui_themes (name, display_name, description, config)
-    VALUES (?, ?, ?, ?)
-  `);
-  
-  const result = stmt.run(
-    name.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
-    displayName,
-    description || null,
-    JSON.stringify(config)
-  );
-  
-  return getTheme(db, result.lastInsertRowid);
+
+  return parseThemeRow(createThemeInDb(db, { name, displayName, description, config }));
 }
 
 /**
@@ -459,43 +377,9 @@ function createTheme(db, themeData) {
  */
 function updateTheme(db, identifier, updates) {
   if (!db) throw new Error("Database not available");
-  
-  const existing = getTheme(db, identifier);
-  if (!existing) throw new Error(`Theme not found: ${identifier}`);
-  
-  if (existing.is_system && updates.name && updates.name !== existing.name) {
-    throw new Error("Cannot rename system themes");
-  }
-  
-  const fields = [];
-  const values = [];
-  
-  if (updates.displayName !== undefined) {
-    fields.push("display_name = ?");
-    values.push(updates.displayName);
-  }
-  if (updates.description !== undefined) {
-    fields.push("description = ?");
-    values.push(updates.description);
-  }
-  if (updates.config !== undefined) {
-    fields.push("config = ?");
-    values.push(JSON.stringify(updates.config));
-  }
-  
-  if (fields.length === 0) return existing;
-  
-  fields.push("updated_at = datetime('now')");
-  values.push(existing.id);
-  
-  const stmt = db.prepare(`
-    UPDATE ui_themes 
-    SET ${fields.join(", ")}
-    WHERE id = ?
-  `);
-  
-  stmt.run(...values);
-  return getTheme(db, existing.id);
+
+  const updated = updateThemeInDb(db, identifier, updates);
+  return parseThemeRow(updated);
 }
 
 /**
@@ -506,14 +390,8 @@ function updateTheme(db, identifier, updates) {
  */
 function setDefaultTheme(db, identifier) {
   if (!db) throw new Error("Database not available");
-  
-  const theme = getTheme(db, identifier);
-  if (!theme) throw new Error(`Theme not found: ${identifier}`);
-  
-  db.exec("UPDATE ui_themes SET is_default = 0");
-  db.prepare("UPDATE ui_themes SET is_default = 1 WHERE id = ?").run(theme.id);
-  
-  return getTheme(db, theme.id);
+
+  return parseThemeRow(setDefaultThemeInDb(db, identifier));
 }
 
 /**
@@ -524,14 +402,10 @@ function setDefaultTheme(db, identifier) {
  */
 function deleteTheme(db, identifier) {
   if (!db) throw new Error("Database not available");
-  
+
   const theme = getTheme(db, identifier);
   if (!theme) throw new Error(`Theme not found: ${identifier}`);
-  
-  if (theme.is_system) {
-    throw new Error("Cannot delete system themes");
-  }
-  
+
   if (theme.is_default) {
     // Reset to obsidian as default
     const obsidian = getTheme(db, "obsidian");
@@ -539,9 +413,8 @@ function deleteTheme(db, identifier) {
       setDefaultTheme(db, obsidian.id);
     }
   }
-  
-  db.prepare("DELETE FROM ui_themes WHERE id = ?").run(theme.id);
-  return true;
+
+  return deleteThemeInDb(db, identifier);
 }
 
 /**

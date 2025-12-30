@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 160">
+  <g id="flow">
+    <rect x="0" y="0" width="800" height="40" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="26" text-anchor="middle" font-size="13" font-weight="600" fill="#f0ede8">ASSIGNMENT FLOW</text>
+    
+    <g transform="translate(30, 55)">
+      <rect x="0" y="0" width="110" height="90" fill="#444" rx="6"/>
+      <text x="55" y="22" text-anchor="middle" font-size="9" font-weight="600" fill="#60a5fa">HTML</text>
+      <text x="55" y="50" text-anchor="middle" font-size="22" fill="#60a5fa">&lt;/&gt;</text>
+      <text x="55" y="78" text-anchor="middle" font-size="8" fill="#888">Input page</text>
+    </g>
+    
+    <path d="M 150 100 L 175 100" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="173,96 181,100 173,104" fill="#c9a962"/>
+    
+    <g transform="translate(185, 55)">
+      <rect x="0" y="0" width="120" height="90" fill="#1e3a5f" rx="6"/>
+      <text x="60" y="22" text-anchor="middle" font-size="9" font-weight="600" fill="#60a5fa">SimHash</text>
+      <text x="60" y="50" text-anchor="middle" font-size="10" fill="#aaa" font-family="monospace">8 bytes</text>
+      <text x="60" y="78" text-anchor="middle" font-size="8" fill="#888">In memory</text>
+    </g>
+    
+    <path d="M 315 100 L 340 100" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="338,96 346,100 338,104" fill="#c9a962"/>
+    
+    <g transform="translate(350, 55)">
+      <rect x="0" y="0" width="140" height="90" fill="#2d1f4a" rx="6"/>
+      <text x="70" y="22" text-anchor="middle" font-size="9" font-weight="600" fill="#a78bfa">Compare K</text>
+      <text x="70" y="50" text-anchor="middle" font-size="10" fill="#aaa">XOR + popcount</text>
+      <text x="70" y="78" text-anchor="middle" font-size="8" fill="#888">~0.1ms</text>
+    </g>
+    
+    <path d="M 500 100 L 525 100" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="523,96 531,100 523,104" fill="#c9a962"/>
+    
+    <g transform="translate(535, 55)">
+      <rect x="0" y="0" width="100" height="90" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="50" y="22" text-anchor="middle" font-size="9" font-weight="600" fill="#34d399">Assign</text>
+      <text x="50" y="50" text-anchor="middle" font-size="12" fill="#34d399" font-family="monospace">ID: 42</text>
+      <text x="50" y="78" text-anchor="middle" font-size="8" fill="#888">4 bytes</text>
+    </g>
+    
+    <path d="M 645 100 L 670 100" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="668,96 676,100 668,104" fill="#c9a962"/>
+    
+    <g transform="translate(680, 55)">
+      <rect x="0" y="0" width="90" height="90" fill="#444" rx="6"/>
+      <text x="45" y="22" text-anchor="middle" font-size="9" font-weight="600" fill="#c9a962">DB</text>
+      <text x="45" y="50" text-anchor="middle" font-size="10" fill="#aaa">UPDATE</text>
+      <text x="45" y="68" text-anchor="middle" font-size="8" fill="#aaa">pages SET</text>
+      <text x="45" y="82" text-anchor="middle" font-size="8" fill="#34d399">cluster_id</text>
+    </g>
+  </g>
+</svg>

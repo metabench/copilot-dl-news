@@ -9,6 +9,8 @@ const { summarizeDsplPatterns, assessDomainReadiness, selectPlaces, selectTopics
 const { createBatchSummary, aggregateSummaryInto, createFailedDomainSummary } = require('./utils/summaryUtils');
 const { fetchUrl } = require('./utils/httpUtils');
 
+const { CRAWL_EVENT_TYPES, SEVERITY_LEVELS, createTelemetryEvent } = require('../crawler/telemetry');
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -40,7 +42,8 @@ class DomainProcessor {
       stores,
       logger,
       fetchFn,
-      now = () => new Date()
+      now = () => new Date(),
+      telemetryBridge
     } = deps;
 
     // Options extraction
@@ -74,7 +77,42 @@ class DomainProcessor {
     const recordFetch = (fetchRow, meta = {}) => this._recordFetch(fetchRow, meta, newsDb, queries, stores, options.verbose, logger);
     const recordDecision = (decision) => this._recordDecision(decision, summary, logger);
 
+    const telemetryJobId = runId;
+    const telemetryCrawlType = options.telemetryCrawlType || 'place-hubs';
+
+    const emitTelemetry = (type, data = {}, eventOptions = {}) => {
+      if (!telemetryBridge || typeof telemetryBridge.emitEvent !== 'function') {
+        return;
+      }
+
+      try {
+        telemetryBridge.emitEvent(createTelemetryEvent(type, data, {
+          jobId: telemetryJobId,
+          crawlType: telemetryCrawlType,
+          source: 'orchestration:place-hubs',
+          ...eventOptions
+        }));
+      } catch (_) {
+        // Telemetry must never break orchestration.
+      }
+    };
+
     try {
+      emitTelemetry(CRAWL_EVENT_TYPES.PLACE_HUB_GUESS_STARTED, {
+        domain: normalizedDomain.host,
+        scheme: normalizedDomain.scheme,
+        kinds,
+        enableTopicDiscovery,
+        enableCombinationDiscovery,
+        enableHierarchicalDiscovery,
+        apply,
+        patternsPerPlace: patternLimit,
+        runId
+      }, {
+        severity: SEVERITY_LEVELS.INFO,
+        message: `Place hub guessing started: ${normalizedDomain.host}`
+      });
+
       // Assess domain readiness
       const readinessResult = await this._assessDomainReadiness(
         normalizedDomain, kinds, queries, analyzers, options, now, recordDecision
@@ -85,6 +123,30 @@ class DomainProcessor {
       // Handle insufficient data
       if (readinessResult.readiness.status === 'insufficient-data') {
         await this._handleInsufficientData(readinessResult, queries, summary, finalizeSummary);
+
+        emitTelemetry(CRAWL_EVENT_TYPES.PLACE_HUB_GUESS_COMPLETED, {
+          domain: normalizedDomain.host,
+          runId,
+          status: 'insufficient-data',
+          summary: {
+            totalPlaces: summary.totalPlaces,
+            totalTopics: summary.totalTopics,
+            totalCombinations: summary.totalCombinations,
+            totalUrls: summary.totalUrls,
+            fetched: summary.fetched,
+            cached: summary.cached,
+            validationSucceeded: summary.validationSucceeded,
+            validationFailed: summary.validationFailed,
+            insertedHubs: summary.insertedHubs,
+            updatedHubs: summary.updatedHubs,
+            errors: summary.errors,
+            rateLimited: summary.rateLimited
+          }
+        }, {
+          severity: SEVERITY_LEVELS.WARN,
+          message: `Place hub guessing stopped: insufficient data for ${normalizedDomain.host}`
+        });
+
         return finalizeSummary();
       }
 
@@ -168,7 +230,7 @@ class DomainProcessor {
           nowMs,
           verbose: options.verbose
         },
-        deps: { db, newsDb, queries, analyzers, validator, stores, logger, fetchFn, now },
+        deps: { db, newsDb, queries, analyzers, validator, stores, logger, fetchFn, now, emitTelemetry },
         attemptCounter,
         recordFetch,
         recordDecision
@@ -184,10 +246,46 @@ class DomainProcessor {
       summary.determination = 'processed';
       summary.determinationReason = `Processed ${summary.totalPlaces} places${enableTopicDiscovery ? `, ${summary.totalTopics} topics` : ''}${enableCombinationDiscovery ? `, ${summary.totalCombinations} combinations` : ''}`;
 
+      emitTelemetry(CRAWL_EVENT_TYPES.PLACE_HUB_GUESS_COMPLETED, {
+        domain: normalizedDomain.host,
+        runId,
+        status: processingResult.rateLimitTriggered ? 'rate-limited' : 'completed',
+        rateLimitTriggered: processingResult.rateLimitTriggered,
+        summary: {
+          totalPlaces: summary.totalPlaces,
+          totalTopics: summary.totalTopics,
+          totalCombinations: summary.totalCombinations,
+          totalUrls: summary.totalUrls,
+          fetched: summary.fetched,
+          cached: summary.cached,
+          validationSucceeded: summary.validationSucceeded,
+          validationFailed: summary.validationFailed,
+          insertedHubs: summary.insertedHubs,
+          updatedHubs: summary.updatedHubs,
+          errors: summary.errors,
+          rateLimited: summary.rateLimited
+        }
+      }, {
+        severity: processingResult.rateLimitTriggered ? SEVERITY_LEVELS.WARN : SEVERITY_LEVELS.INFO,
+        message: `Place hub guessing completed for ${normalizedDomain.host}`
+      });
+
     } catch (error) {
       summary.errors += 1;
       summary.determination = 'error';
       summary.determinationReason = error.message || String(error);
+
+      emitTelemetry(CRAWL_EVENT_TYPES.PLACE_HUB_GUESS_FAILED, {
+        domain: normalizedDomain.host,
+        runId,
+        error: {
+          message: error?.message || String(error),
+          stack: error?.stack || null
+        }
+      }, {
+        severity: SEVERITY_LEVELS.ERROR,
+        message: `Place hub guessing failed for ${normalizedDomain.host}`
+      });
 
       recordDecision({
         stage: 'ERROR',
@@ -818,6 +916,28 @@ class DomainProcessor {
       attemptId
     });
 
+    deps.emitTelemetry?.(CRAWL_EVENT_TYPES.PLACE_HUB_CANDIDATE, {
+      domain: normalizedDomain.host,
+      attemptId,
+      attemptStartedAt,
+      candidateUrl,
+      kind: place.kind,
+      place: {
+        name: place.name,
+        code: placeSignalsInfo.code
+      },
+      prediction: {
+        analyzer: analyzerName,
+        strategy: strategyValue,
+        score: scoreValue,
+        confidence: confidenceValue,
+        pattern: patternValue
+      }
+    }, {
+      severity: SEVERITY_LEVELS.DEBUG,
+      message: `Candidate: ${candidateUrl}`
+    });
+
     // Save candidate to store
     if (stores.candidates && typeof stores.candidates.saveCandidate === 'function') {
       try {
@@ -960,6 +1080,29 @@ class DomainProcessor {
         lastSeenAt: attemptStartedAt
       });
 
+      deps.emitTelemetry?.(CRAWL_EVENT_TYPES.PLACE_HUB_DETERMINATION, {
+        domain: normalizedDomain.host,
+        attemptId,
+        candidateUrl,
+        kind: place.kind,
+        place: {
+          name: place.name,
+          code: placeSignalsInfo.code
+        },
+        determination: {
+          accepted: Boolean(normalizedValidation.isValid),
+          confidence: normalizedValidation.confidence ?? null,
+          reason: normalizedValidation.reason || null,
+          navLinkCount: normalizedValidation.navLinkCount ?? null,
+          articleLinkCount: normalizedValidation.articleLinkCount ?? null,
+          pageTitle: normalizedValidation.pageTitle || null
+        },
+        apply: Boolean(options.apply)
+      }, {
+        severity: normalizedValidation.isValid ? SEVERITY_LEVELS.INFO : SEVERITY_LEVELS.WARN,
+        message: normalizedValidation.isValid ? `Accepted: ${candidateUrl}` : `Rejected: ${candidateUrl}`
+      });
+
       if (normalizedValidation.isValid) {
         summary.validationSucceeded += 1;
 
@@ -1017,6 +1160,25 @@ class DomainProcessor {
         outcome: 'error',
         level: 'error',
         message: `Failed to fetch ${candidateUrl}: ${fetchError.message || fetchError}`
+      });
+
+      deps.emitTelemetry?.(CRAWL_EVENT_TYPES.PLACE_HUB_DETERMINATION, {
+        domain: normalizedDomain.host,
+        attemptId,
+        candidateUrl,
+        kind: place.kind,
+        place: {
+          name: place.name,
+          code: placeSignalsInfo.code
+        },
+        determination: {
+          accepted: false,
+          error: fetchError?.message || String(fetchError)
+        },
+        apply: Boolean(options.apply)
+      }, {
+        severity: SEVERITY_LEVELS.ERROR,
+        message: `Candidate error: ${candidateUrl}`
       });
 
       return {

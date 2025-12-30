@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200">
+  <g id="tradeoffs">
+    <rect x="0" y="0" width="800" height="40" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="26" text-anchor="middle" font-size="13" font-weight="600" fill="#f0ede8">TRADE-OFF ANALYSIS</text>
+    
+    <g transform="translate(30, 55)">
+      <rect x="0" y="0" width="235" height="130" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="117" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#34d399">✓ We Gain</text>
+      <text x="15" y="45" font-size="9" fill="#aaa">• 20x less storage</text>
+      <text x="15" y="62" font-size="9" fill="#aaa">• Faster DB queries (smaller tables)</text>
+      <text x="15" y="79" font-size="9" fill="#aaa">• Simpler schema</text>
+      <text x="15" y="96" font-size="9" fill="#aaa">• Less index maintenance</text>
+      <text x="15" y="113" font-size="9" fill="#aaa">• Lower backup costs</text>
+    </g>
+    
+    <g transform="translate(282, 55)">
+      <rect x="0" y="0" width="235" height="130" fill="#3a3a1a" rx="6" stroke="#fbbf24" stroke-width="1"/>
+      <text x="117" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#fbbf24">⚖ We Accept</text>
+      <text x="15" y="45" font-size="9" fill="#aaa">• O(K) comparison per page</text>
+      <text x="15" y="62" font-size="9" fill="#aaa">• Can't retrieve original sig</text>
+      <text x="15" y="79" font-size="9" fill="#aaa">• Cluster reassignment needs reparse</text>
+      <text x="15" y="96" font-size="9" fill="#aaa">• SimHash less accurate than MinHash</text>
+      <text x="15" y="113" font-size="9" fill="#888">(acceptable for structural similarity)</text>
+    </g>
+    
+    <g transform="translate(534, 55)">
+      <rect x="0" y="0" width="235" height="130" fill="#444" rx="6"/>
+      <text x="117" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">Latency Budget</text>
+      <text x="15" y="48" font-size="9" fill="#aaa">K=1000 centroids</text>
+      <text x="15" y="65" font-size="9" fill="#aaa">8-byte compare × 1000</text>
+      <text x="15" y="82" font-size="9" fill="#aaa">= ~8KB data scanned</text>
+      <text x="15" y="103" font-size="10" fill="#60a5fa" font-weight="600">~0.1ms per assignment</text>
+      <text x="15" y="120" font-size="8" fill="#888">Still very fast!</text>
+    </g>
+  </g>
+</svg>

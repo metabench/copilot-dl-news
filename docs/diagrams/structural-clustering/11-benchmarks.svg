@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <g id="benchmarks">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">EXPECTED BENCHMARKS</text>
+    
+    <!-- Performance Table -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="180" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">OPERATION COSTS (target)</text>
+      
+      <!-- Header -->
+      <text x="12" y="42" font-size="9" font-weight="600" fill="#888">Operation</text>
+      <text x="150" y="42" font-size="9" font-weight="600" fill="#888">Time</text>
+      <text x="220" y="42" font-size="9" font-weight="600" fill="#888">Storage</text>
+      <text x="300" y="42" font-size="9" font-weight="600" fill="#888">Queries</text>
+      
+      <line x1="12" y1="48" x2="358" y2="48" stroke="#666" stroke-width="0.5"/>
+      
+      <!-- Rows -->
+      <text x="12" y="64" font-size="9" fill="#aaa">Compute signature</text>
+      <text x="150" y="64" font-size="9" fill="#34d399">~1ms</text>
+      <text x="220" y="64" font-size="9" fill="#aaa">—</text>
+      <text x="300" y="64" font-size="9" fill="#aaa">0</text>
+      
+      <text x="12" y="82" font-size="9" fill="#aaa">Check exact match</text>
+      <text x="150" y="82" font-size="9" fill="#34d399">&lt;0.1ms</text>
+      <text x="220" y="82" font-size="9" fill="#aaa">—</text>
+      <text x="300" y="82" font-size="9" fill="#aaa">1</text>
+      
+      <text x="12" y="100" font-size="9" fill="#aaa">Find nearest cluster</text>
+      <text x="150" y="100" font-size="9" fill="#34d399">&lt;1ms</text>
+      <text x="220" y="100" font-size="9" fill="#aaa">—</text>
+      <text x="300" y="100" font-size="9" fill="#aaa">1-5</text>
+      
+      <text x="12" y="118" font-size="9" fill="#aaa">Insert new signature</text>
+      <text x="150" y="118" font-size="9" fill="#60a5fa">~2ms</text>
+      <text x="220" y="118" font-size="9" fill="#aaa">+200B</text>
+      <text x="300" y="118" font-size="9" fill="#aaa">1 write</text>
+      
+      <text x="12" y="136" font-size="9" fill="#aaa">Create new cluster</text>
+      <text x="150" y="136" font-size="9" fill="#60a5fa">~5ms</text>
+      <text x="220" y="136" font-size="9" fill="#aaa">+200B</text>
+      <text x="300" y="136" font-size="9" fill="#aaa">2 writes</text>
+      
+      <text x="12" y="154" font-size="9" fill="#aaa">Batch 1000 pages</text>
+      <text x="150" y="154" font-size="9" fill="#fbbf24">~3s</text>
+      <text x="220" y="154" font-size="9" fill="#aaa">+200KB</text>
+      <text x="300" y="154" font-size="9" fill="#aaa">~1K</text>
+      
+      <text x="12" y="172" font-size="9" fill="#aaa">Full 100K re-cluster</text>
+      <text x="150" y="172" font-size="9" fill="#ef4444">~5min</text>
+      <text x="220" y="172" font-size="9" fill="#aaa">—</text>
+      <text x="300" y="172" font-size="9" fill="#aaa">~100K</text>
+    </g>
+    
+    <!-- Storage Budget -->
+    <g transform="translate(15, 245)">
+      <rect x="0" y="0" width="370" height="140" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">STORAGE BUDGET</text>
+      
+      <text x="12" y="42" font-size="9" fill="#aaa">1M pages, 1K unique layouts:</text>
+      <text x="20" y="58" font-size="9" fill="#888">• layout_signatures: ~100KB (1K × 100B)</text>
+      <text x="20" y="72" font-size="9" fill="#888">• layout_signatures_ext: ~150KB (1K × 150B)</text>
+      <text x="20" y="86" font-size="9" fill="#888">• layout_clusters: ~100KB (500 × 200B)</text>
+      <text x="20" y="100" font-size="9" fill="#888">• Indexes: ~200KB</text>
+      
+      <line x1="12" y1="108" x2="358" y2="108" stroke="#666" stroke-width="0.5"/>
+      
+      <text x="12" y="124" font-size="10" font-weight="600" fill="#34d399">TOTAL: ~550KB for 1M pages</text>
+      <text x="200" y="124" font-size="9" fill="#888">(0.55 bytes/page)</text>
+    </g>
+  </g>
+</svg>

@@ -6,14 +6,64 @@ const SkeletonDiff = require('../src/analysis/structure/SkeletonDiff');
 const cheerio = require('cheerio');
 const { createLayoutMasksQueries } = require('../src/db/sqlite/v1/queries/layoutMasks');
 
-// Simple arg parsing if utils not available
+// ─────────────────────────────────────────────────────────────
+// CLI Argument Parsing
+// ─────────────────────────────────────────────────────────────
 const args = process.argv.slice(2);
-const dbPath = 'data/news.db';
-const limit = args.includes('--limit') ? parseInt(args[args.indexOf('--limit') + 1]) : 100;
-const verbose = args.includes('--verbose');
-const maskMode = args.includes('--mask');
-const maskSamples = args.includes('--mask-samples') ? parseInt(args[args.indexOf('--mask-samples') + 1]) : 5;
-const maskLimit = args.includes('--mask-limit') ? parseInt(args[args.indexOf('--mask-limit') + 1]) : 5;
+
+function getArg(name, defaultValue) {
+    const idx = args.indexOf(name);
+    if (idx === -1) return defaultValue;
+    return args[idx + 1];
+}
+
+function hasFlag(name) {
+    return args.includes(name);
+}
+
+// Show help
+if (hasFlag('--help') || hasFlag('-h')) {
+    console.log(`
+structure-miner - Analyze page layouts and cluster by structural similarity
+
+USAGE:
+  node tools/structure-miner.js [options]
+
+OPTIONS:
+  --limit <n>         Number of pages to analyze (default: 100)
+  --domain <host>     Filter to pages from a specific domain (e.g., theguardian.com)
+  --verbose           Show per-page processing output
+  --json              Output results as JSON (for automation)
+  --mask              Generate layout masks for top clusters
+  --mask-samples <n>  Samples per mask (default: 5)
+  --mask-limit <n>    Max masks to generate (default: 5)
+  --db <path>         Database path (default: data/news.db)
+  --help, -h          Show this help
+
+EXAMPLES:
+  # Analyze 500 pages, show clusters
+  node tools/structure-miner.js --limit 500
+
+  # Analyze Guardian pages only
+  node tools/structure-miner.js --domain theguardian.com --limit 200
+
+  # JSON output for automation
+  node tools/structure-miner.js --limit 100 --json
+
+  # Generate masks for clustering analysis
+  node tools/structure-miner.js --limit 500 --mask --mask-limit 10
+`);
+    process.exit(0);
+}
+
+const dbPath = getArg('--db', 'data/news.db');
+const limit = parseInt(getArg('--limit', '100'));
+const domain = getArg('--domain', null);
+const verbose = hasFlag('--verbose');
+const jsonOutput = hasFlag('--json');
+const maskMode = hasFlag('--mask');
+const maskSamples = parseInt(getArg('--mask-samples', '5'));
+const maskLimit = parseInt(getArg('--mask-limit', '5'));
 
 function decompress(buffer, typeId) {
     if (!typeId || typeId === 1) return buffer;
@@ -23,51 +73,67 @@ function decompress(buffer, typeId) {
     return buffer;
 }
 
+function tableExists(db, name) {
+    const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(name);
+    return !!row;
+}
+
+function requireTable(db, name, { hint } = {}) {
+    if (!tableExists(db, name)) {
+        const extra = hint ? `\n\nHint: ${hint}` : '';
+        throw new Error(`Required table missing: ${name}.${extra}`);
+    }
+}
+
 async function main() {
-    console.log(`Opening database: ${dbPath}`);
+    if (!jsonOutput) console.log(`Opening database: ${dbPath}`);
     const db = new Database(dbPath, { readonly: false });
 
-    // Ensure table exists (in case migration didn't run)
-    db.exec(`
-        CREATE TABLE IF NOT EXISTS layout_signatures (
-            signature_hash TEXT PRIMARY KEY,
-            level INTEGER NOT NULL,
-            signature TEXT NOT NULL,
-            first_seen_url TEXT,
-            seen_count INTEGER DEFAULT 1,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE INDEX IF NOT EXISTS idx_layout_signatures_level ON layout_signatures(level);
+    // Schema is expected to be managed canonically (schema:sync). Fail fast if missing.
+    requireTable(db, 'layout_signatures', {
+        hint: 'If this is a fresh DB, run the app once to initialize schema, or run: npm run schema:sync (after migrations).'
+    });
+    if (maskMode) {
+        requireTable(db, 'layout_masks', {
+            hint: 'Run: node tools/migrations/add-layout-templates-and-masks.js then npm run schema:sync'
+        });
+    }
 
-        CREATE TABLE IF NOT EXISTS layout_masks (
-            signature_hash TEXT PRIMARY KEY,
-            mask_json TEXT NOT NULL,
-            sample_count INTEGER DEFAULT 0,
-            dynamic_nodes_count INTEGER DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (signature_hash) REFERENCES layout_signatures(signature_hash) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_layout_masks_signature ON layout_masks(signature_hash);
-    `);
-
-    // Fetch recent HTML responses
-    // Join with urls to get the URL string
-    const query = `
-        SELECT hr.id, u.url, cs.content_blob, cs.compression_type_id
-        FROM http_responses hr
-        JOIN urls u ON u.id = hr.url_id
-        JOIN content_storage cs ON cs.http_response_id = hr.id
-        WHERE cs.content_blob IS NOT NULL
-        ORDER BY hr.fetched_at DESC
-        LIMIT ?
-    `;
+    // Build query with optional domain filter
+    let query;
+    let queryParams;
+    
+    if (domain) {
+        query = `
+            SELECT hr.id, u.url, cs.content_blob, cs.compression_type_id
+            FROM http_responses hr
+            JOIN urls u ON u.id = hr.url_id
+            JOIN content_storage cs ON cs.http_response_id = hr.id
+            WHERE cs.content_blob IS NOT NULL
+              AND u.url LIKE ?
+            ORDER BY hr.fetched_at DESC
+            LIMIT ?
+        `;
+        queryParams = [`%${domain}%`, limit];
+    } else {
+        query = `
+            SELECT hr.id, u.url, cs.content_blob, cs.compression_type_id
+            FROM http_responses hr
+            JOIN urls u ON u.id = hr.url_id
+            JOIN content_storage cs ON cs.http_response_id = hr.id
+            WHERE cs.content_blob IS NOT NULL
+            ORDER BY hr.fetched_at DESC
+            LIMIT ?
+        `;
+        queryParams = [limit];
+    }
 
     const stmt = db.prepare(query);
-    const rows = stmt.all(limit);
+    const rows = stmt.all(...queryParams);
 
-    console.log(`Found ${rows.length} pages to analyze.`);
+    if (!jsonOutput) {
+        console.log(`Found ${rows.length} pages to analyze.${domain ? ` (domain: ${domain})` : ''}`);
+    }
 
     const upsertStmt = db.prepare(`
         INSERT INTO layout_signatures (signature_hash, level, signature, first_seen_url, seen_count, last_seen_at)
@@ -125,7 +191,9 @@ async function main() {
         }
     })();
 
-    console.log(`Processed ${processed} pages.`);
+    if (!jsonOutput) {
+        console.log(`Processed ${processed} pages.`);
+    }
     
     // Report top clusters
     const topL2 = db.prepare(`
@@ -133,13 +201,34 @@ async function main() {
         FROM layout_signatures 
         WHERE level = 2 
         ORDER BY seen_count DESC 
-        LIMIT 5
+        LIMIT 10
     `).all();
 
-    console.log('\nTop 5 Layout Clusters (Level 2):');
-    topL2.forEach(r => {
-        console.log(`- Hash: ${r.signature_hash} | Count: ${r.seen_count} | Example: ${r.first_seen_url}`);
-    });
+    // Get total signature counts
+    const totalL1 = db.prepare(`SELECT COUNT(*) as cnt FROM layout_signatures WHERE level = 1`).get().cnt;
+    const totalL2 = db.prepare(`SELECT COUNT(*) as cnt FROM layout_signatures WHERE level = 2`).get().cnt;
+
+    if (jsonOutput) {
+        // JSON output for automation
+        const result = {
+            processed,
+            domain: domain || null,
+            limit,
+            totals: { l1Signatures: totalL1, l2Signatures: totalL2 },
+            topClusters: topL2.map(r => ({
+                hash: r.signature_hash,
+                count: r.seen_count,
+                exampleUrl: r.first_seen_url
+            }))
+        };
+        console.log(JSON.stringify(result, null, 2));
+    } else {
+        console.log(`\nSignature totals: L1=${totalL1}, L2=${totalL2}`);
+        console.log('\nTop 10 Layout Clusters (Level 2):');
+        topL2.forEach((r, i) => {
+            console.log(`${i + 1}. Hash: ${r.signature_hash} | Count: ${r.seen_count} | Example: ${r.first_seen_url}`);
+        });
+    }
 
     if (maskMode) {
         const layoutMasks = createLayoutMasksQueries(db);
@@ -148,7 +237,9 @@ async function main() {
             .sort((a, b) => b[1].htmls.length - a[1].htmls.length)
             .slice(0, maskLimit);
 
-        console.log(`\nGenerating masks for ${candidates.length} signatures (limit ${maskLimit}, samples up to ${maskSamples}).`);
+        if (!jsonOutput) {
+            console.log(`\nGenerating masks for ${candidates.length} signatures (limit ${maskLimit}, samples up to ${maskSamples}).`);
+        }
 
         for (const [sigHash, bucket] of candidates) {
             try {
@@ -160,12 +251,18 @@ async function main() {
                     sample_count: bucket.htmls.length,
                     dynamic_nodes_count: mask.dynamicPaths.length
                 });
-                console.log(`- Mask stored for ${sigHash}: samples=${bucket.htmls.length}, dynamic=${mask.dynamicPaths.length}`);
+                if (!jsonOutput) {
+                    console.log(`- Mask stored for ${sigHash}: samples=${bucket.htmls.length}, dynamic=${mask.dynamicPaths.length}`);
+                }
             } catch (e) {
-                console.error(`Mask generation failed for ${sigHash}: ${e.message}`);
+                if (!jsonOutput) {
+                    console.error(`Mask generation failed for ${sigHash}: ${e.message}`);
+                }
             }
         }
     }
+
+    db.close();
 }
 
 main().catch(console.error);

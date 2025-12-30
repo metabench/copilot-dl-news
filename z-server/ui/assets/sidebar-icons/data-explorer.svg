@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2e8b57"/>
+      <stop offset="1" stop-color="#50c878"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <rect x="2" y="2" width="36" height="36" rx="8" fill="rgba(80,200,120,0.12)" stroke="rgba(80,200,120,0.4)" stroke-width="1.5"/>
+  
+  <!-- Grid lines -->
+  <path d="M 8 14 H 32" stroke="rgba(183,255,208,0.25)" stroke-width="1"/>
+  <path d="M 8 22 H 32" stroke="rgba(183,255,208,0.18)" stroke-width="1"/>
+  <path d="M 8 30 H 32" stroke="rgba(183,255,208,0.12)" stroke-width="1"/>
+  
+  <!-- Chart line with glow -->
+  <g filter="url(#glow)">
+    <circle cx="12" cy="22" r="2.5" fill="#50c878"/>
+    <circle cx="20" cy="28" r="2.5" fill="#50c878"/>
+    <circle cx="28" cy="14" r="2.5" fill="#50c878"/>
+    <path d="M 12 22 L 20 28 L 28 14" fill="none" stroke="url(#accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

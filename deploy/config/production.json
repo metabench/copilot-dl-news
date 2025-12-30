@@ -1,0 +1,100 @@
+{
+  "$schema": "../../config/schema/crawl-runner.schema.json",
+  "$comment": "Production configuration - optimized for reliability and throughput",
+  
+  "environment": "production",
+  
+  "queue": {
+    "backend": "postgres",
+    "connectionString": "${DATABASE_URL}",
+    "tableName": "crawl_queue",
+    "pollIntervalMs": 1000,
+    "visibilityTimeoutMs": 300000,
+    "maxRetries": 5,
+    "retryBackoffMs": [1000, 5000, 15000, 60000, 300000]
+  },
+  
+  "crawler": {
+    "maxConcurrentPages": 10,
+    "maxPagesPerDomain": 500,
+    "maxTotalPages": 10000,
+    "maxDepth": 5,
+    "respectRobotsTxt": true,
+    "userAgent": "NewsCrawler/1.0 (+https://example.com/crawler)",
+    
+    "timeouts": {
+      "pageLoadMs": 60000,
+      "navigationMs": 45000,
+      "resourceMs": 30000,
+      "idleMs": 5000
+    },
+    
+    "rateLimit": {
+      "requestsPerSecond": 2,
+      "burstSize": 5,
+      "perDomainDelayMs": 2000
+    },
+    
+    "retry": {
+      "maxAttempts": 3,
+      "initialDelayMs": 1000,
+      "maxDelayMs": 30000,
+      "backoffMultiplier": 2,
+      "retryableStatusCodes": [408, 429, 500, 502, 503, 504]
+    }
+  },
+  
+  "proxy": {
+    "enabled": true,
+    "rotationStrategy": "round-robin",
+    "healthCheckIntervalMs": 60000,
+    "configPath": "/app/config/proxies.json"
+  },
+  
+  "puppeteer": {
+    "enabled": true,
+    "fallbackThreshold": 2,
+    "executablePath": "/usr/bin/chromium-browser",
+    "args": [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--single-process"
+    ],
+    "maxInstances": 3,
+    "pagePoolSize": 5
+  },
+  
+  "storage": {
+    "backend": "postgres",
+    "connectionString": "${DATABASE_URL}",
+    "batchSize": 100,
+    "flushIntervalMs": 5000
+  },
+  
+  "telemetry": {
+    "enabled": true,
+    "metricsIntervalMs": 10000,
+    "logLevel": "info",
+    "structured": true,
+    "destinations": ["stdout", "database"]
+  },
+  
+  "resilience": {
+    "circuitBreaker": {
+      "enabled": true,
+      "failureThreshold": 5,
+      "resetTimeoutMs": 60000
+    },
+    "bulkhead": {
+      "enabled": true,
+      "maxConcurrent": 20
+    }
+  },
+  
+  "gracefulShutdown": {
+    "timeoutMs": 60000,
+    "drainQueuedWork": true
+  }
+}

@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520">
+  <defs>
+    <linearGradient id="leather" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#faf9f7"/>
+      <stop offset="50%" stop-color="#f5f3ef"/>
+      <stop offset="100%" stop-color="#ebe8e2"/>
+    </linearGradient>
+    <linearGradient id="obsidian" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2d2d2d"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c9a962"/>
+      <stop offset="100%" stop-color="#e8d5a3"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-opacity="0.25"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#c9a962"/>
+    </marker>
+  </defs>
+  
+  <!-- Leather Background -->
+  <rect width="800" height="520" fill="url(#leather)"/>
+  
+  <!-- Title -->
+  <text x="400" y="35" text-anchor="middle" font-family="Georgia, serif" font-size="20" fill="#2d2d2d">Webhook System UI Architecture</text>
+  <line x1="200" y1="45" x2="600" y2="45" stroke="url(#gold)" stroke-width="2"/>
+  
+  <!-- Event Sources Panel -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="60" width="380" height="70" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="230" y="82" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#c9a962">EVENT SOURCES</text>
+    <rect x="55" y="95" width="105" height="28" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="107" y="114" text-anchor="middle" font-family="Arial" font-size="9" fill="#e8d5a3">Crawler Events</text>
+    <rect x="170" y="95" width="105" height="28" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="222" y="114" text-anchor="middle" font-family="Arial" font-size="9" fill="#e8d5a3">Article Events</text>
+    <rect x="285" y="95" width="105" height="28" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="337" y="114" text-anchor="middle" font-family="Arial" font-size="9" fill="#e8d5a3">Alert Events</text>
+  </g>
+  
+  <!-- Integration Services Panel -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="145" width="380" height="70" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="230" y="167" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#c9a962">INTEGRATION SERVICES</text>
+    <rect x="55" y="180" width="110" height="28" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="110" y="199" text-anchor="middle" font-family="Arial" font-size="9" fill="#e8d5a3">WebhookService</text>
+    <rect x="175" y="180" width="110" height="28" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="230" y="199" text-anchor="middle" font-family="Arial" font-size="9" fill="#e8d5a3">WebhookDelivery</text>
+    <rect x="295" y="180" width="110" height="28" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="350" y="199" text-anchor="middle" font-family="Arial" font-size="9" fill="#e8d5a3">IntegrationMgr</text>
+  </g>
+  
+  <!-- Database Panel -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="230" width="380" height="65" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="230" y="252" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#c9a962">DATABASE</text>
+    <rect x="55" y="265" width="165" height="25" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="137" y="282" text-anchor="middle" font-family="Arial" font-size="10" fill="#e8d5a3">webhook_endpoints</text>
+    <rect x="235" y="265" width="165" height="25" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="317" y="282" text-anchor="middle" font-family="Arial" font-size="10" fill="#e8d5a3">webhook_deliveries</text>
+  </g>
+  
+  <!-- Admin API Panel -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="310" width="380" height="45" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="230" y="338" text-anchor="middle" font-family="Arial" font-size="11" fill="#e8d5a3">/api/webhooks/*</text>
+  </g>
+  
+  <!-- UI Components Panel -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="370" width="380" height="100" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="230" y="392" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#c9a962">UI COMPONENTS</text>
+    <rect x="55" y="405" width="100" height="28" rx="5" fill="#3a3a3a" stroke="#4a9eff"/>
+    <text x="105" y="424" text-anchor="middle" font-family="Arial" font-size="9" fill="#4a9eff">Dashboard</text>
+    <rect x="165" y="405" width="100" height="28" rx="5" fill="#3a3a3a" stroke="#4a9eff"/>
+    <text x="215" y="424" text-anchor="middle" font-family="Arial" font-size="9" fill="#4a9eff">Endpoint Form</text>
+    <rect x="275" y="405" width="100" height="28" rx="5" fill="#3a3a3a" stroke="#4a9eff"/>
+    <text x="325" y="424" text-anchor="middle" font-family="Arial" font-size="9" fill="#4a9eff">Delivery Log</text>
+    <rect x="55" y="438" width="100" height="28" rx="5" fill="#3a3a3a" stroke="#2ecc71"/>
+    <text x="105" y="457" text-anchor="middle" font-family="Arial" font-size="9" fill="#2ecc71">Tester</text>
+    <rect x="165" y="438" width="100" height="28" rx="5" fill="#3a3a3a" stroke="#c9a962"/>
+    <text x="215" y="457" text-anchor="middle" font-family="Arial" font-size="9" fill="#e8d5a3">Analytics</text>
+  </g>
+  
+  <!-- Event Types Panel -->
+  <g filter="url(#shadow)">
+    <rect x="450" y="60" width="310" height="150" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="605" y="85" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#c9a962">EVENT TYPES</text>
+    <text x="475" y="110" font-family="monospace" font-size="10" fill="#e8d5a3">article.created</text>
+    <text x="475" y="130" font-family="monospace" font-size="10" fill="#e8d5a3">article.updated</text>
+    <text x="475" y="150" font-family="monospace" font-size="10" fill="#4a9eff">crawl.started</text>
+    <text x="475" y="170" font-family="monospace" font-size="10" fill="#2ecc71">crawl.completed</text>
+    <text x="475" y="190" font-family="monospace" font-size="10" fill="#e74c3c">crawl.error</text>
+    <text x="620" y="130" font-family="monospace" font-size="10" fill="#c9a962">alert.triggered</text>
+    <text x="620" y="150" font-family="monospace" font-size="10" fill="#c9a962">export.ready</text>
+    <text x="620" y="170" font-family="monospace" font-size="10" fill="#c9a962">analysis.complete</text>
+  </g>
+  
+  <!-- Delivery Status Panel -->
+  <g filter="url(#shadow)">
+    <rect x="450" y="225" width="310" height="95" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="605" y="250" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#c9a962">DELIVERY STATUS</text>
+    <rect x="475" y="265" width="90" height="25" rx="4" fill="#2d4a3a" stroke="#2ecc71"/>
+    <text x="520" y="282" text-anchor="middle" font-family="Arial" font-size="10" fill="#2ecc71">✓ delivered</text>
+    <rect x="575" y="265" width="90" height="25" rx="4" fill="#3a3a2d" stroke="#c9a962"/>
+    <text x="620" y="282" text-anchor="middle" font-family="Arial" font-size="10" fill="#e8d5a3">↻ retrying</text>
+    <rect x="675" y="265" width="70" height="25" rx="4" fill="#4a2a2a" stroke="#e74c3c"/>
+    <text x="710" y="282" text-anchor="middle" font-family="Arial" font-size="10" fill="#e74c3c">✗ failed</text>
+  </g>
+  
+  <!-- External Endpoint Panel -->
+  <g filter="url(#shadow)">
+    <rect x="450" y="335" width="310" height="85" rx="8" fill="url(#obsidian)" stroke="#2ecc71" stroke-width="1.5"/>
+    <text x="605" y="360" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#2ecc71">EXTERNAL ENDPOINT</text>
+    <text x="605" y="385" text-anchor="middle" font-family="monospace" font-size="10" fill="#e8d5a3">https://your-app.com/webhook</text>
+    <text x="605" y="408" text-anchor="middle" font-family="Arial" font-size="10" fill="#888">HMAC-SHA256 Signature</text>
+  </g>
+  
+  <!-- Arrows -->
+  <line x1="230" y1="130" x2="230" y2="145" stroke="#c9a962" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="230" y1="215" x2="230" y2="230" stroke="#c9a962" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="230" y1="295" x2="230" y2="310" stroke="#c9a962" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="230" y1="355" x2="230" y2="370" stroke="#c9a962" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="605" y1="320" x2="605" y2="335" stroke="#2ecc71" stroke-width="2" marker-end="url(#arrow)"/>
+</svg>

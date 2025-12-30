@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420">
+  <g id="storage-schema">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8 8 0 0"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">STORAGE SCHEMA</text>
+    
+    <!-- layout_signatures table -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="150" fill="#1a2f2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">layout_signatures</text>
+      <text x="340" y="18" font-size="8" fill="#888">~150B/row</text>
+      
+      <text x="12" y="38" font-size="9" fill="#888" font-family="monospace">id            INTEGER PRIMARY KEY</text>
+      <text x="12" y="52" font-size="9" fill="#888" font-family="monospace">domain_id     INTEGER → domains</text>
+      <text x="12" y="66" font-size="9" fill="#888" font-family="monospace">l1_hash       BLOB(8)  -- tag sequence</text>
+      <text x="12" y="80" font-size="9" fill="#888" font-family="monospace">l2_hash       BLOB(8)  -- tag+depth</text>
+      <text x="12" y="94" font-size="9" fill="#888" font-family="monospace">semantic_bits BLOB(16) -- class hints</text>
+      <text x="12" y="108" font-size="9" fill="#888" font-family="monospace">metrics       BLOB(8)  -- depth/breadth</text>
+      <text x="12" y="122" font-size="9" fill="#888" font-family="monospace">minhash       BLOB(64) -- LSH shingles</text>
+      <text x="12" y="136" font-size="9" fill="#888" font-family="monospace">cluster_id    INTEGER → layout_clusters</text>
+    </g>
+    
+    <!-- layout_clusters table -->
+    <g transform="translate(15, 215)">
+      <rect x="0" y="0" width="370" height="95" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#a78bfa">layout_clusters</text>
+      <text x="340" y="18" font-size="8" fill="#888">~200B/row</text>
+      
+      <text x="12" y="38" font-size="9" fill="#888" font-family="monospace">id            INTEGER PRIMARY KEY</text>
+      <text x="12" y="52" font-size="9" fill="#888" font-family="monospace">domain_id     INTEGER → domains</text>
+      <text x="12" y="66" font-size="9" fill="#888" font-family="monospace">centroid      BLOB(104) -- avg fingerprint</text>
+      <text x="12" y="80" font-size="9" fill="#888" font-family="monospace">member_count  INTEGER</text>
+    </g>
+    
+    <!-- layout_templates table -->
+    <g transform="translate(15, 320)">
+      <rect x="0" y="0" width="370" height="85" fill="#3a3a1a" rx="6" stroke="#fbbf24" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#fbbf24">layout_templates (future)</text>
+      <text x="340" y="18" font-size="8" fill="#888">~2KB/row</text>
+      
+      <text x="12" y="38" font-size="9" fill="#888" font-family="monospace">id            INTEGER PRIMARY KEY</text>
+      <text x="12" y="52" font-size="9" fill="#888" font-family="monospace">cluster_id    INTEGER → layout_clusters</text>
+      <text x="12" y="66" font-size="9" fill="#888" font-family="monospace">skeleton_gz   BLOB     -- compressed tree</text>
+      <text x="12" y="80" font-size="9" fill="#888" font-family="monospace">extraction_map JSON    -- content XPaths</text>
+    </g>
+  </g>
+</svg>

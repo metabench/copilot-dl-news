@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 180">
+  <g id="topical-power">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">TOPICAL SIMILARITY: WHAT 512 BITS ENABLES</text>
+    
+    <!-- Example scenario -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="360" height="115" fill="#444" rx="6"/>
+      <text x="180" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">Example: Breaking News Event</text>
+      
+      <text x="15" y="45" font-size="9" fill="#f0ede8">Story: "Major earthquake hits California"</text>
+      <text x="15" y="62" font-size="8" fill="#aaa">Sources: BBC, CNN, Reuters, AP, local papers</text>
+      
+      <text x="15" y="82" font-size="9" fill="#60a5fa">Structural band: Different (5 sources)</text>
+      <text x="15" y="96" font-size="9" fill="#a78bfa">Content band: Similar (shared facts)</text>
+      <text x="15" y="110" font-size="9" fill="#34d399">Semantic band: Identical (same event)</text>
+    </g>
+    
+    <!-- Band combination -->
+    <g transform="translate(410, 50)">
+      <rect x="0" y="0" width="360" height="115" fill="#2d2d2d" rx="6"/>
+      <text x="180" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">Multi-Band Query Power</text>
+      
+      <text x="15" y="45" font-size="9" fill="#aaa">"Find all coverage of this event":</text>
+      <text x="25" y="60" font-size="8" fill="#34d399">→ Match semantic band (ignore structure)</text>
+      
+      <text x="15" y="80" font-size="9" fill="#aaa">"Find exact copies":</text>
+      <text x="25" y="95" font-size="8" fill="#34d399">→ Match structural + content bands</text>
+      
+      <text x="15" y="112" font-size="8" fill="#888">Band mask controls which to compare</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 320">
+  <g id="conclusion">
+    <!-- Panel Header with Gold -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8"/>
+    <rect x="0" y="40" width="400" height="3" fill="#c9a962"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#c9a962" letter-spacing="2">★ RECOMMENDATION ★</text>
+    
+    <!-- Main Recommendation -->
+    <g transform="translate(15, 58)">
+      <rect x="0" y="0" width="370" height="75" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="2"/>
+      <text x="185" y="24" text-anchor="middle" font-size="14" font-weight="700" fill="#34d399">HYBRID APPROACH</text>
+      <text x="185" y="44" text-anchor="middle" font-size="11" fill="#f0ede8">Hash (L1) + MinHash (LSH) + Leader Clustering</text>
+      <text x="185" y="62" text-anchor="middle" font-size="9" fill="#aaa">Best of all worlds: exact + fuzzy + incremental</text>
+    </g>
+    
+    <!-- 4 Pillars with better styling -->
+    <g transform="translate(15, 143)">
+      <rect x="0" y="0" width="85" height="55" fill="#1e3a5f" rx="4" stroke="#3b82f6" stroke-width="1"/>
+      <text x="42" y="16" text-anchor="middle" font-size="12" fill="#60a5fa">✓</text>
+      <text x="42" y="32" text-anchor="middle" font-size="9" font-weight="600" fill="#f0ede8">Hash L1</text>
+      <text x="42" y="46" text-anchor="middle" font-size="8" fill="#888">O(1) lookup</text>
+      
+      <rect x="95" y="0" width="85" height="55" fill="#2d1f4a" rx="4" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="137" y="16" text-anchor="middle" font-size="12" fill="#a78bfa">✓</text>
+      <text x="137" y="32" text-anchor="middle" font-size="9" font-weight="600" fill="#f0ede8">MinHash</text>
+      <text x="137" y="46" text-anchor="middle" font-size="8" fill="#888">similarity</text>
+      
+      <rect x="190" y="0" width="85" height="55" fill="#1a3a2a" rx="4" stroke="#10b981" stroke-width="1"/>
+      <text x="232" y="16" text-anchor="middle" font-size="12" fill="#34d399">✓</text>
+      <text x="232" y="32" text-anchor="middle" font-size="9" font-weight="600" fill="#f0ede8">Leader</text>
+      <text x="232" y="46" text-anchor="middle" font-size="8" fill="#888">online O(K)</text>
+      
+      <rect x="285" y="0" width="85" height="55" fill="#3a3a1a" rx="4" stroke="#fbbf24" stroke-width="1"/>
+      <text x="327" y="16" text-anchor="middle" font-size="12" fill="#fbbf24">✓</text>
+      <text x="327" y="32" text-anchor="middle" font-size="9" font-weight="600" fill="#f0ede8">Domain</text>
+      <text x="327" y="46" text-anchor="middle" font-size="8" fill="#888">100× faster</text>
+    </g>
+    
+    <!-- Performance Stats with larger numbers -->
+    <g transform="translate(15, 213)">
+      <rect x="0" y="0" width="370" height="90" fill="#444" rx="6"/>
+      <text x="185" y="18" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">EXPECTED PERFORMANCE AT SCALE</text>
+      
+      <rect x="15" y="30" width="105" height="48" fill="#1a3a2a" rx="4"/>
+      <text x="67" y="48" text-anchor="middle" font-size="8" fill="#888">Query Time</text>
+      <text x="67" y="68" text-anchor="middle" font-size="18" font-weight="700" fill="#34d399">&lt;1ms</text>
+      
+      <rect x="132" y="30" width="105" height="48" fill="#1a3a2a" rx="4"/>
+      <text x="184" y="48" text-anchor="middle" font-size="8" fill="#888">Storage/Page</text>
+      <text x="184" y="68" text-anchor="middle" font-size="18" font-weight="700" fill="#34d399">~1B</text>
+      
+      <rect x="250" y="30" width="105" height="48" fill="#1a3a2a" rx="4"/>
+      <text x="302" y="48" text-anchor="middle" font-size="8" fill="#888">Recall</text>
+      <text x="302" y="68" text-anchor="middle" font-size="18" font-weight="700" fill="#34d399">&gt;98%</text>
+    </g>
+  </g>
+</svg>

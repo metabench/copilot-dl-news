@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 145">
+  <g id="conclusion">
+    <rect x="0" y="0" width="800" height="38" fill="#c9a962" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="#2d2d2d">SUMMARY: SIGNATURE SIZE SELECTION</text>
+    
+    <!-- Three columns -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="230" height="80" fill="#2d2d2d" rx="6"/>
+      <text x="115" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#60a5fa">64-bit: Fast + Small</text>
+      <text x="15" y="42" font-size="9" fill="#f0ede8">8B/page, 10M/sec</text>
+      <text x="15" y="58" font-size="9" fill="#aaa">Best for: pure dedup</text>
+      <text x="15" y="74" font-size="9" fill="#888">Threshold: ≤10 bits</text>
+    </g>
+    
+    <g transform="translate(280, 50)">
+      <rect x="0" y="0" width="230" height="80" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="2"/>
+      <text x="115" y="22" text-anchor="middle" font-size="10" font-weight="700" fill="#fbbf24">128-bit: RECOMMENDED</text>
+      <text x="15" y="42" font-size="9" fill="#f0ede8">16B/page, 5.6M/sec</text>
+      <text x="15" y="58" font-size="9" fill="#f0ede8">Best for: structure + content</text>
+      <text x="15" y="74" font-size="9" fill="#34d399">Threshold: ≤20 bits</text>
+    </g>
+    
+    <g transform="translate(530, 50)">
+      <rect x="0" y="0" width="240" height="80" fill="#2d2d2d" rx="6"/>
+      <text x="120" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#34d399">256-bit: High Quality</text>
+      <text x="15" y="42" font-size="9" fill="#f0ede8">32B/page, 2.9M/sec</text>
+      <text x="15" y="58" font-size="9" fill="#aaa">Best for: topical similarity</text>
+      <text x="15" y="74" font-size="9" fill="#888">Threshold: ≤40 bits</text>
+    </g>
+  </g>
+</svg>

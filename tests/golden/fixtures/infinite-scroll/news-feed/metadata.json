@@ -1,0 +1,24 @@
+{
+  "url": "https://infinite-news.example.com/feed",
+  "capturedAt": "2025-12-20T14:00:00Z",
+  "category": "infinite-scroll",
+  "edgeCaseType": "lazy-load-feed",
+  "expected": {
+    "pageType": "feed",
+    "articlesVisibleInitially": 3,
+    "totalArticlesAvailable": 500,
+    "articleTitles": [
+      "Markets Rally on Positive Economic Data",
+      "Climate Summit Reaches Historic Agreement",
+      "Tech Giant Announces Revolutionary Product"
+    ],
+    "hasMoreContent": true
+  },
+  "flags": {
+    "isInfiniteScroll": true,
+    "usesIntersectionObserver": true,
+    "hasPaginationMetadata": true,
+    "dynamicContentInjection": true
+  },
+  "notes": "Infinite scroll news feed. Only initial 3 articles visible in HTML. Tests that crawler captures visible content without attempting to scroll. Pagination metadata in embedded JSON shows 500 total stories across 50 pages."
+}

@@ -20,10 +20,19 @@ contextBridge.exposeInMainWorld('crawlAPI', {
   // Telemetry
   connectTelemetry: (options) => ipcRenderer.invoke('connect-telemetry', options),
   getTelemetryInfo: () => ipcRenderer.invoke('get-telemetry-info'),
+
+  // Place hubs
+  listPlaceHubs: (options) => ipcRenderer.invoke('list-place-hubs', options),
+  guessPlaceHubs: (options) => ipcRenderer.invoke('guess-place-hubs', options),
   
   // Window control
   closeWidget: () => ipcRenderer.invoke('close-widget'),
   minimizeWidget: () => ipcRenderer.invoke('minimize-widget'),
+
+  // Tools
+  openDataExplorer: () => ipcRenderer.invoke('open-data-explorer'),
+  openDecisionTrees: () => ipcRenderer.invoke('open-decision-trees'),
+  openTelemetryHealth: () => ipcRenderer.invoke('open-telemetry-health'),
   
   // Event listeners
   onCrawlLog: (callback) => {

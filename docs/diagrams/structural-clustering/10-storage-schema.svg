@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480">
+  <g id="storage-schema">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">STORAGE SCHEMA</text>
+    
+    <!-- Existing Table -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="130" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">layout_signatures (existing)</text>
+      <text x="330" y="18" font-size="8" fill="#888">~100B/row</text>
+      
+      <text x="12" y="38" font-size="9" fill="#888" font-family="monospace">signature_hash TEXT PRIMARY KEY</text>
+      <text x="12" y="52" font-size="9" fill="#888" font-family="monospace">level          INTEGER  -- 1 or 2</text>
+      <text x="12" y="66" font-size="9" fill="#888" font-family="monospace">signature      TEXT     -- serialized tree</text>
+      <text x="12" y="80" font-size="9" fill="#888" font-family="monospace">first_seen_url TEXT</text>
+      <text x="12" y="94" font-size="9" fill="#888" font-family="monospace">seen_count     INTEGER DEFAULT 1</text>
+      <text x="12" y="108" font-size="9" fill="#888" font-family="monospace">created_at     DATETIME</text>
+      <text x="12" y="122" font-size="9" fill="#888" font-family="monospace">last_seen_at   DATETIME</text>
+    </g>
+    
+    <!-- New Extension -->
+    <g transform="translate(15, 195)">
+      <rect x="0" y="0" width="370" height="130" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#a78bfa">layout_signatures_ext (new)</text>
+      <text x="330" y="18" font-size="8" fill="#888">~150B/row</text>
+      
+      <text x="12" y="38" font-size="9" fill="#888" font-family="monospace">signature_hash TEXT PRIMARY KEY</text>
+      <text x="12" y="52" font-size="9" fill="#888" font-family="monospace">minhash        BLOB(64)  -- LSH signature</text>
+      <text x="12" y="66" font-size="9" fill="#888" font-family="monospace">feature_bits   INTEGER   -- semantic flags</text>
+      <text x="12" y="80" font-size="9" fill="#888" font-family="monospace">depth_max      INTEGER   -- DOM depth</text>
+      <text x="12" y="94" font-size="9" fill="#888" font-family="monospace">node_count     INTEGER   -- total nodes</text>
+      <text x="12" y="108" font-size="9" fill="#888" font-family="monospace">cluster_id     INTEGER   -- assigned cluster</text>
+      <text x="12" y="122" font-size="9" fill="#666" font-family="monospace">FOREIGN KEY → layout_signatures</text>
+    </g>
+    
+    <!-- Cluster Table -->
+    <g transform="translate(15, 335)">
+      <rect x="0" y="0" width="370" height="130" fill="#3a3a1a" rx="6" stroke="#fbbf24" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#fbbf24">layout_clusters (new)</text>
+      <text x="330" y="18" font-size="8" fill="#888">~200B/row</text>
+      
+      <text x="12" y="38" font-size="9" fill="#888" font-family="monospace">id             INTEGER PRIMARY KEY</text>
+      <text x="12" y="52" font-size="9" fill="#888" font-family="monospace">domain_id      INTEGER  -- domain scope</text>
+      <text x="12" y="66" font-size="9" fill="#888" font-family="monospace">centroid_hash  BLOB(16) -- representative</text>
+      <text x="12" y="80" font-size="9" fill="#888" font-family="monospace">centroid_mh    BLOB(64) -- MinHash centroid</text>
+      <text x="12" y="94" font-size="9" fill="#888" font-family="monospace">member_count   INTEGER</text>
+      <text x="12" y="108" font-size="9" fill="#888" font-family="monospace">leader_url     TEXT     -- first member</text>
+      <text x="12" y="122" font-size="9" fill="#888" font-family="monospace">created_at     DATETIME</text>
+    </g>
+  </g>
+</svg>

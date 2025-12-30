@@ -67,6 +67,67 @@ class ProgressModel extends EventEmitter {
     this._stallThresholdMs = options.stallThresholdMs ?? 30000;
     this._rampThreshold = options.rampThreshold ?? 0.1; // 10% of target
     this._coolThreshold = options.coolThreshold ?? 0.9; // 90% of target
+
+    // Last known state for change detection
+    this._lastState = {
+      completion: 0,
+      phase: ProgressModel.PHASES.INITIALIZING,
+      eta: null,
+      healthScore: 100
+    };
+
+    // Auto-update on context events
+    if (this.context && typeof this.context.on === 'function') {
+      this.context.on('stats:change', () => this.update());
+      this.context.on('url:visited', () => this.update());
+      this.context.on('finished', () => this.update());
+    }
+  }
+
+  /**
+   * Update internal state and emit change events if metrics shifted.
+   */
+  update() {
+    const current = {
+      completion: this.completion,
+      phase: this.phase,
+      eta: this.eta,
+      healthScore: this.healthScore
+    };
+
+    const changes = {};
+    let hasChanged = false;
+
+    if (Math.abs(current.completion - this._lastState.completion) >= 0.1) {
+      changes.completion = { old: this._lastState.completion, new: current.completion };
+      hasChanged = true;
+    }
+
+    if (current.phase !== this._lastState.phase) {
+      changes.phase = { old: this._lastState.phase, new: current.phase };
+      hasChanged = true;
+    }
+
+    if (current.eta !== this._lastState.eta) {
+      changes.eta = { old: this._lastState.eta, new: current.eta };
+      hasChanged = true;
+    }
+
+    if (current.healthScore !== this._lastState.healthScore) {
+      changes.healthScore = { old: this._lastState.healthScore, new: current.healthScore };
+      hasChanged = true;
+    }
+
+    if (hasChanged) {
+      this._lastState = current;
+      this.emit('change', changes);
+
+      if (changes.phase) {
+        this.emit('phase:change', changes.phase);
+      }
+    }
+
+    return hasChanged;
   }
 
   // ============================================================
@@ -475,6 +536,13 @@ class ProgressModel extends EventEmitter {
   // ============================================================
   // SERIALIZATION
   // ============================================================
+
+  /**
+   * Get summary snapshot.
+   */
+  getSnapshot() {
+    return this.toJSON();
+  }
 
   /**
    * Get summary snapshot.

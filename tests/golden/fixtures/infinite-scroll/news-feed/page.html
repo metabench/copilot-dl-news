@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Latest Stories | Infinite News</title>
+  <meta property="article:published_time" content="2025-12-20T12:00:00Z">
+</head>
+<body>
+  <header>
+    <nav>Infinite News | Home | Trending | Categories</nav>
+  </header>
+  
+  <main class="feed-container">
+    <h1>Today's Top Stories</h1>
+    
+    <!-- Initial batch of articles loaded -->
+    <article class="story-card" data-story-id="1">
+      <h2><a href="/story/1">Markets Rally on Positive Economic Data</a></h2>
+      <p class="excerpt">Stock indices reached new highs today following better-than-expected employment figures...</p>
+      <span class="timestamp">2 hours ago</span>
+    </article>
+    
+    <article class="story-card" data-story-id="2">
+      <h2><a href="/story/2">Climate Summit Reaches Historic Agreement</a></h2>
+      <p class="excerpt">World leaders have committed to ambitious new emissions targets in breakthrough negotiations...</p>
+      <span class="timestamp">4 hours ago</span>
+    </article>
+    
+    <article class="story-card" data-story-id="3">
+      <h2><a href="/story/3">Tech Giant Announces Revolutionary Product</a></h2>
+      <p class="excerpt">The new device promises to transform how people interact with digital content...</p>
+      <span class="timestamp">6 hours ago</span>
+    </article>
+    
+    <!-- Lazy load trigger zone -->
+    <div class="infinite-scroll-trigger" id="load-more-trigger">
+      <div class="loading-spinner" style="display: none;">
+        <span class="spinner"></span>
+        <span>Loading more stories...</span>
+      </div>
+    </div>
+    
+    <!-- Placeholder for dynamically loaded content -->
+    <div id="dynamic-content">
+      <!-- More articles would be injected here via JavaScript -->
+    </div>
+    
+    <!-- Hidden data for next page -->
+    <script type="application/json" id="pagination-data">
+    {
+      "currentPage": 1,
+      "totalPages": 50,
+      "nextCursor": "eyJwYWdlIjoyfQ==",
+      "hasMore": true,
+      "storiesLoaded": 3,
+      "totalStories": 500
+    }
+    </script>
+  </main>
+  
+  <footer>
+    <div class="copyright">© 2025 Infinite News Network</div>
+  </footer>
+  
+  <script>
+    // Infinite scroll handler
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          loadMoreStories();
+        }
+      });
+    });
+    
+    function loadMoreStories() {
+      // Would fetch and append more articles
+      console.log('Loading more stories...');
+    }
+    
+    observer.observe(document.getElementById('load-more-trigger'));
+  </script>
+</body>
+</html>

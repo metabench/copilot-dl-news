@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 450">
+  <g id="index-structures">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">INDEX STRUCTURES</text>
+    
+    <!-- B+ Tree -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="95" fill="#1e3a5f" rx="6" stroke="#3b82f6" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#60a5fa">B+ TREE ON HASH</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">SQLite's default index on signature_hash</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">Query: WHERE signature_hash = ? → O(log N)</text>
+      <text x="12" y="66" font-size="9" fill="#aaa">Range: WHERE signature_hash BETWEEN → O(log N + k)</text>
+      <rect x="12" y="74" width="70" height="14" rx="4" fill="#10b981"/>
+      <text x="47" y="85" text-anchor="middle" font-size="8" font-weight="500" fill="white">ALREADY HAVE</text>
+    </g>
+    
+    <!-- Inverted Index -->
+    <g transform="translate(15, 160)">
+      <rect x="0" y="0" width="370" height="95" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#a78bfa">INVERTED INDEX (LSH Bands)</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">band_id → [page_id, page_id, ...]</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">Query: pages sharing ANY band = candidates</text>
+      <text x="12" y="66" font-size="9" fill="#aaa">Storage: band (8B) + page_id (8B) × entries</text>
+      <rect x="12" y="74" width="100" height="14" rx="4" fill="#fbbf24"/>
+      <text x="62" y="85" text-anchor="middle" font-size="8" font-weight="500" fill="#1a1a1a">RECOMMENDED NEW</text>
+    </g>
+    
+    <!-- Bitmap Index -->
+    <g transform="translate(15, 265)">
+      <rect x="0" y="0" width="370" height="95" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#888">BITMAP INDEX (Feature Flags)</text>
+      <text x="12" y="38" font-size="9" fill="#888">Each bit = feature presence (has-nav, has-sidebar...)</text>
+      <text x="12" y="52" font-size="9" fill="#888">AND/OR operations = O(1) per word</text>
+      <text x="12" y="66" font-size="9" fill="#888">Use for pre-filtering before similarity</text>
+      <rect x="12" y="74" width="70" height="14" rx="4" fill="#666"/>
+      <text x="47" y="85" text-anchor="middle" font-size="8" font-weight="500" fill="#333">OPTIONAL</text>
+    </g>
+    
+    <!-- Cluster Index -->
+    <g transform="translate(15, 370)">
+      <rect x="0" y="0" width="370" height="65" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">CLUSTER CENTROID INDEX</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">In-memory: Map&lt;cluster_id, centroid_signature&gt;</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">Size: O(K) where K = cluster count (~100s)</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,22 @@
+{
+  "url": "https://techtalk.example.com/interviews/maria-chen-nexus-corp-ai",
+  "capturedAt": "2025-12-16T16:00:00Z",
+  "category": "interview",
+  "edgeCaseType": "qa-format",
+  "expected": {
+    "title": "Exclusive: Tech Visionary Maria Chen on AI, Ethics, and the Next Decade",
+    "author": "Jessica Park",
+    "publishDate": "2025-12-16T14:00:00Z",
+    "articleType": "interview",
+    "interviewee": "Maria Chen",
+    "bodyContains": ["Nexus Corp", "$200 million", "safety research", "ten years"],
+    "hasQAFormat": true
+  },
+  "flags": {
+    "isInterview": true,
+    "hasQABlocks": true,
+    "multipleParticipants": true,
+    "hasIntervieweePhoto": true
+  },
+  "notes": "Q&A interview format with distinct question/answer structure. Tests extraction of dialogue-style content with multiple speakers."
+}

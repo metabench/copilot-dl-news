@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 130">
+  <g id="conclusion">
+    <rect x="0" y="0" width="800" height="40" fill="#c9a962" rx="8"/>
+    <text x="400" y="26" text-anchor="middle" font-size="13" font-weight="600" fill="#2d2d2d">SUMMARY: SPACE-EFFICIENT CLUSTERING</text>
+    
+    <g transform="translate(30, 55)">
+      <rect x="0" y="0" width="175" height="60" fill="#1a3a2a" rx="6"/>
+      <text x="87" y="22" text-anchor="middle" font-size="22" font-weight="700" fill="#34d399">20MB</text>
+      <text x="87" y="42" text-anchor="middle" font-size="9" fill="#aaa">for 1M pages</text>
+    </g>
+    
+    <g transform="translate(220, 55)">
+      <rect x="0" y="0" width="175" height="60" fill="#444" rx="6"/>
+      <text x="87" y="22" text-anchor="middle" font-size="22" font-weight="700" fill="#60a5fa">0.1ms</text>
+      <text x="87" y="42" text-anchor="middle" font-size="9" fill="#aaa">per assignment</text>
+    </g>
+    
+    <g transform="translate(410, 55)">
+      <rect x="0" y="0" width="175" height="60" fill="#444" rx="6"/>
+      <text x="87" y="22" text-anchor="middle" font-size="22" font-weight="700" fill="#a78bfa">8B</text>
+      <text x="87" y="42" text-anchor="middle" font-size="9" fill="#aaa">per signature</text>
+    </g>
+    
+    <g transform="translate(600, 55)">
+      <rect x="0" y="0" width="175" height="60" fill="#2d1f4a" rx="6"/>
+      <text x="87" y="22" text-anchor="middle" font-size="22" font-weight="700" fill="#fbbf24">~85%</text>
+      <text x="87" y="42" text-anchor="middle" font-size="9" fill="#aaa">accuracy threshold</text>
+    </g>
+  </g>
+</svg>

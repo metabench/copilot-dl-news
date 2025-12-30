@@ -288,5 +288,25 @@
     "path": "src/ui/lab/experiments/029-mixed-builtins-custom-activation",
     "check": "src/ui/lab/experiments/029-mixed-builtins-custom-activation/check.js",
     "readme": "src/ui/lab/experiments/029-mixed-builtins-custom-activation/README.md"
+  },
+  {
+    "id": "042",
+    "slug": "remote-observable-both-ends",
+    "name": "Remote Observable (both ends)",
+    "status": "active",
+    "description": "Server fnl.observable → SSE → client observable adapter; compare jsgui3-server routing vs Express routes",
+    "path": "src/ui/lab/experiments/042-remote-observable-both-ends",
+    "check": "src/ui/lab/experiments/042-remote-observable-both-ends/check.js",
+    "readme": "src/ui/lab/experiments/042-remote-observable-both-ends/README.md"
+  },
+  {
+    "id": "043",
+    "slug": "client-observable-interface",
+    "name": "Client Observable Interface",
+    "status": "active",
+    "description": "Expose an SSE stream as Evented (jsgui-style), Rx-ish, and async-iterator interfaces in the browser",
+    "path": "src/ui/lab/experiments/043-client-observable-interface",
+    "check": "src/ui/lab/experiments/043-client-observable-interface/check.js",
+    "readme": "src/ui/lab/experiments/043-client-observable-interface/README.md"
   }
 ]

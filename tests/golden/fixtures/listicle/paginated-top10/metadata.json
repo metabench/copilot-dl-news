@@ -1,0 +1,25 @@
+{
+  "url": "https://dev-insider.example.com/top-10-programming-languages-2026",
+  "capturedAt": "2025-12-18T11:00:00Z",
+  "category": "listicle",
+  "edgeCaseType": "paginated-list",
+  "expected": {
+    "title": "Top 10 Programming Languages to Learn in 2026",
+    "author": "Jennifer Lee",
+    "publishDate": "2025-12-18T09:00:00Z",
+    "pageType": "listicle",
+    "itemsOnThisPage": 5,
+    "totalItems": 10,
+    "currentPage": 1,
+    "totalPages": 2,
+    "listItems": ["Rust", "Go", "Kotlin", "Swift", "TypeScript"],
+    "bodyContains": ["memory safety", "microservices", "Android", "iOS", "JavaScript"]
+  },
+  "flags": {
+    "isListicle": true,
+    "isPaginated": true,
+    "hasNextPage": true,
+    "hasStructuredListItems": true
+  },
+  "notes": "Paginated listicle article (page 1 of 2). Tests extraction of structured list content and detection of pagination. Only items 10-6 visible on this page."
+}

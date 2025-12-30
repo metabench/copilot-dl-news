@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <defs>
+    <style>
+      .bg { fill: #0b1220; }
+      .card { fill: #111b2e; stroke: #23314e; stroke-width: 2; }
+      .hdr { font: 700 18px system-ui, -apple-system, Segoe UI, Roboto, Arial; fill: #e6edf7; }
+      .txt { font: 13px system-ui, -apple-system, Segoe UI, Roboto, Arial; fill: #b9c7df; }
+      .mono { font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; fill: #c7d5f0; }
+      .pill { fill: #1b2a45; stroke: #2a3b5f; stroke-width: 1.5; }
+      .arrow { stroke: #7aa2ff; stroke-width: 2.5; fill: none; marker-end: url(#m); }
+      .arrow2 { stroke: #36d399; stroke-width: 2.5; fill: none; marker-end: url(#m2); }
+      .muted { fill: #8aa0c7; }
+    </style>
+    <marker id="m" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7aa2ff"/>
+    </marker>
+    <marker id="m2" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#36d399"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="720"/>
+
+  <!-- DB / Model -->
+  <rect class="card" x="60" y="80" width="330" height="210" rx="14"/>
+  <text class="hdr" x="90" y="118">DB + Model</text>
+  <rect class="pill" x="90" y="138" width="270" height="38" rx="10"/>
+  <text class="mono" x="110" y="162">places / place_external_ids / boundaries</text>
+  <rect class="pill" x="90" y="186" width="270" height="38" rx="10"/>
+  <text class="txt" x="110" y="210">Explorer queries (neighbors/search)</text>
+  <rect class="pill" x="90" y="234" width="270" height="38" rx="10"/>
+  <text class="txt" x="110" y="258">Fast summaries (counts, freshness)</text>
+
+  <!-- Import service -->
+  <rect class="card" x="435" y="60" width="355" height="260" rx="14"/>
+  <text class="hdr" x="465" y="98">Geo Import Service Layer</text>
+  <text class="txt" x="465" y="126">Ingestors emit structured events while writing DB</text>
+
+  <rect class="pill" x="465" y="148" width="295" height="40" rx="10"/>
+  <text class="mono" x="485" y="174">EventBus: node / edge / stage</text>
+
+  <rect class="pill" x="465" y="198" width="295" height="40" rx="10"/>
+  <text class="txt" x="485" y="224">Batch+dedupe (100–250ms flush)</text>
+
+  <rect class="pill" x="465" y="248" width="295" height="40" rx="10"/>
+  <text class="txt" x="485" y="274">Snapshots + sequence numbers</text>
+
+  <!-- Streaming -->
+  <rect class="card" x="835" y="80" width="305" height="210" rx="14"/>
+  <text class="hdr" x="865" y="118">Transport</text>
+  <rect class="pill" x="865" y="138" width="245" height="38" rx="10"/>
+  <text class="mono" x="885" y="162">SSE: /api/.../explorer/stream</text>
+  <rect class="pill" x="865" y="186" width="245" height="38" rx="10"/>
+  <text class="txt" x="885" y="210">Reconnect: sinceSeq</text>
+  <rect class="pill" x="865" y="234" width="245" height="38" rx="10"/>
+  <text class="txt" x="885" y="258">Errors as events</text>
+
+  <!-- UI -->
+  <rect class="card" x="150" y="370" width="900" height="280" rx="14"/>
+  <text class="hdr" x="180" y="408">Browser UI (Geo Import Dashboard)</text>
+
+  <rect class="pill" x="180" y="430" width="270" height="46" rx="12"/>
+  <text class="txt" x="200" y="458">GraphStore (bounded state)</text>
+  <text class="txt muted" x="200" y="476">cap nodes/edges, evict low-score</text>
+
+  <rect class="pill" x="470" y="430" width="270" height="46" rx="12"/>
+  <text class="txt" x="490" y="458">Intelligence / LOD</text>
+  <text class="txt muted" x="490" y="476">importance score, collapse groups</text>
+
+  <rect class="pill" x="760" y="430" width="260" height="46" rx="12"/>
+  <text class="txt" x="780" y="458">Renderer</text>
+  <text class="txt muted" x="780" y="476">Phase B: DOM+SVG (limited)</text>
+
+  <rect class="pill" x="180" y="500" width="400" height="54" rx="12"/>
+  <text class="txt" x="200" y="528">Explorer APIs (pull details on demand)</text>
+  <text class="mono" x="200" y="548">/node, /neighbors, /search</text>
+
+  <rect class="pill" x="600" y="500" width="420" height="54" rx="12"/>
+  <text class="txt" x="620" y="528">What’s loading overlays</text>
+  <text class="txt muted" x="620" y="548">stage + node touch set → halos/spinners</text>
+
+  <!-- Arrows -->
+  <path class="arrow" d="M 390 180 C 410 180, 415 180, 435 180"/>
+  <path class="arrow" d="M 790 180 C 810 180, 820 180, 835 180"/>
+
+  <path class="arrow2" d="M 615 320 C 615 350, 610 360, 600 370"/>
+  <path class="arrow2" d="M 990 290 C 990 330, 920 350, 820 370"/>
+
+  <text class="txt" x="510" y="350">SSE stream</text>
+  <text class="txt" x="900" y="350">events</text>
+
+  <text class="hdr" x="60" y="50">Live Geo Import → Incremental Explorer Rendering</text>
+</svg>

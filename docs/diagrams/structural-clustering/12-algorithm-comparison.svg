@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 360">
+  <g id="algorithm-comparison">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">ALGORITHM COMPARISON</text>
+    
+    <!-- Comparison Table -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="220" fill="#444" rx="6"/>
+      
+      <!-- Header -->
+      <text x="12" y="18" font-size="8" font-weight="600" fill="#888">Method</text>
+      <text x="80" y="18" font-size="8" font-weight="600" fill="#888">Query</text>
+      <text x="125" y="18" font-size="8" font-weight="600" fill="#888">Insert</text>
+      <text x="170" y="18" font-size="8" font-weight="600" fill="#888">Space</text>
+      <text x="215" y="18" font-size="8" font-weight="600" fill="#888">Fuzzy</text>
+      <text x="255" y="18" font-size="8" font-weight="600" fill="#888">Online</text>
+      <text x="300" y="18" font-size="8" font-weight="600" fill="#888">Grade</text>
+      
+      <line x1="12" y1="24" x2="358" y2="24" stroke="#666" stroke-width="0.5"/>
+      
+      <!-- Row 1: Naive -->
+      <text x="12" y="42" font-size="8" fill="#aaa">Naive</text>
+      <text x="80" y="42" font-size="8" fill="#ef4444">O(N)</text>
+      <text x="125" y="42" font-size="8" fill="#10b981">O(1)</text>
+      <text x="170" y="42" font-size="8" fill="#10b981">O(N)</text>
+      <text x="215" y="42" font-size="8" fill="#10b981">✓</text>
+      <text x="255" y="42" font-size="8" fill="#ef4444">✗</text>
+      <rect x="300" y="32" width="30" height="14" rx="3" fill="#ef4444"/>
+      <text x="315" y="43" text-anchor="middle" font-size="7" fill="white">F</text>
+      
+      <!-- Row 2: Hash -->
+      <text x="12" y="62" font-size="8" fill="#aaa">Hash</text>
+      <text x="80" y="62" font-size="8" fill="#10b981">O(1)</text>
+      <text x="125" y="62" font-size="8" fill="#10b981">O(1)</text>
+      <text x="170" y="62" font-size="8" fill="#10b981">O(N)</text>
+      <text x="215" y="62" font-size="8" fill="#ef4444">✗</text>
+      <text x="255" y="62" font-size="8" fill="#10b981">✓</text>
+      <rect x="300" y="52" width="30" height="14" rx="3" fill="#60a5fa"/>
+      <text x="315" y="63" text-anchor="middle" font-size="7" fill="white">B</text>
+      
+      <!-- Row 3: LSH -->
+      <text x="12" y="82" font-size="8" fill="#aaa">LSH/MinHash</text>
+      <text x="80" y="82" font-size="8" fill="#60a5fa">O(n)</text>
+      <text x="125" y="82" font-size="8" fill="#60a5fa">O(n)</text>
+      <text x="170" y="82" font-size="8" fill="#fbbf24">O(Nn)</text>
+      <text x="215" y="82" font-size="8" fill="#10b981">✓</text>
+      <text x="255" y="82" font-size="8" fill="#10b981">✓</text>
+      <rect x="300" y="72" width="30" height="14" rx="3" fill="#10b981"/>
+      <text x="315" y="83" text-anchor="middle" font-size="7" fill="white">A</text>
+      
+      <!-- Row 4: Leader -->
+      <text x="12" y="102" font-size="8" fill="#aaa">Leader</text>
+      <text x="80" y="102" font-size="8" fill="#10b981">O(K)</text>
+      <text x="125" y="102" font-size="8" fill="#10b981">O(K)</text>
+      <text x="170" y="102" font-size="8" fill="#10b981">O(K)</text>
+      <text x="215" y="102" font-size="8" fill="#10b981">✓</text>
+      <text x="255" y="102" font-size="8" fill="#10b981">✓</text>
+      <rect x="300" y="92" width="30" height="14" rx="3" fill="#10b981"/>
+      <text x="315" y="103" text-anchor="middle" font-size="7" fill="white">A+</text>
+      
+      <!-- Row 5: Hierarchical -->
+      <text x="12" y="122" font-size="8" fill="#aaa">Hierarchical</text>
+      <text x="80" y="122" font-size="8" fill="#10b981">O(log N)</text>
+      <text x="125" y="122" font-size="8" fill="#60a5fa">O(log N)</text>
+      <text x="170" y="122" font-size="8" fill="#60a5fa">O(N log N)</text>
+      <text x="215" y="122" font-size="8" fill="#ef4444">✗</text>
+      <text x="255" y="122" font-size="8" fill="#fbbf24">~</text>
+      <rect x="300" y="112" width="30" height="14" rx="3" fill="#60a5fa"/>
+      <text x="315" y="123" text-anchor="middle" font-size="7" fill="white">B</text>
+      
+      <!-- Row 6: Combined -->
+      <line x1="12" y1="135" x2="358" y2="135" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="152" font-size="8" font-weight="600" fill="#10b981">Hash+LSH+Leader</text>
+      <text x="80" y="152" font-size="8" fill="#10b981">O(1)+O(K)</text>
+      <text x="125" y="152" font-size="8" fill="#10b981">O(K)</text>
+      <text x="170" y="152" font-size="8" fill="#10b981">O(K+N)</text>
+      <text x="215" y="152" font-size="8" fill="#10b981">✓</text>
+      <text x="255" y="152" font-size="8" fill="#10b981">✓</text>
+      <rect x="300" y="142" width="30" height="14" rx="3" fill="#10b981"/>
+      <text x="315" y="153" text-anchor="middle" font-size="7" fill="white">A++</text>
+      
+      <!-- Legend -->
+      <text x="12" y="180" font-size="8" fill="#666">N = total pages, K = cluster count, n = hash functions</text>
+      <text x="12" y="194" font-size="8" fill="#666">Query = find cluster, Insert = add new page, Space = total storage</text>
+      <text x="12" y="208" font-size="8" fill="#666">Fuzzy = handles similarity, Online = incremental updates</text>
+    </g>
+    
+    <!-- Winner -->
+    <g transform="translate(15, 285)">
+      <rect x="0" y="0" width="370" height="60" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">★ WINNER: HYBRID (Hash + LSH + Leader)</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">Exact hash for fast lookup → LSH for candidate filter →</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">Leader clustering for fuzzy assignment with O(K) memory</text>
+    </g>
+  </g>
+</svg>

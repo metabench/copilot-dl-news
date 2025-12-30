@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 170">
+  <g id="recommendation">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">RECOMMENDATION: 128-bit SWEET SPOT</text>
+    
+    <!-- Why 128 -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="360" height="105" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="2"/>
+      <text x="180" y="22" text-anchor="middle" font-size="11" font-weight="700" fill="#a78bfa">Why 128-bit?</text>
+      <text x="20" y="45" font-size="9" fill="#f0ede8">✓ 2x storage of 64-bit (acceptable)</text>
+      <text x="20" y="62" font-size="9" fill="#f0ede8">✓ Still 5.6M pairs/sec (fast enough)</text>
+      <text x="20" y="79" font-size="9" fill="#f0ede8">✓ Fits L2 cache: 16K × 16B = 256KB</text>
+      <text x="20" y="96" font-size="9" fill="#f0ede8">✓ Distinguishes template vs content diffs</text>
+    </g>
+    
+    <!-- When to use alternatives -->
+    <g transform="translate(410, 50)">
+      <rect x="0" y="0" width="360" height="105" fill="#444" rx="6"/>
+      <text x="180" y="22" text-anchor="middle" font-size="11" font-weight="600" fill="#c9a962">Exception Cases</text>
+      
+      <text x="20" y="45" font-size="9" fill="#60a5fa">Use 64-bit when:</text>
+      <text x="30" y="60" font-size="8" fill="#aaa">• Pure duplicate detection (mirrors, syndication)</text>
+      <text x="30" y="73" font-size="8" fill="#aaa">• Storage is severely constrained</text>
+      
+      <text x="20" y="92" font-size="9" fill="#34d399">Use 256-bit when:</text>
+      <text x="30" y="105" font-size="8" fill="#aaa">• Need topical/semantic similarity</text>
+    </g>
+  </g>
+</svg>

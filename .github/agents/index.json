@@ -230,5 +230,29 @@
     "tags": ["memory", "docs-memory", "svg", "svg-editor", "diagrams", "jsgui3", "lab", "research"],
     "last_review": "2025-12-14",
     "path": ".github/agents/🧠📐 Memory + SVG Researcher 📐🧠.agent.md"
+  },
+  {
+    "doc_slug": "endurance-brain-workflow",
+    "title": "Endurance Brain Workflow",
+    "purpose": "Plan → goals review → detailed plans → validated execution (prevents 'suggest then stop')",
+    "tags": ["workflow", "endurance", "planning", "sessions", "validation"],
+    "last_review": "2025-12-30",
+    "path": "docs/agents/endurance-brain-workflow.md"
+  },
+  {
+    "doc_slug": "endurance-brain-reference",
+    "title": "Endurance Brain Reference",
+    "purpose": "Templates, checklists, and anti-stall rules for execution-oriented agents",
+    "tags": ["workflow", "endurance", "templates", "planning", "validation"],
+    "last_review": "2025-12-30",
+    "path": "docs/agents/endurance-brain-reference.md"
+  },
+  {
+    "doc_slug": "endurance-brain-agent",
+    "title": "🔥 Endurance Brain 🔥",
+    "purpose": "Endurance-first agent: turns suggestions into plans, docs, and validated implementation without stopping",
+    "tags": ["workflow", "planning", "execution", "validation", "sessions"],
+    "last_review": "2025-12-30",
+    "path": ".github/agents/🔥 Endurance Brain 🔥.agent.md"
   }
 ]

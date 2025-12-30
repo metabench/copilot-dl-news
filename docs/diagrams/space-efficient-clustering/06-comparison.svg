@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220">
+  <g id="comparison">
+    <rect x="0" y="0" width="400" height="40" fill="#2d1f4a" rx="8"/>
+    <text x="200" y="26" text-anchor="middle" font-size="13" font-weight="600" fill="white">RAPID COMPARISON</text>
+    
+    <g transform="translate(15, 50)">
+      <rect x="0" y="0" width="370" height="155" fill="#444" rx="6"/>
+      <text x="12" y="20" font-size="10" font-weight="600" fill="#a78bfa">SimHash Distance (Hamming)</text>
+      
+      <text x="12" y="44" font-size="9" fill="#aaa">Use SimHash instead of MinHash:</text>
+      <text x="12" y="62" font-size="9" fill="#888">• 64-bit SimHash = 8 bytes (vs 128B MinHash)</text>
+      <text x="12" y="78" font-size="9" fill="#888">• Hamming distance = XOR + popcount</text>
+      <text x="12" y="94" font-size="9" fill="#888">• CPU has POPCNT instruction (~1 cycle)</text>
+      
+      <rect x="12" y="108" width="346" height="35" fill="#333" rx="4"/>
+      <text x="185" y="122" text-anchor="middle" font-size="9" fill="#888" font-family="monospace">hamming = popcount(sig1 ^ sig2)</text>
+      <text x="185" y="136" text-anchor="middle" font-size="9" fill="#888" font-family="monospace">similar = hamming &lt; 10  # ~85% similarity</text>
+    </g>
+  </g>
+</svg>

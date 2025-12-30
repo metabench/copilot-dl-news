@@ -1,0 +1,22 @@
+{
+  "url": "https://www.spiegel.de/wissenschaft/quantenforschung-durchbruch-2025.html",
+  "capturedAt": "2025-12-20T15:00:00Z",
+  "category": "foreign",
+  "edgeCaseType": "german-language",
+  "expected": {
+    "title": "Durchbruch in der Quantenforschung: Deutsche Wissenschaftler erreichen Meilenstein",
+    "author": "Dr. Hans Müller",
+    "publishDate": "2025-12-20T14:00:00+01:00",
+    "bodyWordCountMin": 100,
+    "bodyContains": ["Max-Planck-Institut", "1000 Qubits", "200 Millionen Euro"],
+    "language": "de"
+  },
+  "flags": {
+    "isForeignLanguage": true,
+    "language": "de",
+    "hasUmlauts": true,
+    "hasEszett": false,
+    "latinScript": true
+  },
+  "notes": "German news article testing umlaut handling (ü, ö, ä) and German date format (DD.MM.YYYY)"
+}

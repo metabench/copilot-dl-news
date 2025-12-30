@@ -1,0 +1,8 @@
+{
+  "id": "non-existent-plugin",
+  "name": "non-existent-plugin",
+  "version": "1.0.0",
+  "type": "extractor",
+  "entrypoint": "index.js",
+  "description": ""
+}

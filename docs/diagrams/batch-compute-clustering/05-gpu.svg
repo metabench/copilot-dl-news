@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+  <g id="gpu-potential">
+    <rect x="0" y="0" width="400" height="38" fill="#2d1f4a" rx="8"/>
+    <text x="200" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="white">GPU ACCELERATION POTENTIAL</text>
+    
+    <g transform="translate(15, 48)">
+      <rect x="0" y="0" width="370" height="140" fill="#444" rx="6"/>
+      
+      <text x="12" y="18" font-size="9" font-weight="600" fill="#a78bfa">Parallel Distance Calculation</text>
+      
+      <text x="12" y="40" font-size="9" fill="#aaa">Each thread computes one distance:</text>
+      <text x="20" y="56" font-size="8" fill="#888" font-family="monospace">dist[i][j] = popcount(sig[i] XOR sig[j])</text>
+      
+      <text x="12" y="78" font-size="9" fill="#aaa">10K × 10K = 50M pairs</text>
+      <text x="12" y="94" font-size="9" fill="#aaa">RTX 3080: 8,704 CUDA cores</text>
+      
+      <rect x="12" y="105" width="346" height="28" fill="#1a3a2a" rx="4"/>
+      <text x="185" y="124" text-anchor="middle" font-size="10" fill="#34d399" font-weight="600">50M pairs ÷ 1B/sec = ~50ms</text>
+    </g>
+  </g>
+</svg>

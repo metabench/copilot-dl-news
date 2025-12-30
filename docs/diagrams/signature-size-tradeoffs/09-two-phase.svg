@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 165">
+  <g id="two-phase">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">ALTERNATIVE: TWO-PHASE CLUSTERING</text>
+    
+    <!-- Phase 1 -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="230" height="100" fill="#1e3a5f" rx="6" stroke="#3b82f6" stroke-width="1"/>
+      <text x="115" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#60a5fa">Phase 1: Coarse (64-bit)</text>
+      <text x="15" y="45" font-size="9" fill="#aaa">• Fast initial clustering</text>
+      <text x="15" y="62" font-size="9" fill="#aaa">• 10M pairs/sec</text>
+      <text x="15" y="79" font-size="9" fill="#aaa">• Group likely-similar items</text>
+      <text x="15" y="96" font-size="9" fill="#888">→ Cheap, catches ~80%</text>
+    </g>
+    
+    <!-- Arrow -->
+    <path d="M 275 100 L 305 100" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="303,96 311,100 303,104" fill="#c9a962"/>
+    
+    <!-- Phase 2 -->
+    <g transform="translate(320, 50)">
+      <rect x="0" y="0" width="230" height="100" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="115" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#a78bfa">Phase 2: Refine (full content)</text>
+      <text x="15" y="45" font-size="9" fill="#aaa">• Compare only within clusters</text>
+      <text x="15" y="62" font-size="9" fill="#aaa">• Full content similarity</text>
+      <text x="15" y="79" font-size="9" fill="#aaa">• Split/merge as needed</text>
+      <text x="15" y="96" font-size="9" fill="#888">→ Accurate but targeted</text>
+    </g>
+    
+    <!-- Benefit -->
+    <g transform="translate(570, 50)">
+      <rect x="0" y="0" width="200" height="100" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="100" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#34d399">Result</text>
+      <text x="15" y="45" font-size="9" fill="#f0ede8">• Store 64-bit sigs (8 MB)</text>
+      <text x="15" y="62" font-size="9" fill="#f0ede8">• Get 256-bit quality</text>
+      <text x="15" y="79" font-size="9" fill="#f0ede8">• Phase 2 = O(C × M²)</text>
+      <text x="15" y="96" font-size="8" fill="#888">C clusters, M members each</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 520">
+  <g id="layer2-lsh">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#2d1f4a" rx="8"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="white" letter-spacing="1">LAYER 2: MinHash LSH</text>
+    
+    <!-- MinHash Generation -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="130" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#a78bfa">MINHASH SIGNATURE GENERATION</text>
+      
+      <text x="12" y="40" font-size="9" fill="#aaa">1. Extract k-shingles from skeleton</text>
+      <text x="20" y="54" font-size="8" fill="#666" font-family="monospace">   {"div.nav", "nav.ul", "ul.li", ...}</text>
+      
+      <text x="12" y="72" font-size="9" fill="#aaa">2. Apply n hash functions (n=128)</text>
+      <text x="20" y="86" font-size="8" fill="#666" font-family="monospace">   h₁(s), h₂(s), ..., h₁₂₈(s)</text>
+      
+      <text x="12" y="104" font-size="9" fill="#aaa">3. Take minimum hash per function</text>
+      <text x="20" y="118" font-size="8" fill="#666" font-family="monospace">   sig = [min(h₁), min(h₂), ..., min(h₁₂₈)]</text>
+    </g>
+    
+    <!-- Signature -->
+    <g transform="translate(15, 195)">
+      <rect x="0" y="0" width="370" height="65" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#a78bfa">RESULTING SIGNATURE</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">128 × 4-byte hashes = 512 bytes (or 64B compressed)</text>
+      <text x="12" y="54" font-size="8" fill="#666">Property: Pr[sig_i(A) = sig_i(B)] = Jaccard(A, B)</text>
+    </g>
+    
+    <!-- Banding -->
+    <g transform="translate(15, 270)">
+      <rect x="0" y="0" width="370" height="110" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#a78bfa">BANDING FOR CANDIDATE GENERATION</text>
+      
+      <text x="12" y="40" font-size="9" fill="#aaa">Divide signature into b bands of r rows</text>
+      <text x="12" y="56" font-size="9" fill="#888">Example: 128 hashes → 16 bands × 8 rows</text>
+      
+      <text x="12" y="78" font-size="9" fill="#aaa">Hash each band → bucket</text>
+      <text x="12" y="94" font-size="9" fill="#888">Pages sharing ANY band = candidates</text>
+    </g>
+    
+    <!-- Probability Curve -->
+    <g transform="translate(15, 390)">
+      <rect x="0" y="0" width="370" height="115" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">SIMILARITY THRESHOLD</text>
+      
+      <!-- Simple curve representation -->
+      <rect x="20" y="30" width="160" height="70" fill="#333" rx="4"/>
+      <text x="100" y="48" text-anchor="middle" font-size="8" fill="#666">P(candidate)</text>
+      <path d="M 30 90 Q 60 88 80 70 Q 100 40 120 38 Q 140 36 170 35" fill="none" stroke="#a78bfa" stroke-width="2"/>
+      <text x="100" y="98" text-anchor="middle" font-size="7" fill="#666">Jaccard similarity →</text>
+      
+      <!-- Threshold explanation -->
+      <text x="200" y="48" font-size="9" fill="#aaa">b=16, r=8:</text>
+      <text x="200" y="64" font-size="9" fill="#888">• t ≈ 0.5: 50% similar</text>
+      <text x="200" y="80" font-size="9" fill="#888">• High recall for t &gt; 0.6</text>
+      <text x="200" y="96" font-size="9" fill="#888">• Filter 99%+ of pairs</text>
+    </g>
+  </g>
+</svg>

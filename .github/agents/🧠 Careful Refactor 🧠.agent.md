@@ -155,7 +155,7 @@ node tools/dev/js-scan.js --export-usage <symbol> --json
 **Key Principles:**
 1. **Facts are NEUTRAL** — Never treat observations as inherently "positive" or "negative"
 2. **Facts are OBJECTIVE** — Verifiable, reproducible boolean values
-3. **No weighted signals** — Pure TRUE/FALSE, no scores
+3. **No weighted signals (Fact → Classification subsystem only)** — Pure TRUE/FALSE, no scores
 4. **Classifications CONSUME facts** — Rules combine facts with boolean logic
 
 **Refactoring guidance**: If you see code treating a fact as good/bad, refactor to separate observation from judgment. Move scoring logic from extractors to classification rules.

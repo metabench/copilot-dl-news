@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520">
+  <defs>
+    <linearGradient id="leather" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#faf9f7"/>
+      <stop offset="50%" stop-color="#f5f3ef"/>
+      <stop offset="100%" stop-color="#ebe8e2"/>
+    </linearGradient>
+    <linearGradient id="obsidian" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2d2d2d"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c9a962"/>
+      <stop offset="100%" stop-color="#e8d5a3"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-opacity="0.25"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#c9a962"/>
+    </marker>
+  </defs>
+  
+  <!-- Leather Background -->
+  <rect width="800" height="520" fill="url(#leather)"/>
+  
+  <!-- Title -->
+  <text x="400" y="35" text-anchor="middle" font-family="Georgia, serif" font-size="20" fill="#2d2d2d">Plugin System UI Architecture</text>
+  <line x1="200" y1="45" x2="600" y2="45" stroke="url(#gold)" stroke-width="2"/>
+  
+  <!-- Plugin Core Panel -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="60" width="450" height="70" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="265" y="82" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#c9a962">PLUGIN CORE</text>
+    <rect x="55" y="93" width="125" height="28" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="117" y="112" text-anchor="middle" font-family="Arial" font-size="10" fill="#e8d5a3">PluginManager</text>
+    <rect x="195" y="93" width="125" height="28" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="257" y="112" text-anchor="middle" font-family="Arial" font-size="10" fill="#e8d5a3">PluginAPI</text>
+    <rect x="335" y="93" width="125" height="28" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="397" y="112" text-anchor="middle" font-family="Arial" font-size="10" fill="#e8d5a3">PluginRegistry</text>
+  </g>
+  
+  <!-- Lifecycle Panel -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="145" width="450" height="42" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="265" y="171" text-anchor="middle" font-family="Arial" font-size="10" fill="#e8d5a3">discover → load → init → activate → deactivate → destroy</text>
+  </g>
+  
+  <!-- Database Panel -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="200" width="450" height="65" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="265" y="222" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#c9a962">DATABASE</text>
+    <rect x="55" y="235" width="130" height="23" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="120" y="251" text-anchor="middle" font-family="Arial" font-size="9" fill="#e8d5a3">installed_plugins</text>
+    <rect x="195" y="235" width="130" height="23" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="260" y="251" text-anchor="middle" font-family="Arial" font-size="9" fill="#e8d5a3">plugin_storage</text>
+    <rect x="335" y="235" width="130" height="23" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="400" y="251" text-anchor="middle" font-family="Arial" font-size="9" fill="#e8d5a3">plugin_registry</text>
+  </g>
+  
+  <!-- Admin API Panel -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="280" width="450" height="42" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="265" y="306" text-anchor="middle" font-family="Arial" font-size="11" fill="#e8d5a3">/api/plugins/*, /api/plugins/registry/*</text>
+  </g>
+  
+  <!-- UI Components Panel -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="337" width="450" height="100" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="265" y="359" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#c9a962">UI COMPONENTS</text>
+    <rect x="55" y="373" width="95" height="28" rx="5" fill="#3a3a3a" stroke="#4a9eff"/>
+    <text x="102" y="392" text-anchor="middle" font-family="Arial" font-size="9" fill="#4a9eff">Marketplace</text>
+    <rect x="160" y="373" width="95" height="28" rx="5" fill="#3a3a3a" stroke="#4a9eff"/>
+    <text x="207" y="392" text-anchor="middle" font-family="Arial" font-size="9" fill="#4a9eff">Manager</text>
+    <rect x="265" y="373" width="95" height="28" rx="5" fill="#3a3a3a" stroke="#4a9eff"/>
+    <text x="312" y="392" text-anchor="middle" font-family="Arial" font-size="9" fill="#4a9eff">Detail View</text>
+    <rect x="370" y="373" width="95" height="28" rx="5" fill="#3a3a3a" stroke="#4a9eff"/>
+    <text x="417" y="392" text-anchor="middle" font-family="Arial" font-size="9" fill="#4a9eff">Config Panel</text>
+    <rect x="55" y="406" width="95" height="28" rx="5" fill="#3a3a3a" stroke="#2ecc71"/>
+    <text x="102" y="425" text-anchor="middle" font-family="Arial" font-size="9" fill="#2ecc71">Dev Tools</text>
+    <rect x="160" y="406" width="95" height="28" rx="5" fill="#3a3a3a" stroke="#c9a962"/>
+    <text x="207" y="425" text-anchor="middle" font-family="Arial" font-size="9" fill="#e8d5a3">Health Monitor</text>
+  </g>
+  
+  <!-- Plugin Types Panel -->
+  <g filter="url(#shadow)">
+    <rect x="520" y="60" width="240" height="130" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="640" y="85" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#c9a962">PLUGIN TYPES</text>
+    <text x="545" y="110" font-family="Arial" font-size="10" fill="#4a9eff">🔍 extractor</text>
+    <text x="545" y="130" font-family="Arial" font-size="10" fill="#2ecc71">📊 analyzer</text>
+    <text x="545" y="150" font-family="Arial" font-size="10" fill="#c9a962">🔗 integration</text>
+    <text x="545" y="170" font-family="Arial" font-size="10" fill="#e8d5a3">🎨 ui-widget</text>
+    <text x="665" y="110" font-family="Arial" font-size="9" fill="#888">Content extraction</text>
+    <text x="665" y="130" font-family="Arial" font-size="9" fill="#888">Data analysis</text>
+    <text x="665" y="150" font-family="Arial" font-size="9" fill="#888">External services</text>
+    <text x="665" y="170" font-family="Arial" font-size="9" fill="#888">Dashboard widgets</text>
+  </g>
+  
+  <!-- API Surface Panel -->
+  <g filter="url(#shadow)">
+    <rect x="520" y="205" width="240" height="115" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="640" y="230" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#c9a962">PLUGIN API</text>
+    <text x="545" y="255" font-family="monospace" font-size="10" fill="#e8d5a3">hooks.on/emit</text>
+    <text x="545" y="275" font-family="monospace" font-size="10" fill="#e8d5a3">config.get/set</text>
+    <text x="545" y="295" font-family="monospace" font-size="10" fill="#e8d5a3">storage.get/set/delete</text>
+    <text x="545" y="315" font-family="monospace" font-size="10" fill="#e8d5a3">log.info/warn/error</text>
+  </g>
+  
+  <!-- Status Panel -->
+  <g filter="url(#shadow)">
+    <rect x="520" y="335" width="240" height="102" rx="8" fill="url(#obsidian)" stroke="#c9a962" stroke-width="1.5"/>
+    <text x="640" y="360" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#c9a962">PLUGIN STATES</text>
+    <rect x="540" y="375" width="70" height="20" rx="4" fill="#3a3a3a" stroke="#888"/>
+    <text x="575" y="389" text-anchor="middle" font-family="Arial" font-size="8" fill="#888">DISCOVERED</text>
+    <rect x="620" y="375" width="55" height="20" rx="4" fill="#3a3a3a" stroke="#4a9eff"/>
+    <text x="647" y="389" text-anchor="middle" font-family="Arial" font-size="8" fill="#4a9eff">LOADED</text>
+    <rect x="685" y="375" width="55" height="20" rx="4" fill="#3a3a3a" stroke="#c9a962"/>
+    <text x="712" y="389" text-anchor="middle" font-family="Arial" font-size="8" fill="#e8d5a3">INIT</text>
+    <rect x="540" y="400" width="90" height="25" rx="4" fill="#2d4a3a" stroke="#2ecc71"/>
+    <text x="585" y="417" text-anchor="middle" font-family="Arial" font-size="9" fill="#2ecc71">✓ ACTIVE</text>
+    <rect x="640" y="400" width="100" height="25" rx="4" fill="#4a2a2a" stroke="#e74c3c"/>
+    <text x="690" y="417" text-anchor="middle" font-family="Arial" font-size="9" fill="#e74c3c">✗ ERROR</text>
+  </g>
+  
+  <!-- Arrows -->
+  <line x1="265" y1="130" x2="265" y2="145" stroke="#c9a962" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="265" y1="187" x2="265" y2="200" stroke="#c9a962" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="265" y1="265" x2="265" y2="280" stroke="#c9a962" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="265" y1="322" x2="265" y2="337" stroke="#c9a962" stroke-width="2" marker-end="url(#arrow)"/>
+</svg>

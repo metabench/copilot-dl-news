@@ -1,0 +1,7 @@
+{
+  "ignoreRoots": ["src/db", "tests", "tools", "scripts", "checks", "crawl-widget/node_modules"],
+  "allow": [
+    { "path": "src/crawler/schema-migrations.js", "reason": "Schema migration entrypoint (tooling-style SQL allowed)" },
+    { "path": "crawl-widget/main.js", "reason": "Electron main process: opens DB handle passed to DB adapter; not UI layer SQL" }
+  ]
+}

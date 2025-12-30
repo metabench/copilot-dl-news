@@ -1,0 +1,21 @@
+{
+  "url": "https://thevoice.example.com/opinion/ai-revolution-warning-collins",
+  "capturedAt": "2025-12-17T10:00:00Z",
+  "category": "opinion",
+  "edgeCaseType": "opinion-editorial",
+  "expected": {
+    "title": "The AI Revolution Is Coming Faster Than We Think — And We're Not Ready",
+    "author": "Dr. Amanda Collins",
+    "publishDate": "2025-12-17T08:00:00Z",
+    "articleType": "opinion",
+    "bodyWordCountMin": 300,
+    "bodyContains": ["Stanford", "White House", "labor market", "universal basic income"]
+  },
+  "flags": {
+    "isOpinion": true,
+    "hasAuthorCredentials": true,
+    "hasFirstPersonNarrative": true,
+    "hasProposedActions": true
+  },
+  "notes": "Opinion/editorial piece with author credentials and first-person perspective. Tests distinguishing opinion from news content. Has 'OPINION' section label that should be detected."
+}

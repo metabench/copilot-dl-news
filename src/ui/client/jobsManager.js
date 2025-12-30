@@ -19,6 +19,29 @@ function createJobsManager({
     updateStartupStatus = () => {}
   } = actions;
 
+  function clamp01(n) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return 0;
+    if (x < 0) return 0;
+    if (x > 1) return 1;
+    return x;
+  }
+
+  function deriveQueueDrainProgress({ visited, queueSize, status, paused }) {
+    const v = Number(visited ?? 0);
+    const q = Number(queueSize ?? 0);
+    const denom = v + q;
+    if (Number.isFinite(denom) && denom > 0) {
+      const ratio = clamp01(v / denom);
+      return { mode: "determinate", ratio };
+    }
+    const s = String(status || "").toLowerCase();
+    if (!paused && s.includes("run")) {
+      return { mode: "indeterminate", ratio: null };
+    }
+    return null;
+  }
+
   function renderEmptyState(target) {
     if (!target) {
       return;
@@ -79,6 +102,22 @@ function createJobsManager({
           ? `<div class="job-card-status-text">${job.statusText}</div>`
           : "";
 
+        const progressModel = deriveQueueDrainProgress({
+          visited,
+          queueSize,
+          status,
+          paused: job.paused
+        });
+
+        const progressHtml = progressModel
+          ? (progressModel.mode === "indeterminate"
+              ? `<div class="job-card-progress"><div class="job-card-progress-bar job-card-progress-bar--indeterminate"><div class="job-card-progress-fill"></div></div><div class="job-card-progress-value">running</div></div>`
+              : (() => {
+                  const pct = Math.round(clamp01(progressModel.ratio) * 100);
+                  return `<div class="job-card-progress"><div class="job-card-progress-bar" title="${pct}%"><div class="job-card-progress-fill" style="width:${pct}%"></div></div><div class="job-card-progress-value">${pct}%</div></div>`;
+                })())
+          : "";
+
         cards.push(`
           <div class="job-card">
             <div class="job-card-header">
@@ -115,6 +154,8 @@ function createJobsManager({
                 <span class="job-card-metric-value">${queueSize.toLocaleString()}</span>
               </div>
             </div>
+
+            ${progressHtml}
 
             <div class="job-card-footer">
               <div class="job-card-time">

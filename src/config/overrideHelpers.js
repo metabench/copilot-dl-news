@@ -33,7 +33,8 @@ function parseSharedOverrides(argv, { allowUnknown = true } = {}) {
     .add('--output-verbosity <level>', 'Output verbosity level')
     .add('--concurrency <number>', 'Crawler concurrency', undefined, 'number')
     .add('--planner-verbosity <number>', 'Planner verbosity', undefined, 'number')
-    .add('--progress-json', 'Output progress stats as JSON to stdout', undefined, 'boolean');
+    .add('--progress-json', 'Output progress stats as JSON to stdout', undefined, 'boolean')
+    .add('--telemetry-json', 'Output crawl telemetry events as JSON lines to stdout', undefined, 'boolean');
 
   const parsed = parser.parse(['node', 'crawl.js', ...argv]);
 
@@ -73,6 +74,9 @@ function buildSharedOverridesFromFlags(flags = {}) {
   if (flags.progressJson !== undefined) {
     overrides.progressJson = Boolean(flags.progressJson);
   }
+  if (flags.telemetryJson !== undefined) {
+    overrides.telemetryJson = Boolean(flags.telemetryJson);
+  }
   return overrides;
 }
 
@@ -101,6 +105,11 @@ function applyContextOverrideFlags(baseOverrides, context) {
   const progressJson = context.getBooleanFlag('--progress-json');
   if (progressJson !== undefined) {
     overrides.progressJson = progressJson;
+  }
+
+  const telemetryJson = context.getBooleanFlag('--telemetry-json');
+  if (telemetryJson !== undefined) {
+    overrides.telemetryJson = telemetryJson;
   }
   return overrides;
 }

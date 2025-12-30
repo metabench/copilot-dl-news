@@ -1,0 +1,119 @@
+# =============================================================================
+# docker-compose.dev.yml - Development Overrides
+# =============================================================================
+# Development-friendly configuration with source mounting and debugging
+#
+# Usage:
+#   docker-compose -f deploy/docker-compose.yml -f deploy/docker-compose.dev.yml up
+#
+# With live reload:
+#   docker-compose -f deploy/docker-compose.yml -f deploy/docker-compose.dev.yml up --build
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL - Development Settings
+  # ---------------------------------------------------------------------------
+  postgres:
+    ports:
+      - "5432:5432"  # Expose for local tools
+    environment:
+      POSTGRES_PASSWORD: dev_password  # Simple password for dev
+
+  # ---------------------------------------------------------------------------
+  # Redis - Development Settings
+  # ---------------------------------------------------------------------------
+  redis:
+    ports:
+      - "6379:6379"  # Expose for local tools
+
+  # ---------------------------------------------------------------------------
+  # Crawler - Development Mode
+  # ---------------------------------------------------------------------------
+  crawler:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: deps  # Stop at deps stage, mount source
+    deploy:
+      replicas: 1  # Single replica for development
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G  # More memory for debugging
+    environment:
+      NODE_ENV: development
+      CRAWL_CONFIG_PATH: /app/deploy/config/staging.json
+      LOG_LEVEL: debug
+      DEBUG: crawler:*
+    volumes:
+      # Mount source code for live changes
+      - ../src:/app/src:ro
+      - ../config:/app/config:ro
+      - ../crawl.js:/app/crawl.js:ro
+      # Local data directory
+      - ../data:/app/data
+      - ../tmp:/app/tmp
+      # Logs accessible locally
+      - ../testlogs:/app/testlogs
+    command: ["node", "--inspect=0.0.0.0:9229", "crawl.js"]
+    ports:
+      - "9229:9229"  # Node.js inspector
+
+  # ---------------------------------------------------------------------------
+  # Dashboard - Development Mode
+  # ---------------------------------------------------------------------------
+  dashboard:
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+    volumes:
+      # Mount source for live changes
+      - ../src:/app/src:ro
+      - ../config:/app/config:ro
+      - ../public:/app/public:ro
+      - ../data:/app/data
+    ports:
+      - "3099:3099"
+      - "3100:3100"
+      - "9230:9230"  # Dashboard inspector
+    command: ["node", "--inspect=0.0.0.0:9230", "src/ui/server/startDashboards.js"]
+
+  # ---------------------------------------------------------------------------
+  # Adminer - Database UI (Dev Only)
+  # ---------------------------------------------------------------------------
+  adminer:
+    image: adminer:latest
+    container_name: news-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+    networks:
+      - crawler-net
+
+  # ---------------------------------------------------------------------------
+  # Redis Commander - Redis UI (Dev Only)
+  # ---------------------------------------------------------------------------
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: news-redis-commander
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    depends_on:
+      - redis
+    networks:
+      - crawler-net

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 195">
+  <g id="use-cases">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">USE CASE MAPPING</text>
+    
+    <!-- 64-bit use cases -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="230" height="130" fill="#1e3a5f" rx="6" stroke="#3b82f6" stroke-width="1"/>
+      <text x="115" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#60a5fa">64-bit: DEDUPLICATION</text>
+      <text x="15" y="44" font-size="9" fill="#f0ede8">✓ Exact duplicates</text>
+      <text x="15" y="60" font-size="9" fill="#f0ede8">✓ Syndicated articles</text>
+      <text x="15" y="76" font-size="9" fill="#f0ede8">✓ Mirror sites</text>
+      <text x="15" y="92" font-size="9" fill="#f0ede8">✓ Minor text edits</text>
+      <rect x="15" y="102" width="200" height="20" fill="#3b82f6" rx="3"/>
+      <text x="115" y="116" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">Threshold: ≤10 bits differ</text>
+    </g>
+    
+    <!-- 128-bit use cases -->
+    <g transform="translate(280, 50)">
+      <rect x="0" y="0" width="230" height="130" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="2"/>
+      <text x="115" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#a78bfa">128-bit: STRUCTURAL</text>
+      <text x="15" y="44" font-size="9" fill="#f0ede8">✓ Same CMS/template</text>
+      <text x="15" y="60" font-size="9" fill="#f0ede8">✓ Same site layout</text>
+      <text x="15" y="76" font-size="9" fill="#f0ede8">✓ Article categories</text>
+      <text x="15" y="92" font-size="9" fill="#f0ede8">✓ Related content</text>
+      <rect x="15" y="102" width="200" height="20" fill="#8b5cf6" rx="3"/>
+      <text x="115" y="116" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">Threshold: ≤20 bits differ</text>
+    </g>
+    
+    <!-- 256-bit use cases -->
+    <g transform="translate(530, 50)">
+      <rect x="0" y="0" width="240" height="130" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="120" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#34d399">256-bit: TOPICAL</text>
+      <text x="15" y="44" font-size="9" fill="#f0ede8">✓ Same subject matter</text>
+      <text x="15" y="60" font-size="9" fill="#f0ede8">✓ Cross-source similarity</text>
+      <text x="15" y="76" font-size="9" fill="#f0ede8">✓ Content fingerprinting</text>
+      <text x="15" y="92" font-size="9" fill="#f0ede8">✓ Semantic clustering</text>
+      <rect x="15" y="102" width="210" height="20" fill="#10b981" rx="3"/>
+      <text x="120" y="116" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">Threshold: ≤40 bits differ</text>
+    </g>
+  </g>
+</svg>

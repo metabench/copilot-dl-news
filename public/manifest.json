@@ -1,0 +1,114 @@
+{
+  "name": "News Crawler",
+  "short_name": "NewsCrawl",
+  "description": "Your personal news aggregator with intelligent crawling and personalized feeds",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#1a1a2e",
+  "theme_color": "#4a90d9",
+  "scope": "/",
+  "lang": "en-US",
+  "categories": ["news", "productivity"],
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "News Crawler Dashboard"
+    },
+    {
+      "src": "/icons/screenshot-narrow.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "News Crawler Mobile View"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "My Feed",
+      "short_name": "Feed",
+      "description": "View your personalized news feed",
+      "url": "/feed",
+      "icons": [{ "src": "/icons/icon-feed.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Saved Articles",
+      "short_name": "Saved",
+      "description": "View articles saved for offline reading",
+      "url": "/saved",
+      "icons": [{ "src": "/icons/icon-saved.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Breaking News",
+      "short_name": "Breaking",
+      "description": "View breaking news alerts",
+      "url": "/breaking",
+      "icons": [{ "src": "/icons/icon-breaking.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}

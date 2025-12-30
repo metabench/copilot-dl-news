@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480">
+  <g id="approach-lsh">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">APPROACH B: LSH / MINHASH</text>
+    
+    <!-- Concept -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="100" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#a78bfa">LOCALITY SENSITIVE HASHING</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">1. Convert skeleton → set of k-shingles</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">2. Hash shingles with multiple hash functions</text>
+      <text x="12" y="66" font-size="9" fill="#aaa">3. Keep min hash per function → signature</text>
+      <text x="12" y="80" font-size="9" fill="#aaa">4. Band similar signatures → candidate pairs</text>
+      <text x="12" y="94" font-size="9" fill="#888">Probability of collision ∝ Jaccard similarity</text>
+    </g>
+    
+    <!-- Algorithm -->
+    <g transform="translate(15, 165)">
+      <rect x="0" y="0" width="370" height="120" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">MINHASH ALGORITHM</text>
+      <text x="12" y="38" font-size="9" fill="#aaa" font-family="monospace">shingles = skeleton.ngrams(k=3)</text>
+      <text x="12" y="52" font-size="9" fill="#888" font-family="monospace">signature = []</text>
+      <text x="12" y="66" font-size="9" fill="#888" font-family="monospace">for h in hashFunctions[0..n]:</text>
+      <text x="12" y="80" font-size="9" fill="#888" font-family="monospace">  signature.push(min(h(s) for s in shingles))</text>
+      <text x="12" y="94" font-size="9" fill="#888" font-family="monospace">// Compare signatures: |match|/n ≈ Jaccard</text>
+      <text x="12" y="108" font-size="9" fill="#666">n=128 hashes → 256B signature, ~2% error</text>
+    </g>
+    
+    <!-- Complexity -->
+    <g transform="translate(15, 295)">
+      <rect x="0" y="0" width="180" height="75" fill="#444" rx="6"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="#c9a962">COMPLEXITY</text>
+      <text x="10" y="36" font-size="9" fill="#aaa">Build: O(n × k)</text>
+      <text x="10" y="50" font-size="9" fill="#aaa">Query: O(n) + candidates</text>
+      <text x="10" y="64" font-size="9" fill="#aaa">Space: O(N × n)</text>
+    </g>
+    
+    <g transform="translate(205, 295)">
+      <rect x="0" y="0" width="180" height="75" fill="#444" rx="6"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="#c9a962">PARAMETERS</text>
+      <text x="10" y="36" font-size="9" fill="#aaa">k = shingle size (3-5)</text>
+      <text x="10" y="50" font-size="9" fill="#aaa">n = hash count (64-256)</text>
+      <text x="10" y="64" font-size="9" fill="#aaa">b = bands, r = rows</text>
+    </g>
+    
+    <!-- Verdict -->
+    <g transform="translate(15, 380)">
+      <rect x="0" y="0" width="370" height="85" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">VERDICT</text>
+      <rect x="12" y="28" width="170" height="18" rx="4" fill="#3b82f6"/>
+      <text x="97" y="42" text-anchor="middle" font-size="9" font-weight="500" fill="white">USE FOR SIMILARITY LAYER</text>
+      <text x="12" y="62" font-size="9" fill="#aaa">Best for finding "similar enough" layouts.</text>
+      <text x="12" y="76" font-size="9" fill="#888">Add to layout_signatures.minhash column.</text>
+    </g>
+  </g>
+</svg>

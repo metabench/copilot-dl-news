@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 120">
+  <g id="conclusion">
+    <rect x="0" y="0" width="800" height="40" fill="#c9a962" rx="8"/>
+    <text x="400" y="26" text-anchor="middle" font-size="14" font-weight="600" fill="#2d2d2d">KEY TAKEAWAYS</text>
+    
+    <g transform="translate(30, 55)">
+      <rect x="0" y="0" width="230" height="50" fill="#1e3a5f" rx="6"/>
+      <text x="115" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="#60a5fa">1. Fast Path First</text>
+      <text x="115" y="38" text-anchor="middle" font-size="8" fill="#aaa">O(1) hash catches 80%</text>
+    </g>
+    
+    <g transform="translate(285, 55)">
+      <rect x="0" y="0" width="230" height="50" fill="#2d1f4a" rx="6"/>
+      <text x="115" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="#a78bfa">2. LSH Filters</text>
+      <text x="115" y="38" text-anchor="middle" font-size="8" fill="#aaa">99% pair pruning</text>
+    </g>
+    
+    <g transform="translate(540, 55)">
+      <rect x="0" y="0" width="230" height="50" fill="#1a3a2a" rx="6"/>
+      <text x="115" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="#34d399">3. Leader Adapts</text>
+      <text x="115" y="38" text-anchor="middle" font-size="8" fill="#aaa">Online + incremental</text>
+    </g>
+  </g>
+</svg>

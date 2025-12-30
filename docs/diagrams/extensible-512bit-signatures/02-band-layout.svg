@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 190">
+  <g id="band-layout">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">512-BIT SIGNATURE BAND ALLOCATION</text>
+    
+    <!-- The 512-bit bar -->
+    <g transform="translate(30, 50)">
+      <text x="0" y="12" font-size="9" fill="#aaa">64 bytes = 512 bits, divided into purpose-specific bands:</text>
+      
+      <!-- Band visualization -->
+      <g transform="translate(0, 22)">
+        <!-- Structural (128 bits) -->
+        <rect x="0" y="0" width="185" height="35" fill="#3b82f6" rx="4"/>
+        <text x="92" y="15" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">STRUCTURAL</text>
+        <text x="92" y="28" text-anchor="middle" font-size="8" fill="#bfdbfe">128 bits (16B)</text>
+        
+        <!-- Content (128 bits) -->
+        <rect x="190" y="0" width="185" height="35" fill="#8b5cf6" rx="4"/>
+        <text x="282" y="15" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">CONTENT</text>
+        <text x="282" y="28" text-anchor="middle" font-size="8" fill="#ddd6fe">128 bits (16B)</text>
+        
+        <!-- Semantic (128 bits) -->
+        <rect x="380" y="0" width="185" height="35" fill="#10b981" rx="4"/>
+        <text x="472" y="15" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">SEMANTIC</text>
+        <text x="472" y="28" text-anchor="middle" font-size="8" fill="#a7f3d0">128 bits (16B)</text>
+        
+        <!-- Reserved (128 bits) -->
+        <rect x="570" y="0" width="170" height="35" fill="#444" rx="4" stroke="#888" stroke-dasharray="4,2"/>
+        <text x="655" y="15" text-anchor="middle" font-size="9" font-weight="600" fill="#888">RESERVED</text>
+        <text x="655" y="28" text-anchor="middle" font-size="8" fill="#666">128 bits (16B)</text>
+      </g>
+      
+      <!-- Scale markers -->
+      <g transform="translate(0, 62)">
+        <line x1="0" y1="0" x2="740" y2="0" stroke="#666" stroke-width="1"/>
+        <text x="0" y="12" font-size="7" fill="#888">0</text>
+        <text x="185" y="12" font-size="7" fill="#888">128</text>
+        <text x="375" y="12" font-size="7" fill="#888">256</text>
+        <text x="565" y="12" font-size="7" fill="#888">384</text>
+        <text x="730" y="12" font-size="7" fill="#888">512 bits</text>
+      </g>
+    </g>
+    
+    <!-- Key insight -->
+    <g transform="translate(30, 145)">
+      <rect x="0" y="0" width="740" height="30" fill="#2d2d2d" rx="4"/>
+      <text x="370" y="19" text-anchor="middle" font-size="9" fill="#c9a962">💡 Start with 128-bit STRUCTURAL only → Enable bands as needed → Reserved bits = 0x00</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 380">
+  <g id="crawler-phase2">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="50" fill="#3a3a3a" rx="8 8 0 0"/>
+    <text x="200" y="25" text-anchor="middle" font-size="16" font-weight="600" fill="#f0ede8" letter-spacing="1">PHASE 2: HYBRID</text>
+    <text x="200" y="42" text-anchor="middle" font-size="10" fill="#888" font-style="italic">"The Smart Crawler"</text>
+    
+    <!-- Complete Items -->
+    <g transform="translate(15, 60)">
+      <rect x="0" y="0" width="370" height="55" fill="#10b981" rx="6"/>
+      <text x="12" y="22" font-size="13" font-weight="600" fill="#1a1a1a">✓ TeacherService (Puppeteer)</text>
+      <text x="12" y="40" font-size="10" fill="#1a1a1a" opacity="0.8">Page pooling • Resource blocking • Headless browser</text>
+    </g>
+    
+    <g transform="translate(15, 125)">
+      <rect x="0" y="0" width="370" height="55" fill="#10b981" rx="6"/>
+      <text x="12" y="22" font-size="13" font-weight="600" fill="#1a1a1a">✓ VisualAnalyzer</text>
+      <text x="12" y="40" font-size="10" fill="#1a1a1a" opacity="0.8">Largest text block • Metadata detection</text>
+    </g>
+    
+    <g transform="translate(15, 190)">
+      <rect x="0" y="0" width="370" height="55" fill="#10b981" rx="6"/>
+      <text x="12" y="22" font-size="13" font-weight="600" fill="#1a1a1a">✓ SkeletonHasher</text>
+      <text x="12" y="40" font-size="10" fill="#1a1a1a" opacity="0.8">L1/L2 hashing • DOM structure fingerprinting</text>
+    </g>
+    
+    <!-- In Progress -->
+    <g transform="translate(15, 255)">
+      <rect x="0" y="0" width="370" height="55" fill="#3b82f6" rx="6"/>
+      <text x="12" y="22" font-size="13" font-weight="600" fill="white">◐ StructureMiner</text>
+      <text x="12" y="40" font-size="10" fill="white" opacity="0.9">L2 clustering • Substructure analysis • In progress</text>
+    </g>
+    
+    <!-- Planned -->
+    <g transform="translate(15, 320)">
+      <rect x="0" y="0" width="370" height="50" fill="#8b5cf6" rx="6"/>
+      <text x="12" y="20" font-size="13" font-weight="600" fill="white">○ Signature Storage</text>
+      <text x="12" y="38" font-size="10" fill="white" opacity="0.9">layout_signatures • layout_templates tables</text>
+    </g>
+  </g>
+</svg>
