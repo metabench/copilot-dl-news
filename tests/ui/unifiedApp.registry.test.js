@@ -20,7 +20,8 @@ describe('unifiedApp sub-app registry', () => {
       'plugins',
       'quality',
       'analytics',
-      'query-telemetry'
+      'query-telemetry',
+      'docs'
     ];
 
     for (const id of required) {
@@ -53,6 +54,7 @@ describe('unifiedApp sub-app registry', () => {
     await expect(byId.get('quality').renderContent({})).resolves.toContain('src="/quality"');
     await expect(byId.get('analytics').renderContent({})).resolves.toContain('src="/analytics"');
     await expect(byId.get('query-telemetry').renderContent({})).resolves.toContain('src="/telemetry"');
+    await expect(byId.get('docs').renderContent({})).resolves.toContain('src="/docs"');
   });
 
   test('GET /api/apps returns stable schema', async () => {

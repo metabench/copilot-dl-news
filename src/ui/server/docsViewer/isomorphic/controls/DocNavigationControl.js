@@ -140,7 +140,10 @@ class DocNavigationControl extends jsgui.Control {
       
       if (!content) {
         // Fetch from API
-        const response = await fetch(`/api/doc?path=${encodeURIComponent(docPath)}`);
+        const basePath = typeof window !== 'undefined' && typeof window.__DOCS_VIEWER_BASE_PATH__ === 'string'
+          ? window.__DOCS_VIEWER_BASE_PATH__
+          : '';
+        const response = await fetch(`${basePath}/api/doc?path=${encodeURIComponent(docPath)}`);
         if (!response.ok) {
           throw new Error(`Failed to load document: ${response.statusText}`);
         }

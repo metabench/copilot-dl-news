@@ -88,3 +88,17 @@ Results (2025-12-30):
 - PluginDashboard: ✅ started successfully (port 3162)
 
 Note: RateLimit/Webhook dashboards can take longer to initialize on real DBs, so their check scripts set `timeout: 20000`.
+
+### Docs Viewer module (mountable under `/docs`)
+
+Goal: allow Docs Viewer to run standalone *and* be mounted under a path prefix (for unified shell) without breaking asset URLs, API URLs, or nav links.
+
+Commands run (2025-12-30):
+- `npm run ui:docs:build`
+	- Result: `✅ Docs viewer client bundle created at ...\src\ui\server\docsViewer\public\docs-viewer-client.js`
+- `node src/ui/server/docsViewer/checks/docsViewer.check.js`
+	- Result: `✅ Docs Viewer startup check passed (port 3163)`
+- `npm run test:by-path tests/ui/unifiedApp.registry.test.js tests/ui/docsViewer.mountPath.test.js`
+	- Result: `2 passed, 0 failed` (exit `0`)
+- `node src/ui/server/unifiedApp/server.js --check --port 3055`
+	- Result: `✅ UnifiedApp startup check passed (port 3055)` (Docs now appears in the printed sub-app list)

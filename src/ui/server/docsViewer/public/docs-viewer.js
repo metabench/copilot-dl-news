@@ -437,7 +437,8 @@
 
   function loadFolderContents(details, folderPath, placeholder) {
     // Build API URL with current state
-    const url = new URL("/api/folder", window.location.origin);
+    const basePath = typeof window.__DOCS_VIEWER_BASE_PATH__ === "string" ? window.__DOCS_VIEWER_BASE_PATH__ : "";
+    const url = new URL(`${basePath}/api/folder`, window.location.origin);
     url.searchParams.set("path", folderPath);
     
     // Preserve current filters/sort from page state

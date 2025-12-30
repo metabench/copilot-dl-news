@@ -168,6 +168,17 @@ function createSubAppRegistry() {
     // Development Tools
     // ─────────────────────────────────────────────────────────────
     {
+      id: 'docs',
+      label: 'Docs',
+      icon: '📚',
+      category: 'dev',
+      description: 'Browse repo documentation in-app',
+      renderContent: async () => {
+        return `<iframe class="app-embed" src="/docs" title="Docs" loading="lazy"></iframe>`;
+      }
+    },
+
+    {
       id: 'decision-tree',
       label: 'Decision Tree',
       icon: '🌳',

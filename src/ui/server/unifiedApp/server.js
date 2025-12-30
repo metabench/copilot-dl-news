@@ -32,6 +32,7 @@ const { createPluginDashboardRouter } = require('../pluginDashboard/server');
 const { createQueryTelemetryRouter } = require('../queryTelemetry/server');
 const { createQualityDashboardRouter } = require('../qualityDashboard/server');
 const { createAnalyticsHubRouter } = require('../analyticsHub/server');
+const { createDocsViewerRouter } = require('../docsViewer/server');
 
 const PORT = process.env.PORT || 3000;
 
@@ -146,6 +147,13 @@ function mountDashboardModules(unifiedApp, options = {}) {
       mountPath: '/analytics',
       full: () => createAnalyticsHubRouter({
         getDbHandle: () => getDbRW()?.db
+      })
+    },
+    {
+      id: 'docs',
+      mountPath: '/docs',
+      full: () => createDocsViewerRouter({
+        docsPath: path.join(process.cwd(), 'docs')
       })
     }
   ];
