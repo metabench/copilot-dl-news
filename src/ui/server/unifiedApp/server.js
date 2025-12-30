@@ -35,6 +35,26 @@ const { createAnalyticsHubRouter } = require('../analyticsHub/server');
 
 const PORT = process.env.PORT || 3000;
 
+function parseArgs(argv = process.argv.slice(2)) {
+  const args = {
+    port: Number(process.env.PORT) || Number(PORT) || 3000
+  };
+
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i];
+    if (token === '--port' && argv[i + 1]) {
+      i += 1;
+      const value = Number(argv[i]);
+      if (Number.isFinite(value) && value > 0) {
+        args.port = value;
+      }
+      continue;
+    }
+  }
+
+  return args;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Sub-App Registry
 // ─────────────────────────────────────────────────────────────
@@ -239,8 +259,10 @@ const mountedModules = mountDashboardModules(app, {
 
 if (require.main === module) {
   process.env.SERVER_NAME = process.env.SERVER_NAME || 'UnifiedApp';
-  wrapServerForCheck(app, PORT, undefined, () => {
-    console.log(`\n🎛️  Unified App Shell running at http://localhost:${PORT}\n`);
+  const args = parseArgs();
+  const port = args.port;
+  wrapServerForCheck(app, port, undefined, () => {
+    console.log(`\n🎛️  Unified App Shell running at http://localhost:${port}\n`);
     console.log('Available sub-apps:');
     for (const app of SUB_APPS) {
       console.log(`  ${app.icon} ${app.label}`);
