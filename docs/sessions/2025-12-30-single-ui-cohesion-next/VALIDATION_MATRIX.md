@@ -7,4 +7,7 @@
 | Unified shell startup check | `node src/ui/server/unifiedApp/server.js --check --port 3055` | Exit 0 | Console output |
 | Ops Hub startup check | `node src/ui/server/opsHub/server.js --check --port 3056` | Exit 0 | Console output |
 | Quality dashboard startup check | `node src/ui/server/qualityDashboard/server.js --check --port 3057 --db-path data/news.db` | Exit 0 | Console output |
+| Rate limit dashboard module check | `node src/ui/server/rateLimitDashboard/checks/rateLimitDashboard.check.js` | Exit 0 | Console output |
+| Webhook dashboard module check | `node src/ui/server/webhookDashboard/checks/webhookDashboard.check.js` | Exit 0 | Console output |
+| Plugin dashboard module check | `node src/ui/server/pluginDashboard/checks/pluginDashboard.check.js` | Exit 0 | Console output |
 | Regression tests | `npm run test:by-path tests/tools/__tests__/schema-sync.line-endings.test.js tests/ui/unifiedApp.registry.test.js` | Exit 0 | Jest output |

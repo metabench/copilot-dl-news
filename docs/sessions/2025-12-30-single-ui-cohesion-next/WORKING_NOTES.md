@@ -74,3 +74,17 @@ After splitting commits, reran the ladder:
 - `node src/ui/server/opsHub/server.js --check --port 3056` => ✅ pass
 - `node src/ui/server/qualityDashboard/server.js --check --port 3057 --db-path "data/news.db"` => ✅ pass
 - `npm run test:by-path tests/tools/__tests__/schema-sync.line-endings.test.js tests/ui/unifiedApp.registry.test.js` => ✅ 2 suites pass
+
+### Dashboard module checks (rate-limit / webhooks / plugins)
+
+Added lightweight startup checks for the three dashboard modules mounted by the unified app:
+- `node src/ui/server/rateLimitDashboard/checks/rateLimitDashboard.check.js`
+- `node src/ui/server/webhookDashboard/checks/webhookDashboard.check.js`
+- `node src/ui/server/pluginDashboard/checks/pluginDashboard.check.js`
+
+Results (2025-12-30):
+- RateLimitDashboard: ✅ started successfully (port 3160)
+- WebhookDashboard: ✅ started successfully (port 3161)
+- PluginDashboard: ✅ started successfully (port 3162)
+
+Note: RateLimit/Webhook dashboards can take longer to initialize on real DBs, so their check scripts set `timeout: 20000`.
