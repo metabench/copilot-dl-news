@@ -2,6 +2,7 @@
 
 describe('unifiedApp sub-app registry', () => {
   const { createSubAppRegistry, CATEGORIES } = require('../../src/ui/server/unifiedApp/subApps/registry');
+  const request = require('supertest');
 
   test('has stable ids, categories, and embedded mount paths', async () => {
     const apps = createSubAppRegistry();
@@ -52,5 +53,32 @@ describe('unifiedApp sub-app registry', () => {
     await expect(byId.get('quality').renderContent({})).resolves.toContain('src="/quality"');
     await expect(byId.get('analytics').renderContent({})).resolves.toContain('src="/analytics"');
     await expect(byId.get('query-telemetry').renderContent({})).resolves.toContain('src="/telemetry"');
+  });
+
+  test('GET /api/apps returns stable schema', async () => {
+    const { app: unifiedAppServer, SUB_APPS } = require('../../src/ui/server/unifiedApp/server');
+
+    const response = await request(unifiedAppServer).get('/api/apps');
+    expect(response.status).toBe(200);
+    expect(response.type).toContain('json');
+
+    expect(response.body).toHaveProperty('apps');
+    expect(Array.isArray(response.body.apps)).toBe(true);
+    expect(response.body.apps.length).toBe(SUB_APPS.length);
+
+    const ids = response.body.apps.map((entry) => entry.id);
+    expect(new Set(ids).size).toBe(ids.length);
+
+    for (const entry of response.body.apps) {
+      expect(entry).toHaveProperty('id');
+      expect(entry).toHaveProperty('label');
+      expect(entry).toHaveProperty('icon');
+      expect(entry).toHaveProperty('category');
+      expect(entry).toHaveProperty('description');
+      expect(Object.prototype.hasOwnProperty.call(CATEGORIES, entry.category)).toBe(true);
+    }
+
+    // IDs should match the registry the shell actually uses.
+    expect(ids).toEqual(SUB_APPS.map((subApp) => subApp.id));
   });
 });

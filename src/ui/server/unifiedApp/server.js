@@ -248,11 +248,6 @@ app.get('/api/apps/:appId/content', async (req, res) => {
   }
 });
 
-// Mount dashboard modules into the unified app (no-retirement: legacy servers keep working too)
-const mountedModules = mountDashboardModules(app, {
-  dbPath: process.env.DB_PATH
-});
-
 // ─────────────────────────────────────────────────────────────
 // Start Server
 // ─────────────────────────────────────────────────────────────
@@ -261,6 +256,14 @@ if (require.main === module) {
   process.env.SERVER_NAME = process.env.SERVER_NAME || 'UnifiedApp';
   const args = parseArgs();
   const port = args.port;
+
+  // Mount dashboard modules into the unified app (no-retirement: legacy servers keep working too)
+  // NOTE: keep this inside the main entrypoint so importing this module in Jest stays cheap and
+  // deterministic (no DB open, no background mounts).
+  const mountedModules = mountDashboardModules(app, {
+    dbPath: process.env.DB_PATH
+  });
+
   wrapServerForCheck(app, port, undefined, () => {
     console.log(`\n🎛️  Unified App Shell running at http://localhost:${port}\n`);
     console.log('Available sub-apps:');
