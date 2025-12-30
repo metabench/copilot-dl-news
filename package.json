@@ -29,6 +29,7 @@
     "test:list": "node scripts/jest_careful_runner.mjs --list-only",
     "test:api": "node scripts/jest_api_tests.mjs",
     "test:by-path": "node scripts/jest_careful_runner.mjs --runTestsByPath",
+    "pr:link": "node tools/dev/git-pr-link.js",
     "test:related": "npx jest --findRelatedTests --listTests",
     "test:name": "npx jest -t",
     "test:proj": "npx jest --selectProjects",

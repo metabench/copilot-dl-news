@@ -31,6 +31,25 @@
 
 ## Current Session
 
+### Session 2025-12-30: Seamless git workflows for agents
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make agent git usage a frictionless enabler (branch checks, PR link creation, predictable defaults).
+
+**Location**: `docs/sessions/2025-12-30-git-agent-seamless/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-30-git-agent-seamless/INDEX.md)
+- 🗺️ [Plan](./2025-12-30-git-agent-seamless/PLAN.md)
+- 📝 [Working Notes](./2025-12-30-git-agent-seamless/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-30-git-agent-seamless/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-30-git-agent-seamless/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-30: Single UI app cohesion  next steps
 
 **Duration**: Active
