@@ -89,6 +89,10 @@ These guides are **authoritative sources** for their domains. When working in th
 - [Puppeteer UI Workflow Guide](guides/PUPPETEER_UI_WORKFLOW.md) - One-shot browser console/network capture for debugging UI routes without writing a full E2E.
 - [Puppeteer Scenario Suites](guides/PUPPETEER_SCENARIO_SUITES.md) - Fast UI verification by running many scenarios per browser session (deterministic fixtures + artifacts on failure).
 
+### Authorization UX (CLI)
+
+- [Authorization Workflows — Case Study + Patterns](guides/AUTHORIZATION_WORKFLOWS_CASE_STUDY.md) - Device-code OAuth case study (GitHub-style) + simpler high-quality CLI auth patterns.
+
 ### Server Telemetry
 
 - [Server Telemetry Standard](guides/SERVER_TELEMETRY_STANDARD.md) - Standard JSONL events + `/api/status` for z-server ingestion and cross-server observability.
