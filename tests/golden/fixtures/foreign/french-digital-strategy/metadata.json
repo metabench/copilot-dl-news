@@ -1,0 +1,21 @@
+{
+  "url": "https://www.lemonde.fr/economie/article/2025/12/19/strategie-numerique-ue.html",
+  "capturedAt": "2025-12-19T12:00:00Z",
+  "category": "foreign",
+  "edgeCaseType": "french-language",
+  "expected": {
+    "title": "L'Union européenne adopte une nouvelle stratégie numérique",
+    "author": "Marie Dupont",
+    "publishDate": "2025-12-19T11:00:00+01:00",
+    "bodyWordCountMin": 100,
+    "bodyContains": ["Commission européenne", "50 milliards", "souveraineté numérique"],
+    "language": "fr"
+  },
+  "flags": {
+    "isForeignLanguage": true,
+    "language": "fr",
+    "hasAccentedCharacters": true,
+    "latinScript": true
+  },
+  "notes": "French news article testing accented character handling (é, è, ê, ç, etc.) and European date/time formats"
+}

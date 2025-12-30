@@ -1,0 +1,65 @@
+{
+  "_comment": "Extractor configuration - maps domains to preferred extraction methods",
+  "_version": 1,
+  
+  "default": "readability",
+  
+  "extractors": {
+    "readability": {
+      "description": "Mozilla Readability - best for traditional article layouts",
+      "package": "@mozilla/readability",
+      "strengths": ["standard articles", "blog posts", "news articles"],
+      "weaknesses": ["SPAs", "heavy JavaScript", "non-article content"]
+    },
+    "template": {
+      "description": "TemplateExtractor - custom extractor with configurable selectors",
+      "path": "../src/extraction/TemplateExtractor.js",
+      "strengths": ["configurable", "site-specific tuning", "handles edge cases"],
+      "weaknesses": ["requires configuration per site"]
+    },
+    "cheerio": {
+      "description": "Simple Cheerio-based extraction - fast fallback",
+      "package": "cheerio",
+      "strengths": ["fast", "low memory", "simple pages"],
+      "weaknesses": ["less accurate", "no content scoring"]
+    }
+  },
+  
+  "perDomain": {
+    "_comment": "Override default extractor for specific domains",
+    
+    "medium.com": "readability",
+    "substack.com": "readability",
+    "reuters.com": "readability",
+    
+    "news.ycombinator.com": "cheerio",
+    
+    "_example_comment": "Add domain-specific overrides as discovered through benchmarking",
+    "_example_format": "domain.com: extractor_name"
+  },
+  
+  "perCategory": {
+    "_comment": "Preferred extractors by content category",
+    
+    "wire": "readability",
+    "standard": "readability",
+    "opinion": "readability",
+    "listicle": "template",
+    "live-blog": "template",
+    "spa": "template",
+    "video-heavy": "template"
+  },
+  
+  "fallbackChain": [
+    "readability",
+    "template",
+    "cheerio"
+  ],
+  
+  "thresholds": {
+    "_comment": "Minimum confidence scores to accept extraction",
+    "minConfidence": 0.5,
+    "minWordCount": 100,
+    "fallbackOnLowConfidence": true
+  }
+}

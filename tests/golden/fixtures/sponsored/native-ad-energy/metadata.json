@@ -1,0 +1,24 @@
+{
+  "url": "https://newshub.example.com/sponsored/energy-corp-clean-energy",
+  "capturedAt": "2025-12-15T12:00:00Z",
+  "category": "sponsored",
+  "edgeCaseType": "native-advertising",
+  "expected": {
+    "title": "How Clean Energy Is Transforming Communities Across America",
+    "author": "Energy Corp Marketing Team",
+    "publishDate": "2025-12-15T10:00:00Z",
+    "isSponsored": true,
+    "sponsor": "Energy Corp",
+    "bodyContains": ["Energy Corp", "renewable", "consultation"],
+    "hasCTA": true
+  },
+  "flags": {
+    "isSponsored": true,
+    "isNativeAd": true,
+    "hasSponsorLabel": true,
+    "hasDisclosure": true,
+    "hasSponsorLogo": true,
+    "hasCallToAction": true
+  },
+  "notes": "Native advertising / sponsored content disguised as editorial. Tests detection of sponsored content markers. Should flag as non-editorial content."
+}

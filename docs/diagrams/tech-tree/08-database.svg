@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <g id="database">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="50" fill="#3a3a3a" rx="8 8 0 0"/>
+    <text x="200" y="25" text-anchor="middle" font-size="16" font-weight="600" fill="#f0ede8" letter-spacing="1">DATABASE LAYER</text>
+    <text x="200" y="42" text-anchor="middle" font-size="10" fill="#888">SQLite + Adapter Pattern • Schema Evolution</text>
+    
+    <!-- DB Cards -->
+    <g transform="translate(15, 60)">
+      <rect x="0" y="0" width="370" height="50" fill="#10b981" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ SQLiteNewsDatabase</text>
+      <text x="12" y="38" font-size="10" fill="#1a1a1a" opacity="0.8">Articles • Fetches • Links • Domains • Categories</text>
+    </g>
+    <g transform="translate(15, 118)">
+      <rect x="0" y="0" width="370" height="50" fill="#10b981" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ Gazetteer Tables</text>
+      <text x="12" y="38" font-size="10" fill="#1a1a1a" opacity="0.8">Places • Regions • Names • Boundaries • Place hubs</text>
+    </g>
+    <g transform="translate(15, 176)">
+      <rect x="0" y="0" width="370" height="50" fill="#10b981" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ Schema Sync Tooling</text>
+      <text x="12" y="38" font-size="10" fill="#1a1a1a" opacity="0.8">npm run schema:sync • Drift detection • CI check</text>
+    </g>
+    <g transform="translate(15, 234)">
+      <rect x="0" y="0" width="370" height="50" fill="#3b82f6" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="white">◐ UI Themes / Metrics Cache</text>
+      <text x="12" y="38" font-size="10" fill="white" opacity="0.9">uiThemes • uiCachedMetrics • Layout tables</text>
+    </g>
+    <g transform="translate(15, 292)">
+      <rect x="0" y="0" width="370" height="50" fill="#8b5cf6" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="white">○ Layout Signatures</text>
+      <text x="12" y="38" font-size="10" fill="white" opacity="0.9">layout_signatures • layout_templates • Masks</text>
+    </g>
+    <g transform="translate(15, 350)">
+      <rect x="0" y="0" width="370" height="48" fill="#f59e0b" rx="6"/>
+      <text x="12" y="18" font-size="12" font-weight="600" fill="#1a1a1a">◇ Postgres Adapter (Future)</text>
+      <text x="12" y="36" font-size="10" fill="#1a1a1a" opacity="0.8">Distributed scale • Multi-machine crawling</text>
+    </g>
+  </g>
+</svg>

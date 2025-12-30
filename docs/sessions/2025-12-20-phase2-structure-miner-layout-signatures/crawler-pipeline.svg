@@ -1,0 +1,1774 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="1600" height="1200">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0d0d1a"/>
+      <stop offset="30%" stop-color="#1a1a2e"/>
+      <stop offset="60%" stop-color="#16213e"/>
+      <stop offset="100%" stop-color="#0a0a15"/>
+    </linearGradient>
+    
+    <!-- Ambient glow for tanks -->
+    <radialGradient id="tankAmbient" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#2a4a5a" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#1a2a3a" stop-opacity="0"/>
+    </radialGradient>
+    
+    <!-- Copper pipe accent -->
+    <linearGradient id="copperPipe" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b87333"/>
+      <stop offset="30%" stop-color="#da8a42"/>
+      <stop offset="50%" stop-color="#cd7f32"/>
+      <stop offset="80%" stop-color="#9a6329"/>
+      <stop offset="100%" stop-color="#7a4a1a"/>
+    </linearGradient>
+    
+    <!-- Hazard warning glow -->
+    <radialGradient id="hazardGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffcc00" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#ff8800" stop-opacity="0"/>
+    </radialGradient>
+    
+    <!-- Data packet gradient -->
+    <radialGradient id="dataPacket" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#00ffff"/>
+      <stop offset="50%" stop-color="#00ff88"/>
+      <stop offset="100%" stop-color="#00aa55"/>
+    </radialGradient>
+    
+    <!-- Error glow -->
+    <radialGradient id="errorGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff4444" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#ff0000" stop-opacity="0"/>
+    </radialGradient>
+    
+    <!-- Metal panel gradient -->
+    <linearGradient id="metalPanel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4a5a6a"/>
+      <stop offset="50%" stop-color="#3a4a5a"/>
+      <stop offset="100%" stop-color="#2a3a4a"/>
+    </linearGradient>
+    
+    <!-- Brushed metal texture -->
+    <pattern id="brushedMetal" width="100" height="4" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="1" x2="100" y2="1" stroke="#5a6a7a" stroke-width="0.3" opacity="0.3"/>
+      <line x1="0" y1="3" x2="100" y2="3" stroke="#3a4a5a" stroke-width="0.2" opacity="0.2"/>
+    </pattern>
+    
+    <!-- Circuit board pattern -->
+    <pattern id="circuitBoard" width="30" height="30" patternUnits="userSpaceOnUse">
+      <rect width="30" height="30" fill="none"/>
+      <circle cx="5" cy="5" r="1.5" fill="#2a4a4a" opacity="0.4"/>
+      <circle cx="25" cy="25" r="1.5" fill="#2a4a4a" opacity="0.4"/>
+      <path d="M5,5 L5,15 L15,15 M25,25 L25,15 L15,15" stroke="#3a5a5a" stroke-width="0.5" fill="none" opacity="0.3"/>
+    </pattern>
+    
+    <!-- Pipe gradients -->
+    <linearGradient id="pipeH" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5a5a6a"/>
+      <stop offset="20%" stop-color="#8a8a9a"/>
+      <stop offset="50%" stop-color="#6a6a7a"/>
+      <stop offset="80%" stop-color="#4a4a5a"/>
+      <stop offset="100%" stop-color="#3a3a4a"/>
+    </linearGradient>
+    
+    <linearGradient id="pipeV" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#5a5a6a"/>
+      <stop offset="20%" stop-color="#8a8a9a"/>
+      <stop offset="50%" stop-color="#6a6a7a"/>
+      <stop offset="80%" stop-color="#4a4a5a"/>
+      <stop offset="100%" stop-color="#3a3a4a"/>
+    </linearGradient>
+    
+    <!-- Data flow gradient (glowing) -->
+    <linearGradient id="dataFlow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00ff88"/>
+      <stop offset="50%" stop-color="#00ffcc"/>
+      <stop offset="100%" stop-color="#00ff88"/>
+    </linearGradient>
+    
+    <!-- Tank/container gradient -->
+    <linearGradient id="tank" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3a4a5a"/>
+      <stop offset="30%" stop-color="#5a6a7a"/>
+      <stop offset="70%" stop-color="#4a5a6a"/>
+      <stop offset="100%" stop-color="#2a3a4a"/>
+    </linearGradient>
+    
+    <!-- Spider body gradient -->
+    <radialGradient id="spiderBody" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#4a4a5a"/>
+      <stop offset="60%" stop-color="#2a2a3a"/>
+      <stop offset="100%" stop-color="#1a1a2a"/>
+    </radialGradient>
+    
+    <!-- Spider body glossy -->
+    <radialGradient id="spiderGloss" cx="30%" cy="20%" r="60%">
+      <stop offset="0%" stop-color="#7a7a8a" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#2a2a3a" stop-opacity="0"/>
+    </radialGradient>
+    
+    <!-- Pipe rivet pattern -->
+    <pattern id="rivets" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="10" cy="10" r="2" fill="#3a3a4a"/>
+      <circle cx="10" cy="10" r="1.2" fill="#5a5a6a"/>
+    </pattern>
+    
+    <!-- Rust/wear texture -->
+    <pattern id="rust" width="40" height="40" patternUnits="userSpaceOnUse">
+      <ellipse cx="10" cy="15" rx="8" ry="4" fill="#5a4a3a" opacity="0.15"/>
+      <ellipse cx="30" cy="30" rx="6" ry="3" fill="#4a3a2a" opacity="0.12"/>
+      <ellipse cx="25" cy="8" rx="5" ry="3" fill="#6a5a4a" opacity="0.1"/>
+    </pattern>
+    
+    <!-- Steam/vapor gradient -->
+    <radialGradient id="steam" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    
+    <!-- Warning stripe pattern -->
+    <pattern id="warning" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="10" height="20" fill="#ffcc00"/>
+      <rect x="10" width="10" height="20" fill="#1a1a2a"/>
+    </pattern>
+    
+    <!-- Glow filter -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Shadow filter -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="3" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+    
+    <!-- Deep shadow for major elements -->
+    <filter id="deepShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="5" dy="5" stdDeviation="8" flood-color="#000" flood-opacity="0.7"/>
+    </filter>
+    
+    <!-- Inner glow for active elements -->
+    <filter id="innerGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+      <feOffset in="blur" dx="0" dy="0" result="offsetBlur"/>
+      <feFlood flood-color="#00ff88" flood-opacity="0.3" result="color"/>
+      <feComposite in="color" in2="offsetBlur" operator="in" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Emboss effect for panels -->
+    <filter id="emboss" x="-10%" y="-10%" width="120%" height="120%">
+      <feConvolveMatrix kernelMatrix="1 0 0 0 0 0 0 0 -1" preserveAlpha="true"/>
+    </filter>
+    
+    <!-- Noise texture filter -->
+    <filter id="noise" x="0%" y="0%" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" result="noise"/>
+      <feComposite in="SourceGraphic" in2="noise" operator="in"/>
+    </filter>
+    
+    <!-- Legend reference gradients -->
+    <linearGradient id="tankGradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3a4a5a"/>
+      <stop offset="50%" stop-color="#5a6a7a"/>
+      <stop offset="100%" stop-color="#2a3a4a"/>
+    </linearGradient>
+    
+    <linearGradient id="pipeGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8a8a9a"/>
+      <stop offset="50%" stop-color="#6a6a7a"/>
+      <stop offset="100%" stop-color="#4a4a5a"/>
+    </linearGradient>
+    
+    <radialGradient id="spiderGradient" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#4a4a5a"/>
+      <stop offset="100%" stop-color="#2a2a3a"/>
+    </radialGradient>
+    
+    <linearGradient id="titleGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4a5a6a"/>
+      <stop offset="100%" stop-color="#2a3a4a"/>
+    </linearGradient>
+    
+    <style>
+      .title { font-family: "Segoe UI", Arial, sans-serif; font-size: 48px; font-weight: bold; fill: #e0e0e0; }
+      .subtitle { font-family: "Segoe UI", Arial, sans-serif; font-size: 20px; fill: #a0a0b0; }
+      .stage-label { font-family: "Segoe UI", Arial, sans-serif; font-size: 16px; font-weight: bold; fill: #ffffff; }
+      .component { font-family: "Consolas", monospace; font-size: 11px; fill: #c0c0d0; }
+      .annotation { font-family: "Segoe UI", Arial, sans-serif; font-size: 10px; fill: #8080a0; font-style: italic; }
+      .tech-label { font-family: "Consolas", monospace; font-size: 9px; fill: #6a8a9a; }
+      .stat-value { font-family: "Consolas", monospace; font-size: 14px; fill: #00ff88; font-weight: bold; }
+      .section-title { font-family: "Segoe UI", Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #d0d0e0; }
+      .description { font-family: "Segoe UI", Arial, sans-serif; font-size: 10px; fill: #9090a0; }
+      .metric-label { font-family: "Consolas", monospace; font-size: 8px; fill: #7a7a8a; }
+      .metric-value { font-family: "Consolas", monospace; font-size: 10px; fill: #00ccff; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1600" height="1200" fill="url(#bg)"/>
+  
+  <!-- Starfield effect (subtle dots) -->
+  <g fill="#ffffff" opacity="0.1">
+    <circle cx="50" cy="80" r="0.5"/><circle cx="180" cy="120" r="0.7"/>
+    <circle cx="320" cy="60" r="0.5"/><circle cx="450" cy="140" r="0.6"/>
+    <circle cx="580" cy="90" r="0.4"/><circle cx="720" cy="50" r="0.5"/>
+    <circle cx="850" cy="130" r="0.6"/><circle cx="980" cy="70" r="0.5"/>
+    <circle cx="1100" cy="100" r="0.4"/><circle cx="1230" cy="60" r="0.7"/>
+    <circle cx="1360" cy="120" r="0.5"/><circle cx="1490" cy="80" r="0.6"/>
+    <circle cx="1550" cy="150" r="0.4"/><circle cx="100" cy="180" r="0.5"/>
+    <circle cx="400" cy="200" r="0.4"/><circle cx="700" cy="170" r="0.6"/>
+    <circle cx="1000" cy="190" r="0.5"/><circle cx="1300" cy="160" r="0.7"/>
+  </g>
+  
+  <!-- Grid pattern (subtle) -->
+  <g stroke="#2a2a4a" stroke-width="0.5" opacity="0.3">
+    <line x1="0" y1="100" x2="1600" y2="100"/>
+    <line x1="0" y1="200" x2="1600" y2="200"/>
+    <line x1="0" y1="300" x2="1600" y2="300"/>
+    <line x1="0" y1="400" x2="1600" y2="400"/>
+    <line x1="0" y1="500" x2="1600" y2="500"/>
+    <line x1="0" y1="600" x2="1600" y2="600"/>
+    <line x1="0" y1="700" x2="1600" y2="700"/>
+    <line x1="0" y1="800" x2="1600" y2="800"/>
+    <line x1="0" y1="900" x2="1600" y2="900"/>
+    <line x1="0" y1="1000" x2="1600" y2="1000"/>
+    <line x1="0" y1="1100" x2="1600" y2="1100"/>
+  </g>
+  
+  <!-- Vertical grid lines -->
+  <g stroke="#2a2a4a" stroke-width="0.3" opacity="0.2">
+    <line x1="200" y1="0" x2="200" y2="1200"/>
+    <line x1="400" y1="0" x2="400" y2="1200"/>
+    <line x1="600" y1="0" x2="600" y2="1200"/>
+    <line x1="800" y1="0" x2="800" y2="1200"/>
+    <line x1="1000" y1="0" x2="1000" y2="1200"/>
+    <line x1="1200" y1="0" x2="1200" y2="1200"/>
+    <line x1="1400" y1="0" x2="1400" y2="1200"/>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- TITLE SECTION                                                         -->
+  <!-- ====================================================================== -->
+  <g transform="translate(800, 55)">
+    <!-- Decorative border frame -->
+    <rect x="-450" y="-30" width="900" height="75" rx="8" fill="none" stroke="#3a4a5a" stroke-width="1" opacity="0.4"/>
+    <rect x="-445" y="-25" width="890" height="65" rx="6" fill="#0a0a15" opacity="0.5"/>
+    
+    <!-- Hex decorations -->
+    <g fill="none" stroke="#4a5a6a" stroke-width="1" opacity="0.3">
+      <polygon points="-430,12 -420,0 -400,0 -390,12 -400,24 -420,24"/>
+      <polygon points="390,12 400,0 420,0 430,12 420,24 400,24"/>
+    </g>
+    
+    <text text-anchor="middle" class="title">🕷️ Crawler Pipeline Architecture 🕷️</text>
+    <text y="32" text-anchor="middle" class="subtitle">Intelligent Data Extraction → Processing → Storage → Presentation</text>
+    
+    <!-- Version badge -->
+    <g transform="translate(380, -15)">
+      <rect width="50" height="18" rx="3" fill="#2a4a3a" stroke="#3a6a4a"/>
+      <text x="25" y="13" text-anchor="middle" class="tech-label" fill="#00ff88">v0.0.14</text>
+    </g>
+  </g>
+  
+  <!-- ====================================================================== -->
+  <!-- SYSTEM OVERVIEW PANEL (Top left)                                      -->
+  <!-- ====================================================================== -->
+  <g transform="translate(30, 95)">
+    <rect width="200" height="80" rx="6" fill="#1a1a2a" stroke="#3a3a4a" opacity="0.8"/>
+    <rect x="5" y="5" width="190" height="20" rx="3" fill="#2a2a3a"/>
+    <text x="100" y="18" text-anchor="middle" class="section-title">📊 System Overview</text>
+    <g class="description" transform="translate(10, 38)">
+      <text y="0">Architecture: Event-driven pipeline</text>
+      <text y="14">Concurrency: Async workers + queues</text>
+      <text y="28">Throughput: ~500 URLs/minute</text>
+    </g>
+  </g>
+  
+  <!-- ====================================================================== -->
+  <!-- HEALTH STATUS PANEL (Top right)                                       -->
+  <!-- ====================================================================== -->
+  <g transform="translate(1370, 95)">
+    <rect width="200" height="80" rx="6" fill="#1a1a2a" stroke="#3a3a4a" opacity="0.8"/>
+    <rect x="5" y="5" width="190" height="20" rx="3" fill="#2a3a2a"/>
+    <text x="100" y="18" text-anchor="middle" class="section-title">🩺 Health Status</text>
+    <g transform="translate(10, 38)">
+      <circle cx="8" cy="4" r="5" fill="#00ff88" filter="url(#glow)"/>
+      <text x="20" y="8" class="description">Pipeline: OPERATIONAL</text>
+      <circle cx="8" cy="20" r="5" fill="#00ff88" filter="url(#glow)"/>
+      <text x="20" y="24" class="description">Workers: 6/6 active</text>
+      <circle cx="8" cy="36" r="5" fill="#ffaa00" filter="url(#glow)"/>
+      <text x="20" y="40" class="description">Queue depth: 142 items</text>
+    </g>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- STAGE 1: URL SOURCES (Left side)                                      -->
+  <!-- ====================================================================== -->
+  <g transform="translate(50, 200)">
+    <!-- Ambient glow behind tank -->
+    <ellipse cx="100" cy="160" rx="110" ry="160" fill="url(#tankAmbient)" opacity="0.4"/>
+    
+    <!-- Tank container -->
+    <rect width="200" height="320" rx="12" fill="url(#tank)" stroke="#6a7a8a" stroke-width="2" filter="url(#deepShadow)"/>
+    <!-- Brushed metal overlay -->
+    <rect width="200" height="320" rx="12" fill="url(#brushedMetal)" opacity="0.3"/>
+    
+    <!-- Industrial details: rivets along edges -->
+    <g fill="#3a3a4a" opacity="0.7">
+      <circle cx="15" cy="15" r="2.5"/><circle cx="185" cy="15" r="2.5"/>
+      <circle cx="15" cy="305" r="2.5"/><circle cx="185" cy="305" r="2.5"/>
+      <circle cx="15" cy="160" r="2"/><circle cx="185" cy="160" r="2"/>
+      <circle cx="100" cy="15" r="2"/><circle cx="100" cy="305" r="2"/>
+    </g>
+    <!-- Bolt heads with highlights -->
+    <g>
+      <circle cx="15" cy="15" r="1.2" fill="#5a5a6a"/>
+      <circle cx="185" cy="15" r="1.2" fill="#5a5a6a"/>
+      <circle cx="15" cy="305" r="1.2" fill="#5a5a6a"/>
+      <circle cx="185" cy="305" r="1.2" fill="#5a5a6a"/>
+    </g>
+    
+    <!-- Wear/rust overlay on tank -->
+    <rect width="200" height="320" rx="12" fill="url(#rust)" opacity="0.2"/>
+    
+    <!-- Header bar with glow -->
+    <rect x="5" y="5" width="190" height="35" rx="6" fill="#2a5a7a"/>
+    <rect x="5" y="5" width="190" height="35" rx="6" fill="url(#circuitBoard)" opacity="0.3"/>
+    <!-- Status LED cluster -->
+    <g transform="translate(165, 22)">
+      <circle r="5" fill="#00ff88" filter="url(#glow)"/>
+      <circle cx="-12" r="3" fill="#00aa66" opacity="0.6"/>
+      <circle cx="12" r="3" fill="#004422" opacity="0.4"/>
+    </g>
+    <text x="90" y="28" text-anchor="middle" class="stage-label">📥 URL SOURCES</text>
+    
+    <!-- Stage number badge -->
+    <g transform="translate(20, 22)">
+      <circle r="10" fill="#1a3a4a" stroke="#4a6a7a"/>
+      <text y="4" text-anchor="middle" class="stat-value" style="font-size:11px">1</text>
+    </g>
+    
+    <!-- Component list with icons -->
+    <g class="component" transform="translate(15, 55)">
+      <text y="0">📡 RSS Feeds</text>
+      <text y="20">🗺️ Sitemap Parser</text>
+      <text y="40">🔍 Hub Discovery</text>
+      <text y="60">🌱 Manual Seeds</text>
+      <text y="80">🔗 Backlink Finder</text>
+      <text y="100">📢 Social Shares</text>
+    </g>
+    
+    <!-- Detailed metrics panel -->
+    <g transform="translate(10, 165)">
+      <rect width="180" height="45" rx="4" fill="#1a2a3a" stroke="#3a4a5a" opacity="0.8"/>
+      <text x="90" y="12" text-anchor="middle" class="metric-label">DISCOVERY METRICS</text>
+      <g transform="translate(10, 22)">
+        <text class="metric-value">128</text><text x="35" class="metric-label">feeds active</text>
+        <text y="14" class="metric-value">2.4K</text><text x="35" y="14" class="metric-label">URLs/hour</text>
+      </g>
+    </g>
+    
+    <!-- Spider placeholder (outline) -->
+    <g transform="translate(100, 255)">
+      <!-- Abdomen (larger back segment) -->
+      <ellipse rx="32" ry="22" fill="url(#spiderBody)" stroke="#4a4a5a" stroke-width="1.5"/>
+      <ellipse rx="32" ry="22" fill="url(#spiderGloss)"/>
+      <!-- Abdomen pattern -->
+      <ellipse rx="14" ry="9" fill="#3a3a4a" opacity="0.3"/>
+      <path d="M -10,6 Q 0,14 10,6" stroke="#4a4a5a" stroke-width="1" fill="none" opacity="0.4"/>
+      <path d="M -8,10 Q 0,16 8,10" stroke="#4a4a5a" stroke-width="0.5" fill="none" opacity="0.3"/>
+      
+      <!-- Cephalothorax (head segment) -->
+      <ellipse cy="-18" rx="16" ry="14" fill="url(#spiderBody)" stroke="#4a4a5a" stroke-width="1.5"/>
+      <ellipse cy="-18" rx="16" ry="14" fill="url(#spiderGloss)"/>
+      
+      <!-- Eyes (8 eyes - spider accurate!) -->
+      <g fill="#ff4444">
+        <!-- Main eyes (front, larger) -->
+        <circle cx="-7" cy="-21" r="4"/>
+        <circle cx="7" cy="-21" r="4"/>
+        <!-- Secondary eyes -->
+        <circle cx="-12" cy="-16" r="2.5"/>
+        <circle cx="12" cy="-16" r="2.5"/>
+        <!-- Smaller back eyes -->
+        <circle cx="-9" cy="-11" r="1.8"/>
+        <circle cx="9" cy="-11" r="1.8"/>
+        <circle cx="-4" cy="-10" r="1.4"/>
+        <circle cx="4" cy="-10" r="1.4"/>
+      </g>
+      <!-- Eye reflections -->
+      <g fill="#ffffff" opacity="0.7">
+        <circle cx="-8" cy="-22" r="1.2"/>
+        <circle cx="6" cy="-22" r="1.2"/>
+      </g>
+      
+      <!-- Chelicerae (fangs) -->
+      <g fill="#2a2a3a" stroke="#3a3a4a" stroke-width="0.5">
+        <path d="M -5,-30 Q -8,-34 -4,-37 Q -1,-33 -3,-30 Z"/>
+        <path d="M 5,-30 Q 8,-34 4,-37 Q 1,-33 3,-30 Z"/>
+      </g>
+      <!-- Venom droplets -->
+      <g fill="#88ff88" opacity="0.5">
+        <ellipse cx="-4" cy="-38" rx="1" ry="1.5"/>
+        <ellipse cx="4" cy="-38" rx="1" ry="1.5"/>
+      </g>
+      
+      <!-- Pedipalps (small front appendages) -->
+      <g stroke="#3a3a4a" stroke-width="1.5" fill="none">
+        <path d="M -10,-26 Q -18,-30 -22,-26"/>
+        <path d="M 10,-26 Q 18,-30 22,-26"/>
+      </g>
+      
+      <!-- Articulated Legs (4 pairs, with joints) -->
+      <g stroke="#3a3a4a" stroke-width="2.5" fill="none" stroke-linecap="round">
+        <!-- Left legs -->
+        <path d="M -26,-9 Q -35,-5 -42,-16 Q -50,-24 -60,-21"/>
+        <path d="M -28,-2 Q -42,1 -50,-5 Q -62,-9 -70,2"/>
+        <path d="M -28,5 Q -42,10 -50,6 Q -62,2 -68,15"/>
+        <path d="M -26,12 Q -34,22 -42,28 Q -52,36 -60,45"/>
+        <!-- Right legs -->
+        <path d="M 26,-9 Q 35,-5 42,-16 Q 50,-24 60,-21"/>
+        <path d="M 28,-2 Q 42,1 50,-5 Q 62,-9 70,2"/>
+        <path d="M 28,5 Q 42,10 50,6 Q 62,2 68,15"/>
+        <path d="M 26,12 Q 34,22 42,28 Q 52,36 60,45"/>
+      </g>
+      <!-- Leg joints (small circles) with highlights -->
+      <g>
+        <circle cx="-42" cy="-16" r="2.5" fill="#4a4a5a"/>
+        <circle cx="-50" cy="-5" r="2.5" fill="#4a4a5a"/>
+        <circle cx="-50" cy="6" r="2.5" fill="#4a4a5a"/>
+        <circle cx="-42" cy="28" r="2.5" fill="#4a4a5a"/>
+        <circle cx="42" cy="-16" r="2.5" fill="#4a4a5a"/>
+        <circle cx="50" cy="-5" r="2.5" fill="#4a4a5a"/>
+        <circle cx="50" cy="6" r="2.5" fill="#4a4a5a"/>
+        <circle cx="42" cy="28" r="2.5" fill="#4a4a5a"/>
+        <!-- Joint highlights -->
+        <circle cx="-42" cy="-17" r="1" fill="#6a6a7a" opacity="0.5"/>
+        <circle cx="42" cy="-17" r="1" fill="#6a6a7a" opacity="0.5"/>
+      </g>
+      
+      <!-- Spinnerets (back of abdomen) -->
+      <g fill="#3a3a4a">
+        <ellipse cx="-6" cy="20" rx="4" ry="2.5"/>
+        <ellipse cx="6" cy="20" rx="4" ry="2.5"/>
+        <ellipse cx="0" cy="22" rx="3" ry="2"/>
+      </g>
+      <!-- Silk thread emerging -->
+      <path d="M 0,24 Q 5,35 -5,50" stroke="#6a6a7a" stroke-width="0.5" fill="none" opacity="0.4"/>
+    </g>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- PIPE 1: Sources → Queue                                               -->
+  <!-- ====================================================================== -->
+  <g transform="translate(250, 360)">
+    <!-- Copper accent pipe (smaller, decorative) above main pipe -->
+    <rect x="15" y="-25" width="110" height="8" rx="4" fill="url(#copperPipe)" stroke="#9a6329"/>
+    <ellipse cx="15" cy="-21" rx="4" ry="4" fill="#cd7f32" stroke="#7a4a1a"/>
+    <ellipse cx="125" cy="-21" rx="4" ry="4" fill="#cd7f32" stroke="#7a4a1a"/>
+    
+    <!-- Pipe flanges (connection points) -->
+    <rect x="-5" y="-5" width="18" height="45" rx="3" fill="#5a5a6a" stroke="#7a7a8a" stroke-width="1.5"/>
+    <rect x="127" y="-5" width="18" height="45" rx="3" fill="#5a5a6a" stroke="#7a7a8a" stroke-width="1.5"/>
+    <!-- Flange bolts with hex pattern -->
+    <g>
+      <circle cx="4" cy="3" r="3.5" fill="#3a3a4a"/>
+      <circle cx="4" cy="32" r="3.5" fill="#3a3a4a"/>
+      <circle cx="136" cy="3" r="3.5" fill="#3a3a4a"/>
+      <circle cx="136" cy="32" r="3.5" fill="#3a3a4a"/>
+      <!-- Hex heads -->
+      <polygon points="4,3 7,1 9,3 7,5 4,5 2,3" fill="#4a4a5a"/>
+      <polygon points="4,32 7,30 9,32 7,34 4,34 2,32" fill="#4a4a5a"/>
+      <polygon points="136,3 139,1 141,3 139,5 136,5 134,3" fill="#4a4a5a"/>
+      <polygon points="136,32 139,30 141,32 139,34 136,34 134,32" fill="#4a4a5a"/>
+    </g>
+    
+    <!-- Main pipe body -->
+    <rect x="10" width="120" height="35" rx="4" fill="url(#pipeH)" stroke="#7a7a8a" stroke-width="1.5"/>
+    <!-- Rust/wear overlay -->
+    <rect x="10" width="120" height="35" rx="4" fill="url(#rust)" opacity="0.5"/>
+    <!-- Pipe highlight -->
+    <rect x="15" y="5" width="110" height="10" rx="2" fill="#9a9aaa" opacity="0.15"/>
+    
+    <!-- Rivet band with reinforcement -->
+    <rect x="55" y="-4" width="30" height="43" rx="2" fill="#4a4a5a" stroke="#6a6a7a"/>
+    <g fill="#3a3a4a">
+      <circle cx="62" cy="4" r="2.5"/><circle cx="77" cy="4" r="2.5"/>
+      <circle cx="62" cy="31" r="2.5"/><circle cx="77" cy="31" r="2.5"/>
+    </g>
+    <!-- Band rivets highlights -->
+    <g fill="#5a5a6a">
+      <circle cx="62" cy="3.5" r="1"/><circle cx="77" cy="3.5" r="1"/>
+    </g>
+    
+    <!-- Pressure gauge (detailed) -->
+    <g transform="translate(70, -22)">
+      <circle r="16" fill="#1a1a2a" stroke="#6a6a7a" stroke-width="2"/>
+      <circle r="13" fill="#0a0a1a" stroke="#4a4a5a"/>
+      <!-- Gauge markings -->
+      <g stroke="#3a3a4a" stroke-width="0.5">
+        <line x1="-10" y1="0" x2="-8" y2="0"/>
+        <line x1="10" y1="0" x2="8" y2="0"/>
+        <line x1="0" y1="-10" x2="0" y2="-8"/>
+        <line x1="0" y1="10" x2="0" y2="8"/>
+      </g>
+      <!-- Needle -->
+      <line x1="0" y1="0" x2="7" y2="-5" stroke="#00ff88" stroke-width="2"/>
+      <circle r="3" fill="#4a4a5a"/>
+      <circle r="1.5" fill="#5a5a6a"/>
+      <!-- Digital readout -->
+      <rect x="-12" y="2" width="24" height="8" rx="1" fill="#0a1a0a"/>
+      <text x="0" y="9" text-anchor="middle" fill="#00ff88" style="font-size:6px; font-family:Consolas">2.4 bar</text>
+    </g>
+    
+    <!-- Flow indicator -->
+    <line x1="25" y1="17.5" x2="110" y2="17.5" stroke="url(#dataFlow)" stroke-width="5" stroke-dasharray="12,6" filter="url(#glow)"/>
+    <!-- Arrow -->
+    <polygon points="125,17.5 105,7 105,28" fill="#00ff88" filter="url(#glow)"/>
+    
+    <!-- Steam wisps (animated looking) -->
+    <g opacity="0.25">
+      <ellipse cx="30" cy="-12" rx="10" ry="5" fill="url(#steam)"/>
+      <ellipse cx="55" cy="-15" rx="8" ry="4" fill="url(#steam)"/>
+      <ellipse cx="90" cy="-13" rx="7" ry="3.5" fill="url(#steam)"/>
+      <ellipse cx="110" cy="-10" rx="6" ry="3" fill="url(#steam)"/>
+    </g>
+    
+    <!-- Pipe label -->
+    <text x="70" y="55" text-anchor="middle" class="tech-label">URL_FEED_PIPE</text>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- STAGE 2: CRAWL QUEUE                                                  -->
+  <!-- ====================================================================== -->
+  <g transform="translate(400, 200)">
+    <!-- Ambient glow -->
+    <ellipse cx="100" cy="160" rx="110" ry="160" fill="url(#tankAmbient)" opacity="0.35"/>
+    
+    <!-- Tank container -->
+    <rect width="200" height="320" rx="12" fill="url(#tank)" stroke="#6a7a8a" stroke-width="2" filter="url(#deepShadow)"/>
+    <rect width="200" height="320" rx="12" fill="url(#brushedMetal)" opacity="0.25"/>
+    
+    <!-- Industrial rivets -->
+    <g fill="#3a3a4a" opacity="0.7">
+      <circle cx="15" cy="15" r="2.5"/><circle cx="185" cy="15" r="2.5"/>
+      <circle cx="15" cy="305" r="2.5"/><circle cx="185" cy="305" r="2.5"/>
+      <circle cx="100" cy="15" r="2"/><circle cx="100" cy="305" r="2"/>
+    </g>
+    <rect width="200" height="320" rx="12" fill="url(#rust)" opacity="0.15"/>
+    
+    <rect x="5" y="5" width="190" height="35" rx="6" fill="#5a5a2a"/>
+    <rect x="5" y="5" width="190" height="35" rx="6" fill="url(#circuitBoard)" opacity="0.25"/>
+    <!-- Amber status LED cluster -->
+    <g transform="translate(165, 22)">
+      <circle r="5" fill="#ffaa00" filter="url(#glow)"/>
+      <circle cx="-12" r="3" fill="#aa7700" opacity="0.6"/>
+      <circle cx="12" r="3" fill="#554400" opacity="0.4"/>
+    </g>
+    <text x="90" y="28" text-anchor="middle" class="stage-label">📋 CRAWL QUEUE</text>
+    
+    <!-- Stage number badge -->
+    <g transform="translate(20, 22)">
+      <circle r="10" fill="#3a3a1a" stroke="#5a5a3a"/>
+      <text y="4" text-anchor="middle" class="stat-value" style="font-size:11px; fill:#ffaa00">2</text>
+    </g>
+    
+    <!-- Component list with icons -->
+    <g class="component" transform="translate(15, 55)">
+      <text y="0">⚖️ Priority Scoring</text>
+      <text y="20">🔄 Deduplication</text>
+      <text y="40">⏱️ Rate Limiting</text>
+      <text y="60">🌐 Domain Rotation</text>
+      <text y="80">♻️ Retry Logic</text>
+      <text y="100">🤖 robots.txt Check</text>
+    </g>
+    
+    <!-- Detailed metrics panel -->
+    <g transform="translate(10, 165)">
+      <rect width="180" height="55" rx="4" fill="#1a2a2a" stroke="#3a4a3a" opacity="0.8"/>
+      <text x="90" y="12" text-anchor="middle" class="metric-label">QUEUE METRICS</text>
+      <g transform="translate(10, 22)">
+        <text class="metric-value" style="fill:#ffaa00">142</text><text x="40" class="metric-label">pending</text>
+        <text y="14" class="metric-value" style="fill:#ffaa00">38</text><text x="40" y="14" class="metric-label">in-flight</text>
+        <text y="28" class="metric-value" style="fill:#00ff88">99.2%</text><text x="50" y="28" class="metric-label">success rate</text>
+      </g>
+    </g>
+    
+    <!-- Queue visualization (mini bar chart) -->
+    <g transform="translate(10, 232)">
+      <rect width="180" height="25" rx="3" fill="#1a1a2a" stroke="#3a3a4a"/>
+      <text x="10" y="10" class="metric-label">QUEUE DEPTH</text>
+      <!-- Progress bars -->
+      <rect x="5" y="14" width="120" height="6" rx="1" fill="#2a2a2a"/>
+      <rect x="5" y="14" width="72" height="6" rx="1" fill="#ffaa00" opacity="0.7"/>
+      <text x="165" y="19" class="metric-value" style="font-size:8px; fill:#ffaa00">60%</text>
+    </g>
+    
+    <!-- Queue Spider (amber eyes) -->
+    <g transform="translate(100, 295)">
+      <ellipse rx="30" ry="21" fill="url(#spiderBody)" stroke="#4a4a5a" stroke-width="1.5"/>
+      <ellipse rx="30" ry="21" fill="url(#spiderGloss)"/>
+      <ellipse rx="13" ry="8" fill="#3a3a4a" opacity="0.3"/>
+      <ellipse cy="-16" rx="15" ry="13" fill="url(#spiderBody)" stroke="#4a4a5a" stroke-width="1.5"/>
+      <ellipse cy="-16" rx="15" ry="13" fill="url(#spiderGloss)"/>
+      <!-- Amber eyes -->
+      <g fill="#ffaa00">
+        <circle cx="-6" cy="-19" r="3.8"/><circle cx="6" cy="-19" r="3.8"/>
+        <circle cx="-11" cy="-14" r="2.2"/><circle cx="11" cy="-14" r="2.2"/>
+        <circle cx="-8" cy="-10" r="1.6"/><circle cx="8" cy="-10" r="1.6"/>
+        <circle cx="-3" cy="-9" r="1.2"/><circle cx="3" cy="-9" r="1.2"/>
+      </g>
+      <g fill="#ffffff" opacity="0.6"><circle cx="-7" cy="-20" r="1.1"/><circle cx="5" cy="-20" r="1.1"/></g>
+      <!-- Fangs -->
+      <g fill="#2a2a3a" stroke="#3a3a4a" stroke-width="0.5">
+        <path d="M -4,-28 Q -7,-32 -3,-35 Q 0,-31 -2,-28 Z"/>
+        <path d="M 4,-28 Q 7,-32 3,-35 Q 0,-31 2,-28 Z"/>
+      </g>
+      <!-- Legs -->
+      <g stroke="#3a3a4a" stroke-width="2.5" fill="none" stroke-linecap="round">
+        <path d="M -24,-8 Q -36,-4 -44,-15 Q -52,-22 -62,-19"/>
+        <path d="M -26,-1 Q -40,2 -50,-4 Q -62,-7 -70,4"/>
+        <path d="M -26,6 Q -40,11 -50,7 Q -62,3 -68,16"/>
+        <path d="M -24,13 Q -33,23 -42,30 Q -52,38 -62,48"/>
+        <path d="M 24,-8 Q 36,-4 44,-15 Q 52,-22 62,-19"/>
+        <path d="M 26,-1 Q 40,2 50,-4 Q 62,-7 70,4"/>
+        <path d="M 26,6 Q 40,11 50,7 Q 62,3 68,16"/>
+        <path d="M 24,13 Q 33,23 42,30 Q 52,38 62,48"/>
+      </g>
+      <g fill="#4a4a5a">
+        <circle cx="-44" cy="-15" r="2.2"/><circle cx="44" cy="-15" r="2.2"/>
+        <circle cx="-50" cy="-4" r="2.2"/><circle cx="50" cy="-4" r="2.2"/>
+        <circle cx="-50" cy="7" r="2.2"/><circle cx="50" cy="7" r="2.2"/>
+        <circle cx="-42" cy="30" r="2.2"/><circle cx="42" cy="30" r="2.2"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- PIPE 2: Queue → Fetcher                                               -->
+  <!-- ====================================================================== -->
+  <g transform="translate(600, 360)">
+    <!-- Copper accent pipes -->
+    <rect x="15" y="-28" width="110" height="8" rx="4" fill="url(#copperPipe)" stroke="#9a6329"/>
+    <ellipse cx="15" cy="-24" rx="4" ry="4" fill="#cd7f32" stroke="#7a4a1a"/>
+    <ellipse cx="125" cy="-24" rx="4" ry="4" fill="#cd7f32" stroke="#7a4a1a"/>
+    
+    <!-- Flanges -->
+    <rect x="-5" y="-5" width="18" height="45" rx="3" fill="#5a5a6a" stroke="#7a7a8a" stroke-width="1.5"/>
+    <rect x="127" y="-5" width="18" height="45" rx="3" fill="#5a5a6a" stroke="#7a7a8a" stroke-width="1.5"/>
+    <g>
+      <circle cx="4" cy="3" r="3.5" fill="#3a3a4a"/>
+      <circle cx="4" cy="32" r="3.5" fill="#3a3a4a"/>
+      <circle cx="136" cy="3" r="3.5" fill="#3a3a4a"/>
+      <circle cx="136" cy="32" r="3.5" fill="#3a3a4a"/>
+    </g>
+    
+    <!-- Pipe body -->
+    <rect x="10" width="120" height="35" rx="4" fill="url(#pipeH)" stroke="#7a7a8a" stroke-width="1.5"/>
+    <rect x="10" width="120" height="35" rx="4" fill="url(#rust)" opacity="0.4"/>
+    <rect x="15" y="5" width="110" height="10" rx="2" fill="#9a9aaa" opacity="0.15"/>
+    
+    <!-- Valve wheel (more detailed) -->
+    <g transform="translate(70, -25)">
+      <circle r="18" fill="#3a3a4a" stroke="#5a5a6a" stroke-width="2"/>
+      <circle r="8" fill="#4a4a5a" stroke="#6a6a7a"/>
+      <circle r="4" fill="#5a5a6a"/>
+      <g stroke="#5a5a6a" stroke-width="4" stroke-linecap="round">
+        <line x1="-14" y1="0" x2="14" y2="0"/>
+        <line x1="0" y1="-14" x2="0" y2="14"/>
+        <line x1="-10" y1="-10" x2="10" y2="10"/>
+        <line x1="-10" y1="10" x2="10" y2="-10"/>
+      </g>
+      <!-- Valve label -->
+      <text y="32" text-anchor="middle" class="tech-label">FLOW CTRL</text>
+    </g>
+    
+    <!-- Flow indicator -->
+    <line x1="25" y1="17.5" x2="110" y2="17.5" stroke="url(#dataFlow)" stroke-width="5" stroke-dasharray="12,6" filter="url(#glow)"/>
+    <polygon points="125,17.5 105,7 105,28" fill="#00ff88" filter="url(#glow)"/>
+    
+    <!-- Steam -->
+    <g opacity="0.2">
+      <ellipse cx="40" cy="-8" rx="8" ry="4" fill="url(#steam)"/>
+      <ellipse cx="100" cy="-10" rx="7" ry="3.5" fill="url(#steam)"/>
+    </g>
+    
+    <!-- Pipe label -->
+    <text x="70" y="55" text-anchor="middle" class="tech-label">DISPATCH_PIPE</text>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- STAGE 3: HTTP FETCHER                                                 -->
+  <!-- ====================================================================== -->
+  <g transform="translate(750, 200)">
+    <!-- Ambient glow -->
+    <ellipse cx="100" cy="160" rx="110" ry="160" fill="url(#tankAmbient)" opacity="0.35"/>
+    
+    <rect width="200" height="320" rx="12" fill="url(#tank)" stroke="#6a7a8a" stroke-width="2" filter="url(#deepShadow)"/>
+    <rect width="200" height="320" rx="12" fill="url(#brushedMetal)" opacity="0.25"/>
+    
+    <!-- Industrial rivets -->
+    <g fill="#3a3a4a" opacity="0.7">
+      <circle cx="15" cy="15" r="2.5"/><circle cx="185" cy="15" r="2.5"/>
+      <circle cx="15" cy="305" r="2.5"/><circle cx="185" cy="305" r="2.5"/>
+      <circle cx="100" cy="15" r="2"/><circle cx="100" cy="305" r="2"/>
+    </g>
+    <rect width="200" height="320" rx="12" fill="url(#rust)" opacity="0.18"/>
+    
+    <rect x="5" y="5" width="190" height="35" rx="6" fill="#2a5a5a"/>
+    <rect x="5" y="5" width="190" height="35" rx="6" fill="url(#circuitBoard)" opacity="0.25"/>
+    <!-- Cyan status LED cluster -->
+    <g transform="translate(165, 22)">
+      <circle r="5" fill="#00ccff" filter="url(#glow)"/>
+      <circle cx="-12" r="3" fill="#0088aa" opacity="0.6"/>
+      <circle cx="12" r="3" fill="#004455" opacity="0.4"/>
+    </g>
+    <text x="90" y="28" text-anchor="middle" class="stage-label">🌐 HTTP FETCHER</text>
+    
+    <!-- Stage number badge -->
+    <g transform="translate(20, 22)">
+      <circle r="10" fill="#1a3a3a" stroke="#3a5a5a"/>
+      <text y="4" text-anchor="middle" class="stat-value" style="font-size:11px; fill:#00ccff">3</text>
+    </g>
+    
+    <g class="component" transform="translate(15, 55)">
+      <text y="0">🔌 Axios/Got Client</text>
+      <text y="20">🔗 Connection Pool</text>
+      <text y="40">⏰ Timeout Handling</text>
+      <text y="60">↪️ Redirect Follow</text>
+      <text y="80">🛡️ Error Recovery</text>
+      <text y="100">💾 Response Cache</text>
+    </g>
+    
+    <!-- Network metrics panel -->
+    <g transform="translate(10, 165)">
+      <rect width="180" height="70" rx="4" fill="#1a2a3a" stroke="#3a5a6a" opacity="0.8"/>
+      <text x="90" y="12" text-anchor="middle" class="metric-label">NETWORK METRICS</text>
+      <g transform="translate(10, 22)">
+        <text class="metric-value" style="fill:#00ccff">245ms</text><text x="55" class="metric-label">avg latency</text>
+        <text y="14" class="metric-value" style="fill:#00ccff">12</text><text x="35" y="14" class="metric-label">active conns</text>
+        <text y="28" class="metric-value" style="fill:#00ff88">4.2MB/s</text><text x="60" y="28" class="metric-label">throughput</text>
+        <text y="42" class="metric-value" style="fill:#ff6644">3</text><text x="35" y="42" class="metric-label">errors/min</text>
+      </g>
+    </g>
+    
+    <!-- Fetcher Spider (cyan eyes) -->
+    <g transform="translate(100, 295)">
+      <ellipse rx="30" ry="21" fill="url(#spiderBody)" stroke="#4a4a5a" stroke-width="1.5"/>
+      <ellipse rx="30" ry="21" fill="url(#spiderGloss)"/>
+      <ellipse rx="13" ry="8" fill="#3a3a4a" opacity="0.3"/>
+      <ellipse cy="-16" rx="15" ry="13" fill="url(#spiderBody)" stroke="#4a4a5a" stroke-width="1.5"/>
+      <ellipse cy="-16" rx="15" ry="13" fill="url(#spiderGloss)"/>
+      <!-- Cyan eyes -->
+      <g fill="#00ccff">
+        <circle cx="-6" cy="-19" r="3.8"/><circle cx="6" cy="-19" r="3.8"/>
+        <circle cx="-11" cy="-14" r="2.2"/><circle cx="11" cy="-14" r="2.2"/>
+        <circle cx="-8" cy="-10" r="1.6"/><circle cx="8" cy="-10" r="1.6"/>
+        <circle cx="-3" cy="-9" r="1.2"/><circle cx="3" cy="-9" r="1.2"/>
+      </g>
+      <g fill="#ffffff" opacity="0.6"><circle cx="-7" cy="-20" r="1.1"/><circle cx="5" cy="-20" r="1.1"/></g>
+      <!-- Fangs -->
+      <g fill="#2a2a3a" stroke="#3a3a4a" stroke-width="0.5">
+        <path d="M -4,-28 Q -7,-32 -3,-35 Q 0,-31 -2,-28 Z"/>
+        <path d="M 4,-28 Q 7,-32 3,-35 Q 0,-31 2,-28 Z"/>
+      </g>
+      <!-- Articulated legs -->
+      <g stroke="#3a3a4a" stroke-width="2.5" fill="none" stroke-linecap="round">
+        <path d="M -24,-8 Q -36,-4 -44,-15 Q -52,-22 -62,-19"/>
+        <path d="M -26,-1 Q -40,2 -50,-4 Q -62,-7 -70,4"/>
+        <path d="M -26,6 Q -40,11 -50,7 Q -62,3 -68,16"/>
+        <path d="M -24,13 Q -33,23 -42,30 Q -52,38 -62,48"/>
+        <path d="M 24,-8 Q 36,-4 44,-15 Q 52,-22 62,-19"/>
+        <path d="M 26,-1 Q 40,2 50,-4 Q 62,-7 70,4"/>
+        <path d="M 26,6 Q 40,11 50,7 Q 62,3 68,16"/>
+        <path d="M 24,13 Q 33,23 42,30 Q 52,38 62,48"/>
+      </g>
+      <g fill="#4a4a5a">
+        <circle cx="-44" cy="-15" r="2.2"/><circle cx="44" cy="-15" r="2.2"/>
+        <circle cx="-50" cy="-4" r="2.2"/><circle cx="50" cy="-4" r="2.2"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- PIPE 3: Fetcher → Parser                                              -->
+  <!-- ====================================================================== -->
+  <g transform="translate(950, 360)">
+    <!-- Copper accent -->
+    <rect x="15" y="-28" width="110" height="8" rx="4" fill="url(#copperPipe)" stroke="#9a6329"/>
+    <ellipse cx="15" cy="-24" rx="4" ry="4" fill="#cd7f32" stroke="#7a4a1a"/>
+    <ellipse cx="125" cy="-24" rx="4" ry="4" fill="#cd7f32" stroke="#7a4a1a"/>
+    
+    <!-- Flanges -->
+    <rect x="-5" y="-5" width="18" height="45" rx="3" fill="#5a5a6a" stroke="#7a7a8a" stroke-width="1.5"/>
+    <rect x="127" y="-5" width="18" height="45" rx="3" fill="#5a5a6a" stroke="#7a7a8a" stroke-width="1.5"/>
+    <g>
+      <circle cx="4" cy="3" r="3.5" fill="#3a3a4a"/>
+      <circle cx="4" cy="32" r="3.5" fill="#3a3a4a"/>
+      <circle cx="136" cy="3" r="3.5" fill="#3a3a4a"/>
+      <circle cx="136" cy="32" r="3.5" fill="#3a3a4a"/>
+    </g>
+    
+    <!-- Pipe body -->
+    <rect x="10" width="120" height="35" rx="4" fill="url(#pipeH)" stroke="#7a7a8a" stroke-width="1.5"/>
+    <rect x="10" width="120" height="35" rx="4" fill="url(#rust)" opacity="0.35"/>
+    <rect x="15" y="5" width="110" height="10" rx="2" fill="#9a9aaa" opacity="0.15"/>
+    
+    <!-- Temperature gauge (more detailed) -->
+    <g transform="translate(70, -20)">
+      <rect x="-22" y="-12" width="44" height="24" rx="4" fill="#2a2a3a" stroke="#5a5a6a"/>
+      <rect x="-18" y="-8" width="26" height="6" rx="2" fill="#1a1a2a"/>
+      <rect x="-18" y="-8" width="18" height="6" rx="2" fill="#00ff88" opacity="0.8"/>
+      <!-- Digital display -->
+      <rect x="-18" y="1" width="36" height="10" rx="2" fill="#0a1a0a" stroke="#1a3a1a"/>
+      <text x="0" y="9" text-anchor="middle" fill="#00ff88" style="font-size:7px; font-family:Consolas">68.2°C</text>
+    </g>
+    
+    <!-- Flow indicator -->
+    <line x1="25" y1="17.5" x2="110" y2="17.5" stroke="url(#dataFlow)" stroke-width="5" stroke-dasharray="12,6" filter="url(#glow)"/>
+    <polygon points="125,17.5 105,7 105,28" fill="#00ff88" filter="url(#glow)"/>
+    
+    <!-- Steam -->
+    <g opacity="0.2">
+      <ellipse cx="35" cy="-8" rx="8" ry="4" fill="url(#steam)"/>
+      <ellipse cx="105" cy="-10" rx="6" ry="3" fill="url(#steam)"/>
+    </g>
+    
+    <!-- Pipe label -->
+    <text x="70" y="55" text-anchor="middle" class="tech-label">RAW_HTML_PIPE</text>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- STAGE 4: HTML PARSER                                                  -->
+  <!-- ====================================================================== -->
+  <g transform="translate(1100, 200)">
+    <!-- Ambient glow -->
+    <ellipse cx="100" cy="160" rx="110" ry="160" fill="url(#tankAmbient)" opacity="0.35"/>
+    
+    <rect width="200" height="320" rx="12" fill="url(#tank)" stroke="#6a7a8a" stroke-width="2" filter="url(#deepShadow)"/>
+    <rect width="200" height="320" rx="12" fill="url(#brushedMetal)" opacity="0.25"/>
+    
+    <!-- Industrial rivets -->
+    <g fill="#3a3a4a" opacity="0.7">
+      <circle cx="15" cy="15" r="2.5"/><circle cx="185" cy="15" r="2.5"/>
+      <circle cx="15" cy="305" r="2.5"/><circle cx="185" cy="305" r="2.5"/>
+      <circle cx="100" cy="15" r="2"/><circle cx="100" cy="305" r="2"/>
+    </g>
+    <rect width="200" height="320" rx="12" fill="url(#rust)" opacity="0.2"/>
+    
+    <rect x="5" y="5" width="190" height="35" rx="6" fill="#5a2a5a"/>
+    <rect x="5" y="5" width="190" height="35" rx="6" fill="url(#circuitBoard)" opacity="0.25"/>
+    <!-- Magenta status LED cluster -->
+    <g transform="translate(165, 22)">
+      <circle r="5" fill="#ff00ff" filter="url(#glow)"/>
+      <circle cx="-12" r="3" fill="#aa00aa" opacity="0.6"/>
+      <circle cx="12" r="3" fill="#550055" opacity="0.4"/>
+    </g>
+    <text x="90" y="28" text-anchor="middle" class="stage-label">📄 HTML PARSER</text>
+    
+    <!-- Stage number badge -->
+    <g transform="translate(20, 22)">
+      <circle r="10" fill="#3a1a3a" stroke="#5a3a5a"/>
+      <text y="4" text-anchor="middle" class="stat-value" style="font-size:11px; fill:#ff00ff">4</text>
+    </g>
+    
+    <g class="component" transform="translate(15, 55)">
+      <text y="0">🔍 Cheerio DOM</text>
+      <text y="20">🔗 Link Extraction</text>
+      <text y="40">🧹 Content Cleanup</text>
+      <text y="60">📋 Metadata Parse</text>
+      <text y="80">🏷️ Schema.org</text>
+      <text y="100">📝 Text Normalize</text>
+    </g>
+    
+    <!-- Parser metrics panel -->
+    <g transform="translate(10, 165)">
+      <rect width="180" height="70" rx="4" fill="#2a1a2a" stroke="#4a3a4a" opacity="0.8"/>
+      <text x="90" y="12" text-anchor="middle" class="metric-label">PARSER METRICS</text>
+      <g transform="translate(10, 22)">
+        <text class="metric-value" style="fill:#ff00ff">1.2K</text><text x="50" class="metric-label">docs parsed/min</text>
+        <text y="14" class="metric-value" style="fill:#ff00ff">847</text><text x="45" y="14" class="metric-label">links extracted</text>
+        <text y="28" class="metric-value" style="fill:#00ff88">12ms</text><text x="48" y="28" class="metric-label">avg parse time</text>
+        <text y="42" class="metric-value" style="fill:#ffaa00">94%</text><text x="45" y="42" class="metric-label">schema.org hit</text>
+      </g>
+    </g>
+    
+    <!-- Parser Spider (magenta eyes) -->
+    <g transform="translate(100, 295)">
+      <ellipse rx="30" ry="21" fill="url(#spiderBody)" stroke="#4a4a5a" stroke-width="1.5"/>
+      <ellipse rx="30" ry="21" fill="url(#spiderGloss)"/>
+      <ellipse rx="13" ry="8" fill="#3a3a4a" opacity="0.3"/>
+      <ellipse cy="-16" rx="15" ry="13" fill="url(#spiderBody)" stroke="#4a4a5a" stroke-width="1.5"/>
+      <ellipse cy="-16" rx="15" ry="13" fill="url(#spiderGloss)"/>
+      <!-- Magenta eyes -->
+      <g fill="#ff00ff">
+        <circle cx="-6" cy="-19" r="3.8"/><circle cx="6" cy="-19" r="3.8"/>
+        <circle cx="-11" cy="-14" r="2.2"/><circle cx="11" cy="-14" r="2.2"/>
+        <circle cx="-8" cy="-10" r="1.6"/><circle cx="8" cy="-10" r="1.6"/>
+        <circle cx="-3" cy="-9" r="1.2"/><circle cx="3" cy="-9" r="1.2"/>
+      </g>
+      <g fill="#ffffff" opacity="0.6"><circle cx="-7" cy="-20" r="1.1"/><circle cx="5" cy="-20" r="1.1"/></g>
+      <!-- Fangs with venom -->
+      <g fill="#2a2a3a" stroke="#3a3a4a" stroke-width="0.5">
+        <path d="M -4,-28 Q -7,-32 -3,-35 Q 0,-31 -2,-28 Z"/>
+        <path d="M 4,-28 Q 7,-32 3,-35 Q 0,-31 2,-28 Z"/>
+      </g>
+      <g fill="#ff88ff" opacity="0.5">
+        <ellipse cx="-3" cy="-36" rx="1" ry="1.5"/>
+        <ellipse cx="3" cy="-36" rx="1" ry="1.5"/>
+      </g>
+      <!-- Articulated legs -->
+      <g stroke="#3a3a4a" stroke-width="2.5" fill="none" stroke-linecap="round">
+        <path d="M -24,-8 Q -36,-4 -44,-15 Q -52,-22 -62,-19"/>
+        <path d="M -26,-1 Q -40,2 -50,-4 Q -62,-7 -70,4"/>
+        <path d="M -26,6 Q -40,11 -50,7 Q -62,3 -68,16"/>
+        <path d="M -24,13 Q -33,23 -42,30 Q -52,38 -62,48"/>
+        <path d="M 24,-8 Q 36,-4 44,-15 Q 52,-22 62,-19"/>
+        <path d="M 26,-1 Q 40,2 50,-4 Q 62,-7 70,4"/>
+        <path d="M 26,6 Q 40,11 50,7 Q 62,3 68,16"/>
+        <path d="M 24,13 Q 33,23 42,30 Q 52,38 62,48"/>
+      </g>
+      <g fill="#4a4a5a">
+        <circle cx="-44" cy="-15" r="2.2"/><circle cx="44" cy="-15" r="2.2"/>
+        <circle cx="-50" cy="-4" r="2.2"/><circle cx="50" cy="-4" r="2.2"/>
+        <circle cx="-50" cy="7" r="2.2"/><circle cx="50" cy="7" r="2.2"/>
+        <circle cx="-42" cy="30" r="2.2"/><circle cx="42" cy="30" r="2.2"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- PIPE 4: Parser → Storage (L-bend pipe going down then left)           -->
+  <!-- ====================================================================== -->
+  <g transform="translate(1185, 520)">
+    <!-- Top flange (connects to Parser bottom) -->
+    <rect x="-8" y="-12" width="50" height="20" rx="3" fill="#5a5a6a" stroke="#7a7a8a" stroke-width="1.5"/>
+    <g fill="#3a3a4a"><circle cx="3" cy="0" r="4"/><circle cx="33" cy="0" r="4"/></g>
+    
+    <!-- Vertical section (goes down ~60px) -->
+    <rect width="35" height="65" rx="4" fill="url(#pipeV)" stroke="#7a7a8a" stroke-width="1.5"/>
+    <rect width="35" height="65" rx="4" fill="url(#rust)" opacity="0.3"/>
+    
+    <!-- Elbow joint (90-degree bend) -->
+    <g transform="translate(0, 60)">
+      <!-- Elbow body - curved section -->
+      <path d="M 0,0 L 0,25 Q 0,45 -20,45 L -50,45 L -50,10 Q -50,0 -40,0 Z" 
+            fill="url(#pipeH)" stroke="#7a7a8a" stroke-width="1.5"/>
+      <path d="M 0,0 L 0,25 Q 0,45 -20,45 L -50,45 L -50,10 Q -50,0 -40,0 Z" 
+            fill="url(#rust)" opacity="0.25"/>
+      <!-- Elbow reinforcement ring -->
+      <ellipse cx="-10" cy="22" rx="18" ry="12" fill="none" stroke="#6a6a7a" stroke-width="3"/>
+      <ellipse cx="-10" cy="22" rx="12" ry="8" fill="#4a4a5a" opacity="0.5"/>
+      <!-- Elbow bolts -->
+      <circle cx="-25" cy="10" r="3" fill="#3a3a4a"/>
+      <circle cx="-25" cy="35" r="3" fill="#3a3a4a"/>
+    </g>
+    
+    <!-- Horizontal section (goes left toward Storage) -->
+    <g transform="translate(-50, 70)">
+      <rect x="-85" y="0" width="90" height="35" rx="4" fill="url(#pipeH)" stroke="#7a7a8a" stroke-width="1.5"/>
+      <rect x="-85" y="0" width="90" height="35" rx="4" fill="url(#rust)" opacity="0.3"/>
+      <!-- Rivet band on horizontal -->
+      <rect x="-55" y="-4" width="25" height="43" rx="2" fill="#4a4a5a" stroke="#6a6a7a"/>
+      <circle cx="-48" cy="5" r="2.5" fill="#3a3a4a"/>
+      <circle cx="-38" cy="5" r="2.5" fill="#3a3a4a"/>
+      <circle cx="-48" cy="30" r="2.5" fill="#3a3a4a"/>
+      <circle cx="-38" cy="30" r="2.5" fill="#3a3a4a"/>
+    </g>
+    
+    <!-- Bottom flange (connects to Storage top) -->
+    <g transform="translate(-135, 65)">
+      <rect y="0" width="18" height="45" rx="3" fill="#5a5a6a" stroke="#7a7a8a" stroke-width="1.5"/>
+      <circle cx="9" cy="10" r="3.5" fill="#3a3a4a"/>
+      <circle cx="9" cy="35" r="3.5" fill="#3a3a4a"/>
+    </g>
+    
+    <!-- Flow indicator (L-shaped path) -->
+    <g filter="url(#glow)">
+      <path d="M 17.5,15 L 17.5,75 Q 17.5,95 -5,95 L -115,95" 
+            stroke="url(#dataFlow)" stroke-width="5" stroke-dasharray="12,6" fill="none"/>
+      <!-- Arrow at end -->
+      <polygon points="-125,95 -105,85 -105,105" fill="#00ff88"/>
+    </g>
+    
+    <!-- Pressure gauge on vertical section -->
+    <g transform="translate(50, 25)">
+      <circle r="14" fill="#1a1a2a" stroke="#6a6a7a" stroke-width="2"/>
+      <circle r="10" fill="#0a0a1a"/>
+      <line x1="0" y1="0" x2="6" y2="-4" stroke="#00ff88" stroke-width="2"/>
+      <circle r="3" fill="#4a4a5a"/>
+      <text y="22" text-anchor="middle" class="tech-label">3.1 bar</text>
+    </g>
+    
+    <!-- Warning label on horizontal -->
+    <rect x="-110" y="80" width="45" height="12" rx="2" fill="url(#warning)" opacity="0.6"/>
+    
+    <!-- Pipe label -->
+    <text x="-60" y="130" text-anchor="middle" class="tech-label">PARSED_DATA</text>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- STAGE 5: DATA STORAGE (Bottom center - expanded)                      -->
+  <!-- ====================================================================== -->
+  <g transform="translate(50, 640)">
+    <!-- Main storage container with enhanced styling -->
+    <rect width="1150" height="280" rx="18" fill="url(#tank)" stroke="#6a7a8a" stroke-width="3" filter="url(#deepShadow)"/>
+    <rect width="1150" height="280" rx="18" fill="url(#brushedMetal)" opacity="0.2"/>
+    
+    <!-- Corner rivets -->
+    <g fill="#3a3a4a" opacity="0.7">
+      <circle cx="20" cy="20" r="3"/><circle cx="1130" cy="20" r="3"/>
+      <circle cx="20" cy="260" r="3"/><circle cx="1130" cy="260" r="3"/>
+      <circle cx="575" cy="20" r="2.5"/><circle cx="575" cy="260" r="2.5"/>
+    </g>
+    
+    <!-- Header bar -->
+    <rect x="10" y="10" width="1130" height="45" rx="10" fill="#2a4a2a"/>
+    <rect x="10" y="10" width="1130" height="45" rx="10" fill="url(#circuitBoard)" opacity="0.2"/>
+    <text x="575" y="40" text-anchor="middle" class="title" style="font-size:24px">💾 DATA STORAGE LAYER</text>
+    
+    <!-- Stage number badge -->
+    <g transform="translate(40, 32)">
+      <circle r="12" fill="#1a3a1a" stroke="#3a5a3a"/>
+      <text y="5" text-anchor="middle" class="stat-value" style="font-size:13px; fill:#00ff88">5</text>
+    </g>
+    
+    <!-- Green status LED cluster -->
+    <g transform="translate(1100, 32)">
+      <circle r="6" fill="#00ff88" filter="url(#glow)"/>
+      <circle cx="-15" r="4" fill="#00aa66" opacity="0.6"/>
+      <circle cx="15" r="4" fill="#004422" opacity="0.4"/>
+    </g>
+    
+    <!-- Three sub-sections with enhanced detail -->
+    <g transform="translate(25, 70)">
+      <!-- SQLite Section -->
+      <rect width="340" height="180" rx="12" fill="#1a2a3a" stroke="#4a5a6a" stroke-width="2"/>
+      <rect width="340" height="180" rx="12" fill="url(#circuitBoard)" opacity="0.15"/>
+      
+      <!-- Section header -->
+      <rect x="5" y="5" width="330" height="30" rx="6" fill="#2a3a4a"/>
+      <text x="170" y="25" text-anchor="middle" class="stage-label" style="font-size:14px">🗃️ SQLite Database</text>
+      
+      <!-- Table list with stats -->
+      <g class="component" transform="translate(15, 48)">
+        <text y="0" style="fill:#00ccff">articles</text><text x="120" y="0" class="metric-value" style="font-size:9px">24,847 rows</text>
+        <text y="18">└ id, url, title, content, fetched_at</text>
+        <text y="38" style="fill:#00ccff">crawl_jobs</text><text x="120" y="38" class="metric-value" style="font-size:9px">1,234 rows</text>
+        <text y="56">└ id, status, started_at, config</text>
+        <text y="76" style="fill:#00ccff">url_frontier</text><text x="120" y="76" class="metric-value" style="font-size:9px">8,912 rows</text>
+        <text y="94">└ url, priority, last_seen, state</text>
+      </g>
+      
+      <!-- Database stats -->
+      <g transform="translate(15, 155)">
+        <text class="metric-label">SIZE:</text><text x="35" class="metric-value" style="font-size:9px">142 MB</text>
+        <text x="100" class="metric-label">INDEXES:</text><text x="155" class="metric-value" style="font-size:9px">12</text>
+        <text x="185" class="metric-label">WAL:</text><text x="215" class="metric-value" style="font-size:9px; fill:#00ff88">ON</text>
+      </g>
+    </g>
+    
+    <g transform="translate(390, 70)">
+      <!-- Cache Section -->
+      <rect width="340" height="180" rx="12" fill="#2a2a1a" stroke="#5a5a3a" stroke-width="2"/>
+      <rect width="340" height="180" rx="12" fill="url(#circuitBoard)" opacity="0.15"/>
+      
+      <rect x="5" y="5" width="330" height="30" rx="6" fill="#3a3a2a"/>
+      <text x="170" y="25" text-anchor="middle" class="stage-label" style="font-size:14px">⚡ In-Memory Cache</text>
+      
+      <g class="component" transform="translate(15, 48)">
+        <text y="0" style="fill:#ffaa00">robots.txt</text><text x="140" y="0" class="metric-value" style="font-size:9px; fill:#ffaa00">342 hosts</text>
+        <text y="18">└ TTL: 24h, auto-refresh</text>
+        <text y="38" style="fill:#ffaa00">response_cache</text><text x="140" y="38" class="metric-value" style="font-size:9px; fill:#ffaa00">1.2 GB</text>
+        <text y="56">└ LRU eviction, 10K entries max</text>
+        <text y="76" style="fill:#ffaa00">seen_urls</text><text x="140" y="76" class="metric-value" style="font-size:9px; fill:#ffaa00">89K URLs</text>
+        <text y="94">└ Bloom filter + hash set</text>
+      </g>
+      
+      <!-- Cache stats -->
+      <g transform="translate(15, 155)">
+        <text class="metric-label">HIT RATE:</text><text x="55" class="metric-value" style="font-size:9px; fill:#00ff88">94.2%</text>
+        <text x="110" class="metric-label">MEMORY:</text><text x="160" class="metric-value" style="font-size:9px; fill:#ffaa00">1.8 GB</text>
+        <text x="210" class="metric-label">EVICTS/h:</text><text x="265" class="metric-value" style="font-size:9px">127</text>
+      </g>
+    </g>
+    
+    <g transform="translate(755, 70)">
+      <!-- Files Section -->
+      <rect width="370" height="180" rx="12" fill="#1a3a2a" stroke="#3a6a4a" stroke-width="2"/>
+      <rect width="370" height="180" rx="12" fill="url(#circuitBoard)" opacity="0.15"/>
+      
+      <rect x="5" y="5" width="360" height="30" rx="6" fill="#2a4a3a"/>
+      <text x="185" y="25" text-anchor="middle" class="stage-label" style="font-size:14px">📁 File System</text>
+      
+      <g class="component" transform="translate(15, 48)">
+        <text y="0" style="fill:#00ff88">exports/</text>
+        <text y="18">├ articles.ndjson</text><text x="160" y="18" class="metric-value" style="font-size:9px">18.4 MB</text>
+        <text y="36">├ crawl-summary.json</text><text x="160" y="36" class="metric-value" style="font-size:9px">2.1 KB</text>
+        <text y="54">└ urls-discovered.ndjson</text><text x="160" y="54" class="metric-value" style="font-size:9px">4.7 MB</text>
+        <text y="76" style="fill:#00ff88">logs/</text>
+        <text y="94">├ crawler.log</text><text x="160" y="94" class="metric-value" style="font-size:9px">12.3 MB</text>
+        <text y="112">└ errors.log</text><text x="160" y="112" class="metric-value" style="font-size:9px">847 KB</text>
+      </g>
+      
+      <!-- File stats -->
+      <g transform="translate(15, 165)">
+        <text class="metric-label">DISK USED:</text><text x="65" class="metric-value" style="font-size:9px; fill:#00ff88">324 MB</text>
+        <text x="130" class="metric-label">FILES:</text><text x="165" class="metric-value" style="font-size:9px">47</text>
+        <text x="195" class="metric-label">ROTATION:</text><text x="255" class="metric-value" style="font-size:9px; fill:#00ff88">DAILY</text>
+      </g>
+    </g>
+    
+    <!-- Storage Spider (green eyes - larger, central) positioned between sections -->
+    <g transform="translate(575, 260)">
+      <ellipse rx="28" ry="20" fill="url(#spiderBody)" stroke="#4a4a5a" stroke-width="1.5"/>
+      <ellipse rx="28" ry="20" fill="url(#spiderGloss)"/>
+      <ellipse rx="12" ry="7" fill="#3a3a4a" opacity="0.3"/>
+      <ellipse cy="-15" rx="14" ry="12" fill="url(#spiderBody)" stroke="#4a4a5a" stroke-width="1.5"/>
+      <ellipse cy="-15" rx="14" ry="12" fill="url(#spiderGloss)"/>
+      <!-- Green eyes -->
+      <g fill="#00ff00">
+        <circle cx="-5" cy="-18" r="3.5"/><circle cx="5" cy="-18" r="3.5"/>
+        <circle cx="-10" cy="-13" r="2"/><circle cx="10" cy="-13" r="2"/>
+        <circle cx="-7" cy="-9" r="1.5"/><circle cx="7" cy="-9" r="1.5"/>
+        <circle cx="-2" cy="-8" r="1.2"/><circle cx="2" cy="-8" r="1.2"/>
+      </g>
+      <g fill="#ffffff" opacity="0.6"><circle cx="-6" cy="-19" r="1"/><circle cx="4" cy="-19" r="1"/></g>
+      <!-- Compact legs -->
+      <g stroke="#3a3a4a" stroke-width="2.5" fill="none" stroke-linecap="round">
+        <path d="M -22,-7 Q -35,-4 -45,-12"/>
+        <path d="M -24,0 Q -40,3 -52,0"/>
+        <path d="M -24,7 Q -38,12 -48,18"/>
+        <path d="M 22,-7 Q 35,-4 45,-12"/>
+        <path d="M 24,0 Q 40,3 52,0"/>
+        <path d="M 24,7 Q 38,12 48,18"/>
+      </g>
+      <g fill="#4a4a5a">
+        <circle cx="-45" cy="-12" r="2"/><circle cx="45" cy="-12" r="2"/>
+        <circle cx="-52" cy="0" r="2"/><circle cx="52" cy="0" r="2"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- PIPE 5: Storage → UI (horizontal pipe to the right)                   -->
+  <!-- ====================================================================== -->
+  <g transform="translate(1200, 780)">
+    <!-- Copper accent pipe -->
+    <rect x="10" y="-22" width="90" height="6" rx="3" fill="url(#copperPipe)" stroke="#9a6329"/>
+    
+    <!-- Flanges -->
+    <rect x="-5" y="-5" width="16" height="45" rx="3" fill="#5a5a6a" stroke="#7a7a8a" stroke-width="1.5"/>
+    <rect x="105" y="-5" width="16" height="45" rx="3" fill="#5a5a6a" stroke="#7a7a8a" stroke-width="1.5"/>
+    <g fill="#3a3a4a">
+      <circle cx="3" cy="4" r="3"/><circle cx="3" cy="31" r="3"/>
+      <circle cx="113" cy="4" r="3"/><circle cx="113" cy="31" r="3"/>
+    </g>
+    
+    <!-- Pipe body -->
+    <rect x="8" width="100" height="35" rx="4" fill="url(#pipeH)" stroke="#7a7a8a" stroke-width="1.5"/>
+    <rect x="8" width="100" height="35" rx="4" fill="url(#rust)" opacity="0.25"/>
+    <rect x="13" y="5" width="90" height="10" rx="2" fill="#9a9aaa" opacity="0.15"/>
+    
+    <!-- Flow meter (detailed) -->
+    <g transform="translate(58, -18)">
+      <ellipse rx="14" ry="11" fill="#2a2a3a" stroke="#5a5a6a"/>
+      <ellipse rx="10" ry="7" fill="#0a1a0a"/>
+      <!-- Pulsing live indicator -->
+      <circle cx="-5" r="2" fill="#00ff88" filter="url(#glow)"/>
+      <text x="3" y="4" fill="#00ff88" style="font-size:8px; font-family:Consolas">LIVE</text>
+    </g>
+    
+    <!-- Flow indicator -->
+    <line x1="20" y1="17.5" x2="95" y2="17.5" stroke="url(#dataFlow)" stroke-width="5" stroke-dasharray="12,6" filter="url(#glow)"/>
+    <polygon points="108,17.5 90,7 90,28" fill="#00ff88" filter="url(#glow)"/>
+    
+    <!-- Pipe label -->
+    <text x="58" y="55" text-anchor="middle" class="tech-label">API_STREAM</text>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- STAGE 6: UI LAYER (Right side - expanded)                             -->
+  <!-- ====================================================================== -->
+  <g transform="translate(1320, 640)">
+    <!-- Ambient glow -->
+    <ellipse cx="125" cy="140" rx="140" ry="150" fill="url(#tankAmbient)" opacity="0.35"/>
+    
+    <rect width="250" height="280" rx="14" fill="url(#tank)" stroke="#6a7a8a" stroke-width="2" filter="url(#deepShadow)"/>
+    <rect width="250" height="280" rx="14" fill="url(#brushedMetal)" opacity="0.25"/>
+    
+    <!-- Industrial rivets -->
+    <g fill="#3a3a4a" opacity="0.7">
+      <circle cx="18" cy="18" r="2.5"/><circle cx="232" cy="18" r="2.5"/>
+      <circle cx="18" cy="262" r="2.5"/><circle cx="232" cy="262" r="2.5"/>
+      <circle cx="125" cy="18" r="2"/><circle cx="125" cy="262" r="2"/>
+    </g>
+    <rect width="250" height="280" rx="14" fill="url(#rust)" opacity="0.12"/>
+    
+    <rect x="5" y="5" width="240" height="40" rx="8" fill="#4a3a5a"/>
+    <rect x="5" y="5" width="240" height="40" rx="8" fill="url(#circuitBoard)" opacity="0.2"/>
+    <!-- Purple status LED cluster -->
+    <g transform="translate(215, 25)">
+      <circle r="6" fill="#aa88ff" filter="url(#glow)"/>
+      <circle cx="-15" r="4" fill="#7755cc" opacity="0.6"/>
+      <circle cx="15" r="4" fill="#443388" opacity="0.4"/>
+    </g>
+    <text x="115" y="32" text-anchor="middle" class="stage-label" style="font-size:15px">🎛️ UI LAYER</text>
+    
+    <!-- Stage number badge -->
+    <g transform="translate(25, 25)">
+      <circle r="11" fill="#2a1a3a" stroke="#4a3a5a"/>
+      <text y="4" text-anchor="middle" class="stat-value" style="font-size:12px; fill:#aa88ff">6</text>
+    </g>
+    
+    <g class="component" transform="translate(15, 60)">
+      <text y="0">📊 Data Explorer</text>
+      <text y="20">📈 Crawl Dashboard</text>
+      <text y="40">🌳 Decision Tree Viz</text>
+      <text y="60">👁️ Job Monitor</text>
+      <text y="80">📤 Export Tools</text>
+      <text y="100">⚙️ Config Editor</text>
+    </g>
+    
+    <!-- UI metrics panel -->
+    <g transform="translate(10, 175)">
+      <rect width="230" height="70" rx="5" fill="#1a1a2a" stroke="#3a3a4a" opacity="0.8"/>
+      <text x="115" y="14" text-anchor="middle" class="metric-label">INTERFACE METRICS</text>
+      <g transform="translate(12, 26)">
+        <text class="metric-value" style="fill:#aa88ff">3</text><text x="20" class="metric-label">active users</text>
+        <text y="16" class="metric-value" style="fill:#aa88ff">47ms</text><text x="48" y="16" class="metric-label">render time</text>
+        <text y="32" class="metric-value" style="fill:#00ff88">24K</text><text x="40" y="32" class="metric-label">rows displayed</text>
+        <text x="120" class="metric-value" style="fill:#aa88ff">8</text><text x="135" class="metric-label">dashboards</text>
+        <text x="120" y="16" class="metric-value" style="fill:#00ff88">ON</text><text x="145" y="16" class="metric-label">real-time</text>
+        <text x="120" y="32" class="metric-value" style="fill:#ffaa00">2</text><text x="135" y="32" class="metric-label">exports queued</text>
+      </g>
+    </g>
+    
+    <!-- UI Spider (purple eyes - compact) -->
+    <g transform="translate(125, 265)">
+      <ellipse rx="22" ry="15" fill="url(#spiderBody)" stroke="#4a4a5a" stroke-width="1.5"/>
+      <ellipse rx="22" ry="15" fill="url(#spiderGloss)"/>
+      <ellipse cy="-12" rx="11" ry="9" fill="url(#spiderBody)" stroke="#4a4a5a" stroke-width="1.5"/>
+      <ellipse cy="-12" rx="11" ry="9" fill="url(#spiderGloss)"/>
+      <!-- Purple eyes -->
+      <g fill="#aa88ff">
+        <circle cx="-4" cy="-14" r="2.8"/><circle cx="4" cy="-14" r="2.8"/>
+        <circle cx="-8" cy="-10" r="1.6"/><circle cx="8" cy="-10" r="1.6"/>
+      </g>
+      <g fill="#ffffff" opacity="0.5"><circle cx="-5" cy="-15" r="0.8"/><circle cx="3" cy="-15" r="0.8"/></g>
+      <!-- Compact legs -->
+      <g stroke="#3a3a4a" stroke-width="2" fill="none" stroke-linecap="round">
+        <path d="M -18,-5 Q -28,-2 -35,-8"/>
+        <path d="M -19,2 Q -30,4 -38,2"/>
+        <path d="M -18,8 Q -26,12 -32,18"/>
+        <path d="M 18,-5 Q 28,-2 35,-8"/>
+        <path d="M 19,2 Q 30,4 38,2"/>
+        <path d="M 18,8 Q 26,12 32,18"/>
+      </g>
+      <g fill="#4a4a5a">
+        <circle cx="-35" cy="-8" r="1.8"/><circle cx="35" cy="-8" r="1.8"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- FEEDBACK LOOP (Top arc from UI back to Sources)                       -->
+  <!-- ====================================================================== -->
+  <g opacity="0.7">
+    <!-- Main feedback arc -->
+    <path d="M 1445,640 Q 1500,200 800,130 Q 100,180 150,200" 
+          fill="none" stroke="#ff8800" stroke-width="3" stroke-dasharray="12,6"/>
+    
+    <!-- Glow effect on path -->
+    <path d="M 1445,640 Q 1500,200 800,130 Q 100,180 150,200" 
+          fill="none" stroke="#ff8800" stroke-width="6" opacity="0.2" filter="url(#glow)"/>
+    
+    <!-- Multiple annotation labels along the arc -->
+    <g class="annotation" style="font-size:11px">
+      <text x="800" y="115" text-anchor="middle" fill="#ff8800">↺ FEEDBACK LOOP</text>
+      <text x="800" y="130" text-anchor="middle">New URLs discovered → Queue | Config updates | Priority adjustments</text>
+    </g>
+    
+    <!-- Feedback arrows (start and end) -->
+    <polygon points="150,198 140,212 158,212" fill="#ff8800" opacity="0.9"/>
+    
+    <!-- Data packets traveling on feedback loop -->
+    <g filter="url(#glow)">
+      <circle cx="400" cy="160" r="5" fill="#ff8800" opacity="0.8"/>
+      <circle cx="600" cy="135" r="4" fill="#ffaa44" opacity="0.7"/>
+      <circle cx="1000" cy="150" r="5" fill="#ff8800" opacity="0.8"/>
+      <circle cx="1250" cy="250" r="4" fill="#ffaa44" opacity="0.7"/>
+    </g>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- DATA PARTICLES (enhanced - flowing through pipes)                     -->
+  <!-- ====================================================================== -->
+  <g filter="url(#glow)">
+    <!-- Particles in pipe 1 (pipe at x=250, body x=260-370, y=378) -->
+    <circle cx="280" cy="378" r="5" fill="url(#dataPacket)" opacity="0.8"/>
+    <circle cx="310" cy="378" r="4" fill="#00ff88" opacity="0.7"/>
+    <circle cx="340" cy="378" r="3" fill="#00ffcc" opacity="0.6"/>
+    
+    <!-- Particles in pipe 2 (pipe at x=600, body x=610-720, y=378) -->
+    <circle cx="630" cy="378" r="5" fill="url(#dataPacket)" opacity="0.8"/>
+    <circle cx="660" cy="378" r="4" fill="#00ff88" opacity="0.7"/>
+    <circle cx="690" cy="378" r="3" fill="#00ffcc" opacity="0.6"/>
+    
+    <!-- Particles in pipe 3 (pipe at x=950, body x=960-1070, y=378) -->
+    <circle cx="980" cy="378" r="5" fill="url(#dataPacket)" opacity="0.8"/>
+    <circle cx="1010" cy="378" r="4" fill="#00ff88" opacity="0.7"/>
+    <circle cx="1040" cy="378" r="3" fill="#00ffcc" opacity="0.6"/>
+    
+    <!-- Particles in vertical pipe 4 (L-shaped: down then left) -->
+    <circle cx="1202" cy="550" r="5" fill="url(#dataPacket)" opacity="0.8"/>
+    <circle cx="1180" cy="610" r="4" fill="#00ff88" opacity="0.7"/>
+    <circle cx="1120" cy="615" r="3" fill="#00ffcc" opacity="0.6"/>
+    <circle cx="1080" cy="615" r="4" fill="url(#dataPacket)" opacity="0.7"/>
+    
+    <!-- Particles in pipe 5 (pipe at x=1200, body x=1208-1305, y=798) -->
+    <circle cx="1230" cy="798" r="4.5" fill="url(#dataPacket)" opacity="0.8"/>
+    <circle cx="1260" cy="798" r="3.5" fill="#00ff88" opacity="0.7"/>
+    <circle cx="1285" cy="798" r="2.5" fill="#00ffcc" opacity="0.6"/>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- SPIDER DEN ATMOSPHERE - Webs, Silk, Egg Sacs, Small Spiders           -->
+  <!-- ====================================================================== -->
+  
+  <!-- Major web network connecting all stages -->
+  <g stroke="#5a5a7a" stroke-width="0.6" fill="none" opacity="0.35">
+    <!-- Primary silk highways between stages -->
+    <path d="M 150,455 Q 250,400 350,380 Q 450,360 550,380 Q 650,400 750,380"/>
+    <path d="M 750,380 Q 850,360 950,380 Q 1050,400 1150,380 Q 1200,360 1200,455"/>
+    <path d="M 100,300 Q 200,250 400,280 Q 600,310 800,280 Q 1000,250 1200,300"/>
+    
+    <!-- Vertical anchor threads -->
+    <path d="M 150,200 L 150,455"/>
+    <path d="M 500,200 L 500,495"/>
+    <path d="M 850,200 L 850,495"/>
+    <path d="M 1200,200 L 1200,495"/>
+    
+    <!-- Diagonal support strands -->
+    <path d="M 50,100 Q 150,200 250,280"/>
+    <path d="M 1550,100 Q 1450,200 1350,280"/>
+    <path d="M 50,600 Q 200,550 350,500"/>
+    <path d="M 1550,600 Q 1400,550 1250,500"/>
+  </g>
+  
+  <!-- Dense orb web in upper left corner -->
+  <g transform="translate(80, 140)" stroke="#6a6a8a" stroke-width="0.5" fill="none" opacity="0.4">
+    <!-- Radial threads -->
+    <line x1="0" y1="0" x2="-60" y2="-40"/>
+    <line x1="0" y1="0" x2="-70" y2="0"/>
+    <line x1="0" y1="0" x2="-60" y2="40"/>
+    <line x1="0" y1="0" x2="-30" y2="60"/>
+    <line x1="0" y1="0" x2="20" y2="50"/>
+    <line x1="0" y1="0" x2="40" y2="20"/>
+    <line x1="0" y1="0" x2="30" y2="-30"/>
+    <line x1="0" y1="0" x2="-20" y2="-50"/>
+    <!-- Spiral threads -->
+    <path d="M -15,-12 Q -20,0 -15,12 Q 0,18 15,12 Q 20,0 15,-12 Q 0,-18 -15,-12"/>
+    <path d="M -30,-22 Q -38,0 -30,22 Q 0,32 30,22 Q 38,0 30,-22 Q 0,-32 -30,-22"/>
+    <path d="M -45,-32 Q -55,0 -45,32 Q 0,48 45,32 Q 55,0 45,-32 Q 0,-48 -45,-32"/>
+  </g>
+  
+  <!-- Dense orb web in upper right corner -->
+  <g transform="translate(1520, 140)" stroke="#6a6a8a" stroke-width="0.5" fill="none" opacity="0.4">
+    <line x1="0" y1="0" x2="60" y2="-40"/>
+    <line x1="0" y1="0" x2="70" y2="0"/>
+    <line x1="0" y1="0" x2="60" y2="40"/>
+    <line x1="0" y1="0" x2="30" y2="60"/>
+    <line x1="0" y1="0" x2="-20" y2="50"/>
+    <line x1="0" y1="0" x2="-40" y2="20"/>
+    <line x1="0" y1="0" x2="-30" y2="-30"/>
+    <path d="M -30,-22 Q -38,0 -30,22 Q 0,32 30,22 Q 38,0 30,-22 Q 0,-32 -30,-22"/>
+    <path d="M -50,-35 Q -60,0 -50,35 Q 0,52 50,35 Q 60,0 50,-35 Q 0,-52 -50,-35"/>
+  </g>
+  
+  <!-- Scattered web strands from spider locations -->
+  <g stroke="#4a4a6a" stroke-width="0.8" fill="none" opacity="0.3">
+    <!-- Web from URL Sources spider -->
+    <path d="M 150,455 Q 190,420 250,385"/>
+    <path d="M 155,460 Q 120,500 80,540"/>
+    <path d="M 160,445 Q 210,450 250,390"/>
+    <path d="M 145,440 Q 100,380 60,320"/>
+    <path d="M 140,470 Q 80,490 30,520"/>
+    <path d="M 160,475 Q 200,520 180,580"/>
+    
+    <!-- Web from Queue spider -->
+    <path d="M 500,495 Q 540,450 600,385"/>
+    <path d="M 505,500 Q 470,540 430,580"/>
+    <path d="M 510,485 Q 560,470 600,390"/>
+    <path d="M 495,510 Q 450,560 400,600"/>
+    <path d="M 515,505 Q 550,550 580,610"/>
+    
+    <!-- Web from Fetcher spider -->
+    <path d="M 850,495 Q 890,450 950,385"/>
+    <path d="M 845,500 Q 810,540 770,580"/>
+    <path d="M 860,485 Q 910,470 950,390"/>
+    <path d="M 840,510 Q 800,560 750,610"/>
+    <path d="M 865,505 Q 900,550 930,610"/>
+    
+    <!-- Web from Parser spider going down -->
+    <path d="M 1200,495 Q 1200,540 1200,580"/>
+    <path d="M 1195,500 Q 1150,560 1100,610"/>
+    <path d="M 1205,500 Q 1260,560 1300,610"/>
+    <path d="M 1210,485 Q 1280,520 1350,540"/>
+    <path d="M 1190,510 Q 1100,550 1050,590"/>
+    
+    <!-- Cross-stage long silk lines (draglines) -->
+    <path d="M 200,250 Q 300,220 400,250" stroke-dasharray="5,10"/>
+    <path d="M 550,250 Q 650,220 750,250" stroke-dasharray="5,10"/>
+    <path d="M 900,250 Q 1000,220 1100,250" stroke-dasharray="5,10"/>
+    
+    <!-- Diagonal cross-webs between stages -->
+    <path d="M 250,400 Q 325,350 400,400" stroke-dasharray="3,8" opacity="0.4"/>
+    <path d="M 600,400 Q 675,350 750,400" stroke-dasharray="3,8" opacity="0.4"/>
+    <path d="M 950,400 Q 1025,350 1100,400" stroke-dasharray="3,8" opacity="0.4"/>
+  </g>
+  
+  <!-- Egg sacs hanging from webs -->
+  <g opacity="0.6">
+    <!-- Egg sac near URL Sources -->
+    <ellipse cx="95" cy="480" rx="8" ry="12" fill="#4a4a5a" stroke="#5a5a6a"/>
+    <ellipse cx="95" cy="478" rx="5" ry="7" fill="#5a5a6a" opacity="0.5"/>
+    <path d="M 95,468 Q 110,450 150,455" stroke="#4a4a6a" stroke-width="0.5" fill="none"/>
+    
+    <!-- Egg sac cluster near Queue -->
+    <ellipse cx="440" cy="560" rx="6" ry="10" fill="#4a4a5a" stroke="#5a5a6a"/>
+    <ellipse cx="455" cy="555" rx="5" ry="8" fill="#4a4a5a" stroke="#5a5a6a"/>
+    <ellipse cx="448" cy="570" rx="4" ry="7" fill="#4a4a5a" stroke="#5a5a6a"/>
+    <path d="M 448,545 Q 480,510 500,495" stroke="#4a4a6a" stroke-width="0.5" fill="none"/>
+    
+    <!-- Egg sac near Fetcher -->
+    <ellipse cx="790" cy="565" rx="7" ry="11" fill="#4a4a5a" stroke="#5a5a6a"/>
+    <path d="M 790,554 Q 820,530 850,495" stroke="#4a4a6a" stroke-width="0.5" fill="none"/>
+    
+    <!-- Egg sac in corner -->
+    <ellipse cx="40" cy="180" rx="9" ry="14" fill="#4a4a5a" stroke="#5a5a6a"/>
+    <ellipse cx="40" cy="177" rx="5" ry="8" fill="#5a5a6a" opacity="0.4"/>
+  </g>
+  
+  <!-- Wrapped prey (data packets caught in web) -->
+  <g opacity="0.5">
+    <!-- Wrapped packet near Sources -->
+    <ellipse cx="120" cy="350" rx="12" ry="8" fill="#3a4a4a" stroke="#4a5a5a"/>
+    <path d="M 108,350 Q 120,345 132,350 M 110,347 Q 120,352 130,347" stroke="#5a6a6a" stroke-width="0.5" fill="none"/>
+    <path d="M 120,342 L 150,320" stroke="#4a4a6a" stroke-width="0.4" fill="none"/>
+    
+    <!-- Wrapped packet between stages -->
+    <ellipse cx="325" cy="320" rx="10" ry="6" fill="#3a4a4a" stroke="#4a5a5a"/>
+    <path d="M 315,320 Q 325,316 335,320" stroke="#5a6a6a" stroke-width="0.5" fill="none"/>
+    
+    <!-- Wrapped packet near Fetcher -->
+    <ellipse cx="700" cy="340" rx="11" ry="7" fill="#3a4a4a" stroke="#4a5a5a"/>
+    <path d="M 689,340 Q 700,336 711,340 M 691,337 Q 700,341 709,337" stroke="#5a6a6a" stroke-width="0.5" fill="none"/>
+  </g>
+  
+  <!-- Small baby spiders scattered around -->
+  <g fill="#3a3a4a" opacity="0.5">
+    <!-- Baby spider 1 (near Sources web) -->
+    <g transform="translate(70, 380)">
+      <ellipse rx="4" ry="3" fill="#3a3a4a"/>
+      <ellipse cy="-3" rx="2.5" ry="2" fill="#3a3a4a"/>
+      <circle cx="-1" cy="-4" r="0.8" fill="#ff4444" opacity="0.7"/>
+      <circle cx="1" cy="-4" r="0.8" fill="#ff4444" opacity="0.7"/>
+      <g stroke="#3a3a4a" stroke-width="0.8" fill="none">
+        <path d="M -3,-1 Q -8,2 -10,-2"/>
+        <path d="M 3,-1 Q 8,2 10,-2"/>
+        <path d="M -3,1 Q -9,4 -11,8"/>
+        <path d="M 3,1 Q 9,4 11,8"/>
+      </g>
+    </g>
+    
+    <!-- Baby spider 2 (on web between stages) -->
+    <g transform="translate(325, 280)">
+      <ellipse rx="3" ry="2.5" fill="#3a3a4a"/>
+      <ellipse cy="-2.5" rx="2" ry="1.5" fill="#3a3a4a"/>
+      <circle cx="-0.8" cy="-3.2" r="0.6" fill="#00ff88" opacity="0.7"/>
+      <circle cx="0.8" cy="-3.2" r="0.6" fill="#00ff88" opacity="0.7"/>
+      <g stroke="#3a3a4a" stroke-width="0.6" fill="none">
+        <path d="M -2,-1 Q -6,1 -8,-1"/>
+        <path d="M 2,-1 Q 6,1 8,-1"/>
+        <path d="M -2,1 Q -6,3 -8,6"/>
+        <path d="M 2,1 Q 6,3 8,6"/>
+      </g>
+    </g>
+    
+    <!-- Baby spider 3 (descending on silk thread) -->
+    <g transform="translate(680, 420)">
+      <path d="M 0,-30 L 0,0" stroke="#5a5a6a" stroke-width="0.4"/>
+      <ellipse rx="3.5" ry="2.8" fill="#3a3a4a"/>
+      <ellipse cy="-2.8" rx="2.2" ry="1.8" fill="#3a3a4a"/>
+      <circle cx="-0.8" cy="-3.5" r="0.6" fill="#ffaa00" opacity="0.7"/>
+      <circle cx="0.8" cy="-3.5" r="0.6" fill="#ffaa00" opacity="0.7"/>
+      <g stroke="#3a3a4a" stroke-width="0.6" fill="none">
+        <path d="M -2.5,-1 Q -7,1 -9,-2"/>
+        <path d="M 2.5,-1 Q 7,1 9,-2"/>
+        <path d="M -2.5,1 Q -7,3 -9,7"/>
+        <path d="M 2.5,1 Q 7,3 9,7"/>
+      </g>
+    </g>
+    
+    <!-- Baby spider 4 (near Parser) -->
+    <g transform="translate(1280, 360)">
+      <ellipse rx="3" ry="2.5" fill="#3a3a4a"/>
+      <ellipse cy="-2.5" rx="2" ry="1.5" fill="#3a3a4a"/>
+      <circle cx="-0.8" cy="-3.2" r="0.6" fill="#ff00ff" opacity="0.7"/>
+      <circle cx="0.8" cy="-3.2" r="0.6" fill="#ff00ff" opacity="0.7"/>
+      <g stroke="#3a3a4a" stroke-width="0.6" fill="none">
+        <path d="M -2,-1 Q -6,1 -8,-1"/>
+        <path d="M 2,-1 Q 6,1 8,-1"/>
+        <path d="M -2,1 Q -6,3 -8,6"/>
+        <path d="M 2,1 Q 6,3 8,6"/>
+      </g>
+    </g>
+    
+    <!-- Baby spider 5 (on Storage) -->
+    <g transform="translate(300, 720)">
+      <ellipse rx="4" ry="3" fill="#3a3a4a"/>
+      <ellipse cy="-3" rx="2.5" ry="2" fill="#3a3a4a"/>
+      <circle cx="-1" cy="-4" r="0.8" fill="#00ff00" opacity="0.7"/>
+      <circle cx="1" cy="-4" r="0.8" fill="#00ff00" opacity="0.7"/>
+      <g stroke="#3a3a4a" stroke-width="0.8" fill="none">
+        <path d="M -3,-1 Q -8,2 -10,-2"/>
+        <path d="M 3,-1 Q 8,2 10,-2"/>
+        <path d="M -3,1 Q -9,4 -11,8"/>
+        <path d="M 3,1 Q 9,4 11,8"/>
+      </g>
+    </g>
+  </g>
+  
+  <!-- Decorative web patterns in corners (enhanced) -->
+  <g stroke="#3a3a5a" stroke-width="0.6" fill="none" opacity="0.3">
+    <!-- Top-left corner web -->
+    <path d="M 0,150 Q 40,120 80,150"/>
+    <path d="M 0,150 Q 35,180 70,150"/>
+    <path d="M 40,120 Q 60,150 40,180"/>
+    <path d="M 20,135 Q 50,150 20,165"/>
+    <path d="M 0,100 Q 50,80 100,100"/>
+    <path d="M 0,100 L 80,150"/>
+    
+    <!-- Top-right corner web -->
+    <path d="M 1600,150 Q 1560,120 1520,150"/>
+    <path d="M 1600,150 Q 1565,180 1530,150"/>
+    <path d="M 1560,120 Q 1540,150 1560,180"/>
+    <path d="M 1600,100 Q 1550,80 1500,100"/>
+    <path d="M 1600,100 L 1520,150"/>
+    
+    <!-- Bottom-left corner web -->
+    <path d="M 0,1100 Q 40,1070 80,1100"/>
+    <path d="M 0,1100 Q 35,1130 70,1100"/>
+    <path d="M 0,1050 Q 60,1030 120,1060"/>
+    <path d="M 0,1150 Q 50,1170 100,1150"/>
+    
+    <!-- Bottom-right corner web -->
+    <path d="M 1600,1100 Q 1560,1070 1520,1100"/>
+    <path d="M 1600,1100 Q 1565,1130 1530,1100"/>
+    <path d="M 1600,1050 Q 1540,1030 1480,1060"/>
+    <path d="M 1600,1150 Q 1550,1170 1500,1150"/>
+  </g>
+  
+  <!-- Dust motes and silk particles floating -->
+  <g fill="#6a6a8a" opacity="0.2">
+    <circle cx="180" cy="300" r="1"/>
+    <circle cx="420" cy="280" r="0.8"/>
+    <circle cx="650" cy="310" r="1.2"/>
+    <circle cx="880" cy="290" r="0.9"/>
+    <circle cx="1120" cy="305" r="1"/>
+    <circle cx="1350" cy="285" r="0.7"/>
+    <circle cx="250" cy="580" r="1.1"/>
+    <circle cx="550" cy="590" r="0.8"/>
+    <circle cx="900" cy="575" r="1"/>
+    <circle cx="1400" cy="560" r="0.9"/>
+    <circle cx="100" cy="800" r="1.2"/>
+    <circle cx="400" cy="850" r="0.8"/>
+    <circle cx="750" cy="820" r="1"/>
+    <circle cx="1100" cy="880" r="0.9"/>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- STAGE ANNOTATIONS (positioned below each stage)                       -->
+  <!-- ====================================================================== -->
+  <g class="annotation" style="font-size:11px">
+    <text x="150" y="545" text-anchor="middle">URL Discovery</text>
+    <text x="150" y="558" text-anchor="middle" style="fill:#6a8a9a">src/modules/urlDiscovery.js</text>
+    
+    <text x="500" y="545" text-anchor="middle">Scheduling</text>
+    <text x="500" y="558" text-anchor="middle" style="fill:#6a8a9a">src/modules/crawlQueue.js</text>
+    
+    <text x="850" y="545" text-anchor="middle">Network I/O</text>
+    <text x="850" y="558" text-anchor="middle" style="fill:#6a8a9a">src/modules/httpFetcher.js</text>
+    
+    <text x="1200" y="545" text-anchor="middle">Extraction</text>
+    <text x="1200" y="558" text-anchor="middle" style="fill:#6a8a9a">src/modules/htmlParser.js</text>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- LEGEND PANEL (enhanced - bottom left)                                 -->
+  <!-- ====================================================================== -->
+  <g transform="translate(50,960)">
+    <!-- Panel background with frame -->
+    <rect x="0" y="0" width="380" height="210" rx="8" fill="url(#metalPanel)" 
+          stroke="#6a8a9a" stroke-width="1"/>
+    <rect x="2" y="2" width="376" height="40" rx="6" fill="url(#titleGradient)" opacity="0.3"/>
+    
+    <!-- Title -->
+    <text x="190" y="28" text-anchor="middle" class="section-title" style="font-size:14px">🗂️ LEGEND</text>
+    
+    <!-- Legend items - left column -->
+    <g transform="translate(20,55)">
+      <!-- Stages -->
+      <rect x="0" y="0" width="20" height="15" rx="3" fill="url(#tankGradient)" stroke="#4a6a7a"/>
+      <text x="28" y="12" class="tech-label">Processing Stage (Tank)</text>
+      
+      <!-- Pipes -->
+      <rect x="0" y="30" width="20" height="8" fill="url(#pipeGradient)"/>
+      <text x="28" y="38" class="tech-label">Data Transport (Pipe)</text>
+      
+      <!-- Spiders -->
+      <circle cx="10" cy="63" r="6" fill="url(#spiderGradient)"/>
+      <text x="28" y="68" class="tech-label">Worker Agent (Spider)</text>
+      
+      <!-- Data particles -->
+      <circle cx="10" cy="93" r="5" fill="url(#dataPacket)" filter="url(#glow)"/>
+      <text x="28" y="98" class="tech-label">Data Packet (flowing)</text>
+      
+      <!-- Feedback loop -->
+      <path d="M 0,120 Q 10,110 20,120" stroke="#ff8800" stroke-width="2" 
+            fill="none" stroke-dasharray="4,2"/>
+      <text x="28" y="128" class="tech-label">Feedback Loop (async)</text>
+    </g>
+    
+    <!-- Legend items - right column -->
+    <g transform="translate(200,55)">
+      <!-- Green LED -->
+      <circle cx="10" cy="7" r="5" fill="#00cc00" filter="url(#glow)"/>
+      <text x="28" y="12" class="tech-label">Status: OK/Active</text>
+      
+      <!-- Yellow LED -->
+      <circle cx="10" cy="37" r="5" fill="#cccc00" filter="url(#glow)"/>
+      <text x="28" y="42" class="tech-label">Status: Warning</text>
+      
+      <!-- Red LED -->
+      <circle cx="10" cy="67" r="5" fill="#cc0000" filter="url(#glow)"/>
+      <text x="28" y="72" class="tech-label">Status: Error/Offline</text>
+      
+      <!-- Spider web -->
+      <path d="M 0,90 Q 10,85 20,90 M 0,95 Q 10,100 20,95 M 10,85 L 10,100" 
+            stroke="#6a6a8a" stroke-width="0.8" fill="none"/>
+      <text x="28" y="97" class="tech-label">Connection Thread</text>
+      
+      <!-- Gauge -->
+      <circle cx="10" cy="123" r="7" fill="none" stroke="#8ab4f8" stroke-width="1.5"/>
+      <path d="M 10,123 L 14,119" stroke="#ff4444" stroke-width="1.5"/>
+      <text x="28" y="128" class="tech-label">Pressure/Temp Gauge</text>
+    </g>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- TECHNOLOGY STACK PANEL (center bottom)                                -->
+  <!-- ====================================================================== -->
+  <g transform="translate(460,960)">
+    <!-- Panel background -->
+    <rect x="0" y="0" width="420" height="210" rx="8" fill="url(#metalPanel)" 
+          stroke="#6a8a9a" stroke-width="1"/>
+    <rect x="2" y="2" width="416" height="40" rx="6" fill="url(#titleGradient)" opacity="0.3"/>
+    
+    <!-- Title -->
+    <text x="210" y="28" text-anchor="middle" class="section-title" style="font-size:14px">🔧 TECHNOLOGY STACK</text>
+    
+    <!-- Core Technologies -->
+    <g transform="translate(20,55)">
+      <text x="0" y="0" class="tech-label" style="fill:#00ccff">Core Runtime:</text>
+      <text x="0" y="18" class="description">Node.js 25.x │ ES2024 │ CommonJS/ESM hybrid</text>
+      
+      <text x="0" y="42" class="tech-label" style="fill:#00ccff">HTTP Layer:</text>
+      <text x="0" y="60" class="description">node-fetch │ cheerio │ robots-parser</text>
+      
+      <text x="0" y="84" class="tech-label" style="fill:#00ccff">Database:</text>
+      <text x="0" y="102" class="description">better-sqlite3 │ PRAGMA journal_mode=WAL</text>
+      
+      <text x="0" y="126" class="tech-label" style="fill:#00ccff">UI Framework:</text>
+      <text x="0" y="144" class="description">jsgui3-html │ Express 5 │ SSR + hydration</text>
+    </g>
+    
+    <!-- Version badges -->
+    <g transform="translate(280,55)">
+      <rect x="0" y="0" width="110" height="20" rx="3" fill="#1a472a" stroke="#00cc00" stroke-width="0.5"/>
+      <text x="55" y="14" text-anchor="middle" class="description" style="fill:#00cc00">Node 25.2.1</text>
+      
+      <rect x="0" y="30" width="110" height="20" rx="3" fill="#1a2d4a" stroke="#4488ff" stroke-width="0.5"/>
+      <text x="55" y="44" text-anchor="middle" class="description" style="fill:#8ab4f8">node-fetch 3.x</text>
+      
+      <rect x="0" y="60" width="110" height="20" rx="3" fill="#2a1a4a" stroke="#aa44ff" stroke-width="0.5"/>
+      <text x="55" y="74" text-anchor="middle" class="description" style="fill:#cc88ff">sqlite3 12.5</text>
+      
+      <rect x="0" y="90" width="110" height="20" rx="3" fill="#4a2a1a" stroke="#ff8844" stroke-width="0.5"/>
+      <text x="55" y="104" text-anchor="middle" class="description" style="fill:#ffaa66">jsgui3 0.0.x</text>
+      
+      <rect x="0" y="120" width="110" height="20" rx="3" fill="#1a3a3a" stroke="#00aaaa" stroke-width="0.5"/>
+      <text x="55" y="134" text-anchor="middle" class="description" style="fill:#44cccc">Express 5.2</text>
+    </g>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- PERFORMANCE METRICS PANEL (bottom right)                              -->
+  <!-- ====================================================================== -->
+  <g transform="translate(910,960)">
+    <!-- Panel background -->
+    <rect x="0" y="0" width="340" height="210" rx="8" fill="url(#metalPanel)" 
+          stroke="#6a8a9a" stroke-width="1"/>
+    <rect x="2" y="2" width="336" height="40" rx="6" fill="url(#titleGradient)" opacity="0.3"/>
+    
+    <!-- Title -->
+    <text x="170" y="28" text-anchor="middle" class="section-title" style="font-size:14px">📊 PERFORMANCE METRICS</text>
+    
+    <!-- Metric rows -->
+    <g transform="translate(20,55)">
+      <!-- Throughput -->
+      <text x="0" y="0" class="metric-label">Throughput:</text>
+      <text x="150" y="0" class="metric-value" style="fill:#00ff88">~2,400 URLs/hour</text>
+      
+      <!-- Avg latency -->
+      <text x="0" y="25" class="metric-label">Avg Latency:</text>
+      <text x="150" y="25" class="metric-value" style="fill:#8ab4f8">245ms p50, 890ms p99</text>
+      
+      <!-- Success rate -->
+      <text x="0" y="50" class="metric-label">Success Rate:</text>
+      <text x="150" y="50" class="metric-value" style="fill:#00cc00">99.2%</text>
+      
+      <!-- Parse efficiency -->
+      <text x="0" y="75" class="metric-label">Parse Efficiency:</text>
+      <text x="150" y="75" class="metric-value" style="fill:#ffcc00">1,247 docs/min</text>
+      
+      <!-- Memory -->
+      <text x="0" y="100" class="metric-label">Memory (RSS):</text>
+      <text x="150" y="100" class="metric-value" style="fill:#cc88ff">~180 MB avg</text>
+      
+      <!-- DB writes -->
+      <text x="0" y="125" class="metric-label">DB Writes:</text>
+      <text x="150" y="125" class="metric-value" style="fill:#ff8844">~42 writes/sec</text>
+    </g>
+    
+    <!-- Mini throughput sparkline -->
+    <g transform="translate(20,188)">
+      <text x="0" y="0" class="tech-label" style="fill:#6a8a9a">24h Throughput:</text>
+      <polyline points="90,0 100,-5 110,-3 120,-8 130,-6 140,-12 150,-10 160,-15 170,-12 180,-18 190,-14 200,-20 210,-16 220,-22 230,-18 240,-25 250,-20 260,-28 270,-24 280,-30" 
+                fill="none" stroke="#00ff88" stroke-width="1.5"/>
+      <line x1="90" y1="2" x2="280" y2="2" stroke="#4a6a7a" stroke-width="0.5"/>
+    </g>
+  </g>
+
+</svg>

@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="560" viewBox="0 0 980 560">
+  <defs>
+    <style>
+      .bg { fill:#0b1220; }
+      .panel { fill:#121b2f; stroke:#223055; stroke-width:1; }
+      .card { fill:#0f172a; stroke:#24345f; stroke-width:1; }
+      .muted { fill:#9fb0d0; font: 12px system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+      .text { fill:#e7eefc; font: 13px system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+      .title { fill:#ffffff; font: 16px system-ui, -apple-system, Segoe UI, Roboto, Arial; font-weight:600; }
+      .chip { fill:#1a2a4f; stroke:#2c437b; stroke-width:1; }
+      .chipText { fill:#d6e2ff; font: 12px system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+      .accent { fill:#67e8f9; }
+      .ok { fill:#34d399; }
+      .warn { fill:#fbbf24; }
+      .mono { fill:#c7d2fe; font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="980" height="560"/>
+
+  <!-- Header -->
+  <rect class="panel" x="16" y="16" width="948" height="54" rx="10"/>
+  <text class="title" x="32" y="48">Gazetteer: Place Names + Matching Inspector</text>
+  <text class="muted" x="32" y="64">Compact multilingual view that exposes the exact match keys (normalized + slug)</text>
+
+  <!-- Left: search/results -->
+  <rect class="panel" x="16" y="84" width="300" height="460" rx="10"/>
+  <text class="text" x="32" y="112">Search places</text>
+  <rect class="card" x="32" y="124" width="268" height="34" rx="8"/>
+  <text class="muted" x="44" y="146">Type: london / paris / tokyo...</text>
+
+  <text class="muted" x="32" y="184">Results</text>
+
+  <rect class="card" x="32" y="196" width="268" height="56" rx="10"/>
+  <text class="text" x="44" y="222">London</text>
+  <text class="muted" x="44" y="242">city · GB · pop 8,799,728</text>
+  <circle class="accent" cx="288" cy="220" r="6"/>
+
+  <rect class="card" x="32" y="262" width="268" height="56" rx="10" opacity="0.7"/>
+  <text class="text" x="44" y="288">London</text>
+  <text class="muted" x="44" y="308">city · CA · pop 422,324</text>
+
+  <rect class="card" x="32" y="328" width="268" height="56" rx="10" opacity="0.7"/>
+  <text class="text" x="44" y="354">London</text>
+  <text class="muted" x="44" y="374">region · US</text>
+
+  <text class="muted" x="32" y="418">Hint</text>
+  <text class="muted" x="32" y="436">Ambiguity is normal. Inspector explains matches.</text>
+
+  <!-- Right: place detail -->
+  <rect class="panel" x="332" y="84" width="632" height="460" rx="10"/>
+
+  <!-- Place header -->
+  <text class="title" x="352" y="112">London</text>
+  <text class="muted" x="352" y="132">id 21 · city · GB · wikidata Q84</text>
+
+  <!-- Match keys card -->
+  <rect class="card" x="352" y="148" width="592" height="96" rx="10"/>
+  <text class="text" x="372" y="176">Match keys (what the matcher uses)</text>
+  <text class="muted" x="372" y="196">Normalized lookup key (place_names.normalized):</text>
+  <text class="mono" x="670" y="196">london</text>
+  <text class="muted" x="372" y="216">Computed URL slug (optional):</text>
+  <text class="mono" x="670" y="216">london</text>
+  <circle class="ok" cx="920" cy="188" r="6"/>
+  <text class="muted" x="372" y="236">Ambiguity: this normalized key maps to 3 places</text>
+
+  <!-- Names by language card -->
+  <rect class="card" x="352" y="260" width="592" height="170" rx="10"/>
+  <text class="text" x="372" y="288">Names by language (compact)</text>
+
+  <!-- Language chips row -->
+  <rect class="chip" x="372" y="302" width="54" height="24" rx="12"/><text class="chipText" x="389" y="319">en</text>
+  <rect class="chip" x="432" y="302" width="54" height="24" rx="12"/><text class="chipText" x="449" y="319">fr</text>
+  <rect class="chip" x="492" y="302" width="54" height="24" rx="12"/><text class="chipText" x="509" y="319">de</text>
+  <rect class="chip" x="552" y="302" width="84" height="24" rx="12"/><text class="chipText" x="568" y="319">historic</text>
+
+  <!-- Name rows -->
+  <text class="text" x="372" y="352">London</text>
+  <text class="muted" x="372" y="370">preferred, official · source: geonames · normalized:</text>
+  <text class="mono" x="700" y="370">london</text>
+
+  <text class="text" x="372" y="402">Londres</text>
+  <text class="muted" x="372" y="420">lang: fr · source: wikidata · normalized:</text>
+  <text class="mono" x="700" y="420">londres</text>
+
+  <!-- Match inspector card -->
+  <rect class="card" x="352" y="444" width="592" height="84" rx="10"/>
+  <text class="text" x="372" y="472">Match inspector</text>
+  <rect class="panel" x="372" y="482" width="280" height="30" rx="8"/>
+  <text class="muted" x="384" y="502">Paste URL segment: london-news</text>
+
+  <text class="muted" x="664" y="494">Segment normalized:</text>
+  <text class="mono" x="664" y="512">london news</text>
+  <circle class="warn" cx="920" cy="504" r="6"/>
+</svg>

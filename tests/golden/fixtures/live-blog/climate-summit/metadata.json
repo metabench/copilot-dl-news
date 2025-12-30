@@ -1,0 +1,26 @@
+{
+  "url": "https://news24.example.com/live/climate-summit-2025",
+  "capturedAt": "2025-12-22T17:00:00Z",
+  "category": "live-blog",
+  "edgeCaseType": "continuously-updated",
+  "expected": {
+    "title": "Global Climate Summit 2025: Live Updates",
+    "author": "News24 Team",
+    "publishDate": "2025-12-22T08:00:00Z",
+    "modifiedDate": "2025-12-22T16:45:00Z",
+    "pageType": "live-blog",
+    "isLive": true,
+    "updatesVisible": 5,
+    "totalUpdates": 47,
+    "latestUpdateContains": ["Agreement Reached", "landmark agreement"],
+    "bodyContains": ["emissions targets", "EU", "$100 billion"]
+  },
+  "flags": {
+    "isLiveBlog": true,
+    "hasReverseChronologicalUpdates": true,
+    "hasDynamicContent": true,
+    "hasAutoRefresh": true,
+    "hasLoadMore": true
+  },
+  "notes": "Live blog with reverse-chronological updates. Content changes frequently. Tests handling of modified_time, multiple timestamped entries, and partial content loading (42 older updates behind 'load more')."
+}

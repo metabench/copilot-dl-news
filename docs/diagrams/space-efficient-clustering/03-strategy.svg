@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 180">
+  <g id="strategy">
+    <rect x="0" y="0" width="800" height="40" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="26" text-anchor="middle" font-size="13" font-weight="600" fill="#f0ede8">CORE STRATEGY: Discard After Assignment</text>
+    
+    <g transform="translate(30, 55)">
+      <rect x="0" y="0" width="180" height="110" fill="#444" rx="6"/>
+      <text x="90" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#60a5fa">1. COMPUTE</text>
+      <text x="90" y="45" text-anchor="middle" font-size="9" fill="#aaa">Generate signature</text>
+      <text x="90" y="60" text-anchor="middle" font-size="9" fill="#aaa">in memory only</text>
+      <rect x="50" y="72" width="80" height="28" fill="#1e3a5f" rx="4"/>
+      <text x="90" y="91" text-anchor="middle" font-size="9" fill="#60a5fa">Transient</text>
+    </g>
+    
+    <path d="M 220 110 L 255 110" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="253,106 261,110 253,114" fill="#c9a962"/>
+    
+    <g transform="translate(265, 55)">
+      <rect x="0" y="0" width="180" height="110" fill="#444" rx="6"/>
+      <text x="90" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#a78bfa">2. COMPARE</text>
+      <text x="90" y="45" text-anchor="middle" font-size="9" fill="#aaa">Match to K centroids</text>
+      <text x="90" y="60" text-anchor="middle" font-size="9" fill="#aaa">Find best cluster</text>
+      <rect x="50" y="72" width="80" height="28" fill="#2d1f4a" rx="4"/>
+      <text x="90" y="91" text-anchor="middle" font-size="9" fill="#a78bfa">O(K)</text>
+    </g>
+    
+    <path d="M 455 110 L 490 110" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="488,106 496,110 488,114" fill="#c9a962"/>
+    
+    <g transform="translate(500, 55)">
+      <rect x="0" y="0" width="135" height="110" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="67" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#34d399">3. STORE</text>
+      <text x="67" y="45" text-anchor="middle" font-size="9" fill="#aaa">cluster_id only</text>
+      <text x="67" y="60" text-anchor="middle" font-size="9" fill="#aaa">(4 bytes)</text>
+      <rect x="27" y="72" width="80" height="28" fill="#0d2818" rx="4"/>
+      <text x="67" y="91" text-anchor="middle" font-size="9" fill="#34d399">Persist</text>
+    </g>
+    
+    <path d="M 645 110 L 680 110" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="678,106 686,110 678,114" fill="#c9a962"/>
+    
+    <g transform="translate(690, 55)">
+      <rect x="0" y="0" width="80" height="110" fill="#3a2020" rx="6" stroke="#ef4444" stroke-width="1" stroke-dasharray="4,2"/>
+      <text x="40" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#ef4444">4. DROP</text>
+      <text x="40" y="50" text-anchor="middle" font-size="16" fill="#ef4444">🗑</text>
+      <text x="40" y="75" text-anchor="middle" font-size="8" fill="#aaa">Discard</text>
+      <text x="40" y="88" text-anchor="middle" font-size="8" fill="#aaa">signature</text>
+    </g>
+  </g>
+</svg>

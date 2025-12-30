@@ -1,0 +1,19 @@
+{
+  "url": "https://smalltowngazette.example.com/news/council-approves-park-expansion",
+  "capturedAt": "2025-12-18T18:00:00Z",
+  "category": "standard",
+  "edgeCaseType": "local-newspaper",
+  "expected": {
+    "title": "Council Gives Green Light to Riverside Park Expansion",
+    "author": "Tom Wilson",
+    "publishDate": "2025-12-18T16:00:00Z",
+    "bodyWordCountMin": 150,
+    "bodyContains": ["city council", "$2.3 million", "Mayor Sarah Johnson", "Community garden"]
+  },
+  "flags": {
+    "isLocalNews": true,
+    "simpleStructure": true,
+    "hasInlineByline": true
+  },
+  "notes": "Simple local newspaper article with traditional structure. No complex layouts or dynamic content. Tests basic extraction on straightforward articles."
+}

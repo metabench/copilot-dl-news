@@ -1,0 +1,52 @@
+{
+  "$schema": "./schema/proxies.schema.json",
+  "version": 1,
+  "description": "Proxy configuration for crawler IP rotation and failover",
+  
+  "enabled": false,
+  
+  "providers": [
+    {
+      "name": "example-proxy-1",
+      "type": "http",
+      "host": "proxy.example.com",
+      "port": 8080,
+      "auth": {
+        "username": "",
+        "password": ""
+      },
+      "enabled": false,
+      "priority": 1,
+      "tags": ["datacenter", "fast"]
+    },
+    {
+      "name": "example-proxy-2",
+      "type": "socks5",
+      "host": "socks.example.com",
+      "port": 1080,
+      "auth": {
+        "username": "",
+        "password": ""
+      },
+      "enabled": false,
+      "priority": 2,
+      "tags": ["residential"]
+    }
+  ],
+  
+  "strategy": "round-robin",
+  
+  "failover": {
+    "enabled": true,
+    "banThresholdFailures": 3,
+    "banDurationMs": 300000,
+    "triggerOnStatusCodes": [403, 429, 503]
+  },
+  
+  "healthCheck": {
+    "enabled": true,
+    "intervalMs": 60000,
+    "testUrl": "https://httpbin.org/ip",
+    "timeoutMs": 10000
+  }
+}

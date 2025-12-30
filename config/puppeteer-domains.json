@@ -1,0 +1,45 @@
+{
+  "$schema": "./schema/puppeteer-domains.schema.json",
+  "version": 1,
+  "description": "Domains that require Puppeteer fallback due to TLS fingerprinting (JA3/JA4 blocking)",
+  "updatedAt": null,
+  "domains": {
+    "manual": [
+      {
+        "domain": "theguardian.com",
+        "reason": "TLS fingerprinting - ECONNRESET on node-fetch",
+        "addedAt": "2025-12-25T00:00:00Z",
+        "addedBy": "default"
+      },
+      {
+        "domain": "bloomberg.com",
+        "reason": "TLS fingerprinting - ECONNRESET on node-fetch",
+        "addedAt": "2025-12-25T00:00:00Z",
+        "addedBy": "default"
+      },
+      {
+        "domain": "wsj.com",
+        "reason": "TLS fingerprinting - ECONNRESET on node-fetch",
+        "addedAt": "2025-12-25T00:00:00Z",
+        "addedBy": "default"
+      }
+    ],
+    "learned": [],
+    "pending": []
+  },
+  "settings": {
+    "autoLearnEnabled": true,
+    "autoLearnThreshold": 3,
+    "autoLearnWindowMs": 300000,
+    "autoApprove": true,
+    "trackingEnabled": true
+  },
+  "browserLifecycle": {
+    "maxPagesPerSession": 50,
+    "maxSessionAgeMs": 600000,
+    "healthCheckEnabled": true,
+    "healthCheckIntervalMs": 30000,
+    "restartOnError": true,
+    "maxConsecutiveErrors": 3
+  }
+}

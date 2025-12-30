@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 160">
+  <g id="metrics">
+    <rect x="0" y="0" width="400" height="40" fill="#3a3a3a" rx="8"/>
+    <text x="200" y="26" text-anchor="middle" font-size="13" font-weight="600" fill="#f0ede8">PERFORMANCE METRICS</text>
+    
+    <g transform="translate(15, 50)">
+      <rect x="0" y="0" width="115" height="95" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="57" y="20" text-anchor="middle" font-size="9" font-weight="600" fill="#34d399">Hit Rate</text>
+      <text x="57" y="55" text-anchor="middle" font-size="28" font-weight="700" fill="#34d399">80%</text>
+      <text x="57" y="75" text-anchor="middle" font-size="8" fill="#aaa">L1 exact match</text>
+    </g>
+    
+    <g transform="translate(142, 50)">
+      <rect x="0" y="0" width="115" height="95" fill="#444" rx="6"/>
+      <text x="57" y="20" text-anchor="middle" font-size="9" font-weight="600" fill="#c9a962">Avg Latency</text>
+      <text x="57" y="55" text-anchor="middle" font-size="28" font-weight="700" fill="#fbbf24">1.8ms</text>
+      <text x="57" y="75" text-anchor="middle" font-size="8" fill="#aaa">per page</text>
+    </g>
+    
+    <g transform="translate(269, 50)">
+      <rect x="0" y="0" width="115" height="95" fill="#444" rx="6"/>
+      <text x="57" y="20" text-anchor="middle" font-size="9" font-weight="600" fill="#60a5fa">Memory</text>
+      <text x="57" y="55" text-anchor="middle" font-size="28" font-weight="700" fill="#60a5fa">~1MB</text>
+      <text x="57" y="75" text-anchor="middle" font-size="8" fill="#aaa">1K centroids</text>
+    </g>
+  </g>
+</svg>

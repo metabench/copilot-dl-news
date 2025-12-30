@@ -1,0 +1,22 @@
+{
+  "url": "https://chronicle.example.com/breaking/policy-change-2025",
+  "capturedAt": "2025-12-23T08:00:00Z",
+  "category": "paywall",
+  "edgeCaseType": "hard-paywall-locked",
+  "expected": {
+    "title": "Breaking: Major Policy Change Announced",
+    "author": "Robert Chen",
+    "publishDate": "2025-12-23T06:00:00Z",
+    "bodyContains": [],
+    "isPaywalled": true,
+    "paywallType": "hard",
+    "extractableContentMinimal": true
+  },
+  "flags": {
+    "hasPaywall": true,
+    "paywallType": "hard",
+    "noVisibleContent": true,
+    "allContentHidden": true
+  },
+  "notes": "Hard paywall with no teaser content. Only title/author/date extractable. Body content completely hidden behind display:none."
+}

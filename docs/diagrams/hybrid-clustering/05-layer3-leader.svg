@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">
+  <g id="layer3-leader">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#1a3a2a" rx="8"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="white" letter-spacing="1">LAYER 3: LEADER CLUSTERING</text>
+    
+    <!-- Algorithm -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="160" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">ONLINE LEADER ALGORITHM</text>
+      
+      <text x="12" y="40" font-size="9" fill="#aaa" font-family="monospace">function assign_cluster(new_sig):</text>
+      <text x="20" y="56" font-size="9" fill="#888" font-family="monospace">  best_dist = ∞</text>
+      <text x="20" y="72" font-size="9" fill="#888" font-family="monospace">  best_cluster = null</text>
+      <text x="20" y="88" font-size="9" fill="#888" font-family="monospace">  for cluster in centroids:    # O(K)</text>
+      <text x="28" y="104" font-size="9" fill="#888" font-family="monospace">    d = jaccard_dist(new_sig, cluster)</text>
+      <text x="28" y="120" font-size="9" fill="#888" font-family="monospace">    if d &lt; best_dist: best_dist, best_cluster = d, cluster</text>
+      <text x="20" y="136" font-size="9" fill="#888" font-family="monospace">  if best_dist &lt; THRESHOLD:</text>
+      <text x="28" y="152" font-size="9" fill="#34d399" font-family="monospace">    return best_cluster  # assign to existing</text>
+    </g>
+    
+    <!-- New Cluster -->
+    <g transform="translate(15, 225)">
+      <rect x="0" y="0" width="370" height="70" fill="#3a3a1a" rx="6" stroke="#fbbf24" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#fbbf24">NEW CLUSTER CREATION</text>
+      <text x="12" y="40" font-size="9" fill="#aaa" font-family="monospace">  else:</text>
+      <text x="20" y="56" font-size="9" fill="#fbbf24" font-family="monospace">    return create_cluster(new_sig)  # new leader</text>
+    </g>
+    
+    <!-- Centroid Update -->
+    <g transform="translate(15, 305)">
+      <rect x="0" y="0" width="370" height="85" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">CENTROID UPDATE (Incremental)</text>
+      <text x="12" y="40" font-size="9" fill="#aaa">When assigning to existing cluster:</text>
+      <text x="12" y="58" font-size="9" fill="#888" font-family="monospace">  centroid = (old_centroid × n + new_sig) / (n+1)</text>
+      <text x="12" y="76" font-size="9" fill="#666">Or: keep leader as centroid (simpler)</text>
+    </g>
+    
+    <!-- Thresholds -->
+    <g transform="translate(15, 400)">
+      <rect x="0" y="0" width="175" height="85" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">THRESHOLDS</text>
+      <text x="12" y="40" font-size="9" fill="#aaa">THRESHOLD = 0.3</text>
+      <text x="12" y="56" font-size="9" fill="#888">70% Jaccard similarity</text>
+      <text x="12" y="72" font-size="9" fill="#666">Tunable per domain</text>
+    </g>
+    
+    <g transform="translate(200, 400)">
+      <rect x="0" y="0" width="185" height="85" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">COMPLEXITY</text>
+      <text x="12" y="40" font-size="9" fill="#aaa">Time: O(K) per page</text>
+      <text x="12" y="56" font-size="9" fill="#aaa">Space: O(K) centroids</text>
+      <text x="12" y="72" font-size="9" fill="#888">K ≈ 100-1000 typically</text>
+    </g>
+  </g>
+</svg>

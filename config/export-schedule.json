@@ -1,0 +1,24 @@
+{
+  "enabled": false,
+  "schedule": "0 2 * * *",
+  "retentionDays": 30,
+  "formats": ["jsonl", "json"],
+  "types": ["articles", "domains"],
+  "outputDir": "data/exports/daily",
+  "feedConfig": {
+    "feedTitle": "News Feed",
+    "feedDescription": "Exported articles from News Crawler",
+    "feedLink": "http://localhost:4000",
+    "feedLanguage": "en",
+    "maxFeedItems": 50
+  },
+  "notes": {
+    "schedule": "Cron expression: minute hour day-of-month month day-of-week",
+    "examples": {
+      "daily2am": "0 2 * * *",
+      "everyHour": "0 * * * *",
+      "weekdays9am": "0 9 * * 1-5",
+      "monthly1st": "0 0 1 * *"
+    }
+  }
+}

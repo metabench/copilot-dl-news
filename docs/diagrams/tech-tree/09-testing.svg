@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 350">
+  <g id="testing">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="50" fill="#3a3a3a" rx="8 8 0 0"/>
+    <text x="200" y="25" text-anchor="middle" font-size="16" font-weight="600" fill="#f0ede8" letter-spacing="1">TESTING INFRA</text>
+    <text x="200" y="42" text-anchor="middle" font-size="10" fill="#888">Jest + Puppeteer • Contract Tests • E2E</text>
+    
+    <!-- Test Cards -->
+    <g transform="translate(15, 60)">
+      <rect x="0" y="0" width="370" height="52" fill="#10b981" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ Unit Test Suite</text>
+      <text x="12" y="38" font-size="10" fill="#1a1a1a" opacity="0.8">Crawler services • DB adapters • CLI tools</text>
+    </g>
+    <g transform="translate(15, 120)">
+      <rect x="0" y="0" width="370" height="52" fill="#10b981" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ Check Scripts (checks/)</text>
+      <text x="12" y="38" font-size="10" fill="#1a1a1a" opacity="0.8">UI controls • Render verification • Fast feedback</text>
+    </g>
+    <g transform="translate(15, 180)">
+      <rect x="0" y="0" width="370" height="52" fill="#10b981" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ Contract Tests</text>
+      <text x="12" y="38" font-size="10" fill="#1a1a1a" opacity="0.8">Crawler ↔ DB ↔ UI boundaries • Explicit invariants</text>
+    </g>
+    <g transform="translate(15, 240)">
+      <rect x="0" y="0" width="370" height="52" fill="#3b82f6" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="white">◐ Puppeteer Scenario Suites</text>
+      <text x="12" y="38" font-size="10" fill="white" opacity="0.9">UI verification • Screenshot diffs • Console capture</text>
+    </g>
+    <g transform="translate(15, 300)">
+      <rect x="0" y="0" width="370" height="48" fill="#8b5cf6" rx="6"/>
+      <text x="12" y="18" font-size="12" font-weight="600" fill="white">○ HTTP Record/Replay</text>
+      <text x="12" y="36" font-size="10" fill="white" opacity="0.9">Deterministic crawler tests • Fixture generation</text>
+    </g>
+  </g>
+</svg>

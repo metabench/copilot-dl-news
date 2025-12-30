@@ -31,6 +31,63 @@
 
 ## Current Session
 
+### Session 2025-12-30: Decision engines vs modes boundary
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Clarify that 'no weighted signals' applies only to the fact/classification decision-tree subsystem; other engines may use weights.
+
+**Location**: `docs/sessions/2025-12-30-decision-modes-boundary/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-30-decision-modes-boundary/INDEX.md)
+- 🗺️ [Plan](./2025-12-30-decision-modes-boundary/PLAN.md)
+- 📝 [Working Notes](./2025-12-30-decision-modes-boundary/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-30-decision-modes-boundary/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-30-decision-modes-boundary/FOLLOW_UPS.md)
+
+
+### Session 2025-12-30: Single UI app cohesion roadmap
+
+**Duration**: Active
+**Type**: architecture
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Review current UI/server structure and outline remaining work to make a cohesive, well-running single UI app.
+
+**Location**: `docs/sessions/2025-12-30-2025-12-30-single-ui-app-cohesion/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-30-2025-12-30-single-ui-app-cohesion/INDEX.md)
+- 🗺️ [Plan](./2025-12-30-2025-12-30-single-ui-app-cohesion/PLAN.md)
+- 📝 [Working Notes](./2025-12-30-2025-12-30-single-ui-app-cohesion/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-30-2025-12-30-single-ui-app-cohesion/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-30-2025-12-30-single-ui-app-cohesion/FOLLOW_UPS.md)
+
+
+### Session 2025-12-27: Rate Limit Dashboard UI
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build UI for viewing and managing domain rate limits
+
+**Location**: `docs/sessions/2025-12-27-rate-limit-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-27-rate-limit-ui/INDEX.md)
+- 🗺️ [Plan](./2025-12-27-rate-limit-ui/PLAN.md)
+- 📝 [Working Notes](./2025-12-27-rate-limit-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-27-rate-limit-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-27-rate-limit-ui/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-26: Team Workspaces & Collaboration
 
 **Duration**: Active

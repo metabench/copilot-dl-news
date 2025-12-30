@@ -1,0 +1,25 @@
+{
+  "url": "https://modern-tech-blog.example.com/articles/tech-trends-2026",
+  "capturedAt": "2025-12-19T16:00:00Z",
+  "category": "spa",
+  "edgeCaseType": "react-client-rendered",
+  "expected": {
+    "title": "Top 10 Tech Trends to Watch in 2026",
+    "titleFallbackSource": "json-ld",
+    "author": "Alex Rivera",
+    "authorFallbackSource": "json-ld",
+    "publishDate": "2025-12-19T15:00:00Z",
+    "bodyContains": ["quantum computing", "AI Agents", "Extended Reality"],
+    "bodySource": "json-ld-articleBody",
+    "requiresJsExecution": true
+  },
+  "flags": {
+    "isSPA": true,
+    "framework": "react",
+    "requiresJavaScript": true,
+    "hasJsonLd": true,
+    "jsonLdContainsArticleBody": true,
+    "skeletonLoaderPresent": true
+  },
+  "notes": "React SPA with no server-rendered content. Tests extraction from JSON-LD structured data as fallback. Real content only available after JS execution."
+}

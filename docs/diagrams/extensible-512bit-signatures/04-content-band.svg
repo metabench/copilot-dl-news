@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 210">
+  <g id="content-band">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">BAND 2: CONTENT (128 bits)</text>
+    
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="740" height="145" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="370" y="22" text-anchor="middle" font-size="11" font-weight="600" fill="#a78bfa">Text Content Fingerprint</text>
+      
+      <!-- What it captures -->
+      <g transform="translate(15, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Captures:</text>
+        <text x="15" y="28" font-size="9" fill="#aaa">• Word/n-gram shingles</text>
+        <text x="15" y="42" font-size="9" fill="#aaa">• Headline fingerprint</text>
+        <text x="15" y="56" font-size="9" fill="#aaa">• Body text density</text>
+        <text x="15" y="70" font-size="9" fill="#aaa">• Named entities (people, places)</text>
+      </g>
+      
+      <!-- What it detects -->
+      <g transform="translate(250, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Detects:</text>
+        <text x="15" y="28" font-size="9" fill="#34d399">✓ Syndicated articles</text>
+        <text x="15" y="42" font-size="9" fill="#34d399">✓ Rewrites/paraphrases</text>
+        <text x="15" y="56" font-size="9" fill="#34d399">✓ Wire service copies</text>
+        <text x="15" y="70" font-size="9" fill="#34d399">✓ Translations (partial)</text>
+      </g>
+      
+      <!-- SimHash approach -->
+      <g transform="translate(470, 35)">
+        <text x="0" y="12" font-size="10" font-weight="600" fill="#f0ede8">Algorithm:</text>
+        <text x="15" y="28" font-size="9" fill="#aaa">SimHash of 3-grams</text>
+        <text x="15" y="42" font-size="9" fill="#aaa">Weighted by TF-IDF</text>
+        <text x="15" y="56" font-size="9" fill="#aaa">→ 128-bit digest</text>
+        <rect x="15" y="62" width="100" height="16" fill="#8b5cf6" rx="2"/>
+        <text x="65" y="74" text-anchor="middle" font-size="8" fill="#fff">O(W) words</text>
+      </g>
+      
+      <!-- Status -->
+      <g transform="translate(15, 115)">
+        <rect x="0" y="0" width="150" height="22" fill="#fbbf24" rx="3"/>
+        <text x="75" y="15" text-anchor="middle" font-size="9" font-weight="600" fill="#000">PHASE 2</text>
+      </g>
+    </g>
+  </g>
+</svg>

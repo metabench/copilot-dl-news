@@ -1,0 +1,99 @@
+{
+  "$schema": "../../config/schema/crawl-runner.schema.json",
+  "$comment": "Staging configuration - reduced limits for testing",
+  
+  "environment": "staging",
+  
+  "queue": {
+    "backend": "sqlite",
+    "databasePath": "/app/data/staging-queue.db",
+    "tableName": "crawl_queue",
+    "pollIntervalMs": 2000,
+    "visibilityTimeoutMs": 120000,
+    "maxRetries": 3,
+    "retryBackoffMs": [1000, 5000, 15000]
+  },
+  
+  "crawler": {
+    "maxConcurrentPages": 3,
+    "maxPagesPerDomain": 50,
+    "maxTotalPages": 500,
+    "maxDepth": 3,
+    "respectRobotsTxt": true,
+    "userAgent": "NewsCrawler/1.0-staging (+https://example.com/crawler)",
+    
+    "timeouts": {
+      "pageLoadMs": 30000,
+      "navigationMs": 25000,
+      "resourceMs": 15000,
+      "idleMs": 3000
+    },
+    
+    "rateLimit": {
+      "requestsPerSecond": 1,
+      "burstSize": 2,
+      "perDomainDelayMs": 3000
+    },
+    
+    "retry": {
+      "maxAttempts": 2,
+      "initialDelayMs": 500,
+      "maxDelayMs": 10000,
+      "backoffMultiplier": 2,
+      "retryableStatusCodes": [408, 429, 500, 502, 503, 504]
+    }
+  },
+  
+  "proxy": {
+    "enabled": false,
+    "rotationStrategy": "none",
+    "healthCheckIntervalMs": 0,
+    "configPath": null
+  },
+  
+  "puppeteer": {
+    "enabled": true,
+    "fallbackThreshold": 1,
+    "executablePath": "/usr/bin/chromium-browser",
+    "args": [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu"
+    ],
+    "maxInstances": 1,
+    "pagePoolSize": 2
+  },
+  
+  "storage": {
+    "backend": "sqlite",
+    "databasePath": "/app/data/staging-news.db",
+    "batchSize": 50,
+    "flushIntervalMs": 10000
+  },
+  
+  "telemetry": {
+    "enabled": true,
+    "metricsIntervalMs": 30000,
+    "logLevel": "debug",
+    "structured": true,
+    "destinations": ["stdout"]
+  },
+  
+  "resilience": {
+    "circuitBreaker": {
+      "enabled": true,
+      "failureThreshold": 3,
+      "resetTimeoutMs": 30000
+    },
+    "bulkhead": {
+      "enabled": true,
+      "maxConcurrent": 5
+    }
+  },
+  
+  "gracefulShutdown": {
+    "timeoutMs": 30000,
+    "drainQueuedWork": true
+  }
+}

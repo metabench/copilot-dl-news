@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 170">
+  <g id="batch-flow">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">BATCH LIFECYCLE</text>
+    
+    <!-- Accumulation -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="175" height="105" fill="#444" rx="6"/>
+      <text x="87" y="20" text-anchor="middle" font-size="9" font-weight="600" fill="#60a5fa">1. ACCUMULATE</text>
+      <text x="12" y="42" font-size="8" fill="#aaa">New pages arrive</text>
+      <text x="12" y="56" font-size="8" fill="#aaa">Check vs exemplars first</text>
+      <text x="12" y="70" font-size="8" fill="#aaa">If no match → queue</text>
+      <text x="12" y="88" font-size="8" fill="#888">Wait until 10K queued</text>
+    </g>
+    
+    <path d="M 215 102 L 240 102" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="238,98 246,102 238,106" fill="#c9a962"/>
+    
+    <!-- Process batch -->
+    <g transform="translate(250, 50)">
+      <rect x="0" y="0" width="175" height="105" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="87" y="20" text-anchor="middle" font-size="9" font-weight="600" fill="#a78bfa">2. PROCESS BATCH</text>
+      <text x="12" y="42" font-size="8" fill="#aaa">Load 10K to memory</text>
+      <text x="12" y="56" font-size="8" fill="#aaa">All-pairs clustering</text>
+      <text x="12" y="70" font-size="8" fill="#aaa">~8 sec CPU / 50ms GPU</text>
+      <text x="12" y="88" font-size="8" fill="#888">Extract new exemplars</text>
+    </g>
+    
+    <path d="M 435 102 L 460 102" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="458,98 466,102 458,106" fill="#c9a962"/>
+    
+    <!-- Merge -->
+    <g transform="translate(470, 50)">
+      <rect x="0" y="0" width="145" height="105" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="72" y="20" text-anchor="middle" font-size="9" font-weight="600" fill="#34d399">3. MERGE</text>
+      <text x="12" y="42" font-size="8" fill="#aaa">New exemplars →</text>
+      <text x="12" y="56" font-size="8" fill="#aaa">compare to existing</text>
+      <text x="12" y="70" font-size="8" fill="#aaa">Merge similar clusters</text>
+      <text x="12" y="88" font-size="8" fill="#888">Update DB IDs</text>
+    </g>
+    
+    <path d="M 625 102 L 650 102" stroke="#c9a962" stroke-width="2"/>
+    <polygon points="648,98 656,102 648,106" fill="#c9a962"/>
+    
+    <!-- Store -->
+    <g transform="translate(660, 50)">
+      <rect x="0" y="0" width="110" height="105" fill="#444" rx="6"/>
+      <text x="55" y="20" text-anchor="middle" font-size="9" font-weight="600" fill="#c9a962">4. STORE</text>
+      <text x="12" y="42" font-size="8" fill="#aaa">Write IDs</text>
+      <text x="12" y="56" font-size="8" fill="#aaa">to pages</text>
+      <text x="12" y="70" font-size="8" fill="#aaa">table</text>
+      <text x="12" y="88" font-size="8" fill="#34d399">40KB write</text>
+    </g>
+  </g>
+</svg>

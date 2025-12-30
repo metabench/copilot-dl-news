@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420">
+  <g id="approach-hierarchical">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">APPROACH D: HIERARCHICAL</text>
+    
+    <!-- Concept -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="95" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#888">MULTI-LEVEL HASH HIERARCHY</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">L1: Tag sequence hash (coarse)</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">L2: Tag + depth hash (medium)</text>
+      <text x="12" y="66" font-size="9" fill="#aaa">L3: Tag + depth + siblings (fine)</text>
+      <text x="12" y="80" font-size="9" fill="#888">Group at coarse level, split at fine level</text>
+    </g>
+    
+    <!-- Visual -->
+    <g transform="translate(15, 160)">
+      <rect x="0" y="0" width="370" height="145" fill="#444" rx="6"/>
+      <text x="185" y="18" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">DENDROGRAM VIEW</text>
+      
+      <!-- Tree visualization -->
+      <rect x="155" y="30" width="60" height="20" rx="4" fill="#888"/>
+      <text x="185" y="44" text-anchor="middle" font-size="8" fill="white">L1: abc</text>
+      
+      <line x1="175" y1="50" x2="115" y2="65" stroke="#666" stroke-width="1"/>
+      <line x1="195" y1="50" x2="255" y2="65" stroke="#666" stroke-width="1"/>
+      
+      <rect x="80" y="65" width="70" height="20" rx="4" fill="#3b82f6"/>
+      <text x="115" y="79" text-anchor="middle" font-size="8" fill="white">L2: abc-1</text>
+      
+      <rect x="220" y="65" width="70" height="20" rx="4" fill="#3b82f6"/>
+      <text x="255" y="79" text-anchor="middle" font-size="8" fill="white">L2: abc-2</text>
+      
+      <line x1="100" y1="85" x2="70" y2="100" stroke="#666" stroke-width="1"/>
+      <line x1="130" y1="85" x2="160" y2="100" stroke="#666" stroke-width="1"/>
+      
+      <rect x="40" y="100" width="60" height="18" rx="4" fill="#10b981"/>
+      <text x="70" y="113" text-anchor="middle" font-size="7" fill="white">150 pages</text>
+      
+      <rect x="130" y="100" width="60" height="18" rx="4" fill="#10b981"/>
+      <text x="160" y="113" text-anchor="middle" font-size="7" fill="white">80 pages</text>
+      
+      <rect x="225" y="100" width="60" height="18" rx="4" fill="#10b981"/>
+      <text x="255" y="113" text-anchor="middle" font-size="7" fill="white">200 pages</text>
+    </g>
+    
+    <!-- Pros/Cons -->
+    <g transform="translate(15, 315)">
+      <rect x="0" y="0" width="180" height="90" fill="#1a3a2a" rx="6"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="#34d399">✓ PROS</text>
+      <text x="10" y="36" font-size="9" fill="#aaa">• Interpretable levels</text>
+      <text x="10" y="50" font-size="9" fill="#aaa">• Drill-down analysis</text>
+      <text x="10" y="64" font-size="9" fill="#aaa">• Already have L1/L2</text>
+      <text x="10" y="78" font-size="9" fill="#aaa">• Good for debugging</text>
+    </g>
+    
+    <g transform="translate(205, 315)">
+      <rect x="0" y="0" width="180" height="90" fill="#3a1a1a" rx="6"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="#ef4444">✗ CONS</text>
+      <text x="10" y="36" font-size="9" fill="#aaa">• Fixed levels</text>
+      <text x="10" y="50" font-size="9" fill="#aaa">• No adaptive splits</text>
+      <text x="10" y="64" font-size="9" fill="#aaa">• Imbalanced trees</text>
+      <text x="10" y="78" font-size="9" fill="#888">Use as debug layer</text>
+    </g>
+  </g>
+</svg>

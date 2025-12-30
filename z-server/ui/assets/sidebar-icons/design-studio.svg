@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9966cc"/>
+      <stop offset="1" stop-color="#da70d6"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <rect x="2" y="2" width="36" height="36" rx="8" fill="rgba(218,112,214,0.12)" stroke="rgba(218,112,214,0.4)" stroke-width="1.5"/>
+  
+  <!-- Palette/design diagonal line -->
+  <path d="M 10 30 L 30 10" stroke="rgba(255,230,255,0.2)" stroke-width="6" stroke-linecap="round"/>
+  
+  <!-- Control boxes -->
+  <rect x="8" y="6" width="10" height="10" rx="3" fill="rgba(10,13,20,0.6)" stroke="rgba(218,112,214,0.35)" stroke-width="1"/>
+  <rect x="22" y="24" width="10" height="10" rx="3" fill="rgba(10,13,20,0.6)" stroke="rgba(218,112,214,0.35)" stroke-width="1"/>
+  
+  <!-- Connecting line with glow -->
+  <g filter="url(#glow)">
+    <path d="M 13 30 L 27 10" stroke="url(#accent)" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="27" cy="10" r="3" fill="#da70d6"/>
+    <circle cx="13" cy="30" r="3" fill="#da70d6"/>
+  </g>
+</svg>

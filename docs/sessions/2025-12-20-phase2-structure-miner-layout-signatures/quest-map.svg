@@ -1,0 +1,3163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1600" viewBox="0 0 1100 1600" role="img" aria-label="Quest map: Structure Miner + Layout Signatures">
+  <defs>
+    <!-- ======================================================= -->
+    <!-- ENHANCED GRADIENTS (richer, more sophisticated)         -->
+    <!-- ======================================================= -->
+    
+    <!-- Parchment background - aged manuscript feel -->
+    <linearGradient id="parchment" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#f8edd4"/>
+      <stop offset="15%" stop-color="#f2e4c4"/>
+      <stop offset="50%" stop-color="#e8dab5"/>
+      <stop offset="85%" stop-color="#dcd0a6"/>
+      <stop offset="100%" stop-color="#d0c498"/>
+    </linearGradient>
+    
+    <!-- Radial vignette for aged edges -->
+    <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="70%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#3d2814" stop-opacity="0.15"/>
+    </radialGradient>
+    
+    <!-- Water gradient - deeper, richer blues -->
+    <linearGradient id="water" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0%" stop-color="#7ab3cc"/>
+      <stop offset="40%" stop-color="#5a98b5"/>
+      <stop offset="100%" stop-color="#3d7a94"/>
+    </linearGradient>
+    
+    <!-- Water shimmer overlay -->
+    <linearGradient id="waterShimmer" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="25%" stop-color="#ffffff" stop-opacity="0.12"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="75%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    
+    <!-- Forest green - lush, varied canopy -->
+    <radialGradient id="forest" cx="40%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#5a9968"/>
+      <stop offset="50%" stop-color="#3d7a4d"/>
+      <stop offset="100%" stop-color="#1e5a32"/>
+    </radialGradient>
+    
+    <!-- Forest highlight for depth -->
+    <linearGradient id="forestHighlight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6aad78"/>
+      <stop offset="100%" stop-color="#3d8b55"/>
+    </linearGradient>
+    
+    <!-- Mountain gradient - realistic rocky peaks -->
+    <linearGradient id="mountain" x1="0" y1="0" x2="0.1" y2="1">
+      <stop offset="0%" stop-color="#a8a8a8"/>
+      <stop offset="25%" stop-color="#888888"/>
+      <stop offset="60%" stop-color="#686868"/>
+      <stop offset="100%" stop-color="#4a4a4a"/>
+    </linearGradient>
+    
+    <!-- Snow cap - crisp alpine peaks -->
+    <linearGradient id="snow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#f0f4f8"/>
+      <stop offset="100%" stop-color="#d8e4ec"/>
+    </linearGradient>
+    
+    <!-- Golden accent for special elements -->
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d4a84b"/>
+      <stop offset="50%" stop-color="#c49428"/>
+      <stop offset="100%" stop-color="#a67c1a"/>
+    </linearGradient>
+    
+    <!-- Warm panel background -->
+    <linearGradient id="panelBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8f0e0"/>
+      <stop offset="100%" stop-color="#e8dcc8"/>
+    </linearGradient>
+    
+    <!-- ======================================================= -->
+    <!-- ENHANCED FILTERS (depth, glow, texture)                 -->
+    <!-- ======================================================= -->
+    
+    <!-- Location markers - warm glow -->
+    <filter id="locationGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+      <feOffset in="blur" dx="0" dy="2" result="offsetBlur"/>
+      <feFlood flood-color="#5c4a32" flood-opacity="0.35" result="color"/>
+      <feComposite in="color" in2="offsetBlur" operator="in" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Subtle inner glow for panels -->
+    <filter id="panelGlow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#8b7355" flood-opacity="0.25"/>
+    </filter>
+    
+    <!-- Text shadow for better readability -->
+    <filter id="textShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="0.3" flood-color="#3d2814" flood-opacity="0.2"/>
+    </filter>
+    
+    <!-- Water reflection effect -->
+    <filter id="waterReflect" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="2" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    
+    <!-- Paper texture noise -->
+    <filter id="paperNoise" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="4" result="noise"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feBlend in="SourceGraphic" mode="multiply" result="blend"/>
+      <feComposite in="blend" in2="SourceGraphic" operator="arithmetic" k1="0" k2="0.95" k3="0.05" k4="0"/>
+    </filter>
+    
+    <!-- Decorative border glow -->
+    <filter id="borderGlow" x="-2%" y="-2%" width="104%" height="104%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="blur"/>
+      <feFlood flood-color="#d4a84b" flood-opacity="0.15" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- ======================================================= -->
+    <!-- MARKERS                                                 -->
+    <!-- ======================================================= -->
+    
+    <marker id="pathArrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+      <circle cx="5" cy="5" r="3" fill="#8b4513"/>
+    </marker>
+    
+    <!-- Fancy arrow for flow diagrams -->
+    <marker id="fancyArrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M 0 2 L 10 6 L 0 10 L 3 6 Z" fill="#6b5744"/>
+    </marker>
+
+    <!-- ======================================================= -->
+    <!-- ENHANCED STYLES (better typography, visual hierarchy)  -->
+    <!-- ======================================================= -->
+    
+    <style>
+      /* Base fills */
+      .parchment { fill: url(#parchment); }
+      
+      /* Borders - enhanced with subtle glow */
+      .border { fill: none; stroke: #7a6548; stroke-width: 8; filter: url(#borderGlow); }
+      .border-inner { fill: none; stroke: #a89070; stroke-width: 2.5; stroke-dasharray: none; }
+      .border-accent { fill: none; stroke: url(#gold); stroke-width: 1; opacity: 0.4; }
+      
+      /* Quest road - warmer, more visible */
+      .quest-road { fill: none; stroke: #9a5519; stroke-width: 5; stroke-dasharray: 10 5; stroke-linecap: round; }
+      .quest-road-outline { fill: none; stroke: #5c3310; stroke-width: 8; stroke-dasharray: 10 5; stroke-linecap: round; opacity: 0.25; }
+      
+      /* Water - deeper blues */
+      .water { fill: url(#water); opacity: 0.75; }
+      .water-shimmer { fill: url(#waterShimmer); opacity: 0.6; }
+      .water-line { fill: none; stroke: #3a6a84; stroke-width: 1.2; opacity: 0.45; }
+      
+      /* Vegetation */
+      .grass { fill: #6ab03a; opacity: 0.35; }
+      .forest-canopy { fill: url(#forest); }
+      .forest-highlight { fill: url(#forestHighlight); opacity: 0.7; }
+      
+      /* Typography - Enhanced hierarchy */
+      .title { 
+        font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif; 
+        font-size: 34px; 
+        font-weight: bold; 
+        fill: #2d1a08;
+        letter-spacing: 1px;
+      }
+      .subtitle { 
+        font-family: Georgia, "Times New Roman", serif; 
+        font-size: 14px; 
+        fill: #5c4a32; 
+        font-style: italic;
+        letter-spacing: 0.5px;
+      }
+      .location-name { 
+        font-family: "Palatino Linotype", Palatino, serif; 
+        font-size: 13px; 
+        font-weight: bold; 
+        fill: #2d1a08;
+      }
+      .location-status { 
+        font-family: Georgia, serif; 
+        font-size: 10px; 
+        fill: #5c4a32;
+      }
+      .compass-text { 
+        font-family: "Palatino Linotype", Palatino, serif; 
+        font-size: 15px; 
+        font-weight: bold; 
+        fill: #4a3a28;
+      }
+      .legend-title { 
+        font-family: "Palatino Linotype", Palatino, serif; 
+        font-size: 13px; 
+        font-weight: bold; 
+        fill: #2d1a08;
+      }
+      .legend-text { 
+        font-family: Georgia, serif; 
+        font-size: 10px; 
+        fill: #5c4a32;
+      }
+      .step-num { 
+        font-family: "Palatino Linotype", Palatino, serif; 
+        font-size: 12px; 
+        font-weight: bold; 
+        fill: #fff;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      }
+      .flavor { 
+        font-family: Georgia, serif; 
+        font-size: 12px; 
+        fill: #6b5744; 
+        font-style: italic;
+        letter-spacing: 0.3px;
+      }
+      
+      /* Panel styles */
+      .panel-bg { fill: url(#panelBg); filter: url(#panelGlow); }
+      .panel-border { fill: none; stroke: #8b7355; stroke-width: 1.5; }
+      .panel-title { 
+        font-family: "Palatino Linotype", Palatino, serif; 
+        font-size: 12px; 
+        font-weight: bold; 
+        fill: #2d1a08;
+      }
+      .panel-text { 
+        font-family: Georgia, serif; 
+        font-size: 7px; 
+        fill: #4a3a28;
+      }
+    </style>
+  </defs>
+
+  <!-- ====================================================================== -->
+  <!-- ENHANCED BACKGROUND (parchment + vignette + texture)            -->
+  <!-- ====================================================================== -->
+  
+  <!-- Base parchment background -->
+  <rect width="1100" height="1600" class="parchment"/>
+  
+  <!-- Subtle paper texture effect -->
+  <rect width="1100" height="1600" fill="#6b5744" opacity="0.025"/>
+  
+  <!-- Warm edge burn effect (aged manuscript) -->
+  <rect width="1100" height="1600" fill="url(#vignette)"/>
+  
+  <!-- Decorative corner stains (aged look) -->
+  <ellipse cx="50" cy="50" rx="80" ry="60" fill="#8b7355" opacity="0.04"/>
+  <ellipse cx="1050" cy="1550" rx="90" ry="70" fill="#8b7355" opacity="0.035"/>
+  <ellipse cx="1050" cy="50" rx="60" ry="50" fill="#8b7355" opacity="0.025"/>
+  <ellipse cx="50" cy="1550" rx="70" ry="55" fill="#8b7355" opacity="0.03"/>
+  
+  <!-- ======================================================= -->
+  <!-- ATMOSPHERIC EFFECTS - Clouds, Birds, Sparkles, Weather     -->
+  <!-- ======================================================= -->
+  
+  <!-- Wispy clouds near mountains (layered for depth) -->
+  <g opacity="0.4" fill="#f5f0e8">
+    <!-- Large cloud cluster 1 -->
+    <ellipse cx="820" cy="100" rx="50" ry="14"/>
+    <ellipse cx="800" cy="98" rx="30" ry="12"/>
+    <ellipse cx="845" cy="95" rx="35" ry="10"/>
+    <ellipse cx="860" cy="102" rx="25" ry="8"/>
+    <!-- Large cloud cluster 2 -->
+    <ellipse cx="950" cy="125" rx="40" ry="11"/>
+    <ellipse cx="930" cy="122" rx="26" ry="9"/>
+    <ellipse cx="975" cy="120" rx="32" ry="10"/>
+    <ellipse cx="990" cy="127" rx="20" ry="7"/>
+  </g>
+  
+  <!-- Mid-level clouds -->
+  <g opacity="0.3" fill="#ebe5d8">
+    <ellipse cx="150" cy="140" rx="45" ry="12"/>
+    <ellipse cx="135" cy="138" rx="28" ry="10"/>
+    <ellipse cx="170" cy="136" rx="24" ry="8"/>
+    <ellipse cx="185" cy="142" rx="18" ry="6"/>
+    <!-- Center sky clouds -->
+    <ellipse cx="680" cy="85" rx="35" ry="10"/>
+    <ellipse cx="700" cy="82" rx="24" ry="8"/>
+    <ellipse cx="660" cy="88" rx="20" ry="6"/>
+    <!-- Additional scattered clouds -->
+    <ellipse cx="450" cy="95" rx="30" ry="9"/>
+    <ellipse cx="470" cy="92" rx="20" ry="7"/>
+    <ellipse cx="350" cy="110" rx="25" ry="8"/>
+    <ellipse cx="370" cy="107" rx="18" ry="6"/>
+  </g>
+  
+  <!-- High wispy cirrus clouds -->
+  <g opacity="0.15" fill="none" stroke="#d0c8b8" stroke-width="1.5">
+    <path d="M 100,70 Q 200,65 300,72 Q 400,78 500,70"/>
+    <path d="M 550,60 Q 650,55 750,62 Q 850,68 950,58"/>
+    <path d="M 200,85 Q 280,80 360,87"/>
+    <path d="M 600,75 Q 700,70 800,77"/>
+  </g>
+  
+  <!-- Flying birds (multiple flocks) -->
+  <g stroke="#4a3a28" stroke-width="1.2" fill="none" opacity="0.5">
+    <!-- Flock 1 (near mountains) -->
+    <path d="M 180,110 L 184,105 L 188,110"/>
+    <path d="M 195,115 L 199,110 L 203,115"/>
+    <path d="M 170,120 L 173,116 L 176,120"/>
+    <path d="M 188,122 L 191,118 L 194,122"/>
+    <!-- Flock 2 (center) -->
+    <path d="M 600,95 L 604,90 L 608,95"/>
+    <path d="M 615,100 L 619,95 L 623,100"/>
+    <path d="M 588,102 L 591,98 L 594,102"/>
+    <path d="M 605,107 L 608,103 L 611,107"/>
+    <!-- Flock 3 (right side) -->
+    <path d="M 940,155 L 945,149 L 950,155"/>
+    <path d="M 920,160 L 924,155 L 928,160"/>
+    <path d="M 955,162 L 959,157 L 963,162"/>
+    <!-- Lone birds -->
+    <path d="M 280,135 L 284,130 L 288,135"/>
+    <path d="M 750,140 L 754,135 L 758,140"/>
+  </g>
+  
+  <!-- Sparkle stars at key locations (enhanced) -->
+  <g fill="#d4a84b" opacity="0.6">
+    <!-- Near victory tower -->
+    <polygon points="510,540 512,545 517,545 513,548 515,553 510,550 505,553 507,548 503,545 508,545" transform="scale(0.5) translate(1010,1080)"/>
+    <polygon points="480,560 482,565 487,565 483,568 485,573 480,570 475,573 477,568 473,565 478,565" transform="scale(0.4) translate(1200,1400)"/>
+    <polygon points="520,530 522,535 527,535 523,538 525,543 520,540 515,543 517,538 513,535 518,535" transform="scale(0.35) translate(1480,1520)"/>
+    <!-- Near compass -->
+    <polygon points="100,760 101,763 104,763 102,765 103,768 100,766 97,768 98,765 96,763 99,763" transform="scale(0.6) translate(165,1265)"/>
+    <!-- Near title -->
+    <polygon points="380,40 382,45 387,45 383,48 385,53 380,50 375,53 377,48 373,45 378,45" transform="scale(0.35) translate(1080,115)"/>
+    <polygon points="720,40 722,45 727,45 723,48 725,53 720,50 715,53 717,48 713,45 718,45" transform="scale(0.35) translate(2055,115)"/>
+    <!-- Near shrine -->
+    <polygon points="780,180 782,185 787,185 783,188 785,193 780,190 775,193 777,188 773,185 778,185" transform="scale(0.3) translate(2600,600)"/>
+  </g>
+  
+  <!-- Subtle dust motes (enhanced distribution) -->
+  <g fill="#a89070" opacity="0.18">
+    <circle cx="250" cy="220" r="1.5"/>
+    <circle cx="320" cy="250" r="1"/>
+    <circle cx="480" cy="180" r="1.2"/>
+    <circle cx="650" cy="320" r="1.3"/>
+    <circle cx="780" cy="250" r="1"/>
+    <circle cx="900" cy="400" r="1.4"/>
+    <circle cx="400" cy="500" r="1.1"/>
+    <circle cx="550" cy="650" r="1.2"/>
+    <circle cx="180" cy="350" r="1"/>
+    <circle cx="720" cy="420" r="1.3"/>
+    <circle cx="850" cy="480" r="1.1"/>
+    <circle cx="350" cy="450" r="0.9"/>
+    <circle cx="620" cy="380" r="1.2"/>
+    <circle cx="950" cy="520" r="1"/>
+  </g>
+  
+  <!-- Light rays/god rays from sky (subtle) -->
+  <g fill="url(#gold)" opacity="0.04">
+    <polygon points="550,0 480,200 520,200"/>
+    <polygon points="600,0 620,200 660,200"/>
+    <polygon points="750,0 700,180 740,180"/>
+  </g>
+  
+  <!-- Decorative border with enhanced styling -->
+  <rect x="12" y="12" width="1076" height="1576" rx="6" class="border"/>
+  <rect x="22" y="22" width="1056" height="1556" rx="4" class="border-inner"/>
+  <rect x="28" y="28" width="1044" height="1544" rx="3" class="border-accent"/>
+  
+  <!-- Corner flourishes -->
+  <g stroke="#a89070" stroke-width="0.8" fill="none" opacity="0.5">
+    <!-- Top-left corner flourish -->
+    <path d="M 35,50 Q 40,40 50,35"/>
+    <path d="M 35,60 Q 45,45 60,35"/>
+    <circle cx="38" cy="38" r="2" fill="#a89070"/>
+    <!-- Top-right corner flourish -->
+    <path d="M 1065,50 Q 1060,40 1050,35"/>
+    <path d="M 1065,60 Q 1055,45 1040,35"/>
+    <circle cx="1062" cy="38" r="2" fill="#a89070"/>
+    <!-- Bottom-left corner flourish -->
+    <path d="M 35,1550 Q 40,1560 50,1565"/>
+    <path d="M 35,1540 Q 45,1555 60,1565"/>
+    <circle cx="38" cy="1562" r="2" fill="#a89070"/>
+    <!-- Bottom-right corner flourish -->
+    <path d="M 1065,1550 Q 1060,1560 1050,1565"/>
+    <path d="M 1065,1540 Q 1055,1555 1040,1565"/>
+    <circle cx="1062" cy="1562" r="2" fill="#a89070"/>
+  </g>
+
+  <!-- === TERRAIN FEATURES === -->
+  
+  <!-- River flowing through the land (enhanced with waves and reflections) -->
+  <path class="water" d="M 0 280 Q 80 300, 120 340 Q 180 400, 280 380 Q 380 360, 420 420 Q 480 500, 580 480 Q 700 450, 800 500 Q 900 560, 1100 540 L 1100 600 Q 900 620, 800 560 Q 700 510, 580 540 Q 480 560, 420 480 Q 380 420, 280 440 Q 180 460, 120 400 Q 80 360, 0 340 Z"/>
+  
+  <!-- River depth variation -->
+  <path d="M 0 300 Q 80 320, 120 360 Q 180 420, 280 400 Q 380 380, 420 440 Q 480 520, 580 500 Q 700 470, 800 520 Q 900 580, 1100 560 L 1100 580 Q 900 600, 800 540 Q 700 490, 580 520 Q 480 540, 420 460 Q 380 400, 280 420 Q 180 440, 120 380 Q 80 340, 0 320 Z" fill="#4a8aa4" opacity="0.3"/>
+  
+  <!-- Water shimmer overlay -->
+  <path d="M 0 295 Q 80 315, 120 355 Q 180 415, 280 395 Q 380 375, 420 435 Q 480 515, 580 495 Q 700 465, 800 515 Q 900 575, 1100 555 L 1100 570 Q 900 590, 800 530 Q 700 480, 580 510 Q 480 530, 420 450 Q 380 390, 280 410 Q 180 430, 120 370 Q 80 330, 0 310 Z" fill="url(#waterShimmer)" opacity="0.6"/>
+  
+  <!-- Main water flow lines -->
+  <path class="water-line" d="M 50 310 Q 100 330, 150 370"/>
+  <path class="water-line" d="M 300 400 Q 350 390, 400 430"/>
+  <path class="water-line" d="M 600 490 Q 680 470, 750 510"/>
+  
+  <!-- Additional water ripples -->
+  <g fill="none" stroke="#8ac8dd" stroke-width="0.6" opacity="0.4">
+    <path d="M 80 340 Q 100 335, 115 345"/>
+    <path d="M 200 405 Q 230 400, 260 410"/>
+    <path d="M 500 470 Q 530 465, 560 475"/>
+    <path d="M 850 530 Q 880 525, 910 535"/>
+  </g>
+  
+  <!-- Wave crests (white highlights) -->
+  <g fill="none" stroke="#ffffff" stroke-width="0.8" opacity="0.25">
+    <path d="M 60 315 Q 70 312, 80 315"/>
+    <path d="M 140 365 Q 155 360, 170 365"/>
+    <path d="M 250 395 Q 265 390, 280 395"/>
+    <path d="M 380 410 Q 395 405, 410 410"/>
+    <path d="M 500 475 Q 520 470, 540 475"/>
+    <path d="M 650 465 Q 670 460, 690 465"/>
+    <path d="M 780 505 Q 800 500, 820 505"/>
+    <path d="M 920 545 Q 945 540, 970 545"/>
+  </g>
+  
+  <!-- Subtle current lines -->
+  <g fill="none" stroke="#5090b0" stroke-width="0.4" opacity="0.35">
+    <path d="M 30 320 Q 60 325, 90 335 Q 120 345, 150 360"/>
+    <path d="M 220 400 Q 260 395, 300 400 Q 340 405, 380 415"/>
+    <path d="M 450 455 Q 500 460, 550 475 Q 600 485, 650 475"/>
+    <path d="M 720 490 Q 780 500, 840 520 Q 900 540, 960 545"/>
+  </g>
+  
+  <!-- Foam/splash at riverbank edges -->
+  <g fill="#ffffff" opacity="0.15">
+    <ellipse cx="40" cy="310" rx="8" ry="3"/>
+    <ellipse cx="95" cy="355" rx="6" ry="2.5"/>
+    <ellipse cx="180" cy="410" rx="7" ry="2.5"/>
+    <ellipse cx="350" cy="400" rx="6" ry="2"/>
+    <ellipse cx="500" cy="485" rx="8" ry="3"/>
+    <ellipse cx="750" cy="510" rx="7" ry="2.5"/>
+    <ellipse cx="950" cy="550" rx="8" ry="3"/>
+  </g>
+  
+  <!-- Small fish in the river -->
+  <g fill="#5a98b5" opacity="0.5">
+    <path d="M 160,365 L 170,362 L 170,368 Z"/>
+    <ellipse cx="156" cy="365" rx="5" ry="2.5"/>
+    <path d="M 240,420 L 250,417 L 250,423 Z"/>
+    <ellipse cx="236" cy="420" rx="4" ry="2"/>
+    <path d="M 520,490 L 530,487 L 530,493 Z"/>
+    <ellipse cx="516" cy="490" rx="5" ry="2.5"/>
+    <path d="M 700,500 L 708,498 L 708,502 Z"/>
+    <ellipse cx="696" cy="500" rx="4" ry="2"/>
+  </g>
+  
+  <!-- Water lilies / lily pads -->
+  <g fill="#4a9d68" opacity="0.6">
+    <ellipse cx="90" cy="355" rx="6" ry="4"/>
+    <ellipse cx="450" cy="465" rx="7" ry="4.5"/>
+    <ellipse cx="680" cy="480" rx="5" ry="3"/>
+    <!-- Lily flowers -->
+    <g fill="#f5e6c8" opacity="0.8">
+      <circle cx="91" cy="353" r="2"/>
+      <circle cx="451" cy="463" r="2.5"/>
+    </g>
+  </g>
+  
+  <!-- Mountain range (top right) - enhanced with detailed crags and snow -->
+  <g transform="translate(750, 80)">
+    <!-- Mountain shadows (depth layer) -->
+    <polygon points="5,120 65,25 85,120" fill="#2a2a2a" opacity="0.35"/>
+    <polygon points="85,120 155,5 175,120" fill="#2a2a2a" opacity="0.35"/>
+    <polygon points="185,120 235,45 255,120" fill="#2a2a2a" opacity="0.35"/>
+    
+    <!-- Mountain 1 (leftmost) -->
+    <polygon points="0,120 60,20 120,120" fill="url(#mountain)"/>
+    <!-- Rocky crag detail -->
+    <g stroke="#4a4a4a" stroke-width="1" fill="none" opacity="0.6">
+      <path d="M 25,90 L 35,70 L 42,85 L 50,60 L 58,75"/>
+      <path d="M 70,95 L 78,75 L 85,88 L 95,70"/>
+      <path d="M 40,100 L 48,85 L 55,95"/>
+    </g>
+    <!-- Snow cap with detail -->
+    <polygon points="40,50 60,20 80,50" fill="url(#snow)"/>
+    <polygon points="45,45 60,25 75,45" fill="#ffffff" opacity="0.6"/>
+    <!-- Snow texture -->
+    <g fill="#e8f4fc" opacity="0.4">
+      <ellipse cx="52" cy="40" rx="8" ry="3"/>
+      <ellipse cx="68" cy="45" rx="6" ry="2"/>
+    </g>
+    
+    <!-- Mountain 2 (center, tallest) -->
+    <polygon points="80,120 150,0 220,120" fill="url(#mountain)"/>
+    <!-- Rocky crag detail -->
+    <g stroke="#4a4a4a" stroke-width="1" fill="none" opacity="0.6">
+      <path d="M 100,95 L 115,65 L 125,80 L 140,50 L 152,70"/>
+      <path d="M 155,90 L 168,60 L 178,80 L 192,55 L 205,85"/>
+      <path d="M 120,105 L 130,85 L 145,100"/>
+      <path d="M 170,100 L 182,80 L 195,95"/>
+    </g>
+    <!-- Snow cap with detail -->
+    <polygon points="125,35 150,0 175,35" fill="url(#snow)"/>
+    <polygon points="130,30 150,5 170,30" fill="#ffffff" opacity="0.7"/>
+    <!-- Snow texture and ice -->
+    <g fill="#e8f4fc" opacity="0.5">
+      <ellipse cx="140" cy="25" rx="10" ry="4"/>
+      <ellipse cx="160" cy="30" rx="8" ry="3"/>
+    </g>
+    <!-- Glacier/ice streak -->
+    <path d="M 150,35 Q 155,50 152,70 Q 148,85 155,100" fill="none" stroke="#c8e0ec" stroke-width="3" opacity="0.3"/>
+    
+    <!-- Mountain 3 (rightmost) -->
+    <polygon points="180,120 230,40 280,120" fill="url(#mountain)"/>
+    <!-- Rocky crag detail -->
+    <g stroke="#4a4a4a" stroke-width="1" fill="none" opacity="0.6">
+      <path d="M 195,100 L 208,75 L 218,90 L 228,65"/>
+      <path d="M 235,95 L 248,70 L 258,88 L 268,75"/>
+      <path d="M 210,108 L 222,90 L 235,105"/>
+    </g>
+    <!-- Snow cap with detail -->
+    <polygon points="210,60 230,40 250,60" fill="url(#snow)"/>
+    <polygon points="215,55 230,42 245,55" fill="#ffffff" opacity="0.6"/>
+    <!-- Snow texture -->
+    <g fill="#e8f4fc" opacity="0.4">
+      <ellipse cx="225" cy="52" rx="8" ry="3"/>
+      <ellipse cx="240" cy="56" rx="6" ry="2"/>
+    </g>
+    
+    <!-- Snow sparkle highlights -->
+    <g fill="#ffffff" opacity="0.7">
+      <circle cx="55" cy="32" r="1.2"/>
+      <circle cx="72" cy="40" r="0.9"/>
+      <circle cx="145" cy="15" r="1.5"/>
+      <circle cx="162" cy="25" r="1.1"/>
+      <circle cx="138" cy="28" r="0.8"/>
+      <circle cx="225" cy="48" r="1.2"/>
+      <circle cx="242" cy="52" r="0.9"/>
+    </g>
+    
+    <!-- Alpine trees at mountain base -->
+    <g fill="#2d5a3a" opacity="0.6">
+      <polygon points="15,120 20,105 25,120"/>
+      <polygon points="30,120 36,100 42,120"/>
+      <polygon points="50,120 55,108 60,120"/>
+      <polygon points="245,120 250,108 255,120"/>
+      <polygon points="260,120 266,102 272,120"/>
+    </g>
+    
+    <!-- Mist at mountain base -->
+    <g fill="#d0c8b8" opacity="0.15">
+      <ellipse cx="60" cy="115" rx="30" ry="8"/>
+      <ellipse cx="150" cy="118" rx="40" ry="6"/>
+      <ellipse cx="240" cy="116" rx="25" ry="7"/>
+    </g>
+  </g>
+  
+  <!-- Hills (various locations) with vegetation details -->
+  <ellipse cx="180" cy="180" rx="60" ry="25" fill="#8bc34a" opacity="0.5"/>
+  <!-- Hill grass texture -->
+  <g stroke="#6aa030" stroke-width="0.6" opacity="0.4">
+    <path d="M 140,178 Q 142,172 144,178"/>
+    <path d="M 160,175 Q 162,168 164,175"/>
+    <path d="M 180,172 Q 183,165 186,172"/>
+    <path d="M 200,174 Q 202,168 204,174"/>
+    <path d="M 218,178 Q 220,172 222,178"/>
+  </g>
+  
+  <ellipse cx="250" cy="190" rx="45" ry="20" fill="#7cb342" opacity="0.4"/>
+  <!-- Small shrubs on hill -->
+  <g fill="#5a9040" opacity="0.5">
+    <circle cx="235" cy="186" r="4"/>
+    <circle cx="265" cy="184" r="3.5"/>
+  </g>
+  
+  <ellipse cx="650" cy="650" rx="70" ry="25" fill="#8bc34a" opacity="0.4"/>
+  <!-- Grass tufts -->
+  <g stroke="#6aa030" stroke-width="0.5" opacity="0.35">
+    <path d="M 600,648 Q 602,642 604,648"/>
+    <path d="M 630,645 Q 633,638 636,645"/>
+    <path d="M 660,643 Q 663,636 666,643"/>
+    <path d="M 690,645 Q 692,640 694,645"/>
+    <path d="M 710,650 Q 712,644 714,650"/>
+  </g>
+  
+  <ellipse cx="900" cy="400" rx="50" ry="20" fill="#7cb342" opacity="0.5"/>
+  <!-- Rocky outcrops on hill -->
+  <g fill="#8a8a7a" opacity="0.3">
+    <ellipse cx="885" cy="398" rx="5" ry="3"/>
+    <ellipse cx="915" cy="395" rx="4" ry="2.5"/>
+  </g>
+  
+  <!-- Forest clusters (enhanced with individual trees and detail) -->
+  <!-- Forest 1 (left side) -->
+  <g transform="translate(60, 420)">
+    <!-- Ground shadow -->
+    <ellipse cx="30" cy="55" rx="50" ry="22" fill="#1a3d28" opacity="0.25"/>
+    
+    <!-- Background trees (smaller, lighter) -->
+    <g opacity="0.7">
+      <circle cx="-5" cy="45" r="12" fill="#2d6b4a"/>
+      <circle cx="65" cy="42" r="10" fill="#2d6b4a"/>
+    </g>
+    
+    <!-- Main trees with trunks -->
+    <g>
+      <!-- Tree 1 -->
+      <rect x="12" y="48" width="6" height="16" fill="#5d4037"/>
+      <circle cx="15" cy="40" r="18" fill="url(#forest)"/>
+      <circle cx="8" cy="35" r="10" fill="#4a9d68" opacity="0.7"/>
+      <circle cx="22" cy="38" r="8" fill="#5aad78" opacity="0.6"/>
+      
+      <!-- Tree 2 -->
+      <rect x="37" y="42" width="7" height="18" fill="#5d4037"/>
+      <circle cx="40" cy="35" r="22" fill="url(#forest)"/>
+      <circle cx="30" cy="30" r="12" fill="#4a9d68" opacity="0.7"/>
+      <circle cx="50" cy="32" r="10" fill="#5aad78" opacity="0.6"/>
+      
+      <!-- Tree 3 -->
+      <rect x="52" y="50" width="5" height="14" fill="#5d4037"/>
+      <circle cx="55" cy="45" r="16" fill="url(#forest)"/>
+      <circle cx="48" cy="42" r="8" fill="#4a9d68" opacity="0.7"/>
+    </g>
+    
+    <!-- Leaf detail highlights -->
+    <g fill="#6acd88" opacity="0.3">
+      <circle cx="10" cy="32" r="3"/>
+      <circle cx="35" cy="28" r="4"/>
+      <circle cx="52" cy="40" r="2.5"/>
+    </g>
+    
+    <!-- Undergrowth/bushes -->
+    <g fill="#3d7a4d" opacity="0.6">
+      <ellipse cx="5" cy="58" rx="8" ry="4"/>
+      <ellipse cx="28" cy="60" rx="10" ry="5"/>
+      <ellipse cx="55" cy="58" rx="7" ry="3.5"/>
+    </g>
+    
+    <!-- Fallen leaves/debris -->
+    <g fill="#6a5a3a" opacity="0.3">
+      <ellipse cx="20" cy="62" rx="2" ry="1"/>
+      <ellipse cx="35" cy="64" rx="1.5" ry="0.8"/>
+      <ellipse cx="45" cy="61" rx="1.8" ry="0.9"/>
+    </g>
+  </g>
+  
+  <!-- Forest 2 (right side, small) -->
+  <g transform="translate(920, 280)">
+    <!-- Ground shadow -->
+    <ellipse cx="25" cy="50" rx="40" ry="18" fill="#1a3d28" opacity="0.2"/>
+    
+    <!-- Trees with trunks -->
+    <rect x="12" y="42" width="5" height="14" fill="#5d4037"/>
+    <circle cx="15" cy="35" r="16" fill="url(#forest)"/>
+    <circle cx="8" cy="32" r="8" fill="#4a9d68" opacity="0.7"/>
+    
+    <rect x="35" y="38" width="6" height="16" fill="#5d4037"/>
+    <circle cx="38" cy="30" r="20" fill="url(#forest)"/>
+    <circle cx="28" cy="26" r="10" fill="#4a9d68" opacity="0.7"/>
+    <circle cx="48" cy="28" r="8" fill="#5aad78" opacity="0.6"/>
+    
+    <!-- Leaf highlights -->
+    <g fill="#6acd88" opacity="0.3">
+      <circle cx="12" cy="30" r="2.5"/>
+      <circle cx="40" cy="24" r="3"/>
+    </g>
+    
+    <!-- Undergrowth -->
+    <g fill="#3d7a4d" opacity="0.5">
+      <ellipse cx="10" cy="52" rx="7" ry="3"/>
+      <ellipse cx="35" cy="54" rx="9" ry="4"/>
+    </g>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- THE GROVE OF NAMES - Large Central Forest (Tree Data Structures) -->
+  <!-- ====================================================================== -->
+  <g transform="translate(420, 540)">
+    <!-- Forest floor/shadow -->
+    <ellipse cx="100" cy="95" rx="180" ry="50" fill="#1a3d28" opacity="0.25"/>
+    
+    <!-- === MAIN TREE: The Name Tree (Trie Structure) === -->
+    <g transform="translate(80, 0)">
+      <!-- Trunk with visible bark texture -->
+      <rect x="-8" y="40" width="16" height="55" fill="#5d4037"/>
+      <path d="M -8,45 L -8,95 M -4,42 L -4,95 M 0,40 L 0,95 M 4,42 L 4,95 M 8,45 L 8,95" 
+            stroke="#4a3228" stroke-width="1" fill="none" opacity="0.5"/>
+      <!-- Roots spreading -->
+      <path d="M -8,95 Q -25,100 -35,95 M 8,95 Q 25,100 35,95 M 0,95 Q 0,105 0,100" 
+            stroke="#5d4037" stroke-width="4" fill="none"/>
+      
+      <!-- Branch structure (visible tree hierarchy) -->
+      <g stroke="#5d4037" stroke-width="3" fill="none">
+        <!-- Main branches from trunk -->
+        <path d="M 0,45 Q -30,30 -50,15"/>
+        <path d="M 0,45 Q 30,30 50,15"/>
+        <path d="M 0,50 Q -20,40 -35,35"/>
+        <path d="M 0,50 Q 20,40 35,35"/>
+        <path d="M 0,55 Q 0,35 0,20"/>
+      </g>
+      
+      <!-- Sub-branches (child nodes) -->
+      <g stroke="#6d4c41" stroke-width="2" fill="none">
+        <path d="M -50,15 Q -60,5 -65,-5"/>
+        <path d="M -50,15 Q -45,5 -40,-5"/>
+        <path d="M 50,15 Q 60,5 65,-5"/>
+        <path d="M 50,15 Q 45,5 40,-5"/>
+        <path d="M -35,35 Q -45,25 -50,15"/>
+        <path d="M 35,35 Q 45,25 50,15"/>
+        <path d="M 0,20 Q -10,5 -15,-10"/>
+        <path d="M 0,20 Q 10,5 15,-10"/>
+      </g>
+      
+      <!-- Leaf clusters (data at nodes) -->
+      <g fill="url(#forest)">
+        <!-- Left branch leaves -->
+        <circle cx="-65" cy="-10" r="15"/>
+        <circle cx="-50" cy="-5" r="12"/>
+        <circle cx="-40" cy="-12" r="14"/>
+        <circle cx="-55" cy="5" r="10"/>
+        <!-- Right branch leaves -->
+        <circle cx="65" cy="-10" r="15"/>
+        <circle cx="50" cy="-5" r="12"/>
+        <circle cx="40" cy="-12" r="14"/>
+        <circle cx="55" cy="5" r="10"/>
+        <!-- Center leaves -->
+        <circle cx="-15" cy="-18" r="13"/>
+        <circle cx="0" cy="-15" r="14"/>
+        <circle cx="15" cy="-18" r="13"/>
+        <circle cx="-5" cy="-5" r="11"/>
+        <circle cx="5" cy="-5" r="11"/>
+      </g>
+      
+      <!-- Tree data labels (showing hierarchy) -->
+      <g font-family="'Courier New', monospace" font-size="6" fill="#2d5a3a" font-weight="bold">
+        <text x="-70" y="-2" text-anchor="middle">London</text>
+        <text x="-35" y="-15" text-anchor="middle">UK</text>
+        <text x="70" y="-2" text-anchor="middle">Paris</text>
+        <text x="35" y="-15" text-anchor="middle">FR</text>
+        <text x="0" y="-18" text-anchor="middle">root</text>
+      </g>
+    </g>
+    
+    <!-- === SECOND TREE: Decision Tree === -->
+    <g transform="translate(-30, 20)">
+      <!-- Trunk -->
+      <rect x="-6" y="35" width="12" height="40" fill="#5d4037"/>
+      <path d="M -6,38 L -6,75 M 0,35 L 0,75 M 6,38 L 6,75" stroke="#4a3228" stroke-width="0.8" fill="none" opacity="0.5"/>
+      
+      <!-- Branches -->
+      <g stroke="#5d4037" stroke-width="2.5" fill="none">
+        <path d="M 0,38 Q -20,25 -35,15"/>
+        <path d="M 0,38 Q 20,25 35,15"/>
+        <path d="M 0,42 Q 0,25 0,10"/>
+      </g>
+      <g stroke="#6d4c41" stroke-width="1.5" fill="none">
+        <path d="M -35,15 Q -42,5 -45,-5"/>
+        <path d="M -35,15 Q -28,5 -25,-5"/>
+        <path d="M 35,15 Q 42,5 45,-5"/>
+        <path d="M 35,15 Q 28,5 25,-5"/>
+      </g>
+      
+      <!-- Leaves -->
+      <g fill="url(#forest)">
+        <circle cx="-45" cy="-10" r="12"/>
+        <circle cx="-25" cy="-10" r="11"/>
+        <circle cx="-35" cy="5" r="9"/>
+        <circle cx="45" cy="-10" r="12"/>
+        <circle cx="25" cy="-10" r="11"/>
+        <circle cx="35" cy="5" r="9"/>
+        <circle cx="0" cy="-5" r="13"/>
+        <circle cx="-10" cy="5" r="8"/>
+        <circle cx="10" cy="5" r="8"/>
+      </g>
+      
+      <!-- Decision labels -->
+      <g font-family="'Courier New', monospace" font-size="6" fill="#2d5a3a">
+        <text x="-35" y="0" text-anchor="middle">yes?</text>
+        <text x="35" y="0" text-anchor="middle">no?</text>
+      </g>
+    </g>
+    
+    <!-- === THIRD TREE: Hierarchy Tree === -->
+    <g transform="translate(200, 15)">
+      <!-- Trunk -->
+      <rect x="-5" y="38" width="10" height="42" fill="#5d4037"/>
+      <path d="M -5,40 L -5,80 M 0,38 L 0,80 M 5,40 L 5,80" stroke="#4a3228" stroke-width="0.7" fill="none" opacity="0.5"/>
+      
+      <!-- Branches -->
+      <g stroke="#5d4037" stroke-width="2" fill="none">
+        <path d="M 0,42 Q -25,28 -40,18"/>
+        <path d="M 0,42 Q 25,28 40,18"/>
+        <path d="M 0,45 Q -12,32 -20,25"/>
+        <path d="M 0,45 Q 12,32 20,25"/>
+      </g>
+      
+      <!-- Leaves -->
+      <g fill="url(#forest)">
+        <circle cx="-40" cy="8" r="14"/>
+        <circle cx="-25" cy="0" r="11"/>
+        <circle cx="-45" cy="20" r="9"/>
+        <circle cx="40" cy="8" r="14"/>
+        <circle cx="25" cy="0" r="11"/>
+        <circle cx="45" cy="20" r="9"/>
+        <circle cx="-20" cy="18" r="10"/>
+        <circle cx="20" cy="18" r="10"/>
+        <circle cx="0" cy="5" r="12"/>
+        <circle cx="-8" cy="18" r="8"/>
+        <circle cx="8" cy="18" r="8"/>
+      </g>
+      
+      <!-- Hierarchy labels -->
+      <g font-family="'Courier New', monospace" font-size="5.5" fill="#2d5a3a" font-weight="bold">
+        <text x="-45" y="5" text-anchor="middle">City</text>
+        <text x="45" y="5" text-anchor="middle">Town</text>
+        <text x="0" y="-3" text-anchor="middle">Region</text>
+      </g>
+    </g>
+    
+    <!-- === SMALLER BACKGROUND TREES === -->
+    <!-- Tree 4 -->
+    <g transform="translate(-80, 35)">
+      <rect x="-4" y="30" width="8" height="30" fill="#5d4037"/>
+      <circle cx="0" cy="15" r="18" fill="url(#forest)"/>
+      <circle cx="-12" cy="22" r="12" fill="url(#forest)"/>
+      <circle cx="12" cy="22" r="12" fill="url(#forest)"/>
+    </g>
+    
+    <!-- Tree 5 -->
+    <g transform="translate(300, 30)">
+      <rect x="-4" y="32" width="8" height="28" fill="#5d4037"/>
+      <circle cx="0" cy="18" r="16" fill="url(#forest)"/>
+      <circle cx="-10" cy="25" r="11" fill="url(#forest)"/>
+      <circle cx="10" cy="25" r="11" fill="url(#forest)"/>
+    </g>
+    
+    <!-- Tree 6 (small) -->
+    <g transform="translate(-50, 55)">
+      <rect x="-3" y="22" width="6" height="20" fill="#5d4037"/>
+      <circle cx="0" cy="12" r="14" fill="url(#forest)"/>
+      <circle cx="-8" cy="18" r="9" fill="url(#forest)"/>
+      <circle cx="8" cy="18" r="9" fill="url(#forest)"/>
+    </g>
+    
+    <!-- Tree 7 (small) -->
+    <g transform="translate(270, 45)">
+      <rect x="-3" y="24" width="6" height="22" fill="#5d4037"/>
+      <circle cx="0" cy="14" r="13" fill="url(#forest)"/>
+      <circle cx="-7" cy="20" r="8" fill="url(#forest)"/>
+      <circle cx="7" cy="20" r="8" fill="url(#forest)"/>
+    </g>
+    
+    <!-- Undergrowth/bushes -->
+    <g fill="#4a7c59" opacity="0.6">
+      <ellipse cx="-60" cy="85" rx="20" ry="8"/>
+      <ellipse cx="50" cy="90" rx="25" ry="10"/>
+      <ellipse cx="150" cy="88" rx="22" ry="9"/>
+      <ellipse cx="250" cy="85" rx="18" ry="7"/>
+    </g>
+    
+    <!-- === FOREST SIGNPOST === -->
+    <g transform="translate(95, 92)">
+      <!-- Post -->
+      <rect x="-3" y="0" width="6" height="25" fill="#6d4c41" stroke="#5d4037" stroke-width="1"/>
+      <!-- Sign board -->
+      <rect x="-55" y="-8" width="110" height="22" rx="2" fill="#8d6e63" stroke="#5d4037" stroke-width="1"/>
+      <text x="0" y="6" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="10" font-weight="bold" fill="#f5e6c8">🌳 The Grove of Names 🌳</text>
+    </g>
+  </g>
+
+  <!-- === GROVE ANNOTATION BOX (enhanced with better spacing) === -->
+  <g transform="translate(700, 575)">
+    <!-- Panel shadow -->
+    <rect x="3" y="3" width="160" height="100" rx="5" fill="#3d2814" opacity="0.1"/>
+    <rect x="0" y="0" width="160" height="100" rx="5" fill="url(#panelBg)" stroke="#8b7355" stroke-width="1.2"/>
+    <rect x="0" y="0" width="160" height="100" rx="5" fill="none" stroke="url(#gold)" stroke-width="0.6" opacity="0.2"/>
+    <text x="80" y="18" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="10" font-weight="bold" fill="#2d1a08">🌳 Tree Structures</text>
+    <line x1="12" y1="26" x2="148" y2="26" stroke="#a89070" stroke-width="0.6"/>
+    <g font-family="Georgia, serif" font-size="8" fill="#4a3a28">
+      <text x="12" y="42">🌲 Name→Place tries</text>
+      <text x="12" y="57">🌲 Decision trees</text>
+      <text x="12" y="72">🌲 Place hierarchies</text>
+      <text x="12" y="87">🌲 Layout DOM trees</text>
+    </g>
+  </g>
+
+  <!-- === QUEST ROAD (enhanced with texture and detail) === -->
+  <!-- Road shadow/worn edges -->
+  <path fill="none" stroke="#6a4412" stroke-width="12" stroke-linecap="round" opacity="0.15" d="M 90 620 C 130 580, 180 520, 200 460 C 220 400, 280 340, 360 320 C 440 300, 520 280, 580 240 C 640 200, 700 180, 780 220 C 860 260, 880 320, 820 380 C 760 440, 680 460, 600 500 C 520 540, 480 580, 520 620"/>
+  
+  <!-- Winding path outline -->
+  <path class="quest-road-outline" d="M 90 620 C 130 580, 180 520, 200 460 C 220 400, 280 340, 360 320 C 440 300, 520 280, 580 240 C 640 200, 700 180, 780 220 C 860 260, 880 320, 820 380 C 760 440, 680 460, 600 500 C 520 540, 480 580, 520 620"/>
+  
+  <!-- Main quest road -->
+  <path class="quest-road" marker-mid="url(#pathArrow)" d="M 90 620 C 130 580, 180 520, 200 460 C 220 400, 280 340, 360 320 C 440 300, 520 280, 580 240 C 640 200, 700 180, 780 220 C 860 260, 880 320, 820 380 C 760 440, 680 460, 600 500 C 520 540, 480 580, 520 620"/>
+  
+  <!-- Road dust/gravel texture -->
+  <g fill="#a87030" opacity="0.2">
+    <circle cx="110" cy="600" r="1.5"/>
+    <circle cx="145" cy="560" r="1.2"/>
+    <circle cx="175" cy="510" r="1"/>
+    <circle cx="195" cy="470" r="1.3"/>
+    <circle cx="230" cy="400" r="1.1"/>
+    <circle cx="290" cy="355" r="1.2"/>
+    <circle cx="370" cy="315" r="1"/>
+    <circle cx="450" cy="295" r="1.3"/>
+    <circle cx="530" cy="270" r="1.1"/>
+    <circle cx="610" cy="225" r="1.2"/>
+    <circle cx="700" cy="195" r="1"/>
+    <circle cx="765" cy="205" r="1.2"/>
+    <circle cx="820" cy="260" r="1.1"/>
+    <circle cx="865" cy="310" r="1"/>
+    <circle cx="845" cy="360" r="1.2"/>
+    <circle cx="780" cy="420" r="1.1"/>
+    <circle cx="700" cy="455" r="1"/>
+    <circle cx="620" cy="490" r="1.2"/>
+    <circle cx="550" cy="525" r="1.1"/>
+    <circle cx="505" cy="585" r="1"/>
+  </g>
+  
+  <!-- Footprint hints along path -->
+  <g fill="#7a5020" opacity="0.15">
+    <ellipse cx="125" cy="590" rx="2" ry="3" transform="rotate(-30 125 590)"/>
+    <ellipse cx="165" cy="530" rx="2" ry="3" transform="rotate(-45 165 530)"/>
+    <ellipse cx="255" cy="375" rx="2" ry="3" transform="rotate(-20 255 375)"/>
+    <ellipse cx="420" cy="305" rx="2" ry="3" transform="rotate(10 420 305)"/>
+    <ellipse cx="570" cy="250" rx="2" ry="3" transform="rotate(25 570 250)"/>
+    <ellipse cx="740" cy="200" rx="2" ry="3" transform="rotate(40 740 200)"/>
+    <ellipse cx="850" cy="285" rx="2" ry="3" transform="rotate(-15 850 285)"/>
+    <ellipse cx="800" cy="400" rx="2" ry="3" transform="rotate(-50 800 400)"/>
+    <ellipse cx="660" cy="475" rx="2" ry="3" transform="rotate(-30 660 475)"/>
+    <ellipse cx="535" cy="555" rx="2" ry="3" transform="rotate(-60 535 555)"/>
+  </g>
+
+  <!-- === LOCATION MARKERS === -->
+  
+  <!-- START: Village (enhanced with multiple buildings and details) -->
+  <g transform="translate(70, 590)" filter="url(#locationGlow)">
+    <!-- Village ground/plaza -->
+    <ellipse cx="20" cy="52" rx="40" ry="12" fill="#c4a882" opacity="0.4"/>
+    
+    <!-- Main hut -->
+    <polygon points="25,45 5,45 5,30 25,30" fill="#a1887f" stroke="#8d6e63" stroke-width="0.8"/>
+    <polygon points="0,32 15,15 30,32" fill="#6d4c41" stroke="#5d4037" stroke-width="0.6"/>
+    <!-- Thatch texture on roof -->
+    <g stroke="#5d4037" stroke-width="0.4" opacity="0.5">
+      <line x1="5" y1="28" x2="15" y2="18"/>
+      <line x1="10" y1="30" x2="18" y2="20"/>
+      <line x1="15" y1="30" x2="22" y2="22"/>
+      <line x1="20" y1="30" x2="25" y2="26"/>
+    </g>
+    <!-- Window -->
+    <rect x="11" y="35" width="8" height="7" rx="1" fill="#5d4037"/>
+    <line x1="15" y1="35" x2="15" y2="42" stroke="#4a3228" stroke-width="0.5"/>
+    <line x1="11" y1="38.5" x2="19" y2="38.5" stroke="#4a3228" stroke-width="0.5"/>
+    
+    <!-- Secondary small hut (background) -->
+    <g transform="translate(-15, 8) scale(0.6)">
+      <polygon points="25,45 5,45 5,32 25,32" fill="#9a8070"/>
+      <polygon points="2,34 15,20 28,34" fill="#6d4c41"/>
+    </g>
+    
+    <!-- Well structure -->
+    <g transform="translate(38, 38)">
+      <ellipse cx="0" cy="0" rx="6" ry="4" fill="#7a7a7a" stroke="#5a5a5a" stroke-width="0.6"/>
+      <ellipse cx="0" cy="-2" rx="5" ry="3" fill="#3a4a5a"/>
+      <rect x="-1" y="-10" width="2" height="10" fill="#6d4c41"/>
+      <rect x="-4" y="-12" width="8" height="3" rx="1" fill="#5d4037"/>
+    </g>
+    
+    <!-- Small garden/vegetation -->
+    <g fill="#4a8c5a" opacity="0.6">
+      <ellipse cx="-8" cy="48" rx="5" ry="3"/>
+      <ellipse cx="45" cy="45" rx="4" ry="2.5"/>
+    </g>
+    
+    <!-- Fence posts -->
+    <g fill="#6d4c41">
+      <rect x="-12" y="42" width="2" height="8"/>
+      <rect x="-6" y="43" width="2" height="7"/>
+      <rect x="48" y="40" width="2" height="9"/>
+    </g>
+    
+    <!-- Start marker -->
+    <circle cx="15" cy="10" r="12" fill="#4a7c59" stroke="#2d5a3a" stroke-width="2"/>
+    <text class="step-num" text-anchor="middle" x="15" y="14">⚑</text>
+    <text class="location-name" text-anchor="middle" x="15" y="68">Start Village</text>
+  </g>
+
+  <!-- Location 1: Schema Caverns (enhanced with stalactites and glow) -->
+  <g transform="translate(175, 430)" filter="url(#locationGlow)">
+    <!-- Rocky outcrop around cave -->
+    <path d="M -5,40 Q 0,30 5,42 Q 15,25 25,35 Q 35,25 45,42 Q 50,30 55,40 L 55,55 L -5,55 Z" fill="#6a6a6a" stroke="#4a4a4a" stroke-width="0.8"/>
+    
+    <!-- Cave entrance shadow -->
+    <ellipse cx="25" cy="38" rx="30" ry="22" fill="#4a4a4a"/>
+    <!-- Main cave entrance -->
+    <ellipse cx="25" cy="35" rx="28" ry="20" fill="#5c5c5c" stroke="#3a3a3a" stroke-width="1"/>
+    <!-- Inner darkness -->
+    <ellipse cx="25" cy="32" rx="18" ry="14" fill="#1a1a1a"/>
+    <!-- Deeper darkness gradient -->
+    <ellipse cx="25" cy="30" rx="12" ry="10" fill="#0a0a0a" opacity="0.8"/>
+    
+    <!-- Stalactites -->
+    <g fill="#5c5c5c" stroke="#4a4a4a" stroke-width="0.4">
+      <polygon points="12,22 14,30 10,30"/>
+      <polygon points="20,20 22,28 18,28"/>
+      <polygon points="28,18 31,28 25,28"/>
+      <polygon points="36,20 38,27 34,27"/>
+    </g>
+    
+    <!-- Mysterious inner glow -->
+    <ellipse cx="25" cy="30" rx="8" ry="6" fill="#4a8a9a" opacity="0.15"/>
+    <ellipse cx="25" cy="30" rx="4" ry="3" fill="#6ab0c0" opacity="0.1"/>
+    
+    <!-- Small crystals -->
+    <g fill="#8ac0d0" opacity="0.5">
+      <polygon points="15,35 16,32 17,35"/>
+      <polygon points="33,33 35,30 36,33"/>
+    </g>
+    
+    <!-- Step marker -->
+    <circle cx="25" cy="8" r="14" fill="#4a7c59" stroke="#2d5a3a" stroke-width="2"/>
+    <text class="step-num" text-anchor="middle" x="25" y="13">1</text>
+    <text class="location-name" text-anchor="middle" x="25" y="72">Schema Caverns</text>
+    <text class="location-status" text-anchor="middle" x="25" y="87">✓ Tables surveyed</text>
+  </g>
+
+  <!-- Location 2: Miner's Guild (enhanced with pickaxe and details) -->
+  <g transform="translate(335, 285)" filter="url(#locationGlow)">
+    <!-- Foundation stones -->
+    <rect x="3" y="52" width="44" height="5" rx="1" fill="#8a8278" stroke="#6a6460" stroke-width="0.5"/>
+    
+    <!-- Guild hall main structure -->
+    <rect x="5" y="25" width="40" height="30" fill="#a1887f" stroke="#6d4c41" stroke-width="1"/>
+    
+    <!-- Stone texture lines -->
+    <g stroke="#8d7060" stroke-width="0.4" opacity="0.5">
+      <line x1="5" y1="35" x2="45" y2="35"/>
+      <line x1="5" y1="45" x2="45" y2="45"/>
+      <line x1="20" y1="25" x2="20" y2="35"/>
+      <line x1="30" y1="35" x2="30" y2="45"/>
+    </g>
+    
+    <!-- Roof with shingles -->
+    <polygon points="0,27 25,5 50,27" fill="#8d6e63" stroke="#6d4c41" stroke-width="0.8"/>
+    <!-- Roof shingle texture -->
+    <g stroke="#6d5040" stroke-width="0.3" opacity="0.6">
+      <line x1="8" y1="23" x2="42" y2="23"/>
+      <line x1="12" y1="19" x2="38" y2="19"/>
+      <line x1="16" y1="15" x2="34" y2="15"/>
+      <line x1="20" y1="11" x2="30" y2="11"/>
+    </g>
+    
+    <!-- Chimney -->
+    <rect x="35" y="10" width="6" height="12" fill="#7a6a5a" stroke="#5a4a3a" stroke-width="0.5"/>
+    <!-- Smoke wisps -->
+    <g fill="none" stroke="#a0a0a0" stroke-width="0.8" opacity="0.4">
+      <path d="M 38,8 Q 40,4 38,0"/>
+      <path d="M 36,6 Q 34,2 36,-2"/>
+    </g>
+    
+    <!-- Door with frame -->
+    <rect x="17" y="37" width="16" height="18" rx="1" fill="#4a3228" stroke="#3d2814" stroke-width="0.6"/>
+    <rect x="18" y="38" width="14" height="17" rx="1" fill="#5d4037"/>
+    <!-- Door handle -->
+    <circle cx="29" cy="48" r="1.5" fill="#c9a227"/>
+    
+    <!-- Window -->
+    <rect x="8" y="32" width="7" height="8" rx="1" fill="#4a5a6a" stroke="#3d4a5a" stroke-width="0.5"/>
+    <line x1="11.5" y1="32" x2="11.5" y2="40" stroke="#5d4037" stroke-width="0.5"/>
+    <line x1="8" y1="36" x2="15" y2="36" stroke="#5d4037" stroke-width="0.5"/>
+    
+    <!-- Pickaxe hanging on wall -->
+    <g transform="translate(40, 30)">
+      <line x1="0" y1="0" x2="8" y2="10" stroke="#6d4c41" stroke-width="2"/>
+      <polygon points="7,8 12,6 10,12" fill="#7a7a7a" stroke="#5a5a5a" stroke-width="0.5"/>
+    </g>
+    
+    <!-- Guild sign -->
+    <g transform="translate(0, 20)">
+      <rect x="-4" y="0" width="3" height="12" fill="#5d4037"/>
+      <rect x="-10" y="-5" width="18" height="8" rx="1" fill="#8d6e63" stroke="#5d4037" stroke-width="0.5"/>
+      <text x="-1" y="1" text-anchor="middle" font-family="Georgia" font-size="4" fill="#3d2814">⚒</text>
+    </g>
+    
+    <!-- Step marker -->
+    <circle cx="25" cy="0" r="14" fill="#4a7c59" stroke="#2d5a3a" stroke-width="2"/>
+    <text class="step-num" text-anchor="middle" x="25" y="5">2</text>
+    <text class="location-name" text-anchor="middle" x="25" y="74">Miner's Guild</text>
+    <text class="location-status" text-anchor="middle" x="25" y="86">✓ Tools modernized</text>
+  </g>
+
+  <!-- Location 3: Template Keep (enhanced castle with full detail) -->
+  <g transform="translate(555, 200)" filter="url(#locationGlow)">
+    <!-- Castle foundation -->
+    <rect x="-5" y="56" width="60" height="6" rx="1" fill="#7a7a7a" stroke="#5a5a5a" stroke-width="0.5"/>
+    
+    <!-- Main wall with stone texture -->
+    <rect x="8" y="30" width="34" height="28" fill="#9e9e9e" stroke="#757575" stroke-width="1"/>
+    <!-- Stone block lines -->
+    <g stroke="#888" stroke-width="0.4" opacity="0.5">
+      <line x1="8" y1="38" x2="42" y2="38"/>
+      <line x1="8" y1="46" x2="42" y2="46"/>
+      <line x1="20" y1="30" x2="20" y2="38"/>
+      <line x1="30" y1="38" x2="30" y2="46"/>
+      <line x1="15" y1="46" x2="15" y2="58"/>
+      <line x1="35" y1="46" x2="35" y2="58"/>
+    </g>
+    
+    <!-- Left tower -->
+    <rect x="0" y="22" width="12" height="36" fill="#bdbdbd" stroke="#9e9e9e" stroke-width="0.8"/>
+    <!-- Tower stone texture -->
+    <g stroke="#a0a0a0" stroke-width="0.3" opacity="0.5">
+      <line x1="0" y1="30" x2="12" y2="30"/>
+      <line x1="0" y1="40" x2="12" y2="40"/>
+      <line x1="0" y1="50" x2="12" y2="50"/>
+      <line x1="6" y1="22" x2="6" y2="30"/>
+    </g>
+    <!-- Tower window -->
+    <rect x="3" y="35" width="6" height="8" rx="1" fill="#4a5a6a"/>
+    <line x1="6" y1="35" x2="6" y2="43" stroke="#7a7a7a" stroke-width="0.5"/>
+    
+    <!-- Right tower -->
+    <rect x="38" y="22" width="12" height="36" fill="#bdbdbd" stroke="#9e9e9e" stroke-width="0.8"/>
+    <!-- Tower stone texture -->
+    <g stroke="#a0a0a0" stroke-width="0.3" opacity="0.5">
+      <line x1="38" y1="30" x2="50" y2="30"/>
+      <line x1="38" y1="40" x2="50" y2="40"/>
+      <line x1="38" y1="50" x2="50" y2="50"/>
+      <line x1="44" y1="22" x2="44" y2="30"/>
+    </g>
+    <!-- Tower window -->
+    <rect x="41" y="35" width="6" height="8" rx="1" fill="#4a5a6a"/>
+    <line x1="44" y1="35" x2="44" y2="43" stroke="#7a7a7a" stroke-width="0.5"/>
+    
+    <!-- Battlements (crenellations) -->
+    <g fill="#9e9e9e" stroke="#757575" stroke-width="0.5">
+      <rect x="0" y="18" width="4" height="6"/>
+      <rect x="8" y="18" width="4" height="6"/>
+      <rect x="38" y="18" width="4" height="6"/>
+      <rect x="46" y="18" width="4" height="6"/>
+    </g>
+    <!-- Main wall battlements -->
+    <g fill="#8e8e8e" stroke="#6e6e6e" stroke-width="0.4">
+      <rect x="10" y="26" width="5" height="5"/>
+      <rect x="18" y="26" width="5" height="5"/>
+      <rect x="27" y="26" width="5" height="5"/>
+      <rect x="35" y="26" width="5" height="5"/>
+    </g>
+    
+    <!-- Gate with portcullis -->
+    <path d="M 18,58 L 18,45 Q 25,40 32,45 L 32,58 Z" fill="#3a3a3a" stroke="#2a2a2a" stroke-width="0.6"/>
+    <!-- Portcullis grid -->
+    <g stroke="#5a5a5a" stroke-width="0.8">
+      <line x1="22" y1="45" x2="22" y2="58"/>
+      <line x1="25" y1="42" x2="25" y2="58"/>
+      <line x1="28" y1="45" x2="28" y2="58"/>
+      <line x1="18" y1="50" x2="32" y2="50"/>
+      <line x1="18" y1="55" x2="32" y2="55"/>
+    </g>
+    
+    <!-- Tower flags -->
+    <g stroke="#5d4037" stroke-width="1.5">
+      <line x1="6" y1="18" x2="6" y2="8"/>
+      <line x1="44" y1="18" x2="44" y2="8"/>
+    </g>
+    <polygon points="6,8 16,11 6,14" fill="#1565c0"/>
+    <polygon points="44,8 54,11 44,14" fill="#1565c0"/>
+    
+    <!-- Torch sconces -->
+    <g fill="#8d6e63">
+      <rect x="14" y="48" width="2" height="4"/>
+      <rect x="34" y="48" width="2" height="4"/>
+    </g>
+    <!-- Torch flames -->
+    <g fill="#ff9800" opacity="0.8">
+      <ellipse cx="15" cy="46" rx="2" ry="3"/>
+      <ellipse cx="35" cy="46" rx="2" ry="3"/>
+    </g>
+    <g fill="#ffeb3b" opacity="0.6">
+      <ellipse cx="15" cy="45" rx="1" ry="2"/>
+      <ellipse cx="35" cy="45" rx="1" ry="2"/>
+    </g>
+    
+    <!-- Step marker -->
+    <circle cx="25" cy="-5" r="14" fill="#4a7c59" stroke="#2d5a3a" stroke-width="2"/>
+    <text class="step-num" text-anchor="middle" x="25" y="0">3</text>
+    <text class="location-name" text-anchor="middle" x="25" y="78">Template Keep</text>
+    <text class="location-status" text-anchor="middle" x="25" y="90">✓ Tables created</text>
+  </g>
+
+  <!-- Location 4: Schema Shrine (enhanced ornate temple) -->
+  <g transform="translate(755, 185)" filter="url(#locationGlow)">
+    <!-- Temple steps -->
+    <g fill="#d4c8a0" stroke="#a89070" stroke-width="0.4">
+      <rect x="2" y="55" width="46" height="4" rx="0.5"/>
+      <rect x="5" y="51" width="40" height="4" rx="0.5"/>
+      <rect x="8" y="47" width="34" height="4" rx="0.5"/>
+    </g>
+    
+    <!-- Temple base/platform -->
+    <rect x="8" y="30" width="34" height="20" fill="#e8e0d0" stroke="#a89070" stroke-width="1"/>
+    <!-- Base decorative pattern -->
+    <g stroke="#c4b090" stroke-width="0.3" opacity="0.6">
+      <line x1="12" y1="35" x2="38" y2="35"/>
+      <line x1="12" y1="40" x2="38" y2="40"/>
+      <line x1="12" y1="45" x2="38" y2="45"/>
+    </g>
+    
+    <!-- Columns -->
+    <g fill="#d4c8a0" stroke="#a89070" stroke-width="0.6">
+      <rect x="5" y="20" width="5" height="30" rx="1"/>
+      <rect x="40" y="20" width="5" height="30" rx="1"/>
+    </g>
+    <!-- Column fluting -->
+    <g stroke="#b0a080" stroke-width="0.3" opacity="0.5">
+      <line x1="7" y1="22" x2="7" y2="48"/>
+      <line x1="8.5" y1="22" x2="8.5" y2="48"/>
+      <line x1="42" y1="22" x2="42" y2="48"/>
+      <line x1="43.5" y1="22" x2="43.5" y2="48"/>
+    </g>
+    <!-- Column capitals -->
+    <g fill="#c9a227" stroke="#a07d00" stroke-width="0.4">
+      <rect x="4" y="18" width="7" height="3" rx="0.5"/>
+      <rect x="39" y="18" width="7" height="3" rx="0.5"/>
+    </g>
+    
+    <!-- Golden roof/pediment -->
+    <polygon points="5,20 25,6 45,20" fill="#c9a227" stroke="#a07d00" stroke-width="0.8"/>
+    <!-- Roof ornamentation -->
+    <polygon points="25,6 27,10 23,10" fill="#ffd700"/>
+    <!-- Pediment decorative lines -->
+    <g stroke="#a07d00" stroke-width="0.3" opacity="0.6">
+      <line x1="10" y1="18" x2="40" y2="18"/>
+      <line x1="15" y1="15" x2="35" y2="15"/>
+    </g>
+    
+    <!-- Sacred symbol (sigma) in center -->
+    <circle cx="25" cy="38" r="8" fill="#f5e6c8" stroke="#c9a227" stroke-width="1.5"/>
+    <text x="25" y="42" text-anchor="middle" font-family="Georgia" font-size="10" font-weight="bold" fill="#8b7355">Σ</text>
+    
+    <!-- Eternal flame at top -->
+    <g transform="translate(25, 2)">
+      <ellipse cx="0" cy="0" rx="3" ry="5" fill="#ff9800" opacity="0.9"/>
+      <ellipse cx="0" cy="-1" rx="2" ry="3" fill="#ffeb3b" opacity="0.8"/>
+      <ellipse cx="0" cy="-2" rx="1" ry="2" fill="#fff" opacity="0.5"/>
+    </g>
+    
+    <!-- Incense/smoke wisps -->
+    <g fill="none" stroke="#a0a0a0" stroke-width="0.6" opacity="0.3">
+      <path d="M 15,28 Q 13,22 16,16"/>
+      <path d="M 35,28 Q 37,22 34,16"/>
+    </g>
+    
+    <!-- Shrine offerings (small objects at base) -->
+    <g fill="#8bc34a" opacity="0.6">
+      <ellipse cx="18" cy="48" rx="3" ry="1.5"/>
+      <ellipse cx="32" cy="48" rx="2.5" ry="1.2"/>
+    </g>
+    
+    <!-- Step marker -->
+    <circle cx="25" cy="-8" r="14" fill="#4a7c59" stroke="#2d5a3a" stroke-width="2"/>
+    <text class="step-num" text-anchor="middle" x="25" y="-3">4</text>
+    <text class="location-name" text-anchor="middle" x="25" y="75">Schema Shrine</text>
+    <text class="location-status" text-anchor="middle" x="25" y="87">✓ Canonized</text>
+  </g>
+
+  <!-- Location 5: Trial Grounds (enhanced arena with seating) -->
+  <g transform="translate(795, 345)" filter="url(#locationGlow)">
+    <!-- Arena outer wall -->
+    <ellipse cx="25" cy="42" rx="35" ry="22" fill="#8d7a6a" stroke="#6d5a4a" stroke-width="1.5"/>
+    
+    <!-- Arena seating tiers (outer to inner) -->
+    <ellipse cx="25" cy="40" rx="32" ry="20" fill="#a1887f" stroke="#8d7060" stroke-width="0.6"/>
+    <ellipse cx="25" cy="38" rx="28" ry="17" fill="#b09888" stroke="#9d8575" stroke-width="0.5"/>
+    <ellipse cx="25" cy="36" rx="24" ry="14" fill="#c4b0a0" stroke="#b0a090" stroke-width="0.4"/>
+    
+    <!-- Arena floor -->
+    <ellipse cx="25" cy="35" rx="20" ry="11" fill="#d7ccc8" stroke="#a89080" stroke-width="0.8"/>
+    
+    <!-- Sand/dirt texture on floor -->
+    <g fill="#c4b8a8" opacity="0.4">
+      <circle cx="18" cy="34" r="1.5"/>
+      <circle cx="30" cy="36" r="1.2"/>
+      <circle cx="25" cy="32" r="1"/>
+      <circle cx="22" cy="38" r="0.8"/>
+    </g>
+    
+    <!-- Arena pillars/columns -->
+    <g fill="#9e9e9e" stroke="#7e7e7e" stroke-width="0.4">
+      <rect x="-2" y="35" width="4" height="12" rx="0.5"/>
+      <rect x="48" y="35" width="4" height="12" rx="0.5"/>
+      <rect x="10" y="52" width="3" height="8" rx="0.3"/>
+      <rect x="37" y="52" width="3" height="8" rx="0.3"/>
+    </g>
+    
+    <!-- Arena entrance arches -->
+    <g fill="#5a4a3a">
+      <path d="M -4,42 Q 0,38 4,42 L 4,50 L -4,50 Z"/>
+      <path d="M 46,42 Q 50,38 54,42 L 54,50 L 46,50 Z"/>
+    </g>
+    
+    <!-- Tiny spectator dots -->
+    <g fill="#6d5a4a" opacity="0.4">
+      <circle cx="8" cy="32" r="1"/>
+      <circle cx="15" cy="28" r="0.8"/>
+      <circle cx="25" cy="26" r="0.9"/>
+      <circle cx="35" cy="28" r="0.8"/>
+      <circle cx="42" cy="32" r="1"/>
+      <circle cx="5" cy="38" r="0.7"/>
+      <circle cx="45" cy="38" r="0.7"/>
+    </g>
+    
+    <!-- Victory laurel wreath in center -->
+    <g transform="translate(25, 35)" fill="#4a8c5a" opacity="0.7">
+      <path d="M -6,0 Q -8,-4 -4,-6 Q 0,-4 0,-6 Q 4,-4 4,-6 Q 8,-4 6,0" fill="none" stroke="#4a8c5a" stroke-width="1.5"/>
+    </g>
+    
+    <!-- Banners on pillars -->
+    <g fill="#c62828" opacity="0.8">
+      <polygon points="-1,36 4,38 -1,44"/>
+      <polygon points="51,36 46,38 51,44"/>
+    </g>
+    
+    <!-- Step marker -->
+    <circle cx="25" cy="8" r="14" fill="#4a7c59" stroke="#2d5a3a" stroke-width="2"/>
+    <text class="step-num" text-anchor="middle" x="25" y="13">5</text>
+    <text class="location-name" text-anchor="middle" x="25" y="75">Trial Grounds</text>
+    <text class="location-status" text-anchor="middle" x="25" y="87">✓ Tests passed</text>
+  </g>
+
+  <!-- FINISH: Victory Tower (enhanced with celebration details) -->
+  <g transform="translate(495, 580)" filter="url(#locationGlow)">
+    <!-- Tower base/platform -->
+    <path d="M 5,60 L 10,58 L 40,58 L 45,60 L 45,65 L 5,65 Z" fill="#a08010" stroke="#806008" stroke-width="0.8"/>
+    
+    <!-- Tower body with brick texture -->
+    <rect x="15" y="20" width="20" height="40" fill="#c9a227" stroke="#a07d00" stroke-width="2"/>
+    <!-- Brick lines -->
+    <g stroke="#b08818" stroke-width="0.5" opacity="0.5">
+      <line x1="15" y1="28" x2="35" y2="28"/>
+      <line x1="15" y1="36" x2="35" y2="36"/>
+      <line x1="15" y1="44" x2="35" y2="44"/>
+      <line x1="15" y1="52" x2="35" y2="52"/>
+      <line x1="25" y1="20" x2="25" y2="28"/>
+      <line x1="20" y1="28" x2="20" y2="36"/>
+      <line x1="30" y1="28" x2="30" y2="36"/>
+      <line x1="25" y1="36" x2="25" y2="44"/>
+    </g>
+    
+    <!-- Tower window -->
+    <rect x="21" y="30" width="8" height="10" rx="1" fill="#f0e070"/>
+    <line x1="25" y1="30" x2="25" y2="40" stroke="#c9a227" stroke-width="0.8"/>
+    <line x1="21" y1="35" x2="29" y2="35" stroke="#c9a227" stroke-width="0.8"/>
+    
+    <!-- Trophy on tower -->
+    <g transform="translate(25, 48)">
+      <ellipse cx="0" cy="0" rx="5" ry="2" fill="#d4a84b"/>
+      <path d="M -3,-8 Q -5,-4 -3,0 L 3,0 Q 5,-4 3,-8 Z" fill="#ffd700" stroke="#d4a84b" stroke-width="0.5"/>
+      <ellipse cx="0" cy="-8" rx="3" ry="1" fill="#ffd700"/>
+    </g>
+    
+    <!-- Gilded spire roof -->
+    <polygon points="10,22 25,0 40,22" fill="#ffd700" stroke="#d4a84b" stroke-width="1"/>
+    <!-- Roof shine -->
+    <polygon points="18,18 25,5 28,18" fill="#fff" opacity="0.2"/>
+    
+    <!-- Flag pole -->
+    <line x1="25" y1="0" x2="25" y2="-18" stroke="#5c4a32" stroke-width="2.5"/>
+    <!-- Pole finial -->
+    <circle cx="25" cy="-19" r="2" fill="#ffd700"/>
+    
+    <!-- Victory flag (waving) -->
+    <path d="M 25,-16 Q 38,-18 45,-13 Q 38,-8 25,-8 Z" fill="#c62828" stroke="#a02020" stroke-width="0.6"/>
+    <!-- Flag star -->
+    <polygon points="35,-12 36.5,-10 38.5,-10 37,-8.5 37.5,-6.5 35,-8 32.5,-6.5 33,-8.5 31.5,-10 33.5,-10" fill="#ffd700" transform="scale(0.7) translate(15,-4)"/>
+    
+    <!-- Celebration sparkles -->
+    <g fill="#ffd700" opacity="0.7">
+      <polygon points="5,10 6,13 9,13 7,15 8,18 5,16 2,18 3,15 1,13 4,13" transform="scale(0.5) translate(-5,10)"/>
+      <polygon points="50,15 51,18 54,18 52,20 53,23 50,21 47,23 48,20 46,18 49,18" transform="scale(0.4) translate(65,20)"/>
+      <polygon points="0,30 1,33 4,33 2,35 3,38 0,36 -3,38 -2,35 -4,33 -1,33" transform="scale(0.45) translate(5,45)"/>
+    </g>
+    
+    <!-- Confetti dots -->
+    <g opacity="0.6">
+      <circle cx="8" cy="25" r="1.5" fill="#e53935"/>
+      <circle cx="42" cy="30" r="1.2" fill="#43a047"/>
+      <circle cx="5" cy="40" r="1" fill="#1e88e5"/>
+      <circle cx="45" cy="45" r="1.3" fill="#fdd835"/>
+      <circle cx="3" cy="55" r="1" fill="#8e24aa"/>
+      <circle cx="47" cy="55" r="1.2" fill="#ff7043"/>
+    </g>
+    
+    <text class="location-name" text-anchor="middle" x="25" y="78">🏆 Victory!</text>
+    <text class="location-status" text-anchor="middle" x="25" y="90">Quest Complete</text>
+  </g>
+
+  <!-- === TITLE CARTOUCHE (enhanced with gilded banner) === -->
+  <g transform="translate(550, 55)">
+    <!-- Banner shadow -->
+    <path d="M -260,5 Q -285,-10 -260,-27 L 260,-27 Q 285,-10 260,5 L 260,45 Q 285,60 260,75 L -260,75 Q -285,60 -260,45 Z" fill="#3d2814" opacity="0.15" transform="translate(3, 3)"/>
+    <!-- Decorative scroll/banner -->
+    <path d="M -260,0 Q -285,-15 -260,-32 L 260,-32 Q 285,-15 260,0 L 260,42 Q 285,57 260,72 L -260,72 Q -285,57 -260,42 Z" fill="#f5e6c8" stroke="#8b7355" stroke-width="2.5"/>
+    <!-- Inner banner panel -->
+    <path d="M -240,4 L 240,4 L 240,62 L -240,62 Z" fill="#efe1c2"/>
+    <!-- Gilded accent lines -->
+    <line x1="-240" y1="4" x2="240" y2="4" stroke="url(#gold)" stroke-width="1.5" opacity="0.5"/>
+    <line x1="-240" y1="62" x2="240" y2="62" stroke="url(#gold)" stroke-width="1.5" opacity="0.5"/>
+    <!-- Banner roll decorations -->
+    <ellipse cx="-263" cy="-16" rx="8" ry="16" fill="#d4c8a0" stroke="#8b7355" stroke-width="1.5"/>
+    <ellipse cx="263" cy="-16" rx="8" ry="16" fill="#d4c8a0" stroke="#8b7355" stroke-width="1.5"/>
+    <ellipse cx="-263" cy="56" rx="8" ry="16" fill="#d4c8a0" stroke="#8b7355" stroke-width="1.5"/>
+    <ellipse cx="263" cy="56" rx="8" ry="16" fill="#d4c8a0" stroke="#8b7355" stroke-width="1.5"/>
+    <!-- Title text -->
+    <text class="title" text-anchor="middle" y="33">⚔ The Quest for Canonical Schema ⚔</text>
+    <text class="subtitle" text-anchor="middle" y="54">Phase 2: Structure Miner - Layout Templates - Database Mastery</text>
+  </g>
+
+  <!-- === COMPASS ROSE (enhanced with gilded details) === -->
+  <g transform="translate(1000, 650)">
+    <!-- Outer decorative ring shadow -->
+    <circle r="42" fill="#3d2814" opacity="0.15" transform="translate(2,2)"/>
+    <!-- Outer decorative ring -->
+    <circle r="42" fill="#f5e6c8" stroke="#8b7355" stroke-width="2.5"/>
+    <!-- Ornate outer edge -->
+    <g fill="#c4a882" opacity="0.6">
+      <circle cx="0" cy="-40" r="3"/>
+      <circle cx="0" cy="40" r="3"/>
+      <circle cx="-40" cy="0" r="3"/>
+      <circle cx="40" cy="0" r="3"/>
+      <circle cx="28" cy="-28" r="2"/>
+      <circle cx="28" cy="28" r="2"/>
+      <circle cx="-28" cy="-28" r="2"/>
+      <circle cx="-28" cy="28" r="2"/>
+    </g>
+    <!-- Gilded ring -->
+    <circle r="36" fill="none" stroke="url(#gold)" stroke-width="2" opacity="0.7"/>
+    <!-- Inner background -->
+    <circle r="33" fill="#efe1c2" stroke="#a89070" stroke-width="1"/>
+    <!-- Decorative tick marks -->
+    <g stroke="#a89070" stroke-width="1" opacity="0.6">
+      <line x1="0" y1="-33" x2="0" y2="-28"/>
+      <line x1="0" y1="33" x2="0" y2="28"/>
+      <line x1="-33" y1="0" x2="-28" y2="0"/>
+      <line x1="33" y1="0" x2="28" y2="0"/>
+      <line x1="23" y1="-23" x2="20" y2="-20"/>
+      <line x1="23" y1="23" x2="20" y2="20"/>
+      <line x1="-23" y1="23" x2="-20" y2="20"/>
+      <line x1="-23" y1="-23" x2="-20" y2="-20"/>
+    </g>
+    <!-- Cardinal directions - enhanced points -->
+    <polygon points="0,-30 6,-12 -6,-12" fill="#5c4a32"/>
+    <polygon points="0,-30 4,-16 -4,-16" fill="url(#gold)" opacity="0.8"/>
+    <polygon points="0,30 6,12 -6,12" fill="#a89070"/>
+    <polygon points="-30,0 -12,6 -12,-6" fill="#a89070"/>
+    <polygon points="30,0 12,6 12,-6" fill="#a89070"/>
+    <!-- Intercardinal points -->
+    <polygon points="20,-20 12,-6 6,-12" fill="#c4b090" opacity="0.85"/>
+    <polygon points="20,20 12,6 6,12" fill="#c4b090" opacity="0.85"/>
+    <polygon points="-20,20 -12,6 -6,12" fill="#c4b090" opacity="0.85"/>
+    <polygon points="-20,-20 -12,-6 -6,-12" fill="#c4b090" opacity="0.85"/>
+    <!-- Center decoration -->
+    <circle r="6" fill="url(#gold)" opacity="0.9"/>
+    <circle r="4" fill="#5c4a32"/>
+    <circle r="2" fill="#d4a84b" opacity="0.6"/>
+    <!-- Labels -->
+    <text class="compass-text" text-anchor="middle" y="-48" font-size="14" font-weight="bold">N</text>
+    <text class="compass-text" text-anchor="middle" y="58" font-size="12">S</text>
+    <text class="compass-text" text-anchor="middle" x="-52" y="5" font-size="12">W</text>
+    <text class="compass-text" text-anchor="middle" x="52" y="5" font-size="12">E</text>
+  </g>
+
+  <!-- === LEGEND (enhanced with better styling) === -->
+  <g transform="translate(50, 100)">
+    <!-- Panel shadow -->
+    <rect x="3" y="3" width="150" height="155" rx="6" fill="#3d2814" opacity="0.1"/>
+    <!-- Panel background -->
+    <rect x="0" y="0" width="150" height="155" rx="6" fill="url(#panelBg)" stroke="#8b7355" stroke-width="1.5"/>
+    <!-- Gilded accent -->
+    <rect x="0" y="0" width="150" height="155" rx="6" fill="none" stroke="url(#gold)" stroke-width="0.8" opacity="0.3"/>
+    <!-- Header -->
+    <text class="legend-title" x="75" y="18" text-anchor="middle">📜 Map Legend</text>
+    <line x1="10" y1="25" x2="140" y2="25" stroke="#a89070" stroke-width="0.8"/>
+    
+    <!-- Completed marker -->
+    <circle cx="22" cy="45" r="9" fill="#4a8c5a" stroke="#2d5a3a" stroke-width="1.5"/>
+    <text x="7" y="49" font-family="Georgia" font-size="8" fill="#fff" font-weight="bold">✓</text>
+    <text class="legend-text" x="38" y="49">Completed</text>
+    
+    <!-- Road -->
+    <line x1="12" y1="68" x2="32" y2="68" stroke="#9a5519" stroke-width="4" stroke-dasharray="5 3"/>
+    <text class="legend-text" x="38" y="72">Quest Road</text>
+    
+    <!-- Water -->
+    <rect x="12" y="84" width="22" height="12" rx="2" fill="url(#water)" opacity="0.8"/>
+    <text class="legend-text" x="38" y="93">River</text>
+    
+    <!-- Forest -->
+    <circle cx="23" cy="115" r="9" fill="url(#forest)"/>
+    <text class="legend-text" x="38" y="119">Forest</text>
+    
+    <!-- Bridge -->
+    <g transform="translate(12, 130)">
+      <rect x="0" y="1" width="22" height="6" rx="1" fill="#7d5e4e" stroke="#5d4037" stroke-width="0.5"/>
+      <rect x="-2" y="0" width="4" height="8" rx="0.5" fill="#6a6258"/>
+      <rect x="20" y="0" width="4" height="8" rx="0.5" fill="#6a6258"/>
+    </g>
+    <text class="legend-text" x="38" y="140">Bridge</text>
+  </g>
+
+  <!-- Flavor text -->
+  <text class="flavor" x="550" y="720" text-anchor="middle">"Through caverns deep and shrines of gold, the schema's tale is finally told."</text>
+
+  <!-- === DETAILED RIVER MONSTER (Sea Serpent) === -->
+  <g transform="translate(480, 470)">
+    <!-- Monster body - sinuous serpentine form -->
+    <path d="M 0,0 Q 15,-8 30,-5 Q 50,-2 65,8 Q 80,18 70,28 Q 55,35 40,30 Q 25,25 15,32 Q 5,40 -10,35 Q -25,28 -30,15 Q -32,5 -20,-2 Q -10,-5 0,0" 
+          fill="#2d5a4a" stroke="#1a3d32" stroke-width="1.2"/>
+    
+    <!-- Scales pattern on body -->
+    <g fill="none" stroke="#1a3d32" stroke-width="0.5" opacity="0.6">
+      <path d="M 5,-2 Q 10,-5 15,-2"/>
+      <path d="M 20,-3 Q 25,-6 30,-3"/>
+      <path d="M 35,0 Q 40,-3 45,0"/>
+      <path d="M 50,5 Q 55,2 60,5"/>
+      <path d="M 55,15 Q 60,12 65,15"/>
+      <path d="M 45,22 Q 50,19 55,22"/>
+      <path d="M 30,25 Q 35,22 40,25"/>
+      <path d="M 15,28 Q 20,25 25,28"/>
+      <path d="M 0,30 Q 5,27 10,30"/>
+      <path d="M -15,28 Q -10,25 -5,28"/>
+      <path d="M -25,20 Q -20,17 -15,20"/>
+      <path d="M -25,10 Q -20,7 -15,10"/>
+      <path d="M -15,2 Q -10,-1 -5,2"/>
+    </g>
+    
+    <!-- Dorsal spines/fins along the back -->
+    <g fill="#3d7a5a" stroke="#2d5a4a" stroke-width="0.5">
+      <polygon points="10,-3 12,-12 16,-2"/>
+      <polygon points="22,-4 25,-14 28,-3"/>
+      <polygon points="35,-2 38,-11 42,0"/>
+      <polygon points="48,3 52,-6 55,5"/>
+      <polygon points="58,10 63,2 65,12"/>
+    </g>
+    
+    <!-- Monster head -->
+    <g transform="translate(-35, 8)">
+      <!-- Head shape -->
+      <ellipse cx="0" cy="0" rx="12" ry="9" fill="#2d5a4a" stroke="#1a3d32" stroke-width="1"/>
+      <!-- Snout -->
+      <path d="M -12,-3 Q -20,-2 -22,2 Q -20,6 -12,5" fill="#2d5a4a" stroke="#1a3d32" stroke-width="1"/>
+      <!-- Eye -->
+      <ellipse cx="-2" cy="-2" rx="4" ry="3" fill="#c9a227"/>
+      <ellipse cx="-3" cy="-2" rx="2" ry="2" fill="#1a1a1a"/>
+      <circle cx="-4" cy="-3" r="0.8" fill="#fff"/>
+      <!-- Nostril -->
+      <ellipse cx="-16" cy="0" rx="1.5" ry="1" fill="#1a3d32"/>
+      <!-- Teeth showing -->
+      <g fill="#f5f5f5" stroke="#ddd" stroke-width="0.3">
+        <polygon points="-18,3 -17,6 -16,3"/>
+        <polygon points="-14,4 -13,7 -12,4"/>
+        <polygon points="-10,4 -9,6 -8,4"/>
+      </g>
+      <!-- Head crest/horn -->
+      <path d="M 5,-6 Q 8,-15 12,-18 Q 10,-12 8,-8" fill="#3d7a5a" stroke="#2d5a4a" stroke-width="0.5"/>
+      <path d="M 0,-7 Q 2,-13 5,-15 Q 4,-10 2,-7" fill="#3d7a5a" stroke="#2d5a4a" stroke-width="0.5"/>
+      <!-- Whiskers/barbels -->
+      <path d="M -20,4 Q -28,8 -32,6" fill="none" stroke="#4a8a6a" stroke-width="1" stroke-linecap="round"/>
+      <path d="M -18,6 Q -25,12 -28,10" fill="none" stroke="#4a8a6a" stroke-width="1" stroke-linecap="round"/>
+    </g>
+    
+    <!-- Tail section emerging from water elsewhere -->
+    <g transform="translate(85, 20)">
+      <path d="M 0,0 Q 10,-5 18,-3 Q 28,0 35,8 Q 30,5 25,8 Q 18,12 10,8 Q 5,5 0,0" 
+            fill="#2d5a4a" stroke="#1a3d32" stroke-width="1"/>
+      <!-- Tail fin -->
+      <path d="M 32,6 Q 42,0 48,-5 Q 45,5 48,15 Q 42,10 35,10" fill="#3d7a5a" stroke="#2d5a4a" stroke-width="0.8"/>
+      <!-- Tail spines -->
+      <polygon points="15,2 17,-5 20,3" fill="#3d7a5a" stroke="#2d5a4a" stroke-width="0.3"/>
+      <polygon points="22,4 25,-2 27,5" fill="#3d7a5a" stroke="#2d5a4a" stroke-width="0.3"/>
+    </g>
+    
+    <!-- Water splash/ripples around monster -->
+    <g fill="none" stroke="#6b9db8" stroke-width="0.8" opacity="0.5">
+      <path d="M -40,5 Q -45,0 -40,-5"/>
+      <path d="M 75,25 Q 80,20 85,25"/>
+      <ellipse cx="20" cy="35" rx="15" ry="3"/>
+      <ellipse cx="-10" cy="38" rx="10" ry="2"/>
+    </g>
+  </g>
+
+  <!-- === DETAILED LARGE FISH #1 (Carp/Koi style) === -->
+  <g transform="translate(320, 420)" opacity="0.8">
+    <!-- Fish body -->
+    <ellipse cx="0" cy="0" rx="22" ry="10" fill="#d4a574" stroke="#a67c52" stroke-width="1"/>
+    
+    <!-- Scale pattern -->
+    <g fill="none" stroke="#a67c52" stroke-width="0.4" opacity="0.7">
+      <path d="M -15,-4 Q -12,-7 -9,-4"/>
+      <path d="M -10,-3 Q -7,-6 -4,-3"/>
+      <path d="M -5,-2 Q -2,-5 1,-2"/>
+      <path d="M 0,-1 Q 3,-4 6,-1"/>
+      <path d="M 5,0 Q 8,-3 11,0"/>
+      <path d="M 10,1 Q 13,-2 16,1"/>
+      <path d="M -15,0 Q -12,-3 -9,0"/>
+      <path d="M -10,1 Q -7,-2 -4,1"/>
+      <path d="M -5,2 Q -2,-1 1,2"/>
+      <path d="M 0,3 Q 3,0 6,3"/>
+      <path d="M 5,4 Q 8,1 11,4"/>
+      <path d="M -15,4 Q -12,1 -9,4"/>
+      <path d="M -10,5 Q -7,2 -4,5"/>
+      <path d="M -5,6 Q -2,3 1,6"/>
+    </g>
+    
+    <!-- Dorsal fin -->
+    <path d="M -5,-9 Q 0,-18 8,-9" fill="#c49464" stroke="#a67c52" stroke-width="0.8"/>
+    <g stroke="#a67c52" stroke-width="0.3" fill="none">
+      <line x1="-3" y1="-9" x2="0" y2="-15"/>
+      <line x1="0" y1="-9" x2="2" y2="-14"/>
+      <line x1="3" y1="-9" x2="5" y2="-13"/>
+    </g>
+    
+    <!-- Pectoral fin -->
+    <path d="M -8,5 Q -15,12 -5,10 Q -2,8 -5,5" fill="#c49464" stroke="#a67c52" stroke-width="0.5"/>
+    
+    <!-- Ventral fin -->
+    <path d="M 5,8 Q 8,14 12,8" fill="#c49464" stroke="#a67c52" stroke-width="0.5"/>
+    
+    <!-- Tail fin -->
+    <path d="M 18,-2 Q 28,-10 35,-8 Q 30,-2 35,4 Q 28,6 18,2" fill="#c49464" stroke="#a67c52" stroke-width="0.8"/>
+    <g stroke="#a67c52" stroke-width="0.3" fill="none">
+      <path d="M 20,0 Q 28,-5 32,-6"/>
+      <path d="M 20,0 Q 28,0 33,0"/>
+      <path d="M 20,0 Q 28,4 32,5"/>
+    </g>
+    
+    <!-- Head detail -->
+    <path d="M -22,0 Q -26,-2 -26,2 Q -24,4 -22,2" fill="#d4a574" stroke="#a67c52" stroke-width="0.8"/>
+    
+    <!-- Eye -->
+    <circle cx="-16" cy="-1" r="3" fill="#fff" stroke="#a67c52" stroke-width="0.5"/>
+    <circle cx="-16" cy="-1" r="2" fill="#2a2a2a"/>
+    <circle cx="-17" cy="-2" r="0.6" fill="#fff"/>
+    
+    <!-- Gill -->
+    <path d="M -12,-4 Q -10,0 -12,4" fill="none" stroke="#a67c52" stroke-width="0.8"/>
+    
+    <!-- Mouth -->
+    <path d="M -24,1 Q -22,2 -20,1" fill="none" stroke="#a67c52" stroke-width="0.6"/>
+    
+    <!-- Lateral line -->
+    <path d="M -10,0 Q 0,1 15,0" fill="none" stroke="#8b6b4a" stroke-width="0.5" stroke-dasharray="2 1"/>
+  </g>
+
+  <!-- === DETAILED LARGE FISH #2 (Trout style) === -->
+  <g transform="translate(680, 510)" opacity="0.75">
+    <!-- Fish body - more streamlined -->
+    <path d="M -25,0 Q -30,-5 -25,-3 Q -10,-8 10,-6 Q 25,-4 30,0 Q 25,5 10,7 Q -10,8 -25,4 Q -30,5 -25,0" 
+          fill="#7a9db8" stroke="#5a7d98" stroke-width="1"/>
+    
+    <!-- Spots pattern (trout-like) -->
+    <g fill="#c94a4a" opacity="0.6">
+      <circle cx="-10" cy="-2" r="1.5"/>
+      <circle cx="-5" cy="2" r="1.2"/>
+      <circle cx="2" cy="-3" r="1.4"/>
+      <circle cx="8" cy="1" r="1.3"/>
+      <circle cx="15" cy="-2" r="1.1"/>
+      <circle cx="12" cy="3" r="1"/>
+      <circle cx="-2" cy="-1" r="0.8"/>
+      <circle cx="5" cy="4" r="0.9"/>
+    </g>
+    
+    <!-- Scale shimmer -->
+    <g fill="none" stroke="#9abdd8" stroke-width="0.3" opacity="0.5">
+      <path d="M -18,-2 Q -15,-4 -12,-2"/>
+      <path d="M -12,-3 Q -9,-5 -6,-3"/>
+      <path d="M -6,-4 Q -3,-6 0,-4"/>
+      <path d="M 0,-5 Q 3,-7 6,-5"/>
+      <path d="M 6,-4 Q 9,-6 12,-4"/>
+      <path d="M 12,-3 Q 15,-5 18,-3"/>
+    </g>
+    
+    <!-- Dorsal fin -->
+    <path d="M 0,-6 Q 5,-14 12,-6" fill="#6a8da8" stroke="#5a7d98" stroke-width="0.6"/>
+    <g stroke="#5a7d98" stroke-width="0.2" fill="none">
+      <line x1="2" y1="-6" x2="4" y2="-12"/>
+      <line x1="5" y1="-6" x2="7" y2="-11"/>
+      <line x1="8" y1="-6" x2="10" y2="-10"/>
+    </g>
+    
+    <!-- Adipose fin (trout have these) -->
+    <path d="M 18,-4 Q 22,-7 24,-4" fill="#6a8da8" stroke="#5a7d98" stroke-width="0.4"/>
+    
+    <!-- Pectoral fin -->
+    <path d="M -12,3 Q -18,10 -8,8 Q -6,5 -10,3" fill="#6a8da8" stroke="#5a7d98" stroke-width="0.5"/>
+    
+    <!-- Anal fin -->
+    <path d="M 12,6 Q 16,12 20,6" fill="#6a8da8" stroke="#5a7d98" stroke-width="0.5"/>
+    
+    <!-- Tail fin - forked -->
+    <path d="M 28,-2 Q 38,-10 42,-6 Q 36,-2 42,4 Q 38,8 28,2" fill="#6a8da8" stroke="#5a7d98" stroke-width="0.8"/>
+    <g stroke="#5a7d98" stroke-width="0.25" fill="none">
+      <path d="M 30,0 Q 36,-4 40,-5"/>
+      <path d="M 30,0 Q 38,0 42,0"/>
+      <path d="M 30,0 Q 36,3 40,4"/>
+    </g>
+    
+    <!-- Head -->
+    <path d="M -25,0 Q -32,-1 -32,1 Q -30,3 -25,1" fill="#7a9db8" stroke="#5a7d98" stroke-width="0.6"/>
+    
+    <!-- Eye -->
+    <circle cx="-22" cy="0" r="2.5" fill="#ffeb3b" stroke="#5a7d98" stroke-width="0.4"/>
+    <circle cx="-22" cy="0" r="1.5" fill="#1a1a1a"/>
+    <circle cx="-23" cy="-1" r="0.5" fill="#fff"/>
+    
+    <!-- Gill plate -->
+    <path d="M -18,-3 Q -15,0 -18,4" fill="none" stroke="#5a7d98" stroke-width="0.6"/>
+    <path d="M -16,-2 Q -14,0 -16,3" fill="none" stroke="#5a7d98" stroke-width="0.4"/>
+    
+    <!-- Lateral line -->
+    <path d="M -15,0 Q 0,1 25,0" fill="none" stroke="#4a6d88" stroke-width="0.6"/>
+  </g>
+
+  <!-- === SMALL FISH SCHOOL (background detail) === -->
+  <g opacity="0.5">
+    <!-- Small fish 1 -->
+    <g transform="translate(250, 390)">
+      <ellipse cx="0" cy="0" rx="8" ry="4" fill="#8ba8c4"/>
+      <polygon points="7,0 12,-3 12,3" fill="#7a98b4"/>
+      <circle cx="-4" cy="-1" r="1" fill="#333"/>
+    </g>
+    <!-- Small fish 2 -->
+    <g transform="translate(270, 400)">
+      <ellipse cx="0" cy="0" rx="6" ry="3" fill="#9bb8d4"/>
+      <polygon points="5,0 9,-2 9,2" fill="#8aa8c4"/>
+      <circle cx="-3" cy="-0.5" r="0.8" fill="#333"/>
+    </g>
+    <!-- Small fish 3 -->
+    <g transform="translate(260, 385)">
+      <ellipse cx="0" cy="0" rx="7" ry="3.5" fill="#7a98b4"/>
+      <polygon points="6,0 10,-2.5 10,2.5" fill="#6a88a4"/>
+      <circle cx="-3.5" cy="-0.8" r="0.9" fill="#333"/>
+    </g>
+  </g>
+
+  <!-- Water ripples around creatures -->
+  <g fill="none" stroke="#4a7a94" stroke-width="0.6" opacity="0.4">
+    <ellipse cx="340" cy="435" rx="25" ry="4"/>
+    <ellipse cx="700" cy="525" rx="30" ry="5"/>
+    <ellipse cx="520" cy="495" rx="40" ry="6"/>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- EXTRA MAP DETAILS (Cartographer embellishments + project index) -->
+  <!-- ====================================================================== -->
+
+  <!-- Corner flourishes (pure decoration, low opacity) -->
+  <g fill="none" stroke="#8b7355" stroke-width="1.2" opacity="0.25">
+    <path d="M 40 40 Q 70 40 70 70"/>
+    <path d="M 55 40 Q 70 55 70 70"/>
+    <path d="M 1060 40 Q 1030 40 1030 70"/>
+    <path d="M 1045 40 Q 1030 55 1030 70"/>
+    <path d="M 40 860 Q 70 860 70 830"/>
+    <path d="M 55 860 Q 70 845 70 830"/>
+    <path d="M 1060 860 Q 1030 860 1030 830"/>
+    <path d="M 1045 860 Q 1030 845 1030 830"/>
+  </g>
+
+  <!-- Tiny constellations near the banner (adds texture to empty sky) -->
+  <g opacity="0.25" stroke="#6b5744" stroke-width="0.8" fill="#f5e6c8">
+    <circle cx="260" cy="95" r="2"/>
+    <circle cx="290" cy="82" r="2"/>
+    <circle cx="320" cy="98" r="2"/>
+    <circle cx="350" cy="78" r="2"/>
+    <circle cx="380" cy="92" r="2"/>
+    <line x1="260" y1="95" x2="290" y2="82"/>
+    <line x1="290" y1="82" x2="320" y2="98"/>
+    <line x1="320" y1="98" x2="350" y2="78"/>
+    <line x1="350" y1="78" x2="380" y2="92"/>
+
+    <circle cx="820" cy="110" r="2"/>
+    <circle cx="845" cy="92" r="2"/>
+    <circle cx="875" cy="115" r="2"/>
+    <circle cx="905" cy="88" r="2"/>
+    <line x1="820" y1="110" x2="845" y2="92"/>
+    <line x1="845" y1="92" x2="875" y2="115"/>
+    <line x1="875" y1="115" x2="905" y2="88"/>
+  </g>
+
+  <!-- Reeds + lily pads (subtle river edge detail) -->
+  <g opacity="0.45">
+    <g fill="#2d5a3a" stroke="#1a3d28" stroke-width="0.5" opacity="0.6">
+      <path d="M 120 355 Q 118 345 114 338" fill="none"/>
+      <path d="M 132 360 Q 130 348 126 342" fill="none"/>
+      <path d="M 145 372 Q 143 360 138 352" fill="none"/>
+      <path d="M 770 505 Q 768 492 764 484" fill="none"/>
+      <path d="M 788 510 Q 786 496 782 488" fill="none"/>
+      <path d="M 805 522 Q 803 508 799 500" fill="none"/>
+    </g>
+    <g fill="#4a7c59" opacity="0.35">
+      <ellipse cx="160" cy="370" rx="10" ry="4"/>
+      <ellipse cx="185" cy="388" rx="9" ry="3.5"/>
+      <ellipse cx="220" cy="405" rx="11" ry="4"/>
+      <ellipse cx="615" cy="505" rx="10" ry="4"/>
+      <ellipse cx="640" cy="520" rx="9" ry="3.5"/>
+      <ellipse cx="665" cy="495" rx="11" ry="4"/>
+      <ellipse cx="720" cy="520" rx="10" ry="4"/>
+      <ellipse cx="745" cy="540" rx="9" ry="3.5"/>
+      <ellipse cx="510" cy="485" rx="12" ry="4.5"/>
+      <ellipse cx="540" cy="505" rx="10" ry="4"/>
+    </g>
+  </g>
+
+  <!-- Bottom margin: Cartographer's Almanac panels (enhanced styling) -->
+  <g transform="translate(40, 755)">
+    <!-- Panel shadow -->
+    <rect x="4" y="4" width="510" height="120" rx="8" fill="#3d2814" opacity="0.12"/>
+    <!-- Panel background -->
+    <rect x="0" y="0" width="510" height="120" rx="8" fill="url(#panelBg)" stroke="#8b7355" stroke-width="1.5"/>
+    <!-- Gilded accent -->
+    <rect x="0" y="0" width="510" height="120" rx="8" fill="none" stroke="url(#gold)" stroke-width="0.8" opacity="0.25"/>
+    <text x="255" y="18" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="12" font-weight="bold" fill="#2d1a08">📜 Cartographer's Almanac - Core Modules</text>
+    <line x1="12" y1="26" x2="498" y2="26" stroke="#a89070" stroke-width="0.8"/>
+    <g font-family="Georgia, serif" font-size="7" fill="#4a3a28">
+      <!-- Column 1 -->
+      <text x="12" y="38">Action</text>
+      <text x="12" y="48">ActionRegistry</text>
+      <text x="12" y="58">ArgumentNormalizer</text>
+      <text x="12" y="68">CliArgumentParser</text>
+      <text x="12" y="78">CliFormatter</text>
+      <text x="12" y="88">ConfigManager</text>
+      <text x="12" y="98">ConfigurationService</text>
+      <text x="12" y="108">ConcurrencyController</text>
+
+      <!-- Column 2 -->
+      <text x="185" y="38">BackgroundTaskManager</text>
+      <text x="185" y="48">AsyncPlanRunner</text>
+      <text x="185" y="58">BatchCoordinator</text>
+      <text x="185" y="68">BatchLoader</text>
+      <text x="185" y="78">BudgetAllocator</text>
+      <text x="185" y="88">CompressionLifecycleTask</text>
+      <text x="185" y="98">CompressionWorkerPool</text>
+      <text x="185" y="108">CompressionAnalytics</text>
+
+      <!-- Column 3 -->
+      <text x="360" y="38">ArticleProcessor</text>
+      <text x="360" y="48">ArticleSignalsService</text>
+      <text x="360" y="58">ArticleXPathService</text>
+      <text x="360" y="68">ArticleXPathAnalyzer</text>
+      <text x="360" y="78">ContentAcquisitionService</text>
+      <text x="360" y="88">ContentValidationService</text>
+      <text x="360" y="98">ArchiveDiscoveryStrategy</text>
+      <text x="360" y="108">CityHubGapAnalyzer</text>
+    </g>
+  </g>
+
+  <g transform="translate(560, 755)">
+    <!-- Panel shadow -->
+    <rect x="4" y="4" width="510" height="120" rx="8" fill="#3d2814" opacity="0.12"/>
+    <!-- Panel background -->
+    <rect x="0" y="0" width="510" height="120" rx="8" fill="url(#panelBg)" stroke="#8b7355" stroke-width="1.5"/>
+    <!-- Gilded accent -->
+    <rect x="0" y="0" width="510" height="120" rx="8" fill="none" stroke="url(#gold)" stroke-width="0.8" opacity="0.25"/>
+    <text x="255" y="18" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="12" font-weight="bold" fill="#2d1a08">🧭 Cartographer's Almanac - UI &amp; Tools</text>
+    <line x1="12" y1="26" x2="498" y2="26" stroke="#a89070" stroke-width="0.8"/>
+    <g font-family="Georgia, serif" font-size="7" fill="#4a3a28">
+      <!-- Column 1 -->
+      <text x="12" y="38">ConfigMatrixControl</text>
+      <text x="12" y="48">DiagramAtlas</text>
+      <text x="12" y="58">ThemeEditorControl</text>
+      <text x="12" y="68">CrawlBehaviorPanel</text>
+      <text x="12" y="78">CrawlJobsTable</text>
+      <text x="12" y="88">DatabaseSelector</text>
+      <text x="12" y="98">MetricCardControl</text>
+      <text x="12" y="108">ProgressBar</text>
+
+      <!-- Column 2 -->
+      <text x="185" y="38">Sparkline</text>
+      <text x="185" y="48">SearchFormControl</text>
+      <text x="185" y="58">ColumnHeaderControl</text>
+      <text x="185" y="68">ContextMenuControl</text>
+      <text x="185" y="78">ConnectionRenderer</text>
+      <text x="185" y="88">controlFactory</text>
+      <text x="185" y="98">controlRegistry</text>
+      <text x="185" y="108">controlManifest</text>
+
+      <!-- Column 3 -->
+      <text x="360" y="38">js-scan</text>
+      <text x="360" y="48">js-edit</text>
+      <text x="360" y="58">md-scan</text>
+      <text x="360" y="68">md-edit</text>
+      <text x="360" y="78">svg-collisions</text>
+      <text x="360" y="88">mcp-check</text>
+      <text x="360" y="98">session-init</text>
+      <text x="360" y="108">schema:check</text>
+    </g>
+  </g>
+
+  <!-- Cartographer stamp (enhanced with wax seal effect) -->
+  <g transform="translate(550, 865)" opacity="0.45">
+    <!-- Outer ring shadow -->
+    <circle r="26" fill="#3d2814" opacity="0.2" transform="translate(2,2)"/>
+    <!-- Outer decorative ring -->
+    <circle r="26" fill="#d4c8a0" stroke="#8b7355" stroke-width="2"/>
+    <!-- Middle ring -->
+    <circle r="20" fill="#e8dcc8" stroke="#a89070" stroke-width="1"/>
+    <!-- Inner ring -->
+    <circle r="14" fill="none" stroke="#8b7355" stroke-width="0.8"/>
+    <!-- Cardinal points decorations -->
+    <path d="M 0,-22 L 2,-16 L -2,-16 Z" fill="#8b7355"/>
+    <path d="M 0,22 L 2,16 L -2,16 Z" fill="#a89070"/>
+    <path d="M -22,0 L -16,2 L -16,-2 Z" fill="#a89070"/>
+    <path d="M 22,0 L 16,2 L 16,-2 Z" fill="#a89070"/>
+    <!-- Center text -->
+    <text x="0" y="4" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="9" font-weight="bold" fill="#5c4a32">MAP</text>
+    <!-- Year decoration -->
+    <text x="0" y="12" text-anchor="middle" font-family="Georgia, serif" font-size="5" fill="#8b7355">MMXXV</text>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- THE ALGORITHM WOODS - North Forest (Module & Service Architecture) -->
+  <!-- ====================================================================== -->
+  <g transform="translate(280, 180)">
+    <!-- Forest floor/shadow -->
+    <ellipse cx="120" cy="110" rx="160" ry="45" fill="#1a3d28" opacity="0.2"/>
+    
+    <!-- === TREE 1: The ActionRegistry Oak (Core Services) === -->
+    <g transform="translate(40, 30)">
+      <!-- Trunk -->
+      <rect x="-6" y="45" width="12" height="45" fill="#5d4037"/>
+      <path d="M -6,50 L -6,90 M -2,47 L -2,90 M 2,47 L 2,90 M 6,50 L 6,90" stroke="#4a3228" stroke-width="1" fill="none" opacity="0.5"/>
+      <!-- Canopy -->
+      <ellipse cx="0" cy="30" rx="35" ry="28" fill="url(#forest)"/>
+      <ellipse cx="-12" cy="22" rx="18" ry="15" fill="#3d8b5a" opacity="0.7"/>
+      <ellipse cx="15" cy="25" rx="15" ry="12" fill="#4a9d68" opacity="0.6"/>
+      <!-- Branch labels -->
+      <g font-family="Georgia, serif" font-size="6" fill="#1a3d28" font-weight="bold">
+        <text x="-25" y="12" transform="rotate(-15 -25 12)">Action</text>
+        <text x="8" y="8" transform="rotate(10 8 8)">Registry</text>
+        <text x="-8" y="38" font-size="5">CommandStack</text>
+      </g>
+      <!-- Tree label sign -->
+      <g transform="translate(-2, 92)">
+        <rect x="-28" y="0" width="56" height="14" rx="2" fill="#8d6e63" stroke="#5d4037" stroke-width="0.5"/>
+        <text x="0" y="10" text-anchor="middle" font-family="Georgia, serif" font-size="7" fill="#f5e6c8">ActionRegistry</text>
+      </g>
+    </g>
+    
+    <!-- === TREE 2: The TaskManager Pine (Background Jobs) === -->
+    <g transform="translate(120, 10)">
+      <!-- Trunk (taller, thinner - pine style) -->
+      <rect x="-4" y="55" width="8" height="50" fill="#5d4037"/>
+      <!-- Triangular pine canopy layers -->
+      <polygon points="0,0 -30,40 30,40" fill="#2d6b4a"/>
+      <polygon points="0,15 -35,55 35,55" fill="#3d8b5a"/>
+      <polygon points="0,30 -28,60 28,60" fill="#4a9d68"/>
+      <!-- Branch labels -->
+      <g font-family="Georgia, serif" font-size="5.5" fill="#1a3d28" font-weight="bold">
+        <text x="-18" y="25">Async</text>
+        <text x="5" y="35">Plan</text>
+        <text x="-12" y="48">Runner</text>
+        <text x="10" y="52" font-size="5">Queue</text>
+      </g>
+      <!-- Tree label -->
+      <g transform="translate(0, 107)">
+        <rect x="-38" y="0" width="76" height="14" rx="2" fill="#8d6e63" stroke="#5d4037" stroke-width="0.5"/>
+        <text x="0" y="10" text-anchor="middle" font-family="Georgia, serif" font-size="6.5" fill="#f5e6c8">BackgroundTaskManager</text>
+      </g>
+    </g>
+    
+    <!-- === TREE 3: The Compression Willow (Data Processing) === -->
+    <g transform="translate(200, 25)">
+      <!-- Trunk with weeping branches -->
+      <rect x="-5" y="40" width="10" height="45" fill="#5d4037"/>
+      <!-- Weeping willow canopy -->
+      <ellipse cx="0" cy="25" rx="32" ry="22" fill="url(#forest)"/>
+      <!-- Drooping branches -->
+      <path d="M -25,30 Q -35,55 -30,70" stroke="#3d8b5a" stroke-width="2" fill="none"/>
+      <path d="M -15,35 Q -22,55 -18,68" stroke="#4a9d68" stroke-width="1.5" fill="none"/>
+      <path d="M 15,35 Q 22,55 18,68" stroke="#4a9d68" stroke-width="1.5" fill="none"/>
+      <path d="M 25,30 Q 35,55 30,70" stroke="#3d8b5a" stroke-width="2" fill="none"/>
+      <!-- Branch labels on drooping branches -->
+      <g font-family="Georgia, serif" font-size="5" fill="#1a3d28" font-weight="bold">
+        <text x="-30" y="50" transform="rotate(-10 -30 50)">Bucket</text>
+        <text x="-20" y="62" font-size="4.5">Cache</text>
+        <text x="12" y="55" transform="rotate(8 12 55)">Analytics</text>
+        <text x="22" y="65" font-size="4.5">Task</text>
+        <text x="-5" y="18">Facade</text>
+      </g>
+      <!-- Tree label -->
+      <g transform="translate(0, 87)">
+        <rect x="-35" y="0" width="70" height="14" rx="2" fill="#8d6e63" stroke="#5d4037" stroke-width="0.5"/>
+        <text x="0" y="10" text-anchor="middle" font-family="Georgia, serif" font-size="7" fill="#f5e6c8">CompressionTask</text>
+      </g>
+    </g>
+    
+    <!-- === SMALL BACKGROUND TREES (More concepts) === -->
+    <!-- SkeletonDiff tree -->
+    <g transform="translate(0, 55)">
+      <rect x="-3" y="25" width="6" height="30" fill="#4a3228"/>
+      <circle cx="0" cy="18" r="18" fill="#3d8b5a" opacity="0.8"/>
+      <text x="0" y="20" text-anchor="middle" font-family="Georgia, serif" font-size="5" fill="#1a3d28" font-weight="bold">Skeleton</text>
+      <text x="0" y="27" text-anchor="middle" font-family="Georgia, serif" font-size="4.5" fill="#1a3d28">Diff</text>
+    </g>
+    
+    <!-- SkeletonHash tree -->
+    <g transform="translate(260, 45)">
+      <rect x="-3" y="28" width="6" height="28" fill="#4a3228"/>
+      <circle cx="0" cy="20" r="16" fill="#4a9d68" opacity="0.75"/>
+      <text x="0" y="18" text-anchor="middle" font-family="Georgia, serif" font-size="5" fill="#1a3d28" font-weight="bold">Skeleton</text>
+      <text x="0" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="4.5" fill="#1a3d28">Hash</text>
+    </g>
+    
+    <!-- BooleanClassifier tree -->
+    <g transform="translate(75, 75)">
+      <rect x="-2" y="18" width="4" height="22" fill="#4a3228"/>
+      <circle cx="0" cy="12" r="12" fill="#2d6b4a" opacity="0.7"/>
+      <text x="0" y="10" text-anchor="middle" font-family="Georgia, serif" font-size="4" fill="#f5e6c8">Boolean</text>
+      <text x="0" y="16" text-anchor="middle" font-family="Georgia, serif" font-size="3.5" fill="#f5e6c8">Classifier</text>
+    </g>
+    
+    <!-- BatchLoader tree -->
+    <g transform="translate(165, 80)">
+      <rect x="-2" y="15" width="4" height="20" fill="#4a3228"/>
+      <circle cx="0" cy="10" r="10" fill="#3d8b5a" opacity="0.65"/>
+      <text x="0" y="8" text-anchor="middle" font-family="Georgia, serif" font-size="4" fill="#f5e6c8">Batch</text>
+      <text x="0" y="14" text-anchor="middle" font-family="Georgia, serif" font-size="3.5" fill="#f5e6c8">Loader</text>
+    </g>
+    
+    <!-- Undergrowth bushes with labels -->
+    <g fill="#2d5a3a" opacity="0.5">
+      <ellipse cx="30" cy="105" rx="18" ry="8"/>
+      <ellipse cx="95" cy="108" rx="15" ry="7"/>
+      <ellipse cx="180" cy="103" rx="20" ry="9"/>
+      <ellipse cx="240" cy="100" rx="16" ry="7"/>
+    </g>
+    
+    <!-- Forest signpost (moved down further to avoid tree label overlaps) -->
+    <g transform="translate(120, 145)">
+      <rect x="-3" y="0" width="6" height="22" fill="#6d4c41" stroke="#5d4037" stroke-width="1"/>
+      <rect x="-48" y="-8" width="96" height="18" rx="2" fill="#8d6e63" stroke="#5d4037" stroke-width="1"/>
+      <text x="0" y="5" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="9" font-weight="bold" fill="#f5e6c8">🌲 The Algorithm Woods 🌲</text>
+    </g>
+  </g>
+
+  <!-- === ALGORITHM WOODS ANNOTATION BOX (moved left to avoid overlap) === -->
+  <g transform="translate(30, 355)">
+    <rect x="0" y="0" width="130" height="75" rx="4" fill="#f5e6c8" stroke="#8b7355" stroke-width="1" opacity="0.95"/>
+    <text x="65" y="14" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="9" font-weight="bold" fill="#3d2814">Core Modules</text>
+    <line x1="8" y1="20" x2="122" y2="20" stroke="#a89070" stroke-width="0.5"/>
+    <g font-family="Georgia, serif" font-size="7" fill="#5c4a32">
+      <text x="8" y="32">⚙ ActionRegistry</text>
+      <text x="8" y="44">⚙ TaskManager</text>
+      <text x="8" y="56">⚙ CompressionTask</text>
+      <text x="8" y="68">⚙ SkeletonHash/Diff</text>
+    </g>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- THE WOODEN BRIDGE - Crossing the River at the narrows           -->
+  <!-- ====================================================================== -->
+  <!-- Bridge positioned to span across the main river (no extra water layer) -->
+  
+  <!-- === KNOWLEDGE BRIDGE APPROACH ROADS === -->
+  
+  <!-- NORTH SIDE: Road from main quest road (360,320) to Knowledge Bridge far/right deck edge -->
+  <!-- Bridge deck far/right lower edge is ~ (400+124, 410+12) = (524,422) -->
+  <g>
+    <path d="M 360,320 C 410,325 455,345 490,370 C 510,385 520,402 524,422" fill="none" stroke="#5c3310" stroke-width="10" stroke-linecap="round" opacity="0.15"/>
+    <path d="M 360,320 C 410,325 455,345 490,370 C 510,385 520,402 524,422" fill="none" stroke="#9a5519" stroke-width="6" stroke-dasharray="7 4" stroke-linecap="round"/>
+  </g>
+  
+  <!-- (Removed) North-side road spur from bridge to eastern quest road -->
+  <!-- Rationale: avoid implying a river crossing from the south-bank quest marker area. -->
+  
+  <!-- Bridge approach embankments (at bridge ends) -->
+  <!-- Left/West embankment -->
+  <!-- Bridge deck near/left edge is ~ (400+4, 410+8) = (404,418) -->
+  <g transform="translate(404, 418)">
+    <ellipse cx="0" cy="8" rx="20" ry="8" fill="#8a7a5a" opacity="0.35"/>
+    <g fill="#7a6a4a" opacity="0.4">
+      <ellipse cx="-8" cy="4" rx="3.5" ry="1.8"/>
+      <ellipse cx="0" cy="6" rx="3" ry="1.5"/>
+      <ellipse cx="10" cy="5" rx="3.5" ry="1.8"/>
+    </g>
+  </g>
+  
+  <!-- Right/East embankment -->
+  <!-- Bridge deck far/right lower edge is ~ (400+124, 410+12) = (524,422) -->
+  <g transform="translate(524, 422)">
+    <ellipse cx="0" cy="15" rx="26" ry="11" fill="#8a7a5a" opacity="0.35"/>
+    <!-- Cobblestones -->
+    <g fill="#7a6a4a" opacity="0.5">
+      <ellipse cx="-12" cy="6" rx="4" ry="2"/>
+      <ellipse cx="-4" cy="10" rx="3.5" ry="1.8"/>
+      <ellipse cx="6" cy="8" rx="4.5" ry="2.2"/>
+      <ellipse cx="14" cy="12" rx="4" ry="2"/>
+      <ellipse cx="-8" cy="16" rx="3.5" ry="1.8"/>
+      <ellipse cx="2" cy="18" rx="4" ry="2"/>
+      <ellipse cx="12" cy="20" rx="3.5" ry="1.8"/>
+    </g>
+    <!-- Grass tufts -->
+    <g stroke="#5a8a3a" stroke-width="0.8" fill="none" opacity="0.5">
+      <path d="M -20,12 Q -18,6 -16,12"/>
+      <path d="M 18,10 Q 20,4 22,10"/>
+      <path d="M 22,14 Q 24,8 26,14"/>
+    </g>
+    <!-- Road edge stones -->
+    <g fill="#6a5a4a" opacity="0.4">
+      <ellipse cx="-16" cy="22" rx="4.5" ry="2.2"/>
+      <ellipse cx="18" cy="24" rx="5" ry="2.5"/>
+    </g>
+  </g>
+  
+  <!-- Road dust particles near bridge approaches -->
+  <g fill="#a08060" opacity="0.22">
+    <!-- West approach dust (forest trail) -->
+    <circle cx="380" cy="430" r="1.1"/>
+    <circle cx="340" cy="450" r="0.9"/>
+    <circle cx="280" cy="465" r="1"/>
+    <circle cx="200" cy="478" r="0.8"/>
+    <circle cx="140" cy="485" r="1"/>
+    <!-- East approach dust -->
+    <circle cx="525" cy="430" r="1.2"/>
+    <circle cx="550" cy="455" r="1"/>
+    <circle cx="590" cy="480" r="1.1"/>
+    <circle cx="650" cy="475" r="0.9"/>
+    <circle cx="720" cy="450" r="1"/>
+    <circle cx="780" cy="410" r="1.2"/>
+  </g>
+  
+  <!-- Forest trail signpost (near where trail meets forest) -->
+  <g transform="translate(130, 480)">
+    <rect x="-2" y="0" width="4" height="15" fill="#5d4037"/>
+    <rect x="-25" y="-8" width="50" height="12" rx="2" fill="#8d6e63" stroke="#5d4037" stroke-width="0.8"/>
+    <text x="0" y="0" text-anchor="middle" font-family="Georgia, serif" font-size="6" fill="#f5e6c8">🌲 To Forest</text>
+  </g>
+  
+  <!-- Junction marker where bridge road rejoins main road -->
+  <g fill="#8a7a5a" opacity="0.3">
+    <ellipse cx="620" cy="490" rx="14" ry="9"/>
+  </g>
+  
+  <!-- === TIDIED ROAD NETWORK - Clean connections to bridge ends === -->
+  
+  <!-- NORTH SIDE ROADS (above the river) -->
+  
+  <!-- Road from main quest road to Forest Bridge NE end -->
+  <!-- Bridge at (110,330), NE abutment offset (90,-5) → absolute ~(200,325) -->
+  <!-- Main road passes (200,460), branch around (200,390) heading N to bridge -->
+  <g>
+    <path d="M 200,390 C 200,365 200,345 200,325" fill="none" stroke="#5c3310" stroke-width="6" stroke-linecap="round" opacity="0.12"/>
+    <path d="M 200,390 C 200,365 200,345 200,325" fill="none" stroke="#7a5a30" stroke-width="4" stroke-dasharray="5 3" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Road from main quest road (820,380) to Small Bridge #2 NORTH end -->
+  <!-- Bridge at 715,475, far bank at 65,8 = absolute 780,483 → north end ~785,480 -->
+  <g>
+    <path d="M 820,380 C 810,420 800,450 785,480" fill="none" stroke="#5c3310" stroke-width="7" stroke-linecap="round" opacity="0.15"/>
+    <path d="M 820,380 C 810,420 800,450 785,480" fill="none" stroke="#9a5519" stroke-width="4" stroke-dasharray="5 3" stroke-linecap="round"/>
+  </g>
+  
+  <!-- SOUTH SIDE ROADS (below the river) -->
+  
+  <!-- Road from Forest Bridge SW end to Forest 1 -->
+  <!-- Bridge at (110,330), SW abutment offset (-15,50) → absolute ~(95,380) -->
+  <!-- Forest 1 is at translate(60, 420), so target ~75,450 -->
+  <g>
+    <path d="M 95,380 C 90,400 85,425 80,450" fill="none" stroke="#5c3310" stroke-width="5" stroke-linecap="round" opacity="0.10"/>
+    <path d="M 95,380 C 90,400 85,425 80,450" fill="none" stroke="#7a5a30" stroke-width="3" stroke-dasharray="4 3" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Main road from Knowledge Bridge SOUTH end to Grove of Names -->
+  <g>
+    <path d="M 404,418 C 370,450 330,480 320,520 C 310,580 380,610 450,605 C 485,602 500,595 505,585" fill="none" stroke="#5c3310" stroke-width="9" stroke-linecap="round" opacity="0.18"/>
+    <path d="M 404,418 C 370,450 330,480 320,520 C 310,580 380,610 450,605 C 485,602 500,595 505,585" fill="none" stroke="#9a5519" stroke-width="6" stroke-dasharray="7 4" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Road from Small Bridge #2 SOUTH end toward Grove (connects to main road) -->
+  <!-- Bridge at 715,475, near bank at -12,12 = absolute 703,487 → south end ~710,535 -->
+  <g>
+    <path d="M 710,535 C 660,555 600,575 540,590" fill="none" stroke="#5c3310" stroke-width="6" stroke-linecap="round" opacity="0.12"/>
+    <path d="M 710,535 C 660,555 600,575 540,590" fill="none" stroke="#7a5a30" stroke-width="4" stroke-dasharray="5 3" stroke-linecap="round"/>
+  </g>
+  
+  <!-- (Removed) Forest Loop Trail and stepping-stones path to keep the road network minimal -->
+  
+  <!-- === ORK WAR CHARIOT - Explains the damaged Forest Bridge === -->
+  <!-- The Orks tried to cross with their heavy war machine and broke the bridge -->
+  <g transform="translate(145, 290)">
+    <!-- Chariot shadow -->
+    <ellipse cx="25" cy="55" rx="35" ry="10" fill="#1a1a0a" opacity="0.3"/>
+    
+    <!-- Broken wheel (fell off, lying flat) -->
+    <g transform="translate(-25, 35)">
+      <ellipse cx="0" cy="0" rx="12" ry="4" fill="#4a3a20" stroke="#2a1a10" stroke-width="1"/>
+      <ellipse cx="0" cy="-1" rx="10" ry="3" fill="#5a4a30"/>
+      <!-- Spokes visible -->
+      <line x1="-8" y1="-1" x2="8" y2="-1" stroke="#3a2a15" stroke-width="1"/>
+      <line x1="-5" y1="-3" x2="5" y2="1" stroke="#3a2a15" stroke-width="1"/>
+    </g>
+    
+    <!-- Main chariot body (tilted, crashed) -->
+    <g transform="rotate(15, 25, 30)">
+      <!-- Chariot base/platform -->
+      <path d="M 0,25 L 50,20 L 55,35 L 5,40 Z" fill="#5a4020" stroke="#3a2010" stroke-width="1.5"/>
+      <path d="M 0,25 L 50,20 L 50,25 L 0,30 Z" fill="#6a5030"/>
+      
+      <!-- Side panels with Ork glyphs -->
+      <path d="M 5,15 L 45,12 L 50,20 L 0,25 Z" fill="#4a3518" stroke="#2a1508" stroke-width="1"/>
+      <!-- Crude Ork symbols -->
+      <g fill="#8a0000" opacity="0.8">
+        <path d="M 15,17 L 18,14 L 21,17 L 18,20 Z"/>
+        <path d="M 30,16 L 35,13 L 35,18 Z"/>
+      </g>
+      
+      <!-- Spiky bits (very Orky) -->
+      <g fill="#3a3a3a" stroke="#2a2a2a" stroke-width="0.5">
+        <polygon points="48,12 52,8 50,14"/>
+        <polygon points="42,11 45,6 44,13"/>
+        <polygon points="8,16 5,10 10,17"/>
+      </g>
+      
+      <!-- Remaining wheel (still attached, bent) -->
+      <g transform="translate(45, 32)">
+        <ellipse cx="0" cy="0" rx="10" ry="10" fill="#4a3a20" stroke="#2a1a10" stroke-width="1.5"/>
+        <ellipse cx="0" cy="0" rx="7" ry="7" fill="none" stroke="#5a4a30" stroke-width="2"/>
+        <circle cx="0" cy="0" r="2" fill="#2a1a10"/>
+        <!-- Spokes -->
+        <g stroke="#3a2a15" stroke-width="1.2">
+          <line x1="-8" y1="0" x2="8" y2="0"/>
+          <line x1="0" y1="-8" x2="0" y2="8"/>
+          <line x1="-6" y1="-6" x2="6" y2="6"/>
+          <line x1="6" y1="-6" x2="-6" y2="6"/>
+        </g>
+      </g>
+    </g>
+    
+    <!-- Ork driver (thrown from chariot, dazed but fearsome) -->
+    <g transform="translate(-15, 5)">
+      <!-- Muscular torso with battle scars -->
+      <ellipse cx="8" cy="18" rx="12" ry="9" fill="#4a6a2a"/>
+      <!-- Torso shadow/muscle definition -->
+      <path d="M 0,14 Q 8,12 16,14" fill="none" stroke="#3a5a1a" stroke-width="1.5" opacity="0.6"/>
+      <path d="M 2,20 Q 8,18 14,20" fill="none" stroke="#3a5a1a" stroke-width="1" opacity="0.5"/>
+      <!-- Battle scar across torso -->
+      <path d="M 2,16 L 14,22" fill="none" stroke="#6a3a3a" stroke-width="0.8" opacity="0.7"/>
+      
+      <!-- Thick muscular neck -->
+      <rect x="2" y="6" width="10" height="8" rx="2" fill="#4a6a2a"/>
+      
+      <!-- Fearsome head - larger, more brutal -->
+      <ellipse cx="7" cy="2" rx="10" ry="9" fill="#4a6a2a" stroke="#2a4a0a" stroke-width="1.2"/>
+      <!-- Brow ridge (heavy, brutish) -->
+      <path d="M -4,-3 Q 7,-7 18,-3" fill="#3a5a1a" stroke="#2a4a0a" stroke-width="0.8"/>
+      <!-- Skull ridge/crest -->
+      <path d="M 3,-8 Q 7,-10 11,-8" fill="none" stroke="#3a5a1a" stroke-width="2" stroke-linecap="round"/>
+      
+      <!-- Deep-set menacing eyes with glow -->
+      <g>
+        <!-- Eye sockets (dark recesses) -->
+        <ellipse cx="1" cy="0" rx="3.5" ry="2.5" fill="#1a2a0a"/>
+        <ellipse cx="13" cy="0" rx="3.5" ry="2.5" fill="#1a2a0a"/>
+        <!-- Glowing red-yellow eyes -->
+        <ellipse cx="1" cy="0" rx="2.5" ry="1.8" fill="#cc2200"/>
+        <ellipse cx="13" cy="0" rx="2.5" ry="1.8" fill="#cc2200"/>
+        <!-- Inner fire glow -->
+        <ellipse cx="0" cy="-0.3" rx="1.2" ry="0.9" fill="#ff4400"/>
+        <ellipse cx="12" cy="-0.3" rx="1.2" ry="0.9" fill="#ff4400"/>
+        <!-- Eye highlights -->
+        <circle cx="-0.5" cy="-0.5" r="0.5" fill="#ffaa00" opacity="0.8"/>
+        <circle cx="11.5" cy="-0.5" r="0.5" fill="#ffaa00" opacity="0.8"/>
+        <!-- Angry brow furrow -->
+        <path d="M -2,-2 L 4,-4" fill="none" stroke="#2a4a0a" stroke-width="1"/>
+        <path d="M 16,-2 L 10,-4" fill="none" stroke="#2a4a0a" stroke-width="1"/>
+      </g>
+      
+      <!-- Broad, flat nose with nostrils -->
+      <path d="M 5,2 Q 7,5 9,2" fill="#3a5a1a" stroke="#2a4a0a" stroke-width="0.6"/>
+      <ellipse cx="5" cy="4" rx="1" ry="0.6" fill="#1a2a0a"/>
+      <ellipse cx="9" cy="4" rx="1" ry="0.6" fill="#1a2a0a"/>
+      
+      <!-- Massive tusks (curved, battle-worn) -->
+      <g fill="#e8dcc0" stroke="#b8a890" stroke-width="0.5">
+        <!-- Left tusk - large, curved -->
+        <path d="M 0,6 Q -4,10 -6,16 Q -5,17 -3,15 Q -1,10 2,7 Z"/>
+        <!-- Right tusk - slightly chipped -->
+        <path d="M 14,6 Q 18,10 19,14 Q 20,15 18,14 Q 16,10 13,7 Z"/>
+        <!-- Tusk texture/wear marks -->
+        <path d="M -1,8 L -3,12" fill="none" stroke="#a89880" stroke-width="0.3" opacity="0.6"/>
+        <path d="M 15,8 L 17,11" fill="none" stroke="#a89880" stroke-width="0.3" opacity="0.6"/>
+      </g>
+      
+      <!-- Jagged lower teeth visible -->
+      <g fill="#d8d0c0" stroke="#a8a090" stroke-width="0.3">
+        <polygon points="3,8 4,10 5,8"/>
+        <polygon points="6,8 7,9 8,8"/>
+        <polygon points="9,8 10,10 11,8"/>
+      </g>
+      
+      <!-- Pointed ears (tattered/battle-damaged) -->
+      <path d="M -5,0 L -10,-5 L -8,-2 L -5,1" fill="#4a6a2a" stroke="#2a4a0a" stroke-width="0.6"/>
+      <path d="M 19,0 L 24,-5 L 22,-2 L 19,1" fill="#4a6a2a" stroke="#2a4a0a" stroke-width="0.6"/>
+      <!-- Ear notches (battle damage) -->
+      <path d="M -9,-3 L -7,-4" fill="none" stroke="#6a3a3a" stroke-width="0.6"/>
+      <path d="M 23,-3 L 21,-4" fill="none" stroke="#6a3a3a" stroke-width="0.6"/>
+      
+      <!-- Facial scars -->
+      <path d="M -1,-4 L 3,2" fill="none" stroke="#6a4a4a" stroke-width="0.8" opacity="0.6"/>
+      <path d="M 11,-2 L 15,4" fill="none" stroke="#6a4a4a" stroke-width="0.6" opacity="0.5"/>
+      
+      <!-- Warpaint/tribal markings -->
+      <g fill="#8a0000" opacity="0.7">
+        <path d="M -3,-5 L 0,-6 L -2,-4 Z"/>
+        <path d="M 17,-5 L 14,-6 L 16,-4 Z"/>
+        <circle cx="7" cy="-6" r="1.2"/>
+      </g>
+      
+      <!-- Mohawk/topknot (crude ork hair) -->
+      <g fill="#1a1a0a" stroke="#0a0a00" stroke-width="0.3">
+        <path d="M 4,-9 Q 5,-14 7,-16 Q 9,-14 10,-9"/>
+        <path d="M 5,-8 Q 6,-12 7,-13 Q 8,-12 9,-8"/>
+      </g>
+      <!-- Hair tie/ring -->
+      <ellipse cx="7" cy="-9" rx="2" ry="0.8" fill="#5a4a20" stroke="#3a2a10" stroke-width="0.4"/>
+      
+      <!-- Metal jaw plate/armor piece -->
+      <path d="M 1,7 L 3,9 L 11,9 L 13,7" fill="#5a5a5a" stroke="#3a3a3a" stroke-width="0.6"/>
+      <circle cx="2" cy="8" r="0.5" fill="#8a8a8a"/>
+      <circle cx="12" cy="8" r="0.5" fill="#8a8a8a"/>
+      
+      <!-- Dazed stars circling head (larger, more visible) -->
+      <g fill="#ffdd44" opacity="0.8">
+        <polygon points="-12,-8 -10,-5 -14,-5" transform="rotate(-20,-12,-7)"/>
+        <polygon points="26,-6 28,-3 24,-3" transform="rotate(20,26,-5)"/>
+        <polygon points="7,-18 9,-15 5,-15"/>
+        <polygon points="-8,4 -6,7 -10,7" transform="rotate(40,-8,5)"/>
+      </g>
+      
+      <!-- Thick muscular arm reaching toward chariot -->
+      <path d="M 18,14 Q 28,10 34,18" fill="none" stroke="#4a6a2a" stroke-width="7" stroke-linecap="round"/>
+      <!-- Arm muscle definition -->
+      <path d="M 20,12 Q 24,10 28,12" fill="none" stroke="#3a5a1a" stroke-width="1" opacity="0.5"/>
+      <!-- Crude hand/fist -->
+      <g transform="translate(32, 16)">
+        <ellipse cx="0" cy="0" rx="4" ry="3.5" fill="#4a6a2a"/>
+        <path d="M -3,1 Q -4,3 -2,4 L 2,4 Q 4,3 3,1" fill="#3a5a1a" opacity="0.5"/>
+        <!-- Thick fingers -->
+        <ellipse cx="3" cy="-2" rx="1.5" ry="2" fill="#4a6a2a"/>
+        <ellipse cx="1" cy="-3" rx="1.3" ry="2" fill="#4a6a2a"/>
+        <ellipse cx="-2" cy="-2" rx="1.5" ry="1.8" fill="#4a6a2a"/>
+        <!-- Dirty/bloody knuckles -->
+        <g fill="#6a3a3a" opacity="0.4">
+          <circle cx="3" cy="-3" r="0.5"/>
+          <circle cx="1" cy="-4" r="0.4"/>
+          <circle cx="-2" cy="-3" r="0.5"/>
+        </g>
+      </g>
+      
+      <!-- Leather strap/harness across chest -->
+      <path d="M -2,12 L 18,18" fill="none" stroke="#5a4020" stroke-width="2"/>
+      <path d="M -2,12 L 18,18" fill="none" stroke="#6a5030" stroke-width="1"/>
+      <!-- Strap buckle -->
+      <rect x="6" y="13" width="4" height="3" rx="0.5" fill="#8a7a5a" stroke="#5a4a3a" stroke-width="0.3"/>
+      
+      <!-- Skull trophy hanging from belt -->
+      <g transform="translate(16, 26)">
+        <ellipse cx="0" cy="0" rx="3" ry="2.5" fill="#e8e0d0" stroke="#a8a090" stroke-width="0.4"/>
+        <ellipse cx="-1" cy="-0.5" rx="0.8" ry="0.6" fill="#1a1a1a"/>
+        <ellipse cx="1" cy="-0.5" rx="0.8" ry="0.6" fill="#1a1a1a"/>
+        <path d="M -0.5,1 L 0.5,1" fill="none" stroke="#1a1a1a" stroke-width="0.4"/>
+      </g>
+    </g>
+    
+    <!-- Debris near bridge -->
+    <g fill="#5a4a30" opacity="0.7">
+      <rect x="35" y="48" width="6" height="2" rx="0.5" transform="rotate(25,38,49)"/>
+      <rect x="20" y="52" width="4" height="1.5" rx="0.3" transform="rotate(-15,22,53)"/>
+      <ellipse cx="50" cy="50" rx="3" ry="1.5"/>
+    </g>
+    
+    <!-- Small "WAAAGH!" text (Ork battle cry) -->
+    <text x="30" y="-5" font-family="Impact, sans-serif" font-size="6" fill="#8a0000" opacity="0.6" transform="rotate(-10,30,-5)">WAAAGH!</text>
+  </g>
+  
+  <!-- === SMALLER SECONDARY BRIDGES (3D PERSPECTIVE CROSSING RIVER) === -->
+  
+  <!-- SMALL BRIDGE #1: Forest Bridge - diagonal crossing upper river -->
+  <!-- River flows Q 80 300, 120 340 Q 180 400, direction NW→SE; bridge crosses diagonally -->
+  <!-- Bridge spans from south-west bank (~110,390) to north-east bank (~210,330) -->
+  <g transform="translate(110, 330)">
+    <!-- Deep shadow on water below (angled ellipse) -->
+    <ellipse cx="55" cy="75" rx="60" ry="18" fill="#1a3d28" opacity="0.35" transform="rotate(-30, 55, 75)"/>
+    
+    <!-- North-east abutment (far side, upper-right) -->
+    <g transform="translate(90, -5)">
+      <path d="M 0,5 L 20,0 L 24,35 L 4,40 Z" fill="#6a6258" stroke="#4a4440" stroke-width="1"/>
+      <g stroke="#5a5450" stroke-width="0.5" opacity="0.65">
+        <line x1="2" y1="12" x2="22" y2="7"/>
+        <line x1="3" y1="22" x2="23" y2="17"/>
+        <line x1="4" y1="32" x2="24" y2="27"/>
+      </g>
+      <path d="M -2,2 L 22,-3 L 23,3 L -1,8 Z" fill="#7a7268"/>
+    </g>
+    
+    <!-- South-west abutment (near side, lower-left, larger for perspective) -->
+    <g transform="translate(-15, 50)">
+      <path d="M 0,5 L 24,0 L 28,45 L 4,50 Z" fill="#7a7268" stroke="#5a5450" stroke-width="1.2"/>
+      <g stroke="#5a5450" stroke-width="0.6" opacity="0.7">
+        <line x1="2" y1="14" x2="26" y2="9"/>
+        <line x1="3" y1="26" x2="27" y2="21"/>
+        <line x1="4" y1="38" x2="28" y2="33"/>
+      </g>
+      <path d="M -3,2 L 26,-3 L 27,4 L -2,9 Z" fill="#8a8278"/>
+    </g>
+    
+    <!-- Bridge deck (diagonal, 3D perspective: SW corner lower-left, NE corner upper-right) -->
+    <polygon points="5,55 100,5 115,18 20,68" fill="#7d5e4e" stroke="#5d4037" stroke-width="1"/>
+    <polygon points="5,55 100,5 105,12 10,62" fill="#9d7e6e"/>
+    
+    <!-- Planks (diagonal across deck) -->
+    <g stroke="#6d5040" stroke-width="0.6" fill="none">
+      <line x1="18" y1="52" x2="28" y2="65"/>
+      <line x1="30" y1="45" x2="40" y2="58"/>
+      <line x1="42" y1="38" x2="52" y2="51"/>
+      <line x1="54" y1="31" x2="64" y2="44"/>
+      <line x1="66" y1="24" x2="76" y2="37"/>
+      <line x1="78" y1="17" x2="88" y2="30"/>
+      <line x1="90" y1="10" x2="100" y2="23"/>
+    </g>
+    
+    <!-- Near-side railing (lower edge, SW to NE) -->
+    <path d="M 15,60 L 105,10" fill="none" stroke="#8b7355" stroke-width="2.5"/>
+    <rect x="10" y="55" width="4" height="12" rx="0.6" fill="#6d4c41" transform="rotate(-30, 12, 61)"/>
+    <rect x="55" y="32" width="3.5" height="10" rx="0.5" fill="#6d4c41" transform="rotate(-30, 57, 37)"/>
+    <rect x="100" y="6" width="3.5" height="10" rx="0.5" fill="#6d4c41" transform="rotate(-30, 102, 11)"/>
+    
+    <!-- Far-side railing (upper edge) -->
+    <path d="M 8,50 L 98,0" fill="none" stroke="#6d5040" stroke-width="1.5" opacity="0.7"/>
+    
+    <!-- Rope draping -->
+    <path d="M 12,58 Q 55,25 102,8" fill="none" stroke="#a08060" stroke-width="1"/>
+    
+    <!-- Sign (level, positioned above bridge center) -->
+    <g transform="translate(55, -5)">
+      <rect x="-22" y="-6" width="44" height="11" rx="2" fill="#8d6e63" stroke="#5d4037" stroke-width="0.8"/>
+      <text x="0" y="2" text-anchor="middle" font-family="Georgia, serif" font-size="5" fill="#f5e6c8">Forest Bridge</text>
+    </g>
+  </g>
+  
+  <!-- SMALL BRIDGE #2: Lower river crossing - ENLARGED rustic log bridge -->
+  <!-- River flows Q 700 450, 800 500 here, bridge crosses at ~(755,495) -->
+  <g transform="translate(715, 475)">
+    <!-- Deep water shadow -->
+    <ellipse cx="40" cy="60" rx="55" ry="12" fill="#1a3d28" opacity="0.35"/>
+    
+    <!-- Far bank support (stone pile) -->
+    <g transform="translate(65, 8)">
+      <ellipse cx="0" cy="28" rx="14" ry="6" fill="#5a5448"/>
+      <ellipse cx="-3" cy="22" rx="10" ry="5" fill="#6a6458"/>
+      <ellipse cx="4" cy="16" rx="8" ry="4" fill="#7a7468"/>
+      <ellipse cx="0" cy="10" rx="6" ry="3" fill="#8a8478"/>
+    </g>
+    
+    <!-- Near bank support (larger) -->
+    <g transform="translate(-12, 12)">
+      <ellipse cx="0" cy="32" rx="18" ry="7" fill="#5a5448"/>
+      <ellipse cx="-4" cy="25" rx="14" ry="6" fill="#6a6458"/>
+      <ellipse cx="5" cy="18" rx="10" ry="5" fill="#7a7468"/>
+      <ellipse cx="0" cy="11" rx="7" ry="3.5" fill="#8a8478"/>
+    </g>
+    
+    <!-- Main log spanning (enlarged) -->
+    <g>
+      <path d="M -8,28 Q 35,18 78,22" fill="none" stroke="#3d2814" stroke-width="16" stroke-linecap="round" opacity="0.3"/>
+      <path d="M -8,24 Q 35,12 78,18" fill="none" stroke="#7d5e4e" stroke-width="14" stroke-linecap="round"/>
+      <path d="M -8,20 Q 35,8 78,14" fill="none" stroke="#9d7e6e" stroke-width="11" stroke-linecap="round"/>
+      <!-- Log end rings -->
+      <g fill="#6d5040" opacity="0.5">
+        <ellipse cx="-4" cy="22" rx="5" ry="7" transform="rotate(-12,-4,22)"/>
+        <ellipse cx="76" cy="16" rx="4" ry="6" transform="rotate(8,76,16)"/>
+      </g>
+      <!-- Bark lines -->
+      <g stroke="#5d4037" stroke-width="0.5" fill="none" opacity="0.6">
+        <path d="M 8,16 Q 22,12 36,13"/>
+        <path d="M 42,12 Q 56,9 70,12"/>
+      </g>
+    </g>
+    
+    <!-- Secondary support log -->
+    <path d="M -2,35 Q 35,28 72,32" fill="none" stroke="#6d5040" stroke-width="6" stroke-linecap="round" opacity="0.6"/>
+    
+    <!-- Rope handrail -->
+    <path d="M -2,12 Q 38,2 72,8" fill="none" stroke="#8b7355" stroke-width="2"/>
+    <rect x="-6" y="8" width="5" height="20" rx="1.5" fill="#5d4037"/>
+    <rect x="70" y="5" width="4" height="18" rx="1" fill="#5d4037"/>
+    
+    <!-- Small sign -->
+    <g transform="translate(35, -5)">
+      <rect x="-18" y="-5" width="36" height="9" rx="2" fill="#8d6e63" stroke="#5d4037" stroke-width="0.8"/>
+      <text x="0" y="2" text-anchor="middle" font-family="Georgia, serif" font-size="5" fill="#f5e6c8">Grove Bridge</text>
+    </g>
+  </g>
+  
+  <!-- STEPPING STONES: Near Schema Caverns - 3D perspective with water interaction -->
+  <!-- River flows Q 180 400, 280 380 here, crossing at ~(260, 400) -->
+  <g transform="translate(235, 385)">
+    <!-- Water disturbance shadows below stones -->
+    <g fill="#1a3d28" opacity="0.2">
+      <ellipse cx="5" cy="20" rx="12" ry="5"/>
+      <ellipse cx="28" cy="22" rx="11" ry="4"/>
+      <ellipse cx="50" cy="21" rx="10" ry="4"/>
+      <ellipse cx="70" cy="23" rx="11" ry="5"/>
+    </g>
+    
+    <!-- Stepping stones with 3D perspective (closer stones larger/higher) -->
+    <!-- Stone 1 (nearest, largest) -->
+    <g transform="translate(0, 0)">
+      <ellipse cx="5" cy="12" rx="12" ry="7" fill="#6a6258"/>
+      <ellipse cx="5" cy="8" rx="11" ry="6" fill="#7a7268"/>
+      <ellipse cx="5" cy="5" rx="10" ry="5" fill="#8a8278"/>
+      <!-- Moss patch -->
+      <ellipse cx="2" cy="3" rx="4" ry="2.5" fill="#4a7a4a" opacity="0.5"/>
+      <!-- Wet edge highlight -->
+      <path d="M -4,10 Q 5,14 14,10" fill="none" stroke="#6b9db8" stroke-width="0.6" opacity="0.4"/>
+    </g>
+    
+    <!-- Stone 2 (medium) -->
+    <g transform="translate(22, 3)">
+      <ellipse cx="5" cy="10" rx="10" ry="6" fill="#6a6258"/>
+      <ellipse cx="5" cy="7" rx="9" ry="5" fill="#7a7268"/>
+      <ellipse cx="5" cy="4" rx="8" ry="4.5" fill="#8a8278"/>
+      <!-- Moss -->
+      <ellipse cx="7" cy="2" rx="3" ry="2" fill="#5a8a5a" opacity="0.45"/>
+    </g>
+    
+    <!-- Stone 3 (medium-small) -->
+    <g transform="translate(43, 1)">
+      <ellipse cx="5" cy="9" rx="9" ry="5.5" fill="#6a6258"/>
+      <ellipse cx="5" cy="6" rx="8" ry="5" fill="#7a7268"/>
+      <ellipse cx="5" cy="3.5" rx="7" ry="4" fill="#8a8278"/>
+      <!-- Small plant growing -->
+      <g stroke="#4a9a4a" stroke-width="0.8" fill="none">
+        <path d="M 3,1 Q 2,-4 4,-6"/>
+        <path d="M 3,1 Q 5,-3 6,-5"/>
+      </g>
+      <circle cx="4" cy="-6" r="1.5" fill="#5aaa5a" opacity="0.6"/>
+    </g>
+    
+    <!-- Stone 4 (farthest, smallest due to perspective) -->
+    <g transform="translate(62, 4)">
+      <ellipse cx="5" cy="8" rx="8" ry="5" fill="#5a5448"/>
+      <ellipse cx="5" cy="5.5" rx="7" ry="4.5" fill="#6a6458"/>
+      <ellipse cx="5" cy="3" rx="6" ry="3.5" fill="#7a7468"/>
+      <!-- Moss -->
+      <ellipse cx="3" cy="1" rx="2.5" ry="1.5" fill="#4a7a4a" opacity="0.4"/>
+    </g>
+    
+    <!-- Water splash effects around stones -->
+    <g fill="none" stroke="#8ac8dd" stroke-width="0.6" opacity="0.45">
+      <path d="M -6,14 Q 5,18 16,14"/>
+      <path d="M 16,16 Q 27,20 38,16"/>
+      <path d="M 36,15 Q 48,19 60,15"/>
+      <path d="M 56,17 Q 67,21 78,17"/>
+    </g>
+    
+    <!-- Ripples emanating from stones -->
+    <g fill="none" stroke="#6b9db8" stroke-width="0.4" opacity="0.3">
+      <ellipse cx="5" cy="14" rx="16" ry="6"/>
+      <ellipse cx="50" cy="15" rx="14" ry="5"/>
+    </g>
+  </g>
+  
+  <!-- === THE KNOWLEDGE BRIDGE (MAIN) with 3D PERSPECTIVE === -->
+  <!-- River flows Q 380 360, 420 420 Q 480 500 here, bridge crosses at angle -->
+  <g transform="translate(400, 410)">
+    <!-- Deep bridge shadow on water (offset for 3D depth) -->
+    <ellipse cx="60" cy="65" rx="75" ry="14" fill="#1a3d28" opacity="0.35"/>
+    
+    <!-- Bridge reflection shimmer on water -->
+    <g opacity="0.15">
+      <rect x="10" y="50" width="100" height="8" rx="2" fill="#7d5e4e"/>
+    </g>
+    
+    <!-- === STONE ABUTMENTS (3D perspective - near larger, far smaller) === -->
+    <!-- Near/Left abutment (closer to viewer - larger, more detail) -->
+    <g transform="translate(-18, 8)">
+      <!-- Foundation base -->
+      <ellipse cx="15" cy="58" rx="22" ry="8" fill="#5a5450" opacity="0.4"/>
+      <!-- Main stone structure -->
+      <path d="M 0,0 L 30,0 L 34,55 L -4,55 Z" fill="#8a8278" stroke="#5a5450" stroke-width="1.5"/>
+      <!-- Stone block texture (more visible) -->
+      <g stroke="#6a6460" stroke-width="0.8" opacity="0.75">
+        <line x1="0" y1="10" x2="30" y2="10"/>
+        <line x1="0" y1="22" x2="30" y2="22"/>
+        <line x1="0" y1="34" x2="30" y2="34"/>
+        <line x1="0" y1="46" x2="30" y2="46"/>
+        <line x1="15" y1="0" x2="16" y2="10"/>
+        <line x1="8" y1="10" x2="9" y2="22"/>
+        <line x1="22" y1="22" x2="23" y2="34"/>
+        <line x1="12" y1="34" x2="13" y2="46"/>
+        <line x1="20" y1="46" x2="21" y2="55"/>
+      </g>
+      <!-- Moss on stones -->
+      <g fill="#4a7a4a" opacity="0.3">
+        <ellipse cx="5" cy="52" rx="4" ry="2"/>
+        <ellipse cx="25" cy="50" rx="3" ry="1.5"/>
+      </g>
+      <!-- Capstone (larger) -->
+      <rect x="-3" y="-5" width="36" height="7" rx="1.5" fill="#9a9490" stroke="#6a6460" stroke-width="1"/>
+    </g>
+    
+    <!-- Far/Right abutment (farther from viewer - smaller, less detail) -->
+    <g transform="translate(102, 12)">
+      <!-- Foundation base -->
+      <ellipse cx="12" cy="48" rx="18" ry="6" fill="#4a4440" opacity="0.35"/>
+      <!-- Main stone structure (smaller) -->
+      <path d="M 0,0 L 24,0 L 27,45 L -3,45 Z" fill="#7a7268" stroke="#5a5450" stroke-width="1.2"/>
+      <!-- Stone block texture -->
+      <g stroke="#6a6460" stroke-width="0.5" opacity="0.6">
+        <line x1="0" y1="9" x2="24" y2="9"/>
+        <line x1="0" y1="18" x2="24" y2="18"/>
+        <line x1="0" y1="28" x2="24" y2="28"/>
+        <line x1="0" y1="38" x2="24" y2="38"/>
+        <line x1="12" y1="0" x2="13" y2="9"/>
+        <line x1="6" y1="9" x2="7" y2="18"/>
+        <line x1="18" y1="18" x2="19" y2="28"/>
+      </g>
+      <!-- Capstone -->
+      <rect x="-2" y="-4" width="28" height="5" rx="1" fill="#8a8480" stroke="#5a5450" stroke-width="0.8"/>
+    </g>
+    
+    <!-- === BRIDGE DECK (3D perspective - angled plane receding) === -->
+    <!-- Deck underside shadow (visible between deck and water) -->
+    <polygon points="8,15 122,20 120,25 6,20" fill="#3d2814" opacity="0.4"/>
+    
+    <!-- Main deck structure (trapezoidal for perspective) -->
+    <polygon points="5,2 125,7 123,17 3,12" fill="#7d5e4e" stroke="#5d4037" stroke-width="1.2"/>
+    
+    <!-- Deck surface (lighter wood top, perspective) -->
+    <polygon points="5,2 125,7 124,12 4,8" fill="#9d7e6e"/>
+
+    <!-- Worn roadway across deck (subtle, keeps planks visible) -->
+    <path d="M 7,7 L 121,12" fill="none" stroke="#6a4412" stroke-width="8" stroke-linecap="round" opacity="0.10"/>
+    <path d="M 7,7 L 121,12" fill="none" stroke="#a87030" stroke-width="4" stroke-linecap="round" opacity="0.22"/>
+    
+    <!-- Individual wooden planks (converging lines for perspective) -->
+    <g stroke="#6d5040" stroke-width="0.8" fill="none">
+      <line x1="12" y1="2.5" x2="10" y2="13"/>
+      <line x1="24" y1="3" x2="23" y2="13.5"/>
+      <line x1="36" y1="3.5" x2="36" y2="14"/>
+      <line x1="48" y1="4" x2="49" y2="14.5"/>
+      <line x1="60" y1="4.5" x2="62" y2="15"/>
+      <line x1="72" y1="5" x2="75" y2="15.5"/>
+      <line x1="84" y1="5.5" x2="88" y2="16"/>
+      <line x1="96" y1="6" x2="101" y2="16.5"/>
+      <line x1="108" y1="6.5" x2="114" y2="17"/>
+      <line x1="118" y1="7" x2="122" y2="17.5"/>
+    </g>
+    
+    <!-- Wood grain highlights -->
+    <g stroke="#b09080" stroke-width="0.4" opacity="0.5">
+      <line x1="18" y1="4" x2="21" y2="4.5"/>
+      <line x1="42" y1="5" x2="46" y2="5.5"/>
+      <line x1="66" y1="6" x2="71" y2="6.5"/>
+      <line x1="90" y1="7" x2="96" y2="7.5"/>
+    </g>
+    
+    <!-- === RAILINGS (3D perspective - near taller, far shorter) === -->
+    <!-- Near-side railing (top in view, taller posts) -->
+    <g>
+      <!-- Railing posts (decreasing height for perspective) -->
+      <g fill="#6d4c41" stroke="#4a3228" stroke-width="0.7">
+        <rect x="8" y="-14" width="5" height="17" rx="0.6"/>
+        <rect x="32" y="-13" width="4.5" height="16" rx="0.5"/>
+        <rect x="60" y="-12" width="4" height="15" rx="0.5"/>
+        <rect x="88" y="-11" width="3.5" height="14" rx="0.5"/>
+        <rect x="115" y="-10" width="3" height="13" rx="0.5"/>
+      </g>
+      <!-- Post caps (decorative, perspective-scaled) -->
+      <g fill="#8d6e63">
+        <rect x="7" y="-17" width="7" height="4" rx="0.6"/>
+        <rect x="31" y="-15.5" width="6" height="3.5" rx="0.5"/>
+        <rect x="59" y="-14" width="5.5" height="3" rx="0.5"/>
+        <rect x="87" y="-12.5" width="5" height="2.5" rx="0.5"/>
+        <rect x="114" y="-11.5" width="4.5" height="2.5" rx="0.5"/>
+      </g>
+      <!-- Top rail (perspective curve) -->
+      <path d="M 8,-13 L 118,-8" fill="none" stroke="#7d5e4e" stroke-width="3" stroke-linecap="round"/>
+      <path d="M 8,-13 L 118,-8" fill="none" stroke="#9d8070" stroke-width="2" stroke-linecap="round"/>
+      <!-- Middle rail -->
+      <path d="M 8,-6 L 118,-2" fill="none" stroke="#8d6e63" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    
+    <!-- Far-side railing (bottom in view, lower posts) -->
+    <g>
+      <!-- Railing posts -->
+      <g fill="#5d4037" stroke="#3d2814" stroke-width="0.5">
+        <rect x="6" y="11" width="4" height="14" rx="0.5"/>
+        <rect x="30" y="12" width="3.5" height="13" rx="0.5"/>
+        <rect x="58" y="13" width="3" height="12" rx="0.5"/>
+        <rect x="86" y="14" width="2.5" height="11" rx="0.5"/>
+        <rect x="113" y="15" width="2.5" height="10" rx="0.5"/>
+      </g>
+      <!-- Post caps -->
+      <g fill="#7d5e4e">
+        <rect x="5" y="24" width="5.5" height="3" rx="0.5"/>
+        <rect x="29" y="24.5" width="5" height="2.8" rx="0.5"/>
+        <rect x="57" y="24.5" width="4.5" height="2.5" rx="0.5"/>
+        <rect x="85" y="24.5" width="4" height="2.3" rx="0.5"/>
+        <rect x="112" y="24.5" width="3.5" height="2" rx="0.5"/>
+      </g>
+      <!-- Top rail -->
+      <path d="M 6,22 L 116,23" fill="none" stroke="#6d4c41" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Middle rail -->
+      <path d="M 6,17 L 116,19" fill="none" stroke="#7d5e4e" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    
+    <!-- === DECORATIVE ROPE HANDRAIL (catenary curves) === -->
+    <g stroke="#c4a882" stroke-width="2" fill="none" opacity="0.75">
+      <!-- Near side rope -->
+      <path d="M 10,-11 Q 22,-8 34,-11 Q 48,-7 62,-10 Q 77,-6 90,-9 Q 103,-5 118,-7"/>
+    </g>
+    <g stroke="#a08868" stroke-width="1.5" fill="none" opacity="0.6">
+      <!-- Far side rope -->
+      <path d="M 8,20 Q 20,23 32,20 Q 46,24 60,21 Q 74,25 88,22 Q 102,26 116,22"/>
+    </g>
+    
+    <!-- === BRIDGE SIGN (centered, prominent) === -->
+    <g transform="translate(60, -32)">
+      <!-- Sign post with shadow -->
+      <rect x="-1" y="14" width="2" height="4" fill="#3d2814" opacity="0.3"/>
+      <rect x="-3" y="0" width="6" height="18" fill="#5d4037" stroke="#4a3228" stroke-width="0.6"/>
+      <!-- Sign board shadow -->
+      <rect x="-42" y="-15" width="84" height="18" rx="3" fill="#2d1a0a" opacity="0.2" transform="translate(2,2)"/>
+      <!-- Sign board -->
+      <rect x="-42" y="-15" width="84" height="18" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="1.2"/>
+      <!-- Decorative elements -->
+      <rect x="-40" y="-13" width="80" height="14" rx="2" fill="none" stroke="#a08060" stroke-width="0.5" opacity="0.5"/>
+      <!-- Decorative nail heads -->
+      <circle cx="-36" cy="-6" r="1.5" fill="#6a6a6a"/>
+      <circle cx="36" cy="-6" r="1.5" fill="#6a6a6a"/>
+      <circle cx="-36" cy="-6" r="0.8" fill="#8a8a8a"/>
+      <circle cx="36" cy="-6" r="0.8" fill="#8a8a8a"/>
+      <text x="0" y="-2" text-anchor="middle" font-family="Georgia, serif" font-size="9" font-weight="bold" fill="#f5e6c8">🌉 Knowledge Bridge</text>
+      <!-- Subtitle showing forest connections -->
+      <text x="0" y="8" text-anchor="middle" font-family="Georgia, serif" font-size="5" fill="#d4c4a8" font-style="italic">Connecting the Great Forests</text>
+    </g>
+    
+    <!-- Water flowing under bridge (visible through deck gaps) -->
+    <g fill="#6b9db8" opacity="0.2">
+      <ellipse cx="30" cy="38" rx="8" ry="3"/>
+      <ellipse cx="60" cy="40" rx="10" ry="4"/>
+      <ellipse cx="90" cy="42" rx="8" ry="3"/>
+    </g>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- ADDITIONAL SCATTERED CONCEPT LABELS (signposts & markers)       -->
+  <!-- ====================================================================== -->
+  
+  <!-- Near Schema Caverns: DB-related concepts (moved left to avoid overlap) -->
+  <g transform="translate(50, 505)">
+    <rect x="0" y="0" width="65" height="50" rx="3" fill="#f5e6c8" stroke="#8b7355" stroke-width="0.8" opacity="0.9"/>
+    <text x="32" y="12" text-anchor="middle" font-family="Georgia, serif" font-size="7" font-weight="bold" fill="#3d2814">DB Layer</text>
+    <g font-family="Georgia, serif" font-size="5.5" fill="#5c4a32">
+      <text x="5" y="24">📦 bootstrapDb</text>
+      <text x="5" y="34">📦 connection</text>
+      <text x="5" y="44">📦 access</text>
+    </g>
+  </g>
+  
+  <!-- Near Miner's Guild: Analysis concepts (moved up-right to avoid overlap) -->
+  <g transform="translate(165, 155)">
+    <rect x="0" y="0" width="75" height="60" rx="3" fill="#f5e6c8" stroke="#8b7355" stroke-width="0.8" opacity="0.9"/>
+    <text x="37" y="12" text-anchor="middle" font-family="Georgia, serif" font-size="7" font-weight="bold" fill="#3d2814">Analysis</text>
+    <g font-family="Georgia, serif" font-size="5.5" fill="#5c4a32">
+      <text x="5" y="24">🔍 AnalysisTask</text>
+      <text x="5" y="34">🔍 AnalysisRunMgr</text>
+      <text x="5" y="44">🔍 page-analyzer</text>
+      <text x="5" y="54">🔍 place-extraction</text>
+    </g>
+  </g>
+  
+  <!-- Near Temple Keep: Template/Layout concepts -->
+  <g transform="translate(615, 125)">
+    <rect x="0" y="0" width="80" height="50" rx="3" fill="#f5e6c8" stroke="#8b7355" stroke-width="0.8" opacity="0.9"/>
+    <text x="40" y="12" text-anchor="middle" font-family="Georgia, serif" font-size="7" font-weight="bold" fill="#3d2814">Layout System</text>
+    <g font-family="Georgia, serif" font-size="5.5" fill="#5c4a32">
+      <text x="5" y="24">📐 layout_templates</text>
+      <text x="5" y="34">📐 layout_masks</text>
+      <text x="5" y="44">📐 StructureMiner</text>
+    </g>
+  </g>
+  
+  <!-- Near Trial Grounds: Testing concepts -->
+  <g transform="translate(860, 310)">
+    <rect x="0" y="0" width="70" height="50" rx="3" fill="#f5e6c8" stroke="#8b7355" stroke-width="0.8" opacity="0.9"/>
+    <text x="35" y="12" text-anchor="middle" font-family="Georgia, serif" font-size="7" font-weight="bold" fill="#3d2814">Testing</text>
+    <g font-family="Georgia, serif" font-size="5.5" fill="#5c4a32">
+      <text x="5" y="24">🧪 Jest suites</text>
+      <text x="5" y="34">🧪 check.js files</text>
+      <text x="5" y="44">🧪 E2E tests</text>
+    </g>
+  </g>
+  
+  <!-- UI Controls cluster (positioned to clear compass and other elements) -->
+  <g transform="translate(855, 540)">
+    <rect x="0" y="0" width="145" height="70" rx="4" fill="#f5e6c8" stroke="#8b7355" stroke-width="1" opacity="0.95"/>
+    <text x="72" y="14" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="9" font-weight="bold" fill="#3d2814">UI Controls (jsgui3)</text>
+    <line x1="8" y1="20" x2="137" y2="20" stroke="#a89070" stroke-width="0.5"/>
+    <g font-family="Georgia, serif" font-size="6" fill="#5c4a32">
+      <text x="8" y="32">🎛 ConfigMatrixControl</text>
+      <text x="8" y="43">🎛 DiagramAtlas</text>
+      <text x="8" y="54">🎛 ThemeEditorControl</text>
+      <text x="8" y="65">🎛 CrawlJobsTable</text>
+    </g>
+  </g>
+  
+  <!-- Signpost near mountains: Gazetteer concepts -->
+  <g transform="translate(680, 130)">
+    <rect x="-2" y="0" width="4" height="20" fill="#5d4037"/>
+    <rect x="-45" y="-15" width="90" height="18" rx="2" fill="#a1887f" stroke="#6d4c41" stroke-width="0.8"/>
+    <text x="0" y="-2" text-anchor="middle" font-family="Georgia, serif" font-size="7" fill="#3d2814">🗺 Gazetteer Services</text>
+  </g>
+  
+  <!-- Signpost in river area: Crawl concepts -->
+  <g transform="translate(250, 290)">
+    <rect x="-2" y="0" width="4" height="18" fill="#5d4037"/>
+    <g transform="rotate(-5)">
+      <rect x="-38" y="-15" width="76" height="16" rx="2" fill="#a1887f" stroke="#6d4c41" stroke-width="0.8"/>
+      <text x="0" y="-3" text-anchor="middle" font-family="Georgia, serif" font-size="6.5" fill="#3d2814">🕷 CrawlBehaviorPanel</text>
+    </g>
+  </g>
+  
+  <!-- Small milestone markers with concept names -->
+  <g font-family="Georgia, serif" font-size="6" fill="#5c4a32">
+    <!-- Along quest road (repositioned to avoid overlaps) -->
+    <g transform="translate(125, 550)">
+      <circle r="8" fill="#d4c8a0" stroke="#a89070" stroke-width="1"/>
+      <text x="0" y="3" text-anchor="middle" font-size="5">DB</text>
+    </g>
+    <g transform="translate(350, 400)">
+      <circle r="8" fill="#d4c8a0" stroke="#a89070" stroke-width="1"/>
+      <text x="0" y="3" text-anchor="middle" font-size="4.5">API</text>
+    </g>
+    <g transform="translate(520, 250)">
+      <circle r="8" fill="#d4c8a0" stroke="#a89070" stroke-width="1"/>
+      <text x="0" y="3" text-anchor="middle" font-size="4.5">UI</text>
+    </g>
+  </g>
+
+  <!-- ====================================================================== -->
+  <!-- EXTENDED APPENDIX (enhanced visual styling)                    -->
+  <!-- ====================================================================== -->
+  <g transform="translate(40, 905)">
+    <!-- Appendix panel shadow -->
+    <rect x="5" y="5" width="1020" height="640" rx="12" fill="#3d2814" opacity="0.12"/>
+    <!-- Appendix panel background -->
+    <rect x="0" y="0" width="1020" height="640" rx="12" fill="url(#panelBg)" stroke="#8b7355" stroke-width="2.5"/>
+    <!-- Gilded border accent -->
+    <rect x="0" y="0" width="1020" height="640" rx="12" fill="none" stroke="url(#gold)" stroke-width="1" opacity="0.3"/>
+    <!-- Inner decorative line -->
+    <rect x="8" y="8" width="1004" height="624" rx="8" fill="none" stroke="#a89070" stroke-width="0.8" opacity="0.5"/>
+    <!-- Header -->
+    <text x="510" y="28" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="17" font-weight="bold" fill="#2d1a08">✒ Appendix: Field Notes &amp; Inset Diagrams</text>
+    <text x="510" y="48" text-anchor="middle" class="subtitle">Extra reference panels (kept in the lower margin so the main map stays readable)</text>
+    <line x1="100" y1="58" x2="920" y2="58" stroke="#a89070" stroke-width="0.8" opacity="0.6"/>
+
+    <!-- Three inset panels (enhanced with shadows and accents) -->
+    <g transform="translate(12, 68)">
+      <!-- Panel 1: Crawler Pipeline -->
+      <g>
+        <!-- Shadow -->
+        <rect x="3" y="3" width="330" height="260" rx="10" fill="#3d2814" opacity="0.08"/>
+        <!-- Background -->
+        <rect x="0" y="0" width="330" height="260" rx="10" fill="#f8f0e0" stroke="#a89070" stroke-width="1.5"/>
+        <!-- Gilded top accent -->
+        <rect x="0" y="0" width="330" height="26" rx="10" fill="url(#gold)" opacity="0.08"/>
+        <path d="M 10,26 L 320,26" stroke="#a89070" stroke-width="0.8"/>
+        <text x="165" y="18" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="11" font-weight="bold" fill="#2d1a08">🕷 Crawler Pipeline (Mini)</text>
+
+        <g font-family="Georgia, serif" font-size="8" fill="#3d2814">
+          <g transform="translate(18, 40)">
+            <rect x="0" y="0" width="120" height="20" rx="4" fill="#d4c8a0" stroke="#8b7355" stroke-width="0.8"/>
+            <text x="60" y="14" text-anchor="middle">Seed URLs</text>
+
+            <rect x="0" y="34" width="120" height="20" rx="4" fill="#d4c8a0" stroke="#8b7355" stroke-width="0.8"/>
+            <text x="60" y="48" text-anchor="middle">Fetch + Robots</text>
+
+            <rect x="0" y="68" width="120" height="20" rx="4" fill="#d4c8a0" stroke="#8b7355" stroke-width="0.8"/>
+            <text x="60" y="82" text-anchor="middle">Parse HTML</text>
+
+            <rect x="0" y="102" width="120" height="20" rx="4" fill="#d4c8a0" stroke="#8b7355" stroke-width="0.8"/>
+            <text x="60" y="116" text-anchor="middle">Extract Facts</text>
+
+            <rect x="0" y="136" width="120" height="20" rx="4" fill="#d4c8a0" stroke="#8b7355" stroke-width="0.8"/>
+            <text x="60" y="150" text-anchor="middle">Store + Index</text>
+
+            <path d="M 60,20 L 60,34" stroke="#6b5744" stroke-width="1" marker-end="url(#pathArrow)"/>
+            <path d="M 60,54 L 60,68" stroke="#6b5744" stroke-width="1" marker-end="url(#pathArrow)"/>
+            <path d="M 60,88 L 60,102" stroke="#6b5744" stroke-width="1" marker-end="url(#pathArrow)"/>
+            <path d="M 60,122 L 60,136" stroke="#6b5744" stroke-width="1" marker-end="url(#pathArrow)"/>
+          </g>
+
+          <g transform="translate(160, 48)" font-size="7" fill="#5c4a32">
+            <text x="0" y="0" font-weight="bold" fill="#3d2814">Key knobs</text>
+            <text x="0" y="16">- timeouts / retries</text>
+            <text x="0" y="28">- concurrency budgets</text>
+            <text x="0" y="40">- per-host politeness</text>
+            <text x="0" y="52">- cache discipline</text>
+            <text x="0" y="64">- failure capture</text>
+            <text x="0" y="76">- deterministic checks</text>
+          </g>
+        </g>
+      </g>
+
+      <!-- Panel 2: Layout Templates DB -->
+      <g transform="translate(345, 0)">
+        <!-- Shadow -->
+        <rect x="3" y="3" width="330" height="260" rx="10" fill="#3d2814" opacity="0.08"/>
+        <!-- Background -->
+        <rect x="0" y="0" width="330" height="260" rx="10" fill="#f8f0e0" stroke="#a89070" stroke-width="1.5"/>
+        <!-- Gilded top accent -->
+        <rect x="0" y="0" width="330" height="26" rx="10" fill="url(#gold)" opacity="0.08"/>
+        <path d="M 10,26 L 320,26" stroke="#a89070" stroke-width="0.8"/>
+        <text x="165" y="18" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="11" font-weight="bold" fill="#2d1a08">📐 Layout Templates DB (Mini)</text>
+
+        <g font-family="Georgia, serif" font-size="7" fill="#5c4a32">
+          <g transform="translate(18, 42)">
+            <rect x="0" y="0" width="135" height="62" rx="6" fill="#d4c8a0" stroke="#8b7355" stroke-width="0.8"/>
+            <text x="8" y="14" font-weight="bold" fill="#3d2814">layout_templates</text>
+            <text x="8" y="28">id (PK)</text>
+            <text x="8" y="40">host</text>
+            <text x="8" y="52">template_json</text>
+          </g>
+
+          <g transform="translate(175, 42)">
+            <rect x="0" y="0" width="135" height="62" rx="6" fill="#d4c8a0" stroke="#8b7355" stroke-width="0.8"/>
+            <text x="8" y="14" font-weight="bold" fill="#3d2814">layout_masks</text>
+            <text x="8" y="28">id (PK)</text>
+            <text x="8" y="40">template_id (FK)</text>
+            <text x="8" y="52">mask_json</text>
+          </g>
+
+          <g transform="translate(18, 130)">
+            <rect x="0" y="0" width="292" height="78" rx="6" fill="#d4c8a0" stroke="#8b7355" stroke-width="0.8"/>
+            <text x="8" y="14" font-weight="bold" fill="#3d2814">layout_signatures (concept)</text>
+            <text x="8" y="30">- hash(host, DOM path, features)</text>
+            <text x="8" y="44">- used by StructureMiner</text>
+            <text x="8" y="58">- powers caching + reuse</text>
+            <text x="8" y="72">- enables diff-friendly templates</text>
+          </g>
+
+          <path d="M 153,73 L 175,73" stroke="#6b5744" stroke-width="1" marker-end="url(#pathArrow)"/>
+          <path d="M 85,104 L 85,130" stroke="#6b5744" stroke-width="1" marker-end="url(#pathArrow)"/>
+          <path d="M 245,104 L 245,130" stroke="#6b5744" stroke-width="1" marker-end="url(#pathArrow)"/>
+        </g>
+      </g>
+
+      <!-- Panel 3: UI Activation Flow -->
+      <g transform="translate(690, 0)">
+        <!-- Shadow -->
+        <rect x="3" y="3" width="330" height="260" rx="10" fill="#3d2814" opacity="0.08"/>
+        <!-- Background -->
+        <rect x="0" y="0" width="330" height="260" rx="10" fill="#f8f0e0" stroke="#a89070" stroke-width="1.5"/>
+        <!-- Gilded top accent -->
+        <rect x="0" y="0" width="330" height="26" rx="10" fill="url(#gold)" opacity="0.08"/>
+        <path d="M 10,26 L 320,26" stroke="#a89070" stroke-width="0.8"/>
+        <text x="165" y="18" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="11" font-weight="bold" fill="#2d1a08">🎛 UI Activation (Mini)</text>
+
+        <g font-family="Georgia, serif" font-size="7" fill="#5c4a32">
+          <g transform="translate(18, 42)">
+            <rect x="0" y="0" width="135" height="42" rx="6" fill="#d4c8a0" stroke="#8b7355" stroke-width="0.8"/>
+            <text x="8" y="14" font-weight="bold" fill="#3d2814">SSR render</text>
+            <text x="8" y="30">HTML + data</text>
+          </g>
+
+          <g transform="translate(175, 42)">
+            <rect x="0" y="0" width="135" height="42" rx="6" fill="#d4c8a0" stroke="#8b7355" stroke-width="0.8"/>
+            <text x="8" y="14" font-weight="bold" fill="#3d2814">Client activate</text>
+            <text x="8" y="30">bind events</text>
+          </g>
+
+          <g transform="translate(18, 104)">
+            <rect x="0" y="0" width="292" height="86" rx="6" fill="#d4c8a0" stroke="#8b7355" stroke-width="0.8"/>
+            <text x="8" y="14" font-weight="bold" fill="#3d2814">Critical invariants</text>
+            <text x="8" y="30">- context.map_Controls present</text>
+            <text x="8" y="44">- control ids stable</text>
+            <text x="8" y="58">- dom.el exists on activate</text>
+            <text x="8" y="72">- avoid 200+ live controls</text>
+            <text x="8" y="86">- checks/*.check.js for HTML</text>
+          </g>
+
+          <path d="M 153,63 L 175,63" stroke="#6b5744" stroke-width="1" marker-end="url(#pathArrow)"/>
+          <path d="M 242,84 L 242,104" stroke="#6b5744" stroke-width="1" marker-end="url(#pathArrow)"/>
+          <path d="M 85,84 L 85,104" stroke="#6b5744" stroke-width="1" marker-end="url(#pathArrow)"/>
+        </g>
+      </g>
+    </g>
+
+    <!-- Panel 4: Template Keep (enhanced with detailed styling) -->
+    <g transform="translate(12, 342)">
+      <!-- Shadow -->
+      <rect x="4" y="4" width="996" height="290" rx="12" fill="#3d2814" opacity="0.1"/>
+      <!-- Background -->
+      <rect x="0" y="0" width="996" height="290" rx="12" fill="#f8f0e0" stroke="#a89070" stroke-width="1.8"/>
+      <!-- Gilded top accent -->
+      <rect x="0" y="0" width="996" height="28" rx="12" fill="url(#gold)" opacity="0.1"/>
+      <path d="M 12,28 L 984,28" stroke="#a89070" stroke-width="0.8"/>
+      <text x="498" y="20" text-anchor="middle" font-family="'Palatino Linotype', serif" font-size="13" font-weight="bold" fill="#2d1a08">🏰 Template Keep - Signatures, Masks &amp; Template Lore</text>
+
+      <!-- Keep graphic (left) -->
+      <g transform="translate(18, 40)">
+        <!-- Ground / plinth -->
+        <path d="M 10 220 Q 90 190 170 220 Q 190 228 210 220 L 220 252 Q 120 280 20 252 Z" fill="#d4c8a0" stroke="#8b7355" stroke-width="1" opacity="0.95"/>
+        <path d="M 22 242 Q 120 265 208 242" fill="none" stroke="#a89070" stroke-width="0.8" opacity="0.7"/>
+
+        <!-- Main wall block -->
+        <rect x="38" y="118" width="160" height="92" rx="6" fill="#a1887f" stroke="#6d4c41" stroke-width="1.1"/>
+        <!-- Crenellations -->
+        <path d="M 38 118 L 38 104 L 52 104 L 52 118 L 66 118 L 66 104 L 80 104 L 80 118 L 94 118 L 94 104 L 108 104 L 108 118 L 122 118 L 122 104 L 136 104 L 136 118 L 150 118 L 150 104 L 164 104 L 164 118 L 178 118 L 178 104 L 192 104 L 192 118 L 198 118" fill="#a1887f" stroke="#6d4c41" stroke-width="1"/>
+
+        <!-- Gate -->
+        <path d="M 108 210 L 108 170 Q 118 154 128 170 L 128 210 Z" fill="#6d4c41" opacity="0.85"/>
+        <path d="M 108 170 Q 118 154 128 170" fill="none" stroke="#4e342e" stroke-width="1"/>
+        <path d="M 114 210 L 114 176 M 118 210 L 118 170 M 122 210 L 122 170 M 126 210 L 126 176" stroke="#3d2814" stroke-width="0.8" opacity="0.6"/>
+
+        <!-- Left tower -->
+        <g transform="translate(18, 72)">
+          <rect x="0" y="70" width="46" height="90" rx="6" fill="#b09b91" stroke="#6d4c41" stroke-width="1"/>
+          <path d="M 0 70 L 0 58 L 10 58 L 10 70 L 18 70 L 18 58 L 28 58 L 28 70 L 36 70 L 36 58 L 46 58 L 46 70" fill="#b09b91" stroke="#6d4c41" stroke-width="1"/>
+          <rect x="16" y="104" width="14" height="18" rx="2" fill="#6b5744" opacity="0.45"/>
+          <rect x="16" y="130" width="14" height="18" rx="2" fill="#6b5744" opacity="0.45"/>
+        </g>
+
+        <!-- Right tower -->
+        <g transform="translate(176, 72)">
+          <rect x="0" y="70" width="46" height="90" rx="6" fill="#b09b91" stroke="#6d4c41" stroke-width="1"/>
+          <path d="M 0 70 L 0 58 L 10 58 L 10 70 L 18 70 L 18 58 L 28 58 L 28 70 L 36 70 L 36 58 L 46 58 L 46 70" fill="#b09b91" stroke="#6d4c41" stroke-width="1"/>
+          <rect x="16" y="104" width="14" height="18" rx="2" fill="#6b5744" opacity="0.45"/>
+          <rect x="16" y="130" width="14" height="18" rx="2" fill="#6b5744" opacity="0.45"/>
+        </g>
+
+        <!-- Banner + sigil -->
+        <g transform="translate(90, 78)">
+          <path d="M 0 0 L 0 34" stroke="#5d4037" stroke-width="2"/>
+          <path d="M 0 6 Q 22 2 44 10 L 44 24 Q 22 32 0 28 Z" fill="#8b4513" opacity="0.85" stroke="#5c3a1a" stroke-width="0.8"/>
+          <text x="22" y="20" text-anchor="middle" font-family="Georgia, serif" font-size="7" font-weight="bold" fill="#f5e6c8">Σ</text>
+        </g>
+
+        <!-- Micro labels on the keep -->
+        <g font-family="Georgia, serif" font-size="6" fill="#3d2814" opacity="0.9">
+          <text x="55" y="132">layout_templates</text>
+          <text x="56" y="146" font-size="5">host-scoped</text>
+          <text x="136" y="132">layout_masks</text>
+          <text x="138" y="146" font-size="5">FK: template_id</text>
+          <text x="100" y="200" font-size="5">gate: signature cache</text>
+        </g>
+      </g>
+
+      <!-- Dense micro-text "keep details" (right) -->
+      <g transform="translate(280, 46)" font-family="Georgia, serif" fill="#5c4a32">
+        <g font-size="6" font-weight="bold" fill="#3d2814">
+          <text x="0" y="0">Keep Details (tiny)</text>
+        </g>
+
+        <g font-size="5.2">
+          <!-- Column A -->
+          <g transform="translate(0, 16)">
+            <text x="0" y="0" font-weight="bold" fill="#3d2814">Template Canon</text>
+            <text x="0" y="14">- host normalization</text>
+            <text x="0" y="26">- stable DOM paths</text>
+            <text x="0" y="38">- strip query params</text>
+            <text x="0" y="50">- whitespace fold</text>
+            <text x="0" y="62">- text node rules</text>
+            <text x="0" y="74">- boilerplate prune</text>
+            <text x="0" y="86">- locale-safe parse</text>
+            <text x="0" y="98">- timestamp bans</text>
+            <text x="0" y="110">- deterministic diffs</text>
+            <text x="0" y="122">- versioned schema</text>
+            <text x="0" y="134">- template_json vN</text>
+            <text x="0" y="146">- provenance fields</text>
+            <text x="0" y="158">- audit trail links</text>
+            <text x="0" y="170">- migration notes</text>
+          </g>
+
+          <!-- Column B -->
+          <g transform="translate(165, 16)">
+            <text x="0" y="0" font-weight="bold" fill="#3d2814">Signatures</text>
+            <text x="0" y="14">- signature = hash()</text>
+            <text x="0" y="26">- inputs: host</text>
+            <text x="0" y="38">- inputs: pathSig</text>
+            <text x="0" y="50">- inputs: features</text>
+            <text x="0" y="62">- exclude volatile ids</text>
+            <text x="0" y="74">- include aria hints</text>
+            <text x="0" y="86">- include tag chain</text>
+            <text x="0" y="98">- include class hints</text>
+            <text x="0" y="110">- include attr set</text>
+            <text x="0" y="122">- guard hash drift</text>
+            <text x="0" y="134">- cache by signature</text>
+            <text x="0" y="146">- reuse templates</text>
+            <text x="0" y="158">- diff layout shifts</text>
+            <text x="0" y="170">- report invariants</text>
+          </g>
+
+          <!-- Column C -->
+          <g transform="translate(330, 16)">
+            <text x="0" y="0" font-weight="bold" fill="#3d2814">Masks</text>
+            <text x="0" y="14">- allowlist selectors</text>
+            <text x="0" y="26">- denylist traps</text>
+            <text x="0" y="38">- drop nav + ads</text>
+            <text x="0" y="50">- keep headline</text>
+            <text x="0" y="62">- keep by role=main</text>
+            <text x="0" y="74">- keep by rel=article</text>
+            <text x="0" y="86">- keep by data-* hints</text>
+            <text x="0" y="98">- preserve anchors</text>
+            <text x="0" y="110">- preserve images</text>
+            <text x="0" y="122">- redact tracking</text>
+            <text x="0" y="134">- scrub scripts</text>
+            <text x="0" y="146">- sanitize styles</text>
+            <text x="0" y="158">- normalize links</text>
+            <text x="0" y="170">- log removals</text>
+          </g>
+
+          <!-- Column D -->
+          <g transform="translate(495, 16)">
+            <text x="0" y="0" font-weight="bold" fill="#3d2814">Guardrails</text>
+            <text x="0" y="14">- no direct SQL in UI</text>
+            <text x="0" y="26">- adapters-only DB</text>
+            <text x="0" y="38">- checks/*.check.js</text>
+            <text x="0" y="50">- schema:check gates</text>
+            <text x="0" y="62">- stable ids for SSR</text>
+            <text x="0" y="74">- avoid 200+ controls</text>
+            <text x="0" y="86">- capture failures</text>
+            <text x="0" y="98">- record fixtures</text>
+            <text x="0" y="110">- diff-friendly HTML</text>
+            <text x="0" y="122">- retry budgets</text>
+            <text x="0" y="134">- timeout budgets</text>
+            <text x="0" y="146">- per-host pacing</text>
+            <text x="0" y="158">- telemetry counters</text>
+            <text x="0" y="170">- invariant reports</text>
+          </g>
+        </g>
+
+        <g font-size="5" fill="#6b5744" font-style="italic" transform="translate(0, 212)">
+          <text x="0" y="0">Tip: Keep the "Keep" quiet-put dense text down here, not on the main map.</text>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <g transform="translate(40, 1545)">
+    <text x="510" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="9" fill="#6b5744" font-style="italic">"Here be notes: keep the map pretty, keep the rules strict."</text>
+  </g>
+</svg>

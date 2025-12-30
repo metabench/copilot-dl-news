@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480">
+  <g id="layer1-hash">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#1e3a5f" rx="8"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="white" letter-spacing="1">LAYER 1: EXACT HASH</text>
+    
+    <!-- Algorithm -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="120" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#60a5fa">SKELETONHASH ALGORITHM</text>
+      <text x="12" y="40" font-size="9" fill="#aaa" font-family="monospace">1. Parse HTML → DOM tree</text>
+      <text x="12" y="56" font-size="9" fill="#aaa" font-family="monospace">2. Extract skeleton (tags + structure)</text>
+      <text x="12" y="72" font-size="9" fill="#aaa" font-family="monospace">3. L1: Hash tag sequence only</text>
+      <text x="12" y="88" font-size="9" fill="#aaa" font-family="monospace">4. L2: Hash with class names</text>
+      <text x="12" y="104" font-size="9" fill="#aaa" font-family="monospace">5. Return 16-byte digest each</text>
+    </g>
+    
+    <!-- Visual Flow -->
+    <g transform="translate(15, 185)">
+      <rect x="0" y="0" width="370" height="100" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">DATA FLOW</text>
+      
+      <!-- HTML Box -->
+      <rect x="15" y="30" width="70" height="55" fill="#3a3a3a" rx="4" stroke="#666" stroke-width="1"/>
+      <text x="50" y="48" text-anchor="middle" font-size="9" fill="#aaa">HTML</text>
+      <text x="50" y="72" text-anchor="middle" font-size="16" fill="#60a5fa">&lt;/&gt;</text>
+      
+      <!-- Arrow -->
+      <path d="M 95 58 L 125 58" stroke="#666" stroke-width="1.5"/>
+      <polygon points="123,54 131,58 123,62" fill="#666"/>
+      
+      <!-- Parser Box -->
+      <rect x="135" y="30" width="70" height="55" fill="#3a3a3a" rx="4" stroke="#666" stroke-width="1"/>
+      <text x="170" y="52" text-anchor="middle" font-size="9" fill="#aaa">Parser</text>
+      <text x="170" y="68" text-anchor="middle" font-size="12" fill="#fbbf24">⚙</text>
+      
+      <!-- Arrow -->
+      <path d="M 215 58 L 245 58" stroke="#666" stroke-width="1.5"/>
+      <polygon points="243,54 251,58 243,62" fill="#666"/>
+      
+      <!-- Hash Box -->
+      <rect x="255" y="30" width="100" height="55" fill="#1e3a5f" rx="4" stroke="#60a5fa" stroke-width="1"/>
+      <text x="305" y="48" text-anchor="middle" font-size="8" fill="#aaa">L1: a3f2...</text>
+      <text x="305" y="62" text-anchor="middle" font-size="8" fill="#aaa">L2: 7b1c...</text>
+      <text x="305" y="76" text-anchor="middle" font-size="9" fill="#60a5fa">16B each</text>
+    </g>
+    
+    <!-- Database Lookup -->
+    <g transform="translate(15, 295)">
+      <rect x="0" y="0" width="370" height="85" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">DATABASE LOOKUP</text>
+      <text x="12" y="40" font-size="9" fill="#aaa" font-family="monospace">SELECT cluster_id, seen_count</text>
+      <text x="12" y="54" font-size="9" fill="#aaa" font-family="monospace">FROM layout_signatures</text>
+      <text x="12" y="68" font-size="9" fill="#aaa" font-family="monospace">WHERE signature_hash = ?  -- O(1) via index</text>
+    </g>
+    
+    <!-- Outcomes -->
+    <g transform="translate(15, 390)">
+      <rect x="0" y="0" width="175" height="75" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">✓ HIT (80%)</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">Return cluster_id</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">Increment seen_count</text>
+      <text x="12" y="66" font-size="9" fill="#888">Done! No Layer 2/3</text>
+    </g>
+    
+    <g transform="translate(200, 390)">
+      <rect x="0" y="0" width="185" height="75" fill="#3a3a1a" rx="6" stroke="#fbbf24" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#fbbf24">✗ MISS (20%)</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">New signature</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">Insert to DB</text>
+      <text x="12" y="66" font-size="9" fill="#888">→ Proceed to Layer 2</text>
+    </g>
+  </g>
+</svg>

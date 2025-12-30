@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 440">
+  <g id="optimizations">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">OPTIMIZATIONS</text>
+    
+    <!-- Centroid Caching -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="80" fill="#1e3a5f" rx="6" stroke="#3b82f6" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#60a5fa">CENTROID CACHING</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">Keep cluster centroids in memory (not on disk)</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">500 clusters × 100B = 50KB RAM</text>
+      <text x="12" y="66" font-size="9" fill="#888">Update centroid incrementally: (old × n + new) / (n+1)</text>
+    </g>
+    
+    <!-- Domain Partitioning -->
+    <g transform="translate(15, 145)">
+      <rect x="0" y="0" width="370" height="80" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#a78bfa">DOMAIN PARTITIONING</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">Cluster within domain first (layouts are domain-specific)</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">Cross-domain clustering only for template discovery</text>
+      <text x="12" y="66" font-size="9" fill="#888">Reduces search space by 100-1000× typically</text>
+    </g>
+    
+    <!-- Early Termination -->
+    <g transform="translate(15, 235)">
+      <rect x="0" y="0" width="370" height="80" fill="#3a3a1a" rx="6" stroke="#fbbf24" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#fbbf24">EARLY TERMINATION</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">Stop searching once distance &lt; threshold found</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">Order clusters by recency (likely matches first)</text>
+      <text x="12" y="66" font-size="9" fill="#888">Average case: check 3-5 clusters, not all</text>
+    </g>
+    
+    <!-- Batch Processing -->
+    <g transform="translate(15, 325)">
+      <rect x="0" y="0" width="370" height="100" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">BATCH PROCESSING</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">Collect N signatures before clustering pass</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">Vectorize distance computation (SIMD-friendly)</text>
+      <text x="12" y="66" font-size="9" fill="#aaa">Single transaction for DB writes</text>
+      
+      <text x="12" y="86" font-size="9" fill="#888">Recommended batch size: 100-1000 pages</text>
+    </g>
+  </g>
+</svg>

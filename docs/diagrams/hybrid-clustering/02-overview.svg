@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280">
+  <g id="overview">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="800" height="45" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">SYSTEM OVERVIEW</text>
+    
+    <!-- Three Layers Visual -->
+    <g transform="translate(30, 60)">
+      <!-- Layer 1 -->
+      <rect x="0" y="0" width="230" height="200" fill="#1e3a5f" rx="8" stroke="#3b82f6" stroke-width="2"/>
+      <rect x="0" y="0" width="230" height="35" fill="#3b82f6" rx="8"/>
+      <rect x="0" y="25" width="230" height="10" fill="#3b82f6"/>
+      <text x="115" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="white">LAYER 1: EXACT HASH</text>
+      <text x="115" y="60" text-anchor="middle" font-size="11" fill="#60a5fa" font-weight="500">SkeletonHash L1/L2</text>
+      <text x="20" y="85" font-size="10" fill="#aaa">• 16-byte content hash</text>
+      <text x="20" y="102" font-size="10" fill="#aaa">• O(1) lookup via B-tree</text>
+      <text x="20" y="119" font-size="10" fill="#aaa">• Perfect precision</text>
+      <text x="20" y="136" font-size="10" fill="#aaa">• Catches 80% of pages</text>
+      <rect x="60" y="155" width="110" height="30" fill="#1e3a5f" rx="4" stroke="#60a5fa" stroke-width="1"/>
+      <text x="115" y="175" text-anchor="middle" font-size="18" font-weight="700" fill="#60a5fa">O(1)</text>
+    </g>
+    
+    <!-- Arrow 1 -->
+    <g transform="translate(265, 150)">
+      <path d="M 0 0 L 30 0" stroke="#c9a962" stroke-width="2"/>
+      <polygon points="28,-4 36,0 28,4" fill="#c9a962"/>
+      <text x="18" y="-8" text-anchor="middle" font-size="8" fill="#888">miss</text>
+    </g>
+    
+    <!-- Layer 2 -->
+    <g transform="translate(285, 60)">
+      <rect x="0" y="0" width="230" height="200" fill="#2d1f4a" rx="8" stroke="#8b5cf6" stroke-width="2"/>
+      <rect x="0" y="0" width="230" height="35" fill="#8b5cf6" rx="8"/>
+      <rect x="0" y="25" width="230" height="10" fill="#8b5cf6"/>
+      <text x="115" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="white">LAYER 2: MinHash LSH</text>
+      <text x="115" y="60" text-anchor="middle" font-size="11" fill="#a78bfa" font-weight="500">Locality-Sensitive Hashing</text>
+      <text x="20" y="85" font-size="10" fill="#aaa">• 64-byte signature</text>
+      <text x="20" y="102" font-size="10" fill="#aaa">• Banding for candidates</text>
+      <text x="20" y="119" font-size="10" fill="#aaa">• Jaccard similarity</text>
+      <text x="20" y="136" font-size="10" fill="#aaa">• Filters 99% of pairs</text>
+      <rect x="60" y="155" width="110" height="30" fill="#2d1f4a" rx="4" stroke="#a78bfa" stroke-width="1"/>
+      <text x="115" y="175" text-anchor="middle" font-size="18" font-weight="700" fill="#a78bfa">O(n)</text>
+    </g>
+    
+    <!-- Arrow 2 -->
+    <g transform="translate(520, 150)">
+      <path d="M 0 0 L 30 0" stroke="#c9a962" stroke-width="2"/>
+      <polygon points="28,-4 36,0 28,4" fill="#c9a962"/>
+      <text x="18" y="-8" text-anchor="middle" font-size="8" fill="#888">candidates</text>
+    </g>
+    
+    <!-- Layer 3 -->
+    <g transform="translate(540, 60)">
+      <rect x="0" y="0" width="230" height="200" fill="#1a3a2a" rx="8" stroke="#10b981" stroke-width="2"/>
+      <rect x="0" y="0" width="230" height="35" fill="#10b981" rx="8"/>
+      <rect x="0" y="25" width="230" height="10" fill="#10b981"/>
+      <text x="115" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="white">LAYER 3: LEADER</text>
+      <text x="115" y="60" text-anchor="middle" font-size="11" fill="#34d399" font-weight="500">Online Clustering</text>
+      <text x="20" y="85" font-size="10" fill="#aaa">• Compare to centroids</text>
+      <text x="20" y="102" font-size="10" fill="#aaa">• Threshold assignment</text>
+      <text x="20" y="119" font-size="10" fill="#aaa">• Incremental updates</text>
+      <text x="20" y="136" font-size="10" fill="#aaa">• Memory: O(K) centroids</text>
+      <rect x="60" y="155" width="110" height="30" fill="#1a3a2a" rx="4" stroke="#34d399" stroke-width="1"/>
+      <text x="115" y="175" text-anchor="middle" font-size="18" font-weight="700" fill="#34d399">O(K)</text>
+    </g>
+  </g>
+</svg>

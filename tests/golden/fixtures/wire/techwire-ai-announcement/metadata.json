@@ -1,0 +1,62 @@
+{
+  "name": "techwire-ai-announcement",
+  "description": "Wire service style article - short paragraphs, inverted pyramid, dateline format",
+  "source": "synthetic",
+  "domain": "techwire.example.com",
+  "category": "wire",
+  
+  "extractionConfig": {
+    "version": 1,
+    "titleSelector": "h1",
+    "bodySelector": ".article-body",
+    "bodyFallback": ["article", "main"],
+    "dateSelector": "time[datetime]",
+    "authorSelector": "[rel='author']",
+    "excludeSelectors": [".related", "nav", "footer"]
+  },
+  
+  "expected": {
+    "title": {
+      "contains": "AI Breakthrough",
+      "exact": "Tech Giant Announces Revolutionary AI Breakthrough"
+    },
+    "body": {
+      "minWordCount": 300,
+      "containsSnippets": [
+        "SAN FRANCISCO (TechWire)",
+        "revolutionary breakthrough",
+        "artificial intelligence",
+        "Dr. Michael Torres"
+      ],
+      "excludes": [
+        "Related:",
+        "All rights reserved"
+      ]
+    },
+    "date": {
+      "iso": "2025-12-24T09:00:00Z"
+    },
+    "author": {
+      "contains": "Sarah Chen"
+    },
+    "extraction": {
+      "success": true,
+      "minConfidence": 0.7
+    }
+  },
+  
+  "edgeCases": {
+    "hasPaywall": false,
+    "requiresJS": false,
+    "hasInfiniteScroll": false,
+    "isRTL": false,
+    "hasVideo": false,
+    "isLiveBlog": false,
+    "wireStyle": true
+  },
+  
+  "metadata": {
+    "createdAt": "2025-12-25",
+    "createdBy": "synthetic"
+  }
+}

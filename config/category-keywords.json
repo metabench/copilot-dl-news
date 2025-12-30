@@ -1,0 +1,235 @@
+{
+  "version": "1.0.0",
+  "description": "Keyword lists for rule-based article categorization. Each category has primary (high weight) and secondary (lower weight) keywords.",
+  "categories": {
+    "Politics": {
+      "weight": 1.0,
+      "primary": [
+        "election", "elections", "vote", "votes", "voting", "voter", "voters",
+        "president", "presidential", "congress", "congressional", "senate", "senator", "senators",
+        "representative", "representatives", "governor", "governors", "mayor", "mayors",
+        "democrat", "democrats", "democratic", "republican", "republicans",
+        "legislation", "legislative", "legislature", "bill", "bills", "law", "laws", "lawmaker", "lawmakers",
+        "policy", "policies", "government", "governmental", "administration",
+        "campaign", "campaigns", "caucus", "primary", "primaries",
+        "ballot", "ballots", "poll", "polls", "polling",
+        "politician", "politicians", "political", "politics", "partisan",
+        "parliament", "parliamentary", "minister", "ministers", "cabinet",
+        "diplomat", "diplomats", "diplomatic", "diplomacy", "embassy", "ambassador",
+        "immigration", "immigrant", "immigrants", "border", "borders",
+        "welfare", "medicare", "medicaid", "social security",
+        "treaty", "treaties", "sanction", "sanctions"
+      ],
+      "secondary": [
+        "white house", "capitol", "state department", "pentagon",
+        "liberal", "conservative", "progressive", "moderate",
+        "bipartisan", "lobby", "lobbying", "lobbyist",
+        "constituent", "constituents", "constituency",
+        "referendum", "amendment", "constitutional",
+        "impeach", "impeachment", "veto", "filibuster",
+        "geopolitical", "foreign policy", "domestic policy"
+      ]
+    },
+    "Technology": {
+      "weight": 1.0,
+      "primary": [
+        "technology", "tech", "software", "hardware", "computer", "computers", "computing",
+        "internet", "online", "digital", "cyber", "cybersecurity",
+        "artificial intelligence", "machine learning", "deep learning", "neural network",
+        "algorithm", "algorithms", "data", "database", "databases",
+        "app", "apps", "application", "applications", "mobile",
+        "startup", "startups", "silicon valley", "venture capital",
+        "programming", "programmer", "programmers", "developer", "developers", "coding", "code",
+        "cloud", "cloud computing", "server", "servers",
+        "robotics", "robot", "robots", "automation", "automated",
+        "cryptocurrency", "crypto", "bitcoin", "blockchain", "ethereum",
+        "smartphone", "smartphones", "iphone", "android",
+        "social media", "facebook", "twitter", "instagram", "tiktok", "linkedin",
+        "google", "microsoft", "apple", "amazon", "meta",
+        "website", "websites", "web", "browser", "browsers",
+        "hack", "hacker", "hackers", "hacking", "malware", "ransomware",
+        "5g", "wireless", "wifi", "broadband", "network", "networking",
+        "semiconductor", "semiconductors", "chip", "chips", "processor", "processors",
+        "virtual reality", "augmented reality", "metaverse"
+      ],
+      "secondary": [
+        "gadget", "gadgets", "device", "devices", "electronics",
+        "innovation", "innovate", "innovative", "disrupt", "disruption",
+        "platform", "platforms", "ecosystem",
+        "encryption", "encrypted", "privacy", "security",
+        "download", "upload", "streaming", "stream",
+        "ecommerce", "fintech", "edtech", "healthtech",
+        "quantum computing", "quantum", "iot", "smart home",
+        "api", "sdk", "opensource", "open source"
+      ]
+    },
+    "Sports": {
+      "weight": 1.0,
+      "primary": [
+        "sport", "sports", "game", "games", "match", "matches",
+        "team", "teams", "player", "players", "athlete", "athletes",
+        "coach", "coaches", "coaching", "manager", "managers",
+        "championship", "championships", "tournament", "tournaments",
+        "league", "leagues", "season", "seasons", "playoff", "playoffs",
+        "football", "nfl", "quarterback", "touchdown", "super bowl",
+        "basketball", "nba", "dunk", "three pointer", "slam dunk",
+        "baseball", "mlb", "home run", "pitcher", "batting",
+        "soccer", "fifa", "world cup", "goal", "goalkeeper",
+        "hockey", "nhl", "puck", "goalie",
+        "tennis", "wimbledon", "us open", "french open", "australian open",
+        "golf", "pga", "masters", "birdie", "bogey",
+        "boxing", "mma", "ufc", "knockout", "fighter",
+        "olympics", "olympic", "medal", "medals", "gold medal",
+        "racing", "nascar", "formula", "motorsport",
+        "stadium", "stadiums", "arena", "arenas",
+        "score", "scores", "scoring", "victory", "defeat",
+        "champion", "champions", "title", "trophy"
+      ],
+      "secondary": [
+        "draft", "drafted", "trade", "traded", "transfer",
+        "injury", "injured", "injured reserve",
+        "record", "records", "stats", "statistics",
+        "fan", "fans", "spectator", "spectators",
+        "referee", "referees", "umpire", "umpires",
+        "halftime", "overtime", "inning", "innings",
+        "batting average", "yards", "assists", "rebounds",
+        "contract", "contracts", "salary", "free agent"
+      ]
+    },
+    "Business": {
+      "weight": 1.0,
+      "primary": [
+        "business", "businesses", "company", "companies", "corporation", "corporations", "corporate",
+        "market", "markets", "stock", "stocks", "shares", "shareholder", "shareholders",
+        "economy", "economic", "economics", "economist", "economists",
+        "finance", "financial", "financing", "investment", "investments", "investor", "investors",
+        "bank", "banks", "banking", "loan", "loans", "credit",
+        "revenue", "revenues", "profit", "profits", "earnings", "income",
+        "ceo", "executive", "executives", "management", "manager",
+        "merger", "mergers", "acquisition", "acquisitions", "buyout",
+        "ipo", "nasdaq", "dow", "dow jones", "wall street", "nyse",
+        "trade", "trading", "trader", "traders", "forex",
+        "inflation", "recession", "gdp", "unemployment", "employment",
+        "entrepreneur", "entrepreneurs", "entrepreneurship",
+        "retail", "retailer", "retailers", "consumer", "consumers",
+        "manufacturing", "manufacturer", "manufacturers", "production",
+        "supply chain", "logistics", "shipping", "distribution",
+        "real estate", "property", "properties", "housing",
+        "insurance", "insurer", "insurers", "premium", "premiums",
+        "tax", "taxes", "taxation", "taxpayer", "taxpayers",
+        "quarterly", "fiscal", "budget", "budgets"
+      ],
+      "secondary": [
+        "dividend", "dividends", "bond", "bonds", "yield",
+        "valuation", "portfolio", "portfolios", "asset", "assets",
+        "bankruptcy", "bankrupt", "debt", "debts", "liability",
+        "venture", "ventures", "angel investor", "private equity",
+        "startup", "startups", "enterprise", "enterprises",
+        "industry", "industries", "sector", "sectors",
+        "workforce", "employees", "employment", "hiring", "layoff", "layoffs",
+        "franchise", "franchises", "franchising"
+      ]
+    },
+    "Entertainment": {
+      "weight": 1.0,
+      "primary": [
+        "entertainment", "celebrity", "celebrities", "star", "stars", "fame", "famous",
+        "movie", "movies", "film", "films", "cinema", "hollywood", "blockbuster",
+        "actor", "actors", "actress", "actresses", "cast", "casting",
+        "director", "directors", "producer", "producers", "production",
+        "tv", "television", "show", "shows", "series", "episode", "episodes",
+        "music", "musical", "musician", "musicians", "singer", "singers", "song", "songs",
+        "album", "albums", "concert", "concerts", "tour", "tours",
+        "award", "awards", "oscar", "oscars", "emmy", "emmys", "grammy", "grammys",
+        "netflix", "disney", "hbo", "streaming", "stream",
+        "box office", "premiere", "premieres", "release", "releases",
+        "comedian", "comedy", "drama", "thriller", "horror", "romance",
+        "video game", "video games", "gaming", "gamer", "gamers", "playstation", "xbox", "nintendo",
+        "anime", "animation", "animated", "cartoon",
+        "podcast", "podcasts", "radio", "broadcast",
+        "fashion", "model", "models", "designer", "designers",
+        "red carpet", "paparazzi", "tabloid", "gossip"
+      ],
+      "secondary": [
+        "screenplay", "script", "scripts", "cinematography",
+        "soundtrack", "score", "scores", "composer",
+        "streaming service", "binge", "bingewatching",
+        "trailer", "trailers", "teaser", "promo",
+        "viral", "trending", "meme", "memes",
+        "influencer", "influencers", "youtuber", "tiktoker"
+      ]
+    },
+    "Science": {
+      "weight": 1.0,
+      "primary": [
+        "science", "scientific", "scientist", "scientists", "researcher", "researchers", "research",
+        "study", "studies", "experiment", "experiments", "laboratory", "lab", "labs",
+        "discovery", "discoveries", "discovered", "breakthrough", "breakthroughs",
+        "physics", "physicist", "physicists", "chemistry", "chemist", "chemists",
+        "biology", "biologist", "biologists", "biological", "genetics", "genetic", "gene", "genes", "dna",
+        "astronomy", "astronomer", "astronomers", "space", "nasa", "spacecraft", "satellite",
+        "planet", "planets", "star", "stars", "galaxy", "galaxies", "universe", "cosmos",
+        "climate", "climate change", "global warming", "environment", "environmental",
+        "evolution", "evolutionary", "species", "ecosystem", "ecosystems", "biodiversity",
+        "energy", "renewable", "solar", "wind power", "nuclear",
+        "earthquake", "earthquakes", "volcano", "volcanic", "tsunami",
+        "ocean", "oceans", "marine", "oceanography",
+        "archaeology", "archaeologist", "fossil", "fossils", "dinosaur", "dinosaurs",
+        "mathematics", "mathematical", "mathematician", "equation", "theorem",
+        "quantum", "particle", "particles", "atom", "atoms", "molecule", "molecules"
+      ],
+      "secondary": [
+        "hypothesis", "theory", "theories", "evidence", "data",
+        "peer review", "journal", "journals", "publication",
+        "observatory", "telescope", "microscope",
+        "conservation", "endangered", "extinction",
+        "carbon", "emission", "emissions", "pollution",
+        "neuroscience", "neuron", "neurons", "brain",
+        "nanotechnology", "biotechnology", "biotech"
+      ]
+    },
+    "Health": {
+      "weight": 1.0,
+      "primary": [
+        "health", "healthy", "healthcare", "medical", "medicine", "medicines",
+        "doctor", "doctors", "physician", "physicians", "nurse", "nurses", "nursing",
+        "hospital", "hospitals", "clinic", "clinics", "patient", "patients",
+        "disease", "diseases", "illness", "illnesses", "sick", "sickness",
+        "treatment", "treatments", "therapy", "therapies", "therapeutic",
+        "vaccine", "vaccines", "vaccination", "vaccinations", "immunization",
+        "covid", "coronavirus", "pandemic", "epidemic", "outbreak",
+        "cancer", "tumor", "tumors", "oncology", "oncologist",
+        "heart", "cardiac", "cardiovascular", "stroke", "strokes",
+        "diabetes", "diabetic", "obesity", "obese",
+        "mental health", "depression", "anxiety", "psychiatric", "psychiatry", "psychologist",
+        "drug", "drugs", "medication", "medications", "pharmaceutical", "pharmaceuticals",
+        "surgery", "surgical", "surgeon", "surgeons", "operation",
+        "diagnosis", "diagnose", "diagnosed", "symptom", "symptoms",
+        "fda", "cdc", "who", "health organization",
+        "nutrition", "diet", "dietary", "vitamin", "vitamins",
+        "exercise", "fitness", "workout", "gym",
+        "wellness", "wellbeing", "lifestyle"
+      ],
+      "secondary": [
+        "clinical", "trial", "trials", "research",
+        "prescription", "prescribe", "dosage", "dose",
+        "infection", "infectious", "bacteria", "bacterial", "virus", "viral",
+        "chronic", "acute", "condition", "conditions",
+        "emergency", "icu", "intensive care",
+        "blood pressure", "cholesterol", "bmi",
+        "alzheimer", "dementia", "parkinson",
+        "allergy", "allergies", "allergic", "asthma",
+        "pregnancy", "pregnant", "maternal", "infant", "pediatric"
+      ]
+    }
+  },
+  "weights": {
+    "primary": 2.0,
+    "secondary": 1.0,
+    "titleMultiplier": 3.0
+  },
+  "thresholds": {
+    "minConfidence": 0.1,
+    "secondaryCategoryGap": 0.5
+  }
+}

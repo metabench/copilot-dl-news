@@ -1,0 +1,99 @@
+# =============================================================================
+# Dockerfile.dashboard - Dashboard Servers Production Build
+# =============================================================================
+# Multi-stage build for dashboard UI servers
+# Exposes ports 3099 (data explorer) and 3100 (crawl observer)
+# Usage: docker build -t news-dashboard -f deploy/Dockerfile.dashboard .
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage 1: Dependencies
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS deps
+
+WORKDIR /app
+
+# Install build dependencies for native modules
+RUN apk add --no-cache python3 make g++ git
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (dev needed for build)
+RUN npm ci --ignore-scripts
+
+# -----------------------------------------------------------------------------
+# Stage 2: Build Client Assets
+# -----------------------------------------------------------------------------
+FROM deps AS builder
+
+WORKDIR /app
+
+# Copy source for client build
+COPY src/ ./src/
+COPY config/ ./config/
+COPY public/ ./public/
+
+# Build client bundles if applicable
+RUN npm run ui:client-build 2>/dev/null || echo "No client build step"
+
+# -----------------------------------------------------------------------------
+# Stage 3: Production Image
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS production
+
+LABEL maintainer="News Crawler Team"
+LABEL description="Dashboard UI servers"
+LABEL version="1.0.0"
+
+WORKDIR /app
+
+# Install minimal runtime dependencies
+RUN apk add --no-cache tini curl && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1001 -S dashboard && \
+    adduser -u 1001 -S dashboard -G dashboard
+
+# Copy production dependencies
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy application
+COPY package*.json ./
+COPY src/ ./src/
+COPY config/ ./config/
+COPY public/ ./public/
+
+# Copy built assets if they exist
+COPY --from=builder /app/public/ ./public/ 2>/dev/null || true
+
+# Copy deployment scripts
+COPY deploy/scripts/ ./deploy/scripts/
+
+# Create data directory for SQLite (mounted volume in production)
+RUN mkdir -p /app/data && chown dashboard:dashboard /app/data
+
+# Set ownership
+RUN chown -R dashboard:dashboard /app
+
+# Switch to non-root user
+USER dashboard
+
+# Environment defaults
+ENV NODE_ENV=production \
+    NODE_OPTIONS="--max-old-space-size=1024" \
+    DATA_EXPLORER_PORT=3099 \
+    CRAWL_OBSERVER_PORT=3100
+
+# Expose dashboard ports
+EXPOSE 3099 3100
+
+# Health check against data explorer
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3099/health || exit 1
+
+# Use tini as init system
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Start both servers (use process manager in production)
+CMD ["node", "src/ui/server/startDashboards.js"]

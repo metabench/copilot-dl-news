@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 180">
+  <g id="storage-impact">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">STORAGE IMPACT (1 Million Pages)</text>
+    
+    <!-- Bar chart -->
+    <g transform="translate(50, 55)">
+      <!-- 64-bit bar -->
+      <rect x="0" y="0" width="100" height="105" fill="#444" rx="4"/>
+      <rect x="10" y="55" width="80" height="40" fill="#3b82f6" rx="2"/>
+      <text x="50" y="80" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">8 MB</text>
+      <text x="50" y="110" text-anchor="middle" font-size="10" font-weight="600" fill="#60a5fa">64-bit</text>
+    </g>
+    
+    <!-- 128-bit bar -->
+    <g transform="translate(180, 55)">
+      <rect x="0" y="0" width="100" height="105" fill="#2d1f4a" rx="4" stroke="#8b5cf6" stroke-width="1"/>
+      <rect x="10" y="35" width="80" height="60" fill="#8b5cf6" rx="2"/>
+      <text x="50" y="72" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">16 MB</text>
+      <text x="50" y="110" text-anchor="middle" font-size="10" font-weight="600" fill="#a78bfa">128-bit</text>
+    </g>
+    
+    <!-- 256-bit bar -->
+    <g transform="translate(310, 55)">
+      <rect x="0" y="0" width="100" height="105" fill="#444" rx="4"/>
+      <rect x="10" y="15" width="80" height="80" fill="#10b981" rx="2"/>
+      <text x="50" y="62" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">32 MB</text>
+      <text x="50" y="110" text-anchor="middle" font-size="10" font-weight="600" fill="#34d399">256-bit</text>
+    </g>
+    
+    <!-- Context comparison -->
+    <g transform="translate(450, 55)">
+      <rect x="0" y="0" width="300" height="105" fill="#2d2d2d" rx="6"/>
+      <text x="150" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">Perspective</text>
+      <text x="15" y="45" font-size="9" fill="#aaa">• L2 cache (256KB): holds 16K × 128-bit sigs</text>
+      <text x="15" y="62" font-size="9" fill="#aaa">• L3 cache (8MB): holds 512K × 128-bit sigs</text>
+      <text x="15" y="79" font-size="9" fill="#aaa">• RAM (16GB): holds 1B × 128-bit sigs</text>
+      <text x="15" y="98" font-size="9" fill="#34d399">→ All sizes fit comfortably in memory</text>
+    </g>
+  </g>
+</svg>

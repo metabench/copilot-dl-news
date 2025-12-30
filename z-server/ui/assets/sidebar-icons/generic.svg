@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6b7280"/>
+      <stop offset="1" stop-color="#9ca3af"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <rect x="2" y="2" width="36" height="36" rx="8" fill="rgba(156,163,175,0.12)" stroke="rgba(156,163,175,0.4)" stroke-width="1.5"/>
+  
+  <!-- Server/terminal icon -->
+  <rect x="8" y="10" width="24" height="20" rx="3" fill="rgba(10,13,20,0.6)" stroke="rgba(156,163,175,0.4)" stroke-width="1"/>
+  
+  <!-- Terminal prompt lines -->
+  <g filter="url(#glow)">
+    <path d="M 12 16 L 16 20 L 12 24" fill="none" stroke="url(#accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 20 24 H 28" stroke="url(#accent)" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

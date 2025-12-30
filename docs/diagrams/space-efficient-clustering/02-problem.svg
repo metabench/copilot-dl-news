@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200">
+  <g id="problem">
+    <rect x="0" y="0" width="800" height="40" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="26" text-anchor="middle" font-size="13" font-weight="600" fill="#f0ede8">THE STORAGE PROBLEM</text>
+    
+    <g transform="translate(30, 55)">
+      <rect x="0" y="0" width="230" height="130" fill="#4a2020" rx="6" stroke="#ef4444" stroke-width="1"/>
+      <text x="115" y="22" text-anchor="middle" font-size="11" font-weight="600" fill="#ef4444">Full Signature Storage</text>
+      <text x="15" y="48" font-size="9" fill="#aaa">• 128-byte MinHash per page</text>
+      <text x="15" y="64" font-size="9" fill="#aaa">• 1M pages = 128MB sigs</text>
+      <text x="15" y="80" font-size="9" fill="#aaa">• Index overhead: 2x</text>
+      <text x="15" y="100" font-size="9" fill="#ef4444" font-weight="600">Total: ~400MB for 1M pages</text>
+      <text x="15" y="118" font-size="8" fill="#888">+ centroid storage on top</text>
+    </g>
+    
+    <g transform="translate(285, 55)">
+      <rect x="0" y="0" width="230" height="130" fill="#444" rx="6"/>
+      <text x="115" y="22" text-anchor="middle" font-size="11" font-weight="600" fill="#c9a962">What We Actually Need</text>
+      <text x="15" y="48" font-size="9" fill="#aaa">• Cluster ID per page</text>
+      <text x="15" y="64" font-size="9" fill="#aaa">• Fast "is similar?" check</text>
+      <text x="15" y="80" font-size="9" fill="#aaa">• Incremental updates</text>
+      <text x="15" y="100" font-size="9" fill="#aaa">• No full sig comparison</text>
+      <text x="15" y="118" font-size="8" fill="#888">Just assignment, not retrieval</text>
+    </g>
+    
+    <g transform="translate(540, 55)">
+      <rect x="0" y="0" width="230" height="130" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="115" y="22" text-anchor="middle" font-size="11" font-weight="600" fill="#34d399">Space-Efficient Target</text>
+      <text x="15" y="48" font-size="9" fill="#aaa">• 4-byte cluster_id per page</text>
+      <text x="15" y="64" font-size="9" fill="#aaa">• 16-byte hash (L1/L2)</text>
+      <text x="15" y="80" font-size="9" fill="#aaa">• Centroids only: ~64KB</text>
+      <text x="15" y="100" font-size="9" fill="#34d399" font-weight="600">Total: ~20MB for 1M pages</text>
+      <text x="15" y="118" font-size="8" fill="#888">20x smaller!</text>
+    </g>
+  </g>
+</svg>

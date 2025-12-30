@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420">
+  <g id="approach-online-leader">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">APPROACH C: ONLINE LEADER</text>
+    
+    <!-- Concept -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="85" fill="#3a3a1a" rx="6" stroke="#fbbf24" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#fbbf24">INCREMENTAL LEADER CLUSTERING</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">Process each page as it arrives:</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">• Find nearest cluster centroid</text>
+      <text x="12" y="66" font-size="9" fill="#aaa">• If distance &lt; threshold → assign to cluster</text>
+      <text x="12" y="80" font-size="9" fill="#aaa">• Else → create new cluster with page as leader</text>
+    </g>
+    
+    <!-- Algorithm -->
+    <g transform="translate(15, 150)">
+      <rect x="0" y="0" width="370" height="135" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">ALGORITHM</text>
+      <text x="12" y="38" font-size="9" fill="#aaa" font-family="monospace">for page in stream:</text>
+      <text x="20" y="52" font-size="9" fill="#888" font-family="monospace">sig = computeSignature(page)</text>
+      <text x="20" y="66" font-size="9" fill="#888" font-family="monospace">best = null, bestDist = ∞</text>
+      <text x="20" y="80" font-size="9" fill="#888" font-family="monospace">for cluster in clusters:</text>
+      <text x="28" y="94" font-size="9" fill="#888" font-family="monospace">d = distance(sig, cluster.centroid)</text>
+      <text x="28" y="108" font-size="9" fill="#888" font-family="monospace">if d &lt; bestDist: best=cluster, bestDist=d</text>
+      <text x="20" y="122" font-size="9" fill="#888" font-family="monospace">if bestDist &lt; T: assign(page, best)</text>
+      <text x="20" y="136" font-size="9" fill="#888" font-family="monospace">else: clusters.add(newCluster(page))</text>
+    </g>
+    
+    <!-- Key Insight -->
+    <g transform="translate(15, 295)">
+      <rect x="0" y="0" width="370" height="50" fill="#1e3a5f" rx="6" stroke="#3b82f6" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#60a5fa">KEY OPTIMIZATION</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">Use hash-based pre-filter: only compare to clusters</text>
+      <text x="12" y="50" font-size="9" fill="#888">where L1 hash matches OR LSH bands overlap.</text>
+    </g>
+    
+    <!-- Verdict -->
+    <g transform="translate(15, 355)">
+      <rect x="0" y="0" width="370" height="50" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">VERDICT</text>
+      <rect x="12" y="28" width="180" height="16" rx="4" fill="#10b981"/>
+      <text x="102" y="40" text-anchor="middle" font-size="9" font-weight="500" fill="white">★ PRIMARY ALGORITHM</text>
+      <text x="200" y="40" font-size="9" fill="#888">Real-time, memory-efficient</text>
+    </g>
+  </g>
+</svg>

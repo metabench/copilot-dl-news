@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420">
+  <g id="cli-tools">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="50" fill="#3a3a3a" rx="8 8 0 0"/>
+    <text x="200" y="25" text-anchor="middle" font-size="16" font-weight="600" fill="#f0ede8" letter-spacing="1">CLI TOOLING</text>
+    <text x="200" y="42" text-anchor="middle" font-size="10" fill="#888">AST-Aware • Bilingual EN/ZH • Guard Rails</text>
+    
+    <!-- Tool Cards -->
+    <g transform="translate(15, 60)">
+      <rect x="0" y="0" width="370" height="52" fill="#10b981" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ js-scan</text>
+      <text x="12" y="38" font-size="10" fill="#1a1a1a" opacity="0.8">Multi-file search • Ripple analysis • Dependency graphs</text>
+    </g>
+    <g transform="translate(15, 120)">
+      <rect x="0" y="0" width="370" height="52" fill="#10b981" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ js-edit</text>
+      <text x="12" y="38" font-size="10" fill="#1a1a1a" opacity="0.8">Guarded replacements • Hash verification • Recipe system</text>
+    </g>
+    <g transform="translate(15, 180)">
+      <rect x="0" y="0" width="370" height="52" fill="#10b981" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ md-scan / md-edit</text>
+      <text x="12" y="38" font-size="10" fill="#1a1a1a" opacity="0.8">Markdown discovery • Section replacement • Agent files</text>
+    </g>
+    <g transform="translate(15, 240)">
+      <rect x="0" y="0" width="370" height="52" fill="#10b981" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ svg-collisions</text>
+      <text x="12" y="38" font-size="10" fill="#1a1a1a" opacity="0.8">Puppeteer bounding boxes • Auto-fix • Strict mode</text>
+    </g>
+    <g transform="translate(15, 300)">
+      <rect x="0" y="0" width="370" height="52" fill="#10b981" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ session-init / session-archive</text>
+      <text x="12" y="38" font-size="10" fill="#1a1a1a" opacity="0.8">Session lifecycle • ZIP archival • Full-text search</text>
+    </g>
+    <g transform="translate(15, 360)">
+      <rect x="0" y="0" width="370" height="52" fill="#10b981" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ mcp-check / ui-pick</text>
+      <text x="12" y="38" font-size="10" fill="#1a1a1a" opacity="0.8">MCP health • Interactive picker • Electron UI</text>
+    </g>
+  </g>
+</svg>

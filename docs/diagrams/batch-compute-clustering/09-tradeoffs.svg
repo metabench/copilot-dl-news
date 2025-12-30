@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 180">
+  <g id="tradeoffs">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">TRADE-OFFS: COMPUTE vs INCREMENTAL</text>
+    
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="360" height="115" fill="#1e3a5f" rx="6" stroke="#3b82f6" stroke-width="1"/>
+      <text x="180" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="#60a5fa">Batch-Compute Approach</text>
+      <text x="15" y="42" font-size="9" fill="#aaa">✓ Better cluster quality (global view)</text>
+      <text x="15" y="58" font-size="9" fill="#aaa">✓ Minimal storage (no per-page sigs)</text>
+      <text x="15" y="74" font-size="9" fill="#aaa">✓ GPU-acceleratable</text>
+      <text x="15" y="90" font-size="9" fill="#888">✗ Delayed assignment (wait for batch)</text>
+      <text x="15" y="106" font-size="9" fill="#888">✗ Higher CPU burst cost</text>
+    </g>
+    
+    <g transform="translate(410, 50)">
+      <rect x="0" y="0" width="360" height="115" fill="#444" rx="6"/>
+      <text x="180" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">Online/Incremental Approach</text>
+      <text x="15" y="42" font-size="9" fill="#aaa">✓ Immediate assignment</text>
+      <text x="15" y="58" font-size="9" fill="#aaa">✓ Predictable latency per page</text>
+      <text x="15" y="74" font-size="9" fill="#aaa">✓ Simpler implementation</text>
+      <text x="15" y="90" font-size="9" fill="#888">✗ Local decisions (may split clusters)</text>
+      <text x="15" y="106" font-size="9" fill="#888">✗ Needs signature storage or recompute</text>
+    </g>
+  </g>
+</svg>

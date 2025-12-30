@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480">
+  <g id="distance-metrics">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">DISTANCE METRICS</text>
+    
+    <!-- Jaccard -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="80" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">JACCARD DISTANCE</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">d(A,B) = 1 - |A ∩ B| / |A ∪ B|</text>
+      <text x="12" y="52" font-size="9" fill="#888">Works on: shingle sets, MinHash signatures</text>
+      <text x="12" y="66" font-size="9" fill="#888">Complexity: O(|A| + |B|) for sets, O(n) for MinHash</text>
+      <rect x="290" y="10" width="70" height="18" rx="4" fill="#10b981"/>
+      <text x="325" y="23" text-anchor="middle" font-size="8" font-weight="500" fill="white">PRIMARY</text>
+    </g>
+    
+    <!-- Hamming -->
+    <g transform="translate(15, 145)">
+      <rect x="0" y="0" width="370" height="80" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">HAMMING DISTANCE</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">d(A,B) = popcount(A XOR B)</text>
+      <text x="12" y="52" font-size="9" fill="#888">Works on: fixed-size bit vectors, SimHash</text>
+      <text x="12" y="66" font-size="9" fill="#888">Complexity: O(1) with SIMD, O(w) for w words</text>
+      <rect x="290" y="10" width="70" height="18" rx="4" fill="#3b82f6"/>
+      <text x="325" y="23" text-anchor="middle" font-size="8" font-weight="500" fill="white">FILTER</text>
+    </g>
+    
+    <!-- Cosine -->
+    <g transform="translate(15, 235)">
+      <rect x="0" y="0" width="370" height="80" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">COSINE SIMILARITY</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">sim(A,B) = (A · B) / (||A|| × ||B||)</text>
+      <text x="12" y="52" font-size="9" fill="#888">Works on: TF-IDF vectors, embeddings</text>
+      <text x="12" y="66" font-size="9" fill="#888">Complexity: O(d) for dimension d</text>
+      <rect x="290" y="10" width="70" height="18" rx="4" fill="#888"/>
+      <text x="325" y="23" text-anchor="middle" font-size="8" font-weight="500" fill="#333">FUTURE</text>
+    </g>
+    
+    <!-- Recommendation -->
+    <g transform="translate(15, 325)">
+      <rect x="0" y="0" width="370" height="140" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">★ TWO-PHASE DISTANCE</text>
+      
+      <text x="12" y="42" font-size="10" fill="#ccc">Phase 1: FAST FILTER</text>
+      <text x="20" y="56" font-size="9" fill="#888">• Hamming on L1 hash (8 bytes) → &lt;5 bits = candidate</text>
+      <text x="20" y="70" font-size="9" fill="#888">• Filters 99%+ of pairs in O(1)</text>
+      
+      <text x="12" y="92" font-size="10" fill="#ccc">Phase 2: ACCURATE</text>
+      <text x="20" y="106" font-size="9" fill="#888">• Jaccard on MinHash (64 bytes) → actual similarity</text>
+      <text x="20" y="120" font-size="9" fill="#888">• Only applied to 1% candidates</text>
+      
+      <text x="12" y="136" font-size="9" fill="#666">Net: &lt;1ms per page at 100K dataset</text>
+    </g>
+  </g>
+</svg>

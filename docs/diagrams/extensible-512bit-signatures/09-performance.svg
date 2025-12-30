@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 185">
+  <g id="performance">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">PERFORMANCE: 512-BIT WITH C++ SIMD</text>
+    
+    <!-- JS vs C++ comparison -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="360" height="120" fill="#444" rx="6"/>
+      <text x="180" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">JavaScript vs C++ (512-bit Hamming)</text>
+      
+      <!-- JS bar -->
+      <text x="15" y="46" font-size="9" fill="#888">JavaScript:</text>
+      <rect x="100" y="36" width="80" height="14" fill="#f87171" rx="2"/>
+      <text x="190" y="47" font-size="8" fill="#aaa">~500K/sec</text>
+      
+      <!-- C++ bar -->
+      <text x="15" y="68" font-size="9" fill="#34d399">C++ SIMD:</text>
+      <rect x="100" y="58" width="200" height="14" fill="#22c55e" rx="2"/>
+      <text x="310" y="69" font-size="8" fill="#aaa">~50M/sec</text>
+      
+      <!-- C++ AVX-512 bar -->
+      <text x="15" y="90" font-size="9" fill="#60a5fa">C++ AVX-512:</text>
+      <rect x="100" y="80" width="230" height="14" fill="#3b82f6" rx="2"/>
+      <text x="340" y="91" font-size="8" fill="#aaa">~100M/sec</text>
+      
+      <text x="15" y="112" font-size="8" fill="#888">512-bit = 8 × 64-bit XOR + 8 × POPCNT + 7 × ADD</text>
+    </g>
+    
+    <!-- Batch processing -->
+    <g transform="translate(410, 50)">
+      <rect x="0" y="0" width="360" height="120" fill="#2d2d2d" rx="6"/>
+      <text x="180" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">Batch Processing (10K × 10K)</text>
+      
+      <text x="15" y="48" font-size="9" fill="#aaa">Total pairs: 50,000,000</text>
+      
+      <text x="15" y="72" font-size="9" fill="#888">JavaScript:</text>
+      <text x="130" y="72" font-size="9" fill="#f87171">~100 seconds</text>
+      
+      <text x="15" y="92" font-size="9" fill="#34d399">C++ SIMD:</text>
+      <text x="130" y="92" font-size="9" fill="#34d399">~1 second</text>
+      
+      <text x="15" y="112" font-size="9" fill="#60a5fa">C++ AVX-512:</text>
+      <text x="130" y="112" font-size="9" fill="#60a5fa">~0.5 seconds</text>
+    </g>
+  </g>
+</svg>

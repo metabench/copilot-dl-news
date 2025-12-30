@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420">
+  <g id="path-c-hybrid">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="50" fill="#3a3a3a" rx="8 8 0 0"/>
+    <text x="20" y="22" font-size="10" font-weight="500" fill="#34d399">PATH C</text>
+    <text x="200" y="35" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">HYBRID FINGERPRINT</text>
+    
+    <!-- Concept -->
+    <g transform="translate(15, 58)">
+      <rect x="0" y="0" width="370" height="85" fill="#1a2f2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">CONCEPT</text>
+      <text x="12" y="34" font-size="10" fill="#ccc">Combine multiple signals into fixed-size fingerprint:</text>
+      <text x="12" y="50" font-size="9" fill="#888">• L1/L2 skeleton hashes (existing)</text>
+      <text x="12" y="64" font-size="9" fill="#888">• Semantic class hints (article, nav, sidebar)</text>
+      <text x="12" y="78" font-size="9" fill="#888">• Structural metrics (depth, breadth, ratios)</text>
+    </g>
+    
+    <!-- Components -->
+    <g transform="translate(15, 150)">
+      <rect x="0" y="0" width="370" height="130" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">FINGERPRINT COMPONENTS</text>
+      
+      <rect x="12" y="30" width="80" height="22" rx="4" fill="#10b981"/>
+      <text x="52" y="45" text-anchor="middle" font-size="8" font-weight="500" fill="#1a1a1a">L1 Hash 8B</text>
+      
+      <rect x="100" y="30" width="80" height="22" rx="4" fill="#10b981"/>
+      <text x="140" y="45" text-anchor="middle" font-size="8" font-weight="500" fill="#1a1a1a">L2 Hash 8B</text>
+      
+      <rect x="188" y="30" width="80" height="22" rx="4" fill="#3b82f6"/>
+      <text x="228" y="45" text-anchor="middle" font-size="8" font-weight="500" fill="white">Semantic 16B</text>
+      
+      <rect x="276" y="30" width="80" height="22" rx="4" fill="#8b5cf6"/>
+      <text x="316" y="45" text-anchor="middle" font-size="8" font-weight="500" fill="white">Metrics 8B</text>
+      
+      <text x="12" y="72" font-size="9" fill="#aaa">Semantic bits: has_article, has_nav, has_aside,</text>
+      <text x="12" y="84" font-size="9" fill="#aaa">has_header, has_footer, has_main, has_form...</text>
+      
+      <text x="12" y="102" font-size="9" fill="#aaa">Metrics: max_depth(4b), avg_breadth(4b),</text>
+      <text x="12" y="114" font-size="9" fill="#aaa">text_ratio(8b), list_count(4b), form_count(4b)...</text>
+    </g>
+    
+    <!-- Comparison -->
+    <g transform="translate(15, 290)">
+      <rect x="0" y="0" width="370" height="55" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">COMPARISON ALGORITHM</text>
+      <text x="12" y="36" font-size="9" fill="#aaa">1. XOR hashes → hamming distance (O(1))</text>
+      <text x="12" y="50" font-size="9" fill="#aaa">2. Weighted sum: 0.4×L1 + 0.3×L2 + 0.2×sem + 0.1×met</text>
+    </g>
+    
+    <!-- Verdict -->
+    <g transform="translate(15, 355)">
+      <rect x="0" y="0" width="370" height="55" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#34d399">★ BEST BALANCE</text>
+      <text x="12" y="36" font-size="10" fill="#ccc">40 bytes total • O(1) compare • Tunable weights</text>
+      <text x="12" y="50" font-size="9" fill="#888">Extends existing L1/L2 without breaking changes</text>
+    </g>
+  </g>
+</svg>

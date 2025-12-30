@@ -1,0 +1,940 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 2137.4500000000003" width="1600" height="2137.4500000000003">
+
+  <defs>
+    <!-- WLILO Leather Background -->
+    <linearGradient id="leather-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#faf9f7"/>
+      <stop offset="50%" style="stop-color:#f5f3ef"/>
+      <stop offset="100%" style="stop-color:#ebe8e2"/>
+    </linearGradient>
+    
+    <!-- Obsidian Panel -->
+    <linearGradient id="obsidian" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d2d2d"/>
+      <stop offset="100%" style="stop-color:#1a1a1a"/>
+    </linearGradient>
+    
+    <!-- Obsidian Inner (lighter) -->
+    <linearGradient id="obsidian-inner" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3a3a3a"/>
+      <stop offset="100%" style="stop-color:#252525"/>
+    </linearGradient>
+    
+    <!-- Gold Accent -->
+    <linearGradient id="gold-accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#c9a962"/>
+      <stop offset="100%" style="stop-color:#e8d5a3"/>
+    </linearGradient>
+    
+    <!-- Status: Complete (Emerald) -->
+    <linearGradient id="status-complete" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#34d399"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+    
+    <!-- Status: In Progress (Sapphire) -->
+    <linearGradient id="status-progress" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60a5fa"/>
+      <stop offset="100%" style="stop-color:#2563eb"/>
+    </linearGradient>
+    
+    <!-- Status: Planned (Amethyst) -->
+    <linearGradient id="status-planned" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#a78bfa"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+    
+    <!-- Status: Research (Topaz) -->
+    <linearGradient id="status-research" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24"/>
+      <stop offset="100%" style="stop-color:#d97706"/>
+    </linearGradient>
+    
+    <!-- Drop Shadow -->
+    <filter id="drop-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+    
+    <!-- Inner Card Shadow -->
+    <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    
+    <!-- Gold Glow -->
+    <filter id="gold-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#c9a962" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Emerald Glow -->
+    <filter id="emerald-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+      <feFlood flood-color="#10b981" flood-opacity="0.35"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Subtle Texture -->
+    <pattern id="leather-texture" patternUnits="userSpaceOnUse" width="100" height="100">
+      <rect width="100" height="100" fill="url(#leather-bg)"/>
+      <circle cx="25" cy="25" r="1" fill="#00000006"/>
+      <circle cx="75" cy="75" r="1" fill="#00000006"/>
+      <circle cx="50" cy="50" r="0.5" fill="#00000004"/>
+      <circle cx="10" cy="60" r="0.8" fill="#00000005"/>
+      <circle cx="90" cy="30" r="0.6" fill="#00000005"/>
+    </pattern>
+    
+    <!-- Grid Pattern for Obsidian -->
+    <pattern id="obsidian-grid" patternUnits="userSpaceOnUse" width="20" height="20">
+      <rect width="20" height="20" fill="transparent"/>
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#ffffff08" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+
+
+  <style>
+    /* Base Typography */
+    text { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    
+    /* Title Styling */
+    .title { 
+      font-size: 42px; 
+      font-weight: 300; 
+      fill: #1a1a1a; 
+      letter-spacing: 2px;
+    }
+    .subtitle { 
+      font-size: 18px; 
+      fill: #666; 
+      font-weight: 300;
+      letter-spacing: 1px;
+    }
+    
+    /* Panel Styling */
+    .wlilo-bg { fill: url(#leather-texture); }
+    .obsidian-panel { 
+      fill: url(#obsidian); 
+      stroke: url(#gold-accent); 
+      stroke-width: 1.5; 
+      filter: url(#drop-shadow); 
+    }
+    .obsidian-inner {
+      fill: url(#obsidian-inner);
+      stroke: #444;
+      stroke-width: 0.5;
+    }
+    
+    /* Gold Elements */
+    .gold-header { fill: #c9a962; font-family: Georgia, serif; filter: url(#gold-glow); }
+    .gold-bar { fill: url(#gold-accent); }
+    .gold-text { fill: url(#gold-accent); }
+    
+    /* Body Text */
+    .body-text { fill: #2d2d2d; font-family: Arial, sans-serif; }
+    .muted-text { fill: #666; font-family: Arial, sans-serif; }
+    .light-text { fill: #f0ede8; }
+    
+    /* Status Badges */
+    .status-complete { fill: url(#status-complete); filter: url(#emerald-glow); }
+    .status-progress { fill: url(#status-progress); }
+    .status-planned { fill: url(#status-planned); }
+    .status-research { fill: url(#status-research); }
+  </style>
+
+
+  <!-- WLILO Leather Background -->
+  <rect class="wlilo-bg" width="100%" height="100%"/>
+  
+  <!-- Outer Gold Frame -->
+  <rect x="15" y="15" width="1570" height="2107.4500000000003" 
+        fill="none" stroke="url(#gold-accent)" stroke-width="3" rx="16" filter="url(#gold-glow)"/>
+  
+  <!-- Inner Frame -->
+  <rect x="22" y="22" width="1556" height="2093.4500000000003" 
+        fill="none" stroke="#c9a96240" stroke-width="1" rx="14"/>
+  
+  <!-- Corner Ornaments -->
+  <g fill="url(#gold-accent)">
+    <!-- Top Left -->
+    <circle cx="35" cy="35" r="6"/>
+    <rect x="45" y="32" width="30" height="2" rx="1"/>
+    <rect x="32" y="45" width="2" height="30" rx="1"/>
+    
+    <!-- Top Right -->
+    <circle cx="1565" cy="35" r="6"/>
+    <rect x="1525" y="32" width="30" height="2" rx="1"/>
+    <rect x="1566" y="45" width="2" height="30" rx="1"/>
+    
+    <!-- Bottom Left -->
+    <circle cx="35" cy="2102.4500000000003" r="6"/>
+    <rect x="45" y="2103.4500000000003" width="30" height="2" rx="1"/>
+    <rect x="32" y="2062.4500000000003" width="2" height="30" rx="1"/>
+    
+    <!-- Bottom Right -->
+    <circle cx="1565" cy="2102.4500000000003" r="6"/>
+    <rect x="1525" y="2103.4500000000003" width="30" height="2" rx="1"/>
+    <rect x="1566" y="2062.4500000000003" width="2" height="30" rx="1"/>
+  </g>
+  
+  <!-- Header Panel -->
+  <g transform="translate(40, 40)">
+    <rect class="obsidian-panel" x="0" y="0" width="1520" height="180" rx="12"/>
+    
+    <!-- Header Gold Accent Line -->
+    <rect class="gold-bar" x="30" y="170" width="1460" height="3" rx="1.5"/>
+    
+    <g transform="translate(560, 20)">
+      <g id="header">
+    <!-- Title Block -->
+    <text x="400" y="40" text-anchor="middle" font-size="32" font-weight="300" fill="#f0ede8" letter-spacing="4">STRUCTURE MINER</text>
+    <text x="400" y="70" text-anchor="middle" font-size="18" font-weight="500" fill="url(#gold-accent)" letter-spacing="2">Research &amp; Implementation Roadmap</text>
+    
+    <!-- Subtitle -->
+    <text x="400" y="100" text-anchor="middle" font-size="12" fill="#888" font-style="italic">"Understanding page layouts through algorithmic structure analysis"</text>
+    
+    <!-- Status Badge -->
+    <rect x="330" y="115" width="140" height="24" rx="12" fill="url(#status-progress)"/>
+    <text x="400" y="132" text-anchor="middle" font-size="11" font-weight="600" fill="white">◐ IN PROGRESS</text>
+    
+    <!-- Key Questions -->
+    <text x="400" y="165" text-anchor="middle" font-size="10" fill="#666">Key Challenge: Extract, compare, and cluster page structures at scale with minimal storage</text>
+  </g>
+    </g>
+  </g>
+  
+  <!-- Content Panels -->
+
+  <!-- 02-current-state.svg -->
+  <g transform="translate(40, 260)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="340.20000000000005" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="340.20000000000005" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(1.215)">
+      <g id="current-state">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="url(#obsidian-inner)" rx="8 8 0 0"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">CURRENT FOUNDATION</text>
+    
+    <!-- Existing Components -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="48" fill="url(#status-complete)" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ SkeletonHasher</text>
+      <text x="12" y="36" font-size="10" fill="#1a1a1a" opacity="0.8">L1 hash (tag sequence) • L2 hash (tag+depth)</text>
+    </g>
+    
+    <g transform="translate(15, 110)">
+      <rect x="0" y="0" width="370" height="48" fill="url(#status-complete)" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ VisualAnalyzer</text>
+      <text x="12" y="36" font-size="10" fill="#1a1a1a" opacity="0.8">Largest text block • Metadata detection</text>
+    </g>
+    
+    <g transform="translate(15, 165)">
+      <rect x="0" y="0" width="370" height="48" fill="url(#status-complete)" rx="6"/>
+      <text x="12" y="20" font-size="12" font-weight="600" fill="#1a1a1a">✓ TeacherService</text>
+      <text x="12" y="36" font-size="10" fill="#1a1a1a" opacity="0.8">Puppeteer rendering • DOM access</text>
+    </g>
+    
+    <!-- Gap Indicator -->
+    <rect x="15" y="225" width="370" height="40" fill="url(#obsidian-inner)" rx="6" stroke="#c9a962" stroke-width="1" stroke-dasharray="4,2"/>
+    <text x="200" y="250" text-anchor="middle" font-size="11" fill="url(#gold-accent)">GAP: No structure storage or comparison yet</text>
+  </g>
+    </g>
+  </g>
+
+  <!-- 03-research-questions.svg -->
+  <g transform="translate(556, 260)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="461.70000000000005" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="461.70000000000005" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(1.215)">
+      <g id="research-questions">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="url(#obsidian-inner)" rx="8 8 0 0"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">⚡ OPEN RESEARCH QUESTIONS</text>
+    
+    <!-- Question Cards -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="55" fill="url(#obsidian-inner)" rx="6" stroke="#f59e0b" stroke-width="1"/>
+      <text x="12" y="20" font-size="11" font-weight="600" fill="url(#status-research)">Q1: Representation Format</text>
+      <text x="12" y="36" font-size="10" fill="#aaa">XPath sequences vs. tree fingerprints vs. structural</text>
+      <text x="12" y="50" font-size="10" fill="#aaa">embeddings? Trade-offs: size, compare speed, accuracy</text>
+    </g>
+    
+    <g transform="translate(15, 118)">
+      <rect x="0" y="0" width="370" height="55" fill="url(#obsidian-inner)" rx="6" stroke="#f59e0b" stroke-width="1"/>
+      <text x="12" y="20" font-size="11" font-weight="600" fill="url(#status-research)">Q2: Similarity Metric</text>
+      <text x="12" y="36" font-size="10" fill="#aaa">Edit distance vs. Jaccard vs. custom DOM distance?</text>
+      <text x="12" y="50" font-size="10" fill="#aaa">Must handle insertions, deletions, and reordering</text>
+    </g>
+    
+    <g transform="translate(15, 181)">
+      <rect x="0" y="0" width="370" height="55" fill="url(#obsidian-inner)" rx="6" stroke="#f59e0b" stroke-width="1"/>
+      <text x="12" y="20" font-size="11" font-weight="600" fill="url(#status-research)">Q3: Clustering Strategy</text>
+      <text x="12" y="36" font-size="10" fill="#aaa">K-means? DBSCAN? Hierarchical? Online clustering?</text>
+      <text x="12" y="50" font-size="10" fill="#aaa">Need to handle unknown K, streaming data</text>
+    </g>
+    
+    <g transform="translate(15, 244)">
+      <rect x="0" y="0" width="370" height="55" fill="url(#obsidian-inner)" rx="6" stroke="#f59e0b" stroke-width="1"/>
+      <text x="12" y="20" font-size="11" font-weight="600" fill="url(#status-research)">Q4: Storage Efficiency</text>
+      <text x="12" y="36" font-size="10" fill="#aaa">Full structure vs. signature vs. reference + delta?</text>
+      <text x="12" y="50" font-size="10" fill="#aaa">Target: &lt;1KB per page layout signature</text>
+    </g>
+    
+    <g transform="translate(15, 307)">
+      <rect x="0" y="0" width="370" height="55" fill="url(#obsidian-inner)" rx="6" stroke="#f59e0b" stroke-width="1"/>
+      <text x="12" y="20" font-size="11" font-weight="600" fill="url(#status-research)">Q5: Template Generalization</text>
+      <text x="12" y="36" font-size="10" fill="#aaa">How to derive a template from similar pages?</text>
+      <text x="12" y="50" font-size="10" fill="#aaa">Mask variable content, preserve structure invariants</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 04-path-a-xpath.svg -->
+  <g transform="translate(1072, 260)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="510.3" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="510.3" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(1.215)">
+      <g id="path-a-xpath">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="50" fill="url(#obsidian-inner)" rx="8 8 0 0"/>
+    <text x="20" y="22" font-size="10" font-weight="500" fill="url(#status-progress)">PATH A</text>
+    <text x="200" y="35" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">XPATH SEQUENCE APPROACH</text>
+    
+    <!-- Concept -->
+    <g transform="translate(15, 58)">
+      <rect x="0" y="0" width="370" height="65" fill="#1e3a5f" rx="6" stroke="#3b82f6" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="url(#status-progress)">CONCEPT</text>
+      <text x="12" y="34" font-size="10" fill="#d0ccc5">Store ordered list of XPaths to content elements:</text>
+      <text x="12" y="50" font-size="9" fill="#888" font-family="monospace">["/html/body/div[2]/article/h1", "/...p[1]", ...]</text>
+    </g>
+    
+    <!-- Pros -->
+    <g transform="translate(15, 130)">
+      <rect x="0" y="0" width="180" height="100" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="url(#status-complete)">✓ PROS</text>
+      <text x="10" y="36" font-size="9" fill="#aaa">• Human readable</text>
+      <text x="10" y="50" font-size="9" fill="#aaa">• Direct element access</text>
+      <text x="10" y="64" font-size="9" fill="#aaa">• Easy to debug</text>
+      <text x="10" y="78" font-size="9" fill="#aaa">• Partial match possible</text>
+      <text x="10" y="92" font-size="9" fill="#aaa">• Works with selectors</text>
+    </g>
+    
+    <!-- Cons -->
+    <g transform="translate(205, 130)">
+      <rect x="0" y="0" width="180" height="100" fill="#3a1a1a" rx="6" stroke="#ef4444" stroke-width="1"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="#f87171">✗ CONS</text>
+      <text x="10" y="36" font-size="9" fill="#aaa">• Large storage (~5KB+)</text>
+      <text x="10" y="50" font-size="9" fill="#aaa">• Brittle to DOM changes</text>
+      <text x="10" y="64" font-size="9" fill="#aaa">• Slow comparison O(n²)</text>
+      <text x="10" y="78" font-size="9" fill="#aaa">• Index positions break</text>
+      <text x="10" y="92" font-size="9" fill="#aaa">• No fuzzy matching</text>
+    </g>
+    
+    <!-- Techniques -->
+    <g transform="translate(15, 240)">
+      <rect x="0" y="0" width="370" height="85" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="url(#gold-accent)">OPTIMIZATION TECHNIQUES</text>
+      <text x="12" y="36" font-size="9" fill="#aaa">• Normalize: strip [1] indices, use tag-only paths</text>
+      <text x="12" y="50" font-size="9" fill="#aaa">• Compress: gzip reduces 5KB → ~800B typically</text>
+      <text x="12" y="64" font-size="9" fill="#aaa">• Hash prefix: first 3 levels as quick filter</text>
+      <text x="12" y="78" font-size="9" fill="#aaa">• LCS comparison: longest common subsequence</text>
+    </g>
+    
+    <!-- Verdict -->
+    <g transform="translate(15, 335)">
+      <rect x="0" y="0" width="370" height="70" fill="#3a3a1a" rx="6" stroke="#fbbf24" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="url(#status-research)">⚖ VERDICT</text>
+      <text x="12" y="36" font-size="10" fill="#d0ccc5">Good for: debugging, small datasets, exact matching</text>
+      <text x="12" y="52" font-size="10" fill="#d0ccc5">Poor for: scale, fuzzy clustering, template learning</text>
+      <text x="12" y="66" font-size="9" fill="#888">Recommendation: Use as debug layer, not primary</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 05-path-b-contentless.svg -->
+  <g transform="translate(40, 625.2)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="546.75" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="546.75" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(1.215)">
+      <g id="path-b-contentless">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="50" fill="url(#obsidian-inner)" rx="8 8 0 0"/>
+    <text x="20" y="22" font-size="10" font-weight="500" fill="#a78bfa">PATH B</text>
+    <text x="200" y="35" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">CONTENTLESS SKELETON</text>
+    
+    <!-- Concept -->
+    <g transform="translate(15, 58)">
+      <rect x="0" y="0" width="370" height="75" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#a78bfa">CONCEPT</text>
+      <text x="12" y="34" font-size="10" fill="#d0ccc5">Strip all text/attributes, keep only tag hierarchy:</text>
+      <text x="12" y="50" font-size="9" fill="#888" font-family="monospace">"div(div(h1,p,p),aside(ul(li,li,li)))"</text>
+      <text x="12" y="66" font-size="9" fill="#888">Serialize as parenthesized string or byte array</text>
+    </g>
+    
+    <!-- Pros -->
+    <g transform="translate(15, 140)">
+      <rect x="0" y="0" width="180" height="100" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="url(#status-complete)">✓ PROS</text>
+      <text x="10" y="36" font-size="9" fill="#aaa">• Tiny (~200-500B)</text>
+      <text x="10" y="50" font-size="9" fill="#aaa">• Content-agnostic</text>
+      <text x="10" y="64" font-size="9" fill="#aaa">• Fast tree distance</text>
+      <text x="10" y="78" font-size="9" fill="#aaa">• Handles dynamic text</text>
+      <text x="10" y="92" font-size="9" fill="#aaa">• Good for templates</text>
+    </g>
+    
+    <!-- Cons -->
+    <g transform="translate(205, 140)">
+      <rect x="0" y="0" width="180" height="100" fill="#3a1a1a" rx="6" stroke="#ef4444" stroke-width="1"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="#f87171">✗ CONS</text>
+      <text x="10" y="36" font-size="9" fill="#aaa">• Loses semantic info</text>
+      <text x="10" y="50" font-size="9" fill="#aaa">• class/id stripped</text>
+      <text x="10" y="64" font-size="9" fill="#aaa">• Can't locate content</text>
+      <text x="10" y="78" font-size="9" fill="#aaa">• Deep trees expensive</text>
+      <text x="10" y="92" font-size="9" fill="#aaa">• Needs depth limit</text>
+    </g>
+    
+    <!-- Encoding Options -->
+    <g transform="translate(15, 250)">
+      <rect x="0" y="0" width="370" height="95" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="url(#gold-accent)">ENCODING OPTIONS</text>
+      <text x="12" y="36" font-size="9" fill="#aaa">1. Parenthesized string: "div(h1,p)" → readable, ~300B</text>
+      <text x="12" y="50" font-size="9" fill="#aaa">2. Byte array: tag→byte map, depth bytes → ~150B</text>
+      <text x="12" y="64" font-size="9" fill="#aaa">3. Prufer sequence: tree→array encoding → ~100B</text>
+      <text x="12" y="78" font-size="9" fill="#aaa">4. MinHash: k-shingle set → fixed 64-256B</text>
+      <text x="12" y="92" font-size="9" fill="#888">Best: byte array + MinHash for clustering</text>
+    </g>
+    
+    <!-- Verdict -->
+    <g transform="translate(15, 355)">
+      <rect x="0" y="0" width="370" height="80" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="url(#status-complete)">★ RECOMMENDED PRIMARY</text>
+      <text x="12" y="36" font-size="10" fill="#d0ccc5">Good for: clustering, template detection, scale</text>
+      <text x="12" y="52" font-size="10" fill="#d0ccc5">Combine with: semantic hints from class names</text>
+      <text x="12" y="68" font-size="9" fill="#888">Storage: skeleton + MinHash + semantic hints = ~500B</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 06-path-c-hybrid.svg -->
+  <g transform="translate(556, 746.7)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="510.3" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="510.3" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(1.215)">
+      <g id="path-c-hybrid">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="50" fill="url(#obsidian-inner)" rx="8 8 0 0"/>
+    <text x="20" y="22" font-size="10" font-weight="500" fill="url(#status-complete)">PATH C</text>
+    <text x="200" y="35" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">HYBRID FINGERPRINT</text>
+    
+    <!-- Concept -->
+    <g transform="translate(15, 58)">
+      <rect x="0" y="0" width="370" height="85" fill="#1a2f2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="url(#status-complete)">CONCEPT</text>
+      <text x="12" y="34" font-size="10" fill="#d0ccc5">Combine multiple signals into fixed-size fingerprint:</text>
+      <text x="12" y="50" font-size="9" fill="#888">• L1/L2 skeleton hashes (existing)</text>
+      <text x="12" y="64" font-size="9" fill="#888">• Semantic class hints (article, nav, sidebar)</text>
+      <text x="12" y="78" font-size="9" fill="#888">• Structural metrics (depth, breadth, ratios)</text>
+    </g>
+    
+    <!-- Components -->
+    <g transform="translate(15, 150)">
+      <rect x="0" y="0" width="370" height="130" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="url(#gold-accent)">FINGERPRINT COMPONENTS</text>
+      
+      <rect x="12" y="30" width="80" height="22" rx="4" fill="url(#status-complete)"/>
+      <text x="52" y="45" text-anchor="middle" font-size="8" font-weight="500" fill="#1a1a1a">L1 Hash 8B</text>
+      
+      <rect x="100" y="30" width="80" height="22" rx="4" fill="url(#status-complete)"/>
+      <text x="140" y="45" text-anchor="middle" font-size="8" font-weight="500" fill="#1a1a1a">L2 Hash 8B</text>
+      
+      <rect x="188" y="30" width="80" height="22" rx="4" fill="url(#status-progress)"/>
+      <text x="228" y="45" text-anchor="middle" font-size="8" font-weight="500" fill="white">Semantic 16B</text>
+      
+      <rect x="276" y="30" width="80" height="22" rx="4" fill="url(#status-planned)"/>
+      <text x="316" y="45" text-anchor="middle" font-size="8" font-weight="500" fill="white">Metrics 8B</text>
+      
+      <text x="12" y="72" font-size="9" fill="#aaa">Semantic bits: has_article, has_nav, has_aside,</text>
+      <text x="12" y="84" font-size="9" fill="#aaa">has_header, has_footer, has_main, has_form...</text>
+      
+      <text x="12" y="102" font-size="9" fill="#aaa">Metrics: max_depth(4b), avg_breadth(4b),</text>
+      <text x="12" y="114" font-size="9" fill="#aaa">text_ratio(8b), list_count(4b), form_count(4b)...</text>
+    </g>
+    
+    <!-- Comparison -->
+    <g transform="translate(15, 290)">
+      <rect x="0" y="0" width="370" height="55" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="url(#gold-accent)">COMPARISON ALGORITHM</text>
+      <text x="12" y="36" font-size="9" fill="#aaa">1. XOR hashes → hamming distance (O(1))</text>
+      <text x="12" y="50" font-size="9" fill="#aaa">2. Weighted sum: 0.4×L1 + 0.3×L2 + 0.2×sem + 0.1×met</text>
+    </g>
+    
+    <!-- Verdict -->
+    <g transform="translate(15, 355)">
+      <rect x="0" y="0" width="370" height="55" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="url(#status-complete)">★ BEST BALANCE</text>
+      <text x="12" y="36" font-size="10" fill="#d0ccc5">40 bytes total • O(1) compare • Tunable weights</text>
+      <text x="12" y="50" font-size="9" fill="#888">Extends existing L1/L2 without breaking changes</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 07-comparison-algorithms.svg -->
+  <g transform="translate(1072, 795.3)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="486.00000000000006" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="486.00000000000006" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(1.215)">
+      <g id="comparison-algorithms">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="url(#obsidian-inner)" rx="8 8 0 0"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">COMPARISON ALGORITHMS</text>
+    
+    <!-- Algorithm Cards -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="180" height="95" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="url(#status-progress)">Tree Edit Distance</text>
+      <text x="10" y="34" font-size="9" fill="#aaa">Zhang-Shasha algorithm</text>
+      <text x="10" y="48" font-size="9" fill="#888">Complexity: O(n²)</text>
+      <text x="10" y="62" font-size="9" fill="#888">Accurate but slow</text>
+      <rect x="10" y="72" width="100" height="14" rx="3" fill="url(#obsidian-inner)"/>
+      <rect x="10" y="72" width="30" height="14" rx="3" fill="#ef4444"/>
+      <text x="120" y="83" font-size="8" fill="#888">Speed</text>
+    </g>
+    
+    <g transform="translate(205, 55)">
+      <rect x="0" y="0" width="180" height="95" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="url(#status-complete)">MinHash LSH</text>
+      <text x="10" y="34" font-size="9" fill="#aaa">Locality sensitive hash</text>
+      <text x="10" y="48" font-size="9" fill="#888">Complexity: O(k)</text>
+      <text x="10" y="62" font-size="9" fill="#888">Approximate, very fast</text>
+      <rect x="10" y="72" width="100" height="14" rx="3" fill="url(#obsidian-inner)"/>
+      <rect x="10" y="72" width="90" height="14" rx="3" fill="url(#status-complete)"/>
+      <text x="120" y="83" font-size="8" fill="#888">Speed</text>
+    </g>
+    
+    <g transform="translate(15, 160)">
+      <rect x="0" y="0" width="180" height="95" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="#a78bfa">Hamming Distance</text>
+      <text x="10" y="34" font-size="9" fill="#aaa">XOR fixed-size hashes</text>
+      <text x="10" y="48" font-size="9" fill="#888">Complexity: O(1)</text>
+      <text x="10" y="62" font-size="9" fill="#888">Fastest, needs encoding</text>
+      <rect x="10" y="72" width="100" height="14" rx="3" fill="url(#obsidian-inner)"/>
+      <rect x="10" y="72" width="100" height="14" rx="3" fill="url(#status-complete)"/>
+      <text x="120" y="83" font-size="8" fill="#888">Speed</text>
+    </g>
+    
+    <g transform="translate(205, 160)">
+      <rect x="0" y="0" width="180" height="95" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="url(#status-research)">Jaccard Similarity</text>
+      <text x="10" y="34" font-size="9" fill="#aaa">Set intersection/union</text>
+      <text x="10" y="48" font-size="9" fill="#888">Complexity: O(n)</text>
+      <text x="10" y="62" font-size="9" fill="#888">Good for shingle sets</text>
+      <rect x="10" y="72" width="100" height="14" rx="3" fill="url(#obsidian-inner)"/>
+      <rect x="10" y="72" width="60" height="14" rx="3" fill="url(#status-research)"/>
+      <text x="120" y="83" font-size="8" fill="#888">Speed</text>
+    </g>
+    
+    <!-- Recommendation -->
+    <g transform="translate(15, 265)">
+      <rect x="0" y="0" width="370" height="120" fill="#1a2f2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="20" font-size="10" font-weight="600" fill="url(#status-complete)">★ RECOMMENDED: Two-Phase Comparison</text>
+      
+      <text x="12" y="42" font-size="10" fill="#d0ccc5">Phase 1: Fast Filter (O(1))</text>
+      <text x="20" y="56" font-size="9" fill="#888">• XOR L1 hashes → hamming ≤ threshold → candidate</text>
+      
+      <text x="12" y="76" font-size="10" fill="#d0ccc5">Phase 2: Accurate Match (O(k))</text>
+      <text x="20" y="90" font-size="9" fill="#888">• MinHash Jaccard on skeleton shingles</text>
+      <text x="20" y="104" font-size="9" fill="#888">• Semantic bit comparison for tie-breaking</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 08-clustering.svg -->
+  <g transform="translate(40, 1196.95)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="461.70000000000005" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="461.70000000000005" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(1.215)">
+      <g id="clustering">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="url(#obsidian-inner)" rx="8 8 0 0"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">CLUSTERING STRATEGIES</text>
+    
+    <!-- Online vs Batch -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="180" height="110" fill="#1e3a5f" rx="6" stroke="#3b82f6" stroke-width="1"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="url(#status-progress)">ONLINE CLUSTERING</text>
+      <text x="10" y="36" font-size="9" fill="#aaa">Process pages as they arrive</text>
+      <text x="10" y="52" font-size="9" fill="#888">• Check against existing clusters</text>
+      <text x="10" y="66" font-size="9" fill="#888">• Create new if no match</text>
+      <text x="10" y="80" font-size="9" fill="#888">• Update centroid incrementally</text>
+      <rect x="10" y="90" width="60" height="14" rx="3" fill="url(#status-complete)"/>
+      <text x="18" y="101" font-size="8" font-weight="500" fill="#1a1a1a">Preferred</text>
+    </g>
+    
+    <g transform="translate(205, 55)">
+      <rect x="0" y="0" width="180" height="110" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="#888">BATCH CLUSTERING</text>
+      <text x="10" y="36" font-size="9" fill="#888">Periodic re-clustering</text>
+      <text x="10" y="52" font-size="9" fill="#666">• Collect N signatures</text>
+      <text x="10" y="66" font-size="9" fill="#666">• Run DBSCAN/k-means</text>
+      <text x="10" y="80" font-size="9" fill="#666">• Replace cluster set</text>
+      <rect x="10" y="90" width="60" height="14" rx="3" fill="#666"/>
+      <text x="18" y="101" font-size="8" font-weight="500" fill="url(#obsidian)">Secondary</text>
+    </g>
+    
+    <!-- Algorithm Choice -->
+    <g transform="translate(15, 175)">
+      <rect x="0" y="0" width="370" height="100" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="url(#gold-accent)">ALGORITHM: Leader Clustering (Online)</text>
+      
+      <text x="12" y="38" font-size="9" fill="#d0ccc5" font-family="monospace">for each new signature S:</text>
+      <text x="20" y="52" font-size="9" fill="#888" font-family="monospace">  best = argmin(distance(S, centroid))</text>
+      <text x="20" y="66" font-size="9" fill="#888" font-family="monospace">  if distance(S, best) &lt; threshold:</text>
+      <text x="20" y="80" font-size="9" fill="#888" font-family="monospace">    assign S to best, update centroid</text>
+      <text x="20" y="94" font-size="9" fill="#888" font-family="monospace">  else: create new cluster with S</text>
+    </g>
+    
+    <!-- Parameters -->
+    <g transform="translate(15, 285)">
+      <rect x="0" y="0" width="370" height="80" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="url(#gold-accent)">TUNABLE PARAMETERS</text>
+      
+      <text x="12" y="38" font-size="9" fill="#aaa">• similarity_threshold: 0.85 (start conservative)</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">• min_cluster_size: 3 (avoid singletons)</text>
+      <text x="12" y="66" font-size="9" fill="#aaa">• max_clusters_per_domain: 20 (cap memory)</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 09-storage-schema.svg -->
+  <g transform="translate(556, 1282)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="510.3" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="510.3" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(1.215)">
+      <g id="storage-schema">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="url(#obsidian-inner)" rx="8 8 0 0"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">STORAGE SCHEMA</text>
+    
+    <!-- layout_signatures table -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="150" fill="#1a2f2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="url(#status-complete)">layout_signatures</text>
+      <text x="340" y="18" font-size="8" fill="#888">~150B/row</text>
+      
+      <text x="12" y="38" font-size="9" fill="#888" font-family="monospace">id            INTEGER PRIMARY KEY</text>
+      <text x="12" y="52" font-size="9" fill="#888" font-family="monospace">domain_id     INTEGER → domains</text>
+      <text x="12" y="66" font-size="9" fill="#888" font-family="monospace">l1_hash       BLOB(8)  -- tag sequence</text>
+      <text x="12" y="80" font-size="9" fill="#888" font-family="monospace">l2_hash       BLOB(8)  -- tag+depth</text>
+      <text x="12" y="94" font-size="9" fill="#888" font-family="monospace">semantic_bits BLOB(16) -- class hints</text>
+      <text x="12" y="108" font-size="9" fill="#888" font-family="monospace">metrics       BLOB(8)  -- depth/breadth</text>
+      <text x="12" y="122" font-size="9" fill="#888" font-family="monospace">minhash       BLOB(64) -- LSH shingles</text>
+      <text x="12" y="136" font-size="9" fill="#888" font-family="monospace">cluster_id    INTEGER → layout_clusters</text>
+    </g>
+    
+    <!-- layout_clusters table -->
+    <g transform="translate(15, 215)">
+      <rect x="0" y="0" width="370" height="95" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#a78bfa">layout_clusters</text>
+      <text x="340" y="18" font-size="8" fill="#888">~200B/row</text>
+      
+      <text x="12" y="38" font-size="9" fill="#888" font-family="monospace">id            INTEGER PRIMARY KEY</text>
+      <text x="12" y="52" font-size="9" fill="#888" font-family="monospace">domain_id     INTEGER → domains</text>
+      <text x="12" y="66" font-size="9" fill="#888" font-family="monospace">centroid      BLOB(104) -- avg fingerprint</text>
+      <text x="12" y="80" font-size="9" fill="#888" font-family="monospace">member_count  INTEGER</text>
+    </g>
+    
+    <!-- layout_templates table -->
+    <g transform="translate(15, 320)">
+      <rect x="0" y="0" width="370" height="85" fill="#3a3a1a" rx="6" stroke="#fbbf24" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="url(#status-research)">layout_templates (future)</text>
+      <text x="340" y="18" font-size="8" fill="#888">~2KB/row</text>
+      
+      <text x="12" y="38" font-size="9" fill="#888" font-family="monospace">id            INTEGER PRIMARY KEY</text>
+      <text x="12" y="52" font-size="9" fill="#888" font-family="monospace">cluster_id    INTEGER → layout_clusters</text>
+      <text x="12" y="66" font-size="9" fill="#888" font-family="monospace">skeleton_gz   BLOB     -- compressed tree</text>
+      <text x="12" y="80" font-size="9" fill="#888" font-family="monospace">extraction_map JSON    -- content XPaths</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 10-implementation-phases.svg -->
+  <g transform="translate(1072, 1306.3)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="486.00000000000006" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="486.00000000000006" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(1.215)">
+      <g id="implementation-phases">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="url(#obsidian-inner)" rx="8 8 0 0"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">IMPLEMENTATION PHASES</text>
+    
+    <!-- Phase 1 -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="75" fill="url(#status-progress)" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="white">PHASE 1: FINGERPRINT EXTRACTION</text>
+      <text x="350" y="18" font-size="8" fill="white" opacity="0.7">2-3 days</text>
+      <text x="12" y="36" font-size="9" fill="white" opacity="0.9">• Extend SkeletonHasher with semantic bits</text>
+      <text x="12" y="50" font-size="9" fill="white" opacity="0.9">• Add structural metrics computation</text>
+      <text x="12" y="64" font-size="9" fill="white" opacity="0.9">• Create layout_signatures table + adapter</text>
+    </g>
+    
+    <!-- Phase 2 -->
+    <g transform="translate(15, 140)">
+      <rect x="0" y="0" width="370" height="75" fill="url(#status-planned)" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="white">PHASE 2: COMPARISON ENGINE</text>
+      <text x="350" y="18" font-size="8" fill="white" opacity="0.7">2-3 days</text>
+      <text x="12" y="36" font-size="9" fill="white" opacity="0.9">• Implement MinHash for skeleton shingles</text>
+      <text x="12" y="50" font-size="9" fill="white" opacity="0.9">• Build two-phase comparison (filter + match)</text>
+      <text x="12" y="64" font-size="9" fill="white" opacity="0.9">• Add layout_clusters table + adapter</text>
+    </g>
+    
+    <!-- Phase 3 -->
+    <g transform="translate(15, 225)">
+      <rect x="0" y="0" width="370" height="75" fill="url(#status-research)" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#1a1a1a">PHASE 3: ONLINE CLUSTERING</text>
+      <text x="350" y="18" font-size="8" fill="#1a1a1a" opacity="0.7">3-4 days</text>
+      <text x="12" y="36" font-size="9" fill="#1a1a1a" opacity="0.9">• Leader clustering with threshold tuning</text>
+      <text x="12" y="50" font-size="9" fill="#1a1a1a" opacity="0.9">• Integration with crawler pipeline</text>
+      <text x="12" y="64" font-size="9" fill="#1a1a1a" opacity="0.9">• Telemetry: cluster stats, new layout alerts</text>
+    </g>
+    
+    <!-- Phase 4 -->
+    <g transform="translate(15, 310)">
+      <rect x="0" y="0" width="370" height="75" fill="url(#obsidian-inner)" rx="6" stroke="#888" stroke-width="1" stroke-dasharray="4,2"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#888">PHASE 4: TEMPLATE LEARNING (Future)</text>
+      <text x="350" y="18" font-size="8" fill="#666">5+ days</text>
+      <text x="12" y="36" font-size="9" fill="#666">• Extract common skeleton from cluster</text>
+      <text x="12" y="50" font-size="9" fill="#666">• Identify variable vs. fixed content regions</text>
+      <text x="12" y="64" font-size="9" fill="#666">• Generate extraction rules from templates</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 11-success-metrics.svg -->
+  <g transform="translate(40, 1683.65)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="388.8" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="388.8" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(1.215)">
+      <g id="success-metrics">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="url(#obsidian-inner)" rx="8 8 0 0"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">SUCCESS METRICS</text>
+    
+    <!-- Metric Cards -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="180" height="75" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="90" y="22" text-anchor="middle" font-size="20" font-weight="700" fill="url(#status-complete)">&lt;1KB</text>
+      <text x="90" y="42" text-anchor="middle" font-size="10" fill="#aaa">per signature</text>
+      <text x="90" y="60" text-anchor="middle" font-size="9" fill="#666">Target: 104 bytes</text>
+    </g>
+    
+    <g transform="translate(205, 55)">
+      <rect x="0" y="0" width="180" height="75" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="90" y="22" text-anchor="middle" font-size="20" font-weight="700" fill="url(#status-complete)">&lt;1ms</text>
+      <text x="90" y="42" text-anchor="middle" font-size="10" fill="#aaa">comparison time</text>
+      <text x="90" y="60" text-anchor="middle" font-size="9" fill="#666">Filter + match</text>
+    </g>
+    
+    <g transform="translate(15, 140)">
+      <rect x="0" y="0" width="180" height="75" fill="#1e3a5f" rx="6" stroke="#3b82f6" stroke-width="1"/>
+      <text x="90" y="22" text-anchor="middle" font-size="20" font-weight="700" fill="url(#status-progress)">&gt;90%</text>
+      <text x="90" y="42" text-anchor="middle" font-size="10" fill="#aaa">cluster accuracy</text>
+      <text x="90" y="60" text-anchor="middle" font-size="9" fill="#666">Same template → same cluster</text>
+    </g>
+    
+    <g transform="translate(205, 140)">
+      <rect x="0" y="0" width="180" height="75" fill="#1e3a5f" rx="6" stroke="#3b82f6" stroke-width="1"/>
+      <text x="90" y="22" text-anchor="middle" font-size="20" font-weight="700" fill="url(#status-progress)">&lt;5%</text>
+      <text x="90" y="42" text-anchor="middle" font-size="10" fill="#aaa">false positives</text>
+      <text x="90" y="60" text-anchor="middle" font-size="9" fill="#666">Different templates merged</text>
+    </g>
+    
+    <!-- Test Strategy -->
+    <g transform="translate(15, 225)">
+      <rect x="0" y="0" width="370" height="80" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="url(#gold-accent)">VALIDATION STRATEGY</text>
+      <text x="12" y="38" font-size="9" fill="#aaa">• Golden set: 100 pages from 10 domains, manually labeled</text>
+      <text x="12" y="52" font-size="9" fill="#aaa">• Similarity matrix: verify cluster cohesion visually</text>
+      <text x="12" y="66" font-size="9" fill="#aaa">• A/B comparison: new layout detection rate</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- 12-data-flow.svg -->
+  <g transform="translate(556, 1817.3)">
+    <!-- Panel Shadow Layer -->
+    <rect fill="url(#obsidian)" x="3" y="3" width="486" height="121.50000000000001" rx="10" opacity="0.5" filter="url(#drop-shadow)"/>
+    
+    <!-- Main Panel -->
+    <rect class="obsidian-panel" x="0" y="0" width="486" height="121.50000000000001" rx="10"/>
+    
+    <!-- Top Accent Line -->
+    <rect fill="url(#gold-accent)" x="20" y="6" width="100" height="2" rx="1" opacity="0.7"/>
+    
+    <!-- Content -->
+    <g transform="scale(0.608)">
+      <g id="data-flow">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="800" height="40" fill="url(#obsidian-inner)" rx="8 8 0 0"/>
+    <text x="400" y="26" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">DATA FLOW: Page → Signature → Cluster</text>
+    
+    <!-- Flow Nodes -->
+    <g transform="translate(30, 60)">
+      <rect x="0" y="0" width="100" height="60" fill="url(#obsidian-inner)" rx="6"/>
+      <text x="50" y="25" text-anchor="middle" font-size="10" font-weight="500" fill="#f0ede8">HTML Page</text>
+      <text x="50" y="42" text-anchor="middle" font-size="8" fill="#888">from Teacher</text>
+    </g>
+    
+    <path d="M 135 90 L 165 90" stroke="#c9a962" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+    
+    <g transform="translate(170, 60)">
+      <rect x="0" y="0" width="100" height="60" fill="url(#status-progress)" rx="6"/>
+      <text x="50" y="25" text-anchor="middle" font-size="10" font-weight="500" fill="white">Skeleton</text>
+      <text x="50" y="42" text-anchor="middle" font-size="8" fill="white" opacity="0.8">strip content</text>
+    </g>
+    
+    <path d="M 275 90 L 305 90" stroke="#c9a962" stroke-width="2" fill="none"/>
+    
+    <g transform="translate(310, 60)">
+      <rect x="0" y="0" width="100" height="60" fill="url(#status-planned)" rx="6"/>
+      <text x="50" y="25" text-anchor="middle" font-size="10" font-weight="500" fill="white">Fingerprint</text>
+      <text x="50" y="42" text-anchor="middle" font-size="8" fill="white" opacity="0.8">104 bytes</text>
+    </g>
+    
+    <path d="M 415 90 L 445 90" stroke="#c9a962" stroke-width="2" fill="none"/>
+    
+    <g transform="translate(450, 60)">
+      <rect x="0" y="0" width="100" height="60" fill="url(#status-research)" rx="6"/>
+      <text x="50" y="25" text-anchor="middle" font-size="10" font-weight="500" fill="#1a1a1a">Compare</text>
+      <text x="50" y="42" text-anchor="middle" font-size="8" fill="#1a1a1a" opacity="0.8">find cluster</text>
+    </g>
+    
+    <path d="M 555 90 L 585 90" stroke="#c9a962" stroke-width="2" fill="none"/>
+    
+    <g transform="translate(590, 60)">
+      <rect x="0" y="0" width="100" height="60" fill="url(#status-complete)" rx="6"/>
+      <text x="50" y="25" text-anchor="middle" font-size="10" font-weight="500" fill="#1a1a1a">Assign</text>
+      <text x="50" y="42" text-anchor="middle" font-size="8" fill="#1a1a1a" opacity="0.8">or create new</text>
+    </g>
+    
+    <path d="M 695 90 L 725 90" stroke="#c9a962" stroke-width="2" fill="none"/>
+    
+    <g transform="translate(730, 60)">
+      <rect x="0" y="0" width="60" height="60" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="30" y="30" text-anchor="middle" font-size="16" fill="url(#status-complete)">💾</text>
+      <text x="30" y="48" text-anchor="middle" font-size="8" fill="#888">Store</text>
+    </g>
+    
+    <!-- Legend -->
+    <g transform="translate(30, 145)">
+      <text x="0" y="12" font-size="9" fill="#888">Processing time: ~5ms total | Storage: signature + cluster_id per page</text>
+      <text x="0" y="28" font-size="9" fill="#666">New cluster creation triggers alert for manual review</text>
+    </g>
+  </g>
+    </g>
+  </g>
+
+  <!-- Footer Decoration -->
+  <g transform="translate(800, 2112.4500000000003)">
+    <rect fill="url(#gold-accent)" x="-60" y="-2" width="120" height="4" rx="2"/>
+    <circle fill="url(#gold-accent)" cx="-70" cy="0" r="4"/>
+    <circle fill="url(#gold-accent)" cx="70" cy="0" r="4"/>
+  </g>
+
+</svg>

@@ -1,0 +1,26 @@
+{
+  "url": "https://spacetoday.example.com/video/starship-mars-test-2025",
+  "capturedAt": "2025-12-21T20:00:00Z",
+  "category": "video-heavy",
+  "edgeCaseType": "video-primary-content",
+  "expected": {
+    "title": "SpaceX Starship Completes Historic Mars-Ready Test Flight",
+    "author": "Marcus Webb",
+    "publishDate": "2025-12-21T18:00:00Z",
+    "pageType": "video-article",
+    "hasVideo": true,
+    "videoUrl": "https://cdn.spacetoday.example.com/starship-launch-2025.mp4",
+    "textContentMinimal": true,
+    "bodyContains": ["SpaceX", "Mars missions", "orbital velocity"],
+    "hasTranscript": true,
+    "transcriptHidden": true
+  },
+  "flags": {
+    "isVideoHeavy": true,
+    "videoPrimaryContent": true,
+    "minimalTextContent": true,
+    "hasHiddenTranscript": true,
+    "hasVideoTimestamps": true
+  },
+  "notes": "Video-focused article with minimal text. Primary content is the embedded video. Tests extraction of video metadata and handling of hidden transcript content. Text body is intentionally sparse."
+}

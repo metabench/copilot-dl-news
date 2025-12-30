@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 175">
+  <g id="storage-math">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">STORAGE MATH: 512-BIT FOR 1M PAGES</text>
+    
+    <!-- Full signatures -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="230" height="110" fill="#444" rx="6"/>
+      <text x="115" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">If Storing All Signatures</text>
+      <text x="15" y="48" font-size="9" fill="#aaa">1M × 64 bytes = 64 MB</text>
+      <text x="15" y="68" font-size="9" fill="#aaa">Fits in RAM easily</text>
+      <text x="15" y="88" font-size="9" fill="#888">But: do we need all bands?</text>
+      <text x="15" y="102" font-size="8" fill="#888">Unused bands = wasted space</text>
+    </g>
+    
+    <!-- Compute on demand -->
+    <g transform="translate(280, 50)">
+      <rect x="0" y="0" width="240" height="110" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="120" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#a78bfa">Hybrid: Store + Compute</text>
+      <text x="15" y="48" font-size="9" fill="#f0ede8">Store: 64B signature (all bands)</text>
+      <text x="15" y="68" font-size="9" fill="#aaa">Distance: compare only enabled bands</text>
+      <text x="15" y="88" font-size="9" fill="#34d399">Band mask stored per-page:</text>
+      <text x="15" y="102" font-size="9" fill="#34d399">0x01 = structural only</text>
+    </g>
+    
+    <!-- Cluster ID approach -->
+    <g transform="translate(540, 50)">
+      <rect x="0" y="0" width="230" height="110" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="115" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#34d399">Minimal: Cluster ID Only</text>
+      <text x="15" y="48" font-size="9" fill="#f0ede8">1M × 4 bytes = 4 MB</text>
+      <text x="15" y="68" font-size="9" fill="#aaa">+ 10K exemplars × 64B = 640KB</text>
+      <text x="15" y="88" font-size="9" fill="#34d399">Total: ~5 MB</text>
+      <text x="15" y="102" font-size="8" fill="#888">Recompute sig on demand</text>
+    </g>
+  </g>
+</svg>

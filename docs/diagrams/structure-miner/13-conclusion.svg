@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 120">
+  <g id="conclusion">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="800" height="40" fill="#3a3a3a" rx="8 8 0 0"/>
+    <text x="400" y="26" text-anchor="middle" font-size="14" font-weight="600" fill="#c9a962" letter-spacing="1">✦ RECOMMENDED APPROACH ✦</text>
+    
+    <!-- Recommendation Box -->
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="760" height="55" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      
+      <!-- Checkmarks and approach -->
+      <text x="20" y="20" font-size="11" fill="#34d399">✓</text>
+      <text x="40" y="20" font-size="11" fill="#f0ede8" font-weight="500">Contentless Skeleton</text>
+      <text x="170" y="20" font-size="10" fill="#888">as primary representation</text>
+      
+      <text x="20" y="38" font-size="11" fill="#34d399">✓</text>
+      <text x="40" y="38" font-size="11" fill="#f0ede8" font-weight="500">Hybrid Fingerprint</text>
+      <text x="175" y="38" font-size="10" fill="#888">for O(1) comparison (104 bytes)</text>
+      
+      <text x="360" y="20" font-size="11" fill="#34d399">✓</text>
+      <text x="380" y="20" font-size="11" fill="#f0ede8" font-weight="500">Leader Clustering</text>
+      <text x="505" y="20" font-size="10" fill="#888">online, incremental</text>
+      
+      <text x="360" y="38" font-size="11" fill="#34d399">✓</text>
+      <text x="380" y="38" font-size="11" fill="#f0ede8" font-weight="500">Two-Phase Comparison</text>
+      <text x="535" y="38" font-size="10" fill="#888">filter + accurate match</text>
+      
+      <!-- Timeline -->
+      <text x="680" y="22" text-anchor="middle" font-size="9" fill="#888">Est. Time</text>
+      <text x="680" y="40" text-anchor="middle" font-size="16" font-weight="600" fill="#c9a962">7-10 days</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f52ba"/>
+      <stop offset="1" stop-color="#6fa8dc"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <rect x="2" y="2" width="36" height="36" rx="8" fill="rgba(111,168,220,0.12)" stroke="rgba(111,168,220,0.4)" stroke-width="1.5"/>
+  
+  <!-- Document shape -->
+  <path d="M 10 8 C 10 6 12 4 14 4 H 26 C 28 4 30 6 30 8 V 32 C 30 34 28 36 26 36 H 14 C 12 36 10 34 10 32 Z" fill="rgba(10,13,20,0.6)" stroke="rgba(111,168,220,0.4)" stroke-width="1"/>
+  
+  <!-- Text lines -->
+  <path d="M 14 12 H 26" stroke="rgba(230,242,255,0.4)" stroke-width="1.5"/>
+  <path d="M 14 18 H 24" stroke="rgba(230,242,255,0.3)" stroke-width="1.5"/>
+  <path d="M 14 24 H 22" stroke="rgba(230,242,255,0.22)" stroke-width="1.5"/>
+  
+  <!-- Checkmark with glow -->
+  <g filter="url(#glow)">
+    <path d="M 16 30 L 20 34 L 28 24" fill="none" stroke="url(#accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

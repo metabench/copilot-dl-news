@@ -1,0 +1,20 @@
+{
+  "url": "https://breakingnews.example.com/us/governor-emergency-winter-storm",
+  "capturedAt": "2025-12-22T04:00:00Z",
+  "category": "standard",
+  "edgeCaseType": "breaking-developing",
+  "expected": {
+    "title": "Governor Declares State of Emergency Amid Winter Storm",
+    "author": "Staff Report",
+    "publishDate": "2025-12-22T03:45:00Z",
+    "bodyContains": ["state of emergency", "15 counties", "blizzard warnings", "National Guard"],
+    "isDeveloping": true
+  },
+  "flags": {
+    "isBreakingNews": true,
+    "isDeveloping": true,
+    "hasTimelineUpdates": true,
+    "mayChangeFrequently": true
+  },
+  "notes": "Breaking/developing news story with bullet-point updates. Short initial body with evolving timeline. Tests extraction of rapidly-changing content."
+}

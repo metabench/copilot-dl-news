@@ -1,0 +1,24 @@
+{
+  "url": "https://ft.example.com/markets/fed-decision-analysis-2025",
+  "capturedAt": "2025-12-20T12:00:00Z",
+  "category": "standard",
+  "edgeCaseType": "well-structured-analysis",
+  "expected": {
+    "title": "How the Fed's Latest Move Will Reshape Markets in 2026",
+    "author": "Dr. Richard Hayes",
+    "publishDate": "2025-12-20T09:30:00Z",
+    "bodyWordCountMin": 300,
+    "bodyContains": ["Federal Reserve", "rate cuts", "S&P 500", "Treasury yields"],
+    "hasSubheadings": true,
+    "hasPullQuote": true,
+    "hasList": true,
+    "hasImage": true
+  },
+  "flags": {
+    "isWellStructured": true,
+    "hasSemanticHTML": true,
+    "hasAuthorBio": true,
+    "hasFigcaption": true
+  },
+  "notes": "Well-structured financial analysis article with proper semantic HTML. Control fixture for testing that standard extraction works correctly. Includes subheadings, blockquotes, lists, and images."
+}

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 150">
+  <g id="conclusion">
+    <rect x="0" y="0" width="800" height="38" fill="#c9a962" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="#2d2d2d">SUMMARY: EXTENSIBLE 512-BIT ARCHITECTURE</text>
+    
+    <g transform="translate(30, 50)">
+      <!-- Design -->
+      <rect x="0" y="0" width="235" height="85" fill="#2d2d2d" rx="6"/>
+      <text x="117" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">Design</text>
+      <text x="15" y="40" font-size="9" fill="#f0ede8">• 4 × 128-bit bands</text>
+      <text x="15" y="55" font-size="9" fill="#aaa">• Start with Band 1 only</text>
+      <text x="15" y="70" font-size="9" fill="#aaa">• Zero-fill reserved bits</text>
+      <text x="15" y="85" font-size="8" fill="#888">• Extend without migration</text>
+    </g>
+    
+    <g transform="translate(280, 50)">
+      <!-- Implementation -->
+      <rect x="0" y="0" width="235" height="85" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="117" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="#a78bfa">Implementation</text>
+      <text x="15" y="40" font-size="9" fill="#f0ede8">• C++ N-API addon</text>
+      <text x="15" y="55" font-size="9" fill="#aaa">• SIMD (AVX2) optimized</text>
+      <text x="15" y="70" font-size="9" fill="#aaa">• 50-100M pairs/sec</text>
+      <text x="15" y="85" font-size="8" fill="#888">• prebuildify for npm</text>
+    </g>
+    
+    <g transform="translate(530, 50)">
+      <!-- Value -->
+      <rect x="0" y="0" width="240" height="85" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="120" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="#34d399">Enables</text>
+      <text x="15" y="40" font-size="9" fill="#f0ede8">✓ Dedup + Structural + Topical</text>
+      <text x="15" y="55" font-size="9" fill="#aaa">✓ Same-event clustering</text>
+      <text x="15" y="70" font-size="9" fill="#aaa">✓ Cross-source matching</text>
+      <text x="15" y="85" font-size="8" fill="#888">✓ Future-proof capacity</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 380">
+  <g id="research-questions">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="45" fill="#3a3a3a" rx="8 8 0 0"/>
+    <text x="200" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">⚡ OPEN RESEARCH QUESTIONS</text>
+    
+    <!-- Question Cards -->
+    <g transform="translate(15, 55)">
+      <rect x="0" y="0" width="370" height="55" fill="#444" rx="6" stroke="#f59e0b" stroke-width="1"/>
+      <text x="12" y="20" font-size="11" font-weight="600" fill="#fbbf24">Q1: Representation Format</text>
+      <text x="12" y="36" font-size="10" fill="#aaa">XPath sequences vs. tree fingerprints vs. structural</text>
+      <text x="12" y="50" font-size="10" fill="#aaa">embeddings? Trade-offs: size, compare speed, accuracy</text>
+    </g>
+    
+    <g transform="translate(15, 118)">
+      <rect x="0" y="0" width="370" height="55" fill="#444" rx="6" stroke="#f59e0b" stroke-width="1"/>
+      <text x="12" y="20" font-size="11" font-weight="600" fill="#fbbf24">Q2: Similarity Metric</text>
+      <text x="12" y="36" font-size="10" fill="#aaa">Edit distance vs. Jaccard vs. custom DOM distance?</text>
+      <text x="12" y="50" font-size="10" fill="#aaa">Must handle insertions, deletions, and reordering</text>
+    </g>
+    
+    <g transform="translate(15, 181)">
+      <rect x="0" y="0" width="370" height="55" fill="#444" rx="6" stroke="#f59e0b" stroke-width="1"/>
+      <text x="12" y="20" font-size="11" font-weight="600" fill="#fbbf24">Q3: Clustering Strategy</text>
+      <text x="12" y="36" font-size="10" fill="#aaa">K-means? DBSCAN? Hierarchical? Online clustering?</text>
+      <text x="12" y="50" font-size="10" fill="#aaa">Need to handle unknown K, streaming data</text>
+    </g>
+    
+    <g transform="translate(15, 244)">
+      <rect x="0" y="0" width="370" height="55" fill="#444" rx="6" stroke="#f59e0b" stroke-width="1"/>
+      <text x="12" y="20" font-size="11" font-weight="600" fill="#fbbf24">Q4: Storage Efficiency</text>
+      <text x="12" y="36" font-size="10" fill="#aaa">Full structure vs. signature vs. reference + delta?</text>
+      <text x="12" y="50" font-size="10" fill="#aaa">Target: &lt;1KB per page layout signature</text>
+    </g>
+    
+    <g transform="translate(15, 307)">
+      <rect x="0" y="0" width="370" height="55" fill="#444" rx="6" stroke="#f59e0b" stroke-width="1"/>
+      <text x="12" y="20" font-size="11" font-weight="600" fill="#fbbf24">Q5: Template Generalization</text>
+      <text x="12" y="36" font-size="10" fill="#aaa">How to derive a template from similar pages?</text>
+      <text x="12" y="50" font-size="10" fill="#aaa">Mask variable content, preserve structure invariants</text>
+    </g>
+  </g>
+</svg>

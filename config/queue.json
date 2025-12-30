@@ -1,0 +1,17 @@
+{
+  "backend": "sqlite",
+  "sqlite": {
+    "dbPath": "data/news.db",
+    "tableName": "crawl_queue"
+  },
+  "postgres": {
+    "connectionString": "${POSTGRES_URL}",
+    "tableName": "url_queue",
+    "poolSize": 10
+  },
+  "options": {
+    "maxRetries": 3,
+    "retryDelayMs": 5000,
+    "staleTimeoutMs": 300000
+  }
+}

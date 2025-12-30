@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420">
+  <g id="path-a-xpath">
+    <!-- Panel Header -->
+    <rect x="0" y="0" width="400" height="50" fill="#3a3a3a" rx="8 8 0 0"/>
+    <text x="20" y="22" font-size="10" font-weight="500" fill="#60a5fa">PATH A</text>
+    <text x="200" y="35" text-anchor="middle" font-size="14" font-weight="600" fill="#f0ede8" letter-spacing="1">XPATH SEQUENCE APPROACH</text>
+    
+    <!-- Concept -->
+    <g transform="translate(15, 58)">
+      <rect x="0" y="0" width="370" height="65" fill="#1e3a5f" rx="6" stroke="#3b82f6" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#60a5fa">CONCEPT</text>
+      <text x="12" y="34" font-size="10" fill="#ccc">Store ordered list of XPaths to content elements:</text>
+      <text x="12" y="50" font-size="9" fill="#888" font-family="monospace">["/html/body/div[2]/article/h1", "/...p[1]", ...]</text>
+    </g>
+    
+    <!-- Pros -->
+    <g transform="translate(15, 130)">
+      <rect x="0" y="0" width="180" height="100" fill="#1a3a2a" rx="6" stroke="#10b981" stroke-width="1"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="#34d399">✓ PROS</text>
+      <text x="10" y="36" font-size="9" fill="#aaa">• Human readable</text>
+      <text x="10" y="50" font-size="9" fill="#aaa">• Direct element access</text>
+      <text x="10" y="64" font-size="9" fill="#aaa">• Easy to debug</text>
+      <text x="10" y="78" font-size="9" fill="#aaa">• Partial match possible</text>
+      <text x="10" y="92" font-size="9" fill="#aaa">• Works with selectors</text>
+    </g>
+    
+    <!-- Cons -->
+    <g transform="translate(205, 130)">
+      <rect x="0" y="0" width="180" height="100" fill="#3a1a1a" rx="6" stroke="#ef4444" stroke-width="1"/>
+      <text x="10" y="18" font-size="10" font-weight="600" fill="#f87171">✗ CONS</text>
+      <text x="10" y="36" font-size="9" fill="#aaa">• Large storage (~5KB+)</text>
+      <text x="10" y="50" font-size="9" fill="#aaa">• Brittle to DOM changes</text>
+      <text x="10" y="64" font-size="9" fill="#aaa">• Slow comparison O(n²)</text>
+      <text x="10" y="78" font-size="9" fill="#aaa">• Index positions break</text>
+      <text x="10" y="92" font-size="9" fill="#aaa">• No fuzzy matching</text>
+    </g>
+    
+    <!-- Techniques -->
+    <g transform="translate(15, 240)">
+      <rect x="0" y="0" width="370" height="85" fill="#444" rx="6"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#c9a962">OPTIMIZATION TECHNIQUES</text>
+      <text x="12" y="36" font-size="9" fill="#aaa">• Normalize: strip [1] indices, use tag-only paths</text>
+      <text x="12" y="50" font-size="9" fill="#aaa">• Compress: gzip reduces 5KB → ~800B typically</text>
+      <text x="12" y="64" font-size="9" fill="#aaa">• Hash prefix: first 3 levels as quick filter</text>
+      <text x="12" y="78" font-size="9" fill="#aaa">• LCS comparison: longest common subsequence</text>
+    </g>
+    
+    <!-- Verdict -->
+    <g transform="translate(15, 335)">
+      <rect x="0" y="0" width="370" height="70" fill="#3a3a1a" rx="6" stroke="#fbbf24" stroke-width="1"/>
+      <text x="12" y="18" font-size="10" font-weight="600" fill="#fbbf24">⚖ VERDICT</text>
+      <text x="12" y="36" font-size="10" fill="#ccc">Good for: debugging, small datasets, exact matching</text>
+      <text x="12" y="52" font-size="10" fill="#ccc">Poor for: scale, fuzzy clustering, template learning</text>
+      <text x="12" y="66" font-size="9" fill="#888">Recommendation: Use as debug layer, not primary</text>
+    </g>
+  </g>
+</svg>

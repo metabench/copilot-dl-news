@@ -1,0 +1,59 @@
+{
+  "name": "arabic-energy-news",
+  "description": "Arabic RTL article - tests right-to-left language and Unicode handling",
+  "source": "synthetic",
+  "domain": "arabic-news.example.com",
+  "category": "foreign",
+  
+  "extractionConfig": {
+    "version": 1,
+    "titleSelector": "h1",
+    "bodySelector": ".article-body",
+    "dateSelector": "time[datetime]",
+    "authorSelector": "[rel='author']",
+    "excludeSelectors": [".related", "nav", "footer"]
+  },
+  
+  "expected": {
+    "title": {
+      "contains": "الإمارات",
+      "exact": "الإمارات تعلن عن استثمارات جديدة في الطاقة المتجددة"
+    },
+    "body": {
+      "minWordCount": 100,
+      "containsSnippets": [
+        "أبوظبي",
+        "٥٠ مليار دولار",
+        "الطاقة المتجددة"
+      ],
+      "excludes": [
+        "مقالات ذات صلة"
+      ]
+    },
+    "date": {
+      "iso": "2025-12-23T14:30:00Z"
+    },
+    "author": {
+      "contains": "أحمد محمد"
+    },
+    "extraction": {
+      "success": true,
+      "minConfidence": 0.6
+    }
+  },
+  
+  "edgeCases": {
+    "hasPaywall": false,
+    "requiresJS": false,
+    "hasInfiniteScroll": false,
+    "isRTL": true,
+    "hasVideo": false,
+    "isLiveBlog": false,
+    "language": "ar"
+  },
+  
+  "metadata": {
+    "createdAt": "2025-12-25",
+    "createdBy": "synthetic"
+  }
+}

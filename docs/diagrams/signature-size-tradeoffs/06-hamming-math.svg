@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 185">
+  <g id="hamming-math">
+    <rect x="0" y="0" width="800" height="38" fill="#3a3a3a" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#f0ede8">HAMMING DISTANCE COMPUTATION</text>
+    
+    <!-- XOR operation -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="360" height="120" fill="#444" rx="6"/>
+      <text x="180" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">XOR + Popcount</text>
+      
+      <!-- Signature A -->
+      <text x="15" y="48" font-size="9" fill="#60a5fa">Sig A:</text>
+      <rect x="55" y="36" width="140" height="16" fill="#1e3a5f" rx="2"/>
+      <text x="125" y="48" text-anchor="middle" font-size="8" fill="#60a5fa">10110010...11010110</text>
+      
+      <!-- Signature B -->
+      <text x="15" y="72" font-size="9" fill="#a78bfa">Sig B:</text>
+      <rect x="55" y="60" width="140" height="16" fill="#2d1f4a" rx="2"/>
+      <text x="125" y="72" text-anchor="middle" font-size="8" fill="#a78bfa">10100010...11010010</text>
+      
+      <!-- XOR result -->
+      <text x="15" y="96" font-size="9" fill="#fbbf24">XOR:</text>
+      <rect x="55" y="84" width="140" height="16" fill="#3a3a1a" rx="2"/>
+      <text x="125" y="96" text-anchor="middle" font-size="8" fill="#fbbf24">00010000...00000100</text>
+      
+      <!-- Popcount -->
+      <text x="210" y="72" font-size="9" fill="#aaa">→</text>
+      <rect x="230" y="55" width="115" height="50" fill="#1a3a2a" rx="4"/>
+      <text x="287" y="75" text-anchor="middle" font-size="9" fill="#34d399">popcount = 2</text>
+      <text x="287" y="95" text-anchor="middle" font-size="8" fill="#888">(2 bits differ)</text>
+    </g>
+    
+    <!-- CPU operation speed -->
+    <g transform="translate(410, 50)">
+      <rect x="0" y="0" width="360" height="120" fill="#2d2d2d" rx="6"/>
+      <text x="180" y="22" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">CPU Operations per Comparison</text>
+      
+      <text x="25" y="48" font-size="9" fill="#60a5fa">64-bit:</text>
+      <text x="100" y="48" font-size="9" fill="#f0ede8">1 XOR + 1 POPCNT</text>
+      <text x="280" y="48" font-size="9" fill="#34d399">~2 cycles</text>
+      
+      <text x="25" y="70" font-size="9" fill="#a78bfa">128-bit:</text>
+      <text x="100" y="70" font-size="9" fill="#f0ede8">2 XOR + 2 POPCNT + ADD</text>
+      <text x="280" y="70" font-size="9" fill="#fbbf24">~5 cycles</text>
+      
+      <text x="25" y="92" font-size="9" fill="#34d399">256-bit:</text>
+      <text x="100" y="92" font-size="9" fill="#f0ede8">4 XOR + 4 POPCNT + 3 ADD</text>
+      <text x="280" y="92" font-size="9" fill="#888">~11 cycles</text>
+      
+      <text x="25" y="114" font-size="8" fill="#888">At 3GHz: all complete in &lt;4 nanoseconds</text>
+    </g>
+  </g>
+</svg>

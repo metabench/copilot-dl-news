@@ -1,0 +1,21 @@
+{
+  "url": "https://www.xinhuanet.com/auto/2025-12/20/c_1234567890.htm",
+  "capturedAt": "2025-12-20T15:00:00Z",
+  "category": "foreign",
+  "edgeCaseType": "chinese-simplified",
+  "expected": {
+    "title": "中国新能源汽车出口创历史新高",
+    "author": "王小明",
+    "publishDate": "2025-12-20T14:30:00+08:00",
+    "bodyWordCountMin": 100,
+    "bodyContains": ["新能源汽车", "500万辆", "海关总署", "2026年"],
+    "language": "zh"
+  },
+  "flags": {
+    "isForeignLanguage": true,
+    "language": "zh-CN",
+    "hasComplexCharacters": true,
+    "requiresUnicodeHandling": true
+  },
+  "notes": "Simplified Chinese news article testing CJK character extraction"
+}

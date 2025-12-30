@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 160">
+  <g id="conclusion">
+    <rect x="0" y="0" width="800" height="38" fill="#c9a962" rx="8"/>
+    <text x="400" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="#2d2d2d">SUMMARY: COMPUTE-INTENSIVE CLUSTERING</text>
+    
+    <!-- Core insight -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="230" height="95" fill="#2d2d2d" rx="6"/>
+      <text x="115" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">Core Insight</text>
+      <text x="15" y="42" font-size="9" fill="#f0ede8">Trade CPU cycles for</text>
+      <text x="15" y="58" font-size="9" fill="#f0ede8">storage + accuracy</text>
+      <text x="15" y="78" font-size="9" fill="#34d399">Lab: 10M pairs/sec (CPU)</text>
+      <text x="15" y="92" font-size="8" fill="#aaa">10K batch = 8 sec work</text>
+    </g>
+    
+    <!-- Storage -->
+    <g transform="translate(280, 50)">
+      <rect x="0" y="0" width="170" height="95" fill="#2d2d2d" rx="6"/>
+      <text x="85" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">Storage Impact</text>
+      <text x="15" y="42" font-size="9" fill="#f0ede8">1M pages:</text>
+      <text x="15" y="58" font-size="9" fill="#34d399">• 4MB cluster IDs</text>
+      <text x="15" y="74" font-size="9" fill="#34d399">• 16KB exemplars</text>
+      <text x="15" y="92" font-size="8" fill="#aaa">vs 8MB sigs = 50% saved</text>
+    </g>
+    
+    <!-- GPU potential -->
+    <g transform="translate(470, 50)">
+      <rect x="0" y="0" width="140" height="95" fill="#2d1f4a" rx="6" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="70" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="#a78bfa">GPU Path</text>
+      <text x="15" y="42" font-size="9" fill="#f0ede8">WebGPU/CUDA</text>
+      <text x="15" y="58" font-size="9" fill="#f0ede8">~1B pairs/sec</text>
+      <text x="15" y="78" font-size="9" fill="#34d399">10K batch</text>
+      <text x="15" y="92" font-size="9" fill="#34d399">= 50ms total</text>
+    </g>
+    
+    <!-- When to use -->
+    <g transform="translate(630, 50)">
+      <rect x="0" y="0" width="140" height="95" fill="#2d2d2d" rx="6"/>
+      <text x="70" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="#c9a962">When to Use</text>
+      <text x="15" y="42" font-size="9" fill="#f0ede8">• Storage-limited</text>
+      <text x="15" y="58" font-size="9" fill="#f0ede8">• GPU available</text>
+      <text x="15" y="74" font-size="9" fill="#f0ede8">• Quality > latency</text>
+      <text x="15" y="92" font-size="8" fill="#aaa">• Batch arrivals OK</text>
+    </g>
+  </g>
+</svg>

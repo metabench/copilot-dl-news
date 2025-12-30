@@ -1,0 +1,50 @@
+{
+  "name": "local-news-transit-plan",
+  "description": "A local government/infrastructure news article",
+  "source": "synthetic",
+  "domain": "localdaily.example.com",
+  "category": "local",
+  
+  "extractionConfig": {
+    "version": 1,
+    "titleSelector": "article header h1",
+    "titleFallback": ["h1", "article h1"],
+    "bodySelector": "section.content",
+    "bodyFallback": ["article", "main"],
+    "dateSelector": "time[datetime]",
+    "dateAttribute": "datetime",
+    "authorSelector": ".author",
+    "authorFallback": [".meta .author"]
+  },
+  
+  "expected": {
+    "title": {
+      "contains": "Transit Plan",
+      "exact": "City Council Approves New Transit Plan"
+    },
+    "body": {
+      "minWordCount": 250,
+      "containsSnippets": [
+        "city council",
+        "$2.5 billion",
+        "bus rapid transit",
+        "economic benefits"
+      ]
+    },
+    "date": {
+      "iso": "2025-12-20T14:15:00Z"
+    },
+    "author": {
+      "contains": "Maria Garcia"
+    },
+    "extraction": {
+      "success": true,
+      "minConfidence": 0.6
+    }
+  },
+  
+  "metadata": {
+    "createdAt": "2025-12-25",
+    "createdBy": "golden-set-init"
+  }
+}
