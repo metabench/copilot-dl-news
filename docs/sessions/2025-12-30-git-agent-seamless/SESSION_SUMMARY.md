@@ -1,13 +1,20 @@
 # Session Summary – Seamless git workflows for agents
 
 ## Accomplishments
-- _Fill in key deliverables and outcomes._
+- Added `tools/dev/git-pr-link.js` to print a GitHub PR compare URL with safe defaults:
+	- base branch derived from `origin/HEAD`
+	- head branch derived from current branch
+	- warnings + next-commands for common blockers (dirty tree, missing upstream)
+- Added `npm run pr:link` so agents can use one memorable command.
+- Documented the workflow in `tools/dev/README.md` and `docs/standards/commit_pr_standards.md`.
 
 ## Metrics / Evidence
-- _Link to tests, benchmarks, or telemetry supporting the results._
+- `npm run pr:link`
+- `node tools/dev/git-pr-link.js --json`
+- `npm run test:by-path tests/tools/__tests__/git-pr-link.test.js`
 
 ## Decisions
-- _Reference entries inside `DECISIONS.md`._
+- Use compare-link generation as the default PR-creation path for agents (works even without `gh`).
 
 ## Next Steps
-- _Summarize remaining work or follow-ups._
+- Optional: add a follow-up helper that checks branch divergence vs base (`git log --left-right --count base...head`).
