@@ -99,6 +99,16 @@ Repeat until the requested slice is complete:
    - Append the exact commands + results to `WORKING_NOTES.md`.
    - Update follow-ups.
 
+## Packaging & session closure (don’t skip)
+Before handing back to the user (or producing a handoff), ensure the work is reviewable and resumable:
+
+- **Split changes into a readable commit series** (by concern: tooling/tests, server behavior, docs/session).
+- **Re-run the validation ladder after packaging** (fast checks first, then focused Jest via `npm run test:by-path`).
+- **Close the session**:
+   - Fill `SESSION_SUMMARY.md` (what changed + why + evidence).
+   - Fill `FOLLOW_UPS.md` (actionable next work, not vague ideas).
+   - Add concrete entries to `DECISIONS.md` when a trade-off was made.
+
 ## When you have “future tasks” to present
 If you have a summary of future tasks, you must also do one of:
 - Convert it into a concrete, numbered plan (with validation commands) and start step 1 immediately, OR

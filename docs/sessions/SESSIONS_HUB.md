@@ -31,6 +31,25 @@
 
 ## Current Session
 
+### Session 2025-12-30: Single UI app cohesion  next steps
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make unified UI shell reliable + verifiable without breaking existing servers.
+
+**Location**: `docs/sessions/2025-12-30-single-ui-cohesion-next/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-30-single-ui-cohesion-next/INDEX.md)
+- 🗺️ [Plan](./2025-12-30-single-ui-cohesion-next/PLAN.md)
+- 📝 [Working Notes](./2025-12-30-single-ui-cohesion-next/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-30-single-ui-cohesion-next/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-30-single-ui-cohesion-next/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-30: Decision engines vs modes boundary
 
 **Duration**: Active
