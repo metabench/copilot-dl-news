@@ -35,6 +35,9 @@
 | 024 | [Fibonacci Server Observable → MVVM (SSE)](experiments/024-fib-observable-mvvm/) | active | Server-side observable publishes Fibonacci ticks every ~330ms; MVVM displays latest index + value |
 | 025 | [MVVM Bindings Library](experiments/025-mvvm-bindings-library/) | active | Small reusable MVVM bindings helpers (model→view model, view model→DOM) with deterministic check |
 | 026 | [Activation Contract Lab](experiments/026-activation-contract-lab/) | active | Enforces activation invariants: data-jsgui-type coverage, constructor registration, activate() actually runs |
+| 044 | [MatrixTableControl (flip axes)](experiments/044-matrix-table-control/) | active | Reusable matrix/table control: rotated headers, truncation/tooltips, and flip-axes interaction |
+| 045 | [Virtual Matrix Scroll](experiments/045-virtual-matrix-scroll/) | active | Large matrix virtual scrolling prototype with bounded DOM + deterministic scroll/flip screenshots |
+| 046 | [VirtualMatrixControl Smoothness](experiments/046-virtual-matrix-control-smoothness/) | active | Smoothness regression lab for production VirtualMatrixControl: bounded DOM, renderSeq stability, scroll/resize rewindowing |
 
 ### Mixin storage pattern (lab mixins)
 

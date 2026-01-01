@@ -7,7 +7,15 @@ const { collectDiagramData } = require(path.join(__dirname, "../../../..", "tool
 const { renderDiagramAtlasHtml } = require("../diagramAtlasServer");
 
 function run() {
-  const payload = collectDiagramData();
+  // Keep `npm run diagram:check` fast and deterministic: we only need enough data
+  // to render the atlas shell and confirm the renderer + DB schema summary work.
+  // The full interactive server can still collect richer code/feature metrics.
+  const payload = collectDiagramData({
+    sections: new Set(["db"])
+  });
+  // Avoid per-run timestamp drift in the committed check artifact.
+  // The interactive server still reports the real snapshot timestamp.
+  payload.generatedAt = null;
   const html = renderDiagramAtlasHtml(payload, { title: "Diagram Atlas (check)" });
   const target = path.join(process.cwd(), "diagram-atlas.check.html");
   fs.writeFileSync(target, html, "utf8");

@@ -34,6 +34,34 @@ const { WebhookDashboard } = require('./views/WebhookDashboard');
 const PORT = process.env.PORT || 3121;
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'news.db');
 
+function parseArgs(argv = process.argv.slice(2)) {
+  const args = {
+    port: Number(process.env.PORT) || Number(PORT) || 3121,
+    dbPath: process.env.DB_PATH || DB_PATH
+  };
+
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i];
+
+    if (token === '--port' && argv[i + 1]) {
+      i += 1;
+      const value = Number(argv[i]);
+      if (Number.isFinite(value) && value > 0) {
+        args.port = value;
+      }
+      continue;
+    }
+
+    if (token === '--db-path' && argv[i + 1]) {
+      i += 1;
+      args.dbPath = argv[i];
+      continue;
+    }
+  }
+
+  return args;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Database & Services
 // ─────────────────────────────────────────────────────────────
@@ -647,9 +675,13 @@ async function createWebhookDashboardRouter(options = {}) {
 // ─────────────────────────────────────────────────────────────
 
 if (require.main === module) {
-  initDb().then(() => {
-    wrapServerForCheck(app, PORT, undefined, () => {
-      console.log(`[WebhookDashboard] Server running at http://localhost:${PORT}`);
+  process.env.SERVER_NAME = process.env.SERVER_NAME || 'WebhookDashboard';
+  const args = parseArgs();
+  const port = args.port;
+
+  initDb(args.dbPath).then(() => {
+    wrapServerForCheck(app, port, undefined, () => {
+      console.log(`[WebhookDashboard] Server running at http://localhost:${port}`);
     });
   }).catch(err => {
     console.error('[WebhookDashboard] Failed to start:', err);

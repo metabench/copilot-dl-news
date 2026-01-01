@@ -6,31 +6,24 @@ const NewsDatabase = require('../../db');
 
 function seedArticle(db, url) {
   const now = new Date().toISOString();
-  db.db.prepare(`
-    INSERT INTO articles (url, title, html, text, crawled_at, fetched_at, http_status, content_type, word_count)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    url,
-    'Sample article for logging test',
-    '<html><body><article><p>Wales and Scotland news story.</p></article></body></html>',
-    'Wales and Scotland news story.',
-    now,
-    now,
-    200,
-    'text/html',
-    6
-  );
-  db.db.prepare(`
-    INSERT INTO fetches (url, request_started_at, fetched_at, http_status, content_type, classification, word_count)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    url,
-    now,
-    now,
-    200,
-    'text/html',
-    'article',
-    6
+
+  db.upsertArticle(
+    {
+      url,
+      title: 'Sample article for logging test',
+      html: '<html><body><article><p>Wales and Scotland news story.</p></article></body></html>',
+      text: 'Wales and Scotland news story.',
+      crawled_at: now,
+      request_started_at: now,
+      fetched_at: now,
+      http_status: 200,
+      content_type: 'text/html',
+      word_count: 6
+    },
+    {
+      // Keep the test lightweight and deterministic.
+      compress: false
+    }
   );
 }
 

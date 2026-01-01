@@ -1,5 +1,161 @@
 # Change Plan — Subscription & Billing System (Phase 10 Item 2)
 
+---
+
+# Change Plan — Crawl Observer: SQL to DB layer + extract controls (2025-12-31)
+
+## Goal
+Finish the in-progress Crawl Observer refactor:
+- Remove embedded SQL from the UI server; keep all SQL in `src/db/sqlite/v1/queries/crawlObserverUiQueries.js`.
+- Move all jsgui3 controls into `src/ui/server/crawlObserver/controls/`.
+- Keep behavior-compatible and efficiency stable (seq cursor paging, tail-by-default, limit clamp, payload gating via `includePayload`).
+
+## Current Behavior
+- Crawl Observer lives at `src/ui/server/crawlObserver/server.js` with inline SQL and some inline control definitions.
+
+## Proposed Changes
+- Refactor `server.js` to call `createCrawlObserverUiQueries(db)` instead of `db.prepare(...)`.
+- Import `TaskListControl`, `TaskDetailControl`, `TelemetryDashboardControl` from the controls folder.
+- Add a small smoke check under `src/ui/server/crawlObserver/checks/`.
+
+## Focused Validation
+- `node src/ui/server/crawlObserver/checks/crawlObserver.smoke.check.js`
+
+## Notes
+- Session plan/notes: `docs/sessions/2025-12-31-crawl-observer-sql-and-controls/`
+
+---
+
+# Change Plan — Unified App: mount Crawl Observer (2025-12-31)
+
+## Goal
+Expose Crawl Observer inside the Unified App on the unified server/port (no separate service/port required).
+
+Non-goals:
+- No UI redesign (keep iframe embed pattern for now).
+- No changes to crawl event schema.
+
+## Current Behavior
+- Unified App embeds tools via iframes (mounted paths like `/rate-limit`, `/quality`, etc) in `src/ui/server/unifiedApp/subApps/registry.js`.
+- Crawl Observer has a router factory (`createCrawlObserverRouter`) but is not mounted into Unified App, and the registry shows a placeholder mentioning a separate port.
+
+## Proposed Changes
+1) Mount Crawl Observer router in-process under `/crawl-observer` in `src/ui/server/unifiedApp/server.js`.
+2) Update the Unified App registry entry to iframe `src="/crawl-observer"`.
+3) Add base-path support to Crawl Observer UI so internal links + API fetches work when mounted.
+4) Update `tests/ui/unifiedApp.registry.test.js` to assert the new embed mount path.
+
+## Focused Validation
+- `npm run test:by-path tests/ui/unifiedApp.registry.test.js`
+
+## Rollback Plan
+- Revert the Unified App mount + registry changes; Crawl Observer remains available via its standalone server.
+
+Branch: `chore/plan-unified-crawl-observer`
+
+---
+
+# Change Plan — Unified App: run crawl + progress (2025-12-31)
+
+## Goal
+Make it easy to start a crawl from the Unified App and view crawl progress in real time.
+
+Constraints:
+- Single service/port: everything runs inside the Unified App server.
+- Reuse existing crawler UI (Crawl Status page + crawl telemetry stream) rather than inventing a new UI.
+
+## Current Behavior
+- Unified App can embed Crawl Observer and other dashboards, but does not expose a “run crawl” workflow.
+- Crawl Status UI exists as `src/ui/server/crawlStatus/CrawlStatusPage.js`, and crawl telemetry endpoints exist in the API server, but they are not mounted inside the Unified App server.
+
+## Proposed Changes
+1) Mount shared RemoteObservable browser scripts in Unified App (`/shared-remote-obs/*`).
+2) Mount crawl telemetry endpoints in Unified App:
+  - `/api/crawl-telemetry/events` (SSE)
+  - `/api/crawl-telemetry/remote-obs` (remote observable)
+  - `/api/crawl-telemetry/history` (JSON history)
+3) Mount crawl API v1 operations + in-process job registry in Unified App under `/api/v1/crawl`.
+4) Add a Unified App sub-app that hosts the Crawl Status UI (mounted at `/crawl-status`) and includes a small “start crawl” form.
+5) Update the Unified App registry test to assert the new sub-app is present and points at the mounted path.
+
+## Integration Points
+- Uses `TelemetryIntegration` to broadcast + persist telemetry (task_events).
+- Uses `InProcessCrawlJobRegistry` + `registerCrawlApiV1Routes` for starting/controlling in-process crawl jobs.
+- Crawl Observer continues to work (and can be used alongside Crawl Status for deep inspection).
+
+## Focused Validation
+- `node src/ui/server/crawlStatus/checks/crawlStatusPage.remoteObservable.check.js`
+- `npm run test:by-path tests/ui/unifiedApp.registry.test.js`
+
+## Rollback Plan
+- Remove the new module mounts from Unified App and the Crawl Status sub-app entry; the rest of the Unified App remains unchanged.
+
+Branch: `chore/plan-unified-app-run-crawl`
+
+## Implementation Notes
+- Completed wiring: `/shared-remote-obs`, `/api/crawl-telemetry/*`, `/api/v1/crawl/*`, and `/crawl-status` mounted in Unified App.
+- Added Unified App sub-app entry: `crawl-status` iframe → `/crawl-status`.
+- UX: simplified Crawl Status "Start crawl" flow to a URL-only quick start, with operation + overrides behind an Advanced expander.
+- UX: added per-job deep link to Crawl Observer task detail (`/crawl-observer/task/<jobId>`) to enable deeper inspection from the simple UI.
+- Validations run:
+  - `node src/ui/server/crawlStatus/checks/crawlStatusPage.remoteObservable.check.js`
+  - `npm run test:by-path tests/ui/unifiedApp.registry.test.js`
+  - Smoke render: `node -e "...renderCrawlStatusPageHtml..."` (asserts `crawl-start-form`, `crawl-start-operation-label`, `crawl-start-advanced` markers)
+
+---
+
+# Change Plan — Hub Guessing Matrix Chrome (UI)
+
+## Goal
+Extract the shared “matrix chrome” (filters, stats, legend, actions, flip-axes script, shared CSS) into a reusable control so Place Hub Guessing and future Topic Hub Guessing matrices share identical supercontrols and presentation.
+
+Non-goals:
+- No re-theming or layout redesign
+- No behavior changes beyond refactoring into a shared control
+- No Topic Hub Guessing UI implementation yet
+
+## Current Behavior
+- Place Hub Guessing matrix is rendered by `src/ui/server/placeHubGuessing/controls/PlaceHubGuessingMatrixControl.js`.
+- It inlines: page theme vars + chrome CSS, view toggle script, filters form, stats, legend, and actions (flip button), then renders either `MatrixTableControl` or `VirtualMatrixControl`.
+- Screenshot check expects stable selectors: root `[data-testid="place-hub-guessing"]`, flip button `[data-testid="flip-axes"]`, legend `[data-testid="matrix-legend"]`, and `data-view` toggling.
+
+## Proposed Changes
+### Step 1: Create reusable chrome control
+- Add `src/ui/server/hubGuessing/controls/HubGuessingMatrixChromeControl.js`
+- Add `src/ui/server/hubGuessing/controls/index.js` export
+- Control responsibilities:
+  - Shared CSS (theme vars, container, filters form, stats, legend, action bar, view toggle hide/show)
+  - Shared view toggle script (root selector + flip button selector)
+  - Render filters form, stats row, legend row, actions row (optional flip button)
+  - Parameterize rootTestId/basePath/fields/stats/legend/includeFlipAxes/initialView
+
+### Step 2: Refactor PlaceHubGuessingMatrixControl
+- Replace inline chrome generation with `HubGuessingMatrixChromeControl`.
+- Keep matrix-specific CSS + rendering (table/virtual/cell styles) in Place control.
+- Preserve existing root data attributes: `data-testid`, `data-view`, `data-matrix-mode`, `data-matrix-threshold`.
+- Preserve existing testids: `filters-form`, `flip-axes`, `matrix-legend`.
+
+## Risks & Unknowns
+- CSS split: ensure view toggling (`data-view`) and test selectors remain unchanged.
+- Ensure no selector drift breaks screenshot check.
+
+## Integration Points
+- Place matrix control composes the shared chrome inside its root container.
+- Future Topic Hub Guessing matrix can reuse the shared control from `src/ui/server/hubGuessing/controls/`.
+
+## Docs Impact
+- None (code-only refactor); session notes live under `docs/sessions/2025-12-31-hub-guessing-matrix-chrome/`.
+
+## Focused Test Plan
+Run the smallest checks for this feature:
+- `node src/ui/server/placeHubGuessing/checks/placeHubGuessing.matrix.screenshot.check.js`
+- (If fast) `node src/ui/server/placeHubGuessing/checks/placeHubGuessing.matrix.check.js`
+
+## Rollback Plan
+- Revert the Place control refactor and delete the new shared control files.
+
+Branch: `chore/plan-hub-guessing-matrix-chrome`
+
 ## Goal
 Implement tiered subscription plans with Stripe integration for payment processing. The system will manage user subscriptions (free/pro/enterprise), track API usage, and enforce plan limits.
 

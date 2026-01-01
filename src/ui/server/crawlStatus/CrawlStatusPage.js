@@ -24,6 +24,12 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
 
   const elStatus = document.getElementById('status');
   const elRows = document.getElementById('rows');
+  const elStartForm = document.getElementById('crawl-start-form');
+  const elStartOperation = document.getElementById('crawl-start-operation');
+  const elStartOperationLabel = document.getElementById('crawl-start-operation-label');
+  const elStartUrl = document.getElementById('crawl-start-url');
+  const elStartOverrides = document.getElementById('crawl-start-overrides');
+  const elStartStatus = document.getElementById('crawl-start-status');
 
   const jobs = new Map();
 
@@ -200,12 +206,16 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
           : '';
 
         const detailHref = jobsApiPath + '/' + encodeURIComponent(job.id || '');
+        const observerHref = '/crawl-observer/task/' + encodeURIComponent(job.id || '');
         return (
           '\n<tr>' +
           '\n  <td>' +
           '\n    <div class="mono">' + id + '</div>' +
           '\n    <div class="muted">' + (url ? url : '') + '</div>' +
-          '\n    <div><a href="' + detailHref + '" class="muted">detail</a></div>' +
+          '\n    <div>' +
+          '<a href="' + detailHref + '" class="muted">detail</a>' +
+          ' · <a href="' + observerHref + '" class="muted" target="_blank" rel="noopener noreferrer">observer</a>' +
+          '</div>' +
           (treeHtml ? ('\n    ' + treeHtml) : '') +
           (lastEvent ? ('\n    <div class="job-last">Last: <span class="mono">' + lastEvent + '</span></div>') : '') +
           (eventsHtml ? ('\n    ' + eventsHtml) : '') +
@@ -456,6 +466,151 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
     }
   }
 
+  function normalizeStartUrl(input) {
+    const raw = String(input || '').trim();
+    if (!raw) return '';
+    if (raw.includes('://')) return raw;
+    // Convenience: allow typing "example.com" or "example.com/path".
+    if (raw.includes('.') || raw.startsWith('localhost')) {
+      return 'https://' + raw;
+    }
+    return raw;
+  }
+
+  function setStartStatus(message, kind) {
+    if (!elStartStatus) return;
+    elStartStatus.textContent = message || '';
+    elStartStatus.className = 'start-status' + (kind ? (' start-status--' + kind) : '');
+  }
+
+  async function loadAvailability() {
+    if (!elStartOperation) return;
+    try {
+      const res = await fetch('/api/v1/crawl/availability?operations=1&sequences=0', { headers: { Accept: 'application/json' } });
+      const payload = await res.json();
+      const ops = payload && payload.availability && Array.isArray(payload.availability.operations)
+        ? payload.availability.operations
+        : [];
+
+      elStartOperation.innerHTML = '';
+
+      const opt0 = document.createElement('option');
+      opt0.value = '';
+      opt0.textContent = ops.length ? 'Select an operation…' : 'No operations available';
+      elStartOperation.appendChild(opt0);
+
+      for (const op of ops) {
+        if (!op || !op.name) continue;
+        const option = document.createElement('option');
+        option.value = op.name;
+        option.textContent = op.summary ? (op.name + ' — ' + op.summary) : op.name;
+        option.dataset.defaultOptions = op.defaultOptions ? JSON.stringify(op.defaultOptions) : '';
+        elStartOperation.appendChild(option);
+      }
+
+      // Default to the first operation when present.
+      if (!elStartOperation.value && ops.length) {
+        elStartOperation.value = ops[0].name;
+      }
+
+      if (elStartOperationLabel) {
+        elStartOperationLabel.textContent = elStartOperation.value || (ops.length ? String(ops[0].name || '') : 'n/a');
+      }
+
+      if (ops.length === 1) {
+        elStartOperation.value = ops[0].name;
+        const json = elStartOperation.selectedOptions && elStartOperation.selectedOptions[0]
+          ? elStartOperation.selectedOptions[0].dataset.defaultOptions
+          : '';
+        if (elStartOverrides && json) {
+          elStartOverrides.value = json;
+        }
+
+        if (elStartOperationLabel) {
+          elStartOperationLabel.textContent = ops[0].name;
+        }
+      }
+
+      setStartStatus('Ready.', 'ok');
+    } catch (err) {
+      setStartStatus('Failed to load operations: ' + (err && err.message ? err.message : String(err)), 'error');
+    }
+  }
+
+  function setupStartForm() {
+    if (!elStartForm || !elStartOperation || !elStartUrl) return;
+
+    elStartOperation.addEventListener('change', () => {
+      const selected = elStartOperation.selectedOptions && elStartOperation.selectedOptions[0]
+        ? elStartOperation.selectedOptions[0]
+        : null;
+      const json = selected && selected.dataset ? selected.dataset.defaultOptions : '';
+      if (elStartOverrides && json) {
+        elStartOverrides.value = json;
+      }
+
+      if (elStartOperationLabel) {
+        elStartOperationLabel.textContent = elStartOperation.value || 'n/a';
+      }
+    });
+
+    elStartForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const operationName = String(elStartOperation.value || '').trim();
+      const startUrl = normalizeStartUrl(elStartUrl.value);
+      if (!operationName) {
+        setStartStatus('Choose an operation.', 'error');
+        return;
+      }
+      if (!startUrl) {
+        setStartStatus('Enter a start URL.', 'error');
+        return;
+      }
+
+      if (elStartUrl && elStartUrl.value !== startUrl) {
+        elStartUrl.value = startUrl;
+      }
+
+      let overrides = undefined;
+      const overridesRaw = elStartOverrides ? String(elStartOverrides.value || '').trim() : '';
+      if (overridesRaw) {
+        try {
+          overrides = JSON.parse(overridesRaw);
+        } catch (err) {
+          setStartStatus('Overrides must be valid JSON: ' + (err && err.message ? err.message : String(err)), 'error');
+          return;
+        }
+      }
+
+      setStartStatus('Starting…', 'working');
+      try {
+        const endpoint = '/api/v1/crawl/operations/' + encodeURIComponent(operationName) + '/start';
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ startUrl, overrides })
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || String(res.status));
+        }
+
+        const payload = await res.json();
+        const jobId = payload && payload.jobId ? String(payload.jobId) : '';
+        setStartStatus('Started' + (jobId ? (' job ' + jobId) : '') + '.', 'ok');
+        await refreshSnapshot();
+      } catch (err) {
+        setStartStatus('Start failed: ' + (err && err.message ? err.message : String(err)), 'error');
+      }
+    });
+
+    loadAvailability();
+  }
+
   async function sendAction(id, action) {
     const job = jobs.get(id);
     const base = job && job.inProcess && extraJobsApiPath ? extraJobsApiPath : jobsApiPath;
@@ -482,6 +637,7 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
   });
 
   refreshSnapshot();
+  setupStartForm();
 
   async function replayTelemetryHistory() {
     if (!telemetryHistoryPath) return;
@@ -609,6 +765,26 @@ header { display: flex; align-items: baseline; justify-content: space-between; g
 h1 { font-size: 18px; margin: 0; }
 .meta { font-size: 12px; color: #555; }
 .links a { margin-right: 12px; font-size: 12px; }
+
+  .start { margin-top: 12px; padding: 12px 12px; border: 1px solid #eee; border-radius: 10px; background: #fafafa; }
+  .start h2 { font-size: 13px; margin: 0 0 8px 0; }
+  .start-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+  .start-field { display: flex; flex-direction: column; gap: 4px; }
+  .start-field label { font-size: 11px; color: #444; }
+  .start-field input, .start-field select, .start-field textarea { font-size: 12px; padding: 7px 10px; border: 1px solid #ddd; border-radius: 8px; }
+  .start-field input { min-width: 360px; }
+  .start-actions { display: flex; gap: 8px; }
+  .start-actions button { font-size: 12px; padding: 8px 12px; }
+  details.start-advanced { margin-top: 10px; }
+  details.start-advanced summary { cursor: pointer; font-size: 12px; color: #444; }
+  .start-advanced-body { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+  .start-advanced-body textarea { min-width: 420px; min-height: 70px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+  .start-meta { margin-top: 6px; font-size: 12px; color: #555; }
+  .start-status { margin-top: 8px; font-size: 12px; color: #444; }
+  .start-status--ok { color: #1b6e2d; }
+  .start-status--working { color: #2457c5; }
+  .start-status--error { color: #b3261e; }
+
 table { border-collapse: collapse; width: 100%; margin-top: 12px; }
 th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; vertical-align: top; }
 th { text-align: left; background: #fafafa; }
@@ -704,6 +880,103 @@ th { text-align: left; background: #fafafa; }
     linkHistory.dom.attributes.href = this.telemetryHistoryPath;
     linkHistory.add('telemetry history');
     links.add(linkHistory);
+
+    const linkObserver = new Control({ context: ctx, tagName: 'a' });
+    linkObserver.dom.attributes.href = '/crawl-observer';
+    linkObserver.add('crawl observer');
+    links.add(linkObserver);
+
+    const startPanel = new Control({ context: ctx, tagName: 'section' });
+    startPanel.dom.attributes.class = 'start';
+    body.add(startPanel);
+
+    const startTitle = new Control({ context: ctx, tagName: 'h2' });
+    startTitle.add('Start crawl (in-process)');
+    startPanel.add(startTitle);
+
+    const form = new Control({ context: ctx, tagName: 'form' });
+    form.dom.attributes.id = 'crawl-start-form';
+    startPanel.add(form);
+
+    const row = new Control({ context: ctx, tagName: 'div' });
+    row.dom.attributes.class = 'start-row';
+    form.add(row);
+
+    const urlField = new Control({ context: ctx, tagName: 'div' });
+    urlField.dom.attributes.class = 'start-field';
+    row.add(urlField);
+    const urlLabel = new Control({ context: ctx, tagName: 'label' });
+    urlLabel.dom.attributes.for = 'crawl-start-url';
+    urlLabel.add('Start URL');
+    urlField.add(urlLabel);
+    const urlInput = new Control({ context: ctx, tagName: 'input' });
+    urlInput.dom.attributes.id = 'crawl-start-url';
+    urlInput.dom.attributes.type = 'url';
+    urlInput.dom.attributes.placeholder = 'https://example.com';
+    urlField.add(urlInput);
+
+    const actions = new Control({ context: ctx, tagName: 'div' });
+    actions.dom.attributes.class = 'start-actions';
+    row.add(actions);
+    const startBtn = new Control({ context: ctx, tagName: 'button' });
+    startBtn.dom.attributes.type = 'submit';
+    startBtn.add('Start');
+    actions.add(startBtn);
+
+    const metaRow = new Control({ context: ctx, tagName: 'div' });
+    metaRow.dom.attributes.class = 'start-meta';
+    metaRow.add('Operation: ');
+    const opLabel = new Control({ context: ctx, tagName: 'span' });
+    opLabel.dom.attributes.class = 'mono';
+    opLabel.dom.attributes.id = 'crawl-start-operation-label';
+    opLabel.add('Loading…');
+    metaRow.add(opLabel);
+    startPanel.add(metaRow);
+
+    const advanced = new Control({ context: ctx, tagName: 'details' });
+    advanced.dom.attributes.class = 'start-advanced';
+    advanced.dom.attributes.id = 'crawl-start-advanced';
+    startPanel.add(advanced);
+    const advancedSummary = new Control({ context: ctx, tagName: 'summary' });
+    advancedSummary.add('Advanced (operation + overrides)');
+    advanced.add(advancedSummary);
+
+    const advancedBody = new Control({ context: ctx, tagName: 'div' });
+    advancedBody.dom.attributes.class = 'start-advanced-body';
+    advanced.add(advancedBody);
+
+    const opField = new Control({ context: ctx, tagName: 'div' });
+    opField.dom.attributes.class = 'start-field';
+    advancedBody.add(opField);
+    const opSelectLabel = new Control({ context: ctx, tagName: 'label' });
+    opSelectLabel.dom.attributes.for = 'crawl-start-operation';
+    opSelectLabel.add('Operation');
+    opField.add(opSelectLabel);
+    const opSelect = new Control({ context: ctx, tagName: 'select' });
+    opSelect.dom.attributes.id = 'crawl-start-operation';
+    const opInitial = new Control({ context: ctx, tagName: 'option' });
+    opInitial.dom.attributes.value = '';
+    opInitial.add('Loading…');
+    opSelect.add(opInitial);
+    opField.add(opSelect);
+
+    const ovField = new Control({ context: ctx, tagName: 'div' });
+    ovField.dom.attributes.class = 'start-field';
+    advancedBody.add(ovField);
+    const ovLabel = new Control({ context: ctx, tagName: 'label' });
+    ovLabel.dom.attributes.for = 'crawl-start-overrides';
+    ovLabel.add('Overrides (JSON)');
+    ovField.add(ovLabel);
+    const ovText = new Control({ context: ctx, tagName: 'textarea' });
+    ovText.dom.attributes.id = 'crawl-start-overrides';
+    ovText.dom.attributes.placeholder = '{ }';
+    ovField.add(ovText);
+
+    const startStatus = new Control({ context: ctx, tagName: 'div' });
+    startStatus.dom.attributes.id = 'crawl-start-status';
+    startStatus.dom.attributes.class = 'start-status';
+    startStatus.add('Loading operations…');
+    startPanel.add(startStatus);
 
     const status = new Control({ context: ctx, tagName: 'div' });
     status.dom.attributes.id = 'status';

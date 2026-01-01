@@ -16,11 +16,55 @@ class GazetteerTelemetry {
     this.jsonMode = options.jsonMode || false;
     this.verbose = options.verbose !== false;
     this.quiet = options.quiet || false;
+    this.summaryFormat = typeof options.summaryFormat === 'string'
+      ? options.summaryFormat.trim().toLowerCase()
+      : 'ascii';
+
+    if (this.summaryFormat !== 'json' && this.summaryFormat !== 'ascii') {
+      this.summaryFormat = 'ascii';
+    }
+
+    const defaultCliStream = (!this.jsonMode && this.summaryFormat === 'json') ? process.stderr : process.stdout;
+    this.cliStream = options.cliStream || defaultCliStream;
+    this.summaryStream = options.summaryStream || process.stdout;
+    this.errorStream = options.errorStream || process.stderr;
+
     this.fmt = new CliFormatter({ useEmojis: true });
     this.startTime = Date.now();
     this.currentPhase = null;
     this.spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     this.spinnerIndex = 0;
+  }
+
+  _writeLine(stream, text) {
+    if (!stream) return;
+    const value = text === undefined || text === null ? '' : String(text);
+    if (value.endsWith('\n')) {
+      stream.write(value);
+      return;
+    }
+    stream.write(value + '\n');
+  }
+
+  _write(stream, text) {
+    if (!stream) return;
+    stream.write(text === undefined || text === null ? '' : String(text));
+  }
+
+  _cli(line) {
+    this._writeLine(this.cliStream, line);
+  }
+
+  _cliRaw(text) {
+    this._write(this.cliStream, text);
+  }
+
+  _summary(line) {
+    this._writeLine(this.summaryStream, line);
+  }
+
+  _err(line) {
+    this._writeLine(this.errorStream, line);
   }
 
   /**
@@ -44,8 +88,8 @@ class GazetteerTelemetry {
   startPhase(name, icon = '🔄') {
     this.currentPhase = name;
     if (!this.quiet && !this.jsonMode) {
-      console.log(`\n${COLORS.bold(COLORS.cyan(`${icon} ${name}`))}`);
-      console.log(COLORS.dim('─'.repeat(Math.min(name.length + 4, 60))));
+      this._cli(`\n${COLORS.bold(COLORS.cyan(`${icon} ${name}`))}`);
+      this._cli(COLORS.dim('─'.repeat(Math.min(name.length + 4, 60))));
     }
     this.emit('phase_start', { phase: name });
   }
@@ -63,7 +107,7 @@ class GazetteerTelemetry {
     
     if (!this.quiet && !this.jsonMode && this.currentPhase) {
       const msg = message ? ` - ${message}` : '';
-      console.log(color(`  ${icon} ${this.currentPhase}${msg}`));
+      this._cli(color(`  ${icon} ${this.currentPhase}${msg}`));
     }
     this.emit('phase_end', { phase: this.currentPhase, status, message });
     this.currentPhase = null;
@@ -155,7 +199,7 @@ class GazetteerTelemetry {
    */
   count(label, count, icon = '📊') {
     if (!this.quiet && !this.jsonMode && this.verbose) {
-      console.log(`  ${COLORS.muted(icon)} ${label}: ${COLORS.cyan(count.toLocaleString())}`);
+      this._cli(`  ${COLORS.muted(icon)} ${label}: ${COLORS.cyan(count.toLocaleString())}`);
     }
   }
 
@@ -166,7 +210,7 @@ class GazetteerTelemetry {
    */
   kvPair(key, value) {
     if (!this.quiet && !this.jsonMode && this.verbose) {
-      console.log(`  ${COLORS.muted('•')} ${key}: ${COLORS.info(value)}`);
+      this._cli(`  ${COLORS.muted('•')} ${key}: ${COLORS.info(value)}`);
     }
   }
 
@@ -180,22 +224,22 @@ class GazetteerTelemetry {
     switch (type) {
       case 'info':
         if (this.verbose) {
-          console.log(`${COLORS.info('ℹ')} ${data.message}`);
+          this._cli(`${COLORS.info('ℹ')} ${data.message}`);
         }
         break;
       case 'success':
-        console.log(`${COLORS.success('✓')} ${data.message}`);
+        this._cli(`${COLORS.success('✓')} ${data.message}`);
         break;
       case 'warning':
-        console.log(`${COLORS.warning('⚠')} ${data.message}`);
+        this._cli(`${COLORS.warning('⚠')} ${data.message}`);
         break;
       case 'error':
-        console.log(`${COLORS.error('✖')} ${COLORS.error(data.message)}`);
-        if (data.stack && this.verbose) console.error(COLORS.dim(data.stack));
+        this._cli(`${COLORS.error('✖')} ${COLORS.error(data.message)}`);
+        if (data.stack && this.verbose) this._err(COLORS.dim(data.stack));
         break;
       case 'step':
         if (this.verbose) {
-          console.log(`  ${COLORS.muted('→')} ${data.message}`);
+          this._cli(`  ${COLORS.muted('→')} ${data.message}`);
         }
         break;
       case 'progress':
@@ -206,21 +250,29 @@ class GazetteerTelemetry {
           const empty = barWidth - filled;
           const bar = `${'█'.repeat(filled)}${'░'.repeat(empty)}`;
           const unitStr = data.unit ? ` ${data.unit}` : '';
-          process.stdout.write(`\r  ${COLORS.cyan(`[${bar}]`)} ${pct}% ${data.label} (${data.current}/${data.total}${unitStr})`);
+          this._cliRaw(`\r  ${COLORS.cyan(`[${bar}]`)} ${pct}% ${data.label} (${data.current}/${data.total}${unitStr})`);
           if (data.current === data.total) {
-            process.stdout.write('\n');
+            this._cliRaw('\n');
           }
         }
         break;
       case 'section':
-        console.log(`\n${COLORS.bold(COLORS.accent(data.title))}`);
-        console.log(COLORS.dim('─'.repeat(data.title.length)));
+        this._cli(`\n${COLORS.bold(COLORS.accent(data.title))}`);
+        this._cli(COLORS.dim('─'.repeat(data.title.length)));
         break;
       case 'table':
-        this.fmt.table(data.rows, data.options);
+        // NOTE: CliFormatter currently prints to stdout; avoid tables when summaryFormat=json.
+        if (this.summaryFormat !== 'json') {
+          this.fmt.table(data.rows, data.options);
+        }
         break;
       case 'summary':
-        this._renderSummary(data);
+        if (this.summaryFormat === 'json') {
+          // Keep stdout deterministic for machine parsing.
+          this._summary(JSON.stringify({ ...(data.stats || {}), durationMs: data.durationMs }));
+        } else {
+          this._renderSummary(data);
+        }
         break;
     }
   }
@@ -233,17 +285,17 @@ class GazetteerTelemetry {
     const stats = data.stats || {};
     const durationSec = (data.durationMs / 1000).toFixed(2);
     
-    console.log('\n' + COLORS.bold(COLORS.cyan('╔══════════════════════════════════════════════════════════════╗')));
-    console.log(COLORS.bold(COLORS.cyan('║')) + COLORS.bold('  🌍 Gazetteer Population Complete                            ') + COLORS.bold(COLORS.cyan('║')));
-    console.log(COLORS.bold(COLORS.cyan('╚══════════════════════════════════════════════════════════════╝')));
+    this._cli('\n' + COLORS.bold(COLORS.cyan('╔══════════════════════════════════════════════════════════════╗')));
+    this._cli(COLORS.bold(COLORS.cyan('║')) + COLORS.bold('  🌍 Gazetteer Population Complete                            ') + COLORS.bold(COLORS.cyan('║')));
+    this._cli(COLORS.bold(COLORS.cyan('╚══════════════════════════════════════════════════════════════╝')));
     
     if (stats.message) {
-      console.log(`\n${COLORS.info('ℹ')} ${stats.message}`);
+      this._cli(`\n${COLORS.info('ℹ')} ${stats.message}`);
     }
     
     // Core statistics in a nice grid
-    console.log('\n' + COLORS.bold('📊 Statistics'));
-    console.log(COLORS.dim('─────────────────────────────────'));
+    this._cli('\n' + COLORS.bold('📊 Statistics'));
+    this._cli(COLORS.dim('─────────────────────────────────'));
     
     const statRows = [
       ['🏳️  Countries', stats.countries],
@@ -256,26 +308,26 @@ class GazetteerTelemetry {
     
     for (const [label, value] of statRows) {
       const valStr = typeof value === 'number' ? value.toLocaleString() : String(value);
-      console.log(`  ${label.padEnd(20)} ${COLORS.cyan(valStr)}`);
+      this._cli(`  ${label.padEnd(20)} ${COLORS.cyan(valStr)}`);
     }
     
     // Cleanup stats if present
     if (stats.cleanup) {
-      console.log('\n' + COLORS.bold('🧹 Cleanup'));
-      console.log(COLORS.dim('─────────────────────────────────'));
-      console.log(`  ${'Merged'.padEnd(20)} ${COLORS.cyan(stats.cleanup.merged || 0)}`);
-      console.log(`  ${'Deleted'.padEnd(20)} ${COLORS.cyan(stats.cleanup.deleted || 0)}`);
+      this._cli('\n' + COLORS.bold('🧹 Cleanup'));
+      this._cli(COLORS.dim('─────────────────────────────────'));
+      this._cli(`  ${'Merged'.padEnd(20)} ${COLORS.cyan(stats.cleanup.merged || 0)}`);
+      this._cli(`  ${'Deleted'.padEnd(20)} ${COLORS.cyan(stats.cleanup.deleted || 0)}`);
     }
     
     // Source and timing
-    console.log('\n' + COLORS.bold('⚙️  Metadata'));
-    console.log(COLORS.dim('─────────────────────────────────'));
+    this._cli('\n' + COLORS.bold('⚙️  Metadata'));
+    this._cli(COLORS.dim('─────────────────────────────────'));
     if (stats.source) {
-      console.log(`  ${'Source'.padEnd(20)} ${COLORS.info(stats.source)}`);
+      this._cli(`  ${'Source'.padEnd(20)} ${COLORS.info(stats.source)}`);
     }
-    console.log(`  ${'Duration'.padEnd(20)} ${COLORS.success(durationSec + 's')}`);
+    this._cli(`  ${'Duration'.padEnd(20)} ${COLORS.success(durationSec + 's')}`);
     
-    console.log('\n' + COLORS.dim('═'.repeat(60)) + '\n');
+    this._cli('\n' + COLORS.dim('═'.repeat(60)) + '\n');
   }
 }
 

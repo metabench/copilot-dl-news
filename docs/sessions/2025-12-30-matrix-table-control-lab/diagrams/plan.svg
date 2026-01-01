@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <defs>
+    <style>
+      .bg { fill: #0b0b0b; }
+      .box { fill: #121212; stroke: #2a2a2a; stroke-width: 2; }
+      .title { fill: #e7c97a; font: 700 20px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+      .text { fill: #e7e7e7; font: 14px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+      .muted { fill: #bdbdbd; font: 12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+      .arrow { stroke: #6aa9ff; stroke-width: 2.5; fill: none; marker-end: url(#mEnd); }
+      .badge { fill: #1f1f1f; stroke: #3a3a3a; stroke-width: 1.5; }
+    </style>
+    <marker id="mEnd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6aa9ff" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="720" />
+
+  <text class="title" x="40" y="60">Lab 044 Plan — MatrixTableControl Patterns</text>
+  <text class="muted" x="40" y="88">Goal: deterministic SSR markers + activation + flip axes + screenshots</text>
+
+  <!-- Step 1 -->
+  <rect class="box" x="40" y="130" width="520" height="170" rx="14" />
+  <text class="title" x="70" y="170" font-size="18">1) Render SSR (Node / jsgui3-server)</text>
+  <text class="text" x="70" y="200">Serve: / (SSR HTML) and /js/js.js (bundle)</text>
+  <text class="text" x="70" y="226">Assertions: data-jsgui-type + data-testid markers</text>
+  <rect class="badge" x="70" y="245" width="450" height="40" rx="10" />
+  <text class="text" x="85" y="270">Key marker: data-testid=&quot;flip-axes&quot; present in HTML</text>
+
+  <!-- Step 2 -->
+  <rect class="box" x="640" y="130" width="520" height="170" rx="14" />
+  <text class="title" x="670" y="170" font-size="18">2) Activate in browser (Puppeteer)</text>
+  <text class="text" x="670" y="200">Wait for .matrix-table-lab + data-activated=1</text>
+  <text class="text" x="670" y="226">Verify tooltips exist for truncated headers</text>
+  <rect class="badge" x="670" y="245" width="450" height="40" rx="10" />
+  <text class="text" x="685" y="270">Click [data-testid=&quot;flip-axes&quot;] → data-view &quot;b&quot;</text>
+
+  <!-- arrows between steps -->
+  <path class="arrow" d="M 560 215 C 595 215, 610 215, 640 215" />
+
+  <!-- Step 3 -->
+  <rect class="box" x="40" y="350" width="1120" height="220" rx="14" />
+  <text class="title" x="70" y="390" font-size="18">3) Capture artifacts</text>
+  <text class="text" x="70" y="420">Before screenshot: screenshots/lab-044-matrix-table-control-a.png</text>
+  <text class="text" x="70" y="446">After screenshot: screenshots/lab-044-matrix-table-control-b.png</text>
+  <text class="text" x="70" y="472">Done when: SSR + click flow + both screenshots succeed</text>
+
+  <!-- Note: attribute wiring -->
+  <rect class="box" x="40" y="600" width="1120" height="90" rx="14" />
+  <text class="title" x="70" y="640" font-size="18">Important Implementation Note</text>
+  <text class="text" x="70" y="670">Set HTML attrs via ctrl.dom.attributes[...] (not as top-level spec keys) to ensure SSR emission.</text>
+</svg>

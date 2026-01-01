@@ -17,8 +17,29 @@ const http = require('http');
 const jsgui = require('jsgui3-html');
 
 const { OpsHubView } = require('./views/OpsHubView');
+const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 
-const PORT = process.env.PORT || 3000;
+const DEFAULT_PORT = 3000;
+
+function parseArgs(argv = process.argv.slice(2)) {
+  const args = {
+    port: Number(process.env.PORT) || DEFAULT_PORT
+  };
+
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i];
+    if (token === '--port' && argv[i + 1]) {
+      i += 1;
+      const value = Number(argv[i]);
+      if (Number.isFinite(value) && value > 0) {
+        args.port = value;
+      }
+      continue;
+    }
+  }
+
+  return args;
+}
 
 // ─────────────────────────────────────────────────────────────
 // Dashboard Registry
@@ -154,8 +175,12 @@ app.get('/go/:path', (req, res) => {
 // ─────────────────────────────────────────────────────────────
 
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`\n🚀 Ops Hub running at http://localhost:${PORT}\n`);
+  const args = parseArgs();
+  const port = args.port;
+  process.env.SERVER_NAME = process.env.SERVER_NAME || 'OpsHub';
+
+  wrapServerForCheck(app, port, undefined, () => {
+    console.log(`\n🚀 Ops Hub running at http://localhost:${port}\n`);
     console.log('Available dashboards:');
     for (const cat of DASHBOARDS) {
       console.log(`\n  ${cat.category}:`);

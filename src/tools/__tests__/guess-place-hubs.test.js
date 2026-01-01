@@ -6,6 +6,38 @@ const path = require('path');
 const { ensureDb } = require('../../db/sqlite/ensureDb');
 const { guessPlaceHubs } = require('../guess-place-hubs');
 
+async function cleanupTempSqlite(dbPath) {
+  const candidates = [dbPath, `${dbPath}-wal`, `${dbPath}-shm`];
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    let hadBusy = false;
+
+    for (const filePath of candidates) {
+      if (!fs.existsSync(filePath)) continue;
+      try {
+        fs.unlinkSync(filePath);
+      } catch (err) {
+        if (err && (err.code === 'EBUSY' || err.code === 'EPERM')) {
+          hadBusy = true;
+          continue;
+        }
+        // Unexpected cleanup error should still fail tests.
+        throw err;
+      }
+    }
+
+    if (!hadBusy) {
+      return;
+    }
+
+    // Windows can hold SQLite files briefly after close; retry with backoff.
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise((resolve) => setTimeout(resolve, 25 * (attempt + 1)));
+  }
+
+  // Give up: don't fail the test for cleanup flakiness.
+}
+
 function createTempDbPath(label) {
   const name = `guess-place-hubs-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}.sqlite`;
   return path.join(os.tmpdir(), name);
@@ -101,18 +133,25 @@ describe('guess-place-hubs tool', () => {
       expect(summary.fetched).toBe(1);
       const verifyDb = ensureDb(dbPath);
       try {
-        const hub = verifyDb.prepare('SELECT url, place_slug, place_kind, title FROM place_hubs').get();
+        const hub = verifyDb.prepare('SELECT url, place_slug, place_kind, title FROM place_hubs_with_urls').get();
         expect(hub).toMatchObject({
           place_slug: 'testland',
           place_kind: 'country'
         });
-        const fetchRow = verifyDb.prepare('SELECT http_status FROM fetches WHERE url = ?').get(hub.url);
+        const fetchRow = verifyDb.prepare(`
+          SELECT hr.http_status
+            FROM http_responses hr
+            JOIN urls u ON u.id = hr.url_id
+           WHERE u.url = ?
+        ORDER BY COALESCE(hr.fetched_at, hr.request_started_at) DESC
+           LIMIT 1
+        `).get(hub.url);
         expect(fetchRow.http_status).toBe(200);
       } finally {
         verifyDb.close();
       }
     } finally {
-      fs.unlinkSync(dbPath);
+      await cleanupTempSqlite(dbPath);
     }
   });
 
@@ -169,13 +208,13 @@ describe('guess-place-hubs tool', () => {
       try {
         const hubCount = verifyDb.prepare('SELECT COUNT(*) AS cnt FROM place_hubs').get().cnt;
         expect(hubCount).toBe(0);
-        const fetchRow = verifyDb.prepare('SELECT http_status FROM fetches ORDER BY rowid DESC LIMIT 1').get();
+        const fetchRow = verifyDb.prepare('SELECT http_status FROM http_responses ORDER BY id DESC LIMIT 1').get();
         expect(fetchRow.http_status).toBe(404);
       } finally {
         verifyDb.close();
       }
     } finally {
-      fs.unlinkSync(dbPath);
+      await cleanupTempSqlite(dbPath);
     }
   });
 
@@ -249,7 +288,7 @@ describe('guess-place-hubs tool', () => {
         verifyDb.close();
       }
     } finally {
-      fs.unlinkSync(dbPath);
+      await cleanupTempSqlite(dbPath);
     }
   });
 
@@ -336,7 +375,7 @@ describe('guess-place-hubs tool', () => {
         verifyDb.close();
       }
     } finally {
-      fs.unlinkSync(dbPath);
+      await cleanupTempSqlite(dbPath);
     }
   });
 });

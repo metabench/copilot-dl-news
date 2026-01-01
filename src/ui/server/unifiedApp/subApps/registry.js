@@ -77,7 +77,18 @@ function createSubAppRegistry() {
       category: 'crawler',
       description: 'Real-time crawl monitoring with event stream',
       renderContent: async () => {
-        return `<div class="app-placeholder"><p>🔭 Crawl Observer</p><p>Real-time crawl monitoring - loads from port 3007</p></div>`;
+        return `<iframe class="app-embed" src="/crawl-observer" title="Crawl Observer" loading="lazy"></iframe>`;
+      }
+    },
+
+    {
+      id: 'crawl-status',
+      label: 'Crawl Status',
+      icon: '🏃',
+      category: 'crawler',
+      description: 'Start crawl operations and view real-time progress',
+      renderContent: async () => {
+        return `<iframe class="app-embed" src="/crawl-status" title="Crawl Status" loading="lazy"></iframe>`;
       }
     },
     
@@ -152,6 +163,39 @@ function createSubAppRegistry() {
         return `<iframe class="app-embed" src="/analytics" title="Analytics" loading="lazy"></iframe>`;
       }
     },
+
+    {
+      id: 'place-hub-guessing',
+      label: 'Place Hub Guessing',
+      icon: '🧭',
+      category: 'analytics',
+      description: 'Coverage matrix for place hub mappings',
+      renderContent: async () => {
+        return `<iframe class="app-embed" src="/place-hubs" title="Place Hub Guessing" loading="lazy"></iframe>`;
+      }
+    },
+
+    {
+      id: 'topic-hub-guessing',
+      label: 'Topic Hub Guessing',
+      icon: '🏷️',
+      category: 'analytics',
+      description: 'Coverage matrix for topic hub mappings',
+      renderContent: async () => {
+        return `<iframe class="app-embed" src="/topic-hubs" title="Topic Hub Guessing" loading="lazy"></iframe>`;
+      }
+    },
+
+    {
+      id: 'topic-lists',
+      label: 'Topic Lists',
+      icon: '🗂️',
+      category: 'admin',
+      description: 'Edit multilingual topic list labels',
+      renderContent: async () => {
+        return `<iframe class="app-embed" src="/topic-lists" title="Topic Lists" loading="lazy"></iframe>`;
+      }
+    },
     
     {
       id: 'query-telemetry',
@@ -167,6 +211,28 @@ function createSubAppRegistry() {
     // ─────────────────────────────────────────────────────────────
     // Development Tools
     // ─────────────────────────────────────────────────────────────
+    {
+      id: 'docs',
+      label: 'Docs',
+      icon: '📚',
+      category: 'dev',
+      description: 'Browse repo documentation in-app',
+      renderContent: async () => {
+        return `<iframe class="app-embed" src="/docs" title="Docs" loading="lazy"></iframe>`;
+      }
+    },
+
+    {
+      id: 'design',
+      label: 'Design Studio',
+      icon: '🎨',
+      category: 'dev',
+      description: 'Browse design assets (SVG/PNG) in-app',
+      renderContent: async () => {
+        return `<iframe class="app-embed" src="/design" title="Design Studio" loading="lazy"></iframe>`;
+      }
+    },
+
     {
       id: 'decision-tree',
       label: 'Decision Tree',

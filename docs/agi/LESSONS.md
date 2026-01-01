@@ -156,3 +156,10 @@
 ## 2025-12-27
 - **Phase 8 Complete** — Implemented all 8 items (Analytics, Intelligence & API) with 469 tests total. Key pattern: Agent dispatching in waves (foundations → intelligence → realtime → advanced) with clear dependency tracking worked well. Test counts per item: Search 42, API 36, Similarity 111, Tagging 88, Analytics 32, Stream 55, Recommendations 105.
 - **Alert System Mock Adapter**: When creating mock adapters for tests, carefully audit all methods the actual adapter needs. The AlertEngine test suite required these often-overlooked methods: `countRecentAlerts()` for throttling, `getBreakingNewsByStory()` and `updateBreakingNewsCount()` for breaking news tracking. Initialize mock rules by ID (not name) to match how the real adapter stores them.
+
+## 2025-12-30
+- In jsgui3 lab controls, set test selectors like `data-testid` via `control.dom.attributes[...]` (not as top-level spec keys in constructors) to ensure SSR emits the attribute and Puppeteer selectors work.
+
+## 2025-12-31
+- For new matrix-style UIs (Place/Topic hub guessing), lock presentation consistency by extracting shared chrome (filters/stats/legend/actions + flip script) into a reusable control, then keep dataset-specific logic isolated to a thin MatrixControl + queries module.
+- When integrating a tool into Unified App, prefer in-process router mounting + iframe embedding, but budget time for base-path correctness (avoid absolute links like `/task/...` unless you prefix via a `basePath` option).

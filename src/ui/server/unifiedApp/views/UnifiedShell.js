@@ -122,7 +122,9 @@ class UnifiedShell extends Control {
     for (const app of this.subApps) {
       const isActive = app.id === this.activeAppId;
       const visibilityClass = isActive ? '' : ' app-container--hidden';
-      const loadedAttr = isActive ? ' data-loaded="true"' : '';
+      // Note: We do NOT pre-render sub-app HTML server-side.
+      // The active container starts with a loading placeholder and must be fetched client-side.
+      const loadedAttr = '';
       
       html += `
         <div class="app-container${visibilityClass}" 

@@ -51,15 +51,34 @@ class CliArgumentParser {
    *   .add('--verbose, -v', 'Verbose output', false, 'boolean');
    */
   add(flags, description, defaultValue, type = 'string') {
+    const originalFlags = flags;
+
+    // Commander treats bare boolean flags (e.g. "--quiet") as not accepting values, so
+    // forms like "--quiet=1" are rejected as unknown options. In this repo we sometimes
+    // use "--flag=1"/"--flag=0" in tests and scripts, so we normalize boolean options
+    // to accept an optional value.
+    let normalizedFlags = flags;
+
     // For variadic arguments, commander.js collects them into an array automatically.
     // No special handling is needed here; just pass the flags to createOption.
-    const option = this.program.createOption(flags, description);
+    const normalizedType = typeof type === 'string' ? String(type || '').toLowerCase() : type;
+    if (
+      typeof normalizedType === 'string' &&
+      normalizedType === 'boolean' &&
+      !normalizedFlags.includes('...') &&
+      !normalizedFlags.includes('<') &&
+      !normalizedFlags.includes('[') &&
+      !normalizedFlags.includes('--no-')
+    ) {
+      normalizedFlags = normalizedFlags.replace(/--([a-zA-Z0-9][\w-]*)/, '--$1 [value]');
+    }
+
+    const option = this.program.createOption(normalizedFlags, description);
 
     let parserFn = null;
     if (typeof type === 'function') {
       parserFn = type;
     } else if (!flags.includes('...')) {
-      const normalizedType = String(type || '').toLowerCase();
       switch (normalizedType) {
         case 'int':
         case 'integer':
@@ -67,7 +86,7 @@ class CliArgumentParser {
           parserFn = (value) => {
             const parsed = Number.parseInt(value, 10);
             if (Number.isNaN(parsed)) {
-              throw new Error(`Expected a number for ${flags}, received "${value}"`);
+              throw new Error(`Expected a number for ${originalFlags}, received "${value}"`);
             }
             return parsed;
           };
@@ -77,21 +96,21 @@ class CliArgumentParser {
           parserFn = (value) => {
             const parsed = Number.parseFloat(value);
             if (Number.isNaN(parsed)) {
-              throw new Error(`Expected a decimal number for ${flags}, received "${value}"`);
+              throw new Error(`Expected a decimal number for ${originalFlags}, received "${value}"`);
             }
             return parsed;
           };
           break;
         case 'boolean':
-          if (flags.includes('<') || flags.includes('[')) {
-              parserFn = (value) => {
-                  if (value === undefined) return true;
-                  const normalized = String(value).trim().toLowerCase();
-                  if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true;
-                  if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false;
-                  throw new Error(`Expected a boolean for ${flags}, received "${value}"`);
-              };
-          }
+          // With optional values, accept --flag, --flag=1, --flag=true, etc.
+          // For bare flags without values, commander supplies undefined.
+          parserFn = (value) => {
+            if (value === undefined) return true;
+            const normalized = String(value).trim().toLowerCase();
+            if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true;
+            if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false;
+            throw new Error(`Expected a boolean for ${originalFlags}, received "${value}"`);
+          };
           break;
         default:
           parserFn = null;

@@ -23,6 +23,11 @@ function run() {
     'expected remote observable base path wiring to be present (may be HTML-escaped)'
   );
 
+  assert(html.includes('crawl-start-form'), 'expected quick start form to be present');
+  assert(html.includes('crawl-start-url'), 'expected quick start URL input to be present');
+  assert(html.includes('crawl-start-operation-label'), 'expected operation label marker to be present');
+  assert(html.includes('crawl-start-advanced'), 'expected advanced expander marker to be present');
+
   console.log('✅ crawl status page includes remote observable client wiring');
 }
 

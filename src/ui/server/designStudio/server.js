@@ -32,6 +32,7 @@ const { Command } = require("commander");
 const { DesignAppControl } = require("./isomorphic/controls");
 const { buildFileTree } = require("../shared/utils/fileTree");
 const { renderSvgContent } = require("../shared/utils/svgRenderer");
+const { wrapServerForCheck } = require("../utils/serverStartupCheck");
 
 const DEFAULT_PORT = 4900;
 const DEFAULT_DESIGN_PATH = path.join(__dirname, "../../../../design");
@@ -51,7 +52,8 @@ function createProgram() {
     .option("-d, --design <path>", "Path to design directory", DEFAULT_DESIGN_PATH)
     .option("--detached", "Run server as a detached background process")
     .option("--stop", "Stop a running detached server")
-    .option("--status", "Check if a detached server is running");
+    .option("--status", "Check if a detached server is running")
+    .option("--check", "Start server, verify it responds, then exit (for CI/agents)");
   
   return program;
 }
@@ -69,8 +71,16 @@ function parseArgs(argv = process.argv) {
     designPath: opts.design || DEFAULT_DESIGN_PATH,
     detached: !!opts.detached,
     stop: !!opts.stop,
-    status: !!opts.status
+    status: !!opts.status,
+    check: !!opts.check
   };
+}
+
+function normalizeBaseUrl(baseUrl) {
+  if (!baseUrl || baseUrl === "/") {
+    return "";
+  }
+  return baseUrl;
 }
 
 /**
@@ -167,51 +177,55 @@ function buildDesignTree(designPath) {
 /**
  * Create the Design Studio Express app
  */
-function createDesignStudioServer(options = {}) {
+function createDesignStudioRouter(options = {}) {
   const designPath = path.resolve(options.designPath || DEFAULT_DESIGN_PATH);
-  
+
   if (!fs.existsSync(designPath)) {
     throw new Error(`Design directory not found: ${designPath}`);
   }
 
-  const app = express();
+  const router = express.Router();
 
   // Serve static assets (CSS, JS, etc.)
   const publicDir = path.join(__dirname, "public");
   if (fs.existsSync(publicDir)) {
-    app.use("/assets", express.static(publicDir));
+    router.use("/assets", express.static(publicDir));
   }
 
   // Also serve design files directly (for download/raw access)
-  app.use("/design-files", express.static(designPath));
+  router.use("/design-files", express.static(designPath));
 
   // Handle favicon requests (suppress 404)
-  app.get("/favicon.ico", (req, res) => res.status(204).end());
+  router.get("/favicon.ico", (req, res) => res.status(204).end());
 
   // Build asset tree on startup
   let assetTree = buildDesignTree(designPath);
 
   // Main page route - renders the design studio app
-  app.get("/", (req, res) => {
+  router.get("/", (req, res) => {
     try {
       const selectedPath = req.query.asset || null;
 
       const context = new jsgui.Page_Context();
-      
+      const baseUrl = normalizeBaseUrl(req.baseUrl);
+      const basePathForLinks = baseUrl || "/";
+
       // Load asset content with context so SVGs can render via jsgui3
-      const assetContent = selectedPath 
-        ? loadAssetContent(designPath, selectedPath, context)
+      const assetContent = selectedPath
+        ? loadAssetContent(designPath, selectedPath, context, { baseUrl })
         : null;
 
       const designApp = new DesignAppControl({
         context,
         assetTree,
         selectedPath,
-        assetContent
+        assetContent,
+        basePath: basePathForLinks
       });
 
-      const html = renderPage(designApp, { 
-        title: assetContent?.title || "Design Studio"
+      const html = renderPage(designApp, {
+        title: assetContent?.title || "Design Studio",
+        baseUrl
       });
       res.type("html").send(html);
     } catch (err) {
@@ -221,31 +235,43 @@ function createDesignStudioServer(options = {}) {
   });
 
   // API endpoint to get asset content
-  app.get("/api/asset", (req, res) => {
+  router.get("/api/asset", (req, res) => {
     const assetPath = req.query.path;
     if (!assetPath) {
       return res.status(400).json({ error: "Missing path parameter" });
     }
-    
-    const content = loadAssetContent(designPath, assetPath);
+
+    const baseUrl = normalizeBaseUrl(req.baseUrl);
+    const content = loadAssetContent(designPath, assetPath, null, { baseUrl });
     if (!content) {
       return res.status(404).json({ error: "Asset not found" });
     }
-    
+
     res.json(content);
   });
 
   // API endpoint to refresh asset tree
-  app.post("/api/refresh", (req, res) => {
+  router.post("/api/refresh", (req, res) => {
     assetTree = buildDesignTree(designPath);
     res.json({ ok: true, count: countAssets(assetTree) });
   });
 
   // Error handler
-  app.use((err, req, res, next) => {
+  router.use((err, req, res, next) => {
     console.error("Design Studio error:", err);
     res.status(500).type("text/plain").send("Internal server error");
   });
+
+  return { router, close: () => {} };
+}
+
+function createDesignStudioServer(options = {}) {
+  const designPath = path.resolve(options.designPath || DEFAULT_DESIGN_PATH);
+  const app = express();
+  app.use(express.json());
+
+  const mod = createDesignStudioRouter({ designPath });
+  app.use("/", mod.router);
 
   return { app, designPath };
 }
@@ -253,8 +279,10 @@ function createDesignStudioServer(options = {}) {
 /**
  * Load and render a design asset (SVG, etc.)
  */
-function loadAssetContent(designPath, relativePath, context = null) {
+function loadAssetContent(designPath, relativePath, context = null, options = {}) {
   try {
+    const baseUrl = normalizeBaseUrl(options.baseUrl);
+
     // Sanitize path to prevent directory traversal
     const safePath = relativePath.replace(/\.\./g, "").replace(/^\/+/, "");
     const fullPath = path.join(designPath, safePath);
@@ -293,7 +321,7 @@ function loadAssetContent(designPath, relativePath, context = null) {
     if ([".png", ".jpg", ".jpeg", ".gif", ".webp"].includes(ext)) {
       const title = path.basename(relativePath, ext);
       const html = `<div class="design-image-container">
-        <img src="/design-files/${escapeHtml(safePath)}" alt="${escapeHtml(title)}" class="design-image" />
+        <img src="${baseUrl}/design-files/${escapeHtml(safePath)}" alt="${escapeHtml(title)}" class="design-image" />
         <p class="design-image-filename"><code>${escapeHtml(relativePath)}</code></p>
       </div>`;
       return { path: relativePath, title, html };
@@ -326,6 +354,7 @@ function countAssets(tree) {
  */
 function renderPage(control, options = {}) {
   const title = options.title || "Design Studio";
+  const baseUrl = normalizeBaseUrl(options.baseUrl);
   const html = control.all_html_render();
   
   // Check if jsgui3 client bundle exists
@@ -333,7 +362,7 @@ function renderPage(control, options = {}) {
   const hasClientBundle = fs.existsSync(clientBundlePath);
   
   const clientBundleScript = hasClientBundle 
-    ? '<!-- jsgui3 client bundle for control activation -->\n  <script src="/assets/design-studio-client.js"></script>'
+    ? `<!-- jsgui3 client bundle for control activation -->\n  <script src="${baseUrl}/assets/design-studio-client.js"></script>`
     : '<!-- jsgui3 client bundle not built - run: npm run ui:design:build -->';
   
   // Inline script to restore split layout width BEFORE render to prevent flickering
@@ -374,12 +403,12 @@ function renderPage(control, options = {}) {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/design-studio.css">
+  <link rel="stylesheet" href="${baseUrl}/assets/design-studio.css">
 </head>
 <body>
   ${html}
   ${clientBundleScript}
-  <script src="/assets/design-studio.js"></script>
+  <script src="${baseUrl}/assets/design-studio.js"></script>
 </body>
 </html>`;
 }
@@ -417,18 +446,25 @@ if (require.main === module) {
     spawnDetached(args);
     process.exit(0);
   }
+
+  if (args.check) {
+    process.env.SERVER_NAME = "Design Studio";
+  }
   
   // Normal foreground server
   const { app, designPath } = createDesignStudioServer({ designPath: args.designPath });
-  
-  app.listen(args.port, () => {
-    console.log(`🎨 Design Studio running at http://localhost:${args.port}`);
-    console.log(`   Serving designs from: ${designPath}`);
+
+  wrapServerForCheck(app, args.port, undefined, () => {
+    if (!args.check) {
+      console.log(`🎨 Design Studio running at http://localhost:${args.port}`);
+      console.log(`   Serving designs from: ${designPath}`);
+    }
   });
 }
 
 module.exports = {
   createDesignStudioServer,
+  createDesignStudioRouter,
   parseArgs,
   createProgram,
   spawnDetached,

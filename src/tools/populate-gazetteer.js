@@ -173,7 +173,8 @@ function normalizeOptions(rawArgs) {
   const telemetry = new GazetteerTelemetry({
     jsonMode: options.jsonEvents,
     verbose: options.verbose,
-    quiet: options.quiet
+    quiet: options.quiet,
+    summaryFormat: options.summaryFormat
   });
 
   const {

@@ -34,14 +34,15 @@ function createGuessPlaceHubsQueries(db) {
     }
   };
 
-  ensureIndex(`CREATE INDEX IF NOT EXISTS idx_fetches_host ON fetches(host);`);
+  ensureIndex(`CREATE INDEX IF NOT EXISTS idx_http_responses_url_id ON http_responses(url_id);`);
+  ensureIndex(`CREATE INDEX IF NOT EXISTS idx_urls_host ON urls(host);`);
   ensureIndex(`CREATE INDEX IF NOT EXISTS idx_place_page_mappings_host_status ON place_page_mappings(host, status, page_kind);`);
   ensureIndex(`CREATE INDEX IF NOT EXISTS idx_place_hubs_host ON place_hubs(host);`);
   ensureIndex(`CREATE INDEX IF NOT EXISTS idx_place_hub_candidates_domain ON place_hub_candidates(domain);`);
 
   const selectLatestFetchStmt = db.prepare(`
     SELECT http_status, fetched_at, request_started_at
-      FROM fetches
+      FROM http_responses
      WHERE url_id = ?
   ORDER BY COALESCE(fetched_at, request_started_at) DESC
      LIMIT 1
@@ -101,35 +102,39 @@ function createGuessPlaceHubsQueries(db) {
      WHERE url_id = @url_id
   `);
 
-  let insertLegacyFetchStmt = null;
+  let insertHttpResponseStmt = null;
+  let updateUrlHostStmt = null;
   try {
-    insertLegacyFetchStmt = db.prepare(`
-      INSERT INTO fetches (
+    insertHttpResponseStmt = db.prepare(`
+      INSERT INTO http_responses (
         url_id,
         request_started_at,
         fetched_at,
         http_status,
         content_type,
-        content_length,
         bytes_downloaded,
         total_ms,
-        download_ms,
-        host
+        download_ms
       ) VALUES (
         @url_id,
         @request_started_at,
         @fetched_at,
         @http_status,
         @content_type,
-        @content_length,
         @bytes_downloaded,
         @total_ms,
-        @download_ms,
-        @host
+        @download_ms
       )
     `);
+
+    updateUrlHostStmt = db.prepare(`
+      UPDATE urls
+         SET host = COALESCE(host, @host)
+       WHERE id = @url_id
+    `);
   } catch (error) {
-    insertLegacyFetchStmt = null;
+    insertHttpResponseStmt = null;
+    updateUrlHostStmt = null;
   }
 
   const normalizeNumber = (value) => (Number.isFinite(value) ? value : null);
@@ -152,7 +157,12 @@ function createGuessPlaceHubsQueries(db) {
     }
   };
 
-  const fetchCountStmt = prepareCountStmt('SELECT COUNT(*) AS count FROM fetches WHERE host = ?');
+  const fetchCountStmt = prepareCountStmt(`
+    SELECT COUNT(*) AS count
+      FROM http_responses hr
+      JOIN urls u ON u.id = hr.url_id
+     WHERE u.host = ?
+  `);
   const verifiedMappingCountStmt = prepareCountStmt(`
     SELECT COUNT(*) AS count
       FROM place_page_mappings
@@ -396,20 +406,28 @@ function createGuessPlaceHubsQueries(db) {
     },
 
     insertLegacyFetch(fetchRow) {
-      if (!insertLegacyFetchStmt || !fetchRow) return;
+      if (!insertHttpResponseStmt || !fetchRow) return;
       const urlId = urlResolver.ensureUrlId(fetchRow.url);
       if (!urlId) return;
-      insertLegacyFetchStmt.run({
+
+      const host = (fetchRow.host || resolveHost(null, fetchRow.url) || null);
+      if (updateUrlHostStmt && host) {
+        try {
+          updateUrlHostStmt.run({ url_id: urlId, host });
+        } catch (_) {
+          /* ignore */
+        }
+      }
+
+      insertHttpResponseStmt.run({
         url_id: urlId,
         request_started_at: fetchRow.request_started_at || fetchRow.fetched_at || null,
         fetched_at: fetchRow.fetched_at || fetchRow.request_started_at || null,
         http_status: fetchRow.http_status ?? null,
         content_type: fetchRow.content_type ?? null,
-        content_length: normalizeNumber(fetchRow.content_length),
         bytes_downloaded: normalizeNumber(fetchRow.bytes_downloaded),
         total_ms: normalizeNumber(fetchRow.total_ms),
-        download_ms: normalizeNumber(fetchRow.download_ms),
-        host: fetchRow.host || null
+        download_ms: normalizeNumber(fetchRow.download_ms)
       });
     },
 
@@ -568,7 +586,8 @@ function createGuessPlaceHubsQueries(db) {
       finalize(selectHubByUrlStmt);
       finalize(insertHubStmt);
       finalize(updateHubStmt);
-      finalize(insertLegacyFetchStmt);
+      finalize(insertHttpResponseStmt);
+      finalize(updateUrlHostStmt);
       finalize(fetchCountStmt);
       finalize(verifiedMappingCountStmt);
       finalize(storedHubCountStmt);

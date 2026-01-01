@@ -30,8 +30,12 @@
 
 const ToolboxControl = require('./ToolboxControl');
 const ContextMenuControl = require('./ContextMenuControl');
+const MatrixTableControl = require('./MatrixTableControl');
+const VirtualMatrixControl = require('./VirtualMatrixControl');
 
 module.exports = {
   ToolboxControl,
-  ContextMenuControl
+  ContextMenuControl,
+  MatrixTableControl,
+  VirtualMatrixControl
 };

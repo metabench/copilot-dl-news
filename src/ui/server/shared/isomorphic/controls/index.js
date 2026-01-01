@@ -56,7 +56,7 @@ const {
 } = require("./canvas");
 
 // UI controls (general patterns)
-const { ToolboxControl, ContextMenuControl } = require("./ui");
+const { ToolboxControl, ContextMenuControl, MatrixTableControl, VirtualMatrixControl } = require("./ui");
 
 module.exports = {
   // Layout
@@ -76,5 +76,7 @@ module.exports = {
   
   // UI
   ToolboxControl,
-  ContextMenuControl
+  ContextMenuControl,
+  MatrixTableControl,
+  VirtualMatrixControl
 };

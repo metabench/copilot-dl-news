@@ -23,6 +23,7 @@ class DesignAppControl extends jsgui.Control {
    * @param {Array} spec.assetTree - Asset tree structure
    * @param {string} spec.selectedPath - Currently selected asset path
    * @param {Object} spec.assetContent - Asset content { title, html, svgControl, path }
+   * @param {string} [spec.basePath] - Mount prefix ('' or '/design') for SSR links
    */
   constructor(spec = {}) {
     super({ ...spec, tagName: "div" });
@@ -30,6 +31,7 @@ class DesignAppControl extends jsgui.Control {
     this.assetTree = spec.assetTree || [];
     this.selectedPath = spec.selectedPath || null;
     this.assetContent = spec.assetContent || null;
+    this.basePath = spec.basePath || "/";
     
     this.add_class("design-app");
     this.dom.attributes["data-jsgui-id"] = "design-app";
@@ -53,7 +55,7 @@ class DesignAppControl extends jsgui.Control {
       context: this.context,
       assetTree: this.assetTree,
       selectedPath: this.selectedPath,
-      basePath: "/"
+      basePath: this.basePath
     });
     navColumn.add(nav);
     
@@ -99,7 +101,7 @@ class DesignAppControl extends jsgui.Control {
     // Logo/Home link
     const logo = new jsgui.Control({ context: this.context, tagName: "a" });
     logo.add_class("design-app__logo");
-    logo.dom.attributes.href = "/";
+    logo.dom.attributes.href = this.basePath;
     
     const logoIcon = new jsgui.Control({ context: this.context, tagName: "span" });
     logoIcon.add_class("design-app__logo-icon");

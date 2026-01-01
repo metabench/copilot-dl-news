@@ -28,6 +28,34 @@ const { PluginDashboard } = require('./views/PluginDashboard');
 const PORT = process.env.PORT || 3122;
 const PLUGINS_DIR = process.env.PLUGINS_DIR || path.join(process.cwd(), 'plugins');
 
+function parseArgs(argv = process.argv.slice(2)) {
+  const args = {
+    port: Number(process.env.PORT) || Number(PORT) || 3122,
+    pluginsDir: process.env.PLUGINS_DIR || PLUGINS_DIR
+  };
+
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i];
+
+    if (token === '--port' && argv[i + 1]) {
+      i += 1;
+      const value = Number(argv[i]);
+      if (Number.isFinite(value) && value > 0) {
+        args.port = value;
+      }
+      continue;
+    }
+
+    if (token === '--plugins-dir' && argv[i + 1]) {
+      i += 1;
+      args.pluginsDir = argv[i];
+      continue;
+    }
+  }
+
+  return args;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Plugin Manager Instance
 // ─────────────────────────────────────────────────────────────
@@ -594,10 +622,15 @@ async function createPluginDashboardRouter(options = {}) {
 // ─────────────────────────────────────────────────────────────
 
 if (require.main === module) {
+  process.env.SERVER_NAME = process.env.SERVER_NAME || 'PluginDashboard';
+  const args = parseArgs();
+  const port = args.port;
+  const pluginsDir = args.pluginsDir;
+
   initPluginManager().then(() => {
-    wrapServerForCheck(app, PORT, undefined, () => {
-      console.log(`[PluginDashboard] Server running at http://localhost:${PORT}`);
-      console.log(`[PluginDashboard] Scanning: ${PLUGINS_DIR}`);
+    wrapServerForCheck(app, port, undefined, () => {
+      console.log(`[PluginDashboard] Server running at http://localhost:${port}`);
+      console.log(`[PluginDashboard] Scanning: ${pluginsDir}`);
       console.log(`[PluginDashboard] Discovered: ${pluginManager.plugins.size} plugins`);
     });
   }).catch(err => {

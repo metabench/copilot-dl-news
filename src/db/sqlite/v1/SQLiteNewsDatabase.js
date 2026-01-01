@@ -9,7 +9,7 @@ const { Readable } = require('stream');
 
 // Import extracted modules
 const { StatementManager } = require('./StatementManager');
-const { UtilityFunctions } = require('./UtilityFunctions');
+const UtilityFunctions = require('./UtilityFunctions');
 const { SchemaInitializer } = require('./SchemaInitializer');
 const { ArticleOperations } = require('./ArticleOperations');
 

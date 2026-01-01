@@ -41,7 +41,8 @@ describe('export-gazetteer CLI', () => {
     expect(fs.existsSync(outPath)).toBe(true);
     const lines = fs.readFileSync(outPath, 'utf8').trim().split(/\r?\n/);
     expect(lines.length).toBeGreaterThanOrEqual(2);
-    const place = lines.map(l => JSON.parse(l)).find(o => o.type === 'place');
+    // The DB bootstrap seeds a "planet" place row first; assert against our seeded Dublin place.
+    const place = lines.map(l => JSON.parse(l)).find(o => o.type === 'place' && o.country_code === 'IE');
     expect(place).toBeTruthy();
     expect(place.extra).toBeTruthy();
     expect(place.extra.wkt).toBeUndefined();

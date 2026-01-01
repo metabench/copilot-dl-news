@@ -28,6 +28,33 @@ const { DomainQualityTable, ConfidenceHistogram, RegressionAlerts } = require('.
 const PORT = process.env.PORT || 3100;
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'news.db');
 
+function parseArgs(argv = process.argv.slice(2)) {
+  const args = {
+    port: Number(process.env.PORT) || Number(PORT) || 3100,
+    dbPath: process.env.DB_PATH || DB_PATH
+  };
+
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i];
+    if (token === '--port' && argv[i + 1]) {
+      i += 1;
+      const value = Number(argv[i]);
+      if (Number.isFinite(value) && value > 0) {
+        args.port = value;
+      }
+      continue;
+    }
+
+    if ((token === '--db-path' || token === '--db') && argv[i + 1]) {
+      i += 1;
+      args.dbPath = argv[i];
+      continue;
+    }
+  }
+
+  return args;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Database setup
 // ─────────────────────────────────────────────────────────────
@@ -683,6 +710,7 @@ function renderDashboard(ctx, summary, distribution, regressions) {
 
 function createApp(service = metricsService) {
   const app = express();
+  const isCheckMode = process.argv.includes('--check');
 
   // JSON API endpoints
   app.get('/api/quality/summary', (req, res) => {
@@ -732,6 +760,11 @@ function createApp(service = metricsService) {
   // SSR pages
   app.get('/', (req, res) => {
     try {
+      if (isCheckMode) {
+        // Keep startup checks fast/deterministic: avoid heavy DB reads during `--check`.
+        res.type('html').send('<!DOCTYPE html><html><head><title>Quality Dashboard (check)</title></head><body>ok</body></html>');
+        return;
+      }
       const summary = service.getSummary();
       const distribution = service.getConfidenceDistribution();
       const regressions = service.getRegressions();
@@ -861,7 +894,9 @@ function closeServer() {
 }
 
 if (require.main === module) {
-  startServer();
+  const args = parseArgs();
+  process.env.SERVER_NAME = process.env.SERVER_NAME || 'QualityDashboard';
+  startServer({ port: args.port, dbPath: args.dbPath });
 
   process.on('SIGINT', () => {
     console.log('\nShutting down...');

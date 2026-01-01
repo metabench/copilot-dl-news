@@ -169,6 +169,10 @@ function checkStatus() {
  */
 function createDocsViewerServer(options = {}) {
   const docsPath = path.resolve(options.docsPath || DEFAULT_DOCS_PATH);
+
+  const wireProcessHandlers = options.wireProcessHandlers !== false;
+  const enableTelemetryMiddleware = options.attachTelemetryMiddleware !== false;
+  const enableTelemetryEndpoints = options.attachTelemetryEndpoints !== false;
   
   if (!fs.existsSync(docsPath)) {
     throw new Error(`Documentation directory not found: ${docsPath}`);
@@ -179,10 +183,16 @@ function createDocsViewerServer(options = {}) {
     name: "Docs Viewer",
     entry: "src/ui/server/docsViewer/server.js"
   });
-  telemetry.wireProcessHandlers();
+  if (wireProcessHandlers) {
+    telemetry.wireProcessHandlers();
+  }
 
-  attachTelemetryMiddleware(app, telemetry);
-  attachTelemetryEndpoints(app, telemetry);
+  if (enableTelemetryMiddleware) {
+    attachTelemetryMiddleware(app, telemetry);
+  }
+  if (enableTelemetryEndpoints) {
+    attachTelemetryEndpoints(app, telemetry);
+  }
 
   // Serve static assets
   const publicDir = path.join(__dirname, "public");
@@ -201,6 +211,8 @@ function createDocsViewerServer(options = {}) {
   app.get("/", (req, res) => {
     const startTime = Date.now();
     try {
+      const baseUrl = req.baseUrl && req.baseUrl !== "/" ? String(req.baseUrl) : "";
+      const uiBasePath = baseUrl || "/";
       const selectedPath = req.query.doc || null;
       
       // Parse filter state from URL params (default: both visible)
@@ -236,6 +248,7 @@ function createDocsViewerServer(options = {}) {
         docTree: sortedTree,
         selectedPath,
         docContent,
+        basePath: uiBasePath,
         filters,
         columns,
         sortBy,
@@ -244,6 +257,7 @@ function createDocsViewerServer(options = {}) {
 
       const html = renderPage(docApp, { 
         title: docContent?.title || "Documentation Viewer",
+        baseUrl,
         filters,
         columns,
         sortBy,
@@ -295,6 +309,9 @@ function createDocsViewerServer(options = {}) {
     if (!folderPath) {
       return res.status(400).json({ error: "Missing path parameter" });
     }
+
+    const baseUrl = req.baseUrl && req.baseUrl !== "/" ? String(req.baseUrl) : "";
+    const uiBasePath = baseUrl || "/";
     
     // Find folder in tree
     const folder = findNodeByPath(docTree, folderPath);
@@ -325,7 +342,7 @@ function createDocsViewerServer(options = {}) {
       context,
       docTree: sortedChildren,
       selectedPath: req.query.doc || null,
-      basePath: "/",
+      basePath: uiBasePath,
       filters,
       columns,
       sortBy,
@@ -357,6 +374,22 @@ function createDocsViewerServer(options = {}) {
   });
 
   return { app, docsPath, telemetry };
+}
+
+/**
+ * Create a mountable router for the unified app.
+ *
+ * This keeps the docs viewer runnable as a standalone server while also allowing
+ * the same app to be mounted under a path prefix (e.g. /docs) without breaking
+ * asset/API URLs.
+ */
+function createDocsViewerRouter(options = {}) {
+  const { app } = createDocsViewerServer({
+    ...options,
+    wireProcessHandlers: false
+  });
+
+  return { router: app, close: () => {} };
 }
 
 /**
@@ -439,6 +472,10 @@ function renderPage(control, options = {}) {
   const columns = options.columns || { mtime: false };
   const sortBy = options.sortBy || 'name';
   const sortOrder = options.sortOrder || 'asc';
+  let baseUrl = typeof options.baseUrl === 'string' ? options.baseUrl : '';
+  if (baseUrl === '/') baseUrl = '';
+  if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+  if (baseUrl && !baseUrl.startsWith('/')) baseUrl = `/${baseUrl}`;
   const html = control.all_html_render();
   
   // Check if jsgui3 client bundle exists
@@ -446,7 +483,7 @@ function renderPage(control, options = {}) {
   const hasClientBundle = fs.existsSync(clientBundlePath);
   
   const clientBundleScript = hasClientBundle 
-    ? '<!-- jsgui3 client bundle for control activation -->\n  <script src="/assets/docs-viewer-client.js"></script>'
+    ? `<!-- jsgui3 client bundle for control activation -->\n  <script src="${baseUrl}/assets/docs-viewer-client.js"></script>`
     : '<!-- jsgui3 client bundle not built - run: npm run ui:docs:build -->';
   
   // Embed state for client-side hydration
@@ -454,6 +491,7 @@ function renderPage(control, options = {}) {
     window.__DOCS_FILTERS__ = ${JSON.stringify(filters)};
     window.__DOCS_COLUMNS__ = ${JSON.stringify(columns)};
     window.__DOCS_SORT__ = { sortBy: ${JSON.stringify(sortBy)}, sortOrder: ${JSON.stringify(sortOrder)} };
+    window.__DOCS_VIEWER_BASE_PATH__ = ${JSON.stringify(baseUrl)};
   </script>`;
   
   // Inline script to restore split layout width BEFORE render to prevent flickering
@@ -495,14 +533,14 @@ function renderPage(control, options = {}) {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manufacturing+Consent&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/docs-viewer.css">
+  <link rel="stylesheet" href="${baseUrl}/assets/docs-viewer.css">
   ${stateScript}
 </head>
 <body>
   ${html}
   ${clientBundleScript}
   <!-- Fallback vanilla JS for non-jsgui features -->
-  <script src="/assets/docs-viewer.js"></script>
+  <script src="${baseUrl}/assets/docs-viewer.js"></script>
 </body>
 </html>`;
 }
@@ -584,6 +622,7 @@ if (require.main === module) {
 
 module.exports = {
   createDocsViewerServer,
+  createDocsViewerRouter,
   parseArgs,
   createProgram,
   spawnDetached,

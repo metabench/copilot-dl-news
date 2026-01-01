@@ -8,8 +8,17 @@ const path = require('path');
  * @returns {Array<{url: string, label: string, icon: string, region?: string}>}
  */
 function loadNewsSourceDefaults() {
-  const bootstrapPath = path.join(__dirname, '..', '..', '..', '..', 'data', 'bootstrap', 'news-sources.json');
   try {
+    const candidatePaths = [
+      path.join(process.cwd(), 'data', 'bootstrap', 'news-sources.json'),
+      path.join(__dirname, '..', '..', '..', '..', 'data', 'bootstrap', 'news-sources.json')
+    ];
+
+    const bootstrapPath = candidatePaths.find((candidate) => fs.existsSync(candidate));
+    if (!bootstrapPath) {
+      throw new Error(`ENOENT, data\\bootstrap\\news-sources.json not found in ${__dirname}`);
+    }
+
     const data = JSON.parse(fs.readFileSync(bootstrapPath, 'utf8'));
     return data.sources || [];
   } catch (err) {

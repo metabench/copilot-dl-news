@@ -66,7 +66,7 @@ function usage() {
     "Run multiple src/ui/lab experiment check.js scripts.",
     "",
     "Usage:",
-    "  node src/ui/lab/run-lab-checks.js --ids 025,026,027,028",
+    "  node src/ui/lab/run-lab-checks.js --ids 025,026,027,028,046",
     "  node src/ui/lab/run-lab-checks.js --all",
     "  node src/ui/lab/run-lab-checks.js --list",
     "",
@@ -150,7 +150,7 @@ async function main() {
   let selected = experiments.filter((e) => e.hasCheck);
 
   if (!args.all) {
-    const ids = args.ids ?? ["025", "026", "027", "028"];
+    const ids = args.ids ?? ["025", "026", "027", "028", "046"];
     const idSet = new Set(ids.map((s) => s.padStart(3, "0")));
     selected = selected.filter((e) => idSet.has(e.id));
 

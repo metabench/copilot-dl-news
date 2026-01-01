@@ -32,8 +32,53 @@ const { createPluginDashboardRouter } = require('../pluginDashboard/server');
 const { createQueryTelemetryRouter } = require('../queryTelemetry/server');
 const { createQualityDashboardRouter } = require('../qualityDashboard/server');
 const { createAnalyticsHubRouter } = require('../analyticsHub/server');
+const { createDocsViewerRouter } = require('../docsViewer/server');
+const { createDesignStudioRouter } = require('../designStudio/server');
+const { createPlaceHubGuessingRouter } = require('../placeHubGuessing/server');
+const { createTopicHubGuessingRouter } = require('../topicHubGuessing/server');
+const { createTopicListsRouter } = require('../topicLists/server');
+const { createCrawlObserverRouter } = require('../crawlObserver/server');
+const { createCrawlStatusRouter } = require('../crawlStatus/server');
+const { TelemetryIntegration } = require('../../../crawler/telemetry/TelemetryIntegration');
+const { InProcessCrawlJobRegistry } = require('../../../server/crawl-api/v1/core/InProcessCrawlJobRegistry');
+const { registerCrawlApiV1Routes } = require('../../../api/route-loaders/crawl-v1');
+const { createCrawlService } = require('../../../server/crawl-api/core/crawlService');
 
 const PORT = process.env.PORT || 3000;
+
+function parseEnvBoolean(value, fallback = false) {
+  if (value === undefined || value === null) return fallback;
+  const normalized = String(value).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return fallback;
+}
+
+function parseNumber(value, fallback) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return n;
+}
+
+function parseArgs(argv = process.argv.slice(2)) {
+  const args = {
+    port: Number(process.env.PORT) || Number(PORT) || 3000
+  };
+
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i];
+    if (token === '--port' && argv[i + 1]) {
+      i += 1;
+      const value = Number(argv[i]);
+      if (Number.isFinite(value) && value > 0) {
+        args.port = value;
+      }
+      continue;
+    }
+  }
+
+  return args;
+}
 
 // ─────────────────────────────────────────────────────────────
 // Sub-App Registry
@@ -47,6 +92,12 @@ const SUB_APPS = createSubAppRegistry();
 
 const app = express();
 app.use(express.json());
+
+// Shared client modules (plain browser scripts) used by lightweight UIs.
+app.use(
+  '/shared-remote-obs',
+  express.static(path.join(__dirname, '..', '..', 'client', 'remoteObservable', 'browser'))
+);
 
 function normalizeRouterFactoryResult(result) {
   if (!result) {
@@ -88,6 +139,46 @@ function mountDashboardModules(unifiedApp, options = {}) {
   const db = initUnifiedDb(options);
   const { getDbRW } = db;
 
+  // Canonical crawler telemetry (SSE + remote-observable) + optional DB persistence.
+  const crawlTelemetry = new TelemetryIntegration({
+    historyLimit: 500,
+    db: getDbRW()?.db,
+    bridgeOptions: {
+      defaultCrawlType: 'standard'
+    }
+  });
+
+  crawlTelemetry.mountSSE(unifiedApp, '/api/crawl-telemetry/events');
+  crawlTelemetry.mountRemoteObservable(unifiedApp, '/api/crawl-telemetry/remote-obs');
+  unifiedApp.get('/api/crawl-telemetry/history', (req, res) => {
+    const limitRaw = req.query && req.query.limit != null ? Number(req.query.limit) : undefined;
+    const limit = Number.isFinite(limitRaw) ? Math.max(0, Math.trunc(limitRaw)) : undefined;
+    const history = crawlTelemetry?.bridge?.getHistory ? crawlTelemetry.bridge.getHistory(limit) : [];
+    res.json({
+      status: 'ok',
+      items: history
+    });
+  });
+
+  const crawlServiceOptions = {
+    telemetryIntegration: crawlTelemetry
+  };
+
+  const inProcessCrawlJobRegistry = new InProcessCrawlJobRegistry({
+    createCrawlService,
+    serviceOptions: crawlServiceOptions,
+    telemetryIntegration: crawlTelemetry,
+    allowMultiJobs: parseEnvBoolean(process.env.UI_ALLOW_MULTI_JOBS, false),
+    historyLimit: parseNumber(process.env.UI_IN_PROCESS_JOB_HISTORY_LIMIT, 200)
+  });
+
+  registerCrawlApiV1Routes(unifiedApp, {
+    basePath: '/api/v1/crawl',
+    createCrawlService,
+    serviceOptions: crawlServiceOptions,
+    inProcessJobRegistry: inProcessCrawlJobRegistry
+  });
+
   const modules = [
     {
       id: 'rate-limit',
@@ -127,10 +218,81 @@ function mountDashboardModules(unifiedApp, options = {}) {
       full: () => createAnalyticsHubRouter({
         getDbHandle: () => getDbRW()?.db
       })
+    },
+    {
+      id: 'place-hubs',
+      mountPath: '/place-hubs',
+      full: () => createPlaceHubGuessingRouter({
+        getDbRW
+      })
+    },
+    {
+      id: 'topic-hubs',
+      mountPath: '/topic-hubs',
+      full: () => createTopicHubGuessingRouter({
+        getDbRW
+      })
+    },
+    {
+      id: 'topic-lists',
+      mountPath: '/topic-lists',
+      full: () => createTopicListsRouter({
+        getDbRW
+      })
+    },
+    {
+      id: 'docs',
+      mountPath: '/docs',
+      full: () => createDocsViewerRouter({
+        docsPath: path.join(process.cwd(), 'docs')
+      })
+    },
+    {
+      id: 'design',
+      mountPath: '/design',
+      full: () => createDesignStudioRouter({
+        designPath: path.join(process.cwd(), 'design')
+      })
+    },
+    {
+      id: 'crawl-observer',
+      mountPath: '/crawl-observer',
+      full: () => createCrawlObserverRouter({
+        getDbHandle: () => getDbRW()?.db
+      })
+    },
+    {
+      id: 'crawl-status',
+      mountPath: '/crawl-status',
+      full: () => createCrawlStatusRouter({
+        jobsApiPath: '/api/v1/crawl/jobs',
+        eventsPath: '/api/crawl-telemetry/events',
+        telemetryHistoryPath: '/api/crawl-telemetry/history'
+      })
     }
   ];
 
   const closers = [];
+  closers.push(() => {
+    try {
+      crawlTelemetry.destroy();
+    } catch {
+      // ignore
+    }
+  });
+  closers.push(() => {
+    try {
+      for (const job of inProcessCrawlJobRegistry.list()) {
+        try {
+          inProcessCrawlJobRegistry.stop(job.id);
+        } catch {
+          // ignore
+        }
+      }
+    } catch {
+      // ignore
+    }
+  });
 
   for (const mod of modules) {
     if (typeof mod.apiOnly === 'function') {
@@ -228,19 +390,24 @@ app.get('/api/apps/:appId/content', async (req, res) => {
   }
 });
 
-// Mount dashboard modules into the unified app (no-retirement: legacy servers keep working too)
-const mountedModules = mountDashboardModules(app, {
-  dbPath: process.env.DB_PATH
-});
-
 // ─────────────────────────────────────────────────────────────
 // Start Server
 // ─────────────────────────────────────────────────────────────
 
 if (require.main === module) {
   process.env.SERVER_NAME = process.env.SERVER_NAME || 'UnifiedApp';
-  wrapServerForCheck(app, PORT, undefined, () => {
-    console.log(`\n🎛️  Unified App Shell running at http://localhost:${PORT}\n`);
+  const args = parseArgs();
+  const port = args.port;
+
+  // Mount dashboard modules into the unified app (no-retirement: legacy servers keep working too)
+  // NOTE: keep this inside the main entrypoint so importing this module in Jest stays cheap and
+  // deterministic (no DB open, no background mounts).
+  const mountedModules = mountDashboardModules(app, {
+    dbPath: process.env.DB_PATH
+  });
+
+  wrapServerForCheck(app, port, undefined, () => {
+    console.log(`\n🎛️  Unified App Shell running at http://localhost:${port}\n`);
     console.log('Available sub-apps:');
     for (const app of SUB_APPS) {
       console.log(`  ${app.icon} ${app.label}`);

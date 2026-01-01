@@ -31,6 +31,386 @@
 
 ## Current Session
 
+### Session 2025-12-31: Unified App: run crawl + progress
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add an easy crawl runner + progress view inside Unified App using existing crawler UI modules.
+
+**Location**: `docs/sessions/2025-12-31-unified-app-run-crawl/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-31-unified-app-run-crawl/INDEX.md)
+- 🗺️ [Plan](./2025-12-31-unified-app-run-crawl/PLAN.md)
+- 📝 [Working Notes](./2025-12-31-unified-app-run-crawl/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-31-unified-app-run-crawl/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-31-unified-app-run-crawl/FOLLOW_UPS.md)
+
+
+### Session 2025-12-31: Unified App: mount Crawl Observer
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Expose Crawl Observer inside unified app under a mounted router so it runs on the unified server/port (no separate service).
+
+**Location**: `docs/sessions/2025-12-31-unified-app-crawl-observer/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-31-unified-app-crawl-observer/INDEX.md)
+- 🗺️ [Plan](./2025-12-31-unified-app-crawl-observer/PLAN.md)
+- 📝 [Working Notes](./2025-12-31-unified-app-crawl-observer/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-31-unified-app-crawl-observer/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-31-unified-app-crawl-observer/FOLLOW_UPS.md)
+
+
+### Session 2025-12-31: Crawl Observer: SQL to DB layer + extract controls
+
+**Duration**: Active
+**Type**: refactor
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Move remaining Crawl Observer SQL into DB query module and extract UI controls into separate files, keeping cursor paging + live stop conditions efficient.
+
+**Location**: `docs/sessions/2025-12-31-crawl-observer-sql-and-controls/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-31-crawl-observer-sql-and-controls/INDEX.md)
+- 🗺️ [Plan](./2025-12-31-crawl-observer-sql-and-controls/PLAN.md)
+- 📝 [Working Notes](./2025-12-31-crawl-observer-sql-and-controls/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-31-crawl-observer-sql-and-controls/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-31-crawl-observer-sql-and-controls/FOLLOW_UPS.md)
+
+
+### Session 2025-12-31: Crawl Observer live breakpoints
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add live polling and UI-configurable stop conditions to Crawl Observer task pages
+
+**Location**: `docs/sessions/2025-12-31-crawl-observer-live-breakpoints/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-31-crawl-observer-live-breakpoints/INDEX.md)
+- 🗺️ [Plan](./2025-12-31-crawl-observer-live-breakpoints/PLAN.md)
+- 📝 [Working Notes](./2025-12-31-crawl-observer-live-breakpoints/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-31-crawl-observer-live-breakpoints/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-31-crawl-observer-live-breakpoints/FOLLOW_UPS.md)
+
+
+### Session 2025-12-31: Decision Review UI (Pause-on-decision crawl)
+
+**Duration**: Active
+**Type**: design
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Design an integrated UI to pause on each crawl decision and inspect the decision plus premises; map current decision-tree/crawl UIs and propose implementation steps
+
+**Location**: `docs/sessions/2025-12-31-decision-review-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-31-decision-review-ui/INDEX.md)
+- 🗺️ [Plan](./2025-12-31-decision-review-ui/PLAN.md)
+- 📝 [Working Notes](./2025-12-31-decision-review-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-31-decision-review-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-31-decision-review-ui/FOLLOW_UPS.md)
+
+
+### Session 2025-12-31: Topic Hub Guessing + Topic Lists
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add Topic Hub Guessing matrix + DB-backed multilingual Topic Lists editor; wire into Unified App; add checks
+
+**Location**: `docs/sessions/2025-12-31-topic-hub-guessing/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-31-topic-hub-guessing/INDEX.md)
+- 🗺️ [Plan](./2025-12-31-topic-hub-guessing/PLAN.md)
+- 📝 [Working Notes](./2025-12-31-topic-hub-guessing/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-31-topic-hub-guessing/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-31-topic-hub-guessing/FOLLOW_UPS.md)
+
+
+### Session 2025-12-31: Topic Hub Guessing Matrix
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Design + implement Topic Hub Guessing matrix using shared HubGuessingMatrixChromeControl.
+
+**Location**: `docs/sessions/2025-12-31-topic-hub-guessing-matrix/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-31-topic-hub-guessing-matrix/INDEX.md)
+- 🗺️ [Plan](./2025-12-31-topic-hub-guessing-matrix/PLAN.md)
+- 📝 [Working Notes](./2025-12-31-topic-hub-guessing-matrix/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-31-topic-hub-guessing-matrix/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-31-topic-hub-guessing-matrix/FOLLOW_UPS.md)
+
+
+### Session 2025-12-31: Hub Guessing Matrix Chrome Control
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Extract shared hub guessing matrix chrome into reusable control and refactor PlaceHubGuessingMatrixControl to use it
+
+**Location**: `docs/sessions/2025-12-31-hub-guessing-matrix-chrome/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-31-hub-guessing-matrix-chrome/INDEX.md)
+- 🗺️ [Plan](./2025-12-31-hub-guessing-matrix-chrome/PLAN.md)
+- 📝 [Working Notes](./2025-12-31-hub-guessing-matrix-chrome/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-31-hub-guessing-matrix-chrome/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-31-hub-guessing-matrix-chrome/FOLLOW_UPS.md)
+
+
+### Session 2025-12-31: Place + Topic Hub Guessing Matrix Polish
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Brainstorm improvements to Place Hub Guessing matrix and design a parallel Topic Hub Guessing matrix feature.
+
+**Location**: `docs/sessions/2025-12-31-place-topic-hub-matrix-polish/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-31-place-topic-hub-matrix-polish/INDEX.md)
+- 🗺️ [Plan](./2025-12-31-place-topic-hub-matrix-polish/PLAN.md)
+- 📝 [Working Notes](./2025-12-31-place-topic-hub-matrix-polish/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-31-place-topic-hub-matrix-polish/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-31-place-topic-hub-matrix-polish/FOLLOW_UPS.md)
+
+
+### Session 2025-12-31: Virtual Matrix Smoothness
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Use lab experiments to validate and improve VirtualMatrixControl smooth scrolling, pinning, and resize behavior.
+
+**Location**: `docs/sessions/2025-12-31-virtual-matrix-smoothness/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-31-virtual-matrix-smoothness/INDEX.md)
+- 🗺️ [Plan](./2025-12-31-virtual-matrix-smoothness/PLAN.md)
+- 📝 [Working Notes](./2025-12-31-virtual-matrix-smoothness/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-31-virtual-matrix-smoothness/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-31-virtual-matrix-smoothness/FOLLOW_UPS.md)
+
+
+### Session 2025-12-30: Virtual scrolling matrix lab
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Prototype and validate a virtual-scrolling matrix control (large rows/cols) with deterministic Puppeteer checks + screenshots
+
+**Location**: `docs/sessions/2025-12-30-matrix-virtual-scroll/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-30-matrix-virtual-scroll/INDEX.md)
+- 🗺️ [Plan](./2025-12-30-matrix-virtual-scroll/PLAN.md)
+- 📝 [Working Notes](./2025-12-30-matrix-virtual-scroll/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-30-matrix-virtual-scroll/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-30-matrix-virtual-scroll/FOLLOW_UPS.md)
+
+
+### Session 2025-12-30: MatrixTableControl Lab + Flip Axes
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create a jsgui3 lab that exercises MatrixTableControl (rotated headers, truncation/tooltips) and validates a flip-axes UX via deterministic checks + screenshots.
+
+**Location**: `docs/sessions/2025-12-30-matrix-table-control-lab/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-30-matrix-table-control-lab/INDEX.md)
+- 🗺️ [Plan](./2025-12-30-matrix-table-control-lab/PLAN.md)
+- 📝 [Working Notes](./2025-12-30-matrix-table-control-lab/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-30-matrix-table-control-lab/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-30-matrix-table-control-lab/FOLLOW_UPS.md)
+
+
+### Session 2025-12-30: Place Hub Guessing: jsgui3 controls + DB-layer SQL
+
+**Duration**: Active
+**Type**: ui-refactor
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Refactor Place Hub Guessing UI server to use DB query module + isomorphic jsgui3 controls (no UI-layer SQL), while keeping existing checks passing.
+
+**Location**: `docs/sessions/2025-12-30-place-hub-guessing-controls-refactor/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-30-place-hub-guessing-controls-refactor/INDEX.md)
+- 🗺️ [Plan](./2025-12-30-place-hub-guessing-controls-refactor/PLAN.md)
+- 📝 [Working Notes](./2025-12-30-place-hub-guessing-controls-refactor/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-30-place-hub-guessing-controls-refactor/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-30-place-hub-guessing-controls-refactor/FOLLOW_UPS.md)
+
+
+### Session 2025-12-30: Place Hub Guessing UI + Testable Subsystems
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Break place hub guessing into testable subsystems and scaffold a unified-app UI matrix to inspect placesource hub status.
+
+**Location**: `docs/sessions/2025-12-30-place-hub-guessing-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-30-place-hub-guessing-ui/INDEX.md)
+- 🗺️ [Plan](./2025-12-30-place-hub-guessing-ui/PLAN.md)
+- 📝 [Working Notes](./2025-12-30-place-hub-guessing-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-30-place-hub-guessing-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-30-place-hub-guessing-ui/FOLLOW_UPS.md)
+
+
+### Session 2025-12-30: Failing Tests Triage
+
+**Duration**: Active
+**Type**: testing
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Re-run historically failing Jest files, reproduce current failures, fix root causes, and add/adjust regression tests.
+
+**Location**: `docs/sessions/2025-12-30-failing-tests-triage/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-30-failing-tests-triage/INDEX.md)
+- 🗺️ [Plan](./2025-12-30-failing-tests-triage/PLAN.md)
+- 📝 [Working Notes](./2025-12-30-failing-tests-triage/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-30-failing-tests-triage/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-30-failing-tests-triage/FOLLOW_UPS.md)
+
+
+### Session 2025-12-30: Fix analysis-run.logging test: FTS shadow tables in schema
+
+**Duration**: Active
+**Type**: bugfix
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make schema init not attempt to create FTS internal shadow tables (e.g., *_fts_config), so analysis-run.logging Jest test passes.
+
+**Location**: `docs/sessions/2025-12-30-analysis-run-logging-test-fix/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-30-analysis-run-logging-test-fix/INDEX.md)
+- 🗺️ [Plan](./2025-12-30-analysis-run-logging-test-fix/PLAN.md)
+- 📝 [Working Notes](./2025-12-30-analysis-run-logging-test-fix/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-30-analysis-run-logging-test-fix/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-30-analysis-run-logging-test-fix/FOLLOW_UPS.md)
+
+
+### Session 2025-12-30: Unified App  Extensive Test Pass
+
+**Duration**: Active
+**Type**: testing
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add/verify broad automated coverage for unified server + mounts + Electron packaging
+
+**Location**: `docs/sessions/2025-12-30-unified-app-testing/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-30-unified-app-testing/INDEX.md)
+- 🗺️ [Plan](./2025-12-30-unified-app-testing/PLAN.md)
+- 📝 [Working Notes](./2025-12-30-unified-app-testing/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-30-unified-app-testing/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-30-unified-app-testing/FOLLOW_UPS.md)
+
+
+### Session 2025-12-30: Electron packaging for Unified App
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Package the jsgui3 Unified App in Electron (dev run + build) without retiring any existing servers.
+
+**Location**: `docs/sessions/2025-12-30-electron-unified-app/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-30-electron-unified-app/INDEX.md)
+- 🗺️ [Plan](./2025-12-30-electron-unified-app/PLAN.md)
+- 📝 [Working Notes](./2025-12-30-electron-unified-app/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-30-electron-unified-app/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-30-electron-unified-app/FOLLOW_UPS.md)
+
+
+### Session 2025-12-30: Seamless git workflows for agents
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make agent git usage a frictionless enabler (branch checks, PR link creation, predictable defaults).
+
+**Location**: `docs/sessions/2025-12-30-git-agent-seamless/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-30-git-agent-seamless/INDEX.md)
+- 🗺️ [Plan](./2025-12-30-git-agent-seamless/PLAN.md)
+- 📝 [Working Notes](./2025-12-30-git-agent-seamless/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-30-git-agent-seamless/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-30-git-agent-seamless/FOLLOW_UPS.md)
+
+
+### Session 2025-12-30: Single UI app cohesion  next steps
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make unified UI shell reliable + verifiable without breaking existing servers.
+
+**Location**: `docs/sessions/2025-12-30-single-ui-cohesion-next/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-30-single-ui-cohesion-next/INDEX.md)
+- 🗺️ [Plan](./2025-12-30-single-ui-cohesion-next/PLAN.md)
+- 📝 [Working Notes](./2025-12-30-single-ui-cohesion-next/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-30-single-ui-cohesion-next/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-30-single-ui-cohesion-next/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-30: Decision engines vs modes boundary
 
 **Duration**: Active

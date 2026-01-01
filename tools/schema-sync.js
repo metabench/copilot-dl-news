@@ -163,6 +163,23 @@ function extractSchema(db) {
         ORDER BY name
     `).all();
 
+    // Filter out internal FTS shadow tables (e.g., <virtual_fts>_config/_data/_docsize/_idx).
+    // These objects are reserved for SQLite's internal use and cannot be created explicitly.
+    const virtualFtsTables = new Set(
+        schema.tables
+            .filter(t => typeof t.sql === 'string')
+            .filter(t => /CREATE\s+VIRTUAL\s+TABLE/i.test(t.sql))
+            .filter(t => /USING\s+fts(4|5)\b/i.test(t.sql))
+            .map(t => t.name)
+    );
+
+    schema.tables = schema.tables.filter(table => {
+        const match = table.name.match(/^(.*)_(config|data|docsize|idx)$/i);
+        if (!match) return true;
+        const baseName = match[1];
+        return !virtualFtsTables.has(baseName);
+    });
+
     // Indexes (excluding auto-generated)
     schema.indexes = db.prepare(`
         SELECT name, sql FROM sqlite_master 
@@ -253,8 +270,9 @@ function generateSchemaDefinitions(schema) {
     content += 'const TRIGGER_STATEMENTS = [\n';
     for (const trg of schema.triggers) {
         if (!trg.sql) continue;
+        const sql = normalizeCreateStatement(trg.sql, 'TRIGGER');
         content += `  // ${trg.name}\n`;
-        content += `  \`${escapeSql(trg.sql)}\`,\n\n`;
+        content += `  \`${escapeSql(sql)}\`,\n\n`;
     }
     content += '];\n\n';
 
@@ -339,6 +357,33 @@ module.exports = {
  * @returns {string} Normalized SQL
  */
 function normalizeCreateStatement(sql, type) {
+    if (!sql || typeof sql !== 'string') return sql;
+
+    if (type === 'TABLE') {
+        // Virtual tables (FTS, etc.) show up as type='table' in sqlite_master.
+        // Keep them idempotent too.
+        if (/CREATE\s+VIRTUAL\s+TABLE/i.test(sql) && !/CREATE\s+VIRTUAL\s+TABLE\s+IF\s+NOT\s+EXISTS/i.test(sql)) {
+            return sql.replace(/CREATE\s+VIRTUAL\s+TABLE\s+/i, 'CREATE VIRTUAL TABLE IF NOT EXISTS ');
+        }
+    }
+
+    if (type === 'INDEX') {
+        // SQLite emits both CREATE INDEX and CREATE UNIQUE INDEX.
+        if (/CREATE\s+UNIQUE\s+INDEX/i.test(sql) && !/CREATE\s+UNIQUE\s+INDEX\s+IF\s+NOT\s+EXISTS/i.test(sql)) {
+            return sql.replace(/CREATE\s+UNIQUE\s+INDEX\s+/i, 'CREATE UNIQUE INDEX IF NOT EXISTS ');
+        }
+    }
+
+    if (type === 'TRIGGER') {
+        // Triggers need to be idempotent because schema initialization can run on an existing DB.
+        if (/CREATE\s+TEMP\s+TRIGGER/i.test(sql) && !/CREATE\s+TEMP\s+TRIGGER\s+IF\s+NOT\s+EXISTS/i.test(sql)) {
+            return sql.replace(/CREATE\s+TEMP\s+TRIGGER\s+/i, 'CREATE TEMP TRIGGER IF NOT EXISTS ');
+        }
+        if (/CREATE\s+TRIGGER/i.test(sql) && !/CREATE\s+TRIGGER\s+IF\s+NOT\s+EXISTS/i.test(sql)) {
+            return sql.replace(/CREATE\s+TRIGGER\s+/i, 'CREATE TRIGGER IF NOT EXISTS ');
+        }
+    }
+
     const pattern = new RegExp(`CREATE\\s+${type}`, 'gi');
     return sql.replace(pattern, `CREATE ${type} IF NOT EXISTS`);
 }
@@ -389,8 +434,10 @@ function generateStats(schema, rowCounts) {
  * @returns {string} SHA256 hash
  */
 function contentHash(content) {
-    // Normalize by removing timestamp line for comparison
-    const normalized = content.replace(/Generated at .+\n/g, '');
+    // Normalize Windows CRLF -> LF so drift checks are stable across platforms.
+    // Also remove timestamp line so regenerations on the same schema compare equal.
+    const normalizedLineEndings = content.replace(/\r\n/g, '\n');
+    const normalized = normalizedLineEndings.replace(/Generated at .+\n/g, '');
     return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 16);
 }
 
@@ -453,8 +500,8 @@ async function main() {
                 console.log('\nRun "npm run schema:sync" to update schema definitions.');
                 
                 // Show what changed
-                const existingTables = existingContent.match(/\/\/ (\w+)\n/g) || [];
-                const newTables = newContent.match(/\/\/ (\w+)\n/g) || [];
+                const existingTables = existingContent.match(/\/\/ (\w+)\r?\n/g) || [];
+                const newTables = newContent.match(/\/\/ (\w+)\r?\n/g) || [];
                 
                 const existingSet = new Set(existingTables.map(t => t.replace(/\/\/ |\n/g, '')));
                 const newSet = new Set(newTables.map(t => t.replace(/\/\/ |\n/g, '')));
@@ -539,5 +586,6 @@ module.exports = {
     extractSchema,
     generateSchemaDefinitions,
     generateStats,
-    parseArgs
+    parseArgs,
+    contentHash
 };

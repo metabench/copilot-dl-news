@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <defs>
+    <style>
+      .bg { fill: #0b0b0b; }
+      .box { fill: #121212; stroke: #2a2a2a; stroke-width: 2; }
+      .ok { fill: #0f1b13; stroke: #2b7a44; stroke-width: 2; }
+      .warn { fill: #1b1410; stroke: #a2742b; stroke-width: 2; }
+      .title { fill: #e7c97a; font: 700 20px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+      .text { fill: #e7e7e7; font: 14px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+      .muted { fill: #bdbdbd; font: 12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+      .code { fill: #d8d8d8; font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .arrow { stroke: #6aa9ff; stroke-width: 2.5; fill: none; marker-end: url(#mEnd); }
+    </style>
+    <marker id="mEnd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6aa9ff" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="720" />
+
+  <text class="title" x="40" y="60">Lab 044 Findings — Why the flip button disappeared</text>
+  <text class="muted" x="40" y="88">Key outcome: deterministic SSR + Puppeteer click after using dom.attributes for data-testid</text>
+
+  <!-- Problem -->
+  <rect class="warn" x="40" y="130" width="520" height="220" rx="14" />
+  <text class="title" x="70" y="170" font-size="18">Failure Mode</text>
+  <text class="text" x="70" y="205">SSR HTML missing:</text>
+  <text class="code" x="70" y="230">data-testid=&quot;flip-axes&quot;</text>
+  <text class="text" x="70" y="260">Puppeteer then fails:</text>
+  <text class="code" x="70" y="285">No element found for selector: [data-testid=&quot;flip-axes&quot;]</text>
+
+  <!-- Cause -->
+  <rect class="box" x="640" y="130" width="520" height="220" rx="14" />
+  <text class="title" x="670" y="170" font-size="18">Root Cause</text>
+  <text class="text" x="670" y="205">In this setup, passing attributes as top-level</text>
+  <text class="text" x="670" y="227">spec keys did not reliably emit into SSR HTML.</text>
+  <text class="code" x="670" y="255">tag(ctx, "button", { "data-testid": "flip-axes" })</text>
+
+  <path class="arrow" d="M 560 240 C 595 240, 610 240, 640 240" />
+
+  <!-- Fix -->
+  <rect class="ok" x="40" y="400" width="1120" height="170" rx="14" />
+  <text class="title" x="70" y="440" font-size="18">Fix Pattern (works for SSR + Puppeteer)</text>
+  <text class="text" x="70" y="472">Set attributes via the DOM attribute bag:</text>
+  <text class="code" x="70" y="500">const btn = tag(ctx, "button");</text>
+  <text class="code" x="70" y="522">btn.dom.attributes["data-testid"] = "flip-axes";</text>
+  <text class="text" x="560" y="472">Apply the same pattern to wrapper divs and any</text>
+  <text class="text" x="560" y="494">ad-hoc td/test markers used by checks.</text>
+
+  <!-- Evidence -->
+  <rect class="box" x="40" y="600" width="1120" height="90" rx="14" />
+  <text class="title" x="70" y="640" font-size="18">Evidence</text>
+  <text class="text" x="70" y="670">Run: node src/ui/lab/experiments/044-matrix-table-control/check.js → green + two screenshots saved.</text>
+</svg>

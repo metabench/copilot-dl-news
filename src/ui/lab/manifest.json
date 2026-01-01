@@ -308,5 +308,35 @@
     "path": "src/ui/lab/experiments/043-client-observable-interface",
     "check": "src/ui/lab/experiments/043-client-observable-interface/check.js",
     "readme": "src/ui/lab/experiments/043-client-observable-interface/README.md"
+  },
+  {
+    "id": "044",
+    "slug": "matrix-table-control",
+    "name": "MatrixTableControl (flip axes)",
+    "status": "active",
+    "description": "Reusable matrix/table control: rotated headers, truncation/tooltips, and flip-axes interaction with deterministic SSR + Puppeteer checks",
+    "path": "src/ui/lab/experiments/044-matrix-table-control",
+    "check": "src/ui/lab/experiments/044-matrix-table-control/check.js",
+    "readme": "src/ui/lab/experiments/044-matrix-table-control/README.md"
+  },
+  {
+    "id": "045",
+    "slug": "virtual-matrix-scroll",
+    "name": "Virtual Matrix Scroll",
+    "status": "active",
+    "description": "Large matrix virtual scrolling prototype: bounded DOM window, deterministic scroll + flip checks, screenshots",
+    "path": "src/ui/lab/experiments/045-virtual-matrix-scroll",
+    "check": "src/ui/lab/experiments/045-virtual-matrix-scroll/check.js",
+    "readme": "src/ui/lab/experiments/045-virtual-matrix-scroll/README.md"
+  },
+  {
+    "id": "046",
+    "slug": "virtual-matrix-control-smoothness",
+    "name": "VirtualMatrixControl Smoothness",
+    "status": "active",
+    "description": "Smoothness regression lab for the production VirtualMatrixControl: bounded DOM, renderSeq stability, scroll/resize rewindowing",
+    "path": "src/ui/lab/experiments/046-virtual-matrix-control-smoothness",
+    "check": "src/ui/lab/experiments/046-virtual-matrix-control-smoothness/check.js",
+    "readme": "src/ui/lab/experiments/046-virtual-matrix-control-smoothness/README.md"
   }
 ]

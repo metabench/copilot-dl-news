@@ -1,0 +1,45 @@
+{
+  "appId": "com.copilotdlnews.unified",
+  "productName": "Copilot DL News — Unified",
+  "copyright": "",
+  "extraMetadata": {
+    "main": "src/ui/electron/unifiedApp/main.js"
+  },
+  "files": [
+    "src/**",
+    "scripts/**",
+    "config/**",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "docs",
+      "to": "docs"
+    },
+    {
+      "from": "design",
+      "to": "design"
+    },
+    {
+      "from": "data/news.db",
+      "to": "data/news.db"
+    },
+    {
+      "from": "data/bootstrap",
+      "to": "data/bootstrap"
+    }
+  ],
+  "asar": true,
+  "asarUnpack": [
+    "**/*.node"
+  ],
+  "npmRebuild": false,
+  "win": {
+    "signAndEditExecutable": false,
+    "target": [
+      {
+        "target": "dir"
+      }
+    ]
+  }
+}

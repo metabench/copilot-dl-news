@@ -983,6 +983,29 @@ node tools/dev/mini-crawl.js https://example.com -v
 - Options may include `icon`/`emoji` and `phase` fields; structured JSON output echoes the chosen option and phase so agents can auto-advance without re-prompting.
 - If no icon is provided, ui-pick falls back to a phase emoji when present (plan/design 🧭, explore 🔍, implement 🛠️, test 🧪, validate ✅, fix 🛡️).
 
+## `git-pr-link` — Git PR Link Helper
+
+`git` can push branches, but creating a Pull Request is a **GitHub API operation**. This helper prints the correct GitHub compare URL with safe defaults so agents never get stuck.
+
+**Quick Examples:**
+```powershell
+# Print compare URL (base from origin/HEAD, head from current branch)
+node tools/dev/git-pr-link.js
+
+# Machine-readable output
+node tools/dev/git-pr-link.js --json
+
+# Convenience wrapper
+npm run pr:link
+```
+
+**What it does:**
+- Detects `origin` URL and parses GitHub owner/repo (supports HTTPS + SSH forms)
+- Detects base branch from `origin/HEAD` (defaults to `main` if missing)
+- Detects current branch as head
+- Computes ahead/behind vs base (best-effort using local/remote refs)
+- Warns when the worktree is dirty or when the branch has no upstream
+
 ## `md-scan` — Markdown Discovery
 
 - `node tools/dev/md-scan.js --径 docs --搜 planner telemetry` — Chinese aliases (`--径`, `--搜`) auto-enable succinct Chinese summaries without explicitly setting `--lang zh`.
