@@ -5,6 +5,10 @@
  * @module tests/ui/testStudio/TestResultService.test
  */
 
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
 describe('TestResultService', () => {
   let TestResultService;
 
@@ -200,6 +204,85 @@ describe('TestResultService with results', () => {
     if (runs.length > 0) {
       const failed = await service.getResults(runs[0].runId, { status: 'failed' });
       expect(Array.isArray(failed)).toBe(true);
+    }
+  });
+});
+
+describe('TestResultService.refreshFromDisk', () => {
+  let TestResultService;
+
+  beforeEach(() => {
+    jest.resetModules();
+    TestResultService = require('../../../src/ui/server/testStudio/TestResultService');
+  });
+
+  function writeJson(filePath, obj) {
+    fs.writeFileSync(filePath, JSON.stringify(obj, null, 2), 'utf8');
+  }
+
+  it('imports a valid run and is idempotent across repeated refreshes', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-dl-news-test-results-'));
+
+    try {
+      const validRun = {
+        runId: 'run-refresh-001',
+        timestamp: new Date().toISOString(),
+        testResults: [
+          {
+            name: 'sample.test.js',
+            assertionResults: [
+              { title: 'works', status: 'passed', duration: 5 }
+            ]
+          }
+        ]
+      };
+
+      writeJson(path.join(tmpDir, 'latest.json'), validRun);
+      fs.writeFileSync(path.join(tmpDir, 'invalid.json'), '{not-json', 'utf8');
+      writeJson(path.join(tmpDir, 'missing-runid.json'), { timestamp: validRun.timestamp, testResults: [] });
+
+      const service = new TestResultService({ resultsDir: tmpDir, autoImportFromDisk: true });
+
+      const first = await service.refreshFromDisk({ dir: tmpDir, minIntervalMs: 0, maxFiles: 10 });
+      expect(first.imported).toBe(1);
+
+      const countAfterFirst = await service.getRunCount();
+      expect(countAfterFirst).toBe(1);
+
+      const second = await service.refreshFromDisk({ dir: tmpDir, minIntervalMs: 0, maxFiles: 10 });
+      expect(second.imported).toBe(0);
+      expect(second.skipped).toBeGreaterThanOrEqual(1);
+
+      const countAfterSecond = await service.getRunCount();
+      expect(countAfterSecond).toBe(1);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('throttles refresh calls by default interval', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-dl-news-test-results-'));
+
+    try {
+      const validRun = {
+        runId: 'run-refresh-002',
+        timestamp: new Date().toISOString(),
+        testResults: []
+      };
+
+      writeJson(path.join(tmpDir, 'latest.json'), validRun);
+
+      const service = new TestResultService({ resultsDir: tmpDir, autoImportFromDisk: true });
+
+      const first = await service.refreshFromDisk({ dir: tmpDir, minIntervalMs: 2500, maxFiles: 10 });
+      expect(first.reason).toBeUndefined();
+
+      const second = await service.refreshFromDisk({ dir: tmpDir, minIntervalMs: 2500, maxFiles: 10 });
+      expect(second.reason).toBe('throttled');
+      expect(second.imported).toBe(0);
+      expect(second.skipped).toBe(0);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
 });

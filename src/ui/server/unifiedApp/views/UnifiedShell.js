@@ -104,9 +104,11 @@ class UnifiedShell extends Control {
         html += `
           <button class="nav-item${activeClass}" 
                   data-app-id="${app.id}"
+                  data-app-category="${catId}"
                   title="${app.description}">
             <span class="nav-item__icon">${app.icon}</span>
             <span class="nav-item__label">${app.label}</span>
+            <span class="nav-item__badge" data-nav-badge aria-hidden="true"></span>
           </button>
         `;
       }
@@ -271,6 +273,26 @@ class UnifiedShell extends Control {
         flex: 1;
       }
 
+      .nav-item__badge {
+        display: none;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(248, 113, 113, 0.55);
+        background: rgba(248, 113, 113, 0.12);
+        color: #ffd0d0;
+        font-size: 12px;
+        line-height: 16px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .nav-item--has-alert .nav-item__badge {
+        display: inline-flex;
+      }
+
       /* Main Content */
       .shell-content {
         flex: 1;
@@ -340,6 +362,11 @@ class UnifiedShell extends Control {
         height: 100%;
         text-align: center;
         color: var(--text-muted);
+      }
+
+      /* Panel contract root (non-iframe sub-apps) */
+      .unified-panel-root {
+        height: 100%;
       }
 
       .app-placeholder p {
@@ -441,6 +468,236 @@ class UnifiedShell extends Control {
         const appViewport = document.getElementById('appViewport');
         const navItems = document.querySelectorAll('.nav-item');
         let currentAppId = '${this.activeAppId}';
+
+        const crawlNavItems = document.querySelectorAll('.nav-item[data-app-category="crawler"]');
+
+        async function fetchCrawlSummary() {
+          const res = await fetch('/api/crawl/summary', { cache: 'no-store' });
+          const json = await res.json();
+          if (!res.ok || !json || json.status !== 'ok') {
+            throw new Error((json && json.error) ? json.error : 'bad response');
+          }
+          return json;
+        }
+
+        function setNavBadgeOnItem(item, { show, text }) {
+          if (!item) return;
+          const badge = item.querySelector('[data-nav-badge]');
+          item.classList.toggle('nav-item--has-alert', show);
+
+          if (badge) {
+            badge.textContent = text || '!';
+            badge.setAttribute('aria-hidden', show ? 'false' : 'true');
+          }
+        }
+
+        function updateCrawlNavBadges(summary) {
+          const lastError = summary && typeof summary.lastError === 'object' ? summary.lastError : null;
+          const hasError = Boolean(lastError && lastError.message);
+          const errorsLast10m = Number.isFinite(summary && summary.errorsLast10m) ? summary.errorsLast10m : 0;
+
+          let badgeText = '!';
+          if (errorsLast10m > 0) {
+            badgeText = errorsLast10m > 99 ? '99+' : String(errorsLast10m);
+          }
+
+          for (const item of crawlNavItems) {
+            setNavBadgeOnItem(item, { show: hasError, text: badgeText });
+          }
+        }
+
+        function bindCrawlNavBadgePoll() {
+          if (document.body.dataset.crawlNavBadgePollBound === 'true') return;
+          document.body.dataset.crawlNavBadgePollBound = 'true';
+
+          async function refresh() {
+            try {
+              const summary = await fetchCrawlSummary();
+              updateCrawlNavBadges(summary);
+              document.body.dataset.crawlNavBadgeOk = 'true';
+            } catch {
+              // Leave the current badge state; no-op.
+              document.body.dataset.crawlNavBadgeOk = 'false';
+            }
+          }
+
+          refresh();
+          setInterval(refresh, 5000);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Panel activation seam
+        // ─────────────────────────────────────────────────────────────
+
+        function getPanelActivatorRegistry() {
+          if (!window.UnifiedAppPanels) window.UnifiedAppPanels = {};
+
+          if (!window.UnifiedAppPanels.activators) {
+            window.UnifiedAppPanels.activators = Object.create(null);
+          }
+
+          if (typeof window.UnifiedAppPanels.registerActivator !== 'function') {
+            window.UnifiedAppPanels.registerActivator = function(key, fn) {
+              if (!key) return;
+              if (typeof fn !== 'function') return;
+              window.UnifiedAppPanels.activators[String(key)] = fn;
+            };
+          }
+
+          return window.UnifiedAppPanels.activators;
+        }
+
+        function activatePanelIfPresent(container, appId, activationKey) {
+          if (!container) return;
+          if (container.dataset.activated === 'true') return;
+
+          const root = container.querySelector('[data-unified-activate]');
+          const key = activationKey || (root ? root.dataset.unifiedActivate : null);
+          if (!key) {
+            // No activation requested.
+            container.dataset.activated = 'true';
+            return;
+          }
+
+          const registry = getPanelActivatorRegistry();
+          const activator = registry && registry[key];
+
+          if (typeof activator === 'function') {
+            try {
+              activator(root || container, { appId, container });
+            } catch (err) {
+              console.warn('[UnifiedApp] panel activation failed:', appId, key, err && err.message ? err.message : err);
+            }
+          }
+
+          container.dataset.activated = 'true';
+        }
+
+        // Seed a couple of safe, no-UI-change activators as examples.
+        // Panels can register additional activators via window.UnifiedAppPanels.registerActivator(...).
+        (function seedDefaultActivators() {
+          const registry = getPanelActivatorRegistry();
+
+          if (typeof registry.placeholder !== 'function') {
+            registry.placeholder = function(root) {
+              root.dataset.panelActivated = 'true';
+            };
+          }
+
+          if (typeof registry.home !== 'function') {
+            registry.home = function(root) {
+              if (!root) return;
+
+              const elJobs = root.querySelector('[data-home-stat="activeCrawlJobs"]');
+              const elHealth = root.querySelector('[data-home-stat="crawlHealth"]');
+              const elAlert = root.querySelector('[data-home-crawl-alert]');
+              const elErrorMsg = root.querySelector('[data-home-crawl-error-message]');
+
+              function setAlertVisible(visible) {
+                if (!elAlert) return;
+                elAlert.style.display = visible ? 'block' : 'none';
+              }
+
+              function setText(el, text) {
+                if (!el) return;
+                el.textContent = text;
+              }
+
+              async function refresh() {
+                try {
+                  const json = await fetchCrawlSummary();
+
+                  const activeJobs = Number.isFinite(json.activeJobs) ? json.activeJobs : 0;
+                  setText(elJobs, String(activeJobs));
+
+                  const lastError = json.lastError && typeof json.lastError === 'object' ? json.lastError : null;
+                  const hasError = Boolean(lastError && lastError.message);
+                  setText(elHealth, hasError ? 'ERR' : 'OK');
+
+                  if (elErrorMsg) {
+                    const errorsLast10m = Number.isFinite(json.errorsLast10m) ? json.errorsLast10m : null;
+                    const parts = [];
+                    if (hasError && lastError && lastError.message) parts.push(String(lastError.message).trim());
+                    if (hasError && lastError && lastError.jobId) parts.push('job: ' + String(lastError.jobId).trim());
+                    if (hasError && lastError && lastError.url) parts.push(String(lastError.url).trim());
+                    if (hasError && errorsLast10m != null) parts.push(String(errorsLast10m) + '/10m');
+                    const msg = hasError ? parts.filter(Boolean).join(' | ').slice(0, 160) : '–';
+                    setText(elErrorMsg, msg);
+                  }
+
+                  setAlertVisible(hasError);
+                  root.dataset.homeCrawlSummaryOk = 'true';
+                } catch (err) {
+                  setText(elJobs, '–');
+                  setText(elHealth, '?');
+                  if (elErrorMsg) setText(elErrorMsg, (err && err.message ? err.message : String(err)).slice(0, 120));
+                  setAlertVisible(true);
+                  root.dataset.homeCrawlSummaryOk = 'false';
+                }
+              }
+
+              if (root.dataset.homeCrawlPollBound !== 'true') {
+                root.dataset.homeCrawlPollBound = 'true';
+                refresh();
+                setInterval(refresh, 5000);
+              } else {
+                refresh();
+              }
+
+              root.dataset.panelActivated = 'true';
+            };
+          }
+
+          if (typeof registry['panel-demo'] !== 'function') {
+            registry['panel-demo'] = function(root) {
+              if (root.dataset.demoBound === 'true') return;
+              root.dataset.demoBound = 'true';
+
+              let clicks = 0;
+              const output = root.querySelector('[data-panel-demo-output]');
+              const statCards = root.querySelectorAll('.stat-card .stat-value');
+
+              function render() {
+                const now = new Date();
+                const lastPing = root.dataset.lastPing || '–';
+
+                if (output) {
+                  output.textContent = 'Activated ✓ | Clicks: ' + clicks + ' | Last Ping: ' + lastPing;
+                }
+
+                // Update the three stat cards if present: Activation, Clicks, Last Ping
+                if (statCards && statCards.length >= 3) {
+                  statCards[0].textContent = '✓';
+                  statCards[1].textContent = String(clicks);
+                  statCards[2].textContent = lastPing;
+                }
+
+                root.dataset.lastRenderAt = now.toISOString();
+              }
+
+              root.addEventListener('click', (event) => {
+                const btn = event && event.target ? event.target.closest('[data-panel-demo-action]') : null;
+                if (!btn) return;
+
+                const action = btn.getAttribute('data-panel-demo-action');
+                if (action === 'ping') {
+                  clicks += 1;
+                  root.dataset.lastPing = new Date().toISOString().slice(11, 19);
+                  render();
+                  return;
+                }
+
+                if (action === 'reset') {
+                  clicks = 0;
+                  root.dataset.lastPing = '–';
+                  render();
+                }
+              });
+
+              render();
+            };
+          }
+        })();
         
         // Load app content from server
         async function loadAppContent(appId) {
@@ -449,6 +706,9 @@ class UnifiedShell extends Control {
           
           // Already loaded?
           if (container.dataset.loaded === 'true') return;
+
+          // Content is changing; allow activation to run again after load.
+          container.dataset.activated = 'false';
           
           container.innerHTML = '<div class="app-loading">Loading...</div>';
           
@@ -461,6 +721,13 @@ class UnifiedShell extends Control {
             } else {
               container.innerHTML = data.content;
               container.dataset.loaded = 'true';
+
+              const activationKey = typeof data.activationKey === 'string' ? data.activationKey : '';
+              const embed = typeof data.embed === 'string' ? data.embed : '';
+              container.dataset.activationKey = activationKey;
+              container.dataset.embed = embed;
+
+              activatePanelIfPresent(container, appId, activationKey);
             }
           } catch (err) {
             container.innerHTML = '<div class="app-placeholder"><p>Error</p><p class="error">' + err.message + '</p></div>';
@@ -490,6 +757,9 @@ class UnifiedShell extends Control {
             // Load if needed
             if (targetContainer.dataset.loaded !== 'true') {
               loadAppContent(appId);
+            } else {
+              // For panel-mode sub-apps, activation is idempotent and safe.
+              activatePanelIfPresent(targetContainer, appId, targetContainer.dataset.activationKey);
             }
           }
           
@@ -516,6 +786,9 @@ class UnifiedShell extends Control {
         
         // Load initial app content
         loadAppContent(currentAppId);
+
+        // Crawl badges should update even if Home is never opened.
+        bindCrawlNavBadgePoll();
         
         console.log('🎛️ Unified App Shell initialized');
         

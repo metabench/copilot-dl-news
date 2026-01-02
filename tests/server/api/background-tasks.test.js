@@ -245,13 +245,28 @@ describe('background tasks router', () => {
       .post('/123/start');
 
     expect(response.status).toBe(429);
-    expect(response.body.error.code).toBe('RATE_LIMITED');
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toEqual({
+      code: 'RATE_LIMITED',
+      message: 'Rate limited',
+      retryAfter: 30,
+      context: { taskType: 'analysis' }
+    });
     expect(response.body.retryAfter).toBe(30);
-    expect(response.body.proposedActions[0].action).toEqual({
-      id: 'stop-123',
-      type: 'stop-task',
-      label: 'Stop Task #123',
-      parameters: { taskId: 123 }
+    expect(response.body.context).toEqual({ taskType: 'analysis' });
+    expect(Array.isArray(response.body.proposedActions)).toBe(true);
+    expect(response.body.proposedActions).toHaveLength(1);
+    expect(response.body.proposedActions[0]).toEqual({
+      action: {
+        id: 'stop-123',
+        type: 'stop-task',
+        label: 'Stop Task #123',
+        parameters: { taskId: 123 }
+      },
+      reason: 'Task already running',
+      description: null,
+      severity: 'warning',
+      priority: 10
     });
   });
 
@@ -407,6 +422,28 @@ describe('background tasks router', () => {
       .send({ action: { type: 'pause-task', parameters: { taskId: 5 } } });
 
     expect(response.status).toBe(429);
-    expect(response.body.error.code).toBe('RATE_LIMITED');
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toEqual({
+      code: 'RATE_LIMITED',
+      message: 'Rate limited',
+      retryAfter: 30,
+      context: { taskType: 'analysis' }
+    });
+    expect(response.body.retryAfter).toBe(30);
+    expect(response.body.context).toEqual({ taskType: 'analysis' });
+    expect(Array.isArray(response.body.proposedActions)).toBe(true);
+    expect(response.body.proposedActions).toHaveLength(1);
+    expect(response.body.proposedActions[0]).toEqual({
+      action: {
+        id: 'stop-123',
+        type: 'stop-task',
+        label: 'Stop Task #123',
+        parameters: { taskId: 123 }
+      },
+      reason: 'Task already running',
+      description: null,
+      severity: 'warning',
+      priority: 10
+    });
   });
 });

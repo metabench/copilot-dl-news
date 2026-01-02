@@ -55,6 +55,7 @@ assert('Contains Home app', html.includes('data-app-id="home"'));
 assert('Contains Rate Limits app', html.includes('data-app-id="rate-limits"'));
 assert('Contains Webhooks app', html.includes('data-app-id="webhooks"'));
 assert('Contains Plugins app', html.includes('data-app-id="plugins"'));
+assert('Contains Panel Demo app', html.includes('data-app-id="panel-demo"'));
 
 // Category labels
 assert('Contains Crawler category', html.includes('Crawler'));

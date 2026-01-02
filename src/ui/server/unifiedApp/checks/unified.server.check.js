@@ -67,6 +67,14 @@ function assertIncludes(name, body, substr) {
   }
 }
 
+function safeJsonParse(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 async function run() {
   const projectRoot = path.join(__dirname, '..', '..', '..', '..', '..');
   const serverPath = path.join(projectRoot, 'src', 'ui', 'server', 'unifiedApp', 'server.js');
@@ -135,6 +143,44 @@ async function run() {
 
     const designCss = await httpGetText(`${baseUrl}/design/assets/design-studio.css`);
     assertStatus('GET /design/assets/design-studio.css', designCss.status, 200);
+
+    const panelDemoPayload = await httpGetText(`${baseUrl}/api/apps/panel-demo/content`);
+    assertStatus('GET /api/apps/panel-demo/content', panelDemoPayload.status, 200);
+    const panelDemoJson = safeJsonParse(panelDemoPayload.body);
+    if (!panelDemoJson) {
+      throw new Error('GET /api/apps/panel-demo/content: expected JSON');
+    }
+    if (panelDemoJson.embed !== 'panel') {
+      throw new Error(`GET /api/apps/panel-demo/content: expected embed=panel, got ${panelDemoJson.embed}`);
+    }
+    if (panelDemoJson.activationKey !== 'panel-demo') {
+      throw new Error(`GET /api/apps/panel-demo/content: expected activationKey=panel-demo, got ${panelDemoJson.activationKey}`);
+    }
+    if (typeof panelDemoJson.content !== 'string' || !panelDemoJson.content.includes('data-unified-activate="panel-demo"')) {
+      throw new Error('GET /api/apps/panel-demo/content: missing activation marker in content');
+    }
+
+    const crawlSummaryPayload = await httpGetText(`${baseUrl}/api/crawl/summary`);
+    assertStatus('GET /api/crawl/summary', crawlSummaryPayload.status, 200);
+    const crawlSummaryJson = safeJsonParse(crawlSummaryPayload.body);
+    if (!crawlSummaryJson) {
+      throw new Error('GET /api/crawl/summary: expected JSON');
+    }
+    if (crawlSummaryJson.status !== 'ok') {
+      throw new Error(`GET /api/crawl/summary: expected status=ok, got ${crawlSummaryJson.status}`);
+    }
+    if (!Number.isFinite(crawlSummaryJson.activeJobs)) {
+      throw new Error('GET /api/crawl/summary: expected numeric activeJobs');
+    }
+    if (!Number.isFinite(crawlSummaryJson.errorsLast10m)) {
+      throw new Error('GET /api/crawl/summary: expected numeric errorsLast10m');
+    }
+    if (crawlSummaryJson.lastFailingJobId != null && typeof crawlSummaryJson.lastFailingJobId !== 'string') {
+      throw new Error('GET /api/crawl/summary: expected lastFailingJobId to be string|null');
+    }
+    if (crawlSummaryJson.lastFailingUrl != null && typeof crawlSummaryJson.lastFailingUrl !== 'string') {
+      throw new Error('GET /api/crawl/summary: expected lastFailingUrl to be string|null');
+    }
 
     console.log('✅ Unified server check passed');
     process.exitCode = 0;

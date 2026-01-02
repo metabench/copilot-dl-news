@@ -163,3 +163,6 @@
 ## 2025-12-31
 - For new matrix-style UIs (Place/Topic hub guessing), lock presentation consistency by extracting shared chrome (filters/stats/legend/actions + flip script) into a reusable control, then keep dataset-specific logic isolated to a thin MatrixControl + queries module.
 - When integrating a tool into Unified App, prefer in-process router mounting + iframe embedding, but budget time for base-path correctness (avoid absolute links like `/task/...` unless you prefix via a `basePath` option).
+
+## 2026-01-02
+- For backlog reconciliation after downtime, prefer postponing lower-priority overdue schedules (spread window) + emitting `task_events` for explainability, rather than adding new schedule schema fields up front.

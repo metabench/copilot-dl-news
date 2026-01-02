@@ -9,6 +9,7 @@ const serverLogger = require('./lib/serverLogger');
 const serverDetector = require('./lib/serverDetector');
 const ipcGuards = require('./lib/ipcGuards');
 const { createScanServersObservable } = require('./lib/scanServersObservable');
+const { filterScannedServers, DEFAULT_SCAN_VISIBILITY } = require('./lib/serverScanFilter');
 
 const { getClientBundleStatus } = require(path.join(__dirname, '..', 'src', 'ui', 'server', 'utils', 'ensureClientBundle'));
 
@@ -21,6 +22,148 @@ let lastScannedServers = []; // last scan results (server records with .file, .m
 const lastKnownServerState = new Map(); // filePath -> { running, pid, port, url }
 let serverStatusPollTimer = null;
 let serverStatusPollInFlight = false;
+
+// Persisted registry for detached servers so z-server can stop/restart them across restarts.
+const detachedRegistry = new Map(); // filePath -> { filePath, pid, port, startedAt, lastSeenAt }
+let detachedRegistryFlushTimer = null;
+let detachedRegistryDirty = false;
+
+function getDetachedRegistryPath() {
+  try {
+    return path.join(app.getPath('userData'), 'detached-servers.json');
+  } catch {
+    return null;
+  }
+}
+
+function scheduleDetachedRegistryFlush() {
+  if (detachedRegistryFlushTimer) return;
+  detachedRegistryFlushTimer = setTimeout(() => {
+    detachedRegistryFlushTimer = null;
+    if (!detachedRegistryDirty) return;
+    detachedRegistryDirty = false;
+
+    try {
+      const targetPath = getDetachedRegistryPath();
+      if (!targetPath) return;
+      const tmpPath = `${targetPath}.tmp`;
+      const payload = {
+        version: 1,
+        updatedAt: new Date().toISOString(),
+        entries: Array.from(detachedRegistry.values())
+      };
+      fs.writeFileSync(tmpPath, JSON.stringify(payload, null, 2), 'utf8');
+      fs.renameSync(tmpPath, targetPath);
+    } catch (e) {
+      serverLogger.logError('Failed to persist detached registry', e);
+    }
+  }, 250);
+}
+
+function flushDetachedRegistrySync() {
+  if (!detachedRegistryDirty) return;
+  detachedRegistryDirty = false;
+  try {
+    const targetPath = getDetachedRegistryPath();
+    if (!targetPath) return;
+    const tmpPath = `${targetPath}.tmp`;
+    const payload = {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      entries: Array.from(detachedRegistry.values())
+    };
+    fs.writeFileSync(tmpPath, JSON.stringify(payload, null, 2), 'utf8');
+    fs.renameSync(tmpPath, targetPath);
+  } catch (e) {
+    serverLogger.logError('Failed to flush detached registry', e);
+  }
+}
+
+function markDetachedRegistryDirty() {
+  detachedRegistryDirty = true;
+  scheduleDetachedRegistryFlush();
+}
+
+function loadDetachedRegistry() {
+  try {
+    const registryPath = getDetachedRegistryPath();
+    if (!registryPath || !fs.existsSync(registryPath)) return;
+
+    const raw = fs.readFileSync(registryPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    const entries = parsed && Array.isArray(parsed.entries) ? parsed.entries : [];
+
+    detachedRegistry.clear();
+    for (const entry of entries) {
+      if (!entry || typeof entry !== 'object') continue;
+      const filePath = typeof entry.filePath === 'string' ? path.resolve(entry.filePath) : null;
+      const pid = Number.isInteger(entry.pid) && entry.pid > 0 ? entry.pid : null;
+      const port = Number.isInteger(entry.port) && entry.port > 0 ? entry.port : null;
+      if (!filePath || !pid) continue;
+      detachedRegistry.set(filePath, {
+        filePath,
+        pid,
+        port,
+        startedAt: entry.startedAt || null,
+        lastSeenAt: entry.lastSeenAt || null
+      });
+    }
+
+    if (detachedRegistry.size > 0) {
+      serverLogger.logActivity(`DETACHED_REGISTRY_LOADED: ${detachedRegistry.size} entries`);
+    }
+  } catch (e) {
+    // If the file is corrupt, move it aside and continue without blocking startup.
+    try {
+      const registryPath = getDetachedRegistryPath();
+      if (registryPath && fs.existsSync(registryPath)) {
+        const backup = `${registryPath}.corrupt-${Date.now()}`;
+        fs.renameSync(registryPath, backup);
+        serverLogger.logActivity(`DETACHED_REGISTRY_CORRUPT: moved aside to ${backup}`);
+      }
+    } catch {
+      // ignore
+    }
+    serverLogger.logError('Failed to load detached registry', e);
+    detachedRegistry.clear();
+  }
+}
+
+function upsertDetachedEntry(filePath, { pid, port } = {}) {
+  if (typeof filePath !== 'string' || !filePath) return;
+  const normalized = path.resolve(filePath);
+  const numericPid = Number.isInteger(pid) && pid > 0 ? pid : null;
+  if (!numericPid) return;
+  const numericPort = Number.isInteger(port) && port > 0 ? port : null;
+
+  const prev = detachedRegistry.get(normalized);
+  const next = {
+    filePath: normalized,
+    pid: numericPid,
+    port: numericPort,
+    startedAt: prev?.startedAt || new Date().toISOString(),
+    lastSeenAt: new Date().toISOString()
+  };
+
+  const changed = !prev
+    || prev.pid !== next.pid
+    || prev.port !== next.port;
+
+  detachedRegistry.set(normalized, next);
+  if (changed) {
+    markDetachedRegistryDirty();
+  } else {
+    detachedRegistryDirty = true;
+    scheduleDetachedRegistryFlush();
+  }
+}
+
+function removeDetachedEntry(filePath) {
+  if (typeof filePath !== 'string' || !filePath) return;
+  const normalized = path.resolve(filePath);
+  const existed = detachedRegistry.delete(normalized);
+  if (existed) markDetachedRegistryDirty();
+}
 
 function sendUiClientLog(logToFilePath, type, data) {
   if (!mainWindow || !logToFilePath) return;
@@ -73,6 +216,12 @@ function startServerStatusPolling() {
         for (const s of detected) {
           const filePath = path.resolve(s.file);
           const tracked = runningProcesses.get(filePath);
+          const detached = detachedRegistry.get(filePath);
+
+          if (!s.running && detached) {
+            // Keep the registry honest: if detection says it's no longer running, clear it.
+            removeDetachedEntry(filePath);
+          }
 
           if (tracked && tracked.pid) {
             const port = tracked.port || s.detectedPort || null;
@@ -85,6 +234,27 @@ function startServerStatusPolling() {
               url,
               source: 'poll',
               detectionMethod: 'tracked'
+            });
+            continue;
+          }
+
+          if (detached && detached.pid) {
+            const port = detached.port || s.detectedPort || null;
+            const url = s.running && port ? `http://localhost:${port}` : null;
+
+            if (s.running) {
+              upsertDetachedEntry(filePath, { pid: s.detectedPid || detached.pid, port });
+            }
+
+            maybeEmitServerStatusChange({
+              filePath,
+              running: !!s.running,
+              pid: s.running ? (s.detectedPid || detached.pid || null) : null,
+              port,
+              url,
+              source: 'poll',
+              detectionMethod: 'detached-registry',
+              uncertain: s.uncertain === true
             });
             continue;
           }
@@ -120,7 +290,13 @@ async function resolveLikelyServerPid(filePath) {
     if (expectedPort) {
       const portStatus = await serverDetector.checkPortInUse(expectedPort);
       if (portStatus && portStatus.inUse && portStatus.isNode && portStatus.pid) {
-        return portStatus.pid;
+        const allowed = await ipcGuards.isPidLikelyRunningServer(portStatus.pid, filePath, {
+          getProcessInfo: serverDetector.getProcessInfo,
+          getProcessCommandLine: serverDetector.getProcessCommandLine
+        });
+        if (allowed) {
+          return portStatus.pid;
+        }
       }
     }
 
@@ -219,6 +395,9 @@ function createWindow() {
 app.whenReady().then(() => {
   // Log z-server startup
   serverLogger.logZServerStart();
+
+  // Load persisted detached server info for stop/restart across z-server restarts.
+  loadDetachedRegistry();
   
   createWindow();
 
@@ -226,15 +405,18 @@ app.whenReady().then(() => {
     // Best-effort cleanup: stop any servers started by this z-server session.
     for (const [filePath, procInfo] of runningProcesses.entries()) {
       try {
-        if (procInfo && procInfo.pid) {
+        if (procInfo && procInfo.pid && procInfo.detached !== true) {
           serverLogger.logActivity(`CLEANUP_STOP: ${path.relative(BASE_PATH, filePath)} (PID ${procInfo.pid})`);
           treeKill(procInfo.pid, 'SIGKILL', () => {});
+        } else if (procInfo && procInfo.pid && procInfo.detached === true) {
+          serverLogger.logActivity(`CLEANUP_SKIP_DETACHED: ${path.relative(BASE_PATH, filePath)} (PID ${procInfo.pid})`);
         }
       } catch {
         // Best-effort cleanup only
       }
     }
     runningProcesses.clear();
+    flushDetachedRegistrySync();
     stopServerStatusPolling();
   });
 
@@ -249,8 +431,12 @@ app.on('window-all-closed', function () {
 
 // IPC Handlers
 
-ipcMain.handle('scan-servers', async () => {
+ipcMain.handle('scan-servers', async (_event, options = {}) => {
   return new Promise((resolve, reject) => {
+    const visibility = options && typeof options === 'object' && options.visibility && typeof options.visibility === 'object'
+      ? options.visibility
+      : DEFAULT_SCAN_VISIBILITY;
+
     const obs = createScanServersObservable({
       basePath: BASE_PATH,
       cwd: BASE_PATH,
@@ -290,8 +476,7 @@ ipcMain.handle('scan-servers', async () => {
 
       (async () => {
         try {
-          // Filter out the tool itself and test files if desired
-          const filtered = servers.filter(s => !s.file.includes('js-server-scan.js'));
+          const filtered = filterScannedServers(servers, { basePath: BASE_PATH, visibility });
 
           lastScannedServers = filtered;
 
@@ -310,7 +495,8 @@ ipcMain.handle('scan-servers', async () => {
 
           // Merge with our tracked processes (in case we started them this session)
           const result = withDetection.map(s => {
-            const tracked = runningProcesses.get(s.file);
+            const resolvedFile = path.resolve(s.file);
+            const tracked = runningProcesses.get(resolvedFile);
             if (tracked) {
               return {
                 ...s,
@@ -318,6 +504,20 @@ ipcMain.handle('scan-servers', async () => {
                 pid: tracked.pid,
                 detectedPort: tracked.port || s.detectedPort
               };
+            }
+
+            const detached = detachedRegistry.get(resolvedFile);
+            if (detached && s.running) {
+              upsertDetachedEntry(resolvedFile, { pid: s.detectedPid || detached.pid, port: s.detectedPort || detached.port || null });
+              return {
+                ...s,
+                pid: s.detectedPid || detached.pid || null,
+                detached: true
+              };
+            }
+
+            if (detached && !s.running) {
+              removeDetachedEntry(resolvedFile);
             }
             return {
               ...s,
@@ -358,13 +558,15 @@ ipcMain.handle('start-server', async (event, filePath, options = {}) => {
 
   const isUiServer = options && typeof options === 'object' && options.isUiServer === true;
   const ensureUiClientBundle = options && typeof options === 'object' && options.ensureUiClientBundle === true;
+  const keepRunningAfterExit = options && typeof options === 'object' && options.keepRunningAfterExit === true;
   const logToFilePath = options && typeof options === 'object' && typeof options.logToFilePath === 'string'
     ? options.logToFilePath
     : filePath;
   
   if (runningProcesses.has(filePath)) {
+    const existing = runningProcesses.get(filePath);
     serverLogger.logActivity(`START_SKIPPED: ${path.relative(BASE_PATH, filePath)} - already tracked as running`);
-    return { success: false, message: 'Already running' };
+    return { success: false, message: 'Already running', pid: existing?.pid || null, port: existing?.port || null, detached: existing?.detached === true };
   }
 
   // Get expected port for this server
@@ -375,8 +577,37 @@ ipcMain.handle('start-server', async (event, filePath, options = {}) => {
     const portStatus = await serverDetector.checkPortInUse(expectedPort);
     if (portStatus.inUse) {
       serverLogger.logActivity(`PORT_IN_USE: Port ${expectedPort} occupied by PID ${portStatus.pid} (${portStatus.processName || 'unknown'})`);
-      // Don't block - let the server try to start and report the error itself
+
+      // If we can confidently confirm it's *this* server, return "Already running" to avoid duplicates.
+      if (portStatus.isNode && portStatus.pid) {
+        const allowed = await ipcGuards.isPidLikelyRunningServer(portStatus.pid, filePath, {
+          getProcessInfo: serverDetector.getProcessInfo,
+          getProcessCommandLine: serverDetector.getProcessCommandLine
+        });
+
+        if (allowed) {
+          if (keepRunningAfterExit) {
+            upsertDetachedEntry(filePath, { pid: portStatus.pid, port: expectedPort });
+          }
+          return { success: false, message: 'Already running', pid: portStatus.pid, port: expectedPort, detached: detachedRegistry.has(filePath) };
+        }
+      }
+
+      // Otherwise, don't block - let the server try to start and report the error itself.
     }
+  }
+
+  // Fallback: process-scan confirmation even when we couldn't infer a port.
+  try {
+    const procMatch = await serverDetector.isServerFileRunning(filePath);
+    if (procMatch && procMatch.running && procMatch.pid) {
+      if (keepRunningAfterExit) {
+        upsertDetachedEntry(filePath, { pid: procMatch.pid, port: expectedPort || null });
+      }
+      return { success: false, message: 'Already running', pid: procMatch.pid, port: expectedPort || null, detached: detachedRegistry.has(filePath) };
+    }
+  } catch {
+    // best-effort only
   }
 
   if (isUiServer && ensureUiClientBundle) {
@@ -387,12 +618,26 @@ ipcMain.handle('start-server', async (event, filePath, options = {}) => {
   }
 
   try {
-    const child = spawn('node', [filePath], {
-      cwd: BASE_PATH,
-      stdio: ['ignore', 'pipe', 'pipe']
+    const spawnOptions = keepRunningAfterExit
+      ? { cwd: BASE_PATH, detached: true, windowsHide: true, stdio: 'ignore' }
+      : { cwd: BASE_PATH, stdio: ['ignore', 'pipe', 'pipe'] };
+
+    const child = spawn('node', [filePath], spawnOptions);
+
+    if (keepRunningAfterExit) {
+      child.unref();
+    }
+
+    runningProcesses.set(filePath, {
+      pid: child.pid,
+      process: keepRunningAfterExit ? null : child,
+      port: expectedPort,
+      detached: keepRunningAfterExit
     });
 
-    runningProcesses.set(filePath, { pid: child.pid, process: child, port: expectedPort });
+    if (keepRunningAfterExit) {
+      upsertDetachedEntry(filePath, { pid: child.pid, port: expectedPort || null });
+    }
     serverLogger.logStartSuccess(filePath, BASE_PATH, child.pid);
 
     {
@@ -410,48 +655,55 @@ ipcMain.handle('start-server', async (event, filePath, options = {}) => {
       }
     });
 
-    child.stdout.on('data', (data) => {
-      const output = data.toString();
-      if (mainWindow) {
-        mainWindow.webContents.send('server-log', { filePath, type: 'stdout', data: output });
-      }
-      
-      // Detect URL in output and log it
-      const urlMatch = output.match(/https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d+)/i);
-      if (urlMatch) {
-        const detectedPort = parseInt(urlMatch[1], 10);
-        const tracked = runningProcesses.get(filePath);
-        if (tracked && !tracked.port) {
-          tracked.port = detectedPort;
+    if (!keepRunningAfterExit) {
+      child.stdout.on('data', (data) => {
+        const output = data.toString();
+        if (mainWindow) {
+          mainWindow.webContents.send('server-log', { filePath, type: 'stdout', data: output });
         }
-        serverLogger.logActivity(`SERVER_URL_DETECTED: ${path.relative(BASE_PATH, filePath)} → ${urlMatch[0]}`);
 
-        maybeEmitServerStatusChange({
-          filePath,
-          running: true,
-          pid: child.pid,
-          port: detectedPort,
-          url: urlMatch[0],
-          source: 'stdout'
-        });
-      }
-    });
+        // Detect URL in output and log it
+        const urlMatch = output.match(/https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d+)/i);
+        if (urlMatch) {
+          const detectedPort = parseInt(urlMatch[1], 10);
+          const tracked = runningProcesses.get(filePath);
+          if (tracked && !tracked.port) {
+            tracked.port = detectedPort;
+          }
+          serverLogger.logActivity(`SERVER_URL_DETECTED: ${path.relative(BASE_PATH, filePath)} → ${urlMatch[0]}`);
 
-    child.stderr.on('data', (data) => {
-      const output = data.toString();
-      if (mainWindow) {
-        mainWindow.webContents.send('server-log', { filePath, type: 'stderr', data: output });
-      }
-      
-      // Log significant errors
-      if (output.includes('EADDRINUSE') || output.includes('Error:') || output.includes('error:')) {
-        serverLogger.logServerError(filePath, BASE_PATH, output);
-      }
-    });
+          maybeEmitServerStatusChange({
+            filePath,
+            running: true,
+            pid: child.pid,
+            port: detectedPort,
+            url: urlMatch[0],
+            source: 'stdout'
+          });
+        }
+      });
+
+      child.stderr.on('data', (data) => {
+        const output = data.toString();
+        if (mainWindow) {
+          mainWindow.webContents.send('server-log', { filePath, type: 'stderr', data: output });
+        }
+
+        // Log significant errors
+        if (output.includes('EADDRINUSE') || output.includes('Error:') || output.includes('error:')) {
+          serverLogger.logServerError(filePath, BASE_PATH, output);
+        }
+      });
+    } else {
+      sendUiClientLog(logToFilePath, 'system', '[z-server] Started in detached mode (will keep running after z-server closes).');
+    }
 
     child.on('close', (code, signal) => {
       serverLogger.logServerExit(filePath, BASE_PATH, code, signal);
       runningProcesses.delete(filePath);
+      if (keepRunningAfterExit) {
+        removeDetachedEntry(filePath);
+      }
       if (mainWindow) {
         // Send exit info so user knows why it stopped
         const exitMsg = signal ? `Process killed by signal: ${signal}` : `Process exited with code: ${code}`;
@@ -462,7 +714,7 @@ ipcMain.handle('start-server', async (event, filePath, options = {}) => {
       maybeEmitServerStatusChange({ filePath, running: false, pid: null, port: null, url: null, source: 'exit' });
     });
 
-    return { success: true, pid: child.pid, port: expectedPort };
+    return { success: true, pid: child.pid, port: expectedPort, detached: keepRunningAfterExit };
   } catch (err) {
     serverLogger.logStartFailure(filePath, BASE_PATH, err);
     return { success: false, message: err.message };
@@ -501,6 +753,7 @@ ipcMain.handle('stop-server', async (event, filePath, detectedPid) => {
   serverLogger.logStopRequest(filePath, BASE_PATH);
   
   const procInfo = runningProcesses.get(filePath);
+  const detachedInfo = detachedRegistry.get(filePath);
 
   const killConfirmedPid = async (pid, { wasExternal = false } = {}) => {
     return new Promise((resolve) => {
@@ -553,6 +806,11 @@ ipcMain.handle('stop-server', async (event, filePath, detectedPid) => {
     });
   };
   
+  // If we don't have it tracked but have a persisted detached PID, treat it as an external stop request.
+  if (!procInfo && !detectedPid && detachedInfo && detachedInfo.pid) {
+    detectedPid = detachedInfo.pid;
+  }
+
   // If we don't have it tracked but were given a detected PID, attempt a conservative external stop.
   if (!procInfo && detectedPid) {
     let pid = Number(detectedPid);
@@ -594,7 +852,11 @@ ipcMain.handle('stop-server', async (event, filePath, detectedPid) => {
     }
 
     serverLogger.logActivity(`STOP_EXTERNAL_CONFIRMED: Stopping PID ${pid} for ${path.relative(BASE_PATH, filePath)}`);
-    return killConfirmedPid(pid, { wasExternal: true });
+    const res = await killConfirmedPid(pid, { wasExternal: true });
+    if (res && res.success) {
+      removeDetachedEntry(filePath);
+    }
+    return res;
   }
   
   if (!procInfo) {
@@ -607,6 +869,7 @@ ipcMain.handle('stop-server', async (event, filePath, detectedPid) => {
   const res = await killConfirmedPid(pid, { wasExternal: false });
   if (res && res.success) {
     runningProcesses.delete(filePath);
+    removeDetachedEntry(filePath);
   }
   return res;
 });

@@ -87,6 +87,12 @@ async function runChecks() {
     
     const pluginsContent = await fetch('/api/apps/plugins/content');
     assert('Plugins content API returns 200', pluginsContent.status === 200);
+
+    // Crawl status summary API (operator UX)
+    const crawlSummary = await fetch('/api/crawl/summary');
+    assert('Crawl summary API returns 200', crawlSummary.status === 200);
+    assert('Crawl summary API returns ok status', crawlSummary.json?.status === 'ok');
+    assert('Crawl summary has activeJobs number', Number.isFinite(crawlSummary.json?.activeJobs));
     
     // Test 404 for unknown app
     const unknownApp = await fetch('/api/apps/does-not-exist/content');

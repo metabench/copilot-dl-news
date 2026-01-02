@@ -31,6 +31,196 @@
 
 ## Current Session
 
+### Session 2026-01-02: Test Studio E2E: self-hosted 1000-page crawl
+
+**Duration**: Active
+**Type**: tests
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add deterministic E2E that uses Test Studio to run a 1000-page local crawl test, plus badge polish.
+
+**Location**: `docs/sessions/2026-01-02-test-studio-e2e-crawl/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-02-test-studio-e2e-crawl/INDEX.md)
+- 🗺️ [Plan](./2026-01-02-test-studio-e2e-crawl/PLAN.md)
+- 📝 [Working Notes](./2026-01-02-test-studio-e2e-crawl/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-02-test-studio-e2e-crawl/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-02-test-studio-e2e-crawl/FOLLOW_UPS.md)
+
+
+### Session 2026-01-02: Operator UX: Crawl Status & Errors
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make crawl problems reliably visible in the Unified UI and z-server workflow.
+
+**Location**: `docs/sessions/2026-01-02-operator-ux-crawl-status/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-02-operator-ux-crawl-status/INDEX.md)
+- 🗺️ [Plan](./2026-01-02-operator-ux-crawl-status/PLAN.md)
+- 📝 [Working Notes](./2026-01-02-operator-ux-crawl-status/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-02-operator-ux-crawl-status/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-02-operator-ux-crawl-status/FOLLOW_UPS.md)
+
+
+### Session 2026-01-02: Z-server Scan Filters
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make z-server server scan defaults stricter and configurable
+
+**Location**: `docs/sessions/2026-01-02-z-server-scan-filters/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-02-z-server-scan-filters/INDEX.md)
+- 🗺️ [Plan](./2026-01-02-z-server-scan-filters/PLAN.md)
+- 📝 [Working Notes](./2026-01-02-z-server-scan-filters/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-02-z-server-scan-filters/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-02-z-server-scan-filters/FOLLOW_UPS.md)
+
+
+### Session 2026-01-02: z-server detached launch
+
+**Duration**: Active
+**Type**: ops
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Allow z-server to launch a server that keeps running after z-server exits
+
+**Location**: `docs/sessions/2026-01-02-z-server-detached-launch/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-02-z-server-detached-launch/INDEX.md)
+- 🗺️ [Plan](./2026-01-02-z-server-detached-launch/PLAN.md)
+- 📝 [Working Notes](./2026-01-02-z-server-detached-launch/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-02-z-server-detached-launch/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-02-z-server-detached-launch/FOLLOW_UPS.md)
+
+
+### Session 2026-01-02: Scheduler Reconciliation + Observability
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add persistent crawl schedules with reconciliation (catch-up/postpone) and a minimal Unified UI view + deterministic checks.
+
+**Location**: `docs/sessions/2026-01-02-scheduler-reconcile-observability/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-02-scheduler-reconcile-observability/INDEX.md)
+- 🗺️ [Plan](./2026-01-02-scheduler-reconcile-observability/PLAN.md)
+- 📝 [Working Notes](./2026-01-02-scheduler-reconcile-observability/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-02-scheduler-reconcile-observability/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-02-scheduler-reconcile-observability/FOLLOW_UPS.md)
+
+
+### Session 2026-01-02: Triage Next System Hotspots
+
+**Duration**: Active
+**Type**: triage
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Identify next riskiest subsystems and add small deterministic checks + targeted Jest regressions as proof.
+
+**Location**: `docs/sessions/2026-01-02-triage-next-hotspots/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-02-triage-next-hotspots/INDEX.md)
+- 🗺️ [Plan](./2026-01-02-triage-next-hotspots/PLAN.md)
+- 📝 [Working Notes](./2026-01-02-triage-next-hotspots/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-02-triage-next-hotspots/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-02-triage-next-hotspots/FOLLOW_UPS.md)
+
+
+### Session 2026-01-01: Unified App: Sub-App Foundations (Keep Iframes)
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Introduce standardized sub-app components/contracts in unified app while retaining iframe embedding, laying groundwork for future panel-based rendering.
+
+**Location**: `docs/sessions/2026-01-01-unified-subapp-foundations/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-01-unified-subapp-foundations/INDEX.md)
+- 🗺️ [Plan](./2026-01-01-unified-subapp-foundations/PLAN.md)
+- 📝 [Working Notes](./2026-01-01-unified-subapp-foundations/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-01-unified-subapp-foundations/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-01-unified-subapp-foundations/FOLLOW_UPS.md)
+
+
+### Session 2026-01-01: Lab Coverage Risk Review
+
+**Duration**: Active
+**Type**: analysis
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Identify app patterns that lack lab/check coverage and may be error-prone
+
+**Location**: `docs/sessions/2026-01-01-lab-coverage-risk-review/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-01-lab-coverage-risk-review/INDEX.md)
+- 🗺️ [Plan](./2026-01-01-lab-coverage-risk-review/PLAN.md)
+- 📝 [Working Notes](./2026-01-01-lab-coverage-risk-review/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-01-lab-coverage-risk-review/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-01-lab-coverage-risk-review/FOLLOW_UPS.md)
+
+
+### Session 2026-01-01: Crawler Studio: DB-backed settings + Home UI
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create a cohesive crawler UI with DB-backed profiles, presets, and run artifacts
+
+**Location**: `docs/sessions/2026-01-01-crawler-studio-db-settings/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-01-crawler-studio-db-settings/INDEX.md)
+- 🗺️ [Plan](./2026-01-01-crawler-studio-db-settings/PLAN.md)
+- 📝 [Working Notes](./2026-01-01-crawler-studio-db-settings/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-01-crawler-studio-db-settings/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-01-crawler-studio-db-settings/FOLLOW_UPS.md)
+
+
+### Session 2026-01-01: Test Studio: ingest Jest runs
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Ensure tests run in terminal produce artifacts visible in Test Studio.
+
+**Location**: `docs/sessions/2026-01-01-test-studio-jest-artifacts/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-01-test-studio-jest-artifacts/INDEX.md)
+- 🗺️ [Plan](./2026-01-01-test-studio-jest-artifacts/PLAN.md)
+- 📝 [Working Notes](./2026-01-01-test-studio-jest-artifacts/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-01-test-studio-jest-artifacts/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-01-test-studio-jest-artifacts/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-31: Unified App: run crawl + progress
 
 **Duration**: Active

@@ -15,6 +15,7 @@ function createControlPanelControl(jsgui, { ControlButtonControl, StringControl 
       this._serverRunning = spec.serverRunning || false;
       this._onStart = spec.onStart || null;
       this._onStop = spec.onStop || null;
+      this._onRestart = spec.onRestart || null;
 
       this._isUiServer = spec.isUiServer === true;
       this._uiClientStatus = spec.uiClientStatus || null;
@@ -22,6 +23,9 @@ function createControlPanelControl(jsgui, { ControlButtonControl, StringControl 
 
       this._autoRebuildUiClient = spec.autoRebuildUiClient === true;
       this._onToggleAutoRebuildUiClient = spec.onToggleAutoRebuildUiClient || null;
+
+      this._keepRunningAfterExit = spec.keepRunningAfterExit === true;
+      this._onToggleKeepRunningAfterExit = spec.onToggleKeepRunningAfterExit || null;
       
       if (!spec.el) {
         this.compose();
@@ -50,6 +54,15 @@ function createControlPanelControl(jsgui, { ControlButtonControl, StringControl 
       });
       this.add(this._stopBtn);
 
+      this._restartBtn = new ControlButtonControl({
+        context: ctx,
+        label: "\u21bb Restart",
+        variant: "restart",
+        disabled: !this._serverRunning,
+        onClick: () => this._onRestart && this._onRestart()
+      });
+      this.add(this._restartBtn);
+
       this._rebuildUiBtn = new ControlButtonControl({
         context: ctx,
         label: "\ud83d\udd28 Rebuild UI",
@@ -73,6 +86,21 @@ function createControlPanelControl(jsgui, { ControlButtonControl, StringControl 
       this._autoRebuildLabel.add(this._autoRebuildText);
       this._autoRebuildWrap.add(this._autoRebuildLabel);
       this.add(this._autoRebuildWrap);
+
+      this._keepRunningWrap = new jsgui.div({ context: ctx, class: "zs-keeprunning zs-control-panel__keeprunning" });
+      this._keepRunningLabel = new jsgui.Control({ context: ctx, tagName: "label", class: "zs-keeprunning__label" });
+      this._keepRunningCheckbox = new jsgui.Control({ context: ctx, tagName: "input", class: "zs-keeprunning__checkbox" });
+      this._keepRunningCheckbox.dom.attributes.type = "checkbox";
+      if (this._keepRunningAfterExit) {
+        this._keepRunningCheckbox.dom.attributes.checked = "checked";
+      }
+      this._keepRunningText = new jsgui.span({ context: ctx, class: "zs-keeprunning__text" });
+      this._keepRunningText.add(new StringControl({ context: ctx, text: "Keep running after z-server closes" }));
+
+      this._keepRunningLabel.add(this._keepRunningCheckbox);
+      this._keepRunningLabel.add(this._keepRunningText);
+      this._keepRunningWrap.add(this._keepRunningLabel);
+      this.add(this._keepRunningWrap);
 
       this._syncUiControls();
     }
@@ -141,6 +169,7 @@ function createControlPanelControl(jsgui, { ControlButtonControl, StringControl 
       this._serverRunning = running;
       this._startBtn.setDisabled(running);
       this._stopBtn.setDisabled(!running);
+      if (this._restartBtn) this._restartBtn.setDisabled(!running);
     }
 
     setUiServer(isUiServer) {
@@ -181,9 +210,27 @@ function createControlPanelControl(jsgui, { ControlButtonControl, StringControl 
       }
     }
 
+    setKeepRunningAfterExit(enabled) {
+      this._keepRunningAfterExit = enabled === true;
+
+      if (this._keepRunningCheckbox) {
+        if (this._keepRunningAfterExit) {
+          this._keepRunningCheckbox.dom.attributes.checked = "checked";
+        } else {
+          delete this._keepRunningCheckbox.dom.attributes.checked;
+        }
+      }
+
+      if (this.dom.el) {
+        const el = this.dom.el.querySelector(".zs-keeprunning__checkbox");
+        if (el) el.checked = this._keepRunningAfterExit;
+      }
+    }
+
     activate() {
       this._startBtn.activate();
       this._stopBtn.activate();
+      if (this._restartBtn) this._restartBtn.activate();
       this._rebuildUiBtn.activate();
 
       if (this.dom.el) {
@@ -198,6 +245,19 @@ function createControlPanelControl(jsgui, { ControlButtonControl, StringControl 
             }
           });
           checkbox.__zsBound = true;
+        }
+
+        const keepRunning = this.dom.el.querySelector(".zs-keeprunning__checkbox");
+        if (keepRunning && !keepRunning.__zsBound) {
+          keepRunning.checked = this._keepRunningAfterExit;
+          keepRunning.addEventListener("change", () => {
+            const enabled = keepRunning.checked === true;
+            this._keepRunningAfterExit = enabled;
+            if (this._onToggleKeepRunningAfterExit) {
+              this._onToggleKeepRunningAfterExit(enabled);
+            }
+          });
+          keepRunning.__zsBound = true;
         }
       }
     }

@@ -29,6 +29,36 @@ function createErrorPayload(code, message, details) {
   return payload;
 }
 
+function serializeProposedActions(proposedActions) {
+  if (!Array.isArray(proposedActions)) {
+    return [];
+  }
+
+  return proposedActions
+    .map((action) => {
+      if (action && typeof action.toJSON === 'function') {
+        return action.toJSON();
+      }
+      return action;
+    })
+    .filter(Boolean);
+}
+
+function createRateLimitPayload(error) {
+  return {
+    success: false,
+    error: {
+      code: 'RATE_LIMITED',
+      message: error.message,
+      retryAfter: error.retryAfter,
+      context: error.context
+    },
+    proposedActions: serializeProposedActions(error.proposedActions),
+    retryAfter: error.retryAfter,
+    context: error.context
+  };
+}
+
 function createBackgroundTasksRouter({ taskManager, getDbRW, logger } = {}) {
   const router = express.Router();
   const log = defaultLogger(logger);
@@ -241,18 +271,7 @@ function createBackgroundTasksRouter({ taskManager, getDbRW, logger } = {}) {
       return res.json(payload);
     } catch (error) {
       if (error instanceof RateLimitError) {
-        return res.status(429).json({
-          success: false,
-          error: {
-            code: 'RATE_LIMITED',
-            message: error.message,
-            retryAfter: error.retryAfter,
-            context: error.context
-          },
-          proposedActions: Array.isArray(error.proposedActions) ? error.proposedActions.map((action) => action.toJSON()) : [],
-          retryAfter: error.retryAfter,
-          context: error.context
-        });
+        return res.status(429).json(createRateLimitPayload(error));
       }
 
       log.error(`Failed to ${action} background task:`, error);
@@ -388,18 +407,7 @@ function createBackgroundTasksRouter({ taskManager, getDbRW, logger } = {}) {
       });
     } catch (error) {
       if (error instanceof RateLimitError) {
-        return res.status(429).json({
-          success: false,
-          error: {
-            code: 'RATE_LIMITED',
-            message: error.message,
-            retryAfter: error.retryAfter,
-            context: error.context
-          },
-          proposedActions: Array.isArray(error.proposedActions) ? error.proposedActions.map((action) => action.toJSON()) : [],
-          retryAfter: error.retryAfter,
-          context: error.context
-        });
+        return res.status(429).json(createRateLimitPayload(error));
       }
 
       log.error('Failed to execute background task action:', error);

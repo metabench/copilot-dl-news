@@ -26,6 +26,21 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
 
       this._autoRebuildUiClient = false;
 
+      this._keepRunningAfterExit = false;
+
+      this._scanVisibility = {
+        ui: true,
+        labs: false,
+        api: false,
+        tools: false,
+        tests: false,
+        checks: false,
+        other: false
+      };
+
+      this._scanInFlight = false;
+      this._scanProgressUnsub = null;
+
       this._debug = false;
       
       if (!spec.el) {
@@ -57,10 +72,58 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
       }
     }
 
+    _loadKeepRunningAfterExitSetting() {
+      try {
+        const raw = globalThis.localStorage && globalThis.localStorage.getItem("zserver:keepRunningAfterExit");
+        return raw === "1" || raw === "true";
+      } catch {
+        return false;
+      }
+    }
+
+    _loadScanVisibilitySetting() {
+      try {
+        const raw = globalThis.localStorage && globalThis.localStorage.getItem("zserver:scanVisibility");
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== "object") return null;
+        return parsed;
+      } catch {
+        return null;
+      }
+    }
+
+    _saveScanVisibilitySetting(visibility) {
+      try {
+        if (!globalThis.localStorage) return;
+        globalThis.localStorage.setItem("zserver:scanVisibility", JSON.stringify(visibility));
+      } catch {
+        // Best-effort only.
+      }
+    }
+
+    _normalizeScanVisibility(visibility) {
+      const defaults = this._scanVisibility;
+      const next = { ...defaults, ...(visibility && typeof visibility === "object" ? visibility : null) };
+      for (const key of Object.keys(defaults)) {
+        next[key] = next[key] === true;
+      }
+      return next;
+    }
+
     _saveAutoRebuildUiClientSetting(enabled) {
       try {
         if (!globalThis.localStorage) return;
         globalThis.localStorage.setItem("zserver:autoRebuildUiClient", enabled ? "1" : "0");
+      } catch {
+        // Best-effort only.
+      }
+    }
+
+    _saveKeepRunningAfterExitSetting(enabled) {
+      try {
+        if (!globalThis.localStorage) return;
+        globalThis.localStorage.setItem("zserver:keepRunningAfterExit", enabled ? "1" : "0");
       } catch {
         // Best-effort only.
       }
@@ -78,7 +141,9 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
         context: ctx,
         servers: this._servers,
         onSelect: (s) => this._selectServer(s),
-        onOpenUrl: (url) => this._openInBrowser(url)
+        onOpenUrl: (url) => this._openInBrowser(url),
+        scanVisibility: this._scanVisibility,
+        onChangeScanVisibility: (visibility) => this._setScanVisibility(visibility)
       });
       container.add(this._sidebar);
       
@@ -86,12 +151,16 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
         context: ctx,
         onStart: () => this._startServer(),
         onStop: () => this._stopServer(),
+        onRestart: () => this._restartServer(),
         onUrlDetected: (filePath, url) => this._setServerUrl(filePath, url),
         onOpenUrl: (url) => this._openInBrowser(url),
         onSelectServer: (server) => this._selectServer(server),
+        onQuickStartServer: (server, options) => this._quickStartServer(server, options),
         autoRebuildUiClient: this._autoRebuildUiClient,
         onRebuildUiClient: () => this._rebuildUiClient(),
-        onToggleAutoRebuildUiClient: (enabled) => this._setAutoRebuildUiClient(enabled)
+        onToggleAutoRebuildUiClient: (enabled) => this._setAutoRebuildUiClient(enabled),
+        keepRunningAfterExit: this._keepRunningAfterExit,
+        onToggleKeepRunningAfterExit: (enabled) => this._setKeepRunningAfterExit(enabled)
       });
       container.add(this._contentArea);
       
@@ -107,71 +176,135 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
       this._debug = this._loadDebugSetting();
       this._autoRebuildUiClient = this._loadAutoRebuildUiClientSetting();
       this._contentArea.setAutoRebuildUiClient(this._autoRebuildUiClient);
+
+      this._keepRunningAfterExit = this._loadKeepRunningAfterExitSetting();
+      if (this._contentArea && typeof this._contentArea.setKeepRunningAfterExit === "function") {
+        this._contentArea.setKeepRunningAfterExit(this._keepRunningAfterExit);
+      }
+
+      const savedVisibility = this._loadScanVisibilitySetting();
+      if (savedVisibility) {
+        this._scanVisibility = this._normalizeScanVisibility(savedVisibility);
+        if (this._sidebar && typeof this._sidebar.setScanVisibility === "function") {
+          this._sidebar.setScanVisibility(this._scanVisibility);
+        }
+      }
       
       try {
-        this._scanTotal = 0;
-        this._scanCurrent = 0;
-        this._scanLastFile = "";
-
-        this._contentArea.setScanning(true);
-        this._debugLog("[ZServerApp] Starting scan...");
-        
-        this._api.onScanProgress((progress) => {
-          this._debugLog("[ZServerApp] Scan progress:", progress);
-          if (progress.type === 'count-start') {
-            this._scanTotal = 0;
-            this._scanCurrent = 0;
-            this._scanLastFile = "";
-            this._contentArea.setScanCounting();
-          } else if (progress.type === 'count-progress') {
-            this._scanCurrent = progress.current || 0;
-            this._scanLastFile = progress.file || "";
-            this._contentArea.setScanCountingProgress(progress.current, progress.file);
-          } else if (progress.type === 'count') {
-            this._scanTotal = progress.total || 0;
-            this._scanCurrent = 0;
-            this._contentArea.setScanTotal(progress.total);
-          } else if (progress.type === 'progress') {
-            this._scanTotal = progress.total || this._scanTotal;
-            this._scanCurrent = progress.current || 0;
-            this._scanLastFile = progress.file || "";
-            this._contentArea.setScanProgress(progress.current, progress.total, progress.file);
-          } else if (progress.type === 'complete') {
-            // Make completion visually truthful even if we hide the indicator immediately after.
-            if (this._scanTotal > 0 && this._scanCurrent < this._scanTotal) {
-              this._contentArea.setScanProgress(this._scanTotal, this._scanTotal, this._scanLastFile);
+        if (!this._scanProgressUnsub) {
+          this._scanProgressUnsub = this._api.onScanProgress((progress) => {
+            this._debugLog("[ZServerApp] Scan progress:", progress);
+            if (progress.type === 'count-start') {
+              this._scanTotal = 0;
+              this._scanCurrent = 0;
+              this._scanLastFile = "";
+              this._contentArea.setScanCounting();
+            } else if (progress.type === 'count-progress') {
+              this._scanCurrent = progress.current || 0;
+              this._scanLastFile = progress.file || "";
+              this._contentArea.setScanCountingProgress(progress.current, progress.file);
+            } else if (progress.type === 'count') {
+              this._scanTotal = progress.total || 0;
+              this._scanCurrent = 0;
+              this._contentArea.setScanTotal(progress.total);
+            } else if (progress.type === 'progress') {
+              this._scanTotal = progress.total || this._scanTotal;
+              this._scanCurrent = progress.current || 0;
+              this._scanLastFile = progress.file || "";
+              this._contentArea.setScanProgress(progress.current, progress.total, progress.file);
+            } else if (progress.type === 'complete') {
+              // Make completion visually truthful even if we hide the indicator immediately after.
+              if (this._scanTotal > 0 && this._scanCurrent < this._scanTotal) {
+                this._contentArea.setScanProgress(this._scanTotal, this._scanTotal, this._scanLastFile);
+              }
             }
-          }
-        });
-        
-        this._servers = await this._api.scanServers();
-        this._debugLog("[ZServerApp] Scan complete, found servers:", this._servers.length, this._servers);
-        
+          });
+        }
+
+        await this._scanAndPopulateServers();
+
         for (const server of this._servers) {
           if (server.running && server.detectedPort) {
             const url = `http://localhost:${server.detectedPort}`;
-            server.runningUrl = url;
             this._addLog(server.file, 'system', `\u2713 Server detected as already running on port ${server.detectedPort}`);
             this._addLog(server.file, 'system', `\ud83d\udccd URL: ${url}`);
           }
         }
         
-        this._sidebar.setServers(this._servers);
-        this._contentArea.setServers(this._servers);
         this._debugLog("[ZServerApp] Servers set on sidebar");
-        
-        this._api.onServerLog(({ filePath, type, data }) => {
-          this._addLog(filePath, type, data);
-        });
-        
-        this._api.onServerStatusChange((payload) => {
-          this._updateServerStatus(payload);
-        });
+
+        if (!this._serverLogUnsub) {
+          this._serverLogUnsub = this._api.onServerLog(({ filePath, type, data }) => {
+            this._addLog(filePath, type, data);
+          });
+        }
+
+        if (!this._serverStatusUnsub) {
+          this._serverStatusUnsub = this._api.onServerStatusChange((payload) => {
+            this._updateServerStatus(payload);
+          });
+        }
       } catch (error) {
         console.error("Failed to scan servers:", error);
         this._contentArea.addLog("stderr", `Failed to scan servers: ${error.message}`);
       } finally {
         this._contentArea.setScanning(false);
+        this._scanInFlight = false;
+      }
+    }
+
+    async _scanAndPopulateServers() {
+      this._scanTotal = 0;
+      this._scanCurrent = 0;
+      this._scanLastFile = "";
+
+      this._scanInFlight = true;
+      this._contentArea.setScanning(true);
+      this._debugLog("[ZServerApp] Starting scan...", this._scanVisibility);
+
+      const scanned = await this._api.scanServers({ visibility: this._scanVisibility });
+      for (const server of scanned) {
+        if (server && server.running && server.detectedPort) {
+          server.runningUrl = `http://localhost:${server.detectedPort}`;
+        }
+      }
+      this._servers = scanned;
+      this._debugLog("[ZServerApp] Scan complete, found servers:", this._servers.length);
+
+      this._sidebar.setServers(this._servers);
+      this._contentArea.setServers(this._servers);
+
+      // Keep selection stable across rescans when possible.
+      if (this._selectedServer && this._selectedServer.file) {
+        const match = this._servers.find(s => s.file === this._selectedServer.file);
+        if (match) {
+          this._selectServer(match);
+        } else {
+          this._selectedServer = null;
+          this._contentArea.setSelectedServer(null);
+          this._contentArea.setLogs([]);
+        }
+      }
+    }
+
+    async _setScanVisibility(visibility) {
+      const next = this._normalizeScanVisibility(visibility);
+      this._scanVisibility = next;
+      this._saveScanVisibilitySetting(next);
+
+      if (this._sidebar && typeof this._sidebar.setScanVisibility === "function") {
+        this._sidebar.setScanVisibility(next);
+      }
+
+      if (this._scanInFlight) return;
+
+      try {
+        await this._scanAndPopulateServers();
+      } catch (err) {
+        this._contentArea.addLog("stderr", `Failed to rescan servers: ${err.message}`);
+      } finally {
+        this._contentArea.setScanning(false);
+        this._scanInFlight = false;
       }
     }
 
@@ -212,6 +345,14 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
       this._autoRebuildUiClient = enabled === true;
       this._saveAutoRebuildUiClientSetting(this._autoRebuildUiClient);
       this._contentArea.setAutoRebuildUiClient(this._autoRebuildUiClient);
+    }
+
+    _setKeepRunningAfterExit(enabled) {
+      this._keepRunningAfterExit = enabled === true;
+      this._saveKeepRunningAfterExitSetting(this._keepRunningAfterExit);
+      if (this._contentArea && typeof this._contentArea.setKeepRunningAfterExit === "function") {
+        this._contentArea.setKeepRunningAfterExit(this._keepRunningAfterExit);
+      }
     }
 
     async _rebuildUiClient() {
@@ -366,6 +507,7 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
       const result = await this._api.startServer(this._selectedServer.file, {
         isUiServer: this._selectedServer.hasHtmlInterface === true,
         ensureUiClientBundle: this._autoRebuildUiClient === true,
+        keepRunningAfterExit: this._keepRunningAfterExit === true,
         logToFilePath: this._selectedServer.file
       });
       
@@ -398,6 +540,168 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
       }
     }
 
+    async _waitForUrlReachable(baseUrl, { timeoutMs = 15000, intervalMs = 250 } = {}) {
+      if (typeof baseUrl !== "string" || !baseUrl) return false;
+
+      // In unit tests or non-browser contexts, skip waiting.
+      if (typeof globalThis.fetch !== "function") return true;
+      if (typeof globalThis.AbortController !== "function") return true;
+
+      const deadline = Date.now() + Math.max(0, timeoutMs);
+      while (Date.now() < deadline) {
+        try {
+          const controller = new AbortController();
+          const attemptTimer = setTimeout(() => controller.abort(), 2000);
+
+          // Any HTTP response (even 404) means the server is up.
+          await fetch(baseUrl, {
+            method: "GET",
+            cache: "no-store",
+            signal: controller.signal
+          });
+
+          clearTimeout(attemptTimer);
+          return true;
+        } catch {
+          // keep retrying
+        }
+
+        await new Promise((r) => setTimeout(r, intervalMs));
+      }
+
+      return false;
+    }
+
+    _isUnifiedUiServer(server) {
+      if (!server || typeof server.file !== "string") return false;
+      const normalized = server.file.replace(/\\/g, "/");
+      return normalized.endsWith("/src/ui/server/unifiedApp/server.js");
+    }
+
+    async _tryFetchUnifiedCrawlSummary(baseUrl, { timeoutMs = 2500 } = {}) {
+      if (typeof baseUrl !== "string" || !baseUrl) return null;
+
+      if (typeof globalThis.fetch !== "function") return null;
+      if (typeof globalThis.AbortController !== "function") return null;
+
+      try {
+        const controller = new AbortController();
+        const attemptTimer = setTimeout(() => controller.abort(), Math.max(250, timeoutMs));
+
+        const res = await fetch(`${baseUrl}/api/crawl/summary`, {
+          method: "GET",
+          cache: "no-store",
+          signal: controller.signal
+        });
+
+        clearTimeout(attemptTimer);
+
+        if (!res.ok) return null;
+        const json = await res.json();
+        if (!json || json.status !== "ok") return null;
+        return json;
+      } catch {
+        return null;
+      }
+    }
+
+    async _pickAutoOpenPath(server, baseUrl) {
+      if (!this._isUnifiedUiServer(server)) return null;
+      const summary = await this._tryFetchUnifiedCrawlSummary(baseUrl);
+      const lastError = summary && typeof summary.lastError === "object" ? summary.lastError : null;
+      const hasError = Boolean(lastError && lastError.message);
+      if (!hasError) return null;
+      return "/?app=crawl-status";
+    }
+
+    async _quickStartServer(server, options = {}) {
+      if (!server || !this._api) return;
+
+      const action = options && typeof options === "object" ? options.action : null;
+      const openPath = options && typeof options === "object" && typeof options.openPath === "string"
+        ? options.openPath
+        : null;
+      if (action !== "start-detached") {
+        this._selectServer(server);
+        return;
+      }
+
+      // Ensure selection so the user sees immediate UI feedback.
+      this._selectServer(server);
+      this._addLog(server.file, "system", "Launching (detached)...");
+
+      const result = await this._api.startServer(server.file, {
+        isUiServer: server.hasHtmlInterface === true,
+        ensureUiClientBundle: this._autoRebuildUiClient === true,
+        keepRunningAfterExit: true,
+        logToFilePath: server.file
+      });
+
+      if (result && result.success) {
+        server.running = true;
+        server.pid = result.pid;
+
+        const port = result.port || server.metadata?.defaultPort || server.detectedPort;
+        const baseUrl = port ? `http://localhost:${port}` : null;
+
+        if (baseUrl) {
+          const ready = await this._waitForUrlReachable(baseUrl);
+          if (!ready) {
+            this._addLog(server.file, "system", "⚠️ Server did not respond before timeout; opening anyway...");
+          }
+        }
+
+        let resolvedOpenPath = openPath;
+        if (!resolvedOpenPath && baseUrl) {
+          resolvedOpenPath = await this._pickAutoOpenPath(server, baseUrl);
+        }
+
+        const url = baseUrl ? `${baseUrl}${resolvedOpenPath || ""}` : null;
+
+        if (url) {
+          server.runningUrl = url;
+          this._setServerUrl(server.file, url);
+          await this._openInBrowser(url);
+        }
+
+        this._contentArea.setServerRunning(true);
+        this._sidebar.updateServerStatus(server.file, true);
+        this._addLog(server.file, "system", `Server started (PID: ${result.pid})`);
+      } else {
+        const message = result && result.message ? result.message : "Failed to start";
+        if (message === "Already running") {
+          server.running = true;
+          this._contentArea.setServerRunning(true);
+          this._sidebar.updateServerStatus(server.file, true);
+
+          const port = server.metadata?.defaultPort || server.detectedPort;
+          const baseUrl = port ? `http://localhost:${port}` : null;
+
+          if (baseUrl) {
+            const ready = await this._waitForUrlReachable(baseUrl, { timeoutMs: 5000 });
+            if (!ready) {
+              this._addLog(server.file, "system", "⚠️ Server did not respond before timeout; opening anyway...");
+            }
+          }
+
+          let resolvedOpenPath = openPath;
+          if (!resolvedOpenPath && baseUrl) {
+            resolvedOpenPath = await this._pickAutoOpenPath(server, baseUrl);
+          }
+
+          const url = baseUrl ? `${baseUrl}${resolvedOpenPath || ""}` : null;
+          this._addLog(server.file, "system", "\u26a0\ufe0f Server is already running!");
+          if (url) {
+            server.runningUrl = url;
+            this._setServerUrl(server.file, url);
+            await this._openInBrowser(url);
+          }
+        } else {
+          this._addLog(server.file, "stderr", `Failed to start: ${message}`);
+        }
+      }
+    }
+
     async _stopServer() {
       if (!this._selectedServer || !this._api) return;
       
@@ -414,6 +718,46 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
       } else {
         this._addLog(this._selectedServer.file, "stderr", `Failed to stop: ${result.message}`);
       }
+    }
+
+    async _restartServer() {
+      if (!this._selectedServer || !this._api) return;
+
+      const filePath = this._selectedServer.file;
+      this._addLog(filePath, "system", "Restarting server...");
+
+      const stopRes = await this._api.stopServer(filePath, this._selectedServer.pid);
+      if (!stopRes || stopRes.success !== true) {
+        const message = stopRes && stopRes.message ? stopRes.message : "unknown";
+        // Allow restart even if it wasn't running (or if PID drifted).
+        this._addLog(filePath, "system", `Stop step: ${message}`);
+      }
+
+      const startRes = await this._api.startServer(filePath, {
+        isUiServer: this._selectedServer.hasHtmlInterface === true,
+        ensureUiClientBundle: this._autoRebuildUiClient === true,
+        keepRunningAfterExit: this._keepRunningAfterExit === true,
+        logToFilePath: filePath
+      });
+
+      if (startRes && startRes.success) {
+        this._selectedServer.running = true;
+        this._selectedServer.pid = startRes.pid;
+        this._contentArea.setServerRunning(true);
+        this._sidebar.updateServerStatus(filePath, true);
+
+        const port = startRes.port || this._selectedServer.metadata?.defaultPort || this._selectedServer.detectedPort;
+        const url = port ? `http://localhost:${port}` : null;
+        if (url) {
+          this._setServerUrl(filePath, url);
+        }
+
+        this._addLog(filePath, "system", `Server restarted (PID: ${startRes.pid})`);
+        return;
+      }
+
+      const message = startRes && startRes.message ? startRes.message : "Failed to start";
+      this._addLog(filePath, "stderr", `Restart failed: ${message}`);
     }
 
     async _openInBrowser(url) {

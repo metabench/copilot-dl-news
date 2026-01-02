@@ -9,6 +9,7 @@
 const express = require('express');
 const path = require('path');
 const { spawn } = require('child_process');
+const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 const TestResultService = require('./TestResultService');
 const FlakyDetector = require('./FlakyDetector');
 const TrendAnalyzer = require('./TrendAnalyzer');
@@ -40,6 +41,7 @@ function createServer(options = {}) {
    */
   app.get('/api/test-studio/runs', async (req, res) => {
     try {
+      await resultService.refreshFromDisk();
       const limit = parseInt(req.query.limit) || 50;
       const offset = parseInt(req.query.offset) || 0;
       const runs = await resultService.listRuns({ limit, offset });
@@ -71,6 +73,7 @@ function createServer(options = {}) {
    */
   app.get('/api/test-studio/runs/:id/results', async (req, res) => {
     try {
+      await resultService.refreshFromDisk();
       const filters = {
         status: req.query.status,
         file: req.query.file,
@@ -216,7 +219,12 @@ function createServer(options = {}) {
  * @returns {string} Command string
  */
 function buildRerunCommand(files, tests) {
-  const fileArgs = files.map(f => `"${f}"`).join(' ');
+  const fileArgs = files
+    .map((filePath) => {
+      const value = String(filePath);
+      return value.includes(' ') ? `"${value}"` : value;
+    })
+    .join(' ');
   
   // If specific tests, add -t filter
   if (tests.length === 1 && tests[0].name) {
@@ -245,12 +253,26 @@ async function executeRerun(command) {
     
     let stdout = '';
     let stderr = '';
+
+    let resolved = false;
+    let timeoutHandle = null;
+    const safeResolve = (value) => {
+      if (resolved) return;
+      resolved = true;
+      resolve(value);
+    };
+    const safeReject = (err) => {
+      if (resolved) return;
+      resolved = true;
+      reject(err);
+    };
     
     child.stdout.on('data', data => stdout += data.toString());
     child.stderr.on('data', data => stderr += data.toString());
     
     child.on('close', code => {
-      resolve({
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+      safeResolve({
         exitCode: code,
         stdout: stdout.slice(-5000), // Last 5KB
         stderr: stderr.slice(-2000)
@@ -258,13 +280,18 @@ async function executeRerun(command) {
     });
     
     child.on('error', error => {
-      reject(error);
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+      safeReject(error);
     });
     
     // Timeout after 5 minutes
-    setTimeout(() => {
-      child.kill();
-      resolve({ exitCode: -1, stdout, stderr, timeout: true });
+    timeoutHandle = setTimeout(() => {
+      try {
+        child.kill();
+      } catch {
+        // ignore
+      }
+      safeResolve({ exitCode: -1, stdout, stderr, timeout: true });
     }, 300000);
   });
 }
@@ -545,12 +572,57 @@ async function startServer(options = {}) {
   
   // Initialize database tables
   await resultService.initTables();
+  await resultService.refreshFromDisk();
   
   return new Promise((resolve) => {
     const server = app.listen(port, () => {
       console.log(`🧪 Test Studio running at http://localhost:${port}`);
       resolve({ server, app, port });
     });
+  });
+}
+
+function parseArgs(argv) {
+  const args = { port: DEFAULT_PORT, check: false };
+
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--check') args.check = true;
+    if (a === '--port') {
+      const v = Number.parseInt(argv[i + 1], 10);
+      if (Number.isFinite(v)) args.port = v;
+      i++;
+    }
+  }
+
+  return args;
+}
+
+if (require.main === module) {
+  process.env.SERVER_NAME = process.env.SERVER_NAME || 'TestStudio';
+  const args = parseArgs(process.argv.slice(2));
+
+  (async () => {
+    const { app, resultService } = createServer({});
+    await resultService.initTables();
+    await resultService.refreshFromDisk();
+
+    const server = wrapServerForCheck(app, args.port, undefined, () => {
+      console.log(`🧪 Test Studio running at http://localhost:${args.port}`);
+    });
+
+    process.on('SIGINT', () => {
+      try { server.close(); } catch { /* ignore */ }
+      process.exit(0);
+    });
+
+    process.on('SIGTERM', () => {
+      try { server.close(); } catch { /* ignore */ }
+      process.exit(0);
+    });
+  })().catch((err) => {
+    console.error('Test Studio failed to start:', err);
+    process.exit(1);
   });
 }
 
