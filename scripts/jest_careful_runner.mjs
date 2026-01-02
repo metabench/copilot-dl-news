@@ -2,8 +2,25 @@
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
+import { mkdirSync } from 'node:fs'
 
 const jestCliPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'node_modules', 'jest', 'bin', 'jest.js')
+
+const sanitizeNodeOptions = (nodeOptions) => {
+  if (typeof nodeOptions !== 'string') return nodeOptions
+  const trimmed = nodeOptions.trim()
+  if (!trimmed) return nodeOptions
+
+  // Node supports --localstorage-file=<path>. When the flag is present without a value,
+  // Node emits: "Warning: `--localstorage-file` was provided without a valid path".
+  // We strip only invalid forms and preserve valid "=..." usage.
+  const withoutBareFlag = trimmed
+    .replace(/(^|\s)--localstorage-file(\s|$)/g, ' ')
+    .replace(/(^|\s)--localstorage-file=(?:""|''|)(?=\s|$)/g, ' ')
+
+  const normalized = withoutBareFlag.replace(/\s+/g, ' ').trim()
+  return normalized || undefined
+}
 
 /**
  * Improved Jest runner with:
@@ -12,12 +29,25 @@ const jestCliPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'node
  * - Timeout safety net
  */
 const run = (args) => {
-  const result = spawnSync(process.execPath, [jestCliPath, ...args], {
+  // Node's internal webstorage implementation emits a warning during Jest teardown
+  // unless a valid localStorage backing file is provided.
+  const localStorageFile = resolve(process.cwd(), 'tmp', 'jest-localstorage.json')
+  mkdirSync(resolve(process.cwd(), 'tmp'), { recursive: true })
+
+  const nodeOptions = sanitizeNodeOptions(process.env.NODE_OPTIONS)
+  const env = {
+    ...process.env,
+    FORCE_COLOR: process.env.FORCE_COLOR || '1'
+  }
+  if (nodeOptions) {
+    env.NODE_OPTIONS = nodeOptions
+  } else {
+    delete env.NODE_OPTIONS
+  }
+
+  const result = spawnSync(process.execPath, [`--localstorage-file=${localStorageFile}`, jestCliPath, ...args], {
     stdio: 'inherit',
-    env: {
-      ...process.env,
-      FORCE_COLOR: process.env.FORCE_COLOR || '1'
-    },
+    env,
     timeout: 300000  // 5 minute safety net for entire run
   })
   if (result.error) {

@@ -39,6 +39,8 @@ const { createTopicHubGuessingRouter } = require('../topicHubGuessing/server');
 const { createTopicListsRouter } = require('../topicLists/server');
 const { createCrawlObserverRouter } = require('../crawlObserver/server');
 const { createCrawlStatusRouter } = require('../crawlStatus/server');
+const { createCrawlerProfilesRouter } = require('../crawlerProfiles/server');
+const { createSchedulerDashboardRouter } = require('../schedulerDashboard/server');
 const { TelemetryIntegration } = require('../../../crawler/telemetry/TelemetryIntegration');
 const { InProcessCrawlJobRegistry } = require('../../../server/crawl-api/v1/core/InProcessCrawlJobRegistry');
 const { registerCrawlApiV1Routes } = require('../../../api/route-loaders/crawl-v1');
@@ -135,6 +137,34 @@ function initUnifiedDb(options = {}) {
   };
 }
 
+function normalizeSubAppRenderResult(result) {
+  if (typeof result === 'string') {
+    return { content: result };
+  }
+
+  if (!result || typeof result !== 'object') {
+    return { content: '' };
+  }
+
+  if (typeof result.content === 'string') {
+    return {
+      content: result.content,
+      activationKey: typeof result.activationKey === 'string' ? result.activationKey : undefined,
+      embed: typeof result.embed === 'string' ? result.embed : undefined
+    };
+  }
+
+  if (typeof result.html === 'string') {
+    return {
+      content: result.html,
+      activationKey: typeof result.activationKey === 'string' ? result.activationKey : undefined,
+      embed: typeof result.embed === 'string' ? result.embed : undefined
+    };
+  }
+
+  return { content: '' };
+}
+
 function mountDashboardModules(unifiedApp, options = {}) {
   const db = initUnifiedDb(options);
   const { getDbRW } = db;
@@ -177,6 +207,119 @@ function mountDashboardModules(unifiedApp, options = {}) {
     createCrawlService,
     serviceOptions: crawlServiceOptions,
     inProcessJobRegistry: inProcessCrawlJobRegistry
+  });
+
+  function getHistoryTimestampMs(ev) {
+    if (!ev || typeof ev !== 'object') return null;
+    if (Number.isFinite(ev.timestampMs)) return ev.timestampMs;
+    if (typeof ev.timestamp === 'string') {
+      const parsed = Date.parse(ev.timestamp);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  }
+
+  function isCrawlErrorEvent(ev) {
+    if (!ev || typeof ev !== 'object') return false;
+    const type = typeof ev.type === 'string' ? ev.type : '';
+    const severity = typeof ev.severity === 'string' ? ev.severity : '';
+
+    return (
+      severity === 'error' ||
+      type.includes('error') ||
+      type.includes('failed') ||
+      type.includes('exception')
+    );
+  }
+
+  function pickBestEffortUrl(ev) {
+    if (!ev || typeof ev !== 'object') return null;
+    const data = ev.data && typeof ev.data === 'object' ? ev.data : null;
+
+    const candidates = [
+      ev.url,
+      data ? data.url : null,
+      data ? data.startUrl : null,
+      data ? data.pageUrl : null,
+      data ? data.requestUrl : null,
+      data ? data.href : null,
+      data ? data.link : null
+    ];
+
+    for (const value of candidates) {
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+
+    return null;
+  }
+
+  function pickLastCrawlErrorEvent(history) {
+    if (!Array.isArray(history) || !history.length) return null;
+
+    for (let i = history.length - 1; i >= 0; i -= 1) {
+      const ev = history[i];
+      if (!ev || typeof ev !== 'object') continue;
+
+      const type = typeof ev.type === 'string' ? ev.type : '';
+      const severity = typeof ev.severity === 'string' ? ev.severity : '';
+      const message = typeof ev.message === 'string' ? ev.message : '';
+      const data = ev.data && typeof ev.data === 'object' ? ev.data : null;
+
+      if (!isCrawlErrorEvent(ev)) continue;
+
+      const dataMessage = data && typeof data.error === 'string' ? data.error : null;
+
+      return {
+        type: type || null,
+        severity: severity || null,
+        timestamp: typeof ev.timestamp === 'string' ? ev.timestamp : null,
+        timestampMs: Number.isFinite(ev.timestampMs) ? ev.timestampMs : null,
+        jobId: typeof ev.jobId === 'string' ? ev.jobId : null,
+        url: pickBestEffortUrl(ev),
+        crawlType: typeof ev.crawlType === 'string' ? ev.crawlType : null,
+        message: (message || dataMessage || '').trim() || null
+      };
+    }
+
+    return null;
+  }
+
+  unifiedApp.get('/api/crawl/summary', (req, res) => {
+    const jobs = inProcessCrawlJobRegistry.list();
+    const activeJobs = jobs.filter((job) => job && job.status === 'running').length;
+
+    const history = crawlTelemetry?.bridge?.getHistory ? crawlTelemetry.bridge.getHistory(200) : [];
+    const lastError = pickLastCrawlErrorEvent(history);
+
+    const nowMs = Date.now();
+    const sinceMs = nowMs - 10 * 60 * 1000;
+    let errorsLast10m = 0;
+    if (Array.isArray(history) && history.length) {
+      for (let i = history.length - 1; i >= 0; i -= 1) {
+        const ev = history[i];
+        const ts = getHistoryTimestampMs(ev);
+
+        if (ts != null && ts < sinceMs) break;
+        if (isCrawlErrorEvent(ev)) errorsLast10m += 1;
+      }
+    }
+
+    const lastFailingJobId = lastError && typeof lastError.jobId === 'string' ? lastError.jobId : null;
+    const lastFailingUrl = lastError && typeof lastError.url === 'string' ? lastError.url : null;
+
+    const lastEvent = Array.isArray(history) && history.length ? history[history.length - 1] : null;
+    const lastEventAt = lastEvent && typeof lastEvent.timestamp === 'string' ? lastEvent.timestamp : null;
+
+    res.json({
+      status: 'ok',
+      activeJobs,
+      jobsTotal: jobs.length,
+      lastEventAt,
+      lastError,
+      errorsLast10m,
+      lastFailingJobId,
+      lastFailingUrl
+    });
   });
 
   const modules = [
@@ -262,6 +405,20 @@ function mountDashboardModules(unifiedApp, options = {}) {
       })
     },
     {
+      id: 'crawler-profiles',
+      mountPath: '/crawler-profiles',
+      apiOnly: () => createCrawlerProfilesRouter({
+        getDbRW,
+        includeRootRoute: false,
+        includeApiRoutes: true
+      }),
+      full: () => createCrawlerProfilesRouter({
+        getDbRW,
+        includeRootRoute: true,
+        includeApiRoutes: false
+      })
+    },
+    {
       id: 'crawl-status',
       mountPath: '/crawl-status',
       full: () => createCrawlStatusRouter({
@@ -269,6 +426,12 @@ function mountDashboardModules(unifiedApp, options = {}) {
         eventsPath: '/api/crawl-telemetry/events',
         telemetryHistoryPath: '/api/crawl-telemetry/history'
       })
+    },
+    {
+      id: 'scheduler',
+      mountPath: '/scheduler',
+      apiOnly: () => createSchedulerDashboardRouter({ getDbRW, includeRootRoute: false }),
+      full: () => createSchedulerDashboardRouter({ getDbRW })
     }
   ];
 
@@ -382,8 +545,14 @@ app.get('/api/apps/:appId/content', async (req, res) => {
   }
   
   try {
-    const content = await app.renderContent(req);
-    res.json({ appId, content });
+    const renderResult = await app.renderContent(req);
+    const normalized = normalizeSubAppRenderResult(renderResult);
+    res.json({
+      appId,
+      content: normalized.content,
+      activationKey: normalized.activationKey,
+      embed: normalized.embed
+    });
   } catch (err) {
     console.error(`Error rendering ${appId}:`, err);
     res.status(500).json({ error: err.message });

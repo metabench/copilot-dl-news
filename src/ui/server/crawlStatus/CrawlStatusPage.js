@@ -11,6 +11,7 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
   const eventsPathJson = JSON.stringify(eventsPath);
   const telemetryHistoryPathJson = JSON.stringify(telemetryHistoryPath || null);
   const remoteObsBasePathJson = JSON.stringify('/api/crawl-telemetry/remote-obs');
+  const profilesApiBaseJson = JSON.stringify('/api/crawler-profiles');
 
   // NOTE: Avoid nested template literals here because this file is loaded in Jest,
   // and nested backticks can be easy to break when embedding HTML fragments.
@@ -21,6 +22,7 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
   const eventsPath = ${eventsPathJson};
   const telemetryHistoryPath = ${telemetryHistoryPathJson};
   const remoteObsBasePath = ${remoteObsBasePathJson};
+  const profilesApiBase = ${profilesApiBaseJson};
 
   const elStatus = document.getElementById('status');
   const elRows = document.getElementById('rows');
@@ -30,6 +32,9 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
   const elStartUrl = document.getElementById('crawl-start-url');
   const elStartOverrides = document.getElementById('crawl-start-overrides');
   const elStartStatus = document.getElementById('crawl-start-status');
+
+  const elProfileSelect = document.getElementById('crawl-profile-select');
+  const elProfileBootstrap = document.getElementById('crawl-profile-bootstrap');
 
   const jobs = new Map();
 
@@ -483,6 +488,123 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
     elStartStatus.className = 'start-status' + (kind ? (' start-status--' + kind) : '');
   }
 
+  function safeJsonStringify(value) {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return '';
+    }
+  }
+
+  async function fetchJson(url, options) {
+    const res = await fetch(url, {
+      headers: { 'Accept': 'application/json', ...(options && options.headers ? options.headers : {}) },
+      ...options
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || String(res.status));
+    }
+    return res.json();
+  }
+
+  let cachedProfiles = [];
+  let cachedActiveProfileId = null;
+  let pendingOperationName = null;
+
+  function applyProfileToForm(profile) {
+    if (!profile || typeof profile !== 'object') return;
+
+    if (elStartUrl && profile.startUrl) {
+      elStartUrl.value = String(profile.startUrl);
+    }
+
+    if (elStartOverrides) {
+      const ov = profile.overrides;
+      if (ov && typeof ov === 'object' && !Array.isArray(ov)) {
+        elStartOverrides.value = safeJsonStringify(ov);
+      }
+    }
+
+    const opName = profile.operationName ? String(profile.operationName) : '';
+    if (opName) {
+      if (elStartOperation) {
+        const has = Array.from(elStartOperation.options || []).some((opt) => opt && opt.value === opName);
+        if (has) {
+          elStartOperation.value = opName;
+          if (elStartOperationLabel) {
+            elStartOperationLabel.textContent = opName;
+          }
+        } else {
+          pendingOperationName = opName;
+        }
+      }
+    }
+  }
+
+  async function setActiveProfile(id) {
+    const key = String(id || '').trim();
+    if (!key) return;
+    try {
+      await fetchJson(profilesApiBase + '/active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: key })
+      });
+    } catch (_) {
+      // Non-fatal: profile selection should not block crawls.
+    }
+  }
+
+  async function loadProfiles() {
+    if (!elProfileSelect) return;
+    try {
+      const payload = await fetchJson(profilesApiBase);
+      const items = payload && Array.isArray(payload.items) ? payload.items : [];
+      const activeId = payload && payload.activeId ? String(payload.activeId) : null;
+
+      cachedProfiles = items;
+      cachedActiveProfileId = activeId;
+
+      elProfileSelect.innerHTML = '';
+
+      const opt0 = document.createElement('option');
+      opt0.value = '';
+      opt0.textContent = items.length ? 'Select a profile…' : 'No profiles saved';
+      elProfileSelect.appendChild(opt0);
+
+      for (const p of items) {
+        if (!p || !p.id || !p.label) continue;
+        const opt = document.createElement('option');
+        opt.value = String(p.id);
+        opt.textContent = (activeId && String(p.id) === activeId ? '★ ' : '') + String(p.label);
+        elProfileSelect.appendChild(opt);
+      }
+
+      if (activeId) {
+        elProfileSelect.value = activeId;
+      } else if (items[0] && items[0].id) {
+        elProfileSelect.value = String(items[0].id);
+      }
+
+      if (elProfileBootstrap) {
+        elProfileBootstrap.style.display = items.length ? 'none' : '';
+      }
+
+      const selectedId = String(elProfileSelect.value || '').trim();
+      const selectedProfile = selectedId
+        ? cachedProfiles.find((p) => p && String(p.id) === selectedId)
+        : null;
+      if (selectedProfile) {
+        applyProfileToForm(selectedProfile);
+      }
+    } catch (_) {
+      if (elProfileBootstrap) {
+        elProfileBootstrap.style.display = '';
+      }
+    }
+  }
+
   async function loadAvailability() {
     if (!elStartOperation) return;
     try {
@@ -513,6 +635,17 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
         elStartOperation.value = ops[0].name;
       }
 
+      if (pendingOperationName) {
+        const has = Array.from(elStartOperation.options || []).some((opt) => opt && opt.value === pendingOperationName);
+        if (has) {
+          elStartOperation.value = pendingOperationName;
+          if (elStartOperationLabel) {
+            elStartOperationLabel.textContent = pendingOperationName;
+          }
+          pendingOperationName = null;
+        }
+      }
+
       if (elStartOperationLabel) {
         elStartOperationLabel.textContent = elStartOperation.value || (ops.length ? String(ops[0].name || '') : 'n/a');
       }
@@ -539,6 +672,31 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
 
   function setupStartForm() {
     if (!elStartForm || !elStartOperation || !elStartUrl) return;
+
+    if (elProfileSelect) {
+      elProfileSelect.addEventListener('change', async () => {
+        const id = String(elProfileSelect.value || '').trim();
+        if (!id) return;
+        const profile = cachedProfiles.find((p) => p && String(p.id) === id);
+        if (profile) {
+          applyProfileToForm(profile);
+        }
+        await setActiveProfile(id);
+      });
+    }
+
+    if (elProfileBootstrap) {
+      elProfileBootstrap.addEventListener('click', async () => {
+        setStartStatus('Installing Guardian presets…', 'working');
+        try {
+          await fetchJson(profilesApiBase + '/bootstrap', { method: 'POST' });
+          await loadProfiles();
+          setStartStatus('Presets installed.', 'ok');
+        } catch (err) {
+          setStartStatus('Preset install failed: ' + (err && err.message ? err.message : String(err)), 'error');
+        }
+      });
+    }
 
     elStartOperation.addEventListener('change', () => {
       const selected = elStartOperation.selectedOptions && elStartOperation.selectedOptions[0]
@@ -609,6 +767,7 @@ function buildCrawlStatusClientScript({ jobsApiPath, extraJobsApiPath, eventsPat
     });
 
     loadAvailability();
+    loadProfiles();
   }
 
   async function sendAction(id, action) {
@@ -773,8 +932,10 @@ h1 { font-size: 18px; margin: 0; }
   .start-field label { font-size: 11px; color: #444; }
   .start-field input, .start-field select, .start-field textarea { font-size: 12px; padding: 7px 10px; border: 1px solid #ddd; border-radius: 8px; }
   .start-field input { min-width: 360px; }
+  .start-field select { min-width: 220px; }
   .start-actions { display: flex; gap: 8px; }
   .start-actions button { font-size: 12px; padding: 8px 12px; }
+  .start-actions a { display: inline-block; font-size: 12px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #111; text-decoration: none; }
   details.start-advanced { margin-top: 10px; }
   details.start-advanced summary { cursor: pointer; font-size: 12px; color: #444; }
   .start-advanced-body { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
@@ -902,6 +1063,21 @@ th { text-align: left; background: #fafafa; }
     row.dom.attributes.class = 'start-row';
     form.add(row);
 
+    const profileField = new Control({ context: ctx, tagName: 'div' });
+    profileField.dom.attributes.class = 'start-field';
+    row.add(profileField);
+    const profileLabel = new Control({ context: ctx, tagName: 'label' });
+    profileLabel.dom.attributes.for = 'crawl-profile-select';
+    profileLabel.add('Profile');
+    profileField.add(profileLabel);
+    const profileSelect = new Control({ context: ctx, tagName: 'select' });
+    profileSelect.dom.attributes.id = 'crawl-profile-select';
+    const profileInitial = new Control({ context: ctx, tagName: 'option' });
+    profileInitial.dom.attributes.value = '';
+    profileInitial.add('Loading…');
+    profileSelect.add(profileInitial);
+    profileField.add(profileSelect);
+
     const urlField = new Control({ context: ctx, tagName: 'div' });
     urlField.dom.attributes.class = 'start-field';
     row.add(urlField);
@@ -922,6 +1098,19 @@ th { text-align: left; background: #fafafa; }
     startBtn.dom.attributes.type = 'submit';
     startBtn.add('Start');
     actions.add(startBtn);
+
+    const presetsBtn = new Control({ context: ctx, tagName: 'button' });
+    presetsBtn.dom.attributes.type = 'button';
+    presetsBtn.dom.attributes.id = 'crawl-profile-bootstrap';
+    presetsBtn.add('Install Guardian presets');
+    actions.add(presetsBtn);
+
+    const profilesLink = new Control({ context: ctx, tagName: 'a' });
+    profilesLink.dom.attributes.href = '/crawler-profiles';
+    profilesLink.dom.attributes.target = '_blank';
+    profilesLink.dom.attributes.rel = 'noopener noreferrer';
+    profilesLink.add('Profiles');
+    actions.add(profilesLink);
 
     const metaRow = new Control({ context: ctx, tagName: 'div' });
     metaRow.dom.attributes.class = 'start-meta';

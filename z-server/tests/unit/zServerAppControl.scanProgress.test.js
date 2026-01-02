@@ -58,6 +58,7 @@ class ContentAreaControlStub {
 
   setAutoRebuildUiClient() {}
   setUiClientStatus() {}
+  setServers() {}
 
   setScanning(isScanning) {
     this._calls.push(["content.setScanning", isScanning]);

@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="520" viewBox="0 0 1100 520">
+  <defs>
+    <style>
+      .bg { fill: #0f1115; }
+      .panel { fill: #161a22; stroke: #3a4256; stroke-width: 2; rx: 14; }
+      .title { fill: #e8e9ee; font: 700 20px system-ui, -apple-system, Segoe UI, sans-serif; }
+      .label { fill: #cdd2e0; font: 14px system-ui, -apple-system, Segoe UI, sans-serif; }
+      .muted { fill: #9aa3b8; font: 13px system-ui, -apple-system, Segoe UI, sans-serif; }
+      .box { fill: #101420; stroke: #58627a; stroke-width: 2; rx: 12; }
+      .box2 { fill: #0f1a16; stroke: #4d8a70; stroke-width: 2; rx: 12; }
+      .box3 { fill: #1b1510; stroke: #9c7a46; stroke-width: 2; rx: 12; }
+      .arrow { stroke: #cdd2e0; stroke-width: 2.5; fill: none; marker-end: url(#arrowHead); }
+      .arrow2 { stroke: #7bdca6; stroke-width: 2.5; fill: none; marker-end: url(#arrowHeadGreen); }
+      .arrow3 { stroke: #e8c9a0; stroke-width: 2.5; fill: none; marker-end: url(#arrowHeadGold); }
+    </style>
+
+    <marker id="arrowHead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#cdd2e0" />
+    </marker>
+    <marker id="arrowHeadGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#7bdca6" />
+    </marker>
+    <marker id="arrowHeadGold" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#e8c9a0" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1100" height="520" />
+
+  <text class="title" x="40" y="46">Test Studio Meta-E2E: “Test Studio runs the crawl test”</text>
+  <text class="muted" x="40" y="70">Offline, deterministic “Guardian-like” fixture pages (5 pages smoke → 100 pages requirement)</text>
+
+  <rect class="panel" x="30" y="90" width="1040" height="390" />
+
+  <!-- Left: Meta E2E -->
+  <rect class="box" x="70" y="140" width="290" height="140" />
+  <text class="label" x="95" y="175">Jest Meta-E2E</text>
+  <text class="muted" x="95" y="200">tests/e2e-features/</text>
+  <text class="muted" x="95" y="220">test-studio-rerun-guardian-</text>
+  <text class="muted" x="95" y="240">crawl.e2e.test.js</text>
+
+  <!-- Test Studio -->
+  <rect class="box2" x="410" y="140" width="310" height="140" />
+  <text class="label" x="435" y="175">Test Studio Server</text>
+  <text class="muted" x="435" y="200">src/ui/server/testStudio/server.js</text>
+  <text class="muted" x="435" y="222">POST /api/test-studio/rerun</text>
+  <text class="muted" x="435" y="244">GET /api/test-studio/runs</text>
+
+  <!-- Nested Jest -->
+  <rect class="box" x="770" y="140" width="270" height="140" />
+  <text class="label" x="795" y="175">Nested Jest Run</text>
+  <text class="muted" x="795" y="200">npm run test:by-path --</text>
+  <text class="muted" x="795" y="220">(writes Test Studio JSON)</text>
+
+  <!-- Fixture site -->
+  <rect class="box3" x="410" y="320" width="310" height="120" />
+  <text class="label" x="435" y="355">Guardian-like Fixture Site</text>
+  <text class="muted" x="435" y="380">tests/fixtures/servers/</text>
+  <text class="muted" x="435" y="400">guardianLikeSiteServer.js</text>
+
+  <!-- Disk -->
+  <rect class="box" x="770" y="320" width="270" height="120" />
+  <text class="label" x="820" y="355">Results on Disk</text>
+  <text class="muted" x="795" y="380">data/test-results/*.json</text>
+  <text class="muted" x="795" y="400">(+ latest.json)</text>
+
+  <!-- Arrows -->
+  <path class="arrow2" d="M360 210 L410 210" />
+  <text class="muted" x="372" y="188">spawn</text>
+
+  <path class="arrow2" d="M720 210 L770 210" />
+  <text class="muted" x="732" y="188">rerun</text>
+
+  <path class="arrow3" d="M905 280 L905 320" />
+  <text class="muted" x="820" y="305">reporter writes</text>
+
+  <path class="arrow3" d="M770 380 L720 380" />
+  <text class="muted" x="610" y="365">refreshFromDisk imports</text>
+
+  <path class="arrow" d="M565 280 L565 320" />
+  <text class="muted" x="460" y="305">crawl test fetches pages</text>
+
+  <path class="arrow" d="M410 210 L360 210" />
+  <text class="muted" x="250" y="232">poll /runs + assert</text>
+</svg>

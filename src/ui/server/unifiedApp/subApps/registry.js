@@ -14,6 +14,96 @@
  */
 
 const jsgui = require('jsgui3-html');
+const { SubAppFrame } = require('../components/SubAppFrame');
+const { SubAppPlaceholder } = require('../components/SubAppPlaceholder');
+const { wrapPanelHtml } = require('./panelContract');
+
+function renderIframeApp(src, title) {
+  const context = new jsgui.Page_Context();
+  const frame = new SubAppFrame({ context, src, title, loading: 'lazy' });
+  return {
+    content: frame.render(),
+    embed: 'iframe'
+  };
+}
+
+function renderPlaceholder(appId, title, subtitle) {
+  const context = new jsgui.Page_Context();
+  const placeholder = new SubAppPlaceholder({ context, title, subtitle });
+  const activationKey = 'placeholder';
+  return {
+    content: wrapPanelHtml({
+      appId,
+      activationKey,
+      html: placeholder.render()
+    }),
+    embed: 'panel',
+    activationKey
+  };
+}
+
+function renderHomePanel(html) {
+  const activationKey = 'home';
+  return {
+    content: wrapPanelHtml({
+      appId: 'home',
+      activationKey,
+      html
+    }),
+    embed: 'panel',
+    activationKey
+  };
+}
+
+function renderDemoPanel() {
+  const html = `
+    <div class="home-dashboard">
+      <div class="home-hero">
+        <h1>🧪 Panel Demo</h1>
+        <p>This panel proves the unified shell activation seam works without relying on <code>&lt;script&gt;</code> execution.</p>
+      </div>
+
+      <div class="home-stats">
+        <div class="stat-card">
+          <span class="stat-value">✓</span>
+          <span class="stat-label">Activation</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">0</span>
+          <span class="stat-label">Clicks</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">–</span>
+          <span class="stat-label">Last Ping</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center;">
+        <button data-panel-demo-action="ping" style="padding: 10px 14px; border-radius: 8px; border: 1px solid #8b6914; background: rgba(212,165,116,0.12); color: #f5e6d3; cursor: pointer;">
+          Ping
+        </button>
+        <button data-panel-demo-action="reset" style="padding: 10px 14px; border-radius: 8px; border: 1px solid #8b6914; background: rgba(212,165,116,0.06); color: #f5e6d3; cursor: pointer;">
+          Reset
+        </button>
+      </div>
+
+      <div style="margin-top: 18px; text-align: center; color: #b8a090; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;" data-panel-demo-output>
+        Waiting for activation…
+      </div>
+    </div>
+  `;
+
+  const activationKey = 'panel-demo';
+  return {
+    content: wrapPanelHtml({
+      appId: 'panel-demo',
+      activationKey,
+      html
+    }),
+    embed: 'panel',
+    activationKey
+  };
+}
 
 /**
  * Create the sub-app registry
@@ -31,7 +121,7 @@ function createSubAppRegistry() {
       category: 'main',
       description: 'System overview and quick actions',
       renderContent: async () => {
-        return `
+        return renderHomePanel(`
           <div class="home-dashboard">
             <div class="home-hero">
               <h1>🎛️ Unified Control Center</h1>
@@ -43,16 +133,22 @@ function createSubAppRegistry() {
                 <span class="stat-label">Available Apps</span>
               </div>
               <div class="stat-card">
-                <span class="stat-value">5</span>
-                <span class="stat-label">Categories</span>
+                <span class="stat-value" data-home-stat="activeCrawlJobs">–</span>
+                <span class="stat-label">Active Crawl Jobs</span>
               </div>
               <div class="stat-card">
-                <span class="stat-value">0</span>
-                <span class="stat-label">Active Tasks</span>
+                <span class="stat-value" data-home-stat="crawlHealth">…</span>
+                <span class="stat-label">Crawl Health</span>
               </div>
             </div>
+
+            <div class="home-alert" data-home-crawl-alert style="display:none; margin-top: 14px; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,122,122,0.55); background: rgba(255,122,122,0.10); color: #ffd0d0;">
+              <strong style="margin-right: 8px;">Last crawl error</strong>
+              <span data-home-crawl-error-message class="mono">–</span>
+              <a href="/?app=crawl-status" style="margin-left: 10px; color: #ffd0d0; text-decoration: underline;">Open Crawl Status</a>
+            </div>
           </div>
-        `;
+        `);
       }
     },
     
@@ -66,7 +162,7 @@ function createSubAppRegistry() {
       category: 'crawler',
       description: 'Domain rate limiting status and controls',
       renderContent: async () => {
-        return `<iframe class="app-embed" src="/rate-limit" title="Rate Limits" loading="lazy"></iframe>`;
+        return renderIframeApp('/rate-limit', 'Rate Limits');
       }
     },
     
@@ -77,7 +173,7 @@ function createSubAppRegistry() {
       category: 'crawler',
       description: 'Real-time crawl monitoring with event stream',
       renderContent: async () => {
-        return `<iframe class="app-embed" src="/crawl-observer" title="Crawl Observer" loading="lazy"></iframe>`;
+        return renderIframeApp('/crawl-observer', 'Crawl Observer');
       }
     },
 
@@ -88,7 +184,29 @@ function createSubAppRegistry() {
       category: 'crawler',
       description: 'Start crawl operations and view real-time progress',
       renderContent: async () => {
-        return `<iframe class="app-embed" src="/crawl-status" title="Crawl Status" loading="lazy"></iframe>`;
+        return renderIframeApp('/crawl-status', 'Crawl Status');
+      }
+    },
+
+    {
+      id: 'scheduler',
+      label: 'Scheduler',
+      icon: '🗓️',
+      category: 'crawler',
+      description: 'Schedules + reconciliation (catch-up / postpone) observability',
+      renderContent: async () => {
+        return renderIframeApp('/scheduler', 'Scheduler');
+      }
+    },
+
+    {
+      id: 'crawler-profiles',
+      label: 'Crawler Profiles',
+      icon: '🗃️',
+      category: 'crawler',
+      description: 'DB-backed crawl presets (start URL + operation + overrides)',
+      renderContent: async () => {
+        return renderIframeApp('/crawler-profiles', 'Crawler Profiles');
       }
     },
     
@@ -99,7 +217,7 @@ function createSubAppRegistry() {
       category: 'crawler',
       description: 'Crawler health and performance metrics',
       renderContent: async () => {
-        return `<div class="app-placeholder"><p>📡 Crawler Monitor</p><p>Health and performance metrics</p></div>`;
+        return renderPlaceholder('crawler-monitor', '📡 Crawler Monitor', 'Health and performance metrics');
       }
     },
     
@@ -113,7 +231,7 @@ function createSubAppRegistry() {
       category: 'admin',
       description: 'Webhook integrations and event routing',
       renderContent: async () => {
-        return `<iframe class="app-embed" src="/webhooks" title="Webhooks" loading="lazy"></iframe>`;
+        return renderIframeApp('/webhooks', 'Webhooks');
       }
     },
     
@@ -124,7 +242,7 @@ function createSubAppRegistry() {
       category: 'admin',
       description: 'Plugin lifecycle and management',
       renderContent: async () => {
-        return `<iframe class="app-embed" src="/plugins" title="Plugins" loading="lazy"></iframe>`;
+        return renderIframeApp('/plugins', 'Plugins');
       }
     },
     
@@ -135,7 +253,7 @@ function createSubAppRegistry() {
       category: 'admin',
       description: 'User management, audit logs, system config',
       renderContent: async () => {
-        return `<div class="app-placeholder"><p>⚙️ Admin Dashboard</p><p>User management and system configuration</p></div>`;
+        return renderPlaceholder('admin', '⚙️ Admin Dashboard', 'User management and system configuration');
       }
     },
     
@@ -149,7 +267,7 @@ function createSubAppRegistry() {
       category: 'analytics',
       description: 'Content quality scores and metrics',
       renderContent: async () => {
-        return `<iframe class="app-embed" src="/quality" title="Quality" loading="lazy"></iframe>`;
+        return renderIframeApp('/quality', 'Quality');
       }
     },
     
@@ -160,7 +278,7 @@ function createSubAppRegistry() {
       category: 'analytics',
       description: 'Aggregated analytics and insights',
       renderContent: async () => {
-        return `<iframe class="app-embed" src="/analytics" title="Analytics" loading="lazy"></iframe>`;
+        return renderIframeApp('/analytics', 'Analytics');
       }
     },
 
@@ -171,7 +289,7 @@ function createSubAppRegistry() {
       category: 'analytics',
       description: 'Coverage matrix for place hub mappings',
       renderContent: async () => {
-        return `<iframe class="app-embed" src="/place-hubs" title="Place Hub Guessing" loading="lazy"></iframe>`;
+        return renderIframeApp('/place-hubs', 'Place Hub Guessing');
       }
     },
 
@@ -182,7 +300,7 @@ function createSubAppRegistry() {
       category: 'analytics',
       description: 'Coverage matrix for topic hub mappings',
       renderContent: async () => {
-        return `<iframe class="app-embed" src="/topic-hubs" title="Topic Hub Guessing" loading="lazy"></iframe>`;
+        return renderIframeApp('/topic-hubs', 'Topic Hub Guessing');
       }
     },
 
@@ -193,7 +311,7 @@ function createSubAppRegistry() {
       category: 'admin',
       description: 'Edit multilingual topic list labels',
       renderContent: async () => {
-        return `<iframe class="app-embed" src="/topic-lists" title="Topic Lists" loading="lazy"></iframe>`;
+        return renderIframeApp('/topic-lists', 'Topic Lists');
       }
     },
     
@@ -204,7 +322,7 @@ function createSubAppRegistry() {
       category: 'analytics',
       description: 'Database query performance analysis',
       renderContent: async () => {
-        return `<iframe class="app-embed" src="/telemetry" title="Query Telemetry" loading="lazy"></iframe>`;
+        return renderIframeApp('/telemetry', 'Query Telemetry');
       }
     },
     
@@ -218,7 +336,7 @@ function createSubAppRegistry() {
       category: 'dev',
       description: 'Browse repo documentation in-app',
       renderContent: async () => {
-        return `<iframe class="app-embed" src="/docs" title="Docs" loading="lazy"></iframe>`;
+        return renderIframeApp('/docs', 'Docs');
       }
     },
 
@@ -229,7 +347,18 @@ function createSubAppRegistry() {
       category: 'dev',
       description: 'Browse design assets (SVG/PNG) in-app',
       renderContent: async () => {
-        return `<iframe class="app-embed" src="/design" title="Design Studio" loading="lazy"></iframe>`;
+        return renderIframeApp('/design', 'Design Studio');
+      }
+    },
+
+    {
+      id: 'panel-demo',
+      label: 'Panel Demo',
+      icon: '🧪',
+      category: 'dev',
+      description: 'Proof-of-life for embedded panel activation (no iframe)',
+      renderContent: async () => {
+        return renderDemoPanel();
       }
     },
 
@@ -240,7 +369,7 @@ function createSubAppRegistry() {
       category: 'dev',
       description: 'Visualize classification decision trees',
       renderContent: async () => {
-        return `<div class="app-placeholder"><p>🌳 Decision Tree Viewer</p><p>Classification visualization</p></div>`;
+        return renderPlaceholder('decision-tree', '🌳 Decision Tree Viewer', 'Classification visualization');
       }
     },
     
@@ -251,7 +380,7 @@ function createSubAppRegistry() {
       category: 'dev',
       description: 'Train and test content extractors',
       renderContent: async () => {
-        return `<div class="app-placeholder"><p>🎓 Template Teacher</p><p>Extractor training UI</p></div>`;
+        return renderPlaceholder('template-teacher', '🎓 Template Teacher', 'Extractor training UI');
       }
     },
     
@@ -262,7 +391,7 @@ function createSubAppRegistry() {
       category: 'dev',
       description: 'Interactive test runner and debugger',
       renderContent: async () => {
-        return `<div class="app-placeholder"><p>🧪 Test Studio</p><p>Interactive testing</p></div>`;
+        return renderPlaceholder('test-studio', '🧪 Test Studio', 'Interactive testing');
       }
     }
   ];

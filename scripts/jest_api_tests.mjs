@@ -1,7 +1,7 @@
 'use strict';
 
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, relative, resolve } from 'node:path';
 
@@ -29,6 +29,22 @@ const MODULE_PATH = fileURLToPath(import.meta.url);
 const ROOT_DIR = resolve(dirname(MODULE_PATH), '..');
 const JEST_BIN = resolve(ROOT_DIR, 'node_modules', 'jest', 'bin', 'jest.js');
 const TIMING_REPORTER = resolve(ROOT_DIR, 'tests', 'jest-timing-reporter.js');
+
+function sanitizeNodeOptions(nodeOptions) {
+  if (typeof nodeOptions !== 'string') return nodeOptions;
+  const trimmed = nodeOptions.trim();
+  if (!trimmed) return nodeOptions;
+
+  // Node supports --localstorage-file=<path>. When present without a value,
+  // Node emits: "Warning: `--localstorage-file` was provided without a valid path".
+  // Strip only invalid forms; preserve valid "=..." usage.
+  const withoutBareFlag = trimmed
+    .replace(/(^|\s)--localstorage-file(\s|$)/g, ' ')
+    .replace(/(^|\s)--localstorage-file=(?:""|''|)(?=\s|$)/g, ' ');
+
+  const normalized = withoutBareFlag.replace(/\s+/g, ' ').trim();
+  return normalized || undefined;
+}
 
 
 function usage() {
@@ -60,12 +76,21 @@ function runJest(args) {
     return 1;
   }
 
-  const nodeArgs = ['--experimental-vm-modules', JEST_BIN, ...args];
+  const localStorageFile = resolve(process.cwd(), 'tmp', 'jest-localstorage.json');
+  mkdirSync(resolve(process.cwd(), 'tmp'), { recursive: true });
+
+  const nodeArgs = [`--localstorage-file=${localStorageFile}`, '--experimental-vm-modules', JEST_BIN, ...args];
+  const nodeOptions = sanitizeNodeOptions(process.env.NODE_OPTIONS);
   const env = {
     ...process.env,
     TEST_SUITE_NAME: process.env.TEST_SUITE_NAME || 'api',
     JEST_TIMING_REPORTER_MODE: process.env.JEST_TIMING_REPORTER_MODE || 'quiet'
   };
+  if (nodeOptions) {
+    env.NODE_OPTIONS = nodeOptions;
+  } else {
+    delete env.NODE_OPTIONS;
+  }
   const result = spawnSync(process.execPath, nodeArgs, {
     stdio: 'inherit',
     shell: false,

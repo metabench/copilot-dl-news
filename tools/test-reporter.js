@@ -33,8 +33,9 @@ class TestStudioReporter {
   generateRunId() {
     const now = new Date();
     const date = now.toISOString().split('T')[0];
-    const time = now.toISOString().split('T')[1].replace(/:/g, '').split('.')[0];
-    return `run-${date}-${time}`;
+    const time = now.toISOString().split('T')[1].replace(/:/g, '').replace('Z', '').replace(/\./g, '').slice(0, 9);
+    const nonce = Math.floor(Math.random() * 1e6).toString(16).padStart(5, '0');
+    return `run-${date}-${time}-${nonce}`;
   }
 
   /**
@@ -45,6 +46,7 @@ class TestStudioReporter {
   onRunStart(results, options) {
     this.startTime = Date.now();
     this.testResults = [];
+    this._testsByFile = new Map();
   }
 
   /**
@@ -57,15 +59,29 @@ class TestStudioReporter {
     const file = path.relative(this.globalConfig.rootDir || process.cwd(), testResult.testFilePath);
 
     for (const result of testResult.testResults) {
-      this.testResults.push({
+      const normalized = {
         file,
         testName: result.fullName || result.title,
         status: this.mapStatus(result.status),
-        duration: result.duration || 0,
+        durationMs: result.duration || 0,
         errorMessage: result.failureMessages?.join('\n') || null,
+        errorStack: result.failureMessages?.join('\n') || null,
         ancestorTitles: result.ancestorTitles || [],
         retry: 0
+      };
+
+      this.testResults.push(normalized);
+
+      const existing = this._testsByFile.get(file) || [];
+      existing.push({
+        name: normalized.testName,
+        fullName: normalized.testName,
+        status: normalized.status,
+        durationMs: normalized.durationMs,
+        errorMessage: normalized.errorMessage,
+        errorStack: normalized.errorStack
       });
+      this._testsByFile.set(file, existing);
     }
   }
 
@@ -96,9 +112,10 @@ class TestStudioReporter {
     const duration = endTime - this.startTime;
 
     const output = {
+      format: 'test-studio-results@1',
       runId: this.runId,
       timestamp: new Date().toISOString(),
-      duration,
+      durationMs: duration,
       source: 'jest',
       environment: {
         node: process.version,
@@ -112,6 +129,10 @@ class TestStudioReporter {
         skipped: results.numPendingTests + results.numTodoTests,
         suites: results.numTotalTestSuites
       },
+      testResults: Array.from(this._testsByFile.entries()).map(([file, tests]) => ({
+        file,
+        tests
+      })),
       results: this.testResults
     };
 
@@ -129,7 +150,7 @@ class TestStudioReporter {
         fs.mkdirSync(this.outputDir, { recursive: true });
       }
 
-      const filename = `${this.runId}.json`;
+      const filename = `${output.runId || this.runId}.json`;
       const filepath = path.join(this.outputDir, filename);
 
       fs.writeFileSync(filepath, JSON.stringify(output, null, 2));

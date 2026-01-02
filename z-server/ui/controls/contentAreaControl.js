@@ -38,15 +38,20 @@ function createContentAreaControl(jsgui, {
       this._serverByFile = new Map();
       this._onStart = spec.onStart || null;
       this._onStop = spec.onStop || null;
+      this._onRestart = spec.onRestart || null;
       this._onUrlDetected = spec.onUrlDetected || null;
       this._onOpenUrl = spec.onOpenUrl || null;
       this._onSelectServer = spec.onSelectServer || null;
+      this._onQuickStartServer = spec.onQuickStartServer || null;
 
       this._isScanning = false;
 
       this._onRebuildUiClient = spec.onRebuildUiClient || null;
       this._onToggleAutoRebuildUiClient = spec.onToggleAutoRebuildUiClient || null;
       this._autoRebuildUiClient = spec.autoRebuildUiClient === true;
+
+      this._onToggleKeepRunningAfterExit = spec.onToggleKeepRunningAfterExit || null;
+      this._keepRunningAfterExit = spec.keepRunningAfterExit === true;
 
       this._detectedUrl = null;
       
@@ -69,6 +74,7 @@ function createContentAreaControl(jsgui, {
         visible: false,
         onStart: () => this._onStart && this._onStart(),
         onStop: () => this._onStop && this._onStop(),
+        onRestart: () => this._onRestart && this._onRestart(),
         isUiServer: false,
         onRebuildUiClient: () => this._onRebuildUiClient && this._onRebuildUiClient(),
         autoRebuildUiClient: this._autoRebuildUiClient,
@@ -76,6 +82,13 @@ function createContentAreaControl(jsgui, {
           this._autoRebuildUiClient = enabled === true;
           if (this._onToggleAutoRebuildUiClient) {
             this._onToggleAutoRebuildUiClient(this._autoRebuildUiClient);
+          }
+        },
+        keepRunningAfterExit: this._keepRunningAfterExit,
+        onToggleKeepRunningAfterExit: (enabled) => {
+          this._keepRunningAfterExit = enabled === true;
+          if (this._onToggleKeepRunningAfterExit) {
+            this._onToggleKeepRunningAfterExit(this._keepRunningAfterExit);
           }
         }
       });
@@ -159,6 +172,11 @@ function createContentAreaControl(jsgui, {
     setAutoRebuildUiClient(enabled) {
       this._autoRebuildUiClient = enabled === true;
       this._controlPanel.setAutoRebuildUiClient(this._autoRebuildUiClient);
+    }
+
+    setKeepRunningAfterExit(enabled) {
+      this._keepRunningAfterExit = enabled === true;
+      this._controlPanel.setKeepRunningAfterExit(this._keepRunningAfterExit);
     }
     
     setRunningUrl(url) {
@@ -299,11 +317,25 @@ function createContentAreaControl(jsgui, {
           ? `<button class=\"zs-app-card__open\" data-open-url=\"${escapeHtml(runningUrl)}\" type=\"button\">\ud83c\udf10 Open</button>`
           : "";
 
+        const primaryAction = card && card.primaryAction ? String(card.primaryAction) : "";
+        const primaryLabel = card && card.primaryLabel ? String(card.primaryLabel) : "";
+        const primaryBtn = (primaryAction && primaryLabel)
+          ? `<button class=\"zs-app-card__primary\" data-primary-action=\"${escapeHtml(primaryAction)}\" type=\"button\">${escapeHtml(primaryLabel)}</button>`
+          : "";
+
+        const quickLinks = card && Array.isArray(card.quickLinks) ? card.quickLinks : [];
+        const quickBtns = quickLinks.map((q) => {
+          const label = q && q.label ? String(q.label) : "";
+          const linkPath = q && q.path ? String(q.path) : "";
+          if (!label || !linkPath) return "";
+          return `<button class=\"zs-app-card__primary zs-app-card__primary--link\" data-primary-action=\"${escapeHtml(primaryAction)}\" data-open-path=\"${escapeHtml(linkPath)}\" type=\"button\">${escapeHtml(label)}</button>`;
+        }).filter(Boolean).join("");
+
         return `
 <div class=\"zs-app-card zs-app-card--${accent}\" data-server-file=\"${file}\" tabindex=\"0\" role=\"button\">
   <div class=\"zs-app-card__top\">
     <div class=\"zs-app-card__svg\"><img src=\"${svgPath}\" alt=\"${title}\"></div>
-    <div class=\"zs-app-card__cta\">${openBtn}</div>
+    <div class=\"zs-app-card__cta\">${primaryBtn}${quickBtns}${openBtn}</div>
   </div>
   <div class=\"zs-app-card__title\">${title}</div>
   <div class=\"zs-app-card__subtitle\">${subtitle}</div>
@@ -319,6 +351,23 @@ function createContentAreaControl(jsgui, {
 
       this._overviewGrid.dom.el.addEventListener("click", (e) => {
         const target = e.target;
+
+        const primaryEl = target && target.closest ? target.closest("[data-primary-action]") : null;
+        if (primaryEl) {
+          const action = primaryEl.getAttribute("data-primary-action");
+          const openPath = primaryEl.getAttribute("data-open-path") || null;
+          const cardEl = primaryEl.closest ? primaryEl.closest("[data-server-file]") : null;
+          const file = cardEl ? cardEl.getAttribute("data-server-file") : null;
+          const server = file ? this._serverByFile.get(file) : null;
+
+          if (action && server && this._onQuickStartServer) {
+            e.preventDefault();
+            e.stopPropagation();
+            this._onQuickStartServer(server, { action, openPath });
+          }
+          return;
+        }
+
         const openEl = target && target.closest ? target.closest("[data-open-url]") : null;
         if (openEl) {
           const url = openEl.getAttribute("data-open-url");

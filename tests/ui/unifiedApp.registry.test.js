@@ -4,6 +4,13 @@ describe('unifiedApp sub-app registry', () => {
   const { createSubAppRegistry, CATEGORIES } = require('../../src/ui/server/unifiedApp/subApps/registry');
   const request = require('supertest');
 
+  function normalizeRenderResult(result) {
+    if (typeof result === 'string') return { content: result };
+    if (!result || typeof result !== 'object') return { content: '' };
+    if (typeof result.content === 'string') return result;
+    return { content: '' };
+  }
+
   test('has stable ids, categories, and embedded mount paths', async () => {
     const apps = createSubAppRegistry();
 
@@ -44,23 +51,29 @@ describe('unifiedApp sub-app registry', () => {
       // Category keys must be declared.
       expect(CATEGORIES).toHaveProperty(app.category);
 
-      const html = await app.renderContent({});
-      expect(typeof html).toBe('string');
-      expect(html.length).toBeGreaterThan(0);
+      const result = normalizeRenderResult(await app.renderContent({}));
+      expect(typeof result.content).toBe('string');
+      expect(result.content.length).toBeGreaterThan(0);
     }
 
     const byId = new Map(apps.map((app) => [app.id, app]));
 
-    await expect(byId.get('rate-limits').renderContent({})).resolves.toContain('src="/rate-limit"');
-    await expect(byId.get('crawl-observer').renderContent({})).resolves.toContain('src="/crawl-observer"');
-    await expect(byId.get('crawl-status').renderContent({})).resolves.toContain('src="/crawl-status"');
-    await expect(byId.get('webhooks').renderContent({})).resolves.toContain('src="/webhooks"');
-    await expect(byId.get('plugins').renderContent({})).resolves.toContain('src="/plugins"');
-    await expect(byId.get('quality').renderContent({})).resolves.toContain('src="/quality"');
-    await expect(byId.get('analytics').renderContent({})).resolves.toContain('src="/analytics"');
-    await expect(byId.get('query-telemetry').renderContent({})).resolves.toContain('src="/telemetry"');
-    await expect(byId.get('docs').renderContent({})).resolves.toContain('src="/docs"');
-    await expect(byId.get('design').renderContent({})).resolves.toContain('src="/design"');
+    await expect(normalizeRenderResult(await byId.get('rate-limits').renderContent({})).content).toContain('src="/rate-limit"');
+    await expect(normalizeRenderResult(await byId.get('crawl-observer').renderContent({})).content).toContain('src="/crawl-observer"');
+    await expect(normalizeRenderResult(await byId.get('crawl-status').renderContent({})).content).toContain('src="/crawl-status"');
+    await expect(normalizeRenderResult(await byId.get('webhooks').renderContent({})).content).toContain('src="/webhooks"');
+    await expect(normalizeRenderResult(await byId.get('plugins').renderContent({})).content).toContain('src="/plugins"');
+    await expect(normalizeRenderResult(await byId.get('quality').renderContent({})).content).toContain('src="/quality"');
+    await expect(normalizeRenderResult(await byId.get('analytics').renderContent({})).content).toContain('src="/analytics"');
+    await expect(normalizeRenderResult(await byId.get('query-telemetry').renderContent({})).content).toContain('src="/telemetry"');
+    await expect(normalizeRenderResult(await byId.get('docs').renderContent({})).content).toContain('src="/docs"');
+    await expect(normalizeRenderResult(await byId.get('design').renderContent({})).content).toContain('src="/design"');
+
+    // Regression guard: the embedded panel demo must request activation.
+    const panelDemo = normalizeRenderResult(await byId.get('panel-demo').renderContent({}));
+    expect(panelDemo.embed).toBe('panel');
+    expect(panelDemo.activationKey).toBe('panel-demo');
+    expect(panelDemo.content).toContain('data-unified-activate="panel-demo"');
   });
 
   test('GET /api/apps returns stable schema', async () => {

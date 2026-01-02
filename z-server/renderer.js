@@ -39143,6 +39143,23 @@ ${description}`.toLowerCase()
       }
       var APP_CARDS = [
         {
+          id: "unified-ui",
+          title: "Unified UI",
+          subtitle: "All dashboards in one shell",
+          accent: "gold",
+          svgPath: "ui/assets/app-cards/generic.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/generic.svg",
+          order: 5,
+          primaryAction: "start-detached",
+          primaryLabel: "\u25B6 Launch (detached)",
+          quickLinks: [
+            { label: "\u{1F5D3}\uFE0F Scheduler", path: "/scheduler" },
+            { label: "\u{1F577}\uFE0F Crawl", path: "/crawl-observer" },
+            { label: "\u{1F50E} Data", path: "/data-explorer" }
+          ],
+          match: ["unifiedapp", "unified-app", "unified ui", "src/ui/server/unifiedApp/server.js"]
+        },
+        {
           id: "data-explorer",
           title: "Data Explorer",
           subtitle: "URLs \u2022 fetches \u2022 filters \u2022 decisions",
@@ -39216,6 +39233,9 @@ ${description}`.toLowerCase()
               svgPath: card.svgPath,
               sidebarIcon: card.sidebarIcon,
               order: card.order,
+              primaryAction: card.primaryAction || null,
+              primaryLabel: card.primaryLabel || null,
+              quickLinks: Array.isArray(card.quickLinks) ? card.quickLinks.slice() : null,
               isMajor: true
             };
           }
@@ -40205,11 +40225,14 @@ ${description}`.toLowerCase()
             this._serverRunning = spec.serverRunning || false;
             this._onStart = spec.onStart || null;
             this._onStop = spec.onStop || null;
+            this._onRestart = spec.onRestart || null;
             this._isUiServer = spec.isUiServer === true;
             this._uiClientStatus = spec.uiClientStatus || null;
             this._onRebuildUiClient = spec.onRebuildUiClient || null;
             this._autoRebuildUiClient = spec.autoRebuildUiClient === true;
             this._onToggleAutoRebuildUiClient = spec.onToggleAutoRebuildUiClient || null;
+            this._keepRunningAfterExit = spec.keepRunningAfterExit === true;
+            this._onToggleKeepRunningAfterExit = spec.onToggleKeepRunningAfterExit || null;
             if (!spec.el) {
               this.compose();
             }
@@ -40233,6 +40256,14 @@ ${description}`.toLowerCase()
               onClick: () => this._onStop && this._onStop()
             });
             this.add(this._stopBtn);
+            this._restartBtn = new ControlButtonControl({
+              context: ctx,
+              label: "\u21BB Restart",
+              variant: "restart",
+              disabled: !this._serverRunning,
+              onClick: () => this._onRestart && this._onRestart()
+            });
+            this.add(this._restartBtn);
             this._rebuildUiBtn = new ControlButtonControl({
               context: ctx,
               label: "\u{1F528} Rebuild UI",
@@ -40254,6 +40285,19 @@ ${description}`.toLowerCase()
             this._autoRebuildLabel.add(this._autoRebuildText);
             this._autoRebuildWrap.add(this._autoRebuildLabel);
             this.add(this._autoRebuildWrap);
+            this._keepRunningWrap = new jsgui2.div({ context: ctx, class: "zs-keeprunning zs-control-panel__keeprunning" });
+            this._keepRunningLabel = new jsgui2.Control({ context: ctx, tagName: "label", class: "zs-keeprunning__label" });
+            this._keepRunningCheckbox = new jsgui2.Control({ context: ctx, tagName: "input", class: "zs-keeprunning__checkbox" });
+            this._keepRunningCheckbox.dom.attributes.type = "checkbox";
+            if (this._keepRunningAfterExit) {
+              this._keepRunningCheckbox.dom.attributes.checked = "checked";
+            }
+            this._keepRunningText = new jsgui2.span({ context: ctx, class: "zs-keeprunning__text" });
+            this._keepRunningText.add(new StringControl({ context: ctx, text: "Keep running after z-server closes" }));
+            this._keepRunningLabel.add(this._keepRunningCheckbox);
+            this._keepRunningLabel.add(this._keepRunningText);
+            this._keepRunningWrap.add(this._keepRunningLabel);
+            this.add(this._keepRunningWrap);
             this._syncUiControls();
           }
           _syncUiControls() {
@@ -40309,6 +40353,7 @@ ${description}`.toLowerCase()
             this._serverRunning = running;
             this._startBtn.setDisabled(running);
             this._stopBtn.setDisabled(!running);
+            if (this._restartBtn) this._restartBtn.setDisabled(!running);
           }
           setUiServer(isUiServer) {
             this._isUiServer = isUiServer === true;
@@ -40342,9 +40387,24 @@ ${description}`.toLowerCase()
               if (el) el.checked = this._autoRebuildUiClient;
             }
           }
+          setKeepRunningAfterExit(enabled) {
+            this._keepRunningAfterExit = enabled === true;
+            if (this._keepRunningCheckbox) {
+              if (this._keepRunningAfterExit) {
+                this._keepRunningCheckbox.dom.attributes.checked = "checked";
+              } else {
+                delete this._keepRunningCheckbox.dom.attributes.checked;
+              }
+            }
+            if (this.dom.el) {
+              const el = this.dom.el.querySelector(".zs-keeprunning__checkbox");
+              if (el) el.checked = this._keepRunningAfterExit;
+            }
+          }
           activate() {
             this._startBtn.activate();
             this._stopBtn.activate();
+            if (this._restartBtn) this._restartBtn.activate();
             this._rebuildUiBtn.activate();
             if (this.dom.el) {
               const checkbox = this.dom.el.querySelector(".zs-autorebuild__checkbox");
@@ -40358,6 +40418,18 @@ ${description}`.toLowerCase()
                   }
                 });
                 checkbox.__zsBound = true;
+              }
+              const keepRunning = this.dom.el.querySelector(".zs-keeprunning__checkbox");
+              if (keepRunning && !keepRunning.__zsBound) {
+                keepRunning.checked = this._keepRunningAfterExit;
+                keepRunning.addEventListener("change", () => {
+                  const enabled = keepRunning.checked === true;
+                  this._keepRunningAfterExit = enabled;
+                  if (this._onToggleKeepRunningAfterExit) {
+                    this._onToggleKeepRunningAfterExit(enabled);
+                  }
+                });
+                keepRunning.__zsBound = true;
               }
             }
           }
@@ -40567,6 +40639,8 @@ ${description}`.toLowerCase()
             this._servers = spec.servers || [];
             this._onSelect = spec.onSelect || null;
             this._onOpenUrl = spec.onOpenUrl || null;
+            this._scanVisibility = spec.scanVisibility && typeof spec.scanVisibility === "object" ? spec.scanVisibility : null;
+            this._onChangeScanVisibility = spec.onChangeScanVisibility || null;
             if (!spec.el) {
               this.compose();
             }
@@ -40577,6 +40651,33 @@ ${description}`.toLowerCase()
             const title = new jsgui2.h2({ context: ctx, class: "zs-sidebar__title" });
             title.add(new StringControl({ context: ctx, text: "\u25C8 Servers" }));
             header.add(title);
+            this._filtersWrap = new jsgui2.div({ context: ctx, class: "zs-sidebar__filters" });
+            const filtersTitle = new jsgui2.div({ context: ctx, class: "zs-sidebar__filters-title" });
+            filtersTitle.add(new StringControl({ context: ctx, text: "Show:" }));
+            this._filtersWrap.add(filtersTitle);
+            this._filterCheckboxes = {};
+            const addFilter = (key2, labelText) => {
+              const row = new jsgui2.div({ context: ctx, class: "zs-sidebar__filter" });
+              const label = new jsgui2.Control({ context: ctx, tagName: "label", class: "zs-sidebar__filter-label" });
+              const checkbox = new jsgui2.Control({ context: ctx, tagName: "input", class: `zs-sidebar__filter-checkbox zs-sidebar__filter-checkbox--${key2}` });
+              checkbox.dom.attributes.type = "checkbox";
+              checkbox.dom.attributes["data-filter-key"] = key2;
+              const text = new jsgui2.span({ context: ctx, class: "zs-sidebar__filter-text" });
+              text.add(new StringControl({ context: ctx, text: labelText }));
+              label.add(checkbox);
+              label.add(text);
+              row.add(label);
+              this._filtersWrap.add(row);
+              this._filterCheckboxes[key2] = checkbox;
+            };
+            addFilter("ui", "UI servers");
+            addFilter("labs", "Lab experiments");
+            addFilter("api", "API/back-end");
+            addFilter("tools", "Tools");
+            addFilter("tests", "Tests");
+            addFilter("checks", "Checks");
+            addFilter("other", "Other");
+            header.add(this._filtersWrap);
             this.add(header);
             this._serverList = new ServerListControl({
               context: ctx,
@@ -40585,10 +40686,29 @@ ${description}`.toLowerCase()
               onOpenUrl: (url) => this._onOpenUrl && this._onOpenUrl(url)
             });
             this.add(this._serverList);
+            this.setScanVisibility(this._scanVisibility);
           }
           setServers(servers) {
             this._servers = servers;
             this._serverList.setServers(servers);
+          }
+          setScanVisibility(visibility) {
+            this._scanVisibility = visibility && typeof visibility === "object" ? visibility : null;
+            if (!this._filterCheckboxes) return;
+            for (const [key2, checkbox] of Object.entries(this._filterCheckboxes)) {
+              const enabled = this._scanVisibility && this._scanVisibility[key2] === true;
+              if (enabled) {
+                checkbox.dom.attributes.checked = "checked";
+              } else {
+                delete checkbox.dom.attributes.checked;
+              }
+            }
+            if (this.dom.el) {
+              for (const key2 of Object.keys(this._filterCheckboxes)) {
+                const el = this.dom.el.querySelector(`.zs-sidebar__filter-checkbox--${key2}`);
+                if (el) el.checked = this._scanVisibility && this._scanVisibility[key2] === true;
+              }
+            }
           }
           updateServerStatus(filePath, running) {
             this._serverList.updateServerStatus(filePath, running);
@@ -40598,6 +40718,25 @@ ${description}`.toLowerCase()
           }
           activate() {
             this._serverList.activate();
+            if (this.dom.el) {
+              const checkboxes = this.dom.el.querySelectorAll(".zs-sidebar__filter-checkbox");
+              for (const checkbox of checkboxes) {
+                if (checkbox.__zsBound) continue;
+                checkbox.__zsBound = true;
+                checkbox.addEventListener("change", () => {
+                  const key2 = checkbox.getAttribute("data-filter-key");
+                  if (!key2) return;
+                  const enabled = checkbox.checked === true;
+                  if (!this._scanVisibility || typeof this._scanVisibility !== "object") {
+                    this._scanVisibility = {};
+                  }
+                  this._scanVisibility[key2] = enabled;
+                  if (this._onChangeScanVisibility) {
+                    this._onChangeScanVisibility({ ...this._scanVisibility });
+                  }
+                });
+              }
+            }
           }
         }
         return SidebarControl;
@@ -40665,13 +40804,17 @@ ${description}`.toLowerCase()
             this._serverByFile = /* @__PURE__ */ new Map();
             this._onStart = spec.onStart || null;
             this._onStop = spec.onStop || null;
+            this._onRestart = spec.onRestart || null;
             this._onUrlDetected = spec.onUrlDetected || null;
             this._onOpenUrl = spec.onOpenUrl || null;
             this._onSelectServer = spec.onSelectServer || null;
+            this._onQuickStartServer = spec.onQuickStartServer || null;
             this._isScanning = false;
             this._onRebuildUiClient = spec.onRebuildUiClient || null;
             this._onToggleAutoRebuildUiClient = spec.onToggleAutoRebuildUiClient || null;
             this._autoRebuildUiClient = spec.autoRebuildUiClient === true;
+            this._onToggleKeepRunningAfterExit = spec.onToggleKeepRunningAfterExit || null;
+            this._keepRunningAfterExit = spec.keepRunningAfterExit === true;
             this._detectedUrl = null;
             if (!spec.el) {
               this.compose();
@@ -40688,6 +40831,7 @@ ${description}`.toLowerCase()
               visible: false,
               onStart: () => this._onStart && this._onStart(),
               onStop: () => this._onStop && this._onStop(),
+              onRestart: () => this._onRestart && this._onRestart(),
               isUiServer: false,
               onRebuildUiClient: () => this._onRebuildUiClient && this._onRebuildUiClient(),
               autoRebuildUiClient: this._autoRebuildUiClient,
@@ -40695,6 +40839,13 @@ ${description}`.toLowerCase()
                 this._autoRebuildUiClient = enabled === true;
                 if (this._onToggleAutoRebuildUiClient) {
                   this._onToggleAutoRebuildUiClient(this._autoRebuildUiClient);
+                }
+              },
+              keepRunningAfterExit: this._keepRunningAfterExit,
+              onToggleKeepRunningAfterExit: (enabled) => {
+                this._keepRunningAfterExit = enabled === true;
+                if (this._onToggleKeepRunningAfterExit) {
+                  this._onToggleKeepRunningAfterExit(this._keepRunningAfterExit);
                 }
               }
             });
@@ -40757,6 +40908,10 @@ ${description}`.toLowerCase()
           setAutoRebuildUiClient(enabled) {
             this._autoRebuildUiClient = enabled === true;
             this._controlPanel.setAutoRebuildUiClient(this._autoRebuildUiClient);
+          }
+          setKeepRunningAfterExit(enabled) {
+            this._keepRunningAfterExit = enabled === true;
+            this._controlPanel.setKeepRunningAfterExit(this._keepRunningAfterExit);
           }
           setRunningUrl(url) {
             this._detectedUrl = url;
@@ -40872,11 +41027,21 @@ ${description}`.toLowerCase()
               const svgPath = escapeHtml(card && card.svgPath);
               const runningUrl = server && server.runningUrl ? String(server.runningUrl) : "";
               const openBtn = runningUrl ? `<button class="zs-app-card__open" data-open-url="${escapeHtml(runningUrl)}" type="button">\u{1F310} Open</button>` : "";
+              const primaryAction = card && card.primaryAction ? String(card.primaryAction) : "";
+              const primaryLabel = card && card.primaryLabel ? String(card.primaryLabel) : "";
+              const primaryBtn = primaryAction && primaryLabel ? `<button class="zs-app-card__primary" data-primary-action="${escapeHtml(primaryAction)}" type="button">${escapeHtml(primaryLabel)}</button>` : "";
+              const quickLinks = card && Array.isArray(card.quickLinks) ? card.quickLinks : [];
+              const quickBtns = quickLinks.map((q) => {
+                const label = q && q.label ? String(q.label) : "";
+                const linkPath = q && q.path ? String(q.path) : "";
+                if (!label || !linkPath) return "";
+                return `<button class="zs-app-card__primary zs-app-card__primary--link" data-primary-action="${escapeHtml(primaryAction)}" data-open-path="${escapeHtml(linkPath)}" type="button">${escapeHtml(label)}</button>`;
+              }).filter(Boolean).join("");
               return `
 <div class="zs-app-card zs-app-card--${accent}" data-server-file="${file}" tabindex="0" role="button">
   <div class="zs-app-card__top">
     <div class="zs-app-card__svg"><img src="${svgPath}" alt="${title}"></div>
-    <div class="zs-app-card__cta">${openBtn}</div>
+    <div class="zs-app-card__cta">${primaryBtn}${quickBtns}${openBtn}</div>
   </div>
   <div class="zs-app-card__title">${title}</div>
   <div class="zs-app-card__subtitle">${subtitle}</div>
@@ -40889,6 +41054,20 @@ ${description}`.toLowerCase()
             if (!this._overviewGrid?.dom?.el) return;
             this._overviewGrid.dom.el.addEventListener("click", (e) => {
               const target = e.target;
+              const primaryEl = target && target.closest ? target.closest("[data-primary-action]") : null;
+              if (primaryEl) {
+                const action = primaryEl.getAttribute("data-primary-action");
+                const openPath = primaryEl.getAttribute("data-open-path") || null;
+                const cardEl2 = primaryEl.closest ? primaryEl.closest("[data-server-file]") : null;
+                const file2 = cardEl2 ? cardEl2.getAttribute("data-server-file") : null;
+                const server2 = file2 ? this._serverByFile.get(file2) : null;
+                if (action && server2 && this._onQuickStartServer) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  this._onQuickStartServer(server2, { action, openPath });
+                }
+                return;
+              }
               const openEl = target && target.closest ? target.closest("[data-open-url]") : null;
               if (openEl) {
                 const url = openEl.getAttribute("data-open-url");
@@ -41043,6 +41222,18 @@ ${description}`.toLowerCase()
             this._scanLastFile = "";
             this._api = spec.api || null;
             this._autoRebuildUiClient = false;
+            this._keepRunningAfterExit = false;
+            this._scanVisibility = {
+              ui: true,
+              labs: false,
+              api: false,
+              tools: false,
+              tests: false,
+              checks: false,
+              other: false
+            };
+            this._scanInFlight = false;
+            this._scanProgressUnsub = null;
             this._debug = false;
             if (!spec.el) {
               this.compose();
@@ -41068,10 +41259,51 @@ ${description}`.toLowerCase()
               return false;
             }
           }
+          _loadKeepRunningAfterExitSetting() {
+            try {
+              const raw = globalThis.localStorage && globalThis.localStorage.getItem("zserver:keepRunningAfterExit");
+              return raw === "1" || raw === "true";
+            } catch {
+              return false;
+            }
+          }
+          _loadScanVisibilitySetting() {
+            try {
+              const raw = globalThis.localStorage && globalThis.localStorage.getItem("zserver:scanVisibility");
+              if (!raw) return null;
+              const parsed = JSON.parse(raw);
+              if (!parsed || typeof parsed !== "object") return null;
+              return parsed;
+            } catch {
+              return null;
+            }
+          }
+          _saveScanVisibilitySetting(visibility) {
+            try {
+              if (!globalThis.localStorage) return;
+              globalThis.localStorage.setItem("zserver:scanVisibility", JSON.stringify(visibility));
+            } catch {
+            }
+          }
+          _normalizeScanVisibility(visibility) {
+            const defaults = this._scanVisibility;
+            const next = { ...defaults, ...visibility && typeof visibility === "object" ? visibility : null };
+            for (const key2 of Object.keys(defaults)) {
+              next[key2] = next[key2] === true;
+            }
+            return next;
+          }
           _saveAutoRebuildUiClientSetting(enabled) {
             try {
               if (!globalThis.localStorage) return;
               globalThis.localStorage.setItem("zserver:autoRebuildUiClient", enabled ? "1" : "0");
+            } catch {
+            }
+          }
+          _saveKeepRunningAfterExitSetting(enabled) {
+            try {
+              if (!globalThis.localStorage) return;
+              globalThis.localStorage.setItem("zserver:keepRunningAfterExit", enabled ? "1" : "0");
             } catch {
             }
           }
@@ -41084,19 +41316,25 @@ ${description}`.toLowerCase()
               context: ctx,
               servers: this._servers,
               onSelect: (s) => this._selectServer(s),
-              onOpenUrl: (url) => this._openInBrowser(url)
+              onOpenUrl: (url) => this._openInBrowser(url),
+              scanVisibility: this._scanVisibility,
+              onChangeScanVisibility: (visibility) => this._setScanVisibility(visibility)
             });
             container.add(this._sidebar);
             this._contentArea = new ContentAreaControl({
               context: ctx,
               onStart: () => this._startServer(),
               onStop: () => this._stopServer(),
+              onRestart: () => this._restartServer(),
               onUrlDetected: (filePath, url) => this._setServerUrl(filePath, url),
               onOpenUrl: (url) => this._openInBrowser(url),
               onSelectServer: (server) => this._selectServer(server),
+              onQuickStartServer: (server, options) => this._quickStartServer(server, options),
               autoRebuildUiClient: this._autoRebuildUiClient,
               onRebuildUiClient: () => this._rebuildUiClient(),
-              onToggleAutoRebuildUiClient: (enabled) => this._setAutoRebuildUiClient(enabled)
+              onToggleAutoRebuildUiClient: (enabled) => this._setAutoRebuildUiClient(enabled),
+              keepRunningAfterExit: this._keepRunningAfterExit,
+              onToggleKeepRunningAfterExit: (enabled) => this._setKeepRunningAfterExit(enabled)
             });
             container.add(this._contentArea);
             this.add(container);
@@ -41109,62 +41347,116 @@ ${description}`.toLowerCase()
             this._debug = this._loadDebugSetting();
             this._autoRebuildUiClient = this._loadAutoRebuildUiClientSetting();
             this._contentArea.setAutoRebuildUiClient(this._autoRebuildUiClient);
+            this._keepRunningAfterExit = this._loadKeepRunningAfterExitSetting();
+            if (this._contentArea && typeof this._contentArea.setKeepRunningAfterExit === "function") {
+              this._contentArea.setKeepRunningAfterExit(this._keepRunningAfterExit);
+            }
+            const savedVisibility = this._loadScanVisibilitySetting();
+            if (savedVisibility) {
+              this._scanVisibility = this._normalizeScanVisibility(savedVisibility);
+              if (this._sidebar && typeof this._sidebar.setScanVisibility === "function") {
+                this._sidebar.setScanVisibility(this._scanVisibility);
+              }
+            }
             try {
-              this._scanTotal = 0;
-              this._scanCurrent = 0;
-              this._scanLastFile = "";
-              this._contentArea.setScanning(true);
-              this._debugLog("[ZServerApp] Starting scan...");
-              this._api.onScanProgress((progress) => {
-                this._debugLog("[ZServerApp] Scan progress:", progress);
-                if (progress.type === "count-start") {
-                  this._scanTotal = 0;
-                  this._scanCurrent = 0;
-                  this._scanLastFile = "";
-                  this._contentArea.setScanCounting();
-                } else if (progress.type === "count-progress") {
-                  this._scanCurrent = progress.current || 0;
-                  this._scanLastFile = progress.file || "";
-                  this._contentArea.setScanCountingProgress(progress.current, progress.file);
-                } else if (progress.type === "count") {
-                  this._scanTotal = progress.total || 0;
-                  this._scanCurrent = 0;
-                  this._contentArea.setScanTotal(progress.total);
-                } else if (progress.type === "progress") {
-                  this._scanTotal = progress.total || this._scanTotal;
-                  this._scanCurrent = progress.current || 0;
-                  this._scanLastFile = progress.file || "";
-                  this._contentArea.setScanProgress(progress.current, progress.total, progress.file);
-                } else if (progress.type === "complete") {
-                  if (this._scanTotal > 0 && this._scanCurrent < this._scanTotal) {
-                    this._contentArea.setScanProgress(this._scanTotal, this._scanTotal, this._scanLastFile);
+              if (!this._scanProgressUnsub) {
+                this._scanProgressUnsub = this._api.onScanProgress((progress) => {
+                  this._debugLog("[ZServerApp] Scan progress:", progress);
+                  if (progress.type === "count-start") {
+                    this._scanTotal = 0;
+                    this._scanCurrent = 0;
+                    this._scanLastFile = "";
+                    this._contentArea.setScanCounting();
+                  } else if (progress.type === "count-progress") {
+                    this._scanCurrent = progress.current || 0;
+                    this._scanLastFile = progress.file || "";
+                    this._contentArea.setScanCountingProgress(progress.current, progress.file);
+                  } else if (progress.type === "count") {
+                    this._scanTotal = progress.total || 0;
+                    this._scanCurrent = 0;
+                    this._contentArea.setScanTotal(progress.total);
+                  } else if (progress.type === "progress") {
+                    this._scanTotal = progress.total || this._scanTotal;
+                    this._scanCurrent = progress.current || 0;
+                    this._scanLastFile = progress.file || "";
+                    this._contentArea.setScanProgress(progress.current, progress.total, progress.file);
+                  } else if (progress.type === "complete") {
+                    if (this._scanTotal > 0 && this._scanCurrent < this._scanTotal) {
+                      this._contentArea.setScanProgress(this._scanTotal, this._scanTotal, this._scanLastFile);
+                    }
                   }
-                }
-              });
-              this._servers = await this._api.scanServers();
-              this._debugLog("[ZServerApp] Scan complete, found servers:", this._servers.length, this._servers);
+                });
+              }
+              await this._scanAndPopulateServers();
               for (const server of this._servers) {
                 if (server.running && server.detectedPort) {
                   const url = `http://localhost:${server.detectedPort}`;
-                  server.runningUrl = url;
                   this._addLog(server.file, "system", `\u2713 Server detected as already running on port ${server.detectedPort}`);
                   this._addLog(server.file, "system", `\u{1F4CD} URL: ${url}`);
                 }
               }
-              this._sidebar.setServers(this._servers);
-              this._contentArea.setServers(this._servers);
               this._debugLog("[ZServerApp] Servers set on sidebar");
-              this._api.onServerLog(({ filePath, type, data }) => {
-                this._addLog(filePath, type, data);
-              });
-              this._api.onServerStatusChange((payload) => {
-                this._updateServerStatus(payload);
-              });
+              if (!this._serverLogUnsub) {
+                this._serverLogUnsub = this._api.onServerLog(({ filePath, type, data }) => {
+                  this._addLog(filePath, type, data);
+                });
+              }
+              if (!this._serverStatusUnsub) {
+                this._serverStatusUnsub = this._api.onServerStatusChange((payload) => {
+                  this._updateServerStatus(payload);
+                });
+              }
             } catch (error2) {
               console.error("Failed to scan servers:", error2);
               this._contentArea.addLog("stderr", `Failed to scan servers: ${error2.message}`);
             } finally {
               this._contentArea.setScanning(false);
+              this._scanInFlight = false;
+            }
+          }
+          async _scanAndPopulateServers() {
+            this._scanTotal = 0;
+            this._scanCurrent = 0;
+            this._scanLastFile = "";
+            this._scanInFlight = true;
+            this._contentArea.setScanning(true);
+            this._debugLog("[ZServerApp] Starting scan...", this._scanVisibility);
+            const scanned = await this._api.scanServers({ visibility: this._scanVisibility });
+            for (const server of scanned) {
+              if (server && server.running && server.detectedPort) {
+                server.runningUrl = `http://localhost:${server.detectedPort}`;
+              }
+            }
+            this._servers = scanned;
+            this._debugLog("[ZServerApp] Scan complete, found servers:", this._servers.length);
+            this._sidebar.setServers(this._servers);
+            this._contentArea.setServers(this._servers);
+            if (this._selectedServer && this._selectedServer.file) {
+              const match = this._servers.find((s) => s.file === this._selectedServer.file);
+              if (match) {
+                this._selectServer(match);
+              } else {
+                this._selectedServer = null;
+                this._contentArea.setSelectedServer(null);
+                this._contentArea.setLogs([]);
+              }
+            }
+          }
+          async _setScanVisibility(visibility) {
+            const next = this._normalizeScanVisibility(visibility);
+            this._scanVisibility = next;
+            this._saveScanVisibilitySetting(next);
+            if (this._sidebar && typeof this._sidebar.setScanVisibility === "function") {
+              this._sidebar.setScanVisibility(next);
+            }
+            if (this._scanInFlight) return;
+            try {
+              await this._scanAndPopulateServers();
+            } catch (err) {
+              this._contentArea.addLog("stderr", `Failed to rescan servers: ${err.message}`);
+            } finally {
+              this._contentArea.setScanning(false);
+              this._scanInFlight = false;
             }
           }
           _selectServer(server) {
@@ -41197,6 +41489,13 @@ ${description}`.toLowerCase()
             this._autoRebuildUiClient = enabled === true;
             this._saveAutoRebuildUiClientSetting(this._autoRebuildUiClient);
             this._contentArea.setAutoRebuildUiClient(this._autoRebuildUiClient);
+          }
+          _setKeepRunningAfterExit(enabled) {
+            this._keepRunningAfterExit = enabled === true;
+            this._saveKeepRunningAfterExitSetting(this._keepRunningAfterExit);
+            if (this._contentArea && typeof this._contentArea.setKeepRunningAfterExit === "function") {
+              this._contentArea.setKeepRunningAfterExit(this._keepRunningAfterExit);
+            }
           }
           async _rebuildUiClient() {
             if (!this._selectedServer || !this._api) return;
@@ -41322,6 +41621,7 @@ ${description}`.toLowerCase()
             const result = await this._api.startServer(this._selectedServer.file, {
               isUiServer: this._selectedServer.hasHtmlInterface === true,
               ensureUiClientBundle: this._autoRebuildUiClient === true,
+              keepRunningAfterExit: this._keepRunningAfterExit === true,
               logToFilePath: this._selectedServer.file
             });
             if (result.success) {
@@ -41349,6 +41649,90 @@ ${description}`.toLowerCase()
               }
             }
           }
+          async _waitForUrlReachable(baseUrl, { timeoutMs = 15e3, intervalMs = 250 } = {}) {
+            if (typeof baseUrl !== "string" || !baseUrl) return false;
+            if (typeof globalThis.fetch !== "function") return true;
+            if (typeof globalThis.AbortController !== "function") return true;
+            const deadline = Date.now() + Math.max(0, timeoutMs);
+            while (Date.now() < deadline) {
+              try {
+                const controller = new AbortController();
+                const attemptTimer = setTimeout(() => controller.abort(), 2e3);
+                await fetch(baseUrl, {
+                  method: "GET",
+                  cache: "no-store",
+                  signal: controller.signal
+                });
+                clearTimeout(attemptTimer);
+                return true;
+              } catch {
+              }
+              await new Promise((r) => setTimeout(r, intervalMs));
+            }
+            return false;
+          }
+          async _quickStartServer(server, options = {}) {
+            if (!server || !this._api) return;
+            const action = options && typeof options === "object" ? options.action : null;
+            const openPath = options && typeof options === "object" && typeof options.openPath === "string" ? options.openPath : null;
+            if (action !== "start-detached") {
+              this._selectServer(server);
+              return;
+            }
+            this._selectServer(server);
+            this._addLog(server.file, "system", "Launching (detached)...");
+            const result = await this._api.startServer(server.file, {
+              isUiServer: server.hasHtmlInterface === true,
+              ensureUiClientBundle: this._autoRebuildUiClient === true,
+              keepRunningAfterExit: true,
+              logToFilePath: server.file
+            });
+            if (result && result.success) {
+              server.running = true;
+              server.pid = result.pid;
+              const port = result.port || server.metadata?.defaultPort || server.detectedPort;
+              const baseUrl = port ? `http://localhost:${port}` : null;
+              const url = baseUrl ? `${baseUrl}${openPath || ""}` : null;
+              if (url) {
+                server.runningUrl = url;
+                this._setServerUrl(server.file, url);
+                if (baseUrl) {
+                  const ready = await this._waitForUrlReachable(baseUrl);
+                  if (!ready) {
+                    this._addLog(server.file, "system", "\u26A0\uFE0F Server did not respond before timeout; opening anyway...");
+                  }
+                }
+                await this._openInBrowser(url);
+              }
+              this._contentArea.setServerRunning(true);
+              this._sidebar.updateServerStatus(server.file, true);
+              this._addLog(server.file, "system", `Server started (PID: ${result.pid})`);
+            } else {
+              const message = result && result.message ? result.message : "Failed to start";
+              if (message === "Already running") {
+                server.running = true;
+                this._contentArea.setServerRunning(true);
+                this._sidebar.updateServerStatus(server.file, true);
+                const port = server.metadata?.defaultPort || server.detectedPort;
+                const baseUrl = port ? `http://localhost:${port}` : null;
+                const url = baseUrl ? `${baseUrl}${openPath || ""}` : null;
+                this._addLog(server.file, "system", "\u26A0\uFE0F Server is already running!");
+                if (url) {
+                  server.runningUrl = url;
+                  this._setServerUrl(server.file, url);
+                  if (baseUrl) {
+                    const ready = await this._waitForUrlReachable(baseUrl, { timeoutMs: 5e3 });
+                    if (!ready) {
+                      this._addLog(server.file, "system", "\u26A0\uFE0F Server did not respond before timeout; opening anyway...");
+                    }
+                  }
+                  await this._openInBrowser(url);
+                }
+              } else {
+                this._addLog(server.file, "stderr", `Failed to start: ${message}`);
+              }
+            }
+          }
           async _stopServer() {
             if (!this._selectedServer || !this._api) return;
             this._addLog(this._selectedServer.file, "system", "Stopping server...");
@@ -41362,6 +41746,37 @@ ${description}`.toLowerCase()
             } else {
               this._addLog(this._selectedServer.file, "stderr", `Failed to stop: ${result.message}`);
             }
+          }
+          async _restartServer() {
+            if (!this._selectedServer || !this._api) return;
+            const filePath = this._selectedServer.file;
+            this._addLog(filePath, "system", "Restarting server...");
+            const stopRes = await this._api.stopServer(filePath, this._selectedServer.pid);
+            if (!stopRes || stopRes.success !== true) {
+              const message2 = stopRes && stopRes.message ? stopRes.message : "unknown";
+              this._addLog(filePath, "system", `Stop step: ${message2}`);
+            }
+            const startRes = await this._api.startServer(filePath, {
+              isUiServer: this._selectedServer.hasHtmlInterface === true,
+              ensureUiClientBundle: this._autoRebuildUiClient === true,
+              keepRunningAfterExit: this._keepRunningAfterExit === true,
+              logToFilePath: filePath
+            });
+            if (startRes && startRes.success) {
+              this._selectedServer.running = true;
+              this._selectedServer.pid = startRes.pid;
+              this._contentArea.setServerRunning(true);
+              this._sidebar.updateServerStatus(filePath, true);
+              const port = startRes.port || this._selectedServer.metadata?.defaultPort || this._selectedServer.detectedPort;
+              const url = port ? `http://localhost:${port}` : null;
+              if (url) {
+                this._setServerUrl(filePath, url);
+              }
+              this._addLog(filePath, "system", `Server restarted (PID: ${startRes.pid})`);
+              return;
+            }
+            const message = startRes && startRes.message ? startRes.message : "Failed to start";
+            this._addLog(filePath, "stderr", `Restart failed: ${message}`);
           }
           async _openInBrowser(url) {
             if (!this._api || !url) return;

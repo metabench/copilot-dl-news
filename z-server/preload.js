@@ -1,7 +1,7 @@
 ﻿const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  scanServers: () => ipcRenderer.invoke('scan-servers'),
+  scanServers: (options) => ipcRenderer.invoke('scan-servers', options || null),
   startServer: (filePath, options) => ipcRenderer.invoke('start-server', filePath, options),
   stopServer: (filePath, detectedPid) => ipcRenderer.invoke('stop-server', filePath, detectedPid),
   openInBrowser: (url) => ipcRenderer.invoke('open-in-browser', url),

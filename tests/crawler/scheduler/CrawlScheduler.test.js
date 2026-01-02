@@ -18,6 +18,7 @@ const CrawlScheduler = require('../../../src/crawler/scheduler/CrawlScheduler');
 const UpdatePatternAnalyzer = require('../../../src/crawler/scheduler/UpdatePatternAnalyzer');
 const ScheduleStore = require('../../../src/crawler/scheduler/ScheduleStore');
 const scheduleAdapter = require('../../../src/db/sqlite/v1/queries/scheduleAdapter');
+const { TaskEventWriter } = require('../../../src/db/TaskEventWriter');
 
 describe('CrawlScheduler', () => {
   let db;
@@ -235,6 +236,61 @@ describe('CrawlScheduler', () => {
 
       const updated = scheduler.recalculateAllPriorities();
       expect(updated).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('reconcileOverdue', () => {
+    test('postpones lower-priority overdue schedules across a spread window', () => {
+      const asOf = '2026-01-01T12:00:00.000Z';
+      const asOfMs = Date.parse(asOf);
+
+      // Seed 5 overdue schedules with descending priority.
+      for (let i = 0; i < 5; i++) {
+        const domain = `domain${i}.example`;
+        const nextCrawlAt = new Date(asOfMs - (2 * 60 + i) * 60 * 1000).toISOString();
+        const priorityScore = 1 - i * 0.1;
+        scheduler.store.save({ domain, nextCrawlAt, priorityScore, avgUpdateIntervalHours: 24 });
+      }
+
+      const writer = new TaskEventWriter(db, { batchWrites: false });
+
+      const result = scheduler.reconcileOverdue({
+        asOf,
+        maxDueNow: 2,
+        spreadWindowMinutes: 30,
+        maxPostponeHours: 24,
+        taskEventWriter: writer,
+        taskId: 'scheduler-reconcile-test'
+      });
+
+      expect(result.overdueCount).toBe(5);
+      expect(result.dueNowCount).toBe(2);
+      expect(result.postponedCount).toBe(3);
+      expect(result.postponed).toHaveLength(3);
+
+      // Due-now schedules should remain overdue (<= asOf).
+      const overdueAfter = scheduler.store.getOverdue({ limit: 10, asOf });
+      expect(overdueAfter.length).toBe(2);
+
+      // Postponed schedules should have nextCrawlAt >= asOf.
+      for (const entry of result.postponed) {
+        const schedule = scheduler.getSchedule(entry.domain);
+        expect(schedule.nextCrawlAt).toBe(entry.toNextCrawlAt);
+        expect(Date.parse(schedule.nextCrawlAt)).toBeGreaterThanOrEqual(asOfMs);
+      }
+
+      const events = writer.getEvents('scheduler-reconcile-test');
+      expect(events[0].event_type).toBe('scheduler:reconcile:start');
+      expect(events[events.length - 1].event_type).toBe('scheduler:reconcile:end');
+      expect(events.filter(e => e.event_type === 'scheduler:reconcile:postpone')).toHaveLength(3);
+
+      writer.destroy();
+    });
+
+    test('throws for invalid asOf', () => {
+      expect(() => scheduler.reconcileOverdue({ asOf: 'not-a-date' })).toThrow(
+        'reconcileOverdue requires valid opts.asOf ISO timestamp'
+      );
     });
   });
 

@@ -219,6 +219,133 @@ class CrawlScheduler {
   }
 
   /**
+   * Reconcile overdue schedules after downtime by limiting how many remain due immediately,
+   * and postponing the rest across a spread window.
+   *
+   * This supports a pragmatic “catch up” behavior (do the highest-priority work now)
+   * while also supporting a “postpone when slipped” policy (avoid stampedes).
+   *
+   * If a TaskEventWriter is provided, emits start/end summary events and per-domain
+   * postpone events when schedules are mutated.
+   *
+   * @param {Object} [opts]
+   * @param {string} [opts.asOf] - ISO timestamp for reconciliation reference (defaults to now)
+   * @param {number} [opts.maxDueNow=200] - Max overdue schedules to keep due immediately
+   * @param {number} [opts.spreadWindowMinutes=60] - Window to spread postponed schedules across
+   * @param {number} [opts.maxPostponeHours=24] - Clamp postponements to this many hours
+   * @param {number} [opts.limit=10000] - Max overdue schedules to consider
+   * @param {import('../../db/TaskEventWriter').TaskEventWriter} [opts.taskEventWriter]
+   * @param {string} [opts.taskId] - Task ID for emitted events
+   * @param {string} [opts.taskType='scheduler'] - Task type for emitted events
+   * @returns {{asOf: string, overdueCount: number, dueNowCount: number, postponedCount: number, postponed: Array<{domain: string, fromNextCrawlAt: string, toNextCrawlAt: string, rank: number}>}}
+   */
+  reconcileOverdue(opts = {}) {
+    const asOf = opts.asOf || new Date().toISOString();
+    const asOfMs = Date.parse(asOf);
+    if (!Number.isFinite(asOfMs)) {
+      throw new Error('reconcileOverdue requires valid opts.asOf ISO timestamp');
+    }
+
+    const maxDueNow = Number.isInteger(opts.maxDueNow) ? opts.maxDueNow : 200;
+    const spreadWindowMinutes = typeof opts.spreadWindowMinutes === 'number' ? opts.spreadWindowMinutes : 60;
+    const maxPostponeHours = typeof opts.maxPostponeHours === 'number' ? opts.maxPostponeHours : 24;
+    const limit = Number.isInteger(opts.limit) ? opts.limit : 10000;
+
+    const overdue = this.store.getOverdue({ limit, asOf });
+
+    const taskEventWriter = opts.taskEventWriter;
+    const canEmit = taskEventWriter && typeof taskEventWriter.write === 'function';
+    const taskType = opts.taskType || 'scheduler';
+    const taskId = opts.taskId || `scheduler-reconcile-${asOf}`;
+
+    if (canEmit) {
+      taskEventWriter.write({
+        taskType,
+        taskId,
+        eventType: 'scheduler:reconcile:start',
+        data: {
+          asOf,
+          overdueCount: overdue.length,
+          maxDueNow,
+          spreadWindowMinutes,
+          maxPostponeHours
+        },
+        ts: asOf
+      });
+    }
+
+    const postponed = [];
+    const dueNowCount = Math.max(0, Math.min(overdue.length, maxDueNow));
+    const postponeCount = Math.max(0, overdue.length - dueNowCount);
+
+    if (postponeCount > 0) {
+      const windowMs = Math.max(1, spreadWindowMinutes) * 60 * 1000;
+      // Keep the spread stable and human-readable: minimum 1 minute spacing.
+      const stepMs = Math.max(60 * 1000, Math.floor(windowMs / postponeCount));
+      const maxPostponeMs = asOfMs + Math.max(0, maxPostponeHours) * 60 * 60 * 1000;
+
+      for (let i = 0; i < postponeCount; i++) {
+        const schedule = overdue[dueNowCount + i];
+        if (!schedule || !schedule.domain) continue;
+
+        const fromNextCrawlAt = schedule.nextCrawlAt;
+        const offsetMs = stepMs * (i + 1);
+        const targetMs = Math.min(maxPostponeMs, asOfMs + offsetMs);
+        const toNextCrawlAt = new Date(targetMs).toISOString();
+
+        this.store.save({ domain: schedule.domain, nextCrawlAt: toNextCrawlAt });
+
+        const entry = {
+          domain: schedule.domain,
+          fromNextCrawlAt,
+          toNextCrawlAt,
+          rank: dueNowCount + i + 1
+        };
+        postponed.push(entry);
+
+        if (canEmit) {
+          taskEventWriter.write({
+            taskType,
+            taskId,
+            eventType: 'scheduler:reconcile:postpone',
+            data: {
+              domain: entry.domain,
+              fromNextCrawlAt: entry.fromNextCrawlAt,
+              toNextCrawlAt: entry.toNextCrawlAt,
+              rank: entry.rank,
+              reason: 'backlog_spread'
+            },
+            ts: asOf
+          });
+        }
+      }
+    }
+
+    if (canEmit) {
+      taskEventWriter.write({
+        taskType,
+        taskId,
+        eventType: 'scheduler:reconcile:end',
+        data: {
+          asOf,
+          overdueCount: overdue.length,
+          dueNowCount,
+          postponedCount: postponed.length
+        },
+        ts: asOf
+      });
+    }
+
+    return {
+      asOf,
+      overdueCount: overdue.length,
+      dueNowCount,
+      postponedCount: postponed.length,
+      postponed
+    };
+  }
+
+  /**
    * Calculate priority score for a schedule
    * @private
    * @param {Object} schedule - Schedule to score

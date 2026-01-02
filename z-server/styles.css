@@ -158,6 +158,42 @@ body {
   text-shadow: 0 0 15px rgba(201, 162, 39, 0.4);
 }
 
+.zs-sidebar__filters {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.zs-sidebar__filters-title {
+  width: 100%;
+  font-family: var(--zs-font-mono);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.zs-sidebar__filter-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.zs-sidebar__filter-checkbox {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--zs-emerald);
+}
+
+.zs-sidebar__filter-text {
+  font-family: var(--zs-font-mono);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /* SCANNING INDICATOR (MAIN AREA EMPTY STATE)                                  */
 /* ═══════════════════════════════════════════════════════════════════════════ */

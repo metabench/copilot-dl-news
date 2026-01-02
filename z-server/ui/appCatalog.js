@@ -22,6 +22,23 @@ function getServerIdentity(server) {
 
 const APP_CARDS = [
   {
+    id: "unified-ui",
+    title: "Unified UI",
+    subtitle: "All dashboards in one shell",
+    accent: "gold",
+    svgPath: "ui/assets/app-cards/generic.svg",
+    sidebarIcon: "ui/assets/sidebar-icons/generic.svg",
+    order: 5,
+    primaryAction: "start-detached",
+    primaryLabel: "\u25b6 Launch (detached)",
+    quickLinks: [
+      { label: "\uD83D\uDDD3\uFE0F Scheduler", path: "/scheduler" },
+      { label: "\uD83D\uDD77\uFE0F Crawl", path: "/crawl-observer" },
+      { label: "\uD83D\uDD0E Data", path: "/data-explorer" }
+    ],
+    match: ["unifiedapp", "unified-app", "unified ui", "src/ui/server/unifiedApp/server.js"]
+  },
+  {
     id: "data-explorer",
     title: "Data Explorer",
     subtitle: "URLs • fetches • filters • decisions",
@@ -97,6 +114,9 @@ function getAppCardSpecForServer(server) {
         svgPath: card.svgPath,
         sidebarIcon: card.sidebarIcon,
         order: card.order,
+        primaryAction: card.primaryAction || null,
+        primaryLabel: card.primaryLabel || null,
+        quickLinks: Array.isArray(card.quickLinks) ? card.quickLinks.slice() : null,
         isMajor: true
       };
     }

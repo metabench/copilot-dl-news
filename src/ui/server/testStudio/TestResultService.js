@@ -7,6 +7,8 @@
  */
 
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * TestResultService - Storage and retrieval of test results
@@ -19,7 +21,103 @@ class TestResultService {
    */
   constructor(options = {}) {
     this.db = options.db || null;
+    this.resultsDir = options.resultsDir || 'data/test-results';
+    this.autoImportFromDisk = options.autoImportFromDisk !== false;
+    this._diskScanState = { lastScanMs: 0, importedRunIds: new Set() };
     this._memory = { runs: [], results: [] }; // In-memory fallback
+  }
+
+  async refreshFromDisk(options = {}) {
+    if (!this.autoImportFromDisk) return { imported: 0, skipped: 0, reason: 'disabled' };
+
+    const maxFiles = Number.isFinite(options.maxFiles) ? options.maxFiles : 50;
+    const minIntervalMs = Number.isFinite(options.minIntervalMs) ? options.minIntervalMs : 1500;
+
+    const now = Date.now();
+    if (now - this._diskScanState.lastScanMs < minIntervalMs) {
+      return { imported: 0, skipped: 0, reason: 'throttled' };
+    }
+    this._diskScanState.lastScanMs = now;
+
+    const dir = this._resolveResultsDir(options.dir || this.resultsDir);
+    if (!fs.existsSync(dir)) return { imported: 0, skipped: 0, reason: 'missing-dir' };
+
+    const files = fs.readdirSync(dir)
+      .filter(f => f.endsWith('.json'))
+      .map(f => path.join(dir, f));
+
+    // Prefer newest runs first, but always include latest.json as fallback
+    const latestPath = path.join(dir, 'latest.json');
+    const runFiles = files
+      .filter(f => path.basename(f) !== 'latest.json')
+      .sort()
+      .reverse()
+      .slice(0, maxFiles);
+
+    const ordered = fs.existsSync(latestPath)
+      ? [latestPath, ...runFiles]
+      : runFiles;
+
+    let imported = 0;
+    let skipped = 0;
+
+    for (const filePath of ordered) {
+      let parsed;
+      try {
+        parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      } catch {
+        skipped++;
+        continue;
+      }
+
+      const runId = parsed?.runId;
+      if (!runId) {
+        skipped++;
+        continue;
+      }
+
+      if (this._diskScanState.importedRunIds.has(runId)) {
+        skipped++;
+        continue;
+      }
+
+      const already = await this._runExists(runId);
+      if (already) {
+        this._diskScanState.importedRunIds.add(runId);
+        skipped++;
+        continue;
+      }
+
+      try {
+        await this.importResults(parsed, 'disk');
+        this._diskScanState.importedRunIds.add(runId);
+        imported++;
+      } catch {
+        skipped++;
+      }
+    }
+
+    return { imported, skipped, dir };
+  }
+
+  _resolveResultsDir(dir) {
+    if (!dir) return path.join(process.cwd(), 'data', 'test-results');
+    return path.isAbsolute(dir) ? dir : path.join(process.cwd(), dir);
+  }
+
+  async _runExists(runId) {
+    if (!runId) return false;
+
+    if (this.db) {
+      try {
+        const row = await this.db.get('SELECT 1 as ok FROM test_runs WHERE run_id = ? LIMIT 1', [runId]);
+        return !!row;
+      } catch {
+        return false;
+      }
+    }
+
+    return this._memory.runs.some(r => (r.runId || r.run_id) === runId);
   }
 
   /**
@@ -93,12 +191,22 @@ class TestResultService {
   async importResults(data, source = 'import') {
     const runId = data.runId || this.generateRunId();
     const timestamp = data.timestamp || new Date().toISOString();
+
+    if (await this._runExists(runId)) {
+      const existing = await this.getRun(runId);
+      return existing || { runId, timestamp };
+    }
     
     // Calculate summary
     let total = 0, passed = 0, failed = 0, skipped = 0, duration = 0;
     const results = [];
 
-    const testResults = data.testResults || data.results || [];
+    // Accept both:
+    // - Jest JSON: data.testResults[] with assertionResults[]
+    // - Test Studio reporter: data.testResults[] with tests[]
+    // - Flat reporter payload: data.results[] with file/testName/status
+    const testResults = data.testResults || [];
+    const flatResults = Array.isArray(data.results) ? data.results : [];
     
     for (const fileResult of testResults) {
       const file = fileResult.name || fileResult.file;
@@ -112,7 +220,8 @@ class TestResultService {
         else if (status === 'failed') failed++;
         else skipped++;
         
-        duration += test.duration || 0;
+        const durationMs = (test.durationMs ?? test.duration ?? 0);
+        duration += durationMs;
         
         results.push({
           runId,
@@ -120,18 +229,43 @@ class TestResultService {
           testName: test.title || test.name,
           fullName: test.fullName || test.ancestorTitles?.join(' > ') + ' > ' + test.title,
           status,
-          durationMs: test.duration || 0,
+            durationMs,
           errorMessage: test.failureMessages?.[0]?.split('\n')[0] || test.error || null,
-          errorStack: test.failureMessages?.join('\n') || test.errorStack || null
+            errorStack: test.failureMessages?.join('\n') || test.errorStack || null
         });
       }
     }
 
+
+    if (results.length === 0 && flatResults.length > 0) {
+      for (const item of flatResults) {
+        if (!item || !item.file) continue;
+        total++;
+        const status = item.status || (item.passed ? 'passed' : 'failed');
+        if (status === 'passed') passed++;
+        else if (status === 'failed') failed++;
+        else skipped++;
+
+        const durationMs = (item.durationMs ?? item.duration ?? 0);
+        duration += durationMs;
+
+        results.push({
+          runId,
+          file: item.file,
+          testName: item.testName || item.name,
+          fullName: item.fullName || item.testName || item.name,
+          status,
+          durationMs,
+          errorMessage: item.errorMessage || null,
+          errorStack: item.errorStack || null
+        });
+      }
+    }
     // Create run record
     const run = {
       runId,
       timestamp,
-      durationMs: data.duration || duration,
+      durationMs: data.durationMs || data.duration || duration,
       total,
       passed,
       failed,
