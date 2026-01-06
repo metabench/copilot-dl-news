@@ -1,6 +1,7 @@
 'use strict';
 
 const jsgui = require('jsgui3-html');
+const { addText, makeTextEl, makeTd, makeTh, makeButton, makeLink } = require('../../utils/jsgui3Helpers');
 
 class TaskDetailControl extends jsgui.Control {
   constructor(spec) {
@@ -25,29 +26,21 @@ class TaskDetailControl extends jsgui.Control {
   compose() {
     const container = this.add(new jsgui.Control({
       context: this.context,
-      el: 'div',
+      tagName: 'div',
       style: { padding: '16px' }
     }));
 
     const header = container.add(new jsgui.Control({
       context: this.context,
-      el: 'div',
+      tagName: 'div',
       style: { marginBottom: '24px' }
     }));
 
-    header.add(new jsgui.Control({
-      context: this.context,
-      el: 'a',
-      text: '← Back to list',
-      attr: { href: this._withBasePath('/') },
-      style: { color: '#0066cc', textDecoration: 'none', marginBottom: '8px', display: 'block' }
+    const backLink = header.add(makeLink(this.context, '← Back to list', this._withBasePath('/'), {
+      marginBottom: '8px', display: 'block'
     }));
 
-    header.add(new jsgui.Control({
-      context: this.context,
-      el: 'h2',
-      text: `🕷️ ${this._taskId}`
-    }));
+    header.add(makeTextEl(this.context, 'h2', `🕷️ ${this._taskId}`));
 
     this._renderSummary(container);
 
@@ -69,7 +62,7 @@ class TaskDetailControl extends jsgui.Control {
 
     const panel = container.add(new jsgui.Control({
       context: this.context,
-      el: 'div',
+      tagName: 'div',
       attr: {
         id: 'co-live-panel',
         'data-task-id': String(this._taskId),
@@ -86,23 +79,13 @@ class TaskDetailControl extends jsgui.Control {
       }
     }));
 
-    panel.add(new jsgui.Control({
-      context: this.context,
-      el: 'h3',
-      text: '⏯️ Live updates + stop conditions',
-      style: { margin: '0 0 8px 0' }
-    }));
+    panel.add(makeTextEl(this.context, 'h3', '⏯️ Live updates + stop conditions', { style: { margin: '0 0 8px 0' } }));
 
-    panel.add(new jsgui.Control({
-      context: this.context,
-      el: 'div',
-      text: 'Enable polling for new events. If a new event matches any enabled stop condition, the observer pauses (polling stops) and highlights the triggering event.',
-      style: { fontSize: '12px', color: '#b9c0d0', marginBottom: '12px', lineHeight: '1.4' }
-    }));
+    panel.add(makeTextEl(this.context, 'div', 'Enable polling for new events. If a new event matches any enabled stop condition, the observer pauses (polling stops) and highlights the triggering event.', { style: { fontSize: '12px', color: '#b9c0d0', marginBottom: '12px', lineHeight: '1.4' } }));
 
-    panel.add(new jsgui.Control({
+    const statusEl = panel.add(new jsgui.Control({
       context: this.context,
-      el: 'div',
+      tagName: 'div',
       attr: { id: 'co-live-status' },
       style: {
         padding: '8px 10px',
@@ -112,87 +95,72 @@ class TaskDetailControl extends jsgui.Control {
         marginBottom: '12px',
         fontSize: '12px',
         color: '#cfe7ff'
-      },
-      text: 'Live updates are off.'
+      }
     }));
+    addText(this.context, statusEl, 'Live updates are off.');
 
     const form = panel.add(new jsgui.Control({
       context: this.context,
-      el: 'div',
+      tagName: 'div',
       attr: { id: 'co-live-form' },
       style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', alignItems: 'start' }
     }));
 
-    const left = form.add(new jsgui.Control({ context: this.context, el: 'div' }));
-    const right = form.add(new jsgui.Control({ context: this.context, el: 'div' }));
+    const left = form.add(new jsgui.Control({ context: this.context, tagName: 'div' }));
+    const right = form.add(new jsgui.Control({ context: this.context, tagName: 'div' }));
 
-    left.add(new jsgui.Control({
-      context: this.context,
-      el: 'div',
-      text: 'Stop on severity',
-      style: { fontSize: '12px', fontWeight: 'bold', marginBottom: '6px', color: '#d7def0' }
-    }));
+    left.add(makeTextEl(this.context, 'div', 'Stop on severity', { style: { fontSize: '12px', fontWeight: 'bold', marginBottom: '6px', color: '#d7def0' } }));
 
     {
       const label = left.add(new jsgui.Control({
         context: this.context,
-        el: 'label',
+        tagName: 'label',
         style: { display: 'block', fontSize: '12px', marginBottom: '4px' }
       }));
-      label.add(new jsgui.Control({ context: this.context, el: 'input', attr: { id: 'co-stop-error', type: 'checkbox' }, style: { marginRight: '6px' } }));
+      label.add(new jsgui.Control({ context: this.context, tagName: 'input', attr: { id: 'co-stop-error', type: 'checkbox' }, style: { marginRight: '6px' } }));
       label.add(new jsgui.Text_Node({ context: this.context, text: 'Stop on errors (severity=error)' }));
     }
 
     {
       const label = left.add(new jsgui.Control({
         context: this.context,
-        el: 'label',
+        tagName: 'label',
         style: { display: 'block', fontSize: '12px', marginBottom: '8px' }
       }));
-      label.add(new jsgui.Control({ context: this.context, el: 'input', attr: { id: 'co-stop-warn', type: 'checkbox' }, style: { marginRight: '6px' } }));
+      label.add(new jsgui.Control({ context: this.context, tagName: 'input', attr: { id: 'co-stop-warn', type: 'checkbox' }, style: { marginRight: '6px' } }));
       label.add(new jsgui.Text_Node({ context: this.context, text: 'Stop on warnings (severity=warn)' }));
     }
 
-    left.add(new jsgui.Control({
-      context: this.context,
-      el: 'div',
-      text: 'Stop on category',
-      style: { fontSize: '12px', fontWeight: 'bold', marginBottom: '6px', color: '#d7def0' }
-    }));
+    left.add(makeTextEl(this.context, 'div', 'Stop on category', { style: { fontSize: '12px', fontWeight: 'bold', marginBottom: '6px', color: '#d7def0' } }));
 
     const categories = ['lifecycle', 'work', 'error', 'metric', 'decision'];
     for (const c of categories) {
       const label = left.add(new jsgui.Control({
         context: this.context,
-        el: 'label',
+        tagName: 'label',
         style: { display: 'block', fontSize: '12px', marginBottom: '4px' }
       }));
       label.add(new jsgui.Control({
         context: this.context,
-        el: 'input',
+        tagName: 'input',
         attr: { id: `co-stop-cat-${c}`, type: 'checkbox', 'data-cat': c },
         style: { marginRight: '6px' }
       }));
       label.add(new jsgui.Text_Node({ context: this.context, text: `Stop on category: ${c}` }));
     }
 
-    right.add(new jsgui.Control({
-      context: this.context,
-      el: 'div',
-      text: 'Stop on text match',
-      style: { fontSize: '12px', fontWeight: 'bold', marginBottom: '6px', color: '#d7def0' }
-    }));
+    right.add(makeTextEl(this.context, 'div', 'Stop on text match', { style: { fontSize: '12px', fontWeight: 'bold', marginBottom: '6px', color: '#d7def0' } }));
 
     {
       const label = right.add(new jsgui.Control({
         context: this.context,
-        el: 'label',
+        tagName: 'label',
         style: { display: 'block', fontSize: '12px', marginBottom: '6px' }
       }));
       label.add(new jsgui.Text_Node({ context: this.context, text: 'Event type contains' }));
       label.add(new jsgui.Control({
         context: this.context,
-        el: 'input',
+        tagName: 'input',
         attr: { id: 'co-stop-event-type', type: 'text', placeholder: 'e.g. decision, classify, hub' },
         style: { display: 'block', width: '100%', padding: '6px', marginTop: '4px', borderRadius: '4px', border: '1px solid #2a3a5a', background: '#0f1a33', color: '#e6eefc' }
       }));
@@ -201,34 +169,29 @@ class TaskDetailControl extends jsgui.Control {
     {
       const label = right.add(new jsgui.Control({
         context: this.context,
-        el: 'label',
+        tagName: 'label',
         style: { display: 'block', fontSize: '12px', marginBottom: '10px' }
       }));
       label.add(new jsgui.Text_Node({ context: this.context, text: 'Scope contains' }));
       label.add(new jsgui.Control({
         context: this.context,
-        el: 'input',
+        tagName: 'input',
         attr: { id: 'co-stop-scope', type: 'text', placeholder: 'e.g. domain:example.com' },
         style: { display: 'block', width: '100%', padding: '6px', marginTop: '4px', borderRadius: '4px', border: '1px solid #2a3a5a', background: '#0f1a33', color: '#e6eefc' }
       }));
     }
 
-    right.add(new jsgui.Control({
-      context: this.context,
-      el: 'div',
-      text: 'Decision matching',
-      style: { fontSize: '12px', fontWeight: 'bold', marginTop: '14px', marginBottom: '6px', color: '#d7def0' }
-    }));
+    right.add(makeTextEl(this.context, 'div', 'Decision matching', { style: { fontSize: '12px', fontWeight: 'bold', marginTop: '14px', marginBottom: '6px', color: '#d7def0' } }));
 
     {
       const label = right.add(new jsgui.Control({
         context: this.context,
-        el: 'label',
+        tagName: 'label',
         style: { display: 'block', fontSize: '12px', marginBottom: '6px' }
       }));
       label.add(new jsgui.Control({
         context: this.context,
-        el: 'input',
+        tagName: 'input',
         attr: { id: 'co-stop-every-decision', type: 'checkbox' },
         style: { marginRight: '6px' }
       }));
@@ -238,13 +201,13 @@ class TaskDetailControl extends jsgui.Control {
     {
       const label = right.add(new jsgui.Control({
         context: this.context,
-        el: 'label',
+        tagName: 'label',
         style: { display: 'block', fontSize: '12px', marginBottom: '6px' }
       }));
       label.add(new jsgui.Text_Node({ context: this.context, text: 'Decision key contains (optional)' }));
       label.add(new jsgui.Control({
         context: this.context,
-        el: 'input',
+        tagName: 'input',
         attr: { id: 'co-stop-decision-key', type: 'text', placeholder: 'e.g. chooseHub, classifyTopic, placeHubGuess' },
         style: { display: 'block', width: '100%', padding: '6px', marginTop: '4px', borderRadius: '4px', border: '1px solid #2a3a5a', background: '#0f1a33', color: '#e6eefc' }
       }));
@@ -253,13 +216,13 @@ class TaskDetailControl extends jsgui.Control {
     {
       const label = right.add(new jsgui.Control({
         context: this.context,
-        el: 'label',
+        tagName: 'label',
         style: { display: 'block', fontSize: '12px', marginBottom: '6px' }
       }));
       label.add(new jsgui.Text_Node({ context: this.context, text: 'Decision outcome contains (optional)' }));
       label.add(new jsgui.Control({
         context: this.context,
-        el: 'input',
+        tagName: 'input',
         attr: { id: 'co-stop-decision-outcome', type: 'text', placeholder: 'e.g. accept, reject, hub:' },
         style: { display: 'block', width: '100%', padding: '6px', marginTop: '4px', borderRadius: '4px', border: '1px solid #2a3a5a', background: '#0f1a33', color: '#e6eefc' }
       }));
@@ -268,22 +231,21 @@ class TaskDetailControl extends jsgui.Control {
     {
       const label = right.add(new jsgui.Control({
         context: this.context,
-        el: 'label',
+        tagName: 'label',
         style: { display: 'block', fontSize: '12px', marginBottom: '8px' }
       }));
       label.add(new jsgui.Control({
         context: this.context,
-        el: 'input',
+        tagName: 'input',
         attr: { id: 'co-stop-decision-once', type: 'checkbox' },
         style: { marginRight: '6px' }
       }));
       label.add(new jsgui.Text_Node({ context: this.context, text: 'Only stop once per decision key (dedupe)' }));
     }
 
-    right.add(new jsgui.Control({
+    const clearBtn = right.add(new jsgui.Control({
       context: this.context,
-      el: 'button',
-      text: '🧹 Clear seen decisions',
+      tagName: 'button',
       attr: { id: 'co-stop-decision-clear', type: 'button' },
       style: {
         padding: '8px 10px',
@@ -295,10 +257,11 @@ class TaskDetailControl extends jsgui.Control {
         fontSize: '12px'
       }
     }));
+    addText(this.context, clearBtn, '🧹 Clear seen decisions');
 
     const controlsRow = panel.add(new jsgui.Control({
       context: this.context,
-      el: 'div',
+      tagName: 'div',
       style: { display: 'flex', gap: '8px', marginTop: '10px', alignItems: 'center', flexWrap: 'wrap' }
     }));
 
@@ -312,19 +275,22 @@ class TaskDetailControl extends jsgui.Control {
       fontSize: '12px'
     };
 
-    controlsRow.add(new jsgui.Control({ context: this.context, el: 'button', text: '▶ Start live', attr: { id: 'co-live-start', type: 'button' }, style: btnStyle }));
-    controlsRow.add(new jsgui.Control({ context: this.context, el: 'button', text: '⏸ Pause', attr: { id: 'co-live-pause', type: 'button' }, style: btnStyle }));
-    controlsRow.add(new jsgui.Control({ context: this.context, el: 'button', text: '🔄 Poll now', attr: { id: 'co-live-poll', type: 'button' }, style: btnStyle }));
+    const startBtn = controlsRow.add(new jsgui.Control({ context: this.context, tagName: 'button', attr: { id: 'co-live-start', type: 'button' }, style: btnStyle }));
+    addText(this.context, startBtn, '▶ Start live');
+    const pauseBtn = controlsRow.add(new jsgui.Control({ context: this.context, tagName: 'button', attr: { id: 'co-live-pause', type: 'button' }, style: btnStyle }));
+    addText(this.context, pauseBtn, '⏸ Pause');
+    const pollBtn = controlsRow.add(new jsgui.Control({ context: this.context, tagName: 'button', attr: { id: 'co-live-poll', type: 'button' }, style: btnStyle }));
+    addText(this.context, pollBtn, '🔄 Poll now');
 
     {
       const label = controlsRow.add(new jsgui.Control({
         context: this.context,
-        el: 'label',
+        tagName: 'label',
         style: { display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', fontSize: '12px', color: '#d7def0' }
       }));
       label.add(new jsgui.Control({
         context: this.context,
-        el: 'input',
+        tagName: 'input',
         attr: { id: 'co-live-interval', type: 'number', min: '200', step: '100' },
         style: { width: '90px', padding: '6px', borderRadius: '4px', border: '1px solid #2a3a5a', background: '#0f1a33', color: '#e6eefc' }
       }));
@@ -333,7 +299,7 @@ class TaskDetailControl extends jsgui.Control {
   }
 
   _renderLiveScript(container) {
-    const script = container.add(new jsgui.Control({ context: this.context, el: 'script' }));
+    const script = container.add(new jsgui.Control({ context: this.context, tagName: 'script' }));
     script.add(new jsgui.Text_Node({
       context: this.context,
       text: `
@@ -717,7 +683,7 @@ class TaskDetailControl extends jsgui.Control {
     const s = this._summary;
     const grid = container.add(new jsgui.Control({
       context: this.context,
-      el: 'div',
+      tagName: 'div',
       style: {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
@@ -727,17 +693,17 @@ class TaskDetailControl extends jsgui.Control {
     }));
 
     const cards = [
-      { label: 'Task Type', value: s.task_type || '-', icon: '📋' },
-      { label: 'Total Events', value: s.total_events || 0, icon: '📊' },
-      { label: 'Errors', value: s.error_count || 0, icon: '❌', bad: s.error_count > 0 },
-      { label: 'Warnings', value: s.warn_count || 0, icon: '⚠️', bad: s.warn_count > 0 },
-      { label: 'Unique Scopes', value: s.unique_scopes || 0, icon: '🌐' }
+      { labtagName: 'Task Type', value: s.task_type || '-', icon: '📋' },
+      { labtagName: 'Total Events', value: s.total_events || 0, icon: '📊' },
+      { labtagName: 'Errors', value: s.error_count || 0, icon: '❌', bad: s.error_count > 0 },
+      { labtagName: 'Warnings', value: s.warn_count || 0, icon: '⚠️', bad: s.warn_count > 0 },
+      { labtagName: 'Unique Scopes', value: s.unique_scopes || 0, icon: '🌐' }
     ];
 
     for (const card of cards) {
       const cardEl = grid.add(new jsgui.Control({
         context: this.context,
-        el: 'div',
+        tagName: 'div',
         style: {
           background: card.bad ? '#fff0f0' : '#f9f9f9',
           padding: '16px',
@@ -745,39 +711,30 @@ class TaskDetailControl extends jsgui.Control {
           border: card.bad ? '1px solid #fcc' : '1px solid #eee'
         }
       }));
-      cardEl.add(new jsgui.Control({
-        context: this.context,
-        el: 'div',
-        text: `${card.icon} ${card.label}`,
+      cardEl.add(makeTextEl(this.context, 'div', `${card.icon} ${card.label}`, {
         style: { fontSize: '12px', color: '#666', marginBottom: '4px' }
       }));
-      cardEl.add(new jsgui.Control({
-        context: this.context,
-        el: 'div',
-        text: String(card.value),
+      cardEl.add(makeTextEl(this.context, 'div', String(card.value), {
         style: { fontSize: '24px', fontWeight: 'bold', color: card.bad ? '#c00' : '#333' }
       }));
     }
   }
 
   _renderProblems(container) {
-    container.add(new jsgui.Control({
-      context: this.context,
-      el: 'h3',
-      text: `❌ Problems (${this._problems.length})`,
+    container.add(makeTextEl(this.context, 'h3', `❌ Problems (${this._problems.length})`, {
       style: { marginTop: '24px', marginBottom: '12px' }
     }));
 
     const list = container.add(new jsgui.Control({
       context: this.context,
-      el: 'div',
+      tagName: 'div',
       style: { marginBottom: '24px' }
     }));
 
     for (const p of this._problems.slice(0, 20)) {
       const item = list.add(new jsgui.Control({
         context: this.context,
-        el: 'div',
+        tagName: 'div',
         style: {
           background: p.severity === 'error' ? '#fff0f0' : '#fffbe6',
           padding: '12px',
@@ -787,18 +744,12 @@ class TaskDetailControl extends jsgui.Control {
         }
       }));
 
-      item.add(new jsgui.Control({
-        context: this.context,
-        el: 'div',
-        text: `[${p.seq}] ${p.event_type}`,
+      item.add(makeTextEl(this.context, 'div', `[${p.seq}] ${p.event_type}`, {
         style: { fontWeight: 'bold', marginBottom: '4px' }
       }));
 
       if (p.target) {
-        item.add(new jsgui.Control({
-          context: this.context,
-          el: 'div',
-          text: p.target.length > 80 ? p.target.slice(0, 77) + '...' : p.target,
+        item.add(makeTextEl(this.context, 'div', p.target.length > 80 ? p.target.slice(0, 77) + '...' : p.target, {
           style: { fontSize: '12px', color: '#666', wordBreak: 'break-all' }
         }));
       }
@@ -807,10 +758,7 @@ class TaskDetailControl extends jsgui.Control {
         try {
           const data = JSON.parse(p.payload);
           if (data.error || data.message) {
-            item.add(new jsgui.Control({
-              context: this.context,
-              el: 'div',
-              text: data.error || data.message,
+            item.add(makeTextEl(this.context, 'div', data.error || data.message, {
               style: { fontSize: '12px', color: '#900', marginTop: '4px' }
             }));
           }
@@ -820,16 +768,13 @@ class TaskDetailControl extends jsgui.Control {
   }
 
   _renderTimeline(container) {
-    container.add(new jsgui.Control({
-      context: this.context,
-      el: 'h3',
-      text: '📍 Timeline',
+    container.add(makeTextEl(this.context, 'h3', '📍 Timeline', {
       style: { marginTop: '24px', marginBottom: '12px' }
     }));
 
     const timeline = container.add(new jsgui.Control({
       context: this.context,
-      el: 'div',
+      tagName: 'div',
       style: {
         borderLeft: '2px solid #0066cc',
         paddingLeft: '20px',
@@ -840,7 +785,7 @@ class TaskDetailControl extends jsgui.Control {
     for (const e of this._timeline) {
       const item = timeline.add(new jsgui.Control({
         context: this.context,
-        el: 'div',
+        tagName: 'div',
         style: {
           position: 'relative',
           marginBottom: '16px'
@@ -849,7 +794,7 @@ class TaskDetailControl extends jsgui.Control {
 
       item.add(new jsgui.Control({
         context: this.context,
-        el: 'div',
+        tagName: 'div',
         style: {
           position: 'absolute',
           left: '-26px',
@@ -861,26 +806,17 @@ class TaskDetailControl extends jsgui.Control {
         }
       }));
 
-      item.add(new jsgui.Control({
-        context: this.context,
-        el: 'div',
-        text: e.event_type,
+      item.add(makeTextEl(this.context, 'div', e.event_type, {
         style: { fontWeight: 'bold' }
       }));
 
       const ts = e.ts ? new Date(e.ts).toLocaleString() : '-';
-      item.add(new jsgui.Control({
-        context: this.context,
-        el: 'div',
-        text: ts,
+      item.add(makeTextEl(this.context, 'div', ts, {
         style: { fontSize: '12px', color: '#666' }
       }));
 
       if (e.scope) {
-        item.add(new jsgui.Control({
-          context: this.context,
-          el: 'div',
-          text: e.scope,
+        item.add(makeTextEl(this.context, 'div', e.scope, {
           style: { fontSize: '12px', color: '#0066cc' }
         }));
       }
@@ -888,17 +824,14 @@ class TaskDetailControl extends jsgui.Control {
   }
 
   _renderEvents(container) {
-    container.add(new jsgui.Control({
-      context: this.context,
-      el: 'h3',
-      text: `📊 Events (${this._events.length})`,
+    container.add(makeTextEl(this.context, 'h3', `📊 Events (${this._events.length})`, {
       style: { marginTop: '24px', marginBottom: '12px' }
     }));
 
     if (this._pageInfo) {
       const nav = container.add(new jsgui.Control({
         context: this.context,
-        el: 'div',
+        tagName: 'div',
         style: {
           display: 'flex',
           gap: '10px',
@@ -915,24 +848,15 @@ class TaskDetailControl extends jsgui.Control {
       }));
 
       const infoText = `seq ${this._pageInfo.minSeq ?? '?'} → ${this._pageInfo.maxSeq ?? '?'} (limit ${this._pageInfo.limit ?? '?'})`;
-      nav.add(new jsgui.Control({ context: this.context, el: 'div', text: infoText, style: { marginRight: 'auto' } }));
+      nav.add(makeTextEl(this.context, 'div', infoText, { style: { marginRight: 'auto' } }));
 
-      const makeLink = (label, href, enabled) => {
+      const makeLocalLink = (label, href, enabled) => {
         if (!enabled) {
-          return nav.add(new jsgui.Control({
-            context: this.context,
-            el: 'span',
-            text: label,
+          return nav.add(makeTextEl(this.context, 'span', label, {
             style: { opacity: 0.45 }
           }));
         }
-        return nav.add(new jsgui.Control({
-          context: this.context,
-          el: 'a',
-          text: label,
-          attr: { href },
-          style: { color: '#7ec8e3', textDecoration: 'none' }
-        }));
+        return nav.add(makeLink(this.context, label, href, { color: '#7ec8e3', textDecoration: 'none' }));
       };
 
       const base = this._withBasePath(`/task/${encodeURIComponent(this._taskId)}`);
@@ -940,14 +864,14 @@ class TaskDetailControl extends jsgui.Control {
       const minSeq = Number(this._pageInfo.minSeq || 0) || 0;
       const maxSeq = Number(this._pageInfo.maxSeq || 0) || 0;
 
-      makeLink('⏮ Latest', `${base}?limit=${encodeURIComponent(String(lim))}`, true);
-      makeLink('⬅ Older', `${base}?beforeSeq=${encodeURIComponent(String(minSeq))}&limit=${encodeURIComponent(String(lim))}`, !!this._pageInfo.hasOlder);
-      makeLink('Newer ➡', `${base}?afterSeq=${encodeURIComponent(String(maxSeq))}&limit=${encodeURIComponent(String(lim))}`, !!this._pageInfo.hasNewer);
+      makeLocalLink('⏮ Latest', `${base}?limit=${encodeURIComponent(String(lim))}`, true);
+      makeLocalLink('⬅ Older', `${base}?beforeSeq=${encodeURIComponent(String(minSeq))}&limit=${encodeURIComponent(String(lim))}`, !!this._pageInfo.hasOlder);
+      makeLocalLink('Newer ➡', `${base}?afterSeq=${encodeURIComponent(String(maxSeq))}&limit=${encodeURIComponent(String(lim))}`, !!this._pageInfo.hasNewer);
     }
 
     const table = container.add(new jsgui.Control({
       context: this.context,
-      el: 'table',
+      tagName: 'table',
       attr: { id: 'co-events-table' },
       style: {
         width: '100%',
@@ -956,13 +880,10 @@ class TaskDetailControl extends jsgui.Control {
       }
     }));
 
-    const thead = table.add(new jsgui.Control({ context: this.context, el: 'thead' }));
-    const headerRow = thead.add(new jsgui.Control({ context: this.context, el: 'tr' }));
+    const thead = table.add(new jsgui.Control({ context: this.context, tagName: 'thead' }));
+    const headerRow = thead.add(new jsgui.Control({ context: this.context, tagName: 'tr' }));
     ['Seq', 'Time', 'Type', '', 'Scope', 'Target', 'Duration'].forEach(h => {
-      headerRow.add(new jsgui.Control({
-        context: this.context,
-        el: 'th',
-        text: h,
+      headerRow.add(makeTextEl(this.context, 'th', h, {
         style: {
           textAlign: 'left',
           padding: '6px',
@@ -972,11 +893,11 @@ class TaskDetailControl extends jsgui.Control {
       }));
     });
 
-    const tbody = table.add(new jsgui.Control({ context: this.context, el: 'tbody', attr: { id: 'co-events-tbody' } }));
+    const tbody = table.add(new jsgui.Control({ context: this.context, tagName: 'tbody', attr: { id: 'co-events-tbody' } }));
     for (const e of this._events) {
       const row = tbody.add(new jsgui.Control({
         context: this.context,
-        el: 'tr',
+        tagName: 'tr',
         attr: {
           'data-seq': String(e.seq ?? ''),
           'data-event-type': String(e.event_type ?? ''),
@@ -991,25 +912,25 @@ class TaskDetailControl extends jsgui.Control {
       if (e.severity === 'error') rowStyle.background = '#fff0f0';
       else if (e.severity === 'warn') rowStyle.background = '#fffbe6';
 
-      row.add(new jsgui.Control({ context: this.context, el: 'td', text: String(e.seq), style: rowStyle }));
+      row.add(makeTextEl(this.context, 'td', String(e.seq), { style: rowStyle }));
 
       const ts = e.ts ? new Date(e.ts).toLocaleTimeString() : '-';
-      row.add(new jsgui.Control({ context: this.context, el: 'td', text: ts, style: { ...rowStyle, fontSize: '11px' } }));
+      row.add(makeTextEl(this.context, 'td', ts, { style: { ...rowStyle, fontSize: '11px' } }));
 
-      row.add(new jsgui.Control({ context: this.context, el: 'td', text: e.event_type, style: rowStyle }));
-      row.add(new jsgui.Control({ context: this.context, el: 'td', text: severityIcon, style: rowStyle }));
+      row.add(makeTextEl(this.context, 'td', e.event_type, { style: rowStyle }));
+      row.add(makeTextEl(this.context, 'td', severityIcon, { style: rowStyle }));
 
       const scope = e.scope ? (e.scope.length > 25 ? e.scope.slice(0, 22) + '...' : e.scope) : '-';
-      row.add(new jsgui.Control({ context: this.context, el: 'td', text: scope, style: { ...rowStyle, fontSize: '11px' } }));
+      row.add(makeTextEl(this.context, 'td', scope, { style: { ...rowStyle, fontSize: '11px' } }));
 
       const target = e.target ? (e.target.length > 40 ? e.target.slice(0, 37) + '...' : e.target) : '-';
-      row.add(new jsgui.Control({ context: this.context, el: 'td', text: target, style: { ...rowStyle, fontSize: '11px' } }));
+      row.add(makeTextEl(this.context, 'td', target, { style: { ...rowStyle, fontSize: '11px' } }));
 
       let dur = '-';
       if (e.duration_ms) {
         dur = e.duration_ms < 1000 ? `${e.duration_ms}ms` : `${(e.duration_ms / 1000).toFixed(1)}s`;
       }
-      row.add(new jsgui.Control({ context: this.context, el: 'td', text: dur, style: rowStyle }));
+      row.add(makeTextEl(this.context, 'td', dur, { style: rowStyle }));
     }
   }
 }
