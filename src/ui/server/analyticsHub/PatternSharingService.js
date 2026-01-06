@@ -9,8 +9,13 @@
  * - Domain family grouping (same CMS platforms)
  * - Pattern transfer recommendations
  * 
+ * All SQL queries are in the DB adapter layer:
+ * src/db/sqlite/v1/queries/ui/patternSharing.js
+ * 
  * Added 2026-01-06 as part of P2 improvements
  */
+
+const { createPatternSharingQueries } = require('../../../db/sqlite/v1/queries/ui/patternSharing');
 
 class PatternSharingService {
   /**
@@ -18,6 +23,7 @@ class PatternSharingService {
    */
   constructor(db) {
     this.db = db;
+    this.queries = createPatternSharingQueries(db);
     this._cache = new Map();
     this._cacheTTL = 5 * 60 * 1000; // 5 minutes
   }
@@ -50,12 +56,7 @@ class PatternSharingService {
     const cached = this._getCached(cacheKey);
     if (cached) return cached;
 
-    // Check if table exists
-    const tableExists = this.db.prepare(`
-      SELECT name FROM sqlite_master WHERE type='table' AND name='cross_crawl_knowledge'
-    `).get();
-
-    if (!tableExists) {
+    if (!this.queries.hasCrossCrawlKnowledge()) {
       return {
         totalPatterns: 0,
         uniqueDomains: 0,
@@ -65,44 +66,9 @@ class PatternSharingService {
     }
 
     try {
-      // Overall stats
-      const statsStmt = this.db.prepare(`
-        SELECT 
-          COUNT(*) as total_patterns,
-          COUNT(DISTINCT source_domain) as unique_domains,
-          SUM(usage_count) as total_usage
-        FROM cross_crawl_knowledge
-      `);
-      const stats = statsStmt.get() || { total_patterns: 0, unique_domains: 0, total_usage: 0 };
-
-      // Breakdown by type
-      const typeStmt = this.db.prepare(`
-        SELECT 
-          knowledge_type,
-          COUNT(*) as count,
-          SUM(usage_count) as usage,
-          AVG(confidence_level) as avg_confidence
-        FROM cross_crawl_knowledge
-        GROUP BY knowledge_type
-        ORDER BY count DESC
-      `);
-      const types = typeStmt.all() || [];
-
-      // Top shared patterns (highest usage)
-      const topStmt = this.db.prepare(`
-        SELECT 
-          source_domain,
-          knowledge_type,
-          knowledge_key,
-          usage_count,
-          confidence_level,
-          created_at
-        FROM cross_crawl_knowledge
-        WHERE usage_count > 0
-        ORDER BY usage_count DESC
-        LIMIT 20
-      `);
-      const topPatterns = topStmt.all() || [];
+      const stats = this.queries.getCrossDomainstats();
+      const types = this.queries.getPatternTypeBreakdown();
+      const topPatterns = this.queries.getTopSharedPatterns(20);
 
       const result = {
         totalPatterns: stats.total_patterns || 0,
@@ -143,52 +109,12 @@ class PatternSharingService {
     const cached = this._getCached(cacheKey);
     if (cached) return cached;
 
-    // Check if layout_signatures table exists
-    const tableExists = this.db.prepare(`
-      SELECT name FROM sqlite_master WHERE type='table' AND name='layout_signatures'
-    `).get();
-
-    if (!tableExists) {
+    if (!this.queries.hasLayoutSignatures()) {
       return [];
     }
 
     try {
-      // Find domains that share layout signatures
-      // Group by signature_hash to find similar templates
-      const stmt = this.db.prepare(`
-        WITH domain_signatures AS (
-          SELECT 
-            SUBSTR(first_seen_url, 
-              INSTR(first_seen_url, '://') + 3,
-              INSTR(SUBSTR(first_seen_url, INSTR(first_seen_url, '://') + 3), '/') - 1
-            ) as domain,
-            signature_hash,
-            seen_count
-          FROM layout_signatures
-          WHERE level = 2
-            AND first_seen_url IS NOT NULL
-        ),
-        shared_templates AS (
-          SELECT 
-            signature_hash,
-            COUNT(DISTINCT domain) as domain_count,
-            GROUP_CONCAT(DISTINCT domain) as domains,
-            SUM(seen_count) as total_seen
-          FROM domain_signatures
-          GROUP BY signature_hash
-          HAVING COUNT(DISTINCT domain) > 1
-        )
-        SELECT 
-          signature_hash,
-          domain_count,
-          domains,
-          total_seen
-        FROM shared_templates
-        ORDER BY domain_count DESC, total_seen DESC
-        LIMIT ?
-      `);
-
-      const rows = stmt.all(limit) || [];
+      const rows = this.queries.getDomainFamilies(limit);
 
       const result = rows.map(row => ({
         signatureHash: row.signature_hash,
@@ -216,36 +142,12 @@ class PatternSharingService {
       return { recommendations: [], reason: 'No target domain specified' };
     }
 
-    // Check if table exists
-    const tableExists = this.db.prepare(`
-      SELECT name FROM sqlite_master WHERE type='table' AND name='cross_crawl_knowledge'
-    `).get();
-
-    if (!tableExists) {
+    if (!this.queries.hasCrossCrawlKnowledge()) {
       return { recommendations: [], reason: 'cross_crawl_knowledge table not found' };
     }
 
     try {
-      // Find patterns from similar domains (same TLD family)
-      const targetTld = this._extractTld(targetDomain);
-      
-      const stmt = this.db.prepare(`
-        SELECT 
-          source_domain,
-          knowledge_type,
-          knowledge_key,
-          knowledge_value,
-          confidence_level,
-          usage_count
-        FROM cross_crawl_knowledge
-        WHERE source_domain != ?
-          AND confidence_level >= 0.7
-          AND usage_count >= 2
-        ORDER BY confidence_level DESC, usage_count DESC
-        LIMIT 20
-      `);
-
-      const rows = stmt.all(targetDomain) || [];
+      const rows = this.queries.getPatternRecommendations(targetDomain, 20);
 
       const recommendations = rows.map(row => ({
         sourceDomain: row.source_domain,
@@ -280,31 +182,12 @@ class PatternSharingService {
       return { patterns: [], reason: 'No domain specified' };
     }
 
-    // Check if table exists
-    const tableExists = this.db.prepare(`
-      SELECT name FROM sqlite_master WHERE type='table' AND name='cross_crawl_knowledge'
-    `).get();
-
-    if (!tableExists) {
+    if (!this.queries.hasCrossCrawlKnowledge()) {
       return { patterns: [], reason: 'cross_crawl_knowledge table not found' };
     }
 
     try {
-      const stmt = this.db.prepare(`
-        SELECT 
-          knowledge_type,
-          knowledge_key,
-          knowledge_value,
-          confidence_level,
-          usage_count,
-          created_at,
-          updated_at
-        FROM cross_crawl_knowledge
-        WHERE source_domain = ?
-        ORDER BY knowledge_type, confidence_level DESC
-      `);
-
-      const rows = stmt.all(domain) || [];
+      const rows = this.queries.getDomainPatterns(domain);
 
       // Group by type
       const byType = {};
