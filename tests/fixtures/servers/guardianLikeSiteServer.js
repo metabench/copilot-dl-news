@@ -54,7 +54,7 @@ function pageHtml({ n, total, baseUrl }) {
   const links = [prev, next, ...related].filter(Boolean);
 
   const linkHtml = links
-    .map((href) => `<li><a href="${href}">${href}</a></li>`)
+    .map((href) => `<li><a href="${baseUrl}${href}">${href}</a></li>`)
     .join("\n");
 
   return `<!doctype html>
@@ -98,18 +98,20 @@ function main() {
   });
 
   app.get("/", (req, res) => {
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
     res.status(200).send(
-      `<!doctype html><html><head><meta charset="utf-8" /><title>Guardian Fixture</title></head><body><a href="/page/1">Start</a></body></html>`
+      `<!doctype html><html><head><meta charset="utf-8" /><title>Guardian Fixture</title></head><body><a href="${baseUrl}/page/1">Start</a></body></html>`
     );
   });
 
   app.get("/tag/:tag", (req, res) => {
     const tag = String(req.params.tag || "tag");
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
     res.status(200).send(
       `<!doctype html><html><head><meta charset="utf-8" /><title>Tag ${tag}</title></head><body>
         <h1>Tag: ${tag}</h1>
-        <a href="/page/1">Top story</a>
-        <a href="/page/2">More</a>
+        <a href="${baseUrl}/page/1">Top story</a>
+        <a href="${baseUrl}/page/2">More</a>
       </body></html>`
     );
   });

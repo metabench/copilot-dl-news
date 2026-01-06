@@ -832,14 +832,448 @@ function inferContext(db, url, title, section) {
   return context;
 }
 
+async function extractGazetteerPlacesFromTextAsync(text, gazetteer, ctx, isTitle) {
+  const results = [];
+  if (!text || !gazetteer) return results;
+
+  const tokenRegex = /[A-Za-z][A-Za-z'\-]*/g;
+  const tokens = [];
+  const normalizedTokens = [];
+  let match;
+
+  while ((match = tokenRegex.exec(text)) !== null) {
+    const word = match[0];
+    const normalized = normName(word);
+    if (!normalized) {
+      continue;
+    }
+    tokens.push({ word, start: match.index, end: match.index + word.length });
+    normalizedTokens.push(normalized);
+  }
+
+  // Collect all candidate phrases for batch lookup
+  const phrasesToLookup = new Set();
+  const maxWindow = 4;
+  
+  for (let i = 0; i < tokens.length; i++) {
+    let phraseNormalized = '';
+    for (
+      let windowSize = 1;
+      windowSize <= maxWindow && i + windowSize <= tokens.length;
+      windowSize += 1
+    ) {
+      const tokenIndex = i + windowSize - 1;
+      const normalizedToken = normalizedTokens[tokenIndex];
+      if (!normalizedToken) {
+        phraseNormalized = '';
+        continue;
+      }
+      phraseNormalized = windowSize === 1
+        ? normalizedToken
+        : `${phraseNormalized} ${normalizedToken}`;
+      
+      phrasesToLookup.add(phraseNormalized);
+    }
+  }
+
+  // Batch lookup
+  const candidatesMap = await gazetteer.findCandidates(Array.from(phrasesToLookup));
+
+  for (let i = 0; i < tokens.length; i++) {
+    let bestMatch = null;
+    let phraseNormalized = '';
+
+    for (
+      let windowSize = 1;
+      windowSize <= maxWindow && i + windowSize <= tokens.length;
+      windowSize += 1
+    ) {
+      const tokenIndex = i + windowSize - 1;
+      const normalizedToken = normalizedTokens[tokenIndex];
+      if (!normalizedToken) {
+        phraseNormalized = '';
+        continue;
+      }
+      phraseNormalized = windowSize === 1
+        ? normalizedToken
+        : `${phraseNormalized} ${normalizedToken}`;
+
+      const candidates = candidatesMap.get(phraseNormalized);
+      if (candidates && candidates.length) {
+        const record = pickBestCandidate(candidates, ctx, isTitle);
+        if (record) {
+          bestMatch = {
+            record,
+            windowSize,
+            start: tokens[i].start,
+            end: tokens[tokenIndex].end
+          };
+        }
+      }
+    }
+
+    if (bestMatch) {
+      results.push({
+        name: bestMatch.record.name,
+        kind: bestMatch.record.kind,
+        country_code: bestMatch.record.country_code,
+        place_id: bestMatch.record.place_id,
+        start: bestMatch.start,
+        end: bestMatch.end
+      });
+      i += bestMatch.windowSize - 1;
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Enhanced candidate picker that integrates publisher prior scoring.
+ * Falls back to standard pickBestCandidate if db/host not provided.
+ * 
+ * @param {Array} candidates - Candidate place records
+ * @param {Object} ctx - Context (domain_cc, tld_cc, url_ccs, section, etc.)
+ * @param {boolean} isTitle - Whether the mention is from title
+ * @param {Object} options - Enhanced options
+ * @param {Object} options.db - Database handle for publisher prior queries
+ * @param {string} options.host - Publisher host for prior scoring
+ * @param {number} options.priorWeight - Weight for publisher prior (default: 2.0)
+ * @returns {Object|null} Best candidate record
+ */
+function pickBestCandidateEnhanced(candidates, ctx, isTitle, options = {}) {
+  if (!candidates || candidates.length === 0) return null;
+  if (candidates.length === 1) return candidates[0];
+
+  const { db, host, priorWeight = 2.0 } = options;
+
+  // If we can't use enhanced scoring, fall back to standard
+  if (!db || !host) {
+    return pickBestCandidate(candidates, ctx, isTitle);
+  }
+
+  // Lazy-load publisher prior to avoid circular dependencies
+  let PublisherPrior;
+  try {
+    PublisherPrior = require('./publisher-prior').PublisherPrior;
+  } catch (err) {
+    // Fall back if module not available
+    return pickBestCandidate(candidates, ctx, isTitle);
+  }
+
+  // Create publisher prior instance
+  let publisherPrior;
+  try {
+    publisherPrior = new PublisherPrior(db);
+  } catch (err) {
+    // Fall back on error (e.g., missing tables)
+    return pickBestCandidate(candidates, ctx, isTitle);
+  }
+
+  let best = candidates[0];
+  let bestScore = -Infinity;
+
+  for (const candidate of candidates) {
+    let score = 0;
+    
+    // Standard context-based scoring
+    if (ctx) {
+      if (ctx.domain_cc && candidate.country_code && ctx.domain_cc === candidate.country_code) score += 5;
+      if (ctx.tld_cc && candidate.country_code && ctx.tld_cc === candidate.country_code) score += 3;
+      if (ctx.url_ccs && candidate.country_code && ctx.url_ccs.includes(candidate.country_code)) score += 4;
+      if (ctx.section && typeof ctx.section === 'string') {
+        const section = ctx.section.toLowerCase();
+        if (candidate.country_code && section.includes(candidate.country_code.toLowerCase())) score += 2;
+      }
+      if (isTitle) score += 1;
+    }
+
+    // Population score
+    const population = Number(candidate.population || 0);
+    if (population > 0) score += Math.log10(population + 1) * 0.5;
+
+    // Publisher prior score (0-1 normalized, then weighted)
+    const countryCode = candidate.country_code;
+    const placeId = candidate.place_id || candidate.id;
+    if (countryCode) {
+      try {
+        const priorValue = publisherPrior.getPrior(host, countryCode, { placeId });
+        // Prior is already 0-1, scale to scoring range
+        score += priorValue * priorWeight;
+      } catch (err) {
+        // Ignore prior errors, just skip the bonus
+      }
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = candidate;
+    }
+  }
+
+  return best;
+}
+
+/**
+ * Create a context-aware place extractor that uses publisher prior and multi-language support.
+ * 
+ * @param {Object} db - Database handle
+ * @param {Object} options - Configuration options
+ * @param {boolean} options.useContextFilter - Enable context-based filtering (default: true)
+ * @returns {Object} Extractor with enhanced methods
+ */
+function createEnhancedPlaceExtractor(db, options = {}) {
+  const matchers = buildGazetteerMatchers(db, options);
+  
+  // Lazy-load multi-language queries
+  let multiLangQueries = null;
+  const getMultiLangQueries = () => {
+    if (!multiLangQueries) {
+      try {
+        const { createMultiLanguagePlaceQueries } = require('../db/sqlite/v1/queries/multiLanguagePlaces');
+        multiLangQueries = createMultiLanguagePlaceQueries(db);
+      } catch (err) {
+        multiLangQueries = null;
+      }
+    }
+    return multiLangQueries;
+  };
+  
+  // Lazy-load context filter
+  let contextFilter = null;
+  const getContextFilter = () => {
+    if (contextFilter === null && options.useContextFilter !== false) {
+      try {
+        const { createPlaceContextFilter } = require('./PlaceContextFilter');
+        contextFilter = createPlaceContextFilter({ db, loadFromDb: true });
+      } catch (err) {
+        contextFilter = false; // Mark as unavailable
+      }
+    }
+    return contextFilter || null;
+  };
+  
+  return {
+    matchers,
+    db,
+    
+    /**
+     * Extract places from text with enhanced disambiguation
+     */
+    extractFromText(text, ctx = {}, isTitle = false) {
+      return extractGazetteerPlacesFromText(text, matchers, ctx, isTitle);
+    },
+    
+    /**
+     * Extract places with context-based filtering to exclude false positives
+     * like "Texas Instruments" or "Paris Hilton"
+     * 
+     * @param {string} text - Text to extract places from
+     * @param {Object} ctx - Context object
+     * @param {boolean} isTitle - Whether text is a title
+     * @param {Object} filterOptions - Options for context filtering
+     * @returns {Array} Filtered place extractions
+     */
+    extractWithFiltering(text, ctx = {}, isTitle = false, filterOptions = {}) {
+      const rawPlaces = extractGazetteerPlacesFromText(text, matchers, ctx, isTitle);
+      const filter = getContextFilter();
+      
+      if (!filter) {
+        return rawPlaces;
+      }
+      
+      return filter.filterPlaces(rawPlaces, text, {
+        contextWindow: filterOptions.contextWindow || 50,
+        includeExcluded: filterOptions.includeExcluded || false
+      });
+    },
+    
+    /**
+     * Extract places with publisher prior integration
+     */
+    extractWithPrior(text, ctx = {}, isTitle = false, host = null) {
+      const results = [];
+      if (!text || !matchers) return results;
+
+      const tokenRegex = /[A-Za-z][A-Za-z'\-]*/g;
+      const tokens = [];
+      const normalizedTokens = [];
+      let match;
+
+      while ((match = tokenRegex.exec(text)) !== null) {
+        const word = match[0];
+        const normalized = normName(word);
+        if (!normalized) continue;
+        tokens.push({ word, start: match.index, end: match.index + word.length });
+        normalizedTokens.push(normalized);
+      }
+
+      const maxWindow = 4;
+      for (let i = 0; i < tokens.length; i++) {
+        let bestMatch = null;
+        let phraseNormalized = '';
+
+        for (
+          let windowSize = 1;
+          windowSize <= maxWindow && i + windowSize <= tokens.length;
+          windowSize += 1
+        ) {
+          const tokenIndex = i + windowSize - 1;
+          const normalizedToken = normalizedTokens[tokenIndex];
+          if (!normalizedToken) {
+            phraseNormalized = '';
+            continue;
+          }
+          phraseNormalized = windowSize === 1
+            ? normalizedToken
+            : `${phraseNormalized} ${normalizedToken}`;
+
+          const candidates = matchers.nameMap.get(phraseNormalized);
+          if (candidates && candidates.length) {
+            const record = pickBestCandidateEnhanced(candidates, ctx, isTitle, {
+              db,
+              host,
+              priorWeight: options.priorWeight || 2.0
+            });
+            if (record) {
+              bestMatch = {
+                record,
+                windowSize,
+                start: tokens[i].start,
+                end: tokens[tokenIndex].end
+              };
+            }
+          }
+        }
+
+        if (bestMatch) {
+          results.push({
+            name: bestMatch.record.name,
+            kind: bestMatch.record.kind,
+            country_code: bestMatch.record.country_code,
+            place_id: bestMatch.record.place_id,
+            start: bestMatch.start,
+            end: bestMatch.end
+          });
+          i += bestMatch.windowSize - 1;
+        }
+      }
+
+      return results;
+    },
+    
+    /**
+     * Search for places by name across all languages
+     */
+    searchMultiLanguage(term, options = {}) {
+      const queries = getMultiLangQueries();
+      if (!queries) {
+        // Fallback to basic search
+        const { searchPlacesByName } = require('../db/sqlite/v1/queries/gazetteer.search');
+        return searchPlacesByName(db, term, options);
+      }
+      // Use findByName which auto-detects language/script
+      const results = queries.findByName(term, { autoDetect: true, ...options });
+      
+      // If no results from exact match, try pattern search
+      if (results.length === 0 && term.length >= 3) {
+        const pattern = `${queries.normalizeName(term)}%`;
+        const limit = options.limit || 20;
+        return queries.searchByPattern(pattern, limit);
+      }
+      
+      return results.slice(0, options.limit || 20);
+    },
+    
+    /**
+     * Detect script of input text
+     */
+    detectScript(text) {
+      const queries = getMultiLangQueries();
+      if (!queries) return 'Latn';
+      const result = queries.detectScript(text);
+      return result.script;
+    },
+    
+    /**
+     * Resolve URL places with enhanced scoring
+     */
+    resolveUrl(url, host = null) {
+      return resolveUrlPlaces(url, matchers, { db, host });
+    },
+    
+    /**
+     * Get hierarchy index for coherence checks
+     */
+    getHierarchy() {
+      return matchers.hierarchy;
+    },
+    
+    /**
+     * Check if placeA is an ancestor of placeB
+     */
+    isAncestor(ancestorId, descendantId) {
+      return matchers.hierarchy.isAncestor(ancestorId, descendantId);
+    },
+    
+    /**
+     * Get the context filter for advanced usage
+     */
+    getContextFilter() {
+      return getContextFilter();
+    },
+    
+    /**
+     * Check if a place mention should be excluded based on context
+     */
+    shouldExcludePlace(placeName, fullText, startPos, endPos, options = {}) {
+      const filter = getContextFilter();
+      if (!filter) return { excluded: false };
+      return filter.shouldExclude(placeName, fullText, startPos, endPos, options);
+    },
+    
+    /**
+     * Add a custom exclusion pattern
+     */
+    addExclusion(triggerWord, phrase) {
+      const filter = getContextFilter();
+      if (filter) {
+        filter.addExclusion(triggerWord, phrase);
+      }
+    },
+    
+    /**
+     * Get context filter statistics
+     */
+    getFilterStats() {
+      const filter = getContextFilter();
+      return filter ? filter.getStats() : null;
+    }
+  };
+}
+
 module.exports = {
   normName,
   slugify,
   buildGazetteerMatchers,
   pickBestCandidate,
+  pickBestCandidateEnhanced,
   extractGazetteerPlacesFromText,
+  extractGazetteerPlacesFromTextAsync,
   resolveUrlPlaces,
   extractPlacesFromUrl,
   dedupeDetections,
-  inferContext
+  inferContext,
+  createEnhancedPlaceExtractor,
+  ...(process.env.PLACE_EXTRACTION_BENCH === '1'
+    ? {
+        __bench: {
+          analyzeSegment,
+          buildChains,
+          chooseBestChain,
+          collectTopics,
+          cleanupMatchArtifacts
+        }
+      }
+    : {})
 };

@@ -32,6 +32,24 @@ Quick anchors (UI/tooling)
 - SVGs: before shipping, run `node tools/dev/svg-collisions.js <file> --strict` to ensure no overlaps; follow [docs/guides/SVG_CREATION_METHODOLOGY.md](docs/guides/SVG_CREATION_METHODOLOGY.md).
 - MCP pre-flight: before calling MCP tools, run `node tools/dev/mcp-check.js --quick --json` to verify servers are responsive; if unhealthy, use CLI fallbacks.
 
+Electron apps for long-running processes (RECOMMENDED)
+- **Wrap long-running processes in Electron apps** for visual progress monitoring. Users see live progress, throughput charts, and can gracefully stop operations.
+- **Existing Electron apps**: `src/ui/electron/unifiedApp/`, `src/ui/electron/crawlerApp/`, `src/ui/electron/backgroundTasksMonitor/`, `src/ui/electron/taskMonitor/`.
+- **Lab templates**:
+  - `labs/analysis-observable/` — Analysis-only with advanced metrics (throughput charts, stall detection, ETA)
+  - `labs/analysis-backfill-ui/` — Analysis backfill with rich UI and granular analysis options (places, hubs, signals)
+  - `labs/crawler-progress-integration/` — Unified crawl + analysis dashboard with auto-start and sequential flow
+  - `labs/jsgui3-idiomatic-progress/` — jsgui3 SSR control patterns with CSS transitions and RAF debouncing
+- **When to create an Electron wrapper**:
+  - Analysis backfills (use `labs/analysis-observable/run-lab.js --electron`)
+  - Gazetteer sync operations
+  - Batch database migrations
+  - Any process expected to run > 5 minutes
+- **Pattern**: Observable → Express SSE endpoint → Electron BrowserWindow loading localhost.
+- **Benefits**: Users don't lose terminal context, can see ETA, throughput trends visible in charts, stop button for graceful shutdown.
+- **Auto-start pattern**: `labs/crawler-progress-integration/` demonstrates auto-starting crawl on first SSE connection, then analysis after crawl completes — eliminates manual intervention for common workflows.
+- See [docs/sessions/2026-01-04-gazetteer-progress-ui/book/chapters/19-rerunning-analysis.md](docs/sessions/2026-01-04-gazetteer-progress-ui/book/chapters/19-rerunning-analysis.md) for detailed workflow.
+
 Memory access feedback (REQUIRED)
 - When you consult the memory system (Skills/sessions/lessons/patterns), emit a **very short** status so the user can see what you loaded.
 - Keep it to **1–2 lines max**, use emojis, and include counts/names when possible.
@@ -53,7 +71,15 @@ MCP server edits (memory-related)
   - Write small, reusable updates: add a Pattern/Anti-Pattern/Lesson, update the Knowledge Map, or append to the current session notes.
   - Default targets: `docs/agi/*` (patterns/lessons/knowledge map) and `docs/sessions/<yyyy-mm-dd>-<slug>/*` (session notes).
   - Keep entries tight (one idea + context); avoid dumping large transcripts.
-- Tier-1 JS tooling: prefer `js-scan` for discovery and `js-edit` for guarded batch edits (dry-run → fix). Reference [tools/dev/README.md](tools/dev/README.md).
+- docs-memory Logging (MCP): apps can write logs that AI agents can read for monitoring and debugging.
+  - **Write logs** from apps: `const { createMcpLogger } = require('./src/utils/mcpLogger'); logger.info('msg', { data })`
+  - **Read logs** via MCP: `docs_memory_getLogs({ session: 'crawl-2025-01-14', limit: 50, level: 'warn' })`
+  - **Search logs**: `docs_memory_searchLogs({ query: 'timeout', level: 'error' })`
+  - **List sessions**: `docs_memory_listLogSessions()`
+  - **HTTP access**: `GET /memory/logs/{session}` when MCP server runs in HTTP mode (`--http`)
+  - Log files: NDJSON in `docs/agi/logs/<session>.ndjson` (human + machine readable)
+  - App abbreviations: `CRWL` (crawler), `ELEC` (Electron), `API` (server), `SRV` (generic), `DB` (database), `UI` (frontend)
+  - **AGI Strategy**: Logging is evolvable—add new tools, improve filtering, add retention policies as needs grow.- Tier-1 JS tooling: prefer `js-scan` for discovery and `js-edit` for guarded batch edits (dry-run → fix). Reference [tools/dev/README.md](tools/dev/README.md).
 - When to use `js-scan` (vs `grep`/`read_file`):
   - Use `js-scan` when you need a **multi-file inventory** ("what does this subsystem cover?"), to find **entrypoints/routes**, or to answer **dependency questions** ("what imports this?").
   - Use `js-scan --what-imports <file>` before refactors so you don’t miss downstream callers.

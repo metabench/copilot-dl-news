@@ -191,11 +191,23 @@ function getArticleXPathPatternCount(db) {
   return row && row.count != null ? Number(row.count) : 0;
 }
 
+function getTopDomains(db, limit) {
+  const stmt = db.prepare(`
+    SELECT domain
+    FROM article_xpath_patterns
+    GROUP BY domain
+    ORDER BY MAX(usage_count) DESC, COUNT(*) DESC
+    LIMIT ?
+  `);
+  return stmt.all(limit);
+}
+
 module.exports = {
   ensureArticleXPathPatternSchema,
   getArticleXPathPatternsForDomain,
   upsertArticleXPathPattern,
   recordArticleXPathPatternUsage,
   getArticleXPathPatternCount,
-  normalizePatternDomain
+  normalizePatternDomain,
+  getTopDomains
 };

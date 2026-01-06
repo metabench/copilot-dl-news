@@ -31,8 +31,6 @@ function searchPlacesByName(db, term, options = {}) {
       pn.name as matched_name,
       pn.name_kind,
       pn.lang,
-      pn.valid_from,
-      pn.valid_to,
       COALESCE(
         (SELECT name FROM place_names WHERE id = p.canonical_name_id),
         pn.name

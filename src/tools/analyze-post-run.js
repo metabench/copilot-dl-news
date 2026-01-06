@@ -52,9 +52,9 @@ function ensureCompressionStatusTable(db) {
   `);
 }
 
-function collectStorageSummary(db, logger) {
+async function collectStorageSummary(db, logger) {
   const analytics = new CompressionAnalytics({ db, logger, enabled: true });
-  const summary = analytics.getStorageSummary();
+  const summary = await analytics.getStorageSummary();
   if (!summary) {
     return {
       total_items: 0,
@@ -124,7 +124,7 @@ function upsertCompressionStatus(db, data) {
   statement.run(data);
 }
 
-function runAnalysisPostProcessing({ dbPath, summary, logger = console }) {
+async function runAnalysisPostProcessing({ dbPath, summary, logger = console }) {
   if (!dbPath) {
     const projectRoot = findProjectRoot(__dirname);
     dbPath = path.join(projectRoot, 'data', 'news.db');
@@ -139,7 +139,7 @@ function runAnalysisPostProcessing({ dbPath, summary, logger = console }) {
     ensureCompressionStatusTable(db);
 
     const normalized = normalizeSummary(summary);
-    const storageSummary = collectStorageSummary(db, logger);
+    const storageSummary = await collectStorageSummary(db, logger);
     const now = new Date().toISOString();
 
     const payload = {
@@ -218,7 +218,7 @@ async function main() {
     summary = JSON.parse(stdinData);
   }
 
-  const result = runAnalysisPostProcessing({
+  const result = await runAnalysisPostProcessing({
     dbPath: args.dbPath,
     summary,
     logger: console

@@ -179,6 +179,12 @@ class ConfigurationService {
       DEFAULT_SEQUENCE_PRESET
     );
 
+    const mode = this._firstDefined(
+      tokens.flags.mode,
+      runnerConfig.mode,
+      crawlDefaults.mode
+    );
+
     const startUrl = this._firstDefined(
       tokens.flags.startUrl,
       runnerConfig.startUrl,
@@ -197,12 +203,23 @@ class ConfigurationService {
       crawlDefaults.stepOverrides
     );
 
+    const multiModalConfig = cleanUndefined(mergeOverrideObjects(
+      crawlDefaults.multiModal,
+      runnerConfig.multiModal,
+      this._parseJsonFlag(tokens.rawFlags, 'multiModal')
+    ));
+    const resolvedMultiModalConfig = multiModalConfig && Object.keys(multiModalConfig).length > 0
+      ? multiModalConfig
+      : undefined;
+
     return {
+      mode,
       sequenceName,
       startUrl,
       sharedOverrides,
       stepOverrides: stepOverrides || undefined,
       continueOnError,
+      multiModalConfig: resolvedMultiModalConfig,
       metadata: {
         defaultConfigPath: layers.defaultConfig?.sourcePath || null,
         runnerConfigPath: layers.runnerConfig?.sourcePath || null

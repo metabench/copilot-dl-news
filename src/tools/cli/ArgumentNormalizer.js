@@ -42,7 +42,10 @@ class ArgumentNormalizer {
     parser.add('--json', 'Emit JSON summary output', false, 'boolean');
     parser.add('--emit-report [path]', 'Write detailed JSON report to disk (optional path or directory)', null);
     parser.add('--report-dir <path>', 'Directory used when --emit-report omits a filename', null);
-    parser.add('--hierarchical', 'Enable hierarchical place-place hub discovery (parent/child relationships)', false, 'boolean');
+parser.add('--hierarchical', 'Enable hierarchical place-place hub discovery (parent/child relationships)', false, 'boolean');
+    parser.add('--active-pattern <pattern>', 'Pattern for active probing (e.g. /world/{slug})', null);
+    parser.add('--parent <place>', 'Parent place constraint (e.g. "Canada")', null);
+    parser.add('--parent-place <place>', 'Alias for --parent', null);
 
     const parsedArgs = parser.parse(rawArgv);
 
@@ -86,6 +89,9 @@ class ArgumentNormalizer {
     });
 
     const dbPath = parsedArgs.dbPath || parsedArgs.db || null;
+
+    const activePattern = parsedArgs.activePattern || null;
+    const parentPlace = parsedArgs.parentPlace || parsedArgs.parent || null;
 
     const positionalDomains = Array.isArray(parsedArgs.positional) ? parsedArgs.positional : [];
     const domainFlags = Array.isArray(parsedArgs.domain) ? parsedArgs.domain : (parsedArgs.domain ? [parsedArgs.domain] : []);
@@ -153,7 +159,9 @@ class ArgumentNormalizer {
       emitReport: reportResolution.requested,
       reportPath: reportResolution.path,
       reportDirectory: reportResolution.directory,
-      hierarchical: Boolean(parsedArgs.hierarchical)
+      hierarchical: Boolean(parsedArgs.hierarchical),
+      activePattern,
+      parentPlace
     };
   }
 }

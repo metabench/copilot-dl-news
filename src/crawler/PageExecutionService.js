@@ -3,7 +3,8 @@ const chalk = require('chalk');
 const { isTotalPrioritisationEnabled } = require('../utils/priorityConfig');
 const {
   normalizeOutputVerbosity,
-  DEFAULT_OUTPUT_VERBOSITY
+  DEFAULT_OUTPUT_VERBOSITY,
+  isSilent
 } = require('../utils/outputVerbosity');
 
 class PageExecutionService {
@@ -37,6 +38,7 @@ class PageExecutionService {
     getCountryHubBehavioralProfile = null,
     outputVerbosity = DEFAULT_OUTPUT_VERBOSITY,
     paginationPredictorService = null,
+    placeHubPatternLearningService = null,
     emitPageEvent = null
   } = {}) {
     if (!fetchPipeline) {
@@ -90,12 +92,10 @@ class PageExecutionService {
     this.outputVerbosity = normalizeOutputVerbosity(outputVerbosity);
     // Phase 1: Pagination prediction for speculative crawling
     this.paginationPredictorService = paginationPredictorService || null;
+    // Place hub pattern learning - predicts place hubs from URL patterns
+    this.placeHubPatternLearningService = placeHubPatternLearningService || null;
     // Callback to emit page timing events (for telemetry/DB persistence)
     this.emitPageEvent = typeof emitPageEvent === 'function' ? emitPageEvent : null;
-    // Debug: verify callback is wired
-    if (this.emitPageEvent) {
-      console.log('[PageExecutionService] emitPageEvent callback is wired');
-    }
   }
 
   async processPage({ url, depth = 0, context = {} }) {
@@ -589,6 +589,28 @@ class PageExecutionService {
           };
         }
 
+        // Place hub pattern learning: predict if URL is a place hub
+        if (this.placeHubPatternLearningService && link.url) {
+          try {
+            const prediction = this.placeHubPatternLearningService.predictPlaceHub(link.url, this.domain);
+            if (prediction && prediction.isPlaceHub && prediction.confidence >= 0.4) {
+              linkMeta = {
+                ...linkMeta,
+                predictedPlaceHub: true,
+                placeHubConfidence: prediction.confidence,
+                placeHubKind: prediction.placeKind || null,
+                placeHubReason: prediction.reason
+              };
+              // Boost priority for predicted place hubs
+              if (!linkMeta.forcePriority || linkMeta.forcePriority < 70) {
+                linkMeta.forcePriority = 70 + Math.floor(prediction.confidence * 20);
+              }
+            }
+          } catch (_) {
+            // Silently ignore prediction errors
+          }
+        }
+
         this.enqueueRequest({
           url: link.url,
           depth: depth + 1,
@@ -775,6 +797,27 @@ class PageExecutionService {
       }
       this._updateCountryHubProgress();
     }
+
+    // Place hub pattern learning: record validation feedback
+    this._recordPlaceHubValidation(normalizedUrl, { hubKind, meta });
+  }
+
+  /**
+   * Record validation feedback for place hub pattern learning
+   * Called when a page is confirmed as a hub (seeded or country)
+   * @private
+   */
+  _recordPlaceHubValidation(normalizedUrl, { hubKind = null, meta = null } = {}) {
+    if (!this.placeHubPatternLearningService || !normalizedUrl) {
+      return;
+    }
+    try {
+      // Record that this URL is confirmed as a place hub
+      const isPlaceKind = hubKind === 'country' || hubKind === 'place' || hubKind === 'region';
+      this.placeHubPatternLearningService.recordValidation(normalizedUrl, this.domain, isPlaceKind);
+    } catch (_) {
+      // Silently ignore validation errors
+    }
   }
 
   _emitPageLog({
@@ -819,7 +862,6 @@ class PageExecutionService {
             status: payload.status,
             cacheReason: payload.cacheReason
           };
-          console.log('[PageExecutionService] emitPageEvent called:', JSON.stringify(pageEvent));
           this.emitPageEvent(pageEvent);
         } catch (_) {}
       }
@@ -829,6 +871,10 @@ class PageExecutionService {
   _logPerVerbosity(payload) {
     const stats = typeof this.getStats === 'function' ? this.getStats() : null;
     const verbosity = this.outputVerbosity || DEFAULT_OUTPUT_VERBOSITY;
+    // Silent mode: no console output at all
+    if (verbosity === 'silent') {
+      return;
+    }
     if (verbosity === 'extra-terse') {
       const line = this._formatExtraTerse(payload, stats);
       console.log(line);

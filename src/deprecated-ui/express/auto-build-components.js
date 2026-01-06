@@ -170,7 +170,7 @@ async function buildComponents() {
     await esbuild.build({
       entryPoints: [file],
       bundle: true,
-      format: 'esm',
+      format: 'iife',
       outfile: outFile,
       minify: false,
       sourcemap: true,

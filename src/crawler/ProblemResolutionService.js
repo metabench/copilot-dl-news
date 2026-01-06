@@ -365,35 +365,6 @@ class ProblemResolutionService {
       return [];
     }
 
-    const handle = this._getDbHandle();
-    let stmt = null;
-    if (handle) {
-      const fallbackSql = `
-          SELECT host, url, evidence, last_seen_at AS lastSeenAt
-            FROM place_hubs
-           WHERE LOWER(host) = ?
-           ORDER BY last_seen_at DESC
-           LIMIT ?
-        `;
-      try {
-        stmt = handle.prepare(`
-          SELECT host, url, evidence, last_seen_at AS lastSeenAt
-            FROM place_hubs_with_urls
-           WHERE LOWER(host) = ?
-           ORDER BY last_seen_at DESC
-           LIMIT ?
-        `);
-      } catch (viewError) {
-        this._log('debug', 'ProblemResolutionService falling back to place_hubs for known hub query', viewError?.message || viewError);
-        try {
-          stmt = handle.prepare(fallbackSql);
-        } catch (tableError) {
-          this._log('warn', 'ProblemResolutionService failed to prepare known hub query', tableError?.message || tableError);
-          stmt = null;
-        }
-      }
-    }
-
     const entries = new Map();
     const pushEntry = (url, payload) => {
       if (!url) return;
@@ -411,32 +382,76 @@ class ProblemResolutionService {
       });
     };
 
-    if (stmt) {
-      const variants = new Set([normalizedHost]);
-      if (!normalizedHost.startsWith('www.')) {
-        variants.add(`www.${normalizedHost}`);
+    // Try DB adapter method first (supports Postgres & SQLite)
+    if (this.db && typeof this.db.getKnownHubSeeds === 'function') {
+      try {
+        const rows = this.db.getKnownHubSeeds(normalizedHost, limit);
+        for (const row of rows) {
+          const payload = parseEvidence(row?.evidence) || {};
+          payload.lastSeenAt = row?.lastSeenAt || null;
+          pushEntry(row?.url, payload);
+        }
+      } catch (error) {
+        this._log('warn', 'ProblemResolutionService failed to load known hub seeds via adapter', error?.message || error);
       }
-      const rawHost = typeof host === 'string' ? host.trim().toLowerCase() : null;
-      if (rawHost && rawHost !== normalizedHost) {
-        variants.add(rawHost);
-      }
-
-      for (const candidateHost of variants) {
+    } else {
+      // Fallback to raw handle logic (SQLite only)
+      const handle = this._getDbHandle();
+      let stmt = null;
+      if (handle && typeof handle.prepare === 'function') {
+        const fallbackSql = `
+            SELECT host, url, evidence, last_seen_at AS lastSeenAt
+              FROM place_hubs
+             WHERE LOWER(host) = ?
+             ORDER BY last_seen_at DESC
+             LIMIT ?
+          `;
         try {
-          const rows = stmt.all(candidateHost, Math.max(limit, 50));
-          for (const row of rows) {
-            const payload = parseEvidence(row?.evidence) || {};
-            payload.lastSeenAt = row?.lastSeenAt || null;
-            pushEntry(row?.url, payload);
+          stmt = handle.prepare(`
+            SELECT host, url, evidence, last_seen_at AS lastSeenAt
+              FROM place_hubs_with_urls
+             WHERE LOWER(host) = ?
+             ORDER BY last_seen_at DESC
+             LIMIT ?
+          `);
+        } catch (viewError) {
+          this._log('debug', 'ProblemResolutionService falling back to place_hubs for known hub query', viewError?.message || viewError);
+          try {
+            stmt = handle.prepare(fallbackSql);
+          } catch (tableError) {
+            this._log('warn', 'ProblemResolutionService failed to prepare known hub query', tableError?.message || tableError);
+            stmt = null;
+          }
+        }
+
+        if (stmt) {
+          const variants = new Set([normalizedHost]);
+          if (!normalizedHost.startsWith('www.')) {
+            variants.add(`www.${normalizedHost}`);
+          }
+          const rawHost = typeof host === 'string' ? host.trim().toLowerCase() : null;
+          if (rawHost && rawHost !== normalizedHost) {
+            variants.add(rawHost);
+          }
+
+          for (const candidateHost of variants) {
+            try {
+              const rows = stmt.all(candidateHost, Math.max(limit, 50));
+              for (const row of rows) {
+                const payload = parseEvidence(row?.evidence) || {};
+                payload.lastSeenAt = row?.lastSeenAt || null;
+                pushEntry(row?.url, payload);
+                if (entries.size >= limit) {
+                  break;
+                }
+              }
+            } catch (error) {
+              this._log('warn', 'ProblemResolutionService failed to load known hub seeds', error?.message || error);
+            }
             if (entries.size >= limit) {
               break;
             }
           }
-        } catch (error) {
-          this._log('warn', 'ProblemResolutionService failed to load known hub seeds', error?.message || error);
-        }
-        if (entries.size >= limit) {
-          break;
         }
       }
     }

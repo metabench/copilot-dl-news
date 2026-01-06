@@ -1,6 +1,5 @@
 // Limit noisy console output during tests by capping lines per test and truncating long lines.
 (() => {
-  console.log('[jest-setup] loaded');
   // Suppress ALL console output during E2E tests to keep output clean
   if (process.env.GEOGRAPHY_FULL_E2E === '1') {
     console.log = () => {};

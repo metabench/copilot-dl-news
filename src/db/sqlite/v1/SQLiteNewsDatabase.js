@@ -12,6 +12,16 @@ const { StatementManager } = require('./StatementManager');
 const UtilityFunctions = require('./UtilityFunctions');
 const { SchemaInitializer } = require('./SchemaInitializer');
 const { ArticleOperations } = require('./ArticleOperations');
+const { createAnalysePagesCoreQueries } = require('./queries/analysis.analysePagesCore');
+const {
+  ensureArticleXPathPatternSchema,
+  getArticleXPathPatternsForDomain,
+  upsertArticleXPathPattern,
+  recordArticleXPathPatternUsage,
+  getArticleXPathPatternCount,
+  normalizePatternDomain,
+  getTopDomains
+} = require('./queries/articleXPathPatterns');
 
 
 
@@ -78,6 +88,32 @@ class NewsDatabase {
     this._updateTaskStatusStmt = this.statements.get('_updateTaskStatusStmt');
     this._clearTasksByJobStmt = this.statements.get('_clearTasksByJobStmt');
     this._getTaskByIdStmt = this.statements.get('_getTaskByIdStmt');
+  }
+
+  createAnalysePagesCoreQueries() {
+    return createAnalysePagesCoreQueries(this.db);
+  }
+
+  createArticleXPathPatternQueries() {
+    return {
+      ensureArticleXPathPatternSchema: (opts) => ensureArticleXPathPatternSchema(this.db, opts),
+      getArticleXPathPatternsForDomain: (domain, opts) => getArticleXPathPatternsForDomain(this.db, domain, opts),
+      upsertArticleXPathPattern: (pattern) => upsertArticleXPathPattern(this.db, pattern),
+      recordArticleXPathPatternUsage: (domain, xpath, opts) => recordArticleXPathPatternUsage(this.db, domain, xpath, opts),
+      getArticleXPathPatternCount: () => getArticleXPathPatternCount(this.db),
+      normalizePatternDomain,
+      getTopDomains: (limit) => getTopDomains(this.db, limit)
+    };
+  }
+
+  createMultiModalCrawlQueries() {
+    const { createMultiModalCrawlQueries } = require('./queries/multiModalCrawl');
+    return createMultiModalCrawlQueries(this.db);
+  }
+
+  createPatternLearningQueries() {
+    const { createPatternLearningQueries } = require('./queries/patternLearning');
+    return createPatternLearningQueries(this.db);
   }
 
   ensureNewsWebsiteFaviconColumns() {
@@ -371,6 +407,90 @@ class NewsDatabase {
       }
     });
     return readable;
+  }
+
+  recordPlaceHubSeed({ host, url, evidence = null } = {}) {
+    if (!host || !url) return false;
+    
+    let payload = evidence;
+    if (payload != null && typeof payload !== 'string') {
+      try {
+        payload = JSON.stringify(payload);
+      } catch (_) {
+        payload = null;
+      }
+    }
+
+    try {
+      const stmt = this.db.prepare(`
+        INSERT OR IGNORE INTO place_hubs(
+          host,
+          url,
+          place_slug,
+          place_kind,
+          topic_slug,
+          topic_label,
+          topic_kind,
+          title,
+          first_seen_at,
+          last_seen_at,
+          nav_links_count,
+          article_links_count,
+          evidence
+        ) VALUES (
+          ?,
+          ?,
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          datetime('now'),
+          datetime('now'),
+          NULL,
+          NULL,
+          ?
+        )
+      `);
+      const result = stmt.run(host, url, payload);
+      return (result.changes || 0) > 0;
+    } catch (err) {
+      console.error('[SQLite] recordPlaceHubSeed error:', err);
+      return false;
+    }
+  }
+
+  getKnownHubSeeds(host, limit = 50) {
+    if (!host) return [];
+    const safeLimit = Math.max(1, Math.min(500, parseInt(limit, 10) || 50));
+    const normalizedHost = host.trim().toLowerCase();
+
+    const queries = [
+      `SELECT host, url, evidence, last_seen_at AS lastSeenAt
+       FROM place_hubs_with_urls
+       WHERE LOWER(host) = ?
+       ORDER BY last_seen_at DESC
+       LIMIT ?`,
+      `SELECT host, url, evidence, last_seen_at AS lastSeenAt
+       FROM place_hubs
+       WHERE LOWER(host) = ?
+       ORDER BY last_seen_at DESC
+       LIMIT ?`
+    ];
+
+    for (const sql of queries) {
+      try {
+        const rows = this.db.prepare(sql).all(normalizedHost, safeLimit);
+        return rows.map(row => ({
+          ...row,
+          evidence: this._safeParseJson(row.evidence)
+        }));
+      } catch (_) {
+        // Ignore
+      }
+    }
+    return [];
   }
 
   close() {

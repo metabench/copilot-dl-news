@@ -211,6 +211,7 @@ function initializeBackgroundInfrastructure({
   const { AnalysisTask } = require('../background/tasks/AnalysisTask');
   const { CompressionLifecycleTask } = require('../background/tasks/CompressionLifecycleTask');
   const { GuessPlaceHubsTask } = require('../background/tasks/GuessPlaceHubsTask');
+  const { BackfillDatesTask } = require('../background/tasks/BackfillDatesTask');
   const { TaskEventWriter } = require('../db/TaskEventWriter');
 
   // Create TaskEventWriter for background task event persistence
@@ -274,6 +275,7 @@ function initializeBackgroundInfrastructure({
     manager.registerTaskType('analysis-run', AnalysisTask, { dbPath });
     manager.registerTaskType('compression-lifecycle', CompressionLifecycleTask, { dbPath });
     manager.registerTaskType('guess-place-hubs', GuessPlaceHubsTask, { dbPath });
+    manager.registerTaskType('backfill-dates', BackfillDatesTask, { dbPath });
   } catch (error) {
     const log = logger?.error || console.error;
     log('[api] Failed to register background task types:', error);
@@ -564,6 +566,102 @@ function createApiServer(options = {}) {
     const result = writer.deleteTask(taskId);
     res.json({ status: 'ok', taskId, ...result });
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Download Evidence API - Proof-grade download statistics
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const downloadEvidence = require('../db/queries/downloadEvidence');
+
+  // Get global download stats (all-time)
+  app.get('/api/downloads/stats', (req, res) => {
+    try {
+      const stats = downloadEvidence.getGlobalStats(getDbRW());
+      res.json({ status: 'ok', stats });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  // Get download stats for a time range
+  app.get('/api/downloads/range', (req, res) => {
+    try {
+      const { start, end } = req.query;
+      if (!start || !end) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: 'Missing required query params: start, end (ISO timestamps)' 
+        });
+      }
+      const stats = downloadEvidence.getDownloadStats(getDbRW(), start, end);
+      res.json({ status: 'ok', start, end, stats });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  // Get download timeline for progress visualization
+  app.get('/api/downloads/timeline', (req, res) => {
+    try {
+      const { start, end } = req.query;
+      if (!start || !end) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: 'Missing required query params: start, end (ISO timestamps)' 
+        });
+      }
+      const timeline = downloadEvidence.getDownloadTimeline(getDbRW(), start, end);
+      res.json({ status: 'ok', start, end, timeline });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  // Get evidence bundle for downloads
+  app.get('/api/downloads/evidence', (req, res) => {
+    try {
+      const { start, end, limit = '100' } = req.query;
+      if (!start || !end) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: 'Missing required query params: start, end (ISO timestamps)' 
+        });
+      }
+      const evidence = downloadEvidence.getDownloadEvidence(
+        getDbRW(), 
+        start, 
+        end, 
+        parseInt(limit, 10)
+      );
+      res.json({ status: 'ok', start, end, count: evidence.length, evidence });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  // Verify a download claim (anti-hallucination endpoint)
+  app.get('/api/downloads/verify', (req, res) => {
+    try {
+      const { start, end, claimed } = req.query;
+      if (!start || !end || claimed === undefined) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: 'Missing required query params: start, end, claimed' 
+        });
+      }
+      const result = downloadEvidence.verifyDownloadClaim(
+        getDbRW(), 
+        start, 
+        end, 
+        parseInt(claimed, 10)
+      );
+      res.json({ status: 'ok', ...result });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
 
   let crawlTelemetryUnsubscribe = null;
   if (app.locals.realtime && typeof app.locals.realtime.broadcastTelemetry === 'function') {

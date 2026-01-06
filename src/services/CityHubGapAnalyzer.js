@@ -2,7 +2,7 @@
 
 const path = require('path');
 const { getDb } = require('../db');
-const { getTopCities } = require('../db/sqlite/v1/queries/gazetteer.places');
+const { getTopCities, getPlacesByCountryAndKind } = require('../db/sqlite/v1/queries/gazetteer.places');
 const { slugify } = require('../tools/slugify');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 
@@ -72,10 +72,26 @@ class CityHubGapAnalyzer extends HubGapAnalyzerBase {
    * Retrieve top cities prioritised by population/priority score.
    *
    * @param {number} [limit=50] - Maximum number of cities to return.
+   * @param {string} [lang='en'] - Language code.
    * @returns {Array<{id: number, name: string, countryCode: string|null, regionName: string|null, regionId: number|null, importance: number}>}
    */
-  getTopCities(limit = 50) {
-    return getTopCities(this.db, limit);
+  getTopCities(limit = 50, lang = 'en') {
+    return getTopCities(this.db, limit, lang);
+  }
+
+  /**
+   * Get cities for a specific country
+   * @param {string} countryCode - ISO country code
+   * @param {number} [limit=50] - Max cities
+   * @param {string} [lang='en'] - Language code.
+   * @returns {Array} List of cities
+   */
+  getCitiesByCountry(countryCode, limit = 50, lang = 'en') {
+    const places = getPlacesByCountryAndKind(this.db, countryCode, 'city', lang);
+    return places.slice(0, limit).map(p => ({
+      ...p,
+      countryCode: p.country_code
+    }));
   }
 
   /**

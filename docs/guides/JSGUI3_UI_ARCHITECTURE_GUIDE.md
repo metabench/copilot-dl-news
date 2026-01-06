@@ -2366,6 +2366,162 @@ setVisible(visible) {
 
 **If jsgui3 methods don't work as expected** (e.g., `add_class` doesn't update the DOM), **report it as a bug** in jsgui3. Don't work around it with direct DOM manipulation unless absolutely necessary, and document the workaround with a `// WORKAROUND: jsgui3 bug - <description>` comment.
 
+### ❌ 11. Using style.display for Show/Hide (Causes Flashing)
+
+**Bad**: Directly setting `style.display` causes instant layout changes and visual flashing.
+
+```javascript
+// ❌ Avoid: Direct style manipulation
+_updateWarnings(warnings) {
+  if (warnings.length > 0) {
+    this._warningEl.dom.el.style.display = 'block';
+    this._warningEl.dom.el.textContent = warnings[0];
+  } else {
+    this._warningEl.dom.el.style.display = 'none';  // FLASH!
+  }
+}
+```
+
+**Good**: Use CSS classes with transitions for smooth visibility changes.
+
+```javascript
+// ✅ Correct: CSS class transitions
+_updateWarnings(warnings) {
+  if (warnings.length > 0) {
+    this._warningEl.dom.el.textContent = warnings[0];
+    this._warningEl.remove_class('hidden');
+  } else {
+    this._warningEl.add_class('hidden');
+  }
+}
+
+// In CSS:
+// .warning { transition: opacity 0.2s, max-height 0.2s; }
+// .warning.hidden { opacity: 0; max-height: 0; overflow: hidden; }
+```
+
+**Why this matters**: With SSE or frequent polling updates (5-20+ per second), rapid show/hide cycles create jittery "flashing" effects that are distracting and unprofessional.
+
+### ❌ 12. Immediate DOM Updates on Every Event (No Debouncing)
+
+**Bad**: Updating DOM on every incoming event causes jitter with frequent updates.
+
+```javascript
+// ❌ Avoid: Sync update on every SSE message
+eventSource.onmessage = (event) => {
+  const state = JSON.parse(event.data);
+  this._barEl.style.width = state.percent + '%';  // 20x/second = jitter!
+  this._textEl.textContent = state.message;
+};
+```
+
+**Good**: Debounce updates using `requestAnimationFrame`.
+
+```javascript
+// ✅ Correct: RAF debouncing coalesces rapid updates
+_scheduleUpdate() {
+  if (this._pendingFrame) return;
+  this._pendingFrame = requestAnimationFrame(() => {
+    this._pendingFrame = null;
+    this._syncView();
+  });
+}
+
+eventSource.onmessage = (event) => {
+  this._state = JSON.parse(event.data);
+  this._scheduleUpdate();  // Max 1 update per frame
+};
+```
+
+**Rule**: For any control receiving updates faster than 5/second, use RAF debouncing.
+
+### ❌ 13. Scattered State Updates (No Single Source of Truth)
+
+**Bad**: State scattered across multiple properties with separate update methods.
+
+```javascript
+// ❌ Avoid: Scattered state
+setCurrent(value) { this.current = value; this._updateBar(); }
+setTotal(value) { this.total = value; this._updateBar(); }
+setPhase(phase) { this.phase = phase; this._updateStatus(); }
+showWarning(msg) { this.warning = msg; this._updateWarning(); }
+```
+
+**Good**: Single state object with centralized sync.
+
+```javascript
+// ✅ Correct: State object pattern
+this._state = { current: 0, total: 0, phase: 'idle', warnings: [] };
+
+setState(partial) {
+  this._state = { ...this._state, ...partial };
+  this._syncView();  // Single update point
+}
+
+_syncView() {
+  // All DOM updates happen here - easy to debug
+}
+```
+
+**Benefits**: Predictable updates, easy debugging (log `_state`), natural batching.
+
+### ❌ 14. Overriding Reserved Method Names (Causes Construction Crashes)
+
+**Bad**: Defining `on()`, `off()`, or other reserved method names that jsgui3 uses internally.
+
+```javascript
+// ❌ CRASH: jsgui3's Control_Core calls this.on('change', ...) during super()
+class ProgressConnector extends jsgui.Control {
+  constructor(spec) {
+    super(spec);  // 💥 CRASH HERE - jsgui3 calls this.on() before we initialize!
+    this._listeners = { progress: [], error: [] };
+  }
+  
+  on(event, cb) {
+    this._listeners[event].push(cb);  // TypeError: Cannot read 'push' of undefined
+  }
+}
+```
+
+**Why it crashes**: jsgui3's `Control_Core` base class calls `this.on('change', ...)` during the `super()` call. If your class defines its own `on()` method, it gets called before your constructor body runs, so `this._listeners` doesn't exist yet.
+
+**Good**: Use different names for custom event methods.
+
+```javascript
+// ✅ Correct: Use unique method names
+class ProgressConnector extends jsgui.Control {
+  constructor(spec) {
+    super(spec);
+    this._listeners = { progress: [], error: [] };
+  }
+  
+  // Use addListener/removeListener instead of on/off
+  addListener(event, cb) {
+    if (this._listeners[event]) {
+      this._listeners[event].push(cb);
+    }
+    return () => this.removeListener(event, cb);
+  }
+  
+  removeListener(event, cb) {
+    if (this._listeners[event]) {
+      this._listeners[event] = this._listeners[event].filter(c => c !== cb);
+    }
+  }
+}
+```
+
+**Reserved method names to avoid overriding**:
+- `on`, `off`, `emit`, `trigger` - internal event system
+- `set`, `get` - property accessors
+- `add`, `remove` - child control management
+- `content` - Collection of children (see Anti-Pattern #9)
+
+**Error messages that indicate this bug**:
+- `TypeError: Cannot read properties of undefined (reading 'change')`
+- `TypeError: Cannot read properties of undefined (reading 'push')`
+- Stack trace pointing to `Control_Core` constructor
+
 ---
 
 ## Quick Reference

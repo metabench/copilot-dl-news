@@ -144,6 +144,77 @@ class PredictionStrategyManager {
   }
 
   /**
+   * Predict URLs using crawl data (urls table)
+   * @param {Object} entity - Entity to predict for
+   * @param {string} domain - Target domain
+   * @returns {Array<Object>} Predictions with confidence scores
+   */
+  predictFromCrawlData(entity, domain) {
+    const predictions = [];
+    const metadata = this.buildMetadata(entity);
+    if (!metadata || !metadata.slug) return predictions;
+
+    // Prepare statement if not already prepared
+    if (!this._crawlDataStmt) {
+      try {
+        this._crawlDataStmt = this.db.prepare(`
+          SELECT url FROM urls
+          WHERE host = ? AND url LIKE ?
+          LIMIT 20
+        `);
+      } catch (err) {
+        // Handle missing table
+        return [];
+      }
+    }
+
+    const patterns = [
+      `%/${metadata.slug}`,
+      `%/${metadata.slug}/%`
+    ];
+    
+    // Add code if available
+    if (metadata.code) {
+        patterns.push(`%/${metadata.code.toLowerCase()}`);
+        patterns.push(`%/${metadata.code.toLowerCase()}/%`);
+    }
+
+    const seenUrls = new Set();
+
+    for (const pattern of patterns) {
+      try {
+        const rows = this._crawlDataStmt.all(domain, pattern);
+        for (const row of rows) {
+            if (seenUrls.has(row.url)) continue;
+            seenUrls.add(row.url);
+
+            // Simple heuristic: shorter URLs are more likely to be hubs
+            // and URLs ending in the slug are better
+            let confidence = 0.5;
+            if (row.url.endsWith(`/${metadata.slug}`) || row.url.endsWith(`/${metadata.slug}/`)) {
+                confidence = 0.8;
+            } else if (row.url.includes(`/world/${metadata.slug}`)) {
+                confidence = 0.7;
+            }
+
+            predictions.push({
+                url: row.url,
+                confidence,
+                strategy: 'crawl-data',
+                pattern: pattern,
+                entity,
+                domain
+            });
+        }
+      } catch (err) {
+        // Ignore errors
+      }
+    }
+
+    return predictions;
+  }
+
+  /**
    * Predict URLs using regional fallback patterns
    * @param {Object} entity - Entity to predict for
    * @param {string} domain - Target domain

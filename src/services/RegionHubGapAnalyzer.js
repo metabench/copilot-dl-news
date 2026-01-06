@@ -2,7 +2,7 @@
 
 const path = require('path');
 const { getDb } = require('../db');
-const { getTopRegions } = require('../db/sqlite/v1/queries/gazetteer.places');
+const { getTopRegions, getPlacesByCountryAndKind } = require('../db/sqlite/v1/queries/gazetteer.places');
 const { slugify } = require('../tools/slugify');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 
@@ -73,10 +73,27 @@ class RegionHubGapAnalyzer extends HubGapAnalyzerBase {
    * Retrieve top regions prioritised by population/priority score.
    *
    * @param {number} [limit=50] - Maximum number of regions to return.
+   * @param {string} [lang='en'] - Language code.
    * @returns {Array<{id: number, name: string, code: string|null, countryCode: string|null, importance: number}>}
    */
-  getTopRegions(limit = 50) {
-    return getTopRegions(this.db, limit);
+  getTopRegions(limit = 50, lang = 'en') {
+    return getTopRegions(this.db, limit, lang);
+  }
+
+  /**
+   * Get regions for a specific country
+   * @param {string} countryCode - ISO country code
+   * @param {number} [limit=50] - Max regions
+   * @param {string} [lang='en'] - Language code.
+   * @returns {Array} List of regions
+   */
+  getRegionsByCountry(countryCode, limit = 50, lang = 'en') {
+    const places = getPlacesByCountryAndKind(this.db, countryCode, 'region', lang);
+    return places.slice(0, limit).map(p => ({
+      ...p,
+      countryCode: p.country_code,
+      code: p.adm1_code
+    }));
   }
 
   /**

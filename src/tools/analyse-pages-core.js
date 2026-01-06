@@ -9,7 +9,6 @@ const { findProjectRoot } = require('../utils/project-root');
 const { loadNonGeoTopicSlugs } = require('./nonGeoTopicSlugs');
 const { ArticleXPathService } = require('../services/ArticleXPathService');
 const { DecompressionWorkerPool } = require('../background/workers/DecompressionWorkerPool');
-const { createAnalysePagesCoreQueries } = require('../db/sqlite/v1/queries/analysis.analysePagesCore');
 
 function toNumber(value, fallback) {
   const num = Number(value);
@@ -37,7 +36,10 @@ async function analysePages({
   hubSummaryLimit = 100,
   includeHubEvidence = false,
   decompressionPoolSize = null,
-  benchmark = null
+  benchmark = null,
+  analysisOptions = {},
+  timeout = 5000,
+  logSpeed = false
 } = {}) {
   if (!dbPath) {
     const projectRoot = findProjectRoot(__dirname);
@@ -66,7 +68,7 @@ async function analysePages({
     }
 
     const xpathService = new ArticleXPathService({
-      db: db.db,
+      db: db,
       logger
     });
 
@@ -86,7 +88,7 @@ async function analysePages({
       gazetteer = null;
     }
 
-    const queries = createAnalysePagesCoreQueries(db.db);
+    const queries = db.createAnalysePagesCoreQueries();
     const optionalErrors = typeof queries.getOptionalErrors === 'function'
       ? queries.getOptionalErrors()
       : {};
@@ -121,25 +123,9 @@ async function analysePages({
     let skipped = 0;
     const hubAssignments = captureHubSummaries ? [] : null;
     let lastProgressAt = Date.now();
-
-    const emitProgress = () => {
-      if (typeof onProgress !== 'function') return;
-      try {
-        onProgress({
-          processed,
-          updated,
-          placesInserted,
-          hubsInserted,
-          hubsUpdated,
-          unknownInserted,
-          skipped,
-          dryRun,
-          ts: Date.now()
-        });
-      } catch (_) {
-        // ignore consumer errors
-      }
-    };
+    let currentUrl = null;
+    let lastItemTimings = null; // Timing breakdown for last processed item
+    let lastAnalysisResult = null;
 
     const rows = queries.getPendingAnalyses(analysisVersion, limit);
     const hasCompressionBucketSupport = queries.hasCompressionBucketSupport();
@@ -151,9 +137,33 @@ async function analysePages({
 
     const totalRows = Array.isArray(rows) ? rows.length : 0;
 
+    const emitProgress = () => {
+      if (typeof onProgress !== 'function') return;
+      try {
+        onProgress({
+          processed,
+          total: totalRows,
+          updated,
+          placesInserted,
+          hubsInserted,
+          hubsUpdated,
+          unknownInserted,
+          skipped,
+          dryRun,
+          ts: Date.now(),
+          url: currentUrl,
+          lastItemTimings,
+          lastAnalysisResult
+        });
+      } catch (_) {
+        // ignore consumer errors
+      }
+    };
+
     for (const row of rows) {
       processed += 1;
       const position = processed;
+      currentUrl = row?.url || null;
       if (row?.url) {
         const prefix = totalRows > 0
           ? `[analyse-pages] analysing (${position}/${totalRows})`
@@ -228,9 +238,11 @@ async function analysePages({
       };
 
       let analysisResult;
-      const analysisStartedAt = benchmarkEnabled ? performance.now() : null;
+      const analysisStartedAt = (benchmarkEnabled || timeout > 0 || logSpeed) ? performance.now() : null;
+      let timedOut = false;
+
       try {
-        analysisResult = await analyzePage({
+        const analysisPromise = analyzePage({
           url: row.url,
           title: row.title || null,
           section: row.section || null,
@@ -241,26 +253,84 @@ async function analysePages({
           db: db.db,
           targetVersion: analysisVersion,
           nonGeoTopicSlugs,
-          xpathService
+          xpathService,
+          analysisOptions
         });
-      } catch (error) {
-        emit(logger, 'warn', `[analyse-pages] Failed to analyse ${row.url}`, verbose ? error : error?.message);
-        if (benchmarkEntry) {
-          benchmarkEntry.analysisMs = analysisStartedAt != null ? Math.max(0, performance.now() - analysisStartedAt) : null;
-          benchmarkEntry.analysisError = error?.message || String(error);
-          if (benchmarkRecorder) {
-            benchmarkRecorder(benchmarkEntry);
-            benchmarkRecorded = true;
+
+        if (timeout > 0) {
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+              timedOut = true;
+              reject(new Error(`Analysis timed out after ${timeout}ms`));
+            }, timeout);
+          });
+          analysisResult = await Promise.race([analysisPromise, timeoutPromise]);
+        } else {
+          analysisResult = await analysisPromise;
+        }
+
+        // Check if it took too long even if it didn't trigger the timer (sync block)
+        if (timeout > 0 && !timedOut) {
+          const duration = performance.now() - analysisStartedAt;
+          if (duration > timeout) {
+            timedOut = true;
+            throw new Error(`Analysis timed out after ${timeout}ms (sync)`);
           }
         }
-        continue;
+      } catch (error) {
+        const duration = analysisStartedAt != null ? performance.now() - analysisStartedAt : 0;
+        
+        if (timedOut) {
+          emit(logger, 'warn', `[analyse-pages] Timeout analyzing ${row.url} (${duration.toFixed(0)}ms)`);
+          analysisResult = {
+            analysis: {
+              kind: 'error',
+              error: 'Timeout',
+              meta: {
+                durationMs: duration,
+                error: 'Timeout',
+                timedOut: true
+              }
+            },
+            places: [],
+            hubCandidate: null,
+            deepAnalysis: null,
+            preparation: null,
+            timings: { overallMs: duration }
+          };
+        } else {
+          emit(logger, 'warn', `[analyse-pages] Failed to analyse ${row.url}`, verbose ? error : error?.message);
+          if (benchmarkEntry) {
+            benchmarkEntry.analysisMs = analysisStartedAt != null ? Math.max(0, performance.now() - analysisStartedAt) : null;
+            benchmarkEntry.analysisError = error?.message || String(error);
+            if (benchmarkRecorder) {
+              benchmarkRecorder(benchmarkEntry);
+              benchmarkRecorded = true;
+            }
+          }
+          continue;
+        }
       }
+      
+      if (logSpeed && analysisStartedAt != null) {
+        const duration = performance.now() - analysisStartedAt;
+        console.log(`[analyse-pages] Analyzed ${row.url} in ${duration.toFixed(0)}ms`);
+      }
+
       if (benchmarkEntry && analysisStartedAt != null) {
         benchmarkEntry.analysisMs = Math.max(0, performance.now() - analysisStartedAt);
         benchmarkEntry.analysisError = null;
       }
 
       const { analysis, places, hubCandidate, deepAnalysis, preparation } = analysisResult;
+
+      lastAnalysisResult = {
+        places,
+        hubCandidate,
+        deepAnalysis,
+        kind: analysis.kind,
+        meta: analysis.meta
+      };
 
       if (deepAnalysis) {
         analysis.meta = analysis.meta || {};
@@ -321,6 +391,20 @@ async function analysePages({
             benchmarkEntry.analysisBreakdown = analysisTimings;
           }
         }
+
+        // Capture timing breakdown for progress callback (reuse prepTimings from above)
+        const prepBreakdown = analysisTimings.preparation || {};
+        lastItemTimings = {
+          overallMs: analysisTimings.overallMs || null,
+          preparationMs: analysisTimings.preparationMs || null,
+          jsdomMs: prepBreakdown.jsdomMs || null,
+          readabilityMs: prepBreakdown.readabilityMs || null,
+          xpathExtractionMs: prepBreakdown.xpathExtractionMs || null,
+          xpathLearningMs: prepBreakdown.xpathLearningMs || null,
+          usedXPath: Boolean(prepBreakdown.xpathExtractionMs && !prepBreakdown.jsdomMs)
+        };
+      } else {
+        lastItemTimings = null;
       }
 
       const wordCountForUpdate = (() => {

@@ -11,6 +11,7 @@
  */
 
 const { DomainProcessor } = require('./DomainProcessor');
+const { ActiveProbeProcessor } = require('./ActiveProbeProcessor');
 const { BatchCoordinator } = require('./BatchCoordinator');
 const { ValidationOrchestrator } = require('./ValidationOrchestrator');
 const { PersistenceManager } = require('./PersistenceManager');
@@ -67,6 +68,12 @@ class OrchestrationError extends Error {
  * @returns {Promise<Object>} Domain summary
  */
 async function guessPlaceHubsForDomain(options = {}, deps = {}) {
+  // Check for active probe mode
+  if (options.mode === 'active-probe' || options.activePattern) {
+    const activeProcessor = new ActiveProbeProcessor();
+    return activeProcessor.processDomain(options, deps);
+  }
+
   const domainProcessor = new DomainProcessor();
   return domainProcessor.processDomain(options, deps);
 }
@@ -82,7 +89,14 @@ async function guessPlaceHubsForDomain(options = {}, deps = {}) {
  */
 async function guessPlaceHubsBatch(options = {}, deps = {}) {
   const { DomainProcessor } = require('./DomainProcessor');
-  const domainProcessor = new DomainProcessor();
+  const { ActiveProbeProcessor } = require('./ActiveProbeProcessor');
+  
+  let domainProcessor;
+  if (options.activePattern || options.mode === 'active-probe') {
+    domainProcessor = new ActiveProbeProcessor();
+  } else {
+    domainProcessor = new DomainProcessor();
+  }
   
   const batchDeps = {
     ...deps,

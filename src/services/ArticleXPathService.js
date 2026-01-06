@@ -3,13 +3,6 @@
 const path = require("path");
 const cheerio = require("cheerio");
 
-const {
-  ensureArticleXPathPatternSchema,
-  getArticleXPathPatternsForDomain,
-  normalizePatternDomain,
-  recordArticleXPathPatternUsage,
-  upsertArticleXPathPattern
-} = require("../db/sqlite/v1/queries/articleXPathPatterns");
 const { ArticleXPathAnalyzer } = require("../utils/ArticleXPathAnalyzer");
 const { extractDomain, loadDxplLibrary, getDxplForDomain } = require("./shared/dxpl");
 
@@ -42,10 +35,10 @@ function dedupePatterns(patterns) {
   return deduped;
 }
 
-function normalizeDomainOrNull(domain) {
+function normalizeDomainOrNull(domain, queries) {
   if (!domain) return null;
   try {
-    return normalizePatternDomain(domain);
+    return queries.normalizePatternDomain(domain);
   } catch {
     return null;
   }
@@ -75,19 +68,24 @@ class ArticleXPathService {
     this.cacheStats = { hits: 0, misses: 0, warmLoads: 0, refreshes: 0, migrations: 0 };
     this._legacyDxplMap = undefined;
 
-    ensureArticleXPathPatternSchema(this.db, { logger: this.logger });
+    this.queries = this.db.createArticleXPathPatternQueries();
+    this.queries.ensureArticleXPathPatternSchema({ logger: this.logger });
 
     if (preloadDomains && preloadDomains > 0) {
-      this._warmCache(Math.min(Number(preloadDomains) || DEFAULT_PRELOAD_LIMIT, 500));
+      this._warmCache(Math.min(Number(preloadDomains) || DEFAULT_PRELOAD_LIMIT, 500)).catch(err => {
+        this.logger?.warn?.(`[xpath-service] Cache warming failed: ${err.message}`);
+      });
     }
 
     if (migrateLegacyDxpl) {
-      this._migrateLegacyDxplLibrary();
+      this._migrateLegacyDxplLibrary().catch(err => {
+        this.logger?.warn?.(`[xpath-service] Legacy DXPL migration failed: ${err.message}`);
+      });
     }
   }
 
-  getXPathForDomain(domain) {
-    const entry = this._getCacheEntry(domain);
+  async getXPathForDomain(domain) {
+    const entry = await this._getCacheEntry(domain);
     if (!entry || entry.patterns.length === 0) {
       return null;
     }
@@ -103,6 +101,22 @@ class ArticleXPathService {
 
     const analyzer = new ArticleXPathAnalyzer(this.analyzerOptions);
     const result = await analyzer.analyzeHtml(html);
+    return this._processAnalysisResult(result, domain, url);
+  }
+
+  async learnXPathFromDocument(url, document) {
+    const domain = extractDomain(url);
+    if (!domain) {
+      this.logger?.warn?.(`[xpath-service] Invalid URL for learning: ${url}`);
+      return null;
+    }
+
+    const analyzer = new ArticleXPathAnalyzer(this.analyzerOptions);
+    const result = analyzer.analyzeDocument(document);
+    return this._processAnalysisResult(result, domain, url);
+  }
+
+  async _processAnalysisResult(result, domain, url) {
     const topPattern = result?.topPatterns?.[0];
     if (!topPattern || !topPattern.xpath) {
       this.logger?.warn?.(`[xpath-service] No XPath patterns discovered for ${url}`);
@@ -126,7 +140,7 @@ class ArticleXPathService {
       metadata: { alternatives }
     };
 
-    const persisted = upsertArticleXPathPattern(this.db, patternRecord);
+    const persisted = await this.queries.upsertArticleXPathPattern(patternRecord);
     if (!persisted) {
       return null;
     }
@@ -139,11 +153,11 @@ class ArticleXPathService {
     return persisted;
   }
 
-  extractTextWithXPath(url, html) {
+  async extractTextWithXPath(url, html) {
     const domain = extractDomain(url);
     if (!domain) return null;
 
-    const entry = this._getCacheEntry(domain);
+    const entry = await this._getCacheEntry(domain);
     if (!entry || entry.patterns.length === 0) {
       return null;
     }
@@ -157,7 +171,7 @@ class ArticleXPathService {
         const extracted = this._extractWithXPath(html, candidate);
         if (this._isAcceptableExtract(extracted)) {
           const patternDomain = pattern.domain || domain;
-          this._recordUsage(patternDomain, pattern.xpath);
+          await this._recordUsage(patternDomain, pattern.xpath);
           this._touchCachePattern(patternDomain, pattern.xpath);
           return extracted.trim();
         }
@@ -167,8 +181,8 @@ class ArticleXPathService {
     return null;
   }
 
-  hasXPathForDomain(domain) {
-    const entry = this._getCacheEntry(domain);
+  async hasXPathForDomain(domain) {
+    const entry = await this._getCacheEntry(domain);
     return Boolean(entry && entry.patterns.length > 0);
   }
 
@@ -180,27 +194,23 @@ class ArticleXPathService {
     this._migrateLegacyDxplLibrary();
   }
 
-  _warmCache(limit) {
+  async _warmCache(limit) {
     try {
-      const stmt = this.db.prepare(`
-        SELECT domain
-        FROM article_xpath_patterns
-        GROUP BY domain
-        ORDER BY MAX(usage_count) DESC, COUNT(*) DESC
-        LIMIT ?
-      `);
-      const rows = stmt.all(Math.max(1, Number(limit) || DEFAULT_PRELOAD_LIMIT));
-      for (const row of rows) {
-        this._getCacheEntry(row.domain);
+      // Use the query interface to get top domains
+      if (typeof this.queries.getTopDomains === 'function') {
+        const rows = await this.queries.getTopDomains(Math.max(1, Number(limit) || DEFAULT_PRELOAD_LIMIT));
+        for (const row of rows) {
+          await this._getCacheEntry(row.domain);
+        }
+        this.cacheStats.warmLoads += rows.length;
       }
-      this.cacheStats.warmLoads += rows.length;
     } catch (error) {
       this.logger?.warn?.(`[xpath-service] Failed to warm cache: ${error.message}`);
     }
   }
 
-  _getCacheEntry(domain) {
-    const normalized = normalizeDomainOrNull(domain);
+  async _getCacheEntry(domain) {
+    const normalized = normalizeDomainOrNull(domain, this.queries);
     if (!normalized) {
       return null;
     }
@@ -213,7 +223,7 @@ class ArticleXPathService {
     }
 
     this.cacheStats.misses += 1;
-    const patterns = this._loadPatternsForDomain(normalized);
+    const patterns = await this._loadPatternsForDomain(normalized);
     const entry = {
       domain: normalized,
       patterns,
@@ -223,15 +233,15 @@ class ArticleXPathService {
     return entry;
   }
 
-  _loadPatternsForDomain(domain) {
-    let patterns = getArticleXPathPatternsForDomain(this.db, domain, {
+  async _loadPatternsForDomain(domain) {
+    let patterns = await this.queries.getArticleXPathPatternsForDomain(domain, {
       limit: this.maxPatternsPerDomain * 2
     });
 
     if (patterns.length === 0 && this.dxplDir) {
-      const imported = this._importLegacyDxplForDomain(domain);
+      const imported = await this._importLegacyDxplForDomain(domain);
       if (imported.length > 0) {
-        patterns = getArticleXPathPatternsForDomain(this.db, domain, {
+        patterns = await this.queries.getArticleXPathPatternsForDomain(domain, {
           limit: this.maxPatternsPerDomain * 2
         });
       }
@@ -242,7 +252,7 @@ class ArticleXPathService {
   }
 
   _applyPatternToCache(domain, pattern) {
-    const normalized = normalizeDomainOrNull(domain);
+    const normalized = normalizeDomainOrNull(domain, this.queries);
     if (!normalized) return;
 
     const entry = this.cache.get(normalized) || {
@@ -269,7 +279,7 @@ class ArticleXPathService {
 
   _recordUsage(domain, xpath) {
     try {
-      recordArticleXPathPatternUsage(this.db, domain, xpath, {
+      this.queries.recordArticleXPathPatternUsage(domain, xpath, {
         at: new Date().toISOString()
       });
     } catch (error) {
@@ -278,7 +288,7 @@ class ArticleXPathService {
   }
 
   _touchCachePattern(domain, xpath) {
-    const normalized = normalizeDomainOrNull(domain);
+    const normalized = normalizeDomainOrNull(domain, this.queries);
     if (!normalized) return;
     const entry = this.cache.get(normalized);
     if (!entry) return;
@@ -296,7 +306,7 @@ class ArticleXPathService {
     this.cache.set(normalized, entry);
   }
 
-  _migrateLegacyDxplLibrary() {
+  async _migrateLegacyDxplLibrary() {
     const dxplMap = this._getLegacyDxplMap();
     if (!dxplMap || dxplMap.size === 0) {
       return;
@@ -305,7 +315,7 @@ class ArticleXPathService {
     const processed = new Set();
     let importedCount = 0;
     for (const [domain, dxpl] of dxplMap.entries()) {
-      const normalized = normalizeDomainOrNull(domain);
+      const normalized = normalizeDomainOrNull(domain, this.queries);
       if (!normalized || processed.has(normalized)) continue;
       processed.add(normalized);
 
@@ -328,7 +338,7 @@ class ArticleXPathService {
 
         if (!prepared.xpath) continue;
 
-        const persisted = upsertArticleXPathPattern(this.db, prepared);
+        const persisted = await this.queries.upsertArticleXPathPattern(prepared);
         if (persisted) {
           this._applyPatternToCache(normalized, persisted);
           importedCount += 1;
@@ -344,7 +354,7 @@ class ArticleXPathService {
     }
   }
 
-  _importLegacyDxplForDomain(domain) {
+  async _importLegacyDxplForDomain(domain) {
     const dxplMap = this._getLegacyDxplMap();
     if (!dxplMap) return [];
 
@@ -370,7 +380,7 @@ class ArticleXPathService {
         alternatives,
         metadata: { alternatives }
       };
-      const stored = upsertArticleXPathPattern(this.db, prepared);
+      const stored = await this.queries.upsertArticleXPathPattern(prepared);
       if (stored) {
         persisted.push(stored);
         this._applyPatternToCache(domain, stored);
@@ -441,6 +451,30 @@ class ArticleXPathService {
 
   _xpathToCssSelector(xpath) {
     if (!xpath || typeof xpath !== "string") return null;
+
+    // Handle //*[@id="..."] syntax -> #id
+    const idMatch = xpath.match(/\/\/\*\[@id=["']([^"']+)["']\]/);
+    if (idMatch) {
+      return `#${idMatch[1]}`;
+    }
+
+    // Handle //tagname[@id="..."] syntax -> tagname#id
+    const tagIdMatch = xpath.match(/\/\/(\w+)\[@id=["']([^"']+)["']\]/);
+    if (tagIdMatch) {
+      return `${tagIdMatch[1]}#${tagIdMatch[2]}`;
+    }
+
+    // Handle [@class="..."] or [contains(@class, "...")] patterns
+    const classMatch = xpath.match(/\/\/\*\[@class=["']([^"']+)["']\]/);
+    if (classMatch) {
+      return `.${classMatch[1].split(/\s+/).join(".")}`;
+    }
+
+    // Handle [data-*="..."] patterns
+    const dataAttrMatch = xpath.match(/\/\/\*\[@(data-[a-z-]+)=["']([^"']+)["']\]/);
+    if (dataAttrMatch) {
+      return `[${dataAttrMatch[1]}="${dataAttrMatch[2]}"]`;
+    }
 
     if (xpath.startsWith("/html/body/")) {
       const parts = xpath.replace("/html/body/", "").split("/");

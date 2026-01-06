@@ -73,6 +73,7 @@ function renderTaskManagerUI() {
             <option value="">-- Select Task Type --</option>
             <option value="article-compression">Article Compression (Brotli)</option>
             <option value="analysis-run">Content Analysis (AI)</option>
+            <option value="backfill-dates">Backfill Article Dates</option>
           </select>
         </div>
         
@@ -91,7 +92,40 @@ function renderTaskManagerUI() {
       </div>
       
       <div class="task-list-container">
-        <h3>Active & Recent Tasks</h3>
+        <div class="task-list-header">
+          <h3>Active & Recent Tasks</h3>
+          <div class="task-filters">
+            <select id="task-status-filter" class="form-control form-control-sm">
+              <option value="">All Statuses</option>
+              <option value="running">Running</option>
+              <option value="paused">Paused</option>
+              <option value="resuming">Resuming</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="abandoned">Abandoned</option>
+            </select>
+            <select id="task-type-filter" class="form-control form-control-sm">
+              <option value="">All Types</option>
+              <option value="analysis-run">Analysis</option>
+              <option value="article-compression">Compression</option>
+              <option value="backfill-dates">Backfill Dates</option>
+            </select>
+            <input type="number" id="task-limit" class="form-control form-control-sm" 
+                   value="20" min="5" max="100" style="width: 80px" title="Max tasks to show" />
+          </div>
+        </div>
+        <div class="task-batch-actions" id="task-batch-actions" style="display: none;">
+          <span class="batch-count">0 tasks selected</span>
+          <button class="btn btn-sm btn-warning" id="batch-abandon-btn" title="Abandon old/obsolete tasks">
+            🗑️ Abandon Selected
+          </button>
+          <button class="btn btn-sm btn-secondary" id="batch-clear-selection-btn">
+            Clear Selection
+          </button>
+        </div>
+        <div id="task-summary" class="task-summary"></div>
         <div id="task-list" class="task-list">
           <p class="loading">Loading tasks...</p>
         </div>
@@ -205,6 +239,43 @@ function renderAnalysisTaskConfig() {
 }
 
 /**
+ * Render backfill dates task configuration form
+ */
+function renderBackfillDatesTaskConfig() {
+  return `
+    <h4>Backfill Settings</h4>
+    
+    <div class="form-group">
+      <label for="backfill-limit">Article Limit:</label>
+      <input type="number" id="backfill-limit" class="form-control" 
+             value="1000" min="1" max="100000" step="100" />
+      <small class="form-text">Maximum articles to process (0 = unlimited)</small>
+    </div>
+    
+    <div class="form-group">
+      <label for="backfill-batch-size">Batch Size:</label>
+      <input type="number" id="backfill-batch-size" class="form-control" 
+             value="100" min="10" max="1000" step="10" />
+      <small class="form-text">Articles per batch (default: 100)</small>
+    </div>
+    
+    <div class="form-group">
+      <label for="backfill-delay">Delay Between Batches (ms):</label>
+      <input type="number" id="backfill-delay" class="form-control" 
+             value="50" min="0" max="5000" step="50" />
+      <small class="form-text">Pause between batches to reduce load</small>
+    </div>
+    
+    <div class="form-group">
+      <label>
+        <input type="checkbox" id="backfill-dry-run" />
+        Dry Run (preview without writing)
+      </label>
+    </div>
+  `;
+}
+
+/**
  * Setup event listeners
  */
 function setupEventListeners(sseManager) {
@@ -223,6 +294,15 @@ function setupEventListeners(sseManager) {
     createTask(true);
   });
 
+  // Filter controls
+  document.getElementById('task-status-filter')?.addEventListener('change', () => refreshTaskList());
+  document.getElementById('task-type-filter')?.addEventListener('change', () => refreshTaskList());
+  document.getElementById('task-limit')?.addEventListener('change', () => refreshTaskList());
+  
+  // Batch action controls
+  document.getElementById('batch-abandon-btn')?.addEventListener('click', () => batchAbandonSelected());
+  document.getElementById('batch-clear-selection-btn')?.addEventListener('click', () => clearTaskSelection());
+
   const telemetryClearBtn = document.getElementById('telemetry-clear-btn');
   telemetryClearBtn?.addEventListener('click', () => clearTelemetryEvents());
 
@@ -237,6 +317,9 @@ function setupEventListeners(sseManager) {
     }
   });
 }
+
+// Track selected tasks for batch operations
+const selectedTaskIds = new Set();
 
 /**
  * Handle task type selection change
@@ -261,6 +344,11 @@ function handleTaskTypeChange(taskType) {
     createStartBtn.disabled = false;
   } else if (taskType === 'analysis-run') {
     configContainer.innerHTML = renderAnalysisTaskConfig();
+    configContainer.style.display = 'block';
+    createBtn.disabled = false;
+    createStartBtn.disabled = false;
+  } else if (taskType === 'backfill-dates') {
+    configContainer.innerHTML = renderBackfillDatesTaskConfig();
     configContainer.style.display = 'block';
     createBtn.disabled = false;
     createStartBtn.disabled = false;
@@ -383,6 +471,13 @@ function gatherTaskConfig(taskType) {
       delayMs: parseInt(document.getElementById('delay-ms-analysis')?.value || '100'),
       force: document.getElementById('force-reanalysis')?.checked || false
     };
+  } else if (taskType === 'backfill-dates') {
+    return {
+      limit: parseInt(document.getElementById('backfill-limit')?.value || '1000'),
+      batchSize: parseInt(document.getElementById('backfill-batch-size')?.value || '100'),
+      delayMs: parseInt(document.getElementById('backfill-delay')?.value || '50'),
+      dryRun: document.getElementById('backfill-dry-run')?.checked || false
+    };
   }
   
   return {};
@@ -393,13 +488,31 @@ function gatherTaskConfig(taskType) {
  */
 async function refreshTaskList() {
   const taskList = document.getElementById('task-list');
+  const taskSummary = document.getElementById('task-summary');
   if (!taskList) return;
   
   try {
-    const response = await fetch('/api/background-tasks?limit=20');
+    // Get filter values
+    const statusFilter = document.getElementById('task-status-filter')?.value || '';
+    const typeFilter = document.getElementById('task-type-filter')?.value || '';
+    const limit = parseInt(document.getElementById('task-limit')?.value || '20');
+    
+    // Build query string
+    const params = new URLSearchParams();
+    params.set('limit', limit);
+    if (statusFilter) params.set('status', statusFilter);
+    if (typeFilter) params.set('taskType', typeFilter);
+    
+    const response = await fetch(`/api/background-tasks?${params.toString()}`);
     const result = await response.json();
     
     if (result.success && result.tasks) {
+      // Show summary of what's loaded
+      if (taskSummary) {
+        const counts = countTasksByStatus(result.tasks);
+        taskSummary.innerHTML = renderTaskSummary(counts, result.tasks.length, limit);
+      }
+      
       renderTaskList(result.tasks);
     } else {
       taskList.innerHTML = '<p class="error">Failed to load tasks</p>';
@@ -407,6 +520,189 @@ async function refreshTaskList() {
   } catch (error) {
     taskList.innerHTML = `<p class="error">Error loading tasks: ${error.message}</p>`;
   }
+}
+
+/**
+ * Count tasks by status
+ */
+function countTasksByStatus(tasks) {
+  const counts = {};
+  for (const task of tasks) {
+    counts[task.status] = (counts[task.status] || 0) + 1;
+  }
+  return counts;
+}
+
+/**
+ * Render task summary
+ */
+function renderTaskSummary(counts, shown, limit) {
+  const parts = [];
+  if (counts.running) parts.push(`<span class="summary-running">▶️ ${counts.running} running</span>`);
+  if (counts.resuming) parts.push(`<span class="summary-resuming">🔄 ${counts.resuming} resuming</span>`);
+  if (counts.paused) parts.push(`<span class="summary-paused">⏸️ ${counts.paused} paused</span>`);
+  if (counts.pending) parts.push(`<span class="summary-pending">⏳ ${counts.pending} pending</span>`);
+  if (counts.completed) parts.push(`<span class="summary-completed">✅ ${counts.completed} completed</span>`);
+  if (counts.failed) parts.push(`<span class="summary-failed">❌ ${counts.failed} failed</span>`);
+  if (counts.cancelled) parts.push(`<span class="summary-cancelled">🛑 ${counts.cancelled} cancelled</span>`);
+  if (counts.abandoned) parts.push(`<span class="summary-abandoned">🗑️ ${counts.abandoned} abandoned</span>`);
+  
+  const showingText = shown >= limit ? `Showing first ${limit}` : `Showing ${shown}`;
+  return `<div class="task-summary-counts">${parts.join(' · ')}</div><div class="task-summary-showing">${showingText}</div>`;
+}
+
+/**
+ * Toggle task selection for batch operations
+ */
+function toggleTaskSelection(taskId) {
+  if (selectedTaskIds.has(taskId)) {
+    selectedTaskIds.delete(taskId);
+  } else {
+    selectedTaskIds.add(taskId);
+  }
+  updateBatchActionsUI();
+  updateTaskCardSelection(taskId);
+}
+
+/**
+ * Update batch actions visibility
+ */
+function updateBatchActionsUI() {
+  const batchActions = document.getElementById('task-batch-actions');
+  const countSpan = batchActions?.querySelector('.batch-count');
+  
+  if (batchActions) {
+    if (selectedTaskIds.size > 0) {
+      batchActions.style.display = 'flex';
+      if (countSpan) countSpan.textContent = `${selectedTaskIds.size} tasks selected`;
+    } else {
+      batchActions.style.display = 'none';
+    }
+  }
+}
+
+/**
+ * Update visual selection state of task card
+ */
+function updateTaskCardSelection(taskId) {
+  const card = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+  if (card) {
+    card.classList.toggle('selected', selectedTaskIds.has(taskId));
+  }
+}
+
+/**
+ * Clear task selection
+ */
+function clearTaskSelection() {
+  selectedTaskIds.clear();
+  document.querySelectorAll('.task-card.selected').forEach(card => card.classList.remove('selected'));
+  updateBatchActionsUI();
+}
+
+/**
+ * Batch abandon selected tasks
+ */
+async function batchAbandonSelected() {
+  if (selectedTaskIds.size === 0) return;
+  
+  const reason = prompt(
+    'Enter reason for abandoning these tasks:\n\n' +
+    '• obsolete_version - Using outdated analysis version\n' +
+    '• superseded - Replaced by newer task\n' +
+    '• system_upgrade - System upgraded, old tasks incompatible\n' +
+    '• user_request - Manual cleanup',
+    'obsolete_version'
+  );
+  
+  if (!reason) return;
+  
+  const reasonDetail = prompt('Additional detail (optional):', '');
+  
+  try {
+    for (const taskId of selectedTaskIds) {
+      await fetch(`/api/background-tasks/${taskId}/abandon`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason, reasonDetail })
+      });
+    }
+    
+    showNotification('success', `Abandoned ${selectedTaskIds.size} tasks`);
+    clearTaskSelection();
+    refreshTaskList();
+    
+  } catch (error) {
+    showNotification('error', `Failed to abandon tasks: ${error.message}`);
+  }
+}
+
+/**
+ * Render task findings/stats based on task type
+ * @param {string} taskType - Type of task (analysis-run, backfill-dates, etc.)
+ * @param {Object} stats - Stats object from task metadata
+ * @param {string} status - Task status
+ * @returns {string} HTML string for findings display
+ */
+function renderTaskFindings(taskType, stats, status) {
+  // Only show findings for completed or running tasks with stats
+  if (!stats || Object.keys(stats).length === 0) {
+    return '';
+  }
+  
+  const items = [];
+  
+  if (taskType === 'analysis-run') {
+    if (stats.pagesProcessed !== undefined) {
+      items.push(`<span class="finding-item">📄 ${stats.pagesProcessed} pages processed</span>`);
+    }
+    if (stats.pagesUpdated !== undefined) {
+      items.push(`<span class="finding-item">✏️ ${stats.pagesUpdated} updated</span>`);
+    }
+    if (stats.placesExtracted !== undefined && stats.placesExtracted > 0) {
+      items.push(`<span class="finding-item">📍 ${stats.placesExtracted} places</span>`);
+    }
+    if (stats.errors !== undefined && stats.errors > 0) {
+      items.push(`<span class="finding-item error">❌ ${stats.errors} errors</span>`);
+    }
+    if (stats.skipped !== undefined && stats.skipped > 0) {
+      items.push(`<span class="finding-item">⏭️ ${stats.skipped} skipped</span>`);
+    }
+  } else if (taskType === 'backfill-dates') {
+    if (stats.articlesProcessed !== undefined) {
+      items.push(`<span class="finding-item">📰 ${stats.articlesProcessed} articles</span>`);
+    }
+    if (stats.datesExtracted !== undefined) {
+      items.push(`<span class="finding-item">📅 ${stats.datesExtracted} dates found</span>`);
+    }
+    if (stats.updated !== undefined) {
+      items.push(`<span class="finding-item">✏️ ${stats.updated} updated</span>`);
+    }
+    if (stats.skipped !== undefined && stats.skipped > 0) {
+      items.push(`<span class="finding-item">⏭️ ${stats.skipped} skipped</span>`);
+    }
+    if (stats.errors !== undefined && stats.errors > 0) {
+      items.push(`<span class="finding-item error">❌ ${stats.errors} errors</span>`);
+    }
+  } else if (taskType === 'compression') {
+    if (stats.bytesCompressed !== undefined) {
+      const mb = (stats.bytesCompressed / 1024 / 1024).toFixed(2);
+      items.push(`<span class="finding-item">📦 ${mb} MB compressed</span>`);
+    }
+    if (stats.filesProcessed !== undefined) {
+      items.push(`<span class="finding-item">📁 ${stats.filesProcessed} files</span>`);
+    }
+  }
+  
+  if (items.length === 0) {
+    return '';
+  }
+  
+  return `
+    <div class="task-findings">
+      ${items.join(' ')}
+    </div>
+  `;
 }
 
 /**
@@ -452,13 +748,19 @@ function renderTaskList(tasks) {
 function renderTaskCard(task) {
   const statusClass = `status-${task.status}`;
   const progress = task.progress || { current: 0, total: 0, percent: 0, message: null };
+  const stage = task.metadata && typeof task.metadata.stage === 'string' ? task.metadata.stage : null;
   
   // Determine which controls to show
   const showStart = task.status === 'pending';
   const showPause = task.status === 'running' || task.status === 'resuming';
   const showResume = task.status === 'paused';
   const showStop = task.status === 'running' || task.status === 'paused' || task.status === 'resuming';
-  const showDelete = task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled';
+  const showDelete = task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled' || task.status === 'abandoned';
+  const showAbandon = task.status === 'pending' || task.status === 'paused';
+  
+  // Can select for batch operations if not already in final state
+  const canSelect = task.status === 'pending' || task.status === 'paused' || task.status === 'resuming';
+  const isSelected = selectedTaskIds.has(task.id);
   
   // Format status display
   let statusDisplay = task.status;
@@ -477,9 +779,14 @@ function renderTaskCard(task) {
     statusIcon = '❌ ';
   } else if (task.status === 'cancelled') {
     statusIcon = '🛑 ';
+  } else if (task.status === 'abandoned') {
+    statusIcon = '🗑️ ';
+    statusDisplay = 'Abandoned';
   }
   
   const isAnalysisTask = task.task_type === 'analysis-run';
+  const isBackfillTask = task.task_type === 'backfill-dates';
+  
   // Enhanced progress display
   const hasValidProgress = progress.total > 0;
   const progressPercent = hasValidProgress ? progress.percent : 0;
@@ -487,7 +794,14 @@ function renderTaskCard(task) {
     ? `${progress.current} / ${progress.total} (${progressPercent}%)`
     : (task.status === 'resuming' ? 'Loading progress...' : 'Starting...');
 
+  // Extract stats from metadata for findings display
+  const stats = task.metadata?.stats || {};
+  const findingsHtml = renderTaskFindings(task.task_type, stats, task.status);
+
   const analysisProgressExtras = [];
+  if (stage) {
+    analysisProgressExtras.push(`<div class="task-stage"><strong>Stage:</strong> ${stage}</div>`);
+  }
   if (progress.message) {
     analysisProgressExtras.push(`<div class="progress-message">${progress.message}</div>`);
   }
@@ -503,6 +817,7 @@ function renderTaskCard(task) {
       </div>
     ` : `
       <div class="task-progress">
+        ${stage ? `<div class="task-stage"><strong>Stage:</strong> ${stage}</div>` : ''}
         <div class="progress-bar-container">
           <div class="progress-bar ${task.status === 'resuming' ? 'progress-bar-resuming' : ''}" style="width: ${progressPercent}%"></div>
         </div>
@@ -514,9 +829,15 @@ function renderTaskCard(task) {
       </div>
     `;
   
+  // Cancellation reason display
+  const cancellationReasonHtml = task.cancellation_reason 
+    ? `<div class="cancellation-reason"><strong>Reason:</strong> ${formatCancellationReason(task.cancellation_reason)}</div>` 
+    : '';
+
   return `
-    <div class="task-card ${statusClass}" data-task-id="${task.id}">
+    <div class="task-card ${statusClass}${isSelected ? ' selected' : ''}" data-task-id="${task.id}">
       <div class="task-header">
+        ${canSelect ? `<input type="checkbox" class="task-select-checkbox" ${isSelected ? 'checked' : ''} data-task-id="${task.id}" title="Select for batch operations">` : ''}
         <span class="task-type">${task.task_type}</span>
         <span class="task-status badge badge-${task.status}">${statusIcon}${statusDisplay}</span>
       </div>
@@ -529,23 +850,51 @@ function renderTaskCard(task) {
         ${task.resume_started_at ? `<div><strong>Resumed:</strong> ${formatDate(task.resume_started_at)}</div>` : ''}
         ${task.completed_at ? `<div><strong>Completed:</strong> ${formatDate(task.completed_at)}</div>` : ''}
         ${task.error_message ? `<div class="error-message"><strong>Error:</strong> ${task.error_message}</div>` : ''}
+        ${cancellationReasonHtml}
       </div>
+      
+      ${findingsHtml}
       
       <div class="task-controls">
         ${showStart ? `<button class="btn btn-sm btn-success" data-action="start" data-task-id="${task.id}">Start</button>` : ''}
         ${showPause ? `<button class="btn btn-sm btn-warning" data-action="pause" data-task-id="${task.id}">Pause</button>` : ''}
         ${showResume ? `<button class="btn btn-sm btn-success" data-action="resume" data-task-id="${task.id}">Resume</button>` : ''}
         ${showStop ? `<button class="btn btn-sm btn-danger" data-action="stop" data-task-id="${task.id}">Cancel</button>` : ''}
+        ${showAbandon ? `<button class="btn btn-sm btn-outline-secondary" data-action="abandon" data-task-id="${task.id}">🗑️ Abandon</button>` : ''}
         ${showDelete ? `<button class="btn btn-sm btn-secondary" data-action="delete" data-task-id="${task.id}">Delete</button>` : ''}
+        ${isAnalysisTask ? `<a href="/analysis" class="btn btn-sm btn-primary" target="_blank">📊 View Results</a>` : ''}
       </div>
     </div>
   `;
 }
 
 /**
- * Attach event listeners to task control buttons
+ * Format cancellation reason for display
+ */
+function formatCancellationReason(reason) {
+  if (!reason) return '';
+  try {
+    const parsed = typeof reason === 'string' ? JSON.parse(reason) : reason;
+    const reasonLabels = {
+      'user_request': 'User Request',
+      'obsolete_version': 'Obsolete Version',
+      'superseded': 'Superseded by New Task',
+      'system_upgrade': 'System Upgrade',
+      'timeout': 'Timeout',
+      'resource_limit': 'Resource Limit'
+    };
+    const label = reasonLabels[parsed.reason] || parsed.reason;
+    return parsed.detail ? `${label} - ${parsed.detail}` : label;
+  } catch {
+    return reason;
+  }
+}
+
+/**
+ * Attach event listeners to task control buttons and checkboxes
  */
 function attachTaskControlListeners() {
+  // Action buttons
   document.querySelectorAll('[data-action]').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       const action = e.target.dataset.action;
@@ -554,24 +903,54 @@ function attachTaskControlListeners() {
       await performTaskAction(action, taskId);
     });
   });
+  
+  // Selection checkboxes
+  document.querySelectorAll('.task-select-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', (e) => {
+      const taskId = e.target.dataset.taskId;
+      toggleTaskSelection(taskId);
+    });
+  });
 }
 
 /**
- * Perform task action (start/pause/resume/stop/delete)
+ * Perform task action (start/pause/resume/stop/delete/abandon)
  */
 async function performTaskAction(action, taskId) {
   try {
-    let endpoint, method;
+    let endpoint, method, body;
     
     if (action === 'delete') {
       endpoint = `/api/background-tasks/${taskId}`;
       method = 'DELETE';
+    } else if (action === 'abandon') {
+      // Prompt for reason
+      const reason = prompt(
+        'Reason for abandonment:\n' +
+        '• obsolete_version - Using outdated analysis version\n' +
+        '• superseded - Replaced by newer task\n' +
+        '• user_request - Manual cleanup',
+        'obsolete_version'
+      );
+      if (!reason) return; // User cancelled
+      
+      const detail = prompt('Additional detail (optional):', '');
+      
+      endpoint = `/api/background-tasks/${taskId}/abandon`;
+      method = 'POST';
+      body = JSON.stringify({ reason, reasonDetail: detail });
     } else {
       endpoint = `/api/background-tasks/${taskId}/${action}`;
       method = 'POST';
     }
     
-    const response = await fetch(endpoint, { method });
+    const fetchOptions = { method };
+    if (body) {
+      fetchOptions.headers = { 'Content-Type': 'application/json' };
+      fetchOptions.body = body;
+    }
+    
+    const response = await fetch(endpoint, fetchOptions);
     const result = await response.json();
     
     // Handle rate limiting (429) with proposed actions
@@ -907,6 +1286,13 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 if (typeof window !== 'undefined') {
+  // Core UI initialization (called from HTML inline script)
+  window.initBackgroundTasksUI = initBackgroundTasksUI;
+  window.updateTaskCard = updateTaskCard;
+  window.refreshTaskList = refreshTaskList;
+  window.showNotification = showNotification;
+  
+  // Telemetry functions
   window.appendBackgroundTelemetry = appendTelemetryEvent;
   window.clearBackgroundTelemetry = clearTelemetryEvents;
   window.toggleBackgroundTelemetryPaused = toggleTelemetryPaused;

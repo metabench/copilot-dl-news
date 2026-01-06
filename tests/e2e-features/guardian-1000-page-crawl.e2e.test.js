@@ -6,7 +6,8 @@ const {
   spawnGuardianFixture,
   waitForHttpOk,
   stopChild,
-  sleep
+  sleep,
+  getTelemetryOptionsFromEnv
 } = require("../helpers/guardianFixtureCrawl");
 
 test(
@@ -32,7 +33,8 @@ test(
       const result = await crawlPages({
         startUrl: `${baseUrl}/page/1`,
         maxPages: pages,
-        concurrency: 25
+        concurrency: 25,
+        telemetry: getTelemetryOptionsFromEnv()
       });
 
       expect(result.visitedCount).toBe(pages);

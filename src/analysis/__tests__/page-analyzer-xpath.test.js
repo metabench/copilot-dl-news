@@ -1,4 +1,6 @@
+const SQLiteNewsDatabase = require('../../db/sqlite/v1/SQLiteNewsDatabase');
 const Database = require('better-sqlite3');
+const { initializeSchema } = require('../../db/sqlite/v1/schema');
 const { analyzePage, buildAnalysis, prepareArticleContent } = require('../page-analyzer');
 const { ArticleXPathService } = require('../../services/ArticleXPathService');
 
@@ -8,7 +10,9 @@ describe('Page Analyzer XPath Integration', () => {
   let xpathService;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    const dbHandle = new Database(':memory:');
+    initializeSchema(dbHandle);
+    db = new SQLiteNewsDatabase(dbHandle);
 
     mockGazetteer = {
       placeNames: new Map(),
@@ -46,12 +50,12 @@ describe('Page Analyzer XPath Integration', () => {
 
     test('uses XPath extraction when pattern exists', async () => {
       // Mock XPath service to have a pattern for the domain
-      xpathService.hasXPathForDomain = jest.fn(() => true);
-      xpathService.getXPathForDomain = jest.fn(() => ({
+      xpathService.hasXPathForDomain = jest.fn(() => Promise.resolve(true));
+      xpathService.getXPathForDomain = jest.fn(() => Promise.resolve({
         xpath: '/html/body/main/article',
         confidence: 0.85
       }));
-      xpathService.extractTextWithXPath = jest.fn(() => 'Test Article This is the main article content about London and Paris.');
+      xpathService.extractTextWithXPath = jest.fn(() => Promise.resolve('Test Article This is the main article content about London and Paris.'));
 
       const preparation = await prepareArticleContent({
         url: 'https://www.theguardian.com/test',
@@ -76,10 +80,10 @@ describe('Page Analyzer XPath Integration', () => {
 
     test('learns new XPath pattern when none exists', async () => {
       // Mock XPath service to have no existing pattern and learn a new one
-      xpathService.hasXPathForDomain = jest.fn(() => false);
+      xpathService.hasXPathForDomain = jest.fn(() => Promise.resolve(false));
       xpathService.extractTextWithXPath = jest.fn()
-        .mockReturnValueOnce(null) // First call (no pattern) returns null
-        .mockReturnValueOnce('Test Article This is the main article content about London and Paris.'); // Second call (after learning) returns text
+        .mockReturnValueOnce(Promise.resolve(null)) // First call (no pattern) returns null
+        .mockReturnValueOnce(Promise.resolve('Test Article This is the main article content about London and Paris.')); // Second call (after learning) returns text
       xpathService.learnXPathFromHtml = jest.fn(() => Promise.resolve({
         xpath: '/html/body/main/article',
         confidence: 0.85
@@ -108,8 +112,8 @@ describe('Page Analyzer XPath Integration', () => {
 
     test('falls back to Readability when XPath fails', async () => {
       // Mock XPath service to fail
-      xpathService.hasXPathForDomain = jest.fn(() => true);
-      xpathService.extractTextWithXPath = jest.fn(() => null);
+      xpathService.hasXPathForDomain = jest.fn(() => Promise.resolve(true));
+      xpathService.extractTextWithXPath = jest.fn(() => Promise.resolve(null));
 
       const preparation = await prepareArticleContent({
         url: 'https://www.example.com/test',
@@ -204,10 +208,10 @@ describe('Page Analyzer XPath Integration', () => {
 
   describe('XPath pattern metadata', () => {
     test('includes XPath in analysis metadata when learned', async () => {
-      xpathService.hasXPathForDomain = jest.fn(() => false);
+      xpathService.hasXPathForDomain = jest.fn(() => Promise.resolve(false));
       xpathService.extractTextWithXPath = jest.fn()
-        .mockReturnValueOnce(null) // First call returns null
-        .mockReturnValueOnce('Extracted article text'); // Second call returns text
+        .mockReturnValueOnce(Promise.resolve(null)) // First call returns null
+        .mockReturnValueOnce(Promise.resolve('Extracted article text')); // Second call returns text
       xpathService.learnXPathFromHtml = jest.fn(() => Promise.resolve({
         xpath: '/html/body/div[1]/article',
         confidence: 0.92

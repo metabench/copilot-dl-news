@@ -14,8 +14,6 @@ class PlannerKnowledgeService {
     this.patternCache = new Map();
     this.hubValidationCache = new Map();
     this.cacheExpiry = 30 * 60 * 1000; // 30 minutes
-    
-    console.log('Planner knowledge service initialized');
   }
 
   /**

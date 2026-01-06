@@ -425,6 +425,209 @@ app.get("/api/trees", (req, res) => {
   });
 });
 
+// API: Classify a URL and explain the decision path
+app.get("/api/classify", async (req, res) => {
+  const { url } = req.query;
+  if (!url) {
+    return res.status(400).json({ error: "url query parameter required" });
+  }
+  
+  try {
+    // Load the URL classification tree
+    const urlClassTreePath = path.join(process.cwd(), "config", "decision-trees", "url-classification.json");
+    if (!fs.existsSync(urlClassTreePath)) {
+      return res.status(404).json({ error: "URL classification tree not found" });
+    }
+    
+    const decisionTree = JSON.parse(fs.readFileSync(urlClassTreePath, "utf8"));
+    
+    // Compute URL signals
+    const signals = computeUrlSignals(url);
+    if (signals.error) {
+      return res.status(400).json({ error: signals.error });
+    }
+    
+    // Classify through each category tree
+    const categories = ["nav", "hub", "article"];
+    const traces = {};
+    let result = { classification: decisionTree.fallback || "unknown", confidence: 0.5 };
+    
+    for (const category of categories) {
+      const catTree = decisionTree.categories[category];
+      if (!catTree || !catTree.tree) continue;
+      
+      const traceResult = classifyWithTrace(signals, catTree.tree);
+      traces[category] = traceResult;
+      
+      if (traceResult.result === "match") {
+        result = {
+          classification: category,
+          confidence: 1.0,
+          reason: traceResult.reason,
+          matchedAt: traceResult.trace.find(t => t.type === "result")?.id || "unknown"
+        };
+        break;
+      }
+    }
+    
+    res.json({
+      url,
+      classification: result.classification,
+      confidence: result.confidence,
+      reason: result.reason || "no category matched",
+      signals,
+      traces
+    });
+    
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Helper: Compute URL signals
+function computeUrlSignals(urlStr) {
+  try {
+    const u = new URL(urlStr);
+    const urlPath = u.pathname;
+    const segments = urlPath.split("/").filter(Boolean);
+    const depth = segments.length;
+    const lastSegment = segments[depth - 1] || "";
+    
+    return {
+      url: urlStr,
+      host: u.hostname,
+      path: urlPath,
+      pathDepth: depth,
+      segments,
+      slug: lastSegment,
+      slugLength: lastSegment.length,
+      hasPage: u.searchParams.has("page"),
+      hasDatePath: /\/\d{4}\/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{2})\/\d{1,2}\//i.test(urlPath),
+      hasNumericDate: /\/\d{4}\/\d{2}\/\d{2}\//.test(urlPath),
+      hasHyphenatedSlug: lastSegment.includes("-") && lastSegment.length > 10,
+      hasSeriesSegment: urlPath.includes("/series/"),
+      hasArticleSegment: /\/article[s]?\//.test(urlPath),
+      hasLiveSegment: urlPath.includes("/live/"),
+      isMediaFile: /\.(jpg|jpeg|png|gif|svg|webp|mp4|mp3|pdf)$/i.test(urlPath),
+      fileExtension: urlPath.match(/\.([a-z0-9]+)$/i)?.[1] || null,
+      queryParamCount: Array.from(u.searchParams).length
+    };
+  } catch (e) {
+    return { error: e.message, url: urlStr };
+  }
+}
+
+// Helper: Evaluate a condition against signals
+function evaluateCondition(condition, signals) {
+  if (!condition) return { result: false, reason: "no-condition" };
+  
+  switch (condition.type) {
+    case "compare": {
+      const field = condition.field;
+      const operator = condition.operator;
+      let value = condition.value;
+      let actual = signals[field];
+      
+      if (typeof value === "object" && value.field) {
+        value = signals[value.field];
+        if (value.multiplier) value *= value.multiplier;
+      }
+      
+      let result;
+      switch (operator) {
+        case "eq": result = actual === value; break;
+        case "ne": result = actual !== value; break;
+        case "gt": result = actual > value; break;
+        case "gte": result = actual >= value; break;
+        case "lt": result = actual < value; break;
+        case "lte": result = actual <= value; break;
+        default: result = false;
+      }
+      
+      return { result, reason: `${field} (${actual}) ${operator} ${value} = ${result}` };
+    }
+    
+    case "flag": {
+      const flag = condition.flag;
+      const expected = condition.expected !== false;
+      const actual = !!signals[flag];
+      return { result: actual === expected, reason: `${flag} is ${actual}` };
+    }
+    
+    case "url_matches": {
+      const patterns = condition.patterns || [];
+      const urlSignal = signals.url || "";
+      const pathSignal = signals.path || "";
+      const matchType = condition.matchType || "contains";
+      const negate = condition.negate === true;
+      
+      let matched = false;
+      for (const pattern of patterns) {
+        const isRegex = matchType === "regex";
+        if (isRegex) {
+          try {
+            const regex = new RegExp(pattern, "i");
+            if (regex.test(urlSignal) || regex.test(pathSignal)) {
+              matched = true;
+              break;
+            }
+          } catch (e) { /* invalid regex */ }
+        } else {
+          if (urlSignal.includes(pattern) || pathSignal.includes(pattern)) {
+            matched = true;
+            break;
+          }
+        }
+      }
+      
+      const result = negate ? !matched : matched;
+      return { result, reason: matched ? `matched pattern` : `no match in ${patterns.length} patterns` };
+    }
+    
+    case "compound": {
+      const conditions = condition.conditions || [];
+      const operator = (condition.operator || "and").toLowerCase();
+      const results = conditions.map(c => evaluateCondition(c, signals));
+      
+      if (operator === "and") {
+        return { result: results.every(r => r.result), reason: `AND of ${results.length} conditions` };
+      } else {
+        return { result: results.some(r => r.result), reason: `OR of ${results.length} conditions` };
+      }
+    }
+    
+    default:
+      return { result: false, reason: `unknown condition type: ${condition.type}` };
+  }
+}
+
+// Helper: Walk decision tree with trace
+function classifyWithTrace(signals, tree) {
+  const trace = [];
+  let node = tree;
+  let depth = 0;
+  
+  while (node && depth < 50) {
+    depth++;
+    
+    if (node.result !== undefined) {
+      const isMatch = node.result === "match" || node.result === true;
+      trace.push({ type: "result", id: node.id, result: isMatch ? "match" : "no-match", reason: node.reason });
+      return { result: isMatch ? "match" : "no-match", reason: node.reason, trace, depth };
+    }
+    
+    if (node.condition) {
+      const evalResult = evaluateCondition(node.condition, signals);
+      trace.push({ type: "branch", id: node.id, evaluation: evalResult, branch: evalResult.result ? "yes" : "no" });
+      node = evalResult.result ? node.yes : node.no;
+    } else {
+      break;
+    }
+  }
+  
+  return { result: "unknown", reason: "tree traversal ended without result", trace, depth };
+}
+
 // Health check
 app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "decision-tree-viewer" });

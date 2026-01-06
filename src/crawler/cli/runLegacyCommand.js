@@ -5,6 +5,7 @@ const { createPauseResumeControls } = require('./pauseControls');
 const chalk = require('chalk');
 const path = require('path');
 const NewsCrawler = require('../NewsCrawler');
+const ProcessStatus = require('../../utils/processStatus');
 
 const { ensureDatabase } = require('../../db/sqlite');
 const { createCliLogger } = require('./progressReporter');
@@ -302,6 +303,18 @@ async function runLegacyCommand({
   }
 
   if (sequenceConfig) {
+    // Initialize process status monitoring for sequence
+    const statusId = `crawler-sequence-${process.pid}`;
+    const status = new ProcessStatus(statusId, 'Sequence Crawler');
+    status.update({
+      status: 'starting',
+      message: `Starting sequence ${sequenceConfig.name}`,
+      metrics: {
+        sequence: sequenceConfig.name,
+        host: sequenceConfig.configHost
+      }
+    });
+
     const resolvedStartForLog = startUrlExplicit ? startUrl : undefined;
     log.info(`Sequence config: ${chalk.bold(sequenceConfig.name)}`);
     if (sequenceConfig.configHost) {
@@ -336,6 +349,7 @@ async function runLegacyCommand({
       }
 
       log.success('Sequence completed');
+      status.complete('Sequence completed');
       return {
         exitCode: 0,
         result: sequenceResult.result,
@@ -343,6 +357,7 @@ async function runLegacyCommand({
       };
     } catch (error) {
       const message = error?.message || 'Sequence execution failed';
+      status.error(error);
       log.error(message);
       if (error?.stack) {
         stderr(error.stack);
@@ -362,6 +377,43 @@ async function runLegacyCommand({
 
   const crawler = new NewsCrawler(startUrl, crawlerOptions || {});
 
+  // Initialize process status monitoring
+  const statusId = crawler.jobId ? `crawler-${crawler.jobId}` : `crawler-${process.pid}`;
+  const status = new ProcessStatus(statusId, 'News Crawler');
+  
+  status.update({
+    status: 'starting',
+    message: `Starting crawl of ${startUrl}`,
+    metrics: {
+      target: startUrl,
+      jobId: crawler.jobId
+    }
+  });
+
+  crawler.on('progress', (data) => {
+    const stats = data.stats || {};
+    const isPaused = data.paused;
+    
+    status.update({
+      status: isPaused ? 'paused' : 'running',
+      message: isPaused ? 'Paused' : `Crawling ${startUrl}`,
+      progress: {
+        current: stats.pagesVisited || 0,
+        total: crawler.maxDownloads || 0,
+        percent: (crawler.maxDownloads && stats.pagesVisited) 
+          ? Math.round((stats.pagesVisited / crawler.maxDownloads) * 100) 
+          : 0,
+        unit: 'pages'
+      },
+      metrics: {
+        downloaded: stats.pagesDownloaded || 0,
+        queued: crawler.queue ? crawler.queue.size() : 0,
+        errors: stats.errors || 0,
+        articles: stats.articlesSaved || 0
+      }
+    });
+  });
+
   if (crawlerOptions.loggingQueue === false) {
     log.info('Queue logging explicitly disabled');
   }
@@ -376,11 +428,13 @@ async function runLegacyCommand({
     });
 
     await crawler.crawl();
+    status.complete('Crawl finished successfully');
     reportCountryCityCounts(crawler.dbPath, targetCountries, log);
     log.success('Crawler finished');
     return { exitCode: 0 };
   } catch (error) {
     const message = error?.message || 'Crawler failed';
+    status.error(error);
     log.error(`Crawler failed: ${message}`);
     if (error?.stack) {
       stderr(error.stack);

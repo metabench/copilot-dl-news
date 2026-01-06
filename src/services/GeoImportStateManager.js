@@ -28,7 +28,7 @@
 const EventEmitter = require('events');
 const fnl = require('fnl');
 const { observable } = fnl;
-const { importGeoNames, createImportPipeline, countLines } = require('./GeoImportService');
+const { importGeoNames, importAlternateNames, createImportPipeline, countLines } = require('./GeoImportService');
 const { StepGate } = require('./StepGate');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,7 +44,8 @@ const IMPORT_STAGES = [
   { id: 'validating', label: 'Validating', emoji: '🔍', description: 'Checking source files' },
   { id: 'counting', label: 'Counting', emoji: '📊', description: 'Counting records' },
   { id: 'preparing', label: 'Preparing', emoji: '⚙️', description: 'Setting up database' },
-  { id: 'importing', label: 'Importing', emoji: '💾', description: 'Importing records' },
+  { id: 'importing', label: 'Importing Cities', emoji: '💾', description: 'Importing places' },
+  { id: 'importing_alternates', label: 'Importing Alternates', emoji: '🔤', description: 'Importing alternate names' },
   { id: 'indexing', label: 'Indexing', emoji: '🗂️', description: 'Building indexes' },
   { id: 'verifying', label: 'Verifying', emoji: '✅', description: 'Validating coverage' },
   { id: 'complete', label: 'Complete', emoji: '🎉', description: 'Import finished' },
@@ -87,6 +88,14 @@ class GeoImportStateManager extends EventEmitter {
     if (fileExists) {
       fileSize = fs.statSync(citiesFile).size;
     }
+
+    // Check for Alternate Names file
+    const altFile = path.join(this._dataDir, 'alternateNames.txt');
+    const altExists = fs.existsSync(altFile);
+    let altSize = 0;
+    if (altExists) {
+      altSize = fs.statSync(altFile).size;
+    }
     
     this._stepGate = new StepGate();
     this._cancelRequested = false;
@@ -104,7 +113,8 @@ class GeoImportStateManager extends EventEmitter {
         inserted: 0,
         skipped: 0,
         namesAdded: 0,
-        errors: 0
+        errors: 0,
+        duplicates: 0
       },
       logs: [],
       sources: {
@@ -113,7 +123,10 @@ class GeoImportStateManager extends EventEmitter {
           file: citiesFile, 
           exists: fileExists,
           fileSize,
-          downloadUrl: 'https://download.geonames.org/export/dump/cities15000.zip'
+          downloadUrl: 'https://download.geonames.org/export/dump/cities15000.zip',
+          altFile,
+          altExists,
+          altSize
         },
         wikidata: { status: 'pending' },
         osm: { status: 'pending' }
@@ -393,6 +406,17 @@ class GeoImportStateManager extends EventEmitter {
         ]
       };
 
+      const altFile = path.join(this._dataDir, 'alternateNames.txt');
+      const altExists = fs.existsSync(altFile);
+      let altFileSize = null;
+      if (altExists) {
+        try {
+          altFileSize = fs.statSync(altFile).size;
+        } catch {
+          altFileSize = null;
+        }
+      }
+
       const stages = [
         {
           id: 'validating',
@@ -426,7 +450,20 @@ class GeoImportStateManager extends EventEmitter {
             { kind: 'insert-or-ignore', table: 'place_external_ids', source: 'geonames' },
             { kind: 'update', table: 'places', note: 'Set canonical_name_id' }
           ]
-        },
+        }
+      ];
+
+      if (altExists) {
+        stages.push({
+          id: 'importing_alternates',
+          label: 'Import alternate names',
+          reads: [{ kind: 'file-stream', path: altFile }],
+          requests: [],
+          writes: [{ kind: 'insert', table: 'place_names', source: 'geonames.alternates', note: 'Only for imported places' }]
+        });
+      }
+
+      stages.push(
         {
           id: 'indexing',
           label: 'Ensure indexes',
@@ -441,7 +478,29 @@ class GeoImportStateManager extends EventEmitter {
           requests: [],
           writes: []
         }
+      );
+
+      const inputs = [
+        {
+          kind: 'file',
+          id: 'cities15000.txt',
+          path: citiesFile,
+          exists: prerequisite.ready,
+          sizeBytes: fileSize,
+          lineCount
+        }
       ];
+
+      if (altExists) {
+        inputs.push({
+          kind: 'file',
+          id: 'alternateNames.txt',
+          path: altFile,
+          exists: true,
+          sizeBytes: altFileSize,
+          note: 'Optional: extended names coverage'
+        });
+      }
 
       return {
         source: normalizedSource,
@@ -452,16 +511,7 @@ class GeoImportStateManager extends EventEmitter {
         expected: {
           networkRequests: downloads.length,
           downloads,
-          inputs: [
-            {
-              kind: 'file',
-              id: 'cities15000.txt',
-              path: citiesFile,
-              exists: prerequisite.ready,
-              sizeBytes: fileSize,
-              lineCount
-            }
-          ],
+          inputs,
           file: {
             path: citiesFile,
             exists: prerequisite.ready,
@@ -471,7 +521,7 @@ class GeoImportStateManager extends EventEmitter {
         },
         targets,
         algorithm: {
-          summary: 'Imports GeoNames cities15000.txt into gazetteer tables with deduplication via place_external_ids and builds lookup indexes.',
+          summary: `Imports GeoNames cities15000.txt${altExists ? ' + alternateNames.txt' : ''} into gazetteer tables using efficient streaming and incremental batching.`,
           stages
         }
       };
@@ -1059,6 +1109,75 @@ class GeoImportStateManager extends EventEmitter {
     
     await this._awaitUserToProceed({ nextStageId: 'indexing', detail: { imported: true } });
     if (this._cancelRequested) return;
+
+    // Stage: Importing Alternates
+    const altFile = path.join(this._dataDir, 'alternateNames.txt');
+    if (fs.existsSync(altFile)) {
+      this._setStage('importing_alternates');
+      
+      this._log('info', '🔤 Starting alternate names import...');
+      
+      const altImport$ = importAlternateNames({
+        altFile,
+        db: this._db,
+        batchSize: 2000
+      });
+
+      this._import$ = altImport$;
+      this._controls = null;
+      this._ensureControls();
+      setTimeout(() => this._ensureControls(), 0);
+      
+      // Start stall detection again
+      this._startStallTimer();
+
+      await new Promise((resolve, reject) => {
+        altImport$.on('next', progress => {
+          this._ensureControls();
+          this._lastProgressAt = Date.now();
+
+          // Update state with progress
+          // Note: total might be unknown or huge lines, so percent is useful
+          this._updateState({
+            progress: {
+              current: progress.current,
+              total: progress.total,
+              percent: progress.percent
+            },
+            stall: {
+              stale: false,
+              lastProgressAt: this._lastProgressAt,
+              msSinceProgress: 0
+            },
+            stats: progress.stats
+          }, 'progress');
+          
+          if (progress.current > 0 && progress.current % 10000 === 0) {
+            this._log('info', `🔤 Processed ${progress.current.toLocaleString()} alternates (${progress.percent}%)`);
+          }
+        });
+
+        altImport$.on('complete', result => {
+          this._stopStallTimer();
+          this._log('success', `✅ Imported ${result.stats.namesAdded.toLocaleString()} alternate names`);
+          resolve(result);
+        });
+
+        altImport$.on('error', err => {
+          this._stopStallTimer();
+          reject(err);
+        });
+      });
+
+      this._import$ = null;
+      this._controls = null;
+
+      await this._awaitUserToProceed({ nextStageId: 'indexing', detail: { alternatesImported: true } });
+      if (this._cancelRequested) return;
+
+    } else {
+      this._log('info', 'ℹ️ Skipping alternate names (alternateNames.txt not found)');
+    }
 
     // Stage: Indexing
     this._setStage('indexing');

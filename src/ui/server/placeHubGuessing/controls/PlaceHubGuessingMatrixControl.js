@@ -283,6 +283,8 @@ td.matrix-td {
         },
         { kind: 'input', label: 'Place filter', name: 'q', value: model?.placeQ || '', attrs: { placeholder: 'e.g. california' } },
         { kind: 'input', label: 'Host filter', name: 'hostQ', value: model?.hostQ || '', attrs: { placeholder: 'e.g. news' } },
+        { kind: 'input', label: 'Parent Place', name: 'parentPlace', value: model?.parentPlace || '', attrs: { placeholder: 'e.g. Canada' } },
+        { kind: 'input', label: 'Active Pattern', name: 'activePattern', value: model?.activePattern || '', attrs: { placeholder: '/news/{slug}' } },
         {
           kind: 'input',
           label: 'Places',
@@ -396,7 +398,7 @@ td.matrix-td {
       const className = isVerified
         ? (outcome === 'absent' ? 'cell--verified-absent' : 'cell--verified-present')
         : 'cell--pending';
-      const glyph = isVerified ? (outcome === 'absent' ? '×' : '✓') : '•';
+      const glyph = isVerified ? (outcome === 'absent' ? '×' : '✓') : '?';
       const ageLabel = mapping.verified_at ? this.props.computeAgeLabel(mapping.verified_at) : '';
 
       const tipParts = [
@@ -556,7 +558,7 @@ td.matrix-td {
 
     const a = makeEl(ctx, 'a', 'cell-link', { href: cellHref, 'aria-label': 'Open cell' });
 
-    const glyph = isVerified ? (outcome === 'absent' ? '×' : '✓') : '•';
+    const glyph = isVerified ? (outcome === 'absent' ? '×' : '✓') : '?';
     a.add(text(ctx, glyph));
 
     const age = mapping.verified_at ? this.props.computeAgeLabel(mapping.verified_at) : '';

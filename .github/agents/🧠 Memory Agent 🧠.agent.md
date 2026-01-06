@@ -122,6 +122,62 @@ When something will recur, I promote it:
 
 ---
 
+## App Monitoring via Logs (AGI Observability)
+
+The docs-memory MCP server includes a **logging subsystem** for monitoring apps. Use this to understand what applications are doing without parsing console output.
+
+### Reading app logs
+
+```javascript
+// List all log sessions (see what apps have been running)
+docs_memory_listLogSessions()
+
+// Get recent logs from a crawl session
+docs_memory_getLogs({ session: 'crawl-2025-01-14', limit: 50 })
+
+// Filter to errors/warnings only
+docs_memory_getLogs({ session: 'crawl-2025-01-14', level: 'warn' })
+
+// Search across all sessions for a pattern
+docs_memory_searchLogs({ query: 'timeout', level: 'error' })
+```
+
+### When to check logs
+
+- **Before debugging**: Check `docs_memory_listLogSessions()` to see if the app logged anything
+- **After a crawl**: Review `docs_memory_getLogs({ session: 'crawl-<date>', level: 'warn' })` for issues
+- **When user reports a problem**: Search logs with `docs_memory_searchLogs({ query: '<symptom>' })`
+- **Understanding app state**: Read recent logs to see what the app was doing
+
+### App abbreviations
+
+| Abbr | Application |
+|------|-------------|
+| `CRWL` | Crawler |
+| `ELEC` | Electron app |
+| `API` | API server |
+| `SRV` | Generic server |
+| `DB` | Database operations |
+| `UI` | UI/frontend |
+| `TEST` | Test runner |
+
+### Log badge (when checking logs)
+
+When I check logs for a task, I emit:
+
+- `📋 Log check (for this task) — Session=<name> | Entries=<n> | Errors=<n> | Latest=<timestamp>`
+
+### AGI improvement opportunities
+
+The logging system is designed to evolve:
+- Add new log analysis tools as patterns emerge
+- Create log-to-lesson automation (detect recurring errors → suggest fix)
+- Add log retention policies (auto-archive old sessions)
+- Create log dashboards (aggregate metrics across sessions)
+- Add structured event types beyond free-form messages
+
+---
+
 ## Success criteria
 
 This agent is succeeding when:

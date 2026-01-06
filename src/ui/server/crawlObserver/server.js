@@ -13,6 +13,9 @@ const path = require('path');
 const jsgui = require('jsgui3-html');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
+const { createMcpLogger } = require('../../../utils/mcpLogger');
+
+const log = createMcpLogger.uiServer('crawl-observer');
 const { createCrawlObserverUiQueries } = require('../../../db/sqlite/v1/queries/crawlObserverUiQueries');
 
 const { TaskListControl } = require('./controls/TaskListControl');
@@ -243,14 +246,17 @@ app.get('/api/telemetry', (req, res) => {
 
 if (require.main === module) {
   process.env.SERVER_NAME = process.env.SERVER_NAME || 'CrawlObserver';
+  log.info('Starting crawl observer', { port: PORT, db: DB_PATH });
   const lifecycle = initDb();
 
   const server = wrapServerForCheck(app, PORT, undefined, () => {
+    log.info('Crawl observer ready', { url: `http://localhost:${PORT}`, db: DB_PATH });
     console.log(`\n🔍 Crawl Observer running at http://localhost:${PORT}`);
     console.log(`   Database: ${DB_PATH}\n`);
   });
 
   process.on('SIGINT', () => {
+    log.info('Shutting down crawl observer (SIGINT)');
     console.log('\nShutting down...');
     try {
       server.close();
@@ -262,6 +268,7 @@ if (require.main === module) {
   });
 
   process.on('SIGTERM', () => {
+    log.info('Shutting down crawl observer (SIGTERM)');
     try {
       server.close();
     } catch {

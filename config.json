@@ -4,9 +4,24 @@
     "totalPriority": true
   },
   "crawlDefaults": {
+    "mode": "multi-modal",
     "sequence": "basicArticleDiscovery",
     "startUrl": "https://www.theguardian.com",
     "outputVerbosity": "extra-terse",
+    "multiModal": {
+      "batchSize": 1000,
+      "historicalRatio": 0.3,
+      "hubDiscoveryPriorityBatches": 2,
+      "hubDiscoverySequence": "intelligentCountryHubDiscovery",
+      "hubDiscoveryMaxDownloads": 250,
+      "hubGuessingKinds": [
+        "country",
+        "region"
+      ],
+      "hubGuessingLimit": 50,
+      "hubRefreshIntervalMs": 3600000,
+      "pauseBetweenBatchesMs": 5000
+    },
     "sharedOverrides": {
       "concurrency": 2,
       "maxDownloads": 40,

@@ -2,8 +2,10 @@
 
 const {
   normalizeOutputVerbosity,
-  DEFAULT_OUTPUT_VERBOSITY
+  DEFAULT_OUTPUT_VERBOSITY,
+  isSilent
 } = require('../utils/outputVerbosity');
+const { CliFormatter, ICONS, COLORS } = require('../utils/CliFormatter');
 
 class CrawlerEvents {
   constructor(options = {}) {
@@ -29,7 +31,8 @@ class CrawlerEvents {
       getCoverageSummary,
       logger,
       outputVerbosity = DEFAULT_OUTPUT_VERBOSITY,
-      loggingQueue = true
+      loggingQueue = true,
+      prettyOutput = false
     } = options;
 
     if (!domain) throw new Error('CrawlerEvents requires domain');
@@ -59,6 +62,8 @@ class CrawlerEvents {
     this.isPausedFn = typeof isPaused === 'function' ? isPaused : () => false;
     this.outputVerbosity = normalizeOutputVerbosity(outputVerbosity);
     this.loggingQueue = loggingQueue;
+    this.prettyOutput = !!prettyOutput;
+    this.formatter = this.prettyOutput ? new CliFormatter() : null;
 
     this._lastProgressEmitAt = 0;
     this.problemCounters = new Map();
@@ -201,8 +206,42 @@ class CrawlerEvents {
       }
     }
 
-    // Emit full JSON for server/child process parsing
-    this._log('log', `PROGRESS ${JSON.stringify(payload)}`);
+    if (this.prettyOutput && this.formatter) {
+      this._emitPrettyProgress(payload);
+    } else {
+      // Emit full JSON for server/child process parsing
+      this._log('log', `PROGRESS ${JSON.stringify(payload)}`);
+    }
+  }
+
+  _emitPrettyProgress(payload) {
+    // Concise status line with emojis
+    const parts = [];
+    
+    // Status/Stage
+    if (payload.paused) parts.push(`${ICONS.pending} PAUSED`);
+    else if (payload.stage) parts.push(`${ICONS.info} ${payload.stage.toUpperCase()}`);
+    else parts.push(`${ICONS.info} CRAWLING`);
+
+    // Stats
+    parts.push(`Visited: ${COLORS.cyan(payload.visited)}`);
+    parts.push(`Downloaded: ${COLORS.cyan(payload.downloaded)}`);
+    parts.push(`Saved: ${COLORS.success(payload.saved)}`);
+    parts.push(`Queue: ${COLORS.warning(payload.queueSize)}`);
+    parts.push(`Errors: ${COLORS.error(payload.errors)}`);
+
+    // Active downloads
+    if (payload.currentDownloadsCount > 0) {
+      parts.push(`${ICONS.pending} ${payload.currentDownloadsCount} active`);
+    }
+
+    // Rate limiting
+    if (payload.domainRateLimited) {
+      parts.push(`${COLORS.warning(ICONS.warning + ' Slow Mode')}`);
+    }
+
+    // Print single line
+    console.log(parts.join(' | '));
   }
 
   emitQueueEvent(evt) {
@@ -365,6 +404,11 @@ class CrawlerEvents {
   _log(level, ...args) {
     if (!this.logger) return;
     
+    // Silent mode: suppress all log output
+    if (this.outputVerbosity === 'silent') {
+      return;
+    }
+    
     const first = args[0];
     if (this.loggingQueue === false && this._isQueueLogLine(first)) {
       return;
@@ -372,6 +416,9 @@ class CrawlerEvents {
 
     if (level === 'log') {
       if (this.outputVerbosity === 'extra-terse' && this._shouldSuppressLogLine(first)) {
+        return;
+      }
+      if (this.outputVerbosity === 'downloads' && !this._isDownloadLogLine(first)) {
         return;
       }
       if (this.outputVerbosity === 'terse' && this._isQueueLogLine(first)) {
@@ -393,6 +440,18 @@ class CrawlerEvents {
       return false;
     }
     return /^QUEUE\b/i.test(trimmed);
+  }
+
+  _isDownloadLogLine(firstArg) {
+    if (typeof firstArg !== 'string') {
+      return false;
+    }
+    const trimmed = firstArg.trim();
+    if (!trimmed) {
+      return false;
+    }
+    // Only show PAGE events (downloads) and Fetching lines
+    return /^PAGE\b/i.test(trimmed);
   }
 
   _shouldSuppressLogLine(firstArg) {

@@ -123,7 +123,7 @@ if (suite.detectOpenHandles) {
 
 // Add reporters
 args.push('--reporters=default');
-args.push('--reporters=./jest-timing-reporter.js');
+args.push('--reporters=./tests/jest-timing-reporter.js');
 
 console.log('Jest command:', 'node', args.join(' '));
 console.log('');

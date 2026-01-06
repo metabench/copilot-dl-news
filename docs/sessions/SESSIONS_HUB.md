@@ -60,6 +60,519 @@
 
 ---
 
+### Session 2026-01-06: Multi-modal crawl review and parallelization
+
+**Duration**: Active
+**Type**: review
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Audit latest session work, fix DB layer/documentation/testing gaps, and improve multi-site crawling
+
+**Location**: `docs/sessions/2026-01-06-multi-modal-intelligent-crawl-review/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-06-multi-modal-intelligent-crawl-review/INDEX.md)
+- 🗺️ [Plan](./2026-01-06-multi-modal-intelligent-crawl-review/PLAN.md)
+- 📝 [Working Notes](./2026-01-06-multi-modal-intelligent-crawl-review/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-06-multi-modal-intelligent-crawl-review/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-06-multi-modal-intelligent-crawl-review/FOLLOW_UPS.md)
+
+
+### Session 2026-01-06: Multi-Modal Intelligent Crawl System
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Design and implement a continuous crawl mode that alternates between downloading batches, analyzing patterns, and re-analyzing content with new learnings
+
+**Location**: `docs/sessions/2026-01-06-multi-modal-intelligent-crawl/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-06-multi-modal-intelligent-crawl/INDEX.md)
+- 🗺️ [Plan](./2026-01-06-multi-modal-intelligent-crawl/PLAN.md)
+- 📝 [Working Notes](./2026-01-06-multi-modal-intelligent-crawl/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-06-multi-modal-intelligent-crawl/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-06-multi-modal-intelligent-crawl/FOLLOW_UPS.md)
+
+
+### Session 2026-01-06: Active Place Hub Discovery Mode
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement active place hub guessing as a specific crawler mode to proactively likely place hubs
+
+**Location**: `docs/sessions/2026-01-06-active-hub-discovery/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-06-active-hub-discovery/INDEX.md)
+- 🗺️ [Plan](./2026-01-06-active-hub-discovery/PLAN.md)
+- 📝 [Working Notes](./2026-01-06-active-hub-discovery/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-06-active-hub-discovery/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-06-active-hub-discovery/FOLLOW_UPS.md)
+
+
+### Session 2026-01-05: Place Hub Discovery Tool & Guardian Coverage
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create general-purpose place-hub-discover tool and expand Guardian place hub mappings from 54 to 225+
+
+**Location**: `docs/sessions/2026-01-05-place-hub-discovery/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-05-place-hub-discovery/INDEX.md)
+- 🗺️ [Plan](./2026-01-05-place-hub-discovery/PLAN.md)
+- 📝 [Working Notes](./2026-01-05-place-hub-discovery/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-05-place-hub-discovery/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-05-place-hub-discovery/FOLLOW_UPS.md)
+
+
+### Session 2026-01-05: Crawl & Analysis Integration Book
+
+**Duration**: Active
+**Type**: documentation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Document the crawl and analysis systems with plans for smooth integration
+
+**Location**: `docs/sessions/2026-01-05-crawl-analysis-integration-book/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-05-crawl-analysis-integration-book/INDEX.md)
+- 🗺️ [Plan](./2026-01-05-crawl-analysis-integration-book/PLAN.md)
+- 📝 [Working Notes](./2026-01-05-crawl-analysis-integration-book/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-05-crawl-analysis-integration-book/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-05-crawl-analysis-integration-book/FOLLOW_UPS.md)
+
+
+### Session 2026-01-05: Analysis Performance Investigation
+
+**Duration**: Active
+**Type**: lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Investigate analysis performance bottlenecks and optimize algorithms
+
+**Location**: `docs/sessions/2026-01-05-analysis-perf-investigation/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-05-analysis-perf-investigation/INDEX.md)
+- 🗺️ [Plan](./2026-01-05-analysis-perf-investigation/PLAN.md)
+- 📝 [Working Notes](./2026-01-05-analysis-perf-investigation/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-05-analysis-perf-investigation/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-05-analysis-perf-investigation/FOLLOW_UPS.md)
+
+
+### Session 2026-01-04: Place Disambiguation UI with Dashboard Controls
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create an Electron app for place disambiguation backfill using new dashboard controls
+
+**Location**: `docs/sessions/2026-01-04-place-disambiguation-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-04-place-disambiguation-ui/INDEX.md)
+- 🗺️ [Plan](./2026-01-04-place-disambiguation-ui/PLAN.md)
+- 📝 [Working Notes](./2026-01-04-place-disambiguation-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-04-place-disambiguation-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-04-place-disambiguation-ui/FOLLOW_UPS.md)
+
+
+### Session 2026-01-04: Dashboard Controls Extraction & Stress Testing
+
+**Duration**: Active
+**Type**: lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Extract reusable jsgui3 progress controls from labs, add anti-jitter patterns, and create UI stress tests
+
+**Location**: `docs/sessions/2026-01-04-dashboard-controls-extraction/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-04-dashboard-controls-extraction/INDEX.md)
+- 🗺️ [Plan](./2026-01-04-dashboard-controls-extraction/PLAN.md)
+- 📝 [Working Notes](./2026-01-04-dashboard-controls-extraction/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-04-dashboard-controls-extraction/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-04-dashboard-controls-extraction/FOLLOW_UPS.md)
+
+
+### Session 2026-01-04: Crawler & Analysis Progress Integration
+
+**Duration**: Active
+**Type**: lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Integrate idiomatic progress UI with real crawler and analysis processes for auto-start and live monitoring
+
+**Location**: `docs/sessions/2026-01-04-crawler-progress-integration/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-04-crawler-progress-integration/INDEX.md)
+- 🗺️ [Plan](./2026-01-04-crawler-progress-integration/PLAN.md)
+- 📝 [Working Notes](./2026-01-04-crawler-progress-integration/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-04-crawler-progress-integration/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-04-crawler-progress-integration/FOLLOW_UPS.md)
+
+
+### Session 2026-01-04: jsgui3 Idiomatic Progress UI Lab
+
+**Duration**: Active
+**Type**: lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create progress UI using idiomatic jsgui3 patterns, fix flashing issues, document patterns/antipatterns
+
+**Location**: `docs/sessions/2026-01-04-jsgui3-idiomatic-progress/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-04-jsgui3-idiomatic-progress/INDEX.md)
+- 🗺️ [Plan](./2026-01-04-jsgui3-idiomatic-progress/PLAN.md)
+- 📝 [Working Notes](./2026-01-04-jsgui3-idiomatic-progress/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-04-jsgui3-idiomatic-progress/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-04-jsgui3-idiomatic-progress/FOLLOW_UPS.md)
+
+
+### Session 2026-01-04: Electron Tray Icon Progress Lab
+
+**Duration**: Active
+**Type**: lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Encapsulated tray icon with popup progress UI for background processes
+
+**Location**: `docs/sessions/2026-01-04-electron-tray-progress-lab/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-04-electron-tray-progress-lab/INDEX.md)
+- 🗺️ [Plan](./2026-01-04-electron-tray-progress-lab/PLAN.md)
+- 📝 [Working Notes](./2026-01-04-electron-tray-progress-lab/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-04-electron-tray-progress-lab/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-04-electron-tray-progress-lab/FOLLOW_UPS.md)
+
+
+### Session 2026-01-04: jsgui3 SSR + Client Activation Lab
+
+**Duration**: Active
+**Type**: lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Investigate SSR and client-side activation patterns with jsgui3 for progress UI
+
+**Location**: `docs/sessions/2026-01-04-jsgui3-ssr-activation-lab/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-04-jsgui3-ssr-activation-lab/INDEX.md)
+- 🗺️ [Plan](./2026-01-04-jsgui3-ssr-activation-lab/PLAN.md)
+- 📝 [Working Notes](./2026-01-04-jsgui3-ssr-activation-lab/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-04-jsgui3-ssr-activation-lab/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-04-jsgui3-ssr-activation-lab/FOLLOW_UPS.md)
+
+
+### Session 2026-01-04: Analysis Progress Bar UI
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make analysis progress reliably visible with a large kiosk-style progress bar (SSE + polling fallback).
+
+**Location**: `docs/sessions/2026-01-04-analysis-progress-bar/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-04-analysis-progress-bar/INDEX.md)
+- 🗺️ [Plan](./2026-01-04-analysis-progress-bar/PLAN.md)
+- 📝 [Working Notes](./2026-01-04-analysis-progress-bar/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-04-analysis-progress-bar/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-04-analysis-progress-bar/FOLLOW_UPS.md)
+
+
+### Session 2026-01-04: Analysis Backfill Observable with Electron UI
+
+**Duration**: Active
+**Type**: lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create observable-wrapped analysis backfill with Electron progress UI, stats tracking, and e2e testing
+
+**Location**: `docs/sessions/2026-01-04-analysis-observable-electron/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-04-analysis-observable-electron/INDEX.md)
+- 🗺️ [Plan](./2026-01-04-analysis-observable-electron/PLAN.md)
+- 📝 [Working Notes](./2026-01-04-analysis-observable-electron/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-04-analysis-observable-electron/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-04-analysis-observable-electron/FOLLOW_UPS.md)
+
+
+### Session 2026-01-04: Multi-stage Process Progress UI
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build a pluggable UI + backend stream for monitoring long-running multi-stage tasks (backfills) with progress + logs, suitable for Electron viewing.
+
+**Location**: `docs/sessions/2026-01-04-process-progress-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-04-process-progress-ui/INDEX.md)
+- 🗺️ [Plan](./2026-01-04-process-progress-ui/PLAN.md)
+- 📝 [Working Notes](./2026-01-04-process-progress-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-04-process-progress-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-04-process-progress-ui/FOLLOW_UPS.md)
+
+
+### Session 2026-01-04: Classification quality vs timing
+
+**Duration**: Active
+**Type**: lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Run experiments to estimate runtime costs and identify levers that improve classification quality.
+
+**Location**: `docs/sessions/2026-01-04-2026-01-04-classification-quality-timing/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-04-2026-01-04-classification-quality-timing/INDEX.md)
+- 🗺️ [Plan](./2026-01-04-2026-01-04-classification-quality-timing/PLAN.md)
+- 📝 [Working Notes](./2026-01-04-2026-01-04-classification-quality-timing/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-04-2026-01-04-classification-quality-timing/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-04-2026-01-04-classification-quality-timing/FOLLOW_UPS.md)
+
+
+### Session 2026-01-04: DB Access Patterns  Experiments Run
+
+**Duration**: Active
+**Type**: lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Run candidate-vs-filter, content decompression, title boost quality, and backfill dry-run benchmarks; save results and update findings.
+
+**Location**: `docs/sessions/2026-01-04-db-access-patterns-experiments/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-04-db-access-patterns-experiments/INDEX.md)
+- 🗺️ [Plan](./2026-01-04-db-access-patterns-experiments/PLAN.md)
+- 📝 [Working Notes](./2026-01-04-db-access-patterns-experiments/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-04-db-access-patterns-experiments/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-04-db-access-patterns-experiments/FOLLOW_UPS.md)
+
+
+### Session 2026-01-04: Gazetteer Import Progress Visualization
+
+**Duration**: Active
+**Type**: brainstorm
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Brainstorm and design UI/UX for visualizing gazetteer import progress including progress bars and world map rendering
+
+**Location**: `docs/sessions/2026-01-04-gazetteer-progress-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-04-gazetteer-progress-ui/INDEX.md)
+- 🗺️ [Plan](./2026-01-04-gazetteer-progress-ui/PLAN.md)
+- 📝 [Working Notes](./2026-01-04-gazetteer-progress-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-04-gazetteer-progress-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-04-gazetteer-progress-ui/FOLLOW_UPS.md)
+
+
+### Session 2026-01-03: Place Name Disambiguation Strategy
+
+**Duration**: Active
+**Type**: research-design
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Design robust disambiguation for place names (e.g., London UK vs London Ontario) with transparent decision logging and CLI verification tools
+
+**Location**: `docs/sessions/2026-01-03-place-disambiguation/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-03-place-disambiguation/INDEX.md)
+- 🗺️ [Plan](./2026-01-03-place-disambiguation/PLAN.md)
+- 📝 [Working Notes](./2026-01-03-place-disambiguation/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-03-place-disambiguation/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-03-place-disambiguation/FOLLOW_UPS.md)
+
+
+### Session 2026-01-03: Multi-Stage Classification Architecture
+
+**Duration**: Active
+**Type**: design
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Design coherent classification system with URL-only, content-based, and Puppeteer stages
+
+**Location**: `docs/sessions/2026-01-03-multi-stage-classification/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-03-multi-stage-classification/INDEX.md)
+- 🗺️ [Plan](./2026-01-03-multi-stage-classification/PLAN.md)
+- 📝 [Working Notes](./2026-01-03-multi-stage-classification/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-03-multi-stage-classification/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-03-multi-stage-classification/FOLLOW_UPS.md)
+
+
+### Session 2026-01-03: Background Task Progress Electron App
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build Electron app with progress bar UI for background tasks like classification backfill
+
+**Location**: `docs/sessions/2026-01-03-task-progress-electron/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-03-task-progress-electron/INDEX.md)
+- 🗺️ [Plan](./2026-01-03-task-progress-electron/PLAN.md)
+- 📝 [Working Notes](./2026-01-03-task-progress-electron/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-03-task-progress-electron/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-03-task-progress-electron/FOLLOW_UPS.md)
+
+
+### Session 2026-01-02: Reliable 50-Page Crawl with Evidence System
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build verified 50-page download with UI progress bar and anti-hallucination guardrails
+
+**Location**: `docs/sessions/2026-01-02-reliable-50-crawl/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-02-reliable-50-crawl/INDEX.md)
+- 🗺️ [Plan](./2026-01-02-reliable-50-crawl/PLAN.md)
+- 📝 [Working Notes](./2026-01-02-reliable-50-crawl/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-02-reliable-50-crawl/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-02-reliable-50-crawl/FOLLOW_UPS.md)
+
+
+### Session 2026-01-02: MCP Logging Integration
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Integrate MCP logging across apps for agent visibility
+
+**Location**: `docs/sessions/2026-01-02-mcp-logging-integration/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-02-mcp-logging-integration/INDEX.md)
+- 🗺️ [Plan](./2026-01-02-mcp-logging-integration/PLAN.md)
+- 📝 [Working Notes](./2026-01-02-mcp-logging-integration/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-02-mcp-logging-integration/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-02-mcp-logging-integration/FOLLOW_UPS.md)
+
+
+### Session 2026-01-02: MCP Logging + Crawl Monitoring
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement MCP logging system and test crawl monitoring approaches
+
+**Location**: `docs/sessions/2026-01-02-mcp-logging-crawl-monitoring/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-02-mcp-logging-crawl-monitoring/INDEX.md)
+- 🗺️ [Plan](./2026-01-02-mcp-logging-crawl-monitoring/PLAN.md)
+- 📝 [Working Notes](./2026-01-02-mcp-logging-crawl-monitoring/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-02-mcp-logging-crawl-monitoring/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-02-mcp-logging-crawl-monitoring/FOLLOW_UPS.md)
+
+
+### Session 2026-01-02: Crawler Diagnostic CLI Tools
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build CLI tools for better visibility into crawls and node processes
+
+**Location**: `docs/sessions/2026-01-02-crawler-diagnostic-cli/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-02-crawler-diagnostic-cli/INDEX.md)
+- 🗺️ [Plan](./2026-01-02-crawler-diagnostic-cli/PLAN.md)
+- 📝 [Working Notes](./2026-01-02-crawler-diagnostic-cli/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-02-crawler-diagnostic-cli/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-02-crawler-diagnostic-cli/FOLLOW_UPS.md)
+
+
+### Session 2026-01-02: Verify 1000-download test counts real downloads
+
+**Duration**: Active
+**Type**: tests
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Tighten the 1000-page crawl E2E so it proves 1000 actual page downloads (DB-backed), not just visits.
+
+**Location**: `docs/sessions/2026-01-02-verify-1000-download-test/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-02-verify-1000-download-test/INDEX.md)
+- 🗺️ [Plan](./2026-01-02-verify-1000-download-test/PLAN.md)
+- 📝 [Working Notes](./2026-01-02-verify-1000-download-test/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-02-verify-1000-download-test/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-02-verify-1000-download-test/FOLLOW_UPS.md)
+
+
+### Session 2026-01-02: Test Studio UI E2E (Visual)
+
+**Duration**: Active
+**Type**: testing
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add a Puppeteer E2E that opens Test Studio UI and visually tracks the 1000-page Guardian crawl rerun end-to-end.
+
+**Location**: `docs/sessions/2026-01-02-test-studio-ui-e2e-visual/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-02-test-studio-ui-e2e-visual/INDEX.md)
+- 🗺️ [Plan](./2026-01-02-test-studio-ui-e2e-visual/PLAN.md)
+- 📝 [Working Notes](./2026-01-02-test-studio-ui-e2e-visual/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-02-test-studio-ui-e2e-visual/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-02-test-studio-ui-e2e-visual/FOLLOW_UPS.md)
+
+
 ### Session 2026-01-02: Test Studio E2E: self-hosted 1000-page crawl
 
 **Duration**: Active

@@ -79,10 +79,37 @@ function createBackfillDatesQueries(db) {
     updateArticleDateStmt.run(isoDate ?? null, url);
   }
 
+  function countCandidates(options = {}) {
+    const {
+      includeExistingDates = false,
+      onlyArticles = true,
+      onlyUrl = '',
+      startAfterId = 0
+    } = options;
+
+    const scope = buildArticleScope(onlyArticles, onlyUrl);
+    const where = ['a.id > ?'];
+    const params = [startAfterId];
+
+    if (!includeExistingDates) {
+      where.push('a.date IS NULL');
+    }
+
+    if (scope.where.length) {
+      where.push(...scope.where);
+      params.push(...scope.params);
+    }
+
+    const sql = `SELECT COUNT(1) AS n FROM articles a WHERE ${where.join(' AND ')}`;
+    const row = db.prepare(sql).get(...params);
+    return Number(row?.n || 0);
+  }
+
   return {
     iterateExistingDates,
     fetchBatch,
-    updateArticleDate
+    updateArticleDate,
+    countCandidates
   };
 }
 

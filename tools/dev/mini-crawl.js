@@ -4,6 +4,11 @@
 /**
  * mini-crawl.js — Small test crawl with full event logging to task_events
  * 
+ * This CLI is a thin wrapper around the shared crawl infrastructure.
+ * For long-running crawls, use the daemon-based approach instead:
+ *   node tools/dev/crawl-daemon.js start
+ *   node tools/dev/crawl-api.js jobs start <operation> <url>
+ * 
  * Usage:
  *   node tools/dev/mini-crawl.js <url>                    # Crawl a single page
  *   node tools/dev/mini-crawl.js <url> --max-pages 5      # Crawl up to 5 pages
@@ -16,12 +21,74 @@
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
-const { createCrawlService } = require('../../src/server/crawl-api');
-const { TelemetryIntegration } = require('../../src/crawler/telemetry/TelemetryIntegration');
 
 // ─────────────────────────────────────────────────────────────
-// Argument parsing
+// Early console filter setup (BEFORE any requires that might log)
+// Reduces noise from internal modules during crawl
+// ─────────────────────────────────────────────────────────────
+
+const _earlyQuiet = process.argv.includes('-q') || process.argv.includes('--quiet');
+const _earlyDownloadsOnly = process.argv.includes('-d') || process.argv.includes('--downloads-only');
+const _earlyTerse = process.argv.includes('--terse') || process.argv.includes('--no-queue');
+
+if (_earlyQuiet || _earlyDownloadsOnly || _earlyTerse) {
+  // Patterns to block (noisy internal logs)
+  const _blockPatterns = [
+    /^\[ProxyManager\]/i,
+    /^\[PuppeteerDomainManager\]/i,
+    /^\[Resilience\]/i,
+    /^Priority config loaded/i,
+    /^Enhanced features/i,
+    /^Initializing enhanced/i,
+    /^SQLite DB initialized/i,
+    /^\[dspl\]/i,
+    /^\[CountryHub/i,
+    /^Country hub/i,
+    /^robots\.txt loaded/i,
+    /^Found \d+ sitemap/i,
+    /^Starting crawler for/i,
+    /^Data will be saved/i,
+    /^Sitemap enqueue complete/i,
+    /^Reached max downloads limit/i,
+    /^QUEUE\s/i,           // Queue events (enqueue/dequeue/drop)
+    /^PROGRESS\s/i         // Progress events (unless verbose)
+  ];
+
+  // Patterns to always allow
+  const _allowPatterns = [
+    /^PAGE\s/i,           // Downloaded pages
+    /^[🕷️✅📊❌⚠️ℹ️🔍]/,   // Emoji-prefixed output
+    /^(URL|Operation|Max Pages|Job ID|Duration|Status|Pages|Links):/i,
+    /^mini-crawl/i
+  ];
+
+  const _shouldBlock = (text) => {
+    const trimmed = String(text).trim();
+    // Allow if matches allow pattern
+    if (_allowPatterns.some(p => p.test(trimmed))) return false;
+    // Block if matches block pattern
+    if (_blockPatterns.some(p => p.test(trimmed))) return true;
+    // In quiet mode, block everything else too
+    if (_earlyQuiet) return true;
+    return false;
+  };
+
+  const _origLog = console.log.bind(console);
+  const _origInfo = console.info.bind(console);
+
+  console.log = (...args) => {
+    if (args.length === 0) return;
+    if (!_shouldBlock(args[0])) _origLog(...args);
+  };
+
+  console.info = (...args) => {
+    if (args.length === 0) return;
+    if (!_shouldBlock(args[0])) _origInfo(...args);
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Argument parsing (must be first to enable --downloads-only filter)
 // ─────────────────────────────────────────────────────────────
 
 function parseArgs(argv) {
@@ -36,6 +103,9 @@ function parseArgs(argv) {
     listOperations: false,
     json: false,
     verbose: false,
+    quiet: false,  // Suppress stdout noise, use CLI tools instead
+    noQueue: true, // Suppress QUEUE events (enqueue/dequeue/drop) by default
+    downloadsOnly: false, // Show only PAGE events (download activity)
     slow: false,
     rateLimitMs: 0,
     db: path.join(process.cwd(), 'data', 'news.db')
@@ -57,12 +127,27 @@ function parseArgs(argv) {
       case '--verbose':
         flags.verbose = true;
         break;
+      case '-q':
+      case '--quiet':
+        flags.quiet = true;
+        break;
+      case '--no-queue':
+      case '--terse':
+        flags.noQueue = true;
+        break;
+      case '--downloads-only':
+      case '-d':
+        flags.downloadsOnly = true;
+        break;
       case '--operation':
       case '-o':
         flags.operation = next;
         i++;
         break;
       case '--max-pages':
+      case '--pages':
+      case '--limit':
+      case '-n':
         flags.maxPages = parseInt(next, 10);
         i++;
         break;
@@ -104,7 +189,16 @@ function parseArgs(argv) {
 // Logging helpers
 // ─────────────────────────────────────────────────────────────
 
-function createLogger(verbose) {
+function createLogger(verbose, quiet) {
+  // Quiet mode: suppress all output except errors
+  if (quiet) {
+    return {
+      info: () => {},
+      warn: () => {},
+      error: (...args) => console.error('❌', ...args),
+      debug: () => {}
+    };
+  }
   return {
     info: (...args) => verbose && console.log('ℹ️', ...args),
     warn: (...args) => console.warn('⚠️', ...args),
@@ -126,6 +220,14 @@ function formatDuration(ms) {
 async function main() {
   const flags = parseArgs(process.argv);
 
+  // NOTE: Downloads-only console filter is now set up at module load time (see top of file)
+  // before any requires can log. The early filter checks process.argv for -d/--downloads-only.
+
+  // Lazy require heavy modules
+  const Database = require('better-sqlite3');
+  const { createCrawlService } = require('../../src/server/crawl-api');
+  const { TelemetryIntegration } = require('../../src/crawler/telemetry/TelemetryIntegration');
+
   if (flags.help) {
     console.log(`
 mini-crawl — Small test crawl with full event logging
@@ -134,26 +236,39 @@ Usage:
   node tools/dev/mini-crawl.js <url> [options]
 
 Options:
-  --operation <name>   Crawl operation (default: quickDiscovery)
-  --max-pages <n>      Max pages to fetch (default: 3)
-  --max-depth <n>      Max link depth (default: 1)
-  --timeout <ms>       Timeout in ms (default: 30000)
-  --list-operations    List available crawl operations
-  --json               Output results as JSON
-  -v, --verbose        Verbose logging
-  --db <path>          Database path (default: data/news.db)
-  -h, --help           Show this help
+  --operation, -o <name>   Crawl operation (default: basicArticleCrawl)
+  --max-pages, -n <n>      Max pages to fetch (default: 3)
+                           Aliases: --pages, --limit
+  --max-depth <n>          Max link depth (default: 1)
+  --timeout <ms>           Timeout in ms (default: 30000)
+  --list-operations        List available crawl operations
+  --json                   Output results as JSON
+  -v, --verbose            Verbose logging
+  -d, --downloads-only     Show only download activity (PAGE events)
+  --terse                  Hide QUEUE/PROGRESS events, show key telemetry only
+  -q, --quiet              Suppress all stdout noise (monitor with crawl-live.js)
+  --db <path>              Database path (default: data/news.db)
+  -h, --help               Show this help
 
 Examples:
-  # Quick test crawl
+  # Quick test crawl (terse output by default)
   node tools/dev/mini-crawl.js https://example.com
 
-  # Larger discovery
-  node tools/dev/mini-crawl.js https://example.com --max-pages 10 --operation discovery
+  # Crawl showing only downloads (clean output)
+  node tools/dev/mini-crawl.js https://bbc.com/news -n 20 -d
 
-  # Check what happened
+  # Quiet mode - use separate CLI to monitor
+  node tools/dev/mini-crawl.js https://example.com -n 50 -q &
+  node tools/dev/crawl-live.js --last 10
+
+  # Check results after crawl
   node tools/dev/task-events.js --list
   node tools/dev/task-events.js --summary <jobId>
+
+For long-running crawls, use the daemon approach:
+  node tools/dev/crawl-daemon.js start
+  node tools/dev/crawl-api.js jobs start siteExplorer https://bbc.com -n 100 --json
+  node tools/dev/crawl-api.js jobs get <jobId> --json
 `);
     return;
   }
@@ -166,14 +281,19 @@ Examples:
 
   // Create telemetry integration with db persistence
   // For small crawls: disable batching for visibility, enable URL events for timing data
+  // Quiet mode: suppress stdout telemetry, still write to DB
   const telemetry = new TelemetryIntegration({ 
     db,
     eventWriterOptions: { batchWrites: !isSmallCrawl },
-    bridgeOptions: isSmallCrawl ? { 
-      broadcastUrlEvents: true,       // Enable per-URL timing events
-      urlEventBatchInterval: 0,       // No batching for small crawls  
-      urlEventBatchSize: 1            // Flush each event immediately
-    } : {}
+    bridgeOptions: {
+      ...(isSmallCrawl ? { 
+        broadcastUrlEvents: true,       // Enable per-URL timing events
+        urlEventBatchInterval: 0,       // No batching for small crawls  
+        urlEventBatchSize: 1            // Flush each event immediately
+      } : {}),
+      // Quiet mode: disable stdout telemetry
+      ...(flags.quiet ? { stdoutEnabled: false } : {})
+    }
   });
 
   // Use the TelemetryIntegration's eventWriter for lifecycle events too (avoid duplicates)
@@ -207,15 +327,19 @@ Examples:
     process.exit(1);
   }
 
-  const logger = createLogger(flags.verbose);
+  const logger = createLogger(flags.verbose, flags.quiet);
   const startTime = Date.now();
   const jobId = `mini-crawl-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
 
-  console.log(`\n🕷️  Starting mini-crawl`);
-  console.log(`   URL:        ${flags.url}`);
-  console.log(`   Operation:  ${flags.operation}`);
-  console.log(`   Max Pages:  ${flags.maxPages}`);
-  console.log(`   Job ID:     ${jobId}\n`);
+  if (!flags.quiet) {
+    console.log(`\n🕷️  Starting mini-crawl`);
+    console.log(`   URL:        ${flags.url}`);
+    console.log(`   Operation:  ${flags.operation}`);
+    console.log(`   Max Pages:  ${flags.maxPages}`);
+    console.log(`   Job ID:     ${jobId}\n`);
+  } else {
+    console.log(`🕷️ ${jobId} started (use crawl-live.js to monitor)`);
+  }
 
   // Initialize the telemetry bridge with the jobId so URL events get the correct task ID
   telemetry.bridge.emitStarted({
@@ -247,7 +371,7 @@ Examples:
       operationName: flags.operation,
       startUrl: flags.url,
       overrides: {
-        maxPagesPerDomain: flags.maxPages,
+        maxDownloads: flags.maxPages,
         maxDepth: flags.maxDepth,
         crawlTimeoutMs: flags.timeout,
         jobId,
@@ -255,7 +379,15 @@ Examples:
         ...(flags.rateLimitMs > 0 && { rateLimitMs: flags.rateLimitMs }),
         ...(flags.slow && { slowMode: true }),
         // For small crawls, disable progress throttle so all events are visible
-        ...(isSmallCrawl && { progressEmitIntervalMs: 0 })
+        ...(isSmallCrawl && !flags.quiet && !flags.downloadsOnly && { progressEmitIntervalMs: 0 }),
+        // Downloads-only mode: show only PAGE events
+        ...(flags.downloadsOnly && { outputVerbosity: 'downloads' }),
+        // Terse mode: hide QUEUE events but show other telemetry
+        ...(flags.noQueue && !flags.downloadsOnly && !flags.quiet && { outputVerbosity: 'terse' }),
+        // Quiet mode: suppress stdout telemetry lines (PROGRESS, QUEUE, MILESTONE, etc)
+        ...(flags.quiet && { outputVerbosity: 'extra-terse' }),
+        // Pretty output for human CLI usage (unless JSON or quiet)
+        prettyOutput: !flags.json && !flags.quiet
       }
     });
 

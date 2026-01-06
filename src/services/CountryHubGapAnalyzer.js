@@ -9,7 +9,7 @@
  * Learns URL patterns from existing data via Domain-Specific Pattern Libraries (DSPLs).
  */
 
-const { getAllCountries, getTopCountries } = require('../db/sqlite/v1/queries/gazetteer.places');
+const { getAllCountries, getTopCountries, getCountryByName } = require('../db/sqlite/v1/queries/gazetteer.places');
 const { getCountryHubCoverage } = require('../db/sqlite/v1/queries/placePageMappings');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 const { getDsplForDomain } = require('./shared/dspl');
@@ -65,10 +65,6 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
       }
     };
 
-    // Override the _extractPatternsFromUrls method for country-specific pattern extraction
-    this.predictionManager._extractPatternsFromUrls = (urls, domain, metadata) => {
-      return this.extractPatternsFromUrls(urls, domain);
-    };
   }
 
   /**
@@ -113,19 +109,31 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
 
   /**
    * Get list of all countries from gazetteer
+   * @param {string} [lang='en'] - Language code (e.g. 'es', 'fr')
    * @returns {Array} Array of {name, code, importance}
    */
-  getAllCountries() {
-    return getAllCountries(this.db);
+  getAllCountries(lang = 'en') {
+    return getAllCountries(this.db, lang);
   }
 
   /**
    * Get top N countries by importance
    * @param {number} limit - Maximum number of countries to return
+   * @param {string} [lang='en'] - Language code
    * @returns {Array} Top countries
    */
-  getTopCountries(limit = 50) {
-    return getTopCountries(this.db, limit);
+  getTopCountries(limit = 50, lang = 'en') {
+    return getTopCountries(this.db, limit, lang);
+  }
+
+  /**
+   * Get country by name
+   * @param {string} name - Country name
+   * @param {string} [lang='en'] - Language code
+   * @returns {Object|null} Country object
+   */
+  getCountryByName(name, lang = 'en') {
+    return getCountryByName(this.db, name, lang);
   }
 
   /**
@@ -146,6 +154,10 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
     // Strategy 2: Gazetteer-based patterns
     const gazetteerPredictions = this.predictionManager.predictFromGazetteer(entity, domain);
     predictions.push(...gazetteerPredictions);
+
+    // Strategy 2.5: Crawl data (map of the site)
+    const crawlPredictions = this.predictionManager.predictFromCrawlData(entity, domain);
+    predictions.push(...crawlPredictions);
 
     // Strategy 3: Common hub patterns as fallback (only if no DSPL patterns exist)
     if (dsplPredictions.length === 0) {

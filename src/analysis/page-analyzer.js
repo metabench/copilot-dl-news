@@ -12,11 +12,26 @@ const { detectPlaceHub } = require('../tools/placeHubDetector');
 const { performDeepAnalysis } = require('./deep-analyzer');
 const { extractDomain } = require('../services/shared/dxpl');
 const { performance } = require('perf_hooks');
-const { createJsdom } = require('../utils/jsdomUtils');
+const { createDom } = require('../utils/domFactory');
 const { countWords } = require('../utils/textMetrics');
 const { summarizeLinks } = require('../utils/linkClassification');
 
-async function analyzePage({
+async function analyzePage(args) {
+  const timeout = args.analysisOptions?.timeout || 5000;
+
+  return Promise.race([
+    performPageAnalysis(args),
+    new Promise((_, reject) =>
+      setTimeout(() => {
+        const error = new Error(`Analysis timed out after ${timeout}ms`);
+        error.code = 'TIMEOUT';
+        reject(error);
+      }, timeout)
+    )
+  ]);
+}
+
+async function performPageAnalysis({
   url,
   title = null,
   section = null,
@@ -27,9 +42,18 @@ async function analyzePage({
   db,
   targetVersion = 1,
   nonGeoTopicSlugs = null,
-  xpathService = null
+  xpathService = null,
+  analysisOptions = {}
 }) {
   if (!url) throw new Error('analyzePage requires a url');
+
+  const options = {
+    places: true,
+    hubs: true,
+    signals: true,
+    deep: true,
+    ...analysisOptions
+  };
 
   const timings = {
     overallMs: 0,
@@ -66,7 +90,8 @@ async function analyzePage({
     gazetteer,
     context,
     targetVersion,
-    preparation
+    preparation,
+    options
   });
   timings.buildAnalysisMs = Math.max(0, performance.now() - buildStart);
 
@@ -87,26 +112,32 @@ async function analyzePage({
   })();
 
   const detectHubStart = performance.now();
-  const hubCandidate = detectPlaceHub({
-    url,
-    urlPlaceAnalysis,
-    urlPlaces: urlPlaceMatches,
-    analysisPlaces: places,
-    section,
-    fetchClassification: fetchRow?.classification || null,
-    navLinksCount: fetchRow?.nav_links_count ?? null,
-    articleLinksCount: fetchRow?.article_links_count ?? null,
-    wordCount: latestWordCount,
-    gazetteerPlaceNames: gazetteer?.placeNames || null,
-    nonGeoTopicSlugs,
-    db
-  });
+  let hubCandidate = null;
+  if (options.hubs) {
+    hubCandidate = detectPlaceHub({
+      url,
+      urlPlaceAnalysis,
+      urlPlaces: urlPlaceMatches,
+      analysisPlaces: places,
+      section,
+      fetchClassification: fetchRow?.classification || null,
+      navLinksCount: fetchRow?.nav_links_count ?? null,
+      articleLinksCount: fetchRow?.article_links_count ?? null,
+      wordCount: latestWordCount,
+      gazetteerPlaceNames: gazetteer?.placeNames || null,
+      nonGeoTopicSlugs,
+      db
+    });
+  }
   timings.detectHubMs = Math.max(0, performance.now() - detectHubStart);
 
-  const articleSignalsService = new ArticleSignalsService();
-  const urlSignals = articleSignalsService.computeUrlSignals(url);
-  const contentSignals = preparation.contentSignals;
-  const articleEvaluation = articleSignalsService.combineSignals(urlSignals, contentSignals, { wordCount: latestWordCount });
+  let articleEvaluation = { hint: 'unknown', score: 0, signals: {} };
+  if (options.signals) {
+    const articleSignalsService = new ArticleSignalsService();
+    const urlSignals = articleSignalsService.computeUrlSignals(url);
+    const contentSignals = preparation.contentSignals;
+    articleEvaluation = articleSignalsService.combineSignals(urlSignals, contentSignals, { wordCount: latestWordCount });
+  }
 
   if (hubCandidate && hubCandidate.kind === 'place') {
     analysis.kind = 'hub';
@@ -117,11 +148,14 @@ async function analyzePage({
   analysis.meta.articleEvaluation = articleEvaluation;
 
   const deepStart = performance.now();
-  const deepAnalysis = performDeepAnalysis({
-    text: preparation.articleRow?.text || articleRow?.text || null,
-    title,
-    metadata: { url }
-  });
+  let deepAnalysis = null;
+  if (options.deep) {
+    deepAnalysis = performDeepAnalysis({
+      text: preparation.articleRow?.text || articleRow?.text || null,
+      title,
+      metadata: { url }
+    });
+  }
   timings.deepAnalysisMs = Math.max(0, performance.now() - deepStart);
 
   timings.overallMs = Math.max(0, performance.now() - overallStart);
@@ -157,7 +191,8 @@ async function buildAnalysis({
   gazetteer,
   context,
   targetVersion,
-  preparation = null
+  preparation = null,
+  options = { places: true }
 }) {
   const base = {
     analysis_version: targetVersion,
@@ -168,7 +203,7 @@ async function buildAnalysis({
   };
 
   let urlPlaceAnalysis = null;
-  if (gazetteer) {
+  if (gazetteer && options.places) {
     try {
       urlPlaceAnalysis = extractPlacesFromUrl(url, gazetteer);
     } catch (error) {
@@ -191,7 +226,7 @@ async function buildAnalysis({
     const detections = [];
 
     try {
-      if (articleRow.text && gazetteer) {
+      if (articleRow.text && gazetteer && options.places) {
         for (const place of extractGazetteerPlacesFromText(articleRow.text, gazetteer, context, false)) {
           detections.push({
             place: place.name,
@@ -206,7 +241,7 @@ async function buildAnalysis({
         }
       }
 
-      if (title && gazetteer) {
+      if (title && gazetteer && options.places) {
         for (const place of extractGazetteerPlacesFromText(title, gazetteer, context, true)) {
           detections.push({
             place: place.name,
@@ -335,79 +370,89 @@ async function prepareArticleContent({
   let extractionMethod = null;
   let xPathLearned = false;
   const domain = safeExtractDomain(url);
+  let dom = null;
 
-  if (xpathService) {
-    try {
-      const xpathStart = performance.now();
-      extractedText = xpathService.extractTextWithXPath(url, html);
-      timings.xpathExtractionMs += Math.max(0, performance.now() - xpathStart);
-      if (extractedText) {
-        extractionMethod = 'xpath';
-        preparedArticleRow.article_xpath = preparedArticleRow.article_xpath || xpathService.getXPathForDomain(domain)?.xpath || null;
-      }
-    } catch (_) {
-      // ignore primary xpath errors
-    }
-
-    if (!extractedText && !xpathService.hasXPathForDomain(domain)) {
+  try {
+    if (xpathService) {
       try {
-        const learnStart = performance.now();
-        const learnedPattern = await xpathService.learnXPathFromHtml(url, html);
-        timings.xpathLearningMs += Math.max(0, performance.now() - learnStart);
-        if (learnedPattern) {
-          const secondXpathStart = performance.now();
-          extractedText = xpathService.extractTextWithXPath(url, html);
-          timings.xpathExtractionMs += Math.max(0, performance.now() - secondXpathStart);
-          if (extractedText) {
-            extractionMethod = 'xpath-learned';
-            xPathLearned = true;
-            preparedArticleRow.article_xpath = learnedPattern.xpath || preparedArticleRow.article_xpath || null;
-          }
+        const xpathStart = performance.now();
+        extractedText = await xpathService.extractTextWithXPath(url, html);
+        timings.xpathExtractionMs += Math.max(0, performance.now() - xpathStart);
+        if (extractedText) {
+          extractionMethod = 'xpath';
+          const pattern = await xpathService.getXPathForDomain(domain);
+          preparedArticleRow.article_xpath = preparedArticleRow.article_xpath || pattern?.xpath || null;
         }
       } catch (_) {
-        // ignore learning failures
+        // ignore primary xpath errors
+      }
+
+      if (!extractedText && !(await xpathService.hasXPathForDomain(domain))) {
+        try {
+          // Optimization: JSDOM is slow. Using linkedom for 10x speedup.
+          const jsdomStart = performance.now();
+          ({ dom } = createDom(html, { url, engine: 'linkedom' }));
+          timings.jsdomMs = (timings.jsdomMs || 0) + Math.max(0, performance.now() - jsdomStart);
+
+          const learnStart = performance.now();
+          const learnedPattern = await xpathService.learnXPathFromDocument(url, dom.window.document);
+          timings.xpathLearningMs += Math.max(0, performance.now() - learnStart);
+          
+          if (learnedPattern) {
+            const secondXpathStart = performance.now();
+            extractedText = await xpathService.extractTextWithXPath(url, html);
+            timings.xpathExtractionMs += Math.max(0, performance.now() - secondXpathStart);
+            if (extractedText) {
+              extractionMethod = 'xpath-learned';
+              xPathLearned = true;
+              preparedArticleRow.article_xpath = learnedPattern.xpath || preparedArticleRow.article_xpath || null;
+            }
+          }
+        } catch (_) {
+          // ignore learning failures
+        }
       }
     }
-  }
 
-  if (!extractedText) {
-    let dom = null;
-    try {
-      const readabilityStart = performance.now();
+    if (!extractedText) {
+      try {
+        const readabilityStart = performance.now();
 
-      const $ = cheerio.load(html);
-      const articleSignalsService = new ArticleSignalsService();
-      result.contentSignals = articleSignalsService.computeContentSignals($, html);
+        const $ = cheerio.load(html);
+        const articleSignalsService = new ArticleSignalsService();
+        result.contentSignals = articleSignalsService.computeContentSignals($, html);
 
-      const jsdomStart = performance.now();
-      ({ dom } = createJsdom(html, { url }));
-      const jsdomMs = Math.max(0, performance.now() - jsdomStart);
-      const document = dom.window.document;
+        if (!dom) {
+          const jsdomStart = performance.now();
+          ({ dom } = createDom(html, { url, engine: 'linkedom' }));
+          timings.jsdomMs = (timings.jsdomMs || 0) + Math.max(0, performance.now() - jsdomStart);
+        }
+        const document = dom.window.document;
 
-      const linkSummary = summarizeLinks({ url, document });
-      result.linkCounts.total = linkSummary.total;
-      result.linkCounts.nav = linkSummary.navigation;
-      result.linkCounts.article = linkSummary.article;
-      result.linkSummary = linkSummary;
+        const linkSummary = summarizeLinks({ url, document });
+        result.linkCounts.total = linkSummary.total;
+        result.linkCounts.nav = linkSummary.navigation;
+        result.linkCounts.article = linkSummary.article;
+        result.linkSummary = linkSummary;
 
-      const readabilityAlgoStart = performance.now();
-      const readable = new Readability(document).parse();
-      const readabilityAlgoMs = Math.max(0, performance.now() - readabilityAlgoStart);
+        const readabilityAlgoStart = performance.now();
+        const readable = new Readability(document).parse();
+        const readabilityAlgoMs = Math.max(0, performance.now() - readabilityAlgoStart);
 
-      if (readable && readable.textContent) {
-        extractedText = readable.textContent.trim();
-        extractionMethod = extractionMethod || 'readability';
+        if (readable && readable.textContent) {
+          extractedText = readable.textContent.trim();
+          extractionMethod = extractionMethod || 'readability';
+        }
+        const totalReadabilityMs = Math.max(0, performance.now() - readabilityStart);
+        timings.readabilityMs += totalReadabilityMs;
+        timings.readabilityAlgoMs = (timings.readabilityAlgoMs || 0) + readabilityAlgoMs;
+      } catch (_) {
+        // ignore readability failures
       }
-      const totalReadabilityMs = Math.max(0, performance.now() - readabilityStart);
-      timings.readabilityMs += totalReadabilityMs;
-      timings.jsdomMs = (timings.jsdomMs || 0) + jsdomMs;
-      timings.readabilityAlgoMs = (timings.readabilityAlgoMs || 0) + readabilityAlgoMs;
-    } catch (_) {
-      // ignore readability failures
-    } finally {
-      if (dom) {
-        dom.window.close();
-      }
+    }
+  } finally {
+    if (dom) {
+      dom.window.close();
     }
   }
 

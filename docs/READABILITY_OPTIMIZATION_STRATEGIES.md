@@ -33,13 +33,13 @@ Instead of running Readability's full DOM parsing on every page, extract content
 **Workflow**:
 ```javascript
 // PHASE 1: Try stored XPath (if domain pattern exists)
-const extractedText = xpathService.extractTextWithXPath(url, html);
+const extractedText = await xpathService.extractTextWithXPath(url, html);
 if (extractedText) return;  // Fast path: 1-5ms
 
 // PHASE 2: Learn pattern (if domain new)
 const learned = await xpathService.learnXPathFromHtml(url, html);
 if (learned) {
-  const extracted = xpathService.extractTextWithXPath(url, html);
+  const extracted = await xpathService.extractTextWithXPath(url, html);
   return;  // ~100ms first time, then <5ms future runs
 }
 

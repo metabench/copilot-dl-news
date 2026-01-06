@@ -228,7 +228,8 @@ class DomainProcessor {
           retry4xxMs,
           runId,
           nowMs,
-          verbose: options.verbose
+          verbose: options.verbose,
+          normalizedDomain
         },
         deps: { db, newsDb, queries, analyzers, validator, stores, logger, fetchFn, now, emitTelemetry },
         attemptCounter,
@@ -294,6 +295,10 @@ class DomainProcessor {
         level: 'error',
         message: `Domain processing failed: ${error.message || error}`
       });
+
+      if (options.verbose) {
+        logger?.error?.(error.stack);
+      }
 
       throw error;
     }
@@ -2065,7 +2070,13 @@ class DomainProcessor {
       cacheHit: Boolean(meta.cacheHit)
     };
     if (stores.fetchRecorder && typeof stores.fetchRecorder.record === 'function') {
-      return stores.fetchRecorder.record(fetchRow, tags);
+      try {
+        return stores.fetchRecorder.record(fetchRow, tags);
+      } catch (error) {
+        if (verbose) {
+          logger?.warn?.(`[DomainProcessor] Failed to record fetch: ${error.message}`);
+        }
+      }
     }
 
     // Fallback path if fetchRecorder unavailable

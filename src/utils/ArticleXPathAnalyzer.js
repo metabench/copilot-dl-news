@@ -1,7 +1,7 @@
 /**
  * ArticleXPathAnalyzer - Analyzes HTML structure to identify XPath patterns for article content extraction
  */
-const { createJsdom } = require('./jsdomUtils');
+const { createDom } = require('./domFactory');
 
 class ArticleXPathAnalyzer {
   constructor(options = {}) {
@@ -23,22 +23,8 @@ class ArticleXPathAnalyzer {
   async analyzeHtml(html) {
     let dom = null;
     try {
-      ({ dom } = createJsdom(html));
-      const document = dom.window.document;
-
-      const candidates = this.findArticleCandidates(document);
-      const scoredCandidates = this.scoreCandidates(candidates, document);
-      const xpathPatterns = this.generateXPathPatterns(scoredCandidates);
-
-      return {
-        documentInfo: {
-          elements: document.querySelectorAll('*').length,
-          textLength: document.body?.textContent?.length || 0
-        },
-        candidatesFound: candidates.length,
-        topPatterns: xpathPatterns.slice(0, this.options.limit)
-      };
-
+      ({ dom } = createDom(html, { engine: 'linkedom' }));
+      return this.analyzeDocument(dom.window.document);
     } catch (error) {
       throw new Error(`HTML analysis failed: ${error.message}`);
     } finally {
@@ -46,6 +32,26 @@ class ArticleXPathAnalyzer {
         dom.window.close();
       }
     }
+  }
+
+  /**
+   * Analyze a DOM document and return XPath patterns
+   * @param {Document} document - DOM document
+   * @returns {object} Analysis results with top patterns
+   */
+  analyzeDocument(document) {
+    const candidates = this.findArticleCandidates(document);
+    const scoredCandidates = this.scoreCandidates(candidates, document);
+    const xpathPatterns = this.generateXPathPatterns(scoredCandidates);
+
+    return {
+      documentInfo: {
+        elements: document.querySelectorAll('*').length,
+        textLength: document.body?.textContent?.length || 0
+      },
+      candidatesFound: candidates.length,
+      topPatterns: xpathPatterns.slice(0, this.options.limit)
+    };
   }
 
   /**

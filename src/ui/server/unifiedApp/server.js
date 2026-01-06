@@ -25,6 +25,7 @@ const { UnifiedShell } = require('./views/UnifiedShell');
 const { createSubAppRegistry } = require('./subApps/registry');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 const { openNewsDb } = require('../../../db/dbAccess');
+const { createMcpLogger } = require('../../../utils/mcpLogger');
 
 const { createRateLimitDashboardRouter } = require('../rateLimitDashboard/server');
 const { createWebhookDashboardRouter } = require('../webhookDashboard/server');
@@ -41,12 +42,16 @@ const { createCrawlObserverRouter } = require('../crawlObserver/server');
 const { createCrawlStatusRouter } = require('../crawlStatus/server');
 const { createCrawlerProfilesRouter } = require('../crawlerProfiles/server');
 const { createSchedulerDashboardRouter } = require('../schedulerDashboard/server');
+const { createMultiModalCrawlRouter } = require('../multiModalCrawl/server');
 const { TelemetryIntegration } = require('../../../crawler/telemetry/TelemetryIntegration');
 const { InProcessCrawlJobRegistry } = require('../../../server/crawl-api/v1/core/InProcessCrawlJobRegistry');
 const { registerCrawlApiV1Routes } = require('../../../api/route-loaders/crawl-v1');
 const { createCrawlService } = require('../../../server/crawl-api/core/crawlService');
 
 const PORT = process.env.PORT || 3000;
+
+// MCP Logger for AI agent visibility (vital-only to console, full logging to file/MCP)
+const log = createMcpLogger.uiServer('unified-app');
 
 function parseEnvBoolean(value, fallback = false) {
   if (value === undefined || value === null) return fallback;
@@ -189,6 +194,225 @@ function mountDashboardModules(unifiedApp, options = {}) {
       items: history
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Download Evidence API - Proof-grade download statistics
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const downloadEvidence = require('../../../db/queries/downloadEvidence');
+
+  // Helper to get the raw better-sqlite3 db object
+  function getDb() {
+    const dbWrapper = getDbRW();
+    if (!dbWrapper) {
+      throw new Error('Database wrapper is null');
+    }
+    const rawDb = dbWrapper.db;
+    if (!rawDb) {
+      throw new Error('Raw database handle is null. Wrapper type: ' + typeof dbWrapper + ', keys: ' + Object.keys(dbWrapper).slice(0,5).join(','));
+    }
+    if (!rawDb.open) {
+      throw new Error('Database is not open. rawDb type: ' + typeof rawDb + ', has prepare: ' + (typeof rawDb.prepare === 'function'));
+    }
+    return rawDb;
+  }
+
+  // Debug endpoint to check database state
+  unifiedApp.get('/api/downloads/debug', (req, res) => {
+    try {
+      const dbWrapper = getDbRW();
+      const rawDb = dbWrapper?.db;
+      res.json({
+        status: 'ok',
+        debug: {
+          hasWrapper: !!dbWrapper,
+          wrapperType: typeof dbWrapper,
+          wrapperKeys: dbWrapper ? Object.keys(dbWrapper).slice(0, 10) : null,
+          hasRawDb: !!rawDb,
+          rawDbType: typeof rawDb,
+          rawDbOpen: rawDb?.open,
+          rawDbHasPrepare: typeof rawDb?.prepare === 'function'
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message, stack: error.stack });
+    }
+  });
+
+  // Get global download stats (all-time)
+  unifiedApp.get('/api/downloads/stats', (req, res) => {
+    try {
+      const stats = downloadEvidence.getGlobalStats(getDb());
+      res.json({ status: 'ok', stats });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  // Get download stats for a time range
+  unifiedApp.get('/api/downloads/range', (req, res) => {
+    try {
+      const { start, end } = req.query;
+      if (!start || !end) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: 'Missing required query params: start, end (ISO timestamps)' 
+        });
+      }
+      const stats = downloadEvidence.getDownloadStats(getDb(), start, end);
+      res.json({ status: 'ok', start, end, stats });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  // Get download timeline for progress visualization
+  unifiedApp.get('/api/downloads/timeline', (req, res) => {
+    try {
+      const { start, end } = req.query;
+      if (!start || !end) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: 'Missing required query params: start, end (ISO timestamps)' 
+        });
+      }
+      const timeline = downloadEvidence.getDownloadTimeline(getDb(), start, end);
+      res.json({ status: 'ok', start, end, timeline });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  // Get evidence bundle for downloads
+  unifiedApp.get('/api/downloads/evidence', (req, res) => {
+    try {
+      const { start, end, limit = '100' } = req.query;
+      if (!start || !end) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: 'Missing required query params: start, end (ISO timestamps)' 
+        });
+      }
+      const evidence = downloadEvidence.getDownloadEvidence(
+        getDb(), 
+        start, 
+        end, 
+        parseInt(limit, 10)
+      );
+      res.json({ status: 'ok', start, end, count: evidence.length, evidence });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  // Verify a download claim (anti-hallucination endpoint)
+  unifiedApp.get('/api/downloads/verify', (req, res) => {
+    try {
+      const { start, end, claimed } = req.query;
+      if (!start || !end || claimed === undefined) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: 'Missing required query params: start, end, claimed' 
+        });
+      }
+      const result = downloadEvidence.verifyDownloadClaim(
+        getDb(), 
+        start, 
+        end, 
+        parseInt(claimed, 10)
+      );
+      res.json({ status: 'ok', ...result });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  // Get active/recent crawl progress from task_events
+  unifiedApp.get('/api/downloads/crawl-progress', (req, res) => {
+    try {
+      const db = getDb();
+      
+      // Find the most recent crawl task (started in the last 30 minutes)
+      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      
+      // Get the latest crawl task
+      const latestTask = db.prepare(`
+        SELECT DISTINCT task_id, task_type, MIN(ts) as started_at
+        FROM task_events 
+        WHERE event_type IN ('crawl:start', 'crawl:started')
+          AND ts > ?
+        GROUP BY task_id
+        ORDER BY started_at DESC
+        LIMIT 1
+      `).get(thirtyMinAgo);
+      
+      if (!latestTask) {
+        return res.json({ 
+          status: 'ok', 
+          active: false, 
+          message: 'No active crawl in last 30 minutes'
+        });
+      }
+      
+      // Get the latest progress event for this task
+      const latestProgress = db.prepare(`
+        SELECT payload, ts
+        FROM task_events 
+        WHERE task_id = ? AND event_type = 'crawl:progress'
+        ORDER BY seq DESC
+        LIMIT 1
+      `).get(latestTask.task_id);
+      
+      // Get the config from the start event
+      const startEvent = db.prepare(`
+        SELECT payload
+        FROM task_events 
+        WHERE task_id = ? AND event_type IN ('crawl:start', 'crawl:started')
+        ORDER BY seq ASC
+        LIMIT 1
+      `).get(latestTask.task_id);
+      
+      let maxPages = 50; // default goal
+      if (startEvent && startEvent.payload) {
+        try {
+          const config = JSON.parse(startEvent.payload);
+          if (config.maxPages) maxPages = config.maxPages;
+          if (config.config?.maxPages) maxPages = config.config.maxPages;
+        } catch (e) { /* ignore parse errors */ }
+      }
+      
+      let progress = { visited: 0, downloaded: 0, articles: 0, errors: 0 };
+      if (latestProgress && latestProgress.payload) {
+        try {
+          progress = JSON.parse(latestProgress.payload);
+        } catch (e) { /* ignore parse errors */ }
+      }
+      
+      // Check if crawl is still active (last progress within 60 seconds)
+      const lastProgressTime = latestProgress?.ts ? new Date(latestProgress.ts).getTime() : 0;
+      const isActive = (Date.now() - lastProgressTime) < 60000;
+      
+      res.json({
+        status: 'ok',
+        active: isActive,
+        taskId: latestTask.task_id,
+        startedAt: latestTask.started_at,
+        lastProgressAt: latestProgress?.ts || null,
+        goal: maxPages,
+        progress: {
+          visited: progress.visited || 0,
+          downloaded: progress.downloaded || 0,
+          articles: progress.articles || 0,
+          errors: progress.errors || 0,
+          percentComplete: Math.min(100, Math.round(((progress.downloaded || 0) / maxPages) * 100))
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
 
   const crawlServiceOptions = {
     telemetryIntegration: crawlTelemetry
@@ -428,6 +652,11 @@ function mountDashboardModules(unifiedApp, options = {}) {
       })
     },
     {
+      id: 'multi-modal-crawl',
+      mountPath: '/multi-modal',
+      full: () => createMultiModalCrawlRouter({ getDbRW })
+    },
+    {
       id: 'scheduler',
       mountPath: '/scheduler',
       apiOnly: () => createSchedulerDashboardRouter({ getDbRW, includeRootRoute: false }),
@@ -517,7 +746,7 @@ app.get('/', async (req, res) => {
     const html = shell.render();
     res.type('html').send(html);
   } catch (err) {
-    console.error('Render error:', err);
+    log.error('Render error', { error: err.message, stack: err.stack });
     res.status(500).send('Error rendering app shell');
   }
 });
@@ -554,7 +783,7 @@ app.get('/api/apps/:appId/content', async (req, res) => {
       embed: normalized.embed
     });
   } catch (err) {
-    console.error(`Error rendering ${appId}:`, err);
+    log.error(`Error rendering sub-app: ${appId}`, { appId, error: err.message });
     res.status(500).json({ error: err.message });
   }
 });
@@ -568,6 +797,8 @@ if (require.main === module) {
   const args = parseArgs();
   const port = args.port;
 
+  log.info('Starting unified app shell', { port });
+
   // Mount dashboard modules into the unified app (no-retirement: legacy servers keep working too)
   // NOTE: keep this inside the main entrypoint so importing this module in Jest stays cheap and
   // deterministic (no DB open, no background mounts).
@@ -576,6 +807,10 @@ if (require.main === module) {
   });
 
   wrapServerForCheck(app, port, undefined, () => {
+    log.info('Unified app shell ready', { 
+      url: `http://localhost:${port}`,
+      subApps: SUB_APPS.length 
+    });
     console.log(`\n🎛️  Unified App Shell running at http://localhost:${port}\n`);
     console.log('Available sub-apps:');
     for (const app of SUB_APPS) {
@@ -585,6 +820,7 @@ if (require.main === module) {
   });
 
   const shutdown = () => {
+    log.info('Shutting down unified app shell');
     try {
       mountedModules.close();
     } catch {

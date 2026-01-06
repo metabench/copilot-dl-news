@@ -13,6 +13,7 @@ const { ensureDb } = require('../db/sqlite');
 const { CliFormatter } = require('../utils/CliFormatter');
 const { CliArgumentParser } = require('../utils/CliArgumentParser');
 const { createBackfillDatesQueries } = require('../db/sqlite/v1/queries/articles.backfillDates');
+const { backfillDates } = require('./backfill-dates-core');
 
 const fmt = new CliFormatter();
 
@@ -246,6 +247,8 @@ function toIso(v) {
   return null;
 }
 
+// Note: Core implementation lives in backfill-dates-core.js; this file remains the CLI wrapper.
+
 if (require.main === module) {
   (async () => {
     let options;
@@ -292,94 +295,40 @@ if (require.main === module) {
       return;
     }
 
-    const queries = createBackfillDatesQueries(dbHandle);
-    const onlyArticles = includeNav ? false : true;
     const events = createEventEmitter(stream);
 
-    let processed = 0;
-    let batches = 0;
-    let listedExisting = 0;
-
     try {
-      if (listExisting && !redo) {
-        for (const row of queries.iterateExistingDates({ onlyArticles, onlyUrl })) {
-          const existing = (row.date || '').trim();
-          events.emit('existing', existing, row.url);
-          listedExisting++;
-        }
-      }
-
-      const tx = dbHandle.transaction((items) => {
-        for (const row of items) {
-          const iso = extractDate(row.html || '');
-          if (iso) {
-            queries.updateArticleDate(row.url, iso);
-            events.emit('backfilled', iso, row.url);
-          } else {
-            events.emit('missing', '', row.url);
-          }
-        }
-      });
-
-      let lastId = 0;
-      while (true) {
-        let toFetch = batchSize;
-        if (limit) {
-          const remaining = limit - processed;
-          if (remaining <= 0) break;
-          toFetch = Math.min(toFetch, remaining);
-        }
-
-        const rows = queries.fetchBatch({
-          lastId,
-          limit: toFetch,
-          includeExistingDates: redo,
-          onlyArticles,
-          onlyUrl
-        });
-
-        if (!rows.length) break;
-
-        if (redo) {
-          const missingRows = rows.filter((row) => !row.date);
-          if (missingRows.length) tx(missingRows);
-
-          for (const row of rows) {
-            if (!row.date) continue;
-            const existing = (row.date || '').trim();
-            const iso = extractDate(row.html || '');
-            if (iso && iso !== existing) {
-              queries.updateArticleDate(row.url, iso);
-              events.emit('updated', iso, row.url);
-            } else {
-              events.emit('unchanged', existing, row.url);
-            }
-          }
-        } else {
-          tx(rows);
-        }
-
-        processed += rows.length;
-        batches += 1;
-        lastId = rows[rows.length - 1].id;
-      }
-
-      const counts = events.counts;
       const summary = {
-        processed,
-        batches,
-        backfilled: counts.backfilled || 0,
-        updated: counts.updated || 0,
-        unchanged: counts.unchanged || 0,
-        missing: counts.missing || 0,
-        existingListed: listedExisting,
-        redo,
-        includeNav,
-        limit,
-        limited: Boolean(limit && processed >= limit)
+        ...(await backfillDates({
+          db: dbHandle,
+          dbPath,
+          limit,
+          batchSize,
+          listExisting,
+          redo,
+          includeNav,
+          onlyUrl,
+          onRowEvent: (evt) => {
+            events.emit(evt.type, evt.date || '', evt.url || '');
+          },
+          logger: quiet ? null : console
+        }))
       };
 
-      emitSummary(summary, { quiet, format: summaryFormat });
+      // Normalize keys for legacy summary output
+      emitSummary({
+        processed: summary.processed,
+        batches: summary.batches,
+        backfilled: summary.backfilled,
+        updated: summary.updated,
+        unchanged: summary.unchanged,
+        missing: summary.missing,
+        existingListed: summary.existingListed,
+        redo: summary.redo,
+        includeNav: summary.includeNav,
+        limit: summary.limit,
+        limited: summary.limited
+      }, { quiet, format: summaryFormat });
     } catch (error) {
       fmt.error(error instanceof Error ? error.message : String(error));
       process.exitCode = 1;

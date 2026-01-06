@@ -15,6 +15,7 @@ const FlakyDetector = require('./FlakyDetector');
 const TrendAnalyzer = require('./TrendAnalyzer');
 
 const DEFAULT_PORT = 3103;
+const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 
 /**
  * Create the Test Studio server
@@ -41,7 +42,13 @@ function createServer(options = {}) {
    */
   app.get('/api/test-studio/runs', async (req, res) => {
     try {
-      await resultService.refreshFromDisk();
+      const minIntervalMsRaw = Number.parseInt(req.query.minIntervalMs, 10);
+      const maxFilesRaw = Number.parseInt(req.query.maxFiles, 10);
+
+      await resultService.refreshFromDisk({
+        ...(Number.isFinite(minIntervalMsRaw) ? { minIntervalMs: minIntervalMsRaw } : null),
+        ...(Number.isFinite(maxFilesRaw) ? { maxFiles: maxFilesRaw } : null)
+      });
       const limit = parseInt(req.query.limit) || 50;
       const offset = parseInt(req.query.offset) || 0;
       const runs = await resultService.listRuns({ limit, offset });
@@ -73,7 +80,13 @@ function createServer(options = {}) {
    */
   app.get('/api/test-studio/runs/:id/results', async (req, res) => {
     try {
-      await resultService.refreshFromDisk();
+      const minIntervalMsRaw = Number.parseInt(req.query.minIntervalMs, 10);
+      const maxFilesRaw = Number.parseInt(req.query.maxFiles, 10);
+
+      await resultService.refreshFromDisk({
+        ...(Number.isFinite(minIntervalMsRaw) ? { minIntervalMs: minIntervalMsRaw } : null),
+        ...(Number.isFinite(maxFilesRaw) ? { maxFiles: maxFilesRaw } : null)
+      });
       const filters = {
         status: req.query.status,
         file: req.query.file,
@@ -247,7 +260,7 @@ async function executeRerun(command) {
     const shellFlag = isWindows ? '/c' : '-c';
     
     const child = spawn(shell, [shellFlag, command], {
-      cwd: process.cwd(),
+      cwd: REPO_ROOT,
       stdio: ['ignore', 'pipe', 'pipe']
     });
     
@@ -411,6 +424,40 @@ function getDashboardHTML() {
     .btn-primary:hover { background: #2563eb; }
     .btn-danger { background: #ef4444; color: white; }
     .btn-danger:hover { background: #dc2626; }
+
+    .rerun-panel {
+      background: #16213e;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      border: 1px solid #2a2a4a;
+    }
+    .rerun-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .rerun-status {
+      color: #cdd2e0;
+      font-size: 13px;
+    }
+    .rerun-status.running { color: #fbbf24; }
+    .rerun-status.passed { color: #4ade80; }
+    .rerun-status.failed { color: #f87171; }
+    .rerun-output {
+      background: #0f1320;
+      border: 1px solid #2a2a4a;
+      border-radius: 6px;
+      padding: 10px;
+      max-height: 220px;
+      overflow: auto;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      color: #cdd2e0;
+    }
     
     .loading { text-align: center; padding: 40px; color: #888; }
     .error { color: #f87171; padding: 20px; text-align: center; }
@@ -441,6 +488,16 @@ function getDashboardHTML() {
         <button class="btn btn-primary" onclick="loadRuns()">Refresh</button>
       </div>
     </header>
+
+    <div class="rerun-panel" id="rerun-panel">
+      <div class="rerun-row">
+        <button class="btn btn-primary" id="rerun-guardian-10" onclick="rerunTestFile('tests/e2e-features/guardian-10-page-crawl.e2e.test.js', 'rerun-guardian-10')">Rerun Guardian 10-page crawl</button>
+        <button class="btn btn-primary" id="rerun-guardian-1000" onclick="rerunTestFile('tests/e2e-features/guardian-1000-page-crawl.e2e.test.js', 'rerun-guardian-1000')">Rerun Guardian 1000-page crawl</button>
+        <button class="btn btn-primary" id="rerun-guardian-1000-db" onclick="rerunTestFile('tests/e2e-features/guardian-1000-page-crawl-persists-to-db.e2e.test.js', 'rerun-guardian-1000-db')">Rerun Guardian 1000-page crawl (DB)</button>
+        <span class="rerun-status" id="rerun-status">Idle</span>
+      </div>
+      <div class="rerun-output" id="rerun-output" aria-label="Rerun output">Click rerun to execute the E2E test via Test Studio.</div>
+    </div>
     
     <div class="stats-grid" id="stats">
       <div class="stat-card"><div class="stat-value">-</div><div class="stat-label">Total Tests</div></div>
@@ -477,10 +534,81 @@ function getDashboardHTML() {
   <script>
     let currentFilter = 'all';
     let testData = [];
-    
-    async function loadRuns() {
+
+    function msToHuman(ms) {
+      if (!Number.isFinite(ms) || ms < 0) return '';
+      const s = Math.round(ms / 100) / 10;
+      return s >= 60
+        ? (Math.floor(s / 60) + 'm ' + Math.round(s % 60) + 's')
+        : (s + 's');
+    }
+
+    async function rerunTestFile(file, buttonId) {
+      const statusEl = document.getElementById('rerun-status');
+      const outputEl = document.getElementById('rerun-output');
+      const btn = document.getElementById(buttonId || 'rerun-guardian-1000');
+
+      const started = Date.now();
+      let tick = null;
+
       try {
-        const res = await fetch('/api/test-studio/runs?limit=1');
+        btn.disabled = true;
+        statusEl.className = 'rerun-status running';
+        statusEl.textContent = 'Running… 0.0s';
+        outputEl.textContent = 'POST /api/test-studio/rerun\\nfile=' + file + '\\n\\n';
+
+        tick = setInterval(() => {
+          statusEl.textContent = 'Running… ' + msToHuman(Date.now() - started);
+        }, 250);
+
+        const res = await fetch('/api/test-studio/rerun', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tests: [{ file }] })
+        });
+
+        const data = await res.json();
+        const finishedMs = Date.now() - started;
+
+        const result = data && data.result ? data.result : null;
+        const exitCode = result ? result.exitCode : undefined;
+        const ok = exitCode === 0;
+
+        statusEl.className = 'rerun-status ' + (ok ? 'passed' : 'failed');
+        statusEl.textContent = (ok ? 'PASS' : 'FAIL') + ' (exit ' + exitCode + ') in ' + msToHuman(finishedMs);
+
+        const stdout = String((result && result.stdout) || '');
+        const stderr = String((result && result.stderr) || '');
+        const command = String((data && data.command) || '');
+        outputEl.textContent =
+          command +
+          '\\n\\n--- stdout ---\\n' +
+          stdout.slice(-4000) +
+          '\\n\\n--- stderr ---\\n' +
+          stderr.slice(-4000) +
+          '\\n';
+
+        // Refresh immediately; bypass refreshFromDisk throttling.
+        await loadRuns({ minIntervalMs: 0 });
+      } catch (err) {
+        const message = err && err.message ? err.message : String(err);
+        statusEl.className = 'rerun-status failed';
+        statusEl.textContent = 'ERROR: ' + message;
+        outputEl.textContent += '\\nERROR: ' + message;
+      } finally {
+        if (tick) clearInterval(tick);
+        btn.disabled = false;
+      }
+    }
+    
+    async function loadRuns(options = {}) {
+      try {
+        const minIntervalMs = Number.isFinite(options.minIntervalMs) ? options.minIntervalMs : undefined;
+        const url = minIntervalMs != null
+          ? '/api/test-studio/runs?limit=1&minIntervalMs=' + encodeURIComponent(String(minIntervalMs))
+          : '/api/test-studio/runs?limit=1';
+
+        const res = await fetch(url);
         const data = await res.json();
         
         if (data.runs && data.runs.length > 0) {
@@ -497,7 +625,7 @@ function getDashboardHTML() {
     
     async function loadResults(runId) {
       try {
-        const res = await fetch('/api/test-studio/runs/' + runId + '/results');
+        const res = await fetch('/api/test-studio/runs/' + runId + '/results?minIntervalMs=0');
         const data = await res.json();
         
         testData = data.results || [];

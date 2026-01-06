@@ -1,6 +1,51 @@
 'use strict';
 
+/**
+ * @fileoverview Article Detection
+ * 
+ * LEGACY INTERFACE: This module provides backward compatibility with the original
+ * evaluateArticleCandidate() function. Internally, it now uses the Classification
+ * Cascade (Stage1UrlClassifier, Stage2ContentClassifier, StageAggregator) for
+ * consistent multi-stage classification.
+ * 
+ * For new code, prefer using the classifiers directly:
+ * ```js
+ * const { Stage1UrlClassifier, Stage2ContentClassifier, StageAggregator } = require('./classifiers');
+ * ```
+ * 
+ * @see src/classifiers/Stage1UrlClassifier.js
+ * @see src/classifiers/Stage2ContentClassifier.js
+ * @see src/classifiers/StageAggregator.js
+ */
+
 const ArticleSignalsService = require('../crawler/ArticleSignalsService');
+const { Stage1UrlClassifier, Stage2ContentClassifier, StageAggregator } = require('../classifiers');
+
+// Singleton instances for reuse
+let _urlClassifier = null;
+let _contentClassifier = null;
+let _aggregator = null;
+
+function getUrlClassifier() {
+  if (!_urlClassifier) {
+    _urlClassifier = new Stage1UrlClassifier();
+  }
+  return _urlClassifier;
+}
+
+function getContentClassifier() {
+  if (!_contentClassifier) {
+    _contentClassifier = new Stage2ContentClassifier();
+  }
+  return _contentClassifier;
+}
+
+function getAggregator() {
+  if (!_aggregator) {
+    _aggregator = new StageAggregator();
+  }
+  return _aggregator;
+}
 
 function normalizeClassification(value) {
   if (!value) return null;
@@ -220,11 +265,180 @@ function evaluateArticleCandidate(candidate, { signalsService = createArticleSig
   };
 }
 
+/**
+ * Classify a URL + optional HTML using the Classification Cascade.
+ * 
+ * This is the recommended API for new code. It uses independent stage classifiers
+ * and returns a result with full provenance tracking.
+ * 
+ * @param {string} url - The URL to classify
+ * @param {string} [html] - Optional HTML content (if already downloaded)
+ * @param {Object} [options] - Classification options
+ * @param {boolean} [options.includeProvenance=true] - Include provenance tracking
+ * @returns {Object} Classification result with provenance
+ * 
+ * @example
+ * // URL-only (pre-download)
+ * const result = classifyWithCascade('https://example.com/article');
+ * 
+ * // URL + Content (post-download)
+ * const result = classifyWithCascade('https://example.com/article', htmlContent);
+ * console.log(result.provenance.aggregator.decision); // 'unanimous' or 'content-override'
+ */
+function classifyWithCascade(url, html = null, options = {}) {
+  const { includeProvenance = true } = options;
+  
+  const urlClassifier = getUrlClassifier();
+  const contentClassifier = getContentClassifier();
+  const aggregator = getAggregator();
+  
+  // Stage 1: URL classification
+  const urlResult = urlClassifier.classify(url);
+  
+  // Stage 2: Content classification (if HTML provided)
+  let contentResult = null;
+  if (html) {
+    contentResult = contentClassifier.classify(html, url);
+  }
+  
+  // Aggregate results
+  const aggregated = aggregator.aggregate(urlResult, contentResult, null);
+  
+  const result = {
+    url,
+    classification: aggregated.classification,
+    confidence: aggregated.confidence,
+    isArticle: aggregated.classification === 'article',
+    stages: {
+      url: {
+        classification: urlResult.classification,
+        confidence: urlResult.confidence,
+        reason: urlResult.reason
+      },
+      content: contentResult ? {
+        classification: contentResult.classification,
+        confidence: contentResult.confidence,
+        reason: contentResult.reason,
+        signals: contentResult.signals
+      } : null
+    }
+  };
+  
+  if (includeProvenance) {
+    result.provenance = aggregated.provenance;
+  }
+  
+  return result;
+}
+
+/**
+ * Classify a URL using all three stages of the Classification Cascade.
+ * 
+ * This async version supports Puppeteer-based classification (Stage 3).
+ * Use when you need the most accurate classification and can afford the browser overhead.
+ * 
+ * @param {string} url - The URL to classify
+ * @param {Object} [options] - Classification options
+ * @param {string} [options.html] - Pre-downloaded HTML (skips re-fetch for Stage 2)
+ * @param {boolean} [options.usePuppeteer=false] - Enable Stage 3 Puppeteer classification
+ * @param {Object} [options.puppeteerClassifier] - Pre-initialized Stage3PuppeteerClassifier
+ * @param {boolean} [options.includeProvenance=true] - Include provenance tracking
+ * @returns {Promise<Object>} Classification result with provenance
+ * 
+ * @example
+ * // Full cascade with Puppeteer
+ * const result = await classifyWithFullCascade('https://example.com/article', {
+ *   usePuppeteer: true
+ * });
+ * console.log(result.provenance.puppeteer); // Stage 3 result
+ */
+async function classifyWithFullCascade(url, options = {}) {
+  const { 
+    html = null, 
+    usePuppeteer = false, 
+    puppeteerClassifier = null,
+    includeProvenance = true 
+  } = options;
+  
+  const urlClassifier = getUrlClassifier();
+  const contentClassifier = getContentClassifier();
+  const aggregator = getAggregator();
+  
+  // Stage 1: URL classification
+  const urlResult = urlClassifier.classify(url);
+  
+  // Stage 2: Content classification (if HTML provided)
+  let contentResult = null;
+  if (html) {
+    contentResult = contentClassifier.classify(html, url);
+  }
+  
+  // Stage 3: Puppeteer classification (if requested)
+  let puppeteerResult = null;
+  if (usePuppeteer) {
+    const { Stage3PuppeteerClassifier } = require('../classifiers');
+    const classifier = puppeteerClassifier || new Stage3PuppeteerClassifier();
+    const needsCleanup = !puppeteerClassifier;
+    
+    try {
+      await classifier.init();
+      puppeteerResult = await classifier.classify(url);
+    } finally {
+      if (needsCleanup) {
+        await classifier.destroy();
+      }
+    }
+  }
+  
+  // Aggregate all results
+  const aggregated = aggregator.aggregate(urlResult, contentResult, puppeteerResult);
+  
+  const result = {
+    url,
+    classification: aggregated.classification,
+    confidence: aggregated.confidence,
+    isArticle: aggregated.classification === 'article',
+    stages: {
+      url: {
+        classification: urlResult.classification,
+        confidence: urlResult.confidence,
+        reason: urlResult.reason
+      },
+      content: contentResult ? {
+        classification: contentResult.classification,
+        confidence: contentResult.confidence,
+        reason: contentResult.reason,
+        signals: contentResult.signals
+      } : null,
+      puppeteer: puppeteerResult ? {
+        classification: puppeteerResult.classification,
+        confidence: puppeteerResult.confidence,
+        reason: puppeteerResult.reason
+      } : null
+    }
+  };
+  
+  if (includeProvenance) {
+    result.provenance = aggregated.provenance;
+  }
+  
+  return result;
+}
+
 module.exports = {
   normalizeClassification,
   safeParse,
   extractContentSignals,
   mergeContentSignals,
   evaluateArticleCandidate,
-  createArticleSignalsService
+  createArticleSignalsService,
+  
+  // New cascade-based API
+  classifyWithCascade,
+  classifyWithFullCascade,
+  
+  // Direct access to classifiers (for advanced usage)
+  getUrlClassifier,
+  getContentClassifier,
+  getAggregator
 };

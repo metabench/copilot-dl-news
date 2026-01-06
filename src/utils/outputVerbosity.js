@@ -1,6 +1,9 @@
 'use strict';
 
-const OUTPUT_VERBOSITY_LEVELS = Object.freeze(['verbose', 'terse', 'extra-terse']);
+// Verbosity levels from most to least verbose
+// 'silent' is the most restrictive - suppresses ALL console output
+// 'downloads' shows only PAGE events (download activity)
+const OUTPUT_VERBOSITY_LEVELS = Object.freeze(['verbose', 'terse', 'downloads', 'extra-terse', 'silent']);
 const DEFAULT_OUTPUT_VERBOSITY = OUTPUT_VERBOSITY_LEVELS[0];
 
 const ALIAS_MAP = new Map([
@@ -11,13 +14,18 @@ const ALIAS_MAP = new Map([
   ['normal', 'terse'],
   ['terse', 'terse'],
   ['compact', 'terse'],
-  ['quiet', 'terse'],
+  ['downloads', 'downloads'],
+  ['downloads-only', 'downloads'],
+  ['pages', 'downloads'],
+  ['quiet', 'extra-terse'],
   ['minimal', 'extra-terse'],
-  ['silent', 'extra-terse'],
   ['extra-terse', 'extra-terse'],
   ['extra_terse', 'extra-terse'],
   ['extraterse', 'extra-terse'],
-  ['extra', 'extra-terse']
+  ['extra', 'extra-terse'],
+  ['silent', 'silent'],
+  ['none', 'silent'],
+  ['off', 'silent']
 ]);
 
 function normalizeOutputVerbosity(value, fallback = DEFAULT_OUTPUT_VERBOSITY) {
@@ -37,12 +45,18 @@ function normalizeOutputVerbosity(value, fallback = DEFAULT_OUTPUT_VERBOSITY) {
 }
 
 function isExtraTerse(level) {
-  return normalizeOutputVerbosity(level) === 'extra-terse';
+  const normalized = normalizeOutputVerbosity(level);
+  return normalized === 'extra-terse' || normalized === 'silent';
+}
+
+function isSilent(level) {
+  return normalizeOutputVerbosity(level) === 'silent';
 }
 
 module.exports = {
   OUTPUT_VERBOSITY_LEVELS,
   DEFAULT_OUTPUT_VERBOSITY,
   normalizeOutputVerbosity,
-  isExtraTerse
+  isExtraTerse,
+  isSilent
 };

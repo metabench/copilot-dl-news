@@ -3,6 +3,8 @@ const { safeCall, safeCallAsync } = require('./utils');
 const NetworkRetryPolicy = require('./NetworkRetryPolicy');
 const HostRetryBudgetManager = require('./HostRetryBudgetManager');
 const EventEmitter = require('events');
+const http = require('http');
+const https = require('https');
 const { PuppeteerDomainManager } = require('./PuppeteerDomainManager');
 
 // Lazy-load PuppeteerFetcher to avoid requiring puppeteer when not needed
@@ -18,7 +20,115 @@ function getPuppeteerFetcher() {
   return PuppeteerFetcher;
 }
 
-const fetchImpl = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+// node-fetch is ESM-only and cannot always be loaded under Jest's VM runtime.
+// We try to use node-fetch first (for feature parity, incl. `agent` support), then fall back to
+// a minimal built-in http/https fetch that provides the subset FetchPipeline needs.
+let cachedNodeFetch = null;
+let cachedNodeFetchError = null;
+
+async function loadNodeFetch() {
+  if (cachedNodeFetch) return cachedNodeFetch;
+  if (cachedNodeFetchError) throw cachedNodeFetchError;
+  try {
+    const mod = await Function('return import("node-fetch")')();
+    cachedNodeFetch = mod && (mod.default || mod);
+    return cachedNodeFetch;
+  } catch (err) {
+    cachedNodeFetchError = err;
+    throw err;
+  }
+}
+
+function toHeaderValue(value) {
+  if (value == null) return null;
+  if (Array.isArray(value)) return value.join(', ');
+  return String(value);
+}
+
+function createHeadersFacade(rawHeaders) {
+  const headers = rawHeaders && typeof rawHeaders === 'object' ? rawHeaders : {};
+  return {
+    get(name) {
+      if (!name) return null;
+      const value = headers[String(name).toLowerCase()];
+      return toHeaderValue(value);
+    }
+  };
+}
+
+function basicFetch(url, { headers, agent, signal } = {}) {
+  return new Promise((resolve, reject) => {
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch (err) {
+      reject(err);
+      return;
+    }
+
+    const transport = parsed.protocol === 'https:' ? https : http;
+    const req = transport.request(
+      {
+        protocol: parsed.protocol,
+        hostname: parsed.hostname,
+        port: parsed.port || undefined,
+        path: `${parsed.pathname || '/'}${parsed.search || ''}`,
+        method: 'GET',
+        headers: headers || {},
+        agent
+      },
+      (res) => {
+        const chunks = [];
+        res.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+        res.on('end', () => {
+          const body = Buffer.concat(chunks);
+          const status = Number(res.statusCode || 0);
+          const headersFacade = createHeadersFacade(res.headers);
+          resolve({
+            status,
+            ok: status >= 200 && status < 300,
+            headers: headersFacade,
+            text: async () => body.toString('utf8')
+          });
+        });
+      }
+    );
+
+    req.on('error', reject);
+
+    if (signal) {
+      if (signal.aborted) {
+        req.destroy(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+      } else {
+        const onAbort = () => {
+          req.destroy(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+        };
+        try {
+          signal.addEventListener('abort', onAbort, { once: true });
+        } catch (_) {}
+        req.on('close', () => {
+          try {
+            signal.removeEventListener('abort', onAbort);
+          } catch (_) {}
+        });
+      }
+    }
+
+    req.end();
+  });
+}
+
+const fetchImpl = async (...args) => {
+  try {
+    const nodeFetch = await loadNodeFetch();
+    if (typeof nodeFetch === 'function') {
+      return nodeFetch(...args);
+    }
+  } catch (_) {
+    // Fall through to basicFetch.
+  }
+  return basicFetch(args[0], args[1]);
+};
 
 // Configuration for error response body storage
 const STORE_ERROR_RESPONSE_BODIES = process.env.STORE_ERROR_BODIES === 'true';
@@ -41,7 +151,8 @@ function defaultLogger() {
   return {
     info: (...args) => console.log(...args),
     warn: (...args) => console.warn(...args),
-    error: (...args) => console.error(...args)
+    error: (...args) => console.error(...args),
+    debug: (...args) => console.log(...args)
   };
 }
 
@@ -273,7 +384,11 @@ class FetchPipeline extends EventEmitter {
     });
     this._puppeteerFetcher.on('fetch:success', (data) => {
       const reusedLabel = data.browserReused ? 'reused' : 'new';
-      this.logger.debug(`[puppeteer] Fetch success (${reusedLabel} browser, page #${data.sessionPageNumber})`, { type: 'PUPPETEER' });
+      if (this.logger && typeof this.logger.debug === 'function') {
+        this.logger.debug(`[puppeteer] Fetch success (${reusedLabel} browser, page #${data.sessionPageNumber})`, { type: 'PUPPETEER' });
+      } else {
+        this.logger.info(`[puppeteer] Fetch success (${reusedLabel} browser, page #${data.sessionPageNumber})`, { type: 'PUPPETEER' });
+      }
     });
     
     await this._puppeteerFetcher.init();
@@ -1109,7 +1224,11 @@ class FetchPipeline extends EventEmitter {
           } else if (learnResult.pending) {
             this.logger.info(`[puppeteer-learn] Domain ${host} pending approval after ${learnResult.failureCount} failures`, { type: 'PUPPETEER_LEARN' });
           } else if (learnResult.tracked) {
-            this.logger.debug(`[puppeteer-learn] Tracked failure ${learnResult.failureCount}/${this._puppeteerDomainManager.config.settings.autoLearnThreshold} for ${host}`, { type: 'PUPPETEER_LEARN' });
+            if (this.logger && typeof this.logger.debug === 'function') {
+              this.logger.debug(`[puppeteer-learn] Tracked failure ${learnResult.failureCount}/${this._puppeteerDomainManager.config.settings.autoLearnThreshold} for ${host}`, { type: 'PUPPETEER_LEARN' });
+            } else {
+              this.logger.info(`[puppeteer-learn] Tracked failure ${learnResult.failureCount}/${this._puppeteerDomainManager.config.settings.autoLearnThreshold} for ${host}`, { type: 'PUPPETEER_LEARN' });
+            }
           }
         }
         

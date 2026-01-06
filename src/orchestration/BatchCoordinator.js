@@ -43,6 +43,14 @@ class BatchCoordinator {
 
     // Process each domain
     for (let index = 0; index < batchEntries.length; index += 1) {
+      if (options.abortSignal && options.abortSignal.aborted) {
+        if (logger && typeof logger.warn === 'function') {
+          logger.warn('[orchestration] Batch processing aborted by signal');
+        }
+        aggregate.batch.aborted = true;
+        break;
+      }
+
       const entry = batchEntries[index];
 
       const domainResult = await this._processDomainEntry(entry, index, options, deps);
@@ -152,7 +160,10 @@ class BatchCoordinator {
       readinessTimeoutMs: options.readinessTimeoutMs,
       enableTopicDiscovery: options.enableTopicDiscovery,
       enableCombinationDiscovery: options.enableCombinationDiscovery,
-      enableHierarchicalDiscovery: options.enableHierarchicalDiscovery,
+      enableHierarchicalDiscovery: options.enableHierarchicalDiscovery || options.hierarchical,
+      activePattern: options.activePattern,
+      parentPlace: options.parentPlace,
+      hierarchical: options.hierarchical,
       topics: options.topics,
       runId: options.runId
     };

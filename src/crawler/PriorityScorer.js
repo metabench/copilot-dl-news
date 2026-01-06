@@ -66,7 +66,6 @@ class PriorityScorer {
 
     this.configManager.addWatcher((newConfig) => {
       this._refreshConfig(newConfig);
-      console.log('Priority scorer configuration updated');
     });
   }
 

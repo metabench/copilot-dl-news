@@ -1,7 +1,6 @@
 'use strict';
 
 const jsgui = require('jsgui3-html');
-
 const { BaseAppControl } = require('../../shared');
 
 const StringControl = jsgui.String_Control;
@@ -22,18 +21,26 @@ function makeEl(ctx, tagName, className = null, attrs = null) {
   return el;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 class PlaceHubGuessingCellControl extends BaseAppControl {
   constructor(spec = {}) {
     super({
       ...spec,
       appName: 'Place Hub Guessing',
       appClass: 'place-hub-guessing',
-      title: '🧭 Place Hub Guessing — Cell',
-      subtitle: null
+      title: '🏷️ Place Hub Guessing — Cell',
+      subtitle: 'Verify or update a place hub mapping.'
     });
 
-    this.basePath = spec.basePath || '';
-    this.model = spec.model || null;
+    this.model = spec.model || {};
 
     if (!spec.el) {
       this.compose();
@@ -42,7 +49,16 @@ class PlaceHubGuessingCellControl extends BaseAppControl {
 
   composeMainContent() {
     const ctx = this.context;
-    const model = this.model;
+    const model = this.model || {};
+    const { place, host, mapping, modelContext } = model;
+    
+    // Construct back link with current filters
+    const params = new URLSearchParams();
+    if (modelContext.placeKind) params.set('placeKind', modelContext.placeKind);
+    if (modelContext.pageKind) params.set('pageKind', modelContext.pageKind);
+    if (modelContext.placeQ) params.set('placeQ', modelContext.placeQ);
+    if (modelContext.hostQ) params.set('hostQ', modelContext.hostQ);
+    const backHref = `./?${params.toString()}`;
 
     const root = makeEl(ctx, 'div', 'page', { 'data-testid': 'place-hub-guessing-cell' });
 
@@ -51,166 +67,164 @@ class PlaceHubGuessingCellControl extends BaseAppControl {
       text(
         ctx,
         `
-:root {
-  --bg: #1a1410;
-  --panel: #241a14;
-  --border: #4a3628;
-  --text: #f5e6d3;
-  --muted: #b8a090;
-  --gold: #d4a574;
-  --ok: #4ade80;
-  --warn: #fbbf24;
-  --bad: #f87171;
-  --mono: Consolas, Monaco, monospace;
+.cell-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 20px 0;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--border);
 }
 
-* { box-sizing: border-box; }
+.cell-meta { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.cell-value { font-size: 18px; font-weight: 500; color: var(--text); }
+.cell-url { font-family: var(--mono); font-size: 14px; color: var(--gold); }
 
-body {
-  margin: 0;
-  background: var(--bg);
+.back-btn {
+  color: var(--gold);
+  text-decoration: none;
+  border: 1px solid rgba(212,165,116,0.45);
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(212,165,116,0.1);
+  font-size: 14px;
+}
+.back-btn:hover { background: rgba(212,165,116,0.2); }
+
+.status-card {
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+}
+.status-card.verified { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); }
+.status-card.candidate { background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.3); }
+.status-card.unknown { background: rgba(55,65,81,0.5); border-color: var(--border); }
+
+.form-group { margin-bottom: 15px; }
+.label { display: block; margin-bottom: 5px; font-size: 14px; color: var(--muted); }
+.input { 
+  width: 100%; 
+  padding: 8px 10px; 
+  background: rgba(0,0,0,0.2); 
+  border: 1px solid var(--border); 
+  border-radius: 4px; 
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--mono);
+}
+.textarea {
+  width: 100%;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.2); 
+  border: 1px solid var(--border); 
+  border-radius: 4px; 
+  color: var(--text);
+  min-height: 80px;
 }
 
-.place-hub-guessing { padding: 0; }
+.actions { display: flex; gap: 10px; margin-top: 20px; }
+.btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: 0;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+}
+.btn-present { background: #10B981; color: #fff; }
+.btn-present:hover { background: #059669; }
+.btn-absent { background: #EF4444; color: #fff; }
+.btn-absent:hover { background: #DC2626; }
 
-.page { padding: 18px 22px; max-width: 1100px; margin: 0 auto; }
-.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 12px 0; }
-.kv { display: grid; grid-template-columns: 140px 1fr; gap: 6px 10px; font-size: 12px; }
-.k { color: var(--muted); }
-code, pre { font-family: var(--mono); }
-a { color: var(--gold); text-decoration: none; }
-a:hover { text-decoration: underline; }
-.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
-.ff { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
-.ff input, .ff select { background: #120e0b; border: 1px solid rgba(245, 230, 211, 0.22); border-radius: 6px; padding: 6px 8px; color: var(--text); font-size: 12px; min-width: 220px; }
-.btn { background: #120e0b; border: 1px solid rgba(245, 230, 211, 0.22); border-radius: 6px; padding: 7px 10px; color: var(--text); font-size: 12px; cursor: pointer; }
-.btn-ok { border-color: rgba(74, 222, 128, 0.45); }
-.btn-bad { border-color: rgba(248, 113, 113, 0.45); }
 `
       )
     );
-
     root.add(styleEl);
 
-    const backHref = model?.backHref || `${this.basePath || '.'}/`;
-    const sub = makeEl(ctx, 'p', 'subtitle');
-    const backLink = makeEl(ctx, 'a', null, { href: backHref });
-    backLink.add(text(ctx, '← Back to matrix'));
-    sub.add(backLink);
-    root.add(sub);
+    // Header
+    const head = makeEl(ctx, 'div', 'cell-head');
+    head.add(text(ctx, `
+      <div>
+        <div class="cell-meta">Target Place</div>
+        <div class="cell-value">${escapeHtml(place?.place_name)} <span style="font-size:12px; color:var(--muted)">(${place?.country_code || '?'})</span></div>
+      </div>
+      <div>
+        <div class="cell-meta">Host</div>
+        <div class="cell-url">${escapeHtml(host)}</div>
+      </div>
+      <div>
+        <a class="back-btn" href="${escapeHtml(backHref)}">← Back for another</a>
+      </div>
+    `));
+    root.add(head);
 
-    const placeLabel = model?.placeLabel || '';
-
-    const panel = makeEl(ctx, 'div', 'panel');
-    const kv = makeEl(ctx, 'div', 'kv');
-
-    const kPlace = makeEl(ctx, 'div', 'k');
-    kPlace.add(text(ctx, 'Place'));
-    kv.add(kPlace);
-    const vPlace = makeEl(ctx, 'div');
-    vPlace.add(text(ctx, placeLabel));
-    kv.add(vPlace);
-
-    const kHost = makeEl(ctx, 'div', 'k');
-    kHost.add(text(ctx, 'Host'));
-    kv.add(kHost);
-    const vHost = makeEl(ctx, 'div');
-    vHost.add(text(ctx, model?.host || ''));
-    kv.add(vHost);
-
-    const kPageKind = makeEl(ctx, 'div', 'k');
-    kPageKind.add(text(ctx, 'Page kind'));
-    kv.add(kPageKind);
-    const vPageKind = makeEl(ctx, 'div');
-    vPageKind.add(text(ctx, model?.pageKind || ''));
-    kv.add(vPageKind);
-
-    const kState = makeEl(ctx, 'div', 'k');
-    kState.add(text(ctx, 'State'));
-    kv.add(kState);
-    const vState = makeEl(ctx, 'div');
-    vState.add(text(ctx, model?.cellState || ''));
-    kv.add(vState);
-
-    const kUrl = makeEl(ctx, 'div', 'k');
-    kUrl.add(text(ctx, 'URL'));
-    kv.add(kUrl);
-    const vUrl = makeEl(ctx, 'div');
-    vUrl.add(text(ctx, model?.currentUrl || '(none)'));
-    kv.add(vUrl);
-
-    const kVerified = makeEl(ctx, 'div', 'k');
-    kVerified.add(text(ctx, 'Verified'));
-    kv.add(kVerified);
-    const vVerified = makeEl(ctx, 'div');
-    vVerified.add(text(ctx, model?.verifiedLabel || ''));
-    kv.add(vVerified);
-
-    panel.add(kv);
-    root.add(panel);
-
-    const actionsPanel = makeEl(ctx, 'div', 'panel');
-    const h2 = makeEl(ctx, 'h2', null, { style: 'margin:0 0 8px 0; font-size: 14px; color: var(--gold);' });
-    h2.add(text(ctx, 'Mark verified'));
-    actionsPanel.add(h2);
-
-    const form = makeEl(ctx, 'form', 'actions', { method: 'POST', action: `${this.basePath}/cell/verify` });
-
-    for (const [name, value] of Object.entries(model?.hidden || {})) {
-      const input = makeEl(ctx, 'input', null, { type: 'hidden', name, value: String(value ?? '') });
-      form.add(input);
+    // Verification Form
+    const mappingStatus = mapping?.status || 'unchecked';
+    const isCandidate = mappingStatus === 'candidate';
+    const currentUrl = mapping?.url || '';
+    
+    let statusClass = 'unknown';
+    let statusText = 'Not Verified';
+    
+    if (mappingStatus === 'verified') {
+      statusClass = 'verified';
+      statusText = 'Verified';
+    } else if (isCandidate) {
+      statusClass = 'candidate';
+      statusText = 'Candidate Found';
     }
 
-    const outcomeField = makeEl(ctx, 'label', 'ff');
-    outcomeField.add(text(ctx, 'Outcome'));
-    const select = makeEl(ctx, 'select', null, { name: 'outcome' });
-    const optThere = makeEl(ctx, 'option', null, { value: 'present' });
-    optThere.add(text(ctx, 'there'));
-    const optNotThere = makeEl(ctx, 'option', null, { value: 'absent' });
-    optNotThere.add(text(ctx, 'not there'));
-    select.add(optThere);
-    select.add(optNotThere);
-    outcomeField.add(select);
-    form.add(outcomeField);
+    const form = makeEl(ctx, 'form', null, { method: 'POST', action: './verify' });
+    
+    // Hidden inputs for context
+    form.add(text(ctx, `
+      <input type="hidden" name="placeId" value="${place?.place_id}">
+      <input type="hidden" name="host" value="${escapeHtml(host)}">
+      <input type="hidden" name="pageKind" value="${escapeHtml(modelContext.pageKind || 'country-hub')}">
+      
+      <!-- Preserve filters on return -->
+      <input type="hidden" name="placeKind" value="${escapeHtml(modelContext.placeKind || '')}">
+      <input type="hidden" name="placeLimit" value="${modelContext.placeLimit}">
+      <input type="hidden" name="hostLimit" value="${modelContext.hostLimit}">
+      <input type="hidden" name="placeQ" value="${escapeHtml(modelContext.placeQ || '')}">
+      <input type="hidden" name="hostQ" value="${escapeHtml(modelContext.hostQ || '')}">
+    `));
 
-    const urlField = makeEl(ctx, 'label', 'ff');
-    urlField.add(text(ctx, 'Checked URL'));
-    urlField.add(makeEl(ctx, 'input', null, { name: 'url', value: model?.currentUrl || '', placeholder: 'https://example.com/...' }));
-    form.add(urlField);
-
-    const noteField = makeEl(ctx, 'label', 'ff');
-    noteField.add(text(ctx, 'Note (optional)'));
-    noteField.add(makeEl(ctx, 'input', null, { name: 'note', value: '', placeholder: 'e.g. 404, redirects, paywall' }));
-    form.add(noteField);
-
-    const btn = makeEl(ctx, 'button', 'btn btn-ok', { type: 'submit' });
-    btn.add(text(ctx, 'Save verification'));
-    form.add(btn);
-
-    actionsPanel.add(form);
-    root.add(actionsPanel);
-
-    const rawPanel = makeEl(ctx, 'div', 'panel');
-    const rawH2 = makeEl(ctx, 'h2', null, { style: 'margin:0 0 8px 0; font-size: 14px; color: var(--gold);' });
-    rawH2.add(text(ctx, 'Raw mapping'));
-    rawPanel.add(rawH2);
-
-    if (model?.mappingJson) {
-      const pre = makeEl(ctx, 'pre', null, { 'data-testid': 'cell-mapping' });
-      pre.add(text(ctx, model.mappingJson));
-      rawPanel.add(pre);
-    } else {
-      const empty = makeEl(ctx, 'div', null, { 'data-testid': 'cell-mapping-empty', style: 'color: var(--muted);' });
-      empty.add(text(ctx, 'No row in place_page_mappings yet.'));
-      rawPanel.add(empty);
+    const card = makeEl(ctx, 'div', `status-card ${statusClass}`);
+    card.add(text(ctx, `<div style="margin-bottom:10px; font-weight:bold">${statusText}</div>`));
+    
+    if (mapping?.evidence) {
+      const ev = typeof mapping.evidence === 'string' ? JSON.parse(mapping.evidence) : mapping.evidence;
+      if (ev) {
+        card.add(text(ctx, `<div style="font-size:12px; font-family:var(--mono); white-space:pre-wrap; color:var(--muted)">${escapeHtml(JSON.stringify(ev, null, 2))}</div>`));
+      }
     }
+    
+    form.add(card);
 
-    root.add(rawPanel);
+    form.add(text(ctx, `
+      <div class="form-group">
+        <label class="label">Hub URL</label>
+        <input class="input" type="text" name="url" value="${escapeHtml(currentUrl)}" placeholder="https://${escapeHtml(host)}/...">
+      </div>
+      
+      <div class="form-group">
+        <label class="label">Notes / Evidence</label>
+        <textarea class="textarea" name="note" placeholder="Any specific notes about this verification..."></textarea>
+      </div>
 
+      <div class="actions">
+        <button type="submit" name="outcome" value="present" class="btn btn-present">✅ Mark Present</button>
+        <button type="submit" name="outcome" value="absent" class="btn btn-absent">❌ Mark Absent</button>
+      </div>
+    `));
+
+    root.add(form);
     this.mainContainer.add(root);
   }
 }
 
-module.exports = { PlaceHubGuessingCellControl };
+module.exports = {
+  PlaceHubGuessingCellControl
+};

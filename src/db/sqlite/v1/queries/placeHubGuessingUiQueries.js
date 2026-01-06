@@ -1,5 +1,7 @@
 'use strict';
 
+const { slugify } = require('../../../../tools/slugify');
+
 function clampInt(value, { min, max, fallback }) {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
@@ -157,12 +159,33 @@ function selectMappings(dbHandle, { pageKind, placeIds, hosts }) {
   return dbHandle.prepare(sql).all(pageKind, ...placeIds, ...hosts);
 }
 
+function selectCandidates(dbHandle, { placeSlugs, hosts }) {
+  if (placeSlugs.length === 0 || hosts.length === 0) return [];
+  const placePlaceholders = placeSlugs.map(() => '?').join(',');
+  const hostPlaceholders = hosts.map(() => '?').join(',');
+
+  const sql = `
+    SELECT
+      place_slug,
+      host,
+      url,
+      title,
+      first_seen_at,
+      last_seen_at,
+      evidence
+    FROM place_hubs_with_urls
+    WHERE place_slug IN (${placePlaceholders})
+      AND host IN (${hostPlaceholders})
+  `;
+  return dbHandle.prepare(sql).all(...placeSlugs, ...hosts);
+}
+
 function buildMatrixModel(dbHandle, options = {}) {
   if (!dbHandle) throw new Error('buildMatrixModel requires dbHandle');
 
   const placeKind = normalizePlaceKind(options.placeKind);
   const pageKind = normalizePageKind(options.pageKind);
-  const placeLimit = clampInt(options.placeLimit, { min: 1, max: 200, fallback: 30 });
+  const placeLimit = clampInt(options.placeLimit, { min: 1, max: 500, fallback: 30 });
   const hostLimit = clampInt(options.hostLimit, { min: 1, max: 50, fallback: 12 });
   const placeQ = normalizeSearchQuery(options.placeQ);
   const hostQ = normalizeSearchQuery(options.hostQ);
@@ -187,12 +210,48 @@ function buildMatrixModel(dbHandle, options = {}) {
     mappingByKey.set(`${row.place_id}|${row.host}`, row);
   }
 
+  // Merge candidates from place_hubs (active probe results)
+  const slugToPlaceIds = new Map();
+  for (const p of filteredPlaces) {
+    const s = slugify(p.place_name);
+    if (!slugToPlaceIds.has(s)) slugToPlaceIds.set(s, []);
+    slugToPlaceIds.get(s).push(p.place_id);
+  }
+
+  const placeSlugs = Array.from(slugToPlaceIds.keys());
+  if (placeSlugs.length > 0 && filteredHosts.length > 0) {
+    try {
+      const candidates = selectCandidates(dbHandle, { placeSlugs, hosts: filteredHosts });
+      for (const cand of candidates) {
+        const ids = slugToPlaceIds.get(cand.place_slug);
+        if (!ids) continue;
+        for (const pid of ids) {
+          const key = `${pid}|${cand.host}`;
+          if (!mappingByKey.has(key)) {
+            mappingByKey.set(key, {
+              place_id: pid,
+              host: cand.host,
+              place_slug: cand.place_slug,
+              url: cand.url, 
+              status: 'candidate', 
+              first_seen_at: cand.first_seen_at,
+              last_seen_at: cand.last_seen_at,
+              evidence: cand.evidence
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to select candidates:', err);
+    }
+  }
+
   let verifiedCount = 0;
   let pendingCount = 0;
   let verifiedPresentCount = 0;
   let verifiedAbsentCount = 0;
 
-  for (const row of mappings) {
+  for (const row of mappingByKey.values()) {
     const isVerified = row.status === 'verified' || !!row.verified_at;
     if (isVerified) {
       verifiedCount += 1;
@@ -275,6 +334,26 @@ function selectMappingByPlaceHost(dbHandle, { pageKind, placeId, host }) {
   return dbHandle.prepare(sql).get(pageKind, placeId, host);
 }
 
+function selectCandidateByPlaceHost(dbHandle, { placeSlugs, host }) {
+  if (placeSlugs.length === 0) return null;
+  const placeholders = placeSlugs.map(() => '?').join(',');
+  const sql = `
+    SELECT
+      place_slug,
+      host,
+      url,
+      title,
+      first_seen_at,
+      last_seen_at,
+      evidence
+    FROM place_hubs_with_urls
+    WHERE place_slug IN (${placeholders})
+      AND host = ?
+    LIMIT 1
+  `;
+  return dbHandle.prepare(sql).get(...placeSlugs, host);
+}
+
 function getCellModel(dbHandle, options = {}) {
   if (!dbHandle) throw new Error('getCellModel requires dbHandle');
 
@@ -299,7 +378,25 @@ function getCellModel(dbHandle, options = {}) {
     return { error: { status: 404, message: 'Place not found' } };
   }
 
-  const mapping = selectMappingByPlaceHost(dbHandle, { pageKind, placeId, host });
+  let mapping = selectMappingByPlaceHost(dbHandle, { pageKind, placeId, host });
+
+  // If no verified mapping, check for candidate
+  if (!mapping) {
+    const s = slugify(place.place_name);
+    const candidate = selectCandidateByPlaceHost(dbHandle, { placeSlugs: [s], host });
+    if (candidate) {
+      mapping = {
+        place_id: placeId,
+        host,
+        place_slug: candidate.place_slug,
+        url: candidate.url,
+        status: 'candidate',
+        first_seen_at: candidate.first_seen_at,
+        last_seen_at: candidate.last_seen_at,
+        evidence: candidate.evidence
+      };
+    }
+  }
 
   return {
     modelContext: {
@@ -385,5 +482,6 @@ module.exports = {
   normalizeSearchQuery,
   clampInt,
   parseEvidenceJson,
-  normalizeOutcome
+  normalizeOutcome,
+  selectHosts
 };
