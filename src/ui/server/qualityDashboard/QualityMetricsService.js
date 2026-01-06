@@ -8,7 +8,12 @@
  * - getDomains(options) - Per-domain quality scores
  * - getRegressions(threshold) - Domains with quality drops
  * - getConfidenceDistribution() - Histogram buckets
+ * 
+ * All SQL queries are in the DB adapter layer:
+ * src/db/sqlite/v1/queries/ui/qualityMetrics.js
  */
+
+const { createQualityMetricsQueries } = require('../../../db/sqlite/v1/queries/ui/qualityMetrics');
 
 /**
  * @typedef {Object} QualitySummary
@@ -54,119 +59,7 @@ class QualityMetricsService {
    */
   constructor(db) {
     this.db = db;
-    this._prepareStatements();
-  }
-
-  /**
-   * Prepare SQL statements for performance
-   */
-  _prepareStatements() {
-    // Summary query
-    this._summaryStmt = this.db.prepare(`
-      SELECT 
-        AVG(ca.confidence_score) as avg_confidence,
-        COUNT(*) as total_articles,
-        SUM(CASE WHEN ca.confidence_score >= 0.8 THEN 1 ELSE 0 END) as high_quality,
-        SUM(CASE WHEN ca.confidence_score >= 0.5 AND ca.confidence_score < 0.8 THEN 1 ELSE 0 END) as medium_quality,
-        SUM(CASE WHEN ca.confidence_score < 0.5 THEN 1 ELSE 0 END) as low_quality
-      FROM content_analysis ca
-      WHERE ca.confidence_score IS NOT NULL
-    `);
-
-    // Classification breakdown
-    this._classificationStmt = this.db.prepare(`
-      SELECT 
-        classification,
-        COUNT(*) as count,
-        AVG(confidence_score) as avg_confidence
-      FROM content_analysis
-      WHERE classification IS NOT NULL
-      GROUP BY classification
-      ORDER BY count DESC
-    `);
-
-    // Method breakdown (from article_xpath_patterns)
-    this._methodStmt = this.db.prepare(`
-      SELECT 
-        CASE 
-          WHEN axp.confidence >= 0.9 THEN 'learned'
-          WHEN axp.confidence >= 0.7 THEN 'heuristic'
-          ELSE 'fallback'
-        END as method,
-        COUNT(*) as count
-      FROM article_xpath_patterns axp
-      GROUP BY method
-      ORDER BY count DESC
-    `);
-
-    // Domain quality
-    this._domainStmt = this.db.prepare(`
-      SELECT 
-        u.host,
-        COUNT(ca.id) as article_count,
-        AVG(ca.confidence_score) as avg_confidence,
-        MIN(ca.confidence_score) as min_confidence,
-        MAX(ca.confidence_score) as max_confidence,
-        MAX(ca.analyzed_at) as last_analyzed_at,
-        SUM(CASE WHEN ca.confidence_score < 0.5 THEN 1 ELSE 0 END) as low_quality_count
-      FROM content_analysis ca
-      JOIN content_storage cs ON cs.id = ca.content_id
-      JOIN http_responses hr ON hr.id = cs.http_response_id
-      JOIN urls u ON u.id = hr.url_id
-      WHERE ca.confidence_score IS NOT NULL
-      GROUP BY u.host
-      HAVING COUNT(ca.id) >= ?
-      ORDER BY avg_confidence ASC
-      LIMIT ?
-    `);
-
-    // Domain quality sorted by article count
-    this._domainByCountStmt = this.db.prepare(`
-      SELECT 
-        u.host,
-        COUNT(ca.id) as article_count,
-        AVG(ca.confidence_score) as avg_confidence,
-        MIN(ca.confidence_score) as min_confidence,
-        MAX(ca.confidence_score) as max_confidence,
-        MAX(ca.analyzed_at) as last_analyzed_at,
-        SUM(CASE WHEN ca.confidence_score < 0.5 THEN 1 ELSE 0 END) as low_quality_count
-      FROM content_analysis ca
-      JOIN content_storage cs ON cs.id = ca.content_id
-      JOIN http_responses hr ON hr.id = cs.http_response_id
-      JOIN urls u ON u.id = hr.url_id
-      WHERE ca.confidence_score IS NOT NULL
-      GROUP BY u.host
-      HAVING COUNT(ca.id) >= ?
-      ORDER BY article_count DESC
-      LIMIT ?
-    `);
-
-    // Confidence histogram
-    this._histogramStmt = this.db.prepare(`
-      SELECT 
-        CASE 
-          WHEN confidence_score >= 0.9 THEN '0.9-1.0'
-          WHEN confidence_score >= 0.8 THEN '0.8-0.9'
-          WHEN confidence_score >= 0.7 THEN '0.7-0.8'
-          WHEN confidence_score >= 0.6 THEN '0.6-0.7'
-          WHEN confidence_score >= 0.5 THEN '0.5-0.6'
-          WHEN confidence_score >= 0.4 THEN '0.4-0.5'
-          WHEN confidence_score >= 0.3 THEN '0.3-0.4'
-          WHEN confidence_score >= 0.2 THEN '0.2-0.3'
-          WHEN confidence_score >= 0.1 THEN '0.1-0.2'
-          ELSE '0.0-0.1'
-        END as bucket,
-        COUNT(*) as count
-      FROM content_analysis
-      WHERE confidence_score IS NOT NULL
-      GROUP BY bucket
-      ORDER BY bucket DESC
-    `);
-
-    // Total count for percentage calculation
-    this._totalCountStmt = this.db.prepare(`
-      SELECT COUNT(*) as total FROM content_analysis WHERE confidence_score IS NOT NULL
-    `);
+    this.queries = createQualityMetricsQueries(db);
   }
 
   /**
@@ -174,16 +67,10 @@ class QualityMetricsService {
    * @returns {QualitySummary}
    */
   getSummary() {
-    const stats = this._summaryStmt.get() || {
-      avg_confidence: 0,
-      total_articles: 0,
-      high_quality: 0,
-      medium_quality: 0,
-      low_quality: 0
-    };
+    const stats = this.queries.getSummary();
 
     // Get classification breakdown
-    const classificationRows = this._classificationStmt.all() || [];
+    const classificationRows = this.queries.getClassificationBreakdown();
     const classificationBreakdown = {};
     for (const row of classificationRows) {
       classificationBreakdown[row.classification] = {
@@ -193,7 +80,7 @@ class QualityMetricsService {
     }
 
     // Get method breakdown
-    const methodRows = this._methodStmt.all() || [];
+    const methodRows = this.queries.getMethodBreakdown();
     const methodBreakdown = {};
     for (const row of methodRows) {
       methodBreakdown[row.method] = row.count;
@@ -229,8 +116,9 @@ class QualityMetricsService {
       sortOrder = 'asc'
     } = options;
 
-    const stmt = sortBy === 'count' ? this._domainByCountStmt : this._domainStmt;
-    const rows = stmt.all(minArticles, limit) || [];
+    const rows = sortBy === 'count' 
+      ? this.queries.getDomainsByCount(minArticles, limit)
+      : this.queries.getDomainsByConfidence(minArticles, limit);
 
     const domains = rows.map(row => ({
       host: row.host,
@@ -245,7 +133,7 @@ class QualityMetricsService {
         : 0
     }));
 
-    // Handle DESC sort for confidence (stmt already returns ASC)
+    // Handle DESC sort for confidence (query returns ASC)
     if (sortBy === 'confidence' && sortOrder === 'desc') {
       domains.reverse();
     }
@@ -260,52 +148,8 @@ class QualityMetricsService {
    * @returns {Regression[]}
    */
   getRegressions(threshold = 0.1, lookbackDays = 7) {
-    // Compare current week vs previous week
-    const stmt = this.db.prepare(`
-      WITH current_period AS (
-        SELECT 
-          u.host,
-          AVG(ca.confidence_score) as avg_confidence,
-          COUNT(*) as article_count
-        FROM content_analysis ca
-        JOIN content_storage cs ON cs.id = ca.content_id
-        JOIN http_responses hr ON hr.id = cs.http_response_id
-        JOIN urls u ON u.id = hr.url_id
-        WHERE ca.confidence_score IS NOT NULL
-          AND ca.analyzed_at > datetime('now', '-' || ? || ' days')
-        GROUP BY u.host
-        HAVING COUNT(*) >= 3
-      ),
-      previous_period AS (
-        SELECT 
-          u.host,
-          AVG(ca.confidence_score) as avg_confidence
-        FROM content_analysis ca
-        JOIN content_storage cs ON cs.id = ca.content_id
-        JOIN http_responses hr ON hr.id = cs.http_response_id
-        JOIN urls u ON u.id = hr.url_id
-        WHERE ca.confidence_score IS NOT NULL
-          AND ca.analyzed_at <= datetime('now', '-' || ? || ' days')
-          AND ca.analyzed_at > datetime('now', '-' || (? * 2) || ' days')
-        GROUP BY u.host
-        HAVING COUNT(*) >= 3
-      )
-      SELECT 
-        c.host,
-        p.avg_confidence as previous_avg,
-        c.avg_confidence as current_avg,
-        c.article_count,
-        ((p.avg_confidence - c.avg_confidence) / p.avg_confidence * 100) as drop_percent
-      FROM current_period c
-      JOIN previous_period p ON p.host = c.host
-      WHERE p.avg_confidence > c.avg_confidence
-        AND (p.avg_confidence - c.avg_confidence) >= ?
-      ORDER BY drop_percent DESC
-      LIMIT 20
-    `);
-
     try {
-      const rows = stmt.all(lookbackDays, lookbackDays, lookbackDays, threshold) || [];
+      const rows = this.queries.getRegressions(lookbackDays, threshold);
       return rows.map(row => ({
         host: row.host,
         previousAvg: row.previous_avg,
@@ -315,7 +159,6 @@ class QualityMetricsService {
         detectedAt: new Date().toISOString()
       }));
     } catch (err) {
-      // Tables might not have enough data
       console.warn('getRegressions query failed:', err.message);
       return [];
     }
@@ -326,9 +169,8 @@ class QualityMetricsService {
    * @returns {HistogramBucket[]}
    */
   getConfidenceDistribution() {
-    const rows = this._histogramStmt.all() || [];
-    const totalRow = this._totalCountStmt.get();
-    const total = totalRow?.total || 0;
+    const rows = this.queries.getHistogram();
+    const total = this.queries.getTotalCount();
 
     // Define bucket ranges
     const bucketDefs = [
@@ -366,23 +208,7 @@ class QualityMetricsService {
    * @returns {Array}
    */
   getRecentActivity(limit = 20) {
-    const stmt = this.db.prepare(`
-      SELECT 
-        u.host,
-        u.url,
-        ca.classification,
-        ca.confidence_score,
-        ca.analyzed_at
-      FROM content_analysis ca
-      JOIN content_storage cs ON cs.id = ca.content_id
-      JOIN http_responses hr ON hr.id = cs.http_response_id
-      JOIN urls u ON u.id = hr.url_id
-      WHERE ca.confidence_score IS NOT NULL
-      ORDER BY ca.analyzed_at DESC
-      LIMIT ?
-    `);
-
-    return stmt.all(limit) || [];
+    return this.queries.getRecentActivity(limit);
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -396,22 +222,7 @@ class QualityMetricsService {
    */
   getQualityTrend(period = '30d') {
     const days = this._parsePeriod(period);
-    
-    const stmt = this.db.prepare(`
-      SELECT 
-        date(ca.analyzed_at) as day,
-        AVG(ca.confidence_score) as avg_confidence,
-        COUNT(*) as article_count,
-        SUM(CASE WHEN ca.confidence_score >= 0.8 THEN 1 ELSE 0 END) as high_quality,
-        SUM(CASE WHEN ca.confidence_score < 0.5 THEN 1 ELSE 0 END) as low_quality
-      FROM content_analysis ca
-      WHERE ca.analyzed_at >= date('now', '-' || ? || ' days')
-        AND ca.confidence_score IS NOT NULL
-      GROUP BY day
-      ORDER BY day
-    `);
-    
-    const rows = stmt.all(days) || [];
+    const rows = this.queries.getQualityTrend(days);
     
     return rows.map(row => ({
       day: row.day,
@@ -432,22 +243,7 @@ class QualityMetricsService {
    */
   getQualityByClassification(period = '30d') {
     const days = this._parsePeriod(period);
-    
-    const stmt = this.db.prepare(`
-      SELECT 
-        COALESCE(ca.classification, 'unknown') as classification,
-        AVG(ca.confidence_score) as avg_confidence,
-        COUNT(*) as count,
-        MIN(ca.confidence_score) as min_confidence,
-        MAX(ca.confidence_score) as max_confidence
-      FROM content_analysis ca
-      WHERE ca.analyzed_at >= date('now', '-' || ? || ' days')
-        AND ca.confidence_score IS NOT NULL
-      GROUP BY classification
-      ORDER BY count DESC
-    `);
-    
-    const rows = stmt.all(days) || [];
+    const rows = this.queries.getQualityByClassification(days);
     
     return rows.map(row => ({
       classification: row.classification,
@@ -467,50 +263,8 @@ class QualityMetricsService {
   getQualityMovers(period = '7d', minArticles = 10) {
     const days = this._parsePeriod(period);
     
-    const stmt = this.db.prepare(`
-      WITH current_period AS (
-        SELECT 
-          u.host,
-          AVG(ca.confidence_score) as avg_confidence,
-          COUNT(*) as article_count
-        FROM content_analysis ca
-        JOIN content_storage cs ON cs.id = ca.content_id
-        JOIN http_responses hr ON hr.id = cs.http_response_id
-        JOIN urls u ON u.id = hr.url_id
-        WHERE ca.analyzed_at >= date('now', '-' || ? || ' days')
-          AND ca.confidence_score IS NOT NULL
-        GROUP BY u.host
-        HAVING COUNT(*) >= ?
-      ),
-      previous_period AS (
-        SELECT 
-          u.host,
-          AVG(ca.confidence_score) as avg_confidence,
-          COUNT(*) as article_count
-        FROM content_analysis ca
-        JOIN content_storage cs ON cs.id = ca.content_id
-        JOIN http_responses hr ON hr.id = cs.http_response_id
-        JOIN urls u ON u.id = hr.url_id
-        WHERE ca.analyzed_at >= date('now', '-' || (? * 2) || ' days')
-          AND ca.analyzed_at < date('now', '-' || ? || ' days')
-          AND ca.confidence_score IS NOT NULL
-        GROUP BY u.host
-        HAVING COUNT(*) >= ?
-      )
-      SELECT 
-        c.host,
-        c.avg_confidence as current_avg,
-        p.avg_confidence as previous_avg,
-        c.article_count,
-        (c.avg_confidence - p.avg_confidence) as change,
-        ROUND((c.avg_confidence - p.avg_confidence) / p.avg_confidence * 100, 1) as change_percent
-      FROM current_period c
-      JOIN previous_period p ON p.host = c.host
-      ORDER BY change DESC
-    `);
-    
     try {
-      const rows = stmt.all(days, minArticles, days, days, minArticles) || [];
+      const rows = this.queries.getQualityMovers(days, minArticles);
       
       const improving = rows
         .filter(r => r.change > 0.05)

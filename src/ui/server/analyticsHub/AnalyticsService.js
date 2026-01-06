@@ -9,7 +9,12 @@
  * - getHourlyActivity(period) - 7×24 heatmap data
  * - getCategoryBreakdown(period) - Articles by category
  * - getExtractionSuccessRate(period) - Success vs failure rates
+ * 
+ * All SQL queries are in the DB adapter layer:
+ * src/db/sqlite/v1/queries/ui/analytics.js
  */
+
+const { createAnalyticsQueries } = require('../../../db/sqlite/v1/queries/ui/analytics');
 
 /**
  * @typedef {Object} DailyCount
@@ -55,107 +60,9 @@ class AnalyticsService {
    */
   constructor(db) {
     this.db = db;
+    this.queries = createAnalyticsQueries(db);
     this._cache = new Map();
     this._cacheTTL = 5 * 60 * 1000; // 5 minutes
-    this._prepareStatements();
-  }
-
-  /**
-   * Prepare SQL statements for performance
-   */
-  _prepareStatements() {
-    // Daily article counts
-    this._dailyCountsStmt = this.db.prepare(`
-      SELECT date(fetched_at) as day, COUNT(*) as count 
-      FROM http_responses 
-      WHERE fetched_at >= date('now', '-' || ? || ' days')
-        AND fetched_at IS NOT NULL
-      GROUP BY day 
-      ORDER BY day
-    `);
-
-    // Daily counts with date range
-    this._dailyCountsRangeStmt = this.db.prepare(`
-      SELECT date(fetched_at) as day, COUNT(*) as count 
-      FROM http_responses 
-      WHERE fetched_at >= ? AND fetched_at <= ?
-        AND fetched_at IS NOT NULL
-      GROUP BY day 
-      ORDER BY day
-    `);
-
-    // Domain leaderboard
-    this._leaderboardStmt = this.db.prepare(`
-      SELECT 
-        u.host,
-        COUNT(*) as article_count,
-        MAX(hr.fetched_at) as last_crawled,
-        MIN(hr.fetched_at) as first_crawled
-      FROM urls u 
-      JOIN http_responses hr ON hr.url_id = u.id 
-      WHERE hr.fetched_at >= date('now', '-' || ? || ' days')
-        AND hr.fetched_at IS NOT NULL
-      GROUP BY u.host 
-      ORDER BY article_count DESC 
-      LIMIT ?
-    `);
-
-    // Hourly activity for heatmap
-    this._hourlyActivityStmt = this.db.prepare(`
-      SELECT 
-        CAST(strftime('%H', fetched_at) AS INTEGER) as hour, 
-        CAST(strftime('%w', fetched_at) AS INTEGER) as dow, 
-        COUNT(*) as count 
-      FROM http_responses 
-      WHERE fetched_at >= date('now', '-' || ? || ' days')
-        AND fetched_at IS NOT NULL
-      GROUP BY hour, dow
-    `);
-
-    // Category breakdown
-    this._categoryStmt = this.db.prepare(`
-      SELECT 
-        COALESCE(ca.classification, 'Uncategorized') as category,
-        COUNT(*) as count
-      FROM content_analysis ca
-      JOIN content_storage cs ON cs.id = ca.content_id
-      JOIN http_responses hr ON hr.id = cs.http_response_id
-      WHERE hr.fetched_at >= date('now', '-' || ? || ' days')
-        AND hr.fetched_at IS NOT NULL
-      GROUP BY category
-      ORDER BY count DESC
-    `);
-
-    // Extraction success rate
-    this._successRateStmt = this.db.prepare(`
-      SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN http_status >= 200 AND http_status < 300 THEN 1 ELSE 0 END) as success,
-        SUM(CASE WHEN http_status >= 400 AND http_status < 500 THEN 1 ELSE 0 END) as client_error,
-        SUM(CASE WHEN http_status >= 500 THEN 1 ELSE 0 END) as server_error
-      FROM http_responses
-      WHERE fetched_at >= date('now', '-' || ? || ' days')
-        AND fetched_at IS NOT NULL
-    `);
-
-    // Overall stats
-    this._overallStatsStmt = this.db.prepare(`
-      SELECT 
-        COUNT(*) as total_responses,
-        COUNT(DISTINCT url_id) as unique_urls,
-        MIN(fetched_at) as earliest,
-        MAX(fetched_at) as latest
-      FROM http_responses
-      WHERE fetched_at IS NOT NULL
-    `);
-
-    // Total domains
-    this._totalDomainsStmt = this.db.prepare(`
-      SELECT COUNT(DISTINCT u.host) as count
-      FROM urls u
-      JOIN http_responses hr ON hr.url_id = u.id
-      WHERE hr.fetched_at IS NOT NULL
-    `);
   }
 
   /**
@@ -205,14 +112,14 @@ class AnalyticsService {
 
     let rows;
     if (startDate && endDate) {
-      rows = this._dailyCountsRangeStmt.all(startDate, endDate);
+      rows = this.queries.getDailyCountsRange(startDate, endDate);
     } else {
       // Default to 30 days
       const days = startDate ? this._parsePeriod(startDate) : 30;
-      rows = this._dailyCountsStmt.all(days);
+      rows = this.queries.getDailyCounts(days);
     }
 
-    const result = (rows || []).map(row => ({
+    const result = rows.map(row => ({
       day: row.day,
       count: row.count || 0
     }));
@@ -233,7 +140,7 @@ class AnalyticsService {
     const cached = this._getCached(cacheKey);
     if (cached) return cached;
 
-    const rows = this._leaderboardStmt.all(days, limit) || [];
+    const rows = this.queries.getLeaderboard(days, limit);
 
     const result = rows.map((row, idx) => {
       // Calculate avg per day
@@ -266,7 +173,7 @@ class AnalyticsService {
     const cached = this._getCached(cacheKey);
     if (cached) return cached;
 
-    const rows = this._hourlyActivityStmt.all(days) || [];
+    const rows = this.queries.getHourlyActivity(days);
 
     // Initialize complete 7×24 grid
     const grid = [];
@@ -300,7 +207,7 @@ class AnalyticsService {
     if (cached) return cached;
 
     try {
-      const rows = this._categoryStmt.all(days) || [];
+      const rows = this.queries.getCategoryBreakdown(days);
       const total = rows.reduce((sum, r) => sum + r.count, 0);
 
       const result = rows.map(row => ({
@@ -329,12 +236,7 @@ class AnalyticsService {
     const cached = this._getCached(cacheKey);
     if (cached) return cached;
 
-    const row = this._successRateStmt.get(days) || {
-      total: 0,
-      success: 0,
-      client_error: 0,
-      server_error: 0
-    };
+    const row = this.queries.getSuccessRate(days);
 
     const result = {
       total: row.total || 0,
@@ -359,19 +261,13 @@ class AnalyticsService {
     const cached = this._getCached(cacheKey);
     if (cached) return cached;
 
-    const stats = this._overallStatsStmt.get() || {
-      total_responses: 0,
-      unique_urls: 0,
-      earliest: null,
-      latest: null
-    };
-
-    const domains = this._totalDomainsStmt.get() || { count: 0 };
+    const stats = this.queries.getOverallStats();
+    const totalDomains = this.queries.getTotalDomains();
 
     const result = {
       totalResponses: stats.total_responses || 0,
       uniqueUrls: stats.unique_urls || 0,
-      totalDomains: domains.count || 0,
+      totalDomains: totalDomains || 0,
       dateRange: {
         earliest: stats.earliest,
         latest: stats.latest
@@ -404,21 +300,7 @@ class AnalyticsService {
     if (cached) return cached;
 
     const days = this._parsePeriod(period);
-    
-    // Get hourly counts grouped by date and hour
-    const stmt = this.db.prepare(`
-      SELECT 
-        date(fetched_at) as day,
-        CAST(strftime('%H', fetched_at) AS INTEGER) as hour,
-        COUNT(*) as count
-      FROM http_responses 
-      WHERE fetched_at >= date('now', '-' || ? || ' days')
-        AND fetched_at IS NOT NULL
-      GROUP BY day, hour
-      ORDER BY day, hour
-    `);
-    
-    const rows = stmt.all(days);
+    const rows = this.queries.getThroughputTrend(days);
     
     // Aggregate into daily averages
     const byDay = new Map();
@@ -453,22 +335,7 @@ class AnalyticsService {
     if (cached) return cached;
 
     const days = this._parsePeriod(period);
-    
-    const stmt = this.db.prepare(`
-      SELECT 
-        date(fetched_at) as day,
-        COUNT(*) as total,
-        SUM(CASE WHEN http_status >= 200 AND http_status < 300 THEN 1 ELSE 0 END) as success,
-        SUM(CASE WHEN http_status >= 400 AND http_status < 500 THEN 1 ELSE 0 END) as client_error,
-        SUM(CASE WHEN http_status >= 500 THEN 1 ELSE 0 END) as server_error
-      FROM http_responses
-      WHERE fetched_at >= date('now', '-' || ? || ' days')
-        AND fetched_at IS NOT NULL
-      GROUP BY day
-      ORDER BY day
-    `);
-    
-    const rows = stmt.all(days);
+    const rows = this.queries.getSuccessRateTrend(days);
     
     const result = rows.map(row => ({
       day: row.day,
@@ -494,36 +361,12 @@ class AnalyticsService {
     const cached = this._getCached(cacheKey);
     if (cached) return cached;
 
-    // Check if place_hubs table exists (project uses place_hubs, not hubs)
-    const tableExists = this.db.prepare(`
-      SELECT name FROM sqlite_master WHERE type='table' AND name='place_hubs'
-    `).get();
-
-    if (!tableExists) {
+    if (!this.queries.hasPlaceHubs()) {
       return [];
     }
 
-    const stmt = this.db.prepare(`
-      SELECT 
-        ph.id as hub_id,
-        ph.host,
-        ph.place_slug,
-        ph.title,
-        ph.last_seen_at as last_seen,
-        CAST(julianday('now') - julianday(ph.last_seen_at) AS INTEGER) as stale_days,
-        ph.nav_links_count,
-        ph.article_links_count,
-        ph.place_kind,
-        ph.topic_slug,
-        ph.topic_label
-      FROM place_hubs ph
-      WHERE ph.last_seen_at IS NOT NULL
-      ORDER BY stale_days DESC, article_links_count DESC
-      LIMIT ?
-    `);
-    
     try {
-      const rows = stmt.all(limit);
+      const rows = this.queries.getHubHealth(limit);
       
       const result = rows.map(row => ({
         hubId: row.hub_id,
@@ -557,41 +400,13 @@ class AnalyticsService {
     const cached = this._getCached(cacheKey);
     if (cached) return cached;
 
-    // Check if table exists
-    const tableExists = this.db.prepare(`
-      SELECT name FROM sqlite_master WHERE type='table' AND name='layout_signatures'
-    `).get();
-
-    if (!tableExists) {
+    if (!this.queries.hasLayoutSignatures()) {
       return { totalSignatures: 0, topClusters: [], uniqueTemplates: 0 };
     }
 
     try {
-      // Get overall stats
-      const statsStmt = this.db.prepare(`
-        SELECT 
-          COUNT(*) as total,
-          SUM(seen_count) as total_pages,
-          COUNT(CASE WHEN level = 1 THEN 1 END) as l1_count,
-          COUNT(CASE WHEN level = 2 THEN 1 END) as l2_count
-        FROM layout_signatures
-      `);
-      const stats = statsStmt.get() || { total: 0, total_pages: 0, l1_count: 0, l2_count: 0 };
-
-      // Get top clusters by seen_count
-      const clustersStmt = this.db.prepare(`
-        SELECT 
-          signature_hash,
-          level,
-          seen_count,
-          first_seen_url,
-          created_at
-        FROM layout_signatures
-        WHERE level = 2
-        ORDER BY seen_count DESC
-        LIMIT ?
-      `);
-      const clusters = clustersStmt.all(limit);
+      const stats = this.queries.getLayoutSignatureStats();
+      const clusters = this.queries.getTopLayoutClusters(limit);
 
       const result = {
         totalSignatures: stats.total || 0,
