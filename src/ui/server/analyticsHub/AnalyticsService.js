@@ -388,6 +388,231 @@ class AnalyticsService {
   clearCache() {
     this._cache.clear();
   }
+
+  // ─────────────────────────────────────────────────────────────
+  // Historical Metrics (Added 2026-01-06)
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Get throughput trend - pages/hour over time
+   * @param {string} period - Time period (7d, 30d, 90d)
+   * @returns {Array<{hour: string, count: number, avgPerHour: number}>}
+   */
+  getThroughputTrend(period = '7d') {
+    const cacheKey = `throughput:${period}`;
+    const cached = this._getCached(cacheKey);
+    if (cached) return cached;
+
+    const days = this._parsePeriod(period);
+    
+    // Get hourly counts grouped by date and hour
+    const stmt = this.db.prepare(`
+      SELECT 
+        date(fetched_at) as day,
+        CAST(strftime('%H', fetched_at) AS INTEGER) as hour,
+        COUNT(*) as count
+      FROM http_responses 
+      WHERE fetched_at >= date('now', '-' || ? || ' days')
+        AND fetched_at IS NOT NULL
+      GROUP BY day, hour
+      ORDER BY day, hour
+    `);
+    
+    const rows = stmt.all(days);
+    
+    // Aggregate into daily averages
+    const byDay = new Map();
+    for (const row of rows) {
+      if (!byDay.has(row.day)) {
+        byDay.set(row.day, { total: 0, hours: 0 });
+      }
+      const d = byDay.get(row.day);
+      d.total += row.count;
+      d.hours += 1;
+    }
+
+    const result = Array.from(byDay.entries()).map(([day, data]) => ({
+      day,
+      totalPages: data.total,
+      activeHours: data.hours,
+      pagesPerHour: data.hours > 0 ? Math.round(data.total / data.hours) : 0
+    }));
+
+    this._setCache(cacheKey, result);
+    return result;
+  }
+
+  /**
+   * Get success/error rate trend over time
+   * @param {string} period - Time period (7d, 30d, 90d)
+   * @returns {Array<{day: string, success: number, clientError: number, serverError: number, total: number, successRate: number}>}
+   */
+  getSuccessRateTrend(period = '7d') {
+    const cacheKey = `successTrend:${period}`;
+    const cached = this._getCached(cacheKey);
+    if (cached) return cached;
+
+    const days = this._parsePeriod(period);
+    
+    const stmt = this.db.prepare(`
+      SELECT 
+        date(fetched_at) as day,
+        COUNT(*) as total,
+        SUM(CASE WHEN http_status >= 200 AND http_status < 300 THEN 1 ELSE 0 END) as success,
+        SUM(CASE WHEN http_status >= 400 AND http_status < 500 THEN 1 ELSE 0 END) as client_error,
+        SUM(CASE WHEN http_status >= 500 THEN 1 ELSE 0 END) as server_error
+      FROM http_responses
+      WHERE fetched_at >= date('now', '-' || ? || ' days')
+        AND fetched_at IS NOT NULL
+      GROUP BY day
+      ORDER BY day
+    `);
+    
+    const rows = stmt.all(days);
+    
+    const result = rows.map(row => ({
+      day: row.day,
+      total: row.total || 0,
+      success: row.success || 0,
+      clientError: row.client_error || 0,
+      serverError: row.server_error || 0,
+      successRate: row.total > 0 ? Math.round((row.success / row.total) * 1000) / 10 : 0
+    }));
+
+    this._setCache(cacheKey, result);
+    return result;
+  }
+
+  /**
+   * Get hub health metrics - staleness and yield
+   * Uses place_hubs table which tracks article hubs per domain/place
+   * @param {number} limit - Max hubs to return
+   * @returns {Array<{hubId: number, host: string, placeSlug: string, title: string, lastSeen: string, staleDays: number, placeKind: string}>}
+   */
+  getHubHealth(limit = 50) {
+    const cacheKey = `hubHealth:${limit}`;
+    const cached = this._getCached(cacheKey);
+    if (cached) return cached;
+
+    // Check if place_hubs table exists (project uses place_hubs, not hubs)
+    const tableExists = this.db.prepare(`
+      SELECT name FROM sqlite_master WHERE type='table' AND name='place_hubs'
+    `).get();
+
+    if (!tableExists) {
+      return [];
+    }
+
+    const stmt = this.db.prepare(`
+      SELECT 
+        ph.id as hub_id,
+        ph.host,
+        ph.place_slug,
+        ph.title,
+        ph.last_seen_at as last_seen,
+        CAST(julianday('now') - julianday(ph.last_seen_at) AS INTEGER) as stale_days,
+        ph.nav_links_count,
+        ph.article_links_count,
+        ph.place_kind,
+        ph.topic_slug,
+        ph.topic_label
+      FROM place_hubs ph
+      WHERE ph.last_seen_at IS NOT NULL
+      ORDER BY stale_days DESC, article_links_count DESC
+      LIMIT ?
+    `);
+    
+    try {
+      const rows = stmt.all(limit);
+      
+      const result = rows.map(row => ({
+        hubId: row.hub_id,
+        host: row.host || '',
+        placeSlug: row.place_slug || '',
+        title: row.title || 'Unknown',
+        lastSeen: row.last_seen,
+        staleDays: row.stale_days || 0,
+        navLinksCount: row.nav_links_count || 0,
+        articleLinksCount: row.article_links_count || 0,
+        placeKind: row.place_kind || '',
+        topicSlug: row.topic_slug || '',
+        topicLabel: row.topic_label || ''
+      }));
+
+      this._setCache(cacheKey, result);
+      return result;
+    } catch (e) {
+      // Table might have unexpected schema
+      return [];
+    }
+  }
+
+  /**
+   * Get layout signature (SkeletonHash) statistics
+   * @param {number} limit - Max clusters to return
+   * @returns {Object} Layout signature statistics
+   */
+  getLayoutSignatureStats(limit = 20) {
+    const cacheKey = `layoutSignatures:${limit}`;
+    const cached = this._getCached(cacheKey);
+    if (cached) return cached;
+
+    // Check if table exists
+    const tableExists = this.db.prepare(`
+      SELECT name FROM sqlite_master WHERE type='table' AND name='layout_signatures'
+    `).get();
+
+    if (!tableExists) {
+      return { totalSignatures: 0, topClusters: [], uniqueTemplates: 0 };
+    }
+
+    try {
+      // Get overall stats
+      const statsStmt = this.db.prepare(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(seen_count) as total_pages,
+          COUNT(CASE WHEN level = 1 THEN 1 END) as l1_count,
+          COUNT(CASE WHEN level = 2 THEN 1 END) as l2_count
+        FROM layout_signatures
+      `);
+      const stats = statsStmt.get() || { total: 0, total_pages: 0, l1_count: 0, l2_count: 0 };
+
+      // Get top clusters by seen_count
+      const clustersStmt = this.db.prepare(`
+        SELECT 
+          signature_hash,
+          level,
+          seen_count,
+          first_seen_url,
+          created_at
+        FROM layout_signatures
+        WHERE level = 2
+        ORDER BY seen_count DESC
+        LIMIT ?
+      `);
+      const clusters = clustersStmt.all(limit);
+
+      const result = {
+        totalSignatures: stats.total || 0,
+        totalPages: stats.total_pages || 0,
+        l1Templates: stats.l1_count || 0,
+        l2Structures: stats.l2_count || 0,
+        topClusters: clusters.map(c => ({
+          hash: c.signature_hash,
+          level: c.level,
+          seenCount: c.seen_count,
+          firstSeenUrl: c.first_seen_url,
+          createdAt: c.created_at
+        }))
+      };
+
+      this._setCache(cacheKey, result);
+      return result;
+    } catch (e) {
+      return { totalSignatures: 0, topClusters: [], uniqueTemplates: 0 };
+    }
+  }
 }
 
 module.exports = { AnalyticsService };

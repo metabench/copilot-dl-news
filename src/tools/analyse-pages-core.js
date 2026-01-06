@@ -9,6 +9,8 @@ const { findProjectRoot } = require('../utils/project-root');
 const { loadNonGeoTopicSlugs } = require('./nonGeoTopicSlugs');
 const { ArticleXPathService } = require('../services/ArticleXPathService');
 const { DecompressionWorkerPool } = require('../background/workers/DecompressionWorkerPool');
+const SkeletonHash = require('../analysis/structure/SkeletonHash');
+const { createLayoutSignaturesQueries } = require('../db/sqlite/v1/queries/layoutSignatures');
 
 function toNumber(value, fallback) {
   const num = Number(value);
@@ -121,11 +123,24 @@ async function analysePages({
     let hubsUpdated = 0;
     let unknownInserted = 0;
     let skipped = 0;
+    let layoutSignaturesUpserted = 0;
+    let lastLayoutSignatureHash = null;
     const hubAssignments = captureHubSummaries ? [] : null;
     let lastProgressAt = Date.now();
     let currentUrl = null;
     let lastItemTimings = null; // Timing breakdown for last processed item
     let lastAnalysisResult = null;
+
+    // Initialize layout signatures queries if computeSkeletonHash is enabled
+    const computeSkeletonHash = analysisOptions?.computeSkeletonHash === true;
+    let layoutSignaturesQueries = null;
+    if (computeSkeletonHash) {
+      try {
+        layoutSignaturesQueries = createLayoutSignaturesQueries(db.db);
+      } catch (error) {
+        emit(logger, 'warn', '[analyse-pages] Failed to initialize layout signatures queries', verbose ? error : error?.message);
+      }
+    }
 
     const rows = queries.getPendingAnalyses(analysisVersion, limit);
     const hasCompressionBucketSupport = queries.hasCompressionBucketSupport();
@@ -153,7 +168,10 @@ async function analysePages({
           ts: Date.now(),
           url: currentUrl,
           lastItemTimings,
-          lastAnalysisResult
+          lastAnalysisResult,
+          // SkeletonHash metrics
+          layoutSignaturesUpserted,
+          lastLayoutSignatureHash
         });
       } catch (_) {
         // ignore consumer errors
@@ -221,6 +239,28 @@ async function analysePages({
       if (htmlInfo.error) {
         skipped += 1;
         emit(logger, 'warn', `[analyse-pages] Failed to load HTML for ${row.url}`, verbose ? htmlInfo.error : htmlInfo.error?.message || htmlInfo.error);
+      }
+
+      // Compute and store SkeletonHash if enabled and HTML is available
+      if (computeSkeletonHash && layoutSignaturesQueries && htmlInfo.html && !htmlInfo.error) {
+        try {
+          const skeletonResult = SkeletonHash.compute(htmlInfo.html, 2); // Level 2 = structure only
+          if (skeletonResult?.hash) {
+            lastLayoutSignatureHash = skeletonResult.hash;
+            layoutSignaturesQueries.upsert({
+              signature_hash: skeletonResult.hash,
+              level: 2,
+              signature: skeletonResult.signature,
+              first_seen_url: row.url
+            });
+            layoutSignaturesUpserted += 1;
+            if (verbose) {
+              emit(logger, 'debug', `[analyse-pages] SkeletonHash L2: ${skeletonResult.hash} for ${row.url}`);
+            }
+          }
+        } catch (skeletonError) {
+          emit(logger, 'warn', `[analyse-pages] SkeletonHash failed for ${row.url}`, verbose ? skeletonError : skeletonError?.message);
+        }
       }
 
       const articleRow = {
@@ -582,7 +622,10 @@ async function analysePages({
       version: analysisVersion,
       dryRun,
       hubAssignments: hubAssignments || undefined,
-      timings: timingSummary
+      timings: timingSummary,
+      // SkeletonHash metrics
+      layoutSignaturesUpserted,
+      lastLayoutSignatureHash
     };
   } finally {
     try { await decompressPool.shutdown(); } catch (_) {}

@@ -628,6 +628,50 @@ function createApp(service = analyticsService) {
     }
   });
 
+  // ─────────────────────────────────────────────────────────────
+  // Historical Metrics API (Added 2026-01-06)
+  // ─────────────────────────────────────────────────────────────
+
+  app.get('/api/analytics/throughput', (req, res) => {
+    try {
+      const period = req.query.period || '7d';
+      const data = service.getThroughputTrend(period);
+      res.json({ success: true, data });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/analytics/success-trend', (req, res) => {
+    try {
+      const period = req.query.period || '7d';
+      const data = service.getSuccessRateTrend(period);
+      res.json({ success: true, data });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/analytics/hub-health', (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit, 10) || 50;
+      const data = service.getHubHealth(limit);
+      res.json({ success: true, data });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/analytics/layout-signatures', (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit, 10) || 20;
+      const data = service.getLayoutSignatureStats(limit);
+      res.json({ success: true, data });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // SSR dashboard page
   app.get('/', (req, res) => {
     try {
