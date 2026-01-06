@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Crawler</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e0e0e0;
+      height: 100vh;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 12px;
+      color: #00ff88;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-controls {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+    .header-controls button {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+    .tab {
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.05);
+      border: none;
+      border-radius: 6px 6px 0 0;
+      color: #888;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .tab.active {
+      background: rgba(255,255,255,0.1);
+      color: #00ff88;
+    }
+    .tab-content { display: none; flex: 1; flex-direction: column; min-height: 0; }
+    .tab-content.active { display: flex; }
+    
+    .stats {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 12px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.05);
+      padding: 10px 15px;
+      border-radius: 8px;
+      min-width: 100px;
+    }
+    .stat-label { font-size: 11px; opacity: 0.7; }
+    .stat-value { font-size: 24px; font-weight: bold; color: #00ff88; }
+    .progress-container {
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      height: 24px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #00ff88 0%, #00cc6a 100%);
+      border-radius: 10px;
+      transition: width 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 12px;
+      color: #1a1a2e;
+      min-width: 40px;
+    }
+    .log-container {
+      flex: 1;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      padding: 8px;
+      overflow-y: auto;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 11px;
+    }
+    .log-line {
+      padding: 1px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .log-line.url { color: #88ccff; }
+    .log-line.error { color: #ff6b6b; }
+    .log-line.info { color: #00ff88; }
+    .controls {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+    }
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    button:hover { transform: scale(1.02); }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-stop { background: #ff6b6b; color: white; }
+    .btn-start { background: #00ff88; color: #1a1a2e; }
+    .btn-settings { background: rgba(255,255,255,0.1); color: #e0e0e0; }
+    .status { 
+      font-size: 13px; 
+      padding: 6px 0;
+      color: #00ff88;
+    }
+    .status.running::before {
+      content: '●';
+      animation: pulse 1s infinite;
+      margin-right: 8px;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Settings Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal {
+      background: #1a1a2e;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 20px;
+      min-width: 300px;
+    }
+    .modal h2 {
+      color: #00ff88;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 14px;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: #00ff88;
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 15px;
+    }
+    .btn-save { background: #00ff88; color: #1a1a2e; }
+    .btn-cancel { background: rgba(255,255,255,0.1); color: #e0e0e0; }
+
+    /* Chart View */
+    .chart-container {
+      flex: 1;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .chart-title { font-size: 14px; color: #888; }
+    .chart-total { font-size: 20px; font-weight: bold; color: #00ff88; }
+    .chart-area {
+      flex: 1;
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      padding-top: 10px;
+    }
+    .chart-bar-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+    }
+    .chart-bar {
+      width: 100%;
+      background: linear-gradient(180deg, #00ff88 0%, #00aa55 100%);
+      border-radius: 3px 3px 0 0;
+      min-height: 2px;
+      transition: height 0.3s ease;
+    }
+    .chart-label {
+      font-size: 9px;
+      color: #666;
+      margin-top: 4px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      height: 50px;
+      overflow: hidden;
+    }
+    .chart-value {
+      font-size: 9px;
+      color: #888;
+      margin-bottom: 2px;
+    }
+  </style>
+</head>
+<body>
+  <h1>
+    🕷️ Web Crawler
+    <div class="header-controls">
+      <button class="btn-settings" onclick="openSettings()">⚙️ Settings</button>
+    </div>
+  </h1>
+  
+  <div class="tabs">
+    <button class="tab active" data-tab="crawl">Crawl</button>
+    <button class="tab" data-tab="chart">📊 Articles</button>
+  </div>
+  
+  <!-- Crawl Tab -->
+  <div class="tab-content active" id="crawl-tab">
+    <div class="status" id="status">Initializing...</div>
+    
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Downloaded</div>
+        <div class="stat-value" id="downloaded">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Target</div>
+        <div class="stat-value" id="target">1000</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Errors</div>
+        <div class="stat-value" id="errors" style="color: #ff6b6b;">0</div>
+      </div>
+    </div>
+    
+    <div class="progress-container">
+      <div class="progress-bar" id="progress" style="width: 0%">0%</div>
+    </div>
+    
+    <div class="log-container" id="log"></div>
+    
+    <div class="controls">
+      <button class="btn-stop" id="btn-stop" onclick="window.crawlerAPI.stopCrawl()">🛑 Stop</button>
+      <button class="btn-start" id="btn-start" onclick="window.crawlerAPI.startCrawl()" disabled>▶️ Start</button>
+    </div>
+  </div>
+  
+  <!-- Chart Tab -->
+  <div class="tab-content" id="chart-tab">
+    <div class="chart-container">
+      <div class="chart-header">
+        <span class="chart-title">Articles Downloaded by Day</span>
+        <span class="chart-total" id="chart-total">0 total</span>
+      </div>
+      <div class="chart-area" id="chart-area">
+        <div style="color: #666; margin: auto;">Loading article stats...</div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn-settings" onclick="window.crawlerAPI.refreshStats()">🔄 Refresh</button>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal">
+      <h2>⚙️ Crawl Settings</h2>
+      <div class="form-group">
+        <label>Start URL</label>
+        <input type="text" id="cfg-url" placeholder="https://www.theguardian.com">
+      </div>
+      <div class="form-group">
+        <label>Max Pages</label>
+        <input type="number" id="cfg-maxPages" min="1" max="100000">
+      </div>
+      <div class="form-group">
+        <label>Max Depth</label>
+        <input type="number" id="cfg-maxDepth" min="1" max="10">
+      </div>
+      <div class="form-group">
+        <label>Concurrency</label>
+        <input type="number" id="cfg-concurrency" min="1" max="10">
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
+        <button class="btn-save" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    let maxPages = 1000;
+    let logs = [];
+    let isRunning = false;
+    let currentConfig = {};
+    const MAX_LOGS = 100;
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        $(tab.dataset.tab + '-tab').classList.add('active');
+      });
+    });
+
+    function addLog(text, type = '') {
+      logs.push({ text, type });
+      if (logs.length > MAX_LOGS) logs.shift();
+      
+      const container = $('log');
+      container.innerHTML = logs.map(l => 
+        `<div class="log-line ${l.type}">${l.text}</div>`
+      ).join('');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function updateButtons() {
+      $('btn-stop').disabled = !isRunning;
+      $('btn-start').disabled = isRunning;
+    }
+
+    // Settings modal
+    function openSettings() {
+      $('cfg-url').value = currentConfig.url || '';
+      $('cfg-maxPages').value = currentConfig.maxPages || 1000;
+      $('cfg-maxDepth').value = currentConfig.maxDepth || 3;
+      $('cfg-concurrency').value = currentConfig.concurrency || 2;
+      $('settings-modal').classList.add('visible');
+    }
+
+    function closeSettings() {
+      $('settings-modal').classList.remove('visible');
+    }
+
+    function saveSettings() {
+      const config = {
+        url: $('cfg-url').value,
+        maxPages: parseInt($('cfg-maxPages').value) || 1000,
+        maxDepth: parseInt($('cfg-maxDepth').value) || 3,
+        concurrency: parseInt($('cfg-concurrency').value) || 2
+      };
+      window.crawlerAPI.updateConfig(config);
+      closeSettings();
+    }
+
+    // Chart rendering
+    function renderChart(stats) {
+      if (!stats || !stats.daily || stats.daily.length === 0) {
+        $('chart-area').innerHTML = '<div style="color: #666; margin: auto;">No data yet</div>';
+        $('chart-total').textContent = '0 total';
+        return;
+      }
+
+      $('chart-total').textContent = stats.total.toLocaleString() + ' total';
+      
+      const maxCount = Math.max(...stats.daily.map(d => d.count));
+      const chartHtml = stats.daily.map(d => {
+        const height = maxCount > 0 ? Math.max(2, (d.count / maxCount) * 150) : 2;
+        const label = d.day ? d.day.slice(5) : ''; // MM-DD
+        return `
+          <div class="chart-bar-wrapper">
+            <div class="chart-value">${d.count}</div>
+            <div class="chart-bar" style="height: ${height}px" title="${d.day}: ${d.count}"></div>
+            <div class="chart-label">${label}</div>
+          </div>
+        `;
+      }).join('');
+      
+      $('chart-area').innerHTML = chartHtml;
+    }
+
+    // Event handlers
+    window.crawlerAPI.onConfigUpdate((config) => {
+      currentConfig = config;
+      maxPages = config.maxPages;
+      $('target').textContent = maxPages;
+    });
+
+    window.crawlerAPI.onStarted((config) => {
+      isRunning = true;
+      maxPages = config.maxPages;
+      $('target').textContent = maxPages;
+      $('status').textContent = 'Crawling...';
+      $('status').className = 'status running';
+      updateButtons();
+    });
+
+    window.crawlerAPI.onProgress((data) => {
+      const downloaded = data.downloaded || 0;
+      const errors = data.errors || 0;
+      const pct = Math.min(100, (downloaded / maxPages) * 100);
+      
+      $('downloaded').textContent = downloaded;
+      $('errors').textContent = errors;
+      $('progress').style.width = pct + '%';
+      $('progress').textContent = pct.toFixed(1) + '%';
+      
+      if (data.lastUrl) {
+        addLog(`📥 ${data.lastUrl}`, 'url');
+      }
+    });
+
+    window.crawlerAPI.onLog((text) => {
+      const type = text.includes('❌') ? 'error' : text.includes('✅') || text.includes('🕷️') ? 'info' : '';
+      addLog(text, type);
+    });
+
+    window.crawlerAPI.onComplete((data) => {
+      isRunning = false;
+      $('status').textContent = '✅ Complete!';
+      $('status').className = 'status';
+      addLog(`✅ Crawl finished! Downloaded ${data.downloaded} pages`, 'info');
+      updateButtons();
+    });
+
+    window.crawlerAPI.onError((error) => {
+      isRunning = false;
+      $('status').textContent = '❌ Error';
+      $('status').className = 'status';
+      addLog(`❌ ${error}`, 'error');
+      updateButtons();
+    });
+
+    window.crawlerAPI.onArticleStats((stats) => {
+      renderChart(stats);
+    });
+
+    // Close modal on overlay click
+    $('settings-modal').addEventListener('click', (e) => {
+      if (e.target === $('settings-modal')) closeSettings();
+    });
+  </script>
+</body>
+</html>

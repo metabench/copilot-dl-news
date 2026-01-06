@@ -1,0 +1,228 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 550">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b"/>
+      <stop offset="100%" style="stop-color:#0f172a"/>
+    </linearGradient>
+    <linearGradient id="completeRegion" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+    <linearGradient id="activeRegion" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b"/>
+      <stop offset="100%" style="stop-color:#d97706"/>
+    </linearGradient>
+    <linearGradient id="pendingRegion" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#334155"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    <filter id="glowActive">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="550" fill="#0f172a"/>
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="800" height="55" fill="url(#bgGrad)"/>
+  <text x="20" y="25" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">Currently Processing</text>
+  <text x="20" y="43" font-family="system-ui, sans-serif" font-size="18" fill="#e2e8f0" font-weight="bold">🇫🇷 France — ADM1 Regions</text>
+  <text x="780" y="35" font-family="monospace" font-size="14" fill="#f59e0b" text-anchor="end">9 / 13 regions</text>
+  
+  <!-- Main Map Panel -->
+  <rect x="15" y="65" width="520" height="420" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  
+  <!-- Simplified France Map with Regions -->
+  <g transform="translate(40, 85)">
+    <!-- Brittany (Bretagne) - Complete -->
+    <path d="M 60,140 Q 40,120 50,100 L 90,95 L 110,115 L 100,145 Z" 
+          fill="url(#completeRegion)" stroke="#047857" stroke-width="1.5">
+      <title>Bretagne ✓</title>
+    </path>
+    <text x="75" y="125" font-family="system-ui, sans-serif" font-size="8" fill="#ffffff" text-anchor="middle">Bretagne</text>
+    
+    <!-- Normandy (Normandie) - Complete -->
+    <path d="M 110,90 L 180,80 L 190,115 L 170,130 L 110,125 Z" 
+          fill="url(#completeRegion)" stroke="#047857" stroke-width="1.5">
+      <title>Normandie ✓</title>
+    </path>
+    <text x="150" y="108" font-family="system-ui, sans-serif" font-size="8" fill="#ffffff" text-anchor="middle">Normandie</text>
+    
+    <!-- Hauts-de-France - Complete -->
+    <path d="M 180,70 L 250,55 L 270,95 L 230,115 L 190,105 Z" 
+          fill="url(#completeRegion)" stroke="#047857" stroke-width="1.5">
+      <title>Hauts-de-France ✓</title>
+    </path>
+    <text x="225" y="88" font-family="system-ui, sans-serif" font-size="7" fill="#ffffff" text-anchor="middle">Hauts-de-France</text>
+    
+    <!-- Grand Est - Complete -->
+    <path d="M 270,85 L 350,70 L 360,145 L 300,160 L 275,130 Z" 
+          fill="url(#completeRegion)" stroke="#047857" stroke-width="1.5">
+      <title>Grand Est ✓</title>
+    </path>
+    <text x="315" y="118" font-family="system-ui, sans-serif" font-size="8" fill="#ffffff" text-anchor="middle">Grand Est</text>
+    
+    <!-- Île-de-France - ACTIVE (highlighted) -->
+    <path d="M 200,115 L 260,110 L 265,150 L 225,160 L 195,145 Z" 
+          fill="url(#activeRegion)" stroke="#d97706" stroke-width="2" filter="url(#glowActive)">
+      <title>Île-de-France ⏳ 78%</title>
+    </path>
+    <text x="230" y="138" font-family="system-ui, sans-serif" font-size="7" fill="#ffffff" text-anchor="middle" font-weight="bold">Île-de-France</text>
+    <text x="230" y="148" font-family="monospace" font-size="6" fill="#fef3c7" text-anchor="middle">78%</text>
+    
+    <!-- Pays de la Loire - Complete -->
+    <path d="M 60,155 L 130,145 L 145,195 L 90,210 L 55,185 Z" 
+          fill="url(#completeRegion)" stroke="#047857" stroke-width="1.5">
+      <title>Pays de la Loire ✓</title>
+    </path>
+    <text x="100" y="180" font-family="system-ui, sans-serif" font-size="7" fill="#ffffff" text-anchor="middle">Pays de la Loire</text>
+    
+    <!-- Centre-Val de Loire - Complete -->
+    <path d="M 135,155 L 200,150 L 215,210 L 150,220 L 140,195 Z" 
+          fill="url(#completeRegion)" stroke="#047857" stroke-width="1.5">
+      <title>Centre-Val de Loire ✓</title>
+    </path>
+    <text x="175" y="188" font-family="system-ui, sans-serif" font-size="6" fill="#ffffff" text-anchor="middle">Centre-Val</text>
+    
+    <!-- Bourgogne-Franche-Comté - Complete -->
+    <path d="M 255,160 L 340,155 L 345,230 L 280,240 L 250,200 Z" 
+          fill="url(#completeRegion)" stroke="#047857" stroke-width="1.5">
+      <title>Bourgogne-Franche-Comté ✓</title>
+    </path>
+    <text x="300" y="195" font-family="system-ui, sans-serif" font-size="6" fill="#ffffff" text-anchor="middle">Bourgogne-FC</text>
+    
+    <!-- Nouvelle-Aquitaine - Pending -->
+    <path d="M 55,210 L 145,200 L 160,295 L 85,330 L 45,280 Z" 
+          fill="url(#pendingRegion)" stroke="#475569" stroke-width="1.5">
+      <title>Nouvelle-Aquitaine (pending)</title>
+    </path>
+    <text x="105" y="265" font-family="system-ui, sans-serif" font-size="7" fill="#94a3b8" text-anchor="middle">Nouvelle-Aquitaine</text>
+    
+    <!-- Auvergne-Rhône-Alpes - Complete -->
+    <path d="M 225,215 L 320,205 L 360,275 L 290,300 L 220,270 Z" 
+          fill="url(#completeRegion)" stroke="#047857" stroke-width="1.5">
+      <title>Auvergne-Rhône-Alpes ✓</title>
+    </path>
+    <text x="290" y="255" font-family="system-ui, sans-serif" font-size="6" fill="#ffffff" text-anchor="middle">Auvergne-RA</text>
+    
+    <!-- Occitanie - Pending -->
+    <path d="M 95,300 L 210,280 L 250,340 L 140,360 L 80,335 Z" 
+          fill="url(#pendingRegion)" stroke="#475569" stroke-width="1.5">
+      <title>Occitanie (pending)</title>
+    </path>
+    <text x="170" y="325" font-family="system-ui, sans-serif" font-size="8" fill="#94a3b8" text-anchor="middle">Occitanie</text>
+    
+    <!-- Provence-Alpes-Côte d'Azur - Pending -->
+    <path d="M 265,295 L 355,280 L 390,340 L 310,365 L 255,340 Z" 
+          fill="url(#pendingRegion)" stroke="#475569" stroke-width="1.5">
+      <title>Provence-Alpes-Côte d'Azur (pending)</title>
+    </path>
+    <text x="325" y="325" font-family="system-ui, sans-serif" font-size="6" fill="#94a3b8" text-anchor="middle">PACA</text>
+    
+    <!-- Corsica - Pending -->
+    <path d="M 400,320 L 420,315 L 425,375 L 405,385 L 395,350 Z" 
+          fill="url(#pendingRegion)" stroke="#475569" stroke-width="1.5">
+      <title>Corse (pending)</title>
+    </path>
+    <text x="410" y="350" font-family="system-ui, sans-serif" font-size="7" fill="#94a3b8" text-anchor="middle">Corse</text>
+  </g>
+  
+  <!-- Legend -->
+  <g transform="translate(50, 455)">
+    <rect x="0" y="0" width="15" height="15" rx="3" fill="url(#completeRegion)"/>
+    <text x="22" y="12" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">Complete</text>
+    
+    <rect x="100" y="0" width="15" height="15" rx="3" fill="url(#activeRegion)"/>
+    <text x="122" y="12" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">Processing</text>
+    
+    <rect x="210" y="0" width="15" height="15" rx="3" fill="url(#pendingRegion)"/>
+    <text x="232" y="12" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">Pending</text>
+  </g>
+  
+  <!-- Right Panel: Active Region Details -->
+  <rect x="545" y="65" width="240" height="420" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  
+  <!-- Active Region Header -->
+  <rect x="555" y="75" width="220" height="60" rx="6" fill="#0f172a" stroke="#f59e0b" stroke-width="1"/>
+  <text x="570" y="97" font-family="system-ui, sans-serif" font-size="12" fill="#f59e0b" font-weight="bold">⏳ Île-de-France</text>
+  <text x="570" y="115" font-family="monospace" font-size="11" fill="#94a3b8">8 departments • 1,269 communes</text>
+  <text x="570" y="128" font-family="monospace" font-size="10" fill="#fef3c7">Population: 12.3M</text>
+  
+  <!-- Department Progress -->
+  <text x="555" y="160" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8" font-weight="bold">Department Progress</text>
+  
+  <!-- Paris -->
+  <g transform="translate(555, 175)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="10" fill="#e2e8f0">Paris (75)</text>
+    <text x="205" y="0" font-family="monospace" font-size="9" fill="#10b981" text-anchor="end">✓</text>
+    <rect x="0" y="5" width="195" height="6" rx="2" fill="#334155"/>
+    <rect x="0" y="5" width="195" height="6" rx="2" fill="#10b981"/>
+  </g>
+  
+  <!-- Hauts-de-Seine -->
+  <g transform="translate(555, 200)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="10" fill="#e2e8f0">Hauts-de-Seine (92)</text>
+    <text x="205" y="0" font-family="monospace" font-size="9" fill="#10b981" text-anchor="end">✓</text>
+    <rect x="0" y="5" width="195" height="6" rx="2" fill="#334155"/>
+    <rect x="0" y="5" width="195" height="6" rx="2" fill="#10b981"/>
+  </g>
+  
+  <!-- Seine-Saint-Denis -->
+  <g transform="translate(555, 225)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="10" fill="#e2e8f0">Seine-Saint-Denis (93)</text>
+    <text x="205" y="0" font-family="monospace" font-size="9" fill="#10b981" text-anchor="end">✓</text>
+    <rect x="0" y="5" width="195" height="6" rx="2" fill="#334155"/>
+    <rect x="0" y="5" width="195" height="6" rx="2" fill="#10b981"/>
+  </g>
+  
+  <!-- Val-de-Marne -->
+  <g transform="translate(555, 250)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="10" fill="#e2e8f0">Val-de-Marne (94)</text>
+    <text x="205" y="0" font-family="monospace" font-size="9" fill="#10b981" text-anchor="end">✓</text>
+    <rect x="0" y="5" width="195" height="6" rx="2" fill="#334155"/>
+    <rect x="0" y="5" width="195" height="6" rx="2" fill="#10b981"/>
+  </g>
+  
+  <!-- Yvelines - Active -->
+  <g transform="translate(555, 275)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="10" fill="#f59e0b" font-weight="bold">Yvelines (78)</text>
+    <text x="205" y="0" font-family="monospace" font-size="9" fill="#f59e0b" text-anchor="end">65%</text>
+    <rect x="0" y="5" width="195" height="6" rx="2" fill="#334155"/>
+    <rect x="0" y="5" width="127" height="6" rx="2" fill="#f59e0b"/>
+  </g>
+  
+  <!-- Essonne -->
+  <g transform="translate(555, 300)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">Essonne (91)</text>
+    <text x="205" y="0" font-family="monospace" font-size="9" fill="#64748b" text-anchor="end">—</text>
+    <rect x="0" y="5" width="195" height="6" rx="2" fill="#334155"/>
+  </g>
+  
+  <!-- Seine-et-Marne -->
+  <g transform="translate(555, 325)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">Seine-et-Marne (77)</text>
+    <text x="205" y="0" font-family="monospace" font-size="9" fill="#64748b" text-anchor="end">—</text>
+    <rect x="0" y="5" width="195" height="6" rx="2" fill="#334155"/>
+  </g>
+  
+  <!-- Val-d'Oise -->
+  <g transform="translate(555, 350)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">Val-d'Oise (95)</text>
+    <text x="205" y="0" font-family="monospace" font-size="9" fill="#64748b" text-anchor="end">—</text>
+    <rect x="0" y="5" width="195" height="6" rx="2" fill="#334155"/>
+  </g>
+  
+  <!-- Current Activity -->
+  <text x="555" y="385" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8" font-weight="bold">Current Activity</text>
+  
+  <rect x="555" y="395" width="220" height="80" rx="6" fill="#0f172a"/>
+  <text x="565" y="415" font-family="monospace" font-size="9" fill="#64748b">⏳ Processing commune:</text>
+  <text x="565" y="432" font-family="system-ui, sans-serif" font-size="11" fill="#e2e8f0">Versailles</text>
+  <text x="565" y="450" font-family="monospace" font-size="9" fill="#64748b">Pop: 85,346 • Lat: 48.80</text>
+  <text x="565" y="465" font-family="monospace" font-size="9" fill="#10b981">Rate: 42 rec/sec • ETA: 23s</text>
+</svg>

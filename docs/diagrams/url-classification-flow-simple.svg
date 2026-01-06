@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" style="background: white">
+  <!-- URL Classification Decision Flow - Phase 1: Simple Structure -->
+  
+  <!-- Title -->
+  <text x="450" y="35" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="20" font-weight="bold" fill="black">URL Classification Decision Flow</text>
+  <text x="450" y="55" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#666">How URLs are classified as Article, Hub, or Nav</text>
+  
+  <!-- Input -->
+  <rect x="350" y="80" width="200" height="50" rx="8" fill="none" stroke="black" stroke-width="2"/>
+  <text x="450" y="110" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" fill="black">Input URL</text>
+  
+  <!-- Arrow down -->
+  <path d="M 450 130 L 450 160" stroke="black" stroke-width="2" fill="none"/>
+  <polygon points="450,170 445,160 455,160" fill="black"/>
+  
+  <!-- Signal Computation -->
+  <rect x="300" y="175" width="300" height="70" rx="8" fill="#e8e8e8" stroke="black" stroke-width="2"/>
+  <text x="450" y="200" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="black">Compute URL Signals</text>
+  <text x="450" y="220" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">host, pathDepth, segments, hasDatePath, hasHyphenatedSlug...</text>
+  <text x="450" y="235" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">hasSeriesSegment, isMediaFile, queryParamCount</text>
+  
+  <!-- Arrow down to branching -->
+  <path d="M 450 245 L 450 275" stroke="black" stroke-width="2" fill="none"/>
+  <polygon points="450,285 445,275 455,275" fill="black"/>
+  
+  <!-- Decision tree evaluation label -->
+  <text x="450" y="310" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="black">Evaluate Category Trees (in order)</text>
+  
+  <!-- Three parallel paths -->
+  
+  <!-- NAV Tree (left) -->
+  <rect x="50" y="330" width="200" height="120" rx="8" fill="none" stroke="black" stroke-width="2"/>
+  <text x="150" y="355" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="black">1. NAV Tree</text>
+  <text x="150" y="375" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Root paths (empty pathname)</text>
+  <text x="150" y="390" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Media files (.jpg, .pdf, etc)</text>
+  <text x="150" y="405" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• E-commerce patterns</text>
+  <text x="150" y="420" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Utility pages (login, search)</text>
+  <text x="150" y="440" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="red">If match → NAV</text>
+  
+  <!-- HUB Tree (center) -->
+  <rect x="350" y="330" width="200" height="120" rx="8" fill="none" stroke="black" stroke-width="2"/>
+  <text x="450" y="355" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="black">2. HUB Tree</text>
+  <text x="450" y="375" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Shallow paths (depth ≤ 1)</text>
+  <text x="450" y="390" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Section pages (/world, /sport)</text>
+  <text x="450" y="405" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• /series/, /topics/ paths</text>
+  <text x="450" y="420" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Date archives (/2024/all)</text>
+  <text x="450" y="440" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="green">If match → HUB</text>
+  
+  <!-- ARTICLE Tree (right) -->
+  <rect x="650" y="330" width="200" height="120" rx="8" fill="none" stroke="black" stroke-width="2"/>
+  <text x="750" y="355" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="black">3. ARTICLE Tree</text>
+  <text x="750" y="375" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Guardian date pattern</text>
+  <text x="750" y="390" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Numeric date paths</text>
+  <text x="750" y="405" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• /article/ segments</text>
+  <text x="750" y="420" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Long hyphenated slugs</text>
+  <text x="750" y="440" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="blue">If match → ARTICLE</text>
+  
+  <!-- Connecting lines from decision label to boxes -->
+  <path d="M 450 320 L 150 330" stroke="black" stroke-width="1.5" fill="none"/>
+  <path d="M 450 320 L 450 330" stroke="black" stroke-width="1.5" fill="none"/>
+  <path d="M 450 320 L 750 330" stroke="black" stroke-width="1.5" fill="none"/>
+  
+  <!-- Arrows down to results -->
+  <path d="M 150 450 L 150 480" stroke="black" stroke-width="2" fill="none"/>
+  <path d="M 450 450 L 450 480" stroke="black" stroke-width="2" fill="none"/>
+  <path d="M 750 450 L 750 480" stroke="black" stroke-width="2" fill="none"/>
+  
+  <!-- Result boxes -->
+  <rect x="80" y="485" width="140" height="40" rx="6" fill="#ffcccc" stroke="red" stroke-width="2"/>
+  <text x="150" y="510" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="red">NAV</text>
+  
+  <rect x="380" y="485" width="140" height="40" rx="6" fill="#ccffcc" stroke="green" stroke-width="2"/>
+  <text x="450" y="510" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="green">HUB</text>
+  
+  <rect x="680" y="485" width="140" height="40" rx="6" fill="#cce5ff" stroke="blue" stroke-width="2"/>
+  <text x="750" y="510" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="blue">ARTICLE</text>
+  
+  <!-- Fallback path -->
+  <path d="M 820 410 L 870 410 L 870 560 L 450 560" stroke="#888" stroke-width="1.5" stroke-dasharray="4,4" fill="none"/>
+  <text x="875" y="485" text-anchor="start" font-family="Segoe UI, sans-serif" font-size="10" fill="#888" transform="rotate(90,875,485)">No match</text>
+  
+  <!-- Fallback box -->
+  <rect x="380" y="545" width="140" height="35" rx="6" fill="#ffe8cc" stroke="orange" stroke-width="2"/>
+  <text x="450" y="567" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="orange">UNKNOWN</text>
+  
+  <!-- Legend -->
+  <rect x="30" y="550" width="180" height="40" rx="4" fill="#f8f8f8" stroke="#ccc" stroke-width="1"/>
+  <text x="40" y="568" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">Order: NAV → HUB → ARTICLE</text>
+  <text x="40" y="582" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">First match wins, else UNKNOWN</text>
+</svg>

@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <defs>
+    <marker id="arrow3" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#475569"/>
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#1e293b">Disambiguation Scoring Flow</text>
+  
+  <!-- Input: Mention -->
+  <rect x="40" y="60" width="140" height="50" rx="6" fill="#e0e7ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="110" y="82" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#4338ca">Mention</text>
+  <text x="110" y="98" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#4338ca">"London"</text>
+
+  <!-- Arrow -->
+  <line x1="180" y1="85" x2="220" y2="85" stroke="#475569" stroke-width="2" marker-end="url(#arrow3)"/>
+
+  <!-- Candidate Generation -->
+  <rect x="230" y="50" width="160" height="70" rx="6" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+  <text x="310" y="75" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#475569">Candidate Gen</text>
+  <text x="310" y="95" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">SQLite lookup</text>
+  <text x="310" y="108" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">→ N candidates</text>
+
+  <!-- Arrow -->
+  <line x1="390" y1="85" x2="430" y2="85" stroke="#475569" stroke-width="2" marker-end="url(#arrow3)"/>
+
+  <!-- Candidates Box -->
+  <rect x="440" y="40" width="160" height="90" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="520" y="62" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#1e40af">Candidates</text>
+  <text x="520" y="82" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#1e40af">London, UK</text>
+  <text x="520" y="96" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#1e40af">London, ON, CA</text>
+  <text x="520" y="110" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#1e40af">London, KY, US</text>
+  <text x="520" y="124" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">...</text>
+
+  <!-- Arrow down -->
+  <line x1="520" y1="130" x2="520" y2="165" stroke="#475569" stroke-width="2" marker-end="url(#arrow3)"/>
+
+  <!-- Feature Computation -->
+  <rect x="320" y="175" width="400" height="140" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="520" y="200" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="#b45309">Feature Scoring (per candidate)</text>
+  
+  <!-- Feature table -->
+  <text x="350" y="225" font-family="monospace" font-size="10" fill="#78350f">publisher_country_match  +6</text>
+  <text x="350" y="242" font-family="monospace" font-size="10" fill="#78350f">publisher_adm1_match     +7</text>
+  <text x="350" y="259" font-family="monospace" font-size="10" fill="#78350f">country_mentioned        +4</text>
+  <text x="350" y="276" font-family="monospace" font-size="10" fill="#78350f">adm1_mentioned           +5</text>
+  <text x="350" y="293" font-family="monospace" font-size="10" fill="#78350f">importance_prior         +0..3</text>
+
+  <text x="550" y="225" font-family="monospace" font-size="10" fill="#78350f">coherence_bonus    +0..4</text>
+  <text x="550" y="242" font-family="monospace" font-size="10" fill="#78350f">name_exact         +1</text>
+  <text x="550" y="259" font-family="monospace" font-size="10" fill="#78350f">kind_hint_match    +2</text>
+
+  <!-- Arrow down -->
+  <line x1="520" y1="315" x2="520" y2="350" stroke="#475569" stroke-width="2" marker-end="url(#arrow3)"/>
+
+  <!-- Coherence Pass -->
+  <rect x="380" y="360" width="280" height="50" rx="6" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/>
+  <text x="520" y="382" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#166534">Coherence Pass</text>
+  <text x="520" y="400" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#166534">Boost candidates consistent with dominant region cluster</text>
+
+  <!-- Arrow down -->
+  <line x1="520" y1="410" x2="520" y2="445" stroke="#475569" stroke-width="2" marker-end="url(#arrow3)"/>
+
+  <!-- Output -->
+  <rect x="380" y="455" width="280" height="35" rx="6" fill="#e0e7ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="520" y="478" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#4338ca">Winner: London, ON, CA (conf: 0.92)</text>
+
+  <!-- Context inputs on left -->
+  <rect x="40" y="175" width="140" height="100" rx="6" fill="#fce7f3" stroke="#ec4899" stroke-width="2"/>
+  <text x="110" y="198" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#be185d">Article Context</text>
+  <text x="110" y="218" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#9d174d">Publisher: London Free Press</text>
+  <text x="110" y="233" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#9d174d">Mentions: Ontario</text>
+  <text x="110" y="248" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#9d174d">Mentions: Thames River</text>
+  <text x="110" y="263" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#9d174d">Mentions: Western Univ</text>
+
+  <!-- Arrow from context to features -->
+  <line x1="180" y1="225" x2="310" y2="225" stroke="#475569" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrow3)"/>
+
+  <!-- Publisher Priors -->
+  <rect x="40" y="300" width="140" height="55" rx="6" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+  <text x="110" y="322" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" fill="#475569">Publisher Prior</text>
+  <text x="110" y="340" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">lfpress.com → CA/ON</text>
+
+  <!-- Arrow from priors to features -->
+  <line x1="180" y1="328" x2="310" y2="270" stroke="#475569" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrow3)"/>
+</svg>

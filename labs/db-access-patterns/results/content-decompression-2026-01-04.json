@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-01-04T05:04:03.811Z",
+  "limitRequested": 200,
+  "rowsFetched": 200,
+  "sampleSize": 1,
+  "skippedTooLarge": 199,
+  "skippedDecodeFailure": 0,
+  "successes": 1,
+  "bytes": {
+    "totalCompressedBytes": 42,
+    "totalUncompressedBytes": 39,
+    "extractedChars": 4
+  },
+  "phases": {
+    "db_fetch": {
+      "avgMs": 0.014799999999922875,
+      "p95Ms": 0.014799999999922875,
+      "bytesPerSec": 4792.332268370602
+    },
+    "decompress": {
+      "avgMs": 0.027799999999956526,
+      "p95Ms": 0.027799999999956526,
+      "bytesPerSec": 4450.022820629844
+    },
+    "html_parse": {
+      "avgMs": 4.49389999999994,
+      "p95Ms": 4.49389999999994
+    },
+    "text_extract": {
+      "avgMs": 4.082499999999982,
+      "p95Ms": 4.082499999999982,
+      "charsPerSec": 456.41259698767635
+    }
+  },
+  "totalPipeline": {
+    "avgMs": 8.76400000000001,
+    "p95Ms": 8.76400000000001,
+    "articlesPerSec": 114.10314924691909
+  }
+}

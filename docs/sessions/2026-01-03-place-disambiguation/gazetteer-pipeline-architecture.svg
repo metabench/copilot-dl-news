@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500">
+  <defs>
+    <linearGradient id="stageComplete" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#047857"/>
+    </linearGradient>
+    <linearGradient id="stageActive" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b"/>
+      <stop offset="100%" style="stop-color:#d97706"/>
+    </linearGradient>
+    <linearGradient id="stagePending" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#475569"/>
+      <stop offset="100%" style="stop-color:#334155"/>
+    </linearGradient>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#10b981"/>
+    </marker>
+    <marker id="arrowYellow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#f59e0b"/>
+    </marker>
+    <marker id="arrowGray" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="900" height="500" fill="#0f172a"/>
+  
+  <!-- Title -->
+  <text x="450" y="35" font-family="system-ui, sans-serif" font-size="22" fill="#e2e8f0" text-anchor="middle" font-weight="bold">Gazetteer Import Pipeline Architecture</text>
+  <text x="450" y="55" font-family="system-ui, sans-serif" font-size="12" fill="#64748b" text-anchor="middle">StagedGazetteerCoordinator → Sequential Stage Processing</text>
+  
+  <!-- Stage 1: Countries -->
+  <g id="stage1">
+    <rect x="50" y="90" width="180" height="120" rx="12" fill="url(#stageComplete)" stroke="#059669" stroke-width="2"/>
+    <text x="140" y="120" font-family="system-ui, sans-serif" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Stage 1: Countries</text>
+    <text x="140" y="145" font-family="system-ui, sans-serif" font-size="24" fill="#ffffff" text-anchor="middle">🌍</text>
+    <text x="140" y="175" font-family="monospace" font-size="11" fill="#d1fae5" text-anchor="middle">WikidataCountryIngestor</text>
+    <text x="140" y="195" font-family="monospace" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">✓ 196 / 196</text>
+  </g>
+  
+  <!-- Arrow 1→2 -->
+  <line x1="230" y1="150" x2="270" y2="150" stroke="#10b981" stroke-width="3" marker-end="url(#arrowGreen)"/>
+  
+  <!-- Stage 2: ADM1 -->
+  <g id="stage2">
+    <rect x="280" y="90" width="180" height="120" rx="12" fill="url(#stageActive)" stroke="#d97706" stroke-width="2" filter="url(#glow)"/>
+    <text x="370" y="120" font-family="system-ui, sans-serif" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Stage 2: ADM1</text>
+    <text x="370" y="145" font-family="system-ui, sans-serif" font-size="24" fill="#ffffff" text-anchor="middle">📍</text>
+    <text x="370" y="175" font-family="monospace" font-size="11" fill="#fef3c7" text-anchor="middle">WikidataAdm1Ingestor</text>
+    <text x="370" y="195" font-family="monospace" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">⏳ 1,842 / 2,364</text>
+  </g>
+  
+  <!-- Arrow 2→3 -->
+  <line x1="460" y1="150" x2="500" y2="150" stroke="#64748b" stroke-width="3" stroke-dasharray="8,4" marker-end="url(#arrowGray)"/>
+  
+  <!-- Stage 3: ADM2 -->
+  <g id="stage3">
+    <rect x="510" y="90" width="180" height="120" rx="12" fill="url(#stagePending)" stroke="#475569" stroke-width="2"/>
+    <text x="600" y="120" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle" font-weight="bold">Stage 3: ADM2</text>
+    <text x="600" y="145" font-family="system-ui, sans-serif" font-size="24" fill="#94a3b8" text-anchor="middle">🏘️</text>
+    <text x="600" y="175" font-family="monospace" font-size="11" fill="#64748b" text-anchor="middle">WikidataAdm2Ingestor</text>
+    <text x="600" y="195" font-family="monospace" font-size="12" fill="#94a3b8" text-anchor="middle">○ Pending</text>
+  </g>
+  
+  <!-- Arrow 3→4 -->
+  <line x1="690" y1="150" x2="730" y2="150" stroke="#64748b" stroke-width="3" stroke-dasharray="8,4" marker-end="url(#arrowGray)"/>
+  
+  <!-- Stage 4: Cities -->
+  <g id="stage4">
+    <rect x="740" y="90" width="140" height="120" rx="12" fill="url(#stagePending)" stroke="#475569" stroke-width="2"/>
+    <text x="810" y="120" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle" font-weight="bold">Stage 4: Cities</text>
+    <text x="810" y="145" font-family="system-ui, sans-serif" font-size="24" fill="#94a3b8" text-anchor="middle">🏙️</text>
+    <text x="810" y="175" font-family="monospace" font-size="11" fill="#64748b" text-anchor="middle">WikidataCitiesIngestor</text>
+    <text x="810" y="195" font-family="monospace" font-size="12" fill="#94a3b8" text-anchor="middle">○ Pending</text>
+  </g>
+  
+  <!-- Progress Telemetry Section -->
+  <rect x="50" y="240" width="400" height="240" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="70" y="270" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" font-weight="bold">📡 Telemetry Events (SSE)</text>
+  
+  <!-- Event Examples -->
+  <rect x="70" y="285" width="360" height="50" rx="6" fill="#0f172a"/>
+  <text x="85" y="305" font-family="monospace" font-size="10" fill="#f59e0b">crawl:progress-tree:updated</text>
+  <text x="85" y="325" font-family="monospace" font-size="9" fill="#64748b">{ stage: "adm1", progress: 0.78, current: "FR:IDF" }</text>
+  
+  <rect x="70" y="345" width="360" height="50" rx="6" fill="#0f172a"/>
+  <text x="85" y="365" font-family="monospace" font-size="10" fill="#10b981">crawl:progress-tree:stage-complete</text>
+  <text x="85" y="385" font-family="monospace" font-size="9" fill="#64748b">{ stage: "countries", total: 196, duration: "2m 14s" }</text>
+  
+  <rect x="70" y="405" width="360" height="50" rx="6" fill="#0f172a"/>
+  <text x="85" y="425" font-family="monospace" font-size="10" fill="#3b82f6">crawl:gazetteer:record-imported</text>
+  <text x="85" y="445" font-family="monospace" font-size="9" fill="#64748b">{ type: "adm1", name: "Île-de-France", parent: "FR" }</text>
+  
+  <!-- UI Components Section -->
+  <rect x="470" y="240" width="410" height="240" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="490" y="270" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" font-weight="bold">🖥️ UI Components</text>
+  
+  <!-- Component List -->
+  <g transform="translate(490, 290)">
+    <!-- World Map -->
+    <rect x="0" y="0" width="180" height="55" rx="6" fill="#0f172a" stroke="#3b82f6" stroke-width="1"/>
+    <text x="15" y="20" font-family="system-ui, sans-serif" font-size="11" fill="#3b82f6">WorldMapProgress</text>
+    <text x="15" y="35" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">SVG map with country fills</text>
+    <text x="15" y="48" font-family="monospace" font-size="8" fill="#475569">PostGIS → GeoJSON → SVG</text>
+    
+    <!-- Progress Stack -->
+    <rect x="195" y="0" width="180" height="55" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
+    <text x="210" y="20" font-family="system-ui, sans-serif" font-size="11" fill="#10b981">ProgressBarStack</text>
+    <text x="210" y="35" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">Multi-level progress bars</text>
+    <text x="210" y="48" font-family="monospace" font-size="8" fill="#475569">Overall + per-stage</text>
+  </g>
+  
+  <g transform="translate(490, 355)">
+    <!-- Tree View -->
+    <rect x="0" y="0" width="180" height="55" rx="6" fill="#0f172a" stroke="#f59e0b" stroke-width="1"/>
+    <text x="15" y="20" font-family="system-ui, sans-serif" font-size="11" fill="#f59e0b">HierarchyTreeView</text>
+    <text x="15" y="35" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">Collapsible region tree</text>
+    <text x="15" y="48" font-family="monospace" font-size="8" fill="#475569">Country → ADM1 → ADM2</text>
+    
+    <!-- Activity Log -->
+    <rect x="195" y="0" width="180" height="55" rx="6" fill="#0f172a" stroke="#8b5cf6" stroke-width="1"/>
+    <text x="210" y="20" font-family="system-ui, sans-serif" font-size="11" fill="#8b5cf6">ActivityLogPanel</text>
+    <text x="210" y="35" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">Scrolling event log</text>
+    <text x="210" y="48" font-family="monospace" font-size="8" fill="#475569">Timestamps + status</text>
+  </g>
+  
+  <g transform="translate(490, 420)">
+    <!-- Statistics -->
+    <rect x="0" y="0" width="180" height="50" rx="6" fill="#0f172a" stroke="#ec4899" stroke-width="1"/>
+    <text x="15" y="20" font-family="system-ui, sans-serif" font-size="11" fill="#ec4899">StatisticsPanel</text>
+    <text x="15" y="35" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">Rate, ETA, counts</text>
+    
+    <!-- Country Focus -->
+    <rect x="195" y="0" width="180" height="50" rx="6" fill="#0f172a" stroke="#06b6d4" stroke-width="1"/>
+    <text x="210" y="20" font-family="system-ui, sans-serif" font-size="11" fill="#06b6d4">CountryFocusMap</text>
+    <text x="210" y="35" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">Zoomed ADM1/2 view</text>
+  </g>
+</svg>

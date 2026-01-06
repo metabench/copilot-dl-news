@@ -1,0 +1,55 @@
+{
+  "timestamp": "2026-01-04T04:10:06.039Z",
+  "urlCount": 2000,
+  "benchmarks": {
+    "matcher_build": {
+      "iterations": 5,
+      "totalMs": 1642,
+      "avgMs": "328.44",
+      "placeCount": 7749,
+      "slugCount": 19174
+    },
+    "url_parsing_only": {
+      "urlCount": 2000,
+      "totalMs": 5,
+      "avgMs": "0.0023",
+      "opsPerSec": 437972
+    },
+    "slug_lookup": {
+      "slugCount": 4127,
+      "totalMs": 0,
+      "avgMs": "0.000086",
+      "opsPerSec": 11563463,
+      "hits": 1197,
+      "hitRate": "29.0%"
+    },
+    "single_url_extraction": {
+      "urlCount": 2000,
+      "totalMs": 34115,
+      "avgMs": "17.0577",
+      "opsPerSec": 59,
+      "totalPlaces": 1487,
+      "urlsWithPlaces": 1439,
+      "placesPerUrl": "0.74"
+    },
+    "batch_url_extraction": {
+      "iterations": 3,
+      "urlCount": 2000,
+      "totalMs": 95005,
+      "avgIterMs": "31668.50",
+      "avgPerUrlMs": "15.8342",
+      "opsPerSec": 63,
+      "urlsWithPlaces": 1439,
+      "urlsWithTopics": 0,
+      "totalPlaces": 1836179
+    }
+  },
+  "summary": {
+    "matcherBuildMs": 328.44,
+    "placesLoaded": 7749,
+    "slugsIndexed": 19174,
+    "urlsPerSec": 63,
+    "timeFor2000UrlsMs": 31746.031746031746,
+    "detectionRate": "72.0%"
+  }
+}

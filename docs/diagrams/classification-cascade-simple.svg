@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 700">
+  <!-- Classification Cascade Architecture - Simple Version for Validation -->
+  
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="white"/>
+  
+  <!-- Title -->
+  <text x="450" y="35" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="22" font-weight="600" fill="#1a1a2e">CLASSIFICATION CASCADE</text>
+  <text x="450" y="55" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#666">Multi-Stage URL/Content Classification Architecture</text>
+  
+  <!-- Stage 1: URL-Only -->
+  <rect x="50" y="80" width="380" height="140" rx="8" fill="none" stroke="#2a5a8a" stroke-width="2"/>
+  <text x="240" y="105" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#2a5a8a">STAGE 1: URL-ONLY</text>
+  <text x="240" y="125" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">(Pre-Download)</text>
+  <rect x="70" y="140" width="340" height="60" rx="4" fill="#f0f5fa" stroke="#2a5a8a" stroke-width="1"/>
+  <text x="240" y="160" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">Decision Tree Engine</text>
+  <text x="240" y="178" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">URL patterns • Path depth • Slug length</text>
+  <text x="240" y="192" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">config/decision-trees/url-classification.json</text>
+  
+  <!-- Stage 2: Content Signals -->
+  <rect x="50" y="240" width="380" height="140" rx="8" fill="none" stroke="#3aa050" stroke-width="2"/>
+  <text x="240" y="265" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#3aa050">STAGE 2: CONTENT SIGNALS</text>
+  <text x="240" y="285" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">(Post-Download, HTML only)</text>
+  <rect x="70" y="300" width="340" height="60" rx="4" fill="#f0faf2" stroke="#3aa050" stroke-width="1"/>
+  <text x="240" y="320" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">ContentSignalsClassifier</text>
+  <text x="240" y="338" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">Word count • Link density • Schema.org</text>
+  <text x="240" y="352" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">Paragraphs • H2/H3 ratio • Structure</text>
+  
+  <!-- Stage 3: Puppeteer -->
+  <rect x="50" y="400" width="380" height="140" rx="8" fill="none" stroke="#c9a227" stroke-width="2"/>
+  <text x="240" y="425" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#c9a227">STAGE 3: PUPPETEER</text>
+  <text x="240" y="445" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">(Low-confidence or JS-heavy sites)</text>
+  <rect x="70" y="460" width="340" height="60" rx="4" fill="#fdf8e8" stroke="#c9a227" stroke-width="1"/>
+  <text x="240" y="480" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">PuppeteerClassifier</text>
+  <text x="240" y="498" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">Rendered DOM • Visual structure • Main content area</text>
+  <text x="240" y="512" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">Ad density • Scroll depth • Comments section</text>
+  
+  <!-- Aggregator -->
+  <rect x="50" y="560" width="380" height="100" rx="8" fill="none" stroke="#9b59b6" stroke-width="2"/>
+  <text x="240" y="585" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#9b59b6">AGGREGATOR</text>
+  <rect x="70" y="600" width="340" height="45" rx="4" fill="#f8f0fc" stroke="#9b59b6" stroke-width="1"/>
+  <text x="240" y="620" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">ClassificationAggregator</text>
+  <text x="240" y="638" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">Weighted voting • Confidence thresholds • Provenance</text>
+  
+  <!-- Flow arrows -->
+  <path d="M 240 220 L 240 240" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 240 380 L 240 400" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 240 540 L 240 560" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#333"/>
+    </marker>
+  </defs>
+  
+  <!-- Right side: Output & Data Flow -->
+  <rect x="470" y="80" width="380" height="260" rx="8" fill="none" stroke="#666" stroke-width="1.5"/>
+  <text x="660" y="105" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#333">STANDARD OUTPUT FORMAT</text>
+  
+  <rect x="490" y="120" width="340" height="100" rx="4" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="510" y="145" font-family="Consolas, monospace" font-size="10" fill="#333">{</text>
+  <text x="530" y="163" font-family="Consolas, monospace" font-size="10" fill="#333">classification: "article" | "hub" | "nav",</text>
+  <text x="530" y="181" font-family="Consolas, monospace" font-size="10" fill="#333">confidence: 0.0 - 1.0,</text>
+  <text x="530" y="199" font-family="Consolas, monospace" font-size="10" fill="#333">reason: "guardian-date-pattern",</text>
+  <text x="530" y="217" font-family="Consolas, monospace" font-size="10" fill="#333">signals: { ... }</text>
+  <text x="510" y="235" font-family="Consolas, monospace" font-size="10" fill="#333">}</text>
+  
+  <text x="660" y="265" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="#666">Each stage produces identical output structure</text>
+  <text x="660" y="282" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="#666">→ Enables independent testing & comparison</text>
+  <text x="660" y="299" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="#666">→ Stages can run in isolation or cascade</text>
+  <text x="660" y="316" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="#666">→ Provenance tracks which stage decided</text>
+  
+  <!-- Right side: When to use each -->
+  <rect x="470" y="360" width="380" height="185" rx="8" fill="none" stroke="#666" stroke-width="1.5"/>
+  <text x="660" y="385" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#333">WHEN TO USE EACH STAGE</text>
+  
+  <text x="490" y="415" font-family="Segoe UI, sans-serif" font-size="11" fill="#2a5a8a" font-weight="600">Stage 1:</text>
+  <text x="560" y="415" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">ALL URLs (cheap, pre-download)</text>
+  <text x="560" y="432" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">Crawl prioritization, queue ordering</text>
+  
+  <text x="490" y="460" font-family="Segoe UI, sans-serif" font-size="11" fill="#3aa050" font-weight="600">Stage 2:</text>
+  <text x="560" y="460" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">Downloaded content (fast)</text>
+  <text x="560" y="477" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">Most articles, extraction decisions</text>
+  
+  <text x="490" y="505" font-family="Segoe UI, sans-serif" font-size="11" fill="#c9a227" font-weight="600">Stage 3:</text>
+  <text x="560" y="505" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">Low-confidence or JS-heavy (slow)</text>
+  <text x="560" y="522" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">SPAs, ambiguous cases, verification</text>
+  
+  <!-- Right side: Final Output -->
+  <rect x="470" y="560" width="380" height="100" rx="8" fill="none" stroke="#9b59b6" stroke-width="1.5"/>
+  <text x="660" y="585" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#9b59b6">FINAL OUTPUT</text>
+  <text x="490" y="610" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">classification + confidence + provenance</text>
+  <text x="490" y="630" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">Provenance shows which stages contributed</text>
+  <text x="490" y="648" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">and why the aggregator made its decision</text>
+</svg>

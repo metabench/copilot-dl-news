@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <marker id="arrow2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#475569"/>
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="35" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#1e293b">Administrative Hierarchy Model</text>
+  <text x="400" y="55" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">Using representative points for containment (not polygon intersects)</text>
+
+  <!-- Country level -->
+  <ellipse cx="400" cy="110" rx="340" ry="50" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" opacity="0.6"/>
+  <text x="400" y="85" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#1e40af">Country (Canada)</text>
+  <circle cx="400" cy="110" r="6" fill="#3b82f6"/>
+  <text x="420" y="115" font-family="system-ui, sans-serif" font-size="9" fill="#1e40af">repr_pt</text>
+
+  <!-- ADM1 level - Ontario -->
+  <ellipse cx="300" cy="200" rx="140" ry="45" fill="#dcfce7" stroke="#22c55e" stroke-width="2" opacity="0.7"/>
+  <text x="300" y="185" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#166534">ADM1 (Ontario)</text>
+  <circle cx="300" cy="205" r="5" fill="#22c55e"/>
+  <text x="320" y="210" font-family="system-ui, sans-serif" font-size="9" fill="#166534">repr_pt</text>
+
+  <!-- ADM1 level - Quebec -->
+  <ellipse cx="520" cy="200" rx="120" ry="40" fill="#dcfce7" stroke="#22c55e" stroke-width="2" opacity="0.7"/>
+  <text x="520" y="195" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#166534">ADM1 (Quebec)</text>
+  <circle cx="520" cy="210" r="5" fill="#22c55e"/>
+
+  <!-- ADM2 inside Ontario -->
+  <ellipse cx="260" cy="290" rx="70" ry="30" fill="#fef3c7" stroke="#f59e0b" stroke-width="2" opacity="0.8"/>
+  <text x="260" y="295" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" fill="#b45309">Middlesex</text>
+  <circle cx="260" cy="285" r="4" fill="#f59e0b"/>
+
+  <!-- City inside ADM2 -->
+  <circle cx="260" cy="350" r="25" fill="#fce7f3" stroke="#ec4899" stroke-width="2"/>
+  <text x="260" y="355" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" fill="#be185d">London</text>
+  <circle cx="260" cy="345" r="3" fill="#ec4899"/>
+
+  <!-- Parent arrows -->
+  <line x1="260" y1="325" x2="260" y2="310" stroke="#475569" stroke-width="1.5" stroke-dasharray="3" marker-end="url(#arrow2)"/>
+  <line x1="260" y1="260" x2="280" y2="235" stroke="#475569" stroke-width="1.5" stroke-dasharray="3" marker-end="url(#arrow2)"/>
+  <line x1="300" y1="155" x2="380" y2="125" stroke="#475569" stroke-width="1.5" stroke-dasharray="3" marker-end="url(#arrow2)"/>
+
+  <!-- Legend box -->
+  <rect x="580" y="280" width="190" height="150" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="675" y="305" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#334155">Key Insight</text>
+  
+  <circle cx="600" cy="330" r="4" fill="#3b82f6"/>
+  <text x="615" y="334" font-family="system-ui, sans-serif" font-size="10" fill="#475569">repr_pt = ST_PointOnSurface</text>
+  
+  <text x="595" y="360" font-family="system-ui, sans-serif" font-size="10" fill="#475569">✓ Point inside polygon</text>
+  <text x="595" y="380" font-family="system-ui, sans-serif" font-size="10" fill="#475569">✓ No SRID mismatch</text>
+  <text x="595" y="400" font-family="system-ui, sans-serif" font-size="10" fill="#475569">✓ No cross-border slivers</text>
+  <text x="595" y="420" font-family="system-ui, sans-serif" font-size="10" fill="#dc2626">✗ Polygon intersects</text>
+
+  <!-- SRID note -->
+  <rect x="40" y="380" width="180" height="55" rx="4" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="130" y="400" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" fill="#dc2626">SRID Rule</text>
+  <text x="130" y="418" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#7f1d1d">Transform admin.way (3857)</text>
+  <text x="130" y="430" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#7f1d1d">→ 4326 before containment</text>
+</svg>

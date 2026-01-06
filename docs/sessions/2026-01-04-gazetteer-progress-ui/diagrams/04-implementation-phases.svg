@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 420">
+  <!-- Title -->
+  <text x="425" y="30" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#1e293b">Implementation Roadmap</text>
+  
+  <!-- Phase boxes -->
+  <!-- Phase 0 -->
+  <rect x="30" y="60" width="110" height="90" rx="6" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+  <text x="85" y="82" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#475569">Phase 0</text>
+  <text x="85" y="100" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">Baseline</text>
+  <text x="85" y="115" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">Inventory</text>
+  <rect x="45" y="125" width="80" height="16" rx="3" fill="#e2e8f0"/>
+  <text x="85" y="137" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">0.5–1 day</text>
+
+  <!-- Phase 1 -->
+  <rect x="155" y="60" width="110" height="90" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="210" y="82" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#1e40af">Phase 1</text>
+  <text x="210" y="100" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#1e40af">Normalize</text>
+  <text x="210" y="115" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#1e40af">Admin Data</text>
+  <rect x="170" y="125" width="80" height="16" rx="3" fill="#bfdbfe"/>
+  <text x="210" y="137" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#1e40af">1–2 days</text>
+
+  <!-- Phase 2 -->
+  <rect x="280" y="60" width="110" height="90" rx="6" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/>
+  <text x="335" y="82" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#166534">Phase 2</text>
+  <text x="335" y="100" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#166534">Country</text>
+  <text x="335" y="115" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#166534">Membership</text>
+  <rect x="295" y="125" width="80" height="16" rx="3" fill="#bbf7d0"/>
+  <text x="335" y="137" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#166534">2–4 days</text>
+
+  <!-- Phase 3 -->
+  <rect x="405" y="60" width="110" height="90" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="460" y="82" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#b45309">Phase 3</text>
+  <text x="460" y="100" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#b45309">Parent</text>
+  <text x="460" y="115" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#b45309">Chains</text>
+  <rect x="420" y="125" width="80" height="16" rx="3" fill="#fde68a"/>
+  <text x="460" y="137" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#b45309">2–5 days</text>
+
+  <!-- Phase 4 -->
+  <rect x="530" y="60" width="110" height="90" rx="6" fill="#fce7f3" stroke="#ec4899" stroke-width="2"/>
+  <text x="585" y="82" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#be185d">Phase 4</text>
+  <text x="585" y="100" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#be185d">SQLite</text>
+  <text x="585" y="115" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#be185d">Builder</text>
+  <rect x="545" y="125" width="80" height="16" rx="3" fill="#fbcfe8"/>
+  <text x="585" y="137" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#be185d">2–4 days</text>
+
+  <!-- Phase 5 -->
+  <rect x="655" y="60" width="110" height="90" rx="6" fill="#e0e7ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="710" y="82" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#4338ca">Phase 5</text>
+  <text x="710" y="100" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#4338ca">Disambig</text>
+  <text x="710" y="115" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#4338ca">MVP</text>
+  <rect x="670" y="125" width="80" height="16" rx="3" fill="#c7d2fe"/>
+  <text x="710" y="137" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#4338ca">2–4 days</text>
+
+  <!-- Connecting arrows -->
+  <line x1="140" y1="105" x2="155" y2="105" stroke="#475569" stroke-width="2"/>
+  <line x1="265" y1="105" x2="280" y2="105" stroke="#475569" stroke-width="2"/>
+  <line x1="390" y1="105" x2="405" y2="105" stroke="#475569" stroke-width="2"/>
+  <line x1="515" y1="105" x2="530" y2="105" stroke="#475569" stroke-width="2"/>
+  <line x1="640" y1="105" x2="655" y2="105" stroke="#475569" stroke-width="2"/>
+
+  <!-- Details section -->
+  <rect x="30" y="175" width="235" height="110" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="147" y="195" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#334155">PostGIS Work (Phases 0–3)</text>
+  <text x="45" y="215" font-family="system-ui, sans-serif" font-size="10" fill="#475569">• SRID normalization (4326)</text>
+  <text x="45" y="232" font-family="system-ui, sans-serif" font-size="10" fill="#475569">• repr_pt for containment</text>
+  <text x="45" y="249" font-family="system-ui, sans-serif" font-size="10" fill="#475569">• country_admin_roles mapping</text>
+  <text x="45" y="266" font-family="system-ui, sans-serif" font-size="10" fill="#475569">• admin_parents edges</text>
+
+  <rect x="280" y="175" width="235" height="110" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="397" y="195" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#334155">SQLite Cache (Phase 4)</text>
+  <text x="295" y="215" font-family="system-ui, sans-serif" font-size="10" fill="#475569">• places + aliases tables</text>
+  <text x="295" y="232" font-family="system-ui, sans-serif" font-size="10" fill="#475569">• parent pointers</text>
+  <text x="295" y="249" font-family="system-ui, sans-serif" font-size="10" fill="#475569">• FTS index for search</text>
+  <text x="295" y="266" font-family="system-ui, sans-serif" font-size="10" fill="#475569">• atomic snapshot swap</text>
+
+  <rect x="530" y="175" width="235" height="110" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="647" y="195" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#334155">Disambiguation (Phase 5)</text>
+  <text x="545" y="215" font-family="system-ui, sans-serif" font-size="10" fill="#475569">• candidate generation</text>
+  <text x="545" y="232" font-family="system-ui, sans-serif" font-size="10" fill="#475569">• multi-signal scoring</text>
+  <text x="545" y="249" font-family="system-ui, sans-serif" font-size="10" fill="#475569">• coherence pass</text>
+  <text x="545" y="266" font-family="system-ui, sans-serif" font-size="10" fill="#475569">• CLI + fixtures</text>
+
+  <!-- Optional phase -->
+  <rect x="280" y="310" width="235" height="55" rx="6" fill="#fefce8" stroke="#eab308" stroke-width="1" stroke-dasharray="4"/>
+  <text x="397" y="332" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#a16207">Phase 6 (optional)</text>
+  <text x="397" y="352" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#a16207">UI Integration — Data Explorer views</text>
+
+  <!-- Total estimate -->
+  <rect x="580" y="320" width="185" height="40" rx="6" fill="#ecfdf5" stroke="#10b981" stroke-width="2"/>
+  <text x="672" y="345" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#047857">Est. Total: 10–20 days</text>
+
+  <!-- Legend -->
+  <rect x="30" y="380" width="400" height="30" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="45" y="400" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">Owner hints:</text>
+  <text x="120" y="400" font-family="system-ui, sans-serif" font-size="10" fill="#3b82f6">DB Guardian</text>
+  <text x="205" y="400" font-family="system-ui, sans-serif" font-size="10" fill="#ec4899">CLI Toolsmith</text>
+  <text x="300" y="400" font-family="system-ui, sans-serif" font-size="10" fill="#6366f1">Crawler Agent</text>
+  <text x="395" y="400" font-family="system-ui, sans-serif" font-size="10" fill="#eab308">UI Singularity</text>
+</svg>

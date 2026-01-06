@@ -1,0 +1,12 @@
+{
+  "name": "analysis-tray-monitor",
+  "version": "1.0.0",
+  "main": "main.js",
+  "description": "Tray monitor for analysis background process",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^28.0.0"
+  }
+}
