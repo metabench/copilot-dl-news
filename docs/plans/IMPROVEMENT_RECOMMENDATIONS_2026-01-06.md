@@ -380,9 +380,9 @@ npm run setup  # Install deps, init DB, run migrations, verify
 |-------------|--------|--------|----------|--------|
 | SkeletonHash integration | HIGH | LOW | 🔴 P1 | ✅ DONE |
 | Historical metrics dashboard | HIGH | MEDIUM | 🔴 P1 | ✅ DONE |
-| Cross-domain pattern sharing | HIGH | MEDIUM | 🟠 P2 | 🔲 |
+| Cross-domain pattern sharing | HIGH | MEDIUM | 🟠 P2 | ✅ DONE |
 | Hub health dashboard | MEDIUM | LOW | 🟠 P2 | ✅ DONE |
-| Quality scoring pipeline | HIGH | HIGH | 🟠 P2 | 🔲 |
+| Quality scoring pipeline | HIGH | HIGH | 🟠 P2 | ✅ DONE |
 | Query optimization | MEDIUM | LOW | 🟡 P3 | 🔲 |
 | Session continuity | MEDIUM | MEDIUM | 🟡 P3 | 🔲 |
 | A/B testing for rules | MEDIUM | HIGH | 🟡 P3 | 🔲 |
@@ -428,3 +428,37 @@ Test results:
 - Success rate: 90.7%
 - Hub health: 127 place hubs tracked (10 shown, most stale 95 days)
 - Layout signatures: 1054 total (533 L1, 521 L2)
+
+### P2 Implementation Details (2026-01-08)
+
+#### Cross-Domain Pattern Sharing
+Created `src/ui/server/analyticsHub/PatternSharingService.js` with 4 methods:
+- `getCrossDomainsummary()` — Overall pattern sharing stats across all domains
+- `getDomainFamilies(limit)` — Domains with similar layout signatures (shared templates)
+- `getPatternRecommendations(targetDomain)` — Suggest patterns from similar domains
+- `getDomainPatterns(domain)` — Patterns learned from a specific domain
+
+Added 4 new API endpoints to analytics hub server:
+- `GET /api/patterns/summary`
+- `GET /api/patterns/domain-families`
+- `GET /api/patterns/recommendations/:domain`
+- `GET /api/patterns/domain/:domain`
+
+#### Quality Scoring Pipeline
+Extended `src/ui/server/qualityDashboard/QualityMetricsService.js` with 3 trending methods:
+- `getQualityTrend(period)` — Daily average confidence scores over time
+- `getQualityByClassification(period)` — Quality breakdown by article classification type
+- `getQualityMovers(period, minArticles)` — Domains with improving/declining quality
+
+Added 3 new API endpoints to quality dashboard server:
+- `GET /api/quality/trend`
+- `GET /api/quality/by-classification`
+- `GET /api/quality/movers`
+
+#### Verification
+Created `checks/p2-improvements.check.js` to validate all P2 endpoints work correctly.
+Test results:
+- Quality trending: 2 days of data, avg confidence 0.713
+- By classification: 5155 articles classified as "article" type
+- Pattern sharing: Ready for pattern data (cross_crawl_knowledge table)
+- Layout signatures: 1054 signatures available for pattern matching
