@@ -514,3 +514,40 @@ AGI-accumulated knowledge catalog.
 **Example**: Separate decision-set registries: geo:place-hub-search vs intelligent:news-hub-search; shared runner consumes IModePlugin interface
 
 ---
+
+## App Monitoring via MCP Logs
+
+**Added**: 2026-01-02
+**Context**: Added as part of AGI observability strategy - enables agents to monitor apps without parsing console output
+
+**When to use**: When debugging app issues, understanding app behavior, or monitoring running applications. Check logs before diving into code.
+
+**Steps/Details**:
+1. 1. List log sessions: docs_memory_listLogSessions() to see what apps have been running
+1. 2. Get recent logs: docs_memory_getLogs({ session: '<app>-<date>', limit: 50 })
+1. 3. Filter by severity: docs_memory_getLogs({ session, level: 'warn' }) for errors/warnings only
+1. 4. Search for symptoms: docs_memory_searchLogs({ query: '<error message>', level: 'error' })
+1. 5. For apps to write logs: const { createMcpLogger } = require('./src/utils/mcpLogger'); logger.info('msg', { data })
+
+
+
+---
+
+## Classification Cascade Pattern
+
+**Added**: 2026-01-03
+**Context**: Multi-stage article classification for news crawler
+
+**When to use**: Multiple classification signals need to be combined (URL patterns, content analysis, visual/rendered analysis). Each signal has different costs and availability.
+
+**Steps/Details**:
+1. Create independent stage classifiers with standard output format: { classification, confidence, reason, signals }
+1. Each stage has clear input requirements (URL only, HTML content, rendered DOM)
+1. Order stages by cost/availability: cheap pre-download → medium post-download → expensive selective
+1. Create aggregator with weighted voting, override rules, and provenance tracking
+1. Later stages can override earlier stages when confidence delta exceeds threshold
+1. Log provenance so decisions are auditable
+
+**Example**: src/classifiers/Stage1UrlClassifier.js, Stage2ContentClassifier.js, StageAggregator.js
+
+---

@@ -6,14 +6,33 @@ let globalInstance = null;
 function normalizeOptions(input) {
   const envEngine = process.env.DB_ENGINE || process.env.NEWS_DB_ENGINE;
   if (typeof input === "string") {
-    return {
-      engine: envEngine ? String(envEngine).toLowerCase() : "sqlite",
+    let engine = envEngine ? String(envEngine).toLowerCase() : "sqlite";
+    // Auto-detect postgres from connection string
+    if (input.startsWith('postgres://') || input.startsWith('postgresql://')) {
+      engine = 'postgres';
+    }
+
+    const opts = {
+      engine,
       dbPath: input
     };
+    
+    // Map dbPath to connectionString for postgres
+    if (engine === 'postgres') {
+      opts.connectionString = input;
+    }
+    
+    return opts;
   }
   const options = { ...(input || {}) };
   const preferredEngine = options.engine || options.adapter || envEngine || "sqlite";
   options.engine = String(preferredEngine).toLowerCase();
+  
+  // Map dbPath to connectionString if needed
+  if (options.engine === 'postgres' && options.dbPath && !options.connectionString) {
+    options.connectionString = options.dbPath;
+  }
+  
   return options;
 }
 
@@ -115,6 +134,11 @@ class NewsDatabaseFacade {
 registerAdapter("sqlite", (options) => {
   const { createSQLiteDatabase } = require("./sqlite");
   return createSQLiteDatabase(options);
+});
+
+registerAdapter("postgres", (options) => {
+  const { createPostgresDatabase } = require("./postgres");
+  return createPostgresDatabase(options);
 });
 
 module.exports = NewsDatabaseFacade;

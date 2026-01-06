@@ -781,7 +781,7 @@ async function main(argv) {
     domain: batchSummary.domain
   };
 
-  const jsonSummary = buildJsonSummary(batchSummary, options, logBuffer);
+  const jsonSummary = ReportWriter.buildJsonSummary(batchSummary, options, logBuffer);
   let reportStatus = null;
 
   if (options.emitReport) {

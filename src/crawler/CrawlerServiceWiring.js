@@ -45,6 +45,15 @@ const { PaginationPredictorService } = require('./services/PaginationPredictorSe
 // Phase 5: Proxy rotation
 const { ProxyManager } = require('./ProxyManager');
 
+// Place Hub Pattern Learning
+let PlaceHubPatternLearningService;
+try {
+  PlaceHubPatternLearningService = require('../services/PlaceHubPatternLearningService').PlaceHubPatternLearningService;
+} catch (e) {
+  // PlaceHubPatternLearningService is optional
+  PlaceHubPatternLearningService = null;
+}
+
 // Phase 2: Teacher module for Puppeteer-based rendering
 let TeacherService;
 try {
@@ -159,7 +168,30 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
   crawler.connectionResetThreshold = opts.connectionResetThreshold;
   crawler.useSequenceRunner = opts.useSequenceRunner !== false;
   crawler.linkExtractor = new LinkExtractor({ normalizeUrl: (url, ctx) => crawler.normalizeUrl(url, ctx), isOnDomain: (url) => crawler.isOnDomain(url), looksLikeArticle: (url) => crawler.looksLikeArticle(url) });
-  crawler.events = new CrawlerEvents({ domain: crawler.domain, getStats: () => crawler.state.getStats(), getQueueSize: () => (crawler.queue?.size?.() || 0), getCurrentDownloads: () => crawler.state.currentDownloads, getDomainLimits: () => crawler.state.getDomainLimitsSnapshot(), getRobotsInfo: () => crawler.robotsCoordinator?.getRobotsInfo() || { robotsLoaded: false }, getSitemapInfo: () => crawler.robotsCoordinator?.getSitemapInfo() || { urls: [], discovered: 0 }, getFeatures: () => crawler.featuresEnabled, getEnhancedDbAdapter: () => crawler.enhancedDbAdapter, getProblemClusteringService: () => crawler.problemClusteringService, getProblemResolutionService: () => crawler.problemResolutionService, getJobId: () => crawler.jobId, plannerScope: () => crawler.domain, isPlannerEnabled: () => crawler.plannerEnabled, isPaused: () => crawler.state.isPaused(), getGoalSummary: () => crawler.milestoneTracker ? crawler.milestoneTracker.getGoalsSummary() : [], getQueueHeatmap: () => (crawler.queue && typeof crawler.queue.getHeatmapSnapshot === 'function') ? crawler.queue.getHeatmapSnapshot() : null, getCoverageSummary: () => crawler._getCoverageSummary(), logger: console, outputVerbosity: crawler.outputVerbosity, loggingQueue: crawler.loggingQueue });
+  crawler.events = new CrawlerEvents({
+    domain: crawler.domain,
+    getStats: () => crawler.state.getStats(),
+    getQueueSize: () => (crawler.queue?.size?.() || 0),
+    getCurrentDownloads: () => crawler.state.currentDownloads,
+    getDomainLimits: () => crawler.state.getDomainLimitsSnapshot(),
+    getRobotsInfo: () => crawler.robotsCoordinator?.getRobotsInfo() || { robotsLoaded: false },
+    getSitemapInfo: () => crawler.robotsCoordinator?.getSitemapInfo() || { urls: [], discovered: 0 },
+    getFeatures: () => crawler.featuresEnabled,
+    getEnhancedDbAdapter: () => crawler.enhancedDbAdapter,
+    getProblemClusteringService: () => crawler.problemClusteringService,
+    getProblemResolutionService: () => crawler.problemResolutionService,
+    getJobId: () => crawler.jobId,
+    plannerScope: () => crawler.domain,
+    isPlannerEnabled: () => crawler.plannerEnabled,
+    isPaused: () => crawler.state.isPaused(),
+    getGoalSummary: () => crawler.milestoneTracker ? crawler.milestoneTracker.getGoalsSummary() : [],
+    getQueueHeatmap: () => (crawler.queue && typeof crawler.queue.getHeatmapSnapshot === 'function') ? crawler.queue.getHeatmapSnapshot() : null,
+    getCoverageSummary: () => crawler._getCoverageSummary(),
+    logger: console,
+    outputVerbosity: crawler.outputVerbosity,
+    loggingQueue: crawler.loggingQueue,
+    prettyOutput: opts.prettyOutput
+  });
   crawler.telemetry = new CrawlerTelemetry({ events: crawler.events });
   crawler.problemResolutionHandler = new ProblemResolutionHandler({ telemetry: crawler.telemetry, state: crawler.state, normalizeUrl: (u, ctx) => crawler.normalizeUrl(u, ctx), domain: crawler.domain, domainNormalized: crawler.domainNormalized });
   crawler.exitManager = new ExitManager({ telemetry: crawler.telemetry });
@@ -194,6 +226,31 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     maxSpeculativePages: 3,
     patternTtlMs: 60 * 60 * 1000 // 1 hour
   });
+
+  // Place Hub Pattern Learning - learns URL patterns from verified place hubs
+  // and predicts which URLs might be place hubs during crawling
+  if (PlaceHubPatternLearningService) {
+    try {
+      const db = crawler.dbAdapter?.getDb?.();
+      if (db) {
+        crawler.placeHubPatternLearningService = new PlaceHubPatternLearningService({
+          db,
+          logger: console,
+          config: {
+            minSampleSize: 3,
+            minAccuracy: 0.5
+          }
+        });
+      } else {
+        crawler.placeHubPatternLearningService = null;
+      }
+    } catch (e) {
+      console.warn('[CrawlerServiceWiring] PlaceHubPatternLearningService failed to initialize:', e.message);
+      crawler.placeHubPatternLearningService = null;
+    }
+  } else {
+    crawler.placeHubPatternLearningService = null;
+  }
 
   // Phase 2: Teacher service for Puppeteer-based rendering of JS-dependent pages
   // This is optional - only initialized if Puppeteer is available
@@ -435,10 +492,11 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     getCountryHubBehavioralProfile: () => crawler.countryHubBehavioralProfile,
     // Phase 1: Pagination prediction for speculative crawling
     paginationPredictorService: crawler.paginationPredictorService,
+    // Place hub pattern learning - predicts place hubs from URL patterns
+    placeHubPatternLearningService: crawler.placeHubPatternLearningService,
     // Emit url:visited event for telemetry persistence (timing data for DB queries)
     emitPageEvent: (pageInfo) => {
       try {
-        console.log('[CrawlerServiceWiring] emitting url:visited:', JSON.stringify(pageInfo));
         crawler.emit('url:visited', pageInfo);
       } catch (_) {}
     }

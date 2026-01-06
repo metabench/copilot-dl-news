@@ -44,6 +44,7 @@ const skillsDir = path.join(repoRoot, "docs", "agi", "skills");
 const sessionsDir = path.join(repoRoot, "docs", "sessions");
 const workflowsDir = path.join(repoRoot, "docs", "workflows");
 const workflowImprovementsDir = path.join(repoRoot, "docs", "agi", "workflow-improvements");
+const logsDir = path.join(repoRoot, "docs", "agi", "logs");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -2052,6 +2053,371 @@ const tools = {
                 content: data.content
             };
         }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Logging Tools - For apps to write logs that AI agents can read
+    // ─────────────────────────────────────────────────────────────────────────
+
+    docs_memory_appendLog: {
+        description: "Append a log entry to a session log. Use this to record events from apps (crawlers, servers, etc.) so AI agents can analyze behavior. Logs are stored as NDJSON files for efficient streaming.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                app: {
+                    type: "string",
+                    description: "App abbreviation (e.g., 'CRWL', 'ELEC', 'API', 'SRV')"
+                },
+                session: {
+                    type: "string",
+                    description: "Session ID for grouping logs (e.g., 'crawl-2025-01-14'). Defaults to 'default'."
+                },
+                level: {
+                    type: "string",
+                    enum: ["debug", "info", "warn", "error"],
+                    description: "Log level (default: 'info')"
+                },
+                msg: {
+                    type: "string",
+                    description: "Log message"
+                },
+                data: {
+                    type: "object",
+                    description: "Optional structured data (JSON object)"
+                }
+            },
+            required: ["msg"]
+        },
+        handler: (params) => {
+            // Ensure logs directory exists
+            if (!fs.existsSync(logsDir)) {
+                fs.mkdirSync(logsDir, { recursive: true });
+            }
+            
+            const entry = {
+                ts: new Date().toISOString(),
+                level: params.level || "info",
+                app: params.app || "APP",
+                session: params.session || "default",
+                msg: params.msg,
+                data: params.data || undefined
+            };
+            
+            const fileName = `${entry.session}.ndjson`;
+            const filePath = path.join(logsDir, fileName);
+            
+            try {
+                fs.appendFileSync(filePath, JSON.stringify(entry) + "\n", "utf8");
+                return {
+                    success: true,
+                    type: "log-appended",
+                    session: entry.session,
+                    level: entry.level,
+                    savedTo: path.relative(repoRoot, filePath)
+                };
+            } catch (err) {
+                return { success: false, error: err.message };
+            }
+        }
+    },
+
+    docs_memory_getLogs: {
+        description: "Read logs from a session. Returns an array of log entries. Use limit and level to filter results. Perfect for AI agents to analyze app behavior.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                session: {
+                    type: "string",
+                    description: "Session ID (e.g., 'crawl-2025-01-14'). Defaults to 'default'."
+                },
+                limit: {
+                    type: "number",
+                    description: "Maximum entries to return from the end (most recent first). Default: 50."
+                },
+                level: {
+                    type: "string",
+                    enum: ["debug", "info", "warn", "error"],
+                    description: "Minimum log level to include (e.g., 'warn' returns warn+error)"
+                },
+                since: {
+                    type: "string",
+                    description: "ISO timestamp - only return logs after this time"
+                },
+                app: {
+                    type: "string",
+                    description: "Filter by app abbreviation"
+                }
+            },
+            required: []
+        },
+        handler: (params) => {
+            const session = params?.session || "default";
+            const fileName = `${session}.ndjson`;
+            const filePath = path.join(logsDir, fileName);
+            
+            if (!fs.existsSync(filePath)) {
+                return { 
+                    type: "logs",
+                    session,
+                    entries: [],
+                    count: 0,
+                    hint: "No logs found for this session"
+                };
+            }
+            
+            try {
+                const content = fs.readFileSync(filePath, "utf8");
+                let entries = content
+                    .split("\n")
+                    .filter(line => line.trim())
+                    .map(line => {
+                        try { return JSON.parse(line); } 
+                        catch { return null; }
+                    })
+                    .filter(Boolean);
+                
+                // Filter by level
+                if (params?.level) {
+                    const levels = ["debug", "info", "warn", "error"];
+                    const minLevel = levels.indexOf(params.level);
+                    entries = entries.filter(e => levels.indexOf(e.level) >= minLevel);
+                }
+                
+                // Filter by time
+                if (params?.since) {
+                    entries = entries.filter(e => e.ts >= params.since);
+                }
+                
+                // Filter by app
+                if (params?.app) {
+                    entries = entries.filter(e => e.app === params.app);
+                }
+                
+                // Limit (from end - most recent)
+                const limit = params?.limit ?? 50;
+                if (entries.length > limit) {
+                    entries = entries.slice(-limit);
+                }
+                
+                return {
+                    type: "logs",
+                    session,
+                    entries,
+                    count: entries.length,
+                    path: path.relative(repoRoot, filePath)
+                };
+            } catch (err) {
+                return { error: err.message };
+            }
+        }
+    },
+
+    docs_memory_listLogSessions: {
+        description: "List all available log sessions with stats (size, entry count, last update).",
+        inputSchema: {
+            type: "object",
+            properties: {
+                limit: {
+                    type: "number",
+                    description: "Maximum sessions to return (default: 20)"
+                }
+            },
+            required: []
+        },
+        handler: (params) => {
+            if (!fs.existsSync(logsDir)) {
+                return {
+                    type: "log-sessions",
+                    sessions: [],
+                    count: 0,
+                    hint: "No logs directory yet. Use appendLog to create logs."
+                };
+            }
+            
+            try {
+                const files = fs.readdirSync(logsDir)
+                    .filter(f => f.endsWith(".ndjson"));
+                
+                let sessions = files.map(fileName => {
+                    const filePath = path.join(logsDir, fileName);
+                    const stat = fs.statSync(filePath);
+                    const content = fs.readFileSync(filePath, "utf8");
+                    const entryCount = content.split("\n").filter(l => l.trim()).length;
+                    
+                    // Get first and last timestamp
+                    const lines = content.split("\n").filter(l => l.trim());
+                    let firstTs = null, lastTs = null;
+                    try {
+                        if (lines.length > 0) firstTs = JSON.parse(lines[0]).ts;
+                        if (lines.length > 0) lastTs = JSON.parse(lines[lines.length - 1]).ts;
+                    } catch {}
+                    
+                    return {
+                        session: fileName.replace(".ndjson", ""),
+                        size: stat.size,
+                        entryCount,
+                        firstEntry: firstTs,
+                        lastEntry: lastTs,
+                        updatedAt: stat.mtime.toISOString()
+                    };
+                }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+                
+                const limit = params?.limit ?? 20;
+                if (sessions.length > limit) {
+                    sessions = sessions.slice(0, limit);
+                }
+                
+                return {
+                    type: "log-sessions",
+                    sessions,
+                    count: sessions.length,
+                    logsDir: path.relative(repoRoot, logsDir)
+                };
+            } catch (err) {
+                return { error: err.message };
+            }
+        }
+    },
+
+    docs_memory_clearLogs: {
+        description: "Clear logs for a session or all sessions. Use with caution.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                session: {
+                    type: "string",
+                    description: "Session ID to clear, or 'all' to clear all logs"
+                },
+                olderThan: {
+                    type: "string",
+                    description: "ISO timestamp - only clear logs older than this (for selective pruning)"
+                }
+            },
+            required: ["session"]
+        },
+        handler: (params) => {
+            if (!fs.existsSync(logsDir)) {
+                return { success: true, cleared: 0, hint: "No logs directory exists" };
+            }
+            
+            try {
+                if (params.session === "all") {
+                    const files = fs.readdirSync(logsDir).filter(f => f.endsWith(".ndjson"));
+                    files.forEach(f => fs.unlinkSync(path.join(logsDir, f)));
+                    return { success: true, cleared: files.length, type: "logs-cleared" };
+                } else {
+                    const fileName = `${params.session}.ndjson`;
+                    const filePath = path.join(logsDir, fileName);
+                    
+                    if (!fs.existsSync(filePath)) {
+                        return { success: true, cleared: 0, hint: "Session not found" };
+                    }
+                    
+                    // If olderThan is specified, filter instead of delete
+                    if (params.olderThan) {
+                        const content = fs.readFileSync(filePath, "utf8");
+                        const lines = content.split("\n").filter(l => l.trim());
+                        const kept = lines.filter(line => {
+                            try {
+                                const entry = JSON.parse(line);
+                                return entry.ts >= params.olderThan;
+                            } catch { return true; }
+                        });
+                        fs.writeFileSync(filePath, kept.join("\n") + (kept.length > 0 ? "\n" : ""), "utf8");
+                        return {
+                            success: true,
+                            cleared: lines.length - kept.length,
+                            kept: kept.length,
+                            type: "logs-pruned"
+                        };
+                    }
+                    
+                    fs.unlinkSync(filePath);
+                    return { success: true, cleared: 1, type: "logs-cleared" };
+                }
+            } catch (err) {
+                return { success: false, error: err.message };
+            }
+        }
+    },
+
+    docs_memory_searchLogs: {
+        description: "Search across log sessions for a message pattern. Returns matching entries with context.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                query: {
+                    type: "string",
+                    description: "Text to search for in log messages"
+                },
+                level: {
+                    type: "string",
+                    enum: ["debug", "info", "warn", "error"],
+                    description: "Minimum log level to search"
+                },
+                app: {
+                    type: "string",
+                    description: "Filter by app abbreviation"
+                },
+                limit: {
+                    type: "number",
+                    description: "Maximum matches to return (default: 20)"
+                }
+            },
+            required: ["query"]
+        },
+        handler: (params) => {
+            if (!fs.existsSync(logsDir)) {
+                return { type: "log-search", query: params.query, matches: [], count: 0 };
+            }
+            
+            try {
+                const files = fs.readdirSync(logsDir).filter(f => f.endsWith(".ndjson"));
+                const limit = params?.limit ?? 20;
+                const levels = ["debug", "info", "warn", "error"];
+                const minLevel = params?.level ? levels.indexOf(params.level) : 0;
+                const query = params.query.toLowerCase();
+                
+                const matches = [];
+                
+                for (const fileName of files) {
+                    if (matches.length >= limit) break;
+                    
+                    const filePath = path.join(logsDir, fileName);
+                    const content = fs.readFileSync(filePath, "utf8");
+                    const session = fileName.replace(".ndjson", "");
+                    
+                    for (const line of content.split("\n").filter(l => l.trim())) {
+                        if (matches.length >= limit) break;
+                        
+                        try {
+                            const entry = JSON.parse(line);
+                            
+                            // Apply filters
+                            if (levels.indexOf(entry.level) < minLevel) continue;
+                            if (params?.app && entry.app !== params.app) continue;
+                            
+                            // Search in message and data
+                            const msgMatch = entry.msg?.toLowerCase().includes(query);
+                            const dataMatch = entry.data && JSON.stringify(entry.data).toLowerCase().includes(query);
+                            
+                            if (msgMatch || dataMatch) {
+                                matches.push({ session, ...entry });
+                            }
+                        } catch {}
+                    }
+                }
+                
+                return {
+                    type: "log-search",
+                    query: params.query,
+                    matches,
+                    count: matches.length
+                };
+            } catch (err) {
+                return { error: err.message };
+            }
+        }
     }
 };
 
@@ -2357,7 +2723,11 @@ const runHttpServer = (port = 4399) => {
                     "/memory/lessons",
                     "/memory/sessions",
                     "/memory/sessions/latest",
-                    "/memory/sessions/{slug}"
+                    "/memory/sessions/{slug}",
+                    "/memory/logs",
+                    "/memory/logs/list",
+                    "/memory/logs/{session}",
+                    "/memory/logs/search?q={query}"
                 ]
             });
             return;
@@ -2407,6 +2777,31 @@ const runHttpServer = (port = 4399) => {
                 } else {
                     const result = tools.docs_memory_getSession.handler({ slug });
                     sendJson(res, result.error ? 404 : 200, result);
+                }
+                return;
+            }
+
+            if (resource === "logs") {
+                const session = segments[2];
+                if (!session || session === "list") {
+                    const limit = parseInt(url.searchParams.get("limit") || "20", 10);
+                    sendJson(res, 200, tools.docs_memory_listLogSessions.handler({ limit }));
+                } else if (session === "search") {
+                    const query = url.searchParams.get("q") || url.searchParams.get("query");
+                    if (!query) {
+                        sendJson(res, 400, { error: "Missing query parameter (q or query)" });
+                        return;
+                    }
+                    const limit = parseInt(url.searchParams.get("limit") || "20", 10);
+                    const level = url.searchParams.get("level");
+                    const app = url.searchParams.get("app");
+                    sendJson(res, 200, tools.docs_memory_searchLogs.handler({ query, limit, level, app }));
+                } else {
+                    const limit = parseInt(url.searchParams.get("limit") || "50", 10);
+                    const level = url.searchParams.get("level");
+                    const since = url.searchParams.get("since");
+                    const app = url.searchParams.get("app");
+                    sendJson(res, 200, tools.docs_memory_getLogs.handler({ session, limit, level, since, app }));
                 }
                 return;
             }
@@ -2488,6 +2883,13 @@ Tools exposed (WRITE - Pattern Catalogs):
 
 Tools exposed (WRITE - AGI Self-Improvement):
   docs_memory_proposeWorkflowImprovement   Suggest workflow optimization
+
+Tools exposed (Logging - For App Telemetry):
+  docs_memory_appendLog          Append log entry (auto-timestamped)
+  docs_memory_getLogs            Read logs from a session
+  docs_memory_listLogSessions    List all log sessions
+  docs_memory_clearLogs          Clear logs (by session or all)
+  docs_memory_searchLogs         Search across log sessions
 `);
         process.exit(0);
     }

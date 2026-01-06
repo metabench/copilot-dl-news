@@ -17,6 +17,9 @@ const jsgui = require("jsgui3-html");
 const { spawn } = require("child_process");
 
 const { TelemetryIntegration } = require("../../crawler/telemetry/TelemetryIntegration");
+const { createMcpLogger } = require("../../utils/mcpLogger");
+
+const log = createMcpLogger.uiServer('data-explorer');
 
 // PID file for detached mode management
 const PID_FILE = path.join(process.cwd(), "tmp", ".data-explorer.pid");
@@ -54,6 +57,13 @@ const {
 } = require("../../db/sqlite/v1/queries/ui/domainListing");
 const { listRecentCrawls } = require("../../db/sqlite/v1/queries/ui/crawls");
 const { listRecentErrors } = require("../../db/sqlite/v1/queries/ui/errors");
+const {
+  listPlaceHubs,
+  countPlaceHubs,
+  getPlaceHubHosts,
+  getPlaceHubsByHost,
+  getPlaceHubsByKind
+} = require("../../db/sqlite/v1/queries/ui/placeHubs");
 const { selectUrlById, selectFetchHistory, selectFetchById } = require("../../db/sqlite/v1/queries/ui/urlDetails");
 const { selectHostSummary, selectHostDownloads } = require("../../db/sqlite/v1/queries/ui/domainDetails");
 const { listConfiguration } = require("../../db/sqlite/v1/queries/ui/configuration");
@@ -91,6 +101,10 @@ const {
   buildErrorLogColumns,
   buildErrorLogRows
 } = require("../controls/ErrorLogTable");
+const {
+  buildPlaceHubColumns,
+  buildPlaceHubRows
+} = require("../controls/PlaceHubsTable");
 const { ConfigMatrixControl } = require("../controls/ConfigMatrixControl");
 const {
   buildNavLinks,
@@ -990,6 +1004,13 @@ const DATA_VIEWS = [
     render: renderDomainSummaryView
   },
   {
+    key: "placeHubs",
+    path: "/place-hubs",
+    navLabel: "Place Hubs",
+    title: "Geographic Place Hubs",
+    render: renderPlaceHubsView
+  },
+  {
     key: "crawls",
     path: "/crawls",
     navLabel: "Crawls",
@@ -1517,6 +1538,115 @@ function renderErrorLogView({ req, db, relativeDb, now }) {
       dbLabel: relativeDb,
       generatedAt: formatDateTime(now, true),
       subtitle
+    }
+  };
+}
+
+const PLACE_HUB_PAGE_SIZE = 50;
+
+/**
+ * Render the place hubs listing view
+ * Shows geographic place hubs discovered across news websites
+ */
+function renderPlaceHubsView({ req, db, relativeDb, now }) {
+  const query = req.query || {};
+  
+  // Parse filter parameters
+  const hostFilter = (query.host || "").trim() || null;
+  const kindFilter = (query.kind || "").trim() || null;
+  const searchFilter = (query.search || "").trim() || null;
+  const page = Math.max(1, parseInt(query.page, 10) || 1);
+  const offset = (page - 1) * PLACE_HUB_PAGE_SIZE;
+  
+  // Build filter options
+  const filterOptions = { 
+    limit: PLACE_HUB_PAGE_SIZE, 
+    offset 
+  };
+  if (hostFilter) filterOptions.host = hostFilter;
+  if (kindFilter) filterOptions.placeKind = kindFilter;
+  if (searchFilter) filterOptions.search = searchFilter;
+  
+  // Fetch data
+  const hubs = listPlaceHubs(db, filterOptions);
+  const totalCount = countPlaceHubs(db, filterOptions);
+  const hostStats = getPlaceHubsByHost(db);
+  const kindStats = getPlaceHubsByKind(db);
+  const availableHosts = getPlaceHubHosts(db);
+  
+  // Build rows
+  const rows = buildPlaceHubRows(hubs, { startIndex: offset + 1 });
+  
+  // Build subtitle
+  let subtitle;
+  if (rows.length === 0) {
+    subtitle = "No place hubs found matching filters";
+  } else {
+    const filterDesc = [];
+    if (hostFilter) filterDesc.push(`host: ${hostFilter}`);
+    if (kindFilter) filterDesc.push(`kind: ${kindFilter}`);
+    if (searchFilter) filterDesc.push(`search: "${searchFilter}"`);
+    const filterText = filterDesc.length > 0 ? ` (${filterDesc.join(", ")})` : "";
+    subtitle = `Showing ${offset + 1}-${offset + rows.length} of ${totalCount} place hubs${filterText}`;
+  }
+  
+  // Build extra cards for statistics
+  const extraCards = [
+    { label: "Total Hubs", value: formatCount(totalCount) },
+    { label: "Hosts", value: formatCount(hostStats.length) },
+    { label: "Place Kinds", value: formatCount(kindStats.length) }
+  ];
+  
+  // Add top host card if we have data
+  if (hostStats.length > 0) {
+    const topHost = hostStats[0];
+    extraCards.push({ 
+      label: "Top Host", 
+      value: String(topHost.count),
+      subtitle: topHost.host.replace(/^www\./, "")
+    });
+  }
+  
+  // Add top kind card
+  if (kindStats.length > 0) {
+    const topKind = kindStats[0];
+    extraCards.push({ 
+      label: "Top Kind", 
+      value: String(topKind.count),
+      subtitle: topKind.place_kind || "unknown"
+    });
+  }
+  
+  // Build pagination
+  const totalPages = Math.ceil(totalCount / PLACE_HUB_PAGE_SIZE);
+  const pagination = {
+    currentPage: page,
+    totalPages,
+    totalRows: totalCount,
+    pageSize: PLACE_HUB_PAGE_SIZE,
+    hasNext: page < totalPages,
+    hasPrev: page > 1
+  };
+  
+  return {
+    title: "Place Hubs",
+    columns: buildPlaceHubColumns(),
+    rows,
+    meta: {
+      rowCount: totalCount,
+      limit: PLACE_HUB_PAGE_SIZE,
+      dbLabel: relativeDb,
+      generatedAt: formatDateTime(now, true),
+      subtitle,
+      extraCards,
+      pagination,
+      filters: {
+        host: hostFilter,
+        kind: kindFilter,
+        search: searchFilter,
+        availableHosts,
+        availableKinds: kindStats.map(k => k.place_kind).filter(Boolean)
+      }
     }
   };
 }
@@ -2609,6 +2739,7 @@ if (require.main === module) {
     const port = Number.isFinite(args.port) ? args.port : DEFAULT_PORT;
     const host = args.host || "127.0.0.1";
 
+    log.info("Starting data explorer", { host, port, pageSize, db: args.db });
     telemetry.info("server.starting", undefined, {
       host,
       port,
@@ -2621,6 +2752,7 @@ if (require.main === module) {
         url: `http://${host}:${port}/urls`,
         pageSize
       });
+      log.info("Data explorer ready", { url: `http://${host}:${port}/urls`, pageSize });
       console.log(`Crawler data explorer listening on http://${host}:${port}/urls (page size ${pageSize})`);
     });
 
@@ -2628,6 +2760,7 @@ if (require.main === module) {
     const handleShutdown = () => {
       if (shuttingDown) return;
       shuttingDown = true;
+      log.info("Shutting down data explorer");
       telemetry.info("server.shutdown", "Shutting down crawler data explorer...");
       console.log("Shutting down crawler data explorer...");
       server.close(() => {

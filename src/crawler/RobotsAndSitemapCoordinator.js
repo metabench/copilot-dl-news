@@ -176,7 +176,7 @@ class RobotsAndSitemapCoordinator {
     if (!this.useSitemap) return 0;
     const pushed = await this.loadSitemaps(this.baseUrl, this.domain, this.sitemapUrls, {
       sitemapMaxUrls: this.sitemapMaxUrls,
-      push: (url) => this._handleSitemapUrl(url)
+      push: (url, meta) => this._handleSitemapUrl(url, meta)
     });
     this.logger.log(`Sitemap enqueue complete: ${pushed} URL(s)`);
     return pushed;
@@ -225,7 +225,7 @@ class RobotsAndSitemapCoordinator {
     }
   }
 
-  _handleSitemapUrl(url) {
+  _handleSitemapUrl(url, meta = {}) {
     const decision = this.getUrlDecision(url, {
       phase: 'sitemap',
       depth: 0,
@@ -252,10 +252,18 @@ class RobotsAndSitemapCoordinator {
     }
 
     const type = this.looksLikeArticle(normalized) ? 'article' : 'nav';
+    
+    const requestMeta = {
+      ...meta,
+      source: 'sitemap',
+      sitemapDiscovery: true
+    };
+
     this.enqueueRequest({
       url: normalized,
       depth: 0,
-      type
+      type,
+      meta: requestMeta
     });
     this.sitemapDiscovered = (this.sitemapDiscovered || 0) + 1;
     this.emitProgress();

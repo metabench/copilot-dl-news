@@ -34,9 +34,6 @@ class HubValidator {
   initialize() {
     if (this.initialized) return;
     this.validationEngine.initialize();
-    if (!this.updateStmt) {
-      this.updateStmt = this.db.prepare('UPDATE place_hubs SET url = ? WHERE id = ?');
-    }
     this.initialized = true;
   }
 

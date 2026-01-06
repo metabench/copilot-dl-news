@@ -1,9 +1,7 @@
-const Database = require('better-sqlite3');
 const { ArticleXPathService } = require('../ArticleXPathService');
-const {
-  upsertArticleXPathPattern,
-  getArticleXPathPatternsForDomain
-} = require('../../db/sqlite/v1/queries/articleXPathPatterns');
+const SQLiteNewsDatabase = require('../../db/sqlite/v1/SQLiteNewsDatabase');
+const Database = require('better-sqlite3');
+const { initializeSchema } = require('../../db/sqlite/v1/schema');
 
 describe('ArticleXPathService', () => {
   let db;
@@ -11,7 +9,9 @@ describe('ArticleXPathService', () => {
   let logger;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    const dbHandle = new Database(':memory:');
+    initializeSchema(dbHandle);
+    db = new SQLiteNewsDatabase(dbHandle);
     logger = {
       log: jest.fn(),
       warn: jest.fn(),
@@ -31,19 +31,20 @@ describe('ArticleXPathService', () => {
   });
 
   describe('getXPathForDomain', () => {
-    test('returns null when no pattern exists for domain', () => {
-      expect(service.getXPathForDomain('example.com')).toBeNull();
+    test('returns null when no pattern exists for domain', async () => {
+      expect(await service.getXPathForDomain('example.com')).toBeNull();
     });
 
-    test('returns persisted pattern with highest confidence', () => {
-      upsertArticleXPathPattern(db, {
+    test('returns persisted pattern with highest confidence', async () => {
+      const queries = db.createArticleXPathPatternQueries();
+      queries.upsertArticleXPathPattern({
         domain: 'example.com',
         xpath: '/html/body/main/article',
         confidence: 0.8,
         learnedFrom: 'https://example.com/first'
       });
 
-      const pattern = service.getXPathForDomain('example.com');
+      const pattern = await service.getXPathForDomain('example.com');
       expect(pattern).toBeDefined();
       expect(pattern.xpath).toBe('/html/body/main/article');
       expect(pattern.confidence).toBeCloseTo(0.8);
@@ -51,28 +52,30 @@ describe('ArticleXPathService', () => {
   });
 
   describe('hasXPathForDomain', () => {
-    test('returns false when no patterns exist', () => {
-      expect(service.hasXPathForDomain('example.com')).toBe(false);
+    test('returns false when no patterns exist', async () => {
+      expect(await service.hasXPathForDomain('example.com')).toBe(false);
     });
 
-    test('returns true when patterns are persisted', () => {
-      upsertArticleXPathPattern(db, {
+    test('returns true when patterns are persisted', async () => {
+      const queries = db.createArticleXPathPatternQueries();
+      queries.upsertArticleXPathPattern({
         domain: 'example.com',
         xpath: '/html/body/main/article'
       });
 
-      expect(service.hasXPathForDomain('example.com')).toBe(true);
+      expect(await service.hasXPathForDomain('example.com')).toBe(true);
     });
   });
 
   describe('extractTextWithXPath', () => {
-    test('returns null when no pattern is known', () => {
+    test('returns null when no pattern is known', async () => {
       const html = '<html><body><article>Content</article></body></html>';
-      expect(service.extractTextWithXPath('https://example.com/a', html)).toBeNull();
+      expect(await service.extractTextWithXPath('https://example.com/a', html)).toBeNull();
     });
 
-    test('extracts text and records usage when pattern exists', () => {
-      upsertArticleXPathPattern(db, {
+    test('extracts text and records usage when pattern exists', async () => {
+      const queries = db.createArticleXPathPatternQueries();
+      queries.upsertArticleXPathPattern({
         domain: 'example.com',
         xpath: '/html/body/main/article',
         confidence: 0.9,
@@ -91,10 +94,10 @@ describe('ArticleXPathService', () => {
         </html>
       `;
 
-      const extracted = service.extractTextWithXPath('https://example.com/a', html);
+      const extracted = await service.extractTextWithXPath('https://example.com/a', html);
       expect(extracted).toMatch(/Meaningful content/);
 
-      const stored = getArticleXPathPatternsForDomain(db, 'example.com');
+      const stored = queries.getArticleXPathPatternsForDomain('example.com');
       expect(stored[0].usageCount).toBeGreaterThanOrEqual(1);
     });
   });
@@ -117,9 +120,10 @@ describe('ArticleXPathService', () => {
       const learned = await service.learnXPathFromHtml('https://example.com/article', html);
       expect(learned).toBeDefined();
       expect(learned.xpath).toBeDefined();
-      expect(service.hasXPathForDomain('example.com')).toBe(true);
+      expect(await service.hasXPathForDomain('example.com')).toBe(true);
 
-      const stored = getArticleXPathPatternsForDomain(db, 'example.com');
+      const queries = db.createArticleXPathPatternQueries();
+      const stored = queries.getArticleXPathPatternsForDomain('example.com');
       expect(stored.length).toBeGreaterThan(0);
       expect(stored[0].xpath).toBe(learned.xpath);
     });

@@ -196,8 +196,12 @@ class QueueDatabase {
     queueOrigin, queueRole, queueDepthBucket,
     priorityScore, prioritySource, bonusApplied, clusterId, gapPredictionScore
   }) {
+    // Skip logging if URL is missing (required by schema)
+    if (!url) {
+      return null;
+    }
     try {
-      const urlId = url ? this._ensureUrlId(url) : null;
+      const urlId = this._ensureUrlId(url);
       return this._insertEnhancedQueueEventStmt.run({
         jobId, ts, action, urlId, depth, host, reason, queueSize, alias,
         queueOrigin: queueOrigin || null,
@@ -353,6 +357,7 @@ class QueueDatabase {
     }
   }
 }
-const { ensureUrlId } = require('./sqlite/urlHelpers');
+
+const { ensureUrlId } = require('./sqlite/urlHelpers');
 
 module.exports = { QueueDatabase };

@@ -697,6 +697,459 @@ class UnifiedShell extends Control {
               render();
             };
           }
+
+          // Multi-Modal Crawl panel activator
+          if (typeof registry['multi-modal-crawl'] !== 'function') {
+            registry['multi-modal-crawl'] = function(root) {
+              if (root.dataset.multimodalBound === 'true') return;
+              root.dataset.multimodalBound = 'true';
+
+              // Element references
+              const elPhase = root.querySelector('[data-multimodal-stat="phase"]');
+              const elBatch = root.querySelector('[data-multimodal-stat="batch"]');
+              const elPages = root.querySelector('[data-multimodal-stat="pages"]');
+              const elPatterns = root.querySelector('[data-multimodal-stat="patterns"]');
+              const elPhaseLabel = root.querySelector('[data-multimodal-stat="phase-label"]');
+              const elProgressText = root.querySelector('[data-multimodal-stat="progress-text"]');
+              const elProgressBar = root.querySelector('[data-multimodal-progress-bar]');
+              const elInsights = root.querySelector('[data-multimodal-insights]');
+              const elStatus = root.querySelector('[data-multimodal-status]');
+
+              // Buttons
+              const btnStart = root.querySelector('[data-multimodal-action="start"]');
+              const btnPause = root.querySelector('[data-multimodal-action="pause"]');
+              const btnStop = root.querySelector('[data-multimodal-action="stop"]');
+
+              // Input getters
+              function getInputValue(name) {
+                const el = root.querySelector('[data-multimodal-input="' + name + '"]');
+                return el ? el.value : null;
+              }
+
+              let eventSource = null;
+              let isRunning = false;
+              let insights = [];
+
+              function setText(el, text) {
+                if (el) el.textContent = text;
+              }
+
+              function setPhaseIcon(phase) {
+                const icons = root.querySelectorAll('[data-multimodal-phase-icon]');
+                icons.forEach(icon => {
+                  const iconPhase = icon.dataset.multimodalPhaseIcon;
+                  icon.style.opacity = iconPhase === phase ? '1' : '0.4';
+                  icon.style.fontWeight = iconPhase === phase ? '600' : '400';
+                });
+              }
+
+              function addInsight(text, type) {
+                const now = new Date().toISOString().slice(11, 19);
+                const color = type === 'error' ? '#f87171' : type === 'success' ? '#4ade80' : '#b8a090';
+                insights.unshift({ time: now, text, color });
+                if (insights.length > 50) insights.pop();
+                renderInsights();
+              }
+
+              function renderInsights() {
+                if (!elInsights) return;
+                if (insights.length === 0) {
+                  elInsights.innerHTML = '<div style="color: #666;">No insights yet. Start a crawl to begin learning.</div>';
+                } else {
+                  elInsights.innerHTML = insights.map(i =>
+                    '<div style="color: ' + i.color + '; margin-bottom: 4px;">[' + i.time + '] ' + i.text + '</div>'
+                  ).join('');
+                }
+              }
+
+              function updateUI(data) {
+                if (data.type === 'state' || data.type === 'progress') {
+                  const v = data.value || data;
+                  if (v.phase) {
+                    setText(elPhase, v.phase);
+                    setText(elPhaseLabel, v.phase);
+                    setPhaseIcon(v.phase.toLowerCase());
+                  }
+                  if (v.batchNumber !== undefined) setText(elBatch, v.batchNumber);
+                  if (v.pagesDownloaded !== undefined) setText(elPages, v.pagesDownloaded.toLocaleString());
+                  if (v.patternsLearned !== undefined) setText(elPatterns, v.patternsLearned);
+                  if (v.progress !== undefined && elProgressBar) {
+                    const pct = Math.min(100, Math.round(v.progress * 100));
+                    elProgressBar.style.width = pct + '%';
+                    setText(elProgressText, pct + '%');
+                  }
+                }
+
+                if (data.type === 'phase-change') {
+                  const v = data.value || {};
+                  const phase = v.phase || v.to || 'unknown';
+                  const domainLabel = v.domain ? ' [' + v.domain + ']' : '';
+                  addInsight('Phase: ' + phase + domainLabel + (v.batch ? ' (batch ' + v.batch + ')' : ''));
+                  if (phase !== 'unknown') {
+                    setPhaseIcon(phase.toLowerCase());
+                  }
+                }
+
+                if (data.type === 'batch-complete') {
+                  const v = data.value || {};
+                  const domainLabel = v.domain ? ' [' + v.domain + ']' : '';
+                  addInsight('Batch ' + v.batch + domainLabel + ' complete: ' + v.pagesDownloaded + ' pages', 'success');
+                }
+
+                if (data.type === 'pattern-learned') {
+                  const v = data.value || {};
+                  const domainLabel = v.domain ? ' [' + v.domain + ']' : '';
+                  const learnedCount = v.patternsLearned ?? (v.significantPatterns ? v.significantPatterns.length : null);
+                  const patternHint = v.pattern ? ' (' + String(v.pattern).slice(0, 8) + '...)' : '';
+                  addInsight('Patterns learned' + domainLabel + (learnedCount != null ? ': ' + learnedCount : '') + patternHint, 'success');
+                }
+
+                if (data.type === 'hub-discovered') {
+                  const v = data.value || {};
+                  const domainLabel = v.domain ? ' [' + v.domain + ']' : '';
+                  const url = v.url || v.newHubs?.[0]?.url || 'unknown';
+                  const confidence = v.confidence ?? v.newHubs?.[0]?.confidence ?? 0;
+                  addInsight('Hub discovered' + domainLabel + ': ' + url + ' (confidence: ' + Math.round(confidence * 100) + '%)', 'success');
+                }
+
+                if (data.type === 'analysis-progress') {
+                  const v = data.value;
+                  if (v.processed && v.total) {
+                    setText(elProgressText, 'Analyzing: ' + v.processed + '/' + v.total);
+                    if (elProgressBar) {
+                      const pct = Math.round((v.processed / v.total) * 100);
+                      elProgressBar.style.width = pct + '%';
+                    }
+                  }
+                }
+
+                if (data.type === 'error') {
+                  addInsight('Error: ' + (data.error || 'unknown'), 'error');
+                }
+
+                if (data.type === 'complete') {
+                  isRunning = false;
+                  updateButtons();
+                  addInsight('Crawl complete!', 'success');
+                  setText(elPhase, 'Complete');
+                  setText(elStatus, 'Status: Completed at ' + new Date().toISOString().slice(11, 19));
+                }
+              }
+
+              function updateButtons() {
+                if (btnStart) btnStart.disabled = isRunning;
+                if (btnPause) btnPause.disabled = !isRunning;
+                if (btnStop) btnStop.disabled = !isRunning;
+              }
+
+              function connectSSE() {
+                if (eventSource) {
+                  eventSource.close();
+                }
+
+                eventSource = new EventSource('/multi-modal/sse/multi-modal/progress');
+
+                eventSource.onmessage = function(event) {
+                  try {
+                    const data = JSON.parse(event.data);
+                    updateUI(data);
+                  } catch (e) {
+                    console.warn('[multi-modal] SSE parse error:', e);
+                  }
+                };
+
+                eventSource.onerror = function() {
+                  setText(elStatus, 'Status: Connection lost, reconnecting...');
+                };
+
+                eventSource.onopen = function() {
+                  setText(elStatus, 'Status: Connected');
+                };
+              }
+
+              async function startCrawl() {
+                const domain = getInputValue('domain');
+                if (!domain) {
+                  alert('Please enter a domain');
+                  return;
+                }
+
+                const body = {
+                  domain,
+                  batchSize: parseInt(getInputValue('batchSize'), 10) || 1000,
+                  historicalRatio: (parseInt(getInputValue('historical'), 10) || 30) / 100,
+                  maxTotalBatches: parseInt(getInputValue('maxBatches'), 10) || null,
+                  hubDiscoveryPerBatch: getInputValue('hubDiscovery') === 'true',
+                  balancingStrategy: getInputValue('strategy') || 'adaptive',
+                  hubRefreshIntervalMs: (parseInt(getInputValue('hubRefreshInterval'), 10) || 60) * 60 * 1000,
+                  pauseBetweenBatchesMs: (parseInt(getInputValue('pauseBetween'), 10) || 5) * 1000
+                };
+
+                try {
+                  const res = await fetch('/multi-modal/api/multi-modal/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                  });
+                  const json = await res.json();
+
+                  if (json.success) {
+                    isRunning = true;
+                    insights = [];
+                    renderInsights();
+                    addInsight('Started crawl on ' + domain);
+                    setText(elStatus, 'Status: Running');
+                    updateButtons();
+                    connectSSE();
+                  } else {
+                    alert('Failed to start: ' + (json.error || 'unknown error'));
+                  }
+                } catch (err) {
+                  alert('Failed to start: ' + err.message);
+                }
+              }
+
+              async function pauseCrawl() {
+                try {
+                  await fetch('/multi-modal/api/multi-modal/pause', { method: 'POST' });
+                  addInsight('Crawl paused');
+                  setText(elStatus, 'Status: Paused');
+                  if (btnPause) btnPause.textContent = '▶️ Resume';
+                  if (btnPause) btnPause.dataset.multimodalAction = 'resume';
+                } catch (err) {
+                  alert('Failed to pause: ' + err.message);
+                }
+              }
+
+              async function resumeCrawl() {
+                try {
+                  await fetch('/multi-modal/api/multi-modal/resume', { method: 'POST' });
+                  addInsight('Crawl resumed');
+                  setText(elStatus, 'Status: Running');
+                  if (btnPause) btnPause.textContent = '⏸️ Pause';
+                  if (btnPause) btnPause.dataset.multimodalAction = 'pause';
+                } catch (err) {
+                  alert('Failed to resume: ' + err.message);
+                }
+              }
+
+              async function stopCrawl() {
+                if (!confirm('Stop the current crawl?')) return;
+                try {
+                  await fetch('/multi-modal/api/multi-modal/stop', { method: 'POST' });
+                  isRunning = false;
+                  updateButtons();
+                  addInsight('Crawl stopped');
+                  setText(elStatus, 'Status: Stopped');
+                  setText(elPhase, 'Stopped');
+                } catch (err) {
+                  alert('Failed to stop: ' + err.message);
+                }
+              }
+
+              // Button handlers
+              root.addEventListener('click', async (event) => {
+                const btn = event.target.closest('[data-multimodal-action]');
+                if (!btn) return;
+
+                const action = btn.dataset.multimodalAction;
+                if (action === 'start') await startCrawl();
+                else if (action === 'pause') await pauseCrawl();
+                else if (action === 'resume') await resumeCrawl();
+                else if (action === 'stop') await stopCrawl();
+              });
+
+              // Check initial status
+              async function checkStatus() {
+                try {
+                  const res = await fetch('/multi-modal/api/multi-modal/status');
+                  const json = await res.json();
+                  if (json.isRunning) {
+                    isRunning = true;
+                    updateButtons();
+                    connectSSE();
+                    if (json.statistics) {
+                      updateUI({ type: 'state', value: json.statistics });
+                    }
+                  }
+                } catch (err) {
+                  // Ignore
+                }
+              }
+
+              checkStatus();
+              renderInsights();
+            };
+          }
+
+          // Downloads panel activator
+          if (typeof registry['downloads'] !== 'function') {
+            registry['downloads'] = function(root) {
+              if (root.dataset.downloadsBound === 'true') return;
+              root.dataset.downloadsBound = 'true';
+
+              const elTotal = root.querySelector('[data-downloads-stat="total"]');
+              const elVerified = root.querySelector('[data-downloads-stat="verified"]');
+              const elBytes = root.querySelector('[data-downloads-stat="bytes"]');
+              const elProgressText = root.querySelector('[data-downloads-stat="progress-text"]');
+              const elProgressBar = root.querySelector('[data-downloads-progress-bar]');
+              const elRecent = root.querySelector('[data-downloads-recent]');
+              const elStatus = root.querySelector('[data-downloads-status]');
+
+              function formatBytes(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+              }
+
+              function setText(el, text) {
+                if (el) el.textContent = text;
+              }
+
+              async function fetchStats() {
+                const res = await fetch('/api/downloads/stats');
+                return res.json();
+              }
+
+              async function fetchRecent() {
+                const now = new Date();
+                const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+                const params = new URLSearchParams({
+                  start: oneHourAgo.toISOString(),
+                  end: now.toISOString(),
+                  limit: '10'
+                });
+                const res = await fetch('/api/downloads/evidence?' + params);
+                return res.json();
+              }
+
+              async function fetchCrawlProgress() {
+                const res = await fetch('/api/downloads/crawl-progress');
+                return res.json();
+              }
+
+              // Track crawl state for adaptive polling
+              let crawlActive = false;
+              let progressPollTimer = null;
+              let lastDownloaded = -1;
+
+              // Fast progress polling (200ms) - only crawl progress, lightweight
+              async function pollProgress() {
+                try {
+                  const crawlRes = await fetchCrawlProgress();
+                  if (crawlRes.status === 'ok') {
+                    if (crawlRes.active) {
+                      crawlActive = true;
+                      const p = crawlRes.progress;
+                      
+                      // Smooth animation: only update if changed
+                      if (p.downloaded !== lastDownloaded) {
+                        lastDownloaded = p.downloaded;
+                        setText(elProgressText, p.downloaded + ' / ' + crawlRes.goal);
+                        if (elProgressBar) {
+                          elProgressBar.style.width = p.percentComplete + '%';
+                        }
+                      }
+                    } else {
+                      // Crawl finished or idle
+                      if (crawlActive) {
+                        // Just finished - do final update
+                        crawlActive = false;
+                        if (crawlRes.taskId) {
+                          const p = crawlRes.progress;
+                          setText(elProgressText, p.downloaded + ' / ' + crawlRes.goal + ' ✓');
+                          if (elProgressBar) {
+                            elProgressBar.style.width = p.percentComplete + '%';
+                          }
+                        }
+                      } else if (crawlRes.taskId) {
+                        // Show last completed crawl
+                        const p = crawlRes.progress;
+                        setText(elProgressText, p.downloaded + ' / ' + crawlRes.goal + ' ✓');
+                        if (elProgressBar) {
+                          elProgressBar.style.width = p.percentComplete + '%';
+                        }
+                      } else {
+                        setText(elProgressText, '0 / 50');
+                        if (elProgressBar) {
+                          elProgressBar.style.width = '0%';
+                        }
+                      }
+                    }
+                  }
+                } catch (err) {
+                  // Silent fail on progress poll - stats refresh will show errors
+                }
+              }
+
+              // Slower refresh for stats/recent (every 10s)
+              async function refresh() {
+                try {
+                  const [statsRes, recentRes] = await Promise.all([fetchStats(), fetchRecent()]);
+                  
+                  if (statsRes.status === 'ok' && statsRes.stats) {
+                    const s = statsRes.stats;
+                    setText(elTotal, s.total_responses ? s.total_responses.toLocaleString() : '0');
+                    setText(elVerified, s.verified_downloads ? s.verified_downloads.toLocaleString() : '0');
+                    setText(elBytes, formatBytes(s.total_bytes || 0));
+                  }
+
+                  if (recentRes.status === 'ok' && recentRes.evidence) {
+                    const lines = recentRes.evidence.map(e => 
+                      e.fetched_at.slice(11, 19) + ' ' + e.http_status + ' ' + formatBytes(e.bytes_downloaded).padStart(10) + ' ' + (e.url || '').substring(0, 60) + '...'
+                    );
+                    if (elRecent) {
+                      elRecent.innerHTML = lines.length > 0 
+                        ? lines.map(l => '<div>' + l + '</div>').join('')
+                        : '<div style="color: #666;">No downloads in last hour</div>';
+                    }
+                  }
+
+                  setText(elStatus, 'Last updated: ' + new Date().toISOString().slice(11, 19));
+                  root.dataset.downloadsOk = 'true';
+                } catch (err) {
+                  setText(elStatus, 'Error: ' + (err.message || String(err)));
+                  root.dataset.downloadsOk = 'false';
+                }
+              }
+
+              // Start fast progress polling (200ms)
+              function startProgressPolling() {
+                if (progressPollTimer) return;
+                progressPollTimer = setInterval(pollProgress, 200);
+              }
+
+              // Button handlers
+              root.addEventListener('click', async (event) => {
+                const btn = event.target.closest('[data-downloads-action]');
+                if (!btn) return;
+
+                const action = btn.getAttribute('data-downloads-action');
+                if (action === 'refresh') {
+                  refresh();
+                }
+                if (action === 'start-crawl') {
+                  btn.disabled = true;
+                  btn.textContent = '⏳ Starting...';
+                  try {
+                    // TODO: Start actual crawl via API
+                    alert('50-page crawl would start here. Use CLI for now:\\nnode tools/dev/verified-crawl.js https://www.theguardian.com --target 50');
+                  } catch (err) {
+                    alert('Failed: ' + err.message);
+                  }
+                  btn.disabled = false;
+                  btn.textContent = '🕷️ Start 50-Page Crawl';
+                }
+              });
+
+              // Initial load + polling
+              refresh();                    // Stats/recent every 10s
+              pollProgress();               // Progress immediately
+              startProgressPolling();       // Progress every 200ms
+              setInterval(refresh, 10000);  // Stats/recent every 10s
+            };
+          }
         })();
         
         // Load app content from server

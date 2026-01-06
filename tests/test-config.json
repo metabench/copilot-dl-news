@@ -1,7 +1,7 @@
 {
   "description": "Test configuration for autonomous test execution. AI agents can modify this file without triggering PowerShell confirmation dialogs.",
   "version": "1.1.0",
-  "lastModified": "2025-12-01",
+  "lastModified": "2026-01-02",
   
   "testSuites": {
     "unit": {
@@ -24,7 +24,14 @@
     "e2e": {
       "description": "Standard E2E tests (excludes dev/manual tests)",
       "testPathPattern": "e2e",
-      "testPathIgnorePatterns": [".dev.test.js", ".manual.test.js", "/broken/", "/deprecated-ui/"],
+      "testPathIgnorePatterns": [
+        ".dev.test.js",
+        ".manual.test.js",
+        "guardian-1000-page-crawl.e2e.test.js",
+        "guardian-1000-page-crawl-persists-to-db.e2e.test.js",
+        "/broken/",
+        "/deprecated-ui/"
+      ],
       "timeout": 60000,
       "forceExit": true,
       "maxWorkers": 1,
@@ -35,7 +42,11 @@
     "e2e-quick": {
       "description": "Quick E2E tests only (fast smoke tests)",
       "testPathPattern": "e2e-features",
-      "testPathIgnorePatterns": ["/deprecated-ui/"],
+      "testPathIgnorePatterns": [
+        "guardian-1000-page-crawl.e2e.test.js",
+        "guardian-1000-page-crawl-persists-to-db.e2e.test.js",
+        "/deprecated-ui/"
+      ],
       "timeout": 30000,
       "forceExit": true,
       "maxWorkers": 1
@@ -53,10 +64,39 @@
     
     "all": {
       "description": "All regular tests (excludes dev/manual tests)",
-      "testPathIgnorePatterns": [".dev.test.js", ".manual.test.js", "geography-crawl.e2e.test.js", "geography.full.e2e.test.js", "/broken/", "/deprecated-ui/"],
+      "testPathIgnorePatterns": [
+        ".dev.test.js",
+        ".manual.test.js",
+        "guardian-1000-page-crawl.e2e.test.js",
+        "guardian-1000-page-crawl-persists-to-db.e2e.test.js",
+        "geography-crawl.e2e.test.js",
+        "geography.full.e2e.test.js",
+        "/broken/",
+        "/deprecated-ui/"
+      ],
       "timeout": 15000,
       "forceExit": true,
       "maxWorkers": 4
+    },
+
+    "crawler-soak": {
+      "description": "MANUAL ONLY - Long-running crawler soak tests (1000-page fixture + DB persistence)",
+      "testPathPattern": "guardian-1000-page-crawl",
+      "timeout": 360000,
+      "forceExit": true,
+      "maxWorkers": 1,
+      "detectOpenHandles": true,
+      "note": "This suite is intentionally excluded from normal runs. Run explicitly when validating end-to-end crawler persistence at scale."
+    },
+
+    "crawler-live": {
+      "description": "MANUAL ONLY - Live internet crawl smoke test (requires LIVE_CRAWL_ENABLE=1 + LIVE_CRAWL_START_URL)",
+      "testPathPattern": "live-crawl-persists-to-db.manual.test.js",
+      "timeout": 1800000,
+      "forceExit": true,
+      "maxWorkers": 1,
+      "detectOpenHandles": true,
+      "note": "This suite is never for CI. Defaults to crawling The Guardian front page when LIVE_CRAWL_ENABLE=1. Proves real network downloads by asserting http_responses.bytes_downloaded in a fresh SQLite DB. Override start URL with LIVE_CRAWL_START_URL if needed."
     },
     
     "dev-geography": {

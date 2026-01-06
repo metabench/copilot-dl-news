@@ -66,7 +66,7 @@ async function main() {
 
   if (!dryRun) {
     try {
-      const postRunResult = runAnalysisPostProcessing({
+      const postRunResult = await runAnalysisPostProcessing({
         dbPath,
         summary,
         logger: console

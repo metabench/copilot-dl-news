@@ -249,7 +249,8 @@ const crawlerOptionsSchema = {
   loggingQueue: { type: 'boolean', default: true },
   loggingNetwork: { type: 'boolean', default: true },
   loggingFetching: { type: 'boolean', default: true },
-  progressJson: { type: 'boolean', default: false }
+  progressJson: { type: 'boolean', default: false },
+  prettyOutput: { type: 'boolean', default: false }
 };
 
 class NewsCrawler extends Crawler {

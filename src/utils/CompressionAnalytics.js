@@ -29,13 +29,75 @@ class CompressionAnalytics {
   }
 
   /**
+   * Execute query on either SQLite or Postgres
+   */
+  async _query(sql, params = []) {
+    const db = this._getDb();
+    let handle = db;
+    
+    // Unwrap adapter if present
+    if (db && typeof db.getHandle === 'function') {
+      handle = db.getHandle();
+    }
+
+    // Postgres (pg.Pool or Client)
+    if (handle && typeof handle.query === 'function' && handle.connect) {
+      // Convert ? to $1, $2...
+      let i = 1;
+      const pgSql = sql.replace(/\?/g, () => `$${i++}`)
+                       .replace(/INSERT OR IGNORE/gi, 'INSERT') // Basic handling
+                       .replace(/datetime\('now'\)/gi, 'NOW()');
+
+      try {
+        const res = await handle.query(pgSql, params);
+        return { 
+          rows: res.rows, 
+          rowCount: res.rowCount,
+          get: () => res.rows[0],
+          all: () => res.rows,
+          run: true,
+          changes: res.rowCount
+        };
+      } catch (err) {
+        // Handle unique constraint violation for "INSERT OR IGNORE" simulation
+        if (sql.toUpperCase().includes('INSERT OR IGNORE') && err.code === '23505') {
+           return { rows: [], rowCount: 0, changes: 0 };
+        }
+        throw err;
+      }
+    } 
+    // SQLite (better-sqlite3)
+    else if (handle && typeof handle.prepare === 'function') {
+      const stmt = handle.prepare(sql);
+      if (sql.trim().toUpperCase().startsWith('SELECT')) {
+        const rows = stmt.all(...params);
+        return { 
+          rows, 
+          rowCount: rows.length,
+          get: () => rows[0],
+          all: () => rows
+        };
+      } else {
+        const info = stmt.run(...params);
+        return { 
+          rows: [], 
+          rowCount: info.changes,
+          run: true,
+          changes: info.changes
+        };
+      }
+    }
+    
+    throw new Error('Unknown database handle type');
+  }
+
+  /**
    * Record compression operation metrics
    */
   async recordCompressionMetrics(operation) {
     if (!this.enabled) return;
 
     try {
-      const db = this._getDb();
       const metrics = {
         operation_type: operation.type || 'unknown',
         content_id: operation.contentId || null,
@@ -49,17 +111,13 @@ class CompressionAnalytics {
         created_at: new Date().toISOString()
       };
 
-      // Insert metrics into compression_metrics table
-      // Note: This table may not exist yet - we'll handle gracefully
-      const insert = db.prepare(`
+      await this._query(`
         INSERT OR IGNORE INTO compression_metrics
         (operation_type, content_id, original_size, compressed_size,
          compression_ratio, compression_type, processing_time_ms,
          success, error_message, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      insert.run(
+      `, [
         metrics.operation_type,
         metrics.content_id,
         metrics.original_size,
@@ -70,7 +128,7 @@ class CompressionAnalytics {
         metrics.success ? 1 : 0,
         metrics.error_message,
         metrics.created_at
-      );
+      ]);
 
     } catch (error) {
       // Log but don't fail - analytics should not break compression
@@ -81,14 +139,12 @@ class CompressionAnalytics {
   /**
    * Get compression statistics
    */
-  getCompressionStats(timeRange = '24 hours') {
+  async getCompressionStats(timeRange = '24 hours') {
     try {
-      const db = this._getDb();
-
       // Convert time range to SQL
       const timeFilter = this._getTimeFilter(timeRange);
 
-      const stats = db.prepare(`
+      const result = await this._query(`
         SELECT
           COUNT(*) as total_operations,
           SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful_operations,
@@ -99,7 +155,9 @@ class CompressionAnalytics {
           SUM(original_size - compressed_size) as total_space_saved
         FROM compression_metrics
         WHERE created_at >= ?
-      `).get(timeFilter);
+      `, [timeFilter]);
+
+      const stats = result.get();
 
       if (!stats) {
         return {
@@ -134,12 +192,11 @@ class CompressionAnalytics {
   /**
    * Get compression type effectiveness
    */
-  getCompressionTypeStats(timeRange = '24 hours') {
+  async getCompressionTypeStats(timeRange = '24 hours') {
     try {
-      const db = this._getDb();
       const timeFilter = this._getTimeFilter(timeRange);
 
-      const typeStats = db.prepare(`
+      const result = await this._query(`
         SELECT
           compression_type,
           COUNT(*) as operations,
@@ -152,7 +209,9 @@ class CompressionAnalytics {
         WHERE created_at >= ? AND success = 1 AND compression_type IS NOT NULL
         GROUP BY compression_type
         ORDER BY space_saved DESC
-      `).all(timeFilter);
+      `, [timeFilter]);
+
+      const typeStats = result.all();
 
       return typeStats.map(stat => ({
         ...stat,
@@ -169,12 +228,10 @@ class CompressionAnalytics {
   /**
    * Get content storage summary
    */
-  getStorageSummary() {
+  async getStorageSummary() {
     try {
-      const db = this._getDb();
-
       // Get total storage stats
-      const totalStats = db.prepare(`
+      const totalStatsResult = await this._query(`
         SELECT
           COUNT(*) as total_items,
           SUM(uncompressed_size) as total_uncompressed_size,
@@ -182,10 +239,11 @@ class CompressionAnalytics {
           AVG(compression_ratio) as avg_compression_ratio
         FROM content_storage
         WHERE compression_type_id IS NOT NULL AND compression_type_id != 1
-      `).get();
+      `);
+      const totalStats = totalStatsResult.get();
 
       // Get breakdown by compression type
-      const typeBreakdown = db.prepare(`
+      const typeBreakdownResult = await this._query(`
         SELECT
           ct.name as compression_type,
           COUNT(*) as item_count,
@@ -197,14 +255,16 @@ class CompressionAnalytics {
         WHERE cs.compression_type_id IS NOT NULL AND cs.compression_type_id != 1
         GROUP BY cs.compression_type_id, ct.name
         ORDER BY SUM(cs.uncompressed_size - cs.compressed_size) DESC
-      `).all();
+      `);
+      const typeBreakdown = typeBreakdownResult.all();
 
       // Get uncompressed items count
-      const uncompressedCount = db.prepare(`
+      const uncompressedCountResult = await this._query(`
         SELECT COUNT(*) as count
         FROM content_storage
         WHERE compression_type_id IS NULL OR compression_type_id = 1
-      `).get()?.count || 0;
+      `);
+      const uncompressedCount = uncompressedCountResult.get()?.count || 0;
 
       return {
         total_items: totalStats?.total_items || 0,
@@ -229,8 +289,8 @@ class CompressionAnalytics {
   /**
    * Check system health and performance thresholds
    */
-  checkHealth() {
-    const stats = this.getCompressionStats('1 hour');
+  async checkHealth() {
+    const stats = await this.getCompressionStats('1 hour');
 
     if (!stats) {
       return {
@@ -266,19 +326,18 @@ class CompressionAnalytics {
   /**
    * Clean up old metrics data
    */
-  cleanupOldMetrics(daysToKeep = 30) {
+  async cleanupOldMetrics(daysToKeep = 30) {
     try {
-      const db = this._getDb();
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
-      const deleted = db.prepare(`
+      const result = await this._query(`
         DELETE FROM compression_metrics
         WHERE created_at < ?
-      `).run(cutoffDate.toISOString());
+      `, [cutoffDate.toISOString()]);
 
-      this.logger.info(`[CompressionAnalytics] Cleaned up ${deleted.changes} old metrics records`);
-      return deleted.changes;
+      this.logger.info(`[CompressionAnalytics] Cleaned up ${result.changes} old metrics records`);
+      return result.changes;
 
     } catch (error) {
       this.logger.warn('[CompressionAnalytics] Failed to cleanup metrics:', error.message);

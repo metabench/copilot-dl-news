@@ -166,3 +166,28 @@
 
 ## 2026-01-02
 - For backlog reconciliation after downtime, prefer postponing lower-priority overdue schedules (spread window) + emitting `task_events` for explainability, rather than adding new schedule schema fields up front.
+- **PowerShell `Tee-Object` outputs UTF-16 LE**: When capturing crawl output with `Tee-Object`, the resulting log files are UTF-16 LE encoded (BOM: `ff fe`). Node.js `fs.readFileSync('file','utf8')` won't read them correctly. Detect the BOM and convert: `if (buf[0] === 0xff && buf[1] === 0xfe) content = buf.toString('utf16le').slice(1);`
+- MCP Logging System: Apps can write logs to `docs/agi/logs/` via `createMcpLogger()`, and AI agents can read them via `docs_memory_getLogs()` / `docs_memory_searchLogs()`. Check logs before debugging user-reported issues. App abbreviations: CRWL (crawler), ELEC (Electron), API (server), SRV (generic), DB (database), UI (frontend).
+- **Crawl Monitoring Hierarchy**: Use `crawl-status.js` for quick process/evidence check → `task-events.js` for detailed telemetry from task_events table → MCP logs (`docs_memory_getLogs`) for app-level server events. The core crawler writes to task_events (SQLite), NOT MCP logs - the MCP logger is currently integrated only in crawl-server.js wrapper.
+- **MCP Logging Integration**: Use `createMcpLogger.uiServer(name)` for UI servers and `createMcpLogger.service(name)` for background services. These presets auto-generate session IDs and configure appropriate console verbosity. Query logs with `docs_memory_getLogs({ session: 'app-YYYY-MM-DD' })`. The logger writes to NDJSON files in `docs/agi/logs/` for fast file-based access.
+
+## 2026-01-04
+- Place disambiguation: All configuration data (publisher priors, context keywords, normalization rules, language mappings) must be stored in database tables, not JSON files or code constants. This enables learning from outcomes and updates without deployments.
+
+## 2026-01-04 jsgui3 Progress UI Patterns
+- **CSS-Based Visibility Transitions (No Flashing)**: When showing/hiding elements dynamically (warnings, notifications, collapsible sections), never use `style.display = 'none'`. Instead, use `add_class('hidden')` with CSS transitions on opacity/max-height. This prevents the "flashing" jitter from rapid show/hide cycles common with SSE/polling updates. Pattern: `.element { transition: opacity 0.2s, max-height 0.2s; } .element.hidden { opacity: 0; max-height: 0; overflow: hidden; }`
+- **RAF Debouncing for High-Frequency Updates**: When receiving updates faster than 5/second (SSE, WebSocket, polling), debounce DOM updates with `requestAnimationFrame`. Pattern: `_scheduleUpdate() { if (this._pendingFrame) return; this._pendingFrame = requestAnimationFrame(() => { this._pendingFrame = null; this._syncView(); }); }` This coalesces multiple updates per frame into a single DOM write, eliminating jitter.
+- **State Object Pattern for Controls**: For interactive controls with multiple mutable properties, use a single `_state = {}` object and a centralized `setState(partial)` + `_syncView()` pattern instead of scattered property updates. Benefits: predictable state transitions, easy debugging (log `_state`), natural batching, works with RAF debouncing.
+
+## 2026-01-04 - jsgui3 Framework
+- jsgui3 Reserved Method Names: Never override `on()`, `off()`, `set()`, `get()`, `add()` in Control subclasses. jsgui3's Control_Core calls these methods during super() construction, before your constructor body runs. Use alternative names like `addListener()`, `subscribe()`, `onEvent()` for custom event systems. Stack traces mentioning Control_Core constructor with "Cannot read properties of undefined" usually indicate this anti-pattern.
+
+## 2026-01-05
+- Electron/Node Version Mismatch: When Electron's bundled Node version (e.g. v18) lags behind the system Node version (e.g. v25), native modules or modern APIs (File, fetch, ESM) may fail. Solution: Use a split-process architecture where the main logic runs in a system Node process (spawned) and Electron is used strictly as a UI shell pointing to a localhost server. This isolates the heavy lifting from Electron's environment constraints.
+- When creating architectural books for AI agents, always include: (1) Current vs Target state table in README, (2) Implementation Guide chapter with actual code extracts showing what exists, (3) FIRST_STEPS.md with executable validation commands. The gap analysis is the most valuable part for agents.
+- Unified Pipeline pattern: Use EventEmitter-based stage orchestration with events (stage:start, progress, stage:complete, pipeline:complete) to enable UI streaming. Pipeline stages should be atomic and support graceful stop at stage boundaries.
+- Place coherence algorithm: Use haversine distance with thresholds (50km=same city, 200km=same region, 1000km=same country) to score geographic coherence between multi-mention candidates. Close places should reinforce each other's scores.
+
+## 2026-01-06
+- When implementing UI matrix views that fetch data via limited queries (e.g. `clampInt`), ensure the hard-coded max limits in the query builder (`max: 200`) are sufficient for complete datasets like 'All Countries' (approx 250), otherwise the tail end of the alphabet will silently disappear.
+- ActiveProbeProcessor requires multi-language slug support when probing non-English domains (e.g. searching for 'germany' on Spanish sites fails, requires 'alemania').

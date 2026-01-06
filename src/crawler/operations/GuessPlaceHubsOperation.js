@@ -141,6 +141,26 @@ class GuessPlaceHubsOperation extends CrawlOperation {
       scheme
     };
 
+    // Pass specific active probe options if present in overrides
+    if (overrides.activePattern) {
+      resolvedOptions.activePattern = overrides.activePattern;
+    }
+    if (overrides.mode) {
+      resolvedOptions.mode = overrides.mode;
+    }
+    if (overrides.limit) {
+      resolvedOptions.limit = overrides.limit;
+    }
+    if (overrides.lang) {
+      resolvedOptions.lang = overrides.lang;
+    }
+    if (overrides.kinds) {
+      resolvedOptions.kinds = overrides.kinds;
+    }
+    if (overrides.parentPlace) {
+      resolvedOptions.parentPlace = overrides.parentPlace;
+    }
+
     delete resolvedOptions.dbPath;
     delete resolvedOptions.dataDir;
 

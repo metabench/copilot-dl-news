@@ -591,14 +591,12 @@ class CrawlTelemetryBridge {
    * Emit a URL visited event (batched, optional broadcast).
    */
   emitUrlVisited(urlInfo, options = {}) {
-    console.log('[CrawlTelemetryBridge] emitUrlVisited called, broadcastUrlEvents=', this._broadcastUrlEvents);
     if (!this._broadcastUrlEvents) return;
     
     const event = createUrlVisitedEvent(urlInfo, {
       jobId: options.jobId || this._currentState.jobId,
       crawlType: options.crawlType || this._currentState.crawlType
     });
-    console.log('[CrawlTelemetryBridge] batching url event:', JSON.stringify(event).slice(0, 200));
     
     this._batchUrlEvent(event);
   }
@@ -748,7 +746,6 @@ class CrawlTelemetryBridge {
         crawlType: this._currentState.crawlType
       });
       
-      console.log('[CrawlTelemetryBridge] flushing', this._pendingUrlEvents.length, 'URL events as batch');
       this._recordAndBroadcast(batch);
       this._pendingUrlEvents = [];
     }
@@ -791,7 +788,6 @@ class CrawlTelemetryBridge {
    */
   destroy() {
     // Flush any pending URL events before cleanup (critical for small/fast crawls)
-    console.log('[CrawlTelemetryBridge] destroy() called, pending URL events:', this._pendingUrlEvents.length);
     this._flushUrlEvents();
     
     // Complete observable stream first so subscribers can detach.

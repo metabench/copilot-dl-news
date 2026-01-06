@@ -8,9 +8,10 @@
 /**
  * Get all countries from gazetteer with their preferred names
  * @param {import('better-sqlite3').Database} db
+ * @param {string} [lang='en'] - Preferred language code (BCP-47)
  * @returns {Array<{id: number, name: string, code: string, importance: number, population: number, wikidataQid: string}>}
  */
-function getAllCountries(db) {
+function getAllCountries(db, lang = 'en') {
   try {
     const countries = db.prepare(`
       WITH country_names AS (
@@ -18,11 +19,11 @@ function getAllCountries(db) {
           p.id,
           p.country_code AS code,
           COALESCE(
-            (SELECT name FROM place_names WHERE id = p.canonical_name_id),
-            (SELECT name FROM place_names
-               WHERE place_id = p.id
-               ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
-               LIMIT 1)
+            (SELECT name FROM place_names 
+             WHERE place_id = p.id 
+             ORDER BY (lang = ?) DESC, is_preferred DESC, (lang = 'en') DESC, id ASC 
+             LIMIT 1),
+            (SELECT name FROM place_names WHERE id = p.canonical_name_id)
           ) AS name,
           COALESCE(p.priority_score, p.population, 0) AS importance,
           p.wikidata_qid AS wikidataQid,
@@ -35,7 +36,7 @@ function getAllCountries(db) {
       FROM country_names
       WHERE name IS NOT NULL
       ORDER BY importance DESC, name ASC
-    `).all();
+    `).all(lang);
 
     return countries;
   } catch (err) {
@@ -48,9 +49,10 @@ function getAllCountries(db) {
  * Get top N countries by importance/priority
  * @param {import('better-sqlite3').Database} db
  * @param {number} limit - Maximum number of countries to return
+ * @param {string} [lang='en'] - Preferred language code (BCP-47)
  * @returns {Array<{id: number, name: string, code: string, importance: number, population: number, wikidataQid: string}>}
  */
-function getTopCountries(db, limit = 50) {
+function getTopCountries(db, limit = 50, lang = 'en') {
   try {
     const countries = db.prepare(`
       WITH country_names AS (
@@ -58,11 +60,11 @@ function getTopCountries(db, limit = 50) {
           p.id,
           p.country_code AS code,
           COALESCE(
-            (SELECT name FROM place_names WHERE id = p.canonical_name_id),
-            (SELECT name FROM place_names
-               WHERE place_id = p.id
-               ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
-               LIMIT 1)
+            (SELECT name FROM place_names 
+             WHERE place_id = p.id 
+             ORDER BY (lang = ?) DESC, is_preferred DESC, (lang = 'en') DESC, id ASC 
+             LIMIT 1),
+            (SELECT name FROM place_names WHERE id = p.canonical_name_id)
           ) AS name,
           COALESCE(p.priority_score, p.population, 0) AS importance,
           p.wikidata_qid AS wikidataQid,
@@ -76,7 +78,7 @@ function getTopCountries(db, limit = 50) {
       WHERE name IS NOT NULL
       ORDER BY importance DESC, name ASC
       LIMIT ?
-    `).all(limit);
+    `).all(lang, limit);
 
     return countries;
   } catch (err) {
@@ -92,9 +94,10 @@ function getTopCountries(db, limit = 50) {
  *
  * @param {import('better-sqlite3').Database} db - Database connection.
  * @param {number} [limit=50] - Maximum number of regions to return.
+ * @param {string} [lang='en'] - Preferred language code (BCP-47)
  * @returns {Array<{id: number, name: string, code: string|null, countryCode: string|null, importance: number}>}
  */
-function getTopRegions(db, limit = 50) {
+function getTopRegions(db, limit = 50, lang = 'en') {
   try {
     const regions = db.prepare(`
       WITH region_names AS (
@@ -103,11 +106,11 @@ function getTopRegions(db, limit = 50) {
           p.adm1_code AS code,
           p.country_code AS countryCode,
           COALESCE(
-            (SELECT name FROM place_names WHERE id = p.canonical_name_id),
-            (SELECT name FROM place_names
-               WHERE place_id = p.id
-               ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
-               LIMIT 1)
+            (SELECT name FROM place_names 
+             WHERE place_id = p.id 
+             ORDER BY (lang = ?) DESC, is_preferred DESC, (lang = 'en') DESC, id ASC 
+             LIMIT 1),
+            (SELECT name FROM place_names WHERE id = p.canonical_name_id)
           ) AS name,
           COALESCE(p.priority_score, p.population, 0) AS importance
         FROM places p
@@ -118,7 +121,7 @@ function getTopRegions(db, limit = 50) {
       WHERE name IS NOT NULL
       ORDER BY importance DESC, name ASC
       LIMIT ?
-    `).all(limit);
+    `).all(lang, limit);
 
     return regions;
   } catch (err) {
@@ -132,9 +135,10 @@ function getTopRegions(db, limit = 50) {
  *
  * @param {import('better-sqlite3').Database} db - Database connection.
  * @param {number} [limit=50] - Maximum number of cities to return.
+ * @param {string} [lang='en'] - Preferred language code (BCP-47)
  * @returns {Array<{id: number, name: string, countryCode: string|null, regionName: string|null, regionId: number|null, importance: number}>}
  */
-function getTopCities(db, limit = 50) {
+function getTopCities(db, limit = 50, lang = 'en') {
   try {
     const cities = db.prepare(`
       WITH direct_parent AS (
@@ -147,11 +151,11 @@ function getTopCities(db, limit = 50) {
         SELECT
           city.id,
           COALESCE(
-            (SELECT name FROM place_names WHERE id = city.canonical_name_id),
-            (SELECT name FROM place_names
-               WHERE place_id = city.id
-               ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
-               LIMIT 1)
+            (SELECT name FROM place_names 
+             WHERE place_id = city.id 
+             ORDER BY (lang = ?) DESC, is_preferred DESC, (lang = 'en') DESC, id ASC 
+             LIMIT 1),
+            (SELECT name FROM place_names WHERE id = city.canonical_name_id)
           ) AS name,
           city.country_code AS countryCode,
           COALESCE(city.priority_score, city.population, 0) AS importance,
@@ -164,11 +168,11 @@ function getTopCities(db, limit = 50) {
         SELECT
           region.id,
           COALESCE(
-            (SELECT name FROM place_names WHERE id = region.canonical_name_id),
-            (SELECT name FROM place_names
-               WHERE place_id = region.id
-               ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
-               LIMIT 1)
+            (SELECT name FROM place_names 
+             WHERE place_id = region.id 
+             ORDER BY (lang = ?) DESC, is_preferred DESC, (lang = 'en') DESC, id ASC 
+             LIMIT 1),
+            (SELECT name FROM place_names WHERE id = region.canonical_name_id)
           ) AS name
         FROM places region
         WHERE region.kind IN ('region', 'country')
@@ -185,7 +189,7 @@ function getTopCities(db, limit = 50) {
       WHERE cn.name IS NOT NULL
       ORDER BY cn.importance DESC, cn.name ASC
       LIMIT ?
-    `).all(limit);
+    `).all(lang, lang, limit);
 
     return cities;
   } catch (err) {
@@ -280,9 +284,10 @@ function getPlaceCountByKind(db, kind) {
  * @param {import('better-sqlite3').Database} db
  * @param {string} countryCode - ISO country code
  * @param {string} kind - Place kind (region, city, etc.)
+ * @param {string} [lang='en'] - Preferred language code (BCP-47)
  * @returns {Array} Array of place objects
  */
-function getPlacesByCountryAndKind(db, countryCode, kind) {
+function getPlacesByCountryAndKind(db, countryCode, kind, lang = 'en') {
   try {
     const places = db.prepare(`
       SELECT
@@ -293,19 +298,18 @@ function getPlacesByCountryAndKind(db, countryCode, kind) {
         COALESCE(p.population, 0) AS population,
         COALESCE(p.priority_score, p.population, 0) AS importance,
         COALESCE(
-          (SELECT name FROM place_names WHERE id = p.canonical_name_id),
-          (SELECT name FROM place_names
-             WHERE place_id = p.id
-             ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
-             LIMIT 1)
+          (SELECT name FROM place_names 
+           WHERE place_id = p.id 
+           ORDER BY (lang = ?) DESC, is_preferred DESC, (lang = 'en') DESC, id ASC 
+           LIMIT 1),
+          (SELECT name FROM place_names WHERE id = p.canonical_name_id)
         ) AS name
       FROM places p
       WHERE p.country_code = ?
         AND p.kind = ?
         AND COALESCE(p.status, 'current') = 'current'
-        AND name IS NOT NULL
       ORDER BY population DESC, name ASC
-    `).all(countryCode, kind);
+    `).all(lang, countryCode, kind);
 
     return places;
   } catch (err) {

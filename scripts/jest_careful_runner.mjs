@@ -6,17 +6,38 @@ import { mkdirSync } from 'node:fs'
 
 const jestCliPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'node_modules', 'jest', 'bin', 'jest.js')
 
+const supportsLocalStorageFile = (() => {
+  const major = Number.parseInt((process.versions.node || '0').split('.')[0], 10);
+  if (!Number.isFinite(major) || major < 21) {
+    return false;
+  }
+  try {
+    const help = spawnSync(process.execPath, ['--help'], { encoding: 'utf8' });
+    const output = `${help.stdout || ''}${help.stderr || ''}`;
+    return output.includes('--localstorage-file');
+  } catch {
+    return false;
+  }
+})();
+
 const sanitizeNodeOptions = (nodeOptions) => {
   if (typeof nodeOptions !== 'string') return nodeOptions
   const trimmed = nodeOptions.trim()
   if (!trimmed) return nodeOptions
 
-  // Node supports --localstorage-file=<path>. When the flag is present without a value,
-  // Node emits: "Warning: `--localstorage-file` was provided without a valid path".
-  // We strip only invalid forms and preserve valid "=..." usage.
-  const withoutBareFlag = trimmed
-    .replace(/(^|\s)--localstorage-file(\s|$)/g, ' ')
-    .replace(/(^|\s)--localstorage-file=(?:""|''|)(?=\s|$)/g, ' ')
+  let withoutBareFlag = trimmed
+  if (!supportsLocalStorageFile) {
+    // Remove unsupported localstorage flags entirely when Node doesn't recognize them.
+    withoutBareFlag = withoutBareFlag
+      .replace(/(^|\s)--localstorage-file(=[^\s]+)?(?=\s|$)/g, ' ')
+  } else {
+    // Node supports --localstorage-file=<path>. When the flag is present without a value,
+    // Node emits: "Warning: `--localstorage-file` was provided without a valid path".
+    // We strip only invalid forms and preserve valid "=..." usage.
+    withoutBareFlag = withoutBareFlag
+      .replace(/(^|\s)--localstorage-file(\s|$)/g, ' ')
+      .replace(/(^|\s)--localstorage-file=(?:""|''|)(?=\s|$)/g, ' ')
+  }
 
   const normalized = withoutBareFlag.replace(/\s+/g, ' ').trim()
   return normalized || undefined
@@ -30,9 +51,13 @@ const sanitizeNodeOptions = (nodeOptions) => {
  */
 const run = (args) => {
   // Node's internal webstorage implementation emits a warning during Jest teardown
-  // unless a valid localStorage backing file is provided.
-  const localStorageFile = resolve(process.cwd(), 'tmp', 'jest-localstorage.json')
-  mkdirSync(resolve(process.cwd(), 'tmp'), { recursive: true })
+  // unless a valid localStorage backing file is provided (supported in newer Node releases).
+  const localStorageFile = supportsLocalStorageFile
+    ? resolve(process.cwd(), 'tmp', 'jest-localstorage.json')
+    : null
+  if (localStorageFile) {
+    mkdirSync(resolve(process.cwd(), 'tmp'), { recursive: true })
+  }
 
   const nodeOptions = sanitizeNodeOptions(process.env.NODE_OPTIONS)
   const env = {
@@ -45,7 +70,8 @@ const run = (args) => {
     delete env.NODE_OPTIONS
   }
 
-  const result = spawnSync(process.execPath, [`--localstorage-file=${localStorageFile}`, jestCliPath, ...args], {
+  const nodeArgs = localStorageFile ? [`--localstorage-file=${localStorageFile}`] : []
+  const result = spawnSync(process.execPath, [...nodeArgs, jestCliPath, ...args], {
     stdio: 'inherit',
     env,
     timeout: 300000  // 5 minute safety net for entire run

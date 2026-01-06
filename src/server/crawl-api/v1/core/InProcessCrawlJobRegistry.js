@@ -34,6 +34,9 @@ class InProcessCrawlJobRegistry {
   } = {}) {
     this._createCrawlService = typeof createCrawlService === 'function' ? createCrawlService : null;
     this._serviceOptions = serviceOptions && typeof serviceOptions === 'object' ? serviceOptions : {};
+    this._defaultOverrides = this._serviceOptions.defaultOverrides && typeof this._serviceOptions.defaultOverrides === 'object'
+      ? this._serviceOptions.defaultOverrides
+      : {};
 
     const telemetry = telemetryIntegration || this._serviceOptions.telemetryIntegration;
     this._telemetry = telemetry && typeof telemetry.connectCrawler === 'function' ? telemetry : null;
@@ -192,6 +195,7 @@ class InProcessCrawlJobRegistry {
     });
 
     const mergedOverrides = {
+      ...this._defaultOverrides,
       ...normalizeOverrides(overrides),
       jobId,
       crawlType: 'operation'

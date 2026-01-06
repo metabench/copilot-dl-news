@@ -8,6 +8,7 @@ const { CrawlCountryHubsHistoryOperation } = require('./CrawlCountryHubsHistoryO
 const { FindTopicHubsOperation } = require('./FindTopicHubsOperation');
 const { FindPlaceAndTopicHubsOperation } = require('./FindPlaceAndTopicHubsOperation');
 const { GuessPlaceHubsOperation } = require('./GuessPlaceHubsOperation');
+const { SiteExplorerOperation } = require('./SiteExplorerOperation');
 const { BasicArticleCrawlOperation } = require('./BasicArticleCrawlOperation');
 const { CustomCrawlOperation } = require('./CustomCrawlOperation');
 const { CrawlSequenceRunner } = require('./SequenceRunner');
@@ -26,7 +27,8 @@ const createDefaultOperations = () => (
     new CrawlCountryHubsHistoryOperation(),
     new FindTopicHubsOperation(),
     new FindPlaceAndTopicHubsOperation(),
-    new GuessPlaceHubsOperation()
+    new GuessPlaceHubsOperation(),
+    new SiteExplorerOperation()
   ]
 );
 

@@ -222,6 +222,9 @@ const {
   GuessPlaceHubsTask
 } = require('../../background/tasks/GuessPlaceHubsTask');
 const {
+  BackfillDatesTask
+} = require('../../background/tasks/BackfillDatesTask');
+const {
   CompressionWorkerPool
 } = require('../../background/workers/CompressionWorkerPool');
 const {
@@ -749,6 +752,15 @@ function createApp(options = {}) {
     
     if (verbose) {
       console.log('[server] Registered guess-place-hubs task type');
+    }
+
+    // Register backfill dates task type (DB-only)
+    backgroundTaskManager.registerTaskType('backfill-dates', BackfillDatesTask, {
+      dbPath: urlsDbPath
+    });
+
+    if (verbose) {
+      console.log('[server] Registered backfill-dates task type');
     }
 
     // Resume paused tasks on startup (after a delay to ensure server is ready)

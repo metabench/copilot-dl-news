@@ -8,6 +8,9 @@
  * Uses lang-tools patterns for consistency.
  */
 
+(function(global) {
+'use strict';
+
 const { each, tof, is_defined, is_array } = (() => {
   // Isomorphic require/import handling
   if (typeof require !== 'undefined') {
@@ -384,8 +387,8 @@ if (typeof module !== 'undefined' && module.exports) {
     validateValues,
     escapeHtml
   };
-} else if (typeof window !== 'undefined') {
-  window.PropertyEditor = {
+} else if (typeof global !== 'undefined') {
+  global.PropertyEditor = {
     FieldType,
     renderField,
     renderPropertyEditor,
@@ -394,3 +397,5 @@ if (typeof module !== 'undefined' && module.exports) {
     escapeHtml
   };
 }
+
+})(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : this));

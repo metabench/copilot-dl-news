@@ -20,7 +20,7 @@
  */
 
 const path = require('path');
-const NewsDatabase = require('../db/sqlite/SQLiteNewsDatabase');
+const { createSQLiteDatabase } = require('../db/sqlite');
 const { NewsWebsiteDiscovery } = require('../services/NewsWebsiteDiscovery');
 
 function parseArgs(argv) {
@@ -119,7 +119,7 @@ async function main() {
   console.log();
 
   // Open database
-  const db = new NewsDatabase(args.dbPath);
+  const db = createSQLiteDatabase(args.dbPath);
   
   // Create discovery service
   const discovery = new NewsWebsiteDiscovery(db, {

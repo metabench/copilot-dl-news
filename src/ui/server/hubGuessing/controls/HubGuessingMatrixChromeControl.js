@@ -54,10 +54,36 @@ class HubGuessingMatrixChromeControl extends jsgui.Control {
 
     this.add(this._styleEl());
     this.add(this._viewToggleScript());
+    this.add(this._runGuessingScript());
     this.add(this._filtersForm());
     this.add(this._statsRow());
     this.add(this._legendRow());
     this.add(this._actionsRow());
+    this.add(this._logModal());
+  }
+
+  _logModal() {
+    const ctx = this.context;
+    const backdrop = makeEl(ctx, 'div', 'log-modal-backdrop', { 'data-testid': 'log-modal-backdrop' });
+    
+    const modal = makeEl(ctx, 'div', 'log-modal');
+    backdrop.add(modal);
+    
+    const header = makeEl(ctx, 'div', 'log-modal-header');
+    modal.add(header);
+    
+    const title = makeEl(ctx, 'div', 'log-modal-title');
+    title.add(text(ctx, 'Job Logs'));
+    header.add(title);
+    
+    const closeBtn = makeEl(ctx, 'button', 'log-modal-close', { 'data-testid': 'log-modal-close' });
+    closeBtn.add(text(ctx, '×'));
+    header.add(closeBtn);
+    
+    const body = makeEl(ctx, 'div', 'log-modal-body', { 'data-testid': 'log-modal-body' });
+    modal.add(body);
+    
+    return backdrop;
   }
 
   _styleEl() {
@@ -206,6 +232,136 @@ body {
 }
 
 .filters code { font-family: var(--mono); color: var(--text); }
+
+.job-status {
+  margin-right: auto;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.job-status--running { color: var(--warn); }
+.job-status--completed { color: var(--ok); }
+.job-status--failed { color: var(--bad); }
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--muted);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.job-progress {
+  display: inline-block;
+  width: 100px;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  margin-right: 8px;
+  vertical-align: middle;
+  overflow: hidden;
+}
+
+.job-progress-fill {
+  height: 100%;
+  background: #fbbf24;
+  transition: width 0.3s ease;
+}
+
+.refresh-btn {
+  background: none;
+  border: 1px solid var(--ok);
+  color: var(--ok);
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  margin-left: 8px;
+}
+.refresh-btn:hover {
+  background: rgba(74,222,128,0.1);
+}
+
+.log-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.7);
+  z-index: 999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.log-modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 800px;
+  max-width: 90vw;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+.log-modal-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #120e0b;
+  border-radius: 8px 8px 0 0;
+}
+
+.log-modal-title {
+  font-weight: 600;
+  color: var(--gold);
+}
+
+.log-modal-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 20px;
+  padding: 0 4px;
+}
+.log-modal-close:hover { color: var(--text); }
+
+.log-modal-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  background: #000;
+}
+
+.log-entry {
+  margin-bottom: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: flex;
+  gap: 8px;
+}
+
+.log-time { color: var(--muted); min-width: 70px; }
+.log-level-info { color: var(--text); }
+.log-level-warn { color: var(--warn); }
+.log-level-error { color: var(--bad); }
 `
       )
     );
@@ -252,6 +408,195 @@ body {
       )
     );
 
+    return scriptEl;
+  }
+
+  _runGuessingScript() {
+    const ctx = this.context;
+    const scriptEl = makeEl(ctx, 'script');
+    scriptEl.add(
+      text(
+        ctx,
+        `
+(() => {
+  const init = () => {
+    const btn = document.querySelector('[data-testid="run-guessing"]');
+    const statusEl = document.querySelector('[data-testid="job-status"]');
+    const modalBackdrop = document.querySelector('[data-testid="log-modal-backdrop"]');
+    const modalClose = document.querySelector('[data-testid="log-modal-close"]');
+    const modalBody = document.querySelector('[data-testid="log-modal-body"]');
+    
+    if (!btn) return;
+
+    const basePath = (btn.getAttribute('data-base-path') || '').replace(/\\/$/, '');
+    const jobsUrl = (basePath + '/api/jobs').replace('//', '/');
+    const guessUrl = (basePath + '/api/guess').replace('//', '/');
+
+    let pollInterval = null;
+
+    const showLogs = async (jobId) => {
+      try {
+        modalBody.innerHTML = 'Loading logs...';
+        modalBackdrop.style.display = 'flex';
+        
+        const res = await fetch(\`\${jobsUrl}/\${jobId}\`);
+        if (!res.ok) throw new Error('Failed to fetch logs');
+        
+        const job = await res.json();
+        const logs = job.logs || [];
+        
+        if (logs.length === 0) {
+          modalBody.innerHTML = '<div class="log-entry"><span class="log-time">--:--:--</span><span class="log-level-info">No logs available</span></div>';
+          return;
+        }
+        
+        modalBody.innerHTML = logs.map(log => {
+          const time = new Date(log.time).toLocaleTimeString();
+          const levelClass = \`log-level-\${log.level || 'info'}\`;
+          return \`<div class="log-entry"><span class="log-time">\${time}</span><span class="\${levelClass}">\${log.msg}</span></div>\`;
+        }).join('');
+        
+        // Scroll to bottom
+        modalBody.scrollTop = modalBody.scrollHeight;
+      } catch (err) {
+        modalBody.innerHTML = \`<div class="log-entry"><span class="log-level-error">Error loading logs: \${err.message}</span></div>\`;
+      }
+    };
+
+    const closeModal = () => {
+      modalBackdrop.style.display = 'none';
+    };
+
+    if (modalClose) modalClose.onclick = closeModal;
+    if (modalBackdrop) {
+      modalBackdrop.onclick = (e) => {
+        if (e.target === modalBackdrop) closeModal();
+      };
+    }
+
+    // Expose showLogs globally so onclick handlers can use it
+    window.showJobLogs = showLogs;
+
+    const updateStatus = async () => {
+      try {
+        const res = await fetch(jobsUrl);
+        if (!res.ok) return;
+        const jobs = await res.json();
+        
+        // Find active or most recent job
+        const activeJob = jobs.find(j => j.status === 'running' || j.status === 'pending');
+        const lastJob = jobs[0]; // Sorted by time desc in server
+
+        if (activeJob) {
+          btn.disabled = true;
+          btn.textContent = 'Running...';
+          
+          let msg = \`Running (\${activeJob.domainCount} domains)\`;
+          if (activeJob.lastMessage) msg += \`: \${activeJob.lastMessage}\`;
+          
+          let progressHtml = '';
+          if (activeJob.domainCount > 0) {
+            const pct = Math.round(((activeJob.processedCount || 0) / activeJob.domainCount) * 100);
+            progressHtml = \`<div class="job-progress" title="\${activeJob.processedCount || 0} / \${activeJob.domainCount}"><div class="job-progress-fill" style="width: \${pct}%"></div></div>\`;
+          }
+          
+          statusEl.innerHTML = \`\${progressHtml}<span class="spinner"></span> \${msg} <button class="refresh-btn" onclick="window.showJobLogs('\${activeJob.id}')">Logs</button> <button class="refresh-btn" id="cancel-job-btn" data-id="\${activeJob.id}" style="border-color: var(--bad); color: var(--bad);">Stop</button>\`;
+          statusEl.className = 'job-status job-status--running';
+          
+          const cancelBtn = document.getElementById('cancel-job-btn');
+          if (cancelBtn) {
+            cancelBtn.onclick = async (e) => {
+              e.preventDefault();
+              if (!confirm('Stop this job?')) return;
+              try {
+                await fetch(\`\${jobsUrl}/\${activeJob.id}/cancel\`, { method: 'POST' });
+                updateStatus();
+              } catch (err) {
+                console.error(err);
+              }
+            };
+          }
+          
+          if (!pollInterval) pollInterval = setInterval(updateStatus, 2000);
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Run Guessing';
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+          
+          if (lastJob) {
+            const time = new Date(lastJob.endTime || lastJob.startTime).toLocaleTimeString();
+            if (lastJob.status === 'completed') {
+              statusEl.innerHTML = \`Last job completed at \${time} (\${lastJob.domainCount} domains) <button class="refresh-btn" onclick="window.showJobLogs('\${lastJob.id}')">Logs</button> <button class="refresh-btn" onclick="location.reload()">Refresh Page</button>\`;
+              statusEl.className = 'job-status job-status--completed';
+            } else if (lastJob.status === 'failed') {
+              const errorMsg = lastJob.error || 'Unknown error';
+              statusEl.innerHTML = \`Last job failed at \${time}: <span title="\${errorMsg}">\${errorMsg}</span> <button class="refresh-btn" onclick="window.showJobLogs('\${lastJob.id}')">Logs</button>\`;
+              statusEl.className = 'job-status job-status--failed';
+            } else {
+              statusEl.textContent = '';
+              statusEl.className = 'job-status';
+            }
+          } else {
+            statusEl.textContent = '';
+            statusEl.className = 'job-status';
+          }
+        }
+      } catch (err) {
+        console.error('Failed to poll jobs:', err);
+      }
+    };
+
+    // Initial check
+    updateStatus();
+
+    btn.addEventListener('click', async () => {
+      if (!confirm('Start background guessing job with current filters?')) return;
+      
+      const form = document.querySelector('[data-testid="filters-form"]');
+      const formData = new FormData(form);
+      const params = Object.fromEntries(formData.entries());
+      
+      const payload = {
+        hostQ: params.hostQ,
+        hostLimit: params.hostLimit,
+        activePattern: params.activePattern,
+        parentPlace: params.parentPlace,
+        apply: true
+      };
+
+      try {
+        btn.disabled = true;
+        btn.textContent = 'Starting...';
+        
+        const res = await fetch(guessUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) throw new Error(await res.text());
+        
+        // Start polling immediately
+        updateStatus();
+      } catch (err) {
+        alert('Error: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Run Guessing';
+      }
+    });
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+`
+      )
+    );
     return scriptEl;
   }
 
@@ -316,11 +661,23 @@ body {
     const ctx = this.context;
     const actions = makeEl(ctx, 'div', 'matrix-actions');
 
+    const status = makeEl(ctx, 'div', 'job-status', { 'data-testid': 'job-status' });
+    actions.add(status);
+
     if (this.includeFlipAxes) {
       const flipBtn = makeEl(ctx, 'button', 'btn', { type: 'button', 'data-testid': 'flip-axes' });
       flipBtn.add(text(ctx, 'Flip axes'));
       actions.add(flipBtn);
     }
+
+    const runBtn = makeEl(ctx, 'button', 'btn', {
+      type: 'button',
+      'data-testid': 'run-guessing',
+      'data-base-path': this.basePath || '',
+      style: 'margin-left: 10px;'
+    });
+    runBtn.add(text(ctx, 'Run Guessing'));
+    actions.add(runBtn);
 
     return actions;
   }

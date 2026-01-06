@@ -4653,3 +4653,202 @@ body.priority-config-page .full-width {
   font-weight: 600;
   color: var(--text-primary, #212529);
 }
+
+/* ========================================================================
+   Task Manager UI - Filters, Selection, and Abandoned Status
+   ======================================================================== */
+
+/* Task Filters */
+.task-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-secondary, #f8f9fa);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.task-filters label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #495057);
+}
+
+.task-filters select,
+.task-filters input[type="number"] {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color, #adb5bd);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background: white;
+}
+
+.task-filters select:focus,
+.task-filters input[type="number"]:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+/* Task Summary */
+.task-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-secondary, #f8f9fa);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 0.875rem;
+}
+
+.task-summary-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.task-summary-counts span {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.summary-running { background: rgba(39, 174, 96, 0.15); color: #27ae60; }
+.summary-resuming { background: rgba(155, 89, 182, 0.15); color: #9b59b6; }
+.summary-paused { background: rgba(149, 165, 166, 0.15); color: #7f8c8d; }
+.summary-pending { background: rgba(52, 152, 219, 0.15); color: #3498db; }
+.summary-completed { background: rgba(39, 174, 96, 0.15); color: #27ae60; }
+.summary-failed { background: rgba(231, 76, 60, 0.15); color: #e74c3c; }
+.summary-cancelled { background: rgba(127, 140, 141, 0.15); color: #7f8c8d; }
+.summary-abandoned { background: rgba(127, 140, 141, 0.15); color: #95a5a6; }
+
+.task-summary-showing {
+  color: var(--text-muted, #6c757d);
+  font-size: 0.75rem;
+}
+
+/* Batch Actions */
+.task-batch-actions {
+  display: none;
+  gap: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(90deg, rgba(52, 152, 219, 0.1), rgba(231, 76, 60, 0.05));
+  border: 1px solid rgba(52, 152, 219, 0.3);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.task-batch-actions .batch-count {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+/* Task Card Selection */
+.task-card {
+  position: relative;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.task-card.selected {
+  background: rgba(52, 152, 219, 0.08);
+  border-left-color: #3498db;
+  box-shadow: 0 0 0 1px rgba(52, 152, 219, 0.2);
+}
+
+.task-select-checkbox {
+  margin-right: 10px;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #3498db;
+}
+
+/* Abandoned Status */
+.task-card.status-abandoned {
+  opacity: 0.7;
+  background: #f8f9fa;
+}
+
+.task-card.status-abandoned .task-type {
+  text-decoration: line-through;
+  color: #95a5a6;
+}
+
+.badge-abandoned {
+  background: #95a5a6;
+  color: white;
+}
+
+.cancellation-reason {
+  font-size: 0.8rem;
+  color: #7f8c8d;
+  font-style: italic;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: rgba(127, 140, 141, 0.1);
+  border-radius: 4px;
+}
+
+/* Abandon button */
+.btn-outline-secondary {
+  background: transparent;
+  border: 1px solid #95a5a6;
+  color: #7f8c8d;
+}
+
+.btn-outline-secondary:hover {
+  background: #95a5a6;
+  color: white;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .task-filters {
+    background: var(--bg-secondary-dark, #2d2d2d);
+  }
+  
+  .task-filters label {
+    color: var(--text-secondary-dark, #b0b0b0);
+  }
+  
+  .task-filters select,
+  .task-filters input[type="number"] {
+    background: var(--bg-primary-dark, #1e1e1e);
+    border-color: var(--border-color-dark, #444);
+    color: var(--text-primary-dark, #e0e0e0);
+  }
+  
+  .task-summary {
+    background: var(--bg-secondary-dark, #2d2d2d);
+  }
+  
+  .task-batch-actions {
+    background: linear-gradient(90deg, rgba(52, 152, 219, 0.15), rgba(231, 76, 60, 0.08));
+    border-color: rgba(52, 152, 219, 0.4);
+  }
+  
+  .task-batch-actions .batch-count {
+    color: var(--text-primary-dark, #e0e0e0);
+  }
+  
+  .task-card.selected {
+    background: rgba(52, 152, 219, 0.12);
+  }
+  
+  .task-card.status-abandoned {
+    background: var(--bg-secondary-dark, #2d2d2d);
+  }
+  
+  .cancellation-reason {
+    background: rgba(127, 140, 141, 0.15);
+    color: #95a5a6;
+  }
+}

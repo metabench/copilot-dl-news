@@ -528,6 +528,11 @@ function createServer(options = {}) {
     const fileSizeMB = geonamesSource.fileSize ? 
       (geonamesSource.fileSize / 1024 / 1024).toFixed(1) + ' MB' : 'Not found';
     
+    // Check for alternates
+    const altExists = geonamesSource.altExists;
+    const altSizeMB = geonamesSource.altSize ? (geonamesSource.altSize / 1024 / 1024).toFixed(1) : '0.0';
+    const altText = altExists ? ` + alternateNames.txt (${altSizeMB} MB)` : '';
+
     const dashboard = new GeoImportDashboard({
       context,
       activeView,
@@ -548,12 +553,13 @@ function createServer(options = {}) {
             emoji: '🌍',
             status: fileStatus,
             description: geonamesSource.exists 
-              ? `cities15000.txt (${fileSizeMB}): ~25,000 cities with population >15K`
+              ? `cities15000.txt (${fileSizeMB})${altText}: ~25,000 cities with population >15K`
               : '⚠️ cities15000.txt not found - download required',
             stats: { 
               expected_cities: 25000, 
               processed: state.stats.processed,
-              inserted: state.stats.inserted
+              inserted: state.stats.inserted,
+              names_added: state.stats.namesAdded
             },
             downloadUrl: geonamesSource.downloadUrl
           },

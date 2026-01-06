@@ -12,6 +12,61 @@ const { FieldType, validateValues } = require('../../deprecated-ui/shared/proper
  * Maps task types to their parameter schemas
  */
 const TASK_DEFINITIONS = {
+  'backfill-dates': {
+    taskType: 'backfill-dates',
+    title: 'Backfill Article Dates',
+    description: 'Parse stored HTML for publication timestamps and backfill the articles.date column',
+    icon: '🗓️',
+    fields: [
+      {
+        name: 'limit',
+        label: 'Row Limit (0 = unlimited)',
+        type: FieldType.NUMBER,
+        default: 0,
+        min: 0,
+        description: 'Maximum number of rows to process'
+      },
+      {
+        name: 'batchSize',
+        label: 'Batch Size',
+        type: FieldType.NUMBER,
+        default: 50,
+        min: 1,
+        max: 500,
+        required: true,
+        description: 'Rows per transaction batch'
+      },
+      {
+        name: 'redo',
+        label: 'Redo (re-parse even when date exists)',
+        type: FieldType.BOOLEAN,
+        default: false,
+        description: 'When enabled, re-parses rows with existing dates and updates if different'
+      },
+      {
+        name: 'includeNav',
+        label: 'Include non-article pages',
+        type: FieldType.BOOLEAN,
+        default: false,
+        description: 'When enabled, include pages not classified as article'
+      },
+      {
+        name: 'url',
+        label: 'Only URL (optional)',
+        type: FieldType.TEXT,
+        default: '',
+        placeholder: 'https://example.com/article',
+        description: 'Process only a single URL'
+      },
+      {
+        name: 'listExisting',
+        label: 'List existing dates first',
+        type: FieldType.BOOLEAN,
+        default: false,
+        description: 'Preview existing dates (can be noisy)'
+      }
+    ]
+  },
   'article-compression': {
     taskType: 'article-compression',
     title: 'Compress Articles',

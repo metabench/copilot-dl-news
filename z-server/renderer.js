@@ -41671,6 +41671,40 @@ ${description}`.toLowerCase()
             }
             return false;
           }
+          _isUnifiedUiServer(server) {
+            if (!server || typeof server.file !== "string") return false;
+            const normalized = server.file.replace(/\\/g, "/");
+            return normalized.endsWith("/src/ui/server/unifiedApp/server.js");
+          }
+          async _tryFetchUnifiedCrawlSummary(baseUrl, { timeoutMs = 2500 } = {}) {
+            if (typeof baseUrl !== "string" || !baseUrl) return null;
+            if (typeof globalThis.fetch !== "function") return null;
+            if (typeof globalThis.AbortController !== "function") return null;
+            try {
+              const controller = new AbortController();
+              const attemptTimer = setTimeout(() => controller.abort(), Math.max(250, timeoutMs));
+              const res2 = await fetch(`${baseUrl}/api/crawl/summary`, {
+                method: "GET",
+                cache: "no-store",
+                signal: controller.signal
+              });
+              clearTimeout(attemptTimer);
+              if (!res2.ok) return null;
+              const json = await res2.json();
+              if (!json || json.status !== "ok") return null;
+              return json;
+            } catch {
+              return null;
+            }
+          }
+          async _pickAutoOpenPath(server, baseUrl) {
+            if (!this._isUnifiedUiServer(server)) return null;
+            const summary = await this._tryFetchUnifiedCrawlSummary(baseUrl);
+            const lastError = summary && typeof summary.lastError === "object" ? summary.lastError : null;
+            const hasError = Boolean(lastError && lastError.message);
+            if (!hasError) return null;
+            return "/?app=crawl-status";
+          }
           async _quickStartServer(server, options = {}) {
             if (!server || !this._api) return;
             const action = options && typeof options === "object" ? options.action : null;
@@ -41692,16 +41726,20 @@ ${description}`.toLowerCase()
               server.pid = result.pid;
               const port = result.port || server.metadata?.defaultPort || server.detectedPort;
               const baseUrl = port ? `http://localhost:${port}` : null;
-              const url = baseUrl ? `${baseUrl}${openPath || ""}` : null;
+              if (baseUrl) {
+                const ready = await this._waitForUrlReachable(baseUrl);
+                if (!ready) {
+                  this._addLog(server.file, "system", "\u26A0\uFE0F Server did not respond before timeout; opening anyway...");
+                }
+              }
+              let resolvedOpenPath = openPath;
+              if (!resolvedOpenPath && baseUrl) {
+                resolvedOpenPath = await this._pickAutoOpenPath(server, baseUrl);
+              }
+              const url = baseUrl ? `${baseUrl}${resolvedOpenPath || ""}` : null;
               if (url) {
                 server.runningUrl = url;
                 this._setServerUrl(server.file, url);
-                if (baseUrl) {
-                  const ready = await this._waitForUrlReachable(baseUrl);
-                  if (!ready) {
-                    this._addLog(server.file, "system", "\u26A0\uFE0F Server did not respond before timeout; opening anyway...");
-                  }
-                }
                 await this._openInBrowser(url);
               }
               this._contentArea.setServerRunning(true);
@@ -41715,17 +41753,21 @@ ${description}`.toLowerCase()
                 this._sidebar.updateServerStatus(server.file, true);
                 const port = server.metadata?.defaultPort || server.detectedPort;
                 const baseUrl = port ? `http://localhost:${port}` : null;
-                const url = baseUrl ? `${baseUrl}${openPath || ""}` : null;
+                if (baseUrl) {
+                  const ready = await this._waitForUrlReachable(baseUrl, { timeoutMs: 5e3 });
+                  if (!ready) {
+                    this._addLog(server.file, "system", "\u26A0\uFE0F Server did not respond before timeout; opening anyway...");
+                  }
+                }
+                let resolvedOpenPath = openPath;
+                if (!resolvedOpenPath && baseUrl) {
+                  resolvedOpenPath = await this._pickAutoOpenPath(server, baseUrl);
+                }
+                const url = baseUrl ? `${baseUrl}${resolvedOpenPath || ""}` : null;
                 this._addLog(server.file, "system", "\u26A0\uFE0F Server is already running!");
                 if (url) {
                   server.runningUrl = url;
                   this._setServerUrl(server.file, url);
-                  if (baseUrl) {
-                    const ready = await this._waitForUrlReachable(baseUrl, { timeoutMs: 5e3 });
-                    if (!ready) {
-                      this._addLog(server.file, "system", "\u26A0\uFE0F Server did not respond before timeout; opening anyway...");
-                    }
-                  }
                   await this._openInBrowser(url);
                 }
               } else {

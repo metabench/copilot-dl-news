@@ -207,7 +207,7 @@ class BatchLoader {
       const trimmed = String(rawValue).trim();
       if (!trimmed) return;
 
-      const normalized = this.constructor.normalizeDomain(trimmed, scheme);
+      const normalized = BatchLoader.normalizeDomain(trimmed, scheme);
       const host = normalized?.host || trimmed.toLowerCase();
       if (!host) return;
 

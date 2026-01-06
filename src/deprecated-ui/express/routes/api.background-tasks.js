@@ -70,7 +70,7 @@ function createBackgroundTasksRouter(taskManager, getDbRW) {
   /**
    * GET /api/background-tasks - List tasks with filters
    * Query params:
-   * - status: Filter by status (pending|running|paused|completed|failed|cancelled)
+   * - status: Filter by status (pending|running|paused|completed|failed|cancelled|abandoned)
    * - taskType: Filter by task type
    * - limit: Maximum number of results (default: 100)
    * - offset: Number of results to skip (default: 0)
@@ -274,13 +274,73 @@ function createBackgroundTasksRouter(taskManager, getDbRW) {
         return next(new BadRequestError('Invalid task ID'));
       }
       
-      await taskManager.stopTask(taskId);
+      const { reason, reasonDetail } = req.body || {};
+      await taskManager.stopTask(taskId, { reason, reasonDetail });
       const task = taskManager.getTask(taskId);
       
       res.json({
         success: true,
         task,
         message: 'Task stopped'
+      });
+      
+    } catch (error) {
+      next(new InternalServerError(error.message));
+    }
+  });
+  
+  /**
+   * POST /api/background-tasks/:id/abandon - Abandon task (mark as obsolete)
+   */
+  router.post('/:id/abandon', async (req, res, next) => {
+    try {
+      const taskId = parseInt(req.params.id);
+      
+      if (isNaN(taskId)) {
+        return next(new BadRequestError('Invalid task ID'));
+      }
+      
+      const { reason, reasonDetail } = req.body || {};
+      if (!reason) {
+        return next(new BadRequestError('Abandonment reason is required'));
+      }
+      
+      await taskManager.abandonTask(taskId, reason, reasonDetail);
+      const task = taskManager.getTask(taskId);
+      
+      res.json({
+        success: true,
+        task,
+        message: `Task abandoned: ${reason}`
+      });
+      
+    } catch (error) {
+      next(new InternalServerError(error.message));
+    }
+  });
+  
+  /**
+   * POST /api/background-tasks/abandon-batch - Abandon multiple tasks by criteria
+   * Used for cleanup operations like deprecating old analysis versions
+   */
+  router.post('/abandon-batch', async (req, res, next) => {
+    try {
+      const { criteria, reason, reasonDetail } = req.body || {};
+      
+      if (!reason) {
+        return next(new BadRequestError('Abandonment reason is required'));
+      }
+      
+      if (!criteria || typeof criteria !== 'object') {
+        return next(new BadRequestError('Criteria object is required'));
+      }
+      
+      const result = taskManager.abandonTasks(criteria, reason, reasonDetail);
+      
+      res.json({
+        success: true,
+        ...result,
+        message: `Abandoned ${result.abandoned} of ${result.totalMatched} matching tasks`
       });
       
     } catch (error) {

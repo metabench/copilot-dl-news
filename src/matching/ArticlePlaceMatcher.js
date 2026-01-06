@@ -106,14 +106,20 @@ class ArticlePlaceMatcher {
 
     const insertMany = this.db.transaction((relations) => {
       for (const relation of relations) {
-        insert.run(
-          relation.article_id,
-          relation.place_id,
-          relation.relation_type,
-          relation.confidence,
-          relation.matching_rule_level,
-          relation.evidence
-        );
+        try {
+          insert.run(
+            relation.article_id,
+            relation.place_id,
+            relation.relation_type,
+            relation.confidence,
+            relation.matching_rule_level,
+            relation.evidence
+          );
+        } catch (err) {
+          console.error('Failed to insert relation:', JSON.stringify(relation, null, 2));
+          console.error('Error:', err.message);
+          throw err;
+        }
       }
     });
 
@@ -376,8 +382,12 @@ class ArticlePlaceMatcher {
 
     // Extract article content using HTML analysis
     if (article.html_content) {
+      const htmlString = Buffer.isBuffer(article.html_content) 
+        ? article.html_content.toString('utf8') 
+        : String(article.html_content);
+
       const extractionResult = this.htmlExtractor.extractForPlaceMatching(
-        article.html_content,
+        htmlString,
         null, // No URL available
         {
           maxLength: this.textSampleLimit,
@@ -390,7 +400,7 @@ class ArticlePlaceMatcher {
       } else {
         // Fallback to basic extraction if HTML analysis fails
         console.warn(`HTML analysis failed for article ${article.id}, using fallback`);
-        text += this.stripHtml(article.html_content);
+        text += this.stripHtml(htmlString);
       }
     }
 

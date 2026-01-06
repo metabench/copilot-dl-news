@@ -21,7 +21,20 @@ const TaskStatus = {
   PAUSED: 'paused',
   COMPLETED: 'completed',
   FAILED: 'failed',
-  CANCELLED: 'cancelled'
+  CANCELLED: 'cancelled',
+  ABANDONED: 'abandoned'
+};
+
+/**
+ * Cancellation reason codes
+ */
+const CancellationReason = {
+  USER_REQUEST: 'user_request',
+  OBSOLETE_VERSION: 'obsolete_version',
+  SUPERSEDED: 'superseded',
+  SYSTEM_UPGRADE: 'system_upgrade',
+  TIMEOUT: 'timeout',
+  RESOURCE_LIMIT: 'resource_limit'
 };
 
 /**
@@ -122,17 +135,33 @@ class BackgroundTaskManager extends EventEmitter {
       message: taskRecord.progress?.message || null,
       ts: now
     };
+    const isFinal = !!taskRecord.metadata?.final;
+    const status = taskRecord.status;
+    const isTerminalStatus = status === TaskStatus.COMPLETED || status === TaskStatus.FAILED || status === TaskStatus.CANCELLED;
+    const entryEvent = 'task-progress';
+    let entrySeverity = 'debug';
+    let messageChanged = false;
+    let stageChanged = false;
     if (prev) {
       const delta = Math.abs(nextState.percent - prev.percent);
       const elapsed = now - prev.ts;
-      const messageChanged = nextState.message !== prev.message;
-      const stageChanged = nextState.stage !== prev.stage;
+      messageChanged = nextState.message !== prev.message;
+      stageChanged = nextState.stage !== prev.stage;
       if (delta < this.telemetryConfig.progressMinDeltaPct && !messageChanged && !stageChanged && elapsed < this.telemetryConfig.progressMinIntervalMs) {
         return;
       }
+
+      if (messageChanged || stageChanged) {
+        entrySeverity = 'info';
+      }
     }
+
+    if (isFinal || isTerminalStatus) {
+      entrySeverity = entrySeverity === 'debug' ? 'info' : entrySeverity;
+    }
+
     this.telemetryProgressState.set(taskRecord.id, nextState);
-    this._telemetry('task-progress', {
+    this._telemetry(entryEvent, {
       taskId: taskRecord.id,
       taskType: taskRecord.task_type,
       status: taskRecord.status,
@@ -143,7 +172,7 @@ class BackgroundTaskManager extends EventEmitter {
         percent: progress.percent || 0,
         stage: taskRecord.metadata?.stage || null
       }
-    }, { severity: 'debug' });
+    }, { severity: entrySeverity });
   }
 
   /**
@@ -376,15 +405,21 @@ class BackgroundTaskManager extends EventEmitter {
    * Stop/cancel a task
    * 
    * @param {number} taskId - Task ID
+   * @param {Object} [options] - Stop options
+   * @param {string} [options.reason] - Reason for cancellation (from CancellationReason)
+   * @param {string} [options.reasonDetail] - Additional detail about the reason
    */
-  stopTask(taskId) {
+  stopTask(taskId, options = {}) {
+    const { reason = CancellationReason.USER_REQUEST, reasonDetail } = options;
+    
     const active = this.activeTasks.get(taskId);
     if (active) {
       active.controller.abort();
       this.activeTasks.delete(taskId);
     }
     
-    this._updateTaskStatus(taskId, TaskStatus.CANCELLED);
+    const reasonText = reasonDetail ? `${reason}: ${reasonDetail}` : reason;
+    this._updateTaskStatus(taskId, TaskStatus.CANCELLED, { cancellation_reason: reasonText });
     this.stats.tasksCancelled++;
     this._updateMetrics();
     this.telemetryProgressState.delete(taskId);
@@ -392,8 +427,105 @@ class BackgroundTaskManager extends EventEmitter {
       taskId,
       taskType: this.getTask(taskId)?.task_type,
       status: TaskStatus.CANCELLED,
-      message: `Cancelled task #${taskId}`
+      message: `Cancelled task #${taskId}: ${reasonText}`,
+      data: { reason, reasonDetail }
     });
+  }
+  
+  /**
+   * Abandon a task (mark as obsolete without attempting to stop)
+   * Used for tasks that shouldn't be resumed, e.g., due to version upgrades
+   * 
+   * @param {number} taskId - Task ID
+   * @param {string} reason - Reason for abandonment (from CancellationReason)
+   * @param {string} [reasonDetail] - Additional detail
+   */
+  abandonTask(taskId, reason, reasonDetail) {
+    const active = this.activeTasks.get(taskId);
+    if (active) {
+      active.controller.abort();
+      this.activeTasks.delete(taskId);
+    }
+    
+    const reasonText = reasonDetail ? `${reason}: ${reasonDetail}` : reason;
+    this._updateTaskStatus(taskId, TaskStatus.ABANDONED, { cancellation_reason: reasonText });
+    this.stats.tasksCancelled++;
+    this._updateMetrics();
+    this.telemetryProgressState.delete(taskId);
+    this._telemetry('task-abandoned', {
+      taskId,
+      taskType: this.getTask(taskId)?.task_type,
+      status: TaskStatus.ABANDONED,
+      message: `Abandoned task #${taskId}: ${reasonText}`,
+      data: { reason, reasonDetail }
+    }, { severity: 'warning' });
+  }
+  
+  /**
+   * Abandon multiple tasks by criteria
+   * 
+   * @param {Object} criteria - Selection criteria
+   * @param {string} [criteria.taskType] - Task type to abandon
+   * @param {string[]} [criteria.statuses] - Statuses to match (default: running, paused, resuming)
+   * @param {number} [criteria.olderThanDays] - Only tasks created before this many days ago
+   * @param {number} [criteria.analysisVersionLessThan] - For analysis tasks, only those with version < this
+   * @param {string} reason - Reason for abandonment
+   * @param {string} [reasonDetail] - Additional detail
+   * @returns {Object} Summary of abandoned tasks
+   */
+  abandonTasks(criteria, reason, reasonDetail) {
+    const {
+      taskType,
+      statuses = [TaskStatus.RUNNING, TaskStatus.PAUSED, TaskStatus.RESUMING, TaskStatus.PENDING],
+      olderThanDays,
+      analysisVersionLessThan
+    } = criteria;
+    
+    // Build query
+    let sql = 'SELECT * FROM background_tasks WHERE status IN (' + statuses.map(() => '?').join(',') + ')';
+    const params = [...statuses];
+    
+    if (taskType) {
+      sql += ' AND task_type = ?';
+      params.push(taskType);
+    }
+    
+    if (olderThanDays) {
+      const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000).toISOString();
+      sql += ' AND created_at < ?';
+      params.push(cutoff);
+    }
+    
+    const tasks = this.db.prepare(sql).all(...params);
+    
+    // Filter by analysis version if specified
+    let tasksToAbandon = tasks;
+    if (analysisVersionLessThan != null) {
+      tasksToAbandon = tasks.filter(t => {
+        if (t.task_type !== 'analysis-run') return false;
+        try {
+          const config = JSON.parse(t.config || '{}');
+          const version = config.analysisVersion ?? config.version ?? 1;
+          return version < analysisVersionLessThan;
+        } catch {
+          return true; // Abandon tasks with unparseable config
+        }
+      });
+    }
+    
+    const abandonedIds = [];
+    for (const task of tasksToAbandon) {
+      this.abandonTask(task.id, reason, reasonDetail);
+      abandonedIds.push(task.id);
+    }
+    
+    return {
+      totalMatched: tasks.length,
+      abandoned: abandonedIds.length,
+      abandonedIds,
+      reason,
+      reasonDetail
+    };
   }
   
   /**
@@ -632,6 +764,18 @@ class BackgroundTaskManager extends EventEmitter {
    */
   _handleCompletion(taskId) {
     this.activeTasks.delete(taskId);
+
+    const existing = this.getTask(taskId);
+    if (existing && existing.status === TaskStatus.CANCELLED) {
+      // Preserve cancellation state; don't overwrite with COMPLETED.
+      this._telemetry('task-cancelled-complete', {
+        taskId,
+        taskType: existing.task_type,
+        status: TaskStatus.CANCELLED,
+        message: `Task #${taskId} finished after cancellation (status preserved)`
+      }, { severity: 'warning' });
+      return;
+    }
     
     this._updateTaskStatus(taskId, TaskStatus.COMPLETED, {
       completed_at: new Date().toISOString()
@@ -662,6 +806,12 @@ class BackgroundTaskManager extends EventEmitter {
   _handleError(taskId, error) {
     this.activeTasks.delete(taskId);
     this.telemetryProgressState.delete(taskId);
+
+    const existing = this.getTask(taskId);
+    if (existing && existing.status === TaskStatus.CANCELLED) {
+      // Preserve cancellation state; don't overwrite with FAILED.
+      return;
+    }
     
     const errorMessage = error?.message || String(error);
     
@@ -756,6 +906,7 @@ class BackgroundTaskManager extends EventEmitter {
       config,
       metadata,
       error_message: row.error_message || null,
+      cancellation_reason: row.cancellation_reason || null,
       created_at: row.created_at,
       started_at: row.started_at || null,
       updated_at: row.updated_at,
@@ -887,5 +1038,6 @@ class BackgroundTaskManager extends EventEmitter {
 
 module.exports = {
   BackgroundTaskManager,
-  TaskStatus
+  TaskStatus,
+  CancellationReason
 };

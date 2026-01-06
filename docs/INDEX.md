@@ -120,6 +120,11 @@ Architecture and system design documents for proposed or implemented features.
 - [Task Events API](database/task-events-api.md) - Unified event storage for crawls and background tasks, with AI query helpers and REST endpoints.
 - [Project Overview](reference/project_overview.md)
 
+## AGI Memory & Observability
+- [docs-memory MCP Server](../tools/mcp/docs-memory/README.md) - AGI memory layer: sessions, skills, lessons, patterns, and app logging.
+- [MCP Logger Client](../src/utils/mcpLogger.js) - Client library for apps to write logs that AI agents can read.
+- [Log Storage](../docs/agi/logs/README.md) - NDJSON log files for app telemetry.
+
 ## Checklists
 - [Database Backup](checklists/database_backup.md)
 - [Doc Link Integrity](checklists/doc_link_integrity.md)
