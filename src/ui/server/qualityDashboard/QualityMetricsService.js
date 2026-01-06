@@ -384,6 +384,176 @@ class QualityMetricsService {
 
     return stmt.all(limit) || [];
   }
+
+  // ─────────────────────────────────────────────────────────────
+  // Quality Trending (Added 2026-01-06)
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Get quality trend over time - daily average confidence scores
+   * @param {string} period - Time period (7d, 30d, 90d)
+   * @returns {Array<{day: string, avgConfidence: number, articleCount: number, highQuality: number, lowQuality: number}>}
+   */
+  getQualityTrend(period = '30d') {
+    const days = this._parsePeriod(period);
+    
+    const stmt = this.db.prepare(`
+      SELECT 
+        date(ca.analyzed_at) as day,
+        AVG(ca.confidence_score) as avg_confidence,
+        COUNT(*) as article_count,
+        SUM(CASE WHEN ca.confidence_score >= 0.8 THEN 1 ELSE 0 END) as high_quality,
+        SUM(CASE WHEN ca.confidence_score < 0.5 THEN 1 ELSE 0 END) as low_quality
+      FROM content_analysis ca
+      WHERE ca.analyzed_at >= date('now', '-' || ? || ' days')
+        AND ca.confidence_score IS NOT NULL
+      GROUP BY day
+      ORDER BY day
+    `);
+    
+    const rows = stmt.all(days) || [];
+    
+    return rows.map(row => ({
+      day: row.day,
+      avgConfidence: row.avg_confidence != null ? Math.round(row.avg_confidence * 1000) / 1000 : null,
+      articleCount: row.article_count || 0,
+      highQuality: row.high_quality || 0,
+      lowQuality: row.low_quality || 0,
+      highQualityPercent: row.article_count > 0 
+        ? Math.round((row.high_quality / row.article_count) * 1000) / 10 
+        : 0
+    }));
+  }
+
+  /**
+   * Get quality by classification type over time
+   * @param {string} period - Time period
+   * @returns {Object} Breakdown by classification with trends
+   */
+  getQualityByClassification(period = '30d') {
+    const days = this._parsePeriod(period);
+    
+    const stmt = this.db.prepare(`
+      SELECT 
+        COALESCE(ca.classification, 'unknown') as classification,
+        AVG(ca.confidence_score) as avg_confidence,
+        COUNT(*) as count,
+        MIN(ca.confidence_score) as min_confidence,
+        MAX(ca.confidence_score) as max_confidence
+      FROM content_analysis ca
+      WHERE ca.analyzed_at >= date('now', '-' || ? || ' days')
+        AND ca.confidence_score IS NOT NULL
+      GROUP BY classification
+      ORDER BY count DESC
+    `);
+    
+    const rows = stmt.all(days) || [];
+    
+    return rows.map(row => ({
+      classification: row.classification,
+      avgConfidence: row.avg_confidence != null ? Math.round(row.avg_confidence * 1000) / 1000 : null,
+      count: row.count || 0,
+      minConfidence: row.min_confidence,
+      maxConfidence: row.max_confidence
+    }));
+  }
+
+  /**
+   * Get domains with improving or declining quality
+   * @param {string} period - Comparison period
+   * @param {number} minArticles - Minimum articles to include
+   * @returns {Object} { improving: [], declining: [] }
+   */
+  getQualityMovers(period = '7d', minArticles = 10) {
+    const days = this._parsePeriod(period);
+    
+    const stmt = this.db.prepare(`
+      WITH current_period AS (
+        SELECT 
+          u.host,
+          AVG(ca.confidence_score) as avg_confidence,
+          COUNT(*) as article_count
+        FROM content_analysis ca
+        JOIN content_storage cs ON cs.id = ca.content_id
+        JOIN http_responses hr ON hr.id = cs.http_response_id
+        JOIN urls u ON u.id = hr.url_id
+        WHERE ca.analyzed_at >= date('now', '-' || ? || ' days')
+          AND ca.confidence_score IS NOT NULL
+        GROUP BY u.host
+        HAVING COUNT(*) >= ?
+      ),
+      previous_period AS (
+        SELECT 
+          u.host,
+          AVG(ca.confidence_score) as avg_confidence,
+          COUNT(*) as article_count
+        FROM content_analysis ca
+        JOIN content_storage cs ON cs.id = ca.content_id
+        JOIN http_responses hr ON hr.id = cs.http_response_id
+        JOIN urls u ON u.id = hr.url_id
+        WHERE ca.analyzed_at >= date('now', '-' || (? * 2) || ' days')
+          AND ca.analyzed_at < date('now', '-' || ? || ' days')
+          AND ca.confidence_score IS NOT NULL
+        GROUP BY u.host
+        HAVING COUNT(*) >= ?
+      )
+      SELECT 
+        c.host,
+        c.avg_confidence as current_avg,
+        p.avg_confidence as previous_avg,
+        c.article_count,
+        (c.avg_confidence - p.avg_confidence) as change,
+        ROUND((c.avg_confidence - p.avg_confidence) / p.avg_confidence * 100, 1) as change_percent
+      FROM current_period c
+      JOIN previous_period p ON p.host = c.host
+      ORDER BY change DESC
+    `);
+    
+    try {
+      const rows = stmt.all(days, minArticles, days, days, minArticles) || [];
+      
+      const improving = rows
+        .filter(r => r.change > 0.05)
+        .slice(0, 10)
+        .map(r => ({
+          host: r.host,
+          currentAvg: Math.round(r.current_avg * 1000) / 1000,
+          previousAvg: Math.round(r.previous_avg * 1000) / 1000,
+          change: Math.round(r.change * 1000) / 1000,
+          changePercent: r.change_percent,
+          articleCount: r.article_count
+        }));
+      
+      const declining = rows
+        .filter(r => r.change < -0.05)
+        .sort((a, b) => a.change - b.change)
+        .slice(0, 10)
+        .map(r => ({
+          host: r.host,
+          currentAvg: Math.round(r.current_avg * 1000) / 1000,
+          previousAvg: Math.round(r.previous_avg * 1000) / 1000,
+          change: Math.round(r.change * 1000) / 1000,
+          changePercent: r.change_percent,
+          articleCount: r.article_count
+        }));
+      
+      return { improving, declining };
+    } catch (err) {
+      console.warn('getQualityMovers query failed:', err.message);
+      return { improving: [], declining: [] };
+    }
+  }
+
+  /**
+   * Parse period string to days
+   * @param {string} period - Period string (7d, 30d, etc)
+   * @returns {number}
+   */
+  _parsePeriod(period) {
+    if (typeof period === 'number') return period;
+    const match = String(period).match(/^(\d+)d?$/i);
+    return match ? parseInt(match[1], 10) : 30;
+  }
 }
 
 module.exports = { QualityMetricsService };

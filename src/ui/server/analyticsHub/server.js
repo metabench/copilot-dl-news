@@ -24,6 +24,7 @@ const jsgui = require('jsgui3-html');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 
 const { AnalyticsService } = require('./AnalyticsService');
+const { PatternSharingService } = require('./PatternSharingService');
 const { 
   TrendChart, 
   DomainLeaderboard, 
@@ -41,11 +42,13 @@ const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'news.db
 
 let db;
 let analyticsService;
+let patternService;
 
 function initDb(dbPath = DB_PATH) {
   db = new Database(dbPath, { readonly: true });
   analyticsService = new AnalyticsService(db);
-  return { db, analyticsService };
+  patternService = new PatternSharingService(db);
+  return { db, analyticsService, patternService };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -564,7 +567,7 @@ function renderDashboard(ctx, period, trends, leaderboard, heatmap, stats, succe
 // Express app
 // ─────────────────────────────────────────────────────────────
 
-function createApp(service = analyticsService) {
+function createApp(service = analyticsService, patternSvc = patternService) {
   const app = express();
 
   // JSON API endpoints
@@ -666,6 +669,49 @@ function createApp(service = analyticsService) {
     try {
       const limit = parseInt(req.query.limit, 10) || 20;
       const data = service.getLayoutSignatureStats(limit);
+      res.json({ success: true, data });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Cross-Domain Pattern Sharing API (Added 2026-01-06)
+  // ─────────────────────────────────────────────────────────────
+
+  app.get('/api/patterns/summary', (req, res) => {
+    try {
+      const data = patternSvc.getCrossDomainsummary();
+      res.json({ success: true, data });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/patterns/domain-families', (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit, 10) || 20;
+      const data = patternSvc.getDomainFamilies(limit);
+      res.json({ success: true, data });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/patterns/recommendations/:domain', (req, res) => {
+    try {
+      const domain = req.params.domain;
+      const data = patternSvc.getPatternRecommendations(domain);
+      res.json({ success: true, data });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/patterns/domain/:domain', (req, res) => {
+    try {
+      const domain = req.params.domain;
+      const data = patternSvc.getDomainPatterns(domain);
       res.json({ success: true, data });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
