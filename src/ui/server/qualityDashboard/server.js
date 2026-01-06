@@ -757,6 +757,41 @@ function createApp(service = metricsService) {
     }
   });
 
+  // ─────────────────────────────────────────────────────────────
+  // Quality Trending API (Added 2026-01-06)
+  // ─────────────────────────────────────────────────────────────
+
+  app.get('/api/quality/trend', (req, res) => {
+    try {
+      const period = req.query.period || '30d';
+      const data = service.getQualityTrend(period);
+      res.json({ success: true, data });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/quality/by-classification', (req, res) => {
+    try {
+      const period = req.query.period || '30d';
+      const data = service.getQualityByClassification(period);
+      res.json({ success: true, data });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/quality/movers', (req, res) => {
+    try {
+      const period = req.query.period || '7d';
+      const minArticles = parseInt(req.query.minArticles, 10) || 10;
+      const data = service.getQualityMovers(period, minArticles);
+      res.json({ success: true, data });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // SSR pages
   app.get('/', (req, res) => {
     try {
