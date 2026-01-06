@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" style="background: white">
+  <!-- Task Monitor Architecture - Phase 1: Simple Structure -->
+  
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="18" font-weight="bold" fill="black">Task Monitor Architecture</text>
+  <text x="400" y="50" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="#666">Electron App for Background Task Progress</text>
+  
+  <!-- Main Process Section -->
+  <rect x="40" y="80" width="320" height="350" rx="8" fill="#e8f4ff" stroke="black" stroke-width="2"/>
+  <text x="200" y="105" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="black">MAIN PROCESS</text>
+  
+  <!-- TaskManager -->
+  <rect x="60" y="130" width="280" height="80" rx="6" fill="white" stroke="black" stroke-width="1.5"/>
+  <text x="200" y="155" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" font-weight="bold" fill="black">TaskManager</text>
+  <text x="200" y="175" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Coordinates multiple tasks</text>
+  <text x="200" y="190" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Emits aggregated updates</text>
+  
+  <!-- BackgroundTask -->
+  <rect x="60" y="230" width="130" height="80" rx="6" fill="white" stroke="black" stroke-width="1.5"/>
+  <text x="125" y="255" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="black">BackgroundTask</text>
+  <text x="125" y="275" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">Abstract base</text>
+  <text x="125" y="290" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">start/pause/cancel</text>
+  
+  <!-- ClassificationBackfillTask -->
+  <rect x="210" y="230" width="130" height="80" rx="6" fill="white" stroke="black" stroke-width="1.5"/>
+  <text x="275" y="250" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" font-weight="bold" fill="black">Classification</text>
+  <text x="275" y="265" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" font-weight="bold" fill="black">BackfillTask</text>
+  <text x="275" y="285" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">URL reclassify</text>
+  <text x="275" y="300" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">Decision tree</text>
+  
+  <!-- IPC Handlers -->
+  <rect x="60" y="330" width="280" height="80" rx="6" fill="white" stroke="black" stroke-width="1.5"/>
+  <text x="200" y="355" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" font-weight="bold" fill="black">IPC Handlers</text>
+  <text x="200" y="375" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">tasks:getAll, tasks:startBackfill</text>
+  <text x="200" y="390" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">tasks:pause, tasks:resume, tasks:cancel</text>
+  
+  <!-- Renderer Process Section -->
+  <rect x="440" y="80" width="320" height="350" rx="8" fill="#fff4e8" stroke="black" stroke-width="2"/>
+  <text x="600" y="105" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="black">RENDERER PROCESS</text>
+  
+  <!-- Preload -->
+  <rect x="460" y="130" width="280" height="60" rx="6" fill="white" stroke="black" stroke-width="1.5"/>
+  <text x="600" y="155" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" font-weight="bold" fill="black">preload.js (contextBridge)</text>
+  <text x="600" y="175" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">Exposes taskAPI to renderer</text>
+  
+  <!-- UI Components -->
+  <rect x="460" y="210" width="280" height="100" rx="6" fill="white" stroke="black" stroke-width="1.5"/>
+  <text x="600" y="235" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" font-weight="bold" fill="black">UI Components</text>
+  <text x="600" y="255" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Task type buttons</text>
+  <text x="600" y="270" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Progress bars (active tasks)</text>
+  <text x="600" y="285" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Pause/Resume/Cancel controls</text>
+  <text x="600" y="300" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">• Completed tasks history</text>
+  
+  <!-- WLILO Theme -->
+  <rect x="460" y="330" width="280" height="80" rx="6" fill="white" stroke="black" stroke-width="1.5"/>
+  <text x="600" y="355" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" font-weight="bold" fill="black">WLILO Theme</text>
+  <text x="600" y="375" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">Industrial Luxury Obsidian</text>
+  <text x="600" y="390" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">Gold accents, dark background</text>
+  
+  <!-- IPC Arrows -->
+  <path d="M 360 170 L 440 170" stroke="black" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="400" y="163" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">IPC</text>
+  
+  <path d="M 440 370 L 360 370" stroke="black" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="400" y="385" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">invoke</text>
+  
+  <!-- Event flow arrows (within main process) -->
+  <path d="M 200 210 L 200 230" stroke="black" stroke-width="1.5" fill="none"/>
+  <path d="M 200 310 L 200 330" stroke="black" stroke-width="1.5" fill="none"/>
+  
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="black"/>
+    </marker>
+  </defs>
+  
+  <!-- Legend -->
+  <rect x="40" y="450" width="720" height="35" rx="4" fill="#f8f8f8" stroke="#ccc" stroke-width="1"/>
+  <text x="60" y="472" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">BackgroundTask: Abstract class with progress/pause/cancel support</text>
+  <text x="450" y="472" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">TaskManager: Coordinates tasks and broadcasts updates to UI</text>
+</svg>

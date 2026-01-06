@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 480">
+  <!-- Title -->
+  <text x="350" y="30" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#1e293b">SQLite Gazetteer Schema</text>
+  
+  <!-- places table -->
+  <rect x="40" y="60" width="280" height="240" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <rect x="40" y="60" width="280" height="28" rx="6" fill="#3b82f6"/>
+  <text x="180" y="80" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="white">places</text>
+  
+  <text x="55" y="105" font-family="monospace" font-size="10" fill="#1e40af">place_id      INTEGER PK</text>
+  <text x="55" y="120" font-family="monospace" font-size="10" fill="#1e40af">source        TEXT</text>
+  <text x="55" y="135" font-family="monospace" font-size="10" fill="#1e40af">source_id     TEXT</text>
+  <text x="55" y="150" font-family="monospace" font-size="10" fill="#1e40af">kind          TEXT</text>
+  <text x="55" y="165" font-family="monospace" font-size="10" fill="#1e40af">name          TEXT</text>
+  <text x="55" y="180" font-family="monospace" font-size="10" fill="#1e40af">name_norm     TEXT</text>
+  <text x="55" y="195" font-family="monospace" font-size="10" fill="#1e40af">country_iso2  TEXT</text>
+  <text x="55" y="210" font-family="monospace" font-size="10" fill="#1e40af">adm1_id       INTEGER FK</text>
+  <text x="55" y="225" font-family="monospace" font-size="10" fill="#1e40af">adm2_id       INTEGER FK</text>
+  <text x="55" y="240" font-family="monospace" font-size="10" fill="#1e40af">lat, lon      REAL</text>
+  <text x="55" y="255" font-family="monospace" font-size="10" fill="#1e40af">importance    REAL</text>
+  <text x="55" y="270" font-family="monospace" font-size="10" fill="#1e40af">area_km2      REAL</text>
+  <text x="55" y="285" font-family="monospace" font-size="10" fill="#64748b">+ bbox, geom_simplified</text>
+
+  <!-- aliases table -->
+  <rect x="380" y="60" width="280" height="120" rx="6" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/>
+  <rect x="380" y="60" width="280" height="28" rx="6" fill="#22c55e"/>
+  <text x="520" y="80" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="white">aliases</text>
+  
+  <text x="395" y="105" font-family="monospace" font-size="10" fill="#166534">alias_norm    TEXT</text>
+  <text x="395" y="120" font-family="monospace" font-size="10" fill="#166534">place_id      INTEGER FK</text>
+  <text x="395" y="135" font-family="monospace" font-size="10" fill="#166534">alias_kind    TEXT</text>
+  <text x="395" y="155" font-family="monospace" font-size="9" fill="#64748b">(abbrev, historic, local, misspelling)</text>
+
+  <!-- place_parents table -->
+  <rect x="380" y="200" width="280" height="100" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <rect x="380" y="200" width="280" height="28" rx="6" fill="#f59e0b"/>
+  <text x="520" y="220" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="white">place_parents</text>
+  
+  <text x="395" y="245" font-family="monospace" font-size="10" fill="#b45309">child_place_id   INTEGER FK</text>
+  <text x="395" y="260" font-family="monospace" font-size="10" fill="#b45309">parent_place_id  INTEGER FK</text>
+  <text x="395" y="275" font-family="monospace" font-size="10" fill="#b45309">parent_kind      TEXT</text>
+  <text x="395" y="290" font-family="monospace" font-size="10" fill="#b45309">confidence       INTEGER</text>
+
+  <!-- snapshots table -->
+  <rect x="40" y="320" width="280" height="90" rx="6" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+  <rect x="40" y="320" width="280" height="28" rx="6" fill="#94a3b8"/>
+  <text x="180" y="340" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="white">snapshots</text>
+  
+  <text x="55" y="365" font-family="monospace" font-size="10" fill="#475569">snapshot_id       INTEGER PK</text>
+  <text x="55" y="380" font-family="monospace" font-size="10" fill="#475569">source_signature  TEXT</text>
+  <text x="55" y="395" font-family="monospace" font-size="10" fill="#475569">built_at          TEXT</text>
+
+  <!-- FK arrows -->
+  <!-- aliases -> places -->
+  <path d="M 380 120 L 330 120 L 330 180 L 320 180" stroke="#475569" stroke-width="1.5" fill="none" stroke-dasharray="4"/>
+  <circle cx="320" cy="180" r="4" fill="#475569"/>
+  
+  <!-- place_parents -> places (child) -->
+  <path d="M 380 255 L 340 255 L 340 210 L 320 210" stroke="#475569" stroke-width="1.5" fill="none" stroke-dasharray="4"/>
+  <circle cx="320" cy="210" r="4" fill="#475569"/>
+
+  <!-- place_parents -> places (parent) -->
+  <path d="M 380 270 L 350 270 L 350 240 L 320 240" stroke="#475569" stroke-width="1.5" fill="none" stroke-dasharray="4"/>
+  <circle cx="320" cy="240" r="4" fill="#475569"/>
+
+  <!-- Indexes box -->
+  <rect x="380" y="320" width="280" height="90" rx="6" fill="#fce7f3" stroke="#ec4899" stroke-width="2"/>
+  <rect x="380" y="320" width="280" height="28" rx="6" fill="#ec4899"/>
+  <text x="520" y="340" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="white">Indexes</text>
+  
+  <text x="395" y="365" font-family="monospace" font-size="9" fill="#be185d">places(name_norm)</text>
+  <text x="395" y="380" font-family="monospace" font-size="9" fill="#be185d">places(country_iso2, kind)</text>
+  <text x="395" y="395" font-family="monospace" font-size="9" fill="#be185d">aliases(alias_norm)</text>
+
+  <!-- Kind enum hint -->
+  <rect x="40" y="430" width="300" height="40" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="55" y="450" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">kind values:</text>
+  <text x="130" y="450" font-family="monospace" font-size="9" fill="#475569">country | adm1 | adm2 | locality | poi</text>
+  <text x="55" y="463" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">source:</text>
+  <text x="105" y="463" font-family="monospace" font-size="9" fill="#475569">osm_country | osm_admin | geonames | wikidata</text>
+</svg>

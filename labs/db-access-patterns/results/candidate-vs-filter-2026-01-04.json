@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-01-04T04:33:22.138Z",
+  "sampleSize": 2000,
+  "matcherBuildMs": 312.5603000000001,
+  "phases": {
+    "url_parsing": {
+      "avgMs": 0.004848599999974794,
+      "percentOfTotal": 0.03871153966378367
+    },
+    "segment_analysis": {
+      "avgMs": 0.1134088999999824,
+      "percentOfTotal": 0.90546407841402
+    },
+    "build_chains": {
+      "avgMs": 12.404650900000014,
+      "percentOfTotal": 99.03954447329883
+    },
+    "choose_best": {
+      "avgMs": 0.002039049999982126,
+      "percentOfTotal": 0.016279908623346225
+    }
+  },
+  "bottleneck": "build_chains",
+  "totals": {
+    "totalMeasuredMs": 25049.894899999912,
+    "avgTotalMsPerUrl": 12.524947449999956,
+    "p50TotalMsPerUrl": 0.01040000000011787,
+    "p95TotalMsPerUrl": 9.117499999999836,
+    "avgSegmentsPerUrl": 2.1595,
+    "avgCandidatesPerUrl": 918.0895,
+    "avgChainsPerUrl": 33.279,
+    "urlsWithBestChain": 1439
+  }
+}

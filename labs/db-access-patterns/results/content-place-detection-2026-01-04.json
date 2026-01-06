@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-01-04T04:04:32.703Z",
+  "sampleSize": 200,
+  "urlsWithContent": 1449,
+  "benchmarks": {
+    "content_loading": {
+      "sampleSize": 200,
+      "iterations": 5,
+      "totalMs": 4,
+      "avgBatchMs": "0.75",
+      "avgPerRowMs": "0.0038",
+      "rowsPerSec": 265266
+    },
+    "url_only": {
+      "sampleSize": 200,
+      "totalMs": 770,
+      "avgMs": "3.8525",
+      "opsPerSec": 260,
+      "urlsWithPlaces": 191,
+      "totalPlaces": 191,
+      "placesPerUrl": "0.95"
+    },
+    "title_only": {
+      "sampleSize": 200,
+      "totalMs": 7,
+      "avgMs": "0.0333",
+      "opsPerSec": 30015,
+      "articlesWithPlaces": 158,
+      "totalPlaces": 197,
+      "placesPerArticle": "0.98"
+    },
+    "body_text": {
+      "sampleSize": 200,
+      "totalMs": 135,
+      "avgMs": "0.67",
+      "opsPerSec": 1482,
+      "articlesWithPlaces": 200,
+      "totalPlaces": 29989,
+      "totalChars": 1676882,
+      "avgCharsPerArticle": 8384,
+      "charsPerSec": 12425812,
+      "placesPerArticle": "149.94",
+      "note": "Using synthetic body text (real body_text is NULL in DB)"
+    },
+    "full_pipeline": {
+      "sampleSize": 200,
+      "totalMs": 799,
+      "avgMs": "4.00",
+      "opsPerSec": 250,
+      "articlesWithPlaces": 200,
+      "totalRawPlaces": 30377,
+      "totalDedupedPlaces": 30377,
+      "dedupeRatio": "100.0%",
+      "placesPerArticle": "151.88"
+    }
+  },
+  "summary": {
+    "urlOnlyOps": 260,
+    "fullPipelineOps": 250,
+    "bodyTextCharsPerSec": 12425812,
+    "avgBodyChars": 8384,
+    "dedupeRatio": "100.0%",
+    "timeFor2000UrlOnly": 7692.307692307692,
+    "timeFor2000Full": 8000
+  }
+}

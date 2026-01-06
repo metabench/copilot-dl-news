@@ -1,0 +1,347 @@
+{
+  "$schema": "./news-sources.schema.json",
+  "version": "1.0.0",
+  "name": "news-sources-config",
+  "description": "Configuration for news sources the crawler can process",
+  "updated": "2026-01-03",
+  
+  "sources": {
+    "theguardian.com": {
+      "name": "The Guardian",
+      "country": "UK",
+      "language": "en",
+      "enabled": true,
+      "tier": 1,
+      "urlPatterns": {
+        "article": {
+          "regex": "\\/(\\d{4})\\/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\\/(\\d{1,2})\\/[a-z0-9._-]+",
+          "examples": ["/world/2024/jan/15/breaking-news-story"]
+        },
+        "hub": {
+          "regex": "^\\/[a-z-]+$|^\\/[a-z-]+\\/[a-z-]+$",
+          "examples": ["/world", "/sport/football"]
+        },
+        "live": {
+          "regex": "\\/live\\/\\d{4}\\/",
+          "examples": ["/world/live/2024/jan/15/live-updates"]
+        }
+      },
+      "selectors": {
+        "articleBody": "article[data-gu-name='body'], .article-body-viewer-selector",
+        "headline": "h1",
+        "byline": "[data-gu-name='meta'] address, .dcr-1pxlji8",
+        "timestamp": "time[datetime]",
+        "author": "[rel='author'], .dcr-1cq5k2s"
+      },
+      "notes": "Major UK quality newspaper, good structured data"
+    },
+    
+    "bbc.com": {
+      "name": "BBC News",
+      "country": "UK",
+      "language": "en",
+      "enabled": true,
+      "tier": 1,
+      "urlPatterns": {
+        "article": {
+          "regex": "\\/news\\/articles\\/[a-z0-9]+|\\/news\\/[a-z-]+-\\d{8}",
+          "examples": ["/news/articles/cjw40n8eg29o", "/news/world-africa-67890123"]
+        },
+        "hub": {
+          "regex": "^\\/news$|^\\/news\\/[a-z-]+$",
+          "examples": ["/news", "/news/world", "/news/technology"]
+        }
+      },
+      "selectors": {
+        "articleBody": "article[role='main'], .ssrcss-11r1m41-RichTextComponentWrapper",
+        "headline": "h1",
+        "byline": "[data-testid='byline']",
+        "timestamp": "time[datetime]"
+      },
+      "notes": "UK public broadcaster, international focus"
+    },
+    
+    "nytimes.com": {
+      "name": "The New York Times",
+      "country": "US",
+      "language": "en",
+      "enabled": true,
+      "tier": 1,
+      "urlPatterns": {
+        "article": {
+          "regex": "\\/(\\d{4})\\/(\\d{2})\\/(\\d{2})\\/[a-z]+\\/[a-z0-9-]+\\.html",
+          "examples": ["/2024/01/15/world/europe/ukraine-russia.html"]
+        },
+        "hub": {
+          "regex": "^\\/section\\/[a-z-]+$",
+          "examples": ["/section/world", "/section/politics"]
+        }
+      },
+      "selectors": {
+        "articleBody": "section[name='articleBody'], article[data-testid='article-body']",
+        "headline": "h1[data-testid='headline']",
+        "byline": "[data-testid='byline']",
+        "timestamp": "time[datetime]"
+      },
+      "notes": "Major US newspaper of record, may have paywall"
+    },
+    
+    "washingtonpost.com": {
+      "name": "The Washington Post",
+      "country": "US",
+      "language": "en",
+      "enabled": true,
+      "tier": 1,
+      "urlPatterns": {
+        "article": {
+          "regex": "\\/[a-z-]+\\/(\\d{4})\\/(\\d{2})\\/(\\d{2})\\/[a-z0-9-]+\\/",
+          "examples": ["/politics/2024/01/15/biden-speech-analysis/"]
+        },
+        "hub": {
+          "regex": "^\\/[a-z-]+\\/?$",
+          "examples": ["/politics/", "/world/"]
+        }
+      },
+      "selectors": {
+        "articleBody": ".article-body, [data-qa='article-body']",
+        "headline": "h1[data-qa='headline']",
+        "byline": ".author-name, [data-qa='author-name']",
+        "timestamp": "time[datetime]"
+      },
+      "notes": "Major US newspaper, strong political coverage"
+    },
+    
+    "reuters.com": {
+      "name": "Reuters",
+      "country": "UK",
+      "language": "en",
+      "enabled": true,
+      "tier": 1,
+      "urlPatterns": {
+        "article": {
+          "regex": "\\/[a-z-]+\\/[a-z0-9-]+-\\d{4}-\\d{2}-\\d{2}\\/",
+          "examples": ["/world/uk/boris-johnson-resigns-2024-01-15/"]
+        },
+        "hub": {
+          "regex": "^\\/[a-z-]+\\/?$|^\\/[a-z-]+\\/[a-z-]+\\/?$",
+          "examples": ["/world/", "/business/finance/"]
+        }
+      },
+      "selectors": {
+        "articleBody": "article.article-body, [data-testid='article-body']",
+        "headline": "h1[data-testid='Heading']",
+        "byline": "[data-testid='Byline']",
+        "timestamp": "time[datetime]"
+      },
+      "notes": "Global news wire, factual reporting"
+    },
+    
+    "apnews.com": {
+      "name": "Associated Press",
+      "country": "US",
+      "language": "en",
+      "enabled": true,
+      "tier": 1,
+      "urlPatterns": {
+        "article": {
+          "regex": "\\/article\\/[a-z0-9-]+",
+          "examples": ["/article/ukraine-russia-war-latest-updates-abc123"]
+        },
+        "hub": {
+          "regex": "^\\/hub\\/[a-z-]+$|^\\/[a-z-]+$",
+          "examples": ["/hub/russia-ukraine", "/politics"]
+        }
+      },
+      "selectors": {
+        "articleBody": ".Article, article.pageContent",
+        "headline": "h1.PagePromo-title",
+        "byline": ".PagePromo-byline",
+        "timestamp": "time[datetime]"
+      },
+      "notes": "Major US news wire, factual reporting"
+    },
+    
+    "cnn.com": {
+      "name": "CNN",
+      "country": "US",
+      "language": "en",
+      "enabled": true,
+      "tier": 2,
+      "urlPatterns": {
+        "article": {
+          "regex": "\\/(\\d{4})\\/(\\d{2})\\/(\\d{2})\\/[a-z]+\\/[a-z0-9-]+\\/index\\.html",
+          "examples": ["/2024/01/15/politics/biden-speech/index.html"]
+        },
+        "hub": {
+          "regex": "^\\/[a-z]+$",
+          "examples": ["/politics", "/world", "/business"]
+        }
+      },
+      "selectors": {
+        "articleBody": "article.article, .article__content",
+        "headline": "h1.headline__text",
+        "byline": ".byline__name",
+        "timestamp": "time[datetime]"
+      },
+      "notes": "Major US cable news network"
+    },
+    
+    "abc.net.au": {
+      "name": "ABC News Australia",
+      "country": "AU",
+      "language": "en",
+      "enabled": true,
+      "tier": 1,
+      "urlPatterns": {
+        "article": {
+          "regex": "\\/news\\/(\\d{4}-\\d{2}-\\d{2})\\/[a-z0-9-]+\\/\\d+",
+          "examples": ["/news/2024-01-15/australia-bushfires-latest/12345678"]
+        },
+        "hub": {
+          "regex": "^\\/news$|^\\/news\\/[a-z-]+$",
+          "examples": ["/news", "/news/world"]
+        }
+      },
+      "selectors": {
+        "articleBody": "article[data-component='ArticleContent']",
+        "headline": "h1[data-component='Headline']",
+        "byline": "[data-component='Byline']",
+        "timestamp": "time[datetime]"
+      },
+      "notes": "Australian public broadcaster"
+    },
+    
+    "theatlantic.com": {
+      "name": "The Atlantic",
+      "country": "US",
+      "language": "en",
+      "enabled": true,
+      "tier": 2,
+      "urlPatterns": {
+        "article": {
+          "regex": "\\/[a-z-]+\\/archive\\/(\\d{4})\\/(\\d{2})\\/[a-z0-9-]+\\/\\d+\\/",
+          "examples": ["/politics/archive/2024/01/biden-analysis/678901/"]
+        },
+        "hub": {
+          "regex": "^\\/[a-z-]+\\/?$",
+          "examples": ["/politics/", "/ideas/", "/culture/"]
+        }
+      },
+      "selectors": {
+        "articleBody": ".article-body, article[itemprop='articleBody']",
+        "headline": "h1.ArticleTitle",
+        "byline": ".ArticleByline",
+        "timestamp": "time[datetime]"
+      },
+      "notes": "Long-form journalism, may have paywall"
+    },
+    
+    "aljazeera.com": {
+      "name": "Al Jazeera English",
+      "country": "QA",
+      "language": "en",
+      "enabled": true,
+      "tier": 1,
+      "urlPatterns": {
+        "article": {
+          "regex": "\\/news\\/(\\d{4})\\/(\\d{1,2})\\/(\\d{1,2})\\/[a-z0-9-]+",
+          "examples": ["/news/2024/1/15/middle-east-latest"]
+        },
+        "hub": {
+          "regex": "^\\/news$|^\\/news\\/[a-z-]+$",
+          "examples": ["/news", "/news/middleeast"]
+        }
+      },
+      "selectors": {
+        "articleBody": ".wysiwyg, article[data-testid='article-body']",
+        "headline": "h1.article-header",
+        "byline": ".article-author",
+        "timestamp": "time[datetime]"
+      },
+      "notes": "International news from Middle East perspective"
+    },
+    
+    "independent.co.uk": {
+      "name": "The Independent",
+      "country": "UK",
+      "language": "en",
+      "enabled": true,
+      "tier": 2,
+      "urlPatterns": {
+        "article": {
+          "regex": "\\/[a-z-]+\\/[a-z-]+\\/[a-z0-9-]+-[a-z0-9]+\\.html",
+          "examples": ["/news/uk/politics-latest-updates-b2345678.html"]
+        },
+        "hub": {
+          "regex": "^\\/[a-z-]+$|^\\/[a-z-]+\\/[a-z-]+$",
+          "examples": ["/news", "/news/uk"]
+        }
+      },
+      "selectors": {
+        "articleBody": "#main-content article",
+        "headline": "h1[id='articleHeader']",
+        "byline": ".author-name",
+        "timestamp": "time[datetime]"
+      },
+      "notes": "UK digital-first newspaper"
+    },
+    
+    "politico.com": {
+      "name": "Politico",
+      "country": "US",
+      "language": "en",
+      "enabled": true,
+      "tier": 2,
+      "urlPatterns": {
+        "article": {
+          "regex": "\\/news\\/(\\d{4})\\/(\\d{2})\\/(\\d{2})\\/[a-z0-9-]+",
+          "examples": ["/news/2024/01/15/congress-budget-analysis-123456"]
+        },
+        "hub": {
+          "regex": "^\\/news$|^\\/[a-z-]+$",
+          "examples": ["/news", "/congress", "/white-house"]
+        }
+      },
+      "selectors": {
+        "articleBody": ".story-text, article.content",
+        "headline": "h1.headline",
+        "byline": ".story-meta__authors",
+        "timestamp": "time[datetime]"
+      },
+      "notes": "US political news focus"
+    }
+  },
+  
+  "tiers": {
+    "1": {
+      "description": "Primary sources - high quality, reliable, well-structured",
+      "priority": 1,
+      "refreshInterval": "1h"
+    },
+    "2": {
+      "description": "Secondary sources - good quality, may have ads/paywalls",
+      "priority": 2,
+      "refreshInterval": "4h"
+    },
+    "3": {
+      "description": "Tertiary sources - regional/specialized",
+      "priority": 3,
+      "refreshInterval": "12h"
+    }
+  },
+  
+  "globalPatterns": {
+    "skipPatterns": [
+      "/search", "/login", "/register", "/subscribe", "/newsletter",
+      "/contact", "/about", "/privacy", "/terms", "/cookies",
+      "/rss", "/feed", ".xml", ".json", "/api/", "/admin/",
+      "/profile", "/account", "/settings", "/user/",
+      "/tag/", "/tags/", "/category/", "/categories/",
+      "/page/", "/sitemap", ".pdf", ".jpg", ".png", ".css", ".js"
+    ],
+    "articleIndicators": [
+      "/article", "/story", "/news", "/post", "/opinion",
+      "/commentary", "/analysis", "/feature", "/report"
+    ]
+  }
+}

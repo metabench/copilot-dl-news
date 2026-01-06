@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Crawler</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Starting crawler...</div>
+  </div>
+  
+  <div class="app">
+    <!-- HOME SCREEN -->
+    <div id="homeScreen" class="screen active">
+      <div class="header">
+        <span class="header-title">🕷️ Crawler</span>
+        <div style="display:flex;gap:8px;">
+          <button class="header-action" id="btnUrls" title="URLs (Ctrl+U)" tabindex="0">📋</button>
+          <button class="header-action" id="btnSettings" title="Settings (Ctrl+,)" tabindex="0">⚙️</button>
+        </div>
+      </div>
+      
+      <div class="progress-ring-container">
+        <svg class="progress-ring" width="160" height="160">
+          <circle class="progress-ring-bg" cx="80" cy="80" r="70"/>
+          <circle class="progress-ring-fill" id="progressRing" cx="80" cy="80" r="70"
+                  stroke-dasharray="439.8" stroke-dashoffset="439.8"/>
+        </svg>
+        <div class="progress-center">
+          <div class="progress-value" id="progressValue">0</div>
+          <div class="progress-label">of <span id="progressMax">1000</span> pages</div>
+        </div>
+      </div>
+      
+      <!-- Horizontal progress bar -->
+      <div class="progress-bar-container">
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progressBar"></div>
+        </div>
+        <div class="progress-bar-labels">
+          <span id="progressPercent">0%</span>
+          <span id="progressEta">--:--</span>
+        </div>
+      </div>
+      
+      <div class="stats-row">
+        <div class="stat-pill"><div class="stat-icon">📥</div><div class="stat-value" id="statQueue">0</div><div class="stat-label">Queue</div></div>
+        <div class="stat-pill"><div class="stat-icon">⚡</div><div class="stat-value" id="statRate">0/s</div><div class="stat-label">Rate</div></div>
+        <div class="stat-pill"><div class="stat-icon">❌</div><div class="stat-value" id="statErrors">0</div><div class="stat-label">Errors</div></div>
+      </div>
+      
+      <div class="card" id="targetCard">
+        <div class="card-row">
+          <div><div class="card-label">Target</div><div class="card-value" id="targetUrl">theguardian.com</div></div>
+          <span class="card-arrow">→</span>
+        </div>
+      </div>
+      
+      <button class="btn-primary" id="btnAction" tabindex="0">Start Crawl</button>
+    </div>
+    
+    <!-- URL LIST SCREEN -->
+    <div id="urlsScreen" class="screen">
+      <div class="header">
+        <button class="header-back" id="urlsBack">← Back</button>
+        <span class="header-title">Downloaded</span>
+        <span style="font-size:11px;color:var(--text-dim);" id="urlCount">0 items</span>
+      </div>
+      <div class="search-bar" id="searchBar">🔍 Filter URLs...</div>
+      <div class="url-list" id="urlList"></div>
+    </div>
+    
+    <!-- DETAIL SCREEN -->
+    <div id="detailScreen" class="screen">
+      <div class="header">
+        <button class="header-back" id="detailBack">← Back</button>
+        <span class="header-title">Details</span>
+        <span></span>
+      </div>
+      <div id="detailContent"></div>
+    </div>
+    
+    <!-- SETTINGS SCREEN -->
+    <div id="settingsScreen" class="screen">
+      <div class="header">
+        <button class="header-back" id="settingsBack">← Back</button>
+        <span class="header-title">Settings</span>
+        <span></span>
+      </div>
+      
+      <div class="setting-group">
+        <div class="setting-group-title">Crawl Target</div>
+        <div class="setting-card">
+          <div class="setting-row">
+            <span class="setting-label">Start URL</span>
+            <input type="text" class="setting-input" id="inputUrl" value="https://www.theguardian.com" style="width:180px;">
+          </div>
+          <div class="setting-row">
+            <span class="setting-label">Operation</span>
+            <select class="setting-input" id="inputOperation" style="width:180px;">
+              <option value="basicArticleCrawl">Basic Article Crawl</option>
+              <option value="siteExplorer">Site Explorer (Structure)</option>
+              <option value="discovery">Discovery</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <div class="setting-group">
+        <div class="setting-group-title">Limits</div>
+        <div class="setting-card">
+          <div class="setting-row"><span class="setting-label">Max Pages</span><input type="number" class="setting-input" id="inputMaxPages" value="1000"></div>
+          <div class="setting-row"><span class="setting-label">Max Depth</span><input type="number" class="setting-input" id="inputMaxDepth" value="3"></div>
+          <div class="setting-row"><span class="setting-label">Timeout (s)</span><input type="number" class="setting-input" id="inputTimeout" value="60"></div>
+        </div>
+      </div>
+      
+      <div class="setting-group">
+        <div class="setting-group-title">Presets</div>
+        <div class="preset-row">
+          <button class="preset-chip" data-preset="quick" tabindex="0">Quick (10p)</button>
+          <button class="preset-chip active" data-preset="standard" tabindex="0">Standard</button>
+          <button class="preset-chip" data-preset="deep" tabindex="0">Deep (500p)</button>
+          <button class="preset-chip" data-preset="explorer" tabindex="0">Explorer</button>
+        </div>
+      </div>
+      
+      <button class="btn-primary" id="btnSaveSettings" tabindex="0">Save Settings</button>
+    </div>
+    
+    <!-- Bottom Tab Bar -->
+    <nav class="tab-bar" id="tabBar">
+      <button class="tab-item active" data-screen="home" tabindex="0">
+        <span class="tab-icon">🏠</span>
+        <span class="tab-label">Home</span>
+      </button>
+      <button class="tab-item" data-screen="urls" tabindex="0">
+        <span class="tab-icon">📋</span>
+        <span class="tab-label">URLs</span>
+      </button>
+      <button class="tab-item" data-screen="settings" tabindex="0">
+        <span class="tab-icon">⚙️</span>
+        <span class="tab-label">Settings</span>
+      </button>
+    </nav>
+    
+    <div class="toast" id="toast"></div>
+  </div>
+  
+  <script src="renderer.js"></script>
+</body>
+</html>

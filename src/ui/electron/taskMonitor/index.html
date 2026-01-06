@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Monitor</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <div class="header">
+      <span class="header-title">📊 Task Monitor</span>
+      <div class="header-stats">
+        <span id="statsRunning" class="stat-badge running">0 running</span>
+        <span id="statsPaused" class="stat-badge paused">0 paused</span>
+      </div>
+    </div>
+    
+    <!-- New Task Panel -->
+    <div class="new-task-panel">
+      <div class="panel-header">
+        <span>➕ New Task</span>
+      </div>
+      <div class="task-types" id="taskTypes">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+    
+    <!-- Active Tasks -->
+    <div class="section">
+      <div class="section-header">
+        <span>🔄 Active Tasks</span>
+        <span class="section-count" id="activeCount">0</span>
+      </div>
+      <div class="task-list" id="activeTasks">
+        <div class="empty-state" id="noActiveTasks">No active tasks</div>
+      </div>
+    </div>
+    
+    <!-- Completed Tasks -->
+    <div class="section">
+      <div class="section-header">
+        <span>✅ Completed</span>
+        <span class="section-count" id="completedCount">0</span>
+      </div>
+      <div class="task-list completed-list" id="completedTasks">
+        <div class="empty-state" id="noCompletedTasks">No completed tasks</div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="renderer.js"></script>
+</body>
+</html>

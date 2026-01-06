@@ -1,0 +1,7 @@
+{
+  "url": "https://www.theguardian.com",
+  "maxPages": 1000,
+  "maxDepth": 3,
+  "timeout": 60000,
+  "operation": "basicArticleCrawl"
+}

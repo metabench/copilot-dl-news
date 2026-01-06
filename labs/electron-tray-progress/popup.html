@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progress</title>
+  <style>
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --bg-card: #0f3460;
+      --text-primary: #e8e8e8;
+      --text-secondary: #a0a0a0;
+      --accent-primary: #00d4ff;
+      --accent-success: #00ff88;
+      --accent-warning: #ffaa00;
+      --accent-error: #ff4444;
+      --border-radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 12px;
+      overflow: hidden;
+      user-select: none;
+      -webkit-app-region: drag;
+    }
+
+    .popup {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .status-badge {
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-idle { background: var(--bg-secondary); color: var(--text-secondary); }
+    .status-running { background: var(--accent-primary); color: var(--bg-primary); }
+    .status-paused { background: var(--accent-warning); color: var(--bg-primary); }
+    .status-complete { background: var(--accent-success); color: var(--bg-primary); }
+    .status-error { background: var(--accent-error); color: white; }
+
+    /* Progress bar */
+    .progress-section {
+      background: var(--bg-secondary);
+      border-radius: var(--border-radius);
+      padding: 10px;
+    }
+
+    .progress-bar-container {
+      position: relative;
+      height: 24px;
+      background: var(--bg-card);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-success));
+      border-radius: 6px;
+      transition: width 0.3s ease-out;
+      min-width: 0;
+    }
+
+    .progress-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .stat-item {
+      background: var(--bg-secondary);
+      border-radius: var(--border-radius);
+      padding: 8px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent-primary);
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* Current item */
+    .current-item {
+      background: var(--bg-secondary);
+      border-radius: var(--border-radius);
+      padding: 8px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .current-item-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    /* Warning banner */
+    .warning-banner {
+      display: none;
+      background: var(--accent-warning);
+      color: var(--bg-primary);
+      padding: 6px 10px;
+      border-radius: var(--border-radius);
+      font-size: 11px;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .warning-banner.visible {
+      display: flex;
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+      -webkit-app-region: no-drag;
+    }
+
+    button {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: var(--border-radius);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      background: var(--accent-primary);
+      color: var(--bg-primary);
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .btn-danger {
+      background: var(--accent-error);
+      color: white;
+    }
+
+    /* Close button */
+    .close-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 20px;
+      height: 20px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      -webkit-app-region: no-drag;
+    }
+
+    .close-btn:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="popup">
+    <button class="close-btn" id="btn-close" title="Close">×</button>
+
+    <div class="header">
+      <span class="title" id="title">Background Process</span>
+      <span class="status-badge status-idle" id="status">Idle</span>
+    </div>
+
+    <div class="progress-section">
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
+        <span class="progress-text" id="progress-text">0 / 0</span>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-value" id="stat-rate">0.0</div>
+        <div class="stat-label">Items/sec</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="stat-eta">--</div>
+        <div class="stat-label">ETA</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="stat-processed">0</div>
+        <div class="stat-label">Processed</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="stat-elapsed">0:00</div>
+        <div class="stat-label">Elapsed</div>
+      </div>
+    </div>
+
+    <div class="current-item" id="current-item-section">
+      <div class="current-item-label">Current</div>
+      <div id="current-item">Waiting...</div>
+    </div>
+
+    <div class="warning-banner" id="warning">
+      <span>⚠️</span>
+      <span id="warning-text"></span>
+    </div>
+
+    <div class="controls">
+      <button class="btn-secondary" id="btn-pause">Pause</button>
+      <button class="btn-danger" id="btn-stop">Stop</button>
+      <button class="btn-primary" id="btn-details">Details</button>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    // DOM elements
+    const els = {
+      title: document.getElementById('title'),
+      status: document.getElementById('status'),
+      progressFill: document.getElementById('progress-fill'),
+      progressText: document.getElementById('progress-text'),
+      statRate: document.getElementById('stat-rate'),
+      statEta: document.getElementById('stat-eta'),
+      statProcessed: document.getElementById('stat-processed'),
+      statElapsed: document.getElementById('stat-elapsed'),
+      currentItem: document.getElementById('current-item'),
+      warning: document.getElementById('warning'),
+      warningText: document.getElementById('warning-text'),
+      btnPause: document.getElementById('btn-pause'),
+      btnStop: document.getElementById('btn-stop'),
+      btnDetails: document.getElementById('btn-details'),
+      btnClose: document.getElementById('btn-close')
+    };
+
+    // Format duration
+    function formatDuration(ms) {
+      if (!ms || ms < 0) return '--';
+      const totalSeconds = Math.round(ms / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      if (hours > 0) {
+        return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      }
+      return `${minutes}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    // Update UI from state
+    function updateUI(state) {
+      // Title
+      if (state.title) {
+        els.title.textContent = state.title;
+      }
+
+      // Status badge
+      const statusMap = {
+        idle: { text: 'Idle', class: 'status-idle' },
+        running: { text: 'Running', class: 'status-running' },
+        paused: { text: 'Paused', class: 'status-paused' },
+        complete: { text: 'Complete', class: 'status-complete' },
+        error: { text: 'Error', class: 'status-error' }
+      };
+      const statusInfo = statusMap[state.phase] || statusMap.idle;
+      els.status.textContent = statusInfo.text;
+      els.status.className = `status-badge ${statusInfo.class}`;
+
+      // Progress bar
+      const pct = state.total > 0 ? Math.round((state.processed / state.total) * 100) : 0;
+      els.progressFill.style.width = `${pct}%`;
+      els.progressText.textContent = `${state.processed?.toLocaleString() || 0} / ${state.total?.toLocaleString() || 0}`;
+
+      // Stats
+      els.statRate.textContent = state.recordsPerSecond?.toFixed(1) || '0.0';
+      els.statEta.textContent = formatDuration(state.etaMs);
+      els.statProcessed.textContent = state.processed?.toLocaleString() || '0';
+      els.statElapsed.textContent = formatDuration(state.elapsedMs);
+
+      // Current item
+      if (state.currentItem) {
+        els.currentItem.textContent = state.currentItem;
+      }
+
+      // Warning
+      if (state.warnings && state.warnings.length > 0) {
+        els.warning.classList.add('visible');
+        els.warningText.textContent = state.warnings[0].message;
+      } else {
+        els.warning.classList.remove('visible');
+      }
+
+      // Button states
+      const isRunning = state.phase === 'running';
+      const isPaused = state.phase === 'paused';
+      
+      els.btnPause.textContent = isPaused ? 'Resume' : 'Pause';
+      els.btnPause.disabled = !isRunning && !isPaused;
+      els.btnStop.disabled = !isRunning && !isPaused;
+    }
+
+    // IPC: Receive progress updates
+    ipcRenderer.on('progress-update', (event, state) => {
+      updateUI(state);
+    });
+
+    // Button handlers
+    els.btnPause.addEventListener('click', () => {
+      const isPaused = els.status.classList.contains('status-paused');
+      ipcRenderer.send('tray-command', isPaused ? 'resume' : 'pause');
+    });
+
+    els.btnStop.addEventListener('click', () => {
+      ipcRenderer.send('tray-command', 'stop');
+    });
+
+    els.btnDetails.addEventListener('click', () => {
+      ipcRenderer.send('tray-command', 'showDetails');
+    });
+
+    els.btnClose.addEventListener('click', () => {
+      ipcRenderer.send('tray-command', 'close');
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        ipcRenderer.send('tray-command', 'close');
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        const isPaused = els.status.classList.contains('status-paused');
+        ipcRenderer.send('tray-command', isPaused ? 'resume' : 'pause');
+      }
+    });
+  </script>
+</body>
+</html>

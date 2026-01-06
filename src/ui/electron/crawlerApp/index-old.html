@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crawler</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e8e8e8;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      user-select: none;
+      overflow: hidden;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    h1 {
+      font-size: 20px;
+      font-weight: 500;
+      color: #4ade80;
+    }
+    
+    .icon-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.1);
+      color: #ccc;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .icon-btn:hover {
+      background: rgba(255,255,255,0.2);
+      color: #4ade80;
+    }
+    
+    .icon-btn.active {
+      background: #4ade80;
+      color: #1a1a2e;
+    }
+    
+    .url-display {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 20px;
+      padding: 10px 14px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .progress-container {
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      height: 32px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #22c55e 0%, #4ade80 100%);
+      width: 0%;
+      transition: width 0.3s ease-out;
+      border-radius: 8px;
+    }
+    
+    .progress-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+    
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .stat {
+      background: rgba(0,0,0,0.2);
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: #4ade80;
+    }
+    
+    .stat-label {
+      font-size: 11px;
+      color: #888;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    
+    .stat.errors .stat-value {
+      color: #f87171;
+    }
+    
+    .buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: auto;
+    }
+    
+    button {
+      flex: 1;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      transform: translateY(-1px);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    .btn-start {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      color: white;
+    }
+    
+    .btn-start:hover {
+      background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    }
+    
+    .btn-start:disabled {
+      background: #333;
+      color: #666;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn-stop {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+    }
+    
+    .btn-stop:disabled {
+      background: #333;
+      color: #666;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn-settings {
+      background: rgba(255,255,255,0.1);
+      color: #ccc;
+      flex: 0 0 auto;
+      width: 48px;
+    }
+    
+    .btn-settings:hover {
+      background: rgba(255,255,255,0.15);
+    }
+    
+    /* Settings Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    
+    .modal-overlay.visible {
+      display: flex;
+    }
+    
+    .modal {
+      background: #1e1e2e;
+      border-radius: 12px;
+      padding: 24px;
+      width: 90%;
+      max-width: 400px;
+    }
+    
+    .modal h2 {
+      font-size: 16px;
+      margin-bottom: 20px;
+      color: #4ade80;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      color: #e8e8e8;
+      font-size: 14px;
+    }
+    
+    .form-group input:focus {
+      outline: none;
+      border-color: #4ade80;
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    
+    .modal-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    
+    .btn-save {
+      background: #4ade80;
+      color: #1a1a2e;
+    }
+    
+    .btn-cancel {
+      background: rgba(255,255,255,0.1);
+      color: #ccc;
+    }
+    
+    /* URL List Panel */
+    .panel-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      z-index: 100;
+    }
+    
+    .panel-overlay.visible {
+      display: block;
+    }
+    
+    .panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 100%;
+      height: 100%;
+      background: #1e1e2e;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .panel-header h2 {
+      font-size: 16px;
+      color: #4ade80;
+    }
+    
+    .panel-close {
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.1);
+      color: #ccc;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    
+    .panel-close:hover {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .url-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    
+    .url-item {
+      padding: 10px 12px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .url-item:hover {
+      background: rgba(74, 222, 128, 0.15);
+    }
+    
+    .url-item-index {
+      font-size: 11px;
+      color: #4ade80;
+      font-weight: 600;
+    }
+    
+    .url-item-url {
+      font-size: 12px;
+      color: #ccc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    
+    .url-item-time {
+      font-size: 10px;
+      color: #666;
+      margin-top: 2px;
+    }
+    
+    /* Analysis Panel */
+    .analysis-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+    
+    .analysis-section {
+      margin-bottom: 20px;
+    }
+    
+    .analysis-section h3 {
+      font-size: 12px;
+      color: #4ade80;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    
+    .analysis-url {
+      font-size: 13px;
+      color: #ccc;
+      word-break: break-all;
+      background: rgba(0,0,0,0.2);
+      padding: 10px;
+      border-radius: 6px;
+    }
+    
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    
+    .analysis-item {
+      background: rgba(0,0,0,0.2);
+      padding: 10px;
+      border-radius: 6px;
+    }
+    
+    .analysis-item-label {
+      font-size: 10px;
+      color: #666;
+      text-transform: uppercase;
+    }
+    
+    .analysis-item-value {
+      font-size: 14px;
+      color: #e8e8e8;
+      margin-top: 2px;
+    }
+    
+    .analysis-item-value.success {
+      color: #4ade80;
+    }
+    
+    .analysis-item-value.error {
+      color: #f87171;
+    }
+    
+    .analysis-back {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 6px;
+      color: #ccc;
+      font-size: 12px;
+      cursor: pointer;
+      margin-bottom: 16px;
+    }
+    
+    .analysis-back:hover {
+      background: rgba(255,255,255,0.15);
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #666;
+    }
+    
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    
+    /* Context Menu */
+    .context-menu {
+      position: fixed;
+      background: #2a2a3e;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 6px 0;
+      min-width: 160px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      z-index: 200;
+      display: none;
+    }
+    
+    .context-menu.visible {
+      display: block;
+    }
+    
+    .context-menu-item {
+      padding: 8px 16px;
+      font-size: 13px;
+      color: #ccc;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .context-menu-item:hover {
+      background: rgba(74, 222, 128, 0.15);
+      color: #4ade80;
+    }
+    
+    .context-menu-item.danger:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+    
+    .context-menu-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.1);
+      margin: 6px 0;
+    }
+    
+    /* Dropdown Menu */
+    .dropdown-container {
+      position: relative;
+    }
+    
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 4px;
+      background: #2a2a3e;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 6px 0;
+      min-width: 180px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      z-index: 150;
+      display: none;
+    }
+    
+    .dropdown-menu.visible {
+      display: block;
+    }
+    
+    .dropdown-item {
+      padding: 10px 16px;
+      font-size: 13px;
+      color: #ccc;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .dropdown-item:hover {
+      background: rgba(74, 222, 128, 0.15);
+      color: #4ade80;
+    }
+    
+    .dropdown-item.danger:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+    
+    .dropdown-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.1);
+      margin: 6px 0;
+    }
+    
+    /* Database Stats Panel */
+    .db-stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 16px;
+    }
+    
+    .db-stat-card {
+      background: rgba(0,0,0,0.2);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+    
+    .db-stat-card.wide {
+      grid-column: span 2;
+    }
+    
+    .db-stat-value {
+      font-size: 28px;
+      font-weight: 600;
+      color: #4ade80;
+    }
+    
+    .db-stat-label {
+      font-size: 11px;
+      color: #888;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    
+    .db-stat-sub {
+      font-size: 11px;
+      color: #666;
+      margin-top: 2px;
+    }
+    
+    /* Toast notifications */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #2a2a3e;
+      color: #e8e8e8;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 300;
+      transition: transform 0.3s ease;
+    }
+    
+    .toast.visible {
+      transform: translateX(-50%) translateY(0);
+    }
+    
+    .toast.success {
+      border-left: 3px solid #4ade80;
+    }
+    
+    .toast.error {
+      border-left: 3px solid #f87171;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🕷️ Web Crawler</h1>
+    <div class="icon-buttons">
+      <button class="icon-btn" id="btnUrls" title="Downloaded URLs">📋</button>
+      <button class="icon-btn" id="btnDb" title="Database Stats">🗄️</button>
+      <div class="dropdown-container">
+        <button class="icon-btn" id="btnMore" title="More options">⋮</button>
+        <div class="dropdown-menu" id="moreMenu">
+          <div class="dropdown-item" id="menuExport">📁 Export URLs</div>
+          <div class="dropdown-item" id="menuOpenLogs">📄 Open Log File</div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item" id="menuClearSession">🔄 Clear Session</div>
+          <div class="dropdown-item danger" id="menuClearDb">🗑️ Clear DB Cache</div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item" id="menuAbout">ℹ️ About</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="url-display" id="urlDisplay">https://www.theguardian.com</div>
+  
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="progress-text" id="progressText">0 / 100</div>
+  </div>
+  
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value" id="downloaded">0</div>
+      <div class="stat-label">Downloaded</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="queued">0</div>
+      <div class="stat-label">Queued</div>
+    </div>
+    <div class="stat errors">
+      <div class="stat-value" id="errors">0</div>
+      <div class="stat-label">Errors</div>
+    </div>
+  </div>
+  
+  <div class="buttons">
+    <button class="btn-start" id="btnStart">Start Crawl</button>
+    <button class="btn-stop" id="btnStop" disabled>Stop</button>
+    <button class="btn-settings" id="btnSettings">⚙️</button>
+  </div>
+  
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <h2>⚙️ Settings</h2>
+      
+      <div class="form-group">
+        <label>Start URL</label>
+        <input type="text" id="inputUrl" value="https://www.theguardian.com">
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Max Pages</label>
+          <input type="number" id="inputMaxPages" value="100" min="1">
+        </div>
+        <div class="form-group">
+          <label>Concurrency</label>
+          <input type="number" id="inputConcurrency" value="2" min="1" max="10">
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Max Depth</label>
+          <input type="number" id="inputMaxDepth" value="3" min="1">
+        </div>
+        <div class="form-group">
+          <label>Timeout (ms)</label>
+          <input type="number" id="inputTimeout" value="60000" min="1000">
+        </div>
+      </div>
+      
+      <div class="modal-buttons">
+        <button class="btn-cancel" id="btnCancel">Cancel</button>
+        <button class="btn-save" id="btnSave">Save</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- URL List Panel -->
+  <div class="panel-overlay" id="urlsPanel">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>📋 Downloaded URLs</h2>
+        <button class="panel-close" id="urlsPanelClose">✕</button>
+      </div>
+      <div class="url-list" id="urlList">
+        <div class="empty-state">
+          <div class="empty-state-icon">📭</div>
+          <div>No URLs downloaded yet</div>
+          <div style="font-size: 12px; margin-top: 4px;">Start a crawl to see URLs here</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Analysis Panel -->
+  <div class="panel-overlay" id="analysisPanel">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>🔍 URL Analysis</h2>
+        <button class="panel-close" id="analysisPanelClose">✕</button>
+      </div>
+      <div class="analysis-content" id="analysisContent">
+        <button class="analysis-back" id="analysisBack">← Back to list</button>
+        <div class="analysis-section">
+          <h3>URL</h3>
+          <div class="analysis-url" id="analysisUrl">-</div>
+        </div>
+        <div class="analysis-section">
+          <h3>HTTP Response</h3>
+          <div class="analysis-grid" id="analysisHttp">
+            <div class="analysis-item">
+              <div class="analysis-item-label">Status</div>
+              <div class="analysis-item-value" id="httpStatus">-</div>
+            </div>
+            <div class="analysis-item">
+              <div class="analysis-item-label">Content Type</div>
+              <div class="analysis-item-value" id="httpContentType">-</div>
+            </div>
+            <div class="analysis-item">
+              <div class="analysis-item-label">Size</div>
+              <div class="analysis-item-value" id="httpSize">-</div>
+            </div>
+            <div class="analysis-item">
+              <div class="analysis-item-label">Fetched At</div>
+              <div class="analysis-item-value" id="httpFetched">-</div>
+            </div>
+            <div class="analysis-item">
+              <div class="analysis-item-label">TTFB</div>
+              <div class="analysis-item-value" id="httpTtfb">-</div>
+            </div>
+            <div class="analysis-item">
+              <div class="analysis-item-label">Total Time</div>
+              <div class="analysis-item-value" id="httpTotal">-</div>
+            </div>
+          </div>
+        </div>
+        <div class="analysis-section">
+          <h3>Database Record</h3>
+          <div class="analysis-grid">
+            <div class="analysis-item">
+              <div class="analysis-item-label">URL ID</div>
+              <div class="analysis-item-value" id="dbUrlId">-</div>
+            </div>
+            <div class="analysis-item">
+              <div class="analysis-item-label">Host</div>
+              <div class="analysis-item-value" id="dbHost">-</div>
+            </div>
+            <div class="analysis-item">
+              <div class="analysis-item-label">Created</div>
+              <div class="analysis-item-value" id="dbCreated">-</div>
+            </div>
+            <div class="analysis-item">
+              <div class="analysis-item-label">Last Seen</div>
+              <div class="analysis-item-value" id="dbLastSeen">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Database Stats Panel -->
+  <div class="panel-overlay" id="dbPanel">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>🗄️ Database Stats</h2>
+        <button class="panel-close" id="dbPanelClose">✕</button>
+      </div>
+      <div class="db-stats-grid">
+        <div class="db-stat-card">
+          <div class="db-stat-value" id="dbTotalUrls">-</div>
+          <div class="db-stat-label">Total URLs</div>
+        </div>
+        <div class="db-stat-card">
+          <div class="db-stat-value" id="dbTotalFetches">-</div>
+          <div class="db-stat-label">HTTP Responses</div>
+        </div>
+        <div class="db-stat-card">
+          <div class="db-stat-value" id="dbTodayFetches">-</div>
+          <div class="db-stat-label">Fetched Today</div>
+        </div>
+        <div class="db-stat-card">
+          <div class="db-stat-value" id="dbUniqueHosts">-</div>
+          <div class="db-stat-label">Unique Hosts</div>
+        </div>
+        <div class="db-stat-card wide">
+          <div class="db-stat-value" id="dbStorageSize">-</div>
+          <div class="db-stat-label">Content Storage</div>
+          <div class="db-stat-sub" id="dbStorageCount">- items</div>
+        </div>
+        <div class="db-stat-card wide">
+          <div class="db-stat-value" id="dbLastFetch">-</div>
+          <div class="db-stat-label">Last Fetch</div>
+          <div class="db-stat-sub" id="dbLastUrl">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div class="context-menu" id="urlContextMenu">
+    <div class="context-menu-item" id="ctxCopyUrl">📋 Copy URL</div>
+    <div class="context-menu-item" id="ctxOpenBrowser">🌐 Open in Browser</div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" id="ctxAnalyze">🔍 Analyze</div>
+    <div class="context-menu-item" id="ctxViewContent">📄 View Content</div>
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // DOM elements
+    const urlDisplay = document.getElementById('urlDisplay');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const downloadedEl = document.getElementById('downloaded');
+    const queuedEl = document.getElementById('queued');
+    const errorsEl = document.getElementById('errors');
+    const btnStart = document.getElementById('btnStart');
+    const btnStop = document.getElementById('btnStop');
+    const btnSettings = document.getElementById('btnSettings');
+    const settingsModal = document.getElementById('settingsModal');
+    const inputUrl = document.getElementById('inputUrl');
+    const inputMaxPages = document.getElementById('inputMaxPages');
+    const inputConcurrency = document.getElementById('inputConcurrency');
+    const inputMaxDepth = document.getElementById('inputMaxDepth');
+    const inputTimeout = document.getElementById('inputTimeout');
+    const btnSave = document.getElementById('btnSave');
+    const btnCancel = document.getElementById('btnCancel');
+    
+    // New panel elements
+    const btnUrls = document.getElementById('btnUrls');
+    const btnDb = document.getElementById('btnDb');
+    const btnMore = document.getElementById('btnMore');
+    const moreMenu = document.getElementById('moreMenu');
+    const urlsPanel = document.getElementById('urlsPanel');
+    const urlList = document.getElementById('urlList');
+    const urlsPanelClose = document.getElementById('urlsPanelClose');
+    const analysisPanel = document.getElementById('analysisPanel');
+    const analysisContent = document.getElementById('analysisContent');
+    const analysisPanelClose = document.getElementById('analysisPanelClose');
+    const analysisBack = document.getElementById('analysisBack');
+    const dbPanel = document.getElementById('dbPanel');
+    const dbPanelClose = document.getElementById('dbPanelClose');
+    const urlContextMenu = document.getElementById('urlContextMenu');
+    const toast = document.getElementById('toast');
+    
+    let config = {};
+    let state = {};
+    let currentUrls = [];
+    let contextMenuUrl = null;
+    
+    // Toast notifications
+    function showToast(message, type = 'success') {
+      toast.textContent = message;
+      toast.className = 'toast ' + type;
+      setTimeout(() => toast.classList.add('visible'), 10);
+      setTimeout(() => toast.classList.remove('visible'), 3000);
+    }
+    
+    // Hide context menu
+    function hideContextMenu() {
+      urlContextMenu.classList.remove('visible');
+      contextMenuUrl = null;
+    }
+    
+    // Hide dropdown menu
+    function hideDropdownMenu() {
+      moreMenu.classList.remove('visible');
+    }
+    
+    // Click anywhere to close menus
+    document.addEventListener('click', (e) => {
+      if (!urlContextMenu.contains(e.target)) {
+        hideContextMenu();
+      }
+      if (!moreMenu.contains(e.target) && e.target !== btnMore) {
+        hideDropdownMenu();
+      }
+    });
+    
+    // Update UI from state
+    function updateUI(data) {
+      if (data.config) {
+        config = data.config;
+        urlDisplay.textContent = config.url;
+        inputUrl.value = config.url;
+        inputMaxPages.value = config.maxPages;
+        inputConcurrency.value = config.concurrency;
+        inputMaxDepth.value = config.maxDepth;
+        inputTimeout.value = config.timeout;
+      }
+      
+      if (data.state) {
+        state = data.state;
+        
+        const downloaded = state.downloaded || 0;
+        const maxPages = config.maxPages || 1000;
+        const percent = Math.min(100, (downloaded / maxPages) * 100);
+        
+        progressBar.style.width = percent + '%';
+        progressText.textContent = `${downloaded} / ${maxPages}`;
+        
+        downloadedEl.textContent = downloaded;
+        queuedEl.textContent = state.queued || 0;
+        errorsEl.textContent = state.errors || 0;
+        
+        btnStart.disabled = state.running;
+        btnStop.disabled = !state.running;
+        
+        if (state.running) {
+          btnStart.textContent = 'Running...';
+        } else {
+          btnStart.textContent = 'Start Crawl';
+        }
+      }
+    }
+    
+    // Event handlers
+    btnStart.addEventListener('click', async () => {
+      await window.crawlerAPI.startCrawl();
+    });
+    
+    btnStop.addEventListener('click', async () => {
+      await window.crawlerAPI.stopCrawl();
+    });
+    
+    btnSettings.addEventListener('click', () => {
+      settingsModal.classList.add('visible');
+    });
+    
+    btnCancel.addEventListener('click', () => {
+      settingsModal.classList.remove('visible');
+    });
+    
+    btnSave.addEventListener('click', async () => {
+      await window.crawlerAPI.setConfig({
+        url: inputUrl.value,
+        maxPages: parseInt(inputMaxPages.value, 10),
+        concurrency: parseInt(inputConcurrency.value, 10),
+        maxDepth: parseInt(inputMaxDepth.value, 10),
+        timeout: parseInt(inputTimeout.value, 10)
+      });
+      settingsModal.classList.remove('visible');
+    });
+    
+    // Close modal on overlay click
+    settingsModal.addEventListener('click', (e) => {
+      if (e.target === settingsModal) {
+        settingsModal.classList.remove('visible');
+      }
+    });
+    
+    // Listen for updates from main process
+    window.crawlerAPI.onUpdate(updateUI);
+    
+    // Get initial state
+    window.crawlerAPI.getState().then(updateUI);
+    
+    // URL List Panel
+    btnUrls.addEventListener('click', async () => {
+      currentUrls = await window.crawlerAPI.getUrls();
+      renderUrlList();
+      urlsPanel.classList.add('visible');
+    });
+    
+    urlsPanelClose.addEventListener('click', () => {
+      urlsPanel.classList.remove('visible');
+    });
+    
+    urlsPanel.addEventListener('click', (e) => {
+      if (e.target === urlsPanel) {
+        urlsPanel.classList.remove('visible');
+      }
+    });
+    
+    function renderUrlList() {
+      if (currentUrls.length === 0) {
+        urlList.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <div>No URLs downloaded yet</div>
+            <div style="font-size: 12px; margin-top: 4px;">Start a crawl to see URLs here</div>
+          </div>
+        `;
+        return;
+      }
+      
+      urlList.innerHTML = currentUrls.map(item => `
+        <div class="url-item" data-url="${encodeURIComponent(item.url)}">
+          <div class="url-item-index">#${item.index}</div>
+          <div class="url-item-url">${item.url}</div>
+          <div class="url-item-time">${new Date(item.timestamp).toLocaleTimeString()}</div>
+        </div>
+      `).join('');
+      
+      // Add click handlers to URL items
+      urlList.querySelectorAll('.url-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const url = decodeURIComponent(el.dataset.url);
+          showAnalysis(url);
+        });
+        
+        // Right-click for context menu
+        el.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          contextMenuUrl = decodeURIComponent(el.dataset.url);
+          urlContextMenu.style.left = e.clientX + 'px';
+          urlContextMenu.style.top = e.clientY + 'px';
+          urlContextMenu.classList.add('visible');
+        });
+      });
+    }
+    
+    // Analysis Panel
+    async function showAnalysis(url) {
+      urlsPanel.classList.remove('visible');
+      analysisPanel.classList.add('visible');
+      
+      document.getElementById('analysisUrl').textContent = url;
+      
+      // Reset values
+      ['httpStatus', 'httpContentType', 'httpSize', 'httpFetched', 'httpTtfb', 'httpTotal',
+       'dbUrlId', 'dbHost', 'dbCreated', 'dbLastSeen'].forEach(id => {
+        document.getElementById(id).textContent = 'Loading...';
+      });
+      
+      const analysis = await window.crawlerAPI.analyzeUrl(url);
+      
+      if (analysis.error) {
+        document.getElementById('httpStatus').textContent = 'Error: ' + analysis.error;
+        document.getElementById('httpStatus').classList.add('error');
+        return;
+      }
+      
+      // HTTP Response
+      if (analysis.httpResponse) {
+        const r = analysis.httpResponse;
+        const statusEl = document.getElementById('httpStatus');
+        statusEl.textContent = r.http_status || '-';
+        statusEl.classList.toggle('success', r.http_status === 200);
+        statusEl.classList.toggle('error', r.http_status >= 400);
+        
+        document.getElementById('httpContentType').textContent = r.content_type || '-';
+        document.getElementById('httpSize').textContent = r.bytes_downloaded ? formatBytes(r.bytes_downloaded) : '-';
+        document.getElementById('httpFetched').textContent = r.fetched_at ? new Date(r.fetched_at).toLocaleString() : '-';
+        document.getElementById('httpTtfb').textContent = r.ttfb_ms ? r.ttfb_ms + 'ms' : '-';
+        document.getElementById('httpTotal').textContent = r.total_ms ? r.total_ms + 'ms' : '-';
+      } else {
+        document.getElementById('httpStatus').textContent = 'Not fetched';
+      }
+      
+      // Database Record
+      if (analysis.urlRecord) {
+        const u = analysis.urlRecord;
+        document.getElementById('dbUrlId').textContent = u.id || '-';
+        document.getElementById('dbHost').textContent = u.host || '-';
+        document.getElementById('dbCreated').textContent = u.created_at ? new Date(u.created_at).toLocaleString() : '-';
+        document.getElementById('dbLastSeen').textContent = u.last_seen_at ? new Date(u.last_seen_at).toLocaleString() : '-';
+      } else {
+        document.getElementById('dbUrlId').textContent = 'Not in database';
+      }
+    }
+    
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+    
+    analysisPanelClose.addEventListener('click', () => {
+      analysisPanel.classList.remove('visible');
+    });
+    
+    analysisBack.addEventListener('click', () => {
+      analysisPanel.classList.remove('visible');
+      urlsPanel.classList.add('visible');
+    });
+    
+    analysisPanel.addEventListener('click', (e) => {
+      if (e.target === analysisPanel) {
+        analysisPanel.classList.remove('visible');
+      }
+    });
+    
+    // Database stats button
+    btnDb.addEventListener('click', async () => {
+      dbPanel.classList.add('visible');
+      // Load database stats
+      try {
+        const stats = await window.crawlerAPI.getDbStats();
+        document.getElementById('dbTotalUrls').textContent = stats.totalUrls?.toLocaleString() || '0';
+        document.getElementById('dbTotalFetches').textContent = stats.totalFetches?.toLocaleString() || '0';
+        document.getElementById('dbTodayFetches').textContent = stats.todayFetches?.toLocaleString() || '0';
+        document.getElementById('dbUniqueHosts').textContent = stats.uniqueHosts?.toLocaleString() || '0';
+        document.getElementById('dbStorageSize').textContent = formatBytes(stats.storageBytes || 0);
+        document.getElementById('dbStorageCount').textContent = `${stats.storageCount?.toLocaleString() || '0'} items`;
+        document.getElementById('dbLastFetch').textContent = stats.lastFetch ? formatDate(stats.lastFetch) : 'Never';
+        document.getElementById('dbLastUrl').textContent = stats.lastUrl ? truncateUrl(stats.lastUrl) : '-';
+      } catch (err) {
+        console.error('Failed to load DB stats:', err);
+      }
+    });
+    
+    dbPanelClose.addEventListener('click', () => {
+      dbPanel.classList.remove('visible');
+    });
+    
+    dbPanel.addEventListener('click', (e) => {
+      if (e.target === dbPanel) dbPanel.classList.remove('visible');
+    });
+    
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+    
+    function truncateUrl(url) {
+      if (url.length > 50) {
+        return url.substring(0, 47) + '...';
+      }
+      return url;
+    }
+    
+    // More menu button
+    btnMore.addEventListener('click', (e) => {
+      e.stopPropagation();
+      moreMenu.classList.toggle('visible');
+    });
+    
+    // More menu items
+    document.getElementById('menuExport').addEventListener('click', async () => {
+      hideDropdownMenu();
+      if (currentUrls.length === 0) {
+        showToast('No URLs to export', 'error');
+        return;
+      }
+      const result = await window.crawlerAPI.exportUrls(currentUrls);
+      if (result.success) {
+        showToast(`Exported ${result.count} URLs`);
+      } else {
+        showToast(result.error || 'Export failed', 'error');
+      }
+    });
+    
+    document.getElementById('menuOpenLogs').addEventListener('click', async () => {
+      hideDropdownMenu();
+      await window.crawlerAPI.openLogs();
+    });
+    
+    document.getElementById('menuClearSession').addEventListener('click', () => {
+      hideDropdownMenu();
+      currentUrls = [];
+      renderUrlList();
+      document.getElementById('downloaded').textContent = '0';
+      document.getElementById('queued').textContent = '0';
+      document.getElementById('errors').textContent = '0';
+      progressBar.style.width = '0%';
+      progressText.textContent = '0 / ' + (config.maxPages || 100);
+      showToast('Session cleared');
+    });
+    
+    document.getElementById('menuClearDb').addEventListener('click', async () => {
+      hideDropdownMenu();
+      if (confirm('This will clear cached HTTP responses. Are you sure?')) {
+        const result = await window.crawlerAPI.clearCache();
+        if (result.success) {
+          showToast(`Cleared ${result.count} cached responses`);
+        } else {
+          showToast(result.error || 'Clear failed', 'error');
+        }
+      }
+    });
+    
+    document.getElementById('menuAbout').addEventListener('click', () => {
+      hideDropdownMenu();
+      alert('🕷️ Web Crawler v1.0\\n\\nA minimal crawl interface for news collection.\\n\\nBuilt with Electron + mini-crawl.js');
+    });
+    
+    // Context menu for URL items
+    document.getElementById('ctxCopyUrl').addEventListener('click', () => {
+      if (contextMenuUrl) {
+        navigator.clipboard.writeText(contextMenuUrl);
+        showToast('URL copied to clipboard');
+      }
+      hideContextMenu();
+    });
+    
+    document.getElementById('ctxOpenBrowser').addEventListener('click', () => {
+      if (contextMenuUrl) {
+        window.crawlerAPI.openExternal(contextMenuUrl);
+      }
+      hideContextMenu();
+    });
+    
+    document.getElementById('ctxAnalyze').addEventListener('click', () => {
+      if (contextMenuUrl) {
+        showAnalysis(contextMenuUrl);
+      }
+      hideContextMenu();
+    });
+    
+    document.getElementById('ctxViewContent').addEventListener('click', async () => {
+      if (contextMenuUrl) {
+        const result = await window.crawlerAPI.getContent(contextMenuUrl);
+        if (result.success && result.content) {
+          // Open content in a new window (simple approach)
+          const win = window.open('', '_blank', 'width=800,height=600');
+          win.document.write('<pre style="white-space:pre-wrap;word-wrap:break-word;">' + escapeHtml(result.content) + '</pre>');
+        } else {
+          showToast('No content available', 'error');
+        }
+      }
+      hideContextMenu();
+    });
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

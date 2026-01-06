@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#475569"/>
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="35" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#1e293b">Gazetteer Architecture Overview</text>
+  
+  <!-- PostGIS Box -->
+  <rect x="40" y="80" width="180" height="120" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="130" y="110" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#1e40af">PostGIS</text>
+  <text x="130" y="135" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#1e40af">countries</text>
+  <text x="130" y="152" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#1e40af">admin_areas</text>
+  <text x="130" y="169" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#1e40af">hierarchy edges</text>
+  <text x="130" y="186" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">(source of truth)</text>
+
+  <!-- Arrow 1 -->
+  <line x1="220" y1="140" x2="280" y2="140" stroke="#475569" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="250" y="130" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">batch</text>
+  <text x="250" y="155" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">sync</text>
+
+  <!-- SQLite Box -->
+  <rect x="290" y="80" width="180" height="120" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/>
+  <text x="380" y="110" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#166534">SQLite Gazetteer</text>
+  <text x="380" y="135" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#166534">places + aliases</text>
+  <text x="380" y="152" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#166534">parent pointers</text>
+  <text x="380" y="169" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#166534">FTS index</text>
+  <text x="380" y="186" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">(fast serving cache)</text>
+
+  <!-- Arrow 2 -->
+  <line x1="470" y1="140" x2="530" y2="140" stroke="#475569" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="500" y="130" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#64748b">lookup</text>
+
+  <!-- Disambiguation Box -->
+  <rect x="540" y="80" width="200" height="120" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="640" y="110" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#b45309">Disambiguation</text>
+  <text x="640" y="135" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#b45309">candidate generation</text>
+  <text x="640" y="152" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#b45309">multi-signal scoring</text>
+  <text x="640" y="169" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#b45309">coherence pass</text>
+  <text x="640" y="186" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">(deterministic)</text>
+
+  <!-- Article Input -->
+  <rect x="540" y="250" width="200" height="70" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+  <text x="640" y="275" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#475569">News Article</text>
+  <text x="640" y="295" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">text + publisher + metadata</text>
+
+  <!-- Arrow from article to disambiguation -->
+  <line x1="640" y1="250" x2="640" y2="210" stroke="#475569" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Output -->
+  <rect x="540" y="350" width="200" height="40" rx="6" fill="#e0e7ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="640" y="375" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#4338ca">Resolved places + confidence</text>
+
+  <!-- Arrow from disambiguation to output (going down then back up conceptually - simplified as label) -->
+  <path d="M 740 140 Q 770 140 770 370 L 740 370" stroke="#475569" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+
+  <!-- Publisher Priors -->
+  <rect x="290" y="250" width="180" height="70" rx="8" fill="#fce7f3" stroke="#ec4899" stroke-width="2"/>
+  <text x="380" y="275" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#be185d">Publisher Priors</text>
+  <text x="380" y="295" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">host → home region</text>
+
+  <!-- Arrow from priors to disambiguation -->
+  <line x1="470" y1="285" x2="530" y2="200" stroke="#475569" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowhead)"/>
+</svg>

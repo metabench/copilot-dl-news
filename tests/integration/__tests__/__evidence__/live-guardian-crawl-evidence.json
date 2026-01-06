@@ -1,0 +1,20 @@
+{
+  "testFile": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\tests\\integration\\__tests__\\live-guardian-crawl.test.js",
+  "runAt": "2026-01-02T19:42:16.797Z",
+  "domain": "theguardian.com",
+  "seedUrl": "https://www.theguardian.com/international",
+  "config": {
+    "maxDownloads": 10,
+    "maxDepth": 3,
+    "crawlType": "basic",
+    "useSitemap": false
+  },
+  "results": {
+    "pagesDownloaded": 2,
+    "pagesVisited": 2,
+    "articlesFound": 2,
+    "articlesSaved": 2,
+    "queueSizeRemaining": 0,
+    "exitReason": "queue-exhausted"
+  }
+}

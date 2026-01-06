@@ -1,0 +1,259 @@
+{
+  "$schema": "./decision-tree.schema.json",
+  "version": "1.5.0",
+  "name": "url-classification-tree",
+  "description": "Decision tree for classifying URLs as article, hub, or nav based on URL structure",
+  "categories": {
+    "article": {
+      "displayName": "Article",
+      "description": "News articles with dates in URL and long slugs",
+      "tree": {
+        "id": "article-root",
+        "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/(\\d{4})\\/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\\/(\\d{1,2})\\/[a-z0-9._-]+"] },
+        "yes": { "result": "match", "confidence": 0.95, "reason": "guardian-date-pattern" },
+        "no": {
+          "id": "article-numeric-date",
+          "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/(\\d{4})\\/(\\d{2})\\/(\\d{2})\\/[a-z0-9._-]+"] },
+          "yes": { "result": "match", "confidence": 0.9, "reason": "numeric-date-pattern" },
+          "no": {
+            "id": "article-hyphen-date",
+            "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/news\\/\\d{4}-\\d{2}-\\d{2}\\/", "\\/debates\\/[A-Z0-9-]+"] },
+            "yes": { "result": "match", "confidence": 0.85, "reason": "hyphen-date-or-debate" },
+            "no": {
+              "id": "article-bbc-intl",
+              "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/(?:zhongwen|ukchina|serbian|uzbek)\\/(?:simp|trad|lat|cyr)?\\/?(?:articles|features|multimedia|world|china|business)\\/"] },
+              "yes": { "result": "match", "confidence": 0.85, "reason": "bbc-intl-article" },
+              "no": {
+                "id": "article-wiki",
+                "condition": { "type": "compound", "operator": "AND", "conditions": [
+                  { "type": "url_matches", "matchType": "contains", "patterns": ["/wiki/"] },
+                  { "type": "url_matches", "matchType": "contains", "patterns": ["/wiki/Special:", "/wiki/File:", "/wiki/Category:", "/wiki/Template:", "/wiki/Talk:", "/wiki/Wikipedia:", "/wiki/Help:", "/wiki/Portal:", "/wiki/User:"], "negate": true }
+                ]},
+                "yes": { "result": "match", "confidence": 0.85, "reason": "wikipedia-article" },
+                "no": {
+                  "id": "article-journal-doi",
+                  "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/doi\\/(?:full|abs|pdf|10\\.)", "\\/article\\/doi\\/10\\.", "\\/journals\\/[a-z]+\\/(?:article|fullarticle)\\/", "\\/article\\/(?:PIIS|pii|abs|view)\\/", "\\/p\\/articles\\/mi_[a-z]+"] },
+                  "yes": { "result": "match", "confidence": 0.9, "reason": "journal-doi-article" },
+                  "no": {
+                    "id": "article-story-segment",
+                    "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/story\\/\\d{4}\\/\\d{1,2}\\/", "\\/en\\/story\\/\\d{4}\\/", "\\/handbook\\/online\\/articles\\/", "\\/cfr\\/text\\/", "\\/expert-answers\\/", "\\/faq-\\d+", "\\/news\\/\\d{4}\\/[a-z]+\\/[a-z-]+", "\\/archive\\/\\d{4}\\/\\d{2}\\/[a-z-]+", "\\/bulletins\\/[a-z]+", "\\/item\\/\\d{4}-DON\\d+", "\\/world-report\\/\\d{4}\\/country-chapters\\/"] },
+                    "yes": { "result": "match", "confidence": 0.85, "reason": "story-faq-reference-article" },
+                    "no": {
+                      "id": "article-person-profile",
+                      "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/person\\/\\d+\\/[a-z-]+", "\\/en\\/person\\/\\d+\\/"] },
+                      "yes": { "result": "match", "confidence": 0.8, "reason": "person-profile-article" },
+                      "no": {
+                        "id": "article-explicit-segment",
+                        "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/article\\/[0-9]+\\/", "\\/article\\d+\\.(?:html|ece)$", "\\/news\\/article\\/[a-z0-9-]+\\/", "\\/articles\\/[a-z0-9]+\\.shtml", "\\/written-(?:statements|questions)\\/detail\\/", "\\/\\d+\\/hi\\/.*\\.stm$", "\\/onthisday\\/hi\\/.*newsid_\\d+\\/", "\\/legislation\\.gov\\.uk\\/.*\\/section\\/", "\\/bill\\/\\d+[a-z]+-congress\\/[a-z-]+\\/\\d+\\/text", "\\/tol\\/[a-z_]+\\/[a-z_]+\\/[a-z_]+\\/article\\d+\\.ece", "\\/racing\\/news\\/[a-z0-9-]{25,}"] },
+                        "yes": { "result": "match", "confidence": 0.85, "reason": "explicit-article-segment" },
+                        "no": {
+                          "id": "article-content-path",
+                          "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/content\\/article\\/", "\\/time\\/magazine\\/article\\/", "\\/outdoor-adventure\\/", "\\/sports\\/(?:soccer|basketball|tennis|golf|nfl|nba|mlb)\\/", "\\/magazine\\/archive\\/\\d{4}\\/", "\\/pubs\\/.*\\.html?$", "\\/pharmaceuticals\\/", "\\/home\\/.*disorders", "\\/news\\/factsheets\\/", "\\/news-room\\/fact-sheets\\/detail\\/", "\\/pressrel\\/\\d{4}\\/", "\\/presscorner\\/detail\\/[a-z]+\\/", "\\/mmwr\\/volumes\\/", "\\/mission_pages\\/.*\\/news\\/", "\\/government\\/statistics\\/[a-z-]+\\/", "\\/en\\/ihl-treaties\\/.*\\/article-\\d+", "\\/en\\/severe-weather\\/[a-z0-9-]{20,}", "\\/pages\\/Library\\/Communication\\/PR\\/\\d{4}\\/"] },
+                          "yes": { "result": "match", "confidence": 0.8, "reason": "content-article-path" },
+                          "no": {
+                            "id": "article-live",
+                            "condition": { "type": "url_matches", "matchType": "segment", "patterns": ["live"] },
+                            "yes": {
+                              "id": "article-live-date",
+                              "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/live\\/\\d{4}\\/"] },
+                              "yes": { "result": "match", "confidence": 0.9, "reason": "live-blog-dated" },
+                              "no": { "result": "no-match", "reason": "live-hub-no-date" }
+                            },
+                            "no": {
+                              "id": "article-depth3-long-slug",
+                              "condition": { "type": "compound", "operator": "AND", "conditions": [
+                                { "type": "compare", "field": "pathDepth", "operator": "eq", "value": 3 },
+                                { "type": "compare", "field": "slugLength", "operator": "gte", "value": 25 },
+                                { "type": "compare", "field": "hasHyphenatedSlug", "operator": "eq", "value": true }
+                              ]},
+                              "yes": { "result": "match", "confidence": 0.8, "reason": "depth3+long-hyphenated-slug" },
+                              "no": {
+                                "id": "article-deep-path",
+                                "condition": { "type": "compound", "operator": "AND", "conditions": [
+                                  { "type": "compare", "field": "pathDepth", "operator": "gte", "value": 4 },
+                                  { "type": "compare", "field": "slugLength", "operator": "gte", "value": 20 }
+                                ]},
+                                "yes": {
+                                  "id": "article-deep-hyphenated",
+                                  "condition": { "type": "compare", "field": "hasHyphenatedSlug", "operator": "eq", "value": true },
+                                  "yes": { "result": "match", "confidence": 0.8, "reason": "deep-path+long-hyphenated-slug" },
+                                  "no": { "result": "no-match", "reason": "deep-path-no-hyphen" }
+                                },
+                                "no": {
+                                  "id": "article-html-suffix",
+                                  "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\.html?$"] },
+                                  "yes": {
+                                    "id": "article-html-long-slug",
+                                    "condition": { "type": "compare", "field": "slugLength", "operator": "gte", "value": 15 },
+                                    "yes": { "result": "match", "confidence": 0.75, "reason": "html-article" },
+                                    "no": { "result": "no-match", "reason": "html-short-slug" }
+                                  },
+                                  "no": { "result": "no-match", "reason": "no-article-signals" }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "hub": {
+      "displayName": "Hub/Section",
+      "description": "Section landing pages, topic pages, and paginated lists",
+      "tree": {
+        "id": "hub-root",
+        "condition": { "type": "url_matches", "matchType": "contains", "patterns": ["?page="] },
+        "yes": { "result": "match", "confidence": 0.95, "reason": "pagination-param" },
+        "no": {
+          "id": "hub-bbc-topics",
+          "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/(?:zhongwen|ukchina|serbian|hindi|urdu|arabic|persian|russian|turkish|vietnamese|indonesian|portuguese|spanish|french|german|swahili|korean|japanese|thai|burmese|bengali|tamil|nepali|marathi|gujarati|punjabi|sinhala|pashto|hausa|amharic|tigrinya|somali|yoruba|igbo|pidgin|afrique|mundo|brasil|gahuza|afaanoromoo|cymrufyw|naidheachdan|gaidlig)\\/(?:simp|trad|lat|cyr)?\\/?topics\\/"] },
+          "yes": { "result": "match", "confidence": 0.9, "reason": "bbc-intl-topics" },
+          "no": {
+            "id": "hub-special-interactive",
+            "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/special\\/\\d{4}\\/newsspec_", "\\/news\\/special\\/", "\\/broadcast\\/[a-z0-9-]+", "\\/newsroom\\/stats\\/", "\\/podcasts\\/[a-z0-9]+", "\\/exhibitions\\/archive\\/", "\\/ci\\/engine\\/current\\/match\\/", "\\/fashion-shows\\/[a-z0-9-]+\\/", "\\/profiles\\/horse\\/", "\\/pictures\\/[a-z]+\\/", "\\/authority\\/rest\\/authorities\\/", "\\/100\\/originals\\/\\d+-greatest\\/", "\\/whats-on\\/\\d{4}\\/event\\/", "\\/[a-z]+\\/actualitat\\/reportatges\\/", "\\/supply-management[a-z-]+\\/reports\\/", "\\/announcement\\/rns\\/[a-z-]+\\/", "\\/rr\\/program\\/bib\\/", "\\/(?:serbian|arabic)\\/(?:lat|cyr)\\/popular\\/read"] },
+            "yes": { "result": "match", "confidence": 0.9, "reason": "special-interactive-or-broadcast" },
+            "no": {
+              "id": "hub-explore",
+              "condition": { "type": "url_matches", "matchType": "contains", "patterns": ["/explore/artists/", "/explore/artworks/", "/explore/themes/", "/graphics/", "/interactives/", "/visit/"] },
+              "yes": { "result": "match", "confidence": 0.85, "reason": "explore-or-graphics-hub" },
+              "no": {
+                "id": "hub-shallow-path",
+                "condition": { "type": "compare", "field": "pathDepth", "operator": "lte", "value": 1 },
+                "yes": {
+                  "id": "hub-not-article-date",
+                  "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/\\d{4}\\/"] },
+                  "yes": { "result": "no-match", "reason": "shallow-but-has-year" },
+                  "no": { "result": "match", "confidence": 0.9, "reason": "shallow-section-path" }
+                },
+                "no": {
+                  "id": "hub-series",
+                  "condition": { "type": "url_matches", "matchType": "segment", "patterns": ["series"] },
+                  "yes": {
+                    "id": "hub-series-no-date",
+                    "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/\\d{4}\\/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\\d{2})\\/\\d{1,2}\\/"] },
+                    "yes": { "result": "no-match", "reason": "series-with-article-date" },
+                    "no": { "result": "match", "confidence": 0.85, "reason": "series-index" }
+                  },
+                  "no": {
+                    "id": "hub-date-archive",
+                    "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/\\d{4}\\/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\\d{2})\\/?$", "\\/[a-z0-9-]+\\/\\d{4}\\/?$", "\\/[a-z0-9-]+\\/[a-z0-9-]+\\/\\d{4}\\/?$"] },
+                    "yes": { "result": "match", "confidence": 0.9, "reason": "date-archive" },
+                    "no": {
+                      "id": "hub-audio-archive",
+                      "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/audio\\/\\d{4}\\/?$"] },
+                      "yes": { "result": "match", "confidence": 0.9, "reason": "audio-archive" },
+                      "no": {
+                        "id": "hub-depth2-no-date",
+                        "condition": { "type": "compound", "operator": "AND", "conditions": [
+                          { "type": "compare", "field": "pathDepth", "operator": "eq", "value": 2 },
+                          { "type": "url_matches", "matchType": "regex", "patterns": ["\\/\\d{4}\\/"], "negate": true }
+                        ]},
+                        "yes": { "result": "match", "confidence": 0.85, "reason": "depth2-topic-page" },
+                        "no": {
+                          "id": "hub-interactive",
+                          "condition": { "type": "url_matches", "matchType": "segment", "patterns": ["ng-interactive"] },
+                          "yes": { "result": "match", "confidence": 0.85, "reason": "interactive-hub" },
+                          "no": {
+                            "id": "hub-depth3-no-date",
+                            "condition": { "type": "compound", "operator": "AND", "conditions": [
+                              { "type": "compare", "field": "pathDepth", "operator": "eq", "value": 3 },
+                              { "type": "url_matches", "matchType": "regex", "patterns": ["\\/\\d{4}\\/"], "negate": true },
+                              { "type": "compare", "field": "slugLength", "operator": "lt", "value": 25 }
+                            ]},
+                            "yes": { "result": "match", "confidence": 0.75, "reason": "depth3-topic-subtopic" },
+                            "no": { "result": "no-match", "reason": "no-hub-signals" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "nav": {
+      "displayName": "Navigation",
+      "description": "Site-wide navigation, utility pages, and non-content pages",
+      "tree": {
+        "id": "nav-root",
+        "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\.pdf$"] },
+        "yes": { "result": "match", "confidence": 0.95, "reason": "pdf-document" },
+        "no": {
+          "id": "nav-media-files",
+          "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\.(?:jpg|jpeg|png|gif|webp|svg|mp3|mp4|wav|ogg|webm)$", "\\/wp-content\\/uploads\\/.*\\.[a-z]{3,4}$", "\\/~\\/media\\/", "\\/attachments\\/original\\/", "\\/assets\\/downloads\\/"] },
+          "yes": { "result": "match", "confidence": 0.95, "reason": "media-file" },
+          "no": {
+            "id": "nav-ecommerce",
+            "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/dp\\/[A-Z0-9]+", "amazon\\.", "hobbylobby\\.com\\/.*\\/p\\/", "drive\\.google\\.com\\/file\\/", "twitter\\.com\\/.*\\/status\\/", "x\\.com\\/.*\\/status\\/", "facebook\\.com\\/.*\\/posts\\/", "archive\\.today\\/", "s3\\..*\\.amazonaws\\.com\\/", "\\/properties\\/residential\\/for-sale\\/", "knightfrank\\.co\\.uk\\/properties\\/"] },
+            "yes": { "result": "match", "confidence": 0.9, "reason": "ecommerce-or-social-media" },
+            "no": {
+              "id": "nav-catalog-entity",
+              "condition": { "type": "url_matches", "matchType": "contains", "patterns": ["/worldcat/entity/", "/catalog/product/", "/LIBRARY/doc/", "bookshop."] },
+              "yes": { "result": "match", "confidence": 0.85, "reason": "catalog-entity-page" },
+              "no": {
+                "id": "nav-download",
+                "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/parlInfo\\/download\\/", "\\/download\\/committee", "\\/download\\/toc_", "\\/opa\\/media\\/\\d+\\/dl", "\\/smash\\/get\\/diva2:", "\\/L0\\/https:"] },
+                "yes": { "result": "match", "confidence": 0.9, "reason": "download-page" },
+                "no": {
+                  "id": "nav-embed",
+                  "condition": { "type": "url_matches", "matchType": "regex", "patterns": ["\\/datawrapper\\/embed\\/", "\\/embed\\/", "\\/widget\\/", "\\/iframe\\/", "\\/viewFile\\/", "\\/web\\/2\\d{3}", "archive\\.org\\/web\\/", "\\/video\\/[a-z]+\\/", "\\/feed\\/update\\/urn:", "\\/e\\/eebo\\/", "\\/hudportal\\/", "\\/census\\/find-census-data\\/", "\\/us\\/podcast\\/[a-z-]+\\/id\\d+", "\\/\\d{10}\\/episode\\/", "\\/RFB\\/dj\\/\\d+\\/", "\\/detail\\/news-photo\\/", "\\/news-photo\\/"] },
+                  "yes": { "result": "match", "confidence": 0.9, "reason": "embed-widget-or-archive" },
+                  "no": {
+                    "id": "nav-discussion",
+                    "condition": { "type": "url_matches", "matchType": "contains", "patterns": ["/discussion/user/", "/user/id/"] },
+                    "yes": { "result": "match", "confidence": 0.9, "reason": "user-discussion-page" },
+                    "no": {
+                      "id": "nav-wiki-special",
+                      "condition": { "type": "url_matches", "matchType": "contains", "patterns": ["/wiki/Special:", "/wiki/File:", "/wiki/Category:", "/wiki/Template:", "/wiki/Talk:", "/wiki/Wikipedia:", "/wiki/Help:", "/wiki/Portal:", "/wiki/User:"] },
+                      "yes": { "result": "match", "confidence": 0.9, "reason": "wikipedia-special-page" },
+                      "no": {
+                        "id": "nav-utility",
+                        "condition": { "type": "url_matches", "matchType": "segment", "patterns": ["profile", "info", "help", "about", "contact", "privacy", "terms", "cookies", "sitemap", "accessibility", "feedback", "subscribe", "newsletters", "sign-in", "signin", "register", "crosswords"] },
+                        "yes": { "result": "match", "confidence": 0.9, "reason": "utility-segment" },
+                        "no": {
+                          "id": "nav-query-only",
+                          "condition": { "type": "compound", "operator": "AND", "conditions": [
+                            { "type": "compare", "field": "pathDepth", "operator": "eq", "value": 0 },
+                            { "type": "compare", "field": "hasQueryParams", "operator": "eq", "value": true }
+                          ]},
+                          "yes": { "result": "match", "confidence": 0.8, "reason": "root-with-query-params" },
+                          "no": {
+                            "id": "nav-share-redirect",
+                            "condition": { "type": "url_matches", "matchType": "contains", "patterns": ["?url=", "?subject=", "?id="] },
+                            "yes": { "result": "match", "confidence": 0.85, "reason": "share-redirect-url" },
+                            "no": { "result": "no-match", "reason": "no-nav-signals" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "fallback": {
+    "classification": "unknown",
+    "confidence": 0.5,
+    "reason": "no-category-matched"
+  },
+  "metadata": {
+    "author": "ai-agent",
+    "created": "2026-01-03",
+    "lastModified": "2026-01-03",
+    "notes": "Multi-domain URL classification tree v1.5. Comprehensive patterns for Guardian/NYT/CNN date formats, BBC intl, Wikipedia, academic journals (DOI/Lancet), UN News, legal references (CFR), FAQs, person profiles, broadcast pages, media files, e-commerce, and navigation utilities."
+  }
+}
