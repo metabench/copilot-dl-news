@@ -193,8 +193,12 @@ class IntelligentPlanningFacade {
     const allCountries = this.countryHubGapService.getAllCountries();
     const total = allCountries.length;
 
-    // Get predictions for top countries
-    const topCountries = this.countryHubGapService.getTopCountries(50);
+    // Get predictions for top countries - use intMaxSeeds or 0 for all
+    // If intMaxSeeds is 0, null, or >= total, use all countries
+    const useAllCountries = !this.intMaxSeeds || this.intMaxSeeds >= total;
+    const topCountries = useAllCountries 
+      ? allCountries 
+      : this.countryHubGapService.getTopCountries(this.intMaxSeeds);
 
     // Display evaluation upfront
     this.logger.log?.('');
@@ -202,7 +206,7 @@ class IntelligentPlanningFacade {
     this.logger.log?.('  COUNTRY HUB DISCOVERY EVALUATION');
     this.logger.log?.('═══════════════════════════════════════════════════════════════');
     this.logger.log?.(`  Gazetteer: ${total} countries available globally`);
-    this.logger.log?.(`  Target: Top ${topCountries.length} countries by importance`);
+    this.logger.log?.(`  Target: ${useAllCountries ? 'ALL' : `Top ${topCountries.length}`} countries${useAllCountries ? '' : ' by importance'}`);
     this.logger.log?.(`  Domain: ${this.domain}`);
     this.logger.log?.('═══════════════════════════════════════════════════════════════');
     this.logger.log?.('');

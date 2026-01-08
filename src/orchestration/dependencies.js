@@ -5,6 +5,8 @@
  * 
  * Creates standardized dependency injection containers for orchestration layers.
  * Ensures CLI tools and API routes use identical dependencies and configuration.
+ * 
+ * Supports distributed fetching via remote worker for high-throughput operations.
  */
 
 const { ensureDb } = require('../db/sqlite/ensureDb');
@@ -17,6 +19,8 @@ const { CityHubGapAnalyzer } = require('../services/CityHubGapAnalyzer');
 const { TopicHubGapAnalyzer } = require('../services/TopicHubGapAnalyzer');
 const HubValidator = require('../hub-validation/HubValidator');
 const { createFetchRecorder } = require('../utils/fetch/fetchRecorder');
+const { createDistributedFetchAdapter } = require('../crawler/adapters/DistributedFetchAdapter');
+const { createBatchProcessor } = require('./DistributedBatchProcessor');
 
 const fetchImpl = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
@@ -47,14 +51,20 @@ function createLogger(verbose = false) {
  * @param {boolean} [options.verbose=false] - Enable verbose logging
  * @param {Function} [options.fetchFn] - Custom fetch function
  * @param {Function} [options.now] - Custom time function (for testing)
+ * @param {boolean} [options.distributed=false] - Enable distributed fetching via remote worker
+ * @param {string} [options.workerUrl] - Remote worker URL (if distributed=true)
+ * @param {Object} [options.distributedOptions] - Additional distributed adapter options
  * @returns {Object} Dependency container
  */
 function createPlaceHubDependencies(options = {}) {
   const {
     dbPath,
     verbose = false,
-    fetchFn = fetchImpl,
-    now = () => new Date()
+    fetchFn: customFetchFn,
+    now = () => new Date(),
+    distributed = false,
+    workerUrl,
+    distributedOptions = {},
   } = options;
 
   if (!dbPath) {
@@ -62,6 +72,28 @@ function createPlaceHubDependencies(options = {}) {
   }
 
   const logger = createLogger(verbose);
+  
+  // Create fetch function - either distributed or local
+  let fetchFn;
+  let distributedAdapter = null;
+  let batchProcessor = null;
+  
+  if (distributed) {
+    distributedAdapter = createDistributedFetchAdapter({
+      workerUrl,
+      localFetch: customFetchFn || fetchImpl,
+      ...distributedOptions,
+    });
+    
+    // Wrap the adapter's fetch method to match the expected signature
+    fetchFn = (url, opts) => distributedAdapter.fetch(url, opts);
+    
+    if (verbose) {
+      logger.info(`[orchestration] Distributed fetching enabled via ${distributedAdapter.workerUrl}`);
+    }
+  } else {
+    fetchFn = customFetchFn || fetchImpl;
+  }
   
   // Database connections
   const db = ensureDb(dbPath);
@@ -108,6 +140,19 @@ function createPlaceHubDependencies(options = {}) {
     source: 'guess-place-hubs'
   });
 
+  // Create batch processor if distributed mode is enabled
+  if (distributedAdapter) {
+    batchProcessor = createBatchProcessor({
+      distributedAdapter,
+      dbHandle: newsDb, // For persistent domain behavior learning
+      logger,
+      emitTelemetry: options.emitTelemetry
+    }, {
+      batchSize: distributedOptions.batchSize || 50,
+      concurrency: distributedOptions.concurrency || 10
+    });
+  }
+
   return {
     db,
     newsDb,
@@ -120,7 +165,11 @@ function createPlaceHubDependencies(options = {}) {
     stores: {
       candidates: candidatesStore,
       fetchRecorder
-    }
+    },
+    // Distributed adapter (if enabled) for batch operations
+    distributedAdapter,
+    // Batch processor for high-throughput batch HEAD/GET operations
+    batchProcessor,
   };
 }
 

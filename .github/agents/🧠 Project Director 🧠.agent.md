@@ -93,6 +93,8 @@ handoffs:
 | **Agent Operations** | `AGENTS.md` | To understand agent workflows | 🔴 CRITICAL |
 | **Session History** | `docs/sessions/SESSIONS_HUB.md` | To review past work/context | 🟡 HIGH |
 | **Tooling Strategy** | `docs/TOOLING_IMPROVEMENT_STRATEGY_INDEX.md` | When planning new tools | 🟡 HIGH |
+| **UI Knowledge Hub** | `docs/guides/UI_KNOWLEDGE_SOURCES.md` | When delegating UI work | 🟡 HIGH |
+| **SSR & Composition** | `docs/guides/JSGUI3_SSR_ISOMORPHIC_CONTROLS.md` | When designing jsgui3 controls | 🟡 HIGH |
 | **Architecture** | `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` | When designing UI tools | 🟡 HIGH |
 
 ### 🔍 Discovery Protocol: md-scan First

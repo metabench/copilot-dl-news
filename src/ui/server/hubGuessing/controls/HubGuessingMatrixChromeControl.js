@@ -41,8 +41,16 @@ class HubGuessingMatrixChromeControl extends jsgui.Control {
     this.fields = Array.isArray(spec.fields) ? spec.fields : [];
     this.stats = Array.isArray(spec.stats) ? spec.stats : [];
     this.legend = Array.isArray(spec.legend) ? spec.legend : [];
+    this.presets = Array.isArray(spec.presets) ? spec.presets : [];
     this.includeFlipAxes = spec.includeFlipAxes !== false;
     this.initialView = spec.initialView === 'b' ? 'b' : 'a';
+    this.guessPayloadFields = Array.isArray(spec.guessPayloadFields)
+      ? spec.guessPayloadFields
+      : ['hostQ', 'hostLimit', 'activePattern', 'parentPlace'];
+    this.guessPayloadDefaults = spec.guessPayloadDefaults && typeof spec.guessPayloadDefaults === 'object'
+      ? spec.guessPayloadDefaults
+      : { apply: true };
+    this.guessConfirmMessage = spec.guessConfirmMessage || 'Start background guessing job with current filters?';
 
     if (!spec.el) {
       this.compose();
@@ -55,11 +63,37 @@ class HubGuessingMatrixChromeControl extends jsgui.Control {
     this.add(this._styleEl());
     this.add(this._viewToggleScript());
     this.add(this._runGuessingScript());
+    this.add(this._presetsRow());
     this.add(this._filtersForm());
     this.add(this._statsRow());
     this.add(this._legendRow());
     this.add(this._actionsRow());
     this.add(this._logModal());
+  }
+
+  _presetsRow() {
+    const ctx = this.context;
+    if (this.presets.length === 0) return makeEl(ctx, 'div'); // empty placeholder
+    
+    const row = makeEl(ctx, 'div', 'presets-row', { 'data-testid': 'presets-row' });
+    
+    for (const preset of this.presets) {
+      if (!preset || typeof preset !== 'object') continue;
+      
+      const params = new URLSearchParams();
+      if (preset.params && typeof preset.params === 'object') {
+        for (const [key, value] of Object.entries(preset.params)) {
+          params.set(key, String(value));
+        }
+      }
+      
+      const href = `${this.basePath || '.'}?${params.toString()}`;
+      const btn = makeEl(ctx, 'a', 'preset-btn', { href, 'data-testid': `preset-${preset.label?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'unknown'}` });
+      btn.add(text(ctx, preset.label || 'Preset'));
+      row.add(btn);
+    }
+    
+    return row;
   }
 
   _logModal() {
@@ -120,6 +154,33 @@ body {
   padding: 18px 22px;
   max-width: 1600px;
   margin: 0 auto;
+}
+
+.presets-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+
+.preset-btn:hover {
+  background: rgba(212, 165, 116, 0.15);
+  border-color: var(--gold);
+  color: var(--gold);
 }
 
 .matrix-legend {
@@ -553,19 +614,20 @@ body {
     updateStatus();
 
     btn.addEventListener('click', async () => {
-      if (!confirm('Start background guessing job with current filters?')) return;
+      if (!confirm(${JSON.stringify(this.guessConfirmMessage)})) return;
       
       const form = document.querySelector('[data-testid="filters-form"]');
       const formData = new FormData(form);
       const params = Object.fromEntries(formData.entries());
       
-      const payload = {
-        hostQ: params.hostQ,
-        hostLimit: params.hostLimit,
-        activePattern: params.activePattern,
-        parentPlace: params.parentPlace,
-        apply: true
-      };
+      const payload = ${JSON.stringify(this.guessPayloadDefaults)};
+      const fields = ${JSON.stringify(this.guessPayloadFields)};
+      for (const field of fields) {
+        if (!Object.prototype.hasOwnProperty.call(params, field)) continue;
+        const value = params[field];
+        if (value === undefined || value === null || value === '') continue;
+        payload[field] = value;
+      }
 
       try {
         btn.disabled = true;

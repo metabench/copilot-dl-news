@@ -131,6 +131,13 @@ const {
   deleteTheme
 } = require("./services/themeService");
 const { ThemeEditorControl } = require("../controls/ThemeEditorControl");
+const { ArticleViewerControl } = require("../controls/ArticleViewerControl");
+const { ArticleListControl } = require("../controls/ArticleListControl");
+const {
+  listArticlesWithContent,
+  countArticlesWithContent,
+  getExtractedArticle
+} = require("../../db/sqlite/v1/queries/ui/articleViewer");
 
 const { ACTIVE_SET_KEY } = require("../../crawler/observatory/DecisionConfigSetState");
 
@@ -1058,6 +1065,13 @@ const DATA_VIEWS = [
     navLabel: "Config",
     title: "Configuration",
     render: renderConfigView
+  },
+  {
+    key: "articles",
+    path: "/articles",
+    navLabel: "Articles",
+    title: "Extracted Articles",
+    render: renderArticlesListView
   }
 ];
 
@@ -1647,6 +1661,66 @@ function renderPlaceHubsView({ req, db, relativeDb, now }) {
         availableHosts,
         availableKinds: kindStats.map(k => k.place_kind).filter(Boolean)
       }
+    }
+  };
+}
+
+const ARTICLE_PAGE_SIZE = 50;
+
+/**
+ * Render the articles list view using ArticleListControl
+ */
+function renderArticlesListView({ req, db, relativeDb, now }) {
+  const query = req.query || {};
+  const page = Math.max(1, parseInt(query.page, 10) || 1);
+  const sortBy = query.sortBy || "fetched_at";
+  const sortDir = query.sortDir === "asc" ? "asc" : "desc";
+  const hostFilter = (query.host || "").trim() || null;
+  const classificationFilter = (query.classification || "").trim() || null;
+  
+  const filterOptions = {
+    limit: ARTICLE_PAGE_SIZE,
+    offset: (page - 1) * ARTICLE_PAGE_SIZE,
+    sortBy,
+    sortDir
+  };
+  if (hostFilter) filterOptions.host = hostFilter;
+  if (classificationFilter) filterOptions.classification = classificationFilter;
+  
+  const articles = listArticlesWithContent(db, filterOptions);
+  const totalCount = countArticlesWithContent(db, filterOptions);
+  const totalPages = Math.ceil(totalCount / ARTICLE_PAGE_SIZE);
+  
+  const subtitle = totalCount === 0
+    ? "No articles with extracted content found"
+    : `Showing ${(page - 1) * ARTICLE_PAGE_SIZE + 1}-${Math.min(page * ARTICLE_PAGE_SIZE, totalCount)} of ${totalCount} articles`;
+
+  return {
+    title: "Articles",
+    columns: [],
+    rows: [],
+    meta: {
+      rowCount: totalCount,
+      limit: ARTICLE_PAGE_SIZE,
+      dbLabel: relativeDb,
+      generatedAt: formatDateTime(now, true),
+      subtitle
+    },
+    renderOptions: {
+      layoutMode: "single-control",
+      mainControlFactory: (context) => new ArticleListControl({
+        context,
+        articles,
+        totalCount,
+        currentPage: page,
+        pageSize: ARTICLE_PAGE_SIZE,
+        totalPages,
+        sortBy,
+        sortDir,
+        hostFilter,
+        classificationFilter,
+        basePath: "/articles"
+      })
     }
   };
 }
@@ -2366,6 +2440,63 @@ function createDataExplorerServer(options = {}) {
           bindingPlugin: bindingPluginEnabled,
           navLinks: buildNavLinks("urls", DATA_VIEWS),
           breadcrumbs
+        }
+      );
+      res.type("html").send(html);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Article detail view - shows extracted article content
+  app.get("/articles/:fetchId", async (req, res, next) => {
+    try {
+      const fetchId = Number(req.params.fetchId);
+      if (!Number.isFinite(fetchId)) return res.status(400).send("Invalid fetch id");
+      
+      const now = new Date();
+      const articleData = await getExtractedArticle(dbAccess.db, fetchId);
+      
+      if (!articleData) {
+        return res.status(404).send("Article not found or no content available");
+      }
+
+      const breadcrumbTrail = [
+        { label: "Articles", href: "/articles" },
+        { label: articleData.host, href: `/domains/${articleData.host}` }
+      ];
+      const backLink = deriveBackLink(req, { label: "Articles", href: "/articles" });
+      const breadcrumbs = buildBreadcrumbs({ 
+        trail: breadcrumbTrail, 
+        backLink, 
+        current: { label: articleData.extractedData?.title || `Article #${fetchId}` } 
+      });
+
+      const html = renderHtml(
+        { 
+          columns: [], 
+          rows: [], 
+          meta: {
+            rowCount: 0,
+            limit: 0,
+            dbLabel: relativeDb,
+            generatedAt: formatDateTime(now, true),
+            subtitle: `Article from ${articleData.host}`
+          },
+          title: articleData.extraction?.title || `Article #${fetchId}`
+        },
+        {
+          clientScriptPath: hasClientBundle ? normalizedScriptPath : undefined,
+          bindingPlugin: bindingPluginEnabled,
+          navLinks: buildNavLinks("articles", DATA_VIEWS),
+          breadcrumbs,
+          layoutMode: "single-control",
+          mainControlFactory: (context) => new ArticleViewerControl({
+            context,
+            article: articleData,
+            fetchId,
+            backHref: req.query.back || "/articles"
+          })
         }
       );
       res.type("html").send(html);

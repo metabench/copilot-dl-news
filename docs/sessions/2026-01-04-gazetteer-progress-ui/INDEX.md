@@ -22,6 +22,7 @@
 - [Disambiguation Scoring Flow](./diagrams/03-disambiguation-scoring.svg)
 - [Implementation Phases](./diagrams/04-implementation-phases.svg)
 - [SQLite Schema](./diagrams/05-sqlite-schema.svg)
+- [Place Hub Matrix UI Flow](./diagrams/06-place-hub-matrix-flow.svg) ⚡ **NEW**
 
 ## Status
 - 🔄 Active — scaffolding created via session-init CLI

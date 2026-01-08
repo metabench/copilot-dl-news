@@ -46,6 +46,12 @@ function main() {
     check(typeof html === 'string' && html.length > 500, 'HTML rendered');
     check(html.includes('data-testid="place-hub-guessing"'), 'Has root test id');
     check(html.includes('data-testid="matrix-legend"'), 'Has legend');
+    check(html.includes('cell--guessed'), 'Has guessed cell CSS class');
+    check(html.includes('cell--pending'), 'Has pending cell CSS class');
+    check(html.includes('cell--verified-present'), 'Has verified-present cell CSS class');
+    check(html.includes('cell--verified-absent'), 'Has verified-absent cell CSS class');
+    check(html.includes('Guessed (candidate hub)'), 'Legend has guessed label');
+    check(html.includes('Pending (verification in progress)'), 'Legend has pending label');
     check(html.includes('data-testid="flip-axes"'), 'Has flip axes button');
     check(html.includes('data-testid="matrix-table"'), 'Has matrix table');
     check(html.includes('data-testid="matrix-table-flipped"'), 'Has flipped matrix table');

@@ -1,6 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events');
+const { detectPuppeteerNeeded, recordPuppeteerNeeded } = require('../utils/puppeteerDetection');
 
 /**
  * RetryCoordinator - Unified retry handling across all levels.
@@ -22,12 +23,16 @@ class RetryCoordinator extends EventEmitter {
   /**
    * @param {Object} options
    * @param {CrawlContext} options.context - CrawlContext for state tracking
+   * @param {Object} options.dbHandle - Database handle for persistent learning
    * @param {Object} options.network - Network retry config
    * @param {Object} options.host - Host budget config
    * @param {Object} options.domain - Domain throttle config
    */
   constructor(options = {}) {
     super();
+
+    // Store database handle for persistent learning
+    this.dbHandle = options.dbHandle || null;
 
     this.context = options.context;
 
@@ -138,6 +143,17 @@ class RetryCoordinator extends EventEmitter {
 
       case 'timeout':
         decision = this._handleTimeout(host, attempt, classification);
+        break;
+
+      case 'bot-blocked':
+        // Bot protection detected - don't retry with HTTP, recommend Puppeteer
+        decision = { 
+          shouldRetry: false, 
+          action: 'use-puppeteer', 
+          reason: classification.reason,
+          recommendsPuppeteer: true
+        };
+        this.emit('bot-blocked', { url, host, reason: classification.reason });
         break;
 
       case 'permanent':
@@ -296,6 +312,33 @@ class RetryCoordinator extends EventEmitter {
         return { type: 'server-error', reason: `http-${status}`, status };
       }
       if (status === 403) {
+        // Check if this looks like bot protection (not just access denied)
+        // Bot protection typically includes specific headers or body patterns
+        const headers = response.headers || {};
+        const body = response.body || '';
+        // Get host from URL if available
+        let host = '';
+        if (response.url) {
+          try { host = new URL(response.url).hostname; } catch (e) { /* ignore */ }
+        }
+        
+        const detection = detectPuppeteerNeeded(host, status, headers, body);
+        if (detection.needsPuppeteer) {
+          // Record this for learning
+          if (host) {
+            recordPuppeteerNeeded(host, detection.reason, { 
+              db: this.dbHandle, 
+              detection 
+            });
+          }
+          return { 
+            type: 'bot-blocked', 
+            reason: detection.reason || 'bot-protection',
+            status,
+            recommendsPuppeteer: true
+          };
+        }
+        
         return { type: 'permanent', reason: 'forbidden' };
       }
       if (status === 404) {

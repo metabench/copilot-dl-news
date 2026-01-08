@@ -426,6 +426,17 @@ function createSubAppRegistry() {
         return renderIframeApp('/crawler-profiles', 'Crawler Profiles');
       }
     },
+
+    {
+      id: 'crawl-strategies',
+      label: 'Crawl Strategies',
+      icon: '🕷️',
+      category: 'crawler',
+      description: 'Browse crawl operations, sequences, and configuration options',
+      renderContent: async () => {
+        return renderIframeApp('/crawl-strategies', 'Crawl Strategies');
+      }
+    },
     
     {
       id: 'crawler-monitor',

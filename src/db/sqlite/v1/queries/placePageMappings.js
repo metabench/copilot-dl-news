@@ -16,6 +16,17 @@ function serializeEvidence(evidence) {
   }
 }
 
+function parseEvidence(evidence) {
+  if (!evidence) return null;
+  if (typeof evidence === 'object') return evidence;
+  if (typeof evidence !== 'string') return null;
+  try {
+    return JSON.parse(evidence);
+  } catch (error) {
+    return null;
+  }
+}
+
 function upsertPlacePageMapping(db, {
   placeId,
   host,
@@ -76,6 +87,59 @@ function upsertPlacePageMapping(db, {
     verifiedAt,
     evidence: serializeEvidence(evidence),
     hubId
+  });
+}
+
+function upsertAbsentPlacePageMapping(db, {
+  placeId,
+  host,
+  url,
+  pageKind = DEFAULT_PAGE_KIND,
+  evidence = null,
+  verifiedAt = new Date().toISOString(),
+  timestamp = verifiedAt
+}) {
+  if (!placeId) {
+    throw new Error('upsertAbsentPlacePageMapping requires placeId');
+  }
+  const normalizedHost = normalizeHost(host);
+  if (!normalizedHost) {
+    throw new Error('upsertAbsentPlacePageMapping requires host');
+  }
+  if (!url) {
+    throw new Error('upsertAbsentPlacePageMapping requires url');
+  }
+
+  const existing = db.prepare(`
+    SELECT status, evidence
+      FROM place_page_mappings
+     WHERE place_id = ?
+       AND host = ?
+       AND page_kind = ?
+     LIMIT 1
+  `).get(placeId, normalizedHost, pageKind);
+
+  if (existing) {
+    const existingEvidence = parseEvidence(existing.evidence);
+    const presence = typeof existingEvidence?.presence === 'string' ? existingEvidence.presence : null;
+    if (existing.status === 'verified' && presence !== 'absent') {
+      return { skipped: true, reason: 'verified-present' };
+    }
+  }
+
+  const resolvedEvidence = evidence && typeof evidence === 'object'
+    ? evidence
+    : { presence: 'absent' };
+
+  return upsertPlacePageMapping(db, {
+    placeId,
+    host: normalizedHost,
+    url,
+    pageKind,
+    status: 'verified',
+    evidence: resolvedEvidence,
+    verifiedAt,
+    timestamp
   });
 }
 
@@ -345,9 +409,211 @@ function getPlacePlaceHubCoverage(db, host, { pageKind = 'place-place-hub' } = {
   }
 }
 
+/**
+ * Get verified hubs ready for archive crawling
+ * @param {import('better-sqlite3').Database} db
+ * @param {Object} options - Query options
+ * @param {string} [options.host] - Filter by host (optional)
+ * @param {string} [options.pageKind] - Filter by page kind (default: 'country-hub')
+ * @param {number} [options.limit] - Max hubs to return (default: 100)
+ * @param {string} [options.orderBy] - 'priority' | 'oldest_check' | 'depth' (default: 'priority')
+ * @param {boolean} [options.needsDepthCheck] - Only return hubs needing depth check
+ * @param {number} [options.depthCheckMaxAgeHours] - Max age of depth check in hours (default: 168 = 7 days)
+ * @returns {Array<Object>} Array of verified hub mappings with place info
+ */
+function getVerifiedHubsForArchive(db, {
+  host = null,
+  pageKind = DEFAULT_PAGE_KIND,
+  limit = 100,
+  orderBy = 'priority',
+  needsDepthCheck = false,
+  depthCheckMaxAgeHours = 168
+} = {}) {
+  const maxAgeClause = needsDepthCheck
+    ? `AND (
+         pm.last_depth_check_at IS NULL
+         OR datetime(pm.last_depth_check_at) < datetime('now', '-${depthCheckMaxAgeHours} hours')
+       )`
+    : '';
+
+  const hostClause = host ? 'AND pm.host = @host' : '';
+
+  const orderClauses = {
+    priority: 'COALESCE(p.priority_score, p.population, 0) DESC',
+    oldest_check: 'COALESCE(pm.last_depth_check_at, "1970-01-01") ASC',
+    depth: 'COALESCE(pm.max_page_depth, 0) DESC'
+  };
+  const orderClause = orderClauses[orderBy] || orderClauses.priority;
+
+  const stmt = db.prepare(`
+    SELECT
+      pm.id,
+      pm.place_id AS placeId,
+      pm.host,
+      pm.url,
+      pm.page_kind AS pageKind,
+      pm.status,
+      pm.verified_at AS verifiedAt,
+      pm.hub_id AS hubId,
+      pm.max_page_depth AS maxPageDepth,
+      pm.oldest_content_date AS oldestContentDate,
+      pm.last_depth_check_at AS lastDepthCheckAt,
+      pm.depth_check_error AS depthCheckError,
+      pm.evidence,
+      p.kind AS placeKind,
+      p.country_code AS countryCode,
+      p.population,
+      p.priority_score AS priorityScore,
+      COALESCE(
+        (SELECT name FROM place_names WHERE id = p.canonical_name_id),
+        (SELECT name FROM place_names
+           WHERE place_id = p.id
+           ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
+           LIMIT 1)
+      ) AS placeName
+    FROM place_page_mappings pm
+    JOIN places p ON p.id = pm.place_id
+    WHERE pm.status = 'verified'
+      AND pm.page_kind = @pageKind
+      AND json_extract(pm.evidence, '$.presence') IS NOT 'absent'
+      ${hostClause}
+      ${maxAgeClause}
+    ORDER BY ${orderClause}
+    LIMIT @limit
+  `);
+
+  return stmt.all({
+    host: host ? normalizeHost(host) : null,
+    pageKind,
+    limit
+  });
+}
+
+/**
+ * Update hub depth check results
+ * @param {import('better-sqlite3').Database} db
+ * @param {Object} params
+ * @param {number} params.id - Place page mapping ID
+ * @param {number} params.maxPageDepth - Maximum page depth found
+ * @param {string} params.oldestContentDate - ISO date of oldest content
+ * @param {string} [params.error] - Error message if check failed
+ */
+function updateHubDepthCheck(db, {
+  id,
+  maxPageDepth,
+  oldestContentDate,
+  error = null
+}) {
+  const stmt = db.prepare(`
+    UPDATE place_page_mappings
+    SET max_page_depth = @maxPageDepth,
+        oldest_content_date = @oldestContentDate,
+        last_depth_check_at = datetime('now'),
+        depth_check_error = @error
+    WHERE id = @id
+  `);
+
+  return stmt.run({
+    id,
+    maxPageDepth,
+    oldestContentDate,
+    error
+  });
+}
+
+/**
+ * Get archive crawl statistics for a host
+ * @param {import('better-sqlite3').Database} db
+ * @param {string} host - Domain host
+ * @returns {Object} Statistics about archive coverage
+ */
+function getArchiveCrawlStats(db, host) {
+  const normalizedHost = normalizeHost(host);
+
+  const stats = db.prepare(`
+    SELECT
+      COUNT(*) AS totalMappings,
+      SUM(CASE WHEN status = 'verified' AND json_extract(evidence, '$.presence') IS NOT 'absent' THEN 1 ELSE 0 END) AS verifiedPresent,
+      SUM(CASE WHEN status = 'verified' AND json_extract(evidence, '$.presence') = 'absent' THEN 1 ELSE 0 END) AS verifiedAbsent,
+      SUM(CASE WHEN max_page_depth IS NOT NULL THEN 1 ELSE 0 END) AS depthChecked,
+      SUM(CASE WHEN max_page_depth > 1 THEN 1 ELSE 0 END) AS hasMultiplePages,
+      AVG(CASE WHEN max_page_depth IS NOT NULL THEN max_page_depth END) AS avgPageDepth,
+      MAX(max_page_depth) AS maxPageDepth,
+      MIN(oldest_content_date) AS oldestContent,
+      SUM(CASE WHEN depth_check_error IS NOT NULL THEN 1 ELSE 0 END) AS depthCheckErrors
+    FROM place_page_mappings
+    WHERE host = @host
+  `).get({ host: normalizedHost });
+
+  return {
+    host: normalizedHost,
+    ...stats
+  };
+}
+
+/**
+ * Get hubs that need archiving (verified, with depth, not yet fully crawled)
+ * @param {import('better-sqlite3').Database} db
+ * @param {Object} options
+ * @param {string} [options.host] - Filter by host
+ * @param {number} [options.minDepth] - Minimum page depth to include (default: 2)
+ * @param {number} [options.limit] - Max results (default: 50)
+ * @returns {Array<Object>} Hubs ready for archive crawling
+ */
+function getHubsNeedingArchive(db, {
+  host = null,
+  minDepth = 2,
+  limit = 50
+} = {}) {
+  const hostClause = host ? 'AND pm.host = @host' : '';
+
+  const stmt = db.prepare(`
+    SELECT
+      pm.id,
+      pm.place_id AS placeId,
+      pm.host,
+      pm.url,
+      pm.page_kind AS pageKind,
+      pm.max_page_depth AS maxPageDepth,
+      pm.oldest_content_date AS oldestContentDate,
+      pm.last_depth_check_at AS lastDepthCheckAt,
+      p.kind AS placeKind,
+      p.country_code AS countryCode,
+      p.population,
+      COALESCE(
+        (SELECT name FROM place_names WHERE id = p.canonical_name_id),
+        (SELECT name FROM place_names
+           WHERE place_id = p.id
+           ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
+           LIMIT 1)
+      ) AS placeName,
+      -- Estimate archive priority based on depth and population
+      (pm.max_page_depth * LOG(COALESCE(p.population, 1000) + 1)) AS archivePriority
+    FROM place_page_mappings pm
+    JOIN places p ON p.id = pm.place_id
+    WHERE pm.status = 'verified'
+      AND pm.max_page_depth >= @minDepth
+      AND json_extract(pm.evidence, '$.presence') IS NOT 'absent'
+      ${hostClause}
+    ORDER BY archivePriority DESC
+    LIMIT @limit
+  `);
+
+  return stmt.all({
+    host: host ? normalizeHost(host) : null,
+    minDepth,
+    limit
+  });
+}
+
 module.exports = {
   getCountryHubCoverage,
   getPlacePlaceHubCoverage,
   markPlacePageMappingVerified,
-  upsertPlacePageMapping
+  upsertPlacePageMapping,
+  upsertAbsentPlacePageMapping,
+  getVerifiedHubsForArchive,
+  updateHubDepthCheck,
+  getArchiveCrawlStats,
+  getHubsNeedingArchive
 };

@@ -5,6 +5,15 @@ const { CrawlOperation, cloneOptions } = require('./CrawlOperation');
 const { guessPlaceHubsForDomain } = require('../../orchestration/placeHubGuessing');
 const { createPlaceHubDependencies } = require('../../orchestration/dependencies');
 
+function parseBoolean(value, fallback = false) {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (typeof value === 'boolean') return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on') return true;
+  if (normalized === '0' || normalized === 'false' || normalized === 'no' || normalized === 'off') return false;
+  return fallback;
+}
+
 function resolveDbPath(overrides = {}, defaults = {}) {
   if (overrides.dbPath) {
     return path.isAbsolute(overrides.dbPath)
@@ -167,13 +176,30 @@ class GuessPlaceHubsOperation extends CrawlOperation {
     const dbPath = resolveDbPath(overrides, defaults);
     const fetchFn = typeof overrides.fetchFn === 'function' ? overrides.fetchFn : undefined;
     const now = typeof overrides.now === 'function' ? overrides.now : undefined;
+    
+    // Distributed fetching support
+    const distributed = parseBoolean(
+      overrides.distributed,
+      parseBoolean(process.env.GUESS_PLACE_HUBS_DISTRIBUTED, true)
+    );
+    const workerUrl = overrides.workerUrl || 'http://144.21.42.149:8081';
 
     const dependencies = createPlaceHubDependencies({
       dbPath,
       verbose: Boolean(resolvedOptions.verbose),
+      distributed,
+      workerUrl,
+      distributedOptions: {
+        batchSize: overrides.batchSize || 50,
+        concurrency: overrides.concurrency || 10
+      },
       ...(fetchFn ? { fetchFn } : {}),
       ...(now ? { now } : {})
     });
+
+    if (distributed && dependencies.batchProcessor) {
+      logger.info?.(`[CrawlOperations] Distributed mode enabled via ${workerUrl}`);
+    }
 
     if (overrides.telemetryBridge && typeof overrides.telemetryBridge.emitEvent === 'function') {
       dependencies.telemetryBridge = overrides.telemetryBridge;

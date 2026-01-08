@@ -210,6 +210,18 @@ describe('guess-place-hubs tool', () => {
         expect(hubCount).toBe(0);
         const fetchRow = verifyDb.prepare('SELECT http_status FROM http_responses ORDER BY id DESC LIMIT 1').get();
         expect(fetchRow.http_status).toBe(404);
+        const mapping = verifyDb.prepare(`
+          SELECT place_id, host, page_kind, url, status, evidence
+            FROM place_page_mappings
+           LIMIT 1
+        `).get();
+        expect(mapping).toBeTruthy();
+        expect(mapping.host).toBe('example.com');
+        expect(mapping.page_kind).toBe('country-hub');
+        expect(mapping.url).toBe('https://example.com/world/nowhere-federation');
+        expect(mapping.status).toBe('verified');
+        const evidence = JSON.parse(mapping.evidence);
+        expect(evidence.presence).toBe('absent');
       } finally {
         verifyDb.close();
       }

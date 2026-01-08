@@ -110,6 +110,7 @@ class ActiveProbeProcessor {
         const countries = analyzers.country.getTopCountries(300, lang);
         
         let mapped = countries.map(c => ({
+            placeId: c.id ?? c.placeId ?? c.place_id ?? null,
             kind: 'country',
             name: c.name,
             code: c.code,
@@ -139,6 +140,7 @@ class ActiveProbeProcessor {
          }
 
          const mapped = regions.map(r => ({
+             placeId: r.id ?? r.placeId ?? r.place_id ?? null,
              kind: 'region',
              name: r.name,
              code: r.code,
@@ -158,6 +160,7 @@ class ActiveProbeProcessor {
          }
 
          const mapped = cities.map(c => ({
+             placeId: c.id ?? c.placeId ?? c.place_id ?? null,
              kind: 'city',
              name: c.name,
              slug: slugify(c.name),
@@ -170,21 +173,23 @@ class ActiveProbeProcessor {
       summary.totalCandidates = targets.length;
       logger.info(`[ActiveProbe] Generated ${targets.length} targets (sorted by importance)`);
 
-      const limit = options.limit || 0;
-      let processedCount = 0;
+      const targetLimit = options.limit || 0;
+      const targetsToProcess = targetLimit > 0 ? targets.slice(0, targetLimit) : targets;
       summary.candidates = [];
 
-      // 2. Process targets (concurrency controlled by fetchFn usually, or we throttle here)
-      // We'll process in chunks to be safe, though fetchFn inside DomainProcessor is sequential.
-      // DomainProcessor loops sequentially. We will too for safety.
-      
-      for (const target of targets) {
-        if (limit > 0 && processedCount >= limit) {
-          logger.info(`[ActiveProbe] Reached limit of ${limit} targets`);
-          break;
+      // Check if batch processing is available (distributed mode)
+      const batchProcessor = deps.batchProcessor;
+      if (batchProcessor && batchProcessor.isAvailable()) {
+        logger.info(`[ActiveProbe] Using distributed batch processing for ${targetsToProcess.length} targets`);
+        await this._processBatch(targetsToProcess, pattern, domain, options, deps, summary, emitTelemetry);
+      } else {
+        // Sequential processing fallback
+        logger.info(`[ActiveProbe] Using sequential processing for ${targetsToProcess.length} targets`);
+        let processedCount = 0;
+        for (const target of targetsToProcess) {
+          await this._processTarget(target, pattern, domain, options, deps, summary, emitTelemetry);
+          processedCount++;
         }
-        await this._processTarget(target, pattern, domain, options, deps, summary, emitTelemetry);
-        processedCount++;
       }
 
     } catch (error) {
@@ -323,6 +328,153 @@ class ActiveProbeProcessor {
     } catch (err) {
       summary.errors++;
       logger.warn(`[ActiveProbe] Failed ${url}: ${err.message}`);
+    }
+  }
+
+  /**
+   * Process targets in batch using distributed worker
+   * @param {Array} targets - Targets to process
+   * @param {string} pattern - URL pattern
+   * @param {string} domain - Domain
+   * @param {Object} options - Options
+   * @param {Object} deps - Dependencies
+   * @param {Object} summary - Summary to update
+   * @param {Function} emitTelemetry - Telemetry emitter
+   */
+  async _processBatch(targets, pattern, domain, options, deps, summary, emitTelemetry) {
+    const { batchProcessor, queries, validator, logger, stores } = deps;
+    const scheme = options.scheme || 'https';
+
+    // Build candidates for batch processing
+    const candidates = targets.map(target => {
+      let path = pattern
+        .replace('{slug}', target.slug)
+        .replace('{code}', target.code ? target.code.toLowerCase() : '')
+        .replace('{name}', target.name);
+      
+      if (!path.startsWith('/')) path = '/' + path;
+      
+      return {
+        url: `${scheme}://${domain}${path}`,
+        target,  // Store target for later processing
+        placeSlug: target.slug,
+        placeKind: target.kind,
+        placeName: target.name
+      };
+    });
+
+    logger.info(`[ActiveProbe] Batch processing ${candidates.length} URLs via distributed worker`);
+
+    try {
+      // Use batch processor for HEAD check + GET fetch
+      const batchResult = await batchProcessor.processCandidatesBatch(candidates, {
+        domain,
+        validateLinks: true,  // We want body content for validation
+        minLinks: 1
+      });
+
+      // Result structure: { results: [...], summary: { totalCandidates, headChecked, getFetched, rateLimited, elapsedMs }}
+      const { results, summary: batchSummary } = batchResult;
+      logger.info(`[ActiveProbe] Batch result: ${batchSummary.getFetched} fetched, ${batchSummary.headChecked} head-checked, ${batchSummary.totalCandidates} total (${batchSummary.elapsedMs}ms)`);
+      summary.fetched = batchSummary.headChecked;
+
+      // Process each result
+      for (const result of results) {
+        // Result structure: { candidate, headResult, getResult, outcome, validation?, shouldRecordAbsent }
+        const { candidate, getResult, outcome, validation: batchValidation } = result;
+        const url = candidate.url;
+        const target = candidate.target;
+
+        // Check outcome
+        if (outcome === 'rate-limited') {
+          logger.warn(`[ActiveProbe] Rate limited: ${url}`);
+          summary.errors++;
+          continue;
+        }
+
+        if (outcome === 'not-found') {
+          summary.failed++;
+          continue;
+        }
+
+        if (outcome === 'head-failed' || outcome === 'fetch-error') {
+          summary.failed++;
+          continue;
+        }
+
+        if (outcome !== 'fetched') {
+          summary.failed++;
+          continue;
+        }
+
+        // outcome === 'fetched' — use batch validation or our own
+        const pageTitle = batchValidation?.pageTitle || getResult?.title || candidate.placeName;
+        
+        // Use batch processor's validation (checks for >=10 links)
+        let isValid = batchValidation?.isValid || false;
+        let validationReason = 'links';
+        
+        // Also check title match as secondary validation
+        const titleLower = (pageTitle || '').toLowerCase();
+        const placeLower = candidate.placeName.toLowerCase();
+        
+        if (titleLower.includes(placeLower)) {
+          isValid = true;
+          validationReason = 'title-match';
+        } else if (batchValidation?.linkCount >= 10) {
+          isValid = true;
+          validationReason = 'has-10-links';
+        }
+
+        if (isValid) {
+          summary.valid++;
+          summary.candidates.push({
+            url,
+            place_slug: target.slug,
+            exists: true,
+            status: 'validated'
+          });
+
+          emitTelemetry(CRAWL_EVENT_TYPES.PLACE_HUB_DETERMINATION, {
+            domain, 
+            url, 
+            determination: { accepted: true, reason: 'active-probe-batch', validationReason }
+          });
+
+          if (options.apply) {
+            const packet = {
+              url,
+              domain,
+              placeSlug: target.slug,
+              placeKind: target.kind,
+              title: pageTitle,
+              evidence: JSON.stringify({ source: 'active-probe-batch', pattern, links: batchValidation?.linkCount })
+            };
+            
+            const existing = queries.getPlaceHub(domain, url);
+            if (existing) {
+              queries.updatePlaceHub(packet);
+              summary.updated++;
+            } else {
+              queries.insertPlaceHub(packet);
+              summary.inserted++;
+            }
+          }
+        } else {
+          logger.info(`[ActiveProbe] Validation failed for ${url}: ${batchValidation?.linkCount || 0} links, title: "${pageTitle}"`);
+          summary.failed++;
+        }
+      }
+
+    } catch (err) {
+      logger.error(`[ActiveProbe] Batch processing failed: ${err.message}`);
+      summary.errors++;
+      
+      // Fall back to sequential processing
+      logger.info(`[ActiveProbe] Falling back to sequential processing`);
+      for (const target of targets) {
+        await this._processTarget(target, pattern, domain, options, deps, summary, emitTelemetry);
+      }
     }
   }
 }

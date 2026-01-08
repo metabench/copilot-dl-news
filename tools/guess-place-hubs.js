@@ -25,6 +25,8 @@ function parseCliArgs(argv) {
     .add('--parent <place>', 'Parent place name (e.g. "Colombia") for filtering')
     .add('--limit <number>', 'Max number of probes to run', undefined, 'int')
     .add('--apply', 'Apply changes (save discovered hubs to DB)', false, 'boolean')
+    .add('--distributed', 'Use distributed fetching via remote worker', false, 'boolean')
+    .add('--worker-url <url>', 'Remote worker URL for distributed mode', 'http://144.21.42.149:8081')
     .add('--verbose', 'Enable verbose output', false, 'boolean')
     .add('--json', 'Output results as JSON', false, 'boolean');
 
@@ -71,6 +73,8 @@ function normalizeOptions(rawArgs) {
     parentPlace,
     limit: rawArgs.limit,
     apply: Boolean(rawArgs.apply),
+    distributed: Boolean(rawArgs.distributed),
+    workerUrl: rawArgs.workerUrl || 'http://144.21.42.149:8081',
     verbose: Boolean(rawArgs.verbose),
     json: Boolean(rawArgs.json)
   };
@@ -99,6 +103,9 @@ async function run(argv) {
     fmt.header('Guess Place Hubs');
     fmt.stat('Target', options.startUrl);
     fmt.stat('Mode', options.mode);
+    if (options.distributed) {
+      fmt.stat('Distributed', `✓ via ${options.workerUrl}`);
+    }
     if (options.mode === 'active-probe') {
       fmt.stat('Pattern', options.activePattern || '(none provided)');
     }
@@ -126,7 +133,9 @@ async function run(argv) {
         verbose: options.verbose,
         lang: options.lang,
         kinds: options.kinds,
-        parentPlace: options.parentPlace
+        parentPlace: options.parentPlace,
+        distributed: options.distributed,
+        workerUrl: options.workerUrl
       },
       logger: options.json ? { info: () => {}, warn: () => {}, error: () => {} } : console
     });

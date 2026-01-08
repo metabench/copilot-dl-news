@@ -58,6 +58,13 @@ Every feature must have measurable impact:
 ### 5. Multistage SVG Creation
 Visualizations follow the staged approach from `docs/guides/SVG_CREATION_METHODOLOGY.md`:
 
+### 6. jsgui3 Controls for Disambiguation UI
+When building UI controls to display disambiguation process and results:
+- **Read first**: `docs/guides/UI_KNOWLEDGE_SOURCES.md` — Consolidated quick reference
+- **SSR patterns**: `docs/guides/JSGUI3_SSR_ISOMORPHIC_CONTROLS.md` — Composition model, activation
+- **Key rule**: Use `_compose*` method names, call `this.compose()` in constructor
+- **Example controls**: `src/ui/controls/ArticleViewerControl.js`, `src/ui/controls/DataExplorerDashboardControl.js`
+
 **Stage 1: Structure**
 - Define panels, groups, relationships
 - No styling, just semantic organization
@@ -264,6 +271,424 @@ interface DisambiguationEngine {
 }
 ```
 
+---
+
+## 🎯 ACTIVE PLAN: Place Hub Guessing Matrix UI Enhancement
+
+**Objective**: Build a comprehensive Place Hub Matrix UI that displays the status of possible place hubs with four states (guessed, verified-not-exist, verified-existing, unchecked) and provides rich detail for verified-existing hubs (article count, date range, coverage proportion).
+
+**Status**: IN PROGRESS — Foundational matrix exists, needs status enrichment + article metrics
+
+### Current State Analysis
+
+**What Exists**:
+- `PlaceHubGuessingMatrixControl.js` — jsgui3 SSR control rendering places × hosts matrix
+- `placeHubGuessingUiQueries.js` — Query layer for matrix data from `place_page_mappings`
+- Four cell states: `unchecked`, `pending`, `verified-present`, `verified-absent`
+- Virtual scrolling for large matrices
+- Filters by placeKind, pageKind, hostQ, placeQ, state
+
+**What's Missing**:
+1. **"Guessed" status** — Currently "candidate" becomes "pending", need explicit "guessed" display
+2. **Article metrics for verified hubs** — article count, date range, coverage %
+3. **Drill-down detail panel** — Rich hub detail view on cell click
+4. **Coverage dashboard** — Aggregate statistics per host/place
+
+### Phase 1: Schema & Data Layer (P0 — Foundation)
+
+**Tasks**:
+
+#### 1.1 Add article metrics columns to place_page_mappings or compute via JOIN
+```sql
+-- Option A: Denormalized columns (faster reads)
+ALTER TABLE place_page_mappings ADD COLUMN article_count INTEGER;
+ALTER TABLE place_page_mappings ADD COLUMN earliest_article TEXT;  -- ISO date
+ALTER TABLE place_page_mappings ADD COLUMN latest_article TEXT;    -- ISO date
+ALTER TABLE place_page_mappings ADD COLUMN coverage_pct REAL;       -- 0.0-1.0
+
+-- Option B: Compute via JOIN to http_responses (slower but always fresh)
+-- Use view: place_page_mapping_stats
+```
+
+#### 1.2 Create enrichment query
+```sql
+-- Get article metrics for a verified hub
+SELECT 
+  COUNT(*) AS article_count,
+  MIN(fetched_at) AS earliest_article,
+  MAX(fetched_at) AS latest_article,
+  -- coverage_pct requires knowing "total possible" which may need hub_expected_frequency
+FROM http_responses hr
+JOIN urls u ON u.id = hr.url_id
+WHERE u.host = ?
+  AND u.path LIKE ? || '%'   -- Hub URL path pattern
+  AND hr.http_status = 200
+```
+
+#### 1.3 Status normalization
+Map current states to new 4-state model:
+
+| DB Status | verified_at | Evidence | New Display State |
+|-----------|-------------|----------|-------------------|
+| null | null | null | `unchecked` |
+| candidate | null | has URL | `guessed` |
+| pending | null | probe attempted | `pending` |
+| verified | not null | presence=present | `verified-existing` |
+| verified | not null | presence=absent | `verified-not-exist` |
+
+**Validation**:
+- [ ] `node tools/schema-sync.js` passes after migration
+- [ ] `npm run test:by-path src/db/sqlite/v1/__tests__/placePageMappings.test.js`
+
+---
+
+### Phase 2: Matrix UI Enhancement (P1 — Core UI)
+
+**Tasks**:
+
+#### 2.1 Update `PlaceHubGuessingMatrixControl.js`
+
+**Update cell rendering** (`_cellTd` method):
+```javascript
+// Current states: cell--none, cell--pending, cell--verified-present, cell--verified-absent
+// Add: cell--guessed (new visual style)
+
+const stateToClass = {
+  'unchecked': 'cell--none',
+  'guessed': 'cell--guessed',      // NEW: yellow/amber background
+  'pending': 'cell--pending',
+  'verified-existing': 'cell--verified-present',
+  'verified-not-exist': 'cell--verified-absent'
+};
+
+const stateToGlyph = {
+  'unchecked': '',
+  'guessed': '?',                  // NEW: question mark
+  'pending': '•',
+  'verified-existing': '✓',
+  'verified-not-exist': '×'
+};
+```
+
+**Update legend**:
+```javascript
+legend: [
+  { label: 'Unchecked', className: 'cell--none' },
+  { label: 'Guessed (not verified)', className: 'cell--guessed' },
+  { label: 'Pending verification', className: 'cell--pending' },
+  { label: 'Verified (exists)', className: 'cell--verified-present' },
+  { label: 'Verified (does not exist)', className: 'cell--verified-absent' }
+]
+```
+
+#### 2.2 Add article metrics to tooltip
+
+For `verified-existing` cells, show enriched tooltip:
+```javascript
+// In _cellTd, for verified-present state:
+const tipParts = [
+  `place_id=${place.place_id}`,
+  `host=${host}`,
+  `status=verified`,
+  `articles=${mapping.article_count || 'unknown'}`,
+  mapping.earliest_article ? `since=${mapping.earliest_article.slice(0,10)}` : null,
+  mapping.latest_article ? `latest=${mapping.latest_article.slice(0,10)}` : null,
+  mapping.coverage_pct ? `coverage=${(mapping.coverage_pct * 100).toFixed(0)}%` : null
+].filter(Boolean).join(' | ');
+```
+
+#### 2.3 Update CSS for new "guessed" state
+
+```css
+.cell--guessed {
+  background: var(--wlilo-amber-50, #fffbeb);
+  border-color: var(--wlilo-amber-300, #fcd34d);
+}
+.cell--guessed .cell-glyph {
+  color: var(--wlilo-amber-600, #d97706);
+}
+```
+
+**Validation**:
+- [ ] `node src/ui/server/placeHubGuessing/checks/placeHubGuessing.matrix.check.js` exits 0
+- [ ] Manual: Navigate to `/admin/place-hubs` and verify all 5 states render
+
+---
+
+### Phase 3: Hub Detail Panel (P1 — Drill-down)
+
+**Tasks**:
+
+#### 3.1 Create `PlaceHubDetailControl.js`
+
+New jsgui3 control for the `/cell` drill-down page:
+
+```javascript
+class PlaceHubDetailControl extends BaseAppControl {
+  constructor(spec) {
+    super({
+      ...spec,
+      appName: 'Place Hub Detail',
+      title: `Hub: ${spec.placeName} @ ${spec.host}`
+    });
+    this.compose();
+  }
+
+  composeMainContent() {
+    const root = this.composeContentRoot();
+    
+    // Status card
+    root.add(this._composeStatusCard());
+    
+    // Article metrics (if verified-existing)
+    if (this.status === 'verified-existing') {
+      root.add(this._composeArticleMetrics());
+      root.add(this._composeArticleTimeline());
+    }
+    
+    // Actions (verify, reject, re-check)
+    root.add(this._composeActions());
+    
+    return root;
+  }
+
+  _composeStatusCard() {
+    // Large status indicator with date/time of last check
+  }
+
+  _composeArticleMetrics() {
+    // Card showing: article count, earliest, latest, coverage %
+    // With sparkline chart if > 10 articles
+  }
+
+  _composeArticleTimeline() {
+    // Timeline showing article publication dates
+    // Grouped by month for readability
+  }
+
+  _composeActions() {
+    // Buttons: "Mark as verified", "Mark as not-exist", "Re-probe URL"
+  }
+}
+```
+
+#### 3.2 Add detail route in server
+
+```javascript
+// In placeHubGuessing/server.js
+router.get('/cell', async (req, res) => {
+  const { placeId, host, pageKind } = req.query;
+  
+  const mapping = getPlacePageMapping(dbHandle, { placeId, host, pageKind });
+  const articleMetrics = getHubArticleMetrics(dbHandle, { placeId, host });
+  const articles = getRecentHubArticles(dbHandle, { placeId, host, limit: 20 });
+  
+  const control = new PlaceHubDetailControl({
+    context: createContext(req),
+    mapping,
+    articleMetrics,
+    articles
+  });
+  
+  res.send(control.render());
+});
+```
+
+**Validation**:
+- [ ] Check script: `node src/ui/server/placeHubGuessing/checks/placeHubGuessing.detail.check.js`
+- [ ] Click cell in matrix → detail page loads with correct data
+
+---
+
+### Phase 4: Article Metrics Queries (P1 — Data)
+
+**Tasks**:
+
+#### 4.1 Add queries to `placeHubGuessingUiQueries.js`
+
+```javascript
+function getHubArticleMetrics(dbHandle, { placeId, host, hubUrl }) {
+  // Count articles that match this hub's URL pattern
+  const urlPattern = extractPathPattern(hubUrl); // e.g., /world/africa/
+  
+  return dbHandle.prepare(`
+    SELECT 
+      COUNT(*) AS article_count,
+      MIN(hr.fetched_at) AS earliest_article,
+      MAX(hr.fetched_at) AS latest_article,
+      -- Days covered
+      CAST((julianday(MAX(hr.fetched_at)) - julianday(MIN(hr.fetched_at))) AS INTEGER) AS days_span
+    FROM http_responses hr
+    JOIN urls u ON u.id = hr.url_id
+    WHERE u.host = ?
+      AND u.path LIKE ? || '%'
+      AND hr.http_status = 200
+      AND hr.is_article = 1
+  `).get(host, urlPattern);
+}
+
+function getRecentHubArticles(dbHandle, { placeId, host, hubUrl, limit = 20 }) {
+  const urlPattern = extractPathPattern(hubUrl);
+  
+  return dbHandle.prepare(`
+    SELECT 
+      hr.id AS fetch_id,
+      u.url,
+      hr.title,
+      hr.fetched_at,
+      hr.word_count
+    FROM http_responses hr
+    JOIN urls u ON u.id = hr.url_id
+    WHERE u.host = ?
+      AND u.path LIKE ? || '%'
+      AND hr.http_status = 200
+      AND hr.is_article = 1
+    ORDER BY hr.fetched_at DESC
+    LIMIT ?
+  `).all(host, urlPattern, limit);
+}
+```
+
+#### 4.2 Add coverage percentage calculation
+
+```javascript
+function calculateHubCoverage(dbHandle, { placeId, host, hubUrl }) {
+  // Coverage = articles we have / articles that exist
+  // "Articles that exist" is tricky — use sitemap counts or hub page nav link count
+  
+  const metrics = getHubArticleMetrics(dbHandle, { placeId, host, hubUrl });
+  const hubRecord = getHubByUrl(dbHandle, hubUrl);
+  
+  if (!hubRecord?.article_links_count) return null;
+  
+  return metrics.article_count / hubRecord.article_links_count;
+}
+```
+
+**Validation**:
+- [ ] Unit tests for new query functions
+- [ ] `npm run test:by-path src/db/sqlite/v1/queries/__tests__/placeHubGuessingUiQueries.test.js`
+
+---
+
+### Phase 5: Coverage Dashboard (P2 — Analytics)
+
+**Tasks**:
+
+#### 5.1 Create `PlaceHubCoverageDashboardControl.js`
+
+Aggregate view showing:
+- **By Host**: Coverage % across all places for each publisher
+- **By Place**: Which publishers cover each country/region
+- **Gap Analysis**: Which place×host combinations are missing
+
+#### 5.2 Add dashboard route
+
+```javascript
+router.get('/coverage', (req, res) => {
+  const hostStats = getHostCoverageStats(dbHandle);
+  const placeStats = getPlaceCoverageStats(dbHandle);
+  const gaps = identifyHighPriorityGaps(dbHandle);
+  
+  const control = new PlaceHubCoverageDashboardControl({
+    context: createContext(req),
+    hostStats,
+    placeStats,
+    gaps
+  });
+  
+  res.send(control.render());
+});
+```
+
+**Validation**:
+- [ ] Check script: `node src/ui/server/placeHubGuessing/checks/placeHubGuessing.coverage.check.js`
+
+---
+
+### Phase 6: Actions & Verification (P2 — Interactions)
+
+**Tasks**:
+
+#### 6.1 Add verification endpoints
+
+```javascript
+// Mark a guessed hub as verified-existing
+router.post('/api/place-hubs/:mappingId/verify', (req, res) => {
+  const { outcome } = req.body; // 'present' or 'absent'
+  markPlacePageMappingVerified(dbHandle, {
+    id: req.params.mappingId,
+    outcome,
+    verifiedAt: new Date().toISOString()
+  });
+  res.json({ success: true });
+});
+
+// Trigger re-probe of a hub URL
+router.post('/api/place-hubs/:mappingId/probe', async (req, res) => {
+  // Queue a background task to re-fetch and validate the hub URL
+  const task = await queueHubProbeTask(req.params.mappingId);
+  res.json({ taskId: task.id });
+});
+```
+
+#### 6.2 Add action buttons to detail page
+
+Interactive buttons that call the API endpoints:
+- "Confirm Exists" → POST /verify with outcome=present
+- "Mark Not Found" → POST /verify with outcome=absent  
+- "Re-probe Now" → POST /probe
+
+**Validation**:
+- [ ] Jest API tests: `npm run test:by-path tests/server/api/place-hubs.test.js`
+
+---
+
+### Validation Matrix
+
+| Layer | What it Validates | Command | Expected |
+|-------|-------------------|---------|----------|
+| Unit | Query functions | `npm run test:by-path src/db/sqlite/v1/queries/__tests__/placeHubGuessingUiQueries.test.js` | PASS |
+| Unit | Coverage calculations | `npm run test:by-path src/services/__tests__/PlaceHubCoverage.test.js` | PASS |
+| API | HTTP endpoints | `npm run test:by-path tests/server/api/place-hubs.test.js` | PASS |
+| UI Check | Matrix renders | `node src/ui/server/placeHubGuessing/checks/placeHubGuessing.matrix.check.js` | exits 0 |
+| UI Check | Detail renders | `node src/ui/server/placeHubGuessing/checks/placeHubGuessing.detail.check.js` | exits 0 |
+| UI Check | Coverage renders | `node src/ui/server/placeHubGuessing/checks/placeHubGuessing.coverage.check.js` | exits 0 |
+| E2E | Full flow | `npm run test:by-path tests/e2e/place-hub-guessing.e2e.test.js` | PASS |
+
+---
+
+### Success Criteria
+
+**Phase 1 Complete When**:
+- [ ] Schema supports all 5 states (unchecked, guessed, pending, verified-existing, verified-not-exist)
+- [ ] Article metrics can be computed for any verified hub
+- [ ] All unit tests pass
+
+**Phase 2 Complete When**:
+- [ ] Matrix shows all 5 states with distinct visual styling
+- [ ] Legend updated with all states
+- [ ] Tooltips show article metrics for verified-existing cells
+
+**Phase 3 Complete When**:
+- [ ] Cell click opens detail page
+- [ ] Detail shows article count, date range, coverage %
+- [ ] Article timeline renders for hubs with >10 articles
+
+**Phase 4 Complete When**:
+- [ ] All query functions have tests
+- [ ] Coverage % calculated correctly
+- [ ] Performance: <100ms for any single cell lookup
+
+**Full Project Complete When**:
+- [ ] Matrix UI shows all 5 states with rich tooltips
+- [ ] Drill-down detail page shows article metrics
+- [ ] Coverage dashboard shows aggregate statistics
+- [ ] Action buttons work for verification/re-probe
+- [ ] All validation matrix items pass
+
+---
+
 ## Key Book Chapters
 
 | Chapter | Status | Implementation Priority |
@@ -275,6 +700,7 @@ interface DisambiguationEngine {
 | 14 - Coherence Pass | Written | P2 - Enhancement |
 | 16 - Building the Service | Written | P1 - API surface |
 | 17 - Testing & Validation | Written | P0 - Quality gates |
+| 20 - Active Hub Discovery | Written | P1 - Hub guessing |
 
 ## Constraints & Escalation
 

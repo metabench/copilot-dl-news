@@ -12,6 +12,24 @@ const express = require('express');
 const { guessPlaceHubsBatch, checkDomainReadiness } = require('../../orchestration/placeHubGuessing');
 const { createPlaceHubDependencies } = require('../../orchestration/dependencies');
 
+function parseBoolean(value, fallback = false) {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (typeof value === 'boolean') return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on') return true;
+  if (normalized === '0' || normalized === 'false' || normalized === 'no' || normalized === 'off') return false;
+  return fallback;
+}
+
+function clampInt(value, { min, max, fallback }) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  const intVal = Math.trunc(num);
+  if (intVal < min) return min;
+  if (intVal > max) return max;
+  return intVal;
+}
+
 /**
  * Create place hub routes router
  * 
@@ -91,6 +109,22 @@ function createPlaceHubsRouter(options = {}) {
         refresh404Days = 180,
         retry4xxDays = 7
       } = guessOptions;
+
+      const distributed = parseBoolean(
+        guessOptions.distributed,
+        parseBoolean(process.env.PLACE_HUB_GUESSING_DISTRIBUTED, true)
+      );
+      const workerUrl = typeof guessOptions.workerUrl === 'string' && guessOptions.workerUrl.trim()
+        ? guessOptions.workerUrl.trim()
+        : process.env.PLACE_HUB_GUESSING_WORKER_URL;
+      const batchSize = clampInt(
+        guessOptions.batchSize ?? process.env.PLACE_HUB_GUESSING_BATCH_SIZE,
+        { min: 1, max: 500, fallback: 50 }
+      );
+      const concurrency = clampInt(
+        guessOptions.concurrency ?? process.env.PLACE_HUB_GUESSING_CONCURRENCY,
+        { min: 1, max: 100, fallback: 10 }
+      );
 
       // Validate kinds
       const validKinds = ['country', 'region', 'city'];
@@ -195,7 +229,13 @@ function createPlaceHubsRouter(options = {}) {
       // Prepare dependencies
       const deps = createPlaceHubDependencies({
         dbPath,
-        verbose: verbose || guessOptions.verbose
+        verbose: verbose || guessOptions.verbose,
+        distributed,
+        workerUrl,
+        distributedOptions: {
+          batchSize,
+          concurrency
+        }
       });
 
       // Prepare orchestration options

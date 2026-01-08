@@ -33,9 +33,16 @@ function makeTextEl(ctx, tagName, text, options = {}) {
   const el = new jsgui.Control({
     context: ctx,
     tagName,
-    style: options.style,
-    attr: options.attr
+    style: options.style
   });
+  // Set attributes via dom.attributes (jsgui3 doesn't use 'attr' in spec)
+  if (options.attr) {
+    Object.entries(options.attr).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        el.dom.attributes[key] = value;
+      }
+    });
+  }
   if (text !== undefined && text !== null && text !== '') {
     addText(ctx, el, text);
   }

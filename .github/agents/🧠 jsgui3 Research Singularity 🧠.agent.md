@@ -28,6 +28,8 @@ tools: ['execute/testFailure', 'execute/getTerminalOutput', 'execute/runTask', '
 
 | Domain | File | When to Read | Priority |
 |--------|------|--------------|----------|
+| **SSR & Composition** | `docs/guides/JSGUI3_SSR_ISOMORPHIC_CONTROLS.md` | Creating/modifying ANY control | 🔴 CRITICAL |
+| **UI Quick Reference** | `docs/guides/UI_KNOWLEDGE_SOURCES.md` | Finding the right UI doc | 🔴 CRITICAL |
 | **Performance** | `docs/guides/JSGUI3_PERFORMANCE_PATTERNS.md` | Before ANY optimization work | 🔴 CRITICAL |
 | **MVVM/State** | `docs/guides/JSGUI3_MVVM_PATTERNS.md` | Forms, data binding, complex state | 🔴 CRITICAL |
 | **Research Methods** | `docs/guides/JSGUI3_COGNITIVE_TOOLKIT.md` | Starting new research, when stuck | 🟡 HIGH |

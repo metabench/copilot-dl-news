@@ -191,3 +191,7 @@
 ## 2026-01-06
 - When implementing UI matrix views that fetch data via limited queries (e.g. `clampInt`), ensure the hard-coded max limits in the query builder (`max: 200`) are sufficient for complete datasets like 'All Countries' (approx 250), otherwise the tail end of the alphabet will silently disappear.
 - ActiveProbeProcessor requires multi-language slug support when probing non-English domains (e.g. searching for 'germany' on Spanish sites fails, requires 'alemania').
+
+## 2026-01-07 Place Hub Matrix
+- **Host normalization bug fix**: When querying place_page_mappings, hosts like `www.theguardian.com` and `theguardian.com` were treated as separate publishers. Fixed by adding `normalizeHost()` that strips `www.` prefix and deduplicating in query results. Also discovered page_kind inconsistency (`country` vs `country-hub`) requiring expansion of page_kind queries to include equivalent variations.
+- **Performance fix: Cities query 4x faster** - Changed `ORDER BY COALESCE(p.population, 0) DESC` to `ORDER BY p.population DESC NULLS LAST` which allows SQLite to use the index directly. Added composite index `idx_places_kind_population ON places(kind, population DESC)`. Result: Cities matrix query dropped from 114ms to 24ms. Key insight: COALESCE in ORDER BY prevents index usage.

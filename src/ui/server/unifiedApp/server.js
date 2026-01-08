@@ -43,6 +43,7 @@ const { createCrawlStatusRouter } = require('../crawlStatus/server');
 const { createCrawlerProfilesRouter } = require('../crawlerProfiles/server');
 const { createSchedulerDashboardRouter } = require('../schedulerDashboard/server');
 const { createMultiModalCrawlRouter } = require('../multiModalCrawl/server');
+const { createCrawlStrategiesRouter } = require('../crawlStrategies/server');
 const { TelemetryIntegration } = require('../../../crawler/telemetry/TelemetryIntegration');
 const { InProcessCrawlJobRegistry } = require('../../../server/crawl-api/v1/core/InProcessCrawlJobRegistry');
 const { registerCrawlApiV1Routes } = require('../../../api/route-loaders/crawl-v1');
@@ -661,6 +662,11 @@ function mountDashboardModules(unifiedApp, options = {}) {
       mountPath: '/scheduler',
       apiOnly: () => createSchedulerDashboardRouter({ getDbRW, includeRootRoute: false }),
       full: () => createSchedulerDashboardRouter({ getDbRW })
+    },
+    {
+      id: 'crawl-strategies',
+      mountPath: '/crawl-strategies',
+      full: () => createCrawlStrategiesRouter({ logger: log, getDbRW })
     }
   ];
 

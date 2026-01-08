@@ -30,7 +30,10 @@ const {
   DomainLeaderboard, 
   ActivityHeatmap, 
   PeriodSelector,
-  SummaryCard 
+  SummaryCard,
+  DownloadHistoryChart,
+  getDailyDownloads,
+  DOWNLOAD_HISTORY_CHART_CSS
 } = require('./controls');
 
 const PORT = process.env.ANALYTICS_PORT || 3101;
@@ -68,6 +71,9 @@ const DASHBOARD_CSS = `
     --accent-red: #ef4444;
     --accent-blue: #3b82f6;
   }
+
+  /* Download History Chart */
+  ${DOWNLOAD_HISTORY_CHART_CSS}
 
   * { box-sizing: border-box; }
 
@@ -631,6 +637,18 @@ function createApp(service = analyticsService, patternSvc = patternService) {
     }
   });
 
+  // Download history API endpoint
+  app.get('/api/analytics/downloads', (req, res) => {
+    try {
+      const days = parseInt(req.query.days, 10) || 128;
+      const clampedDays = Math.min(Math.max(days, 7), 365);
+      const data = getDailyDownloads(db, clampedDays);
+      res.json({ success: true, data, days: clampedDays });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // ─────────────────────────────────────────────────────────────
   // Historical Metrics API (Added 2026-01-06)
   // ─────────────────────────────────────────────────────────────
@@ -780,6 +798,60 @@ function createApp(service = analyticsService, patternSvc = patternService) {
       res.send(renderPage('Domain Leaderboard - Analytics', container));
     } catch (err) {
       console.error('Leaderboard page error:', err);
+      res.status(500).send(`Error: ${err.message}`);
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Download History page (128-day cumulative bar chart)
+  // ─────────────────────────────────────────────────────────────
+  app.get('/downloads', (req, res) => {
+    try {
+      const days = parseInt(req.query.days, 10) || 128;
+      const clampedDays = Math.min(Math.max(days, 7), 365);
+      
+      const ctx = new jsgui.Page_Context();
+      const container = new jsgui.Control({ context: ctx, tagName: 'div' });
+
+      // Navigation back to main dashboard
+      const nav = new jsgui.Control({ context: ctx, tagName: 'div' });
+      nav.add_class('period-selector');
+      const backLink = new jsgui.Control({ context: ctx, tagName: 'a' });
+      backLink.dom.attributes.href = '/';
+      backLink.add_class('period-selector__btn');
+      backLink.add(new StringControl({ context: ctx, text: '← Back to Dashboard' }));
+      nav.add(backLink);
+      
+      // Days selector
+      const daysGroup = new jsgui.Control({ context: ctx, tagName: 'div' });
+      daysGroup.add_class('period-selector__group');
+      for (const d of [30, 60, 90, 128, 180, 365]) {
+        const btn = new jsgui.Control({ context: ctx, tagName: 'a' });
+        btn.dom.attributes.href = `/downloads?days=${d}`;
+        btn.add_class('period-selector__btn');
+        if (d === clampedDays) btn.add_class('period-selector__btn--active');
+        btn.add(new StringControl({ context: ctx, text: `${d}d` }));
+        daysGroup.add(btn);
+      }
+      nav.add(daysGroup);
+      container.add(nav);
+
+      // Download history chart
+      const section = new jsgui.Control({ context: ctx, tagName: 'div' });
+      section.add_class('analytics-dashboard__section');
+      
+      section.add(new DownloadHistoryChart({
+        context: ctx,
+        db,
+        days: clampedDays,
+        title: 'Collection Inventory',
+        wlilo: true
+      }));
+      container.add(section);
+
+      res.send(renderPage(`Download History (${clampedDays} Days) - Analytics`, container));
+    } catch (err) {
+      console.error('Download history page error:', err);
       res.status(500).send(`Error: ${err.message}`);
     }
   });

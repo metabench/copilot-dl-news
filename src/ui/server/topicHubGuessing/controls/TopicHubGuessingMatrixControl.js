@@ -270,6 +270,8 @@ td.matrix-td {
       context: ctx,
       rootTestId: 'topic-hub-guessing',
       basePath: this.basePath || '.',
+      guessPayloadFields: ['lang', 'topicLimit', 'hostLimit', 'q', 'hostQ'],
+      guessPayloadDefaults: { apply: true, enableTopicDiscovery: true },
       fields: [
         {
           label: 'lang',

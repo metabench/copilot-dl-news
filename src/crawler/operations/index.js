@@ -10,7 +10,9 @@ const { FindPlaceAndTopicHubsOperation } = require('./FindPlaceAndTopicHubsOpera
 const { GuessPlaceHubsOperation } = require('./GuessPlaceHubsOperation');
 const { SiteExplorerOperation } = require('./SiteExplorerOperation');
 const { BasicArticleCrawlOperation } = require('./BasicArticleCrawlOperation');
+const { SitemapDiscoveryOperation, SitemapOnlyOperation } = require('./SitemapDiscoveryOperation');
 const { CustomCrawlOperation } = require('./CustomCrawlOperation');
+const { HubArchiveCrawlOperation, HubDepthProbeOperation } = require('./HubArchiveCrawlOperation');
 const { CrawlSequenceRunner } = require('./SequenceRunner');
 const {
   listSequencePresets,
@@ -28,7 +30,11 @@ const createDefaultOperations = () => (
     new FindTopicHubsOperation(),
     new FindPlaceAndTopicHubsOperation(),
     new GuessPlaceHubsOperation(),
-    new SiteExplorerOperation()
+    new SiteExplorerOperation(),
+    new SitemapDiscoveryOperation(),
+    new SitemapOnlyOperation(),
+    new HubArchiveCrawlOperation(),
+    new HubDepthProbeOperation()
   ]
 );
 
