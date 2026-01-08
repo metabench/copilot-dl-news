@@ -107,6 +107,8 @@ COMMANDS:
   --since <time>     Show downloads since ISO timestamp
   --until <time>     Combined with --since for time range
   --hosts            Show download counts by host
+                     Can combine with --since for time-filtered host stats
+  --host <pattern>   Filter to hosts matching pattern (substring match)
   --timeline         Show download timeline (group by minute)
   --url <url>        Get evidence for a specific URL
   --verify <n>       Verify claimed download count against DB
@@ -295,30 +297,66 @@ function cmdSince() {
 function cmdHosts() {
   const db = getDb();
   
-  const stmt = db.prepare(`
+  // Check if we have a time filter
+  const startTime = flags.since;
+  const endTime = flags.until || new Date().toISOString();
+  const hostFilter = flags.host; // substring filter for hosts
+  
+  let stmt;
+  let rows;
+  let params = [];
+  
+  // Build query dynamically based on filters
+  let whereClause = '1=1';
+  if (startTime) {
+    whereClause += ' AND r.fetched_at BETWEEN ? AND ?';
+    params.push(startTime, endTime);
+  }
+  if (hostFilter) {
+    whereClause += ' AND u.host LIKE ?';
+    params.push(`%${hostFilter}%`);
+  }
+  
+  stmt = db.prepare(`
     SELECT 
       u.host,
       COUNT(*) as total_requests,
       COUNT(CASE WHEN r.http_status = 200 THEN 1 END) as successful,
       COUNT(CASE WHEN r.http_status = 429 THEN 1 END) as rate_limited,
       SUM(CASE WHEN r.http_status = 200 THEN r.bytes_downloaded ELSE 0 END) as bytes,
+      MIN(r.fetched_at) as first_fetch,
       MAX(r.fetched_at) as last_fetch
     FROM http_responses r
     JOIN urls u ON r.url_id = u.id
+    WHERE ${whereClause}
     GROUP BY u.host
     ORDER BY total_requests DESC
     LIMIT ?
   `);
+  params.push(LIMIT);
+  rows = stmt.all(...params);
   
-  const rows = stmt.all(LIMIT);
   db.close();
   
   if (JSON_OUTPUT) {
-    console.log(JSON.stringify({ command: 'hosts', hosts: rows }, null, 2));
+    console.log(JSON.stringify({ 
+      command: 'hosts', 
+      startTime: startTime || null, 
+      endTime: startTime ? endTime : null,
+      hostFilter: hostFilter || null,
+      hosts: rows 
+    }, null, 2));
     return;
   }
   
-  console.log(`\n🌐 Downloads by Host\n`);
+  // Build title
+  let title = '🌐 Downloads by Host';
+  const filters = [];
+  if (startTime) filters.push(`since ${startTime.slice(0, 16)}`);
+  if (hostFilter) filters.push(`matching "${hostFilter}"`);
+  if (filters.length > 0) title += ` (${filters.join(', ')})`;
+  
+  console.log(`\n${title}\n`);
   printTable(rows, [
     { header: 'Host', value: r => r.host.length > 35 ? r.host.slice(0, 32) + '...' : r.host },
     { header: 'Total', value: r => r.total_requests },
@@ -468,10 +506,11 @@ function main() {
     cmdToday();
   } else if (flags.stats) {
     cmdStats();
+  } else if (flags.hosts || flags.host) {
+    // hosts can also use --since and --host for filtering
+    cmdHosts();
   } else if (flags.since) {
     cmdSince();
-  } else if (flags.hosts) {
-    cmdHosts();
   } else if (flags.timeline) {
     cmdTimeline();
   } else if (flags.url) {

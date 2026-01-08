@@ -108,6 +108,8 @@ function parseArgs(argv) {
     downloadsOnly: false, // Show only PAGE events (download activity)
     slow: false,
     rateLimitMs: 0,
+    intMaxSeeds: null, // Country seed limit (null = default 50, 0 = all countries)
+    adaptive: false, // Use adaptive strategy selection
     db: path.join(process.cwd(), 'data', 'news.db')
   };
 
@@ -175,6 +177,14 @@ function parseArgs(argv) {
         flags.db = next;
         i++;
         break;
+      case '--int-max-seeds':
+        flags.intMaxSeeds = parseInt(next, 10);
+        i++;
+        break;
+      case '--adaptive':
+      case '-A':
+        flags.adaptive = true;
+        break;
       default:
         if (!arg.startsWith('-') && !flags.url) {
           flags.url = arg;
@@ -227,6 +237,7 @@ async function main() {
   const Database = require('better-sqlite3');
   const { createCrawlService } = require('../../src/server/crawl-api');
   const { TelemetryIntegration } = require('../../src/crawler/telemetry/TelemetryIntegration');
+  const { AdaptiveDiscoveryService, STRATEGIES } = require('../../src/crawler/strategies');
 
   if (flags.help) {
     console.log(`
@@ -247,6 +258,7 @@ Options:
   -d, --downloads-only     Show only download activity (PAGE events)
   --terse                  Hide QUEUE/PROGRESS events, show key telemetry only
   -q, --quiet              Suppress all stdout noise (monitor with crawl-live.js)
+  --adaptive, -A           Use adaptive strategy selection (auto-switch strategies)
   --db <path>              Database path (default: data/news.db)
   -h, --help               Show this help
 
@@ -254,8 +266,8 @@ Examples:
   # Quick test crawl (terse output by default)
   node tools/dev/mini-crawl.js https://example.com
 
-  # Crawl showing only downloads (clean output)
-  node tools/dev/mini-crawl.js https://bbc.com/news -n 20 -d
+  # Adaptive mode - automatically chooses best strategy
+  node tools/dev/mini-crawl.js https://bbc.com/news -n 100 --adaptive
 
   # Quiet mode - use separate CLI to monitor
   node tools/dev/mini-crawl.js https://example.com -n 50 -q &
@@ -331,10 +343,75 @@ For long-running crawls, use the daemon approach:
   const startTime = Date.now();
   const jobId = `mini-crawl-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
 
+  // ─────────────────────────────────────────────────────────────
+  // Adaptive Discovery Mode
+  // ─────────────────────────────────────────────────────────────
+  let adaptiveService = null;
+  let effectiveOperation = flags.operation;
+  
+  if (flags.adaptive) {
+    adaptiveService = new AdaptiveDiscoveryService({ db, logger });
+    const domain = new URL(flags.url).hostname;
+    
+    // Run quick sitemap check to determine capabilities
+    const https = require('https');
+    const http = require('http');
+    const urlObj = new URL(flags.url);
+    const protocol = urlObj.protocol === 'https:' ? https : http;
+    
+    let hasSitemap = false;
+    let sitemapUrls = [];
+    
+    try {
+      const robotsUrl = `${urlObj.origin}/robots.txt`;
+      const robotsResponse = await new Promise((resolve, reject) => {
+        const req = protocol.get(robotsUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)' },
+          timeout: 5000
+        }, resolve);
+        req.on('error', reject);
+        req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+      });
+      
+      if (robotsResponse.statusCode === 200) {
+        let robotsBody = '';
+        robotsResponse.on('data', chunk => { robotsBody += chunk; if (robotsBody.length > 10000) robotsResponse.destroy(); });
+        await new Promise(resolve => robotsResponse.on('end', resolve).on('close', resolve));
+        
+        const sitemapMatches = robotsBody.match(/Sitemap:\s*(.+)/gi) || [];
+        sitemapUrls = sitemapMatches.map(m => m.replace(/Sitemap:\s*/i, '').trim());
+        hasSitemap = sitemapUrls.length > 0;
+      }
+    } catch (err) {
+      logger.debug('robots.txt check failed:', err.message);
+    }
+    
+    // Initialize with capabilities
+    const selectedStrategy = await adaptiveService.initialize(domain, {
+      hasSitemap,
+      sitemapUrls: hasSitemap ? sitemapUrls.length * 100 : 0, // Estimate ~100 URLs per sitemap
+      sitemapLocations: sitemapUrls
+    });
+    
+    // Map strategy to operation
+    const strategyToOperation = {
+      [STRATEGIES.SITEMAP]: 'sitemapDiscovery',
+      [STRATEGIES.APS]: 'siteExplorer',
+      [STRATEGIES.LINK_FOLLOW]: 'basicArticleCrawl',
+      [STRATEGIES.HOMEPAGE]: 'basicArticleCrawl'
+    };
+    effectiveOperation = strategyToOperation[selectedStrategy] || flags.operation;
+    
+    if (!flags.quiet) {
+      console.log(`🧠 Adaptive mode: strategy=${selectedStrategy} → operation=${effectiveOperation}`);
+      console.log(`   Sitemap: ${hasSitemap ? `✓ (${sitemapUrls.length} found)` : '✗ none'}`);
+    }
+  }
+
   if (!flags.quiet) {
     console.log(`\n🕷️  Starting mini-crawl`);
     console.log(`   URL:        ${flags.url}`);
-    console.log(`   Operation:  ${flags.operation}`);
+    console.log(`   Operation:  ${effectiveOperation}${flags.adaptive ? ' (adaptive)' : ''}`);
     console.log(`   Max Pages:  ${flags.maxPages}`);
     console.log(`   Job ID:     ${jobId}\n`);
   } else {
@@ -344,10 +421,10 @@ For long-running crawls, use the daemon approach:
   // Initialize the telemetry bridge with the jobId so URL events get the correct task ID
   telemetry.bridge.emitStarted({
     startUrl: flags.url,
-    config: { operation: flags.operation, maxPages: flags.maxPages }
+    config: { operation: effectiveOperation, maxPages: flags.maxPages, adaptive: flags.adaptive }
   }, {
     jobId,
-    crawlType: flags.operation
+    crawlType: effectiveOperation
   });
 
   // Also write start event directly for structured query support
@@ -358,7 +435,8 @@ For long-running crawls, use the daemon approach:
     category: 'lifecycle',
     data: {
       url: flags.url,
-      operation: flags.operation,
+      operation: effectiveOperation,
+      adaptiveMode: flags.adaptive,
       maxPages: flags.maxPages,
       maxDepth: flags.maxDepth
     }
@@ -368,13 +446,17 @@ For long-running crawls, use the daemon approach:
   try {
     result = await service.runOperation({
       logger,
-      operationName: flags.operation,
+      operationName: effectiveOperation,
       startUrl: flags.url,
       overrides: {
         maxDownloads: flags.maxPages,
         maxDepth: flags.maxDepth,
         crawlTimeoutMs: flags.timeout,
         jobId,
+        // Adaptive discovery service for strategy tracking
+        ...(adaptiveService && { adaptiveDiscoveryService: adaptiveService }),
+        // Country hub seed limit (0 = all countries)
+        ...(flags.intMaxSeeds !== null && { intMaxSeeds: flags.intMaxSeeds }),
         // Rate limiting for anti-bot protection
         ...(flags.rateLimitMs > 0 && { rateLimitMs: flags.rateLimitMs }),
         ...(flags.slow && { slowMode: true }),
@@ -430,11 +512,19 @@ For long-running crawls, use the daemon approach:
 
   const elapsed = Date.now() - startTime;
 
+  // Get adaptive summary if in adaptive mode
+  let adaptiveSummary = null;
+  if (adaptiveService) {
+    adaptiveSummary = adaptiveService.getSummary();
+  }
+
   if (flags.json) {
     console.log(JSON.stringify({
       jobId,
       url: flags.url,
-      operation: flags.operation,
+      operation: effectiveOperation,
+      adaptive: flags.adaptive,
+      ...(adaptiveSummary && { adaptiveStrategy: adaptiveSummary }),
       elapsed,
       result
     }, null, 2));
@@ -445,6 +535,19 @@ For long-running crawls, use the daemon approach:
     if (result?.stats) {
       console.log(`   Pages:      ${result.stats.pagesVisited || 0}`);
       console.log(`   Links:      ${result.stats.linksFound || 0}`);
+    }
+    if (adaptiveSummary) {
+      console.log(`\n🧠 Adaptive Strategy Summary:`);
+      console.log(`   Strategy:   ${adaptiveSummary.currentStrategy}`);
+      console.log(`   Switches:   ${adaptiveSummary.switchCount}`);
+      if (adaptiveSummary.recentMetrics) {
+        const metrics = adaptiveSummary.recentMetrics;
+        console.log(`   Success:    ${(metrics.successRate * 100).toFixed(0)}%`);
+        console.log(`   Articles:   ${(metrics.articleYield * 100).toFixed(0)}% yield`);
+      }
+      if (adaptiveSummary.recommendation) {
+        console.log(`   Recommend:  ${adaptiveSummary.recommendation.action} (${adaptiveSummary.recommendation.reason})`);
+      }
     }
     console.log(`\n📊 Analyze with:`);
     console.log(`   node tools/dev/task-events.js --summary ${jobId}`);

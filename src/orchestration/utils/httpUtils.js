@@ -6,6 +6,47 @@
  */
 
 /**
+ * Extract title from HTML body
+ * @param {string} html - HTML content
+ * @returns {string|null} - Extracted title or null
+ */
+function extractTitle(html) {
+  if (!html || typeof html !== 'string') return null;
+  const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  if (!match) return null;
+  // Decode HTML entities and trim
+  return match[1]
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .trim();
+}
+
+/**
+ * Create a fetch row object for database storage
+ * @param {Object} result - Fetch result
+ * @param {Object} context - Additional context
+ * @returns {Object} - Row object for http_responses table
+ */
+function createFetchRow(result, context = {}) {
+  return {
+    url: context.url || result.finalUrl || result.url,
+    http_status: result.status,
+    final_url: result.finalUrl || result.url,
+    title: extractTitle(result.body),
+    fetched_at: result.metrics?.fetched_at || new Date().toISOString(),
+    bytes_downloaded: result.metrics?.bytes_downloaded || 0,
+    content_type: result.metrics?.content_type || null,
+    request_started_at: result.metrics?.request_started_at || null,
+    duration_ms: result.metrics?.duration_ms || 0,
+    ...context
+  };
+}
+
+/**
  * Fetch URL with timeout and error handling
  * @param {string} url - URL to fetch
  * @param {Function} fetchFn - Fetch function to use
@@ -99,5 +140,7 @@ async function fetchUrl(url, fetchFn, { logger, timeoutMs = 15000, method = 'GET
 }
 
 module.exports = {
-  fetchUrl
+  fetchUrl,
+  extractTitle,
+  createFetchRow
 };

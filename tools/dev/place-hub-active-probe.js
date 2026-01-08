@@ -70,7 +70,7 @@ async function probeUrl(url) {
     
     clearTimeout(timeout);
     
-    if (res.ok) return { url, status: res.status, ok: true };
+    if (res.ok) return { url, finalUrl: res.url, status: res.status, ok: true };
     if (res.status === 405 || res.status === 403) {
       // Some sites block HEAD, try GET
       const controller2 = new AbortController();
@@ -84,7 +84,7 @@ async function probeUrl(url) {
         }
       });
       clearTimeout(timeout2);
-      return { url, status: res2.status, ok: res2.ok };
+      return { url, finalUrl: res2.url, status: res2.status, ok: res2.ok };
     }
     
     return { url, status: res.status, ok: false };
@@ -156,7 +156,7 @@ async function main() {
       const batchResults = await Promise.all(promises);
       for (const r of batchResults) {
         if (flags.verbose) {
-            console.log(`${r.url} -> ${r.ok ? 'OK' : 'FAIL'} (${r.res.status || r.res.error})`);
+            console.log(`${r.url} -> ${r.res.ok ? 'OK' : 'FAIL'} (${r.res.status || r.res.error})` + (r.res.finalUrl && r.res.finalUrl !== r.url ? ` -> ${r.res.finalUrl}` : ''));
         } else {
             process.stdout.write(r.res.ok ? '✅' : '❌');
         }
@@ -168,7 +168,7 @@ async function main() {
     console.log('\n');
     
     console.log(`Found ${results.length} valid hub URLs`);
-    results.forEach(r => console.log(`  ${r.place.name}: ${r.url} (${r.res.status})`));
+    results.forEach(r => console.log(`  ${r.place.name}: ${r.url} ${r.res.finalUrl && r.res.finalUrl !== r.url ? '-> ' + r.res.finalUrl : ''} (${r.res.status})`));
     
     // 5. Apply
     if (APPLY && results.length > 0) {
@@ -176,6 +176,10 @@ async function main() {
         INSERT INTO place_page_mappings 
           (place_id, host, url, page_kind, status, first_seen_at, evidence)
         VALUES (?, ?, ?, 'country-hub', 'pending', ?, ?)
+        ON CONFLICT(place_id, host, page_kind) DO UPDATE SET
+          url = excluded.url,
+          evidence = excluded.evidence,
+          verified_at = CASE WHEN excluded.status = 'verified' THEN excluded.first_seen_at ELSE verified_at END
       `);
       
       const now = new Date().toISOString();
@@ -185,13 +189,15 @@ async function main() {
         let count = 0;
         for (const r of results) {
           try {
+            const finalUrl = r.res.finalUrl || r.url;
             const evidence = JSON.stringify({
               source: 'place-hub-active-probe',
               pattern: PATTERN,
+              originalUrl: r.url,
               status: r.res.status,
               probed_at: now
             });
-            insert.run(r.place.place_id, host, r.url, now, evidence);
+            insert.run(r.place.place_id, host, finalUrl, now, evidence);
             count++;
           } catch (err) {
             console.error(`Failed to insert ${r.url}: ${err.message}`);
@@ -201,7 +207,7 @@ async function main() {
       });
       
       const inserted = tx();
-      console.log(`Inserted ${inserted} new mappings`);
+      console.log(`Upserted ${inserted} mappings`);
     } else if (results.length > 0) {
       console.log(`\nRun with --apply to insert ${results.length} mappings`);
     }

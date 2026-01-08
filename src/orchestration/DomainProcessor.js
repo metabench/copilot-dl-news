@@ -8,10 +8,25 @@ const { computeAgeMs, extractPredictionSignals, composeCandidateSignals, createF
 const { summarizeDsplPatterns, assessDomainReadiness, selectPlaces, selectTopics, collectHubChanges } = require('./utils/analysisUtils');
 const { createBatchSummary, aggregateSummaryInto, createFailedDomainSummary } = require('./utils/summaryUtils');
 const { fetchUrl } = require('./utils/httpUtils');
+const { upsertAbsentPlacePageMapping } = require('../db/sqlite/v1/queries/placePageMappings');
 
 const { CRAWL_EVENT_TYPES, SEVERITY_LEVELS, createTelemetryEvent } = require('../crawler/telemetry');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const PLACE_KIND_TO_PAGE_KIND = {
+  country: 'country-hub',
+  region: 'region-hub',
+  city: 'city-hub'
+};
+
+function resolvePageKind(placeKind) {
+  return PLACE_KIND_TO_PAGE_KIND[placeKind] || 'country-hub';
+}
+
+function resolvePlaceId(place) {
+  const value = place?.placeId ?? place?.place_id ?? place?.id ?? null;
+  return Number.isFinite(value) ? value : null;
+}
 
 /**
  * DomainProcessor - Handles single domain hub guessing orchestration
@@ -43,7 +58,9 @@ class DomainProcessor {
       logger,
       fetchFn,
       now = () => new Date(),
-      telemetryBridge
+      telemetryBridge,
+      batchProcessor,
+      distributedAdapter
     } = deps;
 
     // Options extraction
@@ -231,7 +248,7 @@ class DomainProcessor {
           verbose: options.verbose,
           normalizedDomain
         },
-        deps: { db, newsDb, queries, analyzers, validator, stores, logger, fetchFn, now, emitTelemetry },
+        deps: { db, newsDb, queries, analyzers, validator, stores, logger, fetchFn, now, emitTelemetry, batchProcessor, distributedAdapter },
         attemptCounter,
         recordFetch,
         recordDecision
@@ -622,6 +639,26 @@ class DomainProcessor {
 
     const normalizedPredictions = this._normalizePredictions(predictions, normalizedDomain.scheme);
 
+    // Check if batch processing is available and should be used
+    if (deps.batchProcessor && deps.batchProcessor.isAvailable() && options.useBatchMode !== false) {
+      return this._processPlaceCandidatesBatch({
+        predictions: normalizedPredictions.slice(0, options.patternLimit),
+        place,
+        placeKey,
+        normalizedDomain,
+        validator,
+        queries,
+        stores,
+        summary,
+        options,
+        deps,
+        attemptCounter: currentAttemptCounter,
+        recordFetch,
+        recordDecision
+      });
+    }
+
+    // Sequential processing fallback
     for (const { url: candidateUrl, source: predictionSource } of normalizedPredictions.slice(0, options.patternLimit)) {
       if (rateLimitTriggered) break;
 
@@ -898,10 +935,14 @@ class DomainProcessor {
     const attemptId = `${placeKey}:${nextAttemptCounter}`;
     const attemptStartedAt = new Date().toISOString();
 
+    const placeId = resolvePlaceId(place);
+    const placeCode = place.code || place.countryCode || null;
     const placeSignalsInfo = {
+      id: placeId,
       kind: place.kind,
       name: place.name,
-      code: place.code || place.countryCode || null
+      code: placeCode,
+      country_code: placeCode
     };
 
     const analyzerName = typeof predictionSource === 'object' && predictionSource
@@ -920,6 +961,36 @@ class DomainProcessor {
       place: placeSignalsInfo,
       attemptId
     });
+
+    const pageKind = resolvePageKind(place.kind);
+    const recordAbsentMapping = (httpStatus, source) => {
+      if (!options.apply) return;
+      if (!deps.db || !placeId) return;
+
+      const evidence = {
+        presence: 'absent',
+        checked_url: candidateUrl,
+        http_status: Number.isFinite(httpStatus) ? httpStatus : null,
+        source,
+        verified_at: attemptStartedAt
+      };
+
+      try {
+        upsertAbsentPlacePageMapping(deps.db, {
+          placeId,
+          host: normalizedDomain.host,
+          url: candidateUrl,
+          pageKind,
+          evidence,
+          verifiedAt: attemptStartedAt,
+          timestamp: attemptStartedAt
+        });
+      } catch (error) {
+        if (options.verbose) {
+          deps.logger?.warn?.(`[orchestration] Failed to record absent mapping for ${candidateUrl}: ${error?.message || error}`);
+        }
+      }
+    };
 
     deps.emitTelemetry?.(CRAWL_EVENT_TYPES.PLACE_HUB_CANDIDATE, {
       domain: normalizedDomain.host,
@@ -953,6 +1024,7 @@ class DomainProcessor {
           placeKind: place.kind,
           placeName: place.name,
           placeCode: placeSignalsInfo.code,
+          placeId,
           analyzer: analyzerName,
           strategy: strategyValue,
           score: scoreValue,
@@ -997,6 +1069,9 @@ class DomainProcessor {
     }
 
     if (!headOutcome.shouldProceed) {
+      if (headOutcome.notFound) {
+        recordAbsentMapping(headOutcome.status, 'guess-place-hubs.head');
+      }
       return { attemptCounter: nextAttemptCounter, rateLimitTriggered: false };
     }
 
@@ -1024,8 +1099,9 @@ class DomainProcessor {
         lastSeenAt: attemptStartedAt
       });
 
-      if (result.status === 404) {
+      if (result.status === 404 || result.status === 410) {
         summary.stored404 += 1;
+        recordAbsentMapping(result.status, 'guess-place-hubs.fetch');
         return { attemptCounter: nextAttemptCounter, rateLimitTriggered: false };
       }
 
@@ -1193,6 +1269,237 @@ class DomainProcessor {
     }
 
     return { attemptCounter: nextAttemptCounter, rateLimitTriggered: false };
+  }
+
+  /**
+   * Process place candidates in batch mode using distributed adapter
+   * 
+   * This method provides high-throughput processing by batching HEAD checks
+   * and GET fetches via the distributed fetch adapter.
+   */
+  async _processPlaceCandidatesBatch(params) {
+    const {
+      predictions,
+      place,
+      placeKey,
+      normalizedDomain,
+      validator,
+      queries,
+      stores,
+      summary,
+      options,
+      deps,
+      attemptCounter,
+      recordFetch,
+      recordDecision
+    } = params;
+
+    const batchProcessor = deps.batchProcessor;
+    if (!batchProcessor || !batchProcessor.isAvailable()) {
+      deps.logger?.warn?.('[DomainProcessor] Batch processor not available, falling back to sequential');
+      return { attemptCounter, rateLimitTriggered: false };
+    }
+
+    const startTime = Date.now();
+    let currentAttemptCounter = attemptCounter;
+    let rateLimitTriggered = false;
+
+    const placeId = resolvePlaceId(place);
+    const placeCode = place.code || place.countryCode || null;
+    const pageKind = resolvePageKind(place.kind);
+    const batchStartedAt = new Date().toISOString();
+
+    // Prepare candidates with metadata
+    const candidates = predictions.map(({ url, source }, index) => ({
+      url,
+      source,
+      attemptId: `${placeKey}:${attemptCounter + index + 1}`,
+      attemptStartedAt: batchStartedAt
+    }));
+
+    summary.totalUrls += candidates.length;
+
+    deps.emitTelemetry?.(CRAWL_EVENT_TYPES.BATCH_OPERATION_START || 'BATCH_OPERATION_START', {
+      domain: normalizedDomain.host,
+      kind: place.kind,
+      place: { name: place.name, code: placeCode },
+      candidateCount: candidates.length,
+      mode: 'batch'
+    }, {
+      severity: SEVERITY_LEVELS.INFO,
+      message: `Batch processing ${candidates.length} candidates for ${place.name}`
+    });
+
+    try {
+      // Use batch processor for HEAD + GET
+      const batchResult = await batchProcessor.processCandidatesBatch(candidates, {
+        domain: normalizedDomain.host,
+        placeKind: place.kind,
+        placeName: place.name
+      });
+
+      // Process results
+      for (const result of batchResult.results) {
+        currentAttemptCounter++;
+
+        const { candidate, headResult, getResult, outcome, validation, shouldRecordAbsent, absentStatus } = result;
+
+        // Record telemetry for each candidate
+        deps.emitTelemetry?.(CRAWL_EVENT_TYPES.PLACE_HUB_CANDIDATE, {
+          domain: normalizedDomain.host,
+          attemptId: candidate.attemptId,
+          candidateUrl: candidate.url,
+          kind: place.kind,
+          place: { name: place.name, code: placeCode },
+          batchMode: true,
+          outcome
+        }, {
+          severity: outcome === 'fetched' ? SEVERITY_LEVELS.INFO : SEVERITY_LEVELS.DEBUG,
+          message: `Batch candidate ${outcome}: ${candidate.url}`
+        });
+
+        // Handle rate limiting
+        if (outcome === 'rate-limited') {
+          summary.rateLimited += 1;
+          rateLimitTriggered = true;
+          recordDecision({
+            stage: 'BATCH',
+            status: 429,
+            outcome: 'rate-limited',
+            level: 'warn',
+            message: `Rate limited: ${candidate.url}`
+          });
+          break;
+        }
+
+        // Record absent mappings
+        if (shouldRecordAbsent && options.apply && placeId) {
+          const evidence = {
+            presence: 'absent',
+            checked_url: candidate.url,
+            http_status: absentStatus || null,
+            source: 'guess-place-hubs.batch',
+            verified_at: batchStartedAt
+          };
+
+          try {
+            upsertAbsentPlacePageMapping(deps.db, {
+              placeId,
+              host: normalizedDomain.host,
+              url: candidate.url,
+              pageKind,
+              evidence,
+              verifiedAt: batchStartedAt,
+              timestamp: batchStartedAt
+            });
+            summary.stored404 += 1;
+          } catch (error) {
+            if (options.verbose) {
+              deps.logger?.warn?.(`[DomainProcessor] Failed to record absent mapping: ${error?.message}`);
+            }
+          }
+
+          recordDecision({
+            stage: 'BATCH',
+            status: absentStatus,
+            outcome: 'not-found',
+            level: 'info',
+            message: `Not found: ${candidate.url}`
+          });
+          continue;
+        }
+
+        // Handle successful fetches with validation
+        if (outcome === 'fetched' && getResult && validation) {
+          summary.fetched += 1;
+
+          const fetchRow = createFetchRow(getResult, normalizedDomain.host);
+          recordFetch(fetchRow, { stage: 'BATCH-GET', attemptId: candidate.attemptId, cacheHit: false });
+
+          // Update candidate store
+          stores.candidates?.updateValidation?.({
+            domain: normalizedDomain.host,
+            candidateUrl: candidate.url,
+            validationStatus: validation.isValid ? 'validated' : 'validation-failed',
+            validationScore: validation.confidence || null,
+            validationDetails: validation,
+            lastSeenAt: batchStartedAt
+          });
+
+          if (validation.isValid) {
+            summary.validationSucceeded += 1;
+
+            recordDecision({
+              stage: 'BATCH-VALIDATE',
+              status: getResult.status,
+              outcome: 'accepted',
+              level: 'info',
+              message: `Validated hub: ${candidate.url} (${validation.linkCount} links)`
+            });
+
+            // Persist validated hub
+            if (options.apply) {
+              this._persistValidatedHub({
+                candidateUrl: candidate.url,
+                place,
+                result: getResult,
+                validationResult: validation,
+                candidateSignals: { source: candidate.source },
+                normalizedDomain,
+                queries,
+                summary,
+                pageTitle: validation.pageTitle
+              });
+            }
+          } else {
+            summary.validationFailed += 1;
+            recordDecision({
+              stage: 'BATCH-VALIDATE',
+              status: getResult.status,
+              outcome: 'rejected',
+              level: 'info',
+              message: `Validation failed: ${candidate.url} (${validation.linkCount} links)`
+            });
+          }
+        } else if (outcome === 'fetch-error') {
+          summary.errors += 1;
+          recordDecision({
+            stage: 'BATCH',
+            status: getResult?.status,
+            outcome: 'error',
+            level: 'warn',
+            message: `Fetch error: ${candidate.url}`
+          });
+        }
+      }
+
+      const elapsed = Date.now() - startTime;
+      const throughput = elapsed > 0 ? (batchResult.summary.getFetched / (elapsed / 1000)).toFixed(1) : 0;
+
+      deps.emitTelemetry?.(CRAWL_EVENT_TYPES.BATCH_OPERATION_COMPLETE || 'BATCH_OPERATION_COMPLETE', {
+        domain: normalizedDomain.host,
+        kind: place.kind,
+        place: { name: place.name, code: placeCode },
+        summary: batchResult.summary,
+        elapsedMs: elapsed,
+        throughputPerSec: parseFloat(throughput)
+      }, {
+        severity: SEVERITY_LEVELS.INFO,
+        message: `Batch complete: ${batchResult.summary.getFetched} fetched in ${elapsed}ms (${throughput}/sec)`
+      });
+
+    } catch (batchError) {
+      deps.logger?.error?.(`[DomainProcessor] Batch processing error: ${batchError?.message || batchError}`);
+      recordDecision({
+        stage: 'BATCH',
+        status: null,
+        outcome: 'batch-error',
+        level: 'error',
+        message: `Batch error: ${batchError?.message || batchError}`
+      });
+    }
+
+    return { attemptCounter: currentAttemptCounter, rateLimitTriggered };
   }
 
   async _processTopicCandidateUrl(params) {
@@ -1951,11 +2258,11 @@ class DomainProcessor {
         level: 'warn',
         message: `HEAD failed for ${candidateUrl}: ${headError.message || headError}`
       });
-      return { shouldProceed: true, rateLimitTriggered: false };
+      return { shouldProceed: true, rateLimitTriggered: false, status: null, notFound: false };
     }
 
     if (!headResult) {
-      return { shouldProceed: true, rateLimitTriggered: false };
+      return { shouldProceed: true, rateLimitTriggered: false, status: null, notFound: false };
     }
 
     let headRecorded = false;
@@ -1986,7 +2293,7 @@ class DomainProcessor {
         level: 'warn',
         message: `HEAD 429 rate limit for ${candidateUrl} (halting)`
       });
-      return { shouldProceed: false, rateLimitTriggered: true };
+      return { shouldProceed: false, rateLimitTriggered: true, status: 429, notFound: false };
     }
 
     if (headResult.status === 404 || headResult.status === 410) {
@@ -2006,7 +2313,7 @@ class DomainProcessor {
         level: 'info',
         message: `HEAD ${headResult.status} ${candidateUrl} -> cached`
       });
-      return { shouldProceed: false, rateLimitTriggered: false };
+      return { shouldProceed: false, rateLimitTriggered: false, status: headResult.status, notFound: true };
     }
 
     if (headResult.status === 405) {
@@ -2018,7 +2325,7 @@ class DomainProcessor {
         level: 'info',
         message: `HEAD 405 ${candidateUrl} -> retry with GET`
       });
-      return { shouldProceed: true, rateLimitTriggered: false };
+      return { shouldProceed: true, rateLimitTriggered: false, status: 405, notFound: false };
     }
 
     if (headResult.status >= 400 && headResult.status < 500) {
@@ -2030,11 +2337,11 @@ class DomainProcessor {
         level: 'info',
         message: `HEAD ${headResult.status} ${candidateUrl} -> retry with GET`
       });
-      return { shouldProceed: true, rateLimitTriggered: false };
+      return { shouldProceed: true, rateLimitTriggered: false, status: headResult.status, notFound: false };
     }
 
     recordHeadFetch();
-    return { shouldProceed: true, rateLimitTriggered: false };
+    return { shouldProceed: true, rateLimitTriggered: false, status: headResult.status, notFound: false };
   }
 
   _recordFinalDetermination(queries, domain, processingResult, summary) {

@@ -1376,3 +1376,22 @@ The tool reminds you to update references in:
 - `.github/agents/index.json`
 - Other agent files that reference the renamed agent
 - `AGENTS.md` if the agent is mentioned
+
+## `hub-discover-indices` — Hub-of-Hubs Indexer
+
+`hub-discover-indices` crawls a "Table of Contents" or "Index" page (like `/world/all` or `/topics`) to discover potential place hubs (Depth 2 pages like `/world/france`).
+
+**Quick Examples:**
+```powershell
+# Crawl the Guardian's World Index
+node tools/dev/hub-discover-indices.js https://www.theguardian.com/world/all
+
+# Output as JSON
+node tools/dev/hub-discover-indices.js https://www.theguardian.com/world/all --json
+```
+
+**Features:**
+- **Depth Analysis**: Identifies path depth relative to the seed (e.g., `/world/france` vs `/world/france/2023/...`)
+- **Noise Filtering**: Excludes dated paths and deep articles
+- **Structure Grouping**: Groups results by parent folder (e.g. `/world/`, `/news/`)
+

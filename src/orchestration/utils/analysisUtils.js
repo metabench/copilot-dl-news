@@ -140,6 +140,7 @@ function selectPlaces({ countryAnalyzer, regionAnalyzer, cityAnalyzer }, request
         const count = remaining !== null ? Math.max(remaining, 0) : undefined;
         const countries = analyzer.getTopCountries(count);
         take(countries, (country) => ({
+          placeId: country.id ?? country.placeId ?? country.place_id ?? null,
           kind: 'country',
           name: country.name,
           code: country.code,
@@ -157,6 +158,7 @@ function selectPlaces({ countryAnalyzer, regionAnalyzer, cityAnalyzer }, request
         const count = remaining !== null ? Math.max(remaining, 0) : undefined;
         const regions = analyzer.getTopRegions(count);
         take(regions, (region) => ({
+          placeId: region.id ?? region.placeId ?? region.place_id ?? null,
           kind: 'region',
           name: region.name,
           code: region.code || null,
@@ -175,6 +177,7 @@ function selectPlaces({ countryAnalyzer, regionAnalyzer, cityAnalyzer }, request
         const count = remaining !== null ? Math.max(remaining, 0) : undefined;
         const cities = analyzer.getTopCities(count);
         take(cities, (city) => ({
+          placeId: city.id ?? city.placeId ?? city.place_id ?? null,
           kind: 'city',
           name: city.name,
           code: city.code || null,

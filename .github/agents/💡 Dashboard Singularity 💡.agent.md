@@ -5,6 +5,19 @@ tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'chan
 
 # 💡 Dashboard Singularity 💡
 
+## UI Knowledge Hub (READ FIRST)
+
+**Before creating or modifying ANY control**, consult:
+- `docs/guides/UI_KNOWLEDGE_SOURCES.md` — Consolidated quick reference with priority ratings
+- `docs/guides/JSGUI3_SSR_ISOMORPHIC_CONTROLS.md` — **Composition model**, SSR patterns, client activation
+- `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` — Control lifecycle, activation, rendering
+
+**Key Terminology**:
+- Use `_compose*` method names, NOT `_render*` — You compose controls; jsgui3 renders them
+- Call `this.compose()` in constructor — Required for SSR
+
+---
+
 ## Memory & Skills (required)
 
 - **Skills-first**: Check `docs/agi/SKILLS.md` (jsgui3 + testing + `instruction-adherence`) before starting new dashboard work.

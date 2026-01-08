@@ -64,6 +64,9 @@ This chapter maps the actual codebase to the book's architecture, identifying wh
 | Ch 10 | Multi-feature scoring | ❌ Missing | Documented but not implemented |
 | Ch 10 | Coherence pass | ❌ Missing | Documented but not implemented |
 | Ch 10 | Place Hub Matrix UI | ✅ Implemented | `src/ui/server/placeHubGuessing/` |
+| Ch 10 | Hub Depth Probing | ✅ Implemented | `src/services/HubTaskGenerator.js` |
+| Ch 10 | Hub Archive Crawl | ✅ Implemented | `src/crawler/operations/HubArchiveCrawlOperation.js` |
+| Ch 10 | Intelligent Crawl Server | ✅ Implemented | `src/services/IntelligentCrawlServer.js` |
 
 ### Part IV: Integration (Chapters 11-13)
 
@@ -155,6 +158,12 @@ and quiet output (`--quiet`) for low-noise monitoring.
 | **Place Extraction** | | | |
 | Core extraction | `src/analysis/place-extraction.js` | 954 lines, slug matching | Ch 10 |
 | Gazetteer queries | `src/db/sqlite/v1/queries/gazetteerQueries.js` | Lookup functions | |
+| **Hub Archive System** | | | |
+| HubTaskGenerator | `src/services/HubTaskGenerator.js` | Depth probing + task generation | Hub Deepening book |
+| HubArchiveCrawlOperation | `src/crawler/operations/HubArchiveCrawlOperation.js` | Archive crawl ops | |
+| IntelligentCrawlServer | `src/services/IntelligentCrawlServer.js` | HTTP API + SSE (port 3150) | |
+| Archive queries | `src/db/sqlite/v1/queries/placePageMappings.js` | `getVerifiedHubsForArchive`, `updateHubDepthCheck` | |
+| Matrix depth display | `src/ui/server/placeHubGuessing/controls/PlaceHubGuessingMatrixControl.js` | Deep hub styling + tooltips | |
 
 ### ⚠️ Partially Implemented
 
@@ -209,11 +218,17 @@ src/
 ├── db/
 │   ├── TaskEventWriter.js     ← Event persistence (Ch 7)
 │   └── sqlite/v1/queries/
-│       ├── contentCache.js    ← Compression (Ch 8)
-│       ├── analysisAdapter.js ← Analysis results (Ch 8)
-│       ├── gazetteerQueries.js ← Place lookup (Ch 10)
-│       ├── multiModalCrawl.js  ← Multi-modal crawl queries
-│       └── patternLearning.js  ← Pattern learning queries
+│       ├── contentCache.js          ← Compression (Ch 8)
+│       ├── analysisAdapter.js       ← Analysis results (Ch 8)
+│       ├── gazetteerQueries.js      ← Place lookup (Ch 10)
+│       ├── multiModalCrawl.js       ← Multi-modal crawl queries
+│       ├── patternLearning.js       ← Pattern learning queries
+│       ├── placePageMappings.js     ← Hub archive queries (NEW)
+│       └── placeHubGuessingUiQueries.js ← Matrix UI data (NEW)
+├── services/
+│   ├── HubTaskGenerator.js          ← Depth probe + task generation (NEW)
+│   ├── IntelligentCrawlServer.js    ← HTTP API server port 3150 (NEW)
+│   └── PlaceHubBackfillService.js   ← Hub backfill service (NEW)
 └── api/
     ├── server.js              ← Express API (Ch 4)
     └── routes/
@@ -1051,6 +1066,127 @@ async function loadHubCoverageMatrix(db) {
 // const hubMatrix = loadHubCoverageMatrix(db);
 // const publisherCoverage = hubMatrix.get(publisherHost) || new Map();
 // candidates = publisherPriorScore(candidates, publisherCoverage);
+```
+
+---
+
+## IntelligentCrawlServer API Reference
+
+The IntelligentCrawlServer provides a unified HTTP API for crawling, hub discovery, and archive management.
+
+**Start the server:**
+```bash
+node src/services/IntelligentCrawlServer.js --port=3150
+```
+
+### Core Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/health` | GET | Health check |
+| `/status` | GET | Server status + database info |
+| `/events` | GET | SSE event stream |
+| `/api/config` | GET | Full configuration |
+
+### Backfill Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/backfill` | POST | Trigger manual backfill |
+| `/api/backfill/stats` | GET | Backfill statistics |
+
+### Crawl Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/crawl/start` | POST | Start intelligent crawl |
+| `/api/crawl/stop` | POST | Stop current crawl |
+| `/api/crawl/status` | GET | Current crawl status |
+
+### Hub Archive Endpoints (NEW)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/hub-archive/probe` | POST | Probe verified hubs for pagination depth |
+| `/api/hub-archive/tasks` | POST | Generate crawl tasks for hub archives |
+| `/api/hub-archive/stats` | GET | Archive coverage statistics |
+| `/api/hub-archive/hubs` | GET | List verified hubs |
+
+**Example: Probe hub depths**
+```bash
+curl -X POST http://localhost:3150/api/hub-archive/probe \
+  -H "Content-Type: application/json" \
+  -d '{"host": "theguardian.com", "hubLimit": 50, "probeDelayMs": 500}'
+```
+
+**Example: Generate archive tasks**
+```bash
+curl -X POST http://localhost:3150/api/hub-archive/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"host": "theguardian.com", "minDepth": 10, "pagesPerHub": 100}'
+```
+
+**Example: Monitor via SSE**
+```bash
+curl -N http://localhost:3150/events
+```
+
+### SSE Event Types
+
+| Event | Description |
+|-------|-------------|
+| `hub-probe:start` | Probe session started |
+| `hub-probe:hub-start` | Individual hub probe started |
+| `hub-probe:page` | Page checked during exponential search |
+| `hub-probe:hub-complete` | Hub probe finished |
+| `hub-probe:finish` | All hubs probed |
+| `hub-archive:tasks-generated` | Crawl tasks created |
+| `crawl:started` | Crawl started |
+| `crawl:progress` | Crawl progress update |
+| `crawl:complete` | Crawl finished |
+
+---
+
+## DB Adapter Pattern (CRITICAL)
+
+**All SQL must live in the database adapter layer.** This was enforced in commit `c2e3048`.
+
+### Pattern
+
+```
+Service Layer (Business Logic - NO SQL)
+    ↓
+Query Adapter (ALL SQL - parameterized only)
+    ↓
+Database Engine (SQLite/PostgreSQL)
+```
+
+### Query Adapter Locations
+
+| Category | File | Purpose |
+|----------|------|---------|
+| Core | `contentCache.js` | Content storage + compression |
+| Core | `analysisAdapter.js` | Analysis results |
+| Core | `gazetteerQueries.js` | Place/gazetteer lookups |
+| Hub | `placePageMappings.js` | Hub mappings + archive queries |
+| Hub | `placeHubGuessingUiQueries.js` | Matrix UI data |
+| Crawl | `multiModalCrawl.js` | Multi-modal crawl state |
+| Crawl | `patternLearning.js` | URL pattern learning |
+
+### Key Functions in placePageMappings.js
+
+```javascript
+// Get verified hubs ready for archiving
+getVerifiedHubsForArchive(db, { host, pageKind, limit, orderBy, needsDepthCheck })
+
+// Update hub depth after probing
+updateHubDepthCheck(db, { id, maxPageDepth, oldestContentDate, error })
+
+// Get archive statistics for a host
+getArchiveCrawlStats(db, host)
+
+// Get hubs that need archiving (depth >= minDepth)
+getHubsNeedingArchive(db, { host, minDepth, limit })
 ```
 
 ---

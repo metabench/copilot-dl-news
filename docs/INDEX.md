@@ -66,6 +66,8 @@ High-signal entry points for the crawler subsystem. Start with the architecture 
 
 These guides are **authoritative sources** for their domains. When working in these areas, **read the relevant guide first** — they take precedence over general agent instructions.
 
+- [UI Knowledge Sources (Consolidated)](guides/UI_KNOWLEDGE_SOURCES.md) - **START HERE for UI work**: Quick reference linking all jsgui3 guides with priority ratings.
+- [jsgui3 SSR & Isomorphic Controls](guides/JSGUI3_SSR_ISOMORPHIC_CONTROLS.md) - **Composition model, SSR patterns, client activation** — The definitive guide to how controls work. Covers terminology (compose vs render), the golden rules, and troubleshooting.
 - [jsgui3 UI Architecture Guide](guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md) - Isomorphic component architecture, control composition, SSR/activation patterns, **jsgui3-server experiments**, and verification scripts for jsgui3-html UIs.
 - [jsgui3 Shared Controls Catalog](guides/JSGUI3_SHARED_CONTROLS_CATALOG.md) - **Complete inventory** of all reusable controls (Table, Sparkline, ProgressBar, UrlFilterToggle, etc.), usage examples, patterns, and check scripts. Consult before creating new controls.
 - [jsgui3 Window Control Guide](guides/JSGUI3_WINDOW_CONTROL_GUIDE.md) - **Built-in floating window**: Draggable, resizable, minimize/maximize/close, z-index management. Use for tool panels, dialogs, result viewers.

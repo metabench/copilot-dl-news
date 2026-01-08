@@ -60,6 +60,253 @@
 
 ---
 
+### Session 2026-01-07: Matrix distributed crawl wiring
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Verify distributed crawling for place/topic matrix and wire client-side speedometer
+
+**Location**: `docs/sessions/2026-01-07-matrix-speedometer-wireup/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-07-matrix-speedometer-wireup/INDEX.md)
+- 🗺️ [Plan](./2026-01-07-matrix-speedometer-wireup/PLAN.md)
+- 📝 [Working Notes](./2026-01-07-matrix-speedometer-wireup/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-07-matrix-speedometer-wireup/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-07-matrix-speedometer-wireup/FOLLOW_UPS.md)
+
+
+### Session 2026-01-07: Distributed crawling defaults
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Default to distributed crawling in apps when available
+
+**Location**: `docs/sessions/2026-01-07-distributed-defaults/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-07-distributed-defaults/INDEX.md)
+- 🗺️ [Plan](./2026-01-07-distributed-defaults/PLAN.md)
+- 📝 [Working Notes](./2026-01-07-distributed-defaults/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-07-distributed-defaults/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-07-distributed-defaults/FOLLOW_UPS.md)
+
+
+### Session 2026-01-07: Topic hub guessing UI parity
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Align topic hub guessing UI with place hub guessing and share reusable chrome
+
+**Location**: `docs/sessions/2026-01-07-topic-hub-guessing-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-07-topic-hub-guessing-ui/INDEX.md)
+- 🗺️ [Plan](./2026-01-07-topic-hub-guessing-ui/PLAN.md)
+- 📝 [Working Notes](./2026-01-07-topic-hub-guessing-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-07-topic-hub-guessing-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-07-topic-hub-guessing-ui/FOLLOW_UPS.md)
+
+
+### Session 2026-01-07: Place hub guessing matrix + distributed downloader
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Assess matrix control and wire distributed downloader usage
+
+**Location**: `docs/sessions/2026-01-07-place-hub-guessing-matrix/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-07-place-hub-guessing-matrix/INDEX.md)
+- 🗺️ [Plan](./2026-01-07-place-hub-guessing-matrix/PLAN.md)
+- 📝 [Working Notes](./2026-01-07-place-hub-guessing-matrix/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-07-place-hub-guessing-matrix/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-07-place-hub-guessing-matrix/FOLLOW_UPS.md)
+
+
+### Session 2026-01-07: Distributed crawl packaging
+
+**Duration**: Active
+**Type**: design
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Design & prep distributed crawl nodes for place-hub checks
+
+**Location**: `docs/sessions/2026-01-07-distributed-crawl/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-07-distributed-crawl/INDEX.md)
+- 🗺️ [Plan](./2026-01-07-distributed-crawl/PLAN.md)
+- 📝 [Working Notes](./2026-01-07-distributed-crawl/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-07-distributed-crawl/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-07-distributed-crawl/FOLLOW_UPS.md)
+
+
+### Session 2026-01-07: OCI node hello world
+
+**Duration**: Active
+**Type**: ops
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Deploy Node hello world on OCI instance port 80
+
+**Location**: `docs/sessions/2026-01-07-oci-node-hello/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-07-oci-node-hello/INDEX.md)
+- 🗺️ [Plan](./2026-01-07-oci-node-hello/PLAN.md)
+- 📝 [Working Notes](./2026-01-07-oci-node-hello/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-07-oci-node-hello/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-07-oci-node-hello/FOLLOW_UPS.md)
+
+
+### Session 2026-01-07: Preserve place hub filters across navigation
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Keep matrix state filters and advanced params when drilling into cells and verifying
+
+**Location**: `docs/sessions/2026-01-07-place-hub-nav/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-07-place-hub-nav/INDEX.md)
+- 🗺️ [Plan](./2026-01-07-place-hub-nav/PLAN.md)
+- 📝 [Working Notes](./2026-01-07-place-hub-nav/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-07-place-hub-nav/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-07-place-hub-nav/FOLLOW_UPS.md)
+
+
+### Session 2026-01-07: Place Hub Deepening & Integration
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Integrate hub depth probing into crawl, DB, and UI
+
+**Location**: `docs/sessions/2026-01-07-place-hub-deepening/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-07-place-hub-deepening/INDEX.md)
+- 🗺️ [Plan](./2026-01-07-place-hub-deepening/PLAN.md)
+- 📝 [Working Notes](./2026-01-07-place-hub-deepening/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-07-place-hub-deepening/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-07-place-hub-deepening/FOLLOW_UPS.md)
+
+
+### Session 2026-01-07: jsgui3 Full Stack Crawl Profile Editor
+
+**Duration**: Active
+**Type**: lab
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Port CrawlProfileEditorControl to use jsgui3-server with automatic CSS/SASS extraction and client activation
+
+**Location**: `docs/sessions/2026-01-07-jsgui3-crawl-profile-editor/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-07-jsgui3-crawl-profile-editor/INDEX.md)
+- 🗺️ [Plan](./2026-01-07-jsgui3-crawl-profile-editor/PLAN.md)
+- 📝 [Working Notes](./2026-01-07-jsgui3-crawl-profile-editor/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-07-jsgui3-crawl-profile-editor/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-07-jsgui3-crawl-profile-editor/FOLLOW_UPS.md)
+
+
+### Session 2026-01-07: Crawl Strategy Configuration GUI
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Design and implement a comprehensive GUI for viewing, choosing, and customizing crawl strategies
+
+**Location**: `docs/sessions/2026-01-07-crawl-strategy-gui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-07-crawl-strategy-gui/INDEX.md)
+- 🗺️ [Plan](./2026-01-07-crawl-strategy-gui/PLAN.md)
+- 📝 [Working Notes](./2026-01-07-crawl-strategy-gui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-07-crawl-strategy-gui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-07-crawl-strategy-gui/FOLLOW_UPS.md)
+
+
+### Session 2026-01-07: Place Hub Guessing Matrix Enhancement
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add article metrics, enriched tooltips, and detail panel to the Place Hub Guessing Matrix UI
+
+**Location**: `docs/sessions/2026-01-07-place-hub-matrix-enhancement/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-07-place-hub-matrix-enhancement/INDEX.md)
+- 🗺️ [Plan](./2026-01-07-place-hub-matrix-enhancement/PLAN.md)
+- 📝 [Working Notes](./2026-01-07-place-hub-matrix-enhancement/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-07-place-hub-matrix-enhancement/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-07-place-hub-matrix-enhancement/FOLLOW_UPS.md)
+
+
+### Session 2026-01-06: Place hub 5-state matrix data flow
+
+**Duration**: Active
+**Type**: analysis
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Trace hub guessing outputs and ensure 5-state matrix has required mappings/evidence
+
+**Location**: `docs/sessions/2026-01-06-place-hub-matrix/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-06-place-hub-matrix/INDEX.md)
+- 🗺️ [Plan](./2026-01-06-place-hub-matrix/PLAN.md)
+- 📝 [Working Notes](./2026-01-06-place-hub-matrix/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-06-place-hub-matrix/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-06-place-hub-matrix/FOLLOW_UPS.md)
+
+
+### Session 2026-01-06: Place Hub Guessing Matrix Enhancement
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement 5-state matrix with article metrics for verified hubs
+
+**Location**: `docs/sessions/2026-01-06-phg-matrix-enhancement/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-01-06-phg-matrix-enhancement/INDEX.md)
+- 🗺️ [Plan](./2026-01-06-phg-matrix-enhancement/PLAN.md)
+- 📝 [Working Notes](./2026-01-06-phg-matrix-enhancement/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-01-06-phg-matrix-enhancement/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-01-06-phg-matrix-enhancement/FOLLOW_UPS.md)
+
+
 ### Session 2026-01-06: Multi-modal crawl review and parallelization
 
 **Duration**: Active

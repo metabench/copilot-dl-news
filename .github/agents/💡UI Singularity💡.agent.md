@@ -146,13 +146,21 @@ Use this format so knowledge gaps are visible in the terminal:
 
 ### UI-Specific Knowledge Sources
 
+**START HERE**: `docs/guides/UI_KNOWLEDGE_SOURCES.md` — Consolidated quick reference for all UI docs with priority ratings.
+
 | Topic | Primary Doc | Fallback |
 |-------|-------------|----------|
+| **SSR & Composition** | `docs/guides/JSGUI3_SSR_ISOMORPHIC_CONTROLS.md` | Architecture guide |
 | jsgui3 controls | `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` | `src/ui/controls/*.js` source |
-| Client activation | Guide §13 "Client-Side Activation Flow" | `z-server/renderer.src.js` |
+| Client activation | SSR guide §4 + Architecture guide §13 | `z-server/renderer.src.js` |
 | Theming | Guide "Theme System" section | `src/ui/server/services/themeService.js` |
 | Server endpoints | `docs/API_ENDPOINT_REFERENCE.md` | `src/ui/server/*.js` source |
 | Build process | `AGENTS.md` | `package.json` scripts |
+
+**Key Terminology** (from SSR guide):
+- Use `_compose*` method names, NOT `_render*` — You compose controls; jsgui3 renders them
+- Call `this.compose()` in constructor — Required for SSR
+- Use `dom.attributes.href` for links — NOT `attr: { href }`
 
 ### Delegation lab quick workflow
 - Read the delegation notes: [../../docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md](../../docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md) before touching bubbling/capture/selector logic.

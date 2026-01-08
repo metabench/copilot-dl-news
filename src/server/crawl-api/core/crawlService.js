@@ -6,15 +6,31 @@ const {
   SequenceConfigError
 } = require('../../../orchestration/SequenceConfigLoader');
 const { runSequenceConfig } = require('../../../orchestration/SequenceConfigRunner');
+const { OperationSchemaRegistry } = require('../../../crawler/operations/schemas');
 
-function buildOperationSummaries(facade) {
+function buildOperationSummaries(facade, options = {}) {
+  const includeSchema = options.includeSchema !== false; // Default to true
+  
   return facade.listOperations().map((name) => {
     const preset = facade.getOperationPreset(name) || {};
-    return {
+    const schema = includeSchema ? OperationSchemaRegistry.getSchema(name) : null;
+    
+    const summary = {
       name,
       summary: preset.summary || null,
       defaultOptions: preset.options || {}
     };
+
+    // Add schema metadata if available
+    if (schema) {
+      summary.label = schema.label;
+      summary.description = schema.description;
+      summary.category = schema.category;
+      summary.icon = schema.icon;
+      summary.optionSchema = schema.options;
+    }
+
+    return summary;
   });
 }
 
