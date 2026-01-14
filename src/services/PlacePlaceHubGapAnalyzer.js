@@ -8,8 +8,8 @@
  * Uses database query module for all SQL operations (no inline SQL).
  */
 
-const { getPlacesByCountryAndKind, getPlaceHierarchy } = require('../db/sqlite/v1/queries/gazetteer.places');
-const { getPlacePlaceHubCoverage } = require('../db/sqlite/v1/queries/placePageMappings');
+const { getPlacesByCountryAndKind, getPlaceHierarchy } = require('../data/db/sqlite/v1/queries/gazetteer.places');
+const { getPlacePlaceHubCoverage } = require('../data/db/sqlite/v1/queries/placePageMappings');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 const { getDsplForDomain } = require('./shared/dspl');
 const { slugify } = require('../tools/slugify');
@@ -156,9 +156,9 @@ class PlacePlaceHubGapAnalyzer extends HubGapAnalyzerBase {
   }
 
   /**
-   * Get top hierarchical relationships by importance/population
+   * Get hierarchical relationships (up to limit)
    * @param {number} limit - Maximum number of hierarchies to return
-   * @returns {Array} Top hierarchies
+   * @returns {Array} Hierarchies
    */
   getTopHierarchies(limit = 100) {
     const hierarchies = this.getAllHierarchies();

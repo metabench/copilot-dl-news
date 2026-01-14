@@ -11,8 +11,8 @@ const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 const ndjson = require('ndjson');
-const { initGazetteerTables } = require('../db/sqlite/schema');
-const { findProjectRoot } = require('../utils/project-root');
+const { initGazetteerTables } = require('../data/db/sqlite/schema');
+const { findProjectRoot } = require('../shared/utils/project-root');
 
 // Initialize gazetteer database
 function initGazetteerDb(dbPath) {

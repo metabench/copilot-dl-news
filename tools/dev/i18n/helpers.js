@@ -3,7 +3,7 @@
 /**
  * Resolve the active language mode from the formatter and provide
  * convenience booleans for downstream helpers.
- * @param {import('../../src/utils/CliFormatter')} formatter
+ * @param {import('../../src/shared/utils/CliFormatter')} formatter
  * @returns {{ languageMode: string, isChinese: boolean, englishFirst: boolean }}
  */
 function resolveLanguageContext(formatter) {
@@ -21,7 +21,7 @@ function resolveLanguageContext(formatter) {
 /**
  * Translate a lexicon key while respecting the active language mode.
  * Falls back to the provided English label when translation hooks are missing.
- * @param {import('../../src/utils/CliFormatter')} fmt
+ * @param {import('../../src/shared/utils/CliFormatter')} fmt
  * @param {{ isChinese: boolean, englishFirst: boolean }} language
  * @param {string} key
  * @param {string} fallback
@@ -42,7 +42,7 @@ function translateLabelWithMode(fmt, language, key, fallback, overrides = {}) {
 
 /**
  * Join translated labels in the correct presentation order for the active language.
- * @param {import('../../src/utils/CliFormatter')} fmt
+ * @param {import('../../src/shared/utils/CliFormatter')} fmt
  * @param {{ isChinese: boolean, englishFirst: boolean }} language
  * @param {Array<{ key: string, fallback: string, options?: Record<string, unknown> }>} descriptors
  * @returns {string}
@@ -68,3 +68,4 @@ module.exports = {
   translateLabelWithMode,
   joinTranslatedLabels
 };
+

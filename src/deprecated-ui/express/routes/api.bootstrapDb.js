@@ -3,7 +3,7 @@ const {
   fetchBootstrapDbStatus,
   loadBootstrapDb,
   getBootstrapDatasetPath
-} = require('../data/bootstrapDb');
+} = require('../../../data/bootstrapDb');
 
 function createBootstrapDbApiRouter({ getDbRW, datasetPath = null, logger = console } = {}) {
   if (typeof getDbRW !== 'function') {

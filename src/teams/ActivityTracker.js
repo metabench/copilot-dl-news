@@ -13,7 +13,7 @@
  * @module ActivityTracker
  */
 
-const { ACTIVITY_ACTIONS } = require('../db/sqlite/v1/queries/workspaceAdapter');
+const { ACTIVITY_ACTIONS } = require('../data/db/sqlite/v1/queries/workspaceAdapter');
 
 /**
  * ActivityTracker class

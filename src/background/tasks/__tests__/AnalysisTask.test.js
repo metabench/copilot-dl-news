@@ -8,7 +8,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const { AnalysisTask } = require('../AnalysisTask');
-const { ensureDb } = require('../../../db/sqlite');
+const { ensureDb } = require('../../../data/db/sqlite');
 const Database = require('better-sqlite3');
 
 function createTempDb() {

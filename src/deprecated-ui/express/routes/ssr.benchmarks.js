@@ -1,7 +1,7 @@
 const express = require('express');
 const { renderBenchmarkListPage } = require('../views/benchmarkListPage');
 const { renderBenchmarkDetailPage } = require('../views/benchmarkDetailPage');
-const { createRenderContext } = require('../utils/html');
+const { createRenderContext } = require('../../../shared/utils/html');
 const { errorPage } = require('../components/base');
 
 /**

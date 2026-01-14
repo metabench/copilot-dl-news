@@ -5,4 +5,4 @@
  * server and client builds stay consistent with Docs Viewer/Data Explorer.
  */
 
-module.exports = require("../../shared/isomorphic/jsgui");
+module.exports = require('../../../../shared/isomorphic/jsgui");

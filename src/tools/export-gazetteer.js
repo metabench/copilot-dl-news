@@ -7,17 +7,17 @@ const fs = require('fs');
 const path = require('path');
 const { performance } = require('perf_hooks');
 const { is_array, tof } = require('lang-tools');
-const { openDbReadOnly, ensureDb } = require('../db/sqlite');
+const { openDbReadOnly, ensureDb } = require('../data/db/sqlite');
 const {
   iteratePlaceSources,
   iteratePlaces,
   iteratePlaceNames,
   iteratePlaceHierarchy,
   iteratePlaceExternalIds
-} = require('../db/sqlite/v1/tools/gazetteerExport');
-const { findProjectRoot } = require('../utils/project-root');
-const { CliFormatter } = require('../utils/CliFormatter');
-const { CliArgumentParser } = require('../utils/CliArgumentParser');
+} = require('../data/db/sqlite/v1/tools/gazetteerExport');
+const { findProjectRoot } = require('../shared/utils/project-root');
+const { CliFormatter } = require('../shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');
 
 const fmt = new CliFormatter();
 

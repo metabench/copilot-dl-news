@@ -6,8 +6,8 @@
  * This script records schema version 3 and enables dual-write to normalized tables.
  */
 
-const { ensureDb } = require('../src/db/sqlite/v1/ensureDb');
-const { SchemaVersionManager } = require('../src/db/migration/schema-versions');
+const { ensureDb } = require('../src/data/db/sqlite/v1/ensureDb');
+const { SchemaVersionManager } = require('../src/data/db/migration/schema-versions');
 
 function recordSchemaVersion3(db) {
   console.log('Recording schema version 3...');

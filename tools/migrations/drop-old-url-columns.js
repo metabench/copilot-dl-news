@@ -12,7 +12,7 @@
  */
 
 const path = require('path');
-const { openDatabase } = require('../../src/db/sqlite/v1');
+const { openDatabase } = require('../../src/data/db/sqlite/v1');
 
 // Default to dry-run mode, require --fix to apply changes
 const dryRun = !process.argv.includes('--fix');

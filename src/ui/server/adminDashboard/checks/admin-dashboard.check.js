@@ -24,7 +24,7 @@ console.log('─'.repeat(50));
 // ─────────────────────────────────────────────────────────────
 console.log('\n[1] Testing AdminAdapter...');
 
-const { createAdminAdapter } = require('../../../../db/sqlite/v1/queries/adminAdapter');
+const { createAdminAdapter } = require('../../../../data/db/sqlite/v1/queries/adminAdapter');
 
 const db = new Database(':memory:');
 db.exec(`

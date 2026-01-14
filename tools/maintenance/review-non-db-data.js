@@ -33,7 +33,7 @@
 
 const fs = require('fs');
 const path = require('path');
-// const { ensureDatabase } = require('../src/db/sqlite'); // Moved to initialize() to avoid import errors during help
+// const { ensureDatabase } = require('../src/data/db/sqlite'); // Moved to initialize() to avoid import errors during help
 
 // Check for help flag first, before any imports that might fail
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
@@ -133,7 +133,7 @@ class ReviewNonDbData {
   }
 
   async initialize() {
-    const { ensureDatabase } = require('./src/db/sqlite');
+    const { ensureDatabase } = require('../src/data/db/sqlite');
     this.db = ensureDatabase();
   }
 

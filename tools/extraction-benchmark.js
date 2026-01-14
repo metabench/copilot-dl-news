@@ -106,7 +106,7 @@ function loadExtractors() {
   
   // Template extractor (custom)
   try {
-    TemplateExtractor = require('../src/extraction/TemplateExtractor').TemplateExtractor;
+    TemplateExtractor = require('../src/data/extraction/TemplateExtractor').TemplateExtractor;
     
     extractors.template = {
       name: 'TemplateExtractor',

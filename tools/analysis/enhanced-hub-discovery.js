@@ -13,10 +13,10 @@
 
 const path = require('path');
 const fs = require('fs');
-const { ensureDatabase } = require('../src/db/sqlite');
-const { createSQLiteDatabase } = require('../src/db/sqlite');
+const { ensureDatabase } = require('../src/data/db/sqlite');
+const { createSQLiteDatabase } = require('../src/data/db/sqlite');
 const { CountryHubGapAnalyzer } = require('../src/services/CountryHubGapAnalyzer');
-const { HubValidator } = require('../src/crawler/hub-discovery/HubValidator');
+const { HubValidator } = require('../src/core/crawler/hub-discovery/HubValidator');
 const { slugify } = require('../src/tools/slugify');
 
 const fetchImpl = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));

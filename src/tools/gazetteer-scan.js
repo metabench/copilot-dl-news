@@ -13,16 +13,16 @@
 */
 
 const path = require('path');
-const { ensureDb } = require('../db/sqlite');
-const { findProjectRoot } = require('../utils/project-root');
-const { CliArgumentParser } = require('../utils/CliArgumentParser');
+const { ensureDb } = require('../data/db/sqlite');
+const { findProjectRoot } = require('../shared/utils/project-root');
+const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');
 const { GazetteerTelemetry } = require('./gazetteer/GazetteerTelemetry');
-const { searchPlacesByName, getPlaceDetails } = require('../db/sqlite/v1/queries/gazetteer.search');
+const { searchPlacesByName, getPlaceDetails } = require('../data/db/sqlite/v1/queries/gazetteer.search');
 const { 
   getPlaceCountByKind, 
   getPlacesByCountryAndKind,
   getCountryByCode
-} = require('../db/sqlite/v1/queries/gazetteer.places');
+} = require('../data/db/sqlite/v1/queries/gazetteer.places');
 
 function parseCliArgs(argv) {
   const parser = new CliArgumentParser(

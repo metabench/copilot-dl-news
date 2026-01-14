@@ -364,7 +364,7 @@ class FactCheckService {
       throw new Error('trustAdapter required for addFactCheck');
     }
     
-    const SimHasher = require('../analysis/similarity/SimHasher');
+    const SimHasher = require('../intelligence/analysis/similarity/SimHasher');
     const simHash = SimHasher.toHexString(SimHasher.compute(factCheck.claimText || ''));
     
     return this.trustAdapter.saveFactCheck({

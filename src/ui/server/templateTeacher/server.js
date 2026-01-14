@@ -17,11 +17,11 @@ const express = require('express');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 
-const { TemplateExtractor, TemplateExtractionService } = require('../../../extraction');
-const { TeacherService } = require('../../../teacher/TeacherService');
-const { createLayoutTemplatesQueries } = require('../../../db/sqlite/v1/queries/layoutTemplates');
+const { TemplateExtractor, TemplateExtractionService } = require('../../../data/extraction');
+const { TeacherService } = require('../../../intelligence/teacher/TeacherService');
+const { createLayoutTemplatesQueries } = require('../../../data/db/sqlite/v1/queries/layoutTemplates');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
-const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
+const { resolveBetterSqliteHandle } = require('../utils/serverStartupCheckdashboardModule');
 
 const app = express();
 const DEFAULT_PORT = Number(process.env.TEMPLATE_TEACHER_PORT) || 3022;
@@ -984,3 +984,4 @@ if (require.main === module) {
 }
 
 module.exports = { app, initServices, createTemplateTeacherRouter };
+

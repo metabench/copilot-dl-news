@@ -2,7 +2,7 @@
 
 const express = require('express');
 const { renderGazetteerProgressPage } = require('../views/gazetteerProgressPage');
-const progressData = require('../data/gazetteerProgressData');
+const progressData = require('../../../data/gazetteerProgressData');
 
 /**
  * GET /gazetteer/progress

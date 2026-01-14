@@ -8,8 +8,8 @@
  */
 
 const path = require('path');
-const { findProjectRoot } = require('../../src/utils/project-root');
-const { openDatabase } = require('../../src/db/sqlite/v1/connection');
+const { findProjectRoot } = require('../../src/shared/utils/project-root');
+const { openDatabase } = require('../../src/data/db/sqlite/v1/connection');
 
 function createColors() {
   const enabled = Boolean(process.stdout.isTTY);
@@ -322,3 +322,5 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
+

@@ -1,9 +1,9 @@
 const path = require('path');
 const fs = require('fs');
 const { is_array } = require('lang-tools');
-const { HttpRequestResponseFacade } = require('../utils/HttpRequestResponseFacade');
+const { HttpRequestResponseFacade } = require('../shared/utils/HttpRequestResponseFacade');
 const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
-const { findProjectRoot } = require('../utils/project-root');
+const { findProjectRoot } = require('../shared/utils/project-root');
 
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 

@@ -2,7 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const NewsDatabase = require('../../db');
+const NewsDatabase = require('../../data/db');
 
 function seedArticle(db, url) {
   const now = new Date().toISOString();

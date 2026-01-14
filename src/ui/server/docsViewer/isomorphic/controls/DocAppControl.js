@@ -11,7 +11,7 @@ const jsgui = require("../jsgui");
 
 const { DocNavControl } = require("./DocNavControl");
 const { DocViewerControl } = require("./DocViewerControl");
-const { ResizableSplitLayoutControl } = require("../../../shared/isomorphic/controls");
+const { ResizableSplitLayoutControl } = require("./ResizableSplitLayoutControl");
 
 const StringControl = jsgui.String_Control;
 
@@ -39,9 +39,6 @@ class DocAppControl extends jsgui.Control {
     this.columns = spec.columns || { mtime: false };
     this.sortBy = spec.sortBy || 'name';
     this.sortOrder = spec.sortOrder || 'asc';
-
-    const providedBasePath = typeof spec.basePath === 'string' ? spec.basePath : '';
-    this.basePath = providedBasePath && providedBasePath !== '/' ? providedBasePath : '/';
     
     this.add_class("doc-app");
     this.dom.attributes["data-jsgui-id"] = "doc-app";
@@ -65,7 +62,7 @@ class DocAppControl extends jsgui.Control {
       context: this.context,
       docTree: this.docTree,
       selectedPath: this.selectedPath,
-      basePath: this.basePath,
+      basePath: "/",
       filters: this.filters,
       columns: this.columns,
       sortBy: this.sortBy,
@@ -118,7 +115,7 @@ class DocAppControl extends jsgui.Control {
     // Logo/Home link
     const logo = new jsgui.Control({ context: this.context, tagName: "a" });
     logo.add_class("doc-app__logo");
-    logo.dom.attributes.href = this.basePath;
+    logo.dom.attributes.href = "/";
     
     const logoIcon = new jsgui.Control({ context: this.context, tagName: "span" });
     logoIcon.add_class("doc-app__logo-icon");

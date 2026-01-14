@@ -28,7 +28,7 @@ class HubGapAnalyzerBase {
    * @param {string} [options.dsplDir] - Directory containing DSPL JSON files
    * @throws {Error} If db is not provided
    */
-  constructor({ 
+  constructor({
     db,
     logger = console,
     dsplDir = path.join(__dirname, '..', '..', 'data', 'dspls')
@@ -36,11 +36,11 @@ class HubGapAnalyzerBase {
     if (!db) {
       throw new Error(`${this.constructor.name} requires a database connection`);
     }
-    
+
     this.db = db;
     this.logger = logger;
     this.dsplDir = dsplDir;
-    
+
     // Load DSPLs on initialization
     this.dspls = loadDsplLibrary({ dsplDir: this.dsplDir, logger: this.logger });
   }
@@ -62,7 +62,7 @@ class HubGapAnalyzerBase {
 
     const baseUrl = `https://${domain}`;
     const metadata = this.buildEntityMetadata(entity);
-    
+
     if (!metadata) {
       return [];
     }
@@ -222,3 +222,4 @@ class HubGapAnalyzerBase {
 }
 
 module.exports = { HubGapAnalyzerBase };
+

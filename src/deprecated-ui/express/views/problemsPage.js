@@ -3,7 +3,7 @@
  * Refactored to use centralized utilities and component system
  */
 
-const { escapeHtml, toQueryString } = require('../utils/html');
+const { escapeHtml, toQueryString } = require('../../../shared/utils/html');
 const { pill } = require('../components/base');
 
 /**

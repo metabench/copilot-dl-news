@@ -4,7 +4,7 @@ const { slugify, normalizeForMatching } = require('./slugify');
 const {
   evaluateArticleCandidate,
   createArticleSignalsService
-} = require('../analysis/articleDetection');
+} = require('../intelligence/analysis/articleDetection');
 
 const ARTICLE_REJECTION_KIND = 'article-screened';
 const ARTICLE_CONFIDENCE_THRESHOLD = 0.65;

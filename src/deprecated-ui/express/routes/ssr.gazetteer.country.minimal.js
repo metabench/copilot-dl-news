@@ -1,7 +1,7 @@
 const express = require('express');
 const { renderNav } = require('../services/navigation');
-const { fetchCountryMinimalData, GazetteerCountryError } = require('../data/gazetteerCountry');
-const { escapeHtml, formatNumber, createRenderContext } = require('../utils/html');
+const { fetchCountryMinimalData, GazetteerCountryError } = require('../../../data/gazetteerCountry');
+const { escapeHtml, formatNumber, createRenderContext } = require('../../../shared/utils/html');
 const { errorPage } = require('../components/base');
 
 const responseCache = new Map();

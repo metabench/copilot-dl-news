@@ -7,7 +7,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { ensureDb } = require('../../src/db/sqlite/ensureDb');
+const { ensureDb } = require('../../src/data/db/sqlite/ensureDb');
 const { createMockFetch, scenarios, createMixedBatchResponses } = require('../fixtures/mixed-hub-responses');
 
 function createTempDbPath(label) {

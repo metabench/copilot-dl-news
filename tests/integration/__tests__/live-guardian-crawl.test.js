@@ -15,8 +15,8 @@
 const path = require("path");
 const fs = require("fs");
 const NewsCrawler = require("../../../src/crawl");
-const { createTempDb } = require("../../../src/db/sqlite/v1/test-utils");
-const { ensureDb } = require("../../../src/db/sqlite");
+const { createTempDb } = require("../../../src/data/db/sqlite/v1/test-utils");
+const { ensureDb } = require("../../../src/data/db/sqlite");
 
 const GUARDIAN_URL = "https://www.theguardian.com/international";
 const MAX_PAGES = 10;  // Small for test speed, but enough to verify link following
@@ -153,3 +153,4 @@ describe("Live Guardian Crawl", () => {
     60000
   );
 });
+

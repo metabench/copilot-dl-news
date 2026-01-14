@@ -7,7 +7,7 @@
  */
 
 const { ActivityTracker } = require('../../src/teams/ActivityTracker');
-const { ACTIVITY_ACTIONS } = require('../../src/db/sqlite/v1/queries/workspaceAdapter');
+const { ACTIVITY_ACTIONS } = require('../../src/data/db/sqlite/v1/queries/workspaceAdapter');
 
 describe('ActivityTracker', () => {
   let tracker;
@@ -476,3 +476,4 @@ describe('ActivityTracker', () => {
     });
   });
 });
+

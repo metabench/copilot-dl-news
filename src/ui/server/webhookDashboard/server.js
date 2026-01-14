@@ -24,10 +24,10 @@ const path = require('path');
 const Database = require('better-sqlite3');
 const jsgui = require('jsgui3-html');
 
-const { createIntegrationAdapter } = require('../../../db/sqlite/v1/queries/integrationAdapter');
+const { createIntegrationAdapter } = require('../../../data/db/sqlite/v1/queries/integrationAdapter');
 const { WebhookService, EVENT_TYPES } = require('../../../integrations/WebhookService');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
-const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
+const { resolveBetterSqliteHandle } = require('../utils/serverStartupCheckdashboardModule');
 
 const { WebhookDashboard } = require('./views/WebhookDashboard');
 
@@ -690,3 +690,4 @@ if (require.main === module) {
 }
 
 module.exports = { app, initDb, PORT, createWebhookDashboardRouter };
+

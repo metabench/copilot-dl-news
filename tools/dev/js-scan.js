@@ -5,9 +5,9 @@ const path = require('path');
 const { setupPowerShellEncoding } = require('./shared/powershellEncoding');
 setupPowerShellEncoding();
 
-const { CliFormatter } = require('../../src/utils/CliFormatter');
-const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
-const TokenCodec = require('../../src/codec/TokenCodec');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const TokenCodec = require('../../src/shared/codec/TokenCodec');
 const { translateCliArgs } = require('./i18n/dialect');
 const { extractLangOption, deriveLanguageModeHint } = require('./i18n/language');
 const { resolveLanguageContext, translateLabelWithMode, joinTranslatedLabels } = require('./i18n/helpers');
@@ -3193,3 +3193,5 @@ module.exports = {
   parseTerseFields,
   formatTerseMatch
 };
+
+

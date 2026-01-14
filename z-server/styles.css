@@ -748,12 +748,6 @@ body {
   filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
 
-.zs-app-card__cta {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
 .zs-app-card__open {
   font-family: var(--zs-font-body);
   font-size: 11px;
@@ -772,6 +766,41 @@ body {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
+.zs-app-card__primary {
+  font-family: var(--zs-font-body);
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  border-radius: 999px;
+  padding: 5px 8px;
+  cursor: pointer;
+  border: 1px solid rgba(201, 162, 39, 0.25);
+  background: rgba(201, 162, 39, 0.08);
+  color: var(--zs-gold);
+  transition: opacity 0.15s ease, background 0.12s ease, border-color 0.12s ease;
+  opacity: 0;
+  pointer-events: none;
+  margin-left: 4px;
+}
+
+.zs-app-card:hover .zs-app-card__primary,
+.zs-app-card:focus .zs-app-card__primary {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.zs-app-card__primary:hover {
+  background: rgba(201, 162, 39, 0.15);
+  border-color: rgba(201, 162, 39, 0.4);
+}
+
+.zs-app-card__cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
 .zs-app-card__title {
   font-family: var(--zs-font-display);
   font-size: 16px;
@@ -785,6 +814,53 @@ body {
   font-size: 12px;
   color: var(--zs-text-muted);
   line-height: 1.25;
+}
+
+/* App Card Header with Status Badge */
+.zs-app-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.zs-app-card__header .zs-app-card__title {
+  margin-bottom: 0;
+}
+
+.zs-app-card__status {
+  font-family: var(--zs-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.zs-app-card__status--running {
+  background: rgba(80, 200, 120, 0.15);
+  color: var(--zs-emerald);
+  border: 1px solid rgba(80, 200, 120, 0.35);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.zs-app-card__status--stopped {
+  background: rgba(100, 116, 139, 0.15);
+  color: var(--zs-text-dim);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 4px rgba(80, 200, 120, 0.2); }
+  50% { box-shadow: 0 0 12px rgba(80, 200, 120, 0.4); }
+}
+
+/* Running card gets a subtle glow border */
+.zs-app-card--running {
+  border-color: rgba(80, 200, 120, 0.4);
+  box-shadow: var(--zs-shadow-md), 0 0 12px rgba(80, 200, 120, 0.15);
 }
 
 .zs-app-card--emerald { border-color: rgba(80, 200, 120, 0.22); }
@@ -1275,4 +1351,87 @@ body {
 /* Hidden utility class */
 .zs-hidden {
   display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* CATEGORY GROUPING                                                           */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.zs-category {
+  margin-bottom: 18px;
+}
+
+.zs-category:last-child {
+  margin-bottom: 0;
+}
+
+.zs-category__header {
+  font-family: var(--zs-font-display);
+  font-size: 14px;
+  color: var(--zs-gold);
+  letter-spacing: 1.5px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.18);
+  text-shadow: 0 0 12px rgba(201, 162, 39, 0.2);
+}
+
+.zs-category__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* FEATURE BADGES                                                              */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.zs-app-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.zs-app-card__badge {
+  font-family: var(--zs-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(201, 162, 39, 0.1);
+  border: 1px solid rgba(201, 162, 39, 0.2);
+  color: var(--zs-gold-dim);
+  white-space: nowrap;
+}
+
+/* Badge color variants based on card accent */
+.zs-app-card--topaz .zs-app-card__badge {
+  background: rgba(255, 200, 124, 0.1);
+  border-color: rgba(255, 200, 124, 0.25);
+  color: var(--zs-topaz);
+}
+
+.zs-app-card--emerald .zs-app-card__badge {
+  background: rgba(80, 200, 120, 0.1);
+  border-color: rgba(80, 200, 120, 0.25);
+  color: var(--zs-emerald);
+}
+
+.zs-app-card--ruby .zs-app-card__badge {
+  background: rgba(255, 107, 107, 0.1);
+  border-color: rgba(255, 107, 107, 0.25);
+  color: var(--zs-ruby);
+}
+
+.zs-app-card--sapphire .zs-app-card__badge {
+  background: rgba(111, 168, 220, 0.1);
+  border-color: rgba(111, 168, 220, 0.25);
+  color: var(--zs-sapphire);
+}
+
+.zs-app-card--amethyst .zs-app-card__badge {
+  background: rgba(218, 112, 214, 0.1);
+  border-color: rgba(218, 112, 214, 0.25);
+  color: var(--zs-amethyst);
 }

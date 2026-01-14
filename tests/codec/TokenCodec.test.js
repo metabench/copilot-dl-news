@@ -4,7 +4,7 @@
  * Tests for token encoding, decoding, signing, and validation.
  */
 
-const TokenCodec = require('../../src/codec/TokenCodec');
+const TokenCodec = require('../../src/shared/codec/TokenCodec');
 
 describe('TokenCodec', () => {
   const mockSecret = 'test-secret-key-xyz-1234';
@@ -572,3 +572,4 @@ describe('TokenCodec', () => {
     });
   });
 });
+

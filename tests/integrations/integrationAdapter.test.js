@@ -1,6 +1,6 @@
 'use strict';
 
-const { createIntegrationAdapter } = require('../../src/db/sqlite/v1/queries/integrationAdapter');
+const { createIntegrationAdapter } = require('../../src/data/db/sqlite/v1/queries/integrationAdapter');
 
 // Mock database
 function createMockDb() {
@@ -346,3 +346,4 @@ describe('integrationAdapter', () => {
     });
   });
 });
+

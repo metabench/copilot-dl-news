@@ -1,6 +1,6 @@
 const express = require('express');
 const { resolveStaleQueueJobs } = require('../services/queueJanitor');
-const { listQueues, getQueueDetail } = require('../data/queues');
+const { listQueues, getQueueDetail } = require('../../../data/queues');
 const { BadRequestError, NotFoundError, InternalServerError, ServiceUnavailableError } = require('../errors/HttpError');
 
 // Queues APIs (read-only; best-effort when DB available)

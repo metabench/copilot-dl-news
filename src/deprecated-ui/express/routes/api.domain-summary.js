@@ -1,6 +1,6 @@
 const express = require('express');
-const { fetchDomainSummary } = require('../data/domainSummary');
-const { withNewsDb } = require('../../../db/dbAccess');
+const { fetchDomainSummary } = require('../../../data/domainSummary');
+const { withNewsDb } = require('../../../data/db/dbAccess');
 const { BadRequestError, InternalServerError } = require('../errors/HttpError');
 
 function createDomainSummaryApiRouter({ urlsDbPath }) {

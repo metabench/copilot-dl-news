@@ -1,4 +1,4 @@
-const { ensureDatabase } = require('./src/db/sqlite');
+const { ensureDatabase } = require('../src/data/db/sqlite');
 
 const dbPath = './data/news.db';
 const db = ensureDatabase(dbPath);

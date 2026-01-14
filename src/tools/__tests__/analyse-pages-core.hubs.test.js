@@ -2,7 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { ensureDb } = require('../../db/sqlite');
+const { ensureDb } = require('../../data/db/sqlite');
 const { analysePages } = require('../analyse-pages-core');
 
 function createTempDbPath() {

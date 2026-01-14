@@ -3,7 +3,7 @@
 const jsgui = require('jsgui3-html');
 
 const { BaseAppControl } = require('../../shared');
-const { MatrixTableControl, VirtualMatrixControl } = require('../../shared/isomorphic/controls');
+const { MatrixTableControl, VirtualMatrixControl } = require('../../../../shared/isomorphic/controls');
 const { HubGuessingMatrixChromeControl } = require('../../hubGuessing/controls');
 
 const StringControl = jsgui.String_Control;

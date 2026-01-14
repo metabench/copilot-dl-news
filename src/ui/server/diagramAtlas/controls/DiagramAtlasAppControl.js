@@ -11,7 +11,7 @@
  */
 
 const jsgui = require("jsgui3-html");
-const { BaseAppControl } = require("../../shared/BaseAppControl");
+const { BaseAppControl } = require('../../../../shared/BaseAppControl");
 const { DiagramToolbarControl } = require("./DiagramToolbarControl");
 const { DiagramDiagnosticsControl } = require("./DiagramDiagnosticsControl");
 

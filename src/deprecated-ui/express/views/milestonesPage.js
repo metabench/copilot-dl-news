@@ -4,7 +4,7 @@
  * Following jsgui3-inspired composition patterns
  */
 
-const { escapeHtml, toQueryString } = require('../utils/html');
+const { escapeHtml, toQueryString } = require('../../../shared/utils/html');
 const { pill } = require('../components/base');
 
 /**

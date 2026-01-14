@@ -13,8 +13,8 @@
  *   node tools/corrections/fix-normalized-names.js --fix        # Apply changes
  */
 
-const { ensureDatabase } = require('../../src/db/sqlite');
-const { fixNormalizedNames } = require('../../src/db/sqlite/v1/queries/gazetteer.names');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { fixNormalizedNames } = require('../../src/data/db/sqlite/v1/queries/gazetteer.names');
 const path = require('path');
 
 function getArg(name, fallback) {
@@ -55,7 +55,7 @@ for (const [lang, count] of Object.entries(byLang).sort((a, b) => b[1] - a[1])) 
 console.log('');
 
 for (const nameRecord of namesToFix) {
-  const newNormalized = require('../../src/db/sqlite/queries/gazetteer.utils').normalizeName(nameRecord.name);
+  const newNormalized = require('../../src/data/db/sqlite/queries/gazetteer.utils').normalizeName(nameRecord.name);
 
   if (!newNormalized) {
     console.log(`⚠ Name "${nameRecord.name}" (${nameRecord.lang}) still normalizes to empty - skipping`);

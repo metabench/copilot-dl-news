@@ -1,10 +1,10 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const zlib = require('zlib');
-const SkeletonHash = require('../src/analysis/structure/SkeletonHash');
-const SkeletonDiff = require('../src/analysis/structure/SkeletonDiff');
+const SkeletonHash = require('../src/intelligence/analysis/structure/SkeletonHash');
+const SkeletonDiff = require('../src/intelligence/analysis/structure/SkeletonDiff');
 const cheerio = require('cheerio');
-const { createLayoutMasksQueries } = require('../src/db/sqlite/v1/queries/layoutMasks');
+const { createLayoutMasksQueries } = require('../src/data/db/sqlite/v1/queries/layoutMasks');
 
 // ─────────────────────────────────────────────────────────────
 // CLI Argument Parsing

@@ -1,4 +1,4 @@
-const { escapeHtml, ensureRenderNav } = require('../utils/html');
+const { escapeHtml, ensureRenderNav } = require('../../../shared/utils/html');
 
 function renderMetric(label, value) {
   return `<div class="bootstrap-metric"><span class="bootstrap-metric__label">${escapeHtml(label)}</span><span class="bootstrap-metric__value">${escapeHtml(String(value))}</span></div>`;

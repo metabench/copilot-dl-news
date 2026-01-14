@@ -12,9 +12,9 @@
  */
 
 const path = require('path');
-const { ensureDatabase } = require('../../src/db/sqlite');
-const { EnhancedDatabaseAdapter } = require('../../src/db/EnhancedDatabaseAdapter');
-const { GazetteerPlanRunner } = require('../../src/crawler/gazetteer/GazetteerPlanRunner');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { EnhancedDatabaseAdapter } = require('../../src/data/db/EnhancedDatabaseAdapter');
+const { GazetteerPlanRunner } = require('../../src/core/crawler/gazetteer/GazetteerPlanRunner');
 
 async function main() {
   console.log('=== Gazetteer Meta-Planning Integration Test ===\n');
@@ -129,3 +129,4 @@ main().catch(err => {
   console.error(err.stack);
   process.exit(1);
 });
+

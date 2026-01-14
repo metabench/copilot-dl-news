@@ -1,7 +1,7 @@
 const express = require('express');
 const { renderNav } = require('../services/navigation');
-const { fetchCountryPageData, GazetteerCountryError } = require('../data/gazetteerCountry');
-const { escapeHtml, formatNumber, formatBytes, createRenderContext } = require('../utils/html');
+const { fetchCountryPageData, GazetteerCountryError } = require('../../../data/gazetteerCountry');
+const { escapeHtml, formatNumber, formatBytes, createRenderContext } = require('../../../shared/utils/html');
 const { errorPage } = require('../components/base');
 
 function createGazetteerCountryFullRouter(options = {}) {

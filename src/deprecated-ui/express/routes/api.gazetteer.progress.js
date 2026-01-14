@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const progressData = require('../data/gazetteerProgressData');
+const progressData = require('../../../data/gazetteerProgressData');
 
 /**
  * GET /api/gazetteer/progress

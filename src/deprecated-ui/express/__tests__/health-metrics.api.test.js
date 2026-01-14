@@ -3,7 +3,7 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const { createApp } = require('../server');
-const NewsDatabase = require('../../../db');
+const NewsDatabase = require('../../../data/db');
 
 function startHttp(app) {
   return new Promise((resolve) => {

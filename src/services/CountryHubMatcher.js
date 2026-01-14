@@ -1,8 +1,8 @@
 'use strict';
 
 const { CountryHubGapAnalyzer } = require('./CountryHubGapAnalyzer');
-const { getCountryHubCandidates, normalizeHost } = require('../db/sqlite/v1/queries/placeHubs');
-const { upsertPlacePageMapping } = require('../db/sqlite/v1/queries/placePageMappings');
+const { getCountryHubCandidates, normalizeHost } = require('../data/db/sqlite/v1/queries/placeHubs');
+const { upsertPlacePageMapping } = require('../data/db/sqlite/v1/queries/placePageMappings');
 const { slugify, normalizeForMatching } = require('../tools/slugify');
 
 const LEADING_NAME_STOP_WORDS = new Set([
@@ -333,3 +333,4 @@ class CountryHubMatcher {
 module.exports = {
   CountryHubMatcher
 };
+

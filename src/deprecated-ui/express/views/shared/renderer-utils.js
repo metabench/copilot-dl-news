@@ -1,4 +1,4 @@
-const { escapeHtml } = require('../../utils/html');
+const { escapeHtml } = require('../../../../shared/utils/html');
 const { is_defined, each } = require('lang-tools');
 
 const DEFAULT_STATUS_PRIORITY = ['running', 'paused', 'active', 'done'];

@@ -147,18 +147,18 @@ const {
 } = require('./services/navigation');
 const {
   fetchCountryMinimalData
-} = require('./data/gazetteerCountry');
+} = require('../../data/gazetteerCountry');
 const {
   createWritableDbAccessor
-} = require('./db/writableDb');
+} = require('../../data/db/writableDb');
 const {
   ConfigManager
-} = require('../../config/ConfigManager');
+} = require('../../shared/config/ConfigManager');
 const {
   ensureDb,
   ensureDatabase,
   wrapWithTelemetry
-} = require('../../db/sqlite/v1');
+} = require('../../data/db/sqlite/v1');
 const {
   createRunnerFactory,
   isTruthyFlag
@@ -183,7 +183,7 @@ const {
 } = require('./services/benchmarkManager');
 const {
   GazetteerPriorityScheduler
-} = require('../../crawler/gazetteer/GazetteerPriorityScheduler');
+} = require('../../core/crawler/gazetteer/GazetteerPriorityScheduler');
 const {
   createRequestTimingMiddleware
 } = require('./middleware/requestTiming');
@@ -245,13 +245,13 @@ const {
 const {
   recordCrawlJobStart,
   markCrawlJobStatus
-} = require('./data/crawlJobs');
+} = require('../../data/crawlJobs');
 const {
   insertQueueEvent,
   insertCrawlProblem,
   insertPlannerStageEvent,
   insertCrawlMilestone
-} = require('./data/crawlEvents');
+} = require('../../data/crawlEvents');
 
 // Quiet test mode: suppress certain async logs that can fire after Jest completes
 const QUIET = !!process.env.JEST_WORKER_ID || ['1', 'true', 'yes', 'on'].includes(String(process.env.UI_TEST_QUIET || '').toLowerCase());

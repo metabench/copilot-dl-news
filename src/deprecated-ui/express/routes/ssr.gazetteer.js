@@ -1,8 +1,8 @@
 const express = require('express');
 const { renderNav } = require('../services/navigation');
-const { escapeHtml, createRenderContext } = require('../utils/html');
+const { escapeHtml, createRenderContext } = require('../../../shared/utils/html');
 const { errorPage } = require('../components/base');
-const { fetchGazetteerSummary } = require('../data/gazetteerSummary');
+const { fetchGazetteerSummary } = require('../../../data/gazetteerSummary');
 
 function createGazetteerRouter(options = {}) {
   const { urlsDbPath, startTrace } = options;
@@ -30,7 +30,7 @@ function createGazetteerRouter(options = {}) {
     try {
       let openDbReadOnly;
       try {
-  ({ openDbReadOnly } = require('../../../db/sqlite'));
+  ({ openDbReadOnly } = require('../../../data/db/sqlite'));
       } catch (e) {
         res.status(503).type('html').send(errorPage({ status: 503, message: 'Database unavailable.' }, context));
         finishTrace();

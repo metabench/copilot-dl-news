@@ -45,10 +45,10 @@
  */
 
 const { createApp } = require('../server');
-const { getCrawl, getCrawlLogs } = require('../../../db/sqlite/access');
-const { createTempDb } = require('../../../db/sqlite/test-utils');
-const { getCounts } = require('../../../db/sqlite/seed-utils');
-const { LogCondenser } = require('../../../utils/LogCondenser');
+const { getCrawl, getCrawlLogs } = require('../../../data/db/sqlite/access');
+const { createTempDb } = require('../../../data/db/sqlite/test-utils');
+const { getCounts } = require('../../../data/db/sqlite/seed-utils');
+const { LogCondenser } = require('../../../shared/utils/LogCondenser');
 const fs = require('fs');
 
 // How long to wait for the server to start

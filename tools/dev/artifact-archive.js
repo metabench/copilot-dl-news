@@ -23,8 +23,8 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
-const { CliFormatter } = require('../../src/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 
 const DEFAULT_OLDER_THAN_DAYS = 28;
 const DEFAULT_BUCKET = 'month';
@@ -579,3 +579,4 @@ runCli().catch((error) => {
   console.error(String((error && error.stack) || error));
   process.exit(1);
 });
+

@@ -3,9 +3,9 @@
 'use strict';
 
 const path = require('path');
-const { ensureDatabase } = require('../../src/db/sqlite');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
 const { CountryHubMatcher } = require('../../src/services/CountryHubMatcher');
-const { normalizeHost } = require('../../src/db/sqlite/v1/queries/placeHubs');
+const { normalizeHost } = require('../../src/data/db/sqlite/v1/queries/placeHubs');
 
 function parseArgs(argv) {
   const args = {
@@ -194,3 +194,4 @@ function main() {
 if (require.main === module) {
   main();
 }
+

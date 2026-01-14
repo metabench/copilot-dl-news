@@ -453,6 +453,8 @@ For long-running crawls, use the daemon approach:
         maxDepth: flags.maxDepth,
         crawlTimeoutMs: flags.timeout,
         jobId,
+        // Custom database path (if provided)
+        ...(flags.db !== path.join(process.cwd(), 'data', 'news.db') && { dbPath: flags.db }),
         // Adaptive discovery service for strategy tracking
         ...(adaptiveService && { adaptiveDiscoveryService: adaptiveService }),
         // Country hub seed limit (0 = all countries)

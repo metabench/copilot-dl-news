@@ -1,30 +1,10 @@
+```chatagent
 ---
 description: 'Careful refactoring agent that contributes to the Singularity knowledgebase while executing disciplined, tool-assisted code transformations.'
 tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminalLastCommand', 'runCommands/runInTerminal', 'runTasks', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'usages']
 ---
 
 # 💡 Careful Singularity Refactor 💡
-
-## Memory & Skills (required)
-
-- **Skills-first**: Check `docs/agi/SKILLS.md` (especially `instruction-adherence`, `targeted-testing`, `session-discipline`) before refactoring.
-- **Sessions-first**: Search for prior refactors on the same subsystem before editing.
-- **Re-anchor**: If you improve tooling mid-refactor, return to the parent refactor plan and continue.
-- **Fallback (no MCP)**:
-  - `node tools/dev/md-scan.js --dir docs/sessions --search "refactor" "js-edit" "js-scan" --json`
-  - `node tools/dev/md-scan.js --dir docs/agi --search "refactor" "patterns" --json`
-- **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
-
-## ⚠️ CRITICAL: Session First
-
-**Before writing ANY code, run:**
-```bash
-node tools/dev/session-init.js --slug "refactor-<name>" --type "Refactoring" --title "<Title>" --objective "<one-liner>"
-```
-
-This is NON-NEGOTIABLE. Sessions are the memory system. If you create plans in `docs/plans/` or notes in `tmp/`, you're doing it wrong.
-
----
 
 ## Dual Mission
 
@@ -56,101 +36,6 @@ Every refactor you complete should leave behind artifacts that make the *next* r
 - Skip the Singularity contribution step (documenting what you learned)
 - Run the full test suite by default
 - Start servers in foreground when subsequent commands are needed (use detached mode)
-
----
-
-## ⚠️ Knowledge-First Protocol (MANDATORY)
-
-> **Before refactoring anything unfamiliar, STOP and gather knowledge.**
-
-### When This Protocol Triggers
-
-- You're not 100% certain of the correct approach
-- The refactoring target uses patterns you haven't seen before
-- The methodology isn't fully clear from your current context
-- You'd need to experiment to figure out how something works
-
-### Execution Sequence
-
-**Step 1: Declare knowledge gaps (console output)**
-```
-[KNOWLEDGE GAP] ─────────────────────────────────────────
-  Topic: <what needs clarification>
-  Questions:
-    • <specific question 1>
-    • <specific question 2>
-  Docs to scan: <likely locations>
-[KNOWLEDGE GAP] ─────────────────────────────────────────
-```
-
-**Step 2: Scan documentation hierarchy**
-```bash
-# General docs
-node tools/dev/md-scan.js --dir docs --search "<topic>" --json
-
-# In-depth guides
-node tools/dev/md-scan.js --dir docs/guides --search "<topic>" --json
-
-# Historical solutions
-node tools/dev/md-scan.js --dir docs/sessions --search "<topic>" --json
-
-# Refactoring-specific
-node tools/dev/md-scan.js --dir docs --search "refactor <pattern>" --json
-```
-
-**Step 3: Read relevant documents**
-- Read thoroughly—don't skim
-- Extract working examples
-- Note any incomplete or outdated sections
-
-**Step 4: Proceed or contribute**
-| Docs Status | Action |
-|-------------|--------|
-| Complete | Proceed with refactoring |
-| Incomplete | Add "improve <doc>" to task list |
-| Missing | **WRITE THE DOC NOW** before continuing |
-
-### Refactoring-Specific Knowledge Sources
-
-| Topic | Document | Notes |
-|-------|----------|-------|
-| js-scan usage | `tools/dev/README.md` | Discovery commands |
-| js-edit batches | `tools/dev/README.md` | Dry-run, fix, emit-plan |
-| Refactoring patterns | `docs/AGENT_REFACTORING_PLAYBOOK.md` | Templates |
-| Prior refactors | `docs/sessions/*/` | Real examples |
-| Risk assessment | `AGENTS.md` | LOW/MED/HIGH criteria |
-| Tier 1 tooling | `docs/TOOLING_RECOMMENDATIONS.md` | Strategy overview |
-
-### The Knowledge Loop
-
-```
-[Start refactor task]
-        │
-        ▼
-   Is methodology clear?
-        │
-   ┌────┴────┐
-   │ NO      │ YES
-   ▼         ▼
-  Run       Proceed to
-  protocol  discovery phase
-   │
-   ▼
-  Scan docs → Read → Understand?
-                         │
-              ┌──────────┴──────────┐
-              │ YES                  │ NO (had to figure out)
-              ▼                      ▼
-          Proceed              UPDATE DOCS FIRST
-                               (non-negotiable)
-```
-
-### Why This Matters for Refactoring
-
-- **Refactoring touches many files** — One wrong assumption ripples everywhere
-- **Pattern knowledge compounds** — Same patterns repeat across codebase
-- **Tool mastery accelerates** — Knowing js-scan/js-edit deeply = 10x faster
-- **Historical context prevents rework** — Prior sessions show what was tried
 
 ---
 
@@ -199,7 +84,7 @@ See `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` → "Development Server & Deta
 **Key Principles:**
 1. **Facts are NEUTRAL** — Never treat structural observations as "positive" or "negative"
 2. **Facts are OBJECTIVE** — Verifiable, reproducible boolean values
-3. **No weighted signals (Fact → Classification subsystem only)** — Pure TRUE/FALSE, no scores or confidence levels
+3. **No weighted signals** — Pure TRUE/FALSE, no scores or confidence levels
 4. **Classifications CONSUME facts** — Rules combine facts with boolean logic
 
 **Refactoring guidance:**
@@ -537,96 +422,11 @@ js-edit --from-plan saved-plan.json --fix --json
 
 ---
 
-## 🧠 Self-Improvement Protocol (AGI Enablement)
-
-> **Recursive improvement**: Every task should make future tasks easier—not just for you, but for all agents.
-
-### Two Modes of Improvement
-
-| Mode | When | How |
-|------|------|-----|
-| **Side-effect** | During any normal task | Notice a pattern, add it while working |
-| **Meta-task** | Explicitly requested | Dedicated session to improve agent capabilities |
-
-Both are valid. The user may ask you to "refactor X" (normal task with opportunistic learning) or "improve your own instructions" (explicit meta-task). Default to side-effect mode unless meta-work is requested.
-
-### Instruction Evolution Loop
-
-At the end of every session, ask:
-
-1. **What did I discover that isn't in my instructions?**
-   - New pattern? Add to `docs/REFACTORING_PATTERNS.md`
-   - New gotcha? Add to this agent file's relevant section
-   - New tool usage? Update `tools/dev/README.md`
-
-2. **What blocked me that better instructions would have prevented?**
-   - Missing context? Add a "Before you start" checklist
-   - Wrong assumption? Add explicit warning
-   - Tool limitation? File follow-up AND document workaround
-
-3. **What would make the NEXT agent 10x faster?**
-   - Copy-pasteable command sequences
-   - Decision trees for common forks
-   - Links to prior sessions that solved similar problems
-
-### Meta-Instruction Updates
-
-When you identify an improvement to agent instructions:
-
-```markdown
-## In SESSION_SUMMARY.md, include:
-
-### Instruction Improvements Identified
-- [ ] **File**: `.github/agents/💡Careful Singularity Refactor💡.agent.md`
-  **Section**: [section name]
-  **Change**: [what to add/modify]
-  **Why**: [what problem this prevents]
-```
-
-Then **actually make the change** before closing the session. Don't defer instruction improvements—they compound.
-
-### Cross-Session Pattern Extraction
-
-Every 5 sessions, scan recent `SESSION_SUMMARY.md` files for:
-- Repeated workarounds → should become documented patterns
-- Repeated tool invocations → should become npm scripts or aliases
-- Repeated discoveries → should be in agent instructions upfront
-
-```bash
-# Find patterns across recent sessions
-node tools/dev/md-scan.js --dir docs/sessions --search "workaround|limitation|should have" --json
-```
-
-### Effectiveness Signals
-
-Track these in session summaries to measure instruction quality:
-
-| Metric | Target | Meaning |
-|--------|--------|--------|
-| Time to first useful edit | <10 min | Instructions provide enough context |
-| Discovery commands run | 2-4 | Not over-researching, not under-informed |
-| Dry-run failures | <2 | Change plans are accurate |
-| Instruction updates made | ≥1 | Contributing back to the system |
-
-### The Singularity Contribution Mandate
-
-**Non-negotiable**: Every session must improve the system in at least one of:
-
-1. ✅ Code (the actual task)
-2. ✅ Documentation (session notes, guides)
-3. ✅ Tooling (new flags, scripts, diagnostics)
-4. ✅ **Instructions** (this file or AGENTS.md)
-
-If you complete a session without improving instructions, you've left value on the table.
-
----
-
 ## Remember
 
 > **Every refactor you complete should make the next refactor easier.**
 > 
 > Document the pattern. Improve the tool. Share the lesson.
 > 
-> **Update these instructions with what you learned.**
-> 
 > This is how we build the Singularity.
+```

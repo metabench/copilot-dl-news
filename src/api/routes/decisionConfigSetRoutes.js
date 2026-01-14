@@ -17,12 +17,12 @@ const express = require('express');
 const {
   createDefaultDecisionConfigSetRepository,
   DecisionConfigSetRepository
-} = require('../../crawler/observatory/DecisionConfigSetRepository');
-const { DecisionConfigPromotionService } = require('../../crawler/observatory/DecisionConfigPromotionService');
+} = require('../../core/crawler/observatory/DecisionConfigSetRepository');
+const { DecisionConfigPromotionService } = require('../../core/crawler/observatory/DecisionConfigPromotionService');
 const {
   loadActiveDecisionConfigSet,
   setActiveDecisionConfigSlug
-} = require('../../crawler/observatory/DecisionConfigSetState');
+} = require('../../core/crawler/observatory/DecisionConfigSetState');
 
 function createDecisionConfigSetRoutes({ repository: providedRepository, promotionService: providedPromotionService, dbPath = null } = {}) {
   const router = express.Router();

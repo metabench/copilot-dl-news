@@ -1,4 +1,4 @@
-const { escapeHtml } = require('../utils/html');
+const { escapeHtml } = require('../../../shared/utils/html');
 
 function deriveProblemSeverity(kind) {
   switch (kind) {

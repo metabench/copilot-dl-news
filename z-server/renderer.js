@@ -39141,11 +39141,22 @@ ${name}
 ${description}`.toLowerCase()
         };
       }
+      var CATEGORIES = {
+        featured: { label: "Featured", order: 1 },
+        crawler: { label: "\u{1F577}\uFE0F Crawler Tools", order: 2 },
+        geo: { label: "\u{1F30D} Geo & Places", order: 3 },
+        data: { label: "\u{1F4CA} Data & Docs", order: 4 }
+      };
       var APP_CARDS = [
+        // ─────────────────────────────────────────────────────────────────
+        // Featured
+        // ─────────────────────────────────────────────────────────────────
         {
           id: "unified-ui",
           title: "Unified UI",
           subtitle: "All dashboards in one shell",
+          category: "featured",
+          badges: ["\u{1F3AF} Hub"],
           accent: "gold",
           svgPath: "ui/assets/app-cards/generic.svg",
           sidebarIcon: "ui/assets/sidebar-icons/generic.svg",
@@ -39155,69 +39166,211 @@ ${description}`.toLowerCase()
           quickLinks: [
             { label: "\u{1F5D3}\uFE0F Scheduler", path: "/scheduler" },
             { label: "\u{1F577}\uFE0F Crawl", path: "/crawl-observer" },
-            { label: "\u{1F50E} Data", path: "/data-explorer" }
+            { label: "\u{1F50E} Data", path: "/data-explorer" },
+            { label: "\u{1F310} Hubs", path: "/place-hubs" }
           ],
           match: ["unifiedapp", "unified-app", "unified ui", "src/ui/server/unifiedApp/server.js"]
         },
+        // ─────────────────────────────────────────────────────────────────
+        // Crawler Tools
+        // ─────────────────────────────────────────────────────────────────
         {
-          id: "data-explorer",
-          title: "Data Explorer",
-          subtitle: "URLs \u2022 fetches \u2022 filters \u2022 decisions",
-          accent: "emerald",
-          svgPath: "ui/assets/app-cards/data-explorer.svg",
-          sidebarIcon: "ui/assets/sidebar-icons/data-explorer.svg",
-          order: 10,
-          match: ["dataexplorerserver", "data-explorer", "ui:data-explorer", "src/ui/server/dataExplorerServer.js", "data explorer"]
-        },
-        {
-          id: "docs-viewer",
-          title: "Docs Viewer",
-          subtitle: "Docs \u2022 guides \u2022 sessions \u2022 diagrams",
-          accent: "sapphire",
-          svgPath: "ui/assets/app-cards/docs-viewer.svg",
-          sidebarIcon: "ui/assets/sidebar-icons/docs-viewer.svg",
-          order: 20,
-          match: ["docsviewer", "docs-viewer", "src/ui/server/docsViewer/", "ui:docs", "docs viewer"]
-        },
-        {
-          id: "design-studio",
-          title: "Design Studio",
-          subtitle: "WLILO \u2022 themes \u2022 components",
-          accent: "amethyst",
-          svgPath: "ui/assets/app-cards/design-studio.svg",
-          sidebarIcon: "ui/assets/sidebar-icons/design-studio.svg",
-          order: 30,
-          match: ["designstudio", "design-studio", "src/ui/server/designStudio/", "ui:design", "design studio"]
-        },
-        {
-          id: "diagram-atlas",
-          title: "Diagram Atlas",
-          subtitle: "SVG \u2022 maps \u2022 collision checks",
+          id: "crawler-monitor",
+          title: "Crawler Monitor",
+          subtitle: "Real-time health \u2022 workers \u2022 queues",
+          category: "crawler",
+          badges: ["\u{1F4E1} Live", "\u{1F504} SSE"],
           accent: "topaz",
-          svgPath: "ui/assets/app-cards/diagram-atlas.svg",
-          sidebarIcon: "ui/assets/sidebar-icons/diagram-atlas.svg",
-          order: 40,
-          match: ["diagramatlas", "diagram-atlas", "diagramatlasserver", "src/ui/server/diagramAtlasServer.js", "diagram atlas"]
+          svgPath: "ui/assets/app-cards/generic.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/generic.svg",
+          order: 100,
+          primaryAction: "start-detached",
+          primaryLabel: "\u25B6 Launch",
+          match: ["crawlermonitor", "crawler-monitor", "src/ui/server/crawlerMonitor/"]
+        },
+        {
+          id: "crawl-observer",
+          title: "Crawl Observer",
+          subtitle: "Task events \u2022 telemetry \u2022 history",
+          category: "crawler",
+          badges: ["\u{1F4CB} Events", "\u{1F50D} Debug"],
+          accent: "topaz",
+          svgPath: "ui/assets/app-cards/generic.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/generic.svg",
+          order: 101,
+          primaryAction: "start-detached",
+          primaryLabel: "\u25B6 Launch",
+          match: ["crawlobserver", "crawl-observer", "src/ui/server/crawlObserver/"]
+        },
+        {
+          id: "scheduler-dashboard",
+          title: "Scheduler Dashboard",
+          subtitle: "Schedule reconciliation \u2022 due counts",
+          category: "crawler",
+          badges: ["\u{1F4C5} Schedules", "\u23F0 Cron"],
+          accent: "topaz",
+          svgPath: "ui/assets/app-cards/generic.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/generic.svg",
+          order: 102,
+          primaryAction: "start-detached",
+          primaryLabel: "\u25B6 Launch",
+          match: ["schedulerdashboard", "scheduler-dashboard", "src/ui/server/schedulerDashboard/"]
+        },
+        {
+          id: "rate-limit-dashboard",
+          title: "Rate Limit Dashboard",
+          subtitle: "Domain throttling \u2022 intervals \u2022 resets",
+          category: "crawler",
+          badges: ["\u{1F6A6} Throttle", "\u23F1\uFE0F Limits"],
+          accent: "topaz",
+          svgPath: "ui/assets/app-cards/generic.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/generic.svg",
+          order: 103,
+          primaryAction: "start-detached",
+          primaryLabel: "\u25B6 Launch",
+          match: ["ratelimitdashboard", "rate-limit-dashboard", "src/ui/server/rateLimitDashboard/"]
+        },
+        {
+          id: "crawl-strategies",
+          title: "Crawl Strategies",
+          subtitle: "Profiles \u2022 URL patterns \u2022 site configs",
+          category: "crawler",
+          badges: ["\u2699\uFE0F Config", "\u{1F3AF} Profiles"],
+          accent: "topaz",
+          svgPath: "ui/assets/app-cards/generic.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/generic.svg",
+          order: 104,
+          primaryAction: "start-detached",
+          primaryLabel: "\u25B6 Launch",
+          match: ["crawlstrategies", "crawl-strategies", "crawlStrategies", "src/ui/server/crawlStrategies/"]
+        },
+        {
+          id: "quality-dashboard",
+          title: "Quality Dashboard",
+          subtitle: "Extraction quality \u2022 regressions \u2022 confidence",
+          category: "crawler",
+          badges: ["\u{1F4C8} Metrics", "\u{1F3AF} Quality"],
+          accent: "topaz",
+          svgPath: "ui/assets/app-cards/generic.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/generic.svg",
+          order: 105,
+          primaryAction: "start-detached",
+          primaryLabel: "\u25B6 Launch",
+          match: ["qualitydashboard", "quality-dashboard", "src/ui/server/qualityDashboard/"]
+        },
+        // ─────────────────────────────────────────────────────────────────
+        // Geo & Places
+        // ─────────────────────────────────────────────────────────────────
+        {
+          id: "place-hub-guessing",
+          title: "Place Hub Matrix",
+          subtitle: "Hub guessing \u2022 verification \u2022 coverage",
+          category: "geo",
+          badges: ["\u{1F5FA}\uFE0F Matrix", "\u2713 Verify"],
+          accent: "ruby",
+          svgPath: "ui/assets/app-cards/gazetteer.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/gazetteer.svg",
+          order: 200,
+          // This is mounted under Unified UI, not a standalone server
+          match: []
+          // Don't match any server file - link via Unified UI quickLinks instead
         },
         {
           id: "geo-import",
           title: "Geo Import",
           subtitle: "NDJSON \u2022 geonames \u2022 shape merges",
+          category: "geo",
+          badges: ["\u{1F4E5} Import", "\u{1F310} GeoNames"],
           accent: "emerald",
           svgPath: "ui/assets/app-cards/geo-import.svg",
           sidebarIcon: "ui/assets/sidebar-icons/geo-import.svg",
-          order: 50,
+          order: 201,
+          primaryAction: "start-detached",
+          primaryLabel: "\u25B6 Launch",
           match: ["geoimportserver", "geo-import", "geoimportdashboard", "src/ui/server/geoImportServer.js", "geo import dashboard"]
         },
         {
           id: "gazetteer",
           title: "Gazetteer Info",
           subtitle: "Places \u2022 regions \u2022 admin levels",
+          category: "geo",
+          badges: ["\u{1F4CD} Places", "\u{1F3DB}\uFE0F Admin"],
           accent: "ruby",
           svgPath: "ui/assets/app-cards/gazetteer.svg",
           sidebarIcon: "ui/assets/sidebar-icons/gazetteer.svg",
-          order: 60,
+          order: 202,
+          primaryAction: "start-detached",
+          primaryLabel: "\u25B6 Launch",
           match: ["gazetteerinfoserver", "gazetteer-info", "src/ui/server/gazetteerInfoServer.js", "gazetteer info"]
+        },
+        // ─────────────────────────────────────────────────────────────────
+        // Data & Docs
+        // ─────────────────────────────────────────────────────────────────
+        {
+          id: "data-explorer",
+          title: "Data Explorer",
+          subtitle: "URLs \u2022 fetches \u2022 filters \u2022 decisions",
+          category: "data",
+          badges: ["\u{1F50D} Browse", "\u{1F4CA} Filter"],
+          accent: "emerald",
+          svgPath: "ui/assets/app-cards/data-explorer.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/data-explorer.svg",
+          order: 300,
+          primaryAction: "start-detached",
+          primaryLabel: "\u25B6 Launch",
+          quickLinks: [
+            { label: "\u{1F517} URLs", path: "/urls" },
+            { label: "\u{1F4E5} Fetches", path: "/fetches" },
+            { label: "\u2699\uFE0F Decisions", path: "/decisions" }
+          ],
+          match: ["dataexplorerserver", "data-explorer", "ui:data-explorer", "src/ui/server/dataExplorerServer.js", "data explorer"]
+        },
+        {
+          id: "docs-viewer",
+          title: "Docs Viewer",
+          subtitle: "Docs \u2022 guides \u2022 sessions \u2022 diagrams",
+          category: "data",
+          badges: ["\u{1F4D6} Docs", "\u{1F5C2}\uFE0F Sessions"],
+          accent: "sapphire",
+          svgPath: "ui/assets/app-cards/docs-viewer.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/docs-viewer.svg",
+          order: 301,
+          primaryAction: "start-detached",
+          primaryLabel: "\u25B6 Launch",
+          quickLinks: [
+            { label: "\u{1F4D6} Guides", path: "/guides" },
+            { label: "\u{1F4C5} Sessions", path: "/sessions" },
+            { label: "\u{1F5FA}\uFE0F Diagrams", path: "/diagrams" }
+          ],
+          match: ["docsviewer", "docs-viewer", "src/ui/server/docsViewer/", "ui:docs", "docs viewer"]
+        },
+        {
+          id: "design-studio",
+          title: "Design Studio",
+          subtitle: "WLILO \u2022 themes \u2022 components",
+          category: "data",
+          badges: ["\u{1F3A8} Themes", "\u{1F9E9} UI"],
+          accent: "amethyst",
+          svgPath: "ui/assets/app-cards/design-studio.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/design-studio.svg",
+          order: 302,
+          primaryAction: "start-detached",
+          primaryLabel: "\u25B6 Launch",
+          match: ["designstudio", "design-studio", "src/ui/server/designStudio/", "ui:design", "design studio"]
+        },
+        {
+          id: "diagram-atlas",
+          title: "Diagram Atlas",
+          subtitle: "SVG \u2022 maps \u2022 collision checks",
+          category: "data",
+          badges: ["\u{1F5BC}\uFE0F SVG", "\u2713 Validate"],
+          accent: "topaz",
+          svgPath: "ui/assets/app-cards/diagram-atlas.svg",
+          sidebarIcon: "ui/assets/sidebar-icons/diagram-atlas.svg",
+          order: 303,
+          primaryAction: "start-detached",
+          primaryLabel: "\u25B6 Launch",
+          match: ["diagramatlas", "diagram-atlas", "diagramatlasserver", "src/ui/server/diagramAtlasServer.js", "diagram atlas"]
         }
       ];
       function getAppCardSpecForServer(server) {
@@ -39229,6 +39382,8 @@ ${description}`.toLowerCase()
               id: card.id,
               title: card.title,
               subtitle: card.subtitle,
+              category: card.category || "data",
+              badges: Array.isArray(card.badges) ? card.badges.slice() : [],
               accent: card.accent,
               svgPath: card.svgPath,
               sidebarIcon: card.sidebarIcon,
@@ -39245,6 +39400,8 @@ ${description}`.toLowerCase()
           id: "generic",
           title: fallbackTitle || "Server",
           subtitle: server && server.metadata && server.metadata.description ? String(server.metadata.description) : id.relativeFile || "",
+          category: "data",
+          badges: [],
           accent: "gold",
           svgPath: "ui/assets/app-cards/generic.svg",
           sidebarIcon: "ui/assets/sidebar-icons/generic.svg",
@@ -39275,6 +39432,7 @@ ${description}`.toLowerCase()
         });
       }
       module.exports = {
+        CATEGORIES,
         APP_CARDS,
         getAppCardSpecForServer,
         getMajorServersWithCards
@@ -40776,7 +40934,7 @@ ${description}`.toLowerCase()
     "ui/controls/contentAreaControl.js"(exports, module) {
       "use strict";
       var { extractUrl } = require_extractUrl();
-      var { getMajorServersWithCards } = require_appCatalog();
+      var { getMajorServersWithCards, CATEGORIES } = require_appCatalog();
       function escapeHtml(value2) {
         return String(value2 == null ? "" : value2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
       }
@@ -41019,13 +41177,29 @@ ${description}`.toLowerCase()
               this._overviewGrid.dom.el.innerHTML = '<div class="zs-app-cards__empty">No featured apps detected.</div>';
               return;
             }
-            const html = cards.map(({ server, card }) => {
+            const grouped = {};
+            for (const item2 of cards) {
+              const cat = item2.card.category || "data";
+              if (!grouped[cat]) grouped[cat] = [];
+              grouped[cat].push(item2);
+            }
+            const sortedCategories = Object.keys(grouped).sort((a, b) => {
+              const orderA = CATEGORIES[a]?.order ?? 999;
+              const orderB = CATEGORIES[b]?.order ?? 999;
+              return orderA - orderB;
+            });
+            const renderCard = ({ server, card }) => {
               const file = escapeHtml(server && server.file);
               const title = escapeHtml(card && card.title);
               const subtitle = escapeHtml(card && card.subtitle);
               const accent = escapeHtml(card && card.accent);
               const svgPath = escapeHtml(card && card.svgPath);
+              const isRunning = server && server.running === true;
               const runningUrl = server && server.runningUrl ? String(server.runningUrl) : "";
+              const port = server && server.detectedPort ? server.detectedPort : server && server.metadata && server.metadata.defaultPort;
+              const statusBadge = isRunning ? `<span class="zs-app-card__status zs-app-card__status--running">\u25CF Running${port ? ` :${port}` : ""}</span>` : `<span class="zs-app-card__status zs-app-card__status--stopped">\u25CB Stopped</span>`;
+              const badges = Array.isArray(card.badges) ? card.badges : [];
+              const badgesHtml = badges.length > 0 ? `<div class="zs-app-card__badges">${badges.map((b) => `<span class="zs-app-card__badge">${escapeHtml(b)}</span>`).join("")}</div>` : "";
               const openBtn = runningUrl ? `<button class="zs-app-card__open" data-open-url="${escapeHtml(runningUrl)}" type="button">\u{1F310} Open</button>` : "";
               const primaryAction = card && card.primaryAction ? String(card.primaryAction) : "";
               const primaryLabel = card && card.primaryLabel ? String(card.primaryLabel) : "";
@@ -41037,14 +41211,30 @@ ${description}`.toLowerCase()
                 if (!label || !linkPath) return "";
                 return `<button class="zs-app-card__primary zs-app-card__primary--link" data-primary-action="${escapeHtml(primaryAction)}" data-open-path="${escapeHtml(linkPath)}" type="button">${escapeHtml(label)}</button>`;
               }).filter(Boolean).join("");
+              const runningClass = isRunning ? " zs-app-card--running" : "";
               return `
-<div class="zs-app-card zs-app-card--${accent}" data-server-file="${file}" tabindex="0" role="button">
+<div class="zs-app-card zs-app-card--${accent}${runningClass}" data-server-file="${file}" tabindex="0" role="button">
   <div class="zs-app-card__top">
     <div class="zs-app-card__svg"><img src="${svgPath}" alt="${title}"></div>
     <div class="zs-app-card__cta">${primaryBtn}${quickBtns}${openBtn}</div>
   </div>
-  <div class="zs-app-card__title">${title}</div>
+  <div class="zs-app-card__header">
+    <div class="zs-app-card__title">${title}</div>
+    ${statusBadge}
+  </div>
+  ${badgesHtml}
   <div class="zs-app-card__subtitle">${subtitle}</div>
+</div>`;
+            };
+            const html = sortedCategories.map((cat) => {
+              const catLabel = CATEGORIES[cat]?.label || cat;
+              const catCards = grouped[cat];
+              return `
+<div class="zs-category">
+  <div class="zs-category__header">${escapeHtml(catLabel)}</div>
+  <div class="zs-category__cards">
+    ${catCards.map(renderCard).join("\n")}
+  </div>
 </div>`;
             }).join("\n");
             this._overviewGrid.dom.el.innerHTML = html;

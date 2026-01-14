@@ -6,7 +6,7 @@ const { ToolbarControl } = require("./ToolbarControl");
 const { ToolPanelControl } = require("./ToolPanelControl");
 const { PropertiesPanelControl } = require("./PropertiesPanelControl");
 const { StatusBarControl } = require("./StatusBarControl");
-const { CommandStack } = require("../../../../utils/commandStack");
+const { CommandStack } = require('../../../../../shared/utils/commandStack");
 
 const { Control } = jsgui;
 

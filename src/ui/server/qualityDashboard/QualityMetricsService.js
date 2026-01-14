@@ -13,7 +13,7 @@
  * src/db/sqlite/v1/queries/ui/qualityMetrics.js
  */
 
-const { createQualityMetricsQueries } = require('../../../db/sqlite/v1/queries/ui/qualityMetrics');
+const { createQualityMetricsQueries } = require('../../../data/db/sqlite/v1/queries/ui/qualityMetrics');
 
 /**
  * @typedef {Object} QualitySummary

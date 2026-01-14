@@ -18,7 +18,7 @@
 const path = require('path');
 const { spawn } = require('child_process');
 const Database = require('better-sqlite3');
-const evidence = require('../../src/db/queries/downloadEvidence');
+const evidence = require('../../src/data/db/queries/downloadEvidence');
 
 const DB_PATH = path.join(process.cwd(), 'data', 'news.db');
 
@@ -277,3 +277,4 @@ main().catch((error) => {
   console.error(error.stack);
   process.exit(1);
 });
+

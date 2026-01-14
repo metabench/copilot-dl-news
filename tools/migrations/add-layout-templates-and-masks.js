@@ -11,7 +11,7 @@
  */
 
 const path = require('path');
-const { ensureDatabase } = require('../../src/db/sqlite');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
 
 function tableExists(db, name) {
   const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(name);
@@ -79,3 +79,4 @@ if (require.main === module) {
 }
 
 module.exports = { main };
+

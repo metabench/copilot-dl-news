@@ -1935,7 +1935,7 @@ const tools = {
             properties: {
                 area: {
                     type: "string",
-                    description: "Code area (e.g., 'src/crawler/NewsCrawler.js')"
+                    description: "Code area (e.g., 'src/core/crawler/NewsCrawler.js')"
                 },
                 status: {
                     type: "string",
@@ -2904,3 +2904,4 @@ Tools exposed (Logging - For App Telemetry):
 }
 
 module.exports = { tools, runHttpServer, runStdioServer };
+

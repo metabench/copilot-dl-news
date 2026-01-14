@@ -15,7 +15,7 @@ function loadArticlePlaceMatcher() {
   }
   articleMatcherLoadAttempted = true;
   try {
-    const mod = require('../../../matching/ArticlePlaceMatcher');
+    const mod = require('../../../intelligence/matching/ArticlePlaceMatcher');
     cachedArticleMatcher = mod?.ArticlePlaceMatcher || mod || null;
   } catch (_) {
     cachedArticleMatcher = null;

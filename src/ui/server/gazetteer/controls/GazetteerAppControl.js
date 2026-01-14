@@ -11,7 +11,7 @@
  */
 
 const jsgui = require("jsgui3-html");
-const { BaseAppControl } = require("../../shared/BaseAppControl");
+const { BaseAppControl } = require('../../../../shared/BaseAppControl");
 const { GazetteerSearchFormControl, KIND_OPTIONS } = require("./GazetteerSearchFormControl");
 const { GazetteerBreadcrumbControl } = require("./GazetteerBreadcrumbControl");
 const { GazetteerResultItemControl } = require("./GazetteerResultItemControl");

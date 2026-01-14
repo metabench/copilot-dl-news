@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const TokenCodec = require('../../../../src/codec/TokenCodec');
+const TokenCodec = require('../../../../src/shared/codec/TokenCodec');
 
 let cachedStdinData = null;
 
@@ -278,3 +278,4 @@ module.exports = {
   deriveSnapshotHints,
   hydrateMatchSnapshotContext
 };
+

@@ -12,13 +12,13 @@
 
 const path = require('path');
 const fs = require('fs');
-const { findProjectRoot } = require('../utils/project-root');
-const { CliFormatter } = require('../utils/CliFormatter');
+const { findProjectRoot } = require('../shared/utils/project-root');
+const { CliFormatter } = require('../shared/utils/CliFormatter');
 const { BatchLoader } = require('./cli/BatchLoader');
 const { ArgumentNormalizer } = require('./cli/ArgumentNormalizer');
 const { ReportWriter } = require('./cli/ReportWriter');
-const { guessPlaceHubsForDomain, guessPlaceHubsBatch } = require('../orchestration/placeHubGuessing');
-const { createPlaceHubDependencies } = require('../orchestration/dependencies');
+const { guessPlaceHubsForDomain, guessPlaceHubsBatch } = require('../core/orchestration/placeHubGuessing');
+const { createPlaceHubDependencies } = require('../core/orchestration/dependencies');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -47,14 +47,14 @@ async function guessPlaceHubs(options = {}, legacyDeps = {}) {
   };
   
   // Create dependencies manually to avoid factory function creating console logger
-  const { ensureDb } = require('../db/sqlite/ensureDb');
-  const { createSQLiteDatabase } = require('../db/sqlite');
-  const { createGuessPlaceHubsQueries } = require('../db/sqlite/v1/queries/guessPlaceHubsQueries');
+  const { ensureDb } = require('../data/db/sqlite/ensureDb');
+  const { createSQLiteDatabase } = require('../data/db/sqlite');
+  const { createGuessPlaceHubsQueries } = require('../data/db/sqlite/v1/queries/guessPlaceHubsQueries');
   const { CountryHubGapAnalyzer } = require('../services/CountryHubGapAnalyzer');
   const { RegionHubGapAnalyzer } = require('../services/RegionHubGapAnalyzer');
   const { CityHubGapAnalyzer } = require('../services/CityHubGapAnalyzer');
   const { TopicHubGapAnalyzer } = require('../services/TopicHubGapAnalyzer');
-  const HubValidator = require('../hub-validation/HubValidator');
+  const HubValidator = require('../geo/hub-validation/HubValidator');
   
   const db = ensureDb(dbPath);
   const newsDb = createSQLiteDatabase(dbPath);

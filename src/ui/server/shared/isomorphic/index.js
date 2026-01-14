@@ -9,10 +9,10 @@
  * 
  * Usage:
  *   // For jsgui3 base classes
- *   const jsgui = require("./shared/isomorphic/jsgui");
+ *   const jsgui = require('../../../../shared/isomorphic/jsgui");
  *   
  *   // For shared controls
- *   const { ResizableSplitLayoutControl } = require("./shared/isomorphic/controls");
+ *   const { ResizableSplitLayoutControl } = require('../../../../shared/isomorphic/controls");
  * 
  * @module src/ui/server/shared/isomorphic
  */

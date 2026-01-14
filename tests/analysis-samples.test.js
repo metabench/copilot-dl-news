@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const { analyzePage } = require('../src/analysis/page-analyzer');
-const { buildGazetteerMatchers } = require('../src/analysis/place-extraction');
-const { ensureDatabase } = require('../src/db/sqlite');
+const { analyzePage } = require('../src/intelligence/analysis/page-analyzer');
+const { buildGazetteerMatchers } = require('../src/intelligence/analysis/place-extraction');
+const { ensureDatabase } = require('../src/data/db/sqlite');
 
 describe('Analysis Samples', () => {
   let db;

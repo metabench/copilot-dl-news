@@ -3,11 +3,11 @@
 const request = require("supertest");
 const Database = require("better-sqlite3");
 
-jest.mock("../../../src/db/dbAccess", () => ({
+jest.mock("../../../src/data/db/dbAccess", () => ({
   openNewsDb: jest.fn()
 }));
 
-const { openNewsDb } = require("../../../src/db/dbAccess");
+const { openNewsDb } = require("../../../src/data/db/dbAccess");
 const { createDataExplorerServer } = require("../../../src/ui/server/dataExplorerServer");
 
 function buildInMemoryDb() {
@@ -824,3 +824,4 @@ describe("dataExplorerServer URL detail with decisions", () => {
     shutdown();
   });
 });
+

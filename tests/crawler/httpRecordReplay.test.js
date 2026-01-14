@@ -7,7 +7,7 @@ const {
   createHttpRecordReplay, 
   generateFixtureKey, 
   redactHeaders 
-} = require('../../src/utils/fetch/httpRecordReplay');
+} = require('../../src/shared/utils/fetch/httpRecordReplay');
 
 describe('httpRecordReplay', () => {
   let tempDir;
@@ -243,3 +243,4 @@ describe('httpRecordReplay', () => {
     });
   });
 });
+

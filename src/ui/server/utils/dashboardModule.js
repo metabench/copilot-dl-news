@@ -25,29 +25,41 @@ function resolveBetterSqliteHandle(options = {}) {
     getDbRW
   } = options;
 
+  const resolvedPath = dbPath || path.join(process.cwd(), "data", "news.db");
+
+  const openLocal = () => {
+    const opened = new Database(resolvedPath, { readonly });
+    return {
+      dbHandle: opened,
+      close: () => {
+        try {
+          opened.close();
+        } catch {
+          // ignore
+        }
+      },
+      source: "opened"
+    };
+  };
+
   if (typeof getDbHandle === "function") {
-    return { dbHandle: getDbHandle(), close: () => {}, source: "injected-handle" };
+    const db = getDbHandle();
+    if (db && db.open) {
+      return { dbHandle: db, close: () => {}, source: "injected-handle" };
+    }
+    return openLocal();
   }
 
   if (typeof getDbRW === "function") {
     const newsDb = getDbRW();
-    return { dbHandle: newsDb?.db, close: () => {}, source: "injected-newsdb" };
+    const db = newsDb?.db;
+    if (db && db.open) {
+      return { dbHandle: db, close: () => {}, source: "injected-newsdb" };
+    }
+    return openLocal();
   }
 
-  const resolvedPath = dbPath || path.join(process.cwd(), "data", "news.db");
-  const opened = new Database(resolvedPath, { readonly });
-
-  return {
-    dbHandle: opened,
-    close: () => {
-      try {
-        opened.close();
-      } catch {
-        // ignore
-      }
-    },
-    source: "opened"
-  };
+  return openLocal();
 }
 
 module.exports = {

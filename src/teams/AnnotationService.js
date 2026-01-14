@@ -14,7 +14,7 @@
  * @module AnnotationService
  */
 
-const { ANNOTATION_TYPES, ACTIVITY_ACTIONS } = require('../db/sqlite/v1/queries/workspaceAdapter');
+const { ANNOTATION_TYPES, ACTIVITY_ACTIONS } = require('../data/db/sqlite/v1/queries/workspaceAdapter');
 
 /**
  * AnnotationService class

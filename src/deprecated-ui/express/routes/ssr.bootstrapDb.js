@@ -1,7 +1,7 @@
 const express = require('express');
-const { fetchBootstrapDbStatus, getBootstrapDatasetPath } = require('../data/bootstrapDb');
+const { fetchBootstrapDbStatus, getBootstrapDatasetPath } = require('../../../data/bootstrapDb');
 const { renderBootstrapDbPage } = require('../views/bootstrapDbPage');
-const { escapeHtml } = require('../utils/html');
+const { escapeHtml } = require('../../../shared/utils/html');
 const { errorPage } = require('../components/base');
 
 function createBootstrapDbRouter({ getDbRW, renderNav, datasetPath = null } = {}) {

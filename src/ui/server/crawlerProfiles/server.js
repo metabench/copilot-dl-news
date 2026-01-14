@@ -2,7 +2,7 @@
 
 const express = require('express');
 
-const { CrawlerProfilesStore } = require('../../../crawler/profiles/CrawlerProfilesStore');
+const { CrawlerProfilesStore } = require('../../../core/crawler/profiles/CrawlerProfilesStore');
 
 function asyncHandler(fn) {
   return (req, res, next) => {

@@ -1,4 +1,4 @@
-const { CliFormatter, COLORS, ICONS } = require('../../utils/CliFormatter');
+const { CliFormatter, COLORS, ICONS } = require('../../shared/utils/CliFormatter');
 
 /**
  * GazetteerTelemetry

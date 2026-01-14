@@ -14,7 +14,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-const { ensureDb } = require('../../db/sqlite/ensureDb');
+const { ensureDb } = require('../../data/db/sqlite/ensureDb');
 const PlaceService = require('./gazetteer/services/placeService');
 const placeView = require('./gazetteer/views/placeView');
 

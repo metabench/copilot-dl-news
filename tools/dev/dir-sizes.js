@@ -4,8 +4,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
-const { CliFormatter } = require('../../src/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 
 function formatBytes(bytes) {
   if (!Number.isFinite(bytes)) return '0 B';
@@ -169,3 +169,4 @@ runCli().catch((error) => {
   console.error(String((error && error.stack) || error));
   process.exit(1);
 });
+

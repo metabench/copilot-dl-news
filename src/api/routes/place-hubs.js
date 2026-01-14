@@ -9,8 +9,8 @@
  */
 
 const express = require('express');
-const { guessPlaceHubsBatch, checkDomainReadiness } = require('../../orchestration/placeHubGuessing');
-const { createPlaceHubDependencies } = require('../../orchestration/dependencies');
+const { guessPlaceHubsBatch, checkDomainReadiness } = require('../../core/orchestration/placeHubGuessing');
+const { createPlaceHubDependencies } = require('../../core/orchestration/dependencies');
 
 function parseBoolean(value, fallback = false) {
   if (value === undefined || value === null || value === '') return fallback;

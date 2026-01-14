@@ -4,7 +4,7 @@ const os = require('os');
 const { EventEmitter } = require('events');
 const { createApp } = require('../server');
 const { PlanningSessionManager } = require('../services/planning/PlanningSessionManager');
-const { ConfigManager } = require('../../../config/ConfigManager');
+const { ConfigManager } = require('../../../shared/config/ConfigManager');
 
 function makeTestRunner({ stdoutLines = [], exitCode = 0, delayMs = 10 } = {}) {
   return {

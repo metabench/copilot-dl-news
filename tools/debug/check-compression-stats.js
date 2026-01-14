@@ -1,4 +1,4 @@
-const { openDatabase } = require('./src/db/sqlite/v1/connection');
+const { openDatabase } = require('../src/data/db/sqlite/v1/connection');
 
 function checkCompressionStats() {
   const db = openDatabase('./data/news.db', { readonly: true });

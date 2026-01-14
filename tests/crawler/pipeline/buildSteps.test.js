@@ -1,8 +1,8 @@
 /**
  * Tests for buildSteps - step builder factory
  */
-const { buildSteps, getAvailableSteps, registerStepBuilder, STEP_BUILDERS } = require('../../../src/crawler/pipeline/buildSteps');
-const { runPipeline } = require('../../../src/crawler/pipeline/runPipeline');
+const { buildSteps, getAvailableSteps, registerStepBuilder, STEP_BUILDERS } = require('../../../src/core/crawler/pipeline/buildSteps');
+const { runPipeline } = require('../../../src/core/crawler/pipeline/runPipeline');
 
 describe('buildSteps', () => {
   describe('step generation', () => {
@@ -237,3 +237,4 @@ describe('registerStepBuilder', () => {
     expect(STEP_BUILDERS.customStep).toBe(customBuilder);
   });
 });
+

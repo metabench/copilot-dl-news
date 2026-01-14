@@ -1,6 +1,6 @@
 'use strict';
 
-const { ArchiveDiscoveryStrategy } = require('../../../../src/crawler/services/ArchiveDiscoveryStrategy');
+const { ArchiveDiscoveryStrategy } = require('../../../../src/core/crawler/services/ArchiveDiscoveryStrategy');
 
 describe('ArchiveDiscoveryStrategy', () => {
   let strategy;
@@ -333,3 +333,4 @@ describe('ArchiveDiscoveryStrategy', () => {
     });
   });
 });
+

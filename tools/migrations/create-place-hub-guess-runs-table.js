@@ -9,7 +9,7 @@
  */
 
 const path = require('path');
-const { ensureDatabase } = require('../../src/db/sqlite');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
 
 async function main() {
   const dbPath = path.join(__dirname, '../../data/news.db');

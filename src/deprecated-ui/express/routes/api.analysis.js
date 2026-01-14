@@ -7,7 +7,7 @@ const {
 const {
   countArticlesNeedingAnalysis,
   getAnalysisStatusCounts
-} = require('../../../db/queries/analysisQueries');
+} = require('../../../data/db/queries/analysisQueries');
 
 function createAnalysisApiRouter({ getDbRW }) {
   if (typeof getDbRW !== 'function') throw new Error('createAnalysisApiRouter requires getDbRW function');

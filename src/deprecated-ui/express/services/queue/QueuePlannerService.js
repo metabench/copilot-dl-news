@@ -1,4 +1,4 @@
-const { extractDomain } = require('../../../../utils/domainUtils');
+const { extractDomain } = require('../../../../shared/utils/domainUtils');
 
 /**
  * QueuePlannerService - Plans which incomplete crawl queues should be resumed

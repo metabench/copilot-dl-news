@@ -3,7 +3,7 @@ const {
   listQueues,
   getLatestQueueId,
   getQueueDetail
-} = require('../data/queues');
+} = require('../../../data/queues');
 const {
   renderQueuesListPage,
   streamQueuesListPage
@@ -13,7 +13,7 @@ const {
   renderQueueDetailPage
 } = require('../views/queueDetailPage');
 const { resolveStaleQueueJobs } = require('../services/queueJanitor');
-const { createRenderContext } = require('../utils/html');
+const { createRenderContext } = require('../../../shared/utils/html');
 const { errorPage } = require('../components/base');
 
 const STREAMING_THRESHOLD = 150;

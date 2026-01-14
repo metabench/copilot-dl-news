@@ -5,11 +5,11 @@ const Database = require("better-sqlite3");
 
 const { ensureClientBundle } = require("../../../src/ui/server/utils/ensureClientBundle");
 
-jest.mock("../../../src/db/dbAccess", () => ({
+jest.mock("../../../src/data/db/dbAccess", () => ({
   openNewsDb: jest.fn()
 }));
 
-const { openNewsDb } = require("../../../src/db/dbAccess");
+const { openNewsDb } = require("../../../src/data/db/dbAccess");
 const { createDataExplorerServer } = require("../../../src/ui/server/dataExplorerServer");
 
 let _uiClientBundleEnsured = false;
@@ -325,3 +325,4 @@ describe("Url filter toggle · Puppeteer e2e", () => {
     45000
   );
 });
+

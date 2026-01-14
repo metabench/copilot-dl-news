@@ -17,7 +17,6 @@ const {
 const { PagerButtonControl } = require("./controls/PagerButton");
 const { SparklineControl } = require("./controls");
 const { UrlFilterToggleControl } = require("./controls/UrlFilterToggle");
-const { SearchFormControl } = require("./controls/SearchFormControl");
 const { buildHomeCards } = require("./homeCards");
 const { createHomeCardLoaders } = require("./homeCardData");
 const { listControlTypes } = require("./controls/controlManifest");
@@ -126,32 +125,6 @@ function injectControlManifestScript(context, body, controlTypes) {
   body.add(script);
 }
 
-/**
- * Build a simple search form control for SSR pages
- * @param {Object} context - jsgui Page_Context
- * @param {Object} options - { action, currentSearch, placeholder }
- * @returns {jsgui.Control}
- */
-function buildSearchFormControl(context, options = {}) {
-  const { action = "/", currentSearch = "", placeholder = "Search..." } = options;
-
-  return new SearchFormControl({
-    context,
-    action,
-    method: "get",
-    input: {
-      name: "search",
-      value: currentSearch || "",
-      placeholder,
-      type: "search"
-    },
-    button: {
-      text: "🔍",
-      ariaLabel: "Search"
-    }
-  });
-}
-
 function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {}) {
   const normalizedColumns = Array.isArray(columns) ? columns : [];
   const normalizedRows = Array.isArray(rows) ? rows : [];
@@ -163,13 +136,11 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
   const navLinks = Array.isArray(options.navLinks) ? options.navLinks : null;
   const breadcrumbs = Array.isArray(options.breadcrumbs) ? options.breadcrumbs : null;
   const filterOptions = options.filterOptions;
-  const searchForm = options.searchForm;
   const homeCards = Array.isArray(options.homeCards) ? options.homeCards : null;
   const listingState = options.listingState || null;
   const layoutMode = typeof options.layoutMode === "string" && options.layoutMode.trim() ? options.layoutMode : "listing";
   const hideListingPanel = options.hideListingPanel === true || layoutMode === "dashboard";
-  let mainControl = options.mainControl;
-  const mainControlFactory = options.mainControlFactory;
+  const mainControl = options.mainControl;
   const dashboardSections = Array.isArray(options.dashboardSections) ? options.dashboardSections.slice() : [];
   const includeDashboardScaffold = options.includeDashboardScaffold === true || dashboardSections.length > 0;
   const safeMeta = {
@@ -190,10 +161,6 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
 
   const context = new jsgui.Page_Context();
   const document = new jsgui.Blank_HTML_Document({ context });
-
-  if (!mainControl && typeof mainControlFactory === "function") {
-    mainControl = mainControlFactory(context);
-  }
 
   document.title.add(new StringControl({ context, text: title }));
   const head = document.head;
@@ -219,11 +186,6 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
   fontsStylesheet.dom.attributes.rel = "stylesheet";
   fontsStylesheet.dom.attributes.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@600;700&display=swap";
   head.add(fontsStylesheet);
-
-  const controlsStylesheet = new jsgui.link({ context });
-  controlsStylesheet.dom.attributes.rel = "stylesheet";
-  controlsStylesheet.dom.attributes.href = "/assets/controls.css";
-  head.add(controlsStylesheet);
   
   head.add(createStyleTag(context, themeConfigToCss(themeConfig)));
   head.add(createStyleTag(context, buildDataExplorerCss()));
@@ -252,15 +214,10 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
   if (filterOptions && typeof filterOptions === "object") {
     filterControl = new UrlFilterToggleControl({ context, ...filterOptions });
   }
-  let searchFormControl = null;
-  if (searchForm && typeof searchForm === "object") {
-    searchFormControl = buildSearchFormControl(context, searchForm);
-  }
   hero.add(headingGroup);
-  if (filterControl || searchFormControl) {
+  if (filterControl) {
     const actions = new jsgui.div({ context, class: "page-shell__actions" });
-    if (searchFormControl) actions.add(searchFormControl);
-    if (filterControl) actions.add(filterControl);
+    actions.add(filterControl);
     hero.add(actions);
   }
   header.add(hero);

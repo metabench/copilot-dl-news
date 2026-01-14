@@ -10,10 +10,10 @@
  */
 
 const path = require('path');
-const { ensureDb, openDbReadOnly } = require('../db/sqlite');
-const { validateGazetteer } = require('../db/sqlite/tools/gazetteerQA');
-const { CliFormatter, ICONS } = require('../utils/CliFormatter');
-const { CliArgumentParser } = require('../utils/CliArgumentParser');
+const { ensureDb, openDbReadOnly } = require('../data/db/sqlite');
+const { validateGazetteer } = require('../data/db/sqlite/tools/gazetteerQA');
+const { CliFormatter, ICONS } = require('../shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');
 
 const fmt = new CliFormatter();
 

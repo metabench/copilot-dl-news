@@ -11,7 +11,7 @@
 'use strict';
 
 const { URL } = require('url');
-const { getDb } = require('../db');
+const { getDb } = require('../data/db');
 
 /**
  * @typedef {Object} LearnedPattern
@@ -514,3 +514,4 @@ class UrlPatternLearningService {
 }
 
 module.exports = { UrlPatternLearningService };
+

@@ -1,5 +1,5 @@
 // Test URL normalization with trailing slashes
-const { UrlPolicy } = require('../../src/crawler/urlPolicy');
+const { UrlPolicy } = require('../../src/core/crawler/urlPolicy');
 
 const testCases = [
   { raw: '/world/', base: 'https://www.theguardian.com' },
@@ -26,3 +26,4 @@ for (const { raw, base } of testCases) {
     console.log(`✗ "${raw}" → ERROR: ${error.message}\n`);
   }
 }
+

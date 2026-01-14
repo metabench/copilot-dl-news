@@ -8,9 +8,9 @@
  * @module src/ui/server/dataExplorer/views/classifications
  */
 
-const { formatCount } = require("../utils/formatting");
+const { formatCount } = require('../../utils/serverStartupCheckformatting");
 const { buildViewMeta } = require("./shared");
-const { listClassificationsWithCounts } = require("../../../../db/sqlite/v1/queries/ui/classificationTypes");
+const { listClassificationsWithCounts } = require('../../../../data/db/sqlite/v1/queries/ui/classificationTypes");
 
 /**
  * Build table columns for classification types listing

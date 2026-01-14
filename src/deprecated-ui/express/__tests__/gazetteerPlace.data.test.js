@@ -9,7 +9,7 @@ const {
   fetchPlaceDetails,
   fetchPlaceArticles,
   listPlaceHubsBySlug
-} = require('../data/gazetteerPlace');
+} = require('../../../data/gazetteerPlace');
 
 function tableExists(db, tableName) {
   try {

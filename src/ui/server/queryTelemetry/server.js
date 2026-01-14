@@ -12,7 +12,7 @@ const express = require('express');
 const path = require('path');
 const Database = require('better-sqlite3');
 const jsgui = require('jsgui3-html');
-const { getQueryStats, getRecentQueries } = require('../../../db/queryTelemetry');
+const { getQueryStats, getRecentQueries } = require('../../../data/db/queryTelemetry');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 
 const PORT = process.env.PORT || 3020;
@@ -615,3 +615,4 @@ if (require.main === module) {
 }
 
 module.exports = { app, initDb, createQueryTelemetryRouter };
+

@@ -1,5 +1,5 @@
 const express = require('express');
-const { getRecentDomains } = require('../data/recentDomains');
+const { getRecentDomains } = require('../../../data/recentDomains');
 
 function createRecentDomainsApiRouter({ urlsDbPath }) {
   const router = express.Router();

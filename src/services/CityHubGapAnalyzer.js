@@ -1,8 +1,8 @@
 'use strict';
 
 const path = require('path');
-const { getDb } = require('../db');
-const { getTopCities, getPlacesByCountryAndKind } = require('../db/sqlite/v1/queries/gazetteer.places');
+const { getDb } = require('../data/db');
+const { getTopCities, getPlacesByCountryAndKind } = require('../data/db/sqlite/v1/queries/gazetteer.places');
 const { slugify } = require('../tools/slugify');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 
@@ -113,3 +113,4 @@ class CityHubGapAnalyzer extends HubGapAnalyzerBase {
 module.exports = {
   CityHubGapAnalyzer
 };
+

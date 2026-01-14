@@ -1,4 +1,4 @@
-const { ensureDatabase } = require('./src/db/sqlite');
+const { ensureDatabase } = require('../src/data/db/sqlite');
 const db = ensureDatabase('./data/news.db');
 const results = db.prepare("SELECT name, normalized, lang FROM place_names WHERE normalized = '' AND name != '' LIMIT 10").all();
 console.log('Examples of names with empty normalized:');

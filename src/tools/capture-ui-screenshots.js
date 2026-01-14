@@ -16,7 +16,7 @@ const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
 const sharp = require('sharp');
-const { findProjectRoot } = require('../utils/project-root');
+const { findProjectRoot } = require('../shared/utils/project-root');
 
 const MAX_SCREENSHOT_DIMENSION = 3200;
 

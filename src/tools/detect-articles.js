@@ -17,11 +17,11 @@ const path = require('path');
 const {
   evaluateArticleCandidate,
   createArticleSignalsService
-} = require('../analysis/articleDetection');
-const { findProjectRoot } = require('../utils/project-root');
-const { ensureDb } = require('../db/sqlite/ensureDb');
-const { COLORS, ICONS } = require('../utils/CliFormatter');
-const { CliArgumentParser } = require('../utils/CliArgumentParser');
+} = require('../intelligence/analysis/articleDetection');
+const { findProjectRoot } = require('../shared/utils/project-root');
+const { ensureDb } = require('../data/db/sqlite/ensureDb');
+const { COLORS, ICONS } = require('../shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');
 
 function toInt(value) {
   if (value == null) return null;

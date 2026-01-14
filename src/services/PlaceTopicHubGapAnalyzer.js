@@ -18,13 +18,13 @@ const { PredictionStrategyManager } = require('./shared/PredictionStrategyManage
 const { UrlPatternGenerator } = require('./shared/UrlPatternGenerator');
 
 class PlaceTopicHubGapAnalyzer extends HubGapAnalyzerBase {
-  constructor({ 
+  constructor({
     db,
     logger = console,
     dsplDir
   } = {}) {
     super({ db, logger, dsplDir });
-    
+
     // Initialize shared prediction manager
     this.predictionManager = new PredictionStrategyManager({
       db: this.db,
@@ -33,7 +33,7 @@ class PlaceTopicHubGapAnalyzer extends HubGapAnalyzerBase {
       buildMetadata: this.buildEntityMetadata.bind(this),
       logger: this.logger
     });
-    
+
     // Override methods for place-topic specific logic
     this.predictionManager._getExistingMappings = (domain) => {
       try {
@@ -65,7 +65,7 @@ class PlaceTopicHubGapAnalyzer extends HubGapAnalyzerBase {
         { pattern: `/international/${region}/{topicSlug}`, confidence: 0.2 }
       ];
     };
-    
+
     // Cache for analysis results
     this.lastAnalysis = null;
     this.lastAnalysisTime = 0;
@@ -256,7 +256,7 @@ class PlaceTopicHubGapAnalyzer extends HubGapAnalyzerBase {
       'CN': 'asia', 'JP': 'asia', 'IN': 'asia', 'KR': 'asia', 'SG': 'asia', 'HK': 'asia', 'TW': 'asia',
       'TH': 'asia', 'MY': 'asia', 'ID': 'asia', 'PH': 'asia', 'VN': 'asia', 'PK': 'asia', 'BD': 'asia',
       'LK': 'asia', 'NP': 'asia', 'MM': 'asia', 'KH': 'asia', 'LA': 'asia', 'MN': 'asia',
-      
+
       // Europe
       'GB': 'europe', 'DE': 'europe', 'FR': 'europe', 'IT': 'europe', 'ES': 'europe', 'RU': 'europe',
       'NL': 'europe', 'BE': 'europe', 'AT': 'europe', 'CH': 'europe', 'SE': 'europe', 'NO': 'europe',
@@ -264,17 +264,17 @@ class PlaceTopicHubGapAnalyzer extends HubGapAnalyzerBase {
       'BG': 'europe', 'GR': 'europe', 'PT': 'europe', 'IE': 'europe', 'SK': 'europe', 'SI': 'europe',
       'HR': 'europe', 'BA': 'europe', 'ME': 'europe', 'MK': 'europe', 'AL': 'europe', 'RS': 'europe',
       'EE': 'europe', 'LV': 'europe', 'LT': 'europe', 'UA': 'europe', 'BY': 'europe', 'MD': 'europe',
-      
+
       // Americas
       'US': 'americas', 'CA': 'americas', 'MX': 'americas', 'BR': 'americas', 'AR': 'americas', 'CL': 'americas',
       'CO': 'americas', 'PE': 'americas', 'VE': 'americas', 'EC': 'americas', 'BO': 'americas', 'PY': 'americas',
       'UY': 'americas', 'GY': 'americas', 'SR': 'americas', 'GF': 'americas', 'CR': 'americas', 'PA': 'americas',
       'NI': 'americas', 'HN': 'americas', 'SV': 'americas', 'GT': 'americas', 'BZ': 'americas', 'JM': 'americas',
       'HT': 'americas', 'DO': 'americas', 'CU': 'americas', 'PR': 'americas',
-      
+
       // Oceania
       'AU': 'oceania', 'NZ': 'oceania', 'FJ': 'oceania', 'PG': 'oceania', 'SB': 'oceania', 'VU': 'oceania',
-      
+
       // Africa
       'ZA': 'africa', 'EG': 'africa', 'NG': 'africa', 'KE': 'africa', 'MA': 'africa', 'TN': 'africa',
       'GH': 'africa', 'CI': 'africa', 'SN': 'africa', 'ML': 'africa', 'BF': 'africa', 'NE': 'africa',

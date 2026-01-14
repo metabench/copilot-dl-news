@@ -5,7 +5,7 @@
  */
 
 const Database = require('better-sqlite3');
-const { createAdminAdapter } = require('../../src/db/sqlite/v1/queries/adminAdapter');
+const { createAdminAdapter } = require('../../src/data/db/sqlite/v1/queries/adminAdapter');
 
 describe('adminAdapter', () => {
   let db;
@@ -312,3 +312,4 @@ describe('adminAdapter', () => {
     });
   });
 });
+

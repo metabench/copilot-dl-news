@@ -3,8 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
-const { CliFormatter } = require('../../src/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 
 const DEFAULT_KEEP = 10;
 const DEFAULT_SAMPLE_SIZE = 5;
@@ -303,3 +303,4 @@ if (require.main === module) {
 module.exports = {
   pruneTmp
 };
+

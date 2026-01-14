@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { ensureDb } = require('../../db/sqlite');
+const { ensureDb } = require('../../data/db/sqlite');
 const { scrubExtra } = require('../export-gazetteer');
 const { spawnSync } = require('child_process');
 

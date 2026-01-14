@@ -19,8 +19,8 @@ const outdir = path.join(rootDir, "src", "ui", "server", "docsViewer", "public")
 const outfile = path.join(outdir, "docs-viewer-client.js");
 const shimsDir = path.join(rootDir, "src", "ui", "server", "docsViewer", "client", "shims");
 
-// Use npm-installed jsgui3-client (v0.0.121+ has browser compatibility fixes)
-// No longer using vendor directory
+// Use vendor jsgui3-client which has proper global scope handling
+const vendorClientPath = path.join(rootDir, "vendor", "jsgui3-client", "client.js");
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -53,9 +53,10 @@ module.exports = {
       target: ["es2019"],
       sourcemap: true,
       minify: isProd,
-      // jsgui3-client from npm has browser compatibility fixes (v0.0.121+)
-      // Shim htmlparser for browser (not needed client-side)
+      // Alias vendor jsgui3-client and shim htmlparser
+      // jsgui3-html is bundled directly from npm - it's truly isomorphic
       alias: {
+        "jsgui3-client": vendorClientPath,
         "htmlparser": htmlparserShimPath
       },
       // Externalize nothing - bundle everything for browser

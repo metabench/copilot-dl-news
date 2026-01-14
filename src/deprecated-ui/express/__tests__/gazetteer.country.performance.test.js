@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { performance } = require('perf_hooks');
 const { startServer } = require('../server');
-const { openDbReadOnly } = require('../../../db/sqlite');
+const { openDbReadOnly } = require('../../../data/db/sqlite');
 
 const TEST_TIMEOUT_MS = 3000;
 const REQUEST_TIMEOUT_MS = 500; // Updated from 64ms→150ms→500ms - recent refactoring slowed requests significantly

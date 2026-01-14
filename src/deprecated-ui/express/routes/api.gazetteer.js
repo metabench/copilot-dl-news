@@ -1,5 +1,5 @@
 const express = require('express');
-const { fetchGazetteerSummary } = require('../data/gazetteerSummary');
+const { fetchGazetteerSummary } = require('../../../data/gazetteerSummary');
 
 function createGazetteerApiRouter({ urlsDbPath }) {
   if (!urlsDbPath) {
@@ -11,7 +11,7 @@ function createGazetteerApiRouter({ urlsDbPath }) {
   router.get('/api/gazetteer/summary', (req, res) => {
     let openDbReadOnly;
     try {
-  ({ openDbReadOnly } = require('../../../db/sqlite'));
+  ({ openDbReadOnly } = require('../../../data/db/sqlite'));
     } catch (err) {
       return res.status(503).json({
         error: 'Database unavailable',

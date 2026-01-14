@@ -1,6 +1,6 @@
 'use strict';
 
-const ConcurrencyController = require('../../../src/crawler/concurrency/ConcurrencyController');
+const ConcurrencyController = require('../../../src/core/crawler/concurrency/ConcurrencyController');
 
 describe('ConcurrencyController', () => {
   let controller;
@@ -465,3 +465,4 @@ describe('ConcurrencyController', () => {
     });
   });
 });
+

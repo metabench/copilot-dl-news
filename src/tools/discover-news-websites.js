@@ -20,7 +20,7 @@
  */
 
 const path = require('path');
-const { createSQLiteDatabase } = require('../db/sqlite');
+const { createSQLiteDatabase } = require('../data/db/sqlite');
 const { NewsWebsiteDiscovery } = require('../services/NewsWebsiteDiscovery');
 
 function parseArgs(argv) {

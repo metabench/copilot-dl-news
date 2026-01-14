@@ -2,7 +2,7 @@
 
 // Avoid loading ESM-only dependencies during lightweight wiring tests
 jest.mock('jsdom', () => ({ JSDOM: class { constructor() {} }, VirtualConsole: function() {} }));
-const NewsCrawler = require('../../../src/crawler/NewsCrawler');
+const NewsCrawler = require('../../../src/core/crawler/NewsCrawler');
 
 describe('CrawlerServiceWiring', () => {
   let crawler;
@@ -31,3 +31,4 @@ describe('CrawlerServiceWiring', () => {
     expect(crawler.contentValidationService).toBeDefined();
   });
 });
+

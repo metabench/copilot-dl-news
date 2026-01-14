@@ -15,7 +15,7 @@
  * 
  * @example
  * // In server.js CLI section:
- * const { handleStartupCheck, wrapServerForCheck } = require('./utils/serverStartupCheck');
+ * const { handleStartupCheck, wrapServerForCheck } = require('../utils/serverStartupCheck');
  * 
  * if (require.main === module) {
  *   const args = parseArgs(process.argv.slice(2));
@@ -258,3 +258,4 @@ module.exports = {
   wrapServerForCheck,
   runStartupCheck
 };
+

@@ -5,7 +5,7 @@ const {
   createCrawlService,
   buildAvailabilityPayload,
   SequenceConfigError
-} = require('../../../core/crawlService');
+} = require('../../../../../core/crawlService');
 
 function parseBoolean(value, fallback) {
   if (value === undefined || value === null) {

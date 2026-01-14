@@ -1,4 +1,4 @@
-const { ensureDatabase } = require('./src/db/sqlite');
+const { ensureDatabase } = require('../src/data/db/sqlite');
 const db = ensureDatabase('./data/news.db');
 
 // Check for URLs with multiple HTTP responses

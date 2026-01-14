@@ -50,10 +50,10 @@ console.log('');
 
 try {
   // Import database modules
-  const { ensureDatabase } = require('../src/db/sqlite');
-  const { QueueDatabase } = require('../src/db/QueueDatabase');
-  const { PlannerDatabase } = require('../src/db/PlannerDatabase');
-  const { CoverageDatabase } = require('../src/db/CoverageDatabase');
+  const { ensureDatabase } = require('../src/data/db/sqlite');
+  const { QueueDatabase } = require('../src/data/db/QueueDatabase');
+  const { PlannerDatabase } = require('../src/data/db/PlannerDatabase');
+  const { CoverageDatabase } = require('../src/data/db/CoverageDatabase');
 
   // Get database handle
   const db = ensureDatabase(dbPath);

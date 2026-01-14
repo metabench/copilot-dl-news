@@ -6,7 +6,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const { BackgroundTaskManager } = require('../BackgroundTaskManager');
-const { ensureDb } = require('../../db/sqlite');
+const { ensureDb } = require('../../data/db/sqlite');
 
 // Simple mock task for testing
 class MockTask {

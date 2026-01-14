@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 
-const { CliArgumentParser } = require('../utils/CliArgumentParser');
-const { CliFormatter } = require('../utils/CliFormatter');
+const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');
+const { CliFormatter } = require('../shared/utils/CliFormatter');
 const {
   createCrawlService,
   buildAvailabilityPayload,

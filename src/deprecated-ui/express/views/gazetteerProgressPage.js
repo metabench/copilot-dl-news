@@ -1,6 +1,6 @@
 'use strict';
 
-const { html, head, body, title, meta, link, script, div, h1, h2, p, span, table, thead, tbody, tr, th, td } = require('../utils/html');
+const { html, head, body, title, meta, link, script, div, h1, h2, p, span, table, thead, tbody, tr, th, td } = require('../../../shared/utils/html');
 
 /**
  * Renders the gazetteer progress page with live updates

@@ -6,8 +6,8 @@ const fs = require('fs');
 const { setupPowerShellEncoding } = require('./shared/powershellEncoding');
 setupPowerShellEncoding();
 
-const { CliFormatter } = require('../../src/utils/CliFormatter');
-const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
 
 const fmt = new CliFormatter();
 
@@ -391,3 +391,4 @@ function main() {
 }
 
 main();
+

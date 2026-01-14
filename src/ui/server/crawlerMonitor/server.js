@@ -30,8 +30,8 @@
 const express = require('express');
 const jsgui = require('jsgui3-html');
 
-const { WorkerRegistry, DomainLockManager, WorkDistributor } = require('../../../crawler/coordinator');
-const { CrawlerMetricsService } = require('../../../crawler/metrics');
+const { WorkerRegistry, DomainLockManager, WorkDistributor } = require('../../../core/crawler/coordinator');
+const { CrawlerMetricsService } = require('../../../core/crawler/metrics');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 
 const PORT = process.env.CRAWLER_MONITOR_PORT || process.env.PORT || 3008;
@@ -812,3 +812,4 @@ if (require.main === module) {
 }
 
 module.exports = { app, startServer, createCrawlerMonitorRouter };
+

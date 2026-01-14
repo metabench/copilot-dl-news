@@ -9,7 +9,7 @@
  */
 
 const path = require('path');
-const { ensureDatabase } = require('../../src/db/sqlite');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
 
 function parseArgs(argv) {
   const options = {
@@ -175,3 +175,4 @@ if (require.main === module) {
 }
 
 module.exports = { main };
+

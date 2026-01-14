@@ -1,4 +1,4 @@
-const { getDb } = require('./db');
+const { getDb } = require('./data/db');
 
 // File-based cache removed
 
@@ -9,8 +9,8 @@ class ArticleCache {
     if (this.db && typeof this.db.getHandle === 'function') this.db = this.db.getHandle();
 
     this.normalizeUrl = typeof normalizeUrl === 'function' ? normalizeUrl : (u) => u;
-  // Tiny positive memo to avoid repeated DB hits during rapid cache checking
-  this._memo = new Map(); // url -> { html, crawledAt, source }
+    // Tiny positive memo to avoid repeated DB hits during rapid cache checking
+    this._memo = new Map(); // url -> { html, crawledAt, source }
   }
 
   setDb(db) { this.db = db; }
@@ -18,9 +18,9 @@ class ArticleCache {
   // Return { html, crawledAt, source } or null
   async get(url) {
     const norm = this.normalizeUrl(url) || url;
-  const m = this._memo.get(norm);
-  if (m) return m;
-  // DB only
+    const m = this._memo.get(norm);
+    if (m) return m;
+    // DB only
     if (this.db) {
       try {
         const row = (this.db.getArticleByUrlOrCanonical ? this.db.getArticleByUrlOrCanonical(norm) : this.db.getArticleByUrl(norm));
@@ -31,20 +31,20 @@ class ArticleCache {
             this._memo.set(norm, val);
             return val;
           }
-          
+
           // Return special marker for known 404s (prevents wasteful re-fetches)
           if (row.http_status === 404 && row.fetched_at) {
-            const val = { 
-              html: null, 
-              crawledAt: row.fetched_at, 
+            const val = {
+              html: null,
+              crawledAt: row.fetched_at,
               source: 'db-404',
-              httpStatus: 404 
+              httpStatus: 404
             };
             this._memo.set(norm, val);
             return val;
           }
         }
-      } catch (_) {}
+      } catch (_) { }
     }
     return null;
   }

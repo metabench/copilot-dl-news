@@ -14,7 +14,7 @@ const {
   METRICS,
   SUBSCRIPTION_STATUS,
   getCurrentPeriod
-} = require('../../src/db/sqlite/v1/queries/billingAdapter');
+} = require('../../src/data/db/sqlite/v1/queries/billingAdapter');
 
 /**
  * Create minimal users table for FK constraints
@@ -329,3 +329,4 @@ describe('billingAdapter', () => {
     });
   });
 });
+

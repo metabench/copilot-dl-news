@@ -17,8 +17,8 @@
  * - Rate limit patterns over the specified time period
  */
 
-const { ensureDatabase } = require('../src/db/sqlite');
-const { RateLimitAnalysisQueries } = require('../src/db/sqlite/queries/rateLimitAnalysis');
+const { ensureDatabase } = require('../src/data/db/sqlite');
+const { RateLimitAnalysisQueries } = require('../src/data/db/sqlite/queries/rateLimitAnalysis');
 
 // Check for help flag first
 if (process.argv.includes('--help') || process.argv.includes('-h')) {

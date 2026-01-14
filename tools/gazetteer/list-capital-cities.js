@@ -18,7 +18,7 @@
  *   - Population data may be null for many capitals
  */
 
-const { ensureDatabase } = require('../../src/db/sqlite');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
 const path = require('path');
 
 const args = process.argv.slice(2);
@@ -104,3 +104,4 @@ if (jsonOutput) {
   
   console.log();
 }
+

@@ -1,4 +1,4 @@
-const { escapeHtml } = require('../utils/html');
+const { escapeHtml } = require('../../../shared/utils/html');
 
 function formatDuration(ms) {
   if (!Number.isFinite(ms) || ms <= 0) return '—';

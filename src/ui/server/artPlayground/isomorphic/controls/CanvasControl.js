@@ -3,7 +3,7 @@
 const jsgui = require("../jsgui");
 const { ComponentControl } = require("./ComponentControl");
 const { SelectionHandlesControl } = require("./SelectionHandlesControl");
-const { ListenerBag } = require("../../../../utils/listenerBag");
+const { ListenerBag } = require('../../../../../shared/utils/listenerBag");
 
 const { Control, String_Control } = jsgui;
 

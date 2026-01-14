@@ -3,14 +3,14 @@
 'use strict';
 
 const path = require('path');
-const { findProjectRoot } = require('../utils/project-root');
-const { ensureDb } = require('../db/sqlite/ensureDb');
-const { buildGazetteerMatchers, extractPlacesFromUrl } = require('../analysis/place-extraction');
+const { findProjectRoot } = require('../shared/utils/project-root');
+const { ensureDb } = require('../data/db/sqlite/ensureDb');
+const { buildGazetteerMatchers, extractPlacesFromUrl } = require('../intelligence/analysis/place-extraction');
 const { detectPlaceHub } = require('./placeHubDetector');
 const { loadNonGeoTopicSlugs } = require('./nonGeoTopicSlugs');
-const HubValidator = require('../hub-validation/HubValidator');
-const { COLORS } = require('../utils/CliFormatter');
-const { CliArgumentParser } = require('../utils/CliArgumentParser');
+const HubValidator = require('../geo/hub-validation/HubValidator');
+const { COLORS } = require('../shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');
 
 function toBoolean(value, fallback = false) {
   if (value === undefined || value === null) return fallback;

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { ensureDatabase } = require('../../src/db/sqlite/v1/index');
+const { ensureDatabase } = require('../../src/data/db/sqlite/v1/index');
 
 const db = ensureDatabase('./data/news.db');
 

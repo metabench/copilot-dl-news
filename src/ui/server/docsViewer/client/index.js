@@ -16,13 +16,7 @@
  * server and client using the same code.
  */
 
-// CRITICAL: Guard page_context before jsgui3-client import
-// jsgui3-client expects this global to exist
-if (typeof window !== "undefined" && typeof window.page_context === "undefined") {
-  window.page_context = {};
-}
-
-// jsgui3-client from npm (v0.0.121+ has browser compatibility fixes)
+// Use alias defined in build script - maps to vendor/jsgui3-client/client.js
 const jsguiClient = require("jsgui3-client");
 
 // Import ALL controls from isomorphic directory
@@ -38,8 +32,7 @@ const {
   DocsThemeToggleControl,
   DocsNavToggleControl,
   DocsSearchControl,
-  DocsFileFilterControl,
-  DocNavigationControl
+  DocsFileFilterControl
 } = require("../isomorphic/controls");
 
 // Control type map for lookup by data-jsgui-control attribute value
@@ -51,8 +44,7 @@ const CONTROL_TYPES = {
   "docs_theme_toggle": DocsThemeToggleControl,
   "docs_nav_toggle": DocsNavToggleControl,
   "docs_search": DocsSearchControl,
-  "docs_file_filter": DocsFileFilterControl,
-  "doc_navigation": DocNavigationControl
+  "docs_file_filter": DocsFileFilterControl
 };
 
 /**
@@ -72,7 +64,6 @@ function registerDocsViewerControls(jsgui) {
   controls.ColumnContextMenu = ColumnContextMenuControl;
   controls.ColumnHeader = ColumnHeaderControl;
   controls.ResizableSplitLayout = ResizableSplitLayoutControl;
-  controls.DocNavigation = DocNavigationControl;
   
   // Also register with map_Controls for activation lookup
   const mapControls = jsgui.map_Controls = jsgui.map_Controls || {};
@@ -106,10 +97,6 @@ function activateMarkedControls(context) {
       context: context,
       el: el
     });
-    
-    // Link control to DOM element (required for activate() to work)
-    control.dom = control.dom || {};
-    control.dom.el = el;
     
     // Store reference on element for debugging
     el.__jsgui_control = control;
@@ -182,52 +169,6 @@ function manualActivation() {
 }
 
 /**
- * Initialize the SPA navigation controller
- * This enables instant doc switching without full page reloads
- */
-function initDocNavigation(context) {
-  if (typeof document === "undefined") return;
-  
-  // Find the nav element (contains the doc tree)
-  const navEl = document.querySelector("nav.doc-nav");
-  if (!navEl) {
-    console.warn("[docs-viewer] No nav.doc-nav element found for SPA navigation");
-    return;
-  }
-  
-  // Find the main element (always exists, contains welcome or doc content)
-  const mainEl = document.querySelector("main.doc-viewer");
-  if (!mainEl) {
-    console.warn("[docs-viewer] No main.doc-viewer element found for SPA navigation");
-    return;
-  }
-  
-  // Content target may not exist on welcome page - that's OK
-  // DocNavigationControl will create it when needed
-  const contentTarget = document.querySelector("article.doc-viewer__content");
-  
-  // Create and activate the navigation control
-  const navControl = new DocNavigationControl({
-    context: context,
-    el: navEl,
-    contentTarget: contentTarget  // may be null on welcome page
-  });
-  
-  // Store reference for debugging
-  navEl.__docNavigation = navControl;
-  window.__docNavigation = navControl;
-  
-  // Activate to bind event handlers
-  navControl.activate();
-  
-  console.log("[docs-viewer] SPA navigation initialized", {
-    hasNav: !!navEl,
-    hasMain: !!mainEl,
-    hasContentTarget: !!contentTarget
-  });
-}
-
-/**
  * Bootstrap the docs viewer client
  */
 function bootstrap() {
@@ -264,10 +205,6 @@ function bootstrap() {
     
     if (context) {
       activateMarkedControls(context);
-      
-      // Initialize SPA navigation controller
-      // This intercepts doc link clicks for instant navigation
-      initDocNavigation(context);
     } else {
       console.warn("[docs-viewer] No context available for activation");
     }

@@ -13,7 +13,7 @@
  */
 
 const { FactExtractor } = require('../aggregation/FactExtractor');
-const SimHasher = require('../analysis/similarity/SimHasher');
+const SimHasher = require('../intelligence/analysis/similarity/SimHasher');
 
 // Patterns for identifying checkable claims
 const CLAIM_PATTERNS = {

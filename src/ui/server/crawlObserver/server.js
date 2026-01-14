@@ -12,11 +12,11 @@ const express = require('express');
 const path = require('path');
 const jsgui = require('jsgui3-html');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
-const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
-const { createMcpLogger } = require('../../../utils/mcpLogger');
+const { resolveBetterSqliteHandle } = require('../utils/serverStartupCheckdashboardModule');
+const { createMcpLogger } = require('../utils/serverStartupCheckmcpLogger');
 
 const log = createMcpLogger.uiServer('crawl-observer');
-const { createCrawlObserverUiQueries } = require('../../../db/sqlite/v1/queries/crawlObserverUiQueries');
+const { createCrawlObserverUiQueries } = require('../../../data/db/sqlite/v1/queries/crawlObserverUiQueries');
 
 const { TaskListControl } = require('./controls/TaskListControl');
 const { TaskDetailControl } = require('./controls/TaskDetailControl');
@@ -285,3 +285,4 @@ async function createCrawlObserverRouter(options = {}) {
 }
 
 module.exports = { app, initDb, createCrawlObserverRouter };
+

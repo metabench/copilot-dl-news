@@ -1,7 +1,7 @@
 /**
  * Tests for the pipeline module - runPipeline, createStep, composePipelines
  */
-const { runPipeline, createStep, composePipelines } = require('../../../src/crawler/pipeline/runPipeline');
+const { runPipeline, createStep, composePipelines } = require('../../../src/core/crawler/pipeline/runPipeline');
 
 describe('runPipeline', () => {
   describe('basic execution', () => {
@@ -274,3 +274,4 @@ describe('composePipelines', () => {
     expect(order).toEqual(['a', 'b']);
   });
 });
+

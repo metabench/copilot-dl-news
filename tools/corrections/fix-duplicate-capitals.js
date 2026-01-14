@@ -40,8 +40,8 @@ Safety:
   process.exit(0);
 }
 
-const { ensureDatabase } = require('../../src/db/sqlite');
-const { mergeDuplicateCapitals } = require('../../src/db/sqlite/v1/queries/gazetteer.deduplication');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { mergeDuplicateCapitals } = require('../../src/data/db/sqlite/v1/queries/gazetteer.deduplication');
 const path = require('path');
 
 function getArg(name, fallback) {
@@ -109,3 +109,4 @@ const finalCount = db.prepare(`
   WHERE kind='city' AND json_extract(extra, '$.role')='capital'
 `).get();
 console.log(`\nTotal capital cities: ${finalCount.count}`);
+

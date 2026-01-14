@@ -14,11 +14,11 @@ const { is_array, tof } = require('lang-tools');
 const fs = require('fs');
 const path = require('path');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-const { ensureDb, ensureGazetteer } = require('../db/sqlite');
+const { ensureDb, ensureGazetteer } = require('../data/db/sqlite');
 const {
   createAttributeStatements,
   recordAttribute
-} = require('../db/sqlite/v1/queries/gazetteer.attributes');
+} = require('../data/db/sqlite/v1/queries/gazetteer.attributes');
 const {
   createDeduplicationStatements,
   findExistingPlace,
@@ -27,13 +27,13 @@ const {
   completeIngestionRun,
   generateCapitalExternalId,
   addCapitalRelationship
-} = require('../db/sqlite/v1/queries/gazetteer.deduplication');
-const { createPopulateGazetteerQueries } = require('../db/sqlite/v1/queries/gazetteer.populateTool');
+} = require('../data/db/sqlite/v1/queries/gazetteer.deduplication');
+const { createPopulateGazetteerQueries } = require('../data/db/sqlite/v1/queries/gazetteer.populateTool');
 const { fetchCountries } = require('./restcountries');
-const { findProjectRoot } = require('../utils/project-root');
-const { CliFormatter } = require('../utils/CliFormatter');
-const { CliArgumentParser } = require('../utils/CliArgumentParser');
-const { HttpRequestResponseFacadeInstance } = require('../utils/HttpRequestResponseFacade');
+const { findProjectRoot } = require('../shared/utils/project-root');
+const { CliFormatter } = require('../shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');
+const { HttpRequestResponseFacadeInstance } = require('../shared/utils/HttpRequestResponseFacade');
 const { GazetteerTelemetry } = require('./gazetteer/GazetteerTelemetry');
 
 // Multi-capital countries with correct coordinates per capital

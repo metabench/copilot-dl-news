@@ -1,6 +1,6 @@
 'use strict';
 
-const { extractDomain } = require('../../../utils/domainUtils');
+const { extractDomain } = require('../../../shared/utils/domainUtils');
 
 const DEFAULT_SUMMARY = { count: 0, items: [] };
 const DEFAULT_ACHIEVEMENTS_LIMIT = 12;

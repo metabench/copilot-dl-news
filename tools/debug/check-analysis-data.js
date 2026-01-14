@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const path = require('path');
-const { ensureDatabase } = require('./src/db/sqlite');
+const { ensureDatabase } = require('../src/data/db/sqlite');
 
 const db = ensureDatabase(path.join('.', 'data', 'news.db'));
 

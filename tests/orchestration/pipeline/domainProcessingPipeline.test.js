@@ -15,7 +15,7 @@ const {
   createFinalizeSummaryStep,
   buildDomainProcessingSteps,
   processDomainPipeline
-} = require('../../../src/orchestration/pipeline');
+} = require('../../../src/core/orchestration/pipeline');
 
 // ============================================================================
 // Test Fixtures
@@ -554,3 +554,4 @@ describe('domainProcessingPipeline', () => {
     });
   });
 });
+

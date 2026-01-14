@@ -10,7 +10,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const { createApp } = require('../server');
-const { ensureDatabase } = require('../../../db/sqlite/v1');
+const { ensureDatabase } = require('../../../data/db/sqlite/v1');
 
 // Helper to print red error messages
 const redError = (testName, message) => {

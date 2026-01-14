@@ -8,7 +8,7 @@
  * @module src/ui/server/dataExplorer/views/domains
  */
 
-const { formatDateTime, formatCount } = require("../utils/formatting");
+const { formatDateTime, formatCount } = require('../../utils/serverStartupCheckformatting");
 const { buildDomainSnapshot } = require("../../../homeCardData");
 const {
   buildDomainSummaryColumns,

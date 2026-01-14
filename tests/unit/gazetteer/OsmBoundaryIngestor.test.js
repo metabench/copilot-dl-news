@@ -3,13 +3,13 @@
 const mockListBoundaryCandidates = jest.fn();
 const mockSaveBoundaryData = jest.fn();
 
-jest.mock('../../../src/db/sqlite/v1/queries/gazetteer.osm', () => ({
+jest.mock('../../../src/data/db/sqlite/v1/queries/gazetteer.osm', () => ({
   createOsmBoundaryStatements: jest.fn(() => ({})),
   listBoundaryCandidates: mockListBoundaryCandidates,
   saveBoundaryData: mockSaveBoundaryData
 }));
 
-const OsmBoundaryIngestor = require('../../../src/crawler/gazetteer/ingestors/OsmBoundaryIngestor');
+const OsmBoundaryIngestor = require('../../../src/core/crawler/gazetteer/ingestors/OsmBoundaryIngestor');
 
 const createDbStub = () => ({
   prepare: jest.fn(() => ({ run: jest.fn() }))
@@ -214,3 +214,4 @@ describe('OsmBoundaryIngestor batching and concurrency', () => {
     expect(telemetryCalls[0][0]).toMatchObject({ type: 'error', context: expect.objectContaining({ candidateId: 1 }) });
   });
 });
+

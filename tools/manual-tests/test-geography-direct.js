@@ -16,7 +16,7 @@ console.log('[test] Starting direct geography crawl test');
 console.log('[test] DB path:', dbPath);
 
 // Initialize database
-const { ensureDb } = require('../../src/db/sqlite/ensureDb');
+const { ensureDb } = require('../../src/data/db/sqlite/ensureDb');
 const db = ensureDb(dbPath);
 console.log('[test] Database initialized');
 
@@ -54,3 +54,4 @@ Promise.race([
   console.error('[test] Stack:', err.stack);
   process.exit(1);
 });
+

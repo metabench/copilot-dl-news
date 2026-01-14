@@ -7,7 +7,7 @@
 const path = require('path');
 const Database = require('better-sqlite3');
 const { AuditLogger, AUDIT_ACTIONS } = require('../../src/admin/AuditLogger');
-const { createAdminAdapter } = require('../../src/db/sqlite/v1/queries/adminAdapter');
+const { createAdminAdapter } = require('../../src/data/db/sqlite/v1/queries/adminAdapter');
 
 describe('AuditLogger', () => {
   let db;
@@ -174,3 +174,4 @@ describe('AuditLogger', () => {
     });
   });
 });
+

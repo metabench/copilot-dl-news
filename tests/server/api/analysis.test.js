@@ -10,7 +10,7 @@ jest.mock('../../../src/deprecated-ui/express/services/analysisRuns', () => ({
   getAnalysisRun: jest.fn()
 }));
 
-jest.mock('../../../src/db/queries/analysisQueries', () => ({
+jest.mock('../../../src/data/db/queries/analysisQueries', () => ({
   countArticlesNeedingAnalysis: jest.fn(),
   getAnalysisStatusCounts: jest.fn()
 }));
@@ -23,7 +23,7 @@ const {
 const {
   countArticlesNeedingAnalysis,
   getAnalysisStatusCounts
-} = require('../../../src/db/queries/analysisQueries');
+} = require('../../../src/data/db/queries/analysisQueries');
 
 function createApp(overrides = {}) {
   const getDbRW = overrides.getDbRW ?? (() => overrides.db ?? { name: 'db' });
@@ -195,3 +195,4 @@ describe('analysis router', () => {
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Failed to resolve database connection'), error);
   });
 });
+

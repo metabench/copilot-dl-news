@@ -1,6 +1,6 @@
 // Integration-level wiring test (mock jsdom to avoid ESM issues)
 jest.mock('jsdom', () => ({ JSDOM: class { constructor() {} }, VirtualConsole: function() {} }));
-const NewsCrawler = require('../../../src/crawler/NewsCrawler');
+const NewsCrawler = require('../../../src/core/crawler/NewsCrawler');
 
 describe('NewsCrawler wiring integration', () => {
   let crawler;
@@ -30,3 +30,4 @@ describe('NewsCrawler wiring integration', () => {
     expect(crawler._shadowContext).toBeDefined();
   });
 });
+

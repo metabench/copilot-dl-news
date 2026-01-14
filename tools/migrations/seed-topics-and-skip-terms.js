@@ -13,9 +13,9 @@
  */
 
 const path = require('path');
-const { ensureDatabase } = require('../src/db/sqlite');
-const { seedDefaultTopics } = require('../src/db/sqlite/queries/topicKeywords');
-const { seedDefaultSkipTerms } = require('../src/db/sqlite/queries/crawlSkipTerms');
+const { ensureDatabase } = require('../src/data/db/sqlite');
+const { seedDefaultTopics } = require('../src/data/db/sqlite/queries/topicKeywords');
+const { seedDefaultSkipTerms } = require('../src/data/db/sqlite/queries/crawlSkipTerms');
 
 const args = process.argv.slice(2);
 const force = args.includes('--force');

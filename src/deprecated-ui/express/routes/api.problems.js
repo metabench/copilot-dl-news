@@ -1,5 +1,5 @@
 const express = require('express');
-const { fetchProblems } = require('../data/problems');
+const { fetchProblems } = require('../../../data/problems');
 const { InternalServerError } = require('../errors/HttpError');
 
 // Problems APIs (read-only; best-effort when DB available)

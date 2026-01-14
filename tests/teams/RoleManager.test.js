@@ -7,7 +7,7 @@
  */
 
 const { RoleManager } = require('../../src/teams/RoleManager');
-const { ROLES, ROLE_HIERARCHY } = require('../../src/db/sqlite/v1/queries/workspaceAdapter');
+const { ROLES, ROLE_HIERARCHY } = require('../../src/data/db/sqlite/v1/queries/workspaceAdapter');
 
 describe('RoleManager', () => {
   let roleManager;
@@ -256,3 +256,4 @@ describe('RoleManager', () => {
     });
   });
 });
+

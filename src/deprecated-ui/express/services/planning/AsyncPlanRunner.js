@@ -1,18 +1,18 @@
 'use strict';
 
-const { PlanBlueprintBuilder } = require('../../../../crawler/planner/PlanBlueprintBuilder');
-const { IntelligentPlanRunner } = require('../../../../crawler/IntelligentPlanRunner');
-const { PlannerTelemetryBridge } = require('../../../../crawler/planner/PlannerTelemetryBridge');
-const { PlannerOrchestrator } = require('../../../../crawler/planner/PlannerOrchestrator');
-const { PlannerBootstrap } = require('../../../../crawler/planner/PlannerBootstrap');
-const { PatternInference } = require('../../../../crawler/planner/PatternInference');
-const { CountryHubPlanner } = require('../../../../crawler/planner/CountryHubPlanner');
-const { HubSeeder } = require('../../../../crawler/planner/HubSeeder');
-const { TargetedAnalysisRunner } = require('../../../../crawler/planner/TargetedAnalysisRunner');
-const { NavigationDiscoveryRunner } = require('../../../../crawler/planner/navigation/NavigationDiscoveryRunner');
-const { createPlannerHost } = require('../../../../planner/register');
-const { MetaPlanCoordinator } = require('../../../../planner/meta/MetaPlanCoordinator');
-const { HierarchicalPlanner } = require('../../../../crawler/HierarchicalPlanner');
+const { PlanBlueprintBuilder } = require('../../../../core/crawler/planner/PlanBlueprintBuilder');
+const { IntelligentPlanRunner } = require('../../../../core/crawler/IntelligentPlanRunner');
+const { PlannerTelemetryBridge } = require('../../../../core/crawler/planner/PlannerTelemetryBridge');
+const { PlannerOrchestrator } = require('../../../../core/crawler/planner/PlannerOrchestrator');
+const { PlannerBootstrap } = require('../../../../core/crawler/planner/PlannerBootstrap');
+const { PatternInference } = require('../../../../core/crawler/planner/PatternInference');
+const { CountryHubPlanner } = require('../../../../core/crawler/planner/CountryHubPlanner');
+const { HubSeeder } = require('../../../../core/crawler/planner/HubSeeder');
+const { TargetedAnalysisRunner } = require('../../../../core/crawler/planner/TargetedAnalysisRunner');
+const { NavigationDiscoveryRunner } = require('../../../../core/crawler/planner/navigation/NavigationDiscoveryRunner');
+const { createPlannerHost } = require('../../../../intelligence/planner/register');
+const { MetaPlanCoordinator } = require('../../../../intelligence/planner/meta/MetaPlanCoordinator');
+const { HierarchicalPlanner } = require('../../../../core/crawler/HierarchicalPlanner');
 
 const DEFAULT_FETCH_TIMEOUT_MS = 15000;
 const DEFAULT_PLAN_TIMEOUT_MS = 120000;

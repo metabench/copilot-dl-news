@@ -7,11 +7,11 @@ const express = require('express');
 const request = require('supertest');
 const Database = require('better-sqlite3');
 
-const { openDbReadOnly } = require('../../src/db/sqlite');
+const { openDbReadOnly } = require('../../src/data/db/sqlite');
 const {
   getCountryByCode,
   listTopCities
-} = require('../../src/db/sqlite/queries/ui/gazetteerCountry');
+} = require('../../src/data/db/sqlite/queries/ui/gazetteerCountry');
 const {
   fetchCountryMinimalData
 } = require('../../src/deprecated-ui/express/data/gazetteerCountry');
@@ -227,3 +227,4 @@ main().catch((err) => {
   console.error('Benchmark execution failed:', err);
   process.exitCode = 1;
 });
+

@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const { ensureDb } = require('../../db/sqlite');
+const { ensureDb } = require('../../data/db/sqlite');
 
 function runNode(script, args = []) {
   const { spawnSync } = require('child_process');

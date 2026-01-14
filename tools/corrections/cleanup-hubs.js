@@ -1,5 +1,5 @@
-const HubValidator = require('./src/hub-validation/HubValidator');
-const { ensureDb } = require('./src/db/sqlite');
+const HubValidator = require('../src/geo/hub-validation/HubValidator');
+const { ensureDb } = require('../src/data/db/sqlite');
 
 async function cleanupInvalidHubs() {
   const db = ensureDb('./data/news.db');

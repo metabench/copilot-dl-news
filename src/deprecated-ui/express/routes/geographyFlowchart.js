@@ -8,7 +8,7 @@
 'use strict';
 
 const express = require('express');
-const { generateFlowchart, parseProgressFromEvents } = require('../../shared/geographyFlowchart');
+const { generateFlowchart, parseProgressFromEvents } = require('../../../shared/geographyFlowchart');
 
 function createGeographyFlowchartRouter({ getDbRW, renderNav = () => '' } = {}) {
   const router = express.Router();

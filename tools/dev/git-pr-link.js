@@ -4,8 +4,8 @@
 const { execFileSync } = require('child_process');
 const path = require('path');
 
-const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
-const { CliFormatter } = require('../../src/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 
 function runGit(args, options = {}) {
   const cwd = options.cwd || process.cwd();
@@ -275,3 +275,4 @@ if (require.main === module) {
     process.exitCode = 1;
   });
 }
+

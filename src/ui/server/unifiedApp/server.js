@@ -24,8 +24,8 @@ const { createTwoColumnLayoutControls } = require('../../controls/layouts/TwoCol
 const { UnifiedShell } = require('./views/UnifiedShell');
 const { createSubAppRegistry } = require('./subApps/registry');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
-const { openNewsDb } = require('../../../db/dbAccess');
-const { createMcpLogger } = require('../../../utils/mcpLogger');
+const { openNewsDb } = require('../../../data/db/dbAccess');
+const { createMcpLogger } = require('../utils/serverStartupCheckmcpLogger');
 
 const { createRateLimitDashboardRouter } = require('../rateLimitDashboard/server');
 const { createWebhookDashboardRouter } = require('../webhookDashboard/server');
@@ -44,7 +44,7 @@ const { createCrawlerProfilesRouter } = require('../crawlerProfiles/server');
 const { createSchedulerDashboardRouter } = require('../schedulerDashboard/server');
 const { createMultiModalCrawlRouter } = require('../multiModalCrawl/server');
 const { createCrawlStrategiesRouter } = require('../crawlStrategies/server');
-const { TelemetryIntegration } = require('../../../crawler/telemetry/TelemetryIntegration');
+const { TelemetryIntegration } = require('../../../core/crawler/telemetry/TelemetryIntegration');
 const { InProcessCrawlJobRegistry } = require('../../../server/crawl-api/v1/core/InProcessCrawlJobRegistry');
 const { registerCrawlApiV1Routes } = require('../../../api/route-loaders/crawl-v1');
 const { createCrawlService } = require('../../../server/crawl-api/core/crawlService');
@@ -200,7 +200,7 @@ function mountDashboardModules(unifiedApp, options = {}) {
   // Download Evidence API - Proof-grade download statistics
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const downloadEvidence = require('../../../db/queries/downloadEvidence');
+  const downloadEvidence = require('../../../data/db/queries/downloadEvidence');
 
   // Helper to get the raw better-sqlite3 db object
   function getDb() {
@@ -839,3 +839,4 @@ if (require.main === module) {
 }
 
 module.exports = { app, SUB_APPS, mountDashboardModules };
+

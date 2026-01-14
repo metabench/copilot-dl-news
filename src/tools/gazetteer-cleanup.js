@@ -17,9 +17,9 @@
  */
 
 const path = require('path');
-const { ensureDb } = require('../db/sqlite/ensureDb');
-const { normalizeName } = require('../db/sqlite/v1/queries/gazetteer.utils');
-const { CliFormatter, COLORS, ICONS } = require('../utils/CliFormatter');
+const { ensureDb } = require('../data/db/sqlite/ensureDb');
+const { normalizeName } = require('../data/db/sqlite/v1/queries/gazetteer.utils');
+const { CliFormatter, COLORS, ICONS } = require('../shared/utils/CliFormatter');
 
 // Default paths
 const DEFAULT_DB_PATH = path.join(__dirname, '../../data/gazetteer.db');

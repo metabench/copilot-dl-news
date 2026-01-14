@@ -1,6 +1,6 @@
 'use strict';
 
-const HubFreshnessController = require('../../../../src/crawler/HubFreshnessController');
+const HubFreshnessController = require('../../../../src/core/crawler/HubFreshnessController');
 
 describe('HubFreshnessController', () => {
   describe('constructor', () => {
@@ -340,3 +340,4 @@ describe('HubFreshnessController', () => {
     });
   });
 });
+

@@ -5,7 +5,7 @@ const {
   instrumentStatement,
   createTimedDb,
   DEFAULT_THRESHOLD_MS
-} = require("../../../../../src/db/sqlite/v1/queries/helpers/queryTimeBudget");
+} = require("../../../../../src/data/db/sqlite/v1/queries/helpers/queryTimeBudget");
 
 describe("queryTimeBudget", () => {
   describe("timedQuery", () => {
@@ -185,3 +185,4 @@ describe("queryTimeBudget", () => {
     });
   });
 });
+

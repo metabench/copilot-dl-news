@@ -1,5 +1,5 @@
-const { ensureDb } = require('../../db/sqlite/ensureDb');
-const { UrlResolver } = require('../../utils/UrlResolver');
+const { ensureDb } = require('../../data/db/sqlite/ensureDb');
+const { UrlResolver } = require('../../shared/utils/UrlResolver');
 
 async function normalizePlaceHubs() {
   const db = ensureDb();

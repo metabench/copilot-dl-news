@@ -1,5 +1,5 @@
 const { parentPort } = require('worker_threads');
-const { decompress } = require('../../utils/CompressionFacade');
+const { decompress } = require('../../shared/utils/CompressionFacade');
 
 if (!parentPort) {
   throw new Error('Decompression worker must be run as a worker thread');

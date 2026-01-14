@@ -10,3 +10,4 @@ runStartupCheck(serverPath, 3164, {
   serverName: 'DesignStudio',
   args: ['--design', path.join(process.cwd(), 'design')]
 });
+

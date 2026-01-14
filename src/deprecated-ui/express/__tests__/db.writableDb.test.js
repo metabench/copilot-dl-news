@@ -1,4 +1,4 @@
-const { createWritableDbAccessor } = require('../db/writableDb');
+const { createWritableDbAccessor } = require('../../../data/db/writableDb');
 
 describe('createWritableDbAccessor', () => {
   function createMockDb() {

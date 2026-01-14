@@ -1,6 +1,6 @@
 'use strict';
 
-const RetryCoordinator = require('../crawler/retry/RetryCoordinator');
+const RetryCoordinator = require('../core/crawler/retry/RetryCoordinator');
 
 describe('RetryCoordinator', () => {
   test('_handleRateLimited reads Retry-After via Headers.get("retry-after")', () => {

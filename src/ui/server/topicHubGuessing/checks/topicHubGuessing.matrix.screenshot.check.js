@@ -10,7 +10,7 @@ const path = require('path');
 
 const puppeteer = require('puppeteer');
 
-const { resolveBetterSqliteHandle } = require('../../utils/dashboardModule');
+const { resolveBetterSqliteHandle } = require('../../utils/serverStartupCheckdashboardModule');
 const { renderTopicHubGuessingMatrixHtml } = require('../server');
 
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'news.db');

@@ -16,11 +16,11 @@
  */
 
 const { Command } = require('commander');
-const { ensureDatabase } = require('../src/db/sqlite');
+const { ensureDatabase } = require('../src/data/db/sqlite');
 const { CountryHubGapAnalyzer } = require('../src/services/CountryHubGapAnalyzer');
-const { HubValidator } = require('../src/crawler/hub-discovery/HubValidator');
-const { getAllCountries } = require('../src/db/sqlite/v1/queries/gazetteer.places');
-const { getCountryHubCoverage } = require('../src/db/sqlite/v1/queries/placePageMappings');
+const { HubValidator } = require('../src/core/crawler/hub-discovery/HubValidator');
+const { getAllCountries } = require('../src/data/db/sqlite/v1/queries/gazetteer.places');
+const { getCountryHubCoverage } = require('../src/data/db/sqlite/v1/queries/placePageMappings');
 const { discoverPatternsFromMappings, updateDsplWithPatterns } = require('../src/services/shared/dspl');
 const path = require('path');
 
@@ -60,10 +60,10 @@ class UnifiedHubTool {
       return { discovered: [], validated: [] };
     }
 
-    // Get top missing countries by importance
-    const missingCountries = gaps.missingCountries
-      .sort((a, b) => b.importance - a.importance)
-      .slice(0, limit);
+    // Get missing countries (limit if specified)
+    const missingCountries = limit 
+      ? gaps.missingCountries.slice(0, limit)
+      : gaps.missingCountries;
 
     const discovered = [];
     const validated = [];

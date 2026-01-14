@@ -6,4 +6,4 @@
  * stay consistent with the rest of the UI servers.
  */
 
-module.exports = require("../../shared/isomorphic/jsgui");
+module.exports = require('../../../../shared/isomorphic/jsgui");

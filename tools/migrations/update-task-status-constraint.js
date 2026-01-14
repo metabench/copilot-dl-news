@@ -15,7 +15,7 @@
 
 const path = require('path');
 const Database = require('better-sqlite3');
-const { findProjectRoot } = require('../../src/utils/project-root');
+const { findProjectRoot } = require('../../src/shared/utils/project-root');
 
 function migrate(dbPath) {
   const db = new Database(dbPath);
@@ -129,3 +129,4 @@ if (require.main === module) {
 }
 
 module.exports = { migrate };
+

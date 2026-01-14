@@ -8,7 +8,7 @@
 
 const path = require('path');
 const Database = require('better-sqlite3');
-const { HttpRequestResponseFacade } = require('../src/utils/HttpRequestResponseFacade');
+const { HttpRequestResponseFacade } = require('../src/shared/utils/HttpRequestResponseFacade');
 
 const DB_PATH = path.join(__dirname, '..', 'data', 'news.db');
 

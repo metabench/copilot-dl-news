@@ -1,7 +1,7 @@
 'use strict';
 
-const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
-const { CliFormatter } = require('../../src/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 
 const fmt = new CliFormatter();
 
@@ -189,3 +189,4 @@ module.exports = {
   decodeFromBase64,
   buildEntryFromText
 };
+

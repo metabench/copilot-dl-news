@@ -10,7 +10,7 @@ const {
 } = require('../views/gazetteer/helpers');
 const {
   fetchGazetteerPlaces
-} = require('../data/gazetteerPlaces');
+} = require('../../../data/gazetteerPlaces');
 
 function createGazetteerKindRouter(options = {}) {
   const { urlsDbPath, startTrace } = options;
@@ -38,7 +38,7 @@ function createGazetteerKindRouter(options = {}) {
 
     let openDbReadOnly;
     try {
-  ({ openDbReadOnly } = require('../../../db/sqlite'));
+  ({ openDbReadOnly } = require('../../../data/db/sqlite'));
     } catch (err) {
       endTrace();
       res.status(503).send('<!doctype html><title>Gazetteer</title><body><h1>Database unavailable.</h1></body></html>');

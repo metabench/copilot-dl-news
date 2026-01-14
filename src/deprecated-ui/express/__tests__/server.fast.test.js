@@ -93,7 +93,7 @@ describe('Server Creation (Fast)', () => {
   test('should require database module without errors', () => {
     let dbModule;
     try {
-      dbModule = require('../../../db/sqlite');
+      dbModule = require('../../../data/db/sqlite');
     } catch (e) {
       throw new Error(`Failed to require db/sqlite: ${e.message}`);
     }

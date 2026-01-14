@@ -1,12 +1,12 @@
 const express = require('express');
 const { renderNav } = require('../services/navigation');
-const { escapeHtml, formatNumber, formatBytes, safeTracePre, createRenderContext } = require('../utils/html');
+const { escapeHtml, formatNumber, formatBytes, safeTracePre, createRenderContext } = require('../../../shared/utils/html');
 const { errorPage } = require('../components/base');
 const {
   fetchPlaceDetails,
   fetchPlaceArticles,
   listPlaceHubsBySlug
-} = require('../data/gazetteerPlace');
+} = require('../../../data/gazetteerPlace');
 
 function createGazetteerPlaceRouter(options = {}) {
   const { urlsDbPath, startTrace } = options;
@@ -31,7 +31,7 @@ function createGazetteerPlaceRouter(options = {}) {
 
     let openDbReadOnly;
     try {
-  ({ openDbReadOnly } = require('../../../db/sqlite'));
+  ({ openDbReadOnly } = require('../../../data/db/sqlite'));
     } catch (err) {
       endTrace();
       res.status(503).type('html').send(errorPage({ status: 503, message: 'Database unavailable.' }, context));

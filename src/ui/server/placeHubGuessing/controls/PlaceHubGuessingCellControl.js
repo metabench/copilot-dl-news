@@ -437,6 +437,77 @@ class PlaceHubGuessingCellControl extends BaseAppControl {
   font-size: 12px;
 }
 
+/* Host Eligibility / Crawl Status */
+.eligibility-card {
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.2);
+}
+.eligibility-title {
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: var(--gold);
+}
+.eligibility-content {
+  padding: 10px;
+  border-radius: 6px;
+}
+.eligibility-ok {
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.3);
+}
+.eligibility-needs-crawl {
+  background: rgba(251,191,36,0.1);
+  border: 1px solid rgba(251,191,36,0.3);
+}
+.eligibility-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+.eligibility-label {
+  color: var(--muted);
+  font-size: 12px;
+}
+.eligibility-value {
+  color: var(--text);
+  font-weight: 500;
+  font-size: 12px;
+}
+.crawl-action-row {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.btn-crawl {
+  background: linear-gradient(135deg, #059669, #047857);
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-crawl:hover {
+  background: linear-gradient(135deg, #047857, #065f46);
+  transform: translateY(-1px);
+}
+.btn-crawl:disabled {
+  background: #4b5563;
+  cursor: wait;
+  transform: none;
+}
+.crawl-status {
+  font-size: 13px;
+  color: var(--muted);
+}
+
 /* Hub Check Section */
 .hub-check-card {
   padding: 15px;
@@ -986,6 +1057,135 @@ class PlaceHubGuessingCellControl extends BaseAppControl {
       hostHtml += '</tbody></table>';
       hostPatternsCard.add(text(ctx, hostHtml));
       root.add(hostPatternsCard);
+    }
+
+    // Host Eligibility / Crawl Status (for hosts needing more pages)
+    const hostEligibility = model.hostEligibility;
+    if (hostEligibility) {
+      const eligibilityCard = makeEl(ctx, 'div', 'eligibility-card');
+      eligibilityCard.dom.attributes['data-testid'] = 'host-eligibility';
+      eligibilityCard.dom.attributes['data-host'] = hostEligibility.host || '';
+      eligibilityCard.dom.attributes['data-eligible'] = hostEligibility.isEligible ? 'true' : 'false';
+      
+      const eligibilityClass = hostEligibility.isEligible 
+        ? 'eligibility-ok' 
+        : 'eligibility-needs-crawl';
+      const eligibilityIcon = hostEligibility.isEligible ? '✅' : '📊';
+      
+      const pageCountFormatted = (hostEligibility.pageCount || 0).toLocaleString();
+      const thresholdFormatted = (hostEligibility.threshold || 500).toLocaleString();
+      const pagesNeededFormatted = (hostEligibility.pagesNeeded || 0).toLocaleString();
+      
+      const statusText = hostEligibility.isEligible
+        ? `Ready for pattern analysis (${pageCountFormatted} pages)`
+        : `Needs ${pagesNeededFormatted} more pages for pattern analysis`;
+      
+      // Generate crawl button HTML if not eligible
+      const crawlButtonHtml = hostEligibility.isEligible ? '' : `
+        <div class="crawl-action-row">
+          <button type="button" 
+                  class="btn btn-crawl" 
+                  id="startCrawlBtn"
+                  data-host="${escapeHtml(hostEligibility.host)}"
+                  data-target="${hostEligibility.target || 600}">
+            🕷️ Crawl to ${(hostEligibility.target || 600).toLocaleString()} pages
+          </button>
+          <span id="crawlStatus" class="crawl-status"></span>
+        </div>
+      `;
+      
+      eligibilityCard.add(text(ctx, `
+        <div class="eligibility-title">${eligibilityIcon} Host Crawl Status</div>
+        <div class="eligibility-content ${eligibilityClass}">
+          <div class="eligibility-row">
+            <span class="eligibility-label">Current Pages:</span>
+            <span class="eligibility-value">${pageCountFormatted}</span>
+          </div>
+          <div class="eligibility-row">
+            <span class="eligibility-label">Threshold:</span>
+            <span class="eligibility-value">${thresholdFormatted} pages</span>
+          </div>
+          <div class="eligibility-row">
+            <span class="eligibility-label">Status:</span>
+            <span class="eligibility-value">${statusText}</span>
+          </div>
+          ${crawlButtonHtml}
+        </div>
+      `));
+      
+      // Add crawl button script if not eligible
+      if (!hostEligibility.isEligible) {
+        const crawlScript = makeEl(ctx, 'script');
+        crawlScript.add(text(ctx, `
+(function() {
+  const startBtn = document.getElementById('startCrawlBtn');
+  const statusEl = document.getElementById('crawlStatus');
+  
+  if (startBtn) {
+    startBtn.addEventListener('click', async function() {
+      const host = this.dataset.host;
+      const target = parseInt(this.dataset.target, 10) || 600;
+      
+      startBtn.disabled = true;
+      startBtn.textContent = '⏳ Starting crawl...';
+      statusEl.textContent = '';
+      
+      try {
+        const resp = await fetch('./api/hosts/' + encodeURIComponent(host) + '/prepare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target })
+        });
+        
+        const data = await resp.json();
+        
+        if (data.error) {
+          statusEl.textContent = '❌ ' + data.error;
+          startBtn.disabled = false;
+          startBtn.textContent = '🕷️ Retry Crawl';
+        } else if (data.skipped) {
+          statusEl.textContent = '✅ Already eligible! ' + data.message;
+          startBtn.style.display = 'none';
+          // Refresh the page to show updated status
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          statusEl.textContent = '🚀 ' + (data.message || 'Crawl started');
+          startBtn.textContent = '⏳ Crawling...';
+          
+          // Poll for status
+          const pollStatus = setInterval(async () => {
+            try {
+              const statusResp = await fetch('./api/hosts/' + encodeURIComponent(host) + '/status');
+              const statusData = await statusResp.json();
+              
+              if (statusData.activeCrawl) {
+                statusEl.textContent = '🕷️ Crawling... (' + statusData.pageCount + ' pages)';
+              } else if (statusData.is_eligible) {
+                clearInterval(pollStatus);
+                statusEl.textContent = '✅ Ready! Reloading...';
+                setTimeout(() => location.reload(), 1000);
+              }
+            } catch (e) {
+              console.error('Poll error:', e);
+            }
+          }, 3000);
+          
+          // Stop polling after 5 minutes
+          setTimeout(() => clearInterval(pollStatus), 5 * 60 * 1000);
+        }
+      } catch (err) {
+        statusEl.textContent = '❌ Error: ' + err.message;
+        startBtn.disabled = false;
+        startBtn.textContent = '🕷️ Retry Crawl';
+      }
+    });
+  }
+})();
+        `));
+        eligibilityCard.add(crawlScript);
+      }
+      
+      root.add(eligibilityCard);
     }
 
     // Analysis Freshness Indicator (NEW)

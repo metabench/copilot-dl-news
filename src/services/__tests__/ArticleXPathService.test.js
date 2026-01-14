@@ -1,7 +1,7 @@
 const { ArticleXPathService } = require('../ArticleXPathService');
-const SQLiteNewsDatabase = require('../../db/sqlite/v1/SQLiteNewsDatabase');
+const SQLiteNewsDatabase = require('../../data/db/sqlite/v1/SQLiteNewsDatabase');
 const Database = require('better-sqlite3');
-const { initializeSchema } = require('../../db/sqlite/v1/schema');
+const { initializeSchema } = require('../../data/db/sqlite/v1/schema');
 
 describe('ArticleXPathService', () => {
   let db;

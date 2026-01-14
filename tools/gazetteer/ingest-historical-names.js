@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { ensureDatabase } = require('../../src/db/sqlite');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
 // const fetch = require('node-fetch'); // Native fetch in Node 18+
 
 const DB_PATH = path.join(__dirname, '../../data/gazetteer.db');
@@ -183,3 +183,4 @@ async function ingest() {
 }
 
 ingest().catch(console.error);
+

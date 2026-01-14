@@ -1,4 +1,4 @@
-const { createStartupSequenceRunner, buildStartupSequence } = require('../../../src/crawler/StartupSequenceManager');
+const { createStartupSequenceRunner, buildStartupSequence } = require('../../../src/core/crawler/StartupSequenceManager');
 
 describe('StartupSequenceManager', () => {
   test('builds gazetteer sequence with two steps', () => {
@@ -43,3 +43,4 @@ describe('StartupSequenceManager', () => {
     expect(called.init).toBe(true);
   });
 });
+

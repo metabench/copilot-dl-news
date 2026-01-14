@@ -17,8 +17,8 @@
 
 const path = require('path');
 const { evaluateDomainFromDb } = require('../is_this_a_news_website');
-const { CliFormatter } = require('../utils/CliFormatter');
-const { CliArgumentParser } = require('../utils/CliArgumentParser');
+const { CliFormatter } = require('../shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');
 
 const fmt = new CliFormatter();
 
@@ -50,7 +50,7 @@ function main() {
 
   let NewsDatabase;
   try {
-    NewsDatabase = require('../db');
+    NewsDatabase = require('../data/db');
   } catch (e) {
     fmt.error('Database unavailable: ' + e.message);
     process.exit(1);

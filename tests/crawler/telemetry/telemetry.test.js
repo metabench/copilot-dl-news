@@ -16,7 +16,7 @@ const {
   formatPhaseName,
   isValidTelemetryEvent,
   CrawlTelemetryBridge
-} = require('../../../src/crawler/telemetry');
+} = require('../../../src/core/crawler/telemetry');
 
 describe('CrawlTelemetrySchema', () => {
   describe('CRAWL_PHASES', () => {
@@ -436,3 +436,4 @@ describe('CrawlTelemetryBridge', () => {
     });
   });
 });
+

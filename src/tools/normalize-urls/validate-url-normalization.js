@@ -8,9 +8,9 @@
  */
 
 const path = require('path');
-const { ensureDb } = require('../../db/sqlite/ensureDb');
-const { UrlResolver } = require('../../utils/UrlResolver');
-const { findProjectRoot } = require('../../utils/project-root');
+const { ensureDb } = require('../../data/db/sqlite/ensureDb');
+const { UrlResolver } = require('../../shared/utils/UrlResolver');
+const { findProjectRoot } = require('../../shared/utils/project-root');
 
 const TABLES_TO_CHECK = [
   {

@@ -52,196 +52,6 @@ function formatFileSize(bytes) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Context Menu Component
-// ─────────────────────────────────────────────────────────────────────────────
-
-class DatabaseContextMenu extends Control {
-  constructor(spec = {}) {
-    super({ ...spec, tagName: 'div', __type_name: 'database_context_menu' });
-    
-    this.items = spec.items || [];
-    this._visible = false;
-    this._targetPath = null;
-    
-    this.add_class('db-context-menu');
-    this.dom.attributes['data-context-menu'] = 'database';
-    
-    if (!spec.el) this.compose();
-  }
-  
-  compose() {
-    const ctx = this.context;
-    
-    // Menu items
-    for (const item of this.items) {
-      const menuItem = el(ctx, 'div', null, 'db-context-menu-item');
-      menuItem.dom.attributes['data-action'] = item.action;
-      
-      if (item.icon) {
-        menuItem.add(el(ctx, 'span', item.icon, 'menu-item-icon'));
-      }
-      menuItem.add(el(ctx, 'span', item.label, 'menu-item-label'));
-      
-      if (item.shortcut) {
-        menuItem.add(el(ctx, 'span', item.shortcut, 'menu-item-shortcut'));
-      }
-      
-      this.add(menuItem);
-    }
-  }
-  
-  /**
-   * Show the context menu at the given position
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
-   * @param {string} targetPath - The database path that was right-clicked
-   */
-  show(x, y, targetPath) {
-    this._targetPath = targetPath;
-    this._visible = true;
-    
-    const el = this.dom.el;
-    if (el) {
-      el.style.display = 'block';
-      el.style.left = x + 'px';
-      el.style.top = y + 'px';
-      el.setAttribute('data-target-path', targetPath || '');
-      
-      // Adjust position if menu would go off-screen
-      requestAnimationFrame(() => {
-        const rect = el.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        
-        if (rect.right > viewportWidth) {
-          el.style.left = (x - rect.width) + 'px';
-        }
-        if (rect.bottom > viewportHeight) {
-          el.style.top = (y - rect.height) + 'px';
-        }
-      });
-    }
-  }
-  
-  hide() {
-    this._visible = false;
-    this._targetPath = null;
-    const el = this.dom.el;
-    if (el) {
-      el.style.display = 'none';
-      el.removeAttribute('data-target-path');
-    }
-  }
-  
-  get targetPath() {
-    return this._targetPath;
-  }
-  
-  activate() {
-    if (this.__active) return;
-    
-    // Call super.activate() first - this ensures this.dom.el is properly linked
-    super.activate();
-    this.__active = true;
-    
-    const el = this.dom.el;
-    if (!el) return;
-    
-    // Handle menu item clicks using jsgui on() - works because super.activate() linked DOM
-    this.on('click', (e) => {
-      const target = e.target || e.srcElement;
-      const item = target.closest ? target.closest('.db-context-menu-item') : null;
-      if (item) {
-        const action = item.getAttribute('data-action');
-        const targetPath = el.getAttribute('data-target-path');
-        
-        if (action && targetPath) {
-          this._handleAction(action, targetPath);
-        }
-        this.hide();
-      }
-    });
-    
-    // Close on click outside using body control's jsgui events
-    const closeOnClickOutside = (e) => {
-      const target = e.target || e.srcElement;
-      if (this._visible && !el.contains(target)) {
-        this.hide();
-      }
-    };
-    
-    // Close on Escape key
-    const closeOnEscape = (e) => {
-      if (this._visible && e.key === 'Escape') {
-        this.hide();
-      }
-    };
-    
-    // Get body control from context for global event handling
-    const bodyCtrl = (this.context && typeof this.context.body === 'function')
-      ? this.context.body()
-      : null;
-    
-    if (bodyCtrl) {
-      // Use jsgui body control's on() for click-outside and keydown
-      bodyCtrl.on('click', closeOnClickOutside);
-      bodyCtrl.on('keydown', closeOnEscape);
-      this._bodyListeners = { bodyCtrl, closeOnClickOutside, closeOnEscape };
-    } else {
-      // Fallback to direct DOM listeners if no body control available
-      document.addEventListener('click', closeOnClickOutside);
-      document.addEventListener('keydown', closeOnEscape);
-      this._domListeners = { closeOnClickOutside, closeOnEscape };
-    }
-  }
-  
-  /**
-   * Deactivate - clean up event listeners
-   */
-  deactivate() {
-    if (!this.__active) return;
-    this.__active = false;
-    
-    // Clean up body control listeners
-    if (this._bodyListeners) {
-      const { bodyCtrl, closeOnClickOutside, closeOnEscape } = this._bodyListeners;
-      if (bodyCtrl && typeof bodyCtrl.off === 'function') {
-        bodyCtrl.off('click', closeOnClickOutside);
-        bodyCtrl.off('keydown', closeOnEscape);
-      }
-      this._bodyListeners = null;
-    }
-    
-    // Clean up fallback DOM listeners
-    if (this._domListeners) {
-      document.removeEventListener('click', this._domListeners.closeOnClickOutside);
-      document.removeEventListener('keydown', this._domListeners.closeOnEscape);
-      this._domListeners = null;
-    }
-  }
-  
-  _handleAction(action, targetPath) {
-    if (action === 'open-in-explorer') {
-      // Send request to server to open in file explorer
-      fetch('/api/geo-import/open-in-explorer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: targetPath })
-      }).catch(err => {
-        console.error('Failed to open in explorer:', err);
-      });
-    }
-    
-    // Dispatch custom event for other handlers
-    const event = new CustomEvent('db-context-action', {
-      bubbles: true,
-      detail: { action, targetPath }
-    });
-    this.dom.el?.dispatchEvent(event);
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Database Item Component
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -256,8 +66,7 @@ class DatabaseItem extends Control {
       names: 0,
       size: 0,
       isDefault: false,
-      isNew: false,
-      hasGazetteerTables: false
+      isNew: false
     };
     this.isSelected = spec.isSelected || false;
     
@@ -265,9 +74,6 @@ class DatabaseItem extends Control {
     if (this.isSelected) this.add_class('selected');
     if (this.database.isDefault) this.add_class('default');
     if (this.database.isNew) this.add_class('new-db');
-    if (!this.database.hasGazetteerTables && !this.database.isNew) {
-      this.add_class('no-gazetteer');
-    }
     
     this.dom.attributes['data-db-path'] = this.database.path;
     
@@ -275,12 +81,11 @@ class DatabaseItem extends Control {
   }
   
   compose() {
-    const { name, places, names, size, isDefault, isNew, lastImport, hasGazetteerTables } = this.database;
+    const { name, places, names, size, isDefault, isNew, lastImport } = this.database;
     const ctx = this.context;
     
-    // Icon - different for non-gazetteer DBs
-    const iconChar = isNew ? '➕' : (hasGazetteerTables ? '🗄️' : '📦');
-    const icon = el(ctx, 'span', iconChar, 'db-icon');
+    // Icon
+    const icon = el(ctx, 'span', isNew ? '➕' : '🗄️', 'db-icon');
     this.add(icon);
     
     // Info container
@@ -295,60 +100,13 @@ class DatabaseItem extends Control {
     if (isNew) {
       nameRow.add(el(ctx, 'span', 'Create New', 'db-badge new-badge'));
     }
-    if (!hasGazetteerTables && !isNew) {
-      nameRow.add(el(ctx, 'span', '📦 No Gazetteer', 'db-badge no-gaz-badge'));
-    }
     info.add(nameRow);
     
     // Stats row (only for existing databases)
     if (!isNew) {
       const statsRow = el(ctx, 'div', null, 'db-stats-row');
-      
-      if (hasGazetteerTables) {
-        // Show gazetteer stats
-        const placesText = places === -1 ? '📍 Has places' : `📍 ${formatNumber(places)} places`;
-        const namesText = names === -1 ? '🏷️ Has names' : `🏷️ ${formatNumber(names)} names`;
-        statsRow.add(el(ctx, 'span', placesText, 'db-stat'));
-        statsRow.add(el(ctx, 'span', namesText, 'db-stat'));
-        
-        // For gazetteer DBs with 0 places/names but many other tables (like news.db),
-        // show the other tables info as well
-        const otherTableCount = this.database.otherTableCount || 0;
-        if (places === 0 && names === 0 && otherTableCount > 2) {
-          const tableCounts = this.database.tableCounts || [];
-          if (tableCounts.length > 0 && tableCounts[0].table) {
-            const previewTable = tableCounts[0].table;
-            const previewCount = tableCounts[0].count;
-            const countText = previewCount > 0 ? ` (${formatNumber(previewCount)})` : '';
-            statsRow.add(el(ctx, 'span', `📋 +${otherTableCount} tables: ${previewTable}${countText}...`, 'db-stat hint'));
-          }
-        }
-      } else {
-        // Show non-gazetteer DB info (table count, total rows)
-        const tableCount = this.database.tableCount || 0;
-        const totalRows = this.database.totalRows || 0;
-        const tableCounts = this.database.tableCounts || [];
-        
-        if (tableCount > 0) {
-          statsRow.add(el(ctx, 'span', `📋 ${formatNumber(tableCount)} tables`, 'db-stat'));
-          
-          if (totalRows > 0) {
-            const rowsText = totalRows === -1 ? 'Has data' : formatNumber(totalRows);
-            statsRow.add(el(ctx, 'span', `📊 ${rowsText} rows`, 'db-stat'));
-          }
-          
-          // Show first table name as hint
-          if (tableCounts.length > 0 && tableCounts[0].table) {
-            const previewTable = tableCounts[0].table;
-            const previewCount = tableCounts[0].count;
-            const countText = previewCount === -1 ? '' : ` (${formatNumber(previewCount)})`;
-            statsRow.add(el(ctx, 'span', `🗂️ ${previewTable}${countText}...`, 'db-stat hint'));
-          }
-        } else {
-          statsRow.add(el(ctx, 'span', '🔧 Empty or new database', 'db-stat hint'));
-        }
-      }
-      
+      statsRow.add(el(ctx, 'span', `📍 ${formatNumber(places)} places`, 'db-stat'));
+      statsRow.add(el(ctx, 'span', `🏷️ ${formatNumber(names)} names`, 'db-stat'));
       if (size) {
         statsRow.add(el(ctx, 'span', `💾 ${formatFileSize(size)}`, 'db-stat'));
       }
@@ -361,28 +119,6 @@ class DatabaseItem extends Control {
     }
     
     this.add(info);
-    
-    // Actions container
-    if (!isNew && !isDefault) {
-      const actions = el(ctx, 'div', null, 'db-item-actions');
-      
-      if (hasGazetteerTables) {
-        // Import button for gazetteer DBs
-        const importBtn = el(ctx, 'button', '📥 Import', 'db-action-btn import-btn');
-        importBtn.dom.attributes['data-action'] = 'import-to-main';
-        importBtn.dom.attributes['data-db-path'] = this.database.path;
-        importBtn.dom.attributes['title'] = 'Import this database into the main gazetteer';
-        actions.add(importBtn);
-      } else {
-        // Initialize gazetteer button for non-gazetteer DBs
-        const initBtn = el(ctx, 'button', '➕ Init Gazetteer', 'db-action-btn init-btn');
-        initBtn.dom.attributes['data-action'] = 'init-gazetteer';
-        initBtn.dom.attributes['data-db-path'] = this.database.path;
-        initBtn.dom.attributes['title'] = 'Add gazetteer tables to this database';
-        actions.add(initBtn);
-      }
-      this.add(actions);
-    }
     
     // Selection indicator
     const check = el(ctx, 'span', this.isSelected ? '✓' : '', 'db-check');
@@ -403,9 +139,8 @@ class DatabaseSelector extends Control {
     this.dataDir = spec.dataDir || 'data';
     this.showCreateNew = spec.showCreateNew !== false;
     this._newDbName = '';
-    this.windowTitle = spec.windowTitle || '🗄️ Database Selector';
     
-    this.add_class('db-selector-window');
+    this.add_class('database-selector');
     this.dom.attributes['data-jsgui-control'] = 'database_selector';
     
     if (!spec.el) this.compose();
@@ -414,41 +149,11 @@ class DatabaseSelector extends Control {
   compose() {
     const ctx = this.context;
     
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Window Title Bar (Industrial Luxury Obsidian)
-    // ═══════════════════════════════════════════════════════════════════════════
-    const titleBar = el(ctx, 'div', null, 'window-title-bar');
-    
-    // Window icon
-    const windowIcon = el(ctx, 'span', '🗄️', 'window-icon');
-    titleBar.add(windowIcon);
-    
-    // Window title
-    const titleText = el(ctx, 'span', this.windowTitle, 'window-title');
-    titleBar.add(titleText);
-    
-    // Window buttons (decorative for now)
-    const btnGroup = el(ctx, 'div', null, 'window-btn-group');
-    const minimizeBtn = el(ctx, 'span', '─', 'window-btn minimize');
-    const maximizeBtn = el(ctx, 'span', '☐', 'window-btn maximize');
-    const closeBtn = el(ctx, 'span', '✕', 'window-btn close');
-    btnGroup.add(minimizeBtn);
-    btnGroup.add(maximizeBtn);
-    btnGroup.add(closeBtn);
-    titleBar.add(btnGroup);
-    
-    this.add(titleBar);
-    
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Window Content
-    // ═══════════════════════════════════════════════════════════════════════════
-    const windowContent = el(ctx, 'div', null, 'window-content');
-    
     // Header
     const header = el(ctx, 'div', null, 'db-selector-header');
     header.add(el(ctx, 'h3', '🗄️ Select Database'));
     header.add(el(ctx, 'p', 'Choose an existing database or create a new one', 'db-selector-subtitle'));
-    windowContent.add(header);
+    this.add(header);
     
     // Quick actions bar
     const quickBar = el(ctx, 'div', null, 'db-quick-actions');
@@ -463,7 +168,7 @@ class DatabaseSelector extends Control {
     refreshBtn.dom.attributes['data-action'] = 'refresh-list';
     quickBar.add(refreshBtn);
     
-    windowContent.add(quickBar);
+    this.add(quickBar);
     
     // Database list
     const listContainer = el(ctx, 'div', null, 'db-list-container');
@@ -530,76 +235,13 @@ class DatabaseSelector extends Control {
     }
     
     listContainer.add(dbList);
-    windowContent.add(listContainer);
+    this.add(listContainer);
     
     // Selected database info panel
     const infoPanel = el(ctx, 'div', null, 'db-info-panel');
     infoPanel.dom.attributes['data-panel'] = 'selected-info';
     this._composeInfoPanel(infoPanel);
-    windowContent.add(infoPanel);
-    
-    // Add window content to main control
-    this.add(windowContent);
-    
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Context Menu (hidden by default)
-    // ═══════════════════════════════════════════════════════════════════════════
-    this._contextMenu = new DatabaseContextMenu({
-      context: ctx,
-      items: [
-        { action: 'open-in-explorer', icon: '📂', label: 'Open in Explorer' }
-      ]
-    });
-    this.add(this._contextMenu);
-  }
-  
-  /**
-   * Activate the control - sets up event handlers using jsgui events
-   * Following jsgui3 pattern: super.activate() first, then this.on() for DOM events
-   */
-  activate() {
-    if (this.__active) return;
-    
-    // Call super.activate() first - this links this.dom.el to the actual DOM element
-    super.activate();
-    this.__active = true;
-    
-    const el = this.dom.el;
-    if (!el) return;
-    
-    // Activate context menu child control
-    if (this._contextMenu) {
-      this._contextMenu.activate();
-    }
-    
-    // Handle right-click on database items using jsgui on() method
-    // This works because super.activate() has already linked dom.el
-    this.on('contextmenu', (e) => {
-      const target = e.target || e.srcElement;
-      const dbItem = target.closest ? target.closest('.db-item') : null;
-      if (dbItem) {
-        e.preventDefault();
-        const dbPath = dbItem.getAttribute('data-db-path');
-        
-        // Don't show context menu for "create new" item
-        if (dbPath && dbPath !== '__new__') {
-          this._contextMenu.show(e.clientX, e.clientY, dbPath);
-        }
-      }
-    });
-  }
-  
-  /**
-   * Deactivate - clean up event listeners
-   */
-  deactivate() {
-    if (!this.__active) return;
-    this.__active = false;
-    
-    // Deactivate context menu
-    if (this._contextMenu && typeof this._contextMenu.deactivate === 'function') {
-      this._contextMenu.deactivate();
-    }
+    this.add(infoPanel);
   }
   
   _composeInfoPanel(panel) {
@@ -634,41 +276,6 @@ class DatabaseSelector extends Control {
     pathRow.add(el(ctx, 'span', 'Path: ', 'path-label'));
     pathRow.add(el(ctx, 'code', selectedDb.path, 'path-value'));
     panel.add(pathRow);
-    
-    // Import actions section
-    const actionsSection = el(ctx, 'div', null, 'info-actions');
-    actionsSection.add(el(ctx, 'div', '🔄 Import Actions', 'actions-title'));
-    
-    const actionBtns = el(ctx, 'div', null, 'action-buttons');
-    
-    if (selectedDb.isDefault) {
-      // Default database - can import FROM other sources
-      const importFromBtn = el(ctx, 'button', '📥 Import from Source...', 'action-btn primary');
-      importFromBtn.dom.attributes['data-action'] = 'import-from-source';
-      importFromBtn.dom.attributes['title'] = 'Import geographic data from external sources (GeoNames, etc.)';
-      actionBtns.add(importFromBtn);
-      
-      const mergeBtn = el(ctx, 'button', '🔀 Merge Database...', 'action-btn');
-      mergeBtn.dom.attributes['data-action'] = 'merge-database';
-      mergeBtn.dom.attributes['title'] = 'Merge another gazetteer database into this one';
-      actionBtns.add(mergeBtn);
-    } else {
-      // Non-default database - can import TO main
-      const importToMainBtn = el(ctx, 'button', '📤 Import to Main Database', 'action-btn primary');
-      importToMainBtn.dom.attributes['data-action'] = 'import-to-main';
-      importToMainBtn.dom.attributes['data-db-path'] = selectedDb.path;
-      importToMainBtn.dom.attributes['title'] = 'Import all data from this database into the main gazetteer';
-      actionBtns.add(importToMainBtn);
-      
-      const exportBtn = el(ctx, 'button', '📁 Export to File...', 'action-btn');
-      exportBtn.dom.attributes['data-action'] = 'export-database';
-      exportBtn.dom.attributes['data-db-path'] = selectedDb.path;
-      exportBtn.dom.attributes['title'] = 'Export this database to JSON/CSV';
-      actionBtns.add(exportBtn);
-    }
-    
-    actionsSection.add(actionBtns);
-    panel.add(actionsSection);
   }
   
   _createInfoStat(label, value, emoji) {
@@ -685,11 +292,325 @@ class DatabaseSelector extends Control {
 // CSS Styles
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Styles are now loaded from src/ui/controls/DatabaseSelector.css via /assets/controls.css
+DatabaseSelector.getStyles = function() {
+  return `
+    .database-selector {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .db-selector-header {
+      margin-bottom: 16px;
+    }
+    
+    .db-selector-header h3 {
+      margin: 0 0 4px 0;
+      font-size: 1.1rem;
+    }
+    
+    .db-selector-subtitle {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      margin: 0;
+    }
+    
+    /* Quick actions */
+    .db-quick-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .quick-btn {
+      padding: 8px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-color);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .quick-btn:hover {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+    
+    .quick-btn.secondary {
+      background: transparent;
+    }
+    
+    /* Database list */
+    .db-list-container {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+    }
+    
+    .db-list-separator {
+      height: 1px;
+      background: var(--border-color);
+      margin: 12px 0;
+    }
+    
+    .db-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    /* Database item */
+    .db-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .db-item:hover {
+      border-color: var(--accent-color);
+      background: rgba(88, 166, 255, 0.05);
+    }
+    
+    .db-item.selected {
+      border-color: var(--accent-color);
+      background: rgba(88, 166, 255, 0.1);
+    }
+    
+    .db-item.new-db {
+      border-style: dashed;
+    }
+    
+    .db-item.new-db:hover {
+      border-style: solid;
+    }
+    
+    .db-icon {
+      font-size: 1.5rem;
+      width: 40px;
+      text-align: center;
+    }
+    
+    .db-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .db-name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    
+    .db-name {
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .db-badge {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 500;
+    }
+    
+    .default-badge {
+      background: rgba(88, 166, 255, 0.2);
+      color: var(--accent-color);
+    }
+    
+    .new-badge {
+      background: rgba(59, 185, 80, 0.2);
+      color: var(--success-color);
+    }
+    
+    .db-stats-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    
+    .db-stat {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    
+    .db-last-import {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    
+    .db-check {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--success-color);
+      color: white;
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    
+    .db-item.selected .db-check {
+      opacity: 1;
+    }
+    
+    /* Create new database */
+    .db-create-section {
+      margin-bottom: 8px;
+    }
+    
+    .db-new-input-group {
+      display: none;
+      gap: 8px;
+      margin-top: 8px;
+      padding: 12px;
+      background: var(--bg-color);
+      border-radius: 6px;
+    }
+    
+    .db-new-input-group[data-visible="true"] {
+      display: flex;
+    }
+    
+    .db-new-name-input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: var(--surface-color);
+      color: var(--text-primary);
+      font-size: 0.875rem;
+    }
+    
+    .db-new-name-input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+    
+    .create-db-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      background: var(--success-color);
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    
+    .create-db-btn:hover {
+      background: #2ea043;
+    }
+    
+    /* Empty state */
+    .db-empty-state {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-secondary);
+    }
+    
+    .empty-icon {
+      font-size: 3rem;
+      display: block;
+      margin-bottom: 12px;
+    }
+    
+    .empty-hint {
+      font-size: 0.875rem;
+      opacity: 0.7;
+    }
+    
+    /* Info panel */
+    .db-info-panel {
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 16px;
+    }
+    
+    .info-placeholder {
+      color: var(--text-secondary);
+      text-align: center;
+      margin: 0;
+    }
+    
+    .info-title {
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    
+    .info-hint {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      margin: 8px 0 0 0;
+    }
+    
+    .info-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .info-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px;
+      background: var(--surface-color);
+      border-radius: 4px;
+    }
+    
+    .info-stat .stat-emoji {
+      font-size: 1.25rem;
+      margin-bottom: 4px;
+    }
+    
+    .info-stat .stat-value {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: var(--accent-color);
+    }
+    
+    .info-stat .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+    
+    .info-path {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    
+    .info-path code {
+      background: var(--surface-color);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+  `;
+};
 
 // Register controls
 controls.DatabaseSelector = DatabaseSelector;
 controls.DatabaseItem = DatabaseItem;
-controls.DatabaseContextMenu = DatabaseContextMenu;
 
-module.exports = { DatabaseSelector, DatabaseItem, DatabaseContextMenu };
+module.exports = { DatabaseSelector, DatabaseItem };

@@ -1,5 +1,5 @@
 const express = require('express');
-const { fetchProblems } = require('../data/problems');
+const { fetchProblems } = require('../../../data/problems');
 
 // Rudimentary severity mapping for problem kinds (kept out of DB schema for now to stay normalized)
 function deriveProblemSeverity(kind) {

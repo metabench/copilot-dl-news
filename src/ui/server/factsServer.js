@@ -1,13 +1,6 @@
 "use strict";
 
 /**
- * @server Facts Server
- * @description Fact Determination Layer - Industrial Luxury Obsidian themed server for exploring URL facts.
- * @ui true
- * @port 4800
- */
-
-/**
  * Facts Server - Fact Determination Layer
  * 
  * Industrial Luxury Obsidian themed server for exploring URL facts.
@@ -79,8 +72,8 @@ function resolveDbPath(cliPath) {
 }
 
 /**
- * Get the raw sqlite handle from a NewsDatabase wrapper.
- * The db query helpers expect the raw handle, not the wrapper.
+ * Get the raw better-sqlite3 handle from a NewsDatabase wrapper
+ * The db adapters expect the raw handle, not the wrapper
  */
 function getDbHandle(newsDb) {
   if (!newsDb) return null;

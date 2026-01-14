@@ -1,9 +1,9 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { parseListOptions, listUrls } = require('../data/urlListing');
-const { getFetchFileInfo, getUrlRecord } = require('../data/urlDetails');
-const { withNewsDb } = require('../../../db/dbAccess');
+const { parseListOptions, listUrls } = require('../../../data/urlListing');
+const { getFetchFileInfo, getUrlRecord } = require('../../../data/urlDetails');
+const { withNewsDb } = require('../../../data/db/dbAccess');
 const { BadRequestError, NotFoundError, InternalServerError } = require('../errors/HttpError');
 
 // Router for URL listing and details-related APIs

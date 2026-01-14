@@ -425,7 +425,541 @@
       "archivedAt": "2025-12-19T08:34:48.598Z",
       "objective": "Align the CLI-rendered `/urls` HTML with the shared home card helper so diagnostics and badges match the server output, then capture future UI improvements.",
       "outcome": ""
+    },
+    {
+      "slug": "2025-11-21-crawler-factory-di",
+      "archivedAt": "2026-01-10T04:46:23.650Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-21-crawler-refactor",
+      "archivedAt": "2026-01-10T04:46:25.246Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-21-js-edit-ingestion",
+      "archivedAt": "2026-01-10T04:46:26.855Z",
+      "objective": "Allow js-edit to consume js-scan match snapshots or continuation tokens so agents can replay guards without rerunning locate commands.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-21-js-scan-relationship-tokens",
+      "archivedAt": "2026-01-10T04:46:28.462Z",
+      "objective": "Extend js-scan continuation tokens to importer/export usage queries so AGI workflows can move from discovery to editing without manual re-runs.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-21-jsgui3-isomorphic-diagram-polish",
+      "archivedAt": "2026-01-10T04:46:30.102Z",
+      "objective": "polish the diagram atlas presentation and scale code tiles by actual file byte sizes so SSR + hydration remain aligned.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-21-url-filter-toggle",
+      "archivedAt": "2026-01-10T04:46:31.727Z",
+      "objective": "Restore the “Show fetched URLs only” toggle so `/urls` refreshes its rows/meta/pagination client-side without reloading and the server/API stay in sync.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-22-gap4-plans-integration",
+      "archivedAt": "2026-01-10T04:46:33.318Z",
+      "objective": "Enable `js-edit` to save and resume editing workflows safely using Guarded Plans.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-22-jsgui3-isomorphic-data-explorer",
+      "archivedAt": "2026-01-10T04:46:34.960Z",
+      "objective": "Refresh the Data Explorer SSR surface so its typography/layout match the recent Diagram Atlas polish and stay stable on ultra-wide windows.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-22-partial-match-diffing",
+      "archivedAt": "2026-01-10T04:46:36.605Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-22-selector-suggestions",
+      "archivedAt": "2026-01-10T04:46:38.225Z",
+      "objective": "Implement `--suggest-selectors` in `js-edit` to provide structured disambiguation options when a selector matches multiple targets.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-22-ui-config-viewer",
+      "archivedAt": "2026-01-10T04:46:39.832Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-22-ui-dashboard-completion",
+      "archivedAt": "2026-01-10T04:46:41.583Z",
+      "objective": "Finalize the separation of the Dashboard and URL Listing views, ensuring client-side hydration and navigation work seamlessly.",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-26-classification-types-normalization",
+      "archivedAt": "2026-01-10T04:46:43.300Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-26-domains-perf-eventsource",
+      "archivedAt": "2026-01-10T04:46:45.007Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-26-ui-architecture-refactor",
+      "archivedAt": "2026-01-10T04:46:46.735Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-27-facts-server-luxury-obsidian",
+      "archivedAt": "2026-01-10T04:46:48.441Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-27-ui-premium-theme-system",
+      "archivedAt": "2026-01-10T04:46:50.207Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-27-url-classification-improvement",
+      "archivedAt": "2026-01-10T04:46:52.130Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-28-css-js-separation",
+      "archivedAt": "2026-01-10T04:46:53.961Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-28-fix-z-server-page-context",
+      "archivedAt": "2026-01-10T04:46:55.883Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-28-gazetteer-context-menu",
+      "archivedAt": "2026-01-10T04:46:57.669Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-28-z-server-fix-and-puppeteer-workflow",
+      "archivedAt": "2026-01-10T04:46:59.421Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-28-z-server-jsgui3-refactor",
+      "archivedAt": "2026-01-10T04:47:01.170Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-28-z-server-page-context-fix",
+      "archivedAt": "2026-01-10T04:47:02.967Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-28-z-server-progress-bar",
+      "archivedAt": "2026-01-10T04:47:04.704Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-28-z-server-scanning-ui",
+      "archivedAt": "2026-01-10T04:47:06.483Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-29-design-studio-app",
+      "archivedAt": "2026-01-10T04:47:08.274Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-29-design-studio-console",
+      "archivedAt": "2026-01-10T04:47:10.024Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-29-industrial-obsidian-glyphs",
+      "archivedAt": "2026-01-10T04:47:11.788Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-29-jsgui-patterns-svg",
+      "archivedAt": "2026-01-10T04:47:13.530Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-29-jsgui-workflows",
+      "archivedAt": "2026-01-10T04:47:15.241Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-30-art-playground",
+      "archivedAt": "2026-01-10T04:47:17.017Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-30-decision-tree-viz-research",
+      "archivedAt": "2026-01-10T04:47:18.681Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-30-gaz-ingest-review",
+      "archivedAt": "2026-01-10T04:47:20.409Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-11-30-shared-controls-architecture",
+      "archivedAt": "2026-01-10T04:47:22.128Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-01-art-playground-layout-improvement",
+      "archivedAt": "2026-01-10T04:47:23.825Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-01-decision-tree-viewer-controls",
+      "archivedAt": "2026-01-10T04:47:25.514Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-01-zserver-green-svg",
+      "archivedAt": "2026-01-10T04:47:27.238Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-02-gap5-gap6-cli-implementation",
+      "archivedAt": "2026-01-10T04:47:28.957Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-02-svg-creation-methodology",
+      "archivedAt": "2026-01-10T04:47:30.690Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-02-svg-templates",
+      "archivedAt": "2026-01-10T04:47:32.396Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-03-agi-brainstorm-agent",
+      "archivedAt": "2026-01-10T04:47:34.073Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-03-crawler-cleanup",
+      "archivedAt": "2026-01-10T04:47:35.805Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-03-crawler-safecall-expansion",
+      "archivedAt": "2026-01-10T04:47:37.514Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-03-js-edit-rename",
+      "archivedAt": "2026-01-10T04:47:39.227Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-03-jsgui3-debug-guide",
+      "archivedAt": "2026-01-10T04:47:40.928Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-03-jsgui3-deep-research-singularity",
+      "archivedAt": "2026-01-10T04:47:42.786Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-03-mcp-docs-memory",
+      "archivedAt": "2026-01-10T04:47:44.592Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-03-mcp-memory-codex",
+      "archivedAt": "2026-01-10T04:47:46.399Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-03-news-crawler-wiring-extract",
+      "archivedAt": "2026-01-10T04:47:48.202Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-03-wysiwyg-context",
+      "archivedAt": "2026-01-10T04:47:50.098Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-03-wysiwyg-fix",
+      "archivedAt": "2026-01-10T04:47:52.094Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-04-mcp-reduce-error",
+      "archivedAt": "2026-01-10T04:47:53.876Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-05-agent-backups",
+      "archivedAt": "2026-01-10T04:47:55.700Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-05-npm-scripts-map",
+      "archivedAt": "2026-01-10T04:47:57.438Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-context-menu-control",
+      "archivedAt": "2026-01-10T04:47:59.133Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-crawl-logger-routing",
+      "archivedAt": "2026-01-10T04:48:00.902Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-crawler-modularization",
+      "archivedAt": "2026-01-10T04:48:02.663Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-hybrid-crawler-architecture-design",
+      "archivedAt": "2026-01-10T04:48:04.375Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-instructions-consolidation",
+      "archivedAt": "2026-01-10T04:48:06.142Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-js-scan-longest",
+      "archivedAt": "2026-01-10T04:48:07.841Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-mcp-servers-fix",
+      "archivedAt": "2026-01-10T04:48:09.551Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-project-direction-reliable-news-crawler",
+      "archivedAt": "2026-01-10T04:48:11.258Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-structural-diffing-phase1",
+      "archivedAt": "2026-01-10T04:48:12.973Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-structural-diffing-phase2",
+      "archivedAt": "2026-01-10T04:48:14.746Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-structure-mining-implementation",
+      "archivedAt": "2026-01-10T04:48:16.438Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-structure-review",
+      "archivedAt": "2026-01-10T04:48:18.154Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-svg-editor-electron",
+      "archivedAt": "2026-01-10T04:48:19.914Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-ui-pick-improve",
+      "archivedAt": "2026-01-10T04:48:21.616Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-what-next-past-present-future",
+      "archivedAt": "2026-01-10T04:48:23.335Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-06-what-next-upgrade",
+      "archivedAt": "2026-01-10T04:48:25.063Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-07-crawl-controls-split",
+      "archivedAt": "2026-01-10T04:48:26.768Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-07-crawl-widget-log-space",
+      "archivedAt": "2026-01-10T04:48:28.468Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-07-crawler-abstraction-phase2",
+      "archivedAt": "2026-01-10T04:48:30.221Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-07-crawler-compact-jsgui3",
+      "archivedAt": "2026-01-10T04:48:31.964Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-07-memory-mcp-check",
+      "archivedAt": "2026-01-10T04:48:33.673Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-07-orchestrator-wiring",
+      "archivedAt": "2026-01-10T04:48:35.371Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-07-phase3-url-decisions",
+      "archivedAt": "2026-01-10T04:48:37.065Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-07-reliable-crawler-phase1-impl",
+      "archivedAt": "2026-01-10T04:48:38.786Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-07-reliable-crawler-phase1-planning",
+      "archivedAt": "2026-01-10T04:48:40.489Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-07-z-server-counting",
+      "archivedAt": "2026-01-10T04:48:42.304Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-07-zserver-controls",
+      "archivedAt": "2026-01-10T04:48:44.106Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-10-phase-123-integration",
+      "archivedAt": "2026-01-10T04:48:45.953Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-10-retire-deprecated-tests",
+      "archivedAt": "2026-01-10T04:48:47.766Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-10-solid-configsets",
+      "archivedAt": "2026-01-10T04:48:49.659Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-10-svg-theme-workflows",
+      "archivedAt": "2026-01-10T04:48:51.617Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-10-svg-tooling-v2",
+      "archivedAt": "2026-01-10T04:48:53.455Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-10-test-log-tools",
+      "archivedAt": "2026-01-10T04:48:55.299Z",
+      "objective": "",
+      "outcome": ""
+    },
+    {
+      "slug": "2025-12-10-wlilo-style",
+      "archivedAt": "2026-01-10T04:48:57.052Z",
+      "objective": "",
+      "outcome": ""
     }
   ],
-  "lastUpdated": "2025-12-19T08:34:48.598Z"
+  "lastUpdated": "2026-01-10T04:48:57.052Z"
 }

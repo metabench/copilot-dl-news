@@ -7,7 +7,7 @@ const {
   countUrls,
   parseHosts,
   normalizeHostMode
-} = require("../../../../src/db/sqlite/v1/queries/ui/urlListingNormalized");
+} = require("../../../../src/data/db/sqlite/v1/queries/ui/urlListingNormalized");
 
 function buildDb() {
   const db = new Database(":memory:");
@@ -97,3 +97,4 @@ describe("urlListingNormalized UI query contract", () => {
     expect(normalizeHostMode("nope")).toBe("exact");
   });
 });
+
