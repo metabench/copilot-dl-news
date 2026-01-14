@@ -1,4 +1,4 @@
-const { ensureDatabase } = require('./src/db/sqlite/v1');
+const { ensureDatabase } = require('../src/data/db/sqlite/v1');
 const db = ensureDatabase('./data/news.db');
 console.log('Tables:', db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(t => t.name));
 console.log('HTTP Response count:', db.prepare("SELECT COUNT(*) as count FROM http_responses").get().count);

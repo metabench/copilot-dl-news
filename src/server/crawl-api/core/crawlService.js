@@ -1,12 +1,12 @@
 'use strict';
 
-const { CrawlOperations } = require('../../../crawler/CrawlOperations');
+const { CrawlOperations } = require('../../../core/crawler/CrawlOperations');
 const {
   createSequenceConfigLoader,
   SequenceConfigError
-} = require('../../../orchestration/SequenceConfigLoader');
-const { runSequenceConfig } = require('../../../orchestration/SequenceConfigRunner');
-const { OperationSchemaRegistry } = require('../../../crawler/operations/schemas');
+} = require('../../../core/orchestration/SequenceConfigLoader');
+const { runSequenceConfig } = require('../../../core/orchestration/SequenceConfigRunner');
+const { OperationSchemaRegistry } = require('../../../core/crawler/operations/schemas');
 
 function buildOperationSummaries(facade, options = {}) {
   const includeSchema = options.includeSchema !== false; // Default to true

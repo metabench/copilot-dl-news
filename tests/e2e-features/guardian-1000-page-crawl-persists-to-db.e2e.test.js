@@ -5,8 +5,8 @@ const path = require('path');
 const Database = require('better-sqlite3');
 
 const NewsCrawler = require('../../src/crawl');
-const { ensureDb } = require('../../src/db/sqlite');
-const { createTempDb } = require('../../src/db/sqlite/v1/test-utils');
+const { ensureDb } = require('../../src/data/db/sqlite');
+const { createTempDb } = require('../../src/data/db/sqlite/v1/test-utils');
 
 const {
   getFreePort,
@@ -306,3 +306,4 @@ VERDICT: ${distinctPages === 1000 ? '✓ SUCCESS - 1000 pages downloaded and ver
     }
   });
 });
+

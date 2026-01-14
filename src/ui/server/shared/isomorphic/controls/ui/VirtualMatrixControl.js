@@ -48,9 +48,11 @@ class VirtualMatrixControl extends Control {
    * @param {Array<string|number>} spec.rowKeys
    * @param {Array<string>} spec.rowLabels
    * @param {Array<string>} [spec.rowTitles]
+   * @param {Array<object>} [spec.rowAttrs]
    * @param {Array<string|number>} spec.colKeys
    * @param {Array<string>} spec.colLabels
    * @param {Array<string>} [spec.colTitles]
+   * @param {Array<object>} [spec.colAttrs]
    * @param {Array<object>} [spec.specialCells]
    * @param {object} [spec.cellLink]
    * @param {string} [spec.cellLink.path='/cell']
@@ -80,10 +82,12 @@ class VirtualMatrixControl extends Control {
     this.rowKeys = Array.isArray(spec.rowKeys) ? spec.rowKeys : [];
     this.rowLabels = Array.isArray(spec.rowLabels) ? spec.rowLabels : [];
     this.rowTitles = Array.isArray(spec.rowTitles) ? spec.rowTitles : this.rowLabels;
+    this.rowAttrs = Array.isArray(spec.rowAttrs) ? spec.rowAttrs : [];
 
     this.colKeys = Array.isArray(spec.colKeys) ? spec.colKeys : [];
     this.colLabels = Array.isArray(spec.colLabels) ? spec.colLabels : [];
     this.colTitles = Array.isArray(spec.colTitles) ? spec.colTitles : this.colLabels;
+    this.colAttrs = Array.isArray(spec.colAttrs) ? spec.colAttrs : [];
 
     this.specialCells = Array.isArray(spec.specialCells) ? spec.specialCells : [];
 
@@ -152,9 +156,11 @@ class VirtualMatrixControl extends Control {
       rowKeys: this.rowKeys,
       rowLabels: this.rowLabels,
       rowTitles: this.rowTitles,
+      rowAttrs: this.rowAttrs,
       colKeys: this.colKeys,
       colLabels: this.colLabels,
       colTitles: this.colTitles,
+      colAttrs: this.colAttrs,
       specialCells: this.specialCells,
       cellLink: this.cellLink
     };
@@ -221,9 +227,11 @@ class VirtualMatrixControl extends Control {
       const rowKeys = Array.isArray(payload.rowKeys) ? payload.rowKeys : [];
       const rowLabels = Array.isArray(payload.rowLabels) ? payload.rowLabels : [];
       const rowTitles = Array.isArray(payload.rowTitles) ? payload.rowTitles : rowLabels;
+      const rowAttrs = Array.isArray(payload.rowAttrs) ? payload.rowAttrs : [];
       const colKeys = Array.isArray(payload.colKeys) ? payload.colKeys : [];
       const colLabels = Array.isArray(payload.colLabels) ? payload.colLabels : [];
       const colTitles = Array.isArray(payload.colTitles) ? payload.colTitles : colLabels;
+      const colAttrs = Array.isArray(payload.colAttrs) ? payload.colAttrs : [];
       const specialCells = Array.isArray(payload.specialCells) ? payload.specialCells : [];
 
       const buildHref = buildHrefFor(payload.cellLink);
@@ -352,6 +360,14 @@ class VirtualMatrixControl extends Control {
           col.style.width = String(cellW) + 'px';
           col.style.height = String(colHeaderH) + 'px';
 
+          // Apply custom attributes for this column
+          const attrs = colAttrs[c];
+          if (attrs && typeof attrs === 'object') {
+            for (const k of Object.keys(attrs)) {
+              col.setAttribute(k, String(attrs[k]));
+            }
+          }
+
           const inner = document.createElement('div');
           inner.className = 'vm-col-header-inner';
 
@@ -377,6 +393,15 @@ class VirtualMatrixControl extends Control {
           row.style.height = String(cellH) + 'px';
           row.setAttribute('title', String(rowTitles[r] ?? rowLabels[r] ?? ''));
           row.textContent = String(rowLabels[r] ?? '');
+
+          // Apply custom attributes for this row
+          const rAttrs = rowAttrs[r];
+          if (rAttrs && typeof rAttrs === 'object') {
+            for (const k of Object.keys(rAttrs)) {
+              row.setAttribute(k, String(rAttrs[k]));
+            }
+          }
+
           rowLayer.appendChild(row);
         }
 

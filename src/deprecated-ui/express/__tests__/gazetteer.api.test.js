@@ -28,7 +28,7 @@ jest.mock('jsdom', () => {
 });
 
 const { createApp } = require('../server');
-const { ensureDb } = require('../../../db/sqlite/v1/ensureDb');
+const { ensureDb } = require('../../../data/db/sqlite/v1/ensureDb');
 
 function tableExists(db, tableName) {
   try {

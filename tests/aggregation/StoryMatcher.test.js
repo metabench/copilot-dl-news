@@ -7,7 +7,7 @@
  */
 
 const { StoryMatcher, MAX_HAMMING_DISTANCE, MIN_SHARED_ENTITIES } = require('../../src/aggregation/StoryMatcher');
-const SimHasher = require('../../src/analysis/similarity/SimHasher');
+const SimHasher = require('../../src/intelligence/analysis/similarity/SimHasher');
 
 describe('StoryMatcher', () => {
   let storyMatcher;
@@ -278,3 +278,4 @@ describe('StoryMatcher', () => {
     });
   });
 });
+

@@ -1,6 +1,6 @@
 'use strict';
 
-const { CrawlContext } = require('../../../src/crawler/context');
+const { CrawlContext } = require('../../../src/core/crawler/context');
 
 describe('CrawlContext', () => {
   let context;
@@ -338,3 +338,4 @@ describe('CrawlContext', () => {
     });
   });
 });
+

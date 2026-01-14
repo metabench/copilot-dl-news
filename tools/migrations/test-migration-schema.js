@@ -6,7 +6,7 @@
  * Tests that the URL normalization migration schema can be applied successfully.
  */
 
-const { ensureDatabase } = require('../../src/db/sqlite/v1');
+const { ensureDatabase } = require('../../src/data/db/sqlite/v1');
 const fs = require('fs');
 const path = require('path');
 
@@ -96,7 +96,7 @@ function testMigrationSchema() {
     console.log('✅ Minimal base schema created');
 
     // Apply migration schema
-    const migrationSchemaPath = path.join(__dirname, '../../src/db/migrations/url-normalization-schema.sql');
+    const migrationSchemaPath = path.join(__dirname, '../../src/data/db/migrations/url-normalization-schema.sql');
     const migrationSchema = fs.readFileSync(migrationSchemaPath, 'utf8');
     db.exec(migrationSchema);
     console.log('✅ Migration schema applied');

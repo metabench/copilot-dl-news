@@ -21,8 +21,8 @@ setupPowerShellEncoding();
 
 const fs = require('fs');
 const path = require('path');
-const { CliFormatter } = require('../../src/utils/CliFormatter');
-const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
 const { translateCliArgs } = require('./i18n/dialect');
 const { extractLangOption, deriveLanguageModeHint } = require('./i18n/language');
 const { resolveLanguageContext, translateLabelWithMode, joinTranslatedLabels } = require('./i18n/helpers');
@@ -979,3 +979,4 @@ module.exports = {
   extractMetadata,
   extractLinks
 };
+

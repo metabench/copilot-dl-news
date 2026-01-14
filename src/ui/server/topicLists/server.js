@@ -4,7 +4,7 @@ const express = require('express');
 const path = require('path');
 const jsgui = require('jsgui3-html');
 
-const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
+const { resolveBetterSqliteHandle } = require('../utils/serverStartupCheckdashboardModule');
 const { renderPageHtml } = require('../shared');
 
 const {
@@ -14,7 +14,7 @@ const {
   deleteTopicSlugRow,
   normalizeLang,
   normalizeSearchQuery
-} = require('../../../db/sqlite/v1/queries/nonGeoTopicSlugsUiQueries');
+} = require('../../../data/db/sqlite/v1/queries/nonGeoTopicSlugsUiQueries');
 
 const { TopicListsControl } = require('./controls');
 

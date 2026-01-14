@@ -4,8 +4,8 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const { openNewsDb } = require("../../../../db/dbAccess");
-const { findProjectRoot } = require("../../../../utils/project-root");
+const { openNewsDb } = require('../../../../data/db/dbAccess");
+const { findProjectRoot } = require('../../utils/serverStartupCheckproject-root");
 const { renderHtml, resolveDbPath } = require("../../../render-url-table");
 const { buildNavLinks } = require("../../navigation");
 const { DATA_VIEWS } = require("../../dataExplorerServer");

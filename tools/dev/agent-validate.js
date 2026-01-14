@@ -5,8 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 
-const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
-const { CliFormatter } = require('../../src/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 
 function readText(filePath) {
 	return fs.readFileSync(filePath, 'utf8');

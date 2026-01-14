@@ -1,4 +1,4 @@
-const { getDb } = require('../db');
+const { getDb } = require('../data/db');
 const { slugify } = require('../tools/slugify');
 
 function resolvePatternLearningQueries(db) {
@@ -8,7 +8,7 @@ function resolvePatternLearningQueries(db) {
   }
   const raw = db.db && typeof db.db.prepare === 'function' ? db.db : db;
   if (raw && typeof raw.prepare === 'function') {
-    const { createPatternLearningQueries } = require('../db/sqlite/v1/queries/patternLearning');
+    const { createPatternLearningQueries } = require('../data/db/sqlite/v1/queries/patternLearning');
     return createPatternLearningQueries(raw);
   }
   return null;
@@ -116,3 +116,4 @@ class PatternLearner {
 }
 
 module.exports = { PatternLearner };
+

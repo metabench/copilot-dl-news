@@ -18,7 +18,7 @@
  * @module RoleManager
  */
 
-const { ROLES, ROLE_HIERARCHY } = require('../db/sqlite/v1/queries/workspaceAdapter');
+const { ROLES, ROLE_HIERARCHY } = require('../data/db/sqlite/v1/queries/workspaceAdapter');
 
 /**
  * Actions and their minimum required roles

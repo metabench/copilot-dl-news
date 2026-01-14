@@ -16,7 +16,7 @@
  * @module PerspectiveAnalyzer
  */
 
-const { SentimentAnalyzer } = require('../analysis/sentiment/SentimentAnalyzer');
+const { SentimentAnalyzer } = require('../intelligence/analysis/sentiment/SentimentAnalyzer');
 
 // Tone thresholds
 const TONE_THRESHOLDS = {

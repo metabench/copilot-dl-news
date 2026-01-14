@@ -11,7 +11,7 @@
 const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-const TokenCodec = require('../../src/codec/TokenCodec');
+const TokenCodec = require('../../src/shared/codec/TokenCodec');
 
 const REPO_ROOT = path.resolve(__dirname, '../../');
 const SEARCH_DIR = path.join(REPO_ROOT, 'tools/dev');
@@ -546,3 +546,4 @@ describe('AI-Native CLI Token Flow', () => {
     });
   });
 });
+

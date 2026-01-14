@@ -5,8 +5,8 @@
  */
 
 const path = require('path');
-const { findProjectRoot } = require('../utils/project-root');
-const { ensureDatabase } = require('../db/sqlite');
+const { findProjectRoot } = require('../shared/utils/project-root');
+const { ensureDatabase } = require('../data/db/sqlite');
 
 const projectRoot = findProjectRoot(__dirname);
 

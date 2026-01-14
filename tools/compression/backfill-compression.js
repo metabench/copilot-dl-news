@@ -13,8 +13,8 @@
  */
 
 const path = require('path');
-const { ensureDatabase } = require('../../src/db/sqlite/v1');
-const { compressAndStore } = require('../../src/utils/CompressionFacade');
+const { ensureDatabase } = require('../../src/data/db/sqlite/v1');
+const { compressAndStore } = require('../../src/shared/utils/CompressionFacade');
 
 // Progress bar utility
 class ProgressBar {
@@ -287,7 +287,7 @@ async function backfillCompression() {
 
         if (compressionType) {
           // Compress the existing content and update the record
-          const compressionUtil = require('../../src/utils/CompressionFacade');
+          const compressionUtil = require('../../src/shared/utils/CompressionFacade');
           const typeInfo = compressionUtil.getCompressionType(db, compressionType);
           
           const compressedResult = compressionUtil.compress(contentToCompress, {
@@ -370,3 +370,4 @@ if (require.main === module) {
 }
 
 module.exports = { backfillCompression };
+

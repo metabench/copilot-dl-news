@@ -15,7 +15,7 @@ const {
 const {
   renderAnalysisDetailPage
 } = require('../views/analysisDetailPage');
-const { createRenderContext } = require('../utils/html');
+const { createRenderContext } = require('../../../shared/utils/html');
 const { errorPage } = require('../components/base');
 
 function createAnalysisSsrRouter({ getDbRW, renderNav } = {}) {

@@ -7,12 +7,12 @@ setupPowerShellEncoding();
 
 const path = require('path');
 const fs = require('fs');
-const { CliFormatter } = require('../../src/utils/CliFormatter');
-const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
 const { translateCliArgs } = require('./i18n/dialect');
 const { extractLangOption, deriveLanguageModeHint } = require('./i18n/language');
 const { getPrimaryAlias } = require('./i18n/lexicon');
-const TokenCodec = require('../../src/codec/TokenCodec');
+const TokenCodec = require('../../src/shared/codec/TokenCodec');
 
 // TypeScript support via environment variables (similar to external repo)
 const EDIT_LANGUAGE = process.env.TSNJS_EDIT_LANGUAGE === 'typescript' ? 'typescript' : 'javascript';
@@ -2770,3 +2770,5 @@ main().catch((error) => {
   }
   process.exit(1);
 });
+
+

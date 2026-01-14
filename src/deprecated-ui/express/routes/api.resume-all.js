@@ -1,7 +1,7 @@
 const express = require('express');
-const { extractDomain } = require('../../../utils/domainUtils');
-const { listIncompleteCrawlJobs, clearIncompleteCrawlJobs } = require('../data/queues');
-const { markCrawlJobStatus } = require('../data/crawlJobs');
+const { extractDomain } = require('../../../shared/utils/domainUtils');
+const { listIncompleteCrawlJobs, clearIncompleteCrawlJobs } = require('../../../data/queues');
+const { markCrawlJobStatus } = require('../../../data/crawlJobs');
 const { ServiceUnavailableError, InternalServerError } = require('../errors/HttpError');
 const { QueuePlannerService } = require('../services/queue/QueuePlannerService');
 

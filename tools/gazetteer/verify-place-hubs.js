@@ -14,7 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ensureDatabase } = require('../../src/db/sqlite');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
 const HubValidator = require('../../src/hub-validation/HubValidator');
 
 // Load configuration
@@ -148,3 +148,4 @@ verifyAndNormalizePlaceHubs().catch(error => {
   console.error('Error:', error);
   process.exit(1);
 });
+

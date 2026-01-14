@@ -2,8 +2,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ensureGazetteer, ensureDb } = require('../db/sqlite/v1');
-const { findProjectRoot } = require('../utils/project-root');
+const { ensureGazetteer, ensureDb } = require('../data/db/sqlite/v1');
+const { findProjectRoot } = require('../shared/utils/project-root');
 
 function resolveDefaultDatasetPath() {
   const root = findProjectRoot(__dirname);

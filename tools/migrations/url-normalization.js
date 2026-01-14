@@ -26,7 +26,7 @@
  */
 
 const path = require('path');
-const { ensureDatabase, openDatabase } = require('../../src/db/sqlite/v1');
+const { ensureDatabase, openDatabase } = require('../../src/data/db/sqlite/v1');
 
 // Configuration
 const CONFIG = {

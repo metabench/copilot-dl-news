@@ -1,4 +1,4 @@
-const ExitManager = require('../../../src/crawler/ExitManager');
+const ExitManager = require('../../../src/core/crawler/ExitManager');
 
 describe('ExitManager', () => {
   test('recordExit sets exitSummary and calls telemetry', () => {
@@ -50,4 +50,5 @@ describe('ExitManager', () => {
     expect(res).toEqual({ message: 'err' });
   });
 });
+
 

@@ -7,7 +7,7 @@
  */
 
 const { AnnotationService } = require('../../src/teams/AnnotationService');
-const { ROLES, ANNOTATION_TYPES, ACTIVITY_ACTIONS } = require('../../src/db/sqlite/v1/queries/workspaceAdapter');
+const { ROLES, ANNOTATION_TYPES, ACTIVITY_ACTIONS } = require('../../src/data/db/sqlite/v1/queries/workspaceAdapter');
 
 describe('AnnotationService', () => {
   let service;
@@ -410,3 +410,4 @@ describe('AnnotationService', () => {
     });
   });
 });
+

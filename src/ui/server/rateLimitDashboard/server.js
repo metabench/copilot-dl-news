@@ -22,10 +22,10 @@ const path = require('path');
 const Database = require('better-sqlite3');
 const jsgui = require('jsgui3-html');
 
-const { createRateLimitAdapter } = require('../../../db/sqlite/v1/rateLimitAdapter');
-const { RateLimitTracker } = require('../../../crawler/RateLimitTracker');
+const { createRateLimitAdapter } = require('../../../data/db/sqlite/v1/rateLimitAdapter');
+const { RateLimitTracker } = require('../../../core/crawler/RateLimitTracker');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
-const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
+const { resolveBetterSqliteHandle } = require('../utils/serverStartupCheckdashboardModule');
 
 const { RateLimitDashboard } = require('./views/RateLimitDashboard');
 const { 
@@ -644,3 +644,4 @@ if (require.main === module) {
 }
 
 module.exports = { app, initDb, PORT, createRateLimitDashboardRouter };
+

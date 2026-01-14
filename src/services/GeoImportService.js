@@ -65,19 +65,6 @@ const FEATURE_CODE_MAP = {
   'PPLL': 'village'
 };
 
-const ALTERNATE_NAMES_COLUMNS = {
-  alternateNameId: 0,
-  geonameid: 1,
-  isolanguage: 2,
-  alternateName: 3,
-  isPreferredName: 4,
-  isShortName: 5,
-  isColloquial: 6,
-  isHistoric: 7,
-  from: 8,
-  to: 9
-};
-
 // ─────────────────────────────────────────────────────────────────────────────
 // File Counting Observable
 // ─────────────────────────────────────────────────────────────────────────────
@@ -347,198 +334,6 @@ function importGeoNames(options) {
   });
 }
 
-/**
- * Import alternate names from GeoNames file
- * 
- * Filters to only import names for places that exist in the DB.
- * 
- * @param {Object} options
- * @param {string} options.alternateNamesFile - Path to alternateNames.txt
- * @param {Object} options.db - better-sqlite3 database instance
- * @param {number} [options.batchSize=1000] - Records per batch
- */
-function importAlternateNames(options) {
-  const { alternateNamesFile, db, batchSize = 1000 } = options;
-  
-  return observable((next, complete, error, status, log) => {
-    let stopped = false;
-    let paused = false;
-    let pauseResolve = null;
-    
-    const checkPaused = () => {
-      if (paused) {
-        return new Promise(resolve => { pauseResolve = resolve; });
-      }
-      return Promise.resolve();
-    };
-    
-    const stats = {
-      processed: 0,
-      inserted: 0,
-      skipped: 0, // Not matching a known place
-      duplicates: 0, // Hit unique constraint
-      errors: 0,
-      startTime: Date.now()
-    };
-    
-    const emitProgress = (phase, message, extra = {}) => {
-      next({
-        phase,
-        message,
-        current: stats.processed,
-        total: stats.total || 0, // Might be null for streaming large file
-        percent: stats.total ? Math.round((stats.processed / stats.total) * 100) : 0,
-        stats: { ...stats },
-        elapsed: Date.now() - stats.startTime,
-        ...extra
-      });
-    };
-    
-    (async () => {
-      try {
-        // Phase 1: Validate
-        emitProgress('validating', `Checking ${path.basename(alternateNamesFile)}...`);
-        if (!fs.existsSync(alternateNamesFile)) {
-          throw new Error(`File not found: ${alternateNamesFile}`);
-        }
-        
-        // Phase 2: Build Lookup Map
-        emitProgress('preparing', 'Building place ID lookup map...');
-        const lookupStart = Date.now();
-        
-        // We only want names for places we have imported (from cities15000)
-        // Fetch valid geoname_ids (stored as ext_id in place_external_ids)
-        const rows = db.prepare(`
-          SELECT place_id, ext_id 
-          FROM place_external_ids 
-          WHERE source = 'geonames'
-        `).all();
-        
-        // Map<geonameId(string), placeId(number)>
-        const validPlaces = new Map();
-        for (const row of rows) {
-          validPlaces.set(String(row.ext_id), row.place_id);
-        }
-        
-        emitProgress('preparing', `Loaded ${validPlaces.size.toLocaleString()} target places in ${(Date.now() - lookupStart)}ms`);
-        
-        // Phase 3: Prepare Statements
-        const insertName = db.prepare(`
-          INSERT OR IGNORE INTO place_names (place_id, name, normalized, lang, name_kind, is_preferred, source, is_official)
-          VALUES (?, ?, ?, ?, ?, ?, 'geonames_alt', 0)
-        `);
-        
-        // Phase 4: Import
-        emitProgress('importing', 'Starting import of alternate names...');
-        
-        // Count total lines mainly for progress (optional, can be slow for huge file)
-        // For alternateNames.txt (huge), maybe skip exact count or use stat size estimation?
-        // Let's do a rough size estimation or just skip total if it takes too long.
-        // We'll skip pre-counting for speed, or user can run separate count stage.
-        // For now, let's just proceed.
-        
-        const rl = readline.createInterface({
-          input: fs.createReadStream(alternateNamesFile),
-          crlfDelay: Infinity
-        });
-        
-        let batch = [];
-        const processBatch = db.transaction((lines) => {
-          for (const line of lines) {
-            if (stopped) return;
-            stats.processed++;
-            
-            const cols = line.split('\t');
-            if (cols.length < 4) continue;
-            
-            const geonameId = cols[ALTERNATE_NAMES_COLUMNS.geonameid];
-            const placeId = validPlaces.get(geonameId);
-            
-            if (!placeId) {
-              stats.skipped++;
-              continue;
-            }
-            
-            const name = cols[ALTERNATE_NAMES_COLUMNS.alternateName];
-            if (!name) continue;
-            
-            const lang = cols[ALTERNATE_NAMES_COLUMNS.isolanguage] || 'und';
-            const isPreferred = cols[ALTERNATE_NAMES_COLUMNS.isPreferredName] === '1' ? 1 : 0;
-            const isShort = cols[ALTERNATE_NAMES_COLUMNS.isShortName] === '1';
-            const isColloquial = cols[ALTERNATE_NAMES_COLUMNS.isColloquial] === '1';
-            const isHistoric = cols[ALTERNATE_NAMES_COLUMNS.isHistoric] === '1';
-            
-            let nameKind = 'alias';
-            if (isHistoric) nameKind = 'historic';
-            else if (isColloquial) nameKind = 'colloquial';
-            else if (isShort) nameKind = 'abbrev';
-            else if (lang === 'post') nameKind = 'postal_code';
-            else if (['iata', 'icao', 'faac'].includes(lang)) nameKind = 'code';
-            else if (lang === 'link') nameKind = 'link'; // GeoNames has wikipedia links etc
-            
-            // Skip links for now, we want names
-            if (nameKind === 'link') continue;
-            
-            const normalized = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            
-            const result = insertName.run(placeId, name, normalized, lang, nameKind, isPreferred);
-            if (result.changes > 0) {
-              stats.inserted++;
-            } else {
-              stats.duplicates++;
-            }
-          }
-        });
-        
-        for await (const line of rl) {
-          if (stopped) break;
-          await checkPaused();
-          
-          if (!line.trim()) continue;
-          batch.push(line);
-          
-          if (batch.length >= batchSize) {
-            processBatch(batch);
-            emitProgress('importing', `Processed ${stats.processed.toLocaleString()} lines`);
-            batch = [];
-          }
-        }
-        
-        if (batch.length > 0 && !stopped) {
-          processBatch(batch);
-        }
-        
-        emitProgress('complete', 'Alternate names import complete!', {
-          duration: Date.now() - stats.startTime
-        });
-        
-        complete({
-          success: true,
-          stats,
-          duration: Date.now() - stats.startTime
-        });
-        
-      } catch (err) {
-        stats.errors++;
-        emitProgress('error', err.message, { error: err });
-        error(err);
-      }
-    })();
-    
-    return [
-      () => { stopped = true; },
-      () => { paused = true; },
-      () => {
-        paused = false;
-        if (pauseResolve) {
-          pauseResolve();
-          pauseResolve = null;
-        }
-      }
-    ];
-  });
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Staged Import (Full Pipeline)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -693,10 +488,8 @@ function createImportPipeline(options) {
 
 module.exports = {
   importGeoNames,
-  importAlternateNames,
   createImportPipeline,
   countLines,
   GEONAMES_COLUMNS,
-  ALTERNATE_NAMES_COLUMNS,
   FEATURE_CODE_MAP
 };

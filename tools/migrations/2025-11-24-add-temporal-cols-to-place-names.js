@@ -1,4 +1,4 @@
-const { ensureDatabase } = require('../../src/db/sqlite');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
 const path = require('path');
 
 const DB_PATH = path.join(__dirname, '../../data/gazetteer.db');
@@ -37,3 +37,4 @@ function migrate() {
 }
 
 migrate();
+

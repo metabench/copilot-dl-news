@@ -27,7 +27,7 @@ const path = require('path');
 const fs = require('fs');
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('js-yaml');
-const { ensureDb } = require('../db/sqlite/ensureDb');
+const { ensureDb } = require('../data/db/sqlite/ensureDb');
 const { createWritableDbAccessor } = require('../deprecated-ui/express/db/writableDb');
 const { JobRegistry } = require('../deprecated-ui/express/services/jobRegistry');
 const { RealtimeBroadcaster } = require('../deprecated-ui/express/services/realtimeBroadcaster');
@@ -39,7 +39,7 @@ const { createCrawlsRouter } = require('./routes/crawls');
 const { createDecisionConfigSetRoutes } = require('./routes/decisionConfigSetRoutes');
 const { createEventsRouter } = require('../deprecated-ui/express/routes/events');
 const { renderCrawlStatusPageHtml } = require('../ui/server/crawlStatus/CrawlStatusPage');
-const { TelemetryIntegration } = require('../crawler/telemetry/TelemetryIntegration');
+const { TelemetryIntegration } = require('../core/crawler/telemetry/TelemetryIntegration');
 const { InProcessCrawlJobRegistry } = require('../server/crawl-api/v1/core/InProcessCrawlJobRegistry');
 
 function parseEnvBoolean(value, fallback = false) {
@@ -212,7 +212,7 @@ function initializeBackgroundInfrastructure({
   const { CompressionLifecycleTask } = require('../background/tasks/CompressionLifecycleTask');
   const { GuessPlaceHubsTask } = require('../background/tasks/GuessPlaceHubsTask');
   const { BackfillDatesTask } = require('../background/tasks/BackfillDatesTask');
-  const { TaskEventWriter } = require('../db/TaskEventWriter');
+  const { TaskEventWriter } = require('../data/db/TaskEventWriter');
 
   // Create TaskEventWriter for background task event persistence
   const backgroundTaskEventWriter = new TaskEventWriter(db, { batchWrites: true });
@@ -571,7 +571,7 @@ function createApiServer(options = {}) {
   // Download Evidence API - Proof-grade download statistics
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const downloadEvidence = require('../db/queries/downloadEvidence');
+  const downloadEvidence = require('../data/db/queries/downloadEvidence');
 
   // Get global download stats (all-time)
   app.get('/api/downloads/stats', (req, res) => {

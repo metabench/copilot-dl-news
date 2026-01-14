@@ -2,13 +2,13 @@ const path = require('path');
 const {
   DEFAULT_SEQUENCE_PRESET,
   DEFAULT_START_URL
-} = require('../../config/ConfigurationService');
-const { applyContextOverrideFlags } = require('../../config/overrideHelpers');
+} = require('../../shared/config/ConfigurationService');
+const { applyContextOverrideFlags } = require('../../shared/config/overrideHelpers');
 const { getLoggerWriter } = require('./cliRuntime');
 const { printDownloadSummary, printStatus } = require('./reporting');
-const { CrawlOperations } = require('../../crawler/CrawlOperations');
-const { createMultiModalCrawl, MultiModalCrawlManager } = require('../../crawler/multimodal');
-const { openNewsDb } = require('../../db/dbAccess');
+const { CrawlOperations } = require('../../core/crawler/CrawlOperations');
+const { createMultiModalCrawl, MultiModalCrawlManager } = require('../../core/crawler/multimodal');
+const { openNewsDb } = require('../../data/db/dbAccess');
 
 // Import shared utilities (DRY)
 const { mergeOverrideObjects, extractStatsFromSteps, pickString } = require('./shared');

@@ -3,20 +3,20 @@
 const express = require('express');
 const request = require('supertest');
 
-jest.mock('../../../src/orchestration/placeHubGuessing', () => ({
+jest.mock('../../../src/core/orchestration/placeHubGuessing', () => ({
   guessPlaceHubsBatch: jest.fn(),
   checkDomainReadiness: jest.fn()
 }));
 
-jest.mock('../../../src/orchestration/dependencies', () => ({
+jest.mock('../../../src/core/orchestration/dependencies', () => ({
   createPlaceHubDependencies: jest.fn()
 }));
 
 const {
   guessPlaceHubsBatch,
   checkDomainReadiness
-} = require('../../../src/orchestration/placeHubGuessing');
-const { createPlaceHubDependencies } = require('../../../src/orchestration/dependencies');
+} = require('../../../src/core/orchestration/placeHubGuessing');
+const { createPlaceHubDependencies } = require('../../../src/core/orchestration/dependencies');
 const { createPlaceHubsRouter } = require('../../../src/api/routes/place-hubs');
 
 function createApp(options = {}) {
@@ -182,3 +182,4 @@ describe('place hubs router', () => {
     expect(response.body.hasVerifiedMappings).toBe(true);
   });
 });
+

@@ -5,8 +5,8 @@ const path = require('path');
 const Database = require('better-sqlite3');
 
 const NewsCrawler = require('../../src/crawl');
-const { ensureDb } = require('../../src/db/sqlite');
-const { createTempDb } = require('../../src/db/sqlite/v1/test-utils');
+const { ensureDb } = require('../../src/data/db/sqlite');
+const { createTempDb } = require('../../src/data/db/sqlite/v1/test-utils');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -208,3 +208,4 @@ describe('Live crawl persists to DB (manual)', () => {
     }
   });
 });
+

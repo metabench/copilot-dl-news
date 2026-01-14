@@ -2,7 +2,7 @@ const request = require('supertest');
 const path = require('path');
 const fs = require('fs');
 const { createApp } = require('../server');
-const NewsDatabase = require('../../../db');
+const NewsDatabase = require('../../../data/db');
 
 function makeTempDb(filePath) {
   // create minimal DB with one article

@@ -15,7 +15,7 @@
  */
 
 const express = require('express');
-const { createMultiModalCrawl, MultiModalCrawlManager } = require('../../../crawler/multimodal');
+const { createMultiModalCrawl, MultiModalCrawlManager } = require('../../../core/crawler/multimodal');
 
 // Track active crawl instance (singleton per process)
 let activeManager = null;
@@ -149,7 +149,7 @@ function createMultiModalCrawlRouter({ getDbRW, crawlOperations = null, logger =
       let ops = crawlOperations;
       if (!ops) {
         try {
-          const { CrawlOperations } = require('../../../crawler/CrawlOperations');
+          const { CrawlOperations } = require('../../../core/crawler/CrawlOperations');
           ops = new CrawlOperations({ logger: { log: () => {}, warn: logger.warn, error: logger.error } });
         } catch (e) {
           logger.warn('[multi-modal] Could not create CrawlOperations:', e.message);

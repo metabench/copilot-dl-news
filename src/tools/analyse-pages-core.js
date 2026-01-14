@@ -3,14 +3,14 @@ const tar = require('tar-stream');
 const { performance } = require('perf_hooks');
 const { is_array } = require('lang-tools');
 let NewsDatabase = null;
-const { analyzePage } = require('../analysis/page-analyzer');
-const { buildGazetteerMatchers } = require('../analysis/place-extraction');
-const { findProjectRoot } = require('../utils/project-root');
+const { analyzePage } = require('../intelligence/analysis/page-analyzer');
+const { buildGazetteerMatchers } = require('../intelligence/analysis/place-extraction');
+const { findProjectRoot } = require('../shared/utils/project-root');
 const { loadNonGeoTopicSlugs } = require('./nonGeoTopicSlugs');
 const { ArticleXPathService } = require('../services/ArticleXPathService');
 const { DecompressionWorkerPool } = require('../background/workers/DecompressionWorkerPool');
-const SkeletonHash = require('../analysis/structure/SkeletonHash');
-const { createLayoutSignaturesQueries } = require('../db/sqlite/v1/queries/layoutSignatures');
+const SkeletonHash = require('../intelligence/analysis/structure/SkeletonHash');
+const { createLayoutSignaturesQueries } = require('../data/db/sqlite/v1/queries/layoutSignatures');
 
 function toNumber(value, fallback) {
   const num = Number(value);
@@ -49,7 +49,7 @@ async function analysePages({
   }
 
   if (!NewsDatabase) {
-    NewsDatabase = require('../db');
+    NewsDatabase = require('../data/db');
   }
 
   const db = new NewsDatabase(dbPath);

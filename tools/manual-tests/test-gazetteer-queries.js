@@ -1,5 +1,5 @@
-const { getAllCountries, getTopCountries } = require('../../src/db/sqlite/queries/gazetteer.places');
-const { ensureDatabase } = require('../../src/db/sqlite');
+const { getAllCountries, getTopCountries } = require('../../src/data/db/sqlite/queries/gazetteer.places');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
 const path = require('path');
 
 const dbPath = path.join(__dirname, '..', '..', 'data', 'news.db');
@@ -31,3 +31,4 @@ console.log(`Returned ${top.length} countries`);
 console.log('Top 5:', top);
 
 db.close();
+

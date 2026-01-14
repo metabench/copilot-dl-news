@@ -7,7 +7,7 @@
 const path = require('path');
 const Database = require('better-sqlite3');
 const { AdminService } = require('../../src/admin/AdminService');
-const { createAdminAdapter } = require('../../src/db/sqlite/v1/queries/adminAdapter');
+const { createAdminAdapter } = require('../../src/data/db/sqlite/v1/queries/adminAdapter');
 
 describe('AdminService', () => {
   let db;
@@ -268,3 +268,4 @@ describe('AdminService', () => {
     });
   });
 });
+

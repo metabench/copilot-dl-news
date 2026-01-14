@@ -1,8 +1,8 @@
 "use strict";
 
-const { selectRecentDomains } = require("../db/sqlite/v1/queries/ui/recentDomains");
-const { listRecentCrawls } = require("../db/sqlite/v1/queries/ui/crawls");
-const { listRecentErrors } = require("../db/sqlite/v1/queries/ui/errors");
+const { selectRecentDomains } = require("../data/db/sqlite/v1/queries/ui/recentDomains");
+const { listRecentCrawls } = require("../data/db/sqlite/v1/queries/ui/crawls");
+const { listRecentErrors } = require("../data/db/sqlite/v1/queries/ui/errors");
 const { getCachedMetric } = require("./server/services/metricsService");
 
 function normalizeDomainEntry(entry) {

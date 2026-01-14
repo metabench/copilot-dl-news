@@ -81,8 +81,8 @@ SAFETY:
   process.exit(0);
 }
 
-const { ensureDatabase } = require('../../src/db/sqlite');
-const { mergeDuplicatePlaces } = require('../../src/db/sqlite/v1/queries/gazetteer.deduplication');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { mergeDuplicatePlaces } = require('../../src/data/db/sqlite/v1/queries/gazetteer.deduplication');
 const path = require('path');
 
 function getArg(name, fallback) {
@@ -173,3 +173,4 @@ const finalCount = db.prepare(finalQuery).get();
 console.log(`\nTotal ${kindFilter || 'places'}: ${finalCount.count}`);
 
 db.close();
+

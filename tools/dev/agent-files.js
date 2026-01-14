@@ -8,8 +8,8 @@ const childProcess = require('child_process');
 const { setupPowerShellEncoding } = require('./shared/powershellEncoding');
 setupPowerShellEncoding();
 
-const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
-const { CliFormatter } = require('../../src/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 const { validateAgents } = require('./agent-validate');
 
 const fmt = new CliFormatter();
@@ -623,3 +623,4 @@ module.exports = {
   searchAgentFiles,
   resolveLinkPath
 };
+

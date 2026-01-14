@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const NewsDatabase = require('../db');
+const NewsDatabase = require('../data/db');
 
 function tmpDbPath() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nc-db-'));

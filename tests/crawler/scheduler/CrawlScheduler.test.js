@@ -14,11 +14,11 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const CrawlScheduler = require('../../../src/crawler/scheduler/CrawlScheduler');
-const UpdatePatternAnalyzer = require('../../../src/crawler/scheduler/UpdatePatternAnalyzer');
-const ScheduleStore = require('../../../src/crawler/scheduler/ScheduleStore');
-const scheduleAdapter = require('../../../src/db/sqlite/v1/queries/scheduleAdapter');
-const { TaskEventWriter } = require('../../../src/db/TaskEventWriter');
+const CrawlScheduler = require('../../../src/core/crawler/scheduler/CrawlScheduler');
+const UpdatePatternAnalyzer = require('../../../src/core/crawler/scheduler/UpdatePatternAnalyzer');
+const ScheduleStore = require('../../../src/core/crawler/scheduler/ScheduleStore');
+const scheduleAdapter = require('../../../src/data/db/sqlite/v1/queries/scheduleAdapter');
+const { TaskEventWriter } = require('../../../src/data/db/TaskEventWriter');
 
 describe('CrawlScheduler', () => {
   let db;
@@ -626,3 +626,4 @@ describe('scheduleAdapter', () => {
     expect(retrieved.updatePattern).toEqual(pattern);
   });
 });
+

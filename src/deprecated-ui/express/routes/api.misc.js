@@ -1,6 +1,6 @@
 const express = require('express');
-const { listRecentErrors } = require('../data/errors');
-const { listCrawlTypes } = require('../data/crawlTypes');
+const { listRecentErrors } = require('../../../data/errors');
+const { listCrawlTypes } = require('../../../data/crawlTypes');
 const { ServiceUnavailableError, InternalServerError } = require('../errors/HttpError');
 
 function createMiscApiRouter(options = {}) {

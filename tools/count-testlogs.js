@@ -3,8 +3,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { CliFormatter } = require('../src/utils/CliFormatter');
-const { CliArgumentParser } = require('../src/utils/CliArgumentParser');
+const { CliFormatter } = require('../src/shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../src/shared/utils/CliArgumentParser');
 
 const fmt = new CliFormatter();
 

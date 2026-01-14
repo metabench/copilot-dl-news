@@ -4,8 +4,8 @@
  * Quick test of article-place matching functionality
  */
 
-const { ArticlePlaceMatcher } = require('./src/matching/ArticlePlaceMatcher');
-const { ensureDatabase } = require('./src/db/sqlite/v1');
+const { ArticlePlaceMatcher } = require('../src/intelligence/matching/ArticlePlaceMatcher');
+const { ensureDatabase } = require('../src/data/db/sqlite/v1');
 
 async function testPlaceMatching() {
   console.log('Testing Article-Place Matching...');

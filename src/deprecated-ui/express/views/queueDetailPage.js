@@ -1,4 +1,4 @@
-const { escapeHtml } = require('../utils/html');
+const { escapeHtml } = require('../../../shared/utils/html');
 
 function renderQueueDetailPage({ job, events, filters, pagination, neighbors, renderNav }) {
   const filterOptions = ['', 'enqueued', 'dequeued', 'retry', 'drop']

@@ -16,7 +16,7 @@
  * @module StoryMatcher
  */
 
-const SimHasher = require('../analysis/similarity/SimHasher');
+const SimHasher = require('../intelligence/analysis/similarity/SimHasher');
 
 // Configuration constants
 const MAX_HAMMING_DISTANCE = 3;

@@ -3,8 +3,8 @@ const {
   resolveLoggerVerbosity,
   resolveOverrides
 } = require('../../crawl.js');
-const { DEFAULT_BASIC_OUTPUT_VERBOSITY } = require('../../src/config/ConfigurationService');
-const { OUTPUT_VERBOSITY_LEVELS } = require('../../src/utils/outputVerbosity');
+const { DEFAULT_BASIC_OUTPUT_VERBOSITY } = require('../../src/shared/config/ConfigurationService');
+const { OUTPUT_VERBOSITY_LEVELS } = require('../../src/shared/utils/outputVerbosity');
 
 describe('getLoggerWriter', () => {
   test('prefers info over log', () => {
@@ -95,3 +95,5 @@ describe('resolveOverrides', () => {
     expect(overrides).toEqual({ concurrency: 4, loggingQueue: true });
   });
 });
+
+

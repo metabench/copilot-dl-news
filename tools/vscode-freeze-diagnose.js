@@ -6,8 +6,8 @@ const path = require('path');
 const os = require('os');
 const { spawn } = require('child_process');
 
-const { CliFormatter } = require('../src/utils/CliFormatter');
-const { CliArgumentParser } = require('../src/utils/CliArgumentParser');
+const { CliFormatter } = require('../src/shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../src/shared/utils/CliArgumentParser');
 
 const fmt = new CliFormatter();
 

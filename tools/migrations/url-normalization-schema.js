@@ -11,7 +11,7 @@
  */
 
 const path = require('path');
-const { openDatabase } = require('../../src/db/sqlite/v1/connection');
+const { openDatabase } = require('../../src/data/db/sqlite/v1/connection');
 
 // Schema changes for URL normalization
 const SCHEMA_CHANGES = `

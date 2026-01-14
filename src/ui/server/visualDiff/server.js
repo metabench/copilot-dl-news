@@ -13,9 +13,9 @@
 
 const express = require('express');
 const path = require('path');
-const { findProjectRoot } = require('../../../utils/project-root');
-const { ensureDatabase } = require('../../../db/sqlite');
-const { decompress } = require('../../../utils/compression');
+const { findProjectRoot } = require('../../../shared/utils/project-root');
+const { ensureDatabase } = require('../../../data/db/sqlite');
+const { decompress } = require('../../../shared/utils/compression');
 const { Readability } = require('@mozilla/readability');
 const { JSDOM } = require('jsdom');
 

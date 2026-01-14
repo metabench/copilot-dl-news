@@ -13,7 +13,7 @@ const IMPLEMENTATIONS = {
   }
 };
 
-const crawlService = require('./core/crawlService');
+const crawlService = require('../../core/crawlService');
 
 const AVAILABLE_IMPLEMENTATIONS = Object.freeze(
   Object.values(IMPLEMENTATIONS).map((entry) => ({

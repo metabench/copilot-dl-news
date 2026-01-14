@@ -14,7 +14,7 @@
  * src/db/sqlite/v1/queries/ui/analytics.js
  */
 
-const { createAnalyticsQueries } = require('../../../db/sqlite/v1/queries/ui/analytics');
+const { createAnalyticsQueries } = require('../../../data/db/sqlite/v1/queries/ui/analytics');
 
 /**
  * @typedef {Object} DailyCount

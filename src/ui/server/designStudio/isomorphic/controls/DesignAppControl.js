@@ -13,7 +13,7 @@ const jsgui = require("../jsgui");
 
 const { DesignNavControl } = require("./DesignNavControl");
 const { DesignViewerControl } = require("./DesignViewerControl");
-const { ResizableSplitLayoutControl } = require("../../../shared/isomorphic/controls");
+const { ResizableSplitLayoutControl } = require('../../../../../shared/isomorphic/controls");
 
 const StringControl = jsgui.String_Control;
 

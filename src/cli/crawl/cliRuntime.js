@@ -1,6 +1,6 @@
-const { CliFormatter } = require('../../utils/CliFormatter');
-const { normalizeVerbosity, applyContextOverrideFlags } = require('../../config/overrideHelpers');
-const { DEFAULT_BASIC_OUTPUT_VERBOSITY } = require('../../config/ConfigurationService');
+const { CliFormatter } = require('../../shared/utils/CliFormatter');
+const { normalizeVerbosity, applyContextOverrideFlags } = require('../../shared/config/overrideHelpers');
+const { DEFAULT_BASIC_OUTPUT_VERBOSITY } = require('../../shared/config/ConfigurationService');
 
 // Import shared utilities (DRY)
 const { isPlainObject, mergeOverrideObjects } = require('./shared');

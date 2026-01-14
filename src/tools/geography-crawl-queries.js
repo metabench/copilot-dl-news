@@ -8,7 +8,7 @@
 
 const path = require('path');
 const chalk = require('chalk');
-const WikidataService = require('../crawler/gazetteer/services/WikidataService');
+const WikidataService = require('../core/crawler/gazetteer/services/WikidataService');
 const {
   DEFAULT_LABEL_LANGUAGES,
   DEFAULT_REGION_CLASS_QIDS,
@@ -16,7 +16,7 @@ const {
   buildCountryDiscoveryQuery,
   buildAdm1DiscoveryQuery,
   buildCitiesDiscoveryQuery
-} = require('../crawler/gazetteer/queries/geographyQueries');
+} = require('../core/crawler/gazetteer/queries/geographyQueries');
 
 const CLI_ACTIONS = Object.freeze({
   LIST: 'list',

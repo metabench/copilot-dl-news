@@ -9,7 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ensureDatabase } = require('../../src/db/sqlite');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
 
 // Load configuration
 const configPath = path.join(__dirname, '..', '..', 'config.json');
@@ -84,3 +84,4 @@ if (uniqueHubs.length === 0) {
 
 // Close database
 db.close();
+

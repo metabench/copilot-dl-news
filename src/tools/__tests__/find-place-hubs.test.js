@@ -2,7 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { ensureDb } = require('../../db/sqlite/ensureDb');
+const { ensureDb } = require('../../data/db/sqlite/ensureDb');
 const { findPlaceHubs } = require('../find-place-hubs');
 
 function createTempDb() {

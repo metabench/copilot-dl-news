@@ -10,7 +10,7 @@
  * - crawl_depth, priority_score, last_crawled_at
  */
 
-const { ensureDatabase } = require('../src/db/sqlite');
+const { ensureDatabase } = require('../src/data/db/sqlite');
 const path = require('path');
 
 const dbPath = path.join(__dirname, '..', 'data', 'news.db');

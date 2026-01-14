@@ -13,7 +13,7 @@
  * @module UsageTracker
  */
 
-const { METRICS, getCurrentPeriod } = require('../db/sqlite/v1/queries/billingAdapter');
+const { METRICS, getCurrentPeriod } = require('../data/db/sqlite/v1/queries/billingAdapter');
 
 /**
  * UsageTracker class

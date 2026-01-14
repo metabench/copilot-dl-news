@@ -21,8 +21,8 @@
  */
 
 const path = require('path');
-const { ensureDatabase } = require('../../src/db/sqlite');
-const { getCountryByCode } = require('../../src/db/sqlite/queries/gazetteer.places');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { getCountryByCode } = require('../../src/data/db/sqlite/queries/gazetteer.places');
 
 function parseArgs(argv) {
   const result = {
@@ -261,3 +261,4 @@ function run() {
 }
 
 run();
+

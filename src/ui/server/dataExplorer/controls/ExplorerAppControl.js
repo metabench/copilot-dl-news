@@ -12,7 +12,7 @@
  */
 
 const jsgui = require("jsgui3-html");
-const { BaseAppControl } = require("../../shared/BaseAppControl");
+const { BaseAppControl } = require('../../../../shared/BaseAppControl");
 const { ExplorerHomeCardControl } = require("./ExplorerHomeCardControl");
 const { ExplorerPaginationControl } = require("./ExplorerPaginationControl");
 

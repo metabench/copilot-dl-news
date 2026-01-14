@@ -7,7 +7,7 @@ const {
   buildCountryDiscoveryQuery,
   buildAdm1DiscoveryQuery,
   buildCitiesDiscoveryQuery
-} = require('../../../src/crawler/gazetteer/queries/geographyQueries');
+} = require('../../../src/core/crawler/gazetteer/queries/geographyQueries');
 
 describe('geographyQueries', () => {
   describe('buildCountryDiscoveryQuery', () => {
@@ -86,3 +86,4 @@ describe('geographyQueries', () => {
     });
   });
 });
+

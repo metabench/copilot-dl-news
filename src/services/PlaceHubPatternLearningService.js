@@ -16,8 +16,8 @@
  */
 
 const { URL } = require('url');
-const { createPlaceHubUrlPatternsStore } = require('../db/placeHubUrlPatternsStore');
-const { getDb } = require('../db');
+const { createPlaceHubUrlPatternsStore } = require('../data/db/placeHubUrlPatternsStore');
+const { getDb } = require('../data/db');
 
 // Common place hub URL indicators
 const PLACE_HUB_INDICATORS = [
@@ -576,3 +576,4 @@ module.exports = {
   PLACE_HUB_INDICATORS,
   NON_PLACE_INDICATORS
 };
+

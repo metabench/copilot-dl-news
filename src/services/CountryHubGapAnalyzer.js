@@ -9,11 +9,11 @@
  * Learns URL patterns from existing data via Domain-Specific Pattern Libraries (DSPLs).
  */
 
-const { getAllCountries, getTopCountries, getCountryByName } = require('../db/sqlite/v1/queries/gazetteer.places');
-const { getCountryHubCoverage } = require('../db/sqlite/v1/queries/placePageMappings');
+const { getAllCountries, getTopCountries, getCountryByName, getPlaceNameVariantsForHubDiscovery } = require('../data/db/sqlite/v1/queries/gazetteer.places');
+const { getCountryHubCoverage } = require('../data/db/sqlite/v1/queries/placePageMappings');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 const { getDsplForDomain } = require('./shared/dspl');
-const { slugify } = require('../tools/slugify');
+const { slugify, generateSlugVariants } = require('../tools/slugify');
 const { PredictionStrategyManager } = require('./shared/PredictionStrategyManager');
 const { UrlPatternGenerator } = require('./shared/UrlPatternGenerator');
 
@@ -76,35 +76,194 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
 
   /**
    * Fallback patterns for country hubs
+   * Includes:
+   * - English standard patterns
+   * - Language-prefixed patterns for multilingual sites (e.g., /de/deutschland)
+   * - Regional patterns (e.g., /afrique/, /asie/, /europe/)
    */
   getFallbackPatterns() {
     return [
+      // Standard English patterns
       '/world/{slug}',
       '/news/world/{slug}',
       '/world/{code}',
       '/news/{code}',
       '/{slug}',
       '/international/{slug}',
-      '/news/world-{region}-{slug}'
+      '/news/world-{region}-{slug}',
+      
+      // Language-prefixed patterns (for multilingual sites like DW, France24)
+      '/{lang}/{slug}',
+      '/{lang}/news/{slug}',
+      '/{lang}/world/{slug}',
+      '/{lang}/{localSlug}',      // e.g., /de/deutschland
+      
+      // Regional hub patterns (common for French-language sites)
+      '/afrique/{slug}',           // Africa
+      '/asie/{slug}',              // Asia
+      '/asie-pacifique/{slug}',    // Asia-Pacific
+      '/europe/{slug}',            // Europe
+      '/ameriques/{slug}',         // Americas
+      '/moyen-orient/{slug}',      // Middle East
+      '/africa/{slug}',
+      '/asia/{slug}',
+      '/asia-pacific/{slug}',
+      '/americas/{slug}',
+      '/middle-east/{slug}',
+      '/latin-america/{slug}',
+      
+      // English section for international sites
+      '/en/{slug}',
+      '/en/world/{slug}',
+      '/en/news/{slug}',
+      
+      // Alternative structures
+      '/monde/{slug}',             // World (French)
+      '/international/article/{slug}'
     ];
   }
 
   /**
-   * Build metadata for country entity
+   * Build metadata for country entity.
+   * Includes all name variants and slug strategies for comprehensive URL generation.
+   * 
+   * @param {Object} country - Country object with name, code, id
+   * @param {Object} [options] - Options for language handling
+   * @param {string} [options.publicationLang='en'] - Publication language
+   * @param {Array<string>} [options.placeNativeLanguages=[]] - Native languages of the place
    */
-  buildEntityMetadata(country) {
+  buildEntityMetadata(country, options = {}) {
     if (!country || !country.name) return null;
+    
+    const { publicationLang = 'en', placeNativeLanguages = [] } = options;
     
     const slug = slugify(country.name);
     const code = country.code ? country.code.toLowerCase() : '';
     const region = this._getRegion(country.code);
 
+    // Determine native languages if not provided
+    let nativeLangs = placeNativeLanguages;
+    if (nativeLangs.length === 0 && country.code) {
+      nativeLangs = this._getPlaceNativeLanguages(country.code);
+    }
+
+    // Get all name variants if we have a country id
+    let nameVariants = [];
+    let allSlugs = [];
+    let byLanguage = {};
+    
+    if (country.id) {
+      const variants = getPlaceNameVariantsForHubDiscovery(this.db, country.id, {
+        publicationLang,
+        placeNativeLanguages: nativeLangs
+      });
+      nameVariants = variants.allNames || [];
+      byLanguage = variants.byLanguage || {};
+      
+      // Generate slug variants for each name
+      const seenSlugs = new Set();
+      for (const name of nameVariants) {
+        const slugVariants = generateSlugVariants(name);
+        for (const { slug: s, strategy } of slugVariants) {
+          if (!seenSlugs.has(s)) {
+            seenSlugs.add(s);
+            allSlugs.push({ slug: s, strategy, sourceName: name });
+          }
+        }
+      }
+    } else {
+      // Fallback: just use the single name provided
+      nameVariants = [country.name];
+      allSlugs = generateSlugVariants(country.name).map(v => ({
+        ...v,
+        sourceName: country.name
+      }));
+    }
+
+    // Build local slug from publication language name (e.g., "allemagne" for French, "deutschland" for German)
+    let localSlug = slug;  // Default to English slug
+    if (byLanguage[publicationLang] && byLanguage[publicationLang].length > 0) {
+      localSlug = slugify(byLanguage[publicationLang][0]);
+    }
+
     return {
       slug,
       code,
       region,
-      name: country.name
+      lang: publicationLang,          // For {lang} placeholder in patterns
+      localSlug,                       // Local name slug for publication language
+      name: country.name,
+      nameVariants,
+      allSlugs,  // Array of { slug, strategy, sourceName }
+      byLanguage,  // Names grouped by language code
+      publicationLang,
+      placeNativeLanguages: nativeLangs
     };
+  }
+
+  /**
+   * Get native/official languages for a country based on country code.
+   * Used to prioritize local name forms in URL generation.
+   * @param {string} countryCode - ISO 3166-1 alpha-2 code
+   * @returns {Array<string>} Language codes
+   */
+  _getPlaceNativeLanguages(countryCode) {
+    const languageMap = {
+      // Major languages by country
+      'DE': ['de'],
+      'FR': ['fr'],
+      'ES': ['es'],
+      'IT': ['it'],
+      'PT': ['pt'],
+      'BR': ['pt'],
+      'RU': ['ru'],
+      'CN': ['zh'],
+      'TW': ['zh'],
+      'JP': ['ja'],
+      'KR': ['ko'],
+      'SA': ['ar'],
+      'AE': ['ar'],
+      'EG': ['ar'],
+      'IR': ['fa'],
+      'IL': ['he'],
+      'IN': ['hi', 'en'],
+      'PK': ['ur'],
+      'TH': ['th'],
+      'VN': ['vi'],
+      'ID': ['id'],
+      'MY': ['ms'],
+      'TR': ['tr'],
+      'PL': ['pl'],
+      'NL': ['nl'],
+      'SE': ['sv'],
+      'NO': ['nb', 'no'],
+      'DK': ['da'],
+      'FI': ['fi'],
+      'GR': ['el'],
+      'UA': ['uk'],
+      'CZ': ['cs'],
+      'RO': ['ro'],
+      'HU': ['hu'],
+      'AT': ['de'],
+      'CH': ['de', 'fr', 'it'],
+      'BE': ['nl', 'fr', 'de'],
+      'MX': ['es'],
+      'AR': ['es'],
+      'CO': ['es'],
+      'VE': ['es'],
+      'CL': ['es'],
+      'PE': ['es'],
+      // English-speaking countries don't need native language boost
+      'US': [],
+      'GB': [],
+      'AU': [],
+      'CA': ['en', 'fr'],
+      'NZ': [],
+      'IE': ['en'],
+      'ZA': ['en', 'af', 'zu']
+    };
+    
+    return languageMap[countryCode] || [];
   }
 
   /**
@@ -117,10 +276,10 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
   }
 
   /**
-   * Get top N countries by importance
+   * Get top N countries (limited subset)
    * @param {number} limit - Maximum number of countries to return
    * @param {string} [lang='en'] - Language code
-   * @returns {Array} Top countries
+   * @returns {Array} Countries (up to limit)
    */
   getTopCountries(limit = 50, lang = 'en') {
     return getTopCountries(this.db, limit, lang);
@@ -137,21 +296,36 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
   }
 
   /**
-   * Enhanced URL prediction with multiple strategies and fallbacks
+   * Enhanced URL prediction with multiple strategies and fallbacks.
+   * Now supports comprehensive name variant lookup when placeId is provided.
+   * 
    * @param {string} domain - Target domain
    * @param {string} countryName - Country name
    * @param {string} countryCode - Country code (e.g., 'US', 'GB')
-   * @returns {Array<Object>} Predicted URL objects with confidence scores
+   * @param {Object} [options] - Additional options
+   * @param {number} [options.placeId] - Place ID for fetching all name variants
+   * @param {number} [options.maxUrls=20] - Maximum URLs to return
+   * @param {boolean} [options.useAllNameVariants=true] - Whether to use all name variants
+   * @param {string} [options.publicationLang='en'] - Publication language for name prioritization
+   * @param {Array<string>} [options.placeNativeLanguages] - Override native languages
+   * @returns {Array<string>} Predicted URLs
    */
-  predictCountryHubUrls(domain, countryName, countryCode) {
-    const entity = { name: countryName, code: countryCode };
+  predictCountryHubUrls(domain, countryName, countryCode, options = {}) {
+    const { 
+      placeId, 
+      maxUrls = 20, 
+      useAllNameVariants = true,
+      publicationLang = 'en',
+      placeNativeLanguages
+    } = options;
+    const entity = { name: countryName, code: countryCode, id: placeId };
     const predictions = [];
 
     // Strategy 1: DSPL patterns (highest priority)
     const dsplPredictions = this.predictionManager.predictFromDspl(entity, domain);
     predictions.push(...dsplPredictions);
 
-    // Strategy 2: Gazetteer-based patterns
+    // Strategy 2: Gazetteer-based patterns (learned from verified hubs)
     const gazetteerPredictions = this.predictionManager.predictFromGazetteer(entity, domain);
     predictions.push(...gazetteerPredictions);
 
@@ -159,8 +333,98 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
     const crawlPredictions = this.predictionManager.predictFromCrawlData(entity, domain);
     predictions.push(...crawlPredictions);
 
-    // Strategy 3: Common hub patterns as fallback (only if no DSPL patterns exist)
-    if (dsplPredictions.length === 0) {
+    // Strategy 3: Name variant patterns (ALWAYS run when placeId is provided)
+    // Pass language options to get appropriately prioritized name variants
+    const metadata = this.buildEntityMetadata(entity, {
+      publicationLang,
+      placeNativeLanguages: placeNativeLanguages || []
+    });
+    
+    if (useAllNameVariants && metadata?.allSlugs?.length > 0) {
+      // Generate URLs for each slug variant
+      const prefixes = ['/world/', '/news/world/', '/international/', '/news/', '/'];
+      const seenUrls = new Set(predictions.map(p => p.url));
+      
+      // Lower base confidence if DSPL patterns exist
+      const baseConfidence = dsplPredictions.length > 0 ? 0.3 : 0.4;
+      
+      // FIRST: Add special patterns for major countries BEFORE name variants
+      // These get highest priority (e.g., The Guardian uses /us-news, /uk-news, /world/southafrica, etc.)
+      if (countryCode) {
+        const code = countryCode.toLowerCase();
+        const specialPatterns = [];
+        if (code === 'us') {
+          specialPatterns.push(`/${code}-news`, `/${code}`, `/america`, `/americas`, `/world/us`, `/world/usa`);
+        } else if (code === 'gb') {
+          specialPatterns.push(`/uk`, `/uk-news`, `/britain`, `/england`, `/world/uk`);
+        } else if (code === 'au') {
+          specialPatterns.push(`/australia`, `/${code}`, `/world/australia`);
+        } else if (code === 'za') {
+          specialPatterns.push(`/world/southafrica`, `/world/south-africa`, `/south-africa`, `/africa/south-africa`);
+        } else if (code === 'sa') {
+          specialPatterns.push(`/world/saudiarabia`, `/world/saudi-arabia`, `/middle-east/saudi-arabia`);
+        }
+        
+        for (const pattern of specialPatterns) {
+          const url = `https://${domain}${pattern}`;
+          if (!seenUrls.has(url)) {
+            seenUrls.add(url);
+            predictions.push({
+              url,
+              confidence: 0.85,  // Very high confidence for known patterns
+              strategy: 'special-code',
+              pattern,
+              entity,
+              domain
+            });
+          }
+        }
+      }
+      
+      // SECOND: Add name variant patterns
+      for (const { slug, strategy } of metadata.allSlugs) {
+        for (const prefix of prefixes) {
+          const url = `https://${domain}${prefix}${slug}`;
+          if (seenUrls.has(url)) continue;
+          seenUrls.add(url);
+          
+          // Higher confidence for /world/ prefix and hyphenated slugs
+          let confidence = baseConfidence;
+          if (prefix === '/world/') confidence += 0.2;
+          else if (prefix === '/news/world/') confidence += 0.15;
+          if (strategy === 'hyphenated') confidence += 0.1;
+          
+          predictions.push({
+            url,
+            confidence,
+            strategy: 'name-variant',
+            pattern: `${prefix}${slug}`,
+            entity,
+            domain
+          });
+        }
+      }
+      
+      // THIRD: Add generic country code patterns
+      if (countryCode) {
+        const code = countryCode.toLowerCase();
+        for (const prefix of prefixes) {
+          const url = `https://${domain}${prefix}${code}`;
+          if (!seenUrls.has(url)) {
+            seenUrls.add(url);
+            predictions.push({
+              url,
+              confidence: baseConfidence - 0.05,
+              strategy: 'country-code',
+              pattern: `${prefix}${code}`,
+              entity,
+              domain
+            });
+          }
+        }
+      }
+    } else if (dsplPredictions.length === 0) {
+      // Fallback to original single-name patterns when no placeId
       const commonPatterns = [
         { pattern: `/world/${slugify(countryName)}`, confidence: 0.6 },
         { pattern: `/news/world/${slugify(countryName)}`, confidence: 0.5 },
@@ -182,7 +446,7 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
     const filteredPredictions = uniquePredictions.filter((prediction) => !this._isKnown404Url(prediction.url));
     const finalPredictions = filteredPredictions.length > 0 ? filteredPredictions : uniquePredictions;
 
-    return finalPredictions.slice(0, 5).map((p) => p.url); // Return just URLs for compatibility
+    return finalPredictions.slice(0, maxUrls).map((p) => p.url);
   }
 
   /**

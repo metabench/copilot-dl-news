@@ -7,7 +7,7 @@
  * The module exports { createTrustAdapter } which requires a db handle.
  */
 
-const trustAdapterModule = require('../../src/db/sqlite/v1/queries/trustAdapter');
+const trustAdapterModule = require('../../src/data/db/sqlite/v1/queries/trustAdapter');
 
 describe('trustAdapter module exports', () => {
   it('should export createTrustAdapter factory function', () => {
@@ -375,3 +375,4 @@ describe('trustAdapter instance interface (with mock db)', () => {
     });
   });
 });
+

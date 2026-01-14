@@ -7,7 +7,7 @@ const {
   escapeHtml,
   formatTimestamp,
   formatDuration
-} = require('../shared/renderer-utils');
+} = require('../../../../shared/renderer-utils');
 
 const SUCCESS_STATUSES = new Set(['completed', 'done', 'finished']);
 const WARNING_STATUSES = new Set(['failed', 'errored', 'error', 'cancelled', 'paused', 'pausing']);

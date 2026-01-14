@@ -8,11 +8,11 @@
 // - Ensure any JSDOM windows are explicitly closed to free memory.
 
 const path = require('path');
-const { createJsdom } = require('../utils/jsdomUtils');
-const { ensureDb } = require('../db/sqlite');
-const { CliFormatter } = require('../utils/CliFormatter');
-const { CliArgumentParser } = require('../utils/CliArgumentParser');
-const { createBackfillDatesQueries } = require('../db/sqlite/v1/queries/articles.backfillDates');
+const { createJsdom } = require('../shared/utils/jsdomUtils');
+const { ensureDb } = require('../data/db/sqlite');
+const { CliFormatter } = require('../shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');
+const { createBackfillDatesQueries } = require('../data/db/sqlite/v1/queries/articles.backfillDates');
 const { backfillDates } = require('./backfill-dates-core');
 
 const fmt = new CliFormatter();

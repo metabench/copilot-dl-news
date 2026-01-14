@@ -4,7 +4,6 @@
  * Check script for GeoImportDashboard
  * 
  * Renders the dashboard with sample data to a static HTML file for preview.
- * Includes the DatabaseSelector component for complete view.
  * 
  * Usage:
  *   node src/ui/server/checks/geoImportDashboard.check.js
@@ -15,50 +14,13 @@ const fs = require('fs');
 const path = require('path');
 const jsgui = require('jsgui3-html');
 const { GeoImportDashboard } = require('../../controls/GeoImportDashboard');
-const { DatabaseSelector } = require('../../controls/DatabaseSelector');
 
-// Read CSS files
-const dashboardCssPath = path.join(__dirname, '../../styles/geo-import-dashboard.css');
-const selectorCssPath = path.join(__dirname, '../../controls/DatabaseSelector.css');
-const dashboardCss = fs.existsSync(dashboardCssPath) ? fs.readFileSync(dashboardCssPath, 'utf8') : '';
-const selectorCss = fs.existsSync(selectorCssPath) ? fs.readFileSync(selectorCssPath, 'utf8') : '';
+// Read CSS
+const cssPath = path.join(__dirname, '../../styles/geo-import-dashboard.css');
+const css = fs.existsSync(cssPath) ? fs.readFileSync(cssPath, 'utf8') : '';
 
 // Create context
 const context = new jsgui.Page_Context();
-
-// Sample database list
-const sampleDatabases = [
-  { 
-    path: 'data/gazetteer.db', 
-    name: 'gazetteer.db', 
-    places: 508, 
-    names: 14855, 
-    size: 2457600,
-    isDefault: true 
-  },
-  { 
-    path: 'data/gazetteer.db.backup-pre-schema-migration', 
-    name: 'gazetteer.db.backup-pre-schema-migration', 
-    places: 450, 
-    names: 12000, 
-    size: 1843200 
-  },
-  { 
-    path: 'data/gazetteer-test.db', 
-    name: 'gazetteer-test.db', 
-    places: 100, 
-    names: 500, 
-    size: 204800 
-  }
-];
-
-// Create database selector
-const dbSelector = new DatabaseSelector({
-  context,
-  databases: sampleDatabases,
-  selected: 'data/gazetteer.db',
-  dataDir: 'data'
-});
 
 // Create dashboard with sample running state
 const dashboard = new GeoImportDashboard({
@@ -86,36 +48,22 @@ const dashboard = new GeoImportDashboard({
         id: 'wikidata',
         name: 'Wikidata',
         emoji: '📚',
-        status: 'coming-soon',
-        description: 'SPARQL queries for Wikidata IDs, population updates, and multilingual names',
-        available: false,
-        comingSoon: true,
-        plannedFeatures: [
-          'Wikidata entity linking',
-          'Population synchronization',
-          'Multilingual place labels',
-          'Administrative hierarchy'
-        ],
+        status: 'pending',
+        description: 'SPARQL queries for metadata enrichment (runs after GeoNames)',
         stats: { 
-          linked_entities: '—'
+          linked_entities: 0,
+          queries_planned: 25000
         }
       },
       osm: {
         id: 'osm',
         name: 'OpenStreetMap',
         emoji: '🗺️',
-        status: 'coming-soon',
-        description: 'Local PostGIS database for boundaries and precise geometries',
-        available: false,
-        comingSoon: true,
-        plannedFeatures: [
-          'Administrative boundaries',
-          'Place polygons',
-          'Coastline data',
-          'POI enrichment'
-        ],
+        status: 'idle',
+        description: 'Local PostGIS database for boundaries & spatial queries',
         stats: { 
-          boundaries: '—'
+          boundaries_ready: 5200,
+          connection: 'Ready'
         }
       }
     },
@@ -145,9 +93,6 @@ const dashboard = new GeoImportDashboard({
 });
 
 // Render HTML
-const dbSelectorHtml = dbSelector.all_html_render();
-const dashboardHtml = dashboard.all_html_render();
-
 const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -156,20 +101,11 @@ const html = `<!DOCTYPE html>
   <title>🌐 Geo Import Dashboard - Check</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    .page-container {
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-    ${selectorCss}
-    ${dashboardCss}
+    ${css}
   </style>
 </head>
 <body>
-  <div class="page-container">
-    ${dbSelectorHtml}
-    ${dashboardHtml}
-  </div>
+  ${dashboard.all_html_render()}
   
   <script>
     // Simulate live updates

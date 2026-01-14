@@ -8,7 +8,7 @@
 
 const Database = require('better-sqlite3');
 const path = require('path');
-const { up, down, isApplied, MIGRATION_NAME, MIGRATION_VERSION } = require('../src/db/sqlite/v1/migrations/add_fts5_article_search');
+const { up, down, isApplied, MIGRATION_NAME, MIGRATION_VERSION } = require('../src/data/db/sqlite/v1/migrations/add_fts5_article_search');
 
 const DB_PATH = path.join(__dirname, '..', 'data', 'news.db');
 

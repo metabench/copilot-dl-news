@@ -26,7 +26,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 const jsgui = require('jsgui3-html');
 
-const { createAdminAdapter } = require('../../../db/sqlite/v1/queries/adminAdapter');
+const { createAdminAdapter } = require('../../../data/db/sqlite/v1/queries/adminAdapter');
 const { AdminService } = require('../../../admin/AdminService');
 
 const { AdminDashboard } = require('./views/AdminDashboard');

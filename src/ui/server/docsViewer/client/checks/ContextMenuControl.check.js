@@ -45,8 +45,8 @@ global.window = {
 global.document = mockDocument;
 
 // Now require the controls
-const { ContextMenuControl } = require("../../isomorphic/controls/ContextMenuControl");
-const { ColumnContextMenuControl } = require("../../isomorphic/controls/ColumnContextMenuControl");
+const { ContextMenuControl } = require("../controls/ContextMenuControl");
+const { ColumnContextMenuControl } = require("../controls/ColumnContextMenuControl");
 
 console.log("ContextMenuControl Check Script");
 console.log("========================================\n");

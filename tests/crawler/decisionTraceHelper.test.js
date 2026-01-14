@@ -6,7 +6,7 @@ const {
   normalizeDecisionTrace,
   DECISION_KINDS,
   MAX_DETAILS_SIZE_BYTES
-} = require('../../src/crawler/decisionTraceHelper');
+} = require('../../src/core/crawler/decisionTraceHelper');
 
 describe('decisionTraceHelper', () => {
   describe('normalizeDecisionTrace', () => {
@@ -236,3 +236,4 @@ describe('decisionTraceHelper', () => {
     });
   });
 });
+

@@ -207,6 +207,31 @@ Runs integrity checks on the database (orphaned records, missing names, circular
 node src/tools/validate-gazetteer.js
 ```
 
+## `db-clone-gazetteer.js`
+
+Create a fresh database that keeps only gazetteer tables and schema (no downloads/site patterns). Useful for clean crawls against the production gazetteer without carrying old fetch data.
+
+```bash
+# Build a gazetteer-only DB from news.db
+node tools/dev/db-clone-gazetteer.js --source data/news.db --dest tmp/news-gazetteer-only.db --overwrite --verbose
+
+# JSON summary
+node tools/dev/db-clone-gazetteer.js --source data/news.db --dest tmp/news-gazetteer-only.db --overwrite --json
+
+# Custom table whitelist (comma-separated)
+node tools/dev/db-clone-gazetteer.js --tables places,place_names,place_hierarchy
+```
+
+Defaults:
+- `--source`: data/news.db (read-only)
+- `--dest`: data/news-gazetteer-only.db
+- `--tables`: gazetteer set (places, place_names, hierarchy, sources, external IDs, attributes, provenance, ingestion_runs, gazetteer_crawl_state, topic_keywords, crawl_skip_terms, domain_locales)
+
+Notes:
+- Destination must differ from source; use `--overwrite` to replace an existing file.
+- Destination is schema-initialized before copy; only listed tables are populated.
+- Use `DB_PATH=<dest>` when running place/topic hub matrix checks or crawls so logs land in the new DB.
+
 ---
 
 ## Related Documentation

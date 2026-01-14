@@ -20,7 +20,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 const jsgui = require('jsgui3-html');
 
-const { wrapServerForCheck } = require('../utils/serverStartupCheck');
+const { wrapServerForCheck } = require('../shared/utils/serverStartupCheck');
 
 const { QualityMetricsService } = require('./QualityMetricsService');
 const { DomainQualityTable, ConfidenceHistogram, RegressionAlerts } = require('./controls');

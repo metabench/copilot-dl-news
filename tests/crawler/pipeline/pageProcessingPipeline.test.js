@@ -13,7 +13,7 @@ const {
   createProcessArticleStep,
   createUpdateStateStep,
   createRecordMetricsStep
-} = require('../../../src/crawler/pipeline/pageProcessingPipeline');
+} = require('../../../src/core/crawler/pipeline/pageProcessingPipeline');
 
 // Mock dependencies factory
 function createMockDeps(overrides = {}) {
@@ -427,3 +427,4 @@ describe('pageProcessingPipeline', () => {
     });
   });
 });
+

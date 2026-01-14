@@ -5,7 +5,7 @@
  * This script shows how the crawler would work with a real news website
  */
 
-const NewsCrawler = require('../../src/crawler/NewsCrawler');
+const NewsCrawler = require('../../src/core/crawler/NewsCrawler');
 
 
 async function runExample() {

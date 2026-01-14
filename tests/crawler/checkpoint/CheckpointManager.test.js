@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const CheckpointManager = require('../../../src/crawler/checkpoint/CheckpointManager');
+const CheckpointManager = require('../../../src/core/crawler/checkpoint/CheckpointManager');
 
 describe('CheckpointManager', () => {
   let tempDir;
@@ -361,3 +361,4 @@ describe('CheckpointManager', () => {
     });
   });
 });
+

@@ -14,9 +14,9 @@
 
 const express = require('express');
 const Database = require('better-sqlite3');
-const { PublisherPrior } = require('../../analysis/publisher-prior');
-const { PlaceCoherence, haversineDistance, distanceToCoherence } = require('../../analysis/place-coherence');
-const { createMultiLanguagePlaceQueries } = require('../../db/sqlite/v1/queries/multiLanguagePlaces');
+const { PublisherPrior } = require('../../intelligence/analysis/publisher-prior');
+const { PlaceCoherence, haversineDistance, distanceToCoherence } = require('../../intelligence/analysis/place-coherence');
+const { createMultiLanguagePlaceQueries } = require('../../data/db/sqlite/v1/queries/multiLanguagePlaces');
 
 /**
  * Create places API router

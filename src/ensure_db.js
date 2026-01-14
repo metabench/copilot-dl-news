@@ -1,3 +1,3 @@
 "use strict";
 
-module.exports = require("./db/sqlite/ensureDb");
+module.exports = require("./data/db/sqlite/ensureDb");

@@ -11,3 +11,4 @@ runStartupCheck(serverPath, 3160, {
   timeout: 20000,
   args: ['--db-path', 'data/news.db']
 });
+

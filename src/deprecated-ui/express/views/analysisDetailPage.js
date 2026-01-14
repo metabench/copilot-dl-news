@@ -1,4 +1,4 @@
-const { escapeHtml } = require('../utils/html');
+const { escapeHtml } = require('../../../shared/utils/html');
 
 function safeScript(value) {
 	const json = JSON.stringify(value ?? {});

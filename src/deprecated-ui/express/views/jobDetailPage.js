@@ -1,6 +1,6 @@
 'use strict';
 
-const { escapeHtml } = require('../utils/html');
+const { escapeHtml } = require('../../../shared/utils/html');
 
 /**
  * Renders the job detail SSR page with isomorphic components

@@ -2,7 +2,7 @@
 
 const mockGetFreshness = jest.fn();
 
-jest.mock('../../../src/db/sqlite/v1/queries/gazetteer.ingest', () => ({
+jest.mock('../../../src/data/db/sqlite/v1/queries/gazetteer.ingest', () => ({
   createIngestionStatements: jest.fn(() => ({
     getPlaceFreshnessByWikidata: { get: mockGetFreshness }
   })),
@@ -12,7 +12,7 @@ jest.mock('../../../src/db/sqlite/v1/queries/gazetteer.ingest', () => ({
   setCanonicalName: jest.fn()
 }));
 
-const { WikidataCountryIngestor } = require('../../../src/crawler/gazetteer/ingestors/WikidataCountryIngestor');
+const { WikidataCountryIngestor } = require('../../../src/core/crawler/gazetteer/ingestors/WikidataCountryIngestor');
 
 const createDbStub = () => ({
   prepare: jest.fn(() => ({ run: jest.fn() }))
@@ -93,3 +93,4 @@ describe('WikidataCountryIngestor configuration helpers', () => {
     expect(Object.keys(result.entities)).toHaveLength(5);
   });
 });
+

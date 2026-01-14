@@ -5,7 +5,7 @@
  */
 
 const Database = require('better-sqlite3');
-const { createPushAdapter } = require('../../../src/db/sqlite/v1/queries/pushAdapter');
+const { createPushAdapter } = require('../../../src/data/db/sqlite/v1/queries/pushAdapter');
 
 describe('pushAdapter', () => {
   let db;
@@ -336,3 +336,4 @@ describe('pushAdapter', () => {
     });
   });
 });
+

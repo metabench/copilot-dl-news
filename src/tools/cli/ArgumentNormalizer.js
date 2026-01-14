@@ -5,7 +5,7 @@
  * normalized options for the place hub guessing workflow.
  */
 
-const { CliArgumentParser } = require('../../utils/CliArgumentParser');
+const { CliArgumentParser } = require('../../shared/utils/CliArgumentParser');
 const { BatchLoader } = require('./BatchLoader');
 
 class ArgumentNormalizer {

@@ -2,7 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { runAnalysis } = require('../analysis-run');
-const NewsDatabase = require('../../db');
+const NewsDatabase = require('../../data/db');
 
 function createTempDbWithDepthCoverage({ host = 'example.com', depthCount = 10 } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'analysis-run-run-'));

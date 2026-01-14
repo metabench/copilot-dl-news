@@ -65,8 +65,8 @@ SAFETY:
   process.exit(0);
 }
 
-const { ensureDatabase } = require('../../src/db/sqlite');
-const { fixCanonicalNames } = require('../../src/db/sqlite/v1/queries/gazetteer.names');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { fixCanonicalNames } = require('../../src/data/db/sqlite/v1/queries/gazetteer.names');
 const path = require('path');
 
 function getArg(name, fallback) {
@@ -169,3 +169,4 @@ if (!dryRun && fixedCount > 0) {
 }
 
 db.close();
+

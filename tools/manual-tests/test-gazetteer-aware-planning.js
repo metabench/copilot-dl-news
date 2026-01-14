@@ -9,7 +9,7 @@
 
 const { AsyncPlanRunner } = require('../../src/deprecated-ui/express/services/planning/AsyncPlanRunner');
 const { CountryHubGapAnalyzer } = require('../../src/services/CountryHubGapAnalyzer');
-const { ensureDatabase } = require('../../src/db/sqlite');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
 const path = require('path');
 
 async function test() {
@@ -115,3 +115,4 @@ test().catch(error => {
   console.error('Test failed:', error);
   process.exit(1);
 });
+

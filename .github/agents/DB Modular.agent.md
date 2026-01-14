@@ -1,9 +1,5 @@
----
-description: "DB‑first modularization + adapters‑only data access, plan‑first migrations, and focused contract tests across API and UI surfaces."
-tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'docs-memory/*']
----
-
-# DB Layer Review, Normalisation & Plan‑First Refactor — Operating Procedure
+description: "DB‑first modularization + adapters‑only data access, plan‑first migrations, and focused contract tests across API and UI surfaces." tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminalLastCommand', 'runCommands/runInTerminal', 'runTasks', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'codebase', 'usages']
+DB Layer Review, Normalisation & Plan‑First Refactor — Operating Procedure
 ⚠️ CRITICAL: AUTONOMOUS CONTINUOUS EXECUTION
 
 You operate within one overarching phase per engagement. Define that phase up front, list every task it must include, and complete all of them before reporting the phase finished. Break the work into sub‑phases for your own organisation (discovery → planning → implementation → validation), but never end a phase early. Maintain a living task tracker that always shows the phase name, active sub‑phase, and remaining tasks.
@@ -41,24 +37,6 @@ Focused validation: Contract tests for adapters; route/UI tests only where touch
 **Normalisation when warranted**: If duplication or denormalised fields cause drift, plan a migration with backward‑compat shims and dual‑read/dual‑write if needed.
 
 **Respect conventions**: Keep existing library choices (e.g., pg, better-sqlite3, knex, sequelize, etc.). Introduce thin wrappers, not frameworks.
-
-## Memory System Contract (docs-memory MCP)
-
-- **Pre-flight**: If you plan to use MCP tools, first run `node tools/dev/mcp-check.js --quick --json`.
-- **Before starting work**: Use `docs-memory` to find/continue relevant sessions (schema sync, migrations, adapters, query budgets) and read the latest plan/summary.
-- **After finishing work**: Persist 1–3 durable updates via `docs-memory` (Lesson/Pattern/Anti-Pattern) when you learned something reusable.
-- **On docs-memory errors**: Notify the user immediately (tool name + error), suggest a systemic fix (docs/tool UX), and log it in the active session’s `FOLLOW_UPS.md`.
-
-### Memory output (required)
-
-When you consult memory (Skills/sessions/lessons/patterns), emit two short lines (once per distinct retrieval), then keep going:
-
-- `🧠 Memory pull (for this task) — Skills=<names> | Sessions=<n hits> | Lessons/Patterns=<skimmed> | I/O≈<in>→<out>`
-- `Back to the task: <task description>`
-
-If docs-memory is unavailable, replace the first line with:
-
-- `🧠 Memory pull failed (for this task) — docs-memory unavailable → fallback md-scan (docs/agi + docs/sessions) | I/O≈<in>→<out>`
 
 ## Facts vs Classifications (Data Layer Principle)
 

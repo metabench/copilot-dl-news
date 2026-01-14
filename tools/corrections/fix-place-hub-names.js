@@ -19,8 +19,8 @@
  */
 
 const path = require('path');
-const { ensureDatabase } = require('../../src/db/sqlite');
-const { fixPlaceHubNames } = require('../../src/db/sqlite/v1/queries/gazetteer.names');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { fixPlaceHubNames } = require('../../src/data/db/sqlite/v1/queries/gazetteer.names');
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -60,3 +60,4 @@ if (corrections.length === 0) {
 
 // Close database
 db.close();
+

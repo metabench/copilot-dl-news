@@ -1,5 +1,5 @@
 const express = require('express');
-const { fetchGazetteerCountries } = require('../data/gazetteerCountries');
+const { fetchGazetteerCountries } = require('../../../data/gazetteerCountries');
 const { renderGazetteerCountriesPage } = require('../views/gazetteer/countriesPage');
 const { escapeHtml, safeTracePre } = require('../views/gazetteer/helpers');
 
@@ -32,7 +32,7 @@ function createGazetteerCountriesRouter(options = {}) {
 
     let openDbReadOnly;
     try {
-  ({ openDbReadOnly } = require('../../../db/sqlite'));
+  ({ openDbReadOnly } = require('../../../data/db/sqlite'));
     } catch (err) {
       endTrace();
       res.status(503).send('<!doctype html><title>Countries</title><h1>Countries</h1><p>Database unavailable.</p>');

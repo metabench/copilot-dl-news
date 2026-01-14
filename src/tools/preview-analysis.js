@@ -8,10 +8,10 @@
  */
 
 const path = require('path');
-const { findProjectRoot } = require('../utils/project-root');
-const { ensureDatabase } = require('../db/sqlite');
-const { buildGazetteerMatchers } = require('../analysis/place-extraction');
-const { analyzePage } = require('../analysis/page-analyzer');
+const { findProjectRoot } = require('../shared/utils/project-root');
+const { ensureDatabase } = require('../data/db/sqlite');
+const { buildGazetteerMatchers } = require('../intelligence/analysis/place-extraction');
+const { analyzePage } = require('../intelligence/analysis/page-analyzer');
 const { performance } = require('perf_hooks');
 
 const projectRoot = findProjectRoot(__dirname);

@@ -7,7 +7,7 @@
 
 const path = require('path');
 const fs = require('fs');
-const { findProjectRoot } = require('../../utils/project-root');
+const { findProjectRoot } = require('../../shared/utils/project-root');
 
 class BatchLoader {
   /**

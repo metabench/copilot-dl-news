@@ -1,11 +1,11 @@
-const { escapeHtml } = require('../utils/html');
+const { escapeHtml } = require('../../../shared/utils/html');
 const {
   renderAnalysisSummary,
   renderAnalysisTable,
   renderAnalysisRow,
   buildClientPayload
-} = require('./analysis/renderAnalysisTable');
-const { createAnalysisViewModel } = require('./analysis/createAnalysisViewModel');
+} = require('../../../intelligence/analysis/renderAnalysisTable');
+const { createAnalysisViewModel } = require('../../../intelligence/analysis/createAnalysisViewModel');
 
 function ensureRenderNav(fn) {
   return typeof fn === 'function' ? fn : () => '';

@@ -18,7 +18,7 @@ const {
   ROLES,
   ANNOTATION_TYPES,
   ACTIVITY_ACTIONS
-} = require('../../src/db/sqlite/v1/queries/workspaceAdapter');
+} = require('../../src/data/db/sqlite/v1/queries/workspaceAdapter');
 
 describe('workspaceAdapter', () => {
   let db;
@@ -1108,3 +1108,4 @@ describe('workspaceAdapter', () => {
     });
   });
 });
+

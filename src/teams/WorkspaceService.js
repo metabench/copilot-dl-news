@@ -14,7 +14,7 @@
  * @module WorkspaceService
  */
 
-const { ROLES, ROLE_HIERARCHY, ACTIVITY_ACTIONS } = require('../db/sqlite/v1/queries/workspaceAdapter');
+const { ROLES, ROLE_HIERARCHY, ACTIVITY_ACTIONS } = require('../data/db/sqlite/v1/queries/workspaceAdapter');
 
 /**
  * WorkspaceService class

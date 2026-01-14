@@ -31,7 +31,7 @@ const fs = require("fs");
 const jsgui = require("jsgui3-html");
 
 const { GoalsExplorerControl, GoalDetailControl, GoalsListControl } = require("./controls");
-const { ensureClientBundle } = require("../utils/ensureClientBundle");
+const { ensureClientBundle } = require('../utils/serverStartupCheckensureClientBundle");
 
 // Try to load OpenAI bridge if available
 let OpenAIAgentBridge;
@@ -986,7 +986,7 @@ if (require.main === module) {
   }
   
   // Import startup check utility
-  const { wrapServerForCheck } = require("../utils/serverStartupCheck");
+  const { wrapServerForCheck } = require('../utils/serverStartupCheck");
   
   const port = args.port;
   const host = "127.0.0.1";
@@ -1022,3 +1022,4 @@ if (require.main === module) {
 }
 
 module.exports = app;
+

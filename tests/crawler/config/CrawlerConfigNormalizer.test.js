@@ -15,7 +15,7 @@ const {
   isGazetteerMode,
   isIntelligentMode,
   isBasicMode
-} = require('../../../src/crawler/config');
+} = require('../../../src/core/crawler/config');
 
 describe('CrawlerConfigNormalizer', () => {
   describe('normalizeOutputVerbosity', () => {
@@ -237,3 +237,4 @@ describe('CrawlerConfigNormalizer', () => {
     });
   });
 });
+

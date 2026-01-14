@@ -6,7 +6,7 @@ const {
   GazetteerCrawlMode,
   IntelligentCrawlMode,
   createModeStrategy
-} = require('../../../src/crawler/modes');
+} = require('../../../src/core/crawler/modes');
 
 // Mock crawler object for testing
 function createMockCrawler(overrides = {}) {
@@ -386,3 +386,4 @@ describe('createModeStrategy', () => {
     expect(createModeStrategy('intelligent', context)).toBeInstanceOf(IntelligentCrawlMode);
   });
 });
+

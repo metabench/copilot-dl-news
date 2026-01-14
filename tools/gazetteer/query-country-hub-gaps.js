@@ -8,7 +8,7 @@
  * 
  * Usage:
  *   node tools/gazetteer/query-country-hub-gaps.js --all                    # Show all countries
- *   node tools/gazetteer/query-country-hub-gaps.js --top 20                 # Show top 20 countries by importance
+ *   node tools/gazetteer/query-country-hub-gaps.js --top 20                 # Show top 20 countries
  *   node tools/gazetteer/query-country-hub-gaps.js --country France         # Show specific country
  *   node tools/gazetteer/query-country-hub-gaps.js --domain bbc.co.uk       # Predict URLs for domain
  *   node tools/gazetteer/query-country-hub-gaps.js --analyze bbc.co.uk      # Analyze gap coverage
@@ -73,7 +73,7 @@ Usage:
 
 Options:
   --all                    Show all countries from gazetteer
-  --top N                  Show top N countries by importance
+  --top N                  Show top N countries
   --country NAME           Show details for specific country
   --domain DOMAIN          Predict country hub URLs for domain
   --analyze DOMAIN         Analyze gap coverage for domain
@@ -128,7 +128,7 @@ async function main() {
     // Show top N countries
     if (args.top) {
       const countries = analyzer.getTopCountries(args.top);
-      console.log(`\nTop ${args.top} Countries by Importance:\n`);
+      console.log(`\nTop ${args.top} Countries:\n`);
       console.log('Name                          | Code | Importance | Population');
       console.log('-'.repeat(75));
       for (const country of countries) {

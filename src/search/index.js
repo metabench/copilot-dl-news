@@ -9,7 +9,7 @@
  */
 
 const { SearchService } = require('./SearchService');
-const { createSearchAdapter, BM25_WEIGHTS, sanitizeFtsQuery } = require('../db/sqlite/v1/queries/searchAdapter');
+const { createSearchAdapter, BM25_WEIGHTS, sanitizeFtsQuery } = require('../data/db/sqlite/v1/queries/searchAdapter');
 
 module.exports = {
   SearchService,

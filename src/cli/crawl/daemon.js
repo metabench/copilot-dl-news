@@ -255,7 +255,7 @@ async function startDaemon(config) {
   const { createCrawlApiServer, createCrawlService } = require('../../server/crawl-api');
   const { InProcessCrawlJobRegistry } = require('../../server/crawl-api/v1/core/InProcessCrawlJobRegistry');
   const Database = require('better-sqlite3');
-  const { TelemetryIntegration } = require('../../crawler/telemetry/TelemetryIntegration');
+  const { TelemetryIntegration } = require('../../core/crawler/telemetry/TelemetryIntegration');
   
   // Open database
   const dbPath = path.join(process.cwd(), 'data', 'news.db');

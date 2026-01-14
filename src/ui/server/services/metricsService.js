@@ -1,13 +1,13 @@
 "use strict";
 
-const { countUrls } = require("../../../db/sqlite/v1/queries/ui/urlListingNormalized");
-const { selectRecentDomains } = require("../../../db/sqlite/v1/queries/ui/recentDomains");
+const { countUrls } = require('../../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
+const { selectRecentDomains } = require('../../../data/db/sqlite/v1/queries/ui/recentDomains");
 const {
   resolveDbHandle,
   ensureUiCachedMetricsTable,
   selectMetricRow,
   upsertCachedMetricRow
-} = require("../../../db/sqlite/v1/queries/ui/uiCachedMetrics");
+} = require('../../../data/db/sqlite/v1/queries/ui/uiCachedMetrics");
 
 const DEFAULT_MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -53,7 +53,7 @@ const STAT_DEFINITIONS = [
     maxAgeMs: 10 * 60 * 1000,
     intervalMs: 10 * 60 * 1000,
     compute: ({ db }) => {
-      const { getStorageTotals } = require("../../../db/sqlite/v1/queries/ui/storage");
+      const { getStorageTotals } = require('../../../data/db/sqlite/v1/queries/ui/storage");
       const row = getStorageTotals(db);
       return {
         objectCount: row?.objectCount ?? 0,
@@ -76,7 +76,7 @@ const STAT_DEFINITIONS = [
     compute: ({ db, definition }) => {
       const days = definition?.params?.days || 7;
       const limit = definition?.params?.limit || 200;
-      const { dailyHostHistogram } = require("../../../db/sqlite/v1/queries/ui/errors");
+      const { dailyHostHistogram } = require('../../../data/db/sqlite/v1/queries/ui/errors");
       const rows = dailyHostHistogram(db).all(`-${days} days`, limit);
       return {
         days,

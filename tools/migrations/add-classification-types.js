@@ -14,7 +14,7 @@
 
 const path = require('path');
 const Database = require('better-sqlite3');
-const { CliFormatter } = require('../../src/utils/CliFormatter');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 
 const fmt = new CliFormatter();
 const DEFAULT_DB_PATH = path.join(__dirname, '..', '..', 'data', 'news.db');
@@ -276,3 +276,4 @@ function main() {
 }
 
 main();
+

@@ -34,21 +34,21 @@ const fs = require('fs');
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('js-yaml');
 
-const { ensureDb } = require('../../db/sqlite/ensureDb');
-const { createApiKeyAdapter } = require('../../db/sqlite/v1/queries/apiKeyAdapter');
-const { createArticlesAdapter } = require('../../db/sqlite/v1/queries/articlesAdapter');
-const { createSimilarityAdapter } = require('../../db/sqlite/v1/queries/similarityAdapter');
+const { ensureDb } = require('../../data/db/sqlite/ensureDb');
+const { createApiKeyAdapter } = require('../../data/db/sqlite/v1/queries/apiKeyAdapter');
+const { createArticlesAdapter } = require('../../data/db/sqlite/v1/queries/articlesAdapter');
+const { createSimilarityAdapter } = require('../../data/db/sqlite/v1/queries/similarityAdapter');
 const { createAuthMiddleware } = require('./middleware/auth');
 const { createRateLimitMiddleware, cleanupStaleEntries } = require('./middleware/rateLimit');
 const { createArticlesRouter } = require('./routes/articles');
 const { createDomainsRouter } = require('./routes/domains');
 const { createStatsRouter } = require('./routes/stats');
 const { createExportRouter, createFeedRouter } = require('./routes/export');
-const { DuplicateDetector } = require('../../analysis/similarity/DuplicateDetector');
+const { DuplicateDetector } = require('../../intelligence/analysis/similarity/DuplicateDetector');
 const { createSSEHandler, getBroadcaster } = require('../streaming');
 const { createWebSocketServer } = require('../streaming');
-const { Summarizer } = require('../../analysis/summarization');
-const { createSummaryAdapter } = require('../../db/sqlite/v1/queries/summaryAdapter');
+const { Summarizer } = require('../../intelligence/analysis/summarization');
+const { createSummaryAdapter } = require('../../data/db/sqlite/v1/queries/summaryAdapter');
 
 // Default configuration
 const DEFAULT_PORT = 4000;
@@ -129,7 +129,7 @@ function createGatewayApp(options = {}) {
   // Try to load search adapter if available
   let searchAdapter = null;
   try {
-    const { createSearchAdapter } = require('../../db/sqlite/v1/queries/searchAdapter');
+    const { createSearchAdapter } = require('../../data/db/sqlite/v1/queries/searchAdapter');
     searchAdapter = createSearchAdapter(db);
   } catch {
     if (verbose) {

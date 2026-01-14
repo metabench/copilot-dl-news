@@ -82,3 +82,21 @@ test-failure-summary.json
 test-timing-report.json
 
 package-lock.json
+
+# Root-level temp files (one-off scripts, server outputs)
+tmp_*.js
+server.err
+server.out
+server_*.txt
+
+# Root-level data snapshots (should use data/ directory)
+vnic*.json
+remote_vnics.json
+sl_backup.json
+sl_update.json
+all_sl.json
+subnets.json
+
+# Check HTML outputs (moved to checks/html-outputs/)
+/*.check.html
+/*.check.json

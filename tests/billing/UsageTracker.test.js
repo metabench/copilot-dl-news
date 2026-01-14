@@ -11,7 +11,7 @@ const { UsageTracker, METRICS } = require('../../src/billing');
 const { 
   createBillingAdapter, 
   ensureBillingSchema 
-} = require('../../src/db/sqlite/v1/queries/billingAdapter');
+} = require('../../src/data/db/sqlite/v1/queries/billingAdapter');
 
 /**
  * Create minimal users table for FK constraints
@@ -208,3 +208,4 @@ describe('UsageTracker', () => {
     });
   });
 });
+

@@ -2,7 +2,7 @@ const express = require('express');
 const {
   normalizeGazetteerPlacesQuery,
   fetchGazetteerPlaces
-} = require('../data/gazetteerPlaces');
+} = require('../../../data/gazetteerPlaces');
 
 function createGazetteerPlacesApiRouter({ urlsDbPath }) {
   if (!urlsDbPath) {
@@ -14,7 +14,7 @@ function createGazetteerPlacesApiRouter({ urlsDbPath }) {
   router.get('/api/gazetteer/places', (req, res) => {
     let openDbReadOnly;
     try {
-  ({ openDbReadOnly } = require('../../../db/sqlite'));
+  ({ openDbReadOnly } = require('../../../data/db/sqlite'));
     } catch (err) {
       res.status(503).json({
         error: 'Database unavailable',

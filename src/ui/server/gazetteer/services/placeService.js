@@ -1,4 +1,4 @@
-const { getPlaceDetails, searchPlacesByName } = require('../../../../db/sqlite/v1/queries/gazetteer.search');
+const { getPlaceDetails, searchPlacesByName } = require('../../../../data/db/sqlite/v1/queries/gazetteer.search');
 
 class PlaceService {
   constructor(db) {

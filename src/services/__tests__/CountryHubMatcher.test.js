@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-const { ensureDb } = require('../../db/sqlite/v1/ensureDb');
+const { ensureDb } = require('../../data/db/sqlite/v1/ensureDb');
 const { CountryHubMatcher } = require('../CountryHubMatcher');
 
 function createTempDbPath(prefix = 'country-hub-matcher') {

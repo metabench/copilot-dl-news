@@ -10,7 +10,7 @@
  */
 
 const { guessPlaceHubsBatch } = require('../../tools/guess-place-hubs');
-const { createPlaceHubDependencies } = require('../../orchestration/dependencies');
+const { createPlaceHubDependencies } = require('../../core/orchestration/dependencies');
 const { tof } = require('lang-tools');
 
 /**

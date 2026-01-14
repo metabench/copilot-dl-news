@@ -8,8 +8,8 @@
  * Records as schema version 2.
  */
 
-const { ensureDb } = require('../src/db/sqlite/v1/ensureDb');
-const { SchemaVersionManager } = require('../src/db/migration/schema-versions');
+const { ensureDb } = require('../src/data/db/sqlite/v1/ensureDb');
+const { SchemaVersionManager } = require('../src/data/db/migration/schema-versions');
 
 function createNormalizedTables(db) {
   console.log('Creating normalized tables...');

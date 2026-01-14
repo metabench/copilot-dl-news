@@ -4,7 +4,7 @@ const {
   formatTimestamp,
   formatDuration,
   collectStatusCounts
-} = require('../shared/renderer-utils');
+} = require('../../../../shared/renderer-utils');
 
 const ACTIVE_STATUSES = new Set(['running', 'starting', 'resuming']);
 const COMPLETED_STATUSES = new Set(['completed', 'done', 'finished']);

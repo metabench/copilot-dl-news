@@ -7,7 +7,7 @@
 */
 
 const path = require('path');
-const { findProjectRoot } = require('../utils/project-root');
+const { findProjectRoot } = require('../shared/utils/project-root');
 const { analysePages } = require('./analyse-pages-core');
 const { runAnalysisPostProcessing } = require('./analyze-post-run');
 

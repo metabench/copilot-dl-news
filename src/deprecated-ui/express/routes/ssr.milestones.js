@@ -1,11 +1,11 @@
 const express = require('express');
 const {
   fetchMilestones
-} = require('../data/milestones');
+} = require('../../../data/milestones');
 const {
   renderMilestonesPage
 } = require('../views/milestonesPage');
-const { escapeHtml } = require('../utils/html');
+const { escapeHtml } = require('../../../shared/utils/html');
 const { errorPage } = require('../components/base');
 
 /**

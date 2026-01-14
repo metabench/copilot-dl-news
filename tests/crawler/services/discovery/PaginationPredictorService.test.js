@@ -1,6 +1,6 @@
 'use strict';
 
-const { PaginationPredictorService } = require('../../../../src/crawler/services/PaginationPredictorService');
+const { PaginationPredictorService } = require('../../../../src/core/crawler/services/PaginationPredictorService');
 
 describe('PaginationPredictorService', () => {
   let service;
@@ -377,3 +377,4 @@ describe('PaginationPredictorService', () => {
     });
   });
 });
+

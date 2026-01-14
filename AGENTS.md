@@ -1,135 +1,11 @@
 ﻿Living Agent Workflow (Plan → Improve → Document)
 
----
-
-## TL;DR routing (start here)
-- Need commands? [docs/COMMAND_EXECUTION_GUIDE.md](docs/COMMAND_EXECUTION_GUIDE.md)
-- Running tests? [docs/TESTING_QUICK_REFERENCE.md](docs/TESTING_QUICK_REFERENCE.md)
-- DB changes? [docs/DATABASE_QUICK_REFERENCE.md](docs/DATABASE_QUICK_REFERENCE.md)
-- Shared sessions across repos? [docs/workflows/shared-sessions-across-repos.md](docs/workflows/shared-sessions-across-repos.md)
-- UI/jsgui3? [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md)
-- SVGs? [docs/guides/SVG_CREATION_METHODOLOGY.md](docs/guides/SVG_CREATION_METHODOLOGY.md)
-- WLILO style? [docs/guides/WLILO_STYLE_GUIDE.md](docs/guides/WLILO_STYLE_GUIDE.md)
-- Refactor tooling (js-scan/js-edit)? [tools/dev/README.md](tools/dev/README.md) and Gap-4 session summary
-- Facts vs classifications? [docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md](docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md)
-- Agent delegation (runSubagent)? See "Agent delegation" section below (NOT a true handoff)
-
-Mode/persona rules
-- If a persona or mode is active, note it in your plan and read the matching file under `.github/agents/` (or the current mode file noted by the system) for any extra constraints.
-
-Agent delegation (`runSubagent`)
-- `runSubagent` spawns a **worker AI** that uses another agent's instructions—it is **NOT** a true conversation handoff.
-- The worker executes autonomously (can edit files, run commands), returns ONE final report, then control returns to the calling agent.
-- User does NOT interact with the worker; user continues talking to the calling agent.
-- **Use for**: self-contained tasks, specialist expertise, multi-tool operations.
-- **Don't use for**: ongoing dialogue with specialist, user wanting to interact with another agent.
-- For true agent switching, tell the user: "Switch agents manually via Command Palette → Chat: Change Mode."
-- Full protocol with diagrams: see `🧠 Project Director 🧠.agent.md` → "runSubagent vs True Handoffs" section.
-
-Quick anchors (UI/tooling)
-- jsgui3 controls: extract interactive/stateful pieces into controls, use emoji icons for actions (🔍/⚙️/➕/🗑️/✏️/🔄), and keep control counts lean—lazy load or virtualise when lists exceed ~200 items. See [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md).
-- jsgui3 activation (client-side): if SSR output renders but clicks don’t work / `this.dom.el` is null / you see `Missing context.map_Controls`, start with the activation flow section in [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md#client-side-activation-flow-critical).
-- SVGs: before shipping, run `node tools/dev/svg-collisions.js <file> --strict` to ensure no overlaps; follow [docs/guides/SVG_CREATION_METHODOLOGY.md](docs/guides/SVG_CREATION_METHODOLOGY.md).
-- MCP pre-flight: before calling MCP tools, run `node tools/dev/mcp-check.js --quick --json` to verify servers are responsive; if unhealthy, use CLI fallbacks.
-
-Electron apps for long-running processes (RECOMMENDED)
-- **Wrap long-running processes in Electron apps** for visual progress monitoring. Users see live progress, throughput charts, and can gracefully stop operations.
-- **Existing Electron apps**: `src/ui/electron/unifiedApp/`, `src/ui/electron/crawlerApp/`, `src/ui/electron/backgroundTasksMonitor/`, `src/ui/electron/taskMonitor/`.
-- **Lab templates**:
-  - `labs/analysis-observable/` — Analysis-only with advanced metrics (throughput charts, stall detection, ETA)
-  - `labs/analysis-backfill-ui/` — Analysis backfill with rich UI and granular analysis options (places, hubs, signals)
-  - `labs/crawler-progress-integration/` — Unified crawl + analysis dashboard with auto-start and sequential flow
-  - `labs/jsgui3-idiomatic-progress/` — jsgui3 SSR control patterns with CSS transitions and RAF debouncing
-- **When to create an Electron wrapper**:
-  - Analysis backfills (use `labs/analysis-observable/run-lab.js --electron`)
-  - Gazetteer sync operations
-  - Batch database migrations
-  - Any process expected to run > 5 minutes
-- **Pattern**: Observable → Express SSE endpoint → Electron BrowserWindow loading localhost.
-- **Benefits**: Users don't lose terminal context, can see ETA, throughput trends visible in charts, stop button for graceful shutdown.
-- **Auto-start pattern**: `labs/crawler-progress-integration/` demonstrates auto-starting crawl on first SSE connection, then analysis after crawl completes — eliminates manual intervention for common workflows.
-- See [docs/sessions/2026-01-04-gazetteer-progress-ui/book/chapters/19-rerunning-analysis.md](docs/sessions/2026-01-04-gazetteer-progress-ui/book/chapters/19-rerunning-analysis.md) for detailed workflow.
-
-Memory access feedback (REQUIRED)
-- When you consult the memory system (Skills/sessions/lessons/patterns), emit a **very short** status so the user can see what you loaded.
-- Keep it to **1–2 lines max**, use emojis, and include counts/names when possible.
-- Always follow the memory status with: `Back to the task: <task description>` (this is how we prevent “memory retrieval” from becoming a stopping point).
-- Avoid spam: emit this badge **once per distinct retrieval** (or when the source/loaded items change). Don’t repeat it every message.
-- If memory access fails or is unavailable, say so and name the fallback you used.
-
-Suggested format (examples):
-- `🧠 Memory pull (for this task) — Skills=svg-theme-system, svg-collisions | Sessions=2 hits | Lessons/Patterns=skimmed | I/O≈12KB→4KB`
-- `Back to the task: <task description>`
-
-- `🧠 Memory pull failed (for this task) — docs-memory unavailable → fallback md-scan (docs/sessions: 14 hits) | I/O≈12KB→2KB`
-- `Back to the task: <task description>`
-
-MCP server edits (memory-related)
-- Before modifying `tools/mcp/docs-memory/*` (or other memory MCP servers), consult `docs/agi/skills/mcp-memory-server-surgery/SKILL.md`.
-- docs-memory (MCP): use the memory server for durable agent hygiene, not scratch notes.
-  - Prefer “search/find existing” before creating new work: look for related sessions and continue them when possible.
-  - Write small, reusable updates: add a Pattern/Anti-Pattern/Lesson, update the Knowledge Map, or append to the current session notes.
-  - Default targets: `docs/agi/*` (patterns/lessons/knowledge map) and `docs/sessions/<yyyy-mm-dd>-<slug>/*` (session notes).
-  - Keep entries tight (one idea + context); avoid dumping large transcripts.
-- docs-memory Logging (MCP): apps can write logs that AI agents can read for monitoring and debugging.
-  - **Write logs** from apps: `const { createMcpLogger } = require('./src/utils/mcpLogger'); logger.info('msg', { data })`
-  - **Read logs** via MCP: `docs_memory_getLogs({ session: 'crawl-2025-01-14', limit: 50, level: 'warn' })`
-  - **Search logs**: `docs_memory_searchLogs({ query: 'timeout', level: 'error' })`
-  - **List sessions**: `docs_memory_listLogSessions()`
-  - **HTTP access**: `GET /memory/logs/{session}` when MCP server runs in HTTP mode (`--http`)
-  - Log files: NDJSON in `docs/agi/logs/<session>.ndjson` (human + machine readable)
-  - App abbreviations: `CRWL` (crawler), `ELEC` (Electron), `API` (server), `SRV` (generic), `DB` (database), `UI` (frontend)
-  - **AGI Strategy**: Logging is evolvable—add new tools, improve filtering, add retention policies as needs grow.- Tier-1 JS tooling: prefer `js-scan` for discovery and `js-edit` for guarded batch edits (dry-run → fix). Reference [tools/dev/README.md](tools/dev/README.md).
-- When to use `js-scan` (vs `grep`/`read_file`):
-  - Use `js-scan` when you need a **multi-file inventory** ("what does this subsystem cover?"), to find **entrypoints/routes**, or to answer **dependency questions** ("what imports this?").
-  - Use `js-scan --what-imports <file>` before refactors so you don’t miss downstream callers.
-  - Use `grep_search`/`read_file` when you already know the exact file/symbol and just need **local context** for a small change.
-  - Example (feature inventory like Data Explorer): start with `node tools/dev/js-scan.js --dir src/ui/server --search "DATA_VIEWS" "app.get(" "create.*Server" --json` then pivot with `node tools/dev/js-scan.js --what-imports src/ui/server/dataExplorerServer.js --json`.
-  - Multi-lens follow-through: after a scan, **read the top hits**, then run the closest `checks/*.check.js`, then the smallest relevant Jest suite (`npm run test:by-path ...`) to confirm your understanding matches reality.
-- Present choices with `ui-pick`: `node tools/dev/ui-pick.js <options…>` (or `--options '[{"label":"A","value":"a","icon":"✨","phase":"implement"}]'`). Treat the selection as consent to proceed; use `--json` to capture `{selection, option, phase}` and auto-advance without re-asking.
-
-## ⚠️ SESSION FIRST — NON-NEGOTIABLE
-
-**Before writing ANY code**, create a session directory:
-
-```bash
-node tools/dev/session-init.js --slug "<short-name>" --type "<category>" --title "<Title>" --objective "<one-liner>"
-```
-
-This creates `docs/sessions/YYYY-MM-DD-<slug>/` with:
-- `PLAN.md` — Your working plan (update as you go)
-- `WORKING_NOTES.md` — Notes, commands, discoveries
-- `SESSION_SUMMARY.md` — Fill in when complete
-- `FOLLOW_UPS.md` — What's left for next session
-
-**Why?**
-- Sessions are the **memory system** for AI agents
-- Future agents (and humans) can find and reuse your work
-- Prevents scattered docs in `tmp/` or random locations
-- Enables pattern recognition across sessions
-
-**Common mistakes to avoid:**
-- ❌ Creating plans in `docs/plans/` instead of session directory
-- ❌ Putting notes in `tmp/` (not searchable, not persistent)
-- ❌ Starting code before the session directory exists
-- ❌ Forgetting to update `SESSIONS_HUB.md` (done automatically by tool)
-
-See `docs/sessions/SESSIONS_HUB.md` for the full session system documentation.
-
----
-
 **QUICK START for Tooling Improvements**: New 3-tier strategy document available!
 - **READ FIRST**: `/docs/TOOLING_RECOMMENDATIONS.md` (executive recommendation, 15 min)
 - **IMPLEMENT**: `/docs/IMPLEMENTATION_ROADMAP.md` (hour-by-hour plan, ready to start)
 - **NAVIGATE**: `/docs/TOOLING_IMPROVEMENT_STRATEGY_INDEX.md` (document hub)
 
 Purpose. This file is the hub for all agent work. Treat AGENTS.md as a concise, living playbook: it tells you what to do next, where to look, and how to improve this playbook itself as you learn. All source lives under /src (e.g., /src/modules, /src/db, /src/models, /src/utils), with /tests and /docs at the root. The north star: reduce tech debt, preserve reliability, and evolve a modular, high-performance data layer via swappable /src/db adapters (Postgres, Mongo, etc.) and clean service boundaries—documenting the why and how as you go with JSDoc and brief decision notes.
-
-Operational guardrails (authoritative here; Copilot file is only a pointer)
-- Platform: Windows with PowerShell; prefer Node.js commands over PowerShell-specific tricks. Set UTF-8 if you hit encoding issues.
-- No Python invocations; use Node.js or PowerShell-native tooling for quick scripts.
-- Linked modules (npm link): treat symlinked packages as shared source. Always open a session first, verify link status (e.g., Get-Item node_modules/jsgui3-html | Select-Object LinkType), and follow [docs/designs/NPM_LINK_DEVELOPMENT_NEXUS.md](docs/designs/NPM_LINK_DEVELOPMENT_NEXUS.md).
-- Command execution reference lives in [docs/COMMAND_EXECUTION_GUIDE.md](docs/COMMAND_EXECUTION_GUIDE.md); consult it before running servers or long-lived processes.
 
 Doc topology. Keep this file focused and actionable. Heavier guidance lives in /docs and is indexed from /docs/INDEX.md. When you add or change workflows, first update AGENTS.md (short, prescriptive steps), then create/modify deeper guides:
 
@@ -154,19 +30,9 @@ AGENTS.md should link to these pages and assign follow-ups ("If X arises, consul
 
 Core directives (always-on)
 
-Accuracy-first default. Unless the user explicitly asks for a fast prototype, prioritize correctness over speed:
-- Prefer small, verifiable changes over large refactors.
-- Avoid “fix by vibes”: state a hypothesis, define what would falsify it, and gather evidence.
-- If you spent meaningful time debugging or learned something reusable, document it so future runs start faster.
-
 Plan-first. Before edits, create/refresh a one-screen Plan (see template below). State scope, risks, success criteria, test/benchmark intent, and docs you’ll touch. When the work is truly a one-liner (e.g., running `Stop-Process -Name node -Force` to kill stray tasks), skip the formal plan/todo overhead—execute the command, capture the result, and move on.
 
 Prefer small, reversible steps. Sequence work into short, verifiable changes; keep deltas narrow across /src/modules ↔ /src/db ↔ /src/models.
-
-Evidence contract (recommended). For any non-trivial change, explicitly capture:
-- Hypothesis: what you believe is wrong / what will fix it.
-- Proof: which check/test/script output will confirm success.
-- Failure mode: what output would mean the hypothesis was wrong.
 
 Document the boundaries. Public functions/classes get JSDoc with parameters, returns, invariants, and side-effects. Record non-obvious trade-offs in a short ADR-lite.
 
@@ -176,30 +42,7 @@ Performance by design. Eliminate N+1, batch with joins/IN (...)/eager loading, u
 
 Tests are non-negotiable. For every fix or feature: focused unit/integration tests + a regression test if you killed a bug. Add a tiny benchmark when DB-heavy behavior might shift.
 
-Validation ladder (recommended). Start narrow, then widen confidence:
-- Run the smallest relevant `checks/*.check.js` first (fast feedback).
-- Run the most targeted unit/integration test(s) next.
-- Only then run broader suites / E2E / screenshots if the change touches UI wiring or multi-module behavior.
-
 Process Lifecycle & Cleanup. Ensure all scripts (especially verification tools and one-off checks) exit cleanly. Explicitly close database connections, clear intervals, and unref timers in a `finally` block. Hanging processes block CI and confuse users.
-
-Unexpected issues → research gap protocol. If you hit behavior you didn’t expect (tests fail for unclear reasons, a control lifecycle surprise, a server that hangs, etc.), pause and:
-- Search existing research first: `node tools/dev/md-scan.js --dir docs --search "<topic>" --json` and `node tools/dev/md-scan.js --dir docs/sessions --search "<topic>" --json`.
-- Reduce to a minimal reproduction (a local `checks/*.check.js`, a tiny test, or a lab experiment) before attempting a “fix”.
-- If you can’t find prior art, treat it as a knowledge gap: start a focused research project in a session folder, record findings + evidence, then promote durable guidance into the right doc (guide/workflow/ADR-lite).
-
-Stop & document triggers (accuracy guardrails):
-- Debugging time >15 minutes with no prior art → pause, create a minimal repro, and write a short note in the current session before continuing.
-- Any fix that changes behavior “because it seems right” → stop and add evidence (a check/test) before continuing.
-- Any recurring pitfall discovered → add a durable pointer (AGENTS.md or a guide) so it doesn’t reoccur.
-
-Measuring quality (so accuracy improves over time):
-- Rework rate: count follow-up fixes needed after the “main” change.
-- Evidence rate: did the session/PR record at least one executed check/test that supports the conclusion?
-- Hang rate: how often scripts/tests “pass but don’t exit”.
-- Time-to-confidence: time from first edit to “all relevant validations green”.
-
-**Server verification (don’t duplicate here)**: See `docs/COMMAND_EXECUTION_GUIDE.md` → “🚨 Server Verification - CRITICAL FOR AGENTS 🚨” for the canonical rules and examples.
 
 Server Restart After Changes. When modifying server-side code (Express routes, jsgui3 controls, renderers, utilities), always restart the relevant server after applying changes. For the docs viewer: `node src/ui/server/docsViewer/server.js --stop; node src/ui/server/docsViewer/server.js --detached`. For other UI servers, use `Stop-Process -Name node -Force` followed by the appropriate start command. The user cannot see your changes until the server picks up the new code.
 
@@ -208,8 +51,6 @@ Diagrams over walls of text. When explaining architecture, data flow, module rel
 Checking scripts ride alongside tests. Every UI control, renderer, or service that emits HTML should ship a bite-sized Node script under a local `checks/` folder (e.g., `src/ui/controls/checks/ConfigMatrixControl.check.js`). These scripts render representative data, assert structural expectations, and print the generated markup so diffs stay obvious. Keep them under 60 lines, drop fixtures in the same subtree, and reference them in your plan/tests so future agents can run `node <feature>/checks/<name>.check.js` to sanity-check jsgui3 output without touching the global test runner.
 
 Tight feedback. After each change: self-review the diff; run tests; update JSDoc + docs; capture a decision note if you chose between viable options.
-
-Improve the improver. Instruction improvements happen two ways: (1) **During normal work**—when you discover something useful, add it to agent instructions as a side-effect of completing your task; (2) **As dedicated meta-tasks**—when explicitly asked to improve agent capabilities. Both modes compound—30 seconds of documentation saves 30 minutes on every future task.
 
 The improvement loop (run this every task)
 
@@ -274,7 +115,6 @@ Retrospective (append to PR)
 
 What worked: <1–3 bullets>
 What to change in our workflow/docs next time: <1–3 bullets + links you updated>
-Instruction improvements made: <agent files or AGENTS.md sections updated>
 
 DB adapter checklist (performance-focused)
 
@@ -325,9 +165,40 @@ npm run schema:stats
 
 See `tools/schema-sync.js --help` for all options.
 
-## Facts vs Classifications (pointer)
+## Facts vs Classifications (Critical Distinction)
 
-Keep facts neutral and boolean; classifications consume facts. For rules, rationale, and implementation, read [docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md](docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md) and browse [src/facts/](src/facts/).
+**This is a foundational principle for all classification work in this repository.**
+
+| Concept | Facts | Classifications |
+|---------|-------|------------------|
+| **Nature** | Objective observations | Subjective judgments |
+| **Question** | "Does it have X?" | "What is it?" |
+| **Example** | "URL contains /2024/01/15/" | "This is a news article" |
+| **Mutability** | Fixed once computed | Can change with rule updates |
+| **Storage** | `url_facts` table | `url_classifications` table |
+
+**Key Principles:**
+
+1. **Facts are NEUTRAL** — They observe structure without judging it as good/bad, positive/negative
+2. **Facts are OBJECTIVE** — Verifiable, reproducible, same input = same output
+3. **Classifications CONSUME facts** — Rules combine facts with boolean logic to make decisions
+4. **No weighted signals** — Pure boolean TRUE/FALSE, no scores or confidence levels
+
+**Example: Pagination**
+- ✅ **Fact**: `url.hasPaginationPattern: true` — URL contains `?page=2`
+- ❌ **Wrong**: Treating pagination as a "negative signal"
+- ✅ **Right**: Pagination is neutral data; classification rules decide if it matters
+
+**Fact Categories** (all neutral observations):
+- `url.*` — URL string patterns (cheapest)
+- `document.*` — HTML/DOM structure
+- `schema.*` — JSON-LD/Microdata
+- `meta.*` — Meta tags
+- `response.*` — HTTP response characteristics
+- `page.*` — Page structure observations
+
+See `docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md` for full architecture.
+See `src/facts/` for implementation.
 
 How AGENTS.md stays small (and smart)
 
@@ -372,15 +243,6 @@ Applies only when running inside the **VS Codex extension** (not Copilot Chat). 
 When working with CLI tools (js-scan, js-edit), optimize for **bulk operations** and **efficient state passing** to enable AI agents to accomplish more per invocation.
 
 **Test Runner Requirement**: Always use `npm run test:by-path` or `npm run test:file` for testing CLI tools. Never use pipes (`|`), `Select-Object`, or direct `npx jest` commands. See `/docs/TESTING_QUICK_REFERENCE.md` for runner details.
-
-### UI Debugging (Puppeteer)
-
-When working on UI servers (`src/ui/server/*.js`), use `tools/dev/ui-console-capture.js` to see browser console logs and network errors.
-
-```bash
-# Start server, check URL, capture logs, kill server
-node tools/dev/ui-console-capture.js --server="src/ui/server/gazetteerInfoServer.js" --url="http://localhost:3000"
-```
 
 ### Multi-Code Discovery (Batch Search)
 
@@ -528,9 +390,83 @@ See `/docs/` for detailed guides:
 
 ---
 
-## Tooling improvements (pointer)
+## Completed Tooling Improvements (Gap 2, Gap 3, Gap 4)
 
-Gap 2/3/4 for js-scan/js-edit are complete. For commands, metrics, and usage examples see:
-- [tools/dev/README.md](tools/dev/README.md)
-- [docs/sessions/2025-11-22-gap4-plans-integration/SESSION_SUMMARY.md](docs/sessions/2025-11-22-gap4-plans-integration/SESSION_SUMMARY.md)
-- [docs/AGENT_REFACTORING_PLAYBOOK.md](docs/AGENT_REFACTORING_PLAYBOOK.md)
+**Strategic Initiative**: Three focused enhancements to js-scan/js-edit for 75-80% faster agent refactoring.
+
+**Current Status**: 
+- ✅ **Gap 2 complete** - Semantic relationship queries fully implemented and tested (26 tests passing)
+- ✅ **Gap 3 complete** - Batch dry-run & recovery fully implemented and tested (8 tests passing, CLI integrated)
+- ✅ **Gap 4 complete** - Multi-step workflow threading with guard verification fully implemented and tested
+
+### The Three Improvements
+
+1. **Gap 2: Semantic Relationship Queries** ✅ COMPLETE
+   - `--what-imports`, `--what-calls`, `--export-usage` queries live in js-scan.js
+   - **Status**: All 26 tests passing, CLI working and verified
+   - **Benefit**: Discovery time 20-30 min → <2 min (90% faster)
+
+2. **Gap 3: Batch Dry-Run + Recovery** ✅ COMPLETE (CLI integrated)
+   - `--dry-run`, `--recalculate-offsets`, `--from-plan` flags in js-edit.js
+   - **Status**: All 8 core tests passing, CLI fully integrated and working
+   - **Benefit**: Batch failure 60% → 95%+, recovery 15-20 min → <2 min
+   - **Available now**: `node tools/dev/js-edit.js --dry-run --changes batch.json --json`
+
+3. **Gap 4: Plans Integration** ✅ COMPLETE
+   - `--emit-plan`, `--from-plan` CLI dispatch ready, core logic complete
+   - **Status**: Guard verification system fully implemented and tested (Unit + Integration)
+   - **Benefit**: Enables safe, resumable multi-step refactoring workflows
+
+### How to Use (Available Now)
+
+Agents should follow: **Discover → Dry-Run → Apply → Verify**
+
+```bash
+# 1. Discover (Gap 2) — <2 min [AVAILABLE NOW]
+node js-scan.js --what-calls "processData" --recursive --json
+
+# 2. Prepare batch changes (manual or scripted)
+
+# 3. Dry-run (Gap 3) — <1 min [AVAILABLE NOW]
+node js-edit.js --dry-run --changes batch.json --json
+
+# 4. Apply (Gap 3+4) — <2 min [AVAILABLE NOW]
+node js-edit.js --from-plan saved-plan.json --fix
+
+# 5. Verify (Gap 2) — <1 min [AVAILABLE NOW]
+node js-scan.js --search targetFunction --json
+```
+
+**Total Refactoring Time**: 10-15 minutes (vs. 60-90 min currently) = **80% faster**
+
+### Documentation Hub
+
+Start here for comprehensive guidance:
+
+- **`.github/agents/Singularity Engineer.agent.md`** — Agent-specific tool guidance
+- **`.github/instructions/GitHub Copilot.instructions.md`** — Copilot tool guidance
+- **`docs/sessions/2025-11-22-gap4-plans-integration/SESSION_SUMMARY.md`** — Gap 4 implementation details (NEW!)
+- **`/docs/AGENT_REFACTORING_PLAYBOOK.md`** — How agents use the tools (with examples)
+- **`/docs/GAZETTEER_DEDUPLICATION_SUMMARY.md`** — Guide for the Gazetteer Deduplication Tool (v2 Algorithm)
+- **`/tools/dev/README.md`** — CLI reference for both tools
+
+### Key Metrics
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| Gap 2 Implementation | ✅ Complete | 26/26 tests |
+| Gap 3 Implementation | ✅ Complete | 8/8 tests |
+| Gap 4 Implementation | ✅ Complete | Unit + Integration tests |
+| Discovery Speed | 20-30 min → <2 min | 90% faster |
+| Batch Success | 60% → 95%+ | 58% safer |
+| Recovery Time | 15-20 min → <2 min | 87% faster |
+| Annual Savings | 2,500+ hours | 4-6 team |
+| ROI | 62:1 | Break-even: 1 week |
+
+### Implementation Path
+
+**Phase 1** ✅ Complete: Gap 2 — Semantic relationship queries  
+**Phase 2** ✅ Complete: Gap 3 — Batch dry-run + recovery (core + CLI)  
+**Phase 3** ✅ Complete: Gap 4 — Plans workflow threading  
+
+See `docs/sessions/2025-11-22-gap4-plans-integration/SESSION_SUMMARY.md` for detailed implementation report.

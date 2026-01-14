@@ -10,9 +10,9 @@
  */
 
 const path = require('path');
-const { ensureDb } = require('../../db/sqlite/ensureDb');
-const { UrlResolver, chunkArray } = require('../../utils/UrlResolver');
-const { findProjectRoot } = require('../../utils/project-root');
+const { ensureDb } = require('../../data/db/sqlite/ensureDb');
+const { UrlResolver, chunkArray } = require('../../shared/utils/UrlResolver');
+const { findProjectRoot } = require('../../shared/utils/project-root');
 
 const BATCH_SIZE = 100;
 const PROGRESS_INTERVAL = 500;

@@ -8,8 +8,8 @@
  *   node tools/corrections/drop-legacy-tables.js --fix        # Apply changes
  */
 
-const { ensureDatabase } = require('../../src/db/sqlite');
-const { dropLegacyTables } = require('../../src/db/sqlite/v1/queries/maintenance');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { dropLegacyTables } = require('../../src/data/db/sqlite/v1/queries/maintenance');
 const path = require('path');
 
 // Default to dry-run mode, require --fix to apply changes

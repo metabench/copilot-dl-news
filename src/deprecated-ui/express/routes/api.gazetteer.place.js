@@ -4,7 +4,7 @@ const {
   fetchPlaceArticles,
   listPlaceHubs,
   resolvePlaces
-} = require('../data/gazetteerPlace');
+} = require('../../../data/gazetteerPlace');
 
 let cachedArticlePlaceMatcher;
 function getArticlePlaceMatcher() {
@@ -12,7 +12,7 @@ function getArticlePlaceMatcher() {
     return cachedArticlePlaceMatcher;
   }
   try {
-    const mod = require('../../../matching/ArticlePlaceMatcher');
+    const mod = require('../../../intelligence/matching/ArticlePlaceMatcher');
     cachedArticlePlaceMatcher = mod?.ArticlePlaceMatcher || mod || null;
   } catch (_) {
     cachedArticlePlaceMatcher = null;
@@ -31,7 +31,7 @@ function createGazetteerPlaceApiRouter({ urlsDbPath }) {
     const rawId = req.params.id;
     let openDbReadOnly;
     try {
-  ({ openDbReadOnly } = require('../../../db/sqlite'));
+  ({ openDbReadOnly } = require('../../../data/db/sqlite'));
     } catch (err) {
       return res.status(503).json({
         error: 'Database unavailable',
@@ -80,7 +80,7 @@ function createGazetteerPlaceApiRouter({ urlsDbPath }) {
 
     let openDbReadOnly;
     try {
-  ({ openDbReadOnly } = require('../../../db/sqlite'));
+  ({ openDbReadOnly } = require('../../../data/db/sqlite'));
     } catch (err) {
       return res.status(503).json({
         error: 'Database unavailable',
@@ -165,7 +165,7 @@ function createGazetteerPlaceApiRouter({ urlsDbPath }) {
   router.get('/api/gazetteer/hubs', (req, res) => {
     let openDbReadOnly;
     try {
-  ({ openDbReadOnly } = require('../../../db/sqlite'));
+  ({ openDbReadOnly } = require('../../../data/db/sqlite'));
     } catch (_) {
       return res.status(200).json([]);
     }
@@ -192,7 +192,7 @@ function createGazetteerPlaceApiRouter({ urlsDbPath }) {
   router.get('/api/gazetteer/resolve', (req, res) => {
     let openDbReadOnly;
     try {
-  ({ openDbReadOnly } = require('../../../db/sqlite'));
+  ({ openDbReadOnly } = require('../../../data/db/sqlite'));
     } catch (_) {
       return res.status(200).json([]);
     }

@@ -22,8 +22,8 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
-const { CliFormatter } = require('../../src/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 
 const SESSIONS_DIR = path.resolve(process.cwd(), 'docs', 'sessions');
 const ARCHIVE_DIR = path.resolve(process.cwd(), 'docs', 'sessions', 'archive');
@@ -861,3 +861,4 @@ module.exports = {
   extractFromArchive,
   removeFromArchive
 };
+

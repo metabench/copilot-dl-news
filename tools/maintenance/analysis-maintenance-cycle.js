@@ -12,10 +12,10 @@
  */
 
 const path = require('path');
-const { findProjectRoot } = require('../../src/utils/project-root');
+const { findProjectRoot } = require('../../src/shared/utils/project-root');
 const { analysePages } = require('../../src/tools/analyse-pages-core');
 const { runAnalysisPostProcessing } = require('../../src/tools/analyze-post-run');
-const { ensureDatabase } = require('../../src/db/sqlite/v1');
+const { ensureDatabase } = require('../../src/data/db/sqlite/v1');
 const { main: compressUncompressedRecords } = require('../compress-uncompressed-records');
 
 function createColorPalette() {
@@ -508,3 +508,5 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
+

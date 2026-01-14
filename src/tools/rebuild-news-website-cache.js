@@ -8,7 +8,7 @@
  *   node src/tools/rebuild-news-website-cache.js --id 5    # Rebuild specific website
  */
 
-const { withNewsDb } = require('../db/dbAccess');
+const { withNewsDb } = require('../data/db/dbAccess');
 const NewsWebsiteService = require('../services/NewsWebsiteService');
 
 async function main() {

@@ -1,4 +1,4 @@
-const { PredictiveHubDiscovery } = require('../../src/crawler/PredictiveHubDiscovery');
+const { PredictiveHubDiscovery } = require('../../src/core/crawler/PredictiveHubDiscovery');
 const Database = require('better-sqlite3');
 
 const db = new Database(':memory:');
@@ -56,3 +56,4 @@ discovery.predictSiblingHubs('theguardian.com', testUrl, {})
   .finally(() => {
     db.close();
   });
+

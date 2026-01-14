@@ -1,7 +1,7 @@
 "use strict";
 
 const { extractUrl } = require("../lib/extractUrl");
-const { getMajorServersWithCards } = require("../appCatalog");
+const { getMajorServersWithCards, CATEGORIES } = require("../appCatalog");
 
 function escapeHtml(value) {
   return String(value == null ? "" : value)
@@ -305,14 +305,43 @@ function createContentAreaControl(jsgui, {
         return;
       }
 
-      const html = cards.map(({ server, card }) => {
+      // Group cards by category
+      const grouped = {};
+      for (const item of cards) {
+        const cat = item.card.category || "data";
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(item);
+      }
+
+      // Sort categories by their defined order
+      const sortedCategories = Object.keys(grouped).sort((a, b) => {
+        const orderA = CATEGORIES[a]?.order ?? 999;
+        const orderB = CATEGORIES[b]?.order ?? 999;
+        return orderA - orderB;
+      });
+
+      const renderCard = ({ server, card }) => {
         const file = escapeHtml(server && server.file);
         const title = escapeHtml(card && card.title);
         const subtitle = escapeHtml(card && card.subtitle);
         const accent = escapeHtml(card && card.accent);
         const svgPath = escapeHtml(card && card.svgPath);
 
+        const isRunning = server && server.running === true;
         const runningUrl = server && server.runningUrl ? String(server.runningUrl) : "";
+        const port = server && server.detectedPort ? server.detectedPort : (server && server.metadata && server.metadata.defaultPort);
+        
+        // Status badge
+        const statusBadge = isRunning
+          ? `<span class="zs-app-card__status zs-app-card__status--running">\u25CF Running${port ? ` :${port}` : ''}</span>`
+          : `<span class="zs-app-card__status zs-app-card__status--stopped">\u25CB Stopped</span>`;
+
+        // Feature badges
+        const badges = Array.isArray(card.badges) ? card.badges : [];
+        const badgesHtml = badges.length > 0
+          ? `<div class="zs-app-card__badges">${badges.map(b => `<span class="zs-app-card__badge">${escapeHtml(b)}</span>`).join('')}</div>`
+          : '';
+        
         const openBtn = runningUrl
           ? `<button class=\"zs-app-card__open\" data-open-url=\"${escapeHtml(runningUrl)}\" type=\"button\">\ud83c\udf10 Open</button>`
           : "";
@@ -331,14 +360,33 @@ function createContentAreaControl(jsgui, {
           return `<button class=\"zs-app-card__primary zs-app-card__primary--link\" data-primary-action=\"${escapeHtml(primaryAction)}\" data-open-path=\"${escapeHtml(linkPath)}\" type=\"button\">${escapeHtml(label)}</button>`;
         }).filter(Boolean).join("");
 
+        const runningClass = isRunning ? ' zs-app-card--running' : '';
+
         return `
-<div class=\"zs-app-card zs-app-card--${accent}\" data-server-file=\"${file}\" tabindex=\"0\" role=\"button\">
+<div class=\"zs-app-card zs-app-card--${accent}${runningClass}\" data-server-file=\"${file}\" tabindex=\"0\" role=\"button\">
   <div class=\"zs-app-card__top\">
     <div class=\"zs-app-card__svg\"><img src=\"${svgPath}\" alt=\"${title}\"></div>
     <div class=\"zs-app-card__cta\">${primaryBtn}${quickBtns}${openBtn}</div>
   </div>
-  <div class=\"zs-app-card__title\">${title}</div>
+  <div class=\"zs-app-card__header\">
+    <div class=\"zs-app-card__title\">${title}</div>
+    ${statusBadge}
+  </div>
+  ${badgesHtml}
   <div class=\"zs-app-card__subtitle\">${subtitle}</div>
+</div>`;
+      };
+
+      // Render grouped cards with category headers
+      const html = sortedCategories.map(cat => {
+        const catLabel = CATEGORIES[cat]?.label || cat;
+        const catCards = grouped[cat];
+        return `
+<div class="zs-category">
+  <div class="zs-category__header">${escapeHtml(catLabel)}</div>
+  <div class="zs-category__cards">
+    ${catCards.map(renderCard).join("\n")}
+  </div>
 </div>`;
       }).join("\n");
 

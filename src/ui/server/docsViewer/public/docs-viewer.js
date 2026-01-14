@@ -411,77 +411,6 @@
   }
 
   // ========================================
-  // Lazy Loading for Folder Contents
-  // ========================================
-
-  function initLazyFolders() {
-    const tree = document.querySelector(".doc-nav__tree");
-    if (!tree) return;
-    
-    // Listen for details toggle events
-    tree.addEventListener("toggle", function(e) {
-      const details = e.target;
-      if (details.tagName !== "DETAILS" || !details.open) return;
-      
-      const folderPath = details.getAttribute("data-folder-path");
-      if (!folderPath) return;
-      
-      // Check for lazy placeholder
-      const placeholder = details.querySelector(".doc-nav__lazy-placeholder");
-      if (!placeholder) return; // Already loaded
-      
-      // Load folder contents
-      loadFolderContents(details, folderPath, placeholder);
-    }, true);
-  }
-
-  function loadFolderContents(details, folderPath, placeholder) {
-    // Build API URL with current state
-    const basePath = typeof window.__DOCS_VIEWER_BASE_PATH__ === "string" ? window.__DOCS_VIEWER_BASE_PATH__ : "";
-    const url = new URL(`${basePath}/api/folder`, window.location.origin);
-    url.searchParams.set("path", folderPath);
-    
-    // Preserve current filters/sort from page state
-    const currentUrl = new URL(window.location.href);
-    ["show_md", "show_svg", "col_mtime", "sort_by", "sort_order", "doc"].forEach(function(param) {
-      const val = currentUrl.searchParams.get(param);
-      if (val !== null) {
-        url.searchParams.set(param, val);
-      }
-    });
-    
-    // Show loading state
-    placeholder.innerHTML = '<span class="doc-nav__loading">Loading...</span>';
-    
-    fetch(url.toString())
-      .then(function(res) {
-        if (!res.ok) throw new Error("Failed to load folder");
-        return res.json();
-      })
-      .then(function(data) {
-        // Replace placeholder with actual content
-        const tempDiv = document.createElement("div");
-        tempDiv.innerHTML = data.html;
-        
-        // Get the ul element
-        const childList = tempDiv.firstElementChild;
-        if (childList) {
-          details.replaceChild(childList, placeholder);
-          
-          // Remove count badge from folder since it's now expanded
-          const badge = details.querySelector(".doc-nav__count-badge");
-          if (badge) badge.remove();
-        } else {
-          placeholder.innerHTML = '<span class="doc-nav__empty">No items</span>';
-        }
-      })
-      .catch(function(err) {
-        console.error("[docs-viewer] Failed to load folder:", err);
-        placeholder.innerHTML = '<span class="doc-nav__error">Failed to load</span>';
-      });
-  }
-
-  // ========================================
   // Initialize
   // ========================================
 
@@ -493,7 +422,6 @@
     initSmoothScroll();
     initColumnHeader();
     initColumnToggle();
-    initLazyFolders();
   }
 
   // Run on DOM ready, but with a slight delay to let jsgui3 activate first

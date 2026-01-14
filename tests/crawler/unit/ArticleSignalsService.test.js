@@ -1,6 +1,6 @@
 "use strict";
 
-const ArticleSignalsService = require("../../../src/crawler/ArticleSignalsService");
+const ArticleSignalsService = require("../../../src/core/crawler/ArticleSignalsService");
 
 describe("ArticleSignalsService (config-driven patterns)", () => {
   test("uses defaults when no config provided", () => {
@@ -39,3 +39,4 @@ describe("ArticleSignalsService (config-driven patterns)", () => {
     expect(svc.looksLikeArticle("https://example.com/2025/12/15/story")).toBe(true);
   });
 });
+

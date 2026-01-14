@@ -12,7 +12,7 @@
 
 const { URL } = require('url');
 
-const { getDb } = require('../db');
+const { getDb } = require('../data/db');
 
 /**
  * @typedef {Object} ClassificationPrediction
@@ -610,3 +610,4 @@ class UrlClassificationService {
 }
 
 module.exports = { UrlClassificationService };
+

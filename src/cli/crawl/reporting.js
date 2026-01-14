@@ -1,5 +1,5 @@
-const { parsePositiveInteger } = require('../../config/overrideHelpers');
-const { OUTPUT_VERBOSITY_LEVELS } = require('../../utils/outputVerbosity');
+const { parsePositiveInteger } = require('../../shared/config/overrideHelpers');
+const { OUTPUT_VERBOSITY_LEVELS } = require('../../shared/utils/outputVerbosity');
 const { getLoggerWriter } = require('./cliRuntime');
 
 function formatNumber(value) {

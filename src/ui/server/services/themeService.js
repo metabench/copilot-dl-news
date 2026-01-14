@@ -10,22 +10,11 @@
  * @module themeService
  */
 
-// path kept previously for migrations; SQL + migrations now live in src/db.
+const fs = require("fs");
+const path = require("path");
 
-const {
-  ensureUiThemesTable,
-  ensureSystemThemes: ensureSystemThemesInDb,
-  listThemes: listThemesFromDb,
-  getThemeRow,
-  getDefaultThemeRow,
-  createTheme: createThemeInDb,
-  updateTheme: updateThemeInDb,
-  setDefaultTheme: setDefaultThemeInDb,
-  deleteTheme: deleteThemeInDb
-} = require("../../../db/sqlite/v1/queries/ui/uiThemes");
-
-// System theme configurations (used when DB not available)
-const OBSIDIAN_THEME_CONFIG = {
+// Default theme configuration (Obsidian) - used if DB not available
+const DEFAULT_THEME_CONFIG = {
   colors: {
     primary: "#1e293b",
     primaryLight: "#334155",
@@ -45,12 +34,6 @@ const OBSIDIAN_THEME_CONFIG = {
     textSecondary: "#cbd5e1",
     textMuted: "#94a3b8",
     textSubtle: "#64748b",
-    // Optional: mixed-surface tokens (dark theme keeps these aligned)
-    bgGradient: "#0f172a",
-    surfaceText: "#f8fafc",
-    surfaceTextSecondary: "#cbd5e1",
-    surfaceTextMuted: "#94a3b8",
-    surfaceTextSubtle: "#64748b",
     success: "#22c55e",
     successBg: "#14532d",
     warning: "#f59e0b",
@@ -114,149 +97,52 @@ const OBSIDIAN_THEME_CONFIG = {
   }
 };
 
-const WLILO_THEME_CONFIG = {
-  colors: {
-    // Leather background + obsidian panels + gold accents
-    bg: "#faf9f7",
-    bgGradient: "linear-gradient(135deg, #faf9f7 0%, #f5f3ef 55%, #ebe8e2 100%)",
-    bgAlt: "#f5f3ef",
-    surface: "#1a1a1a",
-    surfaceElevated: "#2d2d2d",
-    surfaceHover: "#343434",
-    border: "rgba(201, 169, 98, 0.55)",
-    borderLight: "rgba(232, 213, 163, 0.75)",
-    accent: "#c9a962",
-    accentLight: "#e8d5a3",
-    accentDark: "#a8873e",
-    accentHover: "#e8d5a3",
-    // Text on leather
-    text: "#2d2d2d",
-    textSecondary: "#666666",
-    textMuted: "#888888",
-    textSubtle: "#666666",
-    // Text on obsidian surfaces
-    surfaceText: "#f5f3ef",
-    surfaceTextSecondary: "#d7d3cc",
-    surfaceTextMuted: "#a8a29e",
-    surfaceTextSubtle: "#8b8580",
-    // Status colors (optional)
-    success: "#27ae60",
-    successBg: "rgba(39, 174, 96, 0.15)",
-    warning: "#f59e0b",
-    warningBg: "rgba(245, 158, 11, 0.16)",
-    error: "#ef4444",
-    errorBg: "rgba(239, 68, 68, 0.16)",
-    info: "#2d7dd2",
-    infoBg: "rgba(45, 125, 210, 0.16)",
-    primary: "#1a1a1a",
-    primaryLight: "#2d2d2d",
-    primaryDark: "#0f0f0f"
-  },
-  typography: {
-    fontDisplay: '"Playfair Display", Georgia, serif',
-    fontBody: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    fontMono: '"JetBrains Mono", "Fira Code", Consolas, monospace',
-    fontSizeBase: "16px",
-    fontSizeXs: "0.75rem",
-    fontSizeSm: "0.875rem",
-    fontSizeMd: "1rem",
-    fontSizeLg: "1.125rem",
-    fontSizeXl: "1.25rem",
-    fontSize2xl: "1.5rem",
-    fontSize3xl: "2rem",
-    fontSize4xl: "2.5rem",
-    fontWeightNormal: "400",
-    fontWeightMedium: "500",
-    fontWeightSemibold: "600",
-    fontWeightBold: "700",
-    lineHeightTight: "1.2",
-    lineHeightNormal: "1.5",
-    lineHeightRelaxed: "1.7",
-    letterSpacingTight: "-0.02em",
-    letterSpacingNormal: "0",
-    letterSpacingWide: "0.05em"
-  },
-  spacing: {
-    xs: "4px",
-    sm: "8px",
-    md: "16px",
-    lg: "24px",
-    xl: "32px",
-    "2xl": "48px",
-    "3xl": "64px"
-  },
-  radii: {
-    sm: "6px",
-    md: "12px",
-    lg: "20px",
-    xl: "28px",
-    full: "9999px"
-  },
-  shadows: {
-    sm: "0 2px 8px rgba(0, 0, 0, 0.15)",
-    md: "0 8px 24px rgba(0, 0, 0, 0.18)",
-    lg: "0 16px 48px rgba(0, 0, 0, 0.22)",
-    glow: "0 0 20px rgba(201, 169, 98, 0.25)",
-    inner: "inset 0 2px 4px rgba(0, 0, 0, 0.12)"
-  },
-  transitions: {
-    fast: "0.15s ease",
-    normal: "0.25s ease",
-    slow: "0.4s ease"
-  }
-};
-
-// Default theme configuration - used if DB not available
-const DEFAULT_THEME_CONFIG = WLILO_THEME_CONFIG;
-
-function parseThemeRow(row) {
-  if (!row) return null;
-  try {
-    return { ...row, config: JSON.parse(row.config) };
-  } catch (_) {
-    return { ...row, config: row.config };
-  }
-}
-
-function ensureSystemThemes(db) {
-  if (!db) return false;
-  try {
-    ensureUiThemesTable(db);
-    return ensureSystemThemesInDb(db, {
-      themes: [
-        {
-          name: "obsidian",
-          displayName: "Obsidian",
-          description: "Dark luxury theme with gold accents",
-          config: OBSIDIAN_THEME_CONFIG,
-          isDefault: false
-        },
-        {
-          name: "wlilo",
-          displayName: "WLILO",
-          description: "White Leather + Industrial Luxury Obsidian",
-          config: WLILO_THEME_CONFIG,
-          defaultIfNone: true
-        }
-      ]
-    });
-  } catch (err) {
-    console.error("Failed to ensure system themes:", err.message);
-    return false;
-  }
-}
-
 /**
  * Ensure the ui_themes table exists
  * @param {Object} db - SQLite database handle
  */
 function ensureThemeTable(db) {
   if (!db) return false;
-  const ok = ensureUiThemesTable(db);
-  if (!ok) {
-    console.error("Failed to ensure theme table");
+  
+  try {
+    // Check if table exists
+    const tableCheck = db.prepare(`
+      SELECT name FROM sqlite_master 
+      WHERE type='table' AND name='ui_themes'
+    `).get();
+    
+    if (tableCheck) return true;
+    
+    // Run migration
+    const migrationPath = path.join(__dirname, "../../db/sqlite/v1/migrations/add_ui_themes_table.sql");
+    if (fs.existsSync(migrationPath)) {
+      const migrationSql = fs.readFileSync(migrationPath, "utf8");
+      db.exec(migrationSql);
+      return true;
+    }
+    
+    // Fallback: create table inline
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS ui_themes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        display_name TEXT NOT NULL,
+        description TEXT,
+        config TEXT NOT NULL,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        is_system INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_ui_themes_is_default ON ui_themes (is_default DESC);
+      CREATE INDEX IF NOT EXISTS idx_ui_themes_name ON ui_themes (name);
+    `);
+    
+    return true;
+  } catch (err) {
+    console.error("Failed to ensure theme table:", err.message);
+    return false;
   }
-  return ok;
 }
 
 /**
@@ -268,8 +154,13 @@ function listThemes(db) {
   if (!db) return [];
   
   try {
-    ensureSystemThemes(db);
-    return listThemesFromDb(db);
+    ensureThemeTable(db);
+    const stmt = db.prepare(`
+      SELECT id, name, display_name, description, is_default, is_system, created_at, updated_at
+      FROM ui_themes
+      ORDER BY is_default DESC, display_name ASC
+    `);
+    return stmt.all();
   } catch (err) {
     console.error("Failed to list themes:", err.message);
     return [];
@@ -286,8 +177,19 @@ function getTheme(db, identifier) {
   if (!db) return null;
   
   try {
-    ensureSystemThemes(db);
-    return parseThemeRow(getThemeRow(db, identifier));
+    ensureThemeTable(db);
+    const isNumeric = typeof identifier === "number" || /^\d+$/.test(identifier);
+    const stmt = isNumeric
+      ? db.prepare("SELECT * FROM ui_themes WHERE id = ?")
+      : db.prepare("SELECT * FROM ui_themes WHERE name = ?");
+    
+    const row = stmt.get(identifier);
+    if (!row) return null;
+    
+    return {
+      ...row,
+      config: JSON.parse(row.config)
+    };
   } catch (err) {
     console.error("Failed to get theme:", err.message);
     return null;
@@ -303,9 +205,9 @@ function getDefaultTheme(db) {
   if (!db) {
     return {
       id: 0,
-      name: "wlilo",
-      display_name: "WLILO",
-      description: "White Leather + Industrial Luxury Obsidian",
+      name: "obsidian",
+      display_name: "Obsidian",
+      description: "Dark luxury theme with gold accents",
       config: DEFAULT_THEME_CONFIG,
       is_default: 1,
       is_system: 1
@@ -313,35 +215,41 @@ function getDefaultTheme(db) {
   }
   
   try {
-    ensureSystemThemes(db);
-    const row = getDefaultThemeRow(db);
+    ensureThemeTable(db);
+    const stmt = db.prepare(`
+      SELECT * FROM ui_themes 
+      WHERE is_default = 1 
+      LIMIT 1
+    `);
+    const row = stmt.get();
     
     if (!row) {
-      // No default set, try WLILO then obsidian
-      const wlilo = getTheme(db, "wlilo");
-      if (wlilo) return wlilo;
+      // No default set, try obsidian
       const obsidian = getTheme(db, "obsidian");
       if (obsidian) return obsidian;
       
       // Return hardcoded default
       return {
         id: 0,
-        name: "wlilo",
-        display_name: "WLILO",
-        description: "White Leather + Industrial Luxury Obsidian",
+        name: "obsidian",
+        display_name: "Obsidian",
+        description: "Dark luxury theme with gold accents",
         config: DEFAULT_THEME_CONFIG,
         is_default: 1,
         is_system: 1
       };
     }
     
-    return parseThemeRow(row);
+    return {
+      ...row,
+      config: JSON.parse(row.config)
+    };
   } catch (err) {
     console.error("Failed to get default theme:", err.message);
     return {
       id: 0,
-      name: "wlilo",
-      display_name: "WLILO",
+      name: "obsidian",
+      display_name: "Obsidian",
       config: DEFAULT_THEME_CONFIG,
       is_default: 1,
       is_system: 1
@@ -364,8 +272,20 @@ function createTheme(db, themeData) {
   }
   
   ensureThemeTable(db);
-
-  return parseThemeRow(createThemeInDb(db, { name, displayName, description, config }));
+  
+  const stmt = db.prepare(`
+    INSERT INTO ui_themes (name, display_name, description, config)
+    VALUES (?, ?, ?, ?)
+  `);
+  
+  const result = stmt.run(
+    name.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+    displayName,
+    description || null,
+    JSON.stringify(config)
+  );
+  
+  return getTheme(db, result.lastInsertRowid);
 }
 
 /**
@@ -377,9 +297,43 @@ function createTheme(db, themeData) {
  */
 function updateTheme(db, identifier, updates) {
   if (!db) throw new Error("Database not available");
-
-  const updated = updateThemeInDb(db, identifier, updates);
-  return parseThemeRow(updated);
+  
+  const existing = getTheme(db, identifier);
+  if (!existing) throw new Error(`Theme not found: ${identifier}`);
+  
+  if (existing.is_system && updates.name && updates.name !== existing.name) {
+    throw new Error("Cannot rename system themes");
+  }
+  
+  const fields = [];
+  const values = [];
+  
+  if (updates.displayName !== undefined) {
+    fields.push("display_name = ?");
+    values.push(updates.displayName);
+  }
+  if (updates.description !== undefined) {
+    fields.push("description = ?");
+    values.push(updates.description);
+  }
+  if (updates.config !== undefined) {
+    fields.push("config = ?");
+    values.push(JSON.stringify(updates.config));
+  }
+  
+  if (fields.length === 0) return existing;
+  
+  fields.push("updated_at = datetime('now')");
+  values.push(existing.id);
+  
+  const stmt = db.prepare(`
+    UPDATE ui_themes 
+    SET ${fields.join(", ")}
+    WHERE id = ?
+  `);
+  
+  stmt.run(...values);
+  return getTheme(db, existing.id);
 }
 
 /**
@@ -390,8 +344,14 @@ function updateTheme(db, identifier, updates) {
  */
 function setDefaultTheme(db, identifier) {
   if (!db) throw new Error("Database not available");
-
-  return parseThemeRow(setDefaultThemeInDb(db, identifier));
+  
+  const theme = getTheme(db, identifier);
+  if (!theme) throw new Error(`Theme not found: ${identifier}`);
+  
+  db.exec("UPDATE ui_themes SET is_default = 0");
+  db.prepare("UPDATE ui_themes SET is_default = 1 WHERE id = ?").run(theme.id);
+  
+  return getTheme(db, theme.id);
 }
 
 /**
@@ -402,10 +362,14 @@ function setDefaultTheme(db, identifier) {
  */
 function deleteTheme(db, identifier) {
   if (!db) throw new Error("Database not available");
-
+  
   const theme = getTheme(db, identifier);
   if (!theme) throw new Error(`Theme not found: ${identifier}`);
-
+  
+  if (theme.is_system) {
+    throw new Error("Cannot delete system themes");
+  }
+  
   if (theme.is_default) {
     // Reset to obsidian as default
     const obsidian = getTheme(db, "obsidian");
@@ -413,8 +377,9 @@ function deleteTheme(db, identifier) {
       setDefaultTheme(db, obsidian.id);
     }
   }
-
-  return deleteThemeInDb(db, identifier);
+  
+  db.prepare("DELETE FROM ui_themes WHERE id = ?").run(theme.id);
+  return true;
 }
 
 /**
@@ -486,11 +451,8 @@ function getGoogleFontsLink() {
 }
 
 module.exports = {
-  OBSIDIAN_THEME_CONFIG,
-  WLILO_THEME_CONFIG,
   DEFAULT_THEME_CONFIG,
   ensureThemeTable,
-  ensureSystemThemes,
   listThemes,
   getTheme,
   getDefaultTheme,

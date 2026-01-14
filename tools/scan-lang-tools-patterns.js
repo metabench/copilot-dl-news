@@ -7,7 +7,7 @@
  * 
  * Usage:
  *   node tools/scan-lang-tools-patterns.js <file.js>
- *   node tools/scan-lang-tools-patterns.js src/crawler/**\/*.js
+ *   node tools/scan-lang-tools-patterns.js src/core/crawler/**\/*.js
  */
 
 'use strict';
@@ -165,7 +165,7 @@ async function main() {
   
   if (args.length === 0) {
     console.error('Usage: node scan-lang-tools-patterns.js <file-or-glob>');
-    console.error('Example: node scan-lang-tools-patterns.js src/crawler/**/*.js');
+    console.error('Example: node scan-lang-tools-patterns.js src/core/crawler/**/*.js');
     process.exit(1);
   }
 
@@ -221,3 +221,4 @@ main().catch(err => {
   console.error('Error:', err);
   process.exit(1);
 });
+

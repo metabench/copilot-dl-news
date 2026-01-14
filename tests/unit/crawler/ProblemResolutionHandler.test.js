@@ -1,4 +1,4 @@
-const ProblemResolutionHandler = require('../../../src/crawler/ProblemResolutionHandler');
+const ProblemResolutionHandler = require('../../../src/core/crawler/ProblemResolutionHandler');
 
 describe('ProblemResolutionHandler', () => {
   test('hydrateResolvedHubsFromHistory skips when resolver disabled', async () => {
@@ -47,3 +47,4 @@ describe('ProblemResolutionHandler', () => {
     expect(added.length).toBe(1);
   });
 });
+

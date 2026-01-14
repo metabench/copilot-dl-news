@@ -5,11 +5,11 @@ const path = require('path');
 
 const jsgui = require('jsgui3-html');
 
-const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
+const { resolveBetterSqliteHandle } = require('../utils/serverStartupCheckdashboardModule');
 const { renderPageHtml } = require('../shared');
-const { createPlaceHubDependencies } = require('../../../orchestration/dependencies');
-const { guessPlaceHubsBatch } = require('../../../orchestration/placeHubGuessing');
-const { selectTopicSlugRows } = require('../../../db/sqlite/v1/queries/nonGeoTopicSlugsUiQueries');
+const { createPlaceHubDependencies } = require('../../../core/orchestration/dependencies');
+const { guessPlaceHubsBatch } = require('../../../core/orchestration/placeHubGuessing');
+const { selectTopicSlugRows } = require('../../../data/db/sqlite/v1/queries/nonGeoTopicSlugsUiQueries');
 const { createHubGuessingJobStore } = require('../hubGuessing/utils/hubGuessingJobs');
 const { parseBoolean, parseNumber } = require('../hubGuessing/utils/guessingRequestUtils');
 
@@ -20,7 +20,7 @@ const {
   normalizeSearchQuery,
   clampInt,
   selectTopicHubHosts
-} = require('../../../db/sqlite/v1/queries/topicHubGuessingUiQueries');
+} = require('../../../data/db/sqlite/v1/queries/topicHubGuessingUiQueries');
 
 const { TopicHubGuessingMatrixControl, TopicHubGuessingCellControl } = require('./controls');
 

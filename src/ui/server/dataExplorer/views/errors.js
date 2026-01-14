@@ -8,7 +8,7 @@
  * @module src/ui/server/dataExplorer/views/errors
  */
 
-const { listRecentErrors } = require("../../../../db/sqlite/v1/queries/ui/errors");
+const { listRecentErrors } = require('../../../../data/db/sqlite/v1/queries/ui/errors");
 const {
   buildErrorLogColumns,
   buildErrorLogRows

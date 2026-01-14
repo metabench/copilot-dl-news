@@ -1,8 +1,8 @@
 'use strict';
 
-const { createJsdom } = require('../utils/jsdomUtils');
-const { ensureDb } = require('../db/sqlite');
-const { createBackfillDatesQueries } = require('../db/sqlite/v1/queries/articles.backfillDates');
+const { createJsdom } = require('../shared/utils/jsdomUtils');
+const { ensureDb } = require('../data/db/sqlite');
+const { createBackfillDatesQueries } = require('../data/db/sqlite/v1/queries/articles.backfillDates');
 
 function toIso(value) {
   if (!value) return null;

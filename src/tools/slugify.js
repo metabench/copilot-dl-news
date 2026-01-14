@@ -55,8 +55,62 @@ function normalizeForMatching(s) {
   return normName(s).replace(/[^a-z0-9]/g, '');
 }
 
+/**
+ * Generate multiple URL slug variants for a name.
+ * Used for hub discovery to try different URL formatting strategies.
+ * 
+ * Returns array of { slug, strategy } objects:
+ *   - hyphenated: "state-of-palestine" (most common)
+ *   - compact: "stateofpalestine" (no separators)
+ *   - underscored: "state_of_palestine" (less common)
+ * 
+ * @param {string} name - Place name to slugify
+ * @returns {Array<{slug: string, strategy: string}>}
+ */
+function generateSlugVariants(name) {
+  if (!name) return [];
+  
+  const variants = [];
+  const seenSlugs = new Set();
+  const normalized = normName(name);
+  
+  // Strategy 1: Standard hyphenated (most common)
+  const hyphenated = normalized
+    .replace(/[^a-z0-9\s]/g, '')    // Remove special chars (keep spaces)
+    .replace(/\s+/g, '-')           // Spaces to hyphens
+    .replace(/-+/g, '-')            // Collapse multiple hyphens
+    .replace(/^-|-$/g, '');         // Trim hyphens
+  
+  if (hyphenated && !seenSlugs.has(hyphenated)) {
+    seenSlugs.add(hyphenated);
+    variants.push({ slug: hyphenated, strategy: 'hyphenated' });
+  }
+  
+  // Strategy 2: Compact (no separators)
+  const compact = normalized.replace(/[^a-z0-9]/g, '');
+  if (compact && !seenSlugs.has(compact)) {
+    seenSlugs.add(compact);
+    variants.push({ slug: compact, strategy: 'compact' });
+  }
+  
+  // Strategy 3: Underscored (less common but exists)
+  const underscored = normalized
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+  
+  if (underscored && !seenSlugs.has(underscored)) {
+    seenSlugs.add(underscored);
+    variants.push({ slug: underscored, strategy: 'underscored' });
+  }
+  
+  return variants;
+}
+
 module.exports = {
   normName,
   slugify,
-  normalizeForMatching
+  normalizeForMatching,
+  generateSlugVariants
 };

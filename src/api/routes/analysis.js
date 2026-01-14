@@ -9,7 +9,7 @@ const {
 const {
   countArticlesNeedingAnalysis,
   getAnalysisStatusCounts
-} = require('../../db/queries/analysisQueries');
+} = require('../../data/db/queries/analysisQueries');
 
 function createErrorPayload(code, message) {
   return {

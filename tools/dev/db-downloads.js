@@ -19,7 +19,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 
 // Import DB query module
-const downloadEvidence = require('../../src/db/queries/downloadEvidence');
+const downloadEvidence = require('../../src/data/db/queries/downloadEvidence');
 
 // CLI argument parsing
 const args = process.argv.slice(2);
@@ -525,3 +525,4 @@ function main() {
 }
 
 main();
+

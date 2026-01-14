@@ -4,7 +4,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const { PatternLearner } = require('../../src/services/PatternLearner');
-const { CliFormatter } = require('../../src/utils/CliFormatter');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 
 const fmt = new CliFormatter();
 
@@ -54,3 +54,4 @@ function main() {
 }
 
 main();
+

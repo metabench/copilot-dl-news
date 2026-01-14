@@ -23,13 +23,13 @@
 const fs = require('fs');
 const path = require('path');
 const { performance } = require('perf_hooks');
-const { findProjectRoot } = require('../utils/project-root');
-const { ensureDatabase } = require('../db/sqlite');
-const { analyzePage } = require('../analysis/page-analyzer');
-const { buildGazetteerMatchers } = require('../analysis/place-extraction');
+const { findProjectRoot } = require('../shared/utils/project-root');
+const { ensureDatabase } = require('../data/db/sqlite');
+const { analyzePage } = require('../intelligence/analysis/page-analyzer');
+const { buildGazetteerMatchers } = require('../intelligence/analysis/place-extraction');
 const { loadNonGeoTopicSlugs } = require('./nonGeoTopicSlugs');
 const { ArticleXPathService } = require('../services/ArticleXPathService');
-const { ContentConfidenceScorer } = require('../analysis/ContentConfidenceScorer');
+const { ContentConfidenceScorer } = require('../intelligence/analysis/ContentConfidenceScorer');
 const { DecompressionWorkerPool } = require('../background/workers/DecompressionWorkerPool');
 
 const projectRoot = findProjectRoot(__dirname);

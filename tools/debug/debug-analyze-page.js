@@ -1,8 +1,8 @@
 const path = require('path');
-const { findProjectRoot } = require('../../src/utils/project-root');
-const { ensureDb } = require('../../src/db/sqlite/ensureDb');
-const { analyzePage } = require('../../src/analysis/page-analyzer');
-const { buildGazetteerMatchers } = require('../../src/analysis/place-extraction');
+const { findProjectRoot } = require('../../src/shared/utils/project-root');
+const { ensureDb } = require('../../src/data/db/sqlite/ensureDb');
+const { analyzePage } = require('../../src/intelligence/analysis/page-analyzer');
+const { buildGazetteerMatchers } = require('../../src/intelligence/analysis/place-extraction');
 
 const projectRoot = findProjectRoot(path.join(__dirname, '..', '..'));
 const dbPath = path.join(projectRoot, 'data', 'news.db');
@@ -64,3 +64,5 @@ console.log('places:', result.places?.length);
 console.log('hubCandidate:', result.hubCandidate);
 
 db.close();
+
+

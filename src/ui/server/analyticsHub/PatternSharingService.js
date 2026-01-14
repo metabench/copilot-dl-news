@@ -15,7 +15,7 @@
  * Added 2026-01-06 as part of P2 improvements
  */
 
-const { createPatternSharingQueries } = require('../../../db/sqlite/v1/queries/ui/patternSharing');
+const { createPatternSharingQueries } = require('../../../data/db/sqlite/v1/queries/ui/patternSharing');
 
 class PatternSharingService {
   /**

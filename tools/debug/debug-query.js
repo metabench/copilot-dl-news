@@ -1,6 +1,6 @@
 const path = require('path');
-const { findProjectRoot } = require('../../src/utils/project-root');
-const { ensureDb } = require('../../src/db/sqlite/ensureDb');
+const { findProjectRoot } = require('../../src/shared/utils/project-root');
+const { ensureDb } = require('../../src/data/db/sqlite/ensureDb');
 
 const projectRoot = findProjectRoot(path.join(__dirname, '..', '..'));
 const dbPath = path.join(projectRoot, 'data', 'news.db');
@@ -51,3 +51,5 @@ try {
 } finally {
   db.close();
 }
+
+

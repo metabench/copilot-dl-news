@@ -3,8 +3,8 @@
 const fs = require("fs");
 const path = require("path");
 
-const { openNewsDb } = require("../../../db/dbAccess");
-const { findProjectRoot } = require("../../../utils/project-root");
+const { openNewsDb } = require('../../../data/db/dbAccess");
+const { findProjectRoot } = require('../utils/serverStartupCheckproject-root");
 const { renderHtml, resolveDbPath } = require("../../render-url-table");
 const { DEFAULT_PAGE_SIZE, renderUrlListingView, DATA_VIEWS } = require("../dataExplorerServer");
 const { buildNavLinks } = require("../navigation");

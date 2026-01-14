@@ -11,8 +11,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ensureDatabase } = require('../../src/db/sqlite');
-const { getAllCountries } = require('../../src/db/sqlite/queries/gazetteer.places');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { getAllCountries } = require('../../src/data/db/sqlite/queries/gazetteer.places');
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -172,3 +172,4 @@ if (withCounts) {
 
 // Close database
 db.close();
+

@@ -18,10 +18,10 @@
  *   validate        Validate current database integrity
  */
 
-const { MigrationOrchestrator } = require('../src/db/migration/orchestrator');
-const { SchemaVersionManager } = require('../src/db/migration/schema-versions');
-const { DataValidator } = require('../src/db/migration/validator');
-const { ensureDb } = require('../src/db/sqlite/v1/ensureDb');
+const { MigrationOrchestrator } = require('../src/data/db/migration/orchestrator');
+const { SchemaVersionManager } = require('../src/data/db/migration/schema-versions');
+const { DataValidator } = require('../src/data/db/migration/validator');
+const { ensureDb } = require('../src/data/db/sqlite/v1/ensureDb');
 const path = require('path');
 const fs = require('fs');
 

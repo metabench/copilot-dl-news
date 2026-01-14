@@ -14,11 +14,11 @@
  */
 
 const path = require('path');
-const { findProjectRoot } = require('../utils/project-root');
-const { ensureDb } = require('../db/sqlite');
-const { CliFormatter } = require('../utils/CliFormatter');
-const { CliArgumentParser } = require('../utils/CliArgumentParser');
-const { createShowAnalysisQueries } = require('../db/sqlite/v1/queries/analysis.showAnalysis');
+const { findProjectRoot } = require('../shared/utils/project-root');
+const { ensureDb } = require('../data/db/sqlite');
+const { CliFormatter } = require('../shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');
+const { createShowAnalysisQueries } = require('../data/db/sqlite/v1/queries/analysis.showAnalysis');
 
 const projectRoot = findProjectRoot(__dirname);
 const fmt = new CliFormatter();

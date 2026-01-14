@@ -25,7 +25,7 @@ const jsgui = require("jsgui3-client");
 const { DesignAppControl } = require("./isomorphic/controls/DesignAppControl");
 const { DesignNavControl } = require("./isomorphic/controls/DesignNavControl");
 const { DesignViewerControl } = require("./isomorphic/controls/DesignViewerControl");
-const { ResizableSplitLayoutControl } = require("../shared/isomorphic/controls");
+const { ResizableSplitLayoutControl } = require('../../../shared/isomorphic/controls");
 
 // Control type map for lookup by data-jsgui-control attribute value
 const CONTROL_TYPES = {

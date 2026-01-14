@@ -15,7 +15,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 
-const { findProjectRoot } = require('../../utils/project-root');
+const { findProjectRoot } = require('../../shared/utils/project-root');
 
 const DEFAULT_PORT = 3020;
 const ROADMAP_FILE = path.join(findProjectRoot(), 'data', 'roadmap.json');

@@ -1,6 +1,6 @@
 'use strict';
 
-const { getDb } = require('../db');
+const { getDb } = require('../data/db');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 const { slugify } = require('../tools/slugify');
 
@@ -63,7 +63,7 @@ class TopicHubGapAnalyzer extends HubGapAnalyzerBase {
   }
 
   /**
-   * Get top topics by importance/frequency
+   * Get topics (up to limit)
    * @param {number} limit - Maximum topics to return
    * @returns {Array<Object>} Topic entities
    */

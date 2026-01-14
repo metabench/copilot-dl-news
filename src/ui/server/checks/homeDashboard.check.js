@@ -5,8 +5,8 @@ const path = require("path");
 
 const { renderHtml, resolveDbPath } = require("../../render-url-table");
 const { DATA_VIEWS } = require("../dataExplorerServer");
-const { openNewsDb } = require("../../../db/dbAccess");
-const { findProjectRoot } = require("../../../utils/project-root");
+const { openNewsDb } = require('../../../data/db/dbAccess");
+const { findProjectRoot } = require('../utils/serverStartupCheckproject-root");
 const { buildNavLinks } = require("../navigation");
 
 function createHomePayload() {

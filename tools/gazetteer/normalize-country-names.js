@@ -3,7 +3,7 @@
 'use strict';
 
 const path = require('path');
-const { ensureDatabase } = require('../../src/db/sqlite');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
 
 function parseArgs(argv) {
   const args = {
@@ -196,3 +196,4 @@ function main() {
 if (require.main === module) {
   main();
 }
+

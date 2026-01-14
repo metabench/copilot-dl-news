@@ -2,7 +2,7 @@ const {
   is_defined,
   collectStatusCounts,
   normalizeStatus
-} = require('../shared/renderer-utils');
+} = require('../../../../shared/renderer-utils');
 
 function normalizeRow(row) {
   const status = normalizeStatus(row.status, { paused: false });

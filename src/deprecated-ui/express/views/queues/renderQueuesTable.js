@@ -6,7 +6,7 @@
 const {
   escapeHtml,
   is_defined
-} = require('../shared/renderer-utils');
+} = require('../../../../shared/renderer-utils');
 
 /**
  * Render a single queue row

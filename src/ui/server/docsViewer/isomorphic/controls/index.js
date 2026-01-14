@@ -12,8 +12,8 @@
  * - All controls use require("../jsgui") which resolves to the correct implementation
  */
 
-// Layout controls - use shared version (same as Design Studio) for consistent behavior
-const { ResizableSplitLayoutControl } = require("../../../shared/isomorphic/controls");
+// Layout controls
+const { ResizableSplitLayoutControl } = require("./ResizableSplitLayoutControl");
 
 // App structure controls
 const { DocAppControl } = require("./DocAppControl");
@@ -28,7 +28,6 @@ const { DocsThemeToggleControl } = require("./DocsThemeToggleControl");
 const { DocsNavToggleControl } = require("./DocsNavToggleControl");
 const { DocsSearchControl } = require("./DocsSearchControl");
 const { DocsFileFilterControl } = require("./DocsFileFilterControl");
-const { DocNavigationControl } = require("./DocNavigationControl");
 
 module.exports = {
   // Layout
@@ -47,6 +46,5 @@ module.exports = {
   DocsThemeToggleControl,
   DocsNavToggleControl,
   DocsSearchControl,
-  DocsFileFilterControl,
-  DocNavigationControl
+  DocsFileFilterControl
 };

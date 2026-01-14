@@ -2,8 +2,8 @@
 // Maintenance tool for the SQLite DB: dedupe and enforce constraints
 
 const path = require('path');
-const { ensureDb, dedupePlaceSources } = require('../db/sqlite/v1/index');
-const { repairGazetteer } = require('../db/sqlite/v1/tools/gazetteerQA');
+const { ensureDb, dedupePlaceSources } = require('../data/db/sqlite/v1/index');
+const { repairGazetteer } = require('../data/db/sqlite/v1/tools/gazetteerQA');
 const {
   countPlaces,
   countPlaceNames,
@@ -11,7 +11,7 @@ const {
   trimPlaceNames,
   deleteEmptyPlaceNames,
   deleteNamelessPlaces
-} = require('../db/sqlite/v1/tools/maintainDb');
+} = require('../data/db/sqlite/v1/tools/maintainDb');
 
 function parseArgs(argv) {
   const args = {};

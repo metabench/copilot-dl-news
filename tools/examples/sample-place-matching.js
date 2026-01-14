@@ -6,8 +6,8 @@
  * Usage: node sample-place-matching.js
  */
 
-const { ensureDatabase } = require('./src/db/sqlite/v1');
-const { ArticlePlaceMatcher } = require('./src/matching/ArticlePlaceMatcher');
+const { ensureDatabase } = require('../src/data/db/sqlite/v1');
+const { ArticlePlaceMatcher } = require('../src/intelligence/matching/ArticlePlaceMatcher');
 
 // Simple HTML text extraction (strips tags and normalizes whitespace)
 function extractTextFromHtml(html) {

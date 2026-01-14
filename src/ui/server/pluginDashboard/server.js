@@ -640,3 +640,4 @@ if (require.main === module) {
 }
 
 module.exports = { app, initPluginManager, PORT, createPluginDashboardRouter };
+

@@ -8,7 +8,7 @@
  */
 
 const { WorkspaceService } = require('../../src/teams/WorkspaceService');
-const { ROLES, ACTIVITY_ACTIONS } = require('../../src/db/sqlite/v1/queries/workspaceAdapter');
+const { ROLES, ACTIVITY_ACTIONS } = require('../../src/data/db/sqlite/v1/queries/workspaceAdapter');
 
 describe('WorkspaceService', () => {
   let service;
@@ -512,3 +512,4 @@ describe('WorkspaceService', () => {
     });
   });
 });
+

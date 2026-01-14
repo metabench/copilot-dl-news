@@ -3,7 +3,7 @@ const {
   toNumber,
   normalizeStatus,
   collectStatusCounts
-} = require('../shared/renderer-utils');
+} = require('../../../../shared/renderer-utils');
 
 function getMetric(row, key) {
   if (row.metrics && is_defined(row.metrics[key])) return row.metrics[key];

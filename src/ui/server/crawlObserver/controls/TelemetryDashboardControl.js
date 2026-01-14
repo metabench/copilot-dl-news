@@ -1,7 +1,7 @@
 'use strict';
 
 const jsgui = require('jsgui3-html');
-const { makeTextEl } = require('../../utils/jsgui3Helpers');
+const { makeTextEl } = require('../../shared/utils/jsgui3Helpers');
 
 class TelemetryDashboardControl extends jsgui.Control {
   constructor(spec) {

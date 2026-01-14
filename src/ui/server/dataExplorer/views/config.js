@@ -8,8 +8,8 @@
  * @module src/ui/server/dataExplorer/views/config
  */
 
-const { formatDateTime } = require("../utils/formatting");
-const { listConfiguration } = require("../../../../db/sqlite/v1/queries/ui/configuration");
+const { formatDateTime } = require('../../utils/serverStartupCheckformatting");
+const { listConfiguration } = require('../../../../data/db/sqlite/v1/queries/ui/configuration");
 const { ConfigMatrixControl } = require("../../../controls/ConfigMatrixControl");
 const { buildViewMeta } = require("./shared");
 

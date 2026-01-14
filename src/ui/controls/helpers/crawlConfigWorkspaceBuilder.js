@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const yaml = require("js-yaml");
-const { findProjectRoot } = require("../../../utils/project-root");
+const { findProjectRoot } = require('../../../shared/utils/project-root");
 
 function safeReadFile(filePath) {
   if (!filePath || !fs.existsSync(filePath)) {

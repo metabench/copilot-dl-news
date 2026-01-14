@@ -1,4 +1,4 @@
-const { parseSharedOverrides, applyContextOverrideFlags, parsePositiveInteger } = require('../../config/overrideHelpers');
+const { parseSharedOverrides, applyContextOverrideFlags, parsePositiveInteger } = require('../../shared/config/overrideHelpers');
 
 // Import shared utilities (DRY)
 const { parseCommaSeparated, ensureAbsoluteUrl } = require('./shared');

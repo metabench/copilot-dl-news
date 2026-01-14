@@ -11,8 +11,8 @@ const fs = require('fs');
 const path = require('path');
 const { is_array, tof, fp } = require('lang-tools');
 const os = require('os');
-const { findProjectRoot } = require('../utils/project-root');
-const { ensureDb } = require('../db/sqlite');
+const { findProjectRoot } = require('../shared/utils/project-root');
+const { ensureDb } = require('../data/db/sqlite');
 
 const DEFAULT_WARMUP = 1;
 const DEFAULT_ITERATIONS = 5;

@@ -7,7 +7,7 @@
  * Provides standardized prediction strategies that can be configured for different entity types.
  */
 
-const { getDb } = require('../../db');
+const { getDb } = require('../../data/db');
 
 class PredictionStrategyManager {
   /**

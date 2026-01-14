@@ -3,16 +3,16 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const NewsCrawler = require('./crawler/NewsCrawler');
+const NewsCrawler = require('./core/crawler/NewsCrawler');
 const {
   runLegacyCommand,
   HELP_TEXT
-} = require('./crawler/cli/runLegacyCommand');
+} = require('./core/crawler/cli/runLegacyCommand');
 const {
   resolveCliArguments,
   DEFAULT_CONFIG_FILENAME
-} = require('./crawler/cli/configArgs');
-const { renderCliError } = require('./crawler/cli/errorRenderer');
+} = require('./core/crawler/cli/configArgs');
+const { renderCliError } = require('./core/crawler/cli/errorRenderer');
 
 const CONFIG_FILENAME = DEFAULT_CONFIG_FILENAME;
 

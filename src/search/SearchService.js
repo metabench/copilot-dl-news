@@ -13,7 +13,7 @@
  *   - Performance metrics
  */
 
-const { createSearchAdapter, BM25_WEIGHTS } = require('../db/sqlite/v1/queries/searchAdapter');
+const { createSearchAdapter, BM25_WEIGHTS } = require('../data/db/sqlite/v1/queries/searchAdapter');
 
 class SearchService {
   /**

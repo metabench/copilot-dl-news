@@ -2,13 +2,13 @@ const express = require('express');
 const { performance } = require('perf_hooks');
 const { CrawlOrchestrationService } = require('../services/core/CrawlOrchestrationService');
 const { JobEventHandlerService } = require('../services/core/JobEventHandlerService');
-const { recordCrawlJobStart, markCrawlJobStatus } = require('../data/crawlJobs');
+const { recordCrawlJobStart, markCrawlJobStatus } = require('../../../data/crawlJobs');
 const {
   insertQueueEvent,
   insertCrawlProblem,
   insertPlannerStageEvent,
   insertCrawlMilestone
-} = require('../data/crawlEvents');
+} = require('../../../data/crawlEvents');
 const { 
   CrawlAlreadyRunningError, 
   InvalidCrawlOptionsError 

@@ -9,10 +9,10 @@
 
 const https = require('https');
 const http = require('http');
-const { ensureDatabase } = require('../src/db/sqlite');
-const HubValidator = require('../src/hub-validation/HubValidator');
-const { createJsdom } = require('../src/utils/jsdomUtils');
-const { summarizeLinks } = require('../src/utils/linkClassification');
+const { ensureDatabase } = require('../src/data/db/sqlite');
+const HubValidator = require('../src/geo/hub-validation/HubValidator');
+const { createJsdom } = require('../src/shared/utils/jsdomUtils');
+const { summarizeLinks } = require('../src/shared/utils/linkClassification');
 
 class HubAnalysisWorkflow {
   constructor(db) {

@@ -14,7 +14,7 @@
  */
 
 const express = require('express');
-const { ExportService } = require('../../../export/ExportService');
+const { ExportService } = require('../../../data/export/ExportService');
 
 /**
  * Create export router

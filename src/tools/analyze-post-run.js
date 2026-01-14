@@ -10,9 +10,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const { findProjectRoot } = require('../utils/project-root');
-const { ensureDatabase } = require('../db/sqlite/v1');
-const { CompressionAnalytics } = require('../utils/CompressionAnalytics');
+const { findProjectRoot } = require('../shared/utils/project-root');
+const { ensureDatabase } = require('../data/db/sqlite/v1');
+const { CompressionAnalytics } = require('../shared/utils/CompressionAnalytics');
 
 function normalizeSummary(summary = {}) {
   const value = summary && typeof summary === 'object' ? summary : {};

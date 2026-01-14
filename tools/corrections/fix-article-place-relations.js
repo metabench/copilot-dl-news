@@ -4,7 +4,7 @@
  * Fix article_place_relations foreign key constraint
  */
 
-const { ensureDatabase } = require('./src/db/sqlite/v1');
+const { ensureDatabase } = require('../src/data/db/sqlite/v1');
 
 function fixArticlePlaceRelations() {
   console.log('Fixing article_place_relations foreign key constraint...');

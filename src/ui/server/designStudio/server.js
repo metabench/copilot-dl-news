@@ -30,9 +30,9 @@ const jsgui = require("jsgui3-html");
 const { Command } = require("commander");
 
 const { DesignAppControl } = require("./isomorphic/controls");
-const { buildFileTree } = require("../shared/utils/fileTree");
-const { renderSvgContent } = require("../shared/utils/svgRenderer");
-const { wrapServerForCheck } = require("../utils/serverStartupCheck");
+const { buildFileTree } = require('../utils/serverStartupCheckfileTree");
+const { renderSvgContent } = require('../utils/serverStartupChecksvgRenderer");
+const { wrapServerForCheck } = require('../utils/serverStartupCheck");
 
 const DEFAULT_PORT = 4900;
 const DEFAULT_DESIGN_PATH = path.join(__dirname, "../../../../design");
@@ -473,3 +473,4 @@ module.exports = {
   DEFAULT_PORT,
   DEFAULT_DESIGN_PATH
 };
+

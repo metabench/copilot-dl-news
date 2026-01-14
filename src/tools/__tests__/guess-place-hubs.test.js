@@ -3,7 +3,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { ensureDb } = require('../../db/sqlite/ensureDb');
+const { ensureDb } = require('../../data/db/sqlite/ensureDb');
 const { guessPlaceHubs } = require('../guess-place-hubs');
 
 async function cleanupTempSqlite(dbPath) {

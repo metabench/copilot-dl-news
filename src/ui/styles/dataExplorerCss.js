@@ -37,7 +37,7 @@ html {
 body {
   margin: 0;
   padding: 0;
-  background: var(--theme-bg-gradient, var(--theme-bg));
+  background: var(--theme-bg);
   color: var(--theme-text);
   min-height: 100vh;
 }
@@ -203,7 +203,7 @@ code, pre, .mono {
   border: 1px solid transparent;
   font-size: var(--theme-font-size-sm);
   font-weight: var(--theme-font-weight-semibold);
-  color: var(--theme-surface-text-secondary, var(--theme-text-secondary));
+  color: var(--theme-text-secondary);
   background: var(--theme-surface);
   text-decoration: none;
   transition: all var(--theme-transition-fast);
@@ -211,7 +211,7 @@ code, pre, .mono {
 
 .primary-nav__link:hover {
   background: var(--theme-surface-hover);
-  color: var(--theme-surface-text, var(--theme-text));
+  color: var(--theme-text);
   text-decoration: none;
 }
 
@@ -298,7 +298,6 @@ code, pre, .mono {
   border-radius: var(--theme-radius-lg);
   padding: var(--theme-space-md) var(--theme-space-lg);
   box-shadow: var(--theme-shadow-md);
-  color: var(--theme-surface-text, var(--theme-text));
   display: flex;
   flex-direction: column;
   gap: var(--theme-space-md);
@@ -320,13 +319,13 @@ code, pre, .mono {
 
 .dashboard-panel__head h2 {
   font-size: var(--theme-font-size-lg);
-  color: var(--theme-surface-text, var(--theme-text));
+  color: var(--theme-text);
   font-family: var(--theme-font-display);
 }
 
 .dashboard-panel__meta {
   font-size: var(--theme-font-size-sm);
-  color: var(--theme-surface-text-muted, var(--theme-text-muted));
+  color: var(--theme-text-muted);
 }
 
 .dashboard-panel__body {
@@ -339,7 +338,7 @@ code, pre, .mono {
 .dashboard-panel__footer {
   margin-top: auto;
   font-size: var(--theme-font-size-sm);
-  color: var(--theme-surface-text-muted, var(--theme-text-muted));
+  color: var(--theme-text-muted);
   border-top: 1px solid var(--theme-border);
   padding-top: var(--theme-space-sm);
 }
@@ -362,7 +361,7 @@ code, pre, .mono {
   font-size: var(--theme-font-size-sm);
   font-weight: var(--theme-font-weight-semibold);
   background: var(--theme-surface-elevated);
-  color: var(--theme-surface-text-secondary, var(--theme-text-secondary));
+  color: var(--theme-text-secondary);
 }
 
 .status-pill--paused {
@@ -389,7 +388,7 @@ code, pre, .mono {
 .startup-status__text {
   margin: 0;
   font-size: var(--theme-font-size-sm);
-  color: var(--theme-surface-text, var(--theme-text));
+  color: var(--theme-text);
 }
 
 .startup-progress {
@@ -398,122 +397,6 @@ code, pre, .mono {
   border-radius: var(--theme-radius-full);
   background: var(--theme-surface);
   overflow: hidden;
-}
-
-/* ========================================
-   Shared Controls (Search + Metric Cards)
-   ======================================== */
-.search-form {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0;
-  margin: 0;
-}
-
-.search-form__home-link {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.45rem 0.85rem;
-  border-radius: var(--theme-radius-full);
-  background: var(--theme-surface);
-  border: 1px solid var(--theme-border);
-  color: var(--theme-surface-text, var(--theme-text));
-  font-weight: var(--theme-font-weight-semibold);
-  text-decoration: none;
-}
-
-.search-form__home-link:hover {
-  background: var(--theme-surface-hover);
-  text-decoration: none;
-}
-
-.search-form__input,
-.search-form__select {
-  height: 40px;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--theme-radius-md);
-  border: 1px solid var(--theme-border);
-  background: var(--theme-surface);
-  color: var(--theme-surface-text, var(--theme-text));
-  font-size: var(--theme-font-size-sm);
-  min-width: 220px;
-}
-
-.search-form__select {
-  min-width: 160px;
-}
-
-.search-form__input::placeholder {
-  color: var(--theme-surface-text-muted, var(--theme-text-muted));
-}
-
-.search-form__input:focus,
-.search-form__select:focus {
-  outline: none;
-  box-shadow: var(--theme-shadow-glow);
-  border-color: var(--theme-accent);
-}
-
-.search-form__button {
-  height: 40px;
-  padding: 0 14px;
-  border-radius: var(--theme-radius-md);
-  border: 1px solid var(--theme-accent-dark);
-  background: var(--theme-accent);
-  color: var(--theme-bg);
-  font-size: 1rem;
-  font-weight: var(--theme-font-weight-semibold);
-  cursor: pointer;
-  transition: all var(--theme-transition-fast);
-}
-
-.search-form__button:hover {
-  background: var(--theme-accent-hover);
-  box-shadow: var(--theme-shadow-glow);
-}
-
-.metric-card,
-.data-explorer__card {
-  background: var(--theme-surface);
-  border: 1px solid var(--theme-border);
-  border-radius: var(--theme-radius-lg);
-  padding: var(--theme-space-md);
-  box-shadow: var(--theme-shadow-sm);
-  color: var(--theme-surface-text, var(--theme-text));
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.metric-card__title {
-  margin: 0;
-  font-size: var(--theme-font-size-sm);
-  letter-spacing: 0.01em;
-  color: var(--theme-surface-text-secondary, var(--theme-text-secondary));
-  font-family: var(--theme-font-body);
-  font-weight: var(--theme-font-weight-semibold);
-}
-
-.metric-card__link {
-  color: inherit;
-  text-decoration: none;
-}
-
-.metric-card__link:hover {
-  text-decoration: underline;
-}
-
-.metric-card__value {
-  font-size: var(--theme-font-size-2xl);
-  font-weight: var(--theme-font-weight-bold);
-  font-feature-settings: "tnum" 1;
-  color: var(--theme-surface-text, var(--theme-text));
-}
-
-.metric-card__subtitle {
-  font-size: var(--theme-font-size-sm);
-  color: var(--theme-surface-text-muted, var(--theme-text-muted));
 }
 
 .startup-progress__fill {
@@ -659,49 +542,6 @@ code, pre, .mono {
   font-weight: var(--theme-font-weight-semibold);
   color: var(--theme-text);
   font-family: var(--theme-font-mono);
-}
-
-.job-card-progress {
-  display: flex;
-  align-items: center;
-  gap: var(--theme-space-sm);
-  margin-top: 10px;
-}
-
-.job-card-progress-bar {
-  flex: 1;
-  height: 8px;
-  border-radius: 999px;
-  border: 1px solid var(--theme-border);
-  background: var(--theme-surface-2, rgba(0, 0, 0, 0.04));
-  overflow: hidden;
-  position: relative;
-  min-width: 140px;
-}
-
-.job-card-progress-fill {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, var(--theme-accent), var(--theme-success, #2ecc71));
-}
-
-.job-card-progress-value {
-  font-size: var(--theme-font-size-xs);
-  color: var(--theme-text-muted);
-  font-family: var(--theme-font-mono);
-}
-
-.job-card-progress-bar--indeterminate .job-card-progress-fill {
-  width: 40%;
-  position: absolute;
-  left: -40%;
-  animation: jobCardProgressSlide 1200ms ease-in-out infinite;
-}
-
-@keyframes jobCardProgressSlide {
-  0% { left: -40%; }
-  50% { left: 60%; }
-  100% { left: 100%; }
 }
 
 /* ========================================
@@ -871,7 +711,7 @@ code, pre, .mono {
   width: 18px;
   left: 2px;
   bottom: 1px;
-  background-color: var(--theme-surface-text-secondary, var(--theme-text-secondary));
+  background-color: var(--theme-text-secondary);
   border-radius: 50%;
   transition: transform var(--theme-transition-fast);
   box-shadow: var(--theme-shadow-sm);
@@ -906,7 +746,6 @@ code, pre, .mono {
   border-radius: var(--theme-radius-lg);
   padding: var(--theme-space-lg);
   box-shadow: var(--theme-shadow-lg);
-  color: var(--theme-surface-text, var(--theme-text));
 }
 
 @media (min-width: 1500px) {
@@ -937,10 +776,9 @@ code, pre, .mono {
 .panel__filters {
   margin-bottom: var(--theme-space-md);
   padding: var(--theme-space-md);
-  background: var(--theme-surface-elevated, var(--theme-bg-alt));
+  background: var(--theme-bg-alt);
   border: 1px solid var(--theme-border);
   border-radius: var(--theme-radius-sm);
-  color: var(--theme-surface-text, var(--theme-text));
 }
 
 /* ========================================
@@ -961,7 +799,7 @@ code, pre, .mono {
 
 .filter-controls__label {
   font-size: var(--theme-font-size-sm);
-  color: var(--theme-surface-text-muted, var(--theme-text-muted));
+  color: var(--theme-text-muted);
 }
 
 .filter-controls__select {
@@ -970,7 +808,7 @@ code, pre, .mono {
   border: 1px solid var(--theme-border);
   border-radius: var(--theme-radius-sm);
   background: var(--theme-surface);
-  color: var(--theme-surface-text, var(--theme-text));
+  color: var(--theme-text);
   cursor: pointer;
   font-family: var(--theme-font-body);
 }
@@ -991,7 +829,7 @@ code, pre, .mono {
   gap: var(--theme-space-sm);
   cursor: pointer;
   font-size: var(--theme-font-size-sm);
-  color: var(--theme-surface-text-muted, var(--theme-text-muted));
+  color: var(--theme-text-muted);
 }
 
 .filter-controls__checkbox {

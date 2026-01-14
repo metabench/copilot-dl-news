@@ -1,8 +1,8 @@
 const express = require('express');
-const { listRecentCrawls } = require('../data/crawls');
+const { listRecentCrawls } = require('../../../data/crawls');
 const { renderCrawlsListPage, streamCrawlsListPage } = require('../views/crawlsListPage');
 const { createCrawlsViewModel } = require('../views/crawls/createCrawlsViewModel');
-const { createRenderContext } = require('../utils/html');
+const { createRenderContext } = require('../../../shared/utils/html');
 const { errorPage } = require('../components/base');
 
 function parseArgs(raw) {

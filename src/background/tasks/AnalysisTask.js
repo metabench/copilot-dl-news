@@ -11,8 +11,8 @@
 
 const { analysePages } = require('../../tools/analyse-pages-core');
 const { awardMilestones } = require('../../tools/milestones');
-const { countArticlesNeedingAnalysis } = require('../../db/queries/analysisQueries');
-const { ArticlePlaceMatcher } = require('../../matching/ArticlePlaceMatcher');
+const { countArticlesNeedingAnalysis } = require('../../data/db/queries/analysisQueries');
+const { ArticlePlaceMatcher } = require('../../intelligence/matching/ArticlePlaceMatcher');
 const { tof } = require('lang-tools');
 
 /**

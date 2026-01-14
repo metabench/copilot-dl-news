@@ -1,7 +1,7 @@
 'use strict';
 
-const { RetryCoordinator } = require('../../../src/crawler/retry');
-const { CrawlContext } = require('../../../src/crawler/context');
+const { RetryCoordinator } = require('../../../src/core/crawler/retry');
+const { CrawlContext } = require('../../../src/core/crawler/context');
 
 describe('RetryCoordinator', () => {
   let coordinator;
@@ -370,3 +370,4 @@ describe('RetryCoordinator', () => {
     });
   });
 });
+

@@ -9,7 +9,7 @@ const {
   formatTimestamp,
   formatDuration,
   normalizeStatus
-} = require('../shared/renderer-utils');
+} = require('../../../../shared/renderer-utils');
 
 function pickMetric(row, key) {
   if (row.metrics && is_defined(row.metrics[key])) return row.metrics[key];

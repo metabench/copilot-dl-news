@@ -1,7 +1,7 @@
 'use strict';
 
 const jsgui = require('jsgui3-html');
-const { addText, makeTextEl, makeTd, makeTh, makeButton, makeLink } = require('../../utils/jsgui3Helpers');
+const { addText, makeTextEl, makeTd, makeTh, makeButton, makeLink } = require('../../shared/utils/jsgui3Helpers');
 
 class TaskDetailControl extends jsgui.Control {
   constructor(spec) {
