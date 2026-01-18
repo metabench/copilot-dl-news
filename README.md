@@ -2,13 +2,189 @@
 
 **When to Read**: This is the main README for the project. Read this first to get a high-level overview of the project's features, how to install and run it, and the available configuration options. It's the best starting point for new developers.
 
-A focused crawler for news sites: detects navigation, finds articles, and saves structured data to SQLite with a live UI.
+A comprehensive web crawler and data analysis platform for news sites with intelligent navigation detection, geographic data collection, and powerful visualization tools. The system combines a modular crawler engine with multiple specialized UI applications for data exploration, content analysis, and system monitoring.
+
+## Table of Contents
+
+- [🏗️ Architecture Overview](#️-architecture-overview)
+- [📁 Source Code Structure](#-source-code-structure)
+- [🚀 Getting Started](#-getting-started)
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Command Line Interface](#command-line-interface)
+  - [CLI Quick Reference](#cli-quick-reference)
+  - [Gazetteer Utilities](#gazetteer-utilities)
+  - [Benchmark Crawl SQL Performance](#benchmark-crawl-sql-performance)
+- [🎨 UI Applications](#-ui-applications)
+- [Sitemap Options](#sitemap-options)
+- [Intelligent Crawl & Diagnostics](#intelligent-crawl--diagnostics)
+- [Problems & Milestones Pages](#problems--milestones-pages)
+- [Queue Events](#queue-events)
+- [Freshness Policy](#freshness-policy-refetch-windows)
+- [Multi-Job Mode](#multi-job-mode)
+- [Crawl Types](#crawl-types)
+- [Page Analysis & Gazetteer](#page-analysis--gazetteer)
+- [Programmatic Usage](#programmatic-usage)
+- [Telemetry API](#telemetry-api)
+- [Scripts](#scripts)
+- [Background Tasks](#background-tasks)
+- [🛠️ Tools & Utilities](#️-tools--utilities)
+- [Common Crawler Issues](#common-crawler-issues)
+- [Debug Tools](#debug-tools)
+- [Performance Issues](#performance-issues)
+- [Advanced Crawler Configuration](#advanced-crawler-configuration)
+- [Output Format](#output-format)
+- [SQLite Database](#sqlite-database)
+- [Observability](#observability)
+- [Navigation Detection](#navigation-detection)
+- [Article Detection](#article-detection)
+- [Ethical Crawling](#ethical-crawling)
+- [Reset / Cleanup](#reset--cleanup)
+- [Dependencies](#dependencies)
+- [Domain Analysis](#domain-analysis-news-site-heuristic)
+- [Tests](#tests)
+- [📚 Documentation](#-documentation)
+- [License](#license)
+
+## 🏗️ Architecture Overview
+
+This project is a **multi-layered system** consisting of:
+
+- **Crawler Engine** (`src/crawler/`, `src/crawl.js`) - Intelligent web crawler with navigation detection, sitemap parsing, rate limiting, and adaptive planning
+- **Database Layer** (`src/db/`) - SQLite-based persistence with comprehensive schema, migrations, and adapters  
+- **API Server** (`src/api/`, `src/deprecated-ui/express/`) - RESTful API and Server-Sent Events (SSE) for real-time updates
+- **UI Applications** (`src/ui/server/`) - Multiple specialized web UIs for different workflows (see [UI Applications](#-ui-applications) below)
+- **Analysis Pipeline** (`src/analysis/`) - Content analysis, place extraction, sentiment analysis, and quality metrics
+- **Tools & Utilities** (`tools/`) - Development, debugging, maintenance, and automation scripts
+- **Background Tasks** (`src/background/`) - Long-running operations for compression, export, analysis, and maintenance
+
+**Key Technologies**: Node.js, SQLite (better-sqlite3), Express, jsgui3-html (isomorphic UI framework), Cheerio, Readability.js
+
+**Design Philosophy**: Modular architecture with clear separation of concerns, swappable database adapters, comprehensive telemetry, and AI-agent-friendly documentation.
+
+## 📁 Source Code Structure
+
+```
+src/
+├── crawler/           # Crawler engine core components
+│   ├── core/         # Main crawler logic, queue, scheduler
+│   ├── planner/      # Intelligent crawl planning and gap detection
+│   ├── telemetry/    # Metrics, events, and progress tracking
+│   ├── gazetteer/    # Geographic data crawling (Wikidata, Overpass)
+│   ├── config/       # Configuration management
+│   └── ...           # 30+ specialized modules
+├── db/               # Database layer
+│   ├── sqlite/       # SQLite adapter implementation
+│   ├── migration/    # Schema migration system
+│   ├── queries/      # Prepared SQL queries
+│   └── checks/       # Schema validation and health checks
+├── api/              # API endpoints and routing
+│   ├── routes/       # Express route handlers
+│   ├── v1/           # API version 1
+│   └── streaming/    # SSE and real-time endpoints
+├── ui/               # User interface applications
+│   ├── server/       # Express servers for each UI app
+│   ├── controls/     # Reusable jsgui3 UI components
+│   ├── client/       # Client-side JavaScript bundles
+│   └── styles/       # SCSS stylesheets
+├── analysis/         # Content analysis modules
+│   ├── structure/    # Page structure analysis
+│   ├── sentiment/    # Sentiment detection
+│   ├── topics/       # Topic extraction
+│   ├── similarity/   # Content similarity
+│   └── tagging/      # Auto-tagging and categorization
+├── background/       # Background task system
+│   ├── tasks/        # Task implementations (compression, export, etc.)
+│   ├── workers/      # Worker pool management
+│   └── actions/      # Reusable task actions
+├── services/         # Business logic services
+├── tools/            # Analysis and reporting utilities
+├── utils/            # Shared utility functions
+└── crawl.js          # Main crawler entry point
+```
+
+**Key Entry Points**:
+- `src/crawl.js` - Main crawler CLI
+- `src/ui/server/dataExplorerServer.js` - Primary UI application
+- `src/api/v1/gateway.js` - API gateway
+- `src/background/workers/` - Background task workers
 
 ## Testing
 
 **GOLDEN RULE**: Tests must never hang silently. All async tests require explicit timeouts and progress logging.
 
 See [AGENTS.md Testing Guidelines](./AGENTS.md#testing-guidelines) and [Testing Async Cleanup Guide](./docs/TESTING_ASYNC_CLEANUP_GUIDE.md) for comprehensive patterns.
+
+## 🚀 Getting Started
+
+### Quick Start (5 minutes)
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Run your first crawl:**
+   ```bash
+   # Crawl a news site (creates data/news.db)
+   node src/crawl.js https://www.theguardian.com --max-pages=10
+   ```
+
+3. **Launch the Data Explorer UI:**
+   ```bash
+   npm run ui:data-explorer
+   # Open http://localhost:3001
+   ```
+
+4. **Explore your data:**
+   - Browse crawled URLs, articles, and domains
+   - View crawl statistics and metrics
+   - Analyze content and navigation patterns
+
+### Common Workflows
+
+**News Site Analysis:**
+```bash
+# Intelligent crawl with hub discovery
+node src/crawl.js https://www.bbc.com --crawl-type=intelligent --max-pages=100
+
+# View results in Data Explorer
+npm run ui:data-explorer
+```
+
+**Geographic Data Collection:**
+```bash
+# Fetch geographic data from Wikidata
+node src/crawl.js --crawl-type=geography --limit-countries=5
+
+# View in Gazetteer UI
+npm run ui:gazetteer
+```
+
+**Content Analysis:**
+```bash
+# Run page analysis (places, topics, quality)
+npm run analysis:run
+
+# Browse documentation
+npm run ui:docs
+```
+
+**Development & Debugging:**
+```bash
+# List all tests
+npm run test:list
+
+# Run specific tests
+npm run test:by-path -- tests/crawler/core.test.js
+
+# Check database schema
+node tools/db-schema.js tables
+
+# Monitor crawl performance
+node src/tools/crawl-query-benchmark.js
+```
 
 ## Features
 
@@ -168,6 +344,71 @@ npm run ui:data-explorer
 2) Open `http://localhost:3001`.
 
 For development notes (SSR vs hydration, control checks, E2E workflow), see `src/ui/README.md`.
+
+## 🎨 UI Applications
+
+The project includes **multiple specialized UI applications**, each serving a specific workflow:
+
+### Data Explorer (Primary)
+**Command**: `npm run ui:data-explorer`  
+**Port**: 3001  
+**Purpose**: Comprehensive data exploration interface for crawled URLs, articles, domains, and analysis results. Supports filtering, sorting, pagination, and detailed views.
+
+### Diagram Atlas
+**Command**: `npm run diagram:server`  
+**Purpose**: Interactive SVG diagram viewer and editor for architectural documentation and system visualizations.
+
+### Documentation Viewer
+**Command**: `npm run ui:docs`  
+**Purpose**: Browse and search project documentation with live rendering of markdown files, session notes, and guides.
+
+### Gazetteer Info
+**Command**: `npm run ui:gazetteer`  
+**Purpose**: Geographic data browser for places, countries, regions, and cities collected from Wikidata and OpenStreetMap.
+
+### Geo Import Dashboard
+**Purpose**: Monitor and manage geographic data import operations with progress tracking and validation.
+
+### Visual Diff
+**Command**: `npm run ui:visual-diff`  
+**Purpose**: Compare and visualize differences between crawled content versions.
+
+### Crawl Observer
+**Command**: `npm run ui:crawl-observer`  
+**Purpose**: Real-time monitoring of active crawl operations with live metrics and event streams.
+
+### Crawler Monitor
+**Command**: `npm run ui:crawler-monitor`  
+**Purpose**: System-level crawler monitoring with resource usage, rate limiting, and health metrics.
+
+### Query Telemetry
+**Command**: `npm run ui:query-telemetry`  
+**Purpose**: Database query performance monitoring and optimization insights.
+
+### Ops Hub
+**Command**: `npm run ui:ops-hub`  
+**Purpose**: Centralized operations dashboard for system administration and maintenance.
+
+### Unified App
+**Command**: `npm run ui:unified`  
+**Purpose**: Consolidated interface combining multiple UI applications in a single shell.
+
+### Design Studio
+**Command**: `npm run ui:design`  
+**Purpose**: Visual design tool for UI components and theme development.
+
+### Additional UIs
+- **Rate Limit Dashboard** (`npm run ui:rate-limit`) - Monitor and configure rate limiting behavior
+- **Webhook Dashboard** (`npm run ui:webhooks`) - Manage webhook integrations
+- **Plugin Dashboard** (`npm run ui:plugins`) - Configure and monitor crawler plugins
+- **Template Teacher** (`npm run ui:template-teacher`) - ML-based template learning for article extraction
+- **Decision Tree Viewer** - Visualize decision trees for content classification
+- **Topic Lists** - Browse and manage extracted topics
+- **Quality Dashboard** - Content quality metrics and scoring
+- **Analytics Hub** - Aggregated analytics and reporting
+- **Admin Dashboard** - System administration interface
+
+**UI Framework**: All UIs use **jsgui3-html**, an isomorphic (SSR + client hydration) component framework. See `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` for architecture details and `docs/guides/JSGUI3_SHARED_CONTROLS_CATALOG.md` for reusable components.
 
 ### Deprecated UI (Express)
 
@@ -1198,6 +1439,78 @@ rm -rf data/
 
 This deletes the SQLite database and related working files.
 
+## 🛠️ Tools & Utilities
+
+The `tools/` directory contains a comprehensive collection of utilities for development, debugging, maintenance, and automation:
+
+### Development Tools (`tools/dev/`)
+- **js-scan** - JavaScript codebase scanning and analysis
+- **js-edit** - Automated JavaScript refactoring and batch editing
+- **md-scan** - Markdown documentation search and analysis
+- **md-edit** - Markdown file batch editing
+- **session-init** - Initialize session directories for agent work
+- **svg-collisions** - Detect overlapping elements in SVG diagrams
+- **ui-pick** - Interactive choice picker for agent workflows
+- **git-pr-link** - Link commits to pull requests
+- **mcp-check** - Verify MCP (Model Context Protocol) server health
+
+See `tools/dev/README.md` for detailed usage of the tier-1 JavaScript tooling (js-scan/js-edit).
+
+### Database Tools
+- **db-schema.js** - Inspect database schema and table structure
+- **db-query.js** - Execute SQL queries from command line
+- **db-table-sizes.js** - Analyze table sizes and storage usage
+- **db-maintenance.js** - Database maintenance operations
+- **vacuum-db.js** - Reclaim space and optimize database
+- **schema-sync.js** - Sync schema across databases
+- **migration-cli.js** - Run database migrations
+
+### Compression Tools (`tools/compression/`)
+- **compression-benchmark.cjs** - Benchmark compression algorithms (Brotli, Gzip, Zstandard)
+- **compression-worker.js** - Parallel compression worker
+- **compress-uncompressed-records.js** - Compress uncompressed article content
+- **find-compression-settings.js** - Optimal compression settings finder
+- **read-decompression-benchmark.cjs** - Benchmark decompression performance
+
+### Gazetteer Tools (`tools/gazetteer/`)
+- **gazetteer-summary.js** - Summary of geographic data by country
+- **gazetteer-dedupe.js** - Deduplicate gazetteer entries
+- **export-gazetteer.js** - Export gazetteer to various formats
+- **detect-duplicate-places.js** - Find duplicate place entries
+
+### Analysis & Export Tools
+- **export-data.js** - Export database tables to JSON/NDJSON/CSV
+- **export-pages.js** - Export article content
+- **analyze-country-hub-patterns.js** - Analyze country hub patterns
+- **crawl-place-hubs.js** - Crawl place-specific hub pages
+- **xpath-analyzer.js** - Analyze XPath patterns in content
+- **structure-miner.js** - Mine URL and page structure patterns
+
+### Benchmarking
+- **extraction-benchmark.js** (`npm run benchmark:extraction`) - Benchmark article extraction performance
+
+### Correction & Maintenance (`tools/corrections/`)
+- Various automated correction scripts for data quality
+
+### Debugging Tools (`tools/debug/`)
+- **child-process-monitor.js** - Monitor crawler child processes
+- **vscode-freeze-diagnose.js** - Diagnose VSCode freezing issues
+
+### CLI Tools (`tools/cli/`)
+- Command-line interface utilities and helpers
+
+### AI/Agent Tools (`tools/ai/`)
+- Tools for AI agent workflows and automation
+
+### MCP Tools (`tools/mcp/`)
+- **docs-memory** - Memory server for agent documentation access
+- **svg-editor** - SVG editing through MCP interface
+
+For comprehensive documentation, see:
+- `tools/README.md` - Tools overview
+- `tools/dev/README.md` - Development tools guide
+- `docs/INDEX.md` - Full documentation index
+
 ## Dependencies
 
 - `cheerio`: Server-side jQuery implementation for HTML parsing
@@ -1250,6 +1563,74 @@ npm run test:dev-geography
 **See**: `docs/tests/FOCUSED_TESTS.md` for canonical focused test commands.  
 **See**: `docs/tests/JEST_PITFALLS.md` for common mistakes to avoid.  
 **See**: `docs/GEOGRAPHY_E2E_TESTING.md` for detailed E2E test documentation.
+
+## 📚 Documentation
+
+The project includes **extensive documentation** organized by category:
+
+### Quick Start Documentation
+- **[docs/INDEX.md](docs/INDEX.md)** - Main documentation index and navigation hub
+- **[AGENTS.md](AGENTS.md)** - Agent workflow guide and operational guardrails
+- **[docs/COMMAND_EXECUTION_GUIDE.md](docs/COMMAND_EXECUTION_GUIDE.md)** - Server commands and process management
+- **[docs/TESTING_QUICK_REFERENCE.md](docs/TESTING_QUICK_REFERENCE.md)** - Testing commands and patterns
+- **[docs/DATABASE_QUICK_REFERENCE.md](docs/DATABASE_QUICK_REFERENCE.md)** - Database operations reference
+
+### Architecture & Design
+- **[docs/API_ENDPOINT_REFERENCE.md](docs/API_ENDPOINT_REFERENCE.md)** - Complete API endpoint documentation
+- **[docs/COMPONENTS.md](docs/COMPONENTS.md)** - System components overview
+- **[docs/API_SERVER_ARCHITECTURE.md](docs/API_SERVER_ARCHITECTURE.md)** - API server architecture
+- **[docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md](docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md)** - Crawls vs background tasks
+- **[docs/SERVICE_LAYER_ARCHITECTURE.md](docs/SERVICE_LAYER_ARCHITECTURE.md)** - Service layer design
+- **[docs/DATABASE_SCHEMA_ERD.md](docs/DATABASE_SCHEMA_ERD.md)** - Database schema diagrams
+
+### Comprehensive Guides (`docs/guides/`)
+AI-generated in-depth references (500-1000+ lines) for complex subsystems:
+
+- **[JSGUI3_UI_ARCHITECTURE_GUIDE.md](docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md)** - Isomorphic UI framework patterns
+- **[JSGUI3_SHARED_CONTROLS_CATALOG.md](docs/guides/JSGUI3_SHARED_CONTROLS_CATALOG.md)** - Reusable UI components inventory
+- **[JSGUI3_PERFORMANCE_PATTERNS.md](docs/guides/JSGUI3_PERFORMANCE_PATTERNS.md)** - UI optimization techniques
+- **[TEST_HANGING_PREVENTION_GUIDE.md](docs/guides/TEST_HANGING_PREVENTION_GUIDE.md)** - Prevent test hangs
+- **[SVG_CREATION_METHODOLOGY.md](docs/guides/SVG_CREATION_METHODOLOGY.md)** - AI agent SVG diagram creation
+- **[WLILO_STYLE_GUIDE.md](docs/guides/WLILO_STYLE_GUIDE.md)** - Visual design aesthetic guide
+
+### Database Documentation (`docs/database/`)
+- Schema definitions and migrations
+- Access patterns and query optimization
+- Task events API documentation
+
+### Workflows (`docs/workflows/`)
+- Step-by-step playbooks for common tasks
+- Agent-specific workflows
+- Session bootstrap and management
+
+### Session Documentation (`docs/sessions/`)
+- **[SESSIONS_HUB.md](docs/sessions/SESSIONS_HUB.md)** - Session system entry point
+- 290+ session folders documenting past work
+- Templates for new sessions
+
+### Standards (`docs/standards/`)
+- Commit and PR standards
+- Naming conventions
+- Communication guidelines
+- Testing output standards
+
+### Reports & Analysis
+- Crawler state reports
+- Session retrospectives
+- Performance analysis
+
+### Decisions (`docs/decisions/`)
+- Architecture Decision Records (ADR-lite)
+- Design choices and rationale
+
+### Plans (`docs/plans/`)
+- Long-term project plans
+- Feature proposals
+- Roadmaps
+
+**Total Documentation**: 2174+ markdown files across 38 directories
+
+For AI agents and developers: Start with `docs/INDEX.md` for navigation, then consult relevant guides before working in unfamiliar subsystems.
 
 ## License
 
