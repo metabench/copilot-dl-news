@@ -1,0 +1,222 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" font-family="'Segoe UI', system-ui, sans-serif">
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="goalGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f093fb;stop-opacity:0.2" />
+      <stop offset="100%" style="stop-color:#f5576c;stop-opacity:0.2" />
+    </linearGradient>
+
+    <linearGradient id="goalGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4facfe;stop-opacity:0.2" />
+      <stop offset="100%" style="stop-color:#00f2fe;stop-opacity:0.2" />
+    </linearGradient>
+
+    <linearGradient id="goalGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#43e97b;stop-opacity:0.2" />
+      <stop offset="100%" style="stop-color:#38f9d7;stop-opacity:0.2" />
+    </linearGradient>
+
+    <linearGradient id="goalGrad4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fa709a;stop-opacity:0.2" />
+      <stop offset="100%" style="stop-color:#fee140;stop-opacity:0.2" />
+    </linearGradient>
+
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="900" fill="#f8f9fa"/>
+
+  <!-- Header -->
+  <rect width="1200" height="100" fill="url(#headerGrad)" filter="url(#shadow)"/>
+  <text x="600" y="45" font-size="36" font-weight="700" fill="white" text-anchor="middle">News Crawler</text>
+  <text x="600" y="75" font-size="18" fill="white" text-anchor="middle" opacity="0.9">Project Goals &amp; Architecture</text>
+
+  <!-- Goal Cards Row 1 -->
+  <!-- Navigation Detection -->
+  <g transform="translate(40, 130)">
+    <rect width="260" height="180" rx="12" fill="url(#goalGrad1)" stroke="#f093fb" stroke-width="2" filter="url(#shadow)"/>
+    <circle cx="30" cy="30" r="20" fill="#f093fb"/>
+    <text x="30" y="37" font-size="24" fill="white" text-anchor="middle" font-weight="bold">1</text>
+    <text x="130" y="35" font-size="18" font-weight="600" fill="#2d3748" text-anchor="middle">Navigation Detection</text>
+    <text x="20" y="70" font-size="13" fill="#4a5568">
+      <tspan x="20" dy="0">• Header, nav, footer links</tspan>
+      <tspan x="20" dy="20">• Breadcrumbs &amp; pagination</tspan>
+      <tspan x="20" dy="20">• ARIA navigation</tspan>
+      <tspan x="20" dy="20">• Menu structure analysis</tspan>
+    </text>
+  </g>
+
+  <!-- Article Discovery -->
+  <g transform="translate(320, 130)">
+    <rect width="260" height="180" rx="12" fill="url(#goalGrad2)" stroke="#4facfe" stroke-width="2" filter="url(#shadow)"/>
+    <circle cx="30" cy="30" r="20" fill="#4facfe"/>
+    <text x="30" y="37" font-size="24" fill="white" text-anchor="middle" font-weight="bold">2</text>
+    <text x="130" y="35" font-size="18" font-weight="600" fill="#2d3748" text-anchor="middle">Article Discovery</text>
+    <text x="20" y="70" font-size="13" fill="#4a5568">
+      <tspan x="20" dy="0">• URL &amp; DOM heuristics</tspan>
+      <tspan x="20" dy="20">• Readability extraction</tspan>
+      <tspan x="20" dy="20">• Metadata parsing</tspan>
+      <tspan x="20" dy="20">• Content classification</tspan>
+    </text>
+  </g>
+
+  <!-- Data Persistence -->
+  <g transform="translate(600, 130)">
+    <rect width="260" height="180" rx="12" fill="url(#goalGrad3)" stroke="#43e97b" stroke-width="2" filter="url(#shadow)"/>
+    <circle cx="30" cy="30" r="20" fill="#43e97b"/>
+    <text x="30" y="37" font-size="24" fill="white" text-anchor="middle" font-weight="bold">3</text>
+    <text x="130" y="35" font-size="18" font-weight="600" fill="#2d3748" text-anchor="middle">Data Persistence</text>
+    <text x="20" y="70" font-size="13" fill="#4a5568">
+      <tspan x="20" dy="0">• SQLite-only storage</tspan>
+      <tspan x="20" dy="20">• Articles, links, domains</tspan>
+      <tspan x="20" dy="20">• Categories &amp; gazetteer</tspan>
+      <tspan x="20" dy="20">• WAL mode for concurrency</tspan>
+    </text>
+  </g>
+
+  <!-- Concurrency & Performance -->
+  <g transform="translate(880, 130)">
+    <rect width="260" height="180" rx="12" fill="url(#goalGrad4)" stroke="#fa709a" stroke-width="2" filter="url(#shadow)"/>
+    <circle cx="30" cy="30" r="20" fill="#fa709a"/>
+    <text x="30" y="37" font-size="24" fill="white" text-anchor="middle" font-weight="bold">4</text>
+    <text x="130" y="35" font-size="18" font-weight="600" fill="#2d3748" text-anchor="middle">Concurrency</text>
+    <text x="20" y="70" font-size="13" fill="#4a5568">
+      <tspan x="20" dy="0">• Bounded priority queue</tspan>
+      <tspan x="20" dy="20">• Per-URL exponential backoff</tspan>
+      <tspan x="20" dy="20">• 429 handling (5s blackout)</tspan>
+      <tspan x="20" dy="20">• Even token spacing</tspan>
+    </text>
+  </g>
+
+  <!-- Goal Cards Row 2 -->
+  <!-- Live UI -->
+  <g transform="translate(40, 340)">
+    <rect width="260" height="180" rx="12" fill="url(#goalGrad1)" stroke="#f093fb" stroke-width="2" filter="url(#shadow)"/>
+    <circle cx="30" cy="30" r="20" fill="#f093fb"/>
+    <text x="30" y="37" font-size="24" fill="white" text-anchor="middle" font-weight="bold">5</text>
+    <text x="130" y="35" font-size="18" font-weight="600" fill="#2d3748" text-anchor="middle">Live UI Dashboard</text>
+    <text x="20" y="70" font-size="13" fill="#4a5568">
+      <tspan x="20" dy="0">• Streaming logs (SSE)</tspan>
+      <tspan x="20" dy="20">• Real-time metrics (req/s, dl/s)</tspan>
+      <tspan x="20" dy="20">• Queue visualization</tspan>
+      <tspan x="20" dy="20">• Multi-job capable</tspan>
+    </text>
+  </g>
+
+  <!-- Intelligent Crawling -->
+  <g transform="translate(320, 340)">
+    <rect width="260" height="180" rx="12" fill="url(#goalGrad2)" stroke="#4facfe" stroke-width="2" filter="url(#shadow)"/>
+    <circle cx="30" cy="30" r="20" fill="#4facfe"/>
+    <text x="30" y="37" font-size="24" fill="white" text-anchor="middle" font-weight="bold">6</text>
+    <text x="130" y="35" font-size="18" font-weight="600" fill="#2d3748" text-anchor="middle">Intelligent Planning</text>
+    <text x="20" y="70" font-size="13" fill="#4a5568">
+      <tspan x="20" dy="0">• Seeds candidate hubs</tspan>
+      <tspan x="20" dy="20">• Detects expectation gaps</tspan>
+      <tspan x="20" dy="20">• Problem &amp; milestone events</tspan>
+      <tspan x="20" dy="20">• Coverage insights</tspan>
+    </text>
+  </g>
+
+  <!-- Geographic Analysis -->
+  <g transform="translate(600, 340)">
+    <rect width="260" height="180" rx="12" fill="url(#goalGrad3)" stroke="#43e97b" stroke-width="2" filter="url(#shadow)"/>
+    <circle cx="30" cy="30" r="20" fill="#43e97b"/>
+    <text x="30" y="37" font-size="24" fill="white" text-anchor="middle" font-weight="bold">7</text>
+    <text x="130" y="35" font-size="18" font-weight="600" fill="#2d3748" text-anchor="middle">Geographic Analysis</text>
+    <text x="20" y="70" font-size="13" fill="#4a5568">
+      <tspan x="20" dy="0">• Gazetteer integration</tspan>
+      <tspan x="20" dy="20">• Place extraction</tspan>
+      <tspan x="20" dy="20">• Hub detection per location</tspan>
+      <tspan x="20" dy="20">• Wikidata enrichment</tspan>
+    </text>
+  </g>
+
+  <!-- Observability -->
+  <g transform="translate(880, 340)">
+    <rect width="260" height="180" rx="12" fill="url(#goalGrad4)" stroke="#fa709a" stroke-width="2" filter="url(#shadow)"/>
+    <circle cx="30" cy="30" r="20" fill="#fa709a"/>
+    <text x="30" y="37" font-size="24" fill="white" text-anchor="middle" font-weight="bold">8</text>
+    <text x="130" y="35" font-size="18" font-weight="600" fill="#2d3748" text-anchor="middle">Observability</text>
+    <text x="20" y="70" font-size="13" fill="#4a5568">
+      <tspan x="20" dy="0">• Prometheus /metrics</tspan>
+      <tspan x="20" dy="20">• Health endpoints</tspan>
+      <tspan x="20" dy="20">• System health strip</tspan>
+      <tspan x="20" dy="20">• CPU/memory monitoring</tspan>
+    </text>
+  </g>
+
+  <!-- Goal Cards Row 3 -->
+  <!-- Ethical Crawling -->
+  <g transform="translate(180, 550)">
+    <rect width="380" height="180" rx="12" fill="url(#goalGrad1)" stroke="#f093fb" stroke-width="2" filter="url(#shadow)"/>
+    <circle cx="30" cy="30" r="20" fill="#f093fb"/>
+    <text x="30" y="37" font-size="24" fill="white" text-anchor="middle" font-weight="bold">9</text>
+    <text x="190" y="35" font-size="18" font-weight="600" fill="#2d3748" text-anchor="middle">Ethical &amp; Respectful Crawling</text>
+    <text x="20" y="70" font-size="13" fill="#4a5568">
+      <tspan x="20" dy="0">• robots.txt compliance - checks and follows exclusion rules</tspan>
+      <tspan x="20" dy="20">• Rate limiting - configurable delays, respects site policies</tspan>
+      <tspan x="20" dy="20">• Domain boundaries - never leaves target domain</tspan>
+      <tspan x="20" dy="20">• Proper User-Agent - identifies itself as a bot</tspan>
+      <tspan x="20" dy="20">• Duplicate visit prevention - efficient resource usage</tspan>
+    </text>
+  </g>
+
+  <!-- Background Tasks -->
+  <g transform="translate(580, 550)">
+    <rect width="380" height="180" rx="12" fill="url(#goalGrad2)" stroke="#4facfe" stroke-width="2" filter="url(#shadow)"/>
+    <circle cx="30" cy="30" r="20" fill="#4facfe"/>
+    <text x="30" y="37" font-size="24" fill="white" text-anchor="middle" font-weight="bold">10</text>
+    <text x="190" y="35" font-size="18" font-weight="600" fill="#2d3748" text-anchor="middle">Background Task Management</text>
+    <text x="20" y="70" font-size="13" fill="#4a5568">
+      <tspan x="20" dy="0">• Article compression - Brotli/Gzip/Zstandard (60-80% savings)</tspan>
+      <tspan x="20" dy="20">• Database export - JSON/NDJSON/CSV formats</tspan>
+      <tspan x="20" dy="20">• Content analysis - place extraction, quality metrics</tspan>
+      <tspan x="20" dy="20">• Database vacuum - space reclamation &amp; optimization</tspan>
+      <tspan x="20" dy="20">• Real-time progress monitoring via SSE</tspan>
+    </text>
+  </g>
+
+  <!-- Core Features Banner -->
+  <g transform="translate(40, 760)">
+    <rect width="1120" height="100" rx="12" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <text x="560" y="30" font-size="20" font-weight="600" fill="#2d3748" text-anchor="middle">Core Features</text>
+    <g transform="translate(60, 50)">
+      <rect x="0" y="0" width="8" height="8" rx="4" fill="#667eea"/>
+      <text x="15" y="8" font-size="12" fill="#4a5568">Sitemap discovery &amp; parsing</text>
+
+      <rect x="200" y="0" width="8" height="8" rx="4" fill="#667eea"/>
+      <text x="215" y="8" font-size="12" fill="#4a5568">Multi-crawl type presets</text>
+
+      <rect x="400" y="0" width="8" height="8" rx="4" fill="#667eea"/>
+      <text x="415" y="8" font-size="12" fill="#4a5568">Queue event tracking</text>
+
+      <rect x="600" y="0" width="8" height="8" rx="4" fill="#667eea"/>
+      <text x="615" y="8" font-size="12" fill="#4a5568">Connection pooling</text>
+
+      <rect x="800" y="0" width="8" height="8" rx="4" fill="#667eea"/>
+      <text x="815" y="8" font-size="12" fill="#4a5568">Freshness policies</text>
+
+      <rect x="0" y="25" width="8" height="8" rx="4" fill="#667eea"/>
+      <text x="15" y="33" font-size="12" fill="#4a5568">Request timeout handling</text>
+
+      <rect x="200" y="25" width="8" height="8" rx="4" fill="#667eea"/>
+      <text x="215" y="33" font-size="12" fill="#4a5568">Keep-alive agents</text>
+
+      <rect x="400" y="25" width="8" height="8" rx="4" fill="#667eea"/>
+      <text x="415" y="33" font-size="12" fill="#4a5568">Keyset pagination</text>
+
+      <rect x="600" y="25" width="8" height="8" rx="4" fill="#667eea"/>
+      <text x="615" y="33" font-size="12" fill="#4a5568">Schema migrations</text>
+
+      <rect x="800" y="25" width="8" height="8" rx="4" fill="#667eea"/>
+      <text x="815" y="33" font-size="12" fill="#4a5568">Comprehensive tests</text>
+    </g>
+  </g>
+</svg>
