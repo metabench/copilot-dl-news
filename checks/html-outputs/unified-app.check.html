@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unified App Shell</title>
+  <style>
+    
+/* ════════════════════════════════════════════════════════════════════════════
+   Two Column Layout - Shared Styles
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.two-column-layout {
+  display: flex;
+  min-height: 100vh;
+  background: rgba(10, 13, 20, 0.99);
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Sidebar
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.layout-sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: rgba(15, 18, 25, 0.98);
+  border-right: 1px solid rgba(201, 162, 39, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.15);
+  background: linear-gradient(135deg, rgba(201, 162, 39, 0.25) 0%, transparent 100%);
+}
+
+.sidebar-header__icon {
+  font-size: 20px;
+  opacity: 0.8;
+}
+
+.sidebar-header__title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #c9a227;
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Nav Item
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  border-left: 3px solid transparent;
+  user-select: none;
+}
+
+.nav-item:hover {
+  background: rgba(201, 162, 39, 0.1);
+  border-left-color: rgba(201, 162, 39, 0.35);
+}
+
+.nav-item--selected {
+  background: rgba(201, 162, 39, 0.2);
+  border-left-color: #c9a227;
+}
+
+.nav-item--selected .nav-item__label {
+  color: #c9a227;
+  font-weight: 600;
+}
+
+.nav-item__icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+  opacity: 0.85;
+}
+
+.nav-item__label {
+  flex: 1;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.nav-item__badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(201, 162, 39, 0.25);
+  color: #c9a227;
+  font-weight: 600;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Content Area
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.layout-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(20, 24, 32, 0.95);
+  overflow: hidden;
+}
+
+.detail-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.15);
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.25) 0%, transparent 100%);
+}
+
+.detail-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.detail-header__icon {
+  font-size: 24px;
+  opacity: 0.9;
+}
+
+.detail-header__title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.detail-header__subtitle {
+  margin: 6px 0 0 36px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.content-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Responsive
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .two-column-layout {
+    flex-direction: column;
+  }
+  
+  .layout-sidebar {
+    width: 100%;
+    min-width: 100%;
+    max-height: 200px;
+    border-right: none;
+    border-bottom: 1px solid rgba(201, 162, 39, 0.15);
+  }
+  
+  .sidebar-nav {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 8px;
+  }
+  
+  .nav-item {
+    padding: 8px 12px;
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    flex: 0 0 auto;
+  }
+  
+  .nav-item--selected {
+    border-bottom-color: #c9a227;
+  }
+}
+
+    
+      /* ═══════════════════════════════════════════════════════════════════════
+         WLILO Theme - Unified Shell
+         ═══════════════════════════════════════════════════════════════════════ */
+      
+      :root {
+        --bg-obsidian: #1a1410;
+        --bg-leather: #2a1f17;
+        --bg-leather-light: #3d2b1f;
+        --gold: #d4a574;
+        --gold-light: #e8c9a0;
+        --gold-dark: #a67c4e;
+        --border-gold: #8b6914;
+        --text-cream: #f5e6d3;
+        --text-muted: #b8a090;
+        --success: #4ade80;
+        --error: #f87171;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        background: var(--bg-obsidian);
+        color: var(--text-cream);
+        min-height: 100vh;
+        overflow: hidden;
+      }
+
+      /* Shell Layout */
+      .unified-shell {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* Sidebar */
+      .shell-sidebar {
+        width: 260px;
+        min-width: 260px;
+        background: linear-gradient(180deg, var(--bg-leather) 0%, var(--bg-obsidian) 100%);
+        border-right: 1px solid var(--border-gold);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .sidebar-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 20px;
+        border-bottom: 1px solid var(--border-gold);
+        background: linear-gradient(135deg, rgba(212, 165, 116, 0.1) 0%, transparent 100%);
+      }
+
+      .brand-icon {
+        font-size: 28px;
+      }
+
+      .brand-title {
+        font-family: Georgia, serif;
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--gold);
+        letter-spacing: 0.5px;
+      }
+
+      /* Navigation */
+      .shell-nav {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px 0;
+      }
+
+      .nav-category {
+        padding: 16px 20px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-muted);
+        border-top: 1px solid rgba(139, 105, 20, 0.2);
+        margin-top: 8px;
+      }
+
+      .nav-category:first-child {
+        border-top: none;
+        margin-top: 0;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 12px 20px;
+        background: none;
+        border: none;
+        border-left: 3px solid transparent;
+        color: var(--text-cream);
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        text-align: left;
+      }
+
+      .nav-item:hover {
+        background: rgba(212, 165, 116, 0.08);
+        border-left-color: var(--gold-dark);
+      }
+
+      .nav-item--active {
+        background: rgba(212, 165, 116, 0.15);
+        border-left-color: var(--gold);
+      }
+
+      .nav-item--active .nav-item__label {
+        color: var(--gold);
+        font-weight: 600;
+      }
+
+      .nav-item__icon {
+        font-size: 18px;
+        width: 24px;
+        text-align: center;
+      }
+
+      .nav-item__label {
+        flex: 1;
+      }
+
+      /* Main Content */
+      .shell-content {
+        flex: 1;
+        overflow: hidden;
+        background: var(--bg-obsidian);
+      }
+
+      .app-viewport {
+        height: 100%;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* App Containers - Off-screen preservation */
+      .app-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow: auto;
+        background: var(--bg-obsidian);
+        transition: opacity 0.15s ease;
+      }
+
+      .app-container--hidden {
+        visibility: hidden;
+        pointer-events: none;
+        opacity: 0;
+        /* Keep in DOM but move off-screen for performance */
+        transform: translateX(-100%);
+      }
+
+      .app-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        font-size: 18px;
+        color: var(--text-muted);
+      }
+
+      /* Sub-app styling overrides */
+      .app-container .dashboard-header {
+        border-top: none;
+      }
+
+      .app-container .hub-nav {
+        display: none; /* Hide hub nav in unified shell */
+      }
+
+      /* Placeholder for unimplemented apps */
+      .app-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+        color: var(--text-muted);
+      }
+
+      .app-placeholder p {
+        font-size: 24px;
+        margin-bottom: 12px;
+      }
+
+      .app-placeholder .error {
+        font-size: 14px;
+        color: var(--error);
+        font-family: monospace;
+      }
+
+      /* Home Dashboard */
+      .home-dashboard {
+        padding: 40px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .home-hero {
+        text-align: center;
+        padding: 60px 20px;
+        background: linear-gradient(135deg, var(--bg-leather) 0%, var(--bg-obsidian) 100%);
+        border-radius: 12px;
+        border: 1px solid var(--border-gold);
+        margin-bottom: 40px;
+      }
+
+      .home-hero h1 {
+        font-family: Georgia, serif;
+        font-size: 36px;
+        color: var(--gold);
+        margin-bottom: 16px;
+      }
+
+      .home-hero p {
+        font-size: 18px;
+        color: var(--text-muted);
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .home-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+      }
+
+      .stat-card {
+        background: var(--bg-leather);
+        border: 1px solid var(--border-gold);
+        border-radius: 8px;
+        padding: 24px;
+        text-align: center;
+      }
+
+      .stat-value {
+        display: block;
+        font-size: 48px;
+        font-weight: 700;
+        color: var(--gold);
+        margin-bottom: 8px;
+      }
+
+      .stat-label {
+        font-size: 14px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      /* Scrollbar styling */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: var(--bg-obsidian);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: var(--border-gold);
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--gold-dark);
+      }
+    
+  </style>
+</head>
+<body>
+  <div class="unified-shell">
+    <aside class="shell-sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-icon">🎛️</span>
+        <span class="brand-title">Control Center</span>
+      </div>
+      <nav class="shell-nav">
+          <button class="nav-item nav-item--active" 
+                  data-app-id="home"
+                  title="System overview and quick actions">
+            <span class="nav-item__icon">🏠</span>
+            <span class="nav-item__label">Home</span>
+          </button>
+        <div class="nav-category">🕷️ Crawler</div>
+          <button class="nav-item" 
+                  data-app-id="rate-limits"
+                  title="Domain rate limiting status and controls">
+            <span class="nav-item__icon">⏱️</span>
+            <span class="nav-item__label">Rate Limits</span>
+          </button>
+        
+          <button class="nav-item" 
+                  data-app-id="crawl-observer"
+                  title="Real-time crawl monitoring with event stream">
+            <span class="nav-item__icon">🔭</span>
+            <span class="nav-item__label">Crawl Observer</span>
+          </button>
+        
+          <button class="nav-item" 
+                  data-app-id="crawler-monitor"
+                  title="Crawler health and performance metrics">
+            <span class="nav-item__icon">📡</span>
+            <span class="nav-item__label">Crawler Monitor</span>
+          </button>
+        <div class="nav-category">⚙️ Administration</div>
+          <button class="nav-item" 
+                  data-app-id="webhooks"
+                  title="Webhook integrations and event routing">
+            <span class="nav-item__icon">🔗</span>
+            <span class="nav-item__label">Webhooks</span>
+          </button>
+        
+          <button class="nav-item" 
+                  data-app-id="plugins"
+                  title="Plugin lifecycle and management">
+            <span class="nav-item__icon">🧩</span>
+            <span class="nav-item__label">Plugins</span>
+          </button>
+        
+          <button class="nav-item" 
+                  data-app-id="admin"
+                  title="User management, audit logs, system config">
+            <span class="nav-item__icon">⚙️</span>
+            <span class="nav-item__label">Admin</span>
+          </button>
+        <div class="nav-category">📊 Analytics</div>
+          <button class="nav-item" 
+                  data-app-id="quality"
+                  title="Content quality scores and metrics">
+            <span class="nav-item__icon">📊</span>
+            <span class="nav-item__label">Quality</span>
+          </button>
+        
+          <button class="nav-item" 
+                  data-app-id="analytics"
+                  title="Aggregated analytics and insights">
+            <span class="nav-item__icon">📈</span>
+            <span class="nav-item__label">Analytics</span>
+          </button>
+        
+          <button class="nav-item" 
+                  data-app-id="query-telemetry"
+                  title="Database query performance analysis">
+            <span class="nav-item__icon">🔍</span>
+            <span class="nav-item__label">Query Telemetry</span>
+          </button>
+        <div class="nav-category">🛠️ Development</div>
+          <button class="nav-item" 
+                  data-app-id="decision-tree"
+                  title="Visualize classification decision trees">
+            <span class="nav-item__icon">🌳</span>
+            <span class="nav-item__label">Decision Tree</span>
+          </button>
+        
+          <button class="nav-item" 
+                  data-app-id="template-teacher"
+                  title="Train and test content extractors">
+            <span class="nav-item__icon">🎓</span>
+            <span class="nav-item__label">Template Teacher</span>
+          </button>
+        
+          <button class="nav-item" 
+                  data-app-id="test-studio"
+                  title="Interactive test runner and debugger">
+            <span class="nav-item__icon">🧪</span>
+            <span class="nav-item__label">Test Studio</span>
+          </button>
+        </nav>
+    </aside>
+    
+    <main class="shell-content">
+      <div class="app-viewport" id="appViewport">
+        
+        <div class="app-container" 
+             id="app-home" 
+             data-app-id="home" data-loaded="true">
+          <div class="app-loading">Loading...</div>
+        </div>
+      
+        <div class="app-container app-container--hidden" 
+             id="app-rate-limits" 
+             data-app-id="rate-limits">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" 
+             id="app-crawl-observer" 
+             data-app-id="crawl-observer">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" 
+             id="app-crawler-monitor" 
+             data-app-id="crawler-monitor">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" 
+             id="app-webhooks" 
+             data-app-id="webhooks">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" 
+             id="app-plugins" 
+             data-app-id="plugins">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" 
+             id="app-admin" 
+             data-app-id="admin">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" 
+             id="app-quality" 
+             data-app-id="quality">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" 
+             id="app-analytics" 
+             data-app-id="analytics">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" 
+             id="app-query-telemetry" 
+             data-app-id="query-telemetry">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" 
+             id="app-decision-tree" 
+             data-app-id="decision-tree">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" 
+             id="app-template-teacher" 
+             data-app-id="template-teacher">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" 
+             id="app-test-studio" 
+             data-app-id="test-studio">
+          
+        </div>
+      
+      </div>
+    </main>
+  </div>
+  
+  <script>
+    
+      (function() {
+        'use strict';
+        
+        const appViewport = document.getElementById('appViewport');
+        const navItems = document.querySelectorAll('.nav-item');
+        let currentAppId = 'home';
+        
+        // Load app content from server
+        async function loadAppContent(appId) {
+          const container = document.getElementById('app-' + appId);
+          if (!container) return;
+          
+          // Already loaded?
+          if (container.dataset.loaded === 'true') return;
+          
+          container.innerHTML = '<div class="app-loading">Loading...</div>';
+          
+          try {
+            const response = await fetch('/api/apps/' + appId + '/content');
+            const data = await response.json();
+            
+            if (data.error) {
+              container.innerHTML = '<div class="app-placeholder"><p>Error</p><p class="error">' + data.error + '</p></div>';
+            } else {
+              container.innerHTML = data.content;
+              container.dataset.loaded = 'true';
+            }
+          } catch (err) {
+            container.innerHTML = '<div class="app-placeholder"><p>Error</p><p class="error">' + err.message + '</p></div>';
+          }
+        }
+        
+        // Switch to app
+        function switchToApp(appId) {
+          if (appId === currentAppId) return;
+          
+          // Hide current app (off-screen preservation)
+          const currentContainer = document.getElementById('app-' + currentAppId);
+          if (currentContainer) {
+            currentContainer.classList.add('app-container--hidden');
+          }
+          
+          // Update nav
+          navItems.forEach(item => {
+            item.classList.toggle('nav-item--active', item.dataset.appId === appId);
+          });
+          
+          // Show target app
+          const targetContainer = document.getElementById('app-' + appId);
+          if (targetContainer) {
+            targetContainer.classList.remove('app-container--hidden');
+            
+            // Load if needed
+            if (targetContainer.dataset.loaded !== 'true') {
+              loadAppContent(appId);
+            }
+          }
+          
+          currentAppId = appId;
+          
+          // Update URL without reload
+          history.pushState({ app: appId }, '', '?app=' + appId);
+        }
+        
+        // Bind nav clicks
+        navItems.forEach(item => {
+          item.addEventListener('click', () => {
+            const appId = item.dataset.appId;
+            if (appId) switchToApp(appId);
+          });
+        });
+        
+        // Handle browser back/forward
+        window.addEventListener('popstate', (event) => {
+          if (event.state && event.state.app) {
+            switchToApp(event.state.app);
+          }
+        });
+        
+        // Load initial app content
+        loadAppContent(currentAppId);
+        
+        console.log('🎛️ Unified App Shell initialized');
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // Sub-App Client Handlers (global functions for onclick handlers)
+        // ═══════════════════════════════════════════════════════════════════
+        
+        // Rate Limit Dashboard
+        window.resetDomain = async function(domain) {
+          if (!confirm('Reset rate limit tracking for ' + domain + '?')) return;
+          try {
+            const res = await fetch('/api/rate-limits/domains/' + encodeURIComponent(domain), { method: 'DELETE' });
+            if (res.ok) location.reload();
+            else alert('Failed to reset domain');
+          } catch (e) { alert('Error: ' + e.message); }
+        };
+        
+        // Webhook Dashboard
+        window.showCreateForm = function() {
+          const modal = document.getElementById('webhook-create-modal');
+          if (modal) modal.style.display = 'block';
+        };
+        
+        window.hideCreateForm = function() {
+          const modal = document.getElementById('webhook-create-modal');
+          if (modal) modal.style.display = 'none';
+        };
+        
+        window.toggleWebhook = async function(id, enabled) {
+          try {
+            const res = await fetch('/api/webhooks/' + id, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ enabled })
+            });
+            if (res.ok) loadAppContent('webhooks'); // Reload content
+            else alert('Failed to toggle webhook');
+          } catch (e) { alert('Error: ' + e.message); }
+        };
+        
+        window.testWebhook = async function(id) {
+          try {
+            const res = await fetch('/api/webhooks/' + id + '/test', { method: 'POST' });
+            const data = await res.json();
+            alert(data.success ? 'Test webhook sent!' : 'Failed: ' + data.error);
+          } catch (e) { alert('Error: ' + e.message); }
+        };
+        
+        window.deleteWebhook = async function(id) {
+          if (!confirm('Delete this webhook?')) return;
+          try {
+            const res = await fetch('/api/webhooks/' + id, { method: 'DELETE' });
+            if (res.ok) {
+              document.getElementById('app-webhooks').dataset.loaded = 'false';
+              loadAppContent('webhooks');
+            } else alert('Failed to delete webhook');
+          } catch (e) { alert('Error: ' + e.message); }
+        };
+        
+        // Plugin Dashboard
+        window.discoverPlugins = async function() {
+          alert('Plugin discovery triggered - this would scan for new plugins');
+        };
+        
+        window.activatePlugin = async function(pluginId) {
+          try {
+            const res = await fetch('/api/plugins/' + encodeURIComponent(pluginId) + '/activate', { method: 'POST' });
+            if (res.ok) {
+              document.getElementById('app-plugins').dataset.loaded = 'false';
+              loadAppContent('plugins');
+            } else alert('Failed to activate plugin');
+          } catch (e) { alert('Error: ' + e.message); }
+        };
+        
+        window.deactivatePlugin = async function(pluginId) {
+          if (!confirm('Deactivate plugin ' + pluginId + '?')) return;
+          try {
+            const res = await fetch('/api/plugins/' + encodeURIComponent(pluginId) + '/deactivate', { method: 'POST' });
+            if (res.ok) {
+              document.getElementById('app-plugins').dataset.loaded = 'false';
+              loadAppContent('plugins');
+            } else alert('Failed to deactivate plugin');
+          } catch (e) { alert('Error: ' + e.message); }
+        };
+        
+      })();
+    
+  </script>
+</body>
+</html>

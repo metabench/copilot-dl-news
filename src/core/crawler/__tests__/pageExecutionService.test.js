@@ -1,0 +1,467 @@
+const { PageExecutionService } = require('../PageExecutionService');
+
+const createStateMock = () => ({
+  addVisited: jest.fn(),
+  incrementPagesVisited: jest.fn(),
+  incrementPagesDownloaded: jest.fn(),
+  incrementBytesDownloaded: jest.fn(),
+  incrementArticlesFound: jest.fn(),
+  incrementArticlesSaved: jest.fn(),
+  incrementErrors: jest.fn(),
+  hasSeededHub: jest.fn(() => false),
+  markSeededHubVisited: jest.fn(),
+  hasVisitedHub: jest.fn(() => false),
+  getSeededHubMeta: jest.fn(() => ({}))
+});
+
+describe('PageExecutionService', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const baseDeps = () => {
+    const state = createStateMock();
+    return {
+      maxDepth: 2,
+      maxDownloads: undefined,
+      getStats: () => ({
+        pagesDownloaded: 0
+      }),
+      state,
+      fetchPipeline: {
+        fetch: jest.fn()
+      },
+      articleProcessor: {
+        process: jest.fn()
+      },
+      navigationDiscoveryService: {
+        discover: jest.fn(() => ({
+          navigationLinks: [],
+          articleLinks: [],
+          allLinks: [],
+          linkSummary: {
+            navigation: [],
+            articles: [],
+            all: []
+          },
+          $: null
+        }))
+      },
+      contentAcquisitionService: {
+        acquire: jest.fn()
+      },
+      milestoneTracker: {
+        checkAnalysisMilestones: jest.fn()
+      },
+      adaptiveSeedPlanner: {
+        seedFromArticle: jest.fn()
+      },
+      enqueueRequest: jest.fn(),
+      telemetry: {
+        problem: jest.fn()
+      },
+      recordError: jest.fn(),
+      normalizeUrl: (url) => url,
+      looksLikeArticle: () => false,
+      noteDepthVisit: jest.fn(),
+      emitProgress: jest.fn(),
+      getDbAdapter: () => ({ isEnabled: () => false }),
+      computeContentSignals: () => ({ content: 1 }),
+      computeUrlSignals: () => ({ url: 1 }),
+      combineSignals: (urlSig, contentSig) => ({ urlSig, contentSig })
+    };
+  };
+
+  test('returns undefined when depth exceeds maxDepth', async () => {
+    const deps = baseDeps();
+    deps.maxDepth = 1;
+    const service = new PageExecutionService(deps);
+
+    const result = await service.processPage({
+      url: 'https://example.com',
+      depth: 3,
+      context: {}
+    });
+
+    expect(result).toBeUndefined();
+    expect(deps.fetchPipeline.fetch).not.toHaveBeenCalled();
+  });
+
+  test('processes network pages and enqueues discovered links', async () => {
+    const deps = baseDeps();
+    deps.fetchPipeline.fetch.mockResolvedValue({
+      source: 'network',
+      meta: {
+        url: 'https://example.com/article',
+        fetchMeta: {
+          bytesDownloaded: 512
+        }
+      },
+      html: '<html></html>'
+    });
+
+    deps.navigationDiscoveryService.discover.mockReturnValue({
+      navigationLinks: [{ url: 'https://example.com/nav', type: 'nav' }],
+      articleLinks: [],
+      allLinks: [
+        { url: 'https://example.com/nav', type: 'nav' },
+        { url: 'https://example.com/nav', type: 'nav' }
+      ],
+      linkSummary: {
+        navigation: [{ url: 'https://example.com/nav', type: 'nav' }],
+        articles: [],
+        all: [
+          { url: 'https://example.com/nav', type: 'nav' },
+          { url: 'https://example.com/nav', type: 'nav' }
+        ]
+      },
+      $: null
+    });
+
+    deps.contentAcquisitionService.acquire.mockResolvedValue({
+      statsDelta: {
+        articlesFound: 1
+      },
+      navigationLinks: [{ url: 'https://example.com/nav', type: 'nav' }],
+      articleLinks: [],
+      allLinks: [
+        { url: 'https://example.com/nav', type: 'nav' },
+        { url: 'https://example.com/nav', type: 'nav' } // duplicate to ensure dedupe
+      ],
+      isArticle: true,
+      metadata: { id: '123' }
+    });
+
+    const service = new PageExecutionService(deps);
+
+    const result = await service.processPage({
+      url: 'https://example.com/article',
+      depth: 1,
+      context: {}
+    });
+
+    expect(result).toEqual({ status: 'success' });
+    expect(deps.fetchPipeline.fetch).toHaveBeenCalledTimes(1);
+    expect(deps.contentAcquisitionService.acquire).toHaveBeenCalledWith(expect.objectContaining({
+      url: 'https://example.com/article',
+      persistArticle: false
+    }));
+    expect(deps.state.incrementPagesVisited).toHaveBeenCalled();
+    expect(deps.state.incrementPagesDownloaded).toHaveBeenCalled();
+    expect(deps.state.incrementBytesDownloaded).toHaveBeenCalledWith(512);
+    expect(deps.state.incrementArticlesFound).toHaveBeenCalledWith(1);
+    expect(deps.enqueueRequest).toHaveBeenCalledTimes(1);
+    expect(deps.enqueueRequest).toHaveBeenCalledWith(expect.objectContaining({
+      url: 'https://example.com/nav',
+      depth: 2
+    }));
+    expect(deps.milestoneTracker.checkAnalysisMilestones).toHaveBeenCalledWith({
+      depth: 1,
+      isArticle: true
+    });
+    expect(deps.adaptiveSeedPlanner.seedFromArticle).toHaveBeenCalledWith({
+      url: 'https://example.com/article',
+      metadata: { id: '123' },
+      depth: 1
+    });
+  });
+
+  test('marks seeded country hubs as visited and emits milestone', async () => {
+    const deps = baseDeps();
+    deps.telemetry = {
+      problem: jest.fn(),
+      milestoneOnce: jest.fn()
+    };
+    deps.state.hasSeededHub.mockReturnValue(true);
+    deps.state.hasVisitedHub.mockReturnValue(false);
+    deps.state.getSeededHubMeta.mockReturnValue({
+      kind: 'country',
+      reason: 'country-candidate',
+      source: 'country-planner'
+    });
+    deps.fetchPipeline.fetch.mockResolvedValue({
+      source: 'network',
+      meta: {
+        url: 'https://example.com/world/france'
+      },
+      html: '<html></html>'
+    });
+    deps.navigationDiscoveryService.discover.mockReturnValue({
+      navigationLinks: [],
+      articleLinks: [],
+      allLinks: [],
+      linkSummary: {
+        navigation: [],
+        articles: [],
+        all: []
+      },
+      $: null
+    });
+    deps.contentAcquisitionService.acquire.mockResolvedValue({
+      statsDelta: null,
+      navigationLinks: [],
+      articleLinks: [],
+      allLinks: [],
+      isArticle: false
+    });
+
+    const service = new PageExecutionService(deps);
+
+    await service.processPage({
+      url: 'https://example.com/world/france',
+      depth: 1,
+      context: {}
+    });
+
+    expect(deps.state.markSeededHubVisited).toHaveBeenCalledWith('https://example.com/world/france', expect.objectContaining({
+      depth: 1,
+      fetchSource: 'network'
+    }));
+    expect(deps.telemetry.milestoneOnce).toHaveBeenCalledWith(
+      'country-hub-found:https://example.com/world/france',
+      expect.objectContaining({
+        kind: 'country-hub-found',
+        details: expect.objectContaining({
+          hubKind: 'country'
+        })
+      })
+    );
+  });
+
+  test('handles cached pages and records fetch metadata', async () => {
+    const insertFetch = jest.fn();
+    const deps = baseDeps();
+    deps.looksLikeArticle = () => true;
+    deps.fetchPipeline.fetch.mockResolvedValue({
+      source: 'cache',
+      meta: {
+        url: 'https://example.com/cached'
+      },
+      html: '<html><body>cached</body></html>'
+    });
+    deps.getDbAdapter = () => ({
+      isEnabled: () => true,
+      insertFetch
+    });
+
+    const service = new PageExecutionService(deps);
+
+    const result = await service.processPage({
+      url: 'https://example.com/cached',
+      depth: 0,
+      context: {}
+    });
+
+    expect(result).toEqual({ status: 'cache' });
+    expect(deps.state.addVisited).toHaveBeenCalledWith('https://example.com/cached');
+    expect(deps.state.incrementPagesVisited).toHaveBeenCalled();
+    expect(deps.state.incrementArticlesFound).toHaveBeenCalled();
+    expect(insertFetch).toHaveBeenCalledWith(expect.objectContaining({
+      url: 'https://example.com/cached',
+      classification: 'article'
+    }));
+    expect(deps.milestoneTracker.checkAnalysisMilestones).toHaveBeenCalledWith({
+      depth: 0,
+      isArticle: true
+    });
+    expect(deps.enqueueRequest).not.toHaveBeenCalled();
+  });
+
+  test('processes cached fetch when context requests cache processing', async () => {
+    const deps = baseDeps();
+    const html = '<html><body>cached</body></html>';
+
+    deps.fetchPipeline.fetch.mockResolvedValue({
+      source: 'cache',
+      meta: {
+        url: 'https://example.com/cache-seed'
+      },
+      html
+    });
+
+    const navigationLinks = [{ url: 'https://example.com/nav', type: 'nav' }];
+    deps.navigationDiscoveryService.discover.mockReturnValue({
+      navigationLinks,
+      articleLinks: [],
+      allLinks: navigationLinks,
+      linkSummary: {
+        navigation: navigationLinks,
+        articles: [],
+        all: navigationLinks
+      },
+      looksLikeArticle: false,
+      $: null
+    });
+
+    deps.contentAcquisitionService.acquire.mockResolvedValue({
+      statsDelta: { articlesFound: 0 },
+      navigationLinks,
+      articleLinks: [],
+      allLinks: navigationLinks,
+      isArticle: false,
+      metadata: null
+    });
+
+    const service = new PageExecutionService(deps);
+
+    const context = {
+      processCacheResult: true,
+      cachedPage: { html },
+      forceCache: true
+    };
+
+    const result = await service.processPage({
+      url: 'https://example.com/cache-seed',
+      depth: 0,
+      context
+    });
+
+    expect(result).toEqual({ status: 'success' });
+    expect(deps.contentAcquisitionService.acquire).toHaveBeenCalledWith(expect.objectContaining({
+      url: 'https://example.com/cache-seed',
+      html
+    }));
+    expect(deps.navigationDiscoveryService.discover).toHaveBeenCalled();
+    expect(deps.enqueueRequest).toHaveBeenCalledTimes(1);
+  });
+
+  test('continues normal processing when cache seed context falls back to network', async () => {
+    const deps = baseDeps();
+    const html = '<html><body>network</body></html>';
+
+    deps.fetchPipeline.fetch.mockImplementation(async ({ context }) => {
+      expect(context.processCacheResult).toBe(true);
+      return {
+        source: 'network',
+        meta: {
+          url: 'https://example.com/cache-miss',
+          fetchMeta: { bytesDownloaded: 256 }
+        },
+        html
+      };
+    });
+
+    const navigationLinks = [{ url: 'https://example.com/next', type: 'nav' }];
+    deps.navigationDiscoveryService.discover.mockReturnValue({
+      navigationLinks,
+      articleLinks: [],
+      allLinks: navigationLinks,
+      linkSummary: {
+        navigation: navigationLinks,
+        articles: [],
+        all: navigationLinks
+      },
+      looksLikeArticle: false,
+      $: null
+    });
+
+    deps.contentAcquisitionService.acquire.mockResolvedValue({
+      statsDelta: { articlesFound: 0 },
+      navigationLinks,
+      articleLinks: [],
+      allLinks: navigationLinks,
+      isArticle: false,
+      metadata: null
+    });
+
+    const service = new PageExecutionService(deps);
+
+    const result = await service.processPage({
+      url: 'https://example.com/cache-miss',
+      depth: 1,
+      context: { processCacheResult: true }
+    });
+
+    expect(result).toEqual({ status: 'success' });
+    expect(deps.state.incrementPagesDownloaded).toHaveBeenCalled();
+    expect(deps.contentAcquisitionService.acquire).toHaveBeenCalled();
+    expect(deps.enqueueRequest).toHaveBeenCalledTimes(1);
+  });
+
+  test('emits PAGE telemetry for network fetches', async () => {
+    const deps = baseDeps();
+    deps.fetchPipeline.fetch.mockResolvedValue({
+      source: 'network',
+      meta: {
+        url: 'https://example.com/article',
+        fetchMeta: {
+          downloadMs: 221,
+          httpStatus: 200,
+          bytesDownloaded: 1024
+        }
+      },
+      html: '<html></html>'
+    });
+    deps.contentAcquisitionService.acquire.mockResolvedValue({
+      statsDelta: { articlesFound: 0, articlesSaved: 0 },
+      navigationLinks: [],
+      articleLinks: [],
+      allLinks: []
+    });
+
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+    const service = new PageExecutionService(deps);
+    await service.processPage({
+      url: 'https://example.com/article',
+      depth: 1,
+      context: {}
+    });
+
+    const pageCall = logSpy.mock.calls.find(
+      (call) => typeof call[0] === 'string' && call[0].startsWith('PAGE ')
+    );
+    expect(pageCall).toBeDefined();
+    const payload = JSON.parse(pageCall[0].slice('PAGE '.length));
+    expect(payload.url).toBe('https://example.com/article');
+    expect(payload.source).toBe('network');
+    expect(payload.downloadMs).toBe(221);
+    expect(payload.status).toBe('success');
+
+    logSpy.mockRestore();
+  });
+
+  test('formats extra-terse page logs with running totals', async () => {
+    const deps = baseDeps();
+    deps.maxDownloads = 100;
+    deps.getStats = () => ({ pagesDownloaded: 10 });
+    deps.fetchPipeline.fetch.mockResolvedValue({
+      source: 'network',
+      meta: {
+        url: 'https://example.com/article',
+        fetchMeta: {
+          downloadMs: 221,
+          httpStatus: 200,
+          bytesDownloaded: 2048
+        }
+      },
+      html: '<html></html>'
+    });
+    deps.contentAcquisitionService.acquire.mockResolvedValue({
+      statsDelta: { articlesFound: 0, articlesSaved: 0 },
+      navigationLinks: [],
+      articleLinks: [],
+      allLinks: []
+    });
+
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+    const service = new PageExecutionService({
+      ...deps,
+      outputVerbosity: 'extra-terse'
+    });
+    await service.processPage({
+      url: 'https://example.com/article',
+      depth: 1,
+      context: {}
+    });
+
+    const terseCall = logSpy.mock.calls.find(
+      (call) => typeof call[0] === 'string' && call[0].includes('10/100')
+    );
+    expect(terseCall).toBeDefined();
+    expect(terseCall[0]).toBe('https://example.com/article 221ms 10/100');
+
+    logSpy.mockRestore();
+  });
+});

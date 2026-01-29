@@ -1,0 +1,24 @@
+{
+    "name": "deploy-manager",
+    "version": "1.0.0",
+    "description": "Electron and CLI tool for managing remote servers",
+    "main": "src/electron/main.js",
+    "bin": {
+        "deploy-manager": "src/cli/index.js"
+    },
+    "scripts": {
+        "start": "electron .",
+        "cli": "node src/cli/index.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "ssh2": "^1.16.0",
+        "yargs": "^17.7.2",
+        "jsgui3-html": "^0.0.21"
+    },
+    "devDependencies": {
+        "electron": "^28.0.0"
+    }
+}

@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 750" style="background: #f5f5f5">
+  <!-- Title -->
+  <text x="700" y="40" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="24" font-weight="600" fill="#333">Predictive Hub Discovery</text>
+  <text x="700" y="62" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#666">Proactive URL Prediction: Pattern-Based + Gazetteer-Driven Hub Generation</text>
+  
+  <!-- INPUT: Known Hub -->
+  <rect x="50" y="100" width="200" height="80" fill="#e3e3e3" stroke="#333" stroke-width="2" rx="5"/>
+  <text x="150" y="130" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#333">Known Hub URL</text>
+  <text x="150" y="150" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#666">/world/france</text>
+  <text x="150" y="168" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#888">Validated hub page</text>
+  
+  <!-- Arrow -->
+  <path d="M 250 140 L 310 140" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  
+  <!-- PREDICTIVE HUB DISCOVERY -->
+  <rect x="310" y="90" width="230" height="100" fill="#d4e5f7" stroke="#333" stroke-width="2" rx="5"/>
+  <text x="425" y="120" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#333">PredictiveHubDiscovery</text>
+  <text x="425" y="140" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#555">Proactive hub prediction</text>
+  <text x="425" y="158" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="8" fill="#888">src/core/crawler/</text>
+  <text x="425" y="180" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="8" fill="#888">PredictiveHubDiscovery.js</text>
+  
+  <!-- STRATEGIES SECTION -->
+  <rect x="50" y="220" width="600" height="280" fill="#f5f5f5" stroke="#666" stroke-width="2" rx="8"/>
+  <text x="350" y="245" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#333">Prediction Strategies</text>
+  
+  <!-- Strategy 1: Sibling Pattern -->
+  <rect x="70" y="260" width="270" height="100" fill="#e8f4e8" stroke="#2d6a2d" stroke-width="2" rx="5"/>
+  <text x="205" y="285" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#333">Sibling Pattern (1.0 weight)</text>
+  <text x="205" y="305" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#555">predictSiblingHubs()</text>
+  <rect x="85" y="315" width="240" height="35" fill="#fff" stroke="#2d6a2d" stroke-width="1" rx="3"/>
+  <text x="205" y="330" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#333">/world/france → /world/germany</text>
+  <text x="205" y="345" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="8" fill="#666">Same URL structure, different entity</text>
+  
+  <!-- Strategy 2: Gazetteer Place -->
+  <rect x="360" y="260" width="270" height="100" fill="#e8f0f8" stroke="#3355aa" stroke-width="2" rx="5"/>
+  <text x="495" y="285" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#333">Gazetteer Place (0.9 weight)</text>
+  <text x="495" y="305" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#555">predictFromGazetteer()</text>
+  <rect x="375" y="315" width="240" height="35" fill="#fff" stroke="#3355aa" stroke-width="1" rx="3"/>
+  <text x="495" y="330" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#333">Wikidata: Q142 → France places</text>
+  <text x="495" y="345" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="8" fill="#666">Use place hierarchy from gazetteer</text>
+  
+  <!-- Strategy 3: Parent-Child -->
+  <rect x="70" y="375" width="270" height="100" fill="#fff4e8" stroke="#cc9900" stroke-width="2" rx="5"/>
+  <text x="205" y="400" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#333">Parent-Child (0.8 weight)</text>
+  <text x="205" y="420" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#555">Hierarchical expansion</text>
+  <rect x="85" y="430" width="240" height="35" fill="#fff" stroke="#cc9900" stroke-width="1" rx="3"/>
+  <text x="205" y="445" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#333">/world/france → /world/france/paris</text>
+  <text x="205" y="460" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="8" fill="#666">Discover child hubs from parent</text>
+  
+  <!-- Strategy 4: URL Template -->
+  <rect x="360" y="375" width="270" height="100" fill="#f0e8f0" stroke="#884488" stroke-width="2" rx="5"/>
+  <text x="495" y="400" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#333">URL Template (0.7 weight)</text>
+  <text x="495" y="420" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#555">Template-based generation</text>
+  <rect x="375" y="430" width="240" height="35" fill="#fff" stroke="#884488" stroke-width="1" rx="3"/>
+  <text x="495" y="445" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#333">/world/{country} template pattern</text>
+  <text x="495" y="460" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="8" fill="#666">Learned URL patterns from domain</text>
+  
+  <!-- PROCESSING SECTION -->
+  <rect x="700" y="220" width="350" height="280" fill="#f0f5fa" stroke="#3355aa" stroke-width="2" rx="8"/>
+  <text x="875" y="245" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#333">Processing Pipeline</text>
+  
+  <!-- Step 1: Extract Pattern -->
+  <rect x="720" y="265" width="310" height="45" fill="#fff" stroke="#3355aa" stroke-width="1" rx="3"/>
+  <text x="875" y="285" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" font-weight="500" fill="#333">1. _extractUrlPattern(knownHubUrl)</text>
+  <text x="875" y="302" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">Identify URL structure and placeholders</text>
+  
+  <!-- Step 2: Infer Hub Type -->
+  <rect x="720" y="320" width="310" height="45" fill="#fff" stroke="#3355aa" stroke-width="1" rx="3"/>
+  <text x="875" y="340" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" font-weight="500" fill="#333">2. _inferHubType(url, pattern)</text>
+  <text x="875" y="357" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">country | region | city | topic</text>
+  
+  <!-- Step 3: Find Siblings -->
+  <rect x="720" y="375" width="310" height="45" fill="#fff" stroke="#3355aa" stroke-width="1" rx="3"/>
+  <text x="875" y="395" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" font-weight="500" fill="#333">3. _findSiblingEntities(domain, url, type)</text>
+  <text x="875" y="412" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">Query gazetteer for related places</text>
+  
+  <!-- Step 4: Generate URL -->
+  <rect x="720" y="430" width="310" height="45" fill="#fff" stroke="#3355aa" stroke-width="1" rx="3"/>
+  <text x="875" y="450" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" font-weight="500" fill="#333">4. _generateSiblingUrl(url, pattern, entity)</text>
+  <text x="875" y="467" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">Create predicted URL from template</text>
+  
+  <!-- OUTPUT SECTION -->
+  <rect x="1100" y="220" width="250" height="280" fill="#e8e8e8" stroke="#333" stroke-width="2" rx="8"/>
+  <text x="1225" y="245" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#333">Prediction Output</text>
+  
+  <!-- Prediction Schema -->
+  <rect x="1120" y="265" width="210" height="140" fill="#fff" stroke="#666" stroke-width="1" rx="3"/>
+  <text x="1225" y="285" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#555">{</text>
+  <text x="1225" y="302" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#555">url: "/world/germany",</text>
+  <text x="1225" y="319" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#555">hubType: "country",</text>
+  <text x="1225" y="336" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#555">strategy: "sibling-pattern",</text>
+  <text x="1225" y="353" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#555">confidence: 0.85,</text>
+  <text x="1225" y="370" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#555">source: "/world/france",</text>
+  <text x="1225" y="387" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#555">entity: "Germany"</text>
+  <text x="1225" y="400" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#555">}</text>
+  
+  <!-- Confidence scoring -->
+  <rect x="1120" y="415" width="210" height="70" fill="#fff4d4" stroke="#cc9900" stroke-width="1" rx="3"/>
+  <text x="1225" y="435" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" font-weight="500" fill="#333">Confidence Scoring</text>
+  <text x="1225" y="455" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#666">_calculateSiblingConfidence()</text>
+  <text x="1225" y="475" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="8" fill="#888">Based on strategy weight + context</text>
+  
+  <!-- Arrows connecting sections -->
+  <path d="M 540 140 L 700 140 L 700 220" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 650 350 L 700 350" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 1050 350 L 1100 350" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  
+  <!-- CACHING SECTION -->
+  <rect x="50" y="530" width="400" height="110" fill="#fafafa" stroke="#ccc" stroke-width="1" rx="5"/>
+  <text x="250" y="555" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#333">Internal Caches</text>
+  
+  <text x="70" y="580" font-family="Segoe UI, sans-serif" font-size="10" fill="#555">• urlPatterns: Map(domain → patterns)</text>
+  <text x="70" y="600" font-family="Segoe UI, sans-serif" font-size="10" fill="#555">• predictedHubs: Map(domain → predictions[])</text>
+  <text x="70" y="620" font-family="Segoe UI, sans-serif" font-size="10" fill="#555">• strategyPerformance: Map(strategy → stats)</text>
+  
+  <!-- Module Legend -->
+  <rect x="500" y="530" width="850" height="110" fill="#fafafa" stroke="#ccc" stroke-width="1" rx="5"/>
+  <text x="925" y="555" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#333">Key Module Paths</text>
+  
+  <text x="520" y="580" font-family="Segoe UI Mono, monospace" font-size="10" fill="#555">Main:      src/core/crawler/PredictiveHubDiscovery.js</text>
+  <text x="520" y="600" font-family="Segoe UI Mono, monospace" font-size="10" fill="#3355aa">Gazetteer: src/core/crawler/gazetteer/ (GazetteerManager.js, StagedGazetteerCoordinator.js)</text>
+  <text x="520" y="620" font-family="Segoe UI Mono, monospace" font-size="10" fill="#888">Database:  gazetteer.db (places, hierarchy, alternate_names)</text>
+  
+  <!-- Use Case Examples -->
+  <rect x="50" y="660" width="1300" height="50" fill="#e8f4e8" stroke="#2d6a2d" stroke-width="1" rx="5"/>
+  <text x="700" y="690" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">Example: Guardian /world/france discovered → predicts /world/germany, /world/spain, /world/italy with 0.85+ confidence → crawler validates &amp; queues</text>
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#333"/>
+    </marker>
+  </defs>
+</svg>

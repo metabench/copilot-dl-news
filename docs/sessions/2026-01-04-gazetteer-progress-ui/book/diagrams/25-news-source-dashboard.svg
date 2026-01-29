@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600">
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1e3a5f"/>
+      <stop offset="100%" style="stop-color:#2d5a87"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#f8fafc"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.15"/>
+    </filter>
+    <filter id="cardShadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="600" fill="#f1f5f9"/>
+
+  <!-- Header Bar -->
+  <rect x="0" y="0" width="900" height="60" fill="url(#headerGrad)"/>
+  <text x="30" y="38" font-family="system-ui, sans-serif" font-size="20" font-weight="600" fill="white">📰 News Source Dashboard</text>
+  <text x="870" y="38" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="end">Last updated: 2 min ago</text>
+
+  <!-- Stats Row -->
+  <g transform="translate(20, 80)">
+    <!-- Stat Card 1 -->
+    <rect x="0" y="0" width="200" height="80" rx="8" fill="url(#cardGrad)" filter="url(#cardShadow)"/>
+    <text x="20" y="30" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">TRACKED SOURCES</text>
+    <text x="20" y="60" font-family="system-ui, sans-serif" font-size="28" font-weight="700" fill="#1e3a5f">24</text>
+    <text x="70" y="60" font-family="system-ui, sans-serif" font-size="12" fill="#22c55e">+3 this week</text>
+
+    <!-- Stat Card 2 -->
+    <rect x="220" y="0" width="200" height="80" rx="8" fill="url(#cardGrad)" filter="url(#cardShadow)"/>
+    <text x="240" y="30" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">VERIFIED HUBS</text>
+    <text x="240" y="60" font-family="system-ui, sans-serif" font-size="28" font-weight="700" fill="#22c55e">847</text>
+    <text x="310" y="60" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">/ 1,204 guessed</text>
+
+    <!-- Stat Card 3 -->
+    <rect x="440" y="0" width="200" height="80" rx="8" fill="url(#cardGrad)" filter="url(#cardShadow)"/>
+    <text x="460" y="30" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">COVERAGE SCORE</text>
+    <text x="460" y="60" font-family="system-ui, sans-serif" font-size="28" font-weight="700" fill="#f59e0b">68%</text>
+    <circle cx="600" cy="50" r="20" fill="none" stroke="#e2e8f0" stroke-width="4"/>
+    <circle cx="600" cy="50" r="20" fill="none" stroke="#f59e0b" stroke-width="4" stroke-dasharray="85 126" transform="rotate(-90 600 50)"/>
+
+    <!-- Stat Card 4 -->
+    <rect x="660" y="0" width="200" height="80" rx="8" fill="url(#cardGrad)" filter="url(#cardShadow)"/>
+    <text x="680" y="30" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">ARTICLES TODAY</text>
+    <text x="680" y="60" font-family="system-ui, sans-serif" font-size="28" font-weight="700" fill="#1e3a5f">1,247</text>
+    <text x="770" y="60" font-family="system-ui, sans-serif" font-size="12" fill="#22c55e">↑ 12%</text>
+  </g>
+
+  <!-- Source Cards Grid -->
+  <g transform="translate(20, 180)">
+    <!-- BBC Card -->
+    <rect x="0" y="0" width="280" height="120" rx="10" fill="url(#cardGrad)" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="280" height="6" rx="3" fill="#22c55e"/>
+    <text x="20" y="35" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#1e3a5f">🌐 BBC News</text>
+    <text x="20" y="55" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">www.bbc.com</text>
+    <text x="20" y="80" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Coverage: <tspan fill="#22c55e" font-weight="600">92%</tspan></text>
+    <text x="120" y="80" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Hubs: <tspan fill="#1e3a5f" font-weight="600">156</tspan></text>
+    <text x="20" y="100" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Articles: <tspan fill="#1e3a5f" font-weight="600">30,847</tspan></text>
+    <rect x="220" y="20" width="45" height="20" rx="4" fill="#dcfce7"/>
+    <text x="242" y="34" font-family="system-ui, sans-serif" font-size="10" fill="#16a34a" text-anchor="middle">Active</text>
+
+    <!-- Reuters Card -->
+    <rect x="300" y="0" width="280" height="120" rx="10" fill="url(#cardGrad)" filter="url(#shadow)"/>
+    <rect x="300" y="0" width="280" height="6" rx="3" fill="#22c55e"/>
+    <text x="320" y="35" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#1e3a5f">📡 Reuters</text>
+    <text x="320" y="55" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">www.reuters.com</text>
+    <text x="320" y="80" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Coverage: <tspan fill="#22c55e" font-weight="600">88%</tspan></text>
+    <text x="420" y="80" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Hubs: <tspan fill="#1e3a5f" font-weight="600">124</tspan></text>
+    <text x="320" y="100" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Articles: <tspan fill="#1e3a5f" font-weight="600">7,932</tspan></text>
+    <rect x="520" y="20" width="45" height="20" rx="4" fill="#dcfce7"/>
+    <text x="542" y="34" font-family="system-ui, sans-serif" font-size="10" fill="#16a34a" text-anchor="middle">Active</text>
+
+    <!-- Al Jazeera Card -->
+    <rect x="600" y="0" width="280" height="120" rx="10" fill="url(#cardGrad)" filter="url(#shadow)"/>
+    <rect x="600" y="0" width="280" height="6" rx="3" fill="#f59e0b"/>
+    <text x="620" y="35" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#1e3a5f">🌍 Al Jazeera</text>
+    <text x="620" y="55" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">www.aljazeera.com</text>
+    <text x="620" y="80" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Coverage: <tspan fill="#f59e0b" font-weight="600">65%</tspan></text>
+    <text x="720" y="80" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Hubs: <tspan fill="#1e3a5f" font-weight="600">89</tspan></text>
+    <text x="620" y="100" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Articles: <tspan fill="#1e3a5f" font-weight="600">6,421</tspan></text>
+    <rect x="820" y="20" width="45" height="20" rx="4" fill="#fef3c7"/>
+    <text x="842" y="34" font-family="system-ui, sans-serif" font-size="10" fill="#d97706" text-anchor="middle">Setup</text>
+
+    <!-- Row 2 -->
+    <!-- Guardian Card -->
+    <rect x="0" y="140" width="280" height="120" rx="10" fill="url(#cardGrad)" filter="url(#shadow)"/>
+    <rect x="0" y="140" width="280" height="6" rx="3" fill="#22c55e"/>
+    <text x="20" y="175" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#1e3a5f">🇬🇧 The Guardian</text>
+    <text x="20" y="195" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">www.theguardian.com</text>
+    <text x="20" y="220" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Coverage: <tspan fill="#22c55e" font-weight="600">94%</tspan></text>
+    <text x="120" y="220" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Hubs: <tspan fill="#1e3a5f" font-weight="600">189</tspan></text>
+    <text x="20" y="240" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Articles: <tspan fill="#1e3a5f" font-weight="600">103,241</tspan></text>
+    <rect x="220" y="160" width="45" height="20" rx="4" fill="#dcfce7"/>
+    <text x="242" y="174" font-family="system-ui, sans-serif" font-size="10" fill="#16a34a" text-anchor="middle">Active</text>
+
+    <!-- NYT Card -->
+    <rect x="300" y="140" width="280" height="120" rx="10" fill="url(#cardGrad)" filter="url(#shadow)"/>
+    <rect x="300" y="140" width="280" height="6" rx="3" fill="#64748b"/>
+    <text x="320" y="175" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#1e3a5f">🇺🇸 NY Times</text>
+    <text x="320" y="195" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">www.nytimes.com</text>
+    <text x="320" y="220" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Coverage: <tspan fill="#64748b" font-weight="600">—</tspan></text>
+    <text x="420" y="220" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Hubs: <tspan fill="#64748b" font-weight="600">0</tspan></text>
+    <text x="320" y="240" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Articles: <tspan fill="#1e3a5f" font-weight="600">6,247</tspan></text>
+    <rect x="520" y="160" width="45" height="20" rx="4" fill="#e2e8f0"/>
+    <text x="542" y="174" font-family="system-ui, sans-serif" font-size="10" fill="#64748b" text-anchor="middle">New</text>
+
+    <!-- DW Card -->
+    <rect x="600" y="140" width="280" height="120" rx="10" fill="url(#cardGrad)" filter="url(#shadow)"/>
+    <rect x="600" y="140" width="280" height="6" rx="3" fill="#ef4444"/>
+    <text x="620" y="175" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#1e3a5f">🇩🇪 Deutsche Welle</text>
+    <text x="620" y="195" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">www.dw.com</text>
+    <text x="620" y="220" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Coverage: <tspan fill="#ef4444" font-weight="600">12%</tspan></text>
+    <text x="720" y="220" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Hubs: <tspan fill="#1e3a5f" font-weight="600">18</tspan></text>
+    <text x="620" y="240" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Articles: <tspan fill="#1e3a5f" font-weight="600">5,241</tspan></text>
+    <rect x="820" y="160" width="55" height="20" rx="4" fill="#fef2f2"/>
+    <text x="847" y="174" font-family="system-ui, sans-serif" font-size="10" fill="#dc2626" text-anchor="middle">Needs Work</text>
+  </g>
+
+  <!-- Quick Actions Bar -->
+  <g transform="translate(20, 460)">
+    <rect x="0" y="0" width="860" height="50" rx="8" fill="white" filter="url(#cardShadow)"/>
+    <text x="20" y="30" font-family="system-ui, sans-serif" font-size="13" fill="#64748b">Quick Actions:</text>
+    
+    <rect x="130" y="10" width="120" height="30" rx="6" fill="#1e3a5f"/>
+    <text x="190" y="30" font-family="system-ui, sans-serif" font-size="12" fill="white" text-anchor="middle">+ Add Source</text>
+    
+    <rect x="260" y="10" width="140" height="30" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <text x="330" y="30" font-family="system-ui, sans-serif" font-size="12" fill="#475569" text-anchor="middle">📊 Coverage Report</text>
+    
+    <rect x="410" y="10" width="130" height="30" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <text x="475" y="30" font-family="system-ui, sans-serif" font-size="12" fill="#475569" text-anchor="middle">✓ Verify Queue</text>
+    
+    <rect x="550" y="10" width="120" height="30" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <text x="610" y="30" font-family="system-ui, sans-serif" font-size="12" fill="#475569" text-anchor="middle">⚙️ Settings</text>
+  </g>
+
+  <!-- Footer -->
+  <rect x="0" y="530" width="900" height="70" fill="#1e293b"/>
+  <text x="30" y="560" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8">Legend:</text>
+  <circle cx="90" cy="556" r="6" fill="#22c55e"/>
+  <text x="102" y="560" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">High Coverage (80%+)</text>
+  <circle cx="230" cy="556" r="6" fill="#f59e0b"/>
+  <text x="242" y="560" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">Medium (50-79%)</text>
+  <circle cx="350" cy="556" r="6" fill="#ef4444"/>
+  <text x="362" y="560" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">Low (&lt;50%)</text>
+  <circle cx="440" cy="556" r="6" fill="#64748b"/>
+  <text x="452" y="560" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">New/Unchecked</text>
+</svg>

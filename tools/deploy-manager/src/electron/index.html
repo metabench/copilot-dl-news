@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Deployment Manager</title>
+    <style>
+        body {
+            background: #222;
+            color: #eee;
+            font-family: sans-serif;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        #graph-container {
+            width: 100vw;
+            height: 70vh;
+            background: #111;
+            border-bottom: 2px solid #444;
+            position: relative;
+        }
+
+        #action-panel {
+            height: 30vh;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        .node {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #4488ff;
+            border: 2px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .node:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 10px #4488ff;
+        }
+
+        .node.remote {
+            background: #ff4444;
+        }
+
+        .label {
+            position: absolute;
+            bottom: -25px;
+            width: 150px;
+            text-align: center;
+            left: -45px;
+        }
+
+        .line {
+            position: absolute;
+            background: #666;
+            height: 2px;
+            transform-origin: 0 50%;
+        }
+
+        button {
+            background: #333;
+            color: white;
+            border: 1px solid #666;
+            padding: 8px 16px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        pre {
+            background: #000;
+            padding: 10px;
+            border: 1px solid #333;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="graph-container">
+        <!-- SVG lines could go here, but simple DIV lines for now -->
+    </div>
+    <div id="action-panel">
+        <h2>Select a node</h2>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        let config = {};
+
+        async function init() {
+            config = await ipcRenderer.invoke('get-config');
+            renderGraph();
+        }
+
+        function renderGraph() {
+            const container = document.getElementById('graph-container');
+            container.innerHTML = '';
+
+            // Local Node (Center-ish)
+            const cw = container.clientWidth;
+            const ch = container.clientHeight;
+            const lx = 200;
+            const ly = ch / 2;
+
+            createNode(container, lx, ly, 'Local Machine', 'local');
+
+            // Remote Nodes
+            const remotes = Object.keys(config);
+            remotes.forEach((name, i) => {
+                const rx = cw - 200;
+                const ry = (ch / (remotes.length + 1)) * (i + 1);
+
+                // Draw line
+                drawLine(container, lx, ly, rx, ry);
+
+                // Draw Node
+                createNode(container, rx, ry, name, 'remote', name);
+            });
+        }
+
+        function createNode(container, x, y, label, type, id) {
+            const el = document.createElement('div');
+            el.className = `node ${type}`;
+            el.style.left = (x - 30) + 'px';
+            el.style.top = (y - 30) + 'px';
+            el.innerHTML = `<div class="label">${label}</div>`;
+
+            el.onclick = () => selectNode(type, id);
+
+            container.appendChild(el);
+        }
+
+        function drawLine(container, x1, y1, x2, y2) {
+            const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+            const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+
+            const line = document.createElement('div');
+            line.className = 'line';
+            line.style.width = length + 'px';
+            line.style.left = x1 + 'px';
+            line.style.top = y1 + 'px';
+            line.style.transform = `rotate(${angle}deg)`;
+            container.appendChild(line);
+        }
+
+        function selectNode(type, id) {
+            const panel = document.getElementById('action-panel');
+            if (type === 'local') {
+                panel.innerHTML = `<h2>Local Machine</h2><p>Source of deployments.</p>`;
+            } else {
+                panel.innerHTML = `
+                    <h2>Remote: ${id}</h2>
+                    <p>Host: ${config[id].host}</p>
+                    <div class="actions">
+                        <button onclick="deploy('${id}')">Deploy 'remote-crawler-lab'</button>
+                        <button onclick="checkStatus('${id}')">Check Status</button>
+                        <button onclick="openBrowser('${id}')" style="background:#007acc; border-color:#005a9e;">Open App in Browser</button>
+                    </div>
+                    <div id="output"></div>
+                `;
+            }
+        }
+
+        async function openBrowser(id) {
+            const host = config[id].host;
+            const url = `http://${host}:3120`;
+            await ipcRenderer.invoke('open-browser', url);
+        }
+
+        async function deploy(id) {
+            const output = document.getElementById('output');
+            output.innerHTML = 'Deploying...';
+            try {
+                // Hardcoded paths for the lab as requested "equivalent pieces of code"
+                const localDir = 'C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\labs\\remote-crawler-lab';
+                const remoteDir = '~/labs/remote-crawler-lab';
+
+                const res = await ipcRenderer.invoke('run-deploy', { serverName: id, localDir, remoteDir });
+                output.innerHTML = `<pre>${res}</pre>`;
+
+                // Auto-restart? run-deploy does npm install, but we need to restart server
+                output.innerHTML += '<br>Restarting process...';
+                await ipcRenderer.invoke('run-cmd', { serverName: id, command: 'pkill -f server.js; cd ~/labs/remote-crawler-lab && ./start_server.sh' });
+                output.innerHTML += '<br>Done.';
+
+            } catch (e) {
+                output.innerHTML = `<pre style="color:red">${e.message}</pre>`;
+            }
+        }
+
+        async function checkStatus(id) {
+            const output = document.getElementById('output');
+            output.innerHTML = 'Checking...';
+            try {
+                const res = await ipcRenderer.invoke('run-cmd', { serverName: id, command: 'ps aux | grep server.js' });
+                output.innerHTML = `<pre>${res.stdout}</pre>`;
+            } catch (e) {
+                output.innerHTML = `<pre style="color:red">${e.message}</pre>`;
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

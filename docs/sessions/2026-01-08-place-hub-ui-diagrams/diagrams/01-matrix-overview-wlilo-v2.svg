@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600">
+  <title>Place Hub Guessing Matrix Dashboard - WLILO Style v2</title>
+  
+  <defs>
+    <!-- WLILO Color Palette -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e94560"/>
+      <stop offset="100%" style="stop-color:#ff6b6b"/>
+    </linearGradient>
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2a2a4e"/>
+      <stop offset="100%" style="stop-color:#1f1f3a"/>
+    </linearGradient>
+    <linearGradient id="progressBg" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#2ecc71"/>
+      <stop offset="65%" style="stop-color:#2ecc71"/>
+      <stop offset="65%" style="stop-color:#3a3a5c"/>
+      <stop offset="100%" style="stop-color:#3a3a5c"/>
+    </linearGradient>
+    
+    <!-- Glow effects -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Drop shadow -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="900" height="600" fill="url(#bgGradient)"/>
+  
+  <!-- Header Bar -->
+  <rect x="0" y="0" width="900" height="60" fill="rgba(0,0,0,0.3)"/>
+  <text x="20" y="38" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="bold" fill="url(#titleGradient)">Place Hub Guessing Matrix</text>
+  <text x="290" y="38" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6a6a8a">Places × Publishers Grid</text>
+  
+  <!-- Coverage Progress Bar -->
+  <g transform="translate(500, 22)">
+    <text x="0" y="0" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a0a0b0">Overall Coverage</text>
+    <rect x="0" y="6" width="200" height="12" fill="#2a2a4e" stroke="#3a3a5c" rx="6"/>
+    <rect x="1" y="7" width="128" height="10" fill="#2ecc71" rx="5"/>
+    <text x="210" y="16" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="bold" fill="#2ecc71">64%</text>
+  </g>
+  
+  <!-- Action Buttons (top-right) -->
+  <g transform="translate(720, 18)">
+    <rect x="0" y="0" width="75" height="28" fill="rgba(128,208,199,0.2)" stroke="#80d0c7" rx="4" style="cursor:pointer"/>
+    <text x="37" y="18" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#80d0c7">⚙️ Filters</text>
+    
+    <rect x="85" y="0" width="75" height="28" fill="rgba(233,69,96,0.2)" stroke="#e94560" rx="4" style="cursor:pointer"/>
+    <text x="122" y="18" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#e94560">📊 Export</text>
+  </g>
+  
+  <!-- Filter Pills Bar -->
+  <g transform="translate(20, 70)">
+    <rect x="0" y="0" width="860" height="34" fill="rgba(255,255,255,0.02)" stroke="#2a2a4e" rx="6"/>
+    
+    <!-- Active Filters -->
+    <rect x="10" y="6" width="90" height="22" fill="rgba(128,208,199,0.15)" stroke="#80d0c7" rx="11"/>
+    <text x="55" y="21" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#80d0c7">country</text>
+    
+    <rect x="110" y="6" width="110" height="22" fill="rgba(233,69,96,0.15)" stroke="#e94560" rx="11"/>
+    <text x="165" y="21" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#e94560">news ×</text>
+    
+    <rect x="230" y="6" width="90" height="22" fill="rgba(46,204,113,0.15)" stroke="#2ecc71" rx="11"/>
+    <text x="275" y="21" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#2ecc71">verified</text>
+    
+    <text x="340" y="21" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#6a6a8a">+ Add filter...</text>
+  </g>
+  
+  <!-- Matrix Container -->
+  <rect x="20" y="115" width="560" height="370" fill="url(#cardGradient)" stroke="#3a3a5c" stroke-width="1" rx="8" filter="url(#shadow)"/>
+  
+  <!-- Matrix Header -->
+  <rect x="20" y="115" width="560" height="30" fill="rgba(128,208,199,0.1)" rx="8"/>
+  <rect x="20" y="130" width="560" height="15" fill="url(#cardGradient)"/>
+  <text x="35" y="135" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="bold" fill="#80d0c7">PLACES × PUBLISHERS</text>
+  <text x="520" y="135" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#6a6a8a">12,000 cells</text>
+  
+  <!-- Column Headers (Publishers) - rotated 50° with proper spacing -->
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="9" text-anchor="start" fill="#80d0c7">
+    <text x="140" y="175" transform="rotate(-50, 140, 175)">guardian</text>
+    <text x="195" y="175" transform="rotate(-50, 195, 175)">bbc</text>
+    <text x="250" y="175" transform="rotate(-50, 250, 175)">eltiempo</text>
+    <text x="305" y="175" transform="rotate(-50, 305, 175)">cbc</text>
+    <text x="360" y="175" transform="rotate(-50, 360, 175)">torontostar</text>
+    <text x="415" y="175" transform="rotate(-50, 415, 175)">efectococuyo</text>
+    <text x="470" y="175" transform="rotate(-50, 470, 175)">semana</text>
+    <text x="525" y="175" transform="rotate(-50, 525, 175)">globalnews</text>
+  </g>
+  
+  <!-- Row Headers (Places) with Hierarchical Tree -->
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#c0c0d0">
+    <text x="115" y="207" text-anchor="end">United Kingdom</text>
+    <text x="115" y="235" text-anchor="end">France</text>
+    <text x="115" y="263" text-anchor="end">Germany</text>
+    <text x="115" y="291" text-anchor="end">Colombia</text>
+    <text x="115" y="319" text-anchor="end">Venezuela</text>
+    
+    <!-- ═══ CANADA TREE HIERARCHY ═══ -->
+    <!-- Canada (parent, expanded) -->
+    <g class="tree-parent">
+      <rect x="32" y="339" width="16" height="16" fill="rgba(128,208,199,0.2)" stroke="#80d0c7" stroke-width="1.5" rx="3" style="cursor:pointer"/>
+      <text x="40" y="351" text-anchor="middle" font-size="14" fill="#80d0c7" font-weight="bold">−</text>
+      <text x="115" y="351" text-anchor="end" fill="#80d0c7" font-weight="600">Canada</text>
+    </g>
+    
+    <!-- Ontario (child of Canada, expanded) -->
+    <g class="tree-child">
+      <!-- Vertical connector from Canada -->
+      <line x1="40" y1="355" x2="40" y2="377" stroke="#4a4a6c" stroke-width="1.5" stroke-dasharray="3,2"/>
+      <!-- Horizontal connector to Ontario -->
+      <line x1="40" y1="377" x2="52" y2="377" stroke="#4a4a6c" stroke-width="1.5" stroke-dasharray="3,2"/>
+      <!-- Ontario toggle box -->
+      <rect x="52" y="369" width="14" height="14" fill="rgba(128,208,199,0.1)" stroke="#6a6a8c" stroke-width="1" rx="2" style="cursor:pointer"/>
+      <text x="59" y="380" text-anchor="middle" font-size="11" fill="#7a7a9a">−</text>
+      <text x="115" y="381" text-anchor="end" fill="#a0a0b8">Ontario</text>
+    </g>
+    
+    <!-- Toronto (grandchild of Ontario) -->
+    <g class="tree-grandchild">
+      <!-- Vertical connector from Ontario -->
+      <line x1="59" y1="383" x2="59" y2="405" stroke="#3a3a5c" stroke-width="1" stroke-dasharray="2,2"/>
+      <!-- Horizontal connector to Toronto -->
+      <line x1="59" y1="405" x2="72" y2="405" stroke="#3a3a5c" stroke-width="1" stroke-dasharray="2,2"/>
+      <!-- Leaf indicator (no children) -->
+      <circle cx="75" cy="405" r="3" fill="#5a5a7a"/>
+      <text x="115" y="409" text-anchor="end" fill="#8a8aa0">Toronto</text>
+    </g>
+    
+    <!-- Ottawa (grandchild of Ontario) -->
+    <g class="tree-grandchild">
+      <line x1="59" y1="405" x2="59" y2="433" stroke="#3a3a5c" stroke-width="1" stroke-dasharray="2,2"/>
+      <line x1="59" y1="433" x2="72" y2="433" stroke="#3a3a5c" stroke-width="1" stroke-dasharray="2,2"/>
+      <circle cx="75" cy="433" r="3" fill="#5a5a7a"/>
+      <text x="115" y="437" text-anchor="end" fill="#8a8aa0">Ottawa</text>
+    </g>
+    
+    <!-- Québec (child of Canada, collapsed) -->
+    <g class="tree-child">
+      <line x1="40" y1="377" x2="40" y2="461" stroke="#4a4a6c" stroke-width="1.5" stroke-dasharray="3,2"/>
+      <line x1="40" y1="461" x2="52" y2="461" stroke="#4a4a6c" stroke-width="1.5" stroke-dasharray="3,2"/>
+      <rect x="52" y="453" width="14" height="14" fill="rgba(128,208,199,0.1)" stroke="#6a6a8c" stroke-width="1" rx="2" style="cursor:pointer"/>
+      <text x="59" y="464" text-anchor="middle" font-size="11" fill="#7a7a9a">+</text>
+      <text x="115" y="465" text-anchor="end" fill="#a0a0b8">Québec</text>
+    </g>
+  </g>
+  
+  <!-- Grid Lines - 28px row spacing, 55px column spacing -->
+  <g stroke="#2a2a4e" stroke-width="0.5" opacity="0.7">
+    <!-- Horizontal (y = 192, 220, 248, 276, 304, 336, 364, 392, 420, 448, 476) -->
+    <line x1="120" y1="192" x2="560" y2="192"/>
+    <line x1="120" y1="220" x2="560" y2="220"/>
+    <line x1="120" y1="248" x2="560" y2="248"/>
+    <line x1="120" y1="276" x2="560" y2="276"/>
+    <line x1="120" y1="304" x2="560" y2="304"/>
+    <line x1="120" y1="336" x2="560" y2="336"/>
+    <line x1="120" y1="364" x2="560" y2="364"/>
+    <line x1="120" y1="392" x2="560" y2="392"/>
+    <line x1="120" y1="420" x2="560" y2="420"/>
+    <line x1="120" y1="448" x2="560" y2="448"/>
+    <line x1="120" y1="476" x2="560" y2="476"/>
+    <!-- Vertical (x = 120, 175, 230, 285, 340, 395, 450, 505, 560) -->
+    <line x1="120" y1="192" x2="120" y2="476"/>
+    <line x1="175" y1="192" x2="175" y2="476"/>
+    <line x1="230" y1="192" x2="230" y2="476"/>
+    <line x1="285" y1="192" x2="285" y2="476"/>
+    <line x1="340" y1="192" x2="340" y2="476"/>
+    <line x1="395" y1="192" x2="395" y2="476"/>
+    <line x1="450" y1="192" x2="450" y2="476"/>
+    <line x1="505" y1="192" x2="505" y2="476"/>
+    <line x1="560" y1="192" x2="560" y2="476"/>
+  </g>
+  
+  <!-- Sample Cells - Row 1: UK (y=193, height=26) -->
+  <rect x="121" y="193" width="53" height="26" fill="#2ecc71" rx="3"/>
+  <text x="147" y="211" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">✓</text>
+  <rect x="176" y="193" width="53" height="26" fill="#2ecc71" rx="3"/>
+  <text x="202" y="211" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">✓</text>
+  <rect x="231" y="193" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="286" y="193" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="341" y="193" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="396" y="193" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="451" y="193" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="506" y="193" width="53" height="26" fill="#f39c12" rx="3"/>
+  <text x="532" y="211" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">?</text>
+  
+  <!-- Row 4: Colombia (y=277, height=26) -->
+  <rect x="121" y="277" width="53" height="26" fill="#f39c12" rx="3"/>
+  <text x="147" y="295" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">?</text>
+  <rect x="176" y="277" width="53" height="26" fill="#f39c12" rx="3"/>
+  <text x="202" y="295" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">?</text>
+  <rect x="231" y="277" width="53" height="26" fill="#2ecc71" rx="3"/>
+  <text x="257" y="295" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">✓</text>
+  <rect x="286" y="277" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="341" y="277" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="396" y="277" width="53" height="26" fill="#2ecc71" rx="3"/>
+  <text x="422" y="295" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">✓</text>
+  <rect x="451" y="277" width="53" height="26" fill="#2ecc71" rx="3"/>
+  <text x="477" y="295" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">✓</text>
+  <rect x="506" y="277" width="53" height="26" fill="#3498db" rx="3"/>
+  <text x="532" y="295" text-anchor="middle" font-family="Arial" font-size="10" fill="#fff">•</text>
+  
+  <!-- Row 5: Venezuela (y=305, height=26) -->
+  <rect x="121" y="305" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="176" y="305" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="231" y="305" width="53" height="26" fill="#e74c3c" rx="3"/>
+  <text x="257" y="323" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">×</text>
+  <rect x="286" y="305" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="341" y="305" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="396" y="305" width="53" height="26" fill="#2ecc71" rx="3"/>
+  <text x="422" y="323" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">✓</text>
+  <rect x="451" y="305" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="506" y="305" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  
+  <!-- Row 6: Canada (y=337, height=26) -->
+  <rect x="121" y="337" width="53" height="26" fill="#f39c12" rx="3"/>
+  <text x="147" y="355" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">?</text>
+  <rect x="176" y="337" width="53" height="26" fill="#2ecc71" rx="3"/>
+  <text x="202" y="355" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">✓</text>
+  <rect x="231" y="337" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="286" y="337" width="53" height="26" fill="#2ecc71" rx="3"/>
+  <text x="312" y="355" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">✓</text>
+  <rect x="341" y="337" width="53" height="26" fill="#2ecc71" rx="3"/>
+  <text x="367" y="355" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">✓</text>
+  <rect x="396" y="337" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="451" y="337" width="53" height="26" fill="rgba(255,255,255,0.03)" rx="3"/>
+  <rect x="506" y="337" width="53" height="26" fill="#2ecc71" rx="3"/>
+  <text x="532" y="355" text-anchor="middle" font-family="Arial" font-size="13" fill="#fff">✓</text>
+  
+  <!-- Row 7: Ontario (y=365, height=26) -->
+  <rect x="121" y="365" width="53" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+  <rect x="176" y="365" width="53" height="26" fill="#2ecc71" rx="2"/>
+  <text x="202" y="383" text-anchor="middle" font-family="Arial" font-size="11" fill="#fff">✓</text>
+  <rect x="231" y="365" width="53" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+  <rect x="286" y="365" width="53" height="26" fill="#2ecc71" rx="2"/>
+  <text x="312" y="383" text-anchor="middle" font-family="Arial" font-size="11" fill="#fff">✓</text>
+  <rect x="341" y="365" width="53" height="26" fill="#f39c12" rx="2"/>
+  <text x="367" y="383" text-anchor="middle" font-family="Arial" font-size="11" fill="#fff">?</text>
+  <rect x="396" y="365" width="53" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+  <rect x="451" y="365" width="53" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+  <rect x="506" y="365" width="53" height="26" fill="#2ecc71" rx="2"/>
+  <text x="532" y="383" text-anchor="middle" font-family="Arial" font-size="11" fill="#fff">✓</text>
+  
+  <!-- Row 8: Toronto (y=393, height=26) -->
+  <rect x="121" y="393" width="53" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+  <rect x="176" y="393" width="53" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+  <rect x="231" y="393" width="53" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+  <rect x="286" y="393" width="53" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+  <rect x="341" y="393" width="53" height="26" fill="#2ecc71" rx="2"/>
+  <text x="367" y="411" text-anchor="middle" font-family="Arial" font-size="11" fill="#fff">✓</text>
+  <rect x="396" y="393" width="53" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+  <rect x="451" y="393" width="53" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+  <rect x="506" y="393" width="53" height="26" fill="rgba(255,255,255,0.02)" rx="2"/>
+  
+  <!-- ═══════════════ RIGHT SIDEBAR ═══════════════ -->
+  
+  <!-- Legend Panel -->
+  <rect x="600" y="115" width="280" height="155" fill="url(#cardGradient)" stroke="#3a3a5c" rx="8" filter="url(#shadow)"/>
+  <rect x="600" y="115" width="280" height="28" fill="rgba(128,208,199,0.1)" rx="8"/>
+  <rect x="600" y="130" width="280" height="13" fill="url(#cardGradient)"/>
+  <text x="615" y="135" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="bold" fill="#80d0c7">CELL STATES</text>
+  
+  <!-- Legend Items (2 columns) -->
+  <g transform="translate(615, 155)">
+    <!-- Column 1 -->
+    <rect x="0" y="0" width="28" height="20" fill="rgba(255,255,255,0.05)" stroke="#3a3a5c" rx="3"/>
+    <text x="40" y="14" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a0a0b0">Unchecked</text>
+    
+    <rect x="0" y="28" width="28" height="20" fill="#f39c12" rx="3"/>
+    <text x="14" y="42" text-anchor="middle" font-family="Arial" font-size="11" fill="#fff">?</text>
+    <text x="40" y="42" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a0a0b0">Guessed</text>
+    
+    <rect x="0" y="56" width="28" height="20" fill="#3498db" rx="3"/>
+    <text x="14" y="70" text-anchor="middle" font-family="Arial" font-size="9" fill="#fff">•</text>
+    <text x="40" y="70" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a0a0b0">Pending</text>
+    
+    <!-- Column 2 -->
+    <rect x="125" y="0" width="28" height="20" fill="#2ecc71" rx="3"/>
+    <text x="139" y="14" text-anchor="middle" font-family="Arial" font-size="11" fill="#fff">✓</text>
+    <text x="165" y="14" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a0a0b0">Verified (exists)</text>
+    
+    <rect x="125" y="28" width="28" height="20" fill="#e74c3c" rx="3"/>
+    <text x="139" y="42" text-anchor="middle" font-family="Arial" font-size="11" fill="#fff">×</text>
+    <text x="165" y="42" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a0a0b0">Verified (absent)</text>
+  </g>
+  
+  <!-- Tree Legend -->
+  <g transform="translate(615, 240)">
+    <text x="0" y="0" font-family="Segoe UI, Arial, sans-serif" font-size="9" font-weight="bold" fill="#6a6a8a">HIERARCHY CONTROLS</text>
+    <rect x="0" y="8" width="14" height="14" fill="rgba(128,208,199,0.15)" stroke="#80d0c7" stroke-width="1" rx="2"/>
+    <text x="7" y="19" text-anchor="middle" font-size="11" fill="#80d0c7">−</text>
+    <text x="20" y="19" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#8a8aa0">Expanded</text>
+    <rect x="70" y="8" width="14" height="14" fill="rgba(128,208,199,0.1)" stroke="#6a6a8c" stroke-width="1" rx="2"/>
+    <text x="77" y="19" text-anchor="middle" font-size="11" fill="#7a7a9a">+</text>
+    <text x="90" y="19" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#8a8aa0">Collapsed</text>
+    <circle cx="147" cy="15" r="3" fill="#5a5a7a"/>
+    <text x="160" y="19" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#8a8aa0">Leaf</text>
+  </g>
+  
+  <!-- Stats Panel -->
+  <rect x="600" y="285" width="280" height="140" fill="url(#cardGradient)" stroke="#3a3a5c" rx="8" filter="url(#shadow)"/>
+  <rect x="600" y="285" width="280" height="28" fill="rgba(233,69,96,0.1)" rx="8"/>
+  <rect x="600" y="300" width="280" height="13" fill="url(#cardGradient)"/>
+  <text x="615" y="305" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="bold" fill="#e94560">MATRIX STATISTICS</text>
+  
+  <g transform="translate(615, 325)">
+    <!-- Stats Grid -->
+    <text x="0" y="0" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a0a0b0">Publishers</text>
+    <text x="90" y="0" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold" fill="#e94560">48</text>
+    
+    <text x="130" y="0" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a0a0b0">Places</text>
+    <text x="200" y="0" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold" fill="#e94560">~250</text>
+    
+    <text x="0" y="20" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a0a0b0">Total Cells</text>
+    <text x="90" y="20" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold" fill="#e94560">12,000</text>
+    
+    <text x="130" y="20" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a0a0b0">Expanded</text>
+    <text x="200" y="20" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold" fill="#80d0c7">18</text>
+    
+    <line x1="0" y1="32" x2="240" y2="32" stroke="#3a3a5c" stroke-width="0.5"/>
+    
+    <!-- State Breakdown Row 1 -->
+    <rect x="0" y="42" width="10" height="10" fill="#2ecc71" rx="2"/>
+    <text x="15" y="51" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a0a0b0">2,847</text>
+    
+    <rect x="55" y="42" width="10" height="10" fill="#f39c12" rx="2"/>
+    <text x="70" y="51" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a0a0b0">1,234</text>
+    
+    <rect x="110" y="42" width="10" height="10" fill="#3498db" rx="2"/>
+    <text x="125" y="51" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a0a0b0">456</text>
+    
+    <rect x="165" y="42" width="10" height="10" fill="#e74c3c" rx="2"/>
+    <text x="180" y="51" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a0a0b0">89</text>
+    
+    <rect x="210" y="42" width="10" height="10" fill="rgba(255,255,255,0.05)" stroke="#3a3a5c" rx="2"/>
+    <text x="225" y="51" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#6a6a8a">7,374</text>
+    
+    <!-- Mini Progress Bar -->
+    <text x="0" y="72" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#6a6a8a">Coverage</text>
+    <rect x="55" y="63" width="170" height="12" fill="#2a2a4e" stroke="#3a3a5c" rx="6"/>
+    <rect x="56" y="64" width="108" height="10" fill="#2ecc71" rx="5"/>
+    <text x="230" y="73" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="bold" fill="#2ecc71">64%</text>
+  </g>
+  
+  <!-- Quick Actions Panel -->
+  <rect x="600" y="440" width="280" height="75" fill="url(#cardGradient)" stroke="#3a3a5c" rx="8" filter="url(#shadow)"/>
+  <rect x="600" y="440" width="280" height="28" fill="rgba(52,152,219,0.1)" rx="8"/>
+  <rect x="600" y="455" width="280" height="13" fill="url(#cardGradient)"/>
+  <text x="615" y="460" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="bold" fill="#3498db">QUICK ACTIONS</text>
+  
+  <g transform="translate(615, 480)">
+    <rect x="0" y="0" width="80" height="24" fill="rgba(46,204,113,0.15)" stroke="#2ecc71" rx="4" style="cursor:pointer"/>
+    <text x="40" y="16" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#2ecc71">✓ Verify All</text>
+    
+    <rect x="90" y="0" width="80" height="24" fill="rgba(243,156,18,0.15)" stroke="#f39c12" rx="4" style="cursor:pointer"/>
+    <text x="130" y="16" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#f39c12">🔍 Re-probe</text>
+    
+    <rect x="180" y="0" width="80" height="24" fill="rgba(233,69,96,0.15)" stroke="#e94560" rx="4" style="cursor:pointer"/>
+    <text x="220" y="16" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#e94560">📈 Coverage</text>
+  </g>
+  
+  <!-- Footer Hints -->
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#5a5a7a">
+    <text x="30" y="500">🖱️ Click cell → Hub Detail</text>
+    <text x="180" y="500">🔀 Toggle → Expand/Collapse</text>
+    <text x="340" y="500">⌨️ Arrows → Navigate</text>
+    <text x="460" y="500">💾 Auto-save</text>
+  </g>
+  
+  <!-- Virtual Scroll Indicator -->
+  <rect x="565" y="192" width="8" height="284" fill="rgba(255,255,255,0.03)" rx="4"/>
+  <rect x="565" y="205" width="8" height="70" fill="rgba(128,208,199,0.3)" rx="4"/>
+  <text x="569" y="510" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="8" fill="#5a5a7a">▼</text>
+  
+  <!-- Tooltip Preview (positioned near a cell) -->
+  <g transform="translate(280, 230)" filter="url(#shadow)">
+    <rect x="0" y="0" width="155" height="85" fill="#1f1f3a" stroke="#80d0c7" stroke-width="1" rx="6"/>
+    <polygon points="20,-8 28,-8 24,0" fill="#1f1f3a" stroke="#80d0c7" stroke-width="1"/>
+    
+    <text x="10" y="18" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="bold" fill="#80d0c7">France @ bbc.com</text>
+    <line x1="10" y1="25" x2="145" y2="25" stroke="#3a3a5c" stroke-width="0.5"/>
+    
+    <text x="10" y="40" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#a0a0b0">Status: <tspan fill="#2ecc71">Verified ✓</tspan></text>
+    <text x="10" y="53" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#a0a0b0">Articles: <tspan fill="#e94560">247</tspan></text>
+    <text x="10" y="66" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#a0a0b0">Coverage: <tspan fill="#f39c12">Jan 2024 – Now</tspan></text>
+    <text x="10" y="79" font-family="Segoe UI, Arial, sans-serif" font-size="8" fill="#6a6a8a">Click for details →</text>
+  </g>
+</svg>

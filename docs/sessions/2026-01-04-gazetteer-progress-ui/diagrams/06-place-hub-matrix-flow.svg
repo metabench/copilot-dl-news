@@ -1,0 +1,239 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#475569"/>
+    </marker>
+    <marker id="arrow-gold" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#d4a024"/>
+    </marker>
+    <linearGradient id="header-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1612;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#120e0b;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="600" fill="#0d0a08"/>
+  
+  <!-- Title -->
+  <text x="450" y="40" text-anchor="middle" font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#f5e6d3">Place Hub Guessing Matrix — User Flow</text>
+  <text x="450" y="62" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#9a8577">Interactive verification of publisher geographic hubs</text>
+
+  <!-- SECTION 1: Matrix View -->
+  <rect x="30" y="90" width="280" height="220" rx="8" fill="#1a1612" stroke="#4a3628" stroke-width="2"/>
+  <text x="170" y="115" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#d4a024">1. Matrix View</text>
+  
+  <!-- Mini matrix representation -->
+  <rect x="50" y="135" width="240" height="130" rx="4" fill="#120e0b" stroke="#3d2e22" stroke-width="1"/>
+  
+  <!-- Corner cell -->
+  <rect x="50" y="135" width="70" height="25" fill="url(#header-grad)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="85" y="152" text-anchor="middle" font-family="monospace" font-size="8" fill="#d4a024">Place \ Host</text>
+  
+  <!-- Column headers (angled placeholders) -->
+  <rect x="120" y="135" width="30" height="25" fill="url(#header-grad)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="135" y="152" text-anchor="middle" font-family="monospace" font-size="7" fill="#d4a024" transform="rotate(-45 135 152)">bbc</text>
+  <rect x="150" y="135" width="30" height="25" fill="url(#header-grad)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="165" y="152" text-anchor="middle" font-family="monospace" font-size="7" fill="#d4a024" transform="rotate(-45 165 152)">guardian</text>
+  <rect x="180" y="135" width="30" height="25" fill="url(#header-grad)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="195" y="152" text-anchor="middle" font-family="monospace" font-size="7" fill="#d4a024" transform="rotate(-45 195 152)">reuters</text>
+  <rect x="210" y="135" width="30" height="25" fill="url(#header-grad)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="240" y="135" width="30" height="25" fill="url(#header-grad)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="260" y="135" width="30" height="25" fill="url(#header-grad)" stroke="#3d2e22" stroke-width="1"/>
+  
+  <!-- Row headers -->
+  <rect x="50" y="160" width="70" height="20" fill="url(#header-grad)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="55" y="174" font-family="system-ui, sans-serif" font-size="9" fill="#f5e6d3">France</text>
+  <rect x="50" y="180" width="70" height="20" fill="url(#header-grad)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="55" y="194" font-family="system-ui, sans-serif" font-size="9" fill="#f5e6d3">Germany</text>
+  <rect x="50" y="200" width="70" height="20" fill="url(#header-grad)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="55" y="214" font-family="system-ui, sans-serif" font-size="9" fill="#f5e6d3">Spain</text>
+  <rect x="50" y="220" width="70" height="20" fill="url(#header-grad)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="55" y="234" font-family="system-ui, sans-serif" font-size="9" fill="#f5e6d3">Italy</text>
+  <rect x="50" y="240" width="70" height="20" fill="url(#header-grad)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="55" y="254" font-family="system-ui, sans-serif" font-size="9" fill="#f5e6d3">Portugal</text>
+  
+  <!-- Matrix cells with states -->
+  <!-- Row 1 -->
+  <rect x="120" y="160" width="30" height="20" fill="rgba(74,222,128,0.18)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="135" y="174" text-anchor="middle" font-family="monospace" font-size="10" fill="#4ade80">✓</text>
+  <rect x="150" y="160" width="30" height="20" fill="rgba(74,222,128,0.18)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="165" y="174" text-anchor="middle" font-family="monospace" font-size="10" fill="#4ade80">✓</text>
+  <rect x="180" y="160" width="30" height="20" fill="rgba(251,191,36,0.28)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="195" y="174" text-anchor="middle" font-family="monospace" font-size="10" fill="#fbbf24">?</text>
+  <rect x="210" y="160" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="240" y="160" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="260" y="160" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  
+  <!-- Row 2 - highlighted cell -->
+  <rect x="120" y="180" width="30" height="20" fill="rgba(74,222,128,0.18)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="135" y="194" text-anchor="middle" font-family="monospace" font-size="10" fill="#4ade80">✓</text>
+  <rect x="150" y="180" width="30" height="20" fill="rgba(251,191,36,0.28)" stroke="#fbbf24" stroke-width="2"/>
+  <text x="165" y="194" text-anchor="middle" font-family="monospace" font-size="10" fill="#fbbf24">?</text>
+  <rect x="180" y="180" width="30" height="20" fill="rgba(248,113,113,0.18)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="195" y="194" text-anchor="middle" font-family="monospace" font-size="10" fill="#f87171">×</text>
+  <rect x="210" y="180" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="240" y="180" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="260" y="180" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  
+  <!-- More rows... -->
+  <rect x="120" y="200" width="30" height="20" fill="rgba(156,163,175,0.22)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="135" y="214" text-anchor="middle" font-family="monospace" font-size="10" fill="#9ca3af">•</text>
+  <rect x="150" y="200" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="180" y="200" width="30" height="20" fill="rgba(74,222,128,0.18)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="195" y="214" text-anchor="middle" font-family="monospace" font-size="10" fill="#4ade80">✓</text>
+  <rect x="210" y="200" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="240" y="200" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="260" y="200" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+
+  <rect x="120" y="220" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="150" y="220" width="30" height="20" fill="rgba(251,191,36,0.28)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="165" y="234" text-anchor="middle" font-family="monospace" font-size="10" fill="#fbbf24">?</text>
+  <rect x="180" y="220" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="210" y="220" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="240" y="220" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="260" y="220" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+
+  <rect x="120" y="240" width="30" height="20" fill="rgba(74,222,128,0.18)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="135" y="254" text-anchor="middle" font-family="monospace" font-size="10" fill="#4ade80">✓</text>
+  <rect x="150" y="240" width="30" height="20" fill="rgba(74,222,128,0.18)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="165" y="254" text-anchor="middle" font-family="monospace" font-size="10" fill="#4ade80">✓</text>
+  <rect x="180" y="240" width="30" height="20" fill="rgba(248,113,113,0.18)" stroke="#3d2e22" stroke-width="1"/>
+  <text x="195" y="254" text-anchor="middle" font-family="monospace" font-size="10" fill="#f87171">×</text>
+  <rect x="210" y="240" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="240" y="240" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+  <rect x="260" y="240" width="30" height="20" fill="rgba(255,255,255,0.02)" stroke="#3d2e22" stroke-width="1"/>
+
+  <!-- Legend -->
+  <g transform="translate(50, 275)">
+    <rect width="12" height="12" fill="rgba(74,222,128,0.18)" stroke="#4ade80" stroke-width="1"/>
+    <text x="16" y="10" font-family="system-ui, sans-serif" font-size="8" fill="#9a8577">✓ Verified</text>
+    <rect x="60" width="12" height="12" fill="rgba(251,191,36,0.28)" stroke="#fbbf24" stroke-width="1"/>
+    <text x="76" y="10" font-family="system-ui, sans-serif" font-size="8" fill="#9a8577">? Guessed</text>
+    <rect x="130" width="12" height="12" fill="rgba(248,113,113,0.18)" stroke="#f87171" stroke-width="1"/>
+    <text x="146" y="10" font-family="system-ui, sans-serif" font-size="8" fill="#9a8577">× Not found</text>
+    <rect x="200" width="12" height="12" fill="rgba(156,163,175,0.22)" stroke="#9ca3af" stroke-width="1"/>
+    <text x="216" y="10" font-family="system-ui, sans-serif" font-size="8" fill="#9a8577">• Pending</text>
+  </g>
+
+  <!-- Arrow to Cell Detail -->
+  <path d="M 310 195 Q 340 195 340 230 Q 340 340 370 340" fill="none" stroke="#d4a024" stroke-width="2" marker-end="url(#arrow-gold)"/>
+  <text x="355" y="275" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#d4a024">click</text>
+  <text x="355" y="287" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#d4a024">cell</text>
+
+  <!-- SECTION 2: Cell Detail -->
+  <rect x="380" y="90" width="250" height="450" rx="8" fill="#1a1612" stroke="#4a3628" stroke-width="2"/>
+  <text x="505" y="115" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#d4a024">2. Cell Detail Page</text>
+
+  <!-- Status Card -->
+  <rect x="395" y="130" width="220" height="50" rx="4" fill="#120e0b" stroke="#3d2e22"/>
+  <text x="405" y="148" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" fill="#d4a024">Status</text>
+  <circle cx="415" cy="165" r="5" fill="#fbbf24"/>
+  <text x="425" y="168" font-family="system-ui, sans-serif" font-size="11" fill="#fbbf24">Guessed (candidate hub)</text>
+
+  <!-- Name Variants Card -->
+  <rect x="395" y="190" width="220" height="70" rx="4" fill="#120e0b" stroke="#3d2e22"/>
+  <text x="405" y="208" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" fill="#d4a024">Place Name Variants</text>
+  <text x="405" y="225" font-family="monospace" font-size="9" fill="#f5e6d3">• Germany</text>
+  <text x="405" y="238" font-family="monospace" font-size="9" fill="#9a8577">• Deutschland (de)</text>
+  <text x="405" y="251" font-family="monospace" font-size="9" fill="#9a8577">• Allemagne (fr)</text>
+
+  <!-- URL Patterns Card -->
+  <rect x="395" y="270" width="220" height="100" rx="4" fill="#120e0b" stroke="#3d2e22"/>
+  <text x="405" y="288" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" fill="#d4a024">Possible URL Patterns</text>
+  <g transform="translate(405, 298)">
+    <rect width="180" height="18" rx="2" fill="#1a1612" stroke="#3d2e22"/>
+    <text x="5" y="13" font-family="monospace" font-size="8" fill="#f5e6d3">/world/germany</text>
+    <rect x="155" width="25" height="18" rx="2" fill="#4a3628"/>
+    <text x="167" y="13" text-anchor="middle" font-family="system-ui, sans-serif" font-size="7" fill="#d4a024">Check</text>
+  </g>
+  <g transform="translate(405, 320)">
+    <rect width="180" height="18" rx="2" fill="#1a1612" stroke="#3d2e22"/>
+    <text x="5" y="13" font-family="monospace" font-size="8" fill="#f5e6d3">/europe/germany</text>
+    <rect x="155" width="25" height="18" rx="2" fill="#4a3628"/>
+    <text x="167" y="13" text-anchor="middle" font-family="system-ui, sans-serif" font-size="7" fill="#d4a024">Check</text>
+  </g>
+  <g transform="translate(405, 342)">
+    <rect width="180" height="18" rx="2" fill="#1a1612" stroke="#3d2e22"/>
+    <text x="5" y="13" font-family="monospace" font-size="8" fill="#f5e6d3">/news/germany</text>
+    <rect x="155" width="25" height="18" rx="2" fill="#4a3628"/>
+    <text x="167" y="13" text-anchor="middle" font-family="system-ui, sans-serif" font-size="7" fill="#d4a024">Check</text>
+  </g>
+
+  <!-- Freshness Card -->
+  <rect x="395" y="380" width="220" height="50" rx="4" fill="#120e0b" stroke="#3d2e22"/>
+  <text x="405" y="398" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" fill="#d4a024">Analysis Freshness</text>
+  <text x="405" y="415" font-family="system-ui, sans-serif" font-size="9" fill="#f5e6d3">Last analyzed: 2h ago</text>
+  <text x="405" y="425" font-family="system-ui, sans-serif" font-size="8" fill="#9a8577">247 articles, 89% coverage</text>
+
+  <!-- Hub Check Card -->
+  <rect x="395" y="440" width="220" height="90" rx="4" fill="#120e0b" stroke="#3d2e22"/>
+  <text x="405" y="458" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" fill="#d4a024">Hub Check</text>
+  <rect x="405" y="468" width="160" height="20" rx="2" fill="#1a1612" stroke="#3d2e22"/>
+  <text x="410" y="482" font-family="monospace" font-size="8" fill="#9a8577">Enter custom URL...</text>
+  <rect x="568" y="468" width="40" height="20" rx="2" fill="#4a3628"/>
+  <text x="588" y="482" text-anchor="middle" font-family="system-ui, sans-serif" font-size="8" fill="#d4a024">Check</text>
+  
+  <!-- Result box -->
+  <rect x="405" y="495" width="200" height="25" rx="2" fill="rgba(74,222,128,0.1)" stroke="#4ade80"/>
+  <text x="415" y="512" font-family="system-ui, sans-serif" font-size="9" fill="#4ade80">✓ 200 OK — Hub exists!</text>
+
+  <!-- Arrow to API -->
+  <line x1="630" y1="340" x2="690" y2="340" stroke="#d4a024" stroke-width="2" marker-end="url(#arrow-gold)"/>
+  <text x="660" y="330" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#d4a024">probe</text>
+
+  <!-- SECTION 3: API & Backend -->
+  <rect x="700" y="90" width="170" height="240" rx="8" fill="#1a1612" stroke="#4a3628" stroke-width="2"/>
+  <text x="785" y="115" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#d4a024">3. Backend</text>
+
+  <!-- API box -->
+  <rect x="715" y="135" width="140" height="55" rx="4" fill="#120e0b" stroke="#3d2e22"/>
+  <text x="785" y="155" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" fill="#22c55e">/api/probe-hub</text>
+  <text x="785" y="172" text-anchor="middle" font-family="monospace" font-size="8" fill="#9a8577">POST {url}</text>
+  <text x="785" y="184" text-anchor="middle" font-family="monospace" font-size="8" fill="#9a8577">→ HEAD/GET request</text>
+
+  <!-- Response box -->
+  <rect x="715" y="200" width="140" height="60" rx="4" fill="#120e0b" stroke="#3d2e22"/>
+  <text x="725" y="218" font-family="system-ui, sans-serif" font-size="9" font-weight="bold" fill="#d4a024">Response</text>
+  <text x="725" y="233" font-family="monospace" font-size="8" fill="#f5e6d3">{status: 200,</text>
+  <text x="725" y="245" font-family="monospace" font-size="8" fill="#f5e6d3"> exists: true,</text>
+  <text x="725" y="257" font-family="monospace" font-size="8" fill="#f5e6d3"> contentType: ...}</text>
+
+  <!-- DB box -->
+  <rect x="715" y="270" width="140" height="45" rx="4" fill="#120e0b" stroke="#3d2e22"/>
+  <text x="785" y="290" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" fill="#3b82f6">SQLite</text>
+  <text x="785" y="305" text-anchor="middle" font-family="monospace" font-size="8" fill="#9a8577">place_page_mappings</text>
+
+  <!-- SECTION 4: State Diagram -->
+  <rect x="700" y="350" width="170" height="190" rx="8" fill="#1a1612" stroke="#4a3628" stroke-width="2"/>
+  <text x="785" y="375" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#d4a024">4. Cell States</text>
+
+  <!-- State nodes -->
+  <rect x="725" y="395" width="60" height="24" rx="4" fill="rgba(255,255,255,0.02)" stroke="#9a8577"/>
+  <text x="755" y="411" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#9a8577">unchecked</text>
+
+  <rect x="795" y="395" width="55" height="24" rx="4" fill="rgba(251,191,36,0.28)" stroke="#fbbf24"/>
+  <text x="822" y="411" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#fbbf24">guessed</text>
+
+  <rect x="725" y="435" width="55" height="24" rx="4" fill="rgba(156,163,175,0.22)" stroke="#9ca3af"/>
+  <text x="752" y="451" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#9ca3af">pending</text>
+
+  <rect x="790" y="435" width="60" height="24" rx="4" fill="rgba(74,222,128,0.18)" stroke="#4ade80"/>
+  <text x="820" y="451" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#4ade80">verified ✓</text>
+
+  <rect x="760" y="475" width="50" height="24" rx="4" fill="rgba(248,113,113,0.18)" stroke="#f87171"/>
+  <text x="785" y="491" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#f87171">absent ×</text>
+
+  <!-- State arrows -->
+  <path d="M 755 419 L 755 432" fill="none" stroke="#475569" stroke-width="1" marker-end="url(#arrow)"/>
+  <path d="M 822 419 L 822 432" fill="none" stroke="#475569" stroke-width="1" marker-end="url(#arrow)"/>
+  <path d="M 765 459 L 780 472" fill="none" stroke="#475569" stroke-width="1" marker-end="url(#arrow)"/>
+  <path d="M 805 459 L 790 472" fill="none" stroke="#475569" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- Transition labels -->
+  <text x="720" y="515" font-family="system-ui, sans-serif" font-size="8" fill="#9a8577">guess → check → verify</text>
+  <text x="720" y="528" font-family="system-ui, sans-serif" font-size="8" fill="#9a8577">HTTP probe determines outcome</text>
+
+  <!-- Footer -->
+  <text x="450" y="575" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#4a3628">Chapter 20 — Active Place Hub Discovery • Place Hub Guessing Matrix UI Flow</text>
+</svg>

@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 550" width="900" height="550">
+  <title>Pattern Analysis Flow - WLILO Style</title>
+  
+  <defs>
+    <!-- WLILO Gradients -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2a2a4e"/>
+      <stop offset="100%" style="stop-color:#1f1f3a"/>
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e94560"/>
+      <stop offset="100%" style="stop-color:#ff6b6b"/>
+    </linearGradient>
+    <!-- Arrowhead marker -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#80d0c7"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="900" height="550" fill="url(#bgGradient)"/>
+  
+  <!-- Title -->
+  <text x="450" y="30" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="bold" fill="url(#accentGradient)">Pattern Analysis &amp; Hub URL Generation</text>
+  <text x="450" y="50" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#a0a0b0">500-page threshold triggers pattern discovery</text>
+  
+  <!-- Phase 1: Data Collection -->
+  <g transform="translate(30, 80)">
+    <rect x="0" y="0" width="180" height="140" fill="url(#cardGradient)" stroke="#3a3a5c" stroke-width="2" rx="8"/>
+    <text x="90" y="25" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold" fill="#80d0c7">1. Data Collection</text>
+    
+    <rect x="15" y="40" width="150" height="25" fill="rgba(0,0,0,0.3)" stroke="#3a3a5c" rx="4"/>
+    <text x="90" y="57" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#e94560">http_responses table</text>
+    
+    <text x="20" y="85" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#c0c0d0">• 500+ pages per host</text>
+    <text x="20" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#c0c0d0">• Article URLs extracted</text>
+    <text x="20" y="115" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#c0c0d0">• Path segments analyzed</text>
+  </g>
+  
+  <!-- Arrow 1 -->
+  <line x1="215" y1="150" x2="255" y2="150" stroke="#80d0c7" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Phase 2: Pattern Discovery -->
+  <g transform="translate(260, 80)">
+    <rect x="0" y="0" width="180" height="140" fill="url(#cardGradient)" stroke="#3a3a5c" stroke-width="2" rx="8"/>
+    <text x="90" y="25" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold" fill="#80d0c7">2. Pattern Discovery</text>
+    
+    <rect x="15" y="40" width="150" height="25" fill="rgba(0,0,0,0.3)" stroke="#3a3a5c" rx="4"/>
+    <text x="90" y="57" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#f39c12">sitePatternAnalysis</text>
+    
+    <text x="20" y="85" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#c0c0d0">• Extract first segments</text>
+    <text x="20" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#c0c0d0">• Identify /world/, /news/</text>
+    <text x="20" y="115" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#c0c0d0">• Calculate confidence</text>
+  </g>
+  
+  <!-- Arrow 2 -->
+  <line x1="445" y1="150" x2="485" y2="150" stroke="#80d0c7" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Phase 3: Pattern Storage -->
+  <g transform="translate(490, 80)">
+    <rect x="0" y="0" width="180" height="140" fill="url(#cardGradient)" stroke="#3a3a5c" stroke-width="2" rx="8"/>
+    <text x="90" y="25" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold" fill="#80d0c7">3. Pattern Storage</text>
+    
+    <rect x="15" y="40" width="150" height="25" fill="rgba(0,0,0,0.3)" stroke="#3a3a5c" rx="4"/>
+    <text x="90" y="57" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#2ecc71">site_url_patterns</text>
+    
+    <text x="20" y="85" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#c0c0d0">• path_template</text>
+    <text x="20" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#c0c0d0">• confidence score</text>
+    <text x="20" y="115" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#c0c0d0">• article_count</text>
+  </g>
+  
+  <!-- Arrow 3 -->
+  <line x1="675" y1="150" x2="715" y2="150" stroke="#80d0c7" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Phase 4: URL Generation -->
+  <g transform="translate(720, 80)">
+    <rect x="0" y="0" width="150" height="140" fill="url(#cardGradient)" stroke="#3a3a5c" stroke-width="2" rx="8"/>
+    <text x="75" y="25" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold" fill="#80d0c7">4. Hub URLs</text>
+    
+    <rect x="10" y="40" width="130" height="25" fill="rgba(0,0,0,0.3)" stroke="#3a3a5c" rx="4"/>
+    <text x="75" y="57" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#9b59b6">generateCandidateUrls</text>
+    
+    <text x="15" y="85" font-family="Consolas, monospace" font-size="9" fill="#2ecc71">/world/colombia</text>
+    <text x="15" y="100" font-family="Consolas, monospace" font-size="9" fill="#2ecc71">/news/venezuela</text>
+    <text x="15" y="115" font-family="Consolas, monospace" font-size="9" fill="#2ecc71">/places/toronto</text>
+  </g>
+  
+  <!-- Example Pattern Box -->
+  <g transform="translate(50, 260)">
+    <rect x="0" y="0" width="380" height="120" fill="url(#cardGradient)" stroke="#3a3a5c" stroke-width="1" rx="8"/>
+    <text x="190" y="20" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="bold" fill="#e94560">Example: theguardian.com patterns</text>
+    
+    <text x="15" y="45" font-family="Consolas, monospace" font-size="9" fill="#c0c0d0">/world/{place}    <tspan fill="#2ecc71">conf: 0.92</tspan>  <tspan fill="#80d0c7">articles: 4521</tspan></text>
+    <text x="15" y="60" font-family="Consolas, monospace" font-size="9" fill="#c0c0d0">/news/{place}     <tspan fill="#2ecc71">conf: 0.78</tspan>  <tspan fill="#80d0c7">articles: 2134</tspan></text>
+    <text x="15" y="75" font-family="Consolas, monospace" font-size="9" fill="#c0c0d0">/uk-news/{place}  <tspan fill="#f39c12">conf: 0.65</tspan>  <tspan fill="#80d0c7">articles: 1892</tspan></text>
+    <text x="15" y="90" font-family="Consolas, monospace" font-size="9" fill="#c0c0d0">/football/{place} <tspan fill="#e74c3c">conf: 0.45</tspan>  <tspan fill="#80d0c7">articles: 876</tspan></text>
+    
+    <text x="15" y="110" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#6a6a8a">72 patterns total across 6 analyzed hosts</text>
+  </g>
+  
+  <!-- DB Tables Comparison -->
+  <g transform="translate(470, 260)">
+    <rect x="0" y="0" width="400" height="120" fill="url(#cardGradient)" stroke="#3a3a5c" stroke-width="1" rx="8"/>
+    <text x="200" y="20" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="bold" fill="#80d0c7">Pattern Tables (No Duplication)</text>
+    
+    <g transform="translate(10, 35)">
+      <rect x="0" y="0" width="180" height="70" fill="rgba(0,0,0,0.2)" stroke="#3a3a5c" rx="4"/>
+      <text x="90" y="15" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="9" font-weight="bold" fill="#e94560">url_classification_patterns</text>
+      <text x="10" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="8" fill="#a0a0b0">Purpose: Classify URL types</text>
+      <text x="10" y="45" font-family="Segoe UI, Arial, sans-serif" font-size="8" fill="#a0a0b0">Data: Regex → article/section</text>
+      <text x="10" y="58" font-family="Segoe UI, Arial, sans-serif" font-size="8" fill="#f39c12">Count: 1,811 rows</text>
+    </g>
+    
+    <g transform="translate(205, 35)">
+      <rect x="0" y="0" width="180" height="70" fill="rgba(0,0,0,0.2)" stroke="#3a3a5c" rx="4"/>
+      <text x="90" y="15" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="9" font-weight="bold" fill="#2ecc71">site_url_patterns</text>
+      <text x="10" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="8" fill="#a0a0b0">Purpose: Generate hub URLs</text>
+      <text x="10" y="45" font-family="Segoe UI, Arial, sans-serif" font-size="8" fill="#a0a0b0">Data: /world/{place} template</text>
+      <text x="10" y="58" font-family="Segoe UI, Arial, sans-serif" font-size="8" fill="#f39c12">Count: 72 rows</text>
+    </g>
+  </g>
+  
+  <!-- Threshold Indicator -->
+  <g transform="translate(50, 420)">
+    <rect x="0" y="0" width="820" height="80" fill="rgba(255,255,255,0.02)" stroke="#3a3a5c" stroke-width="1" stroke-dasharray="5,5" rx="8"/>
+    <text x="410" y="25" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold" fill="#f39c12">500-Page Threshold Gate</text>
+    
+    <g transform="translate(30, 40)">
+      <rect x="0" y="0" width="120" height="30" fill="rgba(46,204,113,0.2)" stroke="#2ecc71" rx="4"/>
+      <text x="60" y="15" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#c0c0d0">theguardian.com</text>
+      <text x="60" y="28" font-family="Segoe UI, Arial, sans-serif" font-size="8" fill="#2ecc71">✓ 45,234 pages</text>
+    </g>
+    
+    <g transform="translate(180, 40)">
+      <rect x="0" y="0" width="120" height="30" fill="rgba(46,204,113,0.2)" stroke="#2ecc71" rx="4"/>
+      <text x="60" y="15" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#c0c0d0">bbc.com</text>
+      <text x="60" y="28" font-family="Segoe UI, Arial, sans-serif" font-size="8" fill="#2ecc71">✓ 12,892 pages</text>
+    </g>
+    
+    <g transform="translate(330, 40)">
+      <rect x="0" y="0" width="120" height="30" fill="rgba(46,204,113,0.2)" stroke="#2ecc71" rx="4"/>
+      <text x="60" y="15" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#c0c0d0">eltiempo.com</text>
+      <text x="60" y="28" font-family="Segoe UI, Arial, sans-serif" font-size="8" fill="#2ecc71">✓ 2,341 pages</text>
+    </g>
+    
+    <g transform="translate(480, 40)">
+      <rect x="0" y="0" width="120" height="30" fill="rgba(231,76,60,0.2)" stroke="#e74c3c" rx="4"/>
+      <text x="60" y="15" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#c0c0d0">newsite.com</text>
+      <text x="60" y="28" font-family="Segoe UI, Arial, sans-serif" font-size="8" fill="#e74c3c">✗ 234 pages</text>
+    </g>
+    
+    <g transform="translate(630, 40)">
+      <rect x="0" y="0" width="160" height="30" fill="rgba(255,255,255,0.05)" stroke="#3a3a5c" stroke-dasharray="3,3" rx="4"/>
+      <text x="80" y="20" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#a0a0b0">Threshold: 500 pages</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,32 @@
+[
+  {
+    "name": "Madagascar",
+    "url": "https://www.theguardian.com/world/madagascar",
+    "maxPage": 16,
+    "oldestDate": "1999-01-30T04:24:19.000Z"
+  },
+  {
+    "name": "United States",
+    "url": "https://www.theguardian.com/us-news",
+    "maxPage": 1,
+    "oldestDate": "2026-01-07T14:21:11.000Z"
+  },
+  {
+    "name": "France",
+    "url": "https://www.theguardian.com/world/france",
+    "maxPage": 1246,
+    "oldestDate": "1848-06-28T17:34:34.000Z"
+  },
+  {
+    "name": "New Zealand",
+    "url": "https://www.theguardian.com/world/newzealand",
+    "maxPage": 317,
+    "oldestDate": "2000-07-28T00:10:50.000Z"
+  },
+  {
+    "name": "Yemen",
+    "url": "https://www.theguardian.com/world/yemen",
+    "maxPage": 131,
+    "oldestDate": "1999-01-06T12:59:12.000Z"
+  }
+]

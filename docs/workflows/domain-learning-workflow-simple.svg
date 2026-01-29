@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 700" style="background: #f5f5f5">
+  <!-- Title -->
+  <text x="700" y="40" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="24" font-weight="600" fill="#333">Domain Learning Pipeline</text>
+  <text x="700" y="62" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#666">Template Generation → Testing → Auto-Approval or Human Review</text>
+  
+  <!-- INPUT -->
+  <rect x="50" y="100" width="180" height="80" fill="#e3e3e3" stroke="#333" stroke-width="2" rx="5"/>
+  <text x="140" y="130" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#333">Sample Pages</text>
+  <text x="140" y="150" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">Crawled articles from</text>
+  <text x="140" y="165" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">a new domain</text>
+  
+  <!-- Arrow -->
+  <path d="M 230 140 L 290 140" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  
+  <!-- PIPELINE ENTRY -->
+  <rect x="290" y="100" width="200" height="80" fill="#d4e5f7" stroke="#333" stroke-width="2" rx="5"/>
+  <text x="390" y="130" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#333">DomainLearningPipeline</text>
+  <text x="390" y="150" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#555">Main orchestration</text>
+  <text x="390" y="168" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="8" fill="#888">src/core/crawler/learning/</text>
+  
+  <!-- Arrow to Phase 1 -->
+  <path d="M 490 140 L 550 140" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  
+  <!-- PHASE 1: TEMPLATE GENERATION -->
+  <rect x="550" y="90" width="280" height="200" fill="#e8f4e8" stroke="#2d6a2d" stroke-width="2" rx="8"/>
+  <text x="690" y="115" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#333">Phase 1: Template Generation</text>
+  <text x="690" y="132" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#666">TemplateGenerator.js</text>
+  
+  <!-- Generation steps -->
+  <rect x="570" y="150" width="240" height="35" fill="#fff" stroke="#2d6a2d" stroke-width="1" rx="3"/>
+  <text x="690" y="172" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#333">1. Analyze HTML structure</text>
+  
+  <rect x="570" y="195" width="240" height="35" fill="#fff" stroke="#2d6a2d" stroke-width="1" rx="3"/>
+  <text x="690" y="217" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#333">2. Extract common selectors</text>
+  
+  <rect x="570" y="240" width="240" height="35" fill="#fff" stroke="#2d6a2d" stroke-width="1" rx="3"/>
+  <text x="690" y="262" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#333">3. Generate CSS/XPath patterns</text>
+  
+  <!-- Arrow to Phase 2 -->
+  <path d="M 830 190 L 890 190" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  
+  <!-- PHASE 2: TEMPLATE TESTING -->
+  <rect x="890" y="90" width="280" height="200" fill="#fff4d4" stroke="#cc9900" stroke-width="2" rx="8"/>
+  <text x="1030" y="115" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#333">Phase 2: Template Testing</text>
+  <text x="1030" y="132" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#666">TemplateTester.js</text>
+  
+  <!-- Testing steps -->
+  <rect x="910" y="150" width="240" height="35" fill="#fff" stroke="#cc9900" stroke-width="1" rx="3"/>
+  <text x="1030" y="172" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#333">1. Apply template to samples</text>
+  
+  <rect x="910" y="195" width="240" height="35" fill="#fff" stroke="#cc9900" stroke-width="1" rx="3"/>
+  <text x="1030" y="217" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#333">2. Compare extracted vs expected</text>
+  
+  <rect x="910" y="240" width="240" height="35" fill="#fff" stroke="#cc9900" stroke-width="1" rx="3"/>
+  <text x="1030" y="262" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#333">3. Calculate accuracy score (0-1)</text>
+  
+  <!-- Arrow down from testing -->
+  <path d="M 1030 290 L 1030 330" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  
+  <!-- DECISION: ACCURACY THRESHOLD -->
+  <polygon points="1030,330 1100,380 1030,430 960,380" fill="#fff" stroke="#333" stroke-width="2"/>
+  <text x="1030" y="375" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" font-weight="600" fill="#333">Accuracy</text>
+  <text x="1030" y="390" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">≥ 90%?</text>
+  
+  <!-- YES PATH: AUTO-APPROVE -->
+  <path d="M 1100 380 L 1200 380" stroke="#2d6a2d" stroke-width="2" fill="none" marker-end="url(#arrowGreen)"/>
+  <text x="1145" y="370" font-family="Segoe UI, sans-serif" font-size="10" fill="#2d6a2d">Yes</text>
+  
+  <rect x="1200" y="340" width="150" height="80" fill="#d4f0d4" stroke="#2d6a2d" stroke-width="2" rx="5"/>
+  <text x="1275" y="370" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#333">Auto-Approved</text>
+  <text x="1275" y="390" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">Template ready</text>
+  <text x="1275" y="410" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#888">status: 'approved'</text>
+  
+  <!-- NO PATH: REVIEW QUEUE -->
+  <path d="M 1030 430 L 1030 480" stroke="#cc9900" stroke-width="2" fill="none" marker-end="url(#arrowYellow)"/>
+  <text x="1045" y="455" font-family="Segoe UI, sans-serif" font-size="10" fill="#cc9900">No</text>
+  
+  <rect x="890" y="480" width="280" height="120" fill="#ffe8cc" stroke="#cc9900" stroke-width="2" rx="8"/>
+  <text x="1030" y="505" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#333">Review Queue</text>
+  <text x="1030" y="522" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#666">ReviewQueue.js</text>
+  
+  <rect x="910" y="535" width="240" height="25" fill="#fff" stroke="#cc9900" stroke-width="1" rx="3"/>
+  <text x="1030" y="552" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#333">status: 'pending' → Human review</text>
+  
+  <rect x="910" y="565" width="240" height="25" fill="#fff" stroke="#cc9900" stroke-width="1" rx="3"/>
+  <text x="1030" y="582" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#333">Returns queueId for tracking</text>
+  
+  <!-- TEMPLATE OUTPUT -->
+  <rect x="550" y="340" width="280" height="120" fill="#e8e8e8" stroke="#333" stroke-width="2" rx="8"/>
+  <text x="690" y="365" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#333">Generated Template</text>
+  
+  <rect x="570" y="380" width="240" height="70" fill="#fff" stroke="#666" stroke-width="1" rx="3"/>
+  <text x="690" y="400" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#555">{</text>
+  <text x="690" y="415" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#555">title: ".article-title",</text>
+  <text x="690" y="430" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#555">content: ".article-body",</text>
+  <text x="690" y="445" text-anchor="middle" font-family="Segoe UI Mono, monospace" font-size="9" fill="#555">date: "time[datetime]"</text>
+  
+  <!-- Connect to template -->
+  <path d="M 690 290 L 690 340" stroke="#2d6a2d" stroke-width="2" fill="none" marker-end="url(#arrowGreen)"/>
+  
+  <!-- OUTPUT TO DB -->
+  <rect x="50" y="400" width="180" height="80" fill="#d4e5f7" stroke="#3355aa" stroke-width="2" rx="5"/>
+  <text x="140" y="430" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#333">Template Storage</text>
+  <text x="140" y="450" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="10" fill="#555">templateAdapter</text>
+  <text x="140" y="468" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="9" fill="#888">Saved to DB</text>
+  
+  <!-- Connect from auto-approved -->
+  <path d="M 1275 420 L 1275 520 L 300 520 L 300 440 L 230 440" stroke="#2d6a2d" stroke-width="2" fill="none" marker-end="url(#arrowGreen)"/>
+  
+  <!-- STATISTICS -->
+  <rect x="50" y="520" width="380" height="130" fill="#fafafa" stroke="#ccc" stroke-width="1" rx="5"/>
+  <text x="240" y="545" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#333">Pipeline Statistics</text>
+  
+  <text x="70" y="575" font-family="Segoe UI, sans-serif" font-size="10" fill="#555">• domainsLearned: count of domains processed</text>
+  <text x="70" y="595" font-family="Segoe UI, sans-serif" font-size="10" fill="#2d6a2d">• autoApproved: templates meeting 90% threshold</text>
+  <text x="70" y="615" font-family="Segoe UI, sans-serif" font-size="10" fill="#cc9900">• queuedForReview: templates needing human review</text>
+  <text x="70" y="635" font-family="Segoe UI, sans-serif" font-size="10" fill="#cc0000">• failed: template generation failures</text>
+  
+  <!-- Module Legend -->
+  <rect x="480" y="520" width="860" height="130" fill="#fafafa" stroke="#ccc" stroke-width="1" rx="5"/>
+  <text x="910" y="545" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#333">Key Module Paths</text>
+  
+  <text x="500" y="575" font-family="Segoe UI Mono, monospace" font-size="10" fill="#555">Learning: src/core/crawler/learning/ (DomainLearningPipeline.js, TemplateGenerator.js, TemplateTester.js)</text>
+  <text x="500" y="595" font-family="Segoe UI Mono, monospace" font-size="10" fill="#cc9900">Queue:    src/core/crawler/learning/ReviewQueue.js (ReviewStatus: pending, approved, rejected)</text>
+  <text x="500" y="615" font-family="Segoe UI Mono, monospace" font-size="10" fill="#555">Config:   autoApproveThreshold = 0.9 (configurable per instance)</text>
+  <text x="500" y="635" font-family="Segoe UI Mono, monospace" font-size="10" fill="#888">Events:   domain:learned, template:approved, template:queued, template:failed</text>
+  
+  <!-- Arrow marker definitions -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#333"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2d6a2d"/>
+    </marker>
+    <marker id="arrowYellow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#cc9900"/>
+    </marker>
+  </defs>
+</svg>

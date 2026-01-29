@@ -1,0 +1,15 @@
+{
+    "name": "@copilot-dl-news/remote-crawler",
+    "version": "0.0.1",
+    "description": "Deployable remote crawler module - reuses main repo DB code",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "start:apnews": "node server.js --domain=apnews.com --port=3200"
+    },
+    "dependencies": {
+        "better-sqlite3": "^12.5.0",
+        "express": "^5.2.1",
+        "lang-tools": "^0.0.44"
+    }
+}

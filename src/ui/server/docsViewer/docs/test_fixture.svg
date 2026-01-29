@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="auto">
+  <title>Automation Test Fixture</title>
+  
+  <!-- A grid to make movement obvious -->
+  <defs>
+    <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+      <path d="M 100 0 L 0 0 0 100" fill="none" stroke="gray" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#grid)" />
+
+  <!-- The Test Subject: A Clear Blue Box -->
+  <g id="test-box" transform="translate(100, 100)">
+    <rect width="100" height="100" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+    <text x="50" y="55" text-anchor="middle" fill="white" font-family="sans-serif">DRAG ME</text>
+  </g>
+
+  <!-- A reference marker at target position (200, 200) -->
+  <circle cx="250" cy="250" r="5" fill="red" opacity="0.5"/>
+  <text x="260" y="255" fill="red" font-size="10">Target (250, 250)</text>
+</svg>

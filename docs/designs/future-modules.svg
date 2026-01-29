@@ -1,0 +1,176 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600">
+  <defs>
+    <!-- Background Gradient (White Leather) -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fdfcfa;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Obsidian Gradient (Panels) -->
+    <linearGradient id="obsidianGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1f2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0a0d14;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Brushed Metal Gradient (Internal Panels) -->
+    <linearGradient id="brushedMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2a3040" />
+      <stop offset="50%" style="stop-color:#1e2330" />
+      <stop offset="100%" style="stop-color:#151820" />
+    </linearGradient>
+
+    <!-- Gemstone Gradients -->
+    <linearGradient id="goldGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fcd34d" />
+      <stop offset="50%" style="stop-color:#b45309" />
+      <stop offset="100%" style="stop-color:#78350f" />
+    </linearGradient>
+    <linearGradient id="emeraldGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2dd4bf" />
+      <stop offset="50%" style="stop-color:#1a8f4d" />
+      <stop offset="100%" style="stop-color:#0f5f33" />
+    </linearGradient>
+    <linearGradient id="rubyGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e74c5e" />
+      <stop offset="50%" style="stop-color:#c21f32" />
+      <stop offset="100%" style="stop-color:#8d1424" />
+    </linearGradient>
+
+    <!-- Filters -->
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feOffset dx="0" dy="4" result="offsetblur" />
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="gemGlow">
+      <feGaussianBlur stdDeviation="3" in="SourceGraphic" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="url(#bgGradient)" />
+
+  <!-- Section Header -->
+  <text x="600" y="40" font-family="Segoe UI, sans-serif" font-size="24" font-weight="bold" fill="#1a1f2e" text-anchor="middle" letter-spacing="1">PROPOSED MODULE INTERNALS</text>
+
+  <!-- Card 1: News Platform UI -->
+  <g transform="translate(50, 80)">
+    <!-- Main Card -->
+    <rect width="340" height="440" rx="12" fill="url(#obsidianGradient)" stroke="#fcd34d" stroke-width="2" filter="url(#dropShadow)" />
+    
+    <!-- Header -->
+    <rect x="0" y="0" width="340" height="60" rx="12" fill="#2a3040" fill-opacity="0.5" />
+    <rect x="-2" y="58" width="344" height="2" fill="#fcd34d" /> <!-- Divider -->
+    <rect x="20" y="15" width="30" height="30" rx="4" fill="url(#goldGem)" filter="url(#gemGlow)" />
+    <text x="65" y="38" font-family="Segoe UI, sans-serif" font-size="18" font-weight="bold" fill="#ffffff">news-platform-ui</text>
+    
+    <!-- Content List -->
+    <g transform="translate(20, 80)">
+      <text x="5" y="0" font-family="Segoe UI, sans-serif" font-size="14" fill="#a0a0a0">Visual Management Layer</text>
+      
+      <!-- List Items -->
+      <g transform="translate(0, 30)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#ffffff">Crawler Dashboard &amp; Stats</text>
+      </g>
+      <g transform="translate(0, 80)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#ffffff">Data Explorer Grid</text>
+      </g>
+      <g transform="translate(0, 130)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#ffffff">Log Viewer (Virtualized)</text>
+      </g>
+      <g transform="translate(0, 180)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#ffffff">Theme Manager (WLILO)</text>
+      </g>
+      <g transform="translate(0, 230)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#fcd34d">API Client (Injected)</text>
+      </g>
+    </g>
+  </g>
+
+
+  <!-- Card 2: News Gazetteer -->
+  <g transform="translate(430, 80)">
+    <!-- Main Card -->
+    <rect width="340" height="440" rx="12" fill="url(#obsidianGradient)" stroke="#2dd4bf" stroke-width="2" filter="url(#dropShadow)" />
+    
+    <!-- Header -->
+    <rect x="0" y="0" width="340" height="60" rx="12" fill="#2a3040" fill-opacity="0.5" />
+    <rect x="-2" y="58" width="344" height="2" fill="#2dd4bf" /> <!-- Divider -->
+    <rect x="20" y="15" width="30" height="30" rx="4" fill="url(#emeraldGem)" filter="url(#gemGlow)" />
+    <text x="65" y="38" font-family="Segoe UI, sans-serif" font-size="18" font-weight="bold" fill="#ffffff">news-gazetteer</text>
+    
+    <!-- Content List -->
+    <g transform="translate(20, 80)">
+      <text x="5" y="0" font-family="Segoe UI, sans-serif" font-size="14" fill="#a0a0a0">Geospatial Intelligence</text>
+      
+      <!-- List Items -->
+      <g transform="translate(0, 30)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#ffffff">Place Disambiguator</text>
+      </g>
+      <g transform="translate(0, 80)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#ffffff">Hub Discovery Engine</text>
+      </g>
+      <g transform="translate(0, 130)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#ffffff">R-Tree Spatial Index</text>
+      </g>
+      <g transform="translate(0, 180)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#ffffff">ISO Country/City Datsets</text>
+      </g>
+      <g transform="translate(0, 230)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#2dd4bf">Persistence (Injected)</text>
+      </g>
+    </g>
+  </g>
+
+
+  <!-- Card 3: News Intelligence -->
+  <g transform="translate(810, 80)">
+    <!-- Main Card -->
+    <rect width="340" height="440" rx="12" fill="url(#obsidianGradient)" stroke="#e74c5e" stroke-width="2" filter="url(#dropShadow)" />
+    
+    <!-- Header -->
+    <rect x="0" y="0" width="340" height="60" rx="12" fill="#2a3040" fill-opacity="0.5" />
+    <rect x="-2" y="58" width="344" height="2" fill="#e74c5e" /> <!-- Divider -->
+    <rect x="20" y="15" width="30" height="30" rx="4" fill="url(#rubyGem)" filter="url(#gemGlow)" />
+    <text x="65" y="38" font-family="Segoe UI, sans-serif" font-size="18" font-weight="bold" fill="#ffffff">news-intelligence</text>
+    
+    <!-- Content List -->
+    <g transform="translate(20, 80)">
+      <text x="5" y="0" font-family="Segoe UI, sans-serif" font-size="14" fill="#a0a0a0">Pure Logic Classifiers</text>
+      
+      <!-- List Items -->
+      <g transform="translate(0, 30)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#ffffff">Cascaded Classifiers (1-3)</text>
+      </g>
+      <g transform="translate(0, 80)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#ffffff">Metadata Extractors</text>
+      </g>
+      <g transform="translate(0, 130)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#ffffff">Trend Detectors</text>
+      </g>
+      <g transform="translate(0, 180)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#ffffff">Summary Generators</text>
+      </g>
+      <g transform="translate(0, 230)">
+        <rect width="300" height="40" rx="4" fill="url(#brushedMetal)" stroke="#3e4555" />
+        <text x="15" y="25" font-family="Segoe UI, sans-serif" font-size="14" fill="#e74c5e">Model Config (Injected)</text>
+      </g>
+    </g>
+  </g>
+
+</svg>

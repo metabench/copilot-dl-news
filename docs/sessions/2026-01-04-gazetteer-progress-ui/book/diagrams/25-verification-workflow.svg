@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480">
+  <defs>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="100%" style="stop-color:#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22c55e"/>
+      <stop offset="100%" style="stop-color:#16a34a"/>
+    </linearGradient>
+    <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b"/>
+      <stop offset="100%" style="stop-color:#d97706"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" fill="#94a3b8">
+      <path d="M0,0 L8,4 L0,8 Z"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" fill="#3b82f6">
+      <path d="M0,0 L8,4 L0,8 Z"/>
+    </marker>
+    <filter id="cardShadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="480" fill="#f8fafc"/>
+
+  <!-- Title -->
+  <text x="450" y="35" font-family="system-ui, sans-serif" font-size="22" font-weight="700" fill="#1e3a5f" text-anchor="middle">Verification Workflow</text>
+  <text x="450" y="55" font-family="system-ui, sans-serif" font-size="13" fill="#64748b" text-anchor="middle">From URL pattern to verified hub</text>
+
+  <!-- Step 1: Detect -->
+  <g transform="translate(50, 90)">
+    <rect x="0" y="0" width="180" height="160" rx="12" fill="white" filter="url(#cardShadow)"/>
+    <rect x="0" y="0" width="180" height="45" rx="12" fill="url(#blueGrad)"/>
+    <rect x="0" y="23" width="180" height="22" fill="url(#blueGrad)"/>
+    <text x="90" y="30" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white" text-anchor="middle">1️⃣ DETECT</text>
+    
+    <text x="15" y="70" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Pattern matching:</text>
+    
+    <rect x="15" y="80" width="150" height="22" rx="3" fill="#e0f2fe"/>
+    <text x="22" y="95" font-family="monospace" font-size="9" fill="#0369a1">/world/{region}</text>
+    
+    <rect x="15" y="106" width="150" height="22" rx="3" fill="#e0f2fe"/>
+    <text x="22" y="121" font-family="monospace" font-size="9" fill="#0369a1">/news/{country}</text>
+    
+    <rect x="15" y="132" width="150" height="22" rx="3" fill="#e0f2fe"/>
+    <text x="22" y="147" font-family="monospace" font-size="9" fill="#0369a1">/international/{place}</text>
+  </g>
+
+  <!-- Arrow 1-2 -->
+  <line x1="240" y1="170" x2="280" y2="170" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Step 2: Guess -->
+  <g transform="translate(290, 90)">
+    <rect x="0" y="0" width="180" height="160" rx="12" fill="white" filter="url(#cardShadow)"/>
+    <rect x="0" y="0" width="180" height="45" rx="12" fill="url(#amberGrad)"/>
+    <rect x="0" y="23" width="180" height="22" fill="url(#amberGrad)"/>
+    <text x="90" y="30" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white" text-anchor="middle">2️⃣ GUESS</text>
+    
+    <text x="15" y="70" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Generated URLs:</text>
+    
+    <rect x="15" y="80" width="150" height="28" rx="3" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+    <text x="22" y="95" font-family="monospace" font-size="8" fill="#92400e">bbc.com/news/world/africa</text>
+    <text x="155" y="103" font-family="system-ui" font-size="8" fill="#d97706" text-anchor="end">?</text>
+    
+    <rect x="15" y="112" width="150" height="28" rx="3" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+    <text x="22" y="127" font-family="monospace" font-size="8" fill="#92400e">bbc.com/news/world/asia</text>
+    <text x="155" y="135" font-family="system-ui" font-size="8" fill="#d97706" text-anchor="end">?</text>
+    
+    <text x="90" y="152" font-family="system-ui, sans-serif" font-size="9" fill="#94a3b8" text-anchor="middle">confidence: 0.75</text>
+  </g>
+
+  <!-- Arrow 2-3 -->
+  <line x1="480" y1="170" x2="520" y2="170" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Step 3: Probe -->
+  <g transform="translate(530, 90)">
+    <rect x="0" y="0" width="180" height="160" rx="12" fill="white" filter="url(#cardShadow)"/>
+    <rect x="0" y="0" width="180" height="45" rx="12" fill="#1e293b"/>
+    <rect x="0" y="23" width="180" height="22" fill="#1e293b"/>
+    <text x="90" y="30" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white" text-anchor="middle">3️⃣ PROBE</text>
+    
+    <text x="15" y="70" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">HTTP check:</text>
+    
+    <rect x="15" y="80" width="150" height="65" rx="3" fill="#0f172a"/>
+    <text x="22" y="95" font-family="monospace" font-size="9" fill="#22c55e">GET /news/world/africa</text>
+    <text x="22" y="110" font-family="monospace" font-size="9" fill="#94a3b8">→ 200 OK</text>
+    <text x="22" y="125" font-family="monospace" font-size="9" fill="#94a3b8">→ Content-Type: text/html</text>
+    <text x="22" y="140" font-family="monospace" font-size="9" fill="#22c55e">→ Has article links ✓</text>
+  </g>
+
+  <!-- Arrow 3-4 -->
+  <line x1="720" y1="170" x2="760" y2="170" stroke="#22c55e" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- Step 4: Verify -->
+  <g transform="translate(770, 90)">
+    <rect x="0" y="0" width="110" height="160" rx="12" fill="url(#greenGrad)" filter="url(#cardShadow)"/>
+    <text x="55" y="50" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white" text-anchor="middle">4️⃣</text>
+    <text x="55" y="70" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white" text-anchor="middle">VERIFIED</text>
+    
+    <text x="55" y="100" font-family="system-ui" font-size="36" fill="white" text-anchor="middle">✓</text>
+    
+    <text x="55" y="130" font-family="system-ui, sans-serif" font-size="10" fill="#dcfce7" text-anchor="middle">Hub confirmed</text>
+    <text x="55" y="145" font-family="system-ui, sans-serif" font-size="10" fill="#dcfce7" text-anchor="middle">Saved to DB</text>
+  </g>
+
+  <!-- Decision Branch (for failures) -->
+  <g transform="translate(530, 260)">
+    <rect x="0" y="0" width="180" height="100" rx="12" fill="white" filter="url(#cardShadow)" stroke="#ef4444" stroke-width="2" stroke-dasharray="4"/>
+    <text x="90" y="25" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#dc2626" text-anchor="middle">If probe fails:</text>
+    
+    <rect x="15" y="40" width="150" height="22" rx="3" fill="#fee2e2"/>
+    <text x="22" y="55" font-family="system-ui, sans-serif" font-size="10" fill="#991b1b">404 → Mark as "no hub"</text>
+    
+    <rect x="15" y="66" width="150" height="22" rx="3" fill="#fef3c7"/>
+    <text x="22" y="81" font-family="system-ui, sans-serif" font-size="10" fill="#92400e">Redirect → Follow & retry</text>
+  </g>
+
+  <!-- Automation Section -->
+  <g transform="translate(50, 280)">
+    <rect x="0" y="0" width="420" height="110" rx="10" fill="white" filter="url(#cardShadow)"/>
+    <text x="20" y="25" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#1e3a5f">⚡ Bulk Verification</text>
+    
+    <rect x="15" y="40" width="390" height="55" rx="6" fill="#0f172a"/>
+    <text x="25" y="60" font-family="monospace" font-size="11" fill="#94a3b8"># Verify all guessed hubs with confidence &gt; 0.8</text>
+    <text x="25" y="80" font-family="monospace" font-size="11" fill="#22c55e">$ hub-verify auto --confidence 0.8 --limit 100</text>
+  </g>
+
+  <!-- Stats Panel -->
+  <g transform="translate(50, 400)">
+    <rect x="0" y="0" width="830" height="60" rx="8" fill="#1e293b"/>
+    <text x="25" y="25" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8">Verification Queue:</text>
+    
+    <circle cx="170" cy="30" r="18" fill="#fef3c7"/>
+    <text x="170" y="35" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#d97706" text-anchor="middle">357</text>
+    <text x="200" y="35" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">guessed</text>
+    
+    <circle cx="310" cy="30" r="18" fill="#dbeafe"/>
+    <text x="310" y="35" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#2563eb" text-anchor="middle">42</text>
+    <text x="340" y="35" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">pending</text>
+    
+    <circle cx="440" cy="30" r="18" fill="#dcfce7"/>
+    <text x="440" y="35" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#16a34a" text-anchor="middle">847</text>
+    <text x="470" y="35" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">verified</text>
+    
+    <rect x="580" y="12" width="120" height="36" rx="6" fill="#22c55e"/>
+    <text x="640" y="35" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="white" text-anchor="middle">Start Verify</text>
+    
+    <rect x="710" y="12" width="100" height="36" rx="6" fill="#334155"/>
+    <text x="760" y="35" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Settings</text>
+  </g>
+</svg>

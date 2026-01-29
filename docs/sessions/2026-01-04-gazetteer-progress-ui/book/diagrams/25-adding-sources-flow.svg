@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <defs>
+    <linearGradient id="tierGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#64748b"/>
+      <stop offset="100%" style="stop-color:#475569"/>
+    </linearGradient>
+    <linearGradient id="tierGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b"/>
+      <stop offset="100%" style="stop-color:#d97706"/>
+    </linearGradient>
+    <linearGradient id="tierGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22c55e"/>
+      <stop offset="100%" style="stop-color:#16a34a"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" fill="#94a3b8">
+      <polygon points="0 0, 10 3.5, 0 7"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" fill="#22c55e">
+      <polygon points="0 0, 10 3.5, 0 7"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="#0f172a"/>
+
+  <!-- Title -->
+  <text x="400" y="40" font-family="system-ui, sans-serif" font-size="24" font-weight="700" fill="white" text-anchor="middle">Adding Sources: The Three-Tier Flow</text>
+  <text x="400" y="65" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">From discovery to verified coverage</text>
+
+  <!-- Tier 1: Discovery -->
+  <g transform="translate(80, 100)">
+    <rect x="0" y="0" width="180" height="280" rx="12" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+    <rect x="0" y="0" width="180" height="50" rx="12" fill="url(#tierGrad1)"/>
+    <rect x="0" y="25" width="180" height="25" fill="url(#tierGrad1)"/>
+    <text x="90" y="32" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white" text-anchor="middle">🔍 DISCOVERY</text>
+    
+    <text x="90" y="75" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">domains table</text>
+    
+    <!-- Domain items -->
+    <rect x="15" y="95" width="150" height="28" rx="4" fill="#334155"/>
+    <text x="25" y="113" font-family="monospace" font-size="10" fill="#cbd5e1">www.bbc.com</text>
+    <circle cx="145" cy="109" r="8" fill="#22c55e" opacity="0.3"/>
+    
+    <rect x="15" y="130" width="150" height="28" rx="4" fill="#334155"/>
+    <text x="25" y="148" font-family="monospace" font-size="10" fill="#cbd5e1">www.reuters.com</text>
+    <circle cx="145" cy="144" r="8" fill="#22c55e" opacity="0.3"/>
+    
+    <rect x="15" y="165" width="150" height="28" rx="4" fill="#334155"/>
+    <text x="25" y="183" font-family="monospace" font-size="10" fill="#cbd5e1">www.nytimes.com</text>
+    <circle cx="145" cy="179" r="8" fill="#64748b" opacity="0.3"/>
+    
+    <rect x="15" y="200" width="150" height="28" rx="4" fill="#334155" opacity="0.5"/>
+    <text x="25" y="218" font-family="monospace" font-size="10" fill="#64748b">wikipedia.org</text>
+    <text x="145" y="218" font-family="system-ui" font-size="9" fill="#ef4444">skip</text>
+    
+    <rect x="15" y="235" width="150" height="28" rx="4" fill="#334155" opacity="0.3"/>
+    <text x="90" y="253" font-family="system-ui" font-size="10" fill="#64748b" text-anchor="middle">+ 47 more...</text>
+  </g>
+
+  <!-- Arrow 1 -->
+  <g transform="translate(270, 230)">
+    <line x1="0" y1="0" x2="60" y2="0" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <text x="30" y="-10" font-family="system-ui, sans-serif" font-size="10" fill="#94a3b8" text-anchor="middle">promote</text>
+  </g>
+
+  <!-- Tier 2: Tracked -->
+  <g transform="translate(340, 100)">
+    <rect x="0" y="0" width="180" height="280" rx="12" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+    <rect x="0" y="0" width="180" height="50" rx="12" fill="url(#tierGrad2)"/>
+    <rect x="0" y="25" width="180" height="25" fill="url(#tierGrad2)"/>
+    <text x="90" y="32" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white" text-anchor="middle">📊 TRACKED</text>
+    
+    <text x="90" y="75" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">place_page_mappings</text>
+    
+    <!-- Source items with progress -->
+    <rect x="15" y="95" width="150" height="35" rx="4" fill="#334155"/>
+    <text x="25" y="113" font-family="monospace" font-size="10" fill="#fbbf24">www.bbc.com</text>
+    <rect x="25" y="118" width="130" height="4" rx="2" fill="#1e293b"/>
+    <rect x="25" y="118" width="117" height="4" rx="2" fill="#22c55e"/>
+    <text x="145" y="126" font-family="system-ui" font-size="8" fill="#94a3b8" text-anchor="end">90%</text>
+    
+    <rect x="15" y="140" width="150" height="35" rx="4" fill="#334155"/>
+    <text x="25" y="158" font-family="monospace" font-size="10" fill="#fbbf24">www.reuters.com</text>
+    <rect x="25" y="163" width="130" height="4" rx="2" fill="#1e293b"/>
+    <rect x="25" y="163" width="91" height="4" rx="2" fill="#f59e0b"/>
+    <text x="145" y="171" font-family="system-ui" font-size="8" fill="#94a3b8" text-anchor="end">70%</text>
+    
+    <rect x="15" y="185" width="150" height="35" rx="4" fill="#334155"/>
+    <text x="25" y="203" font-family="monospace" font-size="10" fill="#fbbf24">www.aljazeera.com</text>
+    <rect x="25" y="208" width="130" height="4" rx="2" fill="#1e293b"/>
+    <rect x="25" y="208" width="52" height="4" rx="2" fill="#f59e0b"/>
+    <text x="145" y="216" font-family="system-ui" font-size="8" fill="#94a3b8" text-anchor="end">40%</text>
+    
+    <rect x="15" y="230" width="150" height="35" rx="4" fill="#334155" stroke="#f59e0b" stroke-dasharray="4"/>
+    <text x="25" y="248" font-family="monospace" font-size="10" fill="#f59e0b">www.nytimes.com</text>
+    <text x="90" y="260" font-family="system-ui" font-size="8" fill="#94a3b8" text-anchor="middle">pending setup...</text>
+  </g>
+
+  <!-- Arrow 2 -->
+  <g transform="translate(530, 230)">
+    <line x1="0" y1="0" x2="60" y2="0" stroke="#22c55e" stroke-width="2" marker-end="url(#arrowGreen)"/>
+    <text x="30" y="-10" font-family="system-ui, sans-serif" font-size="10" fill="#22c55e" text-anchor="middle">verify</text>
+  </g>
+
+  <!-- Tier 3: Verified -->
+  <g transform="translate(600, 100)">
+    <rect x="0" y="0" width="180" height="280" rx="12" fill="#1e293b" stroke="#22c55e" stroke-width="2"/>
+    <rect x="0" y="0" width="180" height="50" rx="12" fill="url(#tierGrad3)"/>
+    <rect x="0" y="25" width="180" height="25" fill="url(#tierGrad3)"/>
+    <text x="90" y="32" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white" text-anchor="middle">✓ VERIFIED</text>
+    
+    <text x="90" y="75" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">place_hubs</text>
+    
+    <!-- Verified hubs -->
+    <rect x="15" y="95" width="150" height="50" rx="4" fill="#134e4a"/>
+    <text x="25" y="113" font-family="monospace" font-size="10" fill="#86efac">bbc.com/news/world/africa</text>
+    <text x="25" y="128" font-family="system-ui" font-size="9" fill="#5eead4">→ Africa Hub</text>
+    <text x="145" y="138" font-family="system-ui" font-size="8" fill="#22c55e" text-anchor="end">✓ verified</text>
+    
+    <rect x="15" y="155" width="150" height="50" rx="4" fill="#134e4a"/>
+    <text x="25" y="173" font-family="monospace" font-size="10" fill="#86efac">bbc.com/news/world/asia</text>
+    <text x="25" y="188" font-family="system-ui" font-size="9" fill="#5eead4">→ Asia Hub</text>
+    <text x="145" y="198" font-family="system-ui" font-size="8" fill="#22c55e" text-anchor="end">✓ verified</text>
+    
+    <rect x="15" y="215" width="150" height="50" rx="4" fill="#134e4a"/>
+    <text x="25" y="233" font-family="monospace" font-size="10" fill="#86efac">reuters.com/world/europe</text>
+    <text x="25" y="248" font-family="system-ui" font-size="9" fill="#5eead4">→ Europe Hub</text>
+    <text x="145" y="258" font-family="system-ui" font-size="8" fill="#22c55e" text-anchor="end">✓ verified</text>
+  </g>
+
+  <!-- Bottom: Command Examples -->
+  <g transform="translate(50, 410)">
+    <rect x="0" y="0" width="700" height="70" rx="8" fill="#1e293b" stroke="#334155"/>
+    <text x="20" y="25" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8">Quick Commands:</text>
+    
+    <text x="20" y="50" font-family="monospace" font-size="11" fill="#22c55e">$ news-sources promote --from discovery --min-urls 1000</text>
+    <text x="450" y="50" font-family="system-ui, sans-serif" font-size="10" fill="#64748b"># Auto-promote high-volume domains</text>
+  </g>
+</svg>

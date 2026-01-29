@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-01-17T01:51:45.781Z",
+  "current": {
+    "handleCheck": {
+      "ok": true
+    },
+    "countUrls": 0
+  },
+  "external": {
+    "handleCheck": {
+      "ok": true
+    },
+    "countUrls": 679946
+  },
+  "externalError": null
+}

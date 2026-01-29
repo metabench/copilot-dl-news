@@ -1,0 +1,108 @@
+{
+  "timestamp": "2026-01-07T22:06:25.833Z",
+  "urlCount": 50,
+  "batchSizes": [
+    {
+      "batchSize": 5,
+      "maxConcurrency": 20,
+      "urlCount": 50,
+      "roundTripMs": 22179,
+      "workerMs": 22037,
+      "ok": 40,
+      "errors": 10,
+      "throughput": "2.3",
+      "avgPerUrl": "443.6"
+    },
+    {
+      "batchSize": 10,
+      "maxConcurrency": 20,
+      "urlCount": 50,
+      "roundTripMs": 17202,
+      "workerMs": 17161,
+      "ok": 40,
+      "errors": 10,
+      "throughput": "2.9",
+      "avgPerUrl": "344.0"
+    },
+    {
+      "batchSize": 20,
+      "maxConcurrency": 20,
+      "urlCount": 50,
+      "roundTripMs": 16585,
+      "workerMs": 16554,
+      "ok": 40,
+      "errors": 10,
+      "throughput": "3.0",
+      "avgPerUrl": "331.7"
+    },
+    {
+      "batchSize": 50,
+      "maxConcurrency": 20,
+      "urlCount": 50,
+      "roundTripMs": 15460,
+      "workerMs": 15066,
+      "ok": 40,
+      "errors": 10,
+      "throughput": "3.2",
+      "avgPerUrl": "309.2"
+    }
+  ],
+  "concurrency": [
+    {
+      "concurrency": 5,
+      "urlCount": 50,
+      "roundTripMs": 17046,
+      "workerMs": 17021,
+      "ok": 40,
+      "errors": 10,
+      "throughput": "2.9"
+    },
+    {
+      "concurrency": 10,
+      "urlCount": 50,
+      "roundTripMs": 16666,
+      "workerMs": 16569,
+      "ok": 40,
+      "errors": 10,
+      "throughput": "3.0"
+    },
+    {
+      "concurrency": 20,
+      "urlCount": 50,
+      "roundTripMs": 16497,
+      "workerMs": 16472,
+      "ok": 40,
+      "errors": 10,
+      "throughput": "3.0"
+    },
+    {
+      "concurrency": 40,
+      "urlCount": 50,
+      "roundTripMs": 16684,
+      "workerMs": 16664,
+      "ok": 40,
+      "errors": 10,
+      "throughput": "3.0"
+    }
+  ],
+  "compression": [
+    {
+      "compression": "none",
+      "actualEncoding": "gzip",
+      "contentLength": "unknown",
+      "urlCount": 50,
+      "roundTripMs": 16718,
+      "workerMs": 16695,
+      "ok": 40
+    },
+    {
+      "compression": "gzip",
+      "actualEncoding": "gzip",
+      "contentLength": "unknown",
+      "urlCount": 50,
+      "roundTripMs": 16862,
+      "workerMs": 16844,
+      "ok": 40
+    }
+  ]
+}

@@ -1,0 +1,235 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 550">
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1e3a5f"/>
+      <stop offset="100%" style="stop-color:#2d5a87"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="550" fill="#f8fafc"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="900" height="50" fill="url(#headerGrad)"/>
+  <text x="25" y="32" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="white">📊 Coverage Analysis — Place Hub Matrix</text>
+  <text x="875" y="32" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8" text-anchor="end">Showing: Countries × Major Publishers</text>
+
+  <!-- Filter Bar -->
+  <rect x="15" y="60" width="870" height="45" rx="6" fill="white" filter="url(#shadow)"/>
+  <text x="30" y="88" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">Filters:</text>
+  
+  <rect x="85" y="72" width="100" height="26" rx="4" fill="#1e3a5f"/>
+  <text x="135" y="90" font-family="system-ui, sans-serif" font-size="11" fill="white" text-anchor="middle">🌍 Countries</text>
+  
+  <rect x="195" y="72" width="80" height="26" rx="4" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="235" y="90" font-family="system-ui, sans-serif" font-size="11" fill="#64748b" text-anchor="middle">Regions</text>
+  
+  <rect x="285" y="72" width="70" height="26" rx="4" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="320" y="90" font-family="system-ui, sans-serif" font-size="11" fill="#64748b" text-anchor="middle">Cities</text>
+  
+  <text x="400" y="88" font-family="system-ui, sans-serif" font-size="12" fill="#64748b">Status:</text>
+  
+  <rect x="450" y="72" width="60" height="26" rx="4" fill="#22c55e"/>
+  <text x="480" y="90" font-family="system-ui, sans-serif" font-size="11" fill="white" text-anchor="middle">All</text>
+  
+  <rect x="520" y="72" width="90" height="26" rx="4" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="565" y="90" font-family="system-ui, sans-serif" font-size="11" fill="#64748b" text-anchor="middle">⚠️ Gaps Only</text>
+
+  <!-- Matrix Grid -->
+  <g transform="translate(15, 120)">
+    <!-- Matrix Container -->
+    <rect x="0" y="0" width="870" height="360" rx="8" fill="white" filter="url(#shadow)"/>
+    
+    <!-- Column Headers (Publishers) -->
+    <g transform="translate(120, 0)">
+      <rect x="0" y="0" width="750" height="35" fill="#f1f5f9"/>
+      <text x="50" y="23" font-family="system-ui, sans-serif" font-size="10" fill="#1e3a5f" text-anchor="middle" font-weight="600">BBC</text>
+      <text x="140" y="23" font-family="system-ui, sans-serif" font-size="10" fill="#1e3a5f" text-anchor="middle" font-weight="600">Reuters</text>
+      <text x="230" y="23" font-family="system-ui, sans-serif" font-size="10" fill="#1e3a5f" text-anchor="middle" font-weight="600">Al Jazeera</text>
+      <text x="320" y="23" font-family="system-ui, sans-serif" font-size="10" fill="#1e3a5f" text-anchor="middle" font-weight="600">Guardian</text>
+      <text x="410" y="23" font-family="system-ui, sans-serif" font-size="10" fill="#1e3a5f" text-anchor="middle" font-weight="600">DW</text>
+      <text x="500" y="23" font-family="system-ui, sans-serif" font-size="10" fill="#1e3a5f" text-anchor="middle" font-weight="600">France24</text>
+      <text x="590" y="23" font-family="system-ui, sans-serif" font-size="10" fill="#1e3a5f" text-anchor="middle" font-weight="600">ABC AU</text>
+      <text x="680" y="23" font-family="system-ui, sans-serif" font-size="10" fill="#64748b" text-anchor="middle">+17 more</text>
+    </g>
+    
+    <!-- Row Labels (Places) -->
+    <rect x="0" y="35" width="120" height="325" fill="#f8fafc"/>
+    
+    <!-- Row 1: Nigeria -->
+    <g transform="translate(0, 35)">
+      <rect x="0" y="0" width="120" height="40" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+      <text x="15" y="18" font-family="system-ui, sans-serif" font-size="11" fill="#1e3a5f" font-weight="500">🇳🇬 Nigeria</text>
+      <text x="15" y="32" font-family="system-ui, sans-serif" font-size="9" fill="#94a3b8">Pop: 223M</text>
+      
+      <!-- Cells -->
+      <g transform="translate(120, 0)">
+        <rect x="10" y="5" width="70" height="30" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+        <text x="45" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#16a34a" text-anchor="middle">✓</text>
+        
+        <rect x="100" y="5" width="70" height="30" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+        <text x="135" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#16a34a" text-anchor="middle">✓</text>
+        
+        <rect x="190" y="5" width="70" height="30" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+        <text x="225" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#d97706" text-anchor="middle">?</text>
+        
+        <rect x="280" y="5" width="70" height="30" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+        <text x="315" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#16a34a" text-anchor="middle">✓</text>
+        
+        <rect x="370" y="5" width="70" height="30" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="405" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">—</text>
+        
+        <rect x="460" y="5" width="70" height="30" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+        <text x="495" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#16a34a" text-anchor="middle">✓</text>
+        
+        <rect x="550" y="5" width="70" height="30" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="585" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">—</text>
+      </g>
+    </g>
+    
+    <!-- Row 2: Kenya -->
+    <g transform="translate(0, 75)">
+      <rect x="0" y="0" width="120" height="40" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
+      <text x="15" y="18" font-family="system-ui, sans-serif" font-size="11" fill="#1e3a5f" font-weight="500">🇰🇪 Kenya</text>
+      <text x="15" y="32" font-family="system-ui, sans-serif" font-size="9" fill="#94a3b8">Pop: 55M</text>
+      
+      <g transform="translate(120, 0)">
+        <rect x="10" y="5" width="70" height="30" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+        <text x="45" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#16a34a" text-anchor="middle">✓</text>
+        
+        <rect x="100" y="5" width="70" height="30" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+        <text x="135" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#d97706" text-anchor="middle">?</text>
+        
+        <rect x="190" y="5" width="70" height="30" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+        <text x="225" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#16a34a" text-anchor="middle">✓</text>
+        
+        <rect x="280" y="5" width="70" height="30" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+        <text x="315" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#d97706" text-anchor="middle">?</text>
+        
+        <rect x="370" y="5" width="70" height="30" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="405" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">—</text>
+        
+        <rect x="460" y="5" width="70" height="30" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="495" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">—</text>
+        
+        <rect x="550" y="5" width="70" height="30" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+        <text x="585" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#16a34a" text-anchor="middle">✓</text>
+      </g>
+    </g>
+    
+    <!-- Row 3: South Africa -->
+    <g transform="translate(0, 115)">
+      <rect x="0" y="0" width="120" height="40" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+      <text x="15" y="18" font-family="system-ui, sans-serif" font-size="11" fill="#1e3a5f" font-weight="500">🇿🇦 South Africa</text>
+      <text x="15" y="32" font-family="system-ui, sans-serif" font-size="9" fill="#94a3b8">Pop: 60M</text>
+      
+      <g transform="translate(120, 0)">
+        <rect x="10" y="5" width="70" height="30" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+        <text x="45" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#16a34a" text-anchor="middle">✓</text>
+        
+        <rect x="100" y="5" width="70" height="30" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+        <text x="135" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#16a34a" text-anchor="middle">✓</text>
+        
+        <rect x="190" y="5" width="70" height="30" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+        <text x="225" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#16a34a" text-anchor="middle">✓</text>
+        
+        <rect x="280" y="5" width="70" height="30" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+        <text x="315" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#16a34a" text-anchor="middle">✓</text>
+        
+        <rect x="370" y="5" width="70" height="30" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+        <text x="405" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#d97706" text-anchor="middle">?</text>
+        
+        <rect x="460" y="5" width="70" height="30" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+        <text x="495" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#16a34a" text-anchor="middle">✓</text>
+        
+        <rect x="550" y="5" width="70" height="30" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+        <text x="585" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#d97706" text-anchor="middle">?</text>
+      </g>
+    </g>
+    
+    <!-- Row 4: Egypt (highlight - low coverage) -->
+    <g transform="translate(0, 155)">
+      <rect x="0" y="0" width="870" height="40" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+      <text x="15" y="18" font-family="system-ui, sans-serif" font-size="11" fill="#1e3a5f" font-weight="500">🇪🇬 Egypt</text>
+      <text x="15" y="32" font-family="system-ui, sans-serif" font-size="9" fill="#dc2626">⚠️ Low coverage</text>
+      
+      <g transform="translate(120, 0)">
+        <rect x="10" y="5" width="70" height="30" rx="4" fill="#fee2e2" stroke="#ef4444" stroke-width="1"/>
+        <text x="45" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#dc2626" text-anchor="middle">✗</text>
+        
+        <rect x="100" y="5" width="70" height="30" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+        <text x="135" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#d97706" text-anchor="middle">?</text>
+        
+        <rect x="190" y="5" width="70" height="30" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+        <text x="225" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#16a34a" text-anchor="middle">✓</text>
+        
+        <rect x="280" y="5" width="70" height="30" rx="4" fill="#fee2e2" stroke="#ef4444" stroke-width="1"/>
+        <text x="315" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#dc2626" text-anchor="middle">✗</text>
+        
+        <rect x="370" y="5" width="70" height="30" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="405" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">—</text>
+        
+        <rect x="460" y="5" width="70" height="30" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="495" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">—</text>
+        
+        <rect x="550" y="5" width="70" height="30" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="585" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">—</text>
+      </g>
+    </g>
+    
+    <!-- More rows indicator -->
+    <g transform="translate(0, 195)">
+      <rect x="0" y="0" width="870" height="30" fill="#f8fafc"/>
+      <text x="435" y="20" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">... 245 more countries ...</text>
+    </g>
+    
+    <!-- Legend -->
+    <g transform="translate(0, 240)">
+      <rect x="0" y="0" width="870" height="50" fill="#f1f5f9"/>
+      <text x="20" y="30" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Legend:</text>
+      
+      <rect x="80" y="15" width="24" height="24" rx="4" fill="#dcfce7" stroke="#22c55e"/>
+      <text x="85" y="32" font-family="system-ui" font-size="12" fill="#16a34a">✓</text>
+      <text x="115" y="32" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Verified</text>
+      
+      <rect x="190" y="15" width="24" height="24" rx="4" fill="#fef3c7" stroke="#f59e0b"/>
+      <text x="197" y="32" font-family="system-ui" font-size="12" fill="#d97706">?</text>
+      <text x="225" y="32" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Guessed</text>
+      
+      <rect x="300" y="15" width="24" height="24" rx="4" fill="#fee2e2" stroke="#ef4444"/>
+      <text x="306" y="32" font-family="system-ui" font-size="12" fill="#dc2626">✗</text>
+      <text x="335" y="32" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">No Hub</text>
+      
+      <rect x="410" y="15" width="24" height="24" rx="4" fill="#f1f5f9" stroke="#e2e8f0"/>
+      <text x="416" y="32" font-family="system-ui" font-size="12" fill="#94a3b8">—</text>
+      <text x="445" y="32" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Unchecked</text>
+      
+      <rect x="540" y="15" width="24" height="24" rx="4" fill="#dbeafe" stroke="#3b82f6"/>
+      <text x="547" y="32" font-family="system-ui" font-size="12" fill="#2563eb">•</text>
+      <text x="575" y="32" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Pending</text>
+    </g>
+    
+    <!-- Summary Stats -->
+    <g transform="translate(0, 300)">
+      <rect x="0" y="0" width="870" height="55" fill="white"/>
+      <text x="20" y="25" font-family="system-ui, sans-serif" font-size="12" fill="#1e3a5f" font-weight="600">Coverage Summary:</text>
+      
+      <text x="180" y="25" font-family="system-ui, sans-serif" font-size="12" fill="#22c55e" font-weight="600">847</text>
+      <text x="210" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">verified</text>
+      
+      <text x="280" y="25" font-family="system-ui, sans-serif" font-size="12" fill="#f59e0b" font-weight="600">357</text>
+      <text x="310" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">guessed</text>
+      
+      <text x="380" y="25" font-family="system-ui, sans-serif" font-size="12" fill="#ef4444" font-weight="600">124</text>
+      <text x="410" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">no hub</text>
+      
+      <text x="480" y="25" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8" font-weight="600">3,892</text>
+      <text x="530" y="25" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">unchecked</text>
+      
+      <text x="20" y="45" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">Click any cell to drill down • Press V to bulk-verify • Press G to show gaps only</text>
+    </g>
+  </g>
+</svg>

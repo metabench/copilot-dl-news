@@ -1,0 +1,15 @@
+{
+    "name": "remote-crawler-lab",
+    "version": "1.0.0",
+    "description": "Standalone crawler with SQLite for remote deployment",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "express": "^4.18.2",
+        "better-sqlite3": "^8.5.0",
+        "jsgui3-html": "^0.0.175",
+        "node-fetch": "^3.3.2"
+    }
+}

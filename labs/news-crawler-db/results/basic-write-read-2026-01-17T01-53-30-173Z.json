@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-01-17T01:53:30.173Z",
+  "current": {
+    "hasUpsertArticle": true,
+    "hasGetArticleByUrl": true,
+    "hasGetCount": true,
+    "writeOk": true,
+    "readOk": true,
+    "count": 0,
+    "error": null
+  },
+  "external": {
+    "hasUpsertArticle": true,
+    "hasGetArticleByUrl": true,
+    "hasGetCount": true,
+    "writeOk": false,
+    "readOk": false,
+    "count": 50266,
+    "error": null
+  },
+  "externalError": null
+}

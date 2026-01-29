@@ -1,0 +1,7 @@
+{
+  "oracle-vm": {
+    "host": "144.21.35.104",
+    "username": "ubuntu",
+    "privateKeyPath": "C:\\Users\\james\\.oci\\oci_api_key.pem"
+  }
+}

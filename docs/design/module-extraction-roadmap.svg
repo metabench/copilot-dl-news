@@ -1,0 +1,135 @@
+<svg width="1200" height="800" xmlns="http://www.w3.org/2000/svg" style="background-color: #1e1e1e; font-family: -apple-system, system-ui, sans-serif;">
+  <!-- Definitions -->
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+    <linearGradient id="grid-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color: #333; stop-opacity: 0.2"/>
+      <stop offset="100%" style="stop-color: #333; stop-opacity: 0"/>
+    </linearGradient>
+    <filter id="leather-texture">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" result="noise"/>
+      <feDiffuseLighting lighting-color="#333" surfaceScale="1" result="light">
+        <feDistantLight azimuth="45" elevation="60"/>
+      </feDiffuseLighting>
+      <feComposite operator="in" in="light" in2="SourceGraphic" result="composite"/>
+      <feBlend mode="multiply" in="composite" in2="SourceGraphic"/>
+    </filter>
+     <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e0e0e0"/>
+    </marker>
+  </defs>
+
+  <!-- Background Texture -->
+  <rect width="100%" height="100%" fill="#1e1e1e"/>
+  <rect width="100%" height="100%" fill="url(#grid-grad)"/>
+
+  <!-- Header -->
+  <text x="50" y="60" fill="#fff" font-size="32" font-weight="bold" letter-spacing="1">ARCHITECTURAL ROADMAP: MODULE EXTRACTION</text>
+  <path d="M50 80 L1150 80" stroke="#555" stroke-width="2"/>
+  <text x="50" y="105" fill="#aaa" font-size="16">Migrating from Monolithic Viewer to Agent Ecosystem</text>
+
+  <!-- Zones -->
+  <!-- Zone 1: The Past/Present (Monolith) -->
+  <g transform="translate(50, 150)">
+    <rect x="0" y="0" width="300" height="500" rx="12" fill="#2a2a2a" stroke="#444" stroke-width="2" filter="url(#shadow)"/>
+    <text x="20" y="40" fill="#ff6b6b" font-size="20" font-weight="bold">THE MONOLITH</text>
+    <text x="20" y="65" fill="#888" font-size="14">Legacy Docs Viewer</text>
+
+    <!-- Components inside Monolith -->
+    <g transform="translate(20, 90)">
+        <rect x="0" y="0" width="260" height="60" rx="6" fill="#3a3a3a" stroke="#666" stroke-dasharray="4 4"/>
+        <text x="130" y="35" fill="#ccc" text-anchor="middle" font-size="14">Mixed Dependencies</text>
+        <text x="130" y="55" fill="#777" text-anchor="middle" font-size="10">(jsgui3 local vs shared)</text>
+    </g>
+
+    <g transform="translate(20, 170)">
+        <rect x="0" y="0" width="260" height="80" rx="6" fill="#3a3a3a" stroke="#666"/>
+        <text x="130" y="30" fill="#fff" text-anchor="middle" font-size="16">Hardcoded Client</text>
+        <text x="130" y="50" fill="#aaa" text-anchor="middle" font-size="12">DOM Logic mixed with App</text>
+        <text x="130" y="65" fill="#aaa" text-anchor="middle" font-size="12">CommentBubble / Link</text>
+    </g>
+
+    <g transform="translate(20, 270)">
+        <rect x="0" y="0" width="260" height="60" rx="6" fill="#3a3a3a" stroke="#666"/>
+        <text x="130" y="35" fill="#fff" text-anchor="middle" font-size="16">Server Routes</text>
+    </g>
+    
+    <g transform="translate(20, 420)">
+        <text x="130" y="0" fill="#ff6b6b" text-anchor="middle" font-size="40">❄️</text>
+        <text x="130" y="30" fill="#ff6b6b" text-anchor="middle" font-size="14">FROZEN</text>
+    </g>
+  </g>
+
+  <!-- Arrows -->
+  <path d="M370 250 L480 250" stroke="#fff" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrowhead)"/>
+  <path d="M370 350 L480 350" stroke="#fff" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Zone 2: The Lab (Transition) -->
+  <g transform="translate(500, 150)">
+    <rect x="0" y="0" width="300" height="500" rx="12" fill="#2a2a2a" stroke="#444" stroke-width="2" filter="url(#shadow)"/>
+    <text x="20" y="40" fill="#ffd93d" font-size="20" font-weight="bold">THE LAB</text>
+    <text x="20" y="65" fill="#888" font-size="14">Isolation & Verification</text>
+
+    <!-- Experiments -->
+    <g transform="translate(20, 90)">
+        <rect x="0" y="0" width="260" height="100" rx="6" fill="#333" stroke="#ffd93d" stroke-width="2"/>
+        <text x="15" y="25" fill="#ffd93d" font-size="12" font-weight="bold">EXP 047: SVG CONTEXT</text>
+        
+        <rect x="15" y="40" width="100" height="40" rx="4" fill="#444" stroke="#777"/>
+        <text x="65" y="65" fill="#fff" text-anchor="middle" font-size="10">CommentBubble</text>
+        
+        <rect x="130" y="40" width="100" height="40" rx="4" fill="#444" stroke="#777"/>
+        <text x="180" y="65" fill="#fff" text-anchor="middle" font-size="10">ContextLink</text>
+    </g>
+
+    <g transform="translate(20, 210)">
+        <rect x="0" y="0" width="260" height="80" rx="6" fill="#333" stroke="#ffd93d" stroke-width="2"/>
+        <text x="15" y="25" fill="#ffd93d" font-size="12" font-weight="bold">EXP 048: AGENT SELECTOR</text>
+        
+        <rect x="15" y="35" width="230" height="30" rx="4" fill="#444" stroke="#777"/>
+        <text x="130" y="55" fill="#fff" text-anchor="middle" font-size="10">AgentSelector (Dropdown)</text>
+    </g>
+    
+     <g transform="translate(20, 310)">
+        <text x="130" y="30" fill="#ffd93d" text-anchor="middle" font-size="14">+ check.js verification</text>
+        <text x="130" y="50" fill="#ffd93d" text-anchor="middle" font-size="14">+ manifest.json</text>
+    </g>
+  </g>
+
+  <!-- Arrows -->
+  <path d="M820 250 L930 250" stroke="#fff" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <path d="M820 350 L930 350" stroke="#fff" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Zone 3: The Future (Ecosystem) -->
+  <g transform="translate(950, 150)">
+    <rect x="0" y="0" width="200" height="500" rx="12" fill="#2a2a2a" stroke="#444" stroke-width="2" filter="url(#shadow)"/>
+    <text x="20" y="40" fill="#6bff6b" font-size="20" font-weight="bold">THE FUTURE</text>
+    <text x="20" y="65" fill="#888" font-size="14">Clean Applications</text>
+
+    <!-- Apps -->
+    <g transform="translate(20, 90)">
+        <rect x="0" y="0" width="160" height="80" rx="6" fill="#1e3a1e" stroke="#6bff6b"/>
+        <text x="80" y="30" fill="#fff" text-anchor="middle" font-size="14" font-weight="bold">AGENT LAB</text>
+        <text x="80" y="50" fill="#aaffaa" text-anchor="middle" font-size="10">The IDE for Agents</text>
+        <text x="80" y="65" fill="#aaffaa" text-anchor="middle" font-size="10">(Uses 047, 048)</text>
+    </g>
+
+    <g transform="translate(20, 190)">
+        <rect x="0" y="0" width="160" height="80" rx="6" fill="#1e3a1e" stroke="#6bff6b"/>
+        <text x="80" y="30" fill="#fff" text-anchor="middle" font-size="14" font-weight="bold">COPILOT APP</text>
+        <text x="80" y="50" fill="#aaffaa" text-anchor="middle" font-size="10">Production UI</text>
+    </g>
+    
+    <g transform="translate(20, 320)">
+        <circle cx="80" cy="40" r="30" fill="#333" stroke="#6bff6b"/>
+        <text x="80" y="45" fill="#fff" text-anchor="middle" font-size="20">🌐</text>
+        <text x="80" y="90" fill="#fff" text-anchor="middle" font-size="12">Global Skills</text>
+    </g>
+  </g>
+  
+  <!-- Footer -->
+  <text x="50" y="750" fill="#555" font-size="12">Architecture Version 1.0 // Generated by Antigravity</text>
+
+</svg>

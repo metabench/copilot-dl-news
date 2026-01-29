@@ -1,0 +1,302 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f8fafc;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1e293b" />
+      <stop offset="100%" style="stop-color:#0f172a" />
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="100%" height="100%" fill="url(#bgGradient)" />
+
+  <!-- Header -->
+  <rect width="1600" height="80" fill="url(#headerGradient)" />
+  <text x="800" y="50" font-family="Segoe UI, sans-serif" font-size="32" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="1">NEWS-DB-ANALYSIS: CAPABILITIES CATALOG</text>
+  
+  <!-- Column Headers -->
+  <g transform="translate(0, 100)">
+    <text x="260" y="30" font-family="Segoe UI, sans-serif" font-size="20" font-weight="bold" fill="#334155" text-anchor="middle">CORE METRICS</text>
+    <line x1="100" y1="45" x2="420" y2="45" stroke="#cbd5e1" stroke-width="2"/>
+    
+    <text x="620" y="30" font-family="Segoe UI, sans-serif" font-size="20" font-weight="bold" fill="#334155" text-anchor="middle">INTELLIGENCE &amp; CONTENT</text>
+    <line x1="460" y1="45" x2="780" y2="45" stroke="#cbd5e1" stroke-width="2"/>
+    
+    <text x="980" y="30" font-family="Segoe UI, sans-serif" font-size="20" font-weight="bold" fill="#334155" text-anchor="middle">DISCOVERY &amp; GROWTH</text>
+    <line x1="820" y1="45" x2="1140" y2="45" stroke="#cbd5e1" stroke-width="2"/>
+    
+    <text x="1340" y="30" font-family="Segoe UI, sans-serif" font-size="20" font-weight="bold" fill="#334155" text-anchor="middle">SYSTEM HEALTH</text>
+    <line x1="1180" y1="45" x2="1500" y2="45" stroke="#cbd5e1" stroke-width="2"/>
+  </g>
+
+  <!-- === COLUMN 1: CORE METRICS === -->
+  <g transform="translate(80, 160)">
+    
+    <!-- Card 1: Time Series -->
+    <rect width="360" height="220" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+    <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 180 0)" />
+    <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">1. Time-Series Statistics</text>
+    <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+      <text x="10" y="0">• getDocumentCountsByDay(n)</text>
+      <text x="10" y="20">• getCrawlVolumeByHour(n)</text>
+      <text x="10" y="40">• getArticlesByWeek(n) / Month(n)</text>
+      <text x="10" y="60">• getGrowthRate(period)</text>
+      <text x="10" y="80">• getNewUrlsPerDay(n)</text>
+      <text x="10" y="100">• getFetchesPerDay(n)</text>
+      <text x="10" y="120">• getAnalysisCompletionsByDay(n)</text>
+      <text x="10" y="140">• getDailyCrawlCounts(days)</text>
+    </g>
+
+    <!-- Card 2: Domains -->
+    <g transform="translate(0, 240)">
+      <rect width="360" height="260" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+      <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 220 0)" />
+      <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">2. Domain &amp; Website Analysis</text>
+      <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+         <text x="10" y="0">• getNewsWebsiteStats(id)</text>
+         <text x="10" y="20">• getDomainArticleMetrics(host)</text>
+         <text x="10" y="40">• getTopDomains(limit)</text>
+         <text x="10" y="60">• getDomainCoveragePercent(domain)</text>
+         <text x="10" y="80">• getDomainsUnderThreshold(threshold)</text>
+         <text x="10" y="100">• getDomainGrowthRate(domain, days)</text>
+         <text x="10" y="120">• compareDomainVolumes(domains[])</text>
+         <text x="10" y="140">• getDomainLastCrawled(domain)</text>
+         <text x="10" y="160">• listDomainHosts({ limit, orderBy })</text>
+      </g>
+    </g>
+
+    <!-- Card 3: Crawl and Fetch -->
+    <g transform="translate(0, 520)">
+      <rect width="360" height="240" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+      <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 200 0)" />
+      <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">3. Crawl &amp; Fetch Patterns</text>
+       <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+         <text x="10" y="0">• getFetchSuccessRate(domain)</text>
+         <text x="10" y="20">• getStatusCodeDistribution(domain)</text>
+         <text x="10" y="40">• getAverageResponseTime(domain)</text>
+         <text x="10" y="60">• getHttp429Stats(host, minutes)</text>
+         <text x="10" y="80">• getSlowFetches(minMs, limit)</text>
+         <text x="10" y="100">• getFailedFetches(domain, limit)</text>
+         <text x="10" y="120">• getRetryStats(domain)</text>
+         <text x="10" y="140">• getArticleClassifiedFetchCount()</text>
+      </g>
+    </g>
+
+    <!-- Card 4: Classification -->
+    <g transform="translate(0, 780)">
+       <rect width="360" height="200" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+      <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 160 0)" />
+      <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">4. Classification Logic</text>
+       <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+         <text x="10" y="0">• getClassificationDistribution(domain)</text>
+         <text x="10" y="20">• getClassificationConfidence(domain)</text>
+         <text x="10" y="40">• getLowConfidenceItems(threshold)</text>
+         <text x="10" y="60">• getMisclassifiedUrls(limit)</text>
+         <text x="10" y="80">• getClassificationStageStats()</text>
+         <text x="10" y="100">• getClassificationHistory(url)</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- === COLUMN 2: INTELLIGENCE === -->
+  <g transform="translate(440, 160)">
+    
+    <!-- Card 5: Topics and Trends -->
+    <rect width="360" height="260" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+    <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 220 0)" />
+    <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">5. Topics &amp; Trends</text>
+    <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+      <text x="10" y="0">• detectTrends(date, limit)</text>
+      <text x="10" y="20">• getEmergingTopics(days, limit)</text>
+      <text x="10" y="40">• detectBreakingNews(hours, min)</text>
+      <text x="10" y="60">• getTopicHistory(topicId, days)</text>
+      <text x="10" y="80">• calculateBaseline(topicId, days)</text>
+      <text x="10" y="100">• getTopicDistribution(domain)</text>
+      <text x="10" y="120">• getTopicCooccurrence(topicId)</text>
+      <text x="10" y="140">• getTrendingTopicsByDomain(domain)</text>
+      <text x="10" y="160">• computeTrendScore(count, baseline)</text>
+    </g>
+
+    <!-- Card 6: Sentiment -->
+    <g transform="translate(0, 280)">
+      <rect width="360" height="220" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+      <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 180 0)" />
+      <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">6. Sentiment Analysis</text>
+      <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+        <text x="10" y="0">• analyzeSentiment(text)</text>
+        <text x="10" y="20">• getEntitySentiment(id, entity)</text>
+        <text x="10" y="40">• getSentimentDistribution(domain)</text>
+        <text x="10" y="60">• getSentimentTrend(topicId, days)</text>
+        <text x="10" y="80">• getControversialTopics(thresh)</text>
+        <text x="10" y="100">• compareSentiment(clusters[])</text>
+        <text x="10" y="120">• getNegativeArticles(domain)</text>
+      </g>
+    </g>
+
+    <!-- Card 7: Similarity -->
+    <g transform="translate(0, 520)">
+      <rect width="360" height="200" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+      <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 160 0)" />
+      <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">7. Similarity &amp; Deduplication</text>
+      <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+        <text x="10" y="0">• findSimilarArticles(fingerprint)</text>
+        <text x="10" y="20">• isDuplicate(contentId)</text>
+        <text x="10" y="40">• getDuplicateCluster(contentId)</text>
+        <text x="10" y="60">• getDuplicateRate(domain)</text>
+        <text x="10" y="80">• getCanonicalArticle(clusterId)</text>
+        <text x="10" y="100">• getSimilarityIndex(domain)</text>
+      </g>
+    </g>
+
+    <!-- Card 8: Stories -->
+    <g transform="translate(0, 740)">
+      <rect width="360" height="240" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+      <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 200 0)" />
+      <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">8. Story Aggregation</text>
+      <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+         <text x="10" y="0">• getStoryCluster(id)</text>
+         <text x="10" y="20">• getStoryCoverage(storyId)</text>
+         <text x="10" y="40">• getPerspectiveDifferences(id)</text>
+         <text x="10" y="60">• extractFacts(clusterId)</text>
+         <text x="10" y="80">• generateCoverageMap(clusterId)</text>
+         <text x="10" y="100">• getRecentClusters(hours)</text>
+         <text x="10" y="120">• mergeClusters(id1, id2)</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- === COLUMN 3: DISCOVERY === -->
+  <g transform="translate(800, 160)">
+    
+    <!-- Card 9: Hub Gaps -->
+    <rect width="360" height="280" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+    <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 240 0)" />
+    <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">9. Hub Gap Discovery</text>
+    <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+      <text x="10" y="0">• getMissingCountryHubs(domain)</text>
+      <text x="10" y="20">• getMissingCityHubs(domain, country)</text>
+      <text x="10" y="40">• getMissingTopicHubs(domain)</text>
+      <text x="10" y="60">• getHubCandidates(domain, kind)</text>
+      <text x="10" y="80">• getHubVerificationQueue(limit)</text>
+      <text x="10" y="100">• getHubCoverageStats(domain)</text>
+      <text x="10" y="120">• predictHubUrls(domain, entity)</text>
+      <text x="10" y="140">• get404Candidates(domain, limit)</text>
+      <text x="10" y="160">• recordPlaceHubPattern(domain)</text>
+    </g>
+
+    <!-- Card 10: Place Analysis -->
+    <g transform="translate(0, 300)">
+      <rect width="360" height="240" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+      <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 200 0)" />
+      <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">10. Place/Geo Analysis</text>
+      <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+        <text x="10" y="0">• extractPlacesFromText(text)</text>
+        <text x="10" y="20">• resolvePlace(name)</text>
+        <text x="10" y="40">• inferContext(detections, domain)</text>
+        <text x="10" y="60">• getArticlesByPlace(placeId)</text>
+        <text x="10" y="80">• getTopCountrySlugs(limit)</text>
+        <text x="10" y="100">• getPlaceDistribution(domain)</text>
+        <text x="10" y="120">• getPlaceHubPatterns(domain)</text>
+      </g>
+    </g>
+
+    <!-- Card 11: Milestones -->
+    <g transform="translate(0, 560)">
+      <rect width="360" height="200" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+      <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 160 0)" />
+      <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">11. Milestone Tracking</text>
+      <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+        <text x="10" y="0">• insertMilestone(milestone)</text>
+        <text x="10" y="20">• listMilestones({ filter })</text>
+        <text x="10" y="40">• getRecentMilestones(limit)</text>
+        <text x="10" y="60">• getMilestoneProgress(job, kind)</text>
+        <text x="10" y="80">• getFirstMilestone(kind, scope)</text>
+        <text x="10" y="100">• getMilestoneHistory(kind, days)</text>
+      </g>
+    </g>
+
+    <!-- Card 12: XPath Learning -->
+    <g transform="translate(0, 780)">
+      <rect width="360" height="200" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+      <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 160 0)" />
+      <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">12. XPath Learning</text>
+      <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+        <text x="10" y="0">• getArticleXPathPatterns(domain)</text>
+        <text x="10" y="20">• recordArticleXPathPatternUsage()</text>
+        <text x="10" y="40">• getPatternSuccessRate(id)</text>
+        <text x="10" y="60">• getLowQualityPatterns(maxRate)</text>
+        <text x="10" y="80">• getTopDomains(limit)</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- === COLUMN 4: SYSTEM HEALTH === -->
+  <g transform="translate(1160, 160)">
+    
+    <!-- Card 13: Job Analysis -->
+    <rect width="360" height="220" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+    <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 180 0)" />
+    <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">13. Jobs &amp; Queues</text>
+    <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+      <text x="10" y="0">• getActiveTaskCount(jobId)</text>
+      <text x="10" y="20">• getQueueDepth(jobId)</text>
+      <text x="10" y="40">• getQueueThroughput(job, mins)</text>
+      <text x="10" y="60">• getTaskCompletionRate(jobId)</text>
+      <text x="10" y="80">• getCrawlJobDuration(jobId)</text>
+      <text x="10" y="100">• getFailedCrawlJobs(days)</text>
+      <text x="10" y="120">• listQueues(limit)</text>
+    </g>
+
+    <!-- Card 14: Health Checks -->
+    <g transform="translate(0, 240)">
+      <rect width="360" height="260" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+      <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 220 0)" />
+      <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">14. Health &amp; Thresholds</text>
+      <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+        <text x="10" y="0">• checkDbModuleMethods()</text>
+        <text x="10" y="20">• checkDatabaseIntegrity()</text>
+        <text x="10" y="40">• getTableSizes()</text>
+        <text x="10" y="60">• checkDocumentThreshold(dom, min)</text>
+        <text x="10" y="80">• checkAnalysisBacklog(max)</text>
+        <text x="10" y="100">• getSystemHealthSummary()</text>
+        <text x="10" y="120">• getAlerts(severity)</text>
+        <text x="10" y="140">• getSlowQueryLog(limit)</text>
+      </g>
+    </g>
+
+    <!-- Card 15: Errors -->
+    <g transform="translate(0, 520)">
+      <rect width="360" height="200" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+      <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 160 0)" />
+      <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">15. Error Analysis</text>
+      <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+        <text x="10" y="0">• getRecentErrors(limit)</text>
+        <text x="10" y="20">• getErrorFrequency(hours)</text>
+        <text x="10" y="40">• getTopErrorCauses(limit)</text>
+        <text x="10" y="60">• getProblemsByDomain(domain)</text>
+        <text x="10" y="80">• listProblems({ filter })</text>
+        <text x="10" y="100">• getUnresolvedProblems(limit)</text>
+      </g>
+    </g>
+
+    <!-- Card 16: Reporting -->
+    <g transform="translate(0, 740)">
+      <rect width="360" height="200" rx="8" fill="#ffffff" stroke="#e2e8f0" filter="url(#shadow)" />
+      <rect width="360" height="40" rx="8" fill="#f1f5f9" clip-path="inset(0 0 160 0)" />
+      <text x="20" y="28" font-family="Segoe UI" font-weight="bold" fill="#0f172a">16. Export &amp; Reporting</text>
+      <g transform="translate(20, 60)" font-family="Consolas, monospace" font-size="11" fill="#475569">
+        <text x="10" y="0">• exportArticles({ filter })</text>
+        <text x="10" y="20">• exportCoverageReport(storyId)</text>
+        <text x="10" y="40">• generateDailyDigest(date)</text>
+        <text x="10" y="60">• generateWeeklyReport(date)</text>
+        <text x="10" y="80">• exportDomainSummary(domain)</text>
+      </g>
+    </g>
+  </g>
+
+</svg>

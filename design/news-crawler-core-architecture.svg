@@ -1,0 +1,190 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200">
+  <title>News Crawler Core - Internals</title>
+  <defs>
+    <!-- WLILO PALETTE -->
+    <linearGradient id="leatherBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#faf9f7"/><stop offset="100%" stop-color="#ebe8e2"/>
+    </linearGradient>
+    <linearGradient id="obsidianGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2d2d2d"/><stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c9a962"/><stop offset="50%" stop-color="#e8d5a3"/><stop offset="100%" stop-color="#c9a962"/>
+    </linearGradient>
+    <filter id="softShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <marker id="goldArrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3z" fill="#c9a962"/>
+    </marker>
+  </defs>
+  
+  <rect width="1600" height="1200" fill="url(#leatherBg)"/>
+  
+  <text x="800" y="50" text-anchor="middle" font-family="Segoe UI" font-size="28" font-weight="bold" fill="#2d2d2d">news-crawler-core: Internal Architecture</text>
+  
+  <!-- ==========================================
+       ZONE 1: ORCHESTRATION (The Brain)
+       ========================================== -->
+  <g transform="translate(50, 100)" filter="url(#softShadow)">
+    <rect width="400" height="600" rx="8" fill="url(#obsidianGrad)" stroke="#c9a962" stroke-width="2"/>
+    <rect width="400" height="40" rx="8 8 0 0" fill="#000" opacity="0.4"/>
+    <text x="20" y="28" fill="#e8d5a3" font-family="Segoe UI" font-weight="bold">ORCHESTRATION & STATE</text>
+    
+    <g transform="translate(20, 70)">
+        <!-- NewsCrawler -->
+        <rect width="360" height="100" rx="4" fill="#333" stroke="#555"/>
+        <text x="10" y="25" fill="#e8d5a3" font-weight="bold">NewsCrawler.js</text>
+        <text x="10" y="45" fill="#ccc" font-size="11">Main Loop & Lifecycle Management</text>
+        <text x="10" y="60" fill="#ccc" font-size="11">.init() -> .crawl() -> .close()</text>
+        <text x="10" y="75" fill="#ccc" font-size="11">Manages: Concurrency, Exit Conditions</text>
+
+        <!-- CrawlerState -->
+        <rect y="120" width="360" height="80" rx="4" fill="#333" stroke="#555"/>
+        <text x="10" y="145" fill="#e8d5a3" font-weight="bold">CrawlerState.js</text>
+        <text x="10" y="165" fill="#ccc" font-size="11">Tracks: Visited URLs, Depth, Errors</text>
+        <text x="10" y="180" fill="#ccc" font-size="11">Persists to: checkpoint.json</text>
+
+         <!-- Robots -->
+        <rect y="220" width="360" height="80" rx="4" fill="#333" stroke="#555"/>
+        <text x="10" y="245" fill="#e8d5a3" font-weight="bold">RobotsCoordinator.js</text>
+        <text x="10" y="265" fill="#ccc" font-size="11">Parses robots.txt & Sitemaps</text>
+        <text x="10" y="280" fill="#ccc" font-size="11">Guard: .isAllowed(url)</text>
+    </g>
+    
+    <!-- Intelligence Bridge -->
+    <g transform="translate(20, 450)">
+        <rect width="360" height="120" rx="4" fill="#581845" stroke="#900C3F"/>
+        <text x="10" y="25" fill="#fff" font-weight="bold">IntelligentPlanningFacade.js</text>
+        <text x="10" y="45" fill="#fbcfe8" font-size="11">Bridge to `news-intelligence`</text>
+        <text x="10" y="65" fill="#fbcfe8" font-size="11">Inputs: Playbooks, Priority Rules</text>
+        <text x="10" y="80" fill="#fbcfe8" font-size="11">Outputs: Prioritized Seeds</text>
+    </g>
+  </g>
+
+  <!-- ==========================================
+       ZONE 2: QUEUE MANAGEMENT
+       ========================================== -->
+  <g transform="translate(500, 100)" filter="url(#softShadow)">
+    <rect width="300" height="400" rx="8" fill="#fff" stroke="#ccc" stroke-width="2"/>
+    <text x="20" y="30" fill="#333" font-weight="bold" font-family="Segoe UI">QUEUE MANAGEMENT</text>
+    
+    <g transform="translate(20, 60)">
+        <!-- QueueManager -->
+        <rect width="260" height="180" rx="4" fill="#f3f4f6" stroke="#e5e7eb"/>
+        <text x="10" y="25" fill="#333" font-weight="bold">QueueManager.js</text>
+        
+        <g transform="translate(10, 40)">
+            <rect width="240" height="30" rx="4" fill="#d1fae5" stroke="#34d399"/>
+            <text x="10" y="20" font-size="11">Priority 1: Seeds / Sitemaps</text>
+            
+            <rect y="35" width="240" height="30" rx="4" fill="#d1fae5" stroke="#34d399"/>
+            <text x="10" y="55" font-size="11">Priority 2: Discovery (Depth 1)</text>
+
+            <rect y="70" width="240" height="30" rx="4" fill="#d1fae5" stroke="#34d399"/>
+            <text x="10" y="90" font-size="11">Priority 3: Deep Crawl</text>
+        </g>
+    </g>
+    
+    <!-- UrlEligibility -->
+    <g transform="translate(20, 260)">
+        <rect width="260" height="100" rx="4" fill="#fff" stroke="#f59e0b" stroke-dasharray="4,2"/>
+        <text x="10" y="25" fill="#d97706" font-weight="bold">UrlEligibilityService.js</text>
+        <text x="10" y="45" fill="#666" font-size="11">Filters: Duplicates, Blacklist, RegEx</text>
+        <text x="10" y="60" fill="#666" font-size="11">Decides: Should we queue this?</text>
+    </g>
+  </g>
+
+  <!-- ==========================================
+       ZONE 3: EXECUTION PIPELINE
+       ========================================== -->
+  <g transform="translate(850, 100)" filter="url(#softShadow)">
+    <rect width="700" height="1000" rx="8" fill="#2d2d2d" stroke="#22c55e" stroke-width="2"/>
+    <rect width="700" height="40" rx="8" fill="#000" opacity="0.4"/>
+    <text x="20" y="28" fill="#4ade80" font-family="Segoe UI" font-weight="bold">FETCH PIPELINE (Worker Pool)</text>
+
+    <!-- Pipeline Stages -->
+    <g transform="translate(40, 80)">
+        <!-- 1. Decision -->
+        <rect width="620" height="60" rx="4" fill="#333" stroke="#555"/>
+        <text x="10" y="25" fill="#4ade80" font-weight="bold">1. UrlDecisionService</text>
+        <text x="10" y="45" fill="#bbb" font-size="11">Final check: Is this URL allowed? Cached? Orchestrated action?</text>
+        
+        <!-- 2. Rate Limit -->
+        <rect y="80" width="620" height="60" rx="4" fill="#333" stroke="#555"/>
+        <text x="10" y="105" fill="#4ade80" font-weight="bold">2. Rate Limitation</text>
+        <text x="10" y="125" fill="#bbb" font-size="11">DomainThrottleManager: acquireToken(host) -> Wait</text>
+        
+        <!-- 3. Cache Check -->
+        <rect y="160" width="620" height="60" rx="4" fill="#333" stroke="#555"/>
+        <text x="10" y="185" fill="#4ade80" font-weight="bold">3. Cache Layer</text>
+        <text x="10" y="205" fill="#bbb" font-size="11">Check DB/FS for fresh content. Return early if found.</text>
+
+        <!-- 4. Fetch Strategy Switch -->
+        <g transform="translate(0, 240)">
+            <rect width="620" height="280" rx="4" fill="#111" stroke="#4ade80" stroke-dasharray="2,2"/>
+            <text x="10" y="25" fill="#4ade80" font-weight="bold">4. Network Strategy Switch</text>
+            
+            <!-- HTTP -->
+            <rect x="20" y="40" width="280" height="120" rx="4" fill="#222" stroke="#444"/>
+            <text x="30" y="65" fill="#fff" font-weight="bold">FAST PATH (node-fetch)</text>
+            <text x="30" y="85" fill="#aaa" font-size="11">Standard static HTML</text>
+            <text x="30" y="100" fill="#aaa" font-size="11">Lightweight, fast</text>
+
+            <!-- Puppeteer -->
+            <rect x="320" y="40" width="280" height="200" rx="4" fill="#222" stroke="#444"/>
+            <text x="330" y="65" fill="#fcd34d" font-weight="bold">HEAVY PATH (Puppeteer)</text>
+            <text x="330" y="85" fill="#aaa" font-size="11">For JS-heavy / TLS-fingerprinted sites</text>
+            
+            <g transform="translate(330, 100)">
+                <rect width="260" height="80" fill="#333"/>
+                <text x="10" y="20" fill="#fcd34d" font-size="10">PuppeteerFetcher.js</text>
+                <text x="10" y="35" fill="#ccc" font-size="10">BrowserPoolManager handles lifecycle</text>
+                <text x="10" y="50" fill="#ccc" font-size="10">Recycles pages/contexts</text>
+                <text x="10" y="65" fill="#ccc" font-size="10">Anti-detection evasion</text>
+            </g>
+
+             <!-- Fallback Logic -->
+            <path d="M 160,160 Q 160,200 320,200" fill="none" stroke="#ef4444" stroke-width="2" marker-end="url(#goldArrow)"/>
+            <text x="170" y="190" fill="#ef4444" font-size="10" font-weight="bold">Fallback on 403 / JS-detect</text>
+        </g>
+        
+        <!-- 5. Processing -->
+        <g transform="translate(0, 540)">
+            <rect width="620" height="150" rx="4" fill="#333" stroke="#555"/>
+            <text x="10" y="25" fill="#4ade80" font-weight="bold">5. Post-Process (ArticleProcessor.js)</text>
+            
+            <g transform="translate(20, 40)">
+                 <rect width="180" height="40" fill="#444"/>
+                 <text x="10" y="25" fill="#fff">LinkExtractor</text>
+                 
+                 <rect x="200" y="0" width="180" height="40" fill="#444"/>
+                 <text x="210" y="25" fill="#fff">ArticleSignals</text>
+
+                 <rect x="400" y="0" width="180" height="40" fill="#444"/>
+                 <text x="410" y="25" fill="#fff">ContentValidation</text>
+            </g>
+            
+            <text x="20" y="100" fill="#aaa" font-size="11">Normalization, scoring, outbound link discovery</text>
+        </g>
+        
+        <!-- 6. Persistence -->
+        <rect y="710" width="620" height="60" rx="4" fill="#333" stroke="#22c55e"/>
+        <text x="10" y="735" fill="#22c55e" font-weight="bold">6. Persistence (DbAdapter)</text>
+        <text x="10" y="755" fill="#bbb" font-size="11">Writes: Article Body, Http Response, Discovered Links</text>
+    </g>
+  </g>
+
+  <!-- ARROWS representing FLOW -->
+  <!-- Queue -> Pipeline -->
+  <path d="M 800,200 L 850,200" stroke="#c9a962" stroke-width="4" marker-end="url(#goldArrow)"/>
+  
+  <!-- Pipeline internal -->
+  <line x1="1160" y1="260" x2="1160" y2="300" stroke="#4ade80" stroke-width="2"/>
+  
+  <!-- Discovered Links -> Eligibility -->
+  <path d="M 1160,890 Q 1160,950 650,950 L 650,460" fill="none" stroke="#6366f1" stroke-width="3" stroke-dasharray="5,5" marker-end="url(#goldArrow)"/>
+  <rect x="750" y="930" width="300" height="30" rx="4" fill="#fff" stroke="#6366f1"/>
+  <text x="900" y="950" text-anchor="middle" fill="#6366f1" font-weight="bold" font-size="12">DISCOVERED LINKS FEEDBACK</text>
+
+</svg>

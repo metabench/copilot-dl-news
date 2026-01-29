@@ -1,0 +1,2024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌐 Geo Import Dashboard - Check</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    .page-container {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    /* ═══════════════════════════════════════════════════════════════════════════ */
+/* DATABASE SELECTOR - Industrial Luxury Obsidian Theme                        */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Obsidian color palette */
+:root {
+  --obsidian-bg-deep: rgba(10, 13, 20, 0.99);
+  --obsidian-bg-surface: rgba(20, 24, 36, 0.98);
+  --obsidian-bg-elevated: rgba(30, 35, 50, 0.95);
+  --obsidian-gold: #c9a227;
+  --obsidian-gold-dim: rgba(201, 162, 39, 0.6);
+  --obsidian-gold-glow: rgba(201, 162, 39, 0.4);
+  --obsidian-gold-subtle: rgba(201, 162, 39, 0.15);
+  --obsidian-border: rgba(201, 162, 39, 0.3);
+  --obsidian-border-dim: rgba(201, 162, 39, 0.15);
+  --obsidian-text: rgba(255, 255, 255, 0.95);
+  --obsidian-text-dim: rgba(255, 255, 255, 0.6);
+  --obsidian-text-muted: rgba(255, 255, 255, 0.4);
+  --obsidian-success: #3bb950;
+  --obsidian-accent: #58a6ff;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Database Selector Window Container                                          */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.db-selector-window {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, 
+    var(--obsidian-bg-surface) 0%, 
+    var(--obsidian-bg-deep) 100%
+  );
+  border: 1px solid var(--obsidian-border);
+  border-radius: 12px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.7),
+    0 0 1px var(--obsidian-gold-dim),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  transition: box-shadow 0.2s ease;
+  margin-bottom: 24px;
+}
+
+.db-selector-window:hover {
+  box-shadow: 
+    0 12px 48px rgba(0, 0, 0, 0.8),
+    0 0 2px var(--obsidian-gold-dim),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Window Title Bar */
+.db-selector-window .window-title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: linear-gradient(180deg, 
+    var(--obsidian-gold-subtle) 0%, 
+    rgba(201, 162, 39, 0.05) 100%
+  );
+  border-bottom: 1px solid var(--obsidian-border);
+  user-select: none;
+}
+
+.db-selector-window .window-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--obsidian-gold);
+  text-shadow: 0 0 12px var(--obsidian-gold-glow);
+}
+
+.db-selector-window .window-title .title-icon {
+  font-size: 16px;
+  filter: drop-shadow(0 0 4px var(--obsidian-gold-glow));
+}
+
+.db-selector-window .window-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.db-selector-window .window-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--obsidian-border);
+  border-radius: 6px;
+  background: linear-gradient(180deg, 
+    var(--obsidian-bg-elevated) 0%, 
+    var(--obsidian-bg-surface) 100%
+  );
+  color: var(--obsidian-text-dim);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.db-selector-window .window-btn:hover {
+  background: var(--obsidian-gold-subtle);
+  border-color: var(--obsidian-gold-dim);
+  color: var(--obsidian-gold);
+  box-shadow: 0 0 8px var(--obsidian-gold-glow);
+}
+
+.db-selector-window .window-btn.btn-close:hover {
+  background: rgba(248, 81, 73, 0.2);
+  border-color: rgba(248, 81, 73, 0.5);
+  color: #f85149;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Window Content Area                                                         */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.db-selector-window .window-content {
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Database Selector Control (Inner)                                           */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.db-selector-header {
+  margin-bottom: 16px;
+}
+
+.db-selector-header h3 {
+  display: none; /* Title is in window bar now */
+}
+
+.db-selector-subtitle {
+  color: var(--obsidian-text-muted);
+  font-size: 0.875rem;
+  margin: 0;
+  letter-spacing: 0.3px;
+}
+
+/* Quick actions */
+.db-quick-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.quick-btn {
+  padding: 10px 18px;
+  border: 1px solid var(--obsidian-border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, 
+    var(--obsidian-bg-elevated) 0%, 
+    var(--obsidian-bg-surface) 100%
+  );
+  color: var(--obsidian-text);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.quick-btn:hover {
+  background: linear-gradient(180deg, 
+    var(--obsidian-gold-subtle) 0%, 
+    rgba(201, 162, 39, 0.08) 100%
+  );
+  border-color: var(--obsidian-gold-dim);
+  color: var(--obsidian-gold);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 0 12px var(--obsidian-gold-glow);
+  transform: translateY(-1px);
+}
+
+.quick-btn:active {
+  transform: translateY(0);
+}
+
+.quick-btn.secondary {
+  background: transparent;
+  box-shadow: none;
+}
+
+.quick-btn.secondary:hover {
+  background: var(--obsidian-gold-subtle);
+}
+
+/* Database list */
+.db-list-container {
+  max-height: 280px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  padding-right: 4px;
+}
+
+.db-list-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.db-list-container::-webkit-scrollbar-track {
+  background: var(--obsidian-bg-deep);
+  border-radius: 3px;
+}
+
+.db-list-container::-webkit-scrollbar-thumb {
+  background: var(--obsidian-border);
+  border-radius: 3px;
+}
+
+.db-list-container::-webkit-scrollbar-thumb:hover {
+  background: var(--obsidian-gold-dim);
+}
+
+.db-list-separator {
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    var(--obsidian-border) 20%, 
+    var(--obsidian-border) 80%, 
+    transparent 100%
+  );
+  margin: 16px 0;
+}
+
+.db-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Database item */
+.db-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, 
+    var(--obsidian-bg-elevated) 0%, 
+    rgba(25, 30, 42, 0.95) 100%
+  );
+  border: 1px solid var(--obsidian-border-dim);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.db-item:hover {
+  border-color: var(--obsidian-gold-dim);
+  background: linear-gradient(180deg, 
+    rgba(35, 42, 58, 0.98) 0%, 
+    rgba(28, 34, 48, 0.98) 100%
+  );
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 0 1px var(--obsidian-gold-dim);
+  transform: translateX(4px);
+}
+
+.db-item.selected {
+  border-color: var(--obsidian-gold);
+  background: linear-gradient(180deg, 
+    rgba(201, 162, 39, 0.12) 0%, 
+    rgba(201, 162, 39, 0.05) 100%
+  );
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.5),
+    0 0 12px var(--obsidian-gold-glow),
+    inset 0 0 20px rgba(201, 162, 39, 0.05);
+}
+
+.db-item.new-db {
+  border-style: dashed;
+  border-color: var(--obsidian-gold-dim);
+  background: linear-gradient(180deg, 
+    rgba(201, 162, 39, 0.08) 0%, 
+    transparent 100%
+  );
+}
+
+.db-item.new-db:hover {
+  border-style: solid;
+  border-color: var(--obsidian-gold);
+}
+
+.db-icon {
+  font-size: 1.75rem;
+  width: 44px;
+  text-align: center;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.db-item.selected .db-icon {
+  filter: drop-shadow(0 0 8px var(--obsidian-gold-glow));
+}
+
+.db-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.db-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.db-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--obsidian-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.3px;
+}
+
+.db-item.selected .db-name {
+  color: var(--obsidian-gold);
+  text-shadow: 0 0 10px var(--obsidian-gold-glow);
+}
+
+.db-badge {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.default-badge {
+  background: linear-gradient(135deg, 
+    var(--obsidian-gold-subtle) 0%, 
+    rgba(201, 162, 39, 0.08) 100%
+  );
+  color: var(--obsidian-gold);
+  border: 1px solid var(--obsidian-border-dim);
+}
+
+.new-badge {
+  background: linear-gradient(135deg, 
+    rgba(59, 185, 80, 0.2) 0%, 
+    rgba(59, 185, 80, 0.08) 100%
+  );
+  color: var(--obsidian-success);
+  border: 1px solid rgba(59, 185, 80, 0.3);
+}
+
+/* Non-gazetteer database styling */
+.no-gaz-badge {
+  background: linear-gradient(135deg, 
+    rgba(100, 100, 120, 0.25) 0%, 
+    rgba(100, 100, 120, 0.1) 100%
+  );
+  color: var(--obsidian-text-muted);
+  border: 1px solid rgba(100, 100, 120, 0.3);
+}
+
+.db-item.no-gazetteer {
+  opacity: 0.75;
+  border-color: var(--obsidian-border-dim);
+}
+
+.db-item.no-gazetteer:hover {
+  opacity: 1;
+  border-color: var(--obsidian-border);
+}
+
+.db-item.no-gazetteer .db-icon {
+  opacity: 0.7;
+}
+
+.db-stat.hint {
+  color: var(--obsidian-text-muted);
+  font-style: italic;
+  font-size: 0.75rem;
+}
+
+.init-btn {
+  background: linear-gradient(135deg, 
+    rgba(100, 149, 237, 0.2) 0%, 
+    rgba(100, 149, 237, 0.1) 100%
+  );
+  color: #6495ed;
+  border: 1px solid rgba(100, 149, 237, 0.3);
+}
+
+.init-btn:hover {
+  background: linear-gradient(135deg, 
+    rgba(100, 149, 237, 0.3) 0%, 
+    rgba(100, 149, 237, 0.15) 100%
+  );
+  border-color: rgba(100, 149, 237, 0.5);
+}
+
+.db-stats-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.db-stat {
+  font-size: 0.8rem;
+  color: var(--obsidian-text-dim);
+  letter-spacing: 0.2px;
+}
+
+.db-last-import {
+  font-size: 0.75rem;
+  color: var(--obsidian-text-muted);
+  margin-top: 6px;
+  font-style: italic;
+}
+
+.db-check {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, 
+    var(--obsidian-gold) 0%, 
+    #a88520 100%
+  );
+  color: var(--obsidian-bg-deep);
+  font-size: 0.9rem;
+  font-weight: bold;
+  opacity: 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(201, 162, 39, 0.4);
+}
+
+.db-item.selected .db-check {
+  opacity: 1;
+}
+
+/* Create new database */
+.db-create-section {
+  margin-bottom: 10px;
+}
+
+.db-new-input-group {
+  display: none;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--obsidian-bg-elevated);
+  border: 1px solid var(--obsidian-border-dim);
+  border-radius: 10px;
+}
+
+.db-new-input-group[data-visible="true"] {
+  display: flex;
+}
+
+.db-new-name-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--obsidian-border);
+  border-radius: 8px;
+  background: var(--obsidian-bg-deep);
+  color: var(--obsidian-text);
+  font-size: 0.9rem;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+}
+
+.db-new-name-input:focus {
+  outline: none;
+  border-color: var(--obsidian-gold);
+  box-shadow: 0 0 12px var(--obsidian-gold-glow);
+}
+
+.db-new-name-input::placeholder {
+  color: var(--obsidian-text-muted);
+}
+
+.create-db-btn {
+  padding: 10px 20px;
+  border: 1px solid var(--obsidian-gold);
+  border-radius: 8px;
+  background: linear-gradient(180deg, 
+    var(--obsidian-gold) 0%, 
+    #a88520 100%
+  );
+  color: var(--obsidian-bg-deep);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(201, 162, 39, 0.3);
+}
+
+.create-db-btn:hover {
+  background: linear-gradient(180deg, 
+    #d4ad2f 0%, 
+    var(--obsidian-gold) 100%
+  );
+  box-shadow: 
+    0 4px 16px rgba(201, 162, 39, 0.5),
+    0 0 20px var(--obsidian-gold-glow);
+  transform: translateY(-1px);
+}
+
+/* Empty state */
+.db-empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--obsidian-text-dim);
+}
+
+.empty-icon {
+  font-size: 3.5rem;
+  display: block;
+  margin-bottom: 16px;
+  filter: grayscale(0.3);
+}
+
+.empty-hint {
+  font-size: 0.9rem;
+  color: var(--obsidian-text-muted);
+  letter-spacing: 0.3px;
+}
+
+/* Info panel */
+.db-info-panel {
+  background: linear-gradient(180deg, 
+    var(--obsidian-bg-elevated) 0%, 
+    var(--obsidian-bg-surface) 100%
+  );
+  border: 1px solid var(--obsidian-border);
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.info-placeholder {
+  color: var(--obsidian-text-muted);
+  text-align: center;
+  margin: 0;
+  font-style: italic;
+}
+
+.info-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--obsidian-gold);
+  text-shadow: 0 0 8px var(--obsidian-gold-glow);
+  margin-bottom: 14px;
+  letter-spacing: 0.5px;
+}
+
+.info-hint {
+  color: var(--obsidian-text-muted);
+  font-size: 0.85rem;
+  margin: 10px 0 0 0;
+  font-style: italic;
+}
+
+.info-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.info-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  background: linear-gradient(180deg, 
+    var(--obsidian-bg-deep) 0%, 
+    rgba(5, 8, 14, 0.95) 100%
+  );
+  border: 1px solid var(--obsidian-border-dim);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.info-stat:hover {
+  border-color: var(--obsidian-border);
+  background: linear-gradient(180deg, 
+    rgba(201, 162, 39, 0.08) 0%, 
+    var(--obsidian-bg-deep) 100%
+  );
+}
+
+.info-stat .stat-emoji {
+  font-size: 1.4rem;
+  margin-bottom: 6px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.info-stat .stat-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--obsidian-gold);
+  text-shadow: 0 0 10px var(--obsidian-gold-glow);
+}
+
+.info-stat .stat-label {
+  font-size: 0.65rem;
+  color: var(--obsidian-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+.info-path {
+  font-size: 0.8rem;
+  color: var(--obsidian-text-dim);
+}
+
+.info-path code {
+  background: var(--obsidian-bg-deep);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: var(--obsidian-text);
+  border: 1px solid var(--obsidian-border-dim);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Import Actions Section
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.info-actions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--obsidian-border-dim);
+}
+
+.actions-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--obsidian-text);
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.action-btn {
+  padding: 10px 16px;
+  border: 1px solid var(--obsidian-border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, 
+    var(--obsidian-bg-elevated) 0%, 
+    var(--obsidian-bg-deep) 100%
+  );
+  color: var(--obsidian-text);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.85rem;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-btn:hover {
+  border-color: var(--obsidian-gold);
+  background: linear-gradient(180deg, 
+    rgba(201, 162, 39, 0.15) 0%, 
+    var(--obsidian-bg-elevated) 100%
+  );
+  color: var(--obsidian-gold);
+  box-shadow: 0 0 16px var(--obsidian-gold-glow);
+  transform: translateY(-1px);
+}
+
+.action-btn.primary {
+  background: linear-gradient(180deg, 
+    var(--obsidian-gold) 0%, 
+    #a88520 100%
+  );
+  color: var(--obsidian-bg-deep);
+  border-color: var(--obsidian-gold);
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(201, 162, 39, 0.35);
+}
+
+.action-btn.primary:hover {
+  background: linear-gradient(180deg, 
+    #d4ad2f 0%, 
+    var(--obsidian-gold) 100%
+  );
+  color: var(--obsidian-bg-deep);
+  box-shadow: 
+    0 4px 20px rgba(201, 162, 39, 0.5),
+    0 0 24px var(--obsidian-gold-glow);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Database Item Action Buttons
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.db-item-actions {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  margin-right: 12px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.db-item:hover .db-item-actions {
+  opacity: 1;
+}
+
+.db-action-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--obsidian-border);
+  border-radius: 6px;
+  background: linear-gradient(180deg, 
+    rgba(201, 162, 39, 0.2) 0%, 
+    rgba(201, 162, 39, 0.05) 100%
+  );
+  color: var(--obsidian-gold);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.db-action-btn:hover {
+  background: linear-gradient(180deg, 
+    var(--obsidian-gold) 0%, 
+    #a88520 100%
+  );
+  color: var(--obsidian-bg-deep);
+  border-color: var(--obsidian-gold);
+  box-shadow: 0 2px 12px rgba(201, 162, 39, 0.5);
+  transform: translateY(-1px);
+}
+
+.db-action-btn.import-btn {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: linear-gradient(180deg, 
+    rgba(34, 197, 94, 0.2) 0%, 
+    rgba(34, 197, 94, 0.05) 100%
+  );
+  color: #22c55e;
+}
+
+.db-action-btn.import-btn:hover {
+  background: linear-gradient(180deg, 
+    #22c55e 0%, 
+    #16a34a 100%
+  );
+  color: var(--obsidian-bg-deep);
+  border-color: #22c55e;
+  box-shadow: 0 2px 12px rgba(34, 197, 94, 0.5);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Context Menu (Industrial Luxury Obsidian)
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.db-context-menu {
+  position: fixed;
+  display: none;
+  z-index: 10000;
+  min-width: 200px;
+  padding: 6px 0;
+  background: linear-gradient(180deg, 
+    rgba(20, 24, 36, 0.98) 0%, 
+    rgba(10, 13, 20, 0.99) 100%
+  );
+  border: 1px solid var(--obsidian-border);
+  border-radius: 10px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 0 1px rgba(201, 162, 39, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.db-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--obsidian-text);
+  font-size: 0.875rem;
+  letter-spacing: 0.3px;
+}
+
+.db-context-menu-item:hover {
+  background: linear-gradient(90deg, 
+    rgba(201, 162, 39, 0.15) 0%, 
+    rgba(201, 162, 39, 0.05) 100%
+  );
+  color: var(--obsidian-gold);
+}
+
+.db-context-menu-item:active {
+  background: linear-gradient(90deg, 
+    rgba(201, 162, 39, 0.25) 0%, 
+    rgba(201, 162, 39, 0.1) 100%
+  );
+}
+
+.menu-item-icon {
+  font-size: 1rem;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.menu-item-label {
+  flex: 1;
+}
+
+.menu-item-shortcut {
+  font-size: 0.7rem;
+  color: var(--obsidian-text-muted);
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Separator for menu sections */
+.db-context-menu-separator {
+  height: 1px;
+  margin: 6px 12px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    var(--obsidian-border-dim) 50%, 
+    transparent 100%
+  );
+}
+
+    /**
+ * GeoImportDashboard Styles
+ * 
+ * Industrial Luxury Obsidian Theme - Premium dark dashboard with gold accents.
+ * Matches the DatabaseSelector aesthetic for visual consistency.
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Page Container - Full viewport obsidian foundation
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.page-container {
+  min-height: 100vh;
+  padding: 24px;
+  background: linear-gradient(135deg, 
+    #050508 0%, 
+    #0a0d14 25%, 
+    #0f1420 50%, 
+    #0a0d14 75%, 
+    #080c12 100%
+  );
+  /* Subtle grid overlay */
+  background-image: 
+    linear-gradient(135deg, #050508 0%, #0a0d14 25%, #0f1420 50%, #0a0d14 75%, #080c12 100%),
+    repeating-linear-gradient(0deg, transparent, transparent 79px, rgba(201, 162, 39, 0.03) 80px),
+    repeating-linear-gradient(90deg, transparent, transparent 79px, rgba(201, 162, 39, 0.03) 80px);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Dashboard Container - Industrial Luxury Obsidian
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.geo-import-dashboard {
+  /* Industrial Luxury Obsidian color palette */
+  --obsidian-bg-deep: rgba(10, 13, 20, 0.99);
+  --obsidian-bg-surface: rgba(20, 24, 36, 0.98);
+  --obsidian-bg-elevated: rgba(30, 35, 50, 0.95);
+  --obsidian-bg-card: rgba(26, 31, 46, 0.98);
+  --obsidian-gold: #c9a227;
+  --obsidian-gold-bright: #d4af37;
+  --obsidian-gold-dim: rgba(201, 162, 39, 0.6);
+  --obsidian-gold-glow: rgba(201, 162, 39, 0.4);
+  --obsidian-gold-subtle: rgba(201, 162, 39, 0.15);
+  --obsidian-border: rgba(201, 162, 39, 0.3);
+  --obsidian-border-dim: rgba(201, 162, 39, 0.15);
+  --obsidian-text: rgba(255, 255, 255, 0.95);
+  --obsidian-text-dim: rgba(255, 255, 255, 0.6);
+  --obsidian-text-muted: rgba(255, 255, 255, 0.4);
+  --obsidian-success: #3bb950;
+  --obsidian-success-dim: rgba(59, 185, 80, 0.3);
+  --obsidian-danger: #f85149;
+  --obsidian-danger-dim: rgba(248, 81, 73, 0.3);
+  --obsidian-warning: #d29922;
+  --obsidian-warning-dim: rgba(210, 153, 34, 0.3);
+  --obsidian-accent: #58a6ff;
+  --obsidian-accent-dim: rgba(88, 166, 255, 0.3);
+  
+  /* Legacy variable mapping for compatibility */
+  --primary-color: var(--obsidian-success);
+  --secondary-color: var(--obsidian-accent);
+  --accent-color: var(--obsidian-gold);
+  --danger-color: var(--obsidian-danger);
+  --success-color: var(--obsidian-success);
+  --warning-color: var(--obsidian-warning);
+  --bg-dark: var(--obsidian-bg-deep);
+  --bg-card: var(--obsidian-bg-card);
+  --bg-elevated: var(--obsidian-bg-elevated);
+  --text-primary: var(--obsidian-text);
+  --text-secondary: var(--obsidian-text-dim);
+  --border-color: var(--obsidian-border);
+  
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--obsidian-text);
+  padding: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Header - Luxury Gold Treatment
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 24px;
+  padding: 28px 32px;
+  background: 
+    linear-gradient(135deg, 
+      var(--obsidian-bg-card) 0%, 
+      rgba(26, 31, 46, 0.95) 50%,
+      var(--obsidian-bg-surface) 100%
+    );
+  border-radius: 12px;
+  border: 1px solid var(--obsidian-border);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.4),
+    0 1px 0 var(--obsidian-gold-subtle) inset;
+}
+
+.dashboard-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, 
+    rgba(201, 162, 39, 0.1),
+    var(--obsidian-gold) 25%,
+    var(--obsidian-gold-bright) 50%,
+    var(--obsidian-gold) 75%,
+    rgba(201, 162, 39, 0.1)
+  );
+}
+
+.dashboard-header h1 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  background: linear-gradient(135deg, 
+    #fff 0%, 
+    var(--obsidian-gold-bright) 40%, 
+    var(--obsidian-gold) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.5px;
+}
+
+.dashboard-header .subtitle {
+  color: var(--obsidian-text-dim);
+  font-size: 0.95rem;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Progress Section - Industrial Card Style
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.stages-section {
+  background: 
+    linear-gradient(135deg, 
+      var(--obsidian-bg-card) 0%, 
+      rgba(26, 31, 46, 0.95) 100%
+    );
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.35),
+    0 1px 0 var(--obsidian-gold-subtle) inset;
+  border: 1px solid var(--obsidian-border-dim);
+}
+
+.stages-section h2 {
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--obsidian-gold);
+}
+
+/* Stages Stepper */
+.stages-stepper {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 0;
+  position: relative;
+  overflow-x: auto;
+}
+
+.stage-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  min-width: 80px;
+}
+
+.stage-marker {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  background: var(--obsidian-bg-elevated);
+  border: 2px solid var(--obsidian-border-dim);
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+.stage-label {
+  font-size: 0.65rem;
+  color: var(--obsidian-text-muted);
+  text-align: center;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stage-connector {
+  position: absolute;
+  top: 22px;
+  left: calc(50% + 22px);
+  width: calc(100% - 44px);
+  height: 2px;
+  background: var(--obsidian-border-dim);
+  z-index: 0;
+  transition: background 0.3s ease;
+}
+
+/* Stage states - Obsidian theme */
+.stage-completed .stage-marker {
+  background: linear-gradient(135deg, var(--obsidian-success), #2ea043);
+  border-color: var(--obsidian-success);
+  color: white;
+  box-shadow: 0 0 10px var(--obsidian-success-dim);
+}
+
+.stage-completed .stage-label {
+  color: var(--obsidian-success);
+  font-weight: 500;
+}
+
+.stage-completed .stage-connector,
+.connector-completed {
+  background: linear-gradient(90deg, var(--obsidian-success), var(--obsidian-gold));
+}
+
+.stage-current .stage-marker {
+  background: linear-gradient(135deg, var(--obsidian-gold), var(--obsidian-gold-bright));
+  border-color: var(--obsidian-gold);
+  color: #0f1420;
+  box-shadow: 0 0 14px var(--obsidian-gold-glow);
+  animation: stagePulseGold 2s ease-in-out infinite;
+}
+
+.stage-current .stage-label {
+  color: var(--obsidian-gold);
+  font-weight: 600;
+}
+
+.stage-pending .stage-marker {
+  background: var(--obsidian-bg-elevated);
+  border-color: var(--obsidian-border-dim);
+  color: var(--obsidian-text-muted);
+}
+
+@keyframes stagePulseGold {
+  0%, 100% { box-shadow: 0 0 14px var(--obsidian-gold-glow); transform: scale(1); }
+  50% { box-shadow: 0 0 22px rgba(201, 162, 39, 0.6); transform: scale(1.05); }
+}
+
+.progress-section {
+  background: 
+    linear-gradient(135deg, 
+      var(--obsidian-bg-card) 0%, 
+      rgba(26, 31, 46, 0.95) 100%
+    );
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.35),
+    0 1px 0 var(--obsidian-gold-subtle) inset;
+  border: 1px solid var(--obsidian-border-dim);
+}
+
+.progress-section h2 {
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--obsidian-gold);
+}
+
+.progress-content {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Progress Ring */
+.progress-ring-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.progress-ring {
+  transform: rotate(-90deg);
+}
+
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.5s ease-in-out;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+.progress-ring-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--obsidian-text);
+}
+
+.progress-stats {
+  flex: 1;
+  min-width: 180px;
+}
+
+.progress-stat {
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.progress-stat .stat-value {
+  font-weight: 600;
+  color: var(--obsidian-gold);
+}
+
+.progress-stat .stat-total {
+  color: var(--obsidian-text-dim);
+}
+
+.progress-phase {
+  font-size: 0.95rem;
+  color: var(--obsidian-text-dim);
+  animation: subtlePulse 3s infinite;
+}
+
+@keyframes subtlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Source Cards - Industrial Luxury Style
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.sources-section {
+  margin-bottom: 20px;
+}
+
+.sources-section h2 {
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--obsidian-gold);
+}
+
+.sources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.geo-source-card {
+  background: 
+    linear-gradient(135deg, 
+      var(--obsidian-bg-card) 0%, 
+      rgba(26, 31, 46, 0.95) 100%
+    );
+  border-radius: 10px;
+  padding: 18px 20px;
+  border: 1px solid var(--obsidian-border-dim);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 3px 16px rgba(0, 0, 0, 0.3);
+}
+
+.geo-source-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--obsidian-border-dim);
+  transition: background 0.3s ease;
+}
+
+.geo-source-card.status-running::before {
+  background: linear-gradient(90deg, var(--obsidian-gold), var(--obsidian-gold-bright), var(--obsidian-gold));
+  background-size: 200% 100%;
+  animation: goldShimmer 2s infinite linear;
+}
+
+.geo-source-card.status-completed::before {
+  background: var(--obsidian-success);
+}
+
+.geo-source-card.status-error::before {
+  background: var(--obsidian-danger);
+}
+
+.geo-source-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 
+    0 8px 28px rgba(0, 0, 0, 0.4),
+    0 0 0 1px var(--obsidian-gold-subtle);
+  border-color: var(--obsidian-border);
+}
+
+@keyframes goldShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.source-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.source-emoji {
+  font-size: 1.6rem;
+}
+
+.source-name {
+  font-size: 1.1rem;
+  font-weight: 500;
+  flex: 1;
+  color: var(--obsidian-text);
+}
+
+.status-badge {
+  font-size: 0.7rem;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: var(--obsidian-bg-elevated);
+  color: var(--obsidian-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.status-running {
+  background: var(--obsidian-gold-subtle);
+  color: var(--obsidian-gold);
+  animation: subtlePulse 2s infinite;
+}
+
+.status-badge.status-completed {
+  background: var(--obsidian-success-dim);
+  color: var(--obsidian-success);
+}
+
+.status-badge.status-error {
+  background: var(--obsidian-danger-dim);
+  color: var(--obsidian-danger);
+}
+
+.status-badge.status-missing {
+  background: var(--obsidian-warning-dim);
+  color: var(--obsidian-warning);
+}
+
+.status-badge.status-coming-soon {
+  background: linear-gradient(135deg, rgba(140, 130, 160, 0.15), rgba(120, 110, 150, 0.15));
+  color: rgba(180, 170, 200, 0.9);
+  border: 1px dashed rgba(140, 130, 160, 0.3);
+  animation: none;
+}
+
+.source-description {
+  color: var(--obsidian-text-dim);
+  font-size: 0.85rem;
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+}
+
+/* Coming Soon Card Styling */
+.geo-source-card.coming-soon {
+  opacity: 0.8;
+  position: relative;
+}
+
+.geo-source-card.coming-soon::before {
+  background: linear-gradient(90deg, rgba(140, 130, 160, 0.5), rgba(120, 110, 150, 0.5));
+  opacity: 0.7;
+}
+
+.geo-source-card.coming-soon::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(140, 130, 160, 0.03) 10px,
+    rgba(140, 130, 160, 0.03) 20px
+  );
+  pointer-events: none;
+  border-radius: 10px;
+}
+
+.geo-source-card.coming-soon .source-emoji {
+  filter: grayscale(30%);
+}
+
+.geo-source-card.coming-soon .stats-grid.stats-disabled {
+  opacity: 0.5;
+}
+
+.geo-source-card.coming-soon .stats-grid.stats-disabled .stat-value {
+  color: var(--obsidian-text-dim);
+}
+
+/* Planned Features List */
+.planned-features {
+  background: rgba(140, 130, 160, 0.08);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-left: 2px solid rgba(140, 130, 160, 0.5);
+}
+
+.planned-features .features-label {
+  font-weight: 500;
+  color: rgba(180, 170, 200, 0.9);
+  font-size: 0.75rem;
+  display: block;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.planned-features .features-list {
+  font-size: 0.8rem;
+  color: var(--obsidian-text-dim);
+  line-height: 1.6;
+}
+
+/* Availability Notes */
+.availability-note {
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--obsidian-text-muted);
+  text-align: right;
+  font-style: italic;
+}
+
+.availability-note.ready {
+  color: var(--obsidian-success);
+  font-style: normal;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 10px;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 10px;
+  background: var(--obsidian-bg-elevated);
+  border-radius: 6px;
+  border: 1px solid var(--obsidian-border-dim);
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--obsidian-gold);
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--obsidian-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+.last-run {
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--obsidian-text-muted);
+  text-align: right;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Coverage Section - Industrial Style
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.coverage-section {
+  background: 
+    linear-gradient(135deg, 
+      var(--obsidian-bg-card) 0%, 
+      rgba(26, 31, 46, 0.95) 100%
+    );
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  border: 1px solid var(--obsidian-border-dim);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.35),
+    0 1px 0 var(--obsidian-gold-subtle) inset;
+}
+
+.coverage-section h2 {
+  margin: 0 0 20px 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--obsidian-gold);
+}
+
+.coverage-grid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.coverage-column {
+  background: var(--obsidian-bg-elevated);
+  border-radius: 10px;
+  padding: 18px 20px;
+  min-width: 160px;
+  text-align: center;
+  border: 1px solid var(--obsidian-border-dim);
+}
+
+.coverage-column h3 {
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+  color: var(--obsidian-text-dim);
+  font-weight: 500;
+}
+
+.coverage-before {
+  border: 1px solid var(--obsidian-danger-dim);
+}
+
+.coverage-after {
+  border: 1px solid var(--obsidian-success-dim);
+}
+
+.coverage-item {
+  margin-bottom: 10px;
+}
+
+.coverage-value {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.coverage-before .coverage-value {
+  color: var(--obsidian-warning);
+}
+
+.coverage-after .coverage-value {
+  color: var(--obsidian-success);
+}
+
+.coverage-label {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--obsidian-text-muted);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.coverage-arrow {
+  font-size: 2.5rem;
+  color: var(--obsidian-gold-dim);
+  animation: arrowPulseGold 2s infinite;
+}
+
+@keyframes arrowPulseGold {
+  0%, 100% { transform: translateX(0); opacity: 1; }
+  50% { transform: translateX(8px); opacity: 0.6; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Live Log - Industrial Console Style
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.log-section {
+  margin-bottom: 20px;
+}
+
+.live-log {
+  background: 
+    linear-gradient(135deg, 
+      rgba(8, 10, 16, 0.98) 0%, 
+      rgba(12, 15, 22, 0.98) 100%
+    );
+  border-radius: 10px;
+  border: 1px solid var(--obsidian-border-dim);
+  overflow: hidden;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(201, 162, 39, 0.05);
+}
+
+.log-header {
+  background: var(--obsidian-bg-elevated);
+  padding: 10px 16px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--obsidian-border-dim);
+  color: var(--obsidian-gold);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.log-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.log-filter {
+  position: relative;
+  margin-left: auto;
+}
+
+.log-filter__trigger {
+  list-style: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  border: 1px solid var(--obsidian-border-dim);
+  border-radius: 6px;
+  background: var(--obsidian-bg);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--obsidian-text);
+  user-select: none;
+}
+
+.log-filter__trigger::-webkit-details-marker {
+  display: none;
+}
+
+.log-filter__chevron {
+  color: var(--obsidian-text-muted);
+  font-size: 0.85rem;
+}
+
+.log-filter__panel {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: var(--obsidian-bg);
+  border: 1px solid var(--obsidian-border-dim);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  padding: 10px;
+  min-width: 200px;
+  z-index: 3;
+}
+
+.log-filter[open] .log-filter__panel {
+  display: block;
+}
+
+.log-filter__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--obsidian-text);
+}
+
+.log-filter__option:hover {
+  background: rgba(201, 162, 39, 0.07);
+}
+
+.log-filter__option input {
+  accent-color: currentColor;
+}
+
+.log-filter__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.9;
+}
+
+.log-filter__label {
+  color: var(--obsidian-text);
+}
+
+.log-body {
+  max-height: 280px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+  font-size: 0.8rem;
+}
+
+.log-entry {
+  display: flex;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.05);
+  transition: background 0.15s ease;
+}
+
+.log-entry:hover {
+  background: rgba(201, 162, 39, 0.03);
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+.log-timestamp {
+  color: var(--obsidian-text-muted);
+  flex-shrink: 0;
+  font-size: 0.75rem;
+}
+
+.log-message {
+  flex: 1;
+}
+
+.log-info .log-message {
+  color: var(--obsidian-accent);
+}
+
+.log-success .log-message {
+  color: var(--obsidian-success);
+}
+
+.log-warning .log-message {
+  color: var(--obsidian-warning);
+}
+
+.log-error .log-message {
+  color: var(--obsidian-danger);
+}
+.log-filter__option.log-info { color: var(--obsidian-accent); }
+.log-filter__option.log-success { color: var(--obsidian-success); }
+.log-filter__option.log-warning { color: var(--obsidian-warning); }
+.log-filter__option.log-error { color: var(--obsidian-danger); }
+
+/* Custom scrollbar for log - Obsidian style */
+.log-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.log-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.log-body::-webkit-scrollbar-thumb {
+  background: var(--obsidian-border);
+  border-radius: 3px;
+}
+
+.log-body::-webkit-scrollbar-thumb:hover {
+  background: var(--obsidian-gold-dim);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Action Buttons - Luxury Industrial Style
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.actions-section {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  padding: 12px 24px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--obsidian-gold), var(--obsidian-gold-bright));
+  color: #0f1420;
+  box-shadow: 0 4px 16px var(--obsidian-gold-glow);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(201, 162, 39, 0.5);
+}
+
+.btn-secondary {
+  background: var(--obsidian-bg-elevated);
+  color: var(--obsidian-text);
+  border: 1px solid var(--obsidian-border-dim);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--obsidian-border-dim);
+  border-color: var(--obsidian-border);
+}
+
+.btn-danger {
+  background: var(--obsidian-danger-dim);
+  color: var(--obsidian-danger);
+  border: 1px solid var(--obsidian-danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--obsidian-danger);
+  color: white;
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Animations - Subtle luxury
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.geo-source-card,
+.progress-section,
+.coverage-section,
+.live-log {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* Stagger animation for source cards */
+.sources-grid .geo-source-card:nth-child(1) { animation-delay: 0.05s; }
+.sources-grid .geo-source-card:nth-child(2) { animation-delay: 0.1s; }
+.sources-grid .geo-source-card:nth-child(3) { animation-delay: 0.15s; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Responsive - Industrial Mobile
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: 16px;
+  }
+  
+  .geo-import-dashboard {
+    padding: 0;
+  }
+  
+  .dashboard-header {
+    padding: 20px;
+  }
+  
+  .dashboard-header h1 {
+    font-size: 1.4rem;
+  }
+  
+  .progress-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .coverage-grid {
+    flex-direction: column;
+  }
+  
+  .coverage-arrow {
+    transform: rotate(90deg);
+  }
+  
+  /* Stages stepper responsive */
+  .stages-stepper {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 10px 0;
+    gap: 6px;
+  }
+  
+  .stage-item {
+    min-width: 56px;
+  }
+  
+  .stage-marker {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+  
+  .stage-label {
+    font-size: 0.55rem;
+  }
+  
+  .stage-connector {
+    top: 16px;
+    left: calc(50% + 16px);
+    width: calc(100% - 32px);
+  }
+  
+  @keyframes arrowPulseGold {
+    0%, 100% { transform: rotate(90deg) translateX(0); opacity: 1; }
+    50% { transform: rotate(90deg) translateX(8px); opacity: 0.6; }
+  }
+}
+
+  </style>
+</head>
+<body>
+  <div class="page-container">
+    <div data-jsgui-id="database_selector_0" data-jsgui-data-model-id="data_object_0" data-jsgui-type="database_selector" data-jsgui-data-model="data_object_0" class="db-selector-window" data-jsgui-control="database_selector"><div data-jsgui-id="control_0" data-jsgui-data-model-id="data_object_1" data-jsgui-type="control" data-jsgui-data-model="data_object_1" class="window-title-bar"><span data-jsgui-id="control_1" data-jsgui-data-model-id="data_object_2" data-jsgui-type="control" data-jsgui-data-model="data_object_2" class="window-icon">🗄️</span><span data-jsgui-id="control_2" data-jsgui-data-model-id="data_object_3" data-jsgui-type="control" data-jsgui-data-model="data_object_3" class="window-title">🗄️ Database Selector</span><div data-jsgui-id="control_3" data-jsgui-data-model-id="data_object_4" data-jsgui-type="control" data-jsgui-data-model="data_object_4" class="window-btn-group"><span data-jsgui-id="control_4" data-jsgui-data-model-id="data_object_5" data-jsgui-type="control" data-jsgui-data-model="data_object_5" class="window-btn minimize">─</span><span data-jsgui-id="control_5" data-jsgui-data-model-id="data_object_6" data-jsgui-type="control" data-jsgui-data-model="data_object_6" class="window-btn maximize">☐</span><span data-jsgui-id="control_6" data-jsgui-data-model-id="data_object_7" data-jsgui-type="control" data-jsgui-data-model="data_object_7" class="window-btn close">✕</span></div></div><div data-jsgui-id="control_7" data-jsgui-data-model-id="data_object_8" data-jsgui-type="control" data-jsgui-data-model="data_object_8" class="window-content"><div data-jsgui-id="control_8" data-jsgui-data-model-id="data_object_9" data-jsgui-type="control" data-jsgui-data-model="data_object_9" class="db-selector-header"><h3 data-jsgui-id="control_9" data-jsgui-data-model-id="data_object_10" data-jsgui-type="control" data-jsgui-data-model="data_object_10">🗄️ Select Database</h3><p data-jsgui-id="control_10" data-jsgui-data-model-id="data_object_11" data-jsgui-type="control" data-jsgui-data-model="data_object_11" class="db-selector-subtitle">Choose an existing database or create a new one</p></div><div data-jsgui-id="control_11" data-jsgui-data-model-id="data_object_12" data-jsgui-type="control" data-jsgui-data-model="data_object_12" class="db-quick-actions"><button data-jsgui-id="control_12" data-jsgui-data-model-id="data_object_13" data-jsgui-type="control" data-jsgui-data-model="data_object_13" class="quick-btn" data-action="select-default">⭐ Use Default</button><button data-jsgui-id="control_13" data-jsgui-data-model-id="data_object_14" data-jsgui-type="control" data-jsgui-data-model="data_object_14" class="quick-btn secondary" data-action="refresh-list">🔄 Refresh</button></div><div data-jsgui-id="control_14" data-jsgui-data-model-id="data_object_15" data-jsgui-type="control" data-jsgui-data-model="data_object_15" class="db-list-container"><div data-jsgui-id="control_15" data-jsgui-data-model-id="data_object_16" data-jsgui-type="control" data-jsgui-data-model="data_object_16" class="db-create-section"><div data-jsgui-id="database_item_0" data-jsgui-data-model-id="data_object_17" data-jsgui-type="database_item" data-jsgui-data-model="data_object_17" class="db-item new-db" data-db-path="__new__"><span data-jsgui-id="control_16" data-jsgui-data-model-id="data_object_18" data-jsgui-type="control" data-jsgui-data-model="data_object_18" class="db-icon">➕</span><div data-jsgui-id="control_17" data-jsgui-data-model-id="data_object_19" data-jsgui-type="control" data-jsgui-data-model="data_object_19" class="db-info"><div data-jsgui-id="control_18" data-jsgui-data-model-id="data_object_20" data-jsgui-type="control" data-jsgui-data-model="data_object_20" class="db-name-row"><span data-jsgui-id="control_19" data-jsgui-data-model-id="data_object_21" data-jsgui-type="control" data-jsgui-data-model="data_object_21" class="db-name">New Gazetteer Database</span><span data-jsgui-id="control_20" data-jsgui-data-model-id="data_object_22" data-jsgui-type="control" data-jsgui-data-model="data_object_22" class="db-badge new-badge">Create New</span></div></div><span data-jsgui-id="control_21" data-jsgui-data-model-id="data_object_23" data-jsgui-type="control" data-jsgui-data-model="data_object_23" class="db-check"></span></div><div data-jsgui-id="control_22" data-jsgui-data-model-id="data_object_24" data-jsgui-type="control" data-jsgui-data-model="data_object_24" class="db-new-input-group" data-visible="false"><input data-jsgui-id="control_23" data-jsgui-data-model-id="data_object_25" data-jsgui-type="control" type="text" placeholder="my-gazetteer.db" data-input="new-db-name"></input><button data-jsgui-id="control_24" data-jsgui-data-model-id="data_object_26" data-jsgui-type="control" data-jsgui-data-model="data_object_26" class="create-db-btn" data-action="create-new-db">✨ Create</button></div></div><div data-jsgui-id="control_25" data-jsgui-data-model-id="data_object_27" data-jsgui-type="control" data-jsgui-data-model="data_object_27" class="db-list-separator"></div><div data-jsgui-id="control_26" data-jsgui-data-model-id="data_object_28" data-jsgui-type="control" data-jsgui-data-model="data_object_28" class="db-list" data-list="databases"><div data-jsgui-id="database_item_1" data-jsgui-data-model-id="data_object_29" data-jsgui-type="database_item" data-jsgui-data-model="data_object_29" class="db-item selected default no-gazetteer" data-db-path="data/gazetteer.db"><span data-jsgui-id="control_27" data-jsgui-data-model-id="data_object_30" data-jsgui-type="control" data-jsgui-data-model="data_object_30" class="db-icon">📦</span><div data-jsgui-id="control_28" data-jsgui-data-model-id="data_object_31" data-jsgui-type="control" data-jsgui-data-model="data_object_31" class="db-info"><div data-jsgui-id="control_29" data-jsgui-data-model-id="data_object_32" data-jsgui-type="control" data-jsgui-data-model="data_object_32" class="db-name-row"><span data-jsgui-id="control_30" data-jsgui-data-model-id="data_object_33" data-jsgui-type="control" data-jsgui-data-model="data_object_33" class="db-name">gazetteer.db</span><span data-jsgui-id="control_31" data-jsgui-data-model-id="data_object_34" data-jsgui-type="control" data-jsgui-data-model="data_object_34" class="db-badge default-badge">⭐ Default</span><span data-jsgui-id="control_32" data-jsgui-data-model-id="data_object_35" data-jsgui-type="control" data-jsgui-data-model="data_object_35" class="db-badge no-gaz-badge">📦 No Gazetteer</span></div><div data-jsgui-id="control_33" data-jsgui-data-model-id="data_object_36" data-jsgui-type="control" data-jsgui-data-model="data_object_36" class="db-stats-row"><span data-jsgui-id="control_34" data-jsgui-data-model-id="data_object_37" data-jsgui-type="control" data-jsgui-data-model="data_object_37" class="db-stat hint">🔧 Empty or new database</span><span data-jsgui-id="control_35" data-jsgui-data-model-id="data_object_38" data-jsgui-type="control" data-jsgui-data-model="data_object_38" class="db-stat">💾 2.3 MB</span></div></div><span data-jsgui-id="control_36" data-jsgui-data-model-id="data_object_39" data-jsgui-type="control" data-jsgui-data-model="data_object_39" class="db-check">✓</span></div><div data-jsgui-id="database_item_2" data-jsgui-data-model-id="data_object_40" data-jsgui-type="database_item" data-jsgui-data-model="data_object_40" class="db-item no-gazetteer" data-db-path="data/gazetteer.db.backup-pre-schema-migration"><span data-jsgui-id="control_37" data-jsgui-data-model-id="data_object_41" data-jsgui-type="control" data-jsgui-data-model="data_object_41" class="db-icon">📦</span><div data-jsgui-id="control_38" data-jsgui-data-model-id="data_object_42" data-jsgui-type="control" data-jsgui-data-model="data_object_42" class="db-info"><div data-jsgui-id="control_39" data-jsgui-data-model-id="data_object_43" data-jsgui-type="control" data-jsgui-data-model="data_object_43" class="db-name-row"><span data-jsgui-id="control_40" data-jsgui-data-model-id="data_object_44" data-jsgui-type="control" data-jsgui-data-model="data_object_44" class="db-name">gazetteer.db.backup-pre-schema-migration</span><span data-jsgui-id="control_41" data-jsgui-data-model-id="data_object_45" data-jsgui-type="control" data-jsgui-data-model="data_object_45" class="db-badge no-gaz-badge">📦 No Gazetteer</span></div><div data-jsgui-id="control_42" data-jsgui-data-model-id="data_object_46" data-jsgui-type="control" data-jsgui-data-model="data_object_46" class="db-stats-row"><span data-jsgui-id="control_43" data-jsgui-data-model-id="data_object_47" data-jsgui-type="control" data-jsgui-data-model="data_object_47" class="db-stat hint">🔧 Empty or new database</span><span data-jsgui-id="control_44" data-jsgui-data-model-id="data_object_48" data-jsgui-type="control" data-jsgui-data-model="data_object_48" class="db-stat">💾 1.8 MB</span></div></div><div data-jsgui-id="control_45" data-jsgui-data-model-id="data_object_49" data-jsgui-type="control" data-jsgui-data-model="data_object_49" class="db-item-actions"><button data-jsgui-id="control_46" data-jsgui-data-model-id="data_object_50" data-jsgui-type="control" data-jsgui-data-model="data_object_50" class="db-action-btn init-btn" data-action="init-gazetteer" data-db-path="data/gazetteer.db.backup-pre-schema-migration" title="Add gazetteer tables to this database">➕ Init Gazetteer</button></div><span data-jsgui-id="control_47" data-jsgui-data-model-id="data_object_51" data-jsgui-type="control" data-jsgui-data-model="data_object_51" class="db-check"></span></div><div data-jsgui-id="database_item_3" data-jsgui-data-model-id="data_object_52" data-jsgui-type="database_item" data-jsgui-data-model="data_object_52" class="db-item no-gazetteer" data-db-path="data/gazetteer-test.db"><span data-jsgui-id="control_48" data-jsgui-data-model-id="data_object_53" data-jsgui-type="control" data-jsgui-data-model="data_object_53" class="db-icon">📦</span><div data-jsgui-id="control_49" data-jsgui-data-model-id="data_object_54" data-jsgui-type="control" data-jsgui-data-model="data_object_54" class="db-info"><div data-jsgui-id="control_50" data-jsgui-data-model-id="data_object_55" data-jsgui-type="control" data-jsgui-data-model="data_object_55" class="db-name-row"><span data-jsgui-id="control_51" data-jsgui-data-model-id="data_object_56" data-jsgui-type="control" data-jsgui-data-model="data_object_56" class="db-name">gazetteer-test.db</span><span data-jsgui-id="control_52" data-jsgui-data-model-id="data_object_57" data-jsgui-type="control" data-jsgui-data-model="data_object_57" class="db-badge no-gaz-badge">📦 No Gazetteer</span></div><div data-jsgui-id="control_53" data-jsgui-data-model-id="data_object_58" data-jsgui-type="control" data-jsgui-data-model="data_object_58" class="db-stats-row"><span data-jsgui-id="control_54" data-jsgui-data-model-id="data_object_59" data-jsgui-type="control" data-jsgui-data-model="data_object_59" class="db-stat hint">🔧 Empty or new database</span><span data-jsgui-id="control_55" data-jsgui-data-model-id="data_object_60" data-jsgui-type="control" data-jsgui-data-model="data_object_60" class="db-stat">💾 200.0 KB</span></div></div><div data-jsgui-id="control_56" data-jsgui-data-model-id="data_object_61" data-jsgui-type="control" data-jsgui-data-model="data_object_61" class="db-item-actions"><button data-jsgui-id="control_57" data-jsgui-data-model-id="data_object_62" data-jsgui-type="control" data-jsgui-data-model="data_object_62" class="db-action-btn init-btn" data-action="init-gazetteer" data-db-path="data/gazetteer-test.db" title="Add gazetteer tables to this database">➕ Init Gazetteer</button></div><span data-jsgui-id="control_58" data-jsgui-data-model-id="data_object_63" data-jsgui-type="control" data-jsgui-data-model="data_object_63" class="db-check"></span></div></div></div><div data-jsgui-id="control_59" data-jsgui-data-model-id="data_object_64" data-jsgui-type="control" data-jsgui-data-model="data_object_64" class="db-info-panel" data-panel="selected-info"><div data-jsgui-id="control_60" data-jsgui-data-model-id="data_object_65" data-jsgui-type="control" data-jsgui-data-model="data_object_65" class="info-title">📊 gazetteer.db</div><div data-jsgui-id="control_61" data-jsgui-data-model-id="data_object_66" data-jsgui-type="control" data-jsgui-data-model="data_object_66" class="info-stats-grid"><div data-jsgui-id="control_62" data-jsgui-data-model-id="data_object_67" data-jsgui-type="control" data-jsgui-data-model="data_object_67" class="info-stat"><span data-jsgui-id="control_63" data-jsgui-data-model-id="data_object_68" data-jsgui-type="control" data-jsgui-data-model="data_object_68" class="stat-emoji">📍</span><span data-jsgui-id="control_64" data-jsgui-data-model-id="data_object_69" data-jsgui-type="control" data-jsgui-data-model="data_object_69" class="stat-value">508</span><span data-jsgui-id="control_65" data-jsgui-data-model-id="data_object_70" data-jsgui-type="control" data-jsgui-data-model="data_object_70" class="stat-label">Places</span></div><div data-jsgui-id="control_66" data-jsgui-data-model-id="data_object_71" data-jsgui-type="control" data-jsgui-data-model="data_object_71" class="info-stat"><span data-jsgui-id="control_67" data-jsgui-data-model-id="data_object_72" data-jsgui-type="control" data-jsgui-data-model="data_object_72" class="stat-emoji">🏷️</span><span data-jsgui-id="control_68" data-jsgui-data-model-id="data_object_73" data-jsgui-type="control" data-jsgui-data-model="data_object_73" class="stat-value">14,855</span><span data-jsgui-id="control_69" data-jsgui-data-model-id="data_object_74" data-jsgui-type="control" data-jsgui-data-model="data_object_74" class="stat-label">Names</span></div><div data-jsgui-id="control_70" data-jsgui-data-model-id="data_object_75" data-jsgui-type="control" data-jsgui-data-model="data_object_75" class="info-stat"><span data-jsgui-id="control_71" data-jsgui-data-model-id="data_object_76" data-jsgui-type="control" data-jsgui-data-model="data_object_76" class="stat-emoji">💾</span><span data-jsgui-id="control_72" data-jsgui-data-model-id="data_object_77" data-jsgui-type="control" data-jsgui-data-model="data_object_77" class="stat-value">2.3 MB</span><span data-jsgui-id="control_73" data-jsgui-data-model-id="data_object_78" data-jsgui-type="control" data-jsgui-data-model="data_object_78" class="stat-label">Size</span></div></div><div data-jsgui-id="control_74" data-jsgui-data-model-id="data_object_79" data-jsgui-type="control" data-jsgui-data-model="data_object_79" class="info-path"><span data-jsgui-id="control_75" data-jsgui-data-model-id="data_object_80" data-jsgui-type="control" data-jsgui-data-model="data_object_80" class="path-label">Path: </span><code data-jsgui-id="control_76" data-jsgui-data-model-id="data_object_81" data-jsgui-type="control" data-jsgui-data-model="data_object_81" class="path-value">data&#x2F;gazetteer.db</code></div><div data-jsgui-id="control_77" data-jsgui-data-model-id="data_object_82" data-jsgui-type="control" data-jsgui-data-model="data_object_82" class="info-actions"><div data-jsgui-id="control_78" data-jsgui-data-model-id="data_object_83" data-jsgui-type="control" data-jsgui-data-model="data_object_83" class="actions-title">🔄 Import Actions</div><div data-jsgui-id="control_79" data-jsgui-data-model-id="data_object_84" data-jsgui-type="control" data-jsgui-data-model="data_object_84" class="action-buttons"><button data-jsgui-id="control_80" data-jsgui-data-model-id="data_object_85" data-jsgui-type="control" data-jsgui-data-model="data_object_85" class="action-btn primary" data-action="import-from-source" title="Import geographic data from external sources (GeoNames, etc.)">📥 Import from Source...</button><button data-jsgui-id="control_81" data-jsgui-data-model-id="data_object_86" data-jsgui-type="control" data-jsgui-data-model="data_object_86" class="action-btn" data-action="merge-database" title="Merge another gazetteer database into this one">🔀 Merge Database...</button></div></div></div></div><div data-jsgui-id="database_context_menu_0" data-jsgui-data-model-id="data_object_87" data-jsgui-type="database_context_menu" data-jsgui-data-model="data_object_87" class="db-context-menu" data-context-menu="database"><div data-jsgui-id="control_82" data-jsgui-data-model-id="data_object_88" data-jsgui-type="control" data-jsgui-data-model="data_object_88" class="db-context-menu-item" data-action="open-in-explorer"><span data-jsgui-id="control_83" data-jsgui-data-model-id="data_object_89" data-jsgui-type="control" data-jsgui-data-model="data_object_89" class="menu-item-icon">📂</span><span data-jsgui-id="control_84" data-jsgui-data-model-id="data_object_90" data-jsgui-type="control" data-jsgui-data-model="data_object_90" class="menu-item-label">Open in Explorer</span></div></div></div>
+    <div data-jsgui-id="geo_import_dashboard_0" data-jsgui-data-model-id="data_object_91" data-jsgui-type="geo_import_dashboard" data-jsgui-data-model="data_object_91" class="geo-import-dashboard" data-jsgui-control="geo_import_dashboard"><div data-jsgui-id="two_column_layout_0" data-jsgui-data-model-id="data_object_92" data-jsgui-type="two_column_layout" data-jsgui-data-model="data_object_92" class="two-column-layout" data-jsgui-control="two_column_layout"><aside data-jsgui-id="sidebar_0" data-jsgui-data-model-id="data_object_93" data-jsgui-type="sidebar" data-jsgui-data-model="data_object_93" class="layout-sidebar"><div data-jsgui-id="control_85" data-jsgui-data-model-id="data_object_94" data-jsgui-type="control" data-jsgui-data-model="data_object_94" class="sidebar-header"><span data-jsgui-id="control_86" data-jsgui-data-model-id="data_object_95" data-jsgui-type="control" data-jsgui-data-model="data_object_95" class="sidebar-header__icon">🌐</span><span data-jsgui-id="control_87" data-jsgui-data-model-id="data_object_96" data-jsgui-type="control" data-jsgui-data-model="data_object_96" class="sidebar-header__title">Gazetteer Import</span></div><nav data-jsgui-id="control_88" data-jsgui-data-model-id="data_object_97" data-jsgui-type="control" data-jsgui-data-model="data_object_97" class="sidebar-nav"><div data-jsgui-id="database" data-jsgui-data-model-id="data_object_98" data-jsgui-type="nav_item" data-jsgui-data-model="data_object_98" class="nav-item" data-nav-id="database"><span data-jsgui-id="control_89" data-jsgui-data-model-id="data_object_99" data-jsgui-type="control" data-jsgui-data-model="data_object_99" class="nav-item__icon">🗄️</span><span data-jsgui-id="control_90" data-jsgui-data-model-id="data_object_100" data-jsgui-type="control" data-jsgui-data-model="data_object_100" class="nav-item__label">Database</span></div><div data-jsgui-id="pipeline" data-jsgui-data-model-id="data_object_101" data-jsgui-type="nav_item" data-jsgui-data-model="data_object_101" class="nav-item nav-item--selected" data-nav-id="pipeline"><span data-jsgui-id="control_91" data-jsgui-data-model-id="data_object_102" data-jsgui-type="control" data-jsgui-data-model="data_object_102" class="nav-item__icon">📋</span><span data-jsgui-id="control_92" data-jsgui-data-model-id="data_object_103" data-jsgui-type="control" data-jsgui-data-model="data_object_103" class="nav-item__label">Pipeline</span></div><div data-jsgui-id="sources" data-jsgui-data-model-id="data_object_104" data-jsgui-type="nav_item" data-jsgui-data-model="data_object_104" class="nav-item" data-nav-id="sources"><span data-jsgui-id="control_93" data-jsgui-data-model-id="data_object_105" data-jsgui-type="control" data-jsgui-data-model="data_object_105" class="nav-item__icon">📦</span><span data-jsgui-id="control_94" data-jsgui-data-model-id="data_object_106" data-jsgui-type="control" data-jsgui-data-model="data_object_106" class="nav-item__label">Data Sources</span></div><div data-jsgui-id="coverage" data-jsgui-data-model-id="data_object_107" data-jsgui-type="nav_item" data-jsgui-data-model="data_object_107" class="nav-item" data-nav-id="coverage"><span data-jsgui-id="control_95" data-jsgui-data-model-id="data_object_108" data-jsgui-type="control" data-jsgui-data-model="data_object_108" class="nav-item__icon">📈</span><span data-jsgui-id="control_96" data-jsgui-data-model-id="data_object_109" data-jsgui-type="control" data-jsgui-data-model="data_object_109" class="nav-item__label">Coverage</span></div><div data-jsgui-id="log" data-jsgui-data-model-id="data_object_110" data-jsgui-type="nav_item" data-jsgui-data-model="data_object_110" class="nav-item" data-nav-id="log"><span data-jsgui-id="control_97" data-jsgui-data-model-id="data_object_111" data-jsgui-type="control" data-jsgui-data-model="data_object_111" class="nav-item__icon">📝</span><span data-jsgui-id="control_98" data-jsgui-data-model-id="data_object_112" data-jsgui-type="control" data-jsgui-data-model="data_object_112" class="nav-item__label">Import Log</span></div></nav><div data-jsgui-id="control_147" data-jsgui-data-model-id="data_object_167" data-jsgui-type="control" data-jsgui-data-model="data_object_167" class="sidebar-actions"><button data-jsgui-id="control_148" data-jsgui-data-model-id="data_object_168" data-jsgui-type="control" data-jsgui-data-model="data_object_168" class="action-btn btn-primary" data-action="start-import">🚀 Start</button><button data-jsgui-id="control_149" data-jsgui-data-model-id="data_object_169" data-jsgui-type="control" data-jsgui-data-model="data_object_169" class="action-btn btn-secondary" data-action="pause-import" disabled="true">⏸️ Pause</button><button data-jsgui-id="control_150" data-jsgui-data-model-id="data_object_170" data-jsgui-type="control" data-jsgui-data-model="data_object_170" class="action-btn btn-danger" data-action="cancel-import" disabled="true">🛑 Cancel</button></div></aside><main data-jsgui-id="content_area_0" data-jsgui-data-model-id="data_object_113" data-jsgui-type="content_area" data-jsgui-data-model="data_object_113" class="layout-content"><header data-jsgui-id="detail_header_0" data-jsgui-data-model-id="data_object_114" data-jsgui-type="detail_header" data-jsgui-data-model="data_object_114" class="detail-header"><div data-jsgui-id="control_99" data-jsgui-data-model-id="data_object_115" data-jsgui-type="control" data-jsgui-data-model="data_object_115" class="detail-header__title-row"><span data-jsgui-id="control_100" data-jsgui-data-model-id="data_object_116" data-jsgui-type="control" data-jsgui-data-model="data_object_116" class="detail-header__icon">📋</span><h2 data-jsgui-id="control_101" data-jsgui-data-model-id="data_object_117" data-jsgui-type="control" data-jsgui-data-model="data_object_117" class="detail-header__title">Import Pipeline</h2></div><p data-jsgui-id="control_102" data-jsgui-data-model-id="data_object_118" data-jsgui-type="control" data-jsgui-data-model="data_object_118" class="detail-header__subtitle">Track import stage progress</p></header><div data-jsgui-id="control_103" data-jsgui-data-model-id="data_object_119" data-jsgui-type="control" data-jsgui-data-model="data_object_119" class="content-body"><div data-jsgui-id="stages_stepper_0" data-jsgui-data-model-id="data_object_120" data-jsgui-type="stages_stepper" data-jsgui-data-model="data_object_120" class="stages-stepper" data-current-stage="importing"><div data-jsgui-id="control_104" data-jsgui-data-model-id="data_object_121" data-jsgui-type="control" data-jsgui-data-model="data_object_121" class="stage-item stage-completed" data-stage-id="idle"><div data-jsgui-id="control_105" data-jsgui-data-model-id="data_object_122" data-jsgui-type="control" data-jsgui-data-model="data_object_122" class="stage-marker">✓</div><div data-jsgui-id="control_106" data-jsgui-data-model-id="data_object_123" data-jsgui-type="control" data-jsgui-data-model="data_object_123" class="stage-label">Ready</div><div data-jsgui-id="control_107" data-jsgui-data-model-id="data_object_124" data-jsgui-type="control" data-jsgui-data-model="data_object_124" class="stage-connector connector-completed"></div></div><div data-jsgui-id="control_108" data-jsgui-data-model-id="data_object_125" data-jsgui-type="control" data-jsgui-data-model="data_object_125" class="stage-item stage-completed" data-stage-id="validating"><div data-jsgui-id="control_109" data-jsgui-data-model-id="data_object_126" data-jsgui-type="control" data-jsgui-data-model="data_object_126" class="stage-marker">✓</div><div data-jsgui-id="control_110" data-jsgui-data-model-id="data_object_127" data-jsgui-type="control" data-jsgui-data-model="data_object_127" class="stage-label">Validating</div><div data-jsgui-id="control_111" data-jsgui-data-model-id="data_object_128" data-jsgui-type="control" data-jsgui-data-model="data_object_128" class="stage-connector connector-completed"></div></div><div data-jsgui-id="control_112" data-jsgui-data-model-id="data_object_129" data-jsgui-type="control" data-jsgui-data-model="data_object_129" class="stage-item stage-completed" data-stage-id="counting"><div data-jsgui-id="control_113" data-jsgui-data-model-id="data_object_130" data-jsgui-type="control" data-jsgui-data-model="data_object_130" class="stage-marker">✓</div><div data-jsgui-id="control_114" data-jsgui-data-model-id="data_object_131" data-jsgui-type="control" data-jsgui-data-model="data_object_131" class="stage-label">Counting</div><div data-jsgui-id="control_115" data-jsgui-data-model-id="data_object_132" data-jsgui-type="control" data-jsgui-data-model="data_object_132" class="stage-connector connector-completed"></div></div><div data-jsgui-id="control_116" data-jsgui-data-model-id="data_object_133" data-jsgui-type="control" data-jsgui-data-model="data_object_133" class="stage-item stage-completed" data-stage-id="preparing"><div data-jsgui-id="control_117" data-jsgui-data-model-id="data_object_134" data-jsgui-type="control" data-jsgui-data-model="data_object_134" class="stage-marker">✓</div><div data-jsgui-id="control_118" data-jsgui-data-model-id="data_object_135" data-jsgui-type="control" data-jsgui-data-model="data_object_135" class="stage-label">Preparing</div><div data-jsgui-id="control_119" data-jsgui-data-model-id="data_object_136" data-jsgui-type="control" data-jsgui-data-model="data_object_136" class="stage-connector connector-completed"></div></div><div data-jsgui-id="control_120" data-jsgui-data-model-id="data_object_137" data-jsgui-type="control" data-jsgui-data-model="data_object_137" class="stage-item stage-current" data-stage-id="importing"><div data-jsgui-id="control_121" data-jsgui-data-model-id="data_object_138" data-jsgui-type="control" data-jsgui-data-model="data_object_138" class="stage-marker">💾</div><div data-jsgui-id="control_122" data-jsgui-data-model-id="data_object_139" data-jsgui-type="control" data-jsgui-data-model="data_object_139" class="stage-label">Importing</div><div data-jsgui-id="control_123" data-jsgui-data-model-id="data_object_140" data-jsgui-type="control" data-jsgui-data-model="data_object_140" class="stage-connector"></div></div><div data-jsgui-id="control_124" data-jsgui-data-model-id="data_object_141" data-jsgui-type="control" data-jsgui-data-model="data_object_141" class="stage-item stage-pending" data-stage-id="indexing"><div data-jsgui-id="control_125" data-jsgui-data-model-id="data_object_142" data-jsgui-type="control" data-jsgui-data-model="data_object_142" class="stage-marker">🗂️</div><div data-jsgui-id="control_126" data-jsgui-data-model-id="data_object_143" data-jsgui-type="control" data-jsgui-data-model="data_object_143" class="stage-label">Indexing</div><div data-jsgui-id="control_127" data-jsgui-data-model-id="data_object_144" data-jsgui-type="control" data-jsgui-data-model="data_object_144" class="stage-connector"></div></div><div data-jsgui-id="control_128" data-jsgui-data-model-id="data_object_145" data-jsgui-type="control" data-jsgui-data-model="data_object_145" class="stage-item stage-pending" data-stage-id="verifying"><div data-jsgui-id="control_129" data-jsgui-data-model-id="data_object_146" data-jsgui-type="control" data-jsgui-data-model="data_object_146" class="stage-marker">✅</div><div data-jsgui-id="control_130" data-jsgui-data-model-id="data_object_147" data-jsgui-type="control" data-jsgui-data-model="data_object_147" class="stage-label">Verifying</div><div data-jsgui-id="control_131" data-jsgui-data-model-id="data_object_148" data-jsgui-type="control" data-jsgui-data-model="data_object_148" class="stage-connector"></div></div><div data-jsgui-id="control_132" data-jsgui-data-model-id="data_object_149" data-jsgui-type="control" data-jsgui-data-model="data_object_149" class="stage-item stage-pending" data-stage-id="complete"><div data-jsgui-id="control_133" data-jsgui-data-model-id="data_object_150" data-jsgui-type="control" data-jsgui-data-model="data_object_150" class="stage-marker">🎉</div><div data-jsgui-id="control_134" data-jsgui-data-model-id="data_object_151" data-jsgui-type="control" data-jsgui-data-model="data_object_151" class="stage-label">Complete</div></div></div><div data-jsgui-id="control_135" data-jsgui-data-model-id="data_object_152" data-jsgui-type="control" data-jsgui-data-model="data_object_152" class="progress-compact"><div data-jsgui-id="progress_ring_0" data-jsgui-data-model-id="data_object_153" data-jsgui-type="progress_ring" data-jsgui-data-model="data_object_153" class="progress-ring-container" data-progress="50.43140114230161" data-ring-size="100"><svg data-jsgui-id="control_136" data-jsgui-data-model-id="data_object_154" data-jsgui-type="control" width="100" height="100" viewBox="0 0 100 100"><circle data-jsgui-id="control_137" data-jsgui-data-model-id="data_object_155" data-jsgui-type="control" cx="50" cy="50" r="46" fill="none" stroke="#e0e0e0" stroke-width="8"></circle><circle data-jsgui-id="control_138" data-jsgui-data-model-id="data_object_156" data-jsgui-type="control" cx="50" cy="50" r="46" fill="none" stroke="#b8860b" stroke-width="8" stroke-linecap="round" stroke-dasharray="289.02652413026095" stroke-dashoffset="143.26639833847787" transform="rotate(-90 50 50)"></circle></svg><div data-jsgui-id="control_139" data-jsgui-data-model-id="data_object_157" data-jsgui-type="control" data-jsgui-data-model="data_object_157" class="progress-ring-text">50%</div></div><div data-jsgui-id="progress_bar_0" data-jsgui-data-model-id="data_object_158" data-jsgui-type="progress_bar" data-jsgui-data-model="data_object_158" class="progress-bar progress-bar--compact progress-bar--gold progress-bar--animated"><div data-jsgui-id="control_140" data-jsgui-data-model-id="data_object_159" data-jsgui-type="control" data-jsgui-data-model="data_object_159" class="progress-bar__track"><div data-jsgui-id="control_141" data-jsgui-data-model-id="data_object_160" data-jsgui-type="control" style="width:50%" data-jsgui-data-model="data_object_160" class="progress-bar__fill"></div></div><span data-jsgui-id="control_142" data-jsgui-data-model-id="data_object_161" data-jsgui-type="control" data-jsgui-data-model="data_object_161" class="progress-bar__label">50%</span></div><div data-jsgui-id="control_143" data-jsgui-data-model-id="data_object_163" data-jsgui-type="control" data-jsgui-data-model="data_object_163" class="progress-stall" data-role="progress-stall"></div><div data-jsgui-id="control_144" data-jsgui-data-model-id="data_object_164" data-jsgui-type="control" data-jsgui-data-model="data_object_164" class="progress-stats-compact"><div data-jsgui-id="control_145" data-jsgui-data-model-id="data_object_165" data-jsgui-type="control" data-jsgui-data-model="data_object_165" class="progress-count">12,450 &#x2F; 24,687 records</div><div data-jsgui-id="control_146" data-jsgui-data-model-id="data_object_166" data-jsgui-type="control" data-jsgui-data-model="data_object_166" class="progress-phase">💾 Importing to database...</div></div></div></div></main></div></div>
+  </div>
+  
+  <script>
+    // Simulate live updates
+    let progress = 12450;
+    const total = 24687;
+    const stageIds = ['idle', 'validating', 'counting', 'preparing', 'importing', 'indexing', 'verifying', 'complete'];
+    let currentStageIndex = 4; // Start at 'importing'
+    
+    function updateStagesStepper(stageIndex) {
+      const stages = document.querySelectorAll('.stage-item');
+      stages.forEach((stageEl, index) => {
+        stageEl.classList.remove('stage-completed', 'stage-current', 'stage-pending');
+        
+        const connector = stageEl.querySelector('.stage-connector');
+        if (connector) {
+          connector.classList.remove('connector-completed');
+        }
+        
+        if (index < stageIndex) {
+          stageEl.classList.add('stage-completed');
+          if (connector) connector.classList.add('connector-completed');
+        } else if (index === stageIndex) {
+          stageEl.classList.add('stage-current');
+        } else {
+          stageEl.classList.add('stage-pending');
+        }
+      });
+    }
+    
+    function simulateProgress() {
+      if (progress >= total) {
+        // Move to 'complete' stage
+        currentStageIndex = 7;
+        updateStagesStepper(currentStageIndex);
+        document.querySelector('.progress-phase').textContent = '🎉 Import complete!';
+        document.querySelector('.progress-ring-circle').style.stroke = '#4CAF50';
+        return;
+      }
+      
+      progress += Math.floor(Math.random() * 200) + 50;
+      if (progress > total) progress = total;
+      
+      const percent = Math.round((progress / total) * 100);
+      
+      // Simulate stage transitions at certain progress points
+      if (percent >= 60 && currentStageIndex === 4) {
+        currentStageIndex = 5; // indexing
+        updateStagesStepper(currentStageIndex);
+      } else if (percent >= 85 && currentStageIndex === 5) {
+        currentStageIndex = 6; // verifying
+        updateStagesStepper(currentStageIndex);
+      }
+      
+      // Update progress text
+      const ringText = document.querySelector('.progress-ring-text');
+      if (ringText) ringText.textContent = percent + '%';
+      
+      // Update progress ring
+      const circle = document.querySelector('.progress-ring-circle');
+      if (circle) {
+        const radius = 56; // (140 - 10*2) / 2
+        const circumference = 2 * Math.PI * radius;
+        const offset = circumference - (percent / 100) * circumference;
+        circle.style.strokeDashoffset = offset;
+      }
+      
+      // Update stats
+      const statValue = document.querySelector('.progress-stat .stat-value');
+      if (statValue) statValue.textContent = progress.toLocaleString();
+      
+      // Add log entry
+      const logBody = document.querySelector('.log-body');
+      if (logBody && Math.random() > 0.7) {
+        const stage = stageIds[currentStageIndex];
+        const entry = document.createElement('div');
+        entry.className = 'log-entry log-info';
+        entry.innerHTML = `
+          <span class="log-timestamp">${new Date().toLocaleTimeString()}</span>
+          <span class="log-message">📊 [${stage}] Progress: ${progress.toLocaleString()} / ${total.toLocaleString()} (${percent}%)</span>
+        `;
+        logBody.appendChild(entry);
+        logBody.scrollTop = logBody.scrollHeight;
+      }
+      
+      setTimeout(simulateProgress, 500 + Math.random() * 500);
+    }
+    
+    // Start simulation after 2 seconds
+    setTimeout(simulateProgress, 2000);
+    
+    // Button handlers
+    document.querySelector('[data-action="start-import"]').addEventListener('click', function() {
+      this.disabled = true;
+      this.textContent = '🔄 Running...';
+      document.querySelector('[data-action="pause-import"]').disabled = false;
+      document.querySelector('[data-action="cancel-import"]').disabled = false;
+    });
+    
+    console.log('🌐 Geo Import Dashboard check loaded');
+    console.log('📊 Simulating live import progress...');
+  </script>
+</body>
+</html>

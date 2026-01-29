@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decision Tree Viewer - Luxury Industrial Obsidian</title>
+  <link rel="stylesheet" href="/public/decision-tree.css">
+  <style>
+    /* Layout styles */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: var(--dt-obsidian);
+      color: var(--dt-text);
+      font-family: var(--dt-font-family);
+    }
+    
+    .dt-viewer {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    
+    .dt-viewer__header {
+      flex-shrink: 0;
+      padding: var(--dt-space-md) var(--dt-space-xl);
+    }
+    
+    .dt-viewer__main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      gap: var(--dt-space-lg);
+      padding: 0 var(--dt-space-xl) var(--dt-space-xl);
+    }
+    
+    .dt-viewer__sidebar {
+      width: 280px;
+      flex-shrink: 0;
+    }
+    
+    .dt-viewer__canvas-container {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    /* Tree list panel */
+    .dt-tree-list {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .dt-tree-list .dt-panel__content {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--dt-space-md);
+    }
+    
+    .dt-tree-list-item {
+      display: flex;
+      align-items: center;
+      gap: var(--dt-space-sm);
+      padding: var(--dt-space-sm) var(--dt-space-md);
+      border-radius: var(--dt-radius-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: var(--dt-space-xs);
+    }
+    
+    .dt-tree-list-item:hover {
+      background: rgba(201, 162, 39, 0.1);
+    }
+    
+    .dt-tree-list-item--selected {
+      background: rgba(201, 162, 39, 0.2);
+      border: 1px solid var(--dt-gold);
+    }
+    
+    .dt-tree-list-item__icon {
+      font-size: 1.2em;
+    }
+    
+    .dt-tree-list-item__name {
+      font-weight: 500;
+      color: var(--dt-text);
+    }
+    
+    .dt-tree-list-item__description {
+      display: none;
+      color: var(--dt-text-dim);
+      font-size: var(--dt-font-xs);
+    }
+    
+    /* Canvas panel */
+    .dt-canvas-panel {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .dt-canvas {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+    }
+    
+    /* Tree layout */
+    .dt-tree {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--dt-space-xl);
+      padding: var(--dt-space-xl);
+      min-width: 100%;
+      min-height: 100%;
+      position: relative;
+    }
+    
+    .dt-level {
+      display: flex;
+      justify-content: center;
+      gap: var(--dt-space-xl);
+      width: 100%;
+    }
+    
+    /* Connections container */
+    .dt-connections {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    /* SVG connection styles */
+    .dt-connection {
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+    
+    .dt-connection--yes {
+      stroke: var(--dt-success, #22c55e);
+    }
+    
+    .dt-connection--no {
+      stroke: var(--dt-error, #ef4444);
+    }
+    
+    .dt-connection__label {
+      font-family: var(--dt-font-mono);
+      font-size: 10px;
+      font-weight: bold;
+    }
+    
+    .dt-connection__label--yes {
+      fill: var(--dt-success, #22c55e);
+    }
+    
+    .dt-connection__label--no {
+      fill: var(--dt-error, #ef4444);
+    }
+  </style>
+</head>
+<body>
+  <div data-jsgui-id="control_0" data-jsgui-data-model-id="data_object_0" data-jsgui-type="control" data-jsgui-data-model="data_object_0" class="dt-viewer" data-jsgui-control="dt_viewer"><header data-jsgui-id="control_1" data-jsgui-data-model-id="data_object_1" data-jsgui-type="control" data-jsgui-data-model="data_object_1" class="dt-viewer__header dt-header"><div data-jsgui-id="control_2" data-jsgui-data-model-id="data_object_2" data-jsgui-type="control" data-jsgui-data-model="data_object_2" class="dt-header__rivets"><span data-jsgui-id="control_3" data-jsgui-data-model-id="data_object_3" data-jsgui-type="control" data-jsgui-data-model="data_object_3" class="dt-rivet"></span><span data-jsgui-id="control_4" data-jsgui-data-model-id="data_object_4" data-jsgui-type="control" data-jsgui-data-model="data_object_4" class="dt-rivet"></span><span data-jsgui-id="control_5" data-jsgui-data-model-id="data_object_5" data-jsgui-type="control" data-jsgui-data-model="data_object_5" class="dt-rivet"></span></div><h1 data-jsgui-id="control_6" data-jsgui-data-model-id="data_object_6" data-jsgui-type="control" data-jsgui-data-model="data_object_6" class="dt-header__title">🌲 Decision Tree Viewer</h1><div data-jsgui-id="control_7" data-jsgui-data-model-id="data_object_8" data-jsgui-type="control" data-jsgui-data-model="data_object_8" class="dt-header__rivets"><span data-jsgui-id="control_8" data-jsgui-data-model-id="data_object_9" data-jsgui-type="control" data-jsgui-data-model="data_object_9" class="dt-rivet"></span><span data-jsgui-id="control_9" data-jsgui-data-model-id="data_object_10" data-jsgui-type="control" data-jsgui-data-model="data_object_10" class="dt-rivet"></span><span data-jsgui-id="control_10" data-jsgui-data-model-id="data_object_11" data-jsgui-type="control" data-jsgui-data-model="data_object_11" class="dt-rivet"></span></div></header><main data-jsgui-id="control_11" data-jsgui-data-model-id="data_object_12" data-jsgui-type="control" data-jsgui-data-model="data_object_12" class="dt-viewer__main"><aside data-jsgui-id="control_12" data-jsgui-data-model-id="data_object_13" data-jsgui-type="control" data-jsgui-data-model="data_object_13" class="dt-viewer__sidebar"><div data-jsgui-id="control_13" data-jsgui-data-model-id="data_object_14" data-jsgui-type="control" data-jsgui-data-model="data_object_14" class="dt-panel dt-tree-list" data-jsgui-control="dt_tree_list"><div data-jsgui-id="control_14" data-jsgui-data-model-id="data_object_15" data-jsgui-type="control" data-jsgui-data-model="data_object_15" class="dt-panel__header dt-header"><div data-jsgui-id="control_15" data-jsgui-data-model-id="data_object_16" data-jsgui-type="control" data-jsgui-data-model="data_object_16" class="dt-header__rivets"><span data-jsgui-id="control_16" data-jsgui-data-model-id="data_object_17" data-jsgui-type="control" data-jsgui-data-model="data_object_17" class="dt-rivet"></span><span data-jsgui-id="control_17" data-jsgui-data-model-id="data_object_18" data-jsgui-type="control" data-jsgui-data-model="data_object_18" class="dt-rivet"></span></div><h2 data-jsgui-id="control_18" data-jsgui-data-model-id="data_object_19" data-jsgui-type="control" data-jsgui-data-model="data_object_19" class="dt-header__title">Decision Trees</h2><div data-jsgui-id="control_19" data-jsgui-data-model-id="data_object_21" data-jsgui-type="control" data-jsgui-data-model="data_object_21" class="dt-header__rivets"><span data-jsgui-id="control_20" data-jsgui-data-model-id="data_object_22" data-jsgui-type="control" data-jsgui-data-model="data_object_22" class="dt-rivet"></span><span data-jsgui-id="control_21" data-jsgui-data-model-id="data_object_23" data-jsgui-type="control" data-jsgui-data-model="data_object_23" class="dt-rivet"></span></div></div><div data-jsgui-id="control_22" data-jsgui-data-model-id="data_object_24" data-jsgui-type="control" data-jsgui-data-model="data_object_24" class="dt-panel__content"><div data-jsgui-id="control_23" data-jsgui-data-model-id="data_object_25" data-jsgui-type="control" data-jsgui-data-model="data_object_25" class="dt-tree-list-item" data-jsgui-control="dt_tree_list_item" data-tree-id="article-classifier"><span data-jsgui-id="control_24" data-jsgui-data-model-id="data_object_26" data-jsgui-type="control" data-jsgui-data-model="data_object_26" class="dt-tree-list-item__icon">🌲</span><span data-jsgui-id="control_25" data-jsgui-data-model-id="data_object_28" data-jsgui-type="control" data-jsgui-data-model="data_object_28" class="dt-tree-list-item__name">Article Page Classifier</span><span data-jsgui-id="control_26" data-jsgui-data-model-id="data_object_30" data-jsgui-type="control" data-jsgui-data-model="data_object_30" class="dt-tree-list-item__description">Determines if a URL points to …</span></div></div></div></aside><section data-jsgui-id="control_27" data-jsgui-data-model-id="data_object_32" data-jsgui-type="control" data-jsgui-data-model="data_object_32" class="dt-viewer__canvas-container"><div data-jsgui-id="control_28" data-jsgui-data-model-id="data_object_33" data-jsgui-type="control" data-jsgui-data-model="data_object_33" class="dt-panel dt-canvas-panel"><div data-jsgui-id="control_29" data-jsgui-data-model-id="data_object_34" data-jsgui-type="control" data-jsgui-data-model="data_object_34" class="dt-panel__header dt-header"><h2 data-jsgui-id="control_30" data-jsgui-data-model-id="data_object_35" data-jsgui-type="control" data-jsgui-data-model="data_object_35" class="dt-header__title">Article Page Classifier</h2></div><div data-jsgui-id="control_31" data-jsgui-data-model-id="data_object_37" data-jsgui-type="control" data-jsgui-data-model="data_object_37" class="dt-canvas"><div data-jsgui-id="control_32" data-jsgui-data-model-id="data_object_38" data-jsgui-type="control" data-jsgui-data-model="data_object_38" class="dt-tree" data-jsgui-control="dt_tree" data-tree-id="article-classifier"><div data-jsgui-id="control_34" data-jsgui-data-model-id="data_object_40" data-jsgui-type="control" data-jsgui-data-model="data_object_40" class="dt-level" data-level="0"><div data-jsgui-id="control_35" data-jsgui-data-model-id="data_object_41" data-jsgui-type="control" data-jsgui-data-model="data_object_41" class="dt-node dt-node--branch" data-jsgui-control="dt_branch_node" data-node-id="check-article-path" data-node-type="branch"><div data-jsgui-id="control_36" data-jsgui-data-model-id="data_object_42" data-jsgui-type="control" data-jsgui-data-model="data_object_42" class="dt-node__content"><div data-jsgui-id="control_37" data-jsgui-data-model-id="data_object_43" data-jsgui-type="control" data-jsgui-data-model="data_object_43" class="dt-node__inner"><div data-jsgui-id="control_38" data-jsgui-data-model-id="data_object_44" data-jsgui-type="control" data-jsgui-data-model="data_object_44" class="dt-node__label">URL contains /article/?</div><div data-jsgui-id="control_39" data-jsgui-data-model-id="data_object_46" data-jsgui-type="control" data-jsgui-data-model="data_object_46" class="dt-node__id">check-article-path</div></div></div><div data-jsgui-id="control_40" data-jsgui-data-model-id="data_object_48" data-jsgui-type="control" data-jsgui-data-model="data_object_48" class="dt-connection-point dt-connection-point--input-top" data-jsgui-control="dt_connection_point" data-node-id="check-article-path" data-point-type="input-top"><div data-jsgui-id="control_41" data-jsgui-data-model-id="data_object_49" data-jsgui-type="control" data-jsgui-data-model="data_object_49" class="dt-connection-point__dot"></div></div><div data-jsgui-id="control_42" data-jsgui-data-model-id="data_object_50" data-jsgui-type="control" data-jsgui-data-model="data_object_50" class="dt-connection-point dt-connection-point--output-yes" data-jsgui-control="dt_connection_point" data-node-id="check-article-path" data-point-type="output-yes" data-branch="yes"><div data-jsgui-id="control_43" data-jsgui-data-model-id="data_object_51" data-jsgui-type="control" data-jsgui-data-model="data_object_51" class="dt-connection-point__dot"></div></div><div data-jsgui-id="control_44" data-jsgui-data-model-id="data_object_52" data-jsgui-type="control" data-jsgui-data-model="data_object_52" class="dt-connection-point dt-connection-point--output-no" data-jsgui-control="dt_connection_point" data-node-id="check-article-path" data-point-type="output-no" data-branch="no"><div data-jsgui-id="control_45" data-jsgui-data-model-id="data_object_53" data-jsgui-type="control" data-jsgui-data-model="data_object_53" class="dt-connection-point__dot"></div></div></div></div><div data-jsgui-id="control_46" data-jsgui-data-model-id="data_object_54" data-jsgui-type="control" data-jsgui-data-model="data_object_54" class="dt-level" data-level="1"><div data-jsgui-id="control_47" data-jsgui-data-model-id="data_object_55" data-jsgui-type="control" data-jsgui-data-model="data_object_55" class="dt-node dt-node--branch" data-jsgui-control="dt_branch_node" data-node-id="check-word-count" data-node-type="branch" data-parent-id="check-article-path" data-branch="yes"><div data-jsgui-id="control_48" data-jsgui-data-model-id="data_object_56" data-jsgui-type="control" data-jsgui-data-model="data_object_56" class="dt-node__content"><div data-jsgui-id="control_49" data-jsgui-data-model-id="data_object_57" data-jsgui-type="control" data-jsgui-data-model="data_object_57" class="dt-node__inner"><div data-jsgui-id="control_50" data-jsgui-data-model-id="data_object_58" data-jsgui-type="control" data-jsgui-data-model="data_object_58" class="dt-node__label">Word count > 300?</div><div data-jsgui-id="control_51" data-jsgui-data-model-id="data_object_60" data-jsgui-type="control" data-jsgui-data-model="data_object_60" class="dt-node__id">check-word-count</div></div></div><div data-jsgui-id="control_52" data-jsgui-data-model-id="data_object_62" data-jsgui-type="control" data-jsgui-data-model="data_object_62" class="dt-connection-point dt-connection-point--input-top" data-jsgui-control="dt_connection_point" data-node-id="check-word-count" data-point-type="input-top"><div data-jsgui-id="control_53" data-jsgui-data-model-id="data_object_63" data-jsgui-type="control" data-jsgui-data-model="data_object_63" class="dt-connection-point__dot"></div></div><div data-jsgui-id="control_54" data-jsgui-data-model-id="data_object_64" data-jsgui-type="control" data-jsgui-data-model="data_object_64" class="dt-connection-point dt-connection-point--output-yes" data-jsgui-control="dt_connection_point" data-node-id="check-word-count" data-point-type="output-yes" data-branch="yes"><div data-jsgui-id="control_55" data-jsgui-data-model-id="data_object_65" data-jsgui-type="control" data-jsgui-data-model="data_object_65" class="dt-connection-point__dot"></div></div><div data-jsgui-id="control_56" data-jsgui-data-model-id="data_object_66" data-jsgui-type="control" data-jsgui-data-model="data_object_66" class="dt-connection-point dt-connection-point--output-no" data-jsgui-control="dt_connection_point" data-node-id="check-word-count" data-point-type="output-no" data-branch="no"><div data-jsgui-id="control_57" data-jsgui-data-model-id="data_object_67" data-jsgui-type="control" data-jsgui-data-model="data_object_67" class="dt-connection-point__dot"></div></div></div><div data-jsgui-id="control_58" data-jsgui-data-model-id="data_object_68" data-jsgui-type="control" data-jsgui-data-model="data_object_68" class="dt-node dt-node--branch" data-jsgui-control="dt_branch_node" data-node-id="check-news-path" data-node-type="branch" data-parent-id="check-article-path" data-branch="no"><div data-jsgui-id="control_59" data-jsgui-data-model-id="data_object_69" data-jsgui-type="control" data-jsgui-data-model="data_object_69" class="dt-node__content"><div data-jsgui-id="control_60" data-jsgui-data-model-id="data_object_70" data-jsgui-type="control" data-jsgui-data-model="data_object_70" class="dt-node__inner"><div data-jsgui-id="control_61" data-jsgui-data-model-id="data_object_71" data-jsgui-type="control" data-jsgui-data-model="data_object_71" class="dt-node__label">URL contains /news/?</div><div data-jsgui-id="control_62" data-jsgui-data-model-id="data_object_73" data-jsgui-type="control" data-jsgui-data-model="data_object_73" class="dt-node__id">check-news-path</div></div></div><div data-jsgui-id="control_63" data-jsgui-data-model-id="data_object_75" data-jsgui-type="control" data-jsgui-data-model="data_object_75" class="dt-connection-point dt-connection-point--input-top" data-jsgui-control="dt_connection_point" data-node-id="check-news-path" data-point-type="input-top"><div data-jsgui-id="control_64" data-jsgui-data-model-id="data_object_76" data-jsgui-type="control" data-jsgui-data-model="data_object_76" class="dt-connection-point__dot"></div></div><div data-jsgui-id="control_65" data-jsgui-data-model-id="data_object_77" data-jsgui-type="control" data-jsgui-data-model="data_object_77" class="dt-connection-point dt-connection-point--output-yes" data-jsgui-control="dt_connection_point" data-node-id="check-news-path" data-point-type="output-yes" data-branch="yes"><div data-jsgui-id="control_66" data-jsgui-data-model-id="data_object_78" data-jsgui-type="control" data-jsgui-data-model="data_object_78" class="dt-connection-point__dot"></div></div><div data-jsgui-id="control_67" data-jsgui-data-model-id="data_object_79" data-jsgui-type="control" data-jsgui-data-model="data_object_79" class="dt-connection-point dt-connection-point--output-no" data-jsgui-control="dt_connection_point" data-node-id="check-news-path" data-point-type="output-no" data-branch="no"><div data-jsgui-id="control_68" data-jsgui-data-model-id="data_object_80" data-jsgui-type="control" data-jsgui-data-model="data_object_80" class="dt-connection-point__dot"></div></div></div></div><div data-jsgui-id="control_69" data-jsgui-data-model-id="data_object_81" data-jsgui-type="control" data-jsgui-data-model="data_object_81" class="dt-level" data-level="2"><div data-jsgui-id="control_70" data-jsgui-data-model-id="data_object_82" data-jsgui-type="control" data-jsgui-data-model="data_object_82" class="dt-node dt-node--result dt-node--result-true" data-jsgui-control="dt_result_node" data-node-id="full-article" data-node-type="result" data-parent-id="check-word-count" data-branch="yes"><div data-jsgui-id="control_71" data-jsgui-data-model-id="data_object_83" data-jsgui-type="control" data-jsgui-data-model="data_object_83" class="dt-node__content"><div data-jsgui-id="control_72" data-jsgui-data-model-id="data_object_84" data-jsgui-type="control" data-jsgui-data-model="data_object_84" class="dt-node__icon">✓</div><div data-jsgui-id="control_73" data-jsgui-data-model-id="data_object_86" data-jsgui-type="control" data-jsgui-data-model="data_object_86" class="dt-node__label">Full Article</div><div data-jsgui-id="control_74" data-jsgui-data-model-id="data_object_88" data-jsgui-type="control" data-jsgui-data-model="data_object_88" class="dt-node__reason">article-path-sufficient-words</div></div><div data-jsgui-id="control_75" data-jsgui-data-model-id="data_object_90" data-jsgui-type="control" data-jsgui-data-model="data_object_90" class="dt-connection-point dt-connection-point--input-top" data-jsgui-control="dt_connection_point" data-node-id="full-article" data-point-type="input-top"><div data-jsgui-id="control_76" data-jsgui-data-model-id="data_object_91" data-jsgui-type="control" data-jsgui-data-model="data_object_91" class="dt-connection-point__dot"></div></div></div><div data-jsgui-id="control_77" data-jsgui-data-model-id="data_object_92" data-jsgui-type="control" data-jsgui-data-model="data_object_92" class="dt-node dt-node--result dt-node--result-true" data-jsgui-control="dt_result_node" data-node-id="short-article" data-node-type="result" data-parent-id="check-word-count" data-branch="no"><div data-jsgui-id="control_78" data-jsgui-data-model-id="data_object_93" data-jsgui-type="control" data-jsgui-data-model="data_object_93" class="dt-node__content"><div data-jsgui-id="control_79" data-jsgui-data-model-id="data_object_94" data-jsgui-type="control" data-jsgui-data-model="data_object_94" class="dt-node__icon">✓</div><div data-jsgui-id="control_80" data-jsgui-data-model-id="data_object_96" data-jsgui-type="control" data-jsgui-data-model="data_object_96" class="dt-node__label">Short Article</div><div data-jsgui-id="control_81" data-jsgui-data-model-id="data_object_98" data-jsgui-type="control" data-jsgui-data-model="data_object_98" class="dt-node__reason">article-path-few-words</div></div><div data-jsgui-id="control_82" data-jsgui-data-model-id="data_object_100" data-jsgui-type="control" data-jsgui-data-model="data_object_100" class="dt-connection-point dt-connection-point--input-top" data-jsgui-control="dt_connection_point" data-node-id="short-article" data-point-type="input-top"><div data-jsgui-id="control_83" data-jsgui-data-model-id="data_object_101" data-jsgui-type="control" data-jsgui-data-model="data_object_101" class="dt-connection-point__dot"></div></div></div><div data-jsgui-id="control_84" data-jsgui-data-model-id="data_object_102" data-jsgui-type="control" data-jsgui-data-model="data_object_102" class="dt-node dt-node--branch" data-jsgui-control="dt_branch_node" data-node-id="check-date-pattern" data-node-type="branch" data-parent-id="check-news-path" data-branch="yes"><div data-jsgui-id="control_85" data-jsgui-data-model-id="data_object_103" data-jsgui-type="control" data-jsgui-data-model="data_object_103" class="dt-node__content"><div data-jsgui-id="control_86" data-jsgui-data-model-id="data_object_104" data-jsgui-type="control" data-jsgui-data-model="data_object_104" class="dt-node__inner"><div data-jsgui-id="control_87" data-jsgui-data-model-id="data_object_105" data-jsgui-type="control" data-jsgui-data-model="data_object_105" class="dt-node__label">Has date in URL?</div><div data-jsgui-id="control_88" data-jsgui-data-model-id="data_object_107" data-jsgui-type="control" data-jsgui-data-model="data_object_107" class="dt-node__id">check-date-pattern</div></div></div><div data-jsgui-id="control_89" data-jsgui-data-model-id="data_object_109" data-jsgui-type="control" data-jsgui-data-model="data_object_109" class="dt-connection-point dt-connection-point--input-top" data-jsgui-control="dt_connection_point" data-node-id="check-date-pattern" data-point-type="input-top"><div data-jsgui-id="control_90" data-jsgui-data-model-id="data_object_110" data-jsgui-type="control" data-jsgui-data-model="data_object_110" class="dt-connection-point__dot"></div></div><div data-jsgui-id="control_91" data-jsgui-data-model-id="data_object_111" data-jsgui-type="control" data-jsgui-data-model="data_object_111" class="dt-connection-point dt-connection-point--output-yes" data-jsgui-control="dt_connection_point" data-node-id="check-date-pattern" data-point-type="output-yes" data-branch="yes"><div data-jsgui-id="control_92" data-jsgui-data-model-id="data_object_112" data-jsgui-type="control" data-jsgui-data-model="data_object_112" class="dt-connection-point__dot"></div></div><div data-jsgui-id="control_93" data-jsgui-data-model-id="data_object_113" data-jsgui-type="control" data-jsgui-data-model="data_object_113" class="dt-connection-point dt-connection-point--output-no" data-jsgui-control="dt_connection_point" data-node-id="check-date-pattern" data-point-type="output-no" data-branch="no"><div data-jsgui-id="control_94" data-jsgui-data-model-id="data_object_114" data-jsgui-type="control" data-jsgui-data-model="data_object_114" class="dt-connection-point__dot"></div></div></div><div data-jsgui-id="control_95" data-jsgui-data-model-id="data_object_115" data-jsgui-type="control" data-jsgui-data-model="data_object_115" class="dt-node dt-node--branch" data-jsgui-control="dt_branch_node" data-node-id="check-blog-path" data-node-type="branch" data-parent-id="check-news-path" data-branch="no"><div data-jsgui-id="control_96" data-jsgui-data-model-id="data_object_116" data-jsgui-type="control" data-jsgui-data-model="data_object_116" class="dt-node__content"><div data-jsgui-id="control_97" data-jsgui-data-model-id="data_object_117" data-jsgui-type="control" data-jsgui-data-model="data_object_117" class="dt-node__inner"><div data-jsgui-id="control_98" data-jsgui-data-model-id="data_object_118" data-jsgui-type="control" data-jsgui-data-model="data_object_118" class="dt-node__label">URL contains /blog/?</div><div data-jsgui-id="control_99" data-jsgui-data-model-id="data_object_120" data-jsgui-type="control" data-jsgui-data-model="data_object_120" class="dt-node__id">check-blog-path</div></div></div><div data-jsgui-id="control_100" data-jsgui-data-model-id="data_object_122" data-jsgui-type="control" data-jsgui-data-model="data_object_122" class="dt-connection-point dt-connection-point--input-top" data-jsgui-control="dt_connection_point" data-node-id="check-blog-path" data-point-type="input-top"><div data-jsgui-id="control_101" data-jsgui-data-model-id="data_object_123" data-jsgui-type="control" data-jsgui-data-model="data_object_123" class="dt-connection-point__dot"></div></div><div data-jsgui-id="control_102" data-jsgui-data-model-id="data_object_124" data-jsgui-type="control" data-jsgui-data-model="data_object_124" class="dt-connection-point dt-connection-point--output-yes" data-jsgui-control="dt_connection_point" data-node-id="check-blog-path" data-point-type="output-yes" data-branch="yes"><div data-jsgui-id="control_103" data-jsgui-data-model-id="data_object_125" data-jsgui-type="control" data-jsgui-data-model="data_object_125" class="dt-connection-point__dot"></div></div><div data-jsgui-id="control_104" data-jsgui-data-model-id="data_object_126" data-jsgui-type="control" data-jsgui-data-model="data_object_126" class="dt-connection-point dt-connection-point--output-no" data-jsgui-control="dt_connection_point" data-node-id="check-blog-path" data-point-type="output-no" data-branch="no"><div data-jsgui-id="control_105" data-jsgui-data-model-id="data_object_127" data-jsgui-type="control" data-jsgui-data-model="data_object_127" class="dt-connection-point__dot"></div></div></div></div><div data-jsgui-id="control_106" data-jsgui-data-model-id="data_object_128" data-jsgui-type="control" data-jsgui-data-model="data_object_128" class="dt-level" data-level="3"><div data-jsgui-id="control_107" data-jsgui-data-model-id="data_object_129" data-jsgui-type="control" data-jsgui-data-model="data_object_129" class="dt-node dt-node--result dt-node--result-true" data-jsgui-control="dt_result_node" data-node-id="dated-news" data-node-type="result" data-parent-id="check-date-pattern" data-branch="yes"><div data-jsgui-id="control_108" data-jsgui-data-model-id="data_object_130" data-jsgui-type="control" data-jsgui-data-model="data_object_130" class="dt-node__content"><div data-jsgui-id="control_109" data-jsgui-data-model-id="data_object_131" data-jsgui-type="control" data-jsgui-data-model="data_object_131" class="dt-node__icon">✓</div><div data-jsgui-id="control_110" data-jsgui-data-model-id="data_object_133" data-jsgui-type="control" data-jsgui-data-model="data_object_133" class="dt-node__label">Dated News Article</div><div data-jsgui-id="control_111" data-jsgui-data-model-id="data_object_135" data-jsgui-type="control" data-jsgui-data-model="data_object_135" class="dt-node__reason">news-with-date</div></div><div data-jsgui-id="control_112" data-jsgui-data-model-id="data_object_137" data-jsgui-type="control" data-jsgui-data-model="data_object_137" class="dt-connection-point dt-connection-point--input-top" data-jsgui-control="dt_connection_point" data-node-id="dated-news" data-point-type="input-top"><div data-jsgui-id="control_113" data-jsgui-data-model-id="data_object_138" data-jsgui-type="control" data-jsgui-data-model="data_object_138" class="dt-connection-point__dot"></div></div></div><div data-jsgui-id="control_114" data-jsgui-data-model-id="data_object_139" data-jsgui-type="control" data-jsgui-data-model="data_object_139" class="dt-node dt-node--result dt-node--result-false" data-jsgui-control="dt_result_node" data-node-id="news-section" data-node-type="result" data-parent-id="check-date-pattern" data-branch="no"><div data-jsgui-id="control_115" data-jsgui-data-model-id="data_object_140" data-jsgui-type="control" data-jsgui-data-model="data_object_140" class="dt-node__content"><div data-jsgui-id="control_116" data-jsgui-data-model-id="data_object_141" data-jsgui-type="control" data-jsgui-data-model="data_object_141" class="dt-node__icon">✗</div><div data-jsgui-id="control_117" data-jsgui-data-model-id="data_object_143" data-jsgui-type="control" data-jsgui-data-model="data_object_143" class="dt-node__label">News Section Page</div><div data-jsgui-id="control_118" data-jsgui-data-model-id="data_object_145" data-jsgui-type="control" data-jsgui-data-model="data_object_145" class="dt-node__reason">news-no-date-likely-hub</div></div><div data-jsgui-id="control_119" data-jsgui-data-model-id="data_object_147" data-jsgui-type="control" data-jsgui-data-model="data_object_147" class="dt-connection-point dt-connection-point--input-top" data-jsgui-control="dt_connection_point" data-node-id="news-section" data-point-type="input-top"><div data-jsgui-id="control_120" data-jsgui-data-model-id="data_object_148" data-jsgui-type="control" data-jsgui-data-model="data_object_148" class="dt-connection-point__dot"></div></div></div><div data-jsgui-id="control_121" data-jsgui-data-model-id="data_object_149" data-jsgui-type="control" data-jsgui-data-model="data_object_149" class="dt-node dt-node--result dt-node--result-true" data-jsgui-control="dt_result_node" data-node-id="blog-post" data-node-type="result" data-parent-id="check-blog-path" data-branch="yes"><div data-jsgui-id="control_122" data-jsgui-data-model-id="data_object_150" data-jsgui-type="control" data-jsgui-data-model="data_object_150" class="dt-node__content"><div data-jsgui-id="control_123" data-jsgui-data-model-id="data_object_151" data-jsgui-type="control" data-jsgui-data-model="data_object_151" class="dt-node__icon">✓</div><div data-jsgui-id="control_124" data-jsgui-data-model-id="data_object_153" data-jsgui-type="control" data-jsgui-data-model="data_object_153" class="dt-node__label">Blog Post</div><div data-jsgui-id="control_125" data-jsgui-data-model-id="data_object_155" data-jsgui-type="control" data-jsgui-data-model="data_object_155" class="dt-node__reason">blog-path</div></div><div data-jsgui-id="control_126" data-jsgui-data-model-id="data_object_157" data-jsgui-type="control" data-jsgui-data-model="data_object_157" class="dt-connection-point dt-connection-point--input-top" data-jsgui-control="dt_connection_point" data-node-id="blog-post" data-point-type="input-top"><div data-jsgui-id="control_127" data-jsgui-data-model-id="data_object_158" data-jsgui-type="control" data-jsgui-data-model="data_object_158" class="dt-connection-point__dot"></div></div></div><div data-jsgui-id="control_128" data-jsgui-data-model-id="data_object_159" data-jsgui-type="control" data-jsgui-data-model="data_object_159" class="dt-node dt-node--result dt-node--result-false" data-jsgui-control="dt_result_node" data-node-id="not-article" data-node-type="result" data-parent-id="check-blog-path" data-branch="no"><div data-jsgui-id="control_129" data-jsgui-data-model-id="data_object_160" data-jsgui-type="control" data-jsgui-data-model="data_object_160" class="dt-node__content"><div data-jsgui-id="control_130" data-jsgui-data-model-id="data_object_161" data-jsgui-type="control" data-jsgui-data-model="data_object_161" class="dt-node__icon">✗</div><div data-jsgui-id="control_131" data-jsgui-data-model-id="data_object_163" data-jsgui-type="control" data-jsgui-data-model="data_object_163" class="dt-node__label">Not an Article</div><div data-jsgui-id="control_132" data-jsgui-data-model-id="data_object_165" data-jsgui-type="control" data-jsgui-data-model="data_object_165" class="dt-node__reason">no-article-indicators</div></div><div data-jsgui-id="control_133" data-jsgui-data-model-id="data_object_167" data-jsgui-type="control" data-jsgui-data-model="data_object_167" class="dt-connection-point dt-connection-point--input-top" data-jsgui-control="dt_connection_point" data-node-id="not-article" data-point-type="input-top"><div data-jsgui-id="control_134" data-jsgui-data-model-id="data_object_168" data-jsgui-type="control" data-jsgui-data-model="data_object_168" class="dt-connection-point__dot"></div></div></div></div><div data-jsgui-id="control_33" data-jsgui-data-model-id="data_object_39" data-jsgui-type="control" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none" data-jsgui-data-model="data_object_39" class="dt-connections"></div></div></div></div></section></main></div>
+  
+  <!-- Embed tree data for client -->
+  <script>
+    window.__DECISION_TREE_DATA__ = [{"id":"article-classifier","name":"Article Page Classifier","description":"Determines if a URL points to an article page","metadata":{"version":"1.0.0","created":"2025-12-13","author":"system"},"root":{"type":"branch","id":"check-article-path","label":"URL contains /article/?","description":"","metadata":{},"condition":{"type":"url_matches","patterns":["article","story","post"],"matchType":"segment"},"yes":{"type":"branch","id":"check-word-count","label":"Word count > 300?","description":"","metadata":{},"condition":{"type":"compare","field":"word_count","operator":"gt","value":300},"yes":{"type":"result","id":"full-article","label":"Full Article","description":"","metadata":{},"result":true,"reason":"article-path-sufficient-words"},"no":{"type":"result","id":"short-article","label":"Short Article","description":"","metadata":{},"result":true,"reason":"article-path-few-words"}},"no":{"type":"branch","id":"check-news-path","label":"URL contains /news/?","description":"","metadata":{},"condition":{"type":"url_matches","patterns":["news","breaking"],"matchType":"segment"},"yes":{"type":"branch","id":"check-date-pattern","label":"Has date in URL?","description":"","metadata":{},"condition":{"type":"url_matches","patterns":["/\\d{4}/\\d{2}/"],"matchType":"regex"},"yes":{"type":"result","id":"dated-news","label":"Dated News Article","description":"","metadata":{},"result":true,"reason":"news-with-date"},"no":{"type":"result","id":"news-section","label":"News Section Page","description":"","metadata":{},"result":false,"reason":"news-no-date-likely-hub"}},"no":{"type":"branch","id":"check-blog-path","label":"URL contains /blog/?","description":"","metadata":{},"condition":{"type":"url_matches","patterns":["blog","posts"],"matchType":"segment"},"yes":{"type":"result","id":"blog-post","label":"Blog Post","description":"","metadata":{},"result":true,"reason":"blog-path"},"no":{"type":"result","id":"not-article","label":"Not an Article","description":"","metadata":{},"result":false,"reason":"no-article-indicators"}}}}}];
+  </script>
+  
+  <!-- jsgui3 client activation -->
+  <script src="/public/decision-tree-client.js"></script>
+</body>
+</html>

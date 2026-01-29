@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+  <defs>
+    <!-- Background Gradient (White Leather) -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f8f9fa;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Logic Block Gradient (Obsidian) -->
+    <linearGradient id="logicGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b" />
+      <stop offset="100%" style="stop-color:#0f172a" />
+    </linearGradient>
+
+    <!-- Data Gradient (Cyan) -->
+    <linearGradient id="dataGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ecfeff" />
+      <stop offset="100%" style="stop-color:#cffafe" />
+    </linearGradient>
+
+    <!-- Insight Gradient (Purple) -->
+    <linearGradient id="insightGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5f3ff" />
+      <stop offset="100%" style="stop-color:#ede9fe" />
+    </linearGradient>
+
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="100%" height="100%" fill="url(#bgGradient)" />
+
+  <!-- Header -->
+  <rect width="1200" height="80" fill="url(#logicGradient)" />
+  <text x="600" y="50" font-family="Segoe UI" font-size="28" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="2">PURE ANALYSIS PIPELINE</text>
+
+  <!-- Flow Arrows -->
+  <path d="M350 400 L430 400" stroke="#94a3b8" stroke-width="4" marker-end="url(#arrow)" />
+  <path d="M770 400 L850 400" stroke="#94a3b8" stroke-width="4" marker-end="url(#arrow)" />
+
+  <!-- === SECTION 1: INPUT DATA (The "Raw Material") === -->
+  <g transform="translate(50, 200)">
+    <rect width="300" height="400" rx="12" fill="url(#dataGradient)" stroke="#06b6d4" stroke-width="2" filter="url(#shadow)" />
+    <text x="150" y="40" font-family="Segoe UI" font-size="20" font-weight="bold" fill="#0891b2" text-anchor="middle">Input Data</text>
+    <text x="150" y="65" font-family="Segoe UI" font-size="14" fill="#06b6d4" text-anchor="middle">(Fetched by App/DB)</text>
+    
+    <!-- Code Snippet -->
+    <rect x="20" y="100" width="260" height="280" rx="4" fill="#ffffff" stroke="#e2e8f0" />
+    <text x="35" y="130" font-family="Consolas" font-size="12" fill="#334155">const articles = [</text>
+    <text x="35" y="150" font-family="Consolas" font-size="12" fill="#334155">  {</text>
+    <text x="35" y="170" font-family="Consolas" font-size="12" fill="#334155">    id: "a1",</text>
+    <text x="35" y="190" font-family="Consolas" font-size="12" fill="#334155">    content: "Global...",</text>
+    <text x="35" y="210" font-family="Consolas" font-size="12" fill="#334155">    simHash: "d8f3..."</text>
+    <text x="35" y="230" font-family="Consolas" font-size="12" fill="#334155">  },</text>
+    <text x="35" y="250" font-family="Consolas" font-size="12" fill="#334155">  {</text>
+    <text x="35" y="270" font-family="Consolas" font-size="12" fill="#334155">    id: "a2",</text>
+    <text x="35" y="290" font-family="Consolas" font-size="12" fill="#334155">    content: "World...",</text>
+    <text x="35" y="310" font-family="Consolas" font-size="12" fill="#334155">    simHash: "d8f4..."</text>
+    <text x="35" y="330" font-family="Consolas" font-size="12" fill="#334155">  }</text>
+    <text x="35" y="350" font-family="Consolas" font-size="12" fill="#334155">];</text>
+  </g>
+
+  <!-- === SECTION 2: PURE FUNCTION (The "Brain") === -->
+  <g transform="translate(450, 150)">
+    <rect width="320" height="500" rx="12" fill="url(#logicGradient)" stroke="#475569" stroke-width="2" filter="url(#shadow)" />
+    <text x="160" y="40" font-family="Segoe UI" font-size="20" font-weight="bold" fill="#ffffff" text-anchor="middle">Pure Logic Unit</text>
+    <text x="160" y="65" font-family="Segoe UI" font-size="14" fill="#94a3b8" text-anchor="middle">news-db-pure-analysis</text>
+
+    <!-- Logic Gates Visual -->
+    <circle cx="160" cy="120" r="30" fill="#3b82f6" opacity="0.8" />
+    <path d="M160 105 L160 135 M145 120 L175 120" stroke="#ffffff" stroke-width="3" />
+    
+    <!-- Function Sig -->
+    <rect x="30" y="170" width="260" height="120" rx="4" fill="#1e293b" stroke="#334155" />
+    <text x="45" y="200" font-family="Consolas" font-size="12" fill="#60a5fa">function groupArticles(</text>
+    <text x="45" y="220" font-family="Consolas" font-size="12" fill="#94a3b8">  items: Article[],</text>
+    <text x="45" y="240" font-family="Consolas" font-size="12" fill="#94a3b8">  threshold: number</text>
+    <text x="45" y="260" font-family="Consolas" font-size="12" fill="#60a5fa">): Cluster[]</text>
+
+    <!-- Characteristics -->
+    <g transform="translate(40, 320)">
+      <circle cx="10" cy="10" r="4" fill="#22c55e" />
+      <text x="25" y="15" font-family="Segoe UI" font-size="14" fill="#cbd5e1">No Side Effects</text>
+      
+      <circle cx="10" cy="40" r="4" fill="#22c55e" />
+      <text x="25" y="45" font-family="Segoe UI" font-size="14" fill="#cbd5e1">Deterministic</text>
+      
+      <circle cx="10" cy="70" r="4" fill="#22c55e" />
+      <text x="25" y="75" font-family="Segoe UI" font-size="14" fill="#cbd5e1">Zero I/O</text>
+      
+      <circle cx="10" cy="100" r="4" fill="#22c55e" />
+      <text x="25" y="105" font-family="Segoe UI" font-size="14" fill="#cbd5e1">Testable In-Memory</text>
+    </g>
+  </g>
+
+  <!-- === SECTION 3: INSIGHT (The "Result") === -->
+  <g transform="translate(850, 200)">
+    <rect width="300" height="400" rx="12" fill="url(#insightGradient)" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow)" />
+    <text x="150" y="40" font-family="Segoe UI" font-size="20" font-weight="bold" fill="#7c3aed" text-anchor="middle">Insight / Plan</text>
+    <text x="150" y="65" font-family="Segoe UI" font-size="14" fill="#8b5cf6" text-anchor="middle">(Saved by App/DB)</text>
+
+    <!-- Result Snippet -->
+    <rect x="20" y="100" width="260" height="280" rx="4" fill="#ffffff" stroke="#e2e8f0" />
+    <text x="35" y="130" font-family="Consolas" font-size="12" fill="#334155">const result = [</text>
+    <text x="35" y="150" font-family="Consolas" font-size="12" fill="#334155">  {</text>
+    <text x="35" y="170" font-family="Consolas" font-size="12" fill="#334155">    clusterId: "c1",</text>
+    <text x="35" y="190" font-family="Consolas" font-size="12" fill="#334155">    members: ["a1", "a2"],</text>
+    <text x="35" y="210" font-family="Consolas" font-size="12" fill="#334155">    score: 0.98,</text>
+    <text x="35" y="230" font-family="Consolas" font-size="12" fill="#334155">    topic: "Global..."</text>
+    <text x="35" y="250" font-family="Consolas" font-size="12" fill="#334155">  }</text>
+    <text x="35" y="270" font-family="Consolas" font-size="12" fill="#334155">];</text>
+  </g>
+
+</svg>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crawl Speedometer Control Check</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      padding: 2rem;
+      margin: 0;
+    }
+    h1 {
+      color: #c9a227;
+      margin-bottom: 1.5rem;
+    }
+    .speedometer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2rem;
+      max-width: 1200px;
+    }
+    .speedometer-demo {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .speedometer-demo h3 {
+      color: #e0e0e0;
+      margin: 0 0 1rem 0;
+      font-size: 0.9rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.7;
+    }
+    .controls {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .controls button {
+      background: #2e8b57;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+      transition: opacity 0.15s;
+    }
+    .controls button:hover {
+      opacity: 0.85;
+    }
+    .controls button.secondary {
+      background: #4a5568;
+    }
+    .controls button.danger {
+      background: #e31837;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏎️ Crawl Speedometer Control</h1>
+  
+  <div class="speedometer-grid">
+    <!-- Demo 1: Idle state -->
+    <div class="speedometer-demo">
+      <h3>Idle State</h3>
+      <div id="demo-idle"></div>
+    </div>
+    
+    <!-- Demo 2: Active crawling -->
+    <div class="speedometer-demo">
+      <h3>Active Crawling</h3>
+      <div id="demo-active"></div>
+      <div class="controls">
+        <button onclick="simulateCrawl()">▶️ Start Simulation</button>
+        <button class="secondary" onclick="pauseCrawl()">⏸️ Pause</button>
+      </div>
+    </div>
+    
+    <!-- Demo 3: Rate limited (warning zone) -->
+    <div class="speedometer-demo">
+      <h3>Near Rate Limit</h3>
+      <div id="demo-warning"></div>
+    </div>
+    
+    <!-- Demo 4: Complete -->
+    <div class="speedometer-demo">
+      <h3>Complete</h3>
+      <div id="demo-complete"></div>
+    </div>
+  </div>
+  
+  <script>
+    // Inline CSS (normally loaded from control)
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = `PLACEHOLDER_STYLES`;
+    document.head.appendChild(styleSheet);
+    
+    // Inline HTML (rendered on server, here we simulate)
+    const speedometerHTML = `PLACEHOLDER_HTML`;
+    
+    // For this check, we'll generate simple placeholder gauges
+    // In production, the control renders this
+    
+    // Simplified gauge renderer for demo
+    function createGaugeSVG(speed, maxSpeed, opts = {}) {
+      const { total = 0, ok = 0, failed = 0, status = 'idle', label = 'Crawl' } = opts;
+      const size = 180;
+      const cx = size / 2;
+      const cy = size / 2;
+      const radius = 75;
+      
+      // Calculate needle angle (0 = left, 180 = right)
+      const pct = Math.min(speed / maxSpeed, 1);
+      const angle = 180 + pct * 180;
+      const needleLen = radius - 15;
+      const rad = (angle * Math.PI) / 180;
+      const nx = cx + needleLen * Math.cos(rad);
+      const ny = cy + needleLen * Math.sin(rad);
+      
+      const statusColors = {
+        idle: '#4a5568',
+        active: '#2e8b57',
+        paused: '#c9a227',
+        complete: '#3b82f6'
+      };
+      
+      return `
+        <div class="crawl-speedometer" style="text-align: center;">
+          <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+            <!-- Background arc -->
+            <path d="M 15 90 A 75 75 0 0 1 165 90" fill="none" stroke="#2a2a3e" stroke-width="12" stroke-linecap="round"/>
+            <!-- Green zone -->
+            <path d="M 15 90 A 75 75 0 0 1 90 15" fill="none" stroke="#2e8b57" stroke-width="10" stroke-linecap="round"/>
+            <!-- Yellow zone -->
+            <path d="M 90 15 A 75 75 0 0 1 143 40" fill="none" stroke="#c9a227" stroke-width="10" stroke-linecap="round"/>
+            <!-- Red zone -->
+            <path d="M 143 40 A 75 75 0 0 1 165 90" fill="none" stroke="#e31837" stroke-width="10" stroke-linecap="round"/>
+            
+            <!-- Needle -->
+            <g class="speedometer-needle" transform="rotate(${angle - 180}, ${cx}, ${cy})">
+              <line x1="${cx}" y1="${cy}" x2="${cx + needleLen}" y2="${cy}" 
+                    stroke="#e0e0e0" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="${cx}" cy="${cy}" r="8" fill="#e0e0e0"/>
+            </g>
+            
+            <!-- Speed value -->
+            <text x="${cx}" y="${cy + 35}" text-anchor="middle" fill="#e0e0e0" font-size="24" font-weight="600">
+              ${speed.toFixed(1)}
+            </text>
+            <text x="${cx}" y="${cy + 52}" text-anchor="middle" fill="#9ca3af" font-size="10">
+              URLs/sec
+            </text>
+          </svg>
+          
+          <!-- Stats grid -->
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 0.5rem; font-size: 0.75rem;">
+            <div style="background: #2a2a3e; padding: 0.4rem; border-radius: 4px;">
+              <div style="color: #9ca3af;">Total</div>
+              <div style="color: #e0e0e0; font-weight: 600;">${total}</div>
+            </div>
+            <div style="background: #2a2a3e; padding: 0.4rem; border-radius: 4px;">
+              <div style="color: #9ca3af;">OK</div>
+              <div style="color: #2e8b57; font-weight: 600;">${ok}</div>
+            </div>
+            <div style="background: #2a2a3e; padding: 0.4rem; border-radius: 4px;">
+              <div style="color: #9ca3af;">Fail</div>
+              <div style="color: #e31837; font-weight: 600;">${failed}</div>
+            </div>
+            <div style="background: #2a2a3e; padding: 0.4rem; border-radius: 4px;">
+              <div style="color: #9ca3af;">Rate</div>
+              <div style="color: #c9a227; font-weight: 600;">${total > 0 ? ((ok / total) * 100).toFixed(0) : 0}%</div>
+            </div>
+          </div>
+          
+          <!-- Status -->
+          <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.75rem;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: ${statusColors[status]}; ${status === 'active' ? 'animation: pulse 1.5s infinite;' : ''}"></span>
+            <span style="color: #9ca3af; font-size: 0.8rem; text-transform: capitalize;">${label}</span>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Render initial states
+    document.getElementById('demo-idle').innerHTML = createGaugeSVG(0, 10, { 
+      total: 0, ok: 0, failed: 0, status: 'idle', label: 'Idle' 
+    });
+    
+    document.getElementById('demo-active').innerHTML = createGaugeSVG(4.2, 10, { 
+      total: 42, ok: 38, failed: 4, status: 'active', label: 'Active' 
+    });
+    
+    document.getElementById('demo-warning').innerHTML = createGaugeSVG(7.8, 10, { 
+      total: 156, ok: 140, failed: 16, status: 'active', label: 'Near Limit' 
+    });
+    
+    document.getElementById('demo-complete').innerHTML = createGaugeSVG(0, 10, { 
+      total: 200, ok: 185, failed: 15, status: 'complete', label: 'Complete' 
+    });
+    
+    // Simulation controls
+    let simulationInterval = null;
+    let simTotal = 42, simOk = 38, simFailed = 4;
+    
+    function simulateCrawl() {
+      if (simulationInterval) return;
+      
+      simulationInterval = setInterval(() => {
+        // Random speed between 3-8 URLs/sec
+        const speed = 3 + Math.random() * 5;
+        simTotal++;
+        if (Math.random() > 0.1) {
+          simOk++;
+        } else {
+          simFailed++;
+        }
+        
+        document.getElementById('demo-active').innerHTML = createGaugeSVG(speed, 10, { 
+          total: simTotal, ok: simOk, failed: simFailed, status: 'active', label: 'Active' 
+        });
+      }, 200);
+    }
+    
+    function pauseCrawl() {
+      if (simulationInterval) {
+        clearInterval(simulationInterval);
+        simulationInterval = null;
+        
+        document.getElementById('demo-active').innerHTML = createGaugeSVG(0, 10, { 
+          total: simTotal, ok: simOk, failed: simFailed, status: 'paused', label: 'Paused' 
+        });
+      }
+    }
+    
+    // Add pulse animation
+    const pulseStyle = document.createElement('style');
+    pulseStyle.textContent = `
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+    `;
+    document.head.appendChild(pulseStyle);
+  </script>
+</body>
+</html>
