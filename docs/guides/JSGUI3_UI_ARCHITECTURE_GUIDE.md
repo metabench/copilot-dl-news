@@ -2,7 +2,7 @@
 
 **Target Audience**: AI coding agents working on jsgui3 UIs  
 **Scope**: Component-based architecture, control composition, isomorphic patterns, and SSR  
-**Last Updated**: November 2025
+**Last Updated**: January 2026
 
 ---
 
@@ -1589,6 +1589,12 @@ const img = new jsgui.Control({ context: this.context, tagName: "img" });
 img.dom.attributes.src = "/image.png";
 img.dom.attributes.alt = "Description";
 ```
+
+### Activation Log Noise (Expected)
+
+- Warnings like `Missing context.map_Controls for type undefined/style/main/input` often indicate **unregistered generic tags** or exempt tags (e.g., `html/head/body`).
+- Treat as noise if activation succeeds and your custom control types are registered.
+- If your custom types appear in the warnings, register them in the client `context.map_Controls` and ensure `__type_name` is set.
 
 ### BEM Naming Convention
 

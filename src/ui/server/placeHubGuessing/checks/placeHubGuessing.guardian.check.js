@@ -10,7 +10,7 @@
 
 const path = require('path');
 
-const { resolveBetterSqliteHandle } = require('../../utils/serverStartupCheckdashboardModule');
+const { resolveBetterSqliteHandle } = require('../../utils/dashboardModule');
 const { renderPlaceHubGuessingMatrixHtml } = require('../server');
 
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'news.db');

@@ -6,7 +6,7 @@ const path = require("path");
 const { renderHtml, resolveDbPath } = require("../../render-url-table");
 const { DATA_VIEWS } = require("../dataExplorerServer");
 const { openNewsDb } = require('../../../data/db/dbAccess");
-const { findProjectRoot } = require('../utils/serverStartupCheckproject-root");
+const { findProjectRoot } = require('../../../shared/utils/project-root');
 const { buildNavLinks } = require("../navigation");
 
 function createHomePayload() {
@@ -27,7 +27,7 @@ function createHomePayload() {
   } finally {
     try {
       dbAccess.close();
-    } catch (_) {}
+    } catch (_) { }
   }
 }
 

@@ -1,6 +1,6 @@
 # Anti-Pattern Catalog
 
-_Last Verified: 2025-01-09_
+_Last Verified: 2026-01-17_
 
 **Purpose**: Quick lookup for common mistakes across all jsgui3 and testing domains. Searchable reference to avoid repeating past errors.
 
@@ -22,6 +22,7 @@ _Last Verified: 2025-01-09_
 | Test hangs on Windows | `shell: true` in spawn | Remove shell option | [TEST_HANGING_PREVENTION](TEST_HANGING_PREVENTION_GUIDE.md) |
 | ctrl.dom.el is null | Accessing before activation | Use `_el()` helper pattern | [UI_ARCHITECTURE](JSGUI3_UI_ARCHITECTURE_GUIDE.md) |
 | Event handler not firing | Missing activation | Call `activate()` after DOM link | [UI_ARCHITECTURE](JSGUI3_UI_ARCHITECTURE_GUIDE.md) |
+| Activation “warnings” in console | Treating noise as failure | Verify activation, then filter or register types | [DEBUGGING_GUIDE](JSGUI3_DEBUGGING_GUIDE.md) |
 | Data binding not updating | Wrong model reference | Use `this.data.model` not `this.view.data.model` | [MVVM_PATTERNS](JSGUI3_MVVM_PATTERNS.md) |
 | Wasted research time | Reading entire source files | Targeted grep first | [COGNITIVE_TOOLKIT](JSGUI3_COGNITIVE_TOOLKIT.md) |
 | Incomplete documentation | Documenting after task | Document as you discover | [COGNITIVE_TOOLKIT](JSGUI3_COGNITIVE_TOOLKIT.md) |
@@ -133,6 +134,18 @@ activate() {
 ```
 
 **Fix**: `if (this.__active) return; this.__active = true;` → See [JSGUI3_UI_ARCHITECTURE_GUIDE.md](JSGUI3_UI_ARCHITECTURE_GUIDE.md)
+
+---
+
+### Treating Expected Activation Warnings as Failures
+
+```text
+❌ WRONG: “Missing context.map_Controls…” means activation is broken
+```
+
+**Impact**: Wasted time debugging noise from exempt tags (`html/head/body`) or generic tags (`style/main/input`).
+
+**Fix**: Only act if your custom types appear in the warnings or activation fails. Otherwise filter logs or register common tags. See [JSGUI3_DEBUGGING_GUIDE.md](JSGUI3_DEBUGGING_GUIDE.md).
 
 ---
 

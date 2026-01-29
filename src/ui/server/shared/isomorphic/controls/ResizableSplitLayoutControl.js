@@ -38,19 +38,22 @@ class ResizableSplitLayoutControl extends jsgui.Control {
    * @param {number} [spec.initialLeftWidth=280] - Initial width of left panel in pixels
    * @param {number} [spec.minLeftWidth=150] - Minimum width of left panel
    * @param {number} [spec.maxLeftWidth=600] - Maximum width of left panel
+   * @param {number} [spec.collapseThreshold=80] - Width below which panel auto-collapses
    * @param {string} [spec.storageKey] - localStorage key for persisting width
    */
   constructor(spec = {}) {
     super({ ...spec, tagName: "div", __type_name: "resizable_split_layout" });
-    
+
     // Configuration (used by both server and client)
     this.leftPanel = spec.leftPanel || null;
     this.rightPanel = spec.rightPanel || null;
     this.initialLeftWidth = spec.initialLeftWidth || 280;
     this.minLeftWidth = spec.minLeftWidth || 150;
     this.maxLeftWidth = spec.maxLeftWidth || 600;
+    this.collapseThreshold = spec.collapseThreshold || 80;
     this.storageKey = spec.storageKey || null;
-    
+    this._isCollapsed = false;
+
     // Runtime state (client-side only, set during activate)
     this._isDragging = false;
     this._startX = 0;
@@ -58,26 +61,27 @@ class ResizableSplitLayoutControl extends jsgui.Control {
     this._leftPanelEl = null;
     this._dividerEl = null;
     this._rightPanelEl = null;
-    
+
     // Set up DOM attributes and classes
     this.add_class("split-layout");
     this.add_class("split-layout--horizontal");
     this.dom.attributes["data-jsgui-control"] = "resizable_split_layout";
-    
+
     // Store config as data attributes for client-side hydration
     this.dom.attributes["data-initial-width"] = String(this.initialLeftWidth);
     this.dom.attributes["data-min-width"] = String(this.minLeftWidth);
     this.dom.attributes["data-max-width"] = String(this.maxLeftWidth);
+    this.dom.attributes["data-collapse-threshold"] = String(this.collapseThreshold);
     if (this.storageKey) {
       this.dom.attributes["data-storage-key"] = this.storageKey;
     }
-    
+
     // Only compose if not hydrating from existing element
     if (!spec.el) {
       this.compose();
     }
   }
-  
+
   /**
    * Compose the control's DOM structure
    * Called on server for SSR, or on client for dynamic creation
@@ -88,14 +92,14 @@ class ResizableSplitLayoutControl extends jsgui.Control {
     leftContainer.add_class("split-layout__panel");
     leftContainer.add_class("split-layout__panel--left");
     leftContainer.dom.attributes["data-panel"] = "left";
-    leftContainer.dom.attributes.style = `width: ${this.initialLeftWidth}px; min-width: ${this.minLeftWidth}px; max-width: ${this.maxLeftWidth}px;`;
-    
+    leftContainer.dom.attributes.style = `width: ${this.initialLeftWidth}px; max-width: ${this.maxLeftWidth}px;`;
+
     if (this.leftPanel) {
       leftContainer.add(this.leftPanel);
     }
-    
+
     this.add(leftContainer);
-    
+
     // Resize divider
     const divider = new jsgui.Control({ context: this.context, tagName: "div" });
     divider.add_class("split-layout__divider");
@@ -107,59 +111,77 @@ class ResizableSplitLayoutControl extends jsgui.Control {
     divider.dom.attributes["aria-valuemax"] = String(this.maxLeftWidth);
     divider.dom.attributes.tabindex = "0";
     divider.dom.attributes.title = "Drag to resize. Double-click to reset.";
-    
+
     // Visual handle inside divider
     const handle = new jsgui.Control({ context: this.context, tagName: "div" });
     handle.add_class("split-layout__handle");
     divider.add(handle);
-    
+
     this.add(divider);
-    
+
+    // Expand handle (shown when collapsed) - WLILO styled
+    const expandHandle = new jsgui.Control({ context: this.context, tagName: "button" });
+    expandHandle.add_class("split-layout__expand-handle");
+    expandHandle.dom.attributes.type = "button";
+    expandHandle.dom.attributes.title = "Expand navigation";
+    expandHandle.dom.attributes["aria-label"] = "Expand navigation panel";
+    expandHandle.dom.attributes["data-expand-handle"] = "true";
+
+    // WLILO visual indicator (three lines)
+    const handleIcon = new jsgui.Control({ context: this.context, tagName: "span" });
+    handleIcon.add_class("split-layout__expand-icon");
+    handleIcon.add(new jsgui.String_Control({ context: this.context, text: "☰" }));
+    expandHandle.add(handleIcon);
+
+    this.add(expandHandle);
+
     // Right panel container
     const rightContainer = new jsgui.Control({ context: this.context, tagName: "div" });
     rightContainer.add_class("split-layout__panel");
     rightContainer.add_class("split-layout__panel--right");
     rightContainer.dom.attributes["data-panel"] = "right";
-    
+
     if (this.rightPanel) {
       rightContainer.add(this.rightPanel);
     }
-    
+
     this.add(rightContainer);
   }
-  
+
   /**
    * Activate the control for client-side interactivity
    */
   activate() {
     if (this.__active) return;
     this.__active = true;
-    
+
     const el = this.dom?.el;
     if (!el) {
       console.warn("[ResizableSplitLayoutControl] No element to activate");
       return;
     }
-    
+
     // Read config from data attributes (for hydration from server-rendered HTML)
     this.initialLeftWidth = parseInt(el.dataset.initialWidth, 10) || this.initialLeftWidth;
     this.minLeftWidth = parseInt(el.dataset.minWidth, 10) || this.minLeftWidth;
     this.maxLeftWidth = parseInt(el.dataset.maxWidth, 10) || this.maxLeftWidth;
+    this.collapseThreshold = parseInt(el.dataset.collapseThreshold, 10) || this.collapseThreshold;
     this.storageKey = el.dataset.storageKey || this.storageKey;
-    
+
     // Find child elements
     this._leftPanelEl = el.querySelector("[data-panel='left']");
     this._dividerEl = el.querySelector("[data-divider]");
     this._rightPanelEl = el.querySelector("[data-panel='right']");
-    
+    this._expandHandleEl = el.querySelector("[data-expand-handle]");
+
     if (!this._leftPanelEl || !this._dividerEl) {
       console.warn("[ResizableSplitLayoutControl] Missing required child elements");
       return;
     }
-    
+
     // Restore saved width from localStorage
     this._restoreSavedWidth();
-    
+
     // Bind event handlers
     this._onMouseDown = this._handleMouseDown.bind(this);
     this._onMouseMove = this._handleMouseMove.bind(this);
@@ -169,19 +191,28 @@ class ResizableSplitLayoutControl extends jsgui.Control {
     this._onTouchEnd = this._handleTouchEnd.bind(this);
     this._onDblClick = this._handleDoubleClick.bind(this);
     this._onKeyDown = this._handleKeyDown.bind(this);
-    
+
     // Attach event listeners to divider
     this._dividerEl.addEventListener("mousedown", this._onMouseDown);
     this._dividerEl.addEventListener("touchstart", this._onTouchStart, { passive: false });
     this._dividerEl.addEventListener("dblclick", this._onDblClick);
     this._dividerEl.addEventListener("keydown", this._onKeyDown);
-    
+
+    // Attach expand handle listener
+    if (this._expandHandleEl) {
+      this._onExpandClick = this._handleExpandClick.bind(this);
+      this._expandHandleEl.addEventListener("click", this._onExpandClick);
+    }
+
     // Remove preload style if present (set by inline script to prevent flickering)
     this._removePreloadStyle();
-    
+
+    // Restore collapsed state
+    this._restoreCollapsedState();
+
     console.log("[ResizableSplitLayoutControl] Activated with width:", this._getLeftWidth());
   }
-  
+
   /**
    * Remove the preload style element that was added to prevent flickering
    * during initial page load. Once the control is activated, we no longer
@@ -189,18 +220,18 @@ class ResizableSplitLayoutControl extends jsgui.Control {
    */
   _removePreloadStyle() {
     if (typeof document === "undefined") return;
-    
+
     const preloadStyle = document.getElementById("split-layout-preload");
     if (preloadStyle) {
       preloadStyle.remove();
     }
   }
-  
+
   // ==================== Width Management ====================
-  
+
   _restoreSavedWidth() {
     if (!this.storageKey || typeof localStorage === "undefined") return;
-    
+
     try {
       const saved = localStorage.getItem(this.storageKey);
       if (saved) {
@@ -213,130 +244,193 @@ class ResizableSplitLayoutControl extends jsgui.Control {
       // localStorage may be disabled or full
     }
   }
-  
+
   _saveWidth(width) {
     if (!this.storageKey || typeof localStorage === "undefined") return;
-    
+
     try {
       localStorage.setItem(this.storageKey, String(width));
     } catch (e) {
       // localStorage may be disabled or full
     }
   }
-  
-  _setLeftWidth(width) {
+
+  _setLeftWidth(width, isDragging = false) {
     if (!this._leftPanelEl) return;
-    
-    width = Math.max(this.minLeftWidth, Math.min(this.maxLeftWidth, width));
+
+    // During drag, allow going to 0 (no min constraint) so user can trigger collapse
+    // When not dragging, enforce min/max constraints
+    if (isDragging) {
+      // Allow ultra-narrow width during drag (for collapse gesture)
+      width = Math.max(0, Math.min(this.maxLeftWidth, width));
+    } else {
+      // Enforce minimum when not dragging (unless we're explicitly collapsing)
+      width = Math.max(this.minLeftWidth, Math.min(this.maxLeftWidth, width));
+    }
+
     this._leftPanelEl.style.width = width + "px";
-    
+
     if (this._dividerEl) {
       this._dividerEl.setAttribute("aria-valuenow", String(width));
     }
   }
-  
+
   _getLeftWidth() {
     return this._leftPanelEl ? this._leftPanelEl.offsetWidth : this.initialLeftWidth;
   }
-  
+
+  // ==================== Collapse/Expand ====================
+
+  _collapse() {
+    this._isCollapsed = true;
+    const el = this.dom?.el;
+    if (el) {
+      el.classList.add("split-layout--collapsed");
+    }
+    if (this._leftPanelEl) {
+      this._leftPanelEl.style.width = "0px";
+    }
+    this._saveCollapsedState(true);
+  }
+
+  _expand() {
+    this._isCollapsed = false;
+    const el = this.dom?.el;
+    if (el) {
+      el.classList.remove("split-layout--collapsed");
+    }
+    this._setLeftWidth(this.initialLeftWidth);
+    this._saveWidth(this.initialLeftWidth);
+    this._saveCollapsedState(false);
+  }
+
+  _handleExpandClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this._expand();
+  }
+
+  _saveCollapsedState(collapsed) {
+    if (!this.storageKey || typeof localStorage === "undefined") return;
+    try {
+      localStorage.setItem(this.storageKey + "-collapsed", String(collapsed));
+    } catch (e) { }
+  }
+
+  _restoreCollapsedState() {
+    if (!this.storageKey || typeof localStorage === "undefined") return;
+    try {
+      const collapsed = localStorage.getItem(this.storageKey + "-collapsed");
+      if (collapsed === "true") {
+        this._collapse();
+      }
+    } catch (e) { }
+  }
+
   // ==================== Mouse Events ====================
-  
+
   _handleMouseDown(e) {
     e.preventDefault();
     this._startDrag(e.clientX);
-    
+
     document.addEventListener("mousemove", this._onMouseMove);
     document.addEventListener("mouseup", this._onMouseUp);
   }
-  
+
   _handleMouseMove(e) {
     if (!this._isDragging) return;
     this._doDrag(e.clientX);
   }
-  
+
   _handleMouseUp(e) {
     this._endDrag();
-    
+
     document.removeEventListener("mousemove", this._onMouseMove);
     document.removeEventListener("mouseup", this._onMouseUp);
   }
-  
+
   // ==================== Touch Events ====================
-  
+
   _handleTouchStart(e) {
     if (e.touches.length !== 1) return;
     e.preventDefault();
-    
+
     this._startDrag(e.touches[0].clientX);
-    
+
     document.addEventListener("touchmove", this._onTouchMove, { passive: false });
     document.addEventListener("touchend", this._onTouchEnd);
     document.addEventListener("touchcancel", this._onTouchEnd);
   }
-  
+
   _handleTouchMove(e) {
     if (!this._isDragging || e.touches.length !== 1) return;
     e.preventDefault();
     this._doDrag(e.touches[0].clientX);
   }
-  
+
   _handleTouchEnd(e) {
     this._endDrag();
-    
+
     document.removeEventListener("touchmove", this._onTouchMove);
     document.removeEventListener("touchend", this._onTouchEnd);
     document.removeEventListener("touchcancel", this._onTouchEnd);
   }
-  
+
   // ==================== Drag Logic ====================
-  
+
   _startDrag(clientX) {
     this._isDragging = true;
     this._startX = clientX;
     this._startWidth = this._getLeftWidth();
-    
+
     const el = this.dom?.el;
     if (el) {
       el.classList.add("split-layout--dragging");
     }
-    
+
     document.body.style.userSelect = "none";
     document.body.style.cursor = "ew-resize";
   }
-  
+
   _doDrag(clientX) {
     const delta = clientX - this._startX;
     const newWidth = this._startWidth + delta;
-    this._setLeftWidth(newWidth);
+    this._setLeftWidth(newWidth, true); // isDragging=true allows going to 0
   }
-  
+
   _endDrag() {
     if (!this._isDragging) return;
-    
+
     this._isDragging = false;
-    
+
     const el = this.dom?.el;
     if (el) {
       el.classList.remove("split-layout--dragging");
     }
-    
+
     document.body.style.userSelect = "";
     document.body.style.cursor = "";
-    
-    this._saveWidth(this._getLeftWidth());
+
+    // Check for collapse at end of drag
+    const width = this._getLeftWidth();
+    if (width < this.collapseThreshold) {
+      this._collapse();
+    } else {
+      this._saveWidth(width);
+    }
   }
-  
+
   // ==================== Keyboard & Other Events ====================
-  
+
   _handleDoubleClick(e) {
     this._setLeftWidth(this.initialLeftWidth);
     this._saveWidth(this.initialLeftWidth);
   }
-  
+
   _handleKeyDown(e) {
     const step = e.shiftKey ? 50 : 10;
     let width = this._getLeftWidth();
-    
+
     switch (e.key) {
       case "ArrowLeft":
         e.preventDefault();
@@ -357,7 +451,7 @@ class ResizableSplitLayoutControl extends jsgui.Control {
       default:
         return;
     }
-    
+
     this._setLeftWidth(width);
     this._saveWidth(width);
   }

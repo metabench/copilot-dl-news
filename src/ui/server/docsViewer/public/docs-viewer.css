@@ -20,19 +20,19 @@
   --color-code-bg: #f1f3f5;
   --color-code-text: #e83e8c;
   --color-accent: #fd7e14;
-  
+
   /* Spacing */
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
   --space-md: 1rem;
   --space-lg: 1.5rem;
   --space-xl: 2rem;
-  
+
   /* Layout */
   --nav-width: 280px;
   --header-height: 56px;
   --content-max-width: 900px;
-  
+
   /* Typography */
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
@@ -42,15 +42,15 @@
   --font-size-lg: 1.25rem;
   --font-size-xl: 1.5rem;
   --line-height: 1.6;
-  
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-  
+
   /* Border radius */
   --radius-sm: 4px;
   --radius-md: 8px;
@@ -74,7 +74,9 @@
 }
 
 /* Reset */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -85,13 +87,20 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   font-family: var(--font-sans);
   font-size: var(--font-size-md);
   line-height: var(--line-height);
   color: var(--color-text);
   background-color: var(--color-bg);
-  min-height: 100vh;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
 }
 
 /* ========================================
@@ -101,7 +110,8 @@ body {
 .doc-app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* ========================================
@@ -182,6 +192,8 @@ body {
   display: flex;
   flex: 1;
   overflow: hidden;
+  height: calc(100vh - var(--header-height));
+  /* Fixed height for independent scrolling */
 }
 
 /* ========================================
@@ -193,6 +205,8 @@ body {
   flex: 1;
   overflow: hidden;
   position: relative;
+  height: 100%;
+  /* Fill available height */
 }
 
 .split-layout--horizontal {
@@ -203,16 +217,24 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  height: 100%;
+  min-height: 0;
+  /* Critical for flex children to shrink and enable scrolling */
 }
 
 .split-layout__panel--left {
   flex-shrink: 0;
+  overflow-y: auto;
+  /* Enable independent scrolling in left panel */
   /* Width is set inline from control */
 }
 
 .split-layout__panel--right {
   flex: 1;
-  min-width: 0; /* Allow shrinking below content width */
+  min-width: 0;
+  /* Allow shrinking below content width */
+  overflow-y: auto;
+  /* Enable scrolling in right panel */
 }
 
 .split-layout__divider {
@@ -226,6 +248,15 @@ body {
   justify-content: center;
   transition: background-color var(--transition-fast);
   z-index: 10;
+
+  /* Prevent touch popup menus (context menu, text selection, etc.) */
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .split-layout__divider:hover,
@@ -264,8 +295,65 @@ body {
 }
 
 .split-layout--dragging .split-layout__panel {
-  pointer-events: none; /* Prevent iframe/selection interference */
+  pointer-events: none;
+  /* Prevent iframe/selection interference */
   user-select: none;
+}
+
+/* ========================================
+   Expand Handle (shown when collapsed)
+   ======================================== */
+
+.split-layout__expand-handle {
+  display: none;
+  /* Hidden by default */
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  width: 24px;
+  height: 48px;
+  background: var(--color-primary);
+  border: none;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  cursor: pointer;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.split-layout__expand-handle:hover {
+  background: var(--color-primary-hover);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.split-layout__expand-icon {
+  color: white;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* Collapsed state */
+.split-layout--collapsed .split-layout__panel--left {
+  width: 0 !important;
+  min-width: 0 !important;
+  overflow: hidden;
+}
+
+.split-layout--collapsed .split-layout__divider {
+  display: none;
+}
+
+.split-layout--collapsed .split-layout__expand-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure independent scrolling for both panels */
+.split-layout__panel {
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* ========================================
@@ -273,7 +361,8 @@ body {
    ======================================== */
 
 .doc-app__nav-column {
-  width: 100%; /* Fill the split panel */
+  width: 100%;
+  /* Fill the split panel */
   height: 100%;
   background-color: var(--color-bg-secondary);
   display: flex;
@@ -303,7 +392,8 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 0; /* Required for flex child scrolling */
+  min-height: 0;
+  /* Required for flex child scrolling */
   overflow: hidden;
 }
 
@@ -383,7 +473,8 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--space-sm) 0;
-  min-height: 0; /* Required for flex child scrolling */
+  min-height: 0;
+  /* Required for flex child scrolling */
 }
 
 /* Custom scrollbar for nav tree */
@@ -483,17 +574,21 @@ body {
    ======================================== */
 
 .doc-nav__context-menu {
-  position: fixed; /* Use fixed positioning for proper stacking */
+  position: fixed;
+  /* Use fixed positioning for proper stacking */
   top: 0;
   left: 0;
-  z-index: 10000; /* High z-index to appear above content column */
+  z-index: 10000;
+  /* High z-index to appear above content column */
   background-color: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md), 0 8px 16px rgba(0, 0, 0, 0.15); /* Enhanced shadow for visibility */
+  box-shadow: var(--shadow-md), 0 8px 16px rgba(0, 0, 0, 0.15);
+  /* Enhanced shadow for visibility */
   padding: var(--space-sm);
   min-width: 160px;
-  pointer-events: auto; /* Ensure clicks are captured */
+  pointer-events: auto;
+  /* Ensure clicks are captured */
 }
 
 .doc-nav__context-menu-title {
@@ -586,6 +681,21 @@ body {
   margin: 0;
 }
 
+/* Hide folder content when details is closed */
+.doc-nav__folder:not([open])>.doc-nav__folder-content {
+  display: none;
+}
+
+.doc-nav__folder-content {
+  padding-left: var(--space-md);
+}
+
+.doc-nav__loading {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-md);
+}
+
 .doc-nav__folder-summary {
   display: flex;
   align-items: center;
@@ -612,7 +722,7 @@ body {
   transition: transform var(--transition-fast);
 }
 
-details[open] > .doc-nav__folder-summary::before {
+details[open]>.doc-nav__folder-summary::before {
   transform: rotate(90deg);
 }
 
@@ -659,8 +769,13 @@ details[open] > .doc-nav__folder-summary::before {
 
 .doc-app__content-column {
   flex: 1;
+  height: 100%;
+  /* Full height for independent scrolling */
   overflow-y: auto;
+  overflow-x: hidden;
   background-color: var(--color-bg);
+  -webkit-overflow-scrolling: touch;
+  /* Smooth scrolling on mobile */
 }
 
 /* ========================================
@@ -759,12 +874,32 @@ details[open] > .doc-nav__folder-summary::before {
   line-height: 1.3;
 }
 
-.doc-content h1 { font-size: 2rem; }
-.doc-content h2 { font-size: 1.5rem; border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-sm); }
-.doc-content h3 { font-size: 1.25rem; }
-.doc-content h4 { font-size: 1.1rem; }
-.doc-content h5 { font-size: 1rem; }
-.doc-content h6 { font-size: 0.9rem; color: var(--color-text-secondary); }
+.doc-content h1 {
+  font-size: 2rem;
+}
+
+.doc-content h2 {
+  font-size: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-sm);
+}
+
+.doc-content h3 {
+  font-size: 1.25rem;
+}
+
+.doc-content h4 {
+  font-size: 1.1rem;
+}
+
+.doc-content h5 {
+  font-size: 1rem;
+}
+
+.doc-content h6 {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
 
 .doc-content p {
   margin-bottom: var(--space-md);
@@ -946,30 +1081,46 @@ details[open] > .doc-nav__folder-summary::before {
    ======================================== */
 
 @media (max-width: 768px) {
-  .doc-app__nav-column {
-    position: fixed;
-    left: 0;
-    top: var(--header-height);
-    bottom: 0;
-    transform: translateX(-100%);
-    transition: transform var(--transition-normal);
-    z-index: 50;
+
+  /* Keep 2-column layout visible in portrait - just use narrower nav */
+  :root {
+    --nav-width: 200px;
   }
 
-  .doc-app__nav-column.is-open {
-    transform: translateX(0);
+  .split-layout__panel--left {
+    min-width: 120px;
+    max-width: 300px;
   }
 
+  /* Hide the toggle button - we keep nav visible */
   .doc-app__nav-toggle {
-    display: block;
+    display: none;
   }
 
   .doc-viewer {
-    padding: var(--space-md);
+    padding: var(--space-sm);
   }
 
   .doc-app__header-title {
     display: none;
+  }
+
+  /* Smaller fonts for compact view */
+  .doc-nav__label {
+    font-size: 0.85rem;
+  }
+
+  .doc-nav__search-input {
+    font-size: 0.85rem;
+    padding: var(--space-xs) var(--space-sm);
+  }
+
+  .doc-nav__header {
+    padding: var(--space-sm);
+  }
+
+  .doc-nav__title {
+    font-size: 0.9rem;
   }
 }
 
@@ -978,6 +1129,7 @@ details[open] > .doc-nav__folder-summary::before {
    ======================================== */
 
 @media print {
+
   .doc-app__header,
   .doc-app__nav-column,
   .doc-viewer__toolbar,

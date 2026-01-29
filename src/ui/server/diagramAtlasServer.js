@@ -20,13 +20,13 @@ const {
   buildDbSection,
   buildFeatureSection
 } = require("../controls/DiagramAtlasControls");
-const { findProjectRoot } = require('./utils/serverStartupCheckproject-root");
-const { ensureClientBundle } = require('./utils/serverStartupCheckensureClientBundle");
+const { findProjectRoot } = require('../../shared/utils/project-root');
+const { ensureClientBundle } = require('./utils/ensureClientBundle");
 const {
   createTelemetry,
   attachTelemetryEndpoints,
   attachTelemetryMiddleware
-} = require('./utils/serverStartupChecktelemetry");
+} = require('./utils/telemetry");
 
 const StringControl = jsgui.String_Control;
 const DEFAULT_PORT = 4620;
@@ -40,7 +40,7 @@ function createStat(context, label, value, options = {}) {
   if (options.tooltip) {
     wrapper.dom.attributes.title = options.tooltip;
   }
-   if (options.icon) {
+  if (options.icon) {
     wrapper.dom.attributes["data-icon"] = options.icon;
   }
   const title = new jsgui.div({ context, class: "diagram-diagnostics__label" });

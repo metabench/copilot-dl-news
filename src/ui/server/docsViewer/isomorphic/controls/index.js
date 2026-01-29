@@ -13,7 +13,7 @@
  */
 
 // Layout controls
-const { ResizableSplitLayoutControl } = require("./ResizableSplitLayoutControl");
+const { ResizableSplitLayoutControl } = require("../../../shared/isomorphic/controls/ResizableSplitLayoutControl");
 
 // App structure controls
 const { DocAppControl } = require("./DocAppControl");
@@ -32,13 +32,13 @@ const { DocsFileFilterControl } = require("./DocsFileFilterControl");
 module.exports = {
   // Layout
   ResizableSplitLayoutControl,
-  
+
   // App structure
   DocAppControl,
   DocNavControl,
   DocViewerControl,
   DocContentControl,
-  
+
   // Interactive
   ContextMenuControl,
   ColumnContextMenuControl,

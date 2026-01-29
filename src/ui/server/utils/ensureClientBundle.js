@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const { findProjectRoot } = require('../utils/serverStartupCheckproject-root");
+const { findProjectRoot } = require('../../../shared/utils/project-root');
 
 function statMtime(filePath) {
   try {

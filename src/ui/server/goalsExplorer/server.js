@@ -31,7 +31,7 @@ const fs = require("fs");
 const jsgui = require("jsgui3-html");
 
 const { GoalsExplorerControl, GoalDetailControl, GoalsListControl } = require("./controls");
-const { ensureClientBundle } = require('../utils/serverStartupCheckensureClientBundle");
+const { ensureClientBundle } = require('../utils/ensureClientBundle");
 
 // Try to load OpenAI bridge if available
 let OpenAIAgentBridge;

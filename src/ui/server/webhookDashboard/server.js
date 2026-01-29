@@ -27,7 +27,7 @@ const jsgui = require('jsgui3-html');
 const { createIntegrationAdapter } = require('../../../data/db/sqlite/v1/queries/integrationAdapter');
 const { WebhookService, EVENT_TYPES } = require('../../../integrations/WebhookService');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
-const { resolveBetterSqliteHandle } = require('../utils/serverStartupCheckdashboardModule');
+const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
 
 const { WebhookDashboard } = require('./views/WebhookDashboard');
 

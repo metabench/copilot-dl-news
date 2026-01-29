@@ -1,6 +1,6 @@
 # jsgui3 MVVM Patterns
 
-_Last Verified: 2025-01-09_
+_Last Verified: 2026-01-17_
 
 **Authority Level**: This is the **definitive reference** for jsgui3's MVVM system. When working with data binding, computed properties, or complex state management, this file takes precedence.
 
@@ -201,6 +201,15 @@ class FormControl extends Data_Model_View_Model_Control {
 
 ---
 
+## Edge Cases (Validated 2026-01-17)
+
+- **Draft vs committed state**: Use `this.view.data.model` for editable drafts and commit to `this.data.model` on explicit actions (Apply/Save).
+- **Computed loops**: Avoid mutating dependency fields inside `computed()` callbacks to prevent feedback loops.
+- **Transform symmetry**: `transform` and `reverse` should round-trip cleanly (type + formatting), especially for numbers/dates.
+- **Persisted fields on activation**: If SSR uses `data-jsgui-fields`, read `_persisted_fields` in `activate()` to restore form state.
+
+---
+
 ## When to Use MVVM vs Simple Controls
 
 | Scenario | Recommendation |
@@ -235,6 +244,12 @@ console.log(control.inspectBindings());
 - `src/ui/lab/experiments/001-color-palette/MVVM_ANALYSIS.md` - Full research notes
 - `node_modules/jsgui3-html/html-core/Data_Model_View_Model_Control.js` - Source
 - `node_modules/jsgui3-html/html-core/ModelBinder.js` - Binding implementation
+
+---
+
+## Verification Notes (2026-01-17)
+
+- MVVM lab check: `node src/ui/lab/experiments/023-advanced-mvvm-patterns/check.js`
 
 ---
 

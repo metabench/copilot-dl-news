@@ -71,6 +71,36 @@ Non-goals:
   - Emitted during pre-activation content linking when the DOM contains text nodes (often whitespace/newlines) that don’t correspond to a control entry in `content._arr`.
   - Often benign, but it is a good signal that DOM↔control-array alignment is fragile.
 
+## Validated Patterns (Docs Viewer 2026)
+
+### Pattern: Manual DOM Query in `activate()`
+When standard `ctrl_fields` and `_persisted_fields` are insufficient or disconnected (e.g. patched bundles or complex hydration), explicitly querying the DOM in `activate()` is a robust fallback pattern.
+
+**Why:** The `pre_activate` phase attempts to link DOM elements to Control instances, but if the tree structure doesn't match perfectly or if elements were added purely server-side without corresponding child controls in the `content` array, the link is missed.
+
+**Implementation:**
+```javascript
+activate() {
+  if (this.__active) return;
+  this.__active = true;
+
+  const el = this.dom?.el;
+  if (!el) return;
+
+  // 1. Read config from data attributes
+  this.initialWidth = parseInt(el.dataset.initialWidth, 10);
+
+  // 2. Query explicitly for child elements
+  this._expandHandleEl = el.querySelector("[data-expand-handle]");
+  
+  // 3. Bind events
+  if (this._expandHandleEl) {
+    this._expandHandleEl.addEventListener("click", this._handleExpand.bind(this));
+  }
+}
+```
+**Proven in:** `ResizableSplitLayoutControl` (Collapsible Nav), `ColumnHeaderControl` (Sort).
+
 ## Patch / plugin strategies
 
 ### Strategy A: Silence known-noise logs (safe)

@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 /**
  * Crawler Electron App - Minimal GUI for running crawls with progress display

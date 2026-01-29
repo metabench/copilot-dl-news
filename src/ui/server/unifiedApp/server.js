@@ -25,7 +25,7 @@ const { UnifiedShell } = require('./views/UnifiedShell');
 const { createSubAppRegistry } = require('./subApps/registry');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 const { openNewsDb } = require('../../../data/db/dbAccess');
-const { createMcpLogger } = require('../utils/serverStartupCheckmcpLogger');
+const { createMcpLogger } = require('../utils/mcpLogger');
 
 const { createRateLimitDashboardRouter } = require('../rateLimitDashboard/server');
 const { createWebhookDashboardRouter } = require('../webhookDashboard/server');

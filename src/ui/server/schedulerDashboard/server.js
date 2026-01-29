@@ -16,7 +16,7 @@ const express = require('express');
 const path = require('path');
 
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
-const { resolveBetterSqliteHandle } = require('../utils/serverStartupCheckdashboardModule');
+const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
 const scheduleAdapter = require('../../../data/db/sqlite/v1/queries/scheduleAdapter');
 
 const PORT = process.env.PORT || 3135;

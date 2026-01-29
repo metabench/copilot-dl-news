@@ -8,7 +8,7 @@
  * @module src/ui/server/dataExplorer/views/classifications
  */
 
-const { formatCount } = require('../../utils/serverStartupCheckformatting");
+const { formatCount } = require('../../utils/formatting");
 const { buildViewMeta } = require("./shared");
 const { listClassificationsWithCounts } = require('../../../../data/db/sqlite/v1/queries/ui/classificationTypes");
 

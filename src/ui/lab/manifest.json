@@ -338,5 +338,15 @@
     "path": "src/ui/lab/experiments/046-virtual-matrix-control-smoothness",
     "check": "src/ui/lab/experiments/046-virtual-matrix-control-smoothness/check.js",
     "readme": "src/ui/lab/experiments/046-virtual-matrix-control-smoothness/README.md"
+  },
+  {
+    "id": "047",
+    "slug": "svg-comment-context",
+    "name": "SVG Comment Context",
+    "status": "active",
+    "description": "Isolate SVG interaction logic (CommentBubble, ContextLink) into reusable jsgui3 controls with independent hydration",
+    "path": "src/ui/lab/experiments/047-svg-comment-context",
+    "check": "src/ui/lab/experiments/047-svg-comment-context/check.js",
+    "readme": "src/ui/lab/experiments/047-svg-comment-context/README.md"
   }
 ]

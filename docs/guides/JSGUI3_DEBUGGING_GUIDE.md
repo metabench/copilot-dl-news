@@ -34,6 +34,20 @@ This guide is a concise playbook for debugging jsgui3 controls, activation (call
   page.on('pageerror', err => console.error('PAGE ERROR:', err.message));
   ```
 
+### Activation Log Noise (Expected Warnings)
+
+If you see console warnings like:
+- `Missing context.map_Controls for type undefined`
+- `Missing context.map_Controls for type style/main/input`
+- `&&& no corresponding control`
+
+…they are often **expected** for:
+- Exempt tags missing `data-jsgui-type` (`html/head/body`)
+- Generic tags not registered in `context.map_Controls`
+- Whitespace-only text nodes during DOM ↔ control alignment
+
+Treat these as noise **only if** activation succeeds and your custom control types are registered. If your control types appear in warnings, fix registration or `__type_name`.
+
 ## Interaction Debugging (Drag/Resize/Connectors)
 - **Pointer events:** Verify container layers allow pointer events (e.g., `pointerEvents: auto`).
 - **Position state:** Controls should keep `position`/`pos` in sync; provide setters/getters for mixins that expect `pos`.

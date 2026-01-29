@@ -1,3 +1,4 @@
+var Tautologistics = window.Tautologistics = window.Tautologistics || {};
 "use strict";
 (() => {
   var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -11819,7 +11820,7 @@
       };
       var p = Control_Core.prototype;
       p.connect_fields = true;
-      var customInspectSymbol = Symbol.for("nodejs.util.inspect.custom");
+      var customInspectSymbol = /* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom");
       if (jsgui2.custom_rendering === "very-simple") {
         p[customInspectSymbol] = function(depth, inspectOptions, inspect) {
           return "< " + this.dom.tagName + " " + this.__type_name + " >";
@@ -15517,7 +15518,7 @@
   // node_modules/jsgui3-gfx-core/core/pixel-pos-list.js
   var require_pixel_pos_list = __commonJS({
     "node_modules/jsgui3-gfx-core/core/pixel-pos-list.js"(exports, module) {
-      var inspect = Symbol.for("nodejs.util.inspect.custom");
+      var inspect = /* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom");
       var Ui16toUi32 = (ui16) => {
         let res2 = new Uint32Array(ui16.length / 2);
         let dv = new DataView(ui16.buffer);
@@ -26954,13 +26955,12 @@
           return typeof __require == "function" && typeof exports == "object" && typeof module == "object" && typeof __filename == "string" && typeof __dirname == "string";
         }
         if (!runningInNode()) {
-          var _global = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : this;
-          if (!_global.Tautologistics)
-            _global.Tautologistics = {};
-          else if (_global.Tautologistics.NodeHtmlParser)
+          if (!this.Tautologistics)
+            this.Tautologistics = {};
+          else if (this.Tautologistics.NodeHtmlParser)
             return;
-          _global.Tautologistics.NodeHtmlParser = {};
-          exports = _global.Tautologistics.NodeHtmlParser;
+          this.Tautologistics.NodeHtmlParser = {};
+          exports = this.Tautologistics.NodeHtmlParser;
         }
         var ElementType = {
           Text: "text",

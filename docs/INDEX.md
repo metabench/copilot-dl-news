@@ -1,6 +1,6 @@
 # Project Documentation Index
 
-_Last updated: 2025-12-13_
+_Last updated: 2026-01-17_
 
 ## Quick References
 - [Command Execution Guide](COMMAND_EXECUTION_GUIDE.md)
@@ -68,6 +68,7 @@ These guides are **authoritative sources** for their domains. When working in th
 
 - [UI Knowledge Sources (Consolidated)](guides/UI_KNOWLEDGE_SOURCES.md) - **START HERE for UI work**: Quick reference linking all jsgui3 guides with priority ratings.
 - [jsgui3 SSR & Isomorphic Controls](guides/JSGUI3_SSR_ISOMORPHIC_CONTROLS.md) - **Composition model, SSR patterns, client activation** — The definitive guide to how controls work. Covers terminology (compose vs render), the golden rules, and troubleshooting.
+- [jsgui3 SSR Activation Data Bridge](guides/JSGUI3_SSR_ISOMORPHIC_CONTROLS.md#76-ssr-activation-data-bridge-data-jsgui-fields--data-jsgui-ctrl-fields) - Persisted fields + ctrl_fields bridge from SSR markup into client activation, with validation steps.
 - [jsgui3 UI Architecture Guide](guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md) - Isomorphic component architecture, control composition, SSR/activation patterns, **jsgui3-server experiments**, and verification scripts for jsgui3-html UIs.
 - [jsgui3 Shared Controls Catalog](guides/JSGUI3_SHARED_CONTROLS_CATALOG.md) - **Complete inventory** of all reusable controls (Table, Sparkline, ProgressBar, UrlFilterToggle, etc.), usage examples, patterns, and check scripts. Consult before creating new controls.
 - [jsgui3 Window Control Guide](guides/JSGUI3_WINDOW_CONTROL_GUIDE.md) - **Built-in floating window**: Draggable, resizable, minimize/maximize/close, z-index management. Use for tool panels, dialogs, result viewers.
@@ -90,6 +91,7 @@ These guides are **authoritative sources** for their domains. When working in th
 - [Test Hanging Prevention Guide](guides/TEST_HANGING_PREVENTION_GUIDE.md) - **CRITICAL for E2E tests**: Preventing "Jest did not exit" warnings, server cleanup patterns, timeout strategies, and reliable async test structure.
 - [Puppeteer UI Workflow Guide](guides/PUPPETEER_UI_WORKFLOW.md) - One-shot browser console/network capture for debugging UI routes without writing a full E2E.
 - [Puppeteer Scenario Suites](guides/PUPPETEER_SCENARIO_SUITES.md) - Fast UI verification by running many scenarios per browser session (deterministic fixtures + artifacts on failure).
+- [jsgui3 Activation Log Noise (Expected)](guides/JSGUI3_DEBUGGING_GUIDE.md#activation-log-noise-expected-warnings) - Interpreting `Missing context.map_Controls` and `&&& no corresponding control` without chasing false alarms.
 
 ### Authorization UX (CLI)
 

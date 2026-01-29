@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
-const { findProjectRoot } = require('../utils/serverStartupCheckproject-root");
+const { findProjectRoot } = require('../../../shared/utils/project-root');
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 

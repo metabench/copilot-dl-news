@@ -382,7 +382,15 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
-  
+
+  // Open DevTools automatically to debug empty window
+  mainWindow.webContents.openDevTools();
+
+  // Log renderer console messages to main process
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`[Renderer] ${message}`);
+  });
+
   // Register Ctrl+Shift+I to toggle dev tools (for debugging)
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.control && input.shift && input.key.toLowerCase() === 'i') {
@@ -398,7 +406,7 @@ app.whenReady().then(() => {
 
   // Load persisted detached server info for stop/restart across z-server restarts.
   loadDetachedRegistry();
-  
+
   createWindow();
 
   app.on('before-quit', () => {
@@ -407,7 +415,7 @@ app.whenReady().then(() => {
       try {
         if (procInfo && procInfo.pid && procInfo.detached !== true) {
           serverLogger.logActivity(`CLEANUP_STOP: ${path.relative(BASE_PATH, filePath)} (PID ${procInfo.pid})`);
-          treeKill(procInfo.pid, 'SIGKILL', () => {});
+          treeKill(procInfo.pid, 'SIGKILL', () => { });
         } else if (procInfo && procInfo.pid && procInfo.detached === true) {
           serverLogger.logActivity(`CLEANUP_SKIP_DETACHED: ${path.relative(BASE_PATH, filePath)} (PID ${procInfo.pid})`);
         }
@@ -562,7 +570,7 @@ ipcMain.handle('start-server', async (event, filePath, options = {}) => {
   const logToFilePath = options && typeof options === 'object' && typeof options.logToFilePath === 'string'
     ? options.logToFilePath
     : filePath;
-  
+
   if (runningProcesses.has(filePath)) {
     const existing = runningProcesses.get(filePath);
     serverLogger.logActivity(`START_SKIPPED: ${path.relative(BASE_PATH, filePath)} - already tracked as running`);
@@ -571,7 +579,7 @@ ipcMain.handle('start-server', async (event, filePath, options = {}) => {
 
   // Get expected port for this server
   const expectedPort = serverDetector.getExpectedPort({ file: filePath });
-  
+
   // Check if port is already in use
   if (expectedPort) {
     const portStatus = await serverDetector.checkPortInUse(expectedPort);
@@ -751,7 +759,7 @@ ipcMain.handle('stop-server', async (event, filePath, detectedPid) => {
 
   filePath = validated.filePath;
   serverLogger.logStopRequest(filePath, BASE_PATH);
-  
+
   const procInfo = runningProcesses.get(filePath);
   const detachedInfo = detachedRegistry.get(filePath);
 
@@ -805,7 +813,7 @@ ipcMain.handle('stop-server', async (event, filePath, detectedPid) => {
       });
     });
   };
-  
+
   // If we don't have it tracked but have a persisted detached PID, treat it as an external stop request.
   if (!procInfo && !detectedPid && detachedInfo && detachedInfo.pid) {
     detectedPid = detachedInfo.pid;
@@ -858,7 +866,7 @@ ipcMain.handle('stop-server', async (event, filePath, detectedPid) => {
     }
     return res;
   }
-  
+
   if (!procInfo) {
     serverLogger.logActivity(`STOP_SKIPPED: ${path.relative(BASE_PATH, filePath)} - not tracked as running`);
     return { success: false, message: 'Not running' };
@@ -883,14 +891,14 @@ ipcMain.handle('open-in-browser', async (event, url) => {
 
   url = validated.url;
   serverLogger.logActivity(`OPEN_BROWSER: ${url}`);
-  
+
   // Try Chrome Canary first, fall back to default browser
   const chromeCanaryPaths = [
     'C:\\Users\\' + process.env.USERNAME + '\\AppData\\Local\\Google\\Chrome SxS\\Application\\chrome.exe',
     'C:\\Program Files\\Google\\Chrome SxS\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Google\\Chrome SxS\\Application\\chrome.exe'
   ];
-  
+
   let chromeCanaryPath = null;
   for (const p of chromeCanaryPaths) {
     if (fs.existsSync(p)) {
@@ -898,7 +906,7 @@ ipcMain.handle('open-in-browser', async (event, url) => {
       break;
     }
   }
-  
+
   if (chromeCanaryPath) {
     spawn(chromeCanaryPath, [url], { detached: true, stdio: 'ignore' }).unref();
     return { success: true, browser: 'Chrome Canary' };

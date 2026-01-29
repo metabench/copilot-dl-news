@@ -21,7 +21,7 @@ const { TemplateExtractor, TemplateExtractionService } = require('../../../data/
 const { TeacherService } = require('../../../intelligence/teacher/TeacherService');
 const { createLayoutTemplatesQueries } = require('../../../data/db/sqlite/v1/queries/layoutTemplates');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
-const { resolveBetterSqliteHandle } = require('../utils/serverStartupCheckdashboardModule');
+const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
 
 const app = express();
 const DEFAULT_PORT = Number(process.env.TEMPLATE_TEACHER_PORT) || 3022;

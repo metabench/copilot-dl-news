@@ -17,7 +17,7 @@ const jsgui = require("jsgui3-html");
 const { spawn } = require("child_process");
 
 const { TelemetryIntegration } = require('../../core/crawler/telemetry/TelemetryIntegration");
-const { createMcpLogger } = require('./utils/serverStartupCheckmcpLogger");
+const { createMcpLogger } = require('./utils/mcpLogger");
 
 const log = createMcpLogger.uiServer('data-explorer');
 
@@ -25,7 +25,7 @@ const log = createMcpLogger.uiServer('data-explorer');
 const PID_FILE = path.join(process.cwd(), "tmp", ".data-explorer.pid");
 
 const { openNewsDb } = require('../../data/db/dbAccess");
-const { findProjectRoot } = require('./utils/serverStartupCheckproject-root");
+const { findProjectRoot } = require('../../shared/utils/project-root');
 const {
   selectUrlPage,
   selectUrlPageByHost,
@@ -67,7 +67,7 @@ const {
 const { selectUrlById, selectFetchHistory, selectFetchById } = require('../../data/db/sqlite/v1/queries/ui/urlDetails");
 const { selectHostSummary, selectHostDownloads } = require('../../data/db/sqlite/v1/queries/ui/domainDetails");
 const { listConfiguration } = require('../../data/db/sqlite/v1/queries/ui/configuration");
-const { 
+const {
   listClassificationsWithCounts,
   getClassificationByName,
   getDocumentsForClassification,
@@ -113,14 +113,14 @@ const {
   appendBackParams,
   buildBreadcrumbs
 } = require("./navigation");
-const { ensureClientBundle } = require('./utils/serverStartupCheckensureClientBundle");
+const { ensureClientBundle } = require('./utils/ensureClientBundle");
 const { runStartupCheck } = require('./utils/serverStartupCheck");
-const { getClassificationDisplay } = require('./utils/serverStartupCheckclassificationEmoji");
+const { getClassificationDisplay } = require('./utils/classificationEmoji");
 const {
   createTelemetry,
   attachTelemetryEndpoints,
   attachTelemetryMiddleware
-} = require('./utils/serverStartupChecktelemetry");
+} = require('./utils/telemetry");
 const {
   listThemes,
   getDefaultTheme,
@@ -466,29 +466,29 @@ function buildHourlySparkline(fetches, { bucketCount = 24, bucketMs = 60 * 60 * 
  */
 function buildClassificationFilterControls({ context, basePath, currentLimit, isRandom, validLimits }) {
   const jsgui = require("jsgui3-html");
-  
+
   // Create the form
   const form = new jsgui.form({ context });
   form.dom.attributes.method = "get";
   form.dom.attributes.action = basePath;
   form.add_class("filter-controls");
   form.dom.attributes["data-jsgui-control"] = "classification_filter";
-  
+
   // Limit selector group
   const limitGroup = new jsgui.Control({ context, tagName: "div" });
   limitGroup.add_class("filter-controls__group");
-  
+
   const limitLabel = new jsgui.label({ context });
   limitLabel.add_class("filter-controls__label");
   limitLabel.dom.attributes["for"] = "limit-select";
   limitLabel.add(new jsgui.String_Control({ context, text: "Show" }));
   limitGroup.add(limitLabel);
-  
+
   const limitSelect = new jsgui.select({ context });
   limitSelect.dom.attributes.name = "limit";
   limitSelect.dom.attributes.id = "limit-select";
   limitSelect.add_class("filter-controls__select");
-  
+
   validLimits.forEach(limit => {
     const opt = new jsgui.option({ context });
     opt.dom.attributes.value = String(limit);
@@ -499,21 +499,21 @@ function buildClassificationFilterControls({ context, basePath, currentLimit, is
     limitSelect.add(opt);
   });
   limitGroup.add(limitSelect);
-  
+
   const docsLabel = new jsgui.span({ context });
   docsLabel.add_class("filter-controls__label");
   docsLabel.add(new jsgui.String_Control({ context, text: "documents" }));
   limitGroup.add(docsLabel);
-  
+
   form.add(limitGroup);
-  
+
   // Random checkbox group
   const randomGroup = new jsgui.Control({ context, tagName: "div" });
   randomGroup.add_class("filter-controls__group");
-  
+
   const checkboxLabel = new jsgui.label({ context });
   checkboxLabel.add_class("filter-controls__checkbox-label");
-  
+
   const checkbox = new jsgui.input({ context });
   checkbox.dom.attributes.type = "checkbox";
   checkbox.dom.attributes.name = "random";
@@ -523,22 +523,22 @@ function buildClassificationFilterControls({ context, basePath, currentLimit, is
     checkbox.dom.attributes.checked = "checked";
   }
   checkboxLabel.add(checkbox);
-  
+
   const checkboxText = new jsgui.span({ context });
   checkboxText.add_class("filter-controls__checkbox-text");
   checkboxText.add(new jsgui.String_Control({ context, text: "Random sample" }));
   checkboxLabel.add(checkboxText);
-  
+
   randomGroup.add(checkboxLabel);
   form.add(randomGroup);
-  
+
   // Submit button
   const submitBtn = new jsgui.button({ context });
   submitBtn.dom.attributes.type = "submit";
   submitBtn.add_class("filter-controls__submit");
   submitBtn.add(new jsgui.String_Control({ context, text: "Apply" }));
   form.add(submitBtn);
-  
+
   return form;
 }
 
@@ -826,9 +826,9 @@ function renderDecisionsView({ db, newsDb, req, relativeDb, now }) {
   const subtitle = milestones.length === 0
     ? `No decision traces found in ${relativeDb}`
     : `${milestones.length} decision traces` +
-      (kindFilter ? ` (kind: ${kindFilter})` : "") +
-      (scopeFilter ? ` (scope: ${scopeFilter})` : "") +
-      (targetLike ? ` (target contains: ${targetLike})` : "");
+    (kindFilter ? ` (kind: ${kindFilter})` : "") +
+    (scopeFilter ? ` (scope: ${scopeFilter})` : "") +
+    (targetLike ? ` (target contains: ${targetLike})` : "");
 
   return {
     title: "Crawler Decisions",
@@ -907,11 +907,11 @@ function renderClassificationsView({ db, relativeDb, now }) {
   const classifications = listClassificationsWithCounts(db);
   const totalDocs = classifications.reduce((sum, c) => sum + (c.document_count || 0), 0);
   const usedCount = classifications.filter(c => c.document_count > 0).length;
-  
+
   const subtitle = classifications.length === 0
     ? `No classification types defined in ${relativeDb}`
     : `${classifications.length} classification types (${usedCount} in use) covering ${formatCount(totalDocs)} documents`;
-  
+
   return {
     title: "Document Classifications",
     columns: buildClassificationColumns(),
@@ -1564,33 +1564,33 @@ const PLACE_HUB_PAGE_SIZE = 50;
  */
 function renderPlaceHubsView({ req, db, relativeDb, now }) {
   const query = req.query || {};
-  
+
   // Parse filter parameters
   const hostFilter = (query.host || "").trim() || null;
   const kindFilter = (query.kind || "").trim() || null;
   const searchFilter = (query.search || "").trim() || null;
   const page = Math.max(1, parseInt(query.page, 10) || 1);
   const offset = (page - 1) * PLACE_HUB_PAGE_SIZE;
-  
+
   // Build filter options
-  const filterOptions = { 
-    limit: PLACE_HUB_PAGE_SIZE, 
-    offset 
+  const filterOptions = {
+    limit: PLACE_HUB_PAGE_SIZE,
+    offset
   };
   if (hostFilter) filterOptions.host = hostFilter;
   if (kindFilter) filterOptions.placeKind = kindFilter;
   if (searchFilter) filterOptions.search = searchFilter;
-  
+
   // Fetch data
   const hubs = listPlaceHubs(db, filterOptions);
   const totalCount = countPlaceHubs(db, filterOptions);
   const hostStats = getPlaceHubsByHost(db);
   const kindStats = getPlaceHubsByKind(db);
   const availableHosts = getPlaceHubHosts(db);
-  
+
   // Build rows
   const rows = buildPlaceHubRows(hubs, { startIndex: offset + 1 });
-  
+
   // Build subtitle
   let subtitle;
   if (rows.length === 0) {
@@ -1603,34 +1603,34 @@ function renderPlaceHubsView({ req, db, relativeDb, now }) {
     const filterText = filterDesc.length > 0 ? ` (${filterDesc.join(", ")})` : "";
     subtitle = `Showing ${offset + 1}-${offset + rows.length} of ${totalCount} place hubs${filterText}`;
   }
-  
+
   // Build extra cards for statistics
   const extraCards = [
     { label: "Total Hubs", value: formatCount(totalCount) },
     { label: "Hosts", value: formatCount(hostStats.length) },
     { label: "Place Kinds", value: formatCount(kindStats.length) }
   ];
-  
+
   // Add top host card if we have data
   if (hostStats.length > 0) {
     const topHost = hostStats[0];
-    extraCards.push({ 
-      label: "Top Host", 
+    extraCards.push({
+      label: "Top Host",
       value: String(topHost.count),
       subtitle: topHost.host.replace(/^www\./, "")
     });
   }
-  
+
   // Add top kind card
   if (kindStats.length > 0) {
     const topKind = kindStats[0];
-    extraCards.push({ 
-      label: "Top Kind", 
+    extraCards.push({
+      label: "Top Kind",
       value: String(topKind.count),
       subtitle: topKind.place_kind || "unknown"
     });
   }
-  
+
   // Build pagination
   const totalPages = Math.ceil(totalCount / PLACE_HUB_PAGE_SIZE);
   const pagination = {
@@ -1641,7 +1641,7 @@ function renderPlaceHubsView({ req, db, relativeDb, now }) {
     hasNext: page < totalPages,
     hasPrev: page > 1
   };
-  
+
   return {
     title: "Place Hubs",
     columns: buildPlaceHubColumns(),
@@ -1677,7 +1677,7 @@ function renderArticlesListView({ req, db, relativeDb, now }) {
   const sortDir = query.sortDir === "asc" ? "asc" : "desc";
   const hostFilter = (query.host || "").trim() || null;
   const classificationFilter = (query.classification || "").trim() || null;
-  
+
   const filterOptions = {
     limit: ARTICLE_PAGE_SIZE,
     offset: (page - 1) * ARTICLE_PAGE_SIZE,
@@ -1686,11 +1686,11 @@ function renderArticlesListView({ req, db, relativeDb, now }) {
   };
   if (hostFilter) filterOptions.host = hostFilter;
   if (classificationFilter) filterOptions.classification = classificationFilter;
-  
+
   const articles = listArticlesWithContent(db, filterOptions);
   const totalCount = countArticlesWithContent(db, filterOptions);
   const totalPages = Math.ceil(totalCount / ARTICLE_PAGE_SIZE);
-  
+
   const subtitle = totalCount === 0
     ? "No articles with extracted content found"
     : `Showing ${(page - 1) * ARTICLE_PAGE_SIZE + 1}-${Math.min(page * ARTICLE_PAGE_SIZE, totalCount)} of ${totalCount} articles`;
@@ -2300,8 +2300,8 @@ function createDataExplorerServer(options = {}) {
       // Classification emoji display (first card, large emoji)
       const classificationInfo = getClassificationDisplay(fetch.analysis.classification);
       const extraCards = [
-        { 
-          label: "Classification", 
+        {
+          label: "Classification",
           value: classificationInfo.emoji,
           subtitle: classificationInfo.label,
           isEmoji: true
@@ -2453,10 +2453,10 @@ function createDataExplorerServer(options = {}) {
     try {
       const fetchId = Number(req.params.fetchId);
       if (!Number.isFinite(fetchId)) return res.status(400).send("Invalid fetch id");
-      
+
       const now = new Date();
       const articleData = await getExtractedArticle(dbAccess.db, fetchId);
-      
+
       if (!articleData) {
         return res.status(404).send("Article not found or no content available");
       }
@@ -2466,16 +2466,16 @@ function createDataExplorerServer(options = {}) {
         { label: articleData.host, href: `/domains/${articleData.host}` }
       ];
       const backLink = deriveBackLink(req, { label: "Articles", href: "/articles" });
-      const breadcrumbs = buildBreadcrumbs({ 
-        trail: breadcrumbTrail, 
-        backLink, 
-        current: { label: articleData.extractedData?.title || `Article #${fetchId}` } 
+      const breadcrumbs = buildBreadcrumbs({
+        trail: breadcrumbTrail,
+        backLink,
+        current: { label: articleData.extractedData?.title || `Article #${fetchId}` }
       });
 
       const html = renderHtml(
-        { 
-          columns: [], 
-          rows: [], 
+        {
+          columns: [],
+          rows: [],
           meta: {
             rowCount: 0,
             limit: 0,
@@ -2511,10 +2511,10 @@ function createDataExplorerServer(options = {}) {
     try {
       const name = (req.params.name || "").trim();
       if (!name) return res.status(400).send("Classification name is required");
-      
+
       const classification = getClassificationByName(dbAccess.db, name);
       if (!classification) return res.status(404).send("Classification not found");
-      
+
       // Parse query parameters
       const query = req.query || {};
       const VALID_LIMITS = [10, 100, 1000, 10000];
@@ -2527,18 +2527,18 @@ function createDataExplorerServer(options = {}) {
       const formWasSubmitted = query.limit !== undefined;
       // If form submitted: random only if checkbox was checked (random=1)
       // If no form submission (initial load): default to random
-      const isRandom = formWasSubmitted 
+      const isRandom = formWasSubmitted
         ? (randomParam === "1" || randomParam === "true")
         : true;
       const requestedPage = Math.max(1, Math.trunc(Number(query.page) || 1));
-      
+
       const now = new Date();
       const totalDocs = countDocumentsForClassification(dbAccess.db, name);
-      
+
       // Fetch documents based on mode
       let documents;
       let pagination = null;
-      
+
       if (isRandom) {
         // Random sampling - no pagination
         documents = getRandomDocumentsForClassification(dbAccess.db, name, { limit: effectiveLimit });
@@ -2548,7 +2548,7 @@ function createDataExplorerServer(options = {}) {
         const safePage = Math.min(requestedPage, totalPages);
         const offset = (safePage - 1) * effectiveLimit;
         documents = getDocumentsForClassification(dbAccess.db, name, { limit: effectiveLimit, offset });
-        
+
         // Build pagination info
         const buildPageHref = (page) => {
           const params = new URLSearchParams();
@@ -2556,7 +2556,7 @@ function createDataExplorerServer(options = {}) {
           if (page > 1) params.set("page", String(page));
           return `/classifications/${encodeURIComponent(name)}?${params.toString()}`;
         };
-        
+
         pagination = {
           currentPage: safePage,
           totalPages,
@@ -2570,7 +2570,7 @@ function createDataExplorerServer(options = {}) {
           lastHref: safePage < totalPages ? buildPageHref(totalPages) : null
         };
       }
-      
+
       // Build columns for documents table
       const DOC_COLUMNS = [
         { key: "url", label: "URL" },
@@ -2578,7 +2578,7 @@ function createDataExplorerServer(options = {}) {
         { key: "word_count", label: "Words", width: "100px", align: "right" },
         { key: "analyzed_at", label: "Analyzed", width: "180px" }
       ];
-      
+
       // Build rows
       const rows = documents.map(doc => ({
         url: { text: doc.url, href: `/urls/${doc.url_id}` },
@@ -2586,7 +2586,7 @@ function createDataExplorerServer(options = {}) {
         word_count: doc.word_count != null ? formatCount(doc.word_count) : "—",
         analyzed_at: formatDateTime(doc.analyzed_at, true)
       }));
-      
+
       // Build subtitle based on mode
       let subtitle;
       if (totalDocs === 0) {
@@ -2598,7 +2598,7 @@ function createDataExplorerServer(options = {}) {
       } else {
         subtitle = `${formatCount(totalDocs)} documents classified as ${classification.display_name}`;
       }
-      
+
       // Build filter controls factory (will be called with context inside renderHtml)
       const filterControlsFactory = (context) => buildClassificationFilterControls({
         context,
@@ -2607,7 +2607,7 @@ function createDataExplorerServer(options = {}) {
         isRandom,
         validLimits: VALID_LIMITS
       });
-      
+
       const meta = {
         rowCount: rows.length,
         limit: effectiveLimit,
@@ -2622,15 +2622,15 @@ function createDataExplorerServer(options = {}) {
         ],
         filterControlsFactory
       };
-      
+
       const breadcrumbTrail = [{ label: "Classifications", href: "/classifications" }];
       const backLink = deriveBackLink(req, breadcrumbTrail[0]);
-      const breadcrumbs = buildBreadcrumbs({ 
-        trail: breadcrumbTrail, 
-        backLink, 
-        current: { label: `${classification.emoji || ""} ${classification.display_name}` } 
+      const breadcrumbs = buildBreadcrumbs({
+        trail: breadcrumbTrail,
+        backLink,
+        current: { label: `${classification.emoji || ""} ${classification.display_name}` }
       });
-      
+
       const html = renderHtml(
         { columns: DOC_COLUMNS, rows, meta, title: `Classification: ${classification.display_name}` },
         {
@@ -2681,7 +2681,7 @@ function createDataExplorerServer(options = {}) {
   const close = () => {
     try {
       dbAccess.close();
-    } catch (_) {}
+    } catch (_) { }
   };
 
   return { app, telemetry, close };
@@ -2847,19 +2847,19 @@ if (require.main === module) {
       stopDetached();
       process.exit(0);
     }
-    
+
     // Handle --status flag
     if (args.status) {
       checkStatus();
       process.exit(0);
     }
-    
+
     // Handle --detached flag
     if (args.detached) {
       spawnDetached(args);
       process.exit(0);
     }
-    
+
     console.log("Server args:", args);
     const pageSize = sanitizePageSize(args.pageSize);
     const { app, close, telemetry } = createDataExplorerServer({

@@ -9,7 +9,7 @@
  * @module src/ui/server/dataExplorer/views/shared
  */
 
-const { formatDateTime, formatCount } = require('../../utils/serverStartupCheckformatting");
+const { formatDateTime, formatCount } = require('../../utils/formatting");
 const { getCachedMetric } = require("../../services/metricsService");
 const { countUrls, countFetchedUrls } = require('../../../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
 const { appendBackParams } = require("../../navigation");

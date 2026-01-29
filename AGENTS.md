@@ -24,6 +24,13 @@ Doc topology. Keep this file focused and actionable. Heavier guidance lives in /
 
 /docs/decisions/ – ADR-lite notes: date, context, options, decision, consequences.
 
+**External Modules**:
+- **News Crawler DB** (`../news-crawler-db`): Unified Drizzle ORM schema + Fastify API.
+- **News DB Analysis** (`../news-db-analysis`): Pure analysis library (stats, coverage, trends).
+> See [docs/agents/modules-reference.md](docs/agents/modules-reference.md) for usage guide.
+
+/docs/decisions/ – ADR-lite notes: date, context, options, decision, consequences.
+
 **Guide authorship rule**: After accomplishing a difficult task in a part of the system that lacks a guide, write one in `/docs/guides/`. Include details you did not know when you started but discovered during implementation—these hard-won insights are the most valuable for future agents. Add the new guide to `/docs/INDEX.md`.
 
 AGENTS.md should link to these pages and assign follow-ups ("If X arises, consult and improve Y.md"). Each time you learn something, push it down into the right doc and tighten the index.
@@ -470,3 +477,44 @@ Start here for comprehensive guidance:
 **Phase 3** ✅ Complete: Gap 4 — Plans workflow threading  
 
 See `docs/sessions/2025-11-22-gap4-plans-integration/SESSION_SUMMARY.md` for detailed implementation report.
+
+---
+
+## SVG Comment Monitoring (Visual Command Interface)
+
+The repository includes a **visual command interface** that allows human collaborators to leave instructions for AI agents via SVG diagram annotations.
+
+### How It Works
+
+1.  **Human**: Opens an SVG diagram on a tablet (via `docs-viewer`).
+2.  **Human**: Adds a "comment bubble" with an instruction (e.g., "Refactor this module").
+3.  **System**: Saves the SVG → triggers SSE event → local `docs-bridge` MCP server receives notification.
+4.  **Agent**: Processes the comment as a user instruction.
+
+### Agent Responsibilities
+
+**At Session Start** (when `docs-bridge` MCP server is connected):
+
+1.  Call `list_resources` on the `docs-bridge` server.
+2.  For SVG resources, call `read_resource` to fetch content.
+3.  Parse for `<g class="agent-comment">` elements.
+4.  Extract the text content and `data-target` (linked element ID).
+5.  Process each comment as if it were a user prompt.
+
+**Alternatively**, check `.agent/pending_comments.md` for queued instructions written by the bridge when sampling isn't available.
+
+### Comment Structure
+
+```xml
+<g class="agent-comment" id="c_12345" data-target="DatabaseService" transform="translate(100, 200)">
+    <rect fill="white" stroke="black" .../>
+    <text>Refactor this module</text>
+</g>
+```
+
+- `data-target`: The ID of the element the comment refers to.
+- Text content: The instruction or question.
+
+### Design Document
+
+See `docs/design/agent_interaction_platform.md` for full architecture ("The Book").

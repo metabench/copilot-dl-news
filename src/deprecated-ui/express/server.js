@@ -1,4 +1,4 @@
-﻿/**
+/**
  * DEPRECATED UI SERVER
  *
  * This UI implementation is deprecated as of October 2025.

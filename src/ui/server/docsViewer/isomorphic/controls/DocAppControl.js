@@ -11,7 +11,7 @@ const jsgui = require("../jsgui");
 
 const { DocNavControl } = require("./DocNavControl");
 const { DocViewerControl } = require("./DocViewerControl");
-const { ResizableSplitLayoutControl } = require("./ResizableSplitLayoutControl");
+const { ResizableSplitLayoutControl } = require("../../../shared/isomorphic/controls/ResizableSplitLayoutControl");
 
 const StringControl = jsgui.String_Control;
 
@@ -31,7 +31,7 @@ class DocAppControl extends jsgui.Control {
    */
   constructor(spec = {}) {
     super({ ...spec, tagName: "div" });
-    
+
     this.docTree = spec.docTree || [];
     this.selectedPath = spec.selectedPath || null;
     this.docContent = spec.docContent || null;
@@ -39,10 +39,10 @@ class DocAppControl extends jsgui.Control {
     this.columns = spec.columns || { mtime: false };
     this.sortBy = spec.sortBy || 'name';
     this.sortOrder = spec.sortOrder || 'asc';
-    
+
     this.add_class("doc-app");
     this.dom.attributes["data-jsgui-id"] = "doc-app";
-    
+
     if (!spec.el) {
       this.compose();
     }
@@ -52,12 +52,12 @@ class DocAppControl extends jsgui.Control {
     // App header
     const header = this._buildHeader();
     this.add(header);
-    
+
     // Build left panel - Navigation
     const navColumn = new jsgui.Control({ context: this.context, tagName: "aside" });
     navColumn.add_class("doc-app__nav-column");
     navColumn.dom.attributes["data-jsgui-id"] = "nav-column";
-    
+
     const nav = new DocNavControl({
       context: this.context,
       docTree: this.docTree,
@@ -69,7 +69,7 @@ class DocAppControl extends jsgui.Control {
       sortOrder: this.sortOrder
     });
     navColumn.add(nav);
-    
+
     // Toggle button for mobile - with jsgui control marker for client hydration
     const toggleBtn = new jsgui.Control({ context: this.context, tagName: "button" });
     toggleBtn.add_class("doc-app__nav-toggle");
@@ -77,19 +77,18 @@ class DocAppControl extends jsgui.Control {
     toggleBtn.dom.attributes["aria-label"] = "Toggle navigation";
     toggleBtn.dom.attributes["data-jsgui-control"] = "docs_nav_toggle";
     toggleBtn.add(new StringControl({ context: this.context, text: "☰" }));
-    navColumn.add(toggleBtn);
-    
+
     // Build right panel - Content viewer
     const contentColumn = new jsgui.Control({ context: this.context, tagName: "div" });
     contentColumn.add_class("doc-app__content-column");
     contentColumn.dom.attributes["data-jsgui-id"] = "content-column";
-    
+
     const viewer = new DocViewerControl({
       context: this.context,
       docContent: this.docContent
     });
     contentColumn.add(viewer);
-    
+
     // Create resizable split layout
     const layout = new ResizableSplitLayoutControl({
       context: this.context,
@@ -101,8 +100,11 @@ class DocAppControl extends jsgui.Control {
       storageKey: "docs-viewer-nav-width"
     });
     layout.add_class("doc-app__layout");
-    
+
     this.add(layout);
+
+    // Toggle button for mobile - placed OUTSIDE nav column so it's visible when nav is hidden
+    this.add(toggleBtn);
   }
 
   /**
@@ -111,42 +113,42 @@ class DocAppControl extends jsgui.Control {
   _buildHeader() {
     const header = new jsgui.Control({ context: this.context, tagName: "header" });
     header.add_class("doc-app__header");
-    
+
     // Logo/Home link
     const logo = new jsgui.Control({ context: this.context, tagName: "a" });
     logo.add_class("doc-app__logo");
     logo.dom.attributes.href = "/";
-    
+
     const logoIcon = new jsgui.Control({ context: this.context, tagName: "span" });
     logoIcon.add_class("doc-app__logo-icon");
     logoIcon.add(new StringControl({ context: this.context, text: "📚" }));
     logo.add(logoIcon);
-    
+
     const logoText = new jsgui.Control({ context: this.context, tagName: "span" });
     logoText.add_class("doc-app__logo-text");
     logoText.add(new StringControl({ context: this.context, text: "Docs" }));
     logo.add(logoText);
-    
+
     header.add(logo);
-    
+
     // Header title showing current doc
     if (this.docContent && this.docContent.title) {
       const titleSep = new jsgui.Control({ context: this.context, tagName: "span" });
       titleSep.add_class("doc-app__header-sep");
       titleSep.add(new StringControl({ context: this.context, text: "/" }));
       header.add(titleSep);
-      
+
       const title = new jsgui.Control({ context: this.context, tagName: "span" });
       title.add_class("doc-app__header-title");
       title.add(new StringControl({ context: this.context, text: this.docContent.title }));
       header.add(title);
     }
-    
+
     // Spacer
     const spacer = new jsgui.Control({ context: this.context, tagName: "div" });
     spacer.add_class("doc-app__header-spacer");
     header.add(spacer);
-    
+
     // Theme toggle - with jsgui control marker for client hydration
     const themeBtn = new jsgui.Control({ context: this.context, tagName: "button" });
     themeBtn.add_class("doc-app__theme-toggle");
@@ -155,7 +157,7 @@ class DocAppControl extends jsgui.Control {
     themeBtn.dom.attributes["data-jsgui-control"] = "docs_theme_toggle";
     themeBtn.add(new StringControl({ context: this.context, text: "🌙" }));
     header.add(themeBtn);
-    
+
     return header;
   }
 }

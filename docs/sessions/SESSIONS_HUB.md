@@ -60,6 +60,23 @@
 
 ---
 
+### Session 2026-01-17: news-crawler-db drop-in labs
+
+**Duration**: Active
+**Type**: Database adapter research
+**Completion**: 🔄 Planning
+
+**Focus**:
+- Define adapter compatibility surface for a drop-in DB layer swap
+- Build lab experiments for adapter API coverage, raw handle compatibility, and smoke read/write flows
+- Capture gaps for `news-crawler-db` improvements
+
+**Location**: `docs/sessions/2026-01-17-news-crawler-db-drop-in/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-01-17-news-crawler-db-drop-in/PLAN.md)
+- 📝 [Working Notes](./2026-01-17-news-crawler-db-drop-in/WORKING_NOTES.md)
+
 ### Session 2025-11-28: CSS/JS Separation Refactoring
 
 **Duration**: Active

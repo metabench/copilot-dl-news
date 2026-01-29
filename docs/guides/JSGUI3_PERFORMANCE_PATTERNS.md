@@ -1,6 +1,6 @@
 # jsgui3 Performance Patterns
 
-_Last Verified: 2025-01-09_
+_Last Verified: 2026-01-17_
 
 **Authority Level**: This is the **definitive reference** for jsgui3 performance optimization. When working on performance-related tasks, this file takes precedence over general guidance.
 
@@ -138,6 +138,12 @@ function countControls(ctrl, count = { total: 0 }) {
 }
 ```
 
+### Edge Cases & Guardrails
+
+- **String nodes can skew counts**: Track totals with and without `String_Control` to understand impact on render time.
+- **Lazy placeholders must stay neutral**: Avoid creating child controls inside placeholders; keep them as lightweight DOM shells.
+- **Client-side replacement needs re-activation**: If `outerHTML` injects jsgui3 markup, re-run activation for the inserted subtree.
+
 ---
 
 ## Pattern 3: Conditional Complexity
@@ -201,6 +207,12 @@ class VirtualListControl extends jsgui.Control {
 > The bottleneck is often not where you expect.
 >
 > In docs viewer: Expected bottleneck = file I/O. Actual bottleneck = control tree (70%!)
+
+---
+
+## Verification Notes (2026-01-17)
+
+- Performance lab check: `node src/ui/lab/experiments/041-jsgui3-live-graph-perf/check.js --nodes 250 --ms 800 --tick 20 --mode batch`
 
 ---
 

@@ -1,6 +1,13 @@
 "use strict";
 
 /**
+ * @server Facts Server
+ * @description Fact Determination Layer - Industrial Luxury Obsidian themed server for exploring URL facts.
+ * @ui true
+ * @port 4800
+ */
+
+/**
  * Facts Server - Fact Determination Layer
  * 
  * Industrial Luxury Obsidian themed server for exploring URL facts.
@@ -23,8 +30,8 @@ const compression = require("compression");
 const { spawn } = require("child_process");
 const jsgui = require("jsgui3-html");
 
-const { openNewsDb } = require("../../db/dbAccess");
-const { findProjectRoot } = require("../../utils/project-root");
+const { openNewsDb } = require('../../data/db/dbAccess");
+const { findProjectRoot } = require('../../shared/utils/project-root");
 const { buildLuxuryObsidianCss } = require("../styles/luxuryObsidianCss");
 const { FactsUrlListControl, formatCount, formatDateTime } = require("../controls/FactsUrlList");
 const { UrlFactsPopup } = require("../controls/UrlFactsPopup");
@@ -33,7 +40,7 @@ const { UrlFactsPopup } = require("../controls/UrlFactsPopup");
 const {
   selectUrlPage,
   countUrls
-} = require("../../db/sqlite/v1/queries/ui/urlListingNormalized");
+} = require('../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
 
 const StringControl = jsgui.String_Control;
 
@@ -72,8 +79,8 @@ function resolveDbPath(cliPath) {
 }
 
 /**
- * Get the raw better-sqlite3 handle from a NewsDatabase wrapper
- * The db adapters expect the raw handle, not the wrapper
+ * Get the raw sqlite handle from a NewsDatabase wrapper.
+ * The db query helpers expect the raw handle, not the wrapper.
  */
 function getDbHandle(newsDb) {
   if (!newsDb) return null;
