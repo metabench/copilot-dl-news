@@ -1,0 +1,531 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 740" width="800" height="740">
+  <defs>
+    <!-- Egyptian color palette -->
+    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a1628"/>
+      <stop offset="60%" style="stop-color:#1a3a5c"/>
+      <stop offset="100%" style="stop-color:#c4956a"/>
+    </linearGradient>
+    
+    <linearGradient id="sandstoneGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e8d4a8"/>
+      <stop offset="50%" style="stop-color:#d4b896"/>
+      <stop offset="100%" style="stop-color:#c9a87c"/>
+    </linearGradient>
+    
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffd700"/>
+      <stop offset="50%" style="stop-color:#daa520"/>
+      <stop offset="100%" style="stop-color:#b8860b"/>
+    </linearGradient>
+    
+    <linearGradient id="pyramidLeft" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#c9a87c"/>
+      <stop offset="100%" style="stop-color:#e8d4a8"/>
+    </linearGradient>
+    
+    <linearGradient id="pyramidRight" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e8d4a8"/>
+      <stop offset="100%" style="stop-color:#a08060"/>
+    </linearGradient>
+    
+    <!-- Papyrus texture pattern -->
+    <pattern id="papyrusTexture" patternUnits="userSpaceOnUse" width="20" height="20">
+      <rect width="20" height="20" fill="#e8d4a8"/>
+      <path d="M0 10 Q5 8 10 10 T20 10" stroke="#d4b896" stroke-width="0.5" fill="none" opacity="0.3"/>
+      <path d="M0 5 Q5 3 10 5 T20 5" stroke="#c9a87c" stroke-width="0.3" fill="none" opacity="0.2"/>
+    </pattern>
+    
+    <!-- Star pattern for night sky -->
+    <pattern id="stars" patternUnits="userSpaceOnUse" width="100" height="100">
+      <circle cx="10" cy="20" r="1" fill="#fff" opacity="0.8"/>
+      <circle cx="45" cy="15" r="0.5" fill="#fff" opacity="0.6"/>
+      <circle cx="80" cy="35" r="1.2" fill="#fff" opacity="0.9"/>
+      <circle cx="25" cy="60" r="0.8" fill="#fff" opacity="0.7"/>
+      <circle cx="70" cy="75" r="0.6" fill="#fff" opacity="0.5"/>
+      <circle cx="55" cy="45" r="1" fill="#fff" opacity="0.8"/>
+      <circle cx="90" cy="85" r="0.7" fill="#fff" opacity="0.6"/>
+      <circle cx="15" cy="90" r="0.9" fill="#fff" opacity="0.7"/>
+    </pattern>
+    
+    <!-- Hieroglyphic border pattern -->
+    <pattern id="hieroBorder" patternUnits="userSpaceOnUse" width="60" height="30">
+      <rect width="60" height="30" fill="none"/>
+      <text x="5" y="20" font-size="16" fill="#8b7355">𓂀</text>
+      <text x="25" y="20" font-size="16" fill="#8b7355">𓃭</text>
+      <text x="45" y="20" font-size="16" fill="#8b7355">𓅃</text>
+    </pattern>
+    
+    <!-- Arrow marker for speed indicator -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ffd700"/>
+    </marker>
+  </defs>
+  
+  <!-- Background: Night sky with stars -->
+  <rect width="800" height="720" fill="url(#skyGradient)"/>
+  <rect width="800" height="350" fill="url(#stars)" opacity="0.8"/>
+  
+  <!-- Orion's Belt constellation (sacred to Osiris) -->
+  <g id="orionsBelt">
+    <circle cx="120" cy="60" r="2" fill="#fff" opacity="0.95"/>
+    <circle cx="140" cy="55" r="2.2" fill="#fff" opacity="1"/>
+    <circle cx="160" cy="50" r="2" fill="#fff" opacity="0.95"/>
+    <!-- Connecting lines -->
+    <line x1="120" y1="60" x2="140" y2="55" stroke="#fff" stroke-width="0.3" opacity="0.3"/>
+    <line x1="140" y1="55" x2="160" y2="50" stroke="#fff" stroke-width="0.3" opacity="0.3"/>
+    <!-- Label -->
+    <text x="140" y="38" text-anchor="middle" font-family="Georgia, serif" font-size="7" fill="#aaccff" opacity="0.7">Sah (Orion)</text>
+  </g>
+  
+  <!-- Sirius star (brightest - sacred to Isis) -->
+  <g id="sirius">
+    <circle cx="200" cy="85" r="2.5" fill="#fff" opacity="1"/>
+    <circle cx="200" cy="85" r="5" fill="#aaddff" opacity="0.3"/>
+    <text x="200" y="75" text-anchor="middle" font-family="Georgia, serif" font-size="6" fill="#aaccff" opacity="0.7">Sopdet</text>
+  </g>
+  
+  <!-- Desert sand at bottom -->
+  <path d="M0 580 Q200 560 400 580 Q600 600 800 570 L800 720 L0 720 Z" fill="#c4956a"/>
+  <path d="M0 590 Q200 575 400 590 Q600 605 800 585 L800 720 L0 720 Z" fill="#d4b896"/>
+  
+  <!-- Palm trees silhouettes -->
+  <g id="palmTrees" fill="#2a3a2a" opacity="0.7">
+    <!-- Left palm -->
+    <path d="M85 540 Q80 520 85 500 L87 500 Q92 520 87 540 Z"/>
+    <path d="M86 502 Q70 485 55 490" stroke="#2a3a2a" stroke-width="3" fill="none"/>
+    <path d="M86 502 Q75 480 70 475" stroke="#2a3a2a" stroke-width="3" fill="none"/>
+    <path d="M86 502 Q95 480 110 475" stroke="#2a3a2a" stroke-width="3" fill="none"/>
+    <path d="M86 502 Q100 485 115 490" stroke="#2a3a2a" stroke-width="3" fill="none"/>
+    <!-- Right palm -->
+    <path d="M715 550 Q710 530 715 510 L717 510 Q722 530 717 550 Z"/>
+    <path d="M716 512 Q700 495 685 500" stroke="#2a3a2a" stroke-width="3" fill="none"/>
+    <path d="M716 512 Q705 490 700 485" stroke="#2a3a2a" stroke-width="3" fill="none"/>
+    <path d="M716 512 Q725 490 740 485" stroke="#2a3a2a" stroke-width="3" fill="none"/>
+    <path d="M716 512 Q730 495 745 500" stroke="#2a3a2a" stroke-width="3" fill="none"/>
+  </g>
+  
+  <!-- Pyramid shadow (depth effect) -->
+  <polygon points="400,520 680,520 750,560 400,560" fill="#1a1a2a" opacity="0.3"/>
+  
+  <!-- Small obelisks in distance -->
+  <g id="obelisks">
+    <!-- Left distant obelisk -->
+    <polygon points="140,545 145,520 150,545" fill="#8b7355" opacity="0.5"/>
+    <rect x="140" y="545" width="10" height="5" fill="#6a5a4a" opacity="0.5"/>
+    <!-- Right distant obelisk -->
+    <polygon points="655,548 660,525 665,548" fill="#8b7355" opacity="0.5"/>
+    <rect x="655" y="548" width="10" height="5" fill="#6a5a4a" opacity="0.5"/>
+  </g>
+  
+  <!-- Main Pyramid Structure (Testing Pyramid) - now 4 tiers -->
+  <g id="mainPyramid">
+    <!-- Left face of pyramid -->
+    <polygon points="400,80 120,520 400,520" fill="url(#pyramidLeft)" stroke="#8b7355" stroke-width="2"/>
+    
+    <!-- Right face of pyramid -->
+    <polygon points="400,80 680,520 400,520" fill="url(#pyramidRight)" stroke="#8b7355" stroke-width="2"/>
+    
+    <!-- Pyramid cap (capstone) - gold -->
+    <polygon points="400,80 350,160 450,160" fill="url(#goldGradient)" stroke="#b8860b" stroke-width="2"/>
+  </g>
+  
+  <!-- Horizontal tier lines -->
+  <g id="tierLines" stroke="#8b7355" stroke-width="2">
+    <!-- E2E tier line -->
+    <line x1="350" y1="160" x2="450" y2="160"/>
+    
+    <!-- Integration tier line -->
+    <line x1="275" y1="270" x2="525" y2="270"/>
+    
+    <!-- Unit tier line -->
+    <line x1="200" y1="380" x2="600" y2="380"/>
+    
+    <!-- Check layer is the base -->
+  </g>
+  
+  <!-- Realistic crescent moon with lunar maria -->
+  <g id="moon" transform="translate(680, 80)">
+    <!-- Moon glow -->
+    <circle cx="0" cy="0" r="42" fill="#f5f5dc" opacity="0.15"/>
+    <circle cx="0" cy="0" r="38" fill="#f5f5dc" opacity="0.1"/>
+    
+    <!-- Base moon surface -->
+    <circle cx="0" cy="0" r="35" fill="#e8e4d4"/>
+    
+    <!-- Lunar maria (dark patches - Sea of Tranquility, etc) -->
+    <ellipse cx="-8" cy="-5" rx="12" ry="8" fill="#c5c0b0" opacity="0.6"/>
+    <ellipse cx="5" cy="10" rx="8" ry="10" fill="#bab5a5" opacity="0.5"/>
+    <circle cx="-15" cy="12" r="6" fill="#c0bba8" opacity="0.4"/>
+    <ellipse cx="12" cy="-12" rx="5" ry="4" fill="#c8c3b3" opacity="0.35"/>
+    
+    <!-- Crater details -->
+    <circle cx="-5" cy="-18" r="4" fill="#d8d4c4" stroke="#c5c0b0" stroke-width="0.5"/>
+    <circle cx="18" cy="5" r="3" fill="#ddd9c9" stroke="#c8c3b3" stroke-width="0.5"/>
+    <circle cx="-20" cy="-8" r="2.5" fill="#e0dccf" stroke="#c5c0b0" stroke-width="0.3"/>
+    <circle cx="8" cy="22" r="2" fill="#d5d1c1" stroke="#ccc8b8" stroke-width="0.3"/>
+    <circle cx="-12" cy="20" r="1.8" fill="#dad6c6" stroke="#c8c3b3" stroke-width="0.3"/>
+    <circle cx="22" cy="-5" r="1.5" fill="#ddd9c9" stroke="#ccc8b8" stroke-width="0.3"/>
+    
+    <!-- Shadow for crescent effect (dark side of moon) -->
+    <clipPath id="moonClip">
+      <circle cx="0" cy="0" r="35"/>
+    </clipPath>
+    <circle cx="18" cy="-3" r="32" fill="url(#skyGradient)" clip-path="url(#moonClip)"/>
+    
+    <!-- Terminator edge highlight (subtle light along shadow edge) -->
+    <path d="M-8,-34 Q-15,0 -8,34" stroke="#fff" stroke-width="0.8" fill="none" opacity="0.3"/>
+    
+    <!-- Bright limb on lit side -->
+    <path d="M-30,-18 Q-38,0 -30,18" stroke="#fffef5" stroke-width="1" fill="none" opacity="0.4"/>
+  </g>
+  
+  <!-- Title cartouche (Egyptian name frame) -->
+  <g id="titleCartouche" transform="translate(400, 35)">
+    <ellipse cx="0" cy="0" rx="140" ry="22" fill="url(#goldGradient)" stroke="#b8860b" stroke-width="2"/>
+    <text x="0" y="6" text-anchor="middle" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#1a1a1a">
+      𓏏 TESTING PYRAMID 𓏏
+    </text>
+  </g>
+  
+  <!-- TIER LABELS -->
+  
+  <!-- E2E Tier (Top - slowest, fewest) -->
+  <g id="e2eTier">
+    <!-- Tier background glow -->
+    <polygon points="400,95 355,155 445,155" fill="#ffd700" opacity="0.3"/>
+    
+    <!-- Label -->
+    <text x="400" y="130" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#1a1a1a">E2E</text>
+    <text x="400" y="145" text-anchor="middle" font-family="Georgia, serif" font-size="9" fill="#4a4a4a">(~5-30s)</text>
+    
+    <!-- Hieroglyphic annotation: Eye of Horus = "see all" -->
+    <text x="480" y="130" font-size="24" fill="url(#goldGradient)">𓂀</text>
+    <text x="510" y="120" font-family="Georgia, serif" font-size="10" fill="#e8d4a8">Puppeteer</text>
+    <text x="510" y="133" font-family="Georgia, serif" font-size="10" fill="#e8d4a8">full browser</text>
+    <text x="510" y="146" font-family="Georgia, serif" font-size="9" fill="#c9a87c">real DOM</text>
+  </g>
+  
+  <!-- Integration Tier (Middle-upper) -->
+  <g id="integrationTier">
+    <!-- Tier fill -->
+    <polygon points="355,165 280,265 520,265 445,165" fill="#c9a87c" opacity="0.2"/>
+    
+    <!-- Label -->
+    <text x="400" y="210" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#1a1a1a">INTEGRATION</text>
+    <text x="400" y="225" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#4a4a4a">(~500ms-2s)</text>
+    
+    <!-- Eye of Ra (left eye - protection) -->
+    <text x="265" y="215" font-size="18" fill="#8b7355">𓁹</text>
+    
+    <!-- Hieroglyphic: English "LINK" = 𓃭𓇋𓈖𓎡 -->
+    <text x="290" y="250" font-size="12" fill="#8b7355">𓃭𓇋𓈖𓎡</text>
+    
+    <!-- Annotation -->
+    <text x="540" y="195" font-family="Georgia, serif" font-size="10" fill="#e8d4a8">Server lifecycle</text>
+    <text x="540" y="208" font-family="Georgia, serif" font-size="10" fill="#e8d4a8">HTTP responses</text>
+    <text x="540" y="221" font-family="Georgia, serif" font-size="10" fill="#e8d4a8">Port management</text>
+    <text x="540" y="234" font-family="Georgia, serif" font-size="9" fill="#c9a87c">real network</text>
+  </g>
+  
+  <!-- Unit Tier (Middle-lower) -->
+  <g id="unitTier">
+    <!-- Tier fill -->
+    <polygon points="280,275 205,375 595,375 520,275" fill="#a08060" opacity="0.15"/>
+    
+    <!-- Label -->
+    <text x="400" y="315" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#1a1a1a">UNIT TESTS</text>
+    <text x="400" y="332" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#4a4a4a">(~10-100ms)</text>
+    
+    <!-- Hieroglyphic: English "FAST" = 𓆑𓄿𓊃𓏏 -->
+    <text x="220" y="330" font-size="14" fill="#8b7355">𓆑𓄿𓊃𓏏</text>
+    <!-- Hieroglyphic: Coptic "ⲥⲟⲃⲧ" (sobt=test) = 𓊃𓍯𓃀𓏏 -->
+    <text x="555" y="330" font-size="14" fill="#8b7355">𓊃𓍯𓃀𓏏</text>
+    
+    <!-- Annotation -->
+    <text x="620" y="295" font-family="Georgia, serif" font-size="10" fill="#e8d4a8">SSR output</text>
+    <text x="620" y="308" font-family="Georgia, serif" font-size="10" fill="#e8d4a8">Control compose</text>
+    <text x="620" y="321" font-family="Georgia, serif" font-size="10" fill="#e8d4a8">No server needed</text>
+    <text x="620" y="334" font-family="Georgia, serif" font-size="9" fill="#c9a87c">pure functions</text>
+  </g>
+  
+  <!-- CHECK Tier (Base - fastest, dev-only) -->
+  <g id="checkTier">
+    <!-- Tier fill - green tint for "go" -->
+    <polygon points="205,385 125,515 675,515 595,385" fill="#4a7c59" opacity="0.2"/>
+    
+    <!-- Label -->
+    <text x="400" y="440" text-anchor="middle" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#1a1a1a">CHECK SCRIPTS</text>
+    <text x="400" y="460" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#4a4a4a">(~1-50ms • dev only)</text>
+    
+    <!-- Hieroglyphic: English "RUN" = 𓂋𓅱𓈖 -->
+    <text x="170" y="450" font-size="18" fill="#4a7c59">𓂋𓅱𓈖</text>
+    <!-- Hieroglyphic: Coptic "ⲛⲁⲛⲉ" (nane=good) = 𓈖𓄿𓈖𓂝 -->
+    <text x="600" y="450" font-size="18" fill="#4a7c59">𓈖𓄿𓈖𓂝</text>
+    
+    <!-- Lotus flowers (rebirth/purity) -->
+    <text x="280" y="490" font-size="18" fill="#4a7c59">𓆸</text>
+    <!-- Scarab beetles (rebirth/iteration) -->
+    <text x="360" y="490" font-size="20" fill="#4a7c59">𓆣</text>
+    <text x="420" y="490" font-size="20" fill="#4a7c59">𓆣</text>
+    <text x="500" y="490" font-size="18" fill="#4a7c59">𓆸</text>
+    
+    <!-- Not in test suite indicator -->
+    <text x="400" y="502" text-anchor="middle" font-family="Georgia, serif" font-size="8" font-style="italic" fill="#6a8a6a">⚡ Outside test suite • Run during development ⚡</text>
+    <text x="400" y="513" text-anchor="middle" font-family="Georgia, serif" font-size="7" fill="#5a7a5a">Some may later become regression tests</text>
+    
+    <!-- Annotation -->
+    <text x="620" y="395" font-family="Georgia, serif" font-size="9" fill="#e8d4a8">node checks/*.js</text>
+    <text x="620" y="407" font-family="Georgia, serif" font-size="9" fill="#e8d4a8">Verify it works</text>
+    <text x="620" y="419" font-family="Georgia, serif" font-size="9" fill="#e8d4a8">Fast iteration</text>
+    <text x="620" y="431" font-family="Georgia, serif" font-size="9" fill="#e8d4a8">Not automated</text>
+    <text x="620" y="443" font-family="Georgia, serif" font-size="9" fill="#e8d4a8">Human-triggered</text>
+    <text x="620" y="455" font-family="Georgia, serif" font-size="9" fill="#c9a87c">no dependencies</text>
+  </g>
+  
+  <!-- Decorative columns (Egyptian style) -->
+  <!-- LEFT COLUMN: English words in hieroglyphic script -->
+  <g id="leftColumn" transform="translate(60, 280)">
+    <!-- Column shaft -->
+    <rect x="-15" y="0" width="30" height="240" fill="url(#sandstoneGradient)" stroke="#8b7355" stroke-width="1"/>
+    <!-- Lotus capital -->
+    <path d="M-20,-10 Q0,-30 20,-10 L15,0 L-15,0 Z" fill="url(#goldGradient)" stroke="#b8860b"/>
+    <!-- Base with engraved label -->
+    <rect x="-18" y="240" width="36" height="18" fill="#a08060"/>
+    <rect x="-16" y="242" width="32" height="14" fill="#8a7050" rx="1"/>
+    <!-- Engraved text effect: shadow first, then highlight -->
+    <text x="1" y="254" text-anchor="middle" font-family="Georgia, serif" font-size="7" font-weight="bold" fill="#6a5040" letter-spacing="1">ENGLISH</text>
+    <text x="0" y="253" text-anchor="middle" font-family="Georgia, serif" font-size="7" font-weight="bold" fill="#c9b99c" letter-spacing="1">ENGLISH</text>
+    
+    <!-- English in hieroglyphics (vertical) -->
+    <!-- "TEST" = 𓏏𓂝𓊃𓏏 (T-E-S-T) -->
+    <text x="0" y="25" text-anchor="middle" font-size="14" fill="#5c4a32">𓏏</text>
+    <text x="0" y="45" text-anchor="middle" font-size="14" fill="#5c4a32">𓂝</text>
+    <text x="0" y="65" text-anchor="middle" font-size="14" fill="#5c4a32">𓊃</text>
+    <text x="0" y="85" text-anchor="middle" font-size="14" fill="#5c4a32">𓏏</text>
+    <!-- "PASS" = 𓊪𓄿𓊃𓊃 (P-A-S-S) -->
+    <text x="0" y="110" text-anchor="middle" font-size="14" fill="#4a7c59">𓊪</text>
+    <text x="0" y="130" text-anchor="middle" font-size="14" fill="#4a7c59">𓄿</text>
+    <text x="0" y="150" text-anchor="middle" font-size="14" fill="#4a7c59">𓊃</text>
+    <text x="0" y="170" text-anchor="middle" font-size="14" fill="#4a7c59">𓊃</text>
+    <!-- "CODE" = 𓎡𓍯𓂧𓂝 (K-O-D-E) -->
+    <text x="0" y="195" text-anchor="middle" font-size="14" fill="#5c4a32">𓎡</text>
+    <text x="0" y="215" text-anchor="middle" font-size="14" fill="#5c4a32">𓍯</text>
+    <text x="0" y="235" text-anchor="middle" font-size="14" fill="#5c4a32">𓂧</text>
+  </g>
+  
+  <!-- RIGHT COLUMN: Coptic words in hieroglyphic script -->
+  <g id="rightColumn" transform="translate(740, 280)">
+    <!-- Column shaft -->
+    <rect x="-15" y="0" width="30" height="240" fill="url(#sandstoneGradient)" stroke="#8b7355" stroke-width="1"/>
+    <!-- Lotus capital -->
+    <path d="M-20,-10 Q0,-30 20,-10 L15,0 L-15,0 Z" fill="url(#goldGradient)" stroke="#b8860b"/>
+    <!-- Base with engraved label -->
+    <rect x="-18" y="240" width="36" height="18" fill="#a08060"/>
+    <rect x="-16" y="242" width="32" height="14" fill="#8a7050" rx="1"/>
+    <!-- Engraved text effect: shadow first, then highlight -->
+    <text x="1" y="254" text-anchor="middle" font-family="Georgia, serif" font-size="7" font-weight="bold" fill="#6a5040" letter-spacing="1">COPTIC</text>
+    <text x="0" y="253" text-anchor="middle" font-family="Georgia, serif" font-size="7" font-weight="bold" fill="#c9b99c" letter-spacing="1">COPTIC</text>
+    
+    <!-- Coptic in hieroglyphics (vertical) -->
+    <!-- "ⲥⲟⲃⲧ" (sobt=test) = 𓊃𓍯𓃀𓏏 -->
+    <text x="0" y="25" text-anchor="middle" font-size="14" fill="#5c4a32">𓊃</text>
+    <text x="0" y="45" text-anchor="middle" font-size="14" fill="#5c4a32">𓍯</text>
+    <text x="0" y="65" text-anchor="middle" font-size="14" fill="#5c4a32">𓃀</text>
+    <text x="0" y="85" text-anchor="middle" font-size="14" fill="#5c4a32">𓏏</text>
+    <!-- "ⲛⲁⲛⲉ" (nane=good) = 𓈖𓄿𓈖𓂝 -->
+    <text x="0" y="110" text-anchor="middle" font-size="14" fill="#4a7c59">𓈖</text>
+    <text x="0" y="130" text-anchor="middle" font-size="14" fill="#4a7c59">𓄿</text>
+    <text x="0" y="150" text-anchor="middle" font-size="14" fill="#4a7c59">𓈖</text>
+    <text x="0" y="170" text-anchor="middle" font-size="14" fill="#4a7c59">𓂝</text>
+    <!-- "ϩⲱⲃ" (hob=work) = 𓉔𓍯𓃀 -->
+    <text x="0" y="195" text-anchor="middle" font-size="14" fill="#5c4a32">𓉔</text>
+    <text x="0" y="215" text-anchor="middle" font-size="14" fill="#5c4a32">𓍯</text>
+    <text x="0" y="235" text-anchor="middle" font-size="14" fill="#5c4a32">𓃀</text>
+  </g>
+  
+  <!-- Winged sun disk (top decoration) - improved with feather details -->
+  <g id="wingedSun" transform="translate(400, 65)">
+    <!-- Outer wing feathers -->
+    <path d="M-120,5 Q-80,-8 -30,0" stroke="url(#goldGradient)" stroke-width="2" fill="none"/>
+    <path d="M-115,10 Q-75,-3 -30,2" stroke="url(#goldGradient)" stroke-width="1.5" fill="none"/>
+    <path d="M120,5 Q80,-8 30,0" stroke="url(#goldGradient)" stroke-width="2" fill="none"/>
+    <path d="M115,10 Q75,-3 30,2" stroke="url(#goldGradient)" stroke-width="1.5" fill="none"/>
+    <!-- Main wings -->
+    <path d="M-100,0 Q-60,-15 -25,0 L-25,5 Q-60,-10 -100,5 Z" fill="url(#goldGradient)" stroke="#b8860b"/>
+    <path d="M100,0 Q60,-15 25,0 L25,5 Q60,-10 100,5 Z" fill="url(#goldGradient)" stroke="#b8860b"/>
+    <!-- Inner wing detail -->
+    <path d="M-70,-5 Q-50,-12 -30,-2" stroke="#daa520" stroke-width="1" fill="none"/>
+    <path d="M70,-5 Q50,-12 30,-2" stroke="#daa520" stroke-width="1" fill="none"/>
+    <!-- Sun disk with glow -->
+    <circle cx="0" cy="0" r="18" fill="#ff6600" opacity="0.3"/>
+    <circle cx="0" cy="0" r="15" fill="#ff4500" stroke="#b8860b" stroke-width="2"/>
+    <circle cx="0" cy="0" r="8" fill="#ffcc00" opacity="0.5"/>
+    <!-- Uraeus (cobra) -->
+    <path d="M0,-15 Q-4,-22 -2,-28 Q0,-32 2,-28 Q4,-22 0,-15" fill="url(#goldGradient)" stroke="#b8860b"/>
+    <!-- Cobra head detail -->
+    <circle cx="0" cy="-30" r="2" fill="#ff4500"/>
+  </g>
+  
+  <!-- LEGEND (Papyrus scroll style) -->
+  <g id="legend" transform="translate(100, 575)">
+    <!-- Scroll background -->
+    <rect x="0" y="0" width="600" height="115" rx="5" fill="url(#papyrusTexture)" stroke="#8b7355" stroke-width="2"/>
+    <!-- Rolled edges -->
+    <ellipse cx="0" cy="57" rx="8" ry="57" fill="#c9a87c" stroke="#8b7355"/>
+    <ellipse cx="600" cy="57" rx="8" ry="57" fill="#c9a87c" stroke="#8b7355"/>
+    
+    <!-- Legend title -->
+    <text x="300" y="16" text-anchor="middle" font-family="Georgia, serif" font-size="12" font-weight="bold" fill="#5c4a32">
+      𓎟 THE TESTING LAWS 𓎟
+    </text>
+    
+    <!-- KEY EXPLANATION ROW -->
+    <g transform="translate(20, 32)">
+      <!-- Bubbles mean -->
+      <circle cx="10" cy="0" r="8" fill="#c9a87c" stroke="#8b7355" stroke-width="1"/>
+      <text x="10" y="3" text-anchor="middle" font-size="7" fill="#1a1a1a">N</text>
+      <text x="25" y="3" font-family="Georgia, serif" font-size="8" fill="#5c4a32">= № of tests</text>
+      
+      <!-- Timing in parentheses -->
+      <text x="100" y="3" font-family="Georgia, serif" font-size="8" fill="#5c4a32">(~time) = typical execution</text>
+      
+      <!-- Divider -->
+      <text x="230" y="3" fill="#8b7355">│</text>
+      
+      <!-- Tier explanation -->
+      <text x="245" y="3" font-family="Georgia, serif" font-size="8" fill="#5c4a32">Higher = slower, fewer  •  Lower = faster, more</text>
+    </g>
+    
+    <!-- Tier legend row -->
+    <g transform="translate(20, 55)">
+      <!-- E2E -->
+      <rect x="-5" y="-5" width="10" height="10" fill="url(#goldGradient)" stroke="#b8860b"/>
+      <text x="12" y="3" font-family="Georgia, serif" font-size="9" fill="#4a4a4a">E2E</text>
+      <text x="12" y="12" font-family="Consolas" font-size="7" fill="#888">~30s</text>
+      
+      <!-- Integration -->
+      <g transform="translate(70, 0)">
+        <rect x="-5" y="-5" width="10" height="10" fill="#c9a87c" stroke="#8b7355"/>
+        <text x="12" y="3" font-family="Georgia, serif" font-size="9" fill="#4a4a4a">Integration</text>
+        <text x="12" y="12" font-family="Consolas" font-size="7" fill="#888">~2s</text>
+      </g>
+      
+      <!-- Unit -->
+      <g transform="translate(170, 0)">
+        <rect x="-6" y="-6" width="12" height="12" fill="#a08060" stroke="#6a5a4a"/>
+        <text x="12" y="3" font-family="Georgia, serif" font-size="9" fill="#4a4a4a">Unit (70%)</text>
+        <text x="12" y="12" font-family="Consolas" font-size="7" fill="#888">~50ms</text>
+      </g>
+      
+      <!-- Check -->
+      <g transform="translate(270, 0)">
+        <rect x="-7" y="-7" width="14" height="14" fill="#4a7c59" stroke="#3a5c49"/>
+        <text x="14" y="-1" font-family="Georgia, serif" font-size="9" fill="#4a4a4a">Check ⚡</text>
+        <text x="14" y="9" font-family="Consolas" font-size="7" fill="#888">~5ms (manual)</text>
+      </g>
+      
+      <!-- Key symbols -->
+      <g transform="translate(390, 0)">
+        <text x="0" y="3" font-size="14" fill="#c9a87c">𓂀</text>
+        <text x="20" y="3" font-family="Georgia, serif" font-size="8" fill="#6a6a6a">= see all</text>
+        <text x="70" y="3" font-size="14" fill="#4a7c59">𓆣</text>
+        <text x="90" y="3" font-family="Georgia, serif" font-size="8" fill="#6a6a6a">= iteration</text>
+        <text x="145" y="3" font-size="14" fill="url(#goldGradient)">☥</text>
+        <text x="160" y="3" font-family="Georgia, serif" font-size="8" fill="#6a6a6a">= stable</text>
+      </g>
+    </g>
+    
+    <!-- Divider line -->
+    <line x1="20" y1="72" x2="580" y2="72" stroke="#c9a87c" stroke-width="1" opacity="0.5"/>
+    
+    <!-- Decorative hieroglyphic pattern -->
+    <text x="300" y="88" text-anchor="middle" font-size="12" fill="#8b7355" opacity="0.6">
+      𓂀 𓆣 𓆸 𓆃 𓊽 𓆃 𓆸 𓆣 𓂀
+    </text>
+    
+    <!-- Djed pillars (stability) -->
+    <text x="15" y="105" font-size="16" fill="#8b7355">𓊽</text>
+    <text x="575" y="105" font-size="16" fill="#8b7355">𓊽</text>
+  </g>
+  
+  <!-- JSGUI3 specific annotations (left side box) -->
+  <g id="jsgui3Notes" transform="translate(15, 100)">
+    <rect x="0" y="0" width="130" height="140" rx="5" fill="url(#papyrusTexture)" stroke="#8b7355" opacity="0.9"/>
+    
+    <text x="65" y="16" text-anchor="middle" font-family="Georgia, serif" font-size="10" font-weight="bold" fill="#5c4a32">jsgui3 Commands</text>
+    
+    <!-- Check (fastest - dev) -->
+    <text x="8" y="34" font-family="Consolas, monospace" font-size="8" fill="#4a7c59">node check.js</text>
+    <text x="8" y="46" font-family="Georgia, serif" font-size="7" fill="#6a8a6a">→ ~1-50ms ⚡</text>
+    
+    <!-- Unit -->
+    <text x="8" y="62" font-family="Consolas, monospace" font-size="8" fill="#4a4a4a">npm run check</text>
+    <text x="8" y="74" font-family="Georgia, serif" font-size="7" fill="#6a6a6a">→ ~10-100ms</text>
+    
+    <!-- Integration/E2E -->
+    <text x="8" y="90" font-family="Consolas, monospace" font-size="8" fill="#4a4a4a">npm run check:e2e</text>
+    <text x="8" y="102" font-family="Georgia, serif" font-size="7" fill="#6a6a6a">→ ~5-30s (browser)</text>
+    
+    <!-- Full suite -->
+    <text x="8" y="118" font-family="Consolas, monospace" font-size="8" fill="#4a4a4a">npm test</text>
+    <text x="8" y="130" font-family="Georgia, serif" font-size="7" fill="#6a6a6a">→ Jest suite (CI)</text>
+  </g>
+  
+  <!-- Test count indicators on pyramid with clear labels -->
+  <g id="testCounts">
+    <!-- TESTS HEADER -->
+    <text x="545" y="85" text-anchor="middle" font-family="Georgia, serif" font-size="9" font-weight="bold" fill="#ffd700">№ TESTS</text>
+    
+    <!-- E2E count bubble -->
+    <g id="e2eCount">
+      <circle cx="460" cy="120" r="16" fill="#ffd700" stroke="#b8860b" stroke-width="2"/>
+      <text x="460" y="124" text-anchor="middle" font-family="Georgia, serif" font-size="11" font-weight="bold" fill="#1a1a1a">1-3</text>
+      <!-- tiny label -->
+      <text x="460" y="140" text-anchor="middle" font-family="Georgia, serif" font-size="6" fill="#ffd700">tests</text>
+    </g>
+    
+    <!-- Integration count bubble -->
+    <g id="integrationCount">
+      <circle cx="510" cy="230" r="16" fill="#c9a87c" stroke="#8b7355" stroke-width="2"/>
+      <text x="510" y="234" text-anchor="middle" font-family="Georgia, serif" font-size="11" font-weight="bold" fill="#1a1a1a">5-10</text>
+      <text x="510" y="250" text-anchor="middle" font-family="Georgia, serif" font-size="6" fill="#c9a87c">tests</text>
+    </g>
+    
+    <!-- Unit count bubble -->
+    <g id="unitCount">
+      <circle cx="560" cy="340" r="18" fill="#a08060" stroke="#6a5a4a" stroke-width="2"/>
+      <text x="560" y="344" text-anchor="middle" font-family="Georgia, serif" font-size="12" font-weight="bold" fill="#1a1a1a">70%</text>
+      <text x="560" y="362" text-anchor="middle" font-family="Georgia, serif" font-size="6" fill="#c9a87c">of suite</text>
+    </g>
+    
+    <!-- Check count bubble (infinity - run as needed) -->
+    <g id="checkCount">
+      <circle cx="610" cy="460" r="20" fill="#4a7c59" stroke="#3a5c49" stroke-width="2"/>
+      <text x="610" y="466" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#fff">∞</text>
+      <text x="610" y="484" text-anchor="middle" font-family="Georgia, serif" font-size="6" fill="#8ab89a">as needed</text>
+    </g>
+  </g>
+  
+  <!-- Ankh symbols (life/reliability) with djed pillars (stability) -->
+  <text x="310" y="545" font-size="20" fill="#8b7355">𓊽</text>
+  <text x="345" y="548" font-size="26" fill="url(#goldGradient)">☥</text>
+  <text x="385" y="538" font-size="14" fill="#c9a87c">𓆣</text>
+  <text x="430" y="548" font-size="26" fill="url(#goldGradient)">☥</text>
+  <text x="465" y="545" font-size="20" fill="#8b7355">𓊽</text>
+  
+  <!-- Bottom hieroglyphic border -->
+  <g id="bottomBorder" transform="translate(100, 697)">
+    <rect x="0" y="0" width="600" height="22" fill="#2a2a4a" opacity="0.8"/>
+    <!-- English "TEST PASS RUN CODE" in hieroglyphics -->
+    <text x="300" y="15" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="url(#goldGradient)" letter-spacing="3">
+      𓏏𓂝𓊃𓏏 𓊪𓄿𓊃𓊃 𓂋𓅱𓈖 𓎡𓍯𓂧𓂝 ☥ 𓊃𓍯𓃀𓏏 𓈖𓄿𓈖𓂝 𓉔𓍯𓃀
+    </text>
+  </g>
+  
+  <!-- Subtitle -->
+  <text x="400" y="565" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#c9a87c">
+    jsgui3 AGI Singularity Starter Kit — Testing Strategy
+  </text>
+  
+</svg>
