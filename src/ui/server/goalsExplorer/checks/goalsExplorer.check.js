@@ -115,7 +115,9 @@ function runCheck() {
   console.log(`   ✓ Has generate button: ${detailNewHtml.includes('Generate with OpenAI')}`);
   
   // Write sample output
-  const outputPath = path.join(__dirname, "../../../../goals-explorer.check.html");
+  const outputDir = path.join(process.cwd(), "checks", "html-outputs");
+  fs.mkdirSync(outputDir, { recursive: true });
+  const outputPath = path.join(outputDir, "goals-explorer.check.html");
   
   // Build full page for inspection
   const docContext = new jsgui.Page_Context();

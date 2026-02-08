@@ -1,6 +1,6 @@
 "use strict";
 
-const { runBrowserScenario, closeShared } = require('../../../shared/utils/browserHarness");
+const { runBrowserScenario, closeShared } = require("../../../shared/utils/browserHarness");
 
 const scenarios = [
 	{

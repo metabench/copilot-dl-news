@@ -109,28 +109,22 @@ The branch name doesn't reflect the work done. Consider:
 
 ### Temporary/Debug Files at Root
 
-These should probably be gitignored or removed:
+These were originally root-level files and have now been relocated for clarity:
 
 ```
-check_geo_data.js
-check_more_tables.js  
-check_schema_details.js
-check_specific_tables.js
-tmp_check_es.js
-tmp_check_langs.js
-tmp_check_urls.js
-tmp_wapo_crawl.txt
-nul
-data-explorer.check.html
+scripts/adhoc/check_geo_data.js
+scripts/adhoc/check_more_tables.js
+scripts/adhoc/check_schema_details.js
+scripts/adhoc/check_specific_tables.js
+tmp/notes/tmp_wapo_crawl.txt
 ```
 
 ### Recommendation
 
 ```bash
 # Add to .gitignore
-echo "check_*.js" >> .gitignore
-echo "tmp_*.js" >> .gitignore
-echo "tmp_*.txt" >> .gitignore
+echo "scripts/adhoc/*.js" >> .gitignore
+echo "tmp/notes/*.txt" >> .gitignore
 echo "*.check.html" >> .gitignore
 echo "nul" >> .gitignore
 ```

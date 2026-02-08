@@ -7,7 +7,7 @@ const { normalizeDomain, applyScheme, extractTitle } = require('../../shared/uti
 const { computeAgeMs, extractPredictionSignals, composeCandidateSignals, createFetchRow } = require('../../shared/utils/dataUtils');
 const { summarizeDsplPatterns, assessDomainReadiness, selectPlaces, selectTopics, collectHubChanges } = require('../../shared/utils/analysisUtils');
 const { createBatchSummary, aggregateSummaryInto, createFailedDomainSummary } = require('../../shared/utils/summaryUtils');
-const { fetchUrl } = require('../../shared/utils/httpUtils');
+const { fetchUrl } = require('./utils/httpUtils');
 const { upsertAbsentPlacePageMapping } = require('../../data/db/sqlite/v1/queries/placePageMappings');
 
 const { CRAWL_EVENT_TYPES, SEVERITY_LEVELS, createTelemetryEvent } = require('../../core/crawler/telemetry');

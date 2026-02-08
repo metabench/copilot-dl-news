@@ -116,7 +116,7 @@ async function runCli() {
   const args = parser.parse(process.argv);
   const dirs = Array.isArray(args.dir) ? args.dir : [args.dir].filter(Boolean);
 
-  const resolvedDirs = (dirs.length ? dirs : ['tmp', 'tmp-debug', 'testlogs', 'screenshots', 'analysis-charts', 'data'])
+  const resolvedDirs = (dirs.length ? dirs : ['tmp', 'tmp/debug', 'testlogs', 'screenshots', 'build/analysis-charts', 'data'])
     .map((d) => (path.isAbsolute(d) ? d : path.resolve(process.cwd(), d)));
 
   const options = {

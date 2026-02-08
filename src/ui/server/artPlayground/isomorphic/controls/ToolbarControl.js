@@ -1,7 +1,7 @@
 "use strict";
 
 const jsgui = require("../jsgui");
-const { ListenerBag } = require('../../../../../shared/utils/listenerBag");
+const { ListenerBag } = require("../../../../utils/listenerBag");
 const { Control, String_Control } = jsgui;
 
 /**

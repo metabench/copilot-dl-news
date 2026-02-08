@@ -7,6 +7,16 @@ owner: architecture
 
 # Project Overview
 
+## Public Entry Points & Exports
+
+Use these as the stable starting points for programmatic usage and system entry:
+
+- `src/index.js` - Public module exports (crawler, UI helpers, API streaming/graphql, cache helpers)
+- `src/crawl.js` - Main crawler CLI (also exports `NewsCrawler` and CLI helpers)
+- `src/ui/server/dataExplorerServer.js` - Primary UI server
+- `src/api/v1/gateway.js` - REST API gateway
+- `src/background/workers/` - Background task workers
+
 ## Legacy UI
 
 - Styles: `src/deprecated-ui/express/public/styles/*.scss`

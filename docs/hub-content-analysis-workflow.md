@@ -14,7 +14,7 @@ This workflow enables AI agents to systematically analyze suspect place and topi
 **CLI Commands**:
 ```bash
 # Get hubs with validation issues
-node analyze-hub-quality.js
+node scripts/adhoc/analyze-hub-quality.js
 
 # Query specific suspect hubs from database
 node tools/db-query.js "SELECT url, place_slug, place_kind, title FROM place_hubs WHERE title IS NULL OR url LIKE '%/live/%' OR url LIKE '%/interactive/%' LIMIT 10"
@@ -479,7 +479,7 @@ if (!validation.isValid) {
 ### Workflow Execution Checklist
 
 **Pre-Analysis**:
-- [ ] Run `analyze-hub-quality.js` to identify suspect hubs
+- [ ] Run `scripts/adhoc/analyze-hub-quality.js` to identify suspect hubs
 - [ ] Select 5-10 diverse suspect URLs for analysis
 - [ ] Ensure test URLs cover different hub types (country, city, topic, place-topic)
 

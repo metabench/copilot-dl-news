@@ -100,11 +100,11 @@ function defaultTargetConfig(target) {
       textOnly: false
     },
     'analysis-charts': {
-      root: path.join(root, 'analysis-charts'),
+      root: path.join(root, 'build', 'analysis-charts'),
       textOnly: false
     },
     'tmp-debug': {
-      root: path.join(root, 'tmp-debug'),
+      root: path.join(root, 'tmp', 'debug'),
       textOnly: true
     }
   };
@@ -474,7 +474,7 @@ async function searchArchives({ manifestPath, archiveDir, query, limit, fmt, qui
 async function runCli() {
   const parser = new CliArgumentParser('artifact-archive', 'Archive large local artifacts into ZIP buckets (dry-run by default).', '1.0.0');
   parser
-    .add('--target <name>', 'Preset target: testlogs|screenshots|analysis-charts|tmp-debug', '')
+    .add('--target <name>', 'Preset target: testlogs|screenshots|analysis-charts|tmp-debug (tmp/debug)', '')
     .add('--root <path>', 'Root directory to archive (overrides --target)', '')
     .add('--archive-dir <path>', 'Archive directory (default: <root>/archive)', '')
     .add('--bucket <mode>', 'Bucket mode: month|day', DEFAULT_BUCKET)

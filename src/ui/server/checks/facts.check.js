@@ -70,7 +70,9 @@ function main() {
     });
 
     // Save check output
-    const outputPath = path.join(__dirname, "..", "..", "..", "..", "facts.check.html");
+      const outputDir = path.join(process.cwd(), "checks", "html-outputs");
+      fs.mkdirSync(outputDir, { recursive: true });
+      const outputPath = path.join(outputDir, "facts.check.html");
     fs.writeFileSync(outputPath, html, "utf8");
     console.log(`   ✓ Saved check HTML to: ${path.relative(process.cwd(), outputPath)}`);
     console.log();

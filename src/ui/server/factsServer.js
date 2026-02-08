@@ -30,8 +30,8 @@ const compression = require("compression");
 const { spawn } = require("child_process");
 const jsgui = require("jsgui3-html");
 
-const { openNewsDb } = require('../../data/db/dbAccess");
-const { findProjectRoot } = require('../../shared/utils/project-root");
+const { openNewsDb } = require("../../data/db/dbAccess");
+const { findProjectRoot } = require("../../shared/utils/project-root");
 const { buildLuxuryObsidianCss } = require("../styles/luxuryObsidianCss");
 const { FactsUrlListControl, formatCount, formatDateTime } = require("../controls/FactsUrlList");
 const { UrlFactsPopup } = require("../controls/UrlFactsPopup");
@@ -40,7 +40,7 @@ const { UrlFactsPopup } = require("../controls/UrlFactsPopup");
 const {
   selectUrlPage,
   countUrls
-} = require('../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
+} = require("../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
 
 const StringControl = jsgui.String_Control;
 

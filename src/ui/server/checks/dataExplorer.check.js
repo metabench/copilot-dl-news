@@ -5,7 +5,7 @@ const path = require("path");
 const net = require("net");
 const { spawnSync } = require("child_process");
 
-const { openNewsDb } = require('../../../data/db/dbAccess");
+const { openNewsDb } = require("../../../data/db/dbAccess");
 const { findProjectRoot } = require('../../../shared/utils/project-root');
 const { renderHtml, resolveDbPath } = require("../../render-url-table");
 const { DEFAULT_PAGE_SIZE, renderUrlListingView, DATA_VIEWS } = require("../dataExplorerServer");
@@ -65,6 +65,8 @@ function assertServerStarts({ port, dbPath }) {
 }
 
 async function run() {
+  const outputDir = path.join(process.cwd(), "checks", "html-outputs");
+  fs.mkdirSync(outputDir, { recursive: true });
   const dbPath = resolveDbPath();
   const projectRoot = findProjectRoot(__dirname);
   const relativeDb = path.relative(projectRoot, dbPath) || path.basename(dbPath);
@@ -93,7 +95,7 @@ async function run() {
         clientScriptPath: "/assets/ui-client.js"
       }
     );
-    const listingTarget = path.join(process.cwd(), "data-explorer.urls.check.html");
+    const listingTarget = path.join(outputDir, "data-explorer.urls.check.html");
     fs.writeFileSync(listingTarget, listingHtml, "utf8");
     console.log(`Saved Data Explorer Listing preview to ${listingTarget}`);
 
@@ -125,7 +127,7 @@ async function run() {
           clientScriptPath: "/assets/ui-client.js"
         }
       );
-      const dashboardTarget = path.join(process.cwd(), "data-explorer.dashboard.check.html");
+      const dashboardTarget = path.join(outputDir, "data-explorer.dashboard.check.html");
       fs.writeFileSync(dashboardTarget, dashboardHtml, "utf8");
       console.log(`Saved Data Explorer Dashboard preview to ${dashboardTarget}`);
     }
@@ -154,7 +156,7 @@ async function run() {
           clientScriptPath: "/assets/ui-client.js"
         }
       );
-      const decisionsTarget = path.join(process.cwd(), "data-explorer.decisions.check.html");
+      const decisionsTarget = path.join(outputDir, "data-explorer.decisions.check.html");
       fs.writeFileSync(decisionsTarget, decisionsHtml, "utf8");
       console.log(`Saved Data Explorer Decisions preview to ${decisionsTarget}`);
     }

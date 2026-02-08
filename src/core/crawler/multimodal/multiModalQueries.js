@@ -13,7 +13,7 @@ function resolveMultiModalQueries(db) {
 
   const raw = db.db && typeof db.db.prepare === "function" ? db.db : db;
   if (raw && typeof raw.prepare === "function") {
-    const { createMultiModalCrawlQueries } = require('../../../data/db/sqlite/v1/queries/multiModalCrawl");
+    const { createMultiModalCrawlQueries } = require("../../../data/db/sqlite/v1/queries/multiModalCrawl");
     return createMultiModalCrawlQueries(raw);
   }
 

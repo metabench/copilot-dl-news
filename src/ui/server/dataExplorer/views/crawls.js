@@ -8,7 +8,7 @@
  * @module src/ui/server/dataExplorer/views/crawls
  */
 
-const { listRecentCrawls } = require('../../../../data/db/sqlite/v1/queries/ui/crawls");
+const { listRecentCrawls } = require("../../../../data/db/sqlite/v1/queries/ui/crawls");
 const {
   buildCrawlJobColumns,
   buildCrawlJobRows

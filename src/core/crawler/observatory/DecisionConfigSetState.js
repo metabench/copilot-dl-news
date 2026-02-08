@@ -1,6 +1,6 @@
 "use strict";
 
-const { withNewsDb } = require('../../../data/db/dbAccess");
+const { withNewsDb } = require("../../../data/db/dbAccess");
 
 const ACTIVE_SET_KEY = "decisionConfigSet.activeSlug";
 

@@ -7,7 +7,7 @@
  */
 
 const path = require('path');
-const { resolveBetterSqliteHandle } = require('../../shared/utils/dashboardModule');
+const { resolveBetterSqliteHandle } = require('../../utils/dashboardModule');
 
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'news.db');
 

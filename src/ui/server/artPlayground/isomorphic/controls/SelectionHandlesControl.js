@@ -2,7 +2,7 @@
 
 const jsgui = require("../jsgui");
 const { Control } = jsgui;
-const { ListenerBag } = require('../../../../../shared/utils/listenerBag");
+const { ListenerBag } = require("../../../../utils/listenerBag");
 
 const HANDLE_SIZE = 8;
 const POSITIONS = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];

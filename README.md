@@ -105,7 +105,8 @@ src/
 ```
 
 **Key Entry Points**:
-- `src/crawl.js` - Main crawler CLI
+- `src/index.js` - Public module exports for programmatic usage
+- `src/crawl.js` - Main crawler CLI (also exports `NewsCrawler` and CLI helpers)
 - `src/ui/server/dataExplorerServer.js` - Primary UI application
 - `src/api/v1/gateway.js` - API gateway
 - `src/background/workers/` - Background task workers
@@ -525,8 +526,10 @@ The legacy `src/analyse-pages.js` now prints a deprecation warning and forwards 
 
 ### Programmatic Usage
 
+Prefer the public module exports from `src/index.js` when embedding the crawler or UI helpers.
+
 ```javascript
-const NewsCrawler = require('./src/crawl.js');
+const { NewsCrawler } = require('./src');
 
 const crawler = new NewsCrawler('https://www.theguardian.com', {
   rateLimitMs: 2000,  // 2 seconds between requests
@@ -1574,6 +1577,7 @@ The project includes **extensive documentation** organized by category:
 - **[docs/COMMAND_EXECUTION_GUIDE.md](docs/COMMAND_EXECUTION_GUIDE.md)** - Server commands and process management
 - **[docs/TESTING_QUICK_REFERENCE.md](docs/TESTING_QUICK_REFERENCE.md)** - Testing commands and patterns
 - **[docs/DATABASE_QUICK_REFERENCE.md](docs/DATABASE_QUICK_REFERENCE.md)** - Database operations reference
+- **[docs/organization/WORKSPACE_STRUCTURE.md](docs/organization/WORKSPACE_STRUCTURE.md)** - Orientation overview for directories, documentation clusters, and tooling rituals
 
 ### Architecture & Design
 - **[docs/API_ENDPOINT_REFERENCE.md](docs/API_ENDPOINT_REFERENCE.md)** - Complete API endpoint documentation

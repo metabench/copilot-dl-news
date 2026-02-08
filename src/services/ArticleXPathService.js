@@ -4,7 +4,7 @@ const path = require("path");
 const cheerio = require("cheerio");
 
 const { ArticleXPathAnalyzer } = require("../shared/utils/ArticleXPathAnalyzer");
-const { extractDomain, loadDxplLibrary, getDxplForDomain } = require('./shared/dxpl");
+const { extractDomain, loadDxplLibrary, getDxplForDomain } = require("./shared/dxpl");
 
 const DEFAULT_MAX_PATTERNS_PER_DOMAIN = 6;
 const DEFAULT_PRELOAD_LIMIT = 25;

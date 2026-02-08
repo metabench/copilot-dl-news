@@ -65,7 +65,7 @@ screenshots/
 .github/agentbackups/
 
 # Analysis charts (generated outputs)
-analysis-charts/
+build/analysis-charts/
 
 # Generated stylesheets (built from Sass)
 src/ui/express/public/ui.css
@@ -79,6 +79,7 @@ src/ui/express/public/assets/**/*.js
 *.db-wal
 *.db
 test-failure-summary.json
+testlogs/failure-summary.json
 test-timing-report.json
 
 package-lock.json
@@ -89,7 +90,10 @@ server.err
 server.out
 server_*.txt
 
-# Root-level data snapshots (should use data/ directory)
+# Data snapshots (inputs/exports used by ad hoc scripts)
+data/snapshots/*.json
+
+# Root-level data snapshots (legacy guard)
 vnic*.json
 remote_vnics.json
 sl_backup.json
@@ -97,6 +101,10 @@ sl_update.json
 all_sl.json
 subnets.json
 
+# Deployment artifacts
+deploy/artifacts/
+
 # Check HTML outputs (moved to checks/html-outputs/)
 /*.check.html
 /*.check.json
+checks/html-outputs/*.json

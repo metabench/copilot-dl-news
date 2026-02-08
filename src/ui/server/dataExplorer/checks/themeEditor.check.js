@@ -4,7 +4,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const { openNewsDb } = require('../../../../data/db/dbAccess");
+const { openNewsDb } = require("../../../../data/db/dbAccess");
 const { findProjectRoot } = require('../../../../shared/utils/project-root');
 const { renderHtml, resolveDbPath } = require("../../../render-url-table");
 const { buildNavLinks } = require("../../navigation");
@@ -48,7 +48,9 @@ function run() {
     assert(html.includes("Theme Editor"), "should render title");
     assert(html.includes("data-theme-json"), "should render config textarea");
 
-    const target = path.join(process.cwd(), "data-explorer.theme-editor.check.html");
+    const outputDir = path.join(process.cwd(), "checks", "html-outputs");
+    fs.mkdirSync(outputDir, { recursive: true });
+    const target = path.join(outputDir, "data-explorer.theme-editor.check.html");
     fs.writeFileSync(target, html, "utf8");
     console.log(`Saved Theme Editor preview to ${target}`);
     console.log("✓ Theme Editor check passed");

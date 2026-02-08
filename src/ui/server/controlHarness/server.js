@@ -13,7 +13,7 @@ const express = require("express");
 const { Command } = require("commander");
 
 const jsgui = require("jsgui3-html");
-const { wrapServerForCheck } = require('../utils/serverStartupCheck");
+const { wrapServerForCheck } = require("../utils/serverStartupCheck");
 
 const { CounterControl } = require("./isomorphic/controls/CounterControl");
 

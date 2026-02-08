@@ -19,7 +19,9 @@ const { createExampleTree } = require("../isomorphic/model/DecisionTree");
 const { ConnectionPointType } = require("../isomorphic/controls/ConnectionPointControl");
 const { DecisionTreeControl } = require("../isomorphic/controls/DecisionTreeControl");
 
-const OUTPUT_PATH = path.join(__dirname, "..", "..", "..", "..", "..", "decision-tree-viewer.check.html");
+const OUTPUT_DIR = path.join(process.cwd(), "checks", "html-outputs");
+fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+const OUTPUT_PATH = path.join(OUTPUT_DIR, "decision-tree-viewer.check.html");
 
 let passed = 0;
 let failed = 0;

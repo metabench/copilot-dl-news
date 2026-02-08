@@ -19,7 +19,7 @@ const HEAVY_DIRS = new Set([
   "data",
   "screenshots",
   "tmp",
-  "tmp-debug",
+  "tmp/debug",
   "testlogs",
   "migration-temp",
   "migration-export",

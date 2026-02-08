@@ -16,16 +16,16 @@ const compression = require("compression");
 const jsgui = require("jsgui3-html");
 const { spawn } = require("child_process");
 
-const { TelemetryIntegration } = require('../../core/crawler/telemetry/TelemetryIntegration");
-const { createMcpLogger } = require('./utils/mcpLogger");
+const { TelemetryIntegration } = require("../../core/crawler/telemetry/TelemetryIntegration");
+const { createMcpLogger } = require("../../shared/utils/mcpLogger");
 
 const log = createMcpLogger.uiServer('data-explorer');
 
 // PID file for detached mode management
 const PID_FILE = path.join(process.cwd(), "tmp", ".data-explorer.pid");
 
-const { openNewsDb } = require('../../data/db/dbAccess");
-const { findProjectRoot } = require('../../shared/utils/project-root');
+const { openNewsDb } = require("../../data/db/dbAccess");
+const { findProjectRoot } = require("../../shared/utils/project-root");
 const {
   selectUrlPage,
   selectUrlPageByHost,
@@ -42,38 +42,38 @@ const {
   countFetchedUrlsFiltered,
   normalizeHostMode,
   parseHosts
-} = require('../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
+} = require("../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
 const {
   getArticleCount,
   getFetchCountDirect,
   getFetchCountViaJoin
-} = require('../../data/db/sqlite/v1/queries/ui/domainSummary");
-const { selectDomainCountsByHosts } = require('../../data/db/sqlite/v1/queries/ui/domainCounts");
+} = require("../../data/db/sqlite/v1/queries/ui/domainSummary");
+const { selectDomainCountsByHosts } = require("../../data/db/sqlite/v1/queries/ui/domainCounts");
 const {
   selectDomainPage,
   countDomains,
   normalizeSortColumn,
   normalizeSortDirection
-} = require('../../data/db/sqlite/v1/queries/ui/domainListing");
-const { listRecentCrawls } = require('../../data/db/sqlite/v1/queries/ui/crawls");
-const { listRecentErrors } = require('../../data/db/sqlite/v1/queries/ui/errors");
+} = require("../../data/db/sqlite/v1/queries/ui/domainListing");
+const { listRecentCrawls } = require("../../data/db/sqlite/v1/queries/ui/crawls");
+const { listRecentErrors } = require("../../data/db/sqlite/v1/queries/ui/errors");
 const {
   listPlaceHubs,
   countPlaceHubs,
   getPlaceHubHosts,
   getPlaceHubsByHost,
   getPlaceHubsByKind
-} = require('../../data/db/sqlite/v1/queries/ui/placeHubs");
-const { selectUrlById, selectFetchHistory, selectFetchById } = require('../../data/db/sqlite/v1/queries/ui/urlDetails");
-const { selectHostSummary, selectHostDownloads } = require('../../data/db/sqlite/v1/queries/ui/domainDetails");
-const { listConfiguration } = require('../../data/db/sqlite/v1/queries/ui/configuration");
+} = require("../../data/db/sqlite/v1/queries/ui/placeHubs");
+const { selectUrlById, selectFetchHistory, selectFetchById } = require("../../data/db/sqlite/v1/queries/ui/urlDetails");
+const { selectHostSummary, selectHostDownloads } = require("../../data/db/sqlite/v1/queries/ui/domainDetails");
+const { listConfiguration } = require("../../data/db/sqlite/v1/queries/ui/configuration");
 const {
   listClassificationsWithCounts,
   getClassificationByName,
   getDocumentsForClassification,
   countDocumentsForClassification,
   getRandomDocumentsForClassification
-} = require('../../data/db/sqlite/v1/queries/ui/classificationTypes");
+} = require("../../data/db/sqlite/v1/queries/ui/classificationTypes");
 const { getCachedMetric } = require("./services/metricsService");
 const { renderHtml, resolveDbPath } = require("../render-url-table");
 const { buildDomainSnapshot, createHomeCardLoaders } = require("../homeCardData");
@@ -113,14 +113,14 @@ const {
   appendBackParams,
   buildBreadcrumbs
 } = require("./navigation");
-const { ensureClientBundle } = require('./utils/ensureClientBundle");
-const { runStartupCheck } = require('./utils/serverStartupCheck");
-const { getClassificationDisplay } = require('./utils/classificationEmoji");
+const { ensureClientBundle } = require("./utils/ensureClientBundle");
+const { runStartupCheck } = require("./utils/serverStartupCheck");
+const { getClassificationDisplay } = require("../utils/classificationEmoji");
 const {
   createTelemetry,
   attachTelemetryEndpoints,
   attachTelemetryMiddleware
-} = require('./utils/telemetry");
+} = require("./utils/telemetry");
 const {
   listThemes,
   getDefaultTheme,
@@ -137,9 +137,9 @@ const {
   listArticlesWithContent,
   countArticlesWithContent,
   getExtractedArticle
-} = require('../../data/db/sqlite/v1/queries/ui/articleViewer");
+} = require("../../data/db/sqlite/v1/queries/ui/articleViewer");
 
-const { ACTIVE_SET_KEY } = require('../../core/crawler/observatory/DecisionConfigSetState");
+const { ACTIVE_SET_KEY } = require("../../core/crawler/observatory/DecisionConfigSetState");
 
 const StringControl = jsgui.String_Control;
 

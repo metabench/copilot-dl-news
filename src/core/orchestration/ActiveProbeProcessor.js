@@ -1,5 +1,5 @@
 const { slugify } = require('../../tools/slugify');
-const { fetchUrl } = require('../../shared/utils/httpUtils');
+const { fetchUrl } = require('./utils/httpUtils');
 const { extractTitle } = require('../../shared/utils/domainUtils');
 const { createFetchRow } = require('../../shared/utils/dataUtils');
 const { CRAWL_EVENT_TYPES, SEVERITY_LEVELS, createTelemetryEvent } = require('../../core/crawler/telemetry');

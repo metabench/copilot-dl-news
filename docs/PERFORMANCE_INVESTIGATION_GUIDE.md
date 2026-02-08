@@ -19,7 +19,7 @@ npm test
 # This now automatically:
 # 1. Shows timing on screen during execution
 # 2. Writes timestamped log file: test-timing-YYYY-MM-DDTHH-MM-SS-sssZ.log
-# 3. Updates failure summary: test-failure-summary.json
+# 3. Updates failure summary: testlogs/failure-summary.json
 # 4. Enables quick status via: node tests/get-test-summary.js --compact
 ```
 

@@ -11,7 +11,7 @@
 const jsgui = require("jsgui3-html");
 const StringControl = jsgui.String_Control;
 
-const { formatCount } = require('../../utils/formatting");
+const { formatCount } = require("../../utils/formatting");
 const { createHomeCardLoaders } = require("../../../homeCardData");
 const { buildHomeCards: buildSharedHomeCards } = require("../../../homeCards");
 

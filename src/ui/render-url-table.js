@@ -4,9 +4,9 @@ const fs = require("fs");
 const path = require("path");
 const jsgui = require("jsgui3-html");
 
-const { openNewsDb } = require("../db/dbAccess");
-const { findProjectRoot } = require("../utils/project-root");
-const { selectInitialUrls, countUrls } = require("../db/sqlite/v1/queries/ui/urlListingNormalized");
+const { openNewsDb } = require("../data/db/dbAccess");
+const { findProjectRoot } = require("../shared/utils/project-root");
+const { selectInitialUrls, countUrls } = require("../data/db/sqlite/v1/queries/ui/urlListingNormalized");
 const {
   UrlListingTableControl,
   buildColumns,
@@ -140,7 +140,7 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
   const listingState = options.listingState || null;
   const layoutMode = typeof options.layoutMode === "string" && options.layoutMode.trim() ? options.layoutMode : "listing";
   const hideListingPanel = options.hideListingPanel === true || layoutMode === "dashboard";
-  const mainControl = options.mainControl;
+  const mainControlFactory = typeof options.mainControlFactory === "function" ? options.mainControlFactory : null;
   const dashboardSections = Array.isArray(options.dashboardSections) ? options.dashboardSections.slice() : [];
   const includeDashboardScaffold = options.includeDashboardScaffold === true || dashboardSections.length > 0;
   const safeMeta = {
@@ -161,6 +161,10 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
 
   const context = new jsgui.Page_Context();
   const document = new jsgui.Blank_HTML_Document({ context });
+  let mainControl = options.mainControl || null;
+  if (!mainControl && mainControlFactory) {
+    mainControl = mainControlFactory(context);
+  }
 
   document.title.add(new StringControl({ context, text: title }));
   const head = document.head;

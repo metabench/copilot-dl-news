@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const { openNewsDb } = require('../../../data/db/dbAccess");
+const { openNewsDb } = require("../../../data/db/dbAccess");
 const { findProjectRoot } = require('../../../shared/utils/project-root');
 const { renderHtml, resolveDbPath } = require("../../render-url-table");
 const { DEFAULT_PAGE_SIZE, renderUrlListingView, DATA_VIEWS } = require("../dataExplorerServer");
@@ -45,6 +45,7 @@ function run() {
   const projectRoot = findProjectRoot(__dirname);
   const relativeDb = path.relative(projectRoot, dbPath) || path.basename(dbPath);
   const dbAccess = openNewsDb(dbPath);
+  const outputDir = path.join(process.cwd(), "checks", "html-outputs");
 
   try {
     const variants = [
@@ -54,16 +55,16 @@ function run() {
       { label: "host_example.com_hasFetches", query: { host: "example.com", hasFetches: "1" } }
     ].map((spec) => renderVariant(dbAccess, { relativeDb, ...spec }));
 
-    const outDir = process.cwd();
+    fs.mkdirSync(outputDir, { recursive: true });
     const summary = variants.map(({ html, ...rest }) => rest);
 
     variants.forEach((variant) => {
-      const target = path.join(outDir, `data-explorer.urls.${variant.label}.check.html`);
+      const target = path.join(outputDir, `data-explorer.urls.${variant.label}.check.html`);
       fs.writeFileSync(target, variant.html, "utf8");
       console.log(`Saved Data Explorer URL variant to ${target}`);
     });
 
-    const summaryTarget = path.join(outDir, "data-explorer.urls.filters.check.json");
+    const summaryTarget = path.join(outputDir, "data-explorer.urls.filters.check.json");
     fs.writeFileSync(summaryTarget, JSON.stringify({ relativeDb, variants: summary }, null, 2), "utf8");
     console.log(`Saved Data Explorer URL filter summary to ${summaryTarget}`);
   } finally {

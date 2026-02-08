@@ -31,6 +31,24 @@
 
 ## Current Sessions
 
+### Session 2026-02-02: MoldBot research (OpenClaw)
+
+**Duration**: Complete
+**Type**: research
+**Completion**: ✅ Complete
+
+**Focus**:
+- Research MoldBot/Moltbot/Clawdbot and current official OpenClaw naming
+- Summarize architecture, capabilities, setup paths, and security risks
+- Capture sources and produce a concise research brief
+
+**Location**: `docs/sessions/2026-02-02-moldbot-research/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-02-02-moldbot-research/PLAN.md)
+- 📝 [Working Notes](./2026-02-02-moldbot-research/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-02-02-moldbot-research/SESSION_SUMMARY.md)
+
 ### Session 2026-01-18: README Update - Comprehensive Project Documentation
 
 **Duration**: Complete

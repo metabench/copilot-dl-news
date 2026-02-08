@@ -1,6 +1,6 @@
 # Project Documentation Index
 
-_Last updated: 2026-01-17_
+_Last updated: 2026-02-04_
 
 ## Quick References
 - [Command Execution Guide](COMMAND_EXECUTION_GUIDE.md)
@@ -124,6 +124,9 @@ Architecture and system design documents for proposed or implemented features.
 - [Task Events API](database/task-events-api.md) - Unified event storage for crawls and background tasks, with AI query helpers and REST endpoints.
 - [Project Overview](reference/project_overview.md)
 
+## Workspace Orientation
+- [Workspace Structure & Navigation](organization/WORKSPACE_STRUCTURE.md)
+
 ## AGI Memory & Observability
 - [docs-memory MCP Server](../tools/mcp/docs-memory/README.md) - AGI memory layer: sessions, skills, lessons, patterns, and app logging.
 - [MCP Logger Client](../src/utils/mcpLogger.js) - Client library for apps to write logs that AI agents can read.
@@ -145,6 +148,7 @@ Architecture and system design documents for proposed or implemented features.
 ## Reports
 - [Crawler State Report (Dec 15, 2025)](reports/2025-12-15-CRAWLER_STATE_REPORT.md) - Comprehensive overview of the crawler subsystem: 259 files, 4-phase roadmap, Phase 1 complete, 7+ improvement opportunities identified.
 - [20-Session Retrospective (Nov 29, 2025)](reports/20-SESSION-RETROSPECTIVE-2025-11-29.md) - **REQUIRED READING**: Analysis of 20 recent sessions with patterns, solutions, and agent instruction improvements. Covers UI hydration fixes, tooling enhancements, and workflow violations.
+- [OpenClaw (MoldBot/Moltbot) Research Brief (Feb 2, 2026)](reports/2026-02-02-OPENCLAW_MOLDBOT_RESEARCH.md) - Naming history, architecture, capabilities, setup, and security risks.
 
 ## Legacy Collections
 - [Root Migration Collection](root-migration/README.md) - Former root-level docs awaiting categorization.

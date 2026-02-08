@@ -877,7 +877,7 @@ The tool walks each directory breadth-first, skips `.gitkeep`, and reports any W
 `dir-sizes` measures directory sizes (bytes + file count) to guide what should be pruned vs archived.
 
 ```powershell
-# Default set (tmp/tmp-debug/testlogs/screenshots/analysis-charts/data)
+# Default set (tmp/tmp/debug/testlogs/screenshots/build/analysis-charts/data)
 node tools/dev/dir-sizes.js
 
 # Target a few dirs explicitly

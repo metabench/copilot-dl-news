@@ -22,7 +22,7 @@ const {
   updateTheme: updateThemeInDb,
   setDefaultTheme: setDefaultThemeInDb,
   deleteTheme: deleteThemeInDb
-} = require('../../../data/db/sqlite/v1/queries/ui/uiThemes");
+} = require("../../../data/db/sqlite/v1/queries/ui/uiThemes");
 
 // System theme configurations (used when DB not available)
 const OBSIDIAN_THEME_CONFIG = {

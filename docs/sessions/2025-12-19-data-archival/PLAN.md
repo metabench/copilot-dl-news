@@ -8,7 +8,7 @@ Consolidate/prune low-value generated data and ensure archived artifacts remain 
 - [ ] Tests and validations (if any) are captured in `WORKING_NOTES.md`.
 - [ ] Follow-ups are recorded in `FOLLOW_UPS.md`.
 
-- [ ] Size inventory exists for the main artifact dirs (`tmp`, `tmp-debug`, `testlogs`, `screenshots`, `analysis-charts`, optionally `data`).
+- [ ] Size inventory exists for the main artifact dirs (`tmp`, `tmp/debug`, `testlogs`, `screenshots`, `build/analysis-charts`, optionally `data`).
 - [ ] A safe archival workflow exists (dry-run default) with CLI support to list/search/extract archived artifacts.
 - [ ] Prune vs archive recommendations are written down (what to keep locally hot vs cold storage).
 

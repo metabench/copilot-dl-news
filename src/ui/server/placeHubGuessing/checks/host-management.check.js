@@ -7,7 +7,7 @@
  */
 'use strict';
 
-const { resolveBetterSqliteHandle } = require('../../shared/utils/dashboardModule');
+const { resolveBetterSqliteHandle } = require('../../utils/dashboardModule');
 const { getHostPageCounts, getHostsAboveThreshold, getHostsBelowThreshold, getHostPageCount, getHostPageCountMap } = require('../../../../data/db/sqlite/v1/queries/placeHubGuessingUiQueries');
 
 const CRAWL_THRESHOLD = 500;

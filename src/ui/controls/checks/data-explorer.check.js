@@ -5,7 +5,7 @@
  * Data Explorer Controls Check
  * 
  * Renders all Data Explorer controls and outputs HTML for visual verification.
- * Run: node src/ui/controls/checks/data-explorer.check.js > tmp/data-explorer.check.html
+ * Run: node src/ui/controls/checks/data-explorer.check.js > checks/html-outputs/data-explorer.check.html
  */
 
 const jsgui = require("jsgui3-html");

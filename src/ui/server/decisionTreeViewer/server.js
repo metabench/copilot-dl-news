@@ -35,12 +35,12 @@ const { loadAllTrees, loadFromConfigSet } = require("./isomorphic/model/Decision
 const {
   loadActiveDecisionConfigSet,
   setActiveDecisionConfigSlug
-} = require('../../../core/crawler/observatory/DecisionConfigSetState");
+} = require("../../../core/crawler/observatory/DecisionConfigSetState");
 
 // Optional repository for loading config sets
 let configSetRepository = null;
 try {
-  const { createDefaultDecisionConfigSetRepository } = require('../../../core/crawler/observatory/DecisionConfigSetRepository");
+  const { createDefaultDecisionConfigSetRepository } = require("../../../core/crawler/observatory/DecisionConfigSetRepository");
   configSetRepository = createDefaultDecisionConfigSetRepository();
 } catch (e) {
   // Repository not available; routes depending on it will 501
@@ -639,7 +639,7 @@ if (require.main === module) {
   
   // Handle --check flag for AI agent verification
   if (args.includes("--check")) {
-    const { runStartupCheck } = require('../utils/serverStartupCheck");
+    const { runStartupCheck } = require("../utils/serverStartupCheck");
     runStartupCheck(__filename, PORT, {
       serverName: "Decision Tree Viewer",
       healthEndpoint: "/health"

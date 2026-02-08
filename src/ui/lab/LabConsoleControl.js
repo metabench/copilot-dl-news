@@ -38,6 +38,7 @@ class LabConsoleControl extends jsgui.Control {
       .lab-chip--validated { background: rgba(16,185,129,0.18); border-color: rgba(16,185,129,0.5); color: #bbf7d0; }
       .lab-chip--active { background: rgba(59,130,246,0.16); border-color: rgba(59,130,246,0.45); color: #bfdbfe; }
       .lab-chip--proposed { background: rgba(234,179,8,0.12); border-color: rgba(234,179,8,0.5); color: #fef08a; }
+      .lab-chip--series { background: rgba(148,163,184,0.14); border-color: rgba(148,163,184,0.4); color: #e2e8f0; }
       .lab-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; border: 1px solid #1f2937; background: rgba(255,255,255,0.03); color: #e2e8f0; text-decoration: none; font-size: 12px; transition: transform 120ms ease, border-color 120ms ease; }
       .lab-btn:hover { transform: translateY(-1px); border-color: #334155; }
       .lab-btn__icon { font-size: 14px; }
@@ -102,7 +103,16 @@ class LabConsoleControl extends jsgui.Control {
 
     const meta = new jsgui.Control({ context: ctx, tagName: "div" });
     meta.add_class("lab-card__meta");
-    meta.add_text(exp.slug);
+    const slug = new jsgui.Control({ context: ctx, tagName: "span" });
+    slug.add_text(exp.slug);
+    meta.add(slug);
+    if (exp.series) {
+      const series = new jsgui.Control({ context: ctx, tagName: "span" });
+      series.add_class("lab-chip");
+      series.add_class("lab-chip--series");
+      series.add_text(exp.series);
+      meta.add(series);
+    }
 
     const desc = new jsgui.Control({ context: ctx, tagName: "div" });
     desc.add_class("lab-card__desc");

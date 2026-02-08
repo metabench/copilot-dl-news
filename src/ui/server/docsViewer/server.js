@@ -17,6 +17,8 @@ const express = require("express");
 const jsgui = require("jsgui3-html");
 const { Command } = require("commander");
 
+const { wrapServerForCheck } = require("../utils/serverStartupCheck");
+
 const { DocAppControl } = require("./isomorphic/controls");
 const { buildDocTree, sortTree } = require("./utils/docTree");
 const { renderMarkdown } = require("./utils/markdownRenderer");
@@ -39,6 +41,7 @@ function createProgram() {
     .option("-p, --port <number>", "Port to listen on", String(DEFAULT_PORT))
     .option("-H, --host <address>", "Host to bind to (0.0.0.0 for LAN access)", "localhost")
     .option("-d, --docs <path>", "Path to documentation directory", DEFAULT_DOCS_PATH)
+    .option("--check", "Run server startup check then exit")
     .option("--detached", "Run server as a detached background process")
     .option("--stop", "Stop a running detached server")
     .option("--status", "Check if a detached server is running")
@@ -59,6 +62,7 @@ function parseArgs(argv = process.argv) {
     port: Number(opts.port) || DEFAULT_PORT,
     host: opts.host || "localhost",
     docsPath: opts.docs || DEFAULT_DOCS_PATH,
+    check: !!opts.check,
     detached: !!opts.detached,
     stop: !!opts.stop,
     status: !!opts.status,
@@ -528,13 +532,16 @@ if (require.main === module) {
     docsPath: args.docsPath,
     pluginsPath: args.pluginsPath
   });
+  if (args.check) {
+    process.env.SERVER_NAME = process.env.SERVER_NAME || "DocsViewer";
+  }
 
-  app.listen(args.port, args.host, () => {
+  wrapServerForCheck(app, args.port, args.host, () => {
     const displayHost = args.host === "0.0.0.0" ? "<your-ip>" : args.host;
     console.log(`📚 Documentation Viewer running at http://${displayHost}:${args.port}`);
     console.log(`   Serving docs from: ${docsPath}`);
     if (args.host === "0.0.0.0") {
-      console.log(`   LAN access enabled - accessible from other devices on the network`);
+      console.log("   LAN access enabled - accessible from other devices on the network");
     }
   });
 }

@@ -6,7 +6,7 @@ const express = require("express");
 const jsguiServer = require("jsgui3-server");
 const { Server: JsguiServer } = jsguiServer;
 
-const { TelemetryIntegration } = require('../../../../core/crawler/telemetry");
+const { TelemetryIntegration } = require("../../../../core/crawler/telemetry");
 
 const jsgui = require("./client");
 const Ctrl = jsgui.controls.crawl_progress_page;

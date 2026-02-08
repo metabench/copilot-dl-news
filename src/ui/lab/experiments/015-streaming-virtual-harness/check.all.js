@@ -1,6 +1,6 @@
 "use strict";
 
-require('../../../../shared/utils/userTerminationBanner");
+require("../../../../shared/utils/userTerminationBanner");
 
 const path = require("path");
 const { runFractalChecks } = require("./fractal.check");

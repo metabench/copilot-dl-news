@@ -120,7 +120,7 @@ node tests/analyze-test-logs.js --summary
   node tests/get-failing-tests.js --history --test crawl.e2e # Track a specific test
   # Exit code: 0 = no failures, 1 = failures exist (latest run)
   ```
-  - Pulls the most recent failure message for each file from `test-failure-summary.json`.
+  - Pulls the most recent failure message for each file from `testlogs/failure-summary.json`.
   - The reporter now saves per-run snapshots (`testlogs/<timestamp>_<suite>.failures.json`), enabling history queries to show original failure messages when available.
 
 3. **`get-test-summary.js`** - Quick status overview (5s)

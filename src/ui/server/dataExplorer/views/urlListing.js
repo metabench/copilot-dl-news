@@ -8,13 +8,13 @@
  * @module src/ui/server/dataExplorer/views/urlListing
  */
 
-const { formatDateTime, formatCount } = require('../../utils/formatting");
-const { sanitizePage, resolveUrlFilterState, snapshotQueryParams } = require('../../utils/queryParams");
-const { buildPagination, buildUrlFilterOptions } = require('../../utils/pagination");
+const { formatDateTime, formatCount } = require("../../utils/formatting");
+const { sanitizePage, resolveUrlFilterState, snapshotQueryParams } = require("../../utils/queryParams");
+const { buildPagination, buildUrlFilterOptions } = require("../../utils/pagination");
 const {
   selectUrlPage,
   selectFetchedUrlPage
-} = require('../../../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
+} = require("../../../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
 const {
   buildColumns,
   buildDisplayRows

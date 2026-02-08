@@ -137,6 +137,12 @@ class TimingReporter {
       console.log(`Online API Tests:     ${onlineTime.toFixed(2)}s (${((onlineTime / runtimeDivisor) * 100).toFixed(1)}%)`);
     }
 
+    const testlogsDir = path.join(process.cwd(), 'testlogs');
+
+    if (!fs.existsSync(testlogsDir)) {
+      fs.mkdirSync(testlogsDir, { recursive: true });
+    }
+
     const failureSummary = this._collectFailureSummary();
     const failureSummaryPayload = {
       timestamp: runIsoTimestamp,
@@ -144,19 +150,13 @@ class TimingReporter {
       failures: failureSummary
     };
 
-    const failureSummaryPath = path.join(process.cwd(), 'test-failure-summary.json');
+    const failureSummaryPath = path.join(testlogsDir, 'failure-summary.json');
     fs.writeFileSync(failureSummaryPath, JSON.stringify(failureSummaryPayload, null, 2), 'utf8');
     if (failureSummary.length > 0 && verbose) {
       console.log(`❌ Failure details saved to: ${failureSummaryPath}`);
     }
     if (verbose) {
       console.log('ℹ️  Quick status: node tests/get-test-summary.js --compact');
-    }
-
-    const testlogsDir = path.join(process.cwd(), 'testlogs');
-
-    if (!fs.existsSync(testlogsDir)) {
-      fs.mkdirSync(testlogsDir, { recursive: true });
     }
 
     const logBaseName = `${fileTimestamp}_${suiteName}`;

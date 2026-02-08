@@ -1,6 +1,6 @@
 "use strict";
 
-require('../../../../shared/utils/userTerminationBanner");
+require("../../../../shared/utils/userTerminationBanner");
 
 const puppeteer = require("puppeteer");
 const { startFractalServer } = require("./fractalServer");

@@ -7,7 +7,7 @@
  * 
  * Usage:
  *   node src/ui/server/checks/geoImportDashboard.check.js
- *   # Opens geo-import-dashboard.check.html
+ *   # Opens checks/html-outputs/geo-import-dashboard.check.html
  */
 
 const fs = require('fs');
@@ -211,7 +211,9 @@ const html = `<!DOCTYPE html>
 </html>`;
 
 // Write output
-const outPath = path.join(__dirname, '../../../../geo-import-dashboard.check.html');
+const outputDir = path.join(process.cwd(), 'checks', 'html-outputs');
+fs.mkdirSync(outputDir, { recursive: true });
+const outPath = path.join(outputDir, 'geo-import-dashboard.check.html');
 fs.writeFileSync(outPath, html, 'utf8');
 
 console.log('✅ Generated:', outPath);

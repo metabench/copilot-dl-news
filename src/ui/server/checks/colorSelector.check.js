@@ -300,7 +300,9 @@ const checkHtml = `<!DOCTYPE html>
 </body>
 </html>`;
 
-const outputPath = path.join(process.cwd(), "color-selector.check.html");
+const outputDir = path.join(process.cwd(), "checks", "html-outputs");
+fs.mkdirSync(outputDir, { recursive: true });
+const outputPath = path.join(outputDir, "color-selector.check.html");
 fs.writeFileSync(outputPath, checkHtml);
 console.log("Generated:", outputPath);
 console.log();
@@ -314,9 +316,9 @@ console.log("✅ ColorSelectorControl renders correctly");
 console.log("✅ Observable properties work (obext prop())");
 console.log("✅ Color-change events fire properly");
 console.log("✅ Public API (setForeground, swapColors, etc.) works");
-console.log("✅ Check HTML generated at color-selector.check.html");
+console.log(`✅ Check HTML generated at ${outputPath}`);
 console.log();
-console.log("Open color-selector.check.html in browser to preview styling.");
+console.log("Open the generated HTML in a browser to preview styling.");
 console.log();
 
 process.exit(0);

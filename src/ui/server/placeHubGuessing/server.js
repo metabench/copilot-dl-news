@@ -6,7 +6,7 @@ const fs = require('fs');
 
 const jsgui = require('jsgui3-html');
 
-const { resolveBetterSqliteHandle } = require('../shared/utils/dashboardModule');
+const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
 
 const { renderPageHtml } = require('../shared');
 

@@ -5,4 +5,4 @@
  * server and client builds stay consistent with Design Studio/Docs Viewer.
  */
 
-module.exports = require('../../../../shared/isomorphic/jsgui");
+module.exports = require("../../shared/isomorphic/jsgui");

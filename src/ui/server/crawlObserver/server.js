@@ -13,7 +13,7 @@ const path = require('path');
 const jsgui = require('jsgui3-html');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
-const { createMcpLogger } = require('../utils/mcpLogger');
+const { createMcpLogger } = require("../../../shared/utils/mcpLogger");
 
 const log = createMcpLogger.uiServer('crawl-observer');
 const { createCrawlObserverUiQueries } = require('../../../data/db/sqlite/v1/queries/crawlObserverUiQueries');

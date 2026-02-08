@@ -20,13 +20,13 @@ const {
   buildDbSection,
   buildFeatureSection
 } = require("../controls/DiagramAtlasControls");
-const { findProjectRoot } = require('../../shared/utils/project-root');
-const { ensureClientBundle } = require('./utils/ensureClientBundle");
+const { findProjectRoot } = require("../../shared/utils/project-root");
+const { ensureClientBundle } = require("./utils/ensureClientBundle");
 const {
   createTelemetry,
   attachTelemetryEndpoints,
   attachTelemetryMiddleware
-} = require('./utils/telemetry");
+} = require("./utils/telemetry");
 
 const StringControl = jsgui.String_Control;
 const DEFAULT_PORT = 4620;

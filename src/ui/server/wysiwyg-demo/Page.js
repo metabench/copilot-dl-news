@@ -1,9 +1,9 @@
 const jsgui = require('jsgui3-html');
 const { Control, Standard_Web_Page } = jsgui;
-const CanvasControl = require('../../../shared/isomorphic/controls/canvas/CanvasControl');
-const DraggableControl = require('../../../shared/isomorphic/controls/interactive/DraggableControl');
-const ResizableControl = require('../../../shared/isomorphic/controls/interactive/ResizableControl');
-const ConnectorControl = require('../../../shared/isomorphic/controls/interactive/ConnectorControl');
+const CanvasControl = require('../shared/isomorphic/controls/canvas/CanvasControl');
+const DraggableControl = require('../shared/isomorphic/controls/interactive/DraggableControl');
+const ResizableControl = require('../shared/isomorphic/controls/interactive/ResizableControl');
+const ConnectorControl = require('../shared/isomorphic/controls/interactive/ConnectorControl');
 
 class Page extends Standard_Web_Page {
     constructor(spec) {

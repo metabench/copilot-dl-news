@@ -38,7 +38,8 @@ try {
 } catch (_) {}
 
 const TESTLOGS_DIR = path.join(__dirname, '..', 'testlogs');
-const FAILURE_SUMMARY_PATH = path.join(__dirname, '..', 'test-failure-summary.json');
+const FAILURE_SUMMARY_PATH = path.join(TESTLOGS_DIR, 'failure-summary.json');
+const LEGACY_FAILURE_SUMMARY_PATH = path.join(__dirname, '..', 'test-failure-summary.json');
 const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T/;
 const DEFAULT_HISTORY_LOGS = 5;
 
@@ -191,14 +192,18 @@ function loadJsonAsMap(payload) {
 }
 
 function loadGlobalFailureSummary() {
-  if (!fs.existsSync(FAILURE_SUMMARY_PATH)) {
+  const summaryPath = fs.existsSync(FAILURE_SUMMARY_PATH)
+    ? FAILURE_SUMMARY_PATH
+    : (fs.existsSync(LEGACY_FAILURE_SUMMARY_PATH) ? LEGACY_FAILURE_SUMMARY_PATH : null);
+
+  if (!summaryPath) {
     return new Map();
   }
   try {
-    const payload = JSON.parse(fs.readFileSync(FAILURE_SUMMARY_PATH, 'utf8'));
+    const payload = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
     return loadJsonAsMap(payload);
   } catch (error) {
-    fmt.warn(`Could not read test-failure-summary.json: ${error.message}`);
+    fmt.warn(`Could not read failure summary: ${error.message}`);
     return new Map();
   }
 }

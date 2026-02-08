@@ -96,6 +96,7 @@ electronApp.whenReady().then(async () => {
   const port = parsePortFromArgv();
   const smoke = hasArg('--smoke');
   const smokeTimeoutMs = parseNumberArg('--smoke-timeout-ms', 12_000);
+  const closeTimeoutMs = parseNumberArg('--smoke-close-timeout-ms', 3_000);
 
   // Keep a stable URL so cached assets work.
   const url = `http://127.0.0.1:${port}`;
@@ -109,8 +110,12 @@ electronApp.whenReady().then(async () => {
     if (shuttingDown) return;
     shuttingDown = true;
 
+    const closeDeadline = smoke ? closeTimeoutMs : 10_000;
     try {
-      await close();
+      await Promise.race([
+        close(),
+        new Promise((resolve) => setTimeout(resolve, closeDeadline))
+      ]);
     } catch {
       // ignore
     }
@@ -119,6 +124,12 @@ electronApp.whenReady().then(async () => {
       electronApp.exit(code);
     } catch {
       process.exit(code);
+    }
+
+    if (smoke) {
+      setTimeout(() => {
+        process.exit(code);
+      }, 500);
     }
   };
 
@@ -144,6 +155,9 @@ electronApp.whenReady().then(async () => {
 
   electronApp.on('before-quit', async (e) => {
     // Ensure we close the server even if window closes quickly.
+    if (shuttingDown) {
+      return;
+    }
     e.preventDefault();
     await shutdown(0);
   });
