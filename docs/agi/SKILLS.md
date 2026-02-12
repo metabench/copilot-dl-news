@@ -41,6 +41,7 @@ This repo does not have Anthropic Claude Code “Skills” support directly, but
 | targeted-testing | run tests, pick smallest suite, puppeteer/e2e, validate changes | `docs/agi/skills/targeted-testing/SKILL.md` |
 | instruction-adherence | stay on track, instruction drift, resume main task after detour, re-anchor loop | `docs/agi/skills/instruction-adherence/SKILL.md` |
 | mcp-memory-server-surgery | mcp, docs-memory, memory server, mcp-server, tools/list, tools/call, stdio, headerless, protocol changes | `docs/agi/skills/mcp-memory-server-surgery/SKILL.md` |
+| crawl-system-diagnostics | crawl health, pipeline check, error rates, save rates, stuck runs, content storage, data anomalies, diagnostic tools | `docs/agi/skills/crawl-system-diagnostics/SKILL.md` |
 
 ## Adding a new Skill (template)
 

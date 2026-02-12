@@ -4,6 +4,14 @@ const jsgui = require('jsgui3-html');
 const { Control } = jsgui;
 const { createTwoColumnLayoutControls } = require('../../../controls/layouts/TwoColumnLayoutFactory');
 const { CATEGORIES } = require('../subApps/registry');
+const {
+  buildHomeActivator,
+  buildPanelDemoActivator,
+  buildMultiModalCrawlActivator,
+  buildDownloadsActivator,
+  buildPlaceholderActivator,
+  buildSubAppDelegateActivator,
+} = require('../activators');
 
 // Get layout controls
 const { TwoColumnLayout, buildStyles } = createTwoColumnLayoutControls(jsgui);
@@ -439,6 +447,231 @@ class UnifiedShell extends Control {
         letter-spacing: 0.05em;
       }
 
+      /* ═══════════════════════════════════════════════════════════════
+         Panel component classes (replace inline styles)
+         ═══════════════════════════════════════════════════════════════ */
+
+      /* Panel sections */
+      .panel-section {
+        margin-top: 32px;
+      }
+
+      .panel-section__title {
+        color: var(--gold);
+        margin-bottom: 16px;
+        font-size: 18px;
+      }
+
+      .panel-card {
+        background: var(--bg-leather);
+        border: 1px solid var(--border-gold);
+        border-radius: 8px;
+        padding: 20px;
+      }
+
+      /* Form grid layout */
+      .panel-form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .panel-label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .panel-input,
+      .panel-select {
+        width: 100%;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border-gold);
+        background: rgba(0, 0, 0, 0.3);
+        color: var(--text-cream);
+        font-family: inherit;
+      }
+
+      /* Button row */
+      .panel-btn-row {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        margin-top: 16px;
+      }
+
+      /* Base button */
+      .panel-btn {
+        padding: 10px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 14px;
+        transition: opacity 0.15s ease;
+      }
+
+      .panel-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* Button variants */
+      .panel-btn--action {
+        padding: 12px 24px;
+        font-weight: 600;
+      }
+
+      .panel-btn--start {
+        border: 1px solid #22c55e;
+        background: rgba(34, 197, 94, 0.15);
+        color: #4ade80;
+      }
+
+      .panel-btn--pause {
+        border: 1px solid #f59e0b;
+        background: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+      }
+
+      .panel-btn--stop {
+        border: 1px solid #ef4444;
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+      }
+
+      .panel-btn--default {
+        border: 1px solid var(--border-gold);
+        background: rgba(212, 165, 116, 0.12);
+        color: var(--text-cream);
+      }
+
+      .panel-btn--ghost {
+        border: 1px solid var(--border-gold);
+        background: rgba(212, 165, 116, 0.06);
+        color: var(--text-cream);
+      }
+
+      /* Progress bar */
+      .panel-progress-track {
+        height: 20px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .panel-progress-track--tall {
+        height: 24px;
+        border-radius: 12px;
+      }
+
+      .panel-progress-bar {
+        height: 100%;
+        width: 0%;
+        border-radius: inherit;
+        transition: width 0.3s ease-out;
+      }
+
+      .panel-progress-bar--rainbow {
+        background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+      }
+
+      .panel-progress-bar--green {
+        background: linear-gradient(90deg, #22c55e 0%, #4ade80 100%);
+      }
+
+      .panel-progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      /* Phase icons row */
+      .panel-phase-icons {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 12px;
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+
+      .panel-phase-icon {
+        opacity: 0.4;
+      }
+
+      /* Log / insights area */
+      .panel-log {
+        background: var(--bg-leather);
+        border: 1px solid var(--border-gold);
+        border-radius: 8px;
+        padding: 16px;
+        max-height: 200px;
+        overflow-y: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      .panel-log--tall {
+        max-height: 300px;
+      }
+
+      /* Status line */
+      .panel-status {
+        margin-top: 18px;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      /* Mono text helper */
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      }
+
+      /* Alert banner */
+      .home-alert {
+        margin-top: 14px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 122, 122, 0.55);
+        background: rgba(255, 122, 122, 0.10);
+        color: #ffd0d0;
+      }
+
+      /* ═══════════════════════════════════════════════════════════════
+         Theme color utilities (use instead of inline style="color:…")
+         ═══════════════════════════════════════════════════════════════ */
+      .text-success  { color: var(--success); }
+      .text-error    { color: var(--error); }
+      .text-muted    { color: var(--text-muted); }
+      .text-gold     { color: var(--gold); }
+      .text-cream    { color: var(--text-cream); }
+
+      /* Insight row in panel-log */
+      .insight-row       { margin-bottom: 4px; }
+      .insight-row--info { color: var(--text-muted); }
+
+      /* Empty-state placeholder in log areas */
+      .panel-log__empty  { color: var(--text-muted); }
+
+      /* Layout utilities */
+      .mt-24  { margin-top: 24px; }
+      .mt-12  { margin-top: 12px; }
+      .mr-8   { margin-right: 8px; }
+      .ml-10  { margin-left: 10px; }
+
+      /* Alert link */
+      .alert-link {
+        color: #ffd0d0;
+        text-decoration: underline;
+        margin-left: 10px;
+      }
+
       /* Scrollbar styling */
       ::-webkit-scrollbar {
         width: 8px;
@@ -468,6 +701,19 @@ class UnifiedShell extends Control {
         const appViewport = document.getElementById('appViewport');
         const navItems = document.querySelectorAll('.nav-item');
         let currentAppId = '${this.activeAppId}';
+
+        // ─── Shared utilities ────────────────────────────────────────
+        function escapeHtml(str) {
+          return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        }
+
+        function setText(el, text) {
+          if (el) el.textContent = text;
+        }
 
         const crawlNavItems = document.querySelectorAll('.nav-item[data-app-category="crawler"]');
 
@@ -573,584 +819,19 @@ class UnifiedShell extends Control {
           container.dataset.activated = 'true';
         }
 
-        // Seed a couple of safe, no-UI-change activators as examples.
-        // Panels can register additional activators via window.UnifiedAppPanels.registerActivator(...).
+        // ─── Panel activators (composed from modules) ────────────
         (function seedDefaultActivators() {
           const registry = getPanelActivatorRegistry();
-
-          if (typeof registry.placeholder !== 'function') {
-            registry.placeholder = function(root) {
-              root.dataset.panelActivated = 'true';
-            };
-          }
-
-          if (typeof registry.home !== 'function') {
-            registry.home = function(root) {
-              if (!root) return;
-
-              const elJobs = root.querySelector('[data-home-stat="activeCrawlJobs"]');
-              const elHealth = root.querySelector('[data-home-stat="crawlHealth"]');
-              const elAlert = root.querySelector('[data-home-crawl-alert]');
-              const elErrorMsg = root.querySelector('[data-home-crawl-error-message]');
-
-              function setAlertVisible(visible) {
-                if (!elAlert) return;
-                elAlert.style.display = visible ? 'block' : 'none';
-              }
-
-              function setText(el, text) {
-                if (!el) return;
-                el.textContent = text;
-              }
-
-              async function refresh() {
-                try {
-                  const json = await fetchCrawlSummary();
-
-                  const activeJobs = Number.isFinite(json.activeJobs) ? json.activeJobs : 0;
-                  setText(elJobs, String(activeJobs));
-
-                  const lastError = json.lastError && typeof json.lastError === 'object' ? json.lastError : null;
-                  const hasError = Boolean(lastError && lastError.message);
-                  setText(elHealth, hasError ? 'ERR' : 'OK');
-
-                  if (elErrorMsg) {
-                    const errorsLast10m = Number.isFinite(json.errorsLast10m) ? json.errorsLast10m : null;
-                    const parts = [];
-                    if (hasError && lastError && lastError.message) parts.push(String(lastError.message).trim());
-                    if (hasError && lastError && lastError.jobId) parts.push('job: ' + String(lastError.jobId).trim());
-                    if (hasError && lastError && lastError.url) parts.push(String(lastError.url).trim());
-                    if (hasError && errorsLast10m != null) parts.push(String(errorsLast10m) + '/10m');
-                    const msg = hasError ? parts.filter(Boolean).join(' | ').slice(0, 160) : '–';
-                    setText(elErrorMsg, msg);
-                  }
-
-                  setAlertVisible(hasError);
-                  root.dataset.homeCrawlSummaryOk = 'true';
-                } catch (err) {
-                  setText(elJobs, '–');
-                  setText(elHealth, '?');
-                  if (elErrorMsg) setText(elErrorMsg, (err && err.message ? err.message : String(err)).slice(0, 120));
-                  setAlertVisible(true);
-                  root.dataset.homeCrawlSummaryOk = 'false';
-                }
-              }
-
-              if (root.dataset.homeCrawlPollBound !== 'true') {
-                root.dataset.homeCrawlPollBound = 'true';
-                refresh();
-                setInterval(refresh, 5000);
-              } else {
-                refresh();
-              }
-
-              root.dataset.panelActivated = 'true';
-            };
-          }
-
-          if (typeof registry['panel-demo'] !== 'function') {
-            registry['panel-demo'] = function(root) {
-              if (root.dataset.demoBound === 'true') return;
-              root.dataset.demoBound = 'true';
-
-              let clicks = 0;
-              const output = root.querySelector('[data-panel-demo-output]');
-              const statCards = root.querySelectorAll('.stat-card .stat-value');
-
-              function render() {
-                const now = new Date();
-                const lastPing = root.dataset.lastPing || '–';
-
-                if (output) {
-                  output.textContent = 'Activated ✓ | Clicks: ' + clicks + ' | Last Ping: ' + lastPing;
-                }
-
-                // Update the three stat cards if present: Activation, Clicks, Last Ping
-                if (statCards && statCards.length >= 3) {
-                  statCards[0].textContent = '✓';
-                  statCards[1].textContent = String(clicks);
-                  statCards[2].textContent = lastPing;
-                }
-
-                root.dataset.lastRenderAt = now.toISOString();
-              }
-
-              root.addEventListener('click', (event) => {
-                const btn = event && event.target ? event.target.closest('[data-panel-demo-action]') : null;
-                if (!btn) return;
-
-                const action = btn.getAttribute('data-panel-demo-action');
-                if (action === 'ping') {
-                  clicks += 1;
-                  root.dataset.lastPing = new Date().toISOString().slice(11, 19);
-                  render();
-                  return;
-                }
-
-                if (action === 'reset') {
-                  clicks = 0;
-                  root.dataset.lastPing = '–';
-                  render();
-                }
-              });
-
-              render();
-            };
-          }
-
-          // Multi-Modal Crawl panel activator
-          if (typeof registry['multi-modal-crawl'] !== 'function') {
-            registry['multi-modal-crawl'] = function(root) {
-              if (root.dataset.multimodalBound === 'true') return;
-              root.dataset.multimodalBound = 'true';
-
-              // Element references
-              const elPhase = root.querySelector('[data-multimodal-stat="phase"]');
-              const elBatch = root.querySelector('[data-multimodal-stat="batch"]');
-              const elPages = root.querySelector('[data-multimodal-stat="pages"]');
-              const elPatterns = root.querySelector('[data-multimodal-stat="patterns"]');
-              const elPhaseLabel = root.querySelector('[data-multimodal-stat="phase-label"]');
-              const elProgressText = root.querySelector('[data-multimodal-stat="progress-text"]');
-              const elProgressBar = root.querySelector('[data-multimodal-progress-bar]');
-              const elInsights = root.querySelector('[data-multimodal-insights]');
-              const elStatus = root.querySelector('[data-multimodal-status]');
-
-              // Buttons
-              const btnStart = root.querySelector('[data-multimodal-action="start"]');
-              const btnPause = root.querySelector('[data-multimodal-action="pause"]');
-              const btnStop = root.querySelector('[data-multimodal-action="stop"]');
-
-              // Input getters
-              function getInputValue(name) {
-                const el = root.querySelector('[data-multimodal-input="' + name + '"]');
-                return el ? el.value : null;
-              }
-
-              let eventSource = null;
-              let isRunning = false;
-              let insights = [];
-
-              function setText(el, text) {
-                if (el) el.textContent = text;
-              }
-
-              function setPhaseIcon(phase) {
-                const icons = root.querySelectorAll('[data-multimodal-phase-icon]');
-                icons.forEach(icon => {
-                  const iconPhase = icon.dataset.multimodalPhaseIcon;
-                  icon.style.opacity = iconPhase === phase ? '1' : '0.4';
-                  icon.style.fontWeight = iconPhase === phase ? '600' : '400';
-                });
-              }
-
-              function addInsight(text, type) {
-                const now = new Date().toISOString().slice(11, 19);
-                const color = type === 'error' ? '#f87171' : type === 'success' ? '#4ade80' : '#b8a090';
-                insights.unshift({ time: now, text, color });
-                if (insights.length > 50) insights.pop();
-                renderInsights();
-              }
-
-              function renderInsights() {
-                if (!elInsights) return;
-                if (insights.length === 0) {
-                  elInsights.innerHTML = '<div style="color: #666;">No insights yet. Start a crawl to begin learning.</div>';
-                } else {
-                  elInsights.innerHTML = insights.map(i =>
-                    '<div style="color: ' + i.color + '; margin-bottom: 4px;">[' + i.time + '] ' + i.text + '</div>'
-                  ).join('');
-                }
-              }
-
-              function updateUI(data) {
-                if (data.type === 'state' || data.type === 'progress') {
-                  const v = data.value || data;
-                  if (v.phase) {
-                    setText(elPhase, v.phase);
-                    setText(elPhaseLabel, v.phase);
-                    setPhaseIcon(v.phase.toLowerCase());
-                  }
-                  if (v.batchNumber !== undefined) setText(elBatch, v.batchNumber);
-                  if (v.pagesDownloaded !== undefined) setText(elPages, v.pagesDownloaded.toLocaleString());
-                  if (v.patternsLearned !== undefined) setText(elPatterns, v.patternsLearned);
-                  if (v.progress !== undefined && elProgressBar) {
-                    const pct = Math.min(100, Math.round(v.progress * 100));
-                    elProgressBar.style.width = pct + '%';
-                    setText(elProgressText, pct + '%');
-                  }
-                }
-
-                if (data.type === 'phase-change') {
-                  const v = data.value || {};
-                  const phase = v.phase || v.to || 'unknown';
-                  const domainLabel = v.domain ? ' [' + v.domain + ']' : '';
-                  addInsight('Phase: ' + phase + domainLabel + (v.batch ? ' (batch ' + v.batch + ')' : ''));
-                  if (phase !== 'unknown') {
-                    setPhaseIcon(phase.toLowerCase());
-                  }
-                }
-
-                if (data.type === 'batch-complete') {
-                  const v = data.value || {};
-                  const domainLabel = v.domain ? ' [' + v.domain + ']' : '';
-                  addInsight('Batch ' + v.batch + domainLabel + ' complete: ' + v.pagesDownloaded + ' pages', 'success');
-                }
-
-                if (data.type === 'pattern-learned') {
-                  const v = data.value || {};
-                  const domainLabel = v.domain ? ' [' + v.domain + ']' : '';
-                  const learnedCount = v.patternsLearned ?? (v.significantPatterns ? v.significantPatterns.length : null);
-                  const patternHint = v.pattern ? ' (' + String(v.pattern).slice(0, 8) + '...)' : '';
-                  addInsight('Patterns learned' + domainLabel + (learnedCount != null ? ': ' + learnedCount : '') + patternHint, 'success');
-                }
-
-                if (data.type === 'hub-discovered') {
-                  const v = data.value || {};
-                  const domainLabel = v.domain ? ' [' + v.domain + ']' : '';
-                  const url = v.url || v.newHubs?.[0]?.url || 'unknown';
-                  const confidence = v.confidence ?? v.newHubs?.[0]?.confidence ?? 0;
-                  addInsight('Hub discovered' + domainLabel + ': ' + url + ' (confidence: ' + Math.round(confidence * 100) + '%)', 'success');
-                }
-
-                if (data.type === 'analysis-progress') {
-                  const v = data.value;
-                  if (v.processed && v.total) {
-                    setText(elProgressText, 'Analyzing: ' + v.processed + '/' + v.total);
-                    if (elProgressBar) {
-                      const pct = Math.round((v.processed / v.total) * 100);
-                      elProgressBar.style.width = pct + '%';
-                    }
-                  }
-                }
-
-                if (data.type === 'error') {
-                  addInsight('Error: ' + (data.error || 'unknown'), 'error');
-                }
-
-                if (data.type === 'complete') {
-                  isRunning = false;
-                  updateButtons();
-                  addInsight('Crawl complete!', 'success');
-                  setText(elPhase, 'Complete');
-                  setText(elStatus, 'Status: Completed at ' + new Date().toISOString().slice(11, 19));
-                }
-              }
-
-              function updateButtons() {
-                if (btnStart) btnStart.disabled = isRunning;
-                if (btnPause) btnPause.disabled = !isRunning;
-                if (btnStop) btnStop.disabled = !isRunning;
-              }
-
-              function connectSSE() {
-                if (eventSource) {
-                  eventSource.close();
-                }
-
-                eventSource = new EventSource('/multi-modal/sse/multi-modal/progress');
-
-                eventSource.onmessage = function(event) {
-                  try {
-                    const data = JSON.parse(event.data);
-                    updateUI(data);
-                  } catch (e) {
-                    console.warn('[multi-modal] SSE parse error:', e);
-                  }
-                };
-
-                eventSource.onerror = function() {
-                  setText(elStatus, 'Status: Connection lost, reconnecting...');
-                };
-
-                eventSource.onopen = function() {
-                  setText(elStatus, 'Status: Connected');
-                };
-              }
-
-              async function startCrawl() {
-                const domain = getInputValue('domain');
-                if (!domain) {
-                  alert('Please enter a domain');
-                  return;
-                }
-
-                const body = {
-                  domain,
-                  batchSize: parseInt(getInputValue('batchSize'), 10) || 1000,
-                  historicalRatio: (parseInt(getInputValue('historical'), 10) || 30) / 100,
-                  maxTotalBatches: parseInt(getInputValue('maxBatches'), 10) || null,
-                  hubDiscoveryPerBatch: getInputValue('hubDiscovery') === 'true',
-                  balancingStrategy: getInputValue('strategy') || 'adaptive',
-                  hubRefreshIntervalMs: (parseInt(getInputValue('hubRefreshInterval'), 10) || 60) * 60 * 1000,
-                  pauseBetweenBatchesMs: (parseInt(getInputValue('pauseBetween'), 10) || 5) * 1000
-                };
-
-                try {
-                  const res = await fetch('/multi-modal/api/multi-modal/start', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                  });
-                  const json = await res.json();
-
-                  if (json.success) {
-                    isRunning = true;
-                    insights = [];
-                    renderInsights();
-                    addInsight('Started crawl on ' + domain);
-                    setText(elStatus, 'Status: Running');
-                    updateButtons();
-                    connectSSE();
-                  } else {
-                    alert('Failed to start: ' + (json.error || 'unknown error'));
-                  }
-                } catch (err) {
-                  alert('Failed to start: ' + err.message);
-                }
-              }
-
-              async function pauseCrawl() {
-                try {
-                  await fetch('/multi-modal/api/multi-modal/pause', { method: 'POST' });
-                  addInsight('Crawl paused');
-                  setText(elStatus, 'Status: Paused');
-                  if (btnPause) btnPause.textContent = '▶️ Resume';
-                  if (btnPause) btnPause.dataset.multimodalAction = 'resume';
-                } catch (err) {
-                  alert('Failed to pause: ' + err.message);
-                }
-              }
-
-              async function resumeCrawl() {
-                try {
-                  await fetch('/multi-modal/api/multi-modal/resume', { method: 'POST' });
-                  addInsight('Crawl resumed');
-                  setText(elStatus, 'Status: Running');
-                  if (btnPause) btnPause.textContent = '⏸️ Pause';
-                  if (btnPause) btnPause.dataset.multimodalAction = 'pause';
-                } catch (err) {
-                  alert('Failed to resume: ' + err.message);
-                }
-              }
-
-              async function stopCrawl() {
-                if (!confirm('Stop the current crawl?')) return;
-                try {
-                  await fetch('/multi-modal/api/multi-modal/stop', { method: 'POST' });
-                  isRunning = false;
-                  updateButtons();
-                  addInsight('Crawl stopped');
-                  setText(elStatus, 'Status: Stopped');
-                  setText(elPhase, 'Stopped');
-                } catch (err) {
-                  alert('Failed to stop: ' + err.message);
-                }
-              }
-
-              // Button handlers
-              root.addEventListener('click', async (event) => {
-                const btn = event.target.closest('[data-multimodal-action]');
-                if (!btn) return;
-
-                const action = btn.dataset.multimodalAction;
-                if (action === 'start') await startCrawl();
-                else if (action === 'pause') await pauseCrawl();
-                else if (action === 'resume') await resumeCrawl();
-                else if (action === 'stop') await stopCrawl();
-              });
-
-              // Check initial status
-              async function checkStatus() {
-                try {
-                  const res = await fetch('/multi-modal/api/multi-modal/status');
-                  const json = await res.json();
-                  if (json.isRunning) {
-                    isRunning = true;
-                    updateButtons();
-                    connectSSE();
-                    if (json.statistics) {
-                      updateUI({ type: 'state', value: json.statistics });
-                    }
-                  }
-                } catch (err) {
-                  // Ignore
-                }
-              }
-
-              checkStatus();
-              renderInsights();
-            };
-          }
-
-          // Downloads panel activator
-          if (typeof registry['downloads'] !== 'function') {
-            registry['downloads'] = function(root) {
-              if (root.dataset.downloadsBound === 'true') return;
-              root.dataset.downloadsBound = 'true';
-
-              const elTotal = root.querySelector('[data-downloads-stat="total"]');
-              const elVerified = root.querySelector('[data-downloads-stat="verified"]');
-              const elBytes = root.querySelector('[data-downloads-stat="bytes"]');
-              const elProgressText = root.querySelector('[data-downloads-stat="progress-text"]');
-              const elProgressBar = root.querySelector('[data-downloads-progress-bar]');
-              const elRecent = root.querySelector('[data-downloads-recent]');
-              const elStatus = root.querySelector('[data-downloads-status]');
-
-              function formatBytes(bytes) {
-                if (bytes < 1024) return bytes + ' B';
-                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-                if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-                return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-              }
-
-              function setText(el, text) {
-                if (el) el.textContent = text;
-              }
-
-              async function fetchStats() {
-                const res = await fetch('/api/downloads/stats');
-                return res.json();
-              }
-
-              async function fetchRecent() {
-                const now = new Date();
-                const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-                const params = new URLSearchParams({
-                  start: oneHourAgo.toISOString(),
-                  end: now.toISOString(),
-                  limit: '10'
-                });
-                const res = await fetch('/api/downloads/evidence?' + params);
-                return res.json();
-              }
-
-              async function fetchCrawlProgress() {
-                const res = await fetch('/api/downloads/crawl-progress');
-                return res.json();
-              }
-
-              // Track crawl state for adaptive polling
-              let crawlActive = false;
-              let progressPollTimer = null;
-              let lastDownloaded = -1;
-
-              // Fast progress polling (200ms) - only crawl progress, lightweight
-              async function pollProgress() {
-                try {
-                  const crawlRes = await fetchCrawlProgress();
-                  if (crawlRes.status === 'ok') {
-                    if (crawlRes.active) {
-                      crawlActive = true;
-                      const p = crawlRes.progress;
-                      
-                      // Smooth animation: only update if changed
-                      if (p.downloaded !== lastDownloaded) {
-                        lastDownloaded = p.downloaded;
-                        setText(elProgressText, p.downloaded + ' / ' + crawlRes.goal);
-                        if (elProgressBar) {
-                          elProgressBar.style.width = p.percentComplete + '%';
-                        }
-                      }
-                    } else {
-                      // Crawl finished or idle
-                      if (crawlActive) {
-                        // Just finished - do final update
-                        crawlActive = false;
-                        if (crawlRes.taskId) {
-                          const p = crawlRes.progress;
-                          setText(elProgressText, p.downloaded + ' / ' + crawlRes.goal + ' ✓');
-                          if (elProgressBar) {
-                            elProgressBar.style.width = p.percentComplete + '%';
-                          }
-                        }
-                      } else if (crawlRes.taskId) {
-                        // Show last completed crawl
-                        const p = crawlRes.progress;
-                        setText(elProgressText, p.downloaded + ' / ' + crawlRes.goal + ' ✓');
-                        if (elProgressBar) {
-                          elProgressBar.style.width = p.percentComplete + '%';
-                        }
-                      } else {
-                        setText(elProgressText, '0 / 50');
-                        if (elProgressBar) {
-                          elProgressBar.style.width = '0%';
-                        }
-                      }
-                    }
-                  }
-                } catch (err) {
-                  // Silent fail on progress poll - stats refresh will show errors
-                }
-              }
-
-              // Slower refresh for stats/recent (every 10s)
-              async function refresh() {
-                try {
-                  const [statsRes, recentRes] = await Promise.all([fetchStats(), fetchRecent()]);
-                  
-                  if (statsRes.status === 'ok' && statsRes.stats) {
-                    const s = statsRes.stats;
-                    setText(elTotal, s.total_responses ? s.total_responses.toLocaleString() : '0');
-                    setText(elVerified, s.verified_downloads ? s.verified_downloads.toLocaleString() : '0');
-                    setText(elBytes, formatBytes(s.total_bytes || 0));
-                  }
-
-                  if (recentRes.status === 'ok' && recentRes.evidence) {
-                    const lines = recentRes.evidence.map(e => 
-                      e.fetched_at.slice(11, 19) + ' ' + e.http_status + ' ' + formatBytes(e.bytes_downloaded).padStart(10) + ' ' + (e.url || '').substring(0, 60) + '...'
-                    );
-                    if (elRecent) {
-                      elRecent.innerHTML = lines.length > 0 
-                        ? lines.map(l => '<div>' + l + '</div>').join('')
-                        : '<div style="color: #666;">No downloads in last hour</div>';
-                    }
-                  }
-
-                  setText(elStatus, 'Last updated: ' + new Date().toISOString().slice(11, 19));
-                  root.dataset.downloadsOk = 'true';
-                } catch (err) {
-                  setText(elStatus, 'Error: ' + (err.message || String(err)));
-                  root.dataset.downloadsOk = 'false';
-                }
-              }
-
-              // Start fast progress polling (200ms)
-              function startProgressPolling() {
-                if (progressPollTimer) return;
-                progressPollTimer = setInterval(pollProgress, 200);
-              }
-
-              // Button handlers
-              root.addEventListener('click', async (event) => {
-                const btn = event.target.closest('[data-downloads-action]');
-                if (!btn) return;
-
-                const action = btn.getAttribute('data-downloads-action');
-                if (action === 'refresh') {
-                  refresh();
-                }
-                if (action === 'start-crawl') {
-                  btn.disabled = true;
-                  btn.textContent = '⏳ Starting...';
-                  try {
-                    // TODO: Start actual crawl via API
-                    alert('50-page crawl would start here. Use CLI for now:\\nnode tools/dev/verified-crawl.js https://www.theguardian.com --target 50');
-                  } catch (err) {
-                    alert('Failed: ' + err.message);
-                  }
-                  btn.disabled = false;
-                  btn.textContent = '🕷️ Start 50-Page Crawl';
-                }
-              });
-
-              // Initial load + polling
-              refresh();                    // Stats/recent every 10s
-              pollProgress();               // Progress immediately
-              startProgressPolling();       // Progress every 200ms
-              setInterval(refresh, 10000);  // Stats/recent every 10s
-            };
-          }
+          ${buildPlaceholderActivator()}
+          ${buildHomeActivator()}
+          ${buildPanelDemoActivator()}
+
+          ${buildMultiModalCrawlActivator()}
+          ${buildDownloadsActivator()}
         })();
+
+        // ─── Sub-app delegated event handlers ──────────────────
+        ${buildSubAppDelegateActivator()}
         
         // Load app content from server
         async function loadAppContent(appId) {
@@ -1170,7 +851,7 @@ class UnifiedShell extends Control {
             const data = await response.json();
             
             if (data.error) {
-              container.innerHTML = '<div class="app-placeholder"><p>Error</p><p class="error">' + data.error + '</p></div>';
+              container.innerHTML = '<div class="app-placeholder"><p>Error</p><p class="error">' + escapeHtml(data.error) + '</p></div>';
             } else {
               container.innerHTML = data.content;
               container.dataset.loaded = 'true';
@@ -1183,7 +864,7 @@ class UnifiedShell extends Control {
               activatePanelIfPresent(container, appId, activationKey);
             }
           } catch (err) {
-            container.innerHTML = '<div class="app-placeholder"><p>Error</p><p class="error">' + err.message + '</p></div>';
+            container.innerHTML = '<div class="app-placeholder"><p>Error</p><p class="error">' + escapeHtml(err.message) + '</p></div>';
           }
         }
         
@@ -1195,6 +876,11 @@ class UnifiedShell extends Control {
           const currentContainer = document.getElementById('app-' + currentAppId);
           if (currentContainer) {
             currentContainer.classList.add('app-container--hidden');
+            // Pause polling timers for the panel being hidden
+            if (typeof currentContainer._downloadsCleanup === 'function') {
+              currentContainer._downloadsCleanup();
+              currentContainer.dataset.downloadsBound = 'false'; // Allow re-bind on next show
+            }
           }
           
           // Update nav
@@ -1245,87 +931,6 @@ class UnifiedShell extends Control {
         
         console.log('🎛️ Unified App Shell initialized');
         
-        // ═══════════════════════════════════════════════════════════════════
-        // Sub-App Client Handlers (global functions for onclick handlers)
-        // ═══════════════════════════════════════════════════════════════════
-        
-        // Rate Limit Dashboard
-        window.resetDomain = async function(domain) {
-          if (!confirm('Reset rate limit tracking for ' + domain + '?')) return;
-          try {
-            const res = await fetch('/api/rate-limits/domains/' + encodeURIComponent(domain), { method: 'DELETE' });
-            if (res.ok) location.reload();
-            else alert('Failed to reset domain');
-          } catch (e) { alert('Error: ' + e.message); }
-        };
-        
-        // Webhook Dashboard
-        window.showCreateForm = function() {
-          const modal = document.getElementById('webhook-create-modal');
-          if (modal) modal.style.display = 'block';
-        };
-        
-        window.hideCreateForm = function() {
-          const modal = document.getElementById('webhook-create-modal');
-          if (modal) modal.style.display = 'none';
-        };
-        
-        window.toggleWebhook = async function(id, enabled) {
-          try {
-            const res = await fetch('/api/webhooks/' + id, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ enabled })
-            });
-            if (res.ok) loadAppContent('webhooks'); // Reload content
-            else alert('Failed to toggle webhook');
-          } catch (e) { alert('Error: ' + e.message); }
-        };
-        
-        window.testWebhook = async function(id) {
-          try {
-            const res = await fetch('/api/webhooks/' + id + '/test', { method: 'POST' });
-            const data = await res.json();
-            alert(data.success ? 'Test webhook sent!' : 'Failed: ' + data.error);
-          } catch (e) { alert('Error: ' + e.message); }
-        };
-        
-        window.deleteWebhook = async function(id) {
-          if (!confirm('Delete this webhook?')) return;
-          try {
-            const res = await fetch('/api/webhooks/' + id, { method: 'DELETE' });
-            if (res.ok) {
-              document.getElementById('app-webhooks').dataset.loaded = 'false';
-              loadAppContent('webhooks');
-            } else alert('Failed to delete webhook');
-          } catch (e) { alert('Error: ' + e.message); }
-        };
-        
-        // Plugin Dashboard
-        window.discoverPlugins = async function() {
-          alert('Plugin discovery triggered - this would scan for new plugins');
-        };
-        
-        window.activatePlugin = async function(pluginId) {
-          try {
-            const res = await fetch('/api/plugins/' + encodeURIComponent(pluginId) + '/activate', { method: 'POST' });
-            if (res.ok) {
-              document.getElementById('app-plugins').dataset.loaded = 'false';
-              loadAppContent('plugins');
-            } else alert('Failed to activate plugin');
-          } catch (e) { alert('Error: ' + e.message); }
-        };
-        
-        window.deactivatePlugin = async function(pluginId) {
-          if (!confirm('Deactivate plugin ' + pluginId + '?')) return;
-          try {
-            const res = await fetch('/api/plugins/' + encodeURIComponent(pluginId) + '/deactivate', { method: 'POST' });
-            if (res.ok) {
-              document.getElementById('app-plugins').dataset.loaded = 'false';
-              loadAppContent('plugins');
-            } else alert('Failed to deactivate plugin');
-          } catch (e) { alert('Error: ' + e.message); }
-        };
         
       })();
     `;

@@ -1,5 +1,12 @@
 "use strict";
 
+// Mock jsdom to avoid parse5 ESM-only import issue in Jest
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation(() => ({
+    window: { document: { querySelector: jest.fn().mockReturnValue(null) } }
+  }))
+}));
+
 const request = require("supertest");
 const Database = require("better-sqlite3");
 

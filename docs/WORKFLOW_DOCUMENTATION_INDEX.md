@@ -6,6 +6,12 @@ purpose: Navigation hub for workflow documentation improvement analysis
 
 # Workflow Documentation Review: Complete Analysis Index
 
+## Want workflows (not analysis)?
+
+Start here:
+- [docs/workflows/WORKFLOW_REGISTRY.md](workflows/WORKFLOW_REGISTRY.md) — canonical list of active workflows
+- [docs/workflows/WORKFLOW_CONTRIBUTION_GUIDE.md](workflows/WORKFLOW_CONTRIBUTION_GUIDE.md) — how to add/update workflows cleanly
+
 **Analysis Date**: November 13, 2025  
 **Status**: Complete & ready to implement  
 **Time Investment**: 4-6 hours (Tier 1) recommended  

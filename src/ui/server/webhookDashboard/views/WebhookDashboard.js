@@ -39,7 +39,7 @@ class WebhookDashboard extends Control {
           <h1 class="dashboard-header__title">🔗 Webhook Management</h1>
           <p class="dashboard-header__subtitle">Configure integrations and event subscriptions</p>
         </div>
-        <button class="btn btn--primary" onclick="showCreateForm()">+ New Webhook</button>
+        <button class="btn btn--primary" data-action="show-create-form">+ New Webhook</button>
       </header>
       
       <main class="dashboard-main">
@@ -89,7 +89,7 @@ class WebhookDashboard extends Control {
             <div class="empty-state__icon">🔔</div>
             <p>No webhooks configured yet.</p>
             <p style="color: var(--text-muted);">Create one to start receiving event notifications.</p>
-            <button class="btn btn--primary" onclick="showCreateForm()" style="margin-top: 16px;">
+            <button class="btn btn--primary" data-action="show-create-form" style="margin-top: 16px;">
               + Create First Webhook
             </button>
           </div>
@@ -134,11 +134,11 @@ class WebhookDashboard extends Control {
           ${moreEvents}
         </div>
         <div class="webhook-card__actions">
-          <button class="btn btn--secondary btn--small" onclick="toggleWebhook(${webhook.id}, ${!webhook.enabled})">
+          <button class="btn btn--secondary btn--small" data-action="toggle-webhook" data-webhook-id="${webhook.id}" data-enabled="${!webhook.enabled}">
             ${webhook.enabled ? 'Disable' : 'Enable'}
           </button>
-          <button class="btn btn--secondary btn--small" onclick="testWebhook(${webhook.id})">Test</button>
-          <button class="btn btn--danger btn--small" onclick="deleteWebhook(${webhook.id})">Delete</button>
+          <button class="btn btn--secondary btn--small" data-action="test-webhook" data-webhook-id="${webhook.id}">Test</button>
+          <button class="btn btn--danger btn--small" data-action="delete-webhook" data-webhook-id="${webhook.id}">Delete</button>
         </div>
       </div>
     `;
@@ -154,10 +154,10 @@ class WebhookDashboard extends Control {
 
     return `
       <div id="createModal" class="modal" style="display: none;">
-        <div class="modal-backdrop" onclick="hideCreateForm()"></div>
+        <div class="modal-backdrop" data-action="hide-create-form"></div>
         <div class="modal-content panel">
           <h3 class="panel__title">Create New Webhook</h3>
-          <form id="createWebhookForm" onsubmit="createWebhook(event)">
+          <form id="createWebhookForm" data-action="create-webhook">
             <div style="margin-bottom: 16px;">
               <label style="display: block; color: var(--text-muted); margin-bottom: 4px;">Name</label>
               <input type="text" name="name" required 
@@ -173,7 +173,7 @@ class WebhookDashboard extends Control {
               ${eventCheckboxes}
             </div>
             <div style="display: flex; gap: 12px; justify-content: flex-end;">
-              <button type="button" class="btn btn--secondary" onclick="hideCreateForm()">Cancel</button>
+              <button type="button" class="btn btn--secondary" data-action="hide-create-form">Cancel</button>
               <button type="submit" class="btn btn--primary">Create Webhook</button>
             </div>
           </form>
@@ -208,20 +208,22 @@ class WebhookDashboard extends Control {
   _getClientScript() {
     return `
       function showCreateForm() {
-        document.getElementById('createModal').style.display = 'flex';
+        var m = document.getElementById('createModal');
+        if (m) m.style.display = 'flex';
       }
       
       function hideCreateForm() {
-        document.getElementById('createModal').style.display = 'none';
+        var m = document.getElementById('createModal');
+        if (m) m.style.display = 'none';
       }
       
-      async function createWebhook(e) {
-        e.preventDefault();
-        const form = e.target;
-        const data = {
-          name: form.name.value,
-          url: form.url.value,
-          events: Array.from(form.querySelectorAll('input[name="events"]:checked')).map(i => i.value)
+      async function createWebhook(formTarget) {
+        var form = formTarget || document.getElementById('createWebhookForm');
+        if (!form) return;
+        var data = {
+          name: form.querySelector('[name="name"]').value,
+          url: form.querySelector('[name="url"]').value,
+          events: Array.from(form.querySelectorAll('input[name="events"]:checked')).map(function(i) { return i.value; })
         };
         
         if (data.events.length === 0) {
@@ -230,12 +232,12 @@ class WebhookDashboard extends Control {
         }
         
         try {
-          const res = await fetch('/api/webhooks', {
+          var res = await fetch('/api/webhooks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
           });
-          const result = await res.json();
+          var result = await res.json();
           if (result.success) {
             location.reload();
           } else {
@@ -248,12 +250,12 @@ class WebhookDashboard extends Control {
       
       async function toggleWebhook(id, enabled) {
         try {
-          const res = await fetch('/api/webhooks/' + id, {
+          var res = await fetch('/api/webhooks/' + id, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ enabled })
+            body: JSON.stringify({ enabled: enabled })
           });
-          const result = await res.json();
+          var result = await res.json();
           if (result.success) {
             location.reload();
           } else {
@@ -268,8 +270,8 @@ class WebhookDashboard extends Control {
         if (!confirm('Delete this webhook?')) return;
         
         try {
-          const res = await fetch('/api/webhooks/' + id, { method: 'DELETE' });
-          const result = await res.json();
+          var res = await fetch('/api/webhooks/' + id, { method: 'DELETE' });
+          var result = await res.json();
           if (result.success) {
             location.reload();
           } else {
@@ -283,6 +285,27 @@ class WebhookDashboard extends Control {
       async function testWebhook(id) {
         alert('Test webhook functionality requires NotificationService integration');
       }
+
+      // Delegated handler for data-action buttons (standalone mode)
+      document.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        var action = btn.dataset.action;
+        e.preventDefault();
+        if (action === 'show-create-form') showCreateForm();
+        else if (action === 'hide-create-form') hideCreateForm();
+        else if (action === 'toggle-webhook') toggleWebhook(btn.dataset.webhookId, btn.dataset.enabled === 'true');
+        else if (action === 'test-webhook') testWebhook(btn.dataset.webhookId);
+        else if (action === 'delete-webhook') deleteWebhook(btn.dataset.webhookId);
+      });
+
+      // Delegated submit handler (standalone mode)
+      document.addEventListener('submit', function(e) {
+        if (e.target.dataset.action === 'create-webhook') {
+          e.preventDefault();
+          createWebhook(e.target);
+        }
+      });
     `;
   }
 

@@ -1,3 +1,15 @@
+---
+type: workflow
+id: emoji-search-markdown
+status: canonical
+audience: agents
+tags:
+	- docs
+	- windows
+	- tooling
+last-reviewed: 2026-02-12
+---
+
 # Emoji Search in Markdown (Windows-safe)
 
 This workflow is the canonical way to search for emoji markers inside Markdown files on Windows, where shells and pipelines can strip or mangle literal emoji in command input.

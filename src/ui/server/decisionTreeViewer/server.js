@@ -4,7 +4,7 @@
  * @server Decision Tree Viewer
  * @description Interactive decision tree visualization with expandable nodes and SVG connections.
  * @ui true
- * @port 4960
+ * @port 3030
  */
 
 /**
@@ -57,6 +57,9 @@ app.use(express.json({ limit: "1mb" }));
 
 // Static files
 app.use("/public", express.static(path.join(__dirname, "public")));
+
+// Suppress favicon 404 (no icon served by this standalone viewer)
+app.get("/favicon.ico", (req, res) => res.status(204).end());
 
 // Check if client bundle exists, build if not
 const clientBundlePath = path.join(__dirname, "public", "decision-tree-client.js");
@@ -271,6 +274,15 @@ function renderPage(context, trees, { baseUrl = "" } = {}) {
 </html>`;
 }
 
+/**
+ * Load decision trees using a three-tier fallback strategy.
+ *
+ * 1. Active config set from the repository (database-backed)
+ * 2. JSON files from `config/decision-trees/` directory
+ * 3. Built-in example tree (always available)
+ *
+ * @returns {Promise<{ trees: DecisionTree[], source: string }>}
+ */
 async function loadTreesWithFallback() {
   if (configSetRepository) {
     try {
@@ -484,7 +496,16 @@ app.get("/api/classify", async (req, res) => {
   }
 });
 
-// Helper: Compute URL signals
+/**
+ * Extract structural signals from a URL for decision tree evaluation.
+ *
+ * Computes features like path depth, slug characteristics, date patterns,
+ * and query parameters. These signals become the input to the decision
+ * tree's condition evaluator.
+ *
+ * @param {string} urlStr - Full URL string to analyze
+ * @returns {Object} Signal object with URL features, or { error, url } on parse failure
+ */
 function computeUrlSignals(urlStr) {
   try {
     const u = new URL(urlStr);
@@ -510,14 +531,29 @@ function computeUrlSignals(urlStr) {
       hasLiveSegment: urlPath.includes("/live/"),
       isMediaFile: /\.(jpg|jpeg|png|gif|svg|webp|mp4|mp3|pdf)$/i.test(urlPath),
       fileExtension: urlPath.match(/\.([a-z0-9]+)$/i)?.[1] || null,
-      queryParamCount: Array.from(u.searchParams).length
+      queryParamCount: Array.from(u.searchParams).length,
+      hasQueryParams: Array.from(u.searchParams).length > 0
     };
   } catch (e) {
     return { error: e.message, url: urlStr };
   }
 }
 
-// Helper: Evaluate a condition against signals
+/**
+ * Evaluate a single decision tree condition against URL signals.
+ *
+ * Supports condition types:
+ * - `compare` — Numeric/string comparison (eq, ne, gt, gte, lt, lte)
+ *   with support for field-reference values (e.g., { field, multiplier })
+ * - `flag` — Boolean flag check
+ * - `url_matches` — Pattern matching against URL/path (regex, contains, segment)
+ * - `text_contains` — Substring matching against a named text field
+ * - `compound` — AND/OR combination of sub-conditions
+ *
+ * @param {Object} condition - Condition definition from config JSON
+ * @param {Object} signals - URL signals from computeUrlSignals()
+ * @returns {{ result: boolean, reason: string }} Evaluation result with explanation
+ */
 function evaluateCondition(condition, signals) {
   if (!condition) return { result: false, reason: "no-condition" };
   
@@ -528,9 +564,13 @@ function evaluateCondition(condition, signals) {
       let value = condition.value;
       let actual = signals[field];
       
-      if (typeof value === "object" && value.field) {
+      // Support field-reference values like { field: "other_signal", multiplier: 1.3 }
+      if (typeof value === "object" && value !== null && value.field) {
+        const multiplier = value.multiplier || 1;
         value = signals[value.field];
-        if (value.multiplier) value *= value.multiplier;
+        if (typeof value === "number" && multiplier !== 1) {
+          value *= multiplier;
+        }
       }
       
       let result;
@@ -563,8 +603,7 @@ function evaluateCondition(condition, signals) {
       
       let matched = false;
       for (const pattern of patterns) {
-        const isRegex = matchType === "regex";
-        if (isRegex) {
+        if (matchType === "regex") {
           try {
             const regex = new RegExp(pattern, "i");
             if (regex.test(urlSignal) || regex.test(pathSignal)) {
@@ -572,7 +611,15 @@ function evaluateCondition(condition, signals) {
               break;
             }
           } catch (e) { /* invalid regex */ }
+        } else if (matchType === "segment") {
+          // Exact match against individual path segments (case-insensitive)
+          const segments = signals.segments || pathSignal.split("/").filter(Boolean);
+          if (segments.some(seg => seg.toLowerCase() === pattern.toLowerCase())) {
+            matched = true;
+            break;
+          }
         } else {
+          // "contains" (default) — substring match
           if (urlSignal.includes(pattern) || pathSignal.includes(pattern)) {
             matched = true;
             break;
@@ -596,12 +643,44 @@ function evaluateCondition(condition, signals) {
       }
     }
     
+    case "text_contains": {
+      const field = condition.field;
+      const patterns = condition.patterns || [];
+      const actual = String(signals[field] || "").toLowerCase();
+      
+      let matched = false;
+      for (const pattern of patterns) {
+        if (actual.includes(pattern.toLowerCase())) {
+          matched = true;
+          break;
+        }
+      }
+      
+      return {
+        result: matched,
+        reason: matched ? `${field} contains match` : `${field}: no match in ${patterns.length} patterns`
+      };
+    }
+    
     default:
       return { result: false, reason: `unknown condition type: ${condition.type}` };
   }
 }
 
-// Helper: Walk decision tree with trace
+/**
+ * Walk a decision tree and produce a classification with an audit trace.
+ *
+ * Starting from the tree root, evaluates each branch condition against the
+ * signals, following the yes/no path until a result node is reached. Records
+ * every step for debugging and transparency.
+ *
+ * Includes a depth guard (max 50 levels) to prevent infinite loops in
+ * malformed trees.
+ *
+ * @param {Object} signals - URL signals from computeUrlSignals()
+ * @param {Object} tree - Root node of the decision tree (from config JSON)
+ * @returns {{ result: string, reason: string, trace: Object[], depth: number }}
+ */
 function classifyWithTrace(signals, tree) {
   const trace = [];
   let node = tree;

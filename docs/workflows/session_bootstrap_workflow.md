@@ -1,3 +1,15 @@
+---
+type: workflow
+id: session-bootstrap-workflow
+status: canonical
+audience: agents
+tags:
+   - sessions
+   - docs
+   - process
+last-reviewed: 2026-02-12
+---
+
 # Session Bootstrap Workflow
 
 _Audience_: Any agent starting a new chunk of work (analysis, implementation, validation).
@@ -38,6 +50,12 @@ Every task in this repo must live inside a session folder so other agents inheri
      Tests/Docs: <plan>
      ```
 
+    - Fast path (recommended):
+       ```bash
+       node tools/dev/session-init.js <slug>
+       ```
+       This creates the session folder and standard files, and prints the next steps.
+
 3. **Log discovery inputs**
    - Before coding, sweep prior art:
      ```bash
@@ -47,6 +65,9 @@ Every task in this repo must live inside a session folder so other agents inheri
 
 4. **Wire the docs hub**
    - Append an entry to `docs/sessions/SESSIONS_HUB.md` describing the new session (duration, focus, quick links).
+
+   - If you're not sure what belongs in sessions, read:
+     [docs/sessions/AGENT.md](../sessions/AGENT.md)
 
 5. **Track commands + decisions**
    - Use the `WORKING_NOTES.md` sections (`Discovery`, `Command Log`, `Decisions`) to capture:
@@ -68,3 +89,10 @@ Every task in this repo must live inside a session folder so other agents inheri
 - If multiple agents collaborate, share the same session folder (different sub-sections per person) rather than duplicating work.
 - When blocked on missing guidance, add a short "Docs gap" note inside the WORKING_NOTES and propose the doc in FOLLOW_UPS.
 - Keep timestamps when possible; they help reconstruct timelines for incident reviews.
+
+## Outputs (done when)
+- `docs/sessions/<yyyy-mm-dd>-<slug>/` exists
+- `PLAN.md` describes objective, done-when, risks, tests/docs
+- `WORKING_NOTES.md` contains discovery + command log
+- `docs/sessions/SESSIONS_HUB.md` links to the new session
+

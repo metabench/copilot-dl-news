@@ -54,6 +54,12 @@ class ArticleProcessor {
     this.knownArticlesCache = knownArticlesCache || null;
     this.events = events || null;
     this.logger = logger || console;
+
+    // P2 diagnostic: track content save decisions for periodic reporting
+    this._contentSaveStats = { total: 0, saved: 0, skippedNotArticle: 0, skippedNoDb: 0, skippedNoPersist: 0, errors: 0 };
+    this._lastContentStatsLog = 0;
+    this._contentStatsInterval = 50; // Log after every N pages processed
+    this._dbEnabledWarned = false;
   }
 
   async process({
@@ -91,18 +97,35 @@ class ArticleProcessor {
     const isArticleByUrl = this.looksLikeArticle(url);
     const strongWordCount = typeof readability.wordCount === 'number' && readability.wordCount > 150;
     const isArticle = isArticleByUrl || strongWordCount;
+    const isHub = !isArticle && this._isLikelyHub(url, navigationLinks, articleLinks);
 
     let metadata = null;
     if (isArticle) {
       metadata = this._extractArticleMetadata($, url);
+    } else if (isHub) {
+      metadata = this._extractHubMetadata($, url, navigationLinks, articleLinks);
     }
 
     const classification = isArticle
       ? 'article'
-      : (navigationLinks.length > 10 ? 'nav' : 'other');
+      : isHub
+        ? 'hub'
+        : (navigationLinks.length > 10 ? 'nav' : 'other');
 
     let articleSaved = false;
-  if (persistArticle && isArticle && this._dbEnabled()) {
+    let hubSaved = false;
+    // P2 diagnostic: track why content is or isn't saved
+    this._contentSaveStats.total++;
+    const dbEnabled = this._dbEnabled();
+
+    if (!dbEnabled && !this._dbEnabledWarned) {
+      this._dbEnabledWarned = true;
+      this._log('warn', '[ArticleProcessor] DB adapter not enabled — no content will be stored. ' +
+        `adapter=${this._getDbAdapter() ? 'present' : 'null'}, ` +
+        `isEnabled=${typeof this._getDbAdapter()?.isEnabled === 'function' ? this._getDbAdapter().isEnabled() : 'N/A'}`);
+    }
+
+    if (persistArticle && isArticle && dbEnabled) {
       articleSaved = await this._persistArticle({
         url,
         html,
@@ -113,6 +136,45 @@ class ArticleProcessor {
         discoveredAt,
         depth
       });
+      if (articleSaved) {
+        this._contentSaveStats.saved++;
+      } else {
+        this._contentSaveStats.errors++;
+      }
+    } else if (persistArticle && isHub && dbEnabled) {
+      // Hub pages are stored via the same upsertArticle path but with hub metadata
+      hubSaved = await this._persistHubPage({
+        url,
+        html,
+        metadata,
+        readability,
+        fetchMeta,
+        referrerUrl,
+        discoveredAt,
+        depth,
+        navigationLinks,
+        articleLinks
+      });
+      if (hubSaved) {
+        this._contentSaveStats.saved++;
+      } else {
+        this._contentSaveStats.errors++;
+      }
+    } else if (!persistArticle) {
+      this._contentSaveStats.skippedNoPersist++;
+    } else if (!isArticle && !isHub) {
+      this._contentSaveStats.skippedNotArticle++;
+    } else if (!dbEnabled) {
+      this._contentSaveStats.skippedNoDb++;
+    }
+
+    // Periodic content save rate reporting
+    if (this._contentSaveStats.total - this._lastContentStatsLog >= this._contentStatsInterval) {
+      this._lastContentStatsLog = this._contentSaveStats.total;
+      const s = this._contentSaveStats;
+      const saveRate = s.total > 0 ? ((s.saved / s.total) * 100).toFixed(1) : '0.0';
+      this._log('log', `[ArticleProcessor] Content save stats: ${s.saved}/${s.total} saved (${saveRate}%), ` +
+        `notArticle=${s.skippedNotArticle}, noPersist=${s.skippedNoPersist}, noDb=${s.skippedNoDb}, errors=${s.errors}`);
     }
 
   if (insertFetchRecord && this._dbEnabled()) {
@@ -126,7 +188,7 @@ class ArticleProcessor {
         urlSignals,
         contentSignals,
         combinedSignals,
-        savedToDb: articleSaved ? 1 : 0
+        savedToDb: (articleSaved || hubSaved) ? 1 : 0
       });
     }
 
@@ -146,6 +208,7 @@ class ArticleProcessor {
       url,
       normalizedUrl: normalizedUrl || url,
       isArticle,
+      isHub,
       metadata,
       readability,
       navigationLinks,
@@ -153,7 +216,9 @@ class ArticleProcessor {
       allLinks,
       statsDelta: {
         articlesFound: isArticle ? 1 : 0,
-        articlesSaved: articleSaved ? 1 : 0
+        articlesSaved: articleSaved ? 1 : 0,
+        hubsFound: isHub ? 1 : 0,
+        hubsSaved: hubSaved ? 1 : 0
       },
       signals: {
         url: urlSignals,
@@ -506,9 +571,147 @@ class ArticleProcessor {
     }
   }
 
+  /**
+   * Determine if a page is likely a hub/section page (not an article).
+   * Hub pages have many navigation links to articles, section-style URLs,
+   * and relatively low word count compared to link count.
+   * @param {string} url
+   * @param {Array} navigationLinks
+   * @param {Array} articleLinks
+   * @returns {boolean}
+   */
+  _isLikelyHub(url, navigationLinks, articleLinks) {
+    // Must have a meaningful number of outbound links to qualify
+    const totalLinks = (navigationLinks?.length || 0) + (articleLinks?.length || 0);
+    if (totalLinks < 5) return false;
+
+    // URL pattern: section pages like /world, /politics, /business, etc.
+    try {
+      const { pathname } = new URL(url);
+      const segments = pathname.split('/').filter(Boolean);
+
+      // Root or single-segment paths are often hubs: /, /world, /politics
+      if (segments.length <= 1) return true;
+
+      // Two-segment with common hub patterns: /news/world, /section/politics
+      const hubSegments = /^(world|politics|business|technology|science|health|sports|entertainment|opinion|culture|news|uk|us|europe|asia|africa|americas|economy|environment|education|travel|lifestyle|video|live|latest|breaking|analysis|features|money|style|weather|local|national|international|top-stories|home)$/i;
+      if (segments.length <= 2 && segments.some(s => hubSegments.test(s))) return true;
+
+      // Pages with many article links (>10) and few words are likely hub pages
+      if (articleLinks?.length > 10 && navigationLinks?.length > 5) return true;
+    } catch (_) {
+      // Invalid URL
+    }
+
+    return false;
+  }
+
+  /**
+   * Extract metadata for a hub page.
+   * @param {object} $ - Cheerio instance
+   * @param {string} url
+   * @param {Array} navigationLinks
+   * @param {Array} articleLinks
+   * @returns {object}
+   */
+  _extractHubMetadata($, url, navigationLinks, articleLinks) {
+    const title = $('h1').first().text().trim() ||
+      $('title').text().trim() ||
+      $('[property="og:title"]').attr('content') ||
+      'Hub Page';
+
+    let section = '';
+    try {
+      const { pathname } = new URL(url);
+      const segments = pathname.split('/').filter(Boolean);
+      section = segments[0] || 'home';
+    } catch (_) {
+      section = 'unknown';
+    }
+
+    return {
+      title,
+      section,
+      date: null,
+      pageType: 'hub',
+      navigationLinksCount: navigationLinks?.length || 0,
+      articleLinksCount: articleLinks?.length || 0
+    };
+  }
+
+  /**
+   * Persist a hub page to the database.
+   * Uses the same upsertArticle pathway but with hub-specific metadata.
+   * This ensures hub page HTML is stored in content_storage for later analysis.
+   * @param {object} params
+   * @returns {boolean}
+   */
+  async _persistHubPage({ url, html, metadata, readability, fetchMeta, referrerUrl, discoveredAt, depth, navigationLinks, articleLinks }) {
+    try {
+      const adapter = this._getDbAdapter();
+      if (!adapter) return false;
+
+      const canonicalUrl = this._extractCanonicalUrl(html);
+
+      // Build a minimal analysis record for the hub
+      const hubAnalysis = {
+        pageType: 'hub',
+        navigationLinksCount: navigationLinks?.length || 0,
+        articleLinksCount: articleLinks?.length || 0,
+        section: metadata?.section || null,
+        wordCount: readability?.wordCount ?? null
+      };
+
+      adapter.upsertArticle({
+        url,
+        title: metadata?.title || 'Hub Page',
+        date: null,
+        section: metadata?.section || null,
+        html,
+        crawled_at: new Date().toISOString(),
+        canonical_url: canonicalUrl,
+        referrer_url: referrerUrl || null,
+        discovered_at: discoveredAt || null,
+        crawl_depth: depth ?? null,
+        fetched_at: fetchMeta?.fetchedAtIso || null,
+        request_started_at: fetchMeta?.requestStartedIso || null,
+        http_status: fetchMeta?.httpStatus ?? null,
+        content_type: fetchMeta?.contentType || null,
+        content_length: fetchMeta?.contentLength ?? null,
+        etag: fetchMeta?.etag || null,
+        last_modified: fetchMeta?.lastModified || null,
+        redirect_chain: fetchMeta?.redirectChain || null,
+        ttfb_ms: fetchMeta?.ttfbMs ?? null,
+        download_ms: fetchMeta?.downloadMs ?? null,
+        total_ms: fetchMeta?.totalMs ?? null,
+        bytes_downloaded: fetchMeta?.bytesDownloaded ?? null,
+        html_sha256: readability?.htmlSha || null,
+        text: readability?.text || null,
+        word_count: readability?.wordCount ?? null,
+        language: readability?.language || null,
+        article_xpath: null,
+        analysis: JSON.stringify(hubAnalysis)
+      });
+
+      const bytes = Buffer.byteLength(html, 'utf8');
+      this._log('log', `Saved hub page: ${metadata?.title || url} (${bytes} bytes, ${navigationLinks?.length || 0} nav links, ${articleLinks?.length || 0} article links)`);
+
+      if (this.events && typeof this.events.emitProgress === 'function') {
+        this.events.emitProgress();
+      }
+      return true;
+    } catch (error) {
+      this._log('error', `Failed to save hub page ${url}: ${error?.message || error}`);
+      return false;
+    }
+  }
+
   _dbEnabled() {
     const adapter = this._getDbAdapter();
-    return !!(adapter && adapter.isEnabled && adapter.isEnabled());
+    if (!adapter) return false;
+    // If adapter has no isEnabled method, assume enabled (adapter exists = enabled)
+    if (typeof adapter.isEnabled !== 'function') return true;
+    return adapter.isEnabled();
   }
 
   _getDbAdapter() {

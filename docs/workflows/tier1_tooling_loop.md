@@ -1,3 +1,15 @@
+---
+type: workflow
+id: tier1-tooling-loop
+status: canonical
+audience: agents
+tags:
+   - tooling
+   - js
+   - refactor
+last-reviewed: 2026-02-12
+---
+
 # Tier 1 Tooling Loop
 
 _Audience_: Agents editing JavaScript/TypeScript code under `src/` or `tools/`.
@@ -45,13 +57,13 @@ This workflow codifies the four-phase loop mandated in AGENTS.md + Singularity E
    ```bash
    npm run test:by-path tests/<suite>.test.js
    ```
-   (Never invoke Jest directly; use the repo scripts.)
+   Prefer repo scripts when available (they encode config and safety defaults). If you must run `npx jest ...` for a specific suite, still follow the Testing Quick Reference and always confirm exit code.
 2. Re-run `js-scan --search` to confirm the symbol now appears where expected.
 3. Update docs/JSDoc + `SESSION_SUMMARY.md` before declaring victory.
 
 ## Bilingual & Compact I/O Tips
 - Default flags: `--json --ai-mode` to keep outputs machine-friendly.
-- Mix Chinese aliases if collaborating bilingually (`--搜`, `--限`, etc.); specify `--lang en|zh|bilingual` to lock formatting.
+- Mix Chinese aliases if collaborating bilingually (`--搜`, `--限`, etc.); use `--lang en|zh|bilingual|auto` to lock formatting.
 - Log continuation tokens so others can resume long scans without rerunning heavy operations.
 
 ## Failure & Recovery Playbook
@@ -65,3 +77,8 @@ This workflow codifies the four-phase loop mandated in AGENTS.md + Singularity E
 - [ ] `--fix --emit-plan` output captured (or reason logged if not applicable)
 - [ ] Tests/checks run via repo scripts
 - [ ] Docs/session notes updated before hand-off
+
+## Related quick references
+- [docs/TESTING_QUICK_REFERENCE.md](../TESTING_QUICK_REFERENCE.md)
+- [docs/workflows/WORKFLOW_REGISTRY.md](WORKFLOW_REGISTRY.md)
+

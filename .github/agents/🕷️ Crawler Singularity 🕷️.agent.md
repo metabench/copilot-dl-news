@@ -36,6 +36,17 @@ handoffs:
       {{PASTE: new modules, test coverage gaps, flaky tests}}
       
       Please audit and improve test coverage.
+
+  - label: '🔬 Hand off to Diagnostic & Repair'
+    agent: '🔬🛠️ Diagnostic & Repair Singularity 🛠️🔬'
+    prompt: |
+      CRAWLER → DIAGNOSTIC & REPAIR HANDOFF
+
+      Crawler work surfaced a data pipeline investigation need:
+
+      {{PASTE: symptoms, affected URLs/time periods, what you've tried}}
+
+      Please investigate root cause using diagnostic instruments and coordinate the fix.
 ---
 
 # 🕷️ Crawler Singularity 🕷️
@@ -53,6 +64,19 @@ handoffs:
 - **Test First**: Crawler logic (orchestration, decision making, parsing) must be unit tested. Use `npm run test:by-path`.
 - **Modular Design**: Avoid "God Classes". Use `CrawlerFactory` to inject dependencies. Keep `NewsCrawler.js` as a thin coordinator.
 - **Observability**: Every stall, retry, or rejection must be logged structurally. The crawler should explain *why* it stopped.
+- **Error Handling Vigilance**: Beware of the triple-silent-failure pattern: `safeCall(() => obj?.method?.())`. Optional chaining inside safeCall suppresses real errors. Always check that error recording paths actually execute. See `docs/designs/CRAWL_SYSTEM_PROBLEMS_AND_RESEARCH.md` P1.
+
+## Known Problems & Diagnostic Tools
+
+**Always consult** `docs/designs/CRAWL_SYSTEM_PROBLEMS_AND_RESEARCH.md` before working on crawler error handling, content storage, or pipeline issues. It documents 8 diagnosed problems with root causes and fix plans.
+
+**Diagnostic instruments** available in `tools/crawl/`:
+- `node tools/crawl/crawl-health.js` — Overall health score
+- `node tools/crawl/crawl-verify.js --url <url>` — Per-URL pipeline trace
+- `node tools/crawl/crawl-pipeline.js` — Aggregate pipeline analytics
+- `node tools/crawl/crawl-errors.js` — Error trend analysis
+
+Use these tools to verify fixes and establish baselines before/after changes.
 
 ## Experimental Methodology (UI + Telemetry + Import)
 

@@ -84,6 +84,20 @@ db.exec(`
 const app = express();
 app.use(express.json());
 
+// P3 fix: Clean up any stuck runs from previous crashes at startup
+try {
+  const stuckRuns = db.prepare(`SELECT id, started_at FROM crawl_runs WHERE status = 'running'`).all();
+  if (stuckRuns.length > 0) {
+    const closeStmt = db.prepare(`UPDATE crawl_runs SET status = 'crashed', ended_at = CURRENT_TIMESTAMP WHERE id = ?`);
+    for (const run of stuckRuns) {
+      closeStmt.run(run.id);
+    }
+    console.log(`[startup] Cleaned up ${stuckRuns.length} stuck run(s) from previous session: ${stuckRuns.map(r => `#${r.id}`).join(', ')}`);
+  }
+} catch (cleanupErr) {
+  console.warn(`[startup] Failed to clean up stuck runs: ${cleanupErr.message}`);
+}
+
 // Crawl state
 let crawlRun = null;
 let isRunning = false;
@@ -286,8 +300,10 @@ async function runCrawler(maxPages = 200) {
         log('info', `Seeded with: ${startUrl}`);
     }
 
-    // Crawl loop
+    // Crawl loop (wrapped in try/finally to prevent stuck runs on crash)
     let processed = 0;
+    let crawlStatus = 'completed';
+    try {
     while (!shouldStop && processed < maxPages) {
         const row = db.prepare(`SELECT id, url, depth FROM urls WHERE status = 'pending' ORDER BY depth ASC, id ASC LIMIT 1`).get();
 
@@ -306,16 +322,25 @@ async function runCrawler(maxPages = 200) {
         const elapsed = (Date.now() - stats.startTime) / 1000;
         stats.itemsPerSecond = elapsed > 0 ? (stats.fetched / elapsed).toFixed(2) : 0;
     }
-
-    // Finalize
+    crawlStatus = shouldStop ? 'stopped' : 'completed';
+    } catch (crawlError) {
+      crawlStatus = 'failed';
+      log('error', `Crawl loop crashed: ${crawlError.message}`);
+    } finally {
+    // Finalize (always runs, even on crash)
+    try {
     db.prepare(`UPDATE crawl_runs SET ended_at = CURRENT_TIMESTAMP, total_fetched = ?, total_errors = ?, status = ? WHERE id = ?`).run(
-        stats.fetched, stats.errors, shouldStop ? 'stopped' : 'completed', crawlRun.id
+        stats.fetched, stats.errors, crawlStatus, crawlRun.id
     );
+    } catch (finalizeErr) {
+      log('error', `Failed to finalize crawl run: ${finalizeErr.message}`);
+    }
 
-    log('info', `Crawl finished`, { fetched: stats.fetched, errors: stats.errors });
+    log('info', `Crawl finished`, { fetched: stats.fetched, errors: stats.errors, status: crawlStatus });
 
     isRunning = false;
     crawlRun = null;
+    }
 
     return { processed, fetched: stats.fetched, errors: stats.errors };
 }
@@ -418,4 +443,28 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`   POST /api/start to begin crawling`);
     console.log(`   GET /api/status for progress`);
     console.log(`   GET /api/export for results`);
+});
+
+// P3 fix: Graceful shutdown — ensure stuck runs are finalized on process exit
+function gracefulShutdown(signal) {
+  console.log(`\n[${signal}] Shutting down gracefully...`);
+  shouldStop = true;
+  if (crawlRun && crawlRun.id) {
+    try {
+      db.prepare(`UPDATE crawl_runs SET ended_at = CURRENT_TIMESTAMP, total_fetched = ?, total_errors = ?, status = 'interrupted' WHERE id = ? AND status = 'running'`).run(
+        stats.fetched || 0, stats.errors || 0, crawlRun.id
+      );
+      console.log(`[${signal}] Finalized crawl run #${crawlRun.id} as 'interrupted'`);
+    } catch (err) {
+      console.error(`[${signal}] Failed to finalize run: ${err.message}`);
+    }
+  }
+  try { db.close(); } catch (_) {}
+  process.exit(0);
+}
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('uncaughtException', (err) => {
+  console.error(`[UNCAUGHT] ${err.message}`);
+  gracefulShutdown('uncaughtException');
 });

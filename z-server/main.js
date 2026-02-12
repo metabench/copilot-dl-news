@@ -383,9 +383,6 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
 
-  // Open DevTools automatically to debug empty window
-  mainWindow.webContents.openDevTools();
-
   // Log renderer console messages to main process
   mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
     console.log(`[Renderer] ${message}`);

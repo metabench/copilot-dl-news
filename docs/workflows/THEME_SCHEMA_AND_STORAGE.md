@@ -1,3 +1,15 @@
+---
+type: workflow
+id: theme-schema-and-storage
+status: canonical
+audience: agents
+tags:
+  - ui
+  - svg
+  - theme
+last-reviewed: 2026-02-12
+---
+
 # Theme Schema & Storage Workflow
 
 **Scope**: Shared theme definitions for SVG, HTML, and jsgui3. Themes live in versioned JSON files, are queryable via the svg MCP tools, and are discoverable via the docs-memory MCP workflow listing.

@@ -120,6 +120,24 @@ Options:
 - Combine `--view terse --fields location,name,selector,hash` to guarantee every match emits a canonical selector plus guard hash even when snippets are empty; the `selector` column mirrors js-edit canonical names so agents can jump straight into guarded edits.
 - When piping results into automation, add `--ai-mode --json` so payloads include `continuation_tokens`, the field list you requested, and the new selector metadata.
 
+---
+
+## `workflows` — List/Search Workflow Docs
+
+Use this when you want to quickly discover what repeatable procedures exist under `docs/workflows/`.
+
+```powershell
+# List workflows
+node tools/dev/workflows.js --list
+
+# Search workflows
+node tools/dev/workflows.js --search crawl diagnostic --json
+
+# Filter by tag
+node tools/dev/workflows.js --tag ui --compact
+```
+
+
 Use `--async`, `--generator`, `--kind`, `--include-path`, and `--exclude-path` to refine search results. Text output respects `--max-lines`, `--no-snippets`, and `--hashes-only` for concise listings, while JSON payloads include guidance hints when result sets overflow.
 
 ### Ripple Analysis — Dependency Impact Assessment

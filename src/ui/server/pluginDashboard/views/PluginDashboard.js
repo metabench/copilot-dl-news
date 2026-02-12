@@ -38,7 +38,7 @@ class PluginDashboard extends Control {
           <h1 class="dashboard-header__title">🔌 Plugin Manager</h1>
           <p class="dashboard-header__subtitle">Discover, configure, and manage plugins</p>
         </div>
-        <button class="btn btn--primary" onclick="discoverPlugins()">🔍 Discover Plugins</button>
+        <button class="btn btn--primary" data-action="discover-plugins">🔍 Discover Plugins</button>
       </header>
       
       <main class="dashboard-main">
@@ -90,7 +90,7 @@ class PluginDashboard extends Control {
             <div class="empty-state__icon">🔌</div>
             <p>No plugins discovered yet.</p>
             <p style="color: var(--text-muted);">Add plugins to the <code>plugins/</code> directory and click "Discover".</p>
-            <button class="btn btn--primary" onclick="discoverPlugins()" style="margin-top: 16px;">
+            <button class="btn btn--primary" data-action="discover-plugins" style="margin-top: 16px;">
               🔍 Discover Plugins
             </button>
           </div>
@@ -130,10 +130,10 @@ class PluginDashboard extends Control {
 
     const actionButtons = [];
     if (canActivate) {
-      actionButtons.push(`<button class="btn btn--secondary btn--small" onclick="activatePlugin('${this._escapeHtml(plugin.id)}')">Activate</button>`);
+      actionButtons.push(`<button class="btn btn--secondary btn--small" data-action="activate-plugin" data-plugin-id="${this._escapeHtml(plugin.id)}">Activate</button>`);
     }
     if (canDeactivate) {
-      actionButtons.push(`<button class="btn btn--danger btn--small" onclick="deactivatePlugin('${this._escapeHtml(plugin.id)}')">Deactivate</button>`);
+      actionButtons.push(`<button class="btn btn--danger btn--small" data-action="deactivate-plugin" data-plugin-id="${this._escapeHtml(plugin.id)}">Deactivate</button>`);
     }
     if (plugin.state === 'error') {
       actionButtons.push(`<span style="color: var(--danger-red); font-size: 12px;" title="${this._escapeHtml(plugin.error || 'Unknown error')}">⚠️ ${this._escapeHtml(plugin.error || 'Error')}</span>`);
@@ -157,8 +157,8 @@ class PluginDashboard extends Control {
     return `
       async function discoverPlugins() {
         try {
-          const res = await fetch('/api/plugins/discover', { method: 'POST' });
-          const result = await res.json();
+          var res = await fetch('/api/plugins/discover', { method: 'POST' });
+          var result = await res.json();
           if (result.success) {
             location.reload();
           } else {
@@ -171,8 +171,8 @@ class PluginDashboard extends Control {
       
       async function activatePlugin(id) {
         try {
-          const res = await fetch('/api/plugins/' + encodeURIComponent(id) + '/activate', { method: 'POST' });
-          const result = await res.json();
+          var res = await fetch('/api/plugins/' + encodeURIComponent(id) + '/activate', { method: 'POST' });
+          var result = await res.json();
           if (result.success) {
             location.reload();
           } else {
@@ -187,8 +187,8 @@ class PluginDashboard extends Control {
         if (!confirm('Deactivate plugin "' + id + '"?')) return;
         
         try {
-          const res = await fetch('/api/plugins/' + encodeURIComponent(id) + '/deactivate', { method: 'POST' });
-          const result = await res.json();
+          var res = await fetch('/api/plugins/' + encodeURIComponent(id) + '/deactivate', { method: 'POST' });
+          var result = await res.json();
           if (result.success) {
             location.reload();
           } else {
@@ -198,6 +198,17 @@ class PluginDashboard extends Control {
           alert('Failed: ' + err.message);
         }
       }
+
+      // Delegated handler for data-action buttons (standalone mode)
+      document.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        var action = btn.dataset.action;
+        e.preventDefault();
+        if (action === 'discover-plugins') discoverPlugins();
+        else if (action === 'activate-plugin') activatePlugin(btn.dataset.pluginId);
+        else if (action === 'deactivate-plugin') deactivatePlugin(btn.dataset.pluginId);
+      });
     `;
   }
 

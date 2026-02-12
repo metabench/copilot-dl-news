@@ -30,6 +30,8 @@ const FailureTypes = Object.freeze({
   CONNECTION_RESET: 'CONNECTION_RESET',
   TIMEOUT: 'TIMEOUT',
   SSL_ERROR: 'SSL_ERROR',
+  AUTH_REQUIRED: 'AUTH_REQUIRED',
+  SERVER_ERROR: 'SERVER_ERROR',
   UNKNOWN: 'UNKNOWN'
 });
 
@@ -105,6 +107,29 @@ const DETECTION_PATTERNS = {
     ],
     errorPatterns: [/ssl/i, /certificate/i, /tls/i],
     description: 'SSL/TLS certificate error'
+  },
+  [FailureTypes.AUTH_REQUIRED]: {
+    statusCodes: [401, 402, 407],
+    bodyPatterns: [
+      /sign.?in/i,
+      /log.?in.?required/i,
+      /subscribe.?to.?(read|access|continue)/i,
+      /paywall/i,
+      /premium.?content/i,
+      /members?.?only/i
+    ],
+    description: 'Authentication or subscription required'
+  },
+  [FailureTypes.SERVER_ERROR]: {
+    statusCodes: [500, 502, 503, 504],
+    bodyPatterns: [
+      /internal.?server.?error/i,
+      /bad.?gateway/i,
+      /service.?unavailable/i,
+      /gateway.?timeout/i,
+      /temporarily.?unavailable/i
+    ],
+    description: 'Server error (5xx)'
   }
 };
 
@@ -165,6 +190,8 @@ class DiagnosticEngine {
     // Check each failure type
     results.push(this._checkRateLimited(statusCode, headers, body, errorMessage));
     results.push(this._checkDnsFailure(errorCode, errorMessage));
+    results.push(this._checkAuthRequired(statusCode, body));
+    results.push(this._checkServerError(statusCode, body, errorMessage));
     results.push(this._checkSoftBlock(statusCode, body, errorMessage));
     results.push(this._checkContentBlock(statusCode, body));
     results.push(this._checkStaleProxy(domain, statusCode, errorCode, context.proxyName));
@@ -512,6 +539,74 @@ class DiagnosticEngine {
     
     return {
       type: FailureTypes.SSL_ERROR,
+      confidence,
+      evidence,
+      message: pattern.description
+    };
+  }
+
+  _checkAuthRequired(statusCode, body) {
+    const pattern = this._patterns[FailureTypes.AUTH_REQUIRED];
+    const evidence = { statusCode, matchedPatterns: [] };
+    let confidence = 0;
+
+    // Direct status code match (401, 402, 407)
+    if (pattern.statusCodes.includes(statusCode)) {
+      confidence = 0.99;
+      evidence.statusMatch = true;
+    }
+
+    // Check body for paywall / login patterns even on other status codes
+    if (body && pattern.bodyPatterns) {
+      for (const p of pattern.bodyPatterns) {
+        if (p.test(body)) {
+          evidence.matchedPatterns.push(p.source);
+          confidence = Math.max(confidence, 0.75);
+        }
+      }
+    }
+
+    if (confidence === 0) return null;
+
+    return {
+      type: FailureTypes.AUTH_REQUIRED,
+      confidence,
+      evidence,
+      message: pattern.description
+    };
+  }
+
+  _checkServerError(statusCode, body, errorMessage) {
+    const pattern = this._patterns[FailureTypes.SERVER_ERROR];
+    const evidence = { statusCode, matchedPatterns: [] };
+    let confidence = 0;
+
+    // Direct status code match (500-504)
+    if (pattern.statusCodes.includes(statusCode)) {
+      confidence = 0.90;
+      evidence.statusMatch = true;
+    }
+
+    // Also match on generic 5xx range
+    if (statusCode >= 500 && statusCode < 600) {
+      confidence = Math.max(confidence, 0.85);
+      evidence.statusRange = '5xx';
+    }
+
+    // Check body for server error patterns
+    if (body && pattern.bodyPatterns) {
+      for (const p of pattern.bodyPatterns) {
+        if (p.test(body)) {
+          evidence.matchedPatterns.push(p.source);
+          confidence = Math.max(confidence, 0.80);
+        }
+      }
+    }
+
+    if (confidence === 0) return null;
+
+    return {
+      type: FailureTypes.SERVER_ERROR,
       confidence,
       evidence,
       message: pattern.description

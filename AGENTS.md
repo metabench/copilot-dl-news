@@ -12,6 +12,7 @@ Doc topology. Keep this file focused and actionable. Heavier guidance lives in /
 - **Session folders are mandatory.** Every session (analysis, implementation, validation) gets a dedicated directory under `docs/sessions/<yyyy-mm-dd>-<short-slug>/`. Park your summaries, roadmaps, follow-ups, and guidance there—never in `tmp/`—and add the folder to `docs/sessions/SESSIONS_HUB.md` as soon as it exists.
 - **Think in memory layers.** Consider the current session directory your short/medium-term memory; older session directories are your long-term memory. Review them before starting new work so you inherit open threads instead of re-discovering them.
 - **Search the archive first.** Use the CLI tooling (`node tools/dev/md-scan.js --dir docs/sessions --search <term> --json`, `node tools/dev/js-scan.js --dir docs --find-pattern <pattern>`) to sweep current and past sessions quickly. Bring the hits into your immediate context before drafting new plans or documents.
+- **Workflow discovery.** If you need a repeatable procedure (deploy, diagnostics, UI inspection, refactor loop), consult the canonical registry first: `docs/workflows/WORKFLOW_REGISTRY.md`.
 - **Kilo instructions live under `.kilo/rules-<slug>/`.** Pair them with [`docs/workflows/kilo-agent-handbook.md`](docs/workflows/kilo-agent-handbook.md) so Kilo Code knows where to find repo-specific guidance. Add a slugged rules directory + `.kilocodemodes` entry whenever you author a new Kilo mode.
 
 /docs/INDEX.md – the table of contents the agents consult first.
@@ -35,7 +36,32 @@ Doc topology. Keep this file focused and actionable. Heavier guidance lives in /
 
 AGENTS.md should link to these pages and assign follow-ups ("If X arises, consult and improve Y.md"). Each time you learn something, push it down into the right doc and tighten the index.
 
+**Path-local `AGENT.md` files.** Key directories contain an `AGENT.md` file that points agents to relevant workflows, docs, and critical knowledge for that specific path. **Before starting work in any directory, check for an `AGENT.md` in or near your working directory** — it is the fastest way to load the right context. Current locations:
+
+| Path | Scope |
+|------|-------|
+| `src/v4/AGENT.md` | V4 distributed crawl system |
+| `src/core/crawler/AGENT.md` | Core (V1/V3) crawler pipeline |
+| `src/data/db/AGENT.md` | Database adapters + schema sync |
+| `src/ui/AGENT.md` | jsgui3 UI components |
+| `deploy/AGENT.md` | Deployment infrastructure |
+| `deploy/remote-crawler-v2/AGENT.md` | Content-storing crawler worker |
+| `tools/crawl/AGENT.md` | Crawl diagnostic instruments |
+| `tools/dev/AGENT.md` | Developer CLI tools (js-scan, js-edit) |
+| `tests/v4/AGENT.md` | V4 test suite |
+| `docs/AGENT.md` | Documentation hub navigation |
+| `docs/sessions/AGENT.md` | Session folder management (agent memory) |
+
+When you create a new major subsystem directory, create an `AGENT.md` there with: (1) what the directory contains, (2) essential reading links, (3) key workflows, (4) critical knowledge / gotchas, (5) related paths and agent specs.
+
+If you add a new workflow, also:
+- Add it to `docs/workflows/WORKFLOW_REGISTRY.md`
+- Add a pointer in at least one relevant path-local `AGENT.md`
+
+
 Core directives (always-on)
+
+Session-first gate (mandatory). For any substantial task (multi-step implementation, diagnostics, crawling, refactors, or cross-file work), you MUST create or continue a session under `docs/sessions/<yyyy-mm-dd>-<slug>/` before doing implementation or running operational diagnostics. Minimum required artifacts at kickoff: `PLAN.md` objective + success criteria and an entry in `WORKING_NOTES.md`. The only exception is a true one-liner operational command.
 
 Plan-first. Before edits, create/refresh a one-screen Plan (see template below). State scope, risks, success criteria, test/benchmark intent, and docs you’ll touch. When the work is truly a one-liner (e.g., running `Stop-Process -Name node -Force` to kill stray tasks), skip the formal plan/todo overhead—execute the command, capture the result, and move on.
 
@@ -50,6 +76,18 @@ Performance by design. Eliminate N+1, batch with joins/IN (...)/eager loading, u
 Tests are non-negotiable. For every fix or feature: focused unit/integration tests + a regression test if you killed a bug. Add a tiny benchmark when DB-heavy behavior might shift.
 
 Process Lifecycle & Cleanup. Ensure all scripts (especially verification tools and one-off checks) exit cleanly. Explicitly close database connections, clear intervals, and unref timers in a `finally` block. Hanging processes block CI and confuse users.
+
+Production persistence default (mandatory). For crawl runs that write into temporary/per-domain databases, agents MUST assess import safety first (dedup + schema compatibility + dry-run). If safe, agents MUST sync results into `data/news.db` during the same session and verify post-sync counts. Do not leave completed crawl data stranded in temp DBs unless a blocker is documented.
+
+Sync-first remote crawling (mandatory). When running remote fleet crawls, **always start with sync enabled** so data flows automatically from remote crawlers to the local `data/news.db`. Use `npm run fleet:crawl-sync` (full crawl+sync) or `npm run fleet:sync` (sync-only). Never run remote crawlers without a corresponding sync pipeline pulling data locally. After crawl sessions, verify local DB counts increased. See `tools/crawl/AGENT.md` for fleet CLI reference and `docs/workflows/continuous-crawl-repair-loop.md` for the operational loop.
+
+Fast-answer CLI policy (mandatory). For repeated operational questions, prefer near-instant local CLI fast paths before expensive scans. Examples: use `node tools/crawl/fleet-cli.js running` (snapshot-based, sub-second) for "are crawlers running?", `node tools/crawl/fleet-cli.js overview` for instant richer triage summaries, and `node tools/crawl/fleet-cli.js question --q "<operator question>"` for deterministic (non-AI) routing to the right fast command. Use `--explain` to show matched rule and `--list-rules` to inspect rule priority. Use `node tools/crawl/fleet-cli.js health` only when snapshot refresh or authoritative live state is required.
+
+Endpoint-intel CLI policy (mandatory). For questions about endpoint structure/capabilities (what routes exist, what they return, local vs remote differences), run `node tools/crawl/fleet-endpoint-intel.js` before manual code spelunking. Prefer `--json` output for agent consumption and use `--target local|remote|both` plus `--deep`/`--include-controls` when needed.
+
+CLI evolution policy (mandatory). Agents may and should add new CLI commands or extend existing ones when this materially reduces answer latency for recurring questions. Keep outputs machine-readable (`--json`), preserve safe defaults, and always update command help plus relevant agent docs after introducing/altering commands.
+
+Intermittent autonomy protocol (mandatory for "go" commands). Agents are not assumed to run continuously; when given a "go" command, run `node tools/crawl/agent-go.js --apply --session <active-session>` (or the npm alias), so actions are driven by elapsed-time checkpoints, recent logs, and fleet state. `agent-go` must write `AUTONOMY_STATE.json` + `WORKING_NOTES.md` checkpoint entries each run.
 
 Server Restart After Changes. When modifying server-side code (Express routes, jsgui3 controls, renderers, utilities), always restart the relevant server after applying changes. For the docs viewer: `node src/ui/server/docsViewer/server.js --stop; node src/ui/server/docsViewer/server.js --detached`. For other UI servers, use `Stop-Process -Name node -Force` followed by the appropriate start command. The user cannot see your changes until the server picks up the new code.
 

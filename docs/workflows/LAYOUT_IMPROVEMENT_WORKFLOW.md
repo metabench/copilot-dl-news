@@ -1,3 +1,15 @@
+---
+type: workflow
+id: layout-improvement-workflow
+status: canonical
+audience: agents
+tags:
+  - ui
+  - jsgui3
+  - workflow
+last-reviewed: 2026-02-12
+---
+
 # Layout Improvement Workflow
 
 > **Purpose**: A systematic approach to improving UI layouts in jsgui3 applications, using visual mockups and measurable criteria.

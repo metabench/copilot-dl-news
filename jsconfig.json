@@ -30,13 +30,9 @@
     "design/**",
     "docs/**",
     "gazetteer-backup/**",
-    "labs/**",
     "migration-*/**",
     "public/**",
     "recipes/**",
-    "screenshots/**",
-    "testlogs/**",
-    "tmp*/**",
-    "z-server/**"
+    "screenshots/**"
   ]
 }

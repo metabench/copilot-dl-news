@@ -667,6 +667,16 @@ function mountDashboardModules(unifiedApp, options = {}) {
       id: 'crawl-strategies',
       mountPath: '/crawl-strategies',
       full: () => createCrawlStrategiesRouter({ logger: log, getDbRW })
+    },
+    {
+      id: 'remote-crawl-admin',
+      mountPath: '/remote-crawl',
+      full: () => {
+        const { createRemoteCrawlAdminRouter } = require('../remoteCrawlAdmin/server');
+        return createRemoteCrawlAdminRouter({
+          remoteHost: process.env.CRAWL_REMOTE_HOST || '144.21.35.104:3200'
+        });
+      }
     }
   ];
 

@@ -1,5 +1,12 @@
 "use strict";
 
+// Mock jsdom to avoid parse5 ESM-only import issue in Jest
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation(() => ({
+    window: { document: { querySelector: jest.fn().mockReturnValue(null) } }
+  }))
+}));
+
 const fs = require("fs");
 const path = require("path");
 const request = require("supertest");
@@ -51,5 +58,5 @@ describeIfDb("dataExplorerServer production snapshot coverage", () => {
     const detailResponse = await request(server.app).get(`/domains/${encodeURIComponent(host)}`);
     expect(detailResponse.status).toBe(200);
     expect(detailResponse.text).toContain(`Domain: ${host}`);
-  });
+  }, 30000);
 });

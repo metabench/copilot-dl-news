@@ -1,11 +1,29 @@
 # Project Documentation Index
 
-_Last updated: 2026-02-04_
+_Last updated: 2026-02-12_
 
 ## Quick References
 - [Command Execution Guide](COMMAND_EXECUTION_GUIDE.md)
 - [Testing Quick Reference](TESTING_QUICK_REFERENCE.md)
 - [Database Quick Reference](DATABASE_QUICK_REFERENCE.md)
+
+## Path-Local Agent Guides (AGENT.md)
+
+Every major subsystem directory has an `AGENT.md` file with context-specific workflows, essential reading, and critical knowledge. **Check for an AGENT.md in your working directory before starting any task.**
+
+| Path | Scope |
+|------|-------|
+| [src/v4/AGENT.md](../src/v4/AGENT.md) | V4 distributed crawl system |
+| [src/core/crawler/AGENT.md](../src/core/crawler/AGENT.md) | Core (V1/V3) crawler pipeline |
+| [src/data/db/AGENT.md](../src/data/db/AGENT.md) | Database adapters + schema sync |
+| [src/ui/AGENT.md](../src/ui/AGENT.md) | jsgui3 UI components |
+| [deploy/AGENT.md](../deploy/AGENT.md) | Deployment infrastructure |
+| [deploy/remote-crawler-v2/AGENT.md](../deploy/remote-crawler-v2/AGENT.md) | Content-storing crawler worker |
+| [tools/crawl/AGENT.md](../tools/crawl/AGENT.md) | Crawl diagnostic instruments |
+| [tools/dev/AGENT.md](../tools/dev/AGENT.md) | Developer CLI tools (js-scan, js-edit) |
+| [tests/v4/AGENT.md](../tests/v4/AGENT.md) | V4 test suite |
+| [docs/AGENT.md](AGENT.md) | Documentation hub navigation |
+| [docs/sessions/AGENT.md](sessions/AGENT.md) | Session folder management (agent memory) |
 
 ## Agents
 - [Agent Policy](agents/agent_policy.md)
@@ -29,6 +47,11 @@ _Last updated: 2026-02-04_
 - [Emoji Search in Markdown (Windows-safe)](workflows/emoji_search_markdown.md) - Find emojis in docs without relying on literal emoji input.
 - [UI Inspection Workflow](workflows/ui-inspection-workflow.md) - Autonomous visual (MCP/Playwright) + numeric (Puppeteer) UI inspection loop.
 - [Single UI App Cohesion](workflows/single-ui-app-cohesion.md) - No-retirement unified shell: add sub-apps + add `--check`.
+- [V4 Production Crawl](workflows/v4-production-crawl.md) - End-to-end workflow for running v4 crawls, verifying integrity, and diagnosing issues.
+- [Crawl Diagnostic Protocol](workflows/crawl-diagnostic-protocol.md) - 7-step protocol for investigating crawl failures using CLI diagnostic tools.
+- [Continuous Crawl + Repair Loop](workflows/continuous-crawl-repair-loop.md) - Run crawls continuously while monitoring success metrics and shipping verified improvements.
+- [Workflow Registry (Canonical)](workflows/WORKFLOW_REGISTRY.md) - One page showing all active workflows + how to find them.
+- [Workflow Contribution Guide](workflows/WORKFLOW_CONTRIBUTION_GUIDE.md) - How to add/update workflows without doc sprawl.
 
 ## Standards
 - [Commit & PR Standards](standards/commit_pr_standards.md)
@@ -57,6 +80,14 @@ High-signal entry points for the crawler subsystem. Start with the architecture 
 - [Geography Crawl Type](GEOGRAPHY_CRAWL_TYPE.md)
 - [Reliable Crawler Roadmap](goals/RELIABLE_CRAWLER_ROADMAP.md)
 - [Intelligent Crawl Startup](agents/intelligent-crawl-startup.md) - Agent workflow for iterating on startup output and preflight.
+- [Crawl System Problems Catalogue](designs/CRAWL_SYSTEM_PROBLEMS_AND_RESEARCH.md) - 8 diagnosed problems with severity ratings, root causes, and fix plan.
+
+### V4 Distributed Crawl System
+
+- [V4 Architecture Book](guides/V4_ARCHITECTURE_BOOK.md) - Comprehensive 18-chapter guide to the v4 distributed system.
+- [V4 Warm-Up Validation Process](guides/V4_WARMUP_VALIDATION_PROCESS.md) - Pre-production validation harness (6 stages).
+- [V4 100-Page Production Crawl](sessions/2025-07-14-v4-100-page-crawl/SESSION_SUMMARY.md) - Real-world 116-page crawl results + 3 bugs found.
+- [Distributed Crawl Architecture Book (v3)](guides/DISTRIBUTED_CRAWL_ARCHITECTURE_BOOK.md) - V1→V2→V3 evolution (read before V4 book).
 
 ## Guides
 
@@ -96,6 +127,11 @@ These guides are **authoritative sources** for their domains. When working in th
 ### Authorization UX (CLI)
 
 - [Authorization Workflows — Case Study + Patterns](guides/AUTHORIZATION_WORKFLOWS_CASE_STUDY.md) - Device-code OAuth case study (GitHub-style) + simpler high-quality CLI auth patterns.
+
+### Distributed Crawling Architecture
+
+- [Distributed Crawl Architecture Book](guides/DISTRIBUTED_CRAWL_ARCHITECTURE_BOOK.md) - **Comprehensive history and design**: v1 (disposable scout) → v2 (content-storing peer) → v3 (P2P orchestrator) → v4 (jsgui3-server) architecture evolution, lessons learned, and implementation blueprint.
+- [V4 Architecture Book](guides/V4_ARCHITECTURE_BOOK.md) - **v4 deep dive**: Intelligence-at-the-edge architecture (CrawlerApp, FleetSupervisor, V4Orchestrator, V4SyncEngine), SSE-triggered sync, SSR dashboards, 82-test local validation, and staged deployment plan for Oracle Cloud VM.
 
 ### Server Telemetry
 

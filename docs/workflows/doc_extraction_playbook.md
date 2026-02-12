@@ -1,8 +1,16 @@
 ---
+type: workflow
+id: doc-extraction-playbook
 status: canonical
 source: AGENTS.md
 last_migrated: 2025-11-04
 owner: docs-indexer
+audience: agents
+tags:
+  - docs
+  - discovery
+  - workflow
+last-reviewed: 2026-02-12
 ---
 
 # Documentation Extraction Playbook

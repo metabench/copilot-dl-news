@@ -1,3 +1,15 @@
+---
+type: workflow
+id: ui-inspection-workflow
+status: canonical
+audience: agents
+tags:
+  - ui
+  - inspection
+  - tooling
+last-reviewed: 2026-02-12
+---
+
 # UI Inspection Workflow
 
 This guide describes how to inspect UI components visually (using MCP Browser tools) and numerically (using Puppeteer scripts).
@@ -17,6 +29,11 @@ node scripts/ui/start-decision-tree-for-mcp.js
 This will start the server on port 3030. Keep this terminal running.
 
 ### Step 2: Use MCP Tools
+
+Tool names can vary depending on the MCP server. Look for the equivalent of:
+- navigate (open URL)
+- take_screenshot
+- snapshot / accessibility snapshot
 
 In a separate agent session (or the same one if backgrounded), use the following tools:
 
@@ -97,3 +114,9 @@ For UI inspection specifically:
 
 - Prefer the repo's existing `scripts/ui/*` helpers for the target app.
 - If you need to add `--check` to a UI server, implement it using the shared helper `src/ui/server/utils/serverStartupCheck.js` and keep the workflow docs thin (link back to the command guide).
+
+## Outputs (what you should produce)
+- At least one screenshot under `screenshots/<app>/...`
+- One saved layout JSON (if using Puppeteer inspection)
+- A short note in the session `WORKING_NOTES.md` describing what you checked and what changed
+

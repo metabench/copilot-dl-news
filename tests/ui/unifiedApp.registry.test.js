@@ -102,4 +102,18 @@ describe('unifiedApp sub-app registry', () => {
     // IDs should match the registry the shell actually uses.
     expect(ids).toEqual(SUB_APPS.map((subApp) => subApp.id));
   });
+
+  test('home page Available Apps count matches actual registry length', async () => {
+    const apps = createSubAppRegistry();
+    const home = apps.find((app) => app.id === 'home');
+    expect(home).toBeDefined();
+
+    const result = normalizeRenderResult(await home.renderContent({}));
+    const html = result.content;
+
+    // The stat-value for Available Apps should equal apps.length (dynamic, not hardcoded).
+    const match = html.match(/<span class="stat-value">(\d+)<\/span>\s*\n?\s*<span class="stat-label">Available Apps<\/span>/);
+    expect(match).not.toBeNull();
+    expect(Number(match[1])).toBe(apps.length);
+  });
 });

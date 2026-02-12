@@ -132,6 +132,9 @@ const fetchImpl = async (...args) => {
 
 // Configuration for error response body storage
 const STORE_ERROR_RESPONSE_BODIES = process.env.STORE_ERROR_BODIES === 'true';
+// P2 fix: Enable content body storage for ALL successful (2xx) responses
+// This ensures HTML is preserved even for pages not classified as articles
+const STORE_SUCCESS_RESPONSE_BODIES = process.env.STORE_SUCCESS_BODIES === 'true';
 
 const DEFAULT_NETWORK_RETRY_OPTIONS = Object.freeze({
   maxAttempts: 3,
@@ -996,6 +999,17 @@ class FetchPipeline extends EventEmitter {
         });
 
         this._recordHttpError(finalUrl, status);
+
+        // P5 fix: Mark permanently dead URLs (404/410) so they won't be re-fetched
+        if (status === 404 || status === 410) {
+          try {
+            const dbAdapter = this.getDbAdapter();
+            if (dbAdapter && typeof dbAdapter.updateUrlStatus === 'function') {
+              dbAdapter.updateUrlStatus(finalUrl, 'dead');
+            }
+          } catch (_) { /* non-critical — next crawl will skip via isKnown404 cache */ }
+        }
+
         if (status === 429) {
           this.note429(host, retryAfterMs);
         }
@@ -1069,7 +1083,7 @@ class FetchPipeline extends EventEmitter {
         conditional: !!conditionalHeaders
       };
 
-      // Record HTTP response (successful responses don't store body here - that's handled by content acquisition)
+      // Record HTTP response (successful responses don't store body here unless STORE_SUCCESS_BODIES is enabled)
       await this._recordHttpResponse({
         url: finalUrl,
         status,
@@ -1083,7 +1097,7 @@ class FetchPipeline extends EventEmitter {
           bytesDownloaded,
           transferKbps
         },
-        body: null, // Successful responses store content via content acquisition, not here
+        body: STORE_SUCCESS_RESPONSE_BODIES ? html : null,
         redirectChain
       });
 
@@ -1376,6 +1390,38 @@ class FetchPipeline extends EventEmitter {
     });
   }
 
+  /**
+   * Safely insert an error into the DB, with explicit checks instead of optional chaining.
+   * This avoids the triple-silent-failure pattern where safeCall + ?. + ?.() all suppress errors.
+   * @param {object} errorData - Error data to insert
+   * @returns {boolean} Whether the error was successfully recorded
+   */
+  _safeInsertError(errorData) {
+    try {
+      const adapter = this.getDbAdapter();
+      if (!adapter) {
+        // DB adapter not available — log once per session to avoid spam
+        if (!this._warnedNoAdapter) {
+          this.logger.warn('[FetchPipeline] Cannot record error: no DB adapter available');
+          this._warnedNoAdapter = true;
+        }
+        return false;
+      }
+      if (typeof adapter.insertError !== 'function') {
+        if (!this._warnedNoInsertError) {
+          this.logger.warn(`[FetchPipeline] DB adapter (${adapter.constructor?.name || typeof adapter}) missing insertError method`);
+          this._warnedNoInsertError = true;
+        }
+        return false;
+      }
+      adapter.insertError(errorData);
+      return true;
+    } catch (err) {
+      this.logger.warn(`[FetchPipeline] insertError failed for ${errorData?.url}: ${err.message}`);
+      return false;
+    }
+  }
+
   _recordHttpError(url, status) {
     const message = `HTTP ${status}`;
     const host = this._safeHost(url);
@@ -1387,7 +1433,7 @@ class FetchPipeline extends EventEmitter {
       host
     };
     safeCall(() => this.recordError({ kind: 'http', code: status, message, url }));
-    safeCall(() => this.getDbAdapter()?.insertError?.({ url, kind: 'http', code: status, message, details: null }));
+    this._safeInsertError({ url, kind: 'http', code: status, message, details: null });
     safeCall(() => console.log(`ERROR ${JSON.stringify(payload)}`));
     safeCall(() => {
       if (this.telemetry && typeof this.telemetry.telemetry === 'function') {
@@ -1432,7 +1478,7 @@ class FetchPipeline extends EventEmitter {
     if (payload.maxAttempts != null && payload.attempts == null) {
       payload.attempts = payload.maxAttempts;
     }
-    safeCall(() => this.getDbAdapter()?.insertError?.({ url, kind, code: payload.code || null, message: payload.message }));
+    this._safeInsertError({ url, kind, code: payload.code || null, message: payload.message });
     safeCall(() => console.log(`ERROR ${JSON.stringify(payload)}`));
     safeCall(() => {
       if (this.telemetry && typeof this.telemetry.telemetry === 'function') {
@@ -1517,7 +1563,10 @@ class FetchPipeline extends EventEmitter {
       };
 
       // Store response body for errors only when configured
-      const shouldStoreBody = body && status >= 400 && STORE_ERROR_RESPONSE_BODIES;
+      const shouldStoreBody = body && (
+        (status >= 400 && STORE_ERROR_RESPONSE_BODIES) ||
+        (status >= 200 && status < 300 && STORE_SUCCESS_RESPONSE_BODIES)
+      );
 
       if (shouldStoreBody) {
         httpResponseData.content_body = body;

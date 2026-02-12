@@ -1,3 +1,15 @@
+---
+type: workflow
+id: kilo-agent-handbook
+status: canonical
+audience: agents
+tags:
+  - agents
+  - kilo
+  - workflow
+last-reviewed: 2026-02-12
+---
+
 # Kilo Agent Handbook
 
 _Last updated: 2025-11-15_

@@ -31,6 +31,156 @@
 
 ## Current Sessions
 
+### Session 2026-02-12: V4 Endpoint Intel CLI
+
+**Duration**: Active
+**Type**: CLI tooling + agent guidance
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build deterministic endpoint capability profiler for local/remote v4 control planes.
+- Provide concise AI-ready endpoint shape/status summaries via CLI (`--json`).
+- Update global and path-specific agent instructions to default to CLI-first endpoint discovery.
+
+**Location**: `docs/sessions/2026-02-12-v4-endpoint-intel-cli/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-02-12-v4-endpoint-intel-cli/PLAN.md)
+- 📝 [Working Notes](./2026-02-12-v4-endpoint-intel-cli/WORKING_NOTES.md)
+
+### Session 2026-02-12: V4 Docs Structure Capabilities
+
+**Duration**: Active
+**Type**: Documentation refresh
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Reconcile v4 documentation with current `src/v4` implementation layout.
+- Document current structure and capabilities without brittle static status claims.
+- Align v4 test/run command examples with current repository command policy.
+
+**Location**: `docs/sessions/2026-02-12-v4-docs-structure-capabilities/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-02-12-v4-docs-structure-capabilities/PLAN.md)
+- 📝 [Working Notes](./2026-02-12-v4-docs-structure-capabilities/WORKING_NOTES.md)
+
+### Session 2026-02-12: Fleet CLI Instant Guidance
+
+**Duration**: Active
+**Type**: CLI tooling guidance
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Codify sub-second fleet-status answer workflow for agents.
+- Define when to use snapshot fast-path vs live scan.
+- Clarify that agents should proactively add/modify CLI commands to answer recurring operational questions near-instantly.
+
+**Location**: `docs/sessions/2026-02-12-fleet-cli-instant-guidance/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-02-12-fleet-cli-instant-guidance/PLAN.md)
+- 📝 [Working Notes](./2026-02-12-fleet-cli-instant-guidance/WORKING_NOTES.md)
+
+### Session 2026-02-12: Oracle Cli Agent Guidebook
+
+**Duration**: Active
+**Type**: General
+**Completion**: 🔄 In progress
+
+**Focus**:
+- TBD
+
+**Location**: `docs/sessions/2026-02-12-oracle-cli-agent-guidebook/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-02-12-oracle-cli-agent-guidebook/INDEX.md)
+- 🗺️ [Plan](./2026-02-12-oracle-cli-agent-guidebook/PLAN.md)
+- 📝 [Working Notes](./2026-02-12-oracle-cli-agent-guidebook/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-02-12-oracle-cli-agent-guidebook/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-02-12-oracle-cli-agent-guidebook/FOLLOW_UPS.md)
+
+
+### Session 2026-02-12: 2026 02 12 20x50 Multisite Crawl Diagnostics
+
+**Duration**: Active
+**Type**: General
+**Completion**: 🔄 In progress
+
+**Focus**:
+- TBD
+
+**Location**: `docs/sessions/2026-02-12-2026-02-12-20x50-multisite-crawl-diagnostics/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-02-12-2026-02-12-20x50-multisite-crawl-diagnostics/INDEX.md)
+- 🗺️ [Plan](./2026-02-12-2026-02-12-20x50-multisite-crawl-diagnostics/PLAN.md)
+- 📝 [Working Notes](./2026-02-12-2026-02-12-20x50-multisite-crawl-diagnostics/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-02-12-2026-02-12-20x50-multisite-crawl-diagnostics/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-02-12-2026-02-12-20x50-multisite-crawl-diagnostics/FOLLOW_UPS.md)
+
+
+### Session 2026-02-10: Fleet Download Problem Monitoring Upgrades
+
+**Duration**: Complete  
+**Type**: implementation + validation  
+**Completion**: ✅ Complete
+
+**Focus**:
+- Implement richer monitoring diagnostics for download problems discovered in live fleet runs.
+- Add HTTP outcome buckets, seed telemetry, auth-wall inference, stagnation timing, and per-domain drilldown.
+- Add extensive coverage in checks/tests and validate behavior end-to-end.
+- Run/monitor a 250-page fleet attempt and record real anomaly signatures.
+
+**Location**: `docs/sessions/2026-02-10-fleet-download-problem-monitoring-upgrades/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-02-10-fleet-download-problem-monitoring-upgrades/PLAN.md)
+- 📝 [Working Notes](./2026-02-10-fleet-download-problem-monitoring-upgrades/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-02-10-fleet-download-problem-monitoring-upgrades/SESSION_SUMMARY.md)
+
+### Session 2026-02-09: Fleet Follow-Ups Book Implementation
+
+**Duration**: Complete  
+**Type**: implementation  
+**Completion**: ✅ Complete
+
+**Focus**:
+- Write the pending fleet follow-ups into the Download Verification Book before implementation.
+- Implement orchestration follow-ups: seed reliability, staggered start, import merge pipeline, auto-retry, and unified fleet SSE streaming.
+- Add checks and session artifacts for handoff continuity.
+
+**Location**: `docs/sessions/2026-02-09-fleet-followups-book-implementation/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-02-09-fleet-followups-book-implementation/PLAN.md)
+- 📝 [Working Notes](./2026-02-09-fleet-followups-book-implementation/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-02-09-fleet-followups-book-implementation/SESSION_SUMMARY.md)
+
+### Session 2026-02-09: Fleet Download Anomaly Diagnostics
+
+**Duration**: Complete  
+**Type**: implementation + continuation  
+**Completion**: ✅ Complete
+
+**Focus**:
+- Continue fleet-monitoring work by implementing verification-book diagnostics in the Fleet Dashboard.
+- Detect and explain oversized/undersized download anomalies (including high-MB outliers like CNN-style cases).
+- Surface root-cause hypotheses and recommended actions in both UI and API.
+
+**Achievements**:
+- Added `FleetViewModel.getProblemReport()` with taxonomy categories + zero-fetch diagnosis.
+- Added `GET /api/diagnostics` and expanded `/diagnostics` UI with a Problem Causes section.
+- Enriched anomaly cards with evidence and action text.
+- Updated dashboard checks and tests for diagnostics behavior.
+
+**Location**: `docs/sessions/2026-02-09-fleet-download-anomaly-diagnostics/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-02-09-fleet-download-anomaly-diagnostics/PLAN.md)
+- 📝 [Working Notes](./2026-02-09-fleet-download-anomaly-diagnostics/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-02-09-fleet-download-anomaly-diagnostics/SESSION_SUMMARY.md)
+
 ### Session 2026-02-02: MoldBot research (OpenClaw)
 
 **Duration**: Complete
@@ -916,4 +1066,3 @@ const matches = searchIndex.find(item => item.keywords.includes('refactor'));
 **Current Session**: 2025-11-22-gap4-plans-integration  
 **Maintenance**: Add new sessions as they complete  
 **For Agents**: This is your memory system. Use it!
-

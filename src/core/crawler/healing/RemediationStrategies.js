@@ -408,6 +408,86 @@ const DEFAULT_STRATEGIES = {
       delayMs: backoffDelay,
       details: { domain, backoffDelay }
     };
+  },
+
+  /**
+   * AUTH_REQUIRED: Accept boundary, flag domain, do not retry
+   * Auth walls (401/402/paywall) are persistent — retrying wastes budget
+   */
+  [FailureTypes.AUTH_REQUIRED]: async (context) => {
+    const { domain, domainHealthTracker, diagnosis } = context;
+
+    // Flag domain for review so operators know it hit a wall
+    if (domainHealthTracker && typeof domainHealthTracker.flagForReview === 'function') {
+      await domainHealthTracker.flagForReview(domain, {
+        reason: 'auth_required',
+        statusCode: diagnosis?.evidence?.statusCode,
+        matchedPatterns: diagnosis?.evidence?.matchedPatterns,
+        detectedAt: new Date().toISOString()
+      });
+    }
+
+    return {
+      success: true,
+      action: 'accept_auth_boundary',
+      message: `Auth/paywall on ${domain}, marking URL as terminal — no retry`,
+      retry: false,
+      details: {
+        domain,
+        statusCode: diagnosis?.evidence?.statusCode,
+        flaggedForReview: true,
+        reason: 'Authentication, subscription, or paywall required'
+      }
+    };
+  },
+
+  /**
+   * SERVER_ERROR: Exponential backoff for transient 5xx errors
+   * 503 (maintenance) and 502 (bad gateway) are often transient.
+   * 500 (internal) may also recover. Retry with progressive delay.
+   */
+  [FailureTypes.SERVER_ERROR]: async (context) => {
+    const { domain, rateLimitTracker, diagnosis } = context;
+    const statusCode = diagnosis?.evidence?.statusCode || 500;
+
+    // 503 with Retry-After should be honoured
+    const retryAfterSec = parseInt(context.headers?.['retry-after'], 10);
+    let backoffDelay;
+
+    if (Number.isFinite(retryAfterSec) && retryAfterSec > 0) {
+      backoffDelay = Math.min(retryAfterSec * 1000, 300000); // cap at 5 min
+    } else {
+      // Progressive backoff: 10s → 30s → 60s depending on consecutive errors
+      const consecutiveCount = context.diagnosticEngine?.getDomainErrorState?.(domain)?.count || 1;
+      backoffDelay = Math.min(10000 * Math.pow(2, Math.min(consecutiveCount - 1, 4)), 300000);
+    }
+
+    // Record failure for rate tracking
+    if (rateLimitTracker && typeof rateLimitTracker.recordFailure === 'function') {
+      rateLimitTracker.recordFailure(domain, new Error(`Server error ${statusCode}`));
+    }
+
+    // After 5 consecutive 5xx, stop retrying for this domain temporarily
+    const state = context.diagnosticEngine?.getDomainErrorState?.(domain);
+    if (state && state.count >= 5) {
+      return {
+        success: true,
+        action: 'pause_server_error',
+        message: `${statusCode} on ${domain}: ${state.count} consecutive errors — pausing`,
+        retry: false,
+        delayMs: 5 * 60 * 1000, // 5 min pause
+        details: { domain, statusCode, consecutiveErrors: state.count, paused: true }
+      };
+    }
+
+    return {
+      success: true,
+      action: 'server_error_backoff',
+      message: `${statusCode} on ${domain}, backing off ${backoffDelay}ms`,
+      retry: true,
+      delayMs: backoffDelay,
+      details: { domain, statusCode, backoffDelay }
+    };
   }
 };
 

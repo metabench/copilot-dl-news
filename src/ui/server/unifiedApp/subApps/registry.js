@@ -17,6 +17,7 @@ const jsgui = require('jsgui3-html');
 const { SubAppFrame } = require('../components/SubAppFrame');
 const { SubAppPlaceholder } = require('../components/SubAppPlaceholder');
 const { wrapPanelHtml } = require('./panelContract');
+const { renderStatCard, renderStatsRow, renderPanelHero } = require('./panelHelpers');
 
 function renderIframeApp(src, title) {
   const context = new jsgui.Page_Context();
@@ -58,36 +59,27 @@ function renderHomePanel(html) {
 function renderDemoPanel() {
   const html = `
     <div class="home-dashboard">
-      <div class="home-hero">
-        <h1>🧪 Panel Demo</h1>
-        <p>This panel proves the unified shell activation seam works without relying on <code>&lt;script&gt;</code> execution.</p>
-      </div>
+      ${renderPanelHero({
+        title: '🧪 Panel Demo',
+        description: 'This panel proves the unified shell activation seam works without relying on <code>&lt;script&gt;</code> execution.'
+      })}
 
-      <div class="home-stats">
-        <div class="stat-card">
-          <span class="stat-value">✓</span>
-          <span class="stat-label">Activation</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-value">0</span>
-          <span class="stat-label">Clicks</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-value">–</span>
-          <span class="stat-label">Last Ping</span>
-        </div>
-      </div>
+      ${renderStatsRow([
+        { value: '✓', label: 'Activation' },
+        { value: '0', label: 'Clicks' },
+        { value: '–', label: 'Last Ping' }
+      ])}
 
-      <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center;">
-        <button data-panel-demo-action="ping" style="padding: 10px 14px; border-radius: 8px; border: 1px solid #8b6914; background: rgba(212,165,116,0.12); color: #f5e6d3; cursor: pointer;">
+      <div class="panel-btn-row mt-24">
+        <button data-panel-demo-action="ping" class="panel-btn panel-btn--default">
           Ping
         </button>
-        <button data-panel-demo-action="reset" style="padding: 10px 14px; border-radius: 8px; border: 1px solid #8b6914; background: rgba(212,165,116,0.06); color: #f5e6d3; cursor: pointer;">
+        <button data-panel-demo-action="reset" class="panel-btn panel-btn--ghost">
           Reset
         </button>
       </div>
 
-      <div style="margin-top: 18px; text-align: center; color: #b8a090; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;" data-panel-demo-output>
+      <div class="panel-status mono" data-panel-demo-output>
         Waiting for activation…
       </div>
     </div>
@@ -108,57 +100,45 @@ function renderDemoPanel() {
 function renderMultiModalPanel() {
   const html = `
     <div class="home-dashboard">
-      <div class="home-hero">
-        <h1>🔄 Multi-Modal Intelligent Crawl</h1>
-        <p>Continuous crawl with learning loops: download batches → analyze content → learn patterns → discover hubs → repeat.</p>
-      </div>
+      ${renderPanelHero({
+        title: '🔄 Multi-Modal Intelligent Crawl',
+        description: 'Continuous crawl with learning loops: download batches → analyze content → learn patterns → discover hubs → repeat.'
+      })}
 
-      <div class="home-stats">
-        <div class="stat-card">
-          <span class="stat-value" data-multimodal-stat="phase">Idle</span>
-          <span class="stat-label">Current Phase</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-value" data-multimodal-stat="batch">0</span>
-          <span class="stat-label">Batch #</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-value" data-multimodal-stat="pages">0</span>
-          <span class="stat-label">Pages Downloaded</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-value" data-multimodal-stat="patterns">0</span>
-          <span class="stat-label">Patterns Learned</span>
-        </div>
-      </div>
+      ${renderStatsRow([
+        { value: 'Idle', label: 'Current Phase', valueAttrs: { 'data-multimodal-stat': 'phase' } },
+        { value: '0', label: 'Batch #', valueAttrs: { 'data-multimodal-stat': 'batch' } },
+        { value: '0', label: 'Pages Downloaded', valueAttrs: { 'data-multimodal-stat': 'pages' } },
+        { value: '0', label: 'Patterns Learned', valueAttrs: { 'data-multimodal-stat': 'patterns' } }
+      ])}
 
-      <div style="margin-top: 32px;">
-        <h3 style="color: var(--gold); margin-bottom: 16px; font-size: 18px;">🎮 Control Panel</h3>
-        <div style="background: var(--bg-leather); border: 1px solid var(--border-gold); border-radius: 8px; padding: 20px;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+      <div class="panel-section">
+        <h3 class="panel-section__title">🎮 Control Panel</h3>
+        <div class="panel-card">
+          <div class="panel-form-grid">
             <div>
-              <label style="display: block; margin-bottom: 6px; color: #b8a090; font-size: 12px;">Domain</label>
-              <input type="text" data-multimodal-input="domain" placeholder="www.theguardian.com" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-gold); background: rgba(0,0,0,0.3); color: #f5e6d3; font-family: inherit;" />
+              <label class="panel-label">Domain</label>
+              <input type="text" data-multimodal-input="domain" placeholder="www.theguardian.com" class="panel-input" />
             </div>
             <div>
-              <label style="display: block; margin-bottom: 6px; color: #b8a090; font-size: 12px;">Batch Size</label>
-              <input type="number" data-multimodal-input="batchSize" value="1000" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-gold); background: rgba(0,0,0,0.3); color: #f5e6d3; font-family: inherit;" />
+              <label class="panel-label">Batch Size</label>
+              <input type="number" data-multimodal-input="batchSize" value="1000" class="panel-input" />
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="panel-form-grid">
             <div>
-              <label style="display: block; margin-bottom: 6px; color: #b8a090; font-size: 12px;">Historical Ratio (%)</label>
-              <input type="number" data-multimodal-input="historical" value="30" min="0" max="100" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-gold); background: rgba(0,0,0,0.3); color: #f5e6d3; font-family: inherit;" />
+              <label class="panel-label">Historical Ratio (%)</label>
+              <input type="number" data-multimodal-input="historical" value="30" min="0" max="100" class="panel-input" />
             </div>
             <div>
-              <label style="display: block; margin-bottom: 6px; color: #b8a090; font-size: 12px;">Max Batches (0 = unlimited)</label>
-              <input type="number" data-multimodal-input="maxBatches" value="0" min="0" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-gold); background: rgba(0,0,0,0.3); color: #f5e6d3; font-family: inherit;" />
+              <label class="panel-label">Max Batches (0 = unlimited)</label>
+              <input type="number" data-multimodal-input="maxBatches" value="0" min="0" class="panel-input" />
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="panel-form-grid">
             <div>
-              <label style="display: block; margin-bottom: 6px; color: #b8a090; font-size: 12px;">Balancing Strategy</label>
-              <select data-multimodal-input="strategy" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-gold); background: rgba(0,0,0,0.3); color: #f5e6d3; font-family: inherit;">
+              <label class="panel-label">Balancing Strategy</label>
+              <select data-multimodal-input="strategy" class="panel-select">
                 <option value="adaptive" selected>Adaptive (recommended)</option>
                 <option value="fixed">Fixed Ratio</option>
                 <option value="priority">Priority Mode</option>
@@ -166,65 +146,65 @@ function renderMultiModalPanel() {
               </select>
             </div>
             <div>
-              <label style="display: block; margin-bottom: 6px; color: #b8a090; font-size: 12px;">Hub Discovery</label>
-              <select data-multimodal-input="hubDiscovery" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-gold); background: rgba(0,0,0,0.3); color: #f5e6d3; font-family: inherit;">
+              <label class="panel-label">Hub Discovery</label>
+              <select data-multimodal-input="hubDiscovery" class="panel-select">
                 <option value="true" selected>Enabled</option>
                 <option value="false">Disabled</option>
               </select>
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="panel-form-grid">
             <div>
-              <label style="display: block; margin-bottom: 6px; color: #b8a090; font-size: 12px;">Hub Refresh Interval (minutes)</label>
-              <input type="number" data-multimodal-input="hubRefreshInterval" value="60" min="5" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-gold); background: rgba(0,0,0,0.3); color: #f5e6d3; font-family: inherit;" />
+              <label class="panel-label">Hub Refresh Interval (minutes)</label>
+              <input type="number" data-multimodal-input="hubRefreshInterval" value="60" min="5" class="panel-input" />
             </div>
             <div>
-              <label style="display: block; margin-bottom: 6px; color: #b8a090; font-size: 12px;">Pause Between Batches (seconds)</label>
-              <input type="number" data-multimodal-input="pauseBetween" value="5" min="0" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-gold); background: rgba(0,0,0,0.3); color: #f5e6d3; font-family: inherit;" />
+              <label class="panel-label">Pause Between Batches (seconds)</label>
+              <input type="number" data-multimodal-input="pauseBetween" value="5" min="0" class="panel-input" />
             </div>
           </div>
-          <div style="display: flex; gap: 12px; justify-content: center; margin-top: 16px;">
-            <button data-multimodal-action="start" style="padding: 12px 24px; border-radius: 8px; border: 1px solid #22c55e; background: rgba(34,197,94,0.15); color: #4ade80; cursor: pointer; font-weight: 600;">
+          <div class="panel-btn-row">
+            <button data-multimodal-action="start" class="panel-btn panel-btn--action panel-btn--start">
               ▶️ Start Crawl
             </button>
-            <button data-multimodal-action="pause" style="padding: 12px 24px; border-radius: 8px; border: 1px solid #f59e0b; background: rgba(245,158,11,0.15); color: #fbbf24; cursor: pointer; font-weight: 600;" disabled>
+            <button data-multimodal-action="pause" class="panel-btn panel-btn--action panel-btn--pause" disabled>
               ⏸️ Pause
             </button>
-            <button data-multimodal-action="stop" style="padding: 12px 24px; border-radius: 8px; border: 1px solid #ef4444; background: rgba(239,68,68,0.15); color: #f87171; cursor: pointer; font-weight: 600;" disabled>
+            <button data-multimodal-action="stop" class="panel-btn panel-btn--action panel-btn--stop" disabled>
               ⏹️ Stop
             </button>
           </div>
         </div>
       </div>
 
-      <div style="margin-top: 32px;">
-        <h3 style="color: var(--gold); margin-bottom: 16px; font-size: 18px;">📊 Phase Progress</h3>
-        <div style="background: var(--bg-leather); border: 1px solid var(--border-gold); border-radius: 8px; padding: 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <div class="panel-section">
+        <h3 class="panel-section__title">📊 Phase Progress</h3>
+        <div class="panel-card">
+          <div class="panel-progress-header">
             <span data-multimodal-stat="phase-label">Idle</span>
             <span data-multimodal-stat="progress-text">–</span>
           </div>
-          <div style="height: 20px; background: rgba(0,0,0,0.3); border-radius: 10px; overflow: hidden; position: relative;">
-            <div data-multimodal-progress-bar style="height: 100%; width: 0%; background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%); border-radius: 10px; transition: width 0.3s ease-out;"></div>
+          <div class="panel-progress-track">
+            <div data-multimodal-progress-bar class="panel-progress-bar panel-progress-bar--rainbow"></div>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-top: 12px; font-size: 11px; color: #b8a090;">
-            <span data-multimodal-phase-icon="downloading" style="opacity: 0.4;">📥 Download</span>
-            <span data-multimodal-phase-icon="analyzing" style="opacity: 0.4;">🔍 Analyze</span>
-            <span data-multimodal-phase-icon="learning" style="opacity: 0.4;">🧠 Learn</span>
-            <span data-multimodal-phase-icon="discovering" style="opacity: 0.4;">🔭 Discover</span>
-            <span data-multimodal-phase-icon="reanalyzing" style="opacity: 0.4;">♻️ Re-analyze</span>
+          <div class="panel-phase-icons">
+            <span data-multimodal-phase-icon="downloading" class="panel-phase-icon">📥 Download</span>
+            <span data-multimodal-phase-icon="analyzing" class="panel-phase-icon">🔍 Analyze</span>
+            <span data-multimodal-phase-icon="learning" class="panel-phase-icon">🧠 Learn</span>
+            <span data-multimodal-phase-icon="discovering" class="panel-phase-icon">🔭 Discover</span>
+            <span data-multimodal-phase-icon="reanalyzing" class="panel-phase-icon">♻️ Re-analyze</span>
           </div>
         </div>
       </div>
 
-      <div style="margin-top: 32px;">
-        <h3 style="color: var(--gold); margin-bottom: 16px; font-size: 18px;">🧠 Learning Insights</h3>
-        <div data-multimodal-insights style="background: var(--bg-leather); border: 1px solid var(--border-gold); border-radius: 8px; padding: 16px; max-height: 200px; overflow-y: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #b8a090;">
-          <div style="color: #666;">No insights yet. Start a crawl to begin learning.</div>
+      <div class="panel-section">
+        <h3 class="panel-section__title">🧠 Learning Insights</h3>
+        <div data-multimodal-insights class="panel-log">
+          <div class="panel-log__empty">No insights yet. Start a crawl to begin learning.</div>
         </div>
       </div>
 
-      <div style="margin-top: 18px; text-align: center; color: #b8a090; font-size: 12px;" data-multimodal-status>
+      <div class="panel-status" data-multimodal-status>
         Status: Ready
       </div>
     </div>
@@ -245,55 +225,46 @@ function renderMultiModalPanel() {
 function renderDownloadsPanel() {
   const html = `
     <div class="home-dashboard">
-      <div class="home-hero">
-        <h1>📥 Download Statistics</h1>
-        <p>Evidence-based download verification. All counts are queried directly from the database.</p>
-      </div>
+      ${renderPanelHero({
+        title: '📥 Download Statistics',
+        description: 'Evidence-based download verification. All counts are queried directly from the database.'
+      })}
 
-      <div class="home-stats">
-        <div class="stat-card">
-          <span class="stat-value" data-downloads-stat="total">–</span>
-          <span class="stat-label">Total Downloads</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-value" data-downloads-stat="verified">–</span>
-          <span class="stat-label">Verified (HTTP 200)</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-value" data-downloads-stat="bytes">–</span>
-          <span class="stat-label">Total Size</span>
-        </div>
-      </div>
+      ${renderStatsRow([
+        { value: '–', label: 'Total Downloads', valueAttrs: { 'data-downloads-stat': 'total' } },
+        { value: '–', label: 'Verified (HTTP 200)', valueAttrs: { 'data-downloads-stat': 'verified' } },
+        { value: '–', label: 'Total Size', valueAttrs: { 'data-downloads-stat': 'bytes' } }
+      ])}
 
-      <div style="margin-top: 32px;">
-        <h3 style="color: var(--gold); margin-bottom: 16px; font-size: 18px;">📊 50-Page Crawl Progress</h3>
-        <div style="background: var(--bg-leather); border: 1px solid var(--border-gold); border-radius: 8px; padding: 20px;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+      <div class="panel-section">
+        <h3 class="panel-section__title">📊 50-Page Crawl Progress</h3>
+        <div class="panel-card">
+          <div class="panel-progress-header">
             <span>Progress</span>
             <span data-downloads-stat="progress-text">0 / 50</span>
           </div>
-          <div style="height: 24px; background: rgba(0,0,0,0.3); border-radius: 12px; overflow: hidden; position: relative;">
-            <div data-downloads-progress-bar style="height: 100%; width: 0%; background: linear-gradient(90deg, #22c55e 0%, #4ade80 100%); border-radius: 12px; transition: width 0.2s ease-out;"></div>
+          <div class="panel-progress-track panel-progress-track--tall">
+            <div data-downloads-progress-bar class="panel-progress-bar panel-progress-bar--green"></div>
           </div>
-          <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: center;">
-            <button data-downloads-action="start-crawl" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #22c55e; background: rgba(34,197,94,0.15); color: #4ade80; cursor: pointer; font-weight: 600;">
+          <div class="panel-btn-row mt-12">
+            <button data-downloads-action="start-crawl" class="panel-btn panel-btn--action panel-btn--start">
               🕷️ Start 50-Page Crawl
             </button>
-            <button data-downloads-action="refresh" style="padding: 10px 14px; border-radius: 8px; border: 1px solid #8b6914; background: rgba(212,165,116,0.12); color: #f5e6d3; cursor: pointer;">
+            <button data-downloads-action="refresh" class="panel-btn panel-btn--default">
               🔄 Refresh
             </button>
           </div>
         </div>
       </div>
 
-      <div style="margin-top: 32px;">
-        <h3 style="color: var(--gold); margin-bottom: 16px; font-size: 18px;">📝 Recent Downloads</h3>
-        <div data-downloads-recent style="background: var(--bg-leather); border: 1px solid var(--border-gold); border-radius: 8px; padding: 16px; max-height: 300px; overflow-y: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #b8a090;">
+      <div class="panel-section">
+        <h3 class="panel-section__title">📝 Recent Downloads</h3>
+        <div data-downloads-recent class="panel-log panel-log--tall">
           Loading...
         </div>
       </div>
 
-      <div style="margin-top: 18px; text-align: center; color: #b8a090; font-size: 12px;" data-downloads-status>
+      <div class="panel-status" data-downloads-status>
         Last updated: –
       </div>
     </div>
@@ -316,7 +287,7 @@ function renderDownloadsPanel() {
  * @returns {Array} Array of sub-app definitions
  */
 function createSubAppRegistry() {
-  return [
+  const apps = [
     // ─────────────────────────────────────────────────────────────
     // Home / Dashboard
     // ─────────────────────────────────────────────────────────────
@@ -329,29 +300,20 @@ function createSubAppRegistry() {
       renderContent: async () => {
         return renderHomePanel(`
           <div class="home-dashboard">
-            <div class="home-hero">
-              <h1>🎛️ Unified Control Center</h1>
-              <p>Welcome to the unified application shell. Select a sub-app from the sidebar to get started.</p>
-            </div>
-            <div class="home-stats">
-              <div class="stat-card">
-                <span class="stat-value">18</span>
-                <span class="stat-label">Available Apps</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-value" data-home-stat="activeCrawlJobs">–</span>
-                <span class="stat-label">Active Crawl Jobs</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-value" data-home-stat="crawlHealth">…</span>
-                <span class="stat-label">Crawl Health</span>
-              </div>
-            </div>
+            ${renderPanelHero({
+              title: '🎛️ Unified Control Center',
+              description: 'Welcome to the unified application shell. Select a sub-app from the sidebar to get started.'
+            })}
+            ${renderStatsRow([
+              { value: String(apps.length), label: 'Available Apps' },
+              { value: '–', label: 'Active Crawl Jobs', valueAttrs: { 'data-home-stat': 'activeCrawlJobs' } },
+              { value: '…', label: 'Crawl Health', valueAttrs: { 'data-home-stat': 'crawlHealth' } }
+            ])}
 
-            <div class="home-alert" data-home-crawl-alert style="display:none; margin-top: 14px; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,122,122,0.55); background: rgba(255,122,122,0.10); color: #ffd0d0;">
-              <strong style="margin-right: 8px;">Last crawl error</strong>
+            <div class="home-alert" data-home-crawl-alert style="display:none;">
+              <strong class="mr-8">Last crawl error</strong>
               <span data-home-crawl-error-message class="mono">–</span>
-              <a href="/?app=crawl-status" style="margin-left: 10px; color: #ffd0d0; text-decoration: underline;">Open Crawl Status</a>
+              <a href="/?app=crawl-status" class="alert-link">Open Crawl Status</a>
             </div>
           </div>
         `);
@@ -634,6 +596,8 @@ function createSubAppRegistry() {
       }
     }
   ];
+
+  return apps;
 }
 
 /**

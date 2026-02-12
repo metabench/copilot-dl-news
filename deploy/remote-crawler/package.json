@@ -10,6 +10,7 @@
     "dependencies": {
         "better-sqlite3": "^12.5.0",
         "express": "^5.2.1",
-        "lang-tools": "^0.0.44"
+        "lang-tools": "^0.0.44",
+        "puppeteer-core": "^23.0.0"
     }
 }

@@ -78,6 +78,18 @@ tools: ['vscode/getProjectSetupInfo', 'vscode/installExtension', 'vscode/newWork
 
 ---
 
+## Known Data Pipeline Problems
+
+**Consult** `docs/designs/CRAWL_SYSTEM_PROBLEMS_AND_RESEARCH.md` before working on:
+- Error storage (`errors` table — P1: recording broken since Oct 2025)
+- Content storage (`content_storage` table — P2: save rate collapsed to 0%)
+- Stuck crawl runs (`crawl_runs` table — P3: 10 runs stuck ~30 days)
+- Remote schema compatibility (`deploy/remote-crawler/lib/schema.js` — P7: flat vs normalized)
+
+**Key anti-pattern**: `safeCall(() => getDbAdapter()?.insertError?.({...}))` — triple optional chaining inside safeCall creates a silent failure where errors are never recorded. When fixing adapter methods, ensure the call chain is NOT optional for critical operations.
+
+**Diagnostic instruments** (use for verification): `node tools/crawl/crawl-health.js --json`, `node tools/crawl/crawl-pipeline.js --json`
+
 ## Memory System Contract (docs-memory MCP)
 
 - **Pre-flight**: If you plan to use MCP tools, first run `node tools/dev/mcp-check.js --quick --json`.

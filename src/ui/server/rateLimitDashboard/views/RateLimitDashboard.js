@@ -141,7 +141,7 @@ class RateLimitDashboard extends Control {
           <td>${d.consecutiveSuccess}</td>
           <td style="color: var(--text-muted);">${lastRequest}</td>
           <td>
-            <button class="btn btn--reset" onclick="resetDomain('${this._escapeHtml(d.domain)}')">Reset</button>
+            <button class="btn btn--reset" data-action="reset-domain" data-domain="${this._escapeHtml(d.domain)}">Reset</button>
           </td>
         </tr>
       `;
@@ -186,6 +186,16 @@ class RateLimitDashboard extends Control {
             alert('Failed: ' + err.message);
           }
         }
+
+        // Delegated handler for data-action buttons (standalone mode)
+        document.addEventListener('click', function(e) {
+          var btn = e.target.closest('[data-action]');
+          if (!btn) return;
+          if (btn.dataset.action === 'reset-domain' && btn.dataset.domain) {
+            e.preventDefault();
+            resetDomain(btn.dataset.domain);
+          }
+        });
       </script>
     `;
   }

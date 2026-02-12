@@ -192,6 +192,30 @@ class CrawlerDb {
     return this._callDb('upsertUrl', null, url, canonical, analysis);
   }
 
+  /**
+   * Update the status of a URL (e.g., 'done', 'error', 'dead')
+   * P5 fix: Ensures dead URLs (404/410) are marked so they won't be re-fetched
+   * @param {string} url
+   * @param {string} status - 'done' | 'error' | 'dead' | 'pending'
+   */
+  updateUrlStatus(url, status) {
+    if (!this.db || !url || !status) return null;
+    try {
+      if (typeof this.db.updateUrlStatus === 'function') {
+        return this.db.updateUrlStatus(url, status);
+      }
+      // Fallback: direct SQL if the DB adapter doesn't have the method
+      const rawDb = typeof this.db.getDb === 'function' ? this.db.getDb() : this.db.db || null;
+      if (rawDb && typeof rawDb.prepare === 'function') {
+        return rawDb.prepare('UPDATE urls SET status = ? WHERE url = ?').run(status, url);
+      }
+    } catch (err) {
+      // Don't fail silently — log the error
+      console.warn(`[CrawlerDb] Failed to update URL status for ${url}: ${err.message}`);
+    }
+    return null;
+  }
+
   upsertDomain(host, analysis = null) {
     return this._callDb('upsertDomain', null, host, analysis);
   }

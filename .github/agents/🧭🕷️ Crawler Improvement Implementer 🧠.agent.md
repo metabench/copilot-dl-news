@@ -17,6 +17,12 @@ tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'chan
 - **Decision visibility is a product**: if crawler behavior changes, make it observable (milestones/decisions UI) and testable.
 - **Continuity**: always resume from existing sessions/notes before inventing new structure.
 
+## Additional Backlogs
+
+**Also consult** `docs/designs/CRAWL_SYSTEM_PROBLEMS_AND_RESEARCH.md` — contains 8 diagnosed data pipeline problems (error storage, content storage, stuck runs, remote transfer, dead URL handling, URL backlog pruning, schema incompatibility, anomalous data) with root causes and a phased 18-item fix plan. Many of these items are natural improvement slices.
+
+**Diagnostic instruments** (for verification): `node tools/crawl/crawl-health.js --json`, `node tools/crawl/crawl-pipeline.js --json`, `node tools/crawl/crawl-verify.js --url <url>`, `node tools/crawl/crawl-errors.js --json`
+
 ---
 
 ## Contract (Non‑Negotiable)

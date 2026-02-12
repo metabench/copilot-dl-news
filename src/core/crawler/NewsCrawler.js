@@ -769,6 +769,23 @@ class NewsCrawler extends Crawler {
           this.enableDb = false;
           return { status: 'skipped', message: 'Database adapter disabled' };
         }
+
+        // Verify the DB adapter has all required methods — prevent silent failures
+        const requiredAdapterMethods = ['insertError', 'insertHttpResponse', 'upsertUrl', 'upsertArticle', 'insertLink'];
+        const missingMethods = requiredAdapterMethods.filter(m => typeof this.dbAdapter[m] !== 'function');
+        if (missingMethods.length > 0) {
+          const adapterType = this.dbAdapter?.constructor?.name || typeof this.dbAdapter;
+          console.warn(`[NewsCrawler] DB adapter (${adapterType}) missing methods: ${missingMethods.join(', ')}. Error recording and content storage may fail silently.`);
+          this.telemetry?.problem?.({
+            kind: 'db-adapter-incomplete',
+            scope: this.domain,
+            message: `DB adapter missing methods: ${missingMethods.join(', ')}`,
+            details: { adapterType, missingMethods }
+          });
+        } else {
+          log.debug('[NewsCrawler] DB adapter verified — all required methods present');
+        }
+
         if (this.isGazetteerMode) {
           await this._trackStartupStage('db-gazetteer-schema', 'Ensuring gazetteer schema ready', async () => {
             try {

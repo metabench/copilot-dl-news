@@ -1,3 +1,15 @@
+---
+type: workflow
+id: single-ui-app-cohesion
+status: canonical
+audience: agents
+tags:
+  - ui
+  - jsgui3
+  - workflow
+last-reviewed: 2026-02-12
+---
+
 # Single UI App Cohesion (No-Retirement Shell)
 
 ## Goal

@@ -2,19 +2,24 @@
 
 /**
  * Decision Tree Viewer - Client Entry Point
- * 
+ *
  * This script is bundled for the browser and handles:
- * 1. jsgui3 client-side control reconstruction
- * 2. DOM element linking
+ * 1. jsgui3 client-side control reconstruction from SSR HTML
+ * 2. Tree selection — swaps the canvas when a different tree is clicked
  * 3. Connection drawing using explicit ConnectionPointControls
- * 
- * Uses jsgui3-client pattern from art playground.
- * 
+ * 4. Node selection, dragging (with document-level tracking), and connection redrawing
+ *
+ * Uses jsgui3-client isomorphic pattern: the server renders the initial
+ * tree via SSR, then this client bundle hydrates the page, wires events,
+ * and handles dynamic tree switching by creating fresh DecisionTreeControls.
+ *
  * ROBUST CONNECTION SYSTEM:
  * - Uses explicit ConnectionPointControl elements as anchors
  * - Queries by data-point-type and data-branch attributes
  * - Validates all connections before drawing
  * - Reports connection verification results
+ *
+ * @module decisionTreeViewer/client
  */
 
 // jsgui3-client expects a global `page_context` when running under strict mode.
@@ -133,8 +138,8 @@ function init() {
     return;
   }
   
-  // Set up tree list interactivity
-  setupTreeList(viewerEl, trees);
+  // Set up tree list interactivity (pass context for client-side tree re-rendering)
+  setupTreeList(viewerEl, trees, context);
   
   // Set up node selection
   setupNodeSelection(viewerEl);
@@ -155,34 +160,95 @@ function init() {
 
 /**
  * Set up tree list interactivity.
+ *
+ * When a tree is clicked in the sidebar, the canvas is cleared and the
+ * selected tree is rendered in its place. Node interactivity (selection,
+ * dragging) and SVG connections are re-wired after each swap.
+ *
+ * @param {HTMLElement} viewerEl - Root viewer element
+ * @param {DecisionTree[]} trees - All loaded tree models
+ * @param {Object} context - jsgui3 client page context for control creation
  */
-function setupTreeList(viewerEl, trees) {
+function setupTreeList(viewerEl, trees, context) {
   const treeListItems = viewerEl.querySelectorAll('.dt-tree-list-item');
-  
-  let selectedTreeId = trees[0]?.id;
-  
+  const canvasEl = viewerEl.querySelector('.dt-canvas');
+
+  let selectedTreeIndex = 0;
+
   // Select first item initially
   if (treeListItems[0]) {
     treeListItems[0].classList.add('dt-tree-list-item--selected');
   }
-  
+
   treeListItems.forEach((item, index) => {
     const tree = trees[index];
     if (!tree) return;
-    
-    item.addEventListener('click', function() {
-      // Update selection styling
+
+    item.addEventListener('click', function () {
+      if (index === selectedTreeIndex) return; // already showing this tree
+
+      // Update sidebar selection styling
       treeListItems.forEach(i => i.classList.remove('dt-tree-list-item--selected'));
       item.classList.add('dt-tree-list-item--selected');
-      selectedTreeId = tree.id;
-      
-      // Update canvas title
+      selectedTreeIndex = index;
+
+      // Update canvas panel title
       const title = viewerEl.querySelector('.dt-canvas-panel .dt-header__title');
       if (title) title.textContent = tree.name;
-      
+
+      // Swap the tree visualization in the canvas
+      renderTreeInCanvas(viewerEl, canvasEl, tree, context);
+
       console.log('[Decision Tree Viewer] Selected tree:', tree.name);
     });
   });
+}
+
+/**
+ * Render a specific decision tree into the canvas area.
+ *
+ * Creates a new {@link DecisionTreeControl} from the model, inserts its
+ * DOM into the canvas, then re-wires all interactivity (node selection,
+ * dragging, SVG connections).
+ *
+ * Prefers the client-side DOM path (`control.dom.el`), falling back to
+ * HTML string rendering (`all_html_render`) for maximum compatibility.
+ *
+ * @param {HTMLElement} viewerEl - Root viewer element (for event delegation)
+ * @param {HTMLElement} canvasEl - The `.dt-canvas` element to render into
+ * @param {DecisionTree} tree - The tree model to visualize
+ * @param {Object} context - jsgui3 page context for control creation
+ */
+function renderTreeInCanvas(viewerEl, canvasEl, tree, context) {
+  if (!canvasEl || !tree) return;
+
+  // Clear existing tree from canvas
+  canvasEl.innerHTML = '';
+
+  // Build a fresh DecisionTreeControl from the model
+  const treeControl = new DecisionTreeControl({ context, tree });
+
+  // Insert into DOM — prefer DOM element (client path), fall back to HTML string
+  if (treeControl.dom && treeControl.dom.el) {
+    canvasEl.appendChild(treeControl.dom.el);
+  } else if (typeof treeControl.all_html_render === 'function') {
+    canvasEl.innerHTML = treeControl.all_html_render();
+  } else {
+    console.error('[Decision Tree Viewer] Cannot render tree — no DOM or HTML output');
+    return;
+  }
+
+  // Re-wire node interactivity on the fresh DOM elements
+  setupNodeSelection(viewerEl);
+  setupNodeDragging(viewerEl);
+
+  // Draw SVG connections after the browser lays out the new elements
+  requestAnimationFrame(() => {
+    drawAllConnections(viewerEl);
+  });
+
+  console.log('[Decision Tree Viewer] Rendered tree:', tree.name,
+              '(' + tree.nodeCount + ' nodes)');
 }
 
 /**
@@ -272,25 +338,34 @@ function setupNodeDragging(viewerEl) {
       
       console.log('[Decision Tree Viewer] Drag start:', nodeEl.getAttribute('data-node-id'));
       
+      // Bind drag listeners to document so mouse can leave the viewer bounds
+      document.addEventListener('mousemove', onDragMove);
+      document.addEventListener('mouseup', endDrag);
+      
       e.preventDefault();
       e.stopPropagation();
     });
   });
   
-  // Bind mousemove to the viewer element (jsgui3 pattern - scope to control)
-  viewerEl.addEventListener('mousemove', function(e) {
+  /**
+   * Handle mousemove during an active drag.
+   * Bound to `document` (not just the viewer) so fast mouse movements
+   * that escape the viewer bounds are still tracked.
+   * @param {MouseEvent} e
+   */
+  function onDragMove(e) {
     if (!activeNodeEl) return;
-    
+
     const deltaX = e.clientX - startX;
     const deltaY = e.clientY - startY;
-    
+
     activeNodeEl._dragTransform.x = startTransformX + deltaX;
     activeNodeEl._dragTransform.y = startTransformY + deltaY;
-    
+
     activeNodeEl.style.transform = `translate(${activeNodeEl._dragTransform.x}px, ${activeNodeEl._dragTransform.y}px)`;
-    
+
     window.__DRAG_STATE__.lastDragDelta = { x: deltaX, y: deltaY };
-    
+
     // Redraw connections during drag (throttled via RAF)
     requestAnimationFrame(() => {
       if (activeNodeEl) {
@@ -298,27 +373,29 @@ function setupNodeDragging(viewerEl) {
         window.__DRAG_STATE__.connectionUpdates++;
       }
     });
-  });
-  
-  // Bind mouseup to viewer (jsgui3 pattern)
-  viewerEl.addEventListener('mouseup', endDrag);
-  
-  // Also bind to document as fallback if mouse leaves viewer during drag
-  document.addEventListener('mouseup', endDrag);
-  
-  function endDrag(e) {
+  }
+
+  /**
+   * End an active drag operation.
+   * Cleans up document-level listeners that were added on mousedown.
+   */
+  function endDrag() {
     if (!activeNodeEl) return;
-    
+
     activeNodeEl.classList.remove('dt-node--dragging');
-    
+
     window.__DRAG_STATE__.isDragging = false;
     window.__DRAG_STATE__.dragCount++;
-    
-    console.log('[Decision Tree Viewer] Drag end:', activeNodeEl.getAttribute('data-node-id'), 
+
+    console.log('[Decision Tree Viewer] Drag end:', activeNodeEl.getAttribute('data-node-id'),
                 'delta:', window.__DRAG_STATE__.lastDragDelta);
-    
+
     activeNodeEl = null;
-    
+
+    // Remove document-level listeners added during mousedown
+    document.removeEventListener('mousemove', onDragMove);
+    document.removeEventListener('mouseup', endDrag);
+
     // Final connection redraw
     drawAllConnections(viewerEl);
   }
@@ -733,6 +810,7 @@ function verifyConnections(viewerEl) {
 // Export for bundling
 module.exports = {
   init,
+  renderTreeInCanvas,
   drawAllConnections,
   drawTreeConnections,
   verifyConnections,

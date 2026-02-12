@@ -1,8 +1,16 @@
 ---
+type: workflow
+id: planning-review-loop
 status: canonical
 source: AGENTS.md
 last_migrated: 2025-11-04
 owner: docs-indexer
+audience: agents
+tags:
+	- planning
+	- process
+	- workflow
+last-reviewed: 2026-02-12
 ---
 
 # Planning & Review Loop

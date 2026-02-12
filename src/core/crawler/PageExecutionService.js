@@ -86,6 +86,8 @@ class PageExecutionService {
     this.domain = domain || null;
     this.structureOnly = !!structureOnly;
     this.hubOnlyMode = !!hubOnlyMode;
+    // P2 diagnostic: log once when structureOnly skips content
+    this._structureOnlyWarned = false;
     this.getCountryHubBehavioralProfile = typeof getCountryHubBehavioralProfile === 'function'
       ? getCountryHubBehavioralProfile
       : () => null;
@@ -405,6 +407,21 @@ class PageExecutionService {
     const dbEnabled = dbAdapter && typeof dbAdapter.isEnabled === 'function' && dbAdapter.isEnabled();
 
   const shouldAcquireContent = !!this.contentAcquisitionService && !this.structureOnly;
+
+    // P2 diagnostic: log when content acquisition is skipped
+    if (!shouldAcquireContent && !this._structureOnlyWarned) {
+      this._structureOnlyWarned = true;
+      const reason = !this.contentAcquisitionService ? 'no contentAcquisitionService' : 'structureOnly mode';
+      console.log(`[PageExecutionService] Content acquisition SKIPPED (${reason}) — no article content will be stored this run`);
+    }
+    if (shouldAcquireContent && !dbEnabled) {
+      // Log once if DB is not enabled but content acquisition is attempted
+      if (!this._dbDisabledWarned) {
+        this._dbDisabledWarned = true;
+        console.log(`[PageExecutionService] Content acquisition active but DB not enabled — articles found but not persisted. ` +
+          `adapter=${dbAdapter ? 'present' : 'null'}, isEnabled=${typeof dbAdapter?.isEnabled === 'function' ? dbAdapter.isEnabled() : 'N/A'}`);
+      }
+    }
 
     let processorResult = null;
     if (shouldAcquireContent) {

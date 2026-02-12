@@ -383,5 +383,16 @@
     "path": "src/ui/lab/experiments/047-svg-comment-context",
     "check": "src/ui/lab/experiments/047-svg-comment-context/check.js",
     "readme": "src/ui/lab/experiments/047-svg-comment-context/README.md"
+  },
+  {
+    "id": "048",
+    "slug": "unified-crawl-process",
+    "name": "Unified Crawl Process",
+    "status": "active",
+    "series": "Architecture",
+    "description": "Single-process multi-domain crawler with CrawlOrchestrator + jsgui3-server dashboard + SSE telemetry",
+    "path": "src/ui/lab/experiments/048-unified-crawl-process",
+    "check": "src/ui/lab/experiments/048-unified-crawl-process/check.js",
+    "readme": "src/ui/lab/experiments/048-unified-crawl-process/README.md"
   }
 ]

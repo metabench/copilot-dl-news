@@ -1,3 +1,15 @@
+---
+type: workflow
+id: shared-sessions-across-repos
+status: canonical
+audience: agents
+tags:
+	- sessions
+	- windows
+	- tooling
+last-reviewed: 2026-02-12
+---
+
 # Shared Sessions Across Repos (Windows-friendly)
 
 Goal: keep a single session folder (PLAN/NOTES/SUMMARY) usable from multiple repos without copy/paste drift.
