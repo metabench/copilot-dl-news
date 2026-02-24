@@ -960,3 +960,7 @@ Once deployed:
 ---
 
 _Ready for implementation sprint. Estimated delivery: 4-5 days with 1 engineer._
+
+
+## Future Refactoring: Fleet Management
+See [CENTRALIZED_REMOTE_CRAWLING_PLAN.md](./CENTRALIZED_REMOTE_CRAWLING_PLAN.md) for the specifications dealing with Hub-and-Spoke fleet orchestration, remote CrawlPlan strictness, and global visibility capabilities.

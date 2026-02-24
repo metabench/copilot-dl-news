@@ -22,7 +22,9 @@ class WorkerRunner {
     getQueueSize,
     onBusyChange,
     onExitReason,
-    pausePollIntervalMs = 200
+    pausePollIntervalMs = 200,
+    markWalStart,
+    markWalComplete
   } = {}) {
     if (!queue || typeof queue.pullNext !== 'function') {
       throw new Error('WorkerRunner requires a queue with pullNext()');
@@ -66,9 +68,11 @@ class WorkerRunner {
     this.emitProgress = emitProgress;
     this.safeHostFromUrl = safeHostFromUrl;
     this.getQueueSize = getQueueSize;
-    this.onBusyChange = typeof onBusyChange === 'function' ? onBusyChange : () => {};
+    this.onBusyChange = typeof onBusyChange === 'function' ? onBusyChange : () => { };
     this.pausePollIntervalMs = pausePollIntervalMs;
     this.onExitReason = typeof onExitReason === 'function' ? onExitReason : null;
+    this.markWalStart = typeof markWalStart === 'function' ? markWalStart : null;
+    this.markWalComplete = typeof markWalComplete === 'function' ? markWalComplete : null;
   }
 
   _emitExitReason(reason, workerId, details = {}) {
@@ -80,7 +84,7 @@ class WorkerRunner {
         workerId,
         ...details
       });
-    } catch (_) {}
+    } catch (_) { }
   }
 
   async run(workerId) {
@@ -163,7 +167,7 @@ class WorkerRunner {
           host,
           queueSize: sizeNow
         });
-      } catch (_) {}
+      } catch (_) { }
 
       this.onBusyChange(1);
 
@@ -205,33 +209,47 @@ class WorkerRunner {
         }
       }
 
-      const result = await this.processPage(item.url, item.depth, processContext);
-      if (this.isAbortRequested()) {
-        this.onBusyChange(-1);
-        return;
-      }
+    // Write-Ahead Log: Log intention to fetch before entering deep execution.
+    // If the node process crashes forcefully during processPage, it remains in the WAL.
+    if (this.markWalStart) {
+      this.markWalStart(item.url);
+    }
 
-      this.onBusyChange(-1);
-
-      if (result) {
-        const { processTaskResult } = require('./WorkerTaskProcessor');
-        await processTaskResult({
-          result,
-          item,
-          queue: this.queue,
-          getQueueSize: this.getQueueSize,
-          retryLimit: this.retryLimit,
-          backoffBaseMs: this.backoffBaseMs,
-          backoffMaxMs: this.backoffMaxMs,
-          computePriority: this.computePriority,
-          nowMs: this.nowMs,
-          jitter: this.jitter,
-          telemetry: this.telemetry
-        });
+    let result;
+    try {
+      result = await this.processPage(item.url, item.depth, processContext);
+    } finally {
+      // Automatically clear WAL if we survive the processPage execution
+      if (this.markWalComplete) {
+        this.markWalComplete(item.url);
       }
     }
-  }
 
+    if (this.isAbortRequested()) {
+      this.onBusyChange(-1);
+      return;
+    }
+
+    this.onBusyChange(-1);
+
+    if (result) {
+      const { processTaskResult } = require('./WorkerTaskProcessor');
+      await processTaskResult({
+        result,
+        item,
+        queue: this.queue,
+        getQueueSize: this.getQueueSize,
+        retryLimit: this.retryLimit,
+        backoffBaseMs: this.backoffBaseMs,
+        backoffMaxMs: this.backoffMaxMs,
+        computePriority: this.computePriority,
+        nowMs: this.nowMs,
+        jitter: this.jitter,
+        telemetry: this.telemetry
+      });
+    }
+  }
+}
 }
 
 module.exports = {

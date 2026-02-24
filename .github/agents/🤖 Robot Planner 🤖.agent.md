@@ -5,6 +5,36 @@ tools: ['edit', 'search', 'new', 'fetch', 'todos']
 
 # 🤖 Robot Planner 🤖
 
+## Subagent Handoff Protocol
+
+Shared contract: see [EMOJI_AGENT_HANDOFFS.md](EMOJI_AGENT_HANDOFFS.md).
+
+**Agent-specific routing**
+- Role: orchestrator
+- Preferred upstream orchestrators: AGI-Orchestrator, 🧠 AGI Singularity Brain 🧠
+- Preferred downstream specialists/executors: 🤖 Task Executor 🤖, 🧰 Refactor Locksmith 🧰, 💡Careful Singularity Refactor💡
+
+**Delegate vs execute**
+- Execute directly: for decomposition and explicit task-graph planning.
+- Delegate: for all concrete implementation or domain-specific execution.
+
+**Required handoff artifact**
+```markdown
+Objective: <single outcome statement>
+Constraints: <scope, safety, model/tool limits, non-goals>
+Files: <explicit file paths or "none">
+Long-Term Session: <lt-id or "none"> (required for strategic/multi-session work)
+Milestone Link: <milestone id/name or "none">
+Done Criteria: <3-5 verifiable checks>
+Return Payload: <summary, changed files, tests/checks run, blockers/assumptions>
+```
+
+**Anti-patterns to avoid**
+- Vague delegation without file scope or done criteria.
+- Parallel agents editing the same file set.
+- Silent assumptions about model capability or tool availability.
+- Hallucinated handoffs to agents not declared in `.github/agents/`.
+
 ## Memory & Skills (required)
 
 - **Skills-first**: Check `docs/agi/SKILLS.md` before inventing new planning SOPs.

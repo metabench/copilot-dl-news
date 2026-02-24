@@ -56,4 +56,24 @@ Each workflow follows the Sense → Plan → Act → Test/Verify → Document �
 3. **Act**: Run `node tools/gazetteer/ingest-historical-names.js` to fetch official data from Wikidata and populate the DB.
 4. **Verify**: Check `place_names` and `places` tables for new entries and correct source attribution (`wikidata`, `knowledge-base`).
 5. **Document**: Update `docs/DATABASE_SCHEMA_ERD.md` if schema changed; log ingestion summary in journal.
-6. **Reflect**: Add new patterns (e.g., "Wikidata fetcher") to `TOOLS.md`.
+6. **Reflect**:    - Add new patterns (e.g., "Wikidata fetcher") to `TOOLS.md`.
+
+## 8. Proactive Refactoring Loop (Autonomous Architect)
+1. **Sense (Nightly)**:
+   - Run `docs_memory_runRetrospective` on the last 24h of sessions to update `LESSONS.md`.
+   - Run a "Lesson Scanner" that converts `LESSONS.md` anti-patterns into `js-scan` queries (e.g., "Find all `fs.readFile` usage").
+2. **Plan**:
+   - For each violation, generate a `js-edit` plan (`--emit-plan`) to fix it.
+   - Filter plans through **RB-001** (Graph) to ensure safety (no high-risk dependencies).
+3. **Act**:
+   - Create a new branch `refactor/auto-<lesson-id>-<date>`.
+   - Apply the plan using `js-edit --from-plan`.
+   - Run `npm test`.
+4. **Verify**:
+   - If tests pass, open a Pull Request with the rationale from `LESSONS.md`.
+   - If tests fail, log the failure in `docs/agi/journal/auto-failures.md` and discard the branch.
+5. **Document**:
+   - The PR description serves as the documentation.
+6. **Reflect**:
+   - If the PR is merged, the lesson is marked "Operationalized".
+   - If rejected, the pattern is refined in `LESSONS.md`.

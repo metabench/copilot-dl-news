@@ -3,20 +3,22 @@
 /**
  * MinHasher - MinHash signatures for Jaccard similarity estimation
  * 
- * MinHash approximates Jaccard similarity between sets of shingles (n-grams).
- * Uses 128 hash functions to create a signature that can be compared quickly.
+ * Partial adapter over news-db-pure-analysis.
  * 
- * Algorithm:
- * 1. Convert text to shingles (word n-grams)
- * 2. For each of 128 hash functions:
- *    - Compute hash for all shingles
- *    - Keep minimum hash value
- * 3. Signature = array of 128 minimum hashes
+ * The hash computation (compute, shingle, fnv1a32Seeded, HASH_SEEDS) is kept
+ * local for DB signature compatibility — existing stored signatures were
+ * produced with these specific hash functions/seeds. Changing them would
+ * invalidate all stored comparisons.
  * 
- * Jaccard similarity ≈ (matching minimums) / 128
+ * exactJaccardSimilarity → delegates to pure jaccardSet.
+ * 
+ * See also: news-db-pure-analysis/clustering/similarity.ts for pure
+ * MinHash/LSH functions suitable for new pipelines.
  * 
  * @module MinHasher
  */
+
+const { jaccardSet: pureJaccardSet } = require('news-db-pure-analysis');
 
 // Default configuration
 const DEFAULT_NUM_HASHES = 128;
@@ -37,7 +39,7 @@ function generateSeeds(count) {
   const seeds = [];
   // Use a fixed seed for reproducibility
   let state = 0x12345678;
-  
+
   for (let i = 0; i < count; i++) {
     // Simple xorshift32 PRNG
     state ^= state << 13;
@@ -45,7 +47,7 @@ function generateSeeds(count) {
     state ^= state << 5;
     seeds.push(state >>> 0); // Convert to unsigned 32-bit
   }
-  
+
   return seeds;
 }
 
@@ -59,15 +61,15 @@ function generateSeeds(count) {
 function fnv1a32Seeded(str, seed) {
   const FNV_OFFSET = 2166136261;
   const FNV_PRIME = 16777619;
-  
+
   // Mix seed into initial value
   let hash = FNV_OFFSET ^ seed;
-  
+
   for (let i = 0; i < str.length; i++) {
     hash ^= str.charCodeAt(i) & 0xFF;
     hash = Math.imul(hash, FNV_PRIME) >>> 0;
   }
-  
+
   return hash;
 }
 
@@ -81,7 +83,7 @@ function tokenize(text) {
   if (!text || typeof text !== 'string') {
     return [];
   }
-  
+
   return text
     .toLowerCase()
     .replace(/[^\w\s]/g, ' ')
@@ -101,7 +103,7 @@ function tokenize(text) {
 function shingle(text, size = DEFAULT_SHINGLE_SIZE) {
   const words = tokenize(text);
   const shingles = new Set();
-  
+
   if (words.length < size) {
     // If text has fewer words than shingle size, use whole text as one shingle
     if (words.length > 0) {
@@ -109,12 +111,12 @@ function shingle(text, size = DEFAULT_SHINGLE_SIZE) {
     }
     return shingles;
   }
-  
+
   for (let i = 0; i <= words.length - size; i++) {
     const shingleWords = words.slice(i, i + size);
     shingles.add(shingleWords.join(' '));
   }
-  
+
   return shingles;
 }
 
@@ -132,17 +134,17 @@ function compute(text, options = {}) {
     numHashes = DEFAULT_NUM_HASHES,
     shingleSize = DEFAULT_SHINGLE_SIZE
   } = options;
-  
+
   const shingles = shingle(text, shingleSize);
-  
+
   if (shingles.size === 0) {
     // Return null for empty/invalid text
     return null;
   }
-  
+
   // Initialize signature with max values
   const signature = new Uint32Array(numHashes).fill(0xFFFFFFFF);
-  
+
   // For each shingle, compute all hash functions and keep minimums
   for (const s of shingles) {
     for (let i = 0; i < numHashes; i++) {
@@ -152,7 +154,7 @@ function compute(text, options = {}) {
       }
     }
   }
-  
+
   // Convert to Buffer (little-endian)
   return Buffer.from(signature.buffer);
 }
@@ -169,31 +171,32 @@ function jaccardSimilarity(sig1, sig2, numHashes = DEFAULT_NUM_HASHES) {
   if (!sig1 || !sig2) {
     return 0;
   }
-  
+
   if (!Buffer.isBuffer(sig1) || sig1.length !== numHashes * 4) {
     throw new Error(`sig1 must be a ${numHashes * 4}-byte Buffer`);
   }
   if (!Buffer.isBuffer(sig2) || sig2.length !== numHashes * 4) {
     throw new Error(`sig2 must be a ${numHashes * 4}-byte Buffer`);
   }
-  
+
   let matching = 0;
-  
+
   for (let i = 0; i < numHashes; i++) {
     const offset = i * 4;
     const h1 = sig1.readUInt32LE(offset);
     const h2 = sig2.readUInt32LE(offset);
-    
+
     if (h1 === h2) {
       matching++;
     }
   }
-  
+
   return matching / numHashes;
 }
 
 /**
- * Compute exact Jaccard similarity between two texts (for testing)
+ * Compute exact Jaccard similarity between two texts (for testing).
+ * Delegates to pure jaccardSet from news-db-pure-analysis.
  * 
  * @param {string} text1 - First text
  * @param {string} text2 - Second text
@@ -203,27 +206,7 @@ function jaccardSimilarity(sig1, sig2, numHashes = DEFAULT_NUM_HASHES) {
 function exactJaccardSimilarity(text1, text2, shingleSize = DEFAULT_SHINGLE_SIZE) {
   const shingles1 = shingle(text1, shingleSize);
   const shingles2 = shingle(text2, shingleSize);
-  
-  if (shingles1.size === 0 && shingles2.size === 0) {
-    return 1; // Both empty = identical
-  }
-  
-  if (shingles1.size === 0 || shingles2.size === 0) {
-    return 0; // One empty, one not = no similarity
-  }
-  
-  // Intersection
-  let intersection = 0;
-  for (const s of shingles1) {
-    if (shingles2.has(s)) {
-      intersection++;
-    }
-  }
-  
-  // Union = |A| + |B| - |A ∩ B|
-  const union = shingles1.size + shingles2.size - intersection;
-  
-  return intersection / union;
+  return pureJaccardSet(shingles1, shingles2);
 }
 
 /**
@@ -239,15 +222,15 @@ function extractBand(signature, bandIndex, numBands = 16, rowsPerBand = 8) {
   if (!Buffer.isBuffer(signature)) {
     throw new Error('signature must be a Buffer');
   }
-  
+
   const bytesPerHash = 4;
   const bandSize = rowsPerBand * bytesPerHash;
   const offset = bandIndex * bandSize;
-  
+
   if (offset + bandSize > signature.length) {
     throw new Error(`Band ${bandIndex} out of range for signature`);
   }
-  
+
   return signature.subarray(offset, offset + bandSize);
 }
 
@@ -260,12 +243,12 @@ function extractBand(signature, bandIndex, numBands = 16, rowsPerBand = 8) {
 function hashBand(band) {
   // Use FNV-1a hash on the band bytes
   let hash = 2166136261;
-  
+
   for (let i = 0; i < band.length; i++) {
     hash ^= band[i];
     hash = Math.imul(hash, 16777619) >>> 0;
   }
-  
+
   return hash.toString(16).padStart(8, '0');
 }
 
@@ -280,7 +263,7 @@ function signatureToArray(signature, numHashes = DEFAULT_NUM_HASHES) {
   if (!Buffer.isBuffer(signature) || signature.length !== numHashes * 4) {
     throw new Error(`Invalid signature: expected ${numHashes * 4} bytes`);
   }
-  
+
   const arr = [];
   for (let i = 0; i < numHashes; i++) {
     arr.push(signature.readUInt32LE(i * 4));
@@ -306,20 +289,20 @@ module.exports = {
   // Core functions
   compute,
   jaccardSimilarity,
-  
+
   // Utilities
   shingle,
   tokenize,
   exactJaccardSimilarity,
-  
+
   // LSH support
   extractBand,
   hashBand,
-  
+
   // Conversions
   signatureToArray,
   arrayToSignature,
-  
+
   // Constants
   DEFAULT_NUM_HASHES,
   DEFAULT_SHINGLE_SIZE,

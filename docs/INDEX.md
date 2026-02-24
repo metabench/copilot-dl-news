@@ -6,6 +6,7 @@ _Last updated: 2026-02-12_
 - [Command Execution Guide](COMMAND_EXECUTION_GUIDE.md)
 - [Testing Quick Reference](TESTING_QUICK_REFERENCE.md)
 - [Database Quick Reference](DATABASE_QUICK_REFERENCE.md)
+- [CLI Documentation Index](cli/INDEX.md)
 
 ## Path-Local Agent Guides (AGENT.md)
 
@@ -27,6 +28,8 @@ Every major subsystem directory has an `AGENT.md` file with context-specific wor
 
 ## Agents
 - [Agent Policy](agents/agent_policy.md)
+- [Instruction Canonicalization Policy](agents/agent_policy.md#cross-tool-instruction-canonicalization) - Keep `AGENTS.md`, `.github/instructions/*`, and path-local `AGENT.md` aligned to avoid cross-tool instruction drift.
+- [Evidence Trust Policy](agents/agent_policy.md#evidence-trust-policy-repo-wide) - Treat official docs as baseline, but promote community practices when repeatable and locally verified.
 - [Command Execution Rules](agents/command-rules.md)
 - [Core Workflow Rules](agents/core-workflow-rules.md)
 - [Database Schema Evolution](agents/database-schema-evolution.md)
@@ -175,6 +178,7 @@ Architecture and system design documents for proposed or implemented features.
 
 ## Sessions
 - [Session Documentation Hub](sessions/SESSIONS_HUB.md) - Entry point for current/archived session folders.
+- [2026-02-14 Central Coordinator Architecture](sessions/2026-02-14-central-coordinator-architecture/SESSION_SUMMARY.md) - Local-first coordinator implementation (`central-coordinator.js`), full remote catch-up sync script, and remote seeded-only mode toggle.
 - [2025-11-18 Crawl Output Refresh](sessions/2025-11-18-crawl-output-refresh/INDEX.md) - Trim crawl output, cached seed handling, 10-minute hub refresh default.
 
 ## Plans

@@ -9,6 +9,7 @@ const {
   buildPanelDemoActivator,
   buildMultiModalCrawlActivator,
   buildDownloadsActivator,
+  buildSearchExplorerActivator,
   buildPlaceholderActivator,
   buildSubAppDelegateActivator,
 } = require('../activators');
@@ -828,6 +829,7 @@ class UnifiedShell extends Control {
 
           ${buildMultiModalCrawlActivator()}
           ${buildDownloadsActivator()}
+          ${buildSearchExplorerActivator()}
         })();
 
         // ─── Sub-app delegated event handlers ──────────────────

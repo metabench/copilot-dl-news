@@ -551,3 +551,55 @@ AGI-accumulated knowledge catalog.
 **Example**: src/classifiers/Stage1UrlClassifier.js, Stage2ContentClassifier.js, StageAggregator.js
 
 ---
+
+## Spec-First Crawler v1 Framing
+
+**Added**: 2026-02-18
+**Context**: docs/sessions/2026-02-18-advanced-crawler-v1-spec
+
+**When to use**: User has broad crawler goals (scale, reliability, UI, compliance) but no unified acceptance spec
+
+**Steps/Details**:
+1. Capture explicit product requirements verbatim
+1. Define in-scope v1 vs out-of-scope later phases
+1. Translate ambiguous terms (e.g., extraction quality) into measurable thresholds
+1. Design phased roadmap: reliability first, search UX second, scale-path third
+1. Write implementation follow-ups tied to concrete modules and checks
+
+**Example**: PLAN.md in 2026-02-18-advanced-crawler-v1-spec
+
+---
+
+## Harden CLI Async + Remote Path Discovery
+
+**Added**: 2026-02-21
+**Context**: tools/crawl/v4-cli.js
+
+**When to use**: Node CLI has async command handlers and remote deploy layouts differ across environments
+
+**Steps/Details**:
+1. Wrap command dispatch in an async main() and await async handlers to prevent silent exit.
+1. For remote process starts, probe candidate script paths before starting optional sidecars (watchdog/aux).
+1. Emit explicit warning markers when optional components are missing so audits do not produce false positives.
+1. Smoke test status/health/start commands after patch with real environment flags.
+
+**Example**: Fixed non-awaited health/status and added watchdog path probing for start command.
+
+---
+
+## Control-Plane First TTFSL Triage
+
+**Added**: 2026-02-22
+**Context**: V4 crawler optimization
+
+**When to use**: When TTFSL measurements are unstable or unavailable due to suspected remote/service outages
+
+**Steps/Details**:
+1. Run bounded reachability probes via status/health/pm2-status with strict timeouts
+1. Classify failure as transport/control-plane vs application/runtime
+1. Only run full start-cycle TTFSL when reachability is green
+1. Record reason-coded JSON evidence in session ledger for each loop
+
+**Example**: tools/crawl/v4-cli.js deterministic status/pm2/ttfsl behavior
+
+---

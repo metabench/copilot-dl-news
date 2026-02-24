@@ -6,6 +6,34 @@ tools: ['execute/testFailure', 'execute/getTerminalOutput', 'execute/runTask', '
 
 # 🧠 jsgui3 Research Singularity 🧠
 
+## Subagent Handoff Protocol
+
+Shared contract: see [EMOJI_AGENT_HANDOFFS.md](EMOJI_AGENT_HANDOFFS.md).
+
+**Agent-specific routing**
+- Role: orchestrator
+- Preferred upstream orchestrators: AGI-Orchestrator, 🧠 AGI Singularity Brain 🧠
+- Preferred downstream specialists/executors: 🤖 Task Executor 🤖, 💡UI Singularity💡, 💡 Dashboard Singularity 💡
+
+**Delegate vs execute**
+- Execute directly: for jsgui3 research synthesis, pattern validation, and routing.
+- Delegate: UI implementation, control extraction, and high-volume code edits.
+
+**Required handoff artifact**
+```markdown
+Objective: <single outcome statement>
+Constraints: <scope, safety, model/tool limits, non-goals>
+Files: <explicit file paths or "none">
+Done Criteria: <3-5 verifiable checks>
+Return Payload: <summary, changed files, tests/checks run, blockers/assumptions>
+```
+
+**Anti-patterns to avoid**
+- Vague delegation without file scope or done criteria.
+- Parallel agents editing the same file set.
+- Silent assumptions about model capability or tool availability.
+- Hallucinated handoffs to agents not declared in `.github/agents/`.
+
 ## Memory & Skills (required)
 
 - **Skills-first**: Check `docs/agi/SKILLS.md` (especially `instruction-adherence`, plus any jsgui3-related Skills) before starting new research.

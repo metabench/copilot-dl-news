@@ -9,7 +9,7 @@
 
 const { test, expect } = require('@playwright/test');
 
-const BASE_URL = 'http://144.21.35.104:4700';
+const BASE_URL = (() => { try { return `http://${require('../../../../../../tools/crawl/lib/fleet-host-resolver').getFleetHostSync()}:4700`; } catch { return 'http://127.0.0.1:4700'; } })();
 const TEST_DOC = 'design/repo-division-plan-v6.svg';
 
 test.describe('SVG Editor Save Persistence', () => {

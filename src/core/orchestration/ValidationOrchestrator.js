@@ -96,7 +96,7 @@ class ValidationOrchestrator {
 
     const { detectPlaceHub } = require('../../tools/placeHubDetector');
     const { slugify } = require('../../tools/slugify');
-    const { extractTitle } = require('../../shared/utils/domainUtils');
+    const { extractTitle } = require('./utils/domainUtils');
 
     const gazetteerPlaceNames = queries.getGazetteerPlaceNames ? queries.getGazetteerPlaceNames() : null;
     const nonGeoTopicSlugs = queries.getNonGeoTopicSlugs ? queries.getNonGeoTopicSlugs() : null;
@@ -159,7 +159,7 @@ class ValidationOrchestrator {
       validationResult
     } = params;
 
-    const { extractPredictionSignals, composeCandidateSignals } = require('../../shared/utils/dataUtils');
+    const { extractPredictionSignals, composeCandidateSignals } = require('./utils/dataUtils');
 
     const predictionSignals = extractPredictionSignals(predictionSource);
     const patternSignals = extractPredictionSignals(patternSource);

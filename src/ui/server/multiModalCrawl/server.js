@@ -121,7 +121,7 @@ function createMultiModalCrawlRouter({ getDbRW, crawlOperations = null, logger =
     const {
       domain,
       domains,
-      maxParallel = 2,
+      maxParallel = 30,
       batchSize = 1000,
       historicalRatio = 0.3,
       maxTotalBatches = null,

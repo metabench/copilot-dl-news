@@ -8,6 +8,29 @@
 
 ---
 
+## CLI Fallback (when MCP is broken)
+
+> [!IMPORTANT]
+> If MCP tools return `connection closed: EOF` or similar transport errors, use the CLI equivalents below. All are safe for `SafeToAutoRun: true`.
+
+| MCP Tool | CLI Equivalent |
+|----------|---------------|
+| `getSelfModel()` | `node tools/agi/memory.js self-model` |
+| `getLessons({ onlyStats: true })` | `node tools/agi/memory.js lessons --stats` |
+| `getLessons({ sinceDate })` | `node tools/agi/memory.js lessons --since 2026-02-01` |
+| `appendLessons({ lesson, category })` | `node tools/agi/memory.js lessons add "text" --category "Cat"` |
+| `listSessions()` | `node tools/agi/memory.js sessions` |
+| `getSession({ slug })` | `node tools/agi/memory.js session [slug]` |
+| `searchSessions({ query })` | `node tools/agi/memory.js search "query"` |
+| `listSkills()` | `node tools/agi/memory.js skills` |
+| `getSkill({ skill })` | `node tools/agi/memory.js skill "name"` |
+
+All commands are also available via `run.js`: `node tools/agi/run.js memory <subcommand>`.
+
+**Root cause reference**: If MCP stops working, check `mcp_config.json` — the `docs-memory` entry must point to `tools/mcp/docs-memory/mcp-server.js` in this repo (not to another repo's TypeScript file).
+
+---
+
 ## Overview
 
 ## Memory Retrieval Ritual (Skills → Sessions → Lessons)

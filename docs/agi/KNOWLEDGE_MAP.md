@@ -23,3 +23,6 @@ Tracks what areas of the codebase have been refactored and documented.
 | `src/crawler/FetchPipeline.js` | ✅ completed | 2025-12-24-puppeteer-fallback-integration | Puppeteer fallback for ECONNRESET on TLS-fingerprinting sites (Guardian, Bloomberg, WSJ). Lazy-loads PuppeteerFetcher, reuses browser, tracks fetchMethod. |
 | `src/pipelines/` | ✅ completed | 2026-01-05-crawl-analysis-integration-book | Created unified pipeline orchestration: PipelineOrchestrator, UnifiedPipeline facade, and CLI tool. Stages: init→crawl→analyze→disambiguate→report→complete. |
 | `src/analysis/place-coherence.js` | ✅ completed | 2026-01-05-crawl-analysis-integration-book | Multi-mention coherence pass for place disambiguation. Uses haversine distance to score geographic clustering of candidates across multiple mentions in same article. |
+| `tools/crawl/v4-cli.js` | ✅ completed | — | CLI reliability hardening completed for deterministic outage behavior (watchdogs, retry/backoff, preflight, auto-recovery hooks). |
+| `mushroom-kart-3d/tests` | ✅ completed | — | Vitest test suite: 34 tests across physics, race, AI. Uses BoxGeometry ground for reliable raycasting. Browser mocks in tests/setup.ts. |
+| `mushroom-kart-3d/game/config` | ✅ completed | — | VehicleConfig (vehicles.ts) with 3 presets + design-targets.ts with numeric quality gates for autonomous validation. |

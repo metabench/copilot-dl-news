@@ -12,10 +12,10 @@ class MultiModalCrawlManager extends EventEmitter {
   /**
    * @param {Object} options
    * @param {Function} options.createOrchestrator - Factory returning { orchestrator, patternTracker, balancer }
-   * @param {number} [options.maxParallel=2] - Max concurrent domains
+    * @param {number} [options.maxParallel=30] - Max concurrent domains
    * @param {Object} [options.logger] - Logger instance
    */
-  constructor({ createOrchestrator, maxParallel = 2, logger = console } = {}) {
+    constructor({ createOrchestrator, maxParallel = 30, logger = console } = {}) {
     super();
     if (typeof createOrchestrator !== "function") {
       throw new Error("MultiModalCrawlManager requires a createOrchestrator function");

@@ -16,6 +16,7 @@
 
 const http = require('http');
 const { spawn } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
 const { waitForServer } = require('../../utils/serverStartupCheck');
@@ -76,11 +77,24 @@ function safeJsonParse(text) {
 }
 
 async function run() {
+  const result = {
+    ok: false,
+    step: 'init',
+    error: null,
+    timestamp: new Date().toISOString(),
+    port: null,
+    childExitCode: null,
+    childExitSignal: null,
+    outputPreview: ''
+  };
+  const artifactPath = path.join(__dirname, 'artifacts', 'unified.server.check.result.json');
+
   const projectRoot = path.join(__dirname, '..', '..', '..', '..', '..');
   const serverPath = path.join(projectRoot, 'src', 'ui', 'server', 'unifiedApp', 'server.js');
 
   const port = await getFreePort();
   const baseUrl = `http://127.0.0.1:${port}`;
+  result.port = port;
 
   console.log('=== Unified Server Check ===');
   console.log(`Server: ${serverPath}`);
@@ -89,7 +103,16 @@ async function run() {
 
   const child = spawn(process.execPath, [serverPath, '--port', String(port)], {
     cwd: projectRoot,
+    env: {
+      ...process.env,
+      UNIFIED_APP_CHECK_MODE: '1'
+    },
     stdio: ['ignore', 'pipe', 'pipe']
+  });
+
+  child.on('exit', (code, signal) => {
+    result.childExitCode = code;
+    result.childExitSignal = signal;
   });
 
   let output = '';
@@ -119,31 +142,41 @@ async function run() {
   };
 
   try {
-    const ready = await waitForServer(port, '127.0.0.1', '/', 8000, 200);
+    result.step = 'waitForServer';
+    const ready = await waitForServer(port, '127.0.0.1', '/', 15000, 250);
     if (!ready.ok) {
-      throw new Error(`Server did not respond: ${ready.error}`);
+      const childExitSuffix = result.childExitCode !== null
+        ? ` (child exit=${result.childExitCode}${result.childExitSignal ? ` signal=${result.childExitSignal}` : ''})`
+        : '';
+      throw new Error(`Server did not respond: ${ready.error}${childExitSuffix}`);
     }
 
+    result.step = 'GET /';
     const home = await httpGetText(`${baseUrl}/`);
     assertStatus('GET /', home.status, 200);
     assertIncludes('GET /', home.body, 'unified-shell');
 
+    result.step = 'GET /docs';
     const docs = await httpGetText(`${baseUrl}/docs`);
     if (docs.status >= 500) {
       throw new Error(`GET /docs: server error status=${docs.status}`);
     }
 
+    result.step = 'GET /design';
     const design = await httpGetText(`${baseUrl}/design`);
     if (design.status >= 500) {
       throw new Error(`GET /design: server error status=${design.status}`);
     }
 
+    result.step = 'GET /docs/assets/docs-viewer.css';
     const docsCss = await httpGetText(`${baseUrl}/docs/assets/docs-viewer.css`);
     assertStatus('GET /docs/assets/docs-viewer.css', docsCss.status, 200);
 
+    result.step = 'GET /design/assets/design-studio.css';
     const designCss = await httpGetText(`${baseUrl}/design/assets/design-studio.css`);
     assertStatus('GET /design/assets/design-studio.css', designCss.status, 200);
 
+    result.step = 'GET /api/apps/panel-demo/content';
     const panelDemoPayload = await httpGetText(`${baseUrl}/api/apps/panel-demo/content`);
     assertStatus('GET /api/apps/panel-demo/content', panelDemoPayload.status, 200);
     const panelDemoJson = safeJsonParse(panelDemoPayload.body);
@@ -160,6 +193,24 @@ async function run() {
       throw new Error('GET /api/apps/panel-demo/content: missing activation marker in content');
     }
 
+    result.step = 'GET /api/apps/search-explorer/content';
+    const searchExplorerPayload = await httpGetText(`${baseUrl}/api/apps/search-explorer/content`);
+    assertStatus('GET /api/apps/search-explorer/content', searchExplorerPayload.status, 200);
+    const searchExplorerJson = safeJsonParse(searchExplorerPayload.body);
+    if (!searchExplorerJson) {
+      throw new Error('GET /api/apps/search-explorer/content: expected JSON');
+    }
+    if (searchExplorerJson.embed !== 'panel') {
+      throw new Error(`GET /api/apps/search-explorer/content: expected embed=panel, got ${searchExplorerJson.embed}`);
+    }
+    if (searchExplorerJson.activationKey !== 'search-explorer') {
+      throw new Error(`GET /api/apps/search-explorer/content: expected activationKey=search-explorer, got ${searchExplorerJson.activationKey}`);
+    }
+    if (typeof searchExplorerJson.content !== 'string' || !searchExplorerJson.content.includes('data-search-input="q"')) {
+      throw new Error('GET /api/apps/search-explorer/content: missing query input marker in content');
+    }
+
+    result.step = 'GET /api/crawl/summary';
     const crawlSummaryPayload = await httpGetText(`${baseUrl}/api/crawl/summary`);
     assertStatus('GET /api/crawl/summary', crawlSummaryPayload.status, 200);
     const crawlSummaryJson = safeJsonParse(crawlSummaryPayload.body);
@@ -182,9 +233,39 @@ async function run() {
       throw new Error('GET /api/crawl/summary: expected lastFailingUrl to be string|null');
     }
 
+    result.step = 'GET /api/search-explorer/search freshness contract';
+    const searchApiPayload = await httpGetText(`${baseUrl}/api/search-explorer/search?q=check`);
+    assertStatus('GET /api/search-explorer/search', searchApiPayload.status, 200);
+    const searchApiJson = safeJsonParse(searchApiPayload.body);
+    if (!searchApiJson) {
+      throw new Error('GET /api/search-explorer/search: expected JSON');
+    }
+    if (searchApiJson.status !== 'ok') {
+      throw new Error(`GET /api/search-explorer/search: expected status=ok, got ${searchApiJson.status}`);
+    }
+    const freshness = searchApiJson.freshness;
+    if (!freshness || typeof freshness !== 'object') {
+      throw new Error('GET /api/search-explorer/search: missing freshness object');
+    }
+    if (typeof freshness.freshnessLabel !== 'string' || !freshness.freshnessLabel) {
+      throw new Error('GET /api/search-explorer/search: freshness.freshnessLabel must be non-empty string');
+    }
+    if (!Number.isFinite(freshness.confidenceScore)) {
+      throw new Error('GET /api/search-explorer/search: freshness.confidenceScore must be numeric');
+    }
+    if (typeof freshness.summary !== 'string' || !freshness.summary) {
+      throw new Error('GET /api/search-explorer/search: freshness.summary must be non-empty string');
+    }
+    if (!Array.isArray(searchApiJson.results)) {
+      throw new Error('GET /api/search-explorer/search: results must be an array');
+    }
+
+    result.ok = true;
+    result.step = 'complete';
     console.log('✅ Unified server check passed');
     process.exitCode = 0;
   } catch (err) {
+    result.error = err?.message || String(err);
     console.error('❌ Unified server check failed:', err?.message || err);
     if (output) {
       console.error('\n--- server output (first 1200 chars) ---');
@@ -192,6 +273,9 @@ async function run() {
     }
     process.exitCode = 1;
   } finally {
+    result.outputPreview = output.slice(0, 1200);
+    fs.mkdirSync(path.dirname(artifactPath), { recursive: true });
+    fs.writeFileSync(artifactPath, JSON.stringify(result, null, 2), 'utf8');
     await killChild();
   }
 }

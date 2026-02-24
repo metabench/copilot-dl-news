@@ -1,5 +1,5 @@
-const { normalizeDomain } = require('../../shared/utils/domainUtils');
-const { createBatchSummary, aggregateSummaryInto, createFailedDomainSummary } = require('../../shared/utils/summaryUtils');
+const { normalizeDomain } = require('./utils/domainUtils');
+const { createBatchSummary, aggregateSummaryInto, createFailedDomainSummary } = require('./utils/summaryUtils');
 
 /**
  * BatchCoordinator - Coordinates batch processing of multiple domains

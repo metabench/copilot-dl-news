@@ -1,7 +1,7 @@
 const { slugify } = require('../../tools/slugify');
 const { fetchUrl } = require('./utils/httpUtils');
-const { extractTitle } = require('../../shared/utils/domainUtils');
-const { createFetchRow } = require('../../shared/utils/dataUtils');
+const { extractTitle } = require('./utils/domainUtils');
+const { createFetchRow } = require('./utils/dataUtils');
 const { CRAWL_EVENT_TYPES, SEVERITY_LEVELS, createTelemetryEvent } = require('../../core/crawler/telemetry');
 const dns = require('dns').promises;
 

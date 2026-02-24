@@ -786,6 +786,39 @@ class NewsCrawler extends Crawler {
           log.debug('[NewsCrawler] DB adapter verified — all required methods present');
         }
 
+        if (this.dbAdapter && typeof this.dbAdapter.recoverWal === 'function') {
+          await this._trackStartupStage('wal-recovery', 'Recovering crashed URLs from Write-Ahead Log', async () => {
+            try {
+              const crashedUrls = this.dbAdapter.recoverWal(this.domain || 'default');
+              if (crashedUrls && crashedUrls.length > 0) {
+                console.error(`[WAL-RECOVERY] Detected fatal crash during previous run of domain ${this.domain}. Blacklisting ${crashedUrls.length} active URLs from WAL.`);
+                for (const url of crashedUrls) {
+                  // Mark the URL as failed in the queue to break any infinite crash loops
+                  if (this.queue && typeof this.queue.markFailed === 'function') {
+                    await this.queue.markFailed(url, { message: 'Blacklisted due to WAL recovery (process crashed while fetching this URL)' });
+                  }
+
+                  // Report the problem back to the crawler dashboard metrics
+                  const problem = {
+                    jobId: this.id,
+                    ts: new Date().toISOString(),
+                    kind: 'fatal-crash-wal',
+                    url: url,
+                    msg: 'URL permanently blacklisted during boot because it caused a hard process crash',
+                    scope: this.domain
+                  };
+                  if (this.dbAdapter.insertProblem) {
+                    this.dbAdapter.insertProblem(problem);
+                  }
+                  this.telemetry?.problem?.(problem);
+                }
+              }
+            } catch (err) {
+              console.error(`[WAL-RECOVERY] Error during crash recovery phase:`, err);
+            }
+          });
+        }
+
         if (this.isGazetteerMode) {
           await this._trackStartupStage('db-gazetteer-schema', 'Ensuring gazetteer schema ready', async () => {
             try {
@@ -1115,6 +1148,41 @@ class NewsCrawler extends Crawler {
       });
     }
     this.emitProgress(true);
+  }
+
+  async stopAsync(options = {}) {
+    const timeoutMs = Number.isFinite(options.timeoutMs)
+      ? Math.max(0, Math.trunc(options.timeoutMs))
+      : 10000;
+    const pollMs = Number.isFinite(options.pollMs)
+      ? Math.max(25, Math.trunc(options.pollMs))
+      : 100;
+
+    this.requestAbort(options.reason || 'stopAsync');
+    this.state.setPaused(false);
+
+    const startedAt = Date.now();
+    while (true) {
+      if (this.exitSummary || (this.busyWorkers === 0 && this.queue?.size?.() === 0)) {
+        return { stopped: true, timedOut: false };
+      }
+      if (timeoutMs > 0 && Date.now() - startedAt >= timeoutMs) {
+        return {
+          stopped: false,
+          timedOut: true,
+          reason: `stopAsync timeout after ${timeoutMs}ms`
+        };
+      }
+      await sleep(pollMs);
+    }
+  }
+
+  async shutdown(options = {}) {
+    const stopResult = await this.stopAsync(options);
+    if (options.close === true) {
+      this.close();
+    }
+    return stopResult;
   }
 
   // JSON file saving removed
@@ -1537,7 +1605,17 @@ class NewsCrawler extends Crawler {
         onBusyChange: (delta) => {
           this.busyWorkers = Math.max(0, this.busyWorkers + delta);
         },
-        onExitReason: (reason, details) => this._recordExit(reason, details)
+        onExitReason: (reason, details) => this._recordExit(reason, details),
+        markWalStart: (url) => {
+          if (this.dbAdapter && this.dbAdapter.logWal) {
+            this.dbAdapter.logWal(this.domain || 'default', url);
+          }
+        },
+        markWalComplete: (url) => {
+          if (this.dbAdapter && this.dbAdapter.clearWal) {
+            this.dbAdapter.clearWal(this.domain || 'default', url);
+          }
+        }
       });
     }
     return this.workerRunner;

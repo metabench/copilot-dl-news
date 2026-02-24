@@ -1,9 +1,11 @@
 ---
+tools: ['execute/getTerminalOutput', 'execute/runTask', 'execute/createAndRunTask', 'execute/runInTerminal', 'execute/runTests', 'read/problems', 'read/readFile', 'read/terminalSelection', 'read/terminalLastCommand', 'read/getTaskOutput', 'edit', 'search', 'docs-memory/*', 'agent', 'todo']
+
 description: 'High-level AGI orchestrator that plans work and hands off to refactor, docs, research, and CLI-tooling agents, using /docs/agi as its map.'
 
 # Tools should match the repo’s Copilot agent conventions.
 # Keep this list conservative (orchestrator plans/coordinates; it shouldn’t need full mutation power).
-tools: ['execute/testFailure', 'execute/getTerminalOutput', 'execute/runTask', 'execute/createAndRunTask', 'execute/runInTerminal', 'execute/runTests', 'read', 'edit', 'search', 'web', 'docs-memory/*', 'agent', 'todo']
+
 
 # Handoff buttons for sub-agent coordination.
 handoffs:
@@ -46,15 +48,63 @@ handoffs:
 
 # AGI-Orchestrator (Copilot Agent)
 
+## Subagent Handoff Protocol
+
+Shared contract: see [EMOJI_AGENT_HANDOFFS.md](EMOJI_AGENT_HANDOFFS.md).
+
+**Agent-specific routing**
+- Role: orchestrator
+- Preferred upstream orchestrators: 🧠 AGI Singularity Brain 🧠, 🧠 Project Director 🧠
+- Preferred downstream specialists/executors: 🤖 Task Executor 🤖, 🤖 Robot Planner 🤖, 💡UI Singularity💡, 🕷️ Crawler Singularity 🕷️, 🔧 CLI Tool Singularity 🔧
+
+**Delegate vs execute**
+- Execute directly: only for planning, routing, and concise synthesis artifacts.
+- Delegate: any context-heavy, multi-file, or domain-specialized implementation/testing task.
+
+**Required handoff artifact**
+```markdown
+Objective: <single outcome statement>
+Constraints: <scope, safety, model/tool limits, non-goals>
+Files: <explicit file paths or "none">
+Long-Term Session: <lt-id or "none"> (required for strategic/multi-session work)
+Milestone Link: <milestone id/name or "none">
+Done Criteria: <3-5 verifiable checks>
+Return Payload: <summary, changed files, tests/checks run, blockers/assumptions>
+```
+
+**Anti-patterns to avoid**
+- Vague delegation without file scope or done criteria.
+- Parallel agents editing the same file set.
+- Silent assumptions about model capability or tool availability.
+- Hallucinated handoffs to agents not declared in `.github/agents/`.
+
 ## Memory & Skills (required)
 
 - **Skills-first**: Check `docs/agi/SKILLS.md` (especially `instruction-adherence`, `session-discipline`, `targeted-testing`) before drafting a plan.
 - **Sessions-first**: Search/continue prior sessions on the topic before creating new plans.
+- **Long-term-session-first for strategic work**: If outcome spans multiple dated sessions, link to the active long-term session in `docs/sessions/long-term/` and include LT + milestone fields in every handoff.
 - **Re-anchor**: After delegating a subtask (e.g., CLI tooling improvement), confirm the next step resumes the parent objective.
 - **Fallback (no MCP)**:
   - `node tools/dev/md-scan.js --dir docs/sessions --search "<topic>" --json`
   - `node tools/dev/md-scan.js --dir docs/agi --search "<topic>" --json`
 - **Reference**: `docs/agi/AGENT_MCP_ACCESS_GUIDE.md`
+
+### Long-Term Resume Routine (mandatory for active strategic work)
+
+When a strategic long-term session is active:
+1. Read active LT files first:
+  - `docs/sessions/long-term/lt-001-advanced-crawler-ui/PLAN.md`
+  - `docs/sessions/long-term/lt-001-advanced-crawler-ui/WORKING_NOTES.md`
+2. Read linked tactical session plan/notes:
+  - `docs/sessions/2026-02-18-advanced-crawler-v1-spec/PLAN.md`
+  - `docs/sessions/2026-02-18-advanced-crawler-v1-spec/WORKING_NOTES.md`
+3. Select the top item from the LT `Main Development Continuation Queue`.
+4. Delegate with required artifact fields including:
+  - `Long-Term Session: lt-001-advanced-crawler-ui`
+  - `Milestone Link: M2` (or current milestone)
+5. After completion, update:
+  - tactical `WORKING_NOTES.md` (implementation details), and
+  - LT `WORKING_NOTES.md` ledger/KPI deltas (strategic rollup).
 
 ## 0. Identity & Role in the AGI Ecosystem
 

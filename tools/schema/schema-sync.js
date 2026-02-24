@@ -6,7 +6,7 @@
  * ensuring documentation and code stay in sync with database changes.
  * 
  * Usage:
- *   node tools/schema-sync.js [options]
+ *   node tools/schema/schema-sync.js [options]
  *   npm run schema:sync [-- options]
  * 
  * Options:
@@ -112,7 +112,7 @@ function showHelp() {
 schema-sync - Synchronize schema definitions with actual database state
 
 Usage:
-  node tools/schema-sync.js [options]
+    node tools/schema/schema-sync.js [options]
   npm run schema:sync [-- options]
 
 Options:
@@ -126,16 +126,16 @@ Options:
 
 Examples:
   # Regenerate schema definitions
-  node tools/schema-sync.js
+    node tools/schema/schema-sync.js
 
   # Check for schema drift in CI
-  node tools/schema-sync.js --check
+    node tools/schema/schema-sync.js --check
 
   # Preview changes without writing
-  node tools/schema-sync.js --dry-run --verbose
+    node tools/schema/schema-sync.js --dry-run --verbose
 
   # Regenerate with stats
-  node tools/schema-sync.js --stats --verbose
+    node tools/schema/schema-sync.js --stats --verbose
 
 Exit codes:
   0 - Success (or no drift in --check mode)

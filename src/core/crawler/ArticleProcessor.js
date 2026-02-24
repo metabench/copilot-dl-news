@@ -49,7 +49,7 @@ class ArticleProcessor {
     this.computeUrlSignals = computeUrlSignals;
     this.computeContentSignals = computeContentSignals;
     this.combineSignals = combineSignals;
-  this.dbAdapter = dbAdapter || null;
+    this.dbAdapter = dbAdapter || null;
     this.articleHeaderCache = articleHeaderCache || null;
     this.knownArticlesCache = knownArticlesCache || null;
     this.events = events || null;
@@ -177,7 +177,7 @@ class ArticleProcessor {
         `notArticle=${s.skippedNotArticle}, noPersist=${s.skippedNoPersist}, noDb=${s.skippedNoDb}, errors=${s.errors}`);
     }
 
-  if (insertFetchRecord && this._dbEnabled()) {
+    if (insertFetchRecord && this._dbEnabled()) {
       this._insertFetchRecord({
         url,
         fetchMeta,
@@ -192,7 +192,7 @@ class ArticleProcessor {
       });
     }
 
-  if (insertLinkRecords && this._dbEnabled()) {
+    if (insertLinkRecords && this._dbEnabled()) {
       this._insertLinkRecords({
         pageUrl: url,
         links: allLinks,
@@ -410,7 +410,7 @@ class ArticleProcessor {
       if (!adapter) return false;
       const canonicalUrl = this._extractCanonicalUrl(html);
       const articleAnalysis = this._buildArticleAnalysis({ url, html, readability });
-      adapter.upsertArticle({
+      const upsertResult = adapter.upsertArticle({
         url,
         title: metadata.title,
         date: metadata.date || null,
@@ -441,6 +441,10 @@ class ArticleProcessor {
         analysis: articleAnalysis ? JSON.stringify(articleAnalysis) : null
       });
 
+      if (!upsertResult) {
+        throw new Error(`adapter.upsertArticle returned null or falsy for ${url}`);
+      }
+
       const normalizedArticleUrl = (() => {
         try { return this.normalizeUrl(url); } catch (_) { return url; }
       })();
@@ -459,7 +463,7 @@ class ArticleProcessor {
       let compressedBytes = 0;
       try {
         compressedBytes = zlib.gzipSync(html).length;
-      } catch (_) {}
+      } catch (_) { }
 
       if (this.events && typeof this.events.incrementBytesSaved === 'function') {
         this.events.incrementBytesSaved(bytes, compressedBytes);
@@ -474,7 +478,11 @@ class ArticleProcessor {
       this._log('error', `Failed to save article ${url}: ${error && error.message ? error.message : error}`);
       try {
         const adapter = this._getDbAdapter();
-        adapter?.insertError?.({ url, kind: 'save', message: error.message || String(error) });
+        if (adapter && typeof adapter.insertError === 'function') {
+          adapter.insertError({ url, kind: 'save', message: error.message || String(error) });
+        } else {
+          this._log('warn', `Could not record save error in DB because adapter.insertError is not a function`);
+        }
       } catch (_) { /* ignore */ }
       return false;
     }

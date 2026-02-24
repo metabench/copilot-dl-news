@@ -204,6 +204,10 @@ class InProcessCrawlJobRegistry {
     const run$ = observable((next, complete, error) => {
       job.stop = () => {
         job.abortRequested = true;
+        if (crawlerRef && typeof crawlerRef.stopAsync === 'function') {
+          crawlerRef.stopAsync({ timeoutMs: 8000, reason: 'stop' }).catch(() => {});
+          return;
+        }
         if (crawlerRef && typeof crawlerRef.requestAbort === 'function') {
           crawlerRef.requestAbort('stop');
         }

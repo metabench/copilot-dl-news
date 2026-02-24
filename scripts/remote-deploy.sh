@@ -20,10 +20,9 @@ if [ -f "deploy_shared.tar.gz" ]; then
     mkdir -p "$APPS_DIR/shared"
     tar -xzf deploy_shared.tar.gz -C "$APPS_DIR/shared"
     rm deploy_shared.tar.gz
-    
+
     echo "Installing shared dependencies..."
     cd "$APPS_DIR/shared"
-    # Install critical deps for shared (isomorphic/jsgui.js relies on these)
     npm install jsgui3-html jsgui3-client jsgui3-server lang-tools --production --no-audit
     cd ../..
 fi
@@ -33,37 +32,46 @@ if [ -f "deploy_docs-viewer.tar.gz" ]; then
     mkdir -p "$APPS_DIR/docs-viewer"
     tar -xzf deploy_docs-viewer.tar.gz -C "$APPS_DIR/docs-viewer"
     rm deploy_docs-viewer.tar.gz
-    
+
     echo "Installing docs-viewer dependencies..."
     cd "$APPS_DIR/docs-viewer"
     npm install --production --no-audit
     cd ../..
+
+    # Restart docs-viewer
+    echo "Restarting docs-viewer..."
+    cd "$APPS_DIR/docs-viewer"
+    export DOCS_PATH="$HOME/$APPS_DIR/docs-viewer/docs"
+    export PLUGINS_PATH="$HOME/$APPS_DIR/docs-viewer/plugins"
+    pkill -f 'node server.js' || true
+    nohup node server.js --docs "$DOCS_PATH" --host 0.0.0.0 --plugins "$PLUGINS_PATH" > out.log 2>&1 &
+    disown
+    echo "docs-viewer started with PID $!"
+    cd ../..
 fi
 
-# 3. Restart Server
-echo "Restarting docs-viewer..."
-cd "$APPS_DIR/docs-viewer"
-export DOCS_PATH="$HOME/$APPS_DIR/docs-viewer/docs"
-export PLUGINS_PATH="$HOME/$APPS_DIR/docs-viewer/plugins"
-pkill -f 'node server.js' || true
-nohup node server.js --docs "$DOCS_PATH" --host 0.0.0.0 --plugins "$PLUGINS_PATH" > out.log 2>&1 &
-PID=$!
-disown
-echo "Server started with PID $PID"
-echo "DOCS_PATH=$DOCS_PATH"
-echo "PLUGINS_PATH=$PLUGINS_PATH"
+if [ -f "deploy_remote-crawler-v2.tar.gz" ]; then
+    echo "Deploying remote-crawler-v2..."
+    mkdir -p "$APPS_DIR/remote-crawler-v2"
+    tar -xzf deploy_remote-crawler-v2.tar.gz -C "$APPS_DIR/remote-crawler-v2"
+    rm deploy_remote-crawler-v2.tar.gz
 
-# 4. Verify Startup
-sleep 2
-if ps -p $PID > /dev/null; then
-   echo "✅ Process $PID is running."
-   echo "--- LOG TAIL ---"
-   tail -n 20 out.log
-   echo "----------------"
-else
-   echo "❌ Process $PID died!"
-   echo "--- LOG TAIL ---"
-   cat out.log
-   echo "----------------"
-   exit 1
+    echo "Installing remote-crawler-v2 dependencies..."
+    cd "$APPS_DIR/remote-crawler-v2"
+    npm install --production --no-audit
+    cd ../..
+
+    echo "Restarting crawl-server-v4..."
+    pm2 restart crawl-server-v4 || echo "crawl-server-v4 not running via pm2"
+
+    # Health check
+    sleep 3
+    if pm2 show crawl-server-v4 | grep -q "online"; then
+        echo "✅ crawl-server-v4 is online"
+    else
+        echo "⚠️ crawl-server-v4 may not have started correctly"
+        pm2 logs crawl-server-v4 --lines 10 --nostream || true
+    fi
 fi
+
+echo "✅ Remote deployment complete."

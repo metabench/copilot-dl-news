@@ -305,24 +305,63 @@ async function startDaemon(config) {
     logger.always(`   Logs: ${config.logFile}`);
     
     // Handle shutdown
+    let shutdownPromise = null;
     const shutdown = async (signal) => {
-      logger.always(`\n🛑 Received ${signal}, shutting down...`);
-      
-      try {
-        await server.stop();
-        telemetry.destroy();
-        db.close();
-        removePidFile(config);
-        logger.always('✅ Daemon stopped cleanly');
-      } catch (e) {
-        logger.error('Error during shutdown:', e.message);
+      if (shutdownPromise) {
+        logger.warn(`Shutdown already in progress (signal: ${signal})`);
+        return shutdownPromise;
       }
-      
-      process.exit(0);
+
+      logger.always(`\n🛑 Received ${signal}, shutting down...`);
+
+      shutdownPromise = (async () => {
+        const forceExitTimer = setTimeout(() => {
+          logger.error('Graceful shutdown timed out after 10s; forcing exit');
+          process.exit(1);
+        }, 10000);
+        forceExitTimer.unref?.();
+
+        const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const stopRunningJobs = async (timeoutMs) => {
+          const startedAt = Date.now();
+          for (const job of jobRegistry.list()) {
+            if (job.status === 'running') {
+              try { jobRegistry.stop(job.id); } catch (_) { }
+            }
+          }
+          while (Date.now() - startedAt < timeoutMs) {
+            const hasRunning = jobRegistry.list().some((job) => job.status === 'running');
+            if (!hasRunning) return true;
+            await wait(100);
+          }
+          return false;
+        };
+
+        try {
+          const drained = await stopRunningJobs(4000);
+          if (!drained) {
+            logger.warn('Some crawl jobs did not stop within grace window; continuing shutdown');
+          }
+
+          await server.stop();
+          telemetry.destroy();
+          db.close();
+          removePidFile(config);
+          clearTimeout(forceExitTimer);
+          logger.always('✅ Daemon stopped cleanly');
+          process.exit(0);
+        } catch (e) {
+          clearTimeout(forceExitTimer);
+          logger.error('Error during shutdown:', e.message);
+          process.exit(1);
+        }
+      })();
+
+      return shutdownPromise;
     };
     
-    process.on('SIGINT', () => shutdown('SIGINT'));
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.once('SIGINT', () => shutdown('SIGINT'));
+    process.once('SIGTERM', () => shutdown('SIGTERM'));
     
     return { success: true, port, pid: process.pid };
   } catch (e) {
@@ -367,16 +406,22 @@ function startDaemonDetached(config) {
   
   // Wait briefly to check if it started
   return new Promise((resolve) => {
+    let resolved = false;
+    const finish = (res) => {
+      if (resolved) return;
+      resolved = true;
+      resolve(res);
+    };
     setTimeout(() => {
       const status = isDaemonRunning(config);
       if (status.running) {
         logger.always(`🕷️ Crawl daemon started in background (PID ${status.pid})`);
         logger.always(`   API: http://localhost:${config.port}/v1/`);
         logger.always(`   Logs: ${config.logFile}`);
-        resolve({ success: true, pid: status.pid, port: config.port });
+        finish({ success: true, pid: status.pid, port: config.port });
       } else {
         logger.error('Failed to start daemon - check logs');
-        resolve({ success: false, error: 'startup_failed' });
+        finish({ success: false, error: 'startup_failed' });
       }
     }, 1500);
   });
@@ -388,6 +433,11 @@ function startDaemonDetached(config) {
 function stopDaemon(config) {
   const logger = createDaemonLogger(config);
   const status = isDaemonRunning(config);
+  const sleepSync = (ms) => {
+    const buf = new SharedArrayBuffer(4);
+    const arr = new Int32Array(buf);
+    Atomics.wait(arr, 0, 0, ms);
+  };
   
   if (!status.running) {
     logger.always('Daemon not running');
@@ -403,7 +453,7 @@ function stopDaemon(config) {
       try {
         process.kill(status.pid, 0);
         // Still running, wait
-        require('child_process').execSync('powershell -Command "Start-Sleep -Milliseconds 500"', { timeout: 1000 });
+        sleepSync(500);
         attempts++;
       } catch (e) {
         // Process gone
@@ -456,7 +506,7 @@ async function getDaemonStatus(config) {
       res.on('end', () => {
         try {
           const health = JSON.parse(data);
-          resolve({
+          finish({
             running: true,
             pid: status.pid,
             port,
@@ -464,7 +514,7 @@ async function getDaemonStatus(config) {
             health
           });
         } catch (e) {
-          resolve({
+          finish({
             running: true,
             pid: status.pid,
             port,
@@ -476,7 +526,7 @@ async function getDaemonStatus(config) {
     });
     
     req.on('error', () => {
-      resolve({
+      finish({
         running: true,
         pid: status.pid,
         port: null,
@@ -485,9 +535,10 @@ async function getDaemonStatus(config) {
       });
     });
     
-    req.on('timeout', () => {
+        req.on('timeout', () => {
+      req.removeAllListeners('error');
       req.destroy();
-      resolve({
+      finish({
         running: true,
         pid: status.pid,
         port: null,

@@ -75,16 +75,16 @@ const searchInSessions = (query, maxResults = 10) => {
     const results = [];
     const dirs = listSessionDirs();
     const lowerQuery = query.toLowerCase();
-    
+
     for (const slug of dirs) {
         if (results.length >= maxResults) break;
         const sessionPath = path.join(sessionsDir, slug);
         const files = ["PLAN.md", "WORKING_NOTES.md", "SESSION_SUMMARY.md", "FOLLOW_UPS.md"];
-        
+
         for (const fileName of files) {
             const filePath = path.join(sessionPath, fileName);
             if (!fs.existsSync(filePath)) continue;
-            
+
             const content = fs.readFileSync(filePath, "utf8");
             if (content.toLowerCase().includes(lowerQuery)) {
                 // Find matching lines for context
@@ -93,13 +93,13 @@ const searchInSessions = (query, maxResults = 10) => {
                     .map((line, idx) => ({ line, lineNumber: idx + 1 }))
                     .filter(({ line }) => line.toLowerCase().includes(lowerQuery))
                     .slice(0, 3);
-                
+
                 results.push({
                     session: slug,
                     file: fileName,
                     matches: matchingLines
                 });
-                
+
                 if (results.length >= maxResults) break;
             }
         }
@@ -122,7 +122,7 @@ const resolveSession = (slug, maxSessions = 5) => {
     if (!targetSlug) return null;
     const base = path.join(sessionsDir, targetSlug);
     if (!fs.existsSync(base)) return null;
-    
+
     const sessionFiles = ["PLAN.md", "WORKING_NOTES.md", "SESSION_SUMMARY.md", "FOLLOW_UPS.md"];
     const payload = { slug: targetSlug, files: {} };
     for (const fileName of sessionFiles) {
@@ -154,22 +154,22 @@ const parseWorkflowMetadata = (content, filePath) => {
         references: [],
         improvementHooks: []
     };
-    
+
     // Extract title (first # heading)
     const titleMatch = content.match(/^# (.+)$/m);
     if (titleMatch) metadata.title = titleMatch[1].trim();
-    
+
     // Extract audience (_Audience_: ...)
     const audienceMatch = content.match(/_Audience_:\s*(.+)/i);
     if (audienceMatch) metadata.audience = audienceMatch[1].trim();
-    
+
     // Extract phases (## Phase N or ## heading patterns)
     const phaseRegex = /^## (?:Phase \d+[^\n]*|[^#\n]+)/gm;
     let phaseMatch;
     while ((phaseMatch = phaseRegex.exec(content)) !== null) {
         metadata.phases.push(phaseMatch[0].replace(/^## /, "").trim());
     }
-    
+
     // Extract prerequisites (lines after "## Prerequisites" until next ##)
     const prereqSection = content.match(/## Prerequisites\s*\n([\s\S]*?)(?=\n##|$)/i);
     if (prereqSection) {
@@ -178,7 +178,7 @@ const parseWorkflowMetadata = (content, filePath) => {
             .map(line => line.replace(/^-\s*/, "").trim());
         metadata.prerequisites = prereqLines;
     }
-    
+
     // Extract checklist items (- [ ] or - [x] patterns)
     const checklistRegex = /^- \[([ x])\] (.+)$/gm;
     let checkMatch;
@@ -188,7 +188,7 @@ const parseWorkflowMetadata = (content, filePath) => {
             item: checkMatch[2].trim()
         });
     }
-    
+
     // Extract code block commands (potential automation points)
     const codeBlockRegex = /```(?:bash|sh|powershell)?\n([\s\S]*?)```/g;
     let codeMatch;
@@ -199,7 +199,7 @@ const parseWorkflowMetadata = (content, filePath) => {
         commands.push(...cmdLines);
     }
     metadata.commands = commands.slice(0, 10); // Cap for context efficiency
-    
+
     // Identify improvement hooks (areas where agents could optimize)
     if (metadata.phases.length > 0) {
         metadata.improvementHooks.push("phase-ordering: Could phases be parallelized or reordered?");
@@ -210,7 +210,7 @@ const parseWorkflowMetadata = (content, filePath) => {
     if (metadata.checklist.length > 5) {
         metadata.improvementHooks.push("checklist-automation: Some checklist items may be automatable");
     }
-    
+
     return metadata;
 };
 
@@ -219,15 +219,15 @@ const parseWorkflowMetadata = (content, filePath) => {
  */
 const listWorkflowFiles = () => {
     if (!fs.existsSync(workflowsDir)) return [];
-    
+
     const walkDir = (dir, prefix = "") => {
         const results = [];
         const entries = fs.readdirSync(dir, { withFileTypes: true });
-        
+
         for (const entry of entries) {
             const fullPath = path.join(dir, entry.name);
             const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
-            
+
             if (entry.isDirectory()) {
                 results.push(...walkDir(fullPath, relativePath));
             } else if (entry.name.endsWith(".md")) {
@@ -243,7 +243,7 @@ const listWorkflowFiles = () => {
         }
         return results;
     };
-    
+
     return walkDir(workflowsDir);
 };
 
@@ -255,11 +255,11 @@ const saveWorkflowImprovement = (workflowName, proposal) => {
     if (!fs.existsSync(workflowImprovementsDir)) {
         fs.mkdirSync(workflowImprovementsDir, { recursive: true });
     }
-    
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
     const fileName = `${workflowName}-${timestamp}.md`;
     const filePath = path.join(workflowImprovementsDir, fileName);
-    
+
     const content = `# Workflow Improvement Proposal
 
 **Workflow**: ${workflowName}
@@ -287,7 +287,7 @@ ${proposal.validation.map(v => `- [ ] ${v}`).join("\n")}
 ---
 _Generated by AGI workflow improvement system_
 `;
-    
+
     fs.writeFileSync(filePath, content, "utf8");
     return { fileName, filePath: path.relative(repoRoot, filePath) };
 };
@@ -303,26 +303,26 @@ const findSessionsByTopic = (topic, maxResults = 5) => {
     const results = [];
     const dirs = listSessionDirs();
     const lowerTopic = topic.toLowerCase();
-    
+
     for (const slug of dirs) {
         if (results.length >= maxResults) break;
-        
+
         // Check if slug contains topic
         const slugMatch = slug.toLowerCase().includes(lowerTopic);
-        
+
         // Check session files for topic
         const sessionPath = path.join(sessionsDir, slug);
         const planPath = path.join(sessionPath, "PLAN.md");
         const summaryPath = path.join(sessionPath, "SESSION_SUMMARY.md");
-        
+
         let contentMatch = false;
         let status = "unknown";
         let taskProgress = null;
-        
+
         if (fs.existsSync(planPath)) {
             const planContent = fs.readFileSync(planPath, "utf8");
             contentMatch = planContent.toLowerCase().includes(lowerTopic);
-            
+
             // Parse task progress from PLAN.md
             const taskRegex = /- \[([ x])\] \*\*Task \d+[^*]*\*\*/g;
             const tasks = [...planContent.matchAll(taskRegex)];
@@ -332,7 +332,7 @@ const findSessionsByTopic = (topic, maxResults = 5) => {
                 status = completed === tasks.length ? "completed" : "in-progress";
             }
         }
-        
+
         // Check if there's a summary (indicates completion)
         if (fs.existsSync(summaryPath)) {
             const summaryContent = fs.readFileSync(summaryPath, "utf8");
@@ -340,7 +340,7 @@ const findSessionsByTopic = (topic, maxResults = 5) => {
                 status = "completed";
             }
         }
-        
+
         if (slugMatch || contentMatch) {
             results.push({
                 slug,
@@ -351,7 +351,7 @@ const findSessionsByTopic = (topic, maxResults = 5) => {
             });
         }
     }
-    
+
     return results;
 };
 
@@ -362,7 +362,7 @@ const parseTaskLedger = (planContent) => {
     const tasks = [];
     const lines = planContent.split(/\r?\n/);
     let currentTask = null;
-    
+
     for (const line of lines) {
         // Match main task: - [ ] **Task N: Name** (Status: ...)
         const taskMatch = line.match(/^- \[([ x])\] \*\*Task (\d+)[^*]*\*\*(?:\s*\(Status:\s*([^)]+)\))?/);
@@ -376,7 +376,7 @@ const parseTaskLedger = (planContent) => {
             };
             continue;
         }
-        
+
         // Match subtask: - [x] Subtask description
         const subtaskMatch = line.match(/^\s+- \[([ x])\] (.+)/);
         if (subtaskMatch && currentTask) {
@@ -386,7 +386,7 @@ const parseTaskLedger = (planContent) => {
             });
         }
     }
-    
+
     if (currentTask) tasks.push(currentTask);
     return tasks;
 };
@@ -416,10 +416,10 @@ ${description}
  */
 const addCatalogEntry = (filePath, title, catalogTitle, entry) => {
     ensureCatalogFile(filePath, catalogTitle, "AGI-accumulated knowledge catalog.");
-    
+
     const content = fs.readFileSync(filePath, "utf8");
     const date = new Date().toISOString().split("T")[0];
-    
+
     const newEntry = `
 ## ${entry.name}
 
@@ -435,7 +435,7 @@ ${entry.example ? `**Example**: ${entry.example}` : ""}
 
 ---
 `;
-    
+
     const result = appendToFile(filePath, newEntry);
     return { ...result, entryName: entry.name };
 };
@@ -603,6 +603,241 @@ const writeJsonSafe = (filePath, value) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Instruction Proposal Helpers (AGI Self-Modification)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const instructionProposalsDir = path.join(repoRoot, "docs", "agi", "instruction-proposals");
+
+/**
+ * List instruction proposals, optionally filtered by status.
+ */
+const listProposals = (statusFilter) => {
+    if (!fs.existsSync(instructionProposalsDir)) return [];
+    const files = fs.readdirSync(instructionProposalsDir)
+        .filter(f => f.endsWith(".json"))
+        .sort((a, b) => (a < b ? 1 : -1)); // newest first
+
+    const proposals = [];
+    for (const fileName of files) {
+        try {
+            const raw = fs.readFileSync(path.join(instructionProposalsDir, fileName), "utf8");
+            const proposal = JSON.parse(raw);
+            if (statusFilter && proposal.status !== statusFilter) continue;
+            proposals.push(proposal);
+        } catch { }
+    }
+    return proposals;
+};
+
+/**
+ * Create a new instruction proposal.
+ */
+const createProposal = ({ targetFile, section, currentText, proposedText, rationale, createdBy }) => {
+    if (!fs.existsSync(instructionProposalsDir)) {
+        fs.mkdirSync(instructionProposalsDir, { recursive: true });
+    }
+
+    const now = new Date();
+    const ts = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const seq = String(fs.readdirSync(instructionProposalsDir).filter(f => f.endsWith(".json")).length + 1).padStart(3, "0");
+    const id = `ip-${ts}-${seq}`;
+    const fileName = `${id}.json`;
+    const filePath = path.join(instructionProposalsDir, fileName);
+
+    const proposal = {
+        id,
+        status: "pending",
+        targetFile,
+        section: section || "(unspecified)",
+        currentText,
+        proposedText,
+        rationale: rationale || "",
+        createdAt: now.toISOString(),
+        createdBy: createdBy || "unknown",
+        reviewedAt: null,
+        reviewOutcome: null,
+        reviewNotes: null
+    };
+
+    fs.writeFileSync(filePath, JSON.stringify(proposal, null, 2) + "\n", "utf8");
+    return { success: true, proposalId: id, filePath: path.relative(repoRoot, filePath) };
+};
+
+/**
+ * Review (approve/reject/defer/apply) an instruction proposal.
+ */
+const reviewProposal = (proposalId, action, reviewNotes) => {
+    const validActions = ["approve", "reject", "defer", "apply"];
+    if (!validActions.includes(action)) {
+        return { success: false, error: `Invalid action. Must be: ${validActions.join(", ")}` };
+    }
+
+    const files = fs.existsSync(instructionProposalsDir)
+        ? fs.readdirSync(instructionProposalsDir).filter(f => f.endsWith(".json"))
+        : [];
+
+    const match = files.find(f => f.startsWith(proposalId));
+    if (!match) {
+        return { success: false, error: `Proposal ${proposalId} not found` };
+    }
+
+    const filePath = path.join(instructionProposalsDir, match);
+    const proposal = JSON.parse(fs.readFileSync(filePath, "utf8"));
+
+    proposal.reviewedAt = new Date().toISOString();
+    proposal.reviewOutcome = action;
+    proposal.reviewNotes = reviewNotes || null;
+
+    if (action === "apply") {
+        // Actually modify the target file
+        const targetPath = path.resolve(repoRoot, proposal.targetFile);
+        if (!fs.existsSync(targetPath)) {
+            return { success: false, error: `Target file not found: ${proposal.targetFile}` };
+        }
+        const content = fs.readFileSync(targetPath, "utf8");
+        if (!content.includes(proposal.currentText)) {
+            return { success: false, error: "currentText not found in target file — file may have changed since proposal was created" };
+        }
+        const updated = content.replace(proposal.currentText, proposal.proposedText);
+        fs.writeFileSync(targetPath, updated, "utf8");
+        proposal.status = "applied";
+    } else {
+        proposal.status = action === "approve" ? "approved" : action === "reject" ? "rejected" : "deferred";
+    }
+
+    fs.writeFileSync(filePath, JSON.stringify(proposal, null, 2) + "\n", "utf8");
+    return { success: true, proposalId, status: proposal.status, action };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Session Retrospective Helpers (Cross-Session Learning)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Build a simple TF-IDF-ish token vector for a text string.
+ * Returns a Map<string, number> of token → frequency.
+ */
+const buildTokenVector = (text) => {
+    const tokens = String(text).toLowerCase()
+        .replace(/[^a-z0-9\s\-]/g, " ")
+        .split(/\s+/)
+        .filter(t => t.length > 2);
+    const freq = new Map();
+    for (const t of tokens) {
+        freq.set(t, (freq.get(t) || 0) + 1);
+    }
+    return freq;
+};
+
+/**
+ * Cosine similarity between two token vectors.
+ */
+const cosineSimilarity = (vecA, vecB) => {
+    let dot = 0, magA = 0, magB = 0;
+    for (const [token, freqA] of vecA) {
+        magA += freqA * freqA;
+        if (vecB.has(token)) dot += freqA * vecB.get(token);
+    }
+    for (const [, freqB] of vecB) {
+        magB += freqB * freqB;
+    }
+    if (magA === 0 || magB === 0) return 0;
+    return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+};
+
+/**
+ * Extract candidate lessons from session content.
+ * Looks for common patterns: "**Key Pattern**:", "**Lesson**:", bullet points
+ * under ## headings containing "lesson", "learned", "takeaway", "pattern".
+ */
+const extractCandidatesFromSession = (sessionSlug) => {
+    const sessionPath = path.join(sessionsDir, sessionSlug);
+    if (!fs.existsSync(sessionPath)) return { error: `Session ${sessionSlug} not found` };
+
+    const candidates = [];
+    const filesToScan = ["WORKING_NOTES.md", "SESSION_SUMMARY.md", "PLAN.md"];
+    const knowledgeHeaderPattern = /^##\s+.*(lesson|learned|takeaway|pattern|insight|discovery|gotcha|what.*worked|retrospective|key.*finding)/i;
+    const keyPatternLine = /\*\*(?:Key Pattern|Lesson|Insight|Discovery|Gotcha)\*\*:\s*(.+)/;
+
+    for (const fileName of filesToScan) {
+        const filePath = path.join(sessionPath, fileName);
+        if (!fs.existsSync(filePath)) continue;
+
+        const content = fs.readFileSync(filePath, "utf8");
+        const lines = content.split(/\r?\n/);
+
+        let inKnowledgeSection = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+
+            // Check for knowledge section headers
+            if (line.startsWith("## ")) {
+                inKnowledgeSection = knowledgeHeaderPattern.test(line);
+                continue;
+            }
+
+            // Extract inline key patterns (can appear anywhere)
+            const inlineMatch = line.match(keyPatternLine);
+            if (inlineMatch) {
+                candidates.push({
+                    text: inlineMatch[1].trim(),
+                    source: `${sessionSlug}/${fileName}:L${i + 1}`,
+                    type: "inline-pattern"
+                });
+                continue;
+            }
+
+            // Extract bullet points from knowledge sections
+            if (inKnowledgeSection && line.startsWith("- ") && line.length > 20) {
+                candidates.push({
+                    text: line.replace(/^-\s*/, "").trim(),
+                    source: `${sessionSlug}/${fileName}:L${i + 1}`,
+                    type: "section-bullet"
+                });
+            }
+        }
+    }
+
+    return { session: sessionSlug, candidates };
+};
+
+/**
+ * Check candidates against existing lessons/patterns for duplicates.
+ */
+const checkDuplicates = (candidates, existingContent, threshold = 0.6) => {
+    const existingLines = existingContent.split(/\r?\n/)
+        .filter(l => l.trim().startsWith("- ") && l.trim().length > 20)
+        .map(l => l.replace(/^-\s*/, "").trim());
+
+    const existingVectors = existingLines.map(l => buildTokenVector(l));
+    const results = [];
+
+    for (const candidate of candidates) {
+        const candidateVec = buildTokenVector(candidate.text);
+        let maxSimilarity = 0;
+        let mostSimilarLine = null;
+
+        for (let i = 0; i < existingVectors.length; i++) {
+            const sim = cosineSimilarity(candidateVec, existingVectors[i]);
+            if (sim > maxSimilarity) {
+                maxSimilarity = sim;
+                mostSimilarLine = existingLines[i];
+            }
+        }
+
+        results.push({
+            ...candidate,
+            isDuplicate: maxSimilarity >= threshold,
+            similarity: Math.round(maxSimilarity * 100) / 100,
+            similarTo: maxSimilarity >= threshold ? mostSimilarLine : null
+        });
+    }
+
+    return results;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Tool Implementations
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -653,20 +888,20 @@ const tools = {
             if (!data.exists) {
                 return { error: "LESSONS.md not found" };
             }
-            
+
             const allLines = data.content.split(/\r?\n/);
             const dateHeaderRegex = /^## (\d{4}-\d{2}-\d{2})/;
             const dates = allLines
                 .map(line => line.match(dateHeaderRegex))
                 .filter(Boolean)
                 .map(m => m[1]);
-            
+
             const stats = {
                 totalLines: allLines.length,
                 sectionCount: dates.length,
                 dateRange: dates.length > 0 ? { oldest: dates[dates.length - 1], newest: dates[0] } : null
             };
-            
+
             // If only stats requested, return early (cheap call)
             if (params?.onlyStats) {
                 return {
@@ -674,22 +909,22 @@ const tools = {
                     path: path.relative(repoRoot, lessonsPath),
                     updatedAt: data.updatedAt,
                     stats,
-                    hint: stats.totalLines > 100 
+                    hint: stats.totalLines > 100
                         ? `Large file (${stats.totalLines} lines). Use sinceDate:'${stats.dateRange?.newest}' to get only recent lessons.`
                         : "File is small enough to fetch fully."
                 };
             }
-            
+
             const maxLines = params?.maxLines ?? 200;
             const sinceDate = params?.sinceDate;
-            
+
             let lines = allLines;
-            
+
             // If sinceDate provided, filter to sections >= that date
             if (sinceDate) {
                 let inScope = false;
                 const filteredLines = [];
-                
+
                 for (const line of lines) {
                     const match = line.match(dateHeaderRegex);
                     if (match) {
@@ -701,12 +936,12 @@ const tools = {
                 }
                 lines = filteredLines;
             }
-            
+
             const excerpt = lines
                 .filter((line) => line.trim().length > 0)
                 .slice(0, maxLines)
                 .join("\n");
-            
+
             return {
                 type: "lessons",
                 path: path.relative(repoRoot, lessonsPath),
@@ -743,16 +978,16 @@ const tools = {
             const dirs = listSessionDirs();
             const targetSlug = params?.slug ?? dirs[0];
             if (!targetSlug) return { error: "No sessions found" };
-            
+
             const base = path.join(sessionsDir, targetSlug);
             if (!fs.existsSync(base)) {
                 return { error: `Session ${targetSlug} not found` };
             }
-            
+
             const allFiles = ["PLAN.md", "WORKING_NOTES.md", "SESSION_SUMMARY.md", "FOLLOW_UPS.md"];
             const requestedFiles = params?.files ?? allFiles;
             const maxLines = params?.maxLinesPerFile;
-            
+
             const payload = { slug: targetSlug, files: {}, fileSizes: {} };
             for (const fileName of allFiles) {
                 const filePath = path.join(base, fileName);
@@ -760,7 +995,7 @@ const tools = {
                     const content = fs.readFileSync(filePath, "utf8");
                     const lineCount = content.split(/\r?\n/).length;
                     payload.fileSizes[fileName] = lineCount;
-                    
+
                     // Only include content if file was requested
                     if (requestedFiles.includes(fileName)) {
                         const data = readFileSafe(filePath);
@@ -826,7 +1061,7 @@ const tools = {
             const date = new Date().toISOString().split("T")[0];
             const header = params.category || `## ${date}`;
             const content = fs.existsSync(lessonsPath) ? fs.readFileSync(lessonsPath, "utf8") : "";
-            
+
             // Check if header exists, if not add it
             let toAppend;
             if (content.includes(header)) {
@@ -836,7 +1071,7 @@ const tools = {
                 // Add new section
                 toAppend = `\n${header}\n- ${params.lesson}\n`;
             }
-            
+
             const result = appendToFile(lessonsPath, toAppend);
             return { ...result, appended: params.lesson };
         }
@@ -899,18 +1134,18 @@ const tools = {
             if (!["WORKING_NOTES.md", "FOLLOW_UPS.md"].includes(params.file)) {
                 return { error: "file must be WORKING_NOTES.md or FOLLOW_UPS.md" };
             }
-            
+
             const dirs = listSessionDirs();
             const slug = params.slug ?? dirs[0];
             if (!slug) {
                 return { error: "No sessions found" };
             }
-            
+
             const filePath = path.join(sessionsDir, slug, params.file);
             if (!fs.existsSync(filePath)) {
                 return { error: `File not found: ${params.file} in session ${slug}` };
             }
-            
+
             const timestamp = new Date().toISOString().replace("T", " ").slice(0, 16);
             const toAppend = `\n- ${timestamp} — ${params.content}`;
             const result = appendToFile(filePath, toAppend);
@@ -936,7 +1171,7 @@ const tools = {
         },
         handler: (params) => {
             const workflows = listWorkflowFiles();
-            
+
             if (params?.includeMetadata) {
                 return {
                     type: "workflow-list",
@@ -957,7 +1192,7 @@ const tools = {
                     hint: "Use getWorkflow with a specific name to read the full workflow content and metadata."
                 };
             }
-            
+
             return {
                 type: "workflow-list",
                 count: workflows.length,
@@ -996,36 +1231,36 @@ const tools = {
             if (!params?.name) {
                 return { error: "name parameter is required" };
             }
-            
+
             const workflows = listWorkflowFiles();
-            const workflow = workflows.find(w => 
-                w.name === params.name || 
+            const workflow = workflows.find(w =>
+                w.name === params.name ||
                 w.name.toLowerCase() === params.name.toLowerCase() ||
                 w.path === params.name ||
                 w.path === `${params.name}.md`
             );
-            
+
             if (!workflow) {
-                return { 
+                return {
                     error: `Workflow '${params.name}' not found`,
                     available: workflows.slice(0, 10).map(w => w.name),
                     hint: "Use listWorkflows to see all available workflows"
                 };
             }
-            
+
             const data = readFileSafe(workflow.fullPath);
             if (!data.exists) {
                 return { error: `Failed to read workflow: ${data.error}` };
             }
-            
+
             let content = data.content;
             const totalLines = content.split(/\r?\n/).length;
-            
+
             if (params?.maxLines && totalLines > params.maxLines) {
                 content = content.split(/\r?\n/).slice(0, params.maxLines).join("\n");
                 content += `\n\n... (truncated, ${totalLines - params.maxLines} more lines)`;
             }
-            
+
             if (params?.contentOnly) {
                 return {
                     type: "workflow",
@@ -1036,9 +1271,9 @@ const tools = {
                     content
                 };
             }
-            
+
             const metadata = parseWorkflowMetadata(data.content, workflow.fullPath);
-            
+
             return {
                 type: "workflow",
                 name: workflow.name,
@@ -1055,7 +1290,7 @@ const tools = {
                     improvementHooks: metadata.improvementHooks
                 },
                 content,
-                hint: metadata.improvementHooks.length > 0 
+                hint: metadata.improvementHooks.length > 0
                     ? `AGI improvement opportunities detected: ${metadata.improvementHooks.length}. Use proposeWorkflowImprovement to suggest optimizations.`
                     : "Workflow appears optimized. Follow phases in order."
             };
@@ -1109,21 +1344,21 @@ const tools = {
                     return { error: `${field} parameter is required` };
                 }
             }
-            
+
             // Verify workflow exists
             const workflows = listWorkflowFiles();
-            const workflow = workflows.find(w => 
-                w.name === params.workflowName || 
+            const workflow = workflows.find(w =>
+                w.name === params.workflowName ||
                 w.name.toLowerCase() === params.workflowName.toLowerCase()
             );
-            
+
             if (!workflow) {
-                return { 
+                return {
                     error: `Workflow '${params.workflowName}' not found`,
                     available: workflows.slice(0, 10).map(w => w.name)
                 };
             }
-            
+
             // Save the improvement proposal
             const result = saveWorkflowImprovement(params.workflowName, {
                 summary: params.summary,
@@ -1133,7 +1368,7 @@ const tools = {
                 risks: params.risks,
                 validation: params.validation
             });
-            
+
             return {
                 success: true,
                 type: "workflow-improvement-proposal",
@@ -1170,15 +1405,15 @@ const tools = {
             if (!params?.query) {
                 return { error: "query parameter is required" };
             }
-            
+
             const workflows = listWorkflowFiles();
             const lowerQuery = params.query.toLowerCase();
             const maxResults = params?.maxResults ?? 5;
             const results = [];
-            
+
             for (const workflow of workflows) {
                 if (results.length >= maxResults) break;
-                
+
                 const content = fs.readFileSync(workflow.fullPath, "utf8");
                 if (content.toLowerCase().includes(lowerQuery)) {
                     const lines = content.split(/\r?\n/);
@@ -1186,9 +1421,9 @@ const tools = {
                         .map((line, idx) => ({ line, lineNumber: idx + 1 }))
                         .filter(({ line }) => line.toLowerCase().includes(lowerQuery))
                         .slice(0, 3);
-                    
+
                     const metadata = parseWorkflowMetadata(content, workflow.fullPath);
-                    
+
                     results.push({
                         name: workflow.name,
                         path: workflow.path,
@@ -1198,12 +1433,12 @@ const tools = {
                     });
                 }
             }
-            
+
             return {
                 query: params.query,
                 resultCount: results.length,
                 results,
-                hint: results.length > 0 
+                hint: results.length > 0
                     ? "Use getWorkflow with a specific name to read the full workflow."
                     : "No matches. Try a different search term or use listWorkflows to browse."
             };
@@ -1234,14 +1469,14 @@ const tools = {
             if (!params?.topic) {
                 return { error: "topic parameter is required" };
             }
-            
+
             const results = findSessionsByTopic(params.topic, params.maxResults ?? 5);
-            
+
             // Categorize results
             const inProgress = results.filter(r => r.status === "in-progress");
             const completed = results.filter(r => r.status === "completed");
             const unknown = results.filter(r => r.status === "unknown");
-            
+
             let recommendation = null;
             if (inProgress.length > 0) {
                 recommendation = {
@@ -1261,7 +1496,7 @@ const tools = {
                     reason: "No existing sessions found on this topic"
                 };
             }
-            
+
             return {
                 topic: params.topic,
                 resultCount: results.length,
@@ -1269,11 +1504,11 @@ const tools = {
                 completed,
                 unknown,
                 recommendation,
-                hint: recommendation.action === "continue" 
+                hint: recommendation.action === "continue"
                     ? `Use getSession with slug:'${recommendation.session}' to load the active session.`
                     : recommendation.action === "review-then-create"
-                    ? `Use getSession with slug:'${recommendation.session}' to review prior learnings.`
-                    : "Create a new session with session-init.js tool."
+                        ? `Use getSession with slug:'${recommendation.session}' to review prior learnings.`
+                        : "Create a new session with session-init.js tool."
             };
         }
     },
@@ -1294,19 +1529,19 @@ const tools = {
             const dirs = listSessionDirs();
             const slug = params?.slug ?? dirs[0];
             if (!slug) return { error: "No sessions found" };
-            
+
             const planPath = path.join(sessionsDir, slug, "PLAN.md");
             if (!fs.existsSync(planPath)) {
                 return { error: `PLAN.md not found in session ${slug}` };
             }
-            
+
             const content = fs.readFileSync(planPath, "utf8");
             const tasks = parseTaskLedger(content);
-            
+
             const completedTasks = tasks.filter(t => t.done).length;
             const inProgressTasks = tasks.filter(t => !t.done && t.subtasks.some(s => s.done)).length;
             const notStartedTasks = tasks.filter(t => !t.done && !t.subtasks.some(s => s.done)).length;
-            
+
             // Find next action
             let nextAction = null;
             for (const task of tasks) {
@@ -1320,7 +1555,7 @@ const tools = {
                     break;
                 }
             }
-            
+
             return {
                 session: slug,
                 summary: {
@@ -1332,7 +1567,7 @@ const tools = {
                 },
                 tasks,
                 nextAction,
-                hint: nextAction 
+                hint: nextAction
                     ? `Resume at Task ${nextAction.taskId}: ${nextAction.nextSubtask}`
                     : "All tasks completed! Update SESSION_SUMMARY.md."
             };
@@ -1434,7 +1669,7 @@ const tools = {
                 query: params.query,
                 resultCount: results.length,
                 results,
-                hint: results.length ? "Use getSkill with a name to read the full SKILL.md." : "No matches. Try a broader query or listSkills." 
+                hint: results.length ? "Use getSkill with a name to read the full SKILL.md." : "No matches. Try a broader query or listSkills."
             };
         }
     },
@@ -1531,7 +1766,7 @@ const tools = {
                 topic: params.topic,
                 consideredSessions: sessionSlugs,
                 recommendations: top,
-                hint: top.length ? `Use getSkill with skill:'${top[0].skill}' to load the SOP.` : "No strong matches. Use listSkills or searchSkills." 
+                hint: top.length ? `Use getSkill with skill:'${top[0].skill}' to load the SOP.` : "No strong matches. Use listSkills or searchSkills."
             };
         }
     },
@@ -1748,9 +1983,9 @@ const tools = {
                     return { error: `${field} parameter is required` };
                 }
             }
-            
+
             const result = addCatalogEntry(
-                patternsPath, 
+                patternsPath,
                 "Refactoring Patterns Catalog",
                 "Refactoring Patterns Catalog",
                 {
@@ -1761,7 +1996,7 @@ const tools = {
                     example: params.example
                 }
             );
-            
+
             return {
                 success: true,
                 type: "pattern-added",
@@ -1811,10 +2046,10 @@ const tools = {
                     return { error: `${field} parameter is required` };
                 }
             }
-            
+
             const result = addCatalogEntry(
                 antiPatternsPath,
-                "Anti-Patterns Catalog", 
+                "Anti-Patterns Catalog",
                 "Anti-Patterns Catalog",
                 {
                     name: params.name,
@@ -1827,7 +2062,7 @@ const tools = {
                     example: params.example
                 }
             );
-            
+
             return {
                 success: true,
                 type: "anti-pattern-added",
@@ -1853,24 +2088,24 @@ const tools = {
         handler: (params) => {
             const data = readFileSafe(patternsPath);
             if (!data.exists) {
-                return { 
-                    exists: false, 
+                return {
+                    exists: false,
                     hint: "No patterns catalog yet. Use addPattern to create one."
                 };
             }
-            
+
             const maxLines = params?.maxLines ?? 200;
             let content = data.content;
             const totalLines = content.split(/\r?\n/).length;
-            
+
             if (totalLines > maxLines) {
                 content = content.split(/\r?\n/).slice(0, maxLines).join("\n");
                 content += `\n\n... (truncated, ${totalLines - maxLines} more lines)`;
             }
-            
+
             // Count patterns (## headers after the title)
             const patternCount = (content.match(/^## /gm) || []).length;
-            
+
             return {
                 type: "patterns-catalog",
                 path: path.relative(repoRoot, patternsPath),
@@ -1896,24 +2131,24 @@ const tools = {
         handler: (params) => {
             const data = readFileSafe(antiPatternsPath);
             if (!data.exists) {
-                return { 
-                    exists: false, 
+                return {
+                    exists: false,
                     hint: "No anti-patterns catalog yet. Use addAntiPattern to create one."
                 };
             }
-            
+
             const maxLines = params?.maxLines ?? 200;
             let content = data.content;
             const totalLines = content.split(/\r?\n/).length;
-            
+
             if (totalLines > maxLines) {
                 content = content.split(/\r?\n/).slice(0, maxLines).join("\n");
                 content += `\n\n... (truncated, ${totalLines - maxLines} more lines)`;
             }
-            
+
             // Count anti-patterns
             const antiPatternCount = (content.match(/^## /gm) || []).length;
-            
+
             return {
                 type: "anti-patterns-catalog",
                 path: path.relative(repoRoot, antiPatternsPath),
@@ -1957,23 +2192,23 @@ const tools = {
             if (!params?.area || !params?.status) {
                 return { error: "area and status parameters are required" };
             }
-            
+
             ensureCatalogFile(
-                knowledgeMapPath, 
+                knowledgeMapPath,
                 "Knowledge Map: Refactoring Coverage",
                 "Tracks what areas of the codebase have been refactored and documented."
             );
-            
+
             const content = fs.readFileSync(knowledgeMapPath, "utf8");
             const date = new Date().toISOString().split("T")[0];
-            
+
             const statusEmoji = {
                 "planned": "📋",
                 "in-progress": "🔄",
                 "completed": "✅",
                 "needs-review": "⚠️"
             };
-            
+
             // Check if area already exists
             if (content.includes(`| \`${params.area}\``)) {
                 // Update existing entry (simple approach: append note)
@@ -1987,10 +2222,10 @@ const tools = {
                     action: "updated"
                 };
             }
-            
+
             // Add new entry
             const entry = `| \`${params.area}\` | ${statusEmoji[params.status]} ${params.status} | ${params.session || "—"} | ${params.notes || "—"} |\n`;
-            
+
             // Check if table exists, if not create it
             if (!content.includes("| Area |")) {
                 const tableHeader = `\n| Area | Status | Session | Notes |\n|------|--------|---------|-------|\n`;
@@ -1998,7 +2233,7 @@ const tools = {
             } else {
                 appendToFile(knowledgeMapPath, entry);
             }
-            
+
             return {
                 success: true,
                 type: "knowledge-map-updated",
@@ -2020,16 +2255,16 @@ const tools = {
         handler: () => {
             const data = readFileSafe(knowledgeMapPath);
             if (!data.exists) {
-                return { 
-                    exists: false, 
+                return {
+                    exists: false,
                     hint: "No knowledge map yet. Use updateKnowledgeMap to create one."
                 };
             }
-            
+
             // Parse the table to extract stats
             const lines = data.content.split(/\r?\n/);
             const tableLines = lines.filter(l => l.startsWith("|") && !l.includes("---"));
-            
+
             const stats = {
                 total: tableLines.length - 1, // Exclude header
                 planned: 0,
@@ -2037,14 +2272,14 @@ const tools = {
                 completed: 0,
                 needsReview: 0
             };
-            
+
             for (const line of tableLines) {
                 if (line.includes("📋")) stats.planned++;
                 if (line.includes("🔄")) stats.inProgress++;
                 if (line.includes("✅")) stats.completed++;
                 if (line.includes("⚠️")) stats.needsReview++;
             }
-            
+
             return {
                 type: "knowledge-map",
                 path: path.relative(repoRoot, knowledgeMapPath),
@@ -2093,7 +2328,7 @@ const tools = {
             if (!fs.existsSync(logsDir)) {
                 fs.mkdirSync(logsDir, { recursive: true });
             }
-            
+
             const entry = {
                 ts: new Date().toISOString(),
                 level: params.level || "info",
@@ -2102,10 +2337,10 @@ const tools = {
                 msg: params.msg,
                 data: params.data || undefined
             };
-            
+
             const fileName = `${entry.session}.ndjson`;
             const filePath = path.join(logsDir, fileName);
-            
+
             try {
                 fs.appendFileSync(filePath, JSON.stringify(entry) + "\n", "utf8");
                 return {
@@ -2154,9 +2389,9 @@ const tools = {
             const session = params?.session || "default";
             const fileName = `${session}.ndjson`;
             const filePath = path.join(logsDir, fileName);
-            
+
             if (!fs.existsSync(filePath)) {
-                return { 
+                return {
                     type: "logs",
                     session,
                     entries: [],
@@ -2164,41 +2399,41 @@ const tools = {
                     hint: "No logs found for this session"
                 };
             }
-            
+
             try {
                 const content = fs.readFileSync(filePath, "utf8");
                 let entries = content
                     .split("\n")
                     .filter(line => line.trim())
                     .map(line => {
-                        try { return JSON.parse(line); } 
+                        try { return JSON.parse(line); }
                         catch { return null; }
                     })
                     .filter(Boolean);
-                
+
                 // Filter by level
                 if (params?.level) {
                     const levels = ["debug", "info", "warn", "error"];
                     const minLevel = levels.indexOf(params.level);
                     entries = entries.filter(e => levels.indexOf(e.level) >= minLevel);
                 }
-                
+
                 // Filter by time
                 if (params?.since) {
                     entries = entries.filter(e => e.ts >= params.since);
                 }
-                
+
                 // Filter by app
                 if (params?.app) {
                     entries = entries.filter(e => e.app === params.app);
                 }
-                
+
                 // Limit (from end - most recent)
                 const limit = params?.limit ?? 50;
                 if (entries.length > limit) {
                     entries = entries.slice(-limit);
                 }
-                
+
                 return {
                     type: "logs",
                     session,
@@ -2233,25 +2468,25 @@ const tools = {
                     hint: "No logs directory yet. Use appendLog to create logs."
                 };
             }
-            
+
             try {
                 const files = fs.readdirSync(logsDir)
                     .filter(f => f.endsWith(".ndjson"));
-                
+
                 let sessions = files.map(fileName => {
                     const filePath = path.join(logsDir, fileName);
                     const stat = fs.statSync(filePath);
                     const content = fs.readFileSync(filePath, "utf8");
                     const entryCount = content.split("\n").filter(l => l.trim()).length;
-                    
+
                     // Get first and last timestamp
                     const lines = content.split("\n").filter(l => l.trim());
                     let firstTs = null, lastTs = null;
                     try {
                         if (lines.length > 0) firstTs = JSON.parse(lines[0]).ts;
                         if (lines.length > 0) lastTs = JSON.parse(lines[lines.length - 1]).ts;
-                    } catch {}
-                    
+                    } catch { }
+
                     return {
                         session: fileName.replace(".ndjson", ""),
                         size: stat.size,
@@ -2261,12 +2496,12 @@ const tools = {
                         updatedAt: stat.mtime.toISOString()
                     };
                 }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-                
+
                 const limit = params?.limit ?? 20;
                 if (sessions.length > limit) {
                     sessions = sessions.slice(0, limit);
                 }
-                
+
                 return {
                     type: "log-sessions",
                     sessions,
@@ -2299,7 +2534,7 @@ const tools = {
             if (!fs.existsSync(logsDir)) {
                 return { success: true, cleared: 0, hint: "No logs directory exists" };
             }
-            
+
             try {
                 if (params.session === "all") {
                     const files = fs.readdirSync(logsDir).filter(f => f.endsWith(".ndjson"));
@@ -2308,11 +2543,11 @@ const tools = {
                 } else {
                     const fileName = `${params.session}.ndjson`;
                     const filePath = path.join(logsDir, fileName);
-                    
+
                     if (!fs.existsSync(filePath)) {
                         return { success: true, cleared: 0, hint: "Session not found" };
                     }
-                    
+
                     // If olderThan is specified, filter instead of delete
                     if (params.olderThan) {
                         const content = fs.readFileSync(filePath, "utf8");
@@ -2331,7 +2566,7 @@ const tools = {
                             type: "logs-pruned"
                         };
                     }
-                    
+
                     fs.unlinkSync(filePath);
                     return { success: true, cleared: 1, type: "logs-cleared" };
                 }
@@ -2370,44 +2605,44 @@ const tools = {
             if (!fs.existsSync(logsDir)) {
                 return { type: "log-search", query: params.query, matches: [], count: 0 };
             }
-            
+
             try {
                 const files = fs.readdirSync(logsDir).filter(f => f.endsWith(".ndjson"));
                 const limit = params?.limit ?? 20;
                 const levels = ["debug", "info", "warn", "error"];
                 const minLevel = params?.level ? levels.indexOf(params.level) : 0;
                 const query = params.query.toLowerCase();
-                
+
                 const matches = [];
-                
+
                 for (const fileName of files) {
                     if (matches.length >= limit) break;
-                    
+
                     const filePath = path.join(logsDir, fileName);
                     const content = fs.readFileSync(filePath, "utf8");
                     const session = fileName.replace(".ndjson", "");
-                    
+
                     for (const line of content.split("\n").filter(l => l.trim())) {
                         if (matches.length >= limit) break;
-                        
+
                         try {
                             const entry = JSON.parse(line);
-                            
+
                             // Apply filters
                             if (levels.indexOf(entry.level) < minLevel) continue;
                             if (params?.app && entry.app !== params.app) continue;
-                            
+
                             // Search in message and data
                             const msgMatch = entry.msg?.toLowerCase().includes(query);
                             const dataMatch = entry.data && JSON.stringify(entry.data).toLowerCase().includes(query);
-                            
+
                             if (msgMatch || dataMatch) {
                                 matches.push({ session, ...entry });
                             }
-                        } catch {}
+                        } catch { }
                     }
                 }
-                
+
                 return {
                     type: "log-search",
                     query: params.query,
@@ -2418,8 +2653,198 @@ const tools = {
                 return { error: err.message };
             }
         }
+    },
+
+    // ─── Instruction Self-Modification ───────────────────────────────────────
+
+    docs_memory_proposeInstructionChange: {
+        description: "Propose a change to an instruction file (AGENTS.md, .agent.md, etc). Creates a versioned proposal for human review. Use this when you discover that instructions are missing, outdated, or could be improved. The proposal is stored in docs/agi/instruction-proposals/ as a JSON file.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                targetFile: {
+                    type: "string",
+                    description: "Relative path from repo root to the instruction file (e.g., 'AGENTS.md', '.github/agents/MyAgent.agent.md')"
+                },
+                section: {
+                    type: "string",
+                    description: "Section header or description of where the change applies"
+                },
+                currentText: {
+                    type: "string",
+                    description: "The exact text to find and replace in the file"
+                },
+                proposedText: {
+                    type: "string",
+                    description: "The replacement text"
+                },
+                rationale: {
+                    type: "string",
+                    description: "Why this change should be made — include evidence from your current session"
+                },
+                createdBy: {
+                    type: "string",
+                    description: "Session slug or agent identity (e.g., 'session/2026-02-15-agi-improvements')"
+                }
+            },
+            required: ["targetFile", "currentText", "proposedText", "rationale"]
+        },
+        handler: (params) => {
+            if (!params?.targetFile || !params?.currentText || !params?.proposedText) {
+                return { error: "targetFile, currentText, and proposedText are required" };
+            }
+            // Validate the target file exists
+            const targetPath = path.resolve(repoRoot, params.targetFile);
+            if (!fs.existsSync(targetPath)) {
+                return { error: `Target file not found: ${params.targetFile}` };
+            }
+            // Validate currentText exists in the file
+            const content = fs.readFileSync(targetPath, "utf8");
+            if (!content.includes(params.currentText)) {
+                return { error: "currentText not found in target file — check the exact text" };
+            }
+            return createProposal(params);
+        }
+    },
+
+    docs_memory_listInstructionProposals: {
+        description: "List instruction change proposals. Use this to see pending proposals that need review, or to browse all proposals.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                status: {
+                    type: "string",
+                    enum: ["pending", "approved", "rejected", "applied", "deferred"],
+                    description: "Filter by status (omit to list all)"
+                }
+            },
+            required: []
+        },
+        handler: (params) => {
+            const proposals = listProposals(params?.status);
+            return {
+                type: "instruction-proposals",
+                count: proposals.length,
+                filter: params?.status || "all",
+                proposals: proposals.map(p => ({
+                    id: p.id,
+                    status: p.status,
+                    targetFile: p.targetFile,
+                    section: p.section,
+                    rationale: p.rationale?.slice(0, 200),
+                    createdAt: p.createdAt,
+                    reviewedAt: p.reviewedAt
+                }))
+            };
+        }
+    },
+
+    docs_memory_reviewInstructionProposal: {
+        description: "Review an instruction change proposal: approve, reject, defer, or apply it. 'apply' will actually modify the target instruction file. CAUTION: 'apply' modifies live instruction files.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                proposalId: {
+                    type: "string",
+                    description: "The proposal ID (e.g., 'ip-2026-02-15T13-58-00-001')"
+                },
+                action: {
+                    type: "string",
+                    enum: ["approve", "reject", "defer", "apply"],
+                    description: "Action to take: approve (mark for future apply), reject, defer, or apply (actually modify the file)"
+                },
+                reviewNotes: {
+                    type: "string",
+                    description: "Optional notes explaining the review decision"
+                }
+            },
+            required: ["proposalId", "action"]
+        },
+        handler: (params) => {
+            if (!params?.proposalId || !params?.action) {
+                return { error: "proposalId and action are required" };
+            }
+            return reviewProposal(params.proposalId, params.action, params.reviewNotes);
+        }
+    },
+
+    // ─── Session Retrospective ───────────────────────────────────────────────
+
+    docs_memory_runRetrospective: {
+        description: "Run automated retrospective on a session to extract candidate lessons and patterns. Checks for duplicates against existing LESSONS.md. Use apply:true to auto-append unique candidates.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                session: {
+                    type: "string",
+                    description: "Session slug (e.g., '2025-12-31'). Required."
+                },
+                apply: {
+                    type: "boolean",
+                    description: "If true, append unique (non-duplicate) candidates to LESSONS.md. Default: false (dry run)."
+                },
+                threshold: {
+                    type: "number",
+                    description: "Similarity threshold (0-1) for duplicate detection. Default: 0.6. Higher = more strict."
+                }
+            },
+            required: ["session"]
+        },
+        handler: (params) => {
+            if (!params?.session) {
+                return { error: "session slug is required" };
+            }
+
+            const extraction = extractCandidatesFromSession(params.session);
+            if (extraction.error) return extraction;
+
+            if (extraction.candidates.length === 0) {
+                return {
+                    type: "retrospective",
+                    session: params.session,
+                    candidateCount: 0,
+                    message: "No candidate lessons found. Session may lack knowledge-bearing sections (## Lessons, **Key Pattern**:, etc.)"
+                };
+            }
+
+            // Check for duplicates against LESSONS.md
+            const lessonsData = readFileSafe(lessonsPath);
+            const existingContent = lessonsData.exists ? lessonsData.content : "";
+            const threshold = params?.threshold ?? 0.6;
+            const results = checkDuplicates(extraction.candidates, existingContent, threshold);
+
+            const unique = results.filter(r => !r.isDuplicate);
+            const duplicates = results.filter(r => r.isDuplicate);
+
+            // Apply if requested
+            let applied = false;
+            if (params?.apply && unique.length > 0) {
+                const date = new Date().toISOString().split("T")[0];
+                const header = `\n## ${date} (auto-retrospective: ${params.session})\n`;
+                const bullets = unique.map(u => `- ${u.text}`).join("\n");
+                appendToFile(lessonsPath, header + bullets + "\n");
+                applied = true;
+            }
+
+            return {
+                type: "retrospective",
+                session: params.session,
+                candidateCount: results.length,
+                uniqueCount: unique.length,
+                duplicateCount: duplicates.length,
+                applied,
+                unique: unique.map(u => ({ text: u.text, source: u.source, type: u.type })),
+                duplicates: duplicates.map(d => ({
+                    text: d.text,
+                    source: d.source,
+                    similarity: d.similarity,
+                    similarTo: d.similarTo?.slice(0, 100)
+                }))
+            };
+        }
     }
 };
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MCP Protocol (stdio transport)
@@ -2678,11 +3103,11 @@ const runStdioServer = () => {
         debugLog("stdin end - exiting");
         process.exit(0);
     });
-    
+
     process.stdin.on("error", (err) => {
         debugLog(`stdin error: ${err.message}`);
     });
-    
+
     debugLog("Server ready, waiting for input");
 };
 
@@ -2883,6 +3308,14 @@ Tools exposed (WRITE - Pattern Catalogs):
 
 Tools exposed (WRITE - AGI Self-Improvement):
   docs_memory_proposeWorkflowImprovement   Suggest workflow optimization
+
+Tools exposed (WRITE - Instruction Self-Modification):
+  docs_memory_proposeInstructionChange     Propose a change to an instruction file
+  docs_memory_listInstructionProposals     List instruction change proposals
+  docs_memory_reviewInstructionProposal    Review/approve/reject/apply a proposal
+
+Tools exposed (WRITE - Session Retrospective):
+  docs_memory_runRetrospective             Extract lessons from a session (with dedup)
 
 Tools exposed (Logging - For App Telemetry):
   docs_memory_appendLog          Append log entry (auto-timestamped)

@@ -252,7 +252,7 @@ async function runMultiModalCrawl({
 
   const maxParallel = Number.isFinite(config.maxParallel)
     ? Math.max(1, Math.floor(config.maxParallel))
-    : 2;
+    : 30;
 
   delete config.domains;
   delete config.domain;

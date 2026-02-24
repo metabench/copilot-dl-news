@@ -37,6 +37,17 @@ docker-compose -f deploy/docker-compose.yml -f deploy/docker-compose.dev.yml up
 # - Node Inspector: chrome://inspect (port 9229)
 ```
 
+### 30-Domain local run (single machine)
+
+```bash
+node deploy/remote-crawler-v2/multi-domain-server.js --config deploy/remote-crawler-v2/crawl-domains-30.json
+```
+
+This starts the multi-domain crawler with:
+- 30 configured domains
+- `maxConcurrent: 30`
+- shared SQLite DB at `data/crawl-multi-30.db`
+
 ## Architecture
 
 ```
@@ -79,6 +90,29 @@ docker-compose -f deploy/docker-compose.yml -f deploy/docker-compose.dev.yml up
 | `scripts/graceful-shutdown.js` | Clean shutdown handler |
 | `scripts/init-db.sql` | PostgreSQL schema initialization |
 | `.dockerignore` | Build context exclusions |
+
+## Terraform (CI-integrated)
+
+Terraform stack location:
+- `deploy/terraform/local`
+
+Purpose:
+- Generates `deploy/remote-crawler-v2/crawl-domains.generated.json` from IaC variables.
+- Encodes max concurrent domains and domain list as versioned config.
+
+CI workflow:
+- `.github/workflows/terraform.yml`
+- Runs `terraform fmt -check`, `terraform validate`, and `terraform plan` using `ci.tfvars`.
+
+Local usage:
+
+```bash
+cd deploy/terraform/local
+terraform init -backend=false
+terraform validate
+terraform plan -var-file=terraform.tfvars
+terraform apply -var-file=terraform.tfvars
+```
 
 ## Configuration
 

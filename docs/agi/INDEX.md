@@ -14,8 +14,10 @@ This directory describes how the copilot-dl-news project can evolve toward an AG
 - [agents/](agents/) – Draft agent specs (not yet active). Each requires manual promotion into the real agent directories.
 - [agents/jsgui3-ui-isomorphic.agent.md](agents/jsgui3-ui-isomorphic.agent.md) – Draft agent charter for researching and shipping jsgui3 isomorphic UI fixes (client-first scope).
 - [AGENT_LANDSCAPE.md](AGENT_LANDSCAPE.md) – Snapshot of existing canonical agents outside `/docs/agi` to consult before proposing new ones.
+- [instruction-proposals/](instruction-proposals/) – Versioned proposals for instruction file changes (AGI self-modification pipeline).
 - [tools/JS_SCAN_DEEP_DIVE.md](tools/JS_SCAN_DEEP_DIVE.md) – Advanced js-scan usage notes, including meta-scans on the tooling itself.
 - [tools/JS_EDIT_DEEP_DIVE.md](tools/JS_EDIT_DEEP_DIVE.md) – Guarded js-edit workflows and recipes, plus guidance for editing the tooling safely.
+- [../../tools/agi/session-retrospective.js](../../tools/agi/session-retrospective.js) – CLI tool for extracting lessons from sessions with dedup.
 
 ## How to Use This Space
 1. **Start with SELF_MODEL.md** to understand the constraints and assets available to AGI-style agents.

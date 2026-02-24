@@ -3,10 +3,10 @@ const { getDsplForDomain } = require('../../services/shared/dspl');
 const { PlacePlaceHubGapAnalyzer } = require('../../services/PlacePlaceHubGapAnalyzer');
 
 // Import utility functions
-const { normalizeDomain, applyScheme, extractTitle } = require('../../shared/utils/domainUtils');
-const { computeAgeMs, extractPredictionSignals, composeCandidateSignals, createFetchRow } = require('../../shared/utils/dataUtils');
-const { summarizeDsplPatterns, assessDomainReadiness, selectPlaces, selectTopics, collectHubChanges } = require('../../shared/utils/analysisUtils');
-const { createBatchSummary, aggregateSummaryInto, createFailedDomainSummary } = require('../../shared/utils/summaryUtils');
+const { normalizeDomain, applyScheme, extractTitle } = require('./utils/domainUtils');
+const { computeAgeMs, extractPredictionSignals, composeCandidateSignals, createFetchRow } = require('./utils/dataUtils');
+const { summarizeDsplPatterns, assessDomainReadiness, selectPlaces, selectTopics, collectHubChanges } = require('./utils/analysisUtils');
+const { createBatchSummary, aggregateSummaryInto, createFailedDomainSummary } = require('./utils/summaryUtils');
 const { fetchUrl } = require('./utils/httpUtils');
 const { upsertAbsentPlacePageMapping } = require('../../data/db/sqlite/v1/queries/placePageMappings');
 

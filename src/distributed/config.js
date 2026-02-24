@@ -12,7 +12,7 @@ const config = {
     enabled: process.env.DISTRIBUTED_CRAWL !== 'false',
 
     // Default worker URL (fallback if no registry nodes available)
-    defaultWorkerUrl: process.env.WORKER_URL || 'http://144.21.35.104:3120',
+    defaultWorkerUrl: process.env.WORKER_URL || (() => { try { return `http://${require('../../tools/crawl/lib/fleet-host-resolver').getFleetHostSync()}:3120`; } catch { return 'http://127.0.0.1:3120'; } })(),
 
     // Batch processing settings
     batchSize: parseInt(process.env.DISTRIBUTED_BATCH_SIZE, 10) || 50,

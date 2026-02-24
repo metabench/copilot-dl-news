@@ -108,6 +108,7 @@ function parseArgs(argv) {
     downloadsOnly: false, // Show only PAGE events (download activity)
     slow: false,
     rateLimitMs: 0,
+    concurrency: 1,
     intMaxSeeds: null, // Country seed limit (null = default 50, 0 = all countries)
     adaptive: false, // Use adaptive strategy selection
     db: path.join(process.cwd(), 'data', 'news.db')
@@ -170,6 +171,11 @@ function parseArgs(argv) {
         flags.rateLimitMs = parseInt(next, 10);
         i++;
         break;
+      case '--concurrency':
+      case '-c':
+        flags.concurrency = parseInt(next, 10);
+        i++;
+        break;
       case '--list-operations':
         flags.listOperations = true;
         break;
@@ -203,10 +209,10 @@ function createLogger(verbose, quiet) {
   // Quiet mode: suppress all output except errors
   if (quiet) {
     return {
-      info: () => {},
-      warn: () => {},
+      info: () => { },
+      warn: () => { },
       error: (...args) => console.error('❌', ...args),
-      debug: () => {}
+      debug: () => { }
     };
   }
   return {
@@ -229,15 +235,6 @@ function formatDuration(ms) {
 
 async function main() {
   const flags = parseArgs(process.argv);
-
-  // NOTE: Downloads-only console filter is now set up at module load time (see top of file)
-  // before any requires can log. The early filter checks process.argv for -d/--downloads-only.
-
-  // Lazy require heavy modules
-  const Database = require('better-sqlite3');
-  const { createCrawlService } = require('../../src/server/crawl-api');
-  const { TelemetryIntegration } = require('../../src/crawler/telemetry/TelemetryIntegration');
-  const { AdaptiveDiscoveryService, STRATEGIES } = require('../../src/crawler/strategies');
 
   if (flags.help) {
     console.log(`
@@ -285,6 +282,15 @@ For long-running crawls, use the daemon approach:
     return;
   }
 
+  // NOTE: Downloads-only console filter is now set up at module load time (see top of file)
+  // before any requires can log. The early filter checks process.argv for -d/--downloads-only.
+
+  // Lazy require heavy modules
+  const Database = require('better-sqlite3');
+  const { createCrawlService } = require('../../src/server/crawl-api');
+  const { TelemetryIntegration } = require('../../src/core/crawler/telemetry/TelemetryIntegration');
+  const { AdaptiveDiscoveryService, STRATEGIES } = require('../../src/core/crawler/strategies');
+
   // Open database
   const db = new Database(flags.db);
 
@@ -294,11 +300,11 @@ For long-running crawls, use the daemon approach:
   // Create telemetry integration with db persistence
   // For small crawls: disable batching for visibility, enable URL events for timing data
   // Quiet mode: suppress stdout telemetry, still write to DB
-  const telemetry = new TelemetryIntegration({ 
+  const telemetry = new TelemetryIntegration({
     db,
     eventWriterOptions: { batchWrites: !isSmallCrawl },
     bridgeOptions: {
-      ...(isSmallCrawl ? { 
+      ...(isSmallCrawl ? {
         broadcastUrlEvents: true,       // Enable per-URL timing events
         urlEventBatchInterval: 0,       // No batching for small crawls  
         urlEventBatchSize: 1            // Flush each event immediately
@@ -348,20 +354,20 @@ For long-running crawls, use the daemon approach:
   // ─────────────────────────────────────────────────────────────
   let adaptiveService = null;
   let effectiveOperation = flags.operation;
-  
+
   if (flags.adaptive) {
     adaptiveService = new AdaptiveDiscoveryService({ db, logger });
     const domain = new URL(flags.url).hostname;
-    
+
     // Run quick sitemap check to determine capabilities
     const https = require('https');
     const http = require('http');
     const urlObj = new URL(flags.url);
     const protocol = urlObj.protocol === 'https:' ? https : http;
-    
+
     let hasSitemap = false;
     let sitemapUrls = [];
-    
+
     try {
       const robotsUrl = `${urlObj.origin}/robots.txt`;
       const robotsResponse = await new Promise((resolve, reject) => {
@@ -372,12 +378,12 @@ For long-running crawls, use the daemon approach:
         req.on('error', reject);
         req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
       });
-      
+
       if (robotsResponse.statusCode === 200) {
         let robotsBody = '';
         robotsResponse.on('data', chunk => { robotsBody += chunk; if (robotsBody.length > 10000) robotsResponse.destroy(); });
         await new Promise(resolve => robotsResponse.on('end', resolve).on('close', resolve));
-        
+
         const sitemapMatches = robotsBody.match(/Sitemap:\s*(.+)/gi) || [];
         sitemapUrls = sitemapMatches.map(m => m.replace(/Sitemap:\s*/i, '').trim());
         hasSitemap = sitemapUrls.length > 0;
@@ -385,14 +391,14 @@ For long-running crawls, use the daemon approach:
     } catch (err) {
       logger.debug('robots.txt check failed:', err.message);
     }
-    
+
     // Initialize with capabilities
     const selectedStrategy = await adaptiveService.initialize(domain, {
       hasSitemap,
       sitemapUrls: hasSitemap ? sitemapUrls.length * 100 : 0, // Estimate ~100 URLs per sitemap
       sitemapLocations: sitemapUrls
     });
-    
+
     // Map strategy to operation
     const strategyToOperation = {
       [STRATEGIES.SITEMAP]: 'sitemapDiscovery',
@@ -401,7 +407,7 @@ For long-running crawls, use the daemon approach:
       [STRATEGIES.HOMEPAGE]: 'basicArticleCrawl'
     };
     effectiveOperation = strategyToOperation[selectedStrategy] || flags.operation;
-    
+
     if (!flags.quiet) {
       console.log(`🧠 Adaptive mode: strategy=${selectedStrategy} → operation=${effectiveOperation}`);
       console.log(`   Sitemap: ${hasSitemap ? `✓ (${sitemapUrls.length} found)` : '✗ none'}`);
@@ -462,6 +468,7 @@ For long-running crawls, use the daemon approach:
         // Rate limiting for anti-bot protection
         ...(flags.rateLimitMs > 0 && { rateLimitMs: flags.rateLimitMs }),
         ...(flags.slow && { slowMode: true }),
+        ...(flags.concurrency && { concurrency: flags.concurrency }),
         // For small crawls, disable progress throttle so all events are visible
         ...(isSmallCrawl && !flags.quiet && !flags.downloadsOnly && { progressEmitIntervalMs: 0 }),
         // Downloads-only mode: show only PAGE events
@@ -506,7 +513,7 @@ For long-running crawls, use the daemon approach:
   } finally {
     // Wait for batched events to flush (bridge uses 500ms batch interval)
     await new Promise(resolve => setTimeout(resolve, 600));
-    
+
     // Cleanup - telemetry.destroy() will flush and destroy the eventWriter
     telemetry.destroy();
     db.close();

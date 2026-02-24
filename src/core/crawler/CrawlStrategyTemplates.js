@@ -284,7 +284,7 @@ class CrawlStrategyTemplates {
       type: 'built-in',
       config: {
         maxDepth: 2,
-        maxConcurrency: 10,
+        maxConcurrency: 30,
         timeout: 5000,
         maxArticlesPerHub: 20,
         followLinks: true,
@@ -453,8 +453,8 @@ class CrawlStrategyTemplates {
     if (validated.maxDepth < 1 || validated.maxDepth > 10) {
       throw new Error('maxDepth must be between 1 and 10');
     }
-    if (validated.maxConcurrency < 1 || validated.maxConcurrency > 20) {
-      throw new Error('maxConcurrency must be between 1 and 20');
+    if (validated.maxConcurrency < 1 || validated.maxConcurrency > 30) {
+      throw new Error('maxConcurrency must be between 1 and 30');
     }
     if (validated.timeout < 1000 || validated.timeout > 60000) {
       throw new Error('timeout must be between 1000 and 60000');

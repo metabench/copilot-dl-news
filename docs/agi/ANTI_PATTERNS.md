@@ -214,3 +214,48 @@ AGI-accumulated knowledge catalog.
 **Example**: A global ‘hub discovery’ registry mutated by geo import or geo crawl code
 
 ---
+
+## Forcing jsgui.tpl on High-Frequency Interactive Micro-Controls
+
+**Added**: 2026-02-20
+**Context**: Refactoring controls to use jsgui.tpl (e.g., Rating_Stars.js)
+
+**When to use**: Symptoms: A control has elements (like interactive rating stars) where `.add_class()` or `.remove_class()` is repeatedly called inside UI event listeners (like `mousemove`), but the agent tries to replace their `compose()` loop with `jsgui.tpl` strings.
+
+**Steps/Details**:
+1. Why it's bad: `jsgui.tpl` handles strings perfectly but its parsed DOM nodes (`Control_View` instances or raw parse objects) might not fully support the rich `Control` API immediately without extra wrapping, causing `TypeError: remove_class is not a function`. It is an anti-pattern for lists of highly mutable sub-components.
+1. Better approach: Use procedural `Control` generation (e.g. `new Control()`) for elements that require direct imperative mutations (like `add_class()`, `clear()`, `add()`). Use `jsgui.tpl` for layout wrappers or declarative content that doesn't need high-frequency programmatic DOM interactions.
+
+
+
+---
+
+## Un-Timeoutable Foreground Commands
+
+**Added**: 2026-02-20
+**Context**: General
+
+**When to use**: Symptoms: Calling bash commands like `ssh`, `scp`, `rsync`, `curl`, `pm2 logs`, or Node `execSync` without a timeout guard. Or calling backend scripts with infinite loops using long `WaitMsBeforeAsync` parameters. The agent hangs until the TCP connection drops naturally (which can take minutes) or blocks entirely until the user clicks cancel.
+
+**Steps/Details**:
+1. Why it's bad: Agent process gets totally stuck thinking it's waiting for quick output, locking up the chat interface for the user and requiring manual intervention to break the loop. This displays a lack of agentic consciousness regarding hanging states.
+1. Better approach: Use explicit timeout arguments inside standard library functions (e.g., `execSync(cmd, { timeout: 15000 })`, `-o ConnectTimeout=5` in SSH). If generating HTTP wrapper functions or promises, ensure any unused `setTimeout` references are cleared or unref'd to avoid zombie processes. When running tasks using `run_command` executing long loops, use `WaitMsBeforeAsync: 500` maximum.
+
+
+
+---
+
+## Baseline-Live Source Equivalence Assumption
+
+**Added**: 2026-02-22
+**Context**: V4 remote crawler server
+
+**When to use**: Symptoms: Fixes to repo server file do not change live remote behavior; repeated incidents persist despite local patching
+
+**Steps/Details**:
+1. Why it's bad: Wastes iterations on non-authoritative code paths and delays root-cause resolution
+1. Better approach: Verify live runtime source snapshot first, then patch authoritative path and revalidate with bounded CLI probes
+
+**Example**: deploy/remote-crawler-v2/multi-domain-server.js vs tmp/remote-live-multi-domain-server.js divergence
+
+---

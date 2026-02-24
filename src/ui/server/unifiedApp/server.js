@@ -41,13 +41,18 @@ const { createTopicListsRouter } = require('../topicLists/server');
 const { createCrawlObserverRouter } = require('../crawlObserver/server');
 const { createCrawlStatusRouter } = require('../crawlStatus/server');
 const { createCrawlerProfilesRouter } = require('../crawlerProfiles/server');
+const { createDomainRegistryRouter } = require('../domainRegistry/server');
 const { createSchedulerDashboardRouter } = require('../schedulerDashboard/server');
 const { createMultiModalCrawlRouter } = require('../multiModalCrawl/server');
 const { createCrawlStrategiesRouter } = require('../crawlStrategies/server');
+const { DomainRegistryStore } = require('../../../core/crawler/domains/DomainRegistryStore');
+const { SearchService } = require('../../../search/SearchService');
 const { TelemetryIntegration } = require('../../../core/crawler/telemetry/TelemetryIntegration');
 const { InProcessCrawlJobRegistry } = require('../../../server/crawl-api/v1/core/InProcessCrawlJobRegistry');
 const { registerCrawlApiV1Routes } = require('../../../api/route-loaders/crawl-v1');
 const { createCrawlService } = require('../../../server/crawl-api/core/crawlService');
+const { resolvePresetDateRange } = require('./lib/searchDateRange');
+const { computeSearchFreshness } = require('./lib/searchFreshness');
 
 const PORT = process.env.PORT || 3000;
 
@@ -66,6 +71,59 @@ function parseNumber(value, fallback) {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
   return n;
+}
+
+function parseBooleanQuery(value, fallback = false) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const normalized = String(value).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return fallback;
+}
+
+function createCheckModeSubApps() {
+  const homeContent = '<div class="home-dashboard"><div class="home-hero"><h1>Unified App (check mode)</h1></div></div>';
+  const panelDemoContent = '<section data-unified-activate="panel-demo"><div class="panel-status">Panel demo check mode</div></section>';
+  const searchExplorerContent = '<section data-unified-activate="search-explorer"><input type="text" data-search-input="q" value="" /></section>';
+
+  return [
+    {
+      id: 'home',
+      label: 'Home',
+      icon: '🏠',
+      category: 'System',
+      description: 'Unified shell home (check mode)',
+      renderContent: async () => ({
+        content: homeContent,
+        embed: 'panel',
+        activationKey: 'home'
+      })
+    },
+    {
+      id: 'panel-demo',
+      label: 'Panel Demo',
+      icon: '🧪',
+      category: 'Diagnostics',
+      description: 'Panel activation seam check',
+      renderContent: async () => ({
+        content: panelDemoContent,
+        embed: 'panel',
+        activationKey: 'panel-demo'
+      })
+    },
+    {
+      id: 'search-explorer',
+      label: 'Search Explorer',
+      icon: '🔎',
+      category: 'Analytics',
+      description: 'Search explorer check payload',
+      renderContent: async () => ({
+        content: searchExplorerContent,
+        embed: 'panel',
+        activationKey: 'search-explorer'
+      })
+    }
+  ];
 }
 
 function parseArgs(argv = process.argv.slice(2)) {
@@ -92,7 +150,9 @@ function parseArgs(argv = process.argv.slice(2)) {
 // Sub-App Registry
 // ─────────────────────────────────────────────────────────────
 
-const SUB_APPS = createSubAppRegistry();
+const SUB_APPS = parseEnvBoolean(process.env.UNIFIED_APP_CHECK_MODE, false)
+  ? createCheckModeSubApps()
+  : createSubAppRegistry();
 
 // ─────────────────────────────────────────────────────────────
 // Express App
@@ -415,6 +475,259 @@ function mountDashboardModules(unifiedApp, options = {}) {
 
   // ═══════════════════════════════════════════════════════════════════════════
 
+  function normalizeDateParam(value) {
+    if (typeof value !== 'string') return null;
+    const v = value.trim();
+    if (!v) return null;
+    return v;
+  }
+
+  function normalizePositiveInt(value, fallback, max = null) {
+    const n = Number.parseInt(value, 10);
+    if (!Number.isFinite(n) || n <= 0) return fallback;
+    if (Number.isFinite(max)) return Math.min(n, max);
+    return n;
+  }
+
+  function buildSearchQuery(baseQuery, authorFilter) {
+    const query = typeof baseQuery === 'string' ? baseQuery.trim() : '';
+    const author = typeof authorFilter === 'string' ? authorFilter.trim().replace(/"/g, '') : '';
+
+    let next = query || '*';
+    if (author) {
+      next += ` author:"${author}"`;
+    }
+    return next;
+  }
+
+  function normalizeSectionFilter(value) {
+    if (typeof value !== 'string') return null;
+    const section = value.trim();
+    return section ? section.toLowerCase() : null;
+  }
+
+  function sectionMatches(result, sectionFilter) {
+    if (!sectionFilter) return true;
+    const section = typeof result.section === 'string' ? result.section.trim().toLowerCase() : '';
+    return section === sectionFilter;
+  }
+
+  function hostAllowed(result, enabledHostSet) {
+    if (!(enabledHostSet instanceof Set)) return true;
+    const host = typeof result.host === 'string' ? result.host.trim().toLowerCase() : '';
+    if (!host) return false;
+    return enabledHostSet.has(host);
+  }
+
+  unifiedApp.get('/api/search-explorer/options', (req, res) => {
+    try {
+      const dbWrapper = getDbRW();
+      const registryStore = new DomainRegistryStore({ db: dbWrapper });
+      const { items } = registryStore.list();
+      const enabledOnly = parseBooleanQuery(req.query.enabledOnly, true);
+
+      const sections = getDb()
+        .prepare(`
+          SELECT ca.section AS section, COUNT(*) AS count
+          FROM content_analysis ca
+          WHERE ca.section IS NOT NULL
+            AND TRIM(ca.section) != ''
+          GROUP BY ca.section
+          ORDER BY count DESC
+          LIMIT 50
+        `)
+        .all()
+        .map((row) => ({
+          section: row.section,
+          count: Number(row.count) || 0
+        }));
+
+      const domains = items
+        .filter((entry) => (enabledOnly ? Boolean(entry.enabled) : true))
+        .map((entry) => ({
+        host: entry.host,
+        enabled: Boolean(entry.enabled),
+        crawlProfile: entry.crawlProfile || null,
+        preflightStatus: entry.preflight && entry.preflight.status ? entry.preflight.status : null
+        }));
+
+      res.json({
+        status: 'ok',
+        enabledOnly,
+        domains,
+        sections,
+        defaults: {
+          limit: 20,
+          datePreset: '7d',
+          enabledOnly: true
+        },
+        counts: {
+          totalDomains: items.length,
+          enabledDomains: items.filter((entry) => entry.enabled).length,
+          optionDomains: domains.length
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  unifiedApp.get('/api/search-explorer/search', (req, res) => {
+    try {
+      const query = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+      const author = typeof req.query.author === 'string' ? req.query.author.trim() : '';
+      if (!query && !author) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Provide q or author to search.'
+        });
+      }
+
+      const domain = typeof req.query.domain === 'string' && req.query.domain.trim() ? req.query.domain.trim() : null;
+      const sectionFilter = normalizeSectionFilter(req.query.section);
+      const enabledOnly = parseBooleanQuery(req.query.enabledOnly, true);
+      const page = normalizePositiveInt(req.query.page, 1);
+      const limit = normalizePositiveInt(req.query.limit, 20, 100);
+      const offset = (page - 1) * limit;
+
+      const resolvedDates = resolvePresetDateRange(
+        req.query.datePreset,
+        normalizeDateParam(req.query.startDate),
+        normalizeDateParam(req.query.endDate)
+      );
+
+      const searchQuery = buildSearchQuery(query, author);
+      const searchService = new SearchService(getDb(), {
+        defaultLimit: 20,
+        maxLimit: 200
+      });
+
+      const dbWrapper = getDbRW();
+      const registryStore = new DomainRegistryStore({ db: dbWrapper });
+      const { items } = registryStore.list();
+      const enabledHostSet = new Set(
+        items
+          .filter((entry) => entry.enabled)
+          .map((entry) => String(entry.host || '').trim().toLowerCase())
+          .filter(Boolean)
+      );
+
+      if (enabledOnly && domain && !enabledHostSet.has(String(domain).trim().toLowerCase())) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Selected domain is not enabled in Domain Registry: ${domain}`
+        });
+      }
+
+      const includeFacets = req.query.includeFacets === '1' || req.query.includeFacets === 'true';
+
+      const requiresPostFilter = Boolean(sectionFilter) || enabledOnly;
+
+      if (!requiresPostFilter) {
+        const result = searchService.search(searchQuery, {
+          limit,
+          offset,
+          domain,
+          startDate: resolvedDates.startDate,
+          endDate: resolvedDates.endDate,
+          includeHighlights: true,
+          includeFacets
+        });
+
+        const freshness = computeSearchFreshness(result.results);
+
+        return res.json({
+          status: result.success ? 'ok' : 'error',
+          query,
+          appliedQuery: result.parsedQuery || searchQuery,
+          author,
+          enabledOnly,
+          domain,
+          section: null,
+          datePreset: resolvedDates.datePreset,
+          startDate: resolvedDates.startDate,
+          endDate: resolvedDates.endDate,
+          freshness,
+          ...result
+        });
+      }
+
+      const scanChunk = Math.min(100, Math.max(limit * 4, 40));
+      const maxScanRounds = 8;
+      let scanOffset = 0;
+      let rounds = 0;
+      let lastResponse = null;
+      const matched = [];
+      let hasMoreRaw = false;
+
+      while (rounds < maxScanRounds) {
+        rounds += 1;
+        const response = searchService.search(searchQuery, {
+          limit: scanChunk,
+          offset: scanOffset,
+          domain,
+          startDate: resolvedDates.startDate,
+          endDate: resolvedDates.endDate,
+          includeHighlights: true,
+          includeFacets: false
+        });
+
+        lastResponse = response;
+        const rows = Array.isArray(response.results) ? response.results : [];
+        for (const row of rows) {
+          if (sectionMatches(row, sectionFilter) && hostAllowed(row, enabledOnly ? enabledHostSet : null)) {
+            matched.push(row);
+          }
+        }
+
+        hasMoreRaw = Boolean(response.pagination && response.pagination.hasMore);
+        if (!hasMoreRaw) break;
+        if (matched.length >= offset + limit) break;
+
+        scanOffset += scanChunk;
+      }
+
+      const paged = matched.slice(offset, offset + limit);
+      const hasMore = matched.length > offset + limit || hasMoreRaw;
+      const freshness = computeSearchFreshness(paged);
+
+      res.json({
+        status: lastResponse && lastResponse.success ? 'ok' : 'error',
+        success: Boolean(lastResponse && lastResponse.success),
+        query,
+        appliedQuery: (lastResponse && lastResponse.parsedQuery) || searchQuery,
+        author,
+        enabledOnly,
+        domain,
+        section: sectionFilter,
+        datePreset: resolvedDates.datePreset,
+        startDate: resolvedDates.startDate,
+        endDate: resolvedDates.endDate,
+        freshness,
+        results: paged,
+        pagination: {
+          total: matched.length,
+          limit,
+          offset,
+          hasMore,
+          page,
+          totalPages: matched.length === 0 ? 0 : Math.ceil(matched.length / limit)
+        },
+        facets: includeFacets && lastResponse ? lastResponse.facets : null,
+        metrics: {
+          durationMs: lastResponse && lastResponse.metrics ? lastResponse.metrics.durationMs : 0,
+          resultsReturned: paged.length,
+          scanRounds: rounds,
+          scannedResults: matched.length
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+
   const crawlServiceOptions = {
     telemetryIntegration: crawlTelemetry
   };
@@ -644,6 +957,20 @@ function mountDashboardModules(unifiedApp, options = {}) {
       })
     },
     {
+      id: 'domain-registry',
+      mountPath: '/domain-registry',
+      apiOnly: () => createDomainRegistryRouter({
+        getDbRW,
+        includeRootRoute: false,
+        includeApiRoutes: true
+      }),
+      full: () => createDomainRegistryRouter({
+        getDbRW,
+        includeRootRoute: true,
+        includeApiRoutes: false
+      })
+    },
+    {
       id: 'crawl-status',
       mountPath: '/crawl-status',
       full: () => createCrawlStatusRouter({
@@ -812,15 +1139,118 @@ if (require.main === module) {
   process.env.SERVER_NAME = process.env.SERVER_NAME || 'UnifiedApp';
   const args = parseArgs();
   const port = args.port;
+  const checkMode = parseEnvBoolean(process.env.UNIFIED_APP_CHECK_MODE, false);
 
-  log.info('Starting unified app shell', { port });
+  log.info('Starting unified app shell', { port, checkMode });
 
   // Mount dashboard modules into the unified app (no-retirement: legacy servers keep working too)
   // NOTE: keep this inside the main entrypoint so importing this module in Jest stays cheap and
   // deterministic (no DB open, no background mounts).
-  const mountedModules = mountDashboardModules(app, {
-    dbPath: process.env.DB_PATH
-  });
+  let mountedModules;
+  if (checkMode) {
+    app.get('/docs', (req, res) => {
+      res.status(200).type('html').send('<!doctype html><html><head><title>Docs (check)</title></head><body><div id="docs-check-root">Docs check mode</div></body></html>');
+    });
+
+    app.get('/design', (req, res) => {
+      res.status(200).type('html').send('<!doctype html><html><head><title>Design (check)</title></head><body><div id="design-check-root">Design check mode</div></body></html>');
+    });
+
+    app.get('/docs/assets/docs-viewer.css', (req, res) => {
+      res.status(200).type('text/css').send('/* check-mode docs css */');
+    });
+
+    app.get('/design/assets/design-studio.css', (req, res) => {
+      res.status(200).type('text/css').send('/* check-mode design css */');
+    });
+
+    app.get('/api/crawl/summary', (req, res) => {
+      res.json({
+        status: 'ok',
+        activeJobs: 0,
+        jobsTotal: 0,
+        lastEventAt: null,
+        lastError: null,
+        errorsLast10m: 0,
+        lastFailingJobId: null,
+        lastFailingUrl: null,
+        checkMode: true
+      });
+    });
+
+    app.get('/api/search-explorer/search', (req, res) => {
+      const query = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+      const author = typeof req.query.author === 'string' ? req.query.author.trim() : '';
+      if (!query && !author) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Provide q or author to search.'
+        });
+      }
+
+      return res.json({
+        status: 'ok',
+        success: true,
+        query,
+        author,
+        appliedQuery: query || `author:"${author}"`,
+        enabledOnly: true,
+        domain: null,
+        section: null,
+        datePreset: '7d',
+        startDate: null,
+        endDate: null,
+        freshness: {
+          freshnessLabel: 'Fresh',
+          confidenceBand: 'High',
+          confidenceScore: 95,
+          coveragePct: 100,
+          totalResults: 1,
+          datedResults: 1,
+          newestAgeDays: 0,
+          oldestAgeDays: 0,
+          newestDate: '2026-02-19',
+          oldestDate: '2026-02-19',
+          staleResults: 0,
+          summary: 'Fresh · High confidence (95%)'
+        },
+        results: [
+          {
+            id: 1,
+            title: 'Search Explorer check-mode result',
+            host: 'example.com',
+            date: '2026-02-19',
+            section: 'check',
+            url: 'https://example.com/check-mode-result',
+            rank: 1
+          }
+        ],
+        pagination: {
+          total: 1,
+          limit: 20,
+          offset: 0,
+          hasMore: false,
+          page: 1,
+          totalPages: 1
+        },
+        facets: null,
+        metrics: {
+          durationMs: 1,
+          resultsReturned: 1,
+          scanRounds: 1,
+          scannedResults: 1
+        }
+      });
+    });
+
+    mountedModules = {
+      close: () => {}
+    };
+  } else {
+    mountedModules = mountDashboardModules(app, {
+      dbPath: process.env.DB_PATH
+    });
+  }
 
   wrapServerForCheck(app, port, undefined, () => {
     log.info('Unified app shell ready', { 

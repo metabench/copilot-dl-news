@@ -18,6 +18,7 @@ const { SubAppFrame } = require('../components/SubAppFrame');
 const { SubAppPlaceholder } = require('../components/SubAppPlaceholder');
 const { wrapPanelHtml } = require('./panelContract');
 const { renderStatCard, renderStatsRow, renderPanelHero } = require('./panelHelpers');
+const { SearchExplorerControl } = require('../../../controls/SearchExplorerControl');
 
 function renderIframeApp(src, title) {
   const context = new jsgui.Page_Context();
@@ -282,6 +283,26 @@ function renderDownloadsPanel() {
   };
 }
 
+function renderSearchExplorerPanel() {
+  const context = new jsgui.Page_Context();
+  const control = new SearchExplorerControl({
+    context,
+    apiBase: '/api/search-explorer'
+  });
+  const html = control.renderHtml();
+
+  const activationKey = 'search-explorer';
+  return {
+    content: wrapPanelHtml({
+      appId: 'search-explorer',
+      activationKey,
+      html
+    }),
+    embed: 'panel',
+    activationKey
+  };
+}
+
 /**
  * Create the sub-app registry
  * @returns {Array} Array of sub-app definitions
@@ -390,6 +411,17 @@ function createSubAppRegistry() {
     },
 
     {
+      id: 'domain-registry',
+      label: 'Domain Registry',
+      icon: '🗂️',
+      category: 'crawler',
+      description: 'Manage crawl domains and sync enabled hosts into scheduler',
+      renderContent: async () => {
+        return renderIframeApp('/domain-registry', 'Domain Registry');
+      }
+    },
+
+    {
       id: 'crawl-strategies',
       label: 'Crawl Strategies',
       icon: '🕷️',
@@ -458,6 +490,17 @@ function createSubAppRegistry() {
       description: 'Verified download statistics and progress',
       renderContent: async () => {
         return renderDownloadsPanel();
+      }
+    },
+
+    {
+      id: 'search-explorer',
+      label: 'Search Explorer',
+      icon: '🔎',
+      category: 'analytics',
+      description: 'Search articles with query, author, domain, category, and date filters',
+      renderContent: async () => {
+        return renderSearchExplorerPanel();
       }
     },
     

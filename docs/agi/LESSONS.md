@@ -195,3 +195,20 @@
 ## 2026-01-07 Place Hub Matrix
 - **Host normalization bug fix**: When querying place_page_mappings, hosts like `www.theguardian.com` and `theguardian.com` were treated as separate publishers. Fixed by adding `normalizeHost()` that strips `www.` prefix and deduplicating in query results. Also discovered page_kind inconsistency (`country` vs `country-hub`) requiring expansion of page_kind queries to include equivalent variations.
 - **Performance fix: Cities query 4x faster** - Changed `ORDER BY COALESCE(p.population, 0) DESC` to `ORDER BY p.population DESC NULLS LAST` which allows SQLite to use the index directly. Added composite index `idx_places_kind_population ON places(kind, population DESC)`. Result: Cities matrix query dropped from 114ms to 24ms. Key insight: COALESCE in ORDER BY prevents index usage.
+
+2026-02-18
+- When users ask for advanced crawler planning, defining 'quality bar' in plain English plus metrics immediately removes ambiguity and accelerates implementation alignment.
+- When introducing Terraform automation in this repo, include a local no-backend stack plus CI plan on ci.tfvars so IaC checks run even before cloud credentials are configured.
+
+## 2026-02-20
+- When creating scripts that communicate across network boundaries (HTTP or SSH), or when running long-lived background synchronization tools, it is CRITICAL to enforce strict upper bounds on execution time. Use `timeout: ms` in `execSync`, `-o ConnectTimeout=N` for `ssh`/`scp`, and `AbortController` signals for `fetch`. If you initiate a background process from your agent tools, DO NOT use high values (e.g. 5000ms+) for `WaitMsBeforeAsync` because it forces the chat interface to lock up synchronously while you incorrectly wait for logs. Send them to the background promptly (e.g., 500ms) and use `command_status` independently.
+
+## 2026-02-21
+- When stress-auditing remote crawlers from Windows, tunnel remote localhost APIs (ssh -L) and sample small health/status snapshots; large JSON status endpoints can stall under high event-loop lag and should be treated as best-effort telemetry, not control-plane hard dependencies.
+- When v4 remote `/api/seed` returns server-side 500s, keep `start-all` seeding optional in CLI so operators can still isolate worker-launch failures without conflating control-plane and seed-path errors.
+
+2026-02-22
+- For V4 crawl incident loops, prioritize deterministic CLI failure payloads (watchdog + retries + machine-readable codes) before deeper performance tuning; this preserves iteration velocity during outages.
+
+## 2026-02-22
+- Mushroom Kart 3D: Built autonomous development infrastructure — Vitest test suite (34 tests), AGENTS.md, 3 agent workflows (physics-tuning, add-game-feature, track-tuning), design-targets.ts with numeric quality gates, and CI pipeline. Key insight: simulation scripts that produce data dumps are NOT tests — agents need binary pass/fail assertions to iterate autonomously. PlaneGeometry doesn't raycast reliably in headless Three.js — use BoxGeometry for ground planes in tests.

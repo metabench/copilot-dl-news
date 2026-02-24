@@ -27,9 +27,210 @@
 **Refresh Rate**: Quarterly archival  
 **For Agents**: Search these for historical context and decision rationale
 
+### 🟣 Long-Term Strategic Sessions (Outcome Memory)
+**Location**: `docs/sessions/long-term/`  
+**Retention**: Multi-month, outcome lifecycle  
+**Purpose**: Track progress toward very large outcomes that span many short sessions  
+**Hard Limits**: max 5 long-term sessions total, recommended max 3, only 1 active at a time  
+**For Agents**: Keep tactical implementation in normal dated sessions, but roll up decisions/progress here
+
+---
+
+## Long-Term Sessions
+
+### LT-001: Advanced Crawler + Advanced UI
+
+**Status**: 🔄 Active (only active long-term session)
+**Outcome**: Production-grade advanced crawler plus advanced jsgui3-first operations/search UI.
+**Location**: `docs/sessions/long-term/lt-001-advanced-crawler-ui/`
+
+**Quick Links**:
+- 🗺️ [Plan](./long-term/lt-001-advanced-crawler-ui/PLAN.md)
+- 📝 [Working Notes](./long-term/lt-001-advanced-crawler-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./long-term/lt-001-advanced-crawler-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./long-term/lt-001-advanced-crawler-ui/FOLLOW_UPS.md)
+
 ---
 
 ## Current Sessions
+
+### Session 2026-02-21: V4 Super Audit Local Throughput
+
+**Duration**: Active
+**Type**: Diagnostics
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Evaluate whether V4 qualifies as v4-super under heavy local SQLite WAL ingestion, PM2 concurrency, and crash recovery stress.
+
+**Location**: `docs/sessions/2026-02-21-v4-super-audit-local-throughput/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-02-21-v4-super-audit-local-throughput/INDEX.md)
+- 🗺️ [Plan](./2026-02-21-v4-super-audit-local-throughput/PLAN.md)
+- 📝 [Working Notes](./2026-02-21-v4-super-audit-local-throughput/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-02-21-v4-super-audit-local-throughput/SESSION_SUMMARY.md)
+- 📍 [Pain Points Report](./2026-02-21-v4-super-audit-local-throughput/PAIN_POINTS_REPORT.md)
+- ✅ [Follow Ups](./2026-02-21-v4-super-audit-local-throughput/FOLLOW_UPS.md)
+
+
+### Session 2026-02-20: Graceful Shutdown Hardening
+
+**Duration**: Active
+**Type**: Implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Harden process termination and graceful shutdown paths across crawler workers, servers, and launcher subprocesses.
+
+**Location**: `docs/sessions/2026-02-20-graceful-shutdown-hardening/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-02-20-graceful-shutdown-hardening/INDEX.md)
+- 🗺️ [Plan](./2026-02-20-graceful-shutdown-hardening/PLAN.md)
+- 📝 [Working Notes](./2026-02-20-graceful-shutdown-hardening/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-02-20-graceful-shutdown-hardening/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-02-20-graceful-shutdown-hardening/FOLLOW_UPS.md)
+
+
+### Session 2026-02-18: Advanced Crawler v1 Product Spec
+
+**Duration**: Active
+**Type**: architecture + product spec
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Define a low-budget, local-machine crawler v1: UI-configurable domains, reliable background execution, robots/sitemap compliance, scalable design toward 1000 domains, and jsgui3 search/date-range UX.
+
+**Location**: `docs/sessions/2026-02-18-advanced-crawler-v1-spec/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-02-18-advanced-crawler-v1-spec/INDEX.md)
+- 🗺️ [Plan](./2026-02-18-advanced-crawler-v1-spec/PLAN.md)
+- 📝 [Working Notes](./2026-02-18-advanced-crawler-v1-spec/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-02-18-advanced-crawler-v1-spec/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-02-18-advanced-crawler-v1-spec/FOLLOW_UPS.md)
+
+
+### Session 2026-02-14: Central Coordinator Architecture
+
+**Duration**: Complete
+**Type**: implementation + validation
+**Completion**: ✅ Complete
+
+**Focus**:
+- Refactor crawl orchestration so local coordinator plans/dispatches/syncs/classifies while remote worker runs in coordinator-seeded mode.
+- Add complete catch-up remote sync CLI and coordinator loop CLI.
+- Add remote seeded-only mode (`--coordinator-mode`) with crawl endpoint aliases and pending queue visibility.
+
+**Location**: `docs/sessions/2026-02-14-central-coordinator-architecture/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-02-14-central-coordinator-architecture/INDEX.md)
+- 🗺️ [Plan](./2026-02-14-central-coordinator-architecture/PLAN.md)
+- 📝 [Working Notes](./2026-02-14-central-coordinator-architecture/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-02-14-central-coordinator-architecture/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-02-14-central-coordinator-architecture/FOLLOW_UPS.md)
+
+
+### Session 2026-02-13: V4 Priority Fixes
+
+**Duration**: Active
+**Type**: v4 reliability implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement priority V4 architecture fixes: sync timestamp safety, export-window behavior, and robust fleet sync polling.
+- Fix V4SyncEngine FleetProcess batch URL compatibility.
+- Add domain-level anti-crawler circuit breaker behavior and targeted test coverage.
+
+**Location**: `docs/sessions/2026-02-13-v4-priority-fixes/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-02-13-v4-priority-fixes/PLAN.md)
+- 📝 [Working Notes](./2026-02-13-v4-priority-fixes/WORKING_NOTES.md)
+
+### Session 2026-02-12: Crawl Monitor Repair
+
+**Duration**: Active
+**Type**: CrawlOps monitoring + repair
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Monitor active crawl/fleet processes and sync health.
+- Diagnose concrete runtime/persistence errors with evidence-first CLI checks.
+- Apply targeted fixes and verify restored crawl health.
+
+**Location**: `docs/sessions/2026-02-12-crawl-monitor-repair/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-02-12-crawl-monitor-repair/PLAN.md)
+- 📝 [Working Notes](./2026-02-12-crawl-monitor-repair/WORKING_NOTES.md)
+
+### Session 2026-02-12: Fleet Reliable Sites CLI
+
+**Duration**: Active
+**Type**: CLI tooling enhancement
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add a deterministic CLI answer for: “Which websites can we reliably crawl?”
+- Route natural-language `fleet-cli question` reliability prompts to a dedicated evidence-based command.
+
+**Location**: `docs/sessions/2026-02-12-fleet-reliable-sites-cli/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-02-12-fleet-reliable-sites-cli/PLAN.md)
+- 📝 [Working Notes](./2026-02-12-fleet-reliable-sites-cli/WORKING_NOTES.md)
+
+### Session 2026-02-12: CrawlOps Background Handoff
+
+**Duration**: Active
+**Type**: CrawlOps docs alignment
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make fresh-session background crawl+sync startup/status/stop explicit for agents.
+- Ensure local `data/news.db` population verification steps are clear and repeatable.
+
+**Location**: `docs/sessions/2026-02-12-crawlops-bg-handoff/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-02-12-crawlops-bg-handoff/PLAN.md)
+- 📝 [Working Notes](./2026-02-12-crawlops-bg-handoff/WORKING_NOTES.md)
+
+### Session 2026-02-12: Fast Crawl Sync Smoke
+
+**Duration**: Active
+**Type**: CrawlOps smoke tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build a very fast operational smoke test: tiny crawl, rapid sync to local DB.
+- Verify stored rows and critical metadata integrity in `data/news.db`.
+
+**Location**: `docs/sessions/2026-02-12-fast-crawl-sync-smoke/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-02-12-fast-crawl-sync-smoke/PLAN.md)
+- 📝 [Working Notes](./2026-02-12-fast-crawl-sync-smoke/WORKING_NOTES.md)
+
+### Session 2026-02-12: V4 Server Single-Process Crawl
+
+**Duration**: Active
+**Type**: v4 server implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add server-side v4 single-process crawl mode.
+- Limit initial fleet instantiation to max 4 crawler resources.
+- Expose SSR HTML dashboard from the single-process runtime.
+
+**Location**: `docs/sessions/2026-02-12-v4-server-single-process-crawl/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-02-12-v4-server-single-process-crawl/PLAN.md)
+- 📝 [Working Notes](./2026-02-12-v4-server-single-process-crawl/WORKING_NOTES.md)
 
 ### Session 2026-02-12: V4 Endpoint Intel CLI
 

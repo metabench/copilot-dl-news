@@ -17,7 +17,7 @@ const { ValidationOrchestrator } = require('./ValidationOrchestrator');
 const { PersistenceManager } = require('./PersistenceManager');
 
 // Legacy exports for backward compatibility
-const { normalizeDomain, assessDomainReadiness, selectPlaces, selectTopics, createBatchSummary, aggregateSummaryInto } = require('../../shared/utils/analysisUtils');
+const { normalizeDomain, assessDomainReadiness, selectPlaces, selectTopics, createBatchSummary, aggregateSummaryInto } = require('./utils/analysisUtils');
 const { getDsplForDomain } = require('../../services/shared/dspl');
 
 // Error class for orchestration failures

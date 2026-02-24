@@ -1,6 +1,6 @@
 const { slugify } = require('../../tools/slugify');
-const { extractTitle } = require('../../shared/utils/domainUtils');
-const { collectHubChanges } = require('../../shared/utils/analysisUtils');
+const { extractTitle } = require('./utils/domainUtils');
+const { collectHubChanges } = require('./utils/analysisUtils');
 
 /**
  * PersistenceManager - Handles database persistence operations for hubs

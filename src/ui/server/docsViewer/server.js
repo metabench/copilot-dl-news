@@ -505,6 +505,20 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
+/**
+ * Unified-app compatible router factory.
+ * Wraps the docs viewer app instance so it can be mounted at /docs.
+ *
+ * @param {Object} options
+ * @param {string} [options.docsPath]
+ * @param {string} [options.pluginsPath]
+ * @returns {import('express').Application}
+ */
+function createDocsViewerRouter(options = {}) {
+  const { app } = createDocsViewerServer(options);
+  return app;
+}
+
 // Run server if this is the main module
 if (require.main === module) {
   const args = parseArgs();
@@ -548,6 +562,7 @@ if (require.main === module) {
 
 module.exports = {
   createDocsViewerServer,
+  createDocsViewerRouter,
   parseArgs,
   createProgram,
   spawnDetached,

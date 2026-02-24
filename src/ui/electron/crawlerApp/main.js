@@ -87,7 +87,7 @@ function createMainWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
-  
+
   mainWindow.on('closed', () => {
     if (crawlProcess) {
       crawlProcess.kill();
@@ -123,7 +123,7 @@ function startCrawl() {
   if (crawlState.running || crawlProcess) return;
 
   const miniCrawlPath = path.join(getAppRoot(), 'tools', 'dev', 'mini-crawl.js');
-  
+
   crawlState = {
     running: true,
     jobId: 'crawl-' + Date.now(),
@@ -160,7 +160,7 @@ function startCrawl() {
         let status = 200;
         let size = 0;
         let source = 'network';
-        
+
         // Try parsing as JSON first (new format)
         if (rest.startsWith('{')) {
           try {
@@ -178,7 +178,7 @@ function startCrawl() {
             // Not JSON, use as URL
           }
         }
-        
+
         // Add to downloaded URLs (don't increment counter - use PROGRESS for that)
         downloadedUrls.push({
           url,
@@ -200,7 +200,7 @@ function startCrawl() {
           crawlState.errors = json.errors || 0;
           console.log(`[PROGRESS] ${crawlState.downloaded}/${config.maxPages} pages, queue=${crawlState.queued}`);
           sendUpdate();
-        } catch (e) {}
+        } catch (e) { }
       }
       else if (trimmed.startsWith('QUEUE ')) {
         try {
@@ -209,7 +209,7 @@ function startCrawl() {
             crawlState.queued = json.queueSize;
             sendUpdate();
           }
-        } catch (e) {}
+        } catch (e) { }
       }
     }
   });
@@ -277,10 +277,10 @@ ipcMain.handle('url:analyze', async (event, url) => {
     const Database = require('better-sqlite3');
     const dbPath = path.join(getAppRoot(), 'data', 'news.db');
     const db = new Database(dbPath, { readonly: true });
-    
+
     // Get URL info
     const urlRow = db.prepare('SELECT * FROM urls WHERE url = ?').get(url);
-    
+
     // Get HTTP response info
     let httpResponse = null;
     if (urlRow) {
@@ -291,7 +291,7 @@ ipcMain.handle('url:analyze', async (event, url) => {
         LIMIT 1
       `).get(urlRow.id);
     }
-    
+
     // Get content storage info
     let content = null;
     if (urlRow) {
@@ -303,9 +303,9 @@ ipcMain.handle('url:analyze', async (event, url) => {
         LIMIT 1
       `).get(urlRow.id);
     }
-    
+
     db.close();
-    
+
     return {
       url,
       urlRecord: urlRow || null,
@@ -328,25 +328,25 @@ ipcMain.handle('db:stats', async () => {
     const Database = require('better-sqlite3');
     const dbPath = path.join(getAppRoot(), 'data', 'news.db');
     const db = new Database(dbPath, { readonly: true });
-    
+
     const totalUrls = db.prepare('SELECT COUNT(*) as count FROM urls').get().count;
     const totalFetches = db.prepare('SELECT COUNT(*) as count FROM http_responses').get().count;
-    
+
     // Today's fetches (UTC)
     const todayFetches = db.prepare(`
       SELECT COUNT(*) as count FROM http_responses 
       WHERE date(fetched_at) = date('now')
     `).get().count;
-    
+
     // Unique hosts
     const uniqueHosts = db.prepare('SELECT COUNT(DISTINCT host) as count FROM urls').get().count;
-    
+
     // Content storage stats
     const storageStats = db.prepare(`
       SELECT COUNT(*) as count, COALESCE(SUM(byte_size), 0) as bytes 
       FROM content_storage
     `).get();
-    
+
     // Last fetch
     const lastFetch = db.prepare(`
       SELECT h.fetched_at, u.url 
@@ -355,9 +355,9 @@ ipcMain.handle('db:stats', async () => {
       ORDER BY h.fetched_at DESC 
       LIMIT 1
     `).get();
-    
+
     db.close();
-    
+
     return {
       totalUrls,
       totalFetches,
@@ -379,11 +379,11 @@ ipcMain.handle('db:clear-cache', async () => {
     const Database = require('better-sqlite3');
     const dbPath = path.join(getAppRoot(), 'data', 'news.db');
     const db = new Database(dbPath);
-    
+
     // Only clear http_responses, not urls or content_storage
     const result = db.prepare('DELETE FROM http_responses').run();
     db.close();
-    
+
     return { success: true, count: result.changes };
   } catch (err) {
     console.error('Error clearing cache:', err);
@@ -396,22 +396,22 @@ ipcMain.handle('url:content', async (event, url) => {
     const Database = require('better-sqlite3');
     const dbPath = path.join(getAppRoot(), 'data', 'news.db');
     const db = new Database(dbPath, { readonly: true });
-    
+
     const urlRow = db.prepare('SELECT id FROM urls WHERE url = ?').get(url);
     if (!urlRow) {
       db.close();
       return { success: false, error: 'URL not found' };
     }
-    
+
     const content = db.prepare(`
       SELECT content FROM content_storage 
       WHERE url_id = ? 
       ORDER BY created_at DESC 
       LIMIT 1
     `).get(urlRow.id);
-    
+
     db.close();
-    
+
     if (content?.content) {
       return { success: true, content: content.content };
     } else {
@@ -433,20 +433,20 @@ ipcMain.handle('urls:export', async (event, urls) => {
         { name: 'Text', extensions: ['txt'] }
       ]
     });
-    
+
     if (!filePath) {
       return { success: false, cancelled: true };
     }
-    
+
     const ext = path.extname(filePath).toLowerCase();
     let content;
-    
+
     if (ext === '.json') {
       content = JSON.stringify(urls, null, 2);
     } else {
       content = urls.map(u => u.url).join('\n');
     }
-    
+
     fs.writeFileSync(filePath, content);
     return { success: true, count: urls.length, path: filePath };
   } catch (err) {
@@ -469,13 +469,13 @@ ipcMain.handle('shell:open', async (event, url) => {
 
 app.whenReady().then(() => {
   createMainWindow();
-  
+
   // Auto-start crawl if --auto-start flag is passed
   if (process.argv.includes('--auto-start')) {
     console.log('[AUTO-START] Starting crawl automatically...');
     setTimeout(() => startCrawl(), 1000);
   }
-  
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createMainWindow();
