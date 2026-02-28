@@ -5,6 +5,10 @@ description: Debug jsgui3 client-side activation issues. Use when SSR renders bu
 
 # jsgui3 Activation Debug
 
+## Triggers
+
+- "jsgui3", "clicks don’t work", "activation", "Missing context.map_Controls"
+
 ## Scope
 
 - Diagnose “renders but no interactivity” failures
@@ -28,6 +32,11 @@ description: Debug jsgui3 client-side activation issues. Use when SSR renders bu
 
 - Prefer a `node src/ui/**/checks/<name>.check.js` script that exits cleanly.
 - Then run the smallest relevant Jest suite via `npm run test:by-path ...`.
+
+## Anti-Patterns to Avoid
+
+- **Blindly Editing CSS**: Assuming a control isn't working because of z-index or pointer-events, when the real issue is that the JS `activate()` method never fired on the client.
+- **Skipping Build**: Making changes to the `jsgui3` control logic and running E2E tests without running `npm run ui:client-build` first, leading to false negatives.
 
 ## Escalation / Research request
 

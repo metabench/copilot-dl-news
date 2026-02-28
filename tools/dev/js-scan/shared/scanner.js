@@ -148,7 +148,7 @@ function walkDirectory(rootDir, options, results) {
 function scanWorkspace(options = {}) {
   const language = normalizeLanguageOption(options.language);
   const runtime = language === 'typescript' ? languageRuntimes.typescript : languageRuntimes.javascript;
-  const { parseModule, collectFunctions } = runtime;
+  const { parseModule, collectFunctions, collectTypes } = runtime;
   const rootDir = path.resolve(options.rootDir || options.dir || process.cwd());
   const includeDeprecated = options.includeDeprecated === true || options.deprecatedOnly === true;
   const deprecatedOnly = options.deprecatedOnly === true;
@@ -175,7 +175,8 @@ function scanWorkspace(options = {}) {
     scannedFiles: 0,
     parsedFiles: 0,
     functions: 0,
-    classes: 0
+    classes: 0,
+    types: 0
   };
   const parseErrors = [];
 
@@ -211,12 +212,17 @@ function scanWorkspace(options = {}) {
 
     let ast;
     let functions;
+    let types;
     let mapper;
     try {
       ast = parseModule(source, path.basename(absolutePath));
       const collectResult = collectFunctions(ast, source);
       functions = collectResult.functions;
       mapper = collectResult.mapper;
+      if (typeof collectTypes === 'function') {
+        const typeResult = collectTypes(ast, source, mapper);
+        types = typeResult.types;
+      }
     } catch (error) {
       parseErrors.push({ filePath: absolutePath, error });
       continue;
@@ -230,12 +236,14 @@ function scanWorkspace(options = {}) {
         source,
         ast,
         functions,
+        types,
         mapper
       });
       fileRecords.push(record);
       stats.parsedFiles += 1;
       stats.functions += record.stats.functions;
       stats.classes += record.stats.classes;
+      stats.types += record.stats.types;
     } catch (error) {
       parseErrors.push({ filePath: absolutePath, error });
       continue;

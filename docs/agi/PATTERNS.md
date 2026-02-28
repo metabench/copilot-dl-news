@@ -603,3 +603,21 @@ AGI-accumulated knowledge catalog.
 **Example**: tools/crawl/v4-cli.js deterministic status/pm2/ttfsl behavior
 
 ---
+
+## Probe → Confirm → Expand Discovery
+
+**Added**: 2026-02-27
+**Context**: fast-hub-discover.js country hub discovery
+
+**When to use**: When discovering which pattern from set M works for targets in set N — e.g., finding URL patterns for country hubs on unknown news sites
+
+**Steps/Details**:
+1. Choose a single probe target that is distinctive, unambiguous, and not a special case (e.g., Jamaica for countries)
+1. Test the probe against all M candidate patterns using the lightest method (HEAD requests)
+1. For each hit: confirm with 2-3 additional targets (Nepal, Kenya) AND a nonsense slug to detect catch-all pages
+1. Expand only the confirmed pattern(s) to all N targets
+1. Register results in the database for future use
+
+**Example**: Jamaica probe found /where/{slug} on Al Jazeera and /world/{slug} on The Guardian — 236 requests vs 6,200 brute-force
+
+---

@@ -259,3 +259,18 @@ AGI-accumulated knowledge catalog.
 **Example**: deploy/remote-crawler-v2/multi-domain-server.js vs tmp/remote-live-multi-domain-server.js divergence
 
 ---
+
+## Raw SQLite Queries via PowerShell CLI
+
+**Added**: 2026-02-27
+**Context**: General
+
+**When to use**: Symptoms: Using `sqlite3 db` from PowerShell, or using `node -e "db.prepare('...')"` from PowerShell, which leads to `Expected ',', got 'string literal'` syntax errors due to quote string escaping bugs.
+
+**Steps/Details**:
+1. Why it's bad: PowerShell handles quotes inside strings unpredictably. Embedded single quotes inside double quotes used for `node -e` evaluation are often stripped or double-parsed, resulting in Node.js syntax errors. Furthermore, native `sqlite3` executable may not be installed on Windows systems.
+1. Better approach: Use or create a dedicated Node.js CLI wrapper script like `node tools/dev/sqlite-query.js "SELECT ..."` which safely passes exactly one unified string argument into the SQL handler without double-evaluation. If querying a different DB, write a script rather than using inline `node -e`.
+
+
+
+---

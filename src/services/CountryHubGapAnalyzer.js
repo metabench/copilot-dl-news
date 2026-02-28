@@ -16,20 +16,21 @@ const { getDsplForDomain } = require('./shared/dspl');
 const { slugify, generateSlugVariants } = require('../tools/slugify');
 const { PredictionStrategyManager } = require('./shared/PredictionStrategyManager');
 const { UrlPatternGenerator } = require('./shared/UrlPatternGenerator');
+const { PatternInferenceService } = require('news-db-pure-analysis');
 
 const MAX_KNOWN_404_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
-  constructor({ 
+  constructor({
     db,
     gazetteerData = null,
     logger = console,
     dsplDir
   } = {}) {
     super({ db, logger, dsplDir });
-    
+
     this.gazetteerData = gazetteerData;
-    
+
     // Cache for analysis results
     this.lastAnalysis = null;
     this.lastAnalysisTime = 0;
@@ -67,6 +68,87 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
 
   }
 
+  getInferredPatterns(domain) {
+    if (!this._inferredPatternsCache) this._inferredPatternsCache = new Map();
+    if (this._inferredPatternsCache.has(domain)) {
+      return this._inferredPatternsCache.get(domain);
+    }
+
+    try {
+      const rows = this.db.prepare('SELECT url FROM urls WHERE host = ? LIMIT 10000').all(domain);
+      const paths = rows.map(r => {
+        try { return new URL(r.url).pathname; } catch { return ''; }
+      }).filter(Boolean);
+
+      const countries = this.db.prepare(`
+        SELECT pn.name as title 
+        FROM places p 
+        JOIN place_names pn ON pn.place_id = p.id 
+        WHERE p.kind='country' AND pn.lang='en'
+      `).all();
+      const slugs = countries.map(c => c.title);
+
+      const inferred = PatternInferenceService.inferCountryHubPatterns(paths, slugs);
+      this._inferredPatternsCache.set(domain, inferred);
+      return inferred;
+    } catch (e) {
+      if (this.logger && this.logger.warn) this.logger.warn(`Failed to infer patterns for ${domain}: ${e.message}`);
+      this._inferredPatternsCache.set(domain, []);
+      return [];
+    }
+  }
+
+  /**
+   * Discover country hubs from URLs already in the database — zero HTTP cost.
+   * Cross-references existing URL paths against the gazetteer to find matches.
+   * @param {string} domain - Target domain
+   * @returns {Array<{path: string, country: {name: string, code: string, id: number}}>}
+   */
+  discoverHubsFromExistingUrls(domain) {
+    try {
+      // Get all short URLs (likely hubs) from the domain
+      const rows = this.db.prepare(
+        'SELECT url FROM urls WHERE host = ? LIMIT 20000'
+      ).all(domain);
+
+      const paths = rows.map(r => {
+        try { return new URL(r.url).pathname; } catch { return ''; }
+      }).filter(Boolean);
+
+      // Build a slug -> country lookup from the gazetteer
+      const countries = this.db.prepare(`
+        SELECT p.id, p.country_code as code, pn.name as title
+        FROM places p
+        JOIN place_names pn ON pn.place_id = p.id
+        WHERE p.kind='country' AND pn.lang='en'
+      `).all();
+
+      const slugMap = new Map();
+      for (const c of countries) {
+        const slug = String(c.title).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        slugMap.set(slug, { name: c.title, code: c.code, id: c.id });
+        // Also add without hyphens for compact matches (e.g. 'saudiarabia')
+        const compact = slug.replace(/-/g, '');
+        if (compact !== slug) slugMap.set(compact, { name: c.title, code: c.code, id: c.id });
+      }
+      // Standard shortcodes
+      const codeMap = new Map();
+      for (const c of countries) {
+        if (c.code) codeMap.set(c.code.toLowerCase(), { name: c.title, code: c.code, id: c.id });
+      }
+      // GB -> UK alias
+      if (codeMap.has('gb')) slugMap.set('uk', codeMap.get('gb'));
+
+      // Merge code map into slug map
+      for (const [k, v] of codeMap) slugMap.set(k, v);
+
+      return PatternInferenceService.discoverHubsFromPaths(paths, slugMap);
+    } catch (e) {
+      if (this.logger && this.logger.warn) this.logger.warn(`discoverHubsFromExistingUrls failed: ${e.message}`);
+      return [];
+    }
+  }
+
   /**
    * Country label for DSPL lookups and logging
    */
@@ -91,13 +173,13 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
       '/{slug}',
       '/international/{slug}',
       '/news/world-{region}-{slug}',
-      
+
       // Language-prefixed patterns (for multilingual sites like DW, France24)
       '/{lang}/{slug}',
       '/{lang}/news/{slug}',
       '/{lang}/world/{slug}',
       '/{lang}/{localSlug}',      // e.g., /de/deutschland
-      
+
       // Regional hub patterns (common for French-language sites)
       '/afrique/{slug}',           // Africa
       '/asie/{slug}',              // Asia
@@ -111,12 +193,12 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
       '/americas/{slug}',
       '/middle-east/{slug}',
       '/latin-america/{slug}',
-      
+
       // English section for international sites
       '/en/{slug}',
       '/en/world/{slug}',
       '/en/news/{slug}',
-      
+
       // Alternative structures
       '/monde/{slug}',             // World (French)
       '/international/article/{slug}'
@@ -134,9 +216,9 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
    */
   buildEntityMetadata(country, options = {}) {
     if (!country || !country.name) return null;
-    
+
     const { publicationLang = 'en', placeNativeLanguages = [] } = options;
-    
+
     const slug = slugify(country.name);
     const code = country.code ? country.code.toLowerCase() : '';
     const region = this._getRegion(country.code);
@@ -151,7 +233,7 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
     let nameVariants = [];
     let allSlugs = [];
     let byLanguage = {};
-    
+
     if (country.id) {
       const variants = getPlaceNameVariantsForHubDiscovery(this.db, country.id, {
         publicationLang,
@@ -159,7 +241,7 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
       });
       nameVariants = variants.allNames || [];
       byLanguage = variants.byLanguage || {};
-      
+
       // Generate slug variants for each name
       const seenSlugs = new Set();
       for (const name of nameVariants) {
@@ -262,7 +344,7 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
       'IE': ['en'],
       'ZA': ['en', 'af', 'zu']
     };
-    
+
     return languageMap[countryCode] || [];
   }
 
@@ -311,15 +393,45 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
    * @returns {Array<string>} Predicted URLs
    */
   predictCountryHubUrls(domain, countryName, countryCode, options = {}) {
-    const { 
-      placeId, 
-      maxUrls = 20, 
+    const {
+      placeId,
+      maxUrls = 20,
       useAllNameVariants = true,
       publicationLang = 'en',
       placeNativeLanguages
     } = options;
     const entity = { name: countryName, code: countryCode, id: placeId };
     const predictions = [];
+
+    // Pre-build metadata to use across strategies
+    const metadata = this.buildEntityMetadata(entity, {
+      publicationLang,
+      placeNativeLanguages: placeNativeLanguages || []
+    });
+
+    // STRATEGY 0: Dynamically Inferred Patterns (highest dynamic priority)
+    const inferredPatterns = this.getInferredPatterns(domain);
+    if (inferredPatterns && inferredPatterns.length > 0) {
+      const seenUrls = new Set();
+      const slugsToTry = metadata?.allSlugs?.length > 0 ? metadata.allSlugs : [{ slug: slugify(countryName) }];
+
+      for (const { pattern, weight } of inferredPatterns) {
+        for (const { slug } of slugsToTry) {
+          const url = `https://${domain}${pattern.replace('{slug}', slug)}`;
+          if (!seenUrls.has(url)) {
+            seenUrls.add(url);
+            predictions.push({
+              url,
+              confidence: weight,
+              strategy: 'data-inferred',
+              pattern: pattern,
+              entity,
+              domain
+            });
+          }
+        }
+      }
+    }
 
     // Strategy 1: DSPL patterns (highest priority)
     const dsplPredictions = this.predictionManager.predictFromDspl(entity, domain);
@@ -334,20 +446,14 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
     predictions.push(...crawlPredictions);
 
     // Strategy 3: Name variant patterns (ALWAYS run when placeId is provided)
-    // Pass language options to get appropriately prioritized name variants
-    const metadata = this.buildEntityMetadata(entity, {
-      publicationLang,
-      placeNativeLanguages: placeNativeLanguages || []
-    });
-    
     if (useAllNameVariants && metadata?.allSlugs?.length > 0) {
       // Generate URLs for each slug variant
       const prefixes = ['/world/', '/news/world/', '/international/', '/news/', '/'];
       const seenUrls = new Set(predictions.map(p => p.url));
-      
+
       // Lower base confidence if DSPL patterns exist
       const baseConfidence = dsplPredictions.length > 0 ? 0.3 : 0.4;
-      
+
       // FIRST: Add special patterns for major countries BEFORE name variants
       // These get highest priority (e.g., The Guardian uses /us-news, /uk-news, /world/southafrica, etc.)
       if (countryCode) {
@@ -364,7 +470,7 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
         } else if (code === 'sa') {
           specialPatterns.push(`/world/saudiarabia`, `/world/saudi-arabia`, `/middle-east/saudi-arabia`);
         }
-        
+
         for (const pattern of specialPatterns) {
           const url = `https://${domain}${pattern}`;
           if (!seenUrls.has(url)) {
@@ -380,20 +486,20 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
           }
         }
       }
-      
+
       // SECOND: Add name variant patterns
       for (const { slug, strategy } of metadata.allSlugs) {
         for (const prefix of prefixes) {
           const url = `https://${domain}${prefix}${slug}`;
           if (seenUrls.has(url)) continue;
           seenUrls.add(url);
-          
+
           // Higher confidence for /world/ prefix and hyphenated slugs
           let confidence = baseConfidence;
           if (prefix === '/world/') confidence += 0.2;
           else if (prefix === '/news/world/') confidence += 0.15;
           if (strategy === 'hyphenated') confidence += 0.1;
-          
+
           predictions.push({
             url,
             confidence,
@@ -404,7 +510,7 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
           });
         }
       }
-      
+
       // THIRD: Add generic country code patterns
       if (countryCode) {
         const code = countryCode.toLowerCase();
@@ -458,7 +564,7 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
   analyzeGaps(domain, hubStats = {}) {
     const host = this._normalizeHost(domain);
     const now = Date.now();
-    
+
     // Return cached analysis if recent
     const cacheKey = `${host || ''}`;
     if (this.lastAnalysis?.[cacheKey] && (now - this.lastAnalysisTime) < this.analysisCacheMs) {
@@ -474,7 +580,7 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
     const visited = coverage.visited || countryStats.visited || 0;
     const missingCountries = coverage.missingCountries || [];
     const missing = coverage.missing ?? Math.max(seeded - visited, 0);
-    
+
     const coveragePercent = seeded > 0 ? Math.round((visited / seeded) * 100) : 0;
     const totalCountries = coverage.totalCountries || seeded;
     const isComplete = missing === 0 && totalCountries > 0;
@@ -507,10 +613,10 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
    */
   generatePredictions(domain, missingCountries = []) {
     const predictions = [];
-    
+
     for (const country of missingCountries) {
       const predictedUrls = this.predictCountryHubUrls(domain, country.name, country.code);
-      
+
       for (const url of predictedUrls) {
         predictions.push({
           url,
@@ -534,17 +640,17 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
    */
   extractCountryNameFromUrl(url) {
     if (!url) return null;
-    
+
     try {
       const urlObj = new URL(url);
       const path = urlObj.pathname;
-      
+
       // Extract last meaningful segment
       const segments = path.split('/').filter(s => s && s.length > 2);
       if (segments.length === 0) return null;
-      
+
       const lastSegment = segments[segments.length - 1];
-      
+
       // Convert slug to title case
       return lastSegment
         .split('-')

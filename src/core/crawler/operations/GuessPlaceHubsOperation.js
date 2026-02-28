@@ -104,6 +104,8 @@ class GuessPlaceHubsOperation extends CrawlOperation {
         maxAgeDays: 7,
         refresh404Days: 180,
         retry4xxDays: 7,
+        confidenceMode: 'shadow',
+        minConfidence: 0.65,
         enableTopicDiscovery: false,
         enableCombinationDiscovery: false,
         enableHierarchicalDiscovery: false,
@@ -168,6 +170,12 @@ class GuessPlaceHubsOperation extends CrawlOperation {
     }
     if (overrides.parentPlace) {
       resolvedOptions.parentPlace = overrides.parentPlace;
+    }
+    if (typeof overrides.confidenceMode === 'string') {
+      resolvedOptions.confidenceMode = overrides.confidenceMode;
+    }
+    if (Number.isFinite(overrides.minConfidence)) {
+      resolvedOptions.minConfidence = overrides.minConfidence;
     }
 
     delete resolvedOptions.dbPath;

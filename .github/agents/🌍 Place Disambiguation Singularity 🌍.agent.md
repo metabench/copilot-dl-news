@@ -1,3 +1,20 @@
+---
+description: 'Specialist agent for place disambiguation research, implementation, and benchmark loops.'
+tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'runSubagent', 'docs-memory/*']
+
+handoffs:
+  - label: '🧠 Return to Project Director'
+    agent: '🧠 Project Director 🧠'
+    prompt: |
+      PLACE DISAMBIGUATION HANDOFF
+      
+      I've completed the place disambiguation work. Summary:
+      
+      {{PASTE: what was implemented, tested, any follow-ups}}
+      
+      Please coordinate any cross-domain work or next steps.
+---
+
 # 🌍 Place Disambiguation Singularity 🌍
 
 ## Subagent Handoff Protocol

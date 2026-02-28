@@ -107,8 +107,19 @@ function createPlaceHubsRouter(options = {}) {
         apply = false,
         maxAgeDays = 7,
         refresh404Days = 180,
-        retry4xxDays = 7
+        retry4xxDays = 7,
+        confidenceMode = 'shadow',
+        minConfidence = 0.65
       } = guessOptions;
+
+      const normalizedConfidenceMode = ['off', 'shadow', 'enforce'].includes(String(confidenceMode).trim().toLowerCase())
+        ? String(confidenceMode).trim().toLowerCase()
+        : 'shadow';
+      const normalizedMinConfidence = clampInt(Number(minConfidence) * 1000, {
+        min: 0,
+        max: 1000,
+        fallback: 650
+      }) / 1000;
 
       const distributed = parseBoolean(
         guessOptions.distributed,
@@ -248,6 +259,8 @@ function createPlaceHubsRouter(options = {}) {
         maxAgeDays,
         refresh404Days,
         retry4xxDays,
+        confidenceMode: normalizedConfidenceMode,
+        minConfidence: normalizedMinConfidence,
         readinessTimeoutSeconds,
         readinessTimeoutMs: readinessTimeoutSeconds > 0 ? readinessTimeoutSeconds * 1000 : null,
         enableTopicDiscovery,
@@ -305,7 +318,10 @@ function createPlaceHubsRouter(options = {}) {
           validationFailed: results.aggregate.validationFailed,
           rateLimited: results.aggregate.rateLimited,
           persistedInserts: results.aggregate.insertedHubs,
-          persistedUpdates: results.aggregate.updatedHubs
+          persistedUpdates: results.aggregate.updatedHubs,
+          confidenceScored: results.aggregate.confidenceScored || 0,
+          confidenceRejected: results.aggregate.confidenceRejected || 0,
+          confidenceAverage: results.aggregate.confidenceAverage || 0
         },
         validationSummary: {
           passed: results.aggregate.validationSucceeded,
@@ -331,7 +347,10 @@ function createPlaceHubsRouter(options = {}) {
             validationPassed: ds.summary.validationSucceeded,
             validationFailed: ds.summary.validationFailed,
             persistedInserts: ds.summary.insertedHubs,
-            persistedUpdates: ds.summary.updatedHubs
+            persistedUpdates: ds.summary.updatedHubs,
+            confidenceScored: ds.summary.confidenceScored || 0,
+            confidenceRejected: ds.summary.confidenceRejected || 0,
+            confidenceAverage: ds.summary.confidenceAverage || 0
           },
           validationSummary: {
             passed: ds.summary.validationSucceeded,

@@ -35,13 +35,20 @@ This repo does not have Anthropic Claude Code “Skills” support directly, but
 | jsgui3-context-menu-patterns | context menu, right-click, popup menu, positioning, dismissal | `docs/agi/skills/jsgui3-context-menu-patterns/SKILL.md` |
 | jsgui3-lab-experimentation | lab experiments, src/ui/lab, check.js, delegation suite, proving ground, research | `docs/agi/skills/jsgui3-lab-experimentation/SKILL.md` |
 | experimental-research-metacognition | experimental research, hypothesis, minimal repro, evidence, tooling, metacognition, confidence calibration | `docs/agi/skills/experimental-research-metacognition/SKILL.md` |
+| deep-research | deep research, deep think, multi-step reasoning, comprehensive analysis, iterative search, synthesis, Tree of Thought, chain of thought, report writing | `docs/agi/skills/deep-research/SKILL.md` |
 | puppeteer-efficient-ui-verification | puppeteer, ui verification, scenario suite, fast e2e, fixtures, single browser reuse | `docs/agi/skills/puppeteer-efficient-ui-verification/SKILL.md` |
 | autonomous-ui-inspection | ui inspection, screenshots, numeric layout metrics, playwright mcp, puppeteer, server check | `docs/agi/skills/autonomous-ui-inspection/SKILL.md` |
 | session-discipline | session-init, session notes, evidence, follow-ups, continuity | `docs/agi/skills/session-discipline/SKILL.md` |
+| sessions | sessions, create session, search sessions, resume session, archive, long-term sessions, session lifecycle, handoff, cross-repo sessions | `docs/agi/skills/sessions/SKILL.md` |
 | targeted-testing | run tests, pick smallest suite, puppeteer/e2e, validate changes | `docs/agi/skills/targeted-testing/SKILL.md` |
 | instruction-adherence | stay on track, instruction drift, resume main task after detour, re-anchor loop | `docs/agi/skills/instruction-adherence/SKILL.md` |
 | mcp-memory-server-surgery | mcp, docs-memory, memory server, mcp-server, tools/list, tools/call, stdio, headerless, protocol changes | `docs/agi/skills/mcp-memory-server-surgery/SKILL.md` |
 | crawl-system-diagnostics | crawl health, pipeline check, error rates, save rates, stuck runs, content storage, data anomalies, diagnostic tools | `docs/agi/skills/crawl-system-diagnostics/SKILL.md` |
+| crawling-strategy | crawl strategy, hub discovery, country hubs, intelligent crawl, crawl planning, site structure, URL patterns, discover hubs, crawl new site, news crawl, endurance crawl | `docs/agi/skills/crawling-strategy/SKILL.md` |
+| subsystem-versioning | versioning, v1, v2, major rewrite, subsystem isolation, directory versioning, rebuild, new version | `docs/agi/skills/subsystem-versioning/SKILL.md` |
+| runaway-process-guard | runaway processes, infinite loops, timeout, circuit breaker, stuck command, hanging script, repetitive output, termination | `docs/agi/skills/runaway-process-guard/SKILL.md` |
+| skill-writing | write a skill, new skill, create skill, skill review, improve skill, skill quality, skill audit, meta-skill | `docs/agi/skills/skill-writing/SKILL.md` |
+| websocket-upgrade | websocket, live updates, real-time, replace SSE, replace polling, ws upgrade, location.reload | `docs/agi/skills/websocket-upgrade/SKILL.md` |
 
 ## Adding a new Skill (template)
 

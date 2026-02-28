@@ -69,7 +69,7 @@ class OrchestrationError extends Error {
  */
 async function guessPlaceHubsForDomain(options = {}, deps = {}) {
   // Check for active probe mode
-  if (options.mode === 'active-probe' || options.activePattern) {
+  if (options.mode === 'active-probe' || options.mode === 'auto-discover' || options.activePattern) {
     const activeProcessor = new ActiveProbeProcessor();
     return activeProcessor.processDomain(options, deps);
   }
@@ -90,19 +90,19 @@ async function guessPlaceHubsForDomain(options = {}, deps = {}) {
 async function guessPlaceHubsBatch(options = {}, deps = {}) {
   const { DomainProcessor } = require('./DomainProcessor');
   const { ActiveProbeProcessor } = require('./ActiveProbeProcessor');
-  
+
   let domainProcessor;
   if (options.activePattern || options.mode === 'active-probe') {
     domainProcessor = new ActiveProbeProcessor();
   } else {
     domainProcessor = new DomainProcessor();
   }
-  
+
   const batchDeps = {
     ...deps,
     domainProcessor
   };
-  
+
   const batchCoordinator = new BatchCoordinator();
   return batchCoordinator.processBatch(options, batchDeps);
 }
@@ -118,7 +118,7 @@ async function guessPlaceHubsBatch(options = {}, deps = {}) {
  */
 async function checkDomainReadiness(domain, options = {}, deps = {}) {
   const { queries, analyzers, now = () => new Date() } = deps;
-  
+
   const normalized = normalizeDomain(domain);
   if (!normalized) {
     throw new OrchestrationError('Invalid domain', {
@@ -162,7 +162,7 @@ module.exports = {
   guessPlaceHubsForDomain,
   checkDomainReadiness,
   OrchestrationError,
-  
+
   // Export helper functions for testing
   normalizeDomain,
   assessDomainReadiness,

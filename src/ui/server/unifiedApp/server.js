@@ -150,9 +150,11 @@ function parseArgs(argv = process.argv.slice(2)) {
 // Sub-App Registry
 // ─────────────────────────────────────────────────────────────
 
-const SUB_APPS = parseEnvBoolean(process.env.UNIFIED_APP_CHECK_MODE, false)
-  ? createCheckModeSubApps()
-  : createSubAppRegistry();
+const SUB_APPS_FACTORY = parseEnvBoolean(process.env.UNIFIED_APP_CHECK_MODE, false)
+  ? () => createCheckModeSubApps()
+  : (opts) => createSubAppRegistry(opts);
+
+// We delay executing the factory until mountDashboardModules is called, so we can pass getDbRW.
 
 // ─────────────────────────────────────────────────────────────
 // Express App
@@ -169,25 +171,25 @@ app.use(
 
 function normalizeRouterFactoryResult(result) {
   if (!result) {
-    return { router: null, close: () => {} };
+    return { router: null, close: () => { } };
   }
 
   if (typeof result === 'function') {
-    return { router: result, close: () => {} };
+    return { router: result, close: () => { } };
   }
 
   if (result.router) {
-    return { router: result.router, close: typeof result.close === 'function' ? result.close : () => {} };
+    return { router: result.router, close: typeof result.close === 'function' ? result.close : () => { } };
   }
 
-  return { router: result, close: () => {} };
+  return { router: result, close: () => { } };
 }
 
 function initUnifiedDb(options = {}) {
   const { dbPath, getDbRW: injectedGetDbRW } = options;
 
   if (typeof injectedGetDbRW === 'function') {
-    return { getDbRW: injectedGetDbRW, close: () => {} };
+    return { getDbRW: injectedGetDbRW, close: () => { } };
   }
 
   const db = openNewsDb(dbPath);
@@ -270,7 +272,7 @@ function mountDashboardModules(unifiedApp, options = {}) {
     }
     const rawDb = dbWrapper.db;
     if (!rawDb) {
-      throw new Error('Raw database handle is null. Wrapper type: ' + typeof dbWrapper + ', keys: ' + Object.keys(dbWrapper).slice(0,5).join(','));
+      throw new Error('Raw database handle is null. Wrapper type: ' + typeof dbWrapper + ', keys: ' + Object.keys(dbWrapper).slice(0, 5).join(','));
     }
     if (!rawDb.open) {
       throw new Error('Database is not open. rawDb type: ' + typeof rawDb + ', has prepare: ' + (typeof rawDb.prepare === 'function'));
@@ -315,9 +317,9 @@ function mountDashboardModules(unifiedApp, options = {}) {
     try {
       const { start, end } = req.query;
       if (!start || !end) {
-        return res.status(400).json({ 
-          status: 'error', 
-          message: 'Missing required query params: start, end (ISO timestamps)' 
+        return res.status(400).json({
+          status: 'error',
+          message: 'Missing required query params: start, end (ISO timestamps)'
         });
       }
       const stats = downloadEvidence.getDownloadStats(getDb(), start, end);
@@ -332,9 +334,9 @@ function mountDashboardModules(unifiedApp, options = {}) {
     try {
       const { start, end } = req.query;
       if (!start || !end) {
-        return res.status(400).json({ 
-          status: 'error', 
-          message: 'Missing required query params: start, end (ISO timestamps)' 
+        return res.status(400).json({
+          status: 'error',
+          message: 'Missing required query params: start, end (ISO timestamps)'
         });
       }
       const timeline = downloadEvidence.getDownloadTimeline(getDb(), start, end);
@@ -349,15 +351,15 @@ function mountDashboardModules(unifiedApp, options = {}) {
     try {
       const { start, end, limit = '100' } = req.query;
       if (!start || !end) {
-        return res.status(400).json({ 
-          status: 'error', 
-          message: 'Missing required query params: start, end (ISO timestamps)' 
+        return res.status(400).json({
+          status: 'error',
+          message: 'Missing required query params: start, end (ISO timestamps)'
         });
       }
       const evidence = downloadEvidence.getDownloadEvidence(
-        getDb(), 
-        start, 
-        end, 
+        getDb(),
+        start,
+        end,
         parseInt(limit, 10)
       );
       res.json({ status: 'ok', start, end, count: evidence.length, evidence });
@@ -371,15 +373,15 @@ function mountDashboardModules(unifiedApp, options = {}) {
     try {
       const { start, end, claimed } = req.query;
       if (!start || !end || claimed === undefined) {
-        return res.status(400).json({ 
-          status: 'error', 
-          message: 'Missing required query params: start, end, claimed' 
+        return res.status(400).json({
+          status: 'error',
+          message: 'Missing required query params: start, end, claimed'
         });
       }
       const result = downloadEvidence.verifyDownloadClaim(
-        getDb(), 
-        start, 
-        end, 
+        getDb(),
+        start,
+        end,
         parseInt(claimed, 10)
       );
       res.json({ status: 'ok', ...result });
@@ -392,10 +394,10 @@ function mountDashboardModules(unifiedApp, options = {}) {
   unifiedApp.get('/api/downloads/crawl-progress', (req, res) => {
     try {
       const db = getDb();
-      
+
       // Find the most recent crawl task (started in the last 30 minutes)
       const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-      
+
       // Get the latest crawl task
       const latestTask = db.prepare(`
         SELECT DISTINCT task_id, task_type, MIN(ts) as started_at
@@ -406,15 +408,15 @@ function mountDashboardModules(unifiedApp, options = {}) {
         ORDER BY started_at DESC
         LIMIT 1
       `).get(thirtyMinAgo);
-      
+
       if (!latestTask) {
-        return res.json({ 
-          status: 'ok', 
-          active: false, 
+        return res.json({
+          status: 'ok',
+          active: false,
           message: 'No active crawl in last 30 minutes'
         });
       }
-      
+
       // Get the latest progress event for this task
       const latestProgress = db.prepare(`
         SELECT payload, ts
@@ -423,7 +425,7 @@ function mountDashboardModules(unifiedApp, options = {}) {
         ORDER BY seq DESC
         LIMIT 1
       `).get(latestTask.task_id);
-      
+
       // Get the config from the start event
       const startEvent = db.prepare(`
         SELECT payload
@@ -432,7 +434,7 @@ function mountDashboardModules(unifiedApp, options = {}) {
         ORDER BY seq ASC
         LIMIT 1
       `).get(latestTask.task_id);
-      
+
       let maxPages = 50; // default goal
       if (startEvent && startEvent.payload) {
         try {
@@ -441,18 +443,18 @@ function mountDashboardModules(unifiedApp, options = {}) {
           if (config.config?.maxPages) maxPages = config.config.maxPages;
         } catch (e) { /* ignore parse errors */ }
       }
-      
+
       let progress = { visited: 0, downloaded: 0, articles: 0, errors: 0 };
       if (latestProgress && latestProgress.payload) {
         try {
           progress = JSON.parse(latestProgress.payload);
         } catch (e) { /* ignore parse errors */ }
       }
-      
+
       // Check if crawl is still active (last progress within 60 seconds)
       const lastProgressTime = latestProgress?.ts ? new Date(latestProgress.ts).getTime() : 0;
       const isActive = (Date.now() - lastProgressTime) < 60000;
-      
+
       res.json({
         status: 'ok',
         active: isActive,
@@ -545,10 +547,10 @@ function mountDashboardModules(unifiedApp, options = {}) {
       const domains = items
         .filter((entry) => (enabledOnly ? Boolean(entry.enabled) : true))
         .map((entry) => ({
-        host: entry.host,
-        enabled: Boolean(entry.enabled),
-        crawlProfile: entry.crawlProfile || null,
-        preflightStatus: entry.preflight && entry.preflight.status ? entry.preflight.status : null
+          host: entry.host,
+          enabled: Boolean(entry.enabled),
+          crawlProfile: entry.crawlProfile || null,
+          preflightStatus: entry.preflight && entry.preflight.status ? entry.preflight.status : null
         }));
 
       res.json({
@@ -1059,6 +1061,62 @@ function mountDashboardModules(unifiedApp, options = {}) {
     }
   }
 
+  // Serve the unified shell
+  unifiedApp.get('/', async (req, res) => {
+    try {
+      const activeAppId = req.query.app || 'home';
+      const SUB_APPS = SUB_APPS_FACTORY({ getDbRW });
+      const shell = new UnifiedShell({
+        subApps: SUB_APPS,
+        activeAppId
+      });
+      const html = shell.render();
+      res.type('html').send(html);
+    } catch (err) {
+      log.error('Render error', { error: err.message, stack: err.stack });
+      res.status(500).send('Error rendering app shell');
+    }
+  });
+
+  // API: Get sub-app registry
+  unifiedApp.get('/api/apps', (req, res) => {
+    const SUB_APPS = SUB_APPS_FACTORY({ getDbRW });
+    res.json({
+      apps: SUB_APPS.map(app => ({
+        id: app.id,
+        label: app.label,
+        icon: app.icon,
+        category: app.category,
+        description: app.description
+      }))
+    });
+  });
+
+  // API: Get sub-app content (for client-side loading)
+  unifiedApp.get('/api/apps/:appId/content', async (req, res) => {
+    const { appId } = req.params;
+    const SUB_APPS = SUB_APPS_FACTORY({ getDbRW });
+    const app = SUB_APPS.find(a => a.id === appId);
+
+    if (!app) {
+      return res.status(404).json({ error: 'App not found' });
+    }
+
+    try {
+      const renderResult = await app.renderContent(req);
+      const normalized = normalizeSubAppRenderResult(renderResult);
+      res.json({
+        appId,
+        content: normalized.content,
+        activationKey: normalized.activationKey,
+        embed: normalized.embed
+      });
+    } catch (err) {
+      log.error(`Error rendering sub-app: ${appId}`, { appId, error: err.message });
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return {
     close: () => {
       for (const fn of closers) {
@@ -1077,206 +1135,145 @@ function mountDashboardModules(unifiedApp, options = {}) {
     }
   };
 }
+process.env.SERVER_NAME = process.env.SERVER_NAME || 'UnifiedApp';
+const args = parseArgs();
+const port = args.port;
+const checkMode = parseEnvBoolean(process.env.UNIFIED_APP_CHECK_MODE, false);
 
-// Serve the unified shell
-app.get('/', async (req, res) => {
-  try {
-    const activeAppId = req.query.app || 'home';
-    const shell = new UnifiedShell({
-      subApps: SUB_APPS,
-      activeAppId
-    });
-    const html = shell.render();
-    res.type('html').send(html);
-  } catch (err) {
-    log.error('Render error', { error: err.message, stack: err.stack });
-    res.status(500).send('Error rendering app shell');
-  }
-});
+log.info('Starting unified app shell', { port, checkMode });
 
-// API: Get sub-app registry
-app.get('/api/apps', (req, res) => {
-  res.json({
-    apps: SUB_APPS.map(app => ({
-      id: app.id,
-      label: app.label,
-      icon: app.icon,
-      category: app.category,
-      description: app.description
-    }))
+// Mount dashboard modules into the unified app (no-retirement: legacy servers keep working too)
+// NOTE: keep this inside the main entrypoint so importing this module in Jest stays cheap and
+// deterministic (no DB open, no background mounts).
+let mountedModules;
+if (checkMode) {
+  app.get('/docs', (req, res) => {
+    res.status(200).type('html').send('<!doctype html><html><head><title>Docs (check)</title></head><body><div id="docs-check-root">Docs check mode</div></body></html>');
   });
-});
 
-// API: Get sub-app content (for client-side loading)
-app.get('/api/apps/:appId/content', async (req, res) => {
-  const { appId } = req.params;
-  const app = SUB_APPS.find(a => a.id === appId);
-  
-  if (!app) {
-    return res.status(404).json({ error: 'App not found' });
-  }
-  
-  try {
-    const renderResult = await app.renderContent(req);
-    const normalized = normalizeSubAppRenderResult(renderResult);
+  app.get('/design', (req, res) => {
+    res.status(200).type('html').send('<!doctype html><html><head><title>Design (check)</title></head><body><div id="design-check-root">Design check mode</div></body></html>');
+  });
+
+  app.get('/docs/assets/docs-viewer.css', (req, res) => {
+    res.status(200).type('text/css').send('/* check-mode docs css */');
+  });
+
+  app.get('/design/assets/design-studio.css', (req, res) => {
+    res.status(200).type('text/css').send('/* check-mode design css */');
+  });
+
+  app.get('/api/crawl/summary', (req, res) => {
     res.json({
-      appId,
-      content: normalized.content,
-      activationKey: normalized.activationKey,
-      embed: normalized.embed
+      status: 'ok',
+      activeJobs: 0,
+      jobsTotal: 0,
+      lastEventAt: null,
+      lastError: null,
+      errorsLast10m: 0,
+      lastFailingJobId: null,
+      lastFailingUrl: null,
+      checkMode: true
     });
-  } catch (err) {
-    log.error(`Error rendering sub-app: ${appId}`, { appId, error: err.message });
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ─────────────────────────────────────────────────────────────
-// Start Server
-// ─────────────────────────────────────────────────────────────
-
-if (require.main === module) {
-  process.env.SERVER_NAME = process.env.SERVER_NAME || 'UnifiedApp';
-  const args = parseArgs();
-  const port = args.port;
-  const checkMode = parseEnvBoolean(process.env.UNIFIED_APP_CHECK_MODE, false);
-
-  log.info('Starting unified app shell', { port, checkMode });
-
-  // Mount dashboard modules into the unified app (no-retirement: legacy servers keep working too)
-  // NOTE: keep this inside the main entrypoint so importing this module in Jest stays cheap and
-  // deterministic (no DB open, no background mounts).
-  let mountedModules;
-  if (checkMode) {
-    app.get('/docs', (req, res) => {
-      res.status(200).type('html').send('<!doctype html><html><head><title>Docs (check)</title></head><body><div id="docs-check-root">Docs check mode</div></body></html>');
-    });
-
-    app.get('/design', (req, res) => {
-      res.status(200).type('html').send('<!doctype html><html><head><title>Design (check)</title></head><body><div id="design-check-root">Design check mode</div></body></html>');
-    });
-
-    app.get('/docs/assets/docs-viewer.css', (req, res) => {
-      res.status(200).type('text/css').send('/* check-mode docs css */');
-    });
-
-    app.get('/design/assets/design-studio.css', (req, res) => {
-      res.status(200).type('text/css').send('/* check-mode design css */');
-    });
-
-    app.get('/api/crawl/summary', (req, res) => {
-      res.json({
-        status: 'ok',
-        activeJobs: 0,
-        jobsTotal: 0,
-        lastEventAt: null,
-        lastError: null,
-        errorsLast10m: 0,
-        lastFailingJobId: null,
-        lastFailingUrl: null,
-        checkMode: true
-      });
-    });
-
-    app.get('/api/search-explorer/search', (req, res) => {
-      const query = typeof req.query.q === 'string' ? req.query.q.trim() : '';
-      const author = typeof req.query.author === 'string' ? req.query.author.trim() : '';
-      if (!query && !author) {
-        return res.status(400).json({
-          status: 'error',
-          message: 'Provide q or author to search.'
-        });
-      }
-
-      return res.json({
-        status: 'ok',
-        success: true,
-        query,
-        author,
-        appliedQuery: query || `author:"${author}"`,
-        enabledOnly: true,
-        domain: null,
-        section: null,
-        datePreset: '7d',
-        startDate: null,
-        endDate: null,
-        freshness: {
-          freshnessLabel: 'Fresh',
-          confidenceBand: 'High',
-          confidenceScore: 95,
-          coveragePct: 100,
-          totalResults: 1,
-          datedResults: 1,
-          newestAgeDays: 0,
-          oldestAgeDays: 0,
-          newestDate: '2026-02-19',
-          oldestDate: '2026-02-19',
-          staleResults: 0,
-          summary: 'Fresh · High confidence (95%)'
-        },
-        results: [
-          {
-            id: 1,
-            title: 'Search Explorer check-mode result',
-            host: 'example.com',
-            date: '2026-02-19',
-            section: 'check',
-            url: 'https://example.com/check-mode-result',
-            rank: 1
-          }
-        ],
-        pagination: {
-          total: 1,
-          limit: 20,
-          offset: 0,
-          hasMore: false,
-          page: 1,
-          totalPages: 1
-        },
-        facets: null,
-        metrics: {
-          durationMs: 1,
-          resultsReturned: 1,
-          scanRounds: 1,
-          scannedResults: 1
-        }
-      });
-    });
-
-    mountedModules = {
-      close: () => {}
-    };
-  } else {
-    mountedModules = mountDashboardModules(app, {
-      dbPath: process.env.DB_PATH
-    });
-  }
-
-  wrapServerForCheck(app, port, undefined, () => {
-    log.info('Unified app shell ready', { 
-      url: `http://localhost:${port}`,
-      subApps: SUB_APPS.length 
-    });
-    console.log(`\n🎛️  Unified App Shell running at http://localhost:${port}\n`);
-    console.log('Available sub-apps:');
-    for (const app of SUB_APPS) {
-      console.log(`  ${app.icon} ${app.label}`);
-    }
-    console.log('\n');
   });
 
-  const shutdown = () => {
-    log.info('Shutting down unified app shell');
-    try {
-      mountedModules.close();
-    } catch {
-      // ignore
+  app.get('/api/search-explorer/search', (req, res) => {
+    const query = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+    const author = typeof req.query.author === 'string' ? req.query.author.trim() : '';
+    if (!query && !author) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Provide q or author to search.'
+      });
     }
-  };
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+    return res.json({
+      status: 'ok',
+      success: true,
+      query,
+      author,
+      appliedQuery: query || `author:"${author}"`,
+      enabledOnly: true,
+      domain: null,
+      section: null,
+      datePreset: '7d',
+      startDate: null,
+      endDate: null,
+      freshness: {
+        freshnessLabel: 'Fresh',
+        confidenceBand: 'High',
+        confidenceScore: 95,
+        coveragePct: 100,
+        totalResults: 1,
+        datedResults: 1,
+        newestAgeDays: 0,
+        oldestAgeDays: 0,
+        newestDate: '2026-02-19',
+        oldestDate: '2026-02-19',
+        staleResults: 0,
+        summary: 'Fresh · High confidence (95%)'
+      },
+      results: [
+        {
+          id: 1,
+          title: 'Search Explorer check-mode result',
+          host: 'example.com',
+          date: '2026-02-19',
+          section: 'check',
+          url: 'https://example.com/check-mode-result',
+          rank: 1
+        }
+      ],
+      pagination: {
+        total: 1,
+        limit: 20,
+        offset: 0,
+        hasMore: false,
+        page: 1,
+        totalPages: 1
+      },
+      facets: null,
+      metrics: {
+        durationMs: 1,
+        resultsReturned: 1,
+        scanRounds: 1,
+        scannedResults: 1
+      }
+    });
+  });
+
+  mountedModules = {
+    close: () => { }
+  };
+} else {
+  mountedModules = mountDashboardModules(app, {
+    dbPath: process.env.DB_PATH
+  });
 }
 
-module.exports = { app, SUB_APPS, mountDashboardModules };
+wrapServerForCheck(app, port, undefined, () => {
+  log.info('Unified app shell ready', {
+    url: `http://localhost:${port}`,
+    subApps: SUB_APPS_FACTORY({}).length
+  });
+  console.log(`\n🎛️  Unified App Shell running at http://localhost:${port}\n`);
+  console.log('Available sub-apps:');
+  for (const app of SUB_APPS_FACTORY({})) {
+    console.log(`  ${app.icon} ${app.label}`);
+  }
+  console.log('\n');
+});
 
+const shutdown = () => {
+  log.info('Shutting down unified app shell');
+  try {
+    mountedModules.close();
+  } catch {
+    // ignore
+  }
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+module.exports = { app, SUB_APPS: SUB_APPS_FACTORY({}), mountDashboardModules };

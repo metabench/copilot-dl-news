@@ -19,6 +19,7 @@ This workflow covers implementing a feature across the entire stack: database ad
 
 ### 0.2 Review Skills Documentation
 1. Check `docs/agi/skills/` for relevant skill files:
+   - `jsgui3-development/SKILL.md` - **CRITICAL:** Strict mandate to use jsgui3. No React/Express permitted.
    - `jsgui3-lab-experimentation/SKILL.md` - How to run UI experiments
    - `jsgui3-ssr-activation-data-bridge/SKILL.md` - SSR to client data patterns
    - `jsgui3-wlilo-ui/SKILL.md` - WLILO design system usage

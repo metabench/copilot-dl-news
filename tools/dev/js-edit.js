@@ -673,7 +673,28 @@ function buildVariableRecords(variables) {
   });
 }
 
+function buildTypeSelectorSet(type) {
+  const set = new Set();
+  const add = (sel) => {
+    if (sel && typeof sel === 'string') {
+      set.add(sel);
+      set.add(sel.toLowerCase());
+    }
+  };
+  add(type.name);
+  if (type.canonicalName) {
+    add(type.canonicalName);
+  }
+  return set;
+}
 
+function buildTypeRecords(types) {
+  return types.map((type, index) => ({
+    ...type,
+    index,
+    selectors: buildTypeSelectorSet(type)
+  }));
+}
 
 function normalizeOptions(raw) {
   const resolved = { ...raw };
@@ -963,6 +984,9 @@ function normalizeOptions(raw) {
   const locateVariableSelector = parseSelector(resolved.locateVariable, '--locate-variable');
   const extractVariableSelector = parseSelector(resolved.extractVariable, '--extract-variable');
   const replaceVariableSelector = parseSelector(resolved.replaceVariable, '--replace-variable');
+  const locateTypeSelector = parseSelector(resolved.locateType, '--locate-type');
+  const extractTypeSelector = parseSelector(resolved.extractType, '--extract-type');
+  const replaceTypeSelector = parseSelector(resolved.replaceType, '--replace-type');
   const copySelector = parseSelector(resolved.copy, '--copy');
   const moveSelector = parseSelector(resolved.move, '--move');
   const previewSelector = parseSelector(resolved.preview, '--preview');
@@ -1323,6 +1347,10 @@ function normalizeOptions(raw) {
     renameTo,
     extractVariableSelector,
     replaceVariableSelector,
+    listTypes: Boolean(resolved.listTypes),
+    locateTypeSelector,
+    extractTypeSelector,
+    replaceTypeSelector,
     copySelector,
     copyToFile,
     copyToPosition,
@@ -1525,7 +1553,7 @@ function parseCliArgs(argv) {
 function printDryRunResult(result, options) {
   const isChinese = fmt.getLanguageMode() === 'zh';
   const terse = options.terse || isChinese;
-  
+
   if (options.json) {
     outputJson(result);
     return;
@@ -1538,7 +1566,7 @@ function printDryRunResult(result, options) {
     console.log(`${status} 干运 改${result.changeCount} 冲${conflicts}${conflicts > 0 ? ' ⚠️' : ''}`);
     if (conflicts > 0) {
       result.conflicts.forEach((c, i) => {
-        console.log(`  ${i+1}.${c.file}:${c.startLine}-${c.endLine} ${c.reason}`);
+        console.log(`  ${i + 1}.${c.file}:${c.startLine}-${c.endLine} ${c.reason}`);
       });
     }
     return;
@@ -1548,7 +1576,7 @@ function printDryRunResult(result, options) {
   fmt.stat('Dry-Run Status', status);
   fmt.stat('Changes to Apply', result.changeCount, 'number');
   fmt.stat('Conflicts Detected', result.conflicts.length, 'number');
-  
+
   if (result.conflicts.length > 0) {
     console.log();
     const conflictsLabel = isChinese ? '冲突' : 'Conflicts';
@@ -1580,7 +1608,7 @@ function printDryRunResult(result, options) {
 function printRecalculateOffsetsResult(result, options) {
   const isChinese = fmt.getLanguageMode() === 'zh';
   const terse = options.terse || isChinese;
-  
+
   if (options.json) {
     outputJson(result);
     return;
@@ -1617,7 +1645,7 @@ function printRecalculateOffsetsResult(result, options) {
 function printPlanResult(result, options) {
   const isChinese = fmt.getLanguageMode() === 'zh';
   const terse = options.terse || isChinese;
-  
+
   if (options.json) {
     outputJson(result);
     return;
@@ -1629,7 +1657,7 @@ function printPlanResult(result, options) {
     console.log(`${status} 计划 用${result.applied} 败${result.failed}${result.resultPlan ? ' 续可' : ''}`);
     if (result.failed > 0 && result.changes) {
       result.changes.filter(c => c.status !== 'applied').forEach((c, i) => {
-        console.log(`  ${i+1}.${c.error || '失败'}`);
+        console.log(`  ${i + 1}.${c.error || '失败'}`);
       });
     }
     return;
@@ -1639,7 +1667,7 @@ function printPlanResult(result, options) {
   fmt.stat('Plan Status', status);
   fmt.stat('Applied', result.applied, 'number');
   fmt.stat('Failed', result.failed, 'number');
-  
+
   if (result.changes && result.changes.length > 0) {
     console.log();
     const changesLabel = isChinese ? '应用结果' : 'Application Results';
@@ -1671,7 +1699,7 @@ function printPlanResult(result, options) {
 function printTransactionPreview(preview, options) {
   const isChinese = fmt.getLanguageMode() === 'zh';
   const terse = options.terse || isChinese;
-  
+
   if (options.json) {
     outputJson(preview);
     return;
@@ -1682,7 +1710,7 @@ function printTransactionPreview(preview, options) {
     const status = preview.valid ? '✓' : '✗';
     console.log(`${status} 事务 文件${preview.fileCount} 改${preview.editCount}${preview.valid ? '' : ' ⚠️'}`);
     if (!preview.valid && preview.errors) {
-      preview.errors.forEach((e, i) => console.log(`  ${i+1}.${e}`));
+      preview.errors.forEach((e, i) => console.log(`  ${i + 1}.${e}`));
     }
     if (options.diffIntent && preview.diffs) {
       console.log('--- 意差 ---');
@@ -1733,7 +1761,7 @@ function printTransactionPreview(preview, options) {
 function printTransactionResult(result, options) {
   const isChinese = fmt.getLanguageMode() === 'zh';
   const terse = options.terse || isChinese;
-  
+
   if (options.json) {
     outputJson(result);
     return;
@@ -1744,7 +1772,7 @@ function printTransactionResult(result, options) {
     const status = result.success ? '✓' : '✗';
     console.log(`${status} 事务 用${result.applied} 败${result.failed}${result.rolledBack ? ' 回滚' : ''}`);
     if (result.failed > 0 && result.errors) {
-      result.errors.forEach((e, i) => console.log(`  ${i+1}.${e}`));
+      result.errors.forEach((e, i) => console.log(`  ${i + 1}.${e}`));
     }
     return;
   }
@@ -1753,7 +1781,7 @@ function printTransactionResult(result, options) {
   fmt.stat('Status', result.success ? fmt.COLORS.success('✓ Success') : fmt.COLORS.error('✗ Failed'));
   fmt.stat('Applied', result.applied, 'number');
   fmt.stat('Failed', result.failed, 'number');
-  
+
   if (result.rolledBack) {
     fmt.stat('Rollback', fmt.COLORS.warn('✓ Restored original files'));
   }
@@ -1776,7 +1804,7 @@ function printTransactionResult(result, options) {
 function printRenamePreview(preview, options) {
   const isChinese = fmt.getLanguageMode() === 'zh';
   const terse = options.terse || isChinese;
-  
+
   if (options.json) {
     outputJson(preview);
     return;
@@ -1787,7 +1815,7 @@ function printRenamePreview(preview, options) {
     const status = preview.valid ? '✓' : '✗';
     console.log(`${status} 改名 ${preview.symbol}→${preview.newName} 引${preview.referenceCount}处 域${preview.scope || '?'}`);
     if (!preview.valid && preview.errors) {
-      preview.errors.forEach((e, i) => console.log(`  ${i+1}.${e}`));
+      preview.errors.forEach((e, i) => console.log(`  ${i + 1}.${e}`));
     }
     return;
   }
@@ -1819,7 +1847,7 @@ function printRenamePreview(preview, options) {
   if (!preview.valid && preview.errors) {
     console.log();
     fmt.header(isChinese ? '错误' : 'Errors');
-    preview.errors.forEach((e, i) => fmt.warn(`  ${i+1}. ${e}`));
+    preview.errors.forEach((e, i) => fmt.warn(`  ${i + 1}. ${e}`));
   }
 
   fmt.footer();
@@ -1832,7 +1860,7 @@ function printRenamePreview(preview, options) {
 function printRenameResult(result, options) {
   const isChinese = fmt.getLanguageMode() === 'zh';
   const terse = options.terse || isChinese;
-  
+
   if (options.json) {
     outputJson({
       success: result.success,
@@ -1849,7 +1877,7 @@ function printRenameResult(result, options) {
     console.log(`${status} 改名 改${count}处`);
     if (!result.success) {
       const errs = result.errors || (result.error ? [result.error] : []);
-      errs.forEach((e, i) => console.log(`  ${i+1}.${e}`));
+      errs.forEach((e, i) => console.log(`  ${i + 1}.${e}`));
     }
     return;
   }
@@ -1875,7 +1903,7 @@ function printRenameResult(result, options) {
     if (errs.length > 0) {
       console.log();
       fmt.header(isChinese ? '错误' : 'Errors');
-      errs.forEach((e, i) => fmt.warn(`  ${i+1}. ${e}`));
+      errs.forEach((e, i) => fmt.warn(`  ${i + 1}. ${e}`));
     }
   }
 
@@ -1889,7 +1917,7 @@ function printRenameResult(result, options) {
 function printSemanticAnalysis(analysis, options) {
   const isChinese = fmt.getLanguageMode() === 'zh';
   const terse = options.terse || isChinese;
-  
+
   if (options.json) {
     // Convert Map to object for JSON
     const output = {
@@ -1906,16 +1934,16 @@ function printSemanticAnalysis(analysis, options) {
     const cls = analysis.classes?.length || 0;
     const sug = analysis.suggestions?.length || 0;
     console.log(`📊 语义 函${fn} 类${cls} 建议${sug}`);
-    
+
     // Show pattern counts
     const p = analysis.patterns || {};
     console.log(`  类别: 验${p.validators?.length || 0} 处${p.handlers?.length || 0} 换${p.transformers?.length || 0} 助${p.helpers?.length || 0}`);
-    
+
     // Show suggestions
     if (analysis.suggestions?.length > 0) {
       console.log('  建议:');
       analysis.suggestions.forEach((s, i) => {
-        console.log(`    ${i+1}. ${s.reason}`);
+        console.log(`    ${i + 1}. ${s.reason}`);
       });
     }
     return;
@@ -1960,7 +1988,7 @@ function printSemanticAnalysis(analysis, options) {
 function printSemanticExtract(result, options) {
   const isChinese = fmt.getLanguageMode() === 'zh';
   const terse = options.terse || isChinese;
-  
+
   if (options.json) {
     outputJson(result);
     return;
@@ -1971,7 +1999,7 @@ function printSemanticExtract(result, options) {
     console.log(`🎯 意取 "${result.intent}" 匹${result.matched}个`);
     if (result.functions?.length > 0) {
       result.functions.forEach((fn, i) => {
-        console.log(`  ${i+1}. ${fn.name} (行${fn.line})`);
+        console.log(`  ${i + 1}. ${fn.name} (行${fn.line})`);
       });
     }
     if (result.relatedDependencies?.length > 0) {
@@ -2046,7 +2074,7 @@ async function main() {
   options.lang = langOverride || rawOptions.lang || 'auto';
   options.languageMode = fmt.getLanguageMode();
   options._i18n = translation;
-  
+
   // Auto-enable terse output when Chinese flags are used (简令 mode)
   const chineseInputDetected = translation.aliasUsed || translation.glyphDetected;
   options.terse = chineseInputDetected || options.languageMode === 'zh';
@@ -2071,20 +2099,20 @@ async function main() {
       const transactionPath = path.isAbsolute(options.transaction)
         ? options.transaction
         : path.resolve(process.cwd(), options.transaction);
-      
+
       const transactionData = JSON.parse(fs.readFileSync(transactionPath, 'utf8'));
       const txManager = new TransactionManager(transactionData, {
         verbose: options.verbose,
         baseDir: path.dirname(transactionPath)
       });
-      
+
       // Preview mode (--diff-intent or default)
       if (options.diffIntent || !options.fix) {
         const preview = txManager.preview();
         printTransactionPreview(preview, options);
         return;
       }
-      
+
       // Execute mode (--fix)
       const result = await txManager.execute();
       printTransactionResult(result, options);
@@ -2103,37 +2131,37 @@ async function main() {
   if (options.renameSymbol) {
     try {
       const { previewRename, applyRename } = require('./js-edit/operations/renameSymbol');
-      
+
       if (!options.filePath) {
         fmt.error('--rename-symbol requires --file <path>');
         process.exitCode = 1;
         return;
       }
-      
+
       if (!options.renameTo) {
         fmt.error('--rename-symbol requires --to <newName>');
         process.exitCode = 1;
         return;
       }
-      
+
       const source = fs.readFileSync(options.filePath, 'utf-8');
-      
+
       // Preview mode (default)
       if (!options.fix) {
         const preview = previewRename(source, options.renameSymbol, options.renameTo);
         printRenamePreview(preview, options);
         return;
       }
-      
+
       // Apply mode (--fix)
       const result = applyRename(source, options.renameSymbol, options.renameTo, {
         force: options.force
       });
-      
+
       if (result.success) {
         fs.writeFileSync(options.filePath, result.source, 'utf-8');
       }
-      
+
       printRenameResult(result, options);
       return;
     } catch (error) {
@@ -2150,22 +2178,22 @@ async function main() {
   if (options.semanticExtract || options.analyze) {
     try {
       const { analyzeSemantics, extractByIntent } = require('./js-edit/operations/semanticExtract');
-      
+
       if (!options.filePath) {
         fmt.error('--semantic-extract and --analyze require --file <path>');
         process.exitCode = 1;
         return;
       }
-      
+
       const source = fs.readFileSync(options.filePath, 'utf-8');
-      
+
       if (options.analyze) {
         // Analysis mode: show file semantics and suggestions
         const analysis = analyzeSemantics(source, options.filePath);
         printSemanticAnalysis(analysis, options);
         return;
       }
-      
+
       // Extraction mode: find functions by intent
       const result = extractByIntent(source, options.semanticExtract);
       printSemanticExtract(result, options);
@@ -2184,19 +2212,19 @@ async function main() {
   if (options.dryRun || options.recalculateOffsets || options.fromPlan || options.copyBatch || (options.changes && options.emitPlanPath)) {
     try {
       const batchRunner = new BatchDryRunner('', { verbose: options.verbose, fuzzy: options.fuzzy });
-      
+
       // For dry-run: load changes file and preview without modifying
       if (options.dryRun && options.changes) {
         const fs = require('fs');
         const changesPath = path.isAbsolute(options.changes)
           ? options.changes
           : path.resolve(process.cwd(), options.changes);
-        
+
         const changesData = JSON.parse(fs.readFileSync(changesPath, 'utf8'));
         batchRunner.loadChanges(changesData, { baseDir: path.dirname(changesPath) });
         const result = batchRunner.dryRun();
         printDryRunResult(result, options);
-        
+
         // Gap 4: Emit plan from dry-run if requested
         if (options.emitPlanPath) {
           const plan = batchRunner.generatePlan();
@@ -2215,13 +2243,13 @@ async function main() {
         const changesPath = path.isAbsolute(options.changes)
           ? options.changes
           : path.resolve(process.cwd(), options.changes);
-        
+
         const changesData = JSON.parse(fs.readFileSync(changesPath, 'utf8'));
         batchRunner.loadChanges(changesData, { baseDir: path.dirname(changesPath) });
-        
+
         const plan = batchRunner.generatePlan();
         const planPath = options.emitPlanPath;
-        
+
         fs.writeFileSync(planPath, JSON.stringify(plan, null, 2), 'utf8');
         if (!options.quiet) {
           fmt.stat('Plan emitted', planPath);
@@ -2235,7 +2263,7 @@ async function main() {
         const changesPath = path.isAbsolute(options.changes)
           ? options.changes
           : path.resolve(process.cwd(), options.changes);
-        
+
         const changesData = JSON.parse(fs.readFileSync(changesPath, 'utf8'));
         batchRunner.loadChanges(changesData, { baseDir: path.dirname(changesPath) });
         const result = batchRunner.recalculateOffsets();
@@ -2262,7 +2290,7 @@ async function main() {
           if (!op || op.type !== 'copy') continue;
 
           // Required: op.source.file and op.source.selector
-         
+
           const sourceFile = op.source && op.source.file ? (path.isAbsolute(op.source.file) ? op.source.file : path.resolve(path.dirname(planPath), op.source.file)) : null;
           const sourceSelector = op.source && op.source.selector ? op.source.selector : null;
           if (!sourceFile || !sourceSelector) {
@@ -2349,7 +2377,7 @@ async function main() {
           const runner = runnersByFile[file];
           if (options.fix) {
             const result = await runner.apply({ force: options.force, continueOnError: options.continueOnError || false, emitPlan: options.emitPlan });
-            
+
             if (result.success && result.resultingSource) {
               const fs = require('fs');
               fs.writeFileSync(file, result.resultingSource, 'utf8');
@@ -2377,23 +2405,23 @@ async function main() {
       // For from-plan: load and apply a saved operation plan (Gap 4)
       if (options.fromPlan) {
         const fs = require('fs');
-        
+
         // --from-plan <path> is the plan file itself
         const planPath = path.isAbsolute(options.fromPlan)
           ? options.fromPlan
           : path.resolve(process.cwd(), options.fromPlan);
-        
+
         const planData = JSON.parse(fs.readFileSync(planPath, 'utf8'));
-        
+
         // Reconstruct BatchDryRunner from plan data
         const batchRunnerFromPlan = new BatchDryRunner('', { verbose: options.verbose, fuzzy: options.fuzzy });
-        
+
         // Load changes from plan
         if (planData.changes && Array.isArray(planData.changes)) {
           // Use loadChanges to ensure source file is loaded and paths are resolved
           batchRunnerFromPlan.loadChanges(planData.changes, { baseDir: path.dirname(planPath) });
         }
-        
+
         // Verify guards before applying
         const guardResult = batchRunnerFromPlan.verifyGuards();
         if (!guardResult.valid && !options.force) {
@@ -2405,101 +2433,101 @@ async function main() {
           return;
         }
 
-          // New: handle copy-batch plan
-          if (options.copyBatch) {
-            const fs = require('fs');
-            const planPath = path.isAbsolute(options.copyBatch) ? options.copyBatch : path.resolve(process.cwd(), options.copyBatch);
-            const planData = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+        // New: handle copy-batch plan
+        if (options.copyBatch) {
+          const fs = require('fs');
+          const planPath = path.isAbsolute(options.copyBatch) ? options.copyBatch : path.resolve(process.cwd(), options.copyBatch);
+          const planData = JSON.parse(fs.readFileSync(planPath, 'utf8'));
 
-            // Validate plan structure
-            if (!Array.isArray(planData.operations)) {
-              throw new Error('--copy-batch plan must contain an "operations" array');
-            }
-
-            const batchRunner = new BatchDryRunner('', { verbose: options.verbose, fuzzy: options.fuzzy });
-
-            for (const op of planData.operations) {
-              if (!op || op.type !== 'copy') continue;
-
-              // Required: op.source.file and op.source.selector
-              const sourceFile = op.source && op.source.file ? (path.isAbsolute(op.source.file) ? op.source.file : path.resolve(path.dirname(planPath), op.source.file)) : null;
-              const sourceSelector = op.source && op.source.selector ? op.source.selector : null;
-              if (!sourceFile || !sourceSelector) {
-                throw new Error('copy-batch operations require source.file and source.selector values');
-              }
-
-              const sourceText = fs.readFileSync(sourceFile, 'utf8');
-              const sourceAst = parseModule(sourceText, sourceFile);
-              const { functions: sourceFunctions } = collectFunctions(sourceAst, sourceText);
-              const sourceRecords = buildFunctionRecords(sourceFunctions);
-              const [matchedRecord] = resolveMatches(sourceRecords, sourceSelector, options, { operation: 'copy-batch' });
-              if (!matchedRecord) throw new Error(`No function matches selector ${sourceSelector} in ${sourceFile}`);
-
-              const snippet = extractCode(sourceText, matchedRecord.span);
-
-              // Determine target insertion line value
-              const targetFile = op.target && op.target.file ? (path.isAbsolute(op.target.file) ? op.target.file : path.resolve(path.dirname(planPath), op.target.file)) : null;
-              const targetPosition = op.target && op.target.position ? op.target.position : 'end-of-file';
-              if (!targetFile) throw new Error('copy-batch target.file is required');
-
-              const targetText = fs.readFileSync(targetFile, 'utf8');
-              const targetLineOffsets = buildLineIndex(targetText);
-
-              let insertChar = targetText.length; // default end-of-file
-              if (typeof targetPosition === 'number') {
-                insertChar = targetPosition;
-              } else if (targetPosition === 'after-last-import') {
-                const importRegex = /^(?:import\s+.*?\s+from\s+['"`][^'"`]*['"`];?\s*$|const\s+.*?=\s*require\(['"`][^'"`]*['"`]\)\s*;?\s*$)/gm;
-                let last = null;
-                let m;
-                while ((m = importRegex.exec(targetText))) last = m;
-                if (last) insertChar = last.index + last[0].length;
-              } else if (targetPosition === 'before-first-function') {
-                const functionRegex = /^(?:function\s+\w+|const\s+\w+\s*=\s*(?:\([^)]*\)\s*=>|function))/gm;
-                const m = functionRegex.exec(targetText);
-                if (m) insertChar = m.index;
-              }
-
-              // Compute insertion line index from char offset
-              const lineIndex = (function findLineIndex(offset) {
-                let idx = 0;
-                for (; idx < targetLineOffsets.length; idx++) {
-                  if (targetLineOffsets[idx] > offset) break;
-                }
-                return Math.max(0, idx - 1);
-              }(insertChar));
-
-              // Normalize snippet newline to target file style
-              const newlineStats = computeNewlineStats(targetText);
-              const normalized = prepareNormalizedSnippet(snippet, newlineStats.style, { ensureTrailingNewline: true });
-
-              const change = {
-                file: targetFile,
-                startLine: lineIndex,
-                endLine: lineIndex - 1, // insertion
-                replacement: normalized.text,
-                id: op.id || `copy-${matchedRecord.name}-${Date.now()}`,
-                description: op.description || `copy ${matchedRecord.canonicalName || matchedRecord.name} -> ${path.basename(targetFile)}`,
-                guards: {
-                  sourceHash: matchedRecord.hash,
-                  sourceFile: sourceFile
-                }
-              };
-
-              batchRunner.addChange(change);
-            }
-
-            // Dry-run or apply
-            if (options.fix) {
-              const result = await batchRunner.apply({ force: options.force, continueOnError: options.continueOnError || false, emitPlan: options.emitPlan });
-              printPlanResult(result, options);
-            } else {
-              const result = batchRunner.dryRun();
-              printDryRunResult(result, options);
-            }
-            return;
+          // Validate plan structure
+          if (!Array.isArray(planData.operations)) {
+            throw new Error('--copy-batch plan must contain an "operations" array');
           }
-        
+
+          const batchRunner = new BatchDryRunner('', { verbose: options.verbose, fuzzy: options.fuzzy });
+
+          for (const op of planData.operations) {
+            if (!op || op.type !== 'copy') continue;
+
+            // Required: op.source.file and op.source.selector
+            const sourceFile = op.source && op.source.file ? (path.isAbsolute(op.source.file) ? op.source.file : path.resolve(path.dirname(planPath), op.source.file)) : null;
+            const sourceSelector = op.source && op.source.selector ? op.source.selector : null;
+            if (!sourceFile || !sourceSelector) {
+              throw new Error('copy-batch operations require source.file and source.selector values');
+            }
+
+            const sourceText = fs.readFileSync(sourceFile, 'utf8');
+            const sourceAst = parseModule(sourceText, sourceFile);
+            const { functions: sourceFunctions } = collectFunctions(sourceAst, sourceText);
+            const sourceRecords = buildFunctionRecords(sourceFunctions);
+            const [matchedRecord] = resolveMatches(sourceRecords, sourceSelector, options, { operation: 'copy-batch' });
+            if (!matchedRecord) throw new Error(`No function matches selector ${sourceSelector} in ${sourceFile}`);
+
+            const snippet = extractCode(sourceText, matchedRecord.span);
+
+            // Determine target insertion line value
+            const targetFile = op.target && op.target.file ? (path.isAbsolute(op.target.file) ? op.target.file : path.resolve(path.dirname(planPath), op.target.file)) : null;
+            const targetPosition = op.target && op.target.position ? op.target.position : 'end-of-file';
+            if (!targetFile) throw new Error('copy-batch target.file is required');
+
+            const targetText = fs.readFileSync(targetFile, 'utf8');
+            const targetLineOffsets = buildLineIndex(targetText);
+
+            let insertChar = targetText.length; // default end-of-file
+            if (typeof targetPosition === 'number') {
+              insertChar = targetPosition;
+            } else if (targetPosition === 'after-last-import') {
+              const importRegex = /^(?:import\s+.*?\s+from\s+['"`][^'"`]*['"`];?\s*$|const\s+.*?=\s*require\(['"`][^'"`]*['"`]\)\s*;?\s*$)/gm;
+              let last = null;
+              let m;
+              while ((m = importRegex.exec(targetText))) last = m;
+              if (last) insertChar = last.index + last[0].length;
+            } else if (targetPosition === 'before-first-function') {
+              const functionRegex = /^(?:function\s+\w+|const\s+\w+\s*=\s*(?:\([^)]*\)\s*=>|function))/gm;
+              const m = functionRegex.exec(targetText);
+              if (m) insertChar = m.index;
+            }
+
+            // Compute insertion line index from char offset
+            const lineIndex = (function findLineIndex(offset) {
+              let idx = 0;
+              for (; idx < targetLineOffsets.length; idx++) {
+                if (targetLineOffsets[idx] > offset) break;
+              }
+              return Math.max(0, idx - 1);
+            }(insertChar));
+
+            // Normalize snippet newline to target file style
+            const newlineStats = computeNewlineStats(targetText);
+            const normalized = prepareNormalizedSnippet(snippet, newlineStats.style, { ensureTrailingNewline: true });
+
+            const change = {
+              file: targetFile,
+              startLine: lineIndex,
+              endLine: lineIndex - 1, // insertion
+              replacement: normalized.text,
+              id: op.id || `copy-${matchedRecord.name}-${Date.now()}`,
+              description: op.description || `copy ${matchedRecord.canonicalName || matchedRecord.name} -> ${path.basename(targetFile)}`,
+              guards: {
+                sourceHash: matchedRecord.hash,
+                sourceFile: sourceFile
+              }
+            };
+
+            batchRunner.addChange(change);
+          }
+
+          // Dry-run or apply
+          if (options.fix) {
+            const result = await batchRunner.apply({ force: options.force, continueOnError: options.continueOnError || false, emitPlan: options.emitPlan });
+            printPlanResult(result, options);
+          } else {
+            const result = batchRunner.dryRun();
+            printDryRunResult(result, options);
+          }
+          return;
+        }
+
         // Apply changes if --fix flag is provided
         if (options.fix) {
           const result = await batchRunnerFromPlan.apply({
@@ -2507,15 +2535,15 @@ async function main() {
             continueOnError: options.continueOnError || false,
             emitPlan: options.emitPlan
           });
-          
+
           // Write changes to disk if successful
           if (result.success && result.resultingSource && batchRunnerFromPlan.filePath) {
             const fs = require('fs');
             fs.writeFileSync(batchRunnerFromPlan.filePath, result.resultingSource, 'utf8');
           }
-          
+
           printPlanResult(result, options);
-          
+
           // If requested, write result plan to file
           if (result.resultPlan && options.emitPlan) {
             const planOutputPath = path.isAbsolute(options.emitPlan)
@@ -2570,6 +2598,15 @@ async function main() {
   options.sourceMapper = variableMapper || options.sourceMapper;
   const variableRecords = buildVariableRecords(variables);
 
+  let typeRecords = [];
+  let types = [];
+  if (typeof collectTypes === 'function') {
+    const typeResult = collectTypes(ast, source, options.sourceMapper);
+    types = typeResult.types || [];
+    options.sourceMapper = typeResult.mapper || options.sourceMapper;
+    typeRecords = buildTypeRecords(types);
+  }
+
   const deps = {
     source,
     ast,
@@ -2580,6 +2617,10 @@ async function main() {
     variables,
     variableRecords,
     buildVariableRecords,
+    buildTypeSelectorSet,
+    buildTypeRecords,
+    types,
+    typeRecords,
     fmt,
     options,
     newlineGuard,
@@ -2630,6 +2671,10 @@ async function main() {
 
     if (options.listConstructors) {
       return discoveryOperations.listConstructors(options, functionRecords, classMetadata);
+    }
+
+    if (options.listTypes) {
+      return discoveryOperations.listTypes(options, source, typeRecords);
     }
 
     if (options.functionSummary) {
@@ -2707,6 +2752,20 @@ async function main() {
       return mutationOperations.replaceVariable(options, source, record, options.replacementPath, options.replaceVariableSelector);
     }
 
+    if (options.locateTypeSelector) {
+      return mutationOperations.locateTypes(options, typeRecords, options.locateTypeSelector);
+    }
+
+    if (options.extractTypeSelector) {
+      const [record] = resolveVariableMatches(typeRecords, options.extractTypeSelector, options, { operation: 'extract-type' });
+      return mutationOperations.extractType(options, source, record, options.extractTypeSelector);
+    }
+
+    if (options.replaceTypeSelector) {
+      const [record] = resolveVariableMatches(typeRecords, options.replaceTypeSelector, options, { operation: 'replace-type' });
+      return mutationOperations.replaceType(options, source, record, options.replacementPath, options.replaceTypeSelector);
+    }
+
     if (options.copySelector) {
       const [record] = resolveMatches(functionRecords, options.copySelector, options, { operation: 'copy-function' });
       return mutationOperations.copyFunction(options, source, record, options.copySelector);
@@ -2764,7 +2823,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  fmt.error(error.message);
+  fmt.error(error.stack || error.message);
   if (process.env.DEBUG) {
     console.error(error);
   }

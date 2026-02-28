@@ -1,6 +1,29 @@
 ---
 description: 'AGI Singularity agent for designing AND building CLI tools — from API design through implementation to validation'
 tools: ['execute/getTerminalOutput', 'execute/runTask', 'execute/createAndRunTask', 'execute/runInTerminal', 'read/problems', 'read/readFile', 'read/terminalSelection', 'read/terminalLastCommand', 'read/getTaskOutput', 'edit', 'search', 'docs-memory/*']
+
+handoffs:
+  - label: '🧠 Return to Project Director'
+    agent: '🧠 Project Director 🧠'
+    prompt: |
+      CLI TOOLSMITH HANDOFF
+      
+      I've completed the CLI tooling work. Summary:
+      
+      {{PASTE: what was implemented, tested, any follow-ups}}
+      
+      Please coordinate any cross-domain work or next steps.
+
+  - label: '🤖 Hand off to Task Executor'
+    agent: '🤖 Task Executor 🤖'
+    prompt: |
+      CLI TOOLSMITH → EXECUTOR HANDOFF
+      
+      I have planned the following CLI implementation steps:
+      
+      {{PASTE: explicit file paths, done criteria, constraints}}
+      
+      Please execute these steps precisely.
 ---
 
 # 🌟📐 CLI Toolsmith 📐🌟

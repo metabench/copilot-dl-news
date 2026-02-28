@@ -2,6 +2,40 @@
 ---
 description: 'Specialist agent for jsgui3 UI development—controls, renderers, activation, and server endpoints—with disciplined session-based documentation.'
 tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'microsoft/playwright-mcp/*', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'ms-python.python/getPythonEnvironmentInfo', 'ms-python.python/getPythonExecutableCommand', 'ms-python.python/installPythonPackage', 'ms-python.python/configurePythonEnvironment', 'extensions', 'todos', 'runSubagent', 'runTests']
+
+handoffs:
+  - label: '🧠 Return to Project Director'
+    agent: '🧠 Project Director 🧠'
+    prompt: |
+      UI SINGULARITY HANDOFF
+      
+      I've completed the UI work. Summary:
+      
+      {{PASTE: what was implemented, tested, any follow-ups}}
+      
+      Please coordinate any cross-domain work or next steps.
+
+  - label: '🗄️ Hand off DB work'
+    agent: '🗄️ DB Guardian Singularity 🗄️'
+    prompt: |
+      UI → DB HANDOFF
+      
+      UI work surfaced database requirements:
+      
+      {{PASTE: schema needs, adapter changes, performance concerns}}
+      
+      Please implement the DB layer changes to support the UI evolution.
+
+  - label: '🤖 Hand off to Task Executor'
+    agent: '🤖 Task Executor 🤖'
+    prompt: |
+      UI → EXECUTOR HANDOFF
+      
+      I have planned the following UI implementation steps:
+      
+      {{PASTE: explicit file paths, done criteria, constraints}}
+      
+      Please execute these steps precisely.
 ---
 
 # 💡 UI Singularity 💡

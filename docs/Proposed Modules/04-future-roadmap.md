@@ -26,17 +26,17 @@ This roadmap aligns with `docs/agi/PATTERNS.md` specifically:
 > [!TIP]
 > **Bootstrap Prompt**
 > ```text
-> Create a strictly typed React+Vite admin dashboard "news-platform-ui".
-> Tech Stack: React 18, TypeScript, TailwindCSS, TanStack Query, Zustand.
+> Create a strictly typed jsgui3-server admin dashboard "news-platform-ui".
+> Tech Stack: jsgui3-server, jsgui3-html, vanilla JS enhancers. NO React or Express.
 > Features:
 > 1. Dashboard (stats widgets from /api/stats)
 > 2. Crawler Control (start/stop/pause via /api/crawler)
-> 3. Data Explorer (ag-grid table for articles)
+> 3. Data Explorer (jsgui3 Data_Grid for articles)
 > 4. Log Viewer (virtualized list for logs)
-> Structure: src/ (components, hooks, stores, services).
+> Structure: src/ (controls, pages, resources).
 > Requirements:
 > - No direct DB access (REST API only).
-> - Mock API service for local dev.
+> - Mock API resource for local dev.
 > - "WLILO" (White Leather/Industrial Luxury) theme support.
 > ```
 
@@ -91,6 +91,13 @@ This roadmap aligns with `docs/agi/PATTERNS.md` specifically:
 > - NO database dependencies. NO network calls (unless configured).
 > - 100% test coverage with fixture HTML files.
 > ```
+
+### 4. Distributed Crawler (V5 Architecture)
+**Current Location**: `copilot-dl-news` (monolithic PM2 workers)
+**Role**: High-throughput, asynchronous Producer-Consumer fetching pipeline. 
+**Why Extract / Refactor**:
+- The current V4 architecture caps throughput artificially because network fetches and CPU parsing occur sequentially on a single thread. 
+- A V5 redesign separates IO-bound network fetching from CPU-bound Parsing/Scoring via in-memory message queues. Detailed in [V5 Crawler Architecture](../books/v5-crawler-architecture.md).
 
 ---
 

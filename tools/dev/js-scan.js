@@ -44,11 +44,12 @@ const CHINESE_HELP_ROWS = Object.freeze([
   { lexKey: 'source_language', alias: '码', summary: '码模', params: '[js ts 自]' },
   { lexKey: 'view', alias: '视', summary: '视模', params: '[详 简 概]' },
   { lexKey: 'byte_length', alias: '长', summary: '长档', params: '[限数]' },
-  { lexKey: 'fields', alias: '域', summary: '简列', params: '[location name hash]'},
+  { lexKey: 'fields', alias: '域', summary: '简列', params: '[location name hash]' },
   { lexKey: 'follow_deps', alias: '依', summary: '依扫', params: '' },
-    { lexKey: 'dependency_depth', alias: '层', summary: '层限', params: '[数]' },
-    { lexKey: 'deps_of', alias: 'dep', summary: '提要求法', params: '[path|hash]' },
-    { lexKey: 'deps_parse_errors', alias: '错', summary: '依错详', params: '' }
+  { lexKey: 'dependency_depth', alias: '层', summary: '层限', params: '[数]' },
+  { lexKey: 'deps_of', alias: 'dep', summary: '提要求法', params: '[path|hash]' },
+  { lexKey: 'deps_parse_errors', alias: '错', summary: '依错详', params: '' },
+  { lexKey: 'list_types', alias: '型列', summary: '型列', params: '' }
 ]);
 
 const CHINESE_HELP_DETAILS = Object.freeze({
@@ -112,6 +113,10 @@ const CHINESE_HELP_DETAILS = Object.freeze({
   deps_parse_errors: [
     '错详: 依赖摘要后显示解析错误细节',
     '示: node tools/dev/js-scan.js --deps-of src/app.js --deps-parse-errors'
+  ],
+  list_types: [
+    '型列 要: 列出所有的 TypeScript Interface/Type',
+    '示: node tools/dev/js-scan.js --型列'
   ]
 });
 
@@ -286,7 +291,7 @@ function findRepositoryRoot(startDir) {
   while (currentDir !== path.dirname(currentDir)) {
     // Check for package.json or .git as repo markers
     if (fs.existsSync(path.join(currentDir, 'package.json')) ||
-        fs.existsSync(path.join(currentDir, '.git'))) {
+      fs.existsSync(path.join(currentDir, '.git'))) {
       return currentDir;
     }
     currentDir = path.dirname(currentDir);
@@ -510,21 +515,21 @@ function printSearchSummary(result, options, language, limitDisplay) {
 
   const segments = isChinese
     ? [
-        `${translateLabelWithMode(fmt, language, 'match_count', 'matches')}:${result.stats.matchCount}`,
-        `${translateLabelWithMode(fmt, language, 'list', 'shown')}:${result.matches.length}`,
-        `${translateLabelWithMode(fmt, language, 'search_limit', 'limit')}:${limitDisplay}`,
-        `${translateLabelWithMode(fmt, language, 'exports', 'exported')}:${result.stats.exportedMatches}`,
-        `${translateLabelWithMode(fmt, language, 'async', 'async')}:${result.stats.asyncMatches}`,
-        `${translateLabelWithMode(fmt, language, 'files_total', 'files')}:${result.stats.filesConsidered}`
-      ]
+      `${translateLabelWithMode(fmt, language, 'match_count', 'matches')}:${result.stats.matchCount}`,
+      `${translateLabelWithMode(fmt, language, 'list', 'shown')}:${result.matches.length}`,
+      `${translateLabelWithMode(fmt, language, 'search_limit', 'limit')}:${limitDisplay}`,
+      `${translateLabelWithMode(fmt, language, 'exports', 'exported')}:${result.stats.exportedMatches}`,
+      `${translateLabelWithMode(fmt, language, 'async', 'async')}:${result.stats.asyncMatches}`,
+      `${translateLabelWithMode(fmt, language, 'files_total', 'files')}:${result.stats.filesConsidered}`
+    ]
     : [
-        `matches=${result.stats.matchCount}`,
-        `shown=${result.matches.length}`,
-        `limit=${limitDisplay}`,
-        `exported=${result.stats.exportedMatches}`,
-        `async=${result.stats.asyncMatches}`,
-        `files=${result.stats.filesConsidered}`
-      ];
+      `matches=${result.stats.matchCount}`,
+      `shown=${result.matches.length}`,
+      `limit=${limitDisplay}`,
+      `exported=${result.stats.exportedMatches}`,
+      `async=${result.stats.asyncMatches}`,
+      `files=${result.stats.filesConsidered}`
+    ];
 
   console.log(fmt.COLORS.muted(segments.join(' ')));
 
@@ -558,15 +563,15 @@ function printSearchTerse(result, options, language, limitDisplay) {
   const { isChinese } = language;
   const summarySegments = isChinese
     ? [
-        `${translateLabelWithMode(fmt, language, 'match_count', 'matches')}:${result.stats.matchCount}`,
-        `${translateLabelWithMode(fmt, language, 'list', 'shown')}:${result.matches.length}`,
-        `${translateLabelWithMode(fmt, language, 'search_limit', 'limit')}:${limitDisplay}`
-      ]
+      `${translateLabelWithMode(fmt, language, 'match_count', 'matches')}:${result.stats.matchCount}`,
+      `${translateLabelWithMode(fmt, language, 'list', 'shown')}:${result.matches.length}`,
+      `${translateLabelWithMode(fmt, language, 'search_limit', 'limit')}:${limitDisplay}`
+    ]
     : [
-        `matches=${result.stats.matchCount}`,
-        `shown=${result.matches.length}`,
-        `limit=${limitDisplay}`
-      ];
+      `matches=${result.stats.matchCount}`,
+      `shown=${result.matches.length}`,
+      `limit=${limitDisplay}`
+    ];
 
   const headerLabel = translateLabelWithMode(fmt, language, 'search', 'Search');
   console.log(fmt.COLORS.bold(fmt.COLORS.accent(headerLabel)));
@@ -728,6 +733,7 @@ function createParser() {
     .add('--include-code', 'Include assembled code in context-slice output', true, 'boolean')
     .add('--file <path>', 'Target file for context-slice operation')
     .add('--build-index', 'Build module index', false, 'boolean')
+    .add('--list-types', '[NEW] List exported and internal TS types/interfaces', false, 'boolean')
     .add('--ai-mode', '[AI-Native] Include continuation tokens in JSON output', false, 'boolean')
     .add('--continuation <token>', '[AI-Native] Resume from continuation token');
 
@@ -753,6 +759,7 @@ function ensureSingleOperation(options) {
   if (options.impactPreview) provided.push('impact-preview');
   if (options.longestFiles) provided.push('longest-files');
   if (options.buildIndex) provided.push('build-index');
+  if (options.listTypes) provided.push('list-types');
   if (provided.length > 1) {
     throw new Error(`Only one operation can be specified at a time. Provided: ${provided.join(', ')}`);
   }
@@ -882,9 +889,9 @@ function printHashLookup(result) {
 
   const headerTitle = isChinese
     ? joinTranslatedLabels(fmt, language, [
-        { key: 'hash', fallback: 'Hash' },
-        { key: 'search', fallback: 'Search' }
-      ])
+      { key: 'hash', fallback: 'Hash' },
+      { key: 'search', fallback: 'Search' }
+    ])
     : translateLabelWithMode(fmt, language, 'hash', 'Hash Lookup');
 
   fmt.header(headerTitle);
@@ -934,9 +941,9 @@ function printIndex(result) {
 
   const headerTitle = isChinese
     ? joinTranslatedLabels(fmt, language, [
-        { key: 'module', fallback: 'Module' },
-        { key: 'index', fallback: 'Index' }
-      ])
+      { key: 'module', fallback: 'Module' },
+      { key: 'index', fallback: 'Index' }
+    ])
     : translateLabelWithMode(fmt, language, 'index', 'Module Index Summary');
 
   fmt.header(headerTitle);
@@ -1048,9 +1055,9 @@ function printLongestFiles(result) {
   const { isChinese } = language;
   const headerTitle = isChinese
     ? joinTranslatedLabels(fmt, language, [
-        { key: 'byte_length', fallback: '长度' },
-        { key: 'file', fallback: '文件' }
-      ])
+      { key: 'byte_length', fallback: '长度' },
+      { key: 'file', fallback: '文件' }
+    ])
     : 'Longest Files';
 
   fmt.header(headerTitle);
@@ -1107,9 +1114,9 @@ function printPatternResult(result) {
 
   const headerTitle = isChinese
     ? joinTranslatedLabels(fmt, language, [
-        { key: 'pattern', fallback: 'Pattern' },
-        { key: 'matches', fallback: 'Matches' }
-      ])
+      { key: 'pattern', fallback: 'Pattern' },
+      { key: 'matches', fallback: 'Matches' }
+    ])
     : translateLabelWithMode(fmt, language, 'pattern', 'Pattern Matches');
 
   fmt.header(headerTitle);
@@ -1395,7 +1402,7 @@ function printRippleAnalysis(result, options) {
       : fmt.COLORS.error(result.risk.level);
   fmt.stat('  Level', riskColor);
   fmt.stat('  Score', `${result.risk.score}/100`, 'number');
-  
+
   if (result.risk.factors) {
     fmt.stat('  Factors', '');
     Object.entries(result.risk.factors).forEach(([key, value]) => {
@@ -1455,7 +1462,7 @@ function printRippleAnalysis(result, options) {
  */
 function generateNextActions(searchResult, options) {
   const actions = [];
-  
+
   if (!searchResult.matches || searchResult.matches.length === 0) {
     return actions;
   }
@@ -1577,15 +1584,15 @@ function captureImporterSnapshot(importer, scopeDir) {
     })),
     jsEditHint: firstImport && firstImport.line
       ? {
-          command: 'node tools/dev/js-edit.js',
-          args: [
-            '--file',
-            path.relative(scopeDir, absoluteFile),
-            '--snipe-position',
-            `${firstImport.line}:1`
-          ],
-          description: 'Jump to import statement for guarded edit'
-        }
+        command: 'node tools/dev/js-edit.js',
+        args: [
+          '--file',
+          path.relative(scopeDir, absoluteFile),
+          '--snipe-position',
+          `${firstImport.line}:1`
+        ],
+        description: 'Jump to import statement for guarded edit'
+      }
       : null
   };
 }
@@ -1610,15 +1617,15 @@ function captureUsageCallSnapshot(entry, scopeDir) {
     })),
     jsEditHint: firstCall && firstCall.line
       ? {
-          command: 'node tools/dev/js-edit.js',
-          args: [
-            '--file',
-            path.relative(scopeDir, absoluteFile),
-            '--snipe-position',
-            `${firstCall.line}:1`
-          ],
-          description: 'Jump to first usage call for guarded edit'
-        }
+        command: 'node tools/dev/js-edit.js',
+        args: [
+          '--file',
+          path.relative(scopeDir, absoluteFile),
+          '--snipe-position',
+          `${firstCall.line}:1`
+        ],
+        description: 'Jump to first usage call for guarded edit'
+      }
       : null
   };
 }
@@ -1901,10 +1908,10 @@ function captureMatchSnapshot(match, scopeDir) {
     column: match.function && typeof match.function.column === 'number' ? match.function.column : null,
     traits: match.function
       ? {
-          exported: !!match.function.exported,
-          isAsync: !!match.function.isAsync,
-          isGenerator: !!match.function.isGenerator
-        }
+        exported: !!match.function.exported,
+        isAsync: !!match.function.isAsync,
+        isGenerator: !!match.function.isGenerator
+      }
       : null,
     jsEditHint: match.jsEditHint || null
   };
@@ -2311,7 +2318,7 @@ function printExportUsage(result, options) {
     return;
   }
 
-  const riskColor = result.riskLevel === 'HIGH' 
+  const riskColor = result.riskLevel === 'HIGH'
     ? fmt.COLORS.error
     : result.riskLevel === 'MEDIUM'
       ? fmt.COLORS.accent
@@ -2376,7 +2383,7 @@ function printContextSlice(result, options) {
   }
 
   const slice = result.slice;
-  
+
   // Show reduction stats
   const reductionLabel = isChinese ? '减少' : 'Reduction';
   const linesLabel = isChinese ? '行' : 'lines';
@@ -2444,7 +2451,7 @@ function printImpactPreview(result, options) {
   }
 
   const summary = result.summary;
-  
+
   // Risk summary
   const riskLabel = isChinese ? '风险摘要' : 'Risk Summary';
   console.log(`\n${fmt.COLORS.accent(riskLabel)}:`);
@@ -2457,7 +2464,7 @@ function printImpactPreview(result, options) {
   if (result.exports.length > 0) {
     const exportsLabel = isChinese ? '导出详情' : 'Export Details';
     console.log(`\n${fmt.COLORS.accent(exportsLabel)}:`);
-    
+
     // Sort by risk level
     const sortedExports = [...result.exports].sort((a, b) => {
       const riskOrder = { HIGH: 0, MEDIUM: 1, LOW: 2, NONE: 3 };
@@ -2468,7 +2475,7 @@ function printImpactPreview(result, options) {
       const riskIcon = exp.risk === 'HIGH' ? '🔴' : exp.risk === 'MEDIUM' ? '🟡' : exp.risk === 'LOW' ? '🟢' : '⚪';
       const usageLabel = isChinese ? '使用' : 'usages';
       console.log(`  ${riskIcon} ${fmt.COLORS.cyan(exp.name)} (${exp.type}) - ${exp.usageCount} ${usageLabel}`);
-      
+
       if (exp.usedBy && exp.usedBy.length > 0 && exp.usedBy.length <= 5) {
         exp.usedBy.forEach(file => {
           console.log(`      ${fmt.COLORS.muted('→')} ${file}`);
@@ -2542,10 +2549,10 @@ function printCallGraph(result, startNode, options) {
   if (result.edges.length > 0) {
     const callsLabel = isChinese ? '调用关系' : 'Call Relationships';
     console.log(`\n${fmt.COLORS.accent(callsLabel)}:`);
-    
+
     const limit = options.limit || 50;
     const edgesToShow = result.edges.slice(0, limit);
-    
+
     edgesToShow.forEach(edge => {
       const sourceShort = edge.sourceId.split('::').pop();
       const targetShort = edge.targetId.split('::').pop();
@@ -2587,8 +2594,8 @@ function printHotPaths(hotPaths, stats, options) {
   fmt.header(headerLabel);
 
   // Stats
-  console.log(`\n${fmt.COLORS.muted(isChinese 
-    ? `总节点: ${stats.nodeCount} | 总边: ${stats.edgeCount}` 
+  console.log(`\n${fmt.COLORS.muted(isChinese
+    ? `总节点: ${stats.nodeCount} | 总边: ${stats.edgeCount}`
     : `Total nodes: ${stats.nodeCount} | Total edges: ${stats.edgeCount}`)}`);
 
   if (hotPaths.length === 0) {
@@ -2627,8 +2634,8 @@ function printDeadCode(deadCode, stats, options) {
 
   // Stats
   const includeExported = options.deadCodeIncludeExported;
-  console.log(`\n${fmt.COLORS.muted(isChinese 
-    ? `总节点: ${stats.nodeCount} | 包含导出: ${includeExported ? '是' : '否'}` 
+  console.log(`\n${fmt.COLORS.muted(isChinese
+    ? `总节点: ${stats.nodeCount} | 包含导出: ${includeExported ? '是' : '否'}`
     : `Total nodes: ${stats.nodeCount} | Include exported: ${includeExported ? 'yes' : 'no'}`)}`);
 
   if (deadCode.length === 0) {
@@ -2640,7 +2647,7 @@ function printDeadCode(deadCode, stats, options) {
   // Summary
   const exportedCount = deadCode.filter(d => d.exported).length;
   const internalCount = deadCode.length - exportedCount;
-  
+
   console.log(`\n${fmt.COLORS.accent(isChinese ? '摘要' : 'Summary')}:`);
   console.log(`  ${isChinese ? '未调用函数' : 'Uncalled functions'}: ${deadCode.length}`);
   if (exportedCount > 0) {
@@ -2660,8 +2667,8 @@ function printDeadCode(deadCode, stats, options) {
 
   // Guidance
   if (internalCount > 0) {
-    console.log(`\n${fmt.COLORS.muted(isChinese 
-      ? '💡 内部未调用函数可能可以安全删除' 
+    console.log(`\n${fmt.COLORS.muted(isChinese
+      ? '💡 内部未调用函数可能可以安全删除'
       : '💡 Internal uncalled functions may be safely removable')}`);
   }
 
@@ -2711,7 +2718,7 @@ async function main() {
         }
         token = token.trim();
       }
-      
+
       const continuationResult = await handleContinuationToken(token, options);
       if (options.json) {
         console.log(JSON.stringify(continuationResult, null, 2));
@@ -2827,7 +2834,7 @@ async function main() {
         noSnippets: options.noSnippets,
         noGuidance: options.noGuidance
       });
-      
+
       if (options.json) {
         // If --ai-mode is enabled, add continuation tokens
         if (options.aiMode) {
@@ -3035,6 +3042,33 @@ async function main() {
     // ═══════════════════════════════════════════════════════════════════════
     // NEW OPERATIONS: Context Slice & Impact Preview
     // ═══════════════════════════════════════════════════════════════════════
+
+    if (operation === 'list-types') {
+      const allTypes = [];
+      scanResult.files.forEach(f => {
+        if (f.types) {
+          allTypes.push(...f.types);
+        }
+      });
+      let filtered = allTypes;
+      if (options.exported) filtered = filtered.filter(t => t.exported);
+      if (options.internal) filtered = filtered.filter(t => !t.exported);
+
+      if (options.json) {
+        console.log(JSON.stringify(filtered, null, 2));
+      } else {
+        const headerLabel = languageMode === 'zh' ? '类型列表' : 'Type List';
+        fmt.header(headerLabel);
+        filtered.forEach(t => {
+          const exportBadge = t.exported ? fmt.COLORS.success('[exported]') : fmt.COLORS.muted('[internal]');
+          console.log(`${fmt.COLORS.cyan(t.name)} ${fmt.COLORS.muted('(' + t.kind + ')')} ${exportBadge}`);
+          console.log(`  ${fmt.COLORS.muted(t.relativePath + ':' + t.line)}`);
+          if (t.hash) console.log(`  ${fmt.COLORS.accent('#' + t.hash)}`);
+        });
+        fmt.footer();
+      }
+      return;
+    }
 
     if (operation === 'context-slice') {
       // Parse target: --context-slice functionName --file path

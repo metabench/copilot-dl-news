@@ -5,6 +5,10 @@ description: Enforce telemetry contract stability (event naming, JSONL envelopes
 
 # Telemetry Contracts
 
+## Triggers
+
+- "telemetry", "drift", "status/health endpoints", "event naming"
+
 ## Scope
 
 This Skill helps keep telemetry reliable over time by:
@@ -39,6 +43,11 @@ Out of scope:
 
 - Run the most targeted test suite(s) that cover telemetry shape.
 - If the change affects diagrams/docs, update the relevant session diagrams.
+
+## Anti-Patterns to Avoid
+
+- **Blindly Renaming Events**: Changing core event names without verifying downstream consumers (z-server, UI dashboards).
+- **Bloated Payloads**: Adding massive, deeply nested objects to the `/api/status` endpoint, violating compact telemetry contracts.
 
 ## Escalation / Research request
 

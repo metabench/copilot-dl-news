@@ -2,10 +2,10 @@
 'use strict';
 
 const path = require('path');
-const { GuessPlaceHubsOperation } = require('../src/core/crawler/operations/GuessPlaceHubsOperation');
-const { CliFormatter } = require('../src/shared/utils/CliFormatter');
-const { CliArgumentParser } = require('../src/shared/utils/CliArgumentParser');
-const { findProjectRoot } = require('../src/shared/utils/project-root');
+const { GuessPlaceHubsOperation } = require('../../src/core/crawler/operations/GuessPlaceHubsOperation');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const { findProjectRoot } = require('../../src/shared/utils/project-root');
 
 const fmt = new CliFormatter();
 
@@ -27,6 +27,8 @@ function parseCliArgs(argv) {
     .add('--apply', 'Apply changes (save discovered hubs to DB)', false, 'boolean')
     .add('--distributed', 'Use distributed fetching via remote worker', false, 'boolean')
     .add('--worker-url <url>', 'Remote worker URL for distributed mode', 'http://144.21.42.149:8081')
+    .add('--confidence-mode <mode>', 'Confidence mode: off | shadow | enforce', 'shadow')
+    .add('--min-confidence <number>', 'Minimum confidence threshold for enforce mode (0-1)', 0.65, 'float')
     .add('--verbose', 'Enable verbose output', false, 'boolean')
     .add('--json', 'Output results as JSON', false, 'boolean');
 
@@ -41,9 +43,9 @@ function normalizeOptions(rawArgs) {
   const positional = rawArgs.positional || [];
   // Find first positional argument that looks like a URL (http) or a domain (no path separators/extensions)
   // Logic: skip node.exe, script.js. Look for 'http' or simple string.
-  const startUrl = rawArgs.url || positional.find(arg => 
+  const startUrl = rawArgs.url || positional.find(arg =>
     arg && (
-      arg.startsWith('http') || 
+      arg.startsWith('http') ||
       (!arg.match(/[\\\/]/) && !arg.endsWith('.js') && !arg.endsWith('.exe'))
     )
   );
@@ -52,7 +54,15 @@ function normalizeOptions(rawArgs) {
     throw new Error('Start URL is required');
   }
 
-  const mode = rawArgs.mode === 'active-probe' ? 'active-probe' : 'standard';
+  const mode = ['active-probe', 'auto-discover'].includes(rawArgs.mode) ? rawArgs.mode : 'standard';
+  const confidenceModeRaw = String(rawArgs.confidenceMode || 'shadow').trim().toLowerCase();
+  const confidenceMode = ['off', 'shadow', 'enforce'].includes(confidenceModeRaw)
+    ? confidenceModeRaw
+    : 'shadow';
+  const minConfidenceRaw = Number(rawArgs.minConfidence);
+  const minConfidence = Number.isFinite(minConfidenceRaw)
+    ? Math.max(0, Math.min(1, minConfidenceRaw))
+    : 0.65;
   const activePattern = rawArgs.pattern || (mode === 'active-probe' ? '/world/{slug}' : undefined);
   const lang = rawArgs.lang || 'en';
   const kinds = rawArgs.kind ? [rawArgs.kind] : ['country'];
@@ -75,6 +85,8 @@ function normalizeOptions(rawArgs) {
     apply: Boolean(rawArgs.apply),
     distributed: Boolean(rawArgs.distributed),
     workerUrl: rawArgs.workerUrl || 'http://144.21.42.149:8081',
+    confidenceMode,
+    minConfidence,
     verbose: Boolean(rawArgs.verbose),
     json: Boolean(rawArgs.json)
   };
@@ -111,6 +123,8 @@ async function run(argv) {
     }
     fmt.stat('Database', options.dbPath);
     fmt.stat('Apply', options.apply ? 'yes' : 'no (dry-run)');
+    fmt.stat('Confidence mode', options.confidenceMode);
+    fmt.stat('Min confidence', options.minConfidence);
   }
 
   if (options.mode === 'active-probe' && !options.activePattern) {
@@ -120,7 +134,7 @@ async function run(argv) {
   }
 
   const operation = new GuessPlaceHubsOperation();
-  
+
   try {
     const result = await operation.run({
       startUrl: options.startUrl,
@@ -135,9 +149,11 @@ async function run(argv) {
         kinds: options.kinds,
         parentPlace: options.parentPlace,
         distributed: options.distributed,
-        workerUrl: options.workerUrl
+        workerUrl: options.workerUrl,
+        confidenceMode: options.confidenceMode,
+        minConfidence: options.minConfidence
       },
-      logger: options.json ? { info: () => {}, warn: () => {}, error: () => {} } : console
+      logger: options.json ? { info: () => { }, warn: () => { }, error: () => { } } : console
     });
 
     if (options.json) {

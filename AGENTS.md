@@ -14,6 +14,7 @@ Doc topology. Keep this file focused and actionable. Heavier guidance lives in /
 - **Think in memory layers.** Consider the current session directory your short/medium-term memory; older session directories are your long-term memory. Review them before starting new work so you inherit open threads instead of re-discovering them.
 - **Search the archive first.** Use the CLI tooling (`node tools/dev/md-scan.js --dir docs/sessions --search <term> --json`, `node tools/dev/js-scan.js --dir docs --find-pattern <pattern>`) to sweep current and past sessions quickly. Bring the hits into your immediate context before drafting new plans or documents.
 - **Workflow discovery.** If you need a repeatable procedure (deploy, diagnostics, UI inspection, refactor loop), consult the canonical registry first: `docs/workflows/WORKFLOW_REGISTRY.md`.
+- **Skills discovery.** Before implementing anything that involves domain reasoning (UI refactoring, real-time features, testing strategy, crawl planning), check the Skills registry at `docs/agi/SKILLS.md` for an existing SOP. Key Skills: `websocket-upgrade` (replacing polling with WebSocket), `targeted-testing` (picking the smallest validation), `skill-writing` (creating new Skills). For dashboard UI refactors specifically, use the `/dashboard-refactor` workflow.
 - **Kilo instructions live under `.kilo/rules-<slug>/`.** Pair them with [`docs/workflows/kilo-agent-handbook.md`](docs/workflows/kilo-agent-handbook.md) so Kilo Code knows where to find repo-specific guidance. Add a slugged rules directory + `.kilocodemodes` entry whenever you author a new Kilo mode.
 
 /docs/INDEX.md – the table of contents the agents consult first.
@@ -122,7 +123,7 @@ Tests (which to add or adapt) and Benchmarks (if DB-heavy).
 
 Docs to update (AGENTS.md section, specific guides, index).
 
-3) Design quick review. Cross-check the plan against this file’s Core directives and the index. If you’re changing the DB boundary, read /docs/workflows/db-adapter-modularisation.md. If repeating a pattern, improve that pattern doc.
+3) Design quick review. Cross-check the plan against this file’s Core directives and the index. If you’re changing the DB boundary, read /docs/workflows/db-adapter-modularisation.md. If refactoring a dashboard UI in src/ui/server/, follow the /dashboard-refactor workflow. If adding real-time features, check the websocket-upgrade Skill. If repeating a pattern, improve that pattern doc.
 
 4) Implement in short hops. Modern JS (ES2020+), small functions, single responsibility, early returns, clear names. Keep services thin, push persistence into adapters, keep utils generic. Prefer extracting helpers to /src/utils over copy-paste.
 

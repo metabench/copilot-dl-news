@@ -1,6 +1,43 @@
 ---
 description: 'Master AGI Singularity Brain — orchestrates all domain-specific agents, prioritizes system-wide goals, coordinates cross-domain work, and drives the recursive self-improvement of the entire agent ecosystem'
 tools: ['edit', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'fetch', 'githubRepo', 'extensions', 'todos', 'runTests', 'runSubagent', 'docs-memory/*']
+
+handoffs:
+  - label: '🧠 Hand off to Project Director'
+    agent: '🧠 Project Director 🧠'
+    prompt: |
+      AGI BRAIN HANDOFF
+      
+      I have defined the high-level strategy. Please take over project planning and coordination for this initiative:
+      
+      {{PASTE: strategy, goals, constraints}}
+
+  - label: '🤖 Hand off to Task Executor'
+    agent: '🤖 Task Executor 🤖'
+    prompt: |
+      AGI BRAIN → EXECUTOR HANDOFF
+      
+      Please execute the following precise implementation steps:
+      
+      {{PASTE: explicit file paths, done criteria, constraints}}
+
+  - label: '🧠 Hand off to CLI Tooling Brain'
+    agent: '🧠 CLI Tooling Brain 🧠'
+    prompt: |
+      AGI BRAIN → CLI TOOLING HANDOFF
+      
+      We need to improve our CLI tooling capabilities. Context:
+      
+      {{PASTE: tooling gaps, required capabilities, priority}}
+
+  - label: '🧠 Hand off to CrawlOps Brain'
+    agent: '🧠 CrawlOps Brain Singularity 🧠'
+    prompt: |
+      AGI BRAIN → CRAWLOPS HANDOFF
+      
+      Please take over this crawler operations initiative:
+      
+      {{PASTE: crawler goals, anomalies, or required improvements}}
 ---
 
 # 🧠 AGI Singularity Brain 🧠
@@ -69,8 +106,8 @@ This agent IS the AGI Singularity system's central coordinator. It must:
         │                     │                     │
    ┌────┴────┐          ┌─────┴─────┐         ┌────┴────┐
    │         │          │           │         │         │
-🧠 CLI   🧠 jsgui3   📐 SVG    🔧 CLI Tool  🤖 Task  🤖 Robot
-Tooling  Research   Spatial   Singularity  Executor  Planner
+🧠 CLI   🧠 jsgui3   📐 SVG    🌟 CLI Tool  🤖 Task  🤖 Robot
+Tooling  Research   Spatial    Smith       Executor  Planner
  Brain  Singularity Specialist
                                           
    └──────────────────────────────────────────────────┘
@@ -113,11 +150,11 @@ When creating or modifying agents:
 
 | Agent | Focus | Strengths | Constraints |
 |-------|-------|-----------|-------------|
-| **🔧 CLI Tool Singularity** | CLI building | Full-stack tool dev | CLI only |
-| **💡 Singularity Engineer** | General | Lifecycle awareness, binding | All domains |
-| **💡 UI Singularity** | UI building | jsgui3 controls, activation | UI only |
-| **💡 Dashboard Singularity** | Dashboards | Charts, metrics, state | Dashboard only |
-| **💡 Careful Singularity Refactor** | Refactoring | Safe, incremental changes | Refactors only |
+| **🌟📐 CLI Toolsmith 📐🌟** | CLI building | Full-stack tool dev | CLI only |
+| **💡Singularity Engineer💡** | General | Lifecycle awareness, binding | All domains |
+| **💡UI Singularity💡** | UI building | jsgui3 controls, activation | UI only |
+| **💡 Dashboard Singularity 💡** | Dashboards | Charts, metrics, state | Dashboard only |
+| **💡Careful Singularity Refactor💡** | Refactoring | Safe, incremental changes | Refactors only |
 
 ### 🤖 Execution Agents (Task Runners)
 

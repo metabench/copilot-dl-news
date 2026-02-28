@@ -82,16 +82,16 @@ function generateUnifiedDiff(beforeText, afterText, context = {}) {
   const afterLines = afterText.split('\n');
   const contextLines = context.contextLines || 3;
   const label = context.label || 'snippet';
-  
+
   // Simple line-by-line diff without external library
   const diffLines = [];
   diffLines.push(`--- ${label} (before)`);
   diffLines.push(`+++ ${label} (after)`);
-  
+
   let i = 0;
   let j = 0;
   const changes = [];
-  
+
   // Find changed regions
   while (i < beforeLines.length || j < afterLines.length) {
     if (i >= beforeLines.length) {
@@ -111,7 +111,7 @@ function generateUnifiedDiff(beforeText, afterText, context = {}) {
       // Changed line - look ahead to find next match
       let foundMatch = false;
       const lookahead = Math.min(5, Math.max(beforeLines.length - i, afterLines.length - j));
-      
+
       for (let la = 1; la <= lookahead; la++) {
         if (i + la < beforeLines.length && beforeLines[i + la] === afterLines[j]) {
           // Deletions followed by match
@@ -131,7 +131,7 @@ function generateUnifiedDiff(beforeText, afterText, context = {}) {
           break;
         }
       }
-      
+
       if (!foundMatch) {
         // Treat as replacement
         changes.push({ type: 'del', beforeIdx: i, afterIdx: j, line: beforeLines[i] });
@@ -141,14 +141,14 @@ function generateUnifiedDiff(beforeText, afterText, context = {}) {
       }
     }
   }
-  
+
   // Group changes into hunks with context
   const hunks = [];
   let currentHunk = null;
-  
+
   for (let idx = 0; idx < changes.length; idx++) {
     const change = changes[idx];
-    
+
     if (change.type !== 'ctx') {
       // Start new hunk or extend existing
       if (!currentHunk) {
@@ -159,7 +159,7 @@ function generateUnifiedDiff(beforeText, afterText, context = {}) {
           startAfter,
           lines: []
         };
-        
+
         // Add leading context
         for (let c = startBefore; c < change.beforeIdx; c++) {
           if (c < beforeLines.length) {
@@ -167,12 +167,12 @@ function generateUnifiedDiff(beforeText, afterText, context = {}) {
           }
         }
       }
-      
+
       currentHunk.lines.push({ type: change.type, line: change.line });
     } else if (currentHunk) {
       // Add context line to current hunk
       currentHunk.lines.push({ type: 'ctx', line: change.line });
-      
+
       // Check if we should close this hunk
       let hasMoreChanges = false;
       for (let look = idx + 1; look < Math.min(idx + 1 + contextLines * 2, changes.length); look++) {
@@ -181,7 +181,7 @@ function generateUnifiedDiff(beforeText, afterText, context = {}) {
           break;
         }
       }
-      
+
       if (!hasMoreChanges) {
         // Trim trailing context to contextLines
         const ctxCount = currentHunk.lines.filter(l => l.type === 'ctx').length;
@@ -195,29 +195,29 @@ function generateUnifiedDiff(beforeText, afterText, context = {}) {
             }
           }
         }
-        
+
         hunks.push(currentHunk);
         currentHunk = null;
       }
     }
   }
-  
+
   if (currentHunk) {
     hunks.push(currentHunk);
   }
-  
+
   // Format hunks
   for (const hunk of hunks) {
     const beforeCount = hunk.lines.filter(l => l.type === 'ctx' || l.type === 'del').length;
     const afterCount = hunk.lines.filter(l => l.type === 'ctx' || l.type === 'add').length;
     diffLines.push(`@@ -${hunk.startBefore + 1},${beforeCount} +${hunk.startAfter + 1},${afterCount} @@`);
-    
+
     for (const line of hunk.lines) {
       const prefix = line.type === 'add' ? '+' : line.type === 'del' ? '-' : ' ';
       diffLines.push(`${prefix}${line.line}`);
     }
   }
-  
+
   return diffLines.join('\n');
 }
 
@@ -1823,6 +1823,528 @@ function ingestMatchSnapshot(options, functionRecords) {
   return payload;
 }
 
+function extractType(options, source, record, selector) {
+  const {
+    extractCode,
+    maybeEmitPlan,
+    writeOutputFile,
+    outputJson,
+    fmt
+  } = requireDeps();
+
+  const { filePath, outputPath, json, quiet } = options;
+  const snippet = extractCode(source, record.span, options.sourceMapper);
+
+  const payload = {
+    file: filePath,
+    typeDeclaration: {
+      name: record.name,
+      canonicalName: record.canonicalName,
+      kind: record.kind,
+      line: record.line,
+      column: record.column,
+      pathSignature: record.pathSignature,
+      hash: record.hash,
+      span: record.span
+    },
+    code: snippet
+  };
+
+  const plan = maybeEmitPlan('extract-type', options, selector, [record], [record.hash], [record.span], {
+    entity: 'type'
+  });
+  if (plan) {
+    payload.plan = plan;
+  }
+
+  if (outputPath) writeOutputFile(outputPath, snippet);
+
+  if (json) {
+    outputJson(payload);
+    return;
+  }
+
+  if (quiet) return;
+
+  const language = resolveLanguageContext(fmt);
+  const headerTitle = `${fmt.translateLabel('type', 'Type', { englishFirst: language.englishFirst })} ${fmt.translateLabel('extract', 'Extract', { englishFirst: language.englishFirst })}`.trim();
+  fmt.header(headerTitle);
+
+  const typeLabel = fmt.translateLabel('type', 'Type', { englishFirst: language.englishFirst });
+  fmt.section(`${typeLabel}: ${record.canonicalName || record.name}`);
+  fmt.stat(fmt.translateLabel('kind', 'Kind', { englishFirst: language.englishFirst }), record.kind);
+  fmt.stat(fmt.translateLabel('location', 'Location', { englishFirst: language.englishFirst }), `${record.line}:${record.column}`);
+  fmt.stat(fmt.translateLabel('path_signature', 'Path', { englishFirst: language.englishFirst }), record.pathSignature);
+  fmt.stat(fmt.translateLabel('hash', 'Hash', { englishFirst: language.englishFirst }), record.hash);
+  fmt.stat(fmt.translateLabel('span', 'Span', { englishFirst: language.englishFirst }), `${record.span.start}:${record.span.end}`);
+  if (outputPath) {
+    fmt.stat(fmt.translateLabel('output', 'Output', { englishFirst: language.englishFirst }), outputPath);
+  }
+  if (options.emitPlanPath) {
+    fmt.info(formatPlanOutput(fmt, options.emitPlanPath, language.englishFirst));
+  }
+  fmt.section(fmt.translateLabel('source', 'Source', { englishFirst: language.englishFirst }));
+  process.stdout.write(`${snippet}\n`);
+  fmt.footer();
+}
+
+function handleTypePreviewMode(options, source, language, fmt, target, normalizedReplacement, contextData, outputJson) {
+  const { extractCode } = requireDeps();
+  const snippetBefore = extractCode(source, target.span, options.sourceMapper);
+  const diffText = generateUnifiedDiff(snippetBefore, normalizedReplacement, { label: 'Type snippet' });
+
+  if (options.json) {
+    outputJson({
+      file: options.filePath,
+      selector: options.replaceTypeSelector,
+      operation: 'replace-type',
+      mode: 'preview-edit',
+      success: true,
+      diff: diffText,
+      target: {
+        canonicalName: contextData.canonicalName,
+        span: contextData.guard.span
+      }
+    });
+    return;
+  }
+
+  if (!options.quiet) {
+    const isChinese = language.isChinese;
+    const headerTitle = `${fmt.translateLabel('type', 'Type', { englishFirst: language.englishFirst })} ${fmt.translateLabel('replace', 'Replace', { englishFirst: language.englishFirst })} [${isChinese ? '预览编辑' : 'Preview Edit'}]`.trim();
+    fmt.header(headerTitle);
+    fmt.section(`${fmt.translateLabel('type', 'Type', { englishFirst: language.englishFirst })}: ${contextData.canonicalName}`);
+    requireDeps().renderGuardrailSummary(contextData.guard, options);
+    fmt.section(isChinese ? '差异变更' : 'Diff Preview');
+    console.log(diffText);
+    fmt.info(isChinese ? '这是一个预览，文件未修改' : 'This is a preview; the file was not modified');
+    fmt.footer();
+  }
+}
+
+function replaceType(options, source, record, replacementPath, selector) {
+  const {
+    extractCode,
+    createDigest,
+    replaceSpan,
+    parseModule,
+    collectTypes,
+    buildTypeRecords,
+    maybeEmitPlan,
+    createNewlineGuard,
+    prepareNormalizedSnippet,
+    getReplacementSource,
+    writeOutputFile,
+    computeNewlineStats,
+    outputJson,
+    fmt,
+    renderGuardrailSummary
+  } = requireDeps();
+
+  const target = record;
+  const snippetBefore = extractCode(source, target.span, options.sourceMapper);
+  const beforeHash = createDigest(snippetBefore);
+  const expectedHash = options.expectHash || target.hash;
+  const hashStatus = beforeHash === expectedHash ? 'ok' : options.force ? 'bypass' : 'mismatch';
+
+  const charLength = Math.max(0, target.span.end - target.span.start);
+  const byteStart = typeof target.span.byteStart === 'number' ? target.span.byteStart : null;
+  const byteEnd = typeof target.span.byteEnd === 'number' ? target.span.byteEnd : null;
+  const byteLength = byteStart !== null && byteEnd !== null ? Math.max(0, byteEnd - byteStart) : null;
+
+  const guard = {
+    span: {
+      status: 'ok',
+      start: target.span.start,
+      end: target.span.end,
+      length: charLength,
+      byteStart,
+      byteEnd,
+      byteLength,
+      expectedStart: null,
+      expectedEnd: null,
+      expectedLength: null,
+      expectedByteStart: null,
+      expectedByteEnd: null,
+      expectedByteLength: null
+    },
+    hash: {
+      status: hashStatus,
+      expected: expectedHash,
+      actual: beforeHash
+    },
+    path: {
+      status: target.pathSignature ? 'pending' : 'skipped',
+      signature: target.pathSignature || '(unavailable)'
+    },
+    syntax: {
+      status: 'skipped'
+    },
+    result: {
+      status: 'skipped'
+    }
+  };
+
+  if (options.expectSpan) {
+    const parseSpan = (spanStr) => {
+      const parts = spanStr.split(':');
+      if (parts.length === 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
+        return { start: parseInt(parts[0], 10), end: parseInt(parts[1], 10) };
+      }
+      return null;
+    };
+    const expectedSpan = parseSpan(options.expectSpan);
+    if (expectedSpan) {
+      const spanExpectedLength = Math.max(0, expectedSpan.end - expectedSpan.start);
+      guard.span.expectedStart = expectedSpan.start;
+      guard.span.expectedEnd = expectedSpan.end;
+      guard.span.expectedLength = spanExpectedLength;
+
+      const spanMatches = expectedSpan.start === guard.span.start && expectedSpan.end === guard.span.end;
+      guard.span.status = spanMatches ? 'ok' : options.force ? 'bypass' : 'mismatch';
+    } else {
+      guard.span.status = 'error';
+    }
+  }
+
+  const guardPasses = ['ok', 'bypass', 'skipped'].includes(guard.hash.status)
+    && ['ok', 'bypass', 'skipped'].includes(guard.span.status);
+
+  if (!guardPasses) {
+    if (options.json) {
+      outputJson({
+        file: options.filePath,
+        selector,
+        success: false,
+        reason: 'guard_mismatch',
+        guard
+      });
+      return;
+    }
+
+    fmt.error(`Guard check failed for type replacement (selector: ${selector})`);
+    renderGuardrailSummary(guard, options);
+    process.exitCode = 1;
+    return;
+  }
+
+  let rawReplacementSource = '';
+  try {
+    rawReplacementSource = requireDeps().getReplacementSource(options);
+  } catch (error) {
+    if (options.json) {
+      requireDeps().outputJson({
+        file: options.filePath,
+        selector,
+        success: false,
+        reason: 'replacement_source_error',
+        message: error.message
+      });
+      return;
+    }
+    fmt.error(`Failed to read replacement code: ${error.message}`);
+    process.exitCode = 1;
+    return;
+  }
+  const language = resolveLanguageContext(fmt);
+  const { text: normalizedReplacement, addedTrailingNewline } = prepareNormalizedSnippet(
+    rawReplacementSource,
+    options.sourceNewline,
+    { ensureTrailingNewline: true }
+  );
+
+  const plan = maybeEmitPlan('replace-type', options, selector, [record], [target.hash], [target.span], {
+    entity: 'type',
+    replacement: normalizedReplacement
+  });
+
+  const languageMode = typeof fmt.getLanguageMode === 'function' ? fmt.getLanguageMode() : 'en';
+  const isChinese = languageMode === 'zh';
+  const contextData = {
+    canonicalName: record.canonicalName,
+    recordName: record.name,
+    kind: record.kind,
+    pathSignature: target.pathSignature,
+    guard,
+    plan,
+    isChinese,
+    includeSnippets: options.digestIncludeSnippets,
+    beforeSnippet: snippetBefore,
+    beforeHash: beforeHash,
+    beforeSpan: guard.span
+  };
+
+  if (options.previewEdit) {
+    return handleTypePreviewMode(options, source, language, fmt, target, normalizedReplacement, contextData, outputJson);
+  }
+
+  const afterCode = replaceSpan(source, target.span, normalizedReplacement, options.sourceMapper);
+  contextData.afterSnippet = normalizedReplacement;
+  contextData.afterHash = createDigest(normalizedReplacement);
+
+  const charDelta = normalizedReplacement.length - guard.span.length;
+  contextData.afterSpan = {
+    start: guard.span.start,
+    end: guard.span.end + charDelta,
+    length: normalizedReplacement.length
+  };
+
+  const digestPaths = maybeWriteDigestSnapshots('replace-type', options, selector, contextData);
+
+  const payload = {
+    file: options.filePath,
+    success: true,
+    selector,
+    operation: 'replace-type',
+    typeDeclaration: {
+      name: record.name,
+      canonicalName: record.canonicalName,
+      kind: record.kind,
+      line: record.line,
+      column: record.column,
+      pathSignature: target.pathSignature,
+      hash: target.hash,
+      span: target.span
+    },
+    guard
+  };
+
+  if (plan) payload.plan = plan;
+  if (digestPaths) payload.digests = digestPaths;
+
+  if (options.fix) {
+    if (guard.path.status === 'pending' && options.pathVerification !== false) {
+      if (typeof parseModule === 'function' && typeof collectTypes === 'function') {
+        try {
+          const afterAst = parseModule(afterCode, options.filePath);
+          const afterCollection = collectTypes(afterAst, afterCode, null);
+          const afterTypes = afterCollection.types || [];
+          const matchedAfter = afterTypes.find(t => t.pathSignature === target.pathSignature);
+
+          if (matchedAfter) {
+            guard.path.status = 'ok';
+            const sanityCharLength = Math.max(0, matchedAfter.span.end - matchedAfter.span.start);
+            const saneLength = sanityCharLength === normalizedReplacement.length ||
+              (addedTrailingNewline && sanityCharLength === normalizedReplacement.length - 1);
+            if (!saneLength) {
+              if (process.env.JS_EDIT_DEBUG === '1') {
+                console.log('[debug] length mismatch after AST verify', sanityCharLength, normalizedReplacement.length);
+              }
+            }
+          } else {
+            guard.path.status = 'warning';
+            payload.warnings = payload.warnings || [];
+            payload.warnings.push(`Path signature '${target.pathSignature}' was not found in the AST after replacement.`);
+          }
+        } catch (subErr) {
+          guard.path.status = 'warning';
+          payload.warnings = payload.warnings || [];
+          payload.warnings.push(`AST validation failed after replacement: ${subErr.message}`);
+        }
+      }
+    }
+
+    try {
+      writeOutputFile(options.filePath, afterCode);
+    } catch (fsErr) {
+      payload.success = false;
+      payload.reason = 'file_write_error';
+      payload.message = fsErr.message;
+      if (options.json) {
+        outputJson(payload);
+        return;
+      }
+      fmt.error(`Failed to write file ${options.filePath}: ${fsErr.message}`);
+      process.exitCode = 1;
+      return;
+    }
+  } else {
+    payload.mode = 'dry-run';
+    payload.preview = snippetBefore;
+    payload.replacement = normalizedReplacement;
+  }
+
+  if (options.json) {
+    outputJson(payload);
+    return;
+  }
+
+  if (options.quiet) return;
+
+  const headerTitle = `${fmt.translateLabel('type', 'Type', { englishFirst: language.englishFirst })} ${fmt.translateLabel('replace', 'Replace', { englishFirst: language.englishFirst })}`.trim();
+  fmt.header(headerTitle);
+
+  const typeLabel = fmt.translateLabel('type', 'Type', { englishFirst: language.englishFirst });
+  let nameLabel = `${typeLabel}: ${record.canonicalName || record.name}`;
+  if (!options.fix) {
+    nameLabel += ` [${formatModeValue(options.fix, contextData)}]`;
+  }
+  fmt.section(nameLabel);
+
+  if (!options.fix) {
+    fmt.warn(formatDryRunWarning(contextData));
+  }
+
+  renderGuardrailSummary(guard, options);
+
+  if (payload.warnings && payload.warnings.length > 0) {
+    fmt.section(isChinese ? '警告' : 'Warnings');
+    payload.warnings.forEach(w => fmt.warn(`  ${w}`));
+  }
+
+  if (digestPaths) {
+    fmt.section(isChinese ? '快照' : 'Digests');
+    fmt.info(formatDigestSnapshot(fmt, 'before', digestPaths.beforePath, language.englishFirst));
+    fmt.info(formatDigestSnapshot(fmt, 'after', digestPaths.afterPath, language.englishFirst));
+  }
+
+  if (options.emitPlanPath) {
+    fmt.info(formatPlanOutput(fmt, options.emitPlanPath, language.englishFirst));
+  }
+
+  if (options.emitDiff && !options.fix) {
+    fmt.section(isChinese ? '差异变更' : 'Diff Preview');
+    const diffText = generateUnifiedDiff(snippetBefore, normalizedReplacement, { label: 'Type snippet' });
+    console.log(diffText);
+  }
+
+  if (options.fix) {
+    fmt.success(formatSuccessMessage(options.filePath, contextData));
+  }
+  fmt.footer();
+}
+
+function locateTypes(options, typeRecords, selector) {
+  const {
+    resolveVariableMatches,
+    maybeEmitPlan,
+    computeAggregateSpan,
+    outputJson,
+    fmt,
+    formatSpanRange,
+    formatAggregateSpan
+  } = requireDeps();
+
+  const resolved = resolveVariableMatches(typeRecords, selector, options, { operation: 'locate-type' });
+  const expectedHashes = resolved.map((record) => record.hash);
+  const expectedSpans = resolved.map((record) => record.span);
+  const plan = maybeEmitPlan('locate-type', options, selector, resolved, expectedHashes, expectedSpans, {
+    entity: 'type'
+  });
+
+  const spanRange = computeAggregateSpan(resolved.map((record) => (record?.span ? record.span : null)));
+
+  const matches = resolved.map((record, index) => {
+    const span = record.span || {};
+    const spanPayload = {
+      start: typeof span.start === 'number' ? span.start : null,
+      end: typeof span.end === 'number' ? span.end : null,
+      length: typeof span.start === 'number' && typeof span.end === 'number' ? Math.max(0, span.end - span.start) : null,
+      byteStart: typeof span.byteStart === 'number' ? span.byteStart : null,
+      byteEnd: typeof span.byteEnd === 'number' ? span.byteEnd : null,
+      byteLength: typeof span.byteStart === 'number' && typeof span.byteEnd === 'number'
+        ? Math.max(0, span.byteEnd - span.byteStart)
+        : null
+    };
+
+    return {
+      name: record.canonicalName || record.name,
+      canonicalName: record.canonicalName || record.name,
+      kind: record.kind,
+      line: record.line,
+      column: record.column,
+      pathSignature: record.pathSignature,
+      hash: record.hash,
+      span: spanPayload
+    };
+  });
+
+  const payload = {
+    file: options.filePath,
+    selector,
+    summary: {
+      matchCount: matches.length,
+      spanRange
+    },
+    matches
+  };
+
+  if (plan) {
+    payload.plan = plan;
+  }
+
+  if (options.json) {
+    outputJson(payload);
+    return;
+  }
+
+  if (options.quiet) {
+    return;
+  }
+
+  const language = resolveLanguageContext(fmt);
+  const headerTitle = `${fmt.translateLabel('type', 'Type', { englishFirst: language.englishFirst })} ${fmt.translateLabel('locate', 'Locate', { englishFirst: language.englishFirst })}`.trim();
+  fmt.header(headerTitle);
+
+  const selectorLabel = fmt.translateLabel('selector', 'Selector', { englishFirst: language.englishFirst });
+  fmt.section(`${selectorLabel}: ${selector}`);
+
+  const columnLabels = {
+    index: fmt.translateLabel('index', 'Index', { englishFirst: language.englishFirst }),
+    name: fmt.translateLabel('name', 'Name', { englishFirst: language.englishFirst }),
+    kind: fmt.translateLabel('kind', 'Kind', { englishFirst: language.englishFirst }),
+    line: fmt.translateLabel('lines', 'Line', { englishFirst: language.englishFirst }),
+    column: fmt.translateLabel('columns', 'Column', { englishFirst: language.englishFirst }),
+    chars: fmt.translateLabel('chars', 'Chars', { englishFirst: language.englishFirst }),
+    bytes: fmt.translateLabel('byte_length', 'Bytes', { englishFirst: language.englishFirst }),
+    path: fmt.translateLabel('path_signature', 'Path', { englishFirst: language.englishFirst }),
+    hash: fmt.translateLabel('hash', 'Hash', { englishFirst: language.englishFirst })
+  };
+
+  const tableRows = matches.map((match, index) => {
+    const charSummary = formatSpanRange('chars', match.span.start, match.span.end, match.span.length);
+    const byteSummary = formatSpanRange('bytes', match.span.byteStart, match.span.byteEnd, match.span.byteLength);
+
+    return {
+      [columnLabels.index]: index + 1,
+      [columnLabels.name]: match.name,
+      [columnLabels.kind]: match.kind,
+      [columnLabels.line]: match.line,
+      [columnLabels.column]: match.column,
+      [columnLabels.chars]: charSummary || '-',
+      [columnLabels.bytes]: byteSummary || '-',
+      [columnLabels.path]: match.pathSignature,
+      [columnLabels.hash]: match.hash ? match.hash.slice(0, 12) : '-'
+    };
+  });
+
+  fmt.table(tableRows, {
+    columns: [
+      columnLabels.index,
+      columnLabels.name,
+      columnLabels.kind,
+      columnLabels.line,
+      columnLabels.column,
+      columnLabels.chars,
+      columnLabels.bytes,
+      columnLabels.path,
+      columnLabels.hash
+    ]
+  });
+
+  fmt.stat(fmt.translateLabel('matches', 'Matches', { englishFirst: language.englishFirst }), payload.summary.matchCount, 'number');
+  const formattedSpanRange = formatAggregateSpan(payload.summary.spanRange);
+  if (formattedSpanRange) {
+    const spanLabel = fmt.translateLabel('span', 'Span', { englishFirst: language.englishFirst });
+    const rangeLabel = fmt.translateLabel('range', 'Range', { englishFirst: language.englishFirst });
+    fmt.stat(`${spanLabel} ${rangeLabel}`, formattedSpanRange);
+  }
+  if (options.emitPlanPath) {
+    fmt.info(formatPlanOutput(fmt, options.emitPlanPath, language.englishFirst));
+  }
+  fmt.footer();
+}
+
 module.exports = {
   init,
   locateFunctions,
@@ -1830,6 +2352,9 @@ module.exports = {
   extractFunction,
   extractVariable,
   replaceVariable,
+  extractType,
+  replaceType,
+  locateTypes,
   replaceFunction,
   copyFunction,
   scanVariableTargets,

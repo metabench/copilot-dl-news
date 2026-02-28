@@ -5,7 +5,7 @@ description: Conventions and patterns for this repository
 - `src/core/crawler/` - Core crawling logic (NewsCrawler, state management, milestones)
 - `src/services/` - Business logic services (gap analyzers, pattern learning)
 - `src/data/` - Database access and data models
-- `src/ui/` - Server-side UI with jsgui3 controls
+- `src/ui/` - Server-side UI (STRICTLY `jsgui3-server` and `jsgui3-html`. Do NOT use React, Vue, or Express here).
 - `tools/` - CLI tools and utilities
 - `docs/` - Documentation and architecture diagrams (NOT tmp/)
 
@@ -21,6 +21,7 @@ description: Conventions and patterns for this repository
 - Run with `npm test`
 
 ## Key Patterns
+- **UI Platform:** `jsgui3` is the mandatory UI framework for all visuals and admin interfaces. 
 - Dependency injection for major components
 - Event-driven communication between crawler subsystems
 - SQLite for local development, Postgres option for production

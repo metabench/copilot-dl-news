@@ -36,13 +36,13 @@ class UnifiedShell extends Control {
     const layoutStyles = buildStyles({ sidebarWidth: 260, theme: 'dark' });
     const shellStyles = this._buildShellStyles();
     const clientScript = this._buildClientScript();
-    
+
     // Group apps by category
     const groupedApps = this._groupByCategory();
-    
+
     // Build navigation HTML
     const navHtml = this._buildNavigation(groupedApps);
-    
+
     // Build app containers (all rendered, only active visible)
     const appContainersHtml = this._buildAppContainers();
 
@@ -94,18 +94,18 @@ class UnifiedShell extends Control {
   _buildNavigation(groupedApps) {
     const categoryOrder = ['main', 'crawler', 'admin', 'analytics', 'dev'];
     let html = '<nav class="shell-nav">';
-    
+
     for (const catId of categoryOrder) {
       const apps = groupedApps[catId];
       if (!apps || apps.length === 0) continue;
-      
+
       const catMeta = CATEGORIES[catId] || { label: catId, icon: '📁' };
-      
+
       // Category header (except for 'main')
       if (catId !== 'main') {
         html += `<div class="nav-category">${catMeta.icon} ${catMeta.label}</div>`;
       }
-      
+
       // Nav items
       for (const app of apps) {
         const isActive = app.id === this.activeAppId;
@@ -122,21 +122,21 @@ class UnifiedShell extends Control {
         `;
       }
     }
-    
+
     html += '</nav>';
     return html;
   }
 
   _buildAppContainers() {
     let html = '';
-    
+
     for (const app of this.subApps) {
       const isActive = app.id === this.activeAppId;
       const visibilityClass = isActive ? '' : ' app-container--hidden';
       // Note: We do NOT pre-render sub-app HTML server-side.
       // The active container starts with a loading placeholder and must be fetched client-side.
       const loadedAttr = '';
-      
+
       html += `
         <div class="app-container${visibilityClass}" 
              id="app-${app.id}" 
@@ -145,7 +145,7 @@ class UnifiedShell extends Control {
         </div>
       `;
     }
-    
+
     return html;
   }
 
@@ -761,6 +761,24 @@ class UnifiedShell extends Control {
             try {
               const summary = await fetchCrawlSummary();
               updateCrawlNavBadges(summary);
+              
+              // Update Dashboard Stat Cards if they exist
+              const activeCount = document.querySelector('[data-home-stat="activeCrawlJobs"]');
+              if (activeCount) activeCount.textContent = summary.activeJobs || '0';
+              
+              const errorCount = document.querySelector('[data-home-stat="errorsLast10m"]');
+              if (errorCount) errorCount.textContent = summary.errorsLast10m || '0';
+              
+              const alertBox = document.querySelector('[data-home-crawl-alert]');
+              const alertMsg = document.querySelector('[data-home-crawl-error-message]');
+              
+              if (summary.lastError && summary.lastError.message) {
+                if (alertBox) alertBox.style.display = 'block';
+                if (alertMsg) alertMsg.textContent = summary.lastError.message;
+              } else {
+                if (alertBox) alertBox.style.display = 'none';
+              }
+              
               document.body.dataset.crawlNavBadgeOk = 'true';
             } catch {
               // Leave the current badge state; no-op.

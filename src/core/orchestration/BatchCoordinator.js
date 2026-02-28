@@ -165,6 +165,8 @@ class BatchCoordinator {
       parentPlace: options.parentPlace,
       hierarchical: options.hierarchical,
       topics: options.topics,
+      confidenceMode: options.confidenceMode,
+      minConfidence: options.minConfidence,
       runId: options.runId
     };
   }

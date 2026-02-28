@@ -2,8 +2,33 @@ const { slugify } = require('../../tools/slugify');
 const { fetchUrl } = require('./utils/httpUtils');
 const { extractTitle } = require('./utils/domainUtils');
 const { createFetchRow } = require('./utils/dataUtils');
+const { getConfidenceConfig, scoreHubCandidate, applyConfidenceDecision } = require('./utils/hubConfidenceScorer');
 const { CRAWL_EVENT_TYPES, SEVERITY_LEVELS, createTelemetryEvent } = require('../../core/crawler/telemetry');
+const { PatternInferenceService, detectHomeCountry, generateCompoundSectionCandidates, COUNTRY_ALIASES } = require('news-db-pure-analysis');
 const dns = require('dns').promises;
+
+// Well-known probe countries used to bootstrap pattern detection on unknown domains
+const BOOTSTRAP_COUNTRIES = [
+  { name: 'Australia', slug: 'australia', code: 'AU' },
+  { name: 'France', slug: 'france', code: 'FR' },
+  { name: 'Japan', slug: 'japan', code: 'JP' },
+  { name: 'Brazil', slug: 'brazil', code: 'BR' },
+  { name: 'India', slug: 'india', code: 'IN' },
+  { name: 'Germany', slug: 'germany', code: 'DE' },
+  { name: 'Nigeria', slug: 'nigeria', code: 'NG' },
+  { name: 'Canada', slug: 'canada', code: 'CA' }
+];
+
+// Common URL patterns found across news websites
+const COMMON_HUB_PATTERNS = [
+  '/world/{slug}',
+  '/{slug}',
+  '/news/{slug}',
+  '/international/{slug}',
+  '/news/world/{slug}',
+  '/topics/{slug}',
+  '/location/{slug}'
+];
 
 class ActiveProbeProcessor {
   constructor() {
@@ -36,25 +61,35 @@ class ActiveProbeProcessor {
     // DNS Validation for Active Probe
     const normalized = domain.toLowerCase().trim();
     if (!/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(normalized)) {
-       throw new Error(`Invalid domain format: "${domain}"`);
+      throw new Error(`Invalid domain format: "${domain}"`);
     }
     try {
-        await dns.lookup(normalized);
+      await dns.lookup(normalized);
     } catch (err) {
-        if (err.code === 'ENOTFOUND') {
-          throw new Error(`Domain not resolved (DNS): "${domain}" - please check spelling or connectivity`);
-        }
-        throw new Error(`DNS lookup failed for "${domain}": ${err.message}`);
+      if (err.code === 'ENOTFOUND') {
+        throw new Error(`Domain not resolved (DNS): "${domain}" - please check spelling or connectivity`);
+      }
+      throw new Error(`DNS lookup failed for "${domain}": ${err.message}`);
     }
 
     const pattern = options.activePattern;
-    if (!pattern) throw new Error('activePattern is required for ActiveProbeProcessor');
+    if (!pattern) {
+      // No pattern specified — try auto-discover mode
+      logger.info(`[ActiveProbe] No pattern specified, entering auto-discover mode`);
+      return this.autoDiscover(options, deps);
+    }
 
     const runId = options.runId || `probe-${Date.now()}`;
     const summary = {
       domain,
       mode: 'active-probe',
       pattern,
+      confidenceMode: getConfidenceConfig(options).mode,
+      minConfidence: getConfidenceConfig(options).threshold,
+      confidenceScored: 0,
+      confidenceRejected: 0,
+      confidenceScoreTotal: 0,
+      confidenceAverage: 0,
       totalCandidates: 0,
       fetched: 0,
       valid: 0,
@@ -80,7 +115,7 @@ class ActiveProbeProcessor {
 
     const limit = options.limit || 0;
     logger.info(`[ActiveProbe] Limit: ${limit}, Options limit: ${options.limit}`);
-    
+
     // Determine language (default to 'en')
     const lang = options.lang || 'en';
     logger.info(`[ActiveProbe] Using language: "${lang}"`);
@@ -94,80 +129,80 @@ class ActiveProbeProcessor {
       // Resolve parent place constraint if provided (e.g. "Canada")
       let parentCountryCode = null;
       if (options.parentPlace) {
-         if (analyzers.country && typeof analyzers.country.getCountryByName === 'function') {
-            const c = analyzers.country.getCountryByName(options.parentPlace, lang);
-            if (c) {
-                parentCountryCode = c.code;
-                logger.info(`[ActiveProbe] Resolved parent place "${options.parentPlace}" to country code ${parentCountryCode}`);
-            } else {
-                logger.warn(`[ActiveProbe] Could not resolve parent place "${options.parentPlace}"`);
-            }
-         }
+        if (analyzers.country && typeof analyzers.country.getCountryByName === 'function') {
+          const c = analyzers.country.getCountryByName(options.parentPlace, lang);
+          if (c) {
+            parentCountryCode = c.code;
+            logger.info(`[ActiveProbe] Resolved parent place "${options.parentPlace}" to country code ${parentCountryCode}`);
+          } else {
+            logger.warn(`[ActiveProbe] Could not resolve parent place "${options.parentPlace}"`);
+          }
+        }
       }
 
       if (options.kinds.includes('country')) {
         // Use getTopCountries to prioritize major countries (using DB importance/population)
         const countries = analyzers.country.getTopCountries(300, lang);
-        
+
         let mapped = countries.map(c => ({
-            placeId: c.id ?? c.placeId ?? c.place_id ?? null,
-            kind: 'country',
-            name: c.name,
-            code: c.code,
-            slug: slugify(c.name),
-            importance: c.importance
+          placeId: c.id ?? c.placeId ?? c.place_id ?? null,
+          kind: 'country',
+          name: c.name,
+          code: c.code,
+          slug: slugify(c.name),
+          importance: c.importance
         }));
 
         // Boost priority codes to the top
         mapped.sort((a, b) => {
-            const aP = priorityCodes.includes(a.code);
-            const bP = priorityCodes.includes(b.code);
-            if (aP && !bP) return -1;
-            if (!aP && bP) return 1;
-            // Otherwise desc importance
-            return (b.importance || 0) - (a.importance || 0);
+          const aP = priorityCodes.includes(a.code);
+          const bP = priorityCodes.includes(b.code);
+          if (aP && !bP) return -1;
+          if (!aP && bP) return 1;
+          // Otherwise desc importance
+          return (b.importance || 0) - (a.importance || 0);
         });
 
         targets = targets.concat(mapped);
       }
 
       if (options.kinds.includes('region')) {
-         let regions = [];
-         if (parentCountryCode && typeof analyzers.region.getRegionsByCountry === 'function') {
-             regions = analyzers.region.getRegionsByCountry(parentCountryCode, 300, lang);
-         } else {
-             regions = analyzers.region.getTopRegions(300, lang);
-         }
+        let regions = [];
+        if (parentCountryCode && typeof analyzers.region.getRegionsByCountry === 'function') {
+          regions = analyzers.region.getRegionsByCountry(parentCountryCode, 300, lang);
+        } else {
+          regions = analyzers.region.getTopRegions(300, lang);
+        }
 
-         const mapped = regions.map(r => ({
-             placeId: r.id ?? r.placeId ?? r.place_id ?? null,
-             kind: 'region',
-             name: r.name,
-             code: r.code,
-             slug: slugify(r.name),
-             importance: r.importance,
-             countryCode: r.countryCode
-         }));
-         targets = targets.concat(mapped);
+        const mapped = regions.map(r => ({
+          placeId: r.id ?? r.placeId ?? r.place_id ?? null,
+          kind: 'region',
+          name: r.name,
+          code: r.code,
+          slug: slugify(r.name),
+          importance: r.importance,
+          countryCode: r.countryCode
+        }));
+        targets = targets.concat(mapped);
       }
 
       if (options.kinds.includes('city')) {
-         let cities = [];
-         if (parentCountryCode && typeof analyzers.city.getCitiesByCountry === 'function') {
-             cities = analyzers.city.getCitiesByCountry(parentCountryCode, 300, lang);
-         } else {
-             cities = analyzers.city.getTopCities(300, lang);
-         }
+        let cities = [];
+        if (parentCountryCode && typeof analyzers.city.getCitiesByCountry === 'function') {
+          cities = analyzers.city.getCitiesByCountry(parentCountryCode, 300, lang);
+        } else {
+          cities = analyzers.city.getTopCities(300, lang);
+        }
 
-         const mapped = cities.map(c => ({
-             placeId: c.id ?? c.placeId ?? c.place_id ?? null,
-             kind: 'city',
-             name: c.name,
-             slug: slugify(c.name),
-             importance: c.importance,
-             countryCode: c.countryCode
-         }));
-         targets = targets.concat(mapped);
+        const mapped = cities.map(c => ({
+          placeId: c.id ?? c.placeId ?? c.place_id ?? null,
+          kind: 'city',
+          name: c.name,
+          slug: slugify(c.name),
+          importance: c.importance,
+          countryCode: c.countryCode
+        }));
+        targets = targets.concat(mapped);
       }
 
       summary.totalCandidates = targets.length;
@@ -209,7 +244,7 @@ class ActiveProbeProcessor {
   async _processTarget(target, pattern, domain, options, deps, summary, emitTelemetry) {
     const { fetchFn, queries, validator, logger, stores } = deps;
     const scheme = options.scheme || 'https';
-    
+
     // Construct URL
     let path = pattern
       .replace('{slug}', target.slug)
@@ -240,24 +275,24 @@ class ActiveProbeProcessor {
       // Record fetch if recorder is available
       if (stores?.fetchRecorder?.record) {
         try {
-           stores.fetchRecorder.record(fetchRow); 
+          stores.fetchRecorder.record(fetchRow);
         } catch (err) {
-           // Ignore recorder errors to prevent crash
+          // Ignore recorder errors to prevent crash
         }
       }
 
       if (!result.ok) {
         summary.failed++;
-        return; 
+        return;
       }
 
       // Validate
       const pageTitle = extractTitle(result.body) || target.name;
-      
+
       let validation = { isValid: false, reason: 'links' };
       try {
         if (validator && typeof validator.validatePlaceHub === 'function') {
-           validation = validator.validatePlaceHub(pageTitle, url);
+          validation = validator.validatePlaceHub(pageTitle, url);
         }
       } catch (err) {
         // Fallback if validator fails (e.g. DB schema mismatch)
@@ -267,59 +302,85 @@ class ActiveProbeProcessor {
         const titleLower = pageTitle.toLowerCase();
         const placeLower = target.name.toLowerCase();
         const isValid = titleLower.includes(placeLower);
-        validation = { 
-            isValid, 
-            reason: isValid ? 'probe-fallback-ok' : 'probe-fallback-title-mismatch',
-            confidence: isValid ? 0.6 : 0.0
+        validation = {
+          isValid,
+          reason: isValid ? 'probe-fallback-ok' : 'probe-fallback-title-mismatch',
+          confidence: isValid ? 0.6 : 0.0
         };
       }
-      
+
       // If no validator was present, we still need basic validation
       if (!validation.isValid && validation.reason === 'links') {
-          // Check title match as fallback
-          const titleLower = pageTitle.toLowerCase();
-          const placeLower = target.name.toLowerCase();
-           if (titleLower.includes(placeLower)) {
-               validation = { isValid: true, reason: 'title-match', confidence: 0.7 };
-           } else {
-             logger.info(`[ActiveProbe] Title mismatch for ${url}. Title: "${pageTitle}", Target: "${target.name}"`);
-           }
+        // Check title match as fallback
+        const titleLower = pageTitle.toLowerCase();
+        const placeLower = target.name.toLowerCase();
+        if (titleLower.includes(placeLower)) {
+          validation = { isValid: true, reason: 'title-match', confidence: 0.7 };
+        } else {
+          logger.info(`[ActiveProbe] Title mismatch for ${url}. Title: "${pageTitle}", Target: "${target.name}"`);
+        }
       } else if (!validation.isValid) {
-         logger.info(`[ActiveProbe] Invalid ${url}: ${validation.reason}`);
+        logger.info(`[ActiveProbe] Invalid ${url}: ${validation.reason}`);
       }
 
-      if (validation.isValid) {
+      const confidenceConfig = getConfidenceConfig(options);
+      const confidenceAssessment = scoreHubCandidate({
+        validation,
+        predictionSource: null,
+        title: pageTitle,
+        place: { name: target.name },
+        topic: null,
+        httpStatus: result.status
+      });
+      const confidenceDecision = applyConfidenceDecision({
+        validation,
+        assessment: confidenceAssessment,
+        config: confidenceConfig
+      });
+      summary.confidenceScored += 1;
+      summary.confidenceScoreTotal += confidenceAssessment.score;
+      summary.confidenceAverage = summary.confidenceScored > 0
+        ? summary.confidenceScoreTotal / summary.confidenceScored
+        : 0;
+      if (confidenceDecision.rejectedByConfidence) {
+        summary.confidenceRejected += 1;
+      }
+
+      if (confidenceDecision.isValid) {
         summary.valid++;
         summary.candidates.push({
-            url,
-            place_slug: target.slug, // guess-place-hubs expects snake_case for CLI
-            exists: true, // indicates it was found/validated
-            status: 'validated'
+          url,
+          place_slug: target.slug, // guess-place-hubs expects snake_case for CLI
+          exists: true, // indicates it was found/validated
+          status: 'validated',
+          confidenceScore: confidenceAssessment.score,
+          confidenceBand: confidenceAssessment.band,
+          confidenceMode: confidenceConfig.mode
         });
-        
+
         emitTelemetry(CRAWL_EVENT_TYPES.PLACE_HUB_DETERMINATION, {
-            domain, url, determination: { accepted: true, reason: 'active-probe' }
+          domain, url, determination: { accepted: true, reason: 'active-probe' }
         });
 
         if (options.apply) {
-             const packet = {
-                url,
-                domain,
-                placeSlug: target.slug,
-                placeKind: target.kind,
-                title: pageTitle,
-                evidence: JSON.stringify({ source: 'active-probe', pattern })
-                // nav/article links counts? 
-             };
-             // Upsert
-             const existing = queries.getPlaceHub(domain, url);
-             if (existing) {
-                 queries.updatePlaceHub(packet);
-                 summary.updated++;
-             } else {
-                 queries.insertPlaceHub(packet);
-                 summary.inserted++;
-             }
+          const packet = {
+            url,
+            domain,
+            placeSlug: target.slug,
+            placeKind: target.kind,
+            title: pageTitle,
+            evidence: JSON.stringify({ source: 'active-probe', pattern })
+            // nav/article links counts? 
+          };
+          // Upsert
+          const existing = queries.getPlaceHub(domain, url);
+          if (existing) {
+            queries.updatePlaceHub(packet);
+            summary.updated++;
+          } else {
+            queries.insertPlaceHub(packet);
+            summary.inserted++;
+          }
         }
       } else {
         summary.failed++;
@@ -329,6 +390,202 @@ class ActiveProbeProcessor {
       summary.errors++;
       logger.warn(`[ActiveProbe] Failed ${url}: ${err.message}`);
     }
+  }
+
+  /**
+   * Auto-discover country hub patterns for an unknown domain.
+   * 
+   * Strategy:
+   * 1. Check if we have existing URL data in the DB for this domain
+   *    - If yes, use PatternInferenceService to infer patterns
+   * 2. If no DB data (or inference returns nothing), bootstrap:
+   *    - Probe a small set of well-known countries against common patterns
+   *    - Any pattern that gets multiple 200s is likely a valid hub structure
+   * 3. Run full active-probe with each validated pattern
+   *
+   * @param {Object} options
+   * @param {Object} deps
+   * @returns {Promise<Object>} Combined summary
+   */
+  async autoDiscover(options = {}, deps = {}) {
+    const { logger, db } = deps;
+    const domain = options.domain;
+    const scheme = options.scheme || 'https';
+
+    logger.info(`[AutoDiscover] Starting pattern detection for ${domain}`);
+
+    // Phase 1: Try to infer patterns from existing DB data
+    let inferredPatterns = [];
+    try {
+      if (db) {
+        const rows = db.prepare('SELECT url FROM urls WHERE host = ? LIMIT 20000').all(domain);
+        if (rows.length > 0) {
+          const paths = rows.map(r => {
+            try { return new URL(r.url).pathname; } catch { return ''; }
+          }).filter(Boolean);
+
+          const countries = db.prepare(`
+            SELECT pn.name as title
+            FROM places p
+            JOIN place_names pn ON pn.place_id = p.id
+            WHERE p.kind='country' AND pn.lang='en'
+          `).all();
+          const slugs = countries.map(c => c.title);
+
+          inferredPatterns = PatternInferenceService.inferCountryHubPatterns(paths, slugs);
+          if (inferredPatterns.length > 0) {
+            logger.info(`[AutoDiscover] Inferred ${inferredPatterns.length} patterns from ${rows.length} existing URLs:`);
+            inferredPatterns.forEach(p => logger.info(`  ${p.pattern} (${p.count} matches, weight ${p.weight})`));
+          } else {
+            logger.info(`[AutoDiscover] No patterns inferred from ${rows.length} existing URLs`);
+          }
+        } else {
+          logger.info(`[AutoDiscover] No existing URLs found for ${domain}`);
+        }
+      }
+    } catch (e) {
+      logger.warn(`[AutoDiscover] Pattern inference failed: ${e.message}`);
+    }
+
+    // Phase 2: If no inferred patterns, bootstrap by probing common patterns
+    let patternsToUse = inferredPatterns.map(p => p.pattern);
+
+    if (patternsToUse.length === 0) {
+      logger.info(`[AutoDiscover] Bootstrapping: probing ${BOOTSTRAP_COUNTRIES.length} countries against ${COMMON_HUB_PATTERNS.length} common patterns`);
+
+      const patternHits = new Map();
+
+      for (const pattern of COMMON_HUB_PATTERNS) {
+        let hits = 0;
+        for (const country of BOOTSTRAP_COUNTRIES) {
+          const path = pattern.replace('{slug}', country.slug);
+          const url = `${scheme}://${domain}${path}`;
+
+          try {
+            const result = await fetchUrl(url, deps.fetchFn, {
+              logger: { info: () => { }, warn: () => { }, error: () => { } },
+              timeoutMs: 10000
+            });
+            if (result.ok) {
+              hits++;
+              logger.info(`[AutoDiscover] ✓ ${url} -> HTTP ${result.status}`);
+            }
+          } catch {
+            // Network error — skip
+          }
+
+          // Short-circuit: if we got 3+ hits, this pattern is confirmed
+          if (hits >= 3) break;
+        }
+
+        if (hits >= 2) {
+          patternHits.set(pattern, hits);
+          logger.info(`[AutoDiscover] Pattern "${pattern}" validated with ${hits}/${BOOTSTRAP_COUNTRIES.length} hits`);
+        }
+      }
+
+      patternsToUse = Array.from(patternHits.keys());
+
+      if (patternsToUse.length === 0) {
+        logger.warn(`[AutoDiscover] No valid patterns found. The domain may not use standard country hub structures.`);
+        return {
+          domain,
+          mode: 'auto-discover',
+          status: 'no-patterns-found',
+          totalCandidates: 0,
+          fetched: 0,
+          valid: 0,
+          candidates: []
+        };
+      }
+    }
+
+    const allCandidates = [];
+
+    // Phase 2.5: Home country + compound section probing
+    // Uses analysis module to generate candidates based on TLD detection
+    const { paths: compoundPaths, homeCountryCode } = generateCompoundSectionCandidates(domain);
+    logger.info(`[AutoDiscover] Probing ${compoundPaths.length} compound section candidates${homeCountryCode ? ` (home country: ${homeCountryCode})` : ''}`);
+
+    for (const path of compoundPaths) {
+      const url = `${scheme}://${domain}${path}`;
+      try {
+        const result = await fetchUrl(url, deps.fetchFn, {
+          logger: { info: () => { }, warn: () => { }, error: () => { } },
+          timeoutMs: 10000
+        });
+        if (result.ok) {
+          const title = extractTitle(result.body) || '';
+          // Basic validation: the page should have a meaningful title, not just "404" or "Not Found"
+          const titleLower = title.toLowerCase();
+          if (titleLower.includes('not found') || titleLower.includes('error') || title.length < 3) {
+            continue; // soft 404
+          }
+          logger.info(`[AutoDiscover] ✓ Compound hub found: ${url} (title: "${title.slice(0, 60)}")`);
+          allCandidates.push({
+            url,
+            place_slug: path.replace('/', '').replace(/-news$|-politics$|-sport$|-opinion$|-business$/, ''),
+            exists: true,
+            status: 'validated',
+            strategy: homeCountryCode ? 'home-country' : 'compound-section',
+            confidenceScore: 0.85,
+            confidenceBand: 'high',
+            confidenceMode: 'auto-discover'
+          });
+        }
+      } catch {
+        // Skip network errors
+      }
+    }
+
+    // Phase 3: Run active probe with each validated pattern
+    logger.info(`[AutoDiscover] Running active probe with ${patternsToUse.length} pattern(s): ${patternsToUse.join(', ')}`);
+
+    let totalFetched = 0;
+    let totalValid = 0;
+    const patternResults = [];
+
+    for (const pattern of patternsToUse) {
+      logger.info(`[AutoDiscover] === Probing pattern: ${pattern} ===`);
+      try {
+        const probeOptions = {
+          ...options,
+          activePattern: pattern,
+          mode: 'active-probe'
+        };
+        const result = await this.processDomain(probeOptions, deps);
+        totalFetched += result.fetched || 0;
+        totalValid += result.valid || 0;
+        if (result.candidates) {
+          allCandidates.push(...result.candidates);
+        }
+        patternResults.push({ pattern, fetched: result.fetched, valid: result.valid });
+      } catch (err) {
+        logger.warn(`[AutoDiscover] Pattern "${pattern}" failed: ${err.message}`);
+        patternResults.push({ pattern, error: err.message });
+      }
+    }
+
+    // Deduplicate candidates by URL
+    const seen = new Set();
+    const uniqueCandidates = allCandidates.filter(c => {
+      if (seen.has(c.url)) return false;
+      seen.add(c.url);
+      return true;
+    });
+
+    logger.info(`[AutoDiscover] Complete: ${uniqueCandidates.length} unique hubs found across ${patternsToUse.length} patterns`);
+
+    return {
+      domain,
+      mode: 'auto-discover',
+      patternsUsed: patternsToUse,
+      patternResults,
+      totalCandidates: uniqueCandidates.length,
+      fetched: totalFetched,
+      valid: totalValid,
+      candidates: uniqueCandidates
+    };
   }
 
   /**
@@ -351,9 +608,9 @@ class ActiveProbeProcessor {
         .replace('{slug}', target.slug)
         .replace('{code}', target.code ? target.code.toLowerCase() : '')
         .replace('{name}', target.name);
-      
+
       if (!path.startsWith('/')) path = '/' + path;
-      
+
       return {
         url: `${scheme}://${domain}${path}`,
         target,  // Store target for later processing
@@ -409,15 +666,15 @@ class ActiveProbeProcessor {
 
         // outcome === 'fetched' — use batch validation or our own
         const pageTitle = batchValidation?.pageTitle || getResult?.title || candidate.placeName;
-        
+
         // Use batch processor's validation (checks for >=10 links)
         let isValid = batchValidation?.isValid || false;
         let validationReason = 'links';
-        
+
         // Also check title match as secondary validation
         const titleLower = (pageTitle || '').toLowerCase();
         const placeLower = candidate.placeName.toLowerCase();
-        
+
         if (titleLower.includes(placeLower)) {
           isValid = true;
           validationReason = 'title-match';
@@ -426,18 +683,53 @@ class ActiveProbeProcessor {
           validationReason = 'has-10-links';
         }
 
-        if (isValid) {
+        const confidenceConfig = getConfidenceConfig(options);
+        const confidenceAssessment = scoreHubCandidate({
+          validation: {
+            isValid,
+            confidence: batchValidation?.confidence || null,
+            linkCount: batchValidation?.linkCount || 0,
+            pageTitle,
+            reason: validationReason
+          },
+          predictionSource: null,
+          title: pageTitle,
+          place: { name: candidate.placeName },
+          topic: null,
+          httpStatus: getResult?.status
+        });
+        const confidenceDecision = applyConfidenceDecision({
+          validation: {
+            isValid,
+            reason: validationReason
+          },
+          assessment: confidenceAssessment,
+          config: confidenceConfig
+        });
+        summary.confidenceScored += 1;
+        summary.confidenceScoreTotal += confidenceAssessment.score;
+        summary.confidenceAverage = summary.confidenceScored > 0
+          ? summary.confidenceScoreTotal / summary.confidenceScored
+          : 0;
+        if (confidenceDecision.rejectedByConfidence) {
+          summary.confidenceRejected += 1;
+        }
+
+        if (confidenceDecision.isValid) {
           summary.valid++;
           summary.candidates.push({
             url,
             place_slug: target.slug,
             exists: true,
-            status: 'validated'
+            status: 'validated',
+            confidenceScore: confidenceAssessment.score,
+            confidenceBand: confidenceAssessment.band,
+            confidenceMode: confidenceConfig.mode
           });
 
           emitTelemetry(CRAWL_EVENT_TYPES.PLACE_HUB_DETERMINATION, {
-            domain, 
-            url, 
+            domain,
+            url,
             determination: { accepted: true, reason: 'active-probe-batch', validationReason }
           });
 
@@ -450,7 +742,7 @@ class ActiveProbeProcessor {
               title: pageTitle,
               evidence: JSON.stringify({ source: 'active-probe-batch', pattern, links: batchValidation?.linkCount })
             };
-            
+
             const existing = queries.getPlaceHub(domain, url);
             if (existing) {
               queries.updatePlaceHub(packet);
@@ -469,7 +761,7 @@ class ActiveProbeProcessor {
     } catch (err) {
       logger.error(`[ActiveProbe] Batch processing failed: ${err.message}`);
       summary.errors++;
-      
+
       // Fall back to sequential processing
       logger.info(`[ActiveProbe] Falling back to sequential processing`);
       for (const target of targets) {

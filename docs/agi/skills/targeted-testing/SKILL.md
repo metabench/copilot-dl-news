@@ -19,6 +19,12 @@ description: Pick and run the smallest correct validation step (checks → focus
 
 ## Procedure
 
+0. **Require smoke test** — the cheapest possible validation. Before running any test suite, verify the module loads without errors:
+   ```bash
+   node -e "require('./path/to/module'); console.log('OK')"
+   ```
+   This catches missing imports, syntax errors, and circular dependencies in <1 second. Especially valuable after decomposing a monolith into smaller modules — smoke-test each extracted module individually.
+
 1. Prefer a local check script first (fast, deterministic, exits cleanly).
 2. Then run the smallest Jest suite by path.
 3. Only then widen to broader suites if needed.
@@ -43,3 +49,4 @@ Ask for dedicated research if:
 
 - Testing quick reference: `docs/TESTING_QUICK_REFERENCE.md`
 - Validation ladder guidance: `AGENTS.md`
+- WebSocket upgrade skill: `docs/agi/skills/websocket-upgrade/SKILL.md`

@@ -5,6 +5,10 @@ description: "Use when you need the WLILO look (White Leather + Industrial Luxur
 
 # Skill: WLILO Design System (White Leather + Industrial Luxury Obsidian)
 
+## Triggers
+
+- "WLILO", "white leather", "industrial luxury", "obsidian", "design system", "palette", "theme tokens", "UI chrome"
+
 ## WLILO acronym
 
 WLILO = **White Leather + Industrial Luxury Obsidian**.
@@ -80,6 +84,11 @@ After finishing a WLILO-related task:
   - `docs/agi/PATTERNS.md` (preferred) or `docs/agi/LESSONS.md`
 - If you discovered a repeatable workflow, update this Skill (tight + SOP-focused).
 - Capture evidence commands in the active session’s `WORKING_NOTES.md`.
+
+## Anti-Patterns to Avoid
+
+- **Freestyling Colors**: Using hardcoded hex values (`#fff`, `#000`) instead of the `--wlilo-*` CSS variables.
+- **Overcrowding**: Putting too many obsidian panels inside each other, destroying the "white leather" negative space.
 
 ## References
 

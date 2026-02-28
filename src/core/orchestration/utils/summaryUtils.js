@@ -38,6 +38,10 @@ function createBatchSummary(domainLabel, totalDomains) {
     cached: 0,
     validationSucceeded: 0,
     validationFailed: 0,
+    confidenceScored: 0,
+    confidenceRejected: 0,
+    confidenceScoreTotal: 0,
+    confidenceAverage: 0,
     diffPreview: {
       inserted: [],
       updated: []
@@ -82,6 +86,12 @@ function aggregateSummaryInto(aggregate, domainSummary, entry) {
   aggregate.cached += domainSummary.cached || 0;
   aggregate.validationSucceeded += domainSummary.validationSucceeded || 0;
   aggregate.validationFailed += domainSummary.validationFailed || 0;
+  aggregate.confidenceScored += domainSummary.confidenceScored || 0;
+  aggregate.confidenceRejected += domainSummary.confidenceRejected || 0;
+  aggregate.confidenceScoreTotal += domainSummary.confidenceScoreTotal || 0;
+  aggregate.confidenceAverage = aggregate.confidenceScored > 0
+    ? aggregate.confidenceScoreTotal / aggregate.confidenceScored
+    : 0;
 
   // Aggregate diff preview
   if (domainSummary.diffPreview) {

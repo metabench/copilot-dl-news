@@ -212,3 +212,9 @@
 
 ## 2026-02-22
 - Mushroom Kart 3D: Built autonomous development infrastructure — Vitest test suite (34 tests), AGENTS.md, 3 agent workflows (physics-tuning, add-game-feature, track-tuning), design-targets.ts with numeric quality gates, and CI pipeline. Key insight: simulation scripts that produce data dumps are NOT tests — agents need binary pass/fail assertions to iterate autonomously. PlaneGeometry doesn't raycast reliably in headless Three.js — use BoxGeometry for ground planes in tests.
+
+## 2026-02-25
+- Hub discovery quality improves most when candidate selection uses a composite confidence score and closes the loop by feeding validated outcomes back into pattern priors; binary link-count thresholds alone plateau quickly on heterogeneous site templates.
+
+## 2026-02-27
+- **Probe→Confirm→Expand pattern for discovery:** When discovering URL patterns on unknown sites, test with a single well-chosen probe (Jamaica: single word, Latin chars, not top news) against all candidate patterns (~31 HEAD requests), confirm with 2-3 more countries + a nonsense-slug false-positive check (~5 requests), then expand only the working pattern to all targets (~200 requests). Total: ~236 requests vs 6,200 brute-force. This pattern applies to any N×M discovery problem: collapse it by fixing one variable and varying the other.

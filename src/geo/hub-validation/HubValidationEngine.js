@@ -70,9 +70,11 @@ class HubValidationEngine {
     }
 
     // Check 3: Does the title contain news-specific indicators?
+    // Hub landing pages commonly have boilerplate like "Today's latest from..." or "Breaking news"
+    // so we only reject when the indicator appears as the PRIMARY content, not in a suffix
     const titleLower = title.toLowerCase();
     for (const indicator of this.newsIndicators) {
-      if (titleLower.includes(indicator) && !titleLower.startsWith('latest ') && !titleLower.includes(' news')) {
+      if (titleLower.includes(indicator) && !this._isBoilerplateIndicator(titleLower, indicator)) {
         return { isValid: false, reason: `Title contains news indicator: "${indicator}"`, placeName: null };
       }
     }
@@ -231,7 +233,7 @@ class HubValidationEngine {
     // Check 3: Does the title contain news-specific indicators that would disqualify it?
     const titleLower = title.toLowerCase();
     for (const indicator of this.newsIndicators) {
-      if (titleLower.includes(indicator) && !titleLower.startsWith('latest ') && !titleLower.includes(' news')) {
+      if (titleLower.includes(indicator) && !this._isBoilerplateIndicator(titleLower, indicator)) {
         return {
           isValid: false,
           reason: `Title contains news indicator: "${indicator}"`,
@@ -429,7 +431,7 @@ class HubValidationEngine {
     // Check 2: Does the title contain news-specific indicators?
     const titleLower = title.toLowerCase();
     for (const indicator of this.newsIndicators) {
-      if (titleLower.includes(indicator) && !titleLower.startsWith('latest ') && !titleLower.includes(' news')) {
+      if (titleLower.includes(indicator) && !this._isBoilerplateIndicator(titleLower, indicator)) {
         return {
           isValid: false,
           reason: `Title contains news indicator: "${indicator}"`,
@@ -565,6 +567,38 @@ class HubValidationEngine {
     }
 
     return null;
+  }
+
+  /**
+   * Check if a news indicator appears only in boilerplate suffix text.
+   * Hub pages commonly have titles like "India | Today's latest from Al Jazeera"
+   * or "Australia news | Breaking news" — the indicator is in the boilerplate,
+   * not the primary content being classified.
+   * @param {string} titleLower - Lowercased title
+   * @param {string} indicator - News indicator to check
+   * @returns {boolean} True if the indicator is in boilerplate (should NOT be rejected)
+   */
+  _isBoilerplateIndicator(titleLower, indicator) {
+    // Always allow if title starts with 'latest' or contains ' news' (existing exceptions)
+    if (titleLower.startsWith('latest ') || titleLower.includes(' news')) return true;
+    // Allow if indicator appears after a pipe separator (boilerplate suffix)
+    const pipeIdx = titleLower.indexOf('|');
+    if (pipeIdx !== -1) {
+      const beforePipe = titleLower.slice(0, pipeIdx);
+      if (!beforePipe.includes(indicator)) return true; // indicator only in suffix
+    }
+    // Allow if indicator appears in common boilerplate phrases
+    const boilerplatePhrases = [
+      "today's latest",
+      'latest from',
+      'latest news',
+      'breaking news',
+      'top stories'
+    ];
+    for (const phrase of boilerplatePhrases) {
+      if (titleLower.includes(phrase)) return true;
+    }
+    return false;
   }
 }
 

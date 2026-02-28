@@ -5,6 +5,10 @@ description: "Use when you need SVGs with selectable/customisable appearance: mu
 
 # Skill: SVG Theme System (Selectable + Customisable)
 
+## Triggers
+
+- "svg", "theme", "theming", "tokens", "style variants", "WLILO", "obsidian", "white-leather", "palettes"
+
 ## Scope
 
 This Skill is about making SVG output:
@@ -86,6 +90,11 @@ When using agents to produce or modify SVGs:
 
 - `node tools/dev/svg-collisions.js <file> --strict` (pass: zero 🔴 HIGH)
 - `node tools/dev/svg-validate.js <file>` (pass: zero errors)
+
+## Anti-Patterns to Avoid
+
+- **Hardcoded Colors**: Writing `fill="#1e293b"` repeatedly across 50 rectangles instead of using `var(--svg-bg)`.
+- **Mixing Pipelines**: Trying to do runtime CSS variable theming on an SVG loaded via an `<img>` tag (it won't work in most browsers).
 
 ## Escalation / Research request
 

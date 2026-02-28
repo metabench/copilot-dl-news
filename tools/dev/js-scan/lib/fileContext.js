@@ -177,7 +177,21 @@ function buildFunctionRecord(fn, context) {
   };
 }
 
-function createFileRecord({ filePath, rootDir, source, ast, functions, mapper }) {
+function buildTypeRecord(t, context) {
+  const { source, mapper, filePath, relativePath } = context;
+  const snippet = extractCode(source, t.span, mapper);
+  return {
+    ...t,
+    filePath,
+    relativePath,
+    exported: Boolean(t.exportKind),
+    snippet,
+    snippetPreview: createSnippetPreview(snippet),
+    spanKey: createSpanKey(t.span)
+  };
+}
+
+function createFileRecord({ filePath, rootDir, source, ast, functions, types, mapper }) {
   const normalizedRelative = path.relative(rootDir, filePath).replace(/\\/g, '/');
   const totalLines = typeof source === 'string' ? source.split(/\r?\n/).length : 0;
   const records = Array.isArray(functions) ? functions.map((fn) => buildFunctionRecord(fn, {
@@ -196,6 +210,13 @@ function createFileRecord({ filePath, rootDir, source, ast, functions, mapper })
   const priority = detectPriority({ exports: exportCount, functions: functionCount }, entryPoint);
   const dependencies = collectDependencies(ast, source);
 
+  const typeRecords = Array.isArray(types) ? types.map((t) => buildTypeRecord(t, {
+    source,
+    mapper,
+    filePath,
+    relativePath: normalizedRelative
+  })) : [];
+
   return {
     filePath,
     relativePath: normalizedRelative,
@@ -206,12 +227,14 @@ function createFileRecord({ filePath, rootDir, source, ast, functions, mapper })
       lines: totalLines,
       functions: functionCount,
       classes: classCount,
-      exports: exportCount
+      exports: exportCount,
+      types: typeRecords.length
     },
     dependencies,
     source,
     mapper,
-    functions: records
+    functions: records,
+    types: typeRecords
   };
 }
 

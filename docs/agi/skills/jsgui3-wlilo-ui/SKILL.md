@@ -5,6 +5,10 @@ description: "Use when designing or polishing jsgui3 UIs in the WLILO style (Whi
 
 # Skill: jsgui3 WLILO UI Design (Tokens + Controls)
 
+## Triggers
+
+- "jsgui3 UI design", "WLILO UI", "dashboard styling", "table styling", "obsidian panels", "white leather"
+
 ## Scope
 
 Use this Skill to apply WLILO consistently to jsgui3 UIs:
@@ -79,11 +83,16 @@ Use icons consistently in buttons/links/toolbars.
 - Keep control counts lean; prefer rendering plain HTML for repeated rows/cells.
 - Lazy load / paginate / virtualize when lists exceed ~200 items.
 
-### 5) Validation ladder
+## Validation
 
 - If you changed a UI control’s markup: run its nearest `checks/*.check.js`.
 - If you changed client-side assets: run `npm run ui:client-build`.
 - If you changed behavior: run the smallest relevant Jest suite via `npm run test:by-path ...`.
+
+## Anti-Patterns to Avoid
+
+- **Inline Styling**: Writing raw `.style.background = '...'` in JavaScript instead of using stateful classes and CSS variables.
+- **Control Thrashing**: Creating thousands of standard DOM nodes via jsgui3 controls for simple table cells instead of raw HTML where appropriate.
 
 ## References
 

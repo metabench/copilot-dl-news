@@ -54,6 +54,80 @@
 
 ## Current Sessions
 
+### Session 2026-02-25: Hub Discovery & Mapping Review
+
+**Duration**: Active
+**Type**: Architecture Review
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Review current hub-page discovery and mapping logic, identify intelligence gaps, and define actionable improvements.
+
+**Location**: `docs/sessions/2026-02-25-hub-discovery-mapping-review/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-02-25-hub-discovery-mapping-review/INDEX.md)
+- 🗺️ [Plan](./2026-02-25-hub-discovery-mapping-review/PLAN.md)
+- 📝 [Working Notes](./2026-02-25-hub-discovery-mapping-review/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-02-25-hub-discovery-mapping-review/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-02-25-hub-discovery-mapping-review/FOLLOW_UPS.md)
+
+
+### Session 2026-02-25: Crawl Sync Reliability Hardening
+
+**Duration**: Active
+**Type**: Tooling Hardening
+**Completion**: ✅ Completed
+
+**Focus**:
+- Harden `v4-cli crawl-sync` for immediate/reliable startup with auto-recovery, retries, and detached rapid-sync.
+
+**Location**: `docs/sessions/2026-02-25-crawl-sync-reliability-hardening/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-02-25-crawl-sync-reliability-hardening/PLAN.md)
+- 📝 [Working Notes](./2026-02-25-crawl-sync-reliability-hardening/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-02-25-crawl-sync-reliability-hardening/SESSION_SUMMARY.md)
+
+
+### Session 2026-02-25: Geo Import + Geo Viewer Cesium Plan
+
+**Duration**: Active
+**Type**: Architecture Planning
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Design a comprehensive pluggable architecture plan to evolve Geo Import UI into Geo Import + Geo Viewer with CesiumJS integration
+
+**Location**: `docs/sessions/2026-02-25-geo-import-geo-viewer-cesium-plan/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-02-25-geo-import-geo-viewer-cesium-plan/INDEX.md)
+- 🗺️ [Plan](./2026-02-25-geo-import-geo-viewer-cesium-plan/PLAN.md)
+- 📝 [Working Notes](./2026-02-25-geo-import-geo-viewer-cesium-plan/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-02-25-geo-import-geo-viewer-cesium-plan/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-02-25-geo-import-geo-viewer-cesium-plan/FOLLOW_UPS.md)
+
+
+### Session 2026-02-25: jsgui3 UI Upgrade Review
+
+**Duration**: Active
+**Type**: Architecture Review
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Assess which UI subsystems most benefit from a rewritten/upgraded jsgui3 client+server stack
+
+**Location**: `docs/sessions/2026-02-25-jsgui3-ui-upgrade-review/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-02-25-jsgui3-ui-upgrade-review/INDEX.md)
+- 🗺️ [Plan](./2026-02-25-jsgui3-ui-upgrade-review/PLAN.md)
+- 📝 [Working Notes](./2026-02-25-jsgui3-ui-upgrade-review/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-02-25-jsgui3-ui-upgrade-review/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-02-25-jsgui3-ui-upgrade-review/FOLLOW_UPS.md)
+
+
 ### Session 2026-02-21: V4 Super Audit Local Throughput
 
 **Duration**: Active

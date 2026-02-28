@@ -5,6 +5,10 @@ description: Create or repair SVG diagrams without overlapping text/shapes. Use 
 
 # SVG Collisions (Repair + Validation)
 
+## Triggers
+
+- "svg", "overlap", "collisions", "diagrams", "WLILO", "layout repair"
+
 ## Scope
 
 - Detect overlaps/collisions in SVGs
@@ -29,6 +33,11 @@ description: Create or repair SVG diagrams without overlapping text/shapes. Use 
 Run:
 
 - `node tools/dev/svg-collisions.js <file> --strict`
+
+## Anti-Patterns to Avoid
+
+- **Ignoring Strict Mode**: Shipping an SVG that passes default validation but fails strict mode without explicit confirmation that the overlaps are intentional.
+- **Manual Nudging Sandbox**: Spending hours manually guessing `<g transform="translate(...)">` values instead of generating a clean layout via templates or collision scripts.
 
 ## Escalation / Research request
 

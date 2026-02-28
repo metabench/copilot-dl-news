@@ -9,13 +9,13 @@ function globToRegex(pattern) {
   if (!pattern || typeof pattern !== 'string') {
     return null;
   }
-  
+
   let regexStr = '^';
   let i = 0;
-  
+
   while (i < pattern.length) {
     const char = pattern[i];
-    
+
     if (char === '*') {
       if (pattern[i + 1] === '*') {
         regexStr += '.*';
@@ -35,9 +35,9 @@ function globToRegex(pattern) {
       i += 1;
     }
   }
-  
+
   regexStr += '$';
-  
+
   try {
     return new RegExp(regexStr, 'i');
   } catch (e) {
@@ -52,12 +52,12 @@ function matchesPattern(value, pattern) {
   if (!pattern) {
     return true;
   }
-  
+
   const regex = globToRegex(pattern);
   if (!regex) {
     return value.toLowerCase().includes(pattern.toLowerCase());
   }
-  
+
   return regex.test(value);
 }
 
@@ -146,21 +146,21 @@ function listFunctions(options, source, functions) {
 
   const matchesIncludeExclude = (fn) => {
     const primaryNames = [fn.name, fn.canonicalName].filter(Boolean);
-    
+
     if (matchPattern) {
       const matched = primaryNames.some((name) => matchesPattern(name, matchPattern));
       if (!matched) {
         return false;
       }
     }
-    
+
     if (excludePattern) {
       const excluded = primaryNames.some((name) => matchesPattern(name, excludePattern));
       if (excluded) {
         return false;
       }
     }
-    
+
     return true;
   };
 
@@ -182,7 +182,7 @@ function listFunctions(options, source, functions) {
   };
 
   const filtered = normalizedFilter ? functions.filter(matchesFilter) : functions.slice();
-  const patternFiltered = (matchPattern || excludePattern) 
+  const patternFiltered = (matchPattern || excludePattern)
     ? filtered.filter(matchesIncludeExclude)
     : filtered;
   const filteredRecords = patternFiltered.map(mapRecord);
@@ -616,21 +616,21 @@ function listConstructors(options, functionRecords, classMetadataMap) {
 
   const matchesIncludeExclude = (entry) => {
     const primaryNames = [entry.classInfo.name, entry.classInfo.canonicalName].filter(Boolean);
-    
+
     if (matchPattern) {
       const matched = primaryNames.some((name) => matchesPattern(name, matchPattern));
       if (!matched) {
         return false;
       }
     }
-    
+
     if (excludePattern) {
       const excluded = primaryNames.some((name) => matchesPattern(name, excludePattern));
       if (excluded) {
         return false;
       }
     }
-    
+
     return true;
   };
 
@@ -815,21 +815,21 @@ function listVariables(options, source, variables) {
 
   const matchesIncludeExclude = (variable) => {
     const primaryName = variable.name;
-    
+
     if (matchPattern) {
       const matched = matchesPattern(primaryName, matchPattern);
       if (!matched) {
         return false;
       }
     }
-    
+
     if (excludePattern) {
       const excluded = matchesPattern(primaryName, excludePattern);
       if (excluded) {
         return false;
       }
     }
-    
+
     return true;
   };
 
@@ -1130,7 +1130,7 @@ function searchTextMatches(options, source, functionRecords, variableRecords) {
   const matches = [];
   let truncated = false;
   const lineOffsets = buildLineIndex(source);
-  
+
   let searchRegex = null;
   if (options.fuzzy) {
     const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1171,14 +1171,14 @@ function searchTextMatches(options, source, functionRecords, variableRecords) {
 
       const functionGuard = functionOwner
         ? {
-            name: functionOwner.name,
-            canonicalName: functionOwner.canonicalName,
-            kind: functionOwner.kind,
-            line: functionOwner.line,
-            column: functionOwner.column,
-            pathSignature: functionOwner.pathSignature,
-            hash: functionOwner.hash
-          }
+          name: functionOwner.name,
+          canonicalName: functionOwner.canonicalName,
+          kind: functionOwner.kind,
+          line: functionOwner.line,
+          column: functionOwner.column,
+          pathSignature: functionOwner.pathSignature,
+          hash: functionOwner.hash
+        }
         : null;
 
       let variableGuard = null;
@@ -1558,8 +1558,8 @@ function outlineSymbols(options, source, functionRecords, variableRecords) {
     if (!Array.isArray(record.scopeChain)) {
       return true;
     }
-    return record.scopeChain.length === 0 || 
-           (record.scopeChain.length === 1 && ['exports', 'module.exports'].includes(record.scopeChain[0]));
+    return record.scopeChain.length === 0 ||
+      (record.scopeChain.length === 1 && ['exports', 'module.exports'].includes(record.scopeChain[0]));
   };
 
   const topLevelFunctions = functionRecords.filter(isTopLevel);
@@ -1629,12 +1629,163 @@ function outlineSymbols(options, source, functionRecords, variableRecords) {
   }
 }
 
+function listTypes(options, source, types) {
+  const { fmt, outputJson } = requireDeps();
+  const { filePath, json, quiet, filterText, matchPattern, excludePattern, includePaths } = options;
+  const normalizedFilter = filterText ? filterText.toLowerCase() : null;
+
+  const matchesFilter = (type) => {
+    if (!normalizedFilter) {
+      return true;
+    }
+
+    const haystacks = [
+      type.name,
+      type.canonicalName,
+      type.kind,
+      type.pathSignature,
+      type.hash
+    ];
+
+    return haystacks.some((value) => typeof value === 'string' && value.toLowerCase().includes(normalizedFilter));
+  };
+
+  const matchesIncludeExclude = (type) => {
+    const primaryNames = [type.name, type.canonicalName].filter(Boolean);
+    if (matchPattern) {
+      const matched = primaryNames.some((name) => matchesPattern(name, matchPattern));
+      if (!matched) return false;
+    }
+    if (excludePattern) {
+      const excluded = primaryNames.some((name) => matchesPattern(name, excludePattern));
+      if (excluded) return false;
+    }
+    return true;
+  };
+
+  const mapRecord = (type) => {
+    const byteLength = Math.max(0, (type.span?.end ?? 0) - (type.span?.start ?? 0));
+    return {
+      name: type.name,
+      canonicalName: type.canonicalName,
+      kind: type.kind,
+      line: type.line,
+      column: type.column,
+      pathSignature: type.pathSignature,
+      hash: type.hash,
+      byteLength
+    };
+  };
+
+  const filtered = normalizedFilter ? types.filter(matchesFilter) : types.slice();
+  const patternFiltered = (matchPattern || excludePattern) ? filtered.filter(matchesIncludeExclude) : filtered;
+  const filteredRecords = patternFiltered.map(mapRecord);
+
+  const payload = {
+    file: filePath,
+    filterText: filterText || null,
+    matchPattern: matchPattern || null,
+    excludePattern: excludePattern || null,
+    totalTypes: types.length,
+    matchedTypes: patternFiltered.length,
+    types: filteredRecords
+  };
+
+  if (json) {
+    outputJson(payload);
+    return;
+  }
+
+  if (!quiet) {
+    fmt.header('TypeScript Type Inventory');
+    if (types.length === 0) {
+      fmt.warn('No type declarations detected in the supplied file.');
+      return;
+    }
+
+    const filterMessages = [];
+    if (filterText) filterMessages.push(`Filter "${filterText}" matched ${filtered.length} types`);
+    if (matchPattern) filterMessages.push(`Match pattern "${matchPattern}" applied`);
+    if (excludePattern) filterMessages.push(`Exclude pattern "${excludePattern}" applied`);
+    if (filterMessages.length > 0) {
+      fmt.info(`${filterMessages.join(', ')} => ${patternFiltered.length} of ${types.length} total.`);
+    }
+
+    fmt.section('Detected Types');
+    if (patternFiltered.length === 0) {
+      fmt.warn('No types matched the current filters.');
+    } else {
+      const listStyle = resolveListOutputStyle(options);
+      const tableRows = filteredRecords.map((record, index) => {
+        const original = patternFiltered[index] || null;
+        const span = original && original.span ? original.span : null;
+        const charLength = span && typeof span.start === 'number' && typeof span.end === 'number'
+          ? Math.max(0, span.end - span.start)
+          : null;
+        const lineValue = Number.isFinite(original?.line) ? original.line : null;
+        const columnValue = Number.isFinite(original?.column) ? original.column : null;
+
+        const row = {
+          index: index + 1,
+          name: record.name,
+          hash: record.hash || '-',
+          kind: record.kind,
+          line: Number.isFinite(lineValue) ? lineValue : '-',
+          column: Number.isFinite(columnValue) ? columnValue : '-'
+        };
+
+        const byteLength = Number.isFinite(record.byteLength) ? record.byteLength : charLength ?? 0;
+        row.bytes = byteLength;
+        row.location = formatLocation(lineValue, columnValue);
+
+        if (includePaths) {
+          row.path = record.pathSignature || '-';
+        }
+
+        return row;
+      });
+
+      if (listStyle === 'dense') {
+        fmt.denseList(tableRows, {
+          labelFormatter: (row) => `${row.index}.`,
+          renderSegments: (row) => {
+            const segments = [
+              row.name,
+              row.kind ? `kind=${row.kind}` : null,
+              row.hash && row.hash !== '-' ? `hash=${row.hash}` : null,
+              `loc=${row.location}`,
+              `bytes=${row.bytes}`
+            ];
+            if (includePaths && row.path && row.path !== '-') {
+              segments.push(`path=${row.path}`);
+            }
+            return segments;
+          }
+        });
+      } else {
+        const columns = ['index', 'name', 'hash', 'kind', 'line', 'column', 'bytes'];
+        if (includePaths) {
+          columns.push('path');
+        }
+        fmt.table(tableRows, { columns });
+      }
+    }
+
+    fmt.stat('Total types', types.length, 'number');
+    if (filterText || matchPattern || excludePattern) {
+      fmt.stat('Matched types', patternFiltered.length, 'number');
+    }
+    fmt.footer();
+  }
+}
+
 module.exports = {
   init,
   listFunctions,
   scanFunctionTargets,
   listConstructors,
   listVariables,
+  listTypes,
   previewFunction,
   previewVariable,
   searchTextMatches,

@@ -64,6 +64,11 @@ screenshots/
 # Agent backup archives
 .github/agentbackups/
 
+# Local VS Code/playwright runtime artifacts
+.playwright-mcp/
+.jsgui3-server-cache/
+.process-registry.json
+
 # Analysis charts (generated outputs)
 build/analysis-charts/
 

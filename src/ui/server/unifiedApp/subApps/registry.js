@@ -61,15 +61,15 @@ function renderDemoPanel() {
   const html = `
     <div class="home-dashboard">
       ${renderPanelHero({
-        title: '🧪 Panel Demo',
-        description: 'This panel proves the unified shell activation seam works without relying on <code>&lt;script&gt;</code> execution.'
-      })}
+    title: '🧪 Panel Demo',
+    description: 'This panel proves the unified shell activation seam works without relying on <code>&lt;script&gt;</code> execution.'
+  })}
 
       ${renderStatsRow([
-        { value: '✓', label: 'Activation' },
-        { value: '0', label: 'Clicks' },
-        { value: '–', label: 'Last Ping' }
-      ])}
+    { value: '✓', label: 'Activation' },
+    { value: '0', label: 'Clicks' },
+    { value: '–', label: 'Last Ping' }
+  ])}
 
       <div class="panel-btn-row mt-24">
         <button data-panel-demo-action="ping" class="panel-btn panel-btn--default">
@@ -102,16 +102,16 @@ function renderMultiModalPanel() {
   const html = `
     <div class="home-dashboard">
       ${renderPanelHero({
-        title: '🔄 Multi-Modal Intelligent Crawl',
-        description: 'Continuous crawl with learning loops: download batches → analyze content → learn patterns → discover hubs → repeat.'
-      })}
+    title: '🔄 Multi-Modal Intelligent Crawl',
+    description: 'Continuous crawl with learning loops: download batches → analyze content → learn patterns → discover hubs → repeat.'
+  })}
 
       ${renderStatsRow([
-        { value: 'Idle', label: 'Current Phase', valueAttrs: { 'data-multimodal-stat': 'phase' } },
-        { value: '0', label: 'Batch #', valueAttrs: { 'data-multimodal-stat': 'batch' } },
-        { value: '0', label: 'Pages Downloaded', valueAttrs: { 'data-multimodal-stat': 'pages' } },
-        { value: '0', label: 'Patterns Learned', valueAttrs: { 'data-multimodal-stat': 'patterns' } }
-      ])}
+    { value: 'Idle', label: 'Current Phase', valueAttrs: { 'data-multimodal-stat': 'phase' } },
+    { value: '0', label: 'Batch #', valueAttrs: { 'data-multimodal-stat': 'batch' } },
+    { value: '0', label: 'Pages Downloaded', valueAttrs: { 'data-multimodal-stat': 'pages' } },
+    { value: '0', label: 'Patterns Learned', valueAttrs: { 'data-multimodal-stat': 'patterns' } }
+  ])}
 
       <div class="panel-section">
         <h3 class="panel-section__title">🎮 Control Panel</h3>
@@ -227,15 +227,15 @@ function renderDownloadsPanel() {
   const html = `
     <div class="home-dashboard">
       ${renderPanelHero({
-        title: '📥 Download Statistics',
-        description: 'Evidence-based download verification. All counts are queried directly from the database.'
-      })}
+    title: '📥 Download Statistics',
+    description: 'Evidence-based download verification. All counts are queried directly from the database.'
+  })}
 
       ${renderStatsRow([
-        { value: '–', label: 'Total Downloads', valueAttrs: { 'data-downloads-stat': 'total' } },
-        { value: '–', label: 'Verified (HTTP 200)', valueAttrs: { 'data-downloads-stat': 'verified' } },
-        { value: '–', label: 'Total Size', valueAttrs: { 'data-downloads-stat': 'bytes' } }
-      ])}
+    { value: '–', label: 'Total Downloads', valueAttrs: { 'data-downloads-stat': 'total' } },
+    { value: '–', label: 'Verified (HTTP 200)', valueAttrs: { 'data-downloads-stat': 'verified' } },
+    { value: '–', label: 'Total Size', valueAttrs: { 'data-downloads-stat': 'bytes' } }
+  ])}
 
       <div class="panel-section">
         <h3 class="panel-section__title">📊 50-Page Crawl Progress</h3>
@@ -305,9 +305,18 @@ function renderSearchExplorerPanel() {
 
 /**
  * Create the sub-app registry
+ * @param {Object} options Options including getDbRW
  * @returns {Array} Array of sub-app definitions
  */
-function createSubAppRegistry() {
+function createSubAppRegistry(options = {}) {
+  const getDb = () => {
+    if (options.getDbRW) {
+      const rw = options.getDbRW();
+      if (rw && rw.db) return rw.db;
+    }
+    return null;
+  };
+
   const apps = [
     // ─────────────────────────────────────────────────────────────
     // Home / Dashboard
@@ -319,17 +328,102 @@ function createSubAppRegistry() {
       category: 'main',
       description: 'System overview and quick actions',
       renderContent: async () => {
+        let totalArticles = '–';
+        let knownHubs = '–';
+        let domains = '–';
+        let recentRuns = [];
+
+        try {
+          const db = getDb();
+          if (db) {
+            totalArticles = db.prepare(`SELECT COUNT(*) as c FROM content_analysis`).get().c;
+            knownHubs = db.prepare(`SELECT COUNT(*) as c FROM classification_cache WHERE type = 'hub'`).get().c;
+            domains = db.prepare(`SELECT COUNT(*) as c FROM domain_registry`).get().c;
+
+            recentRuns = db.prepare(`
+              SELECT task_id, MIN(ts) as started_at, MAX(ts) as finished_at, MAX(seq) as max_seq
+              FROM task_events 
+              WHERE event_type IN ('crawl:start', 'crawl:started', 'crawl:complete', 'crawl:error')
+              GROUP BY task_id
+              ORDER BY started_at DESC
+              LIMIT 5
+            `).all();
+
+            // Format recent runs
+            for (let i = 0; i < recentRuns.length; i++) {
+              const r = recentRuns[i];
+              const startEvent = db.prepare(`SELECT payload FROM task_events WHERE task_id = ? AND event_type IN ('crawl:start', 'crawl:started') ORDER BY seq ASC LIMIT 1`).get(r.task_id);
+              let targetHost = 'Unknown';
+              if (startEvent && startEvent.payload) {
+                try {
+                  const config = JSON.parse(startEvent.payload);
+                  targetHost = config.startUrl || config.domain || r.task_id;
+                } catch (e) { targetHost = r.task_id; }
+              }
+              r.targetHost = targetHost;
+
+              const endEvent = db.prepare(`SELECT event_type FROM task_events WHERE task_id = ? ORDER BY seq DESC LIMIT 1`).get(r.task_id);
+              r.status = endEvent ? (endEvent.event_type === 'crawl:error' ? 'Failed' : (endEvent.event_type === 'crawl:complete' ? 'Complete' : 'Active')) : 'Unknown';
+
+              // Simple duration calculation
+              const startMs = new Date(r.started_at).getTime();
+              const endMs = new Date(r.finished_at).getTime();
+              const durSec = Math.round((endMs - startMs) / 1000);
+              r.duration = durSec > 60 ? Math.round(durSec / 60) + 'm ' + (durSec % 60) + 's' : durSec + 's';
+            }
+          }
+        } catch (e) {
+          console.error("Home dashdb error:", e);
+        }
+
+        let activityRows = recentRuns.map(r => `
+          <tr style="border-bottom: 1px solid rgba(139, 105, 20, 0.2);">
+            <td style="padding: 12px 16px; color: var(--gold); font-family: monospace;">${r.targetHost.replace(/^https?:\/\/(www\.)?/, '')}</td>
+            <td style="padding: 12px 16px; text-align: center;">${r.duration}</td>
+            <td style="padding: 12px 16px; text-align: right; color: ${r.status === 'Active' ? '#4ade80' : r.status === 'Failed' ? '#f87171' : 'var(--text-cream)'};">${r.status}</td>
+          </tr>
+        `).join('');
+
+        if (!activityRows) {
+          activityRows = `<tr><td colspan="3" style="padding: 24px; text-align: center; color: var(--text-muted);">No recent crawls found.</td></tr>`;
+        }
+
         return renderHomePanel(`
           <div class="home-dashboard">
             ${renderPanelHero({
-              title: '🎛️ Unified Control Center',
-              description: 'Welcome to the unified application shell. Select a sub-app from the sidebar to get started.'
-            })}
+          title: '🎛️ Unified Control Center',
+          description: 'Real-time overview of the Copilot Crawler ecosystem.'
+        })}
+            
             ${renderStatsRow([
-              { value: String(apps.length), label: 'Available Apps' },
-              { value: '–', label: 'Active Crawl Jobs', valueAttrs: { 'data-home-stat': 'activeCrawlJobs' } },
-              { value: '…', label: 'Crawl Health', valueAttrs: { 'data-home-stat': 'crawlHealth' } }
-            ])}
+          { value: totalArticles.toLocaleString(), label: 'Articles Indexed' },
+          { value: knownHubs.toLocaleString(), label: 'Known Hub Pages' },
+          { value: domains.toLocaleString(), label: 'Tracked Domains' }
+        ])}
+
+            <div style="margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+              <div>
+                ${renderStatsRow([
+          { value: '...', label: 'Active Crawls', valueAttrs: { 'data-home-stat': 'activeCrawlJobs' } },
+          { value: '...', label: 'Recent Errors (10m)', valueAttrs: { 'data-home-stat': 'errorsLast10m' } }
+        ])}
+              </div>
+              <div class="panel-card" style="padding: 0; overflow: hidden;">
+                <h3 style="padding: 16px; border-bottom: 1px solid var(--border-gold); margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Recent Crawl Activity</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px; text-align: left;">
+                  <thead>
+                    <tr style="background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border-gold);">
+                      <th style="padding: 12px 16px; font-weight: normal; color: var(--text-muted);">Target</th>
+                      <th style="padding: 12px 16px; font-weight: normal; color: var(--text-muted); text-align: center;">Duration</th>
+                      <th style="padding: 12px 16px; font-weight: normal; color: var(--text-muted); text-align: right;">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    \${activityRows}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
             <div class="home-alert" data-home-crawl-alert style="display:none;">
               <strong class="mr-8">Last crawl error</strong>
@@ -340,7 +434,7 @@ function createSubAppRegistry() {
         `);
       }
     },
-    
+
     // ─────────────────────────────────────────────────────────────
     // Crawler Operations
     // ─────────────────────────────────────────────────────────────
@@ -354,7 +448,7 @@ function createSubAppRegistry() {
         return renderIframeApp('/rate-limit', 'Rate Limits');
       }
     },
-    
+
     {
       id: 'crawl-observer',
       label: 'Crawl Observer',
@@ -431,7 +525,7 @@ function createSubAppRegistry() {
         return renderIframeApp('/crawl-strategies', 'Crawl Strategies');
       }
     },
-    
+
     {
       id: 'crawler-monitor',
       label: 'Crawler Monitor',
@@ -442,7 +536,7 @@ function createSubAppRegistry() {
         return renderPlaceholder('crawler-monitor', '📡 Crawler Monitor', 'Health and performance metrics');
       }
     },
-    
+
     // ─────────────────────────────────────────────────────────────
     // Administration
     // ─────────────────────────────────────────────────────────────
@@ -456,7 +550,7 @@ function createSubAppRegistry() {
         return renderIframeApp('/webhooks', 'Webhooks');
       }
     },
-    
+
     {
       id: 'plugins',
       label: 'Plugins',
@@ -467,7 +561,7 @@ function createSubAppRegistry() {
         return renderIframeApp('/plugins', 'Plugins');
       }
     },
-    
+
     {
       id: 'admin',
       label: 'Admin',
@@ -478,7 +572,7 @@ function createSubAppRegistry() {
         return renderPlaceholder('admin', '⚙️ Admin Dashboard', 'User management and system configuration');
       }
     },
-    
+
     // ─────────────────────────────────────────────────────────────
     // Data & Analytics
     // ─────────────────────────────────────────────────────────────
@@ -503,7 +597,7 @@ function createSubAppRegistry() {
         return renderSearchExplorerPanel();
       }
     },
-    
+
     {
       id: 'quality',
       label: 'Quality',
@@ -514,7 +608,7 @@ function createSubAppRegistry() {
         return renderIframeApp('/quality', 'Quality');
       }
     },
-    
+
     {
       id: 'analytics',
       label: 'Analytics',
@@ -558,7 +652,7 @@ function createSubAppRegistry() {
         return renderIframeApp('/topic-lists', 'Topic Lists');
       }
     },
-    
+
     {
       id: 'query-telemetry',
       label: 'Query Telemetry',
@@ -569,7 +663,7 @@ function createSubAppRegistry() {
         return renderIframeApp('/telemetry', 'Query Telemetry');
       }
     },
-    
+
     // ─────────────────────────────────────────────────────────────
     // Development Tools
     // ─────────────────────────────────────────────────────────────
@@ -616,7 +710,7 @@ function createSubAppRegistry() {
         return renderPlaceholder('decision-tree', '🌳 Decision Tree Viewer', 'Classification visualization');
       }
     },
-    
+
     {
       id: 'template-teacher',
       label: 'Template Teacher',
@@ -627,7 +721,7 @@ function createSubAppRegistry() {
         return renderPlaceholder('template-teacher', '🎓 Template Teacher', 'Extractor training UI');
       }
     },
-    
+
     {
       id: 'test-studio',
       label: 'Test Studio',

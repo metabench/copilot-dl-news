@@ -1,5 +1,6 @@
 ---
 description: "Endurance-first agent: turns suggestions into plans, docs, and validated implementation without stopping."
+tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'runSubagent', 'docs-memory/*']
 ---
 
 # 🔥 Endurance Brain 🔥

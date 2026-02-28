@@ -9,9 +9,11 @@ const {
 function getReplacementSource(options) {
   if (options.replacementCode) {
     let code = unescapeCodeString(options.replacementCode);
-    const validation = validateCodeSyntax(code, '<inline>');
-    if (!validation.valid) {
-      throw new Error(`Replacement produced invalid JavaScript: ${validation.error}`);
+    if (!options.replaceTypeSelector) {
+      const validation = validateCodeSyntax(code, '<inline>');
+      if (!validation.valid) {
+        throw new Error(`Replacement produced invalid JavaScript: ${validation.error}`);
+      }
     }
     return code;
   }

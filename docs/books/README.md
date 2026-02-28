@@ -34,6 +34,11 @@ This directory contains the authoritative "books" for the Copilot DL News archit
 **Location:** [2d-svg-spatial-reasoning](./2d-svg-spatial-reasoning/README.md)
 **Focus:** Algorithms for generating collision-free, semantic SVG diagrams.
 
+## 📘 Book 6: V5 Crawler Architecture Proposal
+**Status:** *Proposed*
+**Location:** [v5-crawler-architecture.md](./v5-crawler-architecture.md)
+**Focus:** High-throughput, asynchronous crawling via decoupled producer-consumer queues.
+
 ---
 
 ## Contribution Guide

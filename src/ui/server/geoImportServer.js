@@ -19,8 +19,10 @@ const fs = require('fs');
 
 const jsgui = require('jsgui3-html');
 const { GeoImportDashboard } = require('../controls/GeoImportDashboard');
+const { GeoViewerShell } = require('../controls/GeoViewerShell');
 const { DatabaseSelector } = require('../controls/DatabaseSelector');
 const { GeoImportStateManager, IMPORT_STAGES } = require('../../services/GeoImportStateManager');
+const { registerGeoViewerRoutes } = require('./geoViewer/routes/geoViewerRoutes');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Configuration
@@ -37,7 +39,7 @@ const {
   createGazetteerDatabase, 
   getDefaultGazetteerPath,
   initializeGazetteerSchema
-} = require('../../db/sqlite/gazetteer/v1');
+} = require('../../data/db/sqlite/gazetteer/v1');
 
 /**
  * Open or create a standalone gazetteer database
@@ -260,11 +262,17 @@ function createServer(options = {}) {
     db = opened.db;
     gazetteer = opened.gazetteer;
   }
-  
+
   const dataDir = options.dataDir || path.join(PROJECT_ROOT, 'data', 'geonames');
   
   // State manager (singleton for this server instance)
   const stateManager = new GeoImportStateManager({ db, dataDir });
+
+  registerGeoViewerRoutes(app, {
+    deterministic: true,
+    db,
+    geoImportStateManager: stateManager
+  });
   
   // SSE clients
   const sseClients = new Set();
@@ -522,6 +530,11 @@ function createServer(options = {}) {
   
   app.get('/', (req, res) => {
     const context = new jsgui.Page_Context();
+    const viewerMode = String(req.query.mode || '').toLowerCase() === 'viewer';
+    const viewerRuntime = {
+      requestedEngine: String(req.query.geoEngine || '').trim().toLowerCase() || null,
+      useCesium: req.query.geoCesium === '1' || req.query.geoCesium === 'true'
+    };
     
     // Get current state for initial render
     const state = stateManager.getState();
@@ -538,70 +551,86 @@ function createServer(options = {}) {
       dataDir: path.join(PROJECT_ROOT, 'data')
     });
     
-    // Create dashboard with current state
-    // Get file status from state
-    const geonamesSource = state.sources.geonames || {};
-    const fileStatus = geonamesSource.exists ? 'ready' : 'missing';
-    const fileSizeMB = geonamesSource.fileSize ? 
-      (geonamesSource.fileSize / 1024 / 1024).toFixed(1) + ' MB' : 'Not found';
-    
-    const dashboard = new GeoImportDashboard({
-      context,
-      importState: {
-        phase: state.status,
-        progress: state.progress,
-        currentDb: {
-          path: dbPath,
-          name: path.basename(dbPath),
-          places: currentDbStats.places,
-          names: currentDbStats.names
-        },
-        sources: {
-          geonames: {
-            id: 'geonames',
-            name: 'GeoNames',
-            emoji: '🌍',
-            status: fileStatus,
-            description: geonamesSource.exists 
-              ? `cities15000.txt (${fileSizeMB}): ~25,000 cities with population >15K`
-              : '⚠️ cities15000.txt not found - download required',
-            stats: { 
-              expected_cities: 25000, 
-              processed: state.stats.processed,
-              inserted: state.stats.inserted
-            },
-            downloadUrl: geonamesSource.downloadUrl
-          },
-          wikidata: {
-            id: 'wikidata',
-            name: 'Wikidata',
-            emoji: '📚',
-            status: 'pending',
-            description: 'SPARQL queries for metadata enrichment'
-          },
-          osm: {
-            id: 'osm',
-            name: 'OpenStreetMap',
-            emoji: '🗺️',
-            status: 'pending',
-            description: 'Local PostGIS database for boundaries'
-          }
-        },
-        logs: state.logs,
-        totals: {
-          places_before: currentDbStats.places || 0,
-          places_after: state.stats.inserted,
-          names_before: currentDbStats.names || 0,
-          names_after: state.stats.namesAdded
+    let viewControl;
+
+    if (viewerMode) {
+      viewControl = new GeoViewerShell({
+        context,
+        initialState: {
+          mode: 'viewer',
+          apiBase: '/api/geo-viewer',
+          viewerRuntime
         }
-      }
-    });
+      });
+    } else {
+      // Create dashboard with current state
+      const geonamesSource = state.sources.geonames || {};
+      const fileStatus = geonamesSource.exists ? 'ready' : 'missing';
+      const fileSizeMB = geonamesSource.fileSize ? 
+        (geonamesSource.fileSize / 1024 / 1024).toFixed(1) + ' MB' : 'Not found';
+      
+      viewControl = new GeoImportDashboard({
+        context,
+        importState: {
+          phase: state.status,
+          progress: state.progress,
+          currentDb: {
+            path: dbPath,
+            name: path.basename(dbPath),
+            places: currentDbStats.places,
+            names: currentDbStats.names
+          },
+          sources: {
+            geonames: {
+              id: 'geonames',
+              name: 'GeoNames',
+              emoji: '🌍',
+              status: fileStatus,
+              description: geonamesSource.exists 
+                ? `cities15000.txt (${fileSizeMB}): ~25,000 cities with population >15K`
+                : '⚠️ cities15000.txt not found - download required',
+              stats: { 
+                expected_cities: 25000, 
+                processed: state.stats.processed,
+                inserted: state.stats.inserted
+              },
+              downloadUrl: geonamesSource.downloadUrl
+            },
+            wikidata: {
+              id: 'wikidata',
+              name: 'Wikidata',
+              emoji: '📚',
+              status: 'pending',
+              description: 'SPARQL queries for metadata enrichment'
+            },
+            osm: {
+              id: 'osm',
+              name: 'OpenStreetMap',
+              emoji: '🗺️',
+              status: 'pending',
+              description: 'Local PostGIS database for boundaries'
+            }
+          },
+          logs: state.logs,
+          totals: {
+            places_before: currentDbStats.places || 0,
+            places_after: state.stats.inserted,
+            names_before: currentDbStats.names || 0,
+            names_after: state.stats.namesAdded
+          }
+        }
+      });
+    }
     
-    const html = renderPage(dbSelector, dashboard, context, { dbPath, currentDbStats });
+    const html = renderPage(dbSelector, viewControl, context, { dbPath, currentDbStats }, {
+      mode: viewerMode ? 'viewer' : 'import',
+      viewerRuntime
+    });
     res.send(html);
   });
   
   // Serve static client bundle
+  app.use('/assets/geo-viewer', express.static(path.join(PROJECT_ROOT, 'src', 'ui', 'client', 'geoViewer')));
   app.use('/assets', express.static(path.join(PROJECT_ROOT, 'public', 'assets')));
   
   return { app, stateManager, db, gazetteer };
@@ -611,32 +640,45 @@ function createServer(options = {}) {
 // Page Renderer
 // ─────────────────────────────────────────────────────────────────────────────
 
-function renderPage(dbSelector, dashboard, context, dbInfo = {}) {
+function renderPage(dbSelector, viewControl, context, dbInfo = {}, options = {}) {
+  const mode = options.mode === 'viewer' ? 'viewer' : 'import';
   const css = getStyles();
   const dbSelectorStyles = DatabaseSelector.getStyles();
   const clientScript = getClientScript();
   const dbSelectorHtml = dbSelector.all_html_render();
-  const controlHtml = dashboard.all_html_render();
+  const controlHtml = viewControl.all_html_render();
+  const pageTitle = mode === 'viewer' ? '🗺️ Geo Viewer' : '🌐 Gazetteer Import Dashboard';
+  const modeSwitch = `
+  <nav class="geo-mode-switch" data-geo-mode="${mode}">
+    <a href="/?mode=import" class="geo-mode-switch__link${mode === 'import' ? ' is-active' : ''}">⚙️ Import</a>
+    <a href="/?mode=viewer" class="geo-mode-switch__link${mode === 'viewer' ? ' is-active' : ''}">🗺️ Viewer</a>
+  </nav>`;
+  const runtimeScripts = mode === 'viewer'
+    ? '<script src="/assets/geo-viewer/engines/CesiumEngineAdapter.js"></script>\n  <script src="/assets/geo-viewer/state/GeoViewerStore.js"></script>\n  <script src="/assets/geo-viewer/index.js"></script>'
+    : `<script>${clientScript}</script>`;
   
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🌐 Gazetteer Import Dashboard</title>
+  <title>${pageTitle}</title>
   <style>${css}</style>
   <style>${dbSelectorStyles}</style>
 </head>
 <body>
   <div class="page-container">
+    ${modeSwitch}
     ${dbSelectorHtml}
     ${controlHtml}
   </div>
   <script>
     // Initial database info
     window.__currentDb = ${JSON.stringify(dbInfo)};
+    window.__geoMode = '${mode}';
+    window.__geoViewerRuntime = ${JSON.stringify(options.viewerRuntime || {})};
   </script>
-  <script>${clientScript}</script>
+  ${runtimeScripts}
 </body>
 </html>`;
 }
@@ -667,6 +709,72 @@ function getStyles() {
       color: var(--text-primary);
       line-height: 1.5;
       padding: 20px;
+    }
+
+    .geo-mode-switch {
+      max-width: 1200px;
+      margin: 0 auto 12px auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    .geo-mode-switch__link {
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      background: var(--surface-color);
+      font-weight: 600;
+    }
+
+    .geo-mode-switch__link.is-active {
+      color: var(--text-primary);
+      border-color: var(--accent-color);
+    }
+
+    .geo-viewer-shell {
+      display: grid;
+      grid-template-columns: minmax(220px, 260px) 1fr minmax(260px, 320px);
+      gap: 12px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .geo-viewer-shell__tools,
+    .geo-viewer-shell__map,
+    .geo-viewer-shell__details {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .geo-viewer-shell__map-host,
+    .geo-viewer-shell__snapshot,
+    .geo-viewer-shell__details pre {
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px;
+      min-height: 56px;
+      margin-top: 8px;
+      overflow: auto;
+    }
+
+    .geo-viewer-shell__detail-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .geo-viewer-shell__detail-controls input,
+    .geo-viewer-shell button {
+      background: var(--bg-color);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 6px 10px;
     }
     
     .geo-import-dashboard {

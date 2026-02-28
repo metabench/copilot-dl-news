@@ -8,6 +8,7 @@ const { computeAgeMs, extractPredictionSignals, composeCandidateSignals, createF
 const { summarizeDsplPatterns, assessDomainReadiness, selectPlaces, selectTopics, collectHubChanges } = require('./utils/analysisUtils');
 const { createBatchSummary, aggregateSummaryInto, createFailedDomainSummary } = require('./utils/summaryUtils');
 const { fetchUrl } = require('./utils/httpUtils');
+const { getConfidenceConfig, scoreHubCandidate, applyConfidenceDecision } = require('./utils/hubConfidenceScorer');
 const { upsertAbsentPlacePageMapping } = require('../../data/db/sqlite/v1/queries/placePageMappings');
 
 const { CRAWL_EVENT_TYPES, SEVERITY_LEVELS, createTelemetryEvent } = require('../../core/crawler/telemetry');
@@ -79,6 +80,7 @@ class DomainProcessor {
     const maxAgeMs = Number.isFinite(options.maxAgeDays) ? options.maxAgeDays * this.DAY_MS : 7 * this.DAY_MS;
     const refresh404Ms = Number.isFinite(options.refresh404Days) ? options.refresh404Days * this.DAY_MS : 180 * this.DAY_MS;
     const retry4xxMs = Number.isFinite(options.retry4xxDays) ? options.retry4xxDays * this.DAY_MS : 7 * this.DAY_MS;
+    const confidence = getConfidenceConfig(options);
     const runId = options.runId || `run-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const nowMs = now().getTime();
     const runStartedMs = Date.now();
@@ -86,6 +88,8 @@ class DomainProcessor {
 
     // Initialize summary
     const summary = this._createInitialSummary(normalizedDomain.host, runStartedAt);
+    summary.confidenceMode = confidence.mode;
+    summary.minConfidence = confidence.threshold;
 
     const finalizeSummary = () => this._finalizeSummary(summary, runStartedMs);
 
@@ -124,6 +128,8 @@ class DomainProcessor {
         enableHierarchicalDiscovery,
         apply,
         patternsPerPlace: patternLimit,
+        confidenceMode: confidence.mode,
+        minConfidence: confidence.threshold,
         runId
       }, {
         severity: SEVERITY_LEVELS.INFO,
@@ -243,6 +249,7 @@ class DomainProcessor {
           maxAgeMs,
           refresh404Ms,
           retry4xxMs,
+          confidence,
           runId,
           nowMs,
           verbose: options.verbose,
@@ -359,6 +366,17 @@ class DomainProcessor {
       validationSucceeded: 0,
       validationFailed: 0,
       validationFailureReasons: {},
+      confidenceMode: 'shadow',
+      minConfidence: 0.65,
+      confidenceScored: 0,
+      confidenceRejected: 0,
+      confidenceScoreTotal: 0,
+      confidenceAverage: 0,
+      confidenceBands: {
+        low: 0,
+        medium: 0,
+        high: 0
+      },
       startedAt: startedAt.toISOString(),
       completedAt: null,
       durationMs: null
@@ -1144,6 +1162,27 @@ class DomainProcessor {
         pageTitle
       };
 
+      const confidenceResult = this._assessCandidateConfidence({
+        summary,
+        options,
+        validation: normalizedValidation,
+        predictionSource,
+        title: pageTitle,
+        place,
+        topic: null,
+        httpStatus: result.status
+      });
+      const finalValidation = {
+        ...normalizedValidation,
+        isValid: confidenceResult.decision.isValid,
+        confidenceScore: confidenceResult.assessment?.score ?? null,
+        confidenceBand: confidenceResult.assessment?.band || null,
+        confidenceMode: confidenceResult.config?.mode || 'off',
+        minConfidence: confidenceResult.config?.threshold ?? null,
+        confidenceRejected: Boolean(confidenceResult.decision.rejectedByConfidence),
+        reason: confidenceResult.decision.reason || normalizedValidation.reason || null
+      };
+
       const validationSignals = composeCandidateSignals({
         predictionSource,
         patternSource: 'place-patterns',
@@ -1155,9 +1194,9 @@ class DomainProcessor {
       stores.candidates?.updateValidation?.({
         domain: normalizedDomain.host,
         candidateUrl,
-        validationStatus: normalizedValidation.isValid ? 'validated' : 'validation-failed',
-        validationScore: normalizedValidation.confidence || null,
-        validationDetails: normalizedValidation,
+        validationStatus: finalValidation.isValid ? 'validated' : 'validation-failed',
+        validationScore: finalValidation.confidenceScore || finalValidation.confidence || null,
+        validationDetails: finalValidation,
         signals: validationSignals,
         lastSeenAt: attemptStartedAt
       });
@@ -1172,20 +1211,23 @@ class DomainProcessor {
           code: placeSignalsInfo.code
         },
         determination: {
-          accepted: Boolean(normalizedValidation.isValid),
-          confidence: normalizedValidation.confidence ?? null,
-          reason: normalizedValidation.reason || null,
-          navLinkCount: normalizedValidation.navLinkCount ?? null,
-          articleLinkCount: normalizedValidation.articleLinkCount ?? null,
-          pageTitle: normalizedValidation.pageTitle || null
+          accepted: Boolean(finalValidation.isValid),
+          confidence: finalValidation.confidence ?? null,
+          confidenceScore: finalValidation.confidenceScore ?? null,
+          confidenceBand: finalValidation.confidenceBand || null,
+          confidenceMode: finalValidation.confidenceMode || null,
+          reason: finalValidation.reason || null,
+          navLinkCount: finalValidation.navLinkCount ?? null,
+          articleLinkCount: finalValidation.articleLinkCount ?? null,
+          pageTitle: finalValidation.pageTitle || null
         },
         apply: Boolean(options.apply)
       }, {
-        severity: normalizedValidation.isValid ? SEVERITY_LEVELS.INFO : SEVERITY_LEVELS.WARN,
-        message: normalizedValidation.isValid ? `Accepted: ${candidateUrl}` : `Rejected: ${candidateUrl}`
+        severity: finalValidation.isValid ? SEVERITY_LEVELS.INFO : SEVERITY_LEVELS.WARN,
+        message: finalValidation.isValid ? `Accepted: ${candidateUrl}` : `Rejected: ${candidateUrl}`
       });
 
-      if (normalizedValidation.isValid) {
+      if (finalValidation.isValid) {
         summary.validationSucceeded += 1;
 
         if (options.apply) {
@@ -1193,7 +1235,7 @@ class DomainProcessor {
             candidateUrl,
             place,
             result,
-            validationResult: normalizedValidation,
+            validationResult: finalValidation,
             candidateSignals,
             normalizedDomain,
             queries,
@@ -1203,7 +1245,7 @@ class DomainProcessor {
         }
       } else {
         summary.validationFailed += 1;
-        const failureReason = normalizedValidation.reason || 'unknown';
+        const failureReason = finalValidation.reason || 'unknown';
         summary.validationFailureReasons[failureReason] =
           (summary.validationFailureReasons[failureReason] || 0) + 1;
       }
@@ -1215,8 +1257,8 @@ class DomainProcessor {
           url: candidateUrl,
           placeKind: place.kind,
           placeName: place.name,
-          decision: normalizedValidation.isValid ? 'accepted' : 'rejected',
-          validationMetricsJson: JSON.stringify(normalizedValidation),
+          decision: finalValidation.isValid ? 'accepted' : 'rejected',
+          validationMetricsJson: JSON.stringify(finalValidation),
           attemptId,
           runId: options.runId
         });
@@ -1663,6 +1705,27 @@ class DomainProcessor {
         pageTitle
       };
 
+      const confidenceResult = this._assessCandidateConfidence({
+        summary,
+        options,
+        validation: normalizedValidation,
+        predictionSource,
+        title: pageTitle,
+        place: null,
+        topic,
+        httpStatus: result.status
+      });
+      const finalValidation = {
+        ...normalizedValidation,
+        isValid: confidenceResult.decision.isValid,
+        confidenceScore: confidenceResult.assessment?.score ?? null,
+        confidenceBand: confidenceResult.assessment?.band || null,
+        confidenceMode: confidenceResult.config?.mode || 'off',
+        minConfidence: confidenceResult.config?.threshold ?? null,
+        confidenceRejected: Boolean(confidenceResult.decision.rejectedByConfidence),
+        reason: confidenceResult.decision.reason || normalizedValidation.reason || null
+      };
+
       const validationSignals = composeCandidateSignals({
         predictionSource,
         patternSource: 'topic-patterns',
@@ -1674,14 +1737,14 @@ class DomainProcessor {
       stores.candidates?.updateValidation?.({
         domain: normalizedDomain.host,
         candidateUrl,
-        validationStatus: normalizedValidation.isValid ? 'validated' : 'validation-failed',
-        validationScore: normalizedValidation.confidence || null,
-        validationDetails: normalizedValidation,
+        validationStatus: finalValidation.isValid ? 'validated' : 'validation-failed',
+        validationScore: finalValidation.confidenceScore || finalValidation.confidence || null,
+        validationDetails: finalValidation,
         signals: validationSignals,
         lastSeenAt: attemptStartedAt
       });
 
-      if (normalizedValidation.isValid) {
+      if (finalValidation.isValid) {
         summary.validationSucceeded += 1;
 
         if (options.apply) {
@@ -1689,7 +1752,7 @@ class DomainProcessor {
             candidateUrl,
             topic,
             result,
-            validationResult: normalizedValidation,
+            validationResult: finalValidation,
             candidateSignals,
             normalizedDomain,
             queries,
@@ -1699,7 +1762,7 @@ class DomainProcessor {
         }
       } else {
         summary.validationFailed += 1;
-        const failureReason = normalizedValidation.reason || 'unknown';
+        const failureReason = finalValidation.reason || 'unknown';
         summary.validationFailureReasons[failureReason] =
           (summary.validationFailureReasons[failureReason] || 0) + 1;
       }
@@ -1711,8 +1774,8 @@ class DomainProcessor {
           url: candidateUrl,
           placeKind: 'topic',
           placeName: topic.label,
-          decision: normalizedValidation.isValid ? 'accepted' : 'rejected',
-          validationMetricsJson: JSON.stringify(normalizedValidation),
+          decision: finalValidation.isValid ? 'accepted' : 'rejected',
+          validationMetricsJson: JSON.stringify(finalValidation),
           attemptId,
           runId: options.runId
         });
@@ -1928,6 +1991,36 @@ class DomainProcessor {
         detectionResult.placeSlug === slugify(place.name) &&
         detectionResult.topic.slug === topic.slug;
 
+      const baseValidation = {
+        isValid: isValidCombination,
+        confidence: detectionResult?.evidence?.topic?.confidence || null,
+        reason: isValidCombination ? null : 'detection-failed',
+        navLinkCount: detectionResult?.navLinksCount || 0,
+        articleLinkCount: detectionResult?.articleLinksCount || 0,
+        pageTitle: detectionResult?.title || extractTitle(result.body)
+      };
+
+      const confidenceResult = this._assessCandidateConfidence({
+        summary,
+        options,
+        validation: baseValidation,
+        predictionSource,
+        title: baseValidation.pageTitle,
+        place,
+        topic,
+        httpStatus: result.status
+      });
+      const finalValidation = {
+        ...baseValidation,
+        isValid: confidenceResult.decision.isValid,
+        confidenceScore: confidenceResult.assessment?.score ?? null,
+        confidenceBand: confidenceResult.assessment?.band || null,
+        confidenceMode: confidenceResult.config?.mode || 'off',
+        minConfidence: confidenceResult.config?.threshold ?? null,
+        confidenceRejected: Boolean(confidenceResult.decision.rejectedByConfidence),
+        reason: confidenceResult.decision.reason || baseValidation.reason || null
+      };
+
       const validationSignals = composeCandidateSignals({
         predictionSource,
         patternSource: 'place-topic-patterns',
@@ -1944,10 +2037,10 @@ class DomainProcessor {
       stores.candidates?.updateValidation?.({
         domain: normalizedDomain.host,
         candidateUrl,
-        validationStatus: isValidCombination ? 'validated' : 'validation-failed',
-        validationScore: detectionResult?.evidence?.topic?.confidence || null,
+        validationStatus: finalValidation.isValid ? 'validated' : 'validation-failed',
+        validationScore: finalValidation.confidenceScore || finalValidation.confidence || null,
         validationDetails: {
-          isValid: isValidCombination,
+          ...finalValidation,
           detectionResult,
           expectedPlace: place.name,
           expectedTopic: topic.slug
@@ -1956,7 +2049,7 @@ class DomainProcessor {
         lastSeenAt: attemptStartedAt
       });
 
-      if (isValidCombination) {
+      if (finalValidation.isValid) {
         summary.validationSucceeded += 1;
 
         if (options.apply) {
@@ -1974,7 +2067,7 @@ class DomainProcessor {
         }
       } else {
         summary.validationFailed += 1;
-        const failureReason = isValidCombination === false ? 'detection-failed' : 'unknown';
+        const failureReason = finalValidation.reason || 'unknown';
         summary.validationFailureReasons[failureReason] =
           (summary.validationFailureReasons[failureReason] || 0) + 1;
       }
@@ -1986,9 +2079,9 @@ class DomainProcessor {
           url: candidateUrl,
           placeKind: 'combination',
           placeName: `${place.name} + ${topic.label}`,
-          decision: isValidCombination ? 'accepted' : 'rejected',
+          decision: finalValidation.isValid ? 'accepted' : 'rejected',
           validationMetricsJson: JSON.stringify({
-            isValid: isValidCombination,
+            ...finalValidation,
             detectionResult,
             expectedPlace: place.name,
             expectedTopic: topic.slug
@@ -2421,6 +2514,57 @@ class DomainProcessor {
     return {
       navLinksCount: linkMatches.length,
       articleLinksCount: linkMatches.length
+    };
+  }
+
+  _assessCandidateConfidence({ summary, options, validation, predictionSource, title, place, topic, httpStatus }) {
+    const confidenceConfig = options?.confidence || getConfidenceConfig(options);
+    if (!confidenceConfig.enabled) {
+      return {
+        config: confidenceConfig,
+        assessment: null,
+        decision: {
+          isValid: Boolean(validation?.isValid),
+          rejectedByConfidence: false,
+          reason: validation?.reason || null
+        }
+      };
+    }
+
+    const assessment = scoreHubCandidate({
+      validation,
+      predictionSource,
+      title,
+      place,
+      topic,
+      httpStatus
+    });
+
+    summary.confidenceMode = confidenceConfig.mode;
+    summary.minConfidence = confidenceConfig.threshold;
+    summary.confidenceScored += 1;
+    summary.confidenceScoreTotal += assessment.score;
+    summary.confidenceAverage = summary.confidenceScored > 0
+      ? summary.confidenceScoreTotal / summary.confidenceScored
+      : 0;
+    if (summary.confidenceBands[assessment.band] !== undefined) {
+      summary.confidenceBands[assessment.band] += 1;
+    }
+
+    const decision = applyConfidenceDecision({
+      validation,
+      assessment,
+      config: confidenceConfig
+    });
+
+    if (decision.rejectedByConfidence) {
+      summary.confidenceRejected += 1;
+    }
+
+    return {
+      config: confidenceConfig,
+      assessment,
+      decision
     };
   }
 }

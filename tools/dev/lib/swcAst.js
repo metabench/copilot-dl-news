@@ -725,6 +725,49 @@ function recordVariable(results, source, meta) {
   });
 }
 
+function recordType(results, source, meta) {
+  const mappingContext = meta.mapper || meta.byteIndex || null;
+  const normalizedSpan = normalizeSpan(meta.span, mappingContext);
+  const position = offsetToPosition(meta.lineIndex, normalizedSpan.start);
+
+  const sourceBuffer = meta.sourceBuffer
+    || (meta.mapper && typeof meta.mapper.getBuffer === 'function' ? meta.mapper.getBuffer()
+      : Buffer.from(source, 'utf8'));
+  const byteStart = normalizedSpan.byteStart;
+  const byteEnd = normalizedSpan.byteEnd;
+  const snippetBuffer = byteEnd > byteStart
+    ? sourceBuffer.slice(byteStart, byteEnd)
+    : Buffer.alloc(0);
+  const snippet = snippetBuffer.toString('utf8');
+  const hash = createDigest(snippet);
+
+  const scopeChain = Array.isArray(meta.scopeChain) ? meta.scopeChain.slice() : [];
+  const canonicalName = buildCanonicalName(meta.name, scopeChain, meta.exportKind);
+  const pathSignature = buildPathSignature(meta.pathSegments, meta.nodeType);
+  const byteLength = Math.max(0, byteEnd - byteStart);
+  const enclosingContexts = formatEnclosingContexts(meta.enclosingContexts, mappingContext);
+  const primaryEnclosing = enclosingContexts[0] || null;
+
+  results.push({
+    name: meta.name,
+    canonicalName,
+    scopeChain,
+    kind: meta.kind,
+    exportKind: meta.exportKind,
+    span: normalizedSpan,
+    line: position.line,
+    column: position.column,
+    hash,
+    pathSignature,
+    pathSegments: Array.isArray(meta.pathSegments) ? meta.pathSegments.slice() : [],
+    byteLength,
+    enclosingSpan: primaryEnclosing ? primaryEnclosing.span : null,
+    enclosingKind: primaryEnclosing ? primaryEnclosing.kind : null,
+    enclosingName: primaryEnclosing ? primaryEnclosing.name : null,
+    enclosingContexts
+  });
+}
+
 function extendScopeChain(scopeChain, additions = []) {
   const base = Array.isArray(scopeChain) ? scopeChain : [];
   return base.concat(additions);
@@ -1439,10 +1482,10 @@ function collectFunctions(ast, source, mapper = null) {
         const right = node.right;
         const exportEntry = target
           ? {
-              kind: target.base,
-              name: target.displayName,
-              span: node.span
-            }
+            kind: target.base,
+            name: target.displayName,
+            span: node.span
+          }
           : null;
 
         if (target && right) {
@@ -1499,10 +1542,10 @@ function collectFunctions(ast, source, mapper = null) {
         if (right) {
           const nextContext = target
             ? {
-                ...context,
-                scopeChain: extendScopeChain(currentScope, target.scopeChain),
-                enclosingContexts: exportEntry ? prependContext(baseEnclosing, exportEntry) : baseEnclosing
-              }
+              ...context,
+              scopeChain: extendScopeChain(currentScope, target.scopeChain),
+              enclosingContexts: exportEntry ? prependContext(baseEnclosing, exportEntry) : baseEnclosing
+            }
             : context;
           visit(right, nextContext, currentPath.concat('right'));
         }
@@ -1947,10 +1990,10 @@ function collectVariables(ast, source, mapper = null) {
         const right = node.right;
         const exportEntry = target
           ? {
-              kind: target.base,
-              name: target.displayName,
-              span: node.span
-            }
+            kind: target.base,
+            name: target.displayName,
+            span: node.span
+          }
           : null;
 
         if (target) {
@@ -1991,10 +2034,10 @@ function collectVariables(ast, source, mapper = null) {
         if (right) {
           const nextContext = target
             ? {
-                ...context,
-                scopeChain: extendScopeChain(currentScope, target.scopeChain),
-                enclosingContexts: exportEntry ? prependContext(baseEnclosing, exportEntry) : baseEnclosing
-              }
+              ...context,
+              scopeChain: extendScopeChain(currentScope, target.scopeChain),
+              enclosingContexts: exportEntry ? prependContext(baseEnclosing, exportEntry) : baseEnclosing
+            }
             : context;
           visit(right, nextContext, currentPath.concat('right'));
         }
@@ -2022,6 +2065,154 @@ function collectVariables(ast, source, mapper = null) {
   return { variables, lineIndex, mapper: sourceMapper };
 }
 
+function collectTypes(ast, source, mapper = null) {
+  const sourceMapper = resolveByteMapper(source, mapper) || createByteMapper(source);
+  const spanOffset = resolveSpanBaseOffset(ast);
+  if (spanOffset > 0 && sourceMapper) {
+    if (typeof sourceMapper.setByteOffset === 'function') {
+      sourceMapper.setByteOffset(spanOffset);
+    } else {
+      sourceMapper.byteOffset = spanOffset;
+    }
+  }
+  const lineIndex = buildLineIndex(source);
+  const byteIndex = sourceMapper.getByteIndex();
+  const sourceBuffer = sourceMapper.getBuffer();
+  const types = [];
+
+  function visit(
+    node,
+    context = { scopeChain: [], exportKind: null, className: null, enclosingContexts: [] },
+    pathSegments = ['module']
+  ) {
+    if (!node || typeof node !== 'object') {
+      return;
+    }
+
+    const { type } = node;
+    if (!type) return;
+
+    const includeType = !(type === 'Module' && pathSegments.length === 1 && pathSegments[0] === 'module');
+    const currentPath = includeType ? pathSegments.concat(type) : pathSegments;
+    const currentScope = Array.isArray(context.scopeChain) ? context.scopeChain : [];
+    const baseEnclosing = normalizeContextStack(context.enclosingContexts);
+
+    switch (type) {
+      case 'Module': {
+        if (Array.isArray(node.body)) {
+          node.body.forEach((item, index) => {
+            visit(item, context, currentPath.concat(`body[${index}]`));
+          });
+        }
+        return;
+      }
+      case 'TsInterfaceDeclaration':
+      case 'TsTypeAliasDeclaration':
+      case 'TsEnumDeclaration': {
+        const name = node.id && node.id.value ? node.id.value : '(anonymous type)';
+
+        let kind = 'default';
+        if (type === 'TsInterfaceDeclaration') kind = 'interface';
+        if (type === 'TsTypeAliasDeclaration') kind = 'type-alias';
+        if (type === 'TsEnumDeclaration') kind = 'enum';
+
+        recordType(types, source, {
+          name,
+          kind,
+          exportKind: context.exportKind || null,
+          span: node.span,
+          lineIndex,
+          byteIndex,
+          sourceBuffer,
+          mapper: sourceMapper,
+          scopeChain: currentScope,
+          pathSegments: currentPath,
+          nodeType: type,
+          enclosingContexts: baseEnclosing
+        });
+        break;
+      }
+      case 'TsModuleDeclaration': {
+        let namespaceName = '';
+        if (node.id && node.id.type === 'Identifier') {
+          namespaceName = node.id.value;
+        } else if (node.id && node.id.type === 'StringLiteral') {
+          namespaceName = node.id.value;
+        }
+        const childScope = namespaceName ? extendScopeChain(currentScope, [namespaceName]) : currentScope;
+        if (node.body) {
+          visit(node.body, { ...context, scopeChain: childScope, enclosingContexts: prependContext(baseEnclosing, { kind: 'namespace', name: namespaceName || '(anonymous)', span: node.span }) }, currentPath.concat('body'));
+        }
+        break;
+      }
+      case 'TsModuleBlock': {
+        if (Array.isArray(node.body)) {
+          node.body.forEach((item, index) => {
+            visit(item, context, currentPath.concat(`body[${index}]`));
+          });
+        }
+        break;
+      }
+      case 'ExportDeclaration': {
+        const decl = node.declaration || node.decl;
+        if (decl) {
+          const exportScope = extendScopeChain(currentScope, ['exports']);
+          const exportEntry = { kind: 'export', name: 'named', span: node.span };
+          visit(
+            decl,
+            {
+              ...context,
+              exportKind: 'named',
+              scopeChain: exportScope,
+              exportSpan: node.span,
+              enclosingContexts: prependContext(baseEnclosing, exportEntry)
+            },
+            currentPath.concat('declaration')
+          );
+        }
+        break;
+      }
+      case 'ExportDefaultDeclaration': {
+        const decl = node.declaration || node.decl;
+        if (decl) {
+          const exportScope = extendScopeChain(currentScope, ['exports', 'default']);
+          const exportEntry = { kind: 'export', name: 'default', span: node.span };
+          visit(
+            decl,
+            {
+              ...context,
+              exportKind: 'default',
+              scopeChain: exportScope,
+              exportSpan: node.span,
+              enclosingContexts: prependContext(baseEnclosing, exportEntry)
+            },
+            currentPath.concat('declaration')
+          );
+        }
+        break;
+      }
+      default: {
+        for (const key of Object.keys(node)) {
+          if (key === 'span') continue;
+          const value = node[key];
+          if (Array.isArray(value)) {
+            value.forEach((child, index) => {
+              visit(child, { ...context, enclosingContexts: baseEnclosing }, currentPath.concat(`${key}[${index}]`));
+            });
+          } else if (value && typeof value === 'object') {
+            visit(value, { ...context, enclosingContexts: baseEnclosing }, currentPath.concat(key));
+          }
+        }
+      }
+    }
+  }
+
+  visit(ast, { scopeChain: [], exportKind: null, className: null, enclosingContexts: [] }, ['module']);
+
+  types.sort((a, b) => a.span.start - b.span.start);
+  return { types, lineIndex, mapper: sourceMapper };
+}
+
 function extractCode(source, span, mappingContext = null) {
   if (typeof source !== 'string') {
     return '';
@@ -2044,6 +2235,7 @@ module.exports = {
   parseModule,
   collectFunctions,
   collectVariables,
+  collectTypes,
   extractCode,
   replaceSpan,
   normalizeSpan,

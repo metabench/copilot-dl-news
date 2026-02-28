@@ -88,12 +88,63 @@ If you need multiple interactions but want fast runs:
 
 - Use a scenario suite runner (single browser, many scenarios) rather than N× Jest/Puppeteer startups.
 
+### E) WebSocket / live-update verification
+
+When a dashboard uses WebSocket for real-time updates (see `websocket-upgrade` Skill), inspection must cover more than the initial page load.
+
+#### E.1) Verify the WebSocket connection
+
+In browser DevTools or via Puppeteer, confirm the WS handshake succeeds:
+
+```javascript
+// Puppeteer: check WebSocket is established
+const wsMessages = [];
+page.on('websocket', ws => {
+  ws.on('framereceived', frame => wsMessages.push(JSON.parse(frame.payload)));
+});
+await page.goto(url);
+await page.waitForTimeout(2000);
+console.log('WS messages received:', wsMessages.length);
+console.log('First message type:', wsMessages[0]?.type);
+// Expect: type === 'full_state'
+```
+
+#### E.2) Verify DOM updates happen without reload
+
+After the initial page load, wait for a subsequent WebSocket message and verify the DOM changed:
+
+```javascript
+const before = await page.$eval('[data-metric="visited"]', el => el.textContent);
+await page.waitForTimeout(2000);  // wait for next server tick
+const after = await page.$eval('[data-metric="visited"]', el => el.textContent);
+console.log('Metric changed:', before !== after);
+```
+
+#### E.3) Verify the connection status indicator
+
+```javascript
+const dotColor = await page.$eval('#ws-dot', el => getComputedStyle(el).backgroundColor);
+console.log('Status dot color:', dotColor);
+// Green (rgb(76, 175, 80)) = connected
+// Red (rgb(244, 67, 54)) = disconnected
+```
+
+#### E.4) Test reconnect behavior
+
+Kill the server and restart — the client should auto-reconnect:
+1. Note the status dot turns red/yellow
+2. Restart the server
+3. Wait up to 30 seconds (exponential backoff cap)
+4. Verify the dot turns green and data resumes updating
+
 ## Validation / Evidence Checklist
 
 - Server `--check` exits with 0
 - At least one screenshot captured and stored under `screenshots/` or `.playwright-mcp/`
 - Numeric JSON output captured (stdout or written artifact)
-- A “ready selector” exists and is documented for the UI
+- A "ready selector" exists and is documented for the UI
+- *(WebSocket UIs only)* WS handshake completes and `full_state` message received
+- *(WebSocket UIs only)* DOM elements update without page reload
 
 ## References
 
@@ -103,3 +154,5 @@ If you need multiple interactions but want fast runs:
 - Puppeteer scenario suites: `docs/guides/PUPPETEER_SCENARIO_SUITES.md`
 - One-shot console capture: `docs/guides/PUPPETEER_UI_WORKFLOW.md`
 - Hanging prevention: `docs/guides/TEST_HANGING_PREVENTION_GUIDE.md`
+- WebSocket upgrade skill: `docs/agi/skills/websocket-upgrade/SKILL.md`
+
