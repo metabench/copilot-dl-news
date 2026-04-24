@@ -1,47 +1,20 @@
 # Crawl CLI quick reference
 
-Purpose: fast orientation for crawl.js. Covers commands, override precedence, and verbosity modes. Keep this file short; deeper detail lives in AGENTS.md and source.
+**Scope**: Local config-driven crawling via `node src/crawl.js` / `npm start`. For remote/fleet crawling, see [tools/crawl/AGENT.md](../../tools/crawl/AGENT.md).
 
-## Fleet / v4 Operations (recommended)
+## Quick Entry Points
 
-Use these npm scripts for daily operations:
-
-- `npm run fleet:running` — instant yes/no snapshot of active crawlers.
-- `npm run fleet:overview` — instant high-signal summary (running/fatal/unreachable/backlog).
-- `npm run fleet:health` — authoritative live health scan.
-- `npm run fleet:crawl-sync` — scan/start/recover plus continuous sync to local DB.
-- `npm run fleet:sync` — sync only.
-- `npm run fleet:sync:quick` — one-shot pull.
-- `npm run fleet:stop-all` — fast parallel stop-all with per-process reporting.
-- `npm run fleet:endpoints` — local+remote endpoint capability profile.
-- `npm run fleet:question -- --q "<question>"` — deterministic routing to fast diagnostics.
-- `npm run fleet:smoke:fast -- --count=1 --max-pages=1 --wait-ms=1200 --window=10 --limit=2` — tiny crawl+sync smoke.
-- `npm run fleet:smoke:fast:check` — deterministic local harness for smoke script.
-- `npm run fleet:benchmark` — bounded benchmark via unified `fleet-cli benchmark` command.
-- `npm run fleet:benchmark:25` — bounded 5x5 benchmark (adaptive preflight + SLO tier A) via unified CLI.
-- `npm run fleet:benchmark:matrix` — deterministic profile matrix via `fleet-cli benchmark matrix`.
-
-v4 runtime scripts:
-
-- `npm run v4:supervisor`
-- `npm run v4:supervisor:remote`
-- `npm run v4:server:single` (single-process crawl mode, max resources currently capped to 4)
-- `npm run v4:stop-all`
-
-sync helpers:
-
-- `npm run crawl:sync:if-needed`
-- `npm run crawl:sync:main`
-- `npm run crawl:go`
-- `npm run crawl:go:apply`
+| Task | Command |
+|------|---------|
+| **Unified launcher** (preferred) | `npm run crawl -- <tool> [args]` |
+| **Remote crawl ops** | `node tools/crawl/crawl-remote.js <command>` |
+| **Local intelligent crawl** | `npm run crawl -- intelligent [args]` |
+| **DB download stats** | `npm run db:downloads:stats` |
+| **Legacy config crawl** | `npm start` |
 
 ## See also
 
-- [Architecture: Crawls vs Background Tasks](../ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md)
-- [Reliable Crawler Roadmap](../goals/RELIABLE_CRAWLER_ROADMAP.md)
-- [CLI Documentation Index](INDEX.md)
-- [CLI Command Reference](commands.md)
-- [tools/crawl/AGENT.md](../../tools/crawl/AGENT.md)
+- [tools/crawl/AGENT.md](../../tools/crawl/AGENT.md) — primary crawl tool reference
 
 ## Commands
 - Default run (no command): uses config defaults (crawlDefaults) or runner config if provided.

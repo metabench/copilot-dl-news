@@ -54,6 +54,78 @@
 
 ## Current Sessions
 
+### Session 2026-04-04: Evaluate Static Analysis Tooling
+
+**Duration**: Active
+**Type**: General
+**Completion**: 🔄 In progress
+
+**Focus**:
+- TBD
+
+**Location**: `docs/sessions/2026-04-04-static-analysis-eval/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-04-04-static-analysis-eval/INDEX.md)
+- 🗺️ [Plan](./2026-04-04-static-analysis-eval/PLAN.md)
+- 📝 [Working Notes](./2026-04-04-static-analysis-eval/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-04-04-static-analysis-eval/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-04-04-static-analysis-eval/FOLLOW_UPS.md)
+
+
+### Session 2026-03-10: V5 Runtime Bootstrap
+
+**Duration**: Active
+**Type**: Implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Start actual v5 implementation with a backend-first bootstrap: a real `src/v5/remote/` boundary and minimal bootable API contract for health, status, domains, and crawl control.
+
+**Location**: `docs/sessions/2026-03-10-v5-runtime-bootstrap/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-03-10-v5-runtime-bootstrap/PLAN.md)
+- 📝 [Working Notes](./2026-03-10-v5-runtime-bootstrap/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-03-10-v5-runtime-bootstrap/SESSION_SUMMARY.md)
+- 📋 [Follow-ups](./2026-03-10-v5-runtime-bootstrap/FOLLOW_UPS.md)
+
+### Session 2026-03-08: Remote Crawler Application Review
+
+**Duration**: 1 review session
+**Type**: Architecture Review
+**Completion**: ✅ Completed
+
+**Focus**:
+- Assess what remote crawler application capability already exists in the repo, what is directly operable today, and what gaps remain before it qualifies as a serious remotely hosted crawler application.
+
+**Location**: `docs/sessions/2026-03-08-remote-crawler-application-review/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-03-08-remote-crawler-application-review/PLAN.md)
+- 📝 [Working Notes](./2026-03-08-remote-crawler-application-review/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-03-08-remote-crawler-application-review/SESSION_SUMMARY.md)
+- 📋 [Follow-ups](./2026-03-08-remote-crawler-application-review/FOLLOW_UPS.md)
+
+
+### Session 2026-03-08: V5 Remote Crawler Application Plan
+
+**Duration**: 1 planning session
+**Type**: Architecture Planning
+**Completion**: ✅ Completed
+
+**Focus**:
+- Consolidate existing v5-related ideas into a concrete plan for a remote crawler application with browser UI, crawl control, article browsing, and large compressed bundle downloads.
+
+**Location**: `docs/sessions/2026-03-08-v5-remote-crawler-application-plan/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-03-08-v5-remote-crawler-application-plan/PLAN.md)
+- 📝 [Working Notes](./2026-03-08-v5-remote-crawler-application-plan/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-03-08-v5-remote-crawler-application-plan/SESSION_SUMMARY.md)
+- 📋 [Follow Ups](./2026-03-08-v5-remote-crawler-application-plan/FOLLOW_UPS.md)
+
+
 ### Session 2026-02-25: Hub Discovery & Mapping Review
 
 **Duration**: Active

@@ -21,8 +21,8 @@
  */
 
 const path = require('path');
-const { CliArgumentParser } = require(path.join(__dirname, '../src/shared/utils/CliArgumentParser'));
-const { CliFormatter } = require(path.join(__dirname, '../src/shared/utils/CliFormatter'));
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 
 // Parse arguments
 const parser = new CliArgumentParser({
@@ -261,8 +261,8 @@ async function main() {
 
   // Load dependencies
   const Database = require('better-sqlite3');
-  const { CrawlOperations } = require('../src/core/crawler/CrawlOperations');
-  const { createMultiModalCrawl, MultiModalCrawlManager } = require('../src/core/crawler/multimodal');
+  const { CrawlOperations } = require('../../src/core/crawler/CrawlOperations');
+  const { createMultiModalCrawl, MultiModalCrawlManager } = require('../../src/core/crawler/multimodal');
 
   // Connect to database
   const dbPath = path.join(__dirname, '../data/news.db');

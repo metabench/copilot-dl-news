@@ -6,7 +6,6 @@ _Last updated: 2026-02-12_
 - [Command Execution Guide](COMMAND_EXECUTION_GUIDE.md)
 - [Testing Quick Reference](TESTING_QUICK_REFERENCE.md)
 - [Database Quick Reference](DATABASE_QUICK_REFERENCE.md)
-- [CLI Documentation Index](cli/INDEX.md)
 
 ## Path-Local Agent Guides (AGENT.md)
 
@@ -14,22 +13,12 @@ Every major subsystem directory has an `AGENT.md` file with context-specific wor
 
 | Path | Scope |
 |------|-------|
-| [src/v4/AGENT.md](../src/v4/AGENT.md) | V4 distributed crawl system |
-| [src/core/crawler/AGENT.md](../src/core/crawler/AGENT.md) | Core (V1/V3) crawler pipeline |
 | [src/data/db/AGENT.md](../src/data/db/AGENT.md) | Database adapters + schema sync |
-| [src/ui/AGENT.md](../src/ui/AGENT.md) | jsgui3 UI components |
-| [deploy/AGENT.md](../deploy/AGENT.md) | Deployment infrastructure |
-| [deploy/remote-crawler-v2/AGENT.md](../deploy/remote-crawler-v2/AGENT.md) | Content-storing crawler worker |
-| [tools/crawl/AGENT.md](../tools/crawl/AGENT.md) | Crawl diagnostic instruments |
+| [tools/crawl/AGENT.md](../tools/crawl/AGENT.md) | Crawl CLI tools |
 | [tools/dev/AGENT.md](../tools/dev/AGENT.md) | Developer CLI tools (js-scan, js-edit) |
-| [tests/v4/AGENT.md](../tests/v4/AGENT.md) | V4 test suite |
-| [docs/AGENT.md](AGENT.md) | Documentation hub navigation |
-| [docs/sessions/AGENT.md](sessions/AGENT.md) | Session folder management (agent memory) |
 
 ## Agents
 - [Agent Policy](agents/agent_policy.md)
-- [Instruction Canonicalization Policy](agents/agent_policy.md#cross-tool-instruction-canonicalization) - Keep `AGENTS.md`, `.github/instructions/*`, and path-local `AGENT.md` aligned to avoid cross-tool instruction drift.
-- [Evidence Trust Policy](agents/agent_policy.md#evidence-trust-policy-repo-wide) - Treat official docs as baseline, but promote community practices when repeatable and locally verified.
 - [Command Execution Rules](agents/command-rules.md)
 - [Core Workflow Rules](agents/core-workflow-rules.md)
 - [Database Schema Evolution](agents/database-schema-evolution.md)
@@ -50,11 +39,7 @@ Every major subsystem directory has an `AGENT.md` file with context-specific wor
 - [Emoji Search in Markdown (Windows-safe)](workflows/emoji_search_markdown.md) - Find emojis in docs without relying on literal emoji input.
 - [UI Inspection Workflow](workflows/ui-inspection-workflow.md) - Autonomous visual (MCP/Playwright) + numeric (Puppeteer) UI inspection loop.
 - [Single UI App Cohesion](workflows/single-ui-app-cohesion.md) - No-retirement unified shell: add sub-apps + add `--check`.
-- [V4 Production Crawl](workflows/v4-production-crawl.md) - End-to-end workflow for running v4 crawls, verifying integrity, and diagnosing issues.
-- [Crawl Diagnostic Protocol](workflows/crawl-diagnostic-protocol.md) - 7-step protocol for investigating crawl failures using CLI diagnostic tools.
-- [Continuous Crawl + Repair Loop](workflows/continuous-crawl-repair-loop.md) - Run crawls continuously while monitoring success metrics and shipping verified improvements.
-- [Workflow Registry (Canonical)](workflows/WORKFLOW_REGISTRY.md) - One page showing all active workflows + how to find them.
-- [Workflow Contribution Guide](workflows/WORKFLOW_CONTRIBUTION_GUIDE.md) - How to add/update workflows without doc sprawl.
+
 
 ## Standards
 - [Commit & PR Standards](standards/commit_pr_standards.md)
@@ -81,16 +66,11 @@ High-signal entry points for the crawler subsystem. Start with the architecture 
 - [DB Queries During Crawls](DB_QUERIES_DURING_CRAWLS.md)
 - [Enhanced Features](ENHANCED_FEATURES.md)
 - [Geography Crawl Type](GEOGRAPHY_CRAWL_TYPE.md)
-- [Reliable Crawler Roadmap](goals/RELIABLE_CRAWLER_ROADMAP.md)
 - [Intelligent Crawl Startup](agents/intelligent-crawl-startup.md) - Agent workflow for iterating on startup output and preflight.
-- [Crawl System Problems Catalogue](designs/CRAWL_SYSTEM_PROBLEMS_AND_RESEARCH.md) - 8 diagnosed problems with severity ratings, root causes, and fix plan.
 
 ### V4 Distributed Crawl System
 
-- [V4 Architecture Book](guides/V4_ARCHITECTURE_BOOK.md) - Comprehensive 18-chapter guide to the v4 distributed system.
-- [V4 Warm-Up Validation Process](guides/V4_WARMUP_VALIDATION_PROCESS.md) - Pre-production validation harness (6 stages).
-- [V4 100-Page Production Crawl](sessions/2025-07-14-v4-100-page-crawl/SESSION_SUMMARY.md) - Real-world 116-page crawl results + 3 bugs found.
-- [Distributed Crawl Architecture Book (v3)](guides/DISTRIBUTED_CRAWL_ARCHITECTURE_BOOK.md) - V1→V2→V3 evolution (read before V4 book).
+- [V5 Crawler Architecture Proposal](books/v5-crawler-architecture.md) - Product plan for a remotely operated crawler application.
 
 ## Guides
 
@@ -133,8 +113,7 @@ These guides are **authoritative sources** for their domains. When working in th
 
 ### Distributed Crawling Architecture
 
-- [Distributed Crawl Architecture Book](guides/DISTRIBUTED_CRAWL_ARCHITECTURE_BOOK.md) - **Comprehensive history and design**: v1 (disposable scout) → v2 (content-storing peer) → v3 (P2P orchestrator) → v4 (jsgui3-server) architecture evolution, lessons learned, and implementation blueprint.
-- [V4 Architecture Book](guides/V4_ARCHITECTURE_BOOK.md) - **v4 deep dive**: Intelligence-at-the-edge architecture (CrawlerApp, FleetSupervisor, V4Orchestrator, V4SyncEngine), SSE-triggered sync, SSR dashboards, 82-test local validation, and staged deployment plan for Oracle Cloud VM.
+_Architecture books (v1→v4 evolution, V4 deep-dive) were previously in guides/ but files no longer exist._
 
 ### Server Telemetry
 
@@ -163,12 +142,10 @@ Architecture and system design documents for proposed or implemented features.
 - [Task Events API](database/task-events-api.md) - Unified event storage for crawls and background tasks, with AI query helpers and REST endpoints.
 - [Project Overview](reference/project_overview.md)
 
-## Workspace Orientation
-- [Workspace Structure & Navigation](organization/WORKSPACE_STRUCTURE.md)
+
 
 ## AGI Memory & Observability
 - [docs-memory MCP Server](../tools/mcp/docs-memory/README.md) - AGI memory layer: sessions, skills, lessons, patterns, and app logging.
-- [MCP Logger Client](../src/utils/mcpLogger.js) - Client library for apps to write logs that AI agents can read.
 - [Log Storage](../docs/agi/logs/README.md) - NDJSON log files for app telemetry.
 
 ## Checklists
@@ -178,18 +155,10 @@ Architecture and system design documents for proposed or implemented features.
 
 ## Sessions
 - [Session Documentation Hub](sessions/SESSIONS_HUB.md) - Entry point for current/archived session folders.
-- [2026-02-14 Central Coordinator Architecture](sessions/2026-02-14-central-coordinator-architecture/SESSION_SUMMARY.md) - Local-first coordinator implementation (`central-coordinator.js`), full remote catch-up sync script, and remote seeded-only mode toggle.
-- [2025-11-18 Crawl Output Refresh](sessions/2025-11-18-crawl-output-refresh/INDEX.md) - Trim crawl output, cached seed handling, 10-minute hub refresh default.
 
 ## Plans
 - [Project Plans Index](plans/INDEX.md) - AI-generated long-term plans for human review. File-based, links to sessions.
-- [Plan Proposals](plans/proposals/README.md) - Pending proposals awaiting Central Planner review.
-
-## Reports
-- [Crawler State Report (Dec 15, 2025)](reports/2025-12-15-CRAWLER_STATE_REPORT.md) - Comprehensive overview of the crawler subsystem: 259 files, 4-phase roadmap, Phase 1 complete, 7+ improvement opportunities identified.
-- [20-Session Retrospective (Nov 29, 2025)](reports/20-SESSION-RETROSPECTIVE-2025-11-29.md) - **REQUIRED READING**: Analysis of 20 recent sessions with patterns, solutions, and agent instruction improvements. Covers UI hydration fixes, tooling enhancements, and workflow violations.
-- [OpenClaw (MoldBot/Moltbot) Research Brief (Feb 2, 2026)](reports/2026-02-02-OPENCLAW_MOLDBOT_RESEARCH.md) - Naming history, architecture, capabilities, setup, and security risks.
 
 ## Legacy Collections
 - [Root Migration Collection](root-migration/README.md) - Former root-level docs awaiting categorization.
-- [AGENTS Archives](archives/agents/) - Historical copies of AGENTS.md variants for reference.
+- [Archives](archives/) - Historical copies + archived planning artifacts.

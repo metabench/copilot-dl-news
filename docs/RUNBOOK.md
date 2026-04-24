@@ -1,8 +1,10 @@
 # RUNBOOK.md — Crawler Operations Runbook
 
-**Status**: COMPLETE  
+**Status**: LEGACY — covers local crawling only  
 **Last Updated**: December 12, 2025  
-**When to Read**: You need to run the UI server, trigger crawls, run tests, or debug job/SSE behavior
+**When to Read**: You need to run the local UI server, trigger local crawls, run tests, or debug job/SSE behavior
+
+> **⚠️ For remote/fleet crawl operations**, see [tools/crawl/AGENT.md](../tools/crawl/AGENT.md) instead. This runbook covers the legacy local `npm start` / `node src/crawl.js` entrypoint and the deprecated dashboard UI. The remote fleet system uses `crawl-remote.js` and the unified launcher (`npm run crawl`).
 
 This runbook collects operational workflows so `AGENTS.md` can stay focused on architecture and contracts.
 

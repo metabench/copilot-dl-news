@@ -1,4 +1,4 @@
-﻿Living Agent Workflow (Plan → Improve → Document)
+Living Agent Workflow (Plan → Improve → Document)
 
 **QUICK START for Tooling Improvements**: New 3-tier strategy document available!
 - **READ FIRST**: `/docs/TOOLING_RECOMMENDATIONS.md` (executive recommendation, 15 min)
@@ -13,8 +13,7 @@ Doc topology. Keep this file focused and actionable. Heavier guidance lives in /
 - **Long-term strategic sessions are mandatory for very large outcomes.** Use `docs/sessions/long-term/` to track multi-month, cross-session objectives. Hard limits: max 5 long-term sessions total, recommended max 3, and only 1 active long-term session at a time.
 - **Think in memory layers.** Consider the current session directory your short/medium-term memory; older session directories are your long-term memory. Review them before starting new work so you inherit open threads instead of re-discovering them.
 - **Search the archive first.** Use the CLI tooling (`node tools/dev/md-scan.js --dir docs/sessions --search <term> --json`, `node tools/dev/js-scan.js --dir docs --find-pattern <pattern>`) to sweep current and past sessions quickly. Bring the hits into your immediate context before drafting new plans or documents.
-- **Workflow discovery.** If you need a repeatable procedure (deploy, diagnostics, UI inspection, refactor loop), consult the canonical registry first: `docs/workflows/WORKFLOW_REGISTRY.md`.
-- **Skills discovery.** Before implementing anything that involves domain reasoning (UI refactoring, real-time features, testing strategy, crawl planning), check the Skills registry at `docs/agi/SKILLS.md` for an existing SOP. Key Skills: `websocket-upgrade` (replacing polling with WebSocket), `targeted-testing` (picking the smallest validation), `skill-writing` (creating new Skills). For dashboard UI refactors specifically, use the `/dashboard-refactor` workflow.
+- **Workflow discovery.** If you need a repeatable procedure (deploy, diagnostics, UI inspection, refactor loop), consult `docs/INDEX.md` under the Workflows section.
 - **Kilo instructions live under `.kilo/rules-<slug>/`.** Pair them with [`docs/workflows/kilo-agent-handbook.md`](docs/workflows/kilo-agent-handbook.md) so Kilo Code knows where to find repo-specific guidance. Add a slugged rules directory + `.kilocodemodes` entry whenever you author a new Kilo mode.
 
 /docs/INDEX.md – the table of contents the agents consult first.
@@ -42,22 +41,14 @@ AGENTS.md should link to these pages and assign follow-ups ("If X arises, consul
 
 | Path | Scope |
 |------|-------|
-| `src/v4/AGENT.md` | V4 distributed crawl system |
-| `src/core/crawler/AGENT.md` | Core (V1/V3) crawler pipeline |
 | `src/data/db/AGENT.md` | Database adapters + schema sync |
-| `src/ui/AGENT.md` | jsgui3 UI components |
-| `deploy/AGENT.md` | Deployment infrastructure |
-| `deploy/remote-crawler-v2/AGENT.md` | Content-storing crawler worker |
-| `tools/crawl/AGENT.md` | Crawl diagnostic instruments |
+| `tools/crawl/AGENT.md` | Crawl CLI tools |
 | `tools/dev/AGENT.md` | Developer CLI tools (js-scan, js-edit) |
-| `tests/v4/AGENT.md` | V4 test suite |
-| `docs/AGENT.md` | Documentation hub navigation |
-| `docs/sessions/AGENT.md` | Session folder management (agent memory) |
 
 When you create a new major subsystem directory, create an `AGENT.md` there with: (1) what the directory contains, (2) essential reading links, (3) key workflows, (4) critical knowledge / gotchas, (5) related paths and agent specs.
 
 If you add a new workflow, also:
-- Add it to `docs/workflows/WORKFLOW_REGISTRY.md`
+- Add it to `docs/INDEX.md` under the Workflows section
 - Add a pointer in at least one relevant path-local `AGENT.md`
 
 
@@ -65,7 +56,7 @@ Core directives (always-on)
 
 Session-first gate (mandatory). For any substantial task (multi-step implementation, diagnostics, crawling, refactors, or cross-file work), you MUST create or continue a session under `docs/sessions/<yyyy-mm-dd>-<slug>/` before doing implementation or running operational diagnostics. Minimum required artifacts at kickoff: `PLAN.md` objective + success criteria and an entry in `WORKING_NOTES.md`. The only exception is a true one-liner operational command.
 
-Workflow-first gate for V4 incident/recovery loops (mandatory). Before running any V4 start/restart/TTFSL diagnostic cycle, read and follow in this order: `docs/workflows/WORKFLOW_REGISTRY.md` → `docs/workflows/continuous-crawl-repair-loop.md` → `tools/crawl/AGENT.md`. In the active session `PLAN.md`, explicitly note which workflow branch you are executing (healthy measurement branch vs outage-classification branch) before issuing crawl commands.
+Workflow-first gate for V4 incident/recovery loops (mandatory). Before running any V4 start/restart/TTFSL diagnostic cycle, read `tools/crawl/AGENT.md` for the current crawl tool inventory and decision tree. In the active session `PLAN.md`, explicitly note which workflow branch you are executing (healthy measurement branch vs outage-classification branch) before issuing crawl commands.
 
 Evidence trust policy (mandatory). Trustworthy guidance is not official-only. Use a mixed model: (A) canonical/official docs, (B) field-proven community practice, (C) local reproducible evidence. A community practice may be standardized only when it is repeatable across sources/runs, has mechanistic fit with known system behavior, and is locally verified with bounded metrics. Do not reject non-official patterns by default, and do not adopt popular patterns without local verification.
 
@@ -87,15 +78,15 @@ Process Lifecycle & Cleanup. Ensure all scripts (especially verification tools a
 
 Production persistence default (mandatory). For crawl runs that write into temporary/per-domain databases, agents MUST assess import safety first (dedup + schema compatibility + dry-run). If safe, agents MUST sync results into `data/news.db` during the same session and verify post-sync counts. Do not leave completed crawl data stranded in temp DBs unless a blocker is documented.
 
-Sync-first remote crawling (mandatory). When running remote fleet crawls, **always start with sync enabled** so data flows automatically from remote crawlers to the local `data/news.db`. For fresh sessions and unattended operation, prefer background daemon controls: `npm run fleet:crawl:bg:start` (full crawl+sync), `npm run fleet:crawl:bg:start:sync-only`, `npm run fleet:crawl:bg:status`, and `npm run fleet:crawl:bg:stop`. Foreground alternatives remain `npm run fleet:crawl-sync` (full crawl+sync) and `npm run fleet:sync` (sync-only). Never run remote crawlers without a corresponding sync pipeline pulling data locally. After startup and after crawl batches, verify local DB growth with `npm run db:downloads:recent` and `npm run db:downloads:stats` (optionally `npm run db:downloads:hosts`). See `tools/crawl/AGENT.md` for fleet CLI reference and `docs/workflows/continuous-crawl-repair-loop.md` for the operational loop.
+Sync-first remote crawling (mandatory). When running remote fleet crawls, **always start with sync enabled** so data flows automatically from remote crawlers to the local `data/news.db`. Use `node tools/crawl/crawl-remote.js` for remote operations (status, start, sync, pull). After startup and after crawl batches, verify local DB growth with `npm run db:downloads:recent` and `npm run db:downloads:stats` (optionally `npm run db:downloads:hosts`). See `tools/crawl/AGENT.md` for the full CLI reference.
 
-Fast-answer CLI policy (mandatory). For repeated operational questions, prefer near-instant local CLI fast paths before expensive scans. Examples: use `node tools/crawl/fleet-cli.js running` (snapshot-based, sub-second) for "are crawlers running?", `node tools/crawl/fleet-cli.js overview` for instant richer triage summaries, `node tools/crawl/fleet-cli.js reliable` for "which websites can we reliably crawl?", and `node tools/crawl/fleet-cli.js question --q "<operator question>"` for deterministic (non-AI) routing to the right fast command. Use `--explain` to show matched rule and `--list-rules` to inspect rule priority. Use `node tools/crawl/fleet-cli.js health` only when snapshot refresh or authoritative live state is required.
+Fast-answer CLI policy (mandatory). For repeated operational questions, prefer near-instant local CLI fast paths before expensive scans. Use `npm run crawl -- <tool> [args]` as the unified entry point, or `node tools/crawl/crawl-remote.js status` for remote fleet status. See `tools/crawl/AGENT.md` for the decision tree.
 
-Endpoint-intel CLI policy (mandatory). For questions about endpoint structure/capabilities (what routes exist, what they return, local vs remote differences), run `node tools/crawl/fleet-endpoint-intel.js` before manual code spelunking. Prefer `--json` output for agent consumption and use `--target local|remote|both` plus `--deep`/`--include-controls` when needed.
+Endpoint-intel CLI policy (mandatory). For questions about endpoint structure/capabilities (what routes exist, what they return, local vs remote differences), consult the crawl-remote.js tool or the relevant server source code directly.
 
 CLI evolution policy (mandatory). Agents may and should add new CLI commands or extend existing ones when this materially reduces answer latency for recurring questions. Keep outputs machine-readable (`--json`), preserve safe defaults, and always update command help plus relevant agent docs after introducing/altering commands.
 
-Intermittent autonomy protocol (mandatory for "go" commands). Agents are not assumed to run continuously; when given a "go" command, run `node tools/crawl/agent-go.js --apply --session <active-session>` (or the npm alias), so actions are driven by elapsed-time checkpoints, recent logs, and fleet state. `agent-go` must write `AUTONOMY_STATE.json` + `WORKING_NOTES.md` checkpoint entries each run.
+Intermittent autonomy protocol (mandatory for "go" commands). Agents are not assumed to run continuously; when given a "go" command, check `tools/crawl/AGENT.md` for the current operational tools and use the appropriate crawl entry point for the task.
 
 Server Restart After Changes. When modifying server-side code (Express routes, jsgui3 controls, renderers, utilities), always restart the relevant server after applying changes. For the docs viewer: `node src/ui/server/docsViewer/server.js --stop; node src/ui/server/docsViewer/server.js --detached`. For other UI servers, use `Stop-Process -Name node -Force` followed by the appropriate start command. The user cannot see your changes until the server picks up the new code.
 
@@ -123,7 +114,7 @@ Tests (which to add or adapt) and Benchmarks (if DB-heavy).
 
 Docs to update (AGENTS.md section, specific guides, index).
 
-3) Design quick review. Cross-check the plan against this file’s Core directives and the index. If you’re changing the DB boundary, read /docs/workflows/db-adapter-modularisation.md. If refactoring a dashboard UI in src/ui/server/, follow the /dashboard-refactor workflow. If adding real-time features, check the websocket-upgrade Skill. If repeating a pattern, improve that pattern doc.
+3) Design quick review. Cross-check the plan against this file’s Core directives and the index. If you’re changing the DB boundary, read /docs/workflows/db-adapter-modularisation.md. If repeating a pattern, improve that pattern doc.
 
 4) Implement in short hops. Modern JS (ES2020+), small functions, single responsibility, early returns, clear names. Keep services thin, push persistence into adapters, keep utils generic. Prefer extracting helpers to /src/utils over copy-paste.
 

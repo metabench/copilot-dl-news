@@ -7,13 +7,13 @@
 
 const fs = require('fs');
 const path = require('path');
-const { CliFormatter } = require('../src/shared/utils/CliFormatter');
-const { CliArgumentParser } = require('../src/shared/utils/CliArgumentParser');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
 const {
   getPriorityConfig,
   getPriorityConfigPath,
   setPriorityConfigProfile
-} = require('../src/shared/utils/priorityConfig');
+} = require('../../src/shared/utils/priorityConfig');
 
 class CliError extends Error {
   constructor(message, exitCode = 1) {
@@ -149,11 +149,11 @@ const originalConsole = {
   error: console.error
 };
 
-const NewsCrawler = require('../src/crawl.js');
-const { ensureDatabase } = require('../src/data/db/sqlite');
-const { getAllPlaceNames } = require('../src/data/db/sqlite/queries/gazetteerPlaceNames');
-const { getAllCountries } = require('../src/data/db/sqlite/queries/gazetteer.places');
-const { getTopicTermsForLanguage } = require('../src/data/db/sqlite/queries/topicKeywords');
+const NewsCrawler = require('../../src/crawl.js');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { getAllPlaceNames } = require('../../src/data/db/sqlite/queries/gazetteerPlaceNames');
+const { getAllCountries } = require('../../src/data/db/sqlite/queries/gazetteer.places');
+const { getTopicTermsForLanguage } = require('../../src/data/db/sqlite/queries/topicKeywords');
 
 // Initialize database for place verification
 const dbPath = path.join(__dirname, '..', 'data', 'news.db');

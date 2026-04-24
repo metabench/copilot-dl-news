@@ -2,13 +2,13 @@
 'use strict';
 
 const path = require('path');
-const NewsCrawler = require('../src/crawl.js');
-const { ensureDb } = require('../src/data/db/sqlite');
-const { CliFormatter } = require('../src/shared/utils/CliFormatter');
-const { CliArgumentParser } = require('../src/shared/utils/CliArgumentParser');
-const { findProjectRoot } = require('../src/shared/utils/project-root');
-const { sleep, nowMs } = require('../src/core/crawler/utils');
-const { createCrawlPlaceHubsQueries } = require('../src/data/db/sqlite/v1/queries/placeHubs.crawlTool');
+const NewsCrawler = require('../../src/crawl.js');
+const { ensureDb } = require('../../src/data/db/sqlite');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const { findProjectRoot } = require('../../src/shared/utils/project-root');
+const { sleep, nowMs } = require('../../src/core/crawler/utils');
+const { createCrawlPlaceHubsQueries } = require('../../src/data/db/sqlite/v1/queries/placeHubs.crawlTool');
 
 const VIRTUAL_START_URL = 'https://place-hubs-crawl.local/virtual-start';
 const fmt = new CliFormatter();

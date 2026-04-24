@@ -9,7 +9,7 @@
  *   node tools/list-place-hubs.js --show-types       # Same as --types
  */
 
-const { ensureDatabase } = require('../src/data/db/sqlite');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
 
 function main() {
   const args = process.argv.slice(2);

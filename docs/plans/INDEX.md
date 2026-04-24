@@ -1,6 +1,6 @@
 # Project Plans Index
 
-_Last Updated: 2025-12-01_
+_Last Updated: 2026-03-08_
 
 > **Purpose**: AI-generated long-term project plans for human review and commentary.
 > All plans link to `docs/sessions/` for execution tracking.
@@ -9,7 +9,7 @@ _Last Updated: 2025-12-01_
 
 | Plan | Status | Progress | Next Session | Priority |
 |------|--------|----------|--------------|----------|
-| — | — | — | — | — |
+| [2026-03-v5-remote-crawler-application](./2026-03-v5-remote-crawler-application/PLAN.md) | active | planning complete, implementation not started | `2026-03-xx-v5-boundary-and-runtime-bootstrap` | critical |
 
 ## Completed Plans
 

@@ -426,6 +426,23 @@ class CrawlerState {
     return this.lastError;
   }
 
+  /**
+   * Get overall fatal state object (set by remote adapter or self-healing).
+   * Different from fatalIssues which is a list of individual issues.
+   * @returns {Object|null} Fatal state with { reason, message, detectedAt } or null
+   */
+  getFatalState() {
+    return this._fatalState || null;
+  }
+
+  /**
+   * Set overall fatal state.
+   * @param {Object|null} state - { reason, message, detectedAt } or null to clear
+   */
+  setFatalState(state) {
+    this._fatalState = state || null;
+  }
+
   addErrorSample(sample) {
     if (!sample || tof(sample) !== 'object') {
       return;

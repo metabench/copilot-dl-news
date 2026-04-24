@@ -66,7 +66,7 @@ This document tracks medium-term priorities, milestones, and open investigations
 | `R-14` | Expanded problem taxonomy | Investigate new planner problem kinds (`hub-stale`, `coverage-plateau`, `error-spike`, `conflicting-classification`) and downstream handling. | Proposed |
 | `R-15` | Planner budget mode | Investigate a crawl budget heuristic that prioritises estimated coverage lift, ensuring basic crawl types remain unaffected. | Proposed |
 | `R-16` | Multi-run coverage analytics | Investigate storing historical coverage metrics to emit `coverage-improved` milestones between runs. | Proposed |
-| `R-17` | V5 Crawler Architecture | Transition to an asynchronous Producer-Consumer pipeline to decouple fetching from parsing. See [v5-crawler-architecture.md](books/v5-crawler-architecture.md). | Proposed |
+| `R-17` | V5 Crawler Architecture | Consolidate the current remote crawler runtime, operator shell, article library/reader, and async bundle exports into one remotely operated crawler application. See [v5-crawler-architecture.md](books/v5-crawler-architecture.md). | Proposed |
 
 ### `R-07` implementation notes
 

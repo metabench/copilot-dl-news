@@ -1300,6 +1300,76 @@ class NewsCrawler extends Crawler {
     }
   }
 
+  // ── Remote API surface ──────────────────────────────────────
+
+  /**
+   * Seed URLs into the crawl queue at runtime.
+   * Used by RemoteCrawlerAdapter to inject URLs from remote sources.
+   *
+   * @param {string[]} urls - Array of URLs to seed
+   * @param {Object} [meta={}] - Optional metadata to attach to each seed
+   * @returns {{ inserted: number, total: number }}
+   */
+  seedUrls(urls, meta = {}) {
+    if (!Array.isArray(urls) || urls.length === 0) {
+      return { inserted: 0, total: 0 };
+    }
+
+    let inserted = 0;
+    for (const url of urls) {
+      try {
+        const result = this.enqueueRequest({
+          url,
+          depth: 0,
+          type: 'seed',
+          meta: {
+            source: meta.source || 'seed-api',
+            seededAt: new Date().toISOString(),
+            ...meta,
+          },
+        });
+        if (result !== false) inserted++;
+      } catch (_) { /* skip invalid URLs */ }
+    }
+
+    return { inserted, total: urls.length };
+  }
+
+  /**
+   * Get a structured operational status snapshot suitable for API responses.
+   * Returns current stats, queue state, features, and crawl mode info.
+   *
+   * @returns {Object} Operational status
+   */
+  getOperationalStatus() {
+    const stats = this.state ? this.state.getStats() : {};
+    const queueSize = this.queue?.size?.() || 0;
+    const hubStats = this.state?.getHubVisitStats?.() || {};
+
+    return {
+      domain: this.domain || null,
+      baseUrl: this.baseUrl || null,
+      crawlType: this.crawlType || 'unknown',
+      isProcessing: this.isProcessing || false,
+      isPaused: this.isPaused?.() || false,
+      isAbortRequested: this.isAbortRequested?.() || false,
+      fatalState: this.state?.getFatalState?.() || null,
+      stats: {
+        ...stats,
+        queueSize,
+      },
+      hubs: {
+        seeded: hubStats.seeded || 0,
+        visited: hubStats.visited || 0,
+      },
+      features: this.featuresEnabled || {},
+      concurrency: this.concurrency || 1,
+      structureOnly: this.structureOnly || false,
+      plannerEnabled: this.plannerEnabled || false,
+      isGazetteerMode: this.isGazetteerMode || false,
+    };
+  }
+
   enqueueRequest({
     url,
     depth,
