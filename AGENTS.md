@@ -1,5 +1,13 @@
 Living Agent Workflow (Plan → Improve → Document)
 
+**Repo layout (post 2026-04-24 slim-down):**
+- `src/`, `tools/`, `tests/`, `docs/` — active production code, tooling, tests, and documentation.
+- `solid/` — promotion target for stable, curated stand-alone artifacts. See `solid/README.md`.
+- `wip/` — experimental zone (labs, recipes, sketches, planning docs). May break. See `wip/README.md`.
+- `data/news.db` — production crawl database (~23 GB). Never delete.
+- `tmp/` — gitignored scratch. Anything here is disposable.
+- See ADR `docs/decisions/2026-04-24-repo-slimdown.md` for what was deleted/moved.
+
 **QUICK START for Tooling Improvements**: New 3-tier strategy document available!
 - **READ FIRST**: `/docs/TOOLING_RECOMMENDATIONS.md` (executive recommendation, 15 min)
 - **IMPLEMENT**: `/docs/IMPLEMENTATION_ROADMAP.md` (hour-by-hour plan, ready to start)

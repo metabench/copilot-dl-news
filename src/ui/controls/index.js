@@ -12,8 +12,13 @@ const { ConfigMatrixControl } = require("./ConfigMatrixControl");
 const { CrawlBehaviorPanelControl } = require("./CrawlBehaviorPanel");
 const { CrawlConfigWorkspaceControl } = require("./CrawlConfigWorkspaceControl");
 const { SearchFormControl } = require("./SearchFormControl");
+const { SearchExplorerControl } = require("./SearchExplorerControl");
 const { MetricCardControl } = require("./MetricCardControl");
 const { ThemeEditorControl } = require("./ThemeEditorControl");
+const { ActionButtonGroupControl } = require("./ActionButtonGroupControl");
+const { ActivityLogControl } = require("./ActivityLogControl");
+const { CrawlProgressPanelControl } = require("./CrawlProgressPanelControl");
+const { OptionPickerControl } = require("./OptionPickerControl");
 
 module.exports = {
   TableControl,
@@ -28,6 +33,11 @@ module.exports = {
   CrawlBehaviorPanelControl,
   CrawlConfigWorkspaceControl,
   SearchFormControl,
+  SearchExplorerControl,
   MetricCardControl,
-  ThemeEditorControl
+  ThemeEditorControl,
+  ActionButtonGroupControl,
+  ActivityLogControl,
+  CrawlProgressPanelControl,
+  OptionPickerControl
 };

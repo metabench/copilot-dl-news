@@ -20,7 +20,7 @@
  *   content         Content stats by domain
  *
  * Usage:
- *   node tools/crawl/crawl-remote.js status --host 144.21.35.104:3200
+ *   node tools/crawl/crawl-remote.js status --host 141.144.193.218:3200
  *   node tools/crawl/crawl-remote.js start --domain bbc.com
  *   node tools/crawl/crawl-remote.js start --all
  *   node tools/crawl/crawl-remote.js stop --all
@@ -39,6 +39,7 @@ const zlib = require('zlib');
 const path = require('path');
 const fs = require('fs');
 const {
+  findMissingDomains,
   resolveTargetDomains,
   summarizeBoundedRun,
 } = require('./lib/crawl-remote-bounded');
@@ -89,7 +90,7 @@ Commands:
   content                   Content stats by domain
 
 Options:
-  --host <host:port>     Remote server (default: env CRAWL_REMOTE_HOST or 144.21.35.104:3200)
+  --host <host:port>     Remote server (default: env/resolver or 141.144.193.218:3200)
   --db <path>            Local DB path (default: data/news.db)
   --domain <domain>      Target domain for start/stop/seed/add/remove
   --all                  Affect all domains
@@ -105,10 +106,10 @@ Options:
   process.exit(0);
 }
 
-let defaultHost = '127.0.0.1:3300';
+let defaultHost = '127.0.0.1:3200';
 try {
   const { getFleetHostSync } = require('./lib/fleet-host-resolver');
-  defaultHost = `${getFleetHostSync()}:3300`;
+  defaultHost = `${getFleetHostSync()}:3200`;
 } catch (e) {
   // fallback if resolver fails
 }
@@ -249,6 +250,15 @@ function ingestBatch(batch) {
   const db = openLocalDb();
   const result = ingestV2Batch(db, batch);
   return result;
+}
+
+function getBatchCounts(batch) {
+  return batch.counts || {
+    urls: Array.isArray(batch.urls) ? batch.urls.length : 0,
+    content: Array.isArray(batch.content) ? batch.content.length : 0,
+    httpResponses: Array.isArray(batch.httpResponses) ? batch.httpResponses.length : 0,
+    links: Array.isArray(batch.links) ? batch.links.length : 0,
+  };
 }
 
 // ── Format Helpers ──────────────────────────────────────────
@@ -452,12 +462,14 @@ async function cmdPull() {
   const { data, headers } = await requestWithTimeout('GET', queryPath, null, 60000);
   const fetchMs = Date.now() - startTime;
 
+  const counts = getBatchCounts(data);
+
   if (!data.urls || data.urls.length === 0) {
     console.log(`  No new data (fetch took ${fetchMs}ms)`);
     return { urls: 0, content: 0, fetchMs };
   }
 
-  console.log(`  Fetched batch: ${data.counts.urls} URLs, ${data.counts.content} content, ${data.counts.httpResponses} responses, ${data.counts.links} links (${fetchMs}ms)`);
+  console.log(`  Fetched batch: ${counts.urls} URLs, ${counts.content} content, ${counts.httpResponses} responses, ${counts.links} links (${fetchMs}ms)`);
 
   // Ingest to local DB
   const ingestStart = Date.now();
@@ -468,14 +480,14 @@ async function cmdPull() {
   if (data.watermark) {
     wm.lastWatermark = data.watermark;
     wm.lastPullAt = new Date().toISOString();
-    wm.totalPulled = (wm.totalPulled || 0) + (data.counts.urls || 0);
+    wm.totalPulled = (wm.totalPulled || 0) + (counts.urls || 0);
     saveWatermark(wm);
   }
 
   console.log(`  Ingested: ${result.urlsInserted || 0} URLs, ${result.contentInserted || 0} content, ${result.responsesInserted || 0} responses (${ingestMs}ms)`);
   console.log(`  Total pulled this session: ${wm.totalPulled}`);
 
-  return { urls: data.counts.urls, content: data.counts.content, fetchMs, ingestMs, ...result };
+  return { urls: counts.urls, content: counts.content, fetchMs, ingestMs, ...result };
 }
 
 async function cmdSync() {
@@ -685,16 +697,34 @@ function formatBoundedSummary(summary) {
 }
 
 async function cmdBounded() {
-  const { data: initialStatus } = await requestWithTimeout('GET', '/api/status', null, 10000);
+  let { data: initialStatus } = await requestWithTimeout('GET', '/api/status', null, 10000);
   const targetDomains = resolveTargetDomains(args, initialStatus);
   if (targetDomains.length === 0) {
     throw new Error('No target domains resolved for bounded crawl');
   }
 
+  const maxPagesOverride = args['max-pages'] ? parseInt(args['max-pages'], 10) : undefined;
+  const missingDomains = findMissingDomains(initialStatus, targetDomains);
+  for (const domain of missingDomains) {
+    const body = { domain };
+    if (maxPagesOverride) body.maxPages = maxPagesOverride;
+    const { data: addData } = await requestWithTimeout('POST', '/api/domains/add', body, 15000);
+    if (addData?.error) {
+      throw new Error(`Failed to register bounded crawl domain ${domain}: ${addData.error}`);
+    }
+    if (!JSON_OUTPUT) {
+      console.log(`  Registered remote domain: ${domain}${maxPagesOverride ? ` (maxPages=${maxPagesOverride})` : ''}`);
+    }
+  }
+
+  if (missingDomains.length > 0) {
+    ({ data: initialStatus } = await requestWithTimeout('GET', '/api/status', null, 10000));
+  }
+
   const startBody = {};
   if (args.domain) startBody.domain = args.domain;
   else if (args.domains) startBody.domains = targetDomains;
-  if (args['max-pages']) startBody.maxPages = parseInt(args['max-pages'], 10);
+  if (maxPagesOverride) startBody.maxPages = maxPagesOverride;
 
   const pollMs = Math.max(1000, (parseInt(args.poll, 10) || 5) * 1000);
   const timeoutMs = Math.max(10000, (parseInt(args['timeout-min'], 10) || 30) * 60 * 1000);

@@ -1,6 +1,9 @@
 'use strict';
 
 const path = require('path');
+const fs = require('fs');
+const http = require('http');
+const { spawn } = require('child_process');
 const { app: electronApp, BrowserWindow } = require('electron');
 
 function getDevRepoRoot() {
@@ -36,37 +39,95 @@ function createWindow(url) {
 
 async function startUnifiedServer({ port }) {
   const appRoot = resolveAppRoot();
-  process.chdir(appRoot);
+  const serverPath = path.join(appRoot, 'src', 'ui', 'server', 'unifiedApp', 'server.js');
+  const nodeExecutable = process.env.COPILOT_NODE_PATH || process.env.NODE_EXE || 'node';
+  const output = { stdout: '', stderr: '' };
 
-  const unified = require('../../server/unifiedApp/server');
-  const unifiedExpressApp = unified.app;
-
-  const mounted = unified.mountDashboardModules(unifiedExpressApp, {
-    dbPath: process.env.DB_PATH
+  const server = spawn(nodeExecutable, [serverPath, '--port', String(port)], {
+    cwd: appRoot,
+    env: {
+      ...process.env,
+      DB_PATH: process.env.DB_PATH || path.join(appRoot, 'data', 'news.db')
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true
   });
 
-  const server = await new Promise((resolve, reject) => {
-    const s = unifiedExpressApp.listen(port, '127.0.0.1', () => resolve(s));
-    s.on('error', reject);
+  server.stdout?.on('data', (chunk) => {
+    output.stdout += chunk.toString();
   });
+
+  server.stderr?.on('data', (chunk) => {
+    output.stderr += chunk.toString();
+  });
+
+  await waitForHttp(`http://127.0.0.1:${port}/`, 20_000, server, output);
 
   const close = async () => {
     try {
-      mounted.close();
+      server.kill('SIGTERM');
     } catch {
       // ignore
     }
 
-    await new Promise((resolve) => {
-      try {
-        server.close(() => resolve());
-      } catch {
-        resolve();
-      }
-    });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    try {
+      server.kill('SIGKILL');
+    } catch {
+      // ignore
+    }
   };
 
   return { server, close, appRoot };
+}
+
+function waitForHttp(url, timeoutMs, child, output) {
+  const deadline = Date.now() + timeoutMs;
+
+  return new Promise((resolve, reject) => {
+    let finished = false;
+
+    const fail = (error) => {
+      if (finished) return;
+      finished = true;
+      reject(error);
+    };
+
+    const check = () => {
+      if (finished) return;
+      if (Date.now() > deadline) {
+        return fail(new Error([
+          `Unified server did not respond at ${url}`,
+          output.stdout ? `--- stdout ---\n${output.stdout.slice(0, 1200)}` : '',
+          output.stderr ? `--- stderr ---\n${output.stderr.slice(0, 1200)}` : ''
+        ].filter(Boolean).join('\n')));
+      }
+
+      const req = http.get(url, { timeout: 1000, headers: { Connection: 'close' }, agent: false }, (res) => {
+        res.resume();
+        if (res.statusCode && res.statusCode < 500) {
+          finished = true;
+          resolve();
+          return;
+        }
+        setTimeout(check, 250);
+      });
+
+      req.on('timeout', () => req.destroy(new Error('timeout')));
+      req.on('error', () => setTimeout(check, 250));
+    };
+
+    child.once('exit', (code, signal) => {
+      fail(new Error([
+        `Unified server exited before responding (code=${code}, signal=${signal || 'none'})`,
+        output.stdout ? `--- stdout ---\n${output.stdout.slice(0, 1200)}` : '',
+        output.stderr ? `--- stderr ---\n${output.stderr.slice(0, 1200)}` : ''
+      ].filter(Boolean).join('\n')));
+    });
+
+    check();
+  });
 }
 
 function parsePortFromArgv() {
@@ -92,14 +153,33 @@ function parseNumberArg(flag, defaultValue) {
   return defaultValue;
 }
 
+function parseStringArg(flag, defaultValue = null) {
+  const index = process.argv.indexOf(flag);
+  if (index >= 0 && process.argv[index + 1]) {
+    return process.argv[index + 1];
+  }
+  return defaultValue;
+}
+
+async function captureScreenshot(win, screenshotPath, delayMs) {
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+  const image = await win.webContents.capturePage();
+  fs.mkdirSync(path.dirname(screenshotPath), { recursive: true });
+  fs.writeFileSync(screenshotPath, image.toPNG());
+}
+
 electronApp.whenReady().then(async () => {
   const port = parsePortFromArgv();
   const smoke = hasArg('--smoke');
+  const screenshotPath = parseStringArg('--screenshot');
+  const urlPath = parseStringArg('--url-path', '/');
   const smokeTimeoutMs = parseNumberArg('--smoke-timeout-ms', 12_000);
   const closeTimeoutMs = parseNumberArg('--smoke-close-timeout-ms', 3_000);
+  const screenshotDelayMs = parseNumberArg('--screenshot-delay-ms', 1_200);
+  const smokeReadyDelayMs = parseNumberArg('--smoke-ready-delay-ms', 1_000);
 
   // Keep a stable URL so cached assets work.
-  const url = `http://127.0.0.1:${port}`;
+  const url = `http://127.0.0.1:${port}${urlPath}`;
 
   const { close } = await startUnifiedServer({ port });
 
@@ -133,13 +213,24 @@ electronApp.whenReady().then(async () => {
     }
   };
 
-  if (smoke) {
+  if (smoke || screenshotPath) {
     const timer = setTimeout(() => {
       shutdown(1);
     }, smokeTimeoutMs);
 
-    win.webContents.once('did-finish-load', () => {
+    win.webContents.once('did-finish-load', async () => {
       clearTimeout(timer);
+      if (screenshotPath) {
+        try {
+          await captureScreenshot(win, path.resolve(screenshotPath), screenshotDelayMs);
+        } catch (error) {
+          console.error('[Electron Unified] screenshot failed:', error.message);
+          await shutdown(1);
+          return;
+        }
+      } else if (smokeReadyDelayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, smokeReadyDelayMs));
+      }
       shutdown(0);
     });
 
@@ -167,6 +258,13 @@ electronApp.whenReady().then(async () => {
       createWindow(url);
     }
   });
+}).catch((error) => {
+  console.error('[Electron Unified] startup failed:', error && error.stack ? error.stack : String(error));
+  try {
+    electronApp.exit(1);
+  } catch {
+    process.exit(1);
+  }
 });
 
 electronApp.on('window-all-closed', () => {

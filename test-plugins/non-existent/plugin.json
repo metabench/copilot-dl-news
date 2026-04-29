@@ -1,8 +1,0 @@
-{
-  "id": "non-existent",
-  "name": "non-existent",
-  "version": "1.0.0",
-  "type": "extractor",
-  "entrypoint": "index.js",
-  "description": ""
-}

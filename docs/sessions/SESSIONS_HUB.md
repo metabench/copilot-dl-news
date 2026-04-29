@@ -54,6 +54,82 @@
 
 ## Current Sessions
 
+### Session 2026-04-29: Churn Control Salvage
+
+**Duration**: 1 session
+**Type**: UI Cleanup / jsgui3 Shared Controls
+**Completion**: ✅ Completed
+
+**Focus**:
+- Identify churn-type UI files, remove disposable sources, and salvage reusable controls into shared jsgui3 controls with focused render checks.
+
+**Location**: `docs/sessions/2026-04-29-churn-control-salvage/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-04-29-churn-control-salvage/INDEX.md)
+- 🗺️ [Plan](./2026-04-29-churn-control-salvage/PLAN.md)
+- 📝 [Working Notes](./2026-04-29-churn-control-salvage/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-04-29-churn-control-salvage/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-04-29-churn-control-salvage/FOLLOW_UPS.md)
+
+
+### Session 2026-04-29: Electron jsgui3 Crawl Display
+
+**Duration**: Active
+**Type**: UI/Crawl/Electron Validation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Run a small crawl and prove the crawl display path through jsgui3 unified UI, Electron, and screenshots with iterative fixes.
+
+**Location**: `docs/sessions/2026-04-29-electron-jsgui3-crawl-display/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-04-29-electron-jsgui3-crawl-display/INDEX.md)
+- 🗺️ [Plan](./2026-04-29-electron-jsgui3-crawl-display/PLAN.md)
+- 📝 [Working Notes](./2026-04-29-electron-jsgui3-crawl-display/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-04-29-electron-jsgui3-crawl-display/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-04-29-electron-jsgui3-crawl-display/FOLLOW_UPS.md)
+
+
+### Session 2026-04-29: UI Tools Review
+
+**Duration**: Active
+**Type**: UI Review / jsgui3 Tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Review and improve reusable UI tools, shared controls, and jsgui3 integration for the advanced crawler UI direction.
+
+**Location**: `docs/sessions/2026-04-29-ui-tools-review/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-04-29-ui-tools-review/INDEX.md)
+- 🗺️ [Plan](./2026-04-29-ui-tools-review/PLAN.md)
+- 📝 [Working Notes](./2026-04-29-ui-tools-review/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-04-29-ui-tools-review/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-04-29-ui-tools-review/FOLLOW_UPS.md)
+
+
+### Session 2026-04-29: Simple Distributed Crawl Readiness
+
+**Duration**: 1 session
+**Type**: Crawl Readiness
+**Completion**: ✅ Completed
+
+**Focus**:
+- Verify the smallest easy crawl path, including distributed Oracle Cloud execution, config/profile readiness, and terminology that separates simple scope from local-only execution.
+
+**Location**: `docs/sessions/2026-04-29-simple-distributed-crawl-readiness/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-04-29-simple-distributed-crawl-readiness/INDEX.md)
+- 🗺️ [Plan](./2026-04-29-simple-distributed-crawl-readiness/PLAN.md)
+- 📝 [Working Notes](./2026-04-29-simple-distributed-crawl-readiness/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-04-29-simple-distributed-crawl-readiness/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-04-29-simple-distributed-crawl-readiness/FOLLOW_UPS.md)
+
+
 ### Session 2026-04-04: Evaluate Static Analysis Tooling
 
 **Duration**: Active

@@ -2,11 +2,14 @@
 
 **Scope**: Local config-driven crawling via `node src/crawl.js` / `npm start`. For remote/fleet crawling, see [tools/crawl/AGENT.md](../../tools/crawl/AGENT.md).
 
+Terminology: **simple crawl** means low-scope/easy-to-run, not local-only. The preferred simple crawl is the distributed smoke profile in `tools/crawl`: `npm run crawl -- simple-distributed-smoke`.
+
 ## Quick Entry Points
 
 | Task | Command |
 |------|---------|
 | **Unified launcher** (preferred) | `npm run crawl -- <tool> [args]` |
+| **Simple distributed crawl** | `npm run crawl -- simple-distributed-smoke` |
 | **Remote crawl ops** | `node tools/crawl/crawl-remote.js <command>` |
 | **Local intelligent crawl** | `npm run crawl -- intelligent [args]` |
 | **DB download stats** | `npm run db:downloads:stats` |

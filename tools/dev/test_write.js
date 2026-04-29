@@ -1,1 +1,0 @@
-require('fs').writeFileSync('c:\\Users\\james\\Documents\\repos\\copilot-dl-news\\tmp\\test_node_abs.txt', 'hello from node abs');

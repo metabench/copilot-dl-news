@@ -660,6 +660,59 @@ class UnifiedShell extends Control {
       /* Empty-state placeholder in log areas */
       .panel-log__empty  { color: var(--text-muted); }
 
+      .downloads-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .downloads-list__row {
+        display: grid;
+        grid-template-columns: 52px minmax(0, 1fr) 128px;
+        gap: 12px;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(212, 165, 116, 0.14);
+      }
+
+      .downloads-list__row:last-child {
+        border-bottom: 0;
+      }
+
+      .downloads-list__status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 28px;
+        border-radius: 7px;
+        border: 1px solid rgba(74, 222, 128, 0.48);
+        color: var(--success);
+      }
+
+      .downloads-list__main {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      .downloads-list__main strong {
+        color: var(--text-cream);
+      }
+
+      .downloads-list__main span {
+        color: var(--text-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .downloads-list__meta {
+        color: var(--text-muted);
+        text-align: right;
+        font-size: 11px;
+      }
+
       /* Layout utilities */
       .mt-24  { margin-top: 24px; }
       .mt-12  { margin-top: 12px; }

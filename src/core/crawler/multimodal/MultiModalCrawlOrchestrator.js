@@ -11,7 +11,7 @@ let RegionHubGapAnalyzer = null;
 function getAnalysisObservable() {
   if (!analysisObservableModule) {
     try {
-      analysisObservableModule = require('../../../labs/analysis-observable/analysis-observable');
+      analysisObservableModule = require('../../../wip/labs/analysis-observable/analysis-observable');
     } catch (e) {
       // Fallback: module not available
       analysisObservableModule = { createAnalysisObservable: null };

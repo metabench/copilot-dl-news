@@ -6,6 +6,7 @@ const {
   shouldStopOrchestrator,
 } = require('../../deploy/remote-crawler-v2/lib/orchestrator-utils');
 const {
+  findMissingDomains,
   resolveTargetDomains,
   summarizeBoundedRun,
 } = require('../../tools/crawl/lib/crawl-remote-bounded');
@@ -79,5 +80,16 @@ describe('remote crawl bounded reliability helpers', () => {
     });
 
     expect(targetDomains).toEqual(['bbc.com', 'reuters.com']);
+  });
+
+  test('detects explicit bounded domains missing from the remote server config', () => {
+    const missing = findMissingDomains({
+      domains: [
+        { domain: 'bbc.com' },
+        { domain: 'reuters.com' },
+      ],
+    }, ['bbc.com', 'apnews.com', 'bbc.com']);
+
+    expect(missing).toEqual(['apnews.com']);
   });
 });

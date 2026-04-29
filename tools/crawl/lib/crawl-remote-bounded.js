@@ -61,7 +61,13 @@ function summarizeBoundedRun(statusData, targetDomains) {
   };
 }
 
+function findMissingDomains(statusData, targetDomains) {
+  const configured = new Set((statusData?.domains || []).map(domain => domain.domain));
+  return normalizeDomains(targetDomains).filter(domain => !configured.has(domain));
+}
+
 module.exports = {
+  findMissingDomains,
   normalizeDomains,
   resolveTargetDomains,
   summarizeBoundedRun,

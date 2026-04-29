@@ -45,6 +45,7 @@ const { fnv1a64 } = require('./lib/hash-manifest');
 const { globalShield } = require('./lib/resource-shield');
 const { closeIntelligencePool } = require('./lib/intelligence-pool');
 const { pruneExportedPayload } = require('./lib/export-retention');
+const { buildServerConfig, parseServerArgv } = require('./lib/server-config');
 const {
   getDomainsToSchedule,
   getRunningCount,
@@ -54,26 +55,7 @@ const {
 } = require('./lib/orchestrator-utils');
 
 // ── CLI Args ────────────────────────────────────────────────
-const args = {};
-const argv = process.argv.slice(2);
-for (let i = 0; i < argv.length; i++) {
-  const arg = argv[i];
-  if (arg.startsWith('--')) {
-    const eqIdx = arg.indexOf('=');
-    if (eqIdx !== -1) {
-      args[arg.slice(2, eqIdx)] = arg.slice(eqIdx + 1);
-    } else {
-      const key = arg.slice(2);
-      const next = argv[i + 1];
-      if (next && !next.startsWith('--')) {
-        args[key] = next;
-        i++;
-      } else {
-        args[key] = true;
-      }
-    }
-  }
-}
+const args = parseServerArgv(process.argv.slice(2));
 
 if (args.help || args.h) {
   console.log('multi-domain-server.js v4 — On-demand multi-domain crawl server');
@@ -84,53 +66,38 @@ if (args.help || args.h) {
   console.log('');
   console.log('Options:');
   console.log('  --domains <list>       Comma-separated domain list');
-  console.log('  --config <file>        JSON config file with domain list + options');
+  console.log('  --config <file>        JSON config file with domains plus port/db/limit options');
   console.log('  --port <n>             Server port (default: 3200)');
   console.log('  --db <path>            Database file (default: data/news.db)');
   console.log('  --max-pages <n>        Max pages per domain (default: 50)');
   console.log('  --max-concurrent <n>   Max concurrent crawling domains (default: 20)');
   console.log('  --idle-timeout <mins>  Auto-shutdown after N minutes idle (default: 30, 0=off)');
   console.log('  --coordinator-mode     Seeded-only crawl mode (do not auto-queue discovered URLs)');
+  console.log('  --no-auto-start        Start API server idle; wait for /api/start');
   console.log('  --help                 Show this help');
   process.exit(0);
 }
 
 // ── Configuration ───────────────────────────────────────────
 
-const PORT = parseInt(args.port, 10) || 3200;
-const DB_FILE = args.db || 'data/news.db';
-const MAX_PAGES_DEFAULT = parseInt(args['max-pages'], 10) || 50;
-let MAX_CONCURRENT = parseInt(args['max-concurrent'], 10) || 20;
-const IDLE_TIMEOUT_MIN = args['idle-timeout'] !== undefined ? parseInt(args['idle-timeout'], 10) : 30;
-const COORDINATOR_MODE = !!args['coordinator-mode'];
-
-let domainConfigs = [];
-let loadedConfigPath = null;
-
-if (args.config) {
-  const configPath = path.resolve(args.config);
-  loadedConfigPath = configPath;
-  if (!fs.existsSync(configPath)) {
-    console.error(`Config file not found: ${configPath}`);
-    process.exit(1);
-  }
-  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  domainConfigs = (config.domains || []).map(d => {
-    if (typeof d === 'string') return { domain: d, maxPages: MAX_PAGES_DEFAULT };
-    return {
-      domain: d.domain || d.host,
-      maxPages: d.maxPages || MAX_PAGES_DEFAULT,
-      seedUrls: d.seedUrls,
-    };
-  });
-} else if (args.domains) {
-  domainConfigs = args.domains.split(',').map(d => ({
-    domain: d.trim(),
-    maxPages: MAX_PAGES_DEFAULT,
-  }));
+let serverConfig;
+try {
+  serverConfig = buildServerConfig(args);
+} catch (error) {
+  console.error(error.message || String(error));
+  process.exit(1);
 }
 
-domainConfigs = domainConfigs.filter(dc => dc && dc.domain);
+const PORT = serverConfig.port;
+const DB_FILE = serverConfig.dbFile;
+const MAX_PAGES_DEFAULT = serverConfig.maxPagesDefault;
+let MAX_CONCURRENT = serverConfig.maxConcurrent;
+const IDLE_TIMEOUT_MIN = serverConfig.idleTimeoutMin;
+const COORDINATOR_MODE = serverConfig.coordinatorMode;
+const AUTO_START = serverConfig.autoStart;
+
+let domainConfigs = serverConfig.domainConfigs;
+let loadedConfigPath = serverConfig.loadedConfigPath;
 
 if (domainConfigs.length === 0) {
   console.error('No domains specified. Use --domains or --config.');
@@ -153,6 +120,9 @@ db.pragma('busy_timeout = 5000');
 console.log('═══════════════════════════════════════════════════════════');
 console.log('  Multi-Domain Crawl Server v4 — On-Demand');
 console.log('═══════════════════════════════════════════════════════════');
+if (loadedConfigPath) {
+  console.log(`  Config:         ${loadedConfigPath}`);
+}
 console.log(`  Database:       ${DB_FILE}`);
 console.log(`  Schema:         ${getSchemaVersion(db)}`);
 console.log(`  Port:           ${PORT}`);
@@ -161,6 +131,7 @@ console.log(`  Max pages:      ${MAX_PAGES_DEFAULT} per domain`);
 console.log(`  Concurrency:    ${MAX_CONCURRENT} simultaneous`);
 console.log(`  Idle timeout:   ${IDLE_TIMEOUT_MIN > 0 ? IDLE_TIMEOUT_MIN + ' min' : 'disabled'}`);
 console.log(`  Coordinator:    ${COORDINATOR_MODE ? 'enabled (seeded-only queueing)' : 'disabled'}`);
+console.log(`  Auto-start:     ${AUTO_START ? 'enabled' : 'disabled'}`);
 console.log('═══════════════════════════════════════════════════════════');
 
 // ── Worker Management ───────────────────────────────────────
@@ -585,6 +556,7 @@ async function* iterateDb(stmt, ...binds) {
 async function streamArray(out, key, stmt, ...binds) {
   out.write(`,"${key}":[`);
   let first = true;
+  let count = 0;
   for await (const row of iterateDb(stmt, ...binds)) {
     if (row.content_blob) {
       row.content_blob_b64 = row.content_blob.toString('base64');
@@ -593,8 +565,10 @@ async function streamArray(out, key, stmt, ...binds) {
     if (!first) out.write(',');
     out.write(JSON.stringify(row));
     first = false;
+    count++;
   }
   out.write(']');
+  return count;
 }
 
 // ── Express Server ──────────────────────────────────────────
@@ -951,15 +925,23 @@ app.get('/api/export/batch', async (req, res) => {
 
     const uIds = urls.map(u => u.id).join(',');
 
-    await streamArray(out, 'httpResponses', db.prepare(`SELECT * FROM http_responses WHERE url_id IN (${uIds})`));
+    const httpResponsesCount = await streamArray(out, 'httpResponses', db.prepare(`SELECT * FROM http_responses WHERE url_id IN (${uIds})`));
 
+    let contentCount = 0;
     if (includeContent) {
-      await streamArray(out, 'content', db.prepare(`SELECT * FROM content_storage WHERE http_response_id IN (SELECT id FROM http_responses WHERE url_id IN (${uIds}))`));
+      contentCount = await streamArray(out, 'content', db.prepare(`SELECT * FROM content_storage WHERE http_response_id IN (SELECT id FROM http_responses WHERE url_id IN (${uIds}))`));
     } else {
       out.write(',"content":[]');
     }
 
-    await streamArray(out, 'links', db.prepare(`SELECT dl.*, u.url as source_url FROM discovered_links dl JOIN urls u ON dl.source_url_id = u.id WHERE dl.source_url_id IN (${uIds})`));
+    const linksCount = await streamArray(out, 'links', db.prepare(`SELECT dl.*, u.url as source_url FROM discovered_links dl JOIN urls u ON dl.source_url_id = u.id WHERE dl.source_url_id IN (${uIds})`));
+
+    out.write(',"counts":' + JSON.stringify({
+      urls: urls.length,
+      httpResponses: httpResponsesCount,
+      content: contentCount,
+      links: linksCount,
+    }));
 
     out.end('}');
   } catch (err) {
@@ -1545,9 +1527,12 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log(`Domains: ${domainConfigs.map(d => d.domain).join(', ')}`);
   console.log(`Coordinator mode: ${COORDINATOR_MODE ? 'enabled' : 'disabled'}`);
-  // Auto-start if all checks passed
   globalShield.start();
-  startAll();
+  if (AUTO_START) {
+    startAll();
+  } else {
+    console.log('Auto-start disabled: waiting for /api/start');
+  }
   startStatePoller();
 
   if (IDLE_TIMEOUT_MIN > 0) {

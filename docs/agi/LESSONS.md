@@ -1,5 +1,11 @@
 # Lessons & Patterns (Rolling)
 
+## 2026-04-29
+- **Electron unified UI shell**: For jsgui3 crawl displays that touch DB/native modules, run the unified app in system Node and let Electron load localhost. Requiring the server inside Electron can hit native ABI mismatches, especially with `better-sqlite3`.
+- **jsgui3 inline scripts**: Use `String_Control` for inline `<script>` content. Adding a plain string can HTML-escape JavaScript (`&amp;&amp;`), causing browser parse errors like `Unexpected token '&'` that only appear during real page execution.
+- **Visual checks need runtime evidence**: Crawl UI screenshot scripts should capture PNG size, DOM readiness, browser events, horizontal overflow, and key text/metric values. A non-empty screenshot alone can miss broken stats cards or stuck loading placeholders.
+- **Churn salvage rule**: Deleted UI labs/widgets are design evidence, not code to preserve wholesale. Promote only generic, dependency-light controls into `src/ui/controls/`, then add focused SSR render checks and leave app-specific shells deleted.
+
 ## 2025-12-21
 - **Prevent backsliding first**: If “SQL only in adapters” isn’t already true repo-wide, start by enforcing a narrow boundary (UI/Electron) via an automated guard + explicit allow-list, then migrate modules incrementally.
 

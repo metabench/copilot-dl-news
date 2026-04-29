@@ -220,6 +220,56 @@ const table = new TableControl({
 **Purpose**: Active/completed crawl jobs display  
 **Check**: `src/ui/controls/checks/CrawlJobsTable.check.js`
 
+### CrawlProgressPanelControl
+
+**Path**: `src/ui/controls/CrawlProgressPanelControl.js`  
+**Purpose**: Reusable crawl progress summary panel built on the shared `ProgressBar` primitive  
+**Check**: `src/ui/controls/checks/CrawlProgressPanelControl.check.js`
+
+```javascript
+const { CrawlProgressPanelControl } = require("./CrawlProgressPanelControl");
+
+const panel = new CrawlProgressPanelControl({
+  context,
+  title: "Simple distributed crawl",
+  progress: {
+    visited: 5,
+    queued: 2,
+    total: 10,
+    phase: "acquisition",
+    currentUrl: "https://www.bbc.com/news/example"
+  }
+});
+```
+
+**Notes**:
+- Accepts generic crawl progress fields (`visited`, `queued`, `articles`, `errors`, `total`, `percentComplete`, `phase`).
+- Uses determinate progress when total/percent is known and indeterminate progress otherwise.
+- Replaces the deleted crawl-widget progress panel without keeping widget-specific dependencies.
+
+### ActivityLogControl
+
+**Path**: `src/ui/controls/ActivityLogControl.js`  
+**Purpose**: Generic SSR-friendly activity/log list with typed rows and filter chips  
+**Check**: `src/ui/controls/checks/ActivityLogControl.check.js`
+
+```javascript
+const { ActivityLogControl } = require("./ActivityLogControl");
+
+const log = new ActivityLogControl({
+  context,
+  title: "Crawl log",
+  lines: [
+    { type: "success", timestamp: "10:00:01", text: "Downloaded article" },
+    { type: "error", timestamp: "10:00:02", text: "Fetch failed", meta: "500" }
+  ]
+});
+```
+
+**Notes**:
+- Designed for crawl logs, background task logs, and diagnostic panels.
+- Keeps initial render deterministic; client-side filtering can be layered on by host apps.
+
 ### ErrorLogTable
 
 **Path**: `src/ui/controls/ErrorLogTable.js`  
@@ -262,6 +312,75 @@ const form = new SearchFormControl({
 **Notes**:
 - Uses class names (not inline styles): `search-form__input`, `search-form__select`, etc.
 - Prefer `--search b16:/b64:` workflows when searching for the emoji button label in docs/tools.
+
+### OptionPickerControl
+
+**Path**: `src/ui/controls/OptionPickerControl.js`  
+**Purpose**: Generic option picker for crawl profiles, domains, modes, and compact settings selectors  
+**Check**: `src/ui/controls/checks/OptionPickerControl.check.js`
+
+```javascript
+const { OptionPickerControl } = require("./OptionPickerControl");
+
+const picker = new OptionPickerControl({
+  context,
+  name: "crawlType",
+  label: "Crawl type",
+  selectedValue: "simple",
+  options: [
+    { value: "simple", label: "Simple distributed", description: "Small bounded crawl" },
+    { value: "deep", label: "Deep crawl" }
+  ]
+});
+```
+
+**Notes**:
+- Generalizes deleted one-off crawl type and start URL selectors.
+- SSR renders a display button, hidden form input, and listbox menu with data markers for activation.
+
+### ActionButtonGroupControl
+
+**Path**: `src/ui/controls/ActionButtonGroupControl.js`  
+**Purpose**: Shared command button group for toolbars and crawl controls  
+**Check**: `src/ui/controls/checks/ActionButtonGroupControl.check.js`
+
+```javascript
+const { ActionButtonGroupControl } = require("./ActionButtonGroupControl");
+
+const actions = new ActionButtonGroupControl({
+  context,
+  ariaLabel: "Crawl commands",
+  actions: [
+    { id: "start", label: "Start", variant: "success" },
+    { id: "pause", label: "Pause", variant: "warning", disabled: true },
+    { id: "stop", label: "Stop", variant: "danger" }
+  ]
+});
+```
+
+**Notes**:
+- Replaces deleted crawl-widget-specific command buttons with a configurable action model.
+- Supports horizontal/vertical layout, variants, disabled state, titles, and activation callbacks.
+
+### SearchExplorerControl
+
+**Path**: `src/ui/controls/SearchExplorerControl.js`  \
+**Purpose**: Embedded unified-shell article search panel with query, author, domain, section, date, freshness, and results regions  \
+**Type**: `search_explorer`  \
+**Check**: `src/ui/controls/checks/SearchExplorerControl.check.js`
+
+```javascript
+const { SearchExplorerControl } = require("./SearchExplorerControl");
+
+const control = new SearchExplorerControl({
+  context,
+  apiBase: "/api/search-explorer"
+});
+```
+
+**Notes**:
+- SSR composes stable `data-search-*` markers; unified-shell activation lives in `src/ui/server/unifiedApp/activators.js`.
+- Use this control instead of rebuilding search panel markup inline in sub-app registries.
 
 ### UrlFilterToggle
 

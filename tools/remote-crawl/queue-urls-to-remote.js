@@ -19,8 +19,9 @@ const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
 const { ensureDb } = require('../../src/data/db/sqlite');
+const { getFleetHostSync } = require('../crawl/lib/fleet-host-resolver');
 
-const REMOTE_HOST = 'http://144.21.35.104:3120';
+const REMOTE_HOST = process.env.CRAWL_LEGACY_REMOTE_HOST || `http://${getFleetHostSync()}:3120`;
 const DEFAULT_THRESHOLD = 500;
 const DEFAULT_BATCH = 100;
 

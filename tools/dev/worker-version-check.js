@@ -27,7 +27,7 @@ try {
   // Keep the expected version aligned with the canonical worker implementation.
   // Path is relative to tools/dev/.
   // eslint-disable-next-line global-require
-  EXPECTED = require("../../labs/distributed-crawl/worker-server");
+  EXPECTED = require("../../wip/labs/distributed-crawl/worker-server");
 } catch {
   EXPECTED = { WORKER_API_VERSION: null, WORKER_CAPABILITIES: null };
 }

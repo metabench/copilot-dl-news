@@ -14,12 +14,32 @@ const manifest = [
     loader: () => require("./ThemeEditorControl").ThemeEditorControl
   },
   {
+    type: "search_explorer",
+    loader: () => require("./SearchExplorerControl").SearchExplorerControl
+  },
+  {
     type: "pager_button",
     loader: () => require("./PagerButton").PagerButtonControl
   },
   {
     type: "domain_summary_table",
     loader: () => require("./DomainSummaryTable").DomainSummaryTableControl
+  },
+  {
+    type: "action_button_group",
+    loader: () => require("./ActionButtonGroupControl").ActionButtonGroupControl
+  },
+  {
+    type: "activity_log",
+    loader: () => require("./ActivityLogControl").ActivityLogControl
+  },
+  {
+    type: "crawl_progress_panel",
+    loader: () => require("./CrawlProgressPanelControl").CrawlProgressPanelControl
+  },
+  {
+    type: "option_picker",
+    loader: () => require("./OptionPickerControl").OptionPickerControl
   }
 ];
 

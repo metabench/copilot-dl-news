@@ -37,16 +37,17 @@ docker-compose -f deploy/docker-compose.yml -f deploy/docker-compose.dev.yml up
 # - Node Inspector: chrome://inspect (port 9229)
 ```
 
-### 30-Domain local run (single machine)
+### Remote crawler v2 bounded configs
 
 ```bash
-node deploy/remote-crawler-v2/multi-domain-server.js --config deploy/remote-crawler-v2/crawl-domains-30.json
+node deploy/remote-crawler-v2/multi-domain-server.js --config deploy/remote-crawler-v2/crawl-domains.simple.json
+node deploy/remote-crawler-v2/multi-domain-server.js --config deploy/remote-crawler-v2/crawl-domains.bounded-smoke.json
 ```
 
-This starts the multi-domain crawler with:
-- 30 configured domains
-- `maxConcurrent: 30`
-- shared SQLite DB at `data/crawl-multi-30.db`
+These start the v2 multi-domain crawler with versioned repo configs:
+- `crawl-domains.simple.json`: simple distributed smoke scope, 1 domain x 5 pages.
+- `crawl-domains.bounded-smoke.json`: larger bounded smoke scope, 3 domains x 50 pages.
+- Top-level config fields include `port`, `db`, `maxPages`, `maxConcurrent`, `idleTimeoutMin`, `coordinatorMode`, `autoStart`, and `domains`; CLI flags override config values.
 
 ## Architecture
 
@@ -91,28 +92,9 @@ This starts the multi-domain crawler with:
 | `scripts/init-db.sql` | PostgreSQL schema initialization |
 | `.dockerignore` | Build context exclusions |
 
-## Terraform (CI-integrated)
+## Remote crawler v2 config source
 
-Terraform stack location:
-- `deploy/terraform/local`
-
-Purpose:
-- Generates `deploy/remote-crawler-v2/crawl-domains.generated.json` from IaC variables.
-- Encodes max concurrent domains and domain list as versioned config.
-
-CI workflow:
-- `.github/workflows/terraform.yml`
-- Runs `terraform fmt -check`, `terraform validate`, and `terraform plan` using `ci.tfvars`.
-
-Local usage:
-
-```bash
-cd deploy/terraform/local
-terraform init -backend=false
-terraform validate
-terraform plan -var-file=terraform.tfvars
-terraform apply -var-file=terraform.tfvars
-```
+The current repo source of truth for small remote crawler v2 runs is the JSON config files in `deploy/remote-crawler-v2/`. Older references to generated Terraform domain configs are historical; no Terraform stack is present in this slimmed-down worktree.
 
 ## Configuration
 

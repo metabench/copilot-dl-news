@@ -1,6 +1,6 @@
 # Project Documentation Index
 
-_Last updated: 2026-02-12_
+_Last updated: 2026-04-24 (repo slim-down: 53 docs archived → `archives/2026-Q2/`)_
 
 ## Quick References
 - [Command Execution Guide](COMMAND_EXECUTION_GUIDE.md)
@@ -162,3 +162,4 @@ Architecture and system design documents for proposed or implemented features.
 ## Legacy Collections
 - [Root Migration Collection](root-migration/README.md) - Former root-level docs awaiting categorization.
 - [Archives](archives/) - Historical copies + archived planning artifacts.
+- [Archives — 2026 Q2](archives/2026-Q2/README.md) - 53 PHASE/COMPLETE/SUMMARY docs archived 2026-04-24 in repo slim-down. See [ADR](decisions/2026-04-24-repo-slimdown.md).

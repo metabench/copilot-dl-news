@@ -2,7 +2,7 @@
 
 const jsgui = require('jsgui3-html');
 
-const { Control, Standard_Web_Page } = jsgui;
+const { Control, Standard_Web_Page, String_Control } = jsgui;
 const Server_Page_Context = jsgui.Server_Page_Context || jsgui.Page_Context;
 
 // Extracted from this file's monolith — see companion modules
@@ -263,11 +263,14 @@ class CrawlStatusPage extends Standard_Web_Page {
     table.add(tbody);
 
     const script = new Control({ context: ctx, tagName: 'script' });
-    script.add(buildCrawlStatusClientScript({
-      jobsApiPath: this.jobsApiPath,
-      extraJobsApiPath: this.extraJobsApiPath,
-      eventsPath: this.eventsPath,
-      telemetryHistoryPath: this.telemetryHistoryPath
+    script.add(new String_Control({
+      context: ctx,
+      text: buildCrawlStatusClientScript({
+        jobsApiPath: this.jobsApiPath,
+        extraJobsApiPath: this.extraJobsApiPath,
+        eventsPath: this.eventsPath,
+        telemetryHistoryPath: this.telemetryHistoryPath
+      })
     }));
     body.add(script);
   }

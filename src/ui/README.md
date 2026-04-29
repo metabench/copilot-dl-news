@@ -52,8 +52,27 @@ Use the new check scripts before/after styling changes to preview rendered marku
 - `node src/ui/controls/checks/DomainSummaryTable.check.js`
 - `node src/ui/controls/checks/CrawlJobsTable.check.js`
 - `node src/ui/controls/checks/PagerButton.check.js`
+- `node src/ui/controls/checks/SearchExplorerControl.check.js`
+- `node src/ui/controls/checks/ActionButtonGroupControl.check.js`
+- `node src/ui/controls/checks/ActivityLogControl.check.js`
+- `node src/ui/controls/checks/CrawlProgressPanelControl.check.js`
+- `node src/ui/controls/checks/OptionPickerControl.check.js`
 
 Each script emits HTML and basic assertions so regressions are obvious in diff tooling.
+
+## Unified App Checks
+
+Use these checks when touching the unified shell, embedded panels, or server-side UI routers:
+
+- `node src/ui/server/unifiedApp/checks/shell.check.js`
+- `node src/ui/server/unifiedApp/checks/unified.server.check.js`
+- `node src/ui/server/crawlStatus/checks/crawlStatusPage.remoteObservable.check.js`
+
+For crawl-display visual verification, run:
+
+- `npm run ui:crawl-display-screenshots`
+
+This starts the unified jsgui3 shell, captures the Downloads and Crawl Status routes under `screenshots/unified-crawl-display/`, and writes `analysis.json` with DOM/screenshot quality metrics.
 
 ## Responsive Layout
 

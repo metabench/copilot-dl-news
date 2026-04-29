@@ -5,7 +5,7 @@ const {
   createCrawlService,
   buildAvailabilityPayload
 } = require('./src/server/crawl-api');
-const { ConfigurationService } = require('./src/config/ConfigurationService');
+const { ConfigurationService } = require('./src/shared/config/ConfigurationService');
 
 const {
   parseSharedOverrides

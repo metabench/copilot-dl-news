@@ -13,24 +13,28 @@ This directory contains CLI tools for running and managing crawls. The **unified
 | File | Purpose | Status |
 |------|---------|--------|
 | `index.js` | **Unified crawl launcher** — delegates to tools and profiles | ✅ Working |
-| `crawl-remote.js` | **Remote multi-domain crawl** — start/stop/sync/monitor remote crawlers | ✅ Working |
+| `crawl-remote.js` | **Remote multi-domain crawl** — start/stop/sync/monitor remote crawlers (the canonical "distributed node" entry point) | ✅ Working |
 | `crawl-multi-modal.js` | Multi-modal crawl (HTTP + Puppeteer fallback) | ✅ Working |
 | `crawl-place-hubs.js` | Crawl discovered place hub URLs from local DB | ✅ Working |
 | `intelligent-crawl.js` | Intelligent crawl with hub discovery + learning loops | ✅ Working |
 | `guess-place-hubs.js` | Infer place hubs from existing crawl data | ✅ Working |
 | `list-place-hubs.js` | List known place hubs from the DB | ✅ Working |
-| `distributed-500.js` | Distributed worker-based crawl run | ⚠️ Check deps |
-| `peer-server.js` | Peer-to-peer crawl server | ⚠️ Check deps |
-| `worker-cli.js` | Run a single crawler worker directly | ⚠️ Check deps |
+| `peer-server.js` | P2P NewsCrawler peer node | ✅ Working |
 | `migrate-db-crawl-logs.js` | DB migration: crawl logs | Utility |
 | `migrate-db-for-worker.js` | DB migration: worker schema | Utility |
 | `lib/crawl-remote-bounded.js` | Bounded crawl helper (used by `crawl-remote.js`) | Internal |
+| `lib/fleet-host-resolver.js` | Resolves fleet host (env `FLEET_HOST` → `.fleet-host` → default `141.144.193.218`) | Internal |
+
+> **Terminology rule**: In this repo, **simple crawl** means low-scope and easy to run (few domains/pages, bounded timeout). It does **not** mean local-only. The canonical simple crawl is distributed through `simple-distributed-smoke` unless a user explicitly asks for a local crawl.
+
+> **Removed 2026-04-25**: `worker-cli.js`, `distributed-500.js`, and `deploy/remote-crawler/` (v1) were quarantined to `wip/legacy-distributed/` because they depended on `domain-intelligence`/`self-healing` modules that were never committed. Use `crawl-remote.js` (v2 path) for distributed crawls instead.
 
 ### Named Profiles (`profiles/`)
 
 | Profile | Tool | Description |
 |---------|------|-------------|
-| `remote-bounded-smoke` | `remote` | Small bounded remote crawl smoke test |
+| `simple-distributed-smoke` | `remote` | **Simple distributed smoke**: 1 domain × 5 pages via Oracle/v2 remote server |
+| `remote-bounded-smoke` | `remote` | Larger bounded distributed smoke crawl (3 domains × 50 pages) |
 | `remote-status` | `remote` | Quick remote crawl status snapshot |
 | `place-hubs-local` | `place-hubs` | Local place-hub crawl against default news database |
 
@@ -45,9 +49,12 @@ What kind of crawl do you need?
 │   └── npm run crawl -- remote-status
 │       (or: node tools/crawl/crawl-remote.js status)
 │
-├── 🔹 Small smoke test (remote, bounded)
+├── 🔹 Smallest distributed-node smoke (1 domain × 5 pages)
+│   └── npm run crawl -- simple-distributed-smoke --dry-run    # preview
+│       npm run crawl -- simple-distributed-smoke              # run
+│
+├── 🔹 Larger bounded smoke (3 domains × 50 pages)
 │   └── npm run crawl -- remote-bounded-smoke
-│       (or: npm run crawl -- remote-bounded-smoke --dry-run  to preview)
 │
 ├── 🔹 Remote bounded crawl (specific domains)
 │   └── npm run crawl -- remote bounded --domains bbc.com,reuters.com --max-pages 50
@@ -66,6 +73,9 @@ What kind of crawl do you need?
     └── npm start  (runs node src/crawl.js)
         See docs/cli/crawl.md for commands & override precedence
 ```
+
+The simple distributed smoke path is:
+`npm run crawl -- simple-distributed-smoke` → `tools/crawl/index.js` → `tools/crawl/profiles/simple-distributed-smoke.json` → `tools/crawl/crawl-remote.js bounded --domains bbc.com --max-pages 5` → Oracle/v2 multi-domain server `/api/status`, `/api/domains/add` when needed, `/api/start`, repeated `/api/status` until complete.
 
 ---
 
@@ -100,14 +110,21 @@ npm run crawl -- help
 
 ## Remote Crawl Operations
 
-`crawl-remote.js` is the CLI for controlling the remote multi-domain crawl server at `144.21.35.104`.
+`crawl-remote.js` is the CLI for controlling the remote multi-domain crawl server.
+
+**Default host**: resolved in this order:
+1. `--host <h:p>` flag
+2. `process.env.CRAWL_REMOTE_HOST`
+3. `process.env.FLEET_HOST` (host only — port `:3200` appended)
+4. `tools/crawl/.fleet-host` file (host only)
+5. Default `141.144.193.218:3200`
 
 ### Commands
 
 ```bash
 # Check what's happening
 node tools/crawl/crawl-remote.js status
-node tools/crawl/crawl-remote.js health --host 144.21.35.104:3200
+node tools/crawl/crawl-remote.js health --host 141.144.193.218:3200
 
 # Start/stop domains
 node tools/crawl/crawl-remote.js start --all
@@ -131,10 +148,24 @@ node tools/crawl/crawl-remote.js errors
 node tools/crawl/crawl-remote.js content
 ```
 
+For explicit bounded domains, `crawl-remote.js` registers any missing domain with `/api/domains/add` before starting. That keeps the simple distributed smoke profile usable even when the Oracle server was launched with a narrower domain config.
+
+### Remote Server Configs
+
+The v2 server accepts either CLI domains or a JSON config:
+
+```bash
+node deploy/remote-crawler-v2/multi-domain-server.js --config deploy/remote-crawler-v2/crawl-domains.simple.json
+node deploy/remote-crawler-v2/multi-domain-server.js --config deploy/remote-crawler-v2/crawl-domains.bounded-smoke.json
+node deploy/remote-crawler-v2/multi-domain-server.js --domains bbc.com,reuters.com --max-pages 50 --max-concurrent 2
+```
+
+Config files may set `port`, `db`, `maxPages`, `maxConcurrent`, `idleTimeoutMin`, `coordinatorMode`, `autoStart`, and `domains`. CLI flags override config values. The smoke configs set `autoStart: false` so the Oracle server can sit ready until a profile starts bounded work.
+
 ### Remote Server Architecture
 
 ```
-Remote VM (144.21.35.104)              Local Machine
+Remote VM (141.144.193.218)           Local Machine
 ┌─────────────────────────┐           ┌──────────────────┐
 │ multi-domain-server.js  │──batch──→ │ crawl-remote.js  │
 │ (single process,        │  export   │ (pull / sync)    │
@@ -226,6 +257,7 @@ See [docs/cli/crawl.md](../../docs/cli/crawl.md) for full CLI reference includin
 |------|-------------|
 | `src/v4/` | V4 distributed crawl system |
 | `deploy/remote-crawler-v2/` | CrawlWorker + multi-domain server |
+| `tools/remote-crawl/` | Legacy Oracle crawler scripts; do not use for the simple distributed smoke path |
 | `src/core/crawler/` | V1/V3 core crawler pipeline |
 | `tools/dev/intelligent-crawl-server.js` | ICS server management |
 | `tools/dev/mini-crawl.js` | Quick mini crawl script |

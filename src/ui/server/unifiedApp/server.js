@@ -162,6 +162,7 @@ const SUB_APPS_FACTORY = parseEnvBoolean(process.env.UNIFIED_APP_CHECK_MODE, fal
 
 const app = express();
 app.use(express.json());
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // Shared client modules (plain browser scripts) used by lightweight UIs.
 app.use(
@@ -307,6 +308,30 @@ function mountDashboardModules(unifiedApp, options = {}) {
     try {
       const stats = downloadEvidence.getGlobalStats(getDb());
       res.json({ status: 'ok', stats });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  unifiedApp.get('/api/downloads/recent', (req, res) => {
+    try {
+      const limit = normalizePositiveInt(req.query.limit, 10, 50);
+      const rows = getDb().prepare(`
+        SELECT
+          r.id,
+          u.url,
+          u.host,
+          r.http_status AS httpStatus,
+          r.bytes_downloaded AS bytesDownloaded,
+          r.fetched_at AS fetchedAt,
+          r.content_type AS contentType
+        FROM http_responses r
+        JOIN urls u ON r.url_id = u.id
+        ORDER BY r.fetched_at DESC
+        LIMIT ?
+      `).all(limit);
+
+      res.json({ status: 'ok', limit, items: rows });
     } catch (error) {
       res.status(500).json({ status: 'error', message: error.message });
     }
@@ -1002,8 +1027,15 @@ function mountDashboardModules(unifiedApp, options = {}) {
       mountPath: '/remote-crawl',
       full: () => {
         const { createRemoteCrawlAdminRouter } = require('../remoteCrawlAdmin/server');
+        let defaultRemoteHost = '141.144.193.218:3200';
+        try {
+          const { getFleetHostSync } = require('../../../../tools/crawl/lib/fleet-host-resolver');
+          defaultRemoteHost = `${getFleetHostSync()}:3200`;
+        } catch {
+          // keep static fallback
+        }
         return createRemoteCrawlAdminRouter({
-          remoteHost: process.env.CRAWL_REMOTE_HOST || '144.21.35.104:3200'
+          remoteHost: process.env.CRAWL_REMOTE_HOST || defaultRemoteHost
         });
       }
     }
@@ -1033,7 +1065,15 @@ function mountDashboardModules(unifiedApp, options = {}) {
 
   for (const mod of modules) {
     if (typeof mod.apiOnly === 'function') {
-      Promise.resolve(mod.apiOnly())
+      let apiRouterResult;
+      try {
+        apiRouterResult = mod.apiOnly();
+      } catch (err) {
+        console.warn(`[UnifiedApp] Failed to create API router for ${mod.id}:`, err.message);
+        apiRouterResult = null;
+      }
+
+      Promise.resolve(apiRouterResult)
         .then((result) => {
           const normalized = normalizeRouterFactoryResult(result);
           if (normalized.router) {
@@ -1047,7 +1087,15 @@ function mountDashboardModules(unifiedApp, options = {}) {
     }
 
     if (typeof mod.full === 'function') {
-      Promise.resolve(mod.full())
+      let fullRouterResult;
+      try {
+        fullRouterResult = mod.full();
+      } catch (err) {
+        console.warn(`[UnifiedApp] Failed to create router for ${mod.id} at ${mod.mountPath}:`, err.message);
+        fullRouterResult = null;
+      }
+
+      Promise.resolve(fullRouterResult)
         .then((result) => {
           const normalized = normalizeRouterFactoryResult(result);
           if (normalized.router) {
@@ -1147,6 +1195,44 @@ log.info('Starting unified app shell', { port, checkMode });
 // deterministic (no DB open, no background mounts).
 let mountedModules;
 if (checkMode) {
+  app.get('/', async (req, res) => {
+    const activeAppId = req.query.app || 'home';
+    const shell = new UnifiedShell({
+      subApps: SUB_APPS_FACTORY({}),
+      activeAppId
+    });
+    res.type('html').send(shell.render());
+  });
+
+  app.get('/api/apps', (req, res) => {
+    const SUB_APPS = SUB_APPS_FACTORY({});
+    res.json({
+      apps: SUB_APPS.map((subApp) => ({
+        id: subApp.id,
+        label: subApp.label,
+        icon: subApp.icon,
+        category: subApp.category,
+        description: subApp.description
+      }))
+    });
+  });
+
+  app.get('/api/apps/:appId/content', async (req, res) => {
+    const SUB_APPS = SUB_APPS_FACTORY({});
+    const subApp = SUB_APPS.find((entry) => entry.id === req.params.appId);
+    if (!subApp) {
+      return res.status(404).json({ error: 'App not found' });
+    }
+
+    const normalized = normalizeSubAppRenderResult(await subApp.renderContent(req));
+    res.json({
+      appId: subApp.id,
+      content: normalized.content,
+      activationKey: normalized.activationKey,
+      embed: normalized.embed
+    });
+  });
+
   app.get('/docs', (req, res) => {
     res.status(200).type('html').send('<!doctype html><html><head><title>Docs (check)</title></head><body><div id="docs-check-root">Docs check mode</div></body></html>');
   });
