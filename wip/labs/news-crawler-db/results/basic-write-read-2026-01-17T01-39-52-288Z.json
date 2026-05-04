@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-01-17T01:39:52.287Z",
+  "current": {
+    "hasUpsertArticle": true,
+    "hasGetArticleByUrl": true,
+    "hasGetCount": true,
+    "writeOk": true,
+    "readOk": true,
+    "count": 0,
+    "error": null
+  },
+  "external": null,
+  "externalError": "news-crawler-db not installed"
+}

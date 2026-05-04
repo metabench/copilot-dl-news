@@ -35,10 +35,12 @@ function parseCliArgs(argv) {
     .add('--no-keep-db-sidecars', 'Do not keep -wal/-shm sidecars for kept DBs', false, 'boolean')
     .add('--export-dir <path...>', 'Export directory roots to enforce the export budget on', ['migration-export'])
     .add('--delete-dir <path...>', 'Directory roots whose files should be deleted entirely', [
+      'screenshots',
       'migration-temp',
       'data/backups',
       'data/perf-snapshots'
     ])
+    .add('--allow-protected-roots', 'Allow delete/export roots inside protected source/docs directories (dangerous; dry-run first)', false, 'boolean')
     .add('--json', 'Emit JSON events only (no formatted output)', false, 'boolean')
     .add('--quiet', 'Suppress ASCII summary (still exits with proper code)', false, 'boolean');
 
@@ -65,6 +67,7 @@ function normalizeOptions(raw) {
     exportDirs,
     deleteDirs,
     ignoreIfTracked: true,
+    allowProtectedRoots: raw.allowProtectedRoots === true,
     json: Boolean(raw.json),
     quiet: Boolean(raw.quiet)
   };
@@ -99,6 +102,15 @@ function renderPlanSummary(summary) {
   fmt.section('Delete dirs (purge)');
   fmt.list('Purge roots', (summary.deleteDirs || []).length ? summary.deleteDirs : ['(none)']);
 
+  if (summary.skippedRoots && summary.skippedRoots.length > 0) {
+    fmt.section('Protected roots skipped');
+    fmt.table(summary.skippedRoots.map((root) => ({
+      kind: root.kind,
+      path: root.rel,
+      protectedBy: root.protectedBy
+    })));
+  }
+
   fmt.section('Planned deletions');
   fmt.stat('Count', summary.stats.deletionCount);
   fmt.stat('Bytes', summary.stats.deletionBytesHuman);
@@ -116,6 +128,7 @@ async function main() {
     keepDbSidecars: opts.keepDbSidecars,
     exportDirs: opts.exportDirs,
     deleteDirs: opts.deleteDirs,
+    allowProtectedRoots: opts.allowProtectedRoots,
     ignoreIfTracked: true
   });
 

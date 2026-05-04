@@ -52,6 +52,44 @@ function dbSidecarPaths(dbPath) {
   ];
 }
 
+const DEFAULT_PROTECTED_DIRS = [
+  ".git",
+  ".github",
+  "checks",
+  "config",
+  "deploy",
+  "docs",
+  "public",
+  "scripts",
+  "solid",
+  "src",
+  "tests",
+  "tools",
+  "wip"
+];
+
+function normalizeRelPath(relPath) {
+  return String(relPath || "").replace(/\\/g, "/").replace(/^\.\//, "");
+}
+
+function isInsideOrEqual(parentPath, childPath) {
+  const rel = path.relative(path.resolve(parentPath), path.resolve(childPath));
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+}
+
+function findProtectedRoot(repoRoot, relPath, protectedDirs) {
+  const absPath = ensureInsideRepo(repoRoot, path.join(repoRoot, relPath));
+  for (const protectedRel of protectedDirs) {
+    const normalizedProtectedRel = normalizeRelPath(protectedRel);
+    if (!normalizedProtectedRel) continue;
+    const protectedAbs = ensureInsideRepo(repoRoot, path.join(repoRoot, normalizedProtectedRel));
+    if (isInsideOrEqual(protectedAbs, absPath)) {
+      return normalizedProtectedRel;
+    }
+  }
+  return null;
+}
+
 async function statIfExists(fullPath) {
   try {
     const st = await fs.promises.stat(fullPath);
@@ -138,12 +176,15 @@ function defaultConfig() {
     exportDirs: ["migration-export"],
 
     deleteDirs: [
+      "screenshots",
       "migration-temp",
       path.join("data", "backups"),
       path.join("data", "perf-snapshots")
     ],
 
-    ignoreIfTracked: true
+    ignoreIfTracked: true,
+    protectedDirs: DEFAULT_PROTECTED_DIRS,
+    allowProtectedRoots: false
   };
 }
 
@@ -164,6 +205,10 @@ function normalizeOptions(options = {}) {
     ? normalizePathList(options.deleteDirs)
     : cfg.deleteDirs;
 
+  const protectedDirs = normalizePathList(options.protectedDirs).length
+    ? normalizePathList(options.protectedDirs)
+    : cfg.protectedDirs;
+
   const maxExportBytes = Number.isFinite(options.maxExportBytes)
     ? options.maxExportBytes
     : Number.isFinite(options.maxExportMb)
@@ -178,7 +223,9 @@ function normalizeOptions(options = {}) {
     keepDbSidecars: options.keepDbSidecars !== false,
     exportDirs,
     deleteDirs,
-    ignoreIfTracked: options.ignoreIfTracked !== false
+    ignoreIfTracked: options.ignoreIfTracked !== false,
+    protectedDirs,
+    allowProtectedRoots: options.allowProtectedRoots === true
   };
 }
 
@@ -205,8 +252,20 @@ async function buildPrunePlan(options) {
 
   const exportCandidates = [];
   const deleteCandidates = [];
+  const skippedRoots = [];
 
   for (const exportDirRel of cfg.exportDirs) {
+    const protectedBy = cfg.allowProtectedRoots ? null : findProtectedRoot(repoRoot, exportDirRel, cfg.protectedDirs);
+    if (protectedBy) {
+      skippedRoots.push({
+        kind: "export",
+        rel: normalizeRelPath(exportDirRel),
+        reason: "protected-root",
+        protectedBy
+      });
+      continue;
+    }
+
     const absDir = path.join(repoRoot, exportDirRel);
     const st = await statIfExists(absDir);
     if (!st || !st.isDirectory()) continue;
@@ -223,6 +282,17 @@ async function buildPrunePlan(options) {
   }
 
   for (const deleteDirRel of cfg.deleteDirs) {
+    const protectedBy = cfg.allowProtectedRoots ? null : findProtectedRoot(repoRoot, deleteDirRel, cfg.protectedDirs);
+    if (protectedBy) {
+      skippedRoots.push({
+        kind: "delete",
+        rel: normalizeRelPath(deleteDirRel),
+        reason: "protected-root",
+        protectedBy
+      });
+      continue;
+    }
+
     const absDir = path.join(repoRoot, deleteDirRel);
     const st = await statIfExists(absDir);
     if (!st || !st.isDirectory()) continue;
@@ -266,6 +336,9 @@ async function buildPrunePlan(options) {
     },
 
     deleteDirs: cfg.deleteDirs,
+    protectedDirs: cfg.protectedDirs,
+    allowProtectedRoots: cfg.allowProtectedRoots,
+    skippedRoots,
 
     keep,
     deletions,
@@ -333,6 +406,9 @@ function createLargeArtifactsPruneObservable(options = {}) {
             keepDb: plan.keepDb,
             export: plan.export,
             deleteDirs: plan.deleteDirs,
+            protectedDirs: plan.protectedDirs,
+            allowProtectedRoots: plan.allowProtectedRoots,
+            skippedRoots: plan.skippedRoots,
             stats: plan.stats
           }
         });
@@ -413,5 +489,6 @@ module.exports = {
   createLargeArtifactsPruneObservable,
   buildPrunePlan,
   normalizeOptions,
+  DEFAULT_PROTECTED_DIRS,
   formatBytes
 };

@@ -19,6 +19,9 @@ const { SubAppPlaceholder } = require('../components/SubAppPlaceholder');
 const { wrapPanelHtml } = require('./panelContract');
 const { renderStatCard, renderStatsRow, renderPanelHero } = require('./panelHelpers');
 const { SearchExplorerControl } = require('../../../controls/SearchExplorerControl');
+const { DownloadVerificationPanelControl } = require('../../../controls/DownloadVerificationPanelControl');
+const { CloudCrawlPanelControl } = require('../../../controls/CloudCrawlPanelControl');
+const { ScreenshotReviewPanelControl } = require('../../../controls/ScreenshotReviewPanelControl');
 
 function renderIframeApp(src, title) {
   const context = new jsgui.Page_Context();
@@ -303,6 +306,66 @@ function renderSearchExplorerPanel() {
   };
 }
 
+function renderDownloadVerificationPanel() {
+  const context = new jsgui.Page_Context();
+  const control = new DownloadVerificationPanelControl({
+    context,
+    apiBase: '/api/downloads/verifications'
+  });
+  const html = control.renderHtml();
+
+  const activationKey = 'download-verification';
+  return {
+    content: wrapPanelHtml({
+      appId: 'download-verification',
+      activationKey,
+      html
+    }),
+    embed: 'panel',
+    activationKey
+  };
+}
+
+function renderCloudCrawlPanel() {
+  const context = new jsgui.Page_Context();
+  const control = new CloudCrawlPanelControl({
+    context,
+    apiBase: '/api/cloud-crawl'
+  });
+  const html = control.renderHtml();
+
+  const activationKey = 'cloud-crawl';
+  return {
+    content: wrapPanelHtml({
+      appId: 'cloud-crawl',
+      activationKey,
+      html
+    }),
+    embed: 'panel',
+    activationKey
+  };
+}
+
+function renderScreenshotReviewPanel() {
+  const context = new jsgui.Page_Context();
+  const control = new ScreenshotReviewPanelControl({
+    context,
+    apiBase: '/api/screenshot-review'
+  });
+  const html = control.renderHtml();
+
+  const activationKey = 'screenshot-review';
+  return {
+    content: wrapPanelHtml({
+      appId: 'screenshot-review',
+      activationKey,
+      html
+    }),
+    embed: 'panel',
+    activationKey
+  };
+}
+
 /**
  * Create the sub-app registry
  * @param {Object} options Options including getDbRW
@@ -438,6 +501,17 @@ function createSubAppRegistry(options = {}) {
     // ─────────────────────────────────────────────────────────────
     // Crawler Operations
     // ─────────────────────────────────────────────────────────────
+    {
+      id: 'cloud-crawl',
+      label: 'Cloud Crawl',
+      icon: '☁️',
+      category: 'crawler',
+      description: 'Compact five-site remote crawl view with screenshot-ready evidence',
+      renderContent: async () => {
+        return renderCloudCrawlPanel();
+      }
+    },
+
     {
       id: 'rate-limits',
       label: 'Rate Limits',
@@ -588,6 +662,17 @@ function createSubAppRegistry(options = {}) {
     },
 
     {
+      id: 'download-verification',
+      label: 'Download Verify',
+      icon: '✅',
+      category: 'analytics',
+      description: 'Recent download persistence and compression verification',
+      renderContent: async () => {
+        return renderDownloadVerificationPanel();
+      }
+    },
+
+    {
       id: 'search-explorer',
       label: 'Search Explorer',
       icon: '🔎',
@@ -675,6 +760,17 @@ function createSubAppRegistry(options = {}) {
       description: 'Browse repo documentation in-app',
       renderContent: async () => {
         return renderIframeApp('/docs', 'Docs');
+      }
+    },
+
+    {
+      id: 'screenshot-review',
+      label: 'Screenshots',
+      icon: '🖼️',
+      category: 'dev',
+      description: 'Review saved UI screenshots and write comments for agents',
+      renderContent: async () => {
+        return renderScreenshotReviewPanel();
       }
     },
 

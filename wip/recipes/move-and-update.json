@@ -1,0 +1,90 @@
+{
+  "version": "1.0",
+  "name": "Move function and update imports",
+  "description": "Move a function to a new file and update all import statements across the codebase",
+  "parameters": {
+    "functionName": {
+      "type": "string",
+      "description": "Name of function to move",
+      "required": true
+    },
+    "sourceFile": {
+      "type": "string",
+      "description": "Current file path (relative to workspace root)",
+      "required": true
+    },
+    "targetFile": {
+      "type": "string",
+      "description": "Target file path (relative to workspace root)",
+      "required": true
+    },
+    "targetModule": {
+      "type": "string",
+      "description": "Module name for import statements (defaults to relative path)",
+      "default": ""
+    }
+  },
+  "validation": {
+    "fileExists": ["${sourceFile}"],
+    "directoryExists": ["$(dirname ${targetFile})"]
+  },
+  "steps": [
+    {
+      "name": "Locate function in source",
+      "operation": "js-edit",
+      "action": "locate-function",
+      "file": "${sourceFile}",
+      "functionName": "${functionName}",
+      "emit": "function_location"
+    },
+    {
+      "name": "Check for ripple effects",
+      "operation": "js-scan",
+      "ripple-analysis": "${functionName}",
+      "file": "${sourceFile}",
+      "depth": 3,
+      "emit": "ripple_report"
+    },
+    {
+      "name": "Extract function to new file",
+      "operation": "js-edit",
+      "action": "extract-to-module",
+      "file": "${sourceFile}",
+      "functionName": "${functionName}",
+      "targetFile": "${targetFile}",
+      "condition": "${ripple_report.safetyAssertions.canMove}",
+      "onError": "abort",
+      "emit": "extraction_result"
+    },
+    {
+      "name": "Find all imports of the function",
+      "operation": "js-scan",
+      "search": "${functionName}",
+      "scope": "src/",
+      "exclude-path": ["${sourceFile}", "${targetFile}", "*.test.js"],
+      "emit": "import_locations"
+    },
+    {
+      "name": "Update imports in dependent files",
+      "operation": "js-edit",
+      "action": "batch",
+      "steps": [
+        {
+          "condition": "${import_locations.count > 0}",
+          "forEach": "${import_locations.matches[*].file}",
+          "operation": "js-edit",
+          "action": "update-import",
+          "file": "$item",
+          "functionName": "${functionName}",
+          "newSource": "${targetFile}"
+        }
+      ],
+      "emit": "import_update_result"
+    },
+    {
+      "name": "Report migration complete",
+      "operation": "report",
+      "message": "Moved ${functionName} from ${sourceFile} to ${targetFile}. Updated ${import_update_result.count} import statements."
+    }
+  ]
+}

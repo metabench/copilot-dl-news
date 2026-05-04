@@ -1,0 +1,7 @@
+{
+  "description": "Quick remote crawl status snapshot.",
+  "tool": "remote",
+  "positionals": [
+    "status"
+  ]
+}

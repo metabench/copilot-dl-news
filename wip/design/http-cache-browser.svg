@@ -1,0 +1,239 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+  <title id="title">Industrial Luxury Obsidian — Cached HTTP Response Browser</title>
+  <desc id="desc">Conceptual UI mock showing filters, cached document list, and response preview.</desc>
+  <defs>
+    <!-- Deep obsidian background with radial center warmth -->
+    <linearGradient id="obsidianBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050810"/>
+      <stop offset="40%" stop-color="#0c1220"/>
+      <stop offset="100%" stop-color="#151c2c"/>
+    </linearGradient>
+    <radialGradient id="centerWarmth" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#1a1d28" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#050810" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Panel gradients with subtle depth -->
+    <linearGradient id="panelGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1c222e"/>
+      <stop offset="100%" stop-color="#0e1219"/>
+    </linearGradient>
+    <linearGradient id="panelHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#252d3d"/>
+      <stop offset="100%" stop-color="#141a24"/>
+    </linearGradient>
+    <linearGradient id="chromeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2a3142"/>
+      <stop offset="100%" stop-color="#151b29"/>
+    </linearGradient>
+
+    <!-- Gold accent with enhanced shimmer -->
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8b6914"/>
+      <stop offset="25%" stop-color="#d4af37"/>
+      <stop offset="50%" stop-color="#f0d060"/>
+      <stop offset="75%" stop-color="#d4af37"/>
+      <stop offset="100%" stop-color="#8b6914"/>
+    </linearGradient>
+    <linearGradient id="goldVertical" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e8c252"/>
+      <stop offset="50%" stop-color="#c9a227"/>
+      <stop offset="100%" stop-color="#8b6914"/>
+    </linearGradient>
+
+    <!-- Status colors with glow-ready gradients -->
+    <linearGradient id="emeraldGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#14532d"/>
+    </linearGradient>
+    <linearGradient id="amberGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d"/>
+      <stop offset="100%" stop-color="#92400e"/>
+    </linearGradient>
+    <linearGradient id="roseGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fda4af"/>
+      <stop offset="100%" stop-color="#881337"/>
+    </linearGradient>
+
+    <!-- Filters for glow effects -->
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.85  0 0 0 0 0.64  0 0 0 0 0.15  0 0 0 0.6 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+    <filter id="innerGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+      <feOffset in="blur" dx="0" dy="1" result="offset"/>
+      <feFlood flood-color="#fff" flood-opacity="0.08"/>
+      <feComposite in2="offset" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Subtle industrial grid pattern -->
+    <pattern id="gridPattern" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#c9a227" stroke-width="0.3" opacity="0.04"/>
+      <circle cx="0" cy="0" r="1" fill="#c9a227" opacity="0.06"/>
+    </pattern>
+  </defs>
+
+  <!-- Background layers -->
+  <rect width="960" height="540" fill="url(#obsidianBg)"/>
+  <rect width="960" height="540" fill="url(#centerWarmth)"/>
+  <rect width="960" height="540" fill="url(#gridPattern)"/>
+
+  <!-- Title with gold glow at top -->
+  <g filter="url(#goldGlow)">
+    <text x="40" y="36" fill="url(#goldAccent)" font-family="Georgia, serif" font-size="26" font-weight="bold" letter-spacing="-0.5">
+      Cached HTTP Response Browser
+    </text>
+  </g>
+  <text x="40" y="56" fill="#94a3b8" font-family="Inter, sans-serif" font-size="13" letter-spacing="0.2">
+    Inspect stored documents · Filter by cache key · Preview headers + body
+  </text>
+
+  <!-- Browser chrome with URL bar -->
+  <g transform="translate(30,72)" filter="url(#softShadow)">
+    <rect width="900" height="44" rx="10" fill="url(#chromeGradient)" stroke="#3a4459" stroke-width="1"/>
+    <!-- Window controls with subtle glow -->
+    <circle cx="24" cy="22" r="6" fill="#ff5f57" stroke="#e0443e" stroke-width="0.5"/>
+    <circle cx="50" cy="22" r="6" fill="#febc2e" stroke="#dea123" stroke-width="0.5"/>
+    <circle cx="76" cy="22" r="6" fill="#28c840" stroke="#1fa835" stroke-width="0.5"/>
+    <!-- URL bar with inner shadow -->
+    <rect x="108" y="10" width="640" height="24" rx="12" fill="#080c14" stroke="#2a3444" stroke-width="1"/>
+    <rect x="109" y="11" width="638" height="22" rx="11" fill="none" stroke="#1a2030" stroke-width="1"/>
+    <text x="134" y="26" fill="#64748b" font-family="Inter, sans-serif" font-size="11">🔒</text>
+    <text x="154" y="26" fill="#94a3b8" font-family="Inter, sans-serif" font-size="12">https://internal.tools/copilot/cache-browser</text>
+    <!-- Action buttons -->
+    <rect x="770" y="10" width="32" height="24" rx="8" fill="#0f1520" stroke="#2a3444" stroke-width="1"/>
+    <text x="778" y="26" fill="#94a3b8" font-family="Inter, sans-serif" font-size="13">↻</text>
+    <rect x="812" y="10" width="32" height="24" rx="8" fill="#0f1520" stroke="#2a3444" stroke-width="1"/>
+    <text x="820" y="26" fill="#94a3b8" font-family="Inter, sans-serif" font-size="13">⋮</text>
+    <rect x="854" y="10" width="32" height="24" rx="8" fill="url(#emeraldGlow)" stroke="#22c55e" stroke-width="1"/>
+    <text x="862" y="26" fill="#f8fafc" font-family="Inter, sans-serif" font-size="13">↗</text>
+  </g>
+
+  <!-- Filters ribbon (contiguous below browser bar, no search bar) -->
+  <g transform="translate(30,116)">
+    <rect width="900" height="48" rx="0 0 10 10" fill="url(#panelGradient)" stroke="#3a4459" stroke-width="1"/>
+    <rect width="900" height="1" y="0" rx="0" fill="#2a3444" opacity="0.6"/>
+    <g font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">
+      <text x="20" y="18" font-weight="600" fill="#cbd5e1">Category</text>
+      <rect x="16" y="24" width="130" height="20" rx="6" fill="#0a0f18" stroke="#2a3444" stroke-width="1"/>
+      <text x="26" y="38" fill="#e2e8f0">webpage ▾</text>
+
+      <text x="166" y="18" font-weight="600" fill="#cbd5e1">Status</text>
+      <rect x="162" y="24" width="110" height="20" rx="6" fill="#0a0f18" stroke="#2a3444" stroke-width="1"/>
+      <text x="172" y="38" fill="#e2e8f0">200 OK ▾</text>
+
+      <text x="292" y="18" font-weight="600" fill="#cbd5e1">Hit Range</text>
+      <rect x="288" y="24" width="130" height="20" rx="6" fill="#0a0f18" stroke="#2a3444" stroke-width="1"/>
+      <text x="298" y="38" fill="#e2e8f0">last 7 days ▾</text>
+
+      <text x="440" y="18" font-weight="600" fill="#cbd5e1">Sort</text>
+      <rect x="436" y="24" width="120" height="20" rx="6" fill="#0a0f18" stroke="#2a3444" stroke-width="1"/>
+      <text x="446" y="38" fill="#e2e8f0">last hit ▾</text>
+    </g>
+  </g>
+
+  <!-- Main content area -->
+  <g transform="translate(30,176)" font-family="Inter, sans-serif">
+    <!-- Left sidebar panel -->
+    <g filter="url(#softShadow)">
+      <rect width="200" height="344" rx="12" fill="url(#panelGradient)" stroke="#2a3444" stroke-width="1"/>
+      <rect width="200" height="1" y="0" rx="0" fill="#3a4459" opacity="0.3"/>
+    </g>
+    <!-- Right preview panel -->
+    <g filter="url(#softShadow)">
+      <rect x="220" width="680" height="344" rx="12" fill="url(#panelGradient)" stroke="#2a3444" stroke-width="1"/>
+      <rect x="220" width="680" height="1" y="0" rx="0" fill="#3a4459" opacity="0.3"/>
+    </g>
+
+    <!-- Column headers -->
+    <text x="16" y="28" fill="#cbd5e1" font-size="12" font-weight="600">Cached Documents</text>
+    <text x="16" y="44" fill="#64748b" font-size="9">Collapsed · click to expand</text>
+    <text x="236" y="28" fill="#cbd5e1" font-size="12" font-weight="600">Response Preview</text>
+    <text x="800" y="28" fill="#64748b" font-size="10" text-anchor="end">143 hits</text>
+
+    <!-- Collapsed list with status indicators -->
+    <g font-size="10" fill="#e2e8f0">
+      <!-- Selected item with gold highlight -->
+      <g transform="translate(12,60)">
+        <rect width="176" height="36" rx="8" fill="#141c2a" stroke="url(#goldAccent)" stroke-width="1.5"/>
+        <rect width="176" height="36" rx="8" fill="#c9a227" opacity="0.04"/>
+        <rect x="10" y="10" width="16" height="16" rx="4" fill="url(#emeraldGlow)"/>
+        <text x="14" y="22" fill="#f8fafc" font-size="8" font-weight="bold">✓</text>
+        <text x="34" y="18" fill="#f8fafc" font-weight="600">HIT · 184 KB</text>
+        <text x="34" y="30" fill="#64748b" font-size="9">2m ago</text>
+        <text x="166" y="22" fill="#64748b" font-size="9">›</text>
+      </g>
+      <!-- Other items -->
+      <g transform="translate(12,104)">
+        <rect width="176" height="36" rx="8" fill="#0c1018" stroke="#222c3c" stroke-width="1"/>
+        <rect x="10" y="10" width="16" height="16" rx="4" fill="url(#amberGlow)"/>
+        <text x="14" y="22" fill="#1a1a1a" font-size="8" font-weight="bold">!</text>
+        <text x="34" y="18" fill="#e2e8f0" font-weight="600">STALE · 92 KB</text>
+        <text x="34" y="30" fill="#64748b" font-size="9">8h ago</text>
+      </g>
+      <g transform="translate(12,148)">
+        <rect width="176" height="36" rx="8" fill="#0c1018" stroke="#222c3c" stroke-width="1"/>
+        <rect x="10" y="10" width="16" height="16" rx="4" fill="url(#roseGlow)"/>
+        <text x="14" y="22" fill="#1a1a1a" font-size="8" font-weight="bold">✗</text>
+        <text x="34" y="18" fill="#e2e8f0" font-weight="600">MISS · 28 KB</text>
+        <text x="34" y="30" fill="#64748b" font-size="9">3d ago</text>
+      </g>
+      <g transform="translate(12,192)">
+        <rect width="176" height="36" rx="8" fill="#0c1018" stroke="#222c3c" stroke-width="1"/>
+        <rect x="10" y="10" width="16" height="16" rx="4" fill="url(#emeraldGlow)"/>
+        <text x="14" y="22" fill="#f8fafc" font-size="8" font-weight="bold">✓</text>
+        <text x="34" y="18" fill="#e2e8f0" font-weight="600">HIT · 12 KB</text>
+        <text x="34" y="30" fill="#64748b" font-size="9">30m ago</text>
+      </g>
+      <!-- Expand control -->
+      <g transform="translate(12,244)">
+        <rect width="176" height="28" rx="6" fill="#0a0f18" stroke="#222c3c" stroke-width="1"/>
+        <text x="88" y="18" text-anchor="middle" fill="#64748b" font-size="10">Expand list ▼</text>
+      </g>
+      <text x="88" y="292" text-anchor="middle" fill="#475569" font-size="9">4 of 127 documents</text>
+    </g>
+
+    <!-- Preview pane content -->
+    <g transform="translate(236,52)" font-size="11">
+      <!-- Headers section -->
+      <rect width="648" height="120" rx="8" fill="#0a0f18" stroke="#1e2838" stroke-width="1"/>
+      <rect width="648" height="1" y="0" rx="0" fill="#2a3848" opacity="0.4"/>
+      <text x="16" y="22" fill="#cbd5e1" font-weight="600" font-size="10">RESPONSE HEADERS</text>
+      <g fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10">
+        <text x="16" y="44"><tspan fill="#64748b">cache-key:</tspan> sha256:9be1f4a2...c7d8</text>
+        <text x="16" y="60"><tspan fill="#64748b">hit-count:</tspan> <tspan fill="#34d399">143</tspan></text>
+        <text x="120" y="60"><tspan fill="#64748b">etag:</tspan> "W/\"9ab7e3f1\""</text>
+        <text x="16" y="76"><tspan fill="#64748b">last-hit:</tspan> 2025-11-29T10:02:14Z</text>
+        <text x="280" y="76"><tspan fill="#64748b">expires:</tspan> 2025-11-29T18:02:14Z</text>
+        <text x="16" y="92"><tspan fill="#64748b">content-type:</tspan> text/html; charset=utf-8</text>
+        <text x="340" y="92"><tspan fill="#64748b">size:</tspan> 184,291 bytes</text>
+        <text x="16" y="108"><tspan fill="#64748b">url:</tspan> https://news.example.com/long-read/obsidian-cities</text>
+      </g>
+
+      <!-- Body excerpt section -->
+      <rect y="134" width="648" height="158" rx="8" fill="#080c14" stroke="#1e2838" stroke-width="1"/>
+      <rect y="134" width="648" height="1" rx="0" fill="#2a3848" opacity="0.4"/>
+      <text x="16" y="156" fill="#cbd5e1" font-weight="600" font-size="10">BODY EXCERPT</text>
+      <g fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10">
+        <text x="16" y="178" fill="#7dd3fc">&lt;article</text><text x="60" y="178" fill="#94a3b8"> class=</text><text x="108" y="178" fill="#fcd34d">"long-read"</text><text x="186" y="178" fill="#94a3b8"> data-feature=</text><text x="290" y="178" fill="#fcd34d">"series"</text><text x="344" y="178" fill="#7dd3fc">&gt;</text>
+        <text x="16" y="196" fill="#64748b">  </text><text x="28" y="196" fill="#7dd3fc">&lt;header&gt;</text><text x="80" y="196" fill="#e2e8f0">Embedded in Obsidian Cities</text><text x="280" y="196" fill="#7dd3fc">&lt;/header&gt;</text>
+        <text x="16" y="214" fill="#64748b">  </text><text x="28" y="214" fill="#7dd3fc">&lt;meta</text><text x="60" y="214" fill="#94a3b8"> itemprop=</text><text x="130" y="214" fill="#fcd34d">"wordCount"</text><text x="210" y="214" fill="#94a3b8"> content=</text><text x="276" y="214" fill="#fcd34d">"2849"</text><text x="318" y="214" fill="#7dd3fc">/&gt;</text>
+        <text x="16" y="232" fill="#64748b">  </text><text x="28" y="232" fill="#7dd3fc">&lt;section</text><text x="80" y="232" fill="#94a3b8"> class=</text><text x="128" y="232" fill="#fcd34d">"content"</text><text x="188" y="232" fill="#7dd3fc">&gt;</text>
+        <text x="16" y="250" fill="#64748b">    </text><text x="36" y="250" fill="#7dd3fc">&lt;p&gt;</text><text x="52" y="250" fill="#e2e8f0">The architecture of modern news...</text><text x="280" y="250" fill="#7dd3fc">&lt;/p&gt;</text>
+        <text x="16" y="268" fill="#475569">    ...</text>
+      </g>
+    </g>
+  </g>
+</svg>

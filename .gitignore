@@ -59,7 +59,9 @@ data/exports/**/*.json
 testlogs/
 
 # UI review artefacts
-screenshots/
+# Root screenshots are local/test output by default. Documentation-quality
+# screenshots can still be committed intentionally under docs/**/screenshots/.
+/screenshots/
 
 # Agent backup archives
 .github/agentbackups/

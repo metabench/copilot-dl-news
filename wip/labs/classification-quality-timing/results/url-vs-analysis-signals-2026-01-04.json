@@ -1,0 +1,85 @@
+{
+  "timestamp": "2026-01-04T13:10:30.574Z",
+  "dbPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\data\\news.db",
+  "reference": {
+    "labelSource": "content_analysis.classification",
+    "minConfidence": 0,
+    "requireConfidence": false,
+    "totalLabeled": 46852
+  },
+  "sample": {
+    "limitRequested": 2000,
+    "rowsSampled": 2000
+  },
+  "timings": {
+    "stage1": {
+      "count": 2000,
+      "meanMs": 0.0802279500000027,
+      "p50Ms": 0.07339999999976499,
+      "p95Ms": 0.11779999999998836
+    },
+    "stage2": {
+      "count": 2000,
+      "meanMs": 0.001726299999997991,
+      "p50Ms": 0.0012000000001535227,
+      "p95Ms": 0.004399999999805004
+    },
+    "aggregate": {
+      "count": 2000,
+      "meanMs": 0.00288000000000261,
+      "p50Ms": 0.0014000000001033186,
+      "p95Ms": 0.00930000000016662
+    },
+    "total": {
+      "count": 2000,
+      "meanMs": 0.08537910000000443,
+      "p50Ms": 0.07780000000002474,
+      "p95Ms": 0.12809999999990396
+    }
+  },
+  "quality": {
+    "stage1": {
+      "correct": 1496,
+      "total": 2000,
+      "accuracy": 0.748,
+      "confusion": {
+        "article": {
+          "hub": 504,
+          "article": 1496
+        }
+      }
+    },
+    "stage2": {
+      "correct": 1669,
+      "total": 2000,
+      "accuracy": 0.8345,
+      "confusion": {
+        "article": {
+          "hub": 331,
+          "article": 1669
+        }
+      }
+    },
+    "aggregate": {
+      "correct": 1993,
+      "total": 2000,
+      "accuracy": 0.9965,
+      "confusion": {
+        "article": {
+          "hub": 7,
+          "article": 1993
+        }
+      }
+    },
+    "stage1UnknownRate": 0,
+    "stage2UnknownRate": 0,
+    "stageDisagreementRate": 0.4105
+  },
+  "urlOnly": {
+    "urlCount": 504613,
+    "sampleSize": 100000,
+    "totalMs": 7053.618,
+    "urlsPerSec": 14177.12158497951,
+    "unknownRate": 0.00703
+  }
+}

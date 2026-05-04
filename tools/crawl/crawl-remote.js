@@ -98,6 +98,7 @@ Options:
   --interval <seconds>   Sync polling interval (default: 10)
   --limit <n>            Limit for queries (default: 500)
   --max-pages <n>        Max pages when adding domain (default: 50)
+  --max-concurrent <n>   Max domains to crawl in parallel for start/bounded/run
   --poll <seconds>       Poll interval for bounded wait (default: 5)
   --timeout-min <n>      Timeout in minutes for bounded wait (default: 30)
   --json                 Output raw JSON
@@ -118,6 +119,20 @@ const REMOTE_HOST = args.host || process.env.CRAWL_REMOTE_HOST || defaultHost;
 const LOCAL_DB_PATH = args.db || path.resolve(__dirname, '../../data/news.db');
 const WATERMARK_FILE = path.resolve(__dirname, '.crawl-remote-watermark.json');
 const JSON_OUTPUT = args.json === true;
+
+function parsePositiveIntArg(name) {
+  const value = args[name];
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function applyStartOverrides(body) {
+  const maxPages = parsePositiveIntArg('max-pages');
+  const maxConcurrent = parsePositiveIntArg('max-concurrent') || parsePositiveIntArg('maxConcurrent');
+  if (maxPages) body.maxPages = maxPages;
+  if (maxConcurrent) body.maxConcurrent = maxConcurrent;
+  return body;
+}
 
 // ── HTTP Helpers ────────────────────────────────────────────
 
@@ -337,7 +352,7 @@ async function cmdStart() {
   const body = {};
   if (args.domain) body.domain = args.domain;
   else if (args.domains) body.domains = args.domains.split(',').map(s => s.trim());
-  if (args['max-pages']) body.maxPages = parseInt(args['max-pages'], 10);
+  applyStartOverrides(body);
   // else: start all (empty body)
 
   const { data } = await requestWithTimeout('POST', '/api/start', body);
@@ -583,7 +598,7 @@ async function cmdRun() {
   const startBody = {};
   if (args.domain) startBody.domain = args.domain;
   else if (args.domains) startBody.domains = args.domains.split(',').map(s => s.trim());
-  if (args['max-pages']) startBody.maxPages = parseInt(args['max-pages'], 10);
+  applyStartOverrides(startBody);
   const { data: startData } = await requestWithTimeout('POST', '/api/start', startBody, 15000);
 
   if (startData.results) {
@@ -724,7 +739,7 @@ async function cmdBounded() {
   const startBody = {};
   if (args.domain) startBody.domain = args.domain;
   else if (args.domains) startBody.domains = targetDomains;
-  if (maxPagesOverride) startBody.maxPages = maxPagesOverride;
+  applyStartOverrides(startBody);
 
   const pollMs = Math.max(1000, (parseInt(args.poll, 10) || 5) * 1000);
   const timeoutMs = Math.max(10000, (parseInt(args['timeout-min'], 10) || 30) * 60 * 1000);

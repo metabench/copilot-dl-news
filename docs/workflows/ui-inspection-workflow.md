@@ -14,6 +14,8 @@ last-reviewed: 2026-02-12
 
 This guide describes how to inspect UI components visually (using MCP Browser tools) and numerically (using Puppeteer scripts).
 
+For the full product feedback loop around user journeys, automatic screenshot capture, Electron/Puppeteer rig selection, control-centre screenshot galleries, and comment-driven follow-up work, start with `docs/workflows/ui-screenshot-feedback-loop.md` and `docs/guides/UI_SCREENSHOT_FEEDBACK_METHODOLOGY.md`.
+
 ## 1. Visual Inspection with MCP Browser Tools
 
 This method allows AI agents to "see" the UI by taking screenshots and snapshots via the Playwright MCP server.

@@ -53,8 +53,23 @@ const { registerCrawlApiV1Routes } = require('../../../api/route-loaders/crawl-v
 const { createCrawlService } = require('../../../server/crawl-api/core/crawlService');
 const { resolvePresetDateRange } = require('./lib/searchDateRange');
 const { computeSearchFreshness } = require('./lib/searchFreshness');
+const {
+  appendRunComment,
+  filterScreenshotRuns,
+  getScreenshotRunFilters,
+  getRunComments,
+  listScreenshotRuns,
+  resolveDomSnapshotAsset,
+  resolveScreenshotAsset
+} = require('./lib/screenshotReviewStore');
+const {
+  DEFAULT_CLOUD_CRAWL_TARGETS,
+  getCloudCrawlStatusSnapshot,
+  normalizeDomains
+} = require('../../../data/db/sqlite/v1/queries/ui/cloudCrawl');
 
 const PORT = process.env.PORT || 3000;
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 
 // MCP Logger for AI agent visibility (vital-only to console, full logging to file/MCP)
 const log = createMcpLogger.uiServer('unified-app');
@@ -84,7 +99,10 @@ function parseBooleanQuery(value, fallback = false) {
 function createCheckModeSubApps() {
   const homeContent = '<div class="home-dashboard"><div class="home-hero"><h1>Unified App (check mode)</h1></div></div>';
   const panelDemoContent = '<section data-unified-activate="panel-demo"><div class="panel-status">Panel demo check mode</div></section>';
+  const cloudCrawlContent = '<section data-unified-activate="cloud-crawl" data-cloud-crawl-root="true" data-cloud-crawl-api-base="/api/cloud-crawl" data-cloud-crawl-command="npm run crawl -- remote bounded --domains bbc.com,theguardian.com,cbsnews.com,nbcnews.com,france24.com --max-pages 5 --max-concurrent 5 --poll 3 --timeout-min 10"><div data-cloud-crawl-stat="remote">check</div><div data-cloud-crawl-stat="activeJobs">0</div><div data-cloud-crawl-stat="downloaded">0 / 25</div><div data-cloud-crawl-stat="errors">0</div><div data-cloud-crawl-targets="true"></div><div data-cloud-crawl-recent="true">No recent target downloads found.</div><div data-cloud-crawl-status="true">Check mode</div></section>';
   const searchExplorerContent = '<section data-unified-activate="search-explorer"><input type="text" data-search-input="q" value="" /></section>';
+  const downloadVerificationContent = '<section data-unified-activate="download-verification" data-download-verification-root="true"><div data-download-verification-table="true">Download verification check mode</div></section>';
+  const screenshotReviewContent = '<section data-unified-activate="screenshot-review" data-screenshot-review-root="true" data-screenshot-review-api-base="/api/screenshot-review"><div data-screenshot-review-stat="runs">-</div><div data-screenshot-review-stat="images">-</div><div data-screenshot-review-stat="comments">-</div><div data-screenshot-review-stat="latest">-</div><select data-screenshot-review-filter="session"><option value="all">All sessions</option></select><select data-screenshot-review-filter="app"><option value="all">All apps</option></select><button type="button" data-screenshot-review-action="refresh">Refresh</button><div data-screenshot-review-runs="true">Loading screenshot runs...</div><div data-screenshot-review-gallery="true">Select a run.</div><pre data-screenshot-review-comments="true">No run selected.</pre><form data-screenshot-review-comment-form="true"><select data-screenshot-review-comment-target="true"><option value="run">Whole run</option></select><textarea data-screenshot-review-comment-input="true"></textarea><button type="submit">Save Comment</button></form><div data-screenshot-review-status="true">Check mode</div></section>';
 
   return [
     {
@@ -112,6 +130,18 @@ function createCheckModeSubApps() {
       })
     },
     {
+      id: 'cloud-crawl',
+      label: 'Cloud Crawl',
+      icon: '☁️',
+      category: 'Crawler',
+      description: 'Cloud crawl check payload',
+      renderContent: async () => ({
+        content: cloudCrawlContent,
+        embed: 'panel',
+        activationKey: 'cloud-crawl'
+      })
+    },
+    {
       id: 'search-explorer',
       label: 'Search Explorer',
       icon: '🔎',
@@ -121,6 +151,30 @@ function createCheckModeSubApps() {
         content: searchExplorerContent,
         embed: 'panel',
         activationKey: 'search-explorer'
+      })
+    },
+    {
+      id: 'download-verification',
+      label: 'Download Verify',
+      icon: '✅',
+      category: 'Analytics',
+      description: 'Download verification check payload',
+      renderContent: async () => ({
+        content: downloadVerificationContent,
+        embed: 'panel',
+        activationKey: 'download-verification'
+      })
+    },
+    {
+      id: 'screenshot-review',
+      label: 'Screenshots',
+      icon: '🖼️',
+      category: 'Diagnostics',
+      description: 'Screenshot review check payload',
+      renderContent: async () => ({
+        content: screenshotReviewContent,
+        embed: 'panel',
+        activationKey: 'screenshot-review'
       })
     }
   ];
@@ -238,6 +292,81 @@ function mountDashboardModules(unifiedApp, options = {}) {
   const db = initUnifiedDb(options);
   const { getDbRW } = db;
 
+  unifiedApp.get('/api/screenshot-review/runs', (req, res) => {
+    try {
+      const limit = Math.max(1, Math.min(parseNumber(req.query.limit, 50), 100));
+      const allRuns = listScreenshotRuns({ repoRoot: PROJECT_ROOT, limit: 250 });
+      const runs = filterScreenshotRuns(allRuns, {
+        session: req.query.session,
+        app: req.query.app
+      }).slice(0, limit);
+      res.json({
+        status: 'ok',
+        filters: getScreenshotRunFilters(allRuns),
+        appliedFilters: {
+          session: req.query.session || 'all',
+          app: req.query.app || 'all'
+        },
+        runs
+      });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  unifiedApp.get('/api/screenshot-review/comments', (req, res) => {
+    try {
+      const result = getRunComments({ repoRoot: PROJECT_ROOT, runId: req.query.run });
+      if (!result) return res.status(404).json({ status: 'error', message: 'Screenshot run not found' });
+      res.json({ status: 'ok', ...result });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  unifiedApp.post('/api/screenshot-review/comments', (req, res) => {
+    try {
+      const result = appendRunComment({
+        repoRoot: PROJECT_ROOT,
+        runId: req.body && req.body.runId,
+        target: req.body && req.body.target,
+        comment: req.body && req.body.comment
+      });
+      if (!result) return res.status(404).json({ status: 'error', message: 'Screenshot run not found' });
+      res.json({ status: 'ok', ...result });
+    } catch (error) {
+      res.status(400).json({ status: 'error', message: error.message });
+    }
+  });
+
+  unifiedApp.get('/api/screenshot-review/assets/:runId/:fileName', (req, res) => {
+    try {
+      const assetPath = resolveScreenshotAsset({
+        repoRoot: PROJECT_ROOT,
+        runId: req.params.runId,
+        fileName: req.params.fileName
+      });
+      if (!assetPath) return res.status(404).send('Screenshot asset not found');
+      res.sendFile(assetPath);
+    } catch (error) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  unifiedApp.get('/api/screenshot-review/dom/:runId/:fileName', (req, res) => {
+    try {
+      const assetPath = resolveDomSnapshotAsset({
+        repoRoot: PROJECT_ROOT,
+        runId: req.params.runId,
+        fileName: req.params.fileName
+      });
+      if (!assetPath) return res.status(404).send('DOM snapshot not found');
+      res.type('text/plain').sendFile(assetPath);
+    } catch (error) {
+      res.status(500).send(error.message);
+    }
+  });
+
   // Canonical crawler telemetry (SSE + remote-observable) + optional DB persistence.
   const crawlTelemetry = new TelemetryIntegration({
     historyLimit: 500,
@@ -332,6 +461,17 @@ function mountDashboardModules(unifiedApp, options = {}) {
       `).all(limit);
 
       res.json({ status: 'ok', limit, items: rows });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  unifiedApp.get('/api/downloads/verifications', (req, res) => {
+    try {
+      const limit = normalizePositiveInt(req.query.limit, 25, 100);
+      const since = normalizeDateParam(req.query.since);
+      const result = downloadEvidence.getRecentDownloadVerifications(getDb(), { limit, since });
+      res.json({ status: 'ok', ...result });
     } catch (error) {
       res.status(500).json({ status: 'error', message: error.message });
     }
@@ -515,6 +655,51 @@ function mountDashboardModules(unifiedApp, options = {}) {
     if (Number.isFinite(max)) return Math.min(n, max);
     return n;
   }
+
+  function normalizeDomainQuery(value) {
+    if (Array.isArray(value)) return normalizeDomains(value);
+    if (typeof value !== 'string' || !value.trim()) return [...DEFAULT_CLOUD_CRAWL_TARGETS];
+    return normalizeDomains(value.split(','));
+  }
+
+  unifiedApp.get('/api/cloud-crawl/status', (req, res) => {
+    try {
+      const domains = normalizeDomainQuery(req.query.domains);
+      const maxPagesPerDomain = normalizePositiveInt(req.query.maxPages, 5, 1000);
+      const recentLimit = normalizePositiveInt(req.query.recentLimit, 12, 50);
+      const since = normalizeDateParam(req.query.since);
+      const snapshot = getCloudCrawlStatusSnapshot(getDb(), {
+        domains,
+        maxPagesPerDomain,
+        recentLimit,
+        since
+      });
+
+      const jobs = inProcessCrawlJobRegistry.list();
+      const activeJobs = jobs.filter((job) => job && job.status === 'running').length;
+      const history = crawlTelemetry?.bridge?.getHistory ? crawlTelemetry.bridge.getHistory(200) : [];
+      const sinceMs = Date.now() - 10 * 60 * 1000;
+      const errorsLast10m = Array.isArray(history)
+        ? history.filter((event) => {
+            const timestampMs = getHistoryTimestampMs(event);
+            return isCrawlErrorEvent(event) && (timestampMs == null || timestampMs >= sinceMs);
+          }).length
+        : 0;
+
+      res.json({
+        status: 'ok',
+        remote: {
+          label: 'configured',
+          command: `npm run crawl -- remote bounded --domains ${domains.join(',')} --max-pages ${maxPagesPerDomain} --max-concurrent ${domains.length} --poll 3 --timeout-min 10`
+        },
+        activeJobs,
+        errorsLast10m,
+        ...snapshot
+      });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
 
   function buildSearchQuery(baseQuery, authorFilter) {
     const query = typeof baseQuery === 'string' ? baseQuery.trim() : '';
@@ -1261,6 +1446,144 @@ if (checkMode) {
       lastFailingUrl: null,
       checkMode: true
     });
+  });
+
+  app.get('/api/downloads/verifications', (req, res) => {
+    res.json({
+      status: 'ok',
+      generatedAt: new Date().toISOString(),
+      limit: 3,
+      since: null,
+      summary: {
+        total: 1,
+        downloaded: 1,
+        savedToDb: 1,
+        verified: 1,
+        levelRecorded: 1,
+        algorithms: [{ algorithm: 'brotli', count: 1 }]
+      },
+      items: [
+        {
+          httpResponseId: 1,
+          urlId: 1,
+          url: 'https://example.com/check-download',
+          host: 'example.com',
+          fetchedAt: '2026-04-29 00:00:00',
+          downloaded: true,
+          savedToDb: true,
+          verified: true,
+          http: { status: 200, bytesDownloaded: 1024, contentType: 'text/html', contentEncoding: null },
+          storage: { contentStorageId: 1, storageType: 'db_compressed', sha256Prefix: 'abcdef123456', uncompressedSize: 1024, compressedSize: 320, compressionRatio: 0.3125 },
+          compression: { typeName: 'brotli_6', algorithm: 'brotli', level: 6, levelRecorded: true, options: ['window_bits=22'], optionsRecorded: true, source: 'compression_types' }
+        }
+      ]
+    });
+  });
+
+  app.get('/api/cloud-crawl/status', (req, res) => {
+    const domains = ['bbc.com', 'theguardian.com', 'cbsnews.com', 'nbcnews.com', 'france24.com'];
+    res.json({
+      status: 'ok',
+      remote: {
+        label: 'check',
+        command: 'npm run crawl -- remote bounded --domains bbc.com,theguardian.com,cbsnews.com,nbcnews.com,france24.com --max-pages 5 --max-concurrent 5 --poll 3 --timeout-min 10'
+      },
+      activeJobs: 0,
+      errorsLast10m: 0,
+      domains,
+      goal: 5,
+      since: null,
+      totals: {
+        targetSites: 5,
+        goalDownloads: 25,
+        okDownloads: 0,
+        sitesAtGoal: 0,
+        progressPct: 0
+      },
+      targets: domains.map((domain) => ({
+        domain,
+        goal: 5,
+        okDownloads: 0,
+        latestFetchedAt: null,
+        progressPct: 0
+      })),
+      recentDownloads: []
+    });
+  });
+
+  const screenshotCheckRun = {
+    runId: 'check-run',
+    title: 'check-mode/screenshots',
+    sessionId: 'check-mode',
+    appKeys: ['screenshot-review'],
+    relativeOutputDir: 'screenshots/check-mode',
+    ok: true,
+    capturedAt: '2026-05-04T00:00:00.000Z',
+    routeCount: 1,
+    commentCount: 1,
+    commentsPath: 'screenshots/check-mode/SCREENSHOT_COMMENTS.md',
+    analysisPath: 'screenshots/check-mode/analysis.json',
+    routes: [
+      {
+        key: 'screenshot-review',
+        routeKey: 'screenshot-review',
+        viewportKey: 'desktop',
+        url: '/?app=screenshot-review',
+        screenshotBytes: 67,
+        screenshotSkipped: false,
+        fileName: 'screenshot-review.png',
+        imageUrl: '/api/screenshot-review/assets/check-run/screenshot-review.png',
+        domSnapshotBytes: 1234,
+        domSnapshotSkipped: false,
+        domFileName: 'screenshot-review.html',
+        domSnapshotUrl: '/api/screenshot-review/dom/check-run/screenshot-review.html',
+        metrics: { horizontalOverflow: false }
+      }
+    ]
+  };
+
+  app.get('/api/screenshot-review/runs', (req, res) => {
+    res.json({
+      status: 'ok',
+      filters: {
+        sessions: [{ value: 'check-mode', label: 'check-mode' }],
+        apps: [{ value: 'screenshot-review', label: 'screenshot-review' }]
+      },
+      appliedFilters: {
+        session: req.query.session || 'all',
+        app: req.query.app || 'all'
+      },
+      runs: [screenshotCheckRun]
+    });
+  });
+
+  app.get('/api/screenshot-review/comments', (req, res) => {
+    res.json({
+      status: 'ok',
+      runId: req.query.run || 'check-run',
+      commentsPath: screenshotCheckRun.commentsPath,
+      commentCount: 1,
+      content: '# Screenshot Comments: check-mode/screenshots\n\n## 2026-05-04T00:00:00.000Z\n\n- Status: pending\n  Target: screenshot-review\n  Comment:\n  Check-mode comment.\n  Agent notes: pending\n'
+    });
+  });
+
+  app.post('/api/screenshot-review/comments', (req, res) => {
+    res.json({
+      status: 'ok',
+      runId: (req.body && req.body.runId) || 'check-run',
+      commentsPath: screenshotCheckRun.commentsPath,
+      commentCount: 2,
+      content: '# Screenshot Comments: check-mode/screenshots\n\n- Status: pending\n  Target: run\n  Comment:\n  Check-mode saved comment.\n'
+    });
+  });
+
+  app.get('/api/screenshot-review/assets/:runId/:fileName', (req, res) => {
+    const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', 'base64');
+    res.type('png').send(onePixelPng);
+  });
+
+  app.get('/api/screenshot-review/dom/:runId/:fileName', (req, res) => {
+    res.type('text/plain').send('<!doctype html><html><body>Screenshot review check DOM</body></html>');
   });
 
   app.get('/api/search-explorer/search', (req, res) => {

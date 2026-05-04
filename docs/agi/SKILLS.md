@@ -38,6 +38,7 @@ This repo does not have Anthropic Claude Code “Skills” support directly, but
 | deep-research | deep research, deep think, multi-step reasoning, comprehensive analysis, iterative search, synthesis, Tree of Thought, chain of thought, report writing | `docs/agi/skills/deep-research/SKILL.md` |
 | puppeteer-efficient-ui-verification | puppeteer, ui verification, scenario suite, fast e2e, fixtures, single browser reuse | `docs/agi/skills/puppeteer-efficient-ui-verification/SKILL.md` |
 | autonomous-ui-inspection | ui inspection, screenshots, numeric layout metrics, playwright mcp, puppeteer, server check | `docs/agi/skills/autonomous-ui-inspection/SKILL.md` |
+| ui-screenshot-feedback | ui screenshots, screenshot comments, control centre review, user journeys, electron screenshots, puppeteer capture rigging | `docs/agi/skills/ui-screenshot-feedback/SKILL.md` |
 | session-discipline | session-init, session notes, evidence, follow-ups, continuity | `docs/agi/skills/session-discipline/SKILL.md` |
 | sessions | sessions, create session, search sessions, resume session, archive, long-term sessions, session lifecycle, handoff, cross-repo sessions | `docs/agi/skills/sessions/SKILL.md` |
 | targeted-testing | run tests, pick smallest suite, puppeteer/e2e, validate changes | `docs/agi/skills/targeted-testing/SKILL.md` |

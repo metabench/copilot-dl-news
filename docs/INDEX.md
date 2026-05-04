@@ -38,6 +38,7 @@ Every major subsystem directory has an `AGENT.md` file with context-specific wor
 - [Tier 1 Tooling Loop](workflows/tier1_tooling_loop.md) - js-scan/js-edit discovery, dry-run, apply, and verification loop for JS changes.
 - [Emoji Search in Markdown (Windows-safe)](workflows/emoji_search_markdown.md) - Find emojis in docs without relying on literal emoji input.
 - [UI Inspection Workflow](workflows/ui-inspection-workflow.md) - Autonomous visual (MCP/Playwright) + numeric (Puppeteer) UI inspection loop.
+- [UI Screenshot Feedback Loop](workflows/ui-screenshot-feedback-loop.md) - Automatic screenshot capture, Electron/Puppeteer rigging, control-centre review artifacts, and comment-driven UI iteration.
 - [Single UI App Cohesion](workflows/single-ui-app-cohesion.md) - No-retirement unified shell: add sub-apps + add `--check`.
 
 
@@ -105,6 +106,7 @@ These guides are **authoritative sources** for their domains. When working in th
 - [Test Hanging Prevention Guide](guides/TEST_HANGING_PREVENTION_GUIDE.md) - **CRITICAL for E2E tests**: Preventing "Jest did not exit" warnings, server cleanup patterns, timeout strategies, and reliable async test structure.
 - [Puppeteer UI Workflow Guide](guides/PUPPETEER_UI_WORKFLOW.md) - One-shot browser console/network capture for debugging UI routes without writing a full E2E.
 - [Puppeteer Scenario Suites](guides/PUPPETEER_SCENARIO_SUITES.md) - Fast UI verification by running many scenarios per browser session (deterministic fixtures + artifacts on failure).
+- [UI Screenshot Feedback Methodology](guides/UI_SCREENSHOT_FEEDBACK_METHODOLOGY.md) - Product loop for planning journeys, capturing screenshots, saving control-centre review artifacts, and processing screenshot comments.
 - [jsgui3 Activation Log Noise (Expected)](guides/JSGUI3_DEBUGGING_GUIDE.md#activation-log-noise-expected-warnings) - Interpreting `Missing context.map_Controls` and `&&& no corresponding control` without chasing false alarms.
 
 ### Authorization UX (CLI)

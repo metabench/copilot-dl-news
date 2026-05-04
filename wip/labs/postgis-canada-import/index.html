@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PostGIS Import: Canada</title>
+    <style>
+        :root {
+            --bg: #1e1e1e;
+            --fg: #e0e0e0;
+            --card-bg: #2d2d2d;
+            --accent: #007acc;
+            --success: #4caf50;
+            --warn: #ff9800;
+            --border: #3e3e3e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            margin: 0;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        .panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        h2 { margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        
+        /* Progress Bar */
+        .progress-container {
+            margin-bottom: 20px;
+        }
+        .progress-bar {
+            height: 10px;
+            background: #444;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.2s;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        /* Item List */
+        .item-list {
+            flex: 1;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+        .item {
+            padding: 8px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: center;
+        }
+        .badge.exists { background: #1b5e20; color: #a5d6a7; }
+        .badge.new { background: #0d47a1; color: #90caf9; }
+        
+        .region-header {
+            background: #333;
+            padding: 5px 10px;
+            font-weight: bold;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+
+        /* Log View */
+        .log-view {
+            flex: 1;
+            overflow-y: auto;
+            background: #111;
+            padding: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.85em;
+            white-space: pre-wrap;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            color: #888;
+            border-bottom: 1px solid #222;
+            padding-bottom: 2px;
+        }
+        .log-entry.info { color: #ccc; }
+        .log-entry.error { color: #f44336; }
+        
+        .controls {
+            margin-bottom: 15px;
+        }
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <h2>PostGIS Import Progress</h2>
+        <div class="controls">
+            <button id="startBtn">Start Import Simulation</button>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="stats">
+                <span id="progressText">0 / 0 Regions</span>
+                <span id="currentAction">Ready</span>
+            </div>
+        </div>
+        <div class="item-list" id="itemList">
+            <!-- Items go here -->
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>System Logs</h2>
+        <div class="log-view" id="logView">
+            <!-- Logs go here -->
+        </div>
+    </div>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const currentAction = document.getElementById('currentAction');
+        const itemList = document.getElementById('itemList');
+        const logView = document.getElementById('logView');
+
+        let evtSource = null;
+
+        function log(msg, level = 'info') {
+            const div = document.createElement('div');
+            div.className = `log-entry ${level}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logView.appendChild(div);
+            logView.scrollTop = logView.scrollHeight;
+        }
+
+        startBtn.addEventListener('click', () => {
+            if (evtSource) {
+                evtSource.close();
+            }
+            
+            startBtn.disabled = true;
+            itemList.innerHTML = '';
+            logView.innerHTML = '';
+            progressFill.style.width = '0%';
+            
+            evtSource = new EventSource('/import-stream');
+
+            evtSource.addEventListener('log', (e) => {
+                const data = JSON.parse(e.data);
+                log(data.msg, data.level);
+            });
+
+            evtSource.addEventListener('progress', (e) => {
+                const data = JSON.parse(e.data);
+                if (data.total > 0) {
+                    const pct = (data.processed / data.total) * 100;
+                    progressFill.style.width = `${pct}%`;
+                    progressText.textContent = `${data.processed} / ${data.total} Regions`;
+                }
+                currentAction.textContent = data.current;
+            });
+
+            evtSource.addEventListener('item', (e) => {
+                const data = JSON.parse(e.data);
+                const item = document.createElement('div');
+                item.className = 'item';
+                item.innerHTML = `
+                    <span class="badge ${data.status}">${data.status.toUpperCase()}</span>
+                    <span>${data.name}</span>
+                    <span style="color: #666; font-size: 0.9em">(${data.adm1})</span>
+                `;
+                itemList.insertBefore(item, itemList.firstChild);
+            });
+
+            evtSource.addEventListener('complete', () => {
+                currentAction.textContent = 'Complete';
+                startBtn.disabled = false;
+                evtSource.close();
+                log('Import simulation finished.', 'info');
+            });
+            
+            evtSource.onerror = (err) => {
+                log('Connection error', 'error');
+                startBtn.disabled = false;
+                evtSource.close();
+            };
+        });
+    </script>
+</body>
+</html>

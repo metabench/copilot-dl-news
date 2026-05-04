@@ -1,0 +1,10 @@
+{
+  "description": "Local place-hub crawl against the default news database.",
+  "tool": "place-hubs",
+  "options": {
+    "depth": 1,
+    "concurrency": 1,
+    "summary-format": "json",
+    "quiet": true
+  }
+}

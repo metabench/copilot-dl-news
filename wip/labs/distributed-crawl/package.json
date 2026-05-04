@@ -1,0 +1,9 @@
+{
+  "name": "distributed-crawl-labs",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Labs for distributed crawl worker/controller",
+  "dependencies": {
+    "puppeteer": "^23.6.0"
+  }
+}

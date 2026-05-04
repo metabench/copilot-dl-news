@@ -1,0 +1,686 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 1600">
+  <title>Repository Division v5 - Radial API Architecture</title>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020406"/><stop offset="100%" stop-color="#0c1218"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c9a227" stop-opacity="0.06"/><stop offset="100%" stop-color="#020406" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#705a10"/><stop offset="50%" stop-color="#f5e076"/><stop offset="100%" stop-color="#705a10"/>
+    </linearGradient>
+    <linearGradient id="coreBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="dbGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e"/><stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+    <linearGradient id="analysisPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7"/><stop offset="100%" stop-color="#7e22ce"/>
+    </linearGradient>
+    <linearGradient id="geoAmber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+    <linearGradient id="uiOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316"/><stop offset="100%" stop-color="#c2410c"/>
+    </linearGradient>
+    <linearGradient id="servicesTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14b8a6"/><stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+    <linearGradient id="intelIndigo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#4338ca"/>
+    </linearGradient>
+    <linearGradient id="apiPink" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ec4899"/><stop offset="100%" stop-color="#be185d"/>
+    </linearGradient>
+    <linearGradient id="foundSlate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#475569"/><stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b"/>
+      <feColorMatrix in="b" type="matrix" values="0 0 0 0 0.9 0 0 0 0 0.68 0 0 0 0 0.18 0 0 0 0.5 0"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/></filter>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0L0 0 0 40" fill="none" stroke="#c9a227" stroke-width="0.1" opacity="0.04"/>
+    </pattern>
+    <marker id="arr" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">
+      <path d="M0,0 L0,5 L5,2.5z" fill="#c9a227" opacity="0.5"/>
+    </marker>
+  </defs>
+  <rect width="2000" height="1600" fill="url(#bg)"/><rect width="2000" height="1600" fill="url(#grid)"/><rect width="2000" height="1600" fill="url(#glow)"/>
+  
+  <!-- Title -->
+  <g filter="url(#goldGlow)"><text x="1000" y="40" text-anchor="middle" fill="url(#gold)" font-family="Georgia" font-size="26" font-weight="bold" letter-spacing="2">Repository Division v5 — Radial API Architecture</text></g>
+  <text x="1000" y="62" text-anchor="middle" fill="#8b99ad" font-family="Inter" font-size="10">Core modules at center • UI modules scattered at periphery near their backends • Full API contracts</text>
+  
+  <!-- Orbital rings -->
+  <circle cx="1000" cy="800" r="200" fill="none" stroke="#c9a227" stroke-width="0.5" stroke-dasharray="4,8" opacity="0.2"/>
+  <circle cx="1000" cy="800" r="380" fill="none" stroke="#c9a227" stroke-width="0.5" stroke-dasharray="6,12" opacity="0.15"/>
+  <circle cx="1000" cy="800" r="580" fill="none" stroke="#c9a227" stroke-width="0.4" stroke-dasharray="8,16" opacity="0.1"/>
+  
+  <!-- ===== CENTER: news-crawler-core ===== -->
+  <g transform="translate(850,680)" font-family="Inter" filter="url(#shadow)">
+    <rect width="300" height="240" rx="12" fill="url(#coreBlue)" opacity="0.2"/>
+    <rect width="300" height="240" rx="12" stroke="url(#coreBlue)" stroke-width="2" fill="none"/>
+    <rect width="300" height="28" rx="12 12 0 0" fill="url(#coreBlue)" opacity="0.5"/>
+    <text x="15" y="19" fill="#fff" font-size="13" font-weight="700">🕷️ news-crawler-core</text>
+    <text x="220" y="19" fill="#bfdbfe" font-size="8">The Engine</text>
+    
+    <text x="10" y="45" fill="#93c5fd" font-size="8" font-weight="600">EXPORTED CLASSES</text>
+    <g font-size="6" fill="#cbd5e1" font-family="monospace">
+      <text x="12" y="58">class NewsCrawler</text>
+      <text x="18" y="68">  constructor(url, opts: CrawlOptions)</text>
+      <text x="18" y="78">  crawl(): Promise&lt;CrawlResult&gt;</text>
+      <text x="18" y="88">  pause() / resume() / stop()</text>
+      <text x="18" y="98">  get telemetry: TelemetryFacade</text>
+      <text x="12" y="112">class PriorityQueue&lt;T&gt;</text>
+      <text x="18" y="122">  enqueue(item, priority) / dequeue()</text>
+      <text x="12" y="136">class RateLimiter</text>
+      <text x="18" y="146">  acquire(host): Promise&lt;void&gt;</text>
+      <text x="18" y="156">  getStats(host): RateLimitStats</text>
+    </g>
+    <text x="160" y="45" fill="#93c5fd" font-size="8" font-weight="600">TELEMETRY EVENTS</text>
+    <g font-size="6" fill="#cbd5e1" font-family="monospace">
+      <text x="162" y="58">telemetry.progress(CrawlProgress)</text>
+      <text x="162" y="68">telemetry.queueEvent(QueueEvent)</text>
+      <text x="162" y="78">telemetry.problem(Problem)</text>
+      <text x="162" y="88">telemetry.milestone(Milestone)</text>
+    </g>
+    <text x="160" y="108" fill="#93c5fd" font-size="8" font-weight="600">TYPES</text>
+    <g font-size="6" fill="#cbd5e1" font-family="monospace">
+      <text x="162" y="120">CrawlOptions { depth, maxPages,</text>
+      <text x="168" y="130">  concurrency, rateLimitMs }</text>
+      <text x="162" y="142">CrawlProgress { downloaded,</text>
+      <text x="168" y="152">  queued, errors, bytes }</text>
+    </g>
+    <text x="10" y="175" fill="#fbbf24" font-size="7" font-weight="600">DEPENDS ON</text>
+    <g font-size="6" fill="#94a3b8">
+      <text x="12" y="188">→ news-crawler-db (articles, fetches, links)</text>
+      <text x="12" y="200">→ news-gazetteer (place matching)</text>
+      <text x="12" y="212">→ news-intelligence (classifiers)</text>
+      <text x="12" y="224">→ @news/protocol (SSE, RemoteObservable)</text>
+    </g>
+  </g>
+  
+  <!-- ===== TOP-LEFT: news-crawler-db ===== -->
+  <g transform="translate(380,350)" font-family="Inter" filter="url(#shadow)">
+    <rect width="280" height="300" rx="12" fill="url(#dbGreen)" opacity="0.15"/>
+    <rect width="280" height="300" rx="12" stroke="url(#dbGreen)" stroke-width="2" fill="none"/>
+    <rect width="280" height="28" rx="12 12 0 0" fill="url(#dbGreen)" opacity="0.4"/>
+    <text x="15" y="19" fill="#fff" font-size="12" font-weight="700">💾 news-crawler-db</text>
+    <text x="210" y="19" fill="#4ade80" font-size="7">✓ EXTRACTED</text>
+    
+    <text x="10" y="45" fill="#86efac" font-size="8" font-weight="600">14 ACCESS MODULES (VERIFIED)</text>
+    <g font-size="6" fill="#d1fae5" font-family="monospace">
+      <text x="12" y="58">adapter.articles</text>
+      <text x="18" y="68">  .findById(id) / .findByUrl(url)</text>
+      <text x="18" y="78">  .upsert(art, {onConflict}): number</text>
+      <text x="18" y="88">  .getNeedingAnalysis({limit})</text>
+      <text x="12" y="102">adapter.urls</text>
+      <text x="18" y="112">  .findAll(opts) / .upsert(url)</text>
+      <text x="18" y="122">  .hasUrl(url): boolean</text>
+      <text x="12" y="136">adapter.links</text>
+      <text x="18" y="146">  .insertLink(link): number</text>
+      <text x="18" y="156">  .getLinksForUrl(urlId)</text>
+      <text x="12" y="170">adapter.fetches</text>
+      <text x="18" y="180">  .insertFetch(fetch): number</text>
+      <text x="12" y="194">adapter.places</text>
+      <text x="18" y="204">  .recordPlaceHubSeed(data)</text>
+      <text x="18" y="214">  .getKnownHubSeeds(host)</text>
+      <text x="12" y="228">adapter.documents</text>
+      <text x="18" y="238">  .iterateAll(opts): AsyncIterable</text>
+      <text x="12" y="252">+ domains, queue, dashboard, logging</text>
+      <text x="12" y="262">+ settings, analysis, content</text>
+    </g>
+    <text x="10" y="280" fill="#86efac" font-size="8" font-weight="600">FACTORY</text>
+    <g font-size="6" fill="#d1fae5" font-family="monospace">
+      <text x="12" y="292">createDbAdapter({type, path})</text>
+    </g>
+  </g>
+  
+  <!-- UI near DB: Data Explorer -->
+  <g transform="translate(120,400)" font-family="Inter" filter="url(#shadow)">
+    <rect width="160" height="80" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="160" height="80" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="10" font-weight="600">📊 Data Explorer</text>
+    <g font-size="6" fill="#fed7aa" font-family="monospace">
+      <text x="10" y="32">adapter.articles.iterate()</text>
+      <text x="10" y="44">adapter.domains.getByHost()</text>
+      <text x="10" y="56">GET /api/v1/articles</text>
+      <text x="10" y="68">GET /api/v1/domains</text>
+    </g>
+  </g>
+  
+  <!-- UI near DB: Article View -->
+  <g transform="translate(180,520)" font-family="Inter" filter="url(#shadow)">
+    <rect width="150" height="70" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="150" height="70" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="10" font-weight="600">📰 Article View</text>
+    <g font-size="6" fill="#fed7aa" font-family="monospace">
+      <text x="10" y="32">GET /api/v1/articles/:id</text>
+      <text x="10" y="44">/:id/summary?length=short</text>
+      <text x="10" y="56">adapter.fetches.getLatest()</text>
+    </g>
+  </g>
+  
+  <!-- ===== LEFT: news-db-pure-analysis ===== -->
+  <g transform="translate(380,720)" font-family="Inter" filter="url(#shadow)">
+    <rect width="280" height="320" rx="12" fill="url(#analysisPurple)" opacity="0.15"/>
+    <rect width="280" height="320" rx="12" stroke="url(#analysisPurple)" stroke-width="2" fill="none"/>
+    <rect width="280" height="28" rx="12 12 0 0" fill="url(#analysisPurple)" opacity="0.4"/>
+    <text x="15" y="19" fill="#fff" font-size="11" font-weight="700">🔬 news-db-pure-analysis</text>
+    <text x="210" y="19" fill="#a855f7" font-size="7">✓ EXTRACTED</text>
+    
+    <text x="10" y="42" fill="#d8b4fe" font-size="7" font-weight="600">12 MODULES (VERIFIED FROM SOURCE)</text>
+    
+    <text x="10" y="56" fill="#d8b4fe" font-size="7" font-weight="600">clustering/simhash.ts</text>
+    <g font-size="5.5" fill="#ede9fe" font-family="monospace">
+      <text x="12" y="66">computeSimHash(text): string (hex)</text>
+      <text x="12" y="75">hammingDistance(a, b): 0-64</text>
+      <text x="12" y="84">isNearDuplicate(a, b, thresh=3)</text>
+      <text x="12" y="93">getMatchType(d): exact|near|similar</text>
+    </g>
+    <text x="10" y="108" fill="#d8b4fe" font-size="7" font-weight="600">trends/detector.ts</text>
+    <g font-size="5.5" fill="#ede9fe" font-family="monospace">
+      <text x="12" y="118">detectTrends(topicCounts[], opts)</text>
+      <text x="12" y="127">calculateBaseline(counts[])</text>
+      <text x="12" y="136">calculateTrendScore(curr, baseline)</text>
+      <text x="12" y="145">filterTrending(results[])</text>
+    </g>
+    <text x="10" y="160" fill="#d8b4fe" font-size="7" font-weight="600">summarization/textRank.ts</text>
+    <g font-size="5.5" fill="#ede9fe" font-family="monospace">
+      <text x="12" y="170">class TextRank(opts)</text>
+      <text x="17" y="179">  .rank(sentences[]): Ranked[]</text>
+      <text x="17" y="188">  .summarize(sents, count=3)</text>
+    </g>
+    <text x="10" y="203" fill="#d8b4fe" font-size="7" font-weight="600">recommender/similarity.ts</text>
+    <g font-size="5.5" fill="#ede9fe" font-family="monospace">
+      <text x="12" y="213">cosineSimilarity(a[], b[]): 0-1</text>
+      <text x="12" y="222">jaccardSimilarity(a, b): 0-1</text>
+      <text x="12" y="231">euclideanDistance(a[], b[])</text>
+    </g>
+    <text x="145" y="56" fill="#d8b4fe" font-size="7" font-weight="600">sentiment/lexicon.ts</text>
+    <g font-size="5.5" fill="#ede9fe" font-family="monospace">
+      <text x="147" y="66">analyzeSentiment(text, lexicon?)</text>
+      <text x="152" y="75">→ {score, normalizedScore, label,</text>
+      <text x="152" y="84">   confidence, wordCount}</text>
+      <text x="147" y="93">compareSentiment(a, b)</text>
+    </g>
+    <text x="145" y="108" fill="#d8b4fe" font-size="7" font-weight="600">classification/decisionTree.ts</text>
+    <g font-size="5.5" fill="#ede9fe" font-family="monospace">
+      <text x="147" y="118">evaluateTree(tree, ctx)</text>
+      <text x="152" y="127">→ {match, confidence, path[]}</text>
+      <text x="147" y="136">evaluateAllTrees(trees[], ctx)</text>
+      <text x="147" y="145">getMatches(trees[], ctx)</text>
+    </g>
+    <text x="145" y="160" fill="#d8b4fe" font-size="7" font-weight="600">geo/hubUrlPredictor.ts</text>
+    <g font-size="5.5" fill="#ede9fe" font-family="monospace">
+      <text x="147" y="170">predictHubUrls(domain, place)</text>
+      <text x="147" y="179">predictCountryHubUrls(domain, c)</text>
+      <text x="147" y="188">extractPlaceSlugFromUrl(url)</text>
+      <text x="147" y="197">analyzeGaps(known[], all[])</text>
+      <text x="147" y="206">toSlug(name) / generateNameVariants()</text>
+    </g>
+    <text x="145" y="221" fill="#d8b4fe" font-size="7" font-weight="600">+ 6 more modules</text>
+    <g font-size="5.5" fill="#ede9fe" font-family="monospace">
+      <text x="147" y="231">tagging/tfIdf, text/tokenizer</text>
+      <text x="147" y="240">quality/anomaly, planning/scorer</text>
+      <text x="147" y="249">content/categoryDetector, confidenceScorer</text>
+    </g>
+    <text x="10" y="265" fill="#fbbf24" font-size="6" font-weight="600">ALL PURE FUNCTIONS - NO SIDE EFFECTS</text>
+  </g>
+  
+  <!-- UI near Analysis: Analytics Hub -->
+  <g transform="translate(100,750)" font-family="Inter" filter="url(#shadow)">
+    <rect width="170" height="85" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="170" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="10" font-weight="600">📈 Analytics Hub</text>
+    <g font-size="6" fill="#fed7aa" font-family="monospace">
+      <text x="10" y="32">detectTrends(articles[])</text>
+      <text x="10" y="44">textRank(sentences[])</text>
+      <text x="10" y="56">GET /api/v1/trends</text>
+      <text x="10" y="68">GET /api/v1/topics/:id</text>
+    </g>
+  </g>
+  
+  <!-- UI near Analysis: Quality -->
+  <g transform="translate(100,880)" font-family="Inter" filter="url(#shadow)">
+    <rect width="170" height="75" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="170" height="75" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="10" font-weight="600">✅ Quality Checker</text>
+    <g font-size="6" fill="#fed7aa" font-family="monospace">
+      <text x="10" y="32">isNearDuplicate(a, b): bool</text>
+      <text x="10" y="44">getMatchType(distance)</text>
+      <text x="10" y="56">analyzeSentiment(text)</text>
+      <text x="10" y="68">detectAnomalies(values[])</text>
+    </g>
+  </g>
+  
+  <!-- ===== BOTTOM: news-gazetteer ===== -->
+  <g transform="translate(700,1050)" font-family="Inter" filter="url(#shadow)">
+    <rect width="270" height="220" rx="12" fill="url(#geoAmber)" opacity="0.15"/>
+    <rect width="270" height="220" rx="12" stroke="url(#geoAmber)" stroke-width="2" fill="none"/>
+    <rect width="270" height="28" rx="12 12 0 0" fill="url(#geoAmber)" opacity="0.4"/>
+    <text x="15" y="19" fill="#fff" font-size="12" font-weight="700">🌍 news-gazetteer</text>
+    <text x="200" y="19" fill="#fbbf24" font-size="7">◎ PLANNED</text>
+    
+    <text x="10" y="45" fill="#fde68a" font-size="8" font-weight="600">PLACE MATCHING</text>
+    <g font-size="6" fill="#fef3c7" font-family="monospace">
+      <text x="12" y="58">matchPlaces(text): PlaceMatch[]</text>
+      <text x="12" y="68">disambiguate(cands[], ctx): Place</text>
+      <text x="12" y="78">getHierarchy(place): Place[]</text>
+      <text x="12" y="88">nearbyPlaces(lat, lon, km): Place[]</text>
+    </g>
+    <text x="10" y="108" fill="#fde68a" font-size="8" font-weight="600">PLACE DATA</text>
+    <g font-size="6" fill="#fef3c7" font-family="monospace">
+      <text x="12" y="121">Place { id, name, type, lat, lon,</text>
+      <text x="18" y="131">  population, country_code, aliases }</text>
+      <text x="12" y="143">PlaceType: country|region|city|landmark</text>
+    </g>
+    <text x="10" y="163" fill="#fde68a" font-size="8" font-weight="600">INTEGRATES WITH pure-analysis</text>
+    <g font-size="6" fill="#fef3c7" font-family="monospace">
+      <text x="12" y="176">predictHubUrls(domain, place)</text>
+      <text x="12" y="186">extractPlaceSlugFromUrl(url)</text>
+      <text x="12" y="196">analyzeGaps(known[], all[])</text>
+    </g>
+    <text x="10" y="213" fill="#fbbf24" font-size="6">→ Uses geo/hubUrlPredictor.ts functions</text>
+  </g>
+  
+  <!-- UI near Gazetteer: Gazetteer UI -->
+  <g transform="translate(480,1120)" font-family="Inter" filter="url(#shadow)">
+    <rect width="160" height="80" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="160" height="80" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="10" font-weight="600">🗺️ Gazetteer UI</text>
+    <g font-size="6" fill="#fed7aa" font-family="monospace">
+      <text x="10" y="32">matchPlaces(text)</text>
+      <text x="10" y="44">getHierarchy(place)</text>
+      <text x="10" y="56">adapter.places.search()</text>
+      <text x="10" y="68">nearbyPlaces(lat, lon)</text>
+    </g>
+  </g>
+  
+  <!-- UI near Gazetteer: Hub Matrix -->
+  <g transform="translate(1020,1120)" font-family="Inter" filter="url(#shadow)">
+    <rect width="150" height="75" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="150" height="75" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="10" font-weight="600">🎯 Hub Matrix</text>
+    <g font-size="6" fill="#fed7aa" font-family="monospace">
+      <text x="10" y="32">detectPlaceHub(url, places)</text>
+      <text x="10" y="44">inferHubPlace(articles[])</text>
+      <text x="10" y="56">HubClassifier.classify()</text>
+    </g>
+  </g>
+  
+  <!-- ===== TOP-RIGHT: news-intelligence ===== -->
+  <g transform="translate(1320,350)" font-family="Inter" filter="url(#shadow)">
+    <rect width="280" height="280" rx="12" fill="url(#intelIndigo)" opacity="0.15"/>
+    <rect width="280" height="280" rx="12" stroke="url(#intelIndigo)" stroke-width="2" fill="none"/>
+    <rect width="280" height="28" rx="12 12 0 0" fill="url(#intelIndigo)" opacity="0.4"/>
+    <text x="15" y="19" fill="#fff" font-size="12" font-weight="700">🧠 news-intelligence</text>
+    <text x="210" y="19" fill="#a5b4fc" font-size="7">◎ PLANNED</text>
+    
+    <text x="10" y="45" fill="#c7d2fe" font-size="8" font-weight="600">CLASSIFIERS ($src/intelligence)</text>
+    <g font-size="6" fill="#e0e7ff" font-family="monospace">
+      <text x="12" y="58">Stage1UrlClassifier.js</text>
+      <text x="12" y="68">Stage2ContentClassifier.js</text>
+      <text x="12" y="78">Stage3PuppeteerClassifier.js</text>
+      <text x="12" y="88">StageAggregator.js</text>
+    </g>
+    <text x="10" y="156" fill="#c7d2fe" font-size="8" font-weight="600">PLANNER ($src/intelligence)</text>
+    <g font-size="6" fill="#e0e7ff" font-family="monospace">
+      <text x="12" y="169">PlannerHost.registerPlugin()</text>
+      <text x="12" y="179">IntelligentCrawlServer.js</text>
+      <text x="12" y="189">TopicHubGapAnalyzer.js</text>
+      <text x="12" y="199">UrlClassificationService.js</text>
+    </g>
+    <text x="10" y="219" fill="#c7d2fe" font-size="8" font-weight="600">KNOWLEDGE</text>
+    <g font-size="6" fill="#e0e7ff" font-family="monospace">
+      <text x="12" y="232">extractFacts(article): Fact[]</text>
+      <text x="12" y="242">buildEntityGraph(facts[]): EntityGraph</text>
+      <text x="12" y="252">queryRelations(entity, type?)</text>
+    </g>
+    <text x="10" y="272" fill="#fbbf24" font-size="6">→ news-db-pure-analysis, news-gazetteer</text>
+  </g>
+  
+  <!-- UI near Intelligence: Decision Tree -->
+  <g transform="translate(1660,380)" font-family="Inter" filter="url(#shadow)">
+    <rect width="160" height="80" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="160" height="80" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="10" font-weight="600">🌳 Decision Tree</text>
+    <g font-size="6" fill="#fed7aa" font-family="monospace">
+      <text x="10" y="32">ArticleClassifier.classify()</text>
+      <text x="10" y="44">NavClassifier.extractLinks()</text>
+      <text x="10" y="56">visualize signals[]</text>
+      <text x="10" y="68">confidence breakdown</text>
+    </g>
+  </g>
+  
+  <!-- UI near Intelligence: Planner View -->
+  <g transform="translate(1660,500)" font-family="Inter" filter="url(#shadow)">
+    <rect width="160" height="70" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="160" height="70" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="10" font-weight="600">🗺️ Coverage Map</text>
+    <g font-size="6" fill="#fed7aa" font-family="monospace">
+      <text x="10" y="32">CrawlPlanner.detectGaps()</text>
+      <text x="10" y="44">suggestSeeds(gaps)</text>
+      <text x="10" y="56">planNextBatch(state)</text>
+    </g>
+  </g>
+  
+  <!-- ===== FAR RIGHT: subscriptions (secondary) ===== -->
+  <g transform="translate(1820,700)" font-family="Inter" opacity="0.5">
+    <rect width="160" height="140" rx="10" fill="url(#servicesTeal)" opacity="0.08"/>
+    <rect width="160" height="140" rx="10" stroke="url(#servicesTeal)" stroke-width="1" fill="none" opacity="0.4"/>
+    <rect width="160" height="22" rx="10 10 0 0" fill="url(#servicesTeal)" opacity="0.2"/>
+    <text x="10" y="15" fill="#5eead4" font-size="10" font-weight="600" opacity="0.8">👤 subscriptions</text>
+    <text x="120" y="15" fill="#5eead4" font-size="6" opacity="0.6">◎</text>
+    
+    <text x="8" y="35" fill="#99f6e4" font-size="6" font-weight="600" opacity="0.7">USERS (src/users)</text>
+    <g font-size="5" fill="#ccfbf1" font-family="monospace" opacity="0.6">
+      <text x="10" y="48">UserService.js</text>
+      <text x="10" y="58">PreferenceLearner.js</text>
+    </g>
+    <text x="8" y="105" fill="#99f6e4" font-size="6" font-weight="600" opacity="0.7">BILLING (src/billing)</text>
+    <g font-size="5" fill="#ccfbf1" font-family="monospace" opacity="0.6">
+      <text x="10" y="118">SubscriptionService.js</text>
+      <text x="10" y="128">StripeClient.js</text>
+      <text x="10" y="138">FeatureGate.js</text>
+    </g>
+  </g>
+  
+  <!-- UI: Account (far right, small) -->
+  <g transform="translate(1820,880)" font-family="Inter" opacity="0.5">
+    <rect width="160" height="55" rx="6" fill="url(#uiOrange)" opacity="0.08"/>
+    <rect width="160" height="55" rx="6" stroke="url(#uiOrange)" stroke-width="1" fill="none" opacity="0.4"/>
+    <text x="8" y="14" fill="#fb923c" font-size="8" font-weight="600" opacity="0.7">👤 Account UI</text>
+    <g font-size="5" fill="#fed7aa" font-family="monospace" opacity="0.6">
+      <text x="10" y="28">Login / Profile</text>
+      <text x="10" y="38">Billing portal</text>
+      <text x="10" y="48">Usage dashboard</text>
+    </g>
+  </g>
+  
+  <!-- ===== TOP: news-api ===== -->
+  <g transform="translate(720,90)" font-family="Inter" filter="url(#shadow)">
+    <rect width="560" height="220" rx="12" fill="url(#apiPink)" opacity="0.15"/>
+    <rect width="560" height="220" rx="12" stroke="url(#apiPink)" stroke-width="2" fill="none"/>
+    <rect width="560" height="28" rx="12 12 0 0" fill="url(#apiPink)" opacity="0.4"/>
+    <text x="15" y="19" fill="#fff" font-size="13" font-weight="700">🔌 news-api</text>
+    <text x="400" y="19" fill="#f9a8d4" font-size="8">REST Gateway • SSE Streaming • Auth</text>
+    
+    <text x="10" y="48" fill="#fbcfe8" font-size="8" font-weight="600">REST ENDPOINTS</text>
+    <g font-size="6" fill="#fce7f3" font-family="monospace">
+      <text x="12" y="61">GET  /api/v1/articles</text>
+      <text x="12" y="71">GET  /api/v1/articles/:id</text>
+      <text x="12" y="81">GET  /api/v1/articles/:id/summary?length=</text>
+      <text x="12" y="91">GET  /api/v1/articles/:id/sentiment</text>
+      <text x="12" y="101">GET  /api/v1/articles/:id/recommendations</text>
+      <text x="12" y="111">GET  /api/v1/articles/:id/credibility</text>
+      <text x="12" y="125">GET  /api/v1/domains</text>
+      <text x="12" y="135">GET  /api/v1/domains/:host</text>
+      <text x="12" y="149">GET  /api/v1/topics</text>
+      <text x="12" y="159">GET  /api/v1/trends</text>
+    </g>
+    
+    <text x="150" y="48" fill="#fbcfe8" font-size="8" font-weight="600">CRAWL CONTROL</text>
+    <g font-size="6" fill="#fce7f3" font-family="monospace">
+      <text x="152" y="61">POST /api/v1/crawl { url, options }</text>
+      <text x="152" y="71">GET  /api/v1/crawls</text>
+      <text x="152" y="81">GET  /api/v1/crawls/:jobId</text>
+      <text x="152" y="91">POST /api/v1/crawls/:jobId/stop</text>
+      <text x="152" y="101">POST /api/v1/crawls/:jobId/pause</text>
+      <text x="152" y="111">POST /api/v1/crawls/:jobId/resume</text>
+    </g>
+    
+    <text x="305" y="48" fill="#fbcfe8" font-size="8" font-weight="600">SSE STREAMS</text>
+    <g font-size="6" fill="#fce7f3" font-family="monospace">
+      <text x="307" y="61">GET /events?job=:jobId</text>
+      <text x="313" y="71">→ event: progress</text>
+      <text x="313" y="81">→ event: queue</text>
+      <text x="313" y="91">→ event: milestone</text>
+      <text x="313" y="101">→ event: problem</text>
+      <text x="307" y="115">GET /api/telemetry/events</text>
+      <text x="307" y="125">GET /api/telemetry/remote-obs</text>
+    </g>
+    
+    <text x="430" y="48" fill="#fbcfe8" font-size="8" font-weight="600">AUTH + BILLING</text>
+    <g font-size="6" fill="#fce7f3" font-family="monospace">
+      <text x="432" y="61">requireAuth(req, res, next)</text>
+      <text x="432" y="71">requirePlanLimit(metric)()</text>
+      <text x="432" y="81">validateApiKey(req, res, next)</text>
+      <text x="432" y="95">GET  /billing/subscription</text>
+      <text x="432" y="105">POST /billing/checkout</text>
+      <text x="432" y="115">POST /billing/portal</text>
+      <text x="432" y="125">POST /webhooks/stripe</text>
+    </g>
+    
+    <text x="10" y="180" fill="#fbbf24" font-size="7" font-weight="600">DEPENDS ON ALL BACKEND MODULES</text>
+    <g font-size="6" fill="#94a3b8">
+      <text x="12" y="193">→ news-crawler-core (NewsCrawler, telemetry)</text>
+      <text x="12" y="203">→ news-crawler-db (all adapters)</text>
+      <text x="200" y="193">→ news-db-pure-analysis (trends, sentiment)</text>
+      <text x="200" y="203">→ news-intelligence (classifiers)</text>
+      <text x="400" y="193">→ news-services (billing, trust, users)</text>
+      <text x="400" y="203">→ news-gazetteer (place matching)</text>
+    </g>
+  </g>
+  
+  <!-- UI near API: Crawl Observer -->
+  <g transform="translate(1340,120)" font-family="Inter" filter="url(#shadow)">
+    <rect width="170" height="85" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="170" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="10" font-weight="600">👁️ Crawl Observer</text>
+    <g font-size="6" fill="#fed7aa" font-family="monospace">
+      <text x="10" y="32">GET /events?job=:jobId (SSE)</text>
+      <text x="10" y="44">telemetry.progress events</text>
+      <text x="10" y="56">telemetry.queueEvent</text>
+      <text x="10" y="68">real-time CrawlProgress</text>
+    </g>
+  </g>
+  
+  <!-- UI near API: Crawl Status -->
+  <g transform="translate(1540,180)" font-family="Inter" filter="url(#shadow)">
+    <rect width="160" height="75" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="160" height="75" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="10" font-weight="600">🚦 Crawl Status</text>
+    <g font-size="6" fill="#fed7aa" font-family="monospace">
+      <text x="10" y="32">GET /api/v1/crawls</text>
+      <text x="10" y="44">GET /api/v1/crawls/:jobId</text>
+      <text x="10" y="56">POST /:jobId/stop</text>
+    </g>
+  </g>
+  
+  <!-- UI near API: Rate Limits -->
+  <g transform="translate(1740,260)" font-family="Inter" filter="url(#shadow)">
+    <rect width="150" height="70" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="150" height="70" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="10" font-weight="600">⏱️ Rate Limits</text>
+    <g font-size="6" fill="#fed7aa" font-family="monospace">
+      <text x="10" y="32">RateLimiter.getStats(host)</text>
+      <text x="10" y="44">per-domain caps</text>
+      <text x="10" y="56">429 counts, backoff</text>
+    </g>
+  </g>
+  
+  <!-- Additional scattered UIs around the edges -->
+  
+  <!-- UI: Background Tasks (near core) -->
+  <g transform="translate(1200,950)" font-family="Inter" filter="url(#shadow)">
+    <rect width="155" height="70" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="155" height="70" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="10" font-weight="600">⚡ Background Tasks</text>
+    <g font-size="6" fill="#fed7aa" font-family="monospace">
+      <text x="10" y="32">compression, export, vacuum</text>
+      <text x="10" y="44">POST /background-tasks</text>
+      <text x="10" y="56">GET /background-tasks/:id</text>
+    </g>
+  </g>
+  
+  <!-- UI: Test Studio (bottom right corner) -->
+  <g transform="translate(1380,1050)" font-family="Inter" filter="url(#shadow)">
+    <rect width="160" height="70" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="160" height="70" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="10" font-weight="600">🧪 Test Studio</text>
+    <g font-size="6" fill="#fed7aa" font-family="monospace">
+      <text x="10" y="32">all module test runners</text>
+      <text x="10" y="44">visual test harness</text>
+      <text x="10" y="56">mock data generators</text>
+    </g>
+  </g>
+  
+  <!-- Dev Tools UIs (bottom left) -->
+  <g transform="translate(100,1000)" font-family="Inter" filter="url(#shadow)">
+    <rect width="170" height="120" rx="8" fill="#1c1917" opacity="0.6"/>
+    <rect width="170" height="120" rx="8" stroke="#78716c" stroke-width="1" fill="none"/>
+    <text x="10" y="16" fill="#a8a29e" font-size="9" font-weight="600">🔧 DEV TOOLS (jsgui3)</text>
+    <g font-size="6" fill="#78716c" font-family="monospace">
+      <text x="10" y="32">📚 Docs Viewer</text>
+      <text x="15" y="44">Control.render() showcase</text>
+      <text x="10" y="60">🎨 Design Studio</text>
+      <text x="15" y="72">theme editor, CSS gen</text>
+      <text x="10" y="88">📐 Diagram Atlas</text>
+      <text x="15" y="100">SVG visualizations</text>
+      <text x="10" y="116">🖌️ Art Lab</text>
+    </g>
+  </g>
+  
+  <!-- ===== FOUNDATION (bottom) ===== -->
+  <g transform="translate(480,1320)" font-family="Inter">
+    <text x="0" y="0" fill="#64748b" font-size="10" font-weight="600" letter-spacing="1">FOUNDATION PACKAGES</text>
+    
+    <g transform="translate(0,15)" filter="url(#shadow)">
+      <rect width="165" height="65" rx="6" fill="url(#foundSlate)" opacity="0.2"/>
+      <rect width="165" height="65" rx="6" stroke="url(#foundSlate)" stroke-width="1" fill="none"/>
+      <text x="10" y="16" fill="#94a3b8" font-size="9" font-weight="600">jsgui3-html</text>
+      <g font-size="6" fill="#64748b" font-family="monospace">
+        <text x="10" y="30">Control.render(): string</text>
+        <text x="10" y="40">Control.activate(): void</text>
+        <text x="10" y="50">Model_View_Model_Control</text>
+        <text x="10" y="60">compositional.model</text>
+      </g>
+    </g>
+    
+    <g transform="translate(180,15)" filter="url(#shadow)">
+      <rect width="155" height="65" rx="6" fill="url(#foundSlate)" opacity="0.2"/>
+      <rect width="155" height="65" rx="6" stroke="url(#foundSlate)" stroke-width="1" fill="none"/>
+      <text x="10" y="16" fill="#94a3b8" font-size="9" font-weight="600">lang-tools</text>
+      <g font-size="6" fill="#64748b" font-family="monospace">
+        <text x="10" y="30">Data_Object (reactive state)</text>
+        <text x="10" y="40">Evented_Class (pub/sub)</text>
+        <text x="10" y="50">Collection, Map_Collection</text>
+        <text x="10" y="60">get/set with change events</text>
+      </g>
+    </g>
+    
+    <g transform="translate(350,15)" filter="url(#shadow)">
+      <rect width="145" height="65" rx="6" fill="url(#foundSlate)" opacity="0.2"/>
+      <rect width="145" height="65" rx="6" stroke="url(#foundSlate)" stroke-width="1" fill="none"/>
+      <text x="10" y="16" fill="#94a3b8" font-size="9" font-weight="600">ta-tensor</text>
+      <g font-size="6" fill="#64748b" font-family="monospace">
+        <text x="10" y="30">Tensor(shape: number[])</text>
+        <text x="10" y="40">get(...indices): number</text>
+        <text x="10" y="50">set(...indices, value)</text>
+        <text x="10" y="60">pos_to_i(), i_to_pos()</text>
+      </g>
+    </g>
+    
+    <g transform="translate(510,15)" filter="url(#shadow)">
+      <rect width="165" height="65" rx="6" fill="url(#foundSlate)" opacity="0.2"/>
+      <rect width="165" height="65" rx="6" stroke="url(#foundSlate)" stroke-width="1" fill="none"/>
+      <text x="10" y="16" fill="#94a3b8" font-size="9" font-weight="600">@news/protocol</text>
+      <g font-size="6" fill="#64748b" font-family="monospace">
+        <text x="10" y="30">Remote_Observable&lt;T&gt;</text>
+        <text x="10" y="40">server.publish_observable()</text>
+        <text x="10" y="50">Control.bindRemote(obs)</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- Connecting Lines with Labels -->
+  <defs>
+    <path id="pathCoreToDb" d="M 1000,680 L 1000,580 L 650,580 L 650,550"/> 
+    <path id="pathCoreToIntel" d="M 1000,680 L 1000,660 L 1400,660 L 1400,650"/>
+    <path id="pathDbToApi" d="M 680,450 L 780,450 L 780,180"/>
+    <path id="pathIntelToApi" d="M 1320,450 L 1220,450 L 1220,180"/>
+  </defs>
+
+  <g stroke="#c9a227" stroke-width="0.8" fill="none" opacity="0.6" marker-end="url(#arr)">
+    <use href="#pathCoreToDb"/>
+    <use href="#pathCoreToIntel"/>
+    <use href="#pathDbToApi"/>
+    <use href="#pathIntelToApi"/>
+  </g>
+
+  <!-- Flow Labels -->
+  <g font-family="Inter" font-size="7" fill="#c9a227" font-weight="600" text-anchor="middle">
+    <text x="825" y="570" transform="rotate(0, 825, 570)">RAW HTML</text>
+    <text x="1200" y="650" transform="rotate(0, 1200, 650)">STREAM</text>
+    <text x="730" y="350" transform="rotate(-90, 730, 350)">ARTICLE JSON</text>
+    <text x="1270" y="350" transform="rotate(90, 1270, 350)">INSIGHTS</text>
+  </g>
+
+  <!-- Other Connections (Gazetteer, etc) -->
+  <g stroke="#c9a227" stroke-width="0.8" fill="none" opacity="0.3" marker-end="url(#arr)">
+    <!-- Gazetteer to Core -->
+    <path d="M 870,1050 Q 920,980 970,920"/>
+    <!-- Intelligence to Core -->
+    <path d="M 1320,520 Q 1220,620 1150,700"/>
+    <!-- Core to API -->
+    <path d="M 1000,680 Q 1000,450 1000,310"/>
+  </g>
+  
+  <!-- Subscriptions (secondary, dashed, very faint) -->
+  <g stroke="#5eead4" stroke-width="0.5" fill="none" opacity="0.15" stroke-dasharray="4,4">
+    <path d="M 1150,800 Q 1500,800 1820,770"/>
+  </g>
+  
+  <!-- Legend -->
+  <g transform="translate(1520,1320)" font-family="Inter" font-size="8">
+    <text x="0" y="0" fill="#64748b" font-size="10" font-weight="600">LEGEND</text>
+    
+    <circle cx="10" cy="22" r="5" fill="url(#coreBlue)"/>
+    <text x="22" y="26" fill="#94a3b8">Crawler Core</text>
+    
+    <circle cx="100" cy="22" r="5" fill="url(#dbGreen)"/>
+    <text x="112" y="26" fill="#94a3b8">Database</text>
+    
+    <circle cx="10" cy="42" r="5" fill="url(#analysisPurple)"/>
+    <text x="22" y="46" fill="#94a3b8">Analysis (pure fn)</text>
+    
+    <circle cx="100" cy="42" r="5" fill="url(#geoAmber)"/>
+    <text x="112" y="46" fill="#94a3b8">Geographic</text>
+    
+    <circle cx="10" cy="62" r="5" fill="url(#intelIndigo)"/>
+    <text x="22" y="66" fill="#94a3b8">Intelligence</text>
+    
+    <circle cx="100" cy="62" r="5" fill="url(#servicesTeal)" opacity="0.4"/>
+    <text x="112" y="66" fill="#94a3b8" opacity="0.6">Subscriptions (secondary)</text>
+    
+    <circle cx="200" cy="22" r="5" fill="url(#apiPink)"/>
+    <text x="212" y="26" fill="#94a3b8">API Gateway</text>
+    
+    <circle cx="200" cy="42" r="5" fill="url(#uiOrange)"/>
+    <text x="212" y="46" fill="#94a3b8">UI Modules</text>
+    
+    <text x="200" y="66" fill="#4ade80" font-size="7">✓ 2 extracted</text>
+    <text x="280" y="66" fill="#fbbf24" font-size="7">◎ 5 planned</text>
+    <text x="350" y="66" fill="#fb923c" font-size="7">16+ UIs</text>
+  </g>
+  
+  <!-- Stats -->
+  <g transform="translate(40,1580)" font-family="Inter" font-size="9">
+    <text x="0" y="0" fill="#64748b">v5 | 6 core modules + subscriptions | 14+ UI modules | 4 foundation packages | Verified API contracts</text>
+  </g>
+  
+  <!-- Decorative corners -->
+  <g stroke="url(#gold)" stroke-width="1.5" fill="none" opacity="0.15">
+    <path d="M 20,20 L 20,55 M 20,20 L 55,20"/>
+    <path d="M 1980,20 L 1980,55 M 1980,20 L 1945,20"/>
+    <path d="M 20,1580 L 20,1545 M 20,1580 L 55,1580"/>
+    <path d="M 1980,1580 L 1980,1545 M 1980,1580 L 1945,1580"/>
+  </g>
+  
+</svg>

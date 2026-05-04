@@ -38,6 +38,14 @@ const manifest = [
     loader: () => require("./CrawlProgressPanelControl").CrawlProgressPanelControl
   },
   {
+    type: "cloud_crawl_panel",
+    loader: () => require("./CloudCrawlPanelControl").CloudCrawlPanelControl
+  },
+  {
+    type: "screenshot_review_panel",
+    loader: () => require("./ScreenshotReviewPanelControl").ScreenshotReviewPanelControl
+  },
+  {
     type: "option_picker",
     loader: () => require("./OptionPickerControl").OptionPickerControl
   }

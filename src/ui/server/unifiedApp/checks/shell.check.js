@@ -52,10 +52,13 @@ assert('Contains category headers', html.includes('nav-category'));
 
 // Sub-app entries
 assert('Contains Home app', html.includes('data-app-id="home"'));
+assert('Contains Cloud Crawl app', html.includes('data-app-id="cloud-crawl"'));
 assert('Contains Rate Limits app', html.includes('data-app-id="rate-limits"'));
 assert('Contains Webhooks app', html.includes('data-app-id="webhooks"'));
 assert('Contains Plugins app', html.includes('data-app-id="plugins"'));
 assert('Contains Panel Demo app', html.includes('data-app-id="panel-demo"'));
+assert('Contains Download Verification app', html.includes('data-app-id="download-verification"'));
+assert('Contains Screenshot Review app', html.includes('data-app-id="screenshot-review"'));
 
 // Category labels
 assert('Contains Crawler category', html.includes('Crawler'));
@@ -83,6 +86,9 @@ assert('Contains home icon', html.includes('🏠'));
 assert('Contains rate limit icon', html.includes('⏱️'));
 assert('Contains webhook icon', html.includes('🔗'));
 assert('Contains plugin icon', html.includes('🧩'));
+assert('Contains download verification icon', html.includes('✅'));
+assert('Contains screenshot review icon', html.includes('🖼️'));
+assert('Contains screenshot review activator', html.includes("registerActivator('screenshot-review'"));
 
 // Placeholder styling
 assert('Contains placeholder class', html.includes('app-placeholder'));

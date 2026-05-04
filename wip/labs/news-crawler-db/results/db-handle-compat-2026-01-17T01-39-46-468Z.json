@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-01-17T01:39:46.468Z",
+  "current": {
+    "handleCheck": {
+      "ok": true
+    },
+    "countUrls": 0
+  },
+  "external": null,
+  "externalError": "news-crawler-db not installed"
+}

@@ -1,0 +1,402 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 1600">
+  <title>Repository Division v7 - Distributed API Architecture</title>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020406"/><stop offset="100%" stop-color="#0c1218"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c9a227" stop-opacity="0.06"/><stop offset="100%" stop-color="#020406" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#705a10"/><stop offset="50%" stop-color="#f5e076"/><stop offset="100%" stop-color="#705a10"/>
+    </linearGradient>
+    <linearGradient id="coreBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="dbGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e"/><stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+    <linearGradient id="analysisPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7"/><stop offset="100%" stop-color="#7e22ce"/>
+    </linearGradient>
+    <linearGradient id="geoAmber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+    <linearGradient id="uiOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316"/><stop offset="100%" stop-color="#c2410c"/>
+    </linearGradient>
+    <linearGradient id="servicesTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14b8a6"/><stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+    <linearGradient id="intelIndigo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#4338ca"/>
+    </linearGradient>
+    <linearGradient id="foundSlate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#475569"/><stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <!-- New Maroon Gradient for APIs -->
+    <linearGradient id="apiMaroon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#900C3F"/><stop offset="100%" stop-color="#581845"/>
+    </linearGradient>
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b"/>
+      <feColorMatrix in="b" type="matrix" values="0 0 0 0 0.9 0 0 0 0 0.68 0 0 0 0 0.18 0 0 0 0.5 0"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/></filter>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0L0 0 0 40" fill="none" stroke="#c9a227" stroke-width="0.1" opacity="0.04"/>
+    </pattern>
+    <marker id="arr" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">
+      <path d="M0,0 L0,5 L5,2.5z" fill="#c9a227" opacity="0.5"/>
+    </marker>
+  </defs>
+  <rect width="2000" height="1600" fill="url(#bg)"/><rect width="2000" height="1600" fill="url(#grid)"/><rect width="2000" height="1600" fill="url(#glow)"/>
+  
+  <!-- Title -->
+  <g filter="url(#goldGlow)"><text x="1000" y="50" text-anchor="middle" fill="url(#gold)" font-family="Georgia" font-size="28" font-weight="bold" letter-spacing="2">Repository Division v7 — Distributed API Architecture</text></g>
+  <text x="1000" y="75" text-anchor="middle" fill="#8b99ad" font-family="Inter" font-size="11">APIs redistributed to micro-services • Analysis clustered • Core consumes services</text>
+  
+  <!-- ===== ANALYSIS CLUSTER (LEFT) ===== -->
+  
+  <!-- news-db-pure-analysis -->
+  <g transform="translate(150,550)" font-family="Inter" filter="url(#shadow)">
+    <rect width="280" height="340" rx="12" fill="url(#analysisPurple)" opacity="0.15"/>
+    <rect width="280" height="340" rx="12" stroke="url(#analysisPurple)" stroke-width="2" fill="none"/>
+    <rect width="280" height="28" rx="12 12 0 0" fill="url(#analysisPurple)" opacity="0.4"/>
+    <text x="15" y="19" fill="#fff" font-size="11" font-weight="700">🔬 news-db-pure-analysis</text>
+    <text x="210" y="19" fill="#a855f7" font-size="7">✓ EXTRACTED</text>
+    
+    <text x="10" y="42" fill="#d8b4fe" font-size="7" font-weight="600">PURE FUNCTIONS - NO SIDE EFFECTS</text>
+    
+    <text x="10" y="66" fill="#d8b4fe" font-size="7" font-weight="600">clustering (simhash)</text>
+    <g font-size="5.5" fill="#ede9fe" font-family="monospace">
+      <text x="12" y="76">computeSimHash, hammingDistance</text>
+      <text x="12" y="85">isNearDuplicate, getMatchType</text>
+    </g>
+    <text x="10" y="100" fill="#d8b4fe" font-size="7" font-weight="600">trends &amp; summarization</text>
+    <g font-size="5.5" fill="#ede9fe" font-family="monospace">
+      <text x="12" y="110">detectTrends, calculateBaseline</text>
+      <text x="12" y="120">TextRank.rank, .summarize</text>
+    </g>
+    <text x="10" y="135" fill="#d8b4fe" font-size="7" font-weight="600">sentiment &amp; classification</text>
+    <g font-size="5.5" fill="#ede9fe" font-family="monospace">
+      <text x="12" y="145">analyzeSentiment, compareSentiment</text>
+      <text x="12" y="155">evaluateTree, evaluateAllTrees</text>
+    </g>
+    <text x="10" y="170" fill="#d8b4fe" font-size="7" font-weight="600">geo helpers</text>
+    <g font-size="5.5" fill="#ede9fe" font-family="monospace">
+      <text x="12" y="180">predictHubUrls, toSlug</text>
+    </g>
+    
+    <text x="10" y="205" fill="#d8b4fe" font-size="7" font-weight="600">shared types</text>
+    <g font-size="5.5" fill="#ede9fe" font-family="monospace">
+      <text x="12" y="215">Article, SentimentResult</text>
+      <text x="12" y="225">TrendMetrics, ContentCategory</text>
+    </g>
+  </g>
+  
+  <!-- ===== SERVICE LAYER (CENTER-LEFT) ===== -->
+  
+  <!-- news-intelligence (Moved near analysis) -->
+  <g transform="translate(550,250)" font-family="Inter" filter="url(#shadow)">
+    <!-- Main Box -->
+    <rect width="320" height="280" rx="12" fill="url(#intelIndigo)" opacity="0.15"/>
+    <rect width="320" height="280" rx="12" stroke="url(#intelIndigo)" stroke-width="2" fill="none"/>
+    <rect width="320" height="28" rx="12 12 0 0" fill="url(#intelIndigo)" opacity="0.4"/>
+    <text x="15" y="19" fill="#fff" font-size="12" font-weight="700">🧠 news-intelligence</text>
+    <text x="240" y="19" fill="#a5b4fc" font-size="7">◎ PLANNED</text>
+    
+    <text x="10" y="45" fill="#c7d2fe" font-size="8" font-weight="600">ADVANCED CLASSIFIERS</text>
+    <g font-size="6" fill="#e0e7ff" font-family="monospace">
+      <text x="12" y="58">Stage1UrlClassifier</text>
+      <text x="12" y="68">Stage2ContentClassifier</text>
+      <text x="12" y="78">Stage3PuppeteerClassifier</text>
+    </g>
+    <text x="10" y="100" fill="#c7d2fe" font-size="8" font-weight="600">CRAWL PLANNER</text>
+    <g font-size="6" fill="#e0e7ff" font-family="monospace">
+      <text x="12" y="113">PlannerHost, TopicHubGapAnalyzer</text>
+      <text x="12" y="123">UrlClassificationService</text>
+    </g>
+    <text x="10" y="145" fill="#c7d2fe" font-size="8" font-weight="600">KNOWLEDGE GRAPH</text>
+    <g font-size="6" fill="#e0e7ff" font-family="monospace">
+      <text x="12" y="158">extractFacts, buildEntityGraph</text>
+    </g>
+    
+    <text x="10" y="260" fill="#fbbf24" font-size="6">→ Uses news-db-pure-analysis</text>
+    
+    <!-- MAROON API BOX -->
+    <g transform="translate(320, 40)">
+      <path d="M0,0 L40,0 L40,60 L0,60 L0,0" fill="url(#apiMaroon)" stroke="#581845" stroke-width="1"/>
+      <text x="20" y="35" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle" transform="rotate(90, 20, 35)">API</text>
+      
+      <!-- API Details Popout (Lines) -->
+      <g opacity="0.7">
+        <line x1="40" y1="10" x2="60" y2="10" stroke="#900C3F" stroke-width="1"/>
+        <text x="65" y="12" fill="#dcb6cc" font-size="6">POST /classify</text>
+        <line x1="40" y1="30" x2="60" y2="30" stroke="#900C3F" stroke-width="1"/>
+        <text x="65" y="32" fill="#dcb6cc" font-size="6">GET /plan/gaps</text>
+        <line x1="40" y1="50" x2="60" y2="50" stroke="#900C3F" stroke-width="1"/>
+        <text x="65" y="52" fill="#dcb6cc" font-size="6">GET /graph/query</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- news-crawler-db (Center-Left) -->
+  <g transform="translate(550,600)" font-family="Inter" filter="url(#shadow)">
+    <!-- Main Box -->
+    <rect width="320" height="300" rx="12" fill="url(#dbGreen)" opacity="0.15"/>
+    <rect width="320" height="300" rx="12" stroke="url(#dbGreen)" stroke-width="2" fill="none"/>
+    <rect width="320" height="28" rx="12 12 0 0" fill="url(#dbGreen)" opacity="0.4"/>
+    <text x="15" y="19" fill="#fff" font-size="12" font-weight="700">💾 news-crawler-db</text>
+    <text x="240" y="19" fill="#4ade80" font-size="7">✓ EXTRACTED</text>
+    
+    <text x="10" y="45" fill="#86efac" font-size="8" font-weight="600">DATA ADAPTERS</text>
+    <g font-size="6" fill="#d1fae5" font-family="monospace">
+      <text x="12" y="58">adapter.articles.upsert()</text>
+      <text x="12" y="68">adapter.urls.findAll()</text>
+      <text x="12" y="78">adapter.links.insertLink()</text>
+      <text x="12" y="88">adapter.fetches.insertFetch()</text>
+    </g>
+    <text x="10" y="110" fill="#86efac" font-size="8" font-weight="600">STORAGE ENGINE</text>
+    <g font-size="6" fill="#d1fae5" font-family="monospace">
+      <text x="12" y="123">SQLite / Postgres driver</text>
+      <text x="12" y="133">DbMigrator</text>
+      <text x="12" y="143">Backup / Restore</text>
+    </g>
+    
+    <text x="10" y="280" fill="#fbbf24" font-size="6">→ Uses news-db-pure-analysis</text>
+    
+    <!-- MAROON API BOX -->
+    <g transform="translate(320, 40)">
+      <path d="M0,0 L40,0 L40,80 L0,80 L0,0" fill="url(#apiMaroon)" stroke="#581845" stroke-width="1"/>
+      <text x="20" y="45" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle" transform="rotate(90, 20, 45)">API</text>
+       
+      <g opacity="0.7">
+        <line x1="40" y1="10" x2="60" y2="10" stroke="#900C3F" stroke-width="1"/>
+        <text x="65" y="12" fill="#dcb6cc" font-size="6">GET /articles</text>
+        <line x1="40" y1="30" x2="60" y2="30" stroke="#900C3F" stroke-width="1"/>
+        <text x="65" y="32" fill="#dcb6cc" font-size="6">GET /articles/:id</text>
+        <line x1="40" y1="50" x2="60" y2="50" stroke="#900C3F" stroke-width="1"/>
+        <text x="65" y="52" fill="#dcb6cc" font-size="6">GET /domains</text>
+        <line x1="40" y1="70" x2="60" y2="70" stroke="#900C3F" stroke-width="1"/>
+        <text x="65" y="72" fill="#dcb6cc" font-size="6">GET /trends</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- news-gazetteer (Bottom-Left) -->
+  <g transform="translate(550,960)" font-family="Inter" filter="url(#shadow)">
+    <!-- Main Box -->
+    <rect width="320" height="220" rx="12" fill="url(#geoAmber)" opacity="0.15"/>
+    <rect width="320" height="220" rx="12" stroke="url(#geoAmber)" stroke-width="2" fill="none"/>
+    <rect width="320" height="28" rx="12 12 0 0" fill="url(#geoAmber)" opacity="0.4"/>
+    <text x="15" y="19" fill="#fff" font-size="12" font-weight="700">🌍 news-gazetteer</text>
+    <text x="240" y="19" fill="#fbbf24" font-size="7">◎ PLANNED</text>
+    
+    <text x="10" y="45" fill="#fde68a" font-size="8" font-weight="600">GEOSPATIAL ENGINE</text>
+    <g font-size="6" fill="#fef3c7" font-family="monospace">
+      <text x="12" y="58">matchPlaces(text)</text>
+      <text x="12" y="68">disambiguate(candidates)</text>
+      <text x="12" y="78">nearbyPlaces(lat, lon)</text>
+    </g>
+    <text x="10" y="100" fill="#fde68a" font-size="8" font-weight="600">PLACE DATA</text>
+    <g font-size="6" fill="#fef3c7" font-family="monospace">
+      <text x="12" y="113">Place Hierarchy (Country > City)</text>
+      <text x="12" y="123">Alternate Names / Aliases</text>
+    </g>
+    
+    <text x="10" y="200" fill="#fbbf24" font-size="6">→ Uses news-db-pure-analysis</text>
+    
+    <!-- MAROON API BOX -->
+    <g transform="translate(320, 40)">
+      <path d="M0,0 L40,0 L40,60 L0,60 L0,0" fill="url(#apiMaroon)" stroke="#581845" stroke-width="1"/>
+      <text x="20" y="35" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle" transform="rotate(90, 20, 35)">API</text>
+      
+      <g opacity="0.7">
+        <line x1="40" y1="10" x2="60" y2="10" stroke="#900C3F" stroke-width="1"/>
+        <text x="65" y="12" fill="#dcb6cc" font-size="6">GET /places/search</text>
+        <line x1="40" y1="30" x2="60" y2="30" stroke="#900C3F" stroke-width="1"/>
+        <text x="65" y="32" fill="#dcb6cc" font-size="6">GET /places/nearby</text>
+        <line x1="40" y1="50" x2="60" y2="50" stroke="#900C3F" stroke-width="1"/>
+        <text x="65" y="52" fill="#dcb6cc" font-size="6">POST /geo/match</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- ===== CONSUMER LAYER (RIGHT) ===== -->
+  
+  <!-- news-crawler-core (Right-Center) -->
+  <g transform="translate(1300,600)" font-family="Inter" filter="url(#shadow)">
+    <rect width="320" height="260" rx="12" fill="url(#coreBlue)" opacity="0.2"/>
+    <rect width="320" height="260" rx="12" stroke="url(#coreBlue)" stroke-width="2" fill="none"/>
+    <rect width="320" height="28" rx="12 12 0 0" fill="url(#coreBlue)" opacity="0.5"/>
+    <text x="15" y="19" fill="#fff" font-size="13" font-weight="700">🕷️ news-crawler-core</text>
+    <text x="240" y="19" fill="#bfdbfe" font-size="8">The Coordination Engine</text>
+    
+    <text x="10" y="45" fill="#93c5fd" font-size="8" font-weight="600">CRAWLER LOGIC</text>
+    <g font-size="6" fill="#cbd5e1" font-family="monospace">
+      <text x="12" y="58">NewsCrawler.crawl()</text>
+      <text x="12" y="68">PriorityQueue / Scheduler</text>
+      <text x="12" y="78">RateLimiter</text>
+      <text x="12" y="88">Robots.txt parser</text>
+    </g>
+    <text x="10" y="110" fill="#93c5fd" font-size="8" font-weight="600">ORCHESTRATION</text>
+    <g font-size="6" fill="#cbd5e1" font-family="monospace">
+      <text x="12" y="123">Injects: Adapter, Planner, Gazetteer</text>
+      <text x="12" y="133">Manages: Life-cycle (Start/Stop)</text>
+      <text x="12" y="143">Emits: Telemetry Events</text>
+    </g>
+    
+    <text x="10" y="170" fill="#93c5fd" font-size="8" font-weight="600">INTEGRATIONS</text>
+    <g font-size="6" fill="#94a3b8">
+      <text x="12" y="183">← Consumes news-crawler-db (Storage)</text>
+      <text x="12" y="193">← Consumes news-intelligence (Planning)</text>
+      <text x="12" y="203">← Consumes news-gazetteer (Context)</text>
+    </g>
+    
+    <!-- MAROON API BOX (Control) -->
+    <g transform="translate(320, 40)">
+      <path d="M0,0 L40,0 L40,80 L0,80 L0,0" fill="url(#apiMaroon)" stroke="#581845" stroke-width="1"/>
+      <text x="20" y="45" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle" transform="rotate(90, 20, 45)">API</text>
+      
+      <g opacity="0.7">
+        <line x1="40" y1="10" x2="60" y2="10" stroke="#900C3F" stroke-width="1"/>
+        <text x="65" y="12" fill="#dcb6cc" font-size="6">POST /crawl/start</text>
+        <line x1="40" y1="30" x2="60" y2="30" stroke="#900C3F" stroke-width="1"/>
+        <text x="65" y="32" fill="#dcb6cc" font-size="6">POST /crawl/pause</text>
+        <line x1="40" y1="50" x2="60" y2="50" stroke="#900C3F" stroke-width="1"/>
+        <text x="65" y="52" fill="#dcb6cc" font-size="6">GET /status</text>
+        <line x1="40" y1="70" x2="60" y2="70" stroke="#900C3F" stroke-width="1"/>
+        <text x="65" y="72" fill="#dcb6cc" font-size="6">GET /events (SSE)</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- Subscriptions (Far Right) -->
+  <g transform="translate(1750, 600)" font-family="Inter" opacity="0.6">
+    <rect width="180" height="150" rx="10" fill="url(#servicesTeal)" opacity="0.08"/>
+    <rect width="180" height="150" rx="10" stroke="url(#servicesTeal)" stroke-width="1" fill="none" opacity="0.4"/>
+    <rect width="180" height="22" rx="10 10 0 0" fill="url(#servicesTeal)" opacity="0.2"/>
+    <text x="10" y="15" fill="#5eead4" font-size="10" font-weight="600" opacity="0.8">👤 subscriptions</text>
+    
+    <text x="8" y="35" fill="#99f6e4" font-size="6" font-weight="600" opacity="0.7">Billing &amp; Access</text>
+    <g font-size="5" fill="#ccfbf1" font-family="monospace" opacity="0.6">
+      <text x="10" y="48">Stripe Integration</text>
+      <text x="10" y="58">User Management</text>
+      <text x="10" y="68">API Key Validation</text>
+    </g>
+    
+    <!-- MAROON API BOX -->
+    <g transform="translate(180, 20)">
+      <path d="M0,0 L30,0 L30,50 L0,50 L0,0" fill="url(#apiMaroon)" stroke="#581845" stroke-width="1"/>
+      <text x="15" y="25" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle" transform="rotate(90, 15, 25)">API</text>
+      
+      <g opacity="0.7">
+         <line x1="30" y1="10" x2="45" y2="10" stroke="#900C3F" stroke-width="1"/>
+        <text x="50" y="12" fill="#dcb6cc" font-size="5">/billing</text>
+        <line x1="30" y1="30" x2="45" y2="30" stroke="#900C3F" stroke-width="1"/>
+        <text x="50" y="32" fill="#dcb6cc" font-size="5">/auth</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ===== UI MODULES (SCATTERED) ===== -->
+  
+  <!-- UI Near Intelligence -->
+  <g transform="translate(600,160)" font-family="Inter" filter="url(#shadow)">
+    <rect width="140" height="60" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="140" height="60" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="9" font-weight="600">🌳 Decision Tree UI</text>
+    <line x1="70" y1="60" x2="70" y2="90" stroke="#c2410c" stroke-width="1" stroke-dasharray="2,2"/>
+  </g>
+  
+  <!-- UI Near DB -->
+  <g transform="translate(400,600)" font-family="Inter" filter="url(#shadow)">
+    <rect width="120" height="60" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="120" height="60" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="9" font-weight="600">📊 Data Explorer</text>
+    <line x1="120" y1="30" x2="150" y2="50" stroke="#c2410c" stroke-width="1" stroke-dasharray="2,2"/>
+  </g>
+  
+  <!-- UI Near Analysis -->
+  <g transform="translate(180,470)" font-family="Inter" filter="url(#shadow)">
+    <rect width="130" height="60" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="130" height="60" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="9" font-weight="600">📈 Trend View</text>
+    <line x1="65" y1="60" x2="100" y2="80" stroke="#c2410c" stroke-width="1" stroke-dasharray="2,2"/>
+  </g>
+  
+  <!-- UI Near Core -->
+  <g transform="translate(1300,520)" font-family="Inter" filter="url(#shadow)">
+    <rect width="140" height="60" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="140" height="60" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="9" font-weight="600">👁️ Live Crawler</text>
+    <line x1="70" y1="60" x2="70" y2="80" stroke="#c2410c" stroke-width="1" stroke-dasharray="2,2"/>
+  </g>
+  
+  <!-- UI Near Gazetteer -->
+  <g transform="translate(480,1050)" font-family="Inter" filter="url(#shadow)">
+    <rect width="140" height="60" rx="8" fill="url(#uiOrange)" opacity="0.12"/>
+    <rect width="140" height="60" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <text x="10" y="16" fill="#fb923c" font-size="9" font-weight="600">🗺️ Map View</text>
+    <line x1="140" y1="30" x2="160" y2="30" stroke="#c2410c" stroke-width="1" stroke-dasharray="2,2"/>
+  </g>
+
+  <!-- ===== CONNECTING LINES ===== -->
+  <g stroke="#c9a227" stroke-width="1" fill="none" opacity="0.6" marker-end="url(#arr)">
+    <!-- Pure Analysis to Consumers -->
+    <!-- to DB -->
+    <path d="M 430,700 L 550,700"/>
+    <!-- to Intel -->
+    <path d="M 300,550 Q 300,400 550,400"/>
+    
+    <!-- Services to Core -->
+    <!-- Intel to Core -->
+    <path d="M 870,390 L 1000,390 L 1000,650 L 1300,650"/>
+    <!-- DB to Core -->
+    <path d="M 870,750 L 1300,750"/>
+    <!-- Gazetteer to Core -->
+    <path d="M 870,1070 L 1100,1070 L 1100,800 L 1300,800"/>
+  </g>
+
+  <!-- Legend -->
+  <g transform="translate(1520,1320)" font-family="Inter" font-size="8">
+    <text x="0" y="0" fill="#64748b" font-size="10" font-weight="600">LEGEND</text>
+    
+    <circle cx="10" cy="22" r="5" fill="url(#coreBlue)"/>
+    <text x="22" y="26" fill="#94a3b8">Crawler Core</text>
+    
+    <circle cx="100" cy="22" r="5" fill="url(#dbGreen)"/>
+    <text x="112" y="26" fill="#94a3b8">Database</text>
+    
+    <circle cx="10" cy="42" r="5" fill="url(#analysisPurple)"/>
+    <text x="22" y="46" fill="#94a3b8">Analysis (Library)</text>
+    
+    <rect x="200" y="17" width="10" height="10" fill="url(#apiMaroon)"/>
+    <text x="220" y="26" fill="#94a3b8">Merged API Service</text>
+  </g>
+  
+  <!-- Foundation (Bottom) -->
+  <g transform="translate(680,1400)" font-family="Inter">
+    <text x="0" y="0" fill="#64748b" font-size="10" font-weight="600" letter-spacing="1">FOUNDATION PACKAGES</text>
+    
+    <g transform="translate(0,20)" opacity="0.5">
+      <rect width="140" height="40" rx="4" stroke="#475569" fill="none"/>
+      <text x="70" y="24" text-anchor="middle" fill="#94a3b8" font-size="8">jsgui3-html</text>
+    </g>
+    <g transform="translate(150,20)" opacity="0.5">
+      <rect width="140" height="40" rx="4" stroke="#475569" fill="none"/>
+      <text x="70" y="24" text-anchor="middle" fill="#94a3b8" font-size="8">lang-tools</text>
+    </g>
+    <g transform="translate(300,20)" opacity="0.5">
+      <rect width="140" height="40" rx="4" stroke="#475569" fill="none"/>
+      <text x="70" y="24" text-anchor="middle" fill="#94a3b8" font-size="8">ta-tensor</text>
+    </g>
+    <g transform="translate(450,20)" opacity="0.5">
+      <rect width="140" height="40" rx="4" stroke="#475569" fill="none"/>
+      <text x="70" y="24" text-anchor="middle" fill="#94a3b8" font-size="8">@news/protocol</text>
+    </g>
+  </g>
+
+</svg>

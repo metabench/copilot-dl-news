@@ -382,6 +382,27 @@ const control = new SearchExplorerControl({
 - SSR composes stable `data-search-*` markers; unified-shell activation lives in `src/ui/server/unifiedApp/activators.js`.
 - Use this control instead of rebuilding search panel markup inline in sub-app registries.
 
+### DownloadVerificationPanelControl
+
+**Path**: `src/ui/controls/DownloadVerificationPanelControl.js`  \
+**Purpose**: Embedded unified-shell panel for recent download persistence and compression verification  \
+**Type**: `download_verification_panel`  \
+**Check**: `src/ui/controls/checks/DownloadVerificationPanelControl.check.js`
+
+```javascript
+const { DownloadVerificationPanelControl } = require("./DownloadVerificationPanelControl");
+
+const control = new DownloadVerificationPanelControl({
+  context,
+  apiBase: "/api/downloads/verifications"
+});
+```
+
+**Notes**:
+- SSR composes stable `data-download-verification-*` markers; unified-shell activation lives in `src/ui/server/unifiedApp/activators.js`.
+- Use this control for operator surfaces that need to prove `http_responses` download success, `content_storage` persistence, and recorded compression metadata without inline panel markup.
+- Recent remote imports may only record `content_storage.storage_type` (for example `gzip`) without a `compression_types` row; the UI must show the algorithm while marking level/options as unrecorded.
+
 ### UrlFilterToggle
 
 **Path**: `src/ui/controls/UrlFilterToggle.js`  

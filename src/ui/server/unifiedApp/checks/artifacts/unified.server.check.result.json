@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "step": "complete",
+  "error": null,
+  "timestamp": "2026-05-04T01:03:14.494Z",
+  "port": 62703,
+  "childExitCode": null,
+  "childExitSignal": null,
+  "outputPreview": "[jsgui3-html] DEPRECATED: \"FormField\" is deprecated. Use \"Form_Field\" instead. This will be removed in v1.0.0.\n[jsgui3-html] DEPRECATED: \"PropertyEditor\" is deprecated. Use \"Property_Editor\" instead. This will be removed in v1.0.0.\n[01:03:15] [UI] Starting unified app shell {\"port\":62703,\"checkMode\":true}\n[01:03:15] [UI] Unified app shell ready {\"url\":\"http://localhost:62703\",\"subApps\":6}\n\n🎛️  Unified App Shell running at http://localhost:62703\n\nAvailable sub-apps:\n  🏠 Home\n  🧪 Panel Demo\n  ☁️ Cloud Crawl\n  🔎 Search Explorer\n  ✅ Download Verify\n  🖼️ Screenshots\n\n\n"
+}

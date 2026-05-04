@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-01-04T04:41:02.773Z",
+  "dryRun": true,
+  "sampleSizeRequested": 5,
+  "articlesProcessed": 5,
+  "failures": [],
+  "extractionOnly": {
+    "avgMs": 10364.98408,
+    "p95Ms": 18969.3001,
+    "articlesPerSec": 0.0964786817115883
+  },
+  "withDbWrite": null
+}

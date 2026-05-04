@@ -54,6 +54,125 @@
 
 ## Current Sessions
 
+### Session 2026-05-04: Screenshot Tooling Control Centre
+
+**Duration**: 1 session
+**Type**: UI Tooling / Control Center / Screenshot Feedback
+**Completion**: Completed
+
+**Focus**:
+- Add reusable screenshot capture helpers plus a Control Center screenshot viewer/commenting panel.
+
+**Location**: `docs/sessions/2026-05-04-screenshot-tooling-control-centre/`
+
+**Quick Links**:
+- [Plan](./2026-05-04-screenshot-tooling-control-centre/PLAN.md)
+- [Working Notes](./2026-05-04-screenshot-tooling-control-centre/WORKING_NOTES.md)
+- [User Journeys](./2026-05-04-screenshot-tooling-control-centre/USER_JOURNEYS.md)
+- [Screenshot Review](./2026-05-04-screenshot-tooling-control-centre/SCREENSHOT_REVIEW.md)
+- [Screenshot Comments](./2026-05-04-screenshot-tooling-control-centre/SCREENSHOT_COMMENTS.md)
+- [Validation Matrix](./2026-05-04-screenshot-tooling-control-centre/VALIDATION_MATRIX.md)
+- [Session Summary](./2026-05-04-screenshot-tooling-control-centre/SESSION_SUMMARY.md)
+- [Follow-Ups](./2026-05-04-screenshot-tooling-control-centre/FOLLOW_UPS.md)
+- [Decisions](./2026-05-04-screenshot-tooling-control-centre/DECISIONS.md)
+
+### Session 2026-05-04: UI Screenshot Feedback Methodology
+
+**Duration**: 1 session
+**Type**: UI Methodology / Agent Instructions / Skills
+**Completion**: Completed
+
+**Focus**:
+- Standardize automatic UI screenshot capture, Electron/Puppeteer rigging, control-centre screenshot review artifacts, and comment-driven UI iteration.
+
+**Location**: `docs/sessions/2026-05-04-ui-screenshot-feedback-methodology/`
+
+**Quick Links**:
+- [Plan](./2026-05-04-ui-screenshot-feedback-methodology/PLAN.md)
+- [Working Notes](./2026-05-04-ui-screenshot-feedback-methodology/WORKING_NOTES.md)
+- [Validation Matrix](./2026-05-04-ui-screenshot-feedback-methodology/VALIDATION_MATRIX.md)
+- [Session Summary](./2026-05-04-ui-screenshot-feedback-methodology/SESSION_SUMMARY.md)
+- [Follow-Ups](./2026-05-04-ui-screenshot-feedback-methodology/FOLLOW_UPS.md)
+- [Decisions](./2026-05-04-ui-screenshot-feedback-methodology/DECISIONS.md)
+
+### Session 2026-05-04: Five-Site Cloud Crawl UI
+
+**Duration**: 1 session
+**Type**: Crawl Operations / jsgui3 UI / Visual Validation
+**Completion**: Completed
+
+**Focus**:
+- Run a five-site, five-page parallel cloud crawl while adding a concise screenshot-capable crawl UI surface for agent visual review.
+
+**Location**: `docs/sessions/2026-05-04-five-site-cloud-crawl-ui/`
+
+**Quick Links**:
+- [Plan](./2026-05-04-five-site-cloud-crawl-ui/PLAN.md)
+- [Working Notes](./2026-05-04-five-site-cloud-crawl-ui/WORKING_NOTES.md)
+- [Goals Review](./2026-05-04-five-site-cloud-crawl-ui/GOALS_REVIEW.md)
+- [Validation Matrix](./2026-05-04-five-site-cloud-crawl-ui/VALIDATION_MATRIX.md)
+- [Session Summary](./2026-05-04-five-site-cloud-crawl-ui/SESSION_SUMMARY.md)
+- [Follow-Ups](./2026-05-04-five-site-cloud-crawl-ui/FOLLOW_UPS.md)
+- [Decisions](./2026-05-04-five-site-cloud-crawl-ui/DECISIONS.md)
+- [Next Agent Briefing](./2026-05-04-five-site-cloud-crawl-ui/NEXT_AGENT_BRIEFING.md)
+
+### Session 2026-04-29: Download Verification UI
+
+**Duration**: 1 session
+**Type**: UI / Database Evidence
+**Completion**: ✅ Completed
+
+**Focus**:
+- Add a unified UI screen that verifies recent downloads were fetched, saved to the database, and records their compression storage details.
+
+**Location**: `docs/sessions/2026-04-29-download-verification-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-04-29-download-verification-ui/INDEX.md)
+- 🗺️ [Plan](./2026-04-29-download-verification-ui/PLAN.md)
+- 📝 [Working Notes](./2026-04-29-download-verification-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-04-29-download-verification-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-04-29-download-verification-ui/FOLLOW_UPS.md)
+
+
+### Session 2026-04-29: Electron 500 Download Crawl
+
+**Duration**: 1 session
+**Type**: Crawl Operations / Electron UI Validation
+**Completion**: ✅ Completed
+
+**Focus**:
+- Use a long-lived Electron unified app while running a remote crawl that adds at least 500 local OK downloads for each of eight major news websites.
+
+**Location**: `docs/sessions/2026-04-29-electron-500-download-crawl/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-04-29-electron-500-download-crawl/INDEX.md)
+- 🗺️ [Plan](./2026-04-29-electron-500-download-crawl/PLAN.md)
+- 📝 [Working Notes](./2026-04-29-electron-500-download-crawl/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-04-29-electron-500-download-crawl/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-04-29-electron-500-download-crawl/FOLLOW_UPS.md)
+
+
+### Session 2026-04-29: Eight-Site 250 Download Crawl
+
+**Duration**: 1 session
+**Type**: Crawl Operations / UI Validation
+**Completion**: ✅ Completed
+
+**Focus**:
+- Run a UI-visible distributed crawl that adds at least 250 local downloads for each of eight major news websites.
+
+**Location**: `docs/sessions/2026-04-29-eight-site-250-download-crawl/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-04-29-eight-site-250-download-crawl/INDEX.md)
+- 🗺️ [Plan](./2026-04-29-eight-site-250-download-crawl/PLAN.md)
+- 📝 [Working Notes](./2026-04-29-eight-site-250-download-crawl/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-04-29-eight-site-250-download-crawl/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-04-29-eight-site-250-download-crawl/FOLLOW_UPS.md)
+
+
 ### Session 2026-04-29: Churn Control Salvage
 
 **Duration**: 1 session

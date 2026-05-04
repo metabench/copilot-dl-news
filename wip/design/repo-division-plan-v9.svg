@@ -1,0 +1,328 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 1600">
+  <title>Repository Division v9 - The Intelligence Pipeline</title>
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="stageGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#334155" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#334155" stop-opacity="0.05"/>
+    </linearGradient>
+    
+    <!-- Module Gradients -->
+    <linearGradient id="coreBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="dbGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e"/><stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+    <linearGradient id="analysisRed" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ef4444"/><stop offset="100%" stop-color="#b91c1c"/>
+    </linearGradient>
+    <linearGradient id="libPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7"/><stop offset="100%" stop-color="#7e22ce"/>
+    </linearGradient>
+    <linearGradient id="geoAmber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+    <linearGradient id="intelIndigo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#4338ca"/>
+    </linearGradient>
+    <linearGradient id="apiMaroon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#be123c"/><stop offset="100%" stop-color="#881337"/>
+    </linearGradient>
+    
+    <!-- Filters -->
+    <filter id="shadow"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.5"/></filter>
+    <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    
+    <marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+  
+  <rect width="2400" height="1600" fill="url(#bg)"/>
+  
+  <!-- PIPELINE STAGES BACKGROUNDS -->
+  
+  <!-- Stage 1: Ingestion -->
+  <rect x="50" y="200" width="700" height="1300" rx="20" fill="url(#stageGrad)" stroke="#334155" stroke-dasharray="4,4"/>
+  <text x="400" y="180" text-anchor="middle" fill="#94a3b8" font-family="Segoe UI, sans-serif" font-size="24" font-weight="bold" letter-spacing="2">STAGE 1: INGESTION &amp; STORAGE</text>
+  
+  <!-- Stage 2: Analysis -->
+  <rect x="800" y="200" width="800" height="1300" rx="20" fill="url(#stageGrad)" stroke="#334155" stroke-dasharray="4,4"/>
+  <text x="1200" y="180" text-anchor="middle" fill="#94a3b8" font-family="Segoe UI, sans-serif" font-size="24" font-weight="bold" letter-spacing="2">STAGE 2: DEEP ANALYSIS</text>
+  
+  <!-- Stage 3: Intelligence -->
+  <rect x="1650" y="200" width="700" height="1300" rx="20" fill="url(#stageGrad)" stroke="#334155" stroke-dasharray="4,4"/>
+  <text x="2000" y="180" text-anchor="middle" fill="#94a3b8" font-family="Segoe UI, sans-serif" font-size="24" font-weight="bold" letter-spacing="2">STAGE 3: INTELLIGENCE &amp; PLANNING</text>
+  
+  <!-- ===== STAGE 1: INGESTION ===== -->
+  
+  <!-- news-crawler-core (Top Left) -->
+  <g transform="translate(150, 280)" filter="url(#shadow)">
+    <rect width="500" height="280" rx="10" fill="url(#coreBlue)" opacity="0.2"/>
+    <rect width="500" height="280" rx="10" stroke="url(#coreBlue)" stroke-width="2" fill="none"/>
+    <rect width="500" height="30" rx="10 10 0 0" fill="url(#coreBlue)" opacity="0.5"/>
+    <text x="20" y="22" fill="#fff" font-family="Segoe UI" font-weight="bold" font-size="16">🕷️ news-crawler-core</text>
+    
+    <text x="20" y="60" fill="#93c5fd" font-size="12" font-weight="bold">ORCHESTRATOR</text>
+    <g transform="translate(20, 80)" font-family="Consolas" font-size="10" fill="#cbd5e1">
+      <text y="0">NewsCrawler.crawl(url, depth)</text>
+      <text y="15">Scheduler.prioritize(queue)</text>
+      <text y="30">RateLimiter.acquire(host)</text>
+      <text y="45">RobotsTxt.validate()</text>
+    </g>
+    
+    <!-- API Box -->
+    <g transform="translate(440, 40)">
+      <path d="M0,0 L60,0 L60,80 L0,80 L0,0" fill="url(#apiMaroon)" stroke="#fff" stroke-width="1"/>
+      <text x="30" y="45" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle" transform="rotate(90, 30, 45)">API</text>
+      <g transform="translate(-140, 10)" font-family="Consolas" font-size="9" fill="#fda4af" text-anchor="end">
+        <text y="10">POST /crawl</text>
+        <text y="25">POST /pause</text>
+        <text y="40">GET  /events</text>
+      </g>
+      <line x1="-5" y1="15" x2="0" y2="15" stroke="#be123c"/>
+      <line x1="-5" y1="30" x2="0" y2="30" stroke="#be123c"/>
+      <line x1="-5" y1="45" x2="0" y2="45" stroke="#be123c"/>
+    </g>
+  </g>
+  
+  <!-- Shared Persistence Container (Bottom Left) -->
+  <g transform="translate(100, 650)">
+    <rect width="600" height="800" rx="20" fill="#0f172a" stroke="#22c55e" stroke-width="2" stroke-dasharray="8,8" opacity="0.4"/>
+    <text x="300" y="30" text-anchor="middle" fill="#22c55e" font-family="Segoe UI" font-size="14" font-weight="bold" letter-spacing="1">SHARED PERSISTENCE LAYER</text>
+    
+    <!-- news-crawler-db -->
+    <g transform="translate(50, 60)" filter="url(#shadow)">
+      <rect width="500" height="320" rx="10" fill="url(#dbGreen)" opacity="0.2"/>
+      <rect width="500" height="320" rx="10" stroke="url(#dbGreen)" stroke-width="2" fill="none"/>
+      <rect width="500" height="30" rx="10 10 0 0" fill="url(#dbGreen)" opacity="0.5"/>
+      <text x="20" y="22" fill="#fff" font-family="Segoe UI" font-weight="bold" font-size="16">💾 news-crawler-db</text>
+      
+      <text x="20" y="60" fill="#86efac" font-size="12" font-weight="bold">OPERATIONAL DATA</text>
+      <g transform="translate(20, 80)" font-family="Consolas" font-size="10" fill="#d1fae5">
+        <text y="0">articles (id, html, content)</text>
+        <text y="15">http_responses (headers, status)</text>
+        <text y="30">urls (depth, last_seen)</text>
+        <text y="45">analysis_runs (run_id, status)</text>
+        <text y="60">article_place_relations (joins)</text>
+      </g>
+      
+      <!-- API Box -->
+      <g transform="translate(440, 40)">
+        <path d="M0,0 L60,0 L60,80 L0,80 L0,0" fill="url(#apiMaroon)" stroke="#fff" stroke-width="1"/>
+        <text x="30" y="45" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle" transform="rotate(90, 30, 45)">API</text>
+        <g transform="translate(-140, 10)" font-family="Consolas" font-size="9" fill="#fda4af" text-anchor="end">
+            <text y="10">GET /articles</text>
+            <text y="25">GET /domains</text>
+            <text y="40">GET /runs</text>
+        </g>
+      </g>
+    </g>
+    
+    <!-- DATABASE LINK ISUALIZATION -->
+    <g transform="translate(300, 390)">
+        <line x1="0" y1="0" x2="0" y2="40" stroke="#22c55e" stroke-width="4" stroke-dasharray="4,4"/>
+        <text x="10" y="25" fill="#22c55e" font-size="10">SQL JOINS</text>
+    </g>
+    
+    <!-- news-gazetteer -->
+    <g transform="translate(50, 440)" filter="url(#shadow)">
+      <rect width="500" height="300" rx="10" fill="url(#geoAmber)" opacity="0.2"/>
+      <rect width="500" height="300" rx="10" stroke="url(#geoAmber)" stroke-width="2" fill="none"/>
+      <rect width="500" height="30" rx="10 10 0 0" fill="url(#geoAmber)" opacity="0.5"/>
+      <text x="20" y="22" fill="#fff" font-family="Segoe UI" font-weight="bold" font-size="16">🌍 news-gazetteer</text>
+      
+      <text x="20" y="60" fill="#fcd34d" font-size="12" font-weight="bold">REFERENCE DATA</text>
+      <g transform="translate(20, 80)" font-family="Consolas" font-size="10" fill="#fef3c7">
+        <text y="0">places (id, name, lat, lon)</text>
+        <text y="15">place_hierarchy (parent_id)</text>
+        <text y="30">place_names (multilingual)</text>
+        <text y="45">ingestion_runs (maintenance)</text>
+      </g>
+      
+       <!-- API Box -->
+      <g transform="translate(440, 40)">
+        <path d="M0,0 L60,0 L60,80 L0,80 L0,0" fill="url(#apiMaroon)" stroke="#fff" stroke-width="1"/>
+        <text x="30" y="45" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle" transform="rotate(90, 30, 45)">API</text>
+         <g transform="translate(-140, 10)" font-family="Consolas" font-size="9" fill="#fda4af" text-anchor="end">
+            <text y="10">GET /geo/search</text>
+            <text y="25">POST /geo/match</text>
+        </g>
+      </g>
+    </g>
+  </g>
+  
+  
+  <!-- ===== STAGE 2: ANALYSIS ===== -->
+  
+  <!-- news-db-analysis (Center Top) -->
+  <g transform="translate(850, 280)" filter="url(#shadow)">
+    <rect width="650" height="500" rx="10" fill="url(#analysisRed)" opacity="0.15"/>
+    <rect width="650" height="500" rx="10" stroke="url(#analysisRed)" stroke-width="2" fill="none"/>
+    <rect width="650" height="30" rx="10 10 0 0" fill="url(#analysisRed)" opacity="0.5"/>
+    <text x="20" y="22" fill="#fff" font-family="Segoe UI" font-weight="bold" font-size="16">⚡ news-db-analysis</text>
+    <text x="500" y="22" fill="#fca5a5" font-size="12">STATEFUL SERVICE</text>
+    
+    <text x="20" y="60" fill="#fca5a5" font-size="12" font-weight="bold">CORE SERVICES (src/services)</text>
+    <g transform="translate(20, 80)" font-family="Consolas" font-size="11" fill="#fee2e2">
+      <text y="0">• NewsAnalysisService (Orchestrator)</text>
+      <text y="20">• StoryClusteringService (Groups articles)</text>
+      <text y="40">• TopicTrendService (Detects spikes)</text>
+      <text y="60">• SentimentService (Batch processor)</text>
+      <text y="80">• BackfillService (Historical catchup)</text>
+      <text y="100">• DbHealthService (Maintenance)</text>
+      <text y="120">• HubGapService (Finds missing coverage)</text>
+    </g>
+    
+    <text x="350" y="60" fill="#fca5a5" font-size="12" font-weight="bold">ANALYSIS LOGIC (src/analysis)</text>
+    <g transform="translate(350, 80)" font-family="Consolas" font-size="11" fill="#fee2e2">
+      <text y="0">• DocumentAnalysis (Pipeline)</text>
+      <text y="20">• ClassificationAnalysis</text>
+      <text y="40">• SimilarityAnalysis</text>
+    </g>
+    
+    <line x1="20" y1="220" x2="630" y2="220" stroke="#ef4444" stroke-width="1" stroke-dasharray="4,4"/>
+    
+    <text x="20" y="250" fill="#fca5a5" font-size="12" font-weight="bold">DATA FLOW</text>
+    <g transform="translate(20, 270)" font-family="Consolas" font-size="10" fill="#fee2e2">
+      <text y="0">1. Poll `news-crawler-db` for unprocessed</text>
+      <text y="15">2. Fetch `Pure` functions for computation</text>
+      <text y="30">3. Write results to `analysis_runs` tables</text>
+      <text y="45">4. Emit `TopicTrend` events</text>
+    </g>
+    
+     <!-- API Box -->
+      <g transform="translate(590, 40)">
+        <path d="M0,0 L60,0 L60,80 L0,80 L0,0" fill="url(#apiMaroon)" stroke="#fff" stroke-width="1"/>
+        <text x="30" y="45" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle" transform="rotate(90, 30, 45)">API</text>
+         <g transform="translate(-140, 10)" font-family="Consolas" font-size="9" fill="#fda4af" text-anchor="end">
+            <text y="10">POST /analyze/full</text>
+            <text y="25">POST /cluster/run</text>
+            <text y="40">GET /trends/now</text>
+        </g>
+      </g>
+  </g>
+  
+  <!-- news-db-pure-analysis (Center Bottom) -->
+  <g transform="translate(850, 850)" filter="url(#shadow)">
+    <rect width="650" height="400" rx="10" fill="url(#libPurple)" opacity="0.15"/>
+    <rect width="650" height="400" rx="10" stroke="url(#libPurple)" stroke-width="2" fill="none"/>
+    <rect width="650" height="30" rx="10 10 0 0" fill="url(#libPurple)" opacity="0.5"/>
+    <text x="20" y="22" fill="#fff" font-family="Segoe UI" font-weight="bold" font-size="16">🧪 news-db-pure-analysis</text>
+    <text x="500" y="22" fill="#d8b4fe" font-size="12">STATELESS LITBRARY</text>
+    
+    <text x="20" y="60" fill="#d8b4fe" font-size="12" font-weight="bold">ALGORITHMS</text>
+    
+    <g transform="translate(20, 90)">
+        <!-- Box 1 -->
+        <rect width="180" height="80" rx="4" fill="#a855f7" opacity="0.2"/>
+        <text x="10" y="20" fill="#e9d5ff" font-weight="bold">Clustering</text>
+        <text x="10" y="40" fill="#f3e8ff" font-size="10" font-family="Consolas">computeSimHash()</text>
+        <text x="10" y="55" fill="#f3e8ff" font-size="10" font-family="Consolas">hammingDistance()</text>
+        
+        <!-- Box 2 -->
+        <g transform="translate(200, 0)">
+            <rect width="180" height="80" rx="4" fill="#a855f7" opacity="0.2"/>
+            <text x="10" y="20" fill="#e9d5ff" font-weight="bold">NLP</text>
+            <text x="10" y="40" fill="#f3e8ff" font-size="10" font-family="Consolas">TextRank.rank()</text>
+            <text x="10" y="55" fill="#f3e8ff" font-size="10" font-family="Consolas">analyzeSentiment()</text>
+        </g>
+        
+        <!-- Box 3 -->
+        <g transform="translate(400, 0)">
+            <rect width="180" height="80" rx="4" fill="#a855f7" opacity="0.2"/>
+             <text x="10" y="20" fill="#e9d5ff" font-weight="bold">Classification</text>
+            <text x="10" y="40" fill="#f3e8ff" font-size="10" font-family="Consolas">DecTree.evaluate()</text>
+        </g>
+    </g>
+    
+     <text x="20" y="220" fill="#d8b4fe" font-size="12" font-weight="bold">SHARED TYPES (The Common Language)</text>
+     <g transform="translate(20, 240)" font-family="Consolas" font-size="10" fill="#f3e8ff">
+        <text y="0">interface Article { title, content, ... }</text>
+        <text y="15">interface TrendResult { ... }</text>
+        <text y="30">interface ClusterNode { ... }</text>
+     </g>
+  </g>
+  
+  
+  <!-- ===== STAGE 3: INTELLIGENCE ===== -->
+  
+  <!-- news-intelligence (Right) -->
+  <g transform="translate(1700, 280)" filter="url(#shadow)">
+    <rect width="600" height="500" rx="10" fill="url(#intelIndigo)" opacity="0.15"/>
+    <rect width="600" height="500" rx="10" stroke="url(#intelIndigo)" stroke-width="2" fill="none"/>
+    <rect width="600" height="30" rx="10 10 0 0" fill="url(#intelIndigo)" opacity="0.5"/>
+    <text x="20" y="22" fill="#fff" font-family="Segoe UI" font-weight="bold" font-size="16">🧠 news-intelligence</text>
+    <text x="480" y="22" fill="#a5b4fc" font-size="12">THE PLANNER</text>
+    
+    <text x="20" y="60" fill="#c7d2fe" font-size="12" font-weight="bold">STRATEGY MODULES</text>
+    <g transform="translate(20, 80)" font-family="Consolas" font-size="11" fill="#e0e7ff">
+      <text y="0">• TopicHubGapAnalyzer</text>
+      <text y="20">• IntelligentCrawlServer</text>
+      <text y="40">• PlannerHost</text>
+      <text y="60">• KnowledgeGraphBuilder</text>
+    </g>
+    
+     <text x="20" y="140" fill="#c7d2fe" font-size="12" font-weight="bold">DECISION MAKING</text>
+     <g transform="translate(20, 160)" font-family="Consolas" font-size="10" fill="#e0e7ff">
+        <text y="0">1. Read `TopicTrend` from Analysis</text>
+        <text y="15">2. Check Coverage in Gazetteer</text>
+        <text y="30">3. Identify Gaps (Missing Places/Topics)</text>
+        <text y="45">4. Generate CrawlPlan for `Core`</text>
+     </g>
+     
+     <!-- API Box -->
+      <g transform="translate(540, 40)">
+        <path d="M0,0 L60,0 L60,80 L0,80 L0,0" fill="url(#apiMaroon)" stroke="#fff" stroke-width="1"/>
+        <text x="30" y="45" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle" transform="rotate(90, 30, 45)">API</text>
+         <g transform="translate(-140, 10)" font-family="Consolas" font-size="9" fill="#fda4af" text-anchor="end">
+            <text y="10">GET /plan/next</text>
+            <text y="25">POST /decision</text>
+        </g>
+      </g>
+  </g>
+  
+  <!-- UI Modules (Visualizing the Pipeline) -->
+  <g transform="translate(1750, 900)">
+    <text x="0" y="0" fill="#fff" font-weight="bold" font-family="Segoe UI" font-size="14">VISUALIZATION LAYER (UI)</text>
+    
+    <rect x="0" y="20" width="180" height="80" rx="8" fill="#f97316" opacity="0.2" stroke="#f97316"/>
+    <text x="20" y="50" fill="#fb923c" font-weight="bold">Live Dashboard</text>
+    <text x="20" y="70" fill="#fdba74" font-size="10">Views Core &amp; DB</text>
+    
+    <rect x="200" y="20" width="180" height="80" rx="8" fill="#f97316" opacity="0.2" stroke="#f97316"/>
+    <text x="220" y="50" fill="#fb923c" font-weight="bold">Analysis Lab</text>
+    <text x="220" y="70" fill="#fdba74" font-size="10">Views Trends</text>
+    
+    <rect x="400" y="20" width="180" height="80" rx="8" fill="#f97316" opacity="0.2" stroke="#f97316"/>
+    <text x="420" y="50" fill="#fb923c" font-weight="bold">Strategy Room</text>
+    <text x="420" y="70" fill="#fdba74" font-size="10">Views Plans</text>
+  </g>
+
+  <!-- IMPORTANT ARROWS -->
+  
+  <!-- Core -> DB -->
+  <path d="M 400,560 L 400,650" stroke="#3b82f6" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="410" y="610" fill="#3b82f6" font-size="10" font-weight="bold">WRITES</text>
+  
+  <!-- DB -> Analysis -->
+  <path d="M 700,800 L 850,530" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow)"/>
+   <text x="750" y="660" fill="#ef4444" font-size="10" font-weight="bold">READS</text>
+  
+  <!-- Pure -> Analysis -->
+  <path d="M 1175,850 L 1175,780" stroke="#a855f7" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="1185" y="820" fill="#a855f7" font-size="10" font-weight="bold">IMPORTS</text>
+  
+  <!-- Analysis -> Intelligence -->
+  <path d="M 1500,530 L 1700,530" stroke="#6366f1" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="1560" y="520" fill="#6366f1" font-size="10" font-weight="bold">INSIGHTS</text>
+  
+  <!-- Intelligence -> Core (The Feedback Loop) -->
+  <path d="M 2000,280 Q 2000,100 400,100 L 400,280" stroke="#eab308" stroke-width="3" stroke-dasharray="8,8" fill="none" marker-end="url(#arrow)"/>
+  <text x="1200" y="90" fill="#eab308" font-size="14" font-weight="bold" text-anchor="middle">FEEDBACK LOOP: NEW PLANS</text>
+
+</svg>

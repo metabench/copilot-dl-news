@@ -1,0 +1,601 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Repository Division Plan v2 — Multi-Module Architecture</title>
+  <desc id="desc">Detailed visualization showing how UI modules plug into non-UI backend modules across separate repositories.</desc>
+  
+  <defs>
+    <!-- Deep obsidian background -->
+    <linearGradient id="obsidianBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#030508"/>
+      <stop offset="40%" stop-color="#080c14"/>
+      <stop offset="100%" stop-color="#101820"/>
+    </linearGradient>
+    <radialGradient id="centerGlow" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#1a2030" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#040608" stop-opacity="0"/>
+    </radialGradient>
+    
+    <!-- Gold accent shimmer -->
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#705a10"/>
+      <stop offset="20%" stop-color="#c9a227"/>
+      <stop offset="50%" stop-color="#f5e076"/>
+      <stop offset="80%" stop-color="#c9a227"/>
+      <stop offset="100%" stop-color="#705a10"/>
+    </linearGradient>
+    
+    <!-- Module color gradients -->
+    <linearGradient id="coreBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="dbGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+    <linearGradient id="analysisPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#7e22ce"/>
+    </linearGradient>
+    <linearGradient id="uiOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#c2410c"/>
+    </linearGradient>
+    <linearGradient id="apiPink" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#be185d"/>
+    </linearGradient>
+    <linearGradient id="servicesTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14b8a6"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+    <linearGradient id="intelligenceIndigo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4338ca"/>
+    </linearGradient>
+    <linearGradient id="sharedSlate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#64748b"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+    <linearGradient id="geoAmber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+    
+    <!-- Connection gradient -->
+    <linearGradient id="connGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#c9a227" stop-opacity="0.1"/>
+      <stop offset="50%" stop-color="#f5e076" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#c9a227" stop-opacity="0.1"/>
+    </linearGradient>
+    
+    <!-- Filters -->
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.9  0 0 0 0 0.68  0 0 0 0 0.18  0 0 0 0.6 0"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.6"/>
+    </filter>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    <filter id="smallGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2"/>
+    </filter>
+    
+    <!-- Grid pattern -->
+    <pattern id="gridPattern" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#c9a227" stroke-width="0.2" opacity="0.03"/>
+      <circle cx="0" cy="0" r="0.8" fill="#c9a227" opacity="0.05"/>
+    </pattern>
+    
+    <!-- Stars -->
+    <pattern id="stars" width="250" height="250" patternUnits="userSpaceOnUse">
+      <circle cx="30" cy="40" r="0.6" fill="#fff" opacity="0.12"/>
+      <circle cx="100" cy="150" r="0.4" fill="#c9a227" opacity="0.18"/>
+      <circle cx="200" cy="60" r="0.5" fill="#fff" opacity="0.1"/>
+      <circle cx="220" cy="200" r="0.3" fill="#c9a227" opacity="0.15"/>
+      <circle cx="80" cy="220" r="0.5" fill="#fff" opacity="0.08"/>
+      <circle cx="160" cy="100" r="0.4" fill="#c9a227" opacity="0.12"/>
+    </pattern>
+    
+    <!-- Arrow markers -->
+    <marker id="arrowGold" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#c9a227" opacity="0.7"/>
+    </marker>
+    <marker id="arrowWhite" markerWidth="6" markerHeight="6" refX="5" refY="2.5" orient="auto">
+      <path d="M0,0 L0,5 L6,2.5 z" fill="#fff" opacity="0.5"/>
+    </marker>
+  </defs>
+  
+  <!-- Background layers -->
+  <rect width="1400" height="1000" fill="url(#obsidianBg)"/>
+  <rect width="1400" height="1000" fill="url(#centerGlow)"/>
+  <rect width="1400" height="1000" fill="url(#gridPattern)"/>
+  <rect width="1400" height="1000" fill="url(#stars)"/>
+  
+  <!-- Title -->
+  <g filter="url(#goldGlow)">
+    <text x="700" y="45" text-anchor="middle" fill="url(#goldAccent)" font-family="Georgia, serif" font-size="28" font-weight="bold" letter-spacing="2">
+      Repository Division Plan — Multi-Module Architecture
+    </text>
+  </g>
+  <text x="700" y="70" text-anchor="middle" fill="#8b99ad" font-family="Inter, sans-serif" font-size="12">
+    UI modules connect to specialized backend repos • Clean dependency graph • Independent deployment
+  </text>
+  
+  <!-- === LAYER 1: FOUNDATION (Bottom) === -->
+  <g transform="translate(0, 850)" font-family="Inter, sans-serif">
+    <text x="700" y="-10" text-anchor="middle" fill="#64748b" font-size="10" font-weight="600" letter-spacing="1">FOUNDATION LAYER</text>
+    
+    <!-- Shared Libraries -->
+    <g transform="translate(100, 10)" filter="url(#cardShadow)">
+      <rect width="200" height="60" rx="8" fill="url(#sharedSlate)" opacity="0.15"/>
+      <rect width="200" height="60" rx="8" stroke="url(#sharedSlate)" stroke-width="1.5" fill="none"/>
+      <text x="15" y="25" fill="#94a3b8" font-size="12" font-weight="600">📦 @news/shared</text>
+      <text x="15" y="42" fill="#64748b" font-size="9">Types • Utils • Config • Logging</text>
+    </g>
+    
+    <!-- Lang Tools -->
+    <g transform="translate(330, 10)" filter="url(#cardShadow)">
+      <rect width="180" height="60" rx="8" fill="url(#sharedSlate)" opacity="0.15"/>
+      <rect width="180" height="60" rx="8" stroke="url(#sharedSlate)" stroke-width="1.5" fill="none"/>
+      <text x="15" y="25" fill="#94a3b8" font-size="12" font-weight="600">📦 lang-tools</text>
+      <text x="15" y="42" fill="#64748b" font-size="9">Data_Object • Evented_Class</text>
+    </g>
+    
+    <!-- jsgui3 -->
+    <g transform="translate(540, 10)" filter="url(#cardShadow)">
+      <rect width="180" height="60" rx="8" fill="url(#sharedSlate)" opacity="0.15"/>
+      <rect width="180" height="60" rx="8" stroke="url(#sharedSlate)" stroke-width="1.5" fill="none"/>
+      <text x="15" y="25" fill="#94a3b8" font-size="12" font-weight="600">📦 jsgui3-html</text>
+      <text x="15" y="42" fill="#64748b" font-size="9">Controls • SSR • Hydration</text>
+    </g>
+    
+    <!-- ta-tensor -->
+    <g transform="translate(750, 10)" filter="url(#cardShadow)">
+      <rect width="160" height="60" rx="8" fill="url(#sharedSlate)" opacity="0.15"/>
+      <rect width="160" height="60" rx="8" stroke="url(#sharedSlate)" stroke-width="1.5" fill="none"/>
+      <text x="15" y="25" fill="#94a3b8" font-size="12" font-weight="600">📦 ta-tensor</text>
+      <text x="15" y="42" fill="#64748b" font-size="9">Multi-dim arrays • ML ops</text>
+    </g>
+    
+    <!-- Contracts -->
+    <g transform="translate(940, 10)" filter="url(#cardShadow)">
+      <rect width="180" height="60" rx="8" fill="url(#sharedSlate)" opacity="0.15"/>
+      <rect width="180" height="60" rx="8" stroke="url(#sharedSlate)" stroke-width="1.5" fill="none"/>
+      <text x="15" y="25" fill="#94a3b8" font-size="12" font-weight="600">📦 @news/contracts</text>
+      <text x="15" y="42" fill="#64748b" font-size="9">API schemas • DB interfaces</text>
+    </g>
+    
+    <!-- Protocol -->
+    <g transform="translate(1150, 10)" filter="url(#cardShadow)">
+      <rect width="170" height="60" rx="8" fill="url(#sharedSlate)" opacity="0.15"/>
+      <rect width="170" height="60" rx="8" stroke="url(#sharedSlate)" stroke-width="1.5" fill="none"/>
+      <text x="15" y="25" fill="#94a3b8" font-size="12" font-weight="600">📦 @news/protocol</text>
+      <text x="15" y="42" fill="#64748b" font-size="9">SSE • Remote Observable</text>
+    </g>
+  </g>
+  
+  <!-- === LAYER 2: DATA (Database) === -->
+  <g transform="translate(0, 720)" font-family="Inter, sans-serif">
+    <text x="700" y="-15" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="600" letter-spacing="1">✓ EXTRACTED — DATA LAYER</text>
+    
+    <!-- news-crawler-db -->
+    <g transform="translate(200, 10)" filter="url(#softShadow)">
+      <rect width="300" height="95" rx="10" fill="url(#dbGreen)" opacity="0.15"/>
+      <rect width="300" height="95" rx="10" stroke="url(#dbGreen)" stroke-width="2" fill="none"/>
+      <circle cx="25" cy="25" r="12" fill="url(#dbGreen)"/>
+      <text x="25" y="30" text-anchor="middle" fill="#fff" font-size="12">💾</text>
+      <text x="45" y="30" fill="#4ade80" font-size="15" font-weight="700">news-crawler-db</text>
+      <text x="15" y="50" fill="#94a3b8" font-size="10">SQLite + Postgres adapters</text>
+      <g font-size="8" fill="#64748b">
+        <text x="15" y="65">• articles, fetches, links, domains</text>
+        <text x="15" y="77">• sitemaps, gazetteer, places</text>
+        <text x="15" y="89">• Schema migrations • Transactions</text>
+      </g>
+    </g>
+    
+    <!-- Gazetteer module -->
+    <g transform="translate(550, 10)" filter="url(#softShadow)">
+      <rect width="240" height="95" rx="10" fill="url(#geoAmber)" opacity="0.15"/>
+      <rect width="240" height="95" rx="10" stroke="url(#geoAmber)" stroke-width="2" fill="none"/>
+      <circle cx="25" cy="25" r="12" fill="url(#geoAmber)"/>
+      <text x="25" y="30" text-anchor="middle" fill="#fff" font-size="12">🌍</text>
+      <text x="45" y="30" fill="#fbbf24" font-size="15" font-weight="700">news-gazetteer</text>
+      <text x="15" y="50" fill="#94a3b8" font-size="10">Geographic data management</text>
+      <g font-size="8" fill="#64748b">
+        <text x="15" y="65">• Countries, regions, cities</text>
+        <text x="15" y="77">• Place matching &amp; disambiguation</text>
+        <text x="15" y="89">• Wikidata integration</text>
+      </g>
+    </g>
+    
+    <!-- Cache layer -->
+    <g transform="translate(840, 10)" filter="url(#softShadow)">
+      <rect width="240" height="95" rx="10" fill="url(#sharedSlate)" opacity="0.15"/>
+      <rect width="240" height="95" rx="10" stroke="url(#sharedSlate)" stroke-width="1.5" fill="none"/>
+      <circle cx="25" cy="25" r="12" fill="url(#sharedSlate)"/>
+      <text x="25" y="30" text-anchor="middle" fill="#fff" font-size="12">💨</text>
+      <text x="45" y="30" fill="#94a3b8" font-size="15" font-weight="700">news-cache</text>
+      <text x="15" y="50" fill="#94a3b8" font-size="10">HTTP caching • Response store</text>
+      <g font-size="8" fill="#64748b">
+        <text x="15" y="65">• Brotli compression</text>
+        <text x="15" y="77">• Content fingerprinting</text>
+        <text x="15" y="89">• TTL management</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- === LAYER 3: CORE LOGIC === -->
+  <g transform="translate(0, 560)" font-family="Inter, sans-serif">
+    <text x="700" y="-15" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="600" letter-spacing="1">◎ PLANNED — CORE LOGIC LAYER</text>
+    
+    <!-- Crawler Core -->
+    <g transform="translate(80, 10)" filter="url(#softShadow)">
+      <rect width="260" height="110" rx="10" fill="url(#coreBlue)" opacity="0.15"/>
+      <rect width="260" height="110" rx="10" stroke="url(#coreBlue)" stroke-width="2" fill="none"/>
+      <circle cx="25" cy="25" r="12" fill="url(#coreBlue)"/>
+      <text x="25" y="30" text-anchor="middle" fill="#fff" font-size="12">🕷️</text>
+      <text x="45" y="30" fill="#60a5fa" font-size="15" font-weight="700">news-crawler-core</text>
+      <text x="15" y="50" fill="#94a3b8" font-size="10">The crawling engine</text>
+      <g font-size="8" fill="#64748b">
+        <text x="15" y="65">• Priority queue &amp; workers</text>
+        <text x="15" y="77">• Rate limiting &amp; backoff</text>
+        <text x="15" y="89">• URL processing pipeline</text>
+        <text x="15" y="101">• Telemetry &amp; orchestration</text>
+      </g>
+    </g>
+    
+    <!-- Analysis (Pure) -->
+    <g transform="translate(375, 10)" filter="url(#softShadow)">
+      <rect width="260" height="110" rx="10" fill="url(#analysisPurple)" opacity="0.15"/>
+      <rect width="260" height="110" rx="10" stroke="url(#analysisPurple)" stroke-width="2" fill="none"/>
+      <rect width="260" height="110" rx="10" fill="url(#analysisPurple)" opacity="0.03"/>
+      <circle cx="25" cy="25" r="12" fill="url(#analysisPurple)"/>
+      <text x="25" y="30" text-anchor="middle" fill="#fff" font-size="12">🔬</text>
+      <text x="45" y="30" fill="#a855f7" font-size="15" font-weight="700">news-db-pure-analysis</text>
+      <text x="220" y="18" fill="#4ade80" font-size="8">✓ EXTRACTED</text>
+      <text x="15" y="50" fill="#94a3b8" font-size="10">Pure analysis functions (no DB)</text>
+      <g font-size="8" fill="#64748b">
+        <text x="15" y="65">• SimHasher • TrendDetector</text>
+        <text x="15" y="77">• Sentiment • Summarization</text>
+        <text x="15" y="89">• Topic modeling • Clustering</text>
+        <text x="15" y="101">• Recommender algorithms</text>
+      </g>
+    </g>
+    
+    <!-- Intelligence -->
+    <g transform="translate(670, 10)" filter="url(#softShadow)">
+      <rect width="260" height="110" rx="10" fill="url(#intelligenceIndigo)" opacity="0.15"/>
+      <rect width="260" height="110" rx="10" stroke="url(#intelligenceIndigo)" stroke-width="2" fill="none"/>
+      <circle cx="25" cy="25" r="12" fill="url(#intelligenceIndigo)"/>
+      <text x="25" y="30" text-anchor="middle" fill="#fff" font-size="12">🧠</text>
+      <text x="45" y="30" fill="#818cf8" font-size="15" font-weight="700">news-intelligence</text>
+      <text x="15" y="50" fill="#94a3b8" font-size="10">ML &amp; planning systems</text>
+      <g font-size="8" fill="#64748b">
+        <text x="15" y="65">• Planner &amp; gap detection</text>
+        <text x="15" y="77">• Classifiers (article, hub, nav)</text>
+        <text x="15" y="89">• Knowledge graphs</text>
+        <text x="15" y="101">• Fact extraction &amp; matching</text>
+      </g>
+    </g>
+    
+    <!-- Services -->
+    <g transform="translate(965, 10)" filter="url(#softShadow)">
+      <rect width="260" height="110" rx="10" fill="url(#servicesTeal)" opacity="0.15"/>
+      <rect width="260" height="110" rx="10" stroke="url(#servicesTeal)" stroke-width="2" fill="none"/>
+      <circle cx="25" cy="25" r="12" fill="url(#servicesTeal)"/>
+      <text x="25" y="30" text-anchor="middle" fill="#fff" font-size="12">⚙️</text>
+      <text x="45" y="30" fill="#2dd4bf" font-size="15" font-weight="700">news-services</text>
+      <text x="15" y="50" fill="#94a3b8" font-size="10">Business domain services</text>
+      <g font-size="8" fill="#64748b">
+        <text x="15" y="65">• Billing &amp; subscriptions</text>
+        <text x="15" y="77">• Trust &amp; fact-checking</text>
+        <text x="15" y="89">• User management</text>
+        <text x="15" y="101">• Alerts &amp; notifications</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- === LAYER 4: API GATEWAY === -->
+  <g transform="translate(0, 450)" font-family="Inter, sans-serif">
+    <text x="700" y="-15" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="600" letter-spacing="1">◎ PLANNED — API GATEWAY</text>
+    
+    <!-- API Server -->
+    <g transform="translate(480, 10)" filter="url(#softShadow)">
+      <rect width="440" height="70" rx="10" fill="url(#apiPink)" opacity="0.15"/>
+      <rect width="440" height="70" rx="10" stroke="url(#apiPink)" stroke-width="2" fill="none"/>
+      <circle cx="30" cy="35" r="14" fill="url(#apiPink)"/>
+      <text x="30" y="40" text-anchor="middle" fill="#fff" font-size="14">🔌</text>
+      <text x="55" y="30" fill="#f472b6" font-size="16" font-weight="700">news-api</text>
+      <text x="55" y="48" fill="#94a3b8" font-size="10">REST API gateway • Express routes v1 • SSE streaming • Auth middleware</text>
+      <g font-size="8" fill="#64748b">
+        <text x="55" y="62">/articles • /crawls • /domains • /topics • /recommendations • /billing • /trust</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- === LAYER 5: UI MODULES (Top) === -->
+  <g transform="translate(0, 105)" font-family="Inter, sans-serif">
+    <text x="700" y="0" text-anchor="middle" fill="#fb923c" font-size="10" font-weight="600" letter-spacing="1">◎ PLANNED — UI LAYER (Multiple Pluggable Modules)</text>
+    
+    <!-- Row 1: Data-centric UIs -->
+    <g transform="translate(40, 25)">
+      <!-- Data Explorer UI -->
+      <g filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">📊 Data Explorer</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">URLs, domains, crawls</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ news-crawler-db</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ news-api</text>
+        <rect x="8" y="68" width="50" height="12" rx="3" fill="#15803d" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Core UI</text>
+      </g>
+      
+      <!-- Crawl Observer UI -->
+      <g transform="translate(160, 0)" filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">👁️ Crawl Observer</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">Task telemetry stream</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ news-crawler-core</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ news-api (SSE)</text>
+        <rect x="8" y="68" width="50" height="12" rx="3" fill="#15803d" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Core UI</text>
+      </g>
+      
+      <!-- Crawl Status UI -->
+      <g transform="translate(320, 0)" filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">🚦 Crawl Status</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">Job control &amp; progress</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ news-crawler-core</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ news-services</text>
+        <rect x="8" y="68" width="50" height="12" rx="3" fill="#15803d" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Core UI</text>
+      </g>
+      
+      <!-- Analytics Hub -->
+      <g transform="translate(480, 0)" filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">📈 Analytics Hub</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">Trends, sentiment, topics</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ news-db-pure-analysis</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ news-intelligence</text>
+        <rect x="8" y="68" width="60" height="12" rx="3" fill="#7e22ce" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Analysis UI</text>
+      </g>
+      
+      <!-- Gazetteer UI -->
+      <g transform="translate(640, 0)" filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">🗺️ Gazetteer</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">Places, hubs, geo data</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ news-gazetteer</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ news-crawler-db</text>
+        <rect x="8" y="68" width="40" height="12" rx="3" fill="#b45309" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Geo UI</text>
+      </g>
+      
+      <!-- Quality Dashboard -->
+      <g transform="translate(800, 0)" filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">✅ Quality</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">Article &amp; hub quality</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ news-db-pure-analysis</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ news-services (trust)</text>
+        <rect x="8" y="68" width="60" height="12" rx="3" fill="#7e22ce" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Analysis UI</text>
+      </g>
+      
+      <!-- Hub Guessing -->
+      <g transform="translate(960, 0)" filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">🎯 Hub Matrix</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">Place &amp; topic hubs</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ news-intelligence</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ news-gazetteer</text>
+        <rect x="8" y="68" width="45" height="12" rx="3" fill="#4338ca" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Intel UI</text>
+      </g>
+      
+      <!-- Rate Limit -->
+      <g transform="translate(1120, 0)" filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">⏱️ Rate Limits</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">Per-domain throttling</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ news-crawler-core</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ news-api</text>
+        <rect x="8" y="68" width="40" height="12" rx="3" fill="#1d4ed8" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Ops UI</text>
+      </g>
+    </g>
+    
+    <!-- Row 2: Dev/Admin UIs -->
+    <g transform="translate(40, 125)">
+      <!-- Docs Viewer -->
+      <g filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">📚 Docs Viewer</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">Markdown rendering</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ filesystem</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ jsgui3-html</text>
+        <rect x="8" y="68" width="40" height="12" rx="3" fill="#475569" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Dev UI</text>
+      </g>
+      
+      <!-- Design Studio -->
+      <g transform="translate(160, 0)" filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">🎨 Design Studio</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">Control theming</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ jsgui3-html</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ @news/shared (CSS)</text>
+        <rect x="8" y="68" width="40" height="12" rx="3" fill="#475569" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Dev UI</text>
+      </g>
+      
+      <!-- Diagram Atlas -->
+      <g transform="translate(320, 0)" filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">📐 Diagram Atlas</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">SVG gallery</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ filesystem</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ jsgui3-html</text>
+        <rect x="8" y="68" width="40" height="12" rx="3" fill="#475569" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Dev UI</text>
+      </g>
+      
+      <!-- Art Playground -->
+      <g transform="translate(480, 0)" filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">🖌️ Art Playground</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">Canvas experiments</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ lang-tools</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ jsgui3-html</text>
+        <rect x="8" y="68" width="40" height="12" rx="3" fill="#475569" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Dev UI</text>
+      </g>
+      
+      <!-- Decision Tree Viewer -->
+      <g transform="translate(640, 0)" filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">🌳 Decision Tree</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">Classifier visualization</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ news-intelligence</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ jsgui3-html</text>
+        <rect x="8" y="68" width="45" height="12" rx="3" fill="#4338ca" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Intel UI</text>
+      </g>
+      
+      <!-- Admin Dashboard -->
+      <g transform="translate(800, 0)" filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">🛡️ Admin</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">Users, billing, config</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ news-services</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ news-api (auth)</text>
+        <rect x="8" y="68" width="55" height="12" rx="3" fill="#0d9488" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Services UI</text>
+      </g>
+      
+      <!-- Background Tasks -->
+      <g transform="translate(960, 0)" filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">⚡ Background</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">Async task manager</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ news-crawler-core</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ news-services</text>
+        <rect x="8" y="68" width="40" height="12" rx="3" fill="#1d4ed8" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Ops UI</text>
+      </g>
+      
+      <!-- Article Viewer -->
+      <g transform="translate(1120, 0)" filter="url(#cardShadow)">
+        <rect width="145" height="85" rx="8" fill="url(#uiOrange)" opacity="0.15"/>
+        <rect width="145" height="85" rx="8" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+        <text x="10" y="20" fill="#fb923c" font-size="11" font-weight="600">📰 Article View</text>
+        <text x="10" y="35" fill="#94a3b8" font-size="8">Full article reader</text>
+        <text x="10" y="48" fill="#64748b" font-size="7">↳ news-crawler-db</text>
+        <text x="10" y="60" fill="#64748b" font-size="7">↳ news-cache</text>
+        <rect x="8" y="68" width="50" height="12" rx="3" fill="#15803d" opacity="0.8"/>
+        <text x="13" y="77" fill="#fff" font-size="7">Core UI</text>
+      </g>
+    </g>
+    
+    <!-- Unified App shell indicator -->
+    <g transform="translate(40, 220)">
+      <rect width="1225" height="30" rx="6" fill="none" stroke="url(#goldAccent)" stroke-width="1" stroke-dasharray="8,4" opacity="0.4"/>
+      <text x="612" y="20" text-anchor="middle" fill="#c9a227" font-size="10" font-weight="600">🏠 Unified App Shell — mounts all UI modules under single Express server</text>
+    </g>
+  </g>
+  
+  <!-- Connection lines (simplified visual) -->
+  <g stroke="#c9a227" stroke-width="1" fill="none" opacity="0.2">
+    <!-- UI to API -->
+    <path d="M 700,355 L 700,450"/>
+    
+    <!-- API to Core Logic -->
+    <path d="M 580,520 C 480,540 300,560 210,560"/>
+    <path d="M 620,520 L 505,560"/>
+    <path d="M 700,520 L 800,560"/>
+    <path d="M 780,520 C 880,540 1000,560 1095,560"/>
+    
+    <!-- Core Logic to Data -->
+    <path d="M 210,670 L 350,720"/>
+    <path d="M 505,670 L 505,720"/>
+    <path d="M 800,670 L 670,720"/>
+    <path d="M 1095,670 L 960,720"/>
+    
+    <!-- Data to Foundation -->
+    <path d="M 350,815 L 350,850"/>
+    <path d="M 670,815 L 630,850"/>
+    <path d="M 960,815 L 1030,850"/>
+  </g>
+  
+  <!-- Legend -->
+  <g transform="translate(30, 940)" font-family="Inter, sans-serif" font-size="9">
+    <text x="0" y="0" fill="#8b99ad" font-size="11" font-weight="600">LEGEND</text>
+    
+    <circle cx="10" cy="20" r="5" fill="url(#dbGreen)"/>
+    <text x="22" y="24" fill="#94a3b8">Database</text>
+    
+    <circle cx="90" cy="20" r="5" fill="url(#coreBlue)"/>
+    <text x="102" y="24" fill="#94a3b8">Crawler</text>
+    
+    <circle cx="165" cy="20" r="5" fill="url(#analysisPurple)"/>
+    <text x="177" y="24" fill="#94a3b8">Analysis</text>
+    
+    <circle cx="240" cy="20" r="5" fill="url(#intelligenceIndigo)"/>
+    <text x="252" y="24" fill="#94a3b8">Intelligence</text>
+    
+    <circle cx="335" cy="20" r="5" fill="url(#servicesTeal)"/>
+    <text x="347" y="24" fill="#94a3b8">Services</text>
+    
+    <circle cx="415" cy="20" r="5" fill="url(#apiPink)"/>
+    <text x="427" y="24" fill="#94a3b8">API</text>
+    
+    <circle cx="465" cy="20" r="5" fill="url(#uiOrange)"/>
+    <text x="477" y="24" fill="#94a3b8">UI Modules</text>
+    
+    <circle cx="555" cy="20" r="5" fill="url(#geoAmber)"/>
+    <text x="567" y="24" fill="#94a3b8">Geographic</text>
+    
+    <circle cx="645" cy="20" r="5" fill="url(#sharedSlate)"/>
+    <text x="657" y="24" fill="#94a3b8">Shared/Foundation</text>
+  </g>
+  
+  <!-- Stats -->
+  <g transform="translate(800, 940)" font-family="Inter, sans-serif" font-size="9">
+    <text x="0" y="0" fill="#8b99ad" font-size="11" font-weight="600">ARCHITECTURE STATS</text>
+    
+    <text x="0" y="20" fill="#4ade80">✓ 2 extracted repos</text>
+    <text x="130" y="20" fill="#fbbf24">◎ 6+ planned repos</text>
+    <text x="270" y="20" fill="#fb923c">16+ UI modules</text>
+    <text x="380" y="20" fill="#94a3b8">6 foundation packages</text>
+  </g>
+  
+  <!-- Decorative corners -->
+  <g stroke="url(#goldAccent)" stroke-width="1.5" fill="none" opacity="0.25">
+    <path d="M 20,20 L 20,60 M 20,20 L 60,20"/>
+    <path d="M 1380,20 L 1380,60 M 1380,20 L 1340,20"/>
+    <path d="M 20,980 L 20,940 M 20,980 L 60,980"/>
+    <path d="M 1380,980 L 1380,940 M 1380,980 L 1340,980"/>
+  </g>
+</svg>

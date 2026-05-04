@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-01-07T22:10:22.902Z",
+  "results": [
+    {
+      "compress": "none",
+      "urlCount": 10,
+      "bodiesReceived": 0,
+      "totalBodyBytes": 0,
+      "transferBytes": 1856,
+      "uncompressedLength": 0,
+      "compressionRatio": "N/A",
+      "decompressMs": 0,
+      "totalMs": 1274,
+      "workerMs": 1198,
+      "ok": 9,
+      "errors": 1,
+      "throughputMB": "0.00"
+    },
+    {
+      "compress": "gzip",
+      "encoding": "gzip",
+      "urlCount": 10,
+      "bodiesReceived": 0,
+      "totalBodyBytes": 0,
+      "transferBytes": 868,
+      "uncompressedLength": 2278,
+      "compressionRatio": "0.381",
+      "decompressMs": 1,
+      "totalMs": 676,
+      "workerMs": 652,
+      "ok": 8,
+      "errors": 2,
+      "throughputMB": "0.00"
+    }
+  ]
+}

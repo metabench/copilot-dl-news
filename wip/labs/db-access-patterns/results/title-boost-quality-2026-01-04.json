@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-01-04T04:33:54.168Z",
+  "sampleSize": 2000,
+  "urlOnly": {
+    "detectionRate": "72.0%",
+    "urlsWithPlaces": 1439,
+    "avgPlaces": 0.7435,
+    "avgMsPerUrl": 13.972392249999972
+  },
+  "titleOnly": {
+    "detectionRate": "27.3%",
+    "urlsWithPlaces": 546,
+    "avgPlaces": 0.4435,
+    "avgMsPerUrl": 0.010340200000004358
+  },
+  "combined": {
+    "detectionRate": "73.0%",
+    "urlsWithPlaces": 1460,
+    "avgPlaces": 1.06,
+    "avgMsPerUrl": 13.982732449999975
+  },
+  "titleBoost": {
+    "detectionRateDeltaPoints": 1,
+    "overlapOfTitlePlaces": "28.6%"
+  },
+  "performanceCost": {
+    "titleAddsAvgMsPerUrl": 0.010340200000004358,
+    "titleAddsPercentOfUrlCost": "0.1%"
+  }
+}

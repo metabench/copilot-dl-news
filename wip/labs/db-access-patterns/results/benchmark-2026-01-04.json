@@ -1,0 +1,76 @@
+{
+  "timestamp": "2026-01-04T03:39:05.093Z",
+  "gazetteerLookups": {
+    "timestamp": "2026-01-04T03:39:04.939Z",
+    "testNamesCount": 20,
+    "benchmarks": {
+      "single_exact_prepared": {
+        "iterations": 50,
+        "totalMs": 57,
+        "avgMs": "1.140",
+        "opsPerSec": 877
+      },
+      "single_exact_adhoc": {
+        "iterations": 50,
+        "totalMs": 61,
+        "avgMs": "1.220",
+        "opsPerSec": 820
+      },
+      "batch_in_clause": {
+        "iterations": 50,
+        "totalMs": 86,
+        "avgMs": "1.720",
+        "opsPerSec": 581
+      },
+      "single_normalized": {
+        "iterations": 50,
+        "totalMs": 27,
+        "avgMs": "0.540",
+        "opsPerSec": 1852
+      },
+      "batch_normalized": {
+        "iterations": 50,
+        "totalMs": 49,
+        "avgMs": "0.980",
+        "opsPerSec": 1020
+      },
+      "transaction_batch_write": {
+        "iterations": 50,
+        "totalMs": 2,
+        "avgMs": "0.040",
+        "opsPerSec": 25000
+      }
+    }
+  },
+  "candidateGeneration": {
+    "timestamp": "2026-01-04T03:39:05.092Z",
+    "articleCount": 5,
+    "totalMentions": 20,
+    "benchmarks": {
+      "sequential_candidates": {
+        "iterations": 20,
+        "totalMs": 11,
+        "avgMs": "0.55",
+        "opsPerSec": 1818
+      },
+      "candidates_with_hierarchy": {
+        "iterations": 20,
+        "totalMs": 46,
+        "avgMs": "2.30",
+        "opsPerSec": 435
+      },
+      "deduped_lookup": {
+        "iterations": 20,
+        "totalMs": 17,
+        "avgMs": "0.85",
+        "opsPerSec": 1176
+      },
+      "full_disambiguation": {
+        "iterations": 20,
+        "totalMs": 32,
+        "avgMs": "1.60",
+        "opsPerSec": 625
+      }
+    }
+  }
+}

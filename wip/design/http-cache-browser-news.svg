@@ -1,0 +1,281 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+  <title id="title">Industrial Luxury Obsidian — Cached News Article Preview</title>
+  <desc id="desc">Cache browser showing a cached Guardian news article with rendered page preview.</desc>
+  <defs>
+    <!-- Deep obsidian background with radial warmth -->
+    <linearGradient id="obsidianBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#040608"/>
+      <stop offset="35%" stop-color="#0a0e18"/>
+      <stop offset="100%" stop-color="#121824"/>
+    </linearGradient>
+    <radialGradient id="centerWarmth" cx="55%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#1c2030" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#040608" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Panel gradients -->
+    <linearGradient id="panelGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#181e28"/>
+      <stop offset="100%" stop-color="#0c1014"/>
+    </linearGradient>
+    <linearGradient id="chromeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#262e3e"/>
+      <stop offset="100%" stop-color="#141a24"/>
+    </linearGradient>
+    <linearGradient id="previewBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+
+    <!-- Gold accent shimmer -->
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#705a10"/>
+      <stop offset="20%" stop-color="#c9a227"/>
+      <stop offset="50%" stop-color="#f5e076"/>
+      <stop offset="80%" stop-color="#c9a227"/>
+      <stop offset="100%" stop-color="#705a10"/>
+    </linearGradient>
+
+    <!-- Status gradients -->
+    <linearGradient id="emeraldGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#166534"/>
+    </linearGradient>
+    <linearGradient id="amberGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+    <linearGradient id="roseGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="100%" stop-color="#9f1239"/>
+    </linearGradient>
+
+    <!-- Guardian blue -->
+    <linearGradient id="guardianBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#052962"/>
+      <stop offset="100%" stop-color="#041f4a"/>
+    </linearGradient>
+
+    <!-- Filters -->
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.9  0 0 0 0 0.68  0 0 0 0 0.18  0 0 0 0.5 0"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.55"/>
+    </filter>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+
+    <!-- Subtle grid -->
+    <pattern id="gridPattern" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#c9a227" stroke-width="0.25" opacity="0.035"/>
+      <circle cx="0" cy="0" r="0.8" fill="#c9a227" opacity="0.05"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="540" fill="url(#obsidianBg)"/>
+  <rect width="960" height="540" fill="url(#centerWarmth)"/>
+  <rect width="960" height="540" fill="url(#gridPattern)"/>
+
+  <!-- Title -->
+  <g filter="url(#goldGlow)">
+    <text x="16" y="26" fill="url(#goldAccent)" font-family="Georgia, serif" font-size="22" font-weight="bold" letter-spacing="-0.3">
+      Cached HTTP Response Browser
+    </text>
+  </g>
+  <text x="16" y="42" fill="#8b99ad" font-family="Inter, sans-serif" font-size="11" letter-spacing="0.15">
+    Inspect stored documents · Filter by cache key · Preview headers + body
+  </text>
+
+  <!-- Browser chrome -->
+  <g transform="translate(12,52)" filter="url(#softShadow)">
+    <rect width="936" height="36" rx="6" fill="url(#chromeGradient)" stroke="#3a4459" stroke-width="1"/>
+    <circle cx="18" cy="18" r="5" fill="#ff5f57" stroke="#d9453d" stroke-width="0.5"/>
+    <circle cx="38" cy="18" r="5" fill="#febc2e" stroke="#d4a01e" stroke-width="0.5"/>
+    <circle cx="58" cy="18" r="5" fill="#28c840" stroke="#1ea832" stroke-width="0.5"/>
+    <rect x="78" y="8" width="720" height="20" rx="10" fill="#060a10" stroke="#283040" stroke-width="1"/>
+    <text x="98" y="22" fill="#64748b" font-family="Inter, sans-serif" font-size="9">🔒</text>
+    <text x="114" y="22" fill="#94a3b8" font-family="Inter, sans-serif" font-size="10">https://www.theguardian.com/world/2025/nov/29/climate-summit-breakthrough</text>
+    <rect x="818" y="8" width="26" height="20" rx="5" fill="#0c1218" stroke="#283040" stroke-width="1"/>
+    <text x="825" y="22" fill="#94a3b8" font-family="Inter, sans-serif" font-size="11">↻</text>
+    <rect x="850" y="8" width="26" height="20" rx="5" fill="#0c1218" stroke="#283040" stroke-width="1"/>
+    <text x="857" y="22" fill="#94a3b8" font-family="Inter, sans-serif" font-size="11">⋮</text>
+    <rect x="882" y="8" width="26" height="20" rx="5" fill="url(#emeraldGlow)" stroke="#22c55e" stroke-width="1"/>
+    <text x="889" y="22" fill="#fff" font-family="Inter, sans-serif" font-size="11">↗</text>
+  </g>
+
+  <!-- Filter bar (merged with chrome) -->
+  <g transform="translate(12,88)">
+    <rect width="936" height="34" fill="url(#panelGradient)" stroke="#3a4459" stroke-width="1"/>
+    <g font-family="Inter, sans-serif" font-size="9" fill="#94a3b8">
+      <text x="12" y="12" font-weight="600" fill="#b8c4d4">Category</text>
+      <rect x="8" y="16" width="100" height="14" rx="3" fill="#080c12" stroke="#283040" stroke-width="1"/>
+      <text x="14" y="27" fill="#e2e8f0" font-size="8">webpage ▾</text>
+
+      <text x="124" y="12" font-weight="600" fill="#b8c4d4">Status</text>
+      <rect x="120" y="16" width="80" height="14" rx="3" fill="#080c12" stroke="#283040" stroke-width="1"/>
+      <text x="126" y="27" fill="#e2e8f0" font-size="8">200 OK ▾</text>
+
+      <text x="218" y="12" font-weight="600" fill="#b8c4d4">Hit Range</text>
+      <rect x="214" y="16" width="90" height="14" rx="3" fill="#080c12" stroke="#283040" stroke-width="1"/>
+      <text x="220" y="27" fill="#e2e8f0" font-size="8">last 7 days ▾</text>
+
+      <text x="322" y="12" font-weight="600" fill="#b8c4d4">Sort</text>
+      <rect x="318" y="16" width="80" height="14" rx="3" fill="#080c12" stroke="#283040" stroke-width="1"/>
+      <text x="324" y="27" fill="#e2e8f0" font-size="8">last hit ▾</text>
+    </g>
+  </g>
+
+  <!-- Main content -->
+  <g transform="translate(12,128)" font-family="Inter, sans-serif">
+    <!-- Left sidebar -->
+    <g filter="url(#cardShadow)">
+      <rect width="168" height="400" rx="8" fill="url(#panelGradient)" stroke="#2a3444" stroke-width="1"/>
+    </g>
+    <text x="10" y="18" fill="#b8c4d4" font-size="10" font-weight="600">Cached Documents</text>
+    <text x="10" y="30" fill="#5a6880" font-size="7">4 of 89 shown</text>
+
+    <!-- List items -->
+    <g font-size="8" fill="#e2e8f0">
+      <g transform="translate(6,40)">
+        <rect width="156" height="40" rx="5" fill="#101620" stroke="url(#goldAccent)" stroke-width="1.2"/>
+        <rect width="156" height="40" rx="5" fill="#c9a227" opacity="0.03"/>
+        <rect x="6" y="6" width="12" height="12" rx="2" fill="url(#emeraldGlow)"/>
+        <text x="9" y="15" fill="#fff" font-size="6" font-weight="bold">✓</text>
+        <text x="24" y="14" fill="#f8fafc" font-weight="600" font-size="7">HIT · 156 KB</text>
+        <text x="24" y="24" fill="#5a6880" font-size="6">theguardian.com</text>
+        <text x="24" y="34" fill="#64748b" font-size="6">2 min ago</text>
+        <text x="144" y="22" fill="#5a6880" font-size="7">›</text>
+      </g>
+      <g transform="translate(6,86)">
+        <rect width="156" height="40" rx="5" fill="#0a0e16" stroke="#1e2838" stroke-width="1"/>
+        <rect x="6" y="6" width="12" height="12" rx="2" fill="url(#emeraldGlow)"/>
+        <text x="9" y="15" fill="#fff" font-size="6" font-weight="bold">✓</text>
+        <text x="24" y="14" fill="#e2e8f0" font-weight="600" font-size="7">HIT · 89 KB</text>
+        <text x="24" y="24" fill="#5a6880" font-size="6">bbc.com/news</text>
+        <text x="24" y="34" fill="#64748b" font-size="6">18 min ago</text>
+      </g>
+      <g transform="translate(6,132)">
+        <rect width="156" height="40" rx="5" fill="#0a0e16" stroke="#1e2838" stroke-width="1"/>
+        <rect x="6" y="6" width="12" height="12" rx="2" fill="url(#amberGlow)"/>
+        <text x="9" y="15" fill="#1a1a1a" font-size="6" font-weight="bold">!</text>
+        <text x="24" y="14" fill="#e2e8f0" font-weight="600" font-size="7">STALE · 124 KB</text>
+        <text x="24" y="24" fill="#5a6880" font-size="6">nytimes.com</text>
+        <text x="24" y="34" fill="#64748b" font-size="6">6 hours ago</text>
+      </g>
+      <g transform="translate(6,178)">
+        <rect width="156" height="40" rx="5" fill="#0a0e16" stroke="#1e2838" stroke-width="1"/>
+        <rect x="6" y="6" width="12" height="12" rx="2" fill="url(#roseGlow)"/>
+        <text x="9" y="15" fill="#1a1a1a" font-size="6" font-weight="bold">✗</text>
+        <text x="24" y="14" fill="#e2e8f0" font-weight="600" font-size="7">MISS · 0 KB</text>
+        <text x="24" y="24" fill="#5a6880" font-size="6">reuters.com</text>
+        <text x="24" y="34" fill="#64748b" font-size="6">expired</text>
+      </g>
+      <g transform="translate(6,224)">
+        <rect width="156" height="40" rx="5" fill="#0a0e16" stroke="#1e2838" stroke-width="1"/>
+        <rect x="6" y="6" width="12" height="12" rx="2" fill="url(#emeraldGlow)"/>
+        <text x="9" y="15" fill="#fff" font-size="6" font-weight="bold">✓</text>
+        <text x="24" y="14" fill="#e2e8f0" font-weight="600" font-size="7">HIT · 112 KB</text>
+        <text x="24" y="24" fill="#5a6880" font-size="6">washingtonpost.com</text>
+        <text x="24" y="34" fill="#64748b" font-size="6">45 min ago</text>
+      </g>
+      <g transform="translate(6,270)">
+        <rect width="156" height="40" rx="5" fill="#0a0e16" stroke="#1e2838" stroke-width="1"/>
+        <rect x="6" y="6" width="12" height="12" rx="2" fill="url(#amberGlow)"/>
+        <text x="9" y="15" fill="#1a1a1a" font-size="6" font-weight="bold">!</text>
+        <text x="24" y="14" fill="#e2e8f0" font-weight="600" font-size="7">STALE · 98 KB</text>
+        <text x="24" y="24" fill="#5a6880" font-size="6">cnn.com</text>
+        <text x="24" y="34" fill="#64748b" font-size="6">3 hours ago</text>
+      </g>
+      <g transform="translate(6,316)">
+        <rect width="156" height="40" rx="5" fill="#0a0e16" stroke="#1e2838" stroke-width="1"/>
+        <rect x="6" y="6" width="12" height="12" rx="2" fill="url(#emeraldGlow)"/>
+        <text x="9" y="15" fill="#fff" font-size="6" font-weight="bold">✓</text>
+        <text x="24" y="14" fill="#e2e8f0" font-weight="600" font-size="7">HIT · 145 KB</text>
+        <text x="24" y="24" fill="#5a6880" font-size="6">aljazeera.com</text>
+        <text x="24" y="34" fill="#64748b" font-size="6">1 hour ago</text>
+      </g>
+      <g transform="translate(6,362)">
+        <rect width="156" height="22" rx="3" fill="#080c12" stroke="#1e2838" stroke-width="1"/>
+        <text x="78" y="14" text-anchor="middle" fill="#5a6880" font-size="7">Show all 89 ▼</text>
+      </g>
+    </g>
+
+    <!-- Right preview panel -->
+    <g filter="url(#cardShadow)">
+      <rect x="180" width="756" height="400" rx="8" fill="url(#panelGradient)" stroke="#2a3444" stroke-width="1"/>
+    </g>
+    <text x="192" y="18" fill="#b8c4d4" font-size="10" font-weight="600">Page Preview</text>
+    <text x="830" y="18" fill="#34d399" font-size="8" text-anchor="end">● CACHED · 156 KB · 287 hits</text>
+
+    <!-- Rendered news page preview -->
+    <g transform="translate(188,28)">
+      <rect width="740" height="364" rx="5" fill="url(#previewBg)" stroke="#cbd5e1" stroke-width="1"/>
+      
+      <!-- Guardian header -->
+      <rect width="740" height="40" rx="5 5 0 0" fill="url(#guardianBlue)"/>
+      <text x="16" y="26" fill="#fff" font-family="Georgia, serif" font-size="16" font-weight="bold">The Guardian</text>
+      <g fill="#94c6f0" font-size="8">
+        <text x="140" y="26">News</text>
+        <text x="176" y="26">Opinion</text>
+        <text x="220" y="26">Sport</text>
+        <text x="256" y="26">Culture</text>
+        <text x="300" y="26">Lifestyle</text>
+      </g>
+      <rect x="640" y="10" width="72" height="20" rx="4" fill="#ffe500"/>
+      <text x="656" y="24" fill="#052962" font-size="8" font-weight="bold">Subscribe</text>
+
+      <!-- Article content -->
+      <g transform="translate(16,52)">
+        <text x="0" y="0" fill="#c70000" font-size="8" font-weight="600">WORLD NEWS</text>
+        <text x="0" y="20" fill="#121212" font-family="Georgia, serif" font-size="18" font-weight="bold">Climate summit reaches historic</text>
+        <text x="0" y="42" fill="#121212" font-family="Georgia, serif" font-size="18" font-weight="bold">breakthrough on carbon targets</text>
+        <text x="0" y="64" fill="#5a5a5a" font-size="10">World leaders agree to accelerated emissions timeline at COP35</text>
+        
+        <!-- Byline -->
+        <g transform="translate(0,80)">
+          <circle cx="10" cy="10" r="10" fill="#e0e0e0"/>
+          <text x="26" y="8" fill="#121212" font-size="9" font-weight="600">Fiona Harvey</text>
+          <text x="26" y="20" fill="#707070" font-size="8">Environment correspondent · Fri 29 Nov 2025 08:42 GMT</text>
+        </g>
+
+        <!-- Article image placeholder -->
+        <rect y="108" width="340" height="110" rx="4" fill="#e8e8e8"/>
+        <text x="170" y="158" text-anchor="middle" fill="#888" font-size="9">[ Featured Image ]</text>
+        <text x="170" y="172" text-anchor="middle" fill="#aaa" font-size="7">Summit delegates in Dubai</text>
+
+        <!-- Article text -->
+        <g transform="translate(360,108)" fill="#333" font-size="9">
+          <text x="0" y="10">In a landmark decision that climate</text>
+          <text x="0" y="24">activists are calling "historic", world</text>
+          <text x="0" y="38">leaders have committed to reducing</text>
+          <text x="0" y="52">carbon emissions by 60% by 2035,</text>
+          <text x="0" y="66">exceeding previous COP30 targets.</text>
+          <text x="0" y="86" fill="#888" font-style="italic">Article continues below ↓</text>
+        </g>
+
+        <!-- Additional article snippet -->
+        <g transform="translate(0,228)" fill="#333" font-size="9">
+          <text x="0" y="0">The agreement, reached after marathon 72-hour negotiations, includes binding</text>
+          <text x="0" y="14">commitments from all major emitters including China, the United States, and India.</text>
+          <text x="0" y="28">Climate scientists have described the deal as "a turning point for humanity"...</text>
+        </g>
+      </g>
+
+      <!-- Footer bar -->
+      <rect y="332" width="740" height="32" rx="0 0 5 5" fill="#f6f6f6" stroke="#e0e0e0" stroke-width="1"/>
+      <g font-size="7" fill="#707070">
+        <text x="16" y="348">Share:</text>
+        <text x="48" y="348" fill="#1877f2">Facebook</text>
+        <text x="92" y="348" fill="#1da1f2">Twitter</text>
+        <text x="128" y="348" fill="#0077b5">LinkedIn</text>
+        <text x="580" y="348">Comments: 1,247</text>
+        <text x="660" y="348">Reading time: 8 min</text>
+      </g>
+    </g>
+  </g>
+</svg>

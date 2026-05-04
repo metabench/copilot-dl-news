@@ -1,0 +1,13 @@
+{
+  "description": "Simple distributed smoke crawl: 1 domain, 5 pages, via the remote v2 server. Simple means low-scope, not local-only.",
+  "tool": "remote",
+  "positionals": [
+    "bounded"
+  ],
+  "options": {
+    "domains": "bbc.com",
+    "max-pages": 5,
+    "poll": 5,
+    "timeout-min": 10
+  }
+}

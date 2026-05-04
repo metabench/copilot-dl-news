@@ -1,0 +1,13 @@
+{
+  "description": "Larger bounded distributed smoke crawl with explicit completion polling.",
+  "tool": "remote",
+  "positionals": [
+    "bounded"
+  ],
+  "options": {
+    "domains": "bbc.com,reuters.com,apnews.com",
+    "max-pages": 50,
+    "poll": 5,
+    "timeout-min": 30
+  }
+}

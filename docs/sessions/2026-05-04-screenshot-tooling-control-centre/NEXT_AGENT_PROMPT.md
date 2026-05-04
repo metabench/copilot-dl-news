@@ -1,0 +1,3 @@
+# Next Agent Prompt
+
+Continue the screenshot feedback tooling from `docs/sessions/2026-05-04-screenshot-tooling-control-centre/`. Read `SCREENSHOT_COMMENTS.md` first, then inspect `screenshots/analysis.json` and open the Control Center at `/?app=screenshot-review` if UI work is needed. Preserve the shared helper contract in `scripts/ui/lib/screenshotCapture.js`, keep comments durable in Markdown, and validate with the helper/store check, control render check, unified server check, and a fresh Puppeteer capture.

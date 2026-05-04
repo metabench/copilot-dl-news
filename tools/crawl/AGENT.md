@@ -57,7 +57,7 @@ What kind of crawl do you need?
 │   └── npm run crawl -- remote-bounded-smoke
 │
 ├── 🔹 Remote bounded crawl (specific domains)
-│   └── npm run crawl -- remote bounded --domains bbc.com,reuters.com --max-pages 50
+│   └── npm run crawl -- remote bounded --domains bbc.com,reuters.com --max-pages 50 --max-concurrent 2
 │
 ├── 🔹 Start/manage remote crawl server
 │   └── See "Remote Crawl Operations" section below
@@ -132,7 +132,7 @@ node tools/crawl/crawl-remote.js start --domain bbc.com
 node tools/crawl/crawl-remote.js stop --all
 
 # Bounded crawl (start, wait for completion, exit)
-node tools/crawl/crawl-remote.js bounded --domains bbc.com,reuters.com --max-pages 50 --poll 5 --timeout-min 30
+node tools/crawl/crawl-remote.js bounded --domains bbc.com,reuters.com --max-pages 50 --max-concurrent 2 --poll 5 --timeout-min 30
 
 # Domain management
 node tools/crawl/crawl-remote.js add --domain nytimes.com --max-pages 100

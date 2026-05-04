@@ -1,0 +1,684 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1400" role="img" aria-labelledby="title desc">
+  <title id="title">Repository Division v4 — API Contracts &amp; Interfaces</title>
+  <desc id="desc">Detailed visualization showing API contracts, function signatures, and data flows between modules.</desc>
+  
+  <defs>
+    <!-- Background gradients -->
+    <linearGradient id="obsidianBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020406"/>
+      <stop offset="40%" stop-color="#060a10"/>
+      <stop offset="100%" stop-color="#0c1218"/>
+    </linearGradient>
+    <radialGradient id="centerGlow" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#c9a227" stop-opacity="0.04"/>
+      <stop offset="50%" stop-color="#1a1f2e" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#020406" stop-opacity="0"/>
+    </radialGradient>
+    
+    <!-- Gold accent -->
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#705a10"/>
+      <stop offset="25%" stop-color="#c9a227"/>
+      <stop offset="50%" stop-color="#f5e076"/>
+      <stop offset="75%" stop-color="#c9a227"/>
+      <stop offset="100%" stop-color="#705a10"/>
+    </linearGradient>
+    
+    <!-- Module gradients -->
+    <linearGradient id="coreBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="dbGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+    <linearGradient id="analysisPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#7e22ce"/>
+    </linearGradient>
+    <linearGradient id="geoAmber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+    <linearGradient id="uiOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#c2410c"/>
+    </linearGradient>
+    <linearGradient id="servicesTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14b8a6"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+    <linearGradient id="intelligenceIndigo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4338ca"/>
+    </linearGradient>
+    <linearGradient id="apiPink" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#be185d"/>
+    </linearGradient>
+    <linearGradient id="foundationSlate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#475569"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    
+    <!-- Filters -->
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.9  0 0 0 0 0.68  0 0 0 0 0.18  0 0 0 0.5 0"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+    
+    <!-- Grid pattern -->
+    <pattern id="gridPattern" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#c9a227" stroke-width="0.12" opacity="0.04"/>
+    </pattern>
+    
+    <!-- Arrow markers -->
+    <marker id="arrowGold" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3 z" fill="#c9a227" opacity="0.6"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">
+      <path d="M0,0 L0,5 L5,2.5 z" fill="#22c55e" opacity="0.7"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">
+      <path d="M0,0 L0,5 L5,2.5 z" fill="#a855f7" opacity="0.7"/>
+    </marker>
+    <marker id="arrowPink" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">
+      <path d="M0,0 L0,5 L5,2.5 z" fill="#ec4899" opacity="0.7"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1800" height="1400" fill="url(#obsidianBg)"/>
+  <rect width="1800" height="1400" fill="url(#gridPattern)"/>
+  <rect width="1800" height="1400" fill="url(#centerGlow)"/>
+  
+  <!-- Title -->
+  <g filter="url(#goldGlow)">
+    <text x="900" y="38" text-anchor="middle" fill="url(#goldAccent)" font-family="Georgia, serif" font-size="24" font-weight="bold" letter-spacing="2">
+      Repository Division — API Contracts &amp; Interfaces
+    </text>
+  </g>
+  <text x="900" y="58" text-anchor="middle" fill="#8b99ad" font-family="Inter, sans-serif" font-size="10">
+    Function signatures • REST endpoints • Data types • Event streams • Cross-module contracts
+  </text>
+  
+  <!-- ==================== -->
+  <!-- CORE MODULE: news-crawler-core -->
+  <!-- ==================== -->
+  <g transform="translate(700, 300)" font-family="Inter, sans-serif" filter="url(#softShadow)">
+    <rect x="0" y="0" width="400" height="280" rx="12" fill="url(#coreBlue)" opacity="0.15"/>
+    <rect x="0" y="0" width="400" height="280" rx="12" stroke="url(#coreBlue)" stroke-width="2" fill="none"/>
+    <rect x="0" y="0" width="400" height="32" rx="12 12 0 0" fill="url(#coreBlue)" opacity="0.4"/>
+    
+    <text x="20" y="22" fill="#fff" font-size="14" font-weight="700">🕷️ news-crawler-core</text>
+    <text x="320" y="22" fill="#bfdbfe" font-size="9">The crawling engine</text>
+    
+    <!-- Exported APIs -->
+    <text x="15" y="50" fill="#93c5fd" font-size="9" font-weight="600">EXPORTED CLASSES</text>
+    <g font-size="7" fill="#cbd5e1" font-family="'Fira Code', monospace">
+      <text x="20" y="65">class NewsCrawler</text>
+      <text x="30" y="76">  constructor(url, options: CrawlOptions)</text>
+      <text x="30" y="87">  async crawl(): Promise&lt;CrawlResult&gt;</text>
+      <text x="30" y="98">  pause() / resume() / stop()</text>
+      <text x="30" y="109">  get telemetry: TelemetryFacade</text>
+      
+      <text x="20" y="125">class PriorityQueue&lt;T&gt;</text>
+      <text x="30" y="136">  enqueue(item, priority: number)</text>
+      <text x="30" y="147">  dequeue(): T | undefined</text>
+      <text x="30" y="158">  peek(): T | undefined</text>
+      
+      <text x="20" y="174">class RateLimiter</text>
+      <text x="30" y="185">  acquire(host: string): Promise&lt;void&gt;</text>
+      <text x="30" y="196">  getStats(host): RateLimitStats</text>
+    </g>
+    
+    <!-- Events -->
+    <text x="220" y="50" fill="#93c5fd" font-size="9" font-weight="600">TELEMETRY EVENTS</text>
+    <g font-size="7" fill="#cbd5e1" font-family="'Fira Code', monospace">
+      <text x="225" y="65">telemetry.progress(CrawlProgress)</text>
+      <text x="225" y="76">telemetry.queueEvent(QueueEvent)</text>
+      <text x="225" y="87">telemetry.problem(Problem)</text>
+      <text x="225" y="98">telemetry.milestone(Milestone)</text>
+      <text x="225" y="109">telemetry.plannerStage(Stage)</text>
+    </g>
+    
+    <text x="220" y="130" fill="#93c5fd" font-size="9" font-weight="600">TYPES</text>
+    <g font-size="7" fill="#cbd5e1" font-family="'Fira Code', monospace">
+      <text x="225" y="145">CrawlOptions { depth, maxPages,</text>
+      <text x="235" y="156">  concurrency, rateLimitMs }</text>
+      <text x="225" y="170">CrawlProgress { downloaded, queued,</text>
+      <text x="235" y="181">  errors, bytesDownloaded }</text>
+      <text x="225" y="195">QueueEvent { action, url, reason }</text>
+    </g>
+    
+    <!-- Dependencies -->
+    <text x="15" y="220" fill="#fbbf24" font-size="8" font-weight="600">DEPENDS ON</text>
+    <g font-size="7" fill="#94a3b8">
+      <text x="20" y="233">→ news-crawler-db (articles, fetches, links)</text>
+      <text x="20" y="244">→ news-gazetteer (place matching)</text>
+      <text x="20" y="255">→ news-intelligence (classifiers)</text>
+      <text x="20" y="266">→ @news/protocol (SSE, RemoteObservable)</text>
+    </g>
+  </g>
+  
+  <!-- ==================== -->
+  <!-- DATABASE: news-crawler-db -->
+  <!-- ==================== -->
+  <g transform="translate(50, 150)" font-family="Inter, sans-serif" filter="url(#softShadow)">
+    <rect x="0" y="0" width="360" height="380" rx="12" fill="url(#dbGreen)" opacity="0.15"/>
+    <rect x="0" y="0" width="360" height="380" rx="12" stroke="url(#dbGreen)" stroke-width="2" fill="none"/>
+    <rect x="0" y="0" width="360" height="32" rx="12 12 0 0" fill="url(#dbGreen)" opacity="0.4"/>
+    
+    <text x="20" y="22" fill="#fff" font-size="14" font-weight="700">💾 news-crawler-db</text>
+    <text x="280" y="22" fill="#4ade80" font-size="8">✓ EXTRACTED</text>
+    
+    <!-- Access Modules -->
+    <text x="15" y="50" fill="#86efac" font-size="9" font-weight="600">ACCESS MODULES (DbAdapter)</text>
+    <g font-size="7" fill="#d1fae5" font-family="'Fira Code', monospace">
+      <text x="20" y="65">adapter.articles</text>
+      <text x="30" y="76">  .getById(id): Article | null</text>
+      <text x="30" y="87">  .getByUrl(url): Article | null</text>
+      <text x="30" y="98">  .save(article): number</text>
+      <text x="30" y="109">  .iterate(opts): AsyncIterable&lt;Article&gt;</text>
+      
+      <text x="20" y="127">adapter.fetches</text>
+      <text x="30" y="138">  .record(url, status, headers, body)</text>
+      <text x="30" y="149">  .getLatest(url): FetchRecord | null</text>
+      <text x="30" y="160">  .isFresh(url, maxAge): boolean</text>
+      
+      <text x="20" y="178">adapter.links</text>
+      <text x="30" y="189">  .record(fromUrl, toUrl, type)</text>
+      <text x="30" y="200">  .getOutbound(url): Link[]</text>
+      
+      <text x="20" y="218">adapter.domains</text>
+      <text x="30" y="229">  .upsert(host, stats: DomainStats)</text>
+      <text x="30" y="240">  .getByHost(host): Domain | null</text>
+      
+      <text x="20" y="258">adapter.places</text>
+      <text x="30" y="269">  .getById(id): Place | null</text>
+      <text x="30" y="280">  .search(name, type?): Place[]</text>
+    </g>
+    
+    <!-- Factory -->
+    <text x="15" y="305" fill="#86efac" font-size="9" font-weight="600">FACTORY</text>
+    <g font-size="7" fill="#d1fae5" font-family="'Fira Code', monospace">
+      <text x="20" y="320">createDbAdapter(config): DbAdapter</text>
+      <text x="20" y="333">  config.type: 'sqlite' | 'postgres'</text>
+      <text x="20" y="346">  config.path | config.connectionString</text>
+    </g>
+    
+    <text x="15" y="368" fill="#fbbf24" font-size="7">→ lang-tools (Evented_Class)</text>
+  </g>
+  
+  <!-- ==================== -->
+  <!-- ANALYSIS: news-db-pure-analysis -->
+  <!-- ==================== -->
+  <g transform="translate(50, 560)" font-family="Inter, sans-serif" filter="url(#softShadow)">
+    <rect x="0" y="0" width="360" height="380" rx="12" fill="url(#analysisPurple)" opacity="0.15"/>
+    <rect x="0" y="0" width="360" height="380" rx="12" stroke="url(#analysisPurple)" stroke-width="2" fill="none"/>
+    <rect x="0" y="0" width="360" height="32" rx="12 12 0 0" fill="url(#analysisPurple)" opacity="0.4"/>
+    
+    <text x="20" y="22" fill="#fff" font-size="14" font-weight="700">🔬 news-db-pure-analysis</text>
+    <text x="280" y="22" fill="#a855f7" font-size="8">✓ EXTRACTED</text>
+    
+    <!-- Pure Functions -->
+    <text x="15" y="50" fill="#d8b4fe" font-size="9" font-weight="600">SIMILARITY (pure functions)</text>
+    <g font-size="7" fill="#ede9fe" font-family="'Fira Code', monospace">
+      <text x="20" y="65">computeSimHash(text: string): bigint</text>
+      <text x="20" y="78">hammingDistance(a: bigint, b: bigint): number</text>
+      <text x="20" y="91">areSimilar(a, b, threshold=5): boolean</text>
+      <text x="20" y="104">computeMinHash(tokens, numHashes=128): Uint32Array</text>
+      <text x="20" y="117">jaccardFromMinHash(a, b): number</text>
+    </g>
+    
+    <text x="15" y="140" fill="#d8b4fe" font-size="9" font-weight="600">TRENDS</text>
+    <g font-size="7" fill="#ede9fe" font-family="'Fira Code', monospace">
+      <text x="20" y="155">detectTrends(articles[], windowDays=7): Trend[]</text>
+      <text x="20" y="168">computeVelocity(timestamps[]): number</text>
+      <text x="20" y="181">isBreaking(velocity, threshold): boolean</text>
+    </g>
+    
+    <text x="15" y="204" fill="#d8b4fe" font-size="9" font-weight="600">RECOMMENDER</text>
+    <g font-size="7" fill="#ede9fe" font-family="'Fira Code', monospace">
+      <text x="20" y="219">computeContentSimilarity(a, b): number</text>
+      <text x="20" y="232">computeTagSimilarity(tagsA[], tagsB[]): number</text>
+      <text x="20" y="245">hybridScore(content, tag, trend, weights): number</text>
+      <text x="20" y="258">rankRecommendations(candidates[], limit): Ranked[]</text>
+    </g>
+    
+    <text x="15" y="281" fill="#d8b4fe" font-size="9" font-weight="600">SUMMARIZATION</text>
+    <g font-size="7" fill="#ede9fe" font-family="'Fira Code', monospace">
+      <text x="20" y="296">textRank(sentences[], damping=0.85): Scored[]</text>
+      <text x="20" y="309">extractSummary(text, length: 'brief'|'short'|'full')</text>
+      <text x="20" y="322">tokenizeSentences(text): Sentence[]</text>
+    </g>
+    
+    <text x="15" y="345" fill="#d8b4fe" font-size="9" font-weight="600">SENTIMENT</text>
+    <g font-size="7" fill="#ede9fe" font-family="'Fira Code', monospace">
+      <text x="20" y="360">analyzeSentiment(text): SentimentResult</text>
+      <text x="20" y="373">  → { score: -1..1, confidence, label }</text>
+    </g>
+  </g>
+  
+  <!-- ==================== -->
+  <!-- GAZETTEER: news-gazetteer -->
+  <!-- ==================== -->
+  <g transform="translate(50, 970)" font-family="Inter, sans-serif" filter="url(#softShadow)">
+    <rect x="0" y="0" width="360" height="260" rx="12" fill="url(#geoAmber)" opacity="0.15"/>
+    <rect x="0" y="0" width="360" height="260" rx="12" stroke="url(#geoAmber)" stroke-width="2" fill="none"/>
+    <rect x="0" y="0" width="360" height="32" rx="12 12 0 0" fill="url(#geoAmber)" opacity="0.4"/>
+    
+    <text x="20" y="22" fill="#fff" font-size="14" font-weight="700">🌍 news-gazetteer</text>
+    <text x="290" y="22" fill="#fbbf24" font-size="8">◎ PLANNED</text>
+    
+    <text x="15" y="50" fill="#fde68a" font-size="9" font-weight="600">PLACE MATCHING</text>
+    <g font-size="7" fill="#fef3c7" font-family="'Fira Code', monospace">
+      <text x="20" y="65">matchPlaces(text: string): PlaceMatch[]</text>
+      <text x="20" y="78">disambiguate(candidates[], context): Place</text>
+      <text x="20" y="91">getHierarchy(place): Place[] (country→region→city)</text>
+      <text x="20" y="104">nearbyPlaces(lat, lon, radiusKm): Place[]</text>
+    </g>
+    
+    <text x="15" y="127" fill="#fde68a" font-size="9" font-weight="600">PLACE DATA</text>
+    <g font-size="7" fill="#fef3c7" font-family="'Fira Code', monospace">
+      <text x="20" y="142">Place { id, name, type, lat, lon, population,</text>
+      <text x="30" y="155">  country_code, region_code, aliases[] }</text>
+      <text x="20" y="170">PlaceType: 'country'|'region'|'city'|'landmark'</text>
+    </g>
+    
+    <text x="15" y="193" fill="#fde68a" font-size="9" font-weight="600">HUB DETECTION</text>
+    <g font-size="7" fill="#fef3c7" font-family="'Fira Code', monospace">
+      <text x="20" y="208">detectPlaceHub(url, places[]): HubEvidence | null</text>
+      <text x="20" y="221">inferHubPlace(articles[]): Place | null</text>
+    </g>
+    
+    <text x="15" y="248" fill="#fbbf24" font-size="7">→ ta-tensor (potential: spatial indexing)</text>
+  </g>
+  
+  <!-- ==================== -->
+  <!-- INTELLIGENCE: news-intelligence -->
+  <!-- ==================== -->
+  <g transform="translate(1390, 150)" font-family="Inter, sans-serif" filter="url(#softShadow)">
+    <rect x="0" y="0" width="360" height="350" rx="12" fill="url(#intelligenceIndigo)" opacity="0.15"/>
+    <rect x="0" y="0" width="360" height="350" rx="12" stroke="url(#intelligenceIndigo)" stroke-width="2" fill="none"/>
+    <rect x="0" y="0" width="360" height="32" rx="12 12 0 0" fill="url(#intelligenceIndigo)" opacity="0.4"/>
+    
+    <text x="20" y="22" fill="#fff" font-size="14" font-weight="700">🧠 news-intelligence</text>
+    <text x="290" y="22" fill="#a5b4fc" font-size="8">◎ PLANNED</text>
+    
+    <text x="15" y="50" fill="#c7d2fe" font-size="9" font-weight="600">CLASSIFIERS</text>
+    <g font-size="7" fill="#e0e7ff" font-family="'Fira Code', monospace">
+      <text x="20" y="65">class ArticleClassifier</text>
+      <text x="30" y="78">  classify(html, url): Classification</text>
+      <text x="30" y="91">  → { isArticle, confidence, signals[] }</text>
+      
+      <text x="20" y="109">class HubClassifier</text>
+      <text x="30" y="122">  classify(html, url): HubClassification</text>
+      <text x="30" y="135">  → { isHub, hubType, coverage }</text>
+      
+      <text x="20" y="153">class NavClassifier</text>
+      <text x="30" y="166">  extractLinks(html): ClassifiedLink[]</text>
+    </g>
+    
+    <text x="15" y="189" fill="#c7d2fe" font-size="9" font-weight="600">PLANNER</text>
+    <g font-size="7" fill="#e0e7ff" font-family="'Fira Code', monospace">
+      <text x="20" y="204">class CrawlPlanner</text>
+      <text x="30" y="217">  planNextBatch(state): PlannerAction[]</text>
+      <text x="30" y="230">  detectGaps(coverage): Gap[]</text>
+      <text x="30" y="243">  suggestSeeds(gaps): SeedUrl[]</text>
+    </g>
+    
+    <text x="15" y="266" fill="#c7d2fe" font-size="9" font-weight="600">KNOWLEDGE</text>
+    <g font-size="7" fill="#e0e7ff" font-family="'Fira Code', monospace">
+      <text x="20" y="281">extractFacts(article): Fact[]</text>
+      <text x="20" y="294">buildEntityGraph(facts[]): EntityGraph</text>
+      <text x="20" y="307">queryRelations(entity, type?): Relation[]</text>
+    </g>
+    
+    <text x="15" y="330" fill="#fbbf24" font-size="7">→ news-db-pure-analysis, news-gazetteer</text>
+  </g>
+  
+  <!-- ==================== -->
+  <!-- SERVICES: news-services -->
+  <!-- ==================== -->
+  <g transform="translate(1390, 530)" font-family="Inter, sans-serif" filter="url(#softShadow)">
+    <rect x="0" y="0" width="360" height="340" rx="12" fill="url(#servicesTeal)" opacity="0.15"/>
+    <rect x="0" y="0" width="360" height="340" rx="12" stroke="url(#servicesTeal)" stroke-width="2" fill="none"/>
+    <rect x="0" y="0" width="360" height="32" rx="12 12 0 0" fill="url(#servicesTeal)" opacity="0.4"/>
+    
+    <text x="20" y="22" fill="#fff" font-size="14" font-weight="700">⚙️ news-services</text>
+    <text x="290" y="22" fill="#5eead4" font-size="8">◎ PLANNED</text>
+    
+    <text x="15" y="50" fill="#99f6e4" font-size="9" font-weight="600">BILLING (SubscriptionService)</text>
+    <g font-size="7" fill="#ccfbf1" font-family="'Fira Code', monospace">
+      <text x="20" y="65">getSubscription(userId): Subscription</text>
+      <text x="20" y="78">createSubscription(userId, plan): Subscription</text>
+      <text x="20" y="91">cancelSubscription(userId): void</text>
+      <text x="20" y="104">getPlanLimits(plan): PlanLimits</text>
+    </g>
+    
+    <text x="15" y="127" fill="#99f6e4" font-size="9" font-weight="600">USAGE (UsageTracker)</text>
+    <g font-size="7" fill="#ccfbf1" font-family="'Fira Code', monospace">
+      <text x="20" y="142">increment(userId, metric, count=1)</text>
+      <text x="20" y="155">getUsage(userId, metric, period?): number</text>
+      <text x="20" y="168">isOverLimit(userId, metric): boolean</text>
+    </g>
+    
+    <text x="15" y="191" fill="#99f6e4" font-size="9" font-weight="600">TRUST (CredibilityScorer)</text>
+    <g font-size="7" fill="#ccfbf1" font-family="'Fira Code', monospace">
+      <text x="20" y="206">scoreArticle(article): CredibilityResult</text>
+      <text x="20" y="219">scoreSource(host): SourceCredibility</text>
+      <text x="20" y="232">matchFactChecks(claims[]): FactCheckMatch[]</text>
+    </g>
+    
+    <text x="15" y="255" fill="#99f6e4" font-size="9" font-weight="600">USERS (UserService)</text>
+    <g font-size="7" fill="#ccfbf1" font-family="'Fira Code', monospace">
+      <text x="20" y="270">authenticate(email, password): Session</text>
+      <text x="20" y="283">getProfile(userId): UserProfile</text>
+      <text x="20" y="296">updatePreferences(userId, prefs): void</text>
+    </g>
+    
+    <text x="15" y="322" fill="#fbbf24" font-size="7">→ news-crawler-db (billingAdapter, userAdapter)</text>
+  </g>
+  
+  <!-- ==================== -->
+  <!-- API: news-api -->
+  <!-- ==================== -->
+  <g transform="translate(700, 620)" font-family="Inter, sans-serif" filter="url(#softShadow)">
+    <rect x="0" y="0" width="400" height="350" rx="12" fill="url(#apiPink)" opacity="0.15"/>
+    <rect x="0" y="0" width="400" height="350" rx="12" stroke="url(#apiPink)" stroke-width="2" fill="none"/>
+    <rect x="0" y="0" width="400" height="32" rx="12 12 0 0" fill="url(#apiPink)" opacity="0.4"/>
+    
+    <text x="20" y="22" fill="#fff" font-size="14" font-weight="700">🔌 news-api</text>
+    <text x="290" y="22" fill="#f9a8d4" font-size="8">◎ PLANNED (REST gateway)</text>
+    
+    <!-- REST Endpoints -->
+    <text x="15" y="50" fill="#fbcfe8" font-size="9" font-weight="600">REST ENDPOINTS</text>
+    <g font-size="7" fill="#fce7f3" font-family="'Fira Code', monospace">
+      <text x="20" y="65">GET  /api/v1/articles</text>
+      <text x="20" y="76">GET  /api/v1/articles/:id</text>
+      <text x="20" y="87">GET  /api/v1/articles/:id/summary?length=short</text>
+      <text x="20" y="98">GET  /api/v1/articles/:id/sentiment</text>
+      <text x="20" y="109">GET  /api/v1/articles/:id/recommendations</text>
+      <text x="20" y="120">GET  /api/v1/articles/:id/credibility</text>
+      
+      <text x="20" y="136">GET  /api/v1/domains</text>
+      <text x="20" y="147">GET  /api/v1/domains/:host</text>
+      
+      <text x="20" y="163">GET  /api/v1/topics</text>
+      <text x="20" y="174">GET  /api/v1/topics/:id/articles</text>
+      <text x="20" y="185">GET  /api/v1/trends</text>
+      
+      <text x="20" y="201">POST /api/v1/crawl { url, options }</text>
+      <text x="20" y="212">GET  /api/v1/crawls</text>
+      <text x="20" y="223">GET  /api/v1/crawls/:jobId</text>
+      <text x="20" y="234">POST /api/v1/crawls/:jobId/stop</text>
+    </g>
+    
+    <!-- SSE -->
+    <text x="220" y="50" fill="#fbcfe8" font-size="9" font-weight="600">SSE STREAMS</text>
+    <g font-size="7" fill="#fce7f3" font-family="'Fira Code', monospace">
+      <text x="225" y="65">GET /events?job=:jobId</text>
+      <text x="235" y="76">→ event: progress</text>
+      <text x="235" y="87">→ event: queue</text>
+      <text x="235" y="98">→ event: milestone</text>
+      <text x="235" y="109">→ event: problem</text>
+      
+      <text x="225" y="128">GET /api/crawl-telemetry/events</text>
+      <text x="225" y="141">GET /api/crawl-telemetry/remote-obs</text>
+    </g>
+    
+    <!-- Auth -->
+    <text x="220" y="164" fill="#fbcfe8" font-size="9" font-weight="600">AUTH MIDDLEWARE</text>
+    <g font-size="7" fill="#fce7f3" font-family="'Fira Code', monospace">
+      <text x="225" y="179">requireAuth(req, res, next)</text>
+      <text x="225" y="192">requirePlanLimit(metric)(req,res,next)</text>
+      <text x="225" y="205">validateApiKey(req, res, next)</text>
+    </g>
+    
+    <!-- Billing endpoints -->
+    <text x="220" y="228" fill="#fbcfe8" font-size="9" font-weight="600">BILLING</text>
+    <g font-size="7" fill="#fce7f3" font-family="'Fira Code', monospace">
+      <text x="225" y="243">GET  /api/v1/billing/subscription</text>
+      <text x="225" y="254">POST /api/v1/billing/checkout</text>
+      <text x="225" y="265">POST /api/v1/billing/portal</text>
+      <text x="225" y="276">POST /api/v1/webhooks/stripe</text>
+    </g>
+    
+    <text x="15" y="305" fill="#fbbf24" font-size="8" font-weight="600">DEPENDS ON ALL MODULES</text>
+    <g font-size="7" fill="#94a3b8">
+      <text x="20" y="318">→ news-crawler-core, news-crawler-db</text>
+      <text x="20" y="329">→ news-db-pure-analysis, news-intelligence</text>
+      <text x="20" y="340">→ news-services, news-gazetteer</text>
+    </g>
+  </g>
+  
+  <!-- ==================== -->
+  <!-- UI MODULES -->
+  <!-- ==================== -->
+  <g transform="translate(450, 1020)" font-family="Inter, sans-serif" filter="url(#cardShadow)">
+    <rect x="0" y="0" width="900" height="200" rx="12" fill="url(#uiOrange)" opacity="0.1"/>
+    <rect x="0" y="0" width="900" height="200" rx="12" stroke="url(#uiOrange)" stroke-width="1.5" fill="none"/>
+    <rect x="0" y="0" width="900" height="28" rx="12 12 0 0" fill="url(#uiOrange)" opacity="0.3"/>
+    
+    <text x="20" y="19" fill="#fff" font-size="12" font-weight="700">🎨 UI MODULES (16+)</text>
+    <text x="400" y="19" fill="#fed7aa" font-size="9">jsgui3-html controls • SSR + hydration • pluggable dashboards</text>
+    
+    <!-- Grid of UI modules with their API usage -->
+    <g font-size="6" fill="#fdba74">
+      <!-- Row 1 -->
+      <g transform="translate(15, 38)">
+        <rect width="140" height="48" rx="4" fill="#1c1917" opacity="0.6"/>
+        <text x="5" y="12" fill="#fb923c" font-weight="600">📊 Data Explorer</text>
+        <text x="5" y="24" fill="#a8a29e">GET /api/v1/articles</text>
+        <text x="5" y="34" fill="#a8a29e">GET /api/v1/domains</text>
+        <text x="5" y="44" fill="#78716c">adapter.articles.iterate()</text>
+      </g>
+      
+      <g transform="translate(165, 38)">
+        <rect width="140" height="48" rx="4" fill="#1c1917" opacity="0.6"/>
+        <text x="5" y="12" fill="#fb923c" font-weight="600">👁️ Crawl Observer</text>
+        <text x="5" y="24" fill="#a8a29e">GET /events (SSE)</text>
+        <text x="5" y="34" fill="#a8a29e">telemetry.* events</text>
+        <text x="5" y="44" fill="#78716c">CrawlProgress, QueueEvent</text>
+      </g>
+      
+      <g transform="translate(315, 38)">
+        <rect width="140" height="48" rx="4" fill="#1c1917" opacity="0.6"/>
+        <text x="5" y="12" fill="#fb923c" font-weight="600">📈 Analytics Hub</text>
+        <text x="5" y="24" fill="#a8a29e">GET /api/v1/trends</text>
+        <text x="5" y="34" fill="#a8a29e">GET /api/v1/topics</text>
+        <text x="5" y="44" fill="#78716c">detectTrends(), textRank()</text>
+      </g>
+      
+      <g transform="translate(465, 38)">
+        <rect width="140" height="48" rx="4" fill="#1c1917" opacity="0.6"/>
+        <text x="5" y="12" fill="#fb923c" font-weight="600">🗺️ Gazetteer UI</text>
+        <text x="5" y="24" fill="#a8a29e">matchPlaces(text)</text>
+        <text x="5" y="34" fill="#a8a29e">getHierarchy(place)</text>
+        <text x="5" y="44" fill="#78716c">adapter.places.search()</text>
+      </g>
+      
+      <g transform="translate(615, 38)">
+        <rect width="140" height="48" rx="4" fill="#1c1917" opacity="0.6"/>
+        <text x="5" y="12" fill="#fb923c" font-weight="600">✅ Quality</text>
+        <text x="5" y="24" fill="#a8a29e">GET /:id/credibility</text>
+        <text x="5" y="34" fill="#a8a29e">scoreArticle(), scoreSource()</text>
+        <text x="5" y="44" fill="#78716c">matchFactChecks(claims)</text>
+      </g>
+      
+      <g transform="translate(765, 38)">
+        <rect width="120" height="48" rx="4" fill="#1c1917" opacity="0.6"/>
+        <text x="5" y="12" fill="#fb923c" font-weight="600">🛡️ Admin</text>
+        <text x="5" y="24" fill="#a8a29e">UserService.*</text>
+        <text x="5" y="34" fill="#a8a29e">SubscriptionService.*</text>
+        <text x="5" y="44" fill="#78716c">UsageTracker.getUsage()</text>
+      </g>
+      
+      <!-- Row 2 -->
+      <g transform="translate(15, 95)">
+        <rect width="140" height="48" rx="4" fill="#1c1917" opacity="0.6"/>
+        <text x="5" y="12" fill="#fb923c" font-weight="600">🎯 Hub Matrix</text>
+        <text x="5" y="24" fill="#a8a29e">HubClassifier.classify()</text>
+        <text x="5" y="34" fill="#a8a29e">detectPlaceHub()</text>
+        <text x="5" y="44" fill="#78716c">inferHubPlace(articles)</text>
+      </g>
+      
+      <g transform="translate(165, 95)">
+        <rect width="140" height="48" rx="4" fill="#1c1917" opacity="0.6"/>
+        <text x="5" y="12" fill="#fb923c" font-weight="600">🌳 Decision Tree</text>
+        <text x="5" y="24" fill="#a8a29e">ArticleClassifier.classify()</text>
+        <text x="5" y="34" fill="#a8a29e">NavClassifier.extractLinks()</text>
+        <text x="5" y="44" fill="#78716c">visualization of signals[]</text>
+      </g>
+      
+      <g transform="translate(315, 95)">
+        <rect width="140" height="48" rx="4" fill="#1c1917" opacity="0.6"/>
+        <text x="5" y="12" fill="#fb923c" font-weight="600">⏱️ Rate Limits</text>
+        <text x="5" y="24" fill="#a8a29e">RateLimiter.getStats(host)</text>
+        <text x="5" y="34" fill="#a8a29e">real-time per-domain caps</text>
+        <text x="5" y="44" fill="#78716c">429 counts, blackout periods</text>
+      </g>
+      
+      <g transform="translate(465, 95)">
+        <rect width="140" height="48" rx="4" fill="#1c1917" opacity="0.6"/>
+        <text x="5" y="12" fill="#fb923c" font-weight="600">⚡ Background</text>
+        <text x="5" y="24" fill="#a8a29e">POST /api/background-tasks</text>
+        <text x="5" y="34" fill="#a8a29e">GET /api/background-tasks/:id</text>
+        <text x="5" y="44" fill="#78716c">compression, export, vacuum</text>
+      </g>
+      
+      <g transform="translate(615, 95)">
+        <rect width="140" height="48" rx="4" fill="#1c1917" opacity="0.6"/>
+        <text x="5" y="12" fill="#fb923c" font-weight="600">📰 Article View</text>
+        <text x="5" y="24" fill="#a8a29e">GET /api/v1/articles/:id</text>
+        <text x="5" y="34" fill="#a8a29e">/:id/summary, /:id/sentiment</text>
+        <text x="5" y="44" fill="#78716c">adapter.fetches.getLatest(url)</text>
+      </g>
+      
+      <g transform="translate(765, 95)">
+        <rect width="120" height="48" rx="4" fill="#1c1917" opacity="0.6"/>
+        <text x="5" y="12" fill="#fb923c" font-weight="600">📚 +6 more</text>
+        <text x="5" y="24" fill="#a8a29e">Docs, Diagrams, Art,</text>
+        <text x="5" y="34" fill="#a8a29e">Design Studio, Control</text>
+        <text x="5" y="44" fill="#78716c">Lab, Test Studio</text>
+      </g>
+    </g>
+    
+    <!-- Footer -->
+    <text x="20" y="185" fill="#fbbf24" font-size="7">All UI modules: jsgui3-html SSR → hydration (activate()) → @news/protocol (RemoteObservable, SSE)</text>
+  </g>
+  
+  <!-- ==================== -->
+  <!-- FOUNDATION -->
+  <!-- ==================== -->
+  <g transform="translate(50, 1260)" font-family="Inter, sans-serif">
+    <text x="0" y="0" fill="#64748b" font-size="10" font-weight="600" letter-spacing="1">FOUNDATION PACKAGES</text>
+    
+    <g transform="translate(0, 15)" filter="url(#cardShadow)">
+      <rect width="180" height="70" rx="6" fill="url(#foundationSlate)" opacity="0.2"/>
+      <rect width="180" height="70" rx="6" stroke="url(#foundationSlate)" stroke-width="1" fill="none"/>
+      <text x="10" y="18" fill="#94a3b8" font-size="10" font-weight="600">jsgui3-html</text>
+      <g font-size="6" fill="#64748b" font-family="'Fira Code', monospace">
+        <text x="10" y="32">Control.render(): string</text>
+        <text x="10" y="42">Control.activate(): void</text>
+        <text x="10" y="52">Data_Model_View_Model_Control</text>
+        <text x="10" y="62">compositional.model pattern</text>
+      </g>
+    </g>
+    
+    <g transform="translate(200, 15)" filter="url(#cardShadow)">
+      <rect width="170" height="70" rx="6" fill="url(#foundationSlate)" opacity="0.2"/>
+      <rect width="170" height="70" rx="6" stroke="url(#foundationSlate)" stroke-width="1" fill="none"/>
+      <text x="10" y="18" fill="#94a3b8" font-size="10" font-weight="600">lang-tools</text>
+      <g font-size="6" fill="#64748b" font-family="'Fira Code', monospace">
+        <text x="10" y="32">Data_Object (reactive state)</text>
+        <text x="10" y="42">Evented_Class (pub/sub)</text>
+        <text x="10" y="52">Collection, Map_Collection</text>
+        <text x="10" y="62">get/set with change events</text>
+      </g>
+    </g>
+    
+    <g transform="translate(390, 15)" filter="url(#cardShadow)">
+      <rect width="160" height="70" rx="6" fill="url(#foundationSlate)" opacity="0.2"/>
+      <rect width="160" height="70" rx="6" stroke="url(#foundationSlate)" stroke-width="1" fill="none"/>
+      <text x="10" y="18" fill="#94a3b8" font-size="10" font-weight="600">ta-tensor</text>
+      <g font-size="6" fill="#64748b" font-family="'Fira Code', monospace">
+        <text x="10" y="32">Tensor(shape: number[])</text>
+        <text x="10" y="42">get(...indices): number</text>
+        <text x="10" y="52">set(...indices, value)</text>
+        <text x="10" y="62">pos_to_i(), i_to_pos()</text>
+      </g>
+    </g>
+    
+    <g transform="translate(570, 15)" filter="url(#cardShadow)">
+      <rect width="180" height="70" rx="6" fill="url(#foundationSlate)" opacity="0.2"/>
+      <rect width="180" height="70" rx="6" stroke="url(#foundationSlate)" stroke-width="1" fill="none"/>
+      <text x="10" y="18" fill="#94a3b8" font-size="10" font-weight="600">@news/protocol</text>
+      <g font-size="6" fill="#64748b" font-family="'Fira Code', monospace">
+        <text x="10" y="32">Remote_Observable&lt;T&gt;</text>
+        <text x="10" y="42">server.publish_observable(obs)</text>
+        <text x="10" y="52">Control.bindRemote(obs)</text>
+        <text x="10" y="62">SSE event serialization</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- Connection lines (subtle) -->
+  <g stroke="#c9a227" stroke-width="0.8" fill="none" opacity="0.2" marker-end="url(#arrowGold)">
+    <!-- DB to Core -->
+    <path d="M 410,350 Q 500,320 700,380"/>
+    <!-- Analysis to Core -->
+    <path d="M 410,650 Q 550,550 700,450"/>
+    <!-- Core to API -->
+    <path d="M 900,580 L 900,620"/>
+    <!-- Intelligence to API -->
+    <path d="M 1390,400 Q 1200,500 1100,620"/>
+    <!-- Services to API -->
+    <path d="M 1390,700 Q 1200,700 1100,750"/>
+    <!-- API to UI -->
+    <path d="M 900,970 L 900,1020"/>
+  </g>
+  
+  <!-- Legend -->
+  <g transform="translate(1400, 1260)" font-family="Inter, sans-serif" font-size="8">
+    <text x="0" y="0" fill="#64748b" font-size="10" font-weight="600">LEGEND</text>
+    
+    <circle cx="10" cy="25" r="5" fill="url(#coreBlue)"/>
+    <text x="22" y="28" fill="#94a3b8">Crawler Core</text>
+    
+    <circle cx="100" cy="25" r="5" fill="url(#dbGreen)"/>
+    <text x="112" y="28" fill="#94a3b8">Database</text>
+    
+    <circle cx="10" cy="48" r="5" fill="url(#analysisPurple)"/>
+    <text x="22" y="51" fill="#94a3b8">Analysis (pure)</text>
+    
+    <circle cx="100" cy="48" r="5" fill="url(#geoAmber)"/>
+    <text x="112" y="51" fill="#94a3b8">Geographic</text>
+    
+    <circle cx="10" cy="71" r="5" fill="url(#intelligenceIndigo)"/>
+    <text x="22" y="74" fill="#94a3b8">Intelligence</text>
+    
+    <circle cx="100" cy="71" r="5" fill="url(#servicesTeal)"/>
+    <text x="112" y="74" fill="#94a3b8">Services</text>
+    
+    <text x="200" y="28" fill="#4ade80" font-size="7">✓ EXTRACTED</text>
+    <text x="200" y="45" fill="#fbbf24" font-size="7">◎ PLANNED</text>
+  </g>
+  
+  <!-- Decorative corners -->
+  <g stroke="url(#goldAccent)" stroke-width="1.5" fill="none" opacity="0.15">
+    <path d="M 20,20 L 20,55 M 20,20 L 55,20"/>
+    <path d="M 1780,20 L 1780,55 M 1780,20 L 1745,20"/>
+    <path d="M 20,1380 L 20,1345 M 20,1380 L 55,1380"/>
+    <path d="M 1780,1380 L 1780,1345 M 1780,1380 L 1745,1380"/>
+  </g>
+</svg>

@@ -6,10 +6,13 @@ const { createTwoColumnLayoutControls } = require('../../../controls/layouts/Two
 const { CATEGORIES } = require('../subApps/registry');
 const {
   buildHomeActivator,
+  buildCloudCrawlActivator,
   buildPanelDemoActivator,
   buildMultiModalCrawlActivator,
   buildDownloadsActivator,
+  buildDownloadVerificationActivator,
   buildSearchExplorerActivator,
+  buildScreenshotReviewActivator,
   buildPlaceholderActivator,
   buildSubAppDelegateActivator,
 } = require('../activators');
@@ -713,6 +716,434 @@ class UnifiedShell extends Control {
         font-size: 11px;
       }
 
+      .download-verification-table-card {
+        padding: 0;
+        overflow: hidden;
+      }
+
+      .download-verification-table-wrap {
+        overflow-x: auto;
+      }
+
+      .download-verification-table {
+        width: 100%;
+        min-width: 960px;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .download-verification-table th,
+      .download-verification-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(212, 165, 116, 0.14);
+        vertical-align: top;
+        text-align: left;
+      }
+
+      .download-verification-table th {
+        color: var(--text-muted);
+        background: rgba(0, 0, 0, 0.22);
+        font-weight: 600;
+      }
+
+      .download-verification-table td strong,
+      .download-verification-table td span,
+      .download-verification-table td em {
+        display: block;
+        max-width: 280px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-style: normal;
+      }
+
+      .download-verification-table td strong {
+        color: var(--text-cream);
+      }
+
+      .download-verification-table td span,
+      .download-verification-table td em,
+      .download-verification-table__time {
+        color: var(--text-muted);
+      }
+
+      .download-verification-table__proof {
+        display: flex;
+        gap: 6px;
+        align-items: flex-start;
+      }
+
+      .cloud-crawl-panel {
+        max-width: 1040px;
+      }
+
+      .cloud-crawl-hero {
+        padding-top: 28px;
+        padding-bottom: 28px;
+      }
+
+      .cloud-crawl-strip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 22px;
+      }
+
+      .cloud-crawl-strip__metrics,
+      .cloud-crawl-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .cloud-crawl-actions {
+        justify-content: flex-end;
+        margin-top: 0;
+      }
+
+      .cloud-crawl-pill {
+        min-height: 34px;
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid rgba(212, 165, 116, 0.36);
+        border-radius: 8px;
+        padding: 0 12px;
+        color: var(--text-muted);
+        background: rgba(0, 0, 0, 0.18);
+        font-size: 12px;
+      }
+
+      .cloud-crawl-target-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+      }
+
+      .cloud-crawl-target {
+        min-height: 116px;
+        border: 1px solid rgba(212, 165, 116, 0.28);
+        border-radius: 8px;
+        padding: 14px;
+        background: var(--bg-leather);
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+
+      .cloud-crawl-target--complete {
+        border-color: rgba(74, 222, 128, 0.55);
+      }
+
+      .cloud-crawl-target__label {
+        color: var(--text-cream);
+        font-size: 15px;
+      }
+
+      .cloud-crawl-target__domain,
+      .cloud-crawl-target__count {
+        color: var(--text-muted);
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .cloud-crawl-target__bar {
+        height: 8px;
+        margin-top: auto;
+        overflow: hidden;
+        border-radius: 99px;
+        background: rgba(0, 0, 0, 0.32);
+      }
+
+      .cloud-crawl-target__fill {
+        display: block;
+        width: 0%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #22c55e 0%, #60a5fa 100%);
+        transition: width 0.25s ease;
+      }
+
+      .cloud-crawl-downloads {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .cloud-crawl-download {
+        display: grid;
+        grid-template-columns: 120px minmax(0, 1fr) 230px;
+        gap: 12px;
+        align-items: center;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(212, 165, 116, 0.14);
+      }
+
+      .cloud-crawl-download:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      .cloud-crawl-download strong {
+        color: var(--text-cream);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .cloud-crawl-download span,
+      .cloud-crawl-download em {
+        color: var(--text-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-style: normal;
+      }
+
+      .cloud-crawl-download em {
+        text-align: right;
+        font-size: 11px;
+      }
+
+      @media (max-width: 900px) {
+        .cloud-crawl-strip {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .cloud-crawl-actions {
+          justify-content: flex-start;
+        }
+
+        .cloud-crawl-download {
+          grid-template-columns: 1fr;
+          gap: 4px;
+        }
+
+        .cloud-crawl-download em {
+          text-align: left;
+        }
+      }
+
+      .screenshot-review-panel {
+        max-width: 1180px;
+      }
+
+      .screenshot-review-layout {
+        display: grid;
+        grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .screenshot-review-runs {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .screenshot-review-filters {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .screenshot-review-run-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 620px;
+        overflow: auto;
+      }
+
+      .screenshot-review-run {
+        width: 100%;
+        min-height: 72px;
+        padding: 10px;
+        border: 1px solid rgba(212, 165, 116, 0.24);
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.18);
+        color: var(--text-cream);
+        text-align: left;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .screenshot-review-run--active {
+        border-color: rgba(96, 165, 250, 0.72);
+        background: rgba(96, 165, 250, 0.12);
+      }
+
+      .screenshot-review-run strong,
+      .screenshot-review-run span,
+      .screenshot-review-run em {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .screenshot-review-run span,
+      .screenshot-review-run em {
+        color: var(--text-muted);
+        font-size: 12px;
+        font-style: normal;
+      }
+
+      .screenshot-review-detail {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .screenshot-review-gallery__header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+        margin-bottom: 14px;
+      }
+
+      .screenshot-review-gallery__header h3 {
+        margin: 0 0 4px;
+        color: var(--gold);
+        font-size: 18px;
+      }
+
+      .screenshot-review-gallery__header span,
+      .screenshot-review-gallery__header strong {
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .screenshot-review-image-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+      }
+
+      .screenshot-review-image-card {
+        margin: 0;
+        border: 1px solid rgba(212, 165, 116, 0.22);
+        border-radius: 8px;
+        overflow: hidden;
+        background: rgba(0, 0, 0, 0.16);
+      }
+
+      .screenshot-review-image-card img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 10;
+        object-fit: cover;
+        background: rgba(0, 0, 0, 0.35);
+      }
+
+      .screenshot-review-image-card__missing {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        aspect-ratio: 16 / 10;
+        color: var(--text-muted);
+        background: rgba(0, 0, 0, 0.28);
+        font-size: 12px;
+      }
+
+      .screenshot-review-image-card figcaption {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 10px;
+        padding: 9px 10px;
+        color: var(--text-muted);
+        font-size: 12px;
+        align-items: center;
+      }
+
+      .screenshot-review-image-card figcaption strong,
+      .screenshot-review-image-card figcaption span,
+      .screenshot-review-image-card figcaption a {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .screenshot-review-image-card figcaption strong {
+        color: var(--text-cream);
+      }
+
+      .screenshot-review-image-card figcaption a {
+        color: #93c5fd;
+        text-decoration: none;
+      }
+
+      .screenshot-review-comment-log {
+        min-height: 160px;
+        max-height: 260px;
+        overflow: auto;
+        white-space: pre-wrap;
+        color: var(--text-muted);
+        background: rgba(0, 0, 0, 0.22);
+        border: 1px solid rgba(212, 165, 116, 0.18);
+        border-radius: 8px;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 12px;
+      }
+
+      .screenshot-review-comment-form {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .screenshot-review-comment-input {
+        min-height: 92px;
+        resize: vertical;
+      }
+
+      @media (max-width: 980px) {
+        .screenshot-review-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .screenshot-review-filters {
+          grid-template-columns: 1fr;
+        }
+
+        .screenshot-review-run-list {
+          max-height: 300px;
+        }
+      }
+
+      .download-verification-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 42px;
+        height: 24px;
+        border-radius: 7px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .download-verification-badge--ok {
+        border: 1px solid rgba(74, 222, 128, 0.48);
+        color: var(--success);
+        background: rgba(74, 222, 128, 0.08);
+      }
+
+      .download-verification-badge--warn {
+        border: 1px solid rgba(248, 113, 113, 0.48);
+        color: var(--error);
+        background: rgba(248, 113, 113, 0.08);
+      }
+
       /* Layout utilities */
       .mt-24  { margin-top: 24px; }
       .mt-12  { margin-top: 12px; }
@@ -899,8 +1330,11 @@ class UnifiedShell extends Control {
           ${buildPanelDemoActivator()}
 
           ${buildMultiModalCrawlActivator()}
+          ${buildCloudCrawlActivator()}
           ${buildDownloadsActivator()}
+          ${buildDownloadVerificationActivator()}
           ${buildSearchExplorerActivator()}
+          ${buildScreenshotReviewActivator()}
         })();
 
         // ─── Sub-app delegated event handlers ──────────────────

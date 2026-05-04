@@ -1,0 +1,18 @@
+{
+  "description": "Simple distributed crawl config: one domain, low page limit, Oracle/v2 server shape.",
+  "port": 3200,
+  "db": "data/news-simple.db",
+  "maxPages": 5,
+  "maxConcurrent": 1,
+  "idleTimeoutMin": 10,
+  "autoStart": false,
+  "domains": [
+    {
+      "domain": "bbc.com",
+      "maxPages": 5,
+      "seedUrls": [
+        "https://www.bbc.com/news"
+      ]
+    }
+  ]
+}

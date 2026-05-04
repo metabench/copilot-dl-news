@@ -1,0 +1,112 @@
+{
+  "ok": true,
+  "baseUrl": "http://127.0.0.1:58426",
+  "outputDir": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-five-site-cloud-crawl-ui\\screenshots",
+  "capturedAt": "2026-05-04T00:16:31.826Z",
+  "routes": [
+    {
+      "key": "cloud-crawl",
+      "url": "http://127.0.0.1:58426/?app=cloud-crawl",
+      "screenshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-five-site-cloud-crawl-ui\\screenshots\\cloud-crawl.png",
+      "screenshotBytes": 134857,
+      "metrics": {
+        "title": "Unified App Shell",
+        "activeNav": "Cloud Crawl",
+        "loaded": true,
+        "textLength": 2635,
+        "bbcMentions": 1,
+        "emptyStates": 0,
+        "horizontalOverflow": false,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "downloadsStats": {},
+        "cloudCrawlStats": {
+          "remote": "configured",
+          "activeJobs": "0",
+          "downloaded": "25 / 25",
+          "errors": "0"
+        },
+        "iframeCount": 0,
+        "iframeTexts": [],
+        "iframeLoadingMentions": 0
+      }
+    },
+    {
+      "key": "downloads",
+      "url": "http://127.0.0.1:58426/?app=downloads",
+      "screenshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-five-site-cloud-crawl-ui\\screenshots\\downloads.png",
+      "screenshotBytes": 123290,
+      "metrics": {
+        "title": "Unified App Shell",
+        "activeNav": "Downloads",
+        "loaded": true,
+        "textLength": 1793,
+        "bbcMentions": 0,
+        "emptyStates": 0,
+        "horizontalOverflow": false,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "downloadsStats": {
+          "total": "272464",
+          "verified": "249616",
+          "bytes": "117.7 GB",
+          "progress-text": "0 / 50"
+        },
+        "cloudCrawlStats": {},
+        "iframeCount": 0,
+        "iframeTexts": [],
+        "iframeLoadingMentions": 0
+      }
+    },
+    {
+      "key": "crawl-status",
+      "url": "http://127.0.0.1:58426/?app=crawl-status",
+      "screenshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-five-site-cloud-crawl-ui\\screenshots\\crawl-status.png",
+      "screenshotBytes": 101891,
+      "metrics": {
+        "title": "Unified App Shell",
+        "activeNav": "Crawl Status",
+        "loaded": true,
+        "textLength": 542,
+        "bbcMentions": 0,
+        "emptyStates": 0,
+        "horizontalOverflow": false,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "downloadsStats": {},
+        "cloudCrawlStats": {},
+        "iframeCount": 1,
+        "iframeTexts": [
+          {
+            "url": "http://127.0.0.1:58426/crawl-status",
+            "text": "Ongoing Crawl Status\nLive updates via /api/crawl-telemetry/events, snapshots via /api/v1/crawl/jobs\nAPI docs\njobs JSON\nevents stream\ntelemetry history\ncrawl observer\nStart crawl (in-process)\nProfile\nManual URL\nGuardian news\nSimple distributed smoke\nStart URL\nStart\nInstall Guardian presets\nProfiles\nOperation: intelligent\nAdvanced (operation + overrides)\nReady to start a crawl.\nJobs: 0 · telemetry: /api/crawl-telemetry/events\nJob\tStatus\tProgress\tVisited\tDownloaded\tErrors\tQueue\tLast Activity\tControls\nNo active crawls."
+          }
+        ],
+        "iframeLoadingMentions": 0
+      }
+    }
+  ],
+  "browserEvents": [
+    {
+      "type": "console",
+      "level": "log",
+      "text": "🎛️ Unified App Shell initialized"
+    },
+    {
+      "type": "console",
+      "level": "log",
+      "text": "🎛️ Unified App Shell initialized"
+    },
+    {
+      "type": "console",
+      "level": "log",
+      "text": "🎛️ Unified App Shell initialized"
+    }
+  ]
+}

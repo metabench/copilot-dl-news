@@ -1,0 +1,26 @@
+{
+  "description": "Small distributed bounded smoke config: multiple domains with conservative per-domain limits.",
+  "port": 3200,
+  "db": "data/news-bounded-smoke.db",
+  "maxPages": 50,
+  "maxConcurrent": 3,
+  "idleTimeoutMin": 30,
+  "autoStart": false,
+  "domains": [
+    {
+      "domain": "bbc.com",
+      "maxPages": 50,
+      "seedUrls": ["https://www.bbc.com/news"]
+    },
+    {
+      "domain": "reuters.com",
+      "maxPages": 50,
+      "seedUrls": ["https://www.reuters.com/world/"]
+    },
+    {
+      "domain": "apnews.com",
+      "maxPages": 50,
+      "seedUrls": ["https://apnews.com/"]
+    }
+  ]
+}

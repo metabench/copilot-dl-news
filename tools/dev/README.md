@@ -204,6 +204,16 @@ node tools/dev/mcp-check.js --quick --json
 
 The tool walks each directory breadth-first, skips `.gitkeep`, and reports any Windows locking errors so you can rerun once handles release.
 
+## `prune-large-artifacts` — Large Artifact Pruning
+
+`prune-large-artifacts` is the safer pass for generated repository artifacts. It is dry-run by default, protects source/docs/agent/WIP roots unless `--allow-protected-roots` is explicitly supplied, keeps `data/news.db` plus sidecars, and prunes root-level `screenshots/` output by default while leaving documentation screenshots under `docs/**/screenshots/` alone.
+
+- `npm run prune:large` — preview large/generated artifacts that would be deleted.
+- `npm run prune:large:apply` — apply the previewed deletion policy.
+- `node checks/large-artifacts-pruner.check.js` — verify root screenshot pruning, protected-root skipping, and DB keep-list behavior.
+
+Keep human-facing release/update screenshots under `docs/**/screenshots/` and link them from durable Markdown. Keep transient UI test captures under root `screenshots/` or `tmp/` so pruning can remove them later.
+
 
 ## `dir-sizes` — Directory Size Summary
 

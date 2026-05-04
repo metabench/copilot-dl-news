@@ -56,6 +56,38 @@ function httpGetText(url, { timeoutMs = 5000 } = {}) {
   });
 }
 
+function httpPostJson(url, payload, { timeoutMs = 5000 } = {}) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify(payload || {});
+    const req = http.request(url, {
+      method: 'POST',
+      timeout: timeoutMs,
+      headers: {
+        Connection: 'close',
+        'content-type': 'application/json',
+        'content-length': Buffer.byteLength(body)
+      },
+      agent: false
+    }, (res) => {
+      let data = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        resolve({ status: res.statusCode, headers: res.headers, body: data });
+      });
+    });
+
+    req.on('timeout', () => {
+      req.destroy(new Error('timeout'));
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
 function assertStatus(name, status, expected) {
   if (status !== expected) {
     throw new Error(`${name}: expected ${expected}, got ${status}`);
@@ -193,6 +225,23 @@ async function run() {
       throw new Error('GET /api/apps/panel-demo/content: missing activation marker in content');
     }
 
+    result.step = 'GET /api/apps/cloud-crawl/content';
+    const cloudCrawlPayload = await httpGetText(`${baseUrl}/api/apps/cloud-crawl/content`);
+    assertStatus('GET /api/apps/cloud-crawl/content', cloudCrawlPayload.status, 200);
+    const cloudCrawlJson = safeJsonParse(cloudCrawlPayload.body);
+    if (!cloudCrawlJson) {
+      throw new Error('GET /api/apps/cloud-crawl/content: expected JSON');
+    }
+    if (cloudCrawlJson.embed !== 'panel') {
+      throw new Error(`GET /api/apps/cloud-crawl/content: expected embed=panel, got ${cloudCrawlJson.embed}`);
+    }
+    if (cloudCrawlJson.activationKey !== 'cloud-crawl') {
+      throw new Error(`GET /api/apps/cloud-crawl/content: expected activationKey=cloud-crawl, got ${cloudCrawlJson.activationKey}`);
+    }
+    if (typeof cloudCrawlJson.content !== 'string' || !cloudCrawlJson.content.includes('data-cloud-crawl-root="true"')) {
+      throw new Error('GET /api/apps/cloud-crawl/content: missing cloud crawl root marker');
+    }
+
     result.step = 'GET /api/apps/search-explorer/content';
     const searchExplorerPayload = await httpGetText(`${baseUrl}/api/apps/search-explorer/content`);
     assertStatus('GET /api/apps/search-explorer/content', searchExplorerPayload.status, 200);
@@ -208,6 +257,26 @@ async function run() {
     }
     if (typeof searchExplorerJson.content !== 'string' || !searchExplorerJson.content.includes('data-search-input="q"')) {
       throw new Error('GET /api/apps/search-explorer/content: missing query input marker in content');
+    }
+
+    result.step = 'GET /api/apps/screenshot-review/content';
+    const screenshotReviewPayload = await httpGetText(`${baseUrl}/api/apps/screenshot-review/content`);
+    assertStatus('GET /api/apps/screenshot-review/content', screenshotReviewPayload.status, 200);
+    const screenshotReviewJson = safeJsonParse(screenshotReviewPayload.body);
+    if (!screenshotReviewJson) {
+      throw new Error('GET /api/apps/screenshot-review/content: expected JSON');
+    }
+    if (screenshotReviewJson.embed !== 'panel') {
+      throw new Error(`GET /api/apps/screenshot-review/content: expected embed=panel, got ${screenshotReviewJson.embed}`);
+    }
+    if (screenshotReviewJson.activationKey !== 'screenshot-review') {
+      throw new Error(`GET /api/apps/screenshot-review/content: expected activationKey=screenshot-review, got ${screenshotReviewJson.activationKey}`);
+    }
+    if (typeof screenshotReviewJson.content !== 'string' || !screenshotReviewJson.content.includes('data-screenshot-review-root="true"')) {
+      throw new Error('GET /api/apps/screenshot-review/content: missing screenshot review root marker');
+    }
+    if (!screenshotReviewJson.content.includes('data-screenshot-review-filter="session"') || !screenshotReviewJson.content.includes('data-screenshot-review-filter="app"')) {
+      throw new Error('GET /api/apps/screenshot-review/content: missing screenshot review filter markers');
     }
 
     result.step = 'GET /api/crawl/summary';
@@ -231,6 +300,40 @@ async function run() {
     }
     if (crawlSummaryJson.lastFailingUrl != null && typeof crawlSummaryJson.lastFailingUrl !== 'string') {
       throw new Error('GET /api/crawl/summary: expected lastFailingUrl to be string|null');
+    }
+
+    result.step = 'GET /api/cloud-crawl/status';
+    const cloudStatusPayload = await httpGetText(`${baseUrl}/api/cloud-crawl/status`);
+    assertStatus('GET /api/cloud-crawl/status', cloudStatusPayload.status, 200);
+    const cloudStatusJson = safeJsonParse(cloudStatusPayload.body);
+    if (!cloudStatusJson) {
+      throw new Error('GET /api/cloud-crawl/status: expected JSON');
+    }
+    if (cloudStatusJson.status !== 'ok') {
+      throw new Error(`GET /api/cloud-crawl/status: expected status=ok, got ${cloudStatusJson.status}`);
+    }
+    if (!cloudStatusJson.totals || !Number.isFinite(cloudStatusJson.totals.goalDownloads)) {
+      throw new Error('GET /api/cloud-crawl/status: expected numeric totals.goalDownloads');
+    }
+    if (!Array.isArray(cloudStatusJson.targets) || cloudStatusJson.targets.length !== 5) {
+      throw new Error('GET /api/cloud-crawl/status: expected five target rows');
+    }
+
+    result.step = 'GET /api/downloads/verifications';
+    const downloadVerificationPayload = await httpGetText(`${baseUrl}/api/downloads/verifications?limit=3`);
+    assertStatus('GET /api/downloads/verifications', downloadVerificationPayload.status, 200);
+    const downloadVerificationJson = safeJsonParse(downloadVerificationPayload.body);
+    if (!downloadVerificationJson) {
+      throw new Error('GET /api/downloads/verifications: expected JSON');
+    }
+    if (downloadVerificationJson.status !== 'ok') {
+      throw new Error(`GET /api/downloads/verifications: expected status=ok, got ${downloadVerificationJson.status}`);
+    }
+    if (!Array.isArray(downloadVerificationJson.items)) {
+      throw new Error('GET /api/downloads/verifications: expected items array');
+    }
+    if (!downloadVerificationJson.summary || !Number.isFinite(downloadVerificationJson.summary.total)) {
+      throw new Error('GET /api/downloads/verifications: expected numeric summary.total');
     }
 
     result.step = 'GET /api/search-explorer/search freshness contract';
@@ -258,6 +361,60 @@ async function run() {
     }
     if (!Array.isArray(searchApiJson.results)) {
       throw new Error('GET /api/search-explorer/search: results must be an array');
+    }
+
+    result.step = 'GET /api/screenshot-review/runs';
+    const screenshotRunsPayload = await httpGetText(`${baseUrl}/api/screenshot-review/runs`);
+    assertStatus('GET /api/screenshot-review/runs', screenshotRunsPayload.status, 200);
+    const screenshotRunsJson = safeJsonParse(screenshotRunsPayload.body);
+    if (!screenshotRunsJson || screenshotRunsJson.status !== 'ok') {
+      throw new Error('GET /api/screenshot-review/runs: expected status=ok JSON');
+    }
+    if (!Array.isArray(screenshotRunsJson.runs) || screenshotRunsJson.runs.length < 1) {
+      throw new Error('GET /api/screenshot-review/runs: expected at least one run');
+    }
+    if (!screenshotRunsJson.filters || !Array.isArray(screenshotRunsJson.filters.sessions) || !Array.isArray(screenshotRunsJson.filters.apps)) {
+      throw new Error('GET /api/screenshot-review/runs: expected filter metadata');
+    }
+    const firstRun = screenshotRunsJson.runs[0];
+    if (!firstRun.runId || !Array.isArray(firstRun.routes)) {
+      throw new Error('GET /api/screenshot-review/runs: expected runId and routes');
+    }
+    if (!firstRun.sessionId || !Array.isArray(firstRun.appKeys)) {
+      throw new Error('GET /api/screenshot-review/runs: expected sessionId and appKeys');
+    }
+
+    result.step = 'GET /api/screenshot-review/runs filtered';
+    const filteredScreenshotRunsPayload = await httpGetText(`${baseUrl}/api/screenshot-review/runs?session=${encodeURIComponent(firstRun.sessionId)}&app=screenshot-review`);
+    assertStatus('GET /api/screenshot-review/runs filtered', filteredScreenshotRunsPayload.status, 200);
+    const filteredScreenshotRunsJson = safeJsonParse(filteredScreenshotRunsPayload.body);
+    if (!filteredScreenshotRunsJson || filteredScreenshotRunsJson.status !== 'ok' || !Array.isArray(filteredScreenshotRunsJson.runs) || filteredScreenshotRunsJson.runs.length < 1) {
+      throw new Error('GET /api/screenshot-review/runs filtered: expected matching runs');
+    }
+
+    result.step = 'GET /api/screenshot-review/dom';
+    const domPayload = await httpGetText(`${baseUrl}/api/screenshot-review/dom/check-run/screenshot-review.html`);
+    assertStatus('GET /api/screenshot-review/dom', domPayload.status, 200);
+    assertIncludes('GET /api/screenshot-review/dom', domPayload.body, 'Screenshot review check DOM');
+
+    result.step = 'GET /api/screenshot-review/comments';
+    const screenshotCommentsPayload = await httpGetText(`${baseUrl}/api/screenshot-review/comments?run=${encodeURIComponent(firstRun.runId)}`);
+    assertStatus('GET /api/screenshot-review/comments', screenshotCommentsPayload.status, 200);
+    const screenshotCommentsJson = safeJsonParse(screenshotCommentsPayload.body);
+    if (!screenshotCommentsJson || screenshotCommentsJson.status !== 'ok' || typeof screenshotCommentsJson.content !== 'string') {
+      throw new Error('GET /api/screenshot-review/comments: expected status=ok content');
+    }
+
+    result.step = 'POST /api/screenshot-review/comments';
+    const screenshotCommentPostPayload = await httpPostJson(`${baseUrl}/api/screenshot-review/comments`, {
+      runId: firstRun.runId,
+      target: 'screenshot-review',
+      comment: 'Server check comment'
+    });
+    assertStatus('POST /api/screenshot-review/comments', screenshotCommentPostPayload.status, 200);
+    const screenshotCommentPostJson = safeJsonParse(screenshotCommentPostPayload.body);
+    if (!screenshotCommentPostJson || screenshotCommentPostJson.status !== 'ok' || !screenshotCommentPostJson.content.includes('Check-mode saved comment')) {
+      throw new Error('POST /api/screenshot-review/comments: expected saved check-mode content');
     }
 
     result.ok = true;

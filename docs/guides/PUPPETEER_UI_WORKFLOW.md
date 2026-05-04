@@ -6,6 +6,8 @@ If you want to run *multiple* interactions without re-launching Puppeteer, use t
 
 - `tools/dev/ui-scenario-suite.js` (guide: `docs/guides/PUPPETEER_SCENARIO_SUITES.md`)
 
+If the goal is not just debugging but a reviewable UI feedback loop with saved screenshots, user journeys, and control-centre comments, use `docs/workflows/ui-screenshot-feedback-loop.md` first and treat this guide as the Puppeteer debugging primitive underneath it.
+
 ## The Problem
 
 When developing UI servers (like `gazetteerInfoServer.js` or `dataExplorerServer.js`), errors often happen in the browser (client-side JavaScript). These errors are not visible in the Node.js terminal output.

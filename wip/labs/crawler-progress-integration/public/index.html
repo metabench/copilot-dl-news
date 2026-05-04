@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🚀 Unified Progress Dashboard</title>
+  <style>
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --bg-card: #0f3460;
+      --text-primary: #e8e8e8;
+      --text-secondary: #a0a0a0;
+      --accent-primary: #00d4ff;
+      --accent-success: #00ff88;
+      --accent-warning: #ffcc00;
+      --accent-error: #ff4444;
+      --accent-crawl: #ff6b6b;
+      --accent-analysis: #4ecdc4;
+      --progress-bg: #2a2a4a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 500;
+      color: var(--accent-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .connection-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .connection-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-error);
+      transition: background 0.3s;
+    }
+
+    .connection-dot.connected {
+      background: var(--accent-success);
+    }
+
+    .dashboard {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .process-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .process-card.crawl {
+      border-top: 4px solid var(--accent-crawl);
+    }
+
+    .process-card.analysis {
+      border-top: 4px solid var(--accent-analysis);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .card-title .icon {
+      font-size: 1.3rem;
+    }
+
+    .status-badge {
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .status-idle { background: var(--progress-bg); color: var(--text-secondary); }
+    .status-starting { background: var(--accent-warning); color: var(--bg-primary); }
+    .status-running { background: var(--accent-primary); color: var(--bg-primary); }
+    .status-crawling { background: var(--accent-crawl); color: white; }
+    .status-analyzing { background: var(--accent-analysis); color: var(--bg-primary); }
+    .status-complete { background: var(--accent-success); color: var(--bg-primary); }
+    .status-error { background: var(--accent-error); color: white; }
+
+    .progress-container {
+      margin-bottom: 1rem;
+    }
+
+    .progress-bar-bg {
+      height: 40px;
+      background: var(--progress-bg);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 12px;
+      transition: width 0.3s ease-out;
+      min-width: 0;
+    }
+
+    .process-card.crawl .progress-bar-fill {
+      background: linear-gradient(90deg, var(--accent-crawl), #ff8a8a);
+    }
+
+    .process-card.analysis .progress-bar-fill {
+      background: linear-gradient(90deg, var(--accent-analysis), #6ee7b7);
+    }
+
+    .progress-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1rem;
+      font-weight: 600;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    }
+
+    .stats-row {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--accent-primary);
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 0.2rem;
+    }
+
+    .message-area {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      min-height: 2.5rem;
+      word-break: break-word;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    button {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s, box-shadow 0.2s;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-crawl {
+      background: var(--accent-crawl);
+      color: white;
+    }
+
+    .btn-analysis {
+      background: var(--accent-analysis);
+      color: var(--bg-primary);
+    }
+
+    .btn-danger {
+      background: var(--accent-error);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: var(--progress-bg);
+      color: var(--text-primary);
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .footer a {
+      color: var(--accent-primary);
+      text-decoration: none;
+    }
+
+    /* Animation for running state */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .status-running, .status-crawling, .status-analyzing, .status-starting {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🚀 Unified Progress Dashboard</h1>
+    <div class="connection-status">
+      <span class="connection-dot" id="connection-dot"></span>
+      <span id="connection-text">Connecting...</span>
+    </div>
+  </div>
+
+  <div class="dashboard">
+    <!-- Crawl Card -->
+    <div class="process-card crawl">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="icon">🕷️</span>
+          <span>Web Crawler</span>
+        </div>
+        <span class="status-badge status-idle" id="crawl-status">Idle</span>
+      </div>
+      
+      <div class="progress-container">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="crawl-progress" style="width: 0%"></div>
+          <span class="progress-text" id="crawl-progress-text">0 / 0</span>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-value" id="crawl-processed">0</div>
+          <div class="stat-label">Pages</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="crawl-elapsed">--</div>
+          <div class="stat-label">Elapsed</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="crawl-rate">--</div>
+          <div class="stat-label">Pages/min</div>
+        </div>
+      </div>
+
+      <div class="message-area" id="crawl-message">Waiting to start...</div>
+    </div>
+
+    <!-- Analysis Card -->
+    <div class="process-card analysis">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="icon">📊</span>
+          <span>Content Analysis</span>
+        </div>
+        <span class="status-badge status-idle" id="analysis-status">Idle</span>
+      </div>
+      
+      <div class="progress-container">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="analysis-progress" style="width: 0%"></div>
+          <span class="progress-text" id="analysis-progress-text">0 / 0</span>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-value" id="analysis-processed">0</div>
+          <div class="stat-label">Records</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="analysis-elapsed">--</div>
+          <div class="stat-label">Elapsed</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="analysis-rate">--</div>
+          <div class="stat-label">Rec/sec</div>
+        </div>
+      </div>
+
+      <div class="message-area" id="analysis-message">Waiting for crawl to complete...</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-crawl" id="btn-start-crawl">🕷️ Start Crawl</button>
+    <button class="btn-analysis" id="btn-start-analysis">📊 Start Analysis</button>
+    <button class="btn-danger" id="btn-stop-all">⏹️ Stop All</button>
+  </div>
+
+  <div class="footer">
+    Auto-starts on connection • 
+    <a href="/health" target="_blank">Health Check</a> • 
+    <a href="/api/config" target="_blank">Config</a>
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────────────────────────
+    // State management
+    // ─────────────────────────────────────────────────────────────
+    
+    const state = {
+      connected: false,
+      crawl: { phase: 'idle', processed: 0, total: 0, message: '', startedAt: null },
+      analysis: { phase: 'idle', processed: 0, total: 0, message: '', startedAt: null }
+    };
+
+    // ─────────────────────────────────────────────────────────────
+    // DOM elements
+    // ─────────────────────────────────────────────────────────────
+
+    const els = {
+      connectionDot: document.getElementById('connection-dot'),
+      connectionText: document.getElementById('connection-text'),
+      
+      crawlStatus: document.getElementById('crawl-status'),
+      crawlProgress: document.getElementById('crawl-progress'),
+      crawlProgressText: document.getElementById('crawl-progress-text'),
+      crawlProcessed: document.getElementById('crawl-processed'),
+      crawlElapsed: document.getElementById('crawl-elapsed'),
+      crawlRate: document.getElementById('crawl-rate'),
+      crawlMessage: document.getElementById('crawl-message'),
+      
+      analysisStatus: document.getElementById('analysis-status'),
+      analysisProgress: document.getElementById('analysis-progress'),
+      analysisProgressText: document.getElementById('analysis-progress-text'),
+      analysisProcessed: document.getElementById('analysis-processed'),
+      analysisElapsed: document.getElementById('analysis-elapsed'),
+      analysisRate: document.getElementById('analysis-rate'),
+      analysisMessage: document.getElementById('analysis-message'),
+      
+      btnStartCrawl: document.getElementById('btn-start-crawl'),
+      btnStartAnalysis: document.getElementById('btn-start-analysis'),
+      btnStopAll: document.getElementById('btn-stop-all')
+    };
+
+    // ─────────────────────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────────────────────
+
+    function formatDuration(ms) {
+      if (ms == null || ms < 0) return '--';
+      const totalSeconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return minutes > 0 ? `${minutes}:${String(seconds).padStart(2, '0')}` : `${seconds}s`;
+    }
+
+    function getStatusClass(phase) {
+      const map = {
+        'idle': 'status-idle',
+        'starting': 'status-starting',
+        'running': 'status-running',
+        'crawling': 'status-crawling',
+        'analyzing': 'status-analyzing',
+        'complete': 'status-complete',
+        'error': 'status-error'
+      };
+      return map[phase] || 'status-idle';
+    }
+
+    function getStatusText(phase) {
+      const map = {
+        'idle': 'Idle',
+        'starting': 'Starting',
+        'running': 'Running',
+        'crawling': 'Crawling',
+        'analyzing': 'Analyzing',
+        'complete': 'Complete',
+        'error': 'Error'
+      };
+      return map[phase] || phase;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Render functions
+    // ─────────────────────────────────────────────────────────────
+
+    function renderConnection() {
+      els.connectionDot.classList.toggle('connected', state.connected);
+      els.connectionText.textContent = state.connected ? 'Connected' : 'Disconnected';
+    }
+
+    function renderCrawl() {
+      const { crawl } = state;
+      const percent = crawl.total > 0 ? Math.round((crawl.processed / crawl.total) * 100) : 0;
+      
+      els.crawlStatus.className = `status-badge ${getStatusClass(crawl.phase)}`;
+      els.crawlStatus.textContent = getStatusText(crawl.phase);
+      
+      els.crawlProgress.style.width = `${percent}%`;
+      els.crawlProgressText.textContent = `${crawl.processed} / ${crawl.total}`;
+      
+      els.crawlProcessed.textContent = crawl.processed;
+      
+      if (crawl.startedAt) {
+        const elapsed = Date.now() - crawl.startedAt;
+        els.crawlElapsed.textContent = formatDuration(elapsed);
+        
+        if (crawl.processed > 0 && elapsed > 0) {
+          const rate = (crawl.processed / (elapsed / 60000)).toFixed(1);
+          els.crawlRate.textContent = rate;
+        }
+      } else if (crawl.elapsedMs) {
+        els.crawlElapsed.textContent = formatDuration(crawl.elapsedMs);
+      }
+      
+      els.crawlMessage.textContent = crawl.message || 'Waiting...';
+      
+      // Button state
+      const isRunning = ['starting', 'running', 'crawling'].includes(crawl.phase);
+      els.btnStartCrawl.disabled = isRunning;
+    }
+
+    function renderAnalysis() {
+      const { analysis } = state;
+      const percent = analysis.total > 0 ? Math.round((analysis.processed / analysis.total) * 100) : 0;
+      
+      els.analysisStatus.className = `status-badge ${getStatusClass(analysis.phase)}`;
+      els.analysisStatus.textContent = getStatusText(analysis.phase);
+      
+      els.analysisProgress.style.width = `${percent}%`;
+      els.analysisProgressText.textContent = `${analysis.processed} / ${analysis.total}`;
+      
+      els.analysisProcessed.textContent = analysis.processed;
+      
+      if (analysis.startedAt) {
+        const elapsed = Date.now() - analysis.startedAt;
+        els.analysisElapsed.textContent = formatDuration(elapsed);
+        
+        if (analysis.processed > 0 && elapsed > 0) {
+          const rate = (analysis.processed / (elapsed / 1000)).toFixed(1);
+          els.analysisRate.textContent = rate;
+        }
+      } else if (analysis.elapsedMs) {
+        els.analysisElapsed.textContent = formatDuration(analysis.elapsedMs);
+      }
+      
+      els.analysisMessage.textContent = analysis.message || 'Waiting...';
+      
+      // Button state
+      const isRunning = ['starting', 'running', 'analyzing'].includes(analysis.phase);
+      els.btnStartAnalysis.disabled = isRunning;
+    }
+
+    function render() {
+      renderConnection();
+      renderCrawl();
+      renderAnalysis();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // SSE connection
+    // ─────────────────────────────────────────────────────────────
+
+    let eventSource = null;
+    let reconnectTimeout = null;
+
+    function connectSSE() {
+      if (eventSource) {
+        eventSource.close();
+      }
+
+      eventSource = new EventSource('/sse/progress');
+
+      eventSource.onopen = () => {
+        state.connected = true;
+        render();
+        console.log('[SSE] Connected');
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          
+          if (msg.type === 'crawl' && msg.value) {
+            state.crawl = { ...state.crawl, ...msg.value };
+            if (msg.value.phase === 'starting' || msg.value.phase === 'crawling') {
+              state.crawl.startedAt = state.crawl.startedAt || Date.now();
+            }
+            renderCrawl();
+          } else if (msg.type === 'analysis' && msg.value) {
+            state.analysis = { ...state.analysis, ...msg.value };
+            if (msg.value.phase === 'starting' || msg.value.phase === 'analyzing') {
+              state.analysis.startedAt = state.analysis.startedAt || Date.now();
+            }
+            renderAnalysis();
+          }
+        } catch (e) {
+          console.error('[SSE] Parse error:', e);
+        }
+      };
+
+      eventSource.onerror = () => {
+        state.connected = false;
+        render();
+        console.log('[SSE] Connection lost, reconnecting...');
+        
+        eventSource.close();
+        eventSource = null;
+        
+        // Reconnect after delay
+        if (reconnectTimeout) clearTimeout(reconnectTimeout);
+        reconnectTimeout = setTimeout(connectSSE, 2000);
+      };
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Button handlers
+    // ─────────────────────────────────────────────────────────────
+
+    els.btnStartCrawl.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/crawl/start', { method: 'POST' });
+        const data = await res.json();
+        console.log('[API] Start crawl:', data);
+      } catch (e) {
+        console.error('[API] Start crawl failed:', e);
+      }
+    });
+
+    els.btnStartAnalysis.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/analysis/start', { method: 'POST' });
+        const data = await res.json();
+        console.log('[API] Start analysis:', data);
+      } catch (e) {
+        console.error('[API] Start analysis failed:', e);
+      }
+    });
+
+    els.btnStopAll.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/stop-all', { method: 'POST' });
+        const data = await res.json();
+        console.log('[API] Stop all:', data);
+      } catch (e) {
+        console.error('[API] Stop all failed:', e);
+      }
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // Initialize
+    // ─────────────────────────────────────────────────────────────
+
+    render();
+    connectSSE();
+
+    // Update elapsed times every second
+    setInterval(() => {
+      if (['crawling', 'starting'].includes(state.crawl.phase) && state.crawl.startedAt) {
+        renderCrawl();
+      }
+      if (['analyzing', 'starting'].includes(state.analysis.phase) && state.analysis.startedAt) {
+        renderAnalysis();
+      }
+    }, 1000);
+  </script>
+</body>
+</html>

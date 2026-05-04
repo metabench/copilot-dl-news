@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Place Matching Backfill</title>
+  <style>
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --bg-card: #0f3460;
+      --text-primary: #e8e8e8;
+      --text-secondary: #a0a0a0;
+      --accent-primary: #00d4ff;
+      --accent-success: #00ff88;
+      --accent-warning: #ffcc00;
+      --accent-error: #ff4444;
+      --progress-bg: #2a2a4a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    .container { width: 100%; max-width: 1000px; }
+    h1 { margin-bottom: 2rem; color: var(--accent-primary); }
+
+    .card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Progress Bar (from src/ui/controls/dashboard/ProgressBar.js) */
+    .dprogress { contain: layout style; position: relative; }
+    .dprogress__track {
+      height: 40px;
+      background: var(--progress-bg);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    .dprogress__fill {
+      position: absolute; top: 0; left: 0; height: 100%; width: 100%;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-success));
+      border-radius: 12px;
+      transform-origin: left center;
+      will-change: transform;
+      transition: transform 0.15s ease-out;
+    }
+    .dprogress__text {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      font-variant-numeric: tabular-nums;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      user-select: none; pointer-events: none;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+    .stat-item {
+      text-align: center;
+      padding: 1rem;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+    }
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--accent-primary);
+      margin-bottom: 0.25rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    /* Diagnostics */
+    .diagnostics-panel {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: 'Consolas', monospace;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .diag-row { display: flex; margin-bottom: 0.5rem; }
+    .diag-label { width: 120px; color: var(--accent-primary); }
+    .diag-value { flex: 1; word-break: break-all; }
+    .json-dump { white-space: pre-wrap; color: #a0a0a0; }
+
+    .controls {
+      display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;
+    }
+    button {
+      padding: 0.75rem 1.5rem; border: none; border-radius: 8px;
+      font-size: 0.9rem; font-weight: 500; cursor: pointer;
+      transition: transform 0.1s;
+    }
+    button:hover { transform: translateY(-1px); }
+    .btn-primary { background: var(--accent-primary); color: var(--bg-primary); }
+    .btn-danger { background: var(--accent-error); color: white; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .status-badge {
+      padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 500;
+    }
+    .status-idle { background: var(--progress-bg); color: var(--text-secondary); }
+    .status-running { background: var(--accent-primary); color: var(--bg-primary); }
+    .status-complete { background: var(--accent-success); color: var(--bg-primary); }
+  </style>
+</head>
+<body>
+  <h1>🌍 Place Matching Backfill</h1>
+
+  <div class="container">
+    <!-- Progress Card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Progress</span>
+        <span class="status-badge status-idle" id="status-badge">Idle</span>
+      </div>
+      <div class="dprogress">
+        <div class="dprogress__track">
+          <div class="dprogress__fill" id="progress-fill" style="transform: scaleX(0)"></div>
+          <span class="dprogress__text" id="progress-text">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">Statistics</span></div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value" id="stat-processed">0</div>
+          <div class="stat-label">Processed</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-matched">0</div>
+          <div class="stat-label">Matched</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-relations">0</div>
+          <div class="stat-label">Relations</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-rate">0.0</div>
+          <div class="stat-label">Records/sec</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-eta">--</div>
+          <div class="stat-label">ETA</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Diagnostics -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">AI Diagnostics</span></div>
+      <div class="diagnostics-panel" id="diagnostics">
+        <div class="diag-row">
+          <span class="diag-label">Current ID:</span>
+          <span class="diag-value" id="diag-id">--</span>
+        </div>
+        <div class="diag-row">
+          <span class="diag-label">Last Matches:</span>
+          <span class="diag-value" id="diag-matches">--</span>
+        </div>
+        <div class="diag-row">
+          <span class="diag-label">Avg Item (ms):</span>
+          <span class="diag-value" id="diag-avg">--</span>
+        </div>
+        <div class="json-dump" id="diag-json"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn-primary" id="btn-start">Start Backfill</button>
+      <button class="btn-danger" id="btn-stop" disabled>Stop</button>
+    </div>
+  </div>
+
+  <script src="place-matching-app.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+# Working Notes – Crawl CLI Simplification
+
+- 2026-03-08 — Session created to reduce crawl entrypoint sprawl without breaking existing scripts.
+- 2026-03-08 — Current public crawl tooling is fragmented across multiple direct JS entrypoints under `tools/crawl/` (`crawl-remote.js`, `crawl-multi-modal.js`, `crawl-place-hubs.js`, `intelligent-crawl.js`, `distributed-500.js`, `guess-place-hubs.js`, `list-place-hubs.js`, `worker-cli.js`).
+- 2026-03-08 — Simplification strategy selected: add one thin launcher that delegates to existing tools and supports named JSON profiles for common workflows.
+- 2026-03-08 — Implemented `tools/crawl/index.js` as the unified front door with three operator paths: `list`, direct tool dispatch, and `profile <name|path>`.
+- 2026-03-08 — Added starter JSON profiles under `tools/crawl/profiles/` for `remote-bounded-smoke`, `remote-status`, and `place-hubs-local`.
+- 2026-03-08 — Added npm aliases in `package.json`: `crawl`, `crawl:profile`, and `crawl:list` so operators do not need to remember the direct JS file path.
+- 2026-03-08 — Validation: `npm run test:by-path -- tests/tools/crawl-index.test.js` passed with 6/6 tests.
+- 2026-03-08 — Validation: `node tools/crawl/index.js list` enumerated the unified tool registry and available profiles.
+- 2026-03-08 — Validation: `node tools/crawl/index.js profile remote-bounded-smoke --dry-run` rendered the delegated command `node tools/crawl/crawl-remote.js bounded --domains bbc.com,reuters.com,apnews.com --max-pages 50 --poll 5 --timeout-min 30`.
+- 2026-03-08 — Follow-on simplification selected for this pass: let the unified launcher treat a bare first token as a named JSON profile when it does not match a registered tool.
+- 2026-03-08 — Implemented bare-profile dispatch in `tools/crawl/index.js`; tool names still take precedence, so `remote` continues to resolve as the `crawl-remote.js` tool while `remote-status` resolves as the JSON profile.
+- 2026-03-08 — Validation: `npm run test:by-path -- tests/tools/crawl-index.test.js` passed with 8/8 tests after adding coverage for bare-profile resolution and tool-precedence behavior.
+- 2026-03-08 — Validation: `npm run test:by-path -- tests/tools/crawl-remote-bounded.test.js` passed with 6/6 tests, preserving the restored bounded remote reliability path.
+- 2026-03-08 — Validation: `node tools/crawl/index.js list` now prints the profile inventory plus the operator hint `Run a profile directly: npm run crawl -- <profile-name>`.
+- 2026-03-08 — Validation: `node tools/crawl/index.js remote-bounded-smoke --dry-run` produced the same delegated command and profile path as the explicit `profile remote-bounded-smoke --dry-run` form.
+- 2026-03-08 — Hardening pass selected for this follow-on task: improve operator introspection and edge-case clarity without changing delegated crawl scripts.
+- 2026-03-08 — Implemented `list --json` in `tools/crawl/index.js` so the launcher can emit a machine-readable inventory of tools, profiles, reserved launcher commands, and precedence notes.
+- 2026-03-08 — Improved unknown-name errors to point operators back to `node tools/crawl/index.js list` and the explicit `profile <path-to-json>` escape hatch.
+- 2026-03-08 — Added focused coverage for explicit JSON paths, custom profile directories, tool-vs-profile name collisions, JSON list output, and list-option validation in `tests/tools/crawl-index.test.js`.
+- 2026-03-08 — Validation: `npm run test:by-path -- tests/tools/crawl-index.test.js` passed with 14/14 tests after the launcher hardening additions.
+- 2026-03-08 — Validation: `npm run test:by-path -- tests/tools/crawl-remote-bounded.test.js` passed with 6/6 tests after the hardening pass, preserving the restored bounded remote reliability path.
+- 2026-03-08 — Validation: `node tools/crawl/index.js list --json` emitted structured JSON with `profileDir`, `tools`, `profiles`, `reservedCommands`, and `notes`.
+- 2026-03-08 — Validation: `node tools/crawl/index.js does-not-exist` now prints a guided error message with `list` and explicit JSON-path recovery hints.

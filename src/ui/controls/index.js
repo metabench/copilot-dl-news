@@ -13,6 +13,9 @@ const { CrawlBehaviorPanelControl } = require("./CrawlBehaviorPanel");
 const { CrawlConfigWorkspaceControl } = require("./CrawlConfigWorkspaceControl");
 const { SearchFormControl } = require("./SearchFormControl");
 const { SearchExplorerControl } = require("./SearchExplorerControl");
+const { DownloadVerificationPanelControl } = require("./DownloadVerificationPanelControl");
+const { CloudCrawlPanelControl } = require("./CloudCrawlPanelControl");
+const { ScreenshotReviewPanelControl } = require("./ScreenshotReviewPanelControl");
 const { MetricCardControl } = require("./MetricCardControl");
 const { ThemeEditorControl } = require("./ThemeEditorControl");
 const { ActionButtonGroupControl } = require("./ActionButtonGroupControl");
@@ -34,6 +37,9 @@ module.exports = {
   CrawlConfigWorkspaceControl,
   SearchFormControl,
   SearchExplorerControl,
+  DownloadVerificationPanelControl,
+  CloudCrawlPanelControl,
+  ScreenshotReviewPanelControl,
   MetricCardControl,
   ThemeEditorControl,
   ActionButtonGroupControl,
