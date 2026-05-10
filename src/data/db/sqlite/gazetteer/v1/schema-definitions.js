@@ -1,0 +1,15 @@
+'use strict';
+
+const {
+  TABLE_DEFINITIONS,
+  INDEX_DEFINITIONS,
+  TRIGGER_DEFINITIONS,
+  GAZETTEER_TARGETS
+} = require('news-crawler-db');
+
+module.exports = {
+  TABLE_DEFINITIONS,
+  INDEX_DEFINITIONS,
+  TRIGGER_DEFINITIONS,
+  GAZETTEER_TARGETS
+};
