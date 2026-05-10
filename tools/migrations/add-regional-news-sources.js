@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * add-regional-news-sources.js
  * 
@@ -7,8 +8,6 @@
  * Usage:
  *   node tools/migrations/add-regional-news-sources.js [--dry-run]
  */
-
-const Database = require('better-sqlite3');
 const path = require('path');
 
 const dbPath = path.resolve(__dirname, '../../data/news.db');
@@ -115,7 +114,7 @@ function addRegionalSources() {
   console.log(`=== Adding Regional News Sources ===`);
   console.log(`Mode: ${isDryRun ? 'DRY-RUN' : 'LIVE'}\n`);
   
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   
   try {
     // Check what already exists

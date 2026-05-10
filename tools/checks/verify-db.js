@@ -1,46 +1,45 @@
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 // Quick database verification script
-const Database = require('better-sqlite3');
 const path = require('path');
 
 const dbPath = path.join(__dirname, '../../data/news.db');
 console.log('Checking:', dbPath);
 
-try {
-    const db = new Database(dbPath, { readonly: true });
-    console.log('✅ Connection: OK');
+async function main() {
+    const db = openNewsCrawlerDb(dbPath, { readonly: true });
+    console.log('Connection: OK');
 
-    // Count tables
-    const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`).all();
-    console.log(`✅ Tables: ${tables.length}`);
+    try {
+        const tables = await db.maintenance.listTables();
+        console.log(`Tables: ${tables.length}`);
 
-    // Key table counts
-    const checks = [
-        ['urls', 'SELECT COUNT(*) as c FROM urls'],
-        ['articles', 'SELECT COUNT(*) as c FROM articles'],
-        ['domains', 'SELECT COUNT(*) as c FROM domains'],
-        ['links', 'SELECT COUNT(*) as c FROM links'],
-        ['http_responses', 'SELECT COUNT(*) as c FROM http_responses'],
-        ['news_websites', 'SELECT COUNT(*) as c FROM news_websites'],
-        ['crawl_jobs', 'SELECT COUNT(*) as c FROM crawl_jobs'],
-        ['places', 'SELECT COUNT(*) as c FROM places']
-    ];
+        const checks = [
+            'urls',
+            'articles',
+            'domains',
+            'links',
+            'http_responses',
+            'news_websites',
+            'crawl_jobs',
+            'places'
+        ];
 
-    for (const [name, sql] of checks) {
-        try {
-            const result = db.prepare(sql).get();
-            console.log(`   ${name}: ${result.c.toLocaleString()}`);
-        } catch (e) {
-            console.log(`   ${name}: (table not found)`);
+        const counts = await db.maintenance.getTableCounts(checks);
+        for (const result of counts) {
+            const value = result.exists ? result.count.toLocaleString() : '(table not found)';
+            console.log(`   ${result.table}: ${value}`);
         }
+
+        const integrity = await db.maintenance.integrityCheck();
+        console.log(`Integrity: ${integrity}`);
+
+        console.log('\nDatabase is working properly.');
+    } finally {
+        await db.close();
     }
-
-    // Integrity check
-    const integrity = db.prepare('PRAGMA integrity_check').get();
-    console.log(`✅ Integrity: ${integrity.integrity_check}`);
-
-    db.close();
-    console.log('\n🎉 Database is working properly!');
-} catch (err) {
-    console.error('❌ Error:', err.message);
-    process.exit(1);
 }
+
+main().catch((err) => {
+    console.error('Database check failed:', err.message);
+    process.exit(1);
+});

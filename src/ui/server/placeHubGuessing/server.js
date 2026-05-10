@@ -7,6 +7,7 @@ const fs = require('fs');
 const jsgui = require('jsgui3-html');
 
 const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 
 const { renderPageHtml } = require('../shared');
 
@@ -2131,8 +2132,7 @@ async function createPlaceHubGuessingRouter(options = {}) {
         try {
           const gazetteerPath = path.join(process.cwd(), 'data', 'gazetteer.db');
           if (fs.existsSync(gazetteerPath)) {
-            const Database = require('better-sqlite3');
-            const gazDb = new Database(gazetteerPath, { readonly: true });
+            const gazDb = openNewsCrawlerDb(gazetteerPath, { readonly: true, fileMustExist: true });
             placeNameVariants = getPlaceNameVariants(gazDb, result.place?.place_id);
             gazDb.close();
           }

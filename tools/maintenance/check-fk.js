@@ -1,5 +1,6 @@
-const Database = require('better-sqlite3');
-const db = new Database('./data/test.db');
+
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const db = openNewsCrawlerDb('./data/test.db');
 
 console.log('Article-related tables:');
 const result = db.prepare('SELECT name FROM sqlite_master WHERE type=\'table\' AND name LIKE \'%article%\'').all();

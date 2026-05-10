@@ -1,3 +1,4 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 /**
  * Tests for compression utility module
  */
@@ -10,7 +11,6 @@ const {
   compressAndStore,
   retrieveAndDecompress
 } = require('../CompressionFacade');
-const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
@@ -19,7 +19,7 @@ describe('compression', () => {
   
   beforeEach(() => {
     // Create in-memory database
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create schema
     const { initializeSchema } = require('../../../data/db/sqlite/schema');

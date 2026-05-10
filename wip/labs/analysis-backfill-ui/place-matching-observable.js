@@ -6,13 +6,12 @@
  */
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 const { ArticlePlaceMatcher } = require('../../src/matching/ArticlePlaceMatcher');
 const { RollingWindow, ItemTimingTracker, STALL_THRESHOLD_MS, SLOW_ITEM_THRESHOLD_MS } = require('./analysis-observable');
 const { performance } = require('perf_hooks');
 const path = require('path');
 const { findProjectRoot } = require('../../src/utils/project-root');
-const Database = require('better-sqlite3');
-
 /**
  * Extended Matcher that reads directly from DB instead of API
  */
@@ -122,8 +121,8 @@ function createPlaceMatchingObservable(options = {}) {
     relationsCreated = 0;
     itemTimingTracker.reset();
 
-    const newsDb = new Database(newsDbPath);
-    const gazetteerDb = new Database(gazetteerDbPath);
+    const newsDb = openNewsCrawlerDb(newsDbPath);
+    const gazetteerDb = openNewsCrawlerDb(gazetteerDbPath);
 
     try {
       // Initialize matcher

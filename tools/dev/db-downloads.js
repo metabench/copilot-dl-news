@@ -15,9 +15,8 @@
  */
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 // Import DB query module
 const downloadEvidence = require('../../src/data/db/queries/downloadEvidence');
 
@@ -50,7 +49,7 @@ const LIMIT = parseInt(flags.limit || flags.l || '25', 10);
 
 function getDb() {
   const dbPath = path.resolve(__dirname, '..', '..', 'data', 'news.db');
-  return new Database(dbPath, { readonly: true });
+  return openNewsCrawlerDb(dbPath, { readonly: true });
 }
 
 function formatBytes(bytes) {

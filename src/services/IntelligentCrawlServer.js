@@ -22,6 +22,7 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const { EventEmitter } = require('events');
+const { listVerifiedPlaceHubHosts } = require('news-crawler-db');
 
 // Configuration defaults
 const DEFAULT_PORT = 3150;
@@ -743,15 +744,7 @@ class IntelligentCrawlServer extends EventEmitter {
 
     // Get stats for all hosts or aggregate
     try {
-      // Get list of hosts with verified hubs
-      const hosts = this.db.prepare(`
-        SELECT DISTINCT host, COUNT(*) as hubCount
-        FROM place_page_mappings
-        WHERE status = 'verified'
-        GROUP BY host
-        ORDER BY hubCount DESC
-        LIMIT 20
-      `).all();
+      const hosts = listVerifiedPlaceHubHosts(this.db, { limit: 20 });
 
       const hostStats = hosts.map(h => ({
         host: h.host,
@@ -1116,8 +1109,8 @@ EXAMPLE:
   let db;
   if (dbMode === 'single') {
     // Simple SQLite connection
-    const Database = require('better-sqlite3');
-    db = new Database(dbPath);
+    const { openNewsCrawlerDb } = require('../db/openNewsCrawlerDb');
+    db = openNewsCrawlerDb(dbPath);
   } else {
     // Use DualDatabaseFacade (will be initialized async)
     const { DualDatabaseFacade } = require('../data/db/DualDatabaseFacade');

@@ -1,9 +1,9 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 /**
  * Tests for CrawlStrategyTemplates - Specialized strategies per use case
  */
 
 const { CrawlStrategyTemplates } = require('../CrawlStrategyTemplates');
-const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
@@ -16,7 +16,7 @@ describe('CrawlStrategyTemplates', () => {
   beforeEach(() => {
     // Create temp database
     tempDbPath = path.join(__dirname, `test-templates-${Date.now()}.db`);
-    db = new Database(tempDbPath);
+    db = openNewsCrawlerDb(tempDbPath);
     
     // Create strategy_templates table
     db.exec(`

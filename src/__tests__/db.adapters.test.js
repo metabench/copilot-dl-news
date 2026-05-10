@@ -19,6 +19,8 @@ describe('database adapter registry', () => {
       try {
         db = new NewsDatabase(dbPath);
         expect(db).toBeTruthy();
+        expect(db.usesNewsCrawlerDb).toBe(true);
+        expect(db.core).toBeTruthy();
         expect(typeof db.getHandle).toBe('function');
         expect(db.getHandle()).toBeTruthy();
       } finally {

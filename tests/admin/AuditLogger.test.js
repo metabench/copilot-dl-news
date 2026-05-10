@@ -1,11 +1,11 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * AuditLogger unit tests
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
 const { AuditLogger, AUDIT_ACTIONS } = require('../../src/admin/AuditLogger');
 const { createAdminAdapter } = require('../../src/data/db/sqlite/v1/queries/adminAdapter');
 
@@ -16,7 +16,7 @@ describe('AuditLogger', () => {
 
   beforeAll(() => {
     // Use in-memory database for tests
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create users table (required for foreign key)
     db.exec(`

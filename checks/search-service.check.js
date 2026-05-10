@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 /**
  * Search Service Check Script
  * 
@@ -10,8 +11,6 @@
  * - Migration applied: src/db/sqlite/v1/migrations/add_fts5_article_search.js
  * - Some articles with body_text populated
  */
-
-const Database = require('better-sqlite3');
 const path = require('path');
 const { SearchService } = require('../src/search/SearchService');
 
@@ -29,7 +28,7 @@ if (!fs.existsSync(DB_PATH)) {
 
 let db;
 try {
-  db = new Database(DB_PATH, { readonly: true });
+  db = openNewsCrawlerDb(DB_PATH, { readonly: true });
   console.log('✅ Database opened:', DB_PATH);
 } catch (err) {
   console.error('❌ Failed to open database:', err.message);

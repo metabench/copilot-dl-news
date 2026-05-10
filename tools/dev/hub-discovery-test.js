@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Hub Discovery End-to-End Test
  * 
@@ -27,8 +28,6 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
-const Database = require('better-sqlite3');
-
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -342,7 +341,7 @@ async function runCrawlPhase(sites, dbPath, pagesPerSite, runDir, verbose) {
     results.push(result);
     
     // Check progress after each site
-    const db = new Database(dbPath);
+    const db = openNewsCrawlerDb(dbPath);
     const urlCount = db.prepare('SELECT COUNT(*) as cnt FROM urls').get().cnt;
     const fetchCount = db.prepare('SELECT COUNT(*) as cnt FROM http_responses').get().cnt;
     db.close();
@@ -363,7 +362,7 @@ async function runAnalysisPhase(dbPath, runDir, verbose) {
   log(`${'='.repeat(60)}\n`, 'info');
 
   // Check what we have to analyze
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   const toAnalyze = db.prepare(`
     SELECT COUNT(*) as cnt 
     FROM http_responses 
@@ -397,7 +396,7 @@ async function runAnalysisPhase(dbPath, runDir, verbose) {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     
     // Check results
-    const db2 = new Database(dbPath);
+    const db2 = openNewsCrawlerDb(dbPath);
     const analyzed = db2.prepare('SELECT COUNT(*) as cnt FROM content_analysis').get().cnt;
     db2.close();
 
@@ -473,7 +472,7 @@ function generateDiagnostics(dbPath, runDir, sites) {
   log('PHASE 5: DIAGNOSTICS', 'info');
   log(`${'='.repeat(60)}\n`, 'info');
 
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   const diagnostics = {
     timestamp: new Date().toISOString(),
     runDir,

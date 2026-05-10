@@ -1,13 +1,13 @@
 "use strict";
 
 const path = require("path");
-const Database = require("better-sqlite3");
+const { openNewsCrawlerDb } = require("../../../db/openNewsCrawlerDb");
 
 /**
- * Resolve a better-sqlite3 db handle from injected providers or by opening a local DB.
+ * Resolve a news-crawler-db compatible handle from injected providers or by opening a local DB.
  *
  * Contract:
- * - Prefer injection (unified app / shared DB): `getDbRW()` (NewsDatabase) or `getDbHandle()` (better-sqlite3 Database)
+ * - Prefer injection (unified app / shared DB): `getDbRW()` (NewsDatabase) or `getDbHandle()` (database handle)
  * - Fallback (standalone runner): open local DB at `dbPath`
  *
  * @param {object} [options]
@@ -28,7 +28,7 @@ function resolveBetterSqliteHandle(options = {}) {
   const resolvedPath = dbPath || path.join(process.cwd(), "data", "news.db");
 
   const openLocal = () => {
-    const opened = new Database(resolvedPath, { readonly });
+    const opened = openNewsCrawlerDb(resolvedPath, { readonly });
     return {
       dbHandle: opened,
       close: () => {

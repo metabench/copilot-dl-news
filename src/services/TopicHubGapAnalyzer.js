@@ -3,6 +3,7 @@
 const { getDb } = require('../data/db');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 const { slugify } = require('../tools/slugify');
+const { listTopicKeywordRows } = require('news-crawler-db');
 
 /**
  * TopicHubGapAnalyzer - URL prediction for topic hubs
@@ -73,13 +74,7 @@ class TopicHubGapAnalyzer extends HubGapAnalyzerBase {
       return this.topicCache.slice(0, limit);
     }
 
-    // Load from topic_keywords table (English topics)
-    const rows = this.db.prepare(`
-      SELECT DISTINCT term AS name, lang
-      FROM topic_keywords
-      WHERE lang = 'en'
-      ORDER BY term
-    `).all();
+    const rows = listTopicKeywordRows(this.db, { lang: 'en' });
 
     // Augment with hardcoded categories for common topics
     const categoryMap = {

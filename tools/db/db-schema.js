@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
 const { CliFormatter } = require('../src/shared/utils/CliFormatter');
 const { CliArgumentParser } = require('../src/shared/utils/CliArgumentParser');
 const {
@@ -87,7 +87,7 @@ function normalizeOptions(raw) {
 
 function openDatabase(dbPath) {
   try {
-    return new Database(dbPath, { readonly: true });
+    return openNewsCrawlerDb(dbPath, { readonly: true });
   } catch (error) {
     throw new CliError(`Unable to open database at ${dbPath}: ${error.message}`);
   }

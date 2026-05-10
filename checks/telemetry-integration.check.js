@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 /**
  * Check that TelemetryIntegration properly persists progress events from connected crawler.
  * 
@@ -10,13 +11,11 @@
  * 3. TelemetryIntegration broadcasts it
  * 4. TaskEventWriter persists it with correct jobId
  */
-
-const Database = require('better-sqlite3');
 const { Evented_Class } = require('lang-tools');
-const { TelemetryIntegration } = require('../src/crawler/telemetry/TelemetryIntegration');
+const { TelemetryIntegration } = require('../src/core/crawler/telemetry/TelemetryIntegration');
 
 // Create in-memory DB
-const db = new Database(':memory:');
+const db = openNewsCrawlerDb(':memory:');
 
 // Let TaskEventWriter create the schema
 // (We don't manually create the table - TaskEventWriter does it)
@@ -113,12 +112,8 @@ async function main() {
   console.log('6. Cleanup complete\n');
 
   // Query the database
-  const events = db.prepare(`
-    SELECT id, task_id, event_type, event_category, payload 
-    FROM task_events 
-    WHERE task_id = ?
-    ORDER BY id
-  `).all(jobId);
+  // Query persisted events through the DB-owned access layer.
+  const events = db.taskEvents.getTaskEventsForTask(jobId, { limit: 1000 });
 
   console.log(`=== Results ===`);
   console.log(`Events persisted: ${events.length}\n`);
@@ -127,11 +122,11 @@ async function main() {
     console.error('❌ FAIL: No events persisted!');
     
     // Check if any events at all
-    const allEvents = db.prepare('SELECT COUNT(*) as count FROM task_events').get();
-    console.log(`Total events in DB: ${allEvents.count}`);
+    const storageStats = db.taskEvents.getTaskEventStorageStatistics();
+    console.log(`Total events in DB: ${storageStats.total_events}`);
     
-    if (allEvents.count > 0) {
-      const sample = db.prepare('SELECT task_id, event_type FROM task_events LIMIT 5').all();
+    if (storageStats.total_events > 0) {
+      const sample = db.taskEvents.searchTaskEvents('', { limit: 5 });
       console.log('Sample events:', sample);
     }
     

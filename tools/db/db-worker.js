@@ -1,6 +1,5 @@
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const { parentPort, workerData } = require('worker_threads');
-const Database = require('better-sqlite3');
-
 /**
  * This script runs in a separate worker thread to execute a slow,
  * blocking database query without freezing the main application's event loop.
@@ -10,7 +9,7 @@ function getTableSizesFromDbstat(dbPath) {
   let db;
   try {
     // The worker gets the dbPath and opens its own connection.
-    db = new Database(dbPath, { readonly: true });
+    db = openNewsCrawlerDb(dbPath, { readonly: true });
 
     const query = `
       SELECT 

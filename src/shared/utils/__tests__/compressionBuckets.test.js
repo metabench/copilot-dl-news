@@ -1,9 +1,9 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 /**
  * Tests for compression buckets module
  */
 
 const { createBucket, retrieveFromBucket, listBucketEntries, getBucketStats, finalizeBucket, deleteBucket, queryBuckets } = require('../compressionBuckets');
-const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
@@ -12,7 +12,7 @@ describe('compressionBuckets', () => {
   
   beforeEach(() => {
     // Create in-memory database
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create schema
     const { initializeSchema } = require('../../../data/db/sqlite/schema');

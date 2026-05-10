@@ -1,5 +1,6 @@
 "use strict";
 
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 // Mock jsdom to avoid parse5 ESM-only import issue in Jest
 jest.mock('jsdom', () => ({
   JSDOM: jest.fn().mockImplementation(() => ({
@@ -10,8 +11,6 @@ jest.mock('jsdom', () => ({
 const fs = require("fs");
 const path = require("path");
 const request = require("supertest");
-const Database = require("better-sqlite3");
-
 const { createDataExplorerServer } = require("../../../src/ui/server/dataExplorerServer");
 
 const DB_PATH = path.resolve(__dirname, "../../../data/news.db");
@@ -50,7 +49,7 @@ describeIfDb("dataExplorerServer production snapshot coverage", () => {
   });
 
   test("host drilldown responds for known host from snapshot", async () => {
-    const db = new Database(DB_PATH, { readonly: true });
+    const db = openNewsCrawlerDb(DB_PATH, { readonly: true });
     const hostRow = db.prepare("SELECT LOWER(host) AS host FROM urls WHERE host IS NOT NULL AND TRIM(host) <> '' LIMIT 1").get();
     db.close();
     expect(hostRow && hostRow.host).toBeTruthy();

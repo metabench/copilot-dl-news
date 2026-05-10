@@ -23,6 +23,8 @@ const { GeoViewerShell } = require('../controls/GeoViewerShell');
 const { DatabaseSelector } = require('../controls/DatabaseSelector');
 const { GeoImportStateManager, IMPORT_STAGES } = require('../../services/GeoImportStateManager');
 const { registerGeoViewerRoutes } = require('./geoViewer/routes/geoViewerRoutes');
+const { openNewsCrawlerDb } = require('../../db/openNewsCrawlerDb');
+const { getBasicDbInfo, getDatabaseStats } = require('../../data/db/sqlite/tools/databaseIntrospection');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Configuration
@@ -49,8 +51,6 @@ const {
  * @returns {Object} { db, gazetteer }
  */
 function openDatabase(dbPath, options = {}) {
-  const Database = require('better-sqlite3');
-  
   if (options.standalone) {
     // Create standalone gazetteer database with GazetteerDatabase wrapper
     const gazetteer = createGazetteerDatabase(dbPath, { verbose: true });
@@ -58,7 +58,7 @@ function openDatabase(dbPath, options = {}) {
   }
   
   // Standard mode - open existing database
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   // Ensure gazetteer schema exists
   initializeGazetteerSchema(db, { verbose: true });
   return { db, gazetteer: null };
@@ -122,110 +122,6 @@ function listGazetteerDatabases(projectRoot) {
   });
   
   return databases;
-}
-
-/**
- * Get basic info from a database (quick check)
- * @param {string} dbPath
- * @returns {Object}
- */
-function getBasicDbInfo(dbPath) {
-  const Database = require('better-sqlite3');
-  let db;
-  
-  try {
-    db = new Database(dbPath, { readonly: true });
-    
-    // Check if it has places table
-    const tables = db.prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('places', 'place_names')"
-    ).all();
-    
-    if (tables.length === 0) {
-      return { hasGazetteerTables: false, places: 0, names: 0, sources: [] };
-    }
-    
-    // Count places and names
-    let places = 0, names = 0, sources = [];
-    
-    try {
-      places = db.prepare('SELECT COUNT(*) as count FROM places').get()?.count || 0;
-    } catch (e) { /* table might not exist */ }
-    
-    try {
-      names = db.prepare('SELECT COUNT(*) as count FROM place_names').get()?.count || 0;
-    } catch (e) { /* table might not exist */ }
-    
-    try {
-      sources = db.prepare('SELECT DISTINCT source FROM places WHERE source IS NOT NULL').all()
-        .map(r => r.source);
-    } catch (e) { /* table might not exist */ }
-    
-    return { hasGazetteerTables: true, places, names, sources };
-  } catch (err) {
-    return { hasGazetteerTables: false, places: 0, names: 0, sources: [], error: err.message };
-  } finally {
-    if (db) db.close();
-  }
-}
-
-/**
- * Get detailed stats for a database
- * @param {string} dbPath
- * @returns {Object}
- */
-function getDatabaseStats(dbPath) {
-  const Database = require('better-sqlite3');
-  let db;
-  
-  try {
-    db = new Database(dbPath, { readonly: true });
-    const stats = fs.statSync(dbPath);
-    
-    let places = 0, names = 0, bySource = [], byKind = [], lastImport = null;
-    
-    try {
-      places = db.prepare('SELECT COUNT(*) as count FROM places').get()?.count || 0;
-    } catch (e) { /* ignore */ }
-    
-    try {
-      names = db.prepare('SELECT COUNT(*) as count FROM place_names').get()?.count || 0;
-    } catch (e) { /* ignore */ }
-    
-    try {
-      bySource = db.prepare('SELECT source, COUNT(*) as count FROM places GROUP BY source').all();
-    } catch (e) { /* ignore */ }
-    
-    try {
-      byKind = db.prepare('SELECT kind, COUNT(*) as count FROM places GROUP BY kind ORDER BY count DESC LIMIT 10').all();
-    } catch (e) { /* ignore */ }
-    
-    try {
-      const lastRun = db.prepare('SELECT * FROM ingestion_runs ORDER BY started_at DESC LIMIT 1').get();
-      if (lastRun) {
-        lastImport = {
-          source: lastRun.source,
-          date: lastRun.started_at,
-          status: lastRun.status,
-          recordsInserted: lastRun.records_inserted
-        };
-      }
-    } catch (e) { /* ignore */ }
-    
-    return {
-      places,
-      names,
-      bySource,
-      byKind,
-      lastImport,
-      size: stats.size,
-      modified: stats.mtime.toISOString()
-    };
-  } catch (err) {
-    return { error: err.message, places: 0, names: 0 };
-  } finally {
-    if (db) db.close();
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,4 +1,10 @@
 const { getDb } = require('../../data/db');
+const {
+  listRecentExplorationOutcomes,
+  getDomainExplorationCoefficient,
+  insertExplorationDecision,
+  insertExplorationOutcome
+} = require('news-crawler-db');
 
 /**
  * Adaptive Exploration vs Exploitation - Dynamic strategy switching
@@ -447,16 +453,7 @@ class AdaptiveExplorer {
     }
 
     try {
-      // Analyze exploration vs exploitation outcomes
-      const stmt = this.db.prepare(`
-        SELECT exploration_rate, reward
-        FROM exploration_outcomes
-        WHERE domain = ?
-        ORDER BY created_at DESC
-        LIMIT 100
-      `);
-
-      const rows = stmt.all(domain);
+      const rows = listRecentExplorationOutcomes(this.db, domain, { limit: 100 });
 
       if (rows.length < 20) {
         return; // Not enough data
@@ -494,13 +491,7 @@ class AdaptiveExplorer {
 
   async _loadDomainCoefficient(domain) {
     try {
-      const stmt = this.db.prepare(`
-        SELECT optimal_exploration_rate
-        FROM domain_exploration_coefficients
-        WHERE domain = ?
-      `);
-
-      const row = stmt.get(domain);
+      const row = getDomainExplorationCoefficient(this.db, domain);
       return row ? row.optimal_exploration_rate : null;
     } catch (error) {
       return null;
@@ -513,22 +504,12 @@ class AdaptiveExplorer {
     }
 
     try {
-      const stmt = this.db.prepare(`
-        INSERT INTO exploration_decisions (
-          domain,
-          strategy,
-          exploration_rate,
-          selected_arm,
-          created_at
-        ) VALUES (?, ?, ?, ?, datetime('now'))
-      `);
-
-      stmt.run(
+      insertExplorationDecision(this.db, {
         domain,
         strategy,
         explorationRate,
-        this._getArmKey(selected)
-      );
+        selectedArm: this._getArmKey(selected)
+      });
     } catch (error) {
       this.logger.error?.('Failed to record decision', error);
     }
@@ -540,22 +521,12 @@ class AdaptiveExplorer {
     }
 
     try {
-      const stmt = this.db.prepare(`
-        INSERT INTO exploration_outcomes (
-          domain,
-          arm,
-          exploration_rate,
-          reward,
-          created_at
-        ) VALUES (?, ?, ?, ?, datetime('now'))
-      `);
-
-      stmt.run(
+      insertExplorationOutcome(this.db, {
         domain,
-        this._getArmKey(action),
-        this.epsilon,
+        arm: this._getArmKey(action),
+        explorationRate: this.epsilon,
         reward
-      );
+      });
     } catch (error) {
       this.logger.error?.('Failed to record outcome', error);
     }

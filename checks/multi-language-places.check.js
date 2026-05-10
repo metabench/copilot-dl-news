@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 /**
  * Multi-Language Places Check Script
  * 
@@ -11,7 +12,6 @@
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
 const { createMultiLanguagePlaceQueries } = require('../src/db/sqlite/v1/queries/multiLanguagePlaces');
 
 const DB_PATH = path.join(__dirname, '..', 'data', 'news.db');
@@ -43,7 +43,7 @@ function checkSection(name, fn) {
 }
 
 try {
-  db = new Database(DB_PATH, { readonly: true });
+  db = openNewsCrawlerDb(DB_PATH, { readonly: true });
   queries = createMultiLanguagePlaceQueries(db);
   
   checkSection('Module Export', () => {

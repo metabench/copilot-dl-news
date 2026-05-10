@@ -1,5 +1,6 @@
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 // Seed URLs for DW crawl - Single entry point for discovery
-const db = require('better-sqlite3')('data/crawl-www_dw_com.db');
+const db = openNewsCrawlerDb('data/crawl-www_dw_com.db');
 
 // Ensure schema exists
 db.exec(`

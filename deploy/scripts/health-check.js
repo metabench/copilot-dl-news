@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * health-check.js - Container Health Check Script
  * ================================================
@@ -96,17 +97,15 @@ async function checkSqlite() {
     throw new Error(`SQLite database not found: ${dbPath}`);
   }
   
-  // Try to open and query
-  const Database = require('better-sqlite3');
-  const db = new Database(dbPath, { readonly: true });
+  const db = openNewsCrawlerDb(dbPath, { readonly: true });
   
   try {
-    const result = db.prepare('SELECT 1 as health').get();
+    const result = await db.maintenance.checkHealth();
     if (result.health !== 1) {
       throw new Error('Unexpected query result');
     }
   } finally {
-    db.close();
+    await db.close();
   }
 }
 

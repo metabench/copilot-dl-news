@@ -1,11 +1,11 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * AdminService unit tests
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
 const { AdminService } = require('../../src/admin/AdminService');
 const { createAdminAdapter } = require('../../src/data/db/sqlite/v1/queries/adminAdapter');
 
@@ -16,7 +16,7 @@ describe('AdminService', () => {
 
   beforeAll(() => {
     // Use in-memory database for tests
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create users table (matching real schema)
     db.exec(`

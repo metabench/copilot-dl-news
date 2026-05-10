@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * clear-telemetry.js - Clear query telemetry data and reclaim disk space
  *
@@ -39,7 +40,6 @@ EXAMPLES:
 }
 
 const path = require('path');
-const Database = require('better-sqlite3');
 const { clearQueryTelemetry } = require('../src/data/db/sqlite/v1/queries/telemetry');
 
 const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'news.db');
@@ -47,7 +47,7 @@ let db;
 
 try {
   console.log(`Opening database: ${dbPath}`);
-  db = new Database(dbPath, { timeout: 15000 });
+  db = openNewsCrawlerDb(dbPath, { timeout: 15000 });
   
   console.log('Executing DELETE FROM query_telemetry...');
   const start = Date.now();

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Platform Lab - Test news-crawler-db functionality
  * 
@@ -62,8 +63,7 @@ if (!USE_POSTGRES && !USE_EXISTING) {
     const { execSync } = require('child_process');
     try {
         // Create empty db file first
-        const Database = require('better-sqlite3');
-        const tempDb = new Database(TEST_DB_PATH);
+        const tempDb = openNewsCrawlerDb(TEST_DB_PATH);
         tempDb.close();
 
         // Push schema using drizzle

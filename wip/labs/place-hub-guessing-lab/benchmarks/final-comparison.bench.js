@@ -1,12 +1,11 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../../src/db/openNewsCrawlerDb');
 /**
  * Final performance comparison: Before vs After optimizations
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
-
 const dbPath = path.resolve(__dirname, '../../../data/news.db');
 const db = Database(dbPath, { readonly: true });
 

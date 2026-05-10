@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Tests for workspaceAdapter
  * 
@@ -10,8 +11,6 @@
  * - annotations table
  * - workspace_activity table
  */
-
-const Database = require('better-sqlite3');
 const {
   createWorkspaceAdapter,
   ensureWorkspaceSchema,
@@ -25,7 +24,7 @@ describe('workspaceAdapter', () => {
   let adapter;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create stub users table for foreign key references
     db.exec(`

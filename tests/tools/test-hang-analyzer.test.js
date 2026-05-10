@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -177,9 +178,8 @@ test('sse', () => {
 
   test('flags better-sqlite3 Database open without close', () => {
     const src = `
-const Database = require('better-sqlite3');
 test('db', () => {
-  const db = new Database(':memory:');
+  const db = openNewsCrawlerDb(':memory:');
 });
 `;
     withTempFile('l.test.js', src, (file) => {

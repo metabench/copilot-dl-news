@@ -6,6 +6,10 @@
  */
 
 const { evaluateDomainFromDb } = require('../is_this_a_news_website');
+const {
+  countUrlsMatchingAnyPattern,
+  listDomainsByUrlCount
+} = require('news-crawler-db');
 
 /**
  * Minimum thresholds for automatic registration
@@ -112,13 +116,7 @@ class NewsWebsiteDiscovery {
         `http://www.${host}/news%`,
         `https://www.${host}/news%`
       ];
-      const likeClause = pats.map(() => 'url LIKE ?').join(' OR ');
-
-      const result = this.db.db.prepare(
-        `SELECT COUNT(*) as count FROM urls WHERE (${likeClause})`
-      ).get(...pats);
-
-      return (result?.count || 0) > 5; // At least 5 URLs in /news path
+      return countUrlsMatchingAnyPattern(this.db.db, pats) > 5; // At least 5 URLs in /news path
     } catch (error) {
       return false;
     }
@@ -167,16 +165,10 @@ class NewsWebsiteDiscovery {
     this.logger.log('[NewsWebsiteDiscovery] Starting discovery scan...');
 
     try {
-      // Get domains with most activity
-      const domains = this.db.db.prepare(`
-        SELECT host, COUNT(*) as url_count
-        FROM urls
-        WHERE host IS NOT NULL AND host != ''
-        GROUP BY host
-        HAVING url_count >= ?
-        ORDER BY url_count DESC
-        LIMIT ?
-      `).all(this.thresholds.minUrlsAnalyzed, limit);
+      const domains = listDomainsByUrlCount(this.db.db, {
+        minUrls: this.thresholds.minUrlsAnalyzed,
+        limit
+      });
 
       this.logger.log(`[NewsWebsiteDiscovery] Analyzing ${domains.length} domains...`);
 

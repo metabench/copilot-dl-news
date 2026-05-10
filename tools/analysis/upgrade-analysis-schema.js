@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Upgrade analysis_runs schema to add background_task columns.
  * Run this manually if you want to add the columns without waiting for next server start.
@@ -7,8 +8,6 @@
  *   node tools/upgrade-analysis-schema.js
  *   DB_PATH=./data/test.db node tools/upgrade-analysis-schema.js
  */
-
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const { getTableInfo, getTableIndexNames } = require('../src/data/db/sqlite/v1/queries/schema');
@@ -32,7 +31,7 @@ function main() {
   const dbPath = getDbPath();
   console.log(`Upgrading schema in: ${dbPath}`);
   
-  const db = new Database(dbPath, { readonly: false });
+  const db = openNewsCrawlerDb(dbPath, { readonly: false });
   
   try {
     // Check current columns

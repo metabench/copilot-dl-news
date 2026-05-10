@@ -1,3 +1,4 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 /**
  * AnalysisTask Unit Tests
  * 
@@ -9,8 +10,6 @@ const os = require('os');
 const fs = require('fs');
 const { AnalysisTask } = require('../AnalysisTask');
 const { ensureDb } = require('../../../data/db/sqlite');
-const Database = require('better-sqlite3');
-
 function createTempDb() {
   const tmpDir = path.join(os.tmpdir(), 'analysis-task-tests');
   fs.mkdirSync(tmpDir, { recursive: true });

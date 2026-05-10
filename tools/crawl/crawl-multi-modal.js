@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Multi-Modal Intelligent Crawl CLI
  *
@@ -260,13 +261,12 @@ async function main() {
   }
 
   // Load dependencies
-  const Database = require('better-sqlite3');
   const { CrawlOperations } = require('../../src/core/crawler/CrawlOperations');
   const { createMultiModalCrawl, MultiModalCrawlManager } = require('../../src/core/crawler/multimodal');
 
   // Connect to database
   const dbPath = path.join(__dirname, '../data/news.db');
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
 
   // Create crawl operations facade
   const crawlOperations = new CrawlOperations({

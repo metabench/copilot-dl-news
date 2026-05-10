@@ -1,5 +1,6 @@
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 // Seed URLs for AP News crawl
-const db = require('better-sqlite3')('data/crawl-apnews_com.db');
+const db = openNewsCrawlerDb('data/crawl-apnews_com.db');
 
 const urls = [
     'https://apnews.com',

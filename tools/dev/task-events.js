@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * task-events.js — CLI for querying task events (crawls, background tasks)
  * 
@@ -24,8 +25,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 // ─────────────────────────────────────────────────────────────
 // Argument parsing
 // ─────────────────────────────────────────────────────────────
@@ -235,185 +234,56 @@ function openDb(dbPath) {
     console.error(`Database not found: ${dbPath}`);
     process.exit(1);
   }
-  return new Database(dbPath, { readonly: true });
+  return openNewsCrawlerDb(dbPath, { readonly: true });
 }
 
 function tableExists(db) {
-  const result = db.prepare(
-    "SELECT name FROM sqlite_master WHERE type='table' AND name='task_events'"
-  ).get();
-  return !!result;
+  return db.taskEvents.taskEventsTableExists();
 }
 
 function listTasks(db, { type, limit }) {
-  let sql = `
-    SELECT 
-      task_type,
-      task_id,
-      COUNT(*) as event_count,
-      MIN(ts) as first_ts,
-      MAX(ts) as last_ts,
-      SUM(CASE WHEN severity = 'error' THEN 1 ELSE 0 END) as error_count,
-      SUM(CASE WHEN severity = 'warn' THEN 1 ELSE 0 END) as warn_count
-    FROM task_events
-  `;
-  const params = [];
-  if (type) {
-    sql += ' WHERE task_type = ?';
-    params.push(type);
-  }
-  sql += ' GROUP BY task_id ORDER BY MAX(ts) DESC LIMIT ?';
-  params.push(limit);
-
-  return db.prepare(sql).all(...params);
+  return db.taskEvents.listTaskEventTaskSummaries({ taskType: type, limit });
 }
 
 function getEvents(db, taskId, { category, severity, scope, sinceSeq, limit }) {
-  let sql = 'SELECT * FROM task_events WHERE task_id = ?';
-  const params = [taskId];
-
-  if (category) {
-    sql += ' AND event_category = ?';
-    params.push(category);
-  }
-  if (severity) {
-    sql += ' AND severity = ?';
-    params.push(severity);
-  }
-  if (scope) {
-    sql += ' AND scope LIKE ?';
-    params.push(`%${scope}%`);
-  }
-  if (sinceSeq) {
-    sql += ' AND seq > ?';
-    params.push(sinceSeq);
-  }
-  sql += ' ORDER BY seq LIMIT ?';
-  params.push(limit);
-
-  return db.prepare(sql).all(...params);
+  return db.taskEvents.getTaskEventsForTask(taskId, {
+    category,
+    severity,
+    scopeContains: scope,
+    sinceSeq,
+    limit
+  });
 }
 
 function getSummary(db, taskId) {
-  const stats = db.prepare(`
-    SELECT 
-      COUNT(*) as total_events,
-      MAX(seq) as max_seq,
-      MIN(ts) as first_ts,
-      MAX(ts) as last_ts,
-      task_type,
-      SUM(CASE WHEN severity = 'error' THEN 1 ELSE 0 END) as error_count,
-      SUM(CASE WHEN severity = 'warn' THEN 1 ELSE 0 END) as warn_count,
-      SUM(duration_ms) as total_duration_ms,
-      AVG(duration_ms) as avg_duration_ms,
-      COUNT(DISTINCT scope) as unique_scopes
-    FROM task_events WHERE task_id = ?
-  `).get(taskId);
-
-  const eventTypes = db.prepare(`
-    SELECT event_type, COUNT(*) as count
-    FROM task_events WHERE task_id = ?
-    GROUP BY event_type ORDER BY count DESC LIMIT 20
-  `).all(taskId);
-
-  const scopeBreakdown = db.prepare(`
-    SELECT scope, COUNT(*) as count, AVG(duration_ms) as avg_ms
-    FROM task_events WHERE task_id = ? AND scope IS NOT NULL
-    GROUP BY scope ORDER BY count DESC LIMIT 10
-  `).all(taskId);
-
-  return { ...stats, eventTypes, scopeBreakdown };
+  return db.taskEvents.getTaskEventSummary(taskId);
 }
 
 function getProblems(db, taskId, limit) {
-  return db.prepare(`
-    SELECT seq, ts, event_type, severity, scope, target, payload
-    FROM task_events 
-    WHERE task_id = ? AND severity IN ('error', 'warn')
-    ORDER BY seq LIMIT ?
-  `).all(taskId, limit);
+  return db.taskEvents.getTaskEventProblems(taskId, limit);
 }
 
 function getTimeline(db, taskId) {
-  return db.prepare(`
-    SELECT seq, ts, event_type, scope, duration_ms
-    FROM task_events 
-    WHERE task_id = ? AND event_category = 'lifecycle'
-    ORDER BY seq
-  `).all(taskId);
+  return db.taskEvents.getTaskEventLifecycleTimeline(taskId);
 }
 
 function searchEvents(db, pattern, { type, limit }) {
-  let sql = `
-    SELECT task_id, seq, ts, event_type, severity, scope, target
-    FROM task_events
-    WHERE (
-      event_type LIKE ? OR 
-      scope LIKE ? OR 
-      target LIKE ? OR
-      payload LIKE ?
-    )
-  `;
-  const params = [`%${pattern}%`, `%${pattern}%`, `%${pattern}%`, `%${pattern}%`];
-
-  if (type) {
-    sql += ' AND task_type = ?';
-    params.push(type);
-  }
-  sql += ' ORDER BY ts DESC LIMIT ?';
-  params.push(limit);
-
-  return db.prepare(sql).all(...params);
+  return db.taskEvents.searchTaskEvents(pattern, { taskType: type, limit });
 }
 
 function getStorageStats(db) {
-  const counts = db.prepare(`
-    SELECT 
-      COUNT(*) as total_events,
-      COUNT(DISTINCT task_id) as total_tasks,
-      COUNT(DISTINCT task_type) as task_types,
-      MIN(ts) as oldest,
-      MAX(ts) as newest
-    FROM task_events
-  `).get();
-
-  const byType = db.prepare(`
-    SELECT task_type, COUNT(*) as count, COUNT(DISTINCT task_id) as tasks
-    FROM task_events GROUP BY task_type ORDER BY count DESC
-  `).all();
-
-  const byCategory = db.prepare(`
-    SELECT event_category, COUNT(*) as count
-    FROM task_events GROUP BY event_category ORDER BY count DESC
-  `).all();
-
-  const payloadSize = db.prepare(`
-    SELECT SUM(LENGTH(payload)) as bytes FROM task_events
-  `).get();
-
-  return { ...counts, payloadBytes: payloadSize?.bytes || 0, byType, byCategory };
+  return db.taskEvents.getTaskEventStorageStatistics();
 }
 
 function pruneOlderThan(db, days, fix) {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = cutoff.toISOString();
-
-  const preview = db.prepare(`
-    SELECT COUNT(*) as count, COUNT(DISTINCT task_id) as tasks
-    FROM task_events WHERE ts < ?
-  `).get(cutoffStr);
-
   if (!fix) {
-    return { ...preview, dryRun: true, cutoff: cutoffStr };
+    return db.taskEvents.previewPruneTaskEventsOlderThan(days);
   }
 
-  // Need write access for actual delete
-  const writeDb = new Database(db.name); // Re-open with write
-  const result = writeDb.prepare('DELETE FROM task_events WHERE ts < ?').run(cutoffStr);
+  const writeDb = openNewsCrawlerDb(db.name);
+  const result = writeDb.taskEvents.pruneTaskEventsOlderThan(days);
   writeDb.close();
-
-  return { deleted: result.changes, tasks: preview.tasks, cutoff: cutoffStr };
+  return result;
 }
 
 // ─────────────────────────────────────────────────────────────

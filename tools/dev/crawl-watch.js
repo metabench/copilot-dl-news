@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * crawl-watch.js — Live crawl monitoring CLI
  * 
@@ -24,8 +25,6 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync, spawn } = require('child_process');
-const Database = require('better-sqlite3');
-
 // ─────────────────────────────────────────────────────────────
 // Argument parsing
 // ─────────────────────────────────────────────────────────────
@@ -547,26 +546,21 @@ async function watchTaskEvents(taskId, flags) {
     process.exit(1);
   }
   
-  const db = new Database(flags.db, { readonly: true });
+  const db = openNewsCrawlerDb(flags.db, { readonly: true });
   
   const poll = () => {
     try {
-      const events = db.prepare(`
-        SELECT event_type, severity, message, scope, details, created_at
-        FROM task_events
-        WHERE task_id = ?
-        ORDER BY seq ASC
-        LIMIT ?
-      `).all(taskId, flags.limit);
+      const events = db.taskEvents.getTaskEventsForTask(taskId, { limit: flags.limit });
       
       // Convert DB events to our internal format
       const parsedEvents = events.map(e => {
-        const details = e.details ? JSON.parse(e.details) : {};
+        const details = e.payload ? JSON.parse(e.payload) : {};
         return {
           type: mapEventType(e.event_type),
           ...details,
-          message: e.message,
-          scope: e.scope
+          message: details.message || details.error || e.event_type,
+          scope: e.scope,
+          timestamp: e.ts
         };
       });
       

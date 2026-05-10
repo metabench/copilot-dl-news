@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 /**
  * topicAdapter Tests
  * 
@@ -13,8 +14,6 @@
  * For now, we test basic connectivity and table creation only.
  * Full API tests should be added when the adapter API stabilizes.
  */
-
-const Database = require('better-sqlite3');
 const { createTopicAdapter } = require('../../../src/db/sqlite/v1/queries/topicAdapter');
 
 describe('topicAdapter', () => {
@@ -23,7 +22,7 @@ describe('topicAdapter', () => {
   
   beforeAll(() => {
     // Create in-memory database for testing
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create content_analysis table stub (needed by some JOIN queries)
     db.exec(`

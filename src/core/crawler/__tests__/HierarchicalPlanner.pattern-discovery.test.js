@@ -1,9 +1,9 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 /**
  * Tests for Pattern-Based Hub Discovery (Phase 1 Improvement)
  */
 
 const { HierarchicalPlanner } = require('../HierarchicalPlanner');
-const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
@@ -14,7 +14,7 @@ describe('HierarchicalPlanner - Pattern Discovery', () => {
 
   beforeEach(() => {
     // Create in-memory database
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create required tables from migration
     const migrationPath = path.join(__dirname, '../../db/migrations/006-hierarchical-planning.sql');

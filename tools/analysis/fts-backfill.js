@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Backfill body_text, byline, and authors columns for FTS5 indexing
  * 
@@ -13,8 +14,6 @@
  * Usage:
  *   node tools/fts-backfill.js [--limit 1000] [--batch-size 100] [--dry-run]
  */
-
-const Database = require('better-sqlite3');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
@@ -65,7 +64,7 @@ Options:
 }
 
 // Open database
-const db = new Database(options.dbPath);
+const db = openNewsCrawlerDb(options.dbPath);
 db.pragma('journal_mode = WAL');
 
 // Check if required columns exist

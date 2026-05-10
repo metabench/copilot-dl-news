@@ -18,6 +18,7 @@
 const { URL } = require('url');
 const { createPlaceHubUrlPatternsStore } = require('../data/db/placeHubUrlPatternsStore');
 const { getDb } = require('../data/db');
+const { createSqliteHubGapAnalysisAccess } = require('news-crawler-db');
 
 // Common place hub URL indicators
 const PLACE_HUB_INDICATORS = [
@@ -60,6 +61,7 @@ class PlaceHubPatternLearningService {
     };
 
     this.store = createPlaceHubUrlPatternsStore(this.db);
+    this.hubGapAnalysis = this.db?.hubGapAnalysis || createSqliteHubGapAnalysisAccess(this.db);
     this._preparedStatements = null;
   }
 
@@ -72,66 +74,18 @@ class PlaceHubPatternLearningService {
     }
 
     this._preparedStatements = {
-      // Get verified place hubs for a domain
-      getVerifiedPlaceHubs: this.db.prepare(`
-        SELECT 
-          ph.id,
-          ph.host,
-          u.url,
-          ph.place_slug,
-          ph.place_kind,
-          ph.title,
-          ph.nav_links_count,
-          ph.article_links_count,
-          ph.first_seen_at,
-          ph.last_seen_at
-        FROM place_hubs ph
-        JOIN urls u ON ph.url_id = u.id
-        WHERE ph.host = ?
-        ORDER BY ph.last_seen_at DESC
-      `),
-
-      // Get verified place hub candidates for a domain
-      getVerifiedCandidates: this.db.prepare(`
-        SELECT 
-          id,
-          domain,
-          candidate_url,
-          place_kind,
-          place_name,
-          pattern,
-          validation_status,
-          created_at
-        FROM place_hub_candidates
-        WHERE domain = ?
-          AND validation_status = 'valid'
-        ORDER BY created_at DESC
-      `),
-
-      // Get all domains with verified place hubs
-      getDomainsWithPlaceHubs: this.db.prepare(`
-        SELECT DISTINCT host, COUNT(*) as hub_count
-        FROM place_hubs
-        GROUP BY host
-        HAVING COUNT(*) >= ?
-        ORDER BY COUNT(*) DESC
-      `),
-
-      // Get place page mappings for pattern learning
-      getPlacePageMappings: this.db.prepare(`
-        SELECT 
-          host,
-          page_url,
-          place_slug,
-          page_kind,
-          status,
-          verification_reason
-        FROM place_page_mappings
-        WHERE host = ?
-          AND status = 'verified'
-          AND page_kind IN ('country-hub', 'region-hub', 'city-hub', 'state-hub', 'area-hub')
-        ORDER BY created_at DESC
-      `)
+      getVerifiedPlaceHubs: {
+        all: (host) => this.hubGapAnalysis.listVerifiedPlaceHubRows(host)
+      },
+      getVerifiedCandidates: {
+        all: (domain) => this.hubGapAnalysis.listVerifiedPlaceHubCandidateRows(domain)
+      },
+      getDomainsWithPlaceHubs: {
+        all: (minHubs) => this.hubGapAnalysis.listDomainsWithPlaceHubs({ minHubs })
+      },
+      getPlacePageMappings: {
+        all: (host) => this.hubGapAnalysis.listVerifiedPlacePageMappingsForPatternLearning(host)
+      }
     };
 
     return this._preparedStatements;

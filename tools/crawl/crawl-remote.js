@@ -33,6 +33,7 @@
 
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const http = require('http');
 const https = require('https');
 const zlib = require('zlib');
@@ -333,12 +334,11 @@ let localDb;
 
 function openLocalDb() {
   if (localDb) return localDb;
-  const Database = require('better-sqlite3');
   if (!fs.existsSync(LOCAL_DB_PATH)) {
     console.error(`Local DB not found: ${LOCAL_DB_PATH}`);
     process.exit(1);
   }
-  localDb = new Database(LOCAL_DB_PATH);
+  localDb = openNewsCrawlerDb(LOCAL_DB_PATH);
   localDb.pragma('journal_mode = WAL');
   localDb.pragma('busy_timeout = 5000');
   return localDb;

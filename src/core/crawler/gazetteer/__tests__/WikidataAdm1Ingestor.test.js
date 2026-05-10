@@ -1,9 +1,9 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../../db/openNewsCrawlerDb');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const Database = require('better-sqlite3');
 const { initGazetteerTables } = require('../../../../data/db/sqlite/schema');
 const WikidataAdm1Ingestor = require('../ingestors/WikidataAdm1Ingestor');
 
@@ -23,7 +23,7 @@ describe('WikidataAdm1Ingestor', () => {
   };
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     initGazetteerTables(db, { verbose: false, logger: console });
 
     db.prepare(`

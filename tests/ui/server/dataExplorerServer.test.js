@@ -1,5 +1,6 @@
 "use strict";
 
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 // Mock jsdom to avoid parse5 ESM-only import issue in Jest
 jest.mock('jsdom', () => ({
   JSDOM: jest.fn().mockImplementation(() => ({
@@ -8,8 +9,6 @@ jest.mock('jsdom', () => ({
 }));
 
 const request = require("supertest");
-const Database = require("better-sqlite3");
-
 jest.mock("../../../src/data/db/dbAccess", () => ({
   openNewsDb: jest.fn()
 }));
@@ -18,7 +17,7 @@ const { openNewsDb } = require("../../../src/data/db/dbAccess");
 const { createDataExplorerServer } = require("../../../src/ui/server/dataExplorerServer");
 
 function buildInMemoryDb() {
-  const db = new Database(":memory:");
+  const db = openNewsCrawlerDb(":memory:");
   db.exec(`
     CREATE TABLE urls (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

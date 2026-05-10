@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 /**
  * Places API Check Script
  * 
@@ -10,7 +11,6 @@
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
 const { createPlacesRouter } = require('../src/api/routes/places');
 const { haversineDistance, distanceToCoherence } = require('../src/analysis/place-coherence');
 

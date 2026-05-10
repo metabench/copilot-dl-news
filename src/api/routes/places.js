@@ -13,7 +13,7 @@
  */
 
 const express = require('express');
-const Database = require('better-sqlite3');
+const { openNewsCrawlerDb } = require('../../db/openNewsCrawlerDb');
 const { PublisherPrior } = require('../../intelligence/analysis/publisher-prior');
 const { PlaceCoherence, haversineDistance, distanceToCoherence } = require('../../intelligence/analysis/place-coherence');
 const { createMultiLanguagePlaceQueries } = require('../../data/db/sqlite/v1/queries/multiLanguagePlaces');
@@ -41,7 +41,7 @@ function createPlacesRouter(options = {}) {
   
   function getDb() {
     if (!db) {
-      db = new Database(dbPath);
+      db = openNewsCrawlerDb(dbPath);
       publisherPrior = new PublisherPrior(db);
       placeCoherence = new PlaceCoherence(db);
       multiLangQueries = createMultiLanguagePlaceQueries(db);

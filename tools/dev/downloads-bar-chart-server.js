@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * downloads-bar-chart-server — live bar chart of stored downloads over the last N days
  *
@@ -44,8 +45,6 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const express = require('express');
-const Database = require('better-sqlite3');
-
 const VALID_SOURCES = ['http-all', 'http-ok', 'fetches', 'urls', 'articles'];
 const VALID_MODES = ['daily', 'cumulative'];
 
@@ -231,7 +230,7 @@ function getDailyDownloads(dbPath, days, source = 'http-all', opts = {}) {
   if (!spec) throw new Error(`Unknown source: ${source}`);
   const mode = opts.mode === 'cumulative' ? 'cumulative' : 'daily';
   const baselineOpt = opts.baseline == null ? 'auto' : opts.baseline;
-  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
   try {
     const windowParam = `-${days - 1} days`;
     let rows;

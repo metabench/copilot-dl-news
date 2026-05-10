@@ -1,9 +1,8 @@
+const { openNewsCrawlerDb } = require('../../db/openNewsCrawlerDb');
 const http = require('http');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 jest.setTimeout(15000);
 
 function startServerWithEnv(env = {}) {
@@ -145,7 +144,7 @@ describe('e2e http: more precise coverage', () => {
     }
     // Wait for server shutdown (500ms) + margin to ensure database is released
     await new Promise((resolve) => setTimeout(resolve, 600));
-    const db = new Database(dbPath, { readonly: true });
+    const db = openNewsCrawlerDb(dbPath, { readonly: true });
     const rows = db.prepare('SELECT stage, status FROM planner_stage_events').all();
     db.close();
     expect(rows.length).toBeGreaterThan(0);

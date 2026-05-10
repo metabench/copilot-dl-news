@@ -1,17 +1,16 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 /**
  * Check script for TaskEventWriter functionality.
  * Verifies schema creation, event writing, and query capabilities.
  */
-
-const Database = require('better-sqlite3');
 const { TaskEventWriter, getEventMetadata } = require('../src/db/TaskEventWriter');
 
 console.log('=== TaskEventWriter Check ===\n');
 
 // Create in-memory DB for testing
-const db = new Database(':memory:');
+const db = openNewsCrawlerDb(':memory:');
 console.log('✓ Created in-memory database');
 
 // Create writer (this will auto-create schema)
@@ -19,12 +18,11 @@ const writer = new TaskEventWriter(db, { batchWrites: false });
 console.log('✓ Created TaskEventWriter (non-batched mode)');
 
 // Verify schema was created
-const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='task_events'").all();
-console.log(`✓ task_events table exists: ${tables.length > 0}`);
+console.log(`✓ task_events table exists: ${db.taskEvents.taskEventsTableExists()}`);
 
-const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='task_events'").all();
+const indexes = db.taskEvents.listTaskEventIndexNames();
 console.log(`✓ Indexes created: ${indexes.length} indexes`);
-indexes.forEach(idx => console.log(`  - ${idx.name}`));
+indexes.forEach(indexName => console.log(`  - ${indexName}`));
 
 // Write some test events
 console.log('\n--- Writing test events ---');

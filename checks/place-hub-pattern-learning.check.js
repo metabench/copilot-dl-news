@@ -13,8 +13,7 @@
  */
 
 'use strict';
-
-const Database = require('better-sqlite3');
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 const path = require('path');
 const fs = require('fs');
 
@@ -81,10 +80,10 @@ async function runChecks(useRealDb = false) {
         console.log('   Run without --real-db flag for in-memory testing');
         return { passed: 0, failed: 1 };
       }
-      db = new Database(dbPath);
+      db = openNewsCrawlerDb(dbPath);
       console.log('✅ Connected to real database:', dbPath);
     } else {
-      db = new Database(':memory:');
+      db = openNewsCrawlerDb(':memory:');
       console.log('✅ Created in-memory database');
     }
 

@@ -1,8 +1,7 @@
+const { openNewsCrawlerDb } = require('../../../../../src/db/openNewsCrawlerDb');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 const dbPath = path.join(__dirname, '../../../../data/news.db');
-const db = new Database(dbPath);
+const db = openNewsCrawlerDb(dbPath);
 
 const query = `
 SELECT 

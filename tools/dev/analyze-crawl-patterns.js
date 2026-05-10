@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-
-const Database = require('better-sqlite3');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
 const { PatternLearner } = require('../../src/services/PatternLearner');
 const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
@@ -18,7 +17,7 @@ function main() {
     process.exit(1);
   }
 
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   const learner = new PatternLearner(db);
 
   fmt.header('Crawl Pattern Analysis');

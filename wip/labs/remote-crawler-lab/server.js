@@ -1,5 +1,5 @@
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 const express = require('express');
-const Database = require('better-sqlite3');
 const path = require('path');
 const jsgui = require('jsgui3-html');
 const { createCrawlSpeedometerControl, CRAWL_SPEEDOMETER_STYLES } = require('./controls/CrawlSpeedometerControl');
@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3120;
 const DB_PATH = process.env.DB_PATH || 'crawler.db';
 
 // Database Setup
-const db = new Database(DB_PATH);
+const db = openNewsCrawlerDb(DB_PATH);
 db.exec(`
   CREATE TABLE IF NOT EXISTS urls (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,7 +99,6 @@ async function startWorker() {
 }
 // Start worker immediately
 startWorker();
-
 
 const CrawlSpeedometer = createCrawlSpeedometerControl(jsgui);
 

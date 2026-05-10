@@ -1,6 +1,5 @@
 'use strict';
-
-const Database = require('better-sqlite3');
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 const { initGazetteerTables } = require('../../../data/db/sqlite/schema');
 const OsmBoundaryIngestor = require('../gazetteer/ingestors/OsmBoundaryIngestor');
 
@@ -9,7 +8,7 @@ describe('OsmBoundaryIngestor', () => {
   let logger;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     initGazetteerTables(db, { verbose: false, logger: console });
     logger = {
       info: jest.fn(),

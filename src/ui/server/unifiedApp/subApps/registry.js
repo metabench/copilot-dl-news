@@ -403,19 +403,12 @@ function createSubAppRegistry(options = {}) {
             knownHubs = db.prepare(`SELECT COUNT(*) as c FROM classification_cache WHERE type = 'hub'`).get().c;
             domains = db.prepare(`SELECT COUNT(*) as c FROM domain_registry`).get().c;
 
-            recentRuns = db.prepare(`
-              SELECT task_id, MIN(ts) as started_at, MAX(ts) as finished_at, MAX(seq) as max_seq
-              FROM task_events 
-              WHERE event_type IN ('crawl:start', 'crawl:started', 'crawl:complete', 'crawl:error')
-              GROUP BY task_id
-              ORDER BY started_at DESC
-              LIMIT 5
-            `).all();
+            recentRuns = db.taskEvents.listRecentCrawlTaskRuns({ limit: 5 });
 
             // Format recent runs
             for (let i = 0; i < recentRuns.length; i++) {
               const r = recentRuns[i];
-              const startEvent = db.prepare(`SELECT payload FROM task_events WHERE task_id = ? AND event_type IN ('crawl:start', 'crawl:started') ORDER BY seq ASC LIMIT 1`).get(r.task_id);
+              const startEvent = db.taskEvents.getFirstTaskEventPayload(r.task_id, ['crawl:start', 'crawl:started']);
               let targetHost = 'Unknown';
               if (startEvent && startEvent.payload) {
                 try {
@@ -425,8 +418,8 @@ function createSubAppRegistry(options = {}) {
               }
               r.targetHost = targetHost;
 
-              const endEvent = db.prepare(`SELECT event_type FROM task_events WHERE task_id = ? ORDER BY seq DESC LIMIT 1`).get(r.task_id);
-              r.status = endEvent ? (endEvent.event_type === 'crawl:error' ? 'Failed' : (endEvent.event_type === 'crawl:complete' ? 'Complete' : 'Active')) : 'Unknown';
+              const endEventType = db.taskEvents.getLatestTaskEventType(r.task_id);
+              r.status = endEventType ? (endEventType === 'crawl:error' ? 'Failed' : (endEventType === 'crawl:complete' ? 'Complete' : 'Active')) : 'Unknown';
 
               // Simple duration calculation
               const startMs = new Date(r.started_at).getTime();

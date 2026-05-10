@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 const DEFAULT_SITES = [
   'bbc.com',
   'aljazeera.com',
@@ -57,7 +56,7 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
   const sinceForSql = toSqliteTimestamp(args.since);
   const untilForSql = toSqliteTimestamp(args.until);
-  const db = new Database(args.dbPath, { readonly: true });
+  const db = openNewsCrawlerDb(args.dbPath, { readonly: true });
 
   try {
     const stmt = db.prepare(`

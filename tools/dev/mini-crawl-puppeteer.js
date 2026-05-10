@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * mini-crawl-puppeteer.js — Mini crawl using Puppeteer for sites that block node-fetch
  * 
@@ -9,7 +10,6 @@
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
 const { PuppeteerFetcher } = require('../../src/crawler/PuppeteerFetcher');
 const { TaskEventWriter } = require('../../src/db/TaskEventWriter');
 
@@ -168,7 +168,7 @@ Examples:
   }
 
   // Open database
-  const db = new Database(flags.db);
+  const db = openNewsCrawlerDb(flags.db);
   const eventWriter = new TaskEventWriter(db, { batchWrites: false });
 
   const jobId = `puppeteer-crawl-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;

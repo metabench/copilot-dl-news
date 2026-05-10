@@ -19,7 +19,6 @@
 
 const express = require('express');
 const path = require('path');
-const Database = require('better-sqlite3');
 const jsgui = require('jsgui3-html');
 
 const { createRateLimitAdapter } = require('../../../data/db/sqlite/v1/rateLimitAdapter');
@@ -75,7 +74,7 @@ let rateLimitAdapter;
 let rateLimitTracker;
 
 async function initDb(dbPath = DB_PATH) {
-  db = new Database(dbPath);
+  db = resolveBetterSqliteHandle({ dbPath }).dbHandle;
   rateLimitAdapter = createRateLimitAdapter(db);
   
   // Ensure table exists

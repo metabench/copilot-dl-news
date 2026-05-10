@@ -1,8 +1,8 @@
 'use strict';
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
-const Database = require('better-sqlite3');
 const dbPath = path.resolve(__dirname, '..', '..', 'data', 'news.db');
-const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
 try {
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map(r => r.name);
   console.log('TABLES:', tables.join(', '));

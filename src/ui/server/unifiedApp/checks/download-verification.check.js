@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 "use strict";
-
-const Database = require("better-sqlite3");
+const { openNewsCrawlerDb } = require('../../../../db/openNewsCrawlerDb');
 const { getRecentDownloadVerifications } = require("../../../../data/db/queries/downloadEvidence");
 
 function assert(name, condition) {
@@ -12,7 +11,7 @@ function assert(name, condition) {
 }
 
 function createFixtureDb() {
-  const db = new Database(":memory:");
+  const db = openNewsCrawlerDb(":memory:");
 
   db.exec(`
     CREATE TABLE urls (

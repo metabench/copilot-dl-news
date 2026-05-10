@@ -1,6 +1,5 @@
 'use strict';
-
-const Database = require('better-sqlite3');
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 const { PlannerHost } = require('../PlannerHost');
 const { GraphReasonerPlugin } = require('../../../plugins/GraphReasonerPlugin');
 const { QueryCostEstimatorPlugin } = require('../../../plugins/QueryCostEstimatorPlugin');
@@ -15,7 +14,7 @@ describe('QueryCostEstimatorPlugin', () => {
   let writer;
 
   beforeEach(async () => {
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     const { initializeSchema } = require('../../../data/db/sqlite/schema');
     initializeSchema(db);
 

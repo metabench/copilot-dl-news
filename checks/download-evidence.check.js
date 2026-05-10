@@ -9,8 +9,8 @@
  */
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 const path = require('path');
-const Database = require('better-sqlite3');
 const evidence = require('../src/db/queries/downloadEvidence');
 
 const DB_PATH = path.join(__dirname, '..', 'data', 'news.db');
@@ -18,7 +18,7 @@ const DB_PATH = path.join(__dirname, '..', 'data', 'news.db');
 function main() {
   console.log('=== Download Evidence Check ===\n');
   
-  const db = new Database(DB_PATH, { readonly: true });
+  const db = openNewsCrawlerDb(DB_PATH, { readonly: true });
   
   try {
     // Test 1: Global stats

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * @fileoverview Gazetteer schema migration script
  * 
@@ -17,8 +18,6 @@
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
-
 const DB_PATH = path.join(__dirname, '../../data/gazetteer.db');
 const isDryRun = process.argv.includes('--dry-run');
 
@@ -45,7 +44,7 @@ function main() {
   console.log(`Mode: ${isDryRun ? 'DRY RUN' : 'LIVE'}`);
   console.log('');
 
-  const db = new Database(DB_PATH);
+  const db = openNewsCrawlerDb(DB_PATH);
   
   try {
     if (!isDryRun) {

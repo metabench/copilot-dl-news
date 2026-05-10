@@ -254,12 +254,12 @@ async function startDaemon(config) {
   // Lazy-load heavy modules only when starting
   const { createCrawlApiServer, createCrawlService } = require('../../server/crawl-api');
   const { InProcessCrawlJobRegistry } = require('../../server/crawl-api/v1/core/InProcessCrawlJobRegistry');
-  const Database = require('better-sqlite3');
+  const { openNewsCrawlerDb } = require('../../db/openNewsCrawlerDb');
   const { TelemetryIntegration } = require('../../core/crawler/telemetry/TelemetryIntegration');
   
   // Open database
   const dbPath = path.join(process.cwd(), 'data', 'news.db');
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   
   // Create telemetry with quiet settings
   const telemetry = new TelemetryIntegration({

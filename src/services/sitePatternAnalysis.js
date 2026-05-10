@@ -1,5 +1,7 @@
 'use strict';
 
+const { createSqliteHubGapAnalysisAccess } = require('news-crawler-db');
+
 /**
  * SitePatternAnalyzer
  * 
@@ -70,6 +72,15 @@ function isArticleId(segment) {
   return false;
 }
 
+function getHostVariants(host) {
+  const normalizedHost = host.replace(/^www\./, '');
+  return Array.from(new Set([host, `www.${normalizedHost}`, normalizedHost]));
+}
+
+function getHubGapAccess(dbHandle) {
+  return dbHandle?.hubGapAnalysis || createSqliteHubGapAnalysisAccess(dbHandle);
+}
+
 /**
  * Analyze URLs from a host to discover patterns
  * 
@@ -85,20 +96,11 @@ function analyzeHostPatterns(dbHandle, host, options = {}) {
     minArticleCount = 5
   } = options;
 
-  // Normalize host (strip www. for lookup)
-  const normalizedHost = host.replace(/^www\./, '');
-  const hostVariants = [host, `www.${normalizedHost}`, normalizedHost].filter(h => h !== host);
+  const dbAccess = getHubGapAccess(dbHandle);
+  const hostVariants = getHostVariants(host);
   
   // Get page count to verify eligibility
-  const pageCountResult = dbHandle.prepare(`
-    SELECT COUNT(*) as count
-    FROM http_responses hr
-    JOIN urls u ON u.id = hr.url_id
-    WHERE (u.host = ? OR u.host IN (${hostVariants.map(() => '?').join(',')}))
-      AND hr.http_status = 200
-  `).get(host, ...hostVariants);
-  
-  const pageCount = pageCountResult?.count || 0;
+  const pageCount = dbAccess.countSuccessfulFetchedPagesForHostVariants(host, { hostVariants });
   
   if (pageCount < PAGE_THRESHOLD) {
     return {
@@ -111,14 +113,7 @@ function analyzeHostPatterns(dbHandle, host, options = {}) {
   }
   
   // Get URLs for this host
-  const urls = dbHandle.prepare(`
-    SELECT u.url
-    FROM http_responses hr
-    JOIN urls u ON u.id = hr.url_id
-    WHERE (u.host = ? OR u.host IN (${hostVariants.map(() => '?').join(',')}))
-      AND hr.http_status = 200
-    LIMIT ?
-  `).all(host, ...hostVariants, maxUrls);
+  const urls = dbAccess.listSuccessfulFetchedUrlsForHostVariants(host, { hostVariants, limit: maxUrls });
   
   // Analyze path segments
   const firstSegmentCounts = {};
@@ -263,45 +258,7 @@ function analyzeHostPatterns(dbHandle, host, options = {}) {
  * @returns {object} Save result
  */
 function savePatterns(dbHandle, host, patterns) {
-  const insert = dbHandle.prepare(`
-    INSERT INTO site_url_patterns (
-      host, pattern_type, path_template, first_segment,
-      confidence, article_count, child_count, example_urls,
-      discovered_at, is_active
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), 1)
-    ON CONFLICT(host, pattern_type, path_template) DO UPDATE SET
-      confidence = excluded.confidence,
-      article_count = excluded.article_count,
-      child_count = excluded.child_count,
-      example_urls = excluded.example_urls,
-      last_verified_at = datetime('now'),
-      is_active = 1
-  `);
-  
-  let inserted = 0;
-  let updated = 0;
-  
-  const insertMany = dbHandle.transaction((patterns) => {
-    for (const p of patterns) {
-      const result = insert.run(
-        host,
-        p.type,
-        p.template || p.path,
-        p.firstSegment,
-        p.confidence,
-        p.articleCount || 0,
-        p.childCount || 0,
-        JSON.stringify(p.examples || [])
-      );
-      if (result.changes > 0) {
-        inserted++;
-      }
-    }
-  });
-  
-  insertMany(patterns);
-  
-  return { inserted, host, patternCount: patterns.length };
+  return getHubGapAccess(dbHandle).saveSiteUrlPatterns(host, patterns);
 }
 
 /**
@@ -315,29 +272,11 @@ function savePatterns(dbHandle, host, patterns) {
 function getHostPatterns(dbHandle, host, options = {}) {
   const { type = null, minConfidence = 0.0, activeOnly = true } = options;
   
-  // Normalize host
-  const normalizedHost = host.replace(/^www\./, '');
-  const hostVariants = [host, `www.${normalizedHost}`, normalizedHost];
-  
-  let sql = `
-    SELECT *
-    FROM site_url_patterns
-    WHERE host IN (${hostVariants.map(() => '?').join(',')})
-      AND confidence >= ?
-  `;
-  const params = [...hostVariants, minConfidence];
-  
-  if (activeOnly) {
-    sql += ' AND is_active = 1';
-  }
-  if (type) {
-    sql += ' AND pattern_type = ?';
-    params.push(type);
-  }
-  
-  sql += ' ORDER BY confidence DESC, article_count DESC';
-  
-  return dbHandle.prepare(sql).all(...params);
+  return getHubGapAccess(dbHandle).listSiteUrlPatterns(getHostVariants(host), {
+    type,
+    minConfidence,
+    activeOnly
+  });
 }
 
 /**
@@ -371,31 +310,15 @@ function getPlaceHubPatterns(dbHandle, host) {
 function analyzeAllEligibleHosts(dbHandle, options = {}) {
   const { threshold = PAGE_THRESHOLD, force = false } = options;
   
-  // Get hosts with enough pages
-  const eligibleHosts = dbHandle.prepare(`
-    SELECT u.host, COUNT(*) as page_count
-    FROM http_responses hr
-    JOIN urls u ON u.id = hr.url_id
-    WHERE hr.http_status = 200
-      AND u.host IS NOT NULL
-    GROUP BY u.host
-    HAVING page_count >= ?
-    ORDER BY page_count DESC
-  `).all(threshold);
+  const dbAccess = getHubGapAccess(dbHandle);
+  const eligibleHosts = dbAccess.listEligibleHostsForSitePatternAnalysis({ threshold });
   
   const results = [];
   
   for (const { host, page_count } of eligibleHosts) {
     // Skip if already analyzed (unless force)
     if (!force) {
-      const existing = dbHandle.prepare(`
-        SELECT COUNT(*) as count
-        FROM site_url_patterns
-        WHERE host = ?
-          AND discovered_at > datetime('now', '-7 days')
-      `).get(host);
-      
-      if (existing?.count > 0) {
+      if (dbAccess.countRecentSiteUrlPatterns(host, { days: 7 }) > 0) {
         results.push({ host, status: 'skipped', reason: 'Recently analyzed' });
         continue;
       }

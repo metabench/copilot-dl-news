@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../../db/openNewsCrawlerDb');
 /**
  * Check script for DownloadHistoryChart control
  * 
@@ -12,7 +13,6 @@
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
 const jsgui = require('jsgui3-html');
 
 const { DownloadHistoryChart, getDailyDownloads } = require('../controls/DownloadHistoryChart');
@@ -23,7 +23,7 @@ function check() {
   console.log('🔍 DownloadHistoryChart Check\n');
   
   const errors = [];
-  const db = new Database(DB_PATH, { readonly: true });
+  const db = openNewsCrawlerDb(DB_PATH, { readonly: true });
   
   try {
     // Test 1: getDailyDownloads function

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * HTTP Caching Schema Migration
  *
@@ -11,7 +12,6 @@
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
 const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 
 const fmt = new CliFormatter();
@@ -19,7 +19,7 @@ const DB_PATH = path.join(__dirname, '..', '..', 'data', 'news.db');
 
 function openDatabase() {
   try {
-    return new Database(DB_PATH);
+    return openNewsCrawlerDb(DB_PATH);
   } catch (error) {
     fmt.error(`Failed to open database: ${error.message}`);
     process.exit(1);

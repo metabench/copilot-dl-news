@@ -17,6 +17,13 @@ const { slugify, generateSlugVariants } = require('../tools/slugify');
 const { PredictionStrategyManager } = require('./shared/PredictionStrategyManager');
 const { UrlPatternGenerator } = require('./shared/UrlPatternGenerator');
 const { PatternInferenceService } = require('news-db-pure-analysis');
+const {
+  listVerifiedPlacePageMappingUrls,
+  listUrlsForHost,
+  listCountryNamesForHubInference,
+  listCountryRowsForHubDiscovery,
+  getLatestHttpStatusForUrl
+} = require('news-crawler-db');
 
 const MAX_KNOWN_404_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -51,19 +58,7 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
 
     // Override the _getExistingMappings method for country-specific logic
     this.predictionManager._getExistingMappings = (domain) => {
-      try {
-        return this.db.prepare(`
-          SELECT url FROM place_page_mappings
-          WHERE host = ? AND page_kind = 'country-hub' AND status = 'verified'
-          LIMIT 10
-        `).all(domain) || [];
-      } catch (err) {
-        // Handle missing table gracefully (for tests or incomplete databases)
-        if (err.message.includes('no such table')) {
-          return [];
-        }
-        throw err;
-      }
+      return listVerifiedPlacePageMappingUrls(this.db, domain, 'country-hub', { limit: 10 });
     };
 
   }
@@ -75,17 +70,12 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
     }
 
     try {
-      const rows = this.db.prepare('SELECT url FROM urls WHERE host = ? LIMIT 10000').all(domain);
+      const rows = listUrlsForHost(this.db, domain, { limit: 10000 });
       const paths = rows.map(r => {
         try { return new URL(r.url).pathname; } catch { return ''; }
       }).filter(Boolean);
 
-      const countries = this.db.prepare(`
-        SELECT pn.name as title 
-        FROM places p 
-        JOIN place_names pn ON pn.place_id = p.id 
-        WHERE p.kind='country' AND pn.lang='en'
-      `).all();
+      const countries = listCountryNamesForHubInference(this.db);
       const slugs = countries.map(c => c.title);
 
       const inferred = PatternInferenceService.inferCountryHubPatterns(paths, slugs);
@@ -107,21 +97,14 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
   discoverHubsFromExistingUrls(domain) {
     try {
       // Get all short URLs (likely hubs) from the domain
-      const rows = this.db.prepare(
-        'SELECT url FROM urls WHERE host = ? LIMIT 20000'
-      ).all(domain);
+      const rows = listUrlsForHost(this.db, domain, { limit: 20000 });
 
       const paths = rows.map(r => {
         try { return new URL(r.url).pathname; } catch { return ''; }
       }).filter(Boolean);
 
       // Build a slug -> country lookup from the gazetteer
-      const countries = this.db.prepare(`
-        SELECT p.id, p.country_code as code, pn.name as title
-        FROM places p
-        JOIN place_names pn ON pn.place_id = p.id
-        WHERE p.kind='country' AND pn.lang='en'
-      `).all();
+      const countries = listCountryRowsForHubDiscovery(this.db);
 
       const slugMap = new Map();
       for (const c of countries) {
@@ -683,22 +666,7 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
   }
 
   _initLatestHttpStatusStatement() {
-    try {
-      this._selectLatestHttpStatusStmt = this.db.prepare(`
-        SELECT hr.http_status AS http_status, hr.fetched_at AS fetched_at
-        FROM urls u
-        INNER JOIN http_responses hr ON hr.url_id = u.id
-        WHERE u.url = ?
-        ORDER BY hr.fetched_at DESC
-        LIMIT 1
-      `);
-    } catch (err) {
-      if (err && typeof err.message === 'string' && err.message.includes('no such table')) {
-        this._selectLatestHttpStatusStmt = null;
-        return;
-      }
-      throw err;
-    }
+    this._selectLatestHttpStatusStmt = true;
   }
 
   _getLatestHttpStatus(url) {
@@ -712,7 +680,7 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
     }
 
     try {
-      const row = this._selectLatestHttpStatusStmt.get(url) || null;
+      const row = getLatestHttpStatusForUrl(this.db, url) || null;
       this._knownStatusCache.set(url, { row, cachedAt: Date.now() });
       return row;
     } catch (err) {

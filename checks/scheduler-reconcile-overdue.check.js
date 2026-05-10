@@ -1,13 +1,12 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 /**
  * Deterministic check for CrawlScheduler.reconcileOverdue.
  *
  * Goal: when many schedules are overdue (e.g. after downtime), keep the top N due now
  * and postpone the rest across a spread window, emitting task_events for observability.
  */
-
-const Database = require('better-sqlite3');
 const CrawlScheduler = require('../src/crawler/scheduler/CrawlScheduler');
 const { TaskEventWriter } = require('../src/db/TaskEventWriter');
 
@@ -19,7 +18,7 @@ function assert(condition, message) {
 
 console.log('=== Scheduler Reconcile Overdue Check ===\n');
 
-const db = new Database(':memory:');
+const db = openNewsCrawlerDb(':memory:');
 const scheduler = new CrawlScheduler({ db });
 const writer = new TaskEventWriter(db, { batchWrites: false });
 

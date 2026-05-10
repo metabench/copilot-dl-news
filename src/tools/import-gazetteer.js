@@ -7,12 +7,12 @@
   - Safe to run multiple times; uses INSERT OR IGNORE patterns
 */
 
-const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 const ndjson = require('ndjson');
 const { initGazetteerTables } = require('../data/db/sqlite/schema');
 const { findProjectRoot } = require('../shared/utils/project-root');
+const { openNewsCrawlerDb } = require('../db/openNewsCrawlerDb');
 
 // Initialize gazetteer database
 function initGazetteerDb(dbPath) {
@@ -20,7 +20,7 @@ function initGazetteerDb(dbPath) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   // Sensible pragmas for tools
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = OFF'); // Disable during import to handle unordered data

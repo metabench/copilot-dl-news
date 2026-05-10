@@ -1,8 +1,11 @@
 'use strict';
 
 const { URL } = require('url');
+const {
+  isUrlSuccessfullyProcessedWithContent,
+  getLatestFetchForUrl
+} = require('news-crawler-db');
 
-const statementCache = new WeakMap();
 const ACQUISITION_KINDS = new Set(['article', 'refresh', 'history']);
 
 class UrlEligibilityService {
@@ -250,70 +253,28 @@ class UrlEligibilityService {
       const db = adapter.getDb ? adapter.getDb() : null;
       if (!db) return false;
 
-      const { processedCheck, latestFetch } = this._getStatements(db);
       const isNavigationKind = this._isNavigationKind(options.kind);
 
       if (isNavigationKind && this.maxAgeHubMs != null) {
-        const latestRow = this._getLatestFetch(latestFetch, normalized);
+        const latestRow = this._getLatestFetch(db, normalized);
         if (!this._isHubFetchFresh(latestRow)) {
           return false;
         }
       }
 
-      if (!processedCheck) {
-        return false;
-      }
-
-      const row = processedCheck.get(normalized);
-      return !!row;
+      return isUrlSuccessfullyProcessedWithContent(db, normalized);
     } catch (error) {
       // If database check fails, err on the side of processing (don't block potentially valid URLs)
       return false;
     }
   }
 
-  _getStatements(db) {
-    if (!db) return { processedCheck: null, latestFetch: null };
-    let cached = statementCache.get(db);
-    if (cached) {
-      return cached;
-    }
-
-    let processedCheck = null;
-    let latestFetch = null;
-
-    try {
-      processedCheck = db.prepare(`
-        SELECT 1 FROM urls u
-        INNER JOIN http_responses hr ON hr.url_id = u.id
-        INNER JOIN content_storage cs ON cs.http_response_id = hr.id
-        WHERE u.url = ? AND hr.http_status >= 200 AND hr.http_status < 300
-        LIMIT 1
-      `);
-    } catch (_) {}
-
-    try {
-      latestFetch = db.prepare(`
-        SELECT hr.fetched_at AS fetched_at
-        FROM urls u
-        INNER JOIN http_responses hr ON hr.url_id = u.id
-        WHERE u.url = ?
-        ORDER BY hr.fetched_at DESC
-        LIMIT 1
-      `);
-    } catch (_) {}
-
-    cached = { processedCheck, latestFetch };
-    statementCache.set(db, cached);
-    return cached;
-  }
-
-  _getLatestFetch(statement, normalized) {
-    if (!statement || !normalized) {
+  _getLatestFetch(db, normalized) {
+    if (!db || !normalized) {
       return null;
     }
     try {
-      return statement.get(normalized) || null;
+      return getLatestFetchForUrl(db, normalized) || null;
     } catch (_) {
       return null;
     }

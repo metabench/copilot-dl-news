@@ -1,4 +1,10 @@
 const { getDb } = require('../../data/db');
+const {
+  saveStrategyTemplate,
+  updateStrategyTemplate,
+  deleteStrategyTemplate,
+  listStrategyTemplateRows
+} = require('news-crawler-db');
 
 /**
  * Crawl Strategy Templates - Specialized strategies per use case
@@ -94,18 +100,12 @@ class CrawlStrategyTemplates {
     // Persist to database
     if (this.db) {
       try {
-        const stmt = this.db.prepare(`
-          INSERT OR REPLACE INTO strategy_templates (
-            name, description, use_case, template_config, created_at
-          ) VALUES (?, ?, ?, ?, datetime('now'))
-        `);
-
-        stmt.run(
+        saveStrategyTemplate(this.db, {
           name,
-          template.description,
-          template.useCase,
-          JSON.stringify(template.config)
-        );
+          description: template.description,
+          useCase: template.useCase,
+          config: template.config
+        });
 
         this.logger.log?.('[Strategy]', `Created template: ${name}`);
       } catch (error) {
@@ -137,18 +137,7 @@ class CrawlStrategyTemplates {
     // Update in database
     if (this.db) {
       try {
-        const stmt = this.db.prepare(`
-          UPDATE strategy_templates 
-          SET description = ?, use_case = ?, template_config = ?, updated_at = datetime('now')
-          WHERE name = ?
-        `);
-
-        stmt.run(
-          updated.description,
-          updated.useCase,
-          JSON.stringify(updated.config),
-          name
-        );
+        updateStrategyTemplate(this.db, name, updated);
 
         this.logger.log?.('[Strategy]', `Updated template: ${name}`);
       } catch (error) {
@@ -176,8 +165,7 @@ class CrawlStrategyTemplates {
     // Delete from database
     if (this.db) {
       try {
-        const stmt = this.db.prepare('DELETE FROM strategy_templates WHERE name = ?');
-        stmt.run(name);
+        deleteStrategyTemplate(this.db, name);
 
         this.logger.log?.('[Strategy]', `Deleted template: ${name}`);
       } catch (error) {
@@ -230,13 +218,7 @@ class CrawlStrategyTemplates {
     }
 
     try {
-      const stmt = this.db.prepare(`
-        SELECT name, description, use_case, template_config, created_at
-        FROM strategy_templates
-        ORDER BY created_at DESC
-      `);
-
-      const rows = stmt.all();
+      const rows = listStrategyTemplateRows(this.db);
 
       for (const row of rows) {
         const template = {

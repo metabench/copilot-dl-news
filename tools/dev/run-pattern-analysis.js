@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * CLI tool to run site pattern analysis on eligible hosts
  * 
@@ -9,8 +10,6 @@
  *   node tools/dev/run-pattern-analysis.js --force      # Re-analyze even if recent
  *   node tools/dev/run-pattern-analysis.js --list       # List existing patterns
  */
-
-const Database = require('better-sqlite3');
 const path = require('path');
 
 const {
@@ -74,7 +73,7 @@ Examples:
 
 function main() {
   const options = parseArgs();
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   
   try {
     if (options.list) {

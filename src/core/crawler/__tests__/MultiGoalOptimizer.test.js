@@ -1,9 +1,9 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 /**
  * Tests for MultiGoalOptimizer - Balance competing objectives
  */
 
 const { MultiGoalOptimizer } = require('../MultiGoalOptimizer');
-const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
@@ -15,7 +15,7 @@ describe('MultiGoalOptimizer', () => {
 
   beforeEach(() => {
     tempDbPath = path.join(__dirname, `test-optimizer-${Date.now()}.db`);
-    db = new Database(tempDbPath);
+    db = openNewsCrawlerDb(tempDbPath);
     
     db.exec(`
       CREATE TABLE IF NOT EXISTS goal_optimizations (

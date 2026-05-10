@@ -1,12 +1,11 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Tests for UsageTracker
  * 
  * @module tests/billing/UsageTracker
  */
-
-const Database = require('better-sqlite3');
 const { UsageTracker, METRICS } = require('../../src/billing');
 const { 
   createBillingAdapter, 
@@ -36,7 +35,7 @@ describe('UsageTracker', () => {
   let tracker;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     createUsersTable(db);
     ensureBillingSchema(db);
     adapter = createBillingAdapter(db);

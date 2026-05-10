@@ -4,11 +4,16 @@
  */
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 const path = require('path');
-const Database = require('better-sqlite3');
-const db = new Database(path.resolve(__dirname, '../data/news.db'), { readonly: true });
+const db = openNewsCrawlerDb(path.resolve(__dirname, '../data/news.db'), { readonly: true });
+const diagnostics = db.placeHubDiagnostics;
+if (!diagnostics) {
+  throw new Error('news-crawler-db does not expose placeHubDiagnostics');
+}
 
 const host = 'theguardian.com';
+const dbHost = `www.${host}`;
 const prefix = '/world/';
 const likePattern = `https://www.${host}${prefix}%`;
 const prefixLen = `https://www.${host}${prefix}`.length + 1;
@@ -23,29 +28,14 @@ console.log('NOT GLOB:', notGlob);
 console.log('');
 
 // First, count how many URLs match the pattern
-const countQuery = `SELECT COUNT(*) as c FROM urls WHERE host = ? AND url LIKE ? AND url NOT GLOB ?`;
-const count = db.prepare(countQuery).get(`www.${host}`, likePattern, notGlob);
-console.log('Total matching URLs:', count.c);
+const count = diagnostics.countUrlsForHostPrefix(dbHost, prefix, { excludeNumeric: true });
+console.log('Total matching URLs:', count);
 
 // Get sample with slugs
-const query = `
-  SELECT DISTINCT 
-    url,
-    substr(url, ?, 
-         CASE 
-           WHEN instr(substr(url, ?), '/') > 0 
-           THEN instr(substr(url, ?), '/') - 1
-           ELSE length(substr(url, ?))
-         END) as slug
-  FROM urls 
-  WHERE host = ?
-    AND url LIKE ?
-    AND url NOT GLOB ?
-  ORDER BY slug
-  LIMIT 100
-`;
-
-const rows = db.prepare(query).all(prefixLen, prefixLen, prefixLen, prefixLen, `www.${host}`, likePattern, notGlob);
+const rows = diagnostics.listUrlSlugsForHostPrefix(dbHost, prefix, {
+  excludeNumeric: true,
+  limit: 100
+});
 
 console.log('\nSample slugs (first 50):');
 let empty = 0, valid = 0;
@@ -65,20 +55,8 @@ console.log(`\nEmpty: ${empty}, Valid: ${valid}`);
 
 // Count total distinct slugs (without limit)
 console.log('\n=== Total Distinct Slugs ===');
-const countDistinct = db.prepare(`
-  SELECT COUNT(DISTINCT 
-    substr(url, ${prefixLen}, 
-         CASE 
-           WHEN instr(substr(url, ${prefixLen}), '/') > 0 
-           THEN instr(substr(url, ${prefixLen}), '/') - 1
-           ELSE length(substr(url, ${prefixLen}))
-         END)) as c 
-  FROM urls 
-  WHERE host = ?
-    AND url LIKE ?
-    AND url NOT GLOB ?
-`).get(`www.${host}`, likePattern, notGlob);
-console.log('Total distinct slugs:', countDistinct.c);
+const countDistinct = diagnostics.countDistinctUrlSlugsForHostPrefix(dbHost, prefix, { excludeNumeric: true });
+console.log('Total distinct slugs:', countDistinct);
 
 // Check for major countries
 console.log('\n=== Major Country Check ===');
@@ -87,7 +65,7 @@ for (const country of majorCountries) {
   const found = validSlugs.includes(country);
   if (!found) {
     // Check if URL exists at all
-    const check = db.prepare(`SELECT url FROM urls WHERE host = ? AND url = ?`).get(`www.${host}`, `https://www.${host}/world/${country}`);
+    const check = diagnostics.urlExistsForHost(dbHost, `https://www.${host}/world/${country}`);
     console.log(`  ${country}: ${found ? '✓' : '✗'} ${check ? '(URL exists: ' + check.url + ')' : '(URL not found)'}`);
   } else {
     console.log(`  ${country}: ✓`);

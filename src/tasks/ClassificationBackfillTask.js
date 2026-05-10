@@ -3,6 +3,7 @@
 const { BackgroundTask } = require('./BackgroundTask');
 const path = require('path');
 const fs = require('fs');
+const { openNewsCrawlerDb } = require('../db/openNewsCrawlerDb');
 
 /**
  * ClassificationBackfillTask - Reclassify all URLs in the database using the decision tree
@@ -40,8 +41,6 @@ class ClassificationBackfillTask extends BackgroundTask {
   }
   
   async _execute() {
-    const Database = require('better-sqlite3');
-    
     // Phase 1: Load decision tree
     this.updateProgress(0, { phase: 'init', message: 'Loading decision tree...' });
     
@@ -53,7 +52,7 @@ class ClassificationBackfillTask extends BackgroundTask {
     // Phase 2: Open database and count URLs
     this.updateProgress(0, { phase: 'counting', message: 'Counting URLs...' });
     
-    this.db = new Database(this.dbPath, { readonly: false });
+    this.db = openNewsCrawlerDb(this.dbPath, { readonly: false });
     
     const countRow = this.db.prepare('SELECT COUNT(*) as count FROM pages').get();
     const totalUrls = countRow.count;

@@ -21,12 +21,11 @@
 
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const http = require('http');
-const Database = require('better-sqlite3');
-
 // ═══════════════════════════════════════════════════════════════════════════
 // CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════
@@ -243,8 +242,8 @@ function createTestDatabase(testDbPath) {
   }
   
   // Create new database
-  const testDb = new Database(testDbPath);
-  const sourceDb = new Database(SOURCE_DB, { readonly: true });
+  const testDb = openNewsCrawlerDb(testDbPath);
+  const sourceDb = openNewsCrawlerDb(SOURCE_DB, { readonly: true });
   
   // Attach source database
   testDb.exec(`ATTACH DATABASE '${SOURCE_DB.replace(/\\/g, '/')}' AS source`);
@@ -303,7 +302,7 @@ async function crawlPublishers(publishers, dbPath, targetPages) {
   console.log(`   Target: ${targetPages} pages per publisher`);
   console.log('   ' + '-'.repeat(60));
   
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   
   // Prepare statements
   const insertUrl = db.prepare(`
@@ -413,7 +412,7 @@ function verifyPageCounts(dbPath, publishers, targetPages) {
   console.log('\n📊 STEP 3: Verifying page counts...');
   console.log('   ' + '-'.repeat(60));
   
-  const db = new Database(dbPath, { readonly: true });
+  const db = openNewsCrawlerDb(dbPath, { readonly: true });
   
   const counts = db.prepare(`
     SELECT u.host, COUNT(DISTINCT u.id) as pages
@@ -455,7 +454,7 @@ function analyzeUrlPatterns(dbPath, publishers) {
   console.log('\n🔍 STEP 4: Analyzing URL patterns...');
   console.log('   ' + '-'.repeat(60));
   
-  const db = new Database(dbPath, { readonly: true });
+  const db = openNewsCrawlerDb(dbPath, { readonly: true });
   const patterns = new Map();
   
   for (const pub of publishers) {
@@ -577,7 +576,7 @@ async function verifyCountryHubs(candidates, dbPath) {
   console.log('   Using distributed worker for parallel verification');
   console.log('   ' + '-'.repeat(60));
   
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   
   // Create table to store hub verification results
   db.exec(`
@@ -689,7 +688,7 @@ function reportFindings(dbPath, publishers) {
   console.log('\n📈 STEP 7: Country Hub Discovery Report');
   console.log('═'.repeat(65));
   
-  const db = new Database(dbPath, { readonly: true });
+  const db = openNewsCrawlerDb(dbPath, { readonly: true });
   
   // Summary by publisher
   console.log('\n   HUBS FOUND BY PUBLISHER:');

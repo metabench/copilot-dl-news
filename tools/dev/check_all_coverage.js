@@ -1,4 +1,5 @@
-const db = require('better-sqlite3')('data/news.db');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const db = openNewsCrawlerDb('data/news.db');
 const fs = require('fs');
 
 const hosts = ['theguardian.com', 'independent.co.uk', 'aljazeera.com', 'reuters.com'];

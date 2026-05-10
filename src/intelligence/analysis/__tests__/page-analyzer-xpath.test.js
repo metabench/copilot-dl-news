@@ -1,5 +1,5 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 const SQLiteNewsDatabase = require('../../../data/db/sqlite/v1/SQLiteNewsDatabase');
-const Database = require('better-sqlite3');
 const { initializeSchema } = require('../../../data/db/sqlite/v1/schema');
 const { analyzePage, buildAnalysis, prepareArticleContent } = require('../page-analyzer');
 const { ArticleXPathService } = require('../../../services/ArticleXPathService');
@@ -10,7 +10,7 @@ describe('Page Analyzer XPath Integration', () => {
   let xpathService;
 
   beforeEach(() => {
-    const dbHandle = new Database(':memory:');
+    const dbHandle = openNewsCrawlerDb(':memory:');
     initializeSchema(dbHandle);
     db = new SQLiteNewsDatabase(dbHandle);
 

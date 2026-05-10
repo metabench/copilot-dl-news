@@ -8,8 +8,8 @@
     },
     "dependencies": {
         "express": "^4.18.2",
-        "better-sqlite3": "^8.5.0",
         "jsgui3-html": "^0.0.175",
+        "news-crawler-db": "file:../../../../news-crawler-db",
         "node-fetch": "^3.3.2"
     }
 }

@@ -6,8 +6,7 @@
  *   node tools/schema-sync-postgres.js
  */
 'use strict';
-
-const Database = require('better-sqlite3');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
 
@@ -204,7 +203,7 @@ function main() {
         process.exit(1);
     }
 
-    const db = new Database(DEFAULT_DB_PATH, { readonly: true });
+    const db = openNewsCrawlerDb(DEFAULT_DB_PATH, { readonly: true });
     const schema = extractSchema(db);
     db.close();
 

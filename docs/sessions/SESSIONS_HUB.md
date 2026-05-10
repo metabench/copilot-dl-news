@@ -54,6 +54,18 @@
 
 ## Current Sessions
 
+### Session 2026-05-10: News Crawler DB Boundary Migration
+
+**Status**: Active; not complete  
+**Focus**: Continue staged migration of active `copilot-dl-news` DB/query ownership into explicit `news-crawler-db` APIs. Major slices are migrated, `src/services` now scans clean for active DB patterns, but the latest broad active-path scan still reports 1,586 raw SQL/driver-pattern matches after excluding docs/tests/WIP/public/data.  
+**Location**: `docs/sessions/2026-05-10-news-crawler-db-boundary/`
+
+**Quick Links**:
+- [Session Index](./2026-05-10-news-crawler-db-boundary/INDEX.md)
+- [Plan](./2026-05-10-news-crawler-db-boundary/PLAN.md)
+- [Current Status](./2026-05-10-news-crawler-db-boundary/STATUS.md)
+- [Working Notes](./2026-05-10-news-crawler-db-boundary/WORKING_NOTES.md)
+
 ### Session 2026-05-09: Cloud Crawl 15m Validation
 
 **Duration**: Active

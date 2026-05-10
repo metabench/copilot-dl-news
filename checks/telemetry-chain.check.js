@@ -1,37 +1,20 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 /**
  * Test the telemetry integration chain:
  * Crawler (EventEmitter) -> CrawlTelemetryBridge -> TelemetryIntegration -> TaskEventWriter -> DB
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
-const { TelemetryIntegration } = require('../src/crawler/telemetry/TelemetryIntegration');
-const EventedCrawlerBase = require('../src/crawler/core/EventedCrawlerBase');
+const { TelemetryIntegration } = require('../src/core/crawler/telemetry/TelemetryIntegration');
+const EventedCrawlerBase = require('../src/core/crawler/core/EventedCrawlerBase');
 
 async function main() {
-  const db = new Database(':memory:');
+  const db = openNewsCrawlerDb(':memory:');
 
   // Create task_events table with correct schema
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS task_events (
-      id INTEGER PRIMARY KEY,
-      task_type TEXT NOT NULL,
-      task_id TEXT NOT NULL,
-      seq INTEGER NOT NULL,
-      ts TEXT NOT NULL,
-      event_type TEXT NOT NULL,
-      event_category TEXT,
-      severity TEXT,
-      scope TEXT,
-      target TEXT,
-      payload TEXT,
-      duration_ms INTEGER,
-      http_status INTEGER,
-      item_count INTEGER
-    )
-  `);
+  db.taskEvents.ensureSchema();
 
   const telemetry = new TelemetryIntegration({ 
     db,
@@ -74,7 +57,7 @@ async function main() {
   console.log('\n--- Waiting 700ms for batch flush ---');
   await new Promise(resolve => setTimeout(resolve, 700));
 
-  const events = db.prepare('SELECT * FROM task_events ORDER BY seq').all();
+  const events = db.taskEvents.getTaskEventsForTask('test-job-123', { limit: 1000 });
   console.log(`\nEvents in DB: ${events.length}`);
   for (const evt of events) {
     console.log(` - seq=${evt.seq} type=${evt.event_type} task=${evt.task_id}`);

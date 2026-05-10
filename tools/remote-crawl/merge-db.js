@@ -1,10 +1,9 @@
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Merge Remote Database into Local Database
  * 
  * Usage: node tools/remote-crawl/merge-db.js <source_db_path> [target_db_path]
  */
-
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
@@ -39,7 +38,7 @@ if (!fs.existsSync(targetPath)) {
   process.exit(1);
 }
 
-const db = new Database(targetPath);
+const db = openNewsCrawlerDb(targetPath);
 
 try {
   // Attach source database

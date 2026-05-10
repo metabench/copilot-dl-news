@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../../db/openNewsCrawlerDb');
 /**
  * Admin Dashboard Check Script
  * 
@@ -14,8 +15,6 @@
 
 const path = require('path');
 const assert = require('assert');
-const Database = require('better-sqlite3');
-
 console.log('🛡️ Admin Dashboard Check\n');
 console.log('─'.repeat(50));
 
@@ -26,7 +25,7 @@ console.log('\n[1] Testing AdminAdapter...');
 
 const { createAdminAdapter } = require('../../../../data/db/sqlite/v1/queries/adminAdapter');
 
-const db = new Database(':memory:');
+const db = openNewsCrawlerDb(':memory:');
 db.exec(`
   CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

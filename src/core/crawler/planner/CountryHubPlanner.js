@@ -1,6 +1,7 @@
 'use strict';
 
 const { getDb } = require('../../../data/db');
+const { getLatestHttpStatusForUrl } = require('news-crawler-db');
 
 const DEFAULT_COUNTRY_NAMES = [
   'France', 'Germany', 'Spain', 'Italy', 'China', 'India', 'United States', 'Russia', 'Brazil', 'Canada',
@@ -227,17 +228,17 @@ class CountryHubPlanner {
     }
 
     try {
-      const responsesStmt = db.prepare(`
-        SELECT hr.http_status AS status
-        FROM urls u
-        JOIN http_responses hr ON hr.url_id = u.id
-        WHERE u.url = ?
-        ORDER BY hr.fetched_at DESC
-        LIMIT 1
-      `);
-      const responseRow = responsesStmt.get(url);
+      const responseRow = getLatestHttpStatusForUrl(db, url);
       if (responseRow && typeof responseRow.status === 'number') {
         const status = responseRow.status;
+        return {
+          exists: true,
+          status,
+          isSuccess: status >= 200 && status < 300
+        };
+      }
+      if (responseRow && typeof responseRow.http_status === 'number') {
+        const status = responseRow.http_status;
         return {
           exists: true,
           status,

@@ -1,12 +1,11 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Tests for FeatureGate
  * 
  * @module tests/billing/FeatureGate
  */
-
-const Database = require('better-sqlite3');
 const { FeatureGate, UsageTracker, METRICS } = require('../../src/billing');
 const { 
   createBillingAdapter, 
@@ -37,7 +36,7 @@ describe('FeatureGate', () => {
   let gate;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     createUsersTable(db);
     ensureBillingSchema(db);
     adapter = createBillingAdapter(db);

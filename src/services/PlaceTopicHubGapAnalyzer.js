@@ -16,6 +16,10 @@ const { getDsplForDomain } = require('./shared/dspl');
 const { slugify } = require('../tools/slugify');
 const { PredictionStrategyManager } = require('./shared/PredictionStrategyManager');
 const { UrlPatternGenerator } = require('./shared/UrlPatternGenerator');
+const {
+  listPlaceTopicHubUrls,
+  getPlaceTopicHubCoverageStats
+} = require('news-crawler-db');
 
 class PlaceTopicHubGapAnalyzer extends HubGapAnalyzerBase {
   constructor({
@@ -36,20 +40,7 @@ class PlaceTopicHubGapAnalyzer extends HubGapAnalyzerBase {
 
     // Override methods for place-topic specific logic
     this.predictionManager._getExistingMappings = (domain) => {
-      try {
-        // For place-topic, we need to get mappings from place_hubs table
-        return this.db.prepare(`
-          SELECT url FROM place_hubs
-          WHERE host = ? AND topic_slug IS NOT NULL
-          LIMIT 10
-        `).all(domain) || [];
-      } catch (err) {
-        // Handle missing table gracefully (for tests or incomplete databases)
-        if (err.message.includes('no such table')) {
-          return [];
-        }
-        throw err;
-      }
+      return listPlaceTopicHubUrls(this.db, domain, { limit: 10 });
     };
 
     this.predictionManager._extractPatternsFromUrls = (urls, domain, metadata) => {
@@ -287,15 +278,7 @@ class PlaceTopicHubGapAnalyzer extends HubGapAnalyzerBase {
   }
 
   _getCombinationCoverage(domain) {
-    // Get coverage statistics for place-topic combinations
-    const stats = this.db.prepare(`
-      SELECT
-        COUNT(*) as total,
-        COUNT(CASE WHEN topic_slug IS NOT NULL THEN 1 END) as with_topics,
-        COUNT(CASE WHEN topic_slug IS NOT NULL AND last_seen_at IS NOT NULL THEN 1 END) as visited
-      FROM place_hubs
-      WHERE host = ?
-    `).get(domain) || { total: 0, with_topics: 0, visited: 0 };
+    const stats = getPlaceTopicHubCoverageStats(this.db, domain);
 
     return {
       seeded: stats.with_topics,

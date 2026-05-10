@@ -1,6 +1,6 @@
+const { openNewsCrawlerDb } = require('../../db/openNewsCrawlerDb');
 const { ArticleXPathService } = require('../ArticleXPathService');
 const SQLiteNewsDatabase = require('../../data/db/sqlite/v1/SQLiteNewsDatabase');
-const Database = require('better-sqlite3');
 const { initializeSchema } = require('../../data/db/sqlite/v1/schema');
 
 describe('ArticleXPathService', () => {
@@ -9,7 +9,7 @@ describe('ArticleXPathService', () => {
   let logger;
 
   beforeEach(() => {
-    const dbHandle = new Database(':memory:');
+    const dbHandle = openNewsCrawlerDb(':memory:');
     initializeSchema(dbHandle);
     db = new SQLiteNewsDatabase(dbHandle);
     logger = {

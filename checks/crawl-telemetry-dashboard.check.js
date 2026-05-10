@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 /**
  * Check script for Crawl Telemetry Dashboard
  * 
@@ -12,8 +13,6 @@
 
 const http = require('http');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 const DB_PATH = path.join(process.cwd(), 'data', 'news.db');
 
 let passed = 0;
@@ -39,7 +38,7 @@ async function main() {
   // Test database queries directly
   let db;
   try {
-    db = new Database(DB_PATH, { readonly: true });
+    db = openNewsCrawlerDb(DB_PATH, { readonly: true });
     check(true, 'Database opens successfully');
   } catch (err) {
     check(false, 'Database opens successfully: ' + err.message);
@@ -48,16 +47,7 @@ async function main() {
 
   // Test recentCrawls query
   try {
-    const recentCrawls = db.prepare(`
-      SELECT 
-        COUNT(DISTINCT task_id) as crawl_count,
-        SUM(CASE WHEN event_type = 'crawl:url:batch' THEN item_count ELSE 0 END) as total_urls,
-        SUM(CASE WHEN severity = 'error' THEN 1 ELSE 0 END) as error_count,
-        AVG(duration_ms) as avg_duration_ms
-      FROM task_events
-      WHERE ts > datetime('now', '-24 hours')
-        AND task_type = 'crawl'
-    `).get();
+    const recentCrawls = db.taskEvents.getRecentCrawlTelemetrySummary({ lookbackHours: 24 });
     check(true, 'recentCrawls query executes');
     check(typeof recentCrawls.crawl_count === 'number', 'recentCrawls.crawl_count is number');
   } catch (err) {
@@ -66,19 +56,7 @@ async function main() {
 
   // Test hourlyStats query
   try {
-    const hourlyStats = db.prepare(`
-      SELECT 
-        strftime('%Y-%m-%d %H:00', ts) as hour,
-        COUNT(DISTINCT task_id) as crawl_count,
-        SUM(CASE WHEN event_type = 'crawl:url:batch' THEN item_count ELSE 0 END) as urls_fetched,
-        SUM(CASE WHEN severity = 'error' THEN 1 ELSE 0 END) as errors
-      FROM task_events
-      WHERE ts > datetime('now', '-24 hours')
-        AND task_type = 'crawl'
-      GROUP BY hour
-      ORDER BY hour DESC
-      LIMIT 24
-    `).all();
+    const hourlyStats = db.taskEvents.getHourlyCrawlTelemetryStats({ lookbackHours: 24, limit: 24 });
     check(true, 'hourlyStats query executes');
     check(Array.isArray(hourlyStats), 'hourlyStats returns array');
   } catch (err) {
@@ -87,18 +65,7 @@ async function main() {
 
   // Test errorBreakdown query
   try {
-    const errorBreakdown = db.prepare(`
-      SELECT 
-        event_type,
-        COUNT(*) as count,
-        MAX(ts) as last_seen
-      FROM task_events
-      WHERE severity = 'error'
-        AND ts > datetime('now', '-7 days')
-      GROUP BY event_type
-      ORDER BY count DESC
-      LIMIT 10
-    `).all();
+    const errorBreakdown = db.taskEvents.getTaskEventErrorBreakdown({ lookbackDays: 7, limit: 10 });
     check(true, 'errorBreakdown query executes');
     check(Array.isArray(errorBreakdown), 'errorBreakdown returns array');
   } catch (err) {
@@ -107,20 +74,7 @@ async function main() {
 
   // Test domainStats query
   try {
-    const domainStats = db.prepare(`
-      SELECT 
-        scope as domain,
-        COUNT(*) as fetch_count,
-        AVG(duration_ms) as avg_ms,
-        SUM(CASE WHEN severity = 'error' THEN 1 ELSE 0 END) as errors
-      FROM task_events
-      WHERE event_type = 'crawl:url:batch'
-        AND ts > datetime('now', '-24 hours')
-        AND scope IS NOT NULL
-      GROUP BY scope
-      ORDER BY fetch_count DESC
-      LIMIT 20
-    `).all();
+    const domainStats = db.taskEvents.getCrawlDomainTelemetryStats({ lookbackHours: 24, limit: 20 });
     check(true, 'domainStats query executes');
     check(Array.isArray(domainStats), 'domainStats returns array');
   } catch (err) {
@@ -137,29 +91,33 @@ async function main() {
     
     // Quick HTTP test
     const server = app.listen(0, async () => {
-      const port = server.address().port;
-      
-      // Test telemetry API
-      const apiRes = await fetch(`http://localhost:${port}/api/telemetry`);
-      check(apiRes.ok, '/api/telemetry returns 200');
-      
-      const data = await apiRes.json();
-      check(data.recentCrawls !== undefined, 'API returns recentCrawls');
-      check(data.hourlyStats !== undefined, 'API returns hourlyStats');
-      check(data.errorBreakdown !== undefined, 'API returns errorBreakdown');
-      check(data.domainStats !== undefined, 'API returns domainStats');
-      
-      // Test telemetry page
-      const pageRes = await fetch(`http://localhost:${port}/telemetry`);
-      check(pageRes.ok, '/telemetry page returns 200');
-      
-      const html = await pageRes.text();
-      check(html.includes('Telemetry Dashboard'), 'Page contains title');
-      check(html.includes('Crawls (24h)'), 'Page contains stats cards');
-      
-      server.close();
-      db.close();
-      
+      try {
+        const port = server.address().port;
+        
+        // Test telemetry API
+        const apiRes = await fetch(`http://localhost:${port}/api/telemetry`);
+        check(apiRes.ok, '/api/telemetry returns 200');
+        
+        const data = await apiRes.json();
+        check(data.recentCrawls !== undefined, 'API returns recentCrawls');
+        check(data.hourlyStats !== undefined, 'API returns hourlyStats');
+        check(data.errorBreakdown !== undefined, 'API returns errorBreakdown');
+        check(data.domainStats !== undefined, 'API returns domainStats');
+        
+        // Test telemetry page
+        const pageRes = await fetch(`http://localhost:${port}/telemetry`);
+        check(pageRes.ok, '/telemetry page returns 200');
+        
+        const html = await pageRes.text();
+        check(html.includes('Telemetry Dashboard'), 'Page contains title');
+        check(html.includes('Crawls (24h)'), 'Page contains stats cards');
+      } catch (err) {
+        check(false, 'HTTP checks: ' + err.message);
+      } finally {
+        await new Promise(resolve => server.close(resolve));
+        db.close();
+      }
+
       console.log('');
       console.log('───────────────────────────────────────────────────────────────');
       if (failed === 0) {
@@ -169,8 +127,8 @@ async function main() {
       }
       console.log('───────────────────────────────────────────────────────────────');
       console.log('');
-      
-      process.exit(failed > 0 ? 1 : 0);
+
+      process.exitCode = failed > 0 ? 1 : 0;
     });
   } catch (err) {
     check(false, 'App creation: ' + err.message);

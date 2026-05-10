@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Confidence Backfill Tool
  * 
@@ -13,8 +14,6 @@
  *   node tools/confidence-backfill.js --dry-run            # Preview without updating
  *   node tools/confidence-backfill.js --json               # JSON output
  */
-
-const Database = require('better-sqlite3');
 const path = require('path');
 const { ContentConfidenceScorer } = require('../src/intelligence/analysis/ContentConfidenceScorer');
 const { decompress } = require('../src/shared/utils/compression');
@@ -60,7 +59,7 @@ const verbose = hasFlag('--verbose') || hasFlag('-v');
 const dbPath = getArg('--db', path.join(__dirname, '../data/news.db'));
 
 // Open database
-const db = new Database(dbPath, { readonly: dryRun });
+const db = openNewsCrawlerDb(dbPath, { readonly: dryRun });
 const scorer = new ContentConfidenceScorer();
 
 // Decompression helper - uses compression_types table to determine algorithm

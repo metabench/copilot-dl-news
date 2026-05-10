@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 /**
  * Analytics Hub Tests
  * 
@@ -7,7 +8,6 @@
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
 const request = require('supertest');
 
 const { AnalyticsService } = require('../../../src/ui/server/analyticsHub/AnalyticsService');
@@ -21,7 +21,7 @@ const { createApp, initDb } = require('../../../src/ui/server/analyticsHub/serve
  * Create an in-memory test database with sample data
  */
 function createTestDb() {
-  const db = new Database(':memory:');
+  const db = openNewsCrawlerDb(':memory:');
 
   // Create minimal schema for http_responses and urls
   db.exec(`

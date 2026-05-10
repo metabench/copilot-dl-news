@@ -1,13 +1,13 @@
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
 const { applySchema } = require('../src/db/sqlite/v1/schema-definitions');
 const { importAlternateNames } = require('../src/services/GeoImportService');
 
 // Setup
 const DB_PATH = ':memory:';
-const db = new Database(DB_PATH);
+const db = openNewsCrawlerDb(DB_PATH);
 const TMP_DIR = path.join(__dirname, 'tmp_check_geo_alt');
 
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR);

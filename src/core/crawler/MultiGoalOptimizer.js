@@ -10,6 +10,10 @@
  */
 
 const { getDb } = require('../../data/db');
+const {
+  listRecentGoalOptimizations,
+  insertGoalOptimization
+} = require('news-crawler-db');
 
 class MultiGoalOptimizer {
   constructor({ db, logger = console } = {}) {
@@ -113,19 +117,7 @@ class MultiGoalOptimizer {
     }
 
     try {
-      // Get historical optimizations for this domain
-      const stmt = this.db.prepare(`
-        SELECT 
-          goal_weights,
-          outcome_metrics,
-          success_score
-        FROM goal_optimizations
-        WHERE domain = ?
-        ORDER BY created_at DESC
-        LIMIT 100
-      `);
-
-      const rows = stmt.all(domain);
+      const rows = listRecentGoalOptimizations(this.db, domain, { limit: 100 });
 
       if (rows.length === 0) {
         return null;
@@ -387,22 +379,12 @@ class MultiGoalOptimizer {
     }
 
     try {
-      const stmt = this.db.prepare(`
-        INSERT INTO goal_optimizations (
-          domain,
-          goal_weights,
-          selected_action,
-          pareto_optimal,
-          created_at
-        ) VALUES (?, ?, ?, ?, datetime('now'))
-      `);
-
-      stmt.run(
+      insertGoalOptimization(this.db, {
         domain,
-        JSON.stringify(weights),
-        JSON.stringify(selected),
-        selected?.paretoOptimal ? 1 : 0
-      );
+        goalWeights: weights,
+        selectedAction: selected,
+        paretoOptimal: selected?.paretoOptimal
+      });
     } catch (error) {
       this.logger.error?.('Failed to record optimization', error);
     }

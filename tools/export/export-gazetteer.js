@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * export-gazetteer - Export gazetteer data to NDJSON files for backup
  *
@@ -12,7 +13,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
 const { exportGazetteerTables } = require('../src/data/db/sqlite/v1/queries/gazetteer.export');
 
 // Core gazetteer tables to export
@@ -149,7 +149,7 @@ OUTPUT:
   console.log('');
 
   try {
-    const db = new Database(dbPath, { readonly: true });
+    const db = openNewsCrawlerDb(dbPath, { readonly: true });
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
     db.pragma('busy_timeout = 5000');

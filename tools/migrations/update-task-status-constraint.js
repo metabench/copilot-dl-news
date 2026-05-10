@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Migration: Update background_tasks status CHECK constraint to include 'abandoned'
  * 
@@ -14,11 +15,10 @@
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
 
 function migrate(dbPath) {
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   
   try {
     // Check current schema

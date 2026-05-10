@@ -8,10 +8,9 @@
  */
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 const args = process.argv.slice(2);
 const help = args.includes('--help');
 
@@ -54,14 +53,14 @@ console.log(`Source DB: ${SRC_DB_PATH}`);
 console.log(`Backup DB: ${outPath}`);
 
 // 1. Initialize Source DB connection
-const db = new Database(SRC_DB_PATH, { readonly: true });
+const db = openNewsCrawlerDb(SRC_DB_PATH, { readonly: true });
 
 // 2. Initialize Dest DB connection (create file)
 if (fs.existsSync(outPath)) {
     console.warn(`Warning: Overwriting existing file ${outPath}`);
     fs.unlinkSync(outPath);
 }
-const destDb = new Database(outPath);
+const destDb = openNewsCrawlerDb(outPath);
 
 // 3. Define tables to backup in dependency order
 const TABLES = [
@@ -74,7 +73,7 @@ const TABLES = [
 // 4. Schema Extraction & Application
 console.log(' extracting schema...');
 const schemas = [];
-const schemaDb = new Database(SRC_DB_PATH, { readonly: true });
+const schemaDb = openNewsCrawlerDb(SRC_DB_PATH, { readonly: true });
 for (const table of TABLES) {
     // Check if table exists
     const exists = schemaDb.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(table);
@@ -101,7 +100,7 @@ destDb.close();
 
 // 5. Data Transfer via ATTACH
 // Open Dest as main handle
-const rwDb = new Database(outPath);
+const rwDb = openNewsCrawlerDb(outPath);
 
 // Ideally, we respect FKs, but if circular data exists or order is tricky, we can defer.
 // But we want to ensure the backup is valid.

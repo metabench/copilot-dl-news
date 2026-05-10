@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../../db/openNewsCrawlerDb');
 /**
  * Check: Place Hub Guessing — Cell Detail
  * 
@@ -232,8 +233,7 @@ function main() {
   const gazetteerPath = path.join(process.cwd(), 'data', 'gazetteer.db');
   const fs = require('fs');
   if (fs.existsSync(gazetteerPath)) {
-    const Database = require('better-sqlite3');
-    const gazDb = new Database(gazetteerPath, { readonly: true });
+    const gazDb = openNewsCrawlerDb(gazetteerPath, { readonly: true });
     const testPlaceId = result?.place?.place_id || testMapping?.place_id || 1;
     placeNameVariants = getPlaceNameVariants(gazDb, testPlaceId);
     gazDb.close();

@@ -13,8 +13,8 @@
 
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
-const Database = require('better-sqlite3');
 const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 
 const fmt = new CliFormatter();
@@ -113,7 +113,7 @@ function run(dbPath = DEFAULT_DB_PATH) {
   fmt.header('Place Exclusions Migration');
   fmt.stat('Database', dbPath);
   
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   
   try {
     // Check if table already exists

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
-const Database = require('better-sqlite3');
 const { initSchema } = require('./schema');
 
 function parseArgs(argv = process.argv.slice(2)) {
@@ -99,49 +99,6 @@ function writeStatus(statusDir, domain, payload) {
   fs.writeFileSync(filePath, JSON.stringify(payload, null, 2));
 }
 
-function createStatements(db) {
-  return {
-    insertUrl: db.prepare(`
-      INSERT OR IGNORE INTO urls (url, host, path, status, depth, discovered_from, created_at, updated_at)
-      VALUES (?, ?, ?, 'pending', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    `),
-    nextPending: db.prepare(`
-      SELECT id, url, depth FROM urls
-      WHERE status = 'pending' AND (host = ? OR host = ? OR host LIKE ?)
-      ORDER BY depth ASC, id ASC LIMIT 1
-    `),
-    markFetching: db.prepare("UPDATE urls SET status = 'fetching', updated_at = CURRENT_TIMESTAMP WHERE id = ?"),
-    markDone: db.prepare(`
-      UPDATE urls SET status = 'done', http_status = ?, content_type = ?, content_length = ?, title = ?,
-        word_count = ?, links_found = ?, classification = ?, fetched_at = CURRENT_TIMESTAMP,
-        updated_at = CURRENT_TIMESTAMP, error_msg = NULL
-      WHERE id = ?
-    `),
-    markError: db.prepare("UPDATE urls SET status = 'error', error_msg = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"),
-    insertLink: db.prepare('INSERT INTO discovered_links (source_url_id, target_url, link_text, is_nav_link) VALUES (?, ?, ?, 0)'),
-    insertResponse: db.prepare(`
-      INSERT INTO http_responses (url_id, request_started_at, fetched_at, http_status, content_type,
-        content_encoding, total_ms, bytes_downloaded, request_method)
-      VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, 'GET')
-    `),
-    insertContent: db.prepare(`
-      INSERT INTO content_storage (http_response_id, storage_type, content_blob, content_sha256,
-        uncompressed_size, compressed_size, compression_ratio, content_category, content_subtype)
-      VALUES (?, 'gzip', ?, ?, ?, ?, ?, ?, ?)
-    `),
-    insertRun: db.prepare('INSERT INTO crawl_runs (target_domain) VALUES (?)'),
-    finishRun: db.prepare('UPDATE crawl_runs SET ended_at = CURRENT_TIMESTAMP, total_fetched = ?, total_errors = ?, status = ? WHERE id = ?'),
-    insertError: db.prepare('INSERT INTO errors (url_id, host, kind, code, message) VALUES (?, ?, ?, ?, ?)'),
-    countPending: db.prepare("SELECT COUNT(*) AS c FROM urls WHERE status = 'pending' AND (host = ? OR host = ? OR host LIKE ?)"),
-    countContent: db.prepare(`
-      SELECT COUNT(*) AS c, COALESCE(SUM(compressed_size), 0) AS bytes FROM content_storage cs
-      JOIN http_responses hr ON cs.http_response_id = hr.id
-      JOIN urls u ON hr.url_id = u.id
-      WHERE u.host = ? OR u.host = ? OR u.host LIKE ?
-    `),
-  };
-}
-
 async function fetchWithTimeout(url, timeoutMs = 30000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -183,13 +140,15 @@ async function main() {
   const dbPath = args.db || path.join(__dirname, '..', 'data', 'news.db');
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   initSchema(db);
-  db.pragma('journal_mode = WAL');
-  db.pragma('busy_timeout = 5000');
 
   const statusDir = ensureStatusDir();
-  const stmts = createStatements(db);
+  const remoteCrawlerDb = db.remoteCrawler;
+  if (!remoteCrawlerDb) {
+    throw new Error('news-crawler-db remoteCrawler access is not available');
+  }
+  remoteCrawlerDb.configureRemoteCrawlerSqliteRuntime({ journalMode: 'WAL', busyTimeoutMs: 5000 });
   const seedUrls = String(args['seed-urls'] || '')
     .split(',')
     .map(url => url.trim())
@@ -198,8 +157,7 @@ async function main() {
     seedUrls.push(`https://${domain}/`, `https://www.${domain}/`);
   }
 
-  const run = stmts.insertRun.run(domain);
-  const runId = run.lastInsertRowid;
+  const runId = remoteCrawlerDb.createRemoteCrawlerRun(domain);
   const startedAt = new Date().toISOString();
   const stats = { fetched: 0, done: 0, errors: 0, pending: 0 };
   let stopping = false;
@@ -211,12 +169,18 @@ async function main() {
     const normalized = normalizeUrl(seed);
     if (!normalized || !isCrawlableUrl(normalized, domain)) continue;
     const parsed = new URL(normalized);
-    stmts.insertUrl.run(normalized, parsed.hostname, parsed.pathname, 0, null);
+    remoteCrawlerDb.insertPendingRemoteCrawlerUrl({
+      url: normalized,
+      host: parsed.hostname,
+      path: parsed.pathname,
+      depth: 0,
+      discoveredFrom: null,
+    });
   }
 
   const publishStatus = (state) => {
-    const pending = stmts.countPending.get(domain, `www.${domain}`, `%.${domain}`)?.c || 0;
-    const content = stmts.countContent.get(domain, `www.${domain}`, `%.${domain}`) || { c: 0, bytes: 0 };
+    const pending = remoteCrawlerDb.countPendingRemoteCrawlerUrlsForDomain(domain);
+    const content = remoteCrawlerDb.getRemoteCrawlerContentStorageSummaryForDomain(domain);
     stats.pending = pending;
     writeStatus(statusDir, domain, {
       domain,
@@ -236,10 +200,10 @@ async function main() {
   publishStatus('running');
 
   while (!stopping && stats.fetched < maxPages) {
-    const row = stmts.nextPending.get(domain, `www.${domain}`, `%.${domain}`);
+    const row = remoteCrawlerDb.selectNextPendingRemoteCrawlerUrlForDomain(domain);
     if (!row) break;
 
-    stmts.markFetching.run(row.id);
+    remoteCrawlerDb.markRemoteCrawlerUrlFetching(row.id);
     try {
       const result = await fetchWithTimeout(row.url);
       const html = /^text\/html|application\/xhtml\+xml/i.test(result.contentType) ? result.text : '';
@@ -250,60 +214,75 @@ async function main() {
 
       for (const link of links) {
         const parsed = new URL(link.url);
-        stmts.insertLink.run(row.id, link.url, link.text);
+        remoteCrawlerDb.insertRemoteCrawlerDiscoveredLink({ sourceUrlId: row.id, targetUrl: link.url, linkText: link.text });
         if ((row.depth || 0) < 2) {
-          stmts.insertUrl.run(link.url, parsed.hostname, parsed.pathname, (row.depth || 0) + 1, row.url);
+          remoteCrawlerDb.insertPendingRemoteCrawlerUrl({
+            url: link.url,
+            host: parsed.hostname,
+            path: parsed.pathname,
+            depth: (row.depth || 0) + 1,
+            discoveredFrom: row.url,
+          });
         }
       }
 
-      stmts.markDone.run(
-        result.status,
-        result.contentType,
-        result.buffer.length,
+      remoteCrawlerDb.markRemoteCrawlerUrlDone(row.id, {
+        httpStatus: result.status,
+        contentType: result.contentType,
+        contentLength: result.buffer.length,
         title,
         wordCount,
-        links.length,
-        classifyUrl(result.finalUrl),
-        row.id
-      );
+        linksFound: links.length,
+        classification: classifyUrl(result.finalUrl),
+      });
 
-      const responseInfo = stmts.insertResponse.run(
-        row.id,
-        result.startedAt,
-        result.status,
-        result.contentType,
-        result.contentEncoding,
-        result.elapsedMs,
-        result.buffer.length
-      );
+      const responseId = remoteCrawlerDb.insertRemoteCrawlerHttpResponse({
+        urlId: row.id,
+        requestStartedAt: result.startedAt,
+        httpStatus: result.status,
+        contentType: result.contentType,
+        contentEncoding: result.contentEncoding,
+        totalMs: result.elapsedMs,
+        bytesDownloaded: result.buffer.length,
+      });
 
       if (html) {
         const compressed = zlib.gzipSync(result.buffer, { level: 6 });
         const sha = crypto.createHash('sha256').update(result.buffer).digest('hex');
-        stmts.insertContent.run(
-          responseInfo.lastInsertRowid,
-          compressed,
-          sha,
-          result.buffer.length,
-          compressed.length,
-          result.buffer.length > 0 ? compressed.length / result.buffer.length : 0,
-          'html',
-          classifyUrl(result.finalUrl)
-        );
+        remoteCrawlerDb.insertRemoteCrawlerCompressedContent({
+          httpResponseId: responseId,
+          contentBlob: compressed,
+          contentSha256: sha,
+          uncompressedSize: result.buffer.length,
+          compressedSize: compressed.length,
+          compressionRatio: result.buffer.length > 0 ? compressed.length / result.buffer.length : 0,
+          contentCategory: 'html',
+          contentSubtype: classifyUrl(result.finalUrl),
+        });
       }
 
       stats.fetched += 1;
       stats.done += 1;
     } catch (error) {
       stats.errors += 1;
-      stmts.markError.run(error.message, row.id);
-      stmts.insertError.run(row.id, domain, error.name || 'ERROR', error.code || '', error.message);
+      remoteCrawlerDb.markRemoteCrawlerUrlError(row.id, error.message);
+      remoteCrawlerDb.insertRemoteCrawlerError({
+        urlId: row.id,
+        host: domain,
+        kind: error.name || 'ERROR',
+        code: error.code || '',
+        message: error.message,
+      });
     }
 
     publishStatus('running');
   }
 
-  stmts.finishRun.run(stats.done, stats.errors, stopping ? 'stopped' : 'complete', runId);
+  remoteCrawlerDb.finishRemoteCrawlerRun(runId, {
+    totalFetched: stats.done,
+    totalErrors: stats.errors,
+    status: stopping ? 'stopped' : 'complete',
+  });
   publishStatus('stopped');
   db.close();
 }

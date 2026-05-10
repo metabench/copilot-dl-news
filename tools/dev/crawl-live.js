@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * crawl-live.js - Live local crawl status from task_events.
  *
@@ -17,8 +18,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 const MB = 1024 * 1024;
 const DEFAULT_WINDOWS = Object.freeze([
   { key: '5s', label: '5s', ms: 5 * 1000 },
@@ -125,25 +124,11 @@ function parseWindow(value) {
 }
 
 function getLatestTask(db) {
-  return db.prepare(`
-    SELECT DISTINCT task_id, task_type, MIN(ts) as started, MAX(ts) as latest
-    FROM task_events
-    WHERE task_id LIKE 'mini-crawl-%' OR task_id LIKE 'crawl-%'
-    GROUP BY task_id
-    ORDER BY started DESC
-    LIMIT 1
-  `).get();
+  return db.taskEvents.getLatestCrawlTelemetryTask();
 }
 
 function getTaskInfo(db, taskId) {
-  return db.prepare(`
-    SELECT task_id, task_type, MIN(ts) as started, MAX(ts) as latest, COUNT(*) as event_count
-    FROM task_events
-    WHERE task_id = ?
-    GROUP BY task_id, task_type
-    ORDER BY event_count DESC
-    LIMIT 1
-  `).get(taskId) || { task_id: taskId, task_type: 'crawl', started: null, latest: null, event_count: 0 };
+  return db.taskEvents.getTaskEventTaskInfo(taskId);
 }
 
 function parsePayload(row) {
@@ -157,25 +142,13 @@ function parsePayload(row) {
 }
 
 function getProgress(db, taskId) {
-  const row = db.prepare(`
-    SELECT payload, ts
-    FROM task_events
-    WHERE task_id = ? AND event_type = 'crawl:progress'
-    ORDER BY seq DESC
-    LIMIT 1
-  `).get(taskId);
+  const row = db.taskEvents.getLatestTaskEventPayload(taskId, 'crawl:progress');
   const parsed = parsePayload(row);
   return parsed ? { ...parsed.payload, ts: parsed.ts } : null;
 }
 
 function getProgressHistory(db, taskId, limit = 1000) {
-  const rows = db.prepare(`
-    SELECT payload, ts
-    FROM task_events
-    WHERE task_id = ? AND event_type = 'crawl:progress'
-    ORDER BY seq DESC
-    LIMIT ?
-  `).all(taskId, limit);
+  const rows = db.taskEvents.getTaskEventPayloadHistory(taskId, 'crawl:progress', limit);
 
   return rows
     .map(parsePayload)
@@ -186,13 +159,7 @@ function getProgressHistory(db, taskId, limit = 1000) {
 }
 
 function getDownloadEvents(db, taskId, limit = 1000) {
-  const rows = db.prepare(`
-    SELECT payload, ts
-    FROM task_events
-    WHERE task_id = ? AND event_type = 'crawl:url:batch'
-    ORDER BY seq DESC
-    LIMIT ?
-  `).all(taskId, limit);
+  const rows = db.taskEvents.getTaskEventPayloadHistory(taskId, 'crawl:url:batch', limit);
 
   const downloads = [];
   for (const row of rows) {
@@ -222,24 +189,13 @@ function getDownloadEvents(db, taskId, limit = 1000) {
 }
 
 function getCompletionStatus(db, taskId) {
-  const row = db.prepare(`
-    SELECT payload, ts
-    FROM task_events
-    WHERE task_id = ? AND event_type = 'crawl:complete'
-    ORDER BY seq DESC
-    LIMIT 1
-  `).get(taskId);
+  const row = db.taskEvents.getLatestTaskEventPayload(taskId, 'crawl:complete');
   const parsed = parsePayload(row);
   return parsed ? { ...parsed.payload, ts: parsed.ts } : null;
 }
 
 function getErrorCount(db, taskId) {
-  const row = db.prepare(`
-    SELECT COUNT(*) as cnt
-    FROM task_events
-    WHERE task_id = ? AND severity = 'error'
-  `).get(taskId);
-  return row && Number.isFinite(row.cnt) ? row.cnt : 0;
+  return db.taskEvents.countTaskEventErrors(taskId);
 }
 
 function normalizeProgressSnapshot(progress, ts) {
@@ -641,7 +597,7 @@ function main() {
     process.exit(1);
   }
 
-  const db = new Database(flags.db, { readonly: true });
+  const db = openNewsCrawlerDb(flags.db, { readonly: true });
   let taskId = flags.taskId;
   if (!taskId) {
     const latest = getLatestTask(db);

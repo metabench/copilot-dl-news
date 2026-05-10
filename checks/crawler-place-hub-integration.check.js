@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 /**
  * Crawler Integration Check: Place Hub Pattern Learning
  * 
@@ -9,8 +10,6 @@
  * This check uses an in-memory database and mock components to validate
  * the integration without requiring network access or the full crawler.
  */
-
-const Database = require('better-sqlite3');
 const { createPlaceHubUrlPatternsStore } = require('../src/db/placeHubUrlPatternsStore');
 const { PlaceHubPatternLearningService } = require('../src/services/PlaceHubPatternLearningService');
 
@@ -82,7 +81,7 @@ async function runChecks() {
   console.log('='.repeat(60));
 
   // Create in-memory database
-  const db = new Database(':memory:');
+  const db = openNewsCrawlerDb(':memory:');
   
   // Create required tables for place hubs
   db.exec(`

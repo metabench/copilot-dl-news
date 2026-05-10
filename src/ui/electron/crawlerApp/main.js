@@ -9,6 +9,7 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 
 const DEFAULT_CONFIG = {
   url: 'https://www.theguardian.com',
@@ -274,9 +275,8 @@ ipcMain.handle('urls:get', async () => {
 ipcMain.handle('url:analyze', async (event, url) => {
   // Query the database for URL analysis
   try {
-    const Database = require('better-sqlite3');
     const dbPath = path.join(getAppRoot(), 'data', 'news.db');
-    const db = new Database(dbPath, { readonly: true });
+    const db = openNewsCrawlerDb(dbPath, { readonly: true });
 
     // Get URL info
     const urlRow = db.prepare('SELECT * FROM urls WHERE url = ?').get(url);
@@ -325,9 +325,8 @@ ipcMain.handle('url:analyze', async (event, url) => {
 
 ipcMain.handle('db:stats', async () => {
   try {
-    const Database = require('better-sqlite3');
     const dbPath = path.join(getAppRoot(), 'data', 'news.db');
-    const db = new Database(dbPath, { readonly: true });
+    const db = openNewsCrawlerDb(dbPath, { readonly: true });
 
     const totalUrls = db.prepare('SELECT COUNT(*) as count FROM urls').get().count;
     const totalFetches = db.prepare('SELECT COUNT(*) as count FROM http_responses').get().count;
@@ -376,9 +375,8 @@ ipcMain.handle('db:stats', async () => {
 
 ipcMain.handle('db:clear-cache', async () => {
   try {
-    const Database = require('better-sqlite3');
     const dbPath = path.join(getAppRoot(), 'data', 'news.db');
-    const db = new Database(dbPath);
+    const db = openNewsCrawlerDb(dbPath);
 
     // Only clear http_responses, not urls or content_storage
     const result = db.prepare('DELETE FROM http_responses').run();
@@ -393,9 +391,8 @@ ipcMain.handle('db:clear-cache', async () => {
 
 ipcMain.handle('url:content', async (event, url) => {
   try {
-    const Database = require('better-sqlite3');
     const dbPath = path.join(getAppRoot(), 'data', 'news.db');
-    const db = new Database(dbPath, { readonly: true });
+    const db = openNewsCrawlerDb(dbPath, { readonly: true });
 
     const urlRow = db.prepare('SELECT id FROM urls WHERE url = ?').get(url);
     if (!urlRow) {

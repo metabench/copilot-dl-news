@@ -1,4 +1,5 @@
-const db = require('better-sqlite3')('data/news.db');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const db = openNewsCrawlerDb('data/news.db');
 // Extract URLs from normalized schema that have been analyzed, ordered by most recent analysis
 const rows = db.prepare(`
   SELECT u.id, u.url, ca.analyzed_at

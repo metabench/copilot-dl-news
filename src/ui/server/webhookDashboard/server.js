@@ -21,7 +21,6 @@
 
 const express = require('express');
 const path = require('path');
-const Database = require('better-sqlite3');
 const jsgui = require('jsgui3-html');
 
 const { createIntegrationAdapter } = require('../../../data/db/sqlite/v1/queries/integrationAdapter');
@@ -71,7 +70,7 @@ let integrationAdapter;
 let webhookService;
 
 async function initDb(dbPath = DB_PATH) {
-  db = new Database(dbPath);
+  db = resolveBetterSqliteHandle({ dbPath }).dbHandle;
   
   // Create a wrapped DB that works with async/await
   const wrappedDb = {

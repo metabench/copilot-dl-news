@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 /**
  * Distributed Crawl Speedometer - Electron App
  *
@@ -37,7 +38,7 @@ const MAX_QUEUE_PREVIEW = 200;
 let mainWindow = null;
 let server = null;
 let pushEvent = () => {};
-let errorQueryStmt = null;
+let taskEventsAccess = null;
 
 function createServer() {
   const expressApp = express();
@@ -80,13 +81,13 @@ function createServer() {
 
   // Surface recent DB errors
   expressApp.get('/errors', (req, res) => {
-    if (!errorQueryStmt) {
+    if (!taskEventsAccess) {
       res.status(503).json({ ok: false, error: 'Errors not ready yet' });
       return;
     }
     try {
       const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
-      const rows = errorQueryStmt.all('distributed-crawl', limit).map((row) => {
+      const rows = taskEventsAccess.listTaskEventNonInfoEvents('distributed-crawl', { limit }).map((row) => {
         let payload;
         try { payload = JSON.parse(row.payload || '{}'); } catch (_) { payload = row.payload; }
         return { ...row, payload };
@@ -667,15 +668,9 @@ async function autoStartAllQueued() {
 
 async function main() {
   console.log('[main] Starting...');
-  const db = require('better-sqlite3')('data/news.db');
+  const db = openNewsCrawlerDb('data/news.db');
   console.log('[main] Database opened');
-  errorQueryStmt = db.prepare(`
-    SELECT ts, event_type, event_category, severity, payload
-    FROM task_events
-    WHERE task_type = ? AND COALESCE(severity, 'info') != 'info'
-    ORDER BY ts DESC
-    LIMIT ?
-  `);
+  taskEventsAccess = db.taskEvents;
 
   const expressApp = createServer();
 

@@ -1,3 +1,4 @@
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * worker-cli.js
  * -------------
@@ -6,8 +7,6 @@
  * 
  * Usage: node tools/crawl/worker-cli.js --domain=example.com --max=500 --db=data/news.db
  */
-
-const Database = require('better-sqlite3');
 const path = require('path');
 const { CrawlWorker } = require('../../deploy/remote-crawler/lib/crawl-worker');
 
@@ -27,7 +26,7 @@ if (!domain) {
     process.exit(1);
 }
 
-const db = new Database(dbPath, { timeout: 10000 }); // 10s timeout for busy locks
+const db = openNewsCrawlerDb(dbPath, { timeout: 10000 }); // 10s timeout for busy locks
 // WAL mode recommended for concurrency
 db.pragma('journal_mode = WAL');
 

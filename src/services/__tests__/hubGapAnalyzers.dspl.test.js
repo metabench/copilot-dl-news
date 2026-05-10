@@ -1,9 +1,9 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../db/openNewsCrawlerDb');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const Database = require('better-sqlite3');
 const { CountryHubGapAnalyzer } = require('../CountryHubGapAnalyzer');
 const { RegionHubGapAnalyzer } = require('../RegionHubGapAnalyzer');
 const { CityHubGapAnalyzer } = require('../CityHubGapAnalyzer');
@@ -46,7 +46,7 @@ describe('HubGapAnalyzer DSPL integration', () => {
       }
     };
     fs.writeFileSync(path.join(tempDir, 'guardian.json'), JSON.stringify(dsplPayload, null, 2), 'utf8');
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     db.exec(`
       CREATE TABLE urls (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

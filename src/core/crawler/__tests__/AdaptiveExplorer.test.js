@@ -1,9 +1,9 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 /**
  * Tests for AdaptiveExplorer - Dynamic exploration/exploitation strategy
  */
 
 const { AdaptiveExplorer } = require('../AdaptiveExplorer');
-const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
@@ -15,7 +15,7 @@ describe('AdaptiveExplorer', () => {
 
   beforeEach(() => {
     tempDbPath = path.join(__dirname, `test-explorer-${Date.now()}.db`);
-    db = new Database(tempDbPath);
+    db = openNewsCrawlerDb(tempDbPath);
     
     db.exec(`
       CREATE TABLE IF NOT EXISTS exploration_decisions (

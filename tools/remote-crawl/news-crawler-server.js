@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * news-crawler-server.js
  * ----------------------
@@ -16,7 +17,6 @@
  */
 
 const express = require('express');
-const Database = require('better-sqlite3');
 const path = require('path');
 
 // Parse command line args
@@ -36,7 +36,7 @@ console.log(`Database: ${DB_FILE}`);
 console.log(`Port: ${PORT}`);
 
 // Database Setup
-const db = new Database(DB_FILE);
+const db = openNewsCrawlerDb(DB_FILE);
 db.exec(`
   CREATE TABLE IF NOT EXISTS urls (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

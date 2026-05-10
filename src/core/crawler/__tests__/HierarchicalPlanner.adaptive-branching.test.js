@@ -1,9 +1,9 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 /**
  * Tests for Adaptive Branching (Phase 2 Improvement)
  */
 
 const { HierarchicalPlanner } = require('../HierarchicalPlanner');
-const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
@@ -13,7 +13,7 @@ describe('HierarchicalPlanner - Adaptive Branching', () => {
   let mockLogger;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create minimal schema for domain profile
     db.exec(`

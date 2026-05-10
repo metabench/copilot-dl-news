@@ -29,6 +29,13 @@ const readline = require('readline');
 const path = require('path');
 const fnl = require('fnl');
 const { observable, stages } = fnl;
+const {
+  createGeoNamesImportStatements,
+  createGeoImportTransaction,
+  ensureGeoImportIndexes,
+  getGeoNamesImportCounts,
+  findGeoNamesPlaceByNormalizedName
+} = require('news-crawler-db');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GeoNames Column Mapping
@@ -182,26 +189,7 @@ function importGeoNames(options) {
         // Phase 3: Prepare statements
         emitProgress('preparing', 'Preparing database statements...');
         
-        const stmts = {
-          insertPlace: db.prepare(`
-            INSERT INTO places (kind, country_code, population, lat, lng, source, adm1_code, timezone)
-            VALUES (?, ?, ?, ?, ?, 'geonames', ?, ?)
-          `),
-          insertName: db.prepare(`
-            INSERT INTO place_names (place_id, name, normalized, lang, name_kind, is_preferred, source)
-            VALUES (?, ?, ?, ?, ?, ?, 'geonames')
-          `),
-          insertExternalId: db.prepare(`
-            INSERT OR IGNORE INTO place_external_ids (place_id, source, ext_id)
-            VALUES (?, 'geonames', ?)
-          `),
-          findByGeonameId: db.prepare(`
-            SELECT place_id FROM place_external_ids WHERE source = 'geonames' AND ext_id = ?
-          `),
-          updateCanonical: db.prepare(`
-            UPDATE places SET canonical_name_id = ? WHERE id = ?
-          `)
-        };
+        const stmts = createGeoNamesImportStatements(db);
         
         // Phase 4: Import
         emitProgress('importing', 'Starting import...');
@@ -213,7 +201,7 @@ function importGeoNames(options) {
         
         let batch = [];
         
-        const processBatch = db.transaction((rows) => {
+        const processBatch = createGeoImportTransaction(db, (rows) => {
           for (const row of rows) {
             if (stopped) return;
             
@@ -405,13 +393,7 @@ function createImportPipeline(options) {
       
       raiseStageEvent('index-start');
       
-      // Ensure indexes exist
-      db.exec(`
-        CREATE INDEX IF NOT EXISTS idx_place_names_normalized ON place_names(normalized);
-        CREATE INDEX IF NOT EXISTS idx_place_names_place ON place_names(place_id);
-        CREATE INDEX IF NOT EXISTS idx_places_country ON places(country_code);
-        CREATE INDEX IF NOT EXISTS idx_places_kind ON places(kind);
-      `);
+      ensureGeoImportIndexes(db);
       
       raiseStageEvent('index-complete');
       
@@ -424,24 +406,14 @@ function createImportPipeline(options) {
       
       raiseStageEvent('verify-start');
       
-      const counts = db.prepare(`
-        SELECT 
-          (SELECT COUNT(*) FROM places WHERE source = 'geonames') as places,
-          (SELECT COUNT(*) FROM place_names WHERE source = 'geonames') as names
-      `).get();
+      const counts = getGeoNamesImportCounts(db);
       
       // Test some known cities
       const testCities = ['chicago', 'manchester', 'birmingham', 'tokyo', 'paris'];
       const found = {};
       
       for (const city of testCities) {
-        const result = db.prepare(`
-          SELECT p.id, pn.name 
-          FROM places p
-          JOIN place_names pn ON pn.place_id = p.id
-          WHERE pn.normalized = ?
-          LIMIT 1
-        `).get(city);
+        const result = findGeoNamesPlaceByNormalizedName(db, city);
         found[city] = !!result;
       }
       

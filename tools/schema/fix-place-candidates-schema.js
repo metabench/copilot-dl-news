@@ -1,4 +1,5 @@
-const db = require('better-sqlite3')('data/news.db');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const db = openNewsCrawlerDb('data/news.db');
 
 try {
   console.log('Dropping old place_hub_candidates table...');

@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Tests for Quality Dashboard
  * 
@@ -11,8 +12,6 @@
  */
 
 const request = require('supertest');
-const Database = require('better-sqlite3');
-
 const { QualityMetricsService } = require('../../src/ui/server/qualityDashboard/QualityMetricsService');
 const { createApp, initDb } = require('../../src/ui/server/qualityDashboard/server');
 const { 
@@ -32,7 +31,7 @@ const jsgui = require('jsgui3-html');
 // ─────────────────────────────────────────────────────────────
 
 function buildInMemoryDb() {
-  const db = new Database(':memory:');
+  const db = openNewsCrawlerDb(':memory:');
   
   // Create required tables
   db.exec(`

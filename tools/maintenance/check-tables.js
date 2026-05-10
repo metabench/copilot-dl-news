@@ -1,4 +1,15 @@
-const { ensureDatabase } = require('../src/data/db/sqlite/v1');
-const db = ensureDatabase('./data/news.db');
-console.log('Tables:', db.prepare('SELECT name FROM sqlite_master WHERE type=\'table\'').all().map(t => t.name));
-db.close();
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+
+async function main() {
+	const db = openNewsCrawlerDb('./data/news.db', { readonly: true });
+	try {
+		console.log('Tables:', await db.maintenance.listTables());
+	} finally {
+		await db.close();
+	}
+}
+
+main().catch((error) => {
+	console.error(error.message);
+	process.exit(1);
+});

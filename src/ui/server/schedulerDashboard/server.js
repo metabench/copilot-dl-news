@@ -41,24 +41,7 @@ function queryScheduleStats(dbHandle) {
 
 function queryReconcileRuns(dbHandle, limit = 20) {
   try {
-    const stmt = dbHandle.prepare(`
-      SELECT
-        task_id,
-        task_type,
-        MIN(ts) as first_ts,
-        MAX(ts) as last_ts,
-        SUM(CASE WHEN event_type = 'scheduler:reconcile:postpone' THEN 1 ELSE 0 END) as postponed,
-        SUM(CASE WHEN event_type = 'scheduler:reconcile:start' THEN 1 ELSE 0 END) as starts,
-        SUM(CASE WHEN event_type = 'scheduler:reconcile:end' THEN 1 ELSE 0 END) as ends
-      FROM task_events
-      WHERE task_type = 'scheduler'
-        AND task_id LIKE 'scheduler-reconcile-%'
-      GROUP BY task_id
-      ORDER BY MAX(ts) DESC
-      LIMIT ?
-    `);
-
-    return stmt.all(limit);
+    return dbHandle.taskEvents.listSchedulerReconcileRuns({ limit });
   } catch (err) {
     // task_events might not exist yet; keep UI resilient.
     return { error: err.message, items: [] };
@@ -67,15 +50,7 @@ function queryReconcileRuns(dbHandle, limit = 20) {
 
 function queryReconcileEvents(dbHandle, taskId, limit = 200) {
   try {
-    const stmt = dbHandle.prepare(`
-      SELECT seq, ts, event_type, event_category, severity, scope, target, payload
-      FROM task_events
-      WHERE task_id = ?
-      ORDER BY seq
-      LIMIT ?
-    `);
-
-    return stmt.all(taskId, limit).map(row => ({
+    return dbHandle.taskEvents.getTaskEventsForTask(taskId, { limit }).map(row => ({
       ...row,
       payloadJson: safeJsonParse(row.payload)
     }));

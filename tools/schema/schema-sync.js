@@ -39,8 +39,7 @@
  * @module tools/schema-sync
  */
 'use strict';
-
-const Database = require('better-sqlite3');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -458,7 +457,7 @@ async function main() {
         process.exit(1);
     }
 
-    const db = new Database(options.dbPath, { readonly: true });
+    const db = openNewsCrawlerDb(options.dbPath, { readonly: true });
 
     try {
         // Extract schema

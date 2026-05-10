@@ -4,6 +4,7 @@ const { CountryHubGapAnalyzer } = require('./CountryHubGapAnalyzer');
 const { getCountryHubCandidates, normalizeHost } = require('../data/db/sqlite/v1/queries/placeHubs');
 const { upsertPlacePageMapping } = require('../data/db/sqlite/v1/queries/placePageMappings');
 const { slugify, normalizeForMatching } = require('../tools/slugify');
+const { getPreferredEnglishAndFallbackPlaceNames } = require('news-crawler-db');
 
 const LEADING_NAME_STOP_WORDS = new Set([
   'the',
@@ -128,21 +129,6 @@ class CountryHubMatcher {
     this.minArticleLinks = minArticleLinks;
     this.analyzer = new CountryHubGapAnalyzer({ db, logger });
     this.englishNameCache = new Map();
-    this.altNameStmt = this.db.prepare(`
-      SELECT name
-        FROM place_names
-       WHERE place_id = ?
-         AND lang LIKE 'en%'
-       ORDER BY is_preferred DESC, id ASC
-       LIMIT 1
-    `);
-    this.fallbackNameStmt = this.db.prepare(`
-      SELECT name
-        FROM place_names
-       WHERE place_id = ?
-       ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
-       LIMIT 1
-    `);
   }
 
   getAlternateNames(placeId) {
@@ -153,12 +139,7 @@ class CountryHubMatcher {
 
     let names = [];
     try {
-      const englishRow = this.altNameStmt.get(placeId);
-      const fallbackRow = this.fallbackNameStmt.get(placeId);
-      const unique = new Set();
-      if (englishRow?.name) unique.add(englishRow.name);
-      if (fallbackRow?.name) unique.add(fallbackRow.name);
-      names = Array.from(unique.values());
+      names = getPreferredEnglishAndFallbackPlaceNames(this.db, placeId);
     } catch (error) {
       this.logger.warn?.('[CountryHubMatcher] Failed to load alternate names', error.message);
       names = [];

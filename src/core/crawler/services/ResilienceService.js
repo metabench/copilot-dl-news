@@ -13,6 +13,7 @@
 const dns = require('dns').promises;
 const http = require('http');
 const https = require('https');
+const { checkDatabaseHealth } = require('news-crawler-db');
 
 /**
  * Circuit breaker states
@@ -454,8 +455,8 @@ class ResilienceService {
         await adapter.ping();
       } else if (typeof adapter.getDb === 'function') {
         const db = adapter.getDb();
-        if (db && typeof db.prepare === 'function') {
-          db.prepare('SELECT 1').get();
+        if (db) {
+          checkDatabaseHealth(db);
         }
       }
       

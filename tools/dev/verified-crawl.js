@@ -15,9 +15,9 @@
  */
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
 const { spawn } = require('child_process');
-const Database = require('better-sqlite3');
 const evidence = require('../../src/data/db/queries/downloadEvidence');
 
 const DB_PATH = path.join(process.cwd(), 'data', 'news.db');
@@ -161,7 +161,7 @@ async function main() {
   
   // Step 1: Capture baseline
   console.log('📊 Phase 1: Capturing baseline...');
-  const db = new Database(DB_PATH, { readonly: true });
+  const db = openNewsCrawlerDb(DB_PATH, { readonly: true });
   const baseline = evidence.getGlobalStats(db);
   db.close();
 
@@ -193,7 +193,7 @@ async function main() {
 
   // Step 3: Verify downloads
   console.log('\n✅ Phase 3: Verifying downloads in database...');
-  const db2 = new Database(DB_PATH, { readonly: true });
+  const db2 = openNewsCrawlerDb(DB_PATH, { readonly: true });
   
   const postStats = evidence.getGlobalStats(db2);
   const newDownloads = postStats.verified_downloads - baseline.verified_downloads;

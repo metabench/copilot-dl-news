@@ -1,9 +1,8 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 /**
  * Integration tests for Phase 1-3 features
  * Tests that all components are properly wired together
  */
-
-const Database = require('better-sqlite3');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -22,7 +21,7 @@ describe('Phase 1-3 Integration Tests', () => {
     // Create temp database
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'phase-integration-'));
     dbPath = path.join(tempDir, 'test.db');
-    db = new Database(dbPath);
+    db = openNewsCrawlerDb(dbPath);
 
     // Create required tables
     db.exec(`

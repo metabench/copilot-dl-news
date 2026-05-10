@@ -3,28 +3,26 @@
  * Quick DB query check - Guardian place mappings and gaps
  */
 'use strict';
-
-const Database = require('better-sqlite3');
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 const path = require('path');
 
-const db = new Database(path.join(__dirname, '..', 'data', 'news.db'), { readonly: true });
+const db = openNewsCrawlerDb(path.join(__dirname, '..', 'data', 'news.db'), { readonly: true });
+const diagnostics = db.placeHubDiagnostics;
+if (!diagnostics) {
+  throw new Error('news-crawler-db does not expose placeHubDiagnostics');
+}
 
 // Check Guardian mappings (distinct places)
 console.log('=== Guardian Place Mappings (distinct places) ===');
-const mappings = db.prepare(`
-  SELECT DISTINCT ppm.place_id, ppm.url, ppm.status, ppm.page_kind
-  FROM place_page_mappings ppm
-  WHERE ppm.host = 'theguardian.com'
-  ORDER BY ppm.url
-`).all();
+const mappings = diagnostics.listPlacePageMappingsWithPreferredNames('theguardian.com', {
+  orderBy: 'url',
+  lang: 'en'
+});
 console.log(`Found ${mappings.length} distinct place mappings:`);
 
 // Get English names for each
 for (const m of mappings) {
-  const name = db.prepare(`
-    SELECT name FROM place_names WHERE place_id = ? AND lang = 'en' LIMIT 1
-  `).get(m.place_id);
-  console.log(`  [${m.status}] ${name?.name || 'Unknown'}: ${m.url}`);
+  console.log(`  [${m.status}] ${m.place_name || 'Unknown'}: ${m.url}`);
 }
 
 // Now find potential GAPS - places we discovered in URLs but don't have mappings for
@@ -59,17 +57,10 @@ for (const p of potentialPlaces) {
 
 // Check what countries exist in places table but don't have Guardian mappings
 console.log('\n=== Countries in DB without Guardian mapping ===');
-const unmapped = db.prepare(`
-  SELECT DISTINCT p.id, pn.name
-  FROM places p
-  JOIN place_names pn ON pn.place_id = p.id AND pn.lang = 'en' AND pn.is_preferred = 1
-  WHERE p.place_type = 'country'
-    AND p.id NOT IN (
-      SELECT place_id FROM place_page_mappings WHERE host = 'theguardian.com'
-    )
-  ORDER BY pn.name
-  LIMIT 30
-`).all();
+const unmapped = diagnostics.listCountriesWithoutPlacePageMapping('theguardian.com', {
+  lang: 'en',
+  limit: 30
+});
 console.log(`Found ${unmapped.length} unmapped countries:`);
 for (const u of unmapped) {
   console.log(`  ${u.name} (place_id=${u.id})`);

@@ -1,9 +1,9 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 /**
  * Tests for HierarchicalPlanner - Strategic multi-step planning
  */
 
 const { HierarchicalPlanner } = require('../HierarchicalPlanner');
-const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
@@ -15,7 +15,7 @@ describe('HierarchicalPlanner', () => {
 
   beforeEach(() => {
     tempDbPath = path.join(__dirname, `test-planner-${Date.now()}.db`);
-    db = new Database(tempDbPath);
+    db = openNewsCrawlerDb(tempDbPath);
     
     db.exec(`
       CREATE TABLE IF NOT EXISTS hierarchical_plans (

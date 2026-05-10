@@ -1,13 +1,12 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * @fileoverview Tests for userAdapter
  * 
  * Contract tests for user database operations.
  * Uses in-memory SQLite for isolation.
  */
-
-const Database = require('better-sqlite3');
 const { createUserAdapter, hashPassword, verifyPassword, generateSessionToken } = require('../../src/db/sqlite/v1/queries/userAdapter');
 
 describe('userAdapter', () => {
@@ -16,7 +15,7 @@ describe('userAdapter', () => {
 
   beforeEach(() => {
     // Create in-memory database
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create required dependent tables (minimal versions)
     db.exec(`

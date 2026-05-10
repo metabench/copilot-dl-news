@@ -8,6 +8,7 @@
  */
 
 const { getDb } = require('../../data/db');
+const { listCrawlDataUrlsMatchingPattern } = require('news-crawler-db');
 
 class PredictionStrategyManager {
   /**
@@ -154,20 +155,6 @@ class PredictionStrategyManager {
     const metadata = this.buildMetadata(entity);
     if (!metadata || !metadata.slug) return predictions;
 
-    // Prepare statement if not already prepared
-    if (!this._crawlDataStmt) {
-      try {
-        this._crawlDataStmt = this.db.prepare(`
-          SELECT url FROM urls
-          WHERE host = ? AND url LIKE ?
-          LIMIT 20
-        `);
-      } catch (err) {
-        // Handle missing table
-        return [];
-      }
-    }
-
     const patterns = [
       `%/${metadata.slug}`,
       `%/${metadata.slug}/%`
@@ -183,7 +170,7 @@ class PredictionStrategyManager {
 
     for (const pattern of patterns) {
       try {
-        const rows = this._crawlDataStmt.all(domain, pattern);
+        const rows = listCrawlDataUrlsMatchingPattern(this.db, domain, pattern, { limit: 20 });
         for (const row of rows) {
             if (seenUrls.has(row.url)) continue;
             seenUrls.add(row.url);

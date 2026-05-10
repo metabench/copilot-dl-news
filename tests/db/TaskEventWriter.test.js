@@ -1,10 +1,9 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * @jest-environment node
  */
-
-const Database = require('better-sqlite3');
 const { TaskEventWriter, getEventMetadata, EVENT_TYPE_METADATA } = require('../../src/db/TaskEventWriter');
 
 describe('TaskEventWriter', () => {
@@ -12,7 +11,7 @@ describe('TaskEventWriter', () => {
   let writer;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     writer = new TaskEventWriter(db, { batchWrites: false });
   });
 

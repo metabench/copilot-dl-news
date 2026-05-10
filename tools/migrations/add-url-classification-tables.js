@@ -11,6 +11,7 @@
  */
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const MIGRATION_VERSION = 37; // Increment from current max version
 
 /**
@@ -154,13 +155,12 @@ module.exports = {
 
 // Run directly if called as script
 if (require.main === module) {
-    const Database = require('better-sqlite3');
     const path = require('path');
     
     const dbPath = path.join(__dirname, '..', '..', 'data', 'news.db');
     console.log('Opening database:', dbPath);
     
-    const db = new Database(dbPath);
+    const db = openNewsCrawlerDb(dbPath);
     
     if (isApplied(db)) {
         console.log('Migration already applied');

@@ -12,10 +12,9 @@
  */
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 // CLI argument parsing
 const args = process.argv.slice(2);
 const flags = {};
@@ -44,7 +43,7 @@ const SIMPLE = flags.simple || false;
 
 function getDailyDownloads(days) {
   const dbPath = path.resolve(__dirname, '..', '..', 'data', 'news.db');
-  const db = new Database(dbPath, { readonly: true });
+  const db = openNewsCrawlerDb(dbPath, { readonly: true });
   
   // Get all days in range with download counts
   const stmt = db.prepare(`

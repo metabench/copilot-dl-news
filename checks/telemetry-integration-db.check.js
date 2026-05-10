@@ -1,17 +1,16 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 /**
  * Check script for TelemetryIntegration + TaskEventWriter wiring.
  * Verifies that telemetry events get persisted to the database.
  */
-
-const Database = require('better-sqlite3');
-const { TelemetryIntegration } = require('../src/crawler/telemetry/TelemetryIntegration');
+const { TelemetryIntegration } = require('../src/core/crawler/telemetry/TelemetryIntegration');
 
 console.log('=== TelemetryIntegration DB Wiring Check ===\n');
 
 // Create in-memory DB for testing
-const db = new Database(':memory:');
+const db = openNewsCrawlerDb(':memory:');
 console.log('✓ Created in-memory database');
 
 // Create TelemetryIntegration with db and enable URL broadcasts for testing

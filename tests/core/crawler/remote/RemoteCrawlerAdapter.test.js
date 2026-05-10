@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../../src/db/openNewsCrawlerDb');
 const { describe, it, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const EventEmitter = require('events');
@@ -350,7 +351,7 @@ describe('RemoteCrawlerAdapter', () => {
         // Skip if better-sqlite3 not available in test env
         return;
       }
-      const db = new Database(':memory:');
+      const db = openNewsCrawlerDb(':memory:');
       db.exec(`
         CREATE TABLE urls (
           id INTEGER PRIMARY KEY AUTOINCREMENT,

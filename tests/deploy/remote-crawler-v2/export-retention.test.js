@@ -1,6 +1,5 @@
 'use strict';
-
-const Database = require('better-sqlite3');
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 const { pruneExportedPayload } = require('../../../deploy/remote-crawler-v2/lib/export-retention');
 const {
   validatePruneExportConfig,
@@ -8,7 +7,7 @@ const {
 } = require('../../../tools/crawl/lib/prune-config');
 
 function createFixtureDb() {
-  const db = new Database(':memory:');
+  const db = openNewsCrawlerDb(':memory:');
   db.exec(`
     CREATE TABLE urls (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

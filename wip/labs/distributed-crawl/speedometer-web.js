@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 /**
  * Distributed Crawl Speedometer - Web App
  * 
@@ -11,11 +12,9 @@
  */
 
 const express = require('express');
-const Database = require('better-sqlite3');
-
 const PORT = parseInt(process.argv.find(a => a.startsWith('--port='))?.split('=')[1] || '3098', 10);
 const REMOTE_WORKER = 'http://144.21.42.149:8081';
-const db = new Database('data/news.db');
+const db = openNewsCrawlerDb('data/news.db');
 
 const app = express();
 app.use(express.json());

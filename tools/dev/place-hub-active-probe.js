@@ -14,8 +14,8 @@
  */
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
-const Database = require('better-sqlite3');
 // node-fetch v3 is ESM-only
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const { slugify } = require('../../src/tools/slugify');
@@ -50,7 +50,7 @@ if (!HOST || !PATTERN) {
 
 function getDb(readonly = true) {
   const dbPath = path.resolve(__dirname, '..', '..', 'data', 'news.db');
-  return new Database(dbPath, { readonly });
+  return openNewsCrawlerDb(dbPath, { readonly });
 }
 
 async function probeUrl(url) {

@@ -31,8 +31,22 @@ temp/
 dist/
 build/
 
-# Data directory (crawled content)
-data/
+# Production data directory (crawled content)
+/data/
+
+# Database artifacts should not be committed from any path by accident.
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-shm
+*.sqlite3-wal
 
 # Large NDJSON exports and backups
 *.ndjson
@@ -51,9 +65,9 @@ migration-temp/**/*.json
 migration-temp/**/*.sql
 
 # Data export staging directories
-data/exports/
-data/exports/**/*.ndjson
-data/exports/**/*.json
+/data/exports/
+/data/exports/**/*.ndjson
+/data/exports/**/*.json
 
 # Test logs directory (can grow to thousands of files)
 testlogs/

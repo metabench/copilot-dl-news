@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * intelligent-crawl.js
  * --------------------
@@ -18,7 +19,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
 const { ensureDb } = require('../../src/data/db/sqlite');
 

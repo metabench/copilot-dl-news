@@ -8,9 +8,9 @@
         "start:apnews": "node server.js --domain=apnews.com --port=3200"
     },
     "dependencies": {
-        "better-sqlite3": "^12.5.0",
         "express": "^5.2.1",
         "lang-tools": "^0.0.44",
+        "news-crawler-db": "file:../../../../news-crawler-db",
         "puppeteer-core": "^23.0.0"
     }
 }

@@ -5,10 +5,10 @@
 
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../db/openNewsCrawlerDb');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const Database = require('better-sqlite3');
 const { CountryHubGapAnalyzer } = require('../CountryHubGapAnalyzer');
 const { CityHubGapAnalyzer } = require('../CityHubGapAnalyzer');
 const { RegionHubGapAnalyzer } = require('../RegionHubGapAnalyzer');
@@ -45,7 +45,7 @@ describe('HubGapAnalyzerBase - Shared Pattern Logic', () => {
       'utf8'
     );
     
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
   });
 
   afterEach(() => {

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Test Migration Schema Application
  *
@@ -19,7 +20,7 @@ function testMigrationSchema() {
 
   try {
     // Create a minimal database with just the tables we need for testing
-    const db = new (require('better-sqlite3'))(testDbPath);
+    const db = openNewsCrawlerDb(testDbPath);
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
 

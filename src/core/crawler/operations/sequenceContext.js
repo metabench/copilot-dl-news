@@ -13,6 +13,7 @@
 
 const { CrawlPlaybookService } = require('../CrawlPlaybookService');
 const { getDb } = require('../../../data/db');
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 
 class SequenceContextAdapter {
   constructor({ playbookService, dbPath } = {}) {
@@ -21,8 +22,7 @@ class SequenceContextAdapter {
       this._ownedPlaybook = false;
     } else if (dbPath) {
       // Create our own playbook service instance
-      const Database = require('better-sqlite3');
-      const db = new Database(dbPath);
+      const db = openNewsCrawlerDb(dbPath);
       this._playbook = new CrawlPlaybookService({ db });
       this._ownedPlaybook = true;
     } else {

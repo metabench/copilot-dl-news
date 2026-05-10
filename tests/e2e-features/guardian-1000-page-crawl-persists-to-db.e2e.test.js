@@ -1,9 +1,8 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 const NewsCrawler = require('../../src/crawl');
 const { ensureDb } = require('../../src/data/db/sqlite');
 const { createTempDb } = require('../../src/data/db/sqlite/v1/test-utils');
@@ -98,7 +97,7 @@ describe('LOCAL FIXTURE (not real Guardian) - 1000 page crawl persists to DB', (
       const exitSummary = typeof crawler.getExitSummary === 'function' ? crawler.getExitSummary() : null;
       const crawlerStats = crawler.stats || {};
 
-      db = new Database(dbPath, { readonly: true, fileMustExist: true });
+      db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
 
       const pageLike = `${baseUrl}/page/%`;
 

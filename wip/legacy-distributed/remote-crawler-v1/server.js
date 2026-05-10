@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 /**
  * Remote Crawler Server
  * ---------------------
@@ -12,7 +13,6 @@
  */
 
 const express = require('express');
-const Database = require('better-sqlite3');
 const path = require('path');
 const zlib = require('zlib');
 
@@ -46,7 +46,7 @@ if (!fs.existsSync(dataDir)) {
 }
 
 // Initialize database with reused schema
-const db = new Database(DB_FILE);
+const db = openNewsCrawlerDb(DB_FILE);
 initSchema(db);
 
 // Initialize crawl worker

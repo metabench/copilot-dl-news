@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 function main() {
   const repoRoot = path.resolve(__dirname, '..', '..');
   const snapshot = process.argv[2] || 'mini';
@@ -13,7 +12,7 @@ function main() {
     console.error('Snapshot DB not found:', dbPath);
     process.exit(2);
   }
-  const db = new Database(dbPath, { readonly: true });
+  const db = openNewsCrawlerDb(dbPath, { readonly: true });
   try {
     const required = ['urls', 'errors', 'crawl_jobs', 'articles'];
     const missing = [];

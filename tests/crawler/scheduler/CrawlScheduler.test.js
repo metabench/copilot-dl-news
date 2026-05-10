@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 /**
  * CrawlScheduler Test Suite
  * 
@@ -9,8 +10,6 @@
  * - ScheduleStore
  * - scheduleAdapter
  */
-
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
@@ -30,7 +29,7 @@ describe('CrawlScheduler', () => {
     if (fs.existsSync(testDbPath)) {
       fs.unlinkSync(testDbPath);
     }
-    db = new Database(testDbPath);
+    db = openNewsCrawlerDb(testDbPath);
     scheduler = new CrawlScheduler({ db });
   });
 
@@ -489,7 +488,7 @@ describe('ScheduleStore', () => {
     if (fs.existsSync(testDbPath)) {
       fs.unlinkSync(testDbPath);
     }
-    db = new Database(testDbPath);
+    db = openNewsCrawlerDb(testDbPath);
     store = new ScheduleStore(db);
   });
 
@@ -561,7 +560,7 @@ describe('scheduleAdapter', () => {
     if (fs.existsSync(testDbPath)) {
       fs.unlinkSync(testDbPath);
     }
-    db = new Database(testDbPath);
+    db = openNewsCrawlerDb(testDbPath);
     scheduleAdapter.ensureScheduleSchema(db);
   });
 

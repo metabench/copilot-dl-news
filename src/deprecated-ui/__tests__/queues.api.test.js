@@ -1,9 +1,8 @@
+const { openNewsCrawlerDb } = require('../../db/openNewsCrawlerDb');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const http = require('http');
-const Database = require('better-sqlite3');
-
 function startServerWithEnv(env = {}) {
   return new Promise((resolve, reject) => {
     const { spawn } = require('child_process');
@@ -98,7 +97,7 @@ describe('Queues persistence and APIs', () => {
       // Give the server time to initialise the database schema.
       await delay(120);
 
-      const db = new Database(dbPath);
+      const db = openNewsCrawlerDb(dbPath);
       try {
         db.exec(`
           CREATE TABLE IF NOT EXISTS crawl_jobs (

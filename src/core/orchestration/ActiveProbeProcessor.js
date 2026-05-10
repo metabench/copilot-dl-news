@@ -5,6 +5,10 @@ const { createFetchRow } = require('./utils/dataUtils');
 const { getConfidenceConfig, scoreHubCandidate, applyConfidenceDecision } = require('./utils/hubConfidenceScorer');
 const { CRAWL_EVENT_TYPES, SEVERITY_LEVELS, createTelemetryEvent } = require('../../core/crawler/telemetry');
 const { PatternInferenceService, detectHomeCountry, generateCompoundSectionCandidates, COUNTRY_ALIASES } = require('news-db-pure-analysis');
+const {
+  listUrlsForHost,
+  listCountryNamesForHubInference
+} = require('news-crawler-db');
 const dns = require('dns').promises;
 
 // Well-known probe countries used to bootstrap pattern detection on unknown domains
@@ -418,18 +422,13 @@ class ActiveProbeProcessor {
     let inferredPatterns = [];
     try {
       if (db) {
-        const rows = db.prepare('SELECT url FROM urls WHERE host = ? LIMIT 20000').all(domain);
+        const rows = listUrlsForHost(db, domain, { limit: 20000 });
         if (rows.length > 0) {
           const paths = rows.map(r => {
             try { return new URL(r.url).pathname; } catch { return ''; }
           }).filter(Boolean);
 
-          const countries = db.prepare(`
-            SELECT pn.name as title
-            FROM places p
-            JOIN place_names pn ON pn.place_id = p.id
-            WHERE p.kind='country' AND pn.lang='en'
-          `).all();
+          const countries = listCountryNamesForHubInference(db);
           const slugs = countries.map(c => c.title);
 
           inferredPatterns = PatternInferenceService.inferCountryHubPatterns(paths, slugs);

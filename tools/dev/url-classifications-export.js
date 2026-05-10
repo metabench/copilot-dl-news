@@ -12,9 +12,8 @@
  */
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 // Parse command line arguments
 const args = process.argv.slice(2);
 const flags = {
@@ -123,7 +122,7 @@ function inferClassification(url, signals) {
 async function main() {
   let db;
   try {
-    db = new Database(dbPath, { readonly: true });
+    db = openNewsCrawlerDb(dbPath, { readonly: true });
   } catch (err) {
     console.error(`Failed to open database: ${err.message}`);
     process.exit(1);

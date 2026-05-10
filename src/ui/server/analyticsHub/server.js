@@ -18,7 +18,7 @@
 
 const express = require('express');
 const path = require('path');
-const Database = require('better-sqlite3');
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 const jsgui = require('jsgui3-html');
 
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
@@ -48,7 +48,7 @@ let analyticsService;
 let patternService;
 
 function initDb(dbPath = DB_PATH) {
-  db = new Database(dbPath, { readonly: true });
+  db = openNewsCrawlerDb(dbPath, { readonly: true });
   analyticsService = new AnalyticsService(db);
   patternService = new PatternSharingService(db);
   return { db, analyticsService, patternService };
@@ -893,7 +893,7 @@ function createAnalyticsHubRouter(options = {}) {
   if (typeof getDbHandle === 'function') {
     dbHandle = getDbHandle();
   } else {
-    openedDbHandle = new Database(dbPath, { readonly: true });
+    openedDbHandle = openNewsCrawlerDb(dbPath, { readonly: true });
     dbHandle = openedDbHandle;
     close = () => {
       try {

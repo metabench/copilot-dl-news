@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * URL Classification CLI Tool
  * 
@@ -577,8 +578,7 @@ async function main() {
   
   // Sample from database
   if (flags.sample || flags.test || flags.unknowns) {
-    const Database = require('better-sqlite3');
-    const db = new Database('data/news.db', { readonly: true });
+    const db = openNewsCrawlerDb('data/news.db', { readonly: true });
     
     let query = `
       SELECT DISTINCT u.url 

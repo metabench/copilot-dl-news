@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * crawl-sites.js — Crawl multiple sites with a concise API
  * 
@@ -224,9 +225,8 @@ function resolveSites(siteNames) {
 // ─────────────────────────────────────────────────────────────
 
 async function findFailedSites(threshold, since) {
-  const Database = require('better-sqlite3');
   const dbPath = path.join(process.cwd(), 'data', 'news.db');
-  const db = new Database(dbPath, { readonly: true });
+  const db = openNewsCrawlerDb(dbPath, { readonly: true });
   
   const startTime = since || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   

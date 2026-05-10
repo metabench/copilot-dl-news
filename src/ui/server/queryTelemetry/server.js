@@ -10,7 +10,7 @@
 
 const express = require('express');
 const path = require('path');
-const Database = require('better-sqlite3');
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 const jsgui = require('jsgui3-html');
 const { getQueryStats, getRecentQueries } = require('../../../data/db/queryTelemetry');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
@@ -29,7 +29,7 @@ function initDb(dbPath = DB_PATH, options = {}) {
     db = options.dbHandle;
     return;
   }
-  db = new Database(dbPath, { readonly: true });
+  db = openNewsCrawlerDb(dbPath, { readonly: true });
 }
 
 function createQueryTelemetryRouter(options = {}) {

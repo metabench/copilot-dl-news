@@ -1,7 +1,5 @@
 'use strict';
-
-const Database = require('better-sqlite3');
-
+const { openNewsCrawlerDb } = require('../../../../src/db/openNewsCrawlerDb');
 const {
   DEFAULT_MAX_AGE_MS,
   getStatDefinitions,
@@ -14,7 +12,7 @@ describe('metricsService', () => {
   let db;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
   });
 
   afterEach(() => {

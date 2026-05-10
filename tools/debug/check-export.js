@@ -1,4 +1,5 @@
-const Database = require('better-sqlite3');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+
 const db = Database('full-export-brotli-24threads.db', { readonly: true });
 
 // Check schema

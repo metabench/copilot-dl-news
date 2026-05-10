@@ -4,32 +4,16 @@
  */
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 const path = require('path');
-const Database = require('better-sqlite3');
-const db = new Database(path.resolve(__dirname, '../data/news.db'), { readonly: true });
+const db = openNewsCrawlerDb(path.resolve(__dirname, '../data/news.db'), { readonly: true });
+const diagnostics = db.placeHubDiagnostics;
+if (!diagnostics) {
+  throw new Error('news-crawler-db does not expose placeHubDiagnostics');
+}
 
 // Get all /world/{slug} URLs with the slug extracted
-const query = `
-  SELECT DISTINCT 
-    url,
-    CASE 
-      WHEN url LIKE 'https://www.theguardian.com/world/%' 
-      THEN substr(url, 37, 
-           CASE 
-             WHEN instr(substr(url, 37), '/') > 0 
-             THEN instr(substr(url, 37), '/') - 1
-             ELSE length(substr(url, 37))
-           END)
-      ELSE NULL
-    END as slug
-  FROM urls 
-  WHERE host = 'www.theguardian.com'
-    AND url LIKE 'https://www.theguardian.com/world/%'
-  ORDER BY slug
-  LIMIT 100
-`;
-
-const rows = db.prepare(query).all();
+const rows = diagnostics.listUrlSlugsForHostPrefix('www.theguardian.com', '/world/', { limit: 100 });
 
 console.log('=== Slug Extraction Debug ===\n');
 
@@ -48,15 +32,12 @@ for (const country of majorCountries) {
 
 // Sample URLs that should have these slugs
 console.log('\n\nSample URLs containing major countries:');
-const sampleQuery = `
-  SELECT url FROM urls 
-  WHERE host = 'www.theguardian.com' 
-    AND (url LIKE '%/world/ukraine%' 
-      OR url LIKE '%/world/russia%'
-      OR url LIKE '%/world/china%')
-  LIMIT 10
-`;
-for (const row of db.prepare(sampleQuery).all()) {
+const sampleRows = diagnostics.listUrlsMatchingPrefixesForHost(
+  'www.theguardian.com',
+  ['/world/ukraine', '/world/russia', '/world/china'],
+  { limit: 10 }
+);
+for (const row of sampleRows) {
   console.log('  ' + row.url);
 }
 

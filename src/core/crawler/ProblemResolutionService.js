@@ -2,6 +2,7 @@
 
 const { slugify } = require('../../tools/placeHubDetector');
 const { recordPlaceHubSeed, resolveHandle } = require('./data/placeHubs');
+const { listKnownHubSeeds } = require('news-crawler-db');
 
 function uniqueByKey(items, keyFn) {
   const seen = new Set();
@@ -395,62 +396,33 @@ class ProblemResolutionService {
         this._log('warn', 'ProblemResolutionService failed to load known hub seeds via adapter', error?.message || error);
       }
     } else {
-      // Fallback to raw handle logic (SQLite only)
       const handle = this._getDbHandle();
-      let stmt = null;
-      if (handle && typeof handle.prepare === 'function') {
-        const fallbackSql = `
-            SELECT host, url, evidence, last_seen_at AS lastSeenAt
-              FROM place_hubs
-             WHERE LOWER(host) = ?
-             ORDER BY last_seen_at DESC
-             LIMIT ?
-          `;
-        try {
-          stmt = handle.prepare(`
-            SELECT host, url, evidence, last_seen_at AS lastSeenAt
-              FROM place_hubs_with_urls
-             WHERE LOWER(host) = ?
-             ORDER BY last_seen_at DESC
-             LIMIT ?
-          `);
-        } catch (viewError) {
-          this._log('debug', 'ProblemResolutionService falling back to place_hubs for known hub query', viewError?.message || viewError);
-          try {
-            stmt = handle.prepare(fallbackSql);
-          } catch (tableError) {
-            this._log('warn', 'ProblemResolutionService failed to prepare known hub query', tableError?.message || tableError);
-            stmt = null;
-          }
+      if (handle) {
+        const variants = new Set([normalizedHost]);
+        if (!normalizedHost.startsWith('www.')) {
+          variants.add(`www.${normalizedHost}`);
+        }
+        const rawHost = typeof host === 'string' ? host.trim().toLowerCase() : null;
+        if (rawHost && rawHost !== normalizedHost) {
+          variants.add(rawHost);
         }
 
-        if (stmt) {
-          const variants = new Set([normalizedHost]);
-          if (!normalizedHost.startsWith('www.')) {
-            variants.add(`www.${normalizedHost}`);
-          }
-          const rawHost = typeof host === 'string' ? host.trim().toLowerCase() : null;
-          if (rawHost && rawHost !== normalizedHost) {
-            variants.add(rawHost);
-          }
-
-          for (const candidateHost of variants) {
-            try {
-              const rows = stmt.all(candidateHost, Math.max(limit, 50));
-              for (const row of rows) {
-                const payload = parseEvidence(row?.evidence) || {};
-                payload.lastSeenAt = row?.lastSeenAt || null;
-                pushEntry(row?.url, payload);
-                if (entries.size >= limit) {
-                  break;
-                }
+        for (const candidateHost of variants) {
+          try {
+            const rows = listKnownHubSeeds(handle, candidateHost, { limit: Math.max(limit, 50) });
+            for (const row of rows) {
+              const payload = parseEvidence(row?.evidence) || {};
+              payload.lastSeenAt = row?.lastSeenAt || null;
+              pushEntry(row?.url, payload);
+              if (entries.size >= limit) {
+                break;
               }
-            } catch (error) {
-              this._log('warn', 'ProblemResolutionService failed to load known hub seeds', error?.message || error);
             }
-            if (entries.size >= limit) {
-              break;
-            }
+          } catch (error) {
+            this._log('warn', 'ProblemResolutionService failed to load known hub seeds', error?.message || error);
+          }
+          if (entries.size >= limit) {
+            break;
           }
         }
       }

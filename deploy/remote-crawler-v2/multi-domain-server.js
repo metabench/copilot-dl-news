@@ -32,8 +32,8 @@
 
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const express = require('express');
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const zlib = require('zlib');
@@ -112,26 +112,15 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const db = new Database(DB_FILE);
+const db = openNewsCrawlerDb(DB_FILE);
 initSchema(db);
-db.pragma('journal_mode = WAL');
-db.pragma('busy_timeout = 5000');
-ensureExportIndexes(db);
-
-function ensureExportIndexes(database) {
-  const indexes = [
-    'CREATE INDEX IF NOT EXISTS idx_urls_updated_at_id ON urls(updated_at, id)',
-    'CREATE INDEX IF NOT EXISTS idx_http_responses_url_id_fetched_at ON http_responses(url_id, fetched_at)',
-    'CREATE INDEX IF NOT EXISTS idx_content_storage_http_response_id ON content_storage(http_response_id)',
-    'CREATE INDEX IF NOT EXISTS idx_discovered_links_source_url_id_created_at ON discovered_links(source_url_id, created_at)'
-  ];
-  for (const sql of indexes) {
-    try {
-      database.prepare(sql).run();
-    } catch (error) {
-      console.warn(`[Export Index] ${error.message}`);
-    }
-  }
+const remoteCrawlerDb = db.remoteCrawler;
+if (!remoteCrawlerDb) {
+  throw new Error('news-crawler-db remoteCrawler access is not available');
+}
+remoteCrawlerDb.configureRemoteCrawlerSqliteRuntime({ journalMode: 'WAL', busyTimeoutMs: 5000 });
+for (const result of remoteCrawlerDb.ensureRemoteCrawlerExportIndexes()) {
+  if (!result.ok) console.warn(`[Export Index] ${result.error}`);
 }
 
 console.log('═══════════════════════════════════════════════════════════');
@@ -509,11 +498,7 @@ async function getMultiStatus() {
     lastTotals = { fetched: totalFetched, stored: totalStored, timestamp: now };
   }
 
-  let walPendingCount = 0;
-  try {
-    const row = db.prepare('SELECT COUNT(*) as count FROM crawl_wal').get();
-    walPendingCount = row ? row.count : 0;
-  } catch (e) { }
+  const walPendingCount = remoteCrawlerDb.countRemoteCrawlerWalRows();
 
   return {
     service: 'Multi-Domain Crawl Server v4',
@@ -558,28 +543,13 @@ async function getMultiStatus() {
 // ── Multi-Domain Streaming Exports ────────────────────────────
 
 /**
- * Creates an async generator to yield SQLite rows and prevent event-loop blocking.
- */
-async function* iterateDb(stmt, ...binds) {
-  const iterator = stmt.iterate(...binds);
-  let count = 0;
-  for (const row of iterator) {
-    yield row;
-    count++;
-    if (count % 250 === 0) {
-      await new Promise(r => setImmediate(r));
-    }
-  }
-}
-
-/**
  * Async stream JSON arrays.
  */
-async function streamArray(out, key, stmt, ...binds) {
+async function streamArray(out, key, rows) {
   out.write(`,"${key}":[`);
   let first = true;
   let count = 0;
-  for await (const row of iterateDb(stmt, ...binds)) {
+  for (const row of rows) {
     if (row.content_blob) {
       row.content_blob_b64 = row.content_blob.toString('base64');
       delete row.content_blob;
@@ -588,6 +558,7 @@ async function streamArray(out, key, stmt, ...binds) {
     out.write(JSON.stringify(row));
     first = false;
     count++;
+    if (count % 250 === 0) await new Promise(r => setImmediate(r));
   }
   out.write(']');
   return count;
@@ -634,16 +605,8 @@ app.get('/api/status/:domain', async (req, res) => {
 // Pending queue size per domain
 app.get('/api/queue/pending', (req, res) => {
   const counts = {};
-  const stmt = db.prepare(`
-    SELECT COUNT(*) AS c
-    FROM urls
-    WHERE status = 'pending'
-      AND (host = ? OR host = ? OR host LIKE ?)
-  `);
-
   for (const [domain] of workers) {
-    const row = stmt.get(domain, `www.${domain}`, `%.${domain}`);
-    counts[domain] = Number(row?.c || 0);
+    counts[domain] = remoteCrawlerDb.countPendingRemoteCrawlerUrlsForDomain(domain);
   }
 
   res.json(counts);
@@ -905,16 +868,7 @@ app.post('/api/db/reset', async (req, res) => {
       entry.state = 'idle';
     }
 
-    // Drop and recreate all tables (disable FK checks to avoid ordering issues)
-    db.pragma('foreign_keys = OFF');
-    const tables = db.prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-    ).all().map(r => r.name);
-
-    for (const table of tables) {
-      db.prepare(`DROP TABLE IF EXISTS [${table}]`).run();
-    }
-    db.pragma('foreign_keys = ON');
+    const tables = remoteCrawlerDb.resetRemoteCrawlerDatabaseTables();
 
     initSchema(db);
 
@@ -959,8 +913,7 @@ app.get('/api/export/batch', async (req, res) => {
   out.pipe(res);
 
   try {
-    const urlsStmt = db.prepare(`SELECT * FROM urls WHERE updated_at > ? AND updated_at <= ? ORDER BY updated_at ASC LIMIT ?`);
-    const urls = urlsStmt.all(sinceSql, untilSql, limit);
+    const urls = remoteCrawlerDb.listRemoteCrawlerUrlsUpdatedInWindow({ since: sinceSql, until: untilSql, limit });
     const watermark = urls.length > 0 ? urls[urls.length - 1].updated_at : untilSql;
     res.setHeader('X-Batch-Watermark', watermark || '');
 
@@ -974,20 +927,20 @@ app.get('/api/export/batch', async (req, res) => {
     // Write urls array identically
     out.write(',"urls":' + JSON.stringify(urls));
 
-    const uIds = urls.map(u => u.id).join(',');
+    const urlIds = urls.map(u => u.id);
 
-    const httpResponsesCount = await streamArray(out, 'httpResponses', db.prepare(`SELECT * FROM http_responses WHERE url_id IN (${uIds})`));
+    const httpResponsesCount = await streamArray(out, 'httpResponses', remoteCrawlerDb.listRemoteCrawlerHttpResponsesForUrlIds(urlIds));
 
     let contentCount = 0;
     if (includeContent) {
-      contentCount = await streamArray(out, 'content', db.prepare(`SELECT * FROM content_storage WHERE http_response_id IN (SELECT id FROM http_responses WHERE url_id IN (${uIds}))`));
+      contentCount = await streamArray(out, 'content', remoteCrawlerDb.listRemoteCrawlerContentForUrlIds(urlIds));
     } else {
       out.write(',"content":[]');
     }
 
     let linksCount = 0;
     if (includeLinks) {
-      linksCount = await streamArray(out, 'links', db.prepare(`SELECT dl.*, u.url as source_url FROM discovered_links dl JOIN urls u ON dl.source_url_id = u.id WHERE dl.source_url_id IN (${uIds})`));
+      linksCount = await streamArray(out, 'links', remoteCrawlerDb.listRemoteCrawlerDiscoveredLinksForUrlIds(urlIds));
     } else {
       out.write(',"links":[]');
     }
@@ -1064,9 +1017,9 @@ app.get('/api/export/replay', async (req, res) => {
   out.pipe(res);
 
   try {
-    const urls = db.prepare(`SELECT * FROM urls WHERE id > ? ORDER BY id ASC LIMIT ?`).all(afterRowId, limit);
+    const urls = remoteCrawlerDb.listRemoteCrawlerUrlsAfterRowId({ afterRowId, limit });
     const lastRowId = urls.length > 0 ? urls[urls.length - 1].id : afterRowId;
-    const maxRowId = db.prepare('SELECT MAX(id) AS m FROM urls').get()?.m || 0;
+    const maxRowId = remoteCrawlerDb.getRemoteCrawlerReplayStats().maxRowId || 0;
 
     res.setHeader('X-Replay-LastRowId', String(lastRowId));
     res.setHeader('X-Replay-MaxRowId', String(maxRowId));
@@ -1079,17 +1032,17 @@ app.get('/api/export/replay', async (req, res) => {
     }
 
     out.write(',"urls":' + JSON.stringify(urls));
-    const uIds = urls.map(u => u.id).join(',');
+    const urlIds = urls.map(u => u.id);
 
-    await streamArray(out, 'httpResponses', db.prepare(`SELECT * FROM http_responses WHERE url_id IN (${uIds})`));
+    await streamArray(out, 'httpResponses', remoteCrawlerDb.listRemoteCrawlerHttpResponsesForUrlIds(urlIds));
 
     if (includeContent) {
-      await streamArray(out, 'content', db.prepare(`SELECT * FROM content_storage WHERE http_response_id IN (SELECT id FROM http_responses WHERE url_id IN (${uIds}))`));
+      await streamArray(out, 'content', remoteCrawlerDb.listRemoteCrawlerContentForUrlIds(urlIds));
     } else {
       out.write(',"content":[]');
     }
 
-    await streamArray(out, 'links', db.prepare(`SELECT dl.*, u.url as source_url FROM discovered_links dl JOIN urls u ON dl.source_url_id = u.id WHERE dl.source_url_id IN (${uIds})`));
+    await streamArray(out, 'links', remoteCrawlerDb.listRemoteCrawlerDiscoveredLinksForUrlIds(urlIds));
 
     out.end('}');
   } catch (err) {
@@ -1099,30 +1052,16 @@ app.get('/api/export/replay', async (req, res) => {
 });
 
 app.get('/api/export/replay/stats', (_req, res) => {
-  const row = db.prepare('SELECT MAX(rowid) AS maxRowId, COUNT(*) AS totalUrls FROM urls').get();
-  const content = db.prepare('SELECT COUNT(*) AS c FROM content_storage').get();
-  const responses = db.prepare('SELECT COUNT(*) AS c FROM http_responses').get();
-  res.json({
-    maxRowId: row?.maxRowId || 0,
-    totalUrls: row?.totalUrls || 0,
-    totalContent: content?.c || 0,
-    totalResponses: responses?.c || 0,
-  });
+  res.json(remoteCrawlerDb.getRemoteCrawlerReplayStats());
 });
 
 // v1-compatible simple export
 app.get('/api/export', (req, res) => {
-  const urls = db.prepare(`
-    SELECT url, host, path, http_status, content_type, content_length,
-      title, word_count, links_found, classification, fetched_at
-    FROM urls WHERE status = 'done' ORDER BY fetched_at ASC
-  `).all();
+  const urls = remoteCrawlerDb.listCompletedRemoteCrawlerUrlExportRows();
   res.json({ mode: 'multi-domain', count: urls.length, exportedAt: new Date().toISOString(), urls });
 });
 
 // ── SSE Live Events ─────────────────────────────────────────
-
-
 
 // ── Hash-Based Differential Sync ────────────────────────────
 
@@ -1145,10 +1084,7 @@ app.get('/api/sync/manifest/urls', (req, res) => {
 
     const domain = domains[domainIdx];
     const hosts = [domain, 'www.' + domain];
-    const ph = hosts.map(() => '?').join(',');
-
-    const stmt = db.prepare('SELECT url, status FROM urls WHERE host IN (' + ph + ')');
-    const iterator = stmt.iterate(...hosts);
+    const iterator = remoteCrawlerDb.iterateRemoteCrawlerUrlHashRowsForHosts(hosts);
 
     const hashes = [];
     let doneCount = 0;
@@ -1160,17 +1096,12 @@ app.get('/api/sync/manifest/urls', (req, res) => {
         const next = iterator.next();
         if (next.done) {
           // Finished this domain
-          const contentRow = db.prepare(
-            'SELECT COUNT(*) AS c FROM content_storage cs ' +
-            'JOIN http_responses hr ON cs.http_response_id = hr.id ' +
-            'JOIN urls u ON hr.url_id = u.id ' +
-            'WHERE u.host IN (' + ph + ')'
-          ).get(...hosts);
+          const contentCount = remoteCrawlerDb.countRemoteCrawlerContentRowsForHosts(hosts);
 
           result.domains[domain] = {
             total: totalCount,
             doneCount,
-            contentCount: contentRow?.c || 0,
+            contentCount,
             hashes,
           };
 
@@ -1204,7 +1135,7 @@ app.get('/api/sync/manifest/content', async (_req, res) => {
   try {
     out.write('{"version":1,"generated":"' + new Date().toISOString() + '","hashes":[');
 
-    const iter = db.prepare('SELECT content_sha256 FROM content_storage WHERE content_sha256 IS NOT NULL').iterate();
+    const iter = remoteCrawlerDb.iterateRemoteCrawlerContentSha256Hashes();
     let count = 0;
     let first = true;
     for (const row of iter) {
@@ -1232,8 +1163,7 @@ app.post('/api/sync/resolve', (req, res) => {
   const hashSet = new Set(requestedHashes);
   const resolved = [];
 
-  const stmt = db.prepare('SELECT id, url, host, status FROM urls');
-  const iterator = stmt.iterate();
+  const iterator = remoteCrawlerDb.iterateRemoteCrawlerUrlSyncResolutionRows();
 
   function processChunk() {
     let count = 0;
@@ -1300,41 +1230,11 @@ app.get('/api/sync/pull', async (req, res) => {
   try {
     out.write('{"version":"2.0.0","batchId":"sync-pull-' + Date.now() + '"');
 
-    // Fetch memory-safe metadata
-    const urls = [];
-    const httpResponses = [];
-    const links = [];
-
-    for (let i = 0; i < ids.length; i += 100) {
-      const chunk = ids.slice(i, i + 100);
-      const ph = chunk.map(() => '?').join(',');
-
-      urls.push(...db.prepare(
-        'SELECT id, url, host, path, status, http_status, content_type, ' +
-        'content_length, title, word_count, links_found, depth, discovered_from, ' +
-        'classification, fetched_at, created_at, updated_at, error_msg ' +
-        'FROM urls WHERE id IN (' + ph + ')'
-      ).all(...chunk));
-
-      httpResponses.push(...db.prepare(
-        'SELECT id, url_id, request_started_at, fetched_at, http_status, ' +
-        'content_type, content_encoding, redirect_chain, ttfb_ms, ' +
-        'download_ms, total_ms, bytes_downloaded, transfer_kbps, request_method ' +
-        'FROM http_responses WHERE url_id IN (' + ph + ') ORDER BY fetched_at ASC'
-      ).all(...chunk));
-    }
+    const urls = remoteCrawlerDb.listRemoteCrawlerSyncUrlRowsByIds(ids);
+    const httpResponses = remoteCrawlerDb.listRemoteCrawlerSyncHttpResponsesForUrlIds(ids);
 
     const urlIds = urls.map(u => u.id);
-    for (let i = 0; i < urlIds.length; i += 100) {
-      const chunk = urlIds.slice(i, i + 100);
-      const ph = chunk.map(() => '?').join(',');
-      links.push(...db.prepare(
-        'SELECT dl.id, dl.source_url_id, u.url AS source_url, ' +
-        'dl.target_url, dl.link_text, dl.is_nav_link, dl.created_at ' +
-        'FROM discovered_links dl JOIN urls u ON dl.source_url_id = u.id ' +
-        'WHERE dl.source_url_id IN (' + ph + ') ORDER BY dl.created_at ASC'
-      ).all(...chunk));
-    }
+    const links = remoteCrawlerDb.listRemoteCrawlerDiscoveredLinksForUrlIds(urlIds);
 
     // Write safe metadata directly
     out.write(',"urls":' + JSON.stringify(urls));
@@ -1348,27 +1248,17 @@ app.get('/api/sync/pull', async (req, res) => {
     if (includeContent && httpResponses.length > 0) {
       const hrIds = httpResponses.map(h => h.id);
       let firstContent = true;
-      for (let i = 0; i < hrIds.length; i += 100) {
-        const chunk = hrIds.slice(i, i + 100);
-        const ph = chunk.map(() => '?').join(',');
-        const rows = db.prepare(
-          'SELECT id, http_response_id, storage_type, content_blob, ' +
-          'content_sha256, uncompressed_size, compressed_size, ' +
-          'compression_ratio, content_category, content_subtype, created_at ' +
-          'FROM content_storage WHERE http_response_id IN (' + ph + ')'
-        ).all(...chunk);
-
-        for (const row of rows) {
-          if (row.content_blob) {
-            row.content_blob_b64 = row.content_blob.toString('base64');
-            delete row.content_blob;
-          }
-          if (!firstContent) out.write(',');
-          out.write(JSON.stringify(row));
-          firstContent = false;
-          contentCount++;
+      const rows = remoteCrawlerDb.listRemoteCrawlerContentForHttpResponseIds(hrIds);
+      for (const row of rows) {
+        if (row.content_blob) {
+          row.content_blob_b64 = row.content_blob.toString('base64');
+          delete row.content_blob;
         }
-        await new Promise(r => setImmediate(r)); // yield chunk
+        if (!firstContent) out.write(',');
+        out.write(JSON.stringify(row));
+        firstContent = false;
+        contentCount++;
+        if (contentCount % 100 === 0) await new Promise(r => setImmediate(r));
       }
     }
     out.write(']');
@@ -1444,17 +1334,14 @@ function stopStatePoller() {
   }
 }
 
-
 // Debug: content inspection
 app.get('/api/debug/links', (req, res) => {
   const domain = req.query.domain || 'news.ycombinator.com';
   const entry = workers.get(domain);
   if (!entry) return res.status(404).json({ error: 'Worker not found' });
   try {
-    const count = entry.worker.db.prepare('SELECT count(*) c FROM discovered_links').get().c;
-    const rows = entry.worker.db.prepare('SELECT * FROM discovered_links ORDER BY id DESC LIMIT 5').all();
-    const urls = entry.worker.db.prepare('SELECT * FROM urls ORDER BY updated_at DESC LIMIT 5').all();
-    res.json({ count, rows, urls });
+    const snapshot = entry.worker.db.remoteCrawler.getRemoteCrawlerDebugLinksSnapshot({ limit: 5 });
+    res.json(snapshot);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -1463,41 +1350,14 @@ app.get('/api/debug/links', (req, res) => {
 // ── Content Inspection ──────────────────────────────────────
 
 app.get('/api/content/stats', (req, res) => {
-  const byDomain = db.prepare(`
-    SELECT u.host as domain, COUNT(*) as count,
-      SUM(cs.uncompressed_size) as total_uncompressed,
-      SUM(cs.compressed_size) as total_compressed
-    FROM content_storage cs
-    JOIN http_responses hr ON cs.http_response_id = hr.id
-    JOIN urls u ON hr.url_id = u.id
-    GROUP BY u.host ORDER BY count DESC
-  `).all();
-
-  const totals = db.prepare(`
-    SELECT COUNT(*) as total_stored,
-      SUM(uncompressed_size) as total_uncompressed,
-      SUM(compressed_size) as total_compressed,
-      AVG(compression_ratio) as avg_compression_ratio
-    FROM content_storage
-  `).get();
-
-  res.json({ totals, byDomain });
+  res.json(remoteCrawlerDb.getRemoteCrawlerContentInspectionStats());
 });
 
 app.get('/api/content/by-url', (req, res) => {
   const url = req.query.url;
   if (!url) return res.status(400).json({ error: 'url parameter required' });
 
-  const row = db.prepare(`
-    SELECT cs.content_blob, cs.uncompressed_size, cs.content_sha256,
-      hr.http_status, hr.content_type, hr.fetched_at,
-      u.title, u.classification
-    FROM content_storage cs
-    JOIN http_responses hr ON hr.id = cs.http_response_id
-    JOIN urls u ON u.id = hr.url_id
-    WHERE u.url = ?
-    ORDER BY cs.created_at DESC LIMIT 1
-  `).get(url);
+  const row = remoteCrawlerDb.getLatestRemoteCrawlerContentForUrl(url);
 
   if (!row) return res.status(404).json({ error: 'No content found' });
 
@@ -1521,16 +1381,13 @@ app.get('/api/content/by-url', (req, res) => {
 
 app.get('/api/logs', (req, res) => {
   const limit = parseInt(req.query.limit, 10) || 50;
-  const logs = db.prepare('SELECT * FROM crawl_log ORDER BY id DESC LIMIT ?').all(limit);
+  const logs = remoteCrawlerDb.listRemoteCrawlerLogRows({ limit });
   res.json({ logs });
 });
 
 app.get('/api/errors', (req, res) => {
   const limit = parseInt(req.query.limit, 10) || 50;
-  const errors = db.prepare(`
-    SELECT host, kind, code, message, at, url_id FROM errors
-    ORDER BY at DESC LIMIT ?
-  `).all(limit);
+  const errors = remoteCrawlerDb.listRemoteCrawlerErrorRows({ limit });
   res.json({ count: errors.length, errors });
 });
 

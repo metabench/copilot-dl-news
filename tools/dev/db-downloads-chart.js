@@ -12,10 +12,9 @@
  */
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 // CLI argument parsing
 const args = process.argv.slice(2);
 const flags = {};
@@ -39,7 +38,7 @@ const OUTPUT = flags.output || null;
 
 function getDb() {
   const dbPath = path.resolve(__dirname, '..', '..', 'data', 'news.db');
-  return new Database(dbPath, { readonly: true });
+  return openNewsCrawlerDb(dbPath, { readonly: true });
 }
 
 function getCumulativeData(days) {

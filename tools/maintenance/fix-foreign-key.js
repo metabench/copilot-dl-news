@@ -1,5 +1,6 @@
-const Database = require('better-sqlite3');
-const db = new Database('data/db.sqlite');
+
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const db = openNewsCrawlerDb('data/db.sqlite');
 
 console.log('Fixing foreign key constraint...');
 

@@ -1,11 +1,10 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 /**
  * Phase 3 Dynamic Re-Planning Tests
  * Tests for _shouldReplan, _calculateAvgPerformance, _triggerReplan, _mergePlans
  */
 
 const { IntelligentCrawlerManager } = require('../../../deprecated-ui/express/services/IntelligentCrawlerManager');
-const Database = require('better-sqlite3');
-
 describe('IntelligentCrawlerManager - Dynamic Re-Planning (Phase 3)', () => {
   let db;
   let manager;
@@ -13,7 +12,7 @@ describe('IntelligentCrawlerManager - Dynamic Re-Planning (Phase 3)', () => {
 
   beforeEach(() => {
     // Create in-memory database
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create required tables
     db.exec(`

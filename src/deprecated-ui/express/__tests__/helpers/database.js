@@ -12,7 +12,7 @@
  * 
  * WRONG PATTERN (causes WAL isolation):
  * ```javascript
- * const db = new Database(dbPath);  // Connection 1
+ * const db = openNewsCrawlerDb(dbPath);  // Connection 1
  * db.exec('INSERT INTO articles ...');
  * db.close();
  * 
@@ -29,6 +29,7 @@
 
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../../db/openNewsCrawlerDb');
 /**
  * Get database connection from Express app instance
  * 

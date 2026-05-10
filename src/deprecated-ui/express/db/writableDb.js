@@ -1,4 +1,5 @@
-const Database = require('better-sqlite3');
+
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 const DEFAULT_LOGGER = console;
 
 function createWritableDbAccessor({ ensureDb, urlsDbPath, queueDebug = false, verbose = false, logger = DEFAULT_LOGGER } = {}) {
@@ -31,7 +32,7 @@ function createWritableDbAccessor({ ensureDb, urlsDbPath, queueDebug = false, ve
         }
         // Try to open database directly without full ensureDb
         try {
-          db = new Database(urlsDbPath);
+          db = openNewsCrawlerDb(urlsDbPath);
         } catch (openErr) {
           // Failed to open database - log and return null
           const isTestEnv = process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test';

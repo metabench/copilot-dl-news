@@ -1,7 +1,5 @@
 "use strict";
-
-const Database = require("better-sqlite3");
-
+const { openNewsCrawlerDb } = require('../../../../src/db/openNewsCrawlerDb');
 const {
   selectUrlPage,
   countUrls,
@@ -10,7 +8,7 @@ const {
 } = require("../../../../src/data/db/sqlite/v1/queries/ui/urlListingNormalized");
 
 function buildDb() {
-  const db = new Database(":memory:");
+  const db = openNewsCrawlerDb(":memory:");
   db.exec(`
     CREATE TABLE urls (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

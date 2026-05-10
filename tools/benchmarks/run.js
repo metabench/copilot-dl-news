@@ -1,12 +1,11 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /* eslint-disable no-console */
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const express = require('express');
 const request = require('supertest');
-const Database = require('better-sqlite3');
-
 const { openDbReadOnly } = require('../../src/data/db/sqlite');
 const {
   getCountryByCode,
@@ -104,7 +103,7 @@ function setupTraceStub() {
 
 async function benchmarkDirectDb({ dbPath, iterations }) {
   const section = { name: 'direct-db', benchmarks: [] };
-  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
   try {
     const countCountriesStmt = db.prepare("SELECT COUNT(1) as total FROM places WHERE kind='country'");
     const topCitiesStmt = db.prepare("SELECT id, name FROM place_names ORDER BY id LIMIT 20");

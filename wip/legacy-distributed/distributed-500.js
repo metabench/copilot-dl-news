@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * distributed-500.js
  * ------------------
@@ -8,8 +9,6 @@
  * 
  * Usage: node tools/crawl/distributed-500.js
  */
-
-const Database = require('better-sqlite3');
 const { spawn } = require('child_process');
 const path = require('path');
 const os = require('os');
@@ -24,7 +23,7 @@ function main() {
     console.log(`   DB: ${DB_PATH}`);
     console.log(`   Concurrency: ${CONCURRENCY} workers\n`);
 
-    const db = new Database(DB_PATH);
+    const db = openNewsCrawlerDb(DB_PATH);
     db.pragma('journal_mode = WAL');
 
     // 1. Identify Eligible Sites

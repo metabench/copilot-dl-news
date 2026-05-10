@@ -9,9 +9,9 @@
  */
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
 const { slugify } = require('../../src/tools/slugify'); // Assuming this exists, or use simple fallback
 
 const args = process.argv.slice(2);
@@ -36,7 +36,7 @@ Options:
 
 function getDb(readonly = true) {
     const dbPath = path.resolve(__dirname, '..', '..', 'data', 'news.db');
-    return new Database(dbPath, { readonly });
+    return openNewsCrawlerDb(dbPath, { readonly });
 }
 
 function simpleSlugify(text) {
@@ -47,7 +47,6 @@ function simpleSlugify(text) {
         .replace(/^-+/, '')             // Trim - from start of text
         .replace(/-+$/, '');            // Trim - from end of text
 }
-
 
 function loadPlaceIndex(db) {
     console.log('Loading place names...');

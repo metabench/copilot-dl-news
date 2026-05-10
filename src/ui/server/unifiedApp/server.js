@@ -557,7 +557,7 @@ function mountDashboardModules(unifiedApp, options = {}) {
     }
   });
 
-  // Get active/recent crawl progress from task_events
+  // Get active/recent crawl progress from the DB task event access surface.
   unifiedApp.get('/api/downloads/crawl-progress', (req, res) => {
     try {
       const db = getDb();
@@ -565,16 +565,7 @@ function mountDashboardModules(unifiedApp, options = {}) {
       // Find the most recent crawl task (started in the last 30 minutes)
       const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
 
-      // Get the latest crawl task
-      const latestTask = db.prepare(`
-        SELECT DISTINCT task_id, task_type, MIN(ts) as started_at
-        FROM task_events 
-        WHERE event_type IN ('crawl:start', 'crawl:started')
-          AND ts > ?
-        GROUP BY task_id
-        ORDER BY started_at DESC
-        LIMIT 1
-      `).get(thirtyMinAgo);
+      const latestTask = db.taskEvents.getLatestStartedCrawlTaskSince(thirtyMinAgo);
 
       if (!latestTask) {
         return res.json({
@@ -584,23 +575,10 @@ function mountDashboardModules(unifiedApp, options = {}) {
         });
       }
 
-      // Get the latest progress event for this task
-      const latestProgress = db.prepare(`
-        SELECT payload, ts
-        FROM task_events 
-        WHERE task_id = ? AND event_type = 'crawl:progress'
-        ORDER BY seq DESC
-        LIMIT 1
-      `).get(latestTask.task_id);
+      const latestProgress = db.taskEvents.getLatestTaskEventPayload(latestTask.task_id, 'crawl:progress');
 
       // Get the config from the start event
-      const startEvent = db.prepare(`
-        SELECT payload
-        FROM task_events 
-        WHERE task_id = ? AND event_type IN ('crawl:start', 'crawl:started')
-        ORDER BY seq ASC
-        LIMIT 1
-      `).get(latestTask.task_id);
+      const startEvent = db.taskEvents.getFirstTaskEventPayload(latestTask.task_id, ['crawl:start', 'crawl:started']);
 
       let maxPages = 50; // default goal
       if (startEvent && startEvent.payload) {

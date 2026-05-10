@@ -1,10 +1,10 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 /**
  * Tests for PredictiveHubDiscovery - Proactive hub prediction
  */
 
 const { PredictiveHubDiscovery } = require('../PredictiveHubDiscovery');
 const { applyQuickWinMigrations } = require('../schema-migrations');
-const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
@@ -17,7 +17,7 @@ describe('PredictiveHubDiscovery', () => {
   beforeEach(() => {
     // Create temp database
     tempDbPath = path.join(__dirname, `test-prediction-${Date.now()}.db`);
-    db = new Database(tempDbPath);
+    db = openNewsCrawlerDb(tempDbPath);
     
     // Apply schema
     applyQuickWinMigrations(db);

@@ -1,5 +1,5 @@
+const { openNewsCrawlerDb } = require('../../../../db/openNewsCrawlerDb');
 const path = require('path');
-const Database = require('better-sqlite3');
 const fs = require('fs');
 
 function createTestDb() {
@@ -8,7 +8,7 @@ function createTestDb() {
     fs.mkdirSync(dbDir, { recursive: true });
   }
   const dbPath = path.join(dbDir, `test-db-${Date.now()}-${Math.random()}.db`);
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   return {
     db,
     dbPath,

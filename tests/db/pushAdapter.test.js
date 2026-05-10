@@ -1,10 +1,9 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * @fileoverview Tests for Push Subscription Adapter
  */
-
-const Database = require('better-sqlite3');
 const { createPushAdapter } = require('../../../src/data/db/sqlite/v1/queries/pushAdapter');
 
 describe('pushAdapter', () => {
@@ -13,7 +12,7 @@ describe('pushAdapter', () => {
   let mockLogger;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create users table for foreign key
     db.exec(`

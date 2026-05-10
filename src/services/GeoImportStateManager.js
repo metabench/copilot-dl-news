@@ -29,6 +29,11 @@ const EventEmitter = require('events');
 const fnl = require('fnl');
 const { observable } = fnl;
 const { importGeoNames, createImportPipeline, countLines } = require('./GeoImportService');
+const {
+  ensureGeoImportIndexes,
+  getGeoNamesImportCounts,
+  findGeoNamesPlaceByNormalizedPrefix
+} = require('news-crawler-db');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Import Stages Definition
@@ -465,12 +470,7 @@ class GeoImportStateManager extends EventEmitter {
     this._setStage('indexing');
     this._log('info', '🗂️ Building database indexes...');
     
-    this._db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_place_names_normalized ON place_names(normalized);
-      CREATE INDEX IF NOT EXISTS idx_place_names_place ON place_names(place_id);
-      CREATE INDEX IF NOT EXISTS idx_places_country ON places(country_code);
-      CREATE INDEX IF NOT EXISTS idx_places_kind ON places(kind);
-    `);
+    ensureGeoImportIndexes(this._db);
     
     this._log('success', '✅ Indexes created');
     
@@ -478,24 +478,14 @@ class GeoImportStateManager extends EventEmitter {
     this._setStage('verifying');
     this._log('info', '🔍 Verifying coverage...');
     
-    const counts = this._db.prepare(`
-      SELECT 
-        (SELECT COUNT(*) FROM places WHERE source = 'geonames') as places,
-        (SELECT COUNT(*) FROM place_names WHERE source = 'geonames') as names
-    `).get();
+    const counts = getGeoNamesImportCounts(this._db);
     
     this._log('success', `✅ Verified: ${counts.places.toLocaleString()} places, ${counts.names.toLocaleString()} names`);
     
     // Test some cities
     const testCities = ['london', 'paris', 'tokyo', 'new york', 'sydney'];
     for (const city of testCities) {
-      const result = this._db.prepare(`
-        SELECT p.id, pn.name, p.country_code
-        FROM places p
-        JOIN place_names pn ON pn.place_id = p.id
-        WHERE pn.normalized LIKE ?
-        LIMIT 1
-      `).get(`${city}%`);
+      const result = findGeoNamesPlaceByNormalizedPrefix(this._db, city);
       
       if (result) {
         this._log('info', `  ✓ Found ${result.name} (${result.country_code})`);

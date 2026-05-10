@@ -23,7 +23,7 @@
 
 const express = require('express');
 const path = require('path');
-const Database = require('better-sqlite3');
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 const jsgui = require('jsgui3-html');
 
 const { createAdminAdapter } = require('../../../data/db/sqlite/v1/queries/adminAdapter');
@@ -50,7 +50,7 @@ let adminAdapter;
 let adminService;
 
 function initDb(dbPath = DB_PATH) {
-  db = new Database(dbPath);
+  db = openNewsCrawlerDb(dbPath);
   adminAdapter = createAdminAdapter(db);
   adminService = new AdminService({ adminAdapter });
   return { db, adminAdapter, adminService };

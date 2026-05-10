@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 /**
  * sync-ledger-live.test.js — Integration test that validates the ledger
  * lifecycle: append → confirm → prune, with a forced prune-failure round
@@ -13,7 +14,7 @@ const http = require('http');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const Database = require('better-sqlite3');
+
 const {
   loadLedger,
   saveLedger,
@@ -33,7 +34,7 @@ function createMockServer({ failPruneOnce = true } = {}) {
   let pruneCallCount = 0;
   let shouldFailPrune = failPruneOnce;
 
-  const db = new Database(':memory:');
+  const db = openNewsCrawlerDb(':memory:');
   db.exec(`
     CREATE TABLE urls (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

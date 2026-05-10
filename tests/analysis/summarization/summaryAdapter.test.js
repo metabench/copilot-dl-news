@@ -1,12 +1,11 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 /**
  * Summary Adapter Tests
  * 
  * Tests for the database adapter for article summaries.
  */
-
-const Database = require('better-sqlite3');
 const { createSummaryAdapter } = require('../../../src/db/sqlite/v1/queries/summaryAdapter');
 
 describe('summaryAdapter', () => {
@@ -15,7 +14,7 @@ describe('summaryAdapter', () => {
   
   beforeEach(() => {
     // In-memory database for testing
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create required tables - adapter expects content_analysis table
     db.exec(`

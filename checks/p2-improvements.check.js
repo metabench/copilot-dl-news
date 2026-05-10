@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 /**
  * p2-improvements.check.js - Verify P2 improvements
  * 
@@ -12,8 +13,6 @@
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
-
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'news.db');
 
 function main() {
@@ -24,7 +23,7 @@ function main() {
 
   let db;
   try {
-    db = new Database(DB_PATH, { readonly: true });
+    db = openNewsCrawlerDb(DB_PATH, { readonly: true });
   } catch (err) {
     console.error('❌ Failed to open database:', err.message);
     process.exit(1);

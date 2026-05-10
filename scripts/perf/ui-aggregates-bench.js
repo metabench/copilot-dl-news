@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 "use strict";
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require("fs");
 const path = require("path");
 const { program } = require("commander");
-const Database = require("better-sqlite3");
-
 const repoRoot = path.resolve(__dirname, "..", "..");
 const defaultDbPath = path.join(repoRoot, "data", "news.db");
 
@@ -311,7 +310,7 @@ function main() {
     return;
   }
 
-  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
   const baseContext = {
     sampleHost: opts.sampleHost || "guardian.co.uk",
     sampleCountry: opts.sampleCountry || "GB"

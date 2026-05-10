@@ -1,4 +1,5 @@
-const Database = require('better-sqlite3');
+
+const { openNewsCrawlerDb } = require('../../db/openNewsCrawlerDb');
 const {
   parseArgs,
   selectQueries,
@@ -59,7 +60,7 @@ describe('crawl-query-benchmark database integration', () => {
   let db;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     db.exec(`
       CREATE TABLE foo (id INTEGER PRIMARY KEY, value TEXT);
       INSERT INTO foo(value) VALUES ('a'), ('b'), ('c');

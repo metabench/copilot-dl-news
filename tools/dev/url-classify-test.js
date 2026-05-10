@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * URL Classification Tester
  * 
@@ -19,8 +20,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 // ═══════════════════════════════════════════════════════════════════════════
 // Configuration
 // ═══════════════════════════════════════════════════════════════════════════
@@ -302,7 +301,7 @@ class UrlClassificationEngine {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function getDbSample(dbPath, sampleSize, hostFilter = null) {
-  const db = new Database(dbPath, { readonly: true });
+  const db = openNewsCrawlerDb(dbPath, { readonly: true });
   
   let query = `
     SELECT DISTINCT u.url, u.host

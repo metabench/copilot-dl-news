@@ -1,13 +1,12 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../../src/db/openNewsCrawlerDb');
 /**
  * Performance benchmark for Place Hub Guessing Matrix queries.
  * Identifies bottlenecks and measures query timing.
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
-
 const dbPath = path.resolve(__dirname, '../../../data/news.db');
 const db = Database(dbPath, { readonly: true });
 

@@ -1,6 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events');
+const { insertCrawlTasks } = require('news-crawler-db');
 const cheerio = require('cheerio');
 
 /**
@@ -337,26 +338,7 @@ class HubTaskGenerator extends EventEmitter {
 
       const tasks = this.generateArchiveTasks(hub, { startPage, endPage });
 
-      // Persist tasks to crawl_tasks table
-      const insertStmt = this.db.prepare(`
-        INSERT INTO crawl_tasks (job_id, host, kind, status, url, payload, note, created_at, updated_at)
-        VALUES (@jobId, @host, @kind, 'pending', @url, @payload, @note, datetime('now'), datetime('now'))
-      `);
-
-      const insertMany = this.db.transaction((tasks) => {
-        for (const task of tasks) {
-          insertStmt.run({
-            jobId: jobId || 'hub-archive-batch',
-            host: task.host,
-            kind: task.kind,
-            url: task.url,
-            payload: JSON.stringify(task.metadata),
-            note: `${task.placeName} page ${task.page}/${task.metadata.totalPages}`
-          });
-        }
-      });
-
-      insertMany(tasks);
+      insertCrawlTasks(this.db, tasks, { jobId });
       totalTasks += tasks.length;
 
       this.emit('tasks:generate:hub', { hub, taskCount: tasks.length });

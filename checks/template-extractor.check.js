@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 /**
  * Template Extractor Check Script
  * 
@@ -9,7 +10,6 @@
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
 const { TemplateExtractor, TemplateExtractionService, SCHEMA_VERSION } = require('../src/extraction');
 
 // Test HTML samples
@@ -294,7 +294,7 @@ let db, service;
 try {
   // Use test database
   const dbPath = path.resolve(__dirname, '../data/news.db');
-  db = new Database(dbPath);
+  db = openNewsCrawlerDb(dbPath);
   
   // Ensure tables exist
   const tables = db.prepare(`

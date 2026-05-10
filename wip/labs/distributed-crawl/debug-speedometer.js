@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 /**
  * Debug wrapper to see what's happening with the speedometer app
  */
@@ -17,17 +18,12 @@ console.log('Electron version:', process.versions.electron || 'N/A');
 console.log('CWD:', process.cwd());
 
 try {
-  console.log('Loading better-sqlite3...');
-  const Database = require('better-sqlite3');
-  console.log('better-sqlite3 loaded');
-  
   console.log('Opening database...');
-  const db = Database('data/news.db');
+  const db = openNewsCrawlerDb('data/news.db', { readonly: true });
   console.log('Database opened');
   
-  console.log('Checking task_events table...');
-  const row = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='task_events'`).get();
-  console.log('task_events exists:', row ? 'yes' : 'no');
+  console.log('Checking task event storage...');
+  console.log('task_events exists:', db.taskEvents.taskEventsTableExists() ? 'yes' : 'no');
   
   db.close();
   console.log('Database closed');

@@ -1,10 +1,10 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const request = require('supertest');
 const { createApp } = require('../server');
 const { ensureDb } = require('../../../data/db/sqlite');
-const Database = require('better-sqlite3');
 const NewsDatabase = require('../../../data/db');
 const {
   ensureAnalysisRunSchema,

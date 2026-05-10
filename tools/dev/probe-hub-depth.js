@@ -1,15 +1,15 @@
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * 005-hub-depth-probe/run.js
  * Determine the depth (oldest article) of verified place hubs.
  */
-const Database = require('better-sqlite3');
 const cheerio = require('cheerio');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const path = require('path');
 const fs = require('fs');
 
 const dbPath = path.resolve(__dirname, '../../data/news.db');
-const db = new Database(dbPath, { readonly: false });
+const db = openNewsCrawlerDb(dbPath, { readonly: false });
 
 async function updateHubDepth(hubUrl, maxPage, oldestDate, error = null) {
     try {

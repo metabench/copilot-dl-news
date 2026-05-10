@@ -1,12 +1,11 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Tests for SubscriptionService
  * 
  * @module tests/billing/SubscriptionService
  */
-
-const Database = require('better-sqlite3');
 const { 
   SubscriptionService, 
   StripeClient, 
@@ -45,7 +44,7 @@ describe('SubscriptionService', () => {
   const mockLogger = { log: jest.fn(), error: jest.fn(), warn: jest.fn() };
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     createUsersTable(db);
     ensureBillingSchema(db);
     adapter = createBillingAdapter(db);

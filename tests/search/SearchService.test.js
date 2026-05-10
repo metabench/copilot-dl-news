@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * SearchService Tests
  * 
@@ -14,8 +15,6 @@
  *   - Query parsing
  *   - Edge cases and error handling
  */
-
-const Database = require('better-sqlite3');
 const path = require('path');
 const { SearchService } = require('../../src/search/SearchService');
 const { createSearchAdapter, sanitizeFtsQuery } = require('../../src/db/sqlite/v1/queries/searchAdapter');
@@ -207,7 +206,7 @@ const testArticles = [
 describe('SearchService', () => {
   beforeAll(() => {
     // Create in-memory database for tests
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     createTestSchema(db);
 
     // Insert test articles
@@ -534,7 +533,7 @@ describe('createSearchAdapter', () => {
   let localDb;
 
   beforeAll(() => {
-    localDb = new Database(':memory:');
+    localDb = openNewsCrawlerDb(':memory:');
     createTestSchema(localDb);
     insertTestArticle(localDb, {
       url: 'https://test.com/adapter-test',

@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const { IUrlQueue } = require('../../src/queue/IUrlQueue');
 const { SqliteUrlQueueAdapter } = require('../../src/queue/SqliteUrlQueueAdapter');
 const { PostgresUrlQueueAdapter } = require('../../src/queue/PostgresUrlQueueAdapter');
@@ -47,8 +48,7 @@ describe('SqliteUrlQueueAdapter', () => {
 
   beforeEach(async () => {
     // Use in-memory database for tests
-    const Database = require('better-sqlite3');
-    const db = new Database(':memory:');
+    const db = openNewsCrawlerDb(':memory:');
     
     queue = new SqliteUrlQueueAdapter({
       db,
@@ -495,8 +495,7 @@ describe('Queue Contract Tests', () => {
     {
       name: 'SqliteUrlQueueAdapter',
       create: async () => {
-        const Database = require('better-sqlite3');
-        const db = new Database(':memory:');
+        const db = openNewsCrawlerDb(':memory:');
         const queue = new SqliteUrlQueueAdapter({
           db,
           tableName: 'contract_test',

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 /**
  * Lab: Test body download with compression strategies.
  * 
@@ -15,7 +16,7 @@
 const REMOTE_WORKER = 'http://144.21.42.149:8081';
 const zlib = require('zlib');
 
-const db = require('better-sqlite3')('data/news.db');
+const db = openNewsCrawlerDb('data/news.db');
 
 function getUnfetchedUrls(limit = 10) {
   return db.prepare(`

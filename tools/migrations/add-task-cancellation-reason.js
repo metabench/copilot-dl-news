@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Migration: Add cancellation_reason column to background_tasks table
  * 
@@ -12,11 +13,10 @@
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
 
 function migrate(dbPath) {
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   
   try {
     // Check if column already exists

@@ -12,8 +12,8 @@
 
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
-const Database = require('better-sqlite3');
 const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 
 const fmt = new CliFormatter();
@@ -237,7 +237,7 @@ function main() {
   
   let db;
   try {
-    db = new Database(dbPath);
+    db = openNewsCrawlerDb(dbPath);
     
     if (dryRun) {
       // In dry run, just show what would be done

@@ -1,9 +1,9 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const Database = require('better-sqlite3');
 const {
   normalizeValidationOptions,
   buildRemoteRunArgs,
@@ -154,7 +154,7 @@ describe('cloud-crawl-e2e-validation', () => {
   test('getRecentEvidence matches SQLite timestamps with ISO run windows', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cloud-crawl-e2e-'));
     const dbPath = path.join(dir, 'news.db');
-    const db = new Database(dbPath);
+    const db = openNewsCrawlerDb(dbPath);
     try {
       db.exec(`
         CREATE TABLE urls (id INTEGER PRIMARY KEY, host TEXT NOT NULL);

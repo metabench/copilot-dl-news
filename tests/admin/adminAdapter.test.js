@@ -1,10 +1,9 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * adminAdapter unit tests
  */
-
-const Database = require('better-sqlite3');
 const { createAdminAdapter } = require('../../src/data/db/sqlite/v1/queries/adminAdapter');
 
 describe('adminAdapter', () => {
@@ -13,7 +12,7 @@ describe('adminAdapter', () => {
 
   beforeAll(() => {
     // Use in-memory database for tests
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create users table first (required for foreign key)
     db.exec(`

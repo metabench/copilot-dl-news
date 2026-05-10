@@ -1,5 +1,6 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 /**
  * Analytics Dashboard Check Script
  * 
@@ -16,11 +17,8 @@ const assert = require('assert');
 // ─────────────────────────────────────────────────────────────
 // Test Database Setup
 // ─────────────────────────────────────────────────────────────
-
-const Database = require('better-sqlite3');
-
 function createTestDb() {
-  const db = new Database(':memory:');
+  const db = openNewsCrawlerDb(':memory:');
 
   db.exec(`
     CREATE TABLE urls (

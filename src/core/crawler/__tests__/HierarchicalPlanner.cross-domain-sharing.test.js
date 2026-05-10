@@ -1,10 +1,10 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 /**
  * Phase 3 Cross-Domain Knowledge Sharing Tests
  * Tests for _findSimilarDomains, _sharePattern, and integration with learnHeuristics
  */
 
 const { HierarchicalPlanner } = require('../HierarchicalPlanner');
-const Database = require('better-sqlite3');
 const { mkdirSync } = require('fs');
 const { join } = require('path');
 
@@ -15,7 +15,7 @@ describe('HierarchicalPlanner - Cross-Domain Knowledge Sharing (Phase 3)', () =>
 
   beforeEach(() => {
     // Create in-memory database
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create tables
     db.exec(`

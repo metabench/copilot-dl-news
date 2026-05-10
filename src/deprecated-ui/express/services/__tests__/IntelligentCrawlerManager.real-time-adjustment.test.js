@@ -1,17 +1,16 @@
+const { openNewsCrawlerDb } = require('../../../../db/openNewsCrawlerDb');
 /**
  * Tests for Real-Time Plan Adjustment (Phase 2 Improvement)
  */
 
 const { IntelligentCrawlerManager } = require('../IntelligentCrawlerManager');
-const Database = require('better-sqlite3');
-
 describe('IntelligentCrawlerManager - Real-Time Plan Adjustment', () => {
   let db;
   let manager;
   let mockLogger;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = openNewsCrawlerDb(':memory:');
     
     // Create minimal schema
     db.exec(`

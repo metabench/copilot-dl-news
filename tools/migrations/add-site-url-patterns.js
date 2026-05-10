@@ -1,13 +1,12 @@
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Migration: Add site_url_patterns table
  * 
  * Stores discovered URL patterns from site analysis.
  * Used to predict place hub URLs more accurately.
  */
-
-const Database = require('better-sqlite3');
 const path = require('path');
 
 const dbPath = process.argv[2] || path.join(__dirname, '..', '..', 'data', 'news.db');
@@ -54,7 +53,7 @@ function down(db) {
 
 // Run if executed directly
 if (require.main === module) {
-  const db = new Database(dbPath);
+  const db = openNewsCrawlerDb(dbPath);
   const action = process.argv[3] || 'up';
   
   try {

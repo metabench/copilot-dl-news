@@ -3,6 +3,7 @@ const { recordPlaceHubSeed } = require('./data/placeHubs');
 const NewsWebsiteService = require('../../services/NewsWebsiteService');
 const { safeCall } = require('./utils');
 const { getDb } = require('../../data/db');
+const { updateUrlStatus: updateUrlStatusInDb } = require('news-crawler-db');
 
 let NewsDatabase = null;
 
@@ -204,10 +205,9 @@ class CrawlerDb {
       if (typeof this.db.updateUrlStatus === 'function') {
         return this.db.updateUrlStatus(url, status);
       }
-      // Fallback: direct SQL if the DB adapter doesn't have the method
       const rawDb = typeof this.db.getDb === 'function' ? this.db.getDb() : this.db.db || null;
-      if (rawDb && typeof rawDb.prepare === 'function') {
-        return rawDb.prepare('UPDATE urls SET status = ? WHERE url = ?').run(status, url);
+      if (rawDb) {
+        return updateUrlStatusInDb(rawDb, url, status);
       }
     } catch (err) {
       // Don't fail silently — log the error

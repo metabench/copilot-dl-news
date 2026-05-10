@@ -1,6 +1,16 @@
-const Database = require('better-sqlite3');
-const db = new Database('data/news.db');
-try {
-    const s1 = db.prepare("PRAGMA table_info(news_websites)").all();
-    console.log('news_websites:', s1.map(c => c.name).join(', '));
-} catch (e) { console.error(e); }
+
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+async function main() {
+    const db = openNewsCrawlerDb('data/news.db', { readonly: true });
+    try {
+        const schema = await db.maintenance.getTableInfo('news_websites');
+        console.log('news_websites:', schema.map(c => c.name).join(', '));
+    } finally {
+        await db.close();
+    }
+}
+
+main().catch((error) => {
+    console.error(error.message);
+    process.exit(1);
+});

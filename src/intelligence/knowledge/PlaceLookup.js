@@ -18,7 +18,7 @@
  *   // => [{ placeId: 21, kind: 'city', countryCode: 'GB', population: 8799728, ... }]
  */
 
-const Database = require("better-sqlite3");
+const { openNewsCrawlerDb } = require("../../db/openNewsCrawlerDb");
 
 /**
  * Convert a name to URL-slug format for matching.
@@ -77,7 +77,7 @@ class PlaceLookup {
    */
   static load(dbPath) {
     const startTime = Date.now();
-    const db = new Database(dbPath, { readonly: true });
+    const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
     
     try {
       // Load all places first

@@ -1,5 +1,6 @@
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 // Seed URLs for NPR crawl
-const db = require('better-sqlite3')('data/crawl-www_npr_org.db');
+const db = openNewsCrawlerDb('data/crawl-www_npr_org.db');
 
 // Ensure schema exists
 db.exec(`

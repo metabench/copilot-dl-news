@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
-
 function parseArgs(argv) {
   const args = {};
   for (let i = 0; i < argv.length; i++) {
@@ -90,7 +89,7 @@ function main() {
   }
   console.log(`Copying ${source} -> ${dest}`);
   copyDb(source, dest);
-  const db = new Database(dest);
+  const db = openNewsCrawlerDb(dest);
   try {
     ensureFetchesTable(db);
     ensureErrorsUrlColumn(db);

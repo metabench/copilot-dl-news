@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 /**
  * Check script for Quality Dashboard
  * 
@@ -15,8 +16,6 @@
  */
 
 const path = require('path');
-const Database = require('better-sqlite3');
-
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'news.db');
 
 let passed = 0;
@@ -47,7 +46,7 @@ async function main() {
 
   let db;
   try {
-    db = new Database(DB_PATH, { readonly: true });
+    db = openNewsCrawlerDb(DB_PATH, { readonly: true });
     check(true, 'Database opens successfully');
   } catch (err) {
     check(false, `Database opens: ${err.message}`);

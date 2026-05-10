@@ -1,3 +1,4 @@
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 /**
  * @fileoverview Focused E2E test for analysis pages
  * Tests module loading and error reporting on analysis list/detail pages
@@ -7,7 +8,6 @@ const { describe, test, expect, beforeAll, afterAll } = require('@jest/globals')
 const { createApp } = require('../server');
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
 const { createTempDb } = require('../../../test-utils/db-helpers');
 const { inferQueryType } = require('../../../data/db/sqlite/instrumentation');
 const schema = require('../../../data/db/sqlite/schema');
@@ -23,13 +23,13 @@ describe('Analysis Pages E2E', () => {
     const tempDbPath = createTempDb();
     
     // Mock the database preparation to instrument it
-    const originalPrepare = require('better-sqlite3')(tempDbPath).prepare;
+    const originalPrepare = openNewsCrawlerDb(tempDbPath).prepare;
     
     app = createApp({
       dbPath: tempDbPath,
       verbose: false,
       ensureDb: (dbPath) => {
-        const dbInstance = new Database(dbPath);
+        const dbInstance = openNewsCrawlerDb(dbPath);
         dbInstance.exec(schema);
         
         // Override prepare to track queries

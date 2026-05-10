@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -180,8 +181,7 @@ function snapshotDatabase(dbPath) {
 
   let db = null;
   try {
-    const Database = require('better-sqlite3');
-    db = new Database(dbPath, { readonly: true, fileMustExist: true });
+    db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
     db.pragma('query_only = ON');
     if (tableExists(db, 'urls')) snapshot.totals.urls = getCount(db, 'SELECT COUNT(*) AS count FROM urls');
     if (tableExists(db, 'http_responses')) {
@@ -259,8 +259,7 @@ function getRecentEvidence(dbPath, startedAt, finishedAt, domains) {
 
   let db = null;
   try {
-    const Database = require('better-sqlite3');
-    db = new Database(dbPath, { readonly: true, fileMustExist: true });
+    db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
     db.pragma('query_only = ON');
     if (!tableExists(db, 'http_responses') || !tableExists(db, 'urls')) {
       evidence.error = 'Required tables http_responses/urls not found';

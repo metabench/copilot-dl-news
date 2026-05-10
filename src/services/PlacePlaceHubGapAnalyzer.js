@@ -15,6 +15,10 @@ const { getDsplForDomain } = require('./shared/dspl');
 const { slugify } = require('../tools/slugify');
 const { PredictionStrategyManager } = require('./shared/PredictionStrategyManager');
 const { UrlPatternGenerator } = require('./shared/UrlPatternGenerator');
+const {
+  listVerifiedPlacePageMappingUrls,
+  getPreferredPlaceName
+} = require('news-crawler-db');
 
 class PlacePlaceHubGapAnalyzer extends HubGapAnalyzerBase {
   constructor({ 
@@ -38,19 +42,7 @@ class PlacePlaceHubGapAnalyzer extends HubGapAnalyzerBase {
     
     // Override methods for place-place specific logic
     this.predictionManager._getExistingMappings = (domain) => {
-      try {
-        return this.db.prepare(`
-          SELECT url FROM place_page_mappings
-          WHERE host = ? AND page_kind = 'place-place-hub' AND status = 'verified'
-          LIMIT 10
-        `).all(domain) || [];
-      } catch (err) {
-        // Handle missing table gracefully (for tests or incomplete databases)
-        if (err.message.includes('no such table')) {
-          return [];
-        }
-        throw err;
-      }
+      return listVerifiedPlacePageMappingUrls(this.db, domain, 'place-place-hub', { limit: 10 });
     };
 
     this.predictionManager._extractPatternsFromUrls = (urls, domain, metadata) => {
@@ -295,13 +287,7 @@ class PlacePlaceHubGapAnalyzer extends HubGapAnalyzerBase {
   // Private helper methods
 
   _getPreferredName(placeId) {
-    const result = this.db.prepare(`
-      SELECT name FROM place_names
-      WHERE place_id = ? AND is_preferred = 1
-      LIMIT 1
-    `).get(placeId);
-
-    return result?.name || null;
+    return getPreferredPlaceName(this.db, placeId);
   }
 
   _getPatternsForParentType(parentKind) {

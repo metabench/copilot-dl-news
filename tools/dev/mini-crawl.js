@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * mini-crawl.js — Small test crawl with full event logging to task_events
  * 
@@ -286,13 +287,12 @@ For long-running crawls, use the daemon approach:
   // before any requires can log. The early filter checks process.argv for -d/--downloads-only.
 
   // Lazy require heavy modules
-  const Database = require('better-sqlite3');
   const { createCrawlService } = require('../../src/server/crawl-api');
   const { TelemetryIntegration } = require('../../src/core/crawler/telemetry/TelemetryIntegration');
   const { AdaptiveDiscoveryService, STRATEGIES } = require('../../src/core/crawler/strategies');
 
   // Open database
-  const db = new Database(flags.db);
+  const db = openNewsCrawlerDb(flags.db);
 
   // Determine if this is a "small crawl" (≤20 pages) - disable batching for visibility
   const isSmallCrawl = flags.maxPages <= 20;

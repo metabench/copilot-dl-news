@@ -6,6 +6,7 @@
  */
 
 const { PatternLearner } = require('./PatternLearner');
+const { listVerifiedMappingsForPatternDiscovery } = require('news-crawler-db');
 
 class PatternDiscoveryManager {
   /**
@@ -86,10 +87,7 @@ class PatternDiscoveryManager {
 
     const pageKind = pageKindMap[mappingType] || mappingType;
 
-    return db.prepare(`
-      SELECT url, place_id FROM place_page_mappings
-      WHERE host = ? AND page_kind = ? AND status = 'verified'
-    `).all(domain, pageKind) || [];
+    return listVerifiedMappingsForPatternDiscovery(db, domain, pageKind) || [];
   }
 
   /**
