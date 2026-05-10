@@ -1,0 +1,556 @@
+{
+  "ok": false,
+  "mode": "preflight-only",
+  "startedAt": "2026-05-09T16:54:02.048Z",
+  "finishedAt": "2026-05-09T16:54:03.179Z",
+  "artifact": {
+    "report": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-09-cloud-crawl-15m-validation\\artifacts\\cloud-crawl-e2e-2026-05-09T16-54-02-047Z.json",
+    "log": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-09-cloud-crawl-15m-validation\\artifacts\\cloud-crawl-e2e-2026-05-09T16-54-02-047Z.log"
+  },
+  "plan": {
+    "command": "cloud-crawl-e2e",
+    "host": "141.144.193.218:3200",
+    "domains": [
+      "bbc.com",
+      "theguardian.com",
+      "reuters.com",
+      "nytimes.com",
+      "washingtonpost.com",
+      "cnn.com",
+      "apnews.com",
+      "bloomberg.com",
+      "ft.com",
+      "npr.org"
+    ],
+    "durationMs": 900000,
+    "crawlBudgetMs": 805000,
+    "drainMs": 60000,
+    "validationMs": 20000,
+    "stopGraceMs": 15000,
+    "hardLimit": "15 minutes by default; total process phases must finish before durationMs",
+    "remoteRunArgs": [
+      "run",
+      "--host",
+      "141.144.193.218:3200",
+      "--domains",
+      "bbc.com,theguardian.com,reuters.com,nytimes.com,washingtonpost.com,cnn.com,apnews.com,bloomberg.com,ft.com,npr.org",
+      "--max-pages",
+      "1000",
+      "--max-concurrent",
+      "10",
+      "--interval",
+      "5",
+      "--window",
+      "5",
+      "--limit",
+      "5",
+      "--adaptive-limit",
+      "--target-sync-ms",
+      "5000",
+      "--min-limit",
+      "1",
+      "--max-limit",
+      "25",
+      "--include-content",
+      "--include-links",
+      "--prune-after-ingest",
+      "--no-backoff",
+      "--remote-storage-budget-mb",
+      "512",
+      "--remote-storage-reserve-mb",
+      "256",
+      "--normal-concurrency",
+      "10",
+      "--perf-summary-every",
+      "3"
+    ],
+    "drainArgs": [
+      "sync",
+      "--host",
+      "141.144.193.218:3200",
+      "--rounds",
+      "12",
+      "--interval",
+      "3",
+      "--window",
+      "30",
+      "--limit",
+      "5",
+      "--adaptive-limit",
+      "--target-sync-ms",
+      "5000",
+      "--min-limit",
+      "1",
+      "--max-limit",
+      "25",
+      "--include-content",
+      "--include-links",
+      "--prune-after-ingest",
+      "--no-backoff",
+      "--remote-storage-budget-mb",
+      "512",
+      "--remote-storage-reserve-mb",
+      "256",
+      "--normal-concurrency",
+      "10",
+      "--perf-summary-every",
+      "1"
+    ],
+    "thresholds": {
+      "minNewResponses": 25,
+      "minSuccessResponses": 10,
+      "minContentRows": 5,
+      "minDistinctHosts": 3,
+      "maxFailureRatio": 0.6,
+      "maxUnconfirmedLedgerEntries": 0,
+      "maxUnprunedLedgerEntries": 2
+    }
+  },
+  "remote": {
+    "checkedAt": "2026-05-09T16:54:02.204Z",
+    "healthOk": true,
+    "throttleOk": false,
+    "contentStatsOk": true,
+    "statusOk": true,
+    "healthStatus": 200,
+    "healthError": null,
+    "health": {
+      "healthy": true,
+      "version": "4.0.0",
+      "mode": "multi-domain",
+      "domains": 10,
+      "running": 0,
+      "stored": 0,
+      "memory": {
+        "rss": 72,
+        "heapUsed": 11,
+        "heapTotal": 13
+      },
+      "idle": {
+        "minutes": 2,
+        "timeoutMin": 10,
+        "autoShutdown": true
+      },
+      "uptime": 163
+    },
+    "throttleStatus": 404,
+    "throttleError": null,
+    "throttle": {
+      "raw": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /api/throttle</pre>\n</body>\n</html>\n"
+    },
+    "contentStatsStatus": 200,
+    "contentStatsError": null,
+    "contentStats": {
+      "totals": {
+        "total_stored": 4167,
+        "total_uncompressed": 4774053001,
+        "total_compressed": 845450978,
+        "avg_compression_ratio": 0.3518601891252966
+      },
+      "byDomain": [
+        {
+          "domain": "www.nytimes.com",
+          "count": 1616,
+          "total_uncompressed": 733983171,
+          "total_compressed": 96532042
+        },
+        {
+          "domain": "www.theguardian.com",
+          "count": 1217,
+          "total_uncompressed": 235918560,
+          "total_compressed": 34677901
+        },
+        {
+          "domain": "www.cnn.com",
+          "count": 671,
+          "total_uncompressed": 2663744367,
+          "total_compressed": 505335535
+        },
+        {
+          "domain": "cnnespanol.cnn.com",
+          "count": 162,
+          "total_uncompressed": 532996087,
+          "total_compressed": 98932292
+        },
+        {
+          "domain": "edition.cnn.com",
+          "count": 117,
+          "total_uncompressed": 383281050,
+          "total_compressed": 74345514
+        },
+        {
+          "domain": "cooking.nytimes.com",
+          "count": 101,
+          "total_uncompressed": 62720699,
+          "total_compressed": 7349995
+        },
+        {
+          "domain": "syndication.theguardian.com",
+          "count": 63,
+          "total_uncompressed": 34272,
+          "total_compressed": 21231
+        },
+        {
+          "domain": "holidays.theguardian.com",
+          "count": 63,
+          "total_uncompressed": 26420100,
+          "total_compressed": 2904927
+        },
+        {
+          "domain": "arabic.cnn.com",
+          "count": 43,
+          "total_uncompressed": 9727970,
+          "total_compressed": 2391394
+        },
+        {
+          "domain": "www.bbc.com",
+          "count": 41,
+          "total_uncompressed": 12205906,
+          "total_compressed": 1971845
+        },
+        {
+          "domain": "us.cnn.com",
+          "count": 25,
+          "total_uncompressed": 94952723,
+          "total_compressed": 18210156
+        },
+        {
+          "domain": "www.bloomberg.com",
+          "count": 8,
+          "total_uncompressed": 110848,
+          "total_compressed": 37245
+        },
+        {
+          "domain": "help.nytimes.com",
+          "count": 7,
+          "total_uncompressed": 528468,
+          "total_compressed": 155069
+        },
+        {
+          "domain": "licensing.theguardian.com",
+          "count": 5,
+          "total_uncompressed": 194373,
+          "total_compressed": 59629
+        },
+        {
+          "domain": "support.theguardian.com",
+          "count": 4,
+          "total_uncompressed": 985362,
+          "total_compressed": 66701
+        },
+        {
+          "domain": "shop.bbc.com",
+          "count": 4,
+          "total_uncompressed": 4060566,
+          "total_compressed": 450149
+        },
+        {
+          "domain": "theguardian.com",
+          "count": 3,
+          "total_uncompressed": 1043985,
+          "total_compressed": 164348
+        },
+        {
+          "domain": "cnn.com",
+          "count": 3,
+          "total_uncompressed": 8213151,
+          "total_compressed": 1405883
+        },
+        {
+          "domain": "profile.theguardian.com",
+          "count": 2,
+          "total_uncompressed": 82166,
+          "total_compressed": 17588
+        },
+        {
+          "domain": "manage.theguardian.com",
+          "count": 2,
+          "total_uncompressed": 34458,
+          "total_compressed": 10346
+        },
+        {
+          "domain": "help.cnn.com",
+          "count": 2,
+          "total_uncompressed": 2214568,
+          "total_compressed": 287374
+        },
+        {
+          "domain": "www.reuters.com",
+          "count": 1,
+          "total_uncompressed": 771,
+          "total_compressed": 572
+        },
+        {
+          "domain": "workwithus.theguardian.com",
+          "count": 1,
+          "total_uncompressed": 67418,
+          "total_compressed": 19713
+        },
+        {
+          "domain": "store.nytimes.com",
+          "count": 1,
+          "total_uncompressed": 301322,
+          "total_compressed": 40315
+        },
+        {
+          "domain": "store.cnn.com",
+          "count": 1,
+          "total_uncompressed": 46452,
+          "total_compressed": 14707
+        },
+        {
+          "domain": "nytimes.com",
+          "count": 1,
+          "total_uncompressed": 771,
+          "total_compressed": 571
+        },
+        {
+          "domain": "archive.nytimes.com",
+          "count": 1,
+          "total_uncompressed": 15646,
+          "total_compressed": 3152
+        },
+        {
+          "domain": "advertising.theguardian.com",
+          "count": 1,
+          "total_uncompressed": 47,
+          "total_compressed": 62
+        },
+        {
+          "domain": "account.bbc.com",
+          "count": 1,
+          "total_uncompressed": 167724,
+          "total_compressed": 44722
+        }
+      ]
+    },
+    "statusStatus": 200,
+    "statusError": null,
+    "remoteDomains": [
+      {
+        "domain": "bbc.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "theguardian.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "reuters.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "nytimes.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "washingtonpost.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "cnn.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "apnews.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "bloomberg.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "ft.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "npr.org",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      }
+    ]
+  },
+  "before": {
+    "available": true,
+    "path": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\data\\news.db",
+    "capturedAt": "2026-05-09T16:54:02.048Z",
+    "totals": {
+      "urls": 1631235,
+      "responses": 295006,
+      "successResponses": 278996,
+      "failedResponses": 16010,
+      "content": 183881
+    },
+    "latestFetchedAt": "2026-05-08T09:54:30.836Z",
+    "error": null
+  },
+  "ledgerBefore": {
+    "entries": 0,
+    "unconfirmed": 0,
+    "unpruned": 0,
+    "completed": 0,
+    "lastWatermark": "2026-05-08 02:29:54",
+    "totalPulled": 55556
+  },
+  "validation": {
+    "ok": false,
+    "checks": [
+      {
+        "name": "strict-time-limit",
+        "ok": true,
+        "actual": 1131,
+        "expected": "<= 900000ms",
+        "severity": "fatal"
+      },
+      {
+        "name": "remote-health",
+        "ok": true,
+        "actual": 200,
+        "expected": "healthy / reachable",
+        "severity": "fatal"
+      },
+      {
+        "name": "remote-throttle-endpoint",
+        "ok": false,
+        "actual": 404,
+        "expected": "HTTP 200 throttle endpoint",
+        "severity": "error"
+      },
+      {
+        "name": "new-responses",
+        "ok": false,
+        "actual": 0,
+        "expected": ">= 25",
+        "severity": "error"
+      },
+      {
+        "name": "successful-responses",
+        "ok": false,
+        "actual": 0,
+        "expected": ">= 10",
+        "severity": "error"
+      },
+      {
+        "name": "content-rows",
+        "ok": false,
+        "actual": 0,
+        "expected": ">= 5",
+        "severity": "error"
+      },
+      {
+        "name": "host-spread",
+        "ok": false,
+        "actual": 0,
+        "expected": ">= 3",
+        "severity": "error"
+      },
+      {
+        "name": "failure-ratio",
+        "ok": false,
+        "actual": 1,
+        "expected": "<= 0.6",
+        "severity": "error"
+      },
+      {
+        "name": "ledger-unconfirmed",
+        "ok": true,
+        "actual": 0,
+        "expected": "<= 0",
+        "severity": "error"
+      },
+      {
+        "name": "ledger-unpruned",
+        "ok": true,
+        "actual": 0,
+        "expected": "<= 2",
+        "severity": "error"
+      },
+      {
+        "name": "child-exit",
+        "ok": true,
+        "actual": 0,
+        "expected": "clean exit or deadline stop",
+        "severity": "error"
+      },
+      {
+        "name": "run-log-errors",
+        "ok": true,
+        "actual": [],
+        "expected": "no error lines",
+        "severity": "warn"
+      }
+    ],
+    "diagnostics": [
+      "remote-throttle-endpoint: expected HTTP 200 throttle endpoint, got 404",
+      "new-responses: expected >= 25, got 0",
+      "successful-responses: expected >= 10, got 0",
+      "content-rows: expected >= 5, got 0",
+      "host-spread: expected >= 3, got 0",
+      "failure-ratio: expected <= 0.6, got 1"
+    ],
+    "deltas": {
+      "urls": 0,
+      "responses": 0,
+      "successResponses": 0,
+      "failedResponses": 0,
+      "content": 0
+    },
+    "ledger": {
+      "entries": 0,
+      "unconfirmed": 0,
+      "unpruned": 0,
+      "completed": 0,
+      "lastWatermark": "2026-05-08 02:29:54",
+      "totalPulled": 55556
+    },
+    "benchmark": {
+      "elapsedMs": 1131,
+      "downloadsPerMinute": 0,
+      "successPerMinute": 0,
+      "contentPerMinute": 0,
+      "bytesPerMinute": 0,
+      "roundSamples": 0,
+      "fetchMs": {
+        "p50": 0,
+        "p95": 0
+      },
+      "ingestMs": {
+        "p50": 0,
+        "p95": 0
+      },
+      "roundMs": {
+        "p50": 0,
+        "p95": 0
+      }
+    }
+  }
+}

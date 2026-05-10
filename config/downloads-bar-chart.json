@@ -1,0 +1,7 @@
+{
+  "days": 90,
+  "port": 4321,
+  "source": "http-all",
+  "mode": "cumulative",
+  "baseline": "auto"
+}

@@ -54,6 +54,60 @@
 
 ## Current Sessions
 
+### Session 2026-05-09: Cloud Crawl 15m Validation
+
+**Duration**: Active
+**Type**: Crawl Validation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make the 10x1000 cloud crawl path run under a strict 15-minute cap, validate useful crawl output, and emit actionable diagnostics.
+
+**Location**: `docs/sessions/2026-05-09-cloud-crawl-15m-validation/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2026-05-09-cloud-crawl-15m-validation/INDEX.md)
+- 🗺️ [Plan](./2026-05-09-cloud-crawl-15m-validation/PLAN.md)
+- 📝 [Working Notes](./2026-05-09-cloud-crawl-15m-validation/WORKING_NOTES.md)
+- 📘 [Session Summary](./2026-05-09-cloud-crawl-15m-validation/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2026-05-09-cloud-crawl-15m-validation/FOLLOW_UPS.md)
+
+
+### Session 2026-05-08: Electron Crawl 10x1000
+
+**Duration**: Active
+**Type**: Crawl Operations / Electron / jsgui3 UI / Visual Validation
+**Completion**: In progress
+
+**Focus**:
+- Run a 10-site x 1000-page crawl through the Electron-hosted unified app and capture UI evidence from the Crawl Status surface.
+
+**Location**: `docs/sessions/2026-05-08-electron-crawl-10x1000/`
+
+**Quick Links**:
+- [Plan](./2026-05-08-electron-crawl-10x1000/PLAN.md)
+- [Working Notes](./2026-05-08-electron-crawl-10x1000/WORKING_NOTES.md)
+- [Screenshot Review](./2026-05-08-electron-crawl-10x1000/SCREENSHOT_REVIEW.md)
+- [Screenshot Comments](./2026-05-08-electron-crawl-10x1000/SCREENSHOT_COMMENTS.md)
+
+### Session 2026-05-04: Playwright Control Centre Visual QA
+
+**Duration**: Active
+**Type**: UI Visual QA / Playwright MCP / Crawl Display
+**Completion**: In progress
+
+**Focus**:
+- Explore the unified control centre and crawl-related apps visually, apply only simple risk-free fixes, and keep crawl testing bounded to 5 sites x 5 pages.
+
+**Location**: `docs/sessions/2026-05-04-playwright-control-centre-visual-qa/`
+
+**Quick Links**:
+- [Plan](./2026-05-04-playwright-control-centre-visual-qa/PLAN.md)
+- [Working Notes](./2026-05-04-playwright-control-centre-visual-qa/WORKING_NOTES.md)
+- [User Journeys](./2026-05-04-playwright-control-centre-visual-qa/USER_JOURNEYS.md)
+- [Screenshot Review](./2026-05-04-playwright-control-centre-visual-qa/SCREENSHOT_REVIEW.md)
+- [Screenshot Comments](./2026-05-04-playwright-control-centre-visual-qa/SCREENSHOT_COMMENTS.md)
+
 ### Session 2026-05-04: Screenshot Tooling Control Centre
 
 **Duration**: 1 session
@@ -1581,6 +1635,9 @@ const matches = searchIndex.find(item => item.keywords.includes('refactor'));
 ---
 
 ## Session Index
+
+### 2026 Sessions
+- [2026-05-10: Local Crawl Throughput Slice](./2026-05-10-local-crawl-throughput/PLAN.md)
 
 ### 2025 Sessions
 - [2025-11-13: Strategic Planning & Documentation](./2025-11-13-strategic-planning/INDEX.md)

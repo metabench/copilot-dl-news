@@ -72,7 +72,12 @@ Return Payload: <summary, changed files, tests/checks run, blockers/assumptions>
 4. **Keep the system observable**
    - When behavior changes, add/extend: decision traces (milestones), `/decisions` semantics, and/or a check script.
 
-5. **Always propose “what next”**
+5. **Protect remote-node storage correctness**
+   - Use remote crawler profiles by default for medium/large crawls.
+   - Do not prune remote payloads after metadata-only sync.
+   - Prune only after local DB confirmation and only with exact exported URL IDs; watermark-only pruning is manual maintenance, not a crawler-development default.
+
+6. **Always propose “what next”**
    - End every run with the next 3 candidate slices, ranked by impact/effort/risk.
 
 ### ❌ Never Do

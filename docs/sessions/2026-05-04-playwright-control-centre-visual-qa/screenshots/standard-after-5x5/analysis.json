@@ -1,0 +1,347 @@
+{
+  "ok": true,
+  "baseUrl": "http://localhost:3097",
+  "outputDir": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5",
+  "saveScreenshots": true,
+  "saveDomSnapshots": true,
+  "viewports": [
+    {
+      "key": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "deviceScaleFactor": 1,
+      "isMobile": false,
+      "hasTouch": false,
+      "isLandscape": false
+    },
+    {
+      "key": "mobile",
+      "width": 390,
+      "height": 844,
+      "deviceScaleFactor": 2,
+      "isMobile": true,
+      "hasTouch": true,
+      "isLandscape": false
+    }
+  ],
+  "capturedAt": "2026-05-04T02:14:08.466Z",
+  "routes": [
+    {
+      "key": "cloud-crawl-desktop",
+      "routeKey": "cloud-crawl",
+      "viewportKey": "desktop",
+      "url": "http://localhost:3097/?app=cloud-crawl",
+      "screenshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\cloud-crawl-desktop.png",
+      "screenshotBytes": 134867,
+      "screenshotSkipped": false,
+      "domSnapshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\cloud-crawl-desktop.html",
+      "domSnapshotBytes": 116879,
+      "domSnapshotSkipped": false,
+      "metrics": {
+        "title": "Unified App Shell",
+        "activeNav": "Cloud Crawl",
+        "loaded": true,
+        "textLength": 2651,
+        "emptyStates": 0,
+        "horizontalOverflow": false,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "bbcMentions": 1,
+        "downloadsStats": {},
+        "cloudCrawlStats": {
+          "remote": "configured",
+          "activeJobs": "0",
+          "downloaded": "25 / 25",
+          "errors": "0"
+        },
+        "iframeCount": 0,
+        "iframeTexts": [],
+        "iframeLoadingMentions": 0
+      }
+    },
+    {
+      "key": "downloads-desktop",
+      "routeKey": "downloads",
+      "viewportKey": "desktop",
+      "url": "http://localhost:3097/?app=downloads",
+      "screenshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\downloads-desktop.png",
+      "screenshotBytes": 123196,
+      "screenshotSkipped": false,
+      "domSnapshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\downloads-desktop.html",
+      "domSnapshotBytes": 104090,
+      "domSnapshotSkipped": false,
+      "metrics": {
+        "title": "Unified App Shell",
+        "activeNav": "Downloads",
+        "loaded": true,
+        "textLength": 1809,
+        "emptyStates": 0,
+        "horizontalOverflow": false,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "bbcMentions": 0,
+        "downloadsStats": {
+          "total": "272464",
+          "verified": "249616",
+          "bytes": "117.7 GB",
+          "progress-text": "0 / 50"
+        },
+        "cloudCrawlStats": {},
+        "iframeCount": 0,
+        "iframeTexts": [],
+        "iframeLoadingMentions": 0
+      }
+    },
+    {
+      "key": "crawl-status-desktop",
+      "routeKey": "crawl-status",
+      "viewportKey": "desktop",
+      "url": "http://localhost:3097/?app=crawl-status",
+      "screenshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\crawl-status-desktop.png",
+      "screenshotBytes": 101891,
+      "screenshotSkipped": false,
+      "domSnapshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\crawl-status-desktop.html",
+      "domSnapshotBytes": 99531,
+      "domSnapshotSkipped": false,
+      "metrics": {
+        "title": "Unified App Shell",
+        "activeNav": "Crawl Status",
+        "loaded": true,
+        "textLength": 558,
+        "emptyStates": 0,
+        "horizontalOverflow": false,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "bbcMentions": 0,
+        "downloadsStats": {},
+        "cloudCrawlStats": {},
+        "iframeCount": 1,
+        "iframeTexts": [
+          {
+            "url": "http://localhost:3097/crawl-status",
+            "text": "Ongoing Crawl Status\nLive updates via /api/crawl-telemetry/events, snapshots via /api/v1/crawl/jobs\nAPI docs\njobs JSON\nevents stream\ntelemetry history\ncrawl observer\nStart crawl (in-process)\nProfile\nManual URL\nGuardian news\nSimple distributed smoke\nStart URL\nStart\nInstall Guardian presets\nProfiles\nOperation: intelligent\nAdvanced (operation + overrides)\nReady to start a crawl.\nJobs: 0 · telemetry: /api/crawl-telemetry/events\nJob\tStatus\tProgress\tVisited\tDownloaded\tErrors\tQueue\tLast Activity\tControls\nNo active crawls."
+          }
+        ],
+        "iframeLoadingMentions": 0
+      }
+    },
+    {
+      "key": "screenshot-review-desktop",
+      "routeKey": "screenshot-review",
+      "viewportKey": "desktop",
+      "url": "http://localhost:3097/?app=screenshot-review",
+      "screenshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\screenshot-review-desktop.png",
+      "screenshotBytes": 251840,
+      "screenshotSkipped": false,
+      "domSnapshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\screenshot-review-desktop.html",
+      "domSnapshotBytes": 115107,
+      "domSnapshotSkipped": false,
+      "metrics": {
+        "title": "Unified App Shell",
+        "activeNav": "Screenshots",
+        "loaded": true,
+        "textLength": 2931,
+        "emptyStates": 0,
+        "horizontalOverflow": false,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "bbcMentions": 0,
+        "downloadsStats": {},
+        "cloudCrawlStats": {},
+        "iframeCount": 0,
+        "iframeTexts": [],
+        "iframeLoadingMentions": 0
+      }
+    },
+    {
+      "key": "cloud-crawl-mobile",
+      "routeKey": "cloud-crawl",
+      "viewportKey": "mobile",
+      "url": "http://localhost:3097/?app=cloud-crawl",
+      "screenshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\cloud-crawl-mobile.png",
+      "screenshotBytes": 149827,
+      "screenshotSkipped": false,
+      "domSnapshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\cloud-crawl-mobile.html",
+      "domSnapshotBytes": 116879,
+      "domSnapshotSkipped": false,
+      "metrics": {
+        "title": "Unified App Shell",
+        "activeNav": "Cloud Crawl",
+        "loaded": true,
+        "textLength": 2192,
+        "emptyStates": 0,
+        "horizontalOverflow": false,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "bbcMentions": 1,
+        "downloadsStats": {},
+        "cloudCrawlStats": {
+          "remote": "configured",
+          "activeJobs": "0",
+          "downloaded": "25 / 25",
+          "errors": "0"
+        },
+        "iframeCount": 0,
+        "iframeTexts": [],
+        "iframeLoadingMentions": 0
+      }
+    },
+    {
+      "key": "downloads-mobile",
+      "routeKey": "downloads",
+      "viewportKey": "mobile",
+      "url": "http://localhost:3097/?app=downloads",
+      "screenshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\downloads-mobile.png",
+      "screenshotBytes": 193560,
+      "screenshotSkipped": false,
+      "domSnapshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\downloads-mobile.html",
+      "domSnapshotBytes": 104090,
+      "domSnapshotSkipped": false,
+      "metrics": {
+        "title": "Unified App Shell",
+        "activeNav": "Downloads",
+        "loaded": true,
+        "textLength": 1350,
+        "emptyStates": 0,
+        "horizontalOverflow": false,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "bbcMentions": 0,
+        "downloadsStats": {
+          "total": "272464",
+          "verified": "249616",
+          "bytes": "117.7 GB",
+          "progress-text": "0 / 50"
+        },
+        "cloudCrawlStats": {},
+        "iframeCount": 0,
+        "iframeTexts": [],
+        "iframeLoadingMentions": 0
+      }
+    },
+    {
+      "key": "crawl-status-mobile",
+      "routeKey": "crawl-status",
+      "viewportKey": "mobile",
+      "url": "http://localhost:3097/?app=crawl-status",
+      "screenshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\crawl-status-mobile.png",
+      "screenshotBytes": 177218,
+      "screenshotSkipped": false,
+      "domSnapshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\crawl-status-mobile.html",
+      "domSnapshotBytes": 99531,
+      "domSnapshotSkipped": false,
+      "metrics": {
+        "title": "Unified App Shell",
+        "activeNav": "Crawl Status",
+        "loaded": true,
+        "textLength": 99,
+        "emptyStates": 0,
+        "horizontalOverflow": false,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "bbcMentions": 0,
+        "downloadsStats": {},
+        "cloudCrawlStats": {},
+        "iframeCount": 1,
+        "iframeTexts": [
+          {
+            "url": "http://localhost:3097/crawl-status",
+            "text": "Ongoing Crawl Status\nLive updates via /api/crawl-telemetry/events, snapshots via /api/v1/crawl/jobs\nAPI docs\njobs JSON\nevents stream\ntelemetry history\ncrawl observer\nStart crawl (in-process)\nProfile\nManual URL\nGuardian news\nSimple distributed smoke\nStart URL\nStart\nInstall Guardian presets\nProfiles\nOperation: intelligent\nAdvanced (operation + overrides)\nReady to start a crawl.\nJobs: 0 · telemetry: /api/crawl-telemetry/events\nJob\tStatus\tProgress\tVisited\tDownloaded\tErrors\tQueue\tLast Activity\tControls\nNo active crawls."
+          }
+        ],
+        "iframeLoadingMentions": 0
+      }
+    },
+    {
+      "key": "screenshot-review-mobile",
+      "routeKey": "screenshot-review",
+      "viewportKey": "mobile",
+      "url": "http://localhost:3097/?app=screenshot-review",
+      "screenshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\screenshot-review-mobile.png",
+      "screenshotBytes": 191571,
+      "screenshotSkipped": false,
+      "domSnapshotPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\standard-after-5x5\\screenshot-review-mobile.html",
+      "domSnapshotBytes": 115107,
+      "domSnapshotSkipped": false,
+      "metrics": {
+        "title": "Unified App Shell",
+        "activeNav": "Screenshots",
+        "loaded": true,
+        "textLength": 2472,
+        "emptyStates": 0,
+        "horizontalOverflow": false,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "bbcMentions": 0,
+        "downloadsStats": {},
+        "cloudCrawlStats": {},
+        "iframeCount": 0,
+        "iframeTexts": [],
+        "iframeLoadingMentions": 0
+      }
+    }
+  ],
+  "browserEvents": [
+    {
+      "type": "console",
+      "level": "log",
+      "text": "🎛️ Unified App Shell initialized"
+    },
+    {
+      "type": "console",
+      "level": "log",
+      "text": "🎛️ Unified App Shell initialized"
+    },
+    {
+      "type": "console",
+      "level": "log",
+      "text": "🎛️ Unified App Shell initialized"
+    },
+    {
+      "type": "console",
+      "level": "log",
+      "text": "🎛️ Unified App Shell initialized"
+    },
+    {
+      "type": "console",
+      "level": "log",
+      "text": "🎛️ Unified App Shell initialized"
+    },
+    {
+      "type": "console",
+      "level": "log",
+      "text": "🎛️ Unified App Shell initialized"
+    },
+    {
+      "type": "console",
+      "level": "log",
+      "text": "🎛️ Unified App Shell initialized"
+    },
+    {
+      "type": "console",
+      "level": "log",
+      "text": "🎛️ Unified App Shell initialized"
+    },
+    {
+      "type": "console",
+      "level": "log",
+      "text": "🎛️ Unified App Shell initialized"
+    }
+  ]
+}

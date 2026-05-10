@@ -1,5 +1,8 @@
 {
-  "lastWatermark": "2026-05-04 00:10:12",
-  "lastPullAt": "2026-05-04T00:11:52.604Z",
-  "totalPulled": 30495
+  "lastWatermark": "2026-05-10 00:01:21",
+  "lastPullAt": "2026-05-10T00:13:19.627Z",
+  "totalPulled": 57758,
+  "previousWatermarkBeforeDrain": "2026-05-08 01:35:00",
+  "lastPrunedWatermark": "2026-05-10 00:01:21",
+  "totalPrunedRecords": 1932873
 }

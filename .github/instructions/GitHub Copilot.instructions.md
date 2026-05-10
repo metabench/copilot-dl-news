@@ -46,6 +46,34 @@ Read AGENTS.md Topic Index FIRST to understand available docs, then jump to rele
 - ✅ **OS Awareness**: Always maintain awareness that this repository runs on **Windows** with **PowerShell**. However, prefer cross-platform Node.js commands (`node <script>`) over PowerShell-specific syntax when possible. When PowerShell is required, set UTF-8 encoding (`[Console]::OutputEncoding = [System.Text.Encoding]::UTF8`) before running tools with Unicode output, and avoid Unix-style pipes that may cause encoding issues.
 - ⛔ **No Python invocations**: Do not run `python`, `python3`, or inline Python snippets. Prefer Node.js tooling or PowerShell-native commands when scripts or quick data processing is required.
 
+## Platform-aware command shape (MANDATORY)
+
+This repo runs on **Windows + PowerShell 5.1** with Node at `C:\nvm4w\nodejs\node.exe`. A large fraction of failed commands in this codebase have been Linux/bash syntax sent into a PowerShell session. Before running anything in `run_in_terminal` or `execution_subagent`:
+
+1. **Confirm the platform.** The `<environment_info>` block at the top of every turn states the user's OS. If it says Windows, you are talking to PowerShell, not bash. Do not guess.
+2. **Quick self-check when in doubt.** A single safe probe: `node -p "process.platform + ' ' + process.version"`. Anything starting with `win32` means rule (3) applies.
+3. **Never use these in PowerShell:**
+   - Operators: `&&`, `||`, `2>&1 |` chained the bash way, heredocs (`<<EOF`), backticks for command substitution, `$(...)` for command substitution.
+   - Tools / aliases that resolve differently or not at all: `cat`, `head`, `tail`, `grep`, `find` (POSIX `find`, not the Windows `find.exe`), `which`, `curl`, `wget`, `rm -rf`, `cp`, `mv`, `touch`, `ls -la`, `sed`, `awk`, `jq` (often absent on Windows). PowerShell aliases for `cat`/`ls`/`rm` exist but accept different flags — pretending they're POSIX is the failure mode.
+4. **PowerShell-safe equivalents.**
+   | Need | Use |
+   |------|-----|
+   | Chain commands | `;` (sequential, ignores prior exit code). For "and-then" semantics use `if ($LASTEXITCODE -eq 0) { ... }`. |
+   | Read a file | `Get-Content path -Tail 50` / `-Head 50` |
+   | Search text | `Select-String -Pattern '...' -Path 'src\**\*.js'` (or, better, the `grep_search` tool — it's faster and avoids encoding issues) |
+   | List files | `Get-ChildItem -Recurse -Filter *.js` |
+   | Delete | `Remove-Item -Recurse -Force path` |
+   | HTTP | `Invoke-RestMethod` / `Invoke-WebRequest` — but quoting is fragile. Prefer a tiny Node script. |
+   | JSON | Always use a Node one-liner: `node -e "..."`. Do NOT pipe through `jq`. |
+   | Stop a process | `Stop-Process -Name node -Force` or `Stop-Process -Id <pid> -Force` |
+5. **When the operation is non-trivial, write Node code.** Cross-platform Node scripts under `tmp/_*.js` (HTTP probes, JSON munging, file fan-out) are dramatically more reliable than PowerShell pipelines. They also work unchanged on Linux CI.
+6. **Persistent shell quirk.** This workspace's terminal sometimes injects a leading `^U` control char into commands. To survive it, prefix every command with `; ` (a no-op statement separator). Example: `; node tools\crawl\crawl-batch.js --help`.
+7. **Backslashes in paths are fine; but escape them in JS strings.** PowerShell accepts `tools\crawl\foo.js`. Inside a `node -e "..."` payload, double them: `"tools\\crawl\\foo.js"`.
+8. **Nested quoting via `cmd /c`.** When you must combine `&&`-style chaining with a single shell invocation, wrap with `cmd /c "..."` and double-up inner quotes: `cmd /c "node --check a.js && node --check b.js"`.
+9. **If you find yourself writing bash, stop and rewrite as Node.** That single rule prevents most failures.
+
+When the platform is genuinely Linux/macOS (e.g., crawler peer nodes via SSH), the inverse applies — but `<environment_info>` will tell you.
+
 ## JavaScript Code Editing Tools (Tier 1 Tooling Strategy)
 
 **Critical**: When making changes to JavaScript code, reference and use the specialized CLI tools available:

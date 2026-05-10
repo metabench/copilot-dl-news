@@ -1,0 +1,1009 @@
+{
+  "generatedAt": "2026-05-04T02:05:05.529Z",
+  "baseUrl": "http://localhost:3097",
+  "outputDir": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\after-mobile-fix",
+  "entries": [
+    {
+      "label": "desktop",
+      "app": "home",
+      "url": "http://localhost:3097/?app=home",
+      "screenshot": "desktop-home.png",
+      "navigationError": "page.waitForTimeout is not a function",
+      "title": "Unified App Shell",
+      "headings": [
+        {
+          "tag": "h2",
+          "text": "🎛️ Unified Control Center"
+        },
+        {
+          "tag": "h3",
+          "text": "RECENT CRAWL ACTIVITY"
+        }
+      ],
+      "textSnippets": [
+        "🎛️",
+        "Control Center",
+        "🏠 Home",
+        "🏠",
+        "Home",
+        "☁️ Cloud Crawl",
+        "☁️",
+        "Cloud Crawl",
+        "!",
+        "⏱️ Rate Limits",
+        "⏱️",
+        "Rate Limits",
+        "!",
+        "🔭 Crawl Observer",
+        "🔭",
+        "Crawl Observer",
+        "!",
+        "🏃 Crawl Status",
+        "🏃",
+        "Crawl Status",
+        "!",
+        "🔄 Multi-Modal Crawl",
+        "🔄",
+        "Multi-Modal Crawl",
+        "!",
+        "🗓️ Scheduler",
+        "🗓️",
+        "Scheduler",
+        "!",
+        "🗃️ Crawler Profiles",
+        "🗃️",
+        "Crawler Profiles",
+        "!",
+        "🗂️ Domain Registry",
+        "🗂️",
+        "Domain Registry",
+        "!",
+        "🕷️ Crawl Strategies",
+        "🕷️",
+        "Crawl Strategies"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1100
+      },
+      "body": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1100,
+        "clientHeight": 1100
+      },
+      "main": {
+        "scrollWidth": 1180,
+        "clientWidth": 1180,
+        "scrollHeight": 1100,
+        "clientHeight": 1100,
+        "rect": {
+          "x": 260,
+          "y": 0,
+          "width": 1180,
+          "height": 1100,
+          "right": 1440,
+          "bottom": 1100
+        }
+      },
+      "documentElement": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1100,
+        "clientHeight": 1100
+      },
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": [],
+      "failedRequests": [],
+      "httpErrors": []
+    },
+    {
+      "label": "desktop",
+      "app": "cloud-crawl",
+      "url": "http://localhost:3097/?app=cloud-crawl",
+      "screenshot": "desktop-cloud-crawl.png",
+      "navigationError": "page.waitForTimeout is not a function",
+      "title": "Unified App Shell",
+      "headings": [
+        {
+          "tag": "h2",
+          "text": "Cloud Crawl"
+        },
+        {
+          "tag": "h3",
+          "text": "Targets"
+        },
+        {
+          "tag": "h3",
+          "text": "Recent Downloads"
+        }
+      ],
+      "textSnippets": [
+        "🎛️",
+        "Control Center",
+        "🏠 Home",
+        "🏠",
+        "Home",
+        "☁️ Cloud Crawl",
+        "☁️",
+        "Cloud Crawl",
+        "!",
+        "⏱️ Rate Limits",
+        "⏱️",
+        "Rate Limits",
+        "!",
+        "🔭 Crawl Observer",
+        "🔭",
+        "Crawl Observer",
+        "!",
+        "🏃 Crawl Status",
+        "🏃",
+        "Crawl Status",
+        "!",
+        "🔄 Multi-Modal Crawl",
+        "🔄",
+        "Multi-Modal Crawl",
+        "!",
+        "🗓️ Scheduler",
+        "🗓️",
+        "Scheduler",
+        "!",
+        "🗃️ Crawler Profiles",
+        "🗃️",
+        "Crawler Profiles",
+        "!",
+        "🗂️ Domain Registry",
+        "🗂️",
+        "Domain Registry",
+        "!",
+        "🕷️ Crawl Strategies",
+        "🕷️",
+        "Crawl Strategies"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1100
+      },
+      "body": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1100,
+        "clientHeight": 1100
+      },
+      "main": {
+        "scrollWidth": 1180,
+        "clientWidth": 1180,
+        "scrollHeight": 1100,
+        "clientHeight": 1100,
+        "rect": {
+          "x": 260,
+          "y": 0,
+          "width": 1180,
+          "height": 1100,
+          "right": 1440,
+          "bottom": 1100
+        }
+      },
+      "documentElement": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1100,
+        "clientHeight": 1100
+      },
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": [],
+      "failedRequests": [],
+      "httpErrors": []
+    },
+    {
+      "label": "desktop",
+      "app": "downloads",
+      "url": "http://localhost:3097/?app=downloads",
+      "screenshot": "desktop-downloads.png",
+      "navigationError": "page.waitForTimeout is not a function",
+      "title": "Unified App Shell",
+      "headings": [
+        {
+          "tag": "h2",
+          "text": "📥 Download Statistics"
+        },
+        {
+          "tag": "h3",
+          "text": "📊 50-Page Crawl Progress"
+        },
+        {
+          "tag": "h3",
+          "text": "📝 Recent Downloads"
+        }
+      ],
+      "textSnippets": [
+        "🎛️",
+        "Control Center",
+        "🏠 Home",
+        "🏠",
+        "Home",
+        "☁️ Cloud Crawl",
+        "☁️",
+        "Cloud Crawl",
+        "!",
+        "⏱️ Rate Limits",
+        "⏱️",
+        "Rate Limits",
+        "!",
+        "🔭 Crawl Observer",
+        "🔭",
+        "Crawl Observer",
+        "!",
+        "🏃 Crawl Status",
+        "🏃",
+        "Crawl Status",
+        "!",
+        "🔄 Multi-Modal Crawl",
+        "🔄",
+        "Multi-Modal Crawl",
+        "!",
+        "🗓️ Scheduler",
+        "🗓️",
+        "Scheduler",
+        "!",
+        "🗃️ Crawler Profiles",
+        "🗃️",
+        "Crawler Profiles",
+        "!",
+        "🗂️ Domain Registry",
+        "🗂️",
+        "Domain Registry",
+        "!",
+        "🕷️ Crawl Strategies",
+        "🕷️",
+        "Crawl Strategies"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1100
+      },
+      "body": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1100,
+        "clientHeight": 1100
+      },
+      "main": {
+        "scrollWidth": 1180,
+        "clientWidth": 1180,
+        "scrollHeight": 1100,
+        "clientHeight": 1100,
+        "rect": {
+          "x": 260,
+          "y": 0,
+          "width": 1180,
+          "height": 1100,
+          "right": 1440,
+          "bottom": 1100
+        }
+      },
+      "documentElement": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1100,
+        "clientHeight": 1100
+      },
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": [],
+      "failedRequests": [],
+      "httpErrors": []
+    },
+    {
+      "label": "desktop",
+      "app": "screenshot-review",
+      "url": "http://localhost:3097/?app=screenshot-review",
+      "screenshot": "desktop-screenshot-review.png",
+      "navigationError": "page.waitForTimeout is not a function",
+      "title": "Unified App Shell",
+      "headings": [
+        {
+          "tag": "h2",
+          "text": "Screenshot Review"
+        },
+        {
+          "tag": "h3",
+          "text": "Runs"
+        },
+        {
+          "tag": "h3",
+          "text": "docs/sessions/2026-05-04-screenshot-tooling-control-centre/screenshots"
+        },
+        {
+          "tag": "h3",
+          "text": "Comments"
+        }
+      ],
+      "textSnippets": [
+        "🎛️",
+        "Control Center",
+        "🏠 Home",
+        "🏠",
+        "Home",
+        "☁️ Cloud Crawl",
+        "☁️",
+        "Cloud Crawl",
+        "!",
+        "⏱️ Rate Limits",
+        "⏱️",
+        "Rate Limits",
+        "!",
+        "🔭 Crawl Observer",
+        "🔭",
+        "Crawl Observer",
+        "!",
+        "🏃 Crawl Status",
+        "🏃",
+        "Crawl Status",
+        "!",
+        "🔄 Multi-Modal Crawl",
+        "🔄",
+        "Multi-Modal Crawl",
+        "!",
+        "🗓️ Scheduler",
+        "🗓️",
+        "Scheduler",
+        "!",
+        "🗃️ Crawler Profiles",
+        "🗃️",
+        "Crawler Profiles",
+        "!",
+        "🗂️ Domain Registry",
+        "🗂️",
+        "Domain Registry",
+        "!",
+        "🕷️ Crawl Strategies",
+        "🕷️",
+        "Crawl Strategies"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1100
+      },
+      "body": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1100,
+        "clientHeight": 1100
+      },
+      "main": {
+        "scrollWidth": 1180,
+        "clientWidth": 1180,
+        "scrollHeight": 1100,
+        "clientHeight": 1100,
+        "rect": {
+          "x": 260,
+          "y": 0,
+          "width": 1180,
+          "height": 1100,
+          "right": 1440,
+          "bottom": 1100
+        }
+      },
+      "documentElement": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1100,
+        "clientHeight": 1100
+      },
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": [],
+      "failedRequests": [],
+      "httpErrors": []
+    },
+    {
+      "label": "desktop",
+      "app": "search-explorer",
+      "url": "http://localhost:3097/?app=search-explorer",
+      "screenshot": "desktop-search-explorer.png",
+      "navigationError": "page.waitForTimeout is not a function",
+      "title": "Unified App Shell",
+      "headings": [
+        {
+          "tag": "h2",
+          "text": "Article Search"
+        }
+      ],
+      "textSnippets": [
+        "🎛️",
+        "Control Center",
+        "🏠 Home",
+        "🏠",
+        "Home",
+        "☁️ Cloud Crawl",
+        "☁️",
+        "Cloud Crawl",
+        "!",
+        "⏱️ Rate Limits",
+        "⏱️",
+        "Rate Limits",
+        "!",
+        "🔭 Crawl Observer",
+        "🔭",
+        "Crawl Observer",
+        "!",
+        "🏃 Crawl Status",
+        "🏃",
+        "Crawl Status",
+        "!",
+        "🔄 Multi-Modal Crawl",
+        "🔄",
+        "Multi-Modal Crawl",
+        "!",
+        "🗓️ Scheduler",
+        "🗓️",
+        "Scheduler",
+        "!",
+        "🗃️ Crawler Profiles",
+        "🗃️",
+        "Crawler Profiles",
+        "!",
+        "🗂️ Domain Registry",
+        "🗂️",
+        "Domain Registry",
+        "!",
+        "🕷️ Crawl Strategies",
+        "🕷️",
+        "Crawl Strategies"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1100
+      },
+      "body": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1100,
+        "clientHeight": 1100
+      },
+      "main": {
+        "scrollWidth": 1180,
+        "clientWidth": 1180,
+        "scrollHeight": 1100,
+        "clientHeight": 1100,
+        "rect": {
+          "x": 260,
+          "y": 0,
+          "width": 1180,
+          "height": 1100,
+          "right": 1440,
+          "bottom": 1100
+        }
+      },
+      "documentElement": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1100,
+        "clientHeight": 1100
+      },
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": [],
+      "failedRequests": [],
+      "httpErrors": []
+    },
+    {
+      "label": "mobile",
+      "app": "home",
+      "url": "http://localhost:3097/?app=home",
+      "screenshot": "mobile-home.png",
+      "navigationError": "page.waitForTimeout is not a function",
+      "title": "Unified App Shell",
+      "headings": [
+        {
+          "tag": "h2",
+          "text": "🎛️ Unified Control Center"
+        },
+        {
+          "tag": "h3",
+          "text": "RECENT CRAWL ACTIVITY"
+        }
+      ],
+      "textSnippets": [
+        "🎛️",
+        "Control Center",
+        "🏠",
+        "🏠",
+        "Home",
+        "☁️",
+        "☁️",
+        "Cloud Crawl",
+        "!",
+        "⏱️",
+        "⏱️",
+        "Rate Limits",
+        "!",
+        "🔭",
+        "🔭",
+        "Crawl Observer",
+        "!",
+        "🏃",
+        "🏃",
+        "Crawl Status",
+        "!",
+        "🔄",
+        "🔄",
+        "Multi-Modal Crawl",
+        "!",
+        "🗓️",
+        "🗓️",
+        "Scheduler",
+        "!",
+        "🗃️",
+        "🗃️",
+        "Crawler Profiles",
+        "!",
+        "🗂️",
+        "🗂️",
+        "Domain Registry",
+        "!",
+        "🕷️",
+        "🕷️",
+        "Crawl Strategies"
+      ],
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "body": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844,
+        "clientHeight": 844
+      },
+      "main": {
+        "scrollWidth": 318,
+        "clientWidth": 318,
+        "scrollHeight": 844,
+        "clientHeight": 844,
+        "rect": {
+          "x": 72,
+          "y": 0,
+          "width": 318,
+          "height": 844,
+          "right": 390,
+          "bottom": 844
+        }
+      },
+      "documentElement": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844,
+        "clientHeight": 844
+      },
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": [],
+      "failedRequests": [],
+      "httpErrors": []
+    },
+    {
+      "label": "mobile",
+      "app": "cloud-crawl",
+      "url": "http://localhost:3097/?app=cloud-crawl",
+      "screenshot": "mobile-cloud-crawl.png",
+      "navigationError": "page.waitForTimeout is not a function",
+      "title": "Unified App Shell",
+      "headings": [
+        {
+          "tag": "h2",
+          "text": "Cloud Crawl"
+        },
+        {
+          "tag": "h3",
+          "text": "Targets"
+        },
+        {
+          "tag": "h3",
+          "text": "Recent Downloads"
+        }
+      ],
+      "textSnippets": [
+        "🎛️",
+        "Control Center",
+        "🏠",
+        "🏠",
+        "Home",
+        "☁️",
+        "☁️",
+        "Cloud Crawl",
+        "!",
+        "⏱️",
+        "⏱️",
+        "Rate Limits",
+        "!",
+        "🔭",
+        "🔭",
+        "Crawl Observer",
+        "!",
+        "🏃",
+        "🏃",
+        "Crawl Status",
+        "!",
+        "🔄",
+        "🔄",
+        "Multi-Modal Crawl",
+        "!",
+        "🗓️",
+        "🗓️",
+        "Scheduler",
+        "!",
+        "🗃️",
+        "🗃️",
+        "Crawler Profiles",
+        "!",
+        "🗂️",
+        "🗂️",
+        "Domain Registry",
+        "!",
+        "🕷️",
+        "🕷️",
+        "Crawl Strategies"
+      ],
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "body": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844,
+        "clientHeight": 844
+      },
+      "main": {
+        "scrollWidth": 318,
+        "clientWidth": 318,
+        "scrollHeight": 844,
+        "clientHeight": 844,
+        "rect": {
+          "x": 72,
+          "y": 0,
+          "width": 318,
+          "height": 844,
+          "right": 390,
+          "bottom": 844
+        }
+      },
+      "documentElement": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844,
+        "clientHeight": 844
+      },
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": [],
+      "failedRequests": [],
+      "httpErrors": []
+    },
+    {
+      "label": "mobile",
+      "app": "downloads",
+      "url": "http://localhost:3097/?app=downloads",
+      "screenshot": "mobile-downloads.png",
+      "navigationError": "page.waitForTimeout is not a function",
+      "title": "Unified App Shell",
+      "headings": [
+        {
+          "tag": "h2",
+          "text": "📥 Download Statistics"
+        },
+        {
+          "tag": "h3",
+          "text": "📊 50-Page Crawl Progress"
+        },
+        {
+          "tag": "h3",
+          "text": "📝 Recent Downloads"
+        }
+      ],
+      "textSnippets": [
+        "🎛️",
+        "Control Center",
+        "🏠",
+        "🏠",
+        "Home",
+        "☁️",
+        "☁️",
+        "Cloud Crawl",
+        "!",
+        "⏱️",
+        "⏱️",
+        "Rate Limits",
+        "!",
+        "🔭",
+        "🔭",
+        "Crawl Observer",
+        "!",
+        "🏃",
+        "🏃",
+        "Crawl Status",
+        "!",
+        "🔄",
+        "🔄",
+        "Multi-Modal Crawl",
+        "!",
+        "🗓️",
+        "🗓️",
+        "Scheduler",
+        "!",
+        "🗃️",
+        "🗃️",
+        "Crawler Profiles",
+        "!",
+        "🗂️",
+        "🗂️",
+        "Domain Registry",
+        "!",
+        "🕷️",
+        "🕷️",
+        "Crawl Strategies"
+      ],
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "body": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844,
+        "clientHeight": 844
+      },
+      "main": {
+        "scrollWidth": 318,
+        "clientWidth": 318,
+        "scrollHeight": 844,
+        "clientHeight": 844,
+        "rect": {
+          "x": 72,
+          "y": 0,
+          "width": 318,
+          "height": 844,
+          "right": 390,
+          "bottom": 844
+        }
+      },
+      "documentElement": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844,
+        "clientHeight": 844
+      },
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": [],
+      "failedRequests": [],
+      "httpErrors": []
+    },
+    {
+      "label": "mobile",
+      "app": "screenshot-review",
+      "url": "http://localhost:3097/?app=screenshot-review",
+      "screenshot": "mobile-screenshot-review.png",
+      "navigationError": "page.waitForTimeout is not a function",
+      "title": "Unified App Shell",
+      "headings": [
+        {
+          "tag": "h2",
+          "text": "Screenshot Review"
+        },
+        {
+          "tag": "h3",
+          "text": "Runs"
+        },
+        {
+          "tag": "h3",
+          "text": "docs/sessions/2026-05-04-screenshot-tooling-control-centre/screenshots"
+        },
+        {
+          "tag": "h3",
+          "text": "Comments"
+        }
+      ],
+      "textSnippets": [
+        "🎛️",
+        "Control Center",
+        "🏠",
+        "🏠",
+        "Home",
+        "☁️",
+        "☁️",
+        "Cloud Crawl",
+        "!",
+        "⏱️",
+        "⏱️",
+        "Rate Limits",
+        "!",
+        "🔭",
+        "🔭",
+        "Crawl Observer",
+        "!",
+        "🏃",
+        "🏃",
+        "Crawl Status",
+        "!",
+        "🔄",
+        "🔄",
+        "Multi-Modal Crawl",
+        "!",
+        "🗓️",
+        "🗓️",
+        "Scheduler",
+        "!",
+        "🗃️",
+        "🗃️",
+        "Crawler Profiles",
+        "!",
+        "🗂️",
+        "🗂️",
+        "Domain Registry",
+        "!",
+        "🕷️",
+        "🕷️",
+        "Crawl Strategies"
+      ],
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "body": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844,
+        "clientHeight": 844
+      },
+      "main": {
+        "scrollWidth": 318,
+        "clientWidth": 318,
+        "scrollHeight": 844,
+        "clientHeight": 844,
+        "rect": {
+          "x": 72,
+          "y": 0,
+          "width": 318,
+          "height": 844,
+          "right": 390,
+          "bottom": 844
+        }
+      },
+      "documentElement": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844,
+        "clientHeight": 844
+      },
+      "horizontalOverflow": true,
+      "overflowAmount": 299,
+      "consoleErrors": [],
+      "failedRequests": [],
+      "httpErrors": []
+    }
+  ],
+  "summary": [
+    {
+      "label": "desktop",
+      "app": "home",
+      "screenshot": "desktop-home.png",
+      "title": "Unified App Shell",
+      "heading": "🎛️ Unified Control Center",
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": 0,
+      "failedRequests": 0,
+      "httpErrors": 0,
+      "navigationError": "page.waitForTimeout is not a function"
+    },
+    {
+      "label": "desktop",
+      "app": "cloud-crawl",
+      "screenshot": "desktop-cloud-crawl.png",
+      "title": "Unified App Shell",
+      "heading": "Cloud Crawl",
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": 0,
+      "failedRequests": 0,
+      "httpErrors": 0,
+      "navigationError": "page.waitForTimeout is not a function"
+    },
+    {
+      "label": "desktop",
+      "app": "downloads",
+      "screenshot": "desktop-downloads.png",
+      "title": "Unified App Shell",
+      "heading": "📥 Download Statistics",
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": 0,
+      "failedRequests": 0,
+      "httpErrors": 0,
+      "navigationError": "page.waitForTimeout is not a function"
+    },
+    {
+      "label": "desktop",
+      "app": "screenshot-review",
+      "screenshot": "desktop-screenshot-review.png",
+      "title": "Unified App Shell",
+      "heading": "Screenshot Review",
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": 0,
+      "failedRequests": 0,
+      "httpErrors": 0,
+      "navigationError": "page.waitForTimeout is not a function"
+    },
+    {
+      "label": "desktop",
+      "app": "search-explorer",
+      "screenshot": "desktop-search-explorer.png",
+      "title": "Unified App Shell",
+      "heading": "Article Search",
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": 0,
+      "failedRequests": 0,
+      "httpErrors": 0,
+      "navigationError": "page.waitForTimeout is not a function"
+    },
+    {
+      "label": "mobile",
+      "app": "home",
+      "screenshot": "mobile-home.png",
+      "title": "Unified App Shell",
+      "heading": "🎛️ Unified Control Center",
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": 0,
+      "failedRequests": 0,
+      "httpErrors": 0,
+      "navigationError": "page.waitForTimeout is not a function"
+    },
+    {
+      "label": "mobile",
+      "app": "cloud-crawl",
+      "screenshot": "mobile-cloud-crawl.png",
+      "title": "Unified App Shell",
+      "heading": "Cloud Crawl",
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": 0,
+      "failedRequests": 0,
+      "httpErrors": 0,
+      "navigationError": "page.waitForTimeout is not a function"
+    },
+    {
+      "label": "mobile",
+      "app": "downloads",
+      "screenshot": "mobile-downloads.png",
+      "title": "Unified App Shell",
+      "heading": "📥 Download Statistics",
+      "horizontalOverflow": false,
+      "overflowAmount": 0,
+      "consoleErrors": 0,
+      "failedRequests": 0,
+      "httpErrors": 0,
+      "navigationError": "page.waitForTimeout is not a function"
+    },
+    {
+      "label": "mobile",
+      "app": "screenshot-review",
+      "screenshot": "mobile-screenshot-review.png",
+      "title": "Unified App Shell",
+      "heading": "Screenshot Review",
+      "horizontalOverflow": true,
+      "overflowAmount": 299,
+      "consoleErrors": 0,
+      "failedRequests": 0,
+      "httpErrors": 0,
+      "navigationError": "page.waitForTimeout is not a function"
+    }
+  ]
+}

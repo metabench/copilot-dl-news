@@ -1,14 +1,29 @@
 # Crawl CLI quick reference
 
-**Scope**: Local config-driven crawling via `node src/crawl.js` / `npm start`. For remote/fleet crawling, see [tools/crawl/AGENT.md](../../tools/crawl/AGENT.md).
+**Scope**: Crawl commands for operators and agents. Start here for command choice, then use [tools/crawl/AGENT.md](../../tools/crawl/AGENT.md) for full remote/fleet details.
 
 Terminology: **simple crawl** means low-scope/easy-to-run, not local-only. The preferred simple crawl is the distributed smoke profile in `tools/crawl`: `npm run crawl -- simple-distributed-smoke`.
+
+## Harnessed vs Non-Harnessed Crawls
+
+| Mode | Command | Use for | Output / validation |
+|------|---------|---------|---------------------|
+| Harnessed 15-minute e2e | `npm run crawl -- news-10x1000-15m-e2e` | Proving cloud crawl readiness under a strict time limit. | JSON/log artifact, pass/fail checks, DB growth, host spread, failure ratio, ledger state, benchmark stats. |
+| Harnessed dry-run | `npm run crawl -- news-10x1000-15m-e2e --dry-run` | Inspecting the exact budget/arguments without network or DB work. | Plan artifact only. |
+| Harnessed preflight | `npm run crawl -- news-10x1000-15m-e2e --preflight-only` | Verifying remote health/throttle/content/status before a live validation. | Preflight artifact; no long crawl. |
+| Non-harnessed operator crawl | `npm run crawl -- news-10x1000` | Normal useful 10-domain crawling. | Remote-first orchestration with sync/prune, but no e2e pass/fail artifact or hard 15-minute harness. |
+| Non-harnessed remote direct | `node tools/crawl/crawl-remote.js <command>` | Manual status, start/stop, bounded, run, sync, pull, or recovery work. | Direct control; operator must verify stop/sync/ledger/DB state. |
+| Non-harnessed local/batch | `npm run crawl -- local-news-10x1000` or `npm run crawl -- batch ...` | Explicit local fallback or API-launched in-process jobs. | Requires local services as documented by the selected tool. |
+
+Harnessed crawls are for validation and diagnostics. Non-harnessed crawls are for ordinary data collection or manual operations. After non-harnessed remote work, check `npm run crawl -- remote-status`, `npm run db:downloads:recent`, `npm run db:downloads:stats`, and ledger state before calling the crawl complete.
 
 ## Quick Entry Points
 
 | Task | Command |
 |------|---------|
 | **Unified launcher** (preferred) | `npm run crawl -- <tool> [args]` |
+| **Strict e2e harness** | `npm run crawl -- news-10x1000-15m-e2e` |
+| **Default operator crawl** | `npm run crawl -- news-10x1000` |
 | **Simple distributed crawl** | `npm run crawl -- simple-distributed-smoke` |
 | **Remote crawl ops** | `node tools/crawl/crawl-remote.js <command>` |
 | **Local intelligent crawl** | `npm run crawl -- intelligent [args]` |
@@ -17,9 +32,13 @@ Terminology: **simple crawl** means low-scope/easy-to-run, not local-only. The p
 
 ## See also
 
-- [tools/crawl/AGENT.md](../../tools/crawl/AGENT.md) — primary crawl tool reference
+- [tools/crawl/AGENT.md](../../tools/crawl/AGENT.md) - primary crawl tool reference
+- [Session: Cloud Crawl 15m Validation](../sessions/2026-05-09-cloud-crawl-15m-validation/SESSION_SUMMARY.md) - latest live harness evidence and edge-case notes
 
 ## Commands
+
+The commands below are for the legacy config-driven `crawl.js` path. Prefer `npm run crawl -- ...` for current remote/operator workflows unless the user explicitly asks for this older interface.
+
 - Default run (no command): uses config defaults (crawlDefaults) or runner config if provided.
 - availability: show operations and sequences; flags: --all, --operations, --sequences.
 - run-operation <operationName> <startUrl>: execute one operation; flags: --overrides JSON.

@@ -274,3 +274,18 @@ AGI-accumulated knowledge catalog.
 
 
 ---
+
+## Watermark-Only Remote Prune After Limited Export
+
+**Added**: 2026-05-08
+**Context**: tools/crawl/crawl-remote.js; deploy/remote-crawler-v2/lib/export-retention.js
+
+**When to use**: Symptoms: A sync client exports a limited timestamp batch, confirms only that batch locally, then calls a remote prune endpoint with only a watermark/before timestamp.
+
+**Steps/Details**:
+1. Why it's bad: Rows that share the watermark range but were not exported or locally confirmed can be deleted from the crawler node. For crawler storage drains this can silently remove unsaved response/content/link payloads.
+1. Better approach: For automated crawler sync cleanup, send exact exported URL IDs after full-payload local verification. Keep watermark-only pruning as manual maintenance only, and retain URL state rows while crawls are active unless deletion is explicit.
+
+**Example**: docs/sessions/2026-05-08-electron-crawl-10x1000/DECISIONS.md
+
+---

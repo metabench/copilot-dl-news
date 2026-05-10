@@ -27,6 +27,11 @@ function run() {
   assert(html.includes('crawl-start-url'), 'expected quick start URL input to be present');
   assert(html.includes('crawl-start-operation-label'), 'expected operation label marker to be present');
   assert(html.includes('crawl-start-advanced'), 'expected advanced expander marker to be present');
+  assert(html.includes('data-crawl-throughput-strip'), 'expected compact throughput strip marker to be present');
+  assert(html.includes('data-crawl-throughput-stat'), 'expected throughput stat selectors to be present');
+  assert(html.includes('renderThroughput'), 'expected throughput client renderer to be present');
+  assert(html.includes('@media (max-width: 720px)'), 'expected crawl status mobile CSS to be present');
+  assert(html.includes('overflow-x: auto'), 'expected crawl status table overflow guard to be present');
 
   console.log('✅ crawl status page includes remote observable client wiring');
 }

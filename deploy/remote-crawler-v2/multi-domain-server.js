@@ -116,6 +116,23 @@ const db = new Database(DB_FILE);
 initSchema(db);
 db.pragma('journal_mode = WAL');
 db.pragma('busy_timeout = 5000');
+ensureExportIndexes(db);
+
+function ensureExportIndexes(database) {
+  const indexes = [
+    'CREATE INDEX IF NOT EXISTS idx_urls_updated_at_id ON urls(updated_at, id)',
+    'CREATE INDEX IF NOT EXISTS idx_http_responses_url_id_fetched_at ON http_responses(url_id, fetched_at)',
+    'CREATE INDEX IF NOT EXISTS idx_content_storage_http_response_id ON content_storage(http_response_id)',
+    'CREATE INDEX IF NOT EXISTS idx_discovered_links_source_url_id_created_at ON discovered_links(source_url_id, created_at)'
+  ];
+  for (const sql of indexes) {
+    try {
+      database.prepare(sql).run();
+    } catch (error) {
+      console.warn(`[Export Index] ${error.message}`);
+    }
+  }
+}
 
 console.log('═══════════════════════════════════════════════════════════');
 console.log('  Multi-Domain Crawl Server v4 — On-Demand');
@@ -428,13 +445,18 @@ async function getDomainStatus(domain) {
 
   if (normalizedDiskStatus) {
     entry.lastStatus = normalizedDiskStatus;
-    if (entry.state === 'running' && normalizedDiskStatus.state !== 'running') {
+    if (normalizedDiskStatus.state && entry.state !== normalizedDiskStatus.state) {
       entry.state = normalizedDiskStatus.state;
-      entry.stoppedAt = normalizedDiskStatus.stoppedAt || new Date().toISOString();
-      entry.lastStatus = {
-        ...normalizedDiskStatus,
-        stoppedAt: entry.stoppedAt,
-      };
+      if (normalizedDiskStatus.state !== 'running') {
+        entry.stoppedAt = normalizedDiskStatus.stoppedAt || entry.stoppedAt || new Date().toISOString();
+        entry.lastStatus = {
+          ...normalizedDiskStatus,
+          stoppedAt: entry.stoppedAt,
+        };
+      } else {
+        entry.startedAt = normalizedDiskStatus.startedAt || entry.startedAt || new Date().toISOString();
+        entry.stoppedAt = null;
+      }
     }
   }
 
@@ -678,6 +700,34 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// ── Throttle Stub ─────────────────────────────────────────
+
+let throttleState = { maxConcurrent: null, pause: false, reason: null, updatedAt: null };
+
+app.post('/api/throttle', (req, res) => {
+  const { maxConcurrent: mc, pause, reason } = req.body || {};
+  if (mc !== undefined && Number.isFinite(parseInt(mc, 10))) {
+    const newMax = Math.max(0, parseInt(mc, 10));
+    console.log(`  [throttle] maxConcurrent: ${MAX_CONCURRENT} → ${newMax} (reason: ${reason || 'none'})`);
+    MAX_CONCURRENT = newMax;
+  }
+  throttleState = {
+    maxConcurrent: MAX_CONCURRENT,
+    pause: !!pause,
+    reason: reason || null,
+    updatedAt: new Date().toISOString(),
+  };
+  res.json({ ok: true, throttle: throttleState });
+});
+
+app.get('/api/throttle', (req, res) => {
+  res.json({
+    ok: true,
+    throttle: throttleState,
+    currentMaxConcurrent: MAX_CONCURRENT,
+  });
+});
+
 app.post('/api/tools/fetch', async (req, res) => {
   const { url, domain } = req.body;
   if (!url) return res.status(400).json({ error: 'Missing url' });
@@ -889,6 +939,7 @@ app.get('/api/export/batch', async (req, res) => {
   const windowSec = parseInt(req.query.window, 10) || 10;
   const limit = Math.min(parseInt(req.query.limit, 10) || 500, 10000);
   const includeContent = req.query.includeContent !== 'false';
+  const includeLinks = req.query.includeLinks !== 'false';
 
   const now = new Date();
   const toSqlite = (d) => d.toISOString().replace('T', ' ').replace('Z', '').replace(/\.\d{3}$/, '');
@@ -934,7 +985,12 @@ app.get('/api/export/batch', async (req, res) => {
       out.write(',"content":[]');
     }
 
-    const linksCount = await streamArray(out, 'links', db.prepare(`SELECT dl.*, u.url as source_url FROM discovered_links dl JOIN urls u ON dl.source_url_id = u.id WHERE dl.source_url_id IN (${uIds})`));
+    let linksCount = 0;
+    if (includeLinks) {
+      linksCount = await streamArray(out, 'links', db.prepare(`SELECT dl.*, u.url as source_url FROM discovered_links dl JOIN urls u ON dl.source_url_id = u.id WHERE dl.source_url_id IN (${uIds})`));
+    } else {
+      out.write(',"links":[]');
+    }
 
     out.write(',"counts":' + JSON.stringify({
       urls: urls.length,
@@ -953,13 +1009,16 @@ app.get('/api/export/batch', async (req, res) => {
 app.post('/api/export/prune', (req, res) => {
   const body = req.body || {};
   const before = body.before || body.watermark || null;
-  if (!before) {
-    return res.status(400).json({ ok: false, error: 'before watermark is required' });
+  if (!before && !Array.isArray(body.urlIds)) {
+    return res.status(400).json({ ok: false, error: 'before watermark or urlIds are required' });
   }
 
   try {
     const result = pruneExportedPayload(db, {
       before,
+      urlIds: Array.isArray(body.urlIds) ? body.urlIds : undefined,
+      deleteUrls: body.deleteUrls === true,
+      deleteLinks: body.deleteLinks !== false,
       vacuum: body.vacuum === true,
       vacuumThresholdBytes: Number.isFinite(Number(body.vacuumThresholdMb))
         ? Number(body.vacuumThresholdMb) * 1024 * 1024
@@ -971,7 +1030,25 @@ app.post('/api/export/prune', (req, res) => {
   }
 });
 
-// Row-ID replay export — syncs ALL historical data via generic streams
+// /api/throttle — backpressure stub: records the most recent request and
+// returns 200 so the local sync loop's best-effort POST does not error.
+// Real concurrency adjustment is wired through the orchestrator's worker
+// pool; the local sync loop only needs an acknowledgement.
+let lastThrottleRequest = null;
+app.post('/api/throttle', (req, res) => {
+  const body = req.body || {};
+  lastThrottleRequest = {
+    at: new Date().toISOString(),
+    maxConcurrent: Number.isFinite(Number(body.maxConcurrent)) ? Number(body.maxConcurrent) : null,
+    pause: body.pause === true,
+    reason: typeof body.reason === 'string' ? body.reason : null,
+  };
+  res.json({ ok: true, accepted: lastThrottleRequest });
+});
+app.get('/api/throttle', (req, res) => {
+  res.json({ ok: true, last: lastThrottleRequest });
+});
+
 app.get('/api/export/replay', async (req, res) => {
   const afterRowId = parseInt(req.query.afterRowId, 10) || 0;
   let limit = parseInt(req.query.limit, 10) || 500;

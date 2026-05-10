@@ -1,0 +1,19 @@
+{
+  "healthy": true,
+  "version": "4.0.0",
+  "mode": "multi-domain",
+  "domains": 10,
+  "running": 3,
+  "stored": 5250,
+  "memory": {
+    "rss": 74,
+    "heapUsed": 12,
+    "heapTotal": 15
+  },
+  "idle": {
+    "minutes": 3,
+    "timeoutMin": 10,
+    "autoShutdown": true
+  },
+  "uptime": 744
+}

@@ -7,6 +7,7 @@ const Server_Page_Context = jsgui.Server_Page_Context || jsgui.Page_Context;
 
 // Extracted from this file's monolith — see companion modules
 const { buildCrawlStatusClientScript } = require('./crawl-status-client');
+const { CrawlBatchLauncherControl } = require('./controls/CrawlBatchLauncherControl');
 const CRAWL_STATUS_CSS = require('./crawl-status-styles');
 
 // ─────────────────────────────────────────────────────────────────
@@ -19,7 +20,8 @@ class CrawlStatusPage extends Standard_Web_Page {
     this.__type_name = 'crawl_status_page';
     this.title = 'Crawl Status';
 
-    this.jobsApiPath = spec.jobsApiPath || '/api/crawls';
+    this.jobsApiPath = spec.jobsApiPath || '/api/v1/crawl/jobs';
+    this.apiBasePath = spec.apiBasePath || '/api/v1/crawl';
     this.extraJobsApiPath = spec.extraJobsApiPath || null;
     this.eventsPath = spec.eventsPath || '/api/crawl-telemetry/events';
     this.telemetryHistoryPath = spec.telemetryHistoryPath || '/api/crawl-telemetry/history';
@@ -55,6 +57,8 @@ class CrawlStatusPage extends Standard_Web_Page {
     this.head.add(style);
 
     const body = this.body || this;
+    body.dom.attributes['data-screenshot-subject'] = 'crawl-status';
+    body.dom.attributes['data-screenshot-route'] = '/crawl-status';
 
     const header = new Control({ context: ctx, tagName: 'header' });
     body.add(header);
@@ -236,11 +240,42 @@ class CrawlStatusPage extends Standard_Web_Page {
     startStatus.add('Loading operations…');
     startPanel.add(startStatus);
 
+    const batchLauncher = new CrawlBatchLauncherControl({ context: ctx });
+    batchLauncher.compose();
+    body.add(batchLauncher);
+
     const status = new Control({ context: ctx, tagName: 'div' });
     status.dom.attributes.id = 'status';
     status.dom.attributes.class = 'footer';
     status.add('Loading…');
     body.add(status);
+
+    const throughputStrip = new Control({ context: ctx, tagName: 'section' });
+    throughputStrip.dom.attributes.id = 'throughput-strip';
+    throughputStrip.dom.attributes.class = 'throughput-strip';
+    throughputStrip.dom.attributes['data-screenshot-subject'] = 'crawl-status-throughput-strip';
+    throughputStrip.dom.attributes['data-crawl-throughput-strip'] = 'true';
+    body.add(throughputStrip);
+
+    const throughputItems = [
+      ['network', 'Network MB/s'],
+      ['downloaded', 'Downloaded docs/s'],
+      ['saved', 'Saved docs/s'],
+      ['stored', 'Saved MB/s'],
+      ['queue', 'Queue']
+    ];
+    for (const [key, label] of throughputItems) {
+      const item = new Control({ context: ctx, tagName: 'div' });
+      item.dom.attributes.class = 'throughput-item';
+      throughputStrip.add(item);
+      const value = new Control({ context: ctx, tagName: 'span' });
+      value.dom.attributes['data-crawl-throughput-stat'] = key;
+      value.add(key === 'queue' ? '0' : '0.00');
+      item.add(value);
+      const small = new Control({ context: ctx, tagName: 'small' });
+      small.add(label);
+      item.add(small);
+    }
 
     const table = new Control({ context: ctx, tagName: 'table' });
     body.add(table);
@@ -262,11 +297,18 @@ class CrawlStatusPage extends Standard_Web_Page {
     tbody.dom.attributes.id = 'rows';
     table.add(tbody);
 
+    const readyMarker = new Control({ context: ctx, tagName: 'div' });
+    readyMarker.dom.attributes.class = 'screenshot-ready-marker';
+    readyMarker.dom.attributes['data-crawl-status-ready'] = 'false';
+    readyMarker.dom.attributes['data-screenshot-ready'] = 'crawl-status';
+    body.add(readyMarker);
+
     const script = new Control({ context: ctx, tagName: 'script' });
     script.add(new String_Control({
       context: ctx,
       text: buildCrawlStatusClientScript({
         jobsApiPath: this.jobsApiPath,
+        apiBasePath: this.apiBasePath,
         extraJobsApiPath: this.extraJobsApiPath,
         eventsPath: this.eventsPath,
         telemetryHistoryPath: this.telemetryHistoryPath
@@ -277,7 +319,8 @@ class CrawlStatusPage extends Standard_Web_Page {
 }
 
 function renderCrawlStatusPageHtml({
-  jobsApiPath = '/api/crawls',
+  jobsApiPath = '/api/v1/crawl/jobs',
+  apiBasePath = '/api/v1/crawl',
   extraJobsApiPath = null,
   eventsPath = '/api/crawl-telemetry/events',
   telemetryHistoryPath = '/api/crawl-telemetry/history',
@@ -293,6 +336,7 @@ function renderCrawlStatusPageHtml({
   const page = new CrawlStatusPage({
     context,
     jobsApiPath,
+    apiBasePath,
     extraJobsApiPath,
     eventsPath,
     telemetryHistoryPath

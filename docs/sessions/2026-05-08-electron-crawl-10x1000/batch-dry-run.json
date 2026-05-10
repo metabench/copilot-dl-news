@@ -1,0 +1,28 @@
+{
+  "status": "dry-run",
+  "plan": {
+    "uiHost": "127.0.0.1",
+    "uiPort": 3170,
+    "uiBase": "/api/v1/crawl",
+    "operation": "basicArticleCrawl",
+    "concurrency": 5,
+    "retries": 2,
+    "overrides": {
+      "maxPages": 1000,
+      "maxDownloads": 1000,
+      "maxDepth": 6
+    },
+    "urls": [
+      "https://www.bbc.com/news",
+      "https://www.reuters.com/",
+      "https://www.theguardian.com/uk",
+      "https://www.nytimes.com/",
+      "https://www.washingtonpost.com/",
+      "https://edition.cnn.com/",
+      "https://apnews.com/",
+      "https://www.bloomberg.com/",
+      "https://www.ft.com/",
+      "https://www.npr.org/"
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "description": "Default 10x1000 news crawl. Smart orchestrator: probes remote crawler, uses cloud if healthy, falls back to local profile if not. Reports the Cloud Crawl URL.",
+  "tool": "orchestrate",
+  "options": {
+    "domains": "bbc.com,theguardian.com,reuters.com,nytimes.com,washingtonpost.com,cnn.com,apnews.com,bloomberg.com,ft.com,npr.org",
+    "max-pages": 1000,
+    "max-concurrent": 10,
+    "interval": 5,
+    "window": 5,
+    "limit": 5,
+    "adaptive-limit": true,
+    "target-sync-ms": 5000,
+    "min-limit": 1,
+    "max-limit": 25,
+    "prune-after-ingest": true,
+    "no-backoff": true,
+    "local-profile": "local-news-10x1000",
+    "ui-url": "http://localhost:3170/?app=cloud-crawl"
+  }
+}
+

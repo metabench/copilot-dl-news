@@ -1,3 +1,8 @@
+## 2026-05-08 — Electron 10x1000 crawl operator run
+
+- Tactical session `docs/sessions/2026-05-08-electron-crawl-10x1000/` opened to run 10 major news sites at 1000 pages each through the Electron-hosted unified app.
+- Scope includes a jsgui3 Crawl Status batch launcher, Electron `--app crawl-status --allow-multi-jobs` startup ergonomics, a real batch start against the Electron server, and screenshot evidence under the session folder.
+
 ## 2026-04-29 — Eight-site 250-download crawl with UI evidence
 
 - Completed a distributed crawl producing at least 250 new local 200-status downloads for eight major news sites: `bbc.com`, `aljazeera.com`, `theguardian.com`, `cbsnews.com`, `nbcnews.com`, `france24.com`, `euronews.com`, and `independent.co.uk`.
@@ -11,6 +16,10 @@
 - Verified final local counts ranged from 572 to 595 OK downloads per site from baseline `2026-04-29T21:02:54.481Z`.
 - Used the Electron unified app in long-lived mode at `http://127.0.0.1:51014/?app=downloads`; Electron PID 22172 remained loaded after crawl completion and after screenshot capture.
 - Captured Electron-backed UI evidence under `screenshots/electron-500-download-crawl/` with screenshot analysis `ok: true`.
+
+## 2026-05-10 - Local crawl throughput slice
+
+- Tactical session `docs/sessions/2026-05-10-local-crawl-throughput/` opened to make local crawl throughput visible again after improved internet connectivity: explicit docs/sec and MB/sec metrics, replayable metrics artifacts, and a compact `/crawl-status` strip before any larger UI redesign.
 
 ## 2026-04-29 — Download verification UI
 
@@ -35,3 +44,4 @@
 - 2026-04-29 — Electron+jsgui3 crawl-display validation completed: the simple distributed smoke crawl produced fresh BBC evidence, Downloads and Crawl Status routes render cleanly in the unified shell, Electron route smokes pass, and `npm run ui:crawl-display-screenshots` now captures repeatable visual artifacts plus quality metrics.
 - 2026-04-29 — Churn control salvage completed: disposable widget/app/lab shells stayed removed, while reusable jsgui3 patterns were promoted into shared controls (`ActionButtonGroupControl`, `OptionPickerControl`, `ActivityLogControl`, `CrawlProgressPanelControl`) with focused render checks and catalog documentation.
 - 2026-05-04 — Tactical session `docs/sessions/2026-05-04-five-site-cloud-crawl-ui/` completed a five-site cloud crawl UI slice: added compact `CloudCrawlPanelControl`, mounted `/?app=cloud-crawl`, forwarded `--max-concurrent` through the remote CLI, ran five parallel cloud target crawls to 25/25 pages, synced 25 responses into local `data/news.db`, and captured screenshot evidence with final `analysis.json ok=true`.
+- 2026-05-08 — Tactical session `docs/sessions/2026-05-08-electron-crawl-10x1000/` promoted Cloud Crawl to the 10-site x 1000-page operator path: in-process Electron crawling was rejected after UI starvation, remote 10x1000 was relaunched, Electron displayed live progress, and a 5-second metadata sync path was validated with sub-second remote export/ingest rounds.

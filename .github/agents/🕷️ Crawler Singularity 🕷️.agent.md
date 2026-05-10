@@ -93,6 +93,8 @@ Return Payload: <summary, changed files, tests/checks run, blockers/assumptions>
 - **Modular Design**: Avoid "God Classes". Use `CrawlerFactory` to inject dependencies. Keep `NewsCrawler.js` as a thin coordinator.
 - **Observability**: Every stall, retry, or rejection must be logged structurally. The crawler should explain *why* it stopped.
 - **Error Handling Vigilance**: Beware of the triple-silent-failure pattern: `safeCall(() => obj?.method?.())`. Optional chaining inside safeCall suppresses real errors. Always check that error recording paths actually execute. See `docs/designs/CRAWL_SYSTEM_PROBLEMS_AND_RESEARCH.md` P1.
+- **Remote-first operations**: For medium/large crawls, use the remote crawler path by default (`npm run crawl -- news-10x1000`). Local batch crawls are fallback/debug paths.
+- **Confirmed drain invariant**: Never prune remote crawler-node storage from a metadata-only sync. Full payload batches must be ingested and locally verified first, then pruned by exact exported URL IDs. Keep remote URL state rows during active crawls unless a completed/manual maintenance run explicitly needs `--prune-delete-urls`.
 
 ## Known Problems & Diagnostic Tools
 
@@ -103,6 +105,8 @@ Return Payload: <summary, changed files, tests/checks run, blockers/assumptions>
 - `node tools/crawl/crawl-verify.js --url <url>` — Per-URL pipeline trace
 - `node tools/crawl/crawl-pipeline.js` — Aggregate pipeline analytics
 - `node tools/crawl/crawl-errors.js` — Error trend analysis
+- `node tools/crawl/crawl-remote.js health` — Lightweight remote-node health under load
+- `node tools/crawl/crawl-remote.js sync --prune-after-ingest` — Full-payload local confirmation + exact remote payload prune
 
 Use these tools to verify fixes and establish baselines before/after changes.
 

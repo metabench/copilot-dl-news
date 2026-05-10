@@ -1,0 +1,2615 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unified App Shell</title>
+  <style>
+    
+/* ════════════════════════════════════════════════════════════════════════════
+   Two Column Layout - Shared Styles
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.two-column-layout {
+  display: flex;
+  min-height: 100vh;
+  background: rgba(10, 13, 20, 0.99);
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Sidebar
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.layout-sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: rgba(15, 18, 25, 0.98);
+  border-right: 1px solid rgba(201, 162, 39, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.15);
+  background: linear-gradient(135deg, rgba(201, 162, 39, 0.25) 0%, transparent 100%);
+}
+
+.sidebar-header__icon {
+  font-size: 20px;
+  opacity: 0.8;
+}
+
+.sidebar-header__title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #c9a227;
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Nav Item
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  border-left: 3px solid transparent;
+  user-select: none;
+}
+
+.nav-item:hover {
+  background: rgba(201, 162, 39, 0.1);
+  border-left-color: rgba(201, 162, 39, 0.35);
+}
+
+.nav-item--selected {
+  background: rgba(201, 162, 39, 0.2);
+  border-left-color: #c9a227;
+}
+
+.nav-item--selected .nav-item__label {
+  color: #c9a227;
+  font-weight: 600;
+}
+
+.nav-item__icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+  opacity: 0.85;
+}
+
+.nav-item__label {
+  flex: 1;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.nav-item__badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(201, 162, 39, 0.25);
+  color: #c9a227;
+  font-weight: 600;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Content Area
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.layout-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(20, 24, 32, 0.95);
+  overflow: hidden;
+}
+
+.detail-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.15);
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.25) 0%, transparent 100%);
+}
+
+.detail-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.detail-header__icon {
+  font-size: 24px;
+  opacity: 0.9;
+}
+
+.detail-header__title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.detail-header__subtitle {
+  margin: 6px 0 0 36px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.content-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Responsive
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .two-column-layout {
+    flex-direction: column;
+  }
+  
+  .layout-sidebar {
+    width: 100%;
+    min-width: 100%;
+    max-height: 200px;
+    border-right: none;
+    border-bottom: 1px solid rgba(201, 162, 39, 0.15);
+  }
+  
+  .sidebar-nav {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 8px;
+  }
+  
+  .nav-item {
+    padding: 8px 12px;
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    flex: 0 0 auto;
+  }
+  
+  .nav-item--selected {
+    border-bottom-color: #c9a227;
+  }
+}
+
+    
+      /* ═══════════════════════════════════════════════════════════════════════
+         WLILO Theme - Unified Shell
+         ═══════════════════════════════════════════════════════════════════════ */
+      
+      :root {
+        --bg-obsidian: #1a1410;
+        --bg-leather: #2a1f17;
+        --bg-leather-light: #3d2b1f;
+        --gold: #d4a574;
+        --gold-light: #e8c9a0;
+        --gold-dark: #a67c4e;
+        --border-gold: #8b6914;
+        --text-cream: #f5e6d3;
+        --text-muted: #b8a090;
+        --success: #4ade80;
+        --error: #f87171;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        background: var(--bg-obsidian);
+        color: var(--text-cream);
+        min-height: 100vh;
+        overflow: hidden;
+      }
+
+      /* Shell Layout */
+      .unified-shell {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* Sidebar */
+      .shell-sidebar {
+        width: 260px;
+        min-width: 260px;
+        background: linear-gradient(180deg, var(--bg-leather) 0%, var(--bg-obsidian) 100%);
+        border-right: 1px solid var(--border-gold);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .sidebar-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 20px;
+        border-bottom: 1px solid var(--border-gold);
+        background: linear-gradient(135deg, rgba(212, 165, 116, 0.1) 0%, transparent 100%);
+      }
+
+      .brand-icon {
+        font-size: 28px;
+      }
+
+      .brand-title {
+        font-family: Georgia, serif;
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--gold);
+        letter-spacing: 0.5px;
+      }
+
+      /* Navigation */
+      .shell-nav {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px 0;
+      }
+
+      .nav-category {
+        padding: 16px 20px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-muted);
+        border-top: 1px solid rgba(139, 105, 20, 0.2);
+        margin-top: 8px;
+      }
+
+      .nav-category:first-child {
+        border-top: none;
+        margin-top: 0;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 12px 20px;
+        background: none;
+        border: none;
+        border-left: 3px solid transparent;
+        color: var(--text-cream);
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        text-align: left;
+      }
+
+      .nav-item:hover {
+        background: rgba(212, 165, 116, 0.08);
+        border-left-color: var(--gold-dark);
+      }
+
+      .nav-item--active {
+        background: rgba(212, 165, 116, 0.15);
+        border-left-color: var(--gold);
+      }
+
+      .nav-item--active .nav-item__label {
+        color: var(--gold);
+        font-weight: 600;
+      }
+
+      .nav-item__icon {
+        font-size: 18px;
+        width: 24px;
+        text-align: center;
+      }
+
+      .nav-item__label {
+        flex: 1;
+      }
+
+      .nav-item__badge {
+        display: none;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(248, 113, 113, 0.55);
+        background: rgba(248, 113, 113, 0.12);
+        color: #ffd0d0;
+        font-size: 12px;
+        line-height: 16px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .nav-item--has-alert .nav-item__badge {
+        display: inline-flex;
+      }
+
+      /* Main Content */
+      .shell-content {
+        flex: 1;
+        overflow: hidden;
+        background: var(--bg-obsidian);
+      }
+
+      .app-viewport {
+        height: 100%;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* App Containers - Off-screen preservation */
+      .app-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow: auto;
+        background: var(--bg-obsidian);
+        transition: opacity 0.15s ease;
+      }
+
+      .app-container--hidden {
+        visibility: hidden;
+        pointer-events: none;
+        opacity: 0;
+        /* Keep in DOM but move off-screen for performance */
+        transform: translateX(-100%);
+      }
+
+      .app-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        font-size: 18px;
+        color: var(--text-muted);
+      }
+
+      /* Embedded apps (iframe mode) */
+      .app-embed {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        display: block;
+        background: transparent;
+      }
+
+      /* Sub-app styling overrides */
+      .app-container .dashboard-header {
+        border-top: none;
+      }
+
+      .app-container .hub-nav {
+        display: none; /* Hide hub nav in unified shell */
+      }
+
+      /* Placeholder for unimplemented apps */
+      .app-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+        color: var(--text-muted);
+      }
+
+      /* Panel contract root (non-iframe sub-apps) */
+      .unified-panel-root {
+        height: 100%;
+      }
+
+      .app-placeholder p {
+        font-size: 24px;
+        margin-bottom: 12px;
+      }
+
+      .app-placeholder .error {
+        font-size: 14px;
+        color: var(--error);
+        font-family: monospace;
+      }
+
+      /* Home Dashboard */
+      .home-dashboard {
+        padding: 40px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .home-hero {
+        text-align: center;
+        padding: 60px 20px;
+        background: linear-gradient(135deg, var(--bg-leather) 0%, var(--bg-obsidian) 100%);
+        border-radius: 12px;
+        border: 1px solid var(--border-gold);
+        margin-bottom: 40px;
+      }
+
+      .home-hero h1 {
+        font-family: Georgia, serif;
+        font-size: 36px;
+        color: var(--gold);
+        margin-bottom: 16px;
+      }
+
+      .home-hero p {
+        font-size: 18px;
+        color: var(--text-muted);
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .home-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+      }
+
+      .stat-card {
+        background: var(--bg-leather);
+        border: 1px solid var(--border-gold);
+        border-radius: 8px;
+        padding: 24px;
+        text-align: center;
+      }
+
+      .stat-value {
+        display: block;
+        font-size: 48px;
+        font-weight: 700;
+        color: var(--gold);
+        margin-bottom: 8px;
+      }
+
+      .stat-label {
+        font-size: 14px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      /* ═══════════════════════════════════════════════════════════════
+         Panel component classes (replace inline styles)
+         ═══════════════════════════════════════════════════════════════ */
+
+      /* Panel sections */
+      .panel-section {
+        margin-top: 32px;
+      }
+
+      .panel-section__title {
+        color: var(--gold);
+        margin-bottom: 16px;
+        font-size: 18px;
+      }
+
+      .panel-card {
+        background: var(--bg-leather);
+        border: 1px solid var(--border-gold);
+        border-radius: 8px;
+        padding: 20px;
+      }
+
+      /* Form grid layout */
+      .panel-form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .panel-label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .panel-input,
+      .panel-select {
+        width: 100%;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border-gold);
+        background: rgba(0, 0, 0, 0.3);
+        color: var(--text-cream);
+        font-family: inherit;
+      }
+
+      /* Button row */
+      .panel-btn-row {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        margin-top: 16px;
+      }
+
+      /* Base button */
+      .panel-btn {
+        padding: 10px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 14px;
+        transition: opacity 0.15s ease;
+      }
+
+      .panel-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* Button variants */
+      .panel-btn--action {
+        padding: 12px 24px;
+        font-weight: 600;
+      }
+
+      .panel-btn--start {
+        border: 1px solid #22c55e;
+        background: rgba(34, 197, 94, 0.15);
+        color: #4ade80;
+      }
+
+      .panel-btn--pause {
+        border: 1px solid #f59e0b;
+        background: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+      }
+
+      .panel-btn--stop {
+        border: 1px solid #ef4444;
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+      }
+
+      .panel-btn--default {
+        border: 1px solid var(--border-gold);
+        background: rgba(212, 165, 116, 0.12);
+        color: var(--text-cream);
+      }
+
+      .panel-btn--ghost {
+        border: 1px solid var(--border-gold);
+        background: rgba(212, 165, 116, 0.06);
+        color: var(--text-cream);
+      }
+
+      /* Progress bar */
+      .panel-progress-track {
+        height: 20px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .panel-progress-track--tall {
+        height: 24px;
+        border-radius: 12px;
+      }
+
+      .panel-progress-bar {
+        height: 100%;
+        width: 0%;
+        border-radius: inherit;
+        transition: width 0.3s ease-out;
+      }
+
+      .panel-progress-bar--rainbow {
+        background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+      }
+
+      .panel-progress-bar--green {
+        background: linear-gradient(90deg, #22c55e 0%, #4ade80 100%);
+      }
+
+      .panel-progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      /* Phase icons row */
+      .panel-phase-icons {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 12px;
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+
+      .panel-phase-icon {
+        opacity: 0.4;
+      }
+
+      /* Log / insights area */
+      .panel-log {
+        background: var(--bg-leather);
+        border: 1px solid var(--border-gold);
+        border-radius: 8px;
+        padding: 16px;
+        max-height: 200px;
+        overflow-y: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      .panel-log--tall {
+        max-height: 300px;
+      }
+
+      /* Status line */
+      .panel-status {
+        margin-top: 18px;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      /* Mono text helper */
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      }
+
+      /* Alert banner */
+      .home-alert {
+        margin-top: 14px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 122, 122, 0.55);
+        background: rgba(255, 122, 122, 0.10);
+        color: #ffd0d0;
+      }
+
+      /* ═══════════════════════════════════════════════════════════════
+         Theme color utilities (use instead of inline style="color:…")
+         ═══════════════════════════════════════════════════════════════ */
+      .text-success  { color: var(--success); }
+      .text-error    { color: var(--error); }
+      .text-muted    { color: var(--text-muted); }
+      .text-gold     { color: var(--gold); }
+      .text-cream    { color: var(--text-cream); }
+
+      /* Insight row in panel-log */
+      .insight-row       { margin-bottom: 4px; }
+      .insight-row--info { color: var(--text-muted); }
+
+      /* Empty-state placeholder in log areas */
+      .panel-log__empty  { color: var(--text-muted); }
+
+      .downloads-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .downloads-list__row {
+        display: grid;
+        grid-template-columns: 52px minmax(0, 1fr) 128px;
+        gap: 12px;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(212, 165, 116, 0.14);
+      }
+
+      .downloads-list__row:last-child {
+        border-bottom: 0;
+      }
+
+      .downloads-list__status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 28px;
+        border-radius: 7px;
+        border: 1px solid rgba(74, 222, 128, 0.48);
+        color: var(--success);
+      }
+
+      .downloads-list__main {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      .downloads-list__main strong {
+        color: var(--text-cream);
+      }
+
+      .downloads-list__main span {
+        color: var(--text-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .downloads-list__meta {
+        color: var(--text-muted);
+        text-align: right;
+        font-size: 11px;
+      }
+
+      .download-verification-table-card {
+        padding: 0;
+        overflow: hidden;
+      }
+
+      .download-verification-table-wrap {
+        overflow-x: auto;
+      }
+
+      .download-verification-table {
+        width: 100%;
+        min-width: 960px;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .download-verification-table th,
+      .download-verification-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(212, 165, 116, 0.14);
+        vertical-align: top;
+        text-align: left;
+      }
+
+      .download-verification-table th {
+        color: var(--text-muted);
+        background: rgba(0, 0, 0, 0.22);
+        font-weight: 600;
+      }
+
+      .download-verification-table td strong,
+      .download-verification-table td span,
+      .download-verification-table td em {
+        display: block;
+        max-width: 280px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-style: normal;
+      }
+
+      .download-verification-table td strong {
+        color: var(--text-cream);
+      }
+
+      .download-verification-table td span,
+      .download-verification-table td em,
+      .download-verification-table__time {
+        color: var(--text-muted);
+      }
+
+      .download-verification-table__proof {
+        display: flex;
+        gap: 6px;
+        align-items: flex-start;
+      }
+
+      .home-crawl-overview-grid {
+        margin-top: 24px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+
+      .cloud-crawl-panel {
+        max-width: 1040px;
+      }
+
+      .cloud-crawl-hero {
+        padding-top: 28px;
+        padding-bottom: 28px;
+      }
+
+      .cloud-crawl-strip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 22px;
+      }
+
+      .cloud-crawl-strip__metrics,
+      .cloud-crawl-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .cloud-crawl-actions {
+        justify-content: flex-end;
+        margin-top: 0;
+      }
+
+      .cloud-crawl-pill {
+        min-height: 34px;
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid rgba(212, 165, 116, 0.36);
+        border-radius: 8px;
+        padding: 0 12px;
+        color: var(--text-muted);
+        background: rgba(0, 0, 0, 0.18);
+        font-size: 12px;
+      }
+
+      .cloud-crawl-target-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+      }
+
+      .cloud-crawl-target {
+        min-height: 116px;
+        border: 1px solid rgba(212, 165, 116, 0.28);
+        border-radius: 8px;
+        padding: 14px;
+        background: var(--bg-leather);
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+
+      .cloud-crawl-target--complete {
+        border-color: rgba(74, 222, 128, 0.55);
+      }
+
+      .cloud-crawl-target__label {
+        color: var(--text-cream);
+        font-size: 15px;
+      }
+
+      .cloud-crawl-target__domain,
+      .cloud-crawl-target__count {
+        color: var(--text-muted);
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .cloud-crawl-target__bar {
+        height: 8px;
+        margin-top: auto;
+        overflow: hidden;
+        border-radius: 99px;
+        background: rgba(0, 0, 0, 0.32);
+      }
+
+      .cloud-crawl-target__fill {
+        display: block;
+        width: 0%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #22c55e 0%, #60a5fa 100%);
+        transition: width 0.25s ease;
+      }
+
+      .cloud-crawl-downloads {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .cloud-crawl-download {
+        display: grid;
+        grid-template-columns: 120px minmax(0, 1fr) 230px;
+        gap: 12px;
+        align-items: center;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(212, 165, 116, 0.14);
+      }
+
+      .cloud-crawl-download:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      .cloud-crawl-download strong {
+        color: var(--text-cream);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .cloud-crawl-download span,
+      .cloud-crawl-download em {
+        color: var(--text-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-style: normal;
+      }
+
+      .cloud-crawl-download em {
+        text-align: right;
+        font-size: 11px;
+      }
+
+      @media (max-width: 900px) {
+        .cloud-crawl-strip {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .cloud-crawl-actions {
+          justify-content: flex-start;
+        }
+
+        .cloud-crawl-download {
+          grid-template-columns: 1fr;
+          gap: 4px;
+        }
+
+        .cloud-crawl-download em {
+          text-align: left;
+        }
+      }
+
+      .screenshot-review-panel {
+        max-width: 1180px;
+      }
+
+      .screenshot-review-layout {
+        display: grid;
+        grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .screenshot-review-runs {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .screenshot-review-filters {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .screenshot-review-run-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 620px;
+        overflow: auto;
+      }
+
+      .screenshot-review-run {
+        width: 100%;
+        min-height: 72px;
+        padding: 10px;
+        border: 1px solid rgba(212, 165, 116, 0.24);
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.18);
+        color: var(--text-cream);
+        text-align: left;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .screenshot-review-run--active {
+        border-color: rgba(96, 165, 250, 0.72);
+        background: rgba(96, 165, 250, 0.12);
+      }
+
+      .screenshot-review-run strong,
+      .screenshot-review-run span,
+      .screenshot-review-run em {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .screenshot-review-run span,
+      .screenshot-review-run em {
+        color: var(--text-muted);
+        font-size: 12px;
+        font-style: normal;
+      }
+
+      .screenshot-review-detail {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .screenshot-review-gallery__header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+        margin-bottom: 14px;
+      }
+
+      .screenshot-review-gallery__header h3 {
+        margin: 0 0 4px;
+        color: var(--gold);
+        font-size: 18px;
+      }
+
+      .screenshot-review-gallery__header span,
+      .screenshot-review-gallery__header strong {
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .screenshot-review-image-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+      }
+
+      .screenshot-review-image-card {
+        margin: 0;
+        border: 1px solid rgba(212, 165, 116, 0.22);
+        border-radius: 8px;
+        overflow: hidden;
+        background: rgba(0, 0, 0, 0.16);
+      }
+
+      .screenshot-review-image-card img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 10;
+        object-fit: cover;
+        background: rgba(0, 0, 0, 0.35);
+      }
+
+      .screenshot-review-image-card__missing {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        aspect-ratio: 16 / 10;
+        color: var(--text-muted);
+        background: rgba(0, 0, 0, 0.28);
+        font-size: 12px;
+      }
+
+      .screenshot-review-image-card figcaption {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 10px;
+        padding: 9px 10px;
+        color: var(--text-muted);
+        font-size: 12px;
+        align-items: center;
+      }
+
+      .screenshot-review-image-card figcaption strong,
+      .screenshot-review-image-card figcaption span,
+      .screenshot-review-image-card figcaption a {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .screenshot-review-image-card figcaption strong {
+        color: var(--text-cream);
+      }
+
+      .screenshot-review-image-card figcaption a {
+        color: #93c5fd;
+        text-decoration: none;
+      }
+
+      .screenshot-review-comment-log {
+        min-height: 160px;
+        max-height: 260px;
+        overflow: auto;
+        white-space: pre-wrap;
+        color: var(--text-muted);
+        background: rgba(0, 0, 0, 0.22);
+        border: 1px solid rgba(212, 165, 116, 0.18);
+        border-radius: 8px;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 12px;
+      }
+
+      .screenshot-review-comment-form {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .screenshot-review-comment-input {
+        min-height: 92px;
+        resize: vertical;
+      }
+
+      @media (max-width: 980px) {
+        .screenshot-review-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .screenshot-review-filters {
+          grid-template-columns: 1fr;
+        }
+
+        .screenshot-review-run-list {
+          max-height: 300px;
+        }
+      }
+
+      @media (max-width: 700px) {
+        .shell-sidebar {
+          width: 72px;
+          min-width: 72px;
+        }
+
+        .sidebar-brand {
+          justify-content: center;
+          min-height: 72px;
+          padding: 12px 0;
+        }
+
+        .brand-title,
+        .nav-item__label,
+        .nav-category {
+          display: none;
+        }
+
+        .nav-item {
+          justify-content: center;
+          gap: 0;
+          padding: 14px 0;
+          border-left: 0;
+          border-right: 3px solid transparent;
+        }
+
+        .nav-item:hover,
+        .nav-item--active {
+          border-right-color: var(--gold);
+        }
+
+        .nav-item__icon {
+          width: auto;
+          font-size: 21px;
+        }
+
+        .shell-content {
+          min-width: 0;
+        }
+
+        .home-dashboard {
+          max-width: none;
+          padding: 20px 14px;
+        }
+
+        .home-hero {
+          padding: 24px 14px;
+          margin-bottom: 22px;
+        }
+
+        .home-hero h1,
+        .panel-hero__title {
+          font-size: 26px;
+          line-height: 1.12;
+        }
+
+        .home-hero p,
+        .panel-hero__description {
+          font-size: 15px;
+          line-height: 1.35;
+        }
+
+        .stat-value,
+        .panel-stat-card__value {
+          font-size: 26px;
+          line-height: 1.1;
+        }
+
+        .home-crawl-overview-grid,
+        .panel-form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .panel-card {
+          padding: 14px;
+        }
+
+        .panel-btn-row,
+        .cloud-crawl-actions {
+          justify-content: flex-start;
+          flex-wrap: wrap;
+        }
+
+        .panel-btn {
+          min-height: 40px;
+          white-space: normal;
+          text-align: center;
+        }
+
+        .cloud-crawl-target-grid,
+        .screenshot-review-image-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .downloads-list__row {
+          grid-template-columns: 48px minmax(0, 1fr);
+        }
+
+        .downloads-list__meta {
+          grid-column: 2;
+          text-align: left;
+        }
+
+        .screenshot-review-gallery__header,
+        .screenshot-review-image-card figcaption {
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+        }
+      }
+
+      .download-verification-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 42px;
+        height: 24px;
+        border-radius: 7px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .download-verification-badge--ok {
+        border: 1px solid rgba(74, 222, 128, 0.48);
+        color: var(--success);
+        background: rgba(74, 222, 128, 0.08);
+      }
+
+      .download-verification-badge--warn {
+        border: 1px solid rgba(248, 113, 113, 0.48);
+        color: var(--error);
+        background: rgba(248, 113, 113, 0.08);
+      }
+
+      /* Layout utilities */
+      .mt-24  { margin-top: 24px; }
+      .mt-12  { margin-top: 12px; }
+      .mr-8   { margin-right: 8px; }
+      .ml-10  { margin-left: 10px; }
+
+      /* Alert link */
+      .alert-link {
+        color: #ffd0d0;
+        text-decoration: underline;
+        margin-left: 10px;
+      }
+
+      /* Scrollbar styling */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: var(--bg-obsidian);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: var(--border-gold);
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--gold-dark);
+      }
+    
+  </style>
+</head>
+<body data-crawl-nav-badge-poll-bound="true" data-crawl-nav-badge-ok="true">
+  <div class="unified-shell">
+    <aside class="shell-sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-icon">🎛️</span>
+        <span class="brand-title">Control Center</span>
+      </div>
+      <nav class="shell-nav">
+          <button class="nav-item" data-app-id="home" data-app-category="main" title="System overview and quick actions">
+            <span class="nav-item__icon">🏠</span>
+            <span class="nav-item__label">Home</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        <div class="nav-category">🕷️ Crawler</div>
+          <button class="nav-item" data-app-id="cloud-crawl" data-app-category="crawler" title="Compact five-site remote crawl view with screenshot-ready evidence">
+            <span class="nav-item__icon">☁️</span>
+            <span class="nav-item__label">Cloud Crawl</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true">!</span>
+          </button>
+        
+          <button class="nav-item" data-app-id="rate-limits" data-app-category="crawler" title="Domain rate limiting status and controls">
+            <span class="nav-item__icon">⏱️</span>
+            <span class="nav-item__label">Rate Limits</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true">!</span>
+          </button>
+        
+          <button class="nav-item" data-app-id="crawl-observer" data-app-category="crawler" title="Real-time crawl monitoring with event stream">
+            <span class="nav-item__icon">🔭</span>
+            <span class="nav-item__label">Crawl Observer</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true">!</span>
+          </button>
+        
+          <button class="nav-item" data-app-id="crawl-status" data-app-category="crawler" title="Start crawl operations and view real-time progress">
+            <span class="nav-item__icon">🏃</span>
+            <span class="nav-item__label">Crawl Status</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true">!</span>
+          </button>
+        
+          <button class="nav-item" data-app-id="multi-modal-crawl" data-app-category="crawler" title="Intelligent crawl with learning loops: download → analyze → learn → repeat">
+            <span class="nav-item__icon">🔄</span>
+            <span class="nav-item__label">Multi-Modal Crawl</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true">!</span>
+          </button>
+        
+          <button class="nav-item" data-app-id="scheduler" data-app-category="crawler" title="Schedules + reconciliation (catch-up / postpone) observability">
+            <span class="nav-item__icon">🗓️</span>
+            <span class="nav-item__label">Scheduler</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true">!</span>
+          </button>
+        
+          <button class="nav-item" data-app-id="crawler-profiles" data-app-category="crawler" title="DB-backed crawl presets (start URL + operation + overrides)">
+            <span class="nav-item__icon">🗃️</span>
+            <span class="nav-item__label">Crawler Profiles</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true">!</span>
+          </button>
+        
+          <button class="nav-item" data-app-id="domain-registry" data-app-category="crawler" title="Manage crawl domains and sync enabled hosts into scheduler">
+            <span class="nav-item__icon">🗂️</span>
+            <span class="nav-item__label">Domain Registry</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true">!</span>
+          </button>
+        
+          <button class="nav-item" data-app-id="crawl-strategies" data-app-category="crawler" title="Browse crawl operations, sequences, and configuration options">
+            <span class="nav-item__icon">🕷️</span>
+            <span class="nav-item__label">Crawl Strategies</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true">!</span>
+          </button>
+        
+          <button class="nav-item" data-app-id="crawler-monitor" data-app-category="crawler" title="Crawler health and performance metrics">
+            <span class="nav-item__icon">📡</span>
+            <span class="nav-item__label">Crawler Monitor</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true">!</span>
+          </button>
+        <div class="nav-category">⚙️ Administration</div>
+          <button class="nav-item" data-app-id="webhooks" data-app-category="admin" title="Webhook integrations and event routing">
+            <span class="nav-item__icon">🔗</span>
+            <span class="nav-item__label">Webhooks</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="plugins" data-app-category="admin" title="Plugin lifecycle and management">
+            <span class="nav-item__icon">🧩</span>
+            <span class="nav-item__label">Plugins</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="admin" data-app-category="admin" title="User management, audit logs, system config">
+            <span class="nav-item__icon">⚙️</span>
+            <span class="nav-item__label">Admin</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="topic-lists" data-app-category="admin" title="Edit multilingual topic list labels">
+            <span class="nav-item__icon">🗂️</span>
+            <span class="nav-item__label">Topic Lists</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        <div class="nav-category">📊 Analytics</div>
+          <button class="nav-item nav-item--active" data-app-id="downloads" data-app-category="analytics" title="Verified download statistics and progress">
+            <span class="nav-item__icon">📥</span>
+            <span class="nav-item__label">Downloads</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="download-verification" data-app-category="analytics" title="Recent download persistence and compression verification">
+            <span class="nav-item__icon">✅</span>
+            <span class="nav-item__label">Download Verify</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="search-explorer" data-app-category="analytics" title="Search articles with query, author, domain, category, and date filters">
+            <span class="nav-item__icon">🔎</span>
+            <span class="nav-item__label">Search Explorer</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="quality" data-app-category="analytics" title="Content quality scores and metrics">
+            <span class="nav-item__icon">📊</span>
+            <span class="nav-item__label">Quality</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="analytics" data-app-category="analytics" title="Aggregated analytics and insights">
+            <span class="nav-item__icon">📈</span>
+            <span class="nav-item__label">Analytics</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="place-hub-guessing" data-app-category="analytics" title="Coverage matrix for place hub mappings">
+            <span class="nav-item__icon">🧭</span>
+            <span class="nav-item__label">Place Hub Guessing</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="topic-hub-guessing" data-app-category="analytics" title="Coverage matrix for topic hub mappings">
+            <span class="nav-item__icon">🏷️</span>
+            <span class="nav-item__label">Topic Hub Guessing</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="query-telemetry" data-app-category="analytics" title="Database query performance analysis">
+            <span class="nav-item__icon">🔍</span>
+            <span class="nav-item__label">Query Telemetry</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        <div class="nav-category">🛠️ Development</div>
+          <button class="nav-item" data-app-id="docs" data-app-category="dev" title="Browse repo documentation in-app">
+            <span class="nav-item__icon">📚</span>
+            <span class="nav-item__label">Docs</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="screenshot-review" data-app-category="dev" title="Review saved UI screenshots and write comments for agents">
+            <span class="nav-item__icon">🖼️</span>
+            <span class="nav-item__label">Screenshots</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="design" data-app-category="dev" title="Browse design assets (SVG/PNG) in-app">
+            <span class="nav-item__icon">🎨</span>
+            <span class="nav-item__label">Design Studio</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="panel-demo" data-app-category="dev" title="Proof-of-life for embedded panel activation (no iframe)">
+            <span class="nav-item__icon">🧪</span>
+            <span class="nav-item__label">Panel Demo</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="decision-tree" data-app-category="dev" title="Visualize classification decision trees">
+            <span class="nav-item__icon">🌳</span>
+            <span class="nav-item__label">Decision Tree</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="template-teacher" data-app-category="dev" title="Train and test content extractors">
+            <span class="nav-item__icon">🎓</span>
+            <span class="nav-item__label">Template Teacher</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        
+          <button class="nav-item" data-app-id="test-studio" data-app-category="dev" title="Interactive test runner and debugger">
+            <span class="nav-item__icon">🧪</span>
+            <span class="nav-item__label">Test Studio</span>
+            <span class="nav-item__badge" data-nav-badge="" aria-hidden="true"></span>
+          </button>
+        </nav>
+    </aside>
+    
+    <main class="shell-content">
+      <div class="app-viewport" id="appViewport">
+        
+        <div class="app-container app-container--hidden" id="app-home" data-app-id="home">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-cloud-crawl" data-app-id="cloud-crawl">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-rate-limits" data-app-id="rate-limits">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-crawl-observer" data-app-id="crawl-observer">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-crawl-status" data-app-id="crawl-status">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-multi-modal-crawl" data-app-id="multi-modal-crawl">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-scheduler" data-app-id="scheduler">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-crawler-profiles" data-app-id="crawler-profiles">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-domain-registry" data-app-id="domain-registry">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-crawl-strategies" data-app-id="crawl-strategies">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-crawler-monitor" data-app-id="crawler-monitor">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-webhooks" data-app-id="webhooks">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-plugins" data-app-id="plugins">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-admin" data-app-id="admin">
+          
+        </div>
+      
+        <div class="app-container" id="app-downloads" data-app-id="downloads" data-activated="true" data-loaded="true" data-activation-key="downloads" data-embed="panel"><div class="unified-panel-root" data-unified-panel="downloads" data-unified-activate="downloads">
+    <div class="home-dashboard">
+      
+    <div class="panel-hero">
+      <h2 class="panel-hero__title">📥 Download Statistics</h2>
+      <p class="panel-hero__description">Evidence-based download verification. All counts are queried directly from the database.</p>
+    </div>
+  
+
+      <div class="panel-stats-row">
+    <div class="panel-stat-card">
+      <div class="panel-stat-card__value" data-downloads-stat="total">280964</div>
+      <div class="panel-stat-card__label">Total Downloads</div>
+    </div>
+  
+    <div class="panel-stat-card">
+      <div class="panel-stat-card__value" data-downloads-stat="verified">257045</div>
+      <div class="panel-stat-card__label">Verified (HTTP 200)</div>
+    </div>
+  
+    <div class="panel-stat-card">
+      <div class="panel-stat-card__value" data-downloads-stat="bytes">125.4 GB</div>
+      <div class="panel-stat-card__label">Total Size</div>
+    </div>
+  </div>
+
+      <div class="panel-section">
+        <h3 class="panel-section__title">📊 50-Page Crawl Progress</h3>
+        <div class="panel-card">
+          <div class="panel-progress-header">
+            <span>Progress</span>
+            <span data-downloads-stat="progress-text">0 / 50</span>
+          </div>
+          <div class="panel-progress-track panel-progress-track--tall">
+            <div data-downloads-progress-bar="" class="panel-progress-bar panel-progress-bar--green" style="width: 0%;"></div>
+          </div>
+          <div class="panel-btn-row mt-12">
+            <button data-downloads-action="start-crawl" class="panel-btn panel-btn--action panel-btn--start">
+              🕷️ Start 50-Page Crawl
+            </button>
+            <button data-downloads-action="refresh" class="panel-btn panel-btn--default">
+              🔄 Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3 class="panel-section__title">📝 Recent Downloads</h3>
+        <div data-downloads-recent="" class="panel-log panel-log--tall"><div class="downloads-list"><div class="downloads-list__row"><span class="downloads-list__status">200</span><span class="downloads-list__main"><strong>www.theguardian.com</strong><span>https://www.theguardian.com/football/2026/may/07/manchester-city-wsl-title-triumph-andree-jeglertz-rebecca-knaak-khadija-shaw</span></span><span class="downloads-list__meta">361.8 KB<br>08/05/2026, 02:26:28</span></div><div class="downloads-list__row"><span class="downloads-list__status">200</span><span class="downloads-list__main"><strong>www.theguardian.com</strong><span>https://www.theguardian.com/commentisfree/2026/may/07/left-right-energy-crisis-britain-north-sea-renewables</span></span><span class="downloads-list__meta">311.4 KB<br>08/05/2026, 02:25:55</span></div><div class="downloads-list__row"><span class="downloads-list__status">200</span><span class="downloads-list__main"><strong>www.theguardian.com</strong><span>https://www.theguardian.com/commentisfree/2026/may/07/left-right-energy-crisis-britain-north-sea-renewables</span></span><span class="downloads-list__meta">311.4 KB<br>08/05/2026, 02:25:55</span></div><div class="downloads-list__row"><span class="downloads-list__status">200</span><span class="downloads-list__main"><strong>www.theguardian.com</strong><span>https://www.theguardian.com/commentisfree/2026/may/07/left-right-energy-crisis-britain-north-sea-renewables</span></span><span class="downloads-list__meta">311.4 KB<br>08/05/2026, 02:25:55</span></div><div class="downloads-list__row"><span class="downloads-list__status">200</span><span class="downloads-list__main"><strong>www.theguardian.com</strong><span>https://www.theguardian.com/football/2026/may/07/michael-carrick-has-the-light-touch-manchester-united-need-for-next-chapter</span></span><span class="downloads-list__meta">352.0 KB<br>08/05/2026, 02:25:18</span></div><div class="downloads-list__row"><span class="downloads-list__status">200</span><span class="downloads-list__main"><strong>www.theguardian.com</strong><span>https://www.theguardian.com/football/2026/may/07/michael-carrick-has-the-light-touch-manchester-united-need-for-next-chapter</span></span><span class="downloads-list__meta">352.0 KB<br>08/05/2026, 02:25:18</span></div><div class="downloads-list__row"><span class="downloads-list__status">200</span><span class="downloads-list__main"><strong>www.theguardian.com</strong><span>https://www.theguardian.com/football/2026/may/07/michael-carrick-has-the-light-touch-manchester-united-need-for-next-chapter</span></span><span class="downloads-list__meta">352.0 KB<br>08/05/2026, 02:25:18</span></div><div class="downloads-list__row"><span class="downloads-list__status">200</span><span class="downloads-list__main"><strong>www.theguardian.com</strong><span>https://www.theguardian.com/us-news/2026/may/07/emory-university-professor-lawsuit-israel-gaza-protests</span></span><span class="downloads-list__meta">302.6 KB<br>08/05/2026, 02:24:47</span></div></div></div>
+      </div>
+
+      <div class="panel-status" data-downloads-status="">Last updated: 02:26:58</div>
+    </div>
+  </div></div>
+      
+        <div class="app-container app-container--hidden" id="app-download-verification" data-app-id="download-verification">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-search-explorer" data-app-id="search-explorer">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-quality" data-app-id="quality">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-analytics" data-app-id="analytics">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-place-hub-guessing" data-app-id="place-hub-guessing">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-topic-hub-guessing" data-app-id="topic-hub-guessing">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-topic-lists" data-app-id="topic-lists">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-query-telemetry" data-app-id="query-telemetry">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-docs" data-app-id="docs">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-screenshot-review" data-app-id="screenshot-review">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-design" data-app-id="design">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-panel-demo" data-app-id="panel-demo">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-decision-tree" data-app-id="decision-tree">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-template-teacher" data-app-id="template-teacher">
+          
+        </div>
+      
+        <div class="app-container app-container--hidden" id="app-test-studio" data-app-id="test-studio">
+          
+        </div>
+      
+      </div>
+    </main>
+  </div>
+  
+  <script>
+    
+      (function() {
+        'use strict';
+        
+        const appViewport = document.getElementById('appViewport');
+        const navItems = document.querySelectorAll('.nav-item');
+        let currentAppId = 'downloads';
+
+        // ─── Shared utilities ────────────────────────────────────────
+        function escapeHtml(str) {
+          return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        }
+
+        function setText(el, text) {
+          if (el) el.textContent = text;
+        }
+
+        const crawlNavItems = document.querySelectorAll('.nav-item[data-app-category="crawler"]');
+
+        async function fetchCrawlSummary() {
+          const res = await fetch('/api/crawl/summary', { cache: 'no-store' });
+          const json = await res.json();
+          if (!res.ok || !json || json.status !== 'ok') {
+            throw new Error((json && json.error) ? json.error : 'bad response');
+          }
+          return json;
+        }
+
+        function setNavBadgeOnItem(item, { show, text }) {
+          if (!item) return;
+          const badge = item.querySelector('[data-nav-badge]');
+          item.classList.toggle('nav-item--has-alert', show);
+
+          if (badge) {
+            badge.textContent = text || '!';
+            badge.setAttribute('aria-hidden', show ? 'false' : 'true');
+          }
+        }
+
+        function updateCrawlNavBadges(summary) {
+          const lastError = summary && typeof summary.lastError === 'object' ? summary.lastError : null;
+          const hasError = Boolean(lastError && lastError.message);
+          const errorsLast10m = Number.isFinite(summary && summary.errorsLast10m) ? summary.errorsLast10m : 0;
+
+          let badgeText = '!';
+          if (errorsLast10m > 0) {
+            badgeText = errorsLast10m > 99 ? '99+' : String(errorsLast10m);
+          }
+
+          for (const item of crawlNavItems) {
+            setNavBadgeOnItem(item, { show: hasError, text: badgeText });
+          }
+        }
+
+        function bindCrawlNavBadgePoll() {
+          if (document.body.dataset.crawlNavBadgePollBound === 'true') return;
+          document.body.dataset.crawlNavBadgePollBound = 'true';
+
+          async function refresh() {
+            try {
+              const summary = await fetchCrawlSummary();
+              updateCrawlNavBadges(summary);
+              
+              // Update Dashboard Stat Cards if they exist
+              const activeCount = document.querySelector('[data-home-stat="activeCrawlJobs"]');
+              if (activeCount) activeCount.textContent = summary.activeJobs || '0';
+              
+              const errorCount = document.querySelector('[data-home-stat="errorsLast10m"]');
+              if (errorCount) errorCount.textContent = summary.errorsLast10m || '0';
+              
+              const alertBox = document.querySelector('[data-home-crawl-alert]');
+              const alertMsg = document.querySelector('[data-home-crawl-error-message]');
+              
+              if (summary.lastError && summary.lastError.message) {
+                if (alertBox) alertBox.style.display = 'block';
+                if (alertMsg) alertMsg.textContent = summary.lastError.message;
+              } else {
+                if (alertBox) alertBox.style.display = 'none';
+              }
+              
+              document.body.dataset.crawlNavBadgeOk = 'true';
+            } catch {
+              // Leave the current badge state; no-op.
+              document.body.dataset.crawlNavBadgeOk = 'false';
+            }
+          }
+
+          refresh();
+          setInterval(refresh, 5000);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Panel activation seam
+        // ─────────────────────────────────────────────────────────────
+
+        function getPanelActivatorRegistry() {
+          if (!window.UnifiedAppPanels) window.UnifiedAppPanels = {};
+
+          if (!window.UnifiedAppPanels.activators) {
+            window.UnifiedAppPanels.activators = Object.create(null);
+          }
+
+          if (typeof window.UnifiedAppPanels.registerActivator !== 'function') {
+            window.UnifiedAppPanels.registerActivator = function(key, fn) {
+              if (!key) return;
+              if (typeof fn !== 'function') return;
+              window.UnifiedAppPanels.activators[String(key)] = fn;
+            };
+          }
+
+          return window.UnifiedAppPanels.activators;
+        }
+
+        function activatePanelIfPresent(container, appId, activationKey) {
+          if (!container) return;
+          if (container.dataset.activated === 'true') return;
+
+          const root = container.querySelector('[data-unified-activate]');
+          const key = activationKey || (root ? root.dataset.unifiedActivate : null);
+          if (!key) {
+            // No activation requested.
+            container.dataset.activated = 'true';
+            return;
+          }
+
+          const registry = getPanelActivatorRegistry();
+          const activator = registry && registry[key];
+
+          if (typeof activator === 'function') {
+            try {
+              activator(root || container, { appId, container });
+            } catch (err) {
+              console.warn('[UnifiedApp] panel activation failed:', appId, key, err && err.message ? err.message : err);
+            }
+          }
+
+          container.dataset.activated = 'true';
+        }
+
+        // ─── Panel activators (composed from modules) ────────────
+        (function seedDefaultActivators() {
+          const registry = getPanelActivatorRegistry();
+          
+          window.UnifiedAppPanels.registerActivator('placeholder', function(root) {
+            if (!root) return;
+            root.dataset.placeholderActivated = 'true';
+          });
+          
+          window.UnifiedAppPanels.registerActivator('home', function(root) {
+            if (!root) return;
+            root.dataset.homeActivated = 'true';
+          });
+          
+          window.UnifiedAppPanels.registerActivator('panel-demo', function(root) {
+            if (!root) return;
+            const output = root.querySelector('[data-panel-demo-output]');
+            const ping = root.querySelector('[data-panel-demo-action="ping"]');
+            const reset = root.querySelector('[data-panel-demo-action="reset"]');
+            let clicks = 0;
+            function write(text) { if (output) output.textContent = text; }
+            if (ping) ping.addEventListener('click', function() {
+              clicks += 1;
+              write('Ping ' + clicks + ' at ' + new Date().toLocaleTimeString());
+            });
+            if (reset) reset.addEventListener('click', function() {
+              clicks = 0;
+              write('Reset');
+            });
+            write('Activated');
+          });
+
+          
+          window.UnifiedAppPanels.registerActivator('multi-modal-crawl', function(root) {
+            if (!root) return;
+            const status = root.querySelector('[data-multimodal-status]');
+            const start = root.querySelector('[data-multimodal-action="start"]');
+            const pause = root.querySelector('[data-multimodal-action="pause"]');
+            const stop = root.querySelector('[data-multimodal-action="stop"]');
+            function setStatus(text) { if (status) status.textContent = 'Status: ' + text; }
+            function collectConfig() {
+              const config = {};
+              root.querySelectorAll('[data-multimodal-input]').forEach(function(input) {
+                const key = input.dataset.multimodalInput;
+                config[key] = input.value;
+              });
+              return config;
+            }
+            async function post(path, body) {
+              const response = await fetch('/multi-modal/api/multi-modal/' + path, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify(body || {})
+              });
+              const json = await response.json().catch(function() { return {}; });
+              if (!response.ok) throw new Error(json.error || json.message || response.statusText);
+              return json;
+            }
+            if (start) start.addEventListener('click', async function() {
+              try {
+                setStatus('Starting');
+                await post('start', collectConfig());
+                start.disabled = true;
+                if (pause) pause.disabled = false;
+                if (stop) stop.disabled = false;
+                setStatus('Running');
+              } catch (err) { setStatus(err.message || 'Start failed'); }
+            });
+            if (pause) pause.addEventListener('click', async function() {
+              try { await post('pause'); setStatus('Paused'); } catch (err) { setStatus(err.message || 'Pause failed'); }
+            });
+            if (stop) stop.addEventListener('click', async function() {
+              try {
+                await post('stop');
+                if (start) start.disabled = false;
+                if (pause) pause.disabled = true;
+                stop.disabled = true;
+                setStatus('Stopped');
+              } catch (err) { setStatus(err.message || 'Stop failed'); }
+            });
+          });
+          
+          window.UnifiedAppPanels.registerActivator('cloud-crawl', function(root) {
+            if (!root) return;
+            const panelRoot = root.matches && root.matches('[data-cloud-crawl-root]')
+              ? root
+              : (root.querySelector('[data-cloud-crawl-root]') || root);
+            const apiBase = panelRoot.dataset.cloudCrawlApiBase || '/api/cloud-crawl';
+            const domains = panelRoot.dataset.cloudCrawlDomains || '';
+            const maxPages = panelRoot.dataset.cloudCrawlMaxPages || '';
+            const recentLimit = panelRoot.dataset.cloudCrawlRecentLimit || '';
+            const since = panelRoot.dataset.cloudCrawlSince || '';
+            const status = root.querySelector('[data-cloud-crawl-status]');
+            const refreshButton = root.querySelector('[data-cloud-crawl-action="refresh"]');
+            function setStatus(text) { if (status) status.textContent = text; }
+            function setStat(name, value) {
+              const el = root.querySelector('[data-cloud-crawl-stat="' + name + '"]');
+              if (el) el.textContent = value == null ? '-' : String(value);
+            }
+            function escapeHtml(str) {
+              return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+            }
+            function formatBytes(bytes) {
+              const n = Number(bytes) || 0;
+              if (n <= 0) return '0 B';
+              const units = ['B', 'KB', 'MB', 'GB'];
+              const index = Math.min(units.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
+              return (n / Math.pow(1024, index)).toFixed(index === 0 ? 0 : 1) + ' ' + units[index];
+            }
+            function buildStatusUrl() {
+              const params = new URLSearchParams();
+              if (domains) params.set('domains', domains);
+              if (maxPages) params.set('maxPages', maxPages);
+              if (recentLimit) params.set('recentLimit', recentLimit);
+              if (since) params.set('since', since);
+              const query = params.toString();
+              return apiBase + '/status' + (query ? '?' + query : '');
+            }
+            function renderTargets(targets) {
+              if (!Array.isArray(targets)) return;
+              targets.forEach(function(target) {
+                const domain = target.domain || '';
+                const count = root.querySelector('[data-cloud-crawl-domain-count="' + domain + '"]');
+                const bar = root.querySelector('[data-cloud-crawl-domain-bar="' + domain + '"]');
+                const chip = root.querySelector('[data-cloud-crawl-domain="' + domain + '"]');
+                if (count) count.textContent = (target.okDownloads || 0) + ' / ' + (target.goal || 5);
+                if (bar) bar.style.width = Math.max(0, Math.min(100, target.progressPct || 0)) + '%';
+                if (chip) chip.classList.toggle('cloud-crawl-target--complete', Number(target.okDownloads || 0) >= Number(target.goal || 5));
+              });
+            }
+            function renderRecent(items) {
+              const target = root.querySelector('[data-cloud-crawl-recent]');
+              if (!target) return;
+              if (!Array.isArray(items) || items.length === 0) {
+                target.innerHTML = '<div class="panel-log__empty">No recent target downloads found.</div>';
+                return;
+              }
+              target.innerHTML = '<div class="cloud-crawl-downloads">' + items.map(function(item) {
+                const fetched = item.fetchedAt ? new Date(item.fetchedAt).toLocaleString() : '-';
+                return '<div class="cloud-crawl-download">'
+                  + '<strong>' + escapeHtml(item.host || '-') + '</strong>'
+                  + '<span title="' + escapeHtml(item.url || '') + '">' + escapeHtml(item.url || '') + '</span>'
+                  + '<em>HTTP ' + escapeHtml(item.httpStatus || '-') + ' · ' + escapeHtml(formatBytes(item.bytesDownloaded)) + ' · ' + escapeHtml(fetched) + '</em>'
+                  + '</div>';
+              }).join('') + '</div>';
+            }
+            async function refresh() {
+              setStatus('Loading cloud crawl status...');
+              try {
+                const response = await fetch(buildStatusUrl(), { cache: 'no-store' });
+                const json = await response.json();
+                if (!response.ok || json.status === 'error') throw new Error(json.message || json.error || response.statusText);
+                const totals = json.totals || {};
+                setStat('remote', json.remote && json.remote.label ? json.remote.label : 'configured');
+                setStat('activeJobs', json.activeJobs || 0);
+                setStat('downloaded', (totals.okDownloads || 0) + ' / ' + (totals.goalDownloads || 0));
+                setStat('errors', json.errorsLast10m || 0);
+                renderTargets(json.targets || []);
+                renderRecent(json.recentDownloads || []);
+                root.dataset.cloudCrawlReady = 'true';
+                panelRoot.dataset.cloudCrawlReady = 'true';
+                setStatus('Last updated: ' + new Date().toLocaleTimeString());
+              } catch (err) {
+                root.dataset.cloudCrawlReady = 'error';
+                panelRoot.dataset.cloudCrawlReady = 'error';
+                setStatus('Cloud crawl status failed: ' + (err.message || err));
+              }
+            }
+            if (refreshButton && refreshButton.dataset.cloudCrawlBound !== 'true') {
+              refreshButton.dataset.cloudCrawlBound = 'true';
+              refreshButton.addEventListener('click', refresh);
+            }
+            refresh();
+          });
+          
+          window.UnifiedAppPanels.registerActivator('downloads', function(root) {
+            if (!root) return;
+            const status = root.querySelector('[data-downloads-status]');
+            function setStatus(text) { if (status) status.textContent = text; }
+            function setStat(name, value) {
+              const el = root.querySelector('[data-downloads-stat="' + name + '"]');
+              if (el) el.textContent = value == null ? '0' : String(value);
+            }
+            function escapeHtml(str) {
+              return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+            }
+            function formatBytes(bytes) {
+              const n = Number(bytes) || 0;
+              if (n <= 0) return '0 B';
+              const units = ['B', 'KB', 'MB', 'GB'];
+              const index = Math.min(units.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
+              return (n / Math.pow(1024, index)).toFixed(index === 0 ? 0 : 1) + ' ' + units[index];
+            }
+            function renderRecent(items) {
+              const target = root.querySelector('[data-downloads-recent]');
+              if (!target) return;
+              if (!Array.isArray(items) || items.length === 0) {
+                target.innerHTML = '<div class="panel-log__empty">No downloads found.</div>';
+                return;
+              }
+
+              target.innerHTML = '<div class="downloads-list">' + items.map(function(item) {
+                const status = item.httpStatus || '-';
+                const host = item.host || '';
+                const fetched = item.fetchedAt ? new Date(item.fetchedAt).toLocaleString() : '-';
+                return '<div class="downloads-list__row">'
+                  + '<span class="downloads-list__status">' + escapeHtml(status) + '</span>'
+                  + '<span class="downloads-list__main"><strong>' + escapeHtml(host) + '</strong><span>' + escapeHtml(item.url || '') + '</span></span>'
+                  + '<span class="downloads-list__meta">' + escapeHtml(formatBytes(item.bytesDownloaded)) + '<br>' + escapeHtml(fetched) + '</span>'
+                  + '</div>';
+              }).join('') + '</div>';
+            }
+            async function refresh() {
+              try {
+                const statsResponse = await fetch('/api/downloads/stats', { cache: 'no-store' });
+                const statsJson = await statsResponse.json();
+                const stats = statsJson.stats || {};
+                setStat('total', stats.totalDownloads ?? stats.total ?? stats.downloads ?? stats.total_responses ?? 0);
+                setStat('verified', stats.verifiedDownloads ?? stats.verified ?? stats.http200 ?? stats.verified_downloads ?? 0);
+                setStat('bytes', stats.totalSizeFormatted || formatBytes(stats.totalBytes ?? stats.total_bytes ?? stats.bytes ?? 0));
+
+                const progressResponse = await fetch('/api/downloads/crawl-progress', { cache: 'no-store' });
+                const progressJson = await progressResponse.json();
+                const progress = progressJson.progress || {};
+                const goal = progressJson.goal || 50;
+                const downloaded = progress.downloaded || 0;
+                setStat('progress-text', downloaded + ' / ' + goal);
+                const bar = root.querySelector('[data-downloads-progress-bar]');
+                if (bar) bar.style.width = Math.max(0, Math.min(100, progress.percentComplete || 0)) + '%';
+
+                const recentResponse = await fetch('/api/downloads/recent?limit=8', { cache: 'no-store' });
+                const recentJson = await recentResponse.json();
+                renderRecent(recentJson.items || []);
+
+                setStatus('Last updated: ' + new Date().toLocaleTimeString());
+              } catch (err) {
+                setStatus('Last update failed: ' + (err.message || err));
+              }
+            }
+            const refreshButton = root.querySelector('[data-downloads-action="refresh"]');
+            if (refreshButton) refreshButton.addEventListener('click', refresh);
+            refresh();
+          });
+          
+          window.UnifiedAppPanels.registerActivator('download-verification', function(root) {
+            if (!root) return;
+            const apiBase = root.dataset.downloadVerificationApiBase || '/api/downloads/verifications';
+            const tableTarget = root.querySelector('[data-download-verification-table]');
+            const status = root.querySelector('[data-download-verification-status]');
+            const limitInput = root.querySelector('[data-download-verification-input="limit"]');
+            const sinceInput = root.querySelector('[data-download-verification-input="since"]');
+            function setStatus(text) { if (status) status.textContent = text; }
+            function setStat(name, value) {
+              const el = root.querySelector('[data-download-verification-stat="' + name + '"]');
+              if (el) el.textContent = value == null ? '-' : String(value);
+            }
+            function escapeHtml(str) {
+              return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+            }
+            function formatBytes(bytes) {
+              const n = Number(bytes) || 0;
+              if (n <= 0) return '0 B';
+              const units = ['B', 'KB', 'MB', 'GB'];
+              const index = Math.min(units.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
+              return (n / Math.pow(1024, index)).toFixed(index === 0 ? 0 : 1) + ' ' + units[index];
+            }
+            function formatRatio(value) {
+              const ratio = Number(value);
+              if (!Number.isFinite(ratio) || ratio <= 0) return '-';
+              return Math.round(ratio * 1000) / 10 + '%';
+            }
+            function badge(text, ok) {
+              return '<span class="download-verification-badge ' + (ok ? 'download-verification-badge--ok' : 'download-verification-badge--warn') + '">' + escapeHtml(text) + '</span>';
+            }
+            function renderRows(items) {
+              if (!tableTarget) return;
+              if (!Array.isArray(items) || !items.length) {
+                tableTarget.innerHTML = '<div class="panel-log__empty">No recent download evidence found.</div>';
+                return;
+              }
+              tableTarget.innerHTML = '<table class="download-verification-table">'
+                + '<thead><tr>'
+                + '<th>Proof</th><th>Download</th><th>Storage</th><th>Compression</th><th>Sizes</th><th>Fetched</th>'
+                + '</tr></thead><tbody>'
+                + items.map(function(item) {
+                  const compression = item.compression || {};
+                  const storage = item.storage || {};
+                  const http = item.http || {};
+                  const options = Array.isArray(compression.options) && compression.options.length
+                    ? compression.options.join(' · ')
+                    : 'options not recorded';
+                  const level = compression.levelRecorded ? String(compression.level) : 'not recorded';
+                  const algorithm = compression.algorithm || 'not recorded';
+                  const typeName = compression.typeName || compression.source || 'not recorded';
+                  const fetched = item.fetchedAt ? new Date(item.fetchedAt).toLocaleString() : '-';
+                  const urlText = item.url || '';
+                  return '<tr>'
+                    + '<td class="download-verification-table__proof">'
+                    + badge('HTTP', Boolean(item.downloaded))
+                    + badge('DB', Boolean(item.savedToDb))
+                    + '</td>'
+                    + '<td><strong>' + escapeHtml(item.host || '-') + '</strong><span title="' + escapeHtml(urlText) + '">' + escapeHtml(urlText) + '</span><em>HTTP ' + escapeHtml(http.status || '-') + ' · ' + escapeHtml(formatBytes(http.bytesDownloaded)) + '</em></td>'
+                    + '<td><strong>#' + escapeHtml(storage.contentStorageId || '-') + '</strong><span>' + escapeHtml(storage.storageType || 'not recorded') + '</span><em>sha ' + escapeHtml(storage.sha256Prefix || '-') + '</em></td>'
+                    + '<td><strong>' + escapeHtml(algorithm) + '</strong><span>' + escapeHtml(typeName) + '</span><em>level ' + escapeHtml(level) + ' · ' + escapeHtml(options) + '</em></td>'
+                    + '<td><strong>' + escapeHtml(formatBytes(storage.compressedSize)) + '</strong><span>from ' + escapeHtml(formatBytes(storage.uncompressedSize)) + '</span><em>ratio ' + escapeHtml(formatRatio(storage.compressionRatio)) + '</em></td>'
+                    + '<td class="download-verification-table__time">' + escapeHtml(fetched) + '</td>'
+                    + '</tr>';
+                }).join('')
+                + '</tbody></table>';
+            }
+            function updateStats(summary) {
+              const total = summary && Number.isFinite(summary.total) ? summary.total : 0;
+              const verified = summary && Number.isFinite(summary.verified) ? summary.verified : 0;
+              const saved = summary && Number.isFinite(summary.savedToDb) ? summary.savedToDb : 0;
+              const levelRecorded = summary && Number.isFinite(summary.levelRecorded) ? summary.levelRecorded : 0;
+              const algorithms = summary && Array.isArray(summary.algorithms) ? summary.algorithms : [];
+              setStat('verified', verified + ' / ' + total);
+              setStat('saved', saved + ' / ' + total);
+              setStat('levels', levelRecorded + ' / ' + total);
+              setStat('algorithms', algorithms.length ? algorithms.map(function(row) { return row.algorithm + ':' + row.count; }).join(' ') : '-');
+            }
+            async function refresh() {
+              const params = new URLSearchParams();
+              params.set('limit', limitInput && limitInput.value ? limitInput.value : '25');
+              if (sinceInput && sinceInput.value) params.set('since', sinceInput.value);
+              setStatus('Loading verification evidence...');
+              try {
+                const response = await fetch(apiBase + '?' + params.toString(), { cache: 'no-store' });
+                const json = await response.json();
+                if (!response.ok || json.status === 'error') throw new Error(json.message || json.error || response.statusText);
+                updateStats(json.summary || {});
+                renderRows(json.items || []);
+                setStatus('Last updated: ' + new Date().toLocaleTimeString());
+              } catch (err) {
+                setStatus('Verification load failed: ' + (err.message || err));
+              }
+            }
+            const refreshButton = root.querySelector('[data-download-verification-action="refresh"]');
+            if (refreshButton) refreshButton.addEventListener('click', refresh);
+            if (limitInput) limitInput.addEventListener('change', refresh);
+            if (sinceInput) sinceInput.addEventListener('change', refresh);
+            refresh();
+          });
+          
+          window.UnifiedAppPanels.registerActivator('search-explorer', function(root) {
+            if (!root) return;
+            const apiBase = root.querySelector('[data-search-explorer-root]')?.dataset.searchApiBase || '/api/search-explorer';
+            const form = root.querySelector('[data-search-form]');
+            const resultsEl = root.querySelector('[data-search-results]');
+            const statusEl = root.querySelector('[data-search-status]');
+            const freshnessEl = root.querySelector('[data-search-freshness-summary]');
+
+            function escapeHtml(str) {
+              return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+            }
+            function setStatus(text) { if (statusEl) statusEl.textContent = text; }
+            function field(selector) { return root.querySelector(selector); }
+            function value(selector) { const el = field(selector); return el ? el.value.trim() : ''; }
+            function fillSelect(select, entries, valueKey, labelKey, emptyLabel) {
+              if (!select) return;
+              const current = select.value;
+              select.innerHTML = '<option value="">' + escapeHtml(emptyLabel) + '</option>';
+              entries.forEach(function(entry) {
+                const option = document.createElement('option');
+                option.value = entry[valueKey] || entry[labelKey] || '';
+                option.textContent = entry[labelKey] || entry[valueKey] || option.value;
+                select.appendChild(option);
+              });
+              if (current) select.value = current;
+            }
+            async function loadOptions() {
+              try {
+                const response = await fetch(apiBase + '/options', { cache: 'no-store' });
+                if (!response.ok) return;
+                const json = await response.json();
+                fillSelect(field('[data-search-filter="domain"]'), json.domains || [], 'host', 'host', 'All enabled domains');
+                fillSelect(field('[data-search-filter="section"]'), json.sections || [], 'section', 'section', 'All sections');
+              } catch (_) { /* options are progressive enhancement */ }
+            }
+            function renderResults(json) {
+              if (freshnessEl && json.freshness) freshnessEl.textContent = json.freshness.summary || json.freshness.freshnessLabel || 'Freshness available';
+              const rows = Array.isArray(json.results) ? json.results : [];
+              if (!resultsEl) return;
+              if (!rows.length) {
+                resultsEl.innerHTML = '<div class="panel-log__empty">No matching articles.</div>';
+                return;
+              }
+              resultsEl.innerHTML = rows.map(function(row) {
+                const title = row.title || row.url || 'Untitled result';
+                const meta = [row.host, row.section, row.date].filter(Boolean).join(' · ');
+                const url = row.url || '#';
+                return '<article class="search-result-row">'
+                  + '<a class="text-gold" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(title) + '</a>'
+                  + '<div class="text-muted">' + escapeHtml(meta) + '</div>'
+                  + '</article>';
+              }).join('');
+            }
+            async function runSearch() {
+              const params = new URLSearchParams();
+              const q = value('[data-search-input="q"]');
+              const author = value('[data-search-input="author"]');
+              if (!q && !author) { setStatus('Enter a query or author.'); return; }
+              if (q) params.set('q', q);
+              if (author) params.set('author', author);
+              ['domain', 'section', 'datePreset'].forEach(function(name) {
+                const selected = value('[data-search-filter="' + name + '"]');
+                if (selected) params.set(name, selected);
+              });
+              const enabled = field('[data-search-filter="enabledOnly"]');
+              if (enabled) params.set('enabledOnly', enabled.checked ? 'true' : 'false');
+              setStatus('Searching...');
+              try {
+                const response = await fetch(apiBase + '/search?' + params.toString(), { cache: 'no-store' });
+                const json = await response.json();
+                if (!response.ok || json.status === 'error') throw new Error(json.message || json.error || response.statusText);
+                renderResults(json);
+                const total = json.pagination && Number.isFinite(json.pagination.total) ? json.pagination.total : (json.results || []).length;
+                setStatus('Results: ' + total);
+              } catch (err) {
+                setStatus(err.message || 'Search failed');
+              }
+            }
+            if (form) {
+              form.addEventListener('submit', function(event) { event.preventDefault(); runSearch(); });
+              form.addEventListener('reset', function() {
+                setTimeout(function() {
+                  if (resultsEl) resultsEl.innerHTML = '<div class="panel-log__empty">No results loaded.</div>';
+                  if (freshnessEl) freshnessEl.textContent = 'No search yet';
+                  setStatus('Ready');
+                }, 0);
+              });
+            }
+            loadOptions();
+          });
+          
+          window.UnifiedAppPanels.registerActivator('screenshot-review', function(root) {
+            if (!root) return;
+            const panelRoot = root.matches && root.matches('[data-screenshot-review-root]')
+              ? root
+              : (root.querySelector('[data-screenshot-review-root]') || root);
+            const apiBase = panelRoot.dataset.screenshotReviewApiBase || '/api/screenshot-review';
+            const runList = root.querySelector('[data-screenshot-review-runs]');
+            const gallery = root.querySelector('[data-screenshot-review-gallery]');
+            const comments = root.querySelector('[data-screenshot-review-comments]');
+            const form = root.querySelector('[data-screenshot-review-comment-form]');
+            const targetSelect = root.querySelector('[data-screenshot-review-comment-target]');
+            const input = root.querySelector('[data-screenshot-review-comment-input]');
+            const status = root.querySelector('[data-screenshot-review-status]');
+            const refreshButton = root.querySelector('[data-screenshot-review-action="refresh"]');
+            const sessionFilter = root.querySelector('[data-screenshot-review-filter="session"]');
+            const appFilter = root.querySelector('[data-screenshot-review-filter="app"]');
+            let runs = [];
+            let selectedRun = null;
+
+            function escapeHtml(str) {
+              return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+            }
+            function setStatus(text) { if (status) status.textContent = text; }
+            function setStat(name, value) {
+              const el = root.querySelector('[data-screenshot-review-stat="' + name + '"]');
+              if (el) el.textContent = value == null ? '-' : String(value);
+            }
+            function shortDate(value) {
+              if (!value) return '-';
+              try { return new Date(value).toLocaleString(); } catch (_) { return String(value); }
+            }
+            function updateOptions(select, options, allLabel) {
+              if (!select) return;
+              const current = select.value || 'all';
+              const items = Array.isArray(options) ? options : [];
+              select.innerHTML = '<option value="all">' + escapeHtml(allLabel) + '</option>';
+              items.forEach(function(option) {
+                const el = document.createElement('option');
+                el.value = option.value || option.label || '';
+                el.textContent = option.label || option.value || '';
+                select.appendChild(el);
+              });
+              select.value = Array.from(select.options).some(function(option) { return option.value === current; }) ? current : 'all';
+            }
+            function buildRunsUrl() {
+              const params = new URLSearchParams();
+              if (sessionFilter && sessionFilter.value && sessionFilter.value !== 'all') params.set('session', sessionFilter.value);
+              if (appFilter && appFilter.value && appFilter.value !== 'all') params.set('app', appFilter.value);
+              const suffix = params.toString();
+              return apiBase + '/runs' + (suffix ? '?' + suffix : '');
+            }
+            function renderRuns() {
+              if (!runList) return;
+              if (!runs.length) {
+                runList.innerHTML = '<div class="panel-log__empty">No screenshot runs found.</div>';
+                if (gallery) gallery.innerHTML = '<div class="panel-log__empty">Capture screenshots to populate this view.</div>';
+                return;
+              }
+              runList.innerHTML = runs.map(function(run, index) {
+                const active = selectedRun && selectedRun.runId === run.runId ? ' screenshot-review-run--active' : '';
+                return '<button type="button" class="screenshot-review-run' + active + '" data-screenshot-review-run-id="' + escapeHtml(run.runId) + '">'
+                  + '<strong>' + escapeHtml(run.title || run.relativeOutputDir || 'Screenshot run') + '</strong>'
+                  + '<span>' + escapeHtml(shortDate(run.capturedAt)) + '</span>'
+                  + '<em>' + escapeHtml(run.ok ? 'ok' : 'needs review') + ' · ' + escapeHtml(run.routeCount || 0) + ' images · ' + escapeHtml(run.commentCount || 0) + ' comments</em>'
+                  + '<em>' + escapeHtml((run.sessionId || 'other') + ' · ' + ((run.appKeys || []).join(', ') || 'all apps')) + '</em>'
+                  + '</button>';
+              }).join('');
+            }
+            function renderGallery(run) {
+              if (!gallery) return;
+              if (!run) {
+                gallery.innerHTML = '<div class="panel-log__empty">Select a run to view screenshots.</div>';
+                return;
+              }
+              const routes = Array.isArray(run.routes) ? run.routes : [];
+              const header = '<div class="screenshot-review-gallery__header"><div><h3>' + escapeHtml(run.title) + '</h3><span>' + escapeHtml(run.analysisPath || '') + '</span></div><strong>' + escapeHtml(run.ok ? 'OK' : 'Review') + '</strong></div>';
+              if (!routes.length) {
+                gallery.innerHTML = header + '<div class="panel-log__empty">Run has no screenshot routes.</div>';
+                return;
+              }
+              gallery.innerHTML = header + '<div class="screenshot-review-image-grid">' + routes.map(function(route) {
+                const overflow = route.metrics && route.metrics.horizontalOverflow ? 'overflow' : 'no overflow';
+                const bytes = route.screenshotBytes ? Math.round(route.screenshotBytes / 1024) + ' KB' : 'not saved';
+                const viewport = route.viewportKey ? ' · ' + route.viewportKey : '';
+                const domLink = route.domSnapshotUrl
+                  ? '<a href="' + escapeHtml(route.domSnapshotUrl) + '" target="_blank" rel="noreferrer">DOM</a>'
+                  : '<span>DOM not saved</span>';
+                const media = route.imageUrl
+                  ? '<img src="' + escapeHtml(route.imageUrl) + '" alt="' + escapeHtml(route.key) + ' screenshot" loading="lazy" />'
+                  : '<div class="screenshot-review-image-card__missing">not saved</div>';
+                return '<figure class="screenshot-review-image-card">'
+                  + media
+                  + '<figcaption><strong>' + escapeHtml(route.key) + '</strong><span>' + escapeHtml(bytes + ' · ' + overflow + viewport) + '</span>' + domLink + '</figcaption>'
+                  + '</figure>';
+              }).join('') + '</div>';
+            }
+            function renderTargets(run) {
+              if (!targetSelect) return;
+              targetSelect.innerHTML = '<option value="run">Whole run</option>';
+              (run && Array.isArray(run.routes) ? run.routes : []).forEach(function(route) {
+                const option = document.createElement('option');
+                option.value = route.key || 'screenshot';
+                option.textContent = route.key || 'screenshot';
+                targetSelect.appendChild(option);
+              });
+            }
+            async function loadComments(run) {
+              if (!comments || !run) return;
+              try {
+                const response = await fetch(apiBase + '/comments?run=' + encodeURIComponent(run.runId), { cache: 'no-store' });
+                const json = await response.json();
+                if (!response.ok || json.status === 'error') throw new Error(json.message || json.error || response.statusText);
+                comments.textContent = json.content || 'No comments yet.';
+              } catch (err) {
+                comments.textContent = 'Comment load failed: ' + (err.message || err);
+              }
+            }
+            async function selectRun(runId) {
+              selectedRun = runs.find(function(run) { return run.runId === runId; }) || runs[0] || null;
+              renderRuns();
+              renderGallery(selectedRun);
+              renderTargets(selectedRun);
+              await loadComments(selectedRun);
+            }
+            async function refresh() {
+              setStatus('Loading screenshot runs...');
+              try {
+                const response = await fetch(buildRunsUrl(), { cache: 'no-store' });
+                const json = await response.json();
+                if (!response.ok || json.status === 'error') throw new Error(json.message || json.error || response.statusText);
+                if (json.filters) {
+                  updateOptions(sessionFilter, json.filters.sessions, 'All sessions');
+                  updateOptions(appFilter, json.filters.apps, 'All apps');
+                }
+                runs = Array.isArray(json.runs) ? json.runs : [];
+                const routeCount = runs.reduce(function(sum, run) { return sum + (Number(run.routeCount) || 0); }, 0);
+                const commentCount = runs.reduce(function(sum, run) { return sum + (Number(run.commentCount) || 0); }, 0);
+                setStat('runs', runs.length);
+                setStat('images', routeCount);
+                setStat('comments', commentCount);
+                setStat('latest', runs[0] && runs[0].capturedAt ? shortDate(runs[0].capturedAt).split(',')[0] : '-');
+                await selectRun(selectedRun ? selectedRun.runId : (runs[0] && runs[0].runId));
+                root.dataset.screenshotReviewReady = 'true';
+                panelRoot.dataset.screenshotReviewReady = 'true';
+                setStatus('Last updated: ' + new Date().toLocaleTimeString());
+              } catch (err) {
+                root.dataset.screenshotReviewReady = 'error';
+                panelRoot.dataset.screenshotReviewReady = 'error';
+                setStatus('Screenshot review failed: ' + (err.message || err));
+              }
+            }
+            if (runList) {
+              runList.addEventListener('click', function(event) {
+                const button = event.target.closest('[data-screenshot-review-run-id]');
+                if (button) selectRun(button.dataset.screenshotReviewRunId);
+              });
+            }
+            if (refreshButton) refreshButton.addEventListener('click', refresh);
+            if (sessionFilter) sessionFilter.addEventListener('change', function() { selectedRun = null; refresh(); });
+            if (appFilter) appFilter.addEventListener('change', function() { selectedRun = null; refresh(); });
+            if (form) {
+              form.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                if (!selectedRun || !input || !input.value.trim()) return;
+                setStatus('Saving screenshot comment...');
+                try {
+                  const response = await fetch(apiBase + '/comments', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({
+                      runId: selectedRun.runId,
+                      target: targetSelect && targetSelect.value ? targetSelect.value : 'run',
+                      comment: input.value.trim()
+                    })
+                  });
+                  const json = await response.json();
+                  if (!response.ok || json.status === 'error') throw new Error(json.message || json.error || response.statusText);
+                  input.value = '';
+                  if (comments) comments.textContent = json.content || 'Comment saved.';
+                  selectedRun.commentCount = Number(json.commentCount) || selectedRun.commentCount || 1;
+                  renderRuns();
+                  setStatus('Comment saved: ' + (json.commentsPath || 'SCREENSHOT_COMMENTS.md'));
+                } catch (err) {
+                  setStatus('Comment save failed: ' + (err.message || err));
+                }
+              });
+            }
+            refresh();
+          });
+        })();
+
+        // ─── Sub-app delegated event handlers ──────────────────
+        
+        window.resetDomain = window.resetDomain || function(domain) { console.log('[UnifiedApp] resetDomain', domain); };
+        window.showCreateForm = window.showCreateForm || function() { console.log('[UnifiedApp] showCreateForm'); };
+        window.toggleWebhook = window.toggleWebhook || function(id) { console.log('[UnifiedApp] toggleWebhook', id); };
+        window.deleteWebhook = window.deleteWebhook || function(id) { console.log('[UnifiedApp] deleteWebhook', id); };
+        window.activatePlugin = window.activatePlugin || function(id) { console.log('[UnifiedApp] activatePlugin', id); };
+        window.deactivatePlugin = window.deactivatePlugin || function(id) { console.log('[UnifiedApp] deactivatePlugin', id); };
+        
+        // Load app content from server
+        async function loadAppContent(appId) {
+          const container = document.getElementById('app-' + appId);
+          if (!container) return;
+          
+          // Already loaded?
+          if (container.dataset.loaded === 'true') return;
+
+          // Content is changing; allow activation to run again after load.
+          container.dataset.activated = 'false';
+          
+          container.innerHTML = '<div class="app-loading">Loading...</div>';
+          
+          try {
+            const response = await fetch('/api/apps/' + appId + '/content');
+            const data = await response.json();
+            
+            if (data.error) {
+              container.innerHTML = '<div class="app-placeholder"><p>Error</p><p class="error">' + escapeHtml(data.error) + '</p></div>';
+            } else {
+              container.innerHTML = data.content;
+              container.dataset.loaded = 'true';
+
+              const activationKey = typeof data.activationKey === 'string' ? data.activationKey : '';
+              const embed = typeof data.embed === 'string' ? data.embed : '';
+              container.dataset.activationKey = activationKey;
+              container.dataset.embed = embed;
+
+              activatePanelIfPresent(container, appId, activationKey);
+            }
+          } catch (err) {
+            container.innerHTML = '<div class="app-placeholder"><p>Error</p><p class="error">' + escapeHtml(err.message) + '</p></div>';
+          }
+        }
+        
+        // Switch to app
+        function switchToApp(appId) {
+          if (appId === currentAppId) return;
+          
+          // Hide current app (off-screen preservation)
+          const currentContainer = document.getElementById('app-' + currentAppId);
+          if (currentContainer) {
+            currentContainer.classList.add('app-container--hidden');
+            // Pause polling timers for the panel being hidden
+            if (typeof currentContainer._downloadsCleanup === 'function') {
+              currentContainer._downloadsCleanup();
+              currentContainer.dataset.downloadsBound = 'false'; // Allow re-bind on next show
+            }
+          }
+          
+          // Update nav
+          navItems.forEach(item => {
+            item.classList.toggle('nav-item--active', item.dataset.appId === appId);
+          });
+          
+          // Show target app
+          const targetContainer = document.getElementById('app-' + appId);
+          if (targetContainer) {
+            targetContainer.classList.remove('app-container--hidden');
+            
+            // Load if needed
+            if (targetContainer.dataset.loaded !== 'true') {
+              loadAppContent(appId);
+            } else {
+              // For panel-mode sub-apps, activation is idempotent and safe.
+              activatePanelIfPresent(targetContainer, appId, targetContainer.dataset.activationKey);
+            }
+          }
+          
+          currentAppId = appId;
+          
+          // Update URL without reload
+          history.pushState({ app: appId }, '', '?app=' + appId);
+        }
+        
+        // Bind nav clicks
+        navItems.forEach(item => {
+          item.addEventListener('click', () => {
+            const appId = item.dataset.appId;
+            if (appId) switchToApp(appId);
+          });
+        });
+        
+        // Handle browser back/forward
+        window.addEventListener('popstate', (event) => {
+          if (event.state && event.state.app) {
+            switchToApp(event.state.app);
+          }
+        });
+        
+        // Load initial app content
+        loadAppContent(currentAppId);
+
+        // Crawl badges should update even if Home is never opened.
+        bindCrawlNavBadgePoll();
+        
+        console.log('🎛️ Unified App Shell initialized');
+        
+        
+      })();
+    
+  </script>
+
+</body></html>

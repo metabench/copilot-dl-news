@@ -1,0 +1,2106 @@
+{
+  "generatedAt": "2026-05-04T01:59:47.933Z",
+  "baseUrl": "http://localhost:3097",
+  "outputDir": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\playwright-fallback",
+  "results": [
+    {
+      "route": "/?app=home",
+      "url": "http://localhost:3097/?app=home",
+      "viewport": {
+        "label": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "isMobile": false,
+        "deviceScaleFactor": 1
+      },
+      "title": "Unified App Shell",
+      "location": "http://localhost:3097/?app=home",
+      "headings": [
+        "🎛️ Unified Control Center",
+        "RECENT CRAWL ACTIVITY"
+      ],
+      "textSnippets": [
+        "🎛️ Unified Control Center Real-time overview of the Copilot Crawler ecosystem. 69,823 Articles Indexed – Known Hub Pages – Tracked Domains ... Active Crawls ... Recent Errors (10m) RECENT CRAWL ACTIVITY ${activityRows} Target Duration Status"
+      ],
+      "bodyDimensions": {
+        "scrollWidth": 1440,
+        "scrollHeight": 1000,
+        "clientWidth": 1440,
+        "clientHeight": 1000,
+        "rect": {
+          "width": 1440,
+          "height": 1000,
+          "top": 0,
+          "left": 0,
+          "right": 1440,
+          "bottom": 1000
+        }
+      },
+      "mainDimensions": {
+        "scrollWidth": 1180,
+        "scrollHeight": 1000,
+        "clientWidth": 1180,
+        "clientHeight": 1000,
+        "rect": {
+          "width": 1180,
+          "height": 1000,
+          "top": 0,
+          "left": 260,
+          "right": 1440,
+          "bottom": 1000
+        }
+      },
+      "documentDimensions": {
+        "scrollWidth": 1440,
+        "scrollHeight": 1000,
+        "clientWidth": 1440,
+        "clientHeight": 1000
+      },
+      "horizontalOverflow": false,
+      "horizontalOverflowPx": 0,
+      "overflowElements": [
+        {
+          "tag": "div",
+          "id": "app-cloud-crawl",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-rate-limits",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-observer",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-status",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-multi-modal-crawl",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-scheduler",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawler-profiles",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-domain-registry",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-strategies",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawler-monitor",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-webhooks",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-plugins",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-admin",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-downloads",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-download-verification",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-search-explorer",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-quality",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-analytics",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-place-hub-guessing",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-topic-hub-guessing",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        }
+      ],
+      "consoleErrors": [],
+      "networkFailures": [],
+      "badResponses": [],
+      "screenshot": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\playwright-fallback\\desktop-home.png"
+    },
+    {
+      "route": "/?app=cloud-crawl",
+      "url": "http://localhost:3097/?app=cloud-crawl",
+      "viewport": {
+        "label": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "isMobile": false,
+        "deviceScaleFactor": 1
+      },
+      "title": "Unified App Shell",
+      "location": "http://localhost:3097/?app=cloud-crawl",
+      "headings": [
+        "Cloud Crawl",
+        "Targets",
+        "Recent Downloads"
+      ],
+      "textSnippets": [
+        "Cloud Crawl 5 sites / 5 pages each / remote parallel configured Remote 0 Active 25 / 25 Downloaded 0 Errors 5 targets 5 pages/site remote bounded since 2026-05-04 Refresh Crawl Status Download Verify Targets BBC bbc.com 5 / 5 Guardian theguardian.com 5 / 5 CBS cbsnews.com 5 / 5 NBC nbcnews.com 5 / 5 France 24 france24.com 5 / 5 Recent Downloads www.france24.com https://www.france24.com/en/tag/fran",
+        "ce/3/ HTTP 200 · 610.9 KB · 04/05/2026, 00:10:12 www.france24.com https://www.france24.com/en/tag/france/4/ HTTP 200 · 612.1 KB · 04/05/2026, 00:10:12 www.france24.com https://www.france24.com/en/tag/france/5/ HTTP 200 · 608.3 KB · 04/05/2026, 00:10:12 www.cbsnews.com https://www.cbsnews.com/colorado/news/colorado-prepares-for-cinco-de-mayo/ HTTP 200 · 627.5 KB · 04/05/2026, 00:10:07 www.cbsnews.c"
+      ],
+      "bodyDimensions": {
+        "scrollWidth": 1440,
+        "scrollHeight": 1000,
+        "clientWidth": 1440,
+        "clientHeight": 1000,
+        "rect": {
+          "width": 1440,
+          "height": 1000,
+          "top": 0,
+          "left": 0,
+          "right": 1440,
+          "bottom": 1000
+        }
+      },
+      "mainDimensions": {
+        "scrollWidth": 1180,
+        "scrollHeight": 1000,
+        "clientWidth": 1180,
+        "clientHeight": 1000,
+        "rect": {
+          "width": 1180,
+          "height": 1000,
+          "top": 0,
+          "left": 260,
+          "right": 1440,
+          "bottom": 1000
+        }
+      },
+      "documentDimensions": {
+        "scrollWidth": 1440,
+        "scrollHeight": 1000,
+        "clientWidth": 1440,
+        "clientHeight": 1000
+      },
+      "horizontalOverflow": false,
+      "horizontalOverflowPx": 0,
+      "overflowElements": [
+        {
+          "tag": "div",
+          "id": "app-home",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-rate-limits",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-observer",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-status",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-multi-modal-crawl",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-scheduler",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawler-profiles",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-domain-registry",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-strategies",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawler-monitor",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-webhooks",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-plugins",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-admin",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-downloads",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-download-verification",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-search-explorer",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-quality",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-analytics",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-place-hub-guessing",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-topic-hub-guessing",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        }
+      ],
+      "consoleErrors": [],
+      "networkFailures": [],
+      "badResponses": [],
+      "screenshot": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\playwright-fallback\\desktop-cloud-crawl.png"
+    },
+    {
+      "route": "/?app=downloads",
+      "url": "http://localhost:3097/?app=downloads",
+      "viewport": {
+        "label": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "isMobile": false,
+        "deviceScaleFactor": 1
+      },
+      "title": "Unified App Shell",
+      "location": "http://localhost:3097/?app=downloads",
+      "headings": [
+        "📥 Download Statistics",
+        "📊 50-Page Crawl Progress",
+        "📝 Recent Downloads"
+      ],
+      "textSnippets": [
+        "📥 Download Statistics Evidence-based download verification. All counts are queried directly from the database. 272464 Total Downloads 249616 Verified (HTTP 200) 117.7 GB Total Size 📊 50-Page Crawl Progress Progress 0 / 50 🕷️ Start 50-Page Crawl 🔄 Refresh 📝 Recent Downloads 200 www.france24.com https://www.france24.com/en/tag/france/5/ 608.3 KB 04/05/2026, 00:10:12 200 www.france24.com https:/",
+        "/www.france24.com/en/tag/france/4/ 612.1 KB 04/05/2026, 00:10:12 200 www.france24.com https://www.france24.com/en/tag/france/3/ 610.9 KB 04/05/2026, 00:10:12 200 www.nbcnews.com https://www.nbcnews.com/dateline/in-the-news/dateline-full-episode-the-night-of-the-audition-rcna231878 318.1 KB 04/05/2026, 00:10:07 200 www.nbcnews.com https://www.nbcnews.com/dateline/in-the-news/dateline-full-episode-b"
+      ],
+      "bodyDimensions": {
+        "scrollWidth": 1440,
+        "scrollHeight": 1000,
+        "clientWidth": 1440,
+        "clientHeight": 1000,
+        "rect": {
+          "width": 1440,
+          "height": 1000,
+          "top": 0,
+          "left": 0,
+          "right": 1440,
+          "bottom": 1000
+        }
+      },
+      "mainDimensions": {
+        "scrollWidth": 1180,
+        "scrollHeight": 1000,
+        "clientWidth": 1180,
+        "clientHeight": 1000,
+        "rect": {
+          "width": 1180,
+          "height": 1000,
+          "top": 0,
+          "left": 260,
+          "right": 1440,
+          "bottom": 1000
+        }
+      },
+      "documentDimensions": {
+        "scrollWidth": 1440,
+        "scrollHeight": 1000,
+        "clientWidth": 1440,
+        "clientHeight": 1000
+      },
+      "horizontalOverflow": false,
+      "horizontalOverflowPx": 0,
+      "overflowElements": [
+        {
+          "tag": "div",
+          "id": "app-home",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-cloud-crawl",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-rate-limits",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-observer",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-status",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-multi-modal-crawl",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-scheduler",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawler-profiles",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-domain-registry",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-strategies",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawler-monitor",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-webhooks",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-plugins",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-admin",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-download-verification",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-search-explorer",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-quality",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-analytics",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-place-hub-guessing",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-topic-hub-guessing",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        }
+      ],
+      "consoleErrors": [],
+      "networkFailures": [],
+      "badResponses": [],
+      "screenshot": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\playwright-fallback\\desktop-downloads.png"
+    },
+    {
+      "route": "/?app=crawl-status",
+      "url": "http://localhost:3097/?app=crawl-status",
+      "viewport": {
+        "label": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "isMobile": false,
+        "deviceScaleFactor": 1
+      },
+      "title": "Unified App Shell",
+      "location": "http://localhost:3097/?app=crawl-status",
+      "headings": [],
+      "textSnippets": [
+        "🎛️ Control Center 🏠 Home 🕷️ CRAWLER ☁️ Cloud Crawl ⏱️ Rate Limits 🔭 Crawl Observer 🏃 Crawl Status 🔄 Multi-Modal Crawl 🗓️ Scheduler 🗃️ Crawler Profiles 🗂️ Domain Registry 🕷️ Crawl Strategies 📡 Crawler Monitor ⚙️ ADMINISTRATION 🔗 Webhooks 🧩 Plugins ⚙️ Admin 🗂️ Topic Lists 📊 ANALYTICS 📥 Downloads ✅ Download Verify 🔎 Search Explorer 📊 Quality 📈 Analytics 🧭 Place Hub Guessing 🏷️ To",
+        "pic Hub Guessing 🔍 Query Telemetry 🛠️ DEVELOPMENT 📚 Docs 🖼️ Screenshots 🎨 Design Studio 🧪 Panel Demo 🌳 Decision Tree 🎓 Template Teacher 🧪 Test Studio"
+      ],
+      "bodyDimensions": {
+        "scrollWidth": 1440,
+        "scrollHeight": 1000,
+        "clientWidth": 1440,
+        "clientHeight": 1000,
+        "rect": {
+          "width": 1440,
+          "height": 1000,
+          "top": 0,
+          "left": 0,
+          "right": 1440,
+          "bottom": 1000
+        }
+      },
+      "mainDimensions": {
+        "scrollWidth": 1180,
+        "scrollHeight": 1000,
+        "clientWidth": 1180,
+        "clientHeight": 1000,
+        "rect": {
+          "width": 1180,
+          "height": 1000,
+          "top": 0,
+          "left": 260,
+          "right": 1440,
+          "bottom": 1000
+        }
+      },
+      "documentDimensions": {
+        "scrollWidth": 1440,
+        "scrollHeight": 1000,
+        "clientWidth": 1440,
+        "clientHeight": 1000
+      },
+      "horizontalOverflow": false,
+      "horizontalOverflowPx": 0,
+      "overflowElements": [
+        {
+          "tag": "div",
+          "id": "app-home",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-cloud-crawl",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-rate-limits",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-observer",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-multi-modal-crawl",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-scheduler",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawler-profiles",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-domain-registry",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-strategies",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawler-monitor",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-webhooks",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-plugins",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-admin",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-downloads",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-download-verification",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-search-explorer",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-quality",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-analytics",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-place-hub-guessing",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-topic-hub-guessing",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        }
+      ],
+      "consoleErrors": [],
+      "networkFailures": [],
+      "badResponses": [],
+      "screenshot": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\playwright-fallback\\desktop-crawl-status.png"
+    },
+    {
+      "route": "/?app=screenshot-review",
+      "url": "http://localhost:3097/?app=screenshot-review",
+      "viewport": {
+        "label": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "isMobile": false,
+        "deviceScaleFactor": 1
+      },
+      "title": "Unified App Shell",
+      "location": "http://localhost:3097/?app=screenshot-review",
+      "headings": [
+        "Screenshot Review",
+        "Runs",
+        "docs/sessions/2026-05-04-screenshot-tooling-control-centre/screenshots",
+        "Comments"
+      ],
+      "textSnippets": [
+        "Screenshot Review Browse UI screenshot runs, inspect evidence, and leave comments for later improvement passes. 5 Runs 17 Images 1 Comments 04/05/2026 Latest Runs All sessions 2026-05-04-five-site-cloud-crawl-ui 2026-05-04-screenshot-tooling-control-centre root-screenshots All apps cloud-crawl crawl-status downloads screenshot-review Refresh docs/sessions/2026-05-04-screenshot-tooling-control-cent",
+        "re/screenshots 04/05/2026, 02:00:45 ok · 8 images · 1 comments 2026-05-04-screenshot-tooling-control-centre · cloud-crawl, crawl-status, downloads, screenshot-review docs/sessions/2026-05-04-five-site-cloud-crawl-ui/screenshots 04/05/2026, 01:16:31 ok · 3 images · 0 comments 2026-05-04-five-site-cloud-crawl-ui · cloud-crawl, crawl-status, downloads screenshots/electron-500-download-crawl 29/04/202"
+      ],
+      "bodyDimensions": {
+        "scrollWidth": 1440,
+        "scrollHeight": 1000,
+        "clientWidth": 1440,
+        "clientHeight": 1000,
+        "rect": {
+          "width": 1440,
+          "height": 1000,
+          "top": 0,
+          "left": 0,
+          "right": 1440,
+          "bottom": 1000
+        }
+      },
+      "mainDimensions": {
+        "scrollWidth": 1180,
+        "scrollHeight": 1000,
+        "clientWidth": 1180,
+        "clientHeight": 1000,
+        "rect": {
+          "width": 1180,
+          "height": 1000,
+          "top": 0,
+          "left": 260,
+          "right": 1440,
+          "bottom": 1000
+        }
+      },
+      "documentDimensions": {
+        "scrollWidth": 1440,
+        "scrollHeight": 1000,
+        "clientWidth": 1440,
+        "clientHeight": 1000
+      },
+      "horizontalOverflow": false,
+      "horizontalOverflowPx": 0,
+      "overflowElements": [
+        {
+          "tag": "div",
+          "id": "app-home",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-cloud-crawl",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-rate-limits",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-observer",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-status",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-multi-modal-crawl",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-scheduler",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawler-profiles",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-domain-registry",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-strategies",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawler-monitor",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-webhooks",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-plugins",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-admin",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-downloads",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-download-verification",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-search-explorer",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-quality",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-analytics",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-place-hub-guessing",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        }
+      ],
+      "consoleErrors": [],
+      "networkFailures": [],
+      "badResponses": [],
+      "screenshot": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\playwright-fallback\\desktop-screenshot-review.png"
+    },
+    {
+      "route": "/?app=search-explorer",
+      "url": "http://localhost:3097/?app=search-explorer",
+      "viewport": {
+        "label": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "isMobile": false,
+        "deviceScaleFactor": 1
+      },
+      "title": "Unified App Shell",
+      "location": "http://localhost:3097/?app=search-explorer",
+      "headings": [
+        "Article Search"
+      ],
+      "textSnippets": [
+        "Article Search Freshness-aware article lookup Query Author Domain All enabled domains Section All sections Date Range 24 hours 7 days 30 days All time Domain Scope Enabled domains only Search Reset Ready FreshnessNo search yet No results loaded."
+      ],
+      "bodyDimensions": {
+        "scrollWidth": 1440,
+        "scrollHeight": 1000,
+        "clientWidth": 1440,
+        "clientHeight": 1000,
+        "rect": {
+          "width": 1440,
+          "height": 1000,
+          "top": 0,
+          "left": 0,
+          "right": 1440,
+          "bottom": 1000
+        }
+      },
+      "mainDimensions": {
+        "scrollWidth": 1180,
+        "scrollHeight": 1000,
+        "clientWidth": 1180,
+        "clientHeight": 1000,
+        "rect": {
+          "width": 1180,
+          "height": 1000,
+          "top": 0,
+          "left": 260,
+          "right": 1440,
+          "bottom": 1000
+        }
+      },
+      "documentDimensions": {
+        "scrollWidth": 1440,
+        "scrollHeight": 1000,
+        "clientWidth": 1440,
+        "clientHeight": 1000
+      },
+      "horizontalOverflow": false,
+      "horizontalOverflowPx": 0,
+      "overflowElements": [
+        {
+          "tag": "div",
+          "id": "app-home",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-cloud-crawl",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-rate-limits",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-observer",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-status",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-multi-modal-crawl",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-scheduler",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawler-profiles",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-domain-registry",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawl-strategies",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-crawler-monitor",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-webhooks",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-plugins",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-admin",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-downloads",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-download-verification",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-quality",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-analytics",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-place-hub-guessing",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "app-topic-hub-guessing",
+          "className": "app-container app-container--hidden",
+          "left": -920,
+          "right": 260,
+          "width": 1180,
+          "text": ""
+        }
+      ],
+      "consoleErrors": [],
+      "networkFailures": [],
+      "badResponses": [],
+      "screenshot": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\playwright-fallback\\desktop-search-explorer.png"
+    },
+    {
+      "route": "/?app=cloud-crawl",
+      "url": "http://localhost:3097/?app=cloud-crawl",
+      "viewport": {
+        "label": "mobile",
+        "width": 390,
+        "height": 844,
+        "isMobile": true,
+        "deviceScaleFactor": 2
+      },
+      "title": "Unified App Shell",
+      "location": "http://localhost:3097/?app=cloud-crawl",
+      "headings": [
+        "Cloud Crawl",
+        "Targets",
+        "Recent Downloads"
+      ],
+      "textSnippets": [
+        "Cloud Crawl 5 sites / 5 pages each / remote parallel configured Remote 0 Active 25 / 25 Downloaded 0 Errors 5 targets 5 pages/site remote bounded since 2026-05-04 Refresh Crawl Status Download Verify Targets BBC bbc.com 5 / 5 Guardian theguardian.com 5 / 5 CBS cbsnews.com 5 / 5 NBC nbcnews.com 5 / 5 France 24 france24.com 5 / 5 Recent Downloads www.france24.com https://www.france24.com/en/tag/fran",
+        "ce/3/ HTTP 200 · 610.9 KB · 04/05/2026, 00:10:12 www.france24.com https://www.france24.com/en/tag/france/4/ HTTP 200 · 612.1 KB · 04/05/2026, 00:10:12 www.france24.com https://www.france24.com/en/tag/france/5/ HTTP 200 · 608.3 KB · 04/05/2026, 00:10:12 www.cbsnews.com https://www.cbsnews.com/colorado/news/colorado-prepares-for-cinco-de-mayo/ HTTP 200 · 627.5 KB · 04/05/2026, 00:10:07 www.cbsnews.c"
+      ],
+      "bodyDimensions": {
+        "scrollWidth": 390,
+        "scrollHeight": 844,
+        "clientWidth": 390,
+        "clientHeight": 844,
+        "rect": {
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "left": 0,
+          "right": 390,
+          "bottom": 844
+        }
+      },
+      "mainDimensions": {
+        "scrollWidth": 130,
+        "scrollHeight": 844,
+        "clientWidth": 130,
+        "clientHeight": 844,
+        "rect": {
+          "width": 130,
+          "height": 844,
+          "top": 0,
+          "left": 260,
+          "right": 390,
+          "bottom": 844
+        }
+      },
+      "documentDimensions": {
+        "scrollWidth": 390,
+        "scrollHeight": 844,
+        "clientWidth": 390,
+        "clientHeight": 844
+      },
+      "horizontalOverflow": false,
+      "horizontalOverflowPx": 0,
+      "overflowElements": [
+        {
+          "tag": "a",
+          "id": "",
+          "className": "panel-btn panel-btn--ghost",
+          "left": 300,
+          "right": 393,
+          "width": 93,
+          "text": "Download Verify"
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "cloud-crawl-target cloud-crawl-target--complete",
+          "left": 300,
+          "right": 460,
+          "width": 160,
+          "text": "BBC bbc.com 5 / 5"
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "cloud-crawl-target__label",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": "BBC"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "cloud-crawl-target__domain",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": "bbc.com"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "cloud-crawl-target__count",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": "5 / 5"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "cloud-crawl-target__bar",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": ""
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "cloud-crawl-target__fill",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "cloud-crawl-target cloud-crawl-target--complete",
+          "left": 300,
+          "right": 460,
+          "width": 160,
+          "text": "Guardian theguardian.com 5 / 5"
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "cloud-crawl-target__label",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": "Guardian"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "cloud-crawl-target__domain",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": "theguardian.com"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "cloud-crawl-target__count",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": "5 / 5"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "cloud-crawl-target__bar",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": ""
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "cloud-crawl-target__fill",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "cloud-crawl-target cloud-crawl-target--complete",
+          "left": 300,
+          "right": 460,
+          "width": 160,
+          "text": "CBS cbsnews.com 5 / 5"
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "cloud-crawl-target__label",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": "CBS"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "cloud-crawl-target__domain",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": "cbsnews.com"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "cloud-crawl-target__count",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": "5 / 5"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "cloud-crawl-target__bar",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": ""
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "cloud-crawl-target__fill",
+          "left": 315,
+          "right": 445,
+          "width": 130,
+          "text": ""
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "cloud-crawl-target cloud-crawl-target--complete",
+          "left": 300,
+          "right": 460,
+          "width": 160,
+          "text": "NBC nbcnews.com 5 / 5"
+        }
+      ],
+      "consoleErrors": [],
+      "networkFailures": [],
+      "badResponses": [],
+      "screenshot": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\playwright-fallback\\mobile-cloud-crawl.png"
+    },
+    {
+      "route": "/?app=downloads",
+      "url": "http://localhost:3097/?app=downloads",
+      "viewport": {
+        "label": "mobile",
+        "width": 390,
+        "height": 844,
+        "isMobile": true,
+        "deviceScaleFactor": 2
+      },
+      "title": "Unified App Shell",
+      "location": "http://localhost:3097/?app=downloads",
+      "headings": [
+        "📥 Download Statistics",
+        "📊 50-Page Crawl Progress",
+        "📝 Recent Downloads"
+      ],
+      "textSnippets": [
+        "📥 Download Statistics Evidence-based download verification. All counts are queried directly from the database. 272464 Total Downloads 249616 Verified (HTTP 200) 117.7 GB Total Size 📊 50-Page Crawl Progress Progress 0 / 50 🕷️ Start 50-Page Crawl 🔄 Refresh 📝 Recent Downloads 200 www.france24.com https://www.france24.com/en/tag/france/5/ 608.3 KB 04/05/2026, 00:10:12 200 www.france24.com https:/",
+        "/www.france24.com/en/tag/france/4/ 612.1 KB 04/05/2026, 00:10:12 200 www.france24.com https://www.france24.com/en/tag/france/3/ 610.9 KB 04/05/2026, 00:10:12 200 www.nbcnews.com https://www.nbcnews.com/dateline/in-the-news/dateline-full-episode-the-night-of-the-audition-rcna231878 318.1 KB 04/05/2026, 00:10:07 200 www.nbcnews.com https://www.nbcnews.com/dateline/in-the-news/dateline-full-episode-b"
+      ],
+      "bodyDimensions": {
+        "scrollWidth": 390,
+        "scrollHeight": 844,
+        "clientWidth": 390,
+        "clientHeight": 844,
+        "rect": {
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "left": 0,
+          "right": 390,
+          "bottom": 844
+        }
+      },
+      "mainDimensions": {
+        "scrollWidth": 130,
+        "scrollHeight": 844,
+        "clientWidth": 130,
+        "clientHeight": 844,
+        "rect": {
+          "width": 130,
+          "height": 844,
+          "top": 0,
+          "left": 260,
+          "right": 390,
+          "bottom": 844
+        }
+      },
+      "documentDimensions": {
+        "scrollWidth": 390,
+        "scrollHeight": 844,
+        "clientWidth": 390,
+        "clientHeight": 844
+      },
+      "horizontalOverflow": false,
+      "horizontalOverflowPx": 0,
+      "overflowElements": [
+        {
+          "tag": "span",
+          "id": "",
+          "className": "",
+          "left": 382,
+          "right": 399,
+          "width": 17,
+          "text": "0 / 50"
+        },
+        {
+          "tag": "button",
+          "id": "",
+          "className": "panel-btn panel-btn--default",
+          "left": 336,
+          "right": 412,
+          "width": 76,
+          "text": "🔄 Refresh"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "downloads-list__meta",
+          "left": 393,
+          "right": 521,
+          "width": 128,
+          "text": "608.3 KB 04/05/2026, 00:10:12"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "downloads-list__meta",
+          "left": 393,
+          "right": 521,
+          "width": 128,
+          "text": "612.1 KB 04/05/2026, 00:10:12"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "downloads-list__meta",
+          "left": 393,
+          "right": 521,
+          "width": 128,
+          "text": "610.9 KB 04/05/2026, 00:10:12"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "downloads-list__meta",
+          "left": 393,
+          "right": 521,
+          "width": 128,
+          "text": "318.1 KB 04/05/2026, 00:10:07"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "downloads-list__meta",
+          "left": 393,
+          "right": 521,
+          "width": 128,
+          "text": "320.7 KB 04/05/2026, 00:10:07"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "downloads-list__meta",
+          "left": 393,
+          "right": 521,
+          "width": 128,
+          "text": "609.5 KB 04/05/2026, 00:10:07"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "downloads-list__meta",
+          "left": 393,
+          "right": 521,
+          "width": 128,
+          "text": "626.5 KB 04/05/2026, 00:10:07"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "downloads-list__meta",
+          "left": 393,
+          "right": 521,
+          "width": 128,
+          "text": "627.5 KB 04/05/2026, 00:10:07"
+        }
+      ],
+      "consoleErrors": [],
+      "networkFailures": [],
+      "badResponses": [],
+      "screenshot": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\playwright-fallback\\mobile-downloads.png"
+    },
+    {
+      "route": "/?app=screenshot-review",
+      "url": "http://localhost:3097/?app=screenshot-review",
+      "viewport": {
+        "label": "mobile",
+        "width": 390,
+        "height": 844,
+        "isMobile": true,
+        "deviceScaleFactor": 2
+      },
+      "title": "Unified App Shell",
+      "location": "http://localhost:3097/?app=screenshot-review",
+      "headings": [
+        "Screenshot Review",
+        "Runs",
+        "docs/sessions/2026-05-04-screenshot-tooling-control-centre/screenshots",
+        "Comments"
+      ],
+      "textSnippets": [
+        "Screenshot Review Browse UI screenshot runs, inspect evidence, and leave comments for later improvement passes. 5 Runs 17 Images 1 Comments 04/05/2026 Latest Runs All sessions 2026-05-04-five-site-cloud-crawl-ui 2026-05-04-screenshot-tooling-control-centre root-screenshots All apps cloud-crawl crawl-status downloads screenshot-review Refresh docs/sessions/2026-05-04-screenshot-tooling-control-cent",
+        "re/screenshots 04/05/2026, 02:00:45 ok · 8 images · 1 comments 2026-05-04-screenshot-tooling-control-centre · cloud-crawl, crawl-status, downloads, screenshot-review docs/sessions/2026-05-04-five-site-cloud-crawl-ui/screenshots 04/05/2026, 01:16:31 ok · 3 images · 0 comments 2026-05-04-five-site-cloud-crawl-ui · cloud-crawl, crawl-status, downloads screenshots/electron-500-download-crawl 29/04/202"
+      ],
+      "bodyDimensions": {
+        "scrollWidth": 390,
+        "scrollHeight": 844,
+        "clientWidth": 390,
+        "clientHeight": 844,
+        "rect": {
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "left": 0,
+          "right": 390,
+          "bottom": 844
+        }
+      },
+      "mainDimensions": {
+        "scrollWidth": 130,
+        "scrollHeight": 844,
+        "clientWidth": 130,
+        "clientHeight": 844,
+        "rect": {
+          "width": 130,
+          "height": 844,
+          "top": 0,
+          "left": 260,
+          "right": 390,
+          "bottom": 844
+        }
+      },
+      "documentDimensions": {
+        "scrollWidth": 390,
+        "scrollHeight": 844,
+        "clientWidth": 390,
+        "clientHeight": 844
+      },
+      "horizontalOverflow": false,
+      "horizontalOverflowPx": 0,
+      "overflowElements": [
+        {
+          "tag": "div",
+          "id": "",
+          "className": "panel-card screenshot-review-runs",
+          "left": 300,
+          "right": 915,
+          "width": 615,
+          "text": "Runs All sessions 2026-05-04-five-site-cloud-crawl-ui 2026-05-04-screenshot-tooling-control-centre root-screenshots All "
+        },
+        {
+          "tag": "h3",
+          "id": "",
+          "className": "panel-section__title",
+          "left": 321,
+          "right": 894,
+          "width": 573,
+          "text": "Runs"
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "screenshot-review-filters",
+          "left": 321,
+          "right": 894,
+          "width": 573,
+          "text": "All sessions 2026-05-04-five-site-cloud-crawl-ui 2026-05-04-screenshot-tooling-control-centre root-screenshots All apps "
+        },
+        {
+          "tag": "select",
+          "id": "",
+          "className": "panel-select",
+          "left": 321,
+          "right": 894,
+          "width": 573,
+          "text": "All sessions 2026-05-04-five-site-cloud-crawl-ui 2026-05-04-screenshot-tooling-control-centre root-screenshots"
+        },
+        {
+          "tag": "select",
+          "id": "",
+          "className": "panel-select",
+          "left": 321,
+          "right": 894,
+          "width": 573,
+          "text": "All apps cloud-crawl crawl-status downloads screenshot-review"
+        },
+        {
+          "tag": "button",
+          "id": "",
+          "className": "panel-btn panel-btn--default screenshot-review-refresh",
+          "left": 321,
+          "right": 894,
+          "width": 573,
+          "text": "Refresh"
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "screenshot-review-run-list",
+          "left": 321,
+          "right": 894,
+          "width": 573,
+          "text": "docs/sessions/2026-05-04-screenshot-tooling-control-centre/screenshots 04/05/2026, 02:00:45 ok · 8 images · 1 comments 2"
+        },
+        {
+          "tag": "button",
+          "id": "",
+          "className": "screenshot-review-run screenshot-review-run--active",
+          "left": 321,
+          "right": 894,
+          "width": 573,
+          "text": "docs/sessions/2026-05-04-screenshot-tooling-control-centre/screenshots 04/05/2026, 02:00:45 ok · 8 images · 1 comments 2"
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "left": 332,
+          "right": 883,
+          "width": 551,
+          "text": "docs/sessions/2026-05-04-screenshot-tooling-control-centre/screenshots"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "",
+          "left": 332,
+          "right": 883,
+          "width": 551,
+          "text": "04/05/2026, 02:00:45"
+        },
+        {
+          "tag": "em",
+          "id": "",
+          "className": "",
+          "left": 332,
+          "right": 883,
+          "width": 551,
+          "text": "ok · 8 images · 1 comments"
+        },
+        {
+          "tag": "em",
+          "id": "",
+          "className": "",
+          "left": 332,
+          "right": 883,
+          "width": 551,
+          "text": "2026-05-04-screenshot-tooling-control-centre · cloud-crawl, crawl-status, downloads, screenshot-review"
+        },
+        {
+          "tag": "button",
+          "id": "",
+          "className": "screenshot-review-run",
+          "left": 321,
+          "right": 894,
+          "width": 573,
+          "text": "docs/sessions/2026-05-04-five-site-cloud-crawl-ui/screenshots 04/05/2026, 01:16:31 ok · 3 images · 0 comments 2026-05-04"
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "left": 332,
+          "right": 883,
+          "width": 551,
+          "text": "docs/sessions/2026-05-04-five-site-cloud-crawl-ui/screenshots"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "",
+          "left": 332,
+          "right": 883,
+          "width": 551,
+          "text": "04/05/2026, 01:16:31"
+        },
+        {
+          "tag": "em",
+          "id": "",
+          "className": "",
+          "left": 332,
+          "right": 883,
+          "width": 551,
+          "text": "ok · 3 images · 0 comments"
+        },
+        {
+          "tag": "em",
+          "id": "",
+          "className": "",
+          "left": 332,
+          "right": 883,
+          "width": 551,
+          "text": "2026-05-04-five-site-cloud-crawl-ui · cloud-crawl, crawl-status, downloads"
+        },
+        {
+          "tag": "button",
+          "id": "",
+          "className": "screenshot-review-run",
+          "left": 321,
+          "right": 894,
+          "width": 573,
+          "text": "screenshots/electron-500-download-crawl 29/04/2026, 22:12:45 ok · 2 images · 0 comments root-screenshots · crawl-status,"
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "left": 332,
+          "right": 883,
+          "width": 551,
+          "text": "screenshots/electron-500-download-crawl"
+        },
+        {
+          "tag": "span",
+          "id": "",
+          "className": "",
+          "left": 332,
+          "right": 883,
+          "width": 551,
+          "text": "29/04/2026, 22:12:45"
+        }
+      ],
+      "consoleErrors": [],
+      "networkFailures": [],
+      "badResponses": [],
+      "screenshot": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-04-playwright-control-centre-visual-qa\\screenshots\\playwright-fallback\\mobile-screenshot-review.png"
+    }
+  ]
+}

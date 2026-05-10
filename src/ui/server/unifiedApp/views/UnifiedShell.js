@@ -773,6 +773,13 @@ class UnifiedShell extends Control {
         align-items: flex-start;
       }
 
+      .home-crawl-overview-grid {
+        margin-top: 24px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+
       .cloud-crawl-panel {
         max-width: 1040px;
       }
@@ -1118,6 +1125,117 @@ class UnifiedShell extends Control {
 
         .screenshot-review-run-list {
           max-height: 300px;
+        }
+      }
+
+      @media (max-width: 700px) {
+        .shell-sidebar {
+          width: 72px;
+          min-width: 72px;
+        }
+
+        .sidebar-brand {
+          justify-content: center;
+          min-height: 72px;
+          padding: 12px 0;
+        }
+
+        .brand-title,
+        .nav-item__label,
+        .nav-category {
+          display: none;
+        }
+
+        .nav-item {
+          justify-content: center;
+          gap: 0;
+          padding: 14px 0;
+          border-left: 0;
+          border-right: 3px solid transparent;
+        }
+
+        .nav-item:hover,
+        .nav-item--active {
+          border-right-color: var(--gold);
+        }
+
+        .nav-item__icon {
+          width: auto;
+          font-size: 21px;
+        }
+
+        .shell-content {
+          min-width: 0;
+        }
+
+        .home-dashboard {
+          max-width: none;
+          padding: 20px 14px;
+        }
+
+        .home-hero {
+          padding: 24px 14px;
+          margin-bottom: 22px;
+        }
+
+        .home-hero h1,
+        .panel-hero__title {
+          font-size: 26px;
+          line-height: 1.12;
+        }
+
+        .home-hero p,
+        .panel-hero__description {
+          font-size: 15px;
+          line-height: 1.35;
+        }
+
+        .stat-value,
+        .panel-stat-card__value {
+          font-size: 26px;
+          line-height: 1.1;
+        }
+
+        .home-crawl-overview-grid,
+        .panel-form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .panel-card {
+          padding: 14px;
+        }
+
+        .panel-btn-row,
+        .cloud-crawl-actions {
+          justify-content: flex-start;
+          flex-wrap: wrap;
+        }
+
+        .panel-btn {
+          min-height: 40px;
+          white-space: normal;
+          text-align: center;
+        }
+
+        .cloud-crawl-target-grid,
+        .screenshot-review-image-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .downloads-list__row {
+          grid-template-columns: 48px minmax(0, 1fr);
+        }
+
+        .downloads-list__meta {
+          grid-column: 2;
+          text-align: left;
+        }
+
+        .screenshot-review-gallery__header,
+        .screenshot-review-image-card figcaption {
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
         }
       }
 

@@ -9,6 +9,7 @@ function createCrawlStatusRouter(options = {}) {
 
   const {
     jobsApiPath = '/api/v1/crawl/jobs',
+    apiBasePath = '/api/v1/crawl',
     extraJobsApiPath = null,
     eventsPath = '/api/crawl-telemetry/events',
     telemetryHistoryPath = '/api/crawl-telemetry/history',
@@ -22,6 +23,7 @@ function createCrawlStatusRouter(options = {}) {
         .send(
           renderCrawlStatusPageHtml({
             jobsApiPath,
+            apiBasePath,
             extraJobsApiPath,
             eventsPath,
             telemetryHistoryPath,

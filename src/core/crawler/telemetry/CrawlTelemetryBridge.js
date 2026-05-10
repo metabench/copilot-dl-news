@@ -154,7 +154,12 @@ class CrawlTelemetryBridge {
         ...progress,
         visited: this._toNonNegativeInt(progress.visited, 0),
         queued: this._toNonNegativeInt(progress.queued, 0),
-        errors: this._toNonNegativeInt(progress.errors, 0)
+        errors: this._toNonNegativeInt(progress.errors, 0),
+        saved: this._toNonNegativeInt(progress.saved ?? progress.articlesSaved, progress.saved ?? 0),
+        docsDownloadedPerSec: this._toFiniteNumber(progress.docsDownloadedPerSec ?? progress.docsDownloadedPerSecond ?? progress.downloadedDocsPerSecond ?? progress.requestsPerSec),
+        docsSavedPerSec: this._toFiniteNumber(progress.docsSavedPerSec ?? progress.docsSavedPerSecond ?? progress.savedDocsPerSecond),
+        networkMbPerSec: this._toFiniteNumber(progress.networkMbPerSec ?? progress.networkMbPerSecond),
+        savedMbPerSec: this._toFiniteNumber(progress.savedMbPerSec ?? progress.savedMbPerSecond)
       };
     }
 
@@ -166,10 +171,20 @@ class CrawlTelemetryBridge {
         queued: this._toNonNegativeInt(progress.queued ?? stats.queued ?? stats.pagesQueued, 0),
         errors: this._toNonNegativeInt(stats.errors, 0),
         downloaded: this._toNonNegativeInt(stats.pagesDownloaded ?? stats.downloaded, undefined),
+        saved: this._toNonNegativeInt(stats.articlesSaved ?? stats.saved, 0),
         articles: this._toNonNegativeInt(stats.articlesFound ?? stats.articles, 0),
         skipped: this._toNonNegativeInt(stats.skipped ?? stats.pagesSkipped, 0),
+        bytes: this._toFiniteNumber(stats.bytesDownloaded ?? stats.bytes),
+        bytesSaved: this._toFiniteNumber(stats.bytesSaved),
+        bytesSavedCompressed: this._toFiniteNumber(stats.bytesSavedCompressed),
         bytesPerSec: this._toFiniteNumber(stats.bytesPerSec),
         requestsPerSec: this._toFiniteNumber(stats.requestsPerSec),
+        docsDownloadedPerSec: this._toFiniteNumber(stats.docsDownloadedPerSec ?? stats.docsDownloadedPerSecond ?? stats.downloadedDocsPerSecond ?? stats.requestsPerSec),
+        docsSavedPerSec: this._toFiniteNumber(stats.docsSavedPerSec ?? stats.docsSavedPerSecond ?? stats.savedDocsPerSecond),
+        networkBytesPerSec: this._toFiniteNumber(stats.networkBytesPerSec ?? stats.networkBytesPerSecond ?? stats.bytesPerSec),
+        networkMbPerSec: this._toFiniteNumber(stats.networkMbPerSec ?? stats.networkMbPerSecond),
+        savedBytesPerSec: this._toFiniteNumber(stats.savedBytesPerSec ?? stats.savedBytesPerSecond),
+        savedMbPerSec: this._toFiniteNumber(stats.savedMbPerSec ?? stats.savedMbPerSecond),
         currentUrl: progress.currentUrl ?? null,
         currentAction: progress.currentAction ?? null,
         phase: progress.phase ?? null,

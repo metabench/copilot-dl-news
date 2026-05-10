@@ -63,7 +63,7 @@ High-signal entry points for the crawler subsystem. Start with the architecture 
 - [Architecture: Crawls vs Background Tasks](ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md)
 - [Crawler Runbook (Ops)](RUNBOOK.md)
 - [Debugging Child Processes](DEBUGGING_CHILD_PROCESSES.md)
-- [Crawl CLI Quick Reference](cli/crawl.md)
+- [Crawl CLI Quick Reference](cli/crawl.md) - Harnessed 15-minute validation vs non-harnessed operator/local crawl commands.
 - [DB Queries During Crawls](DB_QUERIES_DURING_CRAWLS.md)
 - [Enhanced Features](ENHANCED_FEATURES.md)
 - [Geography Crawl Type](GEOGRAPHY_CRAWL_TYPE.md)

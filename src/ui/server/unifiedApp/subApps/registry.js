@@ -464,7 +464,7 @@ function createSubAppRegistry(options = {}) {
           { value: domains.toLocaleString(), label: 'Tracked Domains' }
         ])}
 
-            <div style="margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <div class="home-crawl-overview-grid">
               <div>
                 ${renderStatsRow([
           { value: '...', label: 'Active Crawls', valueAttrs: { 'data-home-stat': 'activeCrawlJobs' } },
@@ -482,7 +482,7 @@ function createSubAppRegistry(options = {}) {
                     </tr>
                   </thead>
                   <tbody>
-                    \${activityRows}
+                    ${activityRows}
                   </tbody>
                 </table>
               </div>

@@ -43,6 +43,14 @@ const {
   resolveTargetDomains,
   summarizeBoundedRun,
 } = require('./lib/crawl-remote-bounded');
+const { createAdaptiveBatchController } = require('./lib/adaptive-sync-batching');
+const {
+  shouldPruneAfterIngest: shouldPruneAfterIngestPure,
+  validatePruneExportConfig: validatePruneExportConfigPure,
+} = require('./lib/prune-config');
+const { evaluateStorageBudget, normalizeStorageBudgetOptions } = require('./lib/storage-budget');
+const { evaluateBackpressure } = require('./lib/backpressure');
+const { createPerfReporter } = require('./lib/perf-reporter');
 
 // ── Arg Parsing ─────────────────────────────────────────────
 
@@ -78,6 +86,7 @@ Commands:
   status                    Show all domain crawl status
   health                    Quick health check
   start [--domain d|--all]  Start crawling
+  launch [--domain d|--domains d1,d2] Register missing domains, start crawling, and return
   bounded [--domain d|--domains d1,d2]  Start bounded crawl and wait for completion
   stop  [--domain d|--all]  Stop crawling
   run   [--domain d|--all]  Start crawling, sync continuously, and stop on exit
@@ -85,7 +94,7 @@ Commands:
   add   --domain d          Add domain to server
   remove --domain d         Remove domain from server
   pull  [--window 10]       Pull one batch to local DB
-  sync  [--interval 10]     Continuous batch sync loop
+  sync  [--interval 5]      Continuous timestamped batch sync loop
   errors [--limit 50]       Show recent errors
   content                   Content stats by domain
 
@@ -95,8 +104,25 @@ Options:
   --domain <domain>      Target domain for start/stop/seed/add/remove
   --all                  Affect all domains
   --window <seconds>     Batch window in seconds (default: 10)
-  --interval <seconds>   Sync polling interval (default: 10)
+  --since <timestamp>    Override the first sync watermark for catch-up/drain runs
+  --interval <seconds>   Sync polling interval (default: 5 for sync, 10 for run)
+  --rounds <n>           Stop sync after n rounds (useful for checks)
   --limit <n>            Limit for queries (default: 500)
+  --adaptive-limit       Adjust sync export limit toward --target-sync-ms
+  --adaptive-batching    Alias for --adaptive-limit
+  --target-sync-ms <n>   Target fetch+ingest+verify+prune duration; enables adaptive batching
+  --min-limit <n>        Minimum adaptive export limit (default: 1)
+  --max-limit <n>        Maximum adaptive export limit (default: initial --limit)
+  --include-content <bool> Include content blobs in export batches (default: true)
+  --include-links <bool> Include discovered links in export batches when supported (default: true)
+  --prune-after-ingest   Confirm local save, then prune exported payloads from the remote node
+  --prune-delete-urls    Also delete remote URL state rows after ingest (unsafe while crawls are active)
+  --no-backoff           Keep the configured interval even after empty sync rounds
+  --remote-storage-budget-mb <n>   Soft cap on remote content storage (MB); above this, sync prefers small drain batches
+  --remote-storage-reserve-mb <n>  Hard reserve above the budget; above (budget+reserve), request remote /api/throttle pause
+  --normal-concurrency <n>         Worker concurrency to restore when budget returns to normal (default: --max-concurrent or 10)
+  --reduced-concurrency <n>        Worker concurrency under storage pressure (default: 2)
+  --perf-summary-every <n>         Print p50/p95 perf summary every N rounds (default: 10)
   --max-pages <n>        Max pages when adding domain (default: 50)
   --max-concurrent <n>   Max domains to crawl in parallel for start/bounded/run
   --poll <seconds>       Poll interval for bounded wait (default: 5)
@@ -132,6 +158,75 @@ function applyStartOverrides(body) {
   if (maxPages) body.maxPages = maxPages;
   if (maxConcurrent) body.maxConcurrent = maxConcurrent;
   return body;
+}
+
+function isFalseArg(name) {
+  const value = args[name];
+  return value === false || String(value).toLowerCase() === 'false' || String(value).toLowerCase() === '0';
+}
+
+function isTrueArg(name) {
+  const value = args[name];
+  return value === true || ['true', '1', 'yes', 'on'].includes(String(value).toLowerCase());
+}
+
+function appendExportOptions(queryPath) {
+  const parts = [];
+  if (isFalseArg('include-content') || isFalseArg('includeContent')) parts.push('includeContent=false');
+  if (isFalseArg('include-links') || isFalseArg('includeLinks')) parts.push('includeLinks=false');
+  return parts.length ? `${queryPath}&${parts.join('&')}` : queryPath;
+}
+
+function shouldPruneAfterIngest() {
+  return shouldPruneAfterIngestPure(args);
+}
+
+function validatePruneExportConfig() {
+  validatePruneExportConfigPure(args);
+}
+
+function appendWatermark(queryPath, watermark) {
+  return watermark ? `${queryPath}&since=${encodeURIComponent(watermark)}` : queryPath;
+}
+
+function createSyncBatchController(initialLimit) {
+  return createAdaptiveBatchController({
+    ...args,
+    initialLimit,
+    limit: initialLimit,
+  });
+}
+
+function getAdaptiveSummary(controller) {
+  if (!controller.isEnabled()) return 'disabled';
+  const options = controller.getOptions();
+  return `enabled target=${options.targetMs}ms min=${options.minLimit} max=${options.maxLimit}`;
+}
+
+function logAdaptiveDecision(decision) {
+  if (!decision?.enabled || decision.action === 'hold') return;
+  const duration = Number.isFinite(decision.durationMs) ? `, round=${decision.durationMs}ms` : '';
+  console.log(`  Adaptive limit ${decision.action}: ${decision.previousLimit} → ${decision.currentLimit} (${decision.reason}${duration}, target=${decision.targetMs}ms)`);
+}
+
+function getRequestedDomains() {
+  if (args.domain) return [args.domain];
+  if (args.domains) return args.domains.split(',').map(s => s.trim()).filter(Boolean);
+  return [];
+}
+
+async function registerRequestedDomains(targetDomains) {
+  const uniqueDomains = [...new Set(targetDomains || [])];
+  const maxPagesOverride = parsePositiveIntArg('max-pages');
+  for (const domain of uniqueDomains) {
+    const body = { domain };
+    if (maxPagesOverride) body.maxPages = maxPagesOverride;
+    const { data } = await requestWithTimeout('POST', '/api/domains/add', body, 15000);
+    if (data?.error) throw new Error(`Failed to register remote domain ${domain}: ${data.error}`);
+    if (!JSON_OUTPUT && data?.status === 'added') {
+      console.log(`  Registered remote domain: ${domain}${maxPagesOverride ? ` (maxPages=${maxPagesOverride})` : ''}`);
+    }
+  }
 }
 
 // ── HTTP Helpers ────────────────────────────────────────────
@@ -276,6 +371,179 @@ function getBatchCounts(batch) {
   };
 }
 
+function findLocalResponseId(db, remoteResponse, localUrlId) {
+  if (!remoteResponse || !localUrlId) return null;
+  const fetchedAt = remoteResponse.fetched_at || null;
+  const requestStartedAt = remoteResponse.request_started_at || null;
+  const httpStatus = remoteResponse.http_status ?? null;
+  const row = db.prepare(`
+    SELECT id
+    FROM http_responses
+    WHERE url_id = ?
+      AND COALESCE(fetched_at, '') = COALESCE(?, '')
+      AND COALESCE(request_started_at, '') = COALESCE(?, '')
+      AND COALESCE(http_status, -1) = COALESCE(?, -1)
+    ORDER BY id DESC
+    LIMIT 1
+  `).get(localUrlId, fetchedAt, requestStartedAt, httpStatus);
+  if (row?.id) return row.id;
+
+  const fallback = db.prepare(`
+    SELECT id
+    FROM http_responses
+    WHERE url_id = ?
+    ORDER BY id DESC
+    LIMIT 1
+  `).get(localUrlId);
+  return fallback?.id || null;
+}
+
+function verifyBatchPersisted(batch) {
+  const db = openLocalDb();
+  const urls = Array.isArray(batch.urls) ? batch.urls : [];
+  const responses = Array.isArray(batch.httpResponses) ? batch.httpResponses : [];
+  const content = Array.isArray(batch.content) ? batch.content : [];
+  const links = Array.isArray(batch.links) ? batch.links : [];
+
+  const getUrl = db.prepare('SELECT id FROM urls WHERE url = ? LIMIT 1');
+  const getContentBySha = db.prepare('SELECT id FROM content_storage WHERE http_response_id = ? AND content_sha256 = ? LIMIT 1');
+  const getContentBySize = db.prepare(`
+    SELECT id
+    FROM content_storage
+    WHERE http_response_id = ?
+      AND COALESCE(uncompressed_size, -1) = COALESCE(?, -1)
+      AND COALESCE(compressed_size, -1) = COALESCE(?, -1)
+    LIMIT 1
+  `);
+  const getLink = db.prepare('SELECT id FROM discovered_links WHERE source_url_id = ? AND target_url = ? LIMIT 1');
+  const remoteUrlIdToUrl = new Map();
+  const remoteUrlIdToLocalId = new Map();
+  const remoteResponseIdToLocalId = new Map();
+  const missing = { urls: [], responses: [], content: [], links: [] };
+
+  for (const remoteUrl of urls) {
+    if (!remoteUrl?.url) continue;
+    if (remoteUrl.id !== undefined && remoteUrl.id !== null) remoteUrlIdToUrl.set(remoteUrl.id, remoteUrl.url);
+    const localUrl = getUrl.get(remoteUrl.url);
+    if (localUrl?.id) {
+      if (remoteUrl.id !== undefined && remoteUrl.id !== null) remoteUrlIdToLocalId.set(remoteUrl.id, localUrl.id);
+    } else {
+      missing.urls.push(remoteUrl.url);
+    }
+  }
+
+  for (const remoteResponse of responses) {
+    const localUrlId = remoteUrlIdToLocalId.get(remoteResponse.url_id);
+    const localResponseId = findLocalResponseId(db, remoteResponse, localUrlId);
+    if (localResponseId) {
+      if (remoteResponse.id !== undefined && remoteResponse.id !== null) remoteResponseIdToLocalId.set(remoteResponse.id, localResponseId);
+    } else {
+      missing.responses.push(remoteUrlIdToUrl.get(remoteResponse.url_id) || remoteResponse.url_id);
+    }
+  }
+
+  for (const remoteContent of content) {
+    const localResponseId = remoteResponseIdToLocalId.get(remoteContent.http_response_id);
+    let found = null;
+    if (localResponseId && remoteContent.content_sha256) {
+      found = getContentBySha.get(localResponseId, remoteContent.content_sha256);
+    }
+    if (!found && localResponseId) {
+      found = getContentBySize.get(localResponseId, remoteContent.uncompressed_size ?? null, remoteContent.compressed_size ?? null);
+    }
+    if (!found) {
+      missing.content.push(remoteContent.http_response_id);
+    }
+  }
+
+  for (const remoteLink of links) {
+    const localSourceId = remoteUrlIdToLocalId.get(remoteLink.source_url_id);
+    const found = localSourceId && remoteLink.target_url ? getLink.get(localSourceId, remoteLink.target_url) : null;
+    if (!found) {
+      missing.links.push(remoteLink.target_url || remoteLink.id || remoteLink.source_url_id);
+    }
+  }
+
+  const checked = {
+    urls: urls.length,
+    httpResponses: responses.length,
+    content: content.length,
+    links: links.length,
+  };
+  const missingCounts = Object.fromEntries(Object.entries(missing).map(([key, value]) => [key, value.length]));
+  return {
+    ok: Object.values(missingCounts).every((count) => count === 0),
+    checked,
+    missingCounts,
+    sampleMissing: Object.fromEntries(Object.entries(missing).map(([key, value]) => [key, value.slice(0, 5)])),
+  };
+}
+
+function getBatchUrlIds(batch) {
+  if (!Array.isArray(batch?.urls)) return [];
+  return batch.urls
+    .map((row) => Number(row?.id))
+    .filter((id) => Number.isInteger(id) && id > 0);
+}
+
+async function pruneRemoteWatermark(watermark, urlIds = []) {
+  if (!watermark) return null;
+  const exactUrlIds = Array.from(new Set(urlIds.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)));
+  if (exactUrlIds.length === 0) {
+    throw new Error('Refusing remote prune without exact exported URL IDs. Watermark-only prune is reserved for manual server-side maintenance.');
+  }
+  const body = {
+    before: watermark,
+    urlIds: exactUrlIds,
+    deleteUrls: isTrueArg('prune-delete-urls') || isTrueArg('pruneDeleteUrls'),
+    deleteLinks: !isFalseArg('prune-delete-links') && !isFalseArg('pruneDeleteLinks'),
+    vacuum: isTrueArg('prune-vacuum') || isTrueArg('pruneVacuum'),
+  };
+  if (args['prune-vacuum-threshold-mb']) body.vacuumThresholdMb = args['prune-vacuum-threshold-mb'];
+  const { data } = await requestWithTimeout('POST', '/api/export/prune', body, 60000);
+  if (!data?.ok) {
+    throw new Error(`Remote prune failed for ${watermark}`);
+  }
+  return data;
+}
+
+async function prunePendingWatermark(wm, batch = null) {
+  if (!shouldPruneAfterIngest() || !wm.pendingPruneWatermark) return null;
+  const urlIds = getBatchUrlIds(batch).length > 0 ? getBatchUrlIds(batch) : (Array.isArray(wm.pendingPruneUrlIds) ? wm.pendingPruneUrlIds : []);
+  const pruneResult = await pruneRemoteWatermark(wm.pendingPruneWatermark, urlIds);
+  wm.lastPrunedWatermark = wm.pendingPruneWatermark;
+  wm.totalPrunedRecords = (wm.totalPrunedRecords || 0) + Object.values(pruneResult.deleted || {}).reduce((sum, value) => sum + (value || 0), 0);
+  delete wm.pendingPruneWatermark;
+  delete wm.pendingPruneUrlIds;
+  saveWatermark(wm);
+  return pruneResult;
+}
+
+async function confirmSaveAndMaybePrune(batch, wm, counts) {
+  const verification = verifyBatchPersisted(batch);
+  if (!verification.ok) {
+    throw new Error(`Local DB confirmation failed: ${JSON.stringify({ missingCounts: verification.missingCounts, sampleMissing: verification.sampleMissing })}`);
+  }
+
+  let pruneResult = null;
+  if (batch.watermark) {
+    wm.lastWatermark = batch.watermark;
+    wm.lastPullAt = new Date().toISOString();
+    wm.totalPulled = (wm.totalPulled || 0) + (counts.urls || 0);
+    if (shouldPruneAfterIngest()) {
+      wm.pendingPruneWatermark = batch.watermark;
+      wm.pendingPruneUrlIds = getBatchUrlIds(batch);
+    }
+    saveWatermark(wm);
+
+    if (shouldPruneAfterIngest()) {
+      pruneResult = await prunePendingWatermark(wm, batch);
+    }
+  }
+
+  return { verification, pruneResult };
+}
+
 // ── Format Helpers ──────────────────────────────────────────
 
 function formatSize(bytes) {
@@ -366,6 +634,60 @@ async function cmdStart() {
   } else {
     console.log(`  ${data.status === 'started' ? '▶' : '○'} ${data.domain}: ${data.status}`);
   }
+}
+
+async function ensureDomainsForRun(initialStatus, targetDomains, maxPagesOverride) {
+  const missingDomains = findMissingDomains(initialStatus, targetDomains);
+  for (const domain of missingDomains) {
+    const body = { domain };
+    if (maxPagesOverride) body.maxPages = maxPagesOverride;
+    const { data: addData } = await requestWithTimeout('POST', '/api/domains/add', body, 15000);
+    if (addData?.error) {
+      throw new Error(`Failed to register remote domain ${domain}: ${addData.error}`);
+    }
+    if (!JSON_OUTPUT) {
+      console.log(`  Registered remote domain: ${domain}${maxPagesOverride ? ` (maxPages=${maxPagesOverride})` : ''}`);
+    }
+  }
+
+  if (missingDomains.length > 0) {
+    const { data } = await requestWithTimeout('GET', '/api/status', null, 10000);
+    return data;
+  }
+
+  return initialStatus;
+}
+
+async function cmdLaunch() {
+  let { data: initialStatus } = await requestWithTimeout('GET', '/api/status', null, 10000);
+  const targetDomains = resolveTargetDomains(args, initialStatus);
+  if (targetDomains.length === 0) {
+    throw new Error('No target domains resolved for launch');
+  }
+
+  const maxPagesOverride = args['max-pages'] ? parseInt(args['max-pages'], 10) : undefined;
+  initialStatus = await ensureDomainsForRun(initialStatus, targetDomains, maxPagesOverride);
+
+  const startBody = {};
+  if (args.domain) startBody.domain = args.domain;
+  else startBody.domains = targetDomains;
+  applyStartOverrides(startBody);
+
+  const { data: startData } = await requestWithTimeout('POST', '/api/start', startBody, 15000);
+  const result = { ok: true, targetDomains, started: startData };
+
+  if (JSON_OUTPUT) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (startData.results) {
+    for (const item of startData.results) {
+      console.log(`  ${item.status === 'started' ? '▶' : '○'} ${item.domain}: ${item.status}`);
+    }
+  }
+  console.log(`  Launch requested for ${targetDomains.length} domain(s).`);
+  console.log('  Use `node tools/crawl/crawl-remote.js health` for a lightweight liveness check.');
 }
 
 async function cmdStop() {
@@ -460,18 +782,19 @@ async function cmdContent() {
 // ── Pull / Sync Commands ────────────────────────────────────
 
 async function cmdPull() {
+  validatePruneExportConfig();
   const windowSec = parseInt(args.window, 10) || 10;
   const limit = parseInt(args.limit, 10) || 500;
   const wm = loadWatermark();
+  await prunePendingWatermark(wm);
+  const since = args.since || wm.lastWatermark;
 
   // Build query with watermark for incremental sync
-  let queryPath = `/api/export/batch?window=${windowSec}&limit=${limit}`;
-  if (wm.lastWatermark) {
-    queryPath += `&since=${encodeURIComponent(wm.lastWatermark)}`;
-  }
+  const queryPath = appendWatermark(appendExportOptions(`/api/export/batch?window=${windowSec}&limit=${limit}`), since);
 
   console.log(`  Pulling batch from ${REMOTE_HOST}...`);
-  console.log(`  Window: ${windowSec}s, Limit: ${limit}, Watermark: ${wm.lastWatermark || '(none)'}`);
+  console.log(`  Window: ${windowSec}s, Limit: ${limit}, Watermark: ${since || '(none)'}`);
+  if (shouldPruneAfterIngest()) console.log('  Prune after ingest: enabled (remote URL state retained unless --prune-delete-urls is set)');
 
   const startTime = Date.now();
   const { data, headers } = await requestWithTimeout('GET', queryPath, null, 60000);
@@ -490,24 +813,72 @@ async function cmdPull() {
   const ingestStart = Date.now();
   const result = ingestBatch(data);
   const ingestMs = Date.now() - ingestStart;
-
-  // Update watermark
-  if (data.watermark) {
-    wm.lastWatermark = data.watermark;
-    wm.lastPullAt = new Date().toISOString();
-    wm.totalPulled = (wm.totalPulled || 0) + (counts.urls || 0);
-    saveWatermark(wm);
-  }
+  const { verification, pruneResult } = await confirmSaveAndMaybePrune(data, wm, counts);
 
   console.log(`  Ingested: ${result.urlsInserted || 0} URLs, ${result.contentInserted || 0} content, ${result.responsesInserted || 0} responses (${ingestMs}ms)`);
+  console.log(`  Confirmed local save: ${verification.checked.urls} URLs, ${verification.checked.httpResponses} responses, ${verification.checked.content} content, ${verification.checked.links} links`);
+  if (pruneResult) console.log(`  Remote pruned: ${JSON.stringify(pruneResult.deleted)} retained=${JSON.stringify(pruneResult.retained || {})}`);
   console.log(`  Total pulled this session: ${wm.totalPulled}`);
 
   return { urls: counts.urls, content: counts.content, fetchMs, ingestMs, ...result };
 }
 
 async function cmdSync() {
-  const intervalSec = parseInt(args.interval, 10) || 10;
+  validatePruneExportConfig();
+  const intervalSec = parseInt(args.interval, 10) || 5;
   const maxRounds = args.rounds ? parseInt(args.rounds, 10) : Infinity;
+  const initialLimit = parsePositiveIntArg('limit') || 500;
+  const batchController = createSyncBatchController(initialLimit);
+  const noBackoff = args['no-backoff'] === true || args.noBackoff === true;
+  const budgetOptions = normalizeStorageBudgetOptions(args);
+  const perfReporter = createPerfReporter({ capacity: 60 });
+  const perfPrintEvery = parsePositiveIntArg('perf-summary-every') || 10;
+  let lastBackpressureAction = 'normal';
+
+  // ── Ledger (source of truth) ──────────────────────────────
+  const {
+    loadLedger, saveLedger, appendBatch: ledgerAppendBatch,
+    markConfirmed: ledgerMarkConfirmed, markPruned: ledgerMarkPruned,
+    recordPruneFailure: ledgerRecordPruneFailure, findUnpruned,
+    generateBatchId, getLastWatermark,
+  } = require('./lib/sync-ledger');
+  const LEDGER_FILE = path.resolve(__dirname, '.crawl-remote-ledger.json');
+  let ledger = loadLedger(LEDGER_FILE);
+
+  /** Mirror ledger watermark to legacy file for one release */
+  function mirrorLegacyWatermark() {
+    const wm = loadWatermark();
+    const ledgerWm = getLastWatermark(ledger);
+    if (ledgerWm) wm.lastWatermark = ledgerWm;
+    wm.totalPulled = ledger.totalPulled || wm.totalPulled || 0;
+    saveWatermark(wm);
+  }
+
+  /** Extract url ids from a batch export payload */
+  function extractUrlIdsFromBatch(data) {
+    return getBatchUrlIds(data);
+  }
+
+  // ── Drain unpruned ledger entries from previous crash ─────
+  const unpruned = findUnpruned(ledger);
+  if (unpruned.length > 0) {
+    console.log(`  Ledger: draining ${unpruned.length} unpruned entries from previous run...`);
+    for (const entry of unpruned) {
+      try {
+        const pruneResult = await pruneRemoteWatermark(entry.watermark, entry.urlIds);
+        ledger = ledgerMarkPruned(ledger, entry.batchId, {
+          at: new Date().toISOString(),
+          deleted: pruneResult.deleted,
+        });
+        saveLedger(LEDGER_FILE, ledger);
+        console.log(`    ✓ pruned ledger entry ${entry.batchId} (${entry.urlIds.length} urlIds)`);
+      } catch (e) {
+        ledger = ledgerRecordPruneFailure(ledger, entry.batchId);
+        saveLedger(LEDGER_FILE, ledger);
+        console.log(`    ✗ prune failed for ${entry.batchId} (retry #${entry.pruneRetries + 1}): ${e.message}`);
+      }
+    }
+  }
 
   console.log('═══════════════════════════════════════════════════════');
   console.log('  Continuous Sync Loop');
@@ -515,7 +886,14 @@ async function cmdSync() {
   console.log(`  Remote: ${REMOTE_HOST}`);
   console.log(`  Local DB: ${LOCAL_DB_PATH}`);
   console.log(`  Interval: ${intervalSec}s`);
+  console.log(`  Window: ${parseInt(args.window, 10) || 5}s`);
+  console.log(`  Limit: ${batchController.getLimit()}`);
+  console.log(`  Adaptive batching: ${getAdaptiveSummary(batchController)}`);
+  console.log(`  Storage budget: ${budgetOptions.enabled ? `enabled budget=${budgetOptions.budgetMb}MB reserve=${budgetOptions.reserveMb || 0}MB` : 'disabled'}`);
+  console.log(`  Prune after ingest: ${shouldPruneAfterIngest() ? 'enabled' : 'disabled'}`);
+  console.log(`  Backoff: ${noBackoff ? 'disabled' : 'enabled after empty rounds'}`);
   console.log(`  Max rounds: ${maxRounds === Infinity ? '∞' : maxRounds}`);
+  console.log(`  Ledger: ${LEDGER_FILE} (${ledger.entries.length} entries, wm=${getLastWatermark(ledger) || 'none'})`);
   console.log('  Press Ctrl+C to stop');
   console.log('');
 
@@ -523,56 +901,145 @@ async function cmdSync() {
   let totalUrls = 0;
   let totalContent = 0;
   let consecutiveEmpty = 0;
+  let overrideSince = args.since || null;
 
-  const windowSec = parseInt(args.window, 10) || 30; // Wider window for sync to catch up
+  const windowSec = parseInt(args.window, 10) || 5;
 
   while (round < maxRounds) {
     round++;
     const wm = loadWatermark();
-    let queryPath = `/api/export/batch?window=${windowSec}&limit=500`;
-    if (wm.lastWatermark) {
-      queryPath += `&since=${encodeURIComponent(wm.lastWatermark)}`;
-    }
 
     try {
-      const startTime = Date.now();
-      const { data } = await request('GET', queryPath);
-      const fetchMs = Date.now() - startTime;
+      await prunePendingWatermark(wm);
+      const since = overrideSince || getLastWatermark(ledger) || wm.lastWatermark;
+      const limit = batchController.getLimit();
+      const queryPath = appendWatermark(appendExportOptions(`/api/export/batch?window=${windowSec}&limit=${limit}`), since);
+      const roundStartTime = Date.now();
+      const { data } = await requestWithTimeout('GET', queryPath, null, 60000);
+      const fetchMs = Date.now() - roundStartTime;
 
       if (!data.urls || data.urls.length === 0) {
+        batchController.recordEmpty({ fetchMs });
         consecutiveEmpty++;
         const dot = consecutiveEmpty > 3 ? '.' : '';
         process.stdout.write(`  [${round}] No new data (${fetchMs}ms)${dot}\r`);
 
         // Back off after several empty rounds
-        const backoffMs = Math.min(consecutiveEmpty * 2000, 30000);
+        const backoffMs = noBackoff ? intervalSec * 1000 : Math.min(consecutiveEmpty * 2000, 30000);
         await sleep(Math.max(intervalSec * 1000, backoffMs));
         continue;
       }
 
       consecutiveEmpty = 0;
 
+      // ── Record batch in ledger ─────────────────────────────
+      const batchId = generateBatchId();
+      const urlIds = extractUrlIdsFromBatch(data);
+      ledger = ledgerAppendBatch(ledger, {
+        batchId,
+        exportedAt: new Date().toISOString(),
+        watermark: data.watermark,
+        urlIds,
+      });
+      saveLedger(LEDGER_FILE, ledger);
+
       // Ingest
       const ingestStart = Date.now();
       const result = ingestBatch(data);
       const ingestMs = Date.now() - ingestStart;
+      const counts = getBatchCounts(data);
 
-      totalUrls += data.counts.urls || 0;
-      totalContent += data.counts.content || 0;
+      totalUrls += counts.urls || 0;
+      totalContent += counts.content || 0;
+      const { verification, pruneResult } = await confirmSaveAndMaybePrune(data, wm, counts);
+      if (data.watermark) overrideSince = null;
 
-      // Update watermark
-      if (data.watermark) {
-        wm.lastWatermark = data.watermark;
-        wm.lastPullAt = new Date().toISOString();
-        wm.totalPulled = (wm.totalPulled || 0) + (data.counts.urls || 0);
-        saveWatermark(wm);
+      // ── Mark confirmed in ledger ──────────────────────────
+      ledger = ledgerMarkConfirmed(ledger, batchId, new Date().toISOString());
+      saveLedger(LEDGER_FILE, ledger);
+
+      // ── Mark pruned in ledger (if prune happened) ─────────
+      if (pruneResult) {
+        ledger = ledgerMarkPruned(ledger, batchId, {
+          at: new Date().toISOString(),
+          deleted: pruneResult.deleted,
+        });
+        saveLedger(LEDGER_FILE, ledger);
       }
 
+      // ── Mirror legacy watermark ───────────────────────────
+      mirrorLegacyWatermark();
+
+      const roundMs = Date.now() - roundStartTime;
+      const decision = batchController.recordSuccess({ durationMs: roundMs, fetchedRows: counts.urls, fetchMs, ingestMs });
+      logAdaptiveDecision(decision);
+
       const ts = new Date().toLocaleTimeString();
-      console.log(`  [${round}] ${ts} — ${data.counts.urls} URLs, ${data.counts.content} content → ${result.urlsInserted || 0} new URLs, ${result.contentInserted || 0} new content (fetch: ${fetchMs}ms, ingest: ${ingestMs}ms) | Total: ${totalUrls} URLs, ${totalContent} content`);
+      const pruneText = pruneResult ? `, pruned ${JSON.stringify(pruneResult.deleted)}` : '';
+      console.log(`  [${round}] ${ts} — ${counts.urls} URLs, ${counts.content} content → ${result.urlsInserted || 0} new URLs, ${result.contentInserted || 0} new content; confirmed ${verification.checked.urls}/${verification.checked.httpResponses}/${verification.checked.content}/${verification.checked.links}${pruneText} (fetch: ${fetchMs}ms, ingest: ${ingestMs}ms, round: ${roundMs}ms, next limit: ${batchController.getLimit()}) | Total: ${totalUrls} URLs, ${totalContent} content`);
+
+      // ── Perf reporter ─────────────────────────────────────
+      perfReporter.record({
+        fetchMs,
+        ingestMs,
+        verifyMs: 0,
+        pruneMs: pruneResult?.durationMs || 0,
+        totalMs: roundMs,
+        rows: counts.urls || 0,
+        bytes: counts.content || 0,
+      });
+      if (round % perfPrintEvery === 0) {
+        const s = perfReporter.summary();
+        if (s.samples) {
+          console.log(`  ↳ perf p50/p95 fetch=${s.fetchMs.p50}/${s.fetchMs.p95}ms ingest=${s.ingestMs.p50}/${s.ingestMs.p95}ms total=${s.totalMs.p50}/${s.totalMs.p95}ms rows/s=${s.rowsPerSec.toFixed(2)} samples=${s.samples}`);
+        }
+      }
+
+      // ── Storage budget + backpressure ─────────────────────
+      if (budgetOptions.enabled) {
+        try {
+          const { data: stats } = await requestWithTimeout('GET', '/api/content/stats', null, 10000);
+          const remoteContentBytes = Number(stats?.totals?.compressed_size || stats?.totalBytes || 0);
+          const budgetDecision = evaluateStorageBudget({
+            remoteContentBytes,
+            budgetMb: budgetOptions.budgetMb,
+            reserveMb: budgetOptions.reserveMb,
+            currentLimit: batchController.getLimit(),
+            minLimit: parsePositiveIntArg('min-limit') || 1,
+            maxLimit: parsePositiveIntArg('max-limit') || initialLimit,
+          });
+          if (budgetDecision.action !== 'normal') {
+            console.log(`  ↳ storage budget: action=${budgetDecision.action} target-limit=${budgetDecision.targetLimit} headroom=${budgetDecision.headroomMb?.toFixed(1)}MB (${budgetDecision.reason})`);
+          }
+          if (budgetDecision.action !== lastBackpressureAction) {
+            const bp = evaluateBackpressure({
+              action: budgetDecision.action,
+              currentConcurrency: parsePositiveIntArg('max-concurrent') || 10,
+              normalConcurrency: parsePositiveIntArg('normal-concurrency') || parsePositiveIntArg('max-concurrent') || 10,
+              reducedConcurrency: parsePositiveIntArg('reduced-concurrency') || 2,
+              reason: budgetDecision.reason,
+            });
+            if (bp.changed) {
+              try {
+                await requestWithTimeout('POST', '/api/throttle', { maxConcurrent: bp.desiredConcurrency, pause: bp.pause, reason: bp.reason }, 5000);
+                console.log(`  ↳ backpressure: requested maxConcurrent=${bp.desiredConcurrency} pause=${bp.pause} (${bp.reason})`);
+              } catch (e) {
+                // best-effort: remote may not yet expose /api/throttle
+                if (!/404|not found|ECONN/i.test(e.message)) {
+                  console.log(`  ↳ backpressure (skipped): ${e.message}`);
+                }
+              }
+            }
+            lastBackpressureAction = budgetDecision.action;
+          }
+        } catch (e) {
+          // /api/content/stats failures shouldn't fail the sync loop
+        }
+      }
 
     } catch (err) {
       console.error(`  [${round}] Error: ${err.message}`);
+      logAdaptiveDecision(batchController.recordError({ error: err.message }));
       consecutiveEmpty++;
     }
 
@@ -581,6 +1048,7 @@ async function cmdSync() {
 
   console.log('');
   console.log(`  Sync complete: ${round} rounds, ${totalUrls} URLs, ${totalContent} content records pulled`);
+  console.log(`  Ledger: ${ledger.entries.length} entries, last watermark=${getLastWatermark(ledger) || 'none'}`);
   closeLocalDb();
 }
 
@@ -589,15 +1057,20 @@ function sleep(ms) {
 }
 
 async function cmdRun() {
+  validatePruneExportConfig();
   console.log('═══════════════════════════════════════════════════════');
   console.log('  Rapid Coordination: Start + Continuous Sync + Stop');
   console.log('═══════════════════════════════════════════════════════');
 
   // 1. Start domains
   console.log('  ▶ Starting domains...');
+  const targetDomains = getRequestedDomains();
+  if (targetDomains.length > 0) {
+    await registerRequestedDomains(targetDomains);
+  }
   const startBody = {};
   if (args.domain) startBody.domain = args.domain;
-  else if (args.domains) startBody.domains = args.domains.split(',').map(s => s.trim());
+  else if (targetDomains.length > 0) startBody.domains = targetDomains;
   applyStartOverrides(startBody);
   const { data: startData } = await requestWithTimeout('POST', '/api/start', startBody, 15000);
 
@@ -640,59 +1113,147 @@ async function cmdRun() {
   process.on('SIGINT', () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-  // 3. Continuous Sync Loop
+  // 3. Continuous Sync Loop (instrumented — parity with cmdSync)
   const intervalSec = parseInt(args.interval, 10) || 10;
   const windowSec = parseInt(args.window, 10) || 30;
+  const initialLimit = parsePositiveIntArg('limit') || 500;
+  const batchController = createSyncBatchController(initialLimit);
+  const noBackoff = args['no-backoff'] === true || args.noBackoff === true;
+  const budgetOptions = normalizeStorageBudgetOptions(args);
+  const { createInstrumentation } = require('./lib/sync-loop-instrumentation');
+  const instrumentation = createInstrumentation({
+    budgetOptions,
+    perfPrintEvery: parsePositiveIntArg('perf-summary-every') || 10,
+    initialLimit,
+    argOverrides: args,
+  });
+  const {
+    loadLedger, saveLedger, appendBatch: ledgerAppendBatch,
+    markConfirmed: ledgerMarkConfirmed,
+    markPruned: ledgerMarkPruned,
+    generateBatchId, getLastWatermark,
+  } = require('./lib/sync-ledger');
+  const LEDGER_FILE = path.resolve(__dirname, '.crawl-remote-ledger.json');
+  let ledger = loadLedger(LEDGER_FILE);
+  const ledgerWm = getLastWatermark(ledger);
+  if (ledgerWm) {
+    const wm = loadWatermark();
+    wm.lastWatermark = ledgerWm;
+    saveWatermark(wm);
+  }
+
   console.log(`\n  🔄 Entering continuous sync loop (every ${intervalSec}s). Press Ctrl+C to stop.`);
+  console.log(`  Initial limit: ${batchController.getLimit()}`);
+  console.log(`  Adaptive batching: ${getAdaptiveSummary(batchController)}`);
+  console.log(`  Storage budget: ${budgetOptions.enabled ? `enabled budget=${budgetOptions.budgetMb}MB reserve=${budgetOptions.reserveMb || 0}MB` : 'disabled'}`);
+  console.log(`  Prune after ingest: ${shouldPruneAfterIngest() ? 'enabled' : 'disabled'}`);
+  console.log(`  Ledger: ${LEDGER_FILE} (${ledger.entries.length} entries, wm=${getLastWatermark(ledger) || 'none'})`);
 
   let round = 0;
   let totalUrls = 0;
   let totalContent = 0;
   let consecutiveEmpty = 0;
+  let overrideSince = args.since || null;
 
   while (syncRunning) {
     round++;
     const wm = loadWatermark();
-    let queryPath = `/api/export/batch?window=${windowSec}&limit=500`;
-    if (wm.lastWatermark) {
-      queryPath += `&since=${encodeURIComponent(wm.lastWatermark)}`;
-    }
 
     try {
-      const startTime = Date.now();
+      await prunePendingWatermark(wm);
+      const since = overrideSince || getLastWatermark(ledger) || wm.lastWatermark;
+      const limit = batchController.getLimit();
+      const queryPath = appendWatermark(appendExportOptions(`/api/export/batch?window=${windowSec}&limit=${limit}`), since);
+      const roundStartTime = Date.now();
       // Generous 60s timeout for bulk batches
       const { data } = await requestWithTimeout('GET', queryPath, null, 60000);
-      const fetchMs = Date.now() - startTime;
+      const fetchMs = Date.now() - roundStartTime;
 
       if (!data.urls || data.urls.length === 0) {
+        batchController.recordEmpty({ fetchMs });
         consecutiveEmpty++;
         const dot = consecutiveEmpty > 3 ? '.' : '';
         process.stdout.write(`  [${round}] No new data (${fetchMs}ms)${dot}\r`);
 
-        const backoffMs = Math.min(consecutiveEmpty * 2000, 30000);
+        const backoffMs = noBackoff ? intervalSec * 1000 : Math.min(consecutiveEmpty * 2000, 30000);
         await sleep(Math.max(intervalSec * 1000, backoffMs));
         continue;
       }
       consecutiveEmpty = 0;
 
+      const batchId = generateBatchId();
+      ledger = ledgerAppendBatch(ledger, {
+        batchId,
+        exportedAt: new Date().toISOString(),
+        watermark: data.watermark,
+        urlIds: getBatchUrlIds(data),
+      });
+      saveLedger(LEDGER_FILE, ledger);
+
       const ingestStart = Date.now();
       const result = ingestBatch(data);
       const ingestMs = Date.now() - ingestStart;
+      const counts = getBatchCounts(data);
 
-      totalUrls += data.counts.urls || 0;
-      totalContent += data.counts.content || 0;
-
-      if (data.watermark) {
-        wm.lastWatermark = data.watermark;
-        wm.lastPullAt = new Date().toISOString();
-        wm.totalPulled = (wm.totalPulled || 0) + (data.counts.urls || 0);
-        saveWatermark(wm);
+      totalUrls += counts.urls || 0;
+      totalContent += counts.content || 0;
+      const { verification, pruneResult } = await confirmSaveAndMaybePrune(data, wm, counts);
+      if (data.watermark) overrideSince = null;
+      ledger = ledgerMarkConfirmed(ledger, batchId, new Date().toISOString());
+      saveLedger(LEDGER_FILE, ledger);
+      if (pruneResult) {
+        ledger = ledgerMarkPruned(ledger, batchId, {
+          at: new Date().toISOString(),
+          deleted: pruneResult.deleted,
+        });
+        saveLedger(LEDGER_FILE, ledger);
       }
+      const roundMs = Date.now() - roundStartTime;
+      const decision = batchController.recordSuccess({ durationMs: roundMs, fetchedRows: counts.urls, fetchMs, ingestMs });
+      logAdaptiveDecision(decision);
 
       const ts = new Date().toLocaleTimeString();
-      console.log(`  [${round}] ${ts} — ${data.counts.urls} URLs, ${data.counts.content} content → ${result.urlsInserted || 0} new URLs, ${result.contentInserted || 0} new content (fetch: ${fetchMs}ms, ingest: ${ingestMs}ms)`);
+      const pruneText = pruneResult ? `, pruned ${JSON.stringify(pruneResult.deleted)}` : '';
+      console.log(`  [${round}] ${ts} — ${counts.urls} URLs, ${counts.content} content → ${result.urlsInserted || 0} new URLs, ${result.contentInserted || 0} new content; confirmed ${verification.checked.urls}/${verification.checked.httpResponses}/${verification.checked.content}/${verification.checked.links}${pruneText} (fetch: ${fetchMs}ms, ingest: ${ingestMs}ms, round: ${roundMs}ms, next limit: ${batchController.getLimit()}) | Total: ${totalUrls} URLs, ${totalContent} content`);
+
+      // ── Perf reporter (parity with cmdSync) ─────────────────
+      const instrResult = instrumentation.onRoundSuccess({
+        fetchMs, ingestMs, roundMs,
+        rows: counts.urls || 0, bytes: counts.content || 0,
+        pruneResult, currentLimit: batchController.getLimit(),
+      });
+      if (instrResult.perfLine) console.log(instrResult.perfLine);
+
+      // ── Storage budget + backpressure (parity with cmdSync) ─
+      if (budgetOptions.enabled) {
+        try {
+          const { data: stats } = await requestWithTimeout('GET', '/api/content/stats', null, 10000);
+          const remoteContentBytes = Number(stats?.totals?.compressed_size || stats?.totalBytes || 0);
+          const { budgetDecision, backpressure, transitioned } = instrumentation.evaluateBudget({
+            remoteContentBytes,
+            currentLimit: batchController.getLimit(),
+          });
+          if (budgetDecision && budgetDecision.action !== 'normal') {
+            console.log(`  ↳ storage budget: action=${budgetDecision.action} target-limit=${budgetDecision.targetLimit} headroom=${budgetDecision.headroomMb?.toFixed(1)}MB (${budgetDecision.reason})`);
+          }
+          if (transitioned && backpressure?.changed) {
+            try {
+              await requestWithTimeout('POST', '/api/throttle', { maxConcurrent: backpressure.desiredConcurrency, pause: backpressure.pause, reason: backpressure.reason }, 5000);
+              console.log(`  ↳ backpressure: requested maxConcurrent=${backpressure.desiredConcurrency} pause=${backpressure.pause} (${backpressure.reason})`);
+            } catch (e) {
+              if (!/404|not found|ECONN/i.test(e.message)) {
+                console.log(`  ↳ backpressure (skipped): ${e.message}`);
+              }
+            }
+          }
+        } catch (e) {
+          // /api/content/stats failures shouldn't fail the sync loop
+        }
+      }
     } catch (err) {
       if (syncRunning) console.error(`  [${round}] Error: ${err.message}`);
+      logAdaptiveDecision(batchController.recordError({ error: err.message }));
+      instrumentation.onRoundError();
       consecutiveEmpty++;
     }
 
@@ -719,22 +1280,7 @@ async function cmdBounded() {
   }
 
   const maxPagesOverride = args['max-pages'] ? parseInt(args['max-pages'], 10) : undefined;
-  const missingDomains = findMissingDomains(initialStatus, targetDomains);
-  for (const domain of missingDomains) {
-    const body = { domain };
-    if (maxPagesOverride) body.maxPages = maxPagesOverride;
-    const { data: addData } = await requestWithTimeout('POST', '/api/domains/add', body, 15000);
-    if (addData?.error) {
-      throw new Error(`Failed to register bounded crawl domain ${domain}: ${addData.error}`);
-    }
-    if (!JSON_OUTPUT) {
-      console.log(`  Registered remote domain: ${domain}${maxPagesOverride ? ` (maxPages=${maxPagesOverride})` : ''}`);
-    }
-  }
-
-  if (missingDomains.length > 0) {
-    ({ data: initialStatus } = await requestWithTimeout('GET', '/api/status', null, 10000));
-  }
+  initialStatus = await ensureDomainsForRun(initialStatus, targetDomains, maxPagesOverride);
 
   const startBody = {};
   if (args.domain) startBody.domain = args.domain;
@@ -799,6 +1345,7 @@ const COMMANDS = {
   status: cmdStatus,
   health: cmdHealth,
   start: cmdStart,
+  launch: cmdLaunch,
   bounded: cmdBounded,
   stop: cmdStop,
   run: cmdRun,

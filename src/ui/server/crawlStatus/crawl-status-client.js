@@ -1,13 +1,15 @@
 'use strict';
 
 function buildCrawlStatusClientScript({
-  jobsApiPath = '/api/crawls',
+  jobsApiPath = '/api/v1/crawl/jobs',
+  apiBasePath = '/api/v1/crawl',
   extraJobsApiPath = null,
   eventsPath = '/api/crawl-telemetry/events',
   telemetryHistoryPath = '/api/crawl-telemetry/history',
 } = {}) {
   const config = JSON.stringify({
     jobsApiPath,
+    apiBasePath,
     extraJobsApiPath,
     eventsPath,
     telemetryHistoryPath,
@@ -19,10 +21,36 @@ function buildCrawlStatusClientScript({
   'use strict';
 
   const config = ${config};
+  const BATCH_PRESETS = {
+    'news-10': [
+      'https://www.bbc.com/news',
+      'https://www.reuters.com/',
+      'https://www.theguardian.com/uk',
+      'https://www.nytimes.com/',
+      'https://www.washingtonpost.com/',
+      'https://edition.cnn.com/',
+      'https://apnews.com/',
+      'https://www.bloomberg.com/',
+      'https://www.ft.com/',
+      'https://www.npr.org/'
+    ],
+    'news-5': [
+      'https://www.bbc.com/news',
+      'https://www.reuters.com/',
+      'https://apnews.com/',
+      'https://www.npr.org/',
+      'https://www.theguardian.com/uk'
+    ],
+    'smoke-2': [
+      'https://www.bbc.com/news',
+      'https://apnews.com/'
+    ]
+  };
   window.crawlStatusConfig = config;
 
   const statusEl = document.getElementById('status');
   const rowsEl = document.getElementById('rows');
+  const throughputEl = document.getElementById('throughput-strip');
   const form = document.getElementById('crawl-start-form');
   const urlInput = document.getElementById('crawl-start-url');
   const profileSelect = document.getElementById('crawl-profile-select');
@@ -31,6 +59,14 @@ function buildCrawlStatusClientScript({
   const overridesText = document.getElementById('crawl-start-overrides');
   const startStatus = document.getElementById('crawl-start-status');
   const bootstrapButton = document.getElementById('crawl-profile-bootstrap');
+  const readyMarker = document.querySelector('[data-crawl-status-ready]');
+  const batchForm = document.getElementById('crawl-batch-form');
+  const batchPresetSelect = document.getElementById('crawl-batch-preset');
+  const batchMaxPagesInput = document.getElementById('crawl-batch-max-pages');
+  const batchMaxDepthInput = document.getElementById('crawl-batch-max-depth');
+  const batchConcurrencyInput = document.getElementById('crawl-batch-concurrency');
+  const batchStartButton = document.getElementById('crawl-batch-start');
+  const batchStatus = document.getElementById('crawl-batch-status');
 
   function escapeHtml(value) {
     return String(value == null ? '' : value)
@@ -60,6 +96,54 @@ function buildCrawlStatusClientScript({
     return [];
   }
 
+  function finiteNumber(value, fallback) {
+    const numeric = typeof value === 'string' ? Number(value) : value;
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
+  function metricValue(job, keys, fallback) {
+    const metrics = job.metrics || {};
+    const throughput = metrics.throughput || {};
+    const progress = job.progress || metrics || {};
+    const sources = [progress, throughput, metrics, job];
+    for (const source of sources) {
+      if (!source) continue;
+      for (const key of keys) {
+        if (source[key] != null) return finiteNumber(source[key], fallback);
+      }
+    }
+    return fallback;
+  }
+
+  function formatRate(value) {
+    return finiteNumber(value, 0).toFixed(2);
+  }
+
+  function renderThroughput(jobs) {
+    if (!throughputEl) return;
+    const totals = jobs.reduce(function(acc, job) {
+      acc.network += metricValue(job, ['networkMbPerSec', 'networkMbPerSecond', 'mbPerSecond'], 0);
+      acc.downloaded += metricValue(job, ['docsDownloadedPerSec', 'docsDownloadedPerSecond', 'downloadedDocsPerSecond', 'pagesPerSecond', 'requestsPerSec'], 0);
+      acc.saved += metricValue(job, ['docsSavedPerSec', 'docsSavedPerSecond', 'savedDocsPerSecond'], 0);
+      acc.stored += metricValue(job, ['savedMbPerSec', 'savedMbPerSecond'], 0);
+      acc.queue += metricValue(job, ['queued', 'queueSize', 'queue', 'pending'], 0);
+      return acc;
+    }, { network: 0, downloaded: 0, saved: 0, stored: 0, queue: 0 });
+
+    const values = {
+      network: formatRate(totals.network),
+      downloaded: formatRate(totals.downloaded),
+      saved: formatRate(totals.saved),
+      stored: formatRate(totals.stored),
+      queue: String(Math.round(totals.queue))
+    };
+
+    Object.keys(values).forEach(function(key) {
+      const el = throughputEl.querySelector('[data-crawl-throughput-stat="' + key + '"]');
+      if (el) el.textContent = values[key];
+    });
+  }
+
   function renderJobs(jobs) {
     if (!rowsEl) return;
     if (!jobs.length) {
@@ -70,11 +154,12 @@ function buildCrawlStatusClientScript({
     rowsEl.innerHTML = jobs.map(function(job) {
       const id = job.id || job.taskId || job.task_id || 'crawl';
       const status = job.status || job.state || 'unknown';
-      const progress = job.progress || {};
-      const visited = progress.visited || job.visited || 0;
-      const downloaded = progress.downloaded || job.downloaded || 0;
-      const errors = progress.errors || job.errors || 0;
-      const queue = progress.queue || job.queue || job.pending || 0;
+      const metrics = job.metrics || {};
+      const progress = job.progress || metrics || {};
+      const visited = progress.visited || metrics.visited || job.visited || 0;
+      const downloaded = progress.downloaded || metrics.downloaded || job.downloaded || 0;
+      const errors = progress.errors || metrics.errors || job.errors || 0;
+      const queue = progress.queue || progress.queueSize || metrics.queueSize || job.queue || job.pending || 0;
       const pct = Math.max(0, Math.min(100, progress.percentComplete || job.percentComplete || 0));
       const last = job.lastActivityAt || job.last_activity_at || job.updatedAt || job.updated_at || '';
       return '<tr>'
@@ -96,10 +181,105 @@ function buildCrawlStatusClientScript({
       const payload = await fetchJson(config.jobsApiPath);
       const jobs = normalizeJobs(payload);
       renderJobs(jobs);
+      renderThroughput(jobs);
       setText(statusEl, 'Jobs: ' + jobs.length + ' · telemetry: ' + config.eventsPath);
     } catch (err) {
       setText(statusEl, 'Unable to load jobs: ' + (err.message || err));
       renderJobs([]);
+      renderThroughput([]);
+    }
+  }
+
+  function markReady() {
+    if (readyMarker) readyMarker.setAttribute('data-crawl-status-ready', 'true');
+  }
+
+  function readPositiveInt(input, fallback) {
+    const value = input ? Number(input.value) : fallback;
+    if (!Number.isFinite(value) || value <= 0) return fallback;
+    return Math.max(1, Math.trunc(value));
+  }
+
+  function setBatchMetric(name, value) {
+    const metric = document.querySelector('[data-crawl-batch-stat="' + name + '"]');
+    if (metric) metric.textContent = String(value);
+  }
+
+  function getBatchPlan() {
+    const presetName = batchPresetSelect ? batchPresetSelect.value : 'news-10';
+    const urls = (BATCH_PRESETS[presetName] || BATCH_PRESETS['news-10']).slice();
+    const maxPages = readPositiveInt(batchMaxPagesInput, presetName === 'smoke-2' ? 25 : 1000);
+    const maxDepth = readPositiveInt(batchMaxDepthInput, 6);
+    const concurrency = Math.min(urls.length, readPositiveInt(batchConcurrencyInput, 5));
+    const operation = operationSelect ? (operationSelect.value || 'basicArticleCrawl') : 'basicArticleCrawl';
+    return {
+      presetName,
+      urls,
+      operation,
+      concurrency,
+      overrides: { maxPages, maxDownloads: maxPages, maxDepth }
+    };
+  }
+
+  function updateBatchSummary() {
+    if (!batchForm) return;
+    const plan = getBatchPlan();
+    setBatchMetric('sites', plan.urls.length);
+    if (batchStartButton) {
+      batchStartButton.textContent = 'Start ' + plan.urls.length + ' x ' + plan.overrides.maxPages;
+    }
+  }
+
+  async function runBatchWithConcurrency(items, concurrency, worker) {
+    const results = new Array(items.length);
+    let cursor = 0;
+    async function pump() {
+      while (true) {
+        const itemIndex = cursor;
+        cursor += 1;
+        if (itemIndex >= items.length) return;
+        results[itemIndex] = await worker(items[itemIndex], itemIndex);
+      }
+    }
+    const workerCount = Math.max(1, Math.min(concurrency, items.length));
+    await Promise.all(Array.from({ length: workerCount }, function() { return pump(); }));
+    return results;
+  }
+
+  async function startBatch(event) {
+    event.preventDefault();
+    const plan = getBatchPlan();
+    let accepted = 0;
+    let failed = 0;
+    setBatchMetric('accepted', accepted);
+    setBatchMetric('failed', failed);
+    if (batchStartButton) batchStartButton.disabled = true;
+    setText(batchStatus, 'Starting ' + plan.urls.length + ' jobs with concurrency ' + plan.concurrency + '...');
+    try {
+      const results = await runBatchWithConcurrency(plan.urls, plan.concurrency, async function(startUrl) {
+        try {
+          const result = await fetchJson(config.apiBasePath + '/operations/' + encodeURIComponent(plan.operation) + '/start', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ startUrl, overrides: plan.overrides })
+          });
+          accepted += 1;
+          setBatchMetric('accepted', accepted);
+          refreshJobs();
+          return { ok: true, startUrl, jobId: result && (result.jobId || (result.job && result.job.id)) };
+        } catch (err) {
+          failed += 1;
+          setBatchMetric('failed', failed);
+          return { ok: false, startUrl, error: err.message || String(err) };
+        }
+      });
+      const failedItems = results.filter(function(result) { return !result || !result.ok; });
+      setText(batchStatus, failedItems.length
+        ? 'Batch accepted ' + accepted + '/' + plan.urls.length + '; failed ' + failedItems.length + '.'
+        : 'Batch accepted ' + accepted + '/' + plan.urls.length + ' jobs.');
+      refreshJobs();
+    } finally {
+      if (batchStartButton) batchStartButton.disabled = false;
     }
   }
 
@@ -122,11 +302,33 @@ function buildCrawlStatusClientScript({
       { value: 'simple-distributed-smoke', label: 'Simple distributed smoke' }
     ], '');
     fillSelect(operationSelect, [
-      { value: 'intelligent', label: 'intelligent' },
-      { value: 'news', label: 'news' }
+      { value: 'intelligent', label: 'intelligent (loading…)' }
     ], 'intelligent');
     setText(operationLabel, operationSelect ? operationSelect.value : 'intelligent');
-    setText(startStatus, 'Ready to start a crawl.');
+    setText(startStatus, 'Loading operations…');
+  }
+
+  async function loadOperations() {
+    try {
+      const payload = await fetchJson(config.apiBasePath + '/availability?operations=true&sequences=false');
+      const ops = (payload && payload.availability && Array.isArray(payload.availability.operations))
+        ? payload.availability.operations : [];
+      if (!ops.length) { setText(startStatus, 'No operations available.'); return; }
+      const items = ops.map(function(op) {
+        const name = (typeof op === 'string') ? op : (op.name || op.id || '');
+        return { value: name, label: name };
+      }).filter(function(item) { return !!item.value; });
+      const previous = operationSelect ? operationSelect.value : '';
+      const preferenceOrder = ['basicArticleCrawl', 'intelligent', 'siteExplorer'];
+      const preferred = preferenceOrder.find(function(name) {
+        return items.some(function(i) { return i.value === name; });
+      }) || (items[0] && items[0].value);
+      fillSelect(operationSelect, items, previous && items.some(function(i) { return i.value === previous; }) ? previous : preferred);
+      setText(operationLabel, operationSelect ? operationSelect.value : preferred);
+      setText(startStatus, 'Ready to start a crawl. ' + items.length + ' operations available.');
+    } catch (err) {
+      setText(startStatus, 'Could not load operations: ' + (err.message || err));
+    }
   }
 
   if (operationSelect) {
@@ -144,24 +346,23 @@ function buildCrawlStatusClientScript({
   if (form) {
     form.addEventListener('submit', async function(event) {
       event.preventDefault();
-      const body = {
-        startUrl: urlInput ? urlInput.value.trim() : '',
-        profile: profileSelect ? profileSelect.value : '',
-        operation: operationSelect ? operationSelect.value : 'intelligent',
-        overrides: {}
-      };
+      const startUrl = urlInput ? urlInput.value.trim() : '';
+      const operation = operationSelect ? (operationSelect.value || 'intelligent') : 'intelligent';
+      if (!startUrl) { setText(startStatus, 'Start URL is required.'); return; }
+      const body = { startUrl: startUrl, overrides: {} };
       if (overridesText && overridesText.value.trim()) {
         try { body.overrides = JSON.parse(overridesText.value); }
         catch (err) { setText(startStatus, 'Invalid overrides JSON'); return; }
       }
-      setText(startStatus, 'Starting...');
+      setText(startStatus, 'Starting ' + operation + '…');
       try {
-        await fetchJson('/api/crawls/start', {
+        const result = await fetchJson(config.apiBasePath + '/operations/' + encodeURIComponent(operation) + '/start', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(body)
         });
-        setText(startStatus, 'Started');
+        const jobId = result && (result.jobId || (result.job && result.job.id));
+        setText(startStatus, 'Started' + (jobId ? ' — job ' + jobId : ''));
         refreshJobs();
       } catch (err) {
         setText(startStatus, err.message || 'Start failed');
@@ -169,12 +370,24 @@ function buildCrawlStatusClientScript({
     });
   }
 
+  if (batchForm) {
+    batchForm.addEventListener('submit', startBatch);
+  }
+
+  [batchPresetSelect, batchMaxPagesInput, batchMaxDepthInput, batchConcurrencyInput].forEach(function(input) {
+    if (input) input.addEventListener('change', updateBatchSummary);
+    if (input) input.addEventListener('input', updateBatchSummary);
+  });
+
   document.addEventListener('click', function(event) {
     if (event.target && event.target.matches('[data-refresh-crawls]')) refreshJobs();
   });
 
   seedStartControls();
+  updateBatchSummary();
+  loadOperations().finally(markReady);
   refreshJobs();
+  setInterval(refreshJobs, 3000);
 })();`;
 }
 

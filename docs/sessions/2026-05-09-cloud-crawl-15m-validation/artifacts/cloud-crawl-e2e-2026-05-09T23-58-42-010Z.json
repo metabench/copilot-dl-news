@@ -1,0 +1,811 @@
+{
+  "ok": true,
+  "mode": "live",
+  "startedAt": "2026-05-09T23:58:42.012Z",
+  "finishedAt": "2026-05-10T00:13:21.112Z",
+  "artifact": {
+    "report": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-09-cloud-crawl-15m-validation\\artifacts\\cloud-crawl-e2e-2026-05-09T23-58-42-010Z.json",
+    "log": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-09-cloud-crawl-15m-validation\\artifacts\\cloud-crawl-e2e-2026-05-09T23-58-42-010Z.log"
+  },
+  "plan": {
+    "command": "cloud-crawl-e2e",
+    "host": "141.144.193.218:3200",
+    "domains": [
+      "bbc.com",
+      "theguardian.com",
+      "reuters.com",
+      "nytimes.com",
+      "washingtonpost.com",
+      "cnn.com",
+      "apnews.com",
+      "bloomberg.com",
+      "ft.com",
+      "npr.org"
+    ],
+    "durationMs": 900000,
+    "crawlBudgetMs": 805000,
+    "drainMs": 60000,
+    "validationMs": 20000,
+    "stopGraceMs": 15000,
+    "hardLimit": "15 minutes by default; total process phases must finish before durationMs",
+    "remoteRunArgs": [
+      "run",
+      "--host",
+      "141.144.193.218:3200",
+      "--domains",
+      "bbc.com,theguardian.com,reuters.com,nytimes.com,washingtonpost.com,cnn.com,apnews.com,bloomberg.com,ft.com,npr.org",
+      "--max-pages",
+      "1000",
+      "--max-concurrent",
+      "10",
+      "--interval",
+      "5",
+      "--window",
+      "5",
+      "--limit",
+      "5",
+      "--adaptive-limit",
+      "--target-sync-ms",
+      "5000",
+      "--min-limit",
+      "1",
+      "--max-limit",
+      "25",
+      "--include-content",
+      "--include-links",
+      "--prune-after-ingest",
+      "--no-backoff",
+      "--remote-storage-budget-mb",
+      "512",
+      "--remote-storage-reserve-mb",
+      "256",
+      "--normal-concurrency",
+      "10",
+      "--perf-summary-every",
+      "3"
+    ],
+    "drainArgs": [
+      "sync",
+      "--host",
+      "141.144.193.218:3200",
+      "--rounds",
+      "12",
+      "--interval",
+      "3",
+      "--window",
+      "30",
+      "--limit",
+      "5",
+      "--adaptive-limit",
+      "--target-sync-ms",
+      "5000",
+      "--min-limit",
+      "1",
+      "--max-limit",
+      "25",
+      "--include-content",
+      "--include-links",
+      "--prune-after-ingest",
+      "--no-backoff",
+      "--remote-storage-budget-mb",
+      "512",
+      "--remote-storage-reserve-mb",
+      "256",
+      "--normal-concurrency",
+      "10",
+      "--perf-summary-every",
+      "1"
+    ],
+    "thresholds": {
+      "minNewResponses": 25,
+      "minSuccessResponses": 10,
+      "minContentRows": 5,
+      "minDistinctHosts": 3,
+      "maxFailureRatio": 0.6,
+      "maxUnconfirmedLedgerEntries": 0,
+      "maxUnprunedLedgerEntries": 2
+    }
+  },
+  "remote": {
+    "checkedAt": "2026-05-09T23:58:42.108Z",
+    "healthOk": true,
+    "throttleOk": true,
+    "contentStatsOk": true,
+    "statusOk": true,
+    "healthStatus": 200,
+    "healthError": null,
+    "health": {
+      "healthy": true,
+      "version": "4.0.0",
+      "mode": "multi-domain",
+      "domains": 10,
+      "running": 0,
+      "stored": 0,
+      "memory": {
+        "rss": 83,
+        "heapUsed": 10,
+        "heapTotal": 12
+      },
+      "idle": {
+        "minutes": 6,
+        "timeoutMin": 10,
+        "autoShutdown": true
+      },
+      "uptime": 397
+    },
+    "throttleStatus": 200,
+    "throttleError": null,
+    "throttle": {
+      "ok": true,
+      "throttle": {
+        "maxConcurrent": null,
+        "pause": false,
+        "reason": null,
+        "updatedAt": null
+      },
+      "currentMaxConcurrent": 10
+    },
+    "contentStatsStatus": 200,
+    "contentStatsError": null,
+    "contentStats": {
+      "totals": {
+        "total_stored": 6357,
+        "total_uncompressed": 8298398432,
+        "total_compressed": 1507813151,
+        "avg_compression_ratio": 0.3061845655899457
+      },
+      "byDomain": [
+        {
+          "domain": "www.nytimes.com",
+          "count": 1869,
+          "total_uncompressed": 766578609,
+          "total_compressed": 105899771
+        },
+        {
+          "domain": "www.cnn.com",
+          "count": 1634,
+          "total_uncompressed": 5861644769,
+          "total_compressed": 1104414071
+        },
+        {
+          "domain": "www.theguardian.com",
+          "count": 1217,
+          "total_uncompressed": 235918560,
+          "total_compressed": 34677901
+        },
+        {
+          "domain": "www.bbc.com",
+          "count": 854,
+          "total_uncompressed": 259673357,
+          "total_compressed": 46156756
+        },
+        {
+          "domain": "cnnespanol.cnn.com",
+          "count": 162,
+          "total_uncompressed": 532996087,
+          "total_compressed": 98932292
+        },
+        {
+          "domain": "edition.cnn.com",
+          "count": 120,
+          "total_uncompressed": 383569094,
+          "total_compressed": 74398314
+        },
+        {
+          "domain": "cooking.nytimes.com",
+          "count": 101,
+          "total_uncompressed": 62720699,
+          "total_compressed": 7349995
+        },
+        {
+          "domain": "help.nytimes.com",
+          "count": 81,
+          "total_uncompressed": 7463885,
+          "total_compressed": 2121704
+        },
+        {
+          "domain": "syndication.theguardian.com",
+          "count": 63,
+          "total_uncompressed": 34272,
+          "total_compressed": 21231
+        },
+        {
+          "domain": "holidays.theguardian.com",
+          "count": 63,
+          "total_uncompressed": 26420100,
+          "total_compressed": 2904927
+        },
+        {
+          "domain": "arabic.cnn.com",
+          "count": 43,
+          "total_uncompressed": 9727970,
+          "total_compressed": 2391394
+        },
+        {
+          "domain": "store.nytimes.com",
+          "count": 32,
+          "total_uncompressed": 4310722,
+          "total_compressed": 833365
+        },
+        {
+          "domain": "us.cnn.com",
+          "count": 26,
+          "total_uncompressed": 100111686,
+          "total_compressed": 19270262
+        },
+        {
+          "domain": "advertising.nytimes.com",
+          "count": 25,
+          "total_uncompressed": 3084550,
+          "total_compressed": 873083
+        },
+        {
+          "domain": "cnn.com",
+          "count": 9,
+          "total_uncompressed": 30281175,
+          "total_compressed": 5531797
+        },
+        {
+          "domain": "www.bloomberg.com",
+          "count": 8,
+          "total_uncompressed": 110848,
+          "total_compressed": 37245
+        },
+        {
+          "domain": "myaccount.nytimes.com",
+          "count": 7,
+          "total_uncompressed": 462622,
+          "total_compressed": 176266
+        },
+        {
+          "domain": "account.bbc.com",
+          "count": 7,
+          "total_uncompressed": 1172017,
+          "total_compressed": 312428
+        },
+        {
+          "domain": "nytimes.com",
+          "count": 5,
+          "total_uncompressed": 2135875,
+          "total_compressed": 234978
+        },
+        {
+          "domain": "licensing.theguardian.com",
+          "count": 5,
+          "total_uncompressed": 194373,
+          "total_compressed": 59629
+        },
+        {
+          "domain": "support.theguardian.com",
+          "count": 4,
+          "total_uncompressed": 985362,
+          "total_compressed": 66701
+        },
+        {
+          "domain": "shop.bbc.com",
+          "count": 4,
+          "total_uncompressed": 4060566,
+          "total_compressed": 450149
+        },
+        {
+          "domain": "theguardian.com",
+          "count": 3,
+          "total_uncompressed": 1043985,
+          "total_compressed": 164348
+        },
+        {
+          "domain": "help.cnn.com",
+          "count": 3,
+          "total_uncompressed": 3321852,
+          "total_compressed": 431061
+        },
+        {
+          "domain": "profile.theguardian.com",
+          "count": 2,
+          "total_uncompressed": 82166,
+          "total_compressed": 17588
+        },
+        {
+          "domain": "manage.theguardian.com",
+          "count": 2,
+          "total_uncompressed": 34458,
+          "total_compressed": 10346
+        },
+        {
+          "domain": "cloud.email.bbc.com",
+          "count": 2,
+          "total_uncompressed": 108554,
+          "total_compressed": 31044
+        },
+        {
+          "domain": "www.reuters.com",
+          "count": 1,
+          "total_uncompressed": 771,
+          "total_compressed": 572
+        },
+        {
+          "domain": "workwithus.theguardian.com",
+          "count": 1,
+          "total_uncompressed": 67418,
+          "total_compressed": 19713
+        },
+        {
+          "domain": "store.cnn.com",
+          "count": 1,
+          "total_uncompressed": 46452,
+          "total_compressed": 14707
+        },
+        {
+          "domain": "help.bbc.com",
+          "count": 1,
+          "total_uncompressed": 19885,
+          "total_compressed": 6299
+        },
+        {
+          "domain": "archive.nytimes.com",
+          "count": 1,
+          "total_uncompressed": 15646,
+          "total_compressed": 3152
+        },
+        {
+          "domain": "advertising.theguardian.com",
+          "count": 1,
+          "total_uncompressed": 47,
+          "total_compressed": 62
+        }
+      ]
+    },
+    "statusStatus": 200,
+    "statusError": null,
+    "remoteDomains": [
+      {
+        "domain": "bbc.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "theguardian.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "reuters.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "nytimes.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "washingtonpost.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "cnn.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "apnews.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "bloomberg.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "ft.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "npr.org",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      }
+    ]
+  },
+  "before": {
+    "available": true,
+    "path": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\data\\news.db",
+    "capturedAt": "2026-05-09T23:58:42.012Z",
+    "totals": {
+      "urls": 1631275,
+      "responses": 295264,
+      "successResponses": 279234,
+      "failedResponses": 16030,
+      "content": 184139
+    },
+    "latestFetchedAt": "2026-05-09 16:57:58",
+    "error": null
+  },
+  "after": {
+    "available": true,
+    "path": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\data\\news.db",
+    "capturedAt": "2026-05-10T00:13:21.112Z",
+    "totals": {
+      "urls": 1631416,
+      "responses": 297201,
+      "successResponses": 281143,
+      "failedResponses": 16058,
+      "content": 186076
+    },
+    "latestFetchedAt": "2026-05-10 00:01:21",
+    "error": null
+  },
+  "recent": {
+    "available": true,
+    "startedAt": "2026-05-09T23:58:42.012Z",
+    "finishedAt": "2026-05-10T00:13:21.112Z",
+    "queryWindow": {
+      "startedAt": "2026-05-09 23:58:42",
+      "finishedAt": "2026-05-10 00:13:22"
+    },
+    "downloads": 141,
+    "success": 140,
+    "failed": 1,
+    "bytes": 513111806,
+    "distinctHosts": 4,
+    "hosts": [
+      {
+        "host": "www.cnn.com",
+        "downloads": 126,
+        "success": 125,
+        "failed": 1,
+        "bytes": 497356010,
+        "firstFetchedAt": "2026-05-09 23:58:48",
+        "lastFetchedAt": "2026-05-10 00:01:21"
+      },
+      {
+        "host": "www.bbc.com",
+        "downloads": 12,
+        "success": 12,
+        "failed": 0,
+        "bytes": 3425338,
+        "firstFetchedAt": "2026-05-09 23:58:45",
+        "lastFetchedAt": "2026-05-09 23:58:47"
+      },
+      {
+        "host": "cnn.com",
+        "downloads": 2,
+        "success": 2,
+        "failed": 0,
+        "bytes": 7955227,
+        "firstFetchedAt": "2026-05-10 00:01:19",
+        "lastFetchedAt": "2026-05-10 00:01:20"
+      },
+      {
+        "host": "us.cnn.com",
+        "downloads": 1,
+        "success": 1,
+        "failed": 0,
+        "bytes": 4375231,
+        "firstFetchedAt": "2026-05-10 00:00:34",
+        "lastFetchedAt": "2026-05-10 00:00:34"
+      }
+    ],
+    "statuses": [
+      {
+        "status": 200,
+        "count": 140
+      },
+      {
+        "status": 404,
+        "count": 1
+      }
+    ],
+    "error": null
+  },
+  "ledgerBefore": {
+    "entries": 38,
+    "unconfirmed": 0,
+    "rawUnconfirmed": 1,
+    "supersededUnconfirmed": 1,
+    "unpruned": 0,
+    "completed": 37,
+    "lastWatermark": "2026-05-09 16:57:58",
+    "totalPulled": 55820
+  },
+  "ledgerAfter": {
+    "entries": 146,
+    "unconfirmed": 0,
+    "rawUnconfirmed": 1,
+    "supersededUnconfirmed": 1,
+    "unpruned": 0,
+    "completed": 145,
+    "lastWatermark": "2026-05-10 00:01:21",
+    "totalPulled": 57758
+  },
+  "run": {
+    "command": "C:\\nvm4w\\nodejs\\node.exe",
+    "args": [
+      "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\tools\\crawl\\crawl-remote.js",
+      "run",
+      "--host",
+      "141.144.193.218:3200",
+      "--domains",
+      "bbc.com,theguardian.com,reuters.com,nytimes.com,washingtonpost.com,cnn.com,apnews.com,bloomberg.com,ft.com,npr.org",
+      "--max-pages",
+      "1000",
+      "--max-concurrent",
+      "10",
+      "--interval",
+      "5",
+      "--window",
+      "5",
+      "--limit",
+      "5",
+      "--adaptive-limit",
+      "--target-sync-ms",
+      "5000",
+      "--min-limit",
+      "1",
+      "--max-limit",
+      "25",
+      "--include-content",
+      "--include-links",
+      "--prune-after-ingest",
+      "--no-backoff",
+      "--remote-storage-budget-mb",
+      "512",
+      "--remote-storage-reserve-mb",
+      "256",
+      "--normal-concurrency",
+      "10",
+      "--perf-summary-every",
+      "3"
+    ],
+    "startedAt": "2026-05-09T23:58:43.499Z",
+    "finishedAt": "2026-05-10T00:12:08.628Z",
+    "exitCode": null,
+    "signal": "SIGINT",
+    "stoppedAtDeadline": true,
+    "hardTimedOut": false,
+    "outputText": "═══════════════════════════════════════════════════════\n\n  Rapid Coordination: Start + Continuous Sync + Stop\n═══════════════════════════════════════════════════════\n  ▶ Starting domains...\n\n  Started 10 domain(s)\n\n\n  🔄 Entering continuous sync loop (every 5s). Press Ctrl+C to stop.\n\n  Initial limit: 5\n  Adaptive batching: enabled target=5000ms min=1 max=25\n  Storage budget: enabled budget=512MB reserve=256MB\n  Prune after ingest: enabled\n  Ledger: C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\tools\\crawl\\.crawl-remote-ledger.json (38 entries, wm=2026-05-09 16:57:58)\n\n  [1] 00:58:48 — 5 URLs, 5 content → 0 new URLs, 5 new content; confirmed 5/5/5/155, pruned {\"urls\":0,\"httpResponses\":5,\"content\":5,\"links\":155} (fetch: 402ms, ingest: 106ms, round: 574ms, next limit: 5) | Total: 5 URLs, 5 content\n\n  Adaptive limit shrink: 5 → 2 (slow-round, round=14569ms, target=5000ms)\n  [2] 00:59:09 — 5 URLs, 5 content → 0 new URLs, 5 new content; confirmed 5/5/5/180, pruned {\"urls\":0,\"httpResponses\":5,\"content\":5,\"links\":180} (fetch: 14496ms, ingest: 18ms, round: 14569ms, next limit: 2) | Total: 10 URLs, 10 content\n\n  [3] 00:59:15 — 2 URLs, 2 content → 0 new URLs, 2 new content; confirmed 2/2/2/66, pruned {\"urls\":0,\"httpResponses\":2,\"content\":2,\"links\":66} (fetch: 183ms, ingest: 5ms, round: 235ms, next limit: 2) | Total: 12 URLs, 12 content\n\n  ↳ perf p50/p95 fetch=402/402ms ingest=18/18ms total=574/574ms rows/s=0.78 samples=3\n\n  [4] 00:59:21 — 2 URLs, 2 content → 0 new URLs, 2 new content; confirmed 2/2/2/63, pruned {\"urls\":0,\"httpResponses\":2,\"content\":2,\"links\":63} (fetch: 194ms, ingest: 9ms, round: 257ms, next limit: 2) | Total: 14 URLs, 14 content\n\n  Adaptive limit grow: 2 → 3 (fast-full-streak, round=252ms, target=5000ms)\n  [5] 00:59:28 — 2 URLs, 2 content → 0 new URLs, 2 new content; confirmed 2/2/2/57, pruned {\"urls\":0,\"httpResponses\":2,\"content\":2,\"links\":57} (fetch: 196ms, ingest: 4ms, round: 252ms, next limit: 3) | Total: 16 URLs, 16 content\n\n  [6] 00:59:34 — 3 URLs, 3 content → 0 new URLs, 3 new content; confirmed 3/3/3/105, pruned {\"urls\":0,\"httpResponses\":3,\"content\":3,\"links\":105} (fetch: 216ms, ingest: 10ms, round: 278ms, next limit: 3) | Total: 19 URLs, 19 content\n\n  ↳ perf p50/p95 fetch=196/402ms ingest=9/18ms total=257/574ms rows/s=1.18 samples=6\n\n  [7] 00:59:41 — 3 URLs, 3 content → 0 new URLs, 3 new content; confirmed 3/3/3/100, pruned {\"urls\":0,\"httpResponses\":3,\"content\":3,\"links\":100} (fetch: 236ms, ingest: 18ms, round: 324ms, next limit: 3) | Total: 22 URLs, 22 content\n\n  Adaptive limit grow: 3 → 5 (fast-full-streak, round=398ms, target=5000ms)\n\n  [8] 00:59:47 — 3 URLs, 3 content → 0 new URLs, 3 new content; confirmed 3/3/3/87, pruned {\"urls\":0,\"httpResponses\":3,\"content\":3,\"links\":87} (fetch: 314ms, ingest: 12ms, round: 398ms, next limit: 5) | Total: 25 URLs, 25 content\n\n  [9] 00:59:54 — 5 URLs, 5 content → 0 new URLs, 5 new content; confirmed 5/5/5/146, pruned {\"urls\":0,\"httpResponses\":5,\"content\":5,\"links\":146} (fetch: 365ms, ingest: 17ms, round: 429ms, next limit: 5) | Total: 30 URLs, 30 content\n\n  ↳ perf p50/p95 fetch=236/402ms ingest=12/18ms total=324/574ms rows/s=1.73 samples=9\n\n  [10] 01:00:01 — 5 URLs, 5 content → 0 new URLs, 5 new content; confirmed 5/5/5/240, pruned {\"urls\":0,\"httpResponses\":5,\"content\":5,\"links\":240} (fetch: 276ms, ingest: 21ms, round: 380ms, next limit: 5) | Total: 35 URLs, 35 content\n\n  Adaptive limit grow: 5 → 8 (fast-full-streak, round=587ms, target=5000ms)\n\n  [11] 01:00:08 — 5 URLs, 5 content → 0 new URLs, 5 new content; confirmed 5/5/5/189, pruned {\"urls\":0,\"httpResponses\":5,\"content\":5,\"links\":189} (fetch: 410ms, ingest: 82ms, round: 587ms, next limit: 8) | Total: 40 URLs, 40 content\n\n  [12] 01:00:15 — 8 URLs, 8 content → 0 new URLs, 8 new content; confirmed 8/8/8/420, pruned {\"urls\":0,\"httpResponses\":8,\"content\":8,\"links\":420} (fetch: 591ms, ingest: 30ms, round: 675ms, next limit: 8) | Total: 48 URLs, 48 content\n\n  ↳ perf p50/p95 fetch=276/591ms ingest=17/82ms total=380/675ms rows/s=2.53 samples=12\n\n  [13] 01:00:21 — 8 URLs, 8 content → 0 new URLs, 8 new content; confirmed 8/8/8/447, pruned {\"urls\":0,\"httpResponses\":8,\"content\":8,\"links\":447} (fetch: 436ms, ingest: 48ms, round: 578ms, next limit: 8) | Total: 56 URLs, 56 content\n\n  Adaptive limit grow: 8 → 12 (fast-full-streak, round=603ms, target=5000ms)\n\n  [14] 01:00:28 — 8 URLs, 8 content → 0 new URLs, 8 new content; confirmed 8/8/8/418, pruned {\"urls\":0,\"httpResponses\":8,\"content\":8,\"links\":418} (fetch: 408ms, ingest: 100ms, round: 603ms, next limit: 12) | Total: 64 URLs, 64 content\n\n  [15] 01:00:35 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/777, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":777} (fetch: 460ms, ingest: 39ms, round: 581ms, next limit: 12) | Total: 76 URLs, 76 content\n\n  ↳ perf p50/p95 fetch=365/591ms ingest=18/100ms total=429/675ms rows/s=3.67 samples=15\n\n  [16] 01:00:43 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/698, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":698} (fetch: 1065ms, ingest: 150ms, round: 1319ms, next limit: 12) | Total: 88 URLs, 88 content\n\n  Adaptive limit grow: 12 → 18 (fast-full-streak, round=1440ms, target=5000ms)\n\n  [17] 01:00:50 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/610, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":610} (fetch: 1275ms, ingest: 74ms, round: 1440ms, next limit: 18) | Total: 100 URLs, 100 content\n\n  [18] 01:00:58 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/999, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":999} (fetch: 675ms, ingest: 150ms, round: 897ms, next limit: 18) | Total: 118 URLs, 118 content\n\n  ↳ perf p50/p95 fetch=402/1275ms ingest=21/150ms total=574/1440ms rows/s=4.84 samples=18\n\n  [19] 01:01:05 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/912, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":912} (fetch: 726ms, ingest: 103ms, round: 981ms, next limit: 18) | Total: 136 URLs, 136 content\n\n  Adaptive limit grow: 18 → 25 (fast-full-streak, round=1359ms, target=5000ms)\n\n  [20] 01:01:13 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/906, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":906} (fetch: 1165ms, ingest: 104ms, round: 1359ms, next limit: 25) | Total: 154 URLs, 154 content\n\n  [21] 01:01:21 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/1168, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1168} (fetch: 1708ms, ingest: 127ms, round: 1943ms, next limit: 25) | Total: 179 URLs, 179 content\n\n  ↳ perf p50/p95 fetch=410/1708ms ingest=39/150ms total=581/1943ms rows/s=6.25 samples=21\n\n  [22] 01:01:28 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/1126, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1126} (fetch: 921ms, ingest: 170ms, round: 1177ms, next limit: 25) | Total: 204 URLs, 204 content\n\n  [23] 01:01:36 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/1212, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1212} (fetch: 1188ms, ingest: 192ms, round: 1491ms, next limit: 25) | Total: 229 URLs, 229 content\n\n  [24] 01:01:44 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/1217, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1217} (fetch: 1562ms, ingest: 259ms, round: 1925ms, next limit: 25) | Total: 254 URLs, 254 content\n\n  ↳ perf p50/p95 fetch=436/1562ms ingest=48/170ms total=587/1925ms rows/s=7.64 samples=24\n\n  [25] 01:01:51 — 25 URLs, 24 content → 0 new URLs, 24 new content; confirmed 25/24/24/1002, pruned {\"urls\":0,\"httpResponses\":24,\"content\":24,\"links\":1002} (fetch: 717ms, ingest: 94ms, round: 940ms, next limit: 25) | Total: 279 URLs, 278 content\n\n  [26] 01:01:59 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/1847, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1847} (fetch: 1353ms, ingest: 203ms, round: 1640ms, next limit: 25) | Total: 304 URLs, 303 content\n\n  [27] 01:02:08 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/1418, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1418} (fetch: 2318ms, ingest: 186ms, round: 2686ms, next limit: 25) | Total: 329 URLs, 328 content\n\n  ↳ perf p50/p95 fetch=591/1708ms ingest=82/192ms total=675/1943ms rows/s=8.54 samples=27\n\n  [28] 01:02:16 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/1397, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1397} (fetch: 954ms, ingest: 131ms, round: 1162ms, next limit: 25) | Total: 354 URLs, 353 content\n\n  [29] 01:02:23 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/1267, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1267} (fetch: 999ms, ingest: 194ms, round: 1320ms, next limit: 25) | Total: 379 URLs, 378 content\n\n  [30] 01:02:31 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/1340, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1340} (fetch: 1165ms, ingest: 240ms, round: 1514ms, next limit: 25) | Total: 404 URLs, 403 content\n\n  ↳ perf p50/p95 fetch=675/1708ms ingest=94/203ms total=897/1943ms rows/s=9.50 samples=30\n\n  [31] 01:02:39 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/1228, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1228} (fetch: 1377ms, ingest: 162ms, round: 1627ms, next limit: 25) | Total: 429 URLs, 428 content\n\n  [32] 01:02:47 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/1341, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1341} (fetch: 1363ms, ingest: 137ms, round: 1571ms, next limit: 25) | Total: 454 URLs, 453 content\n\n  [33] 01:02:56 — 25 URLs, 25 content → 8 new URLs, 25 new content; confirmed 25/25/25/2295, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":2295} (fetch: 2172ms, ingest: 266ms, round: 2635ms, next limit: 25) | Total: 479 URLs, 478 content\n\n  ↳ perf p50/p95 fetch=726/2172ms ingest=103/240ms total=981/2635ms rows/s=9.91 samples=33\n\n  [34] 01:03:03 — 25 URLs, 25 content → 16 new URLs, 25 new content; confirmed 25/25/25/1305, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1305} (fetch: 839ms, ingest: 274ms, round: 1224ms, next limit: 25) | Total: 504 URLs, 503 content\n\n  [35] 01:03:11 — 25 URLs, 25 content → 16 new URLs, 25 new content; confirmed 25/25/25/1116, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1116} (fetch: 1766ms, ingest: 115ms, round: 2021ms, next limit: 25) | Total: 529 URLs, 528 content\n\n  [36] 01:03:19 — 25 URLs, 25 content → 10 new URLs, 25 new content; confirmed 25/25/25/1256, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1256} (fetch: 1416ms, ingest: 251ms, round: 1794ms, next limit: 25) | Total: 554 URLs, 553 content\n\n  ↳ perf p50/p95 fetch=839/2172ms ingest=104/259ms total=1162/2635ms rows/s=10.38 samples=36\n\n  [37] 01:03:27 — 25 URLs, 25 content → 2 new URLs, 25 new content; confirmed 25/25/25/1317, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1317} (fetch: 1328ms, ingest: 190ms, round: 1863ms, next limit: 25) | Total: 579 URLs, 578 content\n\n  [38] 01:03:35 — 25 URLs, 25 content → 10 new URLs, 25 new content; confirmed 25/25/25/1429, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1429} (fetch: 1364ms, ingest: 189ms, round: 1675ms, next limit: 25) | Total: 604 URLs, 603 content\n\n  [39] 01:03:43 — 25 URLs, 25 content → 2 new URLs, 25 new content; confirmed 25/25/25/1396, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1396} (fetch: 1461ms, ingest: 121ms, round: 1683ms, next limit: 25) | Total: 629 URLs, 628 content\n\n  ↳ perf p50/p95 fetch=954/2172ms ingest=115/259ms total=1224/2635ms rows/s=10.73 samples=39\n\n  [40] 01:03:51 — 25 URLs, 25 content → 10 new URLs, 25 new content; confirmed 25/25/25/1526, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1526} (fetch: 1220ms, ingest: 318ms, round: 1676ms, next limit: 25) | Total: 654 URLs, 653 content\n\n  [41] 01:03:59 — 25 URLs, 25 content → 12 new URLs, 25 new content; confirmed 25/25/25/1467, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1467} (fetch: 882ms, ingest: 200ms, round: 1204ms, next limit: 25) | Total: 679 URLs, 678 content\n\n  [42] 01:04:07 — 25 URLs, 25 content → 8 new URLs, 25 new content; confirmed 25/25/25/1214, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1214} (fetch: 1980ms, ingest: 115ms, round: 2227ms, next limit: 25) | Total: 704 URLs, 703 content\n\n  ↳ perf p50/p95 fetch=954/1980ms ingest=115/259ms total=1224/2227ms rows/s=11.05 samples=42\n\n  [43] 01:04:15 — 25 URLs, 25 content → 12 new URLs, 25 new content; confirmed 25/25/25/1556, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1556} (fetch: 1282ms, ingest: 270ms, round: 1709ms, next limit: 25) | Total: 729 URLs, 728 content\n\n  [44] 01:04:22 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/1334, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1334} (fetch: 712ms, ingest: 131ms, round: 996ms, next limit: 25) | Total: 754 URLs, 753 content\n\n  [45] 01:04:30 — 25 URLs, 25 content → 2 new URLs, 25 new content; confirmed 25/25/25/1274, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1274} (fetch: 759ms, ingest: 274ms, round: 1151ms, next limit: 25) | Total: 779 URLs, 778 content\n\n  ↳ perf p50/p95 fetch=954/1980ms ingest=127/270ms total=1224/2227ms rows/s=11.53 samples=45\n\n  [46] 01:04:38 — 25 URLs, 25 content → 9 new URLs, 25 new content; confirmed 25/25/25/1310, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1310} (fetch: 1968ms, ingest: 225ms, round: 2315ms, next limit: 25) | Total: 804 URLs, 803 content\n\n  [47] 01:04:46 — 25 URLs, 25 content → 10 new URLs, 25 new content; confirmed 25/25/25/1284, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1284} (fetch: 967ms, ingest: 178ms, round: 1272ms, next limit: 25) | Total: 829 URLs, 828 content\n\n  [48] 01:04:53 — 25 URLs, 25 content → 10 new URLs, 25 new content; confirmed 25/25/25/1535, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1535} (fetch: 877ms, ingest: 221ms, round: 1218ms, next limit: 25) | Total: 854 URLs, 853 content\n\n  ↳ perf p50/p95 fetch=954/1980ms ingest=131/270ms total=1224/2315ms rows/s=11.80 samples=48\n\n  [49] 01:05:01 — 25 URLs, 25 content → 4 new URLs, 25 new content; confirmed 25/25/25/1059, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1059} (fetch: 1440ms, ingest: 107ms, round: 1687ms, next limit: 25) | Total: 879 URLs, 878 content\n\n  [50] 01:05:09 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/3239, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":3239} (fetch: 1133ms, ingest: 336ms, round: 1709ms, next limit: 25) | Total: 904 URLs, 903 content\n\n  [51] 01:05:16 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/3244, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":3244} (fetch: 811ms, ingest: 105ms, round: 1021ms, next limit: 25) | Total: 929 URLs, 928 content\n\n  ↳ perf p50/p95 fetch=967/1980ms ingest=131/274ms total=1272/2315ms rows/s=12.10 samples=51\n\n  [52] 01:05:24 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/3126, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":3126} (fetch: 859ms, ingest: 331ms, round: 1603ms, next limit: 25) | Total: 954 URLs, 953 content\n\n  [53] 01:05:32 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/3226, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":3226} (fetch: 1759ms, ingest: 356ms, round: 2309ms, next limit: 25) | Total: 979 URLs, 978 content\n\n  [54] 01:05:40 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/3224, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":3224} (fetch: 1262ms, ingest: 208ms, round: 1651ms, next limit: 25) | Total: 1004 URLs, 1003 content\n\n  ↳ perf p50/p95 fetch=967/1980ms ingest=131/318ms total=1319/2315ms rows/s=12.19 samples=54\n\n  [55] 01:05:48 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/3083, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":3083} (fetch: 1056ms, ingest: 224ms, round: 1449ms, next limit: 25) | Total: 1029 URLs, 1028 content\n\n  [56] 01:05:57 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/2919, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":2919} (fetch: 2575ms, ingest: 280ms, round: 3030ms, next limit: 25) | Total: 1054 URLs, 1053 content\n\n  [57] 01:06:07 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/2830, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":2830} (fetch: 3472ms, ingest: 507ms, round: 4171ms, next limit: 25) | Total: 1079 URLs, 1078 content\n\n  ↳ perf p50/p95 fetch=1056/2318ms ingest=150/331ms total=1359/2686ms rows/s=11.86 samples=57\n\n  [58] 01:06:18 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/3553, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":3553} (fetch: 3449ms, ingest: 677ms, round: 4343ms, next limit: 25) | Total: 1104 URLs, 1103 content\n\n  Adaptive limit shrink: 25 → 12 (slow-round, round=5215ms, target=5000ms)\n\n  [59] 01:06:29 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/3831, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":3831} (fetch: 4324ms, ingest: 632ms, round: 5215ms, next limit: 12) | Total: 1129 URLs, 1128 content\n\n  [60] 01:06:38 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/1777, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":1777} (fetch: 2595ms, ingest: 273ms, round: 3013ms, next limit: 12) | Total: 1141 URLs, 1140 content\n\n  ↳ perf p50/p95 fetch=1065/3449ms ingest=150/356ms total=1440/4171ms rows/s=11.02 samples=60\n\n  [61] 01:06:46 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/1775, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":1775} (fetch: 1334ms, ingest: 344ms, round: 1818ms, next limit: 12) | Total: 1153 URLs, 1152 content\n\n  [62] 01:06:55 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/1761, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":1761} (fetch: 1911ms, ingest: 421ms, round: 2519ms, next limit: 12) | Total: 1165 URLs, 1164 content\n\n  Adaptive limit grow: 12 → 18 (fast-full-streak, round=2774ms, target=5000ms)\n\n  [63] 01:07:04 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/1796, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":1796} (fetch: 2345ms, ingest: 286ms, round: 2774ms, next limit: 18) | Total: 1177 URLs, 1176 content\n  ↳ perf p50/p95 fetch=1165/2595ms ingest=178/421ms total=1491/3030ms rows/s=12.22 samples=60\n\n  [64] 01:07:13 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2570, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2570} (fetch: 2312ms, ingest: 582ms, round: 3109ms, next limit: 18) | Total: 1195 URLs, 1194 content\n\n  [65] 01:07:23 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2662, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2662} (fetch: 2689ms, ingest: 459ms, round: 3317ms, next limit: 18) | Total: 1213 URLs, 1212 content\n\n  [66] 01:07:33 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2647, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2647} (fetch: 4132ms, ingest: 479ms, round: 4750ms, next limit: 18) | Total: 1231 URLs, 1230 content\n\n  ↳ perf p50/p95 fetch=1220/3449ms ingest=190/507ms total=1603/4171ms rows/s=11.47 samples=60\n\n  [67] 01:07:44 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2491, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2491} (fetch: 4199ms, ingest: 497ms, round: 4914ms, next limit: 18) | Total: 1249 URLs, 1248 content\n\n  [68] 01:07:54 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2536, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2536} (fetch: 2864ms, ingest: 461ms, round: 3502ms, next limit: 18) | Total: 1267 URLs, 1266 content\n\n  [69] 01:08:04 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2640, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2640} (fetch: 2864ms, ingest: 445ms, round: 3601ms, next limit: 18) | Total: 1285 URLs, 1284 content\n\n  ↳ perf p50/p95 fetch=1282/3472ms ingest=200/507ms total=1651/4343ms rows/s=10.77 samples=60\n\n  [70] 01:08:13 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2638, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2638} (fetch: 2886ms, ingest: 443ms, round: 3526ms, next limit: 18) | Total: 1303 URLs, 1302 content\n\n  [71] 01:08:21 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/1310, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":1310} (fetch: 1561ms, ingest: 244ms, round: 1920ms, next limit: 18) | Total: 1321 URLs, 1320 content\n\n  [72] 01:08:27 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/380, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":380} (fetch: 274ms, ingest: 41ms, round: 392ms, next limit: 18) | Total: 1339 URLs, 1338 content\n\n  ↳ perf p50/p95 fetch=1334/3472ms ingest=208/507ms total=1676/4343ms rows/s=10.69 samples=60\n\n  Adaptive limit grow: 18 → 25 (fast-full-streak, round=341ms, target=5000ms)\n  [73] 01:08:34 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/381, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":381} (fetch: 229ms, ingest: 39ms, round: 341ms, next limit: 25) | Total: 1357 URLs, 1356 content\n\n  [74] 01:08:42 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/2012, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":2012} (fetch: 1296ms, ingest: 305ms, round: 1736ms, next limit: 25) | Total: 1382 URLs, 1381 content\n\n  [75] 01:08:49 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/1196, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":1196} (fetch: 1070ms, ingest: 116ms, round: 1335ms, next limit: 25) | Total: 1407 URLs, 1406 content\n\n  ↳ perf p50/p95 fetch=1334/3472ms ingest=221/507ms total=1683/4343ms rows/s=10.87 samples=60\n\n  [76] 01:08:55 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/155, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":155} (fetch: 364ms, ingest: 37ms, round: 479ms, next limit: 25) | Total: 1432 URLs, 1431 content\n\n  [77] 01:09:05 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/3443, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":3443} (fetch: 3351ms, ingest: 496ms, round: 4017ms, next limit: 25) | Total: 1457 URLs, 1456 content\n\n  [78] 01:09:15 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/2432, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":2432} (fetch: 2993ms, ingest: 489ms, round: 3646ms, next limit: 25) | Total: 1482 URLs, 1481 content\n\n  ↳ perf p50/p95 fetch=1363/3472ms ingest=225/507ms total=1709/4343ms rows/s=10.75 samples=60\n\n  [79] 01:09:25 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/3753, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":3753} (fetch: 2397ms, ingest: 800ms, round: 3477ms, next limit: 25) | Total: 1507 URLs, 1506 content\n\n  [80] 01:09:35 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/3681, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":3681} (fetch: 3468ms, ingest: 511ms, round: 4264ms, next limit: 25) | Total: 1532 URLs, 1531 content\n\n  Adaptive limit shrink: 25 → 12 (slow-round, round=5289ms, target=5000ms)\n  [81] 01:09:46 — 25 URLs, 25 content → 0 new URLs, 25 new content; confirmed 25/25/25/3844, pruned {\"urls\":0,\"httpResponses\":25,\"content\":25,\"links\":3844} (fetch: 4481ms, ingest: 607ms, round: 5289ms, next limit: 12) | Total: 1557 URLs, 1556 content\n\n  ↳ perf p50/p95 fetch=1377/4132ms ingest=251/607ms total=1736/4750ms rows/s=10.16 samples=60\n\n  [82] 01:09:55 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/1823, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":1823} (fetch: 2415ms, ingest: 306ms, round: 2882ms, next limit: 12) | Total: 1569 URLs, 1568 content\n\n  [83] 01:10:04 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/1802, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":1802} (fetch: 2657ms, ingest: 215ms, round: 2961ms, next limit: 12) | Total: 1581 URLs, 1580 content\n\n  Adaptive limit grow: 12 → 18 (fast-full-streak, round=2876ms, target=5000ms)\n\n  [84] 01:10:13 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/1812, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":1812} (fetch: 2428ms, ingest: 304ms, round: 2876ms, next limit: 18) | Total: 1593 URLs, 1592 content\n  ↳ perf p50/p95 fetch=1440/4132ms ingest=266/607ms total=1818/4750ms rows/s=9.58 samples=60\n\n  [85] 01:10:22 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2722, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2722} (fetch: 3002ms, ingest: 355ms, round: 3485ms, next limit: 18) | Total: 1611 URLs, 1610 content\n\n  [86] 01:10:32 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2773, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2773} (fetch: 3137ms, ingest: 389ms, round: 3716ms, next limit: 18) | Total: 1629 URLs, 1628 content\n\n  [87] 01:10:41 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2777, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2777} (fetch: 2463ms, ingest: 414ms, round: 3060ms, next limit: 18) | Total: 1647 URLs, 1646 content\n\n  ↳ perf p50/p95 fetch=1561/4132ms ingest=274/607ms total=1920/4750ms rows/s=9.10 samples=60\n\n  [88] 01:10:51 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2759, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2759} (fetch: 3230ms, ingest: 370ms, round: 3774ms, next limit: 18) | Total: 1665 URLs, 1664 content\n\n  [89] 01:10:59 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2784, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2784} (fetch: 1822ms, ingest: 272ms, round: 2242ms, next limit: 18) | Total: 1683 URLs, 1682 content\n\n  [90] 01:11:09 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2847, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2847} (fetch: 3310ms, ingest: 377ms, round: 3860ms, next limit: 18) | Total: 1701 URLs, 1700 content\n\n  ↳ perf p50/p95 fetch=1822/4132ms ingest=280/607ms total=2242/4750ms rows/s=8.61 samples=60\n\n  [91] 01:11:18 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2873, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2873} (fetch: 2457ms, ingest: 520ms, round: 3227ms, next limit: 18) | Total: 1719 URLs, 1718 content\n\n  [92] 01:11:28 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2921, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2921} (fetch: 3638ms, ingest: 459ms, round: 4514ms, next limit: 18) | Total: 1737 URLs, 1736 content\n\n  [93] 01:11:36 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2587, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2587} (fetch: 1724ms, ingest: 448ms, round: 2381ms, next limit: 18) | Total: 1755 URLs, 1754 content\n\n  ↳ perf p50/p95 fetch=1911/4132ms ingest=305/607ms total=2315/4750ms rows/s=8.24 samples=60\n\n  [94] 01:11:46 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2542, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2542} (fetch: 2688ms, ingest: 364ms, round: 3170ms, next limit: 18) | Total: 1773 URLs, 1772 content\n\n  [95] 01:11:54 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/2629, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":2629} (fetch: 2246ms, ingest: 538ms, round: 2978ms, next limit: 18) | Total: 1791 URLs, 1790 content\n\n  [96] 01:12:03 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/1741, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":1741} (fetch: 2037ms, ingest: 177ms, round: 2307ms, next limit: 18) | Total: 1809 URLs, 1808 content\n\n  ↳ perf p50/p95 fetch=2037/4132ms ingest=318/607ms total=2519/4750ms rows/s=7.93 samples=60\n"
+  },
+  "stop": {
+    "ok": true,
+    "status": 200,
+    "data": {
+      "stopped": 10,
+      "results": [
+        {
+          "domain": "bbc.com",
+          "status": "stopped"
+        },
+        {
+          "domain": "theguardian.com",
+          "status": "stopped"
+        },
+        {
+          "domain": "reuters.com",
+          "status": "stopped"
+        },
+        {
+          "domain": "nytimes.com",
+          "status": "stopped"
+        },
+        {
+          "domain": "washingtonpost.com",
+          "status": "stopped"
+        },
+        {
+          "domain": "cnn.com",
+          "status": "stopped"
+        },
+        {
+          "domain": "apnews.com",
+          "status": "stopped"
+        },
+        {
+          "domain": "bloomberg.com",
+          "status": "stopped"
+        },
+        {
+          "domain": "ft.com",
+          "status": "stopped"
+        },
+        {
+          "domain": "npr.org",
+          "status": "stopped"
+        }
+      ]
+    },
+    "text": "{\"stopped\":10,\"results\":[{\"domain\":\"bbc.com\",\"status\":\"stopped\"},{\"domain\":\"theguardian.com\",\"status\":\"stopped\"},{\"domain\":\"reuters.com\",\"status\":\"stopped\"},{\"domain\":\"nytimes.com\",\"status\":\"stopped\"},{\"domain\":\"washingtonpost.com\",\"status\":\"stopped\"},{\"domain\":\"cnn.com\",\"status\":\"stopped\"},{\"domain\":\"apnews.com\",\"status\":\"stopped\"},{\"domain\":\"bloomberg.com\",\"status\":\"stopped\"},{\"domain\":\"ft.com\",\"status\":\"stopped\"},{\"domain\":\"npr.org\",\"status\":\"stopped\"}]}"
+  },
+  "drain": {
+    "command": "C:\\nvm4w\\nodejs\\node.exe",
+    "args": [
+      "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\tools\\crawl\\crawl-remote.js",
+      "sync",
+      "--host",
+      "141.144.193.218:3200",
+      "--rounds",
+      "12",
+      "--interval",
+      "3",
+      "--window",
+      "30",
+      "--limit",
+      "5",
+      "--adaptive-limit",
+      "--target-sync-ms",
+      "5000",
+      "--min-limit",
+      "1",
+      "--max-limit",
+      "25",
+      "--include-content",
+      "--include-links",
+      "--prune-after-ingest",
+      "--no-backoff",
+      "--remote-storage-budget-mb",
+      "512",
+      "--remote-storage-reserve-mb",
+      "256",
+      "--normal-concurrency",
+      "10",
+      "--perf-summary-every",
+      "1"
+    ],
+    "startedAt": "2026-05-10T00:12:12.104Z",
+    "finishedAt": "2026-05-10T00:13:21.112Z",
+    "exitCode": null,
+    "signal": "SIGTERM",
+    "stoppedAtDeadline": true,
+    "hardTimedOut": false,
+    "outputText": "═══════════════════════════════════════════════════════\n\n  Continuous Sync Loop\n═══════════════════════════════════════════════════════\n  Remote: 141.144.193.218:3200\n  Local DB: C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\data\\news.db\n  Interval: 3s\n  Window: 30s\n  Limit: 5\n  Adaptive batching: enabled target=5000ms min=1 max=25\n  Storage budget: enabled budget=512MB reserve=256MB\n\n  Prune after ingest: enabled\n  Backoff: disabled\n  Max rounds: 12\n  Ledger: C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\tools\\crawl\\.crawl-remote-ledger.json (134 entries, wm=2026-05-09 23:58:47)\n  Press Ctrl+C to stop\n\n\n  [1] 01:12:14 — 5 URLs, 5 content → 0 new URLs, 5 new content; confirmed 5/5/5/1061, pruned {\"urls\":0,\"httpResponses\":5,\"content\":5,\"links\":1061} (fetch: 1651ms, ingest: 135ms, round: 1918ms, next limit: 5) | Total: 5 URLs, 5 content\n\n  ↳ perf p50/p95 fetch=1651/1651ms ingest=135/135ms total=1918/1918ms rows/s=2.61 samples=1\n\n  [2] 01:12:19 — 5 URLs, 5 content → 0 new URLs, 5 new content; confirmed 5/5/5/1113, pruned {\"urls\":0,\"httpResponses\":5,\"content\":5,\"links\":1113} (fetch: 1422ms, ingest: 250ms, round: 1813ms, next limit: 5) | Total: 10 URLs, 10 content\n\n  ↳ perf p50/p95 fetch=1422/1422ms ingest=135/135ms total=1813/1813ms rows/s=2.68 samples=2\n\n  Adaptive limit grow: 5 → 8 (fast-full-streak, round=1381ms, target=5000ms)\n\n  [3] 01:12:25 — 5 URLs, 5 content → 0 new URLs, 5 new content; confirmed 5/5/5/1129, pruned {\"urls\":0,\"httpResponses\":5,\"content\":5,\"links\":1129} (fetch: 1095ms, ingest: 128ms, round: 1381ms, next limit: 8) | Total: 15 URLs, 15 content\n  ↳ perf p50/p95 fetch=1422/1422ms ingest=135/135ms total=1813/1813ms rows/s=2.93 samples=3\n\n  [4] 01:12:30 — 8 URLs, 8 content → 0 new URLs, 8 new content; confirmed 8/8/8/1784, pruned {\"urls\":0,\"httpResponses\":8,\"content\":8,\"links\":1784} (fetch: 1344ms, ingest: 345ms, round: 1870ms, next limit: 8) | Total: 23 URLs, 23 content\n\n  ↳ perf p50/p95 fetch=1344/1422ms ingest=135/250ms total=1813/1870ms rows/s=3.29 samples=4\n\n  [5] 01:12:36 — 8 URLs, 8 content → 0 new URLs, 8 new content; confirmed 8/8/8/1754, pruned {\"urls\":0,\"httpResponses\":8,\"content\":8,\"links\":1754} (fetch: 968ms, ingest: 261ms, round: 1383ms, next limit: 8) | Total: 31 URLs, 31 content\n\n  ↳ perf p50/p95 fetch=1344/1422ms ingest=250/261ms total=1813/1870ms rows/s=3.71 samples=5\n\n  Adaptive limit grow: 8 → 12 (fast-full-streak, round=1458ms, target=5000ms)\n\n  [6] 01:12:41 — 8 URLs, 8 content → 0 new URLs, 8 new content; confirmed 8/8/8/1771, pruned {\"urls\":0,\"httpResponses\":8,\"content\":8,\"links\":1771} (fetch: 961ms, ingest: 333ms, round: 1458ms, next limit: 12) | Total: 39 URLs, 39 content\n  ↳ perf p50/p95 fetch=1095/1422ms ingest=250/333ms total=1458/1870ms rows/s=3.97 samples=6\n\n  [7] 01:12:47 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/2708, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":2708} (fetch: 1311ms, ingest: 434ms, round: 2000ms, next limit: 12) | Total: 51 URLs, 51 content\n\n  ↳ perf p50/p95 fetch=1311/1422ms ingest=261/345ms total=1813/1918ms rows/s=4.31 samples=7\n\n  [8] 01:12:53 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/2737, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":2737} (fetch: 1249ms, ingest: 409ms, round: 1862ms, next limit: 12) | Total: 63 URLs, 63 content\n\n  ↳ perf p50/p95 fetch=1249/1422ms ingest=261/409ms total=1813/1918ms rows/s=4.60 samples=8\n\n  Adaptive limit grow: 12 → 18 (fast-full-streak, round=1409ms, target=5000ms)\n\n  [9] 01:12:58 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/2526, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":2526} (fetch: 1002ms, ingest: 260ms, round: 1409ms, next limit: 18) | Total: 75 URLs, 75 content\n  ↳ perf p50/p95 fetch=1249/1422ms ingest=261/409ms total=1813/1918ms rows/s=4.97 samples=9\n\n  [10] 01:13:04 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/3995, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":3995} (fetch: 1675ms, ingest: 644ms, round: 2563ms, next limit: 18) | Total: 93 URLs, 93 content\n\n  ↳ perf p50/p95 fetch=1249/1651ms ingest=261/434ms total=1813/2000ms rows/s=5.27 samples=10\n\n  [11] 01:13:12 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/4074, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":4074} (fetch: 3057ms, ingest: 597ms, round: 3893ms, next limit: 18) | Total: 111 URLs, 111 content\n\n  ↳ perf p50/p95 fetch=1311/1675ms ingest=333/597ms total=1862/2563ms rows/s=5.15 samples=11\n\n  [12] 01:13:20 — 18 URLs, 18 content → 0 new URLs, 18 new content; confirmed 18/18/18/3578, pruned {\"urls\":0,\"httpResponses\":18,\"content\":18,\"links\":3578} (fetch: 2416ms, ingest: 567ms, round: 3575ms, next limit: 18) | Total: 129 URLs, 129 content\n\n  ↳ perf p50/p95 fetch=1311/2416ms ingest=333/597ms total=1862/3575ms rows/s=5.13 samples=12\n"
+  },
+  "validation": {
+    "ok": true,
+    "checks": [
+      {
+        "name": "strict-time-limit",
+        "ok": true,
+        "actual": 879100,
+        "expected": "<= 900000ms",
+        "severity": "fatal"
+      },
+      {
+        "name": "remote-health",
+        "ok": true,
+        "actual": 200,
+        "expected": "healthy / reachable",
+        "severity": "fatal"
+      },
+      {
+        "name": "remote-throttle-endpoint",
+        "ok": true,
+        "actual": 200,
+        "expected": "HTTP 200 throttle endpoint",
+        "severity": "error"
+      },
+      {
+        "name": "new-responses",
+        "ok": true,
+        "actual": 1937,
+        "expected": ">= 25",
+        "severity": "error"
+      },
+      {
+        "name": "successful-responses",
+        "ok": true,
+        "actual": 1909,
+        "expected": ">= 10",
+        "severity": "error"
+      },
+      {
+        "name": "content-rows",
+        "ok": true,
+        "actual": 1937,
+        "expected": ">= 5",
+        "severity": "error"
+      },
+      {
+        "name": "host-spread",
+        "ok": true,
+        "actual": 4,
+        "expected": ">= 3",
+        "severity": "error"
+      },
+      {
+        "name": "failure-ratio",
+        "ok": true,
+        "actual": 0.007,
+        "expected": "<= 0.6",
+        "severity": "error"
+      },
+      {
+        "name": "ledger-unconfirmed",
+        "ok": true,
+        "actual": 0,
+        "expected": "<= 0",
+        "severity": "error"
+      },
+      {
+        "name": "ledger-unpruned",
+        "ok": true,
+        "actual": 0,
+        "expected": "<= 2",
+        "severity": "error"
+      },
+      {
+        "name": "child-exit",
+        "ok": true,
+        "actual": 0,
+        "expected": "clean exit or deadline stop",
+        "severity": "error"
+      },
+      {
+        "name": "run-log-errors",
+        "ok": true,
+        "actual": [],
+        "expected": "no error lines",
+        "severity": "warn"
+      }
+    ],
+    "diagnostics": [],
+    "deltas": {
+      "urls": 141,
+      "responses": 1937,
+      "successResponses": 1909,
+      "failedResponses": 28,
+      "content": 1937
+    },
+    "ledger": {
+      "entries": 146,
+      "unconfirmed": 0,
+      "rawUnconfirmed": 1,
+      "supersededUnconfirmed": 1,
+      "unpruned": 0,
+      "completed": 145,
+      "lastWatermark": "2026-05-10 00:01:21",
+      "totalPulled": 57758
+    },
+    "benchmark": {
+      "elapsedMs": 879100,
+      "downloadsPerMinute": 132.20338983050846,
+      "successPerMinute": 130.29234444318053,
+      "contentPerMinute": 132.20338983050846,
+      "bytesPerMinute": 35020712.50142191,
+      "roundSamples": 108,
+      "fetchMs": {
+        "p50": 1363,
+        "p95": 3472
+      },
+      "ingestMs": {
+        "p50": 244,
+        "p95": 582
+      },
+      "roundMs": {
+        "p50": 1794,
+        "p95": 4343
+      }
+    }
+  }
+}

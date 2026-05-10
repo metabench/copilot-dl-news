@@ -230,3 +230,7 @@
 ## 2026-02-27
 - **Probe→Confirm→Expand pattern for discovery:** When discovering URL patterns on unknown sites, test with a single well-chosen probe (Jamaica: single word, Latin chars, not top news) against all candidate patterns (~31 HEAD requests), confirm with 2-3 more countries + a nonsense-slug false-positive check (~5 requests), then expand only the working pattern to all targets (~200 requests). Total: ~236 requests vs 6,200 brute-force. This pattern applies to any N×M discovery problem: collapse it by fixing one variable and varying the other.
 - When building UI proof for crawler downloads, always join `http_responses` (download success) to `content_storage` (DB persistence) and to `compression_types`/`compression_buckets` (typed compression). Limit recent `http_responses` first before joining storage; otherwise large `data/news.db` queries become unresponsive. Honestly mark legacy/imported rows that only record `content_storage.storage_type` (e.g., `gzip`) as algorithm-known but level/options unrecorded, instead of inferring defaults.
+
+## 2026-05-10
+- Cloud crawl validation must normalize ISO run windows to SQLite UTC timestamp strings before querying `fetched_at`; otherwise live runs can show DB deltas while host-spread/recent evidence falsely reports zero.
+- Targeted remote sync recovery with an older `--since` can regress local crawl ledger/watermark cursors unless append logic keeps the newest watermark; add regression tests for recovery pulls that revisit older batches.

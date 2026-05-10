@@ -164,8 +164,15 @@ function createTelemetryEvent(type, data = {}, options = {}) {
  * @param {number} stats.errors - Error count
  * @param {number} [stats.total] - Optional known total count for determinate progress
  * @param {number} [stats.downloaded] - Successfully downloaded count
+ * @param {number} [stats.saved] - Successfully persisted document count
  * @param {number} [stats.articles] - Articles found
  * @param {number} [stats.skipped] - Skipped URLs
+ * @param {number} [stats.bytes] - Downloaded byte total
+ * @param {number} [stats.bytesSaved] - Persisted byte total
+ * @param {number} [stats.docsDownloadedPerSec] - Downloaded documents per second
+ * @param {number} [stats.docsSavedPerSec] - Persisted documents per second
+ * @param {number} [stats.networkMbPerSec] - Network throughput in MB/s
+ * @param {number} [stats.savedMbPerSec] - Persisted throughput in MB/s
  * @param {string} [stats.currentUrl] - Optional current URL being processed (UI hint)
  * @param {string} [stats.currentAction] - Optional current action (UI hint)
  * @param {string} [stats.phase] - Optional phase hint (UI hint)
@@ -182,11 +189,21 @@ function createProgressEvent(stats, options = {}) {
     errors: stats.errors ?? 0,
     total: stats.total ?? null,
     downloaded: stats.downloaded ?? stats.visited ?? 0,
+    saved: stats.saved ?? stats.articlesSaved ?? stats.articles ?? 0,
     articles: stats.articles ?? 0,
     skipped: stats.skipped ?? 0,
+    bytes: stats.bytes ?? stats.bytesDownloaded ?? null,
+    bytesSaved: stats.bytesSaved ?? null,
+    bytesSavedCompressed: stats.bytesSavedCompressed ?? null,
     // Rates (if available)
     requestsPerSec: stats.requestsPerSec ?? null,
     bytesPerSec: stats.bytesPerSec ?? null,
+    docsDownloadedPerSec: stats.docsDownloadedPerSec ?? stats.docsDownloadedPerSecond ?? stats.downloadedDocsPerSecond ?? stats.requestsPerSec ?? null,
+    docsSavedPerSec: stats.docsSavedPerSec ?? stats.docsSavedPerSecond ?? stats.savedDocsPerSecond ?? null,
+    networkBytesPerSec: stats.networkBytesPerSec ?? stats.networkBytesPerSecond ?? stats.bytesPerSec ?? null,
+    networkMbPerSec: stats.networkMbPerSec ?? stats.networkMbPerSecond ?? null,
+    savedBytesPerSec: stats.savedBytesPerSec ?? stats.savedBytesPerSecond ?? null,
+    savedMbPerSec: stats.savedMbPerSec ?? stats.savedMbPerSecond ?? null,
     // Completion estimate (if available)
     estimatedRemaining: stats.estimatedRemaining ?? null,
     percentComplete: stats.percentComplete ?? null,

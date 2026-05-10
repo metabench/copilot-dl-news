@@ -36,6 +36,18 @@ const TOOL_REGISTRY = Object.freeze({
   peer: {
     script: 'peer-server.js',
     description: 'Run a P2P NewsCrawler peer node'
+  },
+  batch: {
+    script: 'crawl-batch.js',
+    description: 'Batch-launch N crawls against the unified UI v1 API in one command'
+  },
+  orchestrate: {
+    script: 'orchestrate.js',
+    description: 'Smart launcher: probe remote, choose remote or local fallback, report Cloud Crawl URL'
+  },
+  'cloud-e2e': {
+    script: 'cloud-crawl-e2e.js',
+    description: 'Strict 15-minute cloud crawl e2e validation with DB, ledger, and diagnostics artifacts'
   }
 });
 
@@ -53,6 +65,13 @@ function resolveToolSpec(name) {
     guess: 'guess-place-hubs',
     list: 'list-place-hubs',
     'peer-server': 'peer',
+    'crawl-batch': 'batch',
+    'batch-crawl': 'batch',
+    smart: 'orchestrate',
+    auto: 'orchestrate',
+    validate: 'cloud-e2e',
+    e2e: 'cloud-e2e',
+    'cloud-crawl-e2e': 'cloud-e2e',
   };
 
   const key = TOOL_REGISTRY[normalized] ? normalized : aliases[normalized];
@@ -306,8 +325,12 @@ function renderHelp() {
   lines.push('Examples:');
   lines.push('  npm run crawl -- list');
   lines.push('  npm run crawl -- list --json');
+  lines.push('  npm run crawl -- news-10x1000                      # non-harnessed operator crawl');
+  lines.push('  npm run crawl -- news-10x1000-15m-e2e             # harnessed validation');
   lines.push('  npm run crawl -- remote-bounded-smoke');
   lines.push('  npm run crawl -- remote-bounded-smoke --dry-run');
+  lines.push('  npm run crawl -- news-10x1000-15m-e2e --dry-run');
+  lines.push('  npm run crawl -- news-10x1000-15m-e2e --preflight-only');
   lines.push('  npm run crawl -- remote bounded --domains bbc.com,reuters.com --max-pages 50');
   lines.push('  npm run crawl -- profile remote-bounded-smoke');
   lines.push('  npm run crawl -- profile remote-bounded-smoke --dry-run');

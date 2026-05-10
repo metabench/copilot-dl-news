@@ -1,0 +1,21 @@
+{
+  "description": "Remote/cloud crawl config for 10 major news domains x 1000 pages each. Designed for an operator-controlled start plus continuous 5s sync.",
+  "port": 3200,
+  "db": "data/news-simple.db",
+  "maxPages": 1000,
+  "maxConcurrent": 10,
+  "idleTimeoutMin": 10,
+  "autoStart": false,
+  "domains": [
+    { "domain": "bbc.com", "maxPages": 1000, "seedUrls": ["https://www.bbc.com/news"] },
+    { "domain": "theguardian.com", "maxPages": 1000, "seedUrls": ["https://www.theguardian.com/international"] },
+    { "domain": "reuters.com", "maxPages": 1000, "seedUrls": ["https://www.reuters.com/world/"] },
+    { "domain": "nytimes.com", "maxPages": 1000, "seedUrls": ["https://www.nytimes.com/international/"] },
+    { "domain": "washingtonpost.com", "maxPages": 1000, "seedUrls": ["https://www.washingtonpost.com/world/"] },
+    { "domain": "cnn.com", "maxPages": 1000, "seedUrls": ["https://www.cnn.com/world"] },
+    { "domain": "apnews.com", "maxPages": 1000, "seedUrls": ["https://apnews.com/"] },
+    { "domain": "bloomberg.com", "maxPages": 1000, "seedUrls": ["https://www.bloomberg.com/news"] },
+    { "domain": "ft.com", "maxPages": 1000, "seedUrls": ["https://www.ft.com/world"] },
+    { "domain": "npr.org", "maxPages": 1000, "seedUrls": ["https://www.npr.org/sections/news/"] }
+  ]
+}

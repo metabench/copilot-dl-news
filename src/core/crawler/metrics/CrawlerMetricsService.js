@@ -46,8 +46,10 @@ class CrawlerMetricsService extends EventEmitter {
     
     // Counters for throughput calculation
     this._pageCount = 0;
+    this._savedDocCount = 0;
     this._errorCount = 0;
     this._bytesDownloaded = 0;
+    this._bytesSaved = 0;
     this._lastSnapshot = Date.now();
     
     // Domain-level stats: domain -> { pages, errors, bytes, lastFetch }
@@ -97,6 +99,8 @@ class CrawlerMetricsService extends EventEmitter {
    * @param {string} [data.domain]
    * @param {number} [data.bytes]
    * @param {number} [data.durationMs]
+   * @param {boolean|number} [data.saved] - Whether this page was persisted.
+   * @param {number} [data.savedBytes] - Persisted byte count.
    */
   recordPageCrawled(data = {}) {
     this._pageCount++;
@@ -104,12 +108,41 @@ class CrawlerMetricsService extends EventEmitter {
     if (data.bytes) {
       this._bytesDownloaded += data.bytes;
     }
+
+    if (data.saved) {
+      this._savedDocCount += typeof data.saved === 'number' ? data.saved : 1;
+    }
+
+    if (data.savedBytes) {
+      this._bytesSaved += data.savedBytes;
+    }
     
     if (data.domain) {
       const stats = this._domainStats.get(data.domain) || { pages: 0, errors: 0, bytes: 0 };
       stats.pages++;
       stats.bytes += data.bytes || 0;
+      stats.saved = (stats.saved || 0) + (data.saved ? (typeof data.saved === 'number' ? data.saved : 1) : 0);
+      stats.savedBytes = (stats.savedBytes || 0) + (data.savedBytes || 0);
       stats.lastFetch = Date.now();
+      this._domainStats.set(data.domain, stats);
+    }
+  }
+
+  /**
+   * Record a persisted document.
+   * @param {Object} [data]
+   * @param {string} [data.domain]
+   * @param {number} [data.bytes]
+   */
+  recordDocumentSaved(data = {}) {
+    this._savedDocCount++;
+    if (data.bytes) {
+      this._bytesSaved += data.bytes;
+    }
+    if (data.domain) {
+      const stats = this._domainStats.get(data.domain) || { pages: 0, errors: 0, bytes: 0 };
+      stats.saved = (stats.saved || 0) + 1;
+      stats.savedBytes = (stats.savedBytes || 0) + (data.bytes || 0);
       this._domainStats.set(data.domain, stats);
     }
   }
@@ -195,13 +228,17 @@ class CrawlerMetricsService extends EventEmitter {
     
     // Calculate throughput
     const pagesPerSecond = elapsed > 0 ? this._pageCount / elapsed : 0;
+    const savedDocsPerSecond = elapsed > 0 ? this._savedDocCount / elapsed : 0;
     const errorsPerSecond = elapsed > 0 ? this._errorCount / elapsed : 0;
     const bytesPerSecond = elapsed > 0 ? this._bytesDownloaded / elapsed : 0;
+    const savedBytesPerSecond = elapsed > 0 ? this._bytesSaved / elapsed : 0;
     
     // Reset counters
     this._pageCount = 0;
+    this._savedDocCount = 0;
     this._errorCount = 0;
     this._bytesDownloaded = 0;
+    this._bytesSaved = 0;
     this._lastSnapshot = now;
     
     // Get queue stats
@@ -259,8 +296,20 @@ class CrawlerMetricsService extends EventEmitter {
       locks: lockStats,
       throughput: {
         pagesPerSecond: Math.round(pagesPerSecond * 100) / 100,
+        docsDownloadedPerSecond: Math.round(pagesPerSecond * 100) / 100,
+        docsDownloadedPerSec: Math.round(pagesPerSecond * 100) / 100,
+        downloadedDocsPerSecond: Math.round(pagesPerSecond * 100) / 100,
+        savedDocsPerSecond: Math.round(savedDocsPerSecond * 100) / 100,
+        docsSavedPerSecond: Math.round(savedDocsPerSecond * 100) / 100,
+        docsSavedPerSec: Math.round(savedDocsPerSecond * 100) / 100,
         errorsPerSecond: Math.round(errorsPerSecond * 100) / 100,
         bytesPerSecond: Math.round(bytesPerSecond),
+        networkBytesPerSecond: Math.round(bytesPerSecond),
+        networkMbPerSecond: Math.round((bytesPerSecond / 1024 / 1024) * 100) / 100,
+        networkMbPerSec: Math.round((bytesPerSecond / 1024 / 1024) * 100) / 100,
+        savedBytesPerSecond: Math.round(savedBytesPerSecond),
+        savedMbPerSecond: Math.round((savedBytesPerSecond / 1024 / 1024) * 100) / 100,
+        savedMbPerSec: Math.round((savedBytesPerSecond / 1024 / 1024) * 100) / 100,
         mbPerSecond: Math.round((bytesPerSecond / 1024 / 1024) * 100) / 100
       },
       domains: {
@@ -295,7 +344,24 @@ class CrawlerMetricsService extends EventEmitter {
       workerDetails: [],
       queue: { pending: 0, inProgress: 0, completed: 0, failed: 0, total: 0 },
       locks: { active: 0, expired: 0 },
-      throughput: { pagesPerSecond: 0, errorsPerSecond: 0, bytesPerSecond: 0, mbPerSecond: 0 },
+      throughput: {
+        pagesPerSecond: 0,
+        docsDownloadedPerSecond: 0,
+        docsDownloadedPerSec: 0,
+        downloadedDocsPerSecond: 0,
+        savedDocsPerSecond: 0,
+        docsSavedPerSecond: 0,
+        docsSavedPerSec: 0,
+        errorsPerSecond: 0,
+        bytesPerSecond: 0,
+        networkBytesPerSecond: 0,
+        networkMbPerSecond: 0,
+        networkMbPerSec: 0,
+        savedBytesPerSecond: 0,
+        savedMbPerSecond: 0,
+        savedMbPerSec: 0,
+        mbPerSecond: 0
+      },
       domains: { active: 0, locked: 0 },
       errors: { recent: 0, rate: 0 }
     };
@@ -308,8 +374,10 @@ class CrawlerMetricsService extends EventEmitter {
     this._metrics = this._createEmptyMetrics();
     this._history = [];
     this._pageCount = 0;
+    this._savedDocCount = 0;
     this._errorCount = 0;
     this._bytesDownloaded = 0;
+    this._bytesSaved = 0;
     this._lastSnapshot = Date.now();
     this._domainStats.clear();
     this._recentErrors = [];

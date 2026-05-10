@@ -1,0 +1,277 @@
+{
+  "status": "ok",
+  "startedAt": "2026-05-08T00:50:40.218Z",
+  "finishedAt": "2026-05-08T00:50:41.906Z",
+  "plan": {
+    "uiHost": "127.0.0.1",
+    "uiPort": 3170,
+    "uiBase": "/api/v1/crawl",
+    "operation": "basicArticleCrawl",
+    "concurrency": 5,
+    "retries": 2,
+    "overrides": {
+      "maxPages": 1000,
+      "maxDownloads": 1000,
+      "maxDepth": 6
+    },
+    "urls": [
+      "https://www.bbc.com/news",
+      "https://www.reuters.com/",
+      "https://www.theguardian.com/uk",
+      "https://www.nytimes.com/",
+      "https://www.washingtonpost.com/",
+      "https://edition.cnn.com/",
+      "https://apnews.com/",
+      "https://www.bloomberg.com/",
+      "https://www.ft.com/",
+      "https://www.npr.org/"
+    ]
+  },
+  "counts": {
+    "total": 10,
+    "ok": 10,
+    "failed": 0
+  },
+  "results": [
+    {
+      "startUrl": "https://www.bbc.com/news",
+      "ok": true,
+      "status": 200,
+      "jobId": "394f9e46-6cc7-45f0-929e-f3c50720a25d",
+      "body": {
+        "status": "ok",
+        "mode": "operation-job",
+        "jobId": "394f9e46-6cc7-45f0-929e-f3c50720a25d",
+        "job": {
+          "id": "394f9e46-6cc7-45f0-929e-f3c50720a25d",
+          "mode": "in-process",
+          "operationName": "basicArticleCrawl",
+          "startUrl": "https://www.bbc.com/news",
+          "status": "running",
+          "createdAt": "2026-05-08T00:50:40.242Z",
+          "startedAt": "2026-05-08T00:50:40.242Z",
+          "finishedAt": null,
+          "paused": false,
+          "abortRequested": false
+        }
+      },
+      "attempts": 1
+    },
+    {
+      "startUrl": "https://www.reuters.com/",
+      "ok": true,
+      "status": 200,
+      "jobId": "c60e9fe6-82f6-4389-86de-f58f28a78079",
+      "body": {
+        "status": "ok",
+        "mode": "operation-job",
+        "jobId": "c60e9fe6-82f6-4389-86de-f58f28a78079",
+        "job": {
+          "id": "c60e9fe6-82f6-4389-86de-f58f28a78079",
+          "mode": "in-process",
+          "operationName": "basicArticleCrawl",
+          "startUrl": "https://www.reuters.com/",
+          "status": "running",
+          "createdAt": "2026-05-08T00:50:41.742Z",
+          "startedAt": "2026-05-08T00:50:41.742Z",
+          "finishedAt": null,
+          "paused": false,
+          "abortRequested": false
+        }
+      },
+      "attempts": 1
+    },
+    {
+      "startUrl": "https://www.theguardian.com/uk",
+      "ok": true,
+      "status": 200,
+      "jobId": "355f6eff-7a15-4061-96ef-02c70d22060c",
+      "body": {
+        "status": "ok",
+        "mode": "operation-job",
+        "jobId": "355f6eff-7a15-4061-96ef-02c70d22060c",
+        "job": {
+          "id": "355f6eff-7a15-4061-96ef-02c70d22060c",
+          "mode": "in-process",
+          "operationName": "basicArticleCrawl",
+          "startUrl": "https://www.theguardian.com/uk",
+          "status": "running",
+          "createdAt": "2026-05-08T00:50:41.743Z",
+          "startedAt": "2026-05-08T00:50:41.743Z",
+          "finishedAt": null,
+          "paused": false,
+          "abortRequested": false
+        }
+      },
+      "attempts": 1
+    },
+    {
+      "startUrl": "https://www.nytimes.com/",
+      "ok": true,
+      "status": 200,
+      "jobId": "9a62aa34-f714-4922-8f06-abf021180cb8",
+      "body": {
+        "status": "ok",
+        "mode": "operation-job",
+        "jobId": "9a62aa34-f714-4922-8f06-abf021180cb8",
+        "job": {
+          "id": "9a62aa34-f714-4922-8f06-abf021180cb8",
+          "mode": "in-process",
+          "operationName": "basicArticleCrawl",
+          "startUrl": "https://www.nytimes.com/",
+          "status": "running",
+          "createdAt": "2026-05-08T00:50:41.743Z",
+          "startedAt": "2026-05-08T00:50:41.743Z",
+          "finishedAt": null,
+          "paused": false,
+          "abortRequested": false
+        }
+      },
+      "attempts": 1
+    },
+    {
+      "startUrl": "https://www.washingtonpost.com/",
+      "ok": true,
+      "status": 200,
+      "jobId": "c1752ee4-724f-4245-95b3-2178ba67e356",
+      "body": {
+        "status": "ok",
+        "mode": "operation-job",
+        "jobId": "c1752ee4-724f-4245-95b3-2178ba67e356",
+        "job": {
+          "id": "c1752ee4-724f-4245-95b3-2178ba67e356",
+          "mode": "in-process",
+          "operationName": "basicArticleCrawl",
+          "startUrl": "https://www.washingtonpost.com/",
+          "status": "running",
+          "createdAt": "2026-05-08T00:50:41.744Z",
+          "startedAt": "2026-05-08T00:50:41.744Z",
+          "finishedAt": null,
+          "paused": false,
+          "abortRequested": false
+        }
+      },
+      "attempts": 1
+    },
+    {
+      "startUrl": "https://edition.cnn.com/",
+      "ok": true,
+      "status": 200,
+      "jobId": "1df7b8f4-9809-4f4b-af74-5bb30bbcb379",
+      "body": {
+        "status": "ok",
+        "mode": "operation-job",
+        "jobId": "1df7b8f4-9809-4f4b-af74-5bb30bbcb379",
+        "job": {
+          "id": "1df7b8f4-9809-4f4b-af74-5bb30bbcb379",
+          "mode": "in-process",
+          "operationName": "basicArticleCrawl",
+          "startUrl": "https://edition.cnn.com/",
+          "status": "running",
+          "createdAt": "2026-05-08T00:50:41.741Z",
+          "startedAt": "2026-05-08T00:50:41.741Z",
+          "finishedAt": null,
+          "paused": false,
+          "abortRequested": false
+        }
+      },
+      "attempts": 1
+    },
+    {
+      "startUrl": "https://apnews.com/",
+      "ok": true,
+      "status": 200,
+      "jobId": "4d582126-7045-44c0-8082-eac95d350ece",
+      "body": {
+        "status": "ok",
+        "mode": "operation-job",
+        "jobId": "4d582126-7045-44c0-8082-eac95d350ece",
+        "job": {
+          "id": "4d582126-7045-44c0-8082-eac95d350ece",
+          "mode": "in-process",
+          "operationName": "basicArticleCrawl",
+          "startUrl": "https://apnews.com/",
+          "status": "running",
+          "createdAt": "2026-05-08T00:50:41.812Z",
+          "startedAt": "2026-05-08T00:50:41.812Z",
+          "finishedAt": null,
+          "paused": false,
+          "abortRequested": false
+        }
+      },
+      "attempts": 1
+    },
+    {
+      "startUrl": "https://www.bloomberg.com/",
+      "ok": true,
+      "status": 200,
+      "jobId": "b29e0e8f-34c8-48dd-8117-0987115b1da8",
+      "body": {
+        "status": "ok",
+        "mode": "operation-job",
+        "jobId": "b29e0e8f-34c8-48dd-8117-0987115b1da8",
+        "job": {
+          "id": "b29e0e8f-34c8-48dd-8117-0987115b1da8",
+          "mode": "in-process",
+          "operationName": "basicArticleCrawl",
+          "startUrl": "https://www.bloomberg.com/",
+          "status": "running",
+          "createdAt": "2026-05-08T00:50:41.904Z",
+          "startedAt": "2026-05-08T00:50:41.904Z",
+          "finishedAt": null,
+          "paused": false,
+          "abortRequested": false
+        }
+      },
+      "attempts": 1
+    },
+    {
+      "startUrl": "https://www.ft.com/",
+      "ok": true,
+      "status": 200,
+      "jobId": "4e589ef7-e03d-4b15-a600-524f79eade1f",
+      "body": {
+        "status": "ok",
+        "mode": "operation-job",
+        "jobId": "4e589ef7-e03d-4b15-a600-524f79eade1f",
+        "job": {
+          "id": "4e589ef7-e03d-4b15-a600-524f79eade1f",
+          "mode": "in-process",
+          "operationName": "basicArticleCrawl",
+          "startUrl": "https://www.ft.com/",
+          "status": "running",
+          "createdAt": "2026-05-08T00:50:41.904Z",
+          "startedAt": "2026-05-08T00:50:41.904Z",
+          "finishedAt": null,
+          "paused": false,
+          "abortRequested": false
+        }
+      },
+      "attempts": 1
+    },
+    {
+      "startUrl": "https://www.npr.org/",
+      "ok": true,
+      "status": 200,
+      "jobId": "d01abbcb-0a87-495f-b15d-6bbd7ab3b7ec",
+      "body": {
+        "status": "ok",
+        "mode": "operation-job",
+        "jobId": "d01abbcb-0a87-495f-b15d-6bbd7ab3b7ec",
+        "job": {
+          "id": "d01abbcb-0a87-495f-b15d-6bbd7ab3b7ec",
+          "mode": "in-process",
+          "operationName": "basicArticleCrawl",
+          "startUrl": "https://www.npr.org/",
+          "status": "running",
+          "createdAt": "2026-05-08T00:50:41.905Z",
+          "startedAt": "2026-05-08T00:50:41.905Z",
+          "finishedAt": null,
+          "paused": false,
+          "abortRequested": false
+        }
+      },
+      "attempts": 1
+    }
+  ]
+}

@@ -37,17 +37,23 @@ function createWindow(url) {
   return win;
 }
 
-async function startUnifiedServer({ port }) {
+async function startUnifiedServer({ port, useExistingServer = false }) {
   const appRoot = resolveAppRoot();
   const serverPath = path.join(appRoot, 'src', 'ui', 'server', 'unifiedApp', 'server.js');
   const nodeExecutable = process.env.COPILOT_NODE_PATH || process.env.NODE_EXE || 'node';
   const output = { stdout: '', stderr: '' };
 
+  if (useExistingServer) {
+    await waitForHttp(`http://127.0.0.1:${port}/`, 20_000, null, output);
+    return { server: null, close: async () => {}, appRoot };
+  }
+
   const server = spawn(nodeExecutable, [serverPath, '--port', String(port)], {
     cwd: appRoot,
     env: {
       ...process.env,
-      DB_PATH: process.env.DB_PATH || path.join(appRoot, 'data', 'news.db')
+      DB_PATH: process.env.DB_PATH || path.join(appRoot, 'data', 'news.db'),
+      UI_ALLOW_MULTI_JOBS: hasArg('--allow-multi-jobs') ? 'true' : process.env.UI_ALLOW_MULTI_JOBS
     },
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true
@@ -118,13 +124,15 @@ function waitForHttp(url, timeoutMs, child, output) {
       req.on('error', () => setTimeout(check, 250));
     };
 
-    child.once('exit', (code, signal) => {
-      fail(new Error([
-        `Unified server exited before responding (code=${code}, signal=${signal || 'none'})`,
-        output.stdout ? `--- stdout ---\n${output.stdout.slice(0, 1200)}` : '',
-        output.stderr ? `--- stderr ---\n${output.stderr.slice(0, 1200)}` : ''
-      ].filter(Boolean).join('\n')));
-    });
+    if (child && typeof child.once === 'function') {
+      child.once('exit', (code, signal) => {
+        fail(new Error([
+          `Unified server exited before responding (code=${code}, signal=${signal || 'none'})`,
+          output.stdout ? `--- stdout ---\n${output.stdout.slice(0, 1200)}` : '',
+          output.stderr ? `--- stderr ---\n${output.stderr.slice(0, 1200)}` : ''
+        ].filter(Boolean).join('\n')));
+      });
+    }
 
     check();
   });
@@ -161,6 +169,12 @@ function parseStringArg(flag, defaultValue = null) {
   return defaultValue;
 }
 
+function normalizeUrlPath(urlPath, appId) {
+  if (urlPath) return urlPath;
+  if (appId) return `/?app=${encodeURIComponent(appId)}`;
+  return '/';
+}
+
 async function captureScreenshot(win, screenshotPath, delayMs) {
   await new Promise((resolve) => setTimeout(resolve, delayMs));
   const image = await win.webContents.capturePage();
@@ -172,7 +186,9 @@ electronApp.whenReady().then(async () => {
   const port = parsePortFromArgv();
   const smoke = hasArg('--smoke');
   const screenshotPath = parseStringArg('--screenshot');
-  const urlPath = parseStringArg('--url-path', '/');
+  const appId = parseStringArg('--app', null);
+  const urlPath = normalizeUrlPath(parseStringArg('--url-path', null), appId);
+  const useExistingServer = hasArg('--use-existing-server');
   const smokeTimeoutMs = parseNumberArg('--smoke-timeout-ms', 12_000);
   const closeTimeoutMs = parseNumberArg('--smoke-close-timeout-ms', 3_000);
   const screenshotDelayMs = parseNumberArg('--screenshot-delay-ms', 1_200);
@@ -181,7 +197,7 @@ electronApp.whenReady().then(async () => {
   // Keep a stable URL so cached assets work.
   const url = `http://127.0.0.1:${port}${urlPath}`;
 
-  const { close } = await startUnifiedServer({ port });
+  const { close } = await startUnifiedServer({ port, useExistingServer });
 
   const win = createWindow(url);
 

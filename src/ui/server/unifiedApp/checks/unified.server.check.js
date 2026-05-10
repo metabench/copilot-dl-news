@@ -241,6 +241,33 @@ async function run() {
     if (typeof cloudCrawlJson.content !== 'string' || !cloudCrawlJson.content.includes('data-cloud-crawl-root="true"')) {
       throw new Error('GET /api/apps/cloud-crawl/content: missing cloud crawl root marker');
     }
+    if (!cloudCrawlJson.content.includes('data-cloud-crawl-health-card="true"')) {
+      throw new Error('GET /api/apps/cloud-crawl/content: missing operator health card marker');
+    }
+
+    result.step = 'GET /api/cloud-crawl/status';
+    const cloudCrawlStatusPayload = await httpGetText(`${baseUrl}/api/cloud-crawl/status`);
+    assertStatus('GET /api/cloud-crawl/status', cloudCrawlStatusPayload.status, 200);
+    const cloudCrawlStatusJson = safeJsonParse(cloudCrawlStatusPayload.body);
+    if (!cloudCrawlStatusJson) {
+      throw new Error('GET /api/cloud-crawl/status: expected JSON');
+    }
+    if (!cloudCrawlStatusJson.health || typeof cloudCrawlStatusJson.health !== 'object') {
+      throw new Error('GET /api/cloud-crawl/status: missing health object');
+    }
+    const allowedRemote = new Set(['healthy', 'degraded', 'unavailable']);
+    if (!allowedRemote.has(cloudCrawlStatusJson.health.remote)) {
+      throw new Error(`GET /api/cloud-crawl/status: health.remote must be one of ${[...allowedRemote].join('|')}, got ${cloudCrawlStatusJson.health.remote}`);
+    }
+    if (cloudCrawlStatusJson.health.ledger !== null && typeof cloudCrawlStatusJson.health.ledger !== 'object') {
+      throw new Error('GET /api/cloud-crawl/status: health.ledger must be null or object');
+    }
+    if (cloudCrawlStatusJson.health.ledger) {
+      const led = cloudCrawlStatusJson.health.ledger;
+      if (typeof led.entries !== 'number' || typeof led.unconfirmed !== 'number' || typeof led.unpruned !== 'number') {
+        throw new Error('GET /api/cloud-crawl/status: health.ledger must expose numeric entries/unconfirmed/unpruned');
+      }
+    }
 
     result.step = 'GET /api/apps/search-explorer/content';
     const searchExplorerPayload = await httpGetText(`${baseUrl}/api/apps/search-explorer/content`);

@@ -209,6 +209,47 @@ function buildCloudCrawlActivator() {
               const query = params.toString();
               return apiBase + '/status' + (query ? '?' + query : '');
             }
+            function setHealthValue(key, text, classModifier) {
+              const cell = root.querySelector('[data-cloud-crawl-health="' + key + '"]');
+              const valueEl = root.querySelector('[data-cloud-crawl-health-value="' + key + '"]');
+              if (valueEl) valueEl.textContent = text == null ? '—' : String(text);
+              if (cell && classModifier) {
+                cell.classList.remove('is-healthy', 'is-degraded', 'is-unavailable', 'is-warn');
+                cell.classList.add(classModifier);
+              }
+            }
+            function fmtMs(ms) {
+              const n = Number(ms);
+              if (!Number.isFinite(n) || n <= 0) return '—';
+              if (n < 1000) return n + 'ms';
+              if (n < 60000) return (n / 1000).toFixed(1) + 's';
+              return Math.round(n / 60000) + 'm';
+            }
+            function renderHealth(health) {
+              if (!health) {
+                setHealthValue('remote', 'unknown', 'is-unavailable');
+                return;
+              }
+              const remoteText = health.remote === 'healthy' ? 'healthy'
+                : health.remote === 'degraded' ? 'degraded'
+                : 'unavailable';
+              const remoteCls = health.remote === 'healthy' ? 'is-healthy'
+                : health.remote === 'degraded' ? 'is-warn'
+                : 'is-unavailable';
+              setHealthValue('remote', remoteText + (health.remoteError ? ' (' + health.remoteError + ')' : ''), remoteCls);
+              setHealthValue('localWatermark', health.localWatermark || '—');
+              setHealthValue('lastSyncDurationMs', fmtMs(health.lastSyncDurationMs));
+              const deleted = health.lastPrunedDeleted;
+              setHealthValue('lastPrunedDeleted', deleted
+                ? 'http=' + (deleted.httpResponses || 0) + ' content=' + (deleted.content || 0) + ' links=' + (deleted.links || 0)
+                : '—');
+              setHealthValue('remoteContentMb', (health.remoteContentMb || 0) + ' MB / ' + (health.remoteContentRows || 0) + ' rows');
+              setHealthValue('syncLagMs', fmtMs(health.syncLagMs));
+              const ledger = health.ledger;
+              setHealthValue('ledgerSummary', ledger
+                ? ledger.entries + ' entries · ' + ledger.unconfirmed + ' unconfirmed · ' + ledger.unpruned + ' unpruned'
+                : '—');
+            }
             function renderTargets(targets) {
               if (!Array.isArray(targets)) return;
               targets.forEach(function(target) {
@@ -248,6 +289,7 @@ function buildCloudCrawlActivator() {
                 setStat('activeJobs', json.activeJobs || 0);
                 setStat('downloaded', (totals.okDownloads || 0) + ' / ' + (totals.goalDownloads || 0));
                 setStat('errors', json.errorsLast10m || 0);
+                renderHealth(json.health || null);
                 renderTargets(json.targets || []);
                 renderRecent(json.recentDownloads || []);
                 root.dataset.cloudCrawlReady = 'true';

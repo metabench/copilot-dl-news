@@ -1,0 +1,20 @@
+{
+  "description": "Drain mode: pull existing remote payload to the local DB safely (confirmed save then exact-id prune). Does not start any new crawl.",
+  "tool": "remote",
+  "positionals": [
+    "sync"
+  ],
+  "options": {
+    "interval": 3,
+    "window": 30,
+    "limit": 5,
+    "adaptive-limit": true,
+    "target-sync-ms": 5000,
+    "min-limit": 1,
+    "max-limit": 25,
+    "include-content": true,
+    "include-links": true,
+    "prune-after-ingest": true,
+    "no-backoff": true
+  }
+}

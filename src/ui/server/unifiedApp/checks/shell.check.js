@@ -93,6 +93,8 @@ assert('Contains screenshot review activator', html.includes("registerActivator(
 // Placeholder styling
 assert('Contains placeholder class', html.includes('app-placeholder'));
 assert('Contains loading class', html.includes('app-loading'));
+assert('Contains mobile icon rail CSS', html.includes('@media (max-width: 700px)') && html.includes('width: 72px'));
+assert('Contains home crawl overview grid CSS', html.includes('home-crawl-overview-grid'));
 
 // Client handlers for sub-app buttons
 assert('Has resetDomain handler', html.includes('window.resetDomain'));

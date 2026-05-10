@@ -25,6 +25,33 @@ function getUrlId(db, url) {
   return row?.id || null;
 }
 
+function getResponseId(db, responseRow, localUrlId) {
+  if (!responseRow || !localUrlId) return null;
+  const fetchedAt = responseRow.fetched_at || null;
+  const requestStartedAt = responseRow.request_started_at || null;
+  const httpStatus = responseRow.http_status ?? null;
+  const row = db.prepare(`
+    SELECT id
+    FROM http_responses
+    WHERE url_id = ?
+      AND COALESCE(fetched_at, '') = COALESCE(?, '')
+      AND COALESCE(request_started_at, '') = COALESCE(?, '')
+      AND COALESCE(http_status, -1) = COALESCE(?, -1)
+    ORDER BY id DESC
+    LIMIT 1
+  `).get(localUrlId, fetchedAt, requestStartedAt, httpStatus);
+  if (row?.id) return row.id;
+
+  const fallback = db.prepare(`
+    SELECT id
+    FROM http_responses
+    WHERE url_id = ?
+    ORDER BY id DESC
+    LIMIT 1
+  `).get(localUrlId);
+  return fallback?.id || null;
+}
+
 function ingestUrls(db, urls, urlColumns) {
   const remoteToLocalUrlId = new Map();
   let urlsInserted = 0;
@@ -55,7 +82,10 @@ function ingestResponses(db, responses, responseColumns, remoteToLocalUrlId) {
     delete row.id;
     const result = insertRow(db, 'http_responses', row, responseColumns, { ignore: true });
     responsesInserted += result.changes || 0;
-    if (remoteId && result.lastInsertRowid) remoteToLocalResponseId.set(remoteId, result.lastInsertRowid);
+    const localResponseId = result.changes && result.lastInsertRowid
+      ? result.lastInsertRowid
+      : getResponseId(db, remoteRow, localUrlId);
+    if (remoteId && localResponseId) remoteToLocalResponseId.set(remoteId, localResponseId);
   }
 
   return { responsesInserted, remoteToLocalResponseId };

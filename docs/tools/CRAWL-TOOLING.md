@@ -88,6 +88,39 @@ Options:
 
 ---
 
+## `crawl-live` - Local Crawl Throughput Monitor
+
+`crawl-live` watches the `task_events` table for the latest local crawl (or a specific task ID) and reports live throughput in the units operators need while a crawl is running.
+
+```powershell
+# Start a quiet local crawl in one terminal
+node tools/dev/mini-crawl.js https://www.bbc.com/news -o siteExplorer -n 500 -q
+
+# Watch downloaded/saved docs per second and MB/s in another terminal
+node tools/dev/crawl-live.js --latest --metrics
+
+# One-shot JSON snapshot for agents or scripts
+node tools/dev/crawl-live.js --latest --metrics --json --no-follow
+```
+
+Metrics include:
+- 5s, 1m, and lifetime downloaded docs/sec
+- 5s, 1m, and lifetime saved docs/sec
+- 5s, 1m, and lifetime network MB/s
+- 5s, 1m, and lifetime saved MB/s
+- totals, queue, ETA, average page size, average fetch duration, and stall detection
+
+Artifacts are written by default under `tmp/crawl-runs/<taskId>/`:
+- `metrics.ndjson` - append-only throughput snapshots
+- `summary.json` - latest progress, totals, recent downloads, and current window metrics
+
+Options:
+- `--task <id>` or `--latest` - Select the crawl task
+- `--window <duration>` - Add a custom rolling window such as `10s` or `5m`
+- `--artifacts <dir>` - Change the artifact root
+- `--no-artifacts` - Disable artifact writes
+
+---
 
 ## `db-downloads` — Download Evidence & Statistics CLI
 

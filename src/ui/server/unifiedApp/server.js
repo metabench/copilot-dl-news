@@ -18,6 +18,8 @@
 
 const express = require('express');
 const path = require('path');
+const http = require('http');
+const https = require('https');
 const jsgui = require('jsgui3-html');
 
 const { createTwoColumnLayoutControls } = require('../../controls/layouts/TwoColumnLayoutFactory');
@@ -99,7 +101,7 @@ function parseBooleanQuery(value, fallback = false) {
 function createCheckModeSubApps() {
   const homeContent = '<div class="home-dashboard"><div class="home-hero"><h1>Unified App (check mode)</h1></div></div>';
   const panelDemoContent = '<section data-unified-activate="panel-demo"><div class="panel-status">Panel demo check mode</div></section>';
-  const cloudCrawlContent = '<section data-unified-activate="cloud-crawl" data-cloud-crawl-root="true" data-cloud-crawl-api-base="/api/cloud-crawl" data-cloud-crawl-command="npm run crawl -- remote bounded --domains bbc.com,theguardian.com,cbsnews.com,nbcnews.com,france24.com --max-pages 5 --max-concurrent 5 --poll 3 --timeout-min 10"><div data-cloud-crawl-stat="remote">check</div><div data-cloud-crawl-stat="activeJobs">0</div><div data-cloud-crawl-stat="downloaded">0 / 25</div><div data-cloud-crawl-stat="errors">0</div><div data-cloud-crawl-targets="true"></div><div data-cloud-crawl-recent="true">No recent target downloads found.</div><div data-cloud-crawl-status="true">Check mode</div></section>';
+  const cloudCrawlContent = '<section data-unified-activate="cloud-crawl" data-cloud-crawl-root="true" data-cloud-crawl-api-base="/api/cloud-crawl" data-cloud-crawl-domains="bbc.com,theguardian.com,reuters.com,nytimes.com,washingtonpost.com,cnn.com,apnews.com,bloomberg.com,ft.com,npr.org" data-cloud-crawl-max-pages="1000" data-cloud-crawl-command="npm run crawl -- news-10x1000"><div data-cloud-crawl-stat="remote">check</div><div data-cloud-crawl-stat="activeJobs">0</div><div data-cloud-crawl-stat="downloaded">0 / 10000</div><div data-cloud-crawl-stat="errors">0</div><div data-cloud-crawl-health-card="true"><div data-cloud-crawl-health="remote"><div data-cloud-crawl-health-value="remote">checking…</div></div><div data-cloud-crawl-health="localWatermark"><div data-cloud-crawl-health-value="localWatermark">—</div></div><div data-cloud-crawl-health="lastSyncDurationMs"><div data-cloud-crawl-health-value="lastSyncDurationMs">—</div></div><div data-cloud-crawl-health="lastPrunedDeleted"><div data-cloud-crawl-health-value="lastPrunedDeleted">—</div></div><div data-cloud-crawl-health="remoteContentMb"><div data-cloud-crawl-health-value="remoteContentMb">—</div></div><div data-cloud-crawl-health="syncLagMs"><div data-cloud-crawl-health-value="syncLagMs">—</div></div><div data-cloud-crawl-health="ledgerSummary"><div data-cloud-crawl-health-value="ledgerSummary">—</div></div></div><div data-cloud-crawl-targets="true"></div><div data-cloud-crawl-recent="true">No recent target downloads found.</div><div data-cloud-crawl-status="true">Check mode</div></section>';
   const searchExplorerContent = '<section data-unified-activate="search-explorer"><input type="text" data-search-input="q" value="" /></section>';
   const downloadVerificationContent = '<section data-unified-activate="download-verification" data-download-verification-root="true"><div data-download-verification-table="true">Download verification check mode</div></section>';
   const screenshotReviewContent = '<section data-unified-activate="screenshot-review" data-screenshot-review-root="true" data-screenshot-review-api-base="/api/screenshot-review"><div data-screenshot-review-stat="runs">-</div><div data-screenshot-review-stat="images">-</div><div data-screenshot-review-stat="comments">-</div><div data-screenshot-review-stat="latest">-</div><select data-screenshot-review-filter="session"><option value="all">All sessions</option></select><select data-screenshot-review-filter="app"><option value="all">All apps</option></select><button type="button" data-screenshot-review-action="refresh">Refresh</button><div data-screenshot-review-runs="true">Loading screenshot runs...</div><div data-screenshot-review-gallery="true">Select a run.</div><pre data-screenshot-review-comments="true">No run selected.</pre><form data-screenshot-review-comment-form="true"><select data-screenshot-review-comment-target="true"><option value="run">Whole run</option></select><textarea data-screenshot-review-comment-input="true"></textarea><button type="submit">Save Comment</button></form><div data-screenshot-review-status="true">Check mode</div></section>';
@@ -662,10 +664,138 @@ function mountDashboardModules(unifiedApp, options = {}) {
     return normalizeDomains(value.split(','));
   }
 
-  unifiedApp.get('/api/cloud-crawl/status', (req, res) => {
+  function normalizeCloudHost(value) {
+    return String(value || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
+  }
+
+  function resolveRemoteCrawlHost() {
+    if (process.env.CRAWL_REMOTE_HOST) return process.env.CRAWL_REMOTE_HOST;
+    if (process.env.FLEET_HOST) return `${process.env.FLEET_HOST}:3200`;
+    return '141.144.193.218:3200';
+  }
+
+  function fetchRemoteCrawlStatus(host, timeoutMs = 1800) {
+    const base = /^https?:\/\//i.test(host) ? host : `http://${host}`;
+    const url = new URL('/api/health', base);
+    const transport = url.protocol === 'https:' ? https : http;
+    return new Promise((resolve, reject) => {
+      const req = transport.request(url, { method: 'GET', timeout: timeoutMs }, (response) => {
+        const chunks = [];
+        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('end', () => {
+          const text = Buffer.concat(chunks).toString('utf8');
+          try {
+            resolve(JSON.parse(text));
+          } catch (error) {
+            reject(new Error(`Remote status returned non-JSON HTTP ${response.statusCode}`));
+          }
+        });
+      });
+      req.on('timeout', () => req.destroy(new Error(`Remote status timed out after ${timeoutMs}ms`)));
+      req.on('error', reject);
+      req.end();
+    });
+  }
+
+  function fetchRemoteContentStats(host, timeoutMs = 2000) {
+    const base = /^https?:\/\//i.test(host) ? host : `http://${host}`;
+    const url = new URL('/api/content/stats', base);
+    const transport = url.protocol === 'https:' ? https : http;
+    return new Promise((resolve) => {
+      const req = transport.request(url, { method: 'GET', timeout: timeoutMs }, (response) => {
+        const chunks = [];
+        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('end', () => {
+          try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); }
+          catch (_) { resolve(null); }
+        });
+      });
+      req.on('timeout', () => { req.destroy(); resolve(null); });
+      req.on('error', () => resolve(null));
+      req.end();
+    });
+  }
+
+  function readSyncLedgerSafe() {
+    try {
+      const { loadLedger, findUnconfirmed, findUnpruned, getLastWatermark } = require('../../../../tools/crawl/lib/sync-ledger');
+      const ledgerFile = path.resolve(__dirname, '../../../../tools/crawl/.crawl-remote-ledger.json');
+      const ledger = loadLedger(ledgerFile);
+      return {
+        lastWatermark: getLastWatermark(ledger),
+        totalPulled: ledger.totalPulled || 0,
+        unconfirmed: findUnconfirmed(ledger).length,
+        unpruned: findUnpruned(ledger).length,
+        entries: ledger.entries.length,
+        lastEntry: ledger.entries[ledger.entries.length - 1] || null,
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function buildHealthCardSnapshot({ remoteStatus, remoteError, remoteContentStats, ledgerSnapshot }) {
+    const remoteHealth = remoteStatus
+      ? (remoteError ? 'degraded' : 'healthy')
+      : 'unavailable';
+    const totals = remoteContentStats?.totals || {};
+    const remoteContentBytes = Number(totals.compressed_size || totals.compressedSize || 0);
+    const remoteContentRows = Number(totals.row_count || totals.rowCount || 0);
+    const lastEntry = ledgerSnapshot?.lastEntry || null;
+    const lastConfirmedAt = lastEntry?.confirmedAt || null;
+    const lastPrunedAt = lastEntry?.prunedAt || null;
+    const lastPrunedDeleted = lastEntry?.deleted || null;
+    let lastSyncDurationMs = null;
+    if (lastEntry?.exportedAt && lastEntry?.confirmedAt) {
+      lastSyncDurationMs = Math.max(0, new Date(lastEntry.confirmedAt).getTime() - new Date(lastEntry.exportedAt).getTime());
+    }
+    let syncLagMs = null;
+    if (lastEntry?.confirmedAt) {
+      syncLagMs = Math.max(0, Date.now() - new Date(lastEntry.confirmedAt).getTime());
+    }
+    return {
+      remote: remoteHealth,
+      remoteError: remoteError || null,
+      localWatermark: ledgerSnapshot?.lastWatermark || null,
+      lastConfirmedAt,
+      lastPrunedAt,
+      lastPrunedDeleted,
+      lastSyncDurationMs,
+      syncLagMs,
+      remoteContentRows,
+      remoteContentBytes,
+      remoteContentMb: remoteContentBytes ? Number((remoteContentBytes / (1024 * 1024)).toFixed(2)) : 0,
+      ledger: ledgerSnapshot ? {
+        entries: ledgerSnapshot.entries,
+        unconfirmed: ledgerSnapshot.unconfirmed,
+        unpruned: ledgerSnapshot.unpruned,
+        totalPulled: ledgerSnapshot.totalPulled,
+      } : null,
+    };
+  }
+
+  function buildRemoteTargetSnapshot(domains, goal, remoteStatus) {
+    const remoteDomains = Array.isArray(remoteStatus?.domains) ? remoteStatus.domains : [];
+    const byDomain = new Map(remoteDomains.map((entry) => [normalizeCloudHost(entry.domain), entry]));
+    return domains.map((domain) => {
+      const record = byDomain.get(normalizeCloudHost(domain));
+      const okDownloads = Number(record?.contentPipeline?.totalStored || record?.stats?.done || 0);
+      return {
+        domain,
+        goal,
+        okDownloads,
+        latestFetchedAt: record?.stats?.latestFetchedAt || record?.lastActivityAt || null,
+        progressPct: Math.min(100, Math.round((okDownloads / Math.max(goal, 1)) * 100)),
+        remoteState: record?.state || 'unknown',
+        remoteRunning: Boolean(record?.isRunning)
+      };
+    });
+  }
+
+  unifiedApp.get('/api/cloud-crawl/status', async (req, res) => {
     try {
       const domains = normalizeDomainQuery(req.query.domains);
-      const maxPagesPerDomain = normalizePositiveInt(req.query.maxPages, 5, 1000);
+      const maxPagesPerDomain = normalizePositiveInt(req.query.maxPages, 1000, 1000);
       const recentLimit = normalizePositiveInt(req.query.recentLimit, 12, 50);
       const since = normalizeDateParam(req.query.since);
       const snapshot = getCloudCrawlStatusSnapshot(getDb(), {
@@ -675,8 +805,49 @@ function mountDashboardModules(unifiedApp, options = {}) {
         since
       });
 
+      const remoteHost = resolveRemoteCrawlHost();
+      let remoteStatus = null;
+      let remoteError = null;
+      try {
+        remoteStatus = await fetchRemoteCrawlStatus(remoteHost);
+      } catch (error) {
+        remoteError = error.message;
+      }
+
+      const remoteContentStats = remoteStatus ? await fetchRemoteContentStats(remoteHost) : null;
+      const ledgerSnapshot = readSyncLedgerSafe();
+
+      const remoteTargets = remoteStatus && Array.isArray(remoteStatus.domains)
+        ? buildRemoteTargetSnapshot(domains, maxPagesPerDomain, remoteStatus)
+        : null;
+      const remoteStored = Number(remoteStatus?.stored);
+      const responseSnapshot = remoteTargets
+        ? {
+            ...snapshot,
+            totals: {
+              ...snapshot.totals,
+              okDownloads: remoteTargets.reduce((sum, target) => sum + target.okDownloads, 0),
+              sitesAtGoal: remoteTargets.filter((target) => target.okDownloads >= target.goal).length,
+              progressPct: Math.min(100, Math.round((remoteTargets.reduce((sum, target) => sum + target.okDownloads, 0) / Math.max(domains.length * maxPagesPerDomain, 1)) * 100))
+            },
+            targets: remoteTargets
+          }
+        : (Number.isFinite(remoteStored)
+            ? {
+                ...snapshot,
+                totals: {
+                  ...snapshot.totals,
+                  okDownloads: remoteStored,
+                  progressPct: Math.min(100, Math.round((remoteStored / Math.max(domains.length * maxPagesPerDomain, 1)) * 100))
+                }
+              }
+            : snapshot);
+
       const jobs = inProcessCrawlJobRegistry.list();
-      const activeJobs = jobs.filter((job) => job && job.status === 'running').length;
+      const inProcessActiveJobs = jobs.filter((job) => job && job.status === 'running').length;
+      const remoteActiveJobs = remoteStatus && Array.isArray(remoteStatus.domains)
+        ? remoteStatus.domains.filter((domain) => domain && (domain.isRunning || domain.state === 'running')).length
+        : Number(remoteStatus?.running || 0);
       const history = crawlTelemetry?.bridge?.getHistory ? crawlTelemetry.bridge.getHistory(200) : [];
       const sinceMs = Date.now() - 10 * 60 * 1000;
       const errorsLast10m = Array.isArray(history)
@@ -689,12 +860,18 @@ function mountDashboardModules(unifiedApp, options = {}) {
       res.json({
         status: 'ok',
         remote: {
-          label: 'configured',
-          command: `npm run crawl -- remote bounded --domains ${domains.join(',')} --max-pages ${maxPagesPerDomain} --max-concurrent ${domains.length} --poll 3 --timeout-min 10`
+          label: remoteStatus ? `remote ${remoteHost}` : 'configured',
+          host: remoteHost,
+          available: Boolean(remoteStatus),
+          error: remoteError,
+          command: 'npm run crawl -- news-10x1000',
+        health: buildHealthCardSnapshot({ remoteStatus, remoteError, remoteContentStats, ledgerSnapshot }),
+          orchestrator: remoteStatus?.orchestrator || null,
+          totals: remoteStatus?.totals || { stored: remoteStatus?.stored, domains: remoteStatus?.domains }
         },
-        activeJobs,
+        activeJobs: remoteStatus ? remoteActiveJobs : inProcessActiveJobs,
         errorsLast10m,
-        ...snapshot
+        ...responseSnapshot
       });
     } catch (error) {
       res.status(500).json({ status: 'error', message: error.message });
@@ -1187,6 +1364,7 @@ function mountDashboardModules(unifiedApp, options = {}) {
       mountPath: '/crawl-status',
       full: () => createCrawlStatusRouter({
         jobsApiPath: '/api/v1/crawl/jobs',
+        apiBasePath: '/api/v1/crawl',
         eventsPath: '/api/crawl-telemetry/events',
         telemetryHistoryPath: '/api/crawl-telemetry/history'
       })
@@ -1507,7 +1685,21 @@ if (checkMode) {
         latestFetchedAt: null,
         progressPct: 0
       })),
-      recentDownloads: []
+      recentDownloads: [],
+      health: {
+        remote: 'unavailable',
+        remoteError: null,
+        localWatermark: null,
+        lastConfirmedAt: null,
+        lastPrunedAt: null,
+        lastPrunedDeleted: null,
+        lastSyncDurationMs: null,
+        syncLagMs: null,
+        remoteContentRows: 0,
+        remoteContentBytes: 0,
+        remoteContentMb: 0,
+        ledger: null
+      }
     });
   });
 

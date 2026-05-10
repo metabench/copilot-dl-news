@@ -1,0 +1,25 @@
+{
+  "description": "Strict 15-minute 10x1000 cloud crawl e2e validation: preflight remote health/throttle, crawl useful data, drain/sync, validate local DB growth, ledger state, host spread, and benchmark stats.",
+  "tool": "cloud-e2e",
+  "options": {
+    "duration-min": 15,
+    "domains": "bbc.com,theguardian.com,reuters.com,nytimes.com,washingtonpost.com,cnn.com,apnews.com,bloomberg.com,ft.com,npr.org",
+    "max-pages": 1000,
+    "max-concurrent": 10,
+    "interval": 5,
+    "window": 5,
+    "limit": 5,
+    "target-sync-ms": 5000,
+    "min-limit": 1,
+    "max-limit": 25,
+    "remote-storage-budget-mb": 512,
+    "remote-storage-reserve-mb": 256,
+    "normal-concurrency": 10,
+    "perf-summary-every": 3,
+    "min-new-responses": 25,
+    "min-success-responses": 10,
+    "min-content-rows": 5,
+    "min-distinct-hosts": 3,
+    "max-failure-ratio": 0.6
+  }
+}

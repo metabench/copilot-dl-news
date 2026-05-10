@@ -12,8 +12,9 @@ function main() {
   const required = [
     'data-cloud-crawl-root="true"',
     'data-cloud-crawl-api-base="/api/cloud-crawl"',
-    'data-cloud-crawl-domains="bbc.com,theguardian.com,cbsnews.com,nbcnews.com,france24.com"',
-    'data-cloud-crawl-max-pages="5"',
+    'data-cloud-crawl-domains="bbc.com,theguardian.com,reuters.com,nytimes.com,washingtonpost.com,cnn.com,apnews.com,bloomberg.com,ft.com,npr.org"',
+    'data-cloud-crawl-max-pages="1000"',
+    'data-cloud-crawl-command="npm run crawl -- news-10x1000"',
     'data-cloud-crawl-recent-limit="12"',
     'data-cloud-crawl-since="',
     'data-cloud-crawl-stat="remote"',
@@ -22,7 +23,7 @@ function main() {
     'data-cloud-crawl-stat="errors"',
     'data-cloud-crawl-targets="true"',
     'data-cloud-crawl-domain="bbc.com"',
-    'data-cloud-crawl-domain="france24.com"',
+    'data-cloud-crawl-domain="npr.org"',
     'data-cloud-crawl-recent="true"',
     'data-screenshot-subject="cloud-crawl"',
     'data-screenshot-route="/?app=cloud-crawl"'

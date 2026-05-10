@@ -1,0 +1,698 @@
+{
+  "ok": false,
+  "mode": "live",
+  "startedAt": "2026-05-09T16:57:03.756Z",
+  "finishedAt": "2026-05-09T17:11:42.779Z",
+  "artifact": {
+    "report": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-09-cloud-crawl-15m-validation\\artifacts\\cloud-crawl-e2e-2026-05-09T16-57-03-754Z.json",
+    "log": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\docs\\sessions\\2026-05-09-cloud-crawl-15m-validation\\artifacts\\cloud-crawl-e2e-2026-05-09T16-57-03-754Z.log"
+  },
+  "plan": {
+    "command": "cloud-crawl-e2e",
+    "host": "141.144.193.218:3200",
+    "domains": [
+      "bbc.com",
+      "theguardian.com",
+      "reuters.com",
+      "nytimes.com",
+      "washingtonpost.com",
+      "cnn.com",
+      "apnews.com",
+      "bloomberg.com",
+      "ft.com",
+      "npr.org"
+    ],
+    "durationMs": 900000,
+    "crawlBudgetMs": 805000,
+    "drainMs": 60000,
+    "validationMs": 20000,
+    "stopGraceMs": 15000,
+    "hardLimit": "15 minutes by default; total process phases must finish before durationMs",
+    "remoteRunArgs": [
+      "run",
+      "--host",
+      "141.144.193.218:3200",
+      "--domains",
+      "bbc.com,theguardian.com,reuters.com,nytimes.com,washingtonpost.com,cnn.com,apnews.com,bloomberg.com,ft.com,npr.org",
+      "--max-pages",
+      "1000",
+      "--max-concurrent",
+      "10",
+      "--interval",
+      "5",
+      "--window",
+      "5",
+      "--limit",
+      "5",
+      "--adaptive-limit",
+      "--target-sync-ms",
+      "5000",
+      "--min-limit",
+      "1",
+      "--max-limit",
+      "25",
+      "--include-content",
+      "--include-links",
+      "--prune-after-ingest",
+      "--no-backoff",
+      "--remote-storage-budget-mb",
+      "512",
+      "--remote-storage-reserve-mb",
+      "256",
+      "--normal-concurrency",
+      "10",
+      "--perf-summary-every",
+      "3"
+    ],
+    "drainArgs": [
+      "sync",
+      "--host",
+      "141.144.193.218:3200",
+      "--rounds",
+      "12",
+      "--interval",
+      "3",
+      "--window",
+      "30",
+      "--limit",
+      "5",
+      "--adaptive-limit",
+      "--target-sync-ms",
+      "5000",
+      "--min-limit",
+      "1",
+      "--max-limit",
+      "25",
+      "--include-content",
+      "--include-links",
+      "--prune-after-ingest",
+      "--no-backoff",
+      "--remote-storage-budget-mb",
+      "512",
+      "--remote-storage-reserve-mb",
+      "256",
+      "--normal-concurrency",
+      "10",
+      "--perf-summary-every",
+      "1"
+    ],
+    "thresholds": {
+      "minNewResponses": 25,
+      "minSuccessResponses": 10,
+      "minContentRows": 5,
+      "minDistinctHosts": 3,
+      "maxFailureRatio": 0.6,
+      "maxUnconfirmedLedgerEntries": 0,
+      "maxUnprunedLedgerEntries": 2
+    }
+  },
+  "remote": {
+    "checkedAt": "2026-05-09T16:57:03.879Z",
+    "healthOk": true,
+    "throttleOk": true,
+    "contentStatsOk": true,
+    "statusOk": true,
+    "healthStatus": 200,
+    "healthError": null,
+    "health": {
+      "healthy": true,
+      "version": "4.0.0",
+      "mode": "multi-domain",
+      "domains": 10,
+      "running": 0,
+      "stored": 0,
+      "memory": {
+        "rss": 89,
+        "heapUsed": 12,
+        "heapTotal": 13
+      },
+      "idle": {
+        "minutes": 1,
+        "timeoutMin": 10,
+        "autoShutdown": true
+      },
+      "uptime": 71
+    },
+    "throttleStatus": 200,
+    "throttleError": null,
+    "throttle": {
+      "ok": true,
+      "throttle": {
+        "maxConcurrent": null,
+        "pause": false,
+        "reason": null,
+        "updatedAt": null
+      },
+      "currentMaxConcurrent": 10
+    },
+    "contentStatsStatus": 200,
+    "contentStatsError": null,
+    "contentStats": {
+      "totals": {
+        "total_stored": 4167,
+        "total_uncompressed": 4774053001,
+        "total_compressed": 845450978,
+        "avg_compression_ratio": 0.3518601891252966
+      },
+      "byDomain": [
+        {
+          "domain": "www.nytimes.com",
+          "count": 1616,
+          "total_uncompressed": 733983171,
+          "total_compressed": 96532042
+        },
+        {
+          "domain": "www.theguardian.com",
+          "count": 1217,
+          "total_uncompressed": 235918560,
+          "total_compressed": 34677901
+        },
+        {
+          "domain": "www.cnn.com",
+          "count": 671,
+          "total_uncompressed": 2663744367,
+          "total_compressed": 505335535
+        },
+        {
+          "domain": "cnnespanol.cnn.com",
+          "count": 162,
+          "total_uncompressed": 532996087,
+          "total_compressed": 98932292
+        },
+        {
+          "domain": "edition.cnn.com",
+          "count": 117,
+          "total_uncompressed": 383281050,
+          "total_compressed": 74345514
+        },
+        {
+          "domain": "cooking.nytimes.com",
+          "count": 101,
+          "total_uncompressed": 62720699,
+          "total_compressed": 7349995
+        },
+        {
+          "domain": "syndication.theguardian.com",
+          "count": 63,
+          "total_uncompressed": 34272,
+          "total_compressed": 21231
+        },
+        {
+          "domain": "holidays.theguardian.com",
+          "count": 63,
+          "total_uncompressed": 26420100,
+          "total_compressed": 2904927
+        },
+        {
+          "domain": "arabic.cnn.com",
+          "count": 43,
+          "total_uncompressed": 9727970,
+          "total_compressed": 2391394
+        },
+        {
+          "domain": "www.bbc.com",
+          "count": 41,
+          "total_uncompressed": 12205906,
+          "total_compressed": 1971845
+        },
+        {
+          "domain": "us.cnn.com",
+          "count": 25,
+          "total_uncompressed": 94952723,
+          "total_compressed": 18210156
+        },
+        {
+          "domain": "www.bloomberg.com",
+          "count": 8,
+          "total_uncompressed": 110848,
+          "total_compressed": 37245
+        },
+        {
+          "domain": "help.nytimes.com",
+          "count": 7,
+          "total_uncompressed": 528468,
+          "total_compressed": 155069
+        },
+        {
+          "domain": "licensing.theguardian.com",
+          "count": 5,
+          "total_uncompressed": 194373,
+          "total_compressed": 59629
+        },
+        {
+          "domain": "support.theguardian.com",
+          "count": 4,
+          "total_uncompressed": 985362,
+          "total_compressed": 66701
+        },
+        {
+          "domain": "shop.bbc.com",
+          "count": 4,
+          "total_uncompressed": 4060566,
+          "total_compressed": 450149
+        },
+        {
+          "domain": "theguardian.com",
+          "count": 3,
+          "total_uncompressed": 1043985,
+          "total_compressed": 164348
+        },
+        {
+          "domain": "cnn.com",
+          "count": 3,
+          "total_uncompressed": 8213151,
+          "total_compressed": 1405883
+        },
+        {
+          "domain": "profile.theguardian.com",
+          "count": 2,
+          "total_uncompressed": 82166,
+          "total_compressed": 17588
+        },
+        {
+          "domain": "manage.theguardian.com",
+          "count": 2,
+          "total_uncompressed": 34458,
+          "total_compressed": 10346
+        },
+        {
+          "domain": "help.cnn.com",
+          "count": 2,
+          "total_uncompressed": 2214568,
+          "total_compressed": 287374
+        },
+        {
+          "domain": "www.reuters.com",
+          "count": 1,
+          "total_uncompressed": 771,
+          "total_compressed": 572
+        },
+        {
+          "domain": "workwithus.theguardian.com",
+          "count": 1,
+          "total_uncompressed": 67418,
+          "total_compressed": 19713
+        },
+        {
+          "domain": "store.nytimes.com",
+          "count": 1,
+          "total_uncompressed": 301322,
+          "total_compressed": 40315
+        },
+        {
+          "domain": "store.cnn.com",
+          "count": 1,
+          "total_uncompressed": 46452,
+          "total_compressed": 14707
+        },
+        {
+          "domain": "nytimes.com",
+          "count": 1,
+          "total_uncompressed": 771,
+          "total_compressed": 571
+        },
+        {
+          "domain": "archive.nytimes.com",
+          "count": 1,
+          "total_uncompressed": 15646,
+          "total_compressed": 3152
+        },
+        {
+          "domain": "advertising.theguardian.com",
+          "count": 1,
+          "total_uncompressed": 47,
+          "total_compressed": 62
+        },
+        {
+          "domain": "account.bbc.com",
+          "count": 1,
+          "total_uncompressed": 167724,
+          "total_compressed": 44722
+        }
+      ]
+    },
+    "statusStatus": 200,
+    "statusError": null,
+    "remoteDomains": [
+      {
+        "domain": "bbc.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "theguardian.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "reuters.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "nytimes.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "washingtonpost.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "cnn.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "apnews.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "bloomberg.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "ft.com",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      },
+      {
+        "domain": "npr.org",
+        "state": "idle",
+        "isRunning": false,
+        "fetched": 0,
+        "errors": 0
+      }
+    ]
+  },
+  "before": {
+    "available": true,
+    "path": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\data\\news.db",
+    "capturedAt": "2026-05-09T16:57:03.756Z",
+    "totals": {
+      "urls": 1631235,
+      "responses": 295006,
+      "successResponses": 278996,
+      "failedResponses": 16010,
+      "content": 183881
+    },
+    "latestFetchedAt": "2026-05-08T09:54:30.836Z",
+    "error": null
+  },
+  "after": {
+    "available": true,
+    "path": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\data\\news.db",
+    "capturedAt": "2026-05-09T17:11:42.779Z",
+    "totals": {
+      "urls": 1631274,
+      "responses": 295131,
+      "successResponses": 279108,
+      "failedResponses": 16023,
+      "content": 184006
+    },
+    "latestFetchedAt": "2026-05-09 16:57:35",
+    "error": null
+  },
+  "recent": {
+    "available": true,
+    "startedAt": "2026-05-09T16:57:03.756Z",
+    "finishedAt": "2026-05-09T17:11:42.779Z",
+    "downloads": 0,
+    "success": 0,
+    "failed": 0,
+    "bytes": 0,
+    "distinctHosts": 0,
+    "hosts": [],
+    "statuses": [],
+    "error": null
+  },
+  "ledgerBefore": {
+    "entries": 0,
+    "unconfirmed": 0,
+    "unpruned": 0,
+    "completed": 0,
+    "lastWatermark": "2026-05-08 02:29:54",
+    "totalPulled": 55556
+  },
+  "ledgerAfter": {
+    "entries": 25,
+    "unconfirmed": 1,
+    "unpruned": 0,
+    "completed": 24,
+    "lastWatermark": "2026-05-09 16:57:35",
+    "totalPulled": 55681
+  },
+  "run": {
+    "command": "C:\\nvm4w\\nodejs\\node.exe",
+    "args": [
+      "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\tools\\crawl\\crawl-remote.js",
+      "run",
+      "--host",
+      "141.144.193.218:3200",
+      "--domains",
+      "bbc.com,theguardian.com,reuters.com,nytimes.com,washingtonpost.com,cnn.com,apnews.com,bloomberg.com,ft.com,npr.org",
+      "--max-pages",
+      "1000",
+      "--max-concurrent",
+      "10",
+      "--interval",
+      "5",
+      "--window",
+      "5",
+      "--limit",
+      "5",
+      "--adaptive-limit",
+      "--target-sync-ms",
+      "5000",
+      "--min-limit",
+      "1",
+      "--max-limit",
+      "25",
+      "--include-content",
+      "--include-links",
+      "--prune-after-ingest",
+      "--no-backoff",
+      "--remote-storage-budget-mb",
+      "512",
+      "--remote-storage-reserve-mb",
+      "256",
+      "--normal-concurrency",
+      "10",
+      "--perf-summary-every",
+      "3"
+    ],
+    "startedAt": "2026-05-09T16:57:04.713Z",
+    "finishedAt": "2026-05-09T17:10:29.770Z",
+    "exitCode": null,
+    "signal": "SIGINT",
+    "stoppedAtDeadline": true,
+    "hardTimedOut": false,
+    "outputText": "═══════════════════════════════════════════════════════\n\n  Rapid Coordination: Start + Continuous Sync + Stop\n═══════════════════════════════════════════════════════\n  ▶ Starting domains...\n\n  Started 10 domain(s)\n\n\n  🔄 Entering continuous sync loop (every 5s). Press Ctrl+C to stop.\n  Initial limit: 5\n\n  Adaptive batching: enabled target=5000ms min=1 max=25\n  Storage budget: enabled budget=512MB reserve=256MB\n  Prune after ingest: enabled\n  Ledger: C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\tools\\crawl\\.crawl-remote-ledger.json (0 entries, wm=2026-05-08 02:29:54)\n\n  [1] 17:57:09 — 5 URLs, 5 content → 5 new URLs, 5 new content; confirmed 5/5/5/189, pruned {\"urls\":0,\"httpResponses\":5,\"content\":5,\"links\":189} (fetch: 362ms, ingest: 37ms, round: 466ms, next limit: 5) | Total: 5 URLs, 5 content\n\n  Adaptive limit shrink: 5 → 2 (slow-round, round=12789ms, target=5000ms)\n  [2] 17:57:27 — 5 URLs, 5 content → 5 new URLs, 5 new content; confirmed 5/5/5/182, pruned {\"urls\":0,\"httpResponses\":5,\"content\":5,\"links\":182} (fetch: 12709ms, ingest: 11ms, round: 12789ms, next limit: 2) | Total: 10 URLs, 10 content\n\n  [3] 17:57:33 — 2 URLs, 2 content → 1 new URLs, 2 new content; confirmed 2/2/2/73, pruned {\"urls\":0,\"httpResponses\":2,\"content\":2,\"links\":73} (fetch: 211ms, ingest: 28ms, round: 284ms, next limit: 2) | Total: 12 URLs, 12 content\n\n  ↳ perf p50/p95 fetch=362/362ms ingest=28/28ms total=466/466ms rows/s=0.89 samples=3\n\n  [4] 17:57:39 — 2 URLs, 2 content → 2 new URLs, 2 new content; confirmed 2/2/2/76, pruned {\"urls\":0,\"httpResponses\":2,\"content\":2,\"links\":76} (fetch: 238ms, ingest: 8ms, round: 294ms, next limit: 2) | Total: 14 URLs, 14 content\n\n  Adaptive limit grow: 2 → 3 (fast-full-streak, round=202ms, target=5000ms)\n  [5] 17:57:45 — 2 URLs, 2 content → 2 new URLs, 2 new content; confirmed 2/2/2/41, pruned {\"urls\":0,\"httpResponses\":2,\"content\":2,\"links\":41} (fetch: 146ms, ingest: 3ms, round: 202ms, next limit: 3) | Total: 16 URLs, 16 content\n\n  [6] 17:57:51 — 3 URLs, 3 content → 3 new URLs, 3 new content; confirmed 3/3/3/111, pruned {\"urls\":0,\"httpResponses\":3,\"content\":3,\"links\":111} (fetch: 235ms, ingest: 7ms, round: 296ms, next limit: 3) | Total: 19 URLs, 19 content\n\n  ↳ perf p50/p95 fetch=235/362ms ingest=8/28ms total=294/466ms rows/s=1.33 samples=6\n\n  [7] 17:57:57 — 3 URLs, 3 content → 3 new URLs, 3 new content; confirmed 3/3/3/109, pruned {\"urls\":0,\"httpResponses\":3,\"content\":3,\"links\":109} (fetch: 271ms, ingest: 7ms, round: 343ms, next limit: 3) | Total: 22 URLs, 22 content\n\n  Adaptive limit grow: 3 → 5 (fast-full-streak, round=347ms, target=5000ms)\n\n  [8] 17:58:04 — 3 URLs, 3 content → 0 new URLs, 3 new content; confirmed 3/3/3/102, pruned {\"urls\":0,\"httpResponses\":3,\"content\":3,\"links\":102} (fetch: 282ms, ingest: 10ms, round: 347ms, next limit: 5) | Total: 25 URLs, 25 content\n\n  [9] 17:58:10 — 5 URLs, 5 content → 5 new URLs, 5 new content; confirmed 5/5/5/210, pruned {\"urls\":0,\"httpResponses\":5,\"content\":5,\"links\":210} (fetch: 348ms, ingest: 15ms, round: 426ms, next limit: 5) | Total: 30 URLs, 30 content\n\n  ↳ perf p50/p95 fetch=271/362ms ingest=10/28ms total=343/466ms rows/s=1.94 samples=9\n\n  [10] Error: Remote prune failed for 2026-05-09 16:57:15\n\n  Adaptive limit shrink: 5 → 2 (error-round, target=5000ms)\n\n  [11] 17:58:21 — 2 URLs, 2 content → 2 new URLs, 2 new content; confirmed 2/2/2/81, pruned {\"urls\":0,\"httpResponses\":2,\"content\":2,\"links\":81} (fetch: 210ms, ingest: 4ms, round: 277ms, next limit: 2) | Total: 37 URLs, 37 content\n\n  [12] 17:58:27 — 2 URLs, 2 content → 2 new URLs, 2 new content; confirmed 2/2/2/71, pruned {\"urls\":0,\"httpResponses\":2,\"content\":2,\"links\":71} (fetch: 235ms, ingest: 5ms, round: 293ms, next limit: 2) | Total: 39 URLs, 39 content\n\n  ↳ perf p50/p95 fetch=238/362ms ingest=8/28ms total=296/466ms rows/s=2.12 samples=11\n\n  Adaptive limit grow: 2 → 3 (fast-full-streak, round=212ms, target=5000ms)\n\n  [13] 17:58:33 — 2 URLs, 2 content → 2 new URLs, 2 new content; confirmed 2/2/2/77, pruned {\"urls\":0,\"httpResponses\":2,\"content\":2,\"links\":77} (fetch: 162ms, ingest: 5ms, round: 212ms, next limit: 3) | Total: 41 URLs, 41 content\n\n  [14] 17:58:40 — 3 URLs, 3 content → 3 new URLs, 3 new content; confirmed 3/3/3/106, pruned {\"urls\":0,\"httpResponses\":3,\"content\":3,\"links\":106} (fetch: 331ms, ingest: 33ms, round: 415ms, next limit: 3) | Total: 44 URLs, 44 content\n\n  [15] 17:58:46 — 3 URLs, 3 content → 0 new URLs, 3 new content; confirmed 3/3/3/115, pruned {\"urls\":0,\"httpResponses\":3,\"content\":3,\"links\":115} (fetch: 248ms, ingest: 9ms, round: 306ms, next limit: 3) | Total: 47 URLs, 47 content\n  ↳ perf p50/p95 fetch=238/362ms ingest=8/33ms total=296/466ms rows/s=2.48 samples=14\n\n  Adaptive limit grow: 3 → 5 (fast-full-streak, round=342ms, target=5000ms)\n  [16] 17:58:52 — 3 URLs, 3 content → 0 new URLs, 3 new content; confirmed 3/3/3/148, pruned {\"urls\":0,\"httpResponses\":3,\"content\":3,\"links\":148} (fetch: 255ms, ingest: 10ms, round: 342ms, next limit: 5) | Total: 50 URLs, 50 content\n\n  [17] 17:58:58 — 5 URLs, 5 content → 0 new URLs, 5 new content; confirmed 5/5/5/255, pruned {\"urls\":0,\"httpResponses\":5,\"content\":5,\"links\":255} (fetch: 322ms, ingest: 18ms, round: 406ms, next limit: 5) | Total: 55 URLs, 55 content\n\n  [18] 17:59:05 — 5 URLs, 5 content → 0 new URLs, 5 new content; confirmed 5/5/5/318, pruned {\"urls\":0,\"httpResponses\":5,\"content\":5,\"links\":318} (fetch: 1102ms, ingest: 22ms, round: 1201ms, next limit: 5) | Total: 60 URLs, 60 content\n  ↳ perf p50/p95 fetch=255/1102ms ingest=10/33ms total=342/1201ms rows/s=2.91 samples=17\n\n  Adaptive limit grow: 5 → 8 (fast-full-streak, round=1041ms, target=5000ms)\n  [19] 17:59:12 — 5 URLs, 5 content → 0 new URLs, 5 new content; confirmed 5/5/5/355, pruned {\"urls\":0,\"httpResponses\":5,\"content\":5,\"links\":355} (fetch: 838ms, ingest: 31ms, round: 1041ms, next limit: 8) | Total: 65 URLs, 65 content\n\n  [20] 17:59:19 — 8 URLs, 8 content → 0 new URLs, 8 new content; confirmed 8/8/8/358, pruned {\"urls\":0,\"httpResponses\":8,\"content\":8,\"links\":358} (fetch: 1164ms, ingest: 122ms, round: 1394ms, next limit: 8) | Total: 73 URLs, 73 content\n\n  [21] 17:59:26 — 8 URLs, 8 content → 0 new URLs, 8 new content; confirmed 8/8/8/306, pruned {\"urls\":0,\"httpResponses\":8,\"content\":8,\"links\":306} (fetch: 664ms, ingest: 18ms, round: 752ms, next limit: 8) | Total: 81 URLs, 81 content\n\n  ↳ perf p50/p95 fetch=271/1164ms ingest=10/37ms total=343/1394ms rows/s=3.44 samples=20\n\n  Adaptive limit grow: 8 → 12 (fast-full-streak, round=1242ms, target=5000ms)\n\n  [22] 17:59:33 — 8 URLs, 8 content → 0 new URLs, 8 new content; confirmed 8/8/8/393, pruned {\"urls\":0,\"httpResponses\":8,\"content\":8,\"links\":393} (fetch: 1159ms, ingest: 26ms, round: 1242ms, next limit: 12) | Total: 89 URLs, 89 content\n\n  [23] 17:59:41 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/551, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":551} (fetch: 1332ms, ingest: 83ms, round: 1503ms, next limit: 12) | Total: 101 URLs, 101 content\n\n  [24] 17:59:47 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/475, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":475} (fetch: 755ms, ingest: 30ms, round: 847ms, next limit: 12) | Total: 113 URLs, 113 content\n\n  ↳ perf p50/p95 fetch=322/1164ms ingest=15/37ms total=406/1394ms rows/s=4.21 samples=23\n\n  [25] 17:59:57 — 12 URLs, 12 content → 0 new URLs, 12 new content; confirmed 12/12/12/587, pruned {\"urls\":0,\"httpResponses\":12,\"content\":12,\"links\":587} (fetch: 3699ms, ingest: 165ms, round: 3952ms, next limit: 12) | Total: 125 URLs, 125 content\n\n  [26] Error: read ECONNRESET\n\n  Adaptive limit shrink: 12 → 6 (error-round, target=5000ms)\n\n  [27] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  Adaptive limit shrink: 6 → 3 (error-round, target=5000ms)\n\n  [28] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  Adaptive limit shrink: 3 → 1 (error-round, target=5000ms)\n\n  [29] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [30] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [31] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [32] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [33] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [34] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [35] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [36] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [37] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [38] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [39] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [40] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [41] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [42] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [43] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [44] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [45] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [46] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [47] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [48] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [49] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [50] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [51] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [52] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [53] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [54] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [55] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [56] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [57] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [58] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [59] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [60] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [61] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [62] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [63] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [64] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [65] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [66] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [67] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [68] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [69] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [70] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [71] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [72] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [73] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [74] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [75] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [76] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [77] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [78] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [79] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [80] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [81] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [82] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [83] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [84] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [85] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [86] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [87] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [88] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [89] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [90] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [91] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [92] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [93] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [94] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [95] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [96] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [97] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [98] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [99] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [100] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [101] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [102] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [103] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [104] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [105] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [106] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [107] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [108] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [109] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [110] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [111] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [112] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [113] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [114] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [115] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [116] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [117] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [118] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [119] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [120] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [121] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [122] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [123] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [124] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [125] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [126] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [127] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [128] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [129] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [130] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [131] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [132] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [133] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [134] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [135] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [136] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [137] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [138] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [139] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [140] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [141] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [142] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [143] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [144] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [145] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [146] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [147] Error: connect EHOSTUNREACH 141.144.193.218:3200\n"
+  },
+  "stop": {
+    "ok": false,
+    "status": null,
+    "data": null,
+    "error": "connect EHOSTUNREACH 141.144.193.218:3200"
+  },
+  "drain": {
+    "command": "C:\\nvm4w\\nodejs\\node.exe",
+    "args": [
+      "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\tools\\crawl\\crawl-remote.js",
+      "sync",
+      "--host",
+      "141.144.193.218:3200",
+      "--rounds",
+      "12",
+      "--interval",
+      "3",
+      "--window",
+      "30",
+      "--limit",
+      "5",
+      "--adaptive-limit",
+      "--target-sync-ms",
+      "5000",
+      "--min-limit",
+      "1",
+      "--max-limit",
+      "25",
+      "--include-content",
+      "--include-links",
+      "--prune-after-ingest",
+      "--no-backoff",
+      "--remote-storage-budget-mb",
+      "512",
+      "--remote-storage-reserve-mb",
+      "256",
+      "--normal-concurrency",
+      "10",
+      "--perf-summary-every",
+      "1"
+    ],
+    "startedAt": "2026-05-09T17:10:29.772Z",
+    "finishedAt": "2026-05-09T17:11:42.779Z",
+    "exitCode": null,
+    "signal": "SIGTERM",
+    "stoppedAtDeadline": true,
+    "hardTimedOut": false,
+    "outputText": "═══════════════════════════════════════════════════════\n\n  Continuous Sync Loop\n═══════════════════════════════════════════════════════\n  Remote: 141.144.193.218:3200\n  Local DB: C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\data\\news.db\n  Interval: 3s\n  Window: 30s\n  Limit: 5\n  Adaptive batching: enabled target=5000ms min=1 max=25\n  Storage budget: enabled budget=512MB reserve=256MB\n  Prune after ingest: enabled\n  Backoff: disabled\n  Max rounds: 12\n  Ledger: C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\tools\\crawl\\.crawl-remote-ledger.json (25 entries, wm=2026-05-09 16:57:35)\n  Press Ctrl+C to stop\n\n\n  [1] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  Adaptive limit shrink: 5 → 2 (error-round, target=5000ms)\n\n  [2] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  Adaptive limit shrink: 2 → 1 (error-round, target=5000ms)\n\n  [3] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [4] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [5] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [6] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [7] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [8] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [9] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [10] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [11] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n  [12] Error: connect EHOSTUNREACH 141.144.193.218:3200\n\n\n  Sync complete: 12 rounds, 0 URLs, 0 content records pulled\n  Ledger: 25 entries, last watermark=2026-05-09 16:57:35\n"
+  },
+  "validation": {
+    "ok": false,
+    "checks": [
+      {
+        "name": "strict-time-limit",
+        "ok": true,
+        "actual": 879023,
+        "expected": "<= 900000ms",
+        "severity": "fatal"
+      },
+      {
+        "name": "remote-health",
+        "ok": true,
+        "actual": 200,
+        "expected": "healthy / reachable",
+        "severity": "fatal"
+      },
+      {
+        "name": "remote-throttle-endpoint",
+        "ok": true,
+        "actual": 200,
+        "expected": "HTTP 200 throttle endpoint",
+        "severity": "error"
+      },
+      {
+        "name": "new-responses",
+        "ok": true,
+        "actual": 125,
+        "expected": ">= 25",
+        "severity": "error"
+      },
+      {
+        "name": "successful-responses",
+        "ok": true,
+        "actual": 112,
+        "expected": ">= 10",
+        "severity": "error"
+      },
+      {
+        "name": "content-rows",
+        "ok": true,
+        "actual": 125,
+        "expected": ">= 5",
+        "severity": "error"
+      },
+      {
+        "name": "host-spread",
+        "ok": false,
+        "actual": 0,
+        "expected": ">= 3",
+        "severity": "error"
+      },
+      {
+        "name": "failure-ratio",
+        "ok": false,
+        "actual": 1,
+        "expected": "<= 0.6",
+        "severity": "error"
+      },
+      {
+        "name": "ledger-unconfirmed",
+        "ok": false,
+        "actual": 1,
+        "expected": "<= 0",
+        "severity": "error"
+      },
+      {
+        "name": "ledger-unpruned",
+        "ok": true,
+        "actual": 0,
+        "expected": "<= 2",
+        "severity": "error"
+      },
+      {
+        "name": "child-exit",
+        "ok": true,
+        "actual": 0,
+        "expected": "clean exit or deadline stop",
+        "severity": "error"
+      },
+      {
+        "name": "run-log-errors",
+        "ok": false,
+        "actual": [
+          "[137] Error: connect EHOSTUNREACH 141.144.193.218:3200",
+          "[138] Error: connect EHOSTUNREACH 141.144.193.218:3200",
+          "[139] Error: connect EHOSTUNREACH 141.144.193.218:3200",
+          "[140] Error: connect EHOSTUNREACH 141.144.193.218:3200",
+          "[141] Error: connect EHOSTUNREACH 141.144.193.218:3200"
+        ],
+        "expected": "no error lines",
+        "severity": "warn"
+      }
+    ],
+    "diagnostics": [
+      "host-spread: expected >= 3, got 0",
+      "failure-ratio: expected <= 0.6, got 1",
+      "ledger-unconfirmed: expected <= 0, got 1",
+      "run-log-errors: expected no error lines, got [\"[137] Error: connect EHOSTUNREACH 141.144.193.218:3200\",\"[138] Error: connect EHOSTUNREACH 141.144.193.218:3200\",\"[139] Error: connect EHOSTUNREACH 141.144.193.218:3200\",\"[140] Error: connect EHOSTUNREACH 141.144.193.218:3200\",\"[141] Error: connect EHOSTUNREACH 141.144.193.218:3200\"]"
+    ],
+    "deltas": {
+      "urls": 39,
+      "responses": 125,
+      "successResponses": 112,
+      "failedResponses": 13,
+      "content": 125
+    },
+    "ledger": {
+      "entries": 25,
+      "unconfirmed": 1,
+      "unpruned": 0,
+      "completed": 24,
+      "lastWatermark": "2026-05-09 16:57:35",
+      "totalPulled": 55681
+    },
+    "benchmark": {
+      "elapsedMs": 879023,
+      "downloadsPerMinute": 8.532199953812357,
+      "successPerMinute": 7.644851158615873,
+      "contentPerMinute": 8.532199953812357,
+      "bytesPerMinute": 0,
+      "roundSamples": 24,
+      "fetchMs": {
+        "p50": 322,
+        "p95": 1332
+      },
+      "ingestMs": {
+        "p50": 15,
+        "p95": 83
+      },
+      "roundMs": {
+        "p50": 406,
+        "p95": 1503
+      }
+    }
+  }
+}

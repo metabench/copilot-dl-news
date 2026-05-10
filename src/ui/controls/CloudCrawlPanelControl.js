@@ -7,9 +7,14 @@ const StringControl = jsgui.String_Control;
 const DEFAULT_TARGETS = Object.freeze([
   { domain: "bbc.com", label: "BBC" },
   { domain: "theguardian.com", label: "Guardian" },
-  { domain: "cbsnews.com", label: "CBS" },
-  { domain: "nbcnews.com", label: "NBC" },
-  { domain: "france24.com", label: "France 24" }
+  { domain: "reuters.com", label: "Reuters" },
+  { domain: "nytimes.com", label: "NYTimes" },
+  { domain: "washingtonpost.com", label: "Washington Post" },
+  { domain: "cnn.com", label: "CNN" },
+  { domain: "apnews.com", label: "AP" },
+  { domain: "bloomberg.com", label: "Bloomberg" },
+  { domain: "ft.com", label: "FT" },
+  { domain: "npr.org", label: "NPR" }
 ]);
 
 function normalizeTargets(targets) {
@@ -29,8 +34,8 @@ class CloudCrawlPanelControl extends jsgui.Control {
    *
    * @param {Object} spec
    * @param {Object} spec.context jsgui page context.
-   * @param {Array<string|Object>} [spec.targets] Five-site crawl target list.
-   * @param {number} [spec.maxPagesPerSite=5] Per-site page goal.
+  * @param {Array<string|Object>} [spec.targets] Cloud crawl target list.
+  * @param {number} [spec.maxPagesPerSite=1000] Per-site page goal.
    * @param {string} [spec.apiBase="/api/cloud-crawl"] Status API base path.
    * @param {string|null} [spec.since] Date/time lower bound for the compact status view.
    */
@@ -42,11 +47,11 @@ class CloudCrawlPanelControl extends jsgui.Control {
     });
 
     this.targets = normalizeTargets(spec.targets);
-    this.maxPagesPerSite = Number.isFinite(Number(spec.maxPagesPerSite)) ? Number(spec.maxPagesPerSite) : 5;
+    this.maxPagesPerSite = Number.isFinite(Number(spec.maxPagesPerSite)) ? Number(spec.maxPagesPerSite) : 1000;
     this.apiBase = spec.apiBase || "/api/cloud-crawl";
     this.since = spec.since === undefined ? new Date().toISOString().slice(0, 10) : spec.since;
     this.screenshotRoute = spec.screenshotRoute || "/?app=cloud-crawl";
-    this.command = spec.command || `npm run crawl -- remote bounded --domains ${this.targets.map((target) => target.domain).join(",")} --max-pages ${this.maxPagesPerSite} --max-concurrent ${this.targets.length} --poll 3 --timeout-min 10`;
+    this.command = spec.command || `npm run crawl -- news-10x1000`;
 
     this.add_class("cloud-crawl-panel");
     this.add_class("home-dashboard");
@@ -66,6 +71,7 @@ class CloudCrawlPanelControl extends jsgui.Control {
   compose() {
     this._composeHero();
     this._composeStats();
+    this._composeHealthCard();
     this._composeRunStrip();
     this._composeTargets();
     this._composeRecent();
@@ -90,6 +96,34 @@ class CloudCrawlPanelControl extends jsgui.Control {
     stats.add(this._statCard("Downloaded", "downloaded", "-"));
     stats.add(this._statCard("Errors", "errors", "-"));
     this.add(stats);
+  }
+
+  _composeHealthCard() {
+    const section = this._el("div", "panel-section cloud-crawl-health", {
+      "data-cloud-crawl-health-card": "true"
+    });
+    section.add(this._textEl("h3", "Operator Health", "panel-section__title"));
+    const grid = this._el("div", "cloud-crawl-health__grid");
+    grid.add(this._healthCell("Remote", "remote", "checking…"));
+    grid.add(this._healthCell("Local watermark", "localWatermark", "—"));
+    grid.add(this._healthCell("Last sync", "lastSyncDurationMs", "—"));
+    grid.add(this._healthCell("Last pruned", "lastPrunedDeleted", "—"));
+    grid.add(this._healthCell("Remote storage", "remoteContentMb", "—"));
+    grid.add(this._healthCell("Sync lag", "syncLagMs", "—"));
+    grid.add(this._healthCell("Ledger", "ledgerSummary", "—"));
+    section.add(grid);
+    this.add(section);
+  }
+
+  _healthCell(label, key, value) {
+    const cell = this._el("div", "cloud-crawl-health__cell", {
+      "data-cloud-crawl-health": key
+    });
+    cell.add(this._textEl("div", label, "cloud-crawl-health__label"));
+    const valueEl = this._textEl("div", value, "cloud-crawl-health__value");
+    valueEl.dom.attributes["data-cloud-crawl-health-value"] = key;
+    cell.add(valueEl);
+    return cell;
   }
 
   _composeRunStrip() {

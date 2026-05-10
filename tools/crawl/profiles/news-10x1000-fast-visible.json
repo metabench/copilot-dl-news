@@ -1,0 +1,19 @@
+{
+  "description": "Fast-visible 10x1000 sync: metadata-only batches for instant UI visibility, no remote prune. Pair with news-10x1000 for durable drain.",
+  "tool": "remote",
+  "positionals": [
+    "sync"
+  ],
+  "options": {
+    "interval": 5,
+    "window": 10,
+    "limit": 50,
+    "include-content": false,
+    "include-links": false,
+    "adaptive-limit": true,
+    "target-sync-ms": 3000,
+    "min-limit": 5,
+    "max-limit": 200,
+    "no-backoff": true
+  }
+}

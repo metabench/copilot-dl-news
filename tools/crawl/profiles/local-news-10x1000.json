@@ -1,0 +1,12 @@
+{
+  "description": "Local fallback batch crawl: 10 major news sites x 1000 pages each, in-process via the unified UI v1 API. Use only when the remote crawler is unavailable.",
+  "tool": "batch",
+  "options": {
+    "preset": "news-10",
+    "operation": "basicArticleCrawl",
+    "max-pages": 1000,
+    "max-depth": 6,
+    "concurrency": 5,
+    "retries": 2
+  }
+}
