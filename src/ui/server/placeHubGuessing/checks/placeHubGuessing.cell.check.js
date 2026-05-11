@@ -20,7 +20,8 @@ const {
   getPlaceNameVariants,
   generateUrlPatterns,
   getHostUrlPatterns,
-  getHostAnalysisFreshness
+  getHostAnalysisFreshness,
+  getPlaceHubGuessingFirstVerifiedMappingWithUrl
 } = require('../../../../data/db/sqlite/v1/queries/placeHubGuessingUiQueries');
 
 const jsgui = require('jsgui3-html');
@@ -134,13 +135,7 @@ function main() {
 
   const dbHandle = resolved.dbHandle;
 
-  // Find a verified mapping to test with
-  const testMapping = dbHandle.prepare(`
-    SELECT place_id, host, url, status, verified_at, evidence
-    FROM place_page_mappings
-    WHERE status = 'verified' AND url IS NOT NULL
-    LIMIT 1
-  `).get();
+  const testMapping = getPlaceHubGuessingFirstVerifiedMappingWithUrl(dbHandle);
 
   check('Found test mapping', !!testMapping);
 

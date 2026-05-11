@@ -111,62 +111,23 @@ function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function loadCountryMetadata(db) {
-  const countries = db.prepare(`
-    WITH country_names AS (
-      SELECT
-        p.id,
-        p.country_code AS code,
-        COALESCE(
-          (SELECT name FROM place_names WHERE id = p.canonical_name_id),
-          (SELECT name FROM place_names
-             WHERE place_id = p.id
-             ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
-             LIMIT 1)
-        ) AS name,
-        COALESCE(p.priority_score, p.population, 0) AS importance
-      FROM places p
-      WHERE p.kind = 'country'
-        AND p.status = 'current'
-        AND p.country_code IS NOT NULL
-    )
-    SELECT id, name, code, importance
-    FROM country_names
-    WHERE name IS NOT NULL
-  `).all();
+function getDsplAnalysis(db) {
+  if (!db || !db.dsplAnalysis) {
+    throw new Error('news-crawler-db dsplAnalysis access is unavailable');
+  }
+  return db.dsplAnalysis;
+}
 
-  const nameRows = db.prepare(`
-    SELECT pn.place_id, pn.name, pn.normalized
-    FROM place_names pn
-    JOIN places p ON pn.place_id = p.id
-    WHERE p.kind = 'country'
-  `).all();
+function loadCountryMetadata(db) {
+  const access = getDsplAnalysis(db);
+  const countries = access.listDsplCountryMetadataRows();
+  const nameRows = access.listDsplCountryNameRows();
 
   return new CountryMetadata({ countries, nameRows });
 }
 
 function loadRegionMetadata(db) {
-  const rows = db.prepare(`
-    WITH region_names AS (
-      SELECT
-        p.id,
-        COALESCE(
-          (SELECT name FROM place_names WHERE id = p.canonical_name_id),
-          (SELECT name FROM place_names
-             WHERE place_id = p.id
-             ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
-             LIMIT 1)
-        ) AS name,
-        p.country_code AS countryCode,
-        p.adm1_code AS regionCode
-      FROM places p
-      WHERE p.kind = 'region'
-        AND p.status = 'current'
-    )
-    SELECT id, name, countryCode, regionCode
-    FROM region_names
-    WHERE name IS NOT NULL
-  `).all();
+  const rows = getDsplAnalysis(db).listDsplRegionMetadataRows();
 
   const index = new Map();
   for (const row of rows) {
@@ -185,42 +146,7 @@ function loadRegionMetadata(db) {
 }
 
 function loadCityMetadata(db) {
-  const rows = db.prepare(`
-    WITH direct_parent AS (
-      SELECT child_id, MIN(parent_id) AS parent_id
-        FROM place_hierarchy
-       WHERE depth IS NULL OR depth = 1
-       GROUP BY child_id
-    ),
-    city_names AS (
-      SELECT
-        city.id,
-        COALESCE(
-          (SELECT name FROM place_names WHERE id = city.canonical_name_id),
-          (SELECT name FROM place_names
-             WHERE place_id = city.id
-             ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
-             LIMIT 1)
-        ) AS name,
-        city.country_code AS countryCode,
-        dp.parent_id AS regionId
-      FROM places city
-      LEFT JOIN direct_parent dp ON dp.child_id = city.id
-      WHERE city.kind = 'city'
-        AND city.status = 'current'
-    ),
-    region_codes AS (
-      SELECT
-        region.id,
-        region.adm1_code AS regionCode
-      FROM places region
-      WHERE region.kind = 'region'
-    )
-    SELECT cn.id, cn.name, cn.countryCode, cn.regionId, rc.regionCode
-    FROM city_names cn
-    LEFT JOIN region_codes rc ON rc.id = cn.regionId
-    WHERE cn.name IS NOT NULL
-  `).all();
+  const rows = getDsplAnalysis(db).listDsplCityMetadataRows();
 
   const index = new Map();
   for (const row of rows) {

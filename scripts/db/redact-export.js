@@ -1,9 +1,19 @@
 #!/usr/bin/env node
 "use strict";
 
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
+
+function getDbApi(name) {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const fn = dbModule[name];
+  if (typeof fn !== 'function') {
+    throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+  }
+  return fn;
+}
+
 function parseArgs(argv) {
   const args = {};
   for (let i = 0; i < argv.length; i++) {
@@ -33,47 +43,23 @@ function copyDb(source, dest) {
 }
 
 function ensureFetchesTable(db) {
-  const has = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='fetches'").all();
-  if (has.length) return;
-  // Create a minimal fetches table so domain stats can use it
-  db.exec(`CREATE TABLE fetches (id INTEGER PRIMARY KEY AUTOINCREMENT, url TEXT, url_id INTEGER, fetched_at DATETIME, crawled_at DATETIME, classification TEXT, host TEXT)`);
-  const urls = db.prepare('SELECT url FROM urls LIMIT 50').all();
-  const insert = db.prepare('INSERT INTO fetches (url, fetched_at, crawled_at, classification, host) VALUES (?, datetime("now"), datetime("now"), "article", ?)');
-  const tx = db.transaction((rows) => {
-    for (const r of rows) {
-      try {
-        const host = new URL(r.url).host;
-        insert.run(r.url, host);
-      } catch (e) {
-        insert.run(r.url, null);
-      }
-    }
-  });
-  tx(urls);
+  return getDbApi('ensureRedactedExportFetchesTable')(db);
 }
 
 function ensureErrorsUrlColumn(db) {
-  const cols = db.prepare("PRAGMA table_info(errors)").all();
-  const hasUrl = cols.some(c => c.name === 'url');
-  if (hasUrl) return;
-  try {
-    db.exec(`ALTER TABLE errors ADD COLUMN url TEXT`);
-  } catch (e) {
-    console.warn('Unable to add url column to errors table:', e.message);
+  const result = getDbApi('ensureRedactedExportErrorsUrlColumn')(db);
+  if (result.error) {
+    console.warn('Unable to add url column to errors table:', result.error);
   }
+  return result;
 }
 
 function ensureCrawlJobsUrl(db) {
-  const cols = db.prepare("PRAGMA table_info(crawl_jobs)").all();
-  const hasUrl = cols.some(c => c.name === 'url');
-  if (hasUrl) return;
-  try {
-    db.exec(`ALTER TABLE crawl_jobs ADD COLUMN url TEXT`);
-    // Populate with the start_url for older rows if available
-    // no-op if not
-  } catch (e) {
-    console.warn('Unable to add url column to crawl_jobs table:', e.message);
+  const result = getDbApi('ensureRedactedExportCrawlJobsUrlColumn')(db);
+  if (result.error) {
+    console.warn('Unable to add url column to crawl_jobs table:', result.error);
   }
+  return result;
 }
 
 function main() {
@@ -91,9 +77,7 @@ function main() {
   copyDb(source, dest);
   const db = openNewsCrawlerDb(dest);
   try {
-    ensureFetchesTable(db);
-    ensureErrorsUrlColumn(db);
-    ensureCrawlJobsUrl(db);
+    getDbApi('prepareRedactedExportSnapshotDb')(db, { sampleLimit: 50 });
     console.log('Snapshot ready:', dest);
   } finally {
     db.close();

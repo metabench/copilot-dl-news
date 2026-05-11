@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const {
+  countPlacesByKind,
+  listPlaceNamesForBenchmark
+} = require('news-crawler-db');
 /* eslint-disable no-console */
 const fs = require('fs');
 const path = require('path');
@@ -105,11 +109,8 @@ async function benchmarkDirectDb({ dbPath, iterations }) {
   const section = { name: 'direct-db', benchmarks: [] };
   const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
   try {
-    const countCountriesStmt = db.prepare("SELECT COUNT(1) as total FROM places WHERE kind='country'");
-    const topCitiesStmt = db.prepare("SELECT id, name FROM place_names ORDER BY id LIMIT 20");
-
     const countDurations = await runTimed(iterations, () => {
-      countCountriesStmt.get();
+      countPlacesByKind(db, 'country');
     });
     section.benchmarks.push({
       name: 'count-countries',
@@ -117,7 +118,7 @@ async function benchmarkDirectDb({ dbPath, iterations }) {
     });
 
     const citiesDurations = await runTimed(iterations, () => {
-      topCitiesStmt.all();
+      listPlaceNamesForBenchmark(db, { limit: 20 });
     });
     section.benchmarks.push({
       name: 'list-canonical-names',
@@ -226,4 +227,3 @@ main().catch((err) => {
   console.error('Benchmark execution failed:', err);
   process.exitCode = 1;
 });
-

@@ -23,80 +23,14 @@ console.log('─'.repeat(50));
 // ─────────────────────────────────────────────────────────────
 console.log('\n[1] Testing AdminAdapter...');
 
-const { createAdminAdapter } = require('../../../../data/db/sqlite/v1/queries/adminAdapter');
+const {
+  createAdminAdapter,
+  createAdminDashboardCheckFixture
+} = require('../../../../data/db/sqlite/v1/queries/adminAdapter');
 
 const db = openNewsCrawlerDb(':memory:');
-db.exec(`
-  CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL DEFAULT '',
-    password_salt TEXT NOT NULL DEFAULT '',
-    display_name TEXT,
-    settings TEXT DEFAULT '{}',
-    role TEXT DEFAULT 'user',
-    is_active INTEGER DEFAULT 1,
-    email_verified INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    last_login_at TEXT,
-    suspended_at TEXT,
-    suspended_reason TEXT
-  )
-`);
-db.exec(`
-  CREATE TABLE crawl_jobs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    status TEXT DEFAULT 'pending',
-    urls_found INTEGER DEFAULT 0,
-    urls_processed INTEGER DEFAULT 0,
-    started_at TEXT,
-    completed_at TEXT,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    finished_at TEXT,
-    pages_crawled INTEGER DEFAULT 0,
-    error_message TEXT
-  )
-`);
-db.exec(`
-  CREATE TABLE user_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    event_type TEXT,
-    timestamp TEXT
-  )
-`);
-db.exec(`
-  CREATE TABLE user_sessions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    token TEXT,
-    expires_at TEXT
-  )
-`);
-db.exec(`
-  CREATE TABLE urls (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    url TEXT
-  )
-`);
-db.exec(`
-  CREATE TABLE http_responses (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    url_id INTEGER
-  )
-`);
-db.exec(`
-  CREATE TABLE content_analysis (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    url_id INTEGER
-  )
-`);
-
+createAdminDashboardCheckFixture(db);
 const adminAdapter = createAdminAdapter(db);
-
-// Seed test user
-db.prepare('INSERT INTO users (email, display_name, role) VALUES (?, ?, ?)').run('admin@test.com', 'Admin', 'admin');
 
 const stats = adminAdapter.getSystemStats();
 assert(stats.users.total === 1, 'Should have 1 user');

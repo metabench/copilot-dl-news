@@ -13,6 +13,11 @@
  * @param {Object} config - Crawler configuration
  * @param {Object} options - Additional options (db, cache instances)
  */
+const {
+  getLegacyArticleRecordByUrl,
+  upsertLegacyArticleRecord
+} = require('news-crawler-db');
+
 function registerStorageServices(container, config, options = {}) {
   // Cache (in-memory by default)
   container.register('cache', (c) => {
@@ -128,12 +133,9 @@ function registerStorageServices(container, config, options = {}) {
         }
 
         // Persist to DB if available
-        if (dbAdapter.run) {
+        if (dbAdapter) {
           try {
-            await dbAdapter.run(
-              `INSERT OR REPLACE INTO articles (url, title, content, crawled_at) VALUES (?, ?, ?, ?)`,
-              [article.url, article.title, article.content, Date.now()]
-            );
+            await upsertLegacyArticleRecord(dbAdapter, article);
           } catch (e) {
             // Log but don't fail
             console.warn('Failed to store article:', e.message);
@@ -154,15 +156,12 @@ function registerStorageServices(container, config, options = {}) {
         if (cached) return cached;
 
         // Query DB
-        if (dbAdapter.query) {
+        if (dbAdapter) {
           try {
-            const rows = await dbAdapter.query(
-              `SELECT * FROM articles WHERE url = ?`,
-              [url]
-            );
-            if (rows.length > 0) {
-              cache.set(`article:${url}`, rows[0], 3600000);
-              return rows[0];
+            const row = await getLegacyArticleRecordByUrl(dbAdapter, url);
+            if (row) {
+              cache.set(`article:${url}`, row, 3600000);
+              return row;
             }
           } catch (e) {
             // Ignore

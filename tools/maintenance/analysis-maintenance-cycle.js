@@ -15,7 +15,7 @@ const path = require('path');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
 const { analysePages } = require('../../src/tools/analyse-pages-core');
 const { runAnalysisPostProcessing } = require('../../src/tools/analyze-post-run');
-const { ensureDatabase } = require('../../src/data/db/sqlite/v1');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const { main: compressUncompressedRecords } = require('../compress-uncompressed-records');
 
 function createColorPalette() {
@@ -188,59 +188,21 @@ function formatProgressLine(progress, colors) {
   return `   ${colors.gray}↺${colors.reset} ${pieces.join(`${colors.gray} | ${colors.reset}`)}`;
 }
 
-function tableExists(db, tableName) {
-  try {
-    const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ? LIMIT 1").get(tableName);
-    return Boolean(row);
-  } catch (error) {
-    return false;
-  }
-}
-
 function collectMaintenanceSnapshot(dbPath, { topUnknownLimit = 5 } = {}) {
-  const db = ensureDatabase(dbPath);
+  const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
   try {
-    const snapshot = {
-      unknownCount: null,
-      topUnknownTerms: [],
-      compressionStatus: null,
-      uncompressedCount: null
-    };
-
-    if (tableExists(db, 'place_hub_unknown_terms')) {
-      const countRow = db.prepare('SELECT COUNT(*) AS count FROM place_hub_unknown_terms').get();
-      snapshot.unknownCount = countRow ? Number(countRow.count) : 0;
-      if (topUnknownLimit > 0) {
-        snapshot.topUnknownTerms = db.prepare(`
-          SELECT host, term_label, term_slug, reason, confidence, occurrences, last_seen_at
-            FROM place_hub_unknown_terms
-        ORDER BY occurrences DESC, last_seen_at DESC
-           LIMIT ?
-        `).all(topUnknownLimit);
-      }
-    }
-
-    if (tableExists(db, 'compression_status')) {
-      snapshot.compressionStatus = db.prepare('SELECT * FROM compression_status WHERE id = 1').get() || null;
-      if (snapshot.compressionStatus && snapshot.compressionStatus.uncompressed_items != null) {
-        snapshot.uncompressedCount = Number(snapshot.compressionStatus.uncompressed_items);
-      }
-    }
-
-    if (snapshot.uncompressedCount == null && tableExists(db, 'content_storage')) {
-      const row = db.prepare(`
-        SELECT COUNT(*) AS count
-          FROM content_storage
-         WHERE compression_type_id IS NULL
-           AND content_blob IS NOT NULL
-      `).get();
-      snapshot.uncompressedCount = row ? Number(row.count) : 0;
-    }
-
-    return snapshot;
+    return getDbModule().collectAnalysisMaintenanceSnapshot(db, { topUnknownLimit });
   } finally {
     try { db.close(); } catch (_) { /* ignore */ }
   }
+}
+
+function getDbModule() {
+  const dbModule = resolveNewsCrawlerDbModule();
+  if (!dbModule || typeof dbModule.collectAnalysisMaintenanceSnapshot !== 'function') {
+    throw new Error('news-crawler-db analysis maintenance helpers are unavailable. Rebuild news-crawler-db.');
+  }
+  return dbModule;
 }
 
 async function runStage(label, taskFn, colors) {

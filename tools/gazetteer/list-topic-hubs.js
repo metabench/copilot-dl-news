@@ -2,7 +2,7 @@
 
 /**
  * list-topic-hubs - List all discovered topic hubs from the database
- * 
+ *
  * Usage:
  *   node tools/gazetteer/list-topic-hubs.js
  */
@@ -10,6 +10,11 @@
 const fs = require('fs');
 const path = require('path');
 const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
+
+const {
+  listTopicHubDisplayRowsForHostPattern
+} = resolveNewsCrawlerDbModule();
 
 // Load configuration
 const configPath = path.join(__dirname, '..', '..', 'config.json');
@@ -29,20 +34,7 @@ const domain = new URL(config.url).hostname;
 const dbPath = path.join(__dirname, '..', '..', 'data', 'news.db');
 const db = ensureDatabase(dbPath);
 
-// Query the place_hubs table for topic hubs
-const query = `
-  SELECT topic_slug, title, url
-  FROM place_hubs
-  WHERE host LIKE ?
-  AND topic_slug IS NOT NULL
-  AND topic_slug != ''
-  AND (place_slug IS NULL OR place_slug = '')
-  AND url NOT LIKE '%?page=%'
-  AND url NOT LIKE '%&page=%'
-  ORDER BY topic_slug
-`;
-
-const topicHubs = db.prepare(query).all(`%${domain}%`);
+const topicHubs = listTopicHubDisplayRowsForHostPattern(db, `%${domain}%`);
 
 // Format the hubs
 const hubs = topicHubs.map(hub => {
@@ -51,7 +43,7 @@ const hubs = topicHubs.map(hub => {
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
-  
+
   return { name, title: hub.title, url: hub.url };
 });
 
@@ -77,7 +69,7 @@ if (uniqueHubs.length === 0) {
     const num = `${index + 1}.`.padEnd(6);
     console.log(`${num}${hub.name}`);
   });
-  
+
   console.log('\n' + '─'.repeat(80));
   console.log(`Total: ${uniqueHubs.length} topic hub${uniqueHubs.length === 1 ? '' : 's'}\n`);
 }

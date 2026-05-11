@@ -6,8 +6,9 @@
  * Usage: node sample-place-matching.js
  */
 
-const { ensureDatabase } = require('../src/data/db/sqlite/v1');
-const { ArticlePlaceMatcher } = require('../src/intelligence/matching/ArticlePlaceMatcher');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { listRandomLargeArticleSamples } = require('news-crawler-db');
+const { ArticlePlaceMatcher } = require('../../src/intelligence/matching/ArticlePlaceMatcher');
 
 // Simple HTML text extraction (strips tags and normalizes whitespace)
 function extractTextFromHtml(html) {
@@ -37,23 +38,12 @@ function extractTextFromHtml(html) {
 async function main() {
   console.log('🔍 Sampling 20 random articles for place matching...\n');
 
-  const db = ensureDatabase('./data/news.db');
+  const db = openNewsCrawlerDb('./data/news.db');
 
-  // Get 20 random articles with content
-  const articles = db.prepare(`
-    SELECT
-      hr.id,
-      hr.url_id,
-      u.url,
-      cs.content_blob,
-      cs.uncompressed_size
-    FROM http_responses hr
-    JOIN content_storage cs ON hr.id = cs.http_response_id
-    JOIN urls u ON hr.url_id = u.id
-    WHERE cs.uncompressed_size > 1000
-    ORDER BY RANDOM()
-    LIMIT 20
-  `).all();
+  const articles = listRandomLargeArticleSamples(db, {
+    minUncompressedSize: 1000,
+    limit: 20
+  });
 
   console.log(`📊 Found ${articles.length} articles to analyze\n`);
 
@@ -145,6 +135,7 @@ async function main() {
   }
 
   console.log(`\n✅ Place matching dry run complete`);
+  await db.close();
 }
 
 main().catch(console.error);

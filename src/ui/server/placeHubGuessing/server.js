@@ -34,6 +34,7 @@ const {
   getHostUrlPatterns,
   getHostAnalysisFreshness,
   getPlaceById,
+  getPlaceHubGuessingMappingByPlaceHost,
   getUncheckedHostsForPlace,
   getMappingsForPlace,
   getSitePatterns,
@@ -317,11 +318,7 @@ async function createPlaceHubGuessingRouter(options = {}) {
         return res.status(404).send('Place not found');
       }
 
-      // Re-fetch mapping to ensure fresh data
-      const mapping = resolved.dbHandle.prepare(`
-        SELECT * FROM place_page_mappings 
-        WHERE place_id = ? AND host = ? AND page_kind = ?
-      `).get(placeId, host, pageKind);
+      const mapping = getPlaceHubGuessingMappingByPlaceHost(resolved.dbHandle, { placeId, host, pageKind });
 
       const html = renderPlaceHubGuessingCellHtml({
         basePath: req.baseUrl,

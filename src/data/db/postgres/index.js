@@ -1,11 +1,7 @@
-const { createPool } = require('./v1/connection');
-const PostgresNewsDatabase = require('./v1/PostgresNewsDatabase');
+'use strict';
 
-function createPostgresDatabase(options) {
-  const pool = createPool(options);
-  return new PostgresNewsDatabase(pool, options);
-}
+const { createPostgresNewsDatabase } = require('news-crawler-db');
 
 module.exports = {
-  createPostgresDatabase
+  createPostgresDatabase: createPostgresNewsDatabase
 };

@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const {
+  openNewsCrawlerDb,
+  resolveNewsCrawlerDbModule
+} = require('../../src/db/openNewsCrawlerDb');
 /**
  * health-check.js - Container Health Check Script
  * ================================================
@@ -70,19 +73,12 @@ async function checkPostgres() {
     throw new Error('DATABASE_URL not set');
   }
   
-  // Try to connect using pg client
-  const { Client } = require('pg');
-  const client = new Client({ connectionString: dbUrl });
-  
-  try {
-    await client.connect();
-    const result = await client.query('SELECT 1 as health');
-    if (result.rows[0].health !== 1) {
-      throw new Error('Unexpected query result');
-    }
-  } finally {
-    await client.end();
+  const { checkPostgresHealth } = resolveNewsCrawlerDbModule();
+  if (typeof checkPostgresHealth !== 'function') {
+    throw new Error('news-crawler-db does not export checkPostgresHealth');
   }
+
+  await checkPostgresHealth({ connectionString: dbUrl });
 }
 
 /**

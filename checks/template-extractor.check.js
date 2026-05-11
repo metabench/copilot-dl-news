@@ -1,6 +1,7 @@
 'use strict';
 
 const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
+const { databaseTableExists } = require('news-crawler-db');
 /**
  * Template Extractor Check Script
  * 
@@ -296,13 +297,10 @@ try {
   const dbPath = path.resolve(__dirname, '../data/news.db');
   db = openNewsCrawlerDb(dbPath);
   
-  // Ensure tables exist
-  const tables = db.prepare(`
-    SELECT name FROM sqlite_master 
-    WHERE type='table' AND name IN ('layout_signatures', 'layout_templates')
-  `).all();
-  
-  if (tables.length < 2) {
+  const hasLayoutTables = databaseTableExists(db, 'layout_signatures')
+    && databaseTableExists(db, 'layout_templates');
+
+  if (!hasLayoutTables) {
     console.log('  ⏭️ Skipping DB tests (tables not found)');
   } else {
     service = new TemplateExtractionService({ db });

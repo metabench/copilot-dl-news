@@ -37,18 +37,19 @@ function main() {
 
   const resolved = resolveBetterSqliteHandle({ dbPath: DB_PATH, readonly: true });
   const { dbHandle } = resolved;
+  const diagnostics = dbHandle?.placeHubDiagnostics;
 
   try {
     check(!!dbHandle, 'Database handle resolved');
+    check(!!diagnostics, 'Place-hub diagnostics access resolved');
+    if (!diagnostics) {
+      throw new Error('news-crawler-db placeHubDiagnostics access is required');
+    }
 
-    // Query The Guardian's place mappings directly
-    const mappings = dbHandle.prepare(`
-      SELECT COUNT(*) as cnt FROM place_page_mappings 
-      WHERE host = 'theguardian.com' AND page_kind = 'country-hub'
-    `).get();
+    const mappingCount = diagnostics.countPlacePageMappingsForHostAndKind('theguardian.com', 'country-hub');
     
-    console.log(`\n📊 The Guardian has ${mappings.cnt} country-hub mappings\n`);
-    check(mappings.cnt > 0, 'The Guardian has place mappings in database');
+    console.log(`\n📊 The Guardian has ${mappingCount} country-hub mappings\n`);
+    check(mappingCount > 0, 'The Guardian has place mappings in database');
 
     // Test 1: Render matrix filtered to just The Guardian
     const html = renderPlaceHubGuessingMatrixHtml({
@@ -85,19 +86,11 @@ function main() {
     check(html.includes('data-testid="matrix-view-b"'), 'Has flipped view B');
     check(html.includes('Host \\ Place'), 'Has flipped corner label');
 
-    // Test 4: Check specific places that Guardian covers
-    // Ensure we only select actual 'country' records to match matrix logic
-    const guardianPlaces = dbHandle.prepare(`
-      SELECT DISTINCT
-        COALESCE(pn.name, p.country_code) as place_name
-      FROM place_page_mappings ppm
-      JOIN places p ON p.id = ppm.place_id
-      LEFT JOIN place_names pn ON pn.id = p.canonical_name_id
-      WHERE ppm.host = 'theguardian.com'
-        AND ppm.page_kind = 'country-hub'
-        AND p.kind = 'country'
-      LIMIT 10
-    `).all();
+    const guardianPlaces = diagnostics.listMappedCountryPlaceNamesForHostAndKind(
+      'theguardian.com',
+      'country-hub',
+      { limit: 10 }
+    );
 
     console.log('\n📍 Sample Guardian places:');
     for (const p of guardianPlaces.slice(0, 5)) {

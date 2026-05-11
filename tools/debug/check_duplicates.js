@@ -1,65 +1,62 @@
-const { ensureDatabase } = require('../src/data/db/sqlite');
-const db = ensureDatabase('./data/news.db');
+const path = require('path');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 
-// Check for URLs with multiple HTTP responses
-const duplicates = db.prepare(`
-  SELECT u.url, COUNT(hr.id) as response_count
-  FROM urls u
-  INNER JOIN http_responses hr ON hr.url_id = u.id
-  GROUP BY u.url
-  HAVING COUNT(hr.id) > 1
-  ORDER BY response_count DESC
-  LIMIT 10
-`).all();
+const dbPath = path.resolve(__dirname, '..', '..', 'data', 'news.db');
 
-console.log('URLs with multiple HTTP responses:');
-duplicates.forEach(row => {
-  console.log(`  ${row.url}: ${row.response_count} responses`);
-});
+function getDbApi(name) {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const fn = dbModule[name];
+  if (typeof fn !== 'function') {
+    throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+  }
+  return fn;
+}
 
-// Check storage coverage
-const withStorage = db.prepare(`
-  SELECT COUNT(*) as total_responses,
-         COUNT(CASE WHEN cs.id IS NOT NULL THEN 1 END) as with_storage
-  FROM http_responses hr
-  LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
-`).get();
+async function closeDb(db) {
+  if (db && typeof db.close === 'function') {
+    await db.close();
+  }
+}
 
-console.log(`Storage coverage: ${withStorage.with_storage}/${withStorage.total_responses} responses have storage (${((withStorage.with_storage/withStorage.total_responses)*100).toFixed(1)}%)`);
+async function main() {
+  const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    const getDiagnostics = getDbApi('getContentStorageDuplicateDiagnostics');
+    const diagnostics = getDiagnostics(db);
+    const { storageCoverage } = diagnostics;
+    const percent = storageCoverage.total_responses > 0
+      ? storageCoverage.pct_with_storage.toFixed(1)
+      : '0.0';
 
-// Check for responses without storage
-const withoutStorage = db.prepare(`
-  SELECT hr.id, u.url, hr.http_status, hr.bytes_downloaded
-  FROM http_responses hr
-  INNER JOIN urls u ON u.id = hr.url_id
-  LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
-  WHERE cs.id IS NULL AND hr.http_status >= 200 AND hr.http_status < 300
-  LIMIT 10
-`).all();
+    console.log('URLs with multiple HTTP responses:');
+    diagnostics.duplicateUrls.forEach(row => {
+      console.log(`  ${row.url}: ${row.response_count} responses`);
+    });
 
-console.log('\nSample HTTP responses without storage:');
-withoutStorage.forEach(row => {
-  console.log(`  HR ${row.id}: ${row.url} (${row.http_status}, ${row.bytes_downloaded} bytes)`);
-});
+    console.log(
+      `Storage coverage: ${storageCoverage.with_storage}/${storageCoverage.total_responses} responses have storage (${percent}%)`
+    );
 
-// Check foreign key constraints
-const fks = db.prepare('PRAGMA foreign_key_list(content_storage)').all();
-console.log('\nForeign keys on content_storage:');
-fks.forEach(fk => {
-  console.log(`  ${fk.table}.${fk.from} -> ${fk.table}.${fk.to}`);
-});
+    console.log('\nSample HTTP responses without storage:');
+    diagnostics.responsesWithoutStorage.forEach(row => {
+      console.log(`  HR ${row.id}: ${row.url} (${row.http_status}, ${row.bytes_downloaded} bytes)`);
+    });
 
-// Check for duplicate http_response_id in content_storage
-const storageDuplicates = db.prepare(`
-  SELECT http_response_id, COUNT(*) as count
-  FROM content_storage
-  GROUP BY http_response_id
-  HAVING COUNT(*) > 1
-  ORDER BY count DESC
-  LIMIT 5
-`).all();
+    console.log('\nForeign keys on content_storage:');
+    diagnostics.contentStorageForeignKeys.forEach(fk => {
+      console.log(`  content_storage.${fk.from} -> ${fk.table}.${fk.to}`);
+    });
 
-console.log('\nDuplicate http_response_id in content_storage:');
-storageDuplicates.forEach(row => {
-  console.log(`  HR ${row.http_response_id}: ${row.count} storage records`);
+    console.log('\nDuplicate http_response_id in content_storage:');
+    diagnostics.duplicateContentStorageResponses.forEach(row => {
+      console.log(`  HR ${row.http_response_id}: ${row.count} storage records`);
+    });
+  } finally {
+    await closeDb(db);
+  }
+}
+
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
 });

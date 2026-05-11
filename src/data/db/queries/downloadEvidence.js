@@ -8,7 +8,22 @@ const {
   getDownloadTimeline,
   getGlobalDownloadStats,
   getRecentDownloadVerifications,
-  summarizeDownloadVerifications
+  summarizeDownloadVerifications,
+  createDownloadVerificationCheckFixture,
+  listRecentDownloads,
+  getTodayDownloadStats,
+  getDownloadGlobalSummary,
+  listDownloadHosts,
+  listDownloadTimelineByMinute,
+  listUrlDownloadHistory,
+  getUrlDownloadEvidenceBundle,
+  DOWNLOAD_BAR_CHART_SOURCE_LABELS,
+  DOWNLOAD_BAR_CHART_VALID_SOURCES,
+  DOWNLOAD_BAR_CHART_VALID_MODES,
+  getDownloadBarChartSourceLabel,
+  getDailyDownloadBars,
+  getCloudCrawlDatabaseSnapshot,
+  getCloudCrawlRecentEvidence
 } = require('news-crawler-db');
 
 module.exports = {
@@ -19,5 +34,20 @@ module.exports = {
   getDownloadTimeline,
   getGlobalStats: getGlobalDownloadStats,
   getRecentDownloadVerifications,
-  summarizeDownloadVerifications
+  summarizeDownloadVerifications,
+  createDownloadVerificationCheckFixture,
+  listRecentDownloads,
+  getTodayDownloadStats,
+  getDownloadGlobalSummary,
+  listDownloadHosts,
+  listDownloadTimelineByMinute,
+  listUrlDownloadHistory,
+  getUrlDownloadEvidenceBundle,
+  DOWNLOAD_BAR_CHART_SOURCE_LABELS,
+  DOWNLOAD_BAR_CHART_VALID_SOURCES,
+  DOWNLOAD_BAR_CHART_VALID_MODES,
+  getDownloadBarChartSourceLabel,
+  getDailyDownloadBars,
+  getCloudCrawlDatabaseSnapshot,
+  getCloudCrawlRecentEvidence
 };

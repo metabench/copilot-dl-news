@@ -2,6 +2,11 @@ const { GazetteerPriorityScheduler } = require('../../../core/crawler/gazetteer/
 const { MultiGoalOptimizer } = require('../../../core/crawler/MultiGoalOptimizer');
 const { PredictiveHubDiscovery } = require('../../../core/crawler/PredictiveHubDiscovery');
 const { HierarchicalPlanner } = require('../../../core/crawler/HierarchicalPlanner');
+const { checkEnhancedDatabaseHealth } = require('news-crawler-db');
+
+function hasHealthyDb(db) {
+  return Boolean(db && checkEnhancedDatabaseHealth(db).ok);
+}
 
 async function check() {
   console.log('[Check] Verifying Batch 7 components...');
@@ -9,7 +14,7 @@ async function check() {
   try {
     // 1. GazetteerPriorityScheduler
     const scheduler = new GazetteerPriorityScheduler();
-    if (scheduler.db && scheduler.db.prepare('SELECT 1').get()) {
+    if (hasHealthyDb(scheduler.db)) {
       console.log('[Check] GazetteerPriorityScheduler initialized: true');
     } else {
       console.error('[Check] GazetteerPriorityScheduler initialized: false');
@@ -18,7 +23,7 @@ async function check() {
 
     // 2. MultiGoalOptimizer
     const optimizer = new MultiGoalOptimizer();
-    if (optimizer.db && optimizer.db.prepare('SELECT 1').get()) {
+    if (hasHealthyDb(optimizer.db)) {
       console.log('[Check] MultiGoalOptimizer initialized: true');
     } else {
       console.error('[Check] MultiGoalOptimizer initialized: false');
@@ -27,7 +32,7 @@ async function check() {
 
     // 3. PredictiveHubDiscovery
     const discovery = new PredictiveHubDiscovery();
-    if (discovery.db && discovery.db.prepare('SELECT 1').get()) {
+    if (hasHealthyDb(discovery.db)) {
       console.log('[Check] PredictiveHubDiscovery initialized: true');
     } else {
       console.error('[Check] PredictiveHubDiscovery initialized: false');
@@ -36,7 +41,7 @@ async function check() {
 
     // 4. HierarchicalPlanner
     const planner = new HierarchicalPlanner();
-    if (planner.db && planner.db.prepare('SELECT 1').get()) {
+    if (hasHealthyDb(planner.db)) {
       console.log('[Check] HierarchicalPlanner initialized: true');
     } else {
       console.error('[Check] HierarchicalPlanner initialized: false');

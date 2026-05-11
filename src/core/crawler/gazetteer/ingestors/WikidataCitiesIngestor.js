@@ -63,10 +63,12 @@ class WikidataCitiesIngestor {
     this.name = 'Wikidata Cities Ingestor';
 
     try {
-      this.db.prepare(`
-        INSERT OR IGNORE INTO place_sources(name, version, url, license)
-        VALUES ('wikidata', 'latest', 'https://www.wikidata.org', 'CC0 1.0')
-      `).run();
+      ingestQueries.registerPlaceSource(this.db, {
+        name: 'wikidata',
+        version: 'latest',
+        url: 'https://www.wikidata.org',
+        license: 'CC0 1.0'
+      });
     } catch (err) {
       this.logger.warn('[WikidataCitiesIngestor] Failed to register source metadata:', err.message);
     }
@@ -94,13 +96,7 @@ class WikidataCitiesIngestor {
 
     try {
       // Get all countries from database
-      const allCountries = this.db.prepare(`
-        SELECT p.id, p.country_code, p.wikidata_qid, pn.name AS canonical_name, pn.normalized AS canonical_normalized
-        FROM places p
-        LEFT JOIN place_names pn ON pn.id = p.canonical_name_id
-        WHERE p.kind = 'country' AND p.country_code IS NOT NULL
-        ORDER BY p.country_code
-      `).all();
+      const allCountries = ingestQueries.listWikidataCountryIngestionRows(this.db);
 
       let countries = allCountries;
 
@@ -446,18 +442,7 @@ class WikidataCitiesIngestor {
     let adm1Code = null;
     if (adm1Qid) {
       try {
-        const adm1 = this.db.prepare(`
-          SELECT p.adm1_code
-          FROM places p
-          INNER JOIN place_external_ids e ON p.id = e.place_id
-          WHERE p.kind = 'region' 
-            AND p.country_code = ?
-            AND e.source = 'wikidata'
-            AND e.ext_id = ?
-        `).get(country.country_code, adm1Qid);
-        if (adm1) {
-          adm1Code = adm1.adm1_code;
-        }
+        adm1Code = ingestQueries.getAdm1CodeForWikidataRegion(this.db, country.country_code, adm1Qid);
       } catch (_) {}
     }
 
@@ -516,24 +501,15 @@ class WikidataCitiesIngestor {
 
     // Create hierarchy relationship to country
     try {
-      this.db.prepare(`
-        INSERT OR IGNORE INTO place_hierarchy(parent_id, child_id, relation, depth)
-        VALUES (?, ?, 'admin_parent', 1)
-      `).run(country.id, placeId);
+      ingestQueries.insertAdminParentHierarchy(this.db, country.id, placeId);
     } catch (_) {}
 
     // If we have ADM1, create relationship to region
     if (adm1Code) {
       try {
-        const adm1Place = this.db.prepare(`
-          SELECT id FROM places
-          WHERE kind = 'region' AND country_code = ? AND adm1_code = ?
-        `).get(country.country_code, adm1Code);
-        if (adm1Place) {
-          this.db.prepare(`
-            INSERT OR IGNORE INTO place_hierarchy(parent_id, child_id, relation, depth)
-            VALUES (?, ?, 'admin_parent', 1)
-          `).run(adm1Place.id, placeId);
+        const adm1PlaceId = ingestQueries.getRegionPlaceIdByAdm1Code(this.db, country.country_code, adm1Code);
+        if (adm1PlaceId) {
+          ingestQueries.insertAdminParentHierarchy(this.db, adm1PlaceId, placeId);
         }
       } catch (_) {}
     }

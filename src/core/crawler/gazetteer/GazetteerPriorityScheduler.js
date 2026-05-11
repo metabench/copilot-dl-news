@@ -3,6 +3,7 @@
 const { tof, is_array } = require('lang-tools');
 const progressQueries = require('../../../data/db/sqlite/v1/queries/gazetteer.progress');
 const { getDb } = require('../../../data/db');
+const { databaseTableExists } = require('news-crawler-db');
 
 const DEFAULT_STAGE_DEFS = Object.freeze([
   { name: 'countries', priority: 1000, crawlDepth: 0, kind: 'country' },
@@ -112,10 +113,7 @@ class GazetteerPriorityScheduler {
   _ensureStateTable() {
     // The gazetteer_crawl_state table is created by ensureGazetteer, but we'll verify
     try {
-      this.db.prepare(`
-        SELECT COUNT(*) as c FROM sqlite_master 
-        WHERE type='table' AND name='gazetteer_crawl_state'
-      `).get();
+      databaseTableExists(this.db, 'gazetteer_crawl_state');
     } catch (err) {
       this.logger.warn('[GazetteerPriorityScheduler] gazetteer_crawl_state table not found:', err.message);
     }

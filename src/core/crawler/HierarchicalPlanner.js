@@ -10,6 +10,15 @@
  */
 
 const { getDb } = require('../../data/db');
+const {
+  listHighValuePlanningPatternRows,
+  getArticleDomainProfile,
+  insertHierarchicalPlan,
+  upsertPlanningHeuristic,
+  listSimilarDomainArticleUrls,
+  getPlanningHeuristic,
+  insertPlanningHeuristicIfAbsent
+} = require('news-crawler-db');
 
 class HierarchicalPlanner {
   constructor({ db, logger = console, maxLookahead = 5, maxBranches = 10, features = {} } = {}) {
@@ -431,21 +440,7 @@ class HierarchicalPlanner {
     }
 
     try {
-      // Query pattern_performance table for high-success patterns
-      const patterns = this.db.prepare(`
-        SELECT 
-          pp.pattern_signature,
-          pp.success_count,
-          pp.avg_value,
-          ph.patterns
-        FROM pattern_performance pp
-        JOIN planning_heuristics ph ON pp.heuristic_id = ph.id
-        WHERE ph.domain = ?
-          AND pp.success_count >= 3
-          AND pp.avg_value > 20
-        ORDER BY pp.avg_value DESC, pp.success_count DESC
-        LIMIT 5
-      `).all(domain);
+      const patterns = listHighValuePlanningPatternRows(this.db, domain, { limit: 5 });
 
       const candidates = [];
       
@@ -506,14 +501,7 @@ class HierarchicalPlanner {
     if (!this.db) return { pageCount: 0, hubTypeCount: 1, complexity: 1 };
 
     try {
-      const row = this.db.prepare(`
-        SELECT 
-          COUNT(DISTINCT url) as pageCount,
-          COUNT(DISTINCT CASE WHEN url LIKE '%/category/%' OR url LIKE '%/section/%' THEN url END) as hubTypeCount
-        FROM articles
-        WHERE url LIKE ?
-        LIMIT 1
-      `).get(`%${domain}%`);
+      const row = getArticleDomainProfile(this.db, domain);
 
       const pageCount = row?.pageCount || 0;
       const hubTypeCount = Math.max(row?.hubTypeCount || 1, 1);
@@ -638,22 +626,12 @@ class HierarchicalPlanner {
     }
 
     try {
-      const stmt = this.db.prepare(`
-        INSERT INTO hierarchical_plans (
-          domain,
-          plan_steps,
-          estimated_value,
-          probability,
-          created_at
-        ) VALUES (?, ?, ?, ?, datetime('now'))
-      `);
-
-      stmt.run(
+      insertHierarchicalPlan(this.db, {
         domain,
-        JSON.stringify(plan.steps),
-        plan.totalValue,
-        plan.probability
-      );
+        steps: plan.steps,
+        estimatedValue: plan.totalValue,
+        probability: plan.probability
+      });
     } catch (error) {
       this.logger.error?.('Failed to record plan', error);
     }
@@ -661,22 +639,12 @@ class HierarchicalPlanner {
 
   async _saveHeuristic(domain, heuristic) {
     try {
-      const stmt = this.db.prepare(`
-        INSERT OR REPLACE INTO planning_heuristics (
-          domain,
-          patterns,
-          avg_lookahead,
-          branching_factor,
-          updated_at
-        ) VALUES (?, ?, ?, ?, datetime('now'))
-      `);
-
-      stmt.run(
+      upsertPlanningHeuristic(this.db, {
         domain,
-        JSON.stringify(heuristic.patterns),
-        heuristic.avgLookahead,
-        heuristic.branchingFactor
-      );
+        patterns: heuristic.patterns,
+        avgLookahead: heuristic.avgLookahead,
+        branchingFactor: heuristic.branchingFactor
+      });
     } catch (error) {
       this.logger.error?.('Failed to save heuristic', error);
     }
@@ -696,22 +664,7 @@ class HierarchicalPlanner {
     if (!this.db) return [];
 
     try {
-      // Find domains with similar structure (hub patterns, depth)
-      // Limit to 5 most similar domains
-      const stmt = this.db.prepare(`
-        SELECT DISTINCT url
-        FROM articles
-        WHERE url NOT LIKE ?
-          AND (
-            url LIKE '%/news/%' OR
-            url LIKE '%/category/%' OR
-            url LIKE '%/section/%' OR
-            url LIKE '%/blog/%'
-          )
-        LIMIT 100
-      `);
-
-      const rows = stmt.all(`%${domain}%`);
+      const rows = listSimilarDomainArticleUrls(this.db, domain, { limit: 100 });
       
       // Extract unique domains
       const domains = new Set();
@@ -741,11 +694,7 @@ class HierarchicalPlanner {
 
     try {
       // Check if target domain already has heuristics
-      const existing = this.db.prepare(`
-        SELECT patterns, confidence
-        FROM planning_heuristics
-        WHERE domain = ?
-      `).get(targetDomain);
+      const existing = getPlanningHeuristic(this.db, targetDomain);
 
       if (existing) {
         // Merge with existing patterns (don't overwrite)
@@ -753,27 +702,14 @@ class HierarchicalPlanner {
         return;
       }
 
-      // Insert shared patterns with reduced confidence
-      const stmt = this.db.prepare(`
-        INSERT OR IGNORE INTO planning_heuristics (
-          domain,
-          patterns,
-          confidence,
-          sample_size,
-          avg_lookahead,
-          branching_factor,
-          updated_at
-        ) VALUES (?, ?, ?, 0, ?, ?, datetime('now'))
-      `);
-
-      const patterns = JSON.stringify(sourceHeuristic.patterns || []);
-      stmt.run(
+      insertPlanningHeuristicIfAbsent(this.db, {
         targetDomain,
-        patterns,
-        metadata.transferConfidence,
-        sourceHeuristic.avgLookahead || 5,
-        sourceHeuristic.branchingFactor || 10
-      );
+        domain: targetDomain,
+        patterns: sourceHeuristic.patterns || [],
+        confidence: metadata.transferConfidence,
+        avgLookahead: sourceHeuristic.avgLookahead || 5,
+        branchingFactor: sourceHeuristic.branchingFactor || 10
+      });
 
       this.logger.log?.(`[Cross-Domain Sharing] Shared patterns to ${targetDomain} (confidence: ${metadata.transferConfidence})`);
     } catch (error) {

@@ -11,8 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ensureDatabase } = require('../../src/data/db/sqlite');
-const { getAllCountries } = require('../../src/data/db/sqlite/queries/gazetteer.places');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -35,44 +34,12 @@ const domain = new URL(config.url).hostname;
 
 // Initialize database
 const dbPath = path.join(__dirname, '..', '..', 'data', 'news.db');
-const db = ensureDatabase(dbPath);
+const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
+const dbModule = resolveNewsCrawlerDbModule();
 
 // Load all countries from gazetteer for filtering
-const allCountries = getAllCountries(db);
-const countryNames = new Set(allCountries.map(c => c.name.toLowerCase()));
-
-// Query the place_hubs table directly
-let query;
-let placeHubs;
-
-if (withCounts) {
-  query = `
-    SELECT ph.id, ph.place_slug, ph.title, ph.url, COUNT(hr.id) as download_count
-    FROM place_hubs ph
-    LEFT JOIN urls u ON ph.url = u.url
-    LEFT JOIN http_responses hr ON u.id = hr.url_id
-    WHERE ph.host LIKE ?
-    AND ph.place_slug IS NOT NULL
-    AND ph.place_slug != ''
-    AND ph.url NOT LIKE '%?page=%'
-    AND ph.url NOT LIKE '%&page=%'
-    GROUP BY ph.id, ph.place_slug, ph.title, ph.url
-    ORDER BY ph.url
-  `;
-  placeHubs = db.prepare(query).all(`%${domain}%`);
-} else {
-  query = `
-    SELECT place_slug, title, url
-    FROM place_hubs
-    WHERE host LIKE ?
-    AND place_slug IS NOT NULL
-    AND place_slug != ''
-    AND url NOT LIKE '%?page=%'
-    AND url NOT LIKE '%&page=%'
-    ORDER BY place_slug
-  `;
-  placeHubs = db.prepare(query).all(`%${domain}%`);
-}
+const countryNames = new Set(dbModule.listGazetteerCountryNames(db).map(name => name.toLowerCase()));
+const placeHubs = dbModule.listGazetteerPlaceHubsForDomain(db, domain, { withCounts });
 
 // Format the hubs
 let hubs;

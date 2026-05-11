@@ -1,22 +1,32 @@
-const { createSQLiteDatabase } = require('../src/db/sqlite');
+'use strict';
 
-const db = createSQLiteDatabase('data/news.db');
-
-const tlds = ['.co', '.ve', '.colombia', '.venezuela']; // .co is TLD for Colombia, .ve for Venezuela
-
-console.log('Searching for domains ending in .co or .ve...');
-
-const query = `
-  SELECT count(*) as c FROM places WHERE country_code = 'CO'
-`;
-
-const result = db.db.prepare(query).get();
 const fs = require('fs');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../src/db/openNewsCrawlerDb');
 
-const output = [];
-output.push(`Colombia places: ${result.c}`);
-output.push(`Venezuela places: ${resultVE.c}`);
+const {
+  countPlacesByCountryCode
+} = resolveNewsCrawlerDbModule();
 
-fs.writeFileSync('tmp/places-count.txt', output.join('\n'));
-console.log('Written to tmp/places-count.txt');
+async function main() {
+  const db = openNewsCrawlerDb('data/news.db', { readonly: true, fileMustExist: true });
+  try {
+    console.log('Searching for domains ending in .co or .ve...');
+    const output = [
+      `Colombia places: ${countPlacesByCountryCode(db, 'CO')}`,
+      `Venezuela places: ${countPlacesByCountryCode(db, 'VE')}`
+    ];
+    fs.writeFileSync('tmp/places-count.txt', output.join('\n'));
+    console.log('Written to tmp/places-count.txt');
+  } finally {
+    await db.close();
+  }
+}
 
+if (require.main === module) {
+  main().catch(error => {
+    console.error(error && error.stack ? error.stack : error);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { main };

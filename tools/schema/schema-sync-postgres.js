@@ -1,221 +1,196 @@
 #!/usr/bin/env node
 /**
- * schema-sync-postgres - Generate Postgres schema definitions from SQLite database
- * 
- * Usage:
- *   node tools/schema-sync-postgres.js
+ * schema-sync-postgres - Generate Postgres schema definitions from SQLite.
+ *
+ * This CLI owns argument parsing and file output. SQLite schema extraction,
+ * SQLite-to-Postgres translation, and generated contract text live in
+ * news-crawler-db.
  */
 'use strict';
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
 
-const DEFAULT_DB_PATH = path.join(__dirname, '..', 'data', 'news.db');
-const DEFAULT_OUTPUT_PATH = path.join(__dirname, '..', 'src', 'db', 'postgres', 'v1', 'schema-definitions.js');
+const DEFAULT_DB_PATH = path.join(__dirname, '..', '..', 'data', 'news.db');
+const DEFAULT_OUTPUT_PATH = path.join(__dirname, '..', '..', 'src', 'db', 'postgres', 'v1', 'schema-definitions.js');
 
-function translateType(type) {
-    if (!type) return 'TEXT'; // Default fallback
-    const t = type.toUpperCase();
-    if (t.includes('INT')) return 'INTEGER';
-    if (t.includes('CHAR') || t.includes('CLOB') || t.includes('TEXT')) return 'TEXT';
-    if (t.includes('BLOB')) return 'BYTEA';
-    if (t.includes('REAL') || t.includes('FLOA') || t.includes('DOUB')) return 'DOUBLE PRECISION';
-    if (t === 'JSON') return 'JSONB';
-    if (t === 'DATETIME') return 'TIMESTAMP';
-    return 'TEXT';
-}
+function getPostgresSchemaSyncApi() {
+    const dbModule = resolveNewsCrawlerDbModule();
+    const required = [
+        'extractPostgresSchemaFromSqliteDb',
+        'generatePostgresSchemaDefinitions',
+        'getSchemaSyncContentHash'
+    ];
 
-function translateCreateTable(sql) {
-    // Simple regex-based translation is dangerous for complex SQL.
-    // But since we control the schema, we can try to be smart.
-    
-    let pgSql = sql;
-
-    // Handle "CREATE TABLE IF NOT EXISTS name ("
-    const createMatch = pgSql.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?["`]?(\w+)["`]?\s*\(([\s\S]+)\)/i);
-    if (!createMatch) {
-        if (/CREATE\s+VIRTUAL\s+TABLE/i.test(pgSql)) {
-            return null; // Skip FTS for now
-        }
-        return null;
-    }
-
-    const tableName = createMatch[1];
-    const body = createMatch[2];
-
-    // Split body by comma, respecting parentheses
-    const definitions = [];
-    let current = '';
-    let parenDepth = 0;
-    for (let i = 0; i < body.length; i++) {
-        const char = body[i];
-        if (char === '(') parenDepth++;
-        if (char === ')') parenDepth--;
-        if (char === ',' && parenDepth === 0) {
-            definitions.push(current.trim());
-            current = '';
-        } else {
-            current += char;
+    for (const name of required) {
+        if (typeof dbModule[name] !== 'function') {
+            throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
         }
     }
-    if (current.trim()) definitions.push(current.trim());
 
-    const pgDefinitions = definitions.map(def => {
-        // Check for constraints
-        if (/^FOREIGN KEY/i.test(def) || /^PRIMARY KEY/i.test(def) || /^UNIQUE/i.test(def) || /^CHECK/i.test(def)) {
-            return def; // Usually compatible
+    return dbModule;
+}
+
+function parseArgs(argv = process.argv.slice(2)) {
+    const options = {
+        check: false,
+        dryRun: false,
+        verbose: false,
+        help: false,
+        dbPath: DEFAULT_DB_PATH,
+        outputPath: DEFAULT_OUTPUT_PATH
+    };
+
+    for (let i = 0; i < argv.length; i++) {
+        const arg = argv[i];
+        switch (arg) {
+            case '--check':
+                options.check = true;
+                break;
+            case '--dry-run':
+                options.dryRun = true;
+                break;
+            case '--verbose':
+            case '-v':
+                options.verbose = true;
+                break;
+            case '--help':
+            case '-h':
+                options.help = true;
+                break;
+            case '--db':
+                options.dbPath = argv[++i];
+                break;
+            case '--output':
+                options.outputPath = argv[++i];
+                break;
+            default:
+                if (arg.startsWith('-')) {
+                    throw new Error(`Unknown option: ${arg}`);
+                }
         }
+    }
 
-        // Column definition
-        // name type constraints
-        const parts = def.split(/\s+/);
-        const name = parts[0];
-        let type = parts[1] || '';
-        let rest = parts.slice(2).join(' ');
-
-        // Handle "id INTEGER PRIMARY KEY AUTOINCREMENT"
-        if (name.toLowerCase() === 'id' && /INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT/i.test(def)) {
-            return 'id SERIAL PRIMARY KEY';
-        }
-
-        // Translate type
-        const newType = translateType(type);
-        
-        // Reassemble
-        // Remove SQLite specific keywords from rest
-        rest = rest.replace(/AUTOINCREMENT/gi, ''); 
-        
-        return `${name} ${newType} ${rest}`;
-    });
-
-    // Remove WITHOUT ROWID
-    let suffix = pgSql.substring(pgSql.lastIndexOf(')') + 1).replace(/WITHOUT\s+ROWID/i, '');
-
-    return `CREATE TABLE IF NOT EXISTS ${tableName} (\n  ${pgDefinitions.join(',\n  ')}\n)${suffix}`;
+    return options;
 }
 
-function translateIndex(sql) {
-    return sql; // Usually compatible
-}
+function showHelp() {
+    console.log(`
+schema-sync-postgres - Generate Postgres schema definitions from SQLite
 
-function translateTrigger(sql) {
-    // Postgres triggers are very different. 
-    // They require a CREATE FUNCTION first, then CREATE TRIGGER executing that function.
-    // For now, we will comment them out or skip them to get the tables working.
-    return null; 
-}
+Usage:
+  node tools/schema/schema-sync-postgres.js [options]
 
-function translateView(sql) {
-    return sql; // Usually compatible
+Options:
+  --check         Check for drift without writing
+  --dry-run       Show what would be written without making changes
+  --verbose, -v   Show detailed output
+  --db <path>     Path to SQLite database file (default: data/news.db)
+  --output <path> Output path for Postgres schema definitions
+  --help, -h      Show this help message
+`);
 }
 
 function extractSchema(db) {
-    const schema = {
-        tables: [],
-        indexes: [],
-        triggers: [],
-        views: []
-    };
-
-    // Tables
-    const tables = db.prepare(`SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name`).all();
-    schema.tables = tables.map(t => ({ name: t.name, sql: translateCreateTable(t.sql) })).filter(t => t.sql);
-
-    // Indexes
-    const indexes = db.prepare(`SELECT name, sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY name`).all();
-    schema.indexes = indexes.map(t => ({ name: t.name, sql: translateIndex(t.sql) })).filter(t => t.sql);
-
-    // Triggers
-    const triggers = db.prepare(`SELECT name, sql FROM sqlite_master WHERE type='trigger' AND sql IS NOT NULL ORDER BY name`).all();
-    schema.triggers = triggers.map(t => ({ name: t.name, sql: translateTrigger(t.sql) })).filter(t => t.sql);
-
-    // Views
-    const views = db.prepare(`SELECT name, sql FROM sqlite_master WHERE type='view' AND sql IS NOT NULL ORDER BY name`).all();
-    schema.views = views.map(t => ({ name: t.name, sql: translateView(t.sql) })).filter(t => t.sql);
-
-    return schema;
+    return getPostgresSchemaSyncApi().extractPostgresSchemaFromSqliteDb(db);
 }
 
 function generateSchemaDefinitions(schema) {
-    const timestamp = new Date().toISOString();
-    
-    let content = `/**
- * AUTO-GENERATED by tools/schema-sync-postgres.js
- * Generated at ${timestamp}
- *
- * Postgres schema definitions translated from SQLite.
- */
-'use strict';
+    return getPostgresSchemaSyncApi().generatePostgresSchemaDefinitions(schema);
+}
 
-`;
+function contentHash(content) {
+    return getPostgresSchemaSyncApi().getSchemaSyncContentHash(content);
+}
 
-    content += 'const TABLE_STATEMENTS = [\n';
-    for (const table of schema.tables) {
-        content += `  // ${table.name}\n`;
-        content += `  \`${table.sql.replace(/`/g, '\\`')}\`,\n\n`;
+async function closeDb(db) {
+    if (db && typeof db.close === 'function') {
+        await db.close();
     }
-    content += '];\n\n';
+}
 
-    content += 'const INDEX_STATEMENTS = [\n';
-    for (const idx of schema.indexes) {
-        content += `  \`${idx.sql.replace(/`/g, '\\`')}\`,\n`;
+async function main(argv = process.argv.slice(2)) {
+    const options = parseArgs(argv);
+
+    if (options.help) {
+        showHelp();
+        return;
     }
-    content += '];\n\n';
 
-    content += 'const TRIGGER_STATEMENTS = [\n';
-    for (const trg of schema.triggers) {
-        content += `  // ${trg.name}\n`;
-        content += `  \`${trg.sql.replace(/`/g, '\\`')}\`,\n\n`;
+    if (!fs.existsSync(options.dbPath)) {
+        throw new Error(`Database not found: ${options.dbPath}`);
     }
-    content += '];\n\n';
 
-    content += 'const VIEW_STATEMENTS = [\n';
-    for (const view of schema.views) {
-        content += `  // ${view.name}\n`;
-        content += `  \`${view.sql.replace(/`/g, '\\`')}\`,\n\n`;
+    const db = openNewsCrawlerDb(options.dbPath, { readonly: true, fileMustExist: true });
+
+    try {
+        const api = getPostgresSchemaSyncApi();
+        const schema = api.extractPostgresSchemaFromSqliteDb(db);
+        const content = api.generatePostgresSchemaDefinitions(schema);
+        const newHash = api.getSchemaSyncContentHash(content);
+
+        if (options.verbose) {
+            console.log(`Reading schema from: ${options.dbPath}`);
+            console.log(`   Tables: ${schema.tables.length}`);
+            console.log(`   Indexes: ${schema.indexes.length}`);
+            console.log(`   Triggers: ${schema.triggers.length}`);
+            console.log(`   Views: ${schema.views.length}`);
+        }
+
+        if (options.check) {
+            if (!fs.existsSync(options.outputPath)) {
+                console.log('Postgres schema definitions file does not exist');
+                process.exitCode = 1;
+                return;
+            }
+
+            const existingContent = fs.readFileSync(options.outputPath, 'utf8');
+            const existingHash = api.getSchemaSyncContentHash(existingContent);
+
+            if (newHash === existingHash) {
+                console.log('Postgres schema definitions are in sync');
+                return;
+            }
+
+            console.log('Postgres schema drift detected');
+            console.log(`   Existing hash: ${existingHash}`);
+            console.log(`   Current hash:  ${newHash}`);
+            process.exitCode = 1;
+            return;
+        }
+
+        if (options.dryRun) {
+            console.log('Dry run - would write:\n');
+            console.log(`   ${options.outputPath}`);
+            console.log(`   Size: ${(content.length / 1024).toFixed(1)} KB`);
+            console.log(`   Hash: ${newHash}`);
+            return;
+        }
+
+        const outputDir = path.dirname(options.outputPath);
+        if (!fs.existsSync(outputDir)) {
+            fs.mkdirSync(outputDir, { recursive: true });
+        }
+
+        fs.writeFileSync(options.outputPath, content, 'utf8');
+        console.log(`Written ${options.outputPath}`);
+    } finally {
+        await closeDb(db);
     }
-    content += '];\n\n';
+}
 
-    content += `
-function getAllStatements() {
-    return [
-        ...TABLE_STATEMENTS,
-        ...INDEX_STATEMENTS,
-        ...TRIGGER_STATEMENTS,
-        ...VIEW_STATEMENTS
-    ];
+if (require.main === module) {
+    main().catch(err => {
+        console.error('Error:', err.message);
+        process.exit(1);
+    });
 }
 
 module.exports = {
-    TABLE_STATEMENTS,
-    INDEX_STATEMENTS,
-    TRIGGER_STATEMENTS,
-    VIEW_STATEMENTS,
-    getAllStatements
+    extractSchema,
+    generateSchemaDefinitions,
+    parseArgs,
+    contentHash,
+    main
 };
-`;
-    return content;
-}
-
-function main() {
-    if (!fs.existsSync(DEFAULT_DB_PATH)) {
-        console.error(`Database not found: ${DEFAULT_DB_PATH}`);
-        process.exit(1);
-    }
-
-    const db = openNewsCrawlerDb(DEFAULT_DB_PATH, { readonly: true });
-    const schema = extractSchema(db);
-    db.close();
-
-    const content = generateSchemaDefinitions(schema);
-    
-    const outputDir = path.dirname(DEFAULT_OUTPUT_PATH);
-    if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-    }
-    
-    fs.writeFileSync(DEFAULT_OUTPUT_PATH, content, 'utf8');
-    console.log(`Written ${DEFAULT_OUTPUT_PATH}`);
-}
-
-main();

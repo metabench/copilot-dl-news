@@ -125,8 +125,7 @@ class GazetteerManager {
       return;
     }
 
-    // Get raw better-sqlite3 database handle for gazetteer operations
-    // Gazetteer ingestors use db.prepare() directly for performance
+    // Get the raw better-sqlite3 handle expected by the DB-owned gazetteer access layer.
     const db = dbWrapper.getHandle();
     if (!db) {
       this.pipelineConfigured = true;

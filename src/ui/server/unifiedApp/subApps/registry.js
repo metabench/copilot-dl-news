@@ -22,6 +22,7 @@ const { SearchExplorerControl } = require('../../../controls/SearchExplorerContr
 const { DownloadVerificationPanelControl } = require('../../../controls/DownloadVerificationPanelControl');
 const { CloudCrawlPanelControl } = require('../../../controls/CloudCrawlPanelControl');
 const { ScreenshotReviewPanelControl } = require('../../../controls/ScreenshotReviewPanelControl');
+const { getUnifiedAppHomeDashboardCounts } = require('news-crawler-db');
 
 function renderIframeApp(src, title) {
   const context = new jsgui.Page_Context();
@@ -399,9 +400,10 @@ function createSubAppRegistry(options = {}) {
         try {
           const db = getDb();
           if (db) {
-            totalArticles = db.prepare(`SELECT COUNT(*) as c FROM content_analysis`).get().c;
-            knownHubs = db.prepare(`SELECT COUNT(*) as c FROM classification_cache WHERE type = 'hub'`).get().c;
-            domains = db.prepare(`SELECT COUNT(*) as c FROM domain_registry`).get().c;
+            const counts = getUnifiedAppHomeDashboardCounts(db);
+            totalArticles = counts.totalArticles ?? totalArticles;
+            knownHubs = counts.knownHubs ?? knownHubs;
+            domains = counts.domains ?? domains;
 
             recentRuns = db.taskEvents.listRecentCrawlTaskRuns({ limit: 5 });
 

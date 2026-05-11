@@ -19,6 +19,9 @@ const {
   analyzeAllEligibleHosts,
   PAGE_THRESHOLD
 } = require('../../src/services/sitePatternAnalysis');
+const {
+  listSitePatternHostSummaries
+} = require('news-crawler-db');
 
 const dbPath = path.join(__dirname, '..', '..', 'data', 'news.db');
 
@@ -92,13 +95,7 @@ function main() {
         }
       } else {
         // List all hosts with patterns
-        const hosts = db.prepare(`
-          SELECT host, COUNT(*) as pattern_count, MAX(discovered_at) as last_analyzed
-          FROM site_url_patterns
-          WHERE is_active = 1
-          GROUP BY host
-          ORDER BY pattern_count DESC
-        `).all();
+        const hosts = listSitePatternHostSummaries(db);
         
         if (options.json) {
           console.log(JSON.stringify(hosts, null, 2));

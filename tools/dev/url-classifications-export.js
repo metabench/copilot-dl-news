@@ -12,7 +12,7 @@
  */
 'use strict';
 
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -118,6 +118,21 @@ function inferClassification(url, signals) {
   return { inferred: 'unknown', reason: 'no-clear-signals' };
 }
 
+function getDbApi(name) {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const fn = dbModule[name];
+  if (typeof fn !== 'function') {
+    throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+  }
+  return fn;
+}
+
+async function closeDb(db) {
+  if (db && typeof db.close === 'function') {
+    await db.close();
+  }
+}
+
 // Main
 async function main() {
   let db;
@@ -129,15 +144,11 @@ async function main() {
   }
 
   try {
+    const getStats = getDbApi('getUrlClassificationExportStats');
+    const listExportRows = getDbApi('listUrlClassificationExportRows');
+
     // Get total counts first
-    const stats = db.prepare(`
-      SELECT 
-        COUNT(*) as total_urls,
-        (SELECT COUNT(*) FROM content_analysis WHERE classification = 'article') as article_count,
-        (SELECT COUNT(*) FROM content_analysis WHERE classification = 'hub') as hub_count,
-        (SELECT COUNT(*) FROM content_analysis WHERE classification = 'nav') as nav_count,
-        (SELECT COUNT(*) FROM content_analysis WHERE classification IS NULL) as null_count
-    `).get();
+    const stats = getStats(db);
 
     if (!flags.json) {
       console.log('\n=== Database Classification Stats ===');
@@ -149,84 +160,12 @@ async function main() {
       console.log('');
     }
 
-    let query;
-    let params = [];
-
-    if (flags.unclassified) {
-      // Get URLs that have been fetched but not classified
-      // Get URLs that have been fetched but not classified
-      query = `
-        SELECT DISTINCT
-          u.id,
-          u.url,
-          u.host,
-          hr.http_status,
-          hr.fetched_at,
-          cs.uncompressed_size as content_size,
-          ca.classification,
-          ca.word_count
-        FROM urls u
-        JOIN http_responses hr ON u.id = hr.url_id
-        LEFT JOIN content_storage cs ON hr.id = cs.http_response_id
-        LEFT JOIN content_analysis ca ON cs.id = ca.content_id
-        WHERE ca.classification IS NULL OR ca.classification = ''
-        ${flags.host ? 'AND u.host LIKE ?' : ''}
-        ORDER BY hr.fetched_at DESC
-        LIMIT ?
-      `;
-      if (flags.host) params.push(`%${flags.host}%`);
-      params.push(flags.sample);
-    } else {
-      // Get classified URLs - try to stratify by URL pattern for variety
-      if (flags.stratified && !flags.host) {
-        // Get a mix: some with dates, some without, different sections
-        query = `
-          SELECT 
-            u.id,
-            u.url,
-            u.host,
-            hr.http_status,
-            hr.fetched_at,
-            cs.uncompressed_size as content_size,
-            ca.classification,
-            ca.word_count,
-            ca.analyzed_at
-          FROM urls u
-          JOIN http_responses hr ON u.id = hr.url_id
-          JOIN content_storage cs ON hr.id = cs.http_response_id
-          JOIN content_analysis ca ON cs.id = ca.content_id
-          WHERE ca.classification IS NOT NULL
-          ORDER BY RANDOM()
-          LIMIT ?
-        `;
-        params.push(flags.sample);
-      } else {
-        query = `
-          SELECT 
-            u.id,
-            u.url,
-            u.host,
-            hr.http_status,
-            hr.fetched_at,
-            cs.uncompressed_size as content_size,
-            ca.classification,
-            ca.word_count,
-            ca.analyzed_at
-          FROM urls u
-          JOIN http_responses hr ON u.id = hr.url_id
-          JOIN content_storage cs ON hr.id = cs.http_response_id
-          JOIN content_analysis ca ON cs.id = ca.content_id
-          WHERE ca.classification IS NOT NULL
-          ${flags.host ? 'AND u.host LIKE ?' : ''}
-          ORDER BY RANDOM()
-          LIMIT ?
-        `;
-        if (flags.host) params.push(`%${flags.host}%`);
-        params.push(flags.sample);
-      }
-    }
-
-    const urls = db.prepare(query).all(...params);
+    const urls = listExportRows(db, {
+      sample: flags.sample,
+      host: flags.host,
+      unclassified: flags.unclassified,
+      stratified: flags.stratified
+    });
 
     // Analyze each URL
     const results = urls.map(row => {
@@ -311,7 +250,7 @@ async function main() {
     }
 
   } finally {
-    db.close();
+    await closeDb(db);
   }
 }
 

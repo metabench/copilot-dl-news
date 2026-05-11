@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
  * Fix duplicate capital cities by merging duplicate records
- * 
+ *
  * Strategy:
  * 1. Identify duplicates (same country + same normalized name)
  * 2. Choose best record (best coordinates, most names, most recent source)
  * 3. Merge place_names, place_hierarchy, place_attribute_values to best record
  * 4. Delete inferior duplicates
  * 5. Add external IDs to prevent future duplicates
- * 
+ *
  * Usage:
  *   node tools/corrections/fix-duplicate-capitals.js              # Dry run (default)
  *   node tools/corrections/fix-duplicate-capitals.js --fix        # Apply changes
@@ -41,7 +41,10 @@ Safety:
 }
 
 const { ensureDatabase } = require('../../src/data/db/sqlite');
-const { mergeDuplicateCapitals } = require('../../src/data/db/sqlite/v1/queries/gazetteer.deduplication');
+const {
+  countCapitalCitiesForDuplicateCorrection,
+  mergeDuplicateCapitals
+} = require('../../src/data/db/sqlite/v1/queries/gazetteer.deduplication');
 const path = require('path');
 
 function getArg(name, fallback) {
@@ -103,10 +106,6 @@ if (dryRun) {
 }
 
 // Show final count
-const finalCount = db.prepare(`
-  SELECT COUNT(*) as count 
-  FROM places 
-  WHERE kind='city' AND json_extract(extra, '$.role')='capital'
-`).get();
-console.log(`\nTotal capital cities: ${finalCount.count}`);
+const finalCount = countCapitalCitiesForDuplicateCorrection(db, { countryFilter });
+console.log(`\nTotal capital cities: ${finalCount}`);
 

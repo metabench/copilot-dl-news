@@ -7,8 +7,14 @@
  * historical CommonJS `createIntegrationAdapter` export.
  */
 
-const { createIntegrationAdapter } = require('news-crawler-db');
+const {
+  createIntegrationAdapter,
+  createAsyncSqliteIntegrationDb,
+  createIntegrationAdapterFromSqliteHandle
+} = require('news-crawler-db');
 
 module.exports = {
-  createIntegrationAdapter
+  createIntegrationAdapter,
+  createAsyncSqliteIntegrationDb,
+  createIntegrationAdapterFromSqliteHandle
 };

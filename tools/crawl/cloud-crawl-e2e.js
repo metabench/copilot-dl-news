@@ -7,6 +7,7 @@ const path = require('path');
 const http = require('http');
 const https = require('https');
 const { spawn } = require('child_process');
+const downloadEvidence = require('../../src/data/db/queries/downloadEvidence');
 
 const {
   normalizeValidationOptions,
@@ -154,16 +155,6 @@ async function collectRemotePreflight(baseUrl) {
   return result;
 }
 
-function tableExists(db, tableName) {
-  const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ?").get(tableName);
-  return Boolean(row);
-}
-
-function getCount(db, sql, params = []) {
-  const row = db.prepare(sql).get(...params);
-  return row ? Number(row.count || 0) : 0;
-}
-
 function snapshotDatabase(dbPath) {
   const snapshot = {
     available: false,
@@ -182,34 +173,13 @@ function snapshotDatabase(dbPath) {
   let db = null;
   try {
     db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
-    db.pragma('query_only = ON');
-    if (tableExists(db, 'urls')) snapshot.totals.urls = getCount(db, 'SELECT COUNT(*) AS count FROM urls');
-    if (tableExists(db, 'http_responses')) {
-      snapshot.totals.responses = getCount(db, 'SELECT COUNT(*) AS count FROM http_responses');
-      snapshot.totals.successResponses = getCount(db, 'SELECT COUNT(*) AS count FROM http_responses WHERE http_status BETWEEN 200 AND 299');
-      snapshot.totals.failedResponses = getCount(db, 'SELECT COUNT(*) AS count FROM http_responses WHERE http_status IS NULL OR http_status < 200 OR http_status >= 300');
-      const latest = db.prepare('SELECT MAX(fetched_at) AS latestFetchedAt FROM http_responses').get();
-      snapshot.latestFetchedAt = latest?.latestFetchedAt || null;
-    }
-    if (tableExists(db, 'content_storage')) snapshot.totals.content = getCount(db, 'SELECT COUNT(*) AS count FROM content_storage');
-    snapshot.available = true;
+    return downloadEvidence.getCloudCrawlDatabaseSnapshot(db, { path: dbPath });
   } catch (error) {
     snapshot.error = error.message;
   } finally {
     if (db) db.close();
   }
   return snapshot;
-}
-
-function buildHostFilter(domains) {
-  const clauses = [];
-  const params = [];
-  for (const domain of domains || []) {
-    clauses.push('(u.host = ? OR u.host LIKE ?)');
-    params.push(domain, `%.${domain}`);
-  }
-  if (clauses.length === 0) return { sql: '', params: [] };
-  return { sql: ` AND (${clauses.join(' OR ')})`, params };
 }
 
 function toSqliteUtcTimestamp(value, round = 'none') {
@@ -236,12 +206,11 @@ function normalizeEvidenceWindow(startedAt, finishedAt) {
 }
 
 function getRecentEvidence(dbPath, startedAt, finishedAt, domains) {
-  const queryWindow = normalizeEvidenceWindow(startedAt, finishedAt);
   const evidence = {
     available: false,
     startedAt,
     finishedAt,
-    queryWindow,
+    queryWindow: null,
     downloads: 0,
     success: 0,
     failed: 0,
@@ -260,60 +229,7 @@ function getRecentEvidence(dbPath, startedAt, finishedAt, domains) {
   let db = null;
   try {
     db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
-    db.pragma('query_only = ON');
-    if (!tableExists(db, 'http_responses') || !tableExists(db, 'urls')) {
-      evidence.error = 'Required tables http_responses/urls not found';
-      return evidence;
-    }
-
-    const hostFilter = buildHostFilter(domains);
-  const params = [queryWindow.startedAt, queryWindow.finishedAt, ...hostFilter.params];
-    const totals = db.prepare(`
-      SELECT
-        COUNT(*) AS downloads,
-        SUM(CASE WHEN r.http_status BETWEEN 200 AND 299 THEN 1 ELSE 0 END) AS success,
-        SUM(CASE WHEN r.http_status IS NULL OR r.http_status < 200 OR r.http_status >= 300 THEN 1 ELSE 0 END) AS failed,
-        COALESCE(SUM(r.bytes_downloaded), 0) AS bytes,
-        COUNT(DISTINCT u.host) AS distinctHosts
-      FROM http_responses r
-      JOIN urls u ON r.url_id = u.id
-      WHERE r.fetched_at BETWEEN ? AND ?${hostFilter.sql}
-    `).get(...params);
-
-    evidence.downloads = Number(totals.downloads || 0);
-    evidence.success = Number(totals.success || 0);
-    evidence.failed = Number(totals.failed || 0);
-    evidence.bytes = Number(totals.bytes || 0);
-    evidence.distinctHosts = Number(totals.distinctHosts || 0);
-
-    evidence.hosts = db.prepare(`
-      SELECT
-        u.host,
-        COUNT(*) AS downloads,
-        SUM(CASE WHEN r.http_status BETWEEN 200 AND 299 THEN 1 ELSE 0 END) AS success,
-        SUM(CASE WHEN r.http_status IS NULL OR r.http_status < 200 OR r.http_status >= 300 THEN 1 ELSE 0 END) AS failed,
-        COALESCE(SUM(r.bytes_downloaded), 0) AS bytes,
-        MIN(r.fetched_at) AS firstFetchedAt,
-        MAX(r.fetched_at) AS lastFetchedAt
-      FROM http_responses r
-      JOIN urls u ON r.url_id = u.id
-      WHERE r.fetched_at BETWEEN ? AND ?${hostFilter.sql}
-      GROUP BY u.host
-      ORDER BY downloads DESC
-      LIMIT 25
-    `).all(...params);
-
-    evidence.statuses = db.prepare(`
-      SELECT COALESCE(r.http_status, -1) AS status, COUNT(*) AS count
-      FROM http_responses r
-      JOIN urls u ON r.url_id = u.id
-      WHERE r.fetched_at BETWEEN ? AND ?${hostFilter.sql}
-      GROUP BY COALESCE(r.http_status, -1)
-      ORDER BY count DESC
-      LIMIT 25
-    `).all(...params);
-
-    evidence.available = true;
+    return downloadEvidence.getCloudCrawlRecentEvidence(db, { startedAt, finishedAt, domains });
   } catch (error) {
     evidence.error = error.message;
   } finally {

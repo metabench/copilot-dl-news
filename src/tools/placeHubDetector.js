@@ -6,6 +6,16 @@ const {
   createArticleSignalsService
 } = require('../intelligence/analysis/articleDetection');
 
+let PLACE_HUB_DETECTOR_DB_QUERIES = null;
+
+function getPlaceHubDetectorDbQueries() {
+  if (!PLACE_HUB_DETECTOR_DB_QUERIES) {
+    const { resolveNewsCrawlerDbModule } = require('../db/openNewsCrawlerDb');
+    PLACE_HUB_DETECTOR_DB_QUERIES = resolveNewsCrawlerDbModule();
+  }
+  return PLACE_HUB_DETECTOR_DB_QUERIES;
+}
+
 const ARTICLE_REJECTION_KIND = 'article-screened';
 const ARTICLE_CONFIDENCE_THRESHOLD = 0.65;
 const ARTICLE_SCORE_THRESHOLD = 2;
@@ -405,7 +415,7 @@ function detectPlaceHub({
 
   if (segments.includes('world') && db) {
     try {
-      const planet = db.prepare("SELECT p.id, p.kind, p.country_code, pn.name FROM places p JOIN place_names pn ON p.id = pn.place_id WHERE p.kind = 'planet' AND pn.name = 'Earth' LIMIT 1").get();
+      const planet = getPlaceHubDetectorDbQueries().getEarthPlaceHubOverride(db);
       if (planet) {
         placeId = planet.id;
         placeKind = planet.kind;
@@ -579,7 +589,7 @@ function detectPlaceHub({
 
   if (placeSlug === 'world' && db && !isWorldOverride) {
     try {
-      const planet = db.prepare("SELECT id, kind, country_code FROM places WHERE kind = 'planet' LIMIT 1").get();
+      const planet = getPlaceHubDetectorDbQueries().getAnyPlanetPlaceHubOverride(db);
       if (planet) {
         placeId = planet.id;
         placeKind = planet.kind;

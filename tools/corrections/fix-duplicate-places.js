@@ -2,12 +2,12 @@
 
 /**
  * fix-duplicate-places.js - Advanced duplicate place merger with coordinate proximity matching
- * 
+ *
  * Problem: Multiple records exist for the same place due to:
  * 1. Running ingestion multiple times without deduplication
  * 2. Slight coordinate variations (51.5,-0.08 vs 51.5,-0.10)
  * 3. Missing canonical_name_id creating artificial separation
- * 
+ *
  * Strategy:
  * 1. Group places by country + kind + normalized name (from place_names, not canonical)
  * 2. Within each group, check coordinate proximity (<0.05° = ~5.5km)
@@ -15,21 +15,21 @@
  * 4. Choose best record (coords > wikidata > pop > external_id > lowest id)
  * 5. Merge all names, hierarchy, attributes, external IDs
  * 6. Add external ID to prevent future duplicates
- * 
+ *
  * Usage:
  *   node tools/corrections/fix-duplicate-places.js                    # Dry run (default)
  *   node tools/corrections/fix-duplicate-places.js --fix              # Apply changes
  *   node tools/corrections/fix-duplicate-places.js --kind=city        # Only cities
  *   node tools/corrections/fix-duplicate-places.js --fix --country=GB # Fix specific country
  *   node tools/corrections/fix-duplicate-places.js --role=capital     # Only capitals
- * 
+ *
  * Examples:
  *   # Preview all duplicate places
  *   node tools/corrections/fix-duplicate-places.js
- *   
+ *
  *   # Fix duplicate capital cities
  *   node tools/corrections/fix-duplicate-places.js --fix --kind=city --role=capital
- *   
+ *
  *   # Fix all duplicates in a country
  *   node tools/corrections/fix-duplicate-places.js --fix --country=GB
  */
@@ -82,7 +82,10 @@ SAFETY:
 }
 
 const { ensureDatabase } = require('../../src/data/db/sqlite');
-const { mergeDuplicatePlaces } = require('../../src/data/db/sqlite/v1/queries/gazetteer.deduplication');
+const {
+  countPlacesForDuplicateCorrection,
+  mergeDuplicatePlaces
+} = require('../../src/data/db/sqlite/v1/queries/gazetteer.deduplication');
 const path = require('path');
 
 function getArg(name, fallback) {
@@ -164,13 +167,12 @@ if (dryRun) {
 }
 
 // Show final count
-const finalQuery = `
-  SELECT COUNT(*) as count 
-  FROM places p
-  WHERE ${whereConditions.join(' AND ')}
-`;
-const finalCount = db.prepare(finalQuery).get();
-console.log(`\nTotal ${kindFilter || 'places'}: ${finalCount.count}`);
+const finalCount = countPlacesForDuplicateCorrection(db, {
+  countryFilter,
+  kindFilter,
+  roleFilter
+});
+console.log(`\nTotal ${kindFilter || 'places'}: ${finalCount}`);
 
 db.close();
 

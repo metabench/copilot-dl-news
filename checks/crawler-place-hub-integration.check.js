@@ -1,16 +1,16 @@
 'use strict';
 
 const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
+const { createPlaceHubPatternLearningCheckFixture } = require('news-crawler-db');
 /**
  * Crawler Integration Check: Place Hub Pattern Learning
- * 
+ *
  * Verifies that the PlaceHubPatternLearningService is properly wired into
  * the crawler's PageExecutionService via CrawlerServiceWiring.
- * 
+ *
  * This check uses an in-memory database and mock components to validate
  * the integration without requiring network access or the full crawler.
  */
-const { createPlaceHubUrlPatternsStore } = require('../src/db/placeHubUrlPatternsStore');
 const { PlaceHubPatternLearningService } = require('../src/services/PlaceHubPatternLearningService');
 
 // Test utilities
@@ -82,37 +82,7 @@ async function runChecks() {
 
   // Create in-memory database
   const db = openNewsCrawlerDb(':memory:');
-  
-  // Create required tables for place hubs
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS urls (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      url TEXT NOT NULL UNIQUE
-    );
-    
-    CREATE TABLE IF NOT EXISTS place_hubs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      url_id INTEGER NOT NULL,
-      host TEXT NOT NULL,
-      place_slug TEXT,
-      place_kind TEXT,
-      title TEXT,
-      nav_links_count INTEGER DEFAULT 0,
-      article_links_count INTEGER DEFAULT 0,
-      first_seen_at TEXT,
-      last_seen_at TEXT,
-      FOREIGN KEY (url_id) REFERENCES urls(id)
-    );
-    
-    CREATE TABLE IF NOT EXISTS place_hub_candidates (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      domain TEXT NOT NULL,
-      candidate_url TEXT NOT NULL,
-      place_kind TEXT,
-      place_name TEXT,
-      verified INTEGER DEFAULT 0
-    );
-  `);
+  createPlaceHubPatternLearningCheckFixture(db);
 
   console.log('\n' + '='.repeat(60));
   console.log('  1. Service Initialization');
@@ -201,7 +171,7 @@ async function runChecks() {
 
   const analyzed = learningService.analyzeDiscoveredUrls(urls, 'example.com');
   expect(analyzed.length, 'Analyzes URLs and finds potential place hubs').toBeGreaterThan(0);
-  
+
   const worldUrls = analyzed.filter(r => r.url.includes('/world/'));
   expect(worldUrls.length, 'Correctly identifies /world/ URLs as place hubs').toBe(2);
 
@@ -238,7 +208,7 @@ async function runChecks() {
       }
     });
     expect(serviceFromWiring !== null, 'Service can be created as in CrawlerServiceWiring').toBeTruthy();
-    
+
     // Verify the service works in crawler context
     const wiredPrediction = serviceFromWiring.predictPlaceHub('https://example.com/world/uk', 'example.com');
     expect(wiredPrediction.isPlaceHub, 'Wired service makes correct predictions').toBe(true);
@@ -254,7 +224,7 @@ async function runChecks() {
   // Simulate the callback pattern used in PageExecutionService
   function simulateEnqueueWithPrediction(url, domain, learningService) {
     let linkMeta = null;
-    
+
     if (learningService && url) {
       try {
         const prediction = learningService.predictPlaceHub(url, domain);
@@ -274,7 +244,7 @@ async function runChecks() {
         // Silently ignore prediction errors
       }
     }
-    
+
     return linkMeta;
   }
 

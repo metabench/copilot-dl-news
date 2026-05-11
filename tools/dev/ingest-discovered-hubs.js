@@ -9,10 +9,9 @@
  */
 'use strict';
 
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
-const { slugify } = require('../../src/tools/slugify'); // Assuming this exists, or use simple fallback
 
 const args = process.argv.slice(2);
 const help = args.includes('--help');
@@ -36,7 +35,22 @@ Options:
 
 function getDb(readonly = true) {
     const dbPath = path.resolve(__dirname, '..', '..', 'data', 'news.db');
-    return openNewsCrawlerDb(dbPath, { readonly });
+    return openNewsCrawlerDb(dbPath, { readonly, fileMustExist: true });
+}
+
+function getDbApi() {
+    const dbModule = resolveNewsCrawlerDbModule();
+    const required = [
+        'listPlaceNamesForDiscoveredHubIngest',
+        'listPlacePageMappingKeysForHost',
+        'insertVerifiedDiscoveredPlaceHubMappings'
+    ];
+    for (const name of required) {
+        if (typeof dbModule[name] !== 'function') {
+            throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+        }
+    }
+    return dbModule;
 }
 
 function simpleSlugify(text) {
@@ -48,18 +62,10 @@ function simpleSlugify(text) {
         .replace(/-+$/, '');            // Trim - from end of text
 }
 
-function loadPlaceIndex(db) {
+function loadPlaceIndex(db, dbApi) {
     console.log('Loading place names...');
     const index = new Map(); // normalized_name -> { id, name, kind, lang }
-    
-    // Load countries, regions, cities
-    const rows = db.prepare(`
-        SELECT pn.place_id, pn.name, pn.normalized, pn.lang, p.kind
-        FROM place_names pn
-        JOIN places p ON p.id = pn.place_id
-        WHERE p.kind IN ('country', 'region', 'territory', 'continent')
-          AND pn.name_kind IN ('common', 'official', 'endonym')
-    `).all();
+    const rows = dbApi.listPlaceNamesForDiscoveredHubIngest(db);
 
     for (const row of rows) {
         const norm = row.normalized || simpleSlugify(row.name);
@@ -76,7 +82,7 @@ function loadPlaceIndex(db) {
     return index;
 }
 
-function processFile(filePath, db, placeIndex, stats) {
+function processFile(filePath, db, dbApi, placeIndex, stats) {
     const content = fs.readFileSync(filePath, 'utf8');
     let data;
     try {
@@ -100,14 +106,7 @@ function processFile(filePath, db, placeIndex, stats) {
     }
 
     // Filter existing mappings
-    const existingMappings = new Set(
-        db.prepare(`
-            SELECT place_id || ':' || host || ':' || page_kind as key 
-            FROM place_page_mappings 
-            WHERE host = ?
-        `)
-          .all(host).map(r => r.key)
-    );
+    const existingMappings = new Set(dbApi.listPlacePageMappingKeysForHost(db, host));
 
     const candidates = [];
     
@@ -174,36 +173,9 @@ function processFile(filePath, db, placeIndex, stats) {
         console.log(`\nHost: ${host} - Found ${uniqueCandidates.length} new mappings`);
         
         if (apply) {
-            const stmt = db.prepare(`
-                INSERT INTO place_page_mappings (place_id, host, url, page_kind, status, verified_at, evidence)
-                VALUES (?, ?, ?, ?, 'verified', ?, ?)
-            `);
-            const now = new Date().toISOString();
-            
-            const tx = db.transaction(() => {
-                for (const c of uniqueCandidates) {
-                    const evidence = JSON.stringify({
-                        source: 'ingest-discovery',
-                        text: c.text,
-                        match_kind: c.place_kind,
-                        ingested_at: now
-                    });
-                    try {
-                        // We do a try-catch per-row or just rely on the pre-check
-                        // INSERT OR IGNORE is safer for race conditions or edge cases
-                        stmt.run(c.place_id, c.host, c.url, c.page_kind, now, evidence);
-                        stats.inserted++;
-                    } catch (err) {
-                        if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-                            console.warn(`  Duplicate skipped: ${c.place_name} on ${c.host}`);
-                            stats.skipped++;
-                        } else {
-                            throw err;
-                        }
-                    }
-                }
-            });
-            tx();
+            const result = dbApi.insertVerifiedDiscoveredPlaceHubMappings(db, uniqueCandidates);
+            stats.inserted += result.inserted;
+            stats.skipped += result.skipped;
         } else {
             // Dry run output
             for (const c of uniqueCandidates.slice(0, 5)) {
@@ -222,7 +194,8 @@ async function main() {
     }
 
     const db = getDb(!apply);
-    const placeIndex = loadPlaceIndex(db);
+    const dbApi = getDbApi();
+    const placeIndex = loadPlaceIndex(db, dbApi);
     
     const stats = { inserted: 0, skipped: 0, unmatched: 0, pending: 0 };
     
@@ -230,7 +203,7 @@ async function main() {
     console.log(`Scanning ${files.length} files in ${INPUT_DIR}...\n`);
 
     for (const file of files) {
-        processFile(path.join(INPUT_DIR, file), db, placeIndex, stats);
+        processFile(path.join(INPUT_DIR, file), db, dbApi, placeIndex, stats);
     }
 
     console.log('\n' + '='.repeat(40));

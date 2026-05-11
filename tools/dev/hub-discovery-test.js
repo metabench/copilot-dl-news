@@ -28,6 +28,12 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
+const {
+  getHubDiscoveryProgressCounts,
+  countHubDiscoveryPagesNeedingAnalysis,
+  countHubDiscoveryAnalysisRows,
+  getHubDiscoveryDiagnosticsSnapshot
+} = require('news-crawler-db');
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -342,8 +348,7 @@ async function runCrawlPhase(sites, dbPath, pagesPerSite, runDir, verbose) {
     
     // Check progress after each site
     const db = openNewsCrawlerDb(dbPath);
-    const urlCount = db.prepare('SELECT COUNT(*) as cnt FROM urls').get().cnt;
-    const fetchCount = db.prepare('SELECT COUNT(*) as cnt FROM http_responses').get().cnt;
+    const { urlCount, fetchCount } = getHubDiscoveryProgressCounts(db);
     db.close();
     
     log(`Progress: ${urlCount} URLs discovered, ${fetchCount} pages fetched`, 'data');
@@ -363,17 +368,12 @@ async function runAnalysisPhase(dbPath, runDir, verbose) {
 
   // Check what we have to analyze
   const db = openNewsCrawlerDb(dbPath);
-  const toAnalyze = db.prepare(`
-    SELECT COUNT(*) as cnt 
-    FROM http_responses 
-    WHERE http_status = 200 
-      AND id NOT IN (SELECT http_response_id FROM content_analysis WHERE http_response_id IS NOT NULL)
-  `).get();
+  const toAnalyze = countHubDiscoveryPagesNeedingAnalysis(db);
   db.close();
 
-  log(`${toAnalyze.cnt} pages need analysis`, 'data');
+  log(`${toAnalyze} pages need analysis`, 'data');
 
-  if (toAnalyze.cnt === 0) {
+  if (toAnalyze === 0) {
     log('No pages to analyze', 'warn');
     return { analyzed: 0 };
   }
@@ -385,7 +385,7 @@ async function runAnalysisPhase(dbPath, runDir, verbose) {
     // Run the analysis lab with the test database
     await runCommand('node', [
       'labs/analysis-observable/run-lab.js',
-      '--limit', String(toAnalyze.cnt),
+      '--limit', String(toAnalyze),
       '--headless',
       '--db', dbPath
     ], {
@@ -397,7 +397,7 @@ async function runAnalysisPhase(dbPath, runDir, verbose) {
     
     // Check results
     const db2 = openNewsCrawlerDb(dbPath);
-    const analyzed = db2.prepare('SELECT COUNT(*) as cnt FROM content_analysis').get().cnt;
+    const analyzed = countHubDiscoveryAnalysisRows(db2);
     db2.close();
 
     log(`Analysis complete: ${analyzed} pages analyzed in ${elapsed}s`, 'success');
@@ -473,92 +473,15 @@ function generateDiagnostics(dbPath, runDir, sites) {
   log(`${'='.repeat(60)}\n`, 'info');
 
   const db = openNewsCrawlerDb(dbPath);
+  const snapshot = getHubDiscoveryDiagnosticsSnapshot(db, {
+    hosts: sites.map(s => SITES[s].host)
+  });
   const diagnostics = {
     timestamp: new Date().toISOString(),
     runDir,
     dbPath,
-    sites: sites.map(s => SITES[s].host)
-  };
-
-  // URL stats
-  diagnostics.urls = {
-    total: db.prepare('SELECT COUNT(*) as cnt FROM urls').get().cnt,
-    byHost: db.prepare(`
-      SELECT host, COUNT(*) as cnt 
-      FROM urls 
-      WHERE host IN (${sites.map(s => `'${SITES[s].host}'`).join(',')})
-      GROUP BY host 
-      ORDER BY cnt DESC
-    `).all()
-  };
-
-  // HTTP response stats
-  diagnostics.httpResponses = {
-    total: db.prepare('SELECT COUNT(*) as cnt FROM http_responses').get().cnt,
-    byStatus: db.prepare(`
-      SELECT http_status, COUNT(*) as cnt 
-      FROM http_responses 
-      GROUP BY http_status 
-      ORDER BY cnt DESC
-    `).all(),
-    byHost: db.prepare(`
-      SELECT u.host, COUNT(*) as cnt, 
-        SUM(CASE WHEN hr.http_status = 200 THEN 1 ELSE 0 END) as ok,
-        SUM(CASE WHEN hr.http_status = 404 THEN 1 ELSE 0 END) as not_found
-      FROM http_responses hr
-      JOIN urls u ON hr.url_id = u.id
-      WHERE u.host IN (${sites.map(s => `'${SITES[s].host}'`).join(',')})
-      GROUP BY u.host
-    `).all()
-  };
-
-  // Analysis stats
-  diagnostics.analysis = {
-    total: db.prepare('SELECT COUNT(*) as cnt FROM content_analysis').get().cnt,
-    withPlaces: db.prepare(`
-      SELECT COUNT(*) as cnt FROM content_analysis 
-      WHERE places_detected IS NOT NULL AND places_detected != '[]'
-    `).get().cnt
-  };
-
-  // Place hub candidates
-  diagnostics.hubCandidates = {
-    total: db.prepare('SELECT COUNT(*) as cnt FROM place_hub_candidates').get().cnt,
-    byStatus: db.prepare(`
-      SELECT status, COUNT(*) as cnt 
-      FROM place_hub_candidates 
-      GROUP BY status 
-      ORDER BY cnt DESC
-    `).all(),
-    byDomain: db.prepare(`
-      SELECT domain, COUNT(*) as cnt,
-        SUM(CASE WHEN status LIKE '%ok%' THEN 1 ELSE 0 END) as verified_ok,
-        SUM(CASE WHEN status LIKE '%404%' THEN 1 ELSE 0 END) as not_found
-      FROM place_hub_candidates 
-      GROUP BY domain
-    `).all(),
-    sampleVerified: db.prepare(`
-      SELECT domain, candidate_url, place_name, status
-      FROM place_hub_candidates 
-      WHERE status LIKE '%ok%'
-      LIMIT 20
-    `).all(),
-    sample404: db.prepare(`
-      SELECT domain, candidate_url, place_name, status
-      FROM place_hub_candidates 
-      WHERE status LIKE '%404%'
-      LIMIT 10
-    `).all()
-  };
-
-  // Place page mappings
-  diagnostics.pageMappings = {
-    total: db.prepare('SELECT COUNT(*) as cnt FROM place_page_mappings').get().cnt,
-    byStatus: db.prepare(`
-      SELECT status, COUNT(*) as cnt 
-      FROM place_page_mappings 
-      GROUP BY status
-    `).all()
+    sites: sites.map(s => SITES[s].host),
+    ...snapshot
   };
 
   db.close();

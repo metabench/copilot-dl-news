@@ -1,14 +1,27 @@
-const { createSQLiteDatabase } = require('../src/db/sqlite');
-const db = createSQLiteDatabase('data/news.db');
+'use strict';
 
-const places = db.db.prepare(`
-  SELECT pn.name, p.kind, p.population 
-  FROM places p
-  JOIN place_names pn ON p.canonical_name_id = pn.id
-  WHERE p.country_code = 'CO' 
-  ORDER BY p.population DESC 
-  LIMIT 20
-`).all();
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../src/db/openNewsCrawlerDb');
 
-console.log('Top Colombian Places:');
-places.forEach(p => console.log(`${p.kind}: ${p.name}`));
+const {
+  listTopPlacesByCountryCode
+} = resolveNewsCrawlerDbModule();
+
+async function main() {
+  const db = openNewsCrawlerDb('data/news.db', { readonly: true, fileMustExist: true });
+  try {
+    const places = listTopPlacesByCountryCode(db, 'CO', { limit: 20 });
+    console.log('Top Colombian Places:');
+    places.forEach(place => console.log(`${place.kind}: ${place.name}`));
+  } finally {
+    await db.close();
+  }
+}
+
+if (require.main === module) {
+  main().catch(error => {
+    console.error(error && error.stack ? error.stack : error);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { main };

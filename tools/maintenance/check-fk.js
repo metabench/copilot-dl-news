@@ -1,13 +1,27 @@
+'use strict';
 
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
-const db = openNewsCrawlerDb('./data/test.db');
 
-console.log('Article-related tables:');
-const result = db.prepare('SELECT name FROM sqlite_master WHERE type=\'table\' AND name LIKE \'%article%\'').all();
-console.log(result.map(t => t.name));
+async function main(dbPath = './data/test.db') {
+  const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    const tables = await db.maintenance.listTables();
 
-console.log('\nAll tables:');
-const allTables = db.prepare('SELECT name FROM sqlite_master WHERE type=\'table\'').all();
-console.log(allTables.map(t => t.name));
+    console.log('Article-related tables:');
+    console.log(tables.filter(name => name.includes('article')));
 
-db.close();
+    console.log('\nAll tables:');
+    console.log(tables);
+  } finally {
+    await db.close();
+  }
+}
+
+if (require.main === module) {
+  main().catch(error => {
+    console.error(error && error.stack ? error.stack : error);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { main };

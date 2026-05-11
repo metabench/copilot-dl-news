@@ -7,6 +7,9 @@ const {
   listBoundaryCandidates,
   saveBoundaryData
 } = require('../../../../data/db/sqlite/v1/queries/gazetteer.osm');
+const {
+  registerPlaceSource
+} = require('../../../../data/db/sqlite/v1/queries/gazetteer.ingest');
 
 class OsmBoundaryIngestor {
   constructor({
@@ -38,10 +41,12 @@ class OsmBoundaryIngestor {
     this.name = 'OpenStreetMap Boundary Ingestor';
 
     try {
-      this.db.prepare(`
-        INSERT OR IGNORE INTO place_sources(name, version, url, license)
-        VALUES ('osm.overpass', 'api', 'https://overpass-api.de', 'ODbL 1.0')
-      `).run();
+      registerPlaceSource(this.db, {
+        name: 'osm.overpass',
+        version: 'api',
+        url: 'https://overpass-api.de',
+        license: 'ODbL 1.0'
+      });
     } catch (err) {
       this.logger.warn('[OsmBoundaryIngestor] Failed to register source metadata:', err.message);
     }

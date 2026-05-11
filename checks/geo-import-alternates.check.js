@@ -2,36 +2,32 @@
 const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
-const { applySchema } = require('../src/db/sqlite/v1/schema-definitions');
 const { importAlternateNames } = require('../src/services/GeoImportService');
 
 // Setup
 const DB_PATH = ':memory:';
 const db = openNewsCrawlerDb(DB_PATH);
+const geoImport = db.geoImport;
 const TMP_DIR = path.join(__dirname, 'tmp_check_geo_alt');
 
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR);
 const ALT_FILE = path.join(TMP_DIR, 'alternateNames.txt');
 
-// Apply schema
 console.log('--- Applying schema ---');
-applySchema(db);
+geoImport.ensureGeoImportCoreSchema();
 
-// Seed Data
 console.log('--- Seeding data ---');
-// Create a place: London
-db.prepare(`
-    INSERT INTO places (kind, country_code, population, lat, lng, source)
-    VALUES ('city', 'GB', 9000000, 51.5, -0.12, 'geonames')
-`).run();
-const placeId = db.prepare('SELECT last_insert_rowid() as id FROM places').get().id;
+const placeId = geoImport.insertGeoImportPlace({
+    kind: 'city',
+    countryCode: 'GB',
+    population: 9000000,
+    lat: 51.5,
+    lng: -0.12,
+    source: 'geonames'
+});
 console.log(`Created place with ID: ${placeId}`);
 
-// Link it to geoname ID '2643743' (London)
-db.prepare(`
-    INSERT INTO place_external_ids (place_id, source, ext_id)
-    VALUES (?, 'geonames', '2643743')
-`).run(placeId);
+geoImport.linkGeoImportExternalId(placeId, 'geonames', '2643743');
 
 // Create mock alternateNames.txt
 // format: alternateNameId, geonameid, isolanguage, alternateName, isPreferredName, isShortName, isColloquial, isHistoric, from, to
@@ -46,6 +42,12 @@ const lines = [
 
 fs.writeFileSync(ALT_FILE, lines.join('\n'));
 console.log(`Created ${ALT_FILE} `);
+
+async function cleanup() {
+    if (fs.existsSync(ALT_FILE)) fs.unlinkSync(ALT_FILE);
+    if (fs.existsSync(TMP_DIR)) fs.rmdirSync(TMP_DIR);
+    await db.close();
+}
 
 // Run Import
 console.log('--- Running Import ---');
@@ -62,15 +64,16 @@ import$.on('next', (progress) => {
 
 import$.on('error', (err) => {
     console.error('Import failed:', err);
-    process.exit(1);
+    cleanup().finally(() => {
+        process.exitCode = 1;
+    });
 });
 
-import$.on('complete', (result) => {
+import$.on('complete', async (result) => {
     console.log('--- Import Complete ---');
     console.log('Stats:', result.stats);
 
-    // Verify
-    const names = db.prepare('SELECT * FROM place_names WHERE place_id = ?').all(placeId);
+    const names = geoImport.listGeoImportPlaceNamesForPlace(placeId);
     console.log('\nImported Names:');
     console.table(names.map(n => ({ id: n.id, name: n.name, lang: n.lang, kind: n.name_kind, preferred: n.is_preferred })));
 
@@ -84,9 +87,7 @@ import$.on('complete', (result) => {
     if (bigSmoke && bigSmoke.name_kind !== 'colloquial') { console.error(`FAIL: Big smoke kind wrong: ${bigSmoke.name_kind}`); pass = false; }
     if (result.stats.skipped !== 1) { console.error(`FAIL: Skipped count wrong (expected 1, got ${result.stats.skipped})`); pass = false; }
 
-    // Cleanup
-    fs.unlinkSync(ALT_FILE);
-    fs.rmdirSync(TMP_DIR);
+    await cleanup();
 
     if (pass) {
         console.log('\n✅ Verification Passed');

@@ -23,8 +23,12 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { Worker } = require('worker_threads');
-const { openDatabase } = require('../src/db/sqlite/v1/connection');
-const { decompress } = require('../src/utils/CompressionFacade');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
+const { decompress } = require('../../src/utils/CompressionFacade');
+
+const {
+  listCompressionBenchmarkArticles
+} = resolveNewsCrawlerDbModule();
 
 // ANSI color codes
 const colors = {
@@ -176,41 +180,13 @@ console.log(`Using ${threads} thread${threads !== 1 ? 's' : ''}, batch size ${ba
 console.log();
 
 // Open database
-const db = openDatabase('./data/news.db', { readonly: true, fileMustExist: true });
-
-// Build query to get articles
-let query = `
-  SELECT
-    cs.id,
-    cs.content_blob,
-    cs.uncompressed_size,
-    cs.compressed_size,
-    ct.algorithm,
-    ct.level,
-    u.url
-  FROM content_storage cs
-  JOIN compression_types ct ON cs.compression_type_id = ct.id
-  JOIN http_responses hr ON cs.http_response_id = hr.id
-  JOIN urls u ON hr.url_id = u.id
-  WHERE cs.content_blob IS NOT NULL
-`;
-
-const params = [];
-
-if (filterAlgorithm) {
-  query += ' AND ct.algorithm = ?';
-  params.push(filterAlgorithm);
-}
-
-if (filterLevel !== null) {
-  query += ' AND ct.level = ?';
-  params.push(filterLevel);
-}
-
-query += ` ORDER BY RANDOM() LIMIT ${limit}`;
-
-const stmt = db.prepare(query);
-const articles = stmt.all(...params);
+const db = openNewsCrawlerDb('./data/news.db', { readonly: true, fileMustExist: true });
+const articles = listCompressionBenchmarkArticles(db, {
+  limit,
+  algorithm: filterAlgorithm,
+  level: filterLevel,
+  preferUncompressed: false
+});
 
 console.log(`Found ${articles.length} articles matching criteria\n`);
 

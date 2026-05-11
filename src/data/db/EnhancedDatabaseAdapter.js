@@ -1,5 +1,12 @@
-const { QueueDatabase } = require('./QueueDatabase');
-const { PlannerDatabase } = require('./PlannerDatabase');
+const { resolveNewsCrawlerDbModule } = require('../../db/openNewsCrawlerDb');
+const {
+  QueueDatabase,
+  PlannerDatabase,
+  createSyncNewsDbBridge,
+  getEnhancedDatabaseFeatureTableStatus,
+  deactivateOldProblemClusters,
+  checkEnhancedDatabaseHealth
+} = resolveNewsCrawlerDbModule();
 
 // ---------------------------------------------------------------------------
 // Coverage: prefer the external news-db-analysis module (CoverageAnalysisService)
@@ -21,28 +28,6 @@ try {
     // Both unavailable — coverage features will be disabled
     coverageSource = 'none';
   }
-}
-
-// ---------------------------------------------------------------------------
-// Thin adapter: wraps a synchronous better-sqlite3 handle so it
-// satisfies the async NewsDbAdapter.query() / .execute() contract that
-// CoverageAnalysisService expects.
-// ---------------------------------------------------------------------------
-function createSyncNewsDbBridge(rawDb) {
-  return {
-    async query(sql) {
-      return rawDb.prepare(sql).all();
-    },
-    async execute(sql) {
-      rawDb.exec(sql);
-    },
-    // Stub accessors required by the interface (unused by coverage service)
-    websites: {},
-    domains: {},
-    articles: {},
-    analysis: {},
-    queue: {},
-  };
 }
 
 /**
@@ -350,31 +335,7 @@ class EnhancedDatabaseAdapter {
 
   _checkTablesExist() {
     try {
-      const tableChecks = [
-        'queue_events_enhanced',
-        'problem_clusters',
-        'gap_predictions',
-        'planner_patterns',
-        'hub_validations',
-        'knowledge_reuse_events',
-        'coverage_snapshots',
-        'hub_discoveries',
-        'coverage_gaps',
-        'milestone_achievements',
-        'dashboard_metrics'
-      ];
-
-      const existing = {};
-      for (const table of tableChecks) {
-        try {
-          this.db.prepare(`SELECT COUNT(*) FROM ${table} LIMIT 1`).get();
-          existing[table] = true;
-        } catch (error) {
-          existing[table] = false;
-        }
-      }
-
-      return existing;
+      return getEnhancedDatabaseFeatureTableStatus(this.db);
     } catch (error) {
       console.error('Failed to check table existence:', error);
       return {};
@@ -420,11 +381,7 @@ class EnhancedDatabaseAdapter {
         const cutoffDate = new Date();
         cutoffDate.setHours(cutoffDate.getHours() - (options.clusterTimeoutHours || 24));
 
-        const deactivatedClusters = this.db.prepare(`
-          UPDATE problem_clusters 
-          SET status = 'inactive', updated_at = datetime('now')
-          WHERE status = 'active' AND last_seen < ?
-        `).run(cutoffDate.toISOString()).changes;
+        const deactivatedClusters = deactivateOldProblemClusters(this.db, cutoffDate.toISOString());
 
         results.operations.push({
           type: 'cluster_deactivation',
@@ -444,18 +401,24 @@ class EnhancedDatabaseAdapter {
   // Health check
   healthCheck() {
     try {
+      const healthProbe = checkEnhancedDatabaseHealth(this.db);
+      if (!healthProbe.ok) {
+        return {
+          timestamp: new Date().toISOString(),
+          database: 'error',
+          error: healthProbe.error
+        };
+      }
+
       const health = {
         timestamp: new Date().toISOString(),
         database: 'connected',
         features: this.getFeatureStats(),
         tables: this._checkTablesExist(),
-        performance: {}
+        performance: {
+          queryLatencyMs: healthProbe.queryLatencyMs
+        }
       };
-
-      // Basic performance check
-      const start = Date.now();
-      this.db.prepare('SELECT 1').get();
-      health.performance.queryLatencyMs = Date.now() - start;
 
       return health;
     } catch (error) {

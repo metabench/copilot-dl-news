@@ -3,37 +3,16 @@
 
 // Clone gazetteer tables from a source SQLite database into a fresh destination
 // database that keeps the full schema but only copies gazetteer data (no
-// downloads, site patterns, or crawl history). The destination schema is
-// initialized with ensureDatabase(), then gazetteer tables are copied from the
-// source using ATTACH + INSERT ... SELECT. All other tables remain empty and
-// ready for new crawls.
+// downloads, site patterns, or crawl history). DB work is delegated to
+// news-crawler-db so this repo only owns CLI parsing and presentation.
 
-const fs = require('fs');
 const path = require('path');
 const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
-const { initializeSchema } = require('../../src/db/sqlite/v1/schema');
 const { CliFormatter } = require('../../src/utils/CliFormatter');
 const { findProjectRoot } = require('../../src/utils/project-root');
-const { ensureDatabase } = require('../../src/db/sqlite/v1/connection');
+const { resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 
 const fmt = new CliFormatter();
-
-const DEFAULT_TABLES = [
-  // Copy place_names first to ease trigger constraints when re-enabled
-  'place_names',
-  'places',
-  'place_hierarchy',
-  'place_sources',
-  'place_external_ids',
-  'place_attribute_values',
-  'place_attributes',
-  'place_provenance',
-  'ingestion_runs',
-  'gazetteer_crawl_state',
-  'topic_keywords',
-  'crawl_skip_terms',
-  'domain_locales'
-];
 
 function parseArgs(argv) {
   const parser = new CliArgumentParser(
@@ -58,71 +37,13 @@ function resolvePath(projectRoot, candidate) {
   return path.isAbsolute(candidate) ? candidate : path.join(projectRoot, candidate);
 }
 
-function escapePathForSql(p) {
-  return p.replace(/'/g, "''");
-}
-
-function tableExists(db, table, namespace = 'main') {
-  const stmt = db.prepare(`SELECT name FROM ${namespace}.sqlite_master WHERE type='table' AND name=?`);
-  return !!stmt.get(table);
-}
-
-function getColumns(db, table, namespace = 'main') {
-  const stmt = db.prepare(`PRAGMA ${namespace}.table_info('${table}')`);
-  return stmt.all().map((row) => row.name);
-}
-
-function buildColumnList(columns) {
-  return columns.map((c) => `"${c}"`).join(', ');
-}
-
-function copyTables(db, tables, logger) {
-  const results = [];
-  const tx = db.transaction(() => {
-    for (const table of tables) {
-      const sourceHas = tableExists(db, table, 'sourceDb');
-      const destHas = tableExists(db, table, 'main');
-
-      if (!sourceHas || !destHas) {
-        results.push({ table, copied: 0, status: 'skipped', reason: sourceHas ? 'dest-missing' : 'source-missing' });
-        continue;
-      }
-
-      const destColumns = getColumns(db, table, 'main');
-      const sourceColumns = getColumns(db, table, 'sourceDb');
-      const commonColumns = destColumns.filter((c) => sourceColumns.includes(c));
-
-      if (commonColumns.length === 0) {
-        results.push({ table, copied: 0, status: 'skipped', reason: 'no-common-columns' });
-        continue;
-      }
-
-      const columnList = buildColumnList(commonColumns);
-
-      db.exec(`DELETE FROM "${table}";`);
-      db.exec(`INSERT INTO "${table}" (${columnList}) SELECT ${columnList} FROM sourceDb."${table}";`);
-      const count = db.prepare(`SELECT COUNT(*) as c FROM "${table}";`).get()?.c || 0;
-
-      results.push({ table, copied: count, status: 'ok', columns: commonColumns.length });
-      if (logger && logger.log) {
-        logger.log(`[clone] ${table}: copied ${count} rows (${commonColumns.length} cols)`);
-      }
-    }
-  });
-
-  tx();
-  return results;
-}
-
-function dropCanonicalTriggers(db) {
-  const triggers = ['trg_places_canon_ins', 'trg_places_canon_upd'];
-  for (const trig of triggers) {
-    try {
-      db.exec(`DROP TRIGGER IF EXISTS ${trig};`);
-    } catch (err) {
-      // best-effort
-    }
+function getDbExport(name) {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const value = dbModule[name];
+  if (value === undefined) {
+    throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
   }
+  return value;
 }
 
 function main() {
@@ -133,42 +54,8 @@ function main() {
   const overwrite = !!args.overwrite;
   const tables = args.tables
     ? args.tables.split(',').map((t) => t.trim()).filter(Boolean)
-    : DEFAULT_TABLES.slice();
+    : getDbExport('GAZETTEER_CLONE_DEFAULT_TABLES').slice();
 
-  if (!sourcePath) {
-    fmt.error('Source path is required');
-    process.exit(1);
-    return;
-  }
-
-  if (!destPath) {
-    fmt.error('Destination path is required');
-    process.exit(1);
-    return;
-  }
-
-  if (path.resolve(sourcePath) === path.resolve(destPath)) {
-    fmt.error('Source and destination paths must differ');
-    process.exit(1);
-    return;
-  }
-
-  if (!fs.existsSync(sourcePath)) {
-    fmt.error(`Source database not found: ${sourcePath}`);
-    process.exit(1);
-    return;
-  }
-
-  if (fs.existsSync(destPath)) {
-    if (!overwrite) {
-      fmt.error(`Destination already exists: ${destPath} (use --overwrite to replace)`);
-      process.exit(1);
-      return;
-    }
-    fs.unlinkSync(destPath);
-  }
-
-  let db;
   const summary = {
     source: sourcePath,
     destination: destPath,
@@ -178,29 +65,19 @@ function main() {
   };
 
   try {
-    db = ensureDatabase(destPath, { verbose: !!args.verbose, logger: console });
-    // Attach source in the same connection for fast copy
-    const escapedSource = escapePathForSql(sourcePath);
-    db.exec(`ATTACH DATABASE '${escapedSource}' AS sourceDb;`);
-
-    // Disable FKs and drop canonical triggers to avoid circular ordering issues during copy
-    db.exec('PRAGMA foreign_keys = OFF;');
-    dropCanonicalTriggers(db);
-
-    summary.copied = copyTables(db, tables, args.verbose ? console : null);
-
-    db.exec('PRAGMA foreign_keys = ON;');
-    db.exec('DETACH DATABASE sourceDb;');
-
-    // Recreate triggers (idempotent via initializeSchema)
-    initializeSchema(db, { verbose: false, logger: console });
-    summary.completedAt = new Date().toISOString();
+    const cloneGazetteerTablesToSqliteDb = getDbExport('cloneGazetteerTablesToSqliteDb');
+    Object.assign(summary, cloneGazetteerTablesToSqliteDb({
+      sourcePath,
+      destPath,
+      tables,
+      overwrite,
+      verbose: !!args.verbose,
+      logger: console
+    }));
   } catch (error) {
     summary.error = error?.message || String(error);
     fmt.error(summary.error);
     process.exitCode = 1;
-  } finally {
-    try { db?.close(); } catch (_) {}
   }
 
   if (args.json) {

@@ -14,7 +14,7 @@
 const express = require('express');
 const path = require('path');
 const { findProjectRoot } = require('../../../shared/utils/project-root');
-const { ensureDatabase } = require('../../../data/db/sqlite');
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 const { decompress } = require('../../../shared/utils/compression');
 const { Readability } = require('@mozilla/readability');
 const { JSDOM } = require('jsdom');
@@ -27,68 +27,21 @@ const DEFAULT_PORT = 3021;
 
 function getDb() {
   const dbPath = path.join(findProjectRoot(), 'data', 'news.db');
-  return ensureDatabase(dbPath);
+  return openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
+}
+
+function getVisualDiffAccess(db) {
+  if (!db || !db.visualDiff) {
+    throw new Error('news-crawler-db visualDiff access surface is unavailable. Rebuild news-crawler-db.');
+  }
+  return db.visualDiff;
 }
 
 /**
  * Load content and analysis for a URL
  */
 function loadPageData(db, urlOrId) {
-  let row;
-  
-  // Try by URL first
-  if (typeof urlOrId === 'string' && urlOrId.startsWith('http')) {
-    row = db.prepare(`
-      SELECT 
-        u.url,
-        u.id as url_id,
-        ca.id as analysis_id,
-        ca.title,
-        ca.date,
-        ca.section,
-        ca.word_count,
-        ca.confidence_score,
-        ca.analysis_json,
-        cs.content_blob,
-        cs.compression_type_id,
-        ct.algorithm as compression_algorithm
-      FROM urls u
-      JOIN http_responses hr ON hr.url_id = u.id
-      JOIN content_storage cs ON cs.http_response_id = hr.id
-      LEFT JOIN content_analysis ca ON ca.content_id = cs.id
-      LEFT JOIN compression_types ct ON ct.id = cs.compression_type_id
-      WHERE u.url = ?
-      ORDER BY hr.fetched_at DESC
-      LIMIT 1
-    `).get(urlOrId);
-  } else {
-    // Try by analysis_id or url_id
-    const id = parseInt(urlOrId, 10);
-    row = db.prepare(`
-      SELECT 
-        u.url,
-        u.id as url_id,
-        ca.id as analysis_id,
-        ca.title,
-        ca.date,
-        ca.section,
-        ca.word_count,
-        ca.confidence_score,
-        ca.analysis_json,
-        cs.content_blob,
-        cs.compression_type_id,
-        ct.algorithm as compression_algorithm
-      FROM content_analysis ca
-      JOIN content_storage cs ON cs.id = ca.content_id
-      LEFT JOIN http_responses hr ON hr.id = cs.http_response_id
-      LEFT JOIN urls u ON u.id = hr.url_id
-      LEFT JOIN compression_types ct ON ct.id = cs.compression_type_id
-      WHERE ca.id = ?
-      LIMIT 1
-    `).get(id);
-  }
-  
-  return row;
+  return getVisualDiffAccess(db).getVisualDiffPageDataByUrlOrAnalysisId(urlOrId);
 }
 
 /**
@@ -196,44 +149,14 @@ function extractMetadata(html, url) {
  * Get list of recent pages with low confidence for review
  */
 function getLowConfidencePages(db, limit = 50) {
-  return db.prepare(`
-    SELECT 
-      ca.id as analysis_id,
-      u.url,
-      ca.title,
-      ca.confidence_score,
-      ca.word_count,
-      ca.analyzed_at
-    FROM content_analysis ca
-    JOIN content_storage cs ON cs.id = ca.content_id
-    LEFT JOIN http_responses hr ON hr.id = cs.http_response_id
-    LEFT JOIN urls u ON u.id = hr.url_id
-    WHERE ca.confidence_score IS NOT NULL
-      AND ca.confidence_score < 0.6
-    ORDER BY ca.confidence_score ASC, ca.analyzed_at DESC
-    LIMIT ?
-  `).all(limit);
+  return getVisualDiffAccess(db).listVisualDiffLowConfidencePages({ limit });
 }
 
 /**
  * Get list of pages without confidence scores
  */
 function getUnratedPages(db, limit = 50) {
-  return db.prepare(`
-    SELECT 
-      ca.id as analysis_id,
-      u.url,
-      ca.title,
-      ca.word_count,
-      ca.analyzed_at
-    FROM content_analysis ca
-    JOIN content_storage cs ON cs.id = ca.content_id
-    LEFT JOIN http_responses hr ON hr.id = cs.http_response_id
-    LEFT JOIN urls u ON u.id = hr.url_id
-    WHERE ca.confidence_score IS NULL
-    ORDER BY ca.analyzed_at DESC
-    LIMIT ?
-  `).all(limit);
+  return getVisualDiffAccess(db).listVisualDiffUnratedPages({ limit });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

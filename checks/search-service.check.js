@@ -1,6 +1,6 @@
 'use strict';
 
-const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../src/db/openNewsCrawlerDb');
 /**
  * Search Service Check Script
  * 
@@ -26,6 +26,15 @@ if (!fs.existsSync(DB_PATH)) {
   process.exit(1);
 }
 
+function getDbApi(name) {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const fn = dbModule[name];
+  if (typeof fn !== 'function') {
+    throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+  }
+  return fn;
+}
+
 let db;
 try {
   db = openNewsCrawlerDb(DB_PATH, { readonly: true });
@@ -35,14 +44,13 @@ try {
   process.exit(1);
 }
 
-// Check if FTS5 table exists
+const getSearchSnapshot = getDbApi('getSqliteArticleSearchCheckSnapshot');
+const getSampleBodyText = getDbApi('getSqliteArticleSearchSampleBodyText');
+let snapshot;
 try {
-  const ftsTable = db.prepare(`
-    SELECT name FROM sqlite_master 
-    WHERE type='table' AND name='articles_fts'
-  `).get();
-  
-  if (!ftsTable) {
+  snapshot = getSearchSnapshot(db);
+
+  if (!snapshot.ftsTableExists) {
     console.log('⚠️  FTS5 table not found - migration may not be applied');
     console.log('   Run: node src/db/sqlite/v1/migrations/add_fts5_article_search.js up');
     db.close();
@@ -57,14 +65,8 @@ try {
 
 // Check content_analysis schema
 try {
-  const columns = db.prepare(`PRAGMA table_info(content_analysis)`).all();
-  const columnNames = columns.map(c => c.name);
-  
-  const requiredColumns = ['body_text', 'byline', 'authors'];
-  const missingColumns = requiredColumns.filter(c => !columnNames.includes(c));
-  
-  if (missingColumns.length > 0) {
-    console.log('⚠️  Missing columns in content_analysis:', missingColumns.join(', '));
+  if (snapshot.missingContentAnalysisColumns.length > 0) {
+    console.log('⚠️  Missing columns in content_analysis:', snapshot.missingContentAnalysisColumns.join(', '));
     console.log('   Run: node src/db/sqlite/v1/migrations/add_fts5_article_search.js up');
   } else {
     console.log('✅ content_analysis has required columns');
@@ -75,30 +77,19 @@ try {
 
 // Check trigger count
 try {
-  const triggers = db.prepare(`
-    SELECT name FROM sqlite_master 
-    WHERE type='trigger' AND name LIKE 'articles_fts_%'
-  `).all();
-  
-  console.log(`✅ FTS triggers found: ${triggers.length} (expected: 3)`);
-  triggers.forEach(t => console.log(`   - ${t.name}`));
+  console.log(`✅ FTS triggers found: ${snapshot.triggers.length} (expected: 3)`);
+  snapshot.triggers.forEach(t => console.log(`   - ${t.name}`));
 } catch (err) {
   console.error('❌ Error checking triggers:', err.message);
 }
 
 // Check indexed article count
 try {
-  const ftsCount = db.prepare(`SELECT COUNT(*) as count FROM articles_fts`).get();
-  const analysisCount = db.prepare(`
-    SELECT COUNT(*) as count FROM content_analysis 
-    WHERE body_text IS NOT NULL AND body_text != ''
-  `).get();
-  
   console.log(`\n📊 Index Statistics:`);
-  console.log(`   FTS indexed rows: ${ftsCount.count}`);
-  console.log(`   Articles with body_text: ${analysisCount.count}`);
-  
-  if (ftsCount.count < analysisCount.count) {
+  console.log(`   FTS indexed rows: ${snapshot.ftsIndexedRows}`);
+  console.log(`   Articles with body_text: ${snapshot.articlesWithBodyText}`);
+
+  if (snapshot.ftsIndexedRows < snapshot.articlesWithBodyText) {
     console.log('   ⚠️  Some articles may need reindexing');
     console.log('   Run: node tools/fts-backfill.js');
   }
@@ -111,11 +102,7 @@ try {
   const searchService = new SearchService(db);
   
   // Get a sample word from an indexed article
-  const sample = db.prepare(`
-    SELECT body_text FROM content_analysis 
-    WHERE body_text IS NOT NULL AND body_text != ''
-    LIMIT 1
-  `).get();
+  const sample = getSampleBodyText(db);
   
   if (sample && sample.body_text) {
     // Extract first meaningful word

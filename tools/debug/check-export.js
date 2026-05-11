@@ -1,38 +1,46 @@
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+'use strict';
 
-const db = Database('full-export-brotli-24threads.db', { readonly: true });
+const path = require('path');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 
-// Check schema
-console.log('=== SCHEMA ===');
-const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
-console.log('Tables:', tables.map(t => t.name));
+const { getPagesExportDatabaseInspectionSnapshot } = resolveNewsCrawlerDbModule();
 
-// Check articles table structure
-console.log('\n=== ARTICLES TABLE STRUCTURE ===');
-const columns = db.prepare("PRAGMA table_info(articles)").all();
-console.log('Columns:', columns.map(c => `${c.name} (${c.type})`));
+function toMb(value) {
+  if (value == null) return null;
+  return (Number(value) / 1024 / 1024).toFixed(2);
+}
 
-// Check sample data
-console.log('\n=== SAMPLE ARTICLE ===');
-const sample = db.prepare('SELECT id, url, length(html) as html_len, length(compressed_html) as comp_len, compression_ratio FROM articles LIMIT 1').get();
-console.log('Sample:', sample);
+async function main() {
+  const dbPath = process.argv[2] || path.resolve(process.cwd(), 'full-export-brotli-24threads.db');
+  const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
 
-// Check total sizes
-console.log('\n=== TOTAL SIZES ===');
-const stats = db.prepare(`
-  SELECT
-    COUNT(*) as count,
-    SUM(length(html)) as total_html,
-    SUM(length(compressed_html)) as total_compressed,
-    AVG(compression_ratio) as avg_ratio
-  FROM articles
-  WHERE compressed_html IS NOT NULL
-`).get();
-console.log('Stats:', {
-  count: stats.count,
-  total_html_mb: (stats.total_html / 1024 / 1024).toFixed(2),
-  total_compressed_mb: (stats.total_compressed / 1024 / 1024).toFixed(2),
-  avg_ratio: stats.avg_ratio?.toFixed(2)
+  try {
+    const snapshot = getPagesExportDatabaseInspectionSnapshot(db);
+
+    console.log('=== SCHEMA ===');
+    console.log('Tables:', snapshot.tables);
+
+    console.log('\n=== ARTICLES TABLE STRUCTURE ===');
+    console.log('Columns:', snapshot.articleColumns);
+
+    console.log('\n=== SAMPLE ARTICLE ===');
+    console.log('Sample:', snapshot.sampleArticle);
+
+    console.log('\n=== TOTAL SIZES ===');
+    const stats = snapshot.compressionSizeStats;
+    console.log('Stats:', {
+      count: stats.count,
+      total_html_mb: toMb(stats.total_html),
+      total_compressed_mb: toMb(stats.total_compressed),
+      avg_ratio: stats.avg_ratio == null ? null : Number(stats.avg_ratio).toFixed(2)
+    });
+  } finally {
+    await db.close();
+  }
+}
+
+main().catch((error) => {
+  console.error('Error:', error.message);
+  console.error(error.stack);
+  process.exitCode = 1;
 });
-
-db.close();

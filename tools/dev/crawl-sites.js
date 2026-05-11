@@ -2,6 +2,7 @@
 'use strict';
 
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { countSuccessfulHttpResponsesForHostSince } = require('news-crawler-db');
 /**
  * crawl-sites.js — Crawl multiple sites with a concise API
  * 
@@ -236,17 +237,7 @@ async function findFailedSites(threshold, since) {
   for (const [key, site] of Object.entries(SITE_REGISTRY)) {
     const host = new URL(site.url).hostname;
     
-    const stmt = db.prepare(`
-      SELECT COUNT(*) as count
-      FROM http_responses r
-      JOIN urls u ON r.url_id = u.id
-      WHERE u.host = ?
-        AND r.fetched_at >= ?
-        AND r.http_status = 200
-    `);
-    
-    const result = stmt.get(host, startTime);
-    const count = result?.count || 0;
+    const count = countSuccessfulHttpResponsesForHostSince(db, host, startTime);
     
     if (count < threshold) {
       failed.push({ 

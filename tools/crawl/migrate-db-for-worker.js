@@ -1,44 +1,35 @@
+#!/usr/bin/env node
+'use strict';
 
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
-const db = openNewsCrawlerDb('data/news.db');
 
-const columnsToAdd = [
-    { name: 'path', type: 'TEXT' },
-    { name: 'status', type: "TEXT DEFAULT 'pending'" },
-    { name: 'depth', type: 'INTEGER DEFAULT 0' },
-    { name: 'discovered_from', type: 'TEXT' },
-    { name: 'http_status', type: 'INTEGER' },
-    { name: 'content_type', type: 'TEXT' },
-    { name: 'content_length', type: 'INTEGER' },
-    { name: 'title', type: 'TEXT' },
-    { name: 'word_count', type: 'INTEGER' },
-    { name: 'links_found', type: 'INTEGER DEFAULT 0' },
-    { name: 'classification', type: 'TEXT' },
-    { name: 'fetched_at', type: 'DATETIME' },
-    { name: 'updated_at', type: 'DATETIME DEFAULT CURRENT_TIMESTAMP' },
-    { name: 'error_msg', type: 'TEXT' }
-];
+async function main() {
+  const db = openNewsCrawlerDb('data/news.db');
 
-console.log('Checking columns...');
-const existing = db.prepare("PRAGMA table_info(urls)").all().map(c => c.name);
+  try {
+    console.log('Checking worker URL columns...');
+    const result = db.migrationUtilities.ensureWorkerUrlColumns();
 
-for (const col of columnsToAdd) {
-    if (!existing.includes(col.name)) {
-        console.log(`Adding column: ${col.name}`);
-        try {
-            db.prepare(`ALTER TABLE urls ADD COLUMN ${col.name} ${col.type}`).run();
-        } catch (e) {
-            console.error(`Failed to add ${col.name}: ${e.message}`);
-        }
-    } else {
-        console.log(`Skipping existing: ${col.name}`);
+    for (const column of result.addedColumns) {
+      console.log(`Adding column: ${column}`);
     }
+    for (const column of result.existingColumns) {
+      console.log(`Skipping existing: ${column}`);
+    }
+    for (const failure of result.failedColumns) {
+      console.error(`Failed to add ${failure.column}: ${failure.message}`);
+    }
+
+    console.log('Verified status index.');
+    console.log('Migration complete.');
+  } finally {
+    await db.close();
+  }
 }
 
-// create index on status if needed
-try {
-    db.prepare("CREATE INDEX IF NOT EXISTS idx_urls_status ON urls(status)").run();
-    console.log("Verified status index.");
-} catch (e) { console.error(e.message); }
-
-console.log('Migration complete.');
+if (require.main === module) {
+  main().catch((error) => {
+    console.error('Migration failed:', error.message);
+    process.exit(1);
+  });
+}

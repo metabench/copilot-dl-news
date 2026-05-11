@@ -1,5 +1,15 @@
 const { URL } = require('url');
 
+let PLACE_EXTRACTION_DB_QUERIES = null;
+
+function getPlaceExtractionDbQueries() {
+  if (!PLACE_EXTRACTION_DB_QUERIES) {
+    const { resolveNewsCrawlerDbModule } = require('../../db/openNewsCrawlerDb');
+    PLACE_EXTRACTION_DB_QUERIES = resolveNewsCrawlerDbModule();
+  }
+  return PLACE_EXTRACTION_DB_QUERIES;
+}
+
 // Default topic tokens - loaded from database on first use
 let DEFAULT_TOPIC_TOKENS = null;
 
@@ -151,7 +161,7 @@ function finalizePlaceRecords(matchers) {
 }
 
 function buildHierarchyIndex(db, placeIndex) {
-  if (!db || typeof db.prepare !== 'function' || !placeIndex || placeIndex.size === 0) {
+  if (!db || !placeIndex || placeIndex.size === 0) {
     return {
       parents: new Map(),
       children: new Map(),
@@ -161,12 +171,7 @@ function buildHierarchyIndex(db, placeIndex) {
 
   let rows = [];
   try {
-    rows = db.prepare(`
-      SELECT parent_id, child_id,
-             COALESCE(relation, NULL) AS relation,
-             COALESCE(depth, NULL) AS depth
-        FROM place_hierarchy
-    `).all();
+    rows = getPlaceExtractionDbQueries().listPlaceExtractionHierarchyRows(db);
   } catch (_) {
     return {
       parents: new Map(),
@@ -233,10 +238,11 @@ function buildHierarchyIndex(db, placeIndex) {
 }
 
 function buildGazetteerMatchers(db, options = {}) {
-  if (!db || typeof db.prepare !== 'function') {
-    throw new Error('buildGazetteerMatchers requires a database handle with prepare()');
+  if (!db) {
+    throw new Error('buildGazetteerMatchers requires a database handle');
   }
 
+  const dbQueries = getPlaceExtractionDbQueries();
   const matchers = {
     nameMap: new Map(),
     slugMap: new Map(),
@@ -247,19 +253,7 @@ function buildGazetteerMatchers(db, options = {}) {
   const TEST_FAST = process.env.TEST_FAST === '1' || process.env.TEST_FAST === 'true';
   const CITY_LIMIT = TEST_FAST ? 500 : 5000;
 
-  const countryRows = db.prepare(`
-      SELECT pn.name,
-             COALESCE(pn.normalized, LOWER(pn.name)) AS norm,
-             p.id AS place_id,
-             p.kind,
-             p.country_code,
-             COALESCE(p.population, 0) AS population
-        FROM place_names pn
-        JOIN places p ON p.id = pn.place_id
-       WHERE (pn.lang IS NULL OR pn.lang = 'en')
-         AND pn.name_kind IN ('common', 'official', 'alias', 'endonym', 'exonym')
-         AND p.kind IN ('country', 'region', 'planet')
-    `).all();
+  const countryRows = dbQueries.listPlaceExtractionCountryMatcherRows(db);
 
   for (const row of countryRows) {
     const record = ensurePlaceRecord(matchers, row);
@@ -269,21 +263,7 @@ function buildGazetteerMatchers(db, options = {}) {
     addSlugToRecord(record, matchers, row.name);
   }
 
-  const cityRows = db.prepare(`
-      SELECT pn.name,
-             COALESCE(pn.normalized, LOWER(pn.name)) AS norm,
-             p.id AS place_id,
-             p.kind,
-             p.country_code,
-             COALESCE(p.population, 0) AS population
-        FROM place_names pn
-        JOIN places p ON p.id = pn.place_id
-       WHERE (pn.lang IS NULL OR pn.lang = 'en')
-         AND pn.name_kind IN ('common', 'official', 'alias')
-         AND p.kind = 'city'
-    ORDER BY COALESCE(p.population, 0) DESC
-       LIMIT ${CITY_LIMIT}
-    `).all();
+  const cityRows = dbQueries.listPlaceExtractionCityMatcherRows(db, { limit: CITY_LIMIT });
 
   for (const row of cityRows) {
     const record = ensurePlaceRecord(matchers, row);
@@ -800,7 +780,7 @@ function inferContext(db, url, title, section) {
     context.tld_cc = tldMap[tld] || null;
 
     try {
-      const row = db.prepare('SELECT country_code, primary_langs FROM domain_locales WHERE host = ?').get(context.host);
+      const row = db ? getPlaceExtractionDbQueries().getPlaceExtractionDomainLocale(db, context.host) : null;
       if (row) {
         context.domain_cc = row.country_code || null;
         if (row.primary_langs) {

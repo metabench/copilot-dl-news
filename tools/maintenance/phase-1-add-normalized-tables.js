@@ -1,203 +1,106 @@
 #!/usr/bin/env node
+'use strict';
 
 /**
- * Phase 1 Implementation: Add Normalized Tables
+ * Phase 1 implementation wrapper.
  *
- * This script adds normalized tables alongside existing schema without breaking changes.
- * Creates: http_responses, content_analysis, discovery_events, place_provenance, place_attributes
- * Records as schema version 2.
+ * DB-owned schema and migration-version behavior lives in news-crawler-db.
  */
 
-const { ensureDb } = require('../src/data/db/sqlite/v1/ensureDb');
-const { SchemaVersionManager } = require('../src/data/db/migration/schema-versions');
+const path = require('path');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 
-function createNormalizedTables(db) {
-  console.log('Creating normalized tables...');
-
-  // HTTP Protocol Layer
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS http_responses (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      url_id INTEGER NOT NULL REFERENCES urls(id),
-      request_started_at TEXT NOT NULL,
-      fetched_at TEXT,
-      http_status INTEGER,
-      content_type TEXT,
-      content_encoding TEXT,
-      etag TEXT,
-      last_modified TEXT,
-      redirect_chain TEXT,
-      ttfb_ms INTEGER,
-      download_ms INTEGER,
-      total_ms INTEGER,
-      bytes_downloaded INTEGER,
-      transfer_kbps REAL
-    );
-  `);
-
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_http_responses_url ON http_responses(url_id, fetched_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_http_responses_status ON http_responses(http_status);
-    CREATE INDEX IF NOT EXISTS idx_http_responses_fetched ON http_responses(fetched_at);
-  `);
-
-  // Content Analysis Layer
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS content_analysis (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      content_id INTEGER NOT NULL REFERENCES content_storage(id),
-      analysis_version INTEGER NOT NULL DEFAULT 1,
-      classification TEXT,
-      title TEXT,
-      date TEXT,
-      section TEXT,
-      word_count INTEGER,
-      language TEXT,
-      article_xpath TEXT,
-      nav_links_count INTEGER,
-      article_links_count INTEGER,
-      analysis_json TEXT,
-      analyzed_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-  `);
-
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_content_analysis_content ON content_analysis(content_id);
-    CREATE INDEX IF NOT EXISTS idx_content_analysis_classification ON content_analysis(classification);
-    CREATE INDEX IF NOT EXISTS idx_content_analysis_version ON content_analysis(analysis_version);
-  `);
-
-  // Discovery Metadata Layer
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS discovery_events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      url_id INTEGER NOT NULL REFERENCES urls(id),
-      discovered_at TEXT NOT NULL,
-      referrer_url TEXT,
-      crawl_depth INTEGER,
-      discovery_method TEXT,
-      crawl_job_id TEXT REFERENCES crawl_jobs(id)
-    );
-  `);
-
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_discovery_url ON discovery_events(url_id, discovered_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_discovery_job ON discovery_events(crawl_job_id);
-    CREATE INDEX IF NOT EXISTS idx_discovery_events_url ON discovery_events(url_id);
-  `);
-
-  // Place Provenance Layer
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS place_provenance (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      place_id INTEGER NOT NULL REFERENCES places(id),
-      source TEXT NOT NULL,
-      external_id TEXT NOT NULL,
-      fetched_at INTEGER,
-      raw_data TEXT,
-      UNIQUE(place_id, source, external_id)
-    );
-  `);
-
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_place_provenance_place ON place_provenance(place_id);
-    CREATE INDEX IF NOT EXISTS idx_place_provenance_source ON place_provenance(source);
-    CREATE INDEX IF NOT EXISTS idx_place_provenance_external ON place_provenance(external_id);
-  `);
-
-  // Place Attributes Layer
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS place_attributes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      place_id INTEGER NOT NULL REFERENCES places(id),
-      attribute_kind TEXT NOT NULL,
-      value TEXT NOT NULL,
-      source TEXT NOT NULL,
-      fetched_at INTEGER,
-      confidence REAL,
-      metadata TEXT,
-      UNIQUE(place_id, attribute_kind, source)
-    );
-  `);
-
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_place_attributes_place ON place_attributes(place_id);
-    CREATE INDEX IF NOT EXISTS idx_place_attributes_kind ON place_attributes(attribute_kind);
-    CREATE INDEX IF NOT EXISTS idx_place_attributes_source ON place_attributes(source);
-  `);
-
-  console.log('✓ All normalized tables created');
+function parseArgs(argv = process.argv.slice(2)) {
+  const options = {};
+  for (const arg of argv) {
+    if (!arg.startsWith('--')) continue;
+    const [key, value] = arg.substring(2).split('=');
+    options[key] = value || true;
+  }
+  return options;
 }
 
-function recordSchemaVersion2(db) {
-  console.log('Recording schema version 2...');
-
-  const versionManager = new SchemaVersionManager(db);
-  versionManager.recordMigration(
-    2,
-    'add_normalized_tables',
-    'Add normalized tables: http_responses, content_analysis, discovery_events, place_provenance, place_attributes'
-  );
-
-  console.log('✓ Schema version 2 recorded');
-}
-
-function verifyTablesExist(db) {
-  console.log('Verifying tables exist...');
-
-  const expectedTables = [
-    'http_responses',
-    'content_analysis',
-    'discovery_events',
-    'place_provenance',
-    'place_attributes'
+function getPhaseApi() {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const required = [
+    'applyNormalizedPhase1Schema',
+    'verifyNormalizedPhase1Tables',
+    'recordNormalizedPhase1Migration',
+    'runNormalizedPhase1Migration'
   ];
 
-  for (const tableName of expectedTables) {
-    const result = db.prepare(`
-      SELECT name FROM sqlite_master
-      WHERE type='table' AND name=?
-    `).get(tableName);
-
-    if (!result) {
-      throw new Error(`Table '${tableName}' was not created`);
+  for (const name of required) {
+    if (typeof dbModule[name] !== 'function') {
+      throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
     }
-    console.log(`✓ ${tableName} exists`);
+  }
+
+  return dbModule;
+}
+
+async function closeDb(db) {
+  if (db && typeof db.close === 'function') {
+    await db.close();
   }
 }
 
+function createNormalizedTables(db) {
+  return getPhaseApi().applyNormalizedPhase1Schema(db);
+}
+
+function verifyTablesExist(db) {
+  return getPhaseApi().verifyNormalizedPhase1Tables(db);
+}
+
+function recordSchemaVersion2(db) {
+  return getPhaseApi().recordNormalizedPhase1Migration(db);
+}
+
 async function main() {
-  console.log('Phase 1: Add Normalized Tables');
+  const options = parseArgs();
+  if (!options.db) {
+    console.error('Usage: node tools/maintenance/phase-1-add-normalized-tables.js --db=path/to/database.db');
+    process.exit(1);
+  }
+
+  const dbPath = path.resolve(options.db);
+  const db = openNewsCrawlerDb(dbPath);
+  const api = getPhaseApi();
+
+  console.log('Phase 1: Add normalized tables');
   console.log('================================');
+  console.log(`Database: ${dbPath}`);
 
   try {
-    const db = ensureDb();
+    const result = api.runNormalizedPhase1Migration(db);
 
-    // Create all normalized tables
-    createNormalizedTables(db);
+    console.log(`Tables created: ${result.schema.tablesCreated.length}`);
+    console.log(`Tables already present: ${result.schema.tablesAlreadyPresent.length}`);
+    console.log(`Indexes created: ${result.schema.indexesCreated.length}`);
+    console.log(`Indexes already present: ${result.schema.indexesAlreadyPresent.length}`);
 
-    // Verify they were created
-    verifyTablesExist(db);
+    for (const tableName of result.verification.existingTables) {
+      console.log(`✓ ${tableName} exists`);
+    }
 
-    // Record as schema version 2
-    recordSchemaVersion2(db);
-
-    console.log('\n🎉 Phase 1 Complete!');
-    console.log('Normalized tables added successfully');
-    console.log('Schema version: 2 (add_normalized_tables)');
-    console.log('Ready for Phase 2: Dual-write implementation');
-
-    db.close();
-    process.exit(0);
-
-  } catch (error) {
-    console.error('❌ Phase 1 failed:', error.message);
-    process.exit(1);
+    console.log(`✓ Schema version ${result.migration.version} recorded (${result.migration.name})`);
+    console.log('\nPhase 1 complete');
+  } finally {
+    await closeDb(db);
   }
 }
 
 if (require.main === module) {
-  main();
+  main().catch((error) => {
+    console.error('Phase 1 failed:', error.message);
+    process.exit(1);
+  });
 }
 
-module.exports = { createNormalizedTables, recordSchemaVersion2, verifyTablesExist };
+module.exports = {
+  parseArgs,
+  createNormalizedTables,
+  recordSchemaVersion2,
+  verifyTablesExist,
+  main
+};

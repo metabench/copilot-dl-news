@@ -13,7 +13,8 @@
 const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
-const { ensureDb } = require('../../src/data/db/sqlite');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
+const { getAnalysisStatusCheckSnapshot } = resolveNewsCrawlerDbModule();
 
 const THRESHOLD = 500;
 
@@ -28,7 +29,7 @@ function main(argv = process.argv) {
 
     let db;
     try {
-        db = ensureDb(dbPath);
+        db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
     } catch (err) {
         console.error(`❌ Failed to open database: ${err.message}`);
         return 1;
@@ -37,15 +38,8 @@ function main(argv = process.argv) {
     try {
         console.log('=== Analysis Status Check ===\n');
 
-        // 1. Get eligible domains (>= 500 docs)
-        // We use a simplified query for the check tool
-        const eligibleHosts = db.prepare(`
-            SELECT host, COUNT(*) as doc_count 
-            FROM urls 
-            WHERE host IS NOT NULL AND host != ''
-            GROUP BY host 
-            HAVING COUNT(*) >= ?
-        `).all(THRESHOLD);
+        const snapshot = getAnalysisStatusCheckSnapshot(db, { threshold: THRESHOLD });
+        const eligibleHosts = snapshot.eligibleHosts;
 
         if (eligibleHosts.length === 0) {
             console.log(`ℹ️  No domains meet the ${THRESHOLD} document threshold yet.`);
@@ -54,23 +48,8 @@ function main(argv = process.argv) {
 
         console.log(`Found ${eligibleHosts.length} eligible domains (>= ${THRESHOLD} docs).Checking analysis status...\n`);
 
-        // 2. Check analysis status (domain_classification_profiles)
-        const missingAnalysis = [];
-        const analyzed = [];
-
-        for (const site of eligibleHosts) {
-            const profile = db.prepare(`
-                SELECT last_updated_at 
-                FROM domain_classification_profiles 
-                WHERE domain = ?
-            `).get(site.host);
-
-            if (profile) {
-                analyzed.push({ ...site, last_updated_at: profile.last_updated_at });
-            } else {
-                missingAnalysis.push(site);
-            }
-        }
+        const missingAnalysis = snapshot.missingAnalysis;
+        const analyzed = snapshot.analyzed;
 
         // Report
         if (analyzed.length > 0) {

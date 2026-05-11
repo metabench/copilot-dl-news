@@ -1,22 +1,41 @@
-const { ensureDatabase } = require('../src/data/db/sqlite/v1');
-const db = ensureDatabase('./data/news.db');
-console.log('Tables:', db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(t => t.name));
-console.log('HTTP Response count:', db.prepare("SELECT COUNT(*) as count FROM http_responses").get().count);
-console.log('Content Analysis count:', db.prepare("SELECT COUNT(*) as count FROM content_analysis").get().count);
-console.log('Place count:', db.prepare("SELECT COUNT(*) as count FROM places").get().count);
+#!/usr/bin/env node
+'use strict';
 
-// Get a sample article with title
-const sampleArticle = db.prepare(`
-  SELECT hr.id, ca.title
-  FROM http_responses hr
-  LEFT JOIN content_analysis ca ON hr.id = ca.content_id
-  WHERE ca.title IS NOT NULL AND ca.title != ''
-  LIMIT 1
-`).get();
+const path = require('path');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 
-if (sampleArticle) {
-  console.log('Sample article:', sampleArticle);
-} else {
-  console.log('No articles with titles found');
+const DEFAULT_DB_PATH = path.join(__dirname, '..', '..', 'data', 'news.db');
+
+async function main(argv = process.argv.slice(2)) {
+  const dbPath = argv[0] || DEFAULT_DB_PATH;
+  const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
+
+  try {
+    const snapshot = await db.maintenance.getBasicDatabaseCheckSnapshot();
+    const countByTable = new Map(snapshot.counts.map((entry) => [entry.table, entry]));
+
+    console.log('Tables:', snapshot.tables);
+    console.log('HTTP Response count:', countByTable.get('http_responses')?.count ?? 0);
+    console.log('Content Analysis count:', countByTable.get('content_analysis')?.count ?? 0);
+    console.log('Place count:', countByTable.get('places')?.count ?? 0);
+
+    if (snapshot.sampleArticle) {
+      console.log('Sample article:', snapshot.sampleArticle);
+    } else {
+      console.log('No articles with titles found');
+    }
+  } finally {
+    if (db && typeof db.close === 'function') {
+      db.close();
+    }
+  }
 }
-db.close();
+
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err.message || err);
+    process.exit(1);
+  });
+}
+
+module.exports = { main };

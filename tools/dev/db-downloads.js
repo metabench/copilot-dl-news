@@ -129,23 +129,8 @@ EXAMPLES:
 function cmdRecent() {
   const db = getDb();
   const limit = parseInt(flags.recent === true ? LIMIT : flags.recent, 10);
-  
-  const stmt = db.prepare(`
-    SELECT 
-      r.id,
-      u.url,
-      u.host,
-      r.http_status,
-      r.bytes_downloaded,
-      r.fetched_at,
-      r.content_type
-    FROM http_responses r
-    JOIN urls u ON r.url_id = u.id
-    ORDER BY r.fetched_at DESC
-    LIMIT ?
-  `);
-  
-  const rows = stmt.all(limit);
+
+  const rows = downloadEvidence.listRecentDownloads(db, { limit });
   db.close();
   
   if (JSON_OUTPUT) {
@@ -168,24 +153,8 @@ function cmdToday() {
   const db = getDb();
   
   const today = new Date().toISOString().split('T')[0];
-  const startTime = today + 'T00:00:00';
-  const endTime = today + 'T23:59:59';
-  
-  const stats = downloadEvidence.getDownloadStats(db, startTime, endTime);
-  
-  // Also get hourly breakdown
-  const hourlyStmt = db.prepare(`
-    SELECT 
-      strftime('%H', fetched_at) as hour,
-      COUNT(*) as count,
-      SUM(bytes_downloaded) as bytes
-    FROM http_responses
-    WHERE date(fetched_at) = date('now')
-      AND http_status = 200
-    GROUP BY strftime('%H', fetched_at)
-    ORDER BY hour
-  `);
-  const hourly = hourlyStmt.all();
+  const todayResult = downloadEvidence.getTodayDownloadStats(db, { date: today });
+  const { stats, hourly } = todayResult;
   
   db.close();
   
@@ -222,18 +191,7 @@ function cmdToday() {
 
 function cmdStats() {
   const db = getDb();
-  
-  const global = downloadEvidence.getGlobalStats(db);
-  
-  // Additional stats
-  const hostsStmt = db.prepare(`SELECT COUNT(DISTINCT host) as count FROM urls`);
-  const uniqueHosts = hostsStmt.get().count;
-  
-  const contentStmt = db.prepare(`
-    SELECT COUNT(*) as count, COALESCE(SUM(uncompressed_size), 0) as bytes 
-    FROM content_storage
-  `);
-  const content = contentStmt.get();
+  const { global, uniqueHosts, contentStorage: content } = downloadEvidence.getDownloadGlobalSummary(db);
   
   db.close();
   
@@ -300,40 +258,13 @@ function cmdHosts() {
   const startTime = flags.since;
   const endTime = flags.until || new Date().toISOString();
   const hostFilter = flags.host; // substring filter for hosts
-  
-  let stmt;
-  let rows;
-  let params = [];
-  
-  // Build query dynamically based on filters
-  let whereClause = '1=1';
-  if (startTime) {
-    whereClause += ' AND r.fetched_at BETWEEN ? AND ?';
-    params.push(startTime, endTime);
-  }
-  if (hostFilter) {
-    whereClause += ' AND u.host LIKE ?';
-    params.push(`%${hostFilter}%`);
-  }
-  
-  stmt = db.prepare(`
-    SELECT 
-      u.host,
-      COUNT(*) as total_requests,
-      COUNT(CASE WHEN r.http_status = 200 THEN 1 END) as successful,
-      COUNT(CASE WHEN r.http_status = 429 THEN 1 END) as rate_limited,
-      SUM(CASE WHEN r.http_status = 200 THEN r.bytes_downloaded ELSE 0 END) as bytes,
-      MIN(r.fetched_at) as first_fetch,
-      MAX(r.fetched_at) as last_fetch
-    FROM http_responses r
-    JOIN urls u ON r.url_id = u.id
-    WHERE ${whereClause}
-    GROUP BY u.host
-    ORDER BY total_requests DESC
-    LIMIT ?
-  `);
-  params.push(LIMIT);
-  rows = stmt.all(...params);
+
+  const rows = downloadEvidence.listDownloadHosts(db, {
+    startTime,
+    endTime,
+    hostFilter,
+    limit: LIMIT
+  });
   
   db.close();
   
@@ -372,22 +303,7 @@ function cmdTimeline() {
   
   const startTime = flags.since || new Date(Date.now() - 60 * 60 * 1000).toISOString(); // Last hour
   const endTime = flags.until || new Date().toISOString();
-  
-  // Group by minute for better visualization
-  const stmt = db.prepare(`
-    SELECT 
-      strftime('%Y-%m-%dT%H:%M', fetched_at) as minute,
-      COUNT(*) as count,
-      SUM(bytes_downloaded) as bytes,
-      AVG(download_ms) as avg_time
-    FROM http_responses
-    WHERE fetched_at BETWEEN ? AND ?
-      AND http_status = 200
-    GROUP BY strftime('%Y-%m-%dT%H:%M', fetched_at)
-    ORDER BY minute
-  `);
-  
-  const rows = stmt.all(startTime, endTime);
+  const rows = downloadEvidence.listDownloadTimelineByMinute(db, { startTime, endTime }).timeline;
   db.close();
   
   if (JSON_OUTPUT) {
@@ -414,26 +330,8 @@ function cmdTimeline() {
 function cmdUrl() {
   const db = getDb();
   const url = flags.url;
-  
-  const evidence = downloadEvidence.getUrlEvidence(db, url);
-  
-  // Also get all fetches for this URL
-  const historyStmt = db.prepare(`
-    SELECT 
-      r.id,
-      r.http_status,
-      r.bytes_downloaded,
-      r.fetched_at,
-      r.ttfb_ms,
-      r.download_ms,
-      r.content_type
-    FROM urls u
-    JOIN http_responses r ON r.url_id = u.id
-    WHERE u.url = ?
-    ORDER BY r.fetched_at DESC
-    LIMIT 10
-  `);
-  const history = historyStmt.all(url);
+
+  const { evidence, history } = downloadEvidence.getUrlDownloadEvidenceBundle(db, url, { limit: 10 });
   
   db.close();
   
@@ -524,4 +422,3 @@ function main() {
 }
 
 main();
-

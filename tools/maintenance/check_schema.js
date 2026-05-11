@@ -1,27 +1,32 @@
-
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
-const db = openNewsCrawlerDb('data/news.db', { readonly: true });
 
-console.log('=== Content Storage Schema ===');
-const schema = db.prepare(`PRAGMA table_info(content_storage)`).all();
-console.log(schema);
+async function main() {
+  const db = openNewsCrawlerDb('data/news.db', { readonly: true, fileMustExist: true });
 
-console.log('\n=== Content Storage Indexes ===');
-const indexes = db.prepare(`PRAGMA index_list(content_storage)`).all();
-console.log(indexes);
+  try {
+    if (!db.maintenance?.getContentStorageSchemaSnapshot) {
+      throw new Error('news-crawler-db maintenance access is missing getContentStorageSchemaSnapshot');
+    }
 
-console.log('\n=== Foreign Keys ===');
-const fks = db.prepare(`PRAGMA foreign_key_list(content_storage)`).all();
-console.log(fks);
+    const snapshot = await db.maintenance.getContentStorageSchemaSnapshot({ duplicateLimit: 5 });
 
-console.log('\n=== Sample duplicate content_storage records ===');
-const duplicates = db.prepare(`
-  SELECT http_response_id, COUNT(*) as count
-  FROM content_storage
-  GROUP BY http_response_id
-  HAVING COUNT(*) > 1
-  LIMIT 5
-`).all();
-console.log(duplicates);
+    console.log('=== Content Storage Schema ===');
+    console.log(snapshot.schema);
 
-db.close();
+    console.log('\n=== Content Storage Indexes ===');
+    console.log(snapshot.indexes);
+
+    console.log('\n=== Foreign Keys ===');
+    console.log(snapshot.foreignKeys);
+
+    console.log('\n=== Sample duplicate content_storage records ===');
+    console.log(snapshot.duplicateRows);
+  } finally {
+    await db.close();
+  }
+}
+
+main().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});

@@ -1,5 +1,6 @@
 const { TopicHubGapAnalyzer } = require('../../../services/TopicHubGapAnalyzer');
 const { CrawlStrategyTemplates } = require('../../../core/crawler/CrawlStrategyTemplates');
+const { checkDatabaseHealth } = require('news-crawler-db');
 
 async function check() {
   console.log('[Check] Verifying Batch 8 components...');
@@ -7,7 +8,7 @@ async function check() {
   try {
     // 1. TopicHubGapAnalyzer
     const analyzer = new TopicHubGapAnalyzer();
-    if (analyzer.db && analyzer.db.prepare('SELECT 1').get()) {
+    if (analyzer.db && checkDatabaseHealth(analyzer.db)) {
       console.log('[Check] TopicHubGapAnalyzer initialized: true');
     } else {
       console.error('[Check] TopicHubGapAnalyzer initialized: false');
@@ -16,7 +17,7 @@ async function check() {
 
     // 2. CrawlStrategyTemplates
     const templates = new CrawlStrategyTemplates();
-    if (templates.db && templates.db.prepare('SELECT 1').get()) {
+    if (templates.db && checkDatabaseHealth(templates.db)) {
       console.log('[Check] CrawlStrategyTemplates initialized: true');
     } else {
       console.error('[Check] CrawlStrategyTemplates initialized: false');

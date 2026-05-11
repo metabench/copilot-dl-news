@@ -5,11 +5,10 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
  * clear-telemetry.js - Clear query telemetry data and reclaim disk space
  *
  * Usage:
- *   node tools/clear-telemetry.js    # Clear telemetry and vacuum database
+ *   node tools/clear-telemetry.js    # Clear telemetry and compact database
  */
 
-// Check for help
-if (process.argv.includes('--help') || process.argv.includes('-h')) {
+function printHelp() {
   console.log(`
 Query Telemetry Cleaner
 
@@ -17,7 +16,7 @@ Clear query telemetry data and reclaim disk space.
 
 DESCRIPTION:
   This tool deletes all records from the query_telemetry table and runs
-  VACUUM to reclaim unused disk space. Useful for cleaning up after
+  database compaction to reclaim unused disk space. Useful for cleaning up after
   performance analysis or debugging sessions.
 
 USAGE:
@@ -31,45 +30,62 @@ ENVIRONMENT:
 
 OUTPUT:
   - Number of rows deleted
-  - Execution time for delete and vacuum operations
+  - Execution time for cleanup and compaction operations
 
 EXAMPLES:
   node tools/clear-telemetry.js    # Clear telemetry from default database
 `);
-  process.exit(0);
 }
 
 const path = require('path');
-const { clearQueryTelemetry } = require('../src/data/db/sqlite/v1/queries/telemetry');
+const {
+  clearQueryTelemetry,
+  vacuumDatabase
+} = require('news-crawler-db');
 
-const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'news.db');
-let db;
+const dbPath = process.env.DB_PATH || path.join(__dirname, '..', '..', 'data', 'news.db');
 
-try {
-  console.log(`Opening database: ${dbPath}`);
-  db = openNewsCrawlerDb(dbPath, { timeout: 15000 });
-  
-  console.log('Executing DELETE FROM query_telemetry...');
-  const start = Date.now();
-  const info = clearQueryTelemetry(db);
-  const duration = Date.now() - start;
-  
-  console.log(`\n✓ Success!`);
-  console.log(`  - Rows affected: ${info.changes}`);
-  console.log(`  - Duration: ${duration}ms`);
-  
-  console.log('\nRunning VACUUM to reclaim disk space...');
-  const vacuumStart = Date.now();
-  db.prepare('VACUUM').run();
-  const vacuumDuration = Date.now() - vacuumStart;
-  console.log(`✓ VACUUM complete in ${vacuumDuration}ms.`);
+function runClearTelemetry() {
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    printHelp();
+    return;
+  }
 
-} catch (err) {
-  console.error(`\n❌ Failed to clear table: ${err.message}`);
-  process.exit(1);
-} finally {
-  if (db) {
-    db.close();
-    console.log('\nDatabase connection closed.');
+  let db;
+  try {
+    console.log(`Opening database: ${dbPath}`);
+    db = openNewsCrawlerDb(dbPath, { timeout: 15000 });
+
+    console.log('Clearing query telemetry rows...');
+    const start = Date.now();
+    const info = clearQueryTelemetry(db);
+    const duration = Date.now() - start;
+
+    console.log(`\n✓ Success!`);
+    console.log(`  - Rows affected: ${info.changes}`);
+    console.log(`  - Duration: ${duration}ms`);
+
+    console.log('\nRunning database compaction to reclaim disk space...');
+    const compactStart = Date.now();
+    vacuumDatabase(db);
+    const compactDuration = Date.now() - compactStart;
+    console.log(`✓ Compaction complete in ${compactDuration}ms.`);
+  } catch (err) {
+    console.error(`\n❌ Failed to clear table: ${err.message}`);
+    process.exit(1);
+  } finally {
+    if (db) {
+      db.close();
+      console.log('\nDatabase connection closed.');
+    }
   }
 }
+
+if (require.main === module) {
+  runClearTelemetry();
+}
+
+module.exports = {
+  printHelp,
+  runClearTelemetry
+};

@@ -65,8 +65,7 @@ SAFETY:
   process.exit(0);
 }
 
-const { ensureDatabase } = require('../../src/data/db/sqlite');
-const { fixCanonicalNames } = require('../../src/data/db/sqlite/v1/queries/gazetteer.names');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
 
 function getArg(name, fallback) {
@@ -82,12 +81,13 @@ const kindFilter = getArg('kind', null);
 const roleFilter = getArg('role', null);
 
 const dbPath = path.join(__dirname, '..', '..', 'data', 'news.db');
-const db = ensureDatabase(dbPath);
+const db = openNewsCrawlerDb(dbPath, { readonly: dryRun, fileMustExist: true });
+const { fixCanonicalNames } = resolveNewsCrawlerDbModule();
 
 console.log('\n🔍 Finding places with NULL canonical_name_id...');
 if (dryRun) console.log('(DRY RUN MODE - no changes will be made)\n');
 
-const { placesWithoutCanonical, fixedCount, skippedCount } = fixCanonicalNames(db, {
+const { placesWithoutCanonical, fixedCount, skippedCount, remainingWithoutCanonicalCount } = fixCanonicalNames(db, {
   dryRun,
   kindFilter,
   roleFilter
@@ -112,22 +112,8 @@ for (const [kind, count] of Object.entries(byKind).sort()) {
 }
 console.log('');
 
-// Prepare statement to find best name for display
-const getBestName = db.prepare(`
-  SELECT id, name, lang, is_official, is_preferred
-  FROM place_names
-  WHERE place_id = ?
-  ORDER BY
-    is_official DESC,
-    is_preferred DESC,
-    (lang = 'en') DESC,
-    (lang = 'und') DESC,
-    id ASC
-  LIMIT 1
-`);
-
 for (const place of placesWithoutCanonical) {
-  const bestName = getBestName.get(place.id);
+  const bestName = place.bestName;
 
   if (!bestName) {
     console.log(`⚠ Place ${place.id} (${place.kind}, ${place.country_code}) has no names - skipping`);
@@ -160,12 +146,7 @@ if (dryRun) {
 
 // Show summary after fix
 if (!dryRun && fixedCount > 0) {
-  const remaining = db.prepare(`
-    SELECT COUNT(*) as count
-    FROM places
-    WHERE canonical_name_id IS NULL
-  `).get();
-  console.log(`\nRemaining places with NULL canonical_name_id: ${remaining.count}`);
+  console.log(`\nRemaining places with NULL canonical_name_id: ${remainingWithoutCanonicalCount}`);
 }
 
 db.close();

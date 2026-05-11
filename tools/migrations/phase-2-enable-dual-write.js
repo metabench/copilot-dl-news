@@ -1,91 +1,101 @@
 #!/usr/bin/env node
+'use strict';
 
 /**
- * Phase 2 Implementation: Enable Dual-Write
+ * Phase 2 implementation wrapper.
  *
- * This script records schema version 3 and enables dual-write to normalized tables.
+ * DB-owned prerequisite checks and migration-version behavior live in news-crawler-db.
  */
 
-const { ensureDb } = require('../src/data/db/sqlite/v1/ensureDb');
-const { SchemaVersionManager } = require('../src/data/db/migration/schema-versions');
+const path = require('path');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 
-function recordSchemaVersion3(db) {
-  console.log('Recording schema version 3...');
+function parseArgs(argv = process.argv.slice(2)) {
+  const options = {};
+  for (const arg of argv) {
+    if (!arg.startsWith('--')) continue;
+    const [key, value] = arg.substring(2).split('=');
+    options[key] = value || true;
+  }
+  return options;
+}
 
-  const versionManager = new SchemaVersionManager(db);
-  versionManager.recordMigration(
-    3,
-    'enable_dual_write',
-    'Enable dual-write to normalized and legacy schemas (http_responses, content_storage, content_analysis, discovery_events)'
-  );
+function getPhaseApi() {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const required = [
+    'verifyNormalizedDualWritePrerequisites',
+    'recordNormalizedDualWriteMigration',
+    'runNormalizedDualWriteMigration'
+  ];
 
-  console.log('✓ Schema version 3 recorded');
+  for (const name of required) {
+    if (typeof dbModule[name] !== 'function') {
+      throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+    }
+  }
+
+  return dbModule;
+}
+
+async function closeDb(db) {
+  if (db && typeof db.close === 'function') {
+    await db.close();
+  }
 }
 
 function verifyDualWriteEnabled(db) {
-  console.log('Verifying dual-write capability...');
+  return getPhaseApi().verifyNormalizedDualWritePrerequisites(db);
+}
 
-  // Check that all normalized tables exist
-  const requiredTables = [
-    'http_responses',
-    'content_storage',
-    'content_analysis',
-    'discovery_events',
-    'place_provenance',
-    'place_attributes'
-  ];
-
-  for (const tableName of requiredTables) {
-    const result = db.prepare(`
-      SELECT name FROM sqlite_master
-      WHERE type='table' AND name=?
-    `).get(tableName);
-
-    if (!result) {
-      throw new Error(`Required table '${tableName}' does not exist`);
-    }
-    console.log(`✓ ${tableName} exists`);
-  }
-
-  // Check that compression_types is seeded
-  const compressionTypesCount = db.prepare('SELECT COUNT(*) as count FROM compression_types').get();
-  if (compressionTypesCount.count < 10) {
-    console.warn(`⚠️  Only ${compressionTypesCount.count} compression types found (expected 18+)`);
-  } else {
-    console.log(`✓ ${compressionTypesCount.count} compression types available`);
-  }
+function recordSchemaVersion3(db) {
+  return getPhaseApi().recordNormalizedDualWriteMigration(db);
 }
 
 async function main() {
-  console.log('Phase 2: Enable Dual-Write');
-  console.log('==============================');
+  const options = parseArgs();
+  if (!options.db) {
+    console.error('Usage: node tools/migrations/phase-2-enable-dual-write.js --db=path/to/database.db');
+    process.exit(1);
+  }
+
+  const dbPath = path.resolve(options.db);
+  const db = openNewsCrawlerDb(dbPath);
+  const api = getPhaseApi();
+
+  console.log('Phase 2: Enable dual-write');
+  console.log('===========================');
+  console.log(`Database: ${dbPath}`);
 
   try {
-    const db = ensureDb();
+    const result = api.runNormalizedDualWriteMigration(db);
 
-    // Verify normalized tables exist
-    verifyDualWriteEnabled(db);
+    for (const tableName of result.verification.existingTables) {
+      console.log(`✓ ${tableName} exists`);
+    }
 
-    // Record as schema version 3
-    recordSchemaVersion3(db);
+    if (result.verification.compressionTypesWarning) {
+      console.warn(`⚠️  ${result.verification.compressionTypesWarning}`);
+    } else {
+      console.log(`✓ ${result.verification.compressionTypesCount} compression types available`);
+    }
 
-    console.log('\n🎉 Phase 2 Complete!');
-    console.log('Dual-write enabled successfully');
-    console.log('Schema version: 3 (enable_dual_write)');
-    console.log('New articles will be written to both legacy and normalized schemas');
-    console.log('Ready for Phase 3: Backfill historical data');
-
-    db.close();
-    process.exit(0);
-
-  } catch (error) {
-    console.error('❌ Phase 2 failed:', error.message);
-    process.exit(1);
+    console.log(`✓ Schema version ${result.migration.version} recorded (${result.migration.name})`);
+    console.log('\nPhase 2 complete');
+  } finally {
+    await closeDb(db);
   }
 }
 
 if (require.main === module) {
-  main();
+  main().catch((error) => {
+    console.error('Phase 2 failed:', error.message);
+    process.exit(1);
+  });
 }
 
-module.exports = { recordSchemaVersion3, verifyDualWriteEnabled };
+module.exports = {
+  parseArgs,
+  recordSchemaVersion3,
+  verifyDualWriteEnabled,
+  main
+};

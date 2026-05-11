@@ -1,6 +1,6 @@
 'use strict';
 
-const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../src/db/openNewsCrawlerDb');
 /**
  * Analytics Dashboard Check Script
  * 
@@ -19,67 +19,16 @@ const assert = require('assert');
 // ─────────────────────────────────────────────────────────────
 function createTestDb() {
   const db = openNewsCrawlerDb(':memory:');
-
-  db.exec(`
-    CREATE TABLE urls (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      url TEXT NOT NULL,
-      host TEXT NOT NULL
-    );
-
-    CREATE TABLE http_responses (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      url_id INTEGER NOT NULL REFERENCES urls(id),
-      request_started_at TEXT NOT NULL,
-      fetched_at TEXT,
-      http_status INTEGER,
-      content_type TEXT
-    );
-
-    CREATE TABLE content_storage (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      http_response_id INTEGER REFERENCES http_responses(id),
-      body_text TEXT
-    );
-
-    CREATE TABLE content_analysis (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      content_id INTEGER REFERENCES content_storage(id),
-      classification TEXT,
-      confidence_score REAL,
-      analyzed_at TEXT
-    );
-
-    CREATE INDEX idx_http_responses_fetched ON http_responses(fetched_at);
-  `);
-
-  // Seed test data
-  const domains = ['example.com', 'news.org', 'tech.io', 'sports.net', 'blog.dev'];
-  const now = new Date();
-
-  const insertUrl = db.prepare('INSERT INTO urls (url, host) VALUES (?, ?)');
-  const insertResponse = db.prepare(
-    'INSERT INTO http_responses (url_id, request_started_at, fetched_at, http_status, content_type) VALUES (?, ?, ?, ?, ?)'
-  );
-
-  for (let i = 0; i < 50; i++) {
-    const host = domains[i % domains.length];
-    insertUrl.run(`https://${host}/article/${i}`, host);
-
-    const daysAgo = i % 30;
-    const hoursAgo = i % 24;
-    const fetchDate = new Date(now - daysAgo * 24 * 60 * 60 * 1000 - hoursAgo * 60 * 60 * 1000);
-
-    insertResponse.run(
-      i + 1,
-      fetchDate.toISOString(),
-      fetchDate.toISOString(),
-      i % 10 === 0 ? 404 : 200,
-      'text/html'
-    );
-  }
-
+  getDbModule().createAnalyticsDashboardCheckFixture(db);
   return db;
+}
+
+function getDbModule() {
+  const dbModule = resolveNewsCrawlerDbModule();
+  if (!dbModule || typeof dbModule.createAnalyticsDashboardCheckFixture !== 'function') {
+    throw new Error('news-crawler-db analytics dashboard fixture helper is unavailable. Rebuild news-crawler-db.');
+  }
+  return dbModule;
 }
 
 // ─────────────────────────────────────────────────────────────

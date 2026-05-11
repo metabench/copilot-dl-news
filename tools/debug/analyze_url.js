@@ -1,26 +1,36 @@
+'use strict';
 
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
-const db = openNewsCrawlerDb('data/news.db', { readonly: true });
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
+
+const {
+  listUrlHttpResponseDebugRows
+} = resolveNewsCrawlerDbModule();
 
 const testUrl = 'https://www.theguardian.com/about';
 
-console.log(`=== Analysis for URL: ${testUrl} ===`);
+async function main(url = testUrl) {
+  const db = openNewsCrawlerDb('data/news.db', { readonly: true, fileMustExist: true });
+  try {
+    console.log(`=== Analysis for URL: ${url} ===`);
+    const httpResponses = listUrlHttpResponseDebugRows(db, url);
+    console.log(`Total HTTP responses: ${httpResponses.length}`);
+    httpResponses.forEach((row, index) => {
+      console.log(`${index + 1}. ID: ${row.id}, Status: ${row.http_status}, Bytes: ${row.bytes_downloaded}, Content ID: ${row.content_id || 'NULL'}, Size: ${row.uncompressed_size || 'N/A'}`);
+    });
 
-const httpResponses = db.prepare(`
-  SELECT hr.id, hr.http_status, hr.bytes_downloaded, hr.fetched_at,
-         cs.id as content_id, cs.storage_type, cs.uncompressed_size
-  FROM http_responses hr
-  INNER JOIN urls u ON hr.url_id = u.id
-  LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
-  WHERE u.url = ?
-  ORDER BY hr.fetched_at DESC
-`).all(testUrl);
+    const storedCount = httpResponses.filter(row => row.content_id).length;
+    const rate = httpResponses.length ? ((storedCount / httpResponses.length) * 100).toFixed(1) : '0.0';
+    console.log(`\nStorage success rate: ${storedCount}/${httpResponses.length} (${rate}%)`);
+  } finally {
+    await db.close();
+  }
+}
 
-console.log(`Total HTTP responses: ${httpResponses.length}`);
-httpResponses.forEach((row, i) => {
-  console.log(`${i+1}. ID: ${row.id}, Status: ${row.http_status}, Bytes: ${row.bytes_downloaded}, Content ID: ${row.content_id || 'NULL'}, Size: ${row.uncompressed_size || 'N/A'}`);
-});
+if (require.main === module) {
+  main(process.argv[2] || testUrl).catch(error => {
+    console.error(error && error.stack ? error.stack : error);
+    process.exitCode = 1;
+  });
+}
 
-console.log(`\nStorage success rate: ${httpResponses.filter(r => r.content_id).length}/${httpResponses.length} (${((httpResponses.filter(r => r.content_id).length / httpResponses.length) * 100).toFixed(1)}%)`);
-
-db.close();
+module.exports = { main };

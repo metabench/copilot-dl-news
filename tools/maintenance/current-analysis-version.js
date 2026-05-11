@@ -9,7 +9,7 @@
 
 const path = require('path');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
-const { openDatabase } = require('../../src/data/db/sqlite/v1/connection');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 
 function createColors() {
   const enabled = Boolean(process.stdout.isTTY);
@@ -96,106 +96,27 @@ function extractSummaryStats(summary) {
 }
 
 function tableExists(db, tableName) {
-  try {
-    const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ? LIMIT 1").get(tableName);
-    return Boolean(row);
-  } catch (_) {
-    return false;
-  }
+  return getDbModule().analysisMaintenanceTableExists(db, tableName);
 }
 
 function collectContentAnalysisStats(db, topN = 5) {
-  if (!tableExists(db, 'content_analysis')) {
-    return { exists: false };
-  }
-
-  const distribution = db.prepare(`
-    SELECT analysis_version AS version, COUNT(*) AS count
-      FROM content_analysis
-  GROUP BY analysis_version
-  ORDER BY analysis_version DESC
-  `).all();
-
-  const totalRecords = distribution.reduce((sum, row) => sum + (Number(row.count) || 0), 0);
-  const maxVersionRow = distribution.find((row) => row.version !== null && row.version !== undefined);
-  const maxVersion = maxVersionRow ? Number(maxVersionRow.version) : null;
-  const nullRow = distribution.find((row) => row.version == null);
-  const nullCount = nullRow ? Number(nullRow.count) : 0;
-  const belowMax = distribution
-    .filter((row) => row.version != null && (maxVersion == null || Number(row.version) < maxVersion))
-    .reduce((sum, row) => sum + (Number(row.count) || 0), 0);
-
-  const topVersions = distribution
-    .filter((row) => row.version != null)
-    .slice(0, topN)
-    .map((row) => ({
-      version: Number(row.version),
-      count: Number(row.count || 0)
-    }));
-
-  return {
-    exists: true,
-    totalRecords,
-    distribution,
-    maxVersion,
-    nullCount,
-    belowMax,
-    topVersions
-  };
+  return getDbModule().collectContentAnalysisVersionStats(db, { topN });
 }
 
 function collectAnalysisRuns(db) {
-  if (!tableExists(db, 'analysis_runs')) {
-    return { exists: false };
-  }
-
-  const latestRows = db.prepare(`
-    SELECT id,
-           analysis_version,
-           summary,
-           started_at,
-           ended_at
-      FROM analysis_runs
-     WHERE analysis_version IS NOT NULL
-  ORDER BY started_at DESC
-     LIMIT 3
-  `).all();
-
-  return {
-    exists: true,
-    latest: latestRows.map((row) => {
-      const summary = safeParse(row.summary);
-      const stats = extractSummaryStats(summary);
-      return {
-        id: row.id,
-        analysisVersion: row.analysis_version,
-        summary,
-        processed: stats.processed,
-        updated: stats.updated,
-        startedAt: formatTimestamp(row.started_at),
-        endedAt: formatTimestamp(row.ended_at)
-      };
-    })
-  };
+  return getDbModule().collectRecentAnalysisRunsWithVersions(db);
 }
 
 function collectCompressionStatus(db) {
-  if (!tableExists(db, 'compression_status')) {
-    return { exists: false };
-  }
+  return getDbModule().getAnalysisCompressionStatus(db);
+}
 
-  const row = db.prepare('SELECT * FROM compression_status WHERE id = 1').get();
-  if (!row) return { exists: true, row: null };
-  return {
-    exists: true,
-    row: {
-      analysisVersion: row.analysis_version,
-      lastAnalyzedAt: formatTimestamp(row.last_analyzed_at),
-      analysedPages: row.analysed_pages,
-      pagesUpdated: row.pages_updated,
-      skippedPages: row.skipped_pages
-    }
-  };
+function getDbModule() {
+  const dbModule = resolveNewsCrawlerDbModule();
+  if (!dbModule || typeof dbModule.collectCurrentAnalysisVersionReport !== 'function') {
+    throw new Error('news-crawler-db analysis maintenance helpers are unavailable. Rebuild news-crawler-db.');
+  }
+  return dbModule;
 }
 
 function printHelp(colors) {
@@ -291,7 +212,7 @@ async function main() {
     ? path.resolve(options.dbPath)
     : path.join(projectRoot, 'data', 'news.db');
 
-  const db = openDatabase(dbPath, { readonly: true, fileMustExist: true });
+  const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
   try {
     const contentAnalysis = collectContentAnalysisStats(db, options.topN);
     const analysisRuns = collectAnalysisRuns(db);

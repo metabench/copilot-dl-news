@@ -502,24 +502,7 @@ app.get('/recent', (req, res) => {
   const allStats = getQueryStats(db, { limit: 100 });
   const availableTypes = [...new Set(allStats.map(s => s.query_type))].filter(Boolean);
   
-  // Get recent queries (need to fetch from DB directly since getRecentQueries needs a type)
-  let queries = [];
-  if (queryType) {
-    queries = getRecentQueries(db, queryType, 50);
-  } else {
-    // Get recent across all types
-    try {
-      queries = db.prepare(`
-        SELECT id, query_type, operation, duration_ms, result_count, query_complexity, host, job_id
-        FROM query_telemetry
-        ORDER BY id DESC
-        LIMIT 50
-      `).all();
-    } catch (err) {
-      console.warn('[queryTelemetry] Failed to fetch recent queries:', err.message);
-      queries = [];
-    }
-  }
+  const queries = getRecentQueries(db, queryType, 50);
 
   const ctx = new jsgui.Page_Context();
   
@@ -567,22 +550,7 @@ app.get('/api/recent', (req, res) => {
   const queryType = req.query.queryType || null;
   const limit = parseInt(req.query.limit, 10) || 50;
 
-  let queries = [];
-  if (queryType) {
-    queries = getRecentQueries(db, queryType, limit);
-  } else {
-    try {
-      queries = db.prepare(`
-        SELECT id, query_type, operation, duration_ms, result_count, query_complexity, host, job_id
-        FROM query_telemetry
-        ORDER BY id DESC
-        LIMIT ?
-      `).all(limit);
-    } catch (err) {
-      console.warn('[queryTelemetry] Failed to fetch recent queries:', err.message);
-      queries = [];
-    }
-  }
+  const queries = getRecentQueries(db, queryType, limit);
 
   res.json({
     queries,

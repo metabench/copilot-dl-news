@@ -18,8 +18,9 @@
 const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
-const { ensureDb } = require('../../src/data/db/sqlite');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const { getFleetHostSync } = require('../crawl/lib/fleet-host-resolver');
+const { listRemoteCrawlDomainsNeedingDocuments } = require('news-crawler-db');
 
 const REMOTE_HOST = process.env.CRAWL_LEGACY_REMOTE_HOST || `http://${getFleetHostSync()}:3120`;
 const DEFAULT_THRESHOLD = 500;
@@ -36,42 +37,6 @@ function parseArgs(argv = process.argv) {
         if (arg === '--help') args.help = true;
     }
     return args;
-}
-
-async function getDomainsNeedingCrawl(db, threshold) {
-    const websites = db.prepare(`
-    SELECT id, label, parent_domain, url
-    FROM news_websites
-    WHERE enabled = 1
-  `).all();
-
-    const results = [];
-    for (const site of websites) {
-        let siteHost;
-        try {
-            siteHost = new URL(site.url).hostname;
-        } catch {
-            siteHost = site.parent_domain;
-        }
-
-        const countRow = db.prepare(`
-      SELECT COUNT(*) as doc_count
-      FROM urls
-      WHERE host = ?
-    `).get(siteHost);
-
-        const count = countRow?.doc_count || 0;
-        if (count < threshold) {
-            results.push({
-                ...site,
-                host: siteHost,
-                currentCount: count,
-                needed: threshold - count
-            });
-        }
-    }
-
-    return results.sort((a, b) => b.needed - a.needed);
 }
 
 async function generateUrlsForDomain(domain, batchSize) {
@@ -144,14 +109,16 @@ Options:
         process.exit(1);
     }
 
-    const db = ensureDb(dbPath);
+    const db = openNewsCrawlerDb(dbPath);
 
     console.log('=== Queue URLs to Remote Crawler ===\n');
     console.log(`Remote host: ${REMOTE_HOST}`);
     console.log(`Threshold: ${args.threshold} docs`);
     console.log(`Batch size: ${args.batch} URLs per domain\n`);
 
-    const domainsNeedingCrawl = await getDomainsNeedingCrawl(db, args.threshold);
+    const domainsNeedingCrawl = listRemoteCrawlDomainsNeedingDocuments(db, {
+        threshold: args.threshold
+    });
 
     if (args.domain) {
         const filtered = domainsNeedingCrawl.filter(d =>

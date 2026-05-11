@@ -33,7 +33,7 @@
 
 'use strict';
 
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const http = require('http');
 const https = require('https');
 const zlib = require('zlib');
@@ -146,6 +146,32 @@ const REMOTE_HOST = args.host || process.env.CRAWL_REMOTE_HOST || defaultHost;
 const LOCAL_DB_PATH = args.db || path.resolve(__dirname, '../../data/news.db');
 const WATERMARK_FILE = path.resolve(__dirname, '.crawl-remote-watermark.json');
 const JSON_OUTPUT = args.json === true;
+
+function getDbApi(name) {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const fn = dbModule[name];
+  if (typeof fn !== 'function') {
+    throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+  }
+  return fn;
+}
+
+let configureRemoteCrawlLocalSyncDb;
+let verifyRemoteCrawlBatchPersisted;
+
+function getConfigureRemoteCrawlLocalSyncDb() {
+  if (!configureRemoteCrawlLocalSyncDb) {
+    configureRemoteCrawlLocalSyncDb = getDbApi('configureRemoteCrawlLocalSyncDb');
+  }
+  return configureRemoteCrawlLocalSyncDb;
+}
+
+function getVerifyRemoteCrawlBatchPersisted() {
+  if (!verifyRemoteCrawlBatchPersisted) {
+    verifyRemoteCrawlBatchPersisted = getDbApi('verifyRemoteCrawlBatchPersisted');
+  }
+  return verifyRemoteCrawlBatchPersisted;
+}
 
 function parsePositiveIntArg(name) {
   const value = args[name];
@@ -339,8 +365,7 @@ function openLocalDb() {
     process.exit(1);
   }
   localDb = openNewsCrawlerDb(LOCAL_DB_PATH);
-  localDb.pragma('journal_mode = WAL');
-  localDb.pragma('busy_timeout = 5000');
+  getConfigureRemoteCrawlLocalSyncDb()(localDb);
   return localDb;
 }
 
@@ -371,112 +396,9 @@ function getBatchCounts(batch) {
   };
 }
 
-function findLocalResponseId(db, remoteResponse, localUrlId) {
-  if (!remoteResponse || !localUrlId) return null;
-  const fetchedAt = remoteResponse.fetched_at || null;
-  const requestStartedAt = remoteResponse.request_started_at || null;
-  const httpStatus = remoteResponse.http_status ?? null;
-  const row = db.prepare(`
-    SELECT id
-    FROM http_responses
-    WHERE url_id = ?
-      AND COALESCE(fetched_at, '') = COALESCE(?, '')
-      AND COALESCE(request_started_at, '') = COALESCE(?, '')
-      AND COALESCE(http_status, -1) = COALESCE(?, -1)
-    ORDER BY id DESC
-    LIMIT 1
-  `).get(localUrlId, fetchedAt, requestStartedAt, httpStatus);
-  if (row?.id) return row.id;
-
-  const fallback = db.prepare(`
-    SELECT id
-    FROM http_responses
-    WHERE url_id = ?
-    ORDER BY id DESC
-    LIMIT 1
-  `).get(localUrlId);
-  return fallback?.id || null;
-}
-
 function verifyBatchPersisted(batch) {
   const db = openLocalDb();
-  const urls = Array.isArray(batch.urls) ? batch.urls : [];
-  const responses = Array.isArray(batch.httpResponses) ? batch.httpResponses : [];
-  const content = Array.isArray(batch.content) ? batch.content : [];
-  const links = Array.isArray(batch.links) ? batch.links : [];
-
-  const getUrl = db.prepare('SELECT id FROM urls WHERE url = ? LIMIT 1');
-  const getContentBySha = db.prepare('SELECT id FROM content_storage WHERE http_response_id = ? AND content_sha256 = ? LIMIT 1');
-  const getContentBySize = db.prepare(`
-    SELECT id
-    FROM content_storage
-    WHERE http_response_id = ?
-      AND COALESCE(uncompressed_size, -1) = COALESCE(?, -1)
-      AND COALESCE(compressed_size, -1) = COALESCE(?, -1)
-    LIMIT 1
-  `);
-  const getLink = db.prepare('SELECT id FROM discovered_links WHERE source_url_id = ? AND target_url = ? LIMIT 1');
-  const remoteUrlIdToUrl = new Map();
-  const remoteUrlIdToLocalId = new Map();
-  const remoteResponseIdToLocalId = new Map();
-  const missing = { urls: [], responses: [], content: [], links: [] };
-
-  for (const remoteUrl of urls) {
-    if (!remoteUrl?.url) continue;
-    if (remoteUrl.id !== undefined && remoteUrl.id !== null) remoteUrlIdToUrl.set(remoteUrl.id, remoteUrl.url);
-    const localUrl = getUrl.get(remoteUrl.url);
-    if (localUrl?.id) {
-      if (remoteUrl.id !== undefined && remoteUrl.id !== null) remoteUrlIdToLocalId.set(remoteUrl.id, localUrl.id);
-    } else {
-      missing.urls.push(remoteUrl.url);
-    }
-  }
-
-  for (const remoteResponse of responses) {
-    const localUrlId = remoteUrlIdToLocalId.get(remoteResponse.url_id);
-    const localResponseId = findLocalResponseId(db, remoteResponse, localUrlId);
-    if (localResponseId) {
-      if (remoteResponse.id !== undefined && remoteResponse.id !== null) remoteResponseIdToLocalId.set(remoteResponse.id, localResponseId);
-    } else {
-      missing.responses.push(remoteUrlIdToUrl.get(remoteResponse.url_id) || remoteResponse.url_id);
-    }
-  }
-
-  for (const remoteContent of content) {
-    const localResponseId = remoteResponseIdToLocalId.get(remoteContent.http_response_id);
-    let found = null;
-    if (localResponseId && remoteContent.content_sha256) {
-      found = getContentBySha.get(localResponseId, remoteContent.content_sha256);
-    }
-    if (!found && localResponseId) {
-      found = getContentBySize.get(localResponseId, remoteContent.uncompressed_size ?? null, remoteContent.compressed_size ?? null);
-    }
-    if (!found) {
-      missing.content.push(remoteContent.http_response_id);
-    }
-  }
-
-  for (const remoteLink of links) {
-    const localSourceId = remoteUrlIdToLocalId.get(remoteLink.source_url_id);
-    const found = localSourceId && remoteLink.target_url ? getLink.get(localSourceId, remoteLink.target_url) : null;
-    if (!found) {
-      missing.links.push(remoteLink.target_url || remoteLink.id || remoteLink.source_url_id);
-    }
-  }
-
-  const checked = {
-    urls: urls.length,
-    httpResponses: responses.length,
-    content: content.length,
-    links: links.length,
-  };
-  const missingCounts = Object.fromEntries(Object.entries(missing).map(([key, value]) => [key, value.length]));
-  return {
-    ok: Object.values(missingCounts).every((count) => count === 0),
-    checked,
-    missingCounts,
-    sampleMissing: Object.fromEntries(Object.entries(missing).map(([key, value]) => [key, value.slice(0, 5)])),
-  };
+  return getVerifyRemoteCrawlBatchPersisted()(db, batch);
 }
 
 function getBatchUrlIds(batch) {

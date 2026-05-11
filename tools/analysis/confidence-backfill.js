@@ -2,6 +2,11 @@
 'use strict';
 
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
+const {
+  listConfidenceBackfillCandidates,
+  updateContentAnalysisConfidenceScore
+} = resolveNewsCrawlerDbModule();
 /**
  * Confidence Backfill Tool
  * 
@@ -15,8 +20,8 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
  *   node tools/confidence-backfill.js --json               # JSON output
  */
 const path = require('path');
-const { ContentConfidenceScorer } = require('../src/intelligence/analysis/ContentConfidenceScorer');
-const { decompress } = require('../src/shared/utils/compression');
+const { ContentConfidenceScorer } = require('../../src/intelligence/analysis/ContentConfidenceScorer');
+const { decompress } = require('../../src/shared/utils/compression');
 
 // Parse args
 const args = process.argv.slice(2);
@@ -56,67 +61,29 @@ const domain = getArg('--domain', null);
 const dryRun = hasFlag('--dry-run');
 const jsonOutput = hasFlag('--json');
 const verbose = hasFlag('--verbose') || hasFlag('-v');
-const dbPath = getArg('--db', path.join(__dirname, '../data/news.db'));
+const dbPath = getArg('--db', path.join(__dirname, '../../data/news.db'));
 
 // Open database
 const db = openNewsCrawlerDb(dbPath, { readonly: dryRun });
 const scorer = new ContentConfidenceScorer();
 
-// Decompression helper - uses compression_types table to determine algorithm
-function decompressContent(db, blob, compressionTypeId) {
+// Decompression helper. The DB module supplies the compression algorithm.
+function decompressContent(blob, compressionAlgorithm) {
   if (!blob) return null;
-  
+
   try {
-    // Look up the algorithm from compression_types table
-    const type = db.prepare('SELECT algorithm FROM compression_types WHERE id = ?').get(compressionTypeId);
-    if (!type) {
-      // Fallback: assume uncompressed if type not found
+    if (!compressionAlgorithm) {
       return blob.toString('utf-8');
     }
-    
-    const decompressed = decompress(blob, type.algorithm);
+
+    const decompressed = decompress(blob, compressionAlgorithm);
     return decompressed.toString('utf-8');
   } catch (e) {
     return null;
   }
 }
 
-// Build query
-let whereClause = 'WHERE ca.confidence_score IS NULL';
-const queryParams = [];
-
-if (domain) {
-  whereClause += ' AND u.url LIKE ?';
-  queryParams.push(`%${domain}%`);
-}
-
-let limitClause = '';
-if (limit) {
-  limitClause = `LIMIT ${limit}`;
-}
-
-const query = `
-  SELECT 
-    ca.id as analysis_id,
-    ca.content_id,
-    ca.title,
-    ca.word_count,
-    ca.date,
-    ca.section,
-    ca.analysis_json,
-    cs.content_blob,
-    cs.compression_type_id,
-    u.url
-  FROM content_analysis ca
-  JOIN content_storage cs ON cs.id = ca.content_id
-  LEFT JOIN http_responses hr ON hr.id = cs.http_response_id
-  LEFT JOIN urls u ON u.id = hr.url_id
-  ${whereClause}
-  ORDER BY ca.id DESC
-  ${limitClause}
-`;
-
-const rows = db.prepare(query).all(...queryParams);
+const rows = listConfidenceBackfillCandidates(db, { limit, domain });
 
 if (!jsonOutput) {
   console.log(`Found ${rows.length} rows to process.${domain ? ` (domain: ${domain})` : ''}`);
@@ -130,10 +97,6 @@ const stats = {
   errors: 0,
   byLevel: { high: 0, good: 0, medium: 0, low: 0, none: 0 }
 };
-
-const updateStmt = dryRun ? null : db.prepare(`
-  UPDATE content_analysis SET confidence_score = ? WHERE id = ?
-`);
 
 for (const row of rows) {
   try {
@@ -150,7 +113,7 @@ for (const row of rows) {
     // Get content text if needed
     let contentText = null;
     if (!row.word_count && row.content_blob) {
-      const html = decompressContent(db, row.content_blob, row.compression_type_id);
+      const html = decompressContent(row.content_blob, row.compression_algorithm);
       if (html) {
         // Simple text extraction (strip tags)
         contentText = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -179,9 +142,8 @@ for (const row of rows) {
     }
     
     // Update database
-    if (!dryRun && updateStmt) {
-      updateStmt.run(confidence.score, row.analysis_id);
-      stats.updated++;
+    if (!dryRun) {
+      stats.updated += updateContentAnalysisConfidenceScore(db, row.analysis_id, confidence.score);
     }
     
     results.push({

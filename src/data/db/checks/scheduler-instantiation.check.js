@@ -1,5 +1,6 @@
 const { GazetteerPriorityScheduler } = require('../../../core/crawler/gazetteer/GazetteerPriorityScheduler');
 const { getDb } = require('../index');
+const { checkDatabaseHealth } = require('news-crawler-db');
 
 async function run() {
   console.log('[Check] Verifying GazetteerPriorityScheduler instantiation...');
@@ -12,12 +13,10 @@ async function run() {
     // Verify it has a DB handle
     if (scheduler.db) {
         console.log('[Check] Scheduler has a DB handle.');
-        // Try a simple query to ensure it's a real handle
         try {
-            const row = scheduler.db.prepare('SELECT 1 as val').get();
-            console.log(`[Check] DB Query result: ${JSON.stringify(row)}`);
+            console.log(`[Check] DB health: ${checkDatabaseHealth(scheduler.db)}`);
         } catch (e) {
-            console.error('[Check] DB Query failed:', e.message);
+            console.error('[Check] DB health check failed:', e.message);
         }
     } else {
         console.error('[Check] Scheduler has NO DB handle!');

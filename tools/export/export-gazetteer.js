@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 /**
  * export-gazetteer - Export gazetteer data to NDJSON files for backup
  *
@@ -13,21 +13,10 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 
 const fs = require('fs');
 const path = require('path');
-const { exportGazetteerTables } = require('../src/data/db/sqlite/v1/queries/gazetteer.export');
+const { GAZETTEER_EXPORT_TABLES, runGazetteerNdjsonExport } = resolveNewsCrawlerDbModule();
 
 // Core gazetteer tables to export
-const GAZETTEER_TABLES = [
-  'places',
-  'place_names',
-  'place_hierarchy',
-  'place_attributes',
-  'place_attribute_values',
-  'place_external_ids',
-  'place_hubs',
-  'place_hub_unknown_terms',
-  'place_provenance',
-  'place_sources'
-];
+const GAZETTEER_TABLES = GAZETTEER_EXPORT_TABLES;
 
 function parseArgs(argv) {
   const options = {
@@ -149,36 +138,33 @@ OUTPUT:
   console.log('');
 
   try {
-    const db = openNewsCrawlerDb(dbPath, { readonly: true });
-    db.pragma('journal_mode = WAL');
-    db.pragma('foreign_keys = ON');
-    db.pragma('busy_timeout = 5000');
-    db.pragma('synchronous = NORMAL');
+    const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
+    try {
+      const { exportedTables, totalRecords } = runGazetteerNdjsonExport(db, {
+        outputDir,
+        tables: tablesToExport
+      });
 
-    const { exportedTables, totalRecords } = exportGazetteerTables(db, {
-      outputDir,
-      tables: tablesToExport
-    });
+      console.log('');
+      console.log(`Export complete!`);
+      console.log(`Total rows exported: ${totalRecords}`);
+      console.log(`Output directory: ${outputDir}`);
 
-    console.log('');
-    console.log(`Export complete!`);
-    console.log(`Total rows exported: ${totalRecords}`);
-    console.log(`Output directory: ${outputDir}`);
+      // Create a manifest file
+      const manifestPath = path.join(outputDir, 'manifest.json');
+      const manifest = {
+        exported_at: new Date().toISOString(),
+        database_path: dbPath,
+        tables: exportedTables.map(t => t.tableName),
+        total_rows: totalRecords,
+        format: 'ndjson'
+      };
 
-    // Create a manifest file
-    const manifestPath = path.join(outputDir, 'manifest.json');
-    const manifest = {
-      exported_at: new Date().toISOString(),
-      database_path: dbPath,
-      tables: exportedTables.map(t => t.tableName),
-      total_rows: totalRecords,
-      format: 'ndjson'
-    };
-
-    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-    console.log(`Manifest created: ${manifestPath}`);
-
-    db.close();
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+      console.log(`Manifest created: ${manifestPath}`);
+    } finally {
+      db.close();
+    }
 
   } catch (err) {
     console.error(`Export failed: ${err.message}`);

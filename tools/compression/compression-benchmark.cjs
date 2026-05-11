@@ -24,11 +24,11 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { Worker } = require('worker_threads');
-const { openDatabase } = require('../src/db/sqlite/v1/connection');
-const { compress, decompress } = require('../src/utils/CompressionFacade');
-const { CliFormatter } = require('../src/utils/CliFormatter');
-const { CliArgumentParser } = require('../src/utils/CliArgumentParser');
-const { findProjectRoot } = require('../src/utils/project-root');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
+const { compress, decompress } = require('../../src/shared/utils/CompressionFacade');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const { findProjectRoot } = require('../../src/shared/utils/project-root');
 
 class CliError extends Error {
   constructor(message, exitCode = 1) {
@@ -40,6 +40,15 @@ class CliError extends Error {
 const fmt = new CliFormatter();
 const projectRoot = findProjectRoot(__dirname);
 const DEFAULT_DB_PATH = path.join(projectRoot, 'data', 'news.db');
+
+function getDbApi(name) {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const fn = dbModule[name];
+  if (typeof fn !== 'function') {
+    throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+  }
+  return fn;
+}
 
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -234,17 +243,14 @@ if (asciiEnabled) {
   fmt.blank();
 }
 
-// Open database
-const db = openDatabase(dbPath, { readonly: true, fileMustExist: true });
+const getBenchmarkSnapshot = getDbApi('getCompressionBenchmarkSnapshot');
+const listBenchmarkArticles = getDbApi('listCompressionBenchmarkArticles');
+const getDominantSettings = getDbApi('getDominantCompressionSettings');
+const getDominantSummary = getDbApi('getDominantCompressionSummary');
 
-// Get total count of articles with content
-const totalArticles = db.prepare(`
-  SELECT COUNT(*) as count
-  FROM urls u
-  INNER JOIN http_responses hr ON hr.url_id = u.id
-  INNER JOIN content_storage cs ON cs.http_response_id = hr.id
-  WHERE hr.http_status = 200 AND cs.content_blob IS NOT NULL
-`).get().count;
+// Open database
+const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
+const totalArticles = getBenchmarkSnapshot(db).totalArticles;
 
 if (asciiEnabled) {
   fmt.section('Database Snapshot');
@@ -253,27 +259,7 @@ if (asciiEnabled) {
   fmt.blank();
 }
 
-// Build query to get articles (preferring uncompressed ones for fair comparison)
-let query = `
-  SELECT
-    u.id as url_id,
-    u.url,
-    cs.content_blob,
-    cs.uncompressed_size,
-    ct.algorithm as original_algorithm,
-    ct.level as original_level
-  FROM urls u
-  INNER JOIN http_responses hr ON hr.url_id = u.id
-  INNER JOIN content_storage cs ON cs.http_response_id = hr.id
-  INNER JOIN compression_types ct ON cs.compression_type_id = ct.id
-  WHERE hr.http_status = 200 AND cs.content_blob IS NOT NULL
-`;
-
-// Prefer uncompressed articles for fair comparison, but use any if needed
-query += ` ORDER BY CASE WHEN ct.algorithm = 'none' THEN 0 ELSE 1 END, RANDOM() LIMIT ${limit}`;
-
-const stmt = db.prepare(query);
-const articles = stmt.all();
+const articles = listBenchmarkArticles(db, { limit, preferUncompressed: true });
 
 if (asciiEnabled) {
   fmt.section('Sample Preparation');
@@ -689,18 +675,7 @@ async function runComparisonBenchmark() {
   }
 
   // Get current database compression settings
-  const currentStatsRaw = db.prepare(`
-    SELECT
-      ct.algorithm as current_algorithm,
-      ct.level as current_level,
-      ct.window_bits as current_window_bits,
-      COUNT(*) as current_count
-    FROM content_storage cs
-    JOIN compression_types ct ON cs.compression_type_id = ct.id
-    GROUP BY ct.algorithm, ct.level, ct.window_bits
-    ORDER BY COUNT(*) DESC
-    LIMIT 1
-  `).get();
+  const currentStatsRaw = getDominantSettings(db);
 
   const currentStats = normalizeCurrentStats(currentStatsRaw);
 
@@ -739,23 +714,7 @@ async function runSingleBenchmark(testLevel) {
   // This is a simplified version focusing on decompression metrics
 
   // Get articles (reuse the same dataset)
-  const stmt = db.prepare(`
-    SELECT
-      u.id as url_id,
-      u.url,
-      cs.content_blob,
-      cs.uncompressed_size,
-      ct.algorithm as original_algorithm,
-      ct.level as original_level
-    FROM urls u
-    INNER JOIN http_responses hr ON hr.url_id = u.id
-    INNER JOIN content_storage cs ON cs.http_response_id = hr.id
-    INNER JOIN compression_types ct ON cs.compression_type_id = ct.id
-    WHERE hr.http_status = 200 AND cs.content_blob IS NOT NULL
-    ORDER BY RANDOM() LIMIT ${limit}
-  `);
-
-  const testArticles = stmt.all();
+  const testArticles = listBenchmarkArticles(db, { limit, preferUncompressed: false });
 
   // Decompress articles that are compressed
   for (let i = 0; i < testArticles.length; i++) {
@@ -1239,22 +1198,7 @@ async function runBenchmark() {
   const articlesPerSecond = totalProcessingTimeMs > 0 ? sampleCount / (totalProcessingTimeMs / 1000) : 0;
   const fullDatasetTimeSeconds = articlesPerSecond > 0 ? totalArticles / articlesPerSecond : 0;
 
-  const currentStatsRow = db.prepare(`
-    SELECT
-      ct.algorithm as current_algorithm,
-      ct.level as current_level,
-      ct.window_bits as current_window_bits,
-      AVG(cs.compression_ratio) as current_avg_ratio,
-      COUNT(*) as current_count,
-      AVG(cs.uncompressed_size) as current_avg_uncompressed,
-      AVG(cs.compressed_size) as current_avg_compressed
-    FROM content_storage cs
-    JOIN compression_types ct ON cs.compression_type_id = ct.id
-    WHERE cs.content_blob IS NOT NULL
-    GROUP BY ct.algorithm, ct.level, ct.window_bits
-    ORDER BY COUNT(*) DESC
-    LIMIT 1
-  `).get();
+  const currentStatsRow = getDominantSummary(db);
 
   const currentSummary = currentStatsRow ? {
     algorithm: currentStatsRow.current_algorithm || 'none',

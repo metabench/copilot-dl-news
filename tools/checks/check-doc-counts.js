@@ -21,7 +21,7 @@
 const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
-const { ensureDb } = require('../../src/data/db/sqlite');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 
 const DEFAULT_THRESHOLD = 500;
 
@@ -46,65 +46,11 @@ function parseArgs(argv = process.argv) {
 }
 
 function getDocCountsByDomain(db) {
-    // Query news_websites and get document counts per website
-    // Use a simpler, more accurate approach: extract host from URL and match against urls table
-
     try {
-        const websites = db.prepare(`
-      SELECT id, label, parent_domain, url, enabled
-      FROM news_websites
-      WHERE enabled = 1
-    `).all();
-
-        const results = [];
-
-        for (const site of websites) {
-            // Extract the host from the URL
-            let siteHost;
-            try {
-                const urlObj = new URL(site.url);
-                siteHost = urlObj.hostname;
-            } catch {
-                siteHost = site.parent_domain;
-            }
-
-            // Count documents for this host
-            let count = 0;
-            try {
-                const countRow = db.prepare(`
-          SELECT COUNT(*) as doc_count
-          FROM urls
-          WHERE host = ?
-        `).get(siteHost);
-                count = countRow?.doc_count || 0;
-            } catch {
-                // Try with parent_domain as fallback
-                try {
-                    const countRow = db.prepare(`
-            SELECT COUNT(*) as doc_count
-            FROM urls
-            WHERE host LIKE ?
-          `).get(`%${site.parent_domain}`);
-                    count = countRow?.doc_count || 0;
-                } catch {
-                    count = 0;
-                }
-            }
-
-            results.push({
-                id: site.id,
-                label: site.label,
-                domain: site.parent_domain,
-                url: site.url,
-                host: siteHost,
-                count
-            });
-        }
-
-        // Sort by count descending
-        results.sort((a, b) => b.count - a.count);
-
-        return { rows: results, source: 'news_websites + urls (per-site)' };
+        return {
+            rows: getDbModule().listDocumentCountsByEnabledWebsite(db),
+            source: 'news_websites + urls (per-site)'
+        };
     } catch (err) {
         console.error('Query failed:', err.message);
         return { rows: [], source: 'error' };
@@ -113,11 +59,18 @@ function getDocCountsByDomain(db) {
 
 function getTotalDomainCount(db) {
     try {
-        const row = db.prepare(`SELECT COUNT(*) as count FROM news_websites WHERE enabled = 1`).get();
-        return row?.count || 0;
+        return getDbModule().countEnabledNewsWebsites(db);
     } catch {
         return 0;
     }
+}
+
+function getDbModule() {
+    const dbModule = resolveNewsCrawlerDbModule();
+    if (!dbModule || typeof dbModule.listDocumentCountsByEnabledWebsite !== 'function') {
+        throw new Error('news-crawler-db diagnostic report helpers are unavailable. Rebuild news-crawler-db.');
+    }
+    return dbModule;
 }
 
 function printUsage() {
@@ -163,7 +116,7 @@ function main(argv = process.argv) {
 
     let db;
     try {
-        db = ensureDb(dbPath);
+        db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
     } catch (err) {
         if (args.json) {
             console.log(JSON.stringify({ error: 'Failed to open database', message: err.message }, null, 2));

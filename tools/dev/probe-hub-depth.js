@@ -1,4 +1,4 @@
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 /**
  * 005-hub-depth-probe/run.js
  * Determine the depth (oldest article) of verified place hubs.
@@ -10,35 +10,21 @@ const fs = require('fs');
 
 const dbPath = path.resolve(__dirname, '../../data/news.db');
 const db = openNewsCrawlerDb(dbPath, { readonly: false });
+const {
+    getVerifiedHubsForArchive,
+    updateHubDepthCheck
+} = resolveNewsCrawlerDbModule();
 
-async function updateHubDepth(hubUrl, maxPage, oldestDate, error = null) {
+async function updateHubDepth(hub, maxPage, oldestDate, error = null) {
     try {
-        // Strip query params for matching
-        const cleanUrl = hubUrl.split('?')[0].replace(/\/all$/, ''); // Match base URL logic if needed
-        
-        // We might match exact URL or base URL depending on how it's stored.
-        // The probe might have modified the URL (e.g. appended /all).
-        // Let's rely on the URL passed into probeDepth (original) first?
-        // Actually, probeDepth determines the "working" URL.
-        // But place_page_mappings stores the "canonical" URL. 
-        // We should update based on the HOST + URL match.
-        
-        const stmt = db.prepare(`
-            UPDATE place_page_mappings 
-            SET max_page_depth = ?, 
-                oldest_content_date = ?, 
-                last_depth_check_at = datetime('now'),
-                depth_check_error = ?
-            WHERE url = ? OR url = ?
-        `);
-        
-        // Try exact match or match without /all suffix
-        const res = stmt.run(maxPage, oldestDate, error, hubUrl, hubUrl.replace(/\/all$/, ''));
-        
-        if (res.changes > 0) {
-            // console.log(`  Updated DB: depth=${maxPage}, oldest=${oldestDate}`);
-        } else {
-            console.warn(`  Warning: Could not match ${hubUrl} to place_page_mappings for update.`);
+        const res = updateHubDepthCheck(db, {
+            id: hub.id,
+            maxPageDepth: maxPage,
+            oldestContentDate: oldestDate,
+            error
+        });
+        if (res.changes === 0) {
+            console.warn(`  Warning: Could not match ${hub.url} to place_page_mappings for update.`);
         }
     } catch (e) {
         console.error(`  DB Update Error: ${e.message}`);
@@ -46,16 +32,16 @@ async function updateHubDepth(hubUrl, maxPage, oldestDate, error = null) {
 }
 
 async function getVerifiedHubs() {
-    return db.prepare(`
-        SELECT pm.host, pm.url, pn.name 
-        FROM place_page_mappings pm
-        JOIN places p ON p.id = pm.place_id
-        JOIN place_names pn ON pn.place_id = p.id
-        WHERE pm.host = 'theguardian.com' 
-          AND pm.status = 'verified'
-          AND p.kind = 'country'
-          AND pn.is_preferred = 1
-    `).all();
+    return getVerifiedHubsForArchive(db, {
+        host: 'theguardian.com',
+        pageKind: 'country-hub',
+        limit: 10000
+    }).map((row) => ({
+        id: row.id,
+        host: row.host,
+        url: row.url,
+        name: row.placeName
+    }));
 }
 
 async function checkPage(url, pageNum, page1Signature = null) {
@@ -236,7 +222,7 @@ async function probeDepth(hub, isRetry = false) {
     console.log(`✅ ${hub.name}: Max Page ~${bestPage}, Oldest Article: ${oldestDate}`);
     
     // Save to DB
-    await updateHubDepth(hub.url, bestPage, oldestDate);
+    await updateHubDepth(hub, bestPage, oldestDate);
 
     return { 
         name: hub.name, 
@@ -305,4 +291,11 @@ async function main() {
     console.log('Results saved to results.json');
 }
 
-main();
+main()
+    .catch((error) => {
+        console.error(error);
+        process.exitCode = 1;
+    })
+    .finally(async () => {
+        await db.close();
+    });

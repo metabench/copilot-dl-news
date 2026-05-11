@@ -8,8 +8,8 @@
  */
 
 const path = require('path');
-const { openDatabase } = require('../src/data/db/sqlite/v1/connection');
-const { compress } = require('../src/shared/utils/CompressionFacade');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
+const { compress } = require('../../src/shared/utils/CompressionFacade');
 
 // ANSI color codes
 const colors = {
@@ -28,20 +28,25 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+function getDbModule() {
+  const dbModule = resolveNewsCrawlerDbModule();
+  if (!dbModule || typeof dbModule.getBrotliLevel6Window22CompressionType !== 'function') {
+    throw new Error('news-crawler-db compression cleanup helpers are unavailable. Rebuild news-crawler-db.');
+  }
+  return dbModule;
+}
+
 async function main(options = {}) {
   const useColors = process.stdout.isTTY;
   const banner = useColors ? `${colors.cyan || ''}` : '';
   console.log(`${banner}🗜️  Compressing uncompressed records with Brotli level 6...${useColors ? colors.reset : ''}\n`);
 
-  const dbPath = options.dbPath || path.join(__dirname, '..', 'data', 'news.db');
-  const db = openDatabase(dbPath, { readonly: false, fileMustExist: true });
+  const dbPath = options.dbPath || path.join(__dirname, '..', '..', 'data', 'news.db');
+  const db = openNewsCrawlerDb(dbPath, { readonly: false, fileMustExist: true });
+  const dbModule = getDbModule();
 
   try {
-    // Get Brotli level 6 compression type
-    const brotli6Type = db.prepare(`
-      SELECT * FROM compression_types
-      WHERE algorithm = 'brotli' AND level = 6 AND window_bits = 22
-    `).get();
+    const brotli6Type = dbModule.getBrotliLevel6Window22CompressionType(db);
 
     if (!brotli6Type) {
       throw new Error('Brotli level 6 (22-bit) compression type not found in database');
@@ -49,13 +54,7 @@ async function main(options = {}) {
 
     console.log(`Using compression type: ${brotli6Type.name} (ID: ${brotli6Type.id})`);
 
-    // Find all uncompressed records
-    const uncompressedRecords = db.prepare(`
-      SELECT cs.id, cs.content_blob, cs.uncompressed_size
-      FROM content_storage cs
-      WHERE cs.compression_type_id IS NULL  -- Uncompressed records
-        AND cs.content_blob IS NOT NULL
-    `).all();
+    const uncompressedRecords = dbModule.listUncompressedContentStorageRecords(db);
 
     console.log(`Found ${uncompressedRecords.length} uncompressed records to compress\n`);
 
@@ -70,17 +69,6 @@ async function main(options = {}) {
         totalTimeSeconds: 0
       };
     }
-
-    // Prepare update statement
-    const updateStmt = db.prepare(`
-      UPDATE content_storage
-      SET compression_type_id = ?,
-          content_blob = ?,
-          compressed_size = ?,
-          compression_ratio = ?,
-          storage_type = 'db_compressed'
-      WHERE id = ?
-    `);
 
     let totalOriginalSize = 0;
     let totalCompressedSize = 0;
@@ -102,14 +90,13 @@ async function main(options = {}) {
             windowBits: 22
           });
 
-          // Update the record
-          updateStmt.run(
-            brotli6Type.id,
-            result.compressed,
-            result.compressedSize,
-            result.ratio,
-            record.id
-          );
+          dbModule.updateContentStorageCompressionCleanupResult(db, {
+            id: record.id,
+            compressionTypeId: brotli6Type.id,
+            contentBlob: result.compressed,
+            compressedSize: result.compressedSize,
+            compressionRatio: result.ratio
+          });
 
           totalOriginalSize += result.uncompressedSize;
           totalCompressedSize += result.compressedSize;

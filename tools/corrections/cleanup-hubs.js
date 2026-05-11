@@ -1,12 +1,17 @@
-const HubValidator = require('../src/geo/hub-validation/HubValidator');
-const { ensureDb } = require('../src/data/db/sqlite');
+const HubValidator = require('../../src/geo/hub-validation/HubValidator');
+const { resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
+const { ensureDb } = require('../../src/data/db/sqlite');
+
+const {
+  deletePlaceHubById,
+  listPlaceHubCleanupRows
+} = resolveNewsCrawlerDbModule();
 
 async function cleanupInvalidHubs() {
   const db = ensureDb('./data/news.db');
   const validator = new HubValidator(db);
 
-  // Get all place hubs
-  const hubs = db.prepare('SELECT id, url, place_kind, place_slug, title FROM place_hubs').all();
+  const hubs = listPlaceHubCleanupRows(db);
 
   console.log(`Found ${hubs.length} place hubs to validate`);
 
@@ -25,7 +30,7 @@ async function cleanupInvalidHubs() {
       if (!result.isValid) {
         console.log(`❌ INVALID: ${result.reason}`);
         // Remove invalid hub
-        db.prepare('DELETE FROM place_hubs WHERE id = ?').run(hub.id);
+        deletePlaceHubById(db, hub.id);
         removed++;
       } else {
         console.log(`✅ VALID: ${result.reason}`);

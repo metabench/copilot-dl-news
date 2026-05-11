@@ -9,8 +9,13 @@
  */
 
 const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const { dropLegacyTables } = require('../../src/data/db/sqlite/v1/queries/maintenance');
 const path = require('path');
+
+const {
+  getTableRecordCount
+} = resolveNewsCrawlerDbModule();
 
 // Default to dry-run mode, require --fix to apply changes
 const dryRun = !process.argv.includes('--fix');
@@ -33,8 +38,8 @@ async function main() {
 
     console.log('Found legacy tables:');
     legacyTables.forEach(table => {
-      const count = db.prepare(`SELECT COUNT(*) as count FROM ${table.name}`).get();
-      console.log(`  - ${table.name}: ${count.count} rows`);
+      const count = getTableRecordCount(db, table.name);
+      console.log(`  - ${table.name}: ${count} rows`);
     });
 
     if (dryRun) {

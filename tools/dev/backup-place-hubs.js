@@ -1,21 +1,24 @@
 #!/usr/bin/env node
 /**
- * backup-place-hubs.js — Backup place hub mappings and related reference tables
- * 
+ * backup-place-hubs.js - Backup place hub mappings and related reference tables.
+ *
+ * SQL, schema extraction, and data-copy ownership live in news-crawler-db.
+ *
  * Usage:
  *   node tools/dev/backup-place-hubs.js
  *   node tools/dev/backup-place-hubs.js --output data/exports/my-backup.db
  */
 'use strict';
 
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
+
 const args = process.argv.slice(2);
 const help = args.includes('--help');
 
 if (help) {
-    console.log(`
+  console.log(`
 Usage: node tools/dev/backup-place-hubs.js [options]
 
 Creates a standalone SQLite backup of place_page_mappings and its dependencies
@@ -25,119 +28,100 @@ Options:
   --output <path>  Output path for backup DB (default: tmp/backups/place-hubs-YYYY-MM-DD-HHmm.db)
   --help           Show this help
 `);
-    process.exit(0);
+  process.exit(0);
 }
 
-// Config
-const SRC_DB_PATH = path.resolve(__dirname, '../../data/news.db');
-const TIMESTAMP = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16);
-const DEFAULT_OUT_DIR = path.resolve(__dirname, '../../tmp/backups');
-
-const outArgIndex = args.indexOf('--output');
-let outPath = outArgIndex !== -1 ? args[outArgIndex + 1] : null;
-
-if (!outPath) {
-    if (!fs.existsSync(DEFAULT_OUT_DIR)) {
-        fs.mkdirSync(DEFAULT_OUT_DIR, { recursive: true });
-    }
-    outPath = path.join(DEFAULT_OUT_DIR, `place-hubs-backup-${TIMESTAMP}.db`);
+function getDbExport(name) {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const value = dbModule[name];
+  if (!value) {
+    throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+  }
+  return value;
 }
 
-// Ensure output dir exists
-const outDir = path.dirname(outPath);
-if (!fs.existsSync(outDir)) {
+function closeDb(db) {
+  if (db && typeof db.close === 'function') {
+    db.close();
+  }
+}
+
+function resolveOutputPath() {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16);
+  const defaultOutDir = path.resolve(__dirname, '../../tmp/backups');
+  const outArgIndex = args.indexOf('--output');
+  let outPath = outArgIndex !== -1 ? args[outArgIndex + 1] : null;
+
+  if (!outPath) {
+    outPath = path.join(defaultOutDir, `place-hubs-backup-${timestamp}.db`);
+  }
+
+  return path.resolve(outPath);
+}
+
+function ensureOutputPath(outPath) {
+  const outDir = path.dirname(outPath);
+  if (!fs.existsSync(outDir)) {
     fs.mkdirSync(outDir, { recursive: true });
-}
+  }
 
-console.log(`Source DB: ${SRC_DB_PATH}`);
-console.log(`Backup DB: ${outPath}`);
-
-// 1. Initialize Source DB connection
-const db = openNewsCrawlerDb(SRC_DB_PATH, { readonly: true });
-
-// 2. Initialize Dest DB connection (create file)
-if (fs.existsSync(outPath)) {
+  if (fs.existsSync(outPath)) {
     console.warn(`Warning: Overwriting existing file ${outPath}`);
     fs.unlinkSync(outPath);
+  }
 }
-const destDb = openNewsCrawlerDb(outPath);
 
-// 3. Define tables to backup in dependency order
-const TABLES = [
-    'places',
-    'place_hubs',          // Must be before mappings (hub_id FK)
-    'place_page_mappings',
-    'place_names'          // Depends on places
-];
+function backupPlaceHubs() {
+  const backupTables = getDbExport('PLACE_HUB_BACKUP_TABLES');
+  const backupTablesToDatabase = getDbExport('backupPlaceHubTables');
+  const sourceDbPath = path.resolve(__dirname, '../../data/news.db');
+  const outPath = resolveOutputPath();
 
-// 4. Schema Extraction & Application
-console.log(' extracting schema...');
-const schemas = [];
-const schemaDb = openNewsCrawlerDb(SRC_DB_PATH, { readonly: true });
-for (const table of TABLES) {
-    // Check if table exists
-    const exists = schemaDb.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(table);
-    if (!exists) {
-        console.log(`  - Table ${table} not found in source, skipping.`);
-        continue;
+  ensureOutputPath(outPath);
+
+  console.log(`Source DB: ${sourceDbPath}`);
+  console.log(`Backup DB: ${outPath}`);
+  console.log(`Tables: ${backupTables.join(', ')}`);
+
+  const sourceDb = openNewsCrawlerDb(sourceDbPath, { readonly: true, fileMustExist: true });
+  const targetDb = openNewsCrawlerDb(outPath);
+
+  try {
+    const report = backupTablesToDatabase(sourceDb, targetDb, sourceDbPath, {
+      tables: backupTables
+    });
+
+    if (report.skipped.length > 0) {
+      for (const item of report.skipped) {
+        console.log(`Table ${item.table} skipped: ${item.reason}`);
+      }
     }
 
-    const schemaRow = schemaDb.prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name=?`).get(table);
-    if (schemaRow && schemaRow.sql) {
-        schemas.push({ table, sql: schemaRow.sql });
+    for (const table of report.createdTables) {
+      console.log(`Created table: ${table}`);
     }
+
+    for (const table of report.copiedTables) {
+      console.log(`Copied ${table.table}: ${table.rows} rows`);
+    }
+  } finally {
+    closeDb(targetDb);
+    closeDb(sourceDb);
+  }
+
+  const finalStats = fs.statSync(outPath);
+  console.log('');
+  console.log('Backup completed successfully.');
+  console.log(`Size: ${(finalStats.size / 1024 / 1024).toFixed(2)} MB`);
 }
-schemaDb.close();
 
-// Apply schema to dest
-destDb.exec('BEGIN');
-for (const s of schemas) {
-    console.log(`  Creating table: ${s.table}`);
-    destDb.exec(s.sql);
-}
-destDb.exec('COMMIT');
-destDb.close();
-
-// 5. Data Transfer via ATTACH
-// Open Dest as main handle
-const rwDb = openNewsCrawlerDb(outPath);
-
-// Ideally, we respect FKs, but if circular data exists or order is tricky, we can defer.
-// But we want to ensure the backup is valid.
-// Let's try to copy in correct order first.
-// If needed, we can do: rwDb.pragma('foreign_keys = OFF');
-
-console.log('Attaching source database...');
-try {
-    rwDb.prepare(`ATTACH DATABASE ? AS src`).run(SRC_DB_PATH);
-} catch (e) {
-    console.error('Failed to attach source database:', e.message);
+if (require.main === module) {
+  try {
+    backupPlaceHubs();
+  } catch (error) {
+    console.error('Backup failed:', error.message);
     process.exit(1);
+  }
 }
 
-// 6. Copy Data
-console.log('Copying data...');
-rwDb.exec('BEGIN');
-
-// Disable FKs for the bulk copy to avoid ordering headaches (though we tried to sort them)
-rwDb.pragma('foreign_keys = OFF');
-
-for (const s of schemas) {
-    const table = s.table;
-    process.stdout.write(`  Copying ${table}... `);
-    
-    // Copy all data
-    const result = rwDb.prepare(`INSERT INTO main.${table} SELECT * FROM src.${table}`).run();
-    console.log(`${result.changes} rows.`);
-}
-
-// Re-enable FKs? No, we're done closing.
-rwDb.exec('COMMIT');
-
-// 7. Detach
-rwDb.prepare('DETACH DATABASE src').run();
-rwDb.close();
-
-console.log('\nBackup completed successfully.');
-const finalStats = fs.statSync(outPath);
-console.log(`Size: ${(finalStats.size / 1024 / 1024).toFixed(2)} MB`);
+module.exports = { backupPlaceHubs };

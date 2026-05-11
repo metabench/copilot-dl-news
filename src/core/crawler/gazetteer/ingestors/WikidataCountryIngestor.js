@@ -119,10 +119,12 @@ class WikidataCountryIngestor {
     this.name = 'Wikidata Country Ingestor';
 
     try {
-      this.db.prepare(`
-        INSERT OR IGNORE INTO place_sources(name, version, url, license)
-        VALUES ('wikidata', 'latest', 'https://www.wikidata.org', 'CC0 1.0')
-      `).run();
+      ingestQueries.registerPlaceSource(this.db, {
+        name: 'wikidata',
+        version: 'latest',
+        url: 'https://www.wikidata.org',
+        license: 'CC0 1.0'
+      });
     } catch (err) {
       this.logger.warn('[WikidataCountryIngestor] Failed to register source metadata:', err.message);
     }

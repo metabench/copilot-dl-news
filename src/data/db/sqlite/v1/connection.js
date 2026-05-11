@@ -21,17 +21,17 @@ function resolveNewsCrawlerDbModule() {
 
 /**
  * Open database connection with minimal setup
- * 
+ *
  * This is the LOW-LEVEL function - just opens a connection.
  * For most use cases, use ensureDatabase() instead.
- * 
+ *
  * @param {string} dbPath - Path to SQLite database file
  * @param {Object} options - Connection options
  * @param {boolean} [options.readonly=false] - Open in read-only mode
  * @returns {Database} better-sqlite3 Database instance
  */
 function openDatabase(dbPath, options = {}) {
-  const { createDbAdapter } = resolveNewsCrawlerDbModule();
+  const { createDbAdapter, configureSqliteConnectionRuntime } = resolveNewsCrawlerDbModule();
   const db = createDbAdapter({
     type: 'sqlite',
     path: dbPath,
@@ -43,26 +43,23 @@ function openDatabase(dbPath, options = {}) {
     throw new Error('news-crawler-db SQLite adapter must expose prepare() and exec() compatibility methods');
   }
 
-  // Set pragmas (always needed for proper operation). WAL/synchronous are write-mode only.
-  if (!options.readonly && typeof db.pragma === 'function') {
-    db.pragma('journal_mode = WAL');
-    db.pragma('synchronous = NORMAL');
-  }
-  db.pragma('foreign_keys = ON');
-  db.pragma('busy_timeout = 5000');
+  configureSqliteConnectionRuntime(db, {
+    readonly: options.readonly,
+    busyTimeoutMs: 5000
+  });
 
   return db;
 }
 
 /**
  * Ensure database exists with schema initialized
- * 
+ *
  * This is the HIGH-LEVEL function - use this in most cases.
- * 
+ *
  * Separation of concerns:
  * - openDatabase() just opens a connection
  * - initializeSchema() creates tables/indexes
- * 
+ *
  * @param {string} dbPath - Path to SQLite database file
  * @param {Object} options - Initialization options
  * @param {boolean} [options.skipSchema=false] - Skip schema initialization
@@ -76,7 +73,7 @@ function ensureDatabase(dbPath, options = {}) {
     readonly: options.readonly,
     fileMustExist: options.fileMustExist
   });
-  
+
   if (!options.skipSchema && !options.readonly) {
     const logger = options.logger || console;
     const verbose = options.verbose || false;
@@ -129,7 +126,7 @@ function ensureDatabase(dbPath, options = {}) {
       (options.logger || console).error('Failed to seed bootstrap data:', error);
     }
   }
-  
+
   return db;
 }
 

@@ -1,5 +1,6 @@
 const NewsDatabaseFacade = require('../../../data/db');
 const path = require('path');
+const { checkDatabaseHealth } = require('news-crawler-db');
 
 console.log('--- Lab Experiment: DB Access Patterns ---');
 
@@ -26,13 +27,11 @@ try {
         db: rawDb,
         run: function() {
             console.log('[Old Way] Component running with injected DB.');
-            // Just check if we can prepare a statement (smoke test)
             try {
-                const stmt = this.db.prepare('SELECT 1 as val');
-                const res = stmt.get();
-                console.log('[Old Way] Query result:', res);
+                const ok = checkDatabaseHealth(this.db);
+                console.log('[Old Way] DB health:', ok);
             } catch (e) {
-                console.error('[Old Way] Query failed:', e.message);
+                console.error('[Old Way] DB health check failed:', e.message);
             }
         }
     };
@@ -58,9 +57,8 @@ try {
         
         if (db) {
              const rawDb = db.getHandle ? db.getHandle() : db;
-             const stmt = rawDb.prepare('SELECT 1 as val');
-             const res = stmt.get();
-             console.log('[New Way] Query result:', res);
+             const ok = checkDatabaseHealth(rawDb);
+             console.log('[New Way] DB health:', ok);
         }
     }
 } catch (err) {

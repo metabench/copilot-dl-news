@@ -5,6 +5,7 @@ const path = require('path');
 
 const { resolveBetterSqliteHandle } = require('../../utils/dashboardModule');
 const { createTopicHubGuessingRouter } = require('../server');
+const { getTopicHubGuessingCellSample } = require('news-crawler-db');
 
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'news.db');
 
@@ -34,18 +35,7 @@ async function main() {
   try {
     check(!!dbHandle, 'Database handle resolved');
 
-    // Find a real (topic_slug, host) pair from the view so the check is resilient to dataset.
-    const sample = dbHandle
-      .prepare(
-        `
-        SELECT topic_slug AS topicSlug, host
-        FROM place_hubs_with_urls
-        WHERE topic_slug IS NOT NULL AND topic_slug <> ''
-          AND host IS NOT NULL AND host <> ''
-        LIMIT 1
-        `
-      )
-      .get();
+    const sample = getTopicHubGuessingCellSample(dbHandle);
 
     if (!sample) {
       console.log('ℹ️  No topic_slug rows found in DB; skipping cell rendering check');

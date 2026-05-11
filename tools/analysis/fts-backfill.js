@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 /**
  * Backfill body_text, byline, and authors columns for FTS5 indexing
  * 
@@ -25,7 +25,7 @@ const options = {
   batchSize: 100,
   dryRun: false,
   verbose: false,
-  dbPath: path.join(__dirname, '..', 'data', 'news.db')
+  dbPath: path.join(__dirname, '..', '..', 'data', 'news.db')
 };
 
 for (let i = 0; i < args.length; i++) {
@@ -64,12 +64,14 @@ Options:
 }
 
 // Open database
-const db = openNewsCrawlerDb(options.dbPath);
-db.pragma('journal_mode = WAL');
+const db = openNewsCrawlerDb(options.dbPath, { readonly: options.dryRun, fileMustExist: true });
+const dbModule = getDbModule();
+if (!options.dryRun) {
+  dbModule.configureFtsBackfillSqliteRuntime(db);
+}
 
 // Check if required columns exist
-const columns = db.pragma('table_info(content_analysis)');
-const columnNames = columns.map(c => c.name);
+const columnNames = dbModule.listFtsBackfillContentAnalysisColumnNames(db);
 const requiredColumns = ['body_text', 'byline', 'authors'];
 const missingColumns = requiredColumns.filter(c => !columnNames.includes(c));
 
@@ -79,35 +81,13 @@ if (missingColumns.length > 0) {
   process.exit(1);
 }
 
-// Prepare statements
-const getArticlesNeedingBackfill = db.prepare(`
-  SELECT 
-    ca.id,
-    ca.content_id,
-    ca.title,
-    ca.analysis_json,
-    u.url,
-    cs.content_blob,
-    cs.storage_type,
-    ct.algorithm AS compression_algorithm
-  FROM content_analysis ca
-  JOIN content_storage cs ON ca.content_id = cs.id
-  JOIN http_responses hr ON cs.http_response_id = hr.id
-  JOIN urls u ON hr.url_id = u.id
-  LEFT JOIN compression_types ct ON cs.compression_type_id = ct.id
-  WHERE ca.body_text IS NULL
-    AND cs.content_blob IS NOT NULL
-  ORDER BY ca.id
-  LIMIT ?
-`);
-
-const updateArticle = db.prepare(`
-  UPDATE content_analysis
-  SET body_text = ?,
-      byline = ?,
-      authors = ?
-  WHERE id = ?
-`);
+function getDbModule() {
+  const module = resolveNewsCrawlerDbModule();
+  if (!module || typeof module.listFtsBackfillArticlesNeedingBackfill !== 'function') {
+    throw new Error('news-crawler-db FTS backfill helpers are unavailable. Rebuild news-crawler-db.');
+  }
+  return module;
+}
 
 /**
  * Extract text from HTML using Readability
@@ -234,7 +214,7 @@ async function run() {
   let updated = 0;
   let errors = 0;
 
-  const articles = getArticlesNeedingBackfill.all(options.limit);
+  const articles = dbModule.listFtsBackfillArticlesNeedingBackfill(db, { limit: options.limit });
   console.log(`Found ${articles.length} articles needing backfill`);
 
   if (articles.length === 0) {
@@ -291,13 +271,8 @@ async function run() {
 
     // Apply updates in a transaction
     if (updates.length > 0 && !options.dryRun) {
-      const updateTx = db.transaction((rows) => {
-        for (const row of rows) {
-          updateArticle.run(row.body_text, row.byline, row.authors, row.id);
-        }
-      });
-      updateTx(updates);
-      updated += updates.length;
+      const result = dbModule.updateFtsBackfillArticles(db, updates);
+      updated += result.updated;
     } else {
       updated += updates.length; // Count for dry run
     }

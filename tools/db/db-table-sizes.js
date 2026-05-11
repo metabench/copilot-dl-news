@@ -6,10 +6,14 @@ const https = require('https');
 const { spawnSync, execSync } = require('child_process');
 const { Worker } = require('worker_threads');
 const extract = require('extract-zip');
-const { CliFormatter } = require('../src/shared/utils/CliFormatter');
-const { CliArgumentParser } = require('../src/shared/utils/CliArgumentParser');
-const { openDatabase } = require('../src/data/db/sqlite/v1');
-const { findProjectRoot } = require('../src/shared/utils/project-root');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const { openDatabase } = require('../../src/data/db/sqlite/v1');
+const { findProjectRoot } = require('../../src/shared/utils/project-root');
+const {
+  getSqliteDbstatTableSizesQuery,
+  listSqliteDbstatTableSizes
+} = require('news-crawler-db');
 
 class CliError extends Error {
   constructor(message, exitCode = 1) {
@@ -124,22 +128,7 @@ function getFileSizeBytes(dbPath) {
 function collectWithDbstat(dbPath) {
   const db = openDatabase(dbPath, { readonly: true, fileMustExist: true });
   try {
-    const rows = db.prepare(`
-      SELECT 
-        name,
-        COUNT(*) AS page_count,
-        SUM(pgsize) AS size_bytes
-      FROM dbstat
-      WHERE name NOT LIKE 'sqlite_%'
-      GROUP BY name
-      ORDER BY size_bytes DESC
-    `).all();
-
-    return rows.map((row) => ({
-      name: row.name,
-      pageCount: Number(row.page_count || 0),
-      sizeBytes: Number(row.size_bytes || 0)
-    }));
+    return listSqliteDbstatTableSizes(db);
   } finally {
     db.close();
   }
@@ -158,7 +147,7 @@ function parseCliOutput(rawOutput) {
 }
 
 function runCliQuery(cliPath, dbPath) {
-  const query = `SELECT name, COUNT(*) AS page_count, SUM(pgsize) AS size_bytes FROM dbstat WHERE name NOT LIKE 'sqlite_%' GROUP BY name ORDER BY size_bytes DESC;`;
+  const query = getSqliteDbstatTableSizesQuery();
   const result = spawnSync(cliPath, ['-csv', dbPath, query], {
     encoding: 'utf8',
     maxBuffer: 50 * 1024 * 1024

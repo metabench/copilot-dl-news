@@ -1,40 +1,36 @@
-const { ensureDatabase } = require('../../src/data/db/sqlite');
+#!/usr/bin/env node
+'use strict';
+
 const path = require('path');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 
 const DB_PATH = path.join(__dirname, '../../data/gazetteer.db');
 
-function migrate() {
+async function migrate() {
   console.log(`Migrating database at ${DB_PATH}...`);
-  const db = ensureDatabase(DB_PATH);
+  const db = openNewsCrawlerDb(DB_PATH);
 
   try {
-    // Check if columns exist
-    const tableInfo = db.pragma('table_info(place_names)');
-    const hasValidFrom = tableInfo.some(c => c.name === 'valid_from');
-    const hasValidTo = tableInfo.some(c => c.name === 'valid_to');
+    const result = db.migrationUtilities.ensurePlaceNameTemporalColumns();
 
-    if (!hasValidFrom) {
-      console.log('Adding column: valid_from');
-      db.prepare('ALTER TABLE place_names ADD COLUMN valid_from TEXT').run();
-    } else {
-      console.log('Column valid_from already exists.');
+    for (const column of result.addedColumns) {
+      console.log(`Adding column: ${column}`);
     }
-
-    if (!hasValidTo) {
-      console.log('Adding column: valid_to');
-      db.prepare('ALTER TABLE place_names ADD COLUMN valid_to TEXT').run();
-    } else {
-      console.log('Column valid_to already exists.');
+    for (const column of result.existingColumns) {
+      console.log(`Column ${column} already exists.`);
     }
 
     console.log('Migration complete.');
-  } catch (err) {
-    console.error('Migration failed:', err);
-    process.exit(1);
   } finally {
-    db.close();
+    await db.close();
   }
 }
 
-migrate();
+if (require.main === module) {
+  migrate().catch((error) => {
+    console.error('Migration failed:', error);
+    process.exit(1);
+  });
+}
 
+module.exports = { migrate };

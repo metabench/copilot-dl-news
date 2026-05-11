@@ -18,41 +18,17 @@
  *   - Population data may be null for many capitals
  */
 
-const { ensureDatabase } = require('../../src/data/db/sqlite');
 const path = require('path');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 
 const args = process.argv.slice(2);
 const withCountry = args.includes('--with-country');
 const jsonOutput = args.includes('--json');
 
 const dbPath = path.join(__dirname, '..', '..', 'data', 'news.db');
-const db = ensureDatabase(dbPath);
-
-// Query for capital cities with their names
-// Use subquery to get the best available name for each place
-const query = `
-  SELECT 
-    p.id,
-    p.kind,
-    p.country_code,
-    p.lat,
-    p.lng,
-    p.population,
-    p.timezone,
-    p.extra,
-    COALESCE(
-      (SELECT name FROM place_names WHERE id = p.canonical_name_id),
-      (SELECT name FROM place_names WHERE place_id = p.id ORDER BY is_preferred DESC, is_official DESC LIMIT 1),
-      '(unnamed)'
-    ) as name
-  FROM places p
-  WHERE p.kind = 'city' 
-    AND json_extract(p.extra, '$.role') = 'capital'
-    AND p.status = 'current'
-  ORDER BY p.country_code, name
-`;
-
-const capitals = db.prepare(query).all();
+const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
+const dbModule = resolveNewsCrawlerDbModule();
+const capitals = dbModule.listGazetteerCapitalCities(db);
 
 if (jsonOutput) {
   // Output as JSON
@@ -105,3 +81,4 @@ if (jsonOutput) {
   console.log();
 }
 
+db.close();

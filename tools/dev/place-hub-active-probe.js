@@ -14,7 +14,7 @@
  */
 'use strict';
 
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
 // node-fetch v3 is ESM-only
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
@@ -50,7 +50,22 @@ if (!HOST || !PATTERN) {
 
 function getDb(readonly = true) {
   const dbPath = path.resolve(__dirname, '..', '..', 'data', 'news.db');
-  return openNewsCrawlerDb(dbPath, { readonly });
+  return openNewsCrawlerDb(dbPath, { readonly, fileMustExist: true });
+}
+
+function getDbApi() {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const required = [
+    'listPreferredCountryPlacesForActiveHubProbe',
+    'listExistingPlacePageMappingUrlsForHost',
+    'upsertPlaceHubActiveProbeMappings'
+  ];
+  for (const name of required) {
+    if (typeof dbModule[name] !== 'function') {
+      throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+    }
+  }
+  return dbModule;
 }
 
 async function probeUrl(url) {
@@ -95,18 +110,12 @@ async function probeUrl(url) {
 
 async function main() {
   const db = getDb(!APPLY);
+  const dbApi = getDbApi();
   
   try {
     // 1. Load places
     console.log('Loading places from gazetteer...');
-    const places = db.prepare(`
-      SELECT pn.place_id, pn.name, pn.normalized, pn.lang, p.kind, p.country_code as code
-      FROM place_names pn
-      JOIN places p ON p.id = pn.place_id
-      WHERE p.kind = 'country'
-        AND pn.is_preferred = 1
-        AND pn.lang IN ('en', 'eng', 'und')
-    `).all();
+    const places = dbApi.listPreferredCountryPlacesForActiveHubProbe(db);
     console.log(`Loaded ${places.length} places`);
 
     // 2. Generate candidates
@@ -139,9 +148,7 @@ async function main() {
     console.log(`Generated ${candidates.length} candidate URLs for ${places.length} places`);
     
     // 3. Filter existing mappings to avoid redundant probing
-    const existing = new Set(
-      db.prepare('SELECT url FROM place_page_mappings WHERE host = ?').all(HOST.replace(/^www\./, '')).map(r => r.url)
-    );
+    const existing = new Set(dbApi.listExistingPlacePageMappingUrlsForHost(db, HOST));
     
     const toProbe = candidates.filter(c => !existing.has(c.url));
     console.log(`Skipping ${candidates.length - toProbe.length} existing URLs. Probing ${toProbe.length} new candidates...`);
@@ -172,41 +179,22 @@ async function main() {
     
     // 5. Apply
     if (APPLY && results.length > 0) {
-      const insert = db.prepare(`
-        INSERT INTO place_page_mappings 
-          (place_id, host, url, page_kind, status, first_seen_at, evidence)
-        VALUES (?, ?, ?, 'country-hub', 'pending', ?, ?)
-        ON CONFLICT(place_id, host, page_kind) DO UPDATE SET
-          url = excluded.url,
-          evidence = excluded.evidence,
-          verified_at = CASE WHEN excluded.status = 'verified' THEN excluded.first_seen_at ELSE verified_at END
-      `);
-      
-      const now = new Date().toISOString();
-      const host = HOST.replace(/^www\./, '');
-      
-      const tx = db.transaction(() => {
-        let count = 0;
-        for (const r of results) {
-          try {
-            const finalUrl = r.res.finalUrl || r.url;
-            const evidence = JSON.stringify({
-              source: 'place-hub-active-probe',
-              pattern: PATTERN,
-              originalUrl: r.url,
-              status: r.res.status,
-              probed_at: now
-            });
-            insert.run(r.place.place_id, host, finalUrl, now, evidence);
-            count++;
-          } catch (err) {
-            console.error(`Failed to insert ${r.url}: ${err.message}`);
-          }
+      const inserted = dbApi.upsertPlaceHubActiveProbeMappings(
+        db,
+        results.map((r) => ({
+          placeId: r.place.place_id,
+          url: r.url,
+          finalUrl: r.res.finalUrl || r.url,
+          slug: r.slug,
+          status: r.res.status
+        })),
+        HOST,
+        {
+          source: 'place-hub-active-probe',
+          pattern: PATTERN,
+          status: 'pending'
         }
-        return count;
-      });
-      
-      const inserted = tx();
+      );
       console.log(`Upserted ${inserted} mappings`);
     } else if (results.length > 0) {
       console.log(`\nRun with --apply to insert ${results.length} mappings`);

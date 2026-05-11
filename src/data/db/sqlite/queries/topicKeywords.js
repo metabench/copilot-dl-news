@@ -4,6 +4,11 @@
  * Database access layer for querying topic keywords for content analysis.
  */
 
+const {
+  getTopicTermsForLanguage: getTopicTermsForLanguageFromDb,
+  getAllTopicTerms: getAllTopicTermsFromDb
+} = require('news-crawler-db');
+
 /**
  * Get all topic terms for a specific language as a Set for fast lookup
  * @param {import('better-sqlite3').Database} db
@@ -12,13 +17,7 @@
  */
 function getTopicTermsForLanguage(db, lang) {
   try {
-    const terms = db.prepare(`
-      SELECT DISTINCT normalized
-      FROM topic_keywords
-      WHERE lang = ? AND normalized IS NOT NULL AND normalized != ''
-    `).all(lang);
-
-    return new Set(terms.map(row => row.normalized));
+    return getTopicTermsForLanguageFromDb(db, lang);
   } catch (err) {
     console.error('[topicKeywords] Error fetching topic terms:', err.message);
     return new Set();
@@ -32,13 +31,7 @@ function getTopicTermsForLanguage(db, lang) {
  */
 function getAllTopicTerms(db) {
   try {
-    const terms = db.prepare(`
-      SELECT DISTINCT normalized
-      FROM topic_keywords
-      WHERE normalized IS NOT NULL AND normalized != ''
-    `).all();
-
-    return new Set(terms.map(row => row.normalized));
+    return getAllTopicTermsFromDb(db);
   } catch (err) {
     console.error('[topicKeywords] Error fetching topic terms:', err.message);
     return new Set();

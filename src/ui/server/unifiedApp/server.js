@@ -28,6 +28,7 @@ const { createSubAppRegistry } = require('./subApps/registry');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 const { openNewsDb } = require('../../../data/db/dbAccess');
 const { createMcpLogger } = require("../../../shared/utils/mcpLogger");
+const { listContentAnalysisSectionCounts } = require('news-crawler-db');
 
 const { createRateLimitDashboardRouter } = require('../rateLimitDashboard/server');
 const { createWebhookDashboardRouter } = require('../webhookDashboard/server');
@@ -447,20 +448,15 @@ function mountDashboardModules(unifiedApp, options = {}) {
   unifiedApp.get('/api/downloads/recent', (req, res) => {
     try {
       const limit = normalizePositiveInt(req.query.limit, 10, 50);
-      const rows = getDb().prepare(`
-        SELECT
-          r.id,
-          u.url,
-          u.host,
-          r.http_status AS httpStatus,
-          r.bytes_downloaded AS bytesDownloaded,
-          r.fetched_at AS fetchedAt,
-          r.content_type AS contentType
-        FROM http_responses r
-        JOIN urls u ON r.url_id = u.id
-        ORDER BY r.fetched_at DESC
-        LIMIT ?
-      `).all(limit);
+      const rows = downloadEvidence.listRecentDownloads(getDb(), { limit }).map((row) => ({
+        id: row.id,
+        url: row.url,
+        host: row.host,
+        httpStatus: row.http_status,
+        bytesDownloaded: row.bytes_downloaded,
+        fetchedAt: row.fetched_at,
+        contentType: row.content_type
+      }));
 
       res.json({ status: 'ok', limit, items: rows });
     } catch (error) {
@@ -893,21 +889,7 @@ function mountDashboardModules(unifiedApp, options = {}) {
       const { items } = registryStore.list();
       const enabledOnly = parseBooleanQuery(req.query.enabledOnly, true);
 
-      const sections = getDb()
-        .prepare(`
-          SELECT ca.section AS section, COUNT(*) AS count
-          FROM content_analysis ca
-          WHERE ca.section IS NOT NULL
-            AND TRIM(ca.section) != ''
-          GROUP BY ca.section
-          ORDER BY count DESC
-          LIMIT 50
-        `)
-        .all()
-        .map((row) => ({
-          section: row.section,
-          count: Number(row.count) || 0
-        }));
+      const sections = listContentAnalysisSectionCounts(getDb(), { limit: 50 });
 
       const domains = items
         .filter((entry) => (enabledOnly ? Boolean(entry.enabled) : true))

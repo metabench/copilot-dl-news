@@ -1,6 +1,7 @@
 const { UrlPatternLearningService } = require('../../../services/UrlPatternLearningService');
 const { ArticleCache } = require('../../../cache');
 const { createCrawlerDb } = require('../../../core/crawler/dbClient');
+const { checkDatabaseHealth } = require('news-crawler-db');
 
 async function check() {
   console.log('[Check] Verifying DB injection for Batch 5 components...');
@@ -9,15 +10,12 @@ async function check() {
     // 1. UrlPatternLearningService
     const learner = new UrlPatternLearningService();
     if (!learner.db) throw new Error('UrlPatternLearningService failed to resolve DB');
-    const res1 = learner.db.prepare('SELECT 1 as val').get();
-    console.log(`[Check] UrlPatternLearningService DB Query result: ${JSON.stringify(res1)}`);
+    console.log(`[Check] UrlPatternLearningService DB health: ${checkDatabaseHealth(learner.db)}`);
 
     // 2. ArticleCache
     const cache = new ArticleCache();
     if (!cache.db) throw new Error('ArticleCache failed to resolve DB');
-    // ArticleCache.db is the raw handle (better-sqlite3) because we unwrapped it
-    const res2 = cache.db.prepare('SELECT 1 as val').get();
-    console.log(`[Check] ArticleCache DB Query result: ${JSON.stringify(res2)}`);
+    console.log(`[Check] ArticleCache DB health: ${checkDatabaseHealth(cache.db)}`);
 
     // 3. CrawlerDb (auto-wire)
     const crawlerDb = createCrawlerDb(); // No options = no dbPath

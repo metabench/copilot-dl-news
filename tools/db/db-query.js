@@ -5,10 +5,15 @@
 
 const fs = require('fs');
 const path = require('path');
-const { CliFormatter } = require('../src/shared/utils/CliFormatter');
-const { CliArgumentParser } = require('../src/shared/utils/CliArgumentParser');
-const { openDatabase } = require('../src/data/db/sqlite/v1');
-const { findProjectRoot } = require('../src/shared/utils/project-root');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+const { openDatabase } = require('../../src/data/db/sqlite/v1');
+const { findProjectRoot } = require('../../src/shared/utils/project-root');
+const {
+  executeReadOnlySqliteQuery,
+  getSqliteTablesAndViewsQuery,
+  validateReadOnlySqliteQuery
+} = require('news-crawler-db');
 
 class CliError extends Error {
   constructor(message, exitCode = 1) {
@@ -58,20 +63,11 @@ function readQueryFromFile(filePath) {
 }
 
 function ensureAllowedQuery(query) {
-  const trimmed = query.trim();
-  if (!trimmed) {
-    throw new CliError('SQL query is empty.');
+  try {
+    return validateReadOnlySqliteQuery(query);
+  } catch (error) {
+    throw new CliError(error.message || 'Query is not allowed.');
   }
-  const normalized = trimmed.toLowerCase();
-  if (
-    normalized.startsWith('select') ||
-    normalized.startsWith('pragma') ||
-    normalized.startsWith('explain') ||
-    normalized.startsWith('with ')
-  ) {
-    return trimmed;
-  }
-  throw new CliError('Only SELECT, PRAGMA, EXPLAIN, or WITH queries are permitted (connection is read-only).');
 }
 
 function normalizeOptions(rawOptions) {
@@ -111,7 +107,7 @@ function normalizeOptions(rawOptions) {
     if (query) {
       throw new CliError('The --list flag cannot be combined with a custom SQL query.');
     }
-    query = `SELECT name, type FROM sqlite_master WHERE type IN ('table', 'view') ORDER BY name`;
+    query = getSqliteTablesAndViewsQuery();
   }
 
   if (!query) {
@@ -133,8 +129,7 @@ function normalizeOptions(rawOptions) {
 function executeQuery(dbPath, query) {
   const db = openDatabase(dbPath, { readonly: true, fileMustExist: true });
   try {
-    const statement = db.prepare(query);
-    return statement.all();
+    return executeReadOnlySqliteQuery(db, query);
   } finally {
     try { db.close(); } catch (_) {}
   }

@@ -2,38 +2,14 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ensureDatabase } = require('../src/data/db/sqlite');
-const { PatternAggregator } = require('./lib/dspl/patternAggregator');
-const { loadPlaceMetadata } = require('./lib/dspl/placeMetadata');
-const { extractDomain, derivePatternFromUrl } = require('./lib/dspl/patternUtils');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { PatternAggregator } = require('../lib/dspl/patternAggregator');
+const { loadPlaceMetadata } = require('../lib/dspl/placeMetadata');
+const { extractDomain, derivePatternFromUrl } = require('../lib/dspl/patternUtils');
 
 function normalizeDomain(value) {
   if (!value) return null;
   return value.replace(/^https?:\/\//i, '').replace(/^www\./i, '').toLowerCase();
-}
-
-function buildArticleQuery(domain) {
-  let whereClause = '';
-  const params = [];
-  if (domain) {
-    const host = domain.toLowerCase();
-    whereClause = `
-      AND (
-        LOWER(host) = ? OR LOWER(host) = ?
-        OR LOWER(url) LIKE ? OR LOWER(url) LIKE ?
-      )
-    `;
-    params.push(host, `www.${host}`, `https://${host}%`, `https://www.${host}%`);
-  }
-  const sql = `
-    SELECT url, title
-      FROM articles
-     WHERE title LIKE '%|%'
-       AND url NOT LIKE '%/%/%/%/%'
-       AND LENGTH(url) < 100
-       ${whereClause}
-  `;
-  return { sql, params };
 }
 
 function shouldSkipSegments(segments) {
@@ -62,8 +38,7 @@ function isLikelyCountryHub(title, country, token) {
 }
 
 function collectCountryPatternsFromArticles(db, countryMetadata, domain, { silent = false } = {}) {
-  const { sql, params } = buildArticleQuery(domain);
-  const rows = db.prepare(sql).all(...params);
+  const rows = getDsplAnalysis(db).listDsplCountryHubArticleRows(domain);
   if (!silent) {
     console.log(`Found ${rows.length} potential hub pages`);
   }
@@ -119,23 +94,7 @@ function collectCountryPatternsFromArticles(db, countryMetadata, domain, { silen
 }
 
 function collectPatternsFromPlaceHubs(db, metadata, domain) {
-  const normalizedDomain = normalizeDomain(domain);
-  const params = [];
-  let whereClause = `place_kind IN ('country','region','city')`;
-  if (normalizedDomain) {
-    whereClause += ` AND (
-      LOWER(host) = ? OR LOWER(host) = ?
-      OR LOWER(url) LIKE ? OR LOWER(url) LIKE ?
-    )`;
-    params.push(normalizedDomain, `www.${normalizedDomain}`, `https://${normalizedDomain}%`, `https://www.${normalizedDomain}%`);
-  }
-  const rows = db.prepare(`
-    SELECT host, url, place_slug AS slug, place_kind AS kind
-      FROM place_hubs
-     WHERE ${whereClause}
-       AND url LIKE 'http%'
-       AND place_slug IS NOT NULL
-  `).all(...params);
+  const rows = getDsplAnalysis(db).listDsplPlaceHubPatternRows(domain);
 
   const byDomain = new Map();
 
@@ -285,7 +244,20 @@ function saveDsplToDisk(domain, dspl, outputDir) {
   return filepath;
 }
 
-function main() {
+function getDsplAnalysis(db) {
+  if (!db || !db.dsplAnalysis) {
+    throw new Error('news-crawler-db dsplAnalysis access is unavailable');
+  }
+  return db.dsplAnalysis;
+}
+
+async function closeDb(db) {
+  if (db && typeof db.close === 'function') {
+    await db.close();
+  }
+}
+
+async function main() {
   const args = process.argv.slice(2);
   const showHelp = args.includes('--help') || args.includes('-h');
   if (showHelp) {
@@ -310,82 +282,86 @@ Options:
   const jsonMode = args.includes('--json');
   const saveMode = args.includes('--save');
 
-  const dbPath = path.join(__dirname, '..', 'data', 'news.db');
-  const db = ensureDatabase(dbPath);
-  const metadata = loadPlaceMetadata(db);
+  const dbPath = path.join(__dirname, '..', '..', 'data', 'news.db');
+  const db = openNewsCrawlerDb(dbPath, { readonly: true });
 
-  const silentAnalysis = jsonMode || saveMode;
-  const countryPatterns = collectCountryPatternsFromArticles(db, metadata.countries, domain, { silent: silentAnalysis });
-  const hubPatterns = collectPatternsFromPlaceHubs(db, metadata, domain);
+  try {
+    const metadata = loadPlaceMetadata(db);
 
-  const domainSet = new Set();
-  for (const key of countryPatterns.keys()) domainSet.add(key);
-  for (const key of hubPatterns.keys()) domainSet.add(key);
-  if (domain) domainSet.add(normalizeDomain(domain));
-  const domains = Array.from(domainSet).sort();
+    const silentAnalysis = jsonMode || saveMode;
+    const countryPatterns = collectCountryPatternsFromArticles(db, metadata.countries, domain, { silent: silentAnalysis });
+    const hubPatterns = collectPatternsFromPlaceHubs(db, metadata, domain);
 
-  const generatedAt = new Date().toISOString();
-  const dsplMap = new Map();
+    const domainSet = new Set();
+    for (const key of countryPatterns.keys()) domainSet.add(key);
+    for (const key of hubPatterns.keys()) domainSet.add(key);
+    if (domain) domainSet.add(normalizeDomain(domain));
+    const domains = Array.from(domainSet).sort();
 
-  for (const d of domains) {
-    const countryAgg = countryPatterns.get(d) || null;
-    const hubAggs = hubPatterns.get(d) || null;
-    const dspl = buildDspl(d, countryAgg, hubAggs, generatedAt);
-    if (
-      dspl.countryHubPatterns.length === 0 &&
-      dspl.regionHubPatterns.length === 0 &&
-      dspl.cityHubPatterns.length === 0
-    ) {
-      continue;
+    const generatedAt = new Date().toISOString();
+    const dsplMap = new Map();
+
+    for (const d of domains) {
+      const countryAgg = countryPatterns.get(d) || null;
+      const hubAggs = hubPatterns.get(d) || null;
+      const dspl = buildDspl(d, countryAgg, hubAggs, generatedAt);
+      if (
+        dspl.countryHubPatterns.length === 0 &&
+        dspl.regionHubPatterns.length === 0 &&
+        dspl.cityHubPatterns.length === 0
+      ) {
+        continue;
+      }
+      dsplMap.set(d, { dspl, countryAgg, hubAggs });
     }
-    dsplMap.set(d, { dspl, countryAgg, hubAggs });
-  }
 
-  if (saveMode) {
-    const outputDir = path.join(__dirname, '..', 'data', 'dspls');
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
+    if (saveMode) {
+      const outputDir = path.join(__dirname, '..', '..', 'data', 'dspls');
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+      for (const [domainKey, entry] of dsplMap.entries()) {
+        const filepath = saveDsplToDisk(domainKey, entry.dspl, outputDir);
+        const stats = entry.dspl.stats;
+        console.log(
+          `✓ Saved DSPL: ${path.basename(filepath)} ` +
+          `(countries: ${stats.verifiedPatterns}/${stats.totalPatterns}, ` +
+          `regions: ${stats.regionPatterns.verified}/${stats.regionPatterns.total}, ` +
+          `cities: ${stats.cityPatterns.verified}/${stats.cityPatterns.total})`
+        );
+      }
+      if (dsplMap.size === 0) {
+        console.log('No domains with hub patterns found.');
+      }
+      console.log(`\nDSPLs saved to: ${path.join('data', 'dspls')}`);
+      return;
     }
+
+    if (jsonMode) {
+      const payload = {};
+      for (const [domainKey, entry] of dsplMap.entries()) {
+        payload[domainKey] = entry.dspl;
+      }
+      console.log(JSON.stringify(payload, null, 2));
+      return;
+    }
+
     for (const [domainKey, entry] of dsplMap.entries()) {
-      const filepath = saveDsplToDisk(domainKey, entry.dspl, outputDir);
-      const stats = entry.dspl.stats;
-      console.log(
-        `✓ Saved DSPL: ${path.basename(filepath)} ` +
-        `(countries: ${stats.verifiedPatterns}/${stats.totalPatterns}, ` +
-        `regions: ${stats.regionPatterns.verified}/${stats.regionPatterns.total}, ` +
-        `cities: ${stats.cityPatterns.verified}/${stats.cityPatterns.total})`
-      );
+      const report = formatHumanReport(domainKey, entry.dspl, entry.countryAgg, entry.hubAggs);
+      console.log(report);
     }
+
     if (dsplMap.size === 0) {
-      console.log('No domains with hub patterns found.');
+      console.log('No patterns discovered.');
     }
-    console.log(`\nDSPLs saved to: ${path.join('data', 'dspls')}`);
-    db.close();
-    return;
+  } finally {
+    await closeDb(db);
   }
-
-  if (jsonMode) {
-    const payload = {};
-    for (const [domainKey, entry] of dsplMap.entries()) {
-      payload[domainKey] = entry.dspl;
-    }
-    console.log(JSON.stringify(payload, null, 2));
-    db.close();
-    return;
-  }
-
-  for (const [domainKey, entry] of dsplMap.entries()) {
-    const report = formatHumanReport(domainKey, entry.dspl, entry.countryAgg, entry.hubAggs);
-    console.log(report);
-  }
-
-  if (dsplMap.size === 0) {
-    console.log('No patterns discovered.');
-  }
-
-  db.close();
 }
 
 if (require.main === module) {
-  main();
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
 }

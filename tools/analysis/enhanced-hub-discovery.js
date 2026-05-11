@@ -13,11 +13,16 @@
 
 const path = require('path');
 const fs = require('fs');
-const { ensureDatabase } = require('../src/data/db/sqlite');
-const { createSQLiteDatabase } = require('../src/data/db/sqlite');
-const { CountryHubGapAnalyzer } = require('../src/services/CountryHubGapAnalyzer');
-const { HubValidator } = require('../src/core/crawler/hub-discovery/HubValidator');
-const { slugify } = require('../src/tools/slugify');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { createSQLiteDatabase } = require('../../src/data/db/sqlite');
+const { resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
+const { CountryHubGapAnalyzer } = require('../../src/services/CountryHubGapAnalyzer');
+const { HubValidator } = require('../../src/core/crawler/hub-discovery/HubValidator');
+const { slugify } = require('../../src/tools/slugify');
+
+const {
+  listArticlesMentioningPlaceForHubDiscovery
+} = resolveNewsCrawlerDbModule();
 
 const fetchImpl = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
@@ -126,14 +131,11 @@ class EnhancedHubDiscoverer {
     const urls = [];
 
     try {
-      // Query articles that might reference this place
-      const articles = this.db.prepare(`
-        SELECT url, title, html
-        FROM articles
-        WHERE LOWER(host) LIKE LOWER(?)
-          AND (LOWER(title) LIKE LOWER(?) OR LOWER(html) LIKE LOWER(?))
-        LIMIT 50
-      `).all(`%${domain}%`, `%${place.name}%`, `%${place.name}%`);
+      const articles = listArticlesMentioningPlaceForHubDiscovery(this.db, {
+        domain,
+        placeName: place.name,
+        limit: 50
+      });
 
       for (const article of articles) {
         // Extract potential hub URLs from article content
@@ -157,9 +159,8 @@ class EnhancedHubDiscoverer {
     try {
       // Look for navigation links that might point to hubs
       const linkRegex = /<a[^>]+href="([^"]*)"[^>]*>([^<]*)<\/a>/gi;
-      let match;
 
-      while ((match = linkRegex.exec(article.html)) !== null) {
+      for (const match of article.html.matchAll(linkRegex)) {
         const href = match[1];
         const text = match[2];
 

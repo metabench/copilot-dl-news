@@ -2,6 +2,11 @@ const { PredictionStrategyManager } = require('../../../services/shared/Predicti
 const { UrlClassificationService } = require('../../../services/UrlClassificationService');
 const { CountryHubPlanner } = require('../../../core/crawler/planner/CountryHubPlanner');
 const { SequenceContextAdapter } = require('../../../core/crawler/operations/sequenceContext');
+const { checkEnhancedDatabaseHealth } = require('news-crawler-db');
+
+function hasHealthyDb(db) {
+  return Boolean(db && checkEnhancedDatabaseHealth(db).ok);
+}
 
 async function check() {
   console.log('[Check] Verifying Batch 6 components...');
@@ -13,7 +18,7 @@ async function check() {
       entityType: 'country',
       buildMetadata: () => ({})
     });
-    if (manager.db && manager.db.prepare('SELECT 1').get()) {
+    if (hasHealthyDb(manager.db)) {
       console.log('[Check] PredictionStrategyManager initialized: true');
     } else {
       console.error('[Check] PredictionStrategyManager initialized: false');
@@ -22,7 +27,7 @@ async function check() {
 
     // 2. UrlClassificationService
     const classifier = new UrlClassificationService();
-    if (classifier.db && classifier.db.prepare('SELECT 1').get()) {
+    if (hasHealthyDb(classifier.db)) {
       console.log('[Check] UrlClassificationService initialized: true');
     } else {
       console.error('[Check] UrlClassificationService initialized: false');
@@ -31,7 +36,7 @@ async function check() {
 
     // 3. CountryHubPlanner
     const planner = new CountryHubPlanner();
-    if (planner.db && planner.db.prepare('SELECT 1').get()) {
+    if (hasHealthyDb(planner.db)) {
       console.log('[Check] CountryHubPlanner initialized: true');
     } else {
       console.error('[Check] CountryHubPlanner initialized: false');

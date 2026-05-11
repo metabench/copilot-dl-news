@@ -32,8 +32,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ensureDb } = require('../src/data/db/sqlite/ensureDb');
-const { ExportService } = require('../src/data/export/ExportService');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { ExportService } = require('../../src/data/export/ExportService');
 
 // Default paths
 const DEFAULT_DB_PATH = path.join(process.cwd(), 'data', 'news.db');
@@ -176,99 +176,6 @@ Examples:
 }
 
 /**
- * Create a simple articles adapter from database
- * @param {Object} db - Database connection
- * @returns {Object} Articles adapter
- */
-function createSimpleArticlesAdapter(db) {
-  return {
-    exportArticles(options = {}) {
-      const { limit = 1000, since, until, host, offset = 0 } = options;
-
-      let sql = `
-        SELECT 
-          ca.id,
-          u.url,
-          u.host,
-          ca.title,
-          ca.date as published_at,
-          hr.fetched_at,
-          ca.word_count,
-          ca.section as category,
-          ca.byline,
-          cs.body_text
-        FROM content_analysis ca
-        JOIN http_responses hr ON hr.id = ca.http_response_id
-        JOIN urls u ON u.id = hr.url_id
-        LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
-        WHERE 1=1
-      `;
-
-      const params = [];
-
-      if (since) {
-        sql += ` AND (ca.date >= ? OR hr.fetched_at >= ?)`;
-        params.push(since, since);
-      }
-
-      if (until) {
-        sql += ` AND (ca.date <= ? OR hr.fetched_at <= ?)`;
-        params.push(until, until);
-      }
-
-      if (host) {
-        sql += ` AND u.host = ?`;
-        params.push(host);
-      }
-
-      sql += ` ORDER BY hr.fetched_at DESC LIMIT ? OFFSET ?`;
-      params.push(limit, offset);
-
-      try {
-        return db.prepare(sql).all(...params);
-      } catch (err) {
-        // Table might not exist
-        console.error('Query failed:', err.message);
-        return [];
-      }
-    },
-
-    exportArticlesBatch(options) {
-      return this.exportArticles(options);
-    },
-
-    listDomains(options = {}) {
-      const { limit = 1000 } = options;
-
-      try {
-        const sql = `
-          SELECT 
-            u.host,
-            COUNT(*) as article_count,
-            MIN(hr.fetched_at) as first_crawled,
-            MAX(hr.fetched_at) as last_crawled
-          FROM urls u
-          JOIN http_responses hr ON hr.url_id = u.id
-          GROUP BY u.host
-          ORDER BY article_count DESC
-          LIMIT ?
-        `;
-
-        return { items: db.prepare(sql).all(limit) };
-      } catch (err) {
-        console.error('Query failed:', err.message);
-        return { items: [] };
-      }
-    },
-
-    exportDomains(options = {}) {
-      const result = this.listDomains(options);
-      return result.items || [];
-    }
-  };
-}
-
-/**
  * Main CLI function
  */
 async function main() {
@@ -306,19 +213,23 @@ async function main() {
       console.error(`Error: Database not found at ${options.dbPath}`);
       process.exit(1);
     }
-    db = ensureDb(options.dbPath, { readonly: true });
+    db = openNewsCrawlerDb(options.dbPath, { readonly: true, fileMustExist: true });
   } catch (err) {
     console.error(`Error: Failed to open database: ${err.message}`);
     process.exit(1);
   }
 
-  // Create adapters
-  const articlesAdapter = createSimpleArticlesAdapter(db);
+  const dataExportAdapter = db.dataExport;
+  if (!dataExportAdapter) {
+    console.error('Error: news-crawler-db data export adapter is unavailable');
+    await db.close();
+    process.exit(1);
+  }
 
   // Create export service
   const exportService = new ExportService({
-    articlesAdapter,
-    domainsAdapter: articlesAdapter,
+    articlesAdapter: dataExportAdapter,
+    domainsAdapter: dataExportAdapter,
     logger: options.verbose ? console : { log: () => {}, error: console.error }
   });
 
@@ -375,7 +286,7 @@ async function main() {
         });
       }
 
-      db.close();
+      await db.close();
       return;
     }
 
@@ -416,14 +327,14 @@ async function main() {
       process.stdout.write(output);
     }
 
-    db.close();
+    await db.close();
 
   } catch (err) {
     console.error(`Error: Export failed: ${err.message}`);
     if (options.verbose) {
       console.error(err.stack);
     }
-    db.close();
+    await db.close();
     process.exit(1);
   }
 }

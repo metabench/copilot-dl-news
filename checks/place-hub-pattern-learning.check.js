@@ -13,7 +13,7 @@
  */
 
 'use strict';
-const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../src/db/openNewsCrawlerDb');
 const path = require('path');
 const fs = require('fs');
 
@@ -62,6 +62,15 @@ function printSection(title) {
   console.log(`\n${'='.repeat(60)}`);
   console.log(`  ${title}`);
   console.log('='.repeat(60));
+}
+
+function getDbApi(name) {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const fn = dbModule[name];
+  if (typeof fn !== 'function') {
+    throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+  }
+  return fn;
 }
 
 async function runChecks(useRealDb = false) {
@@ -114,66 +123,9 @@ async function runChecks(useRealDb = false) {
     // 3. Test Pattern Learning Service (simulated)
     printSection('3. Pattern Learning Service Tests');
     
-    // Create mock place_hubs and urls tables for the service
     if (!useRealDb) {
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS urls (
-          id INTEGER PRIMARY KEY,
-          url TEXT UNIQUE
-        );
-        CREATE TABLE IF NOT EXISTS place_hubs (
-          id INTEGER PRIMARY KEY,
-          host TEXT,
-          url_id INTEGER,
-          place_slug TEXT,
-          place_kind TEXT,
-          title TEXT,
-          first_seen_at TEXT,
-          last_seen_at TEXT,
-          nav_links_count INTEGER,
-          article_links_count INTEGER,
-          FOREIGN KEY (url_id) REFERENCES urls(id)
-        );
-        CREATE TABLE IF NOT EXISTS place_hub_candidates (
-          id INTEGER PRIMARY KEY,
-          domain TEXT,
-          candidate_url TEXT,
-          place_kind TEXT,
-          place_name TEXT,
-          pattern TEXT,
-          validation_status TEXT,
-          created_at TEXT
-        );
-        CREATE TABLE IF NOT EXISTS place_page_mappings (
-          id INTEGER PRIMARY KEY,
-          host TEXT,
-          page_url TEXT,
-          place_slug TEXT,
-          page_kind TEXT,
-          status TEXT,
-          verification_reason TEXT,
-          created_at TEXT
-        );
-      `);
-
-      // Insert sample data
-      const insertUrl = db.prepare('INSERT INTO urls (url) VALUES (?)');
-      const insertHub = db.prepare(`
-        INSERT INTO place_hubs (host, url_id, place_slug, place_kind, title, last_seen_at)
-        VALUES (?, ?, ?, ?, ?, datetime('now'))
-      `);
-
-      for (const hub of SAMPLE_PLACE_HUBS) {
-        try {
-          const urlInfo = insertUrl.run(hub.url);
-          const urlId = urlInfo.lastInsertRowid;
-          const host = new URL(hub.url).hostname.replace('www.', '');
-          insertHub.run(host, urlId, hub.placeSlug, hub.placeKind, `${hub.placeSlug} News`);
-        } catch (e) {
-          // Ignore duplicate URLs
-        }
-      }
-      console.log(`✅ Inserted ${SAMPLE_PLACE_HUBS.length} sample place hubs`);
+      const fixture = getDbApi('createPlaceHubPatternLearningCheckFixture')(db, SAMPLE_PLACE_HUBS);
+      console.log(`✅ Inserted ${fixture.hubsInserted} sample place hubs`);
     }
 
     // Test the pattern learning service

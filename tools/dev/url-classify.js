@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { listRandomHttpUrlsForClassification } = require('news-crawler-db');
 /**
  * URL Classification CLI Tool
  * 
@@ -579,21 +580,11 @@ async function main() {
   // Sample from database
   if (flags.sample || flags.test || flags.unknowns) {
     const db = openNewsCrawlerDb('data/news.db', { readonly: true });
-    
-    let query = `
-      SELECT DISTINCT u.url 
-      FROM urls u
-      WHERE u.url LIKE 'http%'
-    `;
-    
-    if (flags.host) {
-      query += ` AND u.url LIKE '%${flags.host}%'`;
-    }
-    
-    query += ` ORDER BY RANDOM() LIMIT ${flags.sample || flags.unknowns || 1000}`;
-    
-    const rows = db.prepare(query).all();
-    db.close();
+    const rows = listRandomHttpUrlsForClassification(db, {
+      host: flags.host,
+      limit: flags.sample || flags.unknowns || 1000
+    });
+    await db.close();
     
     const results = { article: [], hub: [], nav: [], unknown: [] };
     const unknownDetails = [];

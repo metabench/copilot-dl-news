@@ -72,6 +72,23 @@ function getAppRoot() {
   return path.resolve(__dirname, '..', '..', '..', '..');
 }
 
+function getCrawlerAppDbPath() {
+  return path.join(getAppRoot(), 'data', 'news.db');
+}
+
+function getCrawlerAppDiagnostics(db) {
+  if (!db || !db.crawlerAppDiagnostics) {
+    throw new Error('news-crawler-db crawlerAppDiagnostics access is unavailable');
+  }
+  return db.crawlerAppDiagnostics;
+}
+
+async function closeDb(db) {
+  if (db && typeof db.close === 'function') {
+    await db.close();
+  }
+}
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 420,
@@ -274,45 +291,10 @@ ipcMain.handle('urls:get', async () => {
 
 ipcMain.handle('url:analyze', async (event, url) => {
   // Query the database for URL analysis
+  let db = null;
   try {
-    const dbPath = path.join(getAppRoot(), 'data', 'news.db');
-    const db = openNewsCrawlerDb(dbPath, { readonly: true });
-
-    // Get URL info
-    const urlRow = db.prepare('SELECT * FROM urls WHERE url = ?').get(url);
-
-    // Get HTTP response info
-    let httpResponse = null;
-    if (urlRow) {
-      httpResponse = db.prepare(`
-        SELECT * FROM http_responses 
-        WHERE url_id = ? 
-        ORDER BY fetched_at DESC 
-        LIMIT 1
-      `).get(urlRow.id);
-    }
-
-    // Get content storage info
-    let content = null;
-    if (urlRow) {
-      content = db.prepare(`
-        SELECT id, url_id, content_type, byte_size, created_at 
-        FROM content_storage 
-        WHERE url_id = ? 
-        ORDER BY created_at DESC 
-        LIMIT 1
-      `).get(urlRow.id);
-    }
-
-    db.close();
-
-    return {
-      url,
-      urlRecord: urlRow || null,
-      httpResponse: httpResponse || null,
-      content: content || null,
-      found: !!urlRow
-    };
+    db = openNewsCrawlerDb(getCrawlerAppDbPath(), { readonly: true });
+    return getCrawlerAppDiagnostics(db).getCrawlerAppUrlAnalysis(url);
   } catch (err) {
     console.error('Error analyzing URL:', err);
     return {
@@ -320,103 +302,58 @@ ipcMain.handle('url:analyze', async (event, url) => {
       error: err.message,
       found: false
     };
+  } finally {
+    await closeDb(db);
   }
 });
 
 ipcMain.handle('db:stats', async () => {
+  let db = null;
   try {
-    const dbPath = path.join(getAppRoot(), 'data', 'news.db');
-    const db = openNewsCrawlerDb(dbPath, { readonly: true });
-
-    const totalUrls = db.prepare('SELECT COUNT(*) as count FROM urls').get().count;
-    const totalFetches = db.prepare('SELECT COUNT(*) as count FROM http_responses').get().count;
-
-    // Today's fetches (UTC)
-    const todayFetches = db.prepare(`
-      SELECT COUNT(*) as count FROM http_responses 
-      WHERE date(fetched_at) = date('now')
-    `).get().count;
-
-    // Unique hosts
-    const uniqueHosts = db.prepare('SELECT COUNT(DISTINCT host) as count FROM urls').get().count;
-
-    // Content storage stats
-    const storageStats = db.prepare(`
-      SELECT COUNT(*) as count, COALESCE(SUM(byte_size), 0) as bytes 
-      FROM content_storage
-    `).get();
-
-    // Last fetch
-    const lastFetch = db.prepare(`
-      SELECT h.fetched_at, u.url 
-      FROM http_responses h 
-      JOIN urls u ON h.url_id = u.id 
-      ORDER BY h.fetched_at DESC 
-      LIMIT 1
-    `).get();
-
-    db.close();
-
-    return {
-      totalUrls,
-      totalFetches,
-      todayFetches,
-      uniqueHosts,
-      storageBytes: storageStats.bytes,
-      storageCount: storageStats.count,
-      lastFetch: lastFetch?.fetched_at || null,
-      lastUrl: lastFetch?.url || null
-    };
+    db = openNewsCrawlerDb(getCrawlerAppDbPath(), { readonly: true });
+    return getCrawlerAppDiagnostics(db).getCrawlerAppDatabaseStats();
   } catch (err) {
     console.error('Error getting DB stats:', err);
     return { error: err.message };
+  } finally {
+    await closeDb(db);
   }
 });
 
 ipcMain.handle('db:clear-cache', async () => {
+  let db = null;
   try {
-    const dbPath = path.join(getAppRoot(), 'data', 'news.db');
-    const db = openNewsCrawlerDb(dbPath);
-
-    // Only clear http_responses, not urls or content_storage
-    const result = db.prepare('DELETE FROM http_responses').run();
-    db.close();
-
-    return { success: true, count: result.changes };
+    db = openNewsCrawlerDb(getCrawlerAppDbPath());
+    const count = getCrawlerAppDiagnostics(db).clearCrawlerAppHttpResponses();
+    return { success: true, count };
   } catch (err) {
     console.error('Error clearing cache:', err);
     return { success: false, error: err.message };
+  } finally {
+    await closeDb(db);
   }
 });
 
 ipcMain.handle('url:content', async (event, url) => {
+  let db = null;
   try {
-    const dbPath = path.join(getAppRoot(), 'data', 'news.db');
-    const db = openNewsCrawlerDb(dbPath, { readonly: true });
+    db = openNewsCrawlerDb(getCrawlerAppDbPath(), { readonly: true });
+    const contentResult = getCrawlerAppDiagnostics(db).getCrawlerAppStoredContentForUrl(url);
 
-    const urlRow = db.prepare('SELECT id FROM urls WHERE url = ?').get(url);
-    if (!urlRow) {
-      db.close();
+    if (!contentResult.found) {
       return { success: false, error: 'URL not found' };
     }
 
-    const content = db.prepare(`
-      SELECT content FROM content_storage 
-      WHERE url_id = ? 
-      ORDER BY created_at DESC 
-      LIMIT 1
-    `).get(urlRow.id);
-
-    db.close();
-
-    if (content?.content) {
-      return { success: true, content: content.content };
+    if (contentResult.content) {
+      return { success: true, content: contentResult.content };
     } else {
       return { success: false, error: 'No content stored' };
     }
   } catch (err) {
     console.error('Error getting content:', err);
     return { success: false, error: err.message };
+  } finally {
+    await closeDb(db);
   }
 });
 

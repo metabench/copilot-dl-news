@@ -9,10 +9,17 @@
 
 const https = require('https');
 const http = require('http');
-const { ensureDatabase } = require('../src/data/db/sqlite');
-const HubValidator = require('../src/geo/hub-validation/HubValidator');
-const { createJsdom } = require('../src/shared/utils/jsdomUtils');
-const { summarizeLinks } = require('../src/shared/utils/linkClassification');
+const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
+const HubValidator = require('../../src/geo/hub-validation/HubValidator');
+const { createJsdom } = require('../../src/shared/utils/jsdomUtils');
+const { summarizeLinks } = require('../../src/shared/utils/linkClassification');
+
+const {
+  getHubAnalysisCachedContent,
+  upsertHubAnalysisCachedContent,
+  listSuspectPlaceHubUrls
+} = resolveNewsCrawlerDbModule();
 
 class HubAnalysisWorkflow {
   constructor(db) {
@@ -114,18 +121,17 @@ class HubAnalysisWorkflow {
    */
   getCachedContent(url) {
     try {
-      const article = this.db.prepare(
-        'SELECT id, url, title, html, text FROM articles WHERE url = ?'
-      ).get(url);
+      const article = getHubAnalysisCachedContent(this.db, url);
 
       if (article) {
+        const html = article.html || article.text || '';
         return {
           url: article.url,
-          html: article.html,
+          html,
           title: article.title,
           fetchedAt: new Date().toISOString(), // Assume recent if cached
           statusCode: 200,
-          contentLength: article.html.length
+          contentLength: html.length
         };
       }
     } catch (error) {
@@ -140,18 +146,12 @@ class HubAnalysisWorkflow {
    */
   cacheContent(content) {
     try {
-      // Insert or replace the article
-      this.db.prepare(`
-        INSERT OR REPLACE INTO articles (url, title, html, text, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(
-        content.url,
-        content.title,
-        content.html,
-        this.extractText(content.html),
-        new Date().toISOString(),
-        new Date().toISOString()
-      );
+      upsertHubAnalysisCachedContent(this.db, {
+        url: content.url,
+        title: content.title,
+        html: content.html,
+        text: this.extractText(content.html)
+      });
     } catch (error) {
       console.log(`DEBUG: Database cache write failed: ${error.message}`);
       // Continue without caching - don't fail the operation
@@ -185,6 +185,18 @@ class HubAnalysisWorkflow {
       linkAnalysis: this.analyzeLinkStructure(content),
       temporalPatterns: this.analyzeTemporalPatterns(content.url, html),
       semanticFeatures: this.extractSemanticFeatures(html)
+    };
+  }
+
+  analyzeNavigationPatterns(html) {
+    const navMatches = html.match(/<nav[^>]*>|role=["']navigation["']|class=["'][^"']*(nav|menu|breadcrumb)[^"']*["']/gi) || [];
+    const listMatches = html.match(/<ul[^>]*>|<ol[^>]*>/gi) || [];
+
+    return {
+      navigationBlocks: navMatches.length,
+      lists: listMatches.length,
+      hasBreadcrumbs: /breadcrumb/i.test(html),
+      hasMenus: /menu|navigation/i.test(html)
     };
   }
 
@@ -300,6 +312,23 @@ class HubAnalysisWorkflow {
       }
     }
   }
+
+  classifyContentStructure(html) {
+    const hubIndicators = {
+      multipleH2: /<h2[^>]*>/gi,
+      manyLinks: /<a[^>]+href=/gi,
+      navigation: /<nav[^>]*>|class=["'][^"']*(nav|menu|breadcrumb)[^"']*["']/gi,
+      lists: /<ul[^>]*>|<ol[^>]*>/gi
+    };
+    const articleIndicators = {
+      articleTag: /<article[^>]*>/gi,
+      byline: /byline|author|dateline/gi,
+      paragraphs: /<p[^>]*>/gi,
+      datedUrl: /\d{4}\/\d{2}\/\d{2}/gi
+    };
+    const articleScore = Object.values(articleIndicators)
+      .reduce((sum, pattern) => sum + (html.match(pattern) || []).length, 0);
+
     const hubScore = Object.values(hubIndicators)
       .reduce((sum, pattern) => {
         const matches = html.match(pattern) || [];
@@ -316,53 +345,6 @@ class HubAnalysisWorkflow {
     if (hubScore > adjustedArticleScore + 3) return { type: 'hub', confidence: 0.8 };
     if (adjustedArticleScore > hubScore + 3) return { type: 'article', confidence: 0.8 };
     return { type: 'unclear', confidence: 0.5 };
-  }
-
-  analyzeLinkStructure(html) {
-    const links = html.match(/<a[^>]+href="([^"]*)"[^>]*>([^<]*)<\/a>/gi) || [];
-
-    const linkTypes = {
-      total: links.length,
-      internal: 0,
-      external: 0,
-      category: 0,
-      article: 0
-    };
-
-    links.forEach(link => {
-      const hrefMatch = link.match(/href="([^"]*)"/);
-      const textMatch = link.match(/>([^<]*)</);
-
-      if (hrefMatch) {
-        const href = hrefMatch[1];
-        try {
-          // Check if internal link
-          if (href.startsWith('/')) {
-            linkTypes.internal++;
-          } else if (href.startsWith('http')) {
-            const linkUrl = new URL(href);
-            const contentUrl = new URL(content.url);
-            if (linkUrl.hostname === contentUrl.hostname) {
-              linkTypes.internal++;
-            } else {
-              linkTypes.external++;
-            }
-          }
-
-          // Categorize by URL patterns
-          if (href.match(/\d{4}\/\d{2}\/\d{2}/)) linkTypes.article++;
-          if (href.match(/\/category\/|\/topic\/|\/tag\//)) linkTypes.category++;
-        } catch (error) {
-          // Skip invalid URLs
-        }
-      }
-    });
-
-    return {
-      ...linkTypes,
-      internalRatio: linkTypes.total > 0 ? linkTypes.internal / linkTypes.total : 0,
-      categoryRatio: linkTypes.total > 0 ? linkTypes.category / linkTypes.total : 0
-    };
   }
 
   analyzeTemporalPatterns(url, html) {
@@ -640,17 +622,8 @@ class HubAnalysisWorkflow {
    * Helper Methods
    */
   async getSuspectUrls(limit = 5) {
-    // Get URLs that might be problematic
-    const hubs = this.db.prepare(`
-      SELECT url FROM place_hubs
-      WHERE title IS NULL
-         OR url LIKE '%/live/%'
-         OR url LIKE '%/interactive/%'
-         OR url LIKE '%/2025/%'
-      LIMIT ?
-    `).all(limit);
-
-    return hubs.map(h => h.url);
+    const hubs = listSuspectPlaceHubUrls(this.db, { limit });
+    return hubs.map(hub => hub.url);
   }
 
   extractPlaceFromUrl(url) {

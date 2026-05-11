@@ -20,6 +20,7 @@ const { JSDOM } = require('jsdom');
 const { TemplateExtractor, TemplateExtractionService } = require('../../../data/extraction');
 const { TeacherService } = require('../../../intelligence/teacher/TeacherService');
 const { createLayoutTemplatesQueries } = require('../../../data/db/sqlite/v1/queries/layoutTemplates');
+const { resolveNewsCrawlerDbModule } = require('../../../db/openNewsCrawlerDb');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
 
@@ -37,6 +38,15 @@ function resolvePortFromArgv(defaultPort) {
 }
 
 const PORT = resolvePortFromArgv(DEFAULT_PORT);
+
+function getDbApi(name) {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const fn = dbModule[name];
+  if (typeof fn !== 'function') {
+    throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+  }
+  return fn;
+}
 
 // Middleware
 app.use(express.json({ limit: '5mb' }));
@@ -266,16 +276,7 @@ const pageTemplate = (title, content) => `<!DOCTYPE html>
 // Dashboard
 app.get('/', (req, res) => {
   const stats = templateService.getStats();
-  
-  // Get recent templates
-  const recentTemplates = db.prepare(`
-    SELECT host, COUNT(*) as count, MAX(updated_at) as last_update
-    FROM layout_templates
-    WHERE extraction_config_json IS NOT NULL
-    GROUP BY host
-    ORDER BY last_update DESC
-    LIMIT 10
-  `).all();
+  const recentTemplates = getDbApi('listTemplateTeacherRecentHostSummaries')(db, { limit: 10 });
   
   const content = `
     <div class="stats">
@@ -559,22 +560,7 @@ app.get('/teach', (req, res) => {
 // List templates
 app.get('/templates', (req, res) => {
   const hostFilter = req.query.host || null;
-  
-  let query = `
-    SELECT id, signature_hash, host, label, example_url, extraction_config_json, updated_at
-    FROM layout_templates
-    WHERE extraction_config_json IS NOT NULL
-  `;
-  const params = [];
-  
-  if (hostFilter) {
-    query += ' AND host = ?';
-    params.push(hostFilter);
-  }
-  
-  query += ' ORDER BY updated_at DESC LIMIT 50';
-  
-  const templates = db.prepare(query).all(...params);
+  const templates = getDbApi('listTemplateTeacherTemplates')(db, { host: hostFilter, limit: 50 });
   
   const content = `
     <div class="card">
@@ -613,9 +599,7 @@ app.get('/templates', (req, res) => {
 
 // View single template
 app.get('/template/:id', (req, res) => {
-  const template = db.prepare(`
-    SELECT * FROM layout_templates WHERE id = ?
-  `).get(req.params.id);
+  const template = getDbApi('getTemplateTeacherTemplateById')(db, req.params.id);
   
   if (!template) {
     return res.status(404).send(pageTemplate('Not Found', '<p>Template not found</p>'));
@@ -894,14 +878,7 @@ app.post('/api/save-template', (req, res) => {
   }
   
   try {
-    // Ensure signature exists in layout_signatures (create if needed for teaching)
-    const sigExists = db.prepare('SELECT 1 FROM layout_signatures WHERE signature_hash = ?').get(signatureHash);
-    if (!sigExists) {
-      db.prepare(`
-        INSERT INTO layout_signatures (signature_hash, level, signature, first_seen_url)
-        VALUES (?, 2, ?, ?)
-      `).run(signatureHash, JSON.stringify({ taught: true }), exampleUrl);
-    }
+    getDbApi('ensureTemplateTeacherLayoutSignature')(db, { signatureHash, exampleUrl });
     
     templateService.saveConfig(signatureHash, config, { host, label, notes, exampleUrl });
     res.json({ success: true });

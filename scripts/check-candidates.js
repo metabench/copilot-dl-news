@@ -1,26 +1,36 @@
-const { createSQLiteDatabase } = require('../src/db/sqlite');
+'use strict';
 
-const db = createSQLiteDatabase('data/news.db');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../src/db/openNewsCrawlerDb');
 
-const domain = 'www.eltiempo.com';
-console.log(`Checking candidates for ${domain}...`);
+const {
+  listPlaceHubCandidateDebugRows
+} = resolveNewsCrawlerDbModule();
 
-const query = `
-  SELECT place_name, place_kind, score, candidate_url
-  FROM place_hub_candidates
-  WHERE domain = ?
-  ORDER BY score DESC
-  LIMIT 20
-`;
+async function main(domain = 'www.eltiempo.com') {
+  const db = openNewsCrawlerDb('data/news.db', { readonly: true, fileMustExist: true });
+  try {
+    console.log(`Checking candidates for ${domain}...`);
+    const candidates = listPlaceHubCandidateDebugRows(db, domain, { limit: 20 });
 
-const candidates = db.db.prepare(query).all(domain);
-
-if (candidates.length === 0) {
-    console.log('No candidates found.');
-} else {
-    console.log('Candidates found:');
-    candidates.forEach(c => {
-        const score = c.score !== null ? c.score.toFixed(2) : 'N/A';
-        console.log(`${score}\t${c.place_kind}\t${c.place_name}`);
-    });
+    if (candidates.length === 0) {
+      console.log('No candidates found.');
+    } else {
+      console.log('Candidates found:');
+      candidates.forEach(candidate => {
+        const score = candidate.score !== null ? candidate.score.toFixed(2) : 'N/A';
+        console.log(`${score}\t${candidate.place_kind}\t${candidate.place_name}`);
+      });
+    }
+  } finally {
+    await db.close();
+  }
 }
+
+if (require.main === module) {
+  main(process.argv[2] || 'www.eltiempo.com').catch(error => {
+    console.error(error && error.stack ? error.stack : error);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { main };

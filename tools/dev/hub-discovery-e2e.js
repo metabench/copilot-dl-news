@@ -26,6 +26,17 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const http = require('http');
+const {
+  copyHubDiscoveryGazetteerSeedData,
+  recordHubDiscoveryFetchedResponses,
+  listHubDiscoverySuccessfulPageCountsByHost,
+  listHubDiscoverySuccessfulUrlsForHost,
+  ensureHubVerificationTable,
+  recordHubVerificationResults,
+  getHubVerificationPublisherStats,
+  listHubVerificationCountryStats,
+  sampleExistingHubVerifications
+} = require('news-crawler-db');
 // ═══════════════════════════════════════════════════════════════════════════
 // CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════
@@ -241,50 +252,12 @@ function createTestDatabase(testDbPath) {
     console.log('   Removed existing test database');
   }
   
-  // Create new database
   const testDb = openNewsCrawlerDb(testDbPath);
-  const sourceDb = openNewsCrawlerDb(SOURCE_DB, { readonly: true });
-  
-  // Attach source database
-  testDb.exec(`ATTACH DATABASE '${SOURCE_DB.replace(/\\/g, '/')}' AS source`);
-  
-  // Copy schema (without data)
-  console.log('   Copying schema...');
-  const schema = sourceDb.prepare(`
-    SELECT sql FROM sqlite_master 
-    WHERE sql IS NOT NULL 
-    AND type IN ('table', 'index')
-    AND name NOT LIKE 'sqlite_%'
-    ORDER BY type DESC, name
-  `).all();
-  
-  let created = 0;
-  for (const { sql } of schema) {
-    try {
-      testDb.exec(sql);
-      created++;
-    } catch (e) {
-      // Ignore errors for reserved names
-    }
-  }
-  console.log(`   Created ${created} tables/indexes`);
-  
-  // Copy gazetteer data
-  console.log('   Copying gazetteer data...');
-  
-  const placeCount = testDb.exec(`
-    INSERT INTO places SELECT * FROM source.places
-  `);
-  const places = testDb.prepare('SELECT COUNT(*) as cnt FROM places').get();
-  console.log(`   Copied ${places.cnt.toLocaleString()} places`);
-  
-  testDb.exec(`INSERT INTO place_names SELECT * FROM source.place_names`);
-  const names = testDb.prepare('SELECT COUNT(*) as cnt FROM place_names').get();
-  console.log(`   Copied ${names.cnt.toLocaleString()} place names`);
-  
-  // Detach and close
-  testDb.exec('DETACH DATABASE source');
-  sourceDb.close();
+  console.log('   Copying schema and gazetteer data...');
+  const seed = copyHubDiscoveryGazetteerSeedData(testDb, SOURCE_DB);
+  console.log(`   Created ${seed.created} tables/indexes`);
+  console.log(`   Copied ${seed.places.toLocaleString()} places`);
+  console.log(`   Copied ${seed.names.toLocaleString()} place names`);
   testDb.close();
   
   const stats = fs.statSync(testDbPath);
@@ -303,17 +276,6 @@ async function crawlPublishers(publishers, dbPath, targetPages) {
   console.log('   ' + '-'.repeat(60));
   
   const db = openNewsCrawlerDb(dbPath);
-  
-  // Prepare statements
-  const insertUrl = db.prepare(`
-    INSERT OR IGNORE INTO urls (url, host, created_at) 
-    VALUES (?, ?, datetime('now'))
-  `);
-  const insertResponse = db.prepare(`
-    INSERT INTO http_responses (url_id, request_started_at, fetched_at, http_status, content_type, bytes_downloaded)
-    VALUES (?, datetime('now'), datetime('now'), ?, ?, ?)
-  `);
-  const getUrlId = db.prepare('SELECT id FROM urls WHERE url = ?');
   
   // Crawl each publisher
   const results = [];
@@ -351,37 +313,25 @@ async function crawlPublishers(publishers, dbPath, targetPages) {
       const responses = await fetchBatchWithBody(batch, BATCH_SIZE);
       
       // Process responses
+      recordHubDiscoveryFetchedResponses(db, pub.host, responses);
+
       let newLinks = 0;
-      db.transaction(() => {
-        for (const resp of responses) {
-          if (resp.status >= 200 && resp.status < 400 && resp.body) {
-            // Insert URL
-            insertUrl.run(resp.url, pub.host);
-            const urlRow = getUrlId.get(resp.url);
-            if (urlRow) {
-              // Insert response
-              insertResponse.run(
-                urlRow.id,
-                resp.status,
-                resp.headers?.['content-type'] || '',
-                resp.body.length
-              );
-              state.pageCount++;
-              
-              // Extract links for queue
-              if (state.pageCount < targetPages) {
-                const links = extractLinks(resp.body, resp.url);
-                for (const link of links) {
-                  if (!state.fetched.has(link)) {
-                    state.queue.push(link);
-                    newLinks++;
-                  }
-                }
+      for (const resp of responses) {
+        if (resp.status >= 200 && resp.status < 400 && resp.body) {
+          state.pageCount++;
+
+          // Extract links for queue
+          if (state.pageCount < targetPages) {
+            const links = extractLinks(resp.body, resp.url);
+            for (const link of links) {
+              if (!state.fetched.has(link)) {
+                state.queue.push(link);
+                newLinks++;
               }
             }
           }
         }
-      })();
+      }
       
       // Progress indicator
       const pct = Math.round((state.pageCount / targetPages) * 100);
@@ -414,13 +364,7 @@ function verifyPageCounts(dbPath, publishers, targetPages) {
   
   const db = openNewsCrawlerDb(dbPath, { readonly: true });
   
-  const counts = db.prepare(`
-    SELECT u.host, COUNT(DISTINCT u.id) as pages
-    FROM urls u
-    JOIN http_responses hr ON hr.url_id = u.id
-    WHERE hr.http_status >= 200 AND hr.http_status < 400
-    GROUP BY u.host
-  `).all();
+  const counts = listHubDiscoverySuccessfulPageCountsByHost(db);
   
   const hostCounts = new Map(counts.map(c => [c.host, c.pages]));
   
@@ -458,11 +402,7 @@ function analyzeUrlPatterns(dbPath, publishers) {
   const patterns = new Map();
   
   for (const pub of publishers) {
-    const urls = db.prepare(`
-      SELECT u.url FROM urls u
-      JOIN http_responses hr ON hr.url_id = u.id
-      WHERE u.host = ? AND hr.http_status >= 200 AND hr.http_status < 400
-    `).all(pub.host);
+    const urls = listHubDiscoverySuccessfulUrlsForHost(db, pub.host);
     
     // Analyze path segments
     const pathCounts = new Map();
@@ -578,25 +518,7 @@ async function verifyCountryHubs(candidates, dbPath) {
   
   const db = openNewsCrawlerDb(dbPath);
   
-  // Create table to store hub verification results
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS hub_verification (
-      id INTEGER PRIMARY KEY,
-      host TEXT,
-      url TEXT,
-      country_code TEXT,
-      country_name TEXT,
-      pattern TEXT,
-      http_status INTEGER,
-      verified_at TEXT,
-      hub_exists INTEGER
-    )
-  `);
-  
-  const insertHub = db.prepare(`
-    INSERT INTO hub_verification (host, url, country_code, country_name, pattern, http_status, verified_at, hub_exists)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+  ensureHubVerificationTable(db);
   
   const results = new Map();
   
@@ -610,31 +532,7 @@ async function verifyCountryHubs(candidates, dbPath) {
       // Verify using distributed worker
       const workerResults = await verifyUrlsWithWorker(urls, 30);
       
-      let found = 0;
-      let verified = 0;
-      
-      db.transaction(() => {
-        for (let i = 0; i < workerResults.length; i++) {
-          const result = workerResults[i];
-          const candidate = pubCandidates[i];
-          const status = result.status || result.statusCode || 0;
-          const exists = status >= 200 && status < 400 ? 1 : 0;
-          
-          insertHub.run(
-            host,
-            candidate.url,
-            candidate.countryCode,
-            candidate.country,
-            candidate.pattern,
-            status,
-            new Date().toISOString(),
-            exists
-          );
-          
-          verified++;
-          if (exists) found++;
-        }
-      })();
+      const { verified, found } = recordHubVerificationResults(db, host, pubCandidates, workerResults);
       
       console.log(`      Verified: ${verified}, Found: ${found}`);
       results.set(host, { verified, found, candidates: pubCandidates.length });
@@ -644,32 +542,18 @@ async function verifyCountryHubs(candidates, dbPath) {
       console.log('      Falling back to local verification...');
       
       // Fallback to local HEAD checks
-      let found = 0;
-      let verified = 0;
+      const localResults = [];
       
       for (const candidate of pubCandidates) {
         const resp = await fetchUrl(candidate.url, 5000);
-        const exists = resp.status >= 200 && resp.status < 400 ? 1 : 0;
-        
-        insertHub.run(
-          host,
-          candidate.url,
-          candidate.countryCode,
-          candidate.country,
-          candidate.pattern,
-          resp.status,
-          new Date().toISOString(),
-          exists
-        );
-        
-        verified++;
-        if (exists) found++;
+        localResults.push({ status: resp.status });
         
         // Progress
-        if (verified % 10 === 0) {
-          process.stdout.write(`\r      Verified: ${verified}/${pubCandidates.length}`);
+        if (localResults.length % 10 === 0) {
+          process.stdout.write(`\r      Verified: ${localResults.length}/${pubCandidates.length}`);
         }
       }
+      const { verified, found } = recordHubVerificationResults(db, host, pubCandidates, localResults);
       
       console.log(`\n      Verified: ${verified}, Found: ${found}`);
       results.set(host, { verified, found, candidates: pubCandidates.length });
@@ -700,13 +584,7 @@ function reportFindings(dbPath, publishers) {
   let totalTested = 0;
   
   for (const pub of publishers) {
-    const stats = db.prepare(`
-      SELECT 
-        COUNT(*) as tested,
-        SUM(hub_exists) as found
-      FROM hub_verification
-      WHERE host = ?
-    `).get(pub.host);
+    const stats = getHubVerificationPublisherStats(db, pub.host);
     
     const found = stats?.found || 0;
     const tested = stats?.tested || 0;
@@ -726,13 +604,7 @@ function reportFindings(dbPath, publishers) {
   console.log('\n   COUNTRIES WITH MOST HUBS:');
   console.log('   ' + '-'.repeat(40));
   
-  const countryStats = db.prepare(`
-    SELECT country_name, country_code, SUM(hub_exists) as found
-    FROM hub_verification
-    GROUP BY country_code
-    ORDER BY found DESC
-    LIMIT 10
-  `).all();
+  const countryStats = listHubVerificationCountryStats(db, { limit: 10 });
   
   for (const row of countryStats) {
     const bar = '█'.repeat(row.found);
@@ -743,13 +615,7 @@ function reportFindings(dbPath, publishers) {
   console.log('\n   SAMPLE FOUND HUBS:');
   console.log('   ' + '-'.repeat(60));
   
-  const sampleHubs = db.prepare(`
-    SELECT host, url, country_name
-    FROM hub_verification
-    WHERE exists = 1
-    ORDER BY RANDOM()
-    LIMIT 10
-  `).all();
+  const sampleHubs = sampleExistingHubVerifications(db, { limit: 10 });
   
   for (const hub of sampleHubs) {
     console.log(`   ${hub.country_name.padEnd(15)} ${hub.url}`);
@@ -838,4 +704,3 @@ async function main() {
 }
 
 main().catch(console.error);
-

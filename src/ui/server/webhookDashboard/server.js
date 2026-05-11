@@ -23,7 +23,7 @@ const express = require('express');
 const path = require('path');
 const jsgui = require('jsgui3-html');
 
-const { createIntegrationAdapter } = require('../../../data/db/sqlite/v1/queries/integrationAdapter');
+const { createIntegrationAdapterFromSqliteHandle } = require('../../../data/db/sqlite/v1/queries/integrationAdapter');
 const { WebhookService, EVENT_TYPES } = require('../../../integrations/WebhookService');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
@@ -71,25 +71,7 @@ let webhookService;
 
 async function initDb(dbPath = DB_PATH) {
   db = resolveBetterSqliteHandle({ dbPath }).dbHandle;
-  
-  // Create a wrapped DB that works with async/await
-  const wrappedDb = {
-    run: (sql, params = []) => {
-      const stmt = db.prepare(sql);
-      const result = stmt.run(...params);
-      return Promise.resolve({ lastID: result.lastInsertRowid, changes: result.changes });
-    },
-    get: (sql, params = []) => {
-      const stmt = db.prepare(sql);
-      return Promise.resolve(stmt.get(...params));
-    },
-    all: (sql, params = []) => {
-      const stmt = db.prepare(sql);
-      return Promise.resolve(stmt.all(...params));
-    }
-  };
-  
-  integrationAdapter = createIntegrationAdapter(wrappedDb);
+  integrationAdapter = createIntegrationAdapterFromSqliteHandle(db);
   
   // Initialize tables
   await integrationAdapter.initTables();
@@ -97,24 +79,6 @@ async function initDb(dbPath = DB_PATH) {
   webhookService = new WebhookService({ adapter: integrationAdapter });
   
   return { db, integrationAdapter, webhookService };
-}
-
-function createWrappedDb(dbHandle) {
-  return {
-    run: (sql, params = []) => {
-      const stmt = dbHandle.prepare(sql);
-      const result = stmt.run(...params);
-      return Promise.resolve({ lastID: result.lastInsertRowid, changes: result.changes });
-    },
-    get: (sql, params = []) => {
-      const stmt = dbHandle.prepare(sql);
-      return Promise.resolve(stmt.get(...params));
-    },
-    all: (sql, params = []) => {
-      const stmt = dbHandle.prepare(sql);
-      return Promise.resolve(stmt.all(...params));
-    }
-  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -653,8 +617,7 @@ async function createWebhookDashboardRouter(options = {}) {
     throw new Error('createWebhookDashboardRouter requires a db handle (getDbHandle/getDbRW/dbPath)');
   }
 
-  const wrappedDb = createWrappedDb(resolved.dbHandle);
-  const adapter = createIntegrationAdapter(wrappedDb);
+  const adapter = createIntegrationAdapterFromSqliteHandle(resolved.dbHandle);
   await adapter.initTables();
   const service = new WebhookService({ adapter });
 

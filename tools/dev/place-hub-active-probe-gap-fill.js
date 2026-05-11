@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const { slugify } = require('../../src/tools/slugify');
@@ -39,7 +39,21 @@ if (!HOST || !PATTERN) {
 
 function getDb(readonly = true) {
   const dbPath = path.resolve(__dirname, '..', '..', 'data', 'news.db');
-  return openNewsCrawlerDb(dbPath, { readonly });
+  return openNewsCrawlerDb(dbPath, { readonly, fileMustExist: true });
+}
+
+function getDbApi() {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const required = [
+    'listMissingPreferredCountryPlacesForActiveHubProbe',
+    'upsertPlaceHubActiveProbeMappings'
+  ];
+  for (const name of required) {
+    if (typeof dbModule[name] !== 'function') {
+      throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+    }
+  }
+  return dbModule;
 }
 
 async function probeUrl(url) {
@@ -85,21 +99,12 @@ async function probeUrl(url) {
 
 async function main() {
   const db = getDb(!APPLY);
+  const dbApi = getDbApi();
   
   try {
     // 1. Identify missing countries
     console.log(`Identifying missing countries for ${HOST}...`);
-    const missing = db.prepare(`
-        SELECT p.id, pn.name, p.country_code as code
-        FROM places p
-        JOIN place_names pn ON pn.place_id = p.id
-        WHERE p.kind = 'country'
-          AND pn.is_preferred = 1
-          AND pn.lang IN ('en', 'eng', 'und')
-          AND p.id NOT IN (
-            SELECT place_id FROM place_page_mappings WHERE host = ?
-          )
-    `).all(HOST.replace(/^www\./, ''));
+    const missing = dbApi.listMissingPreferredCountryPlacesForActiveHubProbe(db, HOST);
     
     console.log(`Found ${missing.length} missing countries.`);
 
@@ -154,37 +159,22 @@ async function main() {
     // 4. Upsert
     if (results.length > 0) {
         if (APPLY) {
-            const insert = db.prepare(`
-                INSERT INTO place_page_mappings 
-                  (place_id, host, url, page_kind, status, first_seen_at, evidence)
-                VALUES (?, ?, ?, 'country-hub', 'verified', ?, ?)
-                ON CONFLICT(place_id, host, page_kind) DO UPDATE SET
-                  url = excluded.url,
-                  evidence = excluded.evidence,
-                  verified_at = excluded.first_seen_at
-            `);
-            // verified_at is set because we just verified it with active probe.
-            // Wait, previous script used 'pending' and updated verified_at if status was 'verified'.
-            // Here we verify it live, so status='verified'.
-            
-            const now = new Date().toISOString();
-            const host = HOST.replace(/^www\./, '');
-             const tx = db.transaction(() => {
-                let count = 0;
-                for (const r of results) {
-                    const finalUrl = r.res.finalUrl || r.url;
-                    const evidence = JSON.stringify({
-                      source: 'gap-fill-probe',
-                      pattern: PATTERN,
-                      slug: r.slug,
-                      probed_at: now
-                    });
-                    insert.run(r.place.id, host, finalUrl, now, evidence);
-                    count++;
+             const c = dbApi.upsertPlaceHubActiveProbeMappings(
+                db,
+                results.map((r) => ({
+                    placeId: r.place.id,
+                    url: r.url,
+                    finalUrl: r.res.finalUrl || r.url,
+                    slug: r.slug,
+                    status: r.res.status
+                })),
+                HOST,
+                {
+                    source: 'gap-fill-probe',
+                    pattern: PATTERN,
+                    status: 'verified'
                 }
-                return count;
-             });
-             const c = tx();
+             );
              console.log(`Upserted ${c} records.`);
         } else {
             console.log(`Found ${results.length} matches. Run --apply to save.`);

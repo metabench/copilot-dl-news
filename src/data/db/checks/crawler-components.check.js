@@ -2,6 +2,7 @@ const { HierarchicalPlanner } = require('../../../core/crawler/HierarchicalPlann
 const { MultiGoalOptimizer } = require('../../../core/crawler/MultiGoalOptimizer');
 const { PredictiveHubDiscovery } = require('../../../core/crawler/PredictiveHubDiscovery');
 const { getDb } = require('../index');
+const { checkDatabaseHealth } = require('news-crawler-db');
 
 async function run() {
   console.log('[Check] Verifying Crawler Components instantiation...');
@@ -19,12 +20,10 @@ async function run() {
       
       if (instance.db) {
         console.log(`[Check] ${name} has a DB handle.`);
-        // Try a simple query to ensure it's a real handle
         try {
-            const row = instance.db.prepare('SELECT 1 as val').get();
-            console.log(`[Check] DB Query result: ${JSON.stringify(row)}`);
+            console.log(`[Check] DB health: ${checkDatabaseHealth(instance.db)}`);
         } catch (e) {
-            console.error(`[Check] DB Query failed for ${name}:`, e.message);
+            console.error(`[Check] DB health check failed for ${name}:`, e.message);
         }
       } else {
         console.error(`[Check] ${name} has NO DB handle!`);

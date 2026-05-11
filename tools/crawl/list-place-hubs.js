@@ -9,55 +9,46 @@
  *   node tools/list-place-hubs.js --show-types       # Same as --types
  */
 
-const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { listPlaceHubCliRows } = require('news-crawler-db');
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
   const showTypes = args.includes('--types') || args.includes('--show-types');
 
   const dbPath = 'data/news.db';
-  const db = ensureDatabase(dbPath);
+  const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
 
-  let query;
-  if (showTypes) {
-    query = `
-      SELECT url, place_kind AS type
-      FROM place_hubs
-      ORDER BY url
-    `;
-  } else {
-    query = `
-      SELECT url
-      FROM place_hubs
-      ORDER BY url
-    `;
-  }
+  try {
+    const rows = listPlaceHubCliRows(db, { showTypes });
 
-  const rows = db.prepare(query).all();
+    if (showTypes) {
+      // Print table header
+      console.log('URL'.padEnd(80) + ' | Type');
+      console.log('-'.repeat(80) + '-+-' + '-'.repeat(10));
 
-  if (showTypes) {
-    // Print table header
-    console.log('URL'.padEnd(80) + ' | Type');
-    console.log('-'.repeat(80) + '-+-' + '-'.repeat(10));
-
-    // Print rows
-    for (const row of rows) {
-      const url = (row.url || '').substring(0, 78); // Truncate long URLs
-      const type = row.type || 'unknown';
-      console.log(url.padEnd(80) + ' | ' + type);
+      // Print rows
+      for (const row of rows) {
+        const url = (row.url || '').substring(0, 78); // Truncate long URLs
+        const type = row.type || 'unknown';
+        console.log(url.padEnd(80) + ' | ' + type);
+      }
+    } else {
+      // Just list URLs
+      for (const row of rows) {
+        console.log(row.url);
+      }
     }
-  } else {
-    // Just list URLs
-    for (const row of rows) {
-      console.log(row.url);
-    }
+
+    console.log(`\nTotal: ${rows.length} place hubs`);
+  } finally {
+    await db.close();
   }
-
-  console.log(`\nTotal: ${rows.length} place hubs`);
-
-  db.close();
 }
 
 if (require.main === module) {
-  main();
+  main().catch((err) => {
+    console.error(err.stack || err.message);
+    process.exit(1);
+  });
 }

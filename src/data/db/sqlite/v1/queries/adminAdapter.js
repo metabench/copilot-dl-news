@@ -9,10 +9,12 @@
 
 const {
   createAdminAdapter,
-  ensureAdminSchema
+  ensureAdminSchema,
+  createAdminDashboardCheckFixture
 } = require('news-crawler-db');
 
 module.exports = {
   createAdminAdapter,
-  ensureAdminSchema
+  ensureAdminSchema,
+  createAdminDashboardCheckFixture
 };

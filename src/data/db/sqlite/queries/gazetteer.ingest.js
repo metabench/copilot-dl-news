@@ -8,7 +8,12 @@ const {
   setClassicGazetteerCanonicalName,
   normalizeClassicGazetteerName,
   findExistingClassicGazetteerPlace,
-  generateClassicGazetteerCapitalExternalId
+  generateClassicGazetteerCapitalExternalId,
+  registerPlaceSource,
+  listWikidataCountryIngestionRows,
+  getAdm1CodeForWikidataRegion,
+  getRegionPlaceIdByAdm1Code,
+  insertAdminParentHierarchy
 } = require('news-crawler-db');
 
 module.exports = {
@@ -17,6 +22,11 @@ module.exports = {
   insertPlaceName: insertClassicGazetteerPlaceName,
   insertExternalId: insertClassicGazetteerExternalId,
   setCanonicalName: setClassicGazetteerCanonicalName,
+  registerPlaceSource,
+  listWikidataCountryIngestionRows,
+  getAdm1CodeForWikidataRegion,
+  getRegionPlaceIdByAdm1Code,
+  insertAdminParentHierarchy,
   normalizeName: normalizeClassicGazetteerName,
   findExistingPlace: findExistingClassicGazetteerPlace,
   generateCapitalExternalId: generateClassicGazetteerCapitalExternalId

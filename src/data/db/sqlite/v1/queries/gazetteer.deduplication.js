@@ -11,7 +11,9 @@ const {
   getCapitalCountries,
   generateCapitalExternalId,
   mergeDuplicatePlaces,
-  mergeDuplicateCapitals
+  mergeDuplicateCapitals,
+  countPlacesForDuplicateCorrection,
+  countCapitalCitiesForDuplicateCorrection
 } = require('news-crawler-db');
 
 module.exports = {
@@ -25,5 +27,7 @@ module.exports = {
   getCapitalCountries,
   generateCapitalExternalId,
   mergeDuplicatePlaces,
-  mergeDuplicateCapitals
+  mergeDuplicateCapitals,
+  countPlacesForDuplicateCorrection,
+  countCapitalCitiesForDuplicateCorrection
 };

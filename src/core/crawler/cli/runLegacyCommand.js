@@ -7,7 +7,8 @@ const path = require('path');
 const NewsCrawler = require('../NewsCrawler');
 const ProcessStatus = require('../../../shared/utils/processStatus');
 
-const { ensureDatabase } = require('../../../data/db/sqlite');
+const { resolveCountryCityCountReports } = require('news-crawler-db');
+const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 const { createCliLogger } = require('./progressReporter');
 const { setupLegacyCliEnvironment } = require('./bootstrap');
 const { normalizeLegacyArguments } = require('./argumentNormalizer');
@@ -92,40 +93,6 @@ Examples:
 Use --verbose for rich telemetry and --allow-query-urls to inspect query-string feeds.
 `;
 
-function resolveCountryRow(db, statements, spec) {
-  if (!spec || typeof spec !== 'object') {
-    return null;
-  }
-
-  const normalizedCode = spec.code ? String(spec.code).trim().toUpperCase() : null;
-  if (normalizedCode) {
-    const rowByCode = statements.byCode.get(normalizedCode);
-    if (rowByCode) return rowByCode;
-  }
-
-  const normalizedQid = spec.qid ? String(spec.qid).trim().toUpperCase() : null;
-  if (normalizedQid) {
-    const rowByQid = statements.byQid.get(normalizedQid);
-    if (rowByQid) return rowByQid;
-  }
-
-  const lowerNameCandidates = [];
-  if (spec.nameLower) {
-    lowerNameCandidates.push(String(spec.nameLower).trim().toLowerCase());
-  }
-  if (spec.raw) {
-    lowerNameCandidates.push(String(spec.raw).trim().toLowerCase());
-  }
-
-  for (const candidate of lowerNameCandidates) {
-    if (!candidate) continue;
-    const rowByName = statements.byName.get(candidate);
-    if (rowByName) return rowByName;
-  }
-
-  return null;
-}
-
 function reportCountryCityCounts(dbPath, countrySpecs, log) {
   if (!countrySpecs || !countrySpecs.length) {
     return;
@@ -133,82 +100,23 @@ function reportCountryCityCounts(dbPath, countrySpecs, log) {
 
   let db;
   try {
-    db = ensureDatabase(dbPath);
+    db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
   } catch (err) {
     log.warn(`[GAZETTEER] Unable to open database for city counts: ${err.message}`);
     return;
   }
 
   try {
-    const statements = {
-      byCode: db.prepare(`
-        SELECT p.country_code AS code,
-               COALESCE(pn.name, p.country_code) AS name
-        FROM places p
-        LEFT JOIN place_names pn ON pn.id = p.canonical_name_id
-        WHERE p.kind = 'country'
-          AND p.country_code = ?
-        LIMIT 1
-      `),
-      byQid: db.prepare(`
-        SELECT p.country_code AS code,
-               COALESCE(pn.name, p.country_code) AS name
-        FROM places p
-        LEFT JOIN place_names pn ON pn.id = p.canonical_name_id
-        WHERE p.kind = 'country'
-          AND p.wikidata_qid = ?
-        LIMIT 1
-      `),
-      byName: db.prepare(`
-        SELECT p.country_code AS code,
-               COALESCE(pn.name, p.country_code) AS name
-        FROM places p
-        LEFT JOIN place_names pn ON pn.id = p.canonical_name_id
-        WHERE p.kind = 'country'
-          AND pn.name IS NOT NULL
-          AND LOWER(pn.name) = ?
-        LIMIT 1
-      `),
-      cityCount: db.prepare(`
-        SELECT COUNT(*) AS count
-        FROM places
-        WHERE kind = 'city'
-          AND status = 'current'
-          AND country_code = ?
-      `)
-    };
+    const { reports, unresolvedSpecs } = resolveCountryCityCountReports(db, countrySpecs);
 
-    const seenCodes = new Set();
-    const pendingReports = [];
-    const unresolvedSpecs = new Set();
-
-    for (const spec of countrySpecs) {
-      const row = resolveCountryRow(db, statements, spec);
-      if (row && row.code) {
-        const normalizedCode = String(row.code).toUpperCase();
-        if (seenCodes.has(normalizedCode)) {
-          continue;
-        }
-        seenCodes.add(normalizedCode);
-        pendingReports.push({
-          code: normalizedCode,
-          name: row.name || normalizedCode
-        });
-      } else {
-        const label = spec?.raw || spec?.code || spec?.qid || 'unknown';
-        unresolvedSpecs.add(label);
-      }
-    }
-
-    for (const report of pendingReports) {
-      const countRow = statements.cityCount.get(report.code);
-      const count = countRow?.count || 0;
+    for (const report of reports) {
+      const count = report.count || 0;
       const formattedCount = Number.isFinite(count) ? count.toLocaleString('en-US') : '0';
       log.info(`Cities in ${report.name} (${report.code}): ${formattedCount}`);
     }
 
-    if (unresolvedSpecs.size > 0) {
-      log.warn(`Could not resolve country specifier(s): ${Array.from(unresolvedSpecs).join(', ')}`);
+    if (unresolvedSpecs.length > 0) {
+      log.warn(`Could not resolve country specifier(s): ${unresolvedSpecs.join(', ')}`);
     }
   } catch (err) {
     log.warn(`[GAZETTEER] Failed to report city counts: ${err.message}`);

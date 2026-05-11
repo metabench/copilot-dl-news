@@ -43,30 +43,7 @@ function getDb() {
 
 function getCumulativeData(days) {
   const db = getDb();
-  
-  // Get daily counts with cumulative running total from ALL time
-  const stmt = db.prepare(`
-    WITH all_daily AS (
-      SELECT 
-        date(fetched_at) as day,
-        COUNT(*) as count
-      FROM http_responses
-      WHERE http_status = 200 AND bytes_downloaded > 0
-      GROUP BY date(fetched_at)
-      ORDER BY day
-    ),
-    cumulative AS (
-      SELECT 
-        day,
-        count,
-        SUM(count) OVER (ORDER BY day) as cumulative
-      FROM all_daily
-    )
-    SELECT * FROM cumulative
-    ORDER BY day
-  `);
-  
-  const allData = stmt.all();
+  const allData = db.databaseIntrospection.listCumulativeSuccessfulHttpResponseDownloadDays();
   db.close();
   
   // Generate all dates in the range and fill gaps with last known cumulative

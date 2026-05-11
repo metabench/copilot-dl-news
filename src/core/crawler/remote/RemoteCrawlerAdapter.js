@@ -1,6 +1,7 @@
 'use strict';
 
 const { generateNodeId } = require('./PeerProtocol');
+const { listRemoteCrawlerAdapterExportRows } = require('news-crawler-db');
 
 /**
  * RemoteCrawlerAdapter — Network bridge for NewsCrawler.
@@ -397,37 +398,7 @@ class RemoteCrawlerAdapter {
     const now = new Date().toISOString();
 
     try {
-      // Fetch URLs updated since watermark using the canonical
-      // urls → http_responses → content_storage → content_analysis join
-      const rows = db.prepare(`
-        SELECT
-          u.id,
-          u.url,
-          u.host,
-          u.canonical_url,
-          hr.fetched_at,
-          hr.http_status,
-          hr.content_type,
-          hr.bytes_downloaded,
-          hr.ttfb_ms,
-          hr.download_ms,
-          hr.total_ms,
-          ca.classification,
-          ca.title,
-          ca.word_count,
-          ca.nav_links_count,
-          ca.article_links_count,
-          ca.date AS article_date,
-          u.created_at,
-          u.last_seen_at
-        FROM urls u
-        INNER JOIN http_responses hr ON hr.url_id = u.id
-        LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
-        LEFT JOIN content_analysis ca ON ca.content_id = cs.id
-        WHERE hr.fetched_at > ?
-        ORDER BY hr.fetched_at ASC
-        LIMIT ?
-      `).all(since, limit);
+      const rows = listRemoteCrawlerAdapterExportRows(db, { since, limit });
 
       // Watermark is the latest fetched_at
       const watermark = rows.length > 0
@@ -473,44 +444,7 @@ class RemoteCrawlerAdapter {
     const limit = options.limit || 0;
 
     try {
-      let sql = `SELECT
-          u.id,
-          u.url,
-          u.host,
-          u.canonical_url,
-          hr.fetched_at,
-          hr.http_status,
-          hr.content_type,
-          hr.bytes_downloaded,
-          hr.ttfb_ms,
-          hr.download_ms,
-          hr.total_ms,
-          ca.classification,
-          ca.title,
-          ca.word_count,
-          ca.nav_links_count,
-          ca.article_links_count,
-          ca.date AS article_date,
-          u.created_at,
-          u.last_seen_at
-        FROM urls u
-        INNER JOIN http_responses hr ON hr.url_id = u.id
-        LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
-        LEFT JOIN content_analysis ca ON ca.content_id = cs.id
-        WHERE 1=1`;
-      const params = [];
-
-      if (since) {
-        sql += ` AND hr.fetched_at > ?`;
-        params.push(since);
-      }
-      sql += ` ORDER BY hr.fetched_at ASC`;
-      if (limit > 0) {
-        sql += ` LIMIT ?`;
-        params.push(limit);
-      }
-
-      const rows = db.prepare(sql).all(...params);
+      const rows = listRemoteCrawlerAdapterExportRows(db, { since, limit });
 
       return {
         nodeId: this.nodeId,

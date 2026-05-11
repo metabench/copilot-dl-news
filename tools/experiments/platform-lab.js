@@ -26,18 +26,24 @@ if (!fs.existsSync(NEWS_CRAWLER_DB_PATH)) {
 
 // Try to load the compiled module
 let createDbAdapter;
+let checkDatabaseHealth;
+let checkPostgresHealth;
 try {
     // Try dist first (compiled)
     const distPath = path.join(NEWS_CRAWLER_DB_PATH, 'dist', 'db', 'index.js');
     if (fs.existsSync(distPath)) {
         const db = require(distPath);
         createDbAdapter = db.createDbAdapter;
+        checkDatabaseHealth = db.checkDatabaseHealth;
+        checkPostgresHealth = db.checkPostgresHealth;
     } else {
         // Try loading via tsx or ts-node
         console.log('⚠️  Compiled dist not found, attempting dynamic TS load...');
         require('tsx/cjs'); // Enable TypeScript loading
         const db = require(path.join(NEWS_CRAWLER_DB_PATH, 'src', 'db', 'index.ts'));
         createDbAdapter = db.createDbAdapter;
+        checkDatabaseHealth = db.checkDatabaseHealth;
+        checkPostgresHealth = db.checkPostgresHealth;
     }
 } catch (err) {
     console.error('❌ Failed to load news-crawler-db:', err.message);
@@ -122,11 +128,12 @@ async function runLab() {
     // Initialize adapter
     console.log('🔧 Initializing adapter...');
     let db;
+    let postgresConnectionString = null;
 
     if (USE_POSTGRES) {
-        const connectionString = process.env.DATABASE_URL || 'postgres://localhost:5432/news_crawler_test';
-        console.log(`   Using Postgres: ${connectionString.split('@')[1] || connectionString}`);
-        db = createDbAdapter({ type: 'postgres', connectionString });
+        postgresConnectionString = process.env.DATABASE_URL || 'postgres://localhost:5432/news_crawler_test';
+        console.log(`   Using Postgres: ${postgresConnectionString.split('@')[1] || postgresConnectionString}`);
+        db = createDbAdapter({ type: 'postgres', connectionString: postgresConnectionString });
     } else {
         console.log(`   Using SQLite: ${TEST_DB_PATH}`);
         db = createDbAdapter({ type: 'sqlite', path: TEST_DB_PATH });
@@ -442,17 +449,23 @@ async function runLab() {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // Raw SQL Tests
+    // Database Health Tests
     // ═══════════════════════════════════════════════════════════════
-    console.log('🔧 Raw SQL Access');
+    console.log('🔧 Database Health Access');
 
-    await test('query() - execute raw SELECT', async () => {
-        const result = await db.query('SELECT 1 as test');
-        if (!Array.isArray(result)) throw new Error('Expected array');
-    });
-
-    await test('execute() - execute raw command', async () => {
-        await db.execute('SELECT 1'); // Simple no-op
+    await test('checkDatabaseHealth() - health probe through DB module', async () => {
+        if (USE_POSTGRES) {
+            if (typeof checkPostgresHealth !== 'function') {
+                throw new Error('checkPostgresHealth export missing');
+            }
+            await checkPostgresHealth({ connectionString: postgresConnectionString });
+        } else {
+            if (typeof checkDatabaseHealth !== 'function') {
+                throw new Error('checkDatabaseHealth export missing');
+            }
+            const ok = checkDatabaseHealth(db);
+            if (!ok) throw new Error('Expected healthy database response');
+        }
     });
 
     console.log();

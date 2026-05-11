@@ -104,13 +104,7 @@ class WikidataAdm1Ingestor {
 
     try {
       // Get all countries from database
-      const allCountries = this.db.prepare(`
-        SELECT p.id, p.country_code, p.wikidata_qid, pn.name AS canonical_name, pn.normalized AS canonical_normalized
-        FROM places p
-        LEFT JOIN place_names pn ON pn.id = p.canonical_name_id
-        WHERE p.kind = 'country' AND p.country_code IS NOT NULL
-        ORDER BY p.country_code
-      `).all();
+      const allCountries = ingestQueries.listWikidataCountryIngestionRows(this.db);
       
       // Apply limit if specified
       let countries = allCountries;

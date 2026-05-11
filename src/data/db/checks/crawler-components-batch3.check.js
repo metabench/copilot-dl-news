@@ -1,6 +1,14 @@
 const { TemporalPatternLearner } = require('../../../core/crawler/TemporalPatternLearner');
 const { AdaptiveExplorer } = require('../../../core/crawler/AdaptiveExplorer');
 const { BudgetAllocator } = require('../../../core/crawler/BudgetAllocator');
+const { checkEnhancedDatabaseHealth } = require('news-crawler-db');
+
+function assertHealthyDb(db, label) {
+  if (!db) throw new Error(`${label} failed to resolve DB`);
+  const health = checkEnhancedDatabaseHealth(db);
+  if (!health.ok) throw new Error(`${label} DB health check failed: ${health.error}`);
+  console.log(`[Check] ${label} DB health: ${JSON.stringify(health)}`);
+}
 
 async function check() {
   console.log('[Check] Verifying DB injection for Batch 3 components...');
@@ -8,21 +16,15 @@ async function check() {
   try {
     // 1. TemporalPatternLearner
     const learner = new TemporalPatternLearner();
-    if (!learner.db) throw new Error('TemporalPatternLearner failed to resolve DB');
-    const res1 = learner.db.prepare('SELECT 1 as val').get();
-    console.log(`[Check] TemporalPatternLearner DB Query result: ${JSON.stringify(res1)}`);
+    assertHealthyDb(learner.db, 'TemporalPatternLearner');
 
     // 2. AdaptiveExplorer
     const explorer = new AdaptiveExplorer();
-    if (!explorer.db) throw new Error('AdaptiveExplorer failed to resolve DB');
-    const res2 = explorer.db.prepare('SELECT 1 as val').get();
-    console.log(`[Check] AdaptiveExplorer DB Query result: ${JSON.stringify(res2)}`);
+    assertHealthyDb(explorer.db, 'AdaptiveExplorer');
 
     // 3. BudgetAllocator
     const allocator = new BudgetAllocator();
-    if (!allocator.db) throw new Error('BudgetAllocator failed to resolve DB');
-    const res3 = allocator.db.prepare('SELECT 1 as val').get();
-    console.log(`[Check] BudgetAllocator DB Query result: ${JSON.stringify(res3)}`);
+    assertHealthyDb(allocator.db, 'BudgetAllocator');
 
     console.log('[Check] All Batch 3 components verified successfully.');
   } catch (err) {

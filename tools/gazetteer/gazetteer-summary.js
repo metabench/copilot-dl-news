@@ -9,7 +9,7 @@
  */
 
 const path = require('path');
-const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 
 function parseArgs(argv) {
   const options = {
@@ -94,6 +94,14 @@ function formatTable(rows) {
   return lines.join('\n');
 }
 
+function getDbModule() {
+  const dbModule = resolveNewsCrawlerDbModule();
+  if (!dbModule || typeof dbModule.listGazetteerCountrySummaryRows !== 'function') {
+    throw new Error('news-crawler-db diagnostic report helpers are unavailable. Rebuild news-crawler-db.');
+  }
+  return dbModule;
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2));
   const dbPath = options.dbPath
@@ -102,7 +110,7 @@ function main() {
 
   let db;
   try {
-    db = ensureDatabase(dbPath);
+    db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
   } catch (err) {
     console.error(`Failed to open database at ${dbPath}: ${err.message}`);
     process.exitCode = 1;
@@ -110,42 +118,7 @@ function main() {
   }
 
   try {
-    const countriesStmt = db.prepare(`
-      SELECT 
-        p.country_code AS code,
-        COALESCE(pn.name, p.country_code) AS name
-      FROM places p
-      LEFT JOIN place_names pn ON pn.id = p.canonical_name_id
-      WHERE p.kind = 'country'
-        AND p.status = 'current'
-      ORDER BY name COLLATE NOCASE ASC
-    `);
-    const cityCountStmt = db.prepare(`
-      SELECT COUNT(*) AS count
-      FROM places
-      WHERE kind = 'city'
-        AND status = 'current'
-        AND country_code = ?
-    `);
-    const regionCountStmt = db.prepare(`
-      SELECT COUNT(*) AS count
-      FROM places
-      WHERE kind = 'region'
-        AND status = 'current'
-        AND country_code = ?
-    `);
-
-    const countries = countriesStmt.all();
-    const summaryRows = countries.map((country) => {
-      const cityCount = cityCountStmt.get(country.code) || { count: 0 };
-      const regionCount = regionCountStmt.get(country.code) || { count: 0 };
-      return {
-        name: country.name || country.code,
-        code: country.code,
-        cities: cityCount.count || 0,
-        regions: regionCount.count || 0
-      };
-    });
+    const summaryRows = getDbModule().listGazetteerCountrySummaryRows(db);
 
     if (options.json) {
       const payload = {

@@ -18,6 +18,25 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 
 const express = require('express');
 const path = require('path');
+const {
+  ensureRemoteCrawlServerSchema,
+  cleanupRemoteCrawlRunningRuns,
+  createRemoteCrawlRun,
+  insertRemoteCrawlLog,
+  markRemoteCrawlUrlFetching,
+  enqueueRemoteCrawlUrls,
+  completeRemoteCrawlUrl,
+  failRemoteCrawlUrl,
+  countRemoteCrawlPendingUrls,
+  seedRemoteCrawlStartUrl,
+  getNextRemoteCrawlPendingUrl,
+  finalizeRemoteCrawlRun,
+  interruptRemoteCrawlRun,
+  getRemoteCrawlServerSummary,
+  listRemoteCrawlServerRecentLogs,
+  listRemoteCrawlServerUrlsByStatus,
+  listRemoteCrawlServerExportRows
+} = require('news-crawler-db');
 
 // Parse command line args
 const args = {};
@@ -37,48 +56,7 @@ console.log(`Port: ${PORT}`);
 
 // Database Setup
 const db = openNewsCrawlerDb(DB_FILE);
-db.exec(`
-  CREATE TABLE IF NOT EXISTS urls (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    url TEXT UNIQUE NOT NULL,
-    host TEXT,
-    path TEXT,
-    status TEXT DEFAULT 'pending',
-    http_status INTEGER,
-    content_type TEXT,
-    content_length INTEGER,
-    title TEXT,
-    content TEXT,
-    links_found INTEGER DEFAULT 0,
-    depth INTEGER DEFAULT 0,
-    discovered_from TEXT,
-    fetched_at DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    error_msg TEXT
-  );
-  
-  CREATE INDEX IF NOT EXISTS idx_urls_status ON urls(status);
-  CREATE INDEX IF NOT EXISTS idx_urls_host ON urls(host);
-  
-  CREATE TABLE IF NOT EXISTS crawl_runs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    target_domain TEXT,
-    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    ended_at DATETIME,
-    total_fetched INTEGER DEFAULT 0,
-    total_errors INTEGER DEFAULT 0,
-    status TEXT DEFAULT 'running'
-  );
-  
-  CREATE TABLE IF NOT EXISTS crawl_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    run_id INTEGER,
-    level TEXT,
-    message TEXT,
-    data TEXT,
-    ts DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-`);
+ensureRemoteCrawlServerSchema(db);
 
 // App setup
 const app = express();
@@ -86,12 +64,8 @@ app.use(express.json());
 
 // P3 fix: Clean up any stuck runs from previous crashes at startup
 try {
-  const stuckRuns = db.prepare(`SELECT id, started_at FROM crawl_runs WHERE status = 'running'`).all();
+  const stuckRuns = cleanupRemoteCrawlRunningRuns(db);
   if (stuckRuns.length > 0) {
-    const closeStmt = db.prepare(`UPDATE crawl_runs SET status = 'crashed', ended_at = CURRENT_TIMESTAMP WHERE id = ?`);
-    for (const run of stuckRuns) {
-      closeStmt.run(run.id);
-    }
     console.log(`[startup] Cleaned up ${stuckRuns.length} stuck run(s) from previous session: ${stuckRuns.map(r => `#${r.id}`).join(', ')}`);
   }
 } catch (cleanupErr) {
@@ -215,41 +189,39 @@ async function processUrl(row) {
     stats.currentUrl = row.url;
 
     try {
-        db.prepare(`UPDATE urls SET status = 'fetching' WHERE id = ?`).run(row.id);
+        markRemoteCrawlUrlFetching(db, row.id);
 
         const result = await fetchUrl(row.url);
         const links = extractLinks(result.html, result.finalUrl);
         const title = extractTitle(result.html);
 
         // Find new links to queue
-        let newLinksQueued = 0;
-        const insertStmt = db.prepare(`
-      INSERT OR IGNORE INTO urls (url, host, path, status, depth, discovered_from)
-      VALUES (?, ?, ?, 'pending', ?, ?)
-    `);
+        const entries = [];
 
         for (const link of links) {
             if (isArticleUrl(link, TARGET_DOMAIN)) {
                 try {
                     const parsed = new URL(link);
-                    const info = insertStmt.run(link, parsed.hostname, parsed.pathname, row.depth + 1, row.url);
-                    if (info.changes > 0) newLinksQueued++;
+                    entries.push({
+                        url: link,
+                        host: parsed.hostname,
+                        path: parsed.pathname,
+                        depth: row.depth + 1,
+                        discoveredFrom: row.url
+                    });
                 } catch { }
             }
         }
+        const { queued: newLinksQueued } = enqueueRemoteCrawlUrls(db, entries);
 
         // Update this URL as done
-        db.prepare(`
-      UPDATE urls SET 
-        status = 'done',
-        http_status = ?,
-        content_type = ?,
-        content_length = ?,
-        title = ?,
-        links_found = ?,
-        fetched_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(result.status, result.contentType, result.contentLength, title, links.length, row.id);
+        completeRemoteCrawlUrl(db, row.id, {
+            status: result.status,
+            contentType: result.contentType,
+            contentLength: result.contentLength,
+            title,
+            linksFound: links.length
+        });
 
         stats.fetched++;
 
@@ -258,7 +230,7 @@ async function processUrl(row) {
         return { success: true, newLinksQueued };
 
     } catch (err) {
-        db.prepare(`UPDATE urls SET status = 'error', error_msg = ? WHERE id = ?`).run(err.message, row.id);
+        failRemoteCrawlUrl(db, row.id, err.message);
         stats.errors++;
         log('error', `Failed: ${row.url}`, { error: err.message });
         return { success: false, error: err.message };
@@ -268,9 +240,7 @@ async function processUrl(row) {
 // Log to database
 function log(level, message, data = null) {
     const runId = crawlRun?.id || null;
-    db.prepare(`INSERT INTO crawl_log (run_id, level, message, data) VALUES (?, ?, ?, ?)`).run(
-        runId, level, message, data ? JSON.stringify(data) : null
-    );
+    insertRemoteCrawlLog(db, { runId, level, message, data });
     console.log(`[${level.toUpperCase()}] ${message}`, data || '');
 }
 
@@ -287,16 +257,14 @@ async function runCrawler(maxPages = 200) {
     stats.errors = 0;
 
     // Create crawl run
-    const runResult = db.prepare(`INSERT INTO crawl_runs (target_domain) VALUES (?)`).run(TARGET_DOMAIN);
-    crawlRun = { id: runResult.lastInsertRowid };
+    crawlRun = createRemoteCrawlRun(db, TARGET_DOMAIN);
 
     log('info', `Starting crawl of ${TARGET_DOMAIN}`, { maxPages });
 
     // Seed with start URL if queue is empty
-    const pending = db.prepare(`SELECT COUNT(*) as c FROM urls WHERE status = 'pending'`).get();
-    if (pending.c === 0) {
-        const startUrl = `https://${TARGET_DOMAIN}`;
-        db.prepare(`INSERT OR IGNORE INTO urls (url, host, path, depth) VALUES (?, ?, '/', 0)`).run(startUrl, TARGET_DOMAIN);
+    const pending = countRemoteCrawlPendingUrls(db);
+    if (pending === 0) {
+        const { url: startUrl } = seedRemoteCrawlStartUrl(db, TARGET_DOMAIN);
         log('info', `Seeded with: ${startUrl}`);
     }
 
@@ -305,7 +273,7 @@ async function runCrawler(maxPages = 200) {
     let crawlStatus = 'completed';
     try {
     while (!shouldStop && processed < maxPages) {
-        const row = db.prepare(`SELECT id, url, depth FROM urls WHERE status = 'pending' ORDER BY depth ASC, id ASC LIMIT 1`).get();
+        const row = getNextRemoteCrawlPendingUrl(db);
 
         if (!row) {
             log('info', 'No more pending URLs');
@@ -329,9 +297,12 @@ async function runCrawler(maxPages = 200) {
     } finally {
     // Finalize (always runs, even on crash)
     try {
-    db.prepare(`UPDATE crawl_runs SET ended_at = CURRENT_TIMESTAMP, total_fetched = ?, total_errors = ?, status = ? WHERE id = ?`).run(
-        stats.fetched, stats.errors, crawlStatus, crawlRun.id
-    );
+    finalizeRemoteCrawlRun(db, {
+        id: crawlRun.id,
+        fetched: stats.fetched,
+        errors: stats.errors,
+        status: crawlStatus
+    });
     } catch (finalizeErr) {
       log('error', `Failed to finalize crawl run: ${finalizeErr.message}`);
     }
@@ -347,14 +318,7 @@ async function runCrawler(maxPages = 200) {
 
 // API Routes
 app.get('/', (req, res) => {
-    const summary = db.prepare(`
-    SELECT 
-      COUNT(*) as total,
-      SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as done,
-      SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-      SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as errors
-    FROM urls
-  `).get();
+    const summary = getRemoteCrawlServerSummary(db);
 
     res.json({
         service: 'News Crawler Server',
@@ -369,16 +333,8 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api/status', (req, res) => {
-    const summary = db.prepare(`
-    SELECT 
-      COUNT(*) as total,
-      SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as done,
-      SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-      SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as errors
-    FROM urls
-  `).get();
-
-    const recentLogs = db.prepare(`SELECT * FROM crawl_log ORDER BY id DESC LIMIT 10`).all();
+    const summary = getRemoteCrawlServerSummary(db);
+    const recentLogs = listRemoteCrawlServerRecentLogs(db, { limit: 10 });
 
     res.json({ isRunning, stats, summary, recentLogs });
 });
@@ -408,25 +364,14 @@ app.get('/api/urls', (req, res) => {
     const status = req.query.status || 'done';
     const limit = parseInt(req.query.limit, 10) || 100;
 
-    const urls = db.prepare(`
-    SELECT id, url, host, title, http_status, content_length, links_found, fetched_at
-    FROM urls
-    WHERE status = ?
-    ORDER BY fetched_at DESC
-    LIMIT ?
-  `).all(status, limit);
+    const urls = listRemoteCrawlServerUrlsByStatus(db, { status, limit });
 
     res.json({ count: urls.length, urls });
 });
 
 app.get('/api/export', (req, res) => {
     // Export completed URLs for syncing to local DB
-    const urls = db.prepare(`
-    SELECT url, host, path, http_status, content_type, content_length, title, links_found, fetched_at
-    FROM urls
-    WHERE status = 'done'
-    ORDER BY fetched_at ASC
-  `).all();
+    const urls = listRemoteCrawlServerExportRows(db);
 
     res.json({
         domain: TARGET_DOMAIN,
@@ -451,9 +396,11 @@ function gracefulShutdown(signal) {
   shouldStop = true;
   if (crawlRun && crawlRun.id) {
     try {
-      db.prepare(`UPDATE crawl_runs SET ended_at = CURRENT_TIMESTAMP, total_fetched = ?, total_errors = ?, status = 'interrupted' WHERE id = ? AND status = 'running'`).run(
-        stats.fetched || 0, stats.errors || 0, crawlRun.id
-      );
+      interruptRemoteCrawlRun(db, {
+        id: crawlRun.id,
+        fetched: stats.fetched || 0,
+        errors: stats.errors || 0
+      });
       console.log(`[${signal}] Finalized crawl run #${crawlRun.id} as 'interrupted'`);
     } catch (err) {
       console.error(`[${signal}] Failed to finalize run: ${err.message}`);

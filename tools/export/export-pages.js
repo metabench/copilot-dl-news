@@ -21,26 +21,20 @@
 
 const fs = require('fs');
 const path = require('path');
-const zlib = require('zlib');
 const os = require('os');
 const { Worker } = require('worker_threads');
-const { openDatabase } = require('../src/data/db/sqlite/v1/connection');
-const { decompress } = require('../src/shared/utils/CompressionFacade');
-const { HtmlArticleExtractor } = require('../src/shared/utils/HtmlArticleExtractor');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const {
-  tableExists,
-  getTableCount,
-  getQueryCount,
+  getPagesExportRequiredSourceTableStatus,
+  getPagesExportSourceContentCount,
   getTotalArticlesCount,
-  getArticlesQuery,
   getArticlesChunk,
-  insertCompressionType,
-  getLastInsertRowid,
-  insertArticle,
+  initializePagesExportDatabase,
+  insertExportedArticleBatch,
   getExportedArticlesCount,
   getExtractionStats,
   getCompressionStats
-} = require('../src/data/db/sqlite/v1/queries/pages.export');
+} = resolveNewsCrawlerDbModule();
 
 // ANSI color codes
 const colors = {
@@ -264,34 +258,27 @@ runExport().catch(error => {
 
 async function runExport() {
   // Initialize source database (read-only, existing)
-  const sourceDbPath = path.join(__dirname, '..', 'data', 'news.db');
+  const sourceDbPath = path.join(__dirname, '..', '..', 'data', 'news.db');
   if (!fs.existsSync(sourceDbPath)) {
     console.error(`Error: Source database not found: ${sourceDbPath}`);
     process.exit(1);
   }
 
-  const sourceDb = openDatabase(sourceDbPath, { readonly: true, fileMustExist: true });
+  const sourceDb = openNewsCrawlerDb(sourceDbPath, { readonly: true, fileMustExist: true });
 
   // Check if required tables exist (normalized schema)
-  const requiredTables = ['urls', 'http_responses', 'content_storage', 'content_analysis'];
-  for (const table of requiredTables) {
-    if (!tableExists(sourceDb, table)) {
-      console.error(`Error: Required table '${table}' not found in source database`);
-      process.exit(1);
-    }
+  const missingTables = getPagesExportRequiredSourceTableStatus(sourceDb)
+    .filter((table) => !table.exists)
+    .map((table) => table.tableName);
+  if (missingTables.length > 0) {
+    console.error(`Error: Required table(s) not found in source database: ${missingTables.join(', ')}`);
+    await sourceDb.close();
+    process.exit(1);
   }
 
   // Count total articles (successful downloads with content)
-  const totalCount = getTableCount(sourceDb, 'urls u INNER JOIN http_responses hr ON hr.url_id = u.id INNER JOIN content_storage cs ON cs.http_response_id = hr.id WHERE hr.http_status = 200 AND cs.content_blob IS NOT NULL');
+  const totalCount = getPagesExportSourceContentCount(sourceDb);
   console.log(`Found ${totalCount} articles with content in source database`);
-
-  // Get most recent article per URL (normalized schema) - ensure uniqueness
-  const articlesQuery = getArticlesQuery();
-
-  // Get articles in chunks to avoid memory issues
-  const getArticlesChunkLocal = (offset, chunkSize) => {
-    return getArticlesChunk(sourceDb, offset, chunkSize);
-  };
 
   // Count total articles for progress tracking
   const totalArticles = getTotalArticlesCount(sourceDb);
@@ -312,76 +299,25 @@ async function runExport() {
     fs.unlinkSync(outputDbPath);
   }
 
-  const outputDb = openDatabase(outputDbPath, { readonly: false, fileMustExist: false });
+  const outputDb = openNewsCrawlerDb(outputDbPath, { readonly: false, fileMustExist: false });
 
   // Create minimal schema
   console.log('Creating minimal schema...');
 
-  const schemaSQL = `
-    CREATE TABLE articles (
-      id INTEGER PRIMARY KEY,
-      url TEXT UNIQUE NOT NULL,
-      canonical_url TEXT,
-      host TEXT,
-      title TEXT,
-      date TEXT,
-      section TEXT,
-      html BLOB,
-      crawled_at TEXT NOT NULL
-    );
-
-    CREATE TABLE compression_types (
-      id INTEGER PRIMARY KEY,
-      name TEXT UNIQUE NOT NULL,
-      level INTEGER,
-      window_bits INTEGER
-    );
-
-    CREATE INDEX idx_articles_url ON articles(url);
-    CREATE INDEX idx_articles_canonical ON articles(canonical_url);
-    CREATE INDEX idx_articles_host ON articles(host);
-    CREATE INDEX idx_articles_crawled_at ON articles(crawled_at);
-  `;
-
-  outputDb.exec(schemaSQL);
-
-  // Add ArticlePlus columns if using article-plus extraction
   if (extractionMode === 'article-plus') {
     console.log('Adding ArticlePlus extraction columns to schema...');
-
-    outputDb.exec(`
-      ALTER TABLE articles ADD COLUMN extracted_text TEXT;
-      ALTER TABLE articles ADD COLUMN word_count INTEGER;
-      ALTER TABLE articles ADD COLUMN metadata TEXT;
-      ALTER TABLE articles ADD COLUMN extraction_success BOOLEAN;
-    `);
   }
 
-  // Add compression columns if compressing
-  let compressionTypeId = null;
   if (compressionMethod !== 'none') {
     console.log('Adding compression columns to schema...');
-
-    outputDb.exec(`
-      ALTER TABLE articles ADD COLUMN compressed_html BLOB;
-      ALTER TABLE articles ADD COLUMN compression_type_id INTEGER REFERENCES compression_types(id);
-      ALTER TABLE articles ADD COLUMN original_size INTEGER;
-      ALTER TABLE articles ADD COLUMN compressed_size INTEGER;
-      ALTER TABLE articles ADD COLUMN compression_ratio REAL;
-    `);
-
-    // Insert compression type
-    compressionTypeId = insertCompressionType(outputDb, {
-      name: compressionMethod,
-      level: compressionLevel,
-      window_bits: compressionMethod === 'brotli' ? windowBits : null
-    });
   }
 
-  // Prepare insert function with options
-  const insertArticleWithOptions = (article) => {
-    return insertArticle(outputDb, article, { extractionMode, compressionMethod });
-  };
+  const { compressionTypeId } = initializePagesExportDatabase(outputDb, {
+    extractionMode,
+    compressionMethod,
+    compressionLevel,
+    windowBits
+  });
 
 // Create worker pool for parallel compression
 function createWorkerPool(size) {
@@ -500,42 +436,44 @@ const startTime = Date.now();
 
     // Launch batch processing (decompression now happens in worker threads)
     const promise = processBatchWithWorkers(batch, workers).then((compressedBatch) => {
-      // Insert compressed results
-      outputDb.transaction(() => {
-        for (const result of compressedBatch) {
-          try {
-            const article = {
-              url: result.url,
-              canonical_url: result.canonical_url,
-              host: result.host,
-              title: result.title,
-              date: result.date,
-              section: result.section,
-              html: result.html, // html kept for reference
-              crawled_at: result.crawled_at
-            };
+      const articlesToInsert = compressedBatch.map((result) => {
+        const article = {
+          id: result.id,
+          url: result.url,
+          canonical_url: result.canonical_url,
+          host: result.host,
+          title: result.title,
+          date: result.date,
+          section: result.section,
+          html: result.html,
+          crawled_at: result.crawled_at
+        };
 
-            if (extractionMode === 'article-plus') {
-              article.extracted_text = result.extractedText;
-              article.word_count = result.wordCount;
-              article.metadata = result.metadata;
-              article.extraction_success = result.extractionSuccess;
-            }
-
-            if (compressionMethod !== 'none' && result.success) {
-              article.compressed_html = result.compressedHtml;
-              article.compression_type_id = compressionTypeId;
-              article.original_size = result.originalSize;
-              article.compressed_size = result.compressedSize;
-              article.compression_ratio = result.compressionRatio;
-            }
-
-            insertArticleWithOptions(article);
-          } catch (error) {
-            console.warn(`Warning: Failed to insert article ${result.id}: ${error.message}`);
-          }
+        if (extractionMode === 'article-plus') {
+          article.extracted_text = result.extractedText;
+          article.word_count = result.wordCount;
+          article.metadata = result.metadata;
+          article.extraction_success = result.extractionSuccess;
         }
-      })();
+
+        if (compressionMethod !== 'none' && result.success) {
+          article.compressed_html = result.compressedHtml;
+          article.compression_type_id = compressionTypeId;
+          article.original_size = result.originalSize;
+          article.compressed_size = result.compressedSize;
+          article.compression_ratio = result.compressionRatio;
+        }
+
+        return article;
+      });
+
+      const insertResult = insertExportedArticleBatch(outputDb, articlesToInsert, {
+        extractionMode,
+        compressionMethod
+      });
+      for (const error of insertResult.errors) {
+        console.warn(`Warning: Failed to insert article ${error.id}: ${error.message}`);
+      }
 
       processed += batch.length;
       processedTotal += batch.length;
@@ -562,7 +500,7 @@ try {
     const chunkLimit = Math.min(chunkSize, articlesToProcess - offset);
     console.log(`Processing chunk ${Math.floor(offset/chunkSize) + 1}: articles ${offset + 1}-${offset + chunkLimit}`);
 
-    const articles = getArticlesChunk(offset, chunkLimit);
+    const articles = getArticlesChunk(sourceDb, offset, chunkLimit);
     console.log(`Loaded ${articles.length} articles from database`);
 
     // Process this chunk with concurrency control
@@ -603,8 +541,8 @@ try {
   }
 
   // Close databases
-  sourceDb.close();
-  outputDb.close();
+  await sourceDb.close();
+  await outputDb.close();
 
   console.log('\n🎉 Export complete!');
 }

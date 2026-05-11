@@ -3,7 +3,7 @@
 'use strict';
 
 const path = require('path');
-const { ensureDatabase } = require('../../src/data/db/sqlite');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 
 function parseArgs(argv) {
   const args = {
@@ -79,50 +79,19 @@ Examples:
 }
 
 function fetchCanonicalRows(db) {
-  const rows = db.prepare(`
-    SELECT
-      p.id,
-      p.country_code AS code,
-      p.canonical_name_id AS canonicalId,
-      cn.name AS canonicalName,
-      cn.lang AS canonicalLang,
-      (
-        SELECT pn.id FROM place_names pn
-         WHERE pn.place_id = p.id
-           AND pn.lang LIKE 'en%'
-         ORDER BY pn.is_preferred DESC, pn.id ASC
-         LIMIT 1
-      ) AS englishId,
-      (
-        SELECT pn.name FROM place_names pn
-         WHERE pn.place_id = p.id
-           AND pn.lang LIKE 'en%'
-         ORDER BY pn.is_preferred DESC, pn.id ASC
-         LIMIT 1
-      ) AS englishName,
-      (
-        SELECT pn.lang FROM place_names pn
-         WHERE pn.place_id = p.id
-           AND pn.lang LIKE 'en%'
-         ORDER BY pn.is_preferred DESC, pn.id ASC
-         LIMIT 1
-      ) AS englishLang
-    FROM places p
-    LEFT JOIN place_names cn ON cn.id = p.canonical_name_id
-    WHERE p.kind = 'country'
-      AND p.country_code IS NOT NULL
-      AND p.status IS NOT 'deprecated'
-    ORDER BY p.country_code ASC
-  `).all();
+  return getDbModule().listCountryCanonicalNameMismatches(db);
+}
 
-  return rows.filter((row) => {
-    if (!row.englishName) return false;
-    if (!row.canonicalId) return true; // canonical missing
-    if (!row.canonicalLang) return true;
-    if (!row.canonicalLang.toLowerCase().startsWith('en')) return true;
-    if (row.canonicalName === row.englishName) return false;
-    return false;
-  });
+function applyCanonicalNameUpdates(db, rows) {
+  return getDbModule().updateCountryCanonicalNamesToEnglish(db, rows);
+}
+
+function getDbModule() {
+  const dbModule = resolveNewsCrawlerDbModule();
+  if (!dbModule || typeof dbModule.listCountryCanonicalNameMismatches !== 'function') {
+    throw new Error('news-crawler-db country-name normalization helpers are unavailable. Rebuild news-crawler-db.');
+  }
+  return dbModule;
 }
 
 function main() {
@@ -136,7 +105,7 @@ function main() {
     ? path.resolve(args.dbPath)
     : path.join(__dirname, '..', '..', 'data', 'news.db');
 
-  const db = ensureDatabase(dbPath);
+  const db = openNewsCrawlerDb(dbPath, { readonly: args.dryRun, fileMustExist: true });
 
   try {
     const mismatches = fetchCanonicalRows(db);
@@ -160,20 +129,8 @@ function main() {
     }
 
     if (!args.dryRun) {
-      const updateStmt = db.prepare(`
-        UPDATE places
-           SET canonical_name_id = @englishId
-         WHERE id = @placeId
-      `);
-      const transaction = db.transaction((rows) => {
-        for (const row of rows) {
-          if (!row.englishId) continue;
-          updateStmt.run({ placeId: row.id, englishId: row.englishId });
-        }
-      });
-
-      transaction(mismatches);
-      console.log(`Updated ${mismatches.length} canonical names to their English variants.`);
+      const result = applyCanonicalNameUpdates(db, mismatches);
+      console.log(`Updated ${result.updated} canonical names to their English variants.`);
     }
 
     if (args.verbose) {

@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * intelligent-crawl.js
  * --------------------
@@ -20,13 +19,22 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
-const { ensureDb } = require('../../src/data/db/sqlite');
+const { resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 
 // Config
 const SOURCE_DB_NAME = 'news.db';
 const runId = Math.floor(Date.now() / 1000);
 const EXPERIMENT_DB_NAME = `news-experiment-${runId}.db`;
 const START_URL_LIMIT = 5;
+
+function getDbExport(name) {
+    const dbModule = resolveNewsCrawlerDbModule();
+    const value = dbModule[name];
+    if (value === undefined) {
+        throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+    }
+    return value;
+}
 
 async function main() {
     const projectRoot = findProjectRoot(__dirname);
@@ -43,62 +51,18 @@ async function main() {
         process.exit(1);
     }
 
-    // --- Step 1: Clean Slate (Using ensureDb + ATTACH) ---
-    console.log(`🌱 Seeding new database (Optimized via ATTACH)...`);
-
-    // 1. Create empty DB with Schema
-    const db = ensureDb(targetPath); // Creates tables
-
-    // 2. Attach Source DB
-    try {
-        db.prepare(`ATTACH DATABASE ? AS source`).run(sourcePath);
-    } catch (e) {
-        console.error("Failed to attach source DB:", e);
-        process.exit(1);
-    }
-
-    // 3. Copy specific tables (Gazetteer + Config)
-    const tablesToCopy = [
-        'news_websites',
-        'places',
-        'place_names',
-        'place_hierarchies',
-        'place_types'
-    ];
-
-    // Verify tables exist in source before copying
-    const sourceTables = db.prepare(`SELECT name FROM source.sqlite_master WHERE type='table'`).all().map(t => t.name);
-
-    db.exec('BEGIN TRANSACTION');
-    for (const table of tablesToCopy) {
-        if (sourceTables.includes(table)) {
-            try {
-                process.stdout.write(`   Copying ${table}... `);
-                db.prepare(`INSERT INTO main.${table} SELECT * FROM source.${table}`).run();
-                console.log('✅');
-            } catch (err) {
-                console.log(`❌ ${err.message}`);
-            }
-        } else {
-            console.log(`   ⚠️ Table ${table} not found in source.`);
-        }
-    }
-
-    db.exec('COMMIT');
-
-    // 4. Detach (Cleanup)
-    db.prepare('DETACH DATABASE source').run();
-
-    // 5. Filter news_websites 
-    if (START_URL_LIMIT > 0) {
-        console.log(`   Limiting news_websites to top ${START_URL_LIMIT}...`);
-        const allSites = db.prepare('SELECT id FROM news_websites WHERE enabled = 1 ORDER BY id ASC').all();
-        const keepIds = allSites.slice(0, START_URL_LIMIT).map(s => s.id);
-        if (keepIds.length > 0) {
-            const placeholders = keepIds.map(() => '?').join(',');
-            db.prepare(`DELETE FROM news_websites WHERE id NOT IN (${placeholders})`).run(...keepIds);
-            console.log(`   Kept ${keepIds.length} sites.`);
-        }
+    // --- Step 1: Clean Slate ---
+    console.log(`🌱 Seeding new database...`);
+    const createExperimentDb = getDbExport('createIntelligentCrawlExperimentDb');
+    const listExperimentSites = getDbExport('listIntelligentCrawlExperimentSites');
+    const { db, summary } = createExperimentDb(targetPath, {
+        sourcePath,
+        startUrlLimit: START_URL_LIMIT,
+        logger: console
+    });
+    console.log(`   Copied ${summary.copied.filter(row => row.status === 'ok').length} seed tables.`);
+    if (summary.startUrlFilter?.kept !== null) {
+        console.log(`   Kept ${summary.startUrlFilter.kept} start sites.`);
     }
 
     // --- Step 3: Initial 3-Page Crawl ---
@@ -109,7 +73,7 @@ async function main() {
     const { analyzeAllEligibleHosts } = require('../../src/services/sitePatternAnalysis');
 
     // Get start URLs
-    const sites = db.prepare('SELECT url, id FROM news_websites WHERE enabled = 1').all();
+    const sites = listExperimentSites(db);
     console.log(`   Queueing ${sites.length} seeds...`);
 
     // Helper to run crawl for a specific limit

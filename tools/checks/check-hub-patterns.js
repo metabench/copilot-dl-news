@@ -13,7 +13,12 @@
 const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
+const { resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const { ensureDb } = require('../../src/data/db/sqlite');
+
+const {
+    listHubPatternCountsByDomainAndClassification
+} = resolveNewsCrawlerDbModule();
 
 function main(argv = process.argv) {
     const projectRoot = findProjectRoot(__dirname);
@@ -35,14 +40,7 @@ function main(argv = process.argv) {
     try {
         console.log('=== Hub Pattern Check ===\n');
 
-        // Get count of patterns by classification ('hub', 'nav', 'place-hub', etc.)
-        const patterns = db.prepare(`
-            SELECT domain, classification, count(*) as pattern_count
-            FROM url_classification_patterns
-            WHERE classification IN ('hub', 'nav', 'place-hub', 'topic-hub')
-            GROUP BY domain, classification
-            ORDER BY pattern_count DESC
-        `).all();
+        const patterns = listHubPatternCountsByDomainAndClassification(db);
 
         if (patterns.length === 0) {
             console.log('❌ No hub patterns found in url_classification_patterns table.');

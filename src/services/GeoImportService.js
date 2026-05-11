@@ -34,7 +34,8 @@ const {
   createGeoImportTransaction,
   ensureGeoImportIndexes,
   getGeoNamesImportCounts,
-  findGeoNamesPlaceByNormalizedName
+  findGeoNamesPlaceByNormalizedName,
+  importGeoNamesAlternateNameRows
 } = require('news-crawler-db');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -322,6 +323,111 @@ function importGeoNames(options) {
   });
 }
 
+function parseFlag(value) {
+  return String(value || '').trim() === '1';
+}
+
+function parseAlternateNameLine(line) {
+  const cols = line.split('\t');
+  return {
+    geonameId: cols[1],
+    language: cols[2] || 'und',
+    name: cols[3] || '',
+    isPreferredName: parseFlag(cols[4]),
+    isShortName: parseFlag(cols[5]),
+    isColloquial: parseFlag(cols[6]),
+    isHistoric: parseFlag(cols[7])
+  };
+}
+
+function importAlternateNames(options) {
+  const { alternateNamesFile, db, batchSize = 1000 } = options;
+
+  return observable((next, complete, error) => {
+    const stats = {
+      processed: 0,
+      inserted: 0,
+      skipped: 0,
+      errors: 0,
+      startTime: Date.now()
+    };
+
+    const emitProgress = (phase, message, extra = {}) => {
+      next({
+        phase,
+        message,
+        current: stats.processed,
+        total: stats.total || 0,
+        percent: stats.total ? Math.round((stats.processed / stats.total) * 100) : 0,
+        stats: { ...stats },
+        elapsed: Date.now() - stats.startTime,
+        ...extra
+      });
+    };
+
+    const applyBatch = (rows) => {
+      if (rows.length === 0) return;
+      const result = importGeoNamesAlternateNameRows(db, rows);
+      stats.processed += result.processed;
+      stats.inserted += result.inserted;
+      stats.skipped += result.skipped;
+    };
+
+    (async () => {
+      try {
+        emitProgress('validating', `Checking ${path.basename(alternateNamesFile)}...`);
+
+        if (!fs.existsSync(alternateNamesFile)) {
+          throw new Error(`File not found: ${alternateNamesFile}`);
+        }
+
+        const countResult = await new Promise((resolve, reject) => {
+          const counter = countLines(alternateNamesFile);
+          counter.on('complete', resolve);
+          counter.on('error', reject);
+        });
+        stats.total = countResult.total;
+
+        const rl = readline.createInterface({
+          input: fs.createReadStream(alternateNamesFile),
+          crlfDelay: Infinity
+        });
+
+        let batch = [];
+
+        for await (const line of rl) {
+          if (!line.trim()) continue;
+          batch.push(parseAlternateNameLine(line));
+
+          if (batch.length >= batchSize) {
+            applyBatch(batch);
+            emitProgress('importing', `Processed ${stats.processed.toLocaleString()} alternate names`);
+            batch = [];
+          }
+        }
+
+        applyBatch(batch);
+
+        complete({
+          success: true,
+          stats,
+          duration: Date.now() - stats.startTime
+        });
+      } catch (err) {
+        stats.errors++;
+        emitProgress('error', err.message, { error: err });
+        error(err);
+      }
+    })();
+
+    return [
+      () => {},
+      () => {},
+      () => {}
+    ];
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Staged Import (Full Pipeline)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -460,6 +566,7 @@ function createImportPipeline(options) {
 
 module.exports = {
   importGeoNames,
+  importAlternateNames,
   createImportPipeline,
   countLines,
   GEONAMES_COLUMNS,

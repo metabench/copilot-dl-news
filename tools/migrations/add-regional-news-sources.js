@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 /**
  * add-regional-news-sources.js
  * 
@@ -12,6 +12,21 @@ const path = require('path');
 
 const dbPath = path.resolve(__dirname, '../../data/news.db');
 const isDryRun = process.argv.includes('--dry-run');
+
+function getRegionalNewsSourcesApi() {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const required = [
+    'planRegionalNewsSources',
+    'insertRegionalNewsSources',
+    'countNewsWebsites'
+  ];
+  for (const name of required) {
+    if (typeof dbModule[name] !== 'function') {
+      throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+    }
+  }
+  return dbModule;
+}
 
 // Regional news sources to add
 const REGIONAL_SOURCES = [
@@ -114,27 +129,13 @@ function addRegionalSources() {
   console.log(`=== Adding Regional News Sources ===`);
   console.log(`Mode: ${isDryRun ? 'DRY-RUN' : 'LIVE'}\n`);
   
-  const db = openNewsCrawlerDb(dbPath);
+  const db = openNewsCrawlerDb(dbPath, { readonly: isDryRun, fileMustExist: true });
+  const dbApi = getRegionalNewsSourcesApi();
   
   try {
-    // Check what already exists
-    const existing = db.prepare(`
-      SELECT parent_domain FROM news_websites
-    `).all().map(r => r.parent_domain);
+    const { existingCount, toAdd, skipped } = dbApi.planRegionalNewsSources(db, REGIONAL_SOURCES);
     
-    console.log(`Existing sources: ${existing.length}`);
-    
-    const toAdd = [];
-    const skipped = [];
-    
-    for (const source of REGIONAL_SOURCES) {
-      if (existing.includes(source.parent_domain)) {
-        skipped.push(source);
-      } else {
-        toAdd.push(source);
-      }
-    }
-    
+    console.log(`Existing sources: ${existingCount}`);
     console.log(`To add: ${toAdd.length}`);
     console.log(`Already exist: ${skipped.length}\n`);
     
@@ -162,31 +163,12 @@ function addRegionalSources() {
       return;
     }
     
-    // Insert new sources
-    const insert = db.prepare(`
-      INSERT INTO news_websites (url, label, parent_domain, url_pattern, website_type, added_at, added_by, enabled, metadata)
-      VALUES (@url, @label, @parent_domain, @url_pattern, @website_type, datetime('now'), 'migration', 1, @metadata)
-    `);
+    const inserted = dbApi.insertRegionalNewsSources(db, toAdd);
     
-    const insertMany = db.transaction((sources) => {
-      for (const source of sources) {
-        insert.run({
-          url: source.url,
-          label: source.label,
-          parent_domain: source.parent_domain,
-          url_pattern: source.url_pattern || `${source.url}/%`,
-          website_type: source.website_type,
-          metadata: JSON.stringify(source.metadata)
-        });
-      }
-    });
-    
-    insertMany(toAdd);
-    
-    console.log(`✅ Added ${toAdd.length} regional news sources.`);
+    console.log(`✅ Added ${inserted} regional news sources.`);
     
     // Show final count
-    const total = db.prepare(`SELECT COUNT(*) as count FROM news_websites`).get().count;
+    const total = dbApi.countNewsWebsites(db);
     console.log(`Total news sources: ${total}`);
     
     // Show by region

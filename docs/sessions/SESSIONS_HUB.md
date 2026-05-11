@@ -56,8 +56,8 @@
 
 ### Session 2026-05-10: News Crawler DB Boundary Migration
 
-**Status**: Active; not complete  
-**Focus**: Continue staged migration of active `copilot-dl-news` DB/query ownership into explicit `news-crawler-db` APIs. Major slices are migrated, `src/services` now scans clean for active DB patterns, but the latest broad active-path scan still reports 1,586 raw SQL/driver-pattern matches after excluding docs/tests/WIP/public/data.  
+**Status**: Active; runtime/check/tool DB ownership is largely migrated
+**Focus**: Continue staged migration of active `copilot-dl-news` DB/query ownership into explicit `news-crawler-db` APIs. The latest pass migrated Postgres health checks, SQLite migration utility scripts, remaining debug/check read models, gazetteer export iterators, snapshot verification, URL-classification samples, site-pattern listing, crawl-site threshold checks, benchmark probes, locale seeding, analytics download-history reads, unified-app dashboard counts, topic-hub cell samples, and remaining active DB smoke probes. Latest broad active-path scan reports `189` SQL/driver-pattern matches after excluding docs/tests/WIP/public/data; remaining matches are classified as migration/deploy SQL artifacts, docs/examples, generated/static bundles, dev-tool source-string scans, SPARQL query builders, or regex parser false positives.
 **Location**: `docs/sessions/2026-05-10-news-crawler-db-boundary/`
 
 **Quick Links**:

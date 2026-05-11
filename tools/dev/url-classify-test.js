@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { listRandomUrlClassificationTestSample } = require('news-crawler-db');
 /**
  * URL Classification Tester
  * 
@@ -302,27 +303,10 @@ class UrlClassificationEngine {
 
 function getDbSample(dbPath, sampleSize, hostFilter = null) {
   const db = openNewsCrawlerDb(dbPath, { readonly: true });
-  
-  let query = `
-    SELECT DISTINCT u.url, u.host
-    FROM urls u
-    WHERE u.url NOT LIKE '%/ss/c/%'
-      AND u.url NOT LIKE '%intent/tweet%'
-      AND u.url NOT LIKE '%dialog/share%'
-      AND u.url NOT LIKE '%@%'
-  `;
-  
-  const params = [];
-  
-  if (hostFilter) {
-    query += ` AND u.host LIKE ?`;
-    params.push(`%${hostFilter}%`);
-  }
-  
-  query += ` ORDER BY RANDOM() LIMIT ?`;
-  params.push(sampleSize);
-  
-  const rows = db.prepare(query).all(...params);
+  const rows = listRandomUrlClassificationTestSample(db, {
+    hostFilter,
+    limit: sampleSize
+  });
   db.close();
   
   return rows;

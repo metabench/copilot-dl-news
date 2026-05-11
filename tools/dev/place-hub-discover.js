@@ -11,7 +11,7 @@
  */
 'use strict';
 
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
 // CLI argument parsing
 const args = process.argv.slice(2);
@@ -41,80 +41,25 @@ function getDb(readonly = true) {
   return openNewsCrawlerDb(dbPath, { readonly });
 }
 
+function getDbApi(name) {
+  const dbModule = resolveNewsCrawlerDbModule();
+  const fn = dbModule[name];
+  if (typeof fn !== 'function') {
+    throw new Error(`news-crawler-db does not export ${name}. Build ../news-crawler-db first.`);
+  }
+  return fn;
+}
+
 /**
  * Extract slugs from URLs matching a pattern
  */
 function extractSlugsFromPattern(db, host, pattern) {
-  // Convert pattern like "/world/{slug}" to regex-ish SQL
-  // Pattern: /world/{slug} -> URLs like https://www.example.com/world/ukraine
-  
-  // Build SQL LIKE pattern
-  const patternParts = pattern.split('{slug}');
-  if (patternParts.length !== 2) {
-    throw new Error(`Pattern must contain exactly one {slug}: ${pattern}`);
-  }
-  
-  const [prefix, suffix] = patternParts;
-  const likePattern = `https://www.${host}${prefix}%${suffix}`;
-  
-  console.log(`Searching for: ${likePattern}`);
-  
-  // Find distinct slugs
-  const query = `
-    SELECT DISTINCT 
-      url,
-      CASE 
-        WHEN url LIKE ? 
-        THEN substr(url, ?, 
-             CASE 
-               WHEN instr(substr(url, ?), '/') > 0 
-               THEN instr(substr(url, ?), '/') - 1
-               ELSE length(substr(url, ?))
-             END)
-        ELSE NULL
-      END as slug
-    FROM urls 
-    WHERE host = ?
-      AND url LIKE ?
-      AND url NOT GLOB 'https://www.${host}${prefix}[0-9]*'
-    ORDER BY slug
-    LIMIT ?
-  `;
-  
-  const prefixLen = `https://www.${host}${prefix}`.length + 1;
-  
-  const rows = db.prepare(query).all(
-    likePattern,
-    prefixLen, prefixLen, prefixLen, prefixLen,
-    `www.${host}`,
-    likePattern,
-    LIMIT
-  );
-  
-  // Deduplicate and clean slugs
+  const listCandidateSlugs = getDbApi('listCandidatePlaceHubSlugsForPattern');
+  const rows = listCandidateSlugs(db, { host, pattern, limit: LIMIT });
   const slugMap = new Map();
   for (const row of rows) {
-    let slug = row.slug;
-    if (!slug || slug.length <= 2 || slug.match(/^\d+$/)) continue;
-    
-    // Strip query strings
-    const qPos = slug.indexOf('?');
-    if (qPos > 0) {
-      slug = slug.slice(0, qPos);
-    }
-    
-    // Skip non-place slugs
-    const skipPatterns = ['live', 'article', 'video', 'gallery', 'series', 
-      'ng-interactive', 'commentisfree', 'from-the-archive-blog'];
-    if (skipPatterns.includes(slug.toLowerCase())) continue;
-    
-    if (!slugMap.has(slug)) {
-      // Build clean URL (without query string)
-      const cleanUrl = row.url.split('?')[0];
-      slugMap.set(slug, cleanUrl);
-    }
+    slugMap.set(row.slug, row.url);
   }
-  
   return slugMap;
 }
 
@@ -129,14 +74,7 @@ function matchSlugsToPlaces(db, slugs) {
   // Build a map of normalized place names to place data
   console.log('   Building place name index...');
   const placeIndex = new Map();
-  
-  // Load all country/region names for fast lookup
-  const placeNames = db.prepare(`
-    SELECT pn.place_id, pn.name, pn.normalized, pn.lang, p.kind
-    FROM place_names pn
-    JOIN places p ON p.id = pn.place_id
-    WHERE p.kind IN ('country', 'territory', 'region', 'continent')
-  `).all();
+  const placeNames = getDbApi('listPlaceNamesForPlaceHubDiscoveryMatching')(db);
   
   for (const pn of placeNames) {
     // Index by normalized name
@@ -196,14 +134,9 @@ function matchSlugsToPlaces(db, slugs) {
   
   // Convert back to array and get English names
   const englishNames = new Map();
-  const englishQuery = db.prepare(`
-    SELECT place_id, name FROM place_names
-    WHERE place_id IN (${[...seenPlaceIds.keys()].join(',')})
-      AND (lang = 'en' OR lang = 'eng' OR lang = 'und')
-      AND is_preferred = 1
-  `);
   if (seenPlaceIds.size > 0) {
-    for (const row of englishQuery.all()) {
+    const preferredNames = getDbApi('listPreferredPlaceNamesForPlaceHubDiscovery')(db, [...seenPlaceIds.keys()]);
+    for (const row of preferredNames) {
       if (!englishNames.has(row.place_id)) {
         englishNames.set(row.place_id, row.name);
       }
@@ -226,57 +159,14 @@ function matchSlugsToPlaces(db, slugs) {
  * Check which matches are already in place_page_mappings
  */
 function filterExistingMappings(db, matches, host) {
-  const newMappings = [];
-  const existingMappings = [];
-  
-  // Normalize host (remove www.)
-  const normalizedHost = host.replace(/^www\./, '');
-  
-  for (const match of matches) {
-    const existing = db.prepare(`
-      SELECT id FROM place_page_mappings
-      WHERE place_id = ? AND host = ?
-    `).get(match.place_id, normalizedHost);
-    
-    if (existing) {
-      existingMappings.push(match);
-    } else {
-      newMappings.push(match);
-    }
-  }
-  
-  return { newMappings, existingMappings };
+  return getDbApi('splitPlaceHubMappingsByExistingHost')(db, matches, host);
 }
 
 /**
  * Insert new mappings
  */
 function insertMappings(db, mappings, host) {
-  const normalizedHost = host.replace(/^www\./, '');
-  const now = new Date().toISOString();
-  
-  const insert = db.prepare(`
-    INSERT INTO place_page_mappings 
-      (place_id, host, url, page_kind, status, first_seen_at, evidence)
-    VALUES (?, ?, ?, 'country-hub', 'pending', ?, ?)
-  `);
-  
-  let inserted = 0;
-  const transaction = db.transaction(() => {
-    for (const m of mappings) {
-      const evidence = JSON.stringify({
-        source: 'place-hub-discover',
-        discovered_at: now,
-        slug: m.slug,
-        place_kind: m.place_kind
-      });
-      insert.run(m.place_id, normalizedHost, m.url, now, evidence);
-      inserted++;
-    }
-  });
-  
-  transaction();
-  return inserted;
+  return getDbApi('insertPendingPlaceHubDiscoveryMappings')(db, mappings, host);
 }
 
 // Main

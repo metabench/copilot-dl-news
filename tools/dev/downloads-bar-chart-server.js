@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 'use strict';
 
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * downloads-bar-chart-server — live bar chart of stored downloads over the last N days
  *
@@ -45,8 +44,13 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const express = require('express');
-const VALID_SOURCES = ['http-all', 'http-ok', 'fetches', 'urls', 'articles'];
-const VALID_MODES = ['daily', 'cumulative'];
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const downloadEvidence = require('../../src/data/db/queries/downloadEvidence');
+const VALID_SOURCES = [...downloadEvidence.DOWNLOAD_BAR_CHART_VALID_SOURCES];
+const VALID_MODES = [...downloadEvidence.DOWNLOAD_BAR_CHART_VALID_MODES];
+const SOURCE_QUERIES = Object.freeze(Object.fromEntries(
+  VALID_SOURCES.map((name) => [name, { label: downloadEvidence.getDownloadBarChartSourceLabel(name) }])
+));
 
 function parseBaseline(v) {
   if (v == null) return 'auto';
@@ -155,140 +159,20 @@ Endpoints when running:
 `);
 }
 
-const SOURCE_QUERIES = {
-  'http-all': {
-    label: 'http_responses (all)',
-    sql: `SELECT date(fetched_at) AS day, COUNT(*) AS count
-          FROM http_responses
-          WHERE fetched_at IS NOT NULL
-            AND date(fetched_at) >= date('now', ?)
-          GROUP BY date(fetched_at)
-          ORDER BY day ASC`,
-    baselineSql: `SELECT COUNT(*) AS n FROM http_responses
-                  WHERE fetched_at IS NOT NULL
-                    AND date(fetched_at) < date('now', ?)`,
-  },
-  'http-ok': {
-    label: 'http_responses (status=200, bytes>0)',
-    sql: `SELECT date(fetched_at) AS day, COUNT(*) AS count
-          FROM http_responses
-          WHERE http_status = 200 AND bytes_downloaded > 0
-            AND fetched_at IS NOT NULL
-            AND date(fetched_at) >= date('now', ?)
-          GROUP BY date(fetched_at)
-          ORDER BY day ASC`,
-    baselineSql: `SELECT COUNT(*) AS n FROM http_responses
-                  WHERE http_status = 200 AND bytes_downloaded > 0
-                    AND fetched_at IS NOT NULL
-                    AND date(fetched_at) < date('now', ?)`,
-  },
-  'fetches': {
-    label: 'fetches.fetched_at',
-    sql: `SELECT date(fetched_at) AS day, COUNT(*) AS count
-          FROM fetches
-          WHERE fetched_at IS NOT NULL
-            AND date(fetched_at) >= date('now', ?)
-          GROUP BY date(fetched_at)
-          ORDER BY day ASC`,
-    baselineSql: `SELECT COUNT(*) AS n FROM fetches
-                  WHERE fetched_at IS NOT NULL
-                    AND date(fetched_at) < date('now', ?)`,
-  },
-  'urls': {
-    label: 'urls.created_at',
-    sql: `SELECT date(created_at) AS day, COUNT(*) AS count
-          FROM urls
-          WHERE created_at IS NOT NULL
-            AND date(created_at) >= date('now', ?)
-          GROUP BY date(created_at)
-          ORDER BY day ASC`,
-    baselineSql: `SELECT COUNT(*) AS n FROM urls
-                  WHERE created_at IS NOT NULL
-                    AND date(created_at) < date('now', ?)`,
-  },
-  'articles': {
-    label: 'articles via urls.created_at + articles_fts',
-    sql: `SELECT date(u.created_at) AS day, COUNT(*) AS count
-          FROM urls u
-          JOIN articles_fts_docsize d ON d.id = u.id
-          WHERE u.created_at IS NOT NULL
-            AND date(u.created_at) >= date('now', ?)
-          GROUP BY date(u.created_at)
-          ORDER BY day ASC`,
-    baselineSql: `SELECT COUNT(*) AS n FROM urls u
-                  JOIN articles_fts_docsize d ON d.id = u.id
-                  WHERE u.created_at IS NOT NULL
-                    AND date(u.created_at) < date('now', ?)`,
-  },
-};
-
 function getDailyDownloads(dbPath, days, source = 'http-all', opts = {}) {
   if (!fs.existsSync(dbPath)) {
     throw new Error(`Database not found: ${dbPath}`);
   }
-  const spec = SOURCE_QUERIES[source];
-  if (!spec) throw new Error(`Unknown source: ${source}`);
-  const mode = opts.mode === 'cumulative' ? 'cumulative' : 'daily';
-  const baselineOpt = opts.baseline == null ? 'auto' : opts.baseline;
   const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
   try {
-    const windowParam = `-${days - 1} days`;
-    let rows;
-    let usedSource = source;
-    try {
-      rows = db.prepare(spec.sql).all(windowParam);
-    } catch (e) {
-      // articles join may fail if FTS internal table layout differs; fall back to bare urls
-      if (source === 'articles') {
-        rows = db.prepare(SOURCE_QUERIES['urls'].sql).all(windowParam);
-        usedSource = 'urls';
-      } else {
-        throw e;
-      }
-    }
-
-    const map = new Map(rows.map((r) => [r.day, Number(r.count) || 0]));
-    const dailyOut = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    for (let i = days - 1; i >= 0; i -= 1) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      dailyOut.push({ day: key, count: map.get(key) || 0 });
-    }
-
-    if (mode !== 'cumulative') return dailyOut;
-
-    // Compute baseline: count strictly before the window starts
-    let baseline = 0;
-    if (baselineOpt === 'none') {
-      baseline = 0;
-    } else if (typeof baselineOpt === 'number') {
-      baseline = baselineOpt;
-    } else {
-      // auto
-      const bSpec = SOURCE_QUERIES[usedSource];
-      try {
-        const row = db.prepare(bSpec.baselineSql).get(windowParam);
-        baseline = Number(row && row.n) || 0;
-      } catch {
-        baseline = 0;
-      }
-    }
-
-    let running = baseline;
-    return dailyOut.map((d) => {
-      running += d.count;
-      return { day: d.day, count: running, delta: d.count };
-    });
+    return downloadEvidence.getDailyDownloadBars(db, days, source, opts);
   } finally {
     db.close();
   }
 }
 
 function sourceLabel(source) {
-  return (SOURCE_QUERIES[source] && SOURCE_QUERIES[source].label) || source;
+  return downloadEvidence.getDownloadBarChartSourceLabel(source);
 }
 
 function formatNumber(n) {

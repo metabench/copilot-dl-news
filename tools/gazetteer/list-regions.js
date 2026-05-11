@@ -15,8 +15,7 @@
  */
 
 const path = require('path');
-const { ensureDatabase } = require('../../src/data/db/sqlite');
-const { getCountryByCode } = require('../../src/data/db/sqlite/queries/gazetteer.places');
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 
 function parseArgs(argv) {
   const result = {
@@ -112,52 +111,21 @@ function run() {
   const countryCode = options.country.toUpperCase();
 
   const dbPath = path.join(__dirname, '..', '..', 'data', 'news.db');
-  const db = ensureDatabase(dbPath);
+  const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
+  const dbModule = resolveNewsCrawlerDbModule();
 
   try {
-    const country = getCountryByCode(db, countryCode);
+    const country = dbModule.getCountryByCode(db, countryCode);
     if (!country) {
       console.error(`No country found for code ${countryCode}.`);
       process.exitCode = 1;
       return;
     }
 
-    const params = [countryCode];
-    let query = `
-      SELECT 
-        p.id,
-        p.country_code,
-        p.lat,
-        p.lng,
-        p.population,
-        p.timezone,
-        p.extra,
-  p.priority_score,
-  p.wikidata_admin_level AS wikidataAdminLevel,
-        COALESCE(
-          (SELECT name FROM place_names WHERE id = p.canonical_name_id),
-          (SELECT name FROM place_names WHERE place_id = p.id ORDER BY is_preferred DESC, is_official DESC LIMIT 1),
-          '(unnamed)'
-        ) AS name
-      FROM places p
-      WHERE p.kind = 'region'
-        AND p.status = 'current'
-        AND p.country_code = ?
-    `;
-
-    const orderClause = options.sort === 'population'
-      ? '\n      ORDER BY p.population DESC, name COLLATE NOCASE ASC\n'
-      : '\n      ORDER BY name COLLATE NOCASE ASC\n';
-
-    query += orderClause;
-
-    if (typeof options.limit === 'number') {
-      query += '      LIMIT ?\n';
-      params.push(options.limit);
-    }
-
-    const statement = db.prepare(query);
-    const rows = statement.all(...params);
+    const rows = dbModule.listGazetteerRegionsForCountry(db, countryCode, {
+      sort: options.sort,
+      limit: options.limit
+    });
 
     if (options.json) {
       const payload = {

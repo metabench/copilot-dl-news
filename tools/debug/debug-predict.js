@@ -1,58 +1,44 @@
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+'use strict';
+
+const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const { PredictiveHubDiscovery } = require('../../src/core/crawler/PredictiveHubDiscovery');
-const db = openNewsCrawlerDb(':memory:');
 
-// Create gazetteer table
-db.exec(`
-  CREATE TABLE gazetteer (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL,
-    type TEXT NOT NULL,
-    population INTEGER DEFAULT 0,
-    is_capital INTEGER DEFAULT 0,
-    wikidata_id TEXT
-  );
+const {
+  listPredictiveHubDiscoveryDebugCountryRows,
+  seedPredictiveHubDiscoveryDebugGazetteer
+} = resolveNewsCrawlerDbModule();
 
-  INSERT INTO gazetteer (name, slug, type, population, is_capital, wikidata_id)
-  VALUES 
-    ('France', 'france', 'country', 67000000, 0, 'Q142'),
-    ('Germany', 'germany', 'country', 83000000, 0, 'Q183'),
-    ('Spain', 'spain', 'country', 47000000, 0, 'Q29'),
-    ('Italy', 'italy', 'country', 60000000, 0, 'Q38');
-`);
+async function main() {
+  const db = openNewsCrawlerDb(':memory:');
 
-const discovery = new PredictiveHubDiscovery({ db });
+  try {
+    seedPredictiveHubDiscoveryDebugGazetteer(db);
 
-// Test URL pattern extraction
-const testUrl = 'https://theguardian.com/world/france';
-console.log('\n1. Testing URL:', testUrl);
+    const discovery = new PredictiveHubDiscovery({ db });
 
-const pattern = discovery._extractUrlPattern(testUrl);
-console.log('2. Pattern:', JSON.stringify(pattern, null, 2));
+    const testUrl = 'https://theguardian.com/world/france';
+    console.log('\n1. Testing URL:', testUrl);
 
-const hubType = discovery._inferHubType(testUrl, pattern);
-console.log('3. Inferred hub type:', hubType);
+    const pattern = discovery._extractUrlPattern(testUrl);
+    console.log('2. Pattern:', JSON.stringify(pattern, null, 2));
 
-// Test gazetteer query directly
-console.log('\n4. Testing direct gazetteer query for country-hub:');
-const stmt = db.prepare(`
-  SELECT name, slug FROM gazetteer WHERE type = 'country' AND slug != 'france'
-`);
-const rows = stmt.all();
-console.log('Found rows:', rows.length);
-rows.forEach(row => console.log('  -', row.name, '('+row.slug+')'));
+    const hubType = discovery._inferHubType(testUrl, pattern);
+    console.log('3. Inferred hub type:', hubType);
 
-// Test the full predictSiblingHubs flow
-discovery.predictSiblingHubs('theguardian.com', testUrl, {})
-  .then(predictions => {
+    console.log('\n4. Testing direct gazetteer lookup for country-hub:');
+    const rows = listPredictiveHubDiscoveryDebugCountryRows(db, { excludeSlug: 'france' });
+    console.log('Found rows:', rows.length);
+    rows.forEach(row => console.log('  -', row.name, '(' + row.slug + ')'));
+
+    const predictions = await discovery.predictSiblingHubs('theguardian.com', testUrl, {});
     console.log('\n5. Predictions:', predictions.length);
-    predictions.forEach(p => console.log('  -', p.url, '('+p.entity+')'));
-  })
-  .catch(error => {
-    console.error('\nError:', error);
-  })
-  .finally(() => {
-    db.close();
-  });
+    predictions.forEach(p => console.log('  -', p.url, '(' + p.entity + ')'));
+  } finally {
+    await db.close();
+  }
+}
 
+main().catch((error) => {
+  console.error('\nError:', error);
+  process.exitCode = 1;
+});

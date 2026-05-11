@@ -15,32 +15,20 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
 
-function migrate(dbPath) {
+async function migrate(dbPath) {
   const db = openNewsCrawlerDb(dbPath);
   
   try {
-    // Check if column already exists
-    const columns = db.pragma('table_info(background_tasks)');
-    const hasColumn = columns.some(col => col.name === 'cancellation_reason');
-    
-    if (hasColumn) {
+    const result = db.migrationUtilities.ensureBackgroundTaskCancellationReason();
+
+    if (result.alreadyExists) {
       console.log('[Migration] cancellation_reason column already exists');
       return { success: true, alreadyExists: true };
     }
-    
-    // Add the column
-    db.exec(`
-      ALTER TABLE background_tasks 
-      ADD COLUMN cancellation_reason TEXT
-    `);
-    
+
     console.log('[Migration] Added cancellation_reason column to background_tasks');
-    
-    // Update the status CHECK constraint to include 'abandoned'
-    // Note: SQLite doesn't support modifying CHECK constraints directly,
-    // but we can verify the constraint allows our new status
-    const statusCheck = columns.find(col => col.name === 'status');
-    console.log('[Migration] Current status column:', statusCheck);
+
+    console.log('[Migration] Current status column:', result.statusColumn);
     
     // The CHECK constraint will be enforced by the schema-definitions.js
     // on new tables; existing tables will accept 'abandoned' status
@@ -49,7 +37,7 @@ function migrate(dbPath) {
     return { success: true, added: true };
     
   } finally {
-    db.close();
+    await db.close();
   }
 }
 
@@ -68,15 +56,13 @@ if (require.main === module) {
   
   console.log(`[Migration] Using database: ${dbPath}`);
   
-  try {
-    const result = migrate(dbPath);
+  migrate(dbPath).then((result) => {
     console.log('[Migration] Result:', result);
     process.exit(0);
-  } catch (error) {
+  }).catch((error) => {
     console.error('[Migration] Failed:', error.message);
     process.exit(1);
-  }
+  });
 }
 
 module.exports = { migrate };
-

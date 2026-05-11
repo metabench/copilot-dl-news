@@ -2,7 +2,6 @@ const path = require('path');
 const fs = require('fs');
 const { findProjectRoot } = require('../../../../shared/utils/project-root');
 const { ensureDatabase } = require('./connection');
-const { seedData } = require('./seed-utils');
 
 // Open (and create if needed) a SQLite DB file and ensure all schemas exist.
 function ensureDb(dbFilePath, options = {}) {

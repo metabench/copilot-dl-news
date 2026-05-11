@@ -13,7 +13,12 @@
 const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
+const { resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const { ensureDb } = require('../../src/data/db/sqlite');
+
+const {
+    listCountryHubGuessCountsByHost
+} = resolveNewsCrawlerDbModule();
 
 function main(argv = process.argv) {
     const projectRoot = findProjectRoot(__dirname);
@@ -35,15 +40,7 @@ function main(argv = process.argv) {
     try {
         console.log('=== Country Hub Guesses Check ===\n');
 
-        // Check for 'candidate' status in place_page_mappings for country-hubs
-        const guesses = db.prepare(`
-            SELECT host, count(*) as guess_count
-            FROM place_page_mappings
-            WHERE page_kind = 'country-hub' 
-              AND status = 'candidate'
-            GROUP BY host
-            ORDER BY guess_count DESC
-        `).all();
+        const guesses = listCountryHubGuessCountsByHost(db);
 
         const totalGuesses = guesses.reduce((sum, g) => sum + g.guess_count, 0);
 

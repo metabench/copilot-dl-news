@@ -14,8 +14,13 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ensureDatabase } = require('../../src/data/db/sqlite');
-const HubValidator = require('../../src/hub-validation/HubValidator');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const HubValidator = require('../../src/geo/hub-validation/HubValidator');
+const {
+  deletePlaceHubById,
+  listPlaceHubsForVerification,
+  updatePlaceHubUrl
+} = require('news-crawler-db');
 
 // Load configuration
 const configPath = path.join(__dirname, '..', '..', 'config.json');
@@ -31,116 +36,105 @@ try {
 // Extract domain from URL
 const domain = new URL(config.url).hostname;
 
-// Initialize database
 const dbPath = path.join(__dirname, '..', '..', 'data', 'news.db');
-const db = ensureDatabase(dbPath);
 
 async function verifyAndNormalizePlaceHubs() {
+  const db = openNewsCrawlerDb(dbPath, { readonly: false });
+
   // Initialize validator
   const validator = new HubValidator(db);
   await validator.initialize();
 
-  // Query place_hubs table for entries marked as place hubs (not topic hubs)
-  const query = `
-    SELECT id, url, title, place_slug, topic_slug
-    FROM place_hubs
-    WHERE host LIKE ?
-    AND place_slug IS NOT NULL
-    ORDER BY title
-  `;
+  try {
+    const placeHubs = listPlaceHubsForVerification(db, domain);
 
-  const placeHubs = db.prepare(query).all(`%${domain}%`);
+    console.log(`\n🔍 Verifying and Normalizing Place Hubs (${config.url})\n`);
+    console.log(`Found ${placeHubs.length} place hub entries to verify...\n`);
+    console.log('─'.repeat(120));
 
-  console.log(`\n🔍 Verifying and Normalizing Place Hubs (${config.url})\n`);
-  console.log(`Found ${placeHubs.length} place hub entries to verify...\n`);
-  console.log('─'.repeat(120));
+    // Track statistics
+    let validCount = 0;
+    let invalidCount = 0;
+    let normalizedCount = 0;
+    let unchangedCount = 0;
+    const deleted = [];
 
-  // Prepare delete statement
-  const deleteStmt = db.prepare('DELETE FROM place_hubs WHERE id = ?');
+    // Validate each hub one by one
+    for (let i = 0; i < placeHubs.length; i++) {
+      const hub = placeHubs[i];
+      const num = `${i + 1}.`.padEnd(6);
+      const placeName = (hub.place_slug || '').split('-').map(word =>
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
 
-  // Track statistics
-  let validCount = 0;
-  let invalidCount = 0;
-  let normalizedCount = 0;
-  let unchangedCount = 0;
-  const deleted = [];
+      // First validate the hub itself
+      const result = validator.validatePlaceHub(hub.title, hub.url);
 
-  // Validate each hub one by one
-  for (let i = 0; i < placeHubs.length; i++) {
-    const hub = placeHubs[i];
-    const num = `${i + 1}.`.padEnd(6);
-    const placeName = (hub.place_slug || '').split('-').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-    
-    // First validate the hub itself
-    const result = validator.validatePlaceHub(hub.title, hub.url);
-    
-    if (!result.isValid) {
-      console.log(`${num}❌ ${placeName.padEnd(30)} - INVALID: ${result.reason}`);
-      console.log(`      Deleting: ${hub.url}`);
-      
-      try {
-        deleteStmt.run(hub.id);
-        invalidCount++;
-        deleted.push({
-          id: hub.id,
-          title: hub.title,
-          url: hub.url,
-          place_slug: hub.place_slug,
-          reason: result.reason
-        });
-      } catch (error) {
-        console.log(`      Error deleting: ${error.message}`);
+      if (!result.isValid) {
+        console.log(`${num}❌ ${placeName.padEnd(30)} - INVALID: ${result.reason}`);
+        console.log(`      Deleting: ${hub.url}`);
+
+        try {
+          deletePlaceHubById(db, hub.id);
+          invalidCount++;
+          deleted.push({
+            id: hub.id,
+            title: hub.title,
+            url: hub.url,
+            place_slug: hub.place_slug,
+            reason: result.reason
+          });
+        } catch (error) {
+          console.log(`      Error deleting: ${error.message}`);
+        }
+        continue;
       }
-      continue;
-    }
-    
-    // Hub is valid, now check if URL needs normalization
-    const normalized = validator.normalizeHubUrl(hub.url);
-    
-    if (normalized === hub.url) {
-      // URL is already normalized
-      console.log(`${num}✅ ${placeName.padEnd(30)} - Valid (already normalized)`);
-      unchangedCount++;
-      validCount++;
-    } else {
-      // URL needs normalization - validate the normalized URL
-      console.log(`${num}🔄 ${placeName.padEnd(30)} - Normalizing...`);
-      console.log(`      Old: ${hub.url}`);
-      console.log(`      New: ${normalized}`);
-      
-      const contentValid = await validator.validateHubContent(normalized, placeName);
-      
-      if (contentValid.isValid) {
-        validator.updateStmt.run(normalized, hub.id);
-        console.log(`      ✅ Validated and updated`);
-        normalizedCount++;
-        validCount++;
-      } else {
-        console.log(`      ⚠️  Normalized URL failed validation: ${contentValid.reason}`);
-        console.log(`      Keeping original URL`);
+
+      // Hub is valid, now check if URL needs normalization
+      const normalized = validator.normalizeHubUrl(hub.url);
+
+      if (normalized === hub.url) {
+        // URL is already normalized
+        console.log(`${num}✅ ${placeName.padEnd(30)} - Valid (already normalized)`);
         unchangedCount++;
         validCount++;
+      } else {
+        // URL needs normalization - validate the normalized URL
+        console.log(`${num}🔄 ${placeName.padEnd(30)} - Normalizing...`);
+        console.log(`      Old: ${hub.url}`);
+        console.log(`      New: ${normalized}`);
+
+        const contentValid = await validator.validateHubContent(normalized, placeName);
+
+        if (contentValid.isValid) {
+          updatePlaceHubUrl(db, hub.id, normalized);
+          console.log(`      ✅ Validated and updated`);
+          normalizedCount++;
+          validCount++;
+        } else {
+          console.log(`      ⚠️  Normalized URL failed validation: ${contentValid.reason}`);
+          console.log(`      Keeping original URL`);
+          unchangedCount++;
+          validCount++;
+        }
       }
     }
-  }
 
-  // Summary
-  console.log('\n' + '─'.repeat(120));
-  console.log(`\n📊 Verification Summary:`);
-  console.log(`   Total entries checked: ${placeHubs.length}`);
-  console.log(`   ✅ Valid place hubs: ${validCount}`);
-  console.log(`      - Already normalized: ${unchangedCount}`);
-  console.log(`      - Newly normalized: ${normalizedCount}`);
-  console.log(`   ❌ Invalid entries removed: ${invalidCount}`);
-  if (placeHubs.length > 0) {
-    console.log(`   Success rate: ${((validCount / placeHubs.length) * 100).toFixed(1)}%`);
+    // Summary
+    console.log('\n' + '─'.repeat(120));
+    console.log(`\n📊 Verification Summary:`);
+    console.log(`   Total entries checked: ${placeHubs.length}`);
+    console.log(`   ✅ Valid place hubs: ${validCount}`);
+    console.log(`      - Already normalized: ${unchangedCount}`);
+    console.log(`      - Newly normalized: ${normalizedCount}`);
+    console.log(`   ❌ Invalid entries removed: ${invalidCount}`);
+    if (placeHubs.length > 0) {
+      console.log(`   Success rate: ${((validCount / placeHubs.length) * 100).toFixed(1)}%`);
+    }
+    console.log('');
+  } finally {
+    await db.close();
   }
-  console.log('');
-
-  // Close database
-  db.close();
 }
 
 // Run verification
