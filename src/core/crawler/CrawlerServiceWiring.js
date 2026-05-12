@@ -32,7 +32,22 @@ const { ConfigManager } = require('../../shared/config/ConfigManager');
 const { setPriorityConfigProfile, resolvePriorityProfileFromCrawlType } = require('../../shared/utils/priorityConfig');
 const { is_array } = require('lang-tools');
 const { parseRetryAfter } = require('./utils');
-const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
+
+const DEFAULT_STARTUP_FETCH_TIMEOUT_MS = Number(process.env.CRAWLER_STARTUP_FETCH_TIMEOUT_MS || 15000);
+
+async function timeoutFetch(url, options = {}) {
+  const fetchImpl = typeof globalThis.fetch === 'function'
+    ? globalThis.fetch.bind(globalThis)
+    : (await import('node-fetch')).default;
+  if (options && options.signal) return fetchImpl(url, options);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), DEFAULT_STARTUP_FETCH_TIMEOUT_MS);
+  try {
+    return await fetchImpl(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 // Phase 1: Resilience services
 const { ResilienceService } = require('./services/ResilienceService');
@@ -319,7 +334,7 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
   crawler.robotsCoordinator = new RobotsAndSitemapCoordinator({
     baseUrl: crawler.baseUrl,
     domain: crawler.domain,
-    fetchImpl: fetch,
+    fetchImpl: timeoutFetch,
     robotsParser,
     loadSitemaps,
     useSitemap: crawler.useSitemap,

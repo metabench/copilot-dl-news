@@ -30,7 +30,22 @@ const {
   isBasicMode
 } = require('./CrawlerConfigNormalizer');
 
+const {
+  DEFAULT_PROFILE_NAME,
+  PROFILES: DEFAULT_CRAWL_PROFILES,
+  getDefaultCrawlProfile,
+  listProfileNames: listDefaultCrawlProfileNames,
+  buildOverrides: buildDefaultCrawlOverrides
+} = require('./defaultCrawlProfiles');
+
 module.exports = {
+  // Default CLI profiles (single source of truth for sensible defaults)
+  DEFAULT_PROFILE_NAME,
+  DEFAULT_CRAWL_PROFILES,
+  getDefaultCrawlProfile,
+  listDefaultCrawlProfileNames,
+  buildDefaultCrawlOverrides,
+
   // Constants
   DEFAULT_OUTPUT_VERBOSITY,
   DEFAULT_FEATURE_FLAGS,

@@ -4,6 +4,51 @@
 
 ---
 
+## Architect Contract — `npm run crawl` (added 2026-05-12)
+
+**Boundary**: pure CLI/config layer; no engine changes.
+- `tools/crawl/run.js` — easy multi-site dispatcher (positional URL/hostname/CSV/`@list-name`); now also handles **local vs remote** target selection and wraps execution with a **live throughput meter**.
+- `tools/crawl/lib/throughput-meter.js` — reusable docs/sec + bytes/sec sampler. Local mode polls `data/news.db` (`fetches.bytes_downloaded`, `fetches.fetched_at`) via direct better-sqlite3 readonly; remote mode polls `GET /api/status` on the fleet host and surfaces `aggregate.totalFetched/totalBytes`.
+- `crawl-lists/` — user-curated newline/JSON lists, referenceable as `@<filename-stem>`.
+- `src/core/crawler/config/defaultCrawlProfiles.js` — single source of truth for sensible CLI defaults (`safe`/`fast`/`gentle`); **engine constructor defaults intentionally untouched**.
+
+**Owning repo**: `copilot-dl-news` (CLI + config). No cross-repo dependencies.
+
+**Dependents**: `npm run crawl` script in `package.json` now points to `run.js`; legacy `index.js` still reachable via `npm run crawl:legacy` and via run.js fallback for non-batch shapes. Remote dispatch reuses `crawl-remote.js launch` unchanged.
+
+**New flags (2026-05-12 follow-up)**:
+- `--local` *(default)* — dispatch to `crawl-batch.js` against the local UI v1 API.
+- `--remote` — dispatch to `crawl-remote.js launch --domains <hosts-csv>`; hostnames derived from positional URLs/lists.
+- `--remote-host <h>` — explicit fleet host (else `$FLEET_HOST` → `.fleet-host` file → `crawl-remote.js` default).
+- `--no-meter` / `--meter` — toggle the live throughput meter (enabled by default; writes to **stderr** so safe with `--json` stdout).
+- `--meter-interval <ms>` — sample interval, default 2000.
+- `--db <path>` — DB path for the local meter, default `data/news.db`.
+
+**Watch / stay-open mode (2026-05-12 follow-up)**:
+- `--watch` — after launch, stay attached and poll backend status until all targets reach a terminal state (or timeout). Default off (fire-and-forget preserved).
+- `--no-watch` — explicitly disable (overrides a prior `--watch`).
+- `--watch-interval <ms>` — poll interval, default 5000.
+- `--watch-timeout <sec>` — overall watch budget, default 1800 (30 min).
+- Local watch uses a "no fetch growth for 3 polls" heuristic since local has no per-domain state field; remote watch uses real `state`/`isRunning` from `/api/status`.
+- `crawl-remote.js watch [--domains a,b] [--watch-interval ms] [--watch-timeout sec] [--json]` — standalone watch subcommand against the fleet (uses the same `CrawlBackend` loop).
+
+**Interchangeable local + fleet code path (2026-05-12 follow-up)**:
+- `tools/crawl/lib/crawl-backend.js` — `CrawlBackend` interface + `LocalBackend` (UI v1 + SQLite readonly status) + `RemoteBackend` (fleet `/api/status` + `/api/start` + `/api/stop`). One **NormalizedStatus** shape: `{ ok, kind, label, totals:{fetched,errors,pending,stored?,bytes?}, throughput:{fetchesPerSec,writesPerSec,windowSec?}, domains:[{domain,state,isRunning,fetched,errors,pending,stored?,bytes?,startedAt?,stoppedAt?,fatalState?}], raw }`. Static helper `CrawlBackend.allTerminal(status, hosts)` powers the watch loop on both sides. `getBackend('local'|'remote', opts)` factory picks the implementation.
+
+**Evidence**: `tests/tools/crawl/run.test.js` — **52** unit tests including watch/fail-fast flag parsing and no-output child timeout coverage. `tests/tools/crawl/crawl-batch.test.js` — **4** unit tests for local-launch retry classification and concise elapsed formatting. `tests/tools/crawl/crawl-backend.test.js` — **17** unit tests covering pure helpers, factory, `allTerminal`/`missingHosts` truth tables, `LocalBackend.status()` against an on-disk fixture DB, `RemoteBackend.status()` shape normalization, lifecycle request bodies, and HTTP timeout cleanup.
+
+**Validation**:
+- `npm run test:by-path -- tests/tools/crawl/run.test.js tests/tools/crawl/crawl-batch.test.js tests/tools/crawl/crawl-backend.test.js` (73 passing).
+- Smoke: `node tools/crawl/run.js --explain --json bbc.com,reuters.com` → `mode:"batch"`, delegated `crawl-batch.js`.
+- Smoke: `node tools/crawl/run.js --remote --explain --json bbc.com,reuters.com` → `mode:"batch-remote"`, delegated `crawl-remote.js launch --domains bbc.com,reuters.com …`.
+- Smoke: `node tools/crawl/run.js --remote --explain --json --watch --watch-interval 3000 --watch-timeout 60 bbc.com,reuters.com` → flags accepted, delegate args unchanged.
+- Smoke: `node tools/crawl/crawl-remote.js help` lists `watch` subcommand.
+- Live-meter smoke: `node -e "require('./tools/crawl/lib/throughput-meter').startLocalMeter({ dbPath:'./data/news.db', sinceIso:new Date(Date.now()-3600e3).toISOString(), intervalMs:700 })"` ticks every interval and prints a final summary.
+
+**Deferred** (not landed in this pass): engine-level idle-exit + duplicate-ratio stop guards. Those need engine knowledge inside `CrawlerConfigNormalizer.js` / runtime; CLI dispatcher is reversible and already cuts the most common ergonomic friction.
+
+---
+
 ## What's Here
 
 This directory contains CLI tools for running and managing crawls. The **unified launcher** (`index.js`) is the preferred entry point for most crawl operations.
@@ -13,6 +58,7 @@ This directory contains CLI tools for running and managing crawls. The **unified
 | File | Purpose | Status |
 |------|---------|--------|
 | `index.js` | **Unified crawl launcher** — delegates to tools and profiles | ✅ Working |
+| `run.js` | **Easy multi-site dispatcher** — entry point for `npm run crawl` (URL/CSV/`@list`); delegates to `crawl-batch.js` for batch shapes and to `index.js` for everything else | ✅ Working |
 | `cloud-crawl-e2e.js` | **Strict 15-minute cloud crawl validation** — preflight, useful crawl window, drain/sync, DB/ledger/perf diagnostics | ✅ Working |
 | `crawl-remote.js` | **Remote multi-domain crawl** — start/stop/sync/monitor remote crawlers (the canonical "distributed node" entry point) | ✅ Working |
 | `crawl-batch.js` | **Batch in-process crawl launcher** — POST N jobs to the unified UI v1 API (`/api/v1/crawl/operations/:op/start`) with bounded concurrency + retries | ✅ Working |
@@ -26,6 +72,8 @@ This directory contains CLI tools for running and managing crawls. The **unified
 | `migrate-db-for-worker.js` | DB migration: worker schema | Utility |
 | `lib/crawl-remote-bounded.js` | Bounded crawl helper (used by `crawl-remote.js`) | Internal |
 | `lib/fleet-host-resolver.js` | Resolves fleet host (env `FLEET_HOST` → `.fleet-host` → default `141.144.193.218`) | Internal |
+| `lib/throughput-meter.js` | Live docs/sec + bytes/sec sampler (local DB poll + remote `/api/status` poll); used by `run.js` to print a stderr meter while crawls run | Internal |
+| `lib/crawl-backend.js` | **Unified `CrawlBackend` interface** + `LocalBackend` / `RemoteBackend` — one normalized status shape across local UI v1 and remote v2 fleet; powers `--watch` follow loops in both `run.js` and `crawl-remote.js watch` | Internal |
 
 > **Terminology rule**: In this repo, **simple crawl** means low-scope and easy to run (few domains/pages, bounded timeout). It does **not** mean local-only. The canonical simple crawl is distributed through `simple-distributed-smoke` unless a user explicitly asks for a local crawl.
 

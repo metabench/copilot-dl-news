@@ -1,5 +1,20 @@
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const { XMLParser } = require('fast-xml-parser');
+
+const DEFAULT_SITEMAP_FETCH_TIMEOUT_MS = Number(process.env.CRAWLER_SITEMAP_FETCH_TIMEOUT_MS || 15000);
+
+async function timeoutFetch(url, options = {}) {
+  const fetchImpl = typeof globalThis.fetch === 'function'
+    ? globalThis.fetch.bind(globalThis)
+    : (await import('node-fetch')).default;
+  if (options && options.signal) return fetchImpl(url, options);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), DEFAULT_SITEMAP_FETCH_TIMEOUT_MS);
+  try {
+    return await fetchImpl(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 async function parseXmlMaybe(xml) {
   try {
@@ -28,7 +43,7 @@ async function loadSitemaps(baseUrl, domain, sitemapUrls, opts) {
 
   const fetchText = async (u) => {
     try {
-      const res = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)' } });
+      const res = await timeoutFetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)' } });
       if (!res.ok) return null;
       return await res.text();
     } catch { return null; }

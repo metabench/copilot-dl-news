@@ -83,8 +83,9 @@ function parseArgs(argv) {
     maxPages: 1000,
     maxDepth: 6,
     concurrency: 5,
-    retries: 2,
+    retries: 0,
     retryDelayMs: 1500,
+    requestTimeoutMs: 15000,
     uiHost: process.env.UI_HOST || '127.0.0.1',
     uiPort: Number(process.env.UI_PORT || 3000),
     uiBase: '/api/v1/crawl',
@@ -109,6 +110,7 @@ function parseArgs(argv) {
       case '--concurrency': case '-c': opts.concurrency = Number(next()); break;
       case '--retries': opts.retries = Number(next()); break;
       case '--retry-delay-ms': opts.retryDelayMs = Number(next()); break;
+      case '--request-timeout-ms': opts.requestTimeoutMs = Number(next()); break;
       case '--ui-host': opts.uiHost = next(); break;
       case '--ui-port': opts.uiPort = Number(next()); break;
       case '--ui-base': opts.uiBase = next(); break;
@@ -155,9 +157,16 @@ function resolveUrls(opts) {
 // HTTP helpers
 // ─────────────────────────────────────────────────────────────────
 
-function postJson({ host, port, path: urlPath, body }, timeoutMs = 30000) {
+function postJson({ host, port, path: urlPath, body }, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
     const data = Buffer.from(JSON.stringify(body));
+    let settled = false;
+    const settle = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      try { req.setTimeout(0); } catch (_e) {}
+      fn(value);
+    };
     const req = http.request({
       host, port, method: 'POST', path: urlPath,
       headers: { 'content-type': 'application/json', 'content-length': data.length }
@@ -167,33 +176,55 @@ function postJson({ host, port, path: urlPath, body }, timeoutMs = 30000) {
       res.on('end', () => {
         const text = Buffer.concat(chunks).toString('utf8');
         let parsed; try { parsed = JSON.parse(text); } catch { parsed = { raw: text }; }
-        resolve({ status: res.statusCode, body: parsed });
+        settle(resolve, { status: res.statusCode, body: parsed });
       });
     });
-    req.setTimeout(timeoutMs, () => req.destroy(new Error(`request timeout after ${timeoutMs}ms`)));
-    req.on('error', reject);
+    req.setTimeout(timeoutMs, () => {
+      if (!settled) {
+        try { req.destroy(); } catch (_e) {}
+        settle(reject, new Error(`request timeout after ${timeoutMs}ms`));
+      }
+    });
+    req.on('error', err => settle(reject, err));
     req.write(data); req.end();
   });
 }
 
 function getJson({ host, port, path: urlPath }, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const settle = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      try { req.setTimeout(0); } catch (_e) {}
+      fn(value);
+    };
     const req = http.request({ host, port, method: 'GET', path: urlPath }, res => {
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => {
         const text = Buffer.concat(chunks).toString('utf8');
         let parsed; try { parsed = JSON.parse(text); } catch { parsed = { raw: text }; }
-        resolve({ status: res.statusCode, body: parsed });
+        settle(resolve, { status: res.statusCode, body: parsed });
       });
     });
-    req.setTimeout(timeoutMs, () => req.destroy(new Error(`request timeout after ${timeoutMs}ms`)));
-    req.on('error', reject);
+    req.setTimeout(timeoutMs, () => {
+      if (!settled) {
+        try { req.destroy(); } catch (_e) {}
+        settle(reject, new Error(`request timeout after ${timeoutMs}ms`));
+      }
+    });
+    req.on('error', err => settle(reject, err));
     req.end();
   });
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function formatElapsed(startedAt, finishedAt) {
+  const elapsedMs = Math.max(0, Date.parse(finishedAt) - Date.parse(startedAt));
+  return `${(elapsedMs / 1000).toFixed(1)}s`;
+}
 
 async function preflight({ host, port, base }, log) {
   const url = `${base}/availability?operations=true&sequences=false`;
@@ -210,26 +241,41 @@ async function preflight({ host, port, base }, log) {
   }
 }
 
-async function startOne({ host, port, base, operation, startUrl, overrides, retries, retryDelayMs, log }) {
+function isRetryableStartFailure(status, body, errorMessage = '') {
+  if (status === 408 || status === 429 || status >= 500) return true;
+  const text = `${body && JSON.stringify(body) || ''} ${errorMessage}`;
+  if (/ECONNRESET|ETIMEDOUT|timeout|socket hang up/i.test(text)) return true;
+  if (/JOB_CONFLICT|already running|single.*job|conflict/i.test(text)) return false;
+  if (status >= 400 && status < 500) return false;
+  return true;
+}
+
+async function startOne({ host, port, base, operation, startUrl, overrides, retries, retryDelayMs, requestTimeoutMs, log }) {
   const urlPath = `${base}/operations/${encodeURIComponent(operation)}/start`;
   let lastErr = null;
+  let retryable = true;
+  let attempts = 0;
   for (let attempt = 0; attempt <= retries; attempt++) {
+    attempts = attempt + 1;
     try {
-      const r = await postJson({ host, port, path: urlPath, body: { startUrl, overrides } });
+      const r = await postJson({ host, port, path: urlPath, body: { startUrl, overrides } }, requestTimeoutMs);
       if (r.status >= 200 && r.status < 300) {
         const jobId = r.body && (r.body.jobId || (r.body.job && r.body.job.id));
         return { ok: true, status: r.status, jobId, body: r.body, attempts: attempt + 1 };
       }
       lastErr = new Error(`HTTP ${r.status}: ${JSON.stringify(r.body).slice(0, 200)}`);
+      retryable = isRetryableStartFailure(r.status, r.body, lastErr.message);
     } catch (err) {
       lastErr = err;
+      retryable = isRetryableStartFailure(0, null, err.message);
     }
+    if (!retryable) break;
     if (attempt < retries) {
       log(`  retry ${attempt + 1}/${retries} for ${startUrl} (${lastErr.message})`);
       await sleep(retryDelayMs);
     }
   }
-  return { ok: false, error: lastErr ? lastErr.message : 'unknown error', attempts: retries + 1 };
+  return { ok: false, error: lastErr ? lastErr.message : 'unknown error', attempts, retryable };
 }
 
 // Bounded-concurrency runner
@@ -299,6 +345,7 @@ async function main() {
     operation: opts.operation,
     concurrency: opts.concurrency,
     retries: opts.retries,
+    requestTimeoutMs: opts.requestTimeoutMs,
     overrides,
     urls
   };
@@ -333,7 +380,7 @@ async function main() {
     const r = await startOne({
       host: opts.uiHost, port: opts.uiPort, base: opts.uiBase,
       operation: opts.operation, startUrl, overrides,
-      retries: opts.retries, retryDelayMs: opts.retryDelayMs, log
+      retries: opts.retries, retryDelayMs: opts.retryDelayMs, requestTimeoutMs: opts.requestTimeoutMs, log
     });
     log(`  ${r.ok ? '✓' : '✗'} ${startUrl}` + (r.jobId ? ` jobId=${r.jobId}` : '') + (r.error ? ` (${r.error})` : ''));
     return Object.assign({ startUrl }, r);
@@ -355,7 +402,7 @@ async function main() {
     process.stdout.write(JSON.stringify(summary, null, 2) + '\n');
   } else {
     log('');
-    log(`Done — ${ok}/${results.length} jobs accepted, ${fail} failed.`);
+    log(`Launch summary: accepted=${ok}/${results.length} failed=${fail} elapsed=${formatElapsed(startedAt, finishedAt)}`);
     if (fail) {
       log('Failed:');
       for (const r of results.filter(r => !r.ok)) log(`  - ${r.startUrl}: ${r.error}`);
@@ -372,4 +419,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseArgs, resolveUrls, PRESETS, runWithConcurrency, startOne, preflight };
+module.exports = { parseArgs, resolveUrls, PRESETS, runWithConcurrency, startOne, preflight, isRetryableStartFailure, formatElapsed };

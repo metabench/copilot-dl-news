@@ -40,3 +40,14 @@
 ## UI Validation Note
 
 - The compact strip was structurally render-checked rather than screenshot-reviewed in this slice because the user explicitly deferred the fuller UI implementation plan. Stable screenshot selectors were added so the next UI pass can capture and review it cleanly.
+
+## 2026-05-12 CLI Fail-Fast Follow-Up
+
+- User attempted a local 5-site crawl with metrics; the local UI/API path failed early when the server was absent, but later recovery attempts exposed ambiguous hangs in local server/runtime paths.
+- New objective: make crawl CLI tools fail early when prerequisites or child processes fail, avoid buffered/no-output waits, and make metrics concise enough to understand success/failure quickly.
+- Scope stays in crawl tooling and wrappers where possible; runtime crawler fixes belong to the crawler implementation layer if a lower-level fetch loop still stalls after CLI guardrails.
+- Implemented delegated child supervision in `tools/crawl/run.js`: launch timeout, no-output timeout, live stdout/stderr piping, hard-kill fallback, and skipped watch polling after failed launch.
+- Tightened local batch launch failure behavior in `tools/crawl/crawl-batch.js`: no implicit retries, request timeout option, non-retryable `JOB_CONFLICT`/4xx handling, and compact launch summary.
+- Condensed final throughput summaries in `tools/crawl/lib/throughput-meter.js` to one line with elapsed/docs/avg/peak/bytes.
+- Validation: syntax checks passed for modified crawl CLI files/tests; `npm run test:by-path -- tests/tools/crawl/run.test.js tests/tools/crawl/crawl-batch.test.js tests/tools/crawl/crawl-backend.test.js` passed 73 tests.
+- Failure smoke: `node tools\crawl\run.js --local --launch-timeout 10 --no-output-timeout 5 --max-pages 1 bbc.com` failed in 0.1s with local UI preflight `ECONNREFUSED`, `[run] local-launch exit=3`, and concise zero-throughput summary.

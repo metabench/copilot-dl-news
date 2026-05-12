@@ -1,12 +1,27 @@
 const robotsParser = require('robots-parser');
 const { compact } = require('../../shared/utils/pipelines');
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+
+const DEFAULT_ROBOTS_FETCH_TIMEOUT_MS = Number(process.env.CRAWLER_ROBOTS_FETCH_TIMEOUT_MS || 15000);
+
+async function timeoutFetch(url, options = {}) {
+  const fetchImpl = typeof globalThis.fetch === 'function'
+    ? globalThis.fetch.bind(globalThis)
+    : (await import('node-fetch')).default;
+  if (options && options.signal) return fetchImpl(url, options);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), DEFAULT_ROBOTS_FETCH_TIMEOUT_MS);
+  try {
+    return await fetchImpl(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 async function loadRobots(baseUrl) {
   const robotsUrl = `${baseUrl}/robots.txt`;
   let rules = null, sitemaps = [], loaded = false;
   try {
-    const res = await fetch(robotsUrl);
+    const res = await timeoutFetch(robotsUrl);
     if (res.ok) {
       const txt = await res.text();
       rules = robotsParser(robotsUrl, txt);

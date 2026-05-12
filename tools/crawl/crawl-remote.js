@@ -98,6 +98,8 @@ Commands:
   sync  [--interval 5]      Continuous timestamped batch sync loop
   errors [--limit 50]       Show recent errors
   content                   Content stats by domain
+  watch [--domains d1,d2]   Stay attached and poll status until terminal
+                              (--watch-interval ms, --watch-timeout sec, --json)
 
 Options:
   --host <host:port>     Remote server (default: env/resolver or 141.144.193.218:3200)
@@ -538,6 +540,116 @@ async function cmdHealth() {
   }
 }
 
+async function cmdWatch() {
+  // Watch (follow) mode — polls /api/status until all targets reach a terminal
+  // state, watch-timeout fires, or Ctrl-C. Uses the shared CrawlBackend so the
+  // same loop works against any backend.
+  const { getBackend, CrawlBackend } = require('./lib/crawl-backend');
+  const intervalMs = Math.max(1000, Number(args['watch-interval']) || 5000);
+  const timeoutMs = Math.max(1000, (Number(args['watch-timeout']) || 1800) * 1000);
+  const requestedHosts = args.domains
+    ? args.domains.split(',').map(s => s.trim()).filter(Boolean)
+    : (args.domain ? [args.domain] : null);
+
+  const backend = getBackend('remote', { host: REMOTE_HOST });
+  const startTs = Date.now();
+  let firstStatus = null;
+  try {
+    firstStatus = await backend.status({ hosts: requestedHosts });
+  } catch (err) {
+    console.error(`  Initial status fetch failed: ${err.message}`);
+    process.exit(1);
+  }
+
+  // RemoteBackend.status() never throws on HTTP error — it returns ok:false.
+  // Detect that here so we don't silently fall through with an empty domain
+  // list and print the misleading "No domains to watch" message.
+  if (firstStatus && firstStatus.ok === false) {
+    console.error(`  Initial status fetch failed: ${firstStatus.error || 'unknown error'} (host=${REMOTE_HOST})`);
+    process.exit(1);
+  }
+
+  const targets = requestedHosts && requestedHosts.length
+    ? requestedHosts
+    : firstStatus.domains.map(d => d.domain);
+  if (!targets.length) {
+    console.error('  No domains to watch');
+    process.exit(1);
+  }
+
+  if (!JSON_OUTPUT) {
+    console.log(`▶ Watching ${REMOTE_HOST} — ${targets.length} target(s), poll ${intervalMs}ms, timeout ${Math.round(timeoutMs/1000)}s`);
+  }
+
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  // After ~5 consecutive poll errors, treat the backend as dead and bail so a
+  // long timeout doesn't silently hang the CLI for the full window.
+  const MAX_CONSECUTIVE_ERRORS = 5;
+  const MAX_MISSING_POLLS = 3;
+  let consecutiveErrors = 0;
+  let consecutiveMissing = 0;
+  let last = firstStatus;
+  let stoppedReason = null;
+  while (true) {
+    if (Date.now() - startTs > timeoutMs) {
+      stoppedReason = 'timeout';
+      if (!JSON_OUTPUT) console.log('⏰ Watch timeout reached');
+      break;
+    }
+    const missingTargets = CrawlBackend.missingHosts(last, targets);
+    if (missingTargets.length > 0) {
+      consecutiveMissing++;
+      if (!JSON_OUTPUT) console.error(`  (missing targets: ${missingTargets.join(', ')}; ${consecutiveMissing}/${MAX_MISSING_POLLS})`);
+      if (consecutiveMissing >= MAX_MISSING_POLLS) {
+        stoppedReason = 'missing-targets';
+        if (!JSON_OUTPUT) console.error(`  ✗ Requested targets never appeared in remote status: ${missingTargets.join(', ')}`);
+        break;
+      }
+    } else {
+      consecutiveMissing = 0;
+    }
+    if (missingTargets.length === 0 && CrawlBackend.allTerminal(last, targets)) {
+      stoppedReason = 'terminal';
+      if (!JSON_OUTPUT) console.log('✅ All targets reached terminal state');
+      break;
+    }
+    if (JSON_OUTPUT) {
+      console.log(JSON.stringify({ watchTick: { ts: new Date().toISOString(), totals: last.totals, throughput: last.throughput, domains: last.domains } }));
+    } else {
+      const tp = (last.throughput && last.throughput.fetchesPerSec) ? ` ${last.throughput.fetchesPerSec.toFixed(2)}/s` : '';
+      console.log(`  · fetched=${last.totals.fetched} stored=${last.totals.stored||0} errors=${last.totals.errors} pending=${last.totals.pending}${tp}`);
+    }
+    await sleep(intervalMs);
+    try {
+      const next = await backend.status({ hosts: requestedHosts });
+      if (next && next.ok === false) {
+        consecutiveErrors++;
+        if (!JSON_OUTPUT) console.error(`  (poll error: ${next.error || 'unknown'}; ${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS})`);
+      } else {
+        consecutiveErrors = 0;
+        last = next;
+      }
+    } catch (err) {
+      consecutiveErrors++;
+      if (!JSON_OUTPUT) console.error(`  (poll error: ${err.message}; ${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS})`);
+    }
+    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+      stoppedReason = 'poll-errors';
+      if (!JSON_OUTPUT) console.error(`  ✗ Backend unreachable after ${MAX_CONSECUTIVE_ERRORS} consecutive poll errors — aborting watch`);
+      break;
+    }
+  }
+  // Print the last observed state on exit so the user always sees the final
+  // counters (the print-then-fetch loop above otherwise drops the final tick).
+  if (!JSON_OUTPUT) {
+    const tp = (last && last.throughput && last.throughput.fetchesPerSec) ? ` ${last.throughput.fetchesPerSec.toFixed(2)}/s` : '';
+    console.log(`  · final fetched=${last.totals.fetched} stored=${last.totals.stored||0} errors=${last.totals.errors} pending=${last.totals.pending}${tp}`);
+  } else {
+    console.log(JSON.stringify({ watchFinal: { stoppedReason, totals: last.totals, throughput: last.throughput, domains: last.domains, missingTargets: CrawlBackend.missingHosts(last, targets) } }));
+  }
+  if (stoppedReason === 'poll-errors' || stoppedReason === 'missing-targets') process.exit(2);
+}
+
 async function cmdStart() {
   const body = {};
   if (args.domain) body.domain = args.domain;
@@ -580,6 +692,45 @@ async function ensureDomainsForRun(initialStatus, targetDomains, maxPagesOverrid
   return initialStatus;
 }
 
+function summarizeStartResults(startData, targetDomains = []) {
+  const results = Array.isArray(startData?.results)
+    ? startData.results
+    : (startData?.domain ? [startData] : []);
+  const targets = normalizeDomains(targetDomains);
+  const byDomain = new Map(results
+    .filter(item => item && item.domain)
+    .map(item => [String(item.domain).toLowerCase(), item]));
+  const failures = results.filter(item => {
+    const status = String(item?.status || '').toLowerCase();
+    return Boolean(item?.error || /error|fail|failed|rejected|invalid/.test(status));
+  });
+  const missing = results.length > 0
+    ? targets.filter(domain => !byDomain.has(String(domain).toLowerCase()))
+    : [];
+  const topLevelError = startData?.ok === false || startData?.error;
+  return {
+    ok: !topLevelError && failures.length === 0 && missing.length === 0,
+    results,
+    failures,
+    missing,
+    topLevelError: topLevelError ? (startData.error || 'start returned ok:false') : null,
+  };
+}
+
+function assertStartSucceeded(startData, targetDomains, label) {
+  const summary = summarizeStartResults(startData, targetDomains);
+  if (summary.ok) return summary;
+  const failureText = summary.failures
+    .map(item => `${item.domain || '(unknown)'}:${item.status || item.error || 'error'}`)
+    .join(', ');
+  const missingText = summary.missing.join(', ');
+  const parts = [];
+  if (summary.topLevelError) parts.push(summary.topLevelError);
+  if (failureText) parts.push(`failed: ${failureText}`);
+  if (missingText) parts.push(`missing results: ${missingText}`);
+  throw new Error(`${label} did not start cleanly (${parts.join('; ')})`);
+}
+
 async function cmdLaunch() {
   let { data: initialStatus } = await requestWithTimeout('GET', '/api/status', null, 10000);
   const targetDomains = resolveTargetDomains(args, initialStatus);
@@ -596,7 +747,8 @@ async function cmdLaunch() {
   applyStartOverrides(startBody);
 
   const { data: startData } = await requestWithTimeout('POST', '/api/start', startBody, 15000);
-  const result = { ok: true, targetDomains, started: startData };
+  const startSummary = assertStartSucceeded(startData, targetDomains, 'Launch');
+  const result = { ok: true, targetDomains, started: startData, startSummary };
 
   if (JSON_OUTPUT) {
     console.log(JSON.stringify(result, null, 2));
@@ -615,6 +767,7 @@ async function cmdLaunch() {
 async function cmdStop() {
   const body = {};
   if (args.domain) body.domain = args.domain;
+  else if (args.domains) body.domains = args.domains.split(',').map(s => s.trim()).filter(Boolean);
   // else: stop all
 
   const { data } = await requestWithTimeout('POST', '/api/stop', body, 15000);
@@ -995,6 +1148,7 @@ async function cmdRun() {
   else if (targetDomains.length > 0) startBody.domains = targetDomains;
   applyStartOverrides(startBody);
   const { data: startData } = await requestWithTimeout('POST', '/api/start', startBody, 15000);
+  assertStartSucceeded(startData, targetDomains, 'Run start');
 
   if (startData.results) {
     console.log(`  Started ${startData.started || startData.results.length} domain(s)`);
@@ -1018,8 +1172,8 @@ async function cmdRun() {
 
     // Attempt to stop the same domains we started
     const stopBody = {};
-    if (args.domain) stopBody.domain = args.domain;
-    else if (args.domains) stopBody.domains = args.domains.split(',').map(s => s.trim());
+    if (targetDomains.length === 1) stopBody.domain = targetDomains[0];
+    else if (targetDomains.length > 1) stopBody.domains = targetDomains;
 
     try {
       // Use an aggressive 5-second timeout for the shutdown hook so we don't hang
@@ -1187,10 +1341,12 @@ function formatBoundedSummary(summary) {
   const running = summary.running.map(status => `${status.domain}(${status.stats?.fetched || status.stats?.done || 0})`).join(', ');
   const completed = summary.completed.map(status => `${status.domain}(${status.stats?.fetched || status.stats?.done || 0})`).join(', ');
   const notStarted = summary.notStarted.map(status => status.domain).join(', ');
+  const unknown = summary.unknown.map(status => `${status.domain}(${status.reason || 'unknown'})`).join(', ');
   return {
     running: running || '(none)',
     completed: completed || '(none)',
     notStarted: notStarted || '(none)',
+    unknown: unknown || '(none)',
   };
 }
 
@@ -1214,7 +1370,10 @@ async function cmdBounded() {
   const startedAt = Date.now();
 
   const { data: startData } = await requestWithTimeout('POST', '/api/start', startBody, 15000);
+  assertStartSucceeded(startData, targetDomains, 'Bounded crawl start');
   let lastProgressKey = '';
+  let consecutiveUnknown = 0;
+  const maxUnknownPolls = 3;
 
   while (Date.now() - startedAt < timeoutMs) {
     const { data: statusData } = await requestWithTimeout('GET', '/api/status', null, 10000);
@@ -1223,6 +1382,7 @@ async function cmdBounded() {
       running: summary.running.map(domain => domain.domain),
       completed: summary.completed.map(domain => domain.domain),
       notStarted: summary.notStarted.map(domain => domain.domain),
+      unknown: summary.unknown.map(domain => domain.domain),
     });
 
     if (!JSON_OUTPUT && currentProgressKey !== lastProgressKey) {
@@ -1230,8 +1390,19 @@ async function cmdBounded() {
       console.log(`  Running: ${formatted.running}`);
       console.log(`  Completed: ${formatted.completed}`);
       console.log(`  Not started: ${formatted.notStarted}`);
+      console.log(`  Unknown: ${formatted.unknown}`);
       console.log('');
       lastProgressKey = currentProgressKey;
+    }
+
+    if (summary.unknown.length > 0) {
+      consecutiveUnknown++;
+      if (consecutiveUnknown >= maxUnknownPolls) {
+        const formatted = formatBoundedSummary(summary);
+        throw new Error(`Remote status did not include requested domains after ${consecutiveUnknown} polls: ${formatted.unknown}`);
+      }
+    } else {
+      consecutiveUnknown = 0;
     }
 
     if (summary.allDone) {
@@ -1257,7 +1428,7 @@ async function cmdBounded() {
   const formatted = formatBoundedSummary(finalSummary);
   throw new Error(
     `Timed out waiting for bounded crawl completion after ${formatDuration(timeoutMs)}. ` +
-    `Running: ${formatted.running}. Not started: ${formatted.notStarted}.`
+    `Running: ${formatted.running}. Not started: ${formatted.notStarted}. Unknown: ${formatted.unknown}.`
   );
 }
 
@@ -1278,6 +1449,7 @@ const COMMANDS = {
   sync: cmdSync,
   errors: cmdErrors,
   content: cmdContent,
+  watch: cmdWatch,
 };
 
 async function main() {
