@@ -1,0 +1,5 @@
+# Local user crawl lists; only the sample is tracked.
+*
+!.gitignore
+!README.md
+!uk-papers.txt

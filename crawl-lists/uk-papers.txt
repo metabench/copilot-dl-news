@@ -1,0 +1,7 @@
+# Sample list — UK national papers
+# Reference as: npm run crawl @uk-papers
+bbc.com/news
+theguardian.com/uk
+https://www.ft.com/
+https://www.thetimes.co.uk/
+https://www.telegraph.co.uk/
