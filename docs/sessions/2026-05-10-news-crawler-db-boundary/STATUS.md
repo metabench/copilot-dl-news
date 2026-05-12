@@ -1,12 +1,12 @@
 # Current Status: News Crawler DB Boundary
 
-Last checked: 2026-05-11.
+Last checked: 2026-05-12.
 
 ## Short Answer
 
-Not absolutely complete, because copilot still contains historical SQL migration artifacts, generated/static bundles, docs/examples, and non-DB query-string false positives. Active runtime/check/tool DB ownership is now largely moved behind `news-crawler-db` APIs.
+Complete for active DB ownership. `copilot-dl-news` no longer owns meaningful SQLite/Postgres SQL, schema contracts, DB fixture SQL, or driver calls in active runtime, UI, checks, and operational tools. Remaining broad-scan matches are explicitly classified residuals, not DB-boundary work.
 
-Substantial active slices have been migrated into `news-crawler-db`. The remaining work is now mostly active tool/script classification and migration/generated/test-only exceptions rather than active `src/core` runtime ownership, Postgres parity runtime ownership, or SQLite v1 query-wrapper ownership.
+Substantial active slices have been migrated into `news-crawler-db`. Remaining scan matches are generated/static bundles, docs/examples, source-analysis tooling strings, SPARQL/external query strings, regex parser loops, UI lab checks, or a deprecated source mutator.
 
 ## What Is Already Migrated
 
@@ -83,6 +83,12 @@ Substantial active slices have been migrated into `news-crawler-db`. The remaini
 - DB table-size diagnostic tooling and worker `dbstat` reads.
 - Telemetry cleanup utility delete/compaction DB operations.
 - Postgres container health checks, SQLite migration utility scripts, snapshot verification, gazetteer export iterators, maintenance wrappers, URL-classification samples, site-pattern listing, crawl-site threshold checks, benchmark probes, locale seeding, analytics download-history reads, unified-app dashboard counts, topic-hub cell samples, and remaining active DB smoke probes.
+- The JS domain crawl behaviors migration artifact now delegates to DB-owned schema constants and named ensure/drop helpers.
+- Query time-budget instrumentation helpers now live in `news-crawler-db`; the copilot helper is a compatibility re-export.
+- Legacy SQLite `.sql` migration artifacts from `src/data/db/migrations`, `src/data/db/sqlite/v1/migrations`, and the archived manual SQL snippet have DB-owned copies under `news-crawler-db/src/db/sqlite/migrations/copilot-legacy`; copilot retains non-executable placeholders only.
+- Postgres Docker bootstrap SQL is owned by `news-crawler-db/src/db/postgres/migrations/bootstrap/init-db.sql`; copilot deploy compose mounts that DB-module file and the old deploy script path is a placeholder.
+- UI scenario fixture setup and the final country-mapping coverage dev utility now delegate to named `news-crawler-db` APIs.
+- Residual broad-scan matches are documented in `config/db-boundary-residual-classifications.json`.
 
 The migrated copilot files are compatibility wrappers or callers; focused scans show no `.prepare(`, `.exec(`, `.pragma(`, `sqlite_master`, or common SQL statement patterns in those migrated slices.
 
@@ -94,17 +100,17 @@ Latest static inventory command:
 rg -n "\.prepare\(|\.exec\(|\.pragma\(|sqlite_master|CREATE TABLE|INSERT INTO|SELECT\s|UPDATE\s|DELETE FROM|client\.query|pool\.query|require\('pg'\)" src/data/db src/core src/services src/ui scripts deploy checks tools --glob '!node_modules/**' --glob '!data/**' --glob '!docs/**' --glob '!**/__tests__/**' --glob '!**/*.test.js' --glob '!**/*.test.ts' --glob '!wip/**' --glob '!public/**' | wc -l
 ```
 
-Result: `189` matches.
+Result: `125` matches.
 
-This count is intentionally broad. The remaining matches are now dominated by generated/schema artifacts, migration-only files, docs/examples, non-DB parser/query strings, and generated/static UI output.
+This count is intentionally broad. Every remaining path is classified in `config/db-boundary-residual-classifications.json`.
 
 Largest current match buckets:
 
-- Generated/deploy/migration SQL artifacts: `deploy/scripts/init-db.sql`, SQLite v1 migration files, `src/data/db/migrations/*`, and the JS migration string `src/data/db/sqlite/v1/migrations/029_domain_crawl_behaviors.js`.
-- Documentation/example text: `tools/corrections/README.md`, `deploy/README.md`, debug README content, and `src/data/db/AGENT.md`.
-- Source-analysis/dev tooling false positives: JS/SVG/Markdown scanners, edit tools, docs bridge scripts, knowledge-graph tools, and test-hang/source-string utilities that inspect code/text rather than databases.
+- Documentation/example text: correction/deploy/debug README content and local guidance.
+- Source-analysis/dev tooling strings: JS/SVG/Markdown scanners, edit tools, docs bridge scripts, knowledge-graph tools, and source-string utilities that inspect code/text rather than databases.
 - Generated/static browser output: built client bundles and source maps under `src/ui/server/**/public`, plus demo/art playground bundles.
 - Non-DB query strings and parser loops: SPARQL query builders in Wikidata/geography modules and `.exec` regex loops in sitemap/archive/hub-validator/remote-crawler parsing code.
+- UI lab/check fixtures and one deprecated source mutator that do not execute database access.
 
 Supplementary scan outside the broad active-path command should still be treated conservatively before deletion or relocation, but the latest active-path sweep no longer shows meaningful active copilot-owned DB operations outside migration/generated/docs/non-DB-string categories. Remaining migration artifacts should be moved or superseded by `news-crawler-db` migration packaging when that repo's migration distribution story is formalized.
 
@@ -112,9 +118,10 @@ Supplementary scan outside the broad active-path command should still be treated
 
 Recommended priority order:
 
-1. Move or retire remaining SQL migration/deploy artifacts (`deploy/scripts/init-db.sql`, `src/data/db/migrations/*`, SQLite v1 `.sql` migrations) once `news-crawler-db` has the agreed migration packaging/export/import workflow for both SQLite and Postgres.
-2. Keep generated/static bundles, docs/examples, dev source scanners, SPARQL query builders, and regex parser loops classified as non-DB-boundary exceptions in scans.
-3. As Postgres evolves, expose new parity behavior through named `news-crawler-db` APIs first; avoid reintroducing Postgres driver calls or SQLite-specific SQL into `copilot-dl-news`.
+1. Keep `config/db-boundary-residual-classifications.json` current when broad scans change.
+2. Delete or retire `tools/maintenance/fix-resume-all-test.js` when the old target test is confirmed obsolete.
+3. Regenerate generated/static UI bundles from source rather than hand-editing them.
+4. As Postgres evolves, expose new parity behavior through named `news-crawler-db` APIs first; avoid reintroducing Postgres driver calls or SQLite-specific SQL into `copilot-dl-news`.
 
 ## Postgres Target State
 

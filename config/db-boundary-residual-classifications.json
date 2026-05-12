@@ -1,0 +1,113 @@
+{
+  "updated": "2026-05-12",
+  "purpose": "Classifies broad SQL-pattern scan matches after DB access ownership moved to news-crawler-db.",
+  "scan": {
+    "command": "rg -n \"\\\\.prepare\\\\(|\\\\.exec\\\\(|\\\\.pragma\\\\(|sqlite_master|CREATE TABLE|INSERT INTO|SELECT\\\\s|UPDATE\\\\s|DELETE FROM|client\\\\.query|pool\\\\.query|require\\\\('pg'\\\\)\" src/data/db src/core src/services src/ui scripts deploy checks tools --glob '!node_modules/**' --glob '!data/**' --glob '!docs/**' --glob '!**/__tests__/**' --glob '!**/*.test.js' --glob '!**/*.test.ts' --glob '!wip/**' --glob '!public/**'"
+  },
+  "classifications": [
+    {
+      "category": "external-query-language",
+      "reason": "SPARQL/Wikidata query text, not local database access.",
+      "paths": [
+        "src/core/crawler/gazetteer/services/WikidataService.js",
+        "src/core/crawler/gazetteer/queries/geographyQueries.js",
+        "src/core/crawler/gazetteer/ingestors/WikidataCitiesIngestor.js",
+        "src/core/crawler/gazetteer/ingestors/WikidataAdm1Ingestor.js"
+      ]
+    },
+    {
+      "category": "regex-parser",
+      "reason": "Regular expression exec loops over HTML, XML, SVG, or rendered markup.",
+      "paths": [
+        "deploy/remote-crawler-v2/lib/run-worker.js",
+        "scripts/agent_runner.js",
+        "scripts/docs-bridge-mcp.js",
+        "scripts/read_svg_comments.js",
+        "src/core/crawler/hub-discovery/HubValidator.js",
+        "src/core/crawler/services/ArchiveDiscoveryStrategy.js",
+        "src/core/crawler/services/groups/ProcessingServices.js",
+        "src/core/crawler/sitemap.js",
+        "src/ui/server/decisionTreeViewer/checks/decisionTreeViewer.check.js",
+        "tools/dev/hub-discovery-e2e.js",
+        "tools/remote-crawl/news-crawler-server.js"
+      ]
+    },
+    {
+      "category": "source-analysis-tooling",
+      "reason": "Tools inspect, transform, or search source text and may contain SQL-like strings as data.",
+      "paths": [
+        "tools/ai/openai-agent-bridge.js",
+        "tools/dev/agent-files.js",
+        "tools/dev/check-knowledge-freshness.js",
+        "tools/dev/diagram-data.js",
+        "tools/dev/js-edit.js",
+        "tools/dev/js-edit/operations/discovery.js",
+        "tools/dev/js-edit/operations/mutation.js",
+        "tools/dev/js-edit/shared/rename.js",
+        "tools/dev/js-scan/lib/fileContext.js",
+        "tools/dev/js-scan/operations/callGraph.js",
+        "tools/dev/js-scan/operations/relationships.js",
+        "tools/dev/js-scan/operations/rippleAnalysis.js",
+        "tools/dev/knowledge-graph.js",
+        "tools/dev/lib/svgGuardSystem.js",
+        "tools/dev/md-scan.js",
+        "tools/dev/svg-components.js",
+        "tools/dev/svg-downloads-chart.js",
+        "tools/dev/svg-gen.js",
+        "tools/dev/svg-scan.js",
+        "tools/dev/svg-shared/hashUtils.js",
+        "tools/dev/svg-validate.js",
+        "tools/dev/test-hang-analyzer.js",
+        "tools/mcp/docs-memory/mcp-server.js"
+      ]
+    },
+    {
+      "category": "generated-or-static-ui",
+      "reason": "Generated/static browser bundles or source maps. Regenerate from source rather than hand-editing.",
+      "paths": [
+        "src/ui/server/artPlayground/client.bundle.js",
+        "src/ui/server/artPlayground/client.bundle.js.map",
+        "src/ui/server/controlHarness/public/control-harness-client.js",
+        "src/ui/server/controlHarness/public/control-harness-client.js.map",
+        "src/ui/server/decisionTreeViewer/public/decision-tree-client.js",
+        "src/ui/server/decisionTreeViewer/public/decision-tree-client.js.map",
+        "src/ui/server/designStudio/public/design-studio-client.js",
+        "src/ui/server/designStudio/public/design-studio-client.js.map",
+        "src/ui/server/docsViewer/public/docs-viewer-client.js",
+        "src/ui/server/docsViewer/public/docs-viewer-client.js.map",
+        "src/ui/server/wysiwyg-demo/public/js/bundle.js",
+        "src/ui/server/wysiwyg-demo/public/js/bundle.js.map"
+      ]
+    },
+    {
+      "category": "ui-lab-fixture-or-check",
+      "reason": "UI/lab checks and fixture code outside DB ownership. Review before promoting to active runtime.",
+      "paths": [
+        "src/ui/lab/run-lab-checks.js",
+        "src/ui/lab/experiments/020-jsgui3-server-activation/check.js",
+        "src/ui/lab/experiments/026-activation-contract-lab/check.js",
+        "src/ui/lab/experiments/029-mixed-builtins-custom-activation/check.js",
+        "src/ui/lab/experiments/047-svg-comment-context/src/client.js",
+        "src/ui/server/artPlayground/isomorphic/controls/CanvasControl.js"
+      ]
+    },
+    {
+      "category": "docs-or-guidance",
+      "reason": "Documentation, examples, and local guidance text, not executable DB ownership.",
+      "paths": [
+        "deploy/README.md",
+        "src/data/db/AGENT.md",
+        "src/data/db/migration/README.md",
+        "tools/corrections/README.md",
+        "tools/debug/README.md"
+      ]
+    },
+    {
+      "category": "deprecated-source-mutator",
+      "reason": "One-off maintenance script mutates old test source text; not database execution. Prefer deletion if the old target test is retired.",
+      "paths": [
+        "tools/maintenance/fix-resume-all-test.js"
+      ]
+    }
+  ]
+}

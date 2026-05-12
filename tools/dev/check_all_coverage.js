@@ -1,25 +1,49 @@
-const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
-const db = openNewsCrawlerDb('data/news.db');
 const fs = require('fs');
 
-const hosts = ['theguardian.com', 'independent.co.uk', 'aljazeera.com', 'reuters.com'];
-const totalCountries = db.prepare(`SELECT count(*) as cnt FROM places WHERE kind = 'country'`).get().cnt;
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 
-let output = `Total Countries: ${totalCountries}\n\n`;
+const DEFAULT_HOSTS = ['theguardian.com', 'independent.co.uk', 'aljazeera.com', 'reuters.com'];
 
-for (const host of hosts) {
-    const row = db.prepare(`
-        SELECT count(DISTINCT ppm.place_id) as cnt
-        FROM place_page_mappings ppm
-        JOIN places p ON p.id = ppm.place_id
-        WHERE ppm.host = ?
-          AND p.kind = 'country'
-    `).get(host);
-    
-    const pct = (row.cnt / totalCountries * 100).toFixed(1);
-    output += `Host: ${host}\n`;
-    output += `Coverage: ${row.cnt} / ${totalCountries} (${pct}%)\n\n`;
+function formatCoverageReport(report) {
+  let output = `Total Countries: ${report.totalCountries}\n\n`;
+
+  for (const row of report.hosts) {
+    output += `Host: ${row.host}\n`;
+    output += `Coverage: ${row.mappedCountries} / ${row.totalCountries} (${row.coveragePct.toFixed(1)}%)\n\n`;
+  }
+
+  return output;
 }
 
-fs.writeFileSync('tmp/final_coverage.txt', output);
-console.log('Written to tmp/final_coverage.txt');
+function runCoverageReport(options = {}) {
+  const dbPath = options.dbPath || 'data/news.db';
+  const outputPath = options.outputPath || 'tmp/final_coverage.txt';
+  const hosts = options.hosts || DEFAULT_HOSTS;
+  const db = openNewsCrawlerDb(dbPath);
+
+  try {
+    if (!db.placeHubDiagnostics || typeof db.placeHubDiagnostics.getCountryMappingCoverageByHosts !== 'function') {
+      throw new Error('news-crawler-db does not expose placeHubDiagnostics.getCountryMappingCoverageByHosts');
+    }
+
+    const report = db.placeHubDiagnostics.getCountryMappingCoverageByHosts(hosts);
+    const output = formatCoverageReport(report);
+    fs.writeFileSync(outputPath, output);
+    return { outputPath, report };
+  } finally {
+    if (db && typeof db.close === 'function') {
+      db.close();
+    }
+  }
+}
+
+if (require.main === module) {
+  const result = runCoverageReport();
+  console.log(`Written to ${result.outputPath}`);
+}
+
+module.exports = {
+  DEFAULT_HOSTS,
+  formatCoverageReport,
+  runCoverageReport
+};

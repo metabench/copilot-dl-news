@@ -89,7 +89,7 @@ These start the v2 multi-domain crawler with versioned repo configs:
 | `config/staging.json` | Staging crawler config |
 | `scripts/health-check.js` | Container health verification |
 | `scripts/graceful-shutdown.js` | Clean shutdown handler |
-| `scripts/init-db.sql` | PostgreSQL schema initialization |
+| `../news-crawler-db/src/db/postgres/migrations/bootstrap/init-db.sql` | PostgreSQL schema initialization owned by the DB module |
 | `.dockerignore` | Build context exclusions |
 
 ## Remote crawler v2 config source

@@ -28,7 +28,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-news_crawler}
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ../../news-crawler-db/src/db/postgres/migrations/bootstrap/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "5432:5432"
     healthcheck:

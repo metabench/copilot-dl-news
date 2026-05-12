@@ -5,6 +5,7 @@ const path = require("path");
 
 const { openNewsDb } = require("../../../src/db/dbAccess");
 const { createDataExplorerServer } = require("../../../src/ui/server/dataExplorerServer");
+const { createUrlFilterToggleScenarioFixture } = require("news-crawler-db");
 
 function nowIso() {
   return new Date().toISOString();
@@ -22,45 +23,7 @@ function makeTempDbPath(artifactsDir) {
 }
 
 function seedUrlData(dbHandle) {
-  const insertUrl = dbHandle.prepare(
-    "INSERT INTO urls (url, host, canonical_url, created_at, last_seen_at, analysis) VALUES (?, ?, ?, ?, ?, ?)"
-  );
-
-  const created = "2025-11-14T00:00:00.000Z";
-  const lastSeen = "2025-11-15T00:00:00.000Z";
-
-  const fetchedUrlId = Number(
-    insertUrl.run(
-      "https://fetched.example/news",
-      "fetched.example",
-      "https://fetched.example/news",
-      created,
-      lastSeen,
-      null
-    ).lastInsertRowid
-  );
-
-  insertUrl.run(
-    "https://nofetch.example/story",
-    "nofetch.example",
-    "https://nofetch.example/story",
-    created,
-    lastSeen,
-    null
-  );
-
-  const insertHttp = dbHandle.prepare(
-    "INSERT INTO http_responses (url_id, request_started_at, fetched_at, http_status, content_type, bytes_downloaded) VALUES (?, ?, ?, ?, ?, ?)"
-  );
-
-  insertHttp.run(
-    fetchedUrlId,
-    "2025-11-15T10:00:00.000Z",
-    "2025-11-15T10:00:00.000Z",
-    200,
-    "text/html",
-    2048
-  );
+  return createUrlFilterToggleScenarioFixture(dbHandle);
 }
 
 async function startServer({ artifactsDir } = {}) {

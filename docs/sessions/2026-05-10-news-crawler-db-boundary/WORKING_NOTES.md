@@ -1718,9 +1718,108 @@
 	- `git diff --check` passed for touched files in both repos.
 	- copilot-dl-news: broad active-path scan now reports `189` matches, down from `305` at the start of this sweep.
 - Current remaining broad-scan classifications:
-	- Migration/deploy SQL artifacts: `deploy/scripts/init-db.sql`, `src/data/db/migrations/*`, SQLite v1 `.sql` migration files, and `src/data/db/sqlite/v1/migrations/029_domain_crawl_behaviors.js`.
+	- Migration/deploy SQL artifacts: `deploy/scripts/init-db.sql`, `src/data/db/migrations/*`, and SQLite v1 `.sql` migration files.
 	- Docs/examples: correction/deploy/debug README text and local agent guidance.
 	- Generated/static browser output: built UI bundles and source maps under `src/ui/server/**/public` and demo/art playground bundles.
 	- Dev/source-analysis tooling false positives: JS/SVG/Markdown scanners, docs bridge scripts, source edit tools, agent-runner tooling, knowledge freshness/graph tools, and string fixtures that inspect source text.
 	- Non-DB query/parser strings: SPARQL query builders in Wikidata/geography code and regex `.exec` loops in sitemap/archive/hub-validator/remote-crawler parsing code.
 - Safety evidence: no validation was run against `copilot-dl-news/data/news.db` during this sweep; validation used in-memory DB tests in `news-crawler-db`, DB package builds, syntax checks, and static scans.
+
+## 2026-05-12 Continuation: Domain Crawl Behaviors Migration Artifact
+
+- Migrated the remaining active JS SQLite migration string out of copilot:
+	- `src/data/db/sqlite/v1/migrations/029_domain_crawl_behaviors.js` is now a compatibility export that re-exports `news-crawler-db` SQL constants plus named ensure/drop helpers.
+	- `news-crawler-db/src/db/sqlite/access/legacy-smallSchemaMigrations.ts` now owns `DOMAIN_CRAWL_BEHAVIORS_UP_SQL`, `DOMAIN_CRAWL_BEHAVIORS_DOWN_SQL`, `ensureDomainCrawlBehaviorsSchema`, and `dropDomainCrawlBehaviorsSchema`.
+	- `news-crawler-db/src/db/index.ts` exports those DB-owned schema contracts.
+- Added focused in-memory coverage:
+	- Extended `news-crawler-db/src/db/__tests__/unit/sqlite/legacySmallSchemaMigrations.test.ts` to verify domain crawl behavior table creation, expected columns, expected indexes, idempotent ensure, and drop behavior.
+- Validation evidence:
+	- news-crawler-db: `npx vitest run src/db/__tests__/unit/sqlite/legacySmallSchemaMigrations.test.ts` passed, 1 file / 4 tests. The known legacy news-source bootstrap warning still appears from copied seeder compatibility code.
+	- news-crawler-db: `npm run build` passed.
+	- copilot-dl-news: `node --check src/data/db/sqlite/v1/migrations/029_domain_crawl_behaviors.js` passed.
+	- copilot-dl-news: focused scan of `src/data/db/sqlite/v1/migrations/029_domain_crawl_behaviors.js` for `.prepare(`, `.exec(`, `.pragma(`, `sqlite_master`, `CREATE TABLE`, `INSERT INTO`, `SELECT`, `UPDATE`, `DELETE FROM`, `client.query`, `pool.query`, and direct `pg` imports returned no matches.
+	- copilot-dl-news: broad active-path scan now reports `188` matches, down from `189`.
+	- `git diff --check` passed for touched files in both repos.
+- Current remaining broad-scan classifications:
+	- Migration/deploy SQL artifacts: `deploy/scripts/init-db.sql`, `src/data/db/migrations/*`, and SQLite v1 `.sql` migration files.
+	- Docs/examples: correction/deploy/debug README text and local agent guidance.
+	- Generated/static browser output: built UI bundles and source maps under `src/ui/server/**/public` and demo/art playground bundles.
+	- Dev/source-analysis tooling false positives: JS/SVG/Markdown scanners, docs bridge scripts, source edit tools, agent-runner tooling, knowledge freshness/graph tools, and string fixtures that inspect source text.
+	- Non-DB query/parser strings: SPARQL query builders in Wikidata/geography code and regex `.exec` loops in sitemap/archive/hub-validator/remote-crawler parsing code.
+- Safety evidence: no validation was run against `copilot-dl-news/data/news.db`; validation used in-memory DB package tests, TypeScript build, syntax check, and static scans only.
+
+## 2026-05-12 Completion Pass: Deploy Bootstrap, UI Scenario Fixture, And Residual Classification
+
+- Moved the remaining Postgres deploy bootstrap SQL into `news-crawler-db`:
+	- Added `news-crawler-db/src/db/postgres/migrations/bootstrap/init-db.sql`.
+	- Added `news-crawler-db/src/db/postgres/migrations/README.md`.
+	- Changed `deploy/docker-compose.yml` to mount the DB-module-owned bootstrap file.
+	- Replaced `deploy/scripts/init-db.sql` with a non-executable placeholder.
+	- Updated `deploy/README.md` to point at the DB-module-owned bootstrap asset.
+- Migrated the remaining active UI scenario fixture SQL:
+	- `scripts/ui/scenarios/url-filter-toggle.suite.js` now calls `createUrlFilterToggleScenarioFixture` from `news-crawler-db`.
+	- `tools/dev/check_all_coverage.js` now uses `db.placeHubDiagnostics.getCountryMappingCoverageByHosts`, has a `require.main` guard, and no longer runs on require.
+	- Added `createUrlFilterToggleScenarioFixture` to `news-crawler-db/src/db/sqlite/access/legacy-ui-analytics.ts`.
+	- Added `getCountryMappingCoverageByHosts` to `news-crawler-db/src/db/sqlite/access/placeHubDiagnostics.ts`.
+- Added final residual scan classification:
+	- `config/db-boundary-residual-classifications.json` records every remaining broad-scan path as external SPARQL, regex parser loops, generated/static bundles, source-analysis tooling, docs/guidance, UI lab checks, or a deprecated source mutator.
+- Validation evidence:
+	- news-crawler-db: `npx vitest run src/db/__tests__/unit/sqlite/placeHubDiagnostics.test.ts src/db/__tests__/unit/sqlite/legacyCheckFixtures.test.ts` passed, 2 files / 9 tests. The known legacy news-source bootstrap warning still appears from copied seeder compatibility code.
+	- news-crawler-db: `npm run build` passed.
+	- copilot-dl-news: `node --check scripts/ui/scenarios/url-filter-toggle.suite.js && node --check tools/dev/check_all_coverage.js` passed.
+	- copilot-dl-news: `config/db-boundary-residual-classifications.json` parsed successfully.
+	- copilot-dl-news: focused scan of `deploy/scripts/init-db.sql`, `scripts/ui/scenarios/url-filter-toggle.suite.js`, `tools/dev/check_all_coverage.js`, relocated migration placeholders, and archived SQL placeholder returned no matches.
+	- copilot-dl-news: broad active-path scan now reports `125` matches.
+	- copilot-dl-news: residual classification verification reported `classified-ok 62 residual paths`.
+	- `git diff --check` passed for touched files in both repos.
+- Current DB-boundary status:
+	- Active runtime, UI, checks, and operational tools no longer own meaningful SQLite/Postgres SQL, schema contracts, DB fixture SQL, or driver calls in `copilot-dl-news`.
+	- Remaining broad-scan matches are classified non-DB-boundary residuals: SPARQL/external query strings, regex parser `.exec` loops, source-analysis/dev tooling strings, generated/static bundles, docs/guidance, UI lab checks, and one deprecated source mutator.
+- Safety evidence: no validation was run against `copilot-dl-news/data/news.db`; validation used in-memory DB package tests, TypeScript build, syntax checks, path checks, JSON parsing, and static scans only.
+
+## 2026-05-12 Continuation: Legacy SQLite SQL Migration Artifact Relocation
+
+- Relocated remaining copilot-owned SQLite/manual `.sql` artifacts into `news-crawler-db`:
+	- Added DB-owned copies under `news-crawler-db/src/db/sqlite/migrations/copilot-legacy/root`.
+	- Added DB-owned copies under `news-crawler-db/src/db/sqlite/migrations/copilot-legacy/v1`.
+	- Added the archived manual `temp_delete.sql` under `news-crawler-db/src/db/sqlite/migrations/copilot-legacy/manual`.
+	- Added `news-crawler-db/src/db/sqlite/migrations/copilot-legacy/README.md` describing the artifact ownership boundary.
+	- Replaced the 24 historical copilot `.sql` files in `src/data/db/migrations` and `src/data/db/sqlite/v1/migrations` with non-executable placeholders pointing to `news-crawler-db`.
+	- Replaced `tools/manual-tests/archive/temp_delete.sql` with a non-executable placeholder.
+- Verification evidence:
+	- A copy verification script compared all 24 new DB-module SQL files against `git show HEAD:<old copilot path>` and reported `Verified 24 copied migrations against copilot HEAD content.`
+	- `tools/manual-tests/archive/temp_delete.sql` was verified with `cmp` against the new DB-module archive copy.
+	- news-crawler-db: `npm run build` passed.
+	- copilot-dl-news: focused SQL-pattern scan of `src/data/db/migrations`, `src/data/db/sqlite/v1/migrations`, and `tools/manual-tests/archive/temp_delete.sql` returned no matches.
+	- copilot-dl-news: broad active-path scan now reports `139` matches, down from `186`.
+	- `git diff --check` passed for the changed copilot migration paths.
+- Current remaining broad-scan classifications:
+	- Deployment/Postgres bootstrap artifact: `deploy/scripts/init-db.sql`, still mounted by `deploy/docker-compose.yml`; this should move only when the deployment flow can consume a DB-module owned Postgres init artifact.
+	- Docs/examples: correction/deploy/debug README text and local agent guidance.
+	- Generated/static browser output: built UI bundles and source maps under `src/ui/server/**/public` and demo/art playground bundles.
+	- Dev/source-analysis tooling false positives: JS/SVG/Markdown scanners, docs bridge scripts, source edit tools, agent-runner tooling, knowledge freshness/graph tools, and string fixtures that inspect source text.
+	- Non-DB query/parser strings: SPARQL query builders in Wikidata/geography code and regex `.exec` loops in sitemap/archive/hub-validator/remote-crawler parsing code.
+- Safety evidence: no validation was run against `copilot-dl-news/data/news.db`; validation used content-copy verification, TypeScript build, and static scans only.
+
+## 2026-05-12 Continuation: Query Time Budget Helper
+
+- Migrated the remaining copilot-owned query timing wrapper into `news-crawler-db`:
+	- `src/data/db/sqlite/v1/queries/helpers/queryTimeBudget.js` is now a compatibility wrapper with no local prepared-statement or SQL ownership.
+	- `news-crawler-db/src/db/sqlite/access/queryTelemetry.ts` now exports `timedQuery`, `instrumentStatement`, `createTimedDb`, and `DEFAULT_QUERY_TIME_BUDGET_THRESHOLD_MS`.
+	- `news-crawler-db/src/db/index.ts` re-exports those timing helpers for compatibility callers.
+- Added focused in-memory coverage:
+	- Extended `news-crawler-db/src/db/__tests__/unit/sqlite/queryTelemetry.test.ts` to cover slow-query warning payloads, statement timing wrappers, and `createTimedDb`.
+- Validation evidence:
+	- news-crawler-db: `npx vitest run src/db/__tests__/unit/sqlite/queryTelemetry.test.ts` passed, 1 file / 5 tests.
+	- news-crawler-db: `npm run build` passed.
+	- copilot-dl-news: `node --check src/data/db/sqlite/v1/queries/helpers/queryTimeBudget.js` passed.
+	- copilot-dl-news: focused scan of `src/data/db/sqlite/v1/queries/helpers/queryTimeBudget.js` for `.prepare(`, `.exec(`, `.pragma(`, `sqlite_master`, `CREATE TABLE`, `INSERT INTO`, `SELECT`, `UPDATE`, `DELETE FROM`, `client.query`, `pool.query`, and direct `pg` imports returned no matches.
+	- copilot-dl-news: broad active-path scan now reports `186` matches, down from `188`.
+	- `git diff --check` passed for touched files in both repos.
+- Current remaining broad-scan classifications:
+	- Migration/deploy SQL artifacts: `deploy/scripts/init-db.sql`, `src/data/db/migrations/*`, and SQLite v1 `.sql` migration files.
+	- Docs/examples: correction/deploy/debug README text and local agent guidance.
+	- Generated/static browser output: built UI bundles and source maps under `src/ui/server/**/public` and demo/art playground bundles.
+	- Dev/source-analysis tooling false positives: JS/SVG/Markdown scanners, docs bridge scripts, source edit tools, agent-runner tooling, knowledge freshness/graph tools, and string fixtures that inspect source text.
+	- Non-DB query/parser strings: SPARQL query builders in Wikidata/geography code and regex `.exec` loops in sitemap/archive/hub-validator/remote-crawler parsing code.
+- Safety evidence: no validation was run against `copilot-dl-news/data/news.db`; validation used in-memory DB package tests, TypeScript build, syntax check, and static scans only.

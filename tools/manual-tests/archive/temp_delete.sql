@@ -1,1 +1,3 @@
-DELETE FROM query_telemetry;
+-- Archived manual SQL ownership moved to news-crawler-db/src/db/sqlite/migrations/copilot-legacy/manual/temp_delete.sql.
+-- This placeholder remains only to preserve the historical copilot-dl-news path.
+-- Do not add executable SQL here.
