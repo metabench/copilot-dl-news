@@ -54,6 +54,26 @@
 
 ## Current Sessions
 
+### Session 2026-05-12: Crawl CLI Operator Command
+
+**Status**: Active
+**Focus**: Improve the remote crawler CLI so a crawl operator can preflight setup, launch, sync, verify local downloaded-page targets, and stop/drain from one clearer command with coloured, emoji-assisted output.
+**Location**: `docs/sessions/2026-05-12-crawl-cli-operator-command/`
+
+**Quick Links**:
+- [Plan](./2026-05-12-crawl-cli-operator-command/PLAN.md)
+- [Working Notes](./2026-05-12-crawl-cli-operator-command/WORKING_NOTES.md)
+
+### Session 2026-05-12: Twelve-Site 100-Page Crawl
+
+**Status**: Active
+**Focus**: Run and monitor a 12-news-site crawl targeting 100 new downloaded pages per host through the remote v2 crawler with continuous local sync.
+**Location**: `docs/sessions/2026-05-12-twelve-site-100-page-crawl/`
+
+**Quick Links**:
+- [Plan](./2026-05-12-twelve-site-100-page-crawl/PLAN.md)
+- [Working Notes](./2026-05-12-twelve-site-100-page-crawl/WORKING_NOTES.md)
+
 ### Session 2026-05-10: News Crawler DB Boundary Migration
 
 **Status**: Active; DB modularisation complete for active runtime/check/tool ownership

@@ -43,7 +43,9 @@ function newerWatermark(current, candidate) {
   const currentMs = parseWatermarkMs(current);
   const candidateMs = parseWatermarkMs(candidate);
   if (currentMs !== null && candidateMs !== null) return candidateMs > currentMs ? candidate : current;
-  return String(candidate) > String(current) ? candidate : current;
+  if (currentMs !== null) return current;     // candidate is malformed — keep current
+  if (candidateMs !== null) return candidate;  // current is malformed — accept candidate
+  return current; // both malformed — don't advance
 }
 
 function emptyLedger() {

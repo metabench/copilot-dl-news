@@ -12,6 +12,7 @@ const {
   buildInvocationFromTool,
   optionsObjectToArgs,
   parseCliArgs,
+  renderInvocation,
   resolveProfilePath,
   resolveToolSpec,
   runCli,
@@ -38,6 +39,7 @@ describe('tools/crawl unified launcher', () => {
     expect(resolveToolSpec('remote').script).toBe('crawl-remote.js');
     expect(resolveToolSpec('multimodal').key).toBe('multi-modal');
     expect(resolveToolSpec('guess').key).toBe('guess-place-hubs');
+    expect(resolveToolSpec('deploy').key).toBe('remote-deploy');
   });
 
   test('parses global launcher flags separately from delegated tokens', () => {
@@ -46,6 +48,24 @@ describe('tools/crawl unified launcher', () => {
     expect(parsed.options.dryRun).toBe(true);
     expect(parsed.options.profileDir).toBe(path.resolve('custom-profiles'));
     expect(parsed.tokens).toEqual(['profile', 'remote-bounded-smoke']);
+  });
+
+  test('parses remote deploy preflight flags as launcher options', () => {
+    const parsed = parseCliArgs([
+      'remote',
+      'bounded',
+      '--remote-deploy', 'never',
+      '--remote-deploy-force',
+      '--remote-deploy-ssh-host', 'ubuntu@example.com',
+      '--remote-deploy-status-url', 'http://example.com:3200/api/status',
+    ]);
+
+    expect(parsed.command).toBe('remote');
+    expect(parsed.options.remoteDeploy).toBe('never');
+    expect(parsed.options.remoteDeployForce).toBe(true);
+    expect(parsed.options.remoteDeploySshHost).toBe('ubuntu@example.com');
+    expect(parsed.options.remoteDeployStatusUrl).toBe('http://example.com:3200/api/status');
+    expect(parsed.tokens).toEqual(['remote', 'bounded']);
   });
 
   test('builds cli args from profile options object', () => {
@@ -84,6 +104,23 @@ describe('tools/crawl unified launcher', () => {
       '--poll', '5',
       '--timeout-min', '10'
     ]);
+  });
+
+  test('builds invocation for the agent-observable Guardian/BBC collect profile', () => {
+    const invocation = buildInvocationFromProfile('remote-guardian-bbc-10-agent', [], DEFAULT_PROFILE_DIR);
+    expect(invocation.tool.key).toBe('remote');
+    expect(invocation.args).toEqual(expect.arrayContaining([
+      'collect',
+      '--domains', 'theguardian.com,bbc.com',
+      '--target-pages', '10',
+      '--max-pages', '30',
+      '--max-depth', '4',
+      '--max-status-failures', '3',
+      '--start-retries', '3',
+      '--agent-log', 'data/crawl-agent-runs/remote-guardian-bbc-10-{ts}.jsonl',
+    ]));
+    expect(invocation.args).toContain('--seed-urls-by-domain');
+    expect(renderInvocation(invocation)).toContain("'theguardian.com=https://www.theguardian.com/international|");
   });
 
   test('builds direct tool invocation', () => {

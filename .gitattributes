@@ -1,0 +1,11 @@
+# Normalize all text files to have LF in the repository database
+* text=auto
+
+# Force LF line endings for deployment scripts and server source code running on remote Linux fleet nodes
+deploy/**/*.js text eol=lf
+*.sh text eol=lf
+
+# Keep typical Windows files using CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf

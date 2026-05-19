@@ -21,13 +21,14 @@ describe('remote crawler v2 server config', () => {
   test('normalizes string and object domain entries', () => {
     expect(normalizeDomainConfigs([
       'bbc.com',
-      { host: 'reuters.com', maxPages: 25, seedUrls: 'https://www.reuters.com/world/, https://www.reuters.com/business/' },
+      { host: 'reuters.com', maxPages: 25, maxDepth: 4, seedUrls: 'https://www.reuters.com/world/, https://www.reuters.com/business/' },
       'bbc.com',
     ], 5)).toEqual([
       { domain: 'bbc.com', maxPages: 5 },
       {
         domain: 'reuters.com',
         maxPages: 25,
+        maxDepth: 4,
         seedUrls: ['https://www.reuters.com/world/', 'https://www.reuters.com/business/'],
       },
     ]);

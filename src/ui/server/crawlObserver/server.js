@@ -14,6 +14,7 @@ const jsgui = require('jsgui3-html');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
 const { createMcpLogger } = require("../../../shared/utils/mcpLogger");
+const { spawn } = require('child_process');
 
 const log = createMcpLogger.uiServer('crawl-observer');
 const { createCrawlObserverUiQueries } = require('../../../data/db/sqlite/v1/queries/crawlObserverUiQueries');
@@ -21,6 +22,7 @@ const { createCrawlObserverUiQueries } = require('../../../data/db/sqlite/v1/que
 const { TaskListControl } = require('./controls/TaskListControl');
 const { TaskDetailControl } = require('./controls/TaskDetailControl');
 const { TelemetryDashboardControl } = require('./controls/TelemetryDashboardControl');
+const RemoteCrawlControl = require('./controls/RemoteCrawlControl');
 
 const DEFAULT_PORT = Number(process.env.PORT) || 3007;
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'news.db');
@@ -131,6 +133,10 @@ function renderPage(ctx, title, content, options = {}) {
   telemetryLink.set('href', joinBasePath(basePath, '/telemetry'));
   telemetryLink.add(text(ctx, '📈 Telemetry'));
 
+  const remoteLink = nav.add(new jsgui.a({ context: ctx }));
+  remoteLink.set('href', joinBasePath(basePath, '/remote-control'));
+  remoteLink.add(text(ctx, '🚀 Remote Control'));
+
   page.body.add(nav);
 
   if (content && typeof content.compose === 'function') {
@@ -228,6 +234,42 @@ app.get('/api/task/:taskId/events', (req, res) => {
   }));
 });
 
+// Server-Sent Events (SSE) endpoint for real-time telemetry
+app.get('/api/task/:taskId/stream', (req, res) => {
+  const taskId = req.params.taskId;
+  const includePayload = String(req.query.includePayload || '') === '1';
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  let lastSeq = Number(req.query.sinceSeq || 0) || 0;
+
+  const intervalId = setInterval(() => {
+    try {
+      const data = queries.getIncrementalEvents(taskId, {
+        limit: 500,
+        sinceSeq: lastSeq,
+        includePayload,
+      });
+
+      if (data.events && data.events.length > 0) {
+        data.events.forEach(ev => {
+          lastSeq = Math.max(lastSeq, Number(ev.seq || 0));
+        });
+        res.write(`data: ${JSON.stringify(data.events)}\n\n`);
+      }
+    } catch (err) {
+      log.error('SSE Error:', err);
+    }
+  }, 500); // 500ms real-time loop
+
+  req.on('close', () => {
+    clearInterval(intervalId);
+  });
+});
+
 app.get('/telemetry', (req, res) => {
   const stats = queries.getTelemetryStats();
   const ctx = new jsgui.Page_Context();
@@ -238,6 +280,43 @@ app.get('/telemetry', (req, res) => {
 
 app.get('/api/telemetry', (req, res) => {
   res.json(queries.getTelemetryStats());
+});
+
+app.get('/remote-control', (req, res) => {
+  const ctx = new jsgui.Page_Context();
+  const basePath = String(req.baseUrl || '');
+  const control = new RemoteCrawlControl({ context: ctx, basePath });
+  res.send(renderPage(ctx, 'Remote Control', control, { basePath }));
+});
+
+app.post('/api/crawl/spawn', express.json(), (req, res) => {
+  const { domains, profile } = req.body;
+  if (!domains && !profile) {
+    return res.status(400).json({ error: 'Must provide either domains or profile' });
+  }
+
+  const args = ['tools/crawl/crawl-remote.js', 'collect'];
+  if (domains) {
+    args.push('--domains', domains);
+  }
+  if (profile) {
+    args.push('--profile', profile);
+  }
+
+  try {
+    const cp = spawn('node', args, {
+      stdio: 'ignore', // run detached without tying up IO
+      detached: true,
+      cwd: path.resolve(__dirname, '../../../../') // repo root
+    });
+    cp.unref();
+
+    log.info('Spawned remote crawl', { pid: cp.pid, args });
+    res.json({ success: true, pid: cp.pid, message: 'Crawl process spawned successfully' });
+  } catch (err) {
+    log.error('Failed to spawn remote crawl', { error: err.message });
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─────────────────────────────────────────────────────────────

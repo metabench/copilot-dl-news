@@ -7,7 +7,9 @@ const {
 } = require('../../deploy/remote-crawler-v2/lib/orchestrator-utils');
 const {
   findMissingDomains,
+  normalizeCollectOptions,
   resolveTargetDomains,
+  summarizeHostVerification,
   summarizeBoundedRun,
 } = require('../../tools/crawl/lib/crawl-remote-bounded');
 
@@ -91,5 +93,52 @@ describe('remote crawl bounded reliability helpers', () => {
     }, ['bbc.com', 'apnews.com', 'bbc.com']);
 
     expect(missing).toEqual(['apnews.com']);
+  });
+
+  test('collect options use crawl-friendly defaults and clamp completion targets', () => {
+    expect(normalizeCollectOptions({}, ['bbc.com', 'reuters.com'])).toMatchObject({
+      targetPages: 100,
+      maxPages: 150,
+      minCompleteHosts: 2,
+      intervalSec: 5,
+      windowSec: 10,
+      limit: 500,
+      verifyEveryRounds: 1,
+      drainEmptyRounds: 3,
+    });
+
+    expect(normalizeCollectOptions({
+      'target-pages': '80',
+      'min-complete-hosts': '99',
+      'max-pages': '120',
+      interval: '2',
+      window: '15',
+      limit: '1000',
+      'verify-every': '3',
+      'drain-empty-rounds': '4',
+    }, ['bbc.com', 'reuters.com'])).toMatchObject({
+      targetPages: 80,
+      maxPages: 120,
+      minCompleteHosts: 2,
+      intervalSec: 2,
+      windowSec: 15,
+      limit: 1000,
+      verifyEveryRounds: 3,
+      drainEmptyRounds: 4,
+    });
+  });
+
+  test('host verification summary separates complete and incomplete targets', () => {
+    const summary = summarizeHostVerification([
+      { host: 'bbc.com', pages: 120, lastFetched: '2026-05-12 21:00:00' },
+      { host: 'reuters.com', pages: 70, lastFetched: '2026-05-12 21:01:00' },
+    ], ['bbc.com', 'reuters.com', 'apnews.com'], 100);
+
+    expect(summary.complete.map(row => row.host)).toEqual(['bbc.com']);
+    expect(summary.incomplete).toMatchObject([
+      { host: 'reuters.com', pages: 70, needed: 30 },
+      { host: 'apnews.com', pages: 0, needed: 100 },
+    ]);
+    expect(summary.allComplete).toBe(false);
   });
 });

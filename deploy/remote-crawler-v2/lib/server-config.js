@@ -92,6 +92,7 @@ function normalizeDomainEntry(entry, maxPagesDefault) {
   return {
     domain,
     maxPages: integerAtLeast(firstDefined(entry.maxPages, entry['max-pages']), maxPagesDefault, 1),
+    maxDepth: integerAtLeast(firstDefined(entry.maxDepth, entry['max-depth']), 2, 0),
     seedUrls,
   };
 }

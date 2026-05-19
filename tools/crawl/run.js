@@ -57,6 +57,9 @@ const {
   startRemoteMeter
 } = require('./lib/throughput-meter');
 const { getBackend, CrawlBackend } = require('./lib/crawl-backend');
+const {
+  runRemoteDeployPreflight,
+} = require('./lib/remote-deploy-preflight');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const DEFAULT_CRAWL_LISTS_DIR = path.join(REPO_ROOT, 'crawl-lists');
@@ -240,6 +243,14 @@ function parseArgs(argv) {
     operation: undefined,
     target: 'local',                  // 'local' | 'remote'
     remoteHost: undefined,
+    remoteDeploy: 'auto',
+    remoteDeployForce: false,
+    remoteDeploySshHost: undefined,
+    remoteDeploySshUser: undefined,
+    remoteDeploySshPort: undefined,
+    remoteDeploySshKey: undefined,
+    remoteDeployStatusUrl: undefined,
+    remoteDeploySkipDbBuild: false,
     meter: true,
     meterIntervalMs: DEFAULT_METER_INTERVAL_MS,
     dbPath: DEFAULT_LOCAL_DB,
@@ -272,6 +283,15 @@ function parseArgs(argv) {
       case '--local': runFlags.target = 'local'; break;
       case '--remote': runFlags.target = 'remote'; break;
       case '--remote-host': runFlags.remoteHost = String(next()); break;
+      case '--remote-deploy': runFlags.remoteDeploy = String(next() || 'auto').toLowerCase(); break;
+      case '--no-remote-deploy': runFlags.remoteDeploy = 'never'; break;
+      case '--remote-deploy-force': runFlags.remoteDeployForce = true; break;
+      case '--remote-deploy-ssh-host': runFlags.remoteDeploySshHost = String(next()); break;
+      case '--remote-deploy-ssh-user': runFlags.remoteDeploySshUser = String(next()); break;
+      case '--remote-deploy-ssh-port': runFlags.remoteDeploySshPort = Number(next()); break;
+      case '--remote-deploy-ssh-key': runFlags.remoteDeploySshKey = String(next()); break;
+      case '--remote-deploy-status-url': runFlags.remoteDeployStatusUrl = String(next()); break;
+      case '--remote-deploy-skip-db-build': runFlags.remoteDeploySkipDbBuild = true; break;
       case '--no-meter': runFlags.meter = false; break;
       case '--meter': runFlags.meter = true; break;
       case '--meter-interval': runFlags.meterIntervalMs = Number(next()); break;
@@ -490,6 +510,14 @@ function rebuildPassThroughFlags(runFlags) {
   if (runFlags.uiHost) out.push('--ui-host', runFlags.uiHost);
   if (runFlags.uiPort) out.push('--ui-port', String(runFlags.uiPort));
   if (runFlags.operation) out.push('--operation', runFlags.operation);
+  if (runFlags.remoteDeploy && runFlags.remoteDeploy !== 'auto') out.push('--remote-deploy', runFlags.remoteDeploy);
+  if (runFlags.remoteDeployForce) out.push('--remote-deploy-force');
+  if (runFlags.remoteDeploySshHost) out.push('--remote-deploy-ssh-host', runFlags.remoteDeploySshHost);
+  if (runFlags.remoteDeploySshUser) out.push('--remote-deploy-ssh-user', runFlags.remoteDeploySshUser);
+  if (runFlags.remoteDeploySshPort) out.push('--remote-deploy-ssh-port', String(runFlags.remoteDeploySshPort));
+  if (runFlags.remoteDeploySshKey) out.push('--remote-deploy-ssh-key', runFlags.remoteDeploySshKey);
+  if (runFlags.remoteDeployStatusUrl) out.push('--remote-deploy-status-url', runFlags.remoteDeployStatusUrl);
+  if (runFlags.remoteDeploySkipDbBuild) out.push('--remote-deploy-skip-db-build');
   for (const kv of runFlags.rawOverrides) out.push('--override', kv);
   return out;
 }
@@ -537,6 +565,10 @@ function renderHelp() {
     '  --local                 force local mode (default)',
     '  --remote                dispatch via tools/crawl/crawl-remote.js (fleet)',
     '  --remote-host <h>       remote fleet host (default $FLEET_HOST or .fleet-host)',
+    '  --remote-deploy <mode>  auto (default), never, always; auto deploys stale remote server before remote crawl starts',
+    '  --no-remote-deploy      disable automatic remote deploy freshness check',
+    '  --remote-deploy-force   allow auto-deploy to interrupt a busy remote server when deployment is needed',
+    '  --remote-deploy-ssh-host <host>  SSH target for auto-deploy (for example ubuntu@141.144.193.218)',
     '  --no-meter              disable live throughput meter (docs/s + bytes/s)',
     '  --meter-interval <ms>   meter sample interval (default 2000)',
     '  --db <path>             DB path for local meter (default data/news.db)',
@@ -909,6 +941,21 @@ async function executeBatch(plan, runFlags) {
 }
 
 async function executeBatchRemote(plan, runFlags) {
+  const deployExit = runRemoteDeployPreflight({
+    mode: runFlags.remoteDeploy,
+    force: runFlags.remoteDeployForce,
+    sshHost: runFlags.remoteDeploySshHost,
+    sshUser: runFlags.remoteDeploySshUser,
+    sshPort: runFlags.remoteDeploySshPort,
+    sshKey: runFlags.remoteDeploySshKey,
+    statusUrl: runFlags.remoteDeployStatusUrl || statusUrlFromRemoteHost(runFlags.remoteHost),
+    skipDbBuild: runFlags.remoteDeploySkipDbBuild,
+    json: runFlags.json,
+    out: process.stderr,
+    err: process.stderr,
+  });
+  if (deployExit.status !== 0) return deployExit.status || 1;
+
   // See note in executeBatch: do not double-poll when --watch is on.
   const meter = runFlags.watch ? null : maybeStartMeter(plan, runFlags);
   let exitCode = 0;
@@ -931,6 +978,16 @@ async function executeBatchRemote(plan, runFlags) {
     process.stderr.write(`(watch skipped: launch exit ${exitCode})\n`);
   }
   return exitCode;
+}
+
+function statusUrlFromRemoteHost(remoteHost) {
+  if (!remoteHost) return undefined;
+  const text = String(remoteHost).trim();
+  if (!text) return undefined;
+  if (/^https?:\/\//i.test(text)) {
+    return text.replace(/\/+$/, '') + '/api/status';
+  }
+  return `http://${text}/api/status`;
 }
 
 /**
@@ -1231,6 +1288,7 @@ module.exports = {
   runCli,
   ensureLocalServer,
   probeAvailability,
+  statusUrlFromRemoteHost,
   // Constants
   DEFAULT_CRAWL_LISTS_DIR,
   BATCH_SCRIPT,

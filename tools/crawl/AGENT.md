@@ -29,6 +29,10 @@
 - `--no-watch` — explicitly disable (overrides a prior `--watch`).
 - `--watch-interval <ms>` — poll interval, default 5000.
 - `--watch-timeout <sec>` — overall watch budget, default 1800 (30 min).
+- `--remote-deploy auto|never|always` — remote crawler build freshness mode for start-like remote runs. `auto` is the default and runs a fast metadata check before remote launch.
+- `--no-remote-deploy` — disable the automatic freshness/deploy preflight.
+- `--remote-deploy-force` — allow the automatic deploy path to interrupt an active remote crawl when deployment is needed.
+- `--remote-deploy-ssh-host <target>` — SSH target for deploy, for example `ubuntu@141.144.193.218`.
 - Local watch uses a "no fetch growth for 3 polls" heuristic since local has no per-domain state field; remote watch uses real `state`/`isRunning` from `/api/status`.
 - `crawl-remote.js watch [--domains a,b] [--watch-interval ms] [--watch-timeout sec] [--json]` — standalone watch subcommand against the fleet (uses the same `CrawlBackend` loop).
 
@@ -64,6 +68,7 @@ This directory contains CLI tools for running and managing crawls. The **unified
 | `crawl-batch.js` | **Batch in-process crawl launcher** — POST N jobs to the unified UI v1 API (`/api/v1/crawl/operations/:op/start`) with bounded concurrency + retries | ✅ Working |
 | `crawl-multi-modal.js` | Multi-modal crawl (HTTP + Puppeteer fallback) | ✅ Working |
 | `crawl-place-hubs.js` | Crawl discovered place hub URLs from local DB | ✅ Working |
+| `deploy-remote-server.js` | Build and deploy the remote crawler v2 server with a busy-server guard; dry-run by default, `--apply` executes, `--force` required when active work is detected | ✅ Working |
 | `intelligent-crawl.js` | Intelligent crawl with hub discovery + learning loops | ✅ Working |
 | `guess-place-hubs.js` | Infer place hubs from existing crawl data | ✅ Working |
 | `list-place-hubs.js` | List known place hubs from the DB | ✅ Working |
@@ -92,6 +97,7 @@ This directory contains CLI tools for running and managing crawls. The **unified
 | `remote-news-10x1000` | `remote` | Explicit remote/cloud alias for the adaptive 10x1000 operator crawl |
 | `local-news-10x1000` | `batch` | Local/in-process fallback for 10 major news sites × 1000 pages each; use only when remote is unavailable |
 | `remote-status` | `remote` | Quick remote crawl status snapshot |
+| `remote-guardian-bbc-10-agent` | `remote` | Agent-observable Guardian/BBC collect run: 10 verified new local saves per host, depth-4 remote exploration, hub seed URLs, JSONL telemetry |
 | `place-hubs-local` | `place-hubs` | Local place-hub crawl against default news database |
 
 ### Lib Modules (`lib/`)
@@ -120,6 +126,9 @@ This directory contains CLI tools for running and managing crawls. The **unified
 | `--perf-summary-every` | 10 | Print p50/p95 perf summary every N rounds |
 | `--normal-concurrency` | 10 | Worker concurrency restored when budget returns to normal |
 | `--reduced-concurrency` | 2 | Worker concurrency under storage pressure |
+| `--max-depth` | server default | Remote worker link-follow depth for start/collect |
+| `--seed-urls-by-domain` | disabled | Domain-specific hub/frontier URLs: `domain=url1\|url2;domain=url3`; known URLs are skipped and do not count as new downloads |
+| `--agent-log` | disabled | Structured JSONL telemetry for agent/operator analysis |
 
 ---
 
@@ -172,7 +181,11 @@ What kind of crawl do you need?
 │        started with UI_ALLOW_MULTI_JOBS=true for parallel jobs.)
 │
 ├── 🔹 Start/manage remote crawl server
-│   └── See "Remote Crawl Operations" section below
+│   └── npm run crawl -- remote-deploy --dry-run
+│       npm run crawl -- remote-deploy --apply
+│       npm run crawl -- remote-deploy --apply --force   # only when intentionally interrupting active work
+│       (Builds remote crawler v2 + news-crawler-db adapter package, checks /api/status,
+│        preserves remote data/, overwrites code, installs deps, and restarts PM2 crawl-server-v4.)
 │
 ├── 🔹 Local intelligent crawl
 │   └── npm run crawl -- intelligent [args]
@@ -226,6 +239,7 @@ npm run crawl -- help
 ## Remote Crawl Operations
 
 `crawl-remote.js` is the CLI for controlling the remote multi-domain crawl server.
+`deploy-remote-server.js` is the CLI for replacing that server on the remote VM.
 
 **Default host**: resolved in this order:
 1. `--host <h:p>` flag
@@ -261,7 +275,21 @@ node tools/crawl/crawl-remote.js pull --window 30       # single batch pull
 # Error inspection
 node tools/crawl/crawl-remote.js errors
 node tools/crawl/crawl-remote.js content
+
+# Build/deploy the remote server runtime
+node tools/crawl/deploy-remote-server.js                  # dry-run + busy check
+node tools/crawl/deploy-remote-server.js --build-only     # local package only
+node tools/crawl/deploy-remote-server.js --apply          # build, upload, overwrite, restart
+node tools/crawl/deploy-remote-server.js --apply --force  # interrupt active crawl work
 ```
+
+Deploy behavior:
+- Builds `news-crawler-db` first, vendors its compiled DB adapter into the deployment package, and packages `deploy/remote-crawler-v2` plus `src/db/openNewsCrawlerDb.js`.
+- Writes a timestamp build id into `deploy/remote-crawler-v2/build-info.json`; `/api/status` and `/api/health` expose it as `build`.
+- In `--if-needed` mode, compares the local build timestamp with the remote build timestamp and skips deployment when the remote is current.
+- Tracks local source mtimes in `tmp/remote-crawler-v2-deploy/build-manifest.json`, so normal preflight is a fast metadata check unless local crawler/DB source changed.
+- Queries `/api/status` before applying. If the server is busy (`running`, active domains, pending URLs, or non-zero throughput), it exits without stopping PM2 and prints the exact `--force` rerun command.
+- Remote install preserves `data/`, replaces only application code/package files, installs production dependencies, deletes/restarts PM2 `crawl-server-v4`, then optionally waits for `/api/status`.
 
 For explicit bounded domains, `crawl-remote.js` registers any missing domain with `/api/domains/add` before starting. That keeps the simple distributed smoke profile usable even when the Oracle server was launched with a narrower domain config.
 

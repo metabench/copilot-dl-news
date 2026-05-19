@@ -21,6 +21,20 @@
 
 - Tactical session `docs/sessions/2026-05-10-local-crawl-throughput/` opened to make local crawl throughput visible again after improved internet connectivity: explicit docs/sec and MB/sec metrics, replayable metrics artifacts, and a compact `/crawl-status` strip before any larger UI redesign.
 
+## 2026-05-12 - Twelve-site 100-page crawl
+
+- Tactical session `docs/sessions/2026-05-12-twelve-site-100-page-crawl/` completed a remote crawler operation that locally verified at least 100 successful, non-empty pages for 14 news hosts, exceeding the requested 12-host target.
+- Operational findings: older preconfigured remote domains can stop immediately with 0 new fetched due existing remote state; replacement/fresh domains and local `http_responses` evidence are more reliable for bounded data-collection goals.
+- Tooling fix promoted during the run: `tools/crawl/crawl-remote.js` now imports `normalizeDomains` for start-result validation; focused crawl tests passed.
+- Environment finding: Windows-hosted Node UI processes can hold `data/news.db-shm` and block WSL SQLite access; stop the specific process or coordinate UI/server ownership before sync verification.
+
+## 2026-05-12 - Crawl CLI operator command
+
+- Tactical session `docs/sessions/2026-05-12-crawl-cli-operator-command/` promoted the previous manual remote-crawl sequence into `node tools/crawl/crawl-remote.js collect`, covering preflight, start, sync, local verification, stop, and drain in one operator command.
+- Human CLI output now uses colour and relevant emojis for setup, remote, DB, target, sync, prune, ledger, verification, and stop/drain states; `--json`, `--no-color`, and `--no-emoji` preserve automation/plain-output use cases.
+- DB-boundary correction: local setup and successful-download host verification SQL moved into `news-crawler-db` `SqliteRemoteCrawlerAccess`; the crawler CLI calls exported DB APIs only.
+- Security posture: host verification uses conservative host normalization, fixed prepared statements, escaped `LIKE` patterns, and parsed `since` markers to avoid wildcard broadening and accidental broad queries.
+
 ## 2026-04-29 — Download verification UI
 
 - Added a unified-shell `Download Verify` screen that joins recent `http_responses` to `content_storage` and compression metadata so operators can inspect downloaded/saved/compressed proof in the UI.

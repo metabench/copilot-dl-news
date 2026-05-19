@@ -129,3 +129,11 @@ deploy/artifacts/
 /*.check.html
 /*.check.json
 checks/html-outputs/*.json
+
+# Local/dynamic crawler profiles
+tools/crawl/profiles/*.json
+deploy/remote-crawler-v2/remote-*.json
+
+# Local scratchpad and experiment scripts
+/scratch/
+

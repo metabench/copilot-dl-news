@@ -351,6 +351,30 @@ describe('tools/crawl/run.js — local vs remote dispatch', () => {
     expect(plan.remoteArgs[i + 1]).toBe('10.0.0.5');
   });
 
+  test('remote deploy preflight flags parse and pass through delegate mode', () => {
+    const parsed = run.parseArgs([
+      '--remote-deploy', 'never',
+      '--remote-deploy-ssh-host', 'ubuntu@example.com',
+      '--remote-deploy-force',
+      'remote-guardian-bbc-10-agent'
+    ]);
+    expect(parsed.runFlags.remoteDeploy).toBe('never');
+    expect(parsed.runFlags.remoteDeploySshHost).toBe('ubuntu@example.com');
+    expect(parsed.runFlags.remoteDeployForce).toBe(true);
+    const plan = run.buildPlan(parsed);
+    expect(plan.mode).toBe('delegate');
+    expect(plan.delegateArgv).toEqual(expect.arrayContaining([
+      '--remote-deploy', 'never',
+      '--remote-deploy-ssh-host', 'ubuntu@example.com',
+      '--remote-deploy-force',
+    ]));
+  });
+
+  test('statusUrlFromRemoteHost normalizes remote host values', () => {
+    expect(run.statusUrlFromRemoteHost('10.0.0.5:3200')).toBe('http://10.0.0.5:3200/api/status');
+    expect(run.statusUrlFromRemoteHost('http://example.com:3200')).toBe('http://example.com:3200/api/status');
+  });
+
   test('--local explicitly forces local even after a previous --remote in argv', () => {
     const parsed = run.parseArgs(['--remote', '--local', 'bbc.com']);
     expect(parsed.runFlags.target).toBe('local');

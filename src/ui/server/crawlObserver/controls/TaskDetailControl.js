@@ -44,6 +44,10 @@ class TaskDetailControl extends jsgui.Control {
 
     this._renderSummary(container);
 
+    if (this._summary && this._summary.task_type === 'remote_crawl') {
+      this._renderRemoteCrawlVisuals(container);
+    }
+
     if (this._problems.length > 0) {
       this._renderProblems(container);
     }
@@ -609,22 +613,69 @@ class TaskDetailControl extends jsgui.Control {
     return tr;
   }
 
-  let timer = null;
+  let sse = null;
   let paused = false;
 
   function stopLive(reason) {
     cfg.enabled = false;
     paused = true;
     saveConfig(cfg);
-    if (timer) {
-      clearInterval(timer);
-      timer = null;
+    if (sse) {
+      sse.close();
+      sse = null;
     }
     setStatus('Paused: ' + reason, 'paused');
   }
 
+  function startLive() {
+    cfg = readConfigFromForm(cfg);
+    cfg.enabled = true;
+    paused = false;
+    saveConfig(cfg);
+    if (sse) sse.close();
+    
+    setStatus('Live: running (last seq ' + lastSeq + ')', 'running');
+    
+    const needsPayload = !!(cfg.stopOnEveryDecision || cfg.decisionKeyContains || cfg.decisionOutcomeContains || cfg.stopOncePerDecisionKey);
+    const url = withBasePath('/api/task/' + encodeURIComponent(taskId)
+      + '/stream?sinceSeq=' + encodeURIComponent(String(lastSeq))
+      + '&includePayload=' + (needsPayload ? '1' : '0'));
+
+    sse = new EventSource(url);
+    
+    sse.onmessage = (e) => {
+      if (!cfg.enabled || paused) return;
+      
+      try {
+        const events = JSON.parse(e.data);
+        if (!Array.isArray(events) || events.length === 0) return;
+        
+        for (const ev of events) {
+          const row = renderEventRow(ev);
+          tbody.appendChild(row);
+          lastSeq = Math.max(lastSeq, Number(ev.seq || 0) || 0);
+          const match = eventMatchesStopRules(ev);
+          if (match.hit) {
+            row.style.outline = '2px solid #e1b64a';
+            row.scrollIntoView({ block: 'center' });
+            stopLive('hit stop rule (' + match.why + ') at seq ' + (ev.seq ?? '?') + ' ' + (ev.event_type ?? '')); 
+            return;
+          }
+        }
+        setStatus('Live: running (last seq ' + lastSeq + ')', 'running');
+      } catch (err) {
+        // ignore JSON parse errors or other errors
+      }
+    };
+    
+    sse.onerror = () => {
+      // EventSource auto-reconnects, but if we want to log it
+      console.warn('SSE connection error. Retrying...');
+    };
+  }
+
   async function pollOnce() {
-    if (!cfg.enabled) return;
+    // Keep a manual poll option for the "Poll now" button
     try {
       const needsPayload = !!(cfg.stopOnEveryDecision || cfg.decisionKeyContains || cfg.decisionOutcomeContains || cfg.stopOncePerDecisionKey);
       const url = withBasePath('/api/task/' + encodeURIComponent(taskId)
@@ -654,17 +705,6 @@ class TaskDetailControl extends jsgui.Control {
     } catch {
       // ignore polling errors
     }
-  }
-
-  function startLive() {
-    cfg = readConfigFromForm(cfg);
-    cfg.enabled = true;
-    paused = false;
-    saveConfig(cfg);
-    if (timer) clearInterval(timer);
-    setStatus('Live: running (last seq ' + lastSeq + ')', 'running');
-    timer = setInterval(pollOnce, cfg.intervalMs || 1000);
-    pollOnce();
   }
 
   startBtn.addEventListener('click', () => startLive());
@@ -717,6 +757,107 @@ class TaskDetailControl extends jsgui.Control {
       cardEl.add(makeTextEl(this.context, 'div', String(card.value), {
         style: { fontSize: '24px', fontWeight: 'bold', color: card.bad ? '#c00' : '#333' }
       }));
+    }
+  }
+
+  _renderRemoteCrawlVisuals(container) {
+    const finalEvent = this._events.find(e => e.event_type === 'crawl:final' || e.event_type === 'collect:final');
+    if (!finalEvent || !finalEvent.payload) return;
+
+    let payloadObj = null;
+    try {
+      payloadObj = typeof finalEvent.payload === 'string' ? JSON.parse(finalEvent.payload) : finalEvent.payload;
+    } catch {
+      return;
+    }
+
+    if (!payloadObj.phaseTimings || !payloadObj.durationMs) return;
+
+    container.add(makeTextEl(this.context, 'h3', '⏱️ Phase Timings', {
+      style: { marginTop: '24px', marginBottom: '12px' }
+    }));
+
+    const chartContainer = container.add(new jsgui.Control({
+      context: this.context,
+      tagName: 'div',
+      style: {
+        marginBottom: '24px',
+        padding: '16px',
+        background: '#f9f9f9',
+        borderRadius: '8px',
+        border: '1px solid #eee'
+      }
+    }));
+
+    const totalMs = payloadObj.wallClockMs || payloadObj.durationMs || 1;
+    const timings = payloadObj.phaseTimings;
+
+    const barContainer = chartContainer.add(new jsgui.Control({
+      context: this.context,
+      tagName: 'div',
+      style: {
+        display: 'flex',
+        width: '100%',
+        height: '32px',
+        borderRadius: '4px',
+        overflow: 'hidden',
+        marginBottom: '16px'
+      }
+    }));
+
+    // Standard phases to look for
+    const phases = [
+      { key: 'preflight', label: 'Preflight', color: '#6c757d' },
+      { key: 'graph-exploration', label: 'Exploration', color: '#17a2b8' },
+      { key: 'graph-seeding', label: 'Seeding', color: '#ffc107' },
+      { key: 'remote-start', label: 'Start Remote', color: '#007bff' },
+      { key: 'sync-loop', label: 'Sync Loop', color: '#28a745' },
+      { key: 'drain-and-verify', label: 'Drain & Verify', color: '#6f42c1' }
+    ];
+
+    const legend = chartContainer.add(new jsgui.Control({
+      context: this.context,
+      tagName: 'div',
+      style: {
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '12px',
+        fontSize: '12px'
+      }
+    }));
+
+    for (const phase of phases) {
+      const ms = timings[phase.key] || 0;
+      if (ms <= 0) continue;
+
+      const pct = (ms / totalMs) * 100;
+      const widthStr = Math.max(pct, 0.5) + '%'; // at least 0.5% if it exists so it's visible
+
+      barContainer.add(new jsgui.Control({
+        context: this.context,
+        tagName: 'div',
+        attr: { title: `${phase.label}: ${ms}ms (${pct.toFixed(1)}%)` },
+        style: {
+          width: widthStr,
+          height: '100%',
+          background: phase.color,
+          borderRight: '1px solid rgba(255,255,255,0.3)'
+        }
+      }));
+
+      const legendItem = legend.add(new jsgui.Control({
+        context: this.context,
+        tagName: 'div',
+        style: { display: 'flex', alignItems: 'center', gap: '6px' }
+      }));
+      
+      legendItem.add(new jsgui.Control({
+        context: this.context,
+        tagName: 'div',
+        style: { width: '12px', height: '12px', borderRadius: '2px', background: phase.color }
+      }));
+      
+      legendItem.add(makeTextEl(this.context, 'span', `${phase.label} (${ms}ms)`));
     }
   }
 

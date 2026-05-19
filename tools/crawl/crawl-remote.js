@@ -18,15 +18,13 @@
  *   sync            Continuous sync loop (pull every 10s)
  *   errors          Show recent errors
  *   content         Content stats by domain
+ *   profiles        List available crawl profiles
  *
  * Usage:
  *   node tools/crawl/crawl-remote.js status --host 141.144.193.218:3200
- *   node tools/crawl/crawl-remote.js start --domain bbc.com
- *   node tools/crawl/crawl-remote.js start --all
- *   node tools/crawl/crawl-remote.js stop --all
- *   node tools/crawl/crawl-remote.js sync --interval 10
- *   node tools/crawl/crawl-remote.js pull --window 30
- *   node tools/crawl/crawl-remote.js add --domain nytimes.com --max-pages 100
+ *   node tools/crawl/crawl-remote.js --profile remote-guardian-bbc-2new
+ *   npm run crawl:remote -- --profile remote-status
+ *   npm run crawl:remote:bbc-guardian
  *
  * @module tools/crawl/crawl-remote
  */
@@ -41,7 +39,10 @@ const path = require('path');
 const fs = require('fs');
 const {
   findMissingDomains,
+  normalizeCollectOptions,
+  normalizeDomains,
   resolveTargetDomains,
+  summarizeHostVerification,
   summarizeBoundedRun,
 } = require('./lib/crawl-remote-bounded');
 const { createAdaptiveBatchController } = require('./lib/adaptive-sync-batching');
@@ -56,10 +57,12 @@ const { createPerfReporter } = require('./lib/perf-reporter');
 // ── Arg Parsing ─────────────────────────────────────────────
 
 const argv = process.argv.slice(2);
-const command = argv[0] || 'status';
+// If argv[0] is a flag (starts with --), treat all as flags and default to 'status'
+const command = (argv[0] && !argv[0].startsWith('--')) ? argv[0] : 'status';
+const argsStartIdx = (argv[0] && !argv[0].startsWith('--')) ? 1 : 0;
 
 const args = {};
-for (let i = 1; i < argv.length; i++) {
+for (let i = argsStartIdx; i < argv.length; i++) {
   const arg = argv[i];
   if (arg.startsWith('--')) {
     const eqIdx = arg.indexOf('=');
@@ -78,7 +81,72 @@ for (let i = 1; i < argv.length; i++) {
   }
 }
 
-if (command === 'help' || args.help || args.h) {
+// ── Profile Loading ─────────────────────────────────────────
+// --profile <name-or-path> loads a JSON file whose keys become arg defaults.
+// Bare names (no path separators, no .json suffix) are resolved from the
+// profiles/ directory next to this script, e.g. --profile remote-guardian-bbc-2new
+// Explicit CLI flags always override profile values.
+const PROFILES_DIR = path.join(__dirname, 'profiles');
+let resolvedProfilePath = null;
+let effectiveCommand = command;
+
+if (args.profile) {
+  const raw = String(args.profile);
+  // Try as-is first (absolute or relative path)
+  let profilePath = path.resolve(raw);
+  if (!fs.existsSync(profilePath)) {
+    // Try adding .json
+    profilePath = path.resolve(raw + '.json');
+  }
+  if (!fs.existsSync(profilePath)) {
+    // Try inside the profiles/ directory
+    profilePath = path.join(PROFILES_DIR, raw);
+    if (!fs.existsSync(profilePath)) {
+      profilePath = path.join(PROFILES_DIR, raw + '.json');
+    }
+  }
+  if (!fs.existsSync(profilePath)) {
+    // List available profiles to help the user
+    const available = fs.existsSync(PROFILES_DIR)
+      ? fs.readdirSync(PROFILES_DIR).filter(f => f.endsWith('.json')).map(f => f.replace(/\.json$/, ''))
+      : [];
+    console.error(`Profile not found: ${raw}`);
+    if (available.length) {
+      console.error(`Available profiles: ${available.join(', ')}`);
+    }
+    process.exit(1);
+  }
+  resolvedProfilePath = profilePath;
+  try {
+    const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
+    // Merge profile.options (the common structure) into args as defaults
+    const optionsToMerge = profile.options || {};
+    for (const [key, value] of Object.entries(optionsToMerge)) {
+      if (key.startsWith('$')) continue;
+      if (args[key] === undefined) {
+        args[key] = value;
+      }
+    }
+    // Also merge top-level keys (excluding reserved ones) for backward compat
+    for (const [key, value] of Object.entries(profile)) {
+      if (['options', 'positionals', 'tool', 'description', '$comment', '$schema'].includes(key)) continue;
+      if (key.startsWith('$')) continue;
+      if (args[key] === undefined) {
+        args[key] = value;
+      }
+    }
+    // Profile can specify the command via positionals[0] when no explicit command was given
+    if (profile.positionals && profile.positionals[0] && command === 'status') {
+      effectiveCommand = profile.positionals[0];
+    }
+  } catch (err) {
+    console.error(`Failed to parse profile ${profilePath}: ${err.message}`);
+    process.exit(1);
+  }
+  delete args.profile; // consumed
+}
+
+if (effectiveCommand === 'help' || args.help || args.h) {
   console.log(`crawl-remote.js — Multi-Domain Crawl Server CLI
 
 Usage:  node tools/crawl/crawl-remote.js <command> [options]
@@ -88,6 +156,8 @@ Commands:
   health                    Quick health check
   start [--domain d|--all]  Start crawling
   launch [--domain d|--domains d1,d2] Register missing domains, start crawling, and return
+  collect [--domains d1,d2] One-command crawl: preflight, start, sync, verify, stop, drain
+  graph-seeds [--domains d1,d2]  Explore local DB link graph to find unvisited pages
   bounded [--domain d|--domains d1,d2]  Start bounded crawl and wait for completion
   stop  [--domain d|--all]  Stop crawling
   run   [--domain d|--all]  Start crawling, sync continuously, and stop on exit
@@ -100,12 +170,26 @@ Commands:
   content                   Content stats by domain
   watch [--domains d1,d2]   Stay attached and poll status until terminal
                               (--watch-interval ms, --watch-timeout sec, --json)
+  profiles                  List available crawl profiles
+
+Shortcuts (npm run):
+  npm run crawl:remote -- <command> [options]
+  npm run crawl:remote -- --profile <name>
+  npm run crawl:remote:bbc-guardian          (BBC+Guardian streaming crawl)
+  npm run crawl:remote:profiles              (list profiles)
 
 Options:
   --host <host:port>     Remote server (default: env/resolver or 141.144.193.218:3200)
   --db <path>            Local DB path (default: data/news.db)
+  --profile <name|path>  Load a JSON profile (bare name resolved from profiles/ dir)
+                         e.g. --profile remote-guardian-bbc-2new
   --domain <domain>      Target domain for start/stop/seed/add/remove
   --all                  Affect all domains
+  --seed-from-graph      Explore local link graph and push unvisited URLs as remote seeds (default: true for collect)
+  --graph-seed-limit <n> Max unvisited URLs to seed per domain from local graph (default: target-pages * 2)
+  --sync-mode <mode>     Sync mode: 'polling' (default) or 'streaming' (SSE push)
+  --sync-batch-size <n>  Streaming: flush after N pages (default: 1 = immediate)
+  --sync-batch-window-ms <n> Streaming: flush after N ms (default: 500)
   --window <seconds>     Batch window in seconds (default: 10)
   --since <timestamp>    Override the first sync watermark for catch-up/drain runs
   --interval <seconds>   Sync polling interval (default: 5 for sync, 10 for run)
@@ -119,6 +203,7 @@ Options:
   --include-content <bool> Include content blobs in export batches (default: true)
   --include-links <bool> Include discovered links in export batches when supported (default: true)
   --prune-after-ingest   Confirm local save, then prune exported payloads from the remote node
+  --prune-delete-links   Also delete exported link rows; default keeps them for future frontier promotion
   --prune-delete-urls    Also delete remote URL state rows after ingest (unsafe while crawls are active)
   --no-backoff           Keep the configured interval even after empty sync rounds
   --remote-storage-budget-mb <n>   Soft cap on remote content storage (MB); above this, sync prefers small drain batches
@@ -127,7 +212,25 @@ Options:
   --reduced-concurrency <n>        Worker concurrency under storage pressure (default: 2)
   --perf-summary-every <n>         Print p50/p95 perf summary every N rounds (default: 10)
   --max-pages <n>        Max pages when adding domain (default: 50)
+  --max-depth <n>        Remote link-follow depth for start/collect (default: remote server default)
   --max-concurrent <n>   Max domains to crawl in parallel for start/bounded/run
+  --seed-urls <csv>      Hub/front-page URLs to queue for all requested domains when not already known
+  --seed-urls-by-domain <spec> Domain hub URL map: domain=url1|url2;domain=url3
+  --target-pages <n>     Local successful downloaded pages per host for collect (default: 100)
+  --min-new-pages <n>    Require N genuinely new pages per host (stored after collect starts)
+  --min-complete-hosts <n> Number of hosts that must reach --target-pages (and --min-new-pages) before collect stops
+  --verify-every <n>     Verify local host counts every N collect rounds (default: 1)
+  --drain-empty-rounds <n> Empty export rounds to drain after collect target is met (default: 3)
+  --max-status-failures <n> Exit collect after empty rounds plus repeated status failures (default: max(3, drain+1))
+  --start-retries <n>    Retry transient remote start failures (default: 3 for collect)
+  --no-prune-after-ingest Disable collect's default confirmed exact-ID remote prune
+  --agent-log <path>    Write structured JSONL telemetry for agents ({ts} and {command} supported)
+  --verbose-telemetry     Enable all verbose output (page latency, phase timing, per-host stats)
+  --show-page-latency    Show per-page download timings with latency in each batch
+  --show-phase-timing    Show timing breakdown for each crawl phase (preflight, graph, seeding, sync)
+  --show-per-host-stats  Show per-host download stats in each batch
+  --no-color             Disable ANSI colour in human output
+  --no-emoji             Disable emoji markers in human output
   --poll <seconds>       Poll interval for bounded wait (default: 5)
   --timeout-min <n>      Timeout in minutes for bounded wait (default: 30)
   --json                 Output raw JSON
@@ -148,6 +251,143 @@ const REMOTE_HOST = args.host || process.env.CRAWL_REMOTE_HOST || defaultHost;
 const LOCAL_DB_PATH = args.db || path.resolve(__dirname, '../../data/news.db');
 const WATERMARK_FILE = path.resolve(__dirname, '.crawl-remote-watermark.json');
 const JSON_OUTPUT = args.json === true;
+const RUN_ID = new Date().toISOString().replace(/[:.]/g, '-');
+const COLOR_OUTPUT = !JSON_OUTPUT
+  && args['no-color'] !== true
+  && process.env.NO_COLOR === undefined
+  && (process.stdout.isTTY || process.env.FORCE_COLOR);
+const EMOJI_OUTPUT = !JSON_OUTPUT && args['no-emoji'] !== true;
+const ANSI = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  gray: '\x1b[90m',
+};
+const ICONS = {
+  adaptive: '⚙️',
+  batch: '📦',
+  collect: '🕷️',
+  db: '🗄️',
+  drain: '🚰',
+  error: '❌',
+  feature: '✨',
+  health: '💚',
+  ledger: '📒',
+  ok: '✅',
+  prune: '🧹',
+  remote: '🌐',
+  setup: '🧰',
+  start: '🚀',
+  stop: '⏹️',
+  sync: '🔄',
+  target: '🎯',
+  verify: '🔎',
+  warn: '⚠️',
+};
+
+function paint(name, text) {
+  const value = String(text);
+  if (!COLOR_OUTPUT || !ANSI[name]) return value;
+  return `${ANSI[name]}${value}${ANSI.reset}`;
+}
+
+function icon(name, fallback = '') {
+  return EMOJI_OUTPUT ? (ICONS[name] || fallback) : fallback;
+}
+
+function printBanner(title, subtitle = '') {
+  if (JSON_OUTPUT) return;
+  console.log(paint('cyan', '═══════════════════════════════════════════════════════'));
+  console.log(`  ${paint('bold', title)}`);
+  if (subtitle) console.log(`  ${paint('dim', subtitle)}`);
+  console.log(paint('cyan', '═══════════════════════════════════════════════════════'));
+}
+
+function printFeature(iconName, label, value, detail = '') {
+  if (JSON_OUTPUT) return;
+  const head = `${icon(iconName)} ${paint('bold', label)}`.trim();
+  const suffix = detail ? ` ${paint('dim', detail)}` : '';
+  console.log(`  ${head}: ${value}${suffix}`);
+}
+
+function printStep(iconName, message, color = 'cyan') {
+  if (JSON_OUTPUT) return;
+  console.log(`  ${icon(iconName)} ${paint(color, message)}`);
+}
+
+let agentLogFile = undefined;
+
+function resolveAgentLogFile() {
+  const raw = args['agent-log'] ?? args.agentLog;
+  if (!raw) return null;
+  const template = raw === true
+    ? 'data/crawl-agent-runs/crawl-{command}-{ts}.jsonl'  
+    : String(raw);
+  const rendered = template
+    .replace(/\{ts\}/g, RUN_ID)
+    .replace(/\{command\}/g, effectiveCommand);
+  return path.resolve(process.cwd(), rendered);
+}
+
+function initAgentLog() {
+  if (agentLogFile !== undefined) return agentLogFile;
+  agentLogFile = resolveAgentLogFile();
+  if (agentLogFile) {
+    fs.mkdirSync(path.dirname(agentLogFile), { recursive: true });
+    if (!isTrueArg('agent-log-append') && !isTrueArg('agentLogAppend')) {
+      fs.writeFileSync(agentLogFile, '');
+    }
+  }
+  return agentLogFile;
+}
+
+let taskEventWriter = null;
+
+function writeAgentEvent(type, payload = {}) {
+  const ts = new Date().toISOString();
+  const file = initAgentLog();
+  if (file) {
+    const event = {
+      ts,
+      runId: RUN_ID,
+      command: effectiveCommand,
+      type,
+      ...payload,
+    };
+    fs.appendFileSync(file, `${JSON.stringify(event)}\n`);
+  }
+
+  // Push to local db task_events for UI observability
+  if (effectiveCommand === 'collect' && localDb) {
+    if (!taskEventWriter) {
+      const { TaskEventWriter } = require('../../src/data/db/TaskEventWriter');
+      taskEventWriter = new TaskEventWriter(localDb, { batchWrites: false });
+    }
+    
+    // Map event type for task_events readability
+    let mappedType = type;
+    if (type.startsWith('collect:')) {
+      mappedType = type.replace('collect:', 'crawl:');
+    }
+    
+    // Format payload for task_events schema requirements
+    let item_count = payload.downloaded || payload.count || payload.urls || payload.pagesDownloaded || 0;
+    
+    taskEventWriter.write({
+      taskType: 'remote_crawl',
+      taskId: RUN_ID,
+      eventType: mappedType,
+      data: { ...payload, count: item_count },
+      ts: ts,
+    });
+  }
+}
 
 function getDbApi(name) {
   const dbModule = resolveNewsCrawlerDbModule();
@@ -159,13 +399,30 @@ function getDbApi(name) {
 }
 
 let configureRemoteCrawlLocalSyncDb;
+let getRemoteCrawlerLocalSetupSnapshot;
+let listRemoteCrawlerSuccessfulDownloadCountsByHost;
 let verifyRemoteCrawlBatchPersisted;
+let listUnvisitedDiscoveredLinksForDomainFn;
 
 function getConfigureRemoteCrawlLocalSyncDb() {
   if (!configureRemoteCrawlLocalSyncDb) {
     configureRemoteCrawlLocalSyncDb = getDbApi('configureRemoteCrawlLocalSyncDb');
   }
   return configureRemoteCrawlLocalSyncDb;
+}
+
+function getRemoteCrawlerLocalSetupSnapshotFn() {
+  if (!getRemoteCrawlerLocalSetupSnapshot) {
+    getRemoteCrawlerLocalSetupSnapshot = getDbApi('getRemoteCrawlerLocalSetupSnapshot');
+  }
+  return getRemoteCrawlerLocalSetupSnapshot;
+}
+
+function getListRemoteCrawlerSuccessfulDownloadCountsByHost() {
+  if (!listRemoteCrawlerSuccessfulDownloadCountsByHost) {
+    listRemoteCrawlerSuccessfulDownloadCountsByHost = getDbApi('listRemoteCrawlerSuccessfulDownloadCountsByHost');
+  }
+  return listRemoteCrawlerSuccessfulDownloadCountsByHost;
 }
 
 function getVerifyRemoteCrawlBatchPersisted() {
@@ -175,17 +432,143 @@ function getVerifyRemoteCrawlBatchPersisted() {
   return verifyRemoteCrawlBatchPersisted;
 }
 
+function getListUnvisitedDiscoveredLinksForDomain() {
+  if (!listUnvisitedDiscoveredLinksForDomainFn) {
+    listUnvisitedDiscoveredLinksForDomainFn = getDbApi('listUnvisitedDiscoveredLinksForDomain');
+  }
+  return listUnvisitedDiscoveredLinksForDomainFn;
+}
+
+/**
+ * Explore the local DB link graph to find unvisited URLs for the given domains.
+ * Returns an object keyed by domain with arrays of unvisited target URLs.
+ *
+ * @param {string[]} domains - Target domains to explore
+ * @param {object} [options] - Options
+ * @param {number} [options.limit=20] - Max unvisited links per domain
+ * @returns {object} { byDomain: { [domain]: [...urls] }, totalUnvisited: number }
+ */
+function exploreLocalGraph(domains, options = {}) {
+  const limit = Number(options.limit) || 20;
+  const db = openLocalDb();
+  const fn = getListUnvisitedDiscoveredLinksForDomain();
+  const byDomain = {};
+  let totalUnvisited = 0;
+  for (const domain of domains) {
+    try {
+      const rows = fn(db, { domain, limit });
+      byDomain[domain] = rows;
+      totalUnvisited += rows.length;
+    } catch (err) {
+      byDomain[domain] = { error: err.message };
+    }
+  }
+  return { byDomain, totalUnvisited };
+}
+
+/**
+ * Push graph-discovered unvisited URLs to the remote server as seeds.
+ * This is the "local brain → remote muscle" pipeline: the local DB's
+ * link graph decides what to download, the remote server executes.
+ *
+ * @param {object} graphResult - Result from exploreLocalGraph()
+ * @param {string[]} targetDomains - Target domains
+ * @param {object} options - { graphSeedLimit: number }
+ * @returns {object} { byDomain: { [domain]: { seeded, skipped, error } }, totalSeeded }
+ */
+async function seedFromLocalGraph(graphResult, targetDomains, options = {}) {
+  const limit = Number(options.graphSeedLimit) || 10;
+  const results = { byDomain: {}, totalSeeded: 0, totalSkipped: 0 };
+
+  for (const domain of targetDomains) {
+    const rows = graphResult.byDomain[domain];
+    if (!Array.isArray(rows) || rows.length === 0) {
+      results.byDomain[domain] = { seeded: 0, skipped: 0, candidates: 0 };
+      continue;
+    }
+
+    // Take the top N unvisited URLs (already ranked by link count from the DB query)
+    const seedUrls = rows.slice(0, limit).map(r => r.targetUrl);
+    try {
+      const { data } = await requestWithTimeout('POST', '/api/seed', {
+        domain,
+        urls: seedUrls,
+      }, 15000);
+      const seeded = Number(data?.inserted || data?.queued || 0);
+      const skipped = seedUrls.length - seeded;
+      results.byDomain[domain] = {
+        seeded,
+        skipped,
+        candidates: seedUrls.length,
+        response: data,
+      };
+      results.totalSeeded += seeded;
+      results.totalSkipped += skipped;
+    } catch (err) {
+      results.byDomain[domain] = {
+        seeded: 0,
+        skipped: 0,
+        candidates: seedUrls.length,
+        error: err.message,
+      };
+    }
+  }
+
+  return results;
+}
+
 function parsePositiveIntArg(name) {
   const value = args[name];
   const parsed = parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
+function parseSeedUrlList(value) {
+  if (Array.isArray(value)) return value.map(item => String(item || '').trim()).filter(Boolean);
+  if (!value || value === true) return [];
+  return String(value)
+    .split(/[,\n]/)
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function parseSeedUrlsByDomain(value) {
+  if (!value || value === true) return null;
+  const result = {};
+  const entries = String(value).split(';').map(item => item.trim()).filter(Boolean);
+  for (const entry of entries) {
+    const eqIndex = entry.indexOf('=');
+    if (eqIndex <= 0) continue;
+    const domain = entry.slice(0, eqIndex).trim().toLowerCase().replace(/^www\./, '');
+    const urls = entry.slice(eqIndex + 1).split('|').map(item => item.trim()).filter(Boolean);
+    if (domain && urls.length > 0) result[domain] = urls;
+  }
+  return Object.keys(result).length > 0 ? result : null;
+}
+
+function summarizeSeedConfiguration() {
+  const seedUrls = parseSeedUrlList(args['seed-urls'] || args.seedUrls);
+  const seedUrlsByDomain = parseSeedUrlsByDomain(args['seed-urls-by-domain'] || args.seedUrlsByDomain);
+  if (seedUrlsByDomain) {
+    return Object.entries(seedUrlsByDomain)
+      .map(([domain, urls]) => `${domain}:${urls.length}`)
+      .join(', ');
+  }
+  if (seedUrls.length > 0) return `${seedUrls.length} shared URL(s)`;
+  return 'remote configured seeds/default front pages';
+}
+
 function applyStartOverrides(body) {
   const maxPages = parsePositiveIntArg('max-pages');
   const maxConcurrent = parsePositiveIntArg('max-concurrent') || parsePositiveIntArg('maxConcurrent');
+  const maxDepth = parsePositiveIntArg('max-depth') || parsePositiveIntArg('maxDepth');
+  const seedUrls = parseSeedUrlList(args['seed-urls'] || args.seedUrls);
+  const seedUrlsByDomain = parseSeedUrlsByDomain(args['seed-urls-by-domain'] || args.seedUrlsByDomain);
   if (maxPages) body.maxPages = maxPages;
   if (maxConcurrent) body.maxConcurrent = maxConcurrent;
+  if (maxDepth) body.maxDepth = maxDepth;
+  if (seedUrls.length > 0) body.seedUrls = seedUrls;
+  if (seedUrlsByDomain) body.seedUrlsByDomain = seedUrlsByDomain;
   return body;
 }
 
@@ -207,7 +590,18 @@ function appendExportOptions(queryPath) {
 }
 
 function shouldPruneAfterIngest() {
+  if (isTrueArg('no-prune-after-ingest') || isTrueArg('noPruneAfterIngest')) return false;
   return shouldPruneAfterIngestPure(args);
+}
+
+function getPruneSummary() {
+  if (!shouldPruneAfterIngest()) return 'disabled';
+  const parts = ['content/http'];
+  parts.push(isTrueArg('prune-delete-links') || isTrueArg('pruneDeleteLinks')
+    ? 'links deleted'
+    : 'links retained for frontier');
+  if (isTrueArg('prune-delete-urls') || isTrueArg('pruneDeleteUrls')) parts.push('URL rows deleted');
+  return `enabled (${parts.join(', ')})`;
 }
 
 function validatePruneExportConfig() {
@@ -302,10 +696,12 @@ function request(method, path, body = null) {
               resolve({
                 status: res.statusCode,
                 headers: res.headers,
+                rawBytes: raw.length,
+                decodedBytes: decompressed.length,
                 data: JSON.parse(decompressed.toString('utf8')),
               });
             } catch (e) {
-              resolve({ status: res.statusCode, headers: res.headers, data: decompressed.toString('utf8') });
+              resolve({ status: res.statusCode, headers: res.headers, rawBytes: raw.length, decodedBytes: decompressed.length, data: decompressed.toString('utf8') });
             }
           });
         } else {
@@ -313,10 +709,12 @@ function request(method, path, body = null) {
             resolve({
               status: res.statusCode,
               headers: res.headers,
+              rawBytes: raw.length,
+              decodedBytes: raw.length,
               data: JSON.parse(raw.toString('utf8')),
             });
           } catch (e) {
-            resolve({ status: res.statusCode, headers: res.headers, data: raw.toString('utf8') });
+            resolve({ status: res.statusCode, headers: res.headers, rawBytes: raw.length, decodedBytes: raw.length, data: raw.toString('utf8') });
           }
         }
       });
@@ -335,6 +733,78 @@ function requestWithTimeout(method, path, body = null, timeoutMs = 30000) {
     request(method, path, body),
     new Promise((_, reject) => setTimeout(() => reject(new Error(`Request ${method} ${path} timed out after ${timeoutMs}ms`)), timeoutMs))
   ]);
+}
+
+function isTransientRequestError(err) {
+  const code = String(err?.code || '').toUpperCase();
+  const message = String(err?.message || '').toLowerCase();
+  return [
+    'ECONNRESET',
+    'ECONNREFUSED',
+    'EPIPE',
+    'ETIMEDOUT',
+    'EAI_AGAIN',
+  ].includes(code)
+    || message.includes('socket hang up')
+    || message.includes('request timed out')
+    || message.includes('timeout')
+    || message.includes('temporarily unavailable');
+}
+
+async function requestWithRetries(method, requestPath, body = null, options = {}) {
+  const attempts = Math.max(1, Number(options.attempts) || 1);
+  const timeoutMs = Math.max(1000, Number(options.timeoutMs) || 30000);
+  const retryDelayMs = Math.max(0, Number(options.retryDelayMs) || 750);
+  const label = options.label || `${method} ${requestPath}`;
+  let lastError;
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const startedAt = new Date().toISOString();
+    const startMs = Date.now();
+    try {
+      const response = await requestWithTimeout(method, requestPath, body, timeoutMs);
+      const durationMs = Date.now() - startMs;
+      if (attempt > 1 && !JSON_OUTPUT) {
+        printStep('ok', `${label} succeeded on attempt ${attempt}/${attempts} (${durationMs}ms)`, 'green');
+      }
+      writeAgentEvent('http:request-success', {
+        label,
+        method,
+        path: requestPath,
+        attempt,
+        attempts,
+        startedAt,
+        durationMs,
+        status: response.status,
+      });
+      return { ...response, attempts: attempt };
+    } catch (err) {
+      lastError = err;
+      const durationMs = Date.now() - startMs;
+      const retryable = attempt < attempts && isTransientRequestError(err);
+      writeAgentEvent('http:request-error', {
+        label,
+        method,
+        path: requestPath,
+        attempt,
+        attempts,
+        startedAt,
+        durationMs,
+        retryable,
+        error: err.message,
+        code: err.code || null,
+      });
+      if (!retryable) break;
+
+      const waitMs = retryDelayMs * attempt;
+      if (!JSON_OUTPUT) {
+        printStep('warn', `${label} attempt ${attempt}/${attempts} failed: ${err.message}; retrying in ${waitMs}ms`, 'yellow');
+      }
+      await sleep(waitMs);
+    }
+  }
+
+  throw lastError;
 }
 
 // ── Watermark Management ────────────────────────────────────
@@ -419,10 +889,11 @@ async function pruneRemoteWatermark(watermark, urlIds = []) {
   const body = {
     before: watermark,
     urlIds: exactUrlIds,
-    deleteUrls: isTrueArg('prune-delete-urls') || isTrueArg('pruneDeleteUrls'),
-    deleteLinks: !isFalseArg('prune-delete-links') && !isFalseArg('pruneDeleteLinks'),
     vacuum: isTrueArg('prune-vacuum') || isTrueArg('pruneVacuum'),
   };
+  if (isTrueArg('prune-delete-urls') || isTrueArg('pruneDeleteUrls')) body.deleteUrls = true;
+  if (isTrueArg('prune-delete-links') || isTrueArg('pruneDeleteLinks')) body.deleteLinks = true;
+  else if (isTrueArg('prune-keep-links') || isTrueArg('pruneKeepLinks')) body.deleteLinks = false;
   if (args['prune-vacuum-threshold-mb']) body.vacuumThresholdMb = args['prune-vacuum-threshold-mb'];
   const { data } = await requestWithTimeout('POST', '/api/export/prune', body, 60000);
   if (!data?.ok) {
@@ -485,14 +956,409 @@ function formatDuration(ms) {
   return `${s}s`;
 }
 
+function formatBytesPerSecond(bytes, ms) {
+  if (!Number.isFinite(bytes) || !Number.isFinite(ms) || ms <= 0) return 'n/a';
+  return `${formatSize((bytes * 1000) / ms)}/s`;
+}
+
+function minIso(values) {
+  const filtered = values.filter(Boolean).sort();
+  return filtered[0] || null;
+}
+
+function maxIso(values) {
+  const filtered = values.filter(Boolean).sort();
+  return filtered[filtered.length - 1] || null;
+}
+
 function printTable(rows, cols) {
   if (rows.length === 0) { console.log('  (empty)'); return; }
   const widths = cols.map(c => Math.max(c.label.length, ...rows.map(r => String(c.get(r) ?? '').length)));
   const header = cols.map((c, i) => c.label.padEnd(widths[i])).join('  ');
-  console.log(`  ${header}`);
-  console.log(`  ${cols.map((_, i) => '─'.repeat(widths[i])).join('──')}`);
+  console.log(`  ${paint('bold', header)}`);
+  console.log(`  ${paint('gray', cols.map((_, i) => '─'.repeat(widths[i])).join('──'))}`);
   for (const row of rows) {
     console.log(`  ${cols.map((c, i) => String(c.get(row) ?? '').padEnd(widths[i])).join('  ')}`);
+  }
+}
+
+function getLedgerFile() {
+  return path.resolve(__dirname, '.crawl-remote-ledger.json');
+}
+
+async function closeDbHandle(db) {
+  if (!db || typeof db.close !== 'function') return;
+  const result = db.close();
+  if (result && typeof result.then === 'function') await result;
+}
+
+function formatSetupError(err) {
+  const message = err?.message || String(err);
+  if (/invalid ELF header|better_sqlite3|NODE_MODULE_VERSION|was compiled against/i.test(message)) {
+    return `${message}\n  ${icon('setup')} Native SQLite binding is not usable in this shell. Rebuild it here with npm rebuild better-sqlite3 in copilot-dl-news and news-crawler-db.`;
+  }
+  if (/SQLITE_IOERR_SHMOPEN|database is locked|SQLITE_BUSY/i.test(message)) {
+    return `${message}\n  ${icon('setup')} Local DB access is blocked. Stop any app currently holding data/news.db before running collect.`;
+  }
+  return message;
+}
+
+async function preflightLocalDb() {
+  if (!fs.existsSync(LOCAL_DB_PATH)) {
+    throw new Error(`Local DB not found: ${LOCAL_DB_PATH}`);
+  }
+
+  let db;
+  try {
+    db = openNewsCrawlerDb(LOCAL_DB_PATH, { readonly: true, fileMustExist: true });
+    const setup = getRemoteCrawlerLocalSetupSnapshotFn()(db);
+    const stat = fs.statSync(LOCAL_DB_PATH);
+    return {
+      path: LOCAL_DB_PATH,
+      sizeBytes: stat.size,
+      tables: setup.tables || [],
+      requiredTables: setup.requiredTables || [],
+      hasRequiredTables: Boolean(setup.hasRequiredTables),
+    };
+  } catch (err) {
+    throw new Error(formatSetupError(err));
+  } finally {
+    await closeDbHandle(db);
+  }
+}
+
+function queryLocalHostVerification(targetDomains, sinceMarker) {
+  const db = openLocalDb();
+  return getListRemoteCrawlerSuccessfulDownloadCountsByHost()(db, {
+    hosts: targetDomains,
+    since: sinceMarker,
+  });
+}
+
+/**
+ * Summarize new-pages verification: for each host, check if at least
+ * minNewPages genuinely new pages have been stored since the collect started.
+ * Uses the collect-start timestamp (not the since marker which may be backdated).
+ * @param {string[]} targetDomains
+ * @param {string} collectStartISO - ISO timestamp of when this collect run started
+ * @param {number} minNewPages - minimum new pages required per host
+ */
+function summarizeNewPagesVerification(targetDomains, collectStartISO, minNewPages) {
+  const db = openLocalDb();
+  const rows = getListRemoteCrawlerSuccessfulDownloadCountsByHost()(db, {
+    hosts: targetDomains,
+    since: collectStartISO,
+  });
+  const byHost = new Map((rows || [])
+    .filter(row => row && (row.host || row.domain))
+    .map(row => [String(row.host || row.domain), {
+      host: String(row.host || row.domain),
+      newPages: Number(row.pages || row.count || 0),
+      lastFetched: row.lastFetched || row.last_fetched || null,
+    }]));
+
+  const complete = [];
+  const incomplete = [];
+
+  for (const host of targetDomains) {
+    const row = byHost.get(host) || { host, newPages: 0, lastFetched: null };
+    const item = {
+      host,
+      newPages: Number(row.newPages || 0),
+      minNewPages,
+      needed: Math.max(0, minNewPages - Number(row.newPages || 0)),
+      lastFetched: row.lastFetched || null,
+    };
+    if (item.newPages >= minNewPages) complete.push(item);
+    else incomplete.push(item);
+  }
+
+  return {
+    minNewPages,
+    totalHosts: targetDomains.length,
+    complete,
+    incomplete,
+    completeCount: complete.length,
+    allComplete: targetDomains.length > 0 && incomplete.length === 0,
+  };
+}
+
+function printNewPagesVerification(summary, minCompleteHosts) {
+  if (JSON_OUTPUT) return;
+  const allMet = summary.completeCount >= minCompleteHosts;
+  const completeText = `${summary.completeCount}/${summary.totalHosts} host(s) at ${summary.minNewPages}+ NEW pages`;
+  const color = allMet ? 'green' : 'yellow';
+  console.log(`  ${icon('verify')} ${paint(color, completeText)} ${paint('dim', `(need ${minCompleteHosts})`)}`);
+
+  const rows = [...summary.complete, ...summary.incomplete]
+    .sort((a, b) => b.newPages - a.newPages)
+    .slice(0, Math.min(12, summary.totalHosts));
+  printTable(rows, [
+    { label: 'Host', get: row => row.host },
+    { label: 'New', get: row => row.newPages },
+    { label: 'Need', get: row => row.needed },
+    { label: 'Last fetched', get: row => row.lastFetched || '' },
+  ]);
+}
+
+function printHostVerification(summary, minCompleteHosts) {
+  if (JSON_OUTPUT) return;
+  const completeText = `${summary.completeCount}/${summary.totalHosts} host(s) at ${summary.targetPages}+ pages`;
+  const color = summary.completeCount >= minCompleteHosts ? 'green' : 'yellow';
+  console.log(`  ${icon('verify')} ${paint(color, completeText)} ${paint('dim', `(need ${minCompleteHosts})`)}`);
+
+  const rows = [...summary.complete, ...summary.incomplete]
+    .sort((a, b) => b.pages - a.pages)
+    .slice(0, Math.min(12, summary.totalHosts));
+  printTable(rows, [
+    { label: 'Host', get: row => row.host },
+    { label: 'Pages', get: row => row.pages },
+    { label: 'Need', get: row => row.needed },
+    { label: 'Last fetched', get: row => row.lastFetched || '' },
+  ]);
+}
+
+function printRemoteFrontierTelemetry(remoteStatus) {
+  if (JSON_OUTPUT || !remoteStatus?.domains?.length) return;
+  const rows = remoteStatus.domains.map(row => {
+    const queue = row.queue || {};
+    const promotion = row.frontier?.lastPromotion || {};
+    return {
+      host: row.domain,
+      depth: row.maxDepth || '',
+      seeds: `${queue.seedQueued || 0}/${queue.seedAlreadyKnown || 0}/${queue.seedRefreshed || 0}`,
+      discovered: `${queue.discoveredQueued || 0}/${queue.discoveredAlreadyKnown || 0}`,
+      pending: row.pending,
+      reason: row.frontier?.lastNoPendingReason || (promotion.reason ? `${promotion.reason}:${promotion.inserted || 0}` : ''),
+    };
+  });
+  console.log(`  ${icon('feature')} Frontier: seeds new/known/refreshed, discovered new/known, pending, no-new reason`);
+  printTable(rows, [
+    { label: 'Host', get: row => row.host },
+    { label: 'Depth', get: row => row.depth },
+    { label: 'Seeds', get: row => row.seeds },
+    { label: 'Discovered', get: row => row.discovered },
+    { label: 'Pending', get: row => row.pending },
+    { label: 'Reason', get: row => row.reason },
+  ]);
+}
+
+function remoteTargetsTerminal(statusData, targetDomains) {
+  return summarizeBoundedRun(statusData, targetDomains).allDone;
+}
+
+function remoteTargetsRunning(statusData, targetDomains) {
+  const targets = normalizeDomains(targetDomains);
+  const domains = Array.isArray(statusData?.domains) ? statusData.domains : [];
+  const byDomain = new Map(domains.map(row => [String(row.domain || '').toLowerCase(), row]));
+  return targets.length > 0 && targets.every(domain => {
+    const row = byDomain.get(domain);
+    return row && (row.isRunning === true || String(row.state || '').toLowerCase() === 'running');
+  });
+}
+
+async function stopTargetDomains(targetDomains, timeoutMs = 15000) {
+  const stopBody = {};
+  if (targetDomains.length === 1) stopBody.domain = targetDomains[0];
+  else if (targetDomains.length > 1) stopBody.domains = targetDomains;
+  const { data } = await requestWithTimeout('POST', '/api/stop', stopBody, timeoutMs);
+  return data;
+}
+
+function summarizeBatchRemoteDownloads(batch) {
+  const urls = new Map((Array.isArray(batch?.urls) ? batch.urls : [])
+    .filter(row => row && row.id !== undefined)
+    .map(row => [Number(row.id), row]));
+  const contentResponseIds = new Set((Array.isArray(batch?.content) ? batch.content : [])
+    .map(row => Number(row?.http_response_id))
+    .filter(id => Number.isInteger(id)));
+  const responses = Array.isArray(batch?.httpResponses) ? batch.httpResponses : [];
+  const summary = {
+    responseCount: responses.length,
+    successCount: 0,
+    contentCount: contentResponseIds.size,
+    bytesDownloaded: 0,
+    totalDownloadMs: 0,
+    totalResponseMs: 0,
+    firstFetchedAt: null,
+    lastFetchedAt: null,
+    remoteBytesPerSec: 0,
+    avgResponseMs: 0,
+    byHost: {},
+  };
+
+  const fetchedTimes = [];
+  for (const response of responses) {
+    const urlRow = urls.get(Number(response?.url_id));
+    const host = String(urlRow?.host || '(unknown)');
+    const status = Number(response?.http_status || 0);
+    const bytes = Number(response?.bytes_downloaded || 0);
+    const downloadMs = Number(response?.download_ms || response?.total_ms || 0);
+    const totalMs = Number(response?.total_ms || 0);
+    const fetchedAt = response?.fetched_at || null;
+
+    if (!summary.byHost[host]) {
+      summary.byHost[host] = {
+        host,
+        responses: 0,
+        success: 0,
+        content: 0,
+        bytesDownloaded: 0,
+        totalDownloadMs: 0,
+        firstFetchedAt: null,
+        lastFetchedAt: null,
+      };
+    }
+
+    const hostSummary = summary.byHost[host];
+    hostSummary.responses += 1;
+    if (status >= 200 && status < 300) {
+      summary.successCount += 1;
+      hostSummary.success += 1;
+    }
+    if (contentResponseIds.has(Number(response?.id))) hostSummary.content += 1;
+    summary.bytesDownloaded += bytes;
+    hostSummary.bytesDownloaded += bytes;
+    if (downloadMs > 0) {
+      summary.totalDownloadMs += downloadMs;
+      hostSummary.totalDownloadMs += downloadMs;
+    }
+    if (totalMs > 0) summary.totalResponseMs += totalMs;
+    if (fetchedAt) fetchedTimes.push(fetchedAt);
+    hostSummary.firstFetchedAt = minIso([hostSummary.firstFetchedAt, fetchedAt]);
+    hostSummary.lastFetchedAt = maxIso([hostSummary.lastFetchedAt, fetchedAt]);
+  }
+
+  summary.firstFetchedAt = minIso(fetchedTimes);
+  summary.lastFetchedAt = maxIso(fetchedTimes);
+  summary.remoteBytesPerSec = summary.totalDownloadMs > 0
+    ? (summary.bytesDownloaded * 1000) / summary.totalDownloadMs
+    : 0;
+  summary.avgResponseMs = summary.responseCount > 0
+    ? summary.totalResponseMs / summary.responseCount
+    : 0;
+  summary.byHost = Object.fromEntries(Object.entries(summary.byHost).map(([host, row]) => [host, {
+    ...row,
+    remoteBytesPerSec: row.totalDownloadMs > 0 ? (row.bytesDownloaded * 1000) / row.totalDownloadMs : 0,
+  }]));
+  summary.pagesDownloaded = summary.successCount;
+  return summary;
+}
+
+function summarizeRemoteStatus(statusData, targetDomains = []) {
+  const targets = new Set(normalizeDomains(targetDomains));
+  const domains = (statusData?.domains || [])
+    .filter(row => targets.size === 0 || targets.has(row.domain))
+    .map(row => ({
+      domain: row.domain,
+      state: row.state,
+      isRunning: Boolean(row.isRunning),
+      fetched: Number(row.stats?.fetched || row.stats?.done || 0),
+      pending: Number(row.stats?.pending || row.stats?.queued || 0),
+      errors: Number(row.stats?.errors || 0),
+      stored: Number(row.contentPipeline?.totalStored || row.stats?.stored || 0),
+      startedAt: row.startedAt || null,
+	      stoppedAt: row.stoppedAt || null,
+	      maxPages: row.maxPages || null,
+	      maxDepth: row.maxDepth || row.stats?.maxDepth || null,
+	      seedUrls: row.seedUrls || 0,
+	      frontier: row.frontier || null,
+	      queue: {
+	        seedQueued: Number(row.stats?.seedQueued || 0),
+	        seedAlreadyKnown: Number(row.stats?.seedAlreadyKnown || 0),
+	        seedRefreshed: Number(row.stats?.seedRefreshed || 0),
+	        discoveredQueued: Number(row.stats?.discoveredQueued || 0),
+	        discoveredAlreadyKnown: Number(row.stats?.discoveredAlreadyKnown || 0),
+	        discoveredInvalid: Number(row.stats?.discoveredInvalid || 0),
+	        discoveredOutsideDomain: Number(row.stats?.discoveredOutsideDomain || 0),
+	        depthLimitSkipped: Number(row.stats?.depthLimitSkipped || 0),
+	      },
+	    }));
+  return {
+    throughput: {
+      fetchesPerSec: Number(statusData?.throughput?.fetchesPerSec || 0),
+      writesPerSec: Number(statusData?.throughput?.writesPerSec || 0),
+      windowSec: Number(statusData?.throughput?.windowSec || 0),
+    },
+    totals: statusData?.totals || {},
+    orchestrator: statusData?.orchestrator || {},
+    domains,
+  };
+}
+
+function buildCollectDiagnostics({
+  ok,
+  totalUrls,
+  totalContent,
+  targetDomains,
+  options,
+  lastRemoteStatus,
+  statusCheckFailures,
+  startAttempts,
+  startRecoveredFromUncertainResponse,
+}) {
+  const domains = Array.isArray(lastRemoteStatus?.domains) ? lastRemoteStatus.domains : [];
+  const targetSet = new Set(normalizeDomains(targetDomains));
+  const targetRows = domains.filter(row => targetSet.has(String(row.domain || '').toLowerCase()));
+  const zeroFreshRows = targetRows.filter(row =>
+    Number(row.fetched || 0) === 0 &&
+    Number(row.pending || 0) === 0 &&
+    String(row.state || '').toLowerCase() !== 'running'
+  );
+  const existingStoredRows = targetRows.filter(row => Number(row.stored || 0) > 0);
+  const issues = [];
+  const recommendations = [];
+
+  if (startAttempts > 1) {
+    issues.push(`Remote start needed ${startAttempts} attempts before a usable response.`);
+    recommendations.push('Keep start retry telemetry enabled and consider adding request IDs on the remote API so duplicate start attempts can be correlated.');
+  }
+
+  if (startRecoveredFromUncertainResponse) {
+    issues.push('The start response failed, but the CLI recovered by observing target domains already running.');
+  }
+
+  if (statusCheckFailures > 0) {
+    issues.push(`${statusCheckFailures} remote status check(s) failed during verification.`);
+    recommendations.push('Add retry/backoff to verification status checks and log request IDs, latency, and error codes for each remote API call.');
+  }
+
+	  if (!ok && totalUrls === 0 && totalContent === 0) {
+	    issues.push('No export batches contained URL or content rows, so remote download and local ingest speed could not be measured for real pages.');
+	    recommendations.push('Expose a pre-start remote queue diagnostic with pending hub/article count, done count, newest fetched_at, and whether a domain will stop immediately before the CLI enters the sync loop.');
+	  }
+
+	  if (!ok && zeroFreshRows.length === targetSet.size && targetSet.size > 0) {
+	    issues.push(`All target domains stopped with 0 fresh fetched pages and 0 pending URLs: ${zeroFreshRows.map(row => row.domain).join(', ')}.`);
+	    recommendations.push('Use hub seed URLs plus discovered-link promotion so exhausted front pages can lead to not-yet-known article URLs without resetting or re-downloading known pages.');
+	  }
+
+  if (!ok && existingStoredRows.length > 0) {
+    const storedText = existingStoredRows.map(row => `${row.domain}=${row.stored}`).join(', ');
+    issues.push(`Remote status shows existing stored content (${storedText}), but none of it was newly fetched after this run's since marker.`);
+    recommendations.push('Surface newest remote fetched_at/content stored_at timestamps per target before start, so the operator can see whether the local since marker can export anything.');
+  }
+
+  if (!ok && Number(options?.maxPages || 0) <= Number(options?.targetPages || 0)) {
+    recommendations.push('For validation crawls, consider max-pages above target-pages to allow for redirects, blocked pages, empty bodies, and duplicate URLs.');
+  }
+
+  return {
+    issues,
+    recommendations,
+    statusCheckFailures,
+    startAttempts,
+    startRecoveredFromUncertainResponse,
+    lastRemoteStatus: lastRemoteStatus || null,
+  };
+}
+
+async function readRemoteStatusTelemetry(targetDomains) {
+  try {
+    const { data } = await requestWithTimeout('GET', '/api/status', null, 10000);
+    return summarizeRemoteStatus(data, targetDomains);
+  } catch (err) {
+    return { error: err.message, throughput: {}, domains: [] };
   }
 }
 
@@ -503,16 +1369,13 @@ async function cmdStatus() {
 
   if (JSON_OUTPUT) { console.log(JSON.stringify(data, null, 2)); return; }
 
-  console.log('═══════════════════════════════════════════════════════');
-  console.log('  Multi-Domain Crawl Server Status');
-  console.log('═══════════════════════════════════════════════════════');
-  console.log(`  Server: ${REMOTE_HOST}`);
-  console.log(`  Version: ${data.version}`);
-  console.log(`  Schema: ${data.schemaVersion}`);
-  console.log(`  Orchestrator: ${data.orchestrator?.running ? 'RUNNING' : 'IDLE'}`);
-  console.log(`  Concurrency: ${data.orchestrator?.currentlyRunning}/${data.orchestrator?.maxConcurrent}`);
+  printBanner(`${icon('collect')} Multi-Domain Crawl Server Status`, `Remote ${REMOTE_HOST}`);
+  printFeature('remote', 'Server', REMOTE_HOST);
+  printFeature('feature', 'Version', data.version || '(unknown)', `schema=${data.schemaVersion || '(unknown)'}`);
+  printFeature('sync', 'Orchestrator', data.orchestrator?.running ? paint('green', 'RUNNING') : paint('yellow', 'IDLE'));
+  printFeature('adaptive', 'Concurrency', `${data.orchestrator?.currentlyRunning}/${data.orchestrator?.maxConcurrent}`);
   console.log('');
-  console.log(`  Totals: ${data.totals?.fetched || 0} fetched, ${data.totals?.stored || 0} stored, ${data.totals?.errors || 0} errors, ${data.totals?.pending || 0} pending`);
+  console.log(`  ${icon('batch')} Totals: ${data.totals?.fetched || 0} fetched, ${data.totals?.stored || 0} stored, ${data.totals?.errors || 0} errors, ${data.totals?.pending || 0} pending`);
   console.log('');
 
   if (data.domains && data.domains.length > 0) {
@@ -533,9 +1396,9 @@ async function cmdHealth() {
   try {
     const { data } = await requestWithTimeout('GET', '/api/health', null, 10000);
     if (JSON_OUTPUT) { console.log(JSON.stringify(data, null, 2)); return; }
-    console.log(`  ✅ ${data.mode} server healthy — ${data.domains} domains, ${data.running} running, ${data.stored} stored`);
+    console.log(`  ${icon('ok')} ${paint('green', `${data.mode} server healthy`)} ${paint('dim', `— ${data.domains} domains, ${data.running} running, ${data.stored} stored`)}`);
   } catch (e) {
-    console.log(`  ❌ Server unreachable: ${e.message}`);
+    console.log(`  ${icon('error')} ${paint('red', `Server unreachable: ${e.message}`)}`);
     process.exit(1);
   }
 }
@@ -762,6 +1625,764 @@ async function cmdLaunch() {
   }
   console.log(`  Launch requested for ${targetDomains.length} domain(s).`);
   console.log('  Use `node tools/crawl/crawl-remote.js health` for a lightweight liveness check.');
+}
+
+async function cmdCollect() {
+  initAgentLog();
+  openLocalDb(); // Ensure local DB is open early for telemetry logging
+  if (!isTrueArg('no-prune-after-ingest') && args['prune-after-ingest'] === undefined && args.pruneAfterIngest === undefined) {
+    args['prune-after-ingest'] = true;
+  }
+  validatePruneExportConfig();
+
+  const wallClockStartMs = Date.now();
+  const phaseTimings = {};
+  function startPhase(name) { phaseTimings[name] = { startMs: Date.now() }; }
+  function endPhase(name) { if (phaseTimings[name]) phaseTimings[name].durationMs = Date.now() - phaseTimings[name].startMs; }
+
+  const sinceMarker = args.since || new Date(Date.now() - 3000).toISOString();
+  printBanner(`${icon('collect')} Remote Crawl Collect`, 'Preflight + start + sync + verify + stop/drain');
+  startPhase('preflight');
+  printStep('setup', 'Checking remote server and local DB setup...', 'cyan');
+  writeAgentEvent('collect:start', {
+    remoteHost: REMOTE_HOST,
+    localDbPath: LOCAL_DB_PATH,
+    sinceMarker,
+    agentLogFile: agentLogFile || null,
+  });
+
+  const { data: healthData } = await requestWithTimeout('GET', '/api/health', null, 10000);
+  let { data: initialStatus } = await requestWithTimeout('GET', '/api/status', null, 10000);
+  const targetDomains = resolveTargetDomains(args, initialStatus);
+  if (targetDomains.length === 0) {
+    throw new Error('No target domains resolved for collect. Use --domain, --domains, or configure remote domains first.');
+  }
+
+  const options = normalizeCollectOptions(args, targetDomains);
+  if (!parsePositiveIntArg('max-pages')) args['max-pages'] = String(options.maxPages);
+  if (!parsePositiveIntArg('limit')) args.limit = String(options.limit);
+
+  const dbInfo = await preflightLocalDb();
+  if (!dbInfo.hasRequiredTables) {
+    throw new Error(`Local DB is missing required tables. Found: ${dbInfo.tables.join(', ') || '(none)'}`);
+  }
+
+  if (!JSON_OUTPUT) {
+    printStep('ok', `Remote health: ${healthData.mode || 'server'} (${healthData.domains || 0} domains, ${healthData.running || 0} running)`, 'green');
+    printStep('ok', `Local DB ready: ${dbInfo.path} (${formatSize(dbInfo.sizeBytes)})`, 'green');
+    console.log('');
+    printFeature('remote', 'Remote', REMOTE_HOST);
+    printFeature('db', 'Local DB', LOCAL_DB_PATH);
+    printFeature('target', 'Targets', `${targetDomains.length} host(s)`, targetDomains.join(', '));
+	    printFeature('target', 'Verification', `${options.targetPages} successful stored pages/host`, `need ${options.minCompleteHosts} host(s) complete`);
+	    if (options.minNewPages > 0) {
+	      printFeature('verify', 'New-page gate', `${options.minNewPages} genuinely NEW pages/host required`, 'stored after collect starts, not just synced');
+	    }
+	    printFeature('start', 'Remote crawl cap', `${options.maxPages} pages/domain`, options.maxPages > options.targetPages ? 'oversamples to offset blocked/empty pages' : '');
+	    printFeature('start', 'Remote depth', parsePositiveIntArg('max-depth') || parsePositiveIntArg('maxDepth') || 'server default', 'follows hub/article links only for not-yet-known URLs');
+	    printFeature('feature', 'Hub seeds', summarizeSeedConfiguration(), 'known URLs are skipped, not counted as downloads');
+	    printFeature('verify', 'Download target', 'new local saves after since marker', 'already-stored pages do not count');
+	    printFeature('sync', 'Sync loop', `window=${options.windowSec}s limit=${options.limit} interval=${options.intervalSec}s`);
+    printFeature('health', 'Status guard', `${options.maxStatusFailures} failed status checks`, `after ${options.drainEmptyRounds}+ empty round(s)`);
+    printFeature('adaptive', 'Adaptive batching', getAdaptiveSummary(createSyncBatchController(options.limit)));
+    printFeature('prune', 'Prune after ingest', getPruneSummary(), 'confirmed exact URL IDs');
+    printFeature('ledger', 'Ledger', getLedgerFile());
+    if (agentLogFile) printFeature('feature', 'Agent JSONL', agentLogFile);
+    printFeature('verify', 'Since marker', sinceMarker);
+    printFeature('feature', 'Graph seeding', options.seedFromGraph ? `enabled (limit=${options.graphSeedLimit}/domain)` : 'disabled', 'local link graph → remote seeds');
+    printFeature('sync', 'Sync mode', options.syncMode, options.syncMode === 'streaming' ? `batch=${options.syncBatchSize} window=${options.syncBatchWindowMs}ms` : 'poll-based');
+    if (options.showPageLatency || options.showPhaseTiming || options.showPerHostStats) {
+      const parts = [];
+      if (options.showPageLatency) parts.push('page-latency');
+      if (options.showPhaseTiming) parts.push('phase-timing');
+      if (options.showPerHostStats) parts.push('per-host-stats');
+      printFeature('feature', 'Verbose telemetry', parts.join(', '));
+    }
+    console.log('');
+  }
+  writeAgentEvent('collect:preflight', {
+    health: healthData,
+    initialStatus: summarizeRemoteStatus(initialStatus, targetDomains),
+    options,
+    db: dbInfo,
+    targetDomains,
+  });
+
+  endPhase('preflight');
+
+  // ── Local graph exploration: find unvisited URLs from existing link graph ──
+  startPhase('graph-exploration');
+  let graphExploration = null;
+  try {
+    graphExploration = exploreLocalGraph(targetDomains, { limit: options.targetPages * 5 });
+    if (!JSON_OUTPUT && graphExploration.totalUnvisited > 0) {
+      printStep('feature', `Local link graph: ${graphExploration.totalUnvisited} unvisited URLs found across ${targetDomains.length} domain(s)`, 'cyan');
+      for (const domain of targetDomains) {
+        const rows = graphExploration.byDomain[domain];
+        if (Array.isArray(rows) && rows.length > 0) {
+          const articleRows = rows.filter(r => /article|news/i.test(r.targetUrl));
+          console.log(`  ${icon('feature')} ${paint('cyan', domain)}: ${rows.length} unvisited (${articleRows.length} likely articles)`);
+          for (const row of rows.slice(0, 3)) {
+            console.log(`    ${paint('dim', `[${row.linkCount}x]`)} ${row.targetUrl}`);
+          }
+          if (rows.length > 3) console.log(`    ${paint('dim', `... and ${rows.length - 3} more`)}`);
+        } else if (rows?.error) {
+          console.log(`  ${icon('warn')} ${paint('yellow', domain)}: graph exploration failed (${rows.error})`);
+        } else {
+          console.log(`  ${icon('ok')} ${paint('dim', domain)}: no unvisited links in local graph`);
+        }
+      }
+      console.log('');
+    } else if (!JSON_OUTPUT) {
+      printStep('ok', 'Local link graph: no unvisited URLs found (all discovered links have been crawled)', 'green');
+      console.log('');
+    }
+    writeAgentEvent('collect:graph-exploration', {
+      totalUnvisited: graphExploration.totalUnvisited,
+      byDomain: Object.fromEntries(targetDomains.map(d => [d, {
+        count: Array.isArray(graphExploration.byDomain[d]) ? graphExploration.byDomain[d].length : 0,
+        topUrls: Array.isArray(graphExploration.byDomain[d])
+          ? graphExploration.byDomain[d].slice(0, 5).map(r => ({ url: r.targetUrl, linkCount: r.linkCount }))
+          : [],
+        error: graphExploration.byDomain[d]?.error || null,
+      }])),
+    });
+  } catch (err) {
+    if (!JSON_OUTPUT) printStep('warn', `Graph exploration skipped: ${err.message}`, 'yellow');
+  }
+  endPhase('graph-exploration');
+
+  // ── Graph → Remote seed injection: push unvisited URLs as remote seeds ──
+  startPhase('graph-seeding');
+  let graphSeedResult = null;
+  if (options.seedFromGraph && graphExploration && graphExploration.totalUnvisited > 0) {
+    try {
+      printStep('start', `Seeding remote server with ${Math.min(graphExploration.totalUnvisited, options.graphSeedLimit * targetDomains.length)} graph-discovered URL(s)...`, 'cyan');
+      graphSeedResult = await seedFromLocalGraph(graphExploration, targetDomains, {
+        graphSeedLimit: options.graphSeedLimit,
+      });
+      if (!JSON_OUTPUT) {
+        for (const domain of targetDomains) {
+          const dr = graphSeedResult.byDomain[domain];
+          if (dr?.error) {
+            console.log(`  ${icon('warn')} ${paint('yellow', domain)}: seed failed (${dr.error})`);
+          } else if (dr?.seeded > 0) {
+            console.log(`  ${icon('ok')} ${paint('green', domain)}: ${dr.seeded} URL(s) seeded to remote (${dr.skipped} already known)`);
+          } else {
+            console.log(`  ${icon('ok')} ${paint('dim', domain)}: all graph URLs already known to remote`);
+          }
+        }
+        console.log('');
+      }
+      writeAgentEvent('collect:graph-seed', {
+        totalSeeded: graphSeedResult.totalSeeded,
+        totalSkipped: graphSeedResult.totalSkipped,
+        byDomain: graphSeedResult.byDomain,
+      });
+    } catch (err) {
+      if (!JSON_OUTPUT) printStep('warn', `Graph seeding skipped: ${err.message}`, 'yellow');
+    }
+  }
+  endPhase('graph-seeding');
+
+  initialStatus = await ensureDomainsForRun(initialStatus, targetDomains, options.maxPages);
+  let lastRemoteStatusSummary = summarizeRemoteStatus(initialStatus, targetDomains);
+  let statusCheckFailures = 0;
+  let startAttempts = 0;
+  let startRecoveredFromUncertainResponse = false;
+
+  const startBody = { domains: targetDomains, maxPages: options.maxPages };
+  if (options.maxConcurrent) startBody.maxConcurrent = options.maxConcurrent;
+  applyStartOverrides(startBody);
+  const startRetries = options.startRetries;
+
+  startPhase('remote-start');
+  printStep('start', `Starting ${targetDomains.length} target host(s)...`, 'cyan');
+  let startData;
+  try {
+    const startResponse = await requestWithRetries('POST', '/api/start', startBody, {
+      attempts: startRetries,
+      timeoutMs: 15000,
+      retryDelayMs: 1000,
+      label: 'remote start',
+    });
+    startData = startResponse.data;
+    startAttempts = startResponse.attempts || 1;
+  } catch (err) {
+    printStep('warn', `Remote start response failed after ${startRetries} attempt(s); checking whether target crawls are already running...`, 'yellow');
+    const statusTelemetry = await readRemoteStatusTelemetry(targetDomains);
+    writeAgentEvent('collect:remote-start-uncertain', {
+      startBody,
+      attempts: startRetries,
+      error: err.message,
+      remoteStatus: statusTelemetry,
+    });
+    if (!remoteTargetsRunning(statusTelemetry, targetDomains)) {
+      throw err;
+    }
+    startRecoveredFromUncertainResponse = true;
+    startAttempts = startRetries;
+    startData = {
+      ok: true,
+      results: statusTelemetry.domains.map(row => ({
+        domain: row.domain,
+        status: 'running-after-uncertain-start',
+      })),
+    };
+    printStep('ok', 'Remote targets are running; continuing the collect from observed status.', 'green');
+    writeAgentEvent('collect:remote-start-adopted', {
+      startBody,
+      attempts: startRetries,
+      remoteStatus: statusTelemetry,
+    });
+  }
+  assertStartSucceeded(startData, targetDomains, 'Collect start');
+  writeAgentEvent('collect:remote-start', {
+    startBody,
+    startData,
+    attempts: startAttempts,
+    recoveredFromUncertainResponse: startRecoveredFromUncertainResponse,
+  });
+  if (!JSON_OUTPUT && startData.results) {
+    for (const item of startData.results) {
+      const statusColor = item.status === 'started' ? 'green' : 'yellow';
+      console.log(`  ${item.status === 'started' ? icon('start') : '○'} ${paint(statusColor, item.domain)}: ${item.status}`);
+    }
+  }
+
+  let syncRunning = true;
+  let stopIssued = false;
+  let shuttingDown = false;
+  const shutdown = async (sig) => {
+    if (shuttingDown) process.exit(1);
+    shuttingDown = true;
+    syncRunning = false;
+    console.log(`\n  ${icon('stop')} ${paint('yellow', `Received ${sig}; stopping target crawls...`)}`);
+    try {
+      await stopTargetDomains(targetDomains, 5000);
+      console.log(`  ${icon('ok')} ${paint('green', 'Remote target crawls stopped')}`);
+    } catch (err) {
+      console.error(`  ${icon('error')} ${paint('red', `Failed to stop target crawls: ${err.message}`)}`);
+    }
+    closeLocalDb();
+    process.exit(0);
+  };
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+  const {
+    loadLedger, saveLedger, appendBatch: ledgerAppendBatch,
+    markConfirmed: ledgerMarkConfirmed, markPruned: ledgerMarkPruned,
+    recordPruneFailure: ledgerRecordPruneFailure, findUnpruned,
+    generateBatchId, getLastWatermark,
+  } = require('./lib/sync-ledger');
+  const LEDGER_FILE = getLedgerFile();
+  let ledger = loadLedger(LEDGER_FILE);
+
+  const unpruned = shouldPruneAfterIngest() ? findUnpruned(ledger) : [];
+  if (unpruned.length > 0) {
+    printStep('prune', `Draining ${unpruned.length} confirmed unpruned ledger entr${unpruned.length === 1 ? 'y' : 'ies'} before new sync...`, 'yellow');
+    for (const entry of unpruned) {
+      try {
+        const pruneResult = await pruneRemoteWatermark(entry.watermark, entry.urlIds);
+        ledger = ledgerMarkPruned(ledger, entry.batchId, {
+          at: new Date().toISOString(),
+          deleted: pruneResult.deleted,
+        });
+        saveLedger(LEDGER_FILE, ledger);
+        if (!JSON_OUTPUT) console.log(`    ${icon('ok')} pruned ${entry.batchId} (${entry.urlIds.length} urlIds)`);
+      } catch (err) {
+        ledger = ledgerRecordPruneFailure(ledger, entry.batchId);
+        saveLedger(LEDGER_FILE, ledger);
+        if (!JSON_OUTPUT) console.log(`    ${icon('warn')} prune failed for ${entry.batchId}: ${err.message}`);
+      }
+    }
+  }
+
+  const batchController = createSyncBatchController(options.limit);
+  const perfReporter = createPerfReporter();
+  const perfSummaryEvery = parsePositiveIntArg('perf-summary-every') || 10;
+  const noBackoff = args['no-backoff'] === true || args.noBackoff === true;
+  const collectStartMs = Date.now();
+  const collectStartISO = new Date(collectStartMs).toISOString();
+  let round = 0;
+  let totalUrls = 0;
+  let totalContent = 0;
+  let consecutiveEmpty = 0;
+  let overrideSince = sinceMarker;
+  let lastVerification = summarizeHostVerification([], targetDomains, options.targetPages);
+  let lastNewPagesVerification = options.minNewPages > 0
+    ? summarizeNewPagesVerification(targetDomains, collectStartISO, options.minNewPages)
+    : null;
+  let lastRemoteTerminal = false;
+
+  const verifyAndMaybeStop = async (reason) => {
+    const rows = queryLocalHostVerification(targetDomains, sinceMarker);
+    lastVerification = summarizeHostVerification(rows, targetDomains, options.targetPages);
+    let statusData = null;
+    try {
+      const response = await requestWithTimeout('GET', '/api/status', null, 10000);
+      statusData = response.data;
+      lastRemoteStatusSummary = summarizeRemoteStatus(statusData, targetDomains);
+      lastRemoteTerminal = remoteTargetsTerminal(statusData, targetDomains);
+    } catch (err) {
+      statusCheckFailures++;
+      if (!JSON_OUTPUT) console.log(`  ${icon('warn')} ${paint('yellow', `Status check skipped during verification: ${err.message}`)}`);
+    }
+
+    // Run new-pages verification when min-new-pages is configured
+    if (options.minNewPages > 0) {
+      lastNewPagesVerification = summarizeNewPagesVerification(targetDomains, collectStartISO, options.minNewPages);
+    }
+
+    if (!JSON_OUTPUT) {
+      console.log(`\n  ${icon('verify')} ${paint('bold', `Local verification after ${reason}`)}`);
+      printHostVerification(lastVerification, options.minCompleteHosts);
+      if (options.minNewPages > 0 && lastNewPagesVerification) {
+        printNewPagesVerification(lastNewPagesVerification, options.minCompleteHosts);
+      }
+      console.log(`  ${icon('remote')} Remote targets terminal: ${lastRemoteTerminal ? paint('green', 'yes') : paint('yellow', 'not yet')}`);
+      if (statusData) printRemoteFrontierTelemetry(lastRemoteStatusSummary);
+    }
+    writeAgentEvent('collect:verification', {
+      reason,
+      summary: lastVerification,
+      newPagesVerification: lastNewPagesVerification || null,
+      remoteTerminal: lastRemoteTerminal,
+      remoteStatus: statusData ? lastRemoteStatusSummary : null,
+      remoteStatusError: statusData ? null : 'status-check-failed',
+    });
+
+    // Both gates must pass: target-pages AND min-new-pages (if configured)
+    const targetPagesMet = lastVerification.completeCount >= options.minCompleteHosts;
+    const newPagesMet = options.minNewPages === 0 || (lastNewPagesVerification && lastNewPagesVerification.completeCount >= options.minCompleteHosts);
+    if (!stopIssued && targetPagesMet && newPagesMet) {
+      printStep('stop', `Target met locally; stopping remote crawls and draining export batches...`, 'green');
+      await stopTargetDomains(targetDomains, 15000);
+      stopIssued = true;
+      writeAgentEvent('collect:remote-stop', {
+        reason: 'target-met',
+        completeCount: lastVerification.completeCount,
+        newPagesCompleteCount: lastNewPagesVerification ? lastNewPagesVerification.completeCount : null,
+        minCompleteHosts: options.minCompleteHosts,
+      });
+    }
+
+    return { statusData, summary: lastVerification, newPages: lastNewPagesVerification };
+  };
+
+  endPhase('remote-start');
+
+  startPhase('sync-loop');
+  if (options.syncMode === 'streaming') {
+    // ── Streaming Sync Mode ─────────────────────────────────
+    printStep('sync', `Entering streaming sync (SSE push, batch=${options.syncBatchSize}, window=${options.syncBatchWindowMs}ms).`, 'cyan');
+    const { createStreamingSync } = require('./lib/streaming-sync');
+
+    let streamingSyncDone = false;
+    const streamingSync = createStreamingSync({
+      remoteHost: REMOTE_HOST,
+      batchSize: options.syncBatchSize,
+      batchWindowMs: options.syncBatchWindowMs,
+      onConnect: () => {
+        if (!JSON_OUTPUT) printStep('ok', 'SSE connected — waiting for page:complete events...', 'green');
+      },
+      onError: (err) => {
+        if (!JSON_OUTPUT) printStep('warn', `SSE error: ${err.message}`, 'yellow');
+      },
+      onEvent: (eventType, data) => {
+        if (eventType === 'page:complete' && !JSON_OUTPUT) {
+          console.log(`  ${icon('sync')} page:complete ${paint('cyan', data.domain || '')} ${data.url?.slice(0, 80) || ''}`);
+        }
+      },
+      onBatch: async ({ urlIds, urls, reason, count }) => {
+        round++;
+        const roundStartMs = Date.now();
+        try {
+          const idsParam = urlIds.join(',');
+          const queryPath = `/api/sync/pull?ids=${idsParam}`;
+          const response = await requestWithTimeout('GET', queryPath, null, 60000);
+          const { data } = response;
+          const fetchMs = Date.now() - roundStartMs;
+
+          if (!data || !data.urls || data.urls.length === 0) {
+            if (!JSON_OUTPUT) printStep('warn', `Streaming batch empty (ids=${idsParam})`, 'yellow');
+            return;
+          }
+
+          const ingestStart = Date.now();
+          const result = ingestBatch(data);
+          const ingestMs = Date.now() - ingestStart;
+          const counts = getBatchCounts(data);
+          totalUrls += counts.urls || 0;
+          totalContent += counts.content || 0;
+
+          const wm = loadWatermark();
+          const confirmStart = Date.now();
+          const { verification, pruneResult } = await confirmSaveAndMaybePrune(data, wm, counts);
+          const confirmAndPruneMs = Date.now() - confirmStart;
+
+          const roundMs = Date.now() - roundStartMs;
+          perfReporter.record({
+            fetchMs, ingestMs, verifyMs: 0, pruneMs: confirmAndPruneMs, totalMs: roundMs,
+            rows: counts.urls || 0, bytes: response.decodedBytes || 0,
+          });
+
+          if (!JSON_OUTPUT) {
+            const pruneText = pruneResult ? `, pruned ${JSON.stringify(pruneResult.deleted)}` : '';
+            console.log(`  ${icon('ok')} [stream ${round}] ${paint('green', `+${counts.urls} urls, +${counts.content} content`)} (${fetchMs}ms fetch, ${ingestMs}ms ingest${pruneText})`);
+          }
+
+          writeAgentEvent('collect:stream-batch', {
+            round, reason, urlIds, urls: urls.slice(0, 5), counts,
+            timingsMs: { fetch: fetchMs, ingest: ingestMs, confirmAndPrune: confirmAndPruneMs, round: roundMs },
+            prune: pruneResult || null,
+          });
+
+          // Adaptive batching: auto-tune streaming batch size
+          const currentBatchSize = streamingSync.stats().batchSize;
+          if (ingestMs < 50 && counts.urls >= currentBatchSize) {
+            const newSize = Math.min(500, Math.ceil(currentBatchSize * 1.5));
+            if (newSize !== currentBatchSize) {
+              streamingSync.setBatchSize(newSize);
+              if (!JSON_OUTPUT) console.log(`  📈 Auto-tuning stream batch size UP to ${newSize}`);
+            }
+          } else if (ingestMs > 200 && currentBatchSize > 5) {
+            const newSize = Math.max(5, Math.floor(currentBatchSize * 0.5));
+            if (newSize !== currentBatchSize) {
+              streamingSync.setBatchSize(newSize);
+              if (!JSON_OUTPUT) console.log(`  📉 Auto-tuning stream batch size DOWN to ${newSize}`);
+            }
+          }
+
+          if (round % options.verifyEveryRounds === 0) {
+            const { summary } = await verifyAndMaybeStop(`stream batch ${round}`);
+            if (summary.allComplete || stopIssued) {
+              streamingSyncDone = true;
+              streamingSync.stop();
+            }
+          }
+        } catch (err) {
+          console.error(`  ${icon('error')} Stream batch error: ${err.message}`);
+          writeAgentEvent('collect:stream-error', { round, error: err.message, urlIds });
+        }
+      },
+    });
+
+    streamingSync.start();
+
+    const streamingMaxMs = (options.maxRounds || 120) * options.intervalSec * 1000;
+    const streamingStartMs = Date.now();
+    while (syncRunning && !streamingSyncDone) {
+      await sleep(1000);
+      if (Date.now() - streamingStartMs > streamingMaxMs) {
+        printStep('warn', `Streaming sync timeout after ${Math.round(streamingMaxMs / 1000)}s`, 'yellow');
+        break;
+      }
+    }
+
+    await streamingSync.stop();
+    const sStats = streamingSync.stats();
+    if (!JSON_OUTPUT) {
+      printStep('ok', `Streaming sync complete: ${sStats.pagesSynced} pages synced, ${sStats.batchesFlushed} batches, ${sStats.errors} errors`, 'green');
+    }
+    writeAgentEvent('collect:stream-final', sStats);
+    endPhase('sync-loop');
+
+  } else {
+    // ── Polling Sync Mode (default) ─────────────────────────
+    printStep('sync', `Entering collect sync loop (Ctrl+C stops target crawls).`, 'cyan');
+
+    while (syncRunning && (!options.maxRounds || round < options.maxRounds)) {
+      round++;
+      const wm = loadWatermark();
+
+      try {
+        await prunePendingWatermark(wm);
+        const since = overrideSince || getLastWatermark(ledger) || wm.lastWatermark;
+        const limit = batchController.getLimit();
+        const queryPath = appendWatermark(appendExportOptions(`/api/export/batch?window=${options.windowSec}&limit=${limit}`), since);
+        const roundStartTime = Date.now();
+        const exportRequestedAt = new Date(roundStartTime).toISOString();
+        const response = await requestWithTimeout('GET', queryPath, null, 60000);
+        const { data } = response;
+        const fetchMs = Date.now() - roundStartTime;
+        const exportReceivedAt = new Date().toISOString();
+
+        if (!data.urls || data.urls.length === 0) {
+          batchController.recordEmpty({ fetchMs });
+          consecutiveEmpty++;
+          writeAgentEvent('collect:round-empty', {
+            round, exportRequestedAt, exportReceivedAt, fetchMs,
+            remoteToLocal: {
+              rawBytes: response.rawBytes || 0, decodedBytes: response.decodedBytes || 0,
+              rawBytesPerSec: fetchMs > 0 ? ((response.rawBytes || 0) * 1000) / fetchMs : 0,
+              decodedBytesPerSec: fetchMs > 0 ? ((response.decodedBytes || 0) * 1000) / fetchMs : 0,
+            },
+            consecutiveEmpty,
+          });
+          if (!JSON_OUTPUT) {
+            process.stdout.write(`  ${icon('drain')} [${round}] No new data (${fetchMs}ms, empty ${consecutiveEmpty}/${options.drainEmptyRounds})\r`);
+          }
+
+          await verifyAndMaybeStop(`empty round ${round}`);
+          if ((stopIssued || lastRemoteTerminal) && consecutiveEmpty >= options.drainEmptyRounds) break;
+          if (consecutiveEmpty >= options.drainEmptyRounds && statusCheckFailures >= options.maxStatusFailures) {
+            printStep('warn', `Status guard exiting after ${consecutiveEmpty} empty round(s) and ${statusCheckFailures} failed status check(s).`, 'yellow');
+            writeAgentEvent('collect:status-guard-exit', {
+              round, consecutiveEmpty, statusCheckFailures,
+              maxStatusFailures: options.maxStatusFailures, drainEmptyRounds: options.drainEmptyRounds,
+            });
+            break;
+          }
+
+          const backoffMs = noBackoff ? options.intervalSec * 1000 : Math.min(consecutiveEmpty * 2000, 30000);
+          await sleep(Math.max(options.intervalSec * 1000, backoffMs));
+          continue;
+        }
+
+        consecutiveEmpty = 0;
+
+        const batchId = generateBatchId();
+        const urlIds = getBatchUrlIds(data);
+        ledger = ledgerAppendBatch(ledger, {
+          batchId, exportedAt: new Date().toISOString(), watermark: data.watermark, urlIds,
+        });
+        saveLedger(LEDGER_FILE, ledger);
+
+        const ingestStart = Date.now();
+        const result = ingestBatch(data);
+        const ingestMs = Date.now() - ingestStart;
+        const localSavedAt = new Date().toISOString();
+        const counts = getBatchCounts(data);
+        totalUrls += counts.urls || 0;
+        totalContent += counts.content || 0;
+
+        const confirmStart = Date.now();
+        const { verification, pruneResult } = await confirmSaveAndMaybePrune(data, wm, counts);
+        const confirmAndPruneMs = Date.now() - confirmStart;
+        if (data.watermark) overrideSince = null;
+
+        ledger = ledgerMarkConfirmed(ledger, batchId, new Date().toISOString());
+        saveLedger(LEDGER_FILE, ledger);
+        if (pruneResult) {
+          ledger = ledgerMarkPruned(ledger, batchId, {
+            at: new Date().toISOString(), deleted: pruneResult.deleted,
+          });
+          saveLedger(LEDGER_FILE, ledger);
+        }
+
+        const roundMs = Date.now() - roundStartTime;
+        const decision = batchController.recordSuccess({ durationMs: roundMs, fetchedRows: counts.urls, fetchMs, ingestMs });
+        logAdaptiveDecision(decision);
+        perfReporter.record({
+          fetchMs, ingestMs, verifyMs: 0, pruneMs: confirmAndPruneMs, totalMs: roundMs,
+          rows: counts.urls || 0, bytes: response.decodedBytes || 0,
+        });
+        const downloadSummary = summarizeBatchRemoteDownloads(data);
+        const statusTelemetry = await readRemoteStatusTelemetry(targetDomains);
+        const remoteToLocalRawRate = formatBytesPerSecond(response.rawBytes || 0, fetchMs);
+        const remoteToLocalDecodedRate = formatBytesPerSecond(response.decodedBytes || 0, fetchMs);
+        const remoteDownloadRate = formatBytesPerSecond(downloadSummary.bytesDownloaded, downloadSummary.totalDownloadMs);
+
+        if (!JSON_OUTPUT) {
+          const pruneText = pruneResult ? `, ${icon('prune')} pruned ${JSON.stringify(pruneResult.deleted)}` : '';
+          console.log(`  ${icon('ok')} [${round}] ${paint('green', `+${counts.urls} urls, +${counts.content} content`)} wm=${paint('dim', (data.watermark || '').slice(0, 19))} (${fetchMs}ms fetch, ${ingestMs}ms ingest${pruneText})`);
+          console.log(`    ${icon('feature')} Remote downloads: ${downloadSummary.pagesDownloaded} pages, ${formatSize(downloadSummary.bytesDownloaded)} total in ${downloadSummary.totalDownloadMs}ms (${remoteDownloadRate})`);
+          console.log(`    ${icon('sync')} Remote->local: ${formatSize(response.rawBytes || 0)} raw / ${formatSize(response.decodedBytes || 0)} decoded in ${fetchMs}ms (${remoteToLocalRawRate} raw, ${remoteToLocalDecodedRate} decoded)`);
+          console.log(`    ${icon('db')} Local DB: saved at ${localSavedAt}; ingest ${ingestMs}ms, confirm/prune ${confirmAndPruneMs}ms, round ${roundMs}ms, next limit ${batchController.getLimit()}`);
+          if (round % perfSummaryEvery === 0) {
+            const ps = perfReporter.summary();
+            console.log(`    ${icon('feature')} Perf (${ps.samples} samples): fetch p50=${ps.fetchMs.p50}ms p95=${ps.fetchMs.p95}ms, ingest p50=${ps.ingestMs.p50}ms p95=${ps.ingestMs.p95}ms, round p50=${ps.totalMs.p50}ms p95=${ps.totalMs.p95}ms, ${ps.rowsPerSec.toFixed(1)} rows/s`);
+          }
+
+          // ── Per-page download latency (verbose) ──
+          if (options.showPageLatency && downloadSummary.responseCount > 0) {
+            const responses = Array.isArray(data?.httpResponses) ? data.httpResponses : [];
+            const urls = new Map((Array.isArray(data?.urls) ? data.urls : []).map(r => [Number(r.id), r]));
+            if (responses.length > 0) {
+              console.log(`    ${icon('feature')} ${paint('cyan', 'Page download latency:')}`);
+              console.log(`      ${paint('dim', 'Host'.padEnd(22))} ${paint('dim', 'Status')} ${paint('dim', 'Size'.padStart(10))} ${paint('dim', 'DL ms'.padStart(8))} ${paint('dim', 'Total ms'.padStart(9))} ${paint('dim', 'URL')}`);
+              console.log(`      ${paint('dim', '─'.repeat(90))}`);
+              for (const resp of responses) {
+                const urlRow = urls.get(Number(resp?.url_id));
+                const host = String(urlRow?.host || '(unknown)').slice(0, 21);
+                const status = String(resp?.http_status || '?').padStart(3);
+                const bytes = formatSize(Number(resp?.bytes_downloaded || 0)).padStart(10);
+                const dlMs = String(Number(resp?.download_ms || 0)).padStart(8);
+                const totalMs = String(Number(resp?.total_ms || 0)).padStart(9);
+                const urlStr = (urlRow?.url || resp?.url || '').slice(0, 60);
+                console.log(`      ${host.padEnd(22)} ${status} ${bytes} ${dlMs} ${totalMs} ${paint('dim', urlStr)}`);
+              }
+            }
+          }
+
+          // ── Per-host download stats (verbose) ──
+          if (options.showPerHostStats && Object.keys(downloadSummary.byHost).length > 0) {
+            console.log(`    ${icon('feature')} ${paint('cyan', 'Per-host download stats:')}`);
+            console.log(`      ${paint('dim', 'Host'.padEnd(22))} ${paint('dim', 'Pages'.padStart(6))} ${paint('dim', 'Content'.padStart(8))} ${paint('dim', 'Size'.padStart(10))} ${paint('dim', 'DL ms'.padStart(8))} ${paint('dim', 'Rate'.padStart(12))}`);
+            console.log(`      ${paint('dim', '─'.repeat(70))}`);
+            for (const [host, hs] of Object.entries(downloadSummary.byHost)) {
+              const pages = String(hs.responses || 0).padStart(6);
+              const content = String(hs.content || 0).padStart(8);
+              const bytes = formatSize(hs.bytesDownloaded || 0).padStart(10);
+              const dlMs = String(hs.totalDownloadMs || 0).padStart(8);
+              const rate = formatBytesPerSecond(hs.bytesDownloaded || 0, hs.totalDownloadMs || 0).padStart(12);
+              console.log(`      ${host.slice(0, 21).padEnd(22)} ${pages} ${content} ${bytes} ${dlMs} ${rate}`);
+            }
+          }
+        }
+        writeAgentEvent('collect:round-batch', {
+          round, batchId, exportRequestedAt, exportReceivedAt, localSavedAt, counts,
+          inserted: { urls: result.urlsInserted || 0, content: result.contentInserted || 0, responses: result.responsesInserted || 0 },
+          verification,
+          timingsMs: { remoteExportFetch: fetchMs, localDbIngest: ingestMs, confirmAndPrune: confirmAndPruneMs, round: roundMs },
+          remoteDownloads: downloadSummary,
+          remoteToLocal: {
+            rawBytes: response.rawBytes || 0, decodedBytes: response.decodedBytes || 0,
+            rawBytesPerSec: fetchMs > 0 ? ((response.rawBytes || 0) * 1000) / fetchMs : 0,
+            decodedBytesPerSec: fetchMs > 0 ? ((response.decodedBytes || 0) * 1000) / fetchMs : 0,
+          },
+          remoteStatus: statusTelemetry,
+          prune: pruneResult || null,
+          nextLimit: batchController.getLimit(),
+        });
+
+        if (round % options.verifyEveryRounds === 0) {
+          await verifyAndMaybeStop(`batch round ${round}`);
+        }
+      } catch (err) {
+        console.error(`  ${icon('error')} [${round}] ${paint('red', `Error: ${err.message}`)}`);
+        logAdaptiveDecision(batchController.recordError({ error: err.message }));
+        consecutiveEmpty++;
+      }
+
+      if (syncRunning) await sleep(options.intervalSec * 1000);
+    }
+    endPhase('sync-loop');
+  } // end sync mode branch
+
+  startPhase('drain-and-verify');
+  if (!stopIssued) {
+    try {
+      printStep('stop', 'Stopping target crawls after collect loop...', 'yellow');
+      await stopTargetDomains(targetDomains, 15000);
+      stopIssued = true;
+      writeAgentEvent('collect:remote-stop', { reason: 'final-loop-exit' });
+    } catch (err) {
+      if (!JSON_OUTPUT) console.log(`  ${icon('warn')} ${paint('yellow', `Final stop failed: ${err.message}`)}`);
+    }
+  }
+
+  await verifyAndMaybeStop('final drain');
+  endPhase('drain-and-verify');
+  const targetPagesMet = lastVerification.completeCount >= options.minCompleteHosts;
+  const newPagesMet = options.minNewPages === 0 || (lastNewPagesVerification && lastNewPagesVerification.completeCount >= options.minCompleteHosts);
+  const ok = targetPagesMet && newPagesMet;
+  const collectDurationMs = Date.now() - collectStartMs;
+  const perfSummary = perfReporter.summary();
+  const diagnostics = buildCollectDiagnostics({
+    ok,
+    totalUrls,
+    totalContent,
+    targetDomains,
+    options,
+    lastRemoteStatus: lastRemoteStatusSummary,
+    statusCheckFailures,
+    startAttempts,
+    startRecoveredFromUncertainResponse,
+  });
+  const result = {
+    ok,
+    targetDomains,
+    sinceMarker,
+    rounds: round,
+    totalUrls,
+    totalContent,
+    minCompleteHosts: options.minCompleteHosts,
+    minNewPages: options.minNewPages,
+    durationMs: collectDurationMs,
+    wallClockMs: Date.now() - wallClockStartMs,
+    phaseTimings: Object.fromEntries(Object.entries(phaseTimings).map(([k, v]) => [k, v.durationMs || 0])),
+    perfSummary,
+    verification: lastVerification,
+    newPagesVerification: lastNewPagesVerification || null,
+    remoteTerminal: lastRemoteTerminal,
+    ledger: {
+      file: LEDGER_FILE,
+      entries: ledger.entries.length,
+      lastWatermark: getLastWatermark(ledger),
+    },
+    agentLogFile: agentLogFile || null,
+    diagnostics,
+  };
+  if (!ok && (diagnostics.issues.length > 0 || diagnostics.recommendations.length > 0)) {
+    writeAgentEvent('collect:diagnostics', diagnostics);
+  }
+  writeAgentEvent('collect:final', result);
+
+  if (JSON_OUTPUT) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log('');
+    printStep(ok ? 'ok' : 'warn', `Collect ${ok ? 'complete' : 'finished below target'}: ${lastVerification.completeCount}/${lastVerification.totalHosts} host(s) at ${options.targetPages}+ pages`, ok ? 'green' : 'yellow');
+    if (options.minNewPages > 0 && lastNewPagesVerification) {
+      const npOk = lastNewPagesVerification.completeCount >= options.minCompleteHosts;
+      printStep(npOk ? 'ok' : 'warn', `New-page gate: ${lastNewPagesVerification.completeCount}/${lastNewPagesVerification.totalHosts} host(s) at ${options.minNewPages}+ NEW pages`, npOk ? 'green' : 'yellow');
+    }
+    console.log(`  ${icon('sync')} Pulled ${totalUrls} URL rows and ${totalContent} content rows across ${round} round(s) in ${formatDuration(collectDurationMs)}.`);
+    if (perfSummary.samples > 0) {
+      console.log(`  ${icon('feature')} Perf (${perfSummary.samples} batches): fetch p50=${perfSummary.fetchMs.p50}ms p95=${perfSummary.fetchMs.p95}ms, ingest p50=${perfSummary.ingestMs.p50}ms p95=${perfSummary.ingestMs.p95}ms, round p50=${perfSummary.totalMs.p50}ms p95=${perfSummary.totalMs.p95}ms, ${perfSummary.rowsPerSec.toFixed(1)} rows/s`);
+    }
+    console.log(`  ${icon('ledger')} Ledger: ${LEDGER_FILE} (${ledger.entries.length} entries, wm=${getLastWatermark(ledger) || 'none'})`);
+
+    // ── Phase timing breakdown (verbose) ──
+    if (options.showPhaseTiming) {
+      const wallClockMs = Date.now() - wallClockStartMs;
+      console.log('');
+      printStep('feature', 'Phase timing breakdown:', 'cyan');
+      const phases = [
+        ['Preflight (health + status + config)', phaseTimings['preflight']],
+        ['Graph exploration (local DB)', phaseTimings['graph-exploration']],
+        ['Graph seeding (push to remote)', phaseTimings['graph-seeding']],
+        ['Remote start', phaseTimings['remote-start']],
+        ['Sync loop', phaseTimings['sync-loop']],
+        ['Drain & verify', phaseTimings['drain-and-verify']],
+      ];
+      console.log(`    ${paint('dim', 'Phase'.padEnd(42))} ${paint('dim', 'Duration'.padStart(10))} ${paint('dim', '%'.padStart(6))}`);
+      console.log(`    ${paint('dim', '─'.repeat(60))}`);
+      for (const [name, timing] of phases) {
+        if (timing && timing.durationMs !== undefined) {
+          const dur = formatDuration(timing.durationMs).padStart(10);
+          const pct = wallClockMs > 0 ? ((timing.durationMs / wallClockMs) * 100).toFixed(1).padStart(5) + '%' : '';
+          console.log(`    ${name.padEnd(42)} ${dur} ${pct}`);
+        }
+      }
+      console.log(`    ${paint('dim', '─'.repeat(60))}`);
+      console.log(`    ${'Total wall-clock time'.padEnd(42)} ${formatDuration(wallClockMs).padStart(10)}`);
+    } else {
+      // Always show total wall-clock time even without verbose phase timing
+      const wallClockMs = Date.now() - wallClockStartMs;
+      console.log(`  ${icon('feature')} Total wall-clock time: ${formatDuration(wallClockMs)}`);
+    }
+    if (!ok && diagnostics.issues.length > 0) {
+      console.log('');
+      printStep('feature', 'Diagnostics for agent review:', 'cyan');
+      for (const issue of diagnostics.issues) {
+        console.log(`    ${icon('warn')} ${issue}`);
+      }
+      for (const recommendation of diagnostics.recommendations) {
+        console.log(`    ${icon('feature')} ${recommendation}`);
+      }
+    }
+  }
+
+  if (!ok) {
+    const parts = [];
+    if (!targetPagesMet) parts.push(`${lastVerification.completeCount}/${lastVerification.totalHosts} hosts at ${options.targetPages}+ pages`);
+    if (!newPagesMet) parts.push(`${lastNewPagesVerification ? lastNewPagesVerification.completeCount : 0}/${targetDomains.length} hosts at ${options.minNewPages}+ NEW pages`);
+    throw new Error(`Collect finished below target: ${parts.join('; ')}; required ${options.minCompleteHosts} host(s).`);
+  }
 }
 
 async function cmdStop() {
@@ -1432,13 +3053,94 @@ async function cmdBounded() {
   );
 }
 
+// ── graph-seeds: Explore local link graph ─────────────────────
+
+async function cmdGraphSeeds() {
+  const { data: remoteStatus } = await requestWithTimeout('GET', '/api/status', null, 10000).catch(() => ({ data: null }));
+  const targetDomains = resolveTargetDomains(args, remoteStatus);
+  if (targetDomains.length === 0) {
+    throw new Error('No target domains. Use --domain or --domains.');
+  }
+
+  const limit = parsePositiveIntArg('limit') || 20;
+  printBanner(`${icon('feature')} Local Link Graph Explorer`, `${targetDomains.length} domain(s), limit=${limit}`);
+
+  const result = exploreLocalGraph(targetDomains, { limit });
+
+  if (JSON_OUTPUT) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (result.totalUnvisited === 0) {
+    printStep('ok', 'No unvisited URLs found in the local link graph.', 'green');
+    printStep('ok', 'All discovered links have already been crawled.', 'dim');
+    return;
+  }
+
+  printStep('feature', `Found ${result.totalUnvisited} unvisited URL(s) across ${targetDomains.length} domain(s)`, 'cyan');
+  console.log('');
+
+  for (const domain of targetDomains) {
+    const rows = result.byDomain[domain];
+    if (rows?.error) {
+      printStep('warn', `${domain}: ${rows.error}`, 'yellow');
+      continue;
+    }
+    if (!Array.isArray(rows) || rows.length === 0) {
+      printStep('ok', `${domain}: fully explored`, 'dim');
+      continue;
+    }
+
+    console.log(`  ${icon('feature')} ${paint('cyan', domain)} — ${rows.length} unvisited link(s):`);
+    printTable(rows.slice(0, limit), [
+      { label: 'Links', get: row => row.linkCount },
+      { label: 'URL', get: row => row.targetUrl.length > 90 ? row.targetUrl.slice(0, 87) + '...' : row.targetUrl },
+      { label: 'Source', get: row => (row.sourceUrl || '').split('/').slice(0, 4).join('/') },
+    ]);
+    console.log('');
+  }
+}
+
 // ── Execute Command ─────────────────────────────────────────
+
+async function cmdProfiles() {
+  if (!fs.existsSync(PROFILES_DIR)) {
+    console.log('No profiles directory found.');
+    return;
+  }
+  const files = fs.readdirSync(PROFILES_DIR).filter(f => f.endsWith('.json')).sort();
+  if (!files.length) {
+    console.log('No profiles found.');
+    return;
+  }
+  console.log(`\n  Available profiles (${PROFILES_DIR}):\n`);
+  for (const file of files) {
+    const name = file.replace(/\.json$/, '');
+    try {
+      const profile = JSON.parse(fs.readFileSync(path.join(PROFILES_DIR, file), 'utf8'));
+      const desc = profile.description || '';
+      const cmd = (profile.positionals && profile.positionals[0]) || '?';
+      const domains = (profile.options && profile.options.domains) || '';
+      console.log(`  ${paint('cyan', name)}`);
+      console.log(`    ${paint('dim', desc)}`);
+      console.log(`    command: ${cmd}${domains ? ', domains: ' + domains : ''}`);
+      console.log('');
+    } catch (err) {
+      console.log(`  ${paint('yellow', name)} — error: ${err.message}`);
+    }
+  }
+  console.log(`  Usage: npm run crawl:remote -- --profile <name>`);
+  console.log(`     or: node tools/crawl/crawl-remote.js --profile <name>\n`);
+}
 
 const COMMANDS = {
   status: cmdStatus,
   health: cmdHealth,
   start: cmdStart,
   launch: cmdLaunch,
+  collect: cmdCollect,
+  'graph-seeds': cmdGraphSeeds,
   bounded: cmdBounded,
   stop: cmdStop,
   run: cmdRun,
@@ -1450,12 +3152,13 @@ const COMMANDS = {
   errors: cmdErrors,
   content: cmdContent,
   watch: cmdWatch,
+  profiles: cmdProfiles,
 };
 
 async function main() {
-  const fn = COMMANDS[command];
+  const fn = COMMANDS[effectiveCommand];
   if (!fn) {
-    console.error(`Unknown command: ${command}`);
+    console.error(`Unknown command: ${effectiveCommand}`);
     console.error(`Valid commands: ${Object.keys(COMMANDS).join(', ')}`);
     process.exit(1);
   }

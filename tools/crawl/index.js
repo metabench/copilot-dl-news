@@ -4,6 +4,10 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const {
+  runRemoteDeployPreflight,
+  shouldPreflightRemoteArgs,
+} = require('./lib/remote-deploy-preflight');
 
 const DEFAULT_PROFILE_DIR = path.join(__dirname, 'profiles');
 const RESERVED_COMMANDS = Object.freeze(['help', 'list', 'profile', 'run']);
@@ -48,6 +52,10 @@ const TOOL_REGISTRY = Object.freeze({
   'cloud-e2e': {
     script: 'cloud-crawl-e2e.js',
     description: 'Strict 15-minute cloud crawl e2e validation with DB, ledger, and diagnostics artifacts'
+  },
+  'remote-deploy': {
+    script: 'deploy-remote-server.js',
+    description: 'Build and deploy the remote crawler v2 server with busy-server protection'
   }
 });
 
@@ -72,6 +80,9 @@ function resolveToolSpec(name) {
     validate: 'cloud-e2e',
     e2e: 'cloud-e2e',
     'cloud-crawl-e2e': 'cloud-e2e',
+    deploy: 'remote-deploy',
+    'deploy-remote': 'remote-deploy',
+    'remote-server-deploy': 'remote-deploy',
   };
 
   const key = TOOL_REGISTRY[normalized] ? normalized : aliases[normalized];
@@ -88,13 +99,63 @@ function parseCliArgs(argv) {
   const passthrough = [];
   const options = {
     dryRun: false,
-    profileDir: DEFAULT_PROFILE_DIR
+    profileDir: DEFAULT_PROFILE_DIR,
+    remoteDeploy: 'auto',
+    remoteDeployForce: false,
+    remoteDeploySshHost: undefined,
+    remoteDeploySshUser: undefined,
+    remoteDeploySshPort: undefined,
+    remoteDeploySshKey: undefined,
+    remoteDeployStatusUrl: undefined,
+    remoteDeploySkipDbBuild: false
   };
 
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
     if (token === '--dry-run') {
       options.dryRun = true;
+      continue;
+    }
+    if (token === '--remote-deploy' && tokens[index + 1]) {
+      options.remoteDeploy = String(tokens[index + 1]).toLowerCase();
+      index += 1;
+      continue;
+    }
+    if (token === '--no-remote-deploy') {
+      options.remoteDeploy = 'never';
+      continue;
+    }
+    if (token === '--remote-deploy-force') {
+      options.remoteDeployForce = true;
+      continue;
+    }
+    if (token === '--remote-deploy-ssh-host' && tokens[index + 1]) {
+      options.remoteDeploySshHost = tokens[index + 1];
+      index += 1;
+      continue;
+    }
+    if (token === '--remote-deploy-ssh-user' && tokens[index + 1]) {
+      options.remoteDeploySshUser = tokens[index + 1];
+      index += 1;
+      continue;
+    }
+    if (token === '--remote-deploy-ssh-port' && tokens[index + 1]) {
+      options.remoteDeploySshPort = tokens[index + 1];
+      index += 1;
+      continue;
+    }
+    if (token === '--remote-deploy-ssh-key' && tokens[index + 1]) {
+      options.remoteDeploySshKey = tokens[index + 1];
+      index += 1;
+      continue;
+    }
+    if (token === '--remote-deploy-status-url' && tokens[index + 1]) {
+      options.remoteDeployStatusUrl = tokens[index + 1];
+      index += 1;
+      continue;
+    }
+    if (token === '--remote-deploy-skip-db-build') {
+      options.remoteDeploySkipDbBuild = true;
       continue;
     }
     if (token === '--profile-dir' && tokens[index + 1]) {
@@ -313,6 +374,10 @@ function renderHelp() {
     'Global options:',
     '  --dry-run                 Show delegated script invocation without running it',
     '  --profile-dir <path>      Override profile directory (default: tools/crawl/profiles)',
+    '  --remote-deploy <mode>    auto (default), never, always before start-like remote commands',
+    '  --no-remote-deploy        Disable automatic remote deploy freshness check',
+    '  --remote-deploy-force     Allow auto-deploy to interrupt a busy remote server',
+    '  --remote-deploy-ssh-host <host>  SSH target for deploy, e.g. ubuntu@141.144.193.218',
     '',
     'Tools:'
   ];
@@ -398,11 +463,36 @@ function printList(profileDir, options = {}) {
 
 function renderInvocation(invocation) {
   const script = path.relative(process.cwd(), invocation.tool.scriptPath).replace(/\\/g, '/');
-  const args = invocation.args.map((value) => (/\s/.test(value) ? `"${value}"` : value));
-  return ['node', script, ...args].join(' ');
+  const quote = (value) => {
+    const text = String(value);
+    if (/^[A-Za-z0-9_./:=,@%+-]+$/.test(text)) return text;
+    return `'${text.replace(/'/g, `'\\''`)}'`;
+  };
+  return ['node', script, ...invocation.args].map(quote).join(' ');
 }
 
-function executeInvocation(invocation, dryRun = false) {
+function maybeRunRemoteDeployPreflight(invocation, options = {}) {
+  if (!invocation || !invocation.tool || invocation.tool.key !== 'remote') return 0;
+  if (!shouldPreflightRemoteArgs(invocation.args)) return 0;
+  if (options.dryRun) return 0;
+
+  const result = runRemoteDeployPreflight({
+    mode: options.remoteDeploy,
+    force: options.remoteDeployForce,
+    sshHost: options.remoteDeploySshHost,
+    sshUser: options.remoteDeploySshUser,
+    sshPort: options.remoteDeploySshPort,
+    sshKey: options.remoteDeploySshKey,
+    statusUrl: options.remoteDeployStatusUrl,
+    skipDbBuild: options.remoteDeploySkipDbBuild,
+    json: false,
+    out: process.stderr,
+    err: process.stderr,
+  });
+  return result.status || 0;
+}
+
+function executeInvocation(invocation, dryRun = false, options = {}) {
   const command = renderInvocation(invocation);
   if (dryRun) {
     console.log(command);
@@ -411,6 +501,9 @@ function executeInvocation(invocation, dryRun = false) {
     }
     return 0;
   }
+
+  const deployExit = maybeRunRemoteDeployPreflight(invocation, { ...options, dryRun });
+  if (deployExit !== 0) return deployExit;
 
   const result = spawnSync(process.execPath, [invocation.tool.scriptPath, ...invocation.args], {
     cwd: process.cwd(),
@@ -456,7 +549,7 @@ function runCli(argv) {
     invocation = buildInvocationFromCommand(command, tokens.slice(1), options.profileDir);
   }
 
-  return executeInvocation(invocation, options.dryRun);
+  return executeInvocation(invocation, options.dryRun, options);
 }
 
 if (require.main === module) {
@@ -480,6 +573,7 @@ module.exports = {
   buildInvocationFromProfile,
   buildInvocationFromTool,
   executeInvocation,
+  maybeRunRemoteDeployPreflight,
   getListData,
   listProfiles,
   loadProfile,

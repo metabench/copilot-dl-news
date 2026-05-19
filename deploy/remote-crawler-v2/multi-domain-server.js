@@ -57,6 +57,21 @@ const {
 // ── CLI Args ────────────────────────────────────────────────
 const args = parseServerArgv(process.argv.slice(2));
 
+function loadBuildInfo() {
+  const buildInfoPath = path.join(__dirname, 'build-info.json');
+  try {
+    if (!fs.existsSync(buildInfoPath)) return null;
+    const parsed = JSON.parse(fs.readFileSync(buildInfoPath, 'utf8'));
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    return parsed;
+  } catch (error) {
+    return {
+      error: error.message,
+      path: buildInfoPath,
+    };
+  }
+}
+
 if (args.help || args.h) {
   console.log('multi-domain-server.js v4 — On-demand multi-domain crawl server');
   console.log('');
@@ -70,6 +85,7 @@ if (args.help || args.h) {
   console.log('  --port <n>             Server port (default: 3200)');
   console.log('  --db <path>            Database file (default: data/news.db)');
   console.log('  --max-pages <n>        Max pages per domain (default: 50)');
+  console.log('  --max-depth <n>        Max link-follow depth per domain (default: 2)');
   console.log('  --max-concurrent <n>   Max concurrent crawling domains (default: 20)');
   console.log('  --idle-timeout <mins>  Auto-shutdown after N minutes idle (default: 30, 0=off)');
   console.log('  --coordinator-mode     Seeded-only crawl mode (do not auto-queue discovered URLs)');
@@ -177,7 +193,7 @@ function createWorker(domainConfig) {
         isRunning: this.isRunning,
       };
     },
-    seedUrls() { return { inserted: 0 }; },
+    seedUrls() { return { inserted: 0, alreadyKnown: 0 }; },
   };
 
   const entry = {
@@ -189,6 +205,63 @@ function createWorker(domainConfig) {
   };
   workers.set(domainConfig.domain, entry);
   return entry;
+}
+
+function parseNonNegativeInteger(value, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function normalizeSeedUrls(value) {
+  const list = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(/[,\n]/)
+      : [];
+  return [...new Set(list
+    .map(url => String(url || '').trim())
+    .filter(Boolean))];
+}
+
+function seedUrlsForDomain(domain, startOptions = {}, entryConfig = {}) {
+  const map = startOptions.seedUrlsByDomain && typeof startOptions.seedUrlsByDomain === 'object'
+    ? startOptions.seedUrlsByDomain
+    : {};
+  const domainSeeds = normalizeSeedUrls(map[domain] || map[String(domain || '').replace(/^www\./, '')]);
+  if (domainSeeds.length > 0) return domainSeeds;
+  const globalSeeds = normalizeSeedUrls(startOptions.seedUrls);
+  if (globalSeeds.length > 0) return globalSeeds;
+  return normalizeSeedUrls(entryConfig.seedUrls);
+}
+
+function enqueueSeedUrls(domain, urls) {
+  const summary = { total: 0, inserted: 0, alreadyKnown: 0, invalid: 0, outsideDomain: 0 };
+  for (const url of normalizeSeedUrls(urls)) {
+    summary.total += 1;
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch (_) {
+      summary.invalid += 1;
+      continue;
+    }
+    const normalizedDomain = String(domain || '').replace(/^www\./, '');
+    const normalizedHost = parsed.hostname.replace(/^www\./, '');
+    if (normalizedHost !== normalizedDomain && !normalizedHost.endsWith(`.${normalizedDomain}`)) {
+      summary.outsideDomain += 1;
+      continue;
+    }
+    const result = remoteCrawlerDb.insertPendingRemoteCrawlerUrl({
+      url: parsed.href,
+      host: parsed.hostname,
+      path: parsed.pathname,
+      depth: 0,
+      discoveredFrom: null,
+    });
+    if (result?.inserted) summary.inserted += 1;
+    else summary.alreadyKnown += 1;
+  }
+  return summary;
 }
 
 // Create all workers
@@ -249,6 +322,12 @@ function startDomain(domain, maxPagesOverride, startOptions = {}) {
   }
 
   const maxPages = maxPagesOverride || entry.config.maxPages;
+  const maxDepth = parseNonNegativeInteger(startOptions.maxDepth, parseNonNegativeInteger(entry.config.maxDepth, 2));
+  const seedUrls = seedUrlsForDomain(domain, startOptions, entry.config);
+  if (startOptions.seedUrls || startOptions.seedUrlsByDomain) {
+    entry.config.seedUrls = seedUrls;
+  }
+  entry.config.maxDepth = maxDepth;
   const workerOptions = {
     ...startOptions,
     coordinatorMode: !!startOptions.coordinatorMode,
@@ -256,16 +335,38 @@ function startDomain(domain, maxPagesOverride, startOptions = {}) {
 
   const pm2Name = getWorkerPm2Name(domain);
   const scriptPath = require('path').join(__dirname, 'lib', 'run-worker.js');
-  const seedUrls = entry.config.seedUrls && entry.config.seedUrls.length > 0 ? entry.config.seedUrls.join(',') : '';
 
   // Clean up any existing PM2 process with the same name to prevent duplicates on restart
-  try { require('child_process').execSync(`pm2 delete "${pm2Name}" 2>/dev/null`, { stdio: 'ignore' }); } catch (_) { }
-  let cmd = `pm2 start "${scriptPath}" --name "${pm2Name}" --max-memory-restart 1500M -- --domain "${domain}" --max-pages ${maxPages} --db "${DB_FILE}"`;
-  if (seedUrls) cmd += ` --seed-urls "${seedUrls}"`;
-  if (workerOptions.coordinatorMode) cmd += ` --coordinator-mode`;
+  try { require('child_process').execFileSync('pm2', ['delete', pm2Name], { stdio: 'ignore' }); } catch (_) { }
+  const pm2Args = [
+    'start',
+    scriptPath,
+    '--name',
+    pm2Name,
+    '--max-memory-restart',
+    '1500M',
+    '--',
+    '--domain',
+    domain,
+    '--max-pages',
+    String(maxPages),
+    '--max-depth',
+    String(maxDepth),
+    '--db',
+    DB_FILE,
+  ];
+  if (seedUrls.length > 0) pm2Args.push('--seed-urls', seedUrls.join(','));
+  if (workerOptions.coordinatorMode) pm2Args.push('--coordinator-mode');
 
   try {
-    const out = require('child_process').execSync(cmd, { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf-8' });
+    const out = require('child_process').spawnSync('pm2', pm2Args, { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf-8' });
+    if (out.error) throw out.error;
+    if (out.status !== 0) {
+      const err = new Error(`pm2 exited with status ${out.status}`);
+      err.stdout = out.stdout;
+      err.stderr = out.stderr;
+      throw err;
+    }
     // console.log(`  [${domain}] PM2 out:`, out); // Optional
   } catch (e) {
     console.error(`  [${domain}] PM2 start failed:`, e.message);
@@ -281,10 +382,10 @@ function startDomain(domain, maxPagesOverride, startOptions = {}) {
   if (entry.worker) entry.worker.isRunning = true;
   resetIdleTimer();
 
-  broadcastSSE('crawl:start', { domain, maxPages, coordinatorMode: workerOptions.coordinatorMode });
-  console.log(`  [${domain}] Crawl started via PM2 (maxPages=${maxPages}, coordinatorMode=${workerOptions.coordinatorMode})`);
+  broadcastSSE('crawl:start', { domain, maxPages, maxDepth, seedUrls: seedUrls.length, coordinatorMode: workerOptions.coordinatorMode });
+  console.log(`  [${domain}] Crawl started via PM2 (maxPages=${maxPages}, maxDepth=${maxDepth}, seeds=${seedUrls.length}, coordinatorMode=${workerOptions.coordinatorMode})`);
 
-  return { domain, status: 'started', maxPages };
+  return { domain, status: 'started', maxPages, maxDepth, seedUrls: seedUrls.length };
 }
 
 /**
@@ -462,6 +563,8 @@ async function getDomainStatus(domain) {
     rateLimiter: null,
     fatalState: effectiveStatus ? effectiveStatus.fatalState : null,
     maxPages: entry.config.maxPages,
+    maxDepth: parseNonNegativeInteger(entry.config.maxDepth, 2),
+    seedUrls: normalizeSeedUrls(entry.config.seedUrls).length,
   };
 }
 
@@ -503,6 +606,7 @@ async function getMultiStatus() {
   return {
     service: 'Multi-Domain Crawl Server v4',
     version: '4.0.0',
+    build: loadBuildInfo(),
     schemaVersion: getSchemaVersion(db),
     uptime: Math.floor(process.uptime()),
     memory: {
@@ -579,6 +683,7 @@ app.get('/api/health', async (req, res) => {
   res.json({
     healthy: true,
     version: '4.0.0',
+    build: status.build,
     mode: 'multi-domain',
     domains: status.orchestrator.totalDomains,
     running: status.orchestrator.currentlyRunning,
@@ -615,8 +720,14 @@ app.get('/api/queue/pending', (req, res) => {
 // ── Crawl Control ───────────────────────────────────────────
 
 function handleStartRequest(req, res) {
-  const { domain, domains: domainList, maxPages, maxConcurrent } = req.body || {};
+  const { domain, domains: domainList, maxPages, maxConcurrent, maxDepth, seedUrls, seedUrlsByDomain } = req.body || {};
   const maxPagesOverride = maxPages ? parseInt(maxPages, 10) : undefined;
+  const maxDepthOverride = maxDepth !== undefined ? parseNonNegativeInteger(maxDepth, undefined) : undefined;
+  const startOptions = {
+    maxDepth: maxDepthOverride,
+    seedUrls: normalizeSeedUrls(seedUrls),
+    seedUrlsByDomain: seedUrlsByDomain && typeof seedUrlsByDomain === 'object' ? seedUrlsByDomain : undefined,
+  };
 
   // Allow runtime concurrency override
   if (maxConcurrent && Number.isFinite(parseInt(maxConcurrent, 10))) {
@@ -626,9 +737,9 @@ function handleStartRequest(req, res) {
   }
 
   if (domain) {
-    res.json(startDomain(domain, maxPagesOverride));
+    res.json(startDomain(domain, maxPagesOverride, startOptions));
   } else if (Array.isArray(domainList)) {
-    const results = domainList.map(d => startDomain(d, maxPagesOverride));
+    const results = domainList.map(d => startDomain(d, maxPagesOverride, startOptions));
     startOrchestrator(domainList);
     res.json({ started: results.length, results, maxConcurrent: MAX_CONCURRENT });
   } else {
@@ -751,7 +862,8 @@ app.post('/api/seed', (req, res) => {
   const entry = workers.get(domain);
   if (!entry) return res.status(404).json({ error: `Unknown domain: ${domain}` });
 
-  const result = entry.worker.seedUrls(urlList);
+  const result = enqueueSeedUrls(domain, urlList);
+  if (result.inserted > 0) resetIdleTimer();
   res.json({ domain, ...result });
 });
 
@@ -772,11 +884,16 @@ app.post('/api/domain/:domain/plan', (req, res) => {
 
 // Add a new domain at runtime
 app.post('/api/domains/add', (req, res) => {
-  const { domain, maxPages, seedUrls } = req.body;
+  const { domain, maxPages, maxDepth, seedUrls } = req.body;
   if (!domain) return res.status(400).json({ error: 'domain required' });
   if (workers.has(domain)) return res.json({ domain, status: 'already_exists' });
 
-  const config = { domain, maxPages: maxPages || MAX_PAGES_DEFAULT, seedUrls };
+  const config = {
+    domain,
+    maxPages: maxPages || MAX_PAGES_DEFAULT,
+    maxDepth: parseNonNegativeInteger(maxDepth, 2),
+    seedUrls,
+  };
   createWorker(config);
   domainConfigs.push(config);
 
@@ -793,6 +910,7 @@ app.put('/api/domains', (req, res) => {
     return {
       domain: d.domain || d.host,
       maxPages: d.maxPages || MAX_PAGES_DEFAULT,
+      maxDepth: parseNonNegativeInteger(d.maxDepth ?? d['max-depth'], 2),
       seedUrls: d.seedUrls,
     };
   }).filter(dc => dc && dc.domain);
@@ -814,6 +932,7 @@ app.put('/api/domains', (req, res) => {
       createWorker(config);
     } else {
       existing.config.maxPages = config.maxPages;
+      existing.config.maxDepth = config.maxDepth;
       existing.worker.maxPages = config.maxPages;
       existing.config.seedUrls = config.seedUrls;
       if (config.seedUrls && config.seedUrls.length > 0) {
@@ -904,7 +1023,7 @@ app.get('/api/export/batch', async (req, res) => {
     sinceSql = toSqlite(new Date(untilDate.getTime() - windowSec * 1000));
   } else {
     sinceSql = since ? toSqlite(new Date(since)) : toSqlite(new Date(now.getTime() - 10000));
-    untilSql = until ? toSqlite(new Date(until)) : toSqlite(now);
+    untilSql = until ? toSqlite(new Date(until)) : toSqlite(new Date(now.getTime() + 2000));
   }
 
   res.setHeader('Content-Type', 'application/json');
@@ -1284,12 +1403,14 @@ app.get('/api/events', (req, res) => {
   res.flushHeaders();
 
   sseClients.add(res);
+  startContentWatcher(); // lazy-start: polls for page:complete only when clients exist
 
   // Send initial status
   res.write(`event: status:initial\ndata: ${JSON.stringify(getMultiStatus())}\n\n`);
 
   req.on('close', () => {
     sseClients.delete(res);
+    if (sseClients.size === 0) stopContentWatcher();
   });
 });
 
@@ -1331,6 +1452,59 @@ function stopStatePoller() {
   if (statePollInterval) {
     clearInterval(statePollInterval);
     statePollInterval = null;
+  }
+}
+
+// ── Content Watcher: broadcasts page:complete SSE events ────
+// Polls the remote crawler DB for newly-completed URLs (after a high-water
+// row ID) and broadcasts SSE events so streaming sync clients can immediately
+// pull the page data. Runs at 500ms intervals when SSE clients are connected.
+let contentWatcherInterval = null;
+let contentWatcherHighWater = 0;
+
+function startContentWatcher() {
+  if (contentWatcherInterval) return;
+  // Initialize high-water mark to current max so we only broadcast NEW pages
+  try {
+    const stats = remoteCrawlerDb.getRemoteCrawlerReplayStats();
+    contentWatcherHighWater = stats?.maxRowId || 0;
+  } catch (_) {
+    contentWatcherHighWater = 0;
+  }
+
+  contentWatcherInterval = setInterval(() => {
+    if (sseClients.size === 0) return; // no listeners, skip
+    try {
+      const urls = remoteCrawlerDb.listRemoteCrawlerUrlsAfterRowId({
+        afterRowId: contentWatcherHighWater,
+        limit: 50,
+      });
+      if (!urls || urls.length === 0) return;
+
+      for (const url of urls) {
+        if (url.status === 'done') {
+          broadcastSSE('page:complete', {
+            urlId: url.id,
+            url: url.url,
+            domain: url.host?.replace(/^www\./, '') || '',
+            ts: url.updated_at || new Date().toISOString(),
+            httpStatus: url.http_status,
+          });
+        }
+        if (url.id > contentWatcherHighWater) {
+          contentWatcherHighWater = url.id;
+        }
+      }
+    } catch (err) {
+      console.error('[Content Watcher Error]', err.message);
+    }
+  }, 500);
+}
+
+function stopContentWatcher() {
+  if (contentWatcherInterval) {
+    clearInterval(contentWatcherInterval);
+    contentWatcherInterval = null;
   }
 }
 
@@ -1503,6 +1677,7 @@ function shutdown(signal = 'SIGTERM') {
       stopOrchestrator();
       stopIdleMonitor();
       stopStatePoller();
+      stopContentWatcher();
       globalShield.stop();
 
       closeSseClients();
