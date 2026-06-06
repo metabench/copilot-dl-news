@@ -43,6 +43,8 @@ const path = require('path');
 const fs = require('fs');
 
 const meterLib = require('./throughput-meter');
+const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
+const downloadEvidence = require('../../../src/data/db/queries/downloadEvidence');
 
 // ── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -107,6 +109,68 @@ function uniqueHostnamesFromUrls(urls) {
   return Array.from(out);
 }
 
+function hostMatches(host, requested) {
+  const normalized = String(host || '').toLowerCase();
+  const target = String(requested || '').toLowerCase();
+  return normalized === target || normalized.endsWith(`.${target}`);
+}
+
+function isLocalJobTerminal(status) {
+  return ['completed', 'failed', 'stopped', 'aborted', 'cancelled'].includes(String(status || '').toLowerCase());
+}
+
+function summarizeLocalJobs(jobs = []) {
+  const statuses = {};
+  for (const job of jobs) {
+    const status = String(job?.status || 'unknown').toLowerCase();
+    statuses[status] = (statuses[status] || 0) + 1;
+  }
+  return {
+    total: jobs.length,
+    running: statuses.running || 0,
+    completed: statuses.completed || 0,
+    failed: statuses.failed || 0,
+    terminal: jobs.filter(job => isLocalJobTerminal(job?.status)).length,
+    statuses,
+  };
+}
+
+function normalizeLocalJob(job) {
+  if (!job || typeof job !== 'object') return null;
+  return {
+    id: job.id || job.jobId || null,
+    operationName: job.operationName || null,
+    startUrl: job.startUrl || null,
+    status: job.status || 'unknown',
+    createdAt: job.createdAt || null,
+    startedAt: job.startedAt || null,
+    finishedAt: job.finishedAt || null,
+    paused: Boolean(job.paused),
+    abortRequested: Boolean(job.abortRequested),
+  };
+}
+
+function localJobMatches(job, { sinceIso = null, urls = null, hosts = null } = {}) {
+  if (!job) return false;
+  const sinceMs = sinceIso ? Date.parse(sinceIso) : NaN;
+  if (Number.isFinite(sinceMs)) {
+    const jobMs = Date.parse(job.startedAt || job.createdAt || '');
+    if (!Number.isFinite(jobMs) || jobMs < sinceMs) return false;
+  }
+  const urlSet = Array.isArray(urls) && urls.length
+    ? new Set(urls.map(url => String(url || '').trim()).filter(Boolean))
+    : null;
+  if (urlSet && urlSet.has(String(job.startUrl || '').trim())) return true;
+
+  const hostList = Array.isArray(hosts)
+    ? hosts.map(host => String(host || '').toLowerCase()).filter(Boolean)
+    : [];
+  if (!hostList.length) return !urlSet;
+  let jobHost = '';
+  try { jobHost = new URL(job.startUrl || '').hostname.toLowerCase(); } catch (_e) { /* ignore */ }
+  return hostList.some(host => hostMatches(jobHost, host));
+}
+
 // ── Base class ───────────────────────────────────────────────────────────────
 
 class CrawlBackend {
@@ -153,7 +217,7 @@ class CrawlBackend {
 // ── Local backend (unified UI v1) ────────────────────────────────────────────
 
 class LocalBackend extends CrawlBackend {
-  constructor({ host = '127.0.0.1', port = 3001, dbPath, uiBase = '/api/v1/crawl', operation = 'basicArticleCrawl' } = {}) {
+  constructor({ host = '127.0.0.1', port = 3001, dbPath, uiBase = '/api/v1/crawl', operation = 'basicArticleCrawl', openDb = null, downloadEvidenceQueries = null } = {}) {
     super(`${host}:${port}`);
     this.host = host;
     this.port = port;
@@ -161,6 +225,8 @@ class LocalBackend extends CrawlBackend {
     this.uiBase = uiBase;
     this.operation = operation;
     this._db = null;
+    this._openDbFn = openDb;
+    this._downloadEvidence = downloadEvidenceQueries || downloadEvidence;
   }
 
   get kind() { return 'local'; }
@@ -177,9 +243,8 @@ class LocalBackend extends CrawlBackend {
   }
 
   /**
-   * Local status is computed from the SQLite `fetches` table since the unified
-   * UI v1 API has no per-host aggregate endpoint. This keeps local + remote
-   * surfaces aligned for the meter and for `--watch`.
+   * Local status is computed through news-crawler-db download evidence helpers
+   * so `--watch` uses the same response/content proof as monitored verification.
    */
   async status({ sinceIso = null, hosts = null } = {}) {
     const db = this._openDb();
@@ -193,42 +258,128 @@ class LocalBackend extends CrawlBackend {
       };
     }
     try {
-      const sinceClause = sinceIso ? 'WHERE fetched_at >= ?' : '';
-      const params = sinceIso ? [sinceIso] : [];
-      const rows = db.prepare(`
-        SELECT host AS domain, COUNT(*) AS fetched, COALESCE(SUM(bytes_downloaded),0) AS bytes
-        FROM fetches
-        ${sinceClause}
-        GROUP BY host
-        ORDER BY fetched DESC
-      `).all(...params);
-      const wanted = hosts ? new Set(hosts.map(h => String(h).toLowerCase())) : null;
-      const domains = rows
-        .filter(r => !wanted || wanted.has(String(r.domain || '').toLowerCase()))
-        .map(r => ({
-          domain: r.domain || '(unknown)',
-          state: 'unknown', // local DB doesn't track running/stopped
-          isRunning: false,
-          fetched: Number(r.fetched || 0),
-          errors: 0,
-          pending: 0,
-          bytes: Number(r.bytes || 0)
-        }));
-      const totalFetched = domains.reduce((a, d) => a + d.fetched, 0);
-      const totalBytes = domains.reduce((a, d) => a + d.bytes, 0);
+      const evidence = this._downloadEvidence.getCloudCrawlRecentEvidence(db, {
+        startedAt: sinceIso || undefined,
+        finishedAt: new Date().toISOString(),
+        domains: hosts || undefined,
+      });
+      if (!evidence || evidence.available === false) {
+        return {
+          ok: false,
+          kind: 'local',
+          label: this.label,
+          error: evidence?.error || 'local-download-evidence-unavailable',
+          totals: { fetched: 0, errors: 0, pending: 0, bytes: 0 },
+          throughput: { fetchesPerSec: 0, writesPerSec: 0 },
+          domains: [],
+          raw: {
+            sinceIso,
+            dbPath: this.dbPath,
+            evidence,
+          },
+        };
+      }
+      const domains = (Array.isArray(evidence.hosts) ? evidence.hosts : []).map(row => ({
+        domain: row.host || '(unknown)',
+        state: 'unknown',
+        isRunning: false,
+        fetched: Number(row.downloads || 0),
+        errors: Number(row.failed || 0),
+        pending: 0,
+        bytes: Number(row.bytes || 0),
+      }));
       return {
         ok: true,
         kind: 'local',
         label: this.label,
-        totals: { fetched: totalFetched, errors: 0, pending: 0, bytes: totalBytes },
+        totals: {
+          fetched: Number(evidence.downloads || 0),
+          errors: Number(evidence.failed || 0),
+          pending: 0,
+          bytes: Number(evidence.bytes || 0),
+        },
         throughput: { fetchesPerSec: 0, writesPerSec: 0 }, // not surfaced locally
         domains,
-        raw: { sinceIso, dbPath: this.dbPath }
+        raw: { sinceIso, dbPath: this.dbPath, evidence }
       };
     } catch (err) {
       return { ok: false, kind: 'local', label: this.label, error: err.message,
         totals: { fetched: 0, errors: 0, pending: 0, bytes: 0 },
         throughput: { fetchesPerSec: 0, writesPerSec: 0 }, domains: [], raw: null };
+    }
+  }
+
+  async jobs({ sinceIso = null, urls = null, hosts = null, jobIds = null, timeoutMs = 1500 } = {}) {
+    const _httpRequest = this._httpRequest || httpRequest;
+    const requestTimeoutMs = Math.max(250, Math.min(5000, Number(timeoutMs) || 1500));
+    const idList = Array.isArray(jobIds)
+      ? jobIds.map(id => String(id || '').trim()).filter(Boolean)
+      : [];
+    try {
+      let items = [];
+      let source = 'list';
+      const jobIdErrors = [];
+      if (idList.length > 0) {
+        source = 'job-id';
+        for (const jobId of idList.slice(0, 20)) {
+          try {
+            const { body } = await _httpRequest(
+              'GET',
+              this.host,
+              this.port,
+              `${this.uiBase}/jobs/${encodeURIComponent(jobId)}`,
+              null,
+              requestTimeoutMs
+            );
+            if (body?.job) items.push(body.job);
+          } catch (err) {
+            jobIdErrors.push({ jobId, error: err.message || String(err) });
+          }
+        }
+        if (!items.length && jobIdErrors.length) {
+          throw new Error(`job snapshot unavailable for ${jobIdErrors.length} accepted job(s): ${jobIdErrors[0].error}`);
+        }
+      } else {
+        const { body } = await _httpRequest('GET', this.host, this.port, `${this.uiBase}/jobs`, null, requestTimeoutMs);
+        items = Array.isArray(body?.items) ? body.items : [];
+      }
+      const jobs = items
+        .map(normalizeLocalJob)
+        .filter(Boolean)
+        .filter(job => idList.length > 0 || localJobMatches(job, { sinceIso, urls, hosts }));
+      return {
+        ok: true,
+        kind: 'local-jobs',
+        label: this.label,
+        counts: summarizeLocalJobs(jobs),
+        jobs,
+        raw: {
+          sinceIso,
+          urlCount: Array.isArray(urls) ? urls.length : 0,
+          hostCount: Array.isArray(hosts) ? hosts.length : 0,
+          jobIdCount: idList.length,
+          timeoutMs: requestTimeoutMs,
+          source,
+          jobIdErrors,
+        },
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        kind: 'local-jobs',
+        label: this.label,
+        error: err.message,
+        counts: summarizeLocalJobs([]),
+        jobs: [],
+        raw: {
+          sinceIso,
+          urlCount: Array.isArray(urls) ? urls.length : 0,
+          hostCount: Array.isArray(hosts) ? hosts.length : 0,
+          jobIdCount: idList.length,
+          timeoutMs: requestTimeoutMs,
+          source: idList.length > 0 ? 'job-id' : 'list',
+        },
+      };
     }
   }
 
@@ -266,9 +417,9 @@ class LocalBackend extends CrawlBackend {
   _openDb() {
     if (this._db) return this._db;
     try {
-      const Database = require('better-sqlite3');
       if (!fs.existsSync(this.dbPath)) return null;
-      this._db = new Database(this.dbPath, { readonly: true, fileMustExist: true });
+      const openDb = this._openDbFn || ((dbPath) => openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true }));
+      this._db = openDb(this.dbPath);
       return this._db;
     } catch (_e) {
       return null;
@@ -428,6 +579,8 @@ module.exports = {
   getBackend,
   // helpers exported for tests
   parseHostPort,
+  isLocalJobTerminal,
+  summarizeLocalJobs,
   uniqueHostnamesFromUrls,
   httpRequest
 };

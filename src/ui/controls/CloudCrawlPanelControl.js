@@ -111,6 +111,7 @@ class CloudCrawlPanelControl extends jsgui.Control {
     grid.add(this._healthCell("Remote storage", "remoteContentMb", "—"));
     grid.add(this._healthCell("Sync lag", "syncLagMs", "—"));
     grid.add(this._healthCell("Ledger", "ledgerSummary", "—"));
+    grid.add(this._healthCell("Recent crawl", "monitoredSmallCrawl", "—"));
     section.add(grid);
     this.add(section);
   }

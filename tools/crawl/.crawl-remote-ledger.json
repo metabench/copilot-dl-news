@@ -1,42 +1,8 @@
 {
   "version": 1,
-  "lastWatermark": "2026-05-13 03:24:11",
-  "totalPulled": 71308,
+  "lastWatermark": "2026-05-28 04:44:15",
+  "totalPulled": 71313,
   "entries": [
-    {
-      "batchId": "b-1778620809268-rpoq2d",
-      "exportedAt": "2026-05-12T21:20:09.268Z",
-      "watermark": "2026-05-12 21:12:18",
-      "urlIds": [
-        18805,
-        18806,
-        34736,
-        76313,
-        76314,
-        76315,
-        76316,
-        80561,
-        80562,
-        80563,
-        80564,
-        80565,
-        80566,
-        80568,
-        80569,
-        80570,
-        18807,
-        18808
-      ],
-      "confirmedAt": "2026-05-12T21:20:11.718Z",
-      "prunedAt": "2026-05-12T21:20:11.735Z",
-      "pruneRetries": 0,
-      "deleted": {
-        "urls": 0,
-        "httpResponses": 18,
-        "content": 18,
-        "links": 2823
-      }
-    },
     {
       "batchId": "b-1778620818219-tru5j6",
       "exportedAt": "2026-05-12T21:20:18.219Z",
@@ -15728,6 +15694,23 @@
       }
     },
     {
+      "batchId": "b-1778642651391-smfdnu",
+      "exportedAt": "2026-05-13T03:24:11.391Z",
+      "watermark": "2026-05-13 03:24:11",
+      "urlIds": [
+        17
+      ],
+      "confirmedAt": "2026-05-13T03:24:11.497Z",
+      "prunedAt": "2026-05-13T03:24:11.501Z",
+      "pruneRetries": 0,
+      "deleted": {
+        "urls": 0,
+        "httpResponses": 1,
+        "content": 1,
+        "links": 234
+      }
+    },
+    {
       "batchId": "b-1778345896371-wgp690",
       "exportedAt": "2026-05-09T16:58:16.371Z",
       "watermark": "2026-05-09 16:57:15",
@@ -16260,21 +16243,20 @@
       "deleted": null
     },
     {
-      "batchId": "b-1778642651391-smfdnu",
-      "exportedAt": "2026-05-13T03:24:11.391Z",
-      "watermark": "2026-05-13 03:24:11",
+      "batchId": "b-1779943498855-yek1k4",
+      "exportedAt": "2026-05-28T04:44:58.855Z",
+      "watermark": "2026-05-28 04:44:15",
       "urlIds": [
-        17
+        120307,
+        120308,
+        120309,
+        120310,
+        120350
       ],
-      "confirmedAt": "2026-05-13T03:24:11.497Z",
-      "prunedAt": "2026-05-13T03:24:11.501Z",
+      "confirmedAt": "2026-05-28T04:45:14.627Z",
+      "prunedAt": null,
       "pruneRetries": 0,
-      "deleted": {
-        "urls": 0,
-        "httpResponses": 1,
-        "content": 1,
-        "links": 234
-      }
+      "deleted": null
     }
   ]
 }

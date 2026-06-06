@@ -55,6 +55,7 @@ function parseArgv(argv = []) {
     force: false,
     forceBuild: false,
     ifNeeded: false,
+    preflightOnly: false,
     json: false,
     noColor: false,
     noEmoji: false,
@@ -98,6 +99,7 @@ function parseArgv(argv = []) {
     else if (flag === '--force') opts.force = true;
     else if (flag === '--force-build') opts.forceBuild = true;
     else if (flag === '--if-needed') opts.ifNeeded = true;
+    else if (flag === '--preflight-only') opts.preflightOnly = true;
     else if (flag === '--json') opts.json = true;
     else if (flag === '--no-color') opts.noColor = true;
     else if (flag === '--no-emoji') opts.noEmoji = true;
@@ -203,6 +205,7 @@ Options:
   --apply                     Execute the deployment (default: dry-run)
   --build-only                Build the tarball locally without uploading
   --if-needed                 Build only if local inputs changed; deploy only if remote build is older/missing
+  --preflight-only            Inspect remote/local build evidence without building or deploying
   --force                     Allow stopping/overwriting a busy remote server
   --force-build               Rebuild local package even if the local build manifest is current
   --quiet-if-current          Print nothing when --if-needed finds remote current
@@ -268,7 +271,7 @@ function forceSuggestion(argv = process.argv.slice(2)) {
 
 function summarizePlan(opts, statusSummary) {
   return {
-    mode: opts.ifNeeded ? 'if-needed' : opts.apply ? 'apply' : opts.buildOnly ? 'build-only' : 'dry-run',
+    mode: opts.preflightOnly ? 'preflight-only' : opts.ifNeeded ? 'if-needed' : opts.apply ? 'apply' : opts.buildOnly ? 'build-only' : 'dry-run',
     force: opts.force,
     forceBuild: opts.forceBuild,
     sshTarget: sshTarget(opts),
@@ -287,6 +290,106 @@ function summarizePlan(opts, statusSummary) {
       'package.json with production runtime dependencies',
     ],
   };
+}
+
+function summarizeLocalBuildState(localState) {
+  const manifest = localState?.manifest || null;
+  return {
+    current: Boolean(localState?.current),
+    manifestPath: localState?.manifestPath || null,
+    tarball: localState?.tarball || null,
+    tarballExists: Boolean(localState?.tarballExists),
+    buildId: manifest?.buildId || null,
+    builtAt: manifest?.builtAt || null,
+    builtAtMs: Number(manifest?.builtAtMs || 0) || null,
+    sourceLatestPath: localState?.source?.latestPath || null,
+    sourceLatestMtimeMs: Number(localState?.source?.latestMtimeMs || 0) || null,
+    sourceFileCount: Number(localState?.source?.fileCount || 0) || 0,
+    staleReasons: Array.isArray(localState?.staleReasons) ? localState.staleReasons : [],
+  };
+}
+
+function buildDeployPreflightProof(opts, remoteStatus, busy) {
+  const localState = getLocalBuildState(opts);
+  const comparison = compareRemoteBuild({
+    localManifest: localState.manifest,
+    remoteStatus,
+  });
+  const localBuild = summarizeLocalBuildState(localState);
+  const busyBlocked = Boolean(busy?.busy);
+  const readyForLiveSeedProof = Boolean(localBuild.current && !busyBlocked && !comparison.deployNeeded);
+  const decision = busyBlocked
+    ? 'blocked-busy'
+    : !localBuild.current
+      ? 'needs-local-build'
+      : comparison.deployNeeded
+        ? 'deploy-needed'
+        : 'current';
+  const operatorMessage = decision === 'current'
+    ? 'Remote build proof is current and idle; deploy/live-seed proof may proceed after other gates pass.'
+    : decision === 'blocked-busy'
+      ? 'Remote has running or retained pending work; do not deploy, force deploy, or seed without resolving queue readiness and explicit approval.'
+      : decision === 'needs-local-build'
+        ? 'Local deploy package is missing or stale; run build-only or the documented if-needed apply path before live-seed proof.'
+        : 'Remote build metadata differs from the local package; deploy current build through the documented preflight/apply path before live-seed proof.';
+
+  return {
+    ...summarizePlan(opts, busy),
+    generatedAt: opts.generatedAt || new Date().toISOString(),
+    localBuild,
+    remoteBuild: comparison.remoteBuild,
+    comparison,
+    decision,
+    readyForLiveSeedProof,
+    operatorMessage,
+    actionPolicy: {
+      proofOnly: true,
+      buildsLocalPackage: false,
+      deploysRemote: false,
+      stopsRemote: false,
+    },
+  };
+}
+
+function buildDeployTroubleshootingHints(context = {}) {
+  const opts = context.opts || {};
+  const busy = context.busy || null;
+  const comparison = context.comparison || null;
+  const localState = context.localState || null;
+  const errorText = String(context.error && context.error.message || context.error || '').trim();
+  const phase = String(context.phase || '').trim().toLowerCase();
+  const hints = [];
+
+  if (phase.includes('health') || /health|status did not become readable|timed out|http/i.test(errorText)) {
+    hints.push('Check /api/health and /api/status before any seed or deploy retry.');
+    hints.push(`Inspect PM2 logs for ${opts.service || DEFAULT_SERVICE} and confirm the service is bound to the expected port.`);
+  }
+  if (busy && busy.busy) {
+    hints.push('Remote status indicates active work; defer deployment or use --force only after explicit interruption approval.');
+  }
+  if (comparison && comparison.deployNeeded) {
+    hints.push(`Deployment is needed because ${comparison.reason}; prefer --if-needed --apply before manual recovery.`);
+  }
+  if (localState && Array.isArray(localState.staleReasons) && localState.staleReasons.length > 0) {
+    hints.push(`Local package is stale: ${localState.staleReasons.join('; ')}.`);
+  }
+  if (opts.remoteDir && opts.remoteDir !== DEFAULT_REMOTE_DIR) {
+    hints.push(`Custom remote dir ${opts.remoteDir} is in use; verify the deployed app, data directory, and PM2 cwd.`);
+  }
+  if (opts.service && opts.service !== DEFAULT_SERVICE) {
+    hints.push(`Custom PM2 service ${opts.service} is in use; verify stop/start/status commands target the same service.`);
+  }
+  if (opts.force) {
+    hints.push('--force may interrupt active remote work; capture status and rollback/stop commands before applying it.');
+  }
+  if (/better-sqlite3|prebuild-install|node-gyp|make:|g\+\+|build-essential/i.test(errorText)) {
+    hints.push('Remote native dependency install may need build-essential, make, g++, and python3 before npm install can compile better-sqlite3.');
+  }
+  if (!hints.length) {
+    hints.push('Run deploy preflight with --if-needed --apply --json, then verify health/status before live crawler work.');
+  }
+
+  return Array.from(new Set(hints)).slice(0, 8);
 }
 
 function toIsoFromMs(ms) {
@@ -607,6 +710,17 @@ function shQuote(value) {
   return `'${String(value).replace(/'/g, `'\\''`)}'`;
 }
 
+function escapeShellDoubleQuoted(value) {
+  return String(value).replace(/["\\`$]/g, '\\$&');
+}
+
+function remotePathAssignment(value) {
+  const text = String(value || '').trim();
+  if (text === '~') return '"$HOME"';
+  if (text.startsWith('~/')) return `"$HOME/${escapeShellDoubleQuoted(text.slice(2))}"`;
+  return shQuote(text);
+}
+
 function createRemoteInstallScript(opts) {
   return `set -euo pipefail
 export NVM_DIR="$HOME/.nvm"
@@ -615,7 +729,7 @@ if [ -s "$NVM_DIR/nvm.sh" ]; then
   nvm use 20 >/dev/null 2>&1 || true
 fi
 
-REMOTE_DIR=${shQuote(opts.remoteDir)}
+REMOTE_DIR=${remotePathAssignment(opts.remoteDir)}
 REMOTE_TARBALL=${shQuote(opts.remoteTarball)}
 SERVICE=${shQuote(opts.service)}
 APP_ENTRY="deploy/remote-crawler-v2/multi-domain-server.js"
@@ -636,6 +750,10 @@ pm2 delete "$SERVICE" >/dev/null 2>&1 || true
 echo "remote: replacing application code while preserving data/"
 rm -rf deploy src vendor lib multi-domain-server.js crawl-domains.*.json package.json package-lock.json node_modules/news-crawler-db
 tar -xzf "$REMOTE_TARBALL" -C "$REMOTE_DIR"
+
+if ! command -v make >/dev/null 2>&1 || ! command -v g++ >/dev/null 2>&1; then
+  echo "remote: build tooling missing; native dependencies such as better-sqlite3 may need build-essential make g++ python3" >&2
+fi
 
 echo "remote: installing production dependencies"
 npm install --omit=dev --no-audit
@@ -733,8 +851,24 @@ async function run(argv = process.argv.slice(2)) {
   }
 
   const plan = summarizePlan(opts, busy);
-  if (opts.json && !opts.apply && !opts.buildOnly && !opts.ifNeeded) {
+  if (opts.json && !opts.apply && !opts.buildOnly && !opts.ifNeeded && !opts.preflightOnly) {
     console.log(JSON.stringify(plan, null, 2));
+    return 0;
+  }
+
+  if (opts.preflightOnly) {
+    const proof = buildDeployPreflightProof(opts, remoteStatus, busy);
+    if (opts.json) {
+      console.log(JSON.stringify(proof, null, 2));
+    } else {
+      printPlan(opts, busy, null);
+      const ready = proof.readyForLiveSeedProof ? 'ready' : `not ready: ${proof.decision}`;
+      console.log(`${icon(proof.readyForLiveSeedProof ? 'ok' : 'warn', opts)}${color(`Deploy proof: ${ready}`, proof.readyForLiveSeedProof ? 'green' : 'yellow', opts)}`);
+      if (proof.localBuild.staleReasons.length) {
+        for (const reason of proof.localBuild.staleReasons) console.log(`   - ${reason}`);
+      }
+      if (proof.comparison?.reason) console.log(`   ${proof.comparison.reason}`);
+    }
     return 0;
   }
 
@@ -837,7 +971,9 @@ if (require.main === module) {
 module.exports = {
   BusyRemoteServerError,
   DEPLOY_DEPENDENCIES,
+  buildDeployPreflightProof,
   buildDeployPackage,
+  buildDeployTroubleshootingHints,
   collectSourceSnapshot,
   classifyBusyStatus,
   compareRemoteBuild,
@@ -848,6 +984,7 @@ module.exports = {
   formatBuildId,
   getLocalBuildState,
   parseArgv,
+  remotePathAssignment,
   remoteBuildInfoFromStatus,
   shQuote,
   splitSshTarget,

@@ -60,6 +60,10 @@ const { getBackend, CrawlBackend } = require('./lib/crawl-backend');
 const {
   runRemoteDeployPreflight,
 } = require('./lib/remote-deploy-preflight');
+const {
+  buildGraphFeedbackArtifactExplanationForHosts,
+  renderGraphFeedbackSummary,
+} = require('./lib/graph-feedback-artifact-explain');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const DEFAULT_CRAWL_LISTS_DIR = path.join(REPO_ROOT, 'crawl-lists');
@@ -72,8 +76,15 @@ const DEFAULT_LAUNCH_TIMEOUT_SEC = 180;
 const DEFAULT_NO_OUTPUT_TIMEOUT_SEC = 45;
 const DEFAULT_UI_HOST = '127.0.0.1';
 const DEFAULT_UI_PORT = 3000;
-const SERVER_READY_TIMEOUT_MS = 30000;
 const SERVER_READY_POLL_MS = 500;
+const MAX_CHILD_CAPTURE_CHARS = 256 * 1024;
+
+function positiveIntFromEnv(name, fallback) {
+  const value = Number.parseInt(process.env[name], 10);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+const SERVER_READY_TIMEOUT_MS = positiveIntFromEnv('CRAWL_RUN_SERVER_READY_TIMEOUT_MS', 30000);
 
 // ─────────────────────────────────────────────────────────────────
 // Input-shape detection
@@ -203,6 +214,11 @@ function listUserLists(listsDir = DEFAULT_CRAWL_LISTS_DIR) {
  *   --max-pages <n>
  *   --max-depth <n>
  *   --concurrency <n>           (per-job worker pool; engine `overrides.concurrency`)
+ *   --batch-concurrency <n>     parallel local operation start requests
+ *   --batch-retries <n>         retry count for local operation start requests
+ *   --batch-retry-delay-ms <n>  delay between local operation start retries
+ *   --batch-request-timeout-ms <n>
+ *                              timeout for each local operation start request
  *   --per-domain-interval-ms <n> (engine `overrides.domainIntervalMs`; default 2000ms;
  *                                 lower = faster issuance per host, but more polite to drop)
  *   --json
@@ -217,6 +233,12 @@ function listUserLists(listsDir = DEFAULT_CRAWL_LISTS_DIR) {
  *   --no-meter                (disable live throughput meter)
  *   --meter-interval <ms>     (sample interval, default 2000)
  *   --db <path>               (DB path for local meter; default data/news.db)
+ *   --crawl-db <path>         (writer DB path for the crawl engine; default
+ *                              <cwd>/data/news.db. Isolates sample crawls from
+ *                              production by pointing the writer elsewhere.)
+ *   --graph-feedback-artifact <path>
+ *                              (with --explain only: attach read-only
+ *                               graph-feedback seed consideration output)
  *   --watch                   (after launch, stay attached and poll status until
  *                              all targets reach a terminal state; default for
  *                              `--remote` is fire-and-forget so this is opt-in)
@@ -237,6 +259,10 @@ function parseArgs(argv) {
     maxPages: undefined,
     maxDepth: undefined,
     concurrency: undefined,
+    batchConcurrency: undefined,
+    batchRetries: undefined,
+    batchRetryDelayMs: undefined,
+    batchRequestTimeoutMs: undefined,
     perDomainIntervalMs: undefined,
     uiHost: undefined,
     uiPort: undefined,
@@ -257,8 +283,15 @@ function parseArgs(argv) {
     watch: false,
     watchIntervalMs: 5000,
     watchTimeoutSec: 1800,
+    watchMinFetches: 0,
+    watchMinHosts: 0,
+    watchWaitTerminalAfterDbProof: false,
+    watchTerminalTimeoutSec: 30,
+    watchTerminalJobPollTimeoutMs: 5000,
     launchTimeoutSec: DEFAULT_LAUNCH_TIMEOUT_SEC,
     noOutputTimeoutSec: DEFAULT_NO_OUTPUT_TIMEOUT_SEC,
+    graphFeedbackArtifactPath: undefined,
+    useGraphFeedbackSeeds: false,
     autoServer: true,
     keepServer: true,
     autoStop: false,
@@ -275,6 +308,10 @@ function parseArgs(argv) {
       case '--max-pages': runFlags.maxPages = Number(next()); break;
       case '--max-depth': runFlags.maxDepth = Number(next()); break;
       case '--concurrency': case '-c': runFlags.concurrency = Number(next()); runFlags.concurrencyExplicit = true; break;
+      case '--batch-concurrency': runFlags.batchConcurrency = Number(next()); break;
+      case '--batch-retries': runFlags.batchRetries = Number(next()); break;
+      case '--batch-retry-delay-ms': runFlags.batchRetryDelayMs = Number(next()); break;
+      case '--batch-request-timeout-ms': runFlags.batchRequestTimeoutMs = Number(next()); break;
       case '--per-domain-interval-ms': case '--domain-interval-ms': runFlags.perDomainIntervalMs = Number(next()); break;
       case '--ui-host': runFlags.uiHost = String(next()); break;
       case '--ui-port': runFlags.uiPort = Number(next()); break;
@@ -296,12 +333,27 @@ function parseArgs(argv) {
       case '--meter': runFlags.meter = true; break;
       case '--meter-interval': runFlags.meterIntervalMs = Number(next()); break;
       case '--db': runFlags.dbPath = path.resolve(String(next())); break;
+      case '--crawl-db': runFlags.crawlDbPath = path.resolve(String(next())); break;
       case '--watch': runFlags.watch = true; break;
       case '--no-watch': runFlags.watch = false; break;
       case '--watch-interval': runFlags.watchIntervalMs = Number(next()); break;
       case '--watch-timeout': runFlags.watchTimeoutSec = Number(next()); break;
+      case '--watch-min-fetches': runFlags.watchMinFetches = Number(next()); break;
+      case '--watch-min-hosts': runFlags.watchMinHosts = Number(next()); break;
+      case '--watch-wait-terminal-after-db-proof': runFlags.watchWaitTerminalAfterDbProof = true; break;
+      case '--watch-terminal-timeout': runFlags.watchTerminalTimeoutSec = Number(next()); break;
+      case '--watch-terminal-job-poll-timeout': runFlags.watchTerminalJobPollTimeoutMs = Number(next()); break;
       case '--launch-timeout': runFlags.launchTimeoutSec = Number(next()); break;
       case '--no-output-timeout': runFlags.noOutputTimeoutSec = Number(next()); break;
+      case '--graph-feedback-artifact': {
+        const artifactPath = next();
+        if (!artifactPath || String(artifactPath).startsWith('--')) {
+          throw new Error('--graph-feedback-artifact requires a path');
+        }
+        runFlags.graphFeedbackArtifactPath = String(artifactPath);
+        break;
+      }
+      case '--use-graph-feedback-seeds': runFlags.useGraphFeedbackSeeds = true; break;
       case '--auto-server': runFlags.autoServer = true; break;
       case '--no-auto-server': runFlags.autoServer = false; break;
       case '--keep-server': runFlags.keepServer = true; runFlags.autoStop = false; break;
@@ -315,6 +367,12 @@ function parseArgs(argv) {
         break;
       }
       default:
+        if (typeof t === 'string' && t.startsWith('--graph-feedback-artifact=')) {
+          const artifactPath = t.slice('--graph-feedback-artifact='.length).trim();
+          if (!artifactPath) throw new Error('--graph-feedback-artifact requires a path');
+          runFlags.graphFeedbackArtifactPath = artifactPath;
+          break;
+        }
         positional.push(t);
     }
   }
@@ -414,6 +472,12 @@ function buildBatchPlan(targets, runFlags) {
     userExplicit[k] = coerceScalar(v);
   }
   const finalOverrides = buildOverrides(profile.name, userExplicit);
+  // Writer DB isolation: when --crawl-db is given, forward it as overrides.dbPath
+  // so the in-process crawl engine (NewsCrawler) writes to the requested DB instead
+  // of the default <cwd>/data/news.db. Reaches the engine via the --override body.
+  if (runFlags.crawlDbPath) {
+    finalOverrides.dbPath = runFlags.crawlDbPath;
+  }
 
   // Build args for crawl-batch.js
   const batchArgs = [];
@@ -422,9 +486,12 @@ function buildBatchPlan(targets, runFlags) {
   // Operation
   batchArgs.push('--operation', runFlags.operation || profile.batch.operation);
   // Batch-level concurrency (job fan-out, not engine concurrency)
-  batchArgs.push('--concurrency', String(profile.batch.concurrency));
-  batchArgs.push('--retries', String(profile.batch.retries));
-  batchArgs.push('--retry-delay-ms', String(profile.batch.retryDelayMs));
+  batchArgs.push('--concurrency', String(Number.isFinite(runFlags.batchConcurrency) ? runFlags.batchConcurrency : profile.batch.concurrency));
+  batchArgs.push('--retries', String(Number.isFinite(runFlags.batchRetries) ? runFlags.batchRetries : profile.batch.retries));
+  batchArgs.push('--retry-delay-ms', String(Number.isFinite(runFlags.batchRetryDelayMs) ? runFlags.batchRetryDelayMs : profile.batch.retryDelayMs));
+  if (Number.isFinite(runFlags.batchRequestTimeoutMs)) {
+    batchArgs.push('--request-timeout-ms', String(runFlags.batchRequestTimeoutMs));
+  }
   // Engine overrides exposed as first-class flags by crawl-batch
   if (finalOverrides.maxPages !== undefined) {
     batchArgs.push('--max-pages', String(finalOverrides.maxPages));
@@ -557,6 +624,10 @@ function renderHelp() {
     '  --max-pages <n>         per-job page cap (sets maxPages and maxDownloads)',
     '  --max-depth <n>         per-job link depth',
     '  --concurrency <n>       engine concurrency per job',
+    '  --batch-concurrency <n> local operation start fan-out (default: profile)',
+    '  --batch-retries <n>     local operation start retries (default: profile)',
+    '  --batch-retry-delay-ms <n>  retry delay for local operation starts',
+    '  --batch-request-timeout-ms <n>  timeout for each local operation start',
     '  --operation <name>      v1 operation (default: from profile)',
     '  --override k=v          extra override (repeatable)',
     '  --ui-host <h>           unified UI host (default: 127.0.0.1)',
@@ -572,8 +643,17 @@ function renderHelp() {
     '  --no-meter              disable live throughput meter (docs/s + bytes/s)',
     '  --meter-interval <ms>   meter sample interval (default 2000)',
     '  --db <path>             DB path for local meter (default data/news.db)',
+    '  --crawl-db <path>       writer DB path for crawl engine (default data/news.db;',
+    '                          isolates sample crawls from production)',
+    '  --graph-feedback-artifact <path>  with --explain: validate saved graph-feedback JSON and show seed consideration',
+    '  --use-graph-feedback-seeds  not supported by run.js; use tools/crawl/index.js remote ... with an artifact',
     '  --launch-timeout <sec>  fail delegated launch if it runs too long (default 180; 0 disables)',
     '  --no-output-timeout <s> fail delegated launch after silence (default 45; 0 disables)',
+    '  --watch-min-fetches <n> require at least N local DB fetches before local watch can stop',
+    '  --watch-min-hosts <n>  require local DB evidence for at least N requested hosts before local watch can stop',
+    '  --watch-wait-terminal-after-db-proof wait briefly for accepted local jobs after DB proof',
+    '  --watch-terminal-timeout <sec> terminal wait budget after DB proof, default 30',
+    '  --watch-terminal-job-poll-timeout <ms> per-poll /jobs budget during terminal wait, default 5000 (1500-5000)',
     '  --no-auto-server        do not auto-start the unified UI when --local and it is not running',
     '  --auto-stop             stop the auto-spawned unified UI after dispatch (kills in-flight crawls)',
     '  --explain               print the resolved plan and exit (no crawl runs)',
@@ -587,7 +667,7 @@ function renderHelp() {
   ].join('\n');
 }
 
-function renderPlan(plan) {
+function renderPlan(plan, options = {}) {
   const out = {
     mode: plan.mode,
     profile: plan.profile && {
@@ -619,7 +699,42 @@ function renderPlan(plan) {
       args: plan.delegateArgv
     };
   }
+  if (options.graphFeedbackArtifactPath) {
+    out.graphFeedback = buildGraphFeedbackArtifactExplanation(plan, options.graphFeedbackArtifactPath, options);
+  }
   return out;
+}
+
+function plannedHostsForGraphFeedback(plan) {
+  if (!plan || typeof plan !== 'object') return [];
+  if (Array.isArray(plan.hosts) && plan.hosts.length) {
+    return plan.hosts.map(host => String(host || '').trim().toLowerCase()).filter(Boolean);
+  }
+  if (Array.isArray(plan.urls) && plan.urls.length) {
+    return uniqueHostnamesFromUrls(plan.urls);
+  }
+  return [];
+}
+
+/**
+ * Attach saved graph-feedback recommendations to an explain-only crawl plan.
+ *
+ * This is intentionally file-only. It validates the artifact against the hosts
+ * that run.js already planned, and only reports how seed candidates would be
+ * considered. It never enqueues URLs, seeds remote crawlers, or changes collect.
+ *
+ * @param {object} plan Resolved run.js plan.
+ * @param {string} artifactPath Saved graph-feedback artifact path.
+ * @param {object} [options] Test seams.
+ * @returns {object} Graph-feedback explain block.
+ */
+function buildGraphFeedbackArtifactExplanation(plan, artifactPath, options = {}) {
+  const plannedHosts = plannedHostsForGraphFeedback(plan);
+  if (!plannedHosts.length) {
+    throw new Error('--graph-feedback-artifact requires a batch or remote batch plan with resolvable hosts');
+  }
+
+  return buildGraphFeedbackArtifactExplanationForHosts(plannedHosts, artifactPath, options);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -637,11 +752,38 @@ function timeoutSecToMs(value) {
   return Math.max(1000, Math.round(n * 1000));
 }
 
-function runChildProcess({ script, args, label, runFlags }) {
+function appendBoundedCapture(state, chunk) {
+  if (!state) return;
+  if (state.truncated) return;
+  const text = Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk || '');
+  const remaining = MAX_CHILD_CAPTURE_CHARS - state.length;
+  if (remaining <= 0) {
+    state.truncated = true;
+    return;
+  }
+  if (text.length > remaining) {
+    state.parts.push(text.slice(0, remaining));
+    state.length += remaining;
+    state.truncated = true;
+    return;
+  }
+  state.parts.push(text);
+  state.length += text.length;
+}
+
+function capturedText(state) {
+  if (!state) return '';
+  const text = state.parts.join('');
+  return state.truncated ? `${text}\n[output truncated after ${MAX_CHILD_CAPTURE_CHARS} chars]` : text;
+}
+
+function runChildProcess({ script, args, label, runFlags, captureOutput = false }) {
   return new Promise((resolve) => {
     const startedAt = Date.now();
     const launchTimeoutMs = timeoutSecToMs(runFlags.launchTimeoutSec);
     const noOutputTimeoutMs = timeoutSecToMs(runFlags.noOutputTimeoutSec);
+    const stdoutCapture = captureOutput ? { parts: [], length: 0, truncated: false } : null;
+    const stderrCapture = captureOutput ? { parts: [], length: 0, truncated: false } : null;
     let lastOutputAt = Date.now();
     let done = false;
     let launchTimer = null;
@@ -672,6 +814,15 @@ function runChildProcess({ script, args, label, runFlags }) {
         const suffix = detail ? ` (${detail})` : '';
         process.stderr.write(`[run] ${label} exit=${exitCode} elapsed=${formatDurationMs(Date.now() - startedAt)}${suffix}\n`);
       }
+      if (captureOutput) {
+        resolve({
+          exitCode,
+          detail: detail || '',
+          stdout: capturedText(stdoutCapture),
+          stderr: capturedText(stderrCapture),
+        });
+        return;
+      }
       resolve(exitCode);
     };
 
@@ -691,10 +842,12 @@ function runChildProcess({ script, args, label, runFlags }) {
 
     child.stdout.on('data', (chunk) => {
       lastOutputAt = Date.now();
+      appendBoundedCapture(stdoutCapture, chunk);
       process.stdout.write(chunk);
     });
     child.stderr.on('data', (chunk) => {
       lastOutputAt = Date.now();
+      appendBoundedCapture(stderrCapture, chunk);
       process.stderr.write(chunk);
     });
     child.on('error', (err) => finish(1, err.message));
@@ -719,6 +872,158 @@ function runChildProcess({ script, args, label, runFlags }) {
       if (typeof silenceTimer.unref === 'function') silenceTimer.unref();
     }
   });
+}
+
+function parseLocalLaunchSummary(stdout) {
+  const text = String(stdout || '').trim();
+  if (!text) return null;
+  const tryParse = (candidate) => {
+    try {
+      const parsed = JSON.parse(candidate);
+      return parsed && Array.isArray(parsed.results) ? parsed : null;
+    } catch (_error) {
+      return null;
+    }
+  };
+  const direct = tryParse(text);
+  if (direct) return direct;
+  const first = text.indexOf('{');
+  const last = text.lastIndexOf('}');
+  if (first === -1 || last <= first) return null;
+  return tryParse(text.slice(first, last + 1));
+}
+
+function summarizeLocalLaunchSummary(summary) {
+  const results = Array.isArray(summary?.results) ? summary.results : [];
+  const accepted = [];
+  const failed = [];
+  for (const result of results) {
+    const startUrl = result?.startUrl || result?.body?.job?.startUrl || result?.target || null;
+    if (result && result.ok) {
+      accepted.push({
+        startUrl,
+        jobId: result.jobId || result?.body?.jobId || result?.body?.job?.id || null,
+        attempts: Number(result.attempts || 0) || 0,
+      });
+    } else {
+      failed.push({
+        startUrl,
+        error: result?.error || null,
+        attempts: Number(result?.attempts || 0) || 0,
+        retryable: result?.retryable == null ? null : Boolean(result.retryable),
+      });
+    }
+  }
+  return {
+    status: summary?.status || (failed.length ? 'partial' : 'ok'),
+    counts: summary?.counts || { total: results.length, ok: accepted.length, failed: failed.length },
+    accepted,
+    failed,
+  };
+}
+
+function summarizeLaunchJobEvidence(launchSummary) {
+  const accepted = Array.isArray(launchSummary?.accepted) ? launchSummary.accepted : [];
+  const failed = Array.isArray(launchSummary?.failed) ? launchSummary.failed : [];
+  if (!accepted.length && !failed.length) return null;
+  return {
+    source: 'launch-report',
+    available: true,
+    counts: {
+      total: accepted.length + failed.length,
+      accepted: accepted.length,
+      failed: failed.length,
+    },
+    items: accepted.slice(0, 5).map(item => ({
+      id: item.jobId || null,
+      status: 'accepted',
+      startUrl: item.startUrl || null,
+      attempts: Number(item.attempts || 0) || 0,
+    })),
+  };
+}
+
+function normalizeHostForMatch(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^\[/, '')
+    .replace(/\]$/, '');
+}
+
+function hostMatchesTarget(actualHost, requestedHost) {
+  const actual = normalizeHostForMatch(actualHost);
+  const requested = normalizeHostForMatch(requestedHost);
+  if (!actual || !requested) return false;
+  return actual === requested || actual.endsWith(`.${requested}`) || requested.endsWith(`.${actual}`);
+}
+
+function localStatusHostCoverage(status, targets) {
+  const wanted = Array.from(new Set((targets || [])
+    .map(host => normalizeHostForMatch(host))
+    .filter(Boolean)));
+  const domains = Array.isArray(status?.domains) ? status.domains : [];
+  const covered = [];
+  const missing = [];
+  for (const target of wanted) {
+    const row = domains.find(domain => {
+      const fetched = Number(domain?.fetched || 0);
+      return fetched > 0 && hostMatchesTarget(domain?.domain, target);
+    });
+    if (row) covered.push(target);
+    else missing.push(target);
+  }
+  return {
+    requested: wanted,
+    covered,
+    missing,
+  };
+}
+
+function localLaunchWatchDecision({ plan, runFlags, launchExitCode, launchStdout }) {
+  if (!runFlags?.watch) {
+    return { shouldWatch: false, reason: 'watch-disabled', plan, launchSummary: null };
+  }
+  const minFetches = Math.max(0, Number(runFlags.watchMinFetches) || 0);
+  const rawSummary = parseLocalLaunchSummary(launchStdout);
+  const launchSummary = rawSummary ? summarizeLocalLaunchSummary(rawSummary) : null;
+  if (launchExitCode === 0) {
+    return { shouldWatch: true, reason: 'launch-ok', plan, launchSummary };
+  }
+  if (launchExitCode !== 2) {
+    return { shouldWatch: false, reason: `launch-exit-${launchExitCode}`, plan, launchSummary: null };
+  }
+  if (minFetches <= 0) {
+    return { shouldWatch: false, reason: 'partial-launch-needs-watch-min-fetches', plan, launchSummary: null };
+  }
+  if (!launchSummary) {
+    return { shouldWatch: false, reason: 'partial-launch-summary-unparseable', plan, launchSummary: null };
+  }
+  const acceptedUrls = launchSummary.accepted
+    .map(item => item.startUrl)
+    .filter(Boolean);
+  if (!acceptedUrls.length) {
+    return { shouldWatch: false, reason: 'partial-launch-no-accepted-jobs', plan, launchSummary };
+  }
+  return {
+    shouldWatch: true,
+    reason: 'partial-launch-accepted-jobs',
+    plan: { ...plan, urls: acceptedUrls },
+    launchSummary,
+  };
+}
+
+function localWatchRunFlagsForDecision(runFlags, watchDecision) {
+  const acceptedCount = watchDecision?.launchSummary?.accepted?.length || 0;
+  const requestedMinHosts = Math.max(0, Number(runFlags?.watchMinHosts) || 0);
+  if (watchDecision?.reason !== 'partial-launch-accepted-jobs' || acceptedCount <= 0 || requestedMinHosts <= acceptedCount) {
+    return runFlags;
+  }
+  return {
+    ...runFlags,
+    watchMinHosts: acceptedCount,
+    watchMinHostsAdjustedFrom: requestedMinHosts,
+  };
 }
 
 /**
@@ -915,9 +1220,23 @@ async function executeBatch(plan, runFlags) {
   // Watch mode supersedes the throughput meter as the live display so we don't
   // double-poll (meter @ 2s + watch @ 5s) and tangle stderr lines.
   const meter = runFlags.watch ? null : maybeStartMeter(plan, runFlags);
+  const watchSinceIso = new Date().toISOString();
   let exitCode = 0;
+  let launchStdout = '';
   try {
-    exitCode = await runChildProcess({ script: BATCH_SCRIPT, args: plan.batchArgs, label: 'local-launch', runFlags });
+    const launchResult = await runChildProcess({
+      script: BATCH_SCRIPT,
+      args: plan.batchArgs,
+      label: 'local-launch',
+      runFlags,
+      captureOutput: runFlags.watch,
+    });
+    if (typeof launchResult === 'number') {
+      exitCode = launchResult;
+    } else {
+      exitCode = launchResult.exitCode;
+      launchStdout = launchResult.stdout || '';
+    }
   } finally {
     if (meter) {
       meter.stop();
@@ -929,12 +1248,50 @@ async function executeBatch(plan, runFlags) {
     }
   }
   // Only watch when launch succeeded; on launch failure surface the error
-  // immediately rather than polling a backend that has nothing to follow.
+  // immediately unless a local partial launch has accepted jobs and an
+  // explicit min-fetch DB proof target to follow.
   let watchExit = exitCode;
-  if (runFlags.watch && exitCode === 0) {
-    watchExit = await runWatchLoop({ kind: 'local', plan, runFlags, launchExitCode: exitCode });
-  } else if (runFlags.watch && exitCode !== 0) {
-    process.stderr.write(`(watch skipped: launch exit ${exitCode})\n`);
+  if (runFlags.watch) {
+    const watchDecision = localLaunchWatchDecision({
+      plan,
+      runFlags,
+      launchExitCode: exitCode,
+      launchStdout,
+    });
+    if (watchDecision.shouldWatch) {
+      const effectiveRunFlags = localWatchRunFlagsForDecision(runFlags, watchDecision);
+      if (watchDecision.reason === 'partial-launch-accepted-jobs') {
+        const acceptedCount = watchDecision.launchSummary?.accepted?.length || 0;
+        const failedCount = watchDecision.launchSummary?.failed?.length || 0;
+        if (runFlags.json) {
+          process.stderr.write(JSON.stringify({
+            watchPartialLaunch: {
+              policy: 'watch-accepted-local-jobs-preserve-launch-failure',
+              accepted: acceptedCount,
+              failed: failedCount,
+              minFetches: Math.max(0, Number(runFlags.watchMinFetches) || 0),
+              minHostsAdjustedFrom: effectiveRunFlags.watchMinHostsAdjustedFrom || null,
+              minHosts: effectiveRunFlags.watchMinHostsAdjustedFrom ? effectiveRunFlags.watchMinHosts : null,
+            },
+          }) + '\n');
+        } else {
+          const minHostText = effectiveRunFlags.watchMinHostsAdjustedFrom
+            ? `; watch minHosts adjusted ${effectiveRunFlags.watchMinHostsAdjustedFrom}->${effectiveRunFlags.watchMinHosts}`
+            : '';
+          process.stderr.write(`(watch continuing after partial local launch: accepted=${acceptedCount} failed=${failedCount}${minHostText}; final exit preserves launch failure)\n`);
+        }
+      }
+      watchExit = await runWatchLoop({
+        kind: 'local',
+        plan: watchDecision.plan,
+        runFlags: effectiveRunFlags,
+        launchExitCode: exitCode,
+        sinceIso: watchSinceIso,
+        launchSummary: watchDecision.launchSummary,
+      });
+    } else {
+      process.stderr.write(`(watch skipped: ${watchDecision.reason})\n`);
+    }
   }
   await server.stop();
   return watchExit;
@@ -999,12 +1356,16 @@ function statusUrlFromRemoteHost(remoteHost) {
  * Returns Promise<number> — propagates the launch exit code unless the watch
  * itself errors.
  */
-async function runWatchLoop({ kind, plan, runFlags, launchExitCode }) {
+async function runWatchLoop({ kind, plan, runFlags, launchExitCode, sinceIso = null, launchSummary = null }) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   let backend;
   try {
     if (kind === 'local') {
-      backend = getBackend('local', { dbPath: runFlags.dbPath });
+      backend = getBackend('local', {
+        host: runFlags.uiHost || DEFAULT_UI_HOST,
+        port: runFlags.uiPort || DEFAULT_UI_PORT,
+        dbPath: runFlags.dbPath,
+      });
     } else {
       const host = runFlags.remoteHost || process.env.FLEET_HOST || resolveDefaultFleetHost();
       backend = getBackend('remote', { host });
@@ -1022,12 +1383,26 @@ async function runWatchLoop({ kind, plan, runFlags, launchExitCode }) {
     return launchExitCode;
   }
 
-  const sinceIso = new Date().toISOString();
+  const watchSinceIso = sinceIso || new Date().toISOString();
   const intervalMs = Math.max(1000, Number(runFlags.watchIntervalMs) || 5000);
   const timeoutMs = Math.max(1000, (Number(runFlags.watchTimeoutSec) || 1800) * 1000);
+  const minFetches = Math.max(0, Number(runFlags.watchMinFetches) || 0);
+  const minHosts = Math.max(0, Number(runFlags.watchMinHosts) || 0);
+  const waitTerminalAfterDbProof = kind === 'local' && Boolean(runFlags.watchWaitTerminalAfterDbProof);
+  const terminalWaitTimeoutMs = Math.max(1000, (Number(runFlags.watchTerminalTimeoutSec) || 30) * 1000);
+  // During the optional terminal wait the in-process crawl is usually still
+  // CPU-bound, so the cheap /jobs/:jobId endpoint can be starved well past the
+  // normal 1.5s job-poll budget. Give terminal-wait polls a longer, bounded
+  // timeout so an event-loop-starved server still gets a chance to respond.
+  const terminalWaitJobPollTimeoutMs = Math.max(1500, Math.min(5000,
+    Number(runFlags.watchTerminalJobPollTimeoutMs) || 5000));
   const startTs = Date.now();
 
-  process.stderr.write(`\n▶ Watching ${kind} backend (${backend.label}) — ${targets.length} target(s), poll ${intervalMs}ms, timeout ${Math.round(timeoutMs/1000)}s\n`);
+  process.stderr.write(`\n▶ Watching ${kind} backend (${backend.label}) — ${targets.length} target(s), poll ${intervalMs}ms, timeout ${Math.round(timeoutMs/1000)}s`);
+  if (kind === 'local' && minHosts > 0) {
+    process.stderr.write(`, minHosts=${minHosts}`);
+  }
+  process.stderr.write('\n');
 
   // Match crawl-remote.js cmdWatch: bail after a streak of poll failures
   // instead of silently looping for the entire watch-timeout window.
@@ -1038,9 +1413,29 @@ async function runWatchLoop({ kind, plan, runFlags, launchExitCode }) {
   let stableTicks = 0;
   let lastFetched = -1;
   let lastStatus = null;
+  let lastJobEvidence = null;
+  let jobPollErrors = 0;
   let stoppedReason = null;
+  const terminalWait = waitTerminalAfterDbProof ? {
+    enabled: true,
+    timeoutSec: Math.round(terminalWaitTimeoutMs / 1000),
+    jobPollTimeoutMs: terminalWaitJobPollTimeoutMs,
+    startedAt: null,
+    finishedAt: null,
+    elapsedMs: 0,
+    jobPolls: 0,
+    jobPollErrors: 0,
+    endpointResponded: false,
+    outcome: null,
+    reason: null,
+  } : null;
+  const launchJobEvidence = kind === 'local' ? summarizeLaunchJobEvidence(launchSummary) : null;
+  const launchJobIds = Array.isArray(launchJobEvidence?.accepted)
+    ? launchJobEvidence.accepted.map(job => job.jobId).filter(Boolean)
+    : [];
   while (true) {
-    if (Date.now() - startTs > timeoutMs) {
+    const terminalWaitActive = Boolean(terminalWait?.startedAt && !terminalWait.outcome);
+    if (Date.now() - startTs > timeoutMs && !terminalWaitActive) {
       stoppedReason = 'timeout';
       process.stderr.write('⏰ Watch timeout reached\n');
       break;
@@ -1049,7 +1444,7 @@ async function runWatchLoop({ kind, plan, runFlags, launchExitCode }) {
     let s;
     try {
       s = kind === 'local'
-        ? await backend.status({ sinceIso, hosts: targets })
+        ? await backend.status({ sinceIso: watchSinceIso, hosts: targets })
         : await backend.status({ hosts: targets });
     } catch (err) {
       consecutiveErrors++;
@@ -1075,11 +1470,85 @@ async function runWatchLoop({ kind, plan, runFlags, launchExitCode }) {
     }
     consecutiveErrors = 0;
     lastStatus = s;
+    let jobEvidence = null;
+    const fetchedNow = Number(s.totals?.fetched || 0);
+    const hostCoverage = kind === 'local'
+      ? localStatusHostCoverage(s, targets)
+      : { requested: [], covered: [], missing: [] };
+    const minFetchesMetNow = minFetches <= 0 || fetchedNow >= minFetches;
+    const minHostsMetNow = minHosts <= 0 || hostCoverage.covered.length >= minHosts;
+    const localDbProofMet = minFetchesMetNow && minHostsMetNow;
+    const needsLocalJobEvidence = kind === 'local'
+      && backend
+      && typeof backend.jobs === 'function'
+      && (!localDbProofMet || waitTerminalAfterDbProof);
+    const inTerminalWaitPhase = waitTerminalAfterDbProof && localDbProofMet;
+    if (needsLocalJobEvidence) {
+      // During terminal wait, cap the per-poll budget to the remaining
+      // terminal-wait budget so the sum of starved 5s polls cannot overshoot
+      // the terminal-wait window.
+      const terminalWaitElapsedMs = terminalWait?.startedAt
+        ? Date.now() - Date.parse(terminalWait.startedAt)
+        : 0;
+      const cappedTerminalPoll = inTerminalWaitPhase
+        ? clampTerminalWaitJobPollTimeout({
+          elapsedMs: terminalWaitElapsedMs,
+          totalTimeoutMs: terminalWaitTimeoutMs,
+          maxPollTimeoutMs: terminalWaitJobPollTimeoutMs,
+        })
+        : 0;
+      const jobPollTimeoutMs = inTerminalWaitPhase
+        ? cappedTerminalPoll
+        : Math.max(500, Math.min(1500, Math.floor(intervalMs * 0.75)));
+      // Budget exhausted: skip the poll so we do not block past the window.
+      if (inTerminalWaitPhase && jobPollTimeoutMs <= 0) {
+        jobEvidence = lastJobEvidence;
+      } else {
+        jobEvidence = await backend.jobs({
+          sinceIso: watchSinceIso,
+          urls: Array.isArray(plan?.urls) ? plan.urls : [],
+          hosts: targets,
+          jobIds: launchJobIds,
+          timeoutMs: jobPollTimeoutMs,
+        });
+        if (inTerminalWaitPhase && terminalWait) {
+          terminalWait.jobPolls += 1;
+          if (jobEvidence && jobEvidence.ok) {
+            terminalWait.endpointResponded = true;
+          } else {
+            terminalWait.jobPollErrors += 1;
+          }
+        }
+      }
+      if (jobEvidence && jobEvidence.ok) {
+        lastJobEvidence = jobEvidence;
+      } else if (jobEvidence) {
+        jobPollErrors++;
+        lastJobEvidence = jobEvidence;
+      }
+    }
     if (!runFlags.json) {
       const tp = (s.throughput && s.throughput.fetchesPerSec) ? ` ${s.throughput.fetchesPerSec.toFixed(2)}/s` : '';
-      process.stderr.write(`  · fetched=${s.totals.fetched} errors=${s.totals.errors} pending=${s.totals.pending}${tp}\n`);
+      const hp = kind === 'local' && minHosts > 0 ? ` hosts=${hostCoverage.covered.length}/${minHosts}` : '';
+      process.stderr.write(`  · fetched=${s.totals.fetched} errors=${s.totals.errors} pending=${s.totals.pending}${hp}${tp}\n`);
+      if (jobEvidence && jobEvidence.ok && jobEvidence.counts.total > 0) {
+        process.stderr.write(`    jobs: running=${jobEvidence.counts.running} completed=${jobEvidence.counts.completed} failed=${jobEvidence.counts.failed}\n`);
+      } else if (jobEvidence && jobEvidence.ok === false && jobPollErrors === 1) {
+        process.stderr.write(`    jobs: unavailable (${jobEvidence.error || 'unknown'})\n`);
+      }
     } else {
-      process.stderr.write(JSON.stringify({ watchTick: { ts: new Date().toISOString(), kind, totals: s.totals, throughput: s.throughput } }) + '\n');
+      const tick = { ts: new Date().toISOString(), kind, totals: s.totals, throughput: s.throughput };
+      if (kind === 'local' && minHosts > 0) {
+        tick.hostCoverage = hostCoverage;
+        tick.minHosts = minHosts;
+        tick.minHostsMet = minHostsMetNow;
+      }
+      if (jobEvidence && jobEvidence.ok && jobEvidence.counts.total > 0) {
+        tick.jobs = summarizeWatchJobEvidence(jobEvidence);
+      } else if (jobEvidence && jobEvidence.ok === false) {
+        tick.jobs = summarizeWatchJobEvidence(jobEvidence);
+      }
+      process.stderr.write(JSON.stringify({ watchTick: tick }) + '\n');
     }
 
     if (kind === 'remote') {
@@ -1101,12 +1570,93 @@ async function runWatchLoop({ kind, plan, runFlags, launchExitCode }) {
         break;
       }
     } else {
-      // Local has no per-domain state field; use a "no-growth" heuristic.
+      if (localDbProofMet && (minFetches > 0 || minHosts > 0)) {
+        if (waitTerminalAfterDbProof) {
+          if (!terminalWait.startedAt) {
+            terminalWait.startedAt = new Date().toISOString();
+          }
+          const elapsed = Date.now() - Date.parse(terminalWait.startedAt);
+          terminalWait.elapsedMs = Number.isFinite(elapsed) ? elapsed : 0;
+          const hasJobs = jobEvidence && jobEvidence.ok && jobEvidence.counts.total > 0;
+          if (hasJobs && jobEvidence.counts.terminal >= jobEvidence.counts.total) {
+            terminalWait.finishedAt = new Date().toISOString();
+            terminalWait.outcome = 'terminal';
+            terminalWait.reason = 'accepted-local-jobs-terminal-after-db-proof';
+            stoppedReason = minHosts > 0 ? 'min-fetches-and-hosts-and-terminal-met' : 'min-fetches-and-terminal-met';
+            process.stderr.write('✅ Local DB proof reached and accepted jobs reached terminal state\n');
+            break;
+          }
+          if (terminalWait.elapsedMs < terminalWaitTimeoutMs) {
+            stableTicks = 0;
+            lastFetched = s.totals.fetched;
+            continue;
+          }
+          terminalWait.finishedAt = new Date().toISOString();
+          const classification = classifyTerminalWaitOutcome({
+            hasJobEvidence: Boolean(hasJobs),
+            allJobsTerminal: false,
+            endpointResponded: Boolean(terminalWait.endpointResponded),
+          });
+          terminalWait.outcome = classification.outcome;
+          terminalWait.reason = classification.reason;
+          stoppedReason = minHosts > 0 ? 'min-fetches-and-hosts-met-terminal-wait-timeout' : 'min-fetches-met-terminal-wait-timeout';
+          process.stderr.write(`⚠ Local DB proof reached but accepted jobs did not reach terminal state within ${terminalWait.timeoutSec}s\n`);
+          break;
+        }
+        stoppedReason = minHosts > 0 ? 'min-fetches-and-hosts-met' : 'min-fetches-met';
+        const hostText = minHosts > 0 ? ` and minHosts=${minHosts}` : '';
+        process.stderr.write(`✅ Local DB proof reached minFetches=${minFetches}${hostText}\n`);
+        break;
+      }
+      // Local DB status has no per-domain state field, but the unified API has
+      // an in-process job registry. Prefer job terminal proof when available
+      // so an accepted local operation is not mistaken for completed work.
+      if (jobEvidence && jobEvidence.ok && jobEvidence.counts.total > 0) {
+        if (jobEvidence.counts.failed > 0) {
+          stoppedReason = 'local-job-failed';
+          process.stderr.write('✗ Local job failed before DB proof completed\n');
+          break;
+        }
+        if (jobEvidence.counts.terminal >= jobEvidence.counts.total) {
+          if (!minFetchesMetNow) {
+            stoppedReason = 'local-job-terminal-without-min-fetches';
+            process.stderr.write(`✗ Local job reached terminal state but fetched=${fetchedNow} < minFetches=${minFetches}\n`);
+            break;
+          }
+          if (!minHostsMetNow) {
+            stoppedReason = 'local-job-terminal-without-host-coverage';
+            process.stderr.write(`✗ Local job reached terminal state but host coverage=${hostCoverage.covered.length} < minHosts=${minHosts}\n`);
+            break;
+          }
+          stoppedReason = 'terminal';
+          process.stderr.write('✅ Local job reached terminal state\n');
+          break;
+        }
+        // If a matching local job is still running, keep waiting until either
+        // it becomes terminal, DB proof appears, or the bounded watch times out.
+        if (jobEvidence.counts.running > 0) {
+          stableTicks = 0;
+          lastFetched = s.totals.fetched;
+          continue;
+        }
+      }
+      // Local fallback when job registry evidence is unavailable: use a
+      // "no-growth" heuristic.
+      if (!minFetchesMetNow) {
+        stableTicks = 0;
+        lastFetched = s.totals.fetched;
+        continue;
+      }
       if (s.totals.fetched === lastFetched) {
         stableTicks++;
         if (stableTicks >= 3) {
-          stoppedReason = 'stable';
-          process.stderr.write('✅ Local fetch count stable for 3 polls — stopping watch\n');
+          if (!minHostsMetNow) {
+            stoppedReason = 'local-host-coverage-not-met';
+            process.stderr.write(`✗ Local fetch count stable but host coverage=${hostCoverage.covered.length} < minHosts=${minHosts}\n`);
+          } else {
+            stoppedReason = 'stable';
+            process.stderr.write('✅ Local fetch count stable for 3 polls — stopping watch\n');
+          }
           break;
         }
       } else {
@@ -1120,15 +1670,117 @@ async function runWatchLoop({ kind, plan, runFlags, launchExitCode }) {
   if (lastStatus && !runFlags.json) {
     const tp = (lastStatus.throughput && lastStatus.throughput.fetchesPerSec) ? ` ${lastStatus.throughput.fetchesPerSec.toFixed(2)}/s` : '';
     process.stderr.write(`  · final fetched=${lastStatus.totals.fetched} errors=${lastStatus.totals.errors} pending=${lastStatus.totals.pending}${tp} (reason=${stoppedReason||'unknown'})\n`);
+    if (launchJobEvidence && (!lastJobEvidence || lastJobEvidence.ok === false)) {
+      process.stderr.write(`    launch jobs: accepted=${launchJobEvidence.counts.accepted} failed=${launchJobEvidence.counts.failed} (job endpoint unavailable or empty)\n`);
+    }
   } else if (lastStatus && runFlags.json) {
-    process.stderr.write(JSON.stringify({ watchFinal: { stoppedReason, kind, totals: lastStatus.totals, throughput: lastStatus.throughput, missingTargets: kind === 'remote' ? CrawlBackend.missingHosts(lastStatus, targets) : [] } }) + '\n');
+    const fetched = Number(lastStatus.totals?.fetched || 0);
+    process.stderr.write(JSON.stringify({
+      watchFinal: {
+        stoppedReason,
+        kind,
+        totals: lastStatus.totals,
+        throughput: lastStatus.throughput,
+        missingTargets: kind === 'remote' ? CrawlBackend.missingHosts(lastStatus, targets) : [],
+        minFetches,
+        minFetchesMet: minFetches <= 0 || fetched >= minFetches,
+        minHosts,
+        minHostsMet: kind === 'local' ? (minHosts <= 0 || localStatusHostCoverage(lastStatus, targets).covered.length >= minHosts) : null,
+        coveredHosts: kind === 'local' ? localStatusHostCoverage(lastStatus, targets).covered : [],
+        missingLocalTargets: kind === 'local' ? localStatusHostCoverage(lastStatus, targets).missing : [],
+        jobs: kind === 'local' && lastJobEvidence ? summarizeWatchJobEvidence(lastJobEvidence) : null,
+        launchJobs: kind === 'local' ? launchJobEvidence : null,
+        jobPollErrors: kind === 'local' ? jobPollErrors : 0,
+        terminalWait,
+      }
+    }) + '\n');
   }
 
   if (backend && typeof backend.close === 'function') backend.close();
   // Surface poll-error exits even when launch succeeded so single-call
   // run+watch invocations don't pretend everything is fine.
-  if (stoppedReason === 'poll-errors' || stoppedReason === 'missing-targets') return launchExitCode || 2;
+  if (watchStoppedReasonExitCode(stoppedReason) !== 0) return launchExitCode || watchStoppedReasonExitCode(stoppedReason);
   return launchExitCode;
+}
+
+/**
+ * Classify the outcome of the optional post-DB-proof terminal wait into one of
+ * three precise states so operators and the packet scorecard can tell apart a
+ * server that responded with non-terminal jobs from one whose job endpoint was
+ * never observed responding during the wait.
+ *
+ * @param {object} input
+ * @param {boolean} input.hasJobEvidence - Latest poll returned usable job counts.
+ * @param {boolean} input.allJobsTerminal - All accepted jobs reached a terminal state.
+ * @param {boolean} input.endpointResponded - The job endpoint responded ok at least once during the wait.
+ * @returns {{ outcome: string, reason: string }}
+ */
+function classifyTerminalWaitOutcome({ hasJobEvidence, allJobsTerminal, endpointResponded } = {}) {
+  if (hasJobEvidence && allJobsTerminal) {
+    return { outcome: 'terminal', reason: 'accepted-local-jobs-terminal-after-db-proof' };
+  }
+  if (hasJobEvidence || endpointResponded) {
+    return { outcome: 'timed-out', reason: 'accepted-local-jobs-still-non-terminal-after-db-proof' };
+  }
+  return { outcome: 'endpoint-unavailable', reason: 'job-endpoint-unavailable-after-db-proof' };
+}
+
+/**
+ * Cap the per-poll `/jobs/:jobId` timeout during terminal wait so the sum of
+ * job polls never overshoots the terminal-wait budget. When the in-process
+ * server is starved each poll blocks for the full `maxPollTimeoutMs`; without a
+ * cap, N polls of `maxPollTimeoutMs` can run well past `totalTimeoutMs`
+ * (observed 4 x 5s = ~21s against a 15s window). The clamp shrinks the final
+ * poll(s) to the remaining budget; once the budget is exhausted it returns 0,
+ * signalling the caller to finalize the terminal wait instead of polling again.
+ *
+ * @param {{ elapsedMs?: number, totalTimeoutMs: number, maxPollTimeoutMs: number }} args
+ * @returns {number} clamped per-poll timeout in ms (0 = budget exhausted)
+ */
+function clampTerminalWaitJobPollTimeout({ elapsedMs, totalTimeoutMs, maxPollTimeoutMs } = {}) {
+  const total = Math.max(0, Number(totalTimeoutMs) || 0);
+  const max = Math.max(0, Number(maxPollTimeoutMs) || 0);
+  const elapsed = Number.isFinite(elapsedMs) && elapsedMs > 0 ? elapsedMs : 0;
+  const remaining = total - elapsed;
+  if (remaining <= 0) {
+    return 0;
+  }
+  // Never exceed the remaining budget; use the full per-poll budget when it
+  // fits, otherwise shrink to whatever budget is left (which may fall below the
+  // usual floor on the final poll — that is intentional to honour the cap).
+  return Math.min(max, remaining);
+}
+
+function watchStoppedReasonExitCode(stoppedReason) {
+  if (
+    stoppedReason === 'poll-errors'
+    || stoppedReason === 'missing-targets'
+    || stoppedReason === 'timeout'
+    || stoppedReason === 'local-job-failed'
+    || stoppedReason === 'local-job-terminal-without-min-fetches'
+    || stoppedReason === 'local-job-terminal-without-host-coverage'
+    || stoppedReason === 'local-host-coverage-not-met'
+  ) {
+    return 2;
+  }
+  return 0;
+}
+
+function summarizeWatchJobEvidence(jobEvidence) {
+  const jobs = Array.isArray(jobEvidence?.jobs) ? jobEvidence.jobs : [];
+  return {
+    available: jobEvidence?.ok !== false,
+    error: jobEvidence?.ok === false ? (jobEvidence.error || 'unknown') : null,
+    counts: jobEvidence?.counts || { total: 0, running: 0, completed: 0, failed: 0, terminal: 0, statuses: {} },
+    items: jobs.slice(0, 5).map(job => ({
+      id: job.id || null,
+      operationName: job.operationName || null,
+      status: job.status || 'unknown',
+      startedAt: job.startedAt || null,
+      finishedAt: job.finishedAt || null,
+      abortRequested: Boolean(job.abortRequested),
+    })),
+  };
 }
 
 function maybeStartMeter(plan, runFlags) {
@@ -1225,13 +1877,33 @@ function runCli(argv) {
     return 3;
   }
 
+  if (parsed.runFlags.useGraphFeedbackSeeds) {
+    process.stderr.write('Error: --use-graph-feedback-seeds is only supported by tools/crawl/index.js remote start-like commands.\n');
+    return 3;
+  }
+  if (parsed.runFlags.graphFeedbackArtifactPath && !parsed.runFlags.explain) {
+    process.stderr.write('Error: --graph-feedback-artifact is explain-only; add --explain to inspect saved recommendations.\n');
+    return 3;
+  }
+
   if (parsed.runFlags.explain) {
-    const rendered = renderPlan(plan);
+    let rendered;
+    try {
+      rendered = renderPlan(plan, {
+        graphFeedbackArtifactPath: parsed.runFlags.graphFeedbackArtifactPath,
+      });
+    } catch (err) {
+      process.stderr.write(`Error: ${err.message}\n`);
+      return 3;
+    }
     if (parsed.runFlags.json) {
       process.stdout.write(JSON.stringify(rendered, null, 2) + '\n');
     } else {
       process.stdout.write('Resolved crawl plan (no jobs started):\n');
       process.stdout.write(JSON.stringify(rendered, null, 2) + '\n');
+      if (rendered.graphFeedback) {
+        process.stdout.write(renderGraphFeedbackSummary(rendered.graphFeedback));
+      }
     }
     return 0;
   }
@@ -1283,12 +1955,26 @@ module.exports = {
   isBatchTarget,
   buildBatchPlan,
   uniqueHostnamesFromUrls,
+  plannedHostsForGraphFeedback,
+  buildGraphFeedbackArtifactExplanation,
+  renderGraphFeedbackSummary,
   coerceScalar,
   runChildProcess,
+  parseLocalLaunchSummary,
+  summarizeLocalLaunchSummary,
+  summarizeLaunchJobEvidence,
+  localStatusHostCoverage,
+  localLaunchWatchDecision,
+  localWatchRunFlagsForDecision,
+  watchStoppedReasonExitCode,
+  classifyTerminalWaitOutcome,
+  clampTerminalWaitJobPollTimeout,
+  summarizeWatchJobEvidence,
   runCli,
   ensureLocalServer,
   probeAvailability,
   statusUrlFromRemoteHost,
+  positiveIntFromEnv,
   // Constants
   DEFAULT_CRAWL_LISTS_DIR,
   BATCH_SCRIPT,

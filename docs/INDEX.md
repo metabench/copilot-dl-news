@@ -40,6 +40,9 @@ Every major subsystem directory has an `AGENT.md` file with context-specific wor
 - [UI Inspection Workflow](workflows/ui-inspection-workflow.md) - Autonomous visual (MCP/Playwright) + numeric (Puppeteer) UI inspection loop.
 - [UI Screenshot Feedback Loop](workflows/ui-screenshot-feedback-loop.md) - Automatic screenshot capture, Electron/Puppeteer rigging, control-centre review artifacts, and comment-driven UI iteration.
 - [Single UI App Cohesion](workflows/single-ui-app-cohesion.md) - No-retirement unified shell: add sub-apps + add `--check`.
+- [Graph Feedback Artifact Planning](workflows/graph-feedback-artifact-planning.md) - Safe crawler profile preflight/report workflow using bounded graph-feedback artifacts without live seeding.
+- [Graph Feedback Profile Workflow Sample](workflows/graph-feedback-profile-workflow-sample.md) - Compact sample of the profile workflow checklist output shape.
+- [Remote Crawler Health, Recovery, And Deploy](workflows/remote-crawler-health-recovery-deploy.md) - Fast checks, stop/recover steps, deploy commands, and verification before live remote crawler work.
 
 
 ## Standards

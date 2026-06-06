@@ -5,9 +5,26 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const {
+  renderDeployPreflightCommand,
   runRemoteDeployPreflight,
   shouldPreflightRemoteArgs,
 } = require('./lib/remote-deploy-preflight');
+const {
+  buildGraphFeedbackArtifactExplanationForHosts,
+  renderGraphFeedbackSummary,
+} = require('./lib/graph-feedback-artifact-explain');
+const {
+  appendGraphFeedbackSeedArgs,
+  buildGraphFeedbackLiveSeedPlan,
+  readLiveSeedPreviewEvidenceSync,
+  renderGraphFeedbackLiveSeedSummary,
+  verifyLiveSeedPreviewEvidence,
+  writeLiveSeedApprovalChecklistSync,
+  writeLiveSeedApprovalReadinessSync,
+  writeLiveSeedPreviewEvidenceSync,
+  writePostSeedVerificationChecklistSync,
+  writeSeedAttemptLogSync,
+} = require('./lib/graph-feedback-live-seeds');
 
 const DEFAULT_PROFILE_DIR = path.join(__dirname, 'profiles');
 const RESERVED_COMMANDS = Object.freeze(['help', 'list', 'profile', 'run']);
@@ -45,6 +62,10 @@ const TOOL_REGISTRY = Object.freeze({
     script: 'crawl-batch.js',
     description: 'Batch-launch N crawls against the unified UI v1 API in one command'
   },
+  'graph-feedback': {
+    script: 'graph-feedback.js',
+    description: 'Read-only graph feedback dry run using news-db-analysis and news-crawler-db'
+  },
   orchestrate: {
     script: 'orchestrate.js',
     description: 'Smart launcher: probe remote, choose remote or local fallback, report Cloud Crawl URL'
@@ -56,6 +77,10 @@ const TOOL_REGISTRY = Object.freeze({
   'remote-deploy': {
     script: 'deploy-remote-server.js',
     description: 'Build and deploy the remote crawler v2 server with busy-server protection'
+  },
+  'monitored-small-crawl': {
+    script: 'monitored-small-crawl.js',
+    description: 'Bounded small-crawl DB evidence, recent overview, baseline, and verification'
   }
 });
 
@@ -75,6 +100,9 @@ function resolveToolSpec(name) {
     'peer-server': 'peer',
     'crawl-batch': 'batch',
     'batch-crawl': 'batch',
+    graph: 'graph-feedback',
+    'feedback': 'graph-feedback',
+    'graph-feedback-dry-run': 'graph-feedback',
     smart: 'orchestrate',
     auto: 'orchestrate',
     validate: 'cloud-e2e',
@@ -83,6 +111,9 @@ function resolveToolSpec(name) {
     deploy: 'remote-deploy',
     'deploy-remote': 'remote-deploy',
     'remote-server-deploy': 'remote-deploy',
+    monitored: 'monitored-small-crawl',
+    'small-crawl': 'monitored-small-crawl',
+    'small-crawl-monitor': 'monitored-small-crawl',
   };
 
   const key = TOOL_REGISTRY[normalized] ? normalized : aliases[normalized];
@@ -106,8 +137,21 @@ function parseCliArgs(argv) {
     remoteDeploySshUser: undefined,
     remoteDeploySshPort: undefined,
     remoteDeploySshKey: undefined,
+    remoteDeployStatusHost: undefined,
+    remoteDeployStatusPort: undefined,
     remoteDeployStatusUrl: undefined,
-    remoteDeploySkipDbBuild: false
+    remoteDeployRemoteDir: undefined,
+    remoteDeployService: undefined,
+    remoteDeploySkipBusyCheck: false,
+    remoteDeploySkipDbBuild: false,
+    remoteDeploySkipHealthCheck: false,
+    graphFeedbackArtifactPath: undefined,
+    graphFeedbackApprovalChecklistPath: undefined,
+    graphFeedbackApprovalReadinessPath: undefined,
+    graphFeedbackPostSeedChecklistPath: undefined,
+    graphFeedbackPreviewEvidencePath: undefined,
+    seedAttemptLogPath: undefined,
+    useGraphFeedbackSeeds: false
   };
 
   for (let index = 0; index < tokens.length; index += 1) {
@@ -154,8 +198,146 @@ function parseCliArgs(argv) {
       index += 1;
       continue;
     }
+    if (token === '--remote-deploy-status-host' && tokens[index + 1]) {
+      options.remoteDeployStatusHost = tokens[index + 1];
+      index += 1;
+      continue;
+    }
+    if (token === '--remote-deploy-status-port' && tokens[index + 1]) {
+      options.remoteDeployStatusPort = tokens[index + 1];
+      index += 1;
+      continue;
+    }
+    if (token === '--remote-deploy-remote-dir' && tokens[index + 1]) {
+      options.remoteDeployRemoteDir = tokens[index + 1];
+      index += 1;
+      continue;
+    }
+    if (token === '--remote-deploy-service' && tokens[index + 1]) {
+      options.remoteDeployService = tokens[index + 1];
+      index += 1;
+      continue;
+    }
+    if (token === '--remote-deploy-skip-busy-check') {
+      options.remoteDeploySkipBusyCheck = true;
+      continue;
+    }
     if (token === '--remote-deploy-skip-db-build') {
       options.remoteDeploySkipDbBuild = true;
+      continue;
+    }
+    if (token === '--remote-deploy-skip-health-check') {
+      options.remoteDeploySkipHealthCheck = true;
+      continue;
+    }
+    if (token === '--use-graph-feedback-seeds') {
+      options.useGraphFeedbackSeeds = true;
+      continue;
+    }
+    if (token === '--no-graph-feedback-seeds') {
+      options.useGraphFeedbackSeeds = false;
+      continue;
+    }
+    if (token === '--graph-feedback-approval-checklist') {
+      const checklistPath = tokens[index + 1];
+      if (!checklistPath || String(checklistPath).startsWith('--')) {
+        throw new Error('--graph-feedback-approval-checklist requires a path');
+      }
+      options.graphFeedbackApprovalChecklistPath = checklistPath;
+      index += 1;
+      continue;
+    }
+    if (typeof token === 'string' && token.startsWith('--graph-feedback-approval-checklist=')) {
+      const checklistPath = token.slice('--graph-feedback-approval-checklist='.length).trim();
+      if (!checklistPath) {
+        throw new Error('--graph-feedback-approval-checklist requires a path');
+      }
+      options.graphFeedbackApprovalChecklistPath = checklistPath;
+      continue;
+    }
+    if (token === '--graph-feedback-approval-readiness') {
+      const readinessPath = tokens[index + 1];
+      if (!readinessPath || String(readinessPath).startsWith('--')) {
+        throw new Error('--graph-feedback-approval-readiness requires a path');
+      }
+      options.graphFeedbackApprovalReadinessPath = readinessPath;
+      index += 1;
+      continue;
+    }
+    if (typeof token === 'string' && token.startsWith('--graph-feedback-approval-readiness=')) {
+      const readinessPath = token.slice('--graph-feedback-approval-readiness='.length).trim();
+      if (!readinessPath) {
+        throw new Error('--graph-feedback-approval-readiness requires a path');
+      }
+      options.graphFeedbackApprovalReadinessPath = readinessPath;
+      continue;
+    }
+    if (token === '--graph-feedback-post-seed-checklist') {
+      const checklistPath = tokens[index + 1];
+      if (!checklistPath || String(checklistPath).startsWith('--')) {
+        throw new Error('--graph-feedback-post-seed-checklist requires a path');
+      }
+      options.graphFeedbackPostSeedChecklistPath = checklistPath;
+      index += 1;
+      continue;
+    }
+    if (typeof token === 'string' && token.startsWith('--graph-feedback-post-seed-checklist=')) {
+      const checklistPath = token.slice('--graph-feedback-post-seed-checklist='.length).trim();
+      if (!checklistPath) {
+        throw new Error('--graph-feedback-post-seed-checklist requires a path');
+      }
+      options.graphFeedbackPostSeedChecklistPath = checklistPath;
+      continue;
+    }
+    if (token === '--graph-feedback-preview-evidence') {
+      const evidencePath = tokens[index + 1];
+      if (!evidencePath || String(evidencePath).startsWith('--')) {
+        throw new Error('--graph-feedback-preview-evidence requires a path');
+      }
+      options.graphFeedbackPreviewEvidencePath = evidencePath;
+      index += 1;
+      continue;
+    }
+    if (typeof token === 'string' && token.startsWith('--graph-feedback-preview-evidence=')) {
+      const evidencePath = token.slice('--graph-feedback-preview-evidence='.length).trim();
+      if (!evidencePath) {
+        throw new Error('--graph-feedback-preview-evidence requires a path');
+      }
+      options.graphFeedbackPreviewEvidencePath = evidencePath;
+      continue;
+    }
+    if (token === '--seed-attempt-log') {
+      const logPath = tokens[index + 1];
+      if (!logPath || String(logPath).startsWith('--')) {
+        throw new Error('--seed-attempt-log requires a path');
+      }
+      options.seedAttemptLogPath = logPath;
+      index += 1;
+      continue;
+    }
+    if (typeof token === 'string' && token.startsWith('--seed-attempt-log=')) {
+      const logPath = token.slice('--seed-attempt-log='.length).trim();
+      if (!logPath) {
+        throw new Error('--seed-attempt-log requires a path');
+      }
+      options.seedAttemptLogPath = logPath;
+      continue;
+    }
+    if (token === '--graph-feedback-artifact') {
+      const artifactPath = tokens[index + 1];
+      if (!artifactPath || String(artifactPath).startsWith('--')) {
+        throw new Error('--graph-feedback-artifact requires a path');
+      }
+      options.graphFeedbackArtifactPath = artifactPath;
+      index += 1;
+      continue;
+    }
+    if (typeof token === 'string' && token.startsWith('--graph-feedback-artifact=')) {
+      const artifactPath = token.slice('--graph-feedback-artifact='.length).trim();
+      if (!artifactPath) {
+        throw new Error('--graph-feedback-artifact requires a path');
+      }
+      options.graphFeedbackArtifactPath = artifactPath;
       continue;
     }
     if (token === '--profile-dir' && tokens[index + 1]) {
@@ -378,6 +560,19 @@ function renderHelp() {
     '  --no-remote-deploy        Disable automatic remote deploy freshness check',
     '  --remote-deploy-force     Allow auto-deploy to interrupt a busy remote server',
     '  --remote-deploy-ssh-host <host>  SSH target for deploy, e.g. ubuntu@141.144.193.218',
+    '  --remote-deploy-status-host <host>  Status host for deploy preflight',
+    '  --remote-deploy-status-port <n>  Status port for deploy preflight',
+    '  --remote-deploy-remote-dir <path>  Remote app dir for deploy preflight',
+    '  --remote-deploy-service <name>  PM2 service name for deploy preflight',
+    '  --remote-deploy-skip-busy-check  Skip deploy preflight busy check after explicit recovery decision',
+    '  --remote-deploy-skip-health-check  Skip post-deploy health check after explicit recovery decision',
+    '  --graph-feedback-artifact <path>  With --dry-run remote invocations: validate saved graph-feedback JSON and show seed consideration',
+    '  --use-graph-feedback-seeds  With --graph-feedback-artifact on explicit remote start/launch/bounded/run: seed validated candidates',
+    '  --graph-feedback-preview-evidence <path>  Write dry-run seed fingerprint or verify it before live seeding',
+    '  --graph-feedback-approval-checklist <path>  Write dry-run-only real-remote seed approval checklist JSON',
+    '  --graph-feedback-approval-readiness <path>  Write dry-run-only approval readiness JSON after checklist/preview validation',
+    '  --graph-feedback-post-seed-checklist <path>  Write dry-run-only post-seed proof checklist JSON',
+    '  --seed-attempt-log <path>  Append compact JSONL evidence before explicit live graph-feedback seed delegation',
     '',
     'Tools:'
   ];
@@ -471,6 +666,91 @@ function renderInvocation(invocation) {
   return ['node', script, ...invocation.args].map(quote).join(' ');
 }
 
+function extractRemoteDryRunHosts(args) {
+  const tokens = Array.isArray(args) ? args : [];
+  const hosts = [];
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token === '--domain' && tokens[index + 1]) {
+      hosts.push(tokens[index + 1]);
+      index += 1;
+      continue;
+    }
+    if (token === '--domains' && tokens[index + 1]) {
+      hosts.push(...String(tokens[index + 1]).split(','));
+      index += 1;
+      continue;
+    }
+    if (typeof token === 'string' && token.startsWith('--domain=')) {
+      hosts.push(token.slice('--domain='.length));
+      continue;
+    }
+    if (typeof token === 'string' && token.startsWith('--domains=')) {
+      hosts.push(...token.slice('--domains='.length).split(','));
+    }
+  }
+
+  const seen = new Set();
+  return hosts
+    .map(value => String(value || '').trim().toLowerCase())
+    .filter(value => {
+      if (!value || seen.has(value)) return false;
+      seen.add(value);
+      return true;
+    });
+}
+
+function buildRemoteDryRunGraphFeedback(invocation, options = {}) {
+  if (!invocation || !invocation.tool || invocation.tool.key !== 'remote') {
+    throw new Error('--graph-feedback-artifact is only supported for remote dry-run invocations');
+  }
+
+  const plannedHosts = extractRemoteDryRunHosts(invocation.args);
+  if (!plannedHosts.length) {
+    throw new Error('--graph-feedback-artifact requires remote --domain or --domains in the dry-run invocation');
+  }
+
+  return buildGraphFeedbackArtifactExplanationForHosts(plannedHosts, options.graphFeedbackArtifactPath, options);
+}
+
+function remoteCommandName(args = []) {
+  return (Array.isArray(args) ? args : [])
+    .find(arg => typeof arg === 'string' && !arg.startsWith('--')) || '';
+}
+
+function prepareGraphFeedbackLiveSeedInvocation(invocation, options = {}) {
+  if (!options.useGraphFeedbackSeeds) {
+    return { invocation, liveSeedPlan: null };
+  }
+  if (!options.graphFeedbackArtifactPath) {
+    throw new Error('--use-graph-feedback-seeds requires --graph-feedback-artifact <path>');
+  }
+  if (!invocation || !invocation.tool || invocation.tool.key !== 'remote') {
+    throw new Error('--use-graph-feedback-seeds is only supported for remote invocations');
+  }
+
+  const command = remoteCommandName(invocation.args);
+  const supportedCommands = new Set(['start', 'launch', 'bounded', 'run']);
+  if (!supportedCommands.has(command)) {
+    throw new Error('--use-graph-feedback-seeds is only supported for explicit remote start, launch, bounded, or run commands');
+  }
+
+  const plannedHosts = extractRemoteDryRunHosts(invocation.args);
+  if (!plannedHosts.length) {
+    throw new Error('--use-graph-feedback-seeds requires remote --domain or --domains in the invocation');
+  }
+
+  const liveSeedPlan = buildGraphFeedbackLiveSeedPlan(plannedHosts, options.graphFeedbackArtifactPath, options);
+  return {
+    invocation: {
+      ...invocation,
+      args: appendGraphFeedbackSeedArgs(invocation.args, liveSeedPlan),
+    },
+    liveSeedPlan,
+  };
+}
+
 function maybeRunRemoteDeployPreflight(invocation, options = {}) {
   if (!invocation || !invocation.tool || invocation.tool.key !== 'remote') return 0;
   if (!shouldPreflightRemoteArgs(invocation.args)) return 0;
@@ -483,8 +763,14 @@ function maybeRunRemoteDeployPreflight(invocation, options = {}) {
     sshUser: options.remoteDeploySshUser,
     sshPort: options.remoteDeploySshPort,
     sshKey: options.remoteDeploySshKey,
+    statusHost: options.remoteDeployStatusHost,
+    statusPort: options.remoteDeployStatusPort,
     statusUrl: options.remoteDeployStatusUrl,
+    remoteDir: options.remoteDeployRemoteDir,
+    service: options.remoteDeployService,
+    skipBusyCheck: options.remoteDeploySkipBusyCheck,
     skipDbBuild: options.remoteDeploySkipDbBuild,
+    skipHealthCheck: options.remoteDeploySkipHealthCheck,
     json: false,
     out: process.stderr,
     err: process.stderr,
@@ -492,20 +778,107 @@ function maybeRunRemoteDeployPreflight(invocation, options = {}) {
   return result.status || 0;
 }
 
+function remoteDeployPreflightOptionsFromLauncher(options = {}) {
+  return {
+    mode: options.remoteDeploy,
+    force: options.remoteDeployForce,
+    sshHost: options.remoteDeploySshHost,
+    sshUser: options.remoteDeploySshUser,
+    sshPort: options.remoteDeploySshPort,
+    sshKey: options.remoteDeploySshKey,
+    statusHost: options.remoteDeployStatusHost,
+    statusPort: options.remoteDeployStatusPort,
+    statusUrl: options.remoteDeployStatusUrl,
+    remoteDir: options.remoteDeployRemoteDir,
+    service: options.remoteDeployService,
+    skipBusyCheck: options.remoteDeploySkipBusyCheck,
+    skipDbBuild: options.remoteDeploySkipDbBuild,
+    skipHealthCheck: options.remoteDeploySkipHealthCheck,
+  };
+}
+
+function buildRemoteDeployPreflightDryRunCommand(invocation, options = {}) {
+  if (!invocation || !invocation.tool || invocation.tool.key !== 'remote') return null;
+  if (!shouldPreflightRemoteArgs(invocation.args)) return null;
+  return renderDeployPreflightCommand(remoteDeployPreflightOptionsFromLauncher(options));
+}
+
 function executeInvocation(invocation, dryRun = false, options = {}) {
-  const command = renderInvocation(invocation);
+  const prepared = prepareGraphFeedbackLiveSeedInvocation(invocation, options);
+  const effectiveInvocation = prepared.invocation;
+  const liveSeedPlan = prepared.liveSeedPlan;
+  const command = renderInvocation(effectiveInvocation);
   if (dryRun) {
+    const graphFeedback = options.graphFeedbackArtifactPath
+      ? buildRemoteDryRunGraphFeedback(invocation, options)
+      : null;
+    const deployPreflightCommand = buildRemoteDeployPreflightDryRunCommand(effectiveInvocation, options);
     console.log(command);
+    if (deployPreflightCommand) {
+      console.log(`Remote deploy preflight: ${deployPreflightCommand}`);
+    }
     if (invocation.type === 'profile') {
       console.log(`Profile: ${invocation.profilePath}`);
+    }
+    if (graphFeedback) {
+      console.log(renderGraphFeedbackSummary(graphFeedback));
+    }
+    if (liveSeedPlan) {
+      let previewEvidenceRecord = null;
+      let approvalChecklistRecord = null;
+      if (options.graphFeedbackPreviewEvidencePath) {
+        previewEvidenceRecord = writeLiveSeedPreviewEvidenceSync(options.graphFeedbackPreviewEvidencePath, liveSeedPlan, options);
+      }
+      if (options.graphFeedbackApprovalChecklistPath) {
+        approvalChecklistRecord = writeLiveSeedApprovalChecklistSync(options.graphFeedbackApprovalChecklistPath, liveSeedPlan, {
+          ...options,
+          dryRunCommand: command,
+          previewEvidencePath: options.graphFeedbackPreviewEvidencePath,
+        });
+      }
+      if (options.graphFeedbackApprovalReadinessPath) {
+        writeLiveSeedApprovalReadinessSync(options.graphFeedbackApprovalReadinessPath, {
+          ...options,
+          approvalChecklist: approvalChecklistRecord,
+          approvalChecklistPath: options.graphFeedbackApprovalChecklistPath,
+          previewEvidence: previewEvidenceRecord,
+          previewEvidencePath: options.graphFeedbackPreviewEvidencePath,
+        });
+      }
+      if (options.graphFeedbackPostSeedChecklistPath) {
+        writePostSeedVerificationChecklistSync(options.graphFeedbackPostSeedChecklistPath, liveSeedPlan, {
+          ...options,
+          approvalChecklistPath: options.graphFeedbackApprovalChecklistPath,
+        });
+      }
+      console.log(renderGraphFeedbackLiveSeedSummary(liveSeedPlan, { dryRun: true }));
     }
     return 0;
   }
 
-  const deployExit = maybeRunRemoteDeployPreflight(invocation, { ...options, dryRun });
+  if (liveSeedPlan && !options.graphFeedbackPreviewEvidencePath) {
+    throw new Error('--use-graph-feedback-seeds live mode requires --graph-feedback-preview-evidence <path> from a matching dry-run preview.');
+  }
+  if (liveSeedPlan && options.graphFeedbackPreviewEvidencePath) {
+    const previewEvidence = readLiveSeedPreviewEvidenceSync(options.graphFeedbackPreviewEvidencePath, options);
+    verifyLiveSeedPreviewEvidence(liveSeedPlan, previewEvidence);
+  }
+
+  const deployExit = maybeRunRemoteDeployPreflight(effectiveInvocation, { ...options, dryRun });
   if (deployExit !== 0) return deployExit;
 
-  const result = spawnSync(process.execPath, [invocation.tool.scriptPath, ...invocation.args], {
+  if (liveSeedPlan) {
+    if (options.seedAttemptLogPath) {
+      writeSeedAttemptLogSync(options.seedAttemptLogPath, liveSeedPlan, {
+        ...options,
+        delegatedCommand: command,
+      });
+    }
+    (options.err || process.stderr).write(renderGraphFeedbackLiveSeedSummary(liveSeedPlan, { dryRun: false }));
+  }
+
+  const spawn = options.spawnSync || spawnSync;
+  const result = spawn(process.execPath, [effectiveInvocation.tool.scriptPath, ...effectiveInvocation.args], {
     cwd: process.cwd(),
     stdio: 'inherit'
   });
@@ -549,6 +922,52 @@ function runCli(argv) {
     invocation = buildInvocationFromCommand(command, tokens.slice(1), options.profileDir);
   }
 
+  if (options.graphFeedbackArtifactPath && !options.dryRun && !options.useGraphFeedbackSeeds) {
+    throw new Error('--graph-feedback-artifact is dry-run only unless --use-graph-feedback-seeds is explicitly supplied.');
+  }
+  if (options.useGraphFeedbackSeeds && !options.graphFeedbackArtifactPath) {
+    throw new Error('--use-graph-feedback-seeds requires --graph-feedback-artifact <path>');
+  }
+  if (options.graphFeedbackPreviewEvidencePath && !options.useGraphFeedbackSeeds) {
+    throw new Error('--graph-feedback-preview-evidence is only supported with --use-graph-feedback-seeds.');
+  }
+  if (options.graphFeedbackApprovalChecklistPath && !options.useGraphFeedbackSeeds) {
+    throw new Error('--graph-feedback-approval-checklist is only supported with --use-graph-feedback-seeds.');
+  }
+  if (options.graphFeedbackApprovalReadinessPath && !options.useGraphFeedbackSeeds) {
+    throw new Error('--graph-feedback-approval-readiness is only supported with --use-graph-feedback-seeds.');
+  }
+  if (options.graphFeedbackPostSeedChecklistPath && !options.useGraphFeedbackSeeds) {
+    throw new Error('--graph-feedback-post-seed-checklist is only supported with --use-graph-feedback-seeds.');
+  }
+  if (options.graphFeedbackApprovalChecklistPath && !options.dryRun) {
+    throw new Error('--graph-feedback-approval-checklist is dry-run only and never authorizes a real seed.');
+  }
+  if (options.graphFeedbackApprovalReadinessPath && !options.dryRun) {
+    throw new Error('--graph-feedback-approval-readiness is dry-run only and never authorizes a real seed.');
+  }
+  if (options.graphFeedbackPostSeedChecklistPath && !options.dryRun) {
+    throw new Error('--graph-feedback-post-seed-checklist is dry-run only and never runs post-seed checks.');
+  }
+  if (options.graphFeedbackApprovalChecklistPath && !options.graphFeedbackPreviewEvidencePath) {
+    throw new Error('--graph-feedback-approval-checklist requires --graph-feedback-preview-evidence <path>.');
+  }
+  if (options.graphFeedbackApprovalReadinessPath && !options.graphFeedbackApprovalChecklistPath) {
+    throw new Error('--graph-feedback-approval-readiness requires --graph-feedback-approval-checklist <path>.');
+  }
+  if (options.graphFeedbackApprovalReadinessPath && !options.graphFeedbackPreviewEvidencePath) {
+    throw new Error('--graph-feedback-approval-readiness requires --graph-feedback-preview-evidence <path>.');
+  }
+  if (options.graphFeedbackPostSeedChecklistPath && !options.graphFeedbackPreviewEvidencePath) {
+    throw new Error('--graph-feedback-post-seed-checklist requires --graph-feedback-preview-evidence <path>.');
+  }
+  if (options.seedAttemptLogPath && !options.useGraphFeedbackSeeds) {
+    throw new Error('--seed-attempt-log is only supported with --use-graph-feedback-seeds.');
+  }
+  if (options.seedAttemptLogPath && options.dryRun) {
+    throw new Error('--seed-attempt-log records live delegation only; use --graph-feedback-preview-evidence for dry-run proof.');
+  }
+
   return executeInvocation(invocation, options.dryRun, options);
 }
 
@@ -573,7 +992,13 @@ module.exports = {
   buildInvocationFromProfile,
   buildInvocationFromTool,
   executeInvocation,
+  extractRemoteDryRunHosts,
+  buildRemoteDryRunGraphFeedback,
+  buildRemoteDeployPreflightDryRunCommand,
+  prepareGraphFeedbackLiveSeedInvocation,
   maybeRunRemoteDeployPreflight,
+  remoteDeployPreflightOptionsFromLauncher,
+  remoteCommandName,
   getListData,
   listProfiles,
   loadProfile,

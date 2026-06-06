@@ -54,6 +54,44 @@
 
 ## Current Sessions
 
+### Session 2026-05-29: Crawler Reliability Recursive Plan
+
+**Status**: Active
+**Focus**: Define the small/medium crawl reliability target, ownership routing, crawl packet contract, recursive improvement loop, and next continuation prompt.
+**Location**: `docs/sessions/2026-05-29-crawler-reliability-recursive-plan/`
+
+**Quick Links**:
+- [Plan](./2026-05-29-crawler-reliability-recursive-plan/PLAN.md)
+- [Working Notes](./2026-05-29-crawler-reliability-recursive-plan/WORKING_NOTES.md)
+- [Crawler Reliability Recursive Plan](./2026-05-29-crawler-reliability-recursive-plan/CRAWLER_RELIABILITY_RECURSIVE_PLAN.md)
+- [Continuation Prompt](./2026-05-29-crawler-reliability-recursive-plan/CONTINUATION_PROMPT.md)
+
+### Session 2026-05-26: Crawler Graph Feedback Loop
+
+**Status**: Active
+**Focus**: Integrate DB-owned GraphAccess and WebsiteGraphAnalysisService outputs into crawler planning through small, bounded, low-storage steps.
+**Location**: `docs/sessions/2026-05-26-crawler-graph-feedback-loop/`
+
+**Quick Links**:
+- [Plan](./2026-05-26-crawler-graph-feedback-loop/PLAN.md)
+- [Working Notes](./2026-05-26-crawler-graph-feedback-loop/WORKING_NOTES.md)
+
+### Session 2026-05-25: News Ecosystem Status
+
+**Status**: Active
+**Focus**: Estimate completion percentages for the local news and crawling ecosystem, excluding jsgui3 platform work.
+**Location**: `docs/sessions/2026-05-25-news-ecosystem-status/`
+
+**Quick Links**:
+- [Plan](./2026-05-25-news-ecosystem-status/PLAN.md)
+- [Working Notes](./2026-05-25-news-ecosystem-status/WORKING_NOTES.md)
+- [Completion Estimate](./2026-05-25-news-ecosystem-status/NEWS_ECOSYSTEM_COMPLETION_ESTIMATE.md)
+- [DB Query And Analysis Focus](./2026-05-25-news-ecosystem-status/DB_QUERY_AND_ANALYSIS_FOCUS.md)
+- [GraphAccess Implementation Plan](./2026-05-25-news-ecosystem-status/GRAPH_ACCESS_AND_ANALYSIS_IMPLEMENTATION_PLAN.md)
+- [GraphAccess 16-Step Recursive Plan](./2026-05-25-news-ecosystem-status/GRAPH_ACCESS_16_STEP_RECURSIVE_PLAN.md)
+- [GraphAccess Step 1 Readiness Audit](./2026-05-25-news-ecosystem-status/GRAPH_ACCESS_STEP_01_READINESS_AUDIT.md)
+- [Recursive Prompt Bootstrap](./2026-05-25-news-ecosystem-status/GRAPH_ACCESS_RECURSIVE_PROMPT_BOOTSTRAP.md)
+
 ### Session 2026-05-12: Crawl CLI Operator Command
 
 **Status**: Active

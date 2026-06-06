@@ -5,7 +5,7 @@
  * interface with Local + Remote backends.
  *
  * These tests exercise pure helpers, the factory, the terminal-state predicate,
- * and the LocalBackend.status() SQL path against an in-memory better-sqlite3.
+ * and the LocalBackend.status() download-evidence path with injected DB helpers.
  * They do NOT touch the network or fleet.
  */
 
@@ -19,7 +19,9 @@ const {
   LocalBackend,
   RemoteBackend,
   getBackend,
+  isLocalJobTerminal,
   parseHostPort,
+  summarizeLocalJobs,
   uniqueHostnamesFromUrls,
   httpRequest
 } = require('../../../tools/crawl/lib/crawl-backend');
@@ -40,6 +42,54 @@ describe('crawl-backend — pure helpers', () => {
       'https://c.com/z'
     ]);
     expect(out.sort()).toEqual(['a.com', 'b.com', 'c.com']);
+  });
+
+  test('local job terminal helpers summarize bounded job status evidence', () => {
+    expect(isLocalJobTerminal('completed')).toBe(true);
+    expect(isLocalJobTerminal('running')).toBe(false);
+    expect(summarizeLocalJobs([
+      { status: 'running' },
+      { status: 'completed' },
+      { status: 'failed' },
+    ])).toMatchObject({
+      total: 3,
+      running: 1,
+      completed: 1,
+      failed: 1,
+      terminal: 2,
+    });
+  });
+
+  test('LocalBackend.jobs can poll accepted job IDs without listing every local job', async () => {
+    const b = new LocalBackend({ host: '127.0.0.1', port: 3019, dbPath: '/no-db-needed.db' });
+    const calls = [];
+    b._httpRequest = jest.fn(async (method, host, port, urlPath) => {
+      calls.push({ method, host, port, urlPath });
+      return {
+        body: {
+          status: 'ok',
+          job: {
+            id: urlPath.endsWith('/job-a') ? 'job-a' : 'job-b',
+            operationName: 'basicArticleCrawl',
+            startUrl: urlPath.endsWith('/job-a')
+              ? 'http://127.0.0.1:41922/news/a.html'
+              : 'http://127.0.0.2:41922/news/b.html',
+            status: urlPath.endsWith('/job-a') ? 'completed' : 'running',
+            startedAt: '2026-05-29T18:40:00.000Z',
+          },
+        },
+      };
+    });
+
+    const out = await b.jobs({ jobIds: ['job-a', 'job-b'], hosts: ['127.0.0.1', '127.0.0.2'] });
+
+    expect(out.ok).toBe(true);
+    expect(out.raw.source).toBe('job-id');
+    expect(out.counts).toMatchObject({ total: 2, completed: 1, running: 1, terminal: 1 });
+    expect(calls.map(call => call.urlPath)).toEqual([
+      '/api/v1/crawl/jobs/job-a',
+      '/api/v1/crawl/jobs/job-b',
+    ]);
   });
 });
 
@@ -121,32 +171,10 @@ describe('crawl-backend — CrawlBackend.allTerminal', () => {
 
 describe('crawl-backend — LocalBackend.status() against an on-disk fixture DB', () => {
   let dbPath;
-  let Database;
-
-  beforeAll(() => {
-    try {
-      Database = require('better-sqlite3');
-    } catch (_e) {
-      Database = null;
-    }
-  });
 
   beforeEach(() => {
-    if (!Database) return;
     dbPath = path.join(os.tmpdir(), `crawl-backend-test-${process.pid}-${Date.now()}.db`);
-    const db = new Database(dbPath);
-    db.exec(`
-      CREATE TABLE fetches (
-        host TEXT,
-        fetched_at TEXT,
-        bytes_downloaded INTEGER
-      );
-    `);
-    const insert = db.prepare('INSERT INTO fetches (host, fetched_at, bytes_downloaded) VALUES (?, ?, ?)');
-    insert.run('a.com', '2025-01-01T00:00:00Z', 100);
-    insert.run('a.com', '2025-01-01T00:00:01Z', 200);
-    insert.run('b.com', '2025-01-01T00:00:02Z', 300);
-    db.close();
+    fs.writeFileSync(dbPath, '');
   });
 
   afterEach(() => {
@@ -164,12 +192,65 @@ describe('crawl-backend — LocalBackend.status() against an on-disk fixture DB'
     b.close();
   });
 
-  test('aggregates per-host fetched + bytes from the fetches table', async () => {
-    if (!Database) {
-      console.warn('better-sqlite3 unavailable — skipping');
-      return;
+  test('uses injected DB opener and DB-owned download evidence for local status', async () => {
+    const tmp = path.join(os.tmpdir(), `crawl-backend-open-${process.pid}-${Date.now()}.db`);
+    fs.writeFileSync(tmp, '');
+    const close = jest.fn();
+    const db = { close };
+    const openDb = jest.fn(() => db);
+    const getCloudCrawlRecentEvidence = jest.fn(() => ({
+      available: true,
+      downloads: 2,
+      success: 2,
+      failed: 0,
+      bytes: 300,
+      hosts: [
+        { host: 'a.com', downloads: 2, success: 2, failed: 0, bytes: 300 },
+      ],
+      statuses: [{ status: 200, count: 2 }],
+    }));
+    try {
+      const b = new LocalBackend({
+        dbPath: tmp,
+        openDb,
+        downloadEvidenceQueries: { getCloudCrawlRecentEvidence },
+      });
+      const out = await b.status({ hosts: ['a.com'] });
+      expect(openDb).toHaveBeenCalledWith(tmp);
+      expect(getCloudCrawlRecentEvidence).toHaveBeenCalledWith(db, expect.objectContaining({
+        startedAt: undefined,
+        finishedAt: expect.any(String),
+        domains: ['a.com'],
+      }));
+      expect(out.ok).toBe(true);
+      expect(out.domains).toHaveLength(1);
+      expect(out.domains[0]).toMatchObject({ domain: 'a.com', fetched: 2, bytes: 300 });
+      expect(out.totals).toMatchObject({ fetched: 2, bytes: 300 });
+      b.close();
+      expect(close).toHaveBeenCalledTimes(1);
+    } finally {
+      try { fs.unlinkSync(tmp); } catch (_e) {}
     }
-    const b = new LocalBackend({ dbPath });
+  });
+
+  test('aggregates per-host fetched + bytes from recent download evidence', async () => {
+    const b = new LocalBackend({
+      dbPath,
+      openDb: () => ({ close() {} }),
+      downloadEvidenceQueries: {
+        getCloudCrawlRecentEvidence: () => ({
+          available: true,
+          downloads: 3,
+          success: 2,
+          failed: 1,
+          bytes: 600,
+          hosts: [
+            { host: 'a.com', downloads: 2, success: 2, failed: 0, bytes: 300 },
+            { host: 'b.com', downloads: 1, success: 0, failed: 1, bytes: 300 },
+          ],
+        }),
+      },
+    });
     const out = await b.status({});
     expect(out.ok).toBe(true);
     expect(out.kind).toBe('local');
@@ -178,12 +259,85 @@ describe('crawl-backend — LocalBackend.status() against an on-disk fixture DB'
     expect(a).toBeTruthy();
     expect(bb).toBeTruthy();
     expect(a.fetched).toBe(2);
+    expect(a.errors).toBe(0);
     expect(a.bytes).toBe(300);
     expect(bb.fetched).toBe(1);
+    expect(bb.errors).toBe(1);
     expect(bb.bytes).toBe(300);
     expect(out.totals.fetched).toBe(3);
+    expect(out.totals.errors).toBe(1);
     expect(out.totals.bytes).toBe(600);
     b.close();
+  });
+
+  test('lists matching in-process local jobs from the UI registry endpoint', async () => {
+    const b = new LocalBackend({ host: '127.0.0.1', port: 3171 });
+    b._httpRequest = jest.fn(async () => ({
+      body: {
+        items: [
+          {
+            id: 'job-1',
+            operationName: 'basicArticleCrawl',
+            startUrl: 'https://www.bbc.com/news',
+            status: 'running',
+            createdAt: '2026-05-28T10:00:00.000Z',
+            startedAt: '2026-05-28T10:00:01.000Z',
+            finishedAt: null,
+          },
+          {
+            id: 'job-2',
+            operationName: 'basicArticleCrawl',
+            startUrl: 'https://example.com/',
+            status: 'completed',
+            createdAt: '2026-05-28T10:00:00.000Z',
+            startedAt: '2026-05-28T10:00:01.000Z',
+            finishedAt: '2026-05-28T10:00:05.000Z',
+          },
+        ],
+      },
+    }));
+
+    const out = await b.jobs({
+      sinceIso: '2026-05-28T09:59:59.000Z',
+      urls: ['https://www.bbc.com/news'],
+      hosts: ['bbc.com'],
+    });
+
+    expect(out.ok).toBe(true);
+    expect(out.counts).toMatchObject({ total: 1, running: 1, terminal: 0 });
+    expect(out.jobs[0]).toMatchObject({
+      id: 'job-1',
+      operationName: 'basicArticleCrawl',
+      status: 'running',
+    });
+    expect(b._httpRequest.mock.calls[0][5]).toBe(1500);
+  });
+
+  test('returns bounded unavailable evidence when local jobs endpoint times out', async () => {
+    const b = new LocalBackend({ host: '127.0.0.1', port: 3171 });
+    b._httpRequest = jest.fn(async () => {
+      throw new Error('timeout after 750ms');
+    });
+
+    const out = await b.jobs({
+      sinceIso: '2026-05-28T09:59:59.000Z',
+      urls: ['https://www.bbc.com/news'],
+      hosts: ['bbc.com'],
+      timeoutMs: 750,
+    });
+
+    expect(out).toMatchObject({
+      ok: false,
+      kind: 'local-jobs',
+      error: 'timeout after 750ms',
+      counts: { total: 0 },
+      jobs: [],
+      raw: {
+        urlCount: 1,
+        hostCount: 1,
+        timeoutMs: 750,
+      },
+    });
   });
 });
 

@@ -132,6 +132,7 @@ checks/html-outputs/*.json
 
 # Local/dynamic crawler profiles
 tools/crawl/profiles/*.json
+!tools/crawl/profiles/local-tiny-monitored-smoke.json
 deploy/remote-crawler-v2/remote-*.json
 
 # Local scratchpad and experiment scripts

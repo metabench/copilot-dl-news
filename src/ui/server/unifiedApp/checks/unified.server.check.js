@@ -126,6 +126,7 @@ async function run() {
 
   const port = await getFreePort();
   const baseUrl = `http://127.0.0.1:${port}`;
+  const startupTimeoutMs = Number(process.env.UNIFIED_APP_CHECK_STARTUP_TIMEOUT_MS || 60000);
   result.port = port;
 
   console.log('=== Unified Server Check ===');
@@ -175,7 +176,7 @@ async function run() {
 
   try {
     result.step = 'waitForServer';
-    const ready = await waitForServer(port, '127.0.0.1', '/', 15000, 250);
+    const ready = await waitForServer(port, '127.0.0.1', '/', startupTimeoutMs, 250);
     if (!ready.ok) {
       const childExitSuffix = result.childExitCode !== null
         ? ` (child exit=${result.childExitCode}${result.childExitSignal ? ` signal=${result.childExitSignal}` : ''})`
@@ -345,6 +346,21 @@ async function run() {
     if (!Array.isArray(cloudStatusJson.targets) || cloudStatusJson.targets.length !== 5) {
       throw new Error('GET /api/cloud-crawl/status: expected five target rows');
     }
+    if (!cloudStatusJson.monitoredSmallCrawl || cloudStatusJson.monitoredSmallCrawl.mode !== 'monitored-small-crawl-report') {
+      throw new Error('GET /api/cloud-crawl/status: expected monitoredSmallCrawl report');
+    }
+    if (!cloudStatusJson.monitoredSmallCrawl.evidence || !Array.isArray(cloudStatusJson.monitoredSmallCrawl.evidence.queryTimings)) {
+      throw new Error('GET /api/cloud-crawl/status: expected monitoredSmallCrawl evidence query timings');
+    }
+    if (!cloudStatusJson.monitoredSmallCrawlSummary || !Number.isFinite(cloudStatusJson.monitoredSmallCrawlSummary.queryTimingMaxMs)) {
+      throw new Error('GET /api/cloud-crawl/status: expected monitoredSmallCrawlSummary queryTimingMaxMs');
+    }
+    if (typeof cloudStatusJson.monitoredSmallCrawlSummary.dataCompletenessLabel !== 'string') {
+      throw new Error('GET /api/cloud-crawl/status: expected monitoredSmallCrawlSummary dataCompletenessLabel');
+    }
+    if (typeof cloudStatusJson.monitoredSmallCrawlSummary.cadenceStatus !== 'string') {
+      throw new Error('GET /api/cloud-crawl/status: expected monitoredSmallCrawlSummary cadenceStatus');
+    }
 
     result.step = 'GET /api/downloads/verifications';
     const downloadVerificationPayload = await httpGetText(`${baseUrl}/api/downloads/verifications?limit=3`);
@@ -468,4 +484,3 @@ run().catch((err) => {
   console.error('❌ Unified server check crashed:', err?.stack || err);
   process.exit(2);
 });
-

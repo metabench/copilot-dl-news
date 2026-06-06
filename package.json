@@ -138,6 +138,7 @@
     "db:downloads:today": "node tools/dev/db-downloads.js --today",
     "db:downloads:stats": "node tools/dev/db-downloads.js --stats",
     "db:downloads:hosts": "node tools/dev/db-downloads.js --hosts",
+    "crawl:monitored-small": "node tools/crawl/monitored-small-crawl.js",
     "sessions:archive:search": "node tools/dev/session-archive.js --search",
     "sessions:archive:read": "node tools/dev/session-archive.js --read",
     "sessions:archive:extract": "node tools/dev/session-archive.js --extract",

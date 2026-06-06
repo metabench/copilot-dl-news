@@ -18,6 +18,13 @@
  *   sync            Continuous sync loop (pull every 10s)
  *   errors          Show recent errors
  *   content         Content stats by domain
+ *   queue-summary   Read-only queue/deploy-readiness summary
+ *   queue-checklist Read-only queue maintenance checklist
+ *   readiness-report File-only combined graph/queue/deploy readiness report
+ *   maintenance-decision File-only approval-gated queue maintenance decision
+ *   maintenance-execution-plan File-only dry-run maintenance execution skeleton
+ *   sync-proof-readiness File-only sync/local DB proof readiness plan
+ *   second-seed-readiness File-only second graph-feedback seed readiness gate
  *   profiles        List available crawl profiles
  *
  * Usage:
@@ -53,6 +60,23 @@ const {
 const { evaluateStorageBudget, normalizeStorageBudgetOptions } = require('./lib/storage-budget');
 const { evaluateBackpressure } = require('./lib/backpressure');
 const { createPerfReporter } = require('./lib/perf-reporter');
+const {
+  buildCombinedReadinessReport,
+  buildQueueMaintenanceDecisionArtifact,
+  buildQueueMaintenanceExecutionPlanArtifact,
+  buildQueueMaintenanceChecklist,
+  buildQueueSummary,
+  buildSecondSeedReadinessArtifact,
+  buildSyncLocalProofReadinessArtifact,
+  normalizeQueueOptions,
+  renderCombinedReadinessReportText,
+  renderQueueMaintenanceDecisionText,
+  renderQueueMaintenanceExecutionPlanText,
+  renderQueueMaintenanceChecklistText,
+  renderQueueSummaryText,
+  renderSecondSeedReadinessText,
+  renderSyncLocalProofReadinessText,
+} = require('./lib/remote-queue-summary');
 
 // ── Arg Parsing ─────────────────────────────────────────────
 
@@ -168,6 +192,20 @@ Commands:
   sync  [--interval 5]      Continuous timestamped batch sync loop
   errors [--limit 50]       Show recent errors
   content                   Content stats by domain
+  queue-summary [--domains d1,d2]
+                            Read-only queue/deploy-readiness summary
+  queue-checklist [--domains d1,d2]
+                            Read-only queue maintenance checklist
+  readiness-report --queue-summary <path>
+                            File-only combined graph/queue/deploy readiness report
+  maintenance-decision --readiness-report <path>
+                            File-only approval-gated queue maintenance decision
+  maintenance-execution-plan --maintenance-decision <path>
+                            File-only dry-run maintenance execution skeleton
+  sync-proof-readiness --readiness-report <path>
+                            File-only bounded sync/local proof readiness plan
+  second-seed-readiness --queue-summary <path>
+                            File-only second graph-feedback seed readiness gate
   watch [--domains d1,d2]   Stay attached and poll status until terminal
                               (--watch-interval ms, --watch-timeout sec, --json)
   profiles                  List available crawl profiles
@@ -195,6 +233,25 @@ Options:
   --interval <seconds>   Sync polling interval (default: 5 for sync, 10 for run)
   --rounds <n>           Stop sync after n rounds (useful for checks)
   --limit <n>            Limit for queries (default: 500)
+  --max-domains <n>      Queue summary domain cap (default: 25, max: 50)
+  --error-limit <n>      Queue summary recent error cap (default: 10, max: 50)
+  --maintenance-checklist Print queue maintenance checklist from queue-summary
+  --queue-summary <path> Readiness report input: saved queue-summary JSON
+  --deploy-proof <path>  Readiness report input: saved deploy preflight JSON
+  --graph-artifact <path> Readiness report input: saved graph-feedback artifact JSON
+  --preview-evidence <path> Readiness report input: saved live-seed preview evidence JSON
+  --post-seed-checklist <path> Readiness report input: saved post-seed proof/checklist JSON
+  --stale-after-min <n>  Readiness report freshness warning threshold (default: 60)
+  --readiness-report <path> Maintenance/sync-proof input: saved readiness-report JSON
+  --maintenance-decision <path> Execution-plan input: saved maintenance-decision JSON
+  --sync-proof-readiness <path> Execution-plan input: saved sync-proof-readiness JSON
+  --maintenance-execution-plan <path> Second-seed input: saved maintenance execution plan JSON
+  --max-hosts <n>       Second-seed readiness cap (default: 1, max: 5)
+  --max-candidates-per-host <n> Second-seed readiness cap (default: 3, max: 10)
+  --max-total-candidates <n> Second-seed readiness cap (default: 3, max: 25)
+  --maintenance-action <a> Maintenance action: retain-queue, sync-local-proof, stop-only, prune, drain, clear, force-deploy
+  --approval-token <token> Record approval token presence in file-only decision output
+  --out <path>           Write queue summary/checklist/report JSON to a compact file
   --adaptive-limit       Adjust sync export limit toward --target-sync-ms
   --adaptive-batching    Alias for --adaptive-limit
   --target-sync-ms <n>   Target fetch+ingest+verify+prune duration; enables adaptive batching
@@ -216,6 +273,9 @@ Options:
   --max-concurrent <n>   Max domains to crawl in parallel for start/bounded/run
   --seed-urls <csv>      Hub/front-page URLs to queue for all requested domains when not already known
   --seed-urls-by-domain <spec> Domain hub URL map: domain=url1|url2;domain=url3
+  --use-graph-feedback-seeds
+                         Not supported here; use tools/crawl/index.js with
+                         --graph-feedback-artifact and explicit live seed gates
   --target-pages <n>     Local successful downloaded pages per host for collect (default: 100)
   --min-new-pages <n>    Require N genuinely new pages per host (stored after collect starts)
   --min-complete-hosts <n> Number of hosts that must reach --target-pages (and --min-new-pages) before collect stops
@@ -237,6 +297,12 @@ Options:
   --help                 Show this help
 `);
   process.exit(0);
+}
+
+if (args['use-graph-feedback-seeds'] || args.useGraphFeedbackSeeds || args['graph-feedback-artifact'] || args.graphFeedbackArtifact) {
+  console.error('Graph-feedback live seeding is only supported through tools/crawl/index.js remote start-like commands.');
+  console.error('Use: node tools/crawl/index.js remote bounded --domains <hosts> --graph-feedback-artifact <path> --use-graph-feedback-seeds');
+  process.exit(1);
 }
 
 let defaultHost = '127.0.0.1:3200';
@@ -327,7 +393,7 @@ function resolveAgentLogFile() {
   const raw = args['agent-log'] ?? args.agentLog;
   if (!raw) return null;
   const template = raw === true
-    ? 'data/crawl-agent-runs/crawl-{command}-{ts}.jsonl'  
+    ? 'data/crawl-agent-runs/crawl-{command}-{ts}.jsonl'
     : String(raw);
   const rendered = template
     .replace(/\{ts\}/g, RUN_ID)
@@ -369,16 +435,16 @@ function writeAgentEvent(type, payload = {}) {
       const { TaskEventWriter } = require('../../src/data/db/TaskEventWriter');
       taskEventWriter = new TaskEventWriter(localDb, { batchWrites: false });
     }
-    
+
     // Map event type for task_events readability
     let mappedType = type;
     if (type.startsWith('collect:')) {
       mappedType = type.replace('collect:', 'crawl:');
     }
-    
+
     // Format payload for task_events schema requirements
     let item_count = payload.downloaded || payload.count || payload.urls || payload.pagesDownloaded || 0;
-    
+
     taskEventWriter.write({
       taskType: 'remote_crawl',
       taskId: RUN_ID,
@@ -657,8 +723,14 @@ async function registerRequestedDomains(targetDomains) {
 /**
  * Make HTTP request to remote server
  */
-function request(method, path, body = null) {
+function request(method, path, body = null, timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const settle = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      fn(value);
+    };
     const isHttps = REMOTE_HOST.startsWith('https://');
     const host = REMOTE_HOST.replace(/^https?:\/\//, '');
     const [hostname, port] = host.split(':');
@@ -671,8 +743,10 @@ function request(method, path, body = null) {
       headers: {
         'Accept': 'application/json',
         'Accept-Encoding': 'gzip',
+        'Connection': 'close',
       },
-      timeout: 30000,
+      timeout: timeoutMs,
+      agent: false,
     };
 
     if (body) {
@@ -691,9 +765,9 @@ function request(method, path, body = null) {
         const raw = Buffer.concat(chunks);
         if (isGzipped) {
           zlib.gunzip(raw, (err, decompressed) => {
-            if (err) return reject(new Error(`Decompression error: ${err.message}`));
+            if (err) return settle(reject, new Error(`Decompression error: ${err.message}`));
             try {
-              resolve({
+              settle(resolve, {
                 status: res.statusCode,
                 headers: res.headers,
                 rawBytes: raw.length,
@@ -701,12 +775,12 @@ function request(method, path, body = null) {
                 data: JSON.parse(decompressed.toString('utf8')),
               });
             } catch (e) {
-              resolve({ status: res.statusCode, headers: res.headers, rawBytes: raw.length, decodedBytes: decompressed.length, data: decompressed.toString('utf8') });
+              settle(resolve, { status: res.statusCode, headers: res.headers, rawBytes: raw.length, decodedBytes: decompressed.length, data: decompressed.toString('utf8') });
             }
           });
         } else {
           try {
-            resolve({
+            settle(resolve, {
               status: res.statusCode,
               headers: res.headers,
               rawBytes: raw.length,
@@ -714,14 +788,16 @@ function request(method, path, body = null) {
               data: JSON.parse(raw.toString('utf8')),
             });
           } catch (e) {
-            resolve({ status: res.statusCode, headers: res.headers, rawBytes: raw.length, decodedBytes: raw.length, data: raw.toString('utf8') });
+            settle(resolve, { status: res.statusCode, headers: res.headers, rawBytes: raw.length, decodedBytes: raw.length, data: raw.toString('utf8') });
           }
         }
       });
     });
 
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')); });
+    req.on('error', (err) => settle(reject, err));
+    req.on('timeout', () => {
+      req.destroy(new Error(`Request ${method} ${path} timed out after ${timeoutMs}ms`));
+    });
 
     if (body) req.write(JSON.stringify(body));
     req.end();
@@ -729,10 +805,7 @@ function request(method, path, body = null) {
 }
 
 function requestWithTimeout(method, path, body = null, timeoutMs = 30000) {
-  return Promise.race([
-    request(method, path, body),
-    new Promise((_, reject) => setTimeout(() => reject(new Error(`Request ${method} ${path} timed out after ${timeoutMs}ms`)), timeoutMs))
-  ]);
+  return request(method, path, body, timeoutMs);
 }
 
 function isTransientRequestError(err) {
@@ -2475,6 +2548,221 @@ async function cmdContent() {
   }
 }
 
+async function buildRemoteQueueSummaryFromApi() {
+  const queueOptions = normalizeQueueOptions({
+    domain: args.domain,
+    domains: args.domains,
+    maxDomains: args['max-domains'] ?? args.maxDomains,
+    errorLimit: args['error-limit'] ?? args.errorLimit,
+    remoteHost: REMOTE_HOST,
+  });
+  const { data: statusPayload } = await requestWithTimeout('GET', '/api/status', null, 10000);
+  let errorsPayload = { count: 0, errors: [] };
+  let contentStats = { byDomain: [], totals: {} };
+  const caveats = [];
+
+  try {
+    const { data } = await requestWithTimeout('GET', `/api/errors?limit=${encodeURIComponent(queueOptions.errorLimit)}`, null, 10000);
+    errorsPayload = data;
+  } catch (err) {
+    caveats.push(`Recent error evidence unavailable: ${err.message}`);
+  }
+
+  try {
+    const { data } = await requestWithTimeout('GET', '/api/content/stats', null, 10000);
+    contentStats = data;
+  } catch (err) {
+    caveats.push(`Content-count evidence unavailable: ${err.message}`);
+  }
+
+  const summary = buildQueueSummary(statusPayload, {
+    ...queueOptions,
+    errorsPayload,
+    contentStats,
+  });
+  if (caveats.length > 0) summary.caveats.push(...caveats);
+  return summary;
+}
+
+function writeQueueJsonIfRequested(payload) {
+  if (!args.out || args.out === true) return null;
+  const outPath = path.resolve(process.cwd(), String(args.out));
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, `${JSON.stringify(payload, null, 2)}\n`);
+  return outPath;
+}
+
+const MAX_READINESS_EVIDENCE_BYTES = 256 * 1024;
+
+function readBoundedJsonEvidence(rawPath, label) {
+  if (!rawPath || rawPath === true) return null;
+  const filePath = path.resolve(process.cwd(), String(rawPath));
+  let stat;
+  try {
+    stat = fs.statSync(filePath);
+  } catch (err) {
+    throw new Error(`Unable to read ${label} evidence ${filePath}: ${err.message}`);
+  }
+  if (!stat.isFile()) {
+    throw new Error(`${label} evidence is not a file: ${filePath}`);
+  }
+  if (stat.size > MAX_READINESS_EVIDENCE_BYTES) {
+    throw new Error(`${label} evidence ${filePath} is ${stat.size} bytes; max supported size is ${MAX_READINESS_EVIDENCE_BYTES}`);
+  }
+  let value;
+  try {
+    value = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (err) {
+    throw new Error(`Invalid ${label} evidence JSON at ${filePath}: ${err.message}`);
+  }
+  return {
+    path: filePath,
+    byteSize: stat.size,
+    value,
+  };
+}
+
+function parseReadinessStaleAfterMs() {
+  const raw = args['stale-after-min'] ?? args.staleAfterMin;
+  if (raw === undefined || raw === null || raw === true || raw === '') return undefined;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 10080) {
+    throw new Error('--stale-after-min must be an integer from 1 to 10080');
+  }
+  return parsed * 60 * 1000;
+}
+
+async function cmdReadinessReport() {
+  const payload = buildCombinedReadinessReport({
+    generatedAt: args['reference-at'] || args.referenceAt || new Date().toISOString(),
+    staleAfterMs: parseReadinessStaleAfterMs(),
+    graphArtifact: readBoundedJsonEvidence(args['graph-artifact'] ?? args.graphArtifact, 'graph artifact'),
+    queueSummary: readBoundedJsonEvidence(args['queue-summary'] ?? args.queueSummary, 'queue summary'),
+    deployProof: readBoundedJsonEvidence(args['deploy-proof'] ?? args.deployProof, 'deploy proof'),
+    previewEvidence: readBoundedJsonEvidence(args['preview-evidence'] ?? args.previewEvidence, 'preview evidence'),
+    postSeedPlan: readBoundedJsonEvidence(args['post-seed-checklist'] ?? args.postSeedChecklist, 'post-seed checklist'),
+  });
+  const outPath = writeQueueJsonIfRequested(payload);
+
+  if (JSON_OUTPUT) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  process.stdout.write(renderCombinedReadinessReportText(payload));
+  if (outPath) console.log(`Wrote compact JSON: ${outPath}`);
+}
+
+async function cmdMaintenanceDecision() {
+  const payload = buildQueueMaintenanceDecisionArtifact({
+    generatedAt: args['reference-at'] || args.referenceAt || new Date().toISOString(),
+    staleAfterMs: parseReadinessStaleAfterMs(),
+    maintenanceAction: args['maintenance-action'] ?? args.maintenanceAction ?? args.action,
+    approvalToken: args['approval-token'] ?? args.approvalToken,
+    readinessReport: readBoundedJsonEvidence(args['readiness-report'] ?? args.readinessReport, 'readiness report'),
+    queueSummary: readBoundedJsonEvidence(args['queue-summary'] ?? args.queueSummary, 'queue summary'),
+  });
+  const outPath = writeQueueJsonIfRequested(payload);
+
+  if (JSON_OUTPUT) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  process.stdout.write(renderQueueMaintenanceDecisionText(payload));
+  if (outPath) console.log(`Wrote compact JSON: ${outPath}`);
+}
+
+async function cmdSyncProofReadiness() {
+  const payload = buildSyncLocalProofReadinessArtifact({
+    generatedAt: args['reference-at'] || args.referenceAt || new Date().toISOString(),
+    staleAfterMs: parseReadinessStaleAfterMs(),
+    readinessReport: readBoundedJsonEvidence(args['readiness-report'] ?? args.readinessReport, 'readiness report'),
+    queueSummary: readBoundedJsonEvidence(args['queue-summary'] ?? args.queueSummary, 'queue summary'),
+  });
+  const outPath = writeQueueJsonIfRequested(payload);
+
+  if (JSON_OUTPUT) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  process.stdout.write(renderSyncLocalProofReadinessText(payload));
+  if (outPath) console.log(`Wrote compact JSON: ${outPath}`);
+}
+
+async function cmdMaintenanceExecutionPlan() {
+  const payload = buildQueueMaintenanceExecutionPlanArtifact({
+    generatedAt: args['reference-at'] || args.referenceAt || new Date().toISOString(),
+    staleAfterMs: parseReadinessStaleAfterMs(),
+    maintenanceAction: args['maintenance-action'] ?? args.maintenanceAction ?? args.action,
+    approvalToken: args['approval-token'] ?? args.approvalToken,
+    maintenanceDecision: readBoundedJsonEvidence(args['maintenance-decision'] ?? args.maintenanceDecision, 'maintenance decision'),
+    syncProofReadiness: readBoundedJsonEvidence(args['sync-proof-readiness'] ?? args.syncProofReadiness, 'sync-proof readiness'),
+    readinessReport: readBoundedJsonEvidence(args['readiness-report'] ?? args.readinessReport, 'readiness report'),
+    queueSummary: readBoundedJsonEvidence(args['queue-summary'] ?? args.queueSummary, 'queue summary'),
+    deployProof: readBoundedJsonEvidence(args['deploy-proof'] ?? args.deployProof, 'deploy proof'),
+  });
+  const outPath = writeQueueJsonIfRequested(payload);
+
+  if (JSON_OUTPUT) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  process.stdout.write(renderQueueMaintenanceExecutionPlanText(payload));
+  if (outPath) console.log(`Wrote compact JSON: ${outPath}`);
+}
+
+async function cmdSecondSeedReadiness() {
+  const payload = buildSecondSeedReadinessArtifact({
+    generatedAt: args['reference-at'] || args.referenceAt || new Date().toISOString(),
+    staleAfterMs: parseReadinessStaleAfterMs(),
+    approvalToken: args['approval-token'] ?? args.approvalToken,
+    maxHosts: args['max-hosts'] ?? args.maxHosts,
+    maxCandidatesPerHost: args['max-candidates-per-host'] ?? args.maxCandidatesPerHost,
+    maxTotalCandidates: args['max-total-candidates'] ?? args.maxTotalCandidates,
+    graphArtifact: readBoundedJsonEvidence(args['graph-artifact'] ?? args.graphArtifact, 'graph artifact'),
+    queueSummary: readBoundedJsonEvidence(args['queue-summary'] ?? args.queueSummary, 'queue summary'),
+    deployProof: readBoundedJsonEvidence(args['deploy-proof'] ?? args.deployProof, 'deploy proof'),
+    previewEvidence: readBoundedJsonEvidence(args['preview-evidence'] ?? args.previewEvidence, 'preview evidence'),
+    postSeedPlan: readBoundedJsonEvidence(args['post-seed-checklist'] ?? args.postSeedChecklist, 'post-seed checklist'),
+    readinessReport: readBoundedJsonEvidence(args['readiness-report'] ?? args.readinessReport, 'readiness report'),
+    maintenanceExecutionPlan: readBoundedJsonEvidence(args['maintenance-execution-plan'] ?? args.maintenanceExecutionPlan, 'maintenance execution plan'),
+  });
+  const outPath = writeQueueJsonIfRequested(payload);
+
+  if (JSON_OUTPUT) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  process.stdout.write(renderSecondSeedReadinessText(payload));
+  if (outPath) console.log(`Wrote compact JSON: ${outPath}`);
+}
+
+async function cmdQueueSummary() {
+  const summary = await buildRemoteQueueSummaryFromApi();
+  const wantsChecklist = effectiveCommand === 'queue-checklist'
+    || effectiveCommand === 'queue-maintenance-checklist'
+    || isTrueArg('maintenance-checklist')
+    || isTrueArg('queue-maintenance-checklist');
+  const payload = wantsChecklist
+    ? buildQueueMaintenanceChecklist(summary)
+    : summary;
+  const outPath = writeQueueJsonIfRequested(payload);
+
+  if (JSON_OUTPUT) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  process.stdout.write(wantsChecklist
+    ? renderQueueMaintenanceChecklistText(payload)
+    : renderQueueSummaryText(payload));
+  if (outPath) console.log(`Wrote compact JSON: ${outPath}`);
+}
+
 // ── Pull / Sync Commands ────────────────────────────────────
 
 async function cmdPull() {
@@ -3151,6 +3439,17 @@ const COMMANDS = {
   sync: cmdSync,
   errors: cmdErrors,
   content: cmdContent,
+  'queue-summary': cmdQueueSummary,
+  'queue-checklist': cmdQueueSummary,
+  'queue-maintenance-checklist': cmdQueueSummary,
+  'readiness-report': cmdReadinessReport,
+  'maintenance-decision': cmdMaintenanceDecision,
+  'queue-maintenance-decision': cmdMaintenanceDecision,
+  'maintenance-execution-plan': cmdMaintenanceExecutionPlan,
+  'queue-maintenance-execution-plan': cmdMaintenanceExecutionPlan,
+  'sync-proof-readiness': cmdSyncProofReadiness,
+  'second-seed-readiness': cmdSecondSeedReadiness,
+  'live-seed-readiness': cmdSecondSeedReadiness,
   watch: cmdWatch,
   profiles: cmdProfiles,
 };

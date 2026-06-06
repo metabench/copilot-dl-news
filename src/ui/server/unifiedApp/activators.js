@@ -278,6 +278,30 @@ function buildCloudCrawlActivator() {
                   + '</div>';
               }).join('') + '</div>';
             }
+            function renderMonitoredSmallCrawl(report, summary) {
+              if (!report || report.mode !== 'monitored-small-crawl-report') {
+                setHealthValue('monitoredSmallCrawl', 'unavailable', 'is-unavailable');
+                return;
+              }
+              const recent = report.recent || {};
+              const timing = summary || {};
+              const timingText = timing.queryTimingMaxMs ? ' · db ' + timing.queryTimingMaxMs + 'ms' : '';
+              const slowText = timing.slowQueryStepCount ? ' · slow proof' : '';
+              const partialText = timing.dataCompletenessLabel === 'partial-url-only' ? ' · partial' : '';
+              const cadenceText = timing.cadenceStatus ? ' · ' + timing.cadenceStatus : '';
+              const label = (report.readinessLabel || 'unknown')
+                + ' · ' + (recent.success || 0) + '/' + (recent.downloads || 0) + ' ok'
+                + timingText
+                + slowText
+                + partialText
+                + cadenceText;
+              const cls = report.readinessLabel === 'verified-new-data' || report.readinessLabel === 'verified-with-failures'
+                ? 'is-healthy'
+                : report.readinessLabel === 'no-new-data'
+                  ? 'is-warn'
+                  : 'is-degraded';
+              setHealthValue('monitoredSmallCrawl', label, cls);
+            }
             async function refresh() {
               setStatus('Loading cloud crawl status...');
               try {
@@ -292,6 +316,7 @@ function buildCloudCrawlActivator() {
                 renderHealth(json.health || null);
                 renderTargets(json.targets || []);
                 renderRecent(json.recentDownloads || []);
+                renderMonitoredSmallCrawl(json.monitoredSmallCrawl || null, json.monitoredSmallCrawlSummary || null);
                 root.dataset.cloudCrawlReady = 'true';
                 panelRoot.dataset.cloudCrawlReady = 'true';
                 setStatus('Last updated: ' + new Date().toLocaleTimeString());

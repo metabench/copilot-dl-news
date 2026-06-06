@@ -2,15 +2,15 @@
 
 /**
  * Unified App Shell - Single Page Application Container
- * 
+ *
  * A unified dashboard shell that hosts multiple sub-apps with:
  * - Vertical navigation sidebar (using TwoColumnLayoutFactory)
  * - DOM preservation (off-screen, not destroyed) for instant switching
  * - State retention across app switches
  * - WLILO theme consistency
- * 
+ *
  * Port: 3000
- * 
+ *
  * Usage:
  *   node src/ui/server/unifiedApp/server.js
  *   Open http://localhost:3000
@@ -102,7 +102,7 @@ function parseBooleanQuery(value, fallback = false) {
 function createCheckModeSubApps() {
   const homeContent = '<div class="home-dashboard"><div class="home-hero"><h1>Unified App (check mode)</h1></div></div>';
   const panelDemoContent = '<section data-unified-activate="panel-demo"><div class="panel-status">Panel demo check mode</div></section>';
-  const cloudCrawlContent = '<section data-unified-activate="cloud-crawl" data-cloud-crawl-root="true" data-cloud-crawl-api-base="/api/cloud-crawl" data-cloud-crawl-domains="bbc.com,theguardian.com,reuters.com,nytimes.com,washingtonpost.com,cnn.com,apnews.com,bloomberg.com,ft.com,npr.org" data-cloud-crawl-max-pages="1000" data-cloud-crawl-command="npm run crawl -- news-10x1000"><div data-cloud-crawl-stat="remote">check</div><div data-cloud-crawl-stat="activeJobs">0</div><div data-cloud-crawl-stat="downloaded">0 / 10000</div><div data-cloud-crawl-stat="errors">0</div><div data-cloud-crawl-health-card="true"><div data-cloud-crawl-health="remote"><div data-cloud-crawl-health-value="remote">checking…</div></div><div data-cloud-crawl-health="localWatermark"><div data-cloud-crawl-health-value="localWatermark">—</div></div><div data-cloud-crawl-health="lastSyncDurationMs"><div data-cloud-crawl-health-value="lastSyncDurationMs">—</div></div><div data-cloud-crawl-health="lastPrunedDeleted"><div data-cloud-crawl-health-value="lastPrunedDeleted">—</div></div><div data-cloud-crawl-health="remoteContentMb"><div data-cloud-crawl-health-value="remoteContentMb">—</div></div><div data-cloud-crawl-health="syncLagMs"><div data-cloud-crawl-health-value="syncLagMs">—</div></div><div data-cloud-crawl-health="ledgerSummary"><div data-cloud-crawl-health-value="ledgerSummary">—</div></div></div><div data-cloud-crawl-targets="true"></div><div data-cloud-crawl-recent="true">No recent target downloads found.</div><div data-cloud-crawl-status="true">Check mode</div></section>';
+  const cloudCrawlContent = '<section data-unified-activate="cloud-crawl" data-cloud-crawl-root="true" data-cloud-crawl-api-base="/api/cloud-crawl" data-cloud-crawl-domains="bbc.com,theguardian.com,reuters.com,nytimes.com,washingtonpost.com,cnn.com,apnews.com,bloomberg.com,ft.com,npr.org" data-cloud-crawl-max-pages="1000" data-cloud-crawl-command="npm run crawl -- news-10x1000"><div data-cloud-crawl-stat="remote">check</div><div data-cloud-crawl-stat="activeJobs">0</div><div data-cloud-crawl-stat="downloaded">0 / 10000</div><div data-cloud-crawl-stat="errors">0</div><div data-cloud-crawl-health-card="true"><div data-cloud-crawl-health="remote"><div data-cloud-crawl-health-value="remote">checking…</div></div><div data-cloud-crawl-health="localWatermark"><div data-cloud-crawl-health-value="localWatermark">—</div></div><div data-cloud-crawl-health="lastSyncDurationMs"><div data-cloud-crawl-health-value="lastSyncDurationMs">—</div></div><div data-cloud-crawl-health="lastPrunedDeleted"><div data-cloud-crawl-health-value="lastPrunedDeleted">—</div></div><div data-cloud-crawl-health="remoteContentMb"><div data-cloud-crawl-health-value="remoteContentMb">—</div></div><div data-cloud-crawl-health="syncLagMs"><div data-cloud-crawl-health-value="syncLagMs">—</div></div><div data-cloud-crawl-health="ledgerSummary"><div data-cloud-crawl-health-value="ledgerSummary">—</div></div><div data-cloud-crawl-health="monitoredSmallCrawl"><div data-cloud-crawl-health-value="monitoredSmallCrawl">—</div></div></div><div data-cloud-crawl-targets="true"></div><div data-cloud-crawl-recent="true">No recent target downloads found.</div><div data-cloud-crawl-status="true">Check mode</div></section>';
   const searchExplorerContent = '<section data-unified-activate="search-explorer"><input type="text" data-search-input="q" value="" /></section>';
   const downloadVerificationContent = '<section data-unified-activate="download-verification" data-download-verification-root="true"><div data-download-verification-table="true">Download verification check mode</div></section>';
   const screenshotReviewContent = '<section data-unified-activate="screenshot-review" data-screenshot-review-root="true" data-screenshot-review-api-base="/api/screenshot-review"><div data-screenshot-review-stat="runs">-</div><div data-screenshot-review-stat="images">-</div><div data-screenshot-review-stat="comments">-</div><div data-screenshot-review-stat="latest">-</div><select data-screenshot-review-filter="session"><option value="all">All sessions</option></select><select data-screenshot-review-filter="app"><option value="all">All apps</option></select><button type="button" data-screenshot-review-action="refresh">Refresh</button><div data-screenshot-review-runs="true">Loading screenshot runs...</div><div data-screenshot-review-gallery="true">Select a run.</div><pre data-screenshot-review-comments="true">No run selected.</pre><form data-screenshot-review-comment-form="true"><select data-screenshot-review-comment-target="true"><option value="run">Whole run</option></select><textarea data-screenshot-review-comment-input="true"></textarea><button type="submit">Save Comment</button></form><div data-screenshot-review-status="true">Check mode</div></section>';
@@ -766,6 +766,77 @@ function mountDashboardModules(unifiedApp, options = {}) {
     });
   }
 
+  function buildMonitoredSmallCrawlOverviewSafe({ domains, since, recentLimit }) {
+    try {
+      const { collectRecentCrawlOverview } = require('../../../../tools/crawl/lib/monitored-small-crawl');
+      return collectRecentCrawlOverview({
+        hosts: domains,
+        since,
+        sampleLimit: recentLimit,
+        command: 'dashboard recent-crawl overview',
+      });
+    } catch (error) {
+      return {
+        schemaVersion: 1,
+        mode: 'monitored-small-crawl-report',
+        generatedAt: new Date().toISOString(),
+        readinessLabel: 'verification-blocked',
+        blockers: ['recent-crawl-overview-unavailable'],
+        warnings: [error.message],
+        actionPolicy: {
+          readOnlyReport: true,
+          startsCrawler: false,
+          contactsRemote: false,
+          writesLocalDb: false,
+          changesCollectBehavior: false,
+        },
+      };
+    }
+  }
+
+  function buildMonitoredSmallCrawlStatusSummary(report) {
+    const recent = report && report.recent ? report.recent : {};
+    const delta = report && report.database ? report.database.delta : null;
+    const samples = Array.isArray(recent.samples) ? recent.samples : [];
+    const queryTimings = report && report.evidence && Array.isArray(report.evidence.queryTimings)
+      ? report.evidence.queryTimings
+      : [];
+    const slowQueryWarningMs = Number(report?.evidence?.slowQueryWarningMs || 5000);
+    const queryTimingMaxMs = queryTimings.reduce((max, row) => Math.max(max, Number(row.ms || 0) || 0), 0);
+    const slowQueryStepCount = queryTimings.filter(row => (Number(row.ms || 0) || 0) > slowQueryWarningMs).length;
+    const dataCompletenessLabel = delta
+      && Number(delta.urls || 0) > 0
+      && Number(delta.responses || 0) === 0
+      && Number(delta.content || 0) === 0
+      ? 'partial-url-only'
+      : Number(recent.success || 0) > 0
+        ? 'recent-downloads'
+        : 'no-recent-downloads';
+    const cadenceStatus = dataCompletenessLabel === 'partial-url-only'
+      ? 'partial-data'
+      : report?.readinessLabel === 'verification-blocked'
+        ? 'blocked'
+        : Number(recent.success || 0) > 0
+          ? 'recent-data-visible'
+          : 'no-recent-data';
+    const latestSampleAt = samples.map(row => row.fetchedAt).filter(Boolean).sort().pop() || null;
+    return {
+      readinessLabel: report?.readinessLabel || 'unknown',
+      dataCompletenessLabel,
+      cadenceStatus,
+      downloads: Number(recent.downloads || 0),
+      success: Number(recent.success || 0),
+      failed: Number(recent.failed || 0),
+      sampleCount: samples.length,
+      latestSampleAt,
+      latestDownloadAt: latestSampleAt,
+      queryTimingMaxMs,
+      slowQueryStepCount,
+      blockerCount: Array.isArray(report?.blockers) ? report.blockers.length : 0,
+      warningCount: Array.isArray(report?.warnings) ? report.warnings.length : 0,
+    };
+  }
+
   unifiedApp.get('/api/cloud-crawl/status', async (req, res) => {
     try {
       const domains = normalizeDomainQuery(req.query.domains);
@@ -823,6 +894,30 @@ function mountDashboardModules(unifiedApp, options = {}) {
         ? remoteStatus.domains.filter((domain) => domain && (domain.isRunning || domain.state === 'running')).length
         : Number(remoteStatus?.running || 0);
       const history = crawlTelemetry?.bridge?.getHistory ? crawlTelemetry.bridge.getHistory(200) : [];
+      const monitoredSmallCrawl = buildMonitoredSmallCrawlOverviewSafe({
+        domains,
+        since,
+        recentLimit,
+      });
+      const monitoredSmallCrawlSummary = buildMonitoredSmallCrawlStatusSummary(monitoredSmallCrawl);
+      const monitoredRecentSamples = monitoredSmallCrawl
+        && monitoredSmallCrawl.recent
+        && Array.isArray(monitoredSmallCrawl.recent.samples)
+        ? monitoredSmallCrawl.recent.samples.map((item) => ({
+            host: item.host,
+            url: item.url,
+            httpStatus: item.httpStatus,
+            bytesDownloaded: item.bytesDownloaded,
+            fetchedAt: item.fetchedAt,
+            contentType: item.contentType,
+          }))
+        : [];
+      const responseWithMonitoredRecent = {
+        ...responseSnapshot,
+        recentDownloads: Array.isArray(responseSnapshot.recentDownloads) && responseSnapshot.recentDownloads.length
+          ? responseSnapshot.recentDownloads
+          : monitoredRecentSamples,
+      };
       const sinceMs = Date.now() - 10 * 60 * 1000;
       const errorsLast10m = Array.isArray(history)
         ? history.filter((event) => {
@@ -845,7 +940,9 @@ function mountDashboardModules(unifiedApp, options = {}) {
         },
         activeJobs: remoteStatus ? remoteActiveJobs : inProcessActiveJobs,
         errorsLast10m,
-        ...responseSnapshot
+        monitoredSmallCrawl,
+        monitoredSmallCrawlSummary,
+        ...responseWithMonitoredRecent
       });
     } catch (error) {
       res.status(500).json({ status: 'error', message: error.message });
@@ -1646,6 +1743,35 @@ if (checkMode) {
         progressPct: 0
       })),
       recentDownloads: [],
+      monitoredSmallCrawl: {
+        schemaVersion: 1,
+        mode: 'monitored-small-crawl-report',
+        readinessLabel: 'no-new-data',
+        recent: { downloads: 0, success: 0, failed: 0, bytes: 0, samples: [] },
+        evidence: { queryTimings: [], slowQueryWarningMs: 5000 },
+        actionPolicy: {
+          readOnlyReport: true,
+          startsCrawler: false,
+          contactsRemote: false,
+          writesLocalDb: false,
+          changesCollectBehavior: false,
+        },
+      },
+      monitoredSmallCrawlSummary: {
+        readinessLabel: 'no-new-data',
+        dataCompletenessLabel: 'no-recent-downloads',
+        cadenceStatus: 'no-recent-data',
+        downloads: 0,
+        success: 0,
+        failed: 0,
+        sampleCount: 0,
+        latestSampleAt: null,
+        latestDownloadAt: null,
+        queryTimingMaxMs: 0,
+        slowQueryStepCount: 0,
+        blockerCount: 0,
+        warningCount: 0,
+      },
       health: {
         remote: 'unavailable',
         remoteError: null,

@@ -43,6 +43,19 @@ function buildDeployPreflightArgs(options = {}) {
   return args;
 }
 
+function quoteCommandArg(value) {
+  const text = String(value);
+  if (/^[A-Za-z0-9_./:=,@%+-]+$/.test(text)) return text;
+  return `'${text.replace(/'/g, `'\\''`)}'`;
+}
+
+function renderDeployPreflightCommand(options = {}) {
+  const args = buildDeployPreflightArgs(options);
+  if (!args) return null;
+  const script = path.relative(process.cwd(), DEPLOY_SCRIPT).replace(/\\/g, '/');
+  return ['node', script, ...args].map(quoteCommandArg).join(' ');
+}
+
 function runRemoteDeployPreflight(options = {}) {
   const args = buildDeployPreflightArgs(options);
   if (!args) return { skipped: true, status: 0 };
@@ -82,6 +95,7 @@ module.exports = {
   REMOTE_START_COMMANDS,
   buildDeployPreflightArgs,
   normalizeDeployMode,
+  renderDeployPreflightCommand,
   runRemoteDeployPreflight,
   shouldPreflightRemoteArgs,
 };
