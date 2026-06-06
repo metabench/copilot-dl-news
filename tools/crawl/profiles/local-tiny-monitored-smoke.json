@@ -1,0 +1,15 @@
+{
+  "description": "Tiny local monitored crawl target: one BBC news URL, one page, depth 0. Prefer tools/crawl/monitored-small-crawl.js local-smoke --execute for baseline/run/verify evidence.",
+  "tool": "batch",
+  "args": [
+    "https://www.bbc.com/news"
+  ],
+  "options": {
+    "operation": "basicArticleCrawl",
+    "max-pages": 1,
+    "max-depth": 0,
+    "concurrency": 1,
+    "retries": 0,
+    "request-timeout-ms": 20000
+  }
+}
