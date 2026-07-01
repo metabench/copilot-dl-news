@@ -18,6 +18,7 @@ class DomainThrottleManager {
     this.limiterFactory = typeof limiterFactory === 'function' ? limiterFactory : null;
     this._domainLimiter = null;
     this._limiterInitialized = false;
+    this._politenessFloors = new Map();
   }
 
   /**
@@ -47,7 +48,10 @@ class DomainThrottleManager {
         rpmLastMinute: 0,
         windowStartedAt: 0,
         windowCount: 0,
-        lastHttpStatus: null
+        lastHttpStatus: null,
+        politenessFloorMs: 0,
+        politenessSource: null,
+        crawlDelaySeconds: null
       };
       this.state.setDomainLimitState(host, state);
     }
@@ -76,6 +80,7 @@ class DomainThrottleManager {
     const state = this.getDomainState(host);
     if (!state) return;
     const limiter = safeCall(() => this._ensureLimiter(), null);
+    this._applyStoredPolitenessFloor(host, limiter, state);
     if (limiter) {
       const acquired = await safeCallAsync(async () => {
         await limiter.acquire(host);
@@ -90,7 +95,15 @@ class DomainThrottleManager {
     if ((state.backoffUntil || 0) > now) {
       await sleep(state.backoffUntil - now);
     }
-    state.lastRequestAt = now;
+    if ((state.nextRequestAt || 0) > now) {
+      await sleep(state.nextRequestAt - now);
+    }
+    const t = nowMs();
+    state.lastRequestAt = t;
+    const floorMs = Math.max(0, Number(state.politenessFloorMs) || 0);
+    if (floorMs > 0) {
+      state.nextRequestAt = t + floorMs;
+    }
     this._persist(host, state);
   }
 
@@ -121,7 +134,8 @@ class DomainThrottleManager {
     if (state.err429Streak >= 3) blackout = Math.max(blackout, 15 * 60 * 1000);
     state.backoffUntil = now + blackout;
     const currentRpm = state.rpm || 60;
-    const newRpm = Math.max(1, Math.floor(currentRpm * 0.25));
+    const floorRpm = state.politenessFloorMs > 0 ? Math.max(1, Math.floor(60000 / state.politenessFloorMs)) : Infinity;
+    const newRpm = Math.min(floorRpm, Math.max(1, Math.floor(currentRpm * 0.25)));
     state.rpm = newRpm;
     state.nextRequestAt = now + Math.floor(60000 / newRpm);
     this._persist(host, state);
@@ -150,7 +164,8 @@ class DomainThrottleManager {
       if (canProbe) {
         const currentRpm = state.rpm || 10;
         const nextRpm = Math.max(1, Math.floor(currentRpm * 1.1));
-        state.rpm = Math.min(nextRpm, 300);
+        const floorRpm = state.politenessFloorMs > 0 ? Math.max(1, Math.floor(60000 / state.politenessFloorMs)) : 300;
+        state.rpm = Math.min(nextRpm, 300, floorRpm);
         state.successStreak = 0;
       }
     }
@@ -158,6 +173,23 @@ class DomainThrottleManager {
       state.lastHttpStatus = null;
     }
     this._persist(host, state);
+  }
+
+  setRobotsCrawlDelay(host, crawlDelaySeconds, { source = 'robots-crawl-delay' } = {}) {
+    const state = this.getDomainState(host);
+    if (!state) return null;
+    const seconds = Number(crawlDelaySeconds);
+    const floorMs = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds * 1000) : 0;
+    const payload = {
+      floorMs,
+      source: floorMs > 0 ? source : null,
+      crawlDelaySeconds: floorMs > 0 ? seconds : null
+    };
+    this._politenessFloors.set(host, payload);
+    const limiter = safeCall(() => this._ensureLimiter(), null);
+    this._applyStoredPolitenessFloor(host, limiter, state);
+    this._persist(host, state);
+    return { ...state };
   }
 
   _ensureLimiter() {
@@ -183,6 +215,24 @@ class DomainThrottleManager {
     return this._domainLimiter;
   }
 
+  _applyStoredPolitenessFloor(host, limiter, state) {
+    const floor = this._politenessFloors.get(host);
+    if (!floor) return;
+    if (limiter && typeof limiter.setPolitenessFloor === 'function') {
+      safeCall(() => limiter.setPolitenessFloor(host, floor.floorMs, {
+        source: floor.source,
+        crawlDelaySeconds: floor.crawlDelaySeconds
+      }));
+    }
+    state.politenessFloorMs = floor.floorMs;
+    state.politenessSource = floor.source;
+    state.crawlDelaySeconds = floor.crawlDelaySeconds;
+    if (state.rpm > 0 && floor.floorMs > 0) {
+      const floorRpm = Math.max(1, Math.floor(60000 / floor.floorMs));
+      state.rpm = Math.min(state.rpm, floorRpm);
+    }
+  }
+
   _syncFromLimiter(limiter, host, state) {
     if (!limiter || typeof limiter.getSnapshot !== 'function') {
       return;
@@ -190,10 +240,16 @@ class DomainThrottleManager {
     const snapshot = limiter.getSnapshot(host);
     if (snapshot) {
       const prevStatus = state.lastHttpStatus;
+      const politenessFloorMs = state.politenessFloorMs || 0;
+      const politenessSource = state.politenessSource || null;
+      const crawlDelaySeconds = state.crawlDelaySeconds != null ? state.crawlDelaySeconds : null;
       Object.assign(state, snapshot);
       if (state.lastHttpStatus == null && prevStatus != null) {
         state.lastHttpStatus = prevStatus;
       }
+      if (state.politenessFloorMs == null) state.politenessFloorMs = politenessFloorMs;
+      if (state.politenessSource == null) state.politenessSource = politenessSource;
+      if (state.crawlDelaySeconds == null) state.crawlDelaySeconds = crawlDelaySeconds;
     }
     this._persist(host, state);
   }
@@ -220,6 +276,9 @@ class DomainThrottleManager {
         windowStartedAt: state.windowStartedAt || 0,
         windowCount: state.windowCount || 0,
         lastHttpStatus: state.lastHttpStatus != null ? state.lastHttpStatus : null,
+        politenessFloorMs: state.politenessFloorMs || 0,
+        politenessSource: state.politenessSource || null,
+        crawlDelaySeconds: state.crawlDelaySeconds != null ? state.crawlDelaySeconds : null,
         recordedAt: new Date().toISOString()
       };
       adapter.upsertDomain(host, JSON.stringify(payload));

@@ -86,8 +86,12 @@ describe('PageExecutionService place hub pattern learning', () => {
 
       await service.processPage({ url: 'https://example.com/', depth: 0, context: {} });
 
-      // Should have called predictPlaceHub for each link
-      expect(mockLearningService.predictPlaceHub).toHaveBeenCalledTimes(2);
+      // Should have called predictPlaceHub for the current page and each link
+      expect(mockLearningService.predictPlaceHub).toHaveBeenCalledTimes(3);
+      expect(mockLearningService.predictPlaceHub).toHaveBeenCalledWith(
+        'https://example.com/',
+        'example.com'
+      );
       expect(mockLearningService.predictPlaceHub).toHaveBeenCalledWith(
         'https://example.com/world/france',
         'example.com'
@@ -162,6 +166,107 @@ describe('PageExecutionService place hub pattern learning', () => {
       expect(worldCall).toBeDefined();
       // forcePriority should be 70 + floor(0.9 * 20) = 70 + 18 = 88
       expect(worldCall[0].meta.forcePriority).toBe(88);
+    });
+
+    test('annotates article links from a predicted Guardian hub with source pattern metadata', async () => {
+      const logs = [];
+      const originalLog = console.log;
+      const mockLearningService = {
+        predictPlaceHub: jest.fn().mockImplementation((url) => {
+          if (url === 'https://www.theguardian.com/world/france') {
+            return {
+              isPlaceHub: true,
+              confidence: 0.75,
+              placeKind: 'country-hub',
+              reason: 'Matched pattern: Guardian country-hub URL pattern /world/{slug}',
+              pattern: {
+                pattern_type: 'world-country',
+                pattern_regex: '^https?:\\/\\/(www\\.)?theguardian\\.com\\/world\\/([a-z][a-z0-9-]+)\\/?$'
+              }
+            };
+          }
+          return { isPlaceHub: false, confidence: 0, placeKind: null, pattern: null, reason: 'No match' };
+        }),
+        recordValidation: jest.fn()
+      };
+
+      const { service, enqueueRequest } = createMockService({
+        domain: 'www.theguardian.com',
+        placeHubPatternLearningService: mockLearningService,
+        getLimiterSnapshot: () => ({
+          host: 'www.theguardian.com',
+          politenessFloorMs: 2000,
+          crawlDelaySeconds: 2,
+          lastHttpStatus: 200
+        }),
+        allLinks: [
+          {
+            url: 'https://www.theguardian.com/world/2026/jun/14/france-story',
+            type: 'article'
+          },
+          {
+            url: 'https://www.theguardian.com/world/germany',
+            type: 'nav'
+          }
+        ]
+      });
+      service.fetchPipeline.fetch = jest.fn().mockResolvedValue({
+        source: 'network',
+        html: '<html><a href="/world/2026/jun/14/france-story">France story</a></html>',
+        meta: { url: 'https://www.theguardian.com/world/france' }
+      });
+
+      console.log = (line) => logs.push(line);
+      try {
+        await service.processPage({
+          url: 'https://www.theguardian.com/world/france',
+          depth: 0,
+          context: {}
+        });
+      } finally {
+        console.log = originalLog;
+      }
+
+      const storyCall = enqueueRequest.mock.calls.find(
+        call => call[0].url === 'https://www.theguardian.com/world/2026/jun/14/france-story'
+      );
+      expect(storyCall).toBeDefined();
+      expect(storyCall[0].meta).toMatchObject({
+        runtimeLatestStoryCandidate: true,
+        latestStoryEvidenceSource: 'runtime-place-hub-link',
+        sourcePlaceHub: 'https://www.theguardian.com/world/france',
+        sourcePlaceHubPredicted: true,
+        sourcePlaceHubPatternType: 'world-country',
+        sourcePlaceHubKind: 'country-hub'
+      });
+
+      const navCall = enqueueRequest.mock.calls.find(
+        call => call[0].url === 'https://www.theguardian.com/world/germany'
+      );
+      expect(navCall).toBeDefined();
+      expect(navCall[0].meta?.runtimeLatestStoryCandidate).toBeUndefined();
+      expect(mockLearningService.predictPlaceHub).toHaveBeenCalledWith(
+        'https://www.theguardian.com/world/france',
+        'www.theguardian.com'
+      );
+
+      const pageLine = logs.find((line) => typeof line === 'string' && line.startsWith('PAGE {'));
+      expect(pageLine).toBeDefined();
+      const page = JSON.parse(pageLine.slice('PAGE '.length));
+      expect(page.runtimeLatestStoryExtraction).toMatchObject({
+        evidenceSource: 'runtime-page-log',
+        sourcePlaceHubPatternType: 'world-country',
+        candidateCount: 1
+      });
+      expect(page.runtimeLatestStoryExtraction.candidates[0]).toMatchObject({
+        url: 'https://www.theguardian.com/world/2026/jun/14/france-story',
+        sourcePlaceHubPatternType: 'world-country'
+      });
+      expect(page.limiterSnapshot).toMatchObject({
+        host: 'www.theguardian.com',
+        politenessFloorMs: 2000,
+        crawlDelaySeconds: 2
+      });
     });
 
     test('should not annotate links below confidence threshold', async () => {

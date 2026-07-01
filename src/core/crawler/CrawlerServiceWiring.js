@@ -347,6 +347,12 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     emitProgress: () => crawler.emitProgress(),
     getQueueSize: () => crawler.queue.size(),
     dbAdapter: () => crawler.dbAdapter,
+    onRobotsPolicy: (policy) => {
+      if (!policy || policy.crawlDelaySeconds == null || !crawler.domainThrottle) return;
+      crawler.domainThrottle.setRobotsCrawlDelay(crawler.domain, policy.crawlDelaySeconds, {
+        source: `robots:${policy.source || 'unknown'}`
+      });
+    },
     logger: console
   });
   // Wire new abstractions adapter in shadow mode for validation
@@ -514,6 +520,13 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
       try {
         crawler.emit('url:visited', pageInfo);
       } catch (_) {}
+    },
+    getLimiterSnapshot: (host) => {
+      try {
+        return crawler.domainThrottle?.getDomainState?.(host) || null;
+      } catch (_) {
+        return null;
+      }
     }
   });
 }

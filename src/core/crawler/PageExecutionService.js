@@ -39,7 +39,8 @@ class PageExecutionService {
     outputVerbosity = DEFAULT_OUTPUT_VERBOSITY,
     paginationPredictorService = null,
     placeHubPatternLearningService = null,
-    emitPageEvent = null
+    emitPageEvent = null,
+    getLimiterSnapshot = null
   } = {}) {
     if (!fetchPipeline) {
       throw new Error('PageExecutionService requires a fetch pipeline');
@@ -98,6 +99,7 @@ class PageExecutionService {
     this.placeHubPatternLearningService = placeHubPatternLearningService || null;
     // Callback to emit page timing events (for telemetry/DB persistence)
     this.emitPageEvent = typeof emitPageEvent === 'function' ? emitPageEvent : null;
+    this.getLimiterSnapshot = typeof getLimiterSnapshot === 'function' ? getLimiterSnapshot : null;
   }
 
   async processPage({ url, depth = 0, context = {} }) {
@@ -285,7 +287,8 @@ class PageExecutionService {
             word_count: existing?.word_count ?? null,
             analysis: JSON.stringify({
               status: 'not-modified',
-              conditional: true
+              conditional: true,
+              freshness: fetchMeta?.freshness || null
             })
           });
         } catch (_) {}
@@ -372,6 +375,7 @@ class PageExecutionService {
     // Check if this is a country hub page in total prioritisation mode
     const isCountryHubPage = this._isCountryHubPage(resolvedUrl);
     const totalPrioritisationMode = this._isTotalPrioritisationEnabled();
+    const sourcePlaceHubMeta = this._buildSourcePlaceHubMeta(resolvedUrl, normalizedUrl);
 
     let discovery = null;
     try {
@@ -572,6 +576,7 @@ class PageExecutionService {
     }
 
     const seen = new Set();
+    const runtimeLatestStoryCandidates = [];
     for (const link of allLinks) {
       if (!link || !link.url) continue;
       if (seen.has(link.url)) continue;
@@ -589,6 +594,24 @@ class PageExecutionService {
 
       try {
         let linkMeta = isCountryHubPage ? { sourceHub: resolvedUrl, sourceHubType: 'country' } : null;
+        if (sourcePlaceHubMeta && link.type === 'article') {
+          linkMeta = {
+            ...linkMeta,
+            ...sourcePlaceHubMeta,
+            runtimeLatestStoryCandidate: true,
+            latestStoryEvidenceSource: 'runtime-place-hub-link'
+          };
+          runtimeLatestStoryCandidates.push({
+            url: link.url,
+            type: link.type || 'article',
+            sourcePlaceHub: linkMeta.sourcePlaceHub || null,
+            sourcePlaceHubPatternType: linkMeta.sourcePlaceHubPatternType || null,
+            sourcePlaceHubPatternRegex: linkMeta.sourcePlaceHubPatternRegex || null,
+            sourcePlaceHubKind: linkMeta.sourcePlaceHubKind || null,
+            sourcePlaceHubConfidence: linkMeta.sourcePlaceHubConfidence ?? null,
+            latestStoryEvidenceSource: linkMeta.latestStoryEvidenceSource || null
+          });
+        }
 
         if (this._isTotalPrioritisationEnabled()) {
           const targetIsCountryHub = this._isCountryHubPage(link.url || '');
@@ -646,12 +669,44 @@ class PageExecutionService {
       status: 'success',
       fetchMeta,
       cacheInfo,
-      depth
+      depth,
+      runtimeLatestStoryExtraction: sourcePlaceHubMeta
+        ? {
+          evidenceSource: 'runtime-page-log',
+          sourcePlaceHub: sourcePlaceHubMeta.sourcePlaceHub || normalizedUrl || resolvedUrl,
+          sourcePlaceHubPatternType: sourcePlaceHubMeta.sourcePlaceHubPatternType || null,
+          sourcePlaceHubPatternRegex: sourcePlaceHubMeta.sourcePlaceHubPatternRegex || null,
+          sourcePlaceHubKind: sourcePlaceHubMeta.sourcePlaceHubKind || null,
+          sourcePlaceHubConfidence: sourcePlaceHubMeta.sourcePlaceHubConfidence ?? null,
+          candidateCount: runtimeLatestStoryCandidates.length,
+          candidates: runtimeLatestStoryCandidates.slice(0, 25)
+        }
+        : null
     });
 
     return {
       status: 'success'
     };
+  }
+
+  _buildSourcePlaceHubMeta(resolvedUrl, normalizedUrl) {
+    if (!this.placeHubPatternLearningService || !resolvedUrl) return null;
+    try {
+      const prediction = this.placeHubPatternLearningService.predictPlaceHub(resolvedUrl, this.domain);
+      if (!prediction || !prediction.isPlaceHub || prediction.confidence < 0.4) return null;
+      const pattern = prediction.pattern || null;
+      return {
+        sourcePlaceHub: normalizedUrl || resolvedUrl,
+        sourcePlaceHubPredicted: true,
+        sourcePlaceHubConfidence: prediction.confidence,
+        sourcePlaceHubKind: prediction.placeKind || null,
+        sourcePlaceHubReason: prediction.reason || null,
+        sourcePlaceHubPatternType: pattern?.pattern_type || pattern?.patternType || null,
+        sourcePlaceHubPatternRegex: pattern?.pattern_regex || pattern?.patternRegex || null
+      };
+    } catch (_) {
+      return null;
+    }
   }
 
   _collectCountryHubLinkSummary(allLinks) {
@@ -845,7 +900,8 @@ class PageExecutionService {
     fetchMeta,
     cacheInfo,
     depth,
-    error
+    error,
+    runtimeLatestStoryExtraction = null
   }) {
     try {
       const payload = {
@@ -859,7 +915,10 @@ class PageExecutionService {
         bytesDownloaded: Number.isFinite(fetchMeta?.bytesDownloaded) ? fetchMeta.bytesDownloaded : null,
         cacheAgeSeconds: Number.isFinite(cacheInfo?.ageSeconds) ? cacheInfo.ageSeconds : null,
         cacheReason: cacheInfo?.reason || null,
-        cacheSource: cacheInfo?.source || null
+        cacheSource: cacheInfo?.source || null,
+        freshness: fetchMeta?.freshness || cacheInfo?.freshness || null,
+        limiterSnapshot: this._buildLimiterSnapshot(normalizedUrl || url),
+        runtimeLatestStoryExtraction: runtimeLatestStoryExtraction || null
       };
       if (error) {
         payload.error = typeof error === 'string' ? error : (error.message || error.kind || null);
@@ -877,7 +936,10 @@ class PageExecutionService {
             cached: payload.source === 'cache',
             depth: payload.depth,
             status: payload.status,
-            cacheReason: payload.cacheReason
+            cacheReason: payload.cacheReason,
+            freshness: payload.freshness,
+            limiterSnapshot: payload.limiterSnapshot,
+            runtimeLatestStoryExtraction: payload.runtimeLatestStoryExtraction
           };
           this.emitPageEvent(pageEvent);
         } catch (_) {}
@@ -941,6 +1003,39 @@ class PageExecutionService {
     }
     const value = stats.pagesDownloaded;
     return Number.isFinite(value) ? value : null;
+  }
+
+  _buildLimiterSnapshot(url) {
+    if (!this.getLimiterSnapshot || !url) return null;
+    let host = null;
+    try {
+      host = new URL(url).hostname;
+    } catch (_) {
+      host = null;
+    }
+    if (!host) return null;
+    try {
+      const snapshot = this.getLimiterSnapshot(host);
+      if (!snapshot || typeof snapshot !== 'object') return null;
+      return {
+        host: snapshot.host || host,
+        isLimited: Boolean(snapshot.isLimited),
+        rpm: snapshot.rpm ?? null,
+        nextRequestAt: snapshot.nextRequestAt || null,
+        backoffUntil: snapshot.backoffUntil || null,
+        lastRequestAt: snapshot.lastRequestAt || null,
+        lastSuccessAt: snapshot.lastSuccessAt || null,
+        last429At: snapshot.last429At || null,
+        successStreak: snapshot.successStreak || 0,
+        err429Streak: snapshot.err429Streak || 0,
+        lastHttpStatus: snapshot.lastHttpStatus ?? null,
+        politenessFloorMs: snapshot.politenessFloorMs || 0,
+        politenessSource: snapshot.politenessSource || null,
+        crawlDelaySeconds: snapshot.crawlDelaySeconds ?? null
+      };
+    } catch (_) {
+      return null;
+    }
   }
 
   _analyzePageType(url, processorResult) {

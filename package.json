@@ -105,6 +105,7 @@
     "crawl:modern": "node node_modules/news-crawler-itself/dist/index.js",
     "crawl:modern:run": "node node_modules/news-crawler-itself/dist/index.js run",
     "crawl": "node tools/crawl/run.js",
+    "crawl:sample": "node tools/crawl/sample.js",
     "crawl:legacy": "node tools/crawl/index.js",
     "crawl:e2e:15m": "node tools/crawl/index.js news-10x1000-15m-e2e",
     "crawl:profile": "node tools/crawl/index.js profile",

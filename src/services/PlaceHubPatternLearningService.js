@@ -35,6 +35,8 @@ const NON_PLACE_INDICATORS = [
   'terms', 'privacy', 'help', 'faq', 'api', 'feed', 'rss', 'tag', 'tags'
 ];
 
+const ARTICLE_DATE_PATH_RE = /\/(?:19|20)\d{2}\/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{1,2})\/\d{1,2}\//i;
+
 class PlaceHubPatternLearningService {
   /**
    * @param {Object} options
@@ -425,7 +427,7 @@ class PlaceHubPatternLearningService {
       const hasIndicator = PLACE_HUB_INDICATORS.some(ind => pathLower.includes(`/${ind}/`));
       const hasNonIndicator = NON_PLACE_INDICATORS.some(ind => pathLower.includes(`/${ind}/`) || pathLower.includes(`/${ind}`));
 
-      if (hasIndicator && !hasNonIndicator) {
+      if (hasIndicator && !hasNonIndicator && !ARTICLE_DATE_PATH_RE.test(pathLower)) {
         return {
           isPlaceHub: true,
           confidence: 0.4, // Lower confidence for heuristic match

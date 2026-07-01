@@ -125,6 +125,8 @@ class CrawlerEvents {
 
     const robotsInfo = this.getRobotsInfo();
     const sitemapInfo = this.getSitemapInfo();
+    const robotsCrawlDelaySeconds = robotsInfo.crawlDelaySeconds ?? null;
+    const robotsPolitenessFloorMs = robotsInfo.politenessFloorMs ?? null;
 
     const payload = {
       visited: stats.pagesVisited || 0,
@@ -140,6 +142,9 @@ class CrawlerEvents {
       currentDownloads: inflight,
       paused: !!this.isPausedFn(),
       robotsLoaded: !!robotsInfo.robotsLoaded,
+      robotsSource: robotsInfo.source || null,
+      robotsCrawlDelaySeconds,
+      robotsPolitenessFloorMs,
       sitemapCount: Array.isArray(sitemapInfo.urls) ? sitemapInfo.urls.length : 0,
       sitemapEnqueued: sitemapInfo.discovered || 0,
       domain: this.domain,

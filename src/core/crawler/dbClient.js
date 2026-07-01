@@ -147,6 +147,30 @@ class CrawlerDb {
     return this._stats;
   }
 
+  _getCoverageAccess() {
+    return this.db?.coverage || this.db?.access?.coverage || null;
+  }
+
+  async getRobotsCache(domain) {
+    const coverage = this._getCoverageAccess();
+    if (!coverage || typeof coverage.getRobotsCache !== 'function') return null;
+    try {
+      return await coverage.getRobotsCache(domain);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async upsertRobotsCache(record) {
+    const coverage = this._getCoverageAccess();
+    if (!coverage || typeof coverage.upsertRobotsCache !== 'function') return null;
+    try {
+      return await coverage.upsertRobotsCache(record);
+    } catch (_) {
+      return null;
+    }
+  }
+
   getArticleHeaders(url) {
     return this._callDb('getArticleHeaders', null, url);
   }

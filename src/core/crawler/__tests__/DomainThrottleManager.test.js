@@ -50,9 +50,9 @@ describe('DomainThrottleManager', () => {
       expect(state.backoffUntil).toBeGreaterThan(mockNowValue);
       expect(upsertDomain).toHaveBeenCalledTimes(1);
       const payload = JSON.parse(upsertDomain.mock.calls[0][1]);
-  expect(payload.isLimited).toBe(true);
-  expect(payload.err429Streak).toBe(1);
-  expect(payload.lastHttpStatus).toBe(429);
+      expect(payload.isLimited).toBe(true);
+      expect(payload.err429Streak).toBe(1);
+      expect(payload.lastHttpStatus).toBe(429);
     });
 
     it('increments success streaks and persists on success', () => {
@@ -78,6 +78,36 @@ describe('DomainThrottleManager', () => {
       expect(mockSleep).toHaveBeenCalledWith(500);
       expect(upsertDomain).toHaveBeenCalledTimes(1);
       expect(state.lastRequestAt).toBe(mockNowValue);
+    });
+
+    it('applies robots crawl-delay as a per-host floor without rate-limit state', async () => {
+      manager.setRobotsCrawlDelay('example.com', 2, { source: 'robots:cache-hit' });
+      upsertDomain.mockClear();
+
+      await manager.acquireToken('example.com');
+      mockNowValue += 500;
+      await manager.acquireToken('example.com');
+
+      const state = manager.getDomainState('example.com');
+      expect(mockSleep).toHaveBeenCalledWith(1500);
+      expect(state.politenessFloorMs).toBe(2000);
+      expect(state.politenessSource).toBe('robots:cache-hit');
+      expect(state.crawlDelaySeconds).toBe(2);
+      expect(state.nextRequestAt).toBe(mockNowValue + 2000);
+    });
+
+    it('does not let success recovery raise rpm beyond the robots floor', () => {
+      const state = manager.getDomainState('example.com');
+      manager.setRobotsCrawlDelay('example.com', 3, { source: 'robots:network' });
+      state.isLimited = true;
+      state.rpm = 10;
+      state.successStreak = 150;
+      state.last429At = mockNowValue - (6 * 60 * 1000);
+
+      manager.noteSuccess('example.com');
+
+      expect(state.rpm).toBeLessThanOrEqual(20);
+      expect(state.politenessFloorMs).toBe(3000);
     });
   });
 
@@ -149,6 +179,21 @@ describe('DomainThrottleManager', () => {
       expect(state.successStreak).toBe(1);
       expect(state.err429Streak).toBe(0);
       expect(upsertDomain).toHaveBeenCalledTimes(1);
+    });
+
+    it('passes robots crawl-delay floor into the limiter', async () => {
+      limiter.setPolitenessFloor = jest.fn(() => ({ ...limiterState }));
+
+      manager.setRobotsCrawlDelay('example.com', 4, { source: 'robots:network' });
+      await manager.acquireToken('example.com');
+
+      expect(limiter.setPolitenessFloor).toHaveBeenCalledWith('example.com', 4000, {
+        source: 'robots:network',
+        crawlDelaySeconds: 4
+      });
+      expect(limiter.acquire).toHaveBeenCalledWith('example.com');
+      const state = manager.getDomainState('example.com');
+      expect(state.politenessFloorMs).toBe(4000);
     });
   });
 });

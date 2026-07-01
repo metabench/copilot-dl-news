@@ -1,4 +1,5 @@
 const { each } = require('lang-tools');
+const { RobotsCache } = require('./RobotsCache');
 
 class RobotsAndSitemapCoordinator {
   constructor({
@@ -17,6 +18,9 @@ class RobotsAndSitemapCoordinator {
     emitProgress,
     getQueueSize,
     dbAdapter = null,
+    robotsCache = null,
+    robotsCacheTtlSeconds = undefined,
+    onRobotsPolicy = null,
     logger = console
   } = {}) {
     if (!baseUrl || !domain) {
@@ -69,15 +73,26 @@ class RobotsAndSitemapCoordinator {
     this.getQueueSize = getQueueSize;
     this.dbAdapter = dbAdapter;
     this.logger = logger;
+    this.onRobotsPolicy = typeof onRobotsPolicy === 'function' ? onRobotsPolicy : null;
+    this.robotsCache = robotsCache || new RobotsCache({
+      baseUrl,
+      domain,
+      fetchImpl,
+      dbAdapter,
+      ttlSeconds: robotsCacheTtlSeconds,
+      logger
+    });
 
     this.robotsRules = null;
     this.robotsTxtLoaded = false;
+    this.robotsInfo = { robotsLoaded: false };
     this.sitemapUrls = [];
     this.sitemapDiscovered = 0;
   }
 
   getRobotsInfo() {
     return {
+      ...this.robotsInfo,
       robotsLoaded: !!this.robotsTxtLoaded
     };
   }
@@ -99,77 +114,35 @@ class RobotsAndSitemapCoordinator {
   }
 
   async loadRobotsTxt() {
-    const robotsUrl = `${this.baseUrl}/robots.txt`;
-    const dbAdapter = typeof this.dbAdapter === 'function' ? this.dbAdapter() : this.dbAdapter;
-    const db = dbAdapter?.db || dbAdapter; // Handle both CrawlerDb wrapper and direct SQLiteNewsDatabase
-    
-    // Try cache first
-    if (db && typeof db.getArticleByUrl === 'function') {
-      try {
-        const cached = db.getArticleByUrl(robotsUrl);
-        // Check if cached and fresh enough (e.g. 24 hours)
-        const now = Date.now();
-        const fetchedAt = cached?.fetched_at ? new Date(cached.fetched_at).getTime() : 0;
-        const ageSeconds = Math.floor((now - fetchedAt) / 1000);
-        
-        if (cached && cached.http_status === 200 && cached.html && ageSeconds < 86400) {
-          const robotsTxt = Buffer.isBuffer(cached.html) ? cached.html.toString('utf8') : String(cached.html);
-          this.robotsRules = this.robotsParser(robotsUrl, robotsTxt);
-          this.robotsTxtLoaded = true;
-          this.logger.log(`robots.txt loaded from DB cache (age: ${ageSeconds}s)`);
-          this._harvestSitemaps(robotsTxt);
-          return;
-        }
-      } catch (err) {
-        // Cache miss or read error, continue to fetch
+    const result = await this.robotsCache.load();
+    if (!result.loaded) {
+      if (result.httpStatus === 404) {
+        this.logger.log('No robots.txt found (404), proceeding without restrictions');
+      } else {
+        this.logger.log('Failed to load robots.txt, proceeding without restrictions');
       }
+      return;
     }
 
-    // Fetch with retry logic
-    this.logger.log(`Loading robots.txt from: ${robotsUrl}`);
-    let lastError = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    this.robotsRules = this.robotsParser(result.robotsUrl || `${this.baseUrl}/robots.txt`, result.robotsTxt);
+    this.robotsTxtLoaded = true;
+    this.robotsInfo = {
+      robotsLoaded: true,
+      source: result.source || null,
+      fetchedAt: result.fetchedAt || null,
+      crawlDelaySeconds: result.crawlDelaySeconds ?? null,
+      sitemapUrls: Array.isArray(result.sitemapUrls) ? result.sitemapUrls : [],
+      politenessFloorMs: result.crawlDelaySeconds != null ? Math.floor(Number(result.crawlDelaySeconds) * 1000) : null
+    };
+    if (this.onRobotsPolicy) {
       try {
-        const response = await this.fetch(robotsUrl);
-        if (response.ok) {
-          const robotsTxt = await response.text();
-          this.robotsRules = this.robotsParser(robotsUrl, robotsTxt);
-          this.robotsTxtLoaded = true;
-          this.logger.log('robots.txt loaded successfully');
-          this._harvestSitemaps(robotsTxt);
-          
-          // Cache the successful fetch to DB
-          if (db && typeof db.upsertArticle === 'function' && robotsTxt) {
-            try {
-              const now = new Date().toISOString();
-              db.upsertArticle({
-                url: robotsUrl,
-                fetched_at: now,
-                http_status: 200,
-                content_type: 'text/plain',
-                html: robotsTxt,
-                title: 'robots.txt',
-                classification: 'robots'
-              }, { compress: false });
-            } catch (_) {
-              // Cache write failure is non-critical
-            }
-          }
-          return;
-        } else if (response.status === 404) {
-          this.logger.log('No robots.txt found (404), proceeding without restrictions');
-          return;
-        }
-        lastError = `HTTP ${response.status}`;
-      } catch (error) {
-        lastError = error.message;
-        if (attempt < 3) {
-          const delay = attempt * 1000; // 1s, 2s backoff
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
+        this.onRobotsPolicy(this.robotsInfo);
+      } catch (_) {
+        // Policy callback failure must not disable robots allow/deny enforcement.
       }
     }
-    this.logger.log(`Failed to load robots.txt after 3 attempts (${lastError}), proceeding without restrictions`);
+    this.logger.log(result.source === 'network' ? 'robots.txt loaded successfully' : `robots.txt loaded from ${result.source}`);
+    this._harvestSitemaps(result.robotsTxt);
   }
 
   async loadSitemapsAndEnqueue() {

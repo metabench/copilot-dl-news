@@ -2,6 +2,7 @@ const { shouldUseCache } = require('../../cache');
 const { safeCall, safeCallAsync } = require('./utils');
 const NetworkRetryPolicy = require('./NetworkRetryPolicy');
 const HostRetryBudgetManager = require('./HostRetryBudgetManager');
+const { classifyFreshness } = require('./FreshnessClassifier');
 const EventEmitter = require('events');
 const http = require('http');
 const https = require('https');
@@ -836,7 +837,9 @@ class FetchPipeline extends EventEmitter {
         'Upgrade-Insecure-Requests': '1'
       };
 
-      const conditionalHeaders = this._buildConditionalHeaders(normalizedUrl);
+      const requestMeta = context?.requestMeta && typeof context.requestMeta === 'object' ? context.requestMeta : null;
+      const storedHeaderMeta = this._getArticleHeaderMeta(normalizedUrl);
+      const conditionalHeaders = this._buildConditionalHeadersFromMeta(storedHeaderMeta);
       if (conditionalHeaders) Object.assign(headers, conditionalHeaders);
 
       // Determine which agent to use (proxy or direct)
@@ -934,6 +937,14 @@ class FetchPipeline extends EventEmitter {
           transferKbps: null,
           conditional: !!conditionalHeaders
         };
+        meta.freshness = classifyFreshness({
+          source: 'not-modified',
+          status: 'not-modified',
+          fetchMeta: meta,
+          requestMeta,
+          headerMeta: storedHeaderMeta,
+          conditionalHeaders
+        });
 
         // Record HTTP response
         await this._recordHttpResponse({
@@ -1082,6 +1093,14 @@ class FetchPipeline extends EventEmitter {
         transferKbps,
         conditional: !!conditionalHeaders
       };
+      fetchMeta.freshness = classifyFreshness({
+        source: 'network',
+        status: 'success',
+        fetchMeta,
+        requestMeta,
+        headerMeta: storedHeaderMeta,
+        conditionalHeaders
+      });
 
       // Record HTTP response (successful responses don't store body here unless STORE_SUCCESS_BODIES is enabled)
       await this._recordHttpResponse({
@@ -1284,6 +1303,14 @@ class FetchPipeline extends EventEmitter {
                   conditional: false,
                   fetchMethod: 'puppeteer-fallback'
                 };
+                fetchMeta.freshness = classifyFreshness({
+                  source: 'network',
+                  status: 'success',
+                  fetchMeta,
+                  requestMeta,
+                  headerMeta: storedHeaderMeta,
+                  conditionalHeaders: null
+                });
                 
                 this.emit('fetch:success', { url: puppeteerResult.finalUrl, status: puppeteerResult.httpStatus, fetchMeta });
                 return this._buildResult({
@@ -1354,15 +1381,15 @@ class FetchPipeline extends EventEmitter {
     }
   }
 
-  _buildConditionalHeaders(normalizedUrl) {
-  const dbAdapter = this.getDbAdapter();
-  if (!dbAdapter || !dbAdapter.isEnabled?.()) return null;
+  _getArticleHeaderMeta(normalizedUrl) {
+    const dbAdapter = this.getDbAdapter();
+    if (!dbAdapter || !dbAdapter.isEnabled?.()) return null;
     let meta = null;
     try {
       if (this.articleHeaderCache && this.articleHeaderCache.has(normalizedUrl)) {
         meta = this.articleHeaderCache.get(normalizedUrl);
       } else {
-  meta = dbAdapter.getArticleHeaders(normalizedUrl) || null;
+        meta = dbAdapter.getArticleHeaders(normalizedUrl) || null;
         if (this.articleHeaderCache) {
           this.articleHeaderCache.set(normalizedUrl, meta);
         }
@@ -1370,6 +1397,14 @@ class FetchPipeline extends EventEmitter {
     } catch (_) {
       meta = null;
     }
+    return meta || null;
+  }
+
+  _buildConditionalHeaders(normalizedUrl) {
+    return this._buildConditionalHeadersFromMeta(this._getArticleHeaderMeta(normalizedUrl));
+  }
+
+  _buildConditionalHeadersFromMeta(meta) {
     if (!meta || !(meta.etag || meta.last_modified || meta.lastModified)) return null;
     const headers = {};
     if (meta.etag) headers['If-None-Match'] = meta.etag;
@@ -1580,7 +1615,13 @@ class FetchPipeline extends EventEmitter {
     }
   }
 
-  _buildResult({ status, source, url = null, html = null, fetchMeta = null, error = null, retryAfterMs = null, decision = null, cacheInfo = null, reason = null }) {
+  _buildResult({ status, source, url = null, html = null, fetchMeta = null, error = null, retryAfterMs = null, decision = null, cacheInfo = null, reason = null, freshness = null }) {
+    const freshnessProof = freshness || fetchMeta?.freshness || cacheInfo?.freshness || classifyFreshness({
+      source,
+      status,
+      fetchMeta,
+      cacheInfo
+    });
     return {
       html,
       source,
@@ -1588,6 +1629,7 @@ class FetchPipeline extends EventEmitter {
         status,
         url,
         fetchMeta,
+        freshness: freshnessProof,
         error,
         retryAfterMs,
         decision,

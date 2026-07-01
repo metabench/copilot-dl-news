@@ -21,6 +21,7 @@ Harnessed crawls are for validation and diagnostics. Non-harnessed crawls are fo
 
 | Task | Command |
 |------|---------|
+| **One-command sample crawl + scorecard** | `npm run crawl:sample -- <url>` |
 | **Unified launcher** (preferred) | `npm run crawl -- <tool> [args]` |
 | **Strict e2e harness** | `npm run crawl -- news-10x1000-15m-e2e` |
 | **Default operator crawl** | `npm run crawl -- news-10x1000` |
@@ -38,6 +39,28 @@ Harnessed crawls are for validation and diagnostics. Non-harnessed crawls are fo
 | **Local intelligent crawl** | `npm run crawl -- intelligent [args]` |
 | **DB download stats** | `npm run db:downloads:stats` |
 | **Legacy config crawl** | `npm start` |
+
+## One-command sample crawl (`crawl:sample`)
+
+`npm run crawl:sample -- <url>` is the easiest way to run a bounded, observable crawl
+and get a clear **PASS/FAIL quality scorecard**. It wraps launch + live watch +
+scoring into a single command with safe defaults:
+
+```
+npm run crawl:sample -- https://www.bbc.com/news          # small rung (20 pages, gentle)
+npm run crawl:sample -- theguardian.com --rung medium     # larger rung
+npm run crawl:sample -- bbc.com --json                    # machine-readable scorecard
+```
+
+- Crawls to an isolated **sample DB** (`data/samples/<rung>-sample.db`), never `data/news.db`.
+- Auto-starts the unified UI, obeys robots + Crawl-delay, follows the job to a terminal
+  state, then tears the UI down (`--auto-stop`).
+- Scores success rate, politeness (429 storms), host coverage, freshness, and dedup;
+  prints a scorecard and exits **0 = PASS, 2 = FAIL, 3 = usage/preflight error**.
+- Fresh DB per run by default (`--keep-db` to accumulate). Run `npm run crawl:sample -- --help`
+  for all options.
+
+If it reports a native SQLite load failure, run `cd ../news-crawler-db && npm rebuild better-sqlite3`.
 
 ## See also
 

@@ -733,14 +733,6 @@ class QueueManager {
       return nextContext;
     }
 
-    const meta = item.meta && typeof item.meta === 'object' ? item.meta : null;
-    const wantsCacheProcessing = meta?.processCacheResult === true || meta?.seedFromCache === true;
-    const fetchPolicy = meta && typeof meta.fetchPolicy === 'string' ? meta.fetchPolicy : null;
-    const fallbackToCache = meta && meta.fallbackToCache === false ? false : true;
-    const metaMaxCacheAge = typeof meta?.maxCacheAgeMs === 'number' && Number.isFinite(meta.maxCacheAgeMs) && meta.maxCacheAgeMs >= 0
-      ? meta.maxCacheAgeMs
-      : null;
-
     let propagatedContext = null;
     const getContextRef = () => {
       if (!propagatedContext) {
@@ -748,6 +740,17 @@ class QueueManager {
       }
       return propagatedContext;
     };
+
+    const meta = item.meta && typeof item.meta === 'object' ? item.meta : null;
+    if (meta) {
+      getContextRef().requestMeta = meta;
+    }
+    const wantsCacheProcessing = meta?.processCacheResult === true || meta?.seedFromCache === true;
+    const fetchPolicy = meta && typeof meta.fetchPolicy === 'string' ? meta.fetchPolicy : null;
+    const fallbackToCache = meta && meta.fallbackToCache === false ? false : true;
+    const metaMaxCacheAge = typeof meta?.maxCacheAgeMs === 'number' && Number.isFinite(meta.maxCacheAgeMs) && meta.maxCacheAgeMs >= 0
+      ? meta.maxCacheAgeMs
+      : null;
 
     if (fetchPolicy) {
       getContextRef().fetchPolicy = fetchPolicy;

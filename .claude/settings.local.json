@@ -6,7 +6,16 @@
       "Bash(tree:*)",
       "Bash(ls:*)",
       "Bash(dir:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(cat .nvmrc .node-version)",
+      "Bash(node -p \"require\\('./package.json'\\).engines || 'no engines'\")",
+      "Bash(ls -la node_modules/better-sqlite3/build/Release/*.node)",
+      "Bash(ls -la ../news-crawler-db/node_modules/better-sqlite3/build/Release/*.node)",
+      "Bash(node -p \"require\\('../news-crawler-db/node_modules/better-sqlite3/package.json'\\).version\")",
+      "Bash(timeout 240 npm rebuild better-sqlite3)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(node -e ' *)",
+      "Bash(node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit --reporters=default --testPathPatterns \"tools/crawl/\\(quality-scorecard|sample-db-signals|sample\\)\\\\.test\\\\.js\")"
     ],
     "deny": [],
     "ask": []

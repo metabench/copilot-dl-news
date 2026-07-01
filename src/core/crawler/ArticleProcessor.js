@@ -549,7 +549,12 @@ class ArticleProcessor {
         nav_links_count: navigationLinksCount,
         article_links_count: articleLinksCount,
         word_count: readability.wordCount ?? null,
-        analysis: JSON.stringify({ url: urlSignals, content: { ...contentSignals, wordCount: readability.wordCount ?? null }, combined: combinedSignals })
+        analysis: JSON.stringify({
+          url: urlSignals,
+          content: { ...contentSignals, wordCount: readability.wordCount ?? null },
+          combined: combinedSignals,
+          freshness: fetchMeta?.freshness || null
+        })
       });
     } catch (error) {
       this._log('warn', 'Failed to insert fetch record:', error && error.message ? error.message : error);

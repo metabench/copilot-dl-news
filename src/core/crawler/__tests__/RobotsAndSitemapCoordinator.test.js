@@ -17,7 +17,7 @@ describe('RobotsAndSitemapCoordinator', () => {
         'https://example.com/news/story-1',
         'https://example.com/news/story-2?utm=1'
       ];
-      sitemapUrls.forEach((url) => push(url));
+      sitemapUrls.forEach((url) => push(url, overrides.__sitemapMeta?.[url] || {}));
       return sitemapUrls.length;
     });
 
@@ -85,6 +85,41 @@ describe('RobotsAndSitemapCoordinator', () => {
     expect(coordinator.sitemapUrls).toEqual(['https://example.com/sitemap.xml']);
   });
 
+  test('loadRobotsTxt exposes crawl-delay policy evidence and callback', async () => {
+    const onRobotsPolicy = jest.fn();
+    const fetchImpl = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => 'User-agent: *\nCrawl-delay: 2\nSitemap: /news.xml'
+    }));
+    const dbAdapter = {
+      getRobotsCache: jest.fn(async () => null),
+      upsertRobotsCache: jest.fn(async () => {})
+    };
+    const robotsParser = jest.fn(() => ({
+      getSitemaps: jest.fn(() => []),
+      isAllowed: jest.fn(() => true)
+    }));
+    const { coordinator } = createCoordinator({ robotsParser, fetchImpl });
+    coordinator.robotsCache.dbAdapter = dbAdapter;
+    coordinator.onRobotsPolicy = onRobotsPolicy;
+
+    await coordinator.loadRobotsTxt();
+
+    expect(onRobotsPolicy).toHaveBeenCalledWith(expect.objectContaining({
+      robotsLoaded: true,
+      crawlDelaySeconds: 2,
+      politenessFloorMs: 2000,
+      source: 'network'
+    }));
+    expect(coordinator.getRobotsInfo()).toMatchObject({
+      robotsLoaded: true,
+      crawlDelaySeconds: 2,
+      politenessFloorMs: 2000,
+      sitemapUrls: ['https://example.com/news.xml']
+    });
+  });
+
   test('loadRobotsTxt falls back to scanning text when parser lacks sitemap helper', async () => {
     const robotsParser = jest.fn(() => ({
       isAllowed: jest.fn(() => true)
@@ -118,7 +153,13 @@ describe('RobotsAndSitemapCoordinator', () => {
       enqueueRequest,
       emitProgress,
       getQueueSize,
-      __sitemapUrls: Array.from(decisions.keys())
+      __sitemapUrls: Array.from(decisions.keys()),
+      __sitemapMeta: {
+        'https://example.com/news/story-1': {
+          lastmod: '2026-06-12T10:00:00Z',
+          changefreq: 'hourly'
+        }
+      }
     });
 
     coordinator.robotsTxtLoaded = true;
@@ -129,7 +170,13 @@ describe('RobotsAndSitemapCoordinator', () => {
     expect(enqueueRequest).toHaveBeenCalledWith({
       url: 'https://example.com/news/story-1',
       depth: 0,
-      type: 'article'
+      type: 'article',
+      meta: {
+        lastmod: '2026-06-12T10:00:00Z',
+        changefreq: 'hourly',
+        source: 'sitemap',
+        sitemapDiscovery: true
+      }
     });
     expect(handlePolicySkip).toHaveBeenCalledWith(decisions.get('https://example.com/news/story-2?utm=1'), {
       depth: 0,

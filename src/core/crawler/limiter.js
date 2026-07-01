@@ -25,7 +25,10 @@ class DomainLimiter {
         rpmLastMinute: 0,
         windowStartedAt: 0,
         windowCount: 0,
-        lastHttpStatus: null
+        lastHttpStatus: null,
+        politenessFloorMs: 0,
+        politenessSource: null,
+        crawlDelaySeconds: null
       };
       this.states.set(host, s);
     }
@@ -43,7 +46,8 @@ class DomainLimiter {
     if (s.backoffUntil > now) {
       await sleep(s.backoffUntil - now);
     }
-    if (!s.isLimited) {
+    const politenessFloorMs = Math.max(0, Number(s.politenessFloorMs) || 0);
+    if (!s.isLimited && politenessFloorMs <= 0) {
       s.lastRequestAt = now;
       return;
     }
@@ -52,7 +56,8 @@ class DomainLimiter {
     }
     const t = nowMs();
     s.lastRequestAt = t;
-    const interval = s.rpm > 0 ? Math.floor(60000 / s.rpm) : 0;
+    const rateInterval = s.isLimited && s.rpm > 0 ? Math.floor(60000 / s.rpm) : 0;
+    const interval = Math.max(rateInterval, politenessFloorMs);
     const min = this.pacerJitterMinMs;
     const max = this.pacerJitterMaxMs;
     const jitter = max > min ? (min + Math.floor(Math.random() * (max - min + 1))) : min;
@@ -63,6 +68,21 @@ class DomainLimiter {
       s.windowCount = 0;
     }
     s.windowCount++;
+  }
+
+  setPolitenessFloor(host, intervalMs, { source = 'robots-crawl-delay', crawlDelaySeconds = null } = {}) {
+    const s = this._get(host);
+    const floor = Math.max(0, Math.floor(Number(intervalMs) || 0));
+    s.politenessFloorMs = floor;
+    s.politenessSource = floor > 0 ? source : null;
+    s.crawlDelaySeconds = floor > 0
+      ? (Number.isFinite(Number(crawlDelaySeconds)) ? Number(crawlDelaySeconds) : floor / 1000)
+      : null;
+    if (s.rpm > 0 && floor > 0) {
+      const floorRpm = Math.max(1, Math.floor(60000 / floor));
+      s.rpm = Math.min(s.rpm, floorRpm);
+    }
+    return { ...s };
   }
 
   note429(host, retryAfterMs) {
@@ -80,7 +100,8 @@ class DomainLimiter {
     if (s.err429Streak >= 3) blackout = Math.max(blackout, 15 * 60 * 1000);
     s.backoffUntil = now + blackout;
     const currentRpm = s.rpm || 60;
-    const newRpm = Math.max(1, Math.floor(currentRpm * 0.25));
+    const floorRpm = s.politenessFloorMs > 0 ? Math.max(1, Math.floor(60000 / s.politenessFloorMs)) : Infinity;
+    const newRpm = Math.min(floorRpm, Math.max(1, Math.floor(currentRpm * 0.25)));
     s.rpm = newRpm;
     s.nextRequestAt = now + Math.floor(60000 / newRpm);
   }
@@ -99,7 +120,8 @@ class DomainLimiter {
       if (canProbe) {
         const current = s.rpm || 10;
         const next = Math.max(1, Math.floor(current * 1.1));
-        s.rpm = Math.min(next, 300);
+        const floorRpm = s.politenessFloorMs > 0 ? Math.max(1, Math.floor(60000 / s.politenessFloorMs)) : 300;
+        s.rpm = Math.min(next, 300, floorRpm);
         s.successStreak = 0;
       }
     }

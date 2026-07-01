@@ -86,7 +86,101 @@ describe('FetchPipeline', () => {
     expect(result.source).toBe('network');
     expect(result.html).toContain('hello');
     expect(result.meta.fetchMeta).toEqual(expect.objectContaining({ httpStatus: 200 }));
+    expect(result.meta.freshness).toEqual(expect.objectContaining({
+      status: 'new',
+      reason: 'network-200-no-stored-proof'
+    }));
     expect(deps.noteSuccess).toHaveBeenCalled();
+  });
+
+  it('classifies conditional 304 responses as unchanged freshness', async () => {
+    const deps = baseDeps();
+    const dbAdapter = {
+      isEnabled: () => true,
+      getArticleHeaders: jest.fn(() => ({
+        etag: '"stored"',
+        last_modified: 'Tue, 10 Jun 2026 10:00:00 GMT',
+        fetched_at: '2026-06-10T10:00:00.000Z'
+      })),
+      insertHttpResponse: jest.fn(async () => {})
+    };
+    deps.fetchFn = jest.fn(async (_url, options) => ({
+      ok: false,
+      status: 304,
+      headers: {
+        get: (key) => {
+          if (key === 'etag') return '"stored"';
+          if (key === 'last-modified') return 'Tue, 10 Jun 2026 10:00:00 GMT';
+          return null;
+        }
+      },
+      text: async () => ''
+    }));
+
+    const pipeline = new FetchPipeline({ ...deps, getDbAdapter: () => dbAdapter, fetchFn: deps.fetchFn });
+    const result = await pipeline.fetch({ url: 'https://example.com/page', context: { depth: 0, allowRevisit: true } });
+
+    expect(deps.fetchFn).toHaveBeenCalledWith('https://example.com/page', expect.objectContaining({
+      headers: expect.objectContaining({
+        'If-None-Match': '"stored"',
+        'If-Modified-Since': 'Tue, 10 Jun 2026 10:00:00 GMT'
+      })
+    }));
+    expect(result.source).toBe('not-modified');
+    expect(result.meta.freshness).toMatchObject({
+      status: 'unchanged',
+      reason: 'conditional-get-304',
+      avoidedDownload: true,
+      fullGetRequired: false
+    });
+  });
+
+  it('classifies conditional 200 responses with sitemap lastmod as updated freshness', async () => {
+    const deps = baseDeps();
+    const dbAdapter = {
+      isEnabled: () => true,
+      getArticleHeaders: jest.fn(() => ({
+        etag: '"old"',
+        last_modified: 'Tue, 10 Jun 2026 10:00:00 GMT',
+        fetched_at: '2026-06-10T10:00:00.000Z'
+      })),
+      insertHttpResponse: jest.fn(async () => {})
+    };
+    deps.fetchFn = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: {
+        get: (key) => {
+          if (key === 'content-type') return 'text/html';
+          if (key === 'etag') return '"new"';
+          if (key === 'last-modified') return 'Fri, 12 Jun 2026 10:00:00 GMT';
+          return null;
+        }
+      },
+      text: async () => '<html><body>updated</body></html>'
+    }));
+
+    const pipeline = new FetchPipeline({ ...deps, getDbAdapter: () => dbAdapter, fetchFn: deps.fetchFn });
+    const result = await pipeline.fetch({
+      url: 'https://example.com/page',
+      context: {
+        depth: 0,
+        allowRevisit: true,
+        requestMeta: {
+          source: 'sitemap',
+          sitemapDiscovery: true,
+          lastmod: '2026-06-12T10:00:00Z'
+        }
+      }
+    });
+
+    expect(result.source).toBe('network');
+    expect(result.meta.freshness).toMatchObject({
+      status: 'updated',
+      reason: 'conditional-get-200',
+      conditional: true,
+      sitemapLastmod: '2026-06-12T10:00:00Z'
+    });
   });
 
   it('classifies http failure as error with retry metadata', async () => {

@@ -7,15 +7,16 @@
  * Read-only invariant checker for the recursive-prompting Execution State block.
  *
  * The recursive crawler-reliability loop stores its authoritative execution
- * state as a fenced ```json block under a `## Execution State` heading inside
- * `CONTINUATION_PROMPT.md`. As `completed_nodes` grows turn-over-turn it becomes
- * easy to introduce silent drift (active_node missing from pending, a node in
- * both completed and pending, a duplicate, malformed JSON). This script parses
- * that block and asserts the structural invariants so each turn's verification
- * ladder can catch drift before it compounds.
+ * state either as `EXECUTION_STATE.json` next to `CONTINUATION_PROMPT.md`, or
+ * as a fenced ```json block under a `## Execution State` heading inside the
+ * prompt for older handoffs. As `completed_nodes` grows turn-over-turn it
+ * becomes easy to introduce silent drift (active_node missing from pending, a
+ * node in both completed and pending, a duplicate, malformed JSON). This script
+ * parses that state and asserts the structural invariants so each turn's
+ * verification ladder can catch drift before it compounds.
  *
  * Usage:
- *   node tools/crawl/validate-continuation-state.js [--file <path>] [--json] [--max-lines <n>]
+ *   node tools/crawl/validate-continuation-state.js [--file <path>] [--state-file <path>] [--json] [--max-lines <n>]
  *
  * Exit code 0 = all invariants hold; 1 = at least one violation (or parse error).
  * The `--max-lines` growth guard (default 800) emits a non-fatal warning when
@@ -36,14 +37,21 @@ const DEFAULT_FILE = path.join(
   '2026-05-29-crawler-reliability-recursive-plan',
   'CONTINUATION_PROMPT.md'
 );
+const DEFAULT_STATE_FILE = path.join(
+  path.dirname(DEFAULT_FILE),
+  'EXECUTION_STATE.json'
+);
 
 function parseArgs(argv) {
-  const args = { file: DEFAULT_FILE, json: false, maxLines: 800 };
+  const args = { file: DEFAULT_FILE, stateFile: null, json: false, maxLines: 800 };
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i];
     if (token === '--json') args.json = true;
     else if (token === '--file') {
       args.file = argv[i + 1];
+      i += 1;
+    } else if (token === '--state-file') {
+      args.stateFile = argv[i + 1];
       i += 1;
     } else if (token === '--max-lines') {
       args.maxLines = Number(argv[i + 1]);
@@ -137,37 +145,53 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
     process.stdout.write(
-      'Usage: node tools/crawl/validate-continuation-state.js [--file <path>] [--json] [--max-lines <n>]\n'
+      'Usage: node tools/crawl/validate-continuation-state.js [--file <path>] [--state-file <path>] [--json] [--max-lines <n>]\n'
     );
     process.exitCode = 0;
     return;
   }
 
-  let markdown;
+  let markdown = '';
   try {
     markdown = fs.readFileSync(args.file, 'utf8');
   } catch (err) {
-    emit(args.json, { ok: false, error: `cannot read file: ${err.message}`, file: args.file });
-    process.exitCode = 1;
-    return;
+    if (!args.stateFile) {
+      emit(args.json, { ok: false, error: `cannot read file: ${err.message}`, file: args.file });
+      process.exitCode = 1;
+      return;
+    }
   }
 
-  const rawJson = extractExecutionStateJson(markdown);
-  if (!rawJson) {
-    emit(args.json, {
-      ok: false,
-      error: 'no ```json block found under "## Execution State"',
-      file: args.file
-    });
-    process.exitCode = 1;
-    return;
+  const stateFile = args.stateFile || (fs.existsSync(DEFAULT_STATE_FILE) ? DEFAULT_STATE_FILE : null);
+  let rawJson = null;
+  let source = args.file;
+  if (stateFile) {
+    try {
+      rawJson = fs.readFileSync(stateFile, 'utf8').trim();
+      source = stateFile;
+    } catch (err) {
+      emit(args.json, { ok: false, error: `cannot read state file: ${err.message}`, file: stateFile });
+      process.exitCode = 1;
+      return;
+    }
+  } else {
+    rawJson = extractExecutionStateJson(markdown);
+    if (!rawJson) {
+      emit(args.json, {
+        ok: false,
+        error: 'no state file and no ```json block found under "## Execution State"',
+        file: args.file
+      });
+      process.exitCode = 1;
+      return;
+    }
   }
 
   let state;
   try {
     state = JSON.parse(rawJson);
   } catch (err) {
-    emit(args.json, { ok: false, error: `execution-state JSON did not parse: ${err.message}`, file: args.file });
+    emit(args.json, { ok: false, error: `execution-state JSON did not parse: ${err.message}`, file: source });
     process.exitCode = 1;
     return;
   }
@@ -185,6 +209,8 @@ function main() {
   emit(args.json, {
     ok,
     file: args.file,
+    state_file: stateFile,
+    state_source: source,
     active_node: state.active_node,
     completed_count: Array.isArray(state.completed_nodes) ? state.completed_nodes.length : null,
     pending_count: Array.isArray(state.pending_nodes) ? state.pending_nodes.length : null,

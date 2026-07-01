@@ -459,3 +459,117 @@ Only with explicit approval for remote mutation:
   conclusion applied: `--max-lines` growth guard in the continuation-state
   validator. +4 tests -> 110 passing. Next active node
   `decide_fresh_internet_small_target_policy`.
+
+- 2026-06-13 `implement_robots_txt_cache_with_ttl_revalidation_and_db_persistence`
+  complete: extracted `RobotsCache`, wired it into
+  `RobotsAndSitemapCoordinator`, added typed coverage cache preference with
+  legacy article-row fallback, configurable TTL, conditional revalidation,
+  sitemap extraction, and `Crawl-delay` parse/persist. Added focused tests and
+  split long execution state into `EXECUTION_STATE.json` so recursive prompts
+  stay concise. Next active node:
+  `honor_robots_crawl_delay_and_adaptive_per_host_politeness`.
+
+- 2026-06-13 `honor_robots_crawl_delay_and_adaptive_per_host_politeness`
+  complete: `RobotsCache` policy output now reaches `DomainThrottleManager`;
+  `DomainLimiter` enforces `Crawl-delay` as a per-host politeness floor while
+  preserving stricter 429/403 backoff and bounded success recovery. Progress
+  payloads expose robots source, Crawl-delay seconds, and floor ms. Next active
+  node: `implement_freshness_detection_sitemap_lastmod_head_and_conditional_get`.
+
+- 2026-06-14 `implement_freshness_detection_sitemap_lastmod_head_and_conditional_get`
+  complete: freshness classification is now explicit in fetch result metadata,
+  page events, and DB fetch analysis. The classifier reports `new`, `updated`,
+  `unchanged`, `stale`, or `unknown` with validator/sitemap/cache proof fields.
+  Sitemap `lastmod` is proof input; stored `ETag`/`Last-Modified` validators
+  remain the safe pre-body optimization through conditional GET. No HEAD or
+  sitemap-only skip path was added. Next active node:
+  `build_throughput_analyzer_with_bandwidth_and_latency_decomposition`.
+
+- 2026-06-14 `build_throughput_analyzer_with_bandwidth_and_latency_decomposition`
+  complete: no-contact throughput analyzer now reads saved progress, meter,
+  fetch, limiter, and cadence artifacts and emits an operator-ready
+  `crawl-throughput-analysis` report. It decomposes monitor visibility, DB
+  growth, Crawl-delay politeness floors, adaptive 429/403 backoff, latency,
+  freshness/cache behavior, and cadence divergence. Next active node:
+  `run_internet_crawl_to_sample_db_measuring_politeness_and_throughput`.
+
+- `run_internet_crawl_to_sample_db_measuring_politeness_and_throughput`:
+  complete as blocked/no-contact for this prompt. No explicit approval was
+  present for internet target contact or isolated sample DB writes, so no live
+  crawl ran. Added `throughput-analyzer.js approval`, producing
+  `tmp/internet-throughput-approval-blocked.json` with the missing approval
+  class, proposed bounded sample run, production zero-delta proof plan, and
+  no-action policy. Next node:
+  `define_adaptive_pacing_policy_for_bandwidth_and_latency_regimes`.
+
+- Guardian place/country hub priority: next work should use the local crawler
+  only for The Guardian small/medium sample crawls. Bounded local runs may make
+  HTTP requests directly from this machine and write isolated sample DBs without
+  a separate approval step. The system should discover country/place hubs,
+  tolerate multiple URL patterns on the same site, extract latest stories from
+  those hubs, and preserve isolated sample-crawl artifacts. Remote crawler
+  servers/queues/deploy/sync/seed/maintenance and production `data/news.db`
+  writes stay out of scope unless explicitly requested.
+
+- `build_guardian_place_hub_pattern_inventory`: added local-only Guardian
+  place/country hub helper and artifacts for pattern inventory, fixture
+  latest-story extraction, small/medium sample crawl plans, and run explain
+  packets. Supported patterns now include multiple same-site forms such as
+  `/world/<country>`, `/world/<region>-news`, `/<country>-news`, and
+  `/international/world/<country>`. Added a DB persistence plan and store
+  contract so these heuristics are stored through
+  `src/data/db/placeHubUrlPatternsStore.js` / `news-crawler-db` rather than
+  loose helper JSON or ad hoc SQL. Live local sample crawls and actual pattern
+  persistence are blocked until the Linux shell can load a valid
+  `better-sqlite3` native module or another DB proof path exists; without that,
+  isolated sample DB growth and production zero-delta proof cannot be verified.
+
+- `restore_linux_sqlite_native_db_access_and_persist_guardian_hub_patterns`:
+  restored the Linux DB proof path by rebuilding `better-sqlite3` in sibling
+  `news-crawler-db`, then proved Guardian heuristics round-trip through the
+  DB-owned pattern store in isolated sample DBs. Ran bounded local Guardian
+  small and medium sample crawls to isolated DBs. Small: +56 responses,
+  +54 successes, +18 content, production delta 0. Medium: +25 responses,
+  +25 successes, +8 content, production delta 0. Remaining gaps are runtime
+  use of stored patterns, medium job terminal observability after DB proof, and
+  richer throughput/freshness/politeness sample artifacts.
+
+- `promote_guardian_hub_patterns_into_runtime_and_improve_sample_observability`:
+  runtime-pattern proof complete. Guardian persisted regexes now match the DB
+  store's full-URL `matchUrl` contract, and
+  `guardian-place-hubs.js runtime-proof --db data/samples/guardian-runtime-pattern-proof.db`
+  proves `PlaceHubPatternLearningService.predictPlaceHub` consumes those
+  stored rows. Artifact `tmp/guardian-runtime-pattern-proof.json`: 4/4 expected
+  Guardian hubs matched stored patterns, expected pattern readback is complete,
+  and article date-path false positives are 0. Next recursive pass should focus
+  on richer Guardian sample observability and runtime latest-story extraction.
+
+- `add_guardian_sample_terminal_wait_or_job_status_evidence`: complete for
+  saved artifacts. `guardian-place-hubs.js sample-summary` now composes launch,
+  watch, sample/prod DB snapshots, throughput analysis, runtime proof, and
+  latest-story extraction into one operator summary. Current summaries prove
+  DB growth and production zero-delta while classifying terminal evidence as
+  small `not-observed` and medium `endpoint-unavailable`. Next work should
+  capture richer live progress/meter/fetch/limiter inputs and, if needed, rerun
+  a bounded small Guardian sample with terminal wait.
+
+- `add_guardian_sample_db_progress_and_throughput_analysis`: complete for
+  no-contact summary support. `sample-summary` now records artifact timing and
+  can build embedded throughput attribution from raw meter, fetch/freshness,
+  limiter, and cadence inputs. Refreshed progress artifacts show the saved
+  Guardian small/medium proofs still have DB growth and production isolation,
+  but raw meter/fetch/limiter samples are absent, so Crawl-delay, backoff,
+  latency, and freshness/cache attribution remain partial. Next work should
+  prove runtime latest-story extraction from discovered Guardian hubs, then
+  rerun a bounded small Guardian sample only if that proof requires live data.
+
+- `add_guardian_runtime_latest_story_extraction_proof`: complete for saved
+  fixture and runtime metadata. `PageExecutionService` now tags article links
+  discovered from a predicted place hub with `sourcePlaceHub*` metadata.
+  `guardian-place-hubs.js latest-story-proof` persists Guardian patterns
+  through the DB module and proves saved Guardian hub stories become runtime
+  latest-story candidates. Artifact
+  `tmp/guardian-runtime-latest-story-proof.json` shows 25/25 candidates from
+  stored `world-country` hub metadata and 0 article false positives. Next work
+  should capture this metadata in a bounded small Guardian live sample with raw
+  meter/fetch/limiter artifacts.

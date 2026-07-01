@@ -23,6 +23,100 @@ Date: 2026-05-29
   revalidation, parse+persist `Crawl-delay`). Folded split-state node into its
   workload (prompt is 979 lines > 800 WARN).
 
+## 2026-06-13 — RobotsCache extraction + concise recursive state split
+
+- Node `implement_robots_txt_cache_with_ttl_revalidation_and_db_persistence`
+  done. Added `src/core/crawler/RobotsCache.js` and wired
+  `RobotsAndSitemapCoordinator` through it. The coordinator still owns
+  `isAllowed()` and sitemap enqueue behavior; the cache module owns robots.txt
+  cache lifecycle.
+- `RobotsCache` now prefers typed coverage cache APIs
+  `getRobotsCache(domain)` / `upsertRobotsCache(record)`, persists
+  `robotsTxt`, `crawlDelaySeconds`, `sitemapUrls`, `etag`, `lastModified`, and
+  `expiresAt` when available, and falls back to legacy article-row cache reads
+  and writes for compatibility.
+- TTL is configurable with `CRAWLER_ROBOTS_CACHE_TTL_SECONDS` (default 24h).
+  Stale cache revalidation sends `If-None-Match` / `If-Modified-Since`; a 304
+  refreshes cache timestamp without reparsing. `Crawl-delay` is parsed with
+  per-agent plus `*` fallback and persisted for the next governor node. It is
+  not enforced yet.
+- `CrawlerDb` now exposes `getRobotsCache()` and `upsertRobotsCache()` when the
+  wrapped DB exposes coverage access.
+- Added focused tests for cache hit, miss/write, 304 revalidation, legacy
+  fallback, Crawl-delay parsing, and sitemap normalization. Updated the
+  coordinator sitemap enqueue expectation to preserve existing current behavior.
+- Split recursive execution state to
+  `docs/sessions/2026-05-29-crawler-reliability-recursive-plan/EXECUTION_STATE.json`.
+  `CONTINUATION_PROMPT.md` is now concise, and
+  `validate-continuation-state.js --json` reads the state file with no
+  max-line warning.
+
+Next active node: `honor_robots_crawl_delay_and_adaptive_per_host_politeness`.
+No live network, remote crawler contact, remote mutation, or production DB write
+was needed for this node.
+
+Validation:
+- Syntax checks passed for touched crawler JS, touched tests, and
+  `tools/crawl/validate-continuation-state.js`.
+- Focused Jest: combined no-contact run passed 145 assertions across 6 suites
+  and hit one Jest transform-cache ENOENT in
+  `sequential-fixture-proof.test.js`; isolated rerun with `--no-cache` passed
+  that suite (4/4). Test artifacts:
+  `data/test-results/run-2026-06-13-223905174-36320.json` and
+  `data/test-results/run-2026-06-13-224106258-384bb.json`.
+- State validator passed reading `EXECUTION_STATE.json`: 93 completed, 8
+  pending, active
+  `honor_robots_crawl_delay_and_adaptive_per_host_politeness`, prompt 100
+  lines, no warnings.
+- No-contact artifacts:
+  `tmp/robots-cache-policy.json`,
+  `tmp/robots-cache-local-smoke-plan.json`,
+  `tmp/crawl-packet-tiny-robots-cache-plan.json`,
+  `tmp/robots-cache-local-smoke-comparison.json`,
+  `tmp/robots-cache-small-vs-medium-cadence.json`, and
+  `tmp/robots-cache-small-vs-medium-card.json`. The cadence/card artifacts
+  intentionally report divergence (small 96%, medium 93%, `poll-error` only in
+  medium); this is existing saved-rung evidence, not a new blocker.
+- Whitespace scan, targeted `git diff --check`, and process cleanup checks
+  passed. `git diff --check` printed only existing CRLF-normalization warnings.
+
+## 2026-06-13 — Crawl-delay politeness floor enforced
+
+- Node `honor_robots_crawl_delay_and_adaptive_per_host_politeness` done.
+  `RobotsAndSitemapCoordinator` now exposes robots policy evidence and calls
+  the active pacing path when `RobotsCache` returns `crawlDelaySeconds`.
+- `DomainThrottleManager.setRobotsCrawlDelay(host, seconds)` stores a per-host
+  politeness floor and applies it to `DomainLimiter`. The fallback path also
+  waits for `nextRequestAt` and schedules the next request from the floor.
+- `DomainLimiter` now enforces `politenessFloorMs` even when a host is not in
+  slow mode. 429/403 backoff can still reduce RPM below the floor, and success
+  recovery caps RPM so it cannot pace faster than robots allows.
+- Progress payloads now include `robotsSource`, `robotsCrawlDelaySeconds`, and
+  `robotsPolitenessFloorMs` for operator clarity.
+- Capability review: policy proven for robots allow/deny and Crawl-delay floor;
+  preflight proven by no-contact plans; launch/watch/DB proof unchanged and
+  still proven by saved tiny/small/medium artifacts; artifact/comparison
+  tooling proven; dashboard card remains file-only; freshness and throughput
+  remain partial and are the next horizon.
+- Focused tests passed: 5 suites / 128 tests
+  (`DomainThrottleManager`, `RobotsAndSitemapCoordinator`, `RobotsCache`,
+  `crawl-packet`, `run`). Test artifact:
+  `data/test-results/run-2026-06-13-225955383-1a284.json`.
+- No-contact artifacts:
+  `tmp/politeness-floor-policy.json`,
+  `tmp/politeness-floor-local-smoke-plan.json`,
+  `tmp/crawl-packet-tiny-politeness-floor-plan.json`,
+  `tmp/politeness-floor-local-smoke-comparison.json`,
+  `tmp/politeness-floor-small-vs-medium-cadence.json`, and
+  `tmp/politeness-floor-small-vs-medium-card.json`. Cadence/card still exit 2
+  for the known saved-rung divergence: small 96%, medium 93%, `poll-error` only
+  in medium.
+
+Next active node:
+`implement_freshness_detection_sitemap_lastmod_head_and_conditional_get`.
+No live network, remote crawler contact, remote mutation, loopback crawl, or
+production DB write was required for this node.
+
 ## Context
 
 - The user explicitly redirected away from docs-viewer work in
@@ -1528,3 +1622,398 @@ production delta.
 4. snapshot-both-dbs.js writes sample.totals but the monitor baseline adapter reads sample.before, so packet dbGrowth showed absolute totals; real delta computed from before/after. Follow-up: teach loadBaselineSnapshot the {sample:{totals}} shape.
 
 **Safety.** No production write (delta 0). No remote crawler contact, no queue mutation. Background crawl stopped cleanly after the proof. Focused suite 100 green on 3 touched files.
+
+## 2026-06-14 — freshness classifier and operator proof fields
+
+**Capability review.** Policy/preflight/safety remain proven by no-contact
+packets. Sitemap `lastmod` propagation is proven through
+`RobotsAndSitemapCoordinator` enqueue metadata. Stored validator access is
+proven through `FetchPipeline` article-header cache/DB adapter. Before this
+pass, operator freshness status was partial because conditional GET existed but
+new/updated/unchanged/stale status required raw field inference.
+
+**Implementation.** Added `src/core/crawler/FreshnessClassifier.js` and wired
+`FetchPipeline` to attach freshness proof to cache, network 200, conditional
+304, and fallback results. Queue request metadata now propagates into fetch
+context so sitemap `lastmod` can participate in classification.
+`PageExecutionService` emits freshness in page events/log payloads and 304
+fetch analysis; `ArticleProcessor` includes it in fetch analysis for saved
+network content.
+
+**Policy choice.** No live HEAD probe or sitemap-only skip was added. Safe
+current behavior is: use stored validators through conditional GET where
+available, use sitemap `lastmod` as operator evidence, and classify cache
+fallback as `stale` without broadening contact semantics.
+
+**Verification.** `node --check` passed for touched JS/test files. Focused Jest
+passed 5 suites / 35 tests with artifact
+`data/test-results/run-2026-06-13-231007535-9d7fd.json`. No-contact artifacts:
+`tmp/freshness-policy.json`, `tmp/freshness-local-smoke-plan.json`,
+`tmp/crawl-packet-tiny-freshness-plan.json`,
+`tmp/freshness-local-smoke-comparison.json`,
+`tmp/crawl-packet-small-freshness-plan.json`,
+`tmp/crawl-packet-medium-freshness-plan.json`,
+`tmp/freshness-small-vs-medium-cadence.json`, and
+`tmp/freshness-small-vs-medium-card.json`. Cadence/card still exit 2 with the
+known small/medium `poll-error` divergence.
+
+**Safety.** No remote contact, no internet crawl, no live loopback crawl, and
+no production DB write. Changes are metadata/classification only.
+
+## 2026-06-14 — no-contact throughput analyzer
+
+**Capability review.** Throughput was partial: `run.js` had a live meter and
+`crawl-progress-monitor` had writer-DB-aware docs/sec/bytes/sec packets, but
+operators still had to infer whether a run was limited by politeness, backoff,
+latency, freshness/cache behavior, DB growth, or monitor visibility. Robots,
+freshness, policy, and packet artifacts are proven; broad live internet
+throughput measurement remains gated on explicit approval.
+
+**Implementation.** Added `tools/crawl/lib/throughput-analyzer.js` and CLI
+`tools/crawl/throughput-analyzer.js`. It is strictly no-contact: reads saved
+progress, meter, fetch/page-event, limiter snapshot, and cadence artifacts and
+emits `crawl-throughput-analysis` with action policy, evidence summaries,
+limiting factors, diagnostics, and next safest action. Exit 3 means the saved
+evidence is throughput-blocked/stalled, not a tool crash.
+
+**Artifact.** Ran
+`node tools/crawl/throughput-analyzer.js analyze --progress tmp/progress-selfclock-replay.json --cadence tmp/freshness-small-vs-medium-cadence.json --json --pretty --out tmp/throughput-analysis-progress-cadence.json`.
+The report correctly labels the stale sample progress as
+`throughput-blocked`, primary `stall`, while preserving proven writer-DB
+growth (+48 responses / +15 content) and cadence diagnostics (`poll-error`
+only in medium).
+
+**Verification.** Syntax checks passed for analyzer files. Focused Jest passed
+3 suites / 56 tests with artifact
+`data/test-results/run-2026-06-13-231940038-b44c8.json`. Refreshed no-contact
+artifacts: `tmp/throughput-policy.json`, `tmp/throughput-local-smoke-plan.json`,
+`tmp/crawl-packet-tiny-throughput-plan.json`,
+`tmp/throughput-local-smoke-comparison.json`,
+`tmp/throughput-small-vs-medium-cadence.json`, and
+`tmp/throughput-small-vs-medium-card.json`. Cadence/card still exit 2 with the
+known small/medium taxonomy divergence.
+
+**Safety.** No remote contact, no internet crawl, no loopback live crawl, and
+no production DB write.
+
+## 2026-06-14 — internet throughput sample approval boundary
+
+**Capability review.** Policy, preflight, no-contact packet generation,
+robots Crawl-delay parsing/enforcement, freshness proof metadata, saved
+artifact comparison, and no-contact throughput decomposition are proven by
+focused tests and refreshed artifacts. Live internet throughput measurement is
+blocked in this prompt because there is no explicit approval for internet
+target contact or isolated sample DB writes. Remote contact/mutation and
+production DB writes remain blocked.
+
+**Implementation.** Added `throughput-analyzer.js approval`, a no-contact
+approval packet mode. It records the missing approval class, proposed bounded
+BBC sample target, isolated sample DB path, production `data/news.db`
+zero-delta proof plan, post-run analyzer plan, and no-action policy. Default
+exit 3 is the expected `approval-missing` classification.
+
+**Artifacts.** `tmp/internet-throughput-approval-blocked.json` is the blocked
+handoff packet. Refreshed no-contact artifacts:
+`tmp/throughput-approval-policy.json`,
+`tmp/throughput-approval-local-smoke-plan.json`,
+`tmp/crawl-packet-tiny-throughput-approval-plan.json`,
+`tmp/throughput-approval-analysis.json`,
+`tmp/throughput-approval-small-vs-medium-cadence.json`, and
+`tmp/throughput-approval-small-vs-medium-card.json`.
+
+**Verification.** `node --check` passed for touched analyzer files. Focused
+Jest passed `tests/tools/crawl/throughput-analyzer.test.js` with artifact
+`data/test-results/run-2026-06-13-232749443-8ef9c.json`. No internet crawl,
+remote contact, sample DB write, or production DB write was performed.
+
+## Priority update — Guardian local place/country hub sample ladder
+
+The next recursive prompt begins Guardian place-hub work with the local crawler
+only. Bounded local crawler runs may make HTTP requests directly from this
+machine to public news targets and write isolated sample DBs without a separate
+approval step. The goal is to make small/medium Guardian sample crawls find
+latest stories from place hubs, especially country hubs. The system must handle
+multiple URL patterns on the same site, country/place aliases, hub-to-story
+extraction, freshness/dedupe proof, and isolated sample crawl artifacts. Remote
+crawler servers, remote queues, deploy/sync/seed/maintenance, and production
+`data/news.db` writes remain out of scope unless explicitly requested.
+
+## 2026-06-14 — Guardian place/country hub inventory and local plans
+
+**Capability review.** Policy/safety are proven for local-only planning:
+Guardian helper commands do not contact remote crawler infrastructure and plan
+isolated `data/samples/guardian-*.db` DB paths. Guardian hub discovery is now
+partial/proven: explicit patterns cover `/world/<country>`,
+`/world/<region>-news`, `/<country>-news`, and
+`/international/world/<country>`, and saved-fixture extraction proves article
+link filtering/dedupe. Launch/watch/isolated DB proof for live Guardian samples
+is blocked locally until SQLite native access works in this Linux shell.
+
+**Implementation.** Added `tools/crawl/lib/guardian-place-hubs.js` and CLI
+`tools/crawl/guardian-place-hubs.js`. The helper builds an inventory of
+Guardian place/country hub URL patterns, classifies sample hub URLs, extracts
+latest Guardian article links from saved HTML with dedupe/rejection counts, and
+emits small/medium local-only sample crawl plans with gentle single-concurrency
+settings, `--crawl-db` + `--db` pointed at isolated sample DBs, and no remote
+server command. Follow-up added `db-plan` and `persist` modes: `db-plan` maps
+the heuristics into `place_hub_url_patterns` records, and `persist` applies
+them through `src/data/db/placeHubUrlPatternsStore.js` /
+`news-crawler-db.createSqlitePlaceHubUrlPatternsStore`. This keeps heuristic
+storage DB-owned and avoids ad hoc SQL.
+
+**Artifacts.** Refreshed/generated:
+`tmp/guardian-place-hub-inventory.json`,
+`tmp/guardian-place-hub-extraction-fixture.json`,
+`tmp/guardian-small-sample-plan.json`,
+`tmp/guardian-medium-sample-plan.json`,
+`tmp/guardian-small-run-explain.json`,
+`tmp/guardian-medium-run-explain.json`,
+`tmp/guardian-local-policy.json`, and
+`tmp/guardian-local-smoke-plan.json`. New DB persistence artifact:
+`tmp/guardian-place-hub-db-persistence-plan.json`. The saved Guardian fixture extraction
+found 25 unique article links and rejected 124 duplicate/non-article/external
+links.
+
+**Blocker.** Live Guardian small/medium sample crawls were not started because
+DB proof is not currently available in this Linux shell:
+`news-crawler-db/node_modules/better-sqlite3/.../better_sqlite3.node` fails
+with `invalid ELF header`, and `sqlite3` CLI is unavailable. Actual
+`guardian-place-hubs.js persist --db data/samples/...` hits the same native
+module failure. Running live crawls anyway would hide whether heuristics were
+stored, whether the isolated sample DB grew, and whether production
+`data/news.db` stayed unchanged.
+
+**Verification.** Syntax checks passed for the new helper files. Focused
+helper Jest passed 1 suite / 7 tests with artifact
+`data/test-results/run-2026-06-14-000622473-8926c.json`. The broader
+place-hub DB store suite still fails at startup on the known native-module
+mismatch, not on the new Guardian helper. No remote crawler contact, remote
+mutation, live Guardian crawl, or production DB write occurred.
+
+## 2026-06-14 — DB-backed Guardian small/medium local proofs
+
+**Capability review.** Local policy, Guardian helper artifacts, DB-owned
+heuristic persistence, isolated sample DB proof, and production isolation are
+now proven. Guardian runtime use of stored patterns is still partial: patterns
+are persisted through the DB module but the crawl path has not yet been proven
+to consult them for hub selection. Medium terminal/job observability is partial:
+DB proof passes, but job endpoint evidence timed out during watch and jobs were
+still reported `running` after the DB proof boundary.
+
+**Environment repair.** Rebuilt sibling `news-crawler-db` `better-sqlite3`
+from the Linux shell with `npm rebuild better-sqlite3 --build-from-source`.
+The native file changed from a Windows PE DLL to `ELF 64-bit LSB shared object,
+x86-64`, restoring `openNewsCrawlerDb(':memory:')` and DB-backed store tests.
+
+**DB heuristic persistence.** `guardian-place-hubs.js persist` wrote Guardian
+patterns through `src/data/db/placeHubUrlPatternsStore.js` into isolated sample
+DBs. Artifacts:
+`tmp/guardian-place-hub-db-persistence-result.json`,
+`tmp/guardian-small-db-persistence-result.json`, and
+`tmp/guardian-medium-db-persistence-result.json`. Each saved 4 records and
+read back all expected pattern types.
+
+**Small local Guardian proof.** First attempt failed as
+`no-output-timeout 45s` before launch output. The plan generator now includes
+`--launch-timeout 180 --no-output-timeout 180 --auto-stop`. Corrected rerun
+accepted 2/2 local jobs and reached DB proof. Final sample snapshot:
+`tmp/guardian-small-final-sample-after.json` with DB growth +751 URLs,
++56 responses, +54 successes, +18 content. Production isolation:
+`tmp/guardian-small-rerun-production-before.json` vs
+`tmp/guardian-small-rerun-production-after.json` success/content deltas 0 and
+latest fetched timestamp unchanged.
+
+**Medium local Guardian proof.** First attempt failed preflight while prior
+small jobs were still active. Rerun from idle server accepted 4/4 local jobs and
+reached DB proof. Final sample snapshot:
+`tmp/guardian-medium-final-sample-after.json` with DB growth +808 URLs,
++25 responses, +25 successes, +8 content. Production isolation:
+`tmp/guardian-medium-rerun-production-before.json` vs
+`tmp/guardian-medium-final-production-after.json` success/content deltas 0 and
+latest fetched timestamp unchanged. Caveat: watch recorded 8 job endpoint
+timeouts, and post-run job status still showed the four medium jobs as
+`running`; the local server was cleaned up with SIGKILL after SIGTERM did not
+exit.
+
+**Throughput.** `tmp/guardian-small-throughput-analysis.json` and
+`tmp/guardian-medium-throughput-analysis.json` prove DB growth but classify
+monitor visibility as limited (`elapsedSec:0`, no meter/fetch/limiter samples).
+Next node should add Guardian sample progress/meter/fetch/limiter artifacts so
+throughput, freshness, Crawl-delay, and latency can be attributed without raw
+logs.
+
+**Verification.** Syntax checks passed. Focused Jest passed
+`tests/tools/crawl/guardian-place-hubs.test.js` plus
+`src/data/db/__tests__/placeHubUrlPatternsStore.test.js`: 2 suites / 32 tests,
+artifact `data/test-results/run-2026-06-14-001753833-d8438.json`. No remote
+crawler contact, remote mutation, or production DB write occurred.
+
+## 2026-06-14 — Guardian stored-pattern runtime proof
+
+**Capability review.** Guardian DB persistence is now proven through the
+runtime prediction path, not only through helper readback. The crawler wiring is
+`CrawlerServiceWiring` -> `PlaceHubPatternLearningService` ->
+`PageExecutionService`, and page execution annotates/enqueues predicted place
+hubs from the learning service. Guardian hub discovery is proven for stored
+patterns and partial for live latest-story runtime use. Medium terminal job
+evidence and rich throughput/freshness/politeness samples remain partial.
+
+**Implementation.** Guardian DB records now store full-URL regexes compatible
+with `news-crawler-db` `place_hub_url_patterns.matchUrl(url, domain)`, which
+tests against the full URL. Added
+`guardian-place-hubs.js runtime-proof --db <isolated db>`: it persists Guardian
+patterns through the DB module, instantiates
+`PlaceHubPatternLearningService`, predicts representative Guardian hub/article
+URLs, and emits the matched stored pattern type/regex for each candidate.
+Tightened `PlaceHubPatternLearningService` fallback heuristics so date-like
+article paths such as `/world/2026/jun/14/...` are not classified as place hubs
+when no stored pattern matches.
+
+**Artifacts.** Refreshed no-contact/DB proof artifacts:
+`tmp/guardian-place-hub-inventory.json`,
+`tmp/guardian-place-hub-extraction-fixture.json`,
+`tmp/guardian-place-hub-db-persistence-plan.json`,
+`tmp/guardian-small-sample-plan.json`,
+`tmp/guardian-medium-sample-plan.json`, and
+`tmp/guardian-runtime-pattern-proof.json`. Runtime proof saved 4 Guardian
+patterns, read back all expected types, matched 4/4 expected Guardian hubs from
+stored patterns, and produced zero article-path false positives.
+
+**Verification.** Syntax checks passed for touched JS files. Focused Jest passed
+4 suites / 43 tests:
+`src/services/__tests__/PlaceHubPatternLearningService.test.js`,
+`tests/tools/crawl/guardian-place-hubs.test.js`,
+`src/data/db/__tests__/placeHubUrlPatternsStore.test.js`, and
+`src/core/crawler/__tests__/PageExecutionService.placeHubPatterns.test.js`.
+Test artifact: `data/test-results/run-2026-06-14-005303308-53cd3.json`.
+No additional live Guardian crawl was run because this node changed runtime
+proof/heuristic behavior, not sample launch/watch behavior.
+
+## 2026-06-14 — Guardian saved sample observability summaries
+
+**Capability review.** Local policy, Guardian hub discovery, runtime
+stored-pattern proof, isolated sample DB growth, and production zero-delta proof
+remain proven. Operator clarity improved: saved Guardian small/medium artifacts
+now produce one summary object instead of requiring raw launch/watch/progress/
+throughput log reading. Terminal job evidence remains partial because the
+existing runs did not include a post-DB-proof terminal wait.
+
+**Implementation.** Added `guardian-place-hubs.js sample-summary` and
+`buildGuardianSampleObservabilitySummary`. The summary reads saved launch JSON,
+watch stderr JSON lines, sample/prod before-after monitor snapshots,
+throughput analysis, runtime proof, and optional latest-story extraction
+artifact. It classifies accepted jobs, watch DB proof, terminal/job endpoint
+evidence (`not-observed`, `endpoint-unavailable`, `non-terminal`, or
+`terminal`), sample DB growth, production zero-delta, runtime stored-pattern
+proof, fixture latest-story extraction, and missing throughput inputs.
+
+**Artifacts.** Refreshed:
+`tmp/guardian-place-hub-inventory.json`,
+`tmp/guardian-place-hub-extraction-fixture.json`,
+`tmp/guardian-place-hub-db-persistence-plan.json`,
+`tmp/guardian-small-sample-plan.json`,
+`tmp/guardian-medium-sample-plan.json`,
+`tmp/guardian-observability-db-persistence-result.json`,
+`tmp/guardian-runtime-pattern-proof.json`,
+`tmp/guardian-small-observability-summary.json`, and
+`tmp/guardian-medium-observability-summary.json`. The small summary labels
+terminal evidence `not-observed`; the medium summary labels it
+`endpoint-unavailable` with 8 job poll errors. Both summaries preserve DB
+growth, production zero-delta, runtime stored-pattern proof, fixture
+latest-story extraction, and unknown throughput factors.
+
+**Verification.** Syntax checks passed for touched helper files. Focused Jest
+passed 4 suites / 44 tests:
+`tests/tools/crawl/guardian-place-hubs.test.js`,
+`src/services/__tests__/PlaceHubPatternLearningService.test.js`,
+`src/data/db/__tests__/placeHubUrlPatternsStore.test.js`, and
+`src/core/crawler/__tests__/PageExecutionService.placeHubPatterns.test.js`.
+Test artifact: `data/test-results/run-2026-06-14-012445105-1f1f8.json`.
+No live Guardian crawl, remote contact, remote mutation, or production DB write
+occurred in this node.
+
+## 2026-06-18 — Guardian progress and throughput summary inputs
+
+**Capability review.** Local Guardian policy, stored-pattern runtime proof,
+isolated sample DB growth, and production zero-delta proof remain proven. The
+new summary path improves operator clarity for elapsed timing and throughput
+input availability. Real raw meter/fetch/limiter sample capture remains
+partial for the saved Guardian runs: the analyzer proves DB growth, but robots
+Crawl-delay, adaptive backoff, network latency, and freshness/cache attribution
+are still `unknown` because those sample files were not captured during the
+prior live crawls.
+
+**Implementation.** `guardian-place-hubs.js sample-summary` now accepts raw
+`--meter-samples`, `--fetch-samples`, `--limiter-snapshots`, and `--cadence`
+inputs. When supplied, the Guardian summary builds a no-contact
+`crawl-throughput-analysis` internally and embeds meter, fetch/freshness,
+limiter, factor, diagnostic, and unknown-factor details. Summaries also include
+artifact timing: launch duration, watch observed seconds, sample/prod snapshot
+delta, and monitor elapsed source.
+
+**Artifacts.** Refreshed no-contact/isolated proof artifacts:
+`tmp/guardian-place-hub-inventory-progress.json`,
+`tmp/guardian-place-hub-extraction-progress.json`,
+`tmp/guardian-small-sample-plan-progress.json`,
+`tmp/guardian-medium-sample-plan-progress.json`,
+`tmp/guardian-place-hub-db-persistence-plan-progress.json`,
+`tmp/guardian-observability-progress-db-persistence-result.json`,
+`tmp/guardian-runtime-pattern-proof-progress.json`,
+`tmp/guardian-small-throughput-analysis-progress.json`,
+`tmp/guardian-medium-throughput-analysis-progress.json`,
+`tmp/guardian-small-observability-summary-progress.json`, and
+`tmp/guardian-medium-observability-summary-progress.json`. Small summary:
+accepted 2/2 jobs, DB growth +56 responses / +54 successes / +18 content,
+production delta 0, terminal evidence `not-observed`. Medium summary:
+accepted 4/4 jobs, DB growth +25 responses / +25 successes / +8 content,
+production delta 0, terminal evidence `endpoint-unavailable` with 8 job poll
+errors, watch observed 57.7 seconds.
+
+**Verification.** Syntax checks passed for touched Guardian helper files.
+Focused Jest passed `tests/tools/crawl/guardian-place-hubs.test.js` with 10
+tests; artifact
+`data/test-results/run-2026-06-18-003340836-cb1da.json`. No live Guardian
+crawl, remote contact, remote mutation, or production DB write occurred in this
+node.
+
+## 2026-06-18 — Guardian runtime latest-story proof
+
+**Capability review.** Guardian stored-pattern runtime use is proven, saved
+latest-story extraction is proven, and the runtime now preserves source hub
+metadata for article links from predicted place hubs. This closes the
+no-contact runtime/latest-story proof gap. Still partial: freshness for saved
+fixture stories is `unknown`, and the old live Guardian samples did not capture
+the new runtime metadata, raw meter/fetch/limiter samples, or terminal job proof.
+
+**Implementation.** `PageExecutionService` now predicts the current page as a
+place hub before enqueueing outgoing links. If the page matches a stored place
+hub pattern and the outgoing link is an article, the enqueue metadata includes
+`runtimeLatestStoryCandidate`, `latestStoryEvidenceSource`, `sourcePlaceHub`,
+`sourcePlaceHubPatternType`, `sourcePlaceHubPatternRegex`, confidence, kind,
+and reason. Added `guardian-place-hubs.js latest-story-proof` and
+`buildGuardianRuntimeLatestStoryProof` to produce a no-contact proof from saved
+Guardian hub HTML using the DB-backed runtime predictor.
+
+**Artifacts.** Refreshed:
+`tmp/guardian-place-hub-inventory-runtime-story.json`,
+`tmp/guardian-place-hub-extraction-runtime-story.json`,
+`tmp/guardian-small-sample-plan-runtime-story.json`,
+`tmp/guardian-medium-sample-plan-runtime-story.json`,
+`tmp/guardian-place-hub-db-persistence-plan-runtime-story.json`,
+`tmp/guardian-runtime-story-db-persistence-result.json`,
+`tmp/guardian-runtime-pattern-proof-runtime-story.json`,
+`tmp/guardian-runtime-latest-story-proof.json`,
+`tmp/guardian-small-throughput-analysis-runtime-story.json`,
+`tmp/guardian-medium-throughput-analysis-runtime-story.json`,
+`tmp/guardian-small-observability-summary-runtime-story.json`, and
+`tmp/guardian-medium-observability-summary-runtime-story.json`. Latest-story
+proof: source hub matched stored `world-country` pattern, extracted 25 stories,
+produced 25 runtime latest-story candidates, and had 0 article false positives.
+
+**Verification.** Syntax checks passed for `PageExecutionService` and Guardian
+helper files. Focused Jest passed 2 suites / 20 tests:
+`tests/tools/crawl/guardian-place-hubs.test.js` and
+`src/core/crawler/__tests__/PageExecutionService.placeHubPatterns.test.js`.
+Test artifact: `data/test-results/run-2026-06-18-131209349-3c5a8.json`.
+No live Guardian crawl, remote contact, remote mutation, or production DB write
+occurred in this node.
