@@ -260,7 +260,11 @@ class NewsCrawler extends Crawler {
 
     this.domain = new URL(startUrl).hostname;
     this.domainNormalized = normalizeHost(this.domain);
-    this.baseUrl = `${new URL(startUrl).protocol}//${this.domain}`;
+    // baseUrl must keep a non-default port (URL host, not hostname): robots.txt,
+    // sitemaps, and seed planning address the ORIGIN. Dropping the port sent
+    // robots requests for http://host:PORT crawls to port 80, which failed
+    // silently and left the crawl running without robots rules.
+    this.baseUrl = `${new URL(startUrl).protocol}//${new URL(startUrl).host}`;
 
     // Handle nested logging config from config.json (flatten for schema validation)
     const effectiveOptions = { ...options };
@@ -1905,13 +1909,32 @@ class NewsCrawler extends Crawler {
         return;
       }
       seen.add(key);
-      this.enqueueRequest({
+      // Seed-fetch guarantee: "crawl X" must actually fetch X. The seed is
+      // enqueued AFTER the sitemap flood, so it needs top priority to not
+      // starve behind thousands of discovered articles; allowRevisit rides in
+      // the type object (that is what eligibility reads) so a stored or
+      // planner-duplicated seed is still re-fetched — cheap, since stored
+      // validators turn the re-fetch into a conditional GET.
+      const accepted = this.enqueueRequest({
         url: targetUrl,
         depth: 0,
-        type: 'nav',
-        meta: meta || null
+        type: { kind: 'nav', allowRevisit: true, seedStartUrl: true, ...(meta || {}) },
+        meta: meta || null,
+        priority: 1e9
       });
-      seedsEnqueued += 1;
+      if (accepted) seedsEnqueued += 1;
+      // Always record the seed enqueue OUTCOME (persisted via the enhanced
+      // channel; mirrored to stderr with CRAWLER_LOG_QUEUE_DROPS). A rejected
+      // seed is the first suspect when the seed-fetched hard check fails.
+      try {
+        this.telemetry.enhancedQueueEvent({
+          action: 'seed-enqueue',
+          url: targetUrl,
+          depth: 0,
+          host: this._safeHostFromUrl(targetUrl),
+          reason: accepted ? 'accepted' : 'rejected'
+        });
+      } catch (_) { }
     };
 
     const startMeta = this.seedStartFromCache ? this._buildCachedSeedMeta('start-url') : null;
@@ -2030,7 +2053,9 @@ class NewsCrawler extends Crawler {
       const extraCtx = pick.context || {};
       try {
         const host = this._safeHostFromUrl(item.url);
-        this.telemetry.queueEvent({
+        // Enhanced channel: persisted to queue_events_enhanced so pulls are
+        // auditable next to 'enqueued' rows (seed-fetched forensics, c10).
+        this.telemetry.enhancedQueueEvent({
           action: 'dequeued',
           url: item.url,
           depth: item.depth,

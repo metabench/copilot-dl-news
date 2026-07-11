@@ -1,5 +1,6 @@
 const { CrawlerTelemetry } = require('../CrawlerTelemetry');
 
+
 describe('CrawlerTelemetry', () => {
   test('progress forwards force flag correctly', () => {
     const events = { emitProgress: jest.fn() };
@@ -97,5 +98,106 @@ describe('CrawlerTelemetry', () => {
 
     expect(telemetry.getProblemSummary()).toBe(summary);
     expect(events.getProblemSummary).toHaveBeenCalled();
+  });
+
+  describe('CRAWLER_LOG_QUEUE_DROPS stderr mirroring (cycle 10)', () => {
+    let stderrSpy;
+    let originalEnv;
+
+    beforeEach(() => {
+      originalEnv = process.env.CRAWLER_LOG_QUEUE_DROPS;
+      stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    });
+
+    afterEach(() => {
+      stderrSpy.mockRestore();
+      if (originalEnv === undefined) {
+        delete process.env.CRAWLER_LOG_QUEUE_DROPS;
+      } else {
+        process.env.CRAWLER_LOG_QUEUE_DROPS = originalEnv;
+      }
+    });
+
+    const written = () => stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+
+    test('knob off: drop events are not mirrored to stderr', () => {
+      delete process.env.CRAWLER_LOG_QUEUE_DROPS;
+      const events = { emitQueueEvent: jest.fn() };
+      const telemetry = new CrawlerTelemetry({ events });
+
+      telemetry.queueEvent({ action: 'drop', url: 'https://example.com/a', reason: 'overflow' });
+
+      expect(written()).toBe('');
+      expect(events.emitQueueEvent).toHaveBeenCalledTimes(1);
+    });
+
+    test('knob on: drop events are mirrored with reason/url/queueSize', () => {
+      process.env.CRAWLER_LOG_QUEUE_DROPS = '1';
+      const events = { emitQueueEvent: jest.fn() };
+      const telemetry = new CrawlerTelemetry({ events });
+
+      telemetry.queueEvent({
+        action: 'drop',
+        url: 'https://example.com/seed',
+        reason: 'robots-disallow',
+        depth: 0,
+        host: 'example.com',
+        queueSize: 12
+      });
+
+      const line = written();
+      expect(line).toContain('[queue] action=drop');
+      expect(line).toContain('reason=robots-disallow');
+      expect(line).toContain('url=https://example.com/seed');
+      expect(line).toContain('queueSize=12');
+    });
+
+    test('knob on: fetch-skip, seed-enqueue and dequeued mirror via enhanced channel', () => {
+      process.env.CRAWLER_LOG_QUEUE_DROPS = '1';
+      const events = { emitQueueEvent: jest.fn(), emitEnhancedQueueEvent: jest.fn() };
+      const telemetry = new CrawlerTelemetry({ events });
+
+      telemetry.enhancedQueueEvent({ action: 'fetch-skip', url: 'https://example.com/seed', reason: 'already-visited' });
+      telemetry.enhancedQueueEvent({ action: 'seed-enqueue', url: 'https://example.com/seed', reason: 'accepted' });
+      telemetry.enhancedQueueEvent({ action: 'dequeued', url: 'https://example.com/seed', depth: 0 });
+
+      const line = written();
+      expect(line).toContain('action=fetch-skip');
+      expect(line).toContain('reason=already-visited');
+      expect(line).toContain('action=seed-enqueue');
+      expect(line).toContain('action=dequeued');
+      expect(events.emitEnhancedQueueEvent).toHaveBeenCalledTimes(3);
+    });
+
+    test('knob on: enqueued events are never mirrored', () => {
+      process.env.CRAWLER_LOG_QUEUE_DROPS = '1';
+      const events = { emitQueueEvent: jest.fn(), emitEnhancedQueueEvent: jest.fn() };
+      const telemetry = new CrawlerTelemetry({ events });
+
+      telemetry.enhancedQueueEvent({ action: 'enqueued', url: 'https://example.com/x', queueSize: 3 });
+
+      expect(written()).toBe('');
+    });
+
+    test('falsy knob values (0/false/off) disable mirroring', () => {
+      const events = { emitQueueEvent: jest.fn() };
+      const telemetry = new CrawlerTelemetry({ events });
+      for (const value of ['0', 'false', 'off', '']) {
+        process.env.CRAWLER_LOG_QUEUE_DROPS = value;
+        telemetry.queueEvent({ action: 'drop', url: 'https://example.com/y', reason: 'dup' });
+      }
+      expect(written()).toBe('');
+    });
+
+    test('fallback path mirrors exactly once', () => {
+      process.env.CRAWLER_LOG_QUEUE_DROPS = '1';
+      const events = { emitQueueEvent: jest.fn() };
+      const telemetry = new CrawlerTelemetry({ events });
+
+      telemetry.enhancedQueueEvent({ action: 'drop', url: 'https://example.com/z', reason: 'dup' });
+
+      const occurrences = written().split('[queue]').length - 1;
+      expect(occurrences).toBe(1);
+    });
   });
 });

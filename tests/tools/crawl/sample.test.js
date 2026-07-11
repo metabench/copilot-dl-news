@@ -30,6 +30,25 @@ describe('sample.js parseSampleArgs', () => {
     expect(parseSampleArgs(['x.com', '--keep-db', '--fresh']).keepDb).toBe(false);
   });
 
+  test('--override collects repeatable k=v pairs and flows into run args', () => {
+    const a = parseSampleArgs(['x.com', '--override', 'preferCache=false', '--override', 'maxAgeMs=0']);
+    expect(a.overrides).toEqual(['preferCache=false', 'maxAgeMs=0']);
+    const runArgs = buildRunArgs(resolveSamplePlan(a));
+    const i = runArgs.indexOf('--override');
+    expect(i).toBeGreaterThan(-1);
+    expect(runArgs[i + 1]).toBe('preferCache=false');
+    expect(runArgs.filter((t) => t === '--override')).toHaveLength(2);
+    expect(() => parseSampleArgs(['x.com', '--override', 'nonsense'])).toThrow(/key=value/);
+  });
+
+  test('runWindowSinceIso windows keep-db runs only', () => {
+    const { runWindowSinceIso } = require('../../../tools/crawl/sample');
+    const t = Date.parse('2026-07-02T12:00:00.000Z');
+    expect(runWindowSinceIso(true, t)).toBe('2026-07-02T12:00:00.000Z');
+    expect(runWindowSinceIso(false, t)).toBeUndefined();
+    expect(runWindowSinceIso(true, NaN)).toBeUndefined();
+  });
+
   test('throws on an unknown flag', () => {
     expect(() => parseSampleArgs(['x.com', '--bogus'])).toThrow(/Unknown option/);
   });

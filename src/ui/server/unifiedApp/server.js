@@ -18,6 +18,7 @@
 
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const jsgui = require('jsgui3-html');
@@ -384,11 +385,81 @@ function mountDashboardModules(unifiedApp, options = {}) {
   unifiedApp.get('/api/crawl-telemetry/history', (req, res) => {
     const limitRaw = req.query && req.query.limit != null ? Number(req.query.limit) : undefined;
     const limit = Number.isFinite(limitRaw) ? Math.max(0, Math.trunc(limitRaw)) : undefined;
-    const history = crawlTelemetry?.bridge?.getHistory ? crawlTelemetry.bridge.getHistory(limit) : [];
+    let history = crawlTelemetry?.bridge?.getHistory ? crawlTelemetry.bridge.getHistory(limit) : [];
+    // ?topic= and ?severity= were silently ignored (filed 2026-07-07 crawl-ops
+    // c2 — error events were unfindable during a live failure). Filter here;
+    // topic/severity match is exact, applied BEFORE the limit trim would lose
+    // rarer events, so re-query without limit when filtering.
+    const topic = req.query && typeof req.query.topic === 'string' ? req.query.topic : null;
+    const severity = req.query && typeof req.query.severity === 'string' ? req.query.severity : null;
+    if (topic || severity) {
+      const all = crawlTelemetry?.bridge?.getHistory ? crawlTelemetry.bridge.getHistory(undefined) : history;
+      history = all.filter((e) => (!topic || e.topic === topic) && (!severity || e.severity === severity));
+      if (limit) history = history.slice(-limit);
+    }
     res.json({
       status: 'ok',
       items: history
     });
+  });
+
+  // ── Downloads-by-country chart (added 2026-07-11) ────────────────────────
+  // The per-country aggregation is heavy on a large DB, so it runs in a CHILD
+  // process (tools/crawl/country-download-stats.js) and is cached in memory;
+  // the page serves the latest snapshot and kicks a refresh when stale.
+  const countryStats = { data: null, generatedAt: 0, refreshing: false };
+  function refreshCountryStats() {
+    if (countryStats.refreshing) return;
+    countryStats.refreshing = true;
+    try {
+      const { spawn } = require('child_process');
+      const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+      const child = spawn(process.execPath, [path.join(repoRoot, 'tools', 'crawl', 'country-download-stats.js'), '--limit', '40'], { cwd: repoRoot, windowsHide: true });
+      let out = '';
+      child.stdout.on('data', (c) => { out += c.toString(); });
+      child.on('exit', () => {
+        try {
+          countryStats.data = JSON.parse(out);
+          countryStats.generatedAt = Date.now();
+        } catch (_) { /* keep previous snapshot */ }
+        countryStats.refreshing = false;
+      });
+      child.on('error', () => { countryStats.refreshing = false; });
+      setTimeout(() => { try { child.kill(); } catch (_) {} }, 360000);
+    } catch (_) { countryStats.refreshing = false; }
+  }
+
+  unifiedApp.get('/api/analytics/country-downloads', (req, res) => {
+    if (!countryStats.data || Date.now() - countryStats.generatedAt > 15 * 60 * 1000) refreshCountryStats();
+    res.json({
+      status: 'ok',
+      generatedAt: countryStats.generatedAt ? new Date(countryStats.generatedAt).toISOString() : null,
+      refreshing: countryStats.refreshing,
+      countries: (countryStats.data && countryStats.data.byCountryHub) || []
+    });
+  });
+
+  unifiedApp.get('/country-downloads', (_req, res) => {
+    res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><title>Downloads by Country</title>
+<style>body{font-family:Segoe UI,system-ui,sans-serif;background:#16130f;color:#e8e0d0;max-width:860px;margin:2rem auto;padding:0 1rem}h1{font-size:1.4rem}.row{display:flex;align-items:center;gap:10px;margin:6px 0}.label{width:160px;text-align:right;font-size:.9rem;text-transform:capitalize}.track{flex:1;background:#241f18;border-radius:4px;height:22px}.bar{height:22px;border-radius:4px;background:#4a90d9;transition:width .6s}.num{width:80px;font-variant-numeric:tabular-nums;font-size:.9rem}.sub{color:#998f7f;font-size:.85rem}</style></head>
+<body><h1>📊 Downloads by Country</h1><p class="sub" id="meta">Loading…</p><div id="chart"></div>
+<script>
+async function load(){
+  const r = await fetch('/api/analytics/country-downloads');
+  const j = await r.json();
+  const rows = j.countries || [];
+  document.getElementById('meta').textContent = j.generatedAt
+    ? ('Successful downloads under each country hub prefix — snapshot ' + j.generatedAt + (j.refreshing ? ' (refreshing…)' : ''))
+    : 'Computing first snapshot (heavy query — up to a few minutes)…';
+  if (!rows.length) return;
+  const max = Math.max(...rows.map(x => x.downloads));
+  document.getElementById('chart').innerHTML = rows.map(c =>
+    '<div class="row"><div class="label">' + c.country + '</div><div class="track"><div class="bar" style="width:' +
+    Math.max(1, Math.round(c.downloads / max * 100)) + '%"></div></div><div class="num">' +
+    c.downloads.toLocaleString() + '</div></div>').join('');
+}
+load(); setInterval(load, 60000);
+</script></body></html>`);
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1445,6 +1516,9 @@ function mountDashboardModules(unifiedApp, options = {}) {
     {
       id: 'remote-crawl-admin',
       mountPath: '/remote-crawl',
+      // Router source is not present in all checkouts; skip cleanly when absent
+      // instead of error-logging on every boot (2026-07-07 electron-ui-loop c3).
+      requiresModulePath: path.join(__dirname, '..', 'remoteCrawlAdmin', 'server.js'),
       full: () => {
         const { createRemoteCrawlAdminRouter } = require('../remoteCrawlAdmin/server');
         let defaultRemoteHost = '141.144.193.218:3200';
@@ -1459,7 +1533,16 @@ function mountDashboardModules(unifiedApp, options = {}) {
         });
       }
     }
-  ];
+  ].filter((mod) => {
+    if (mod.requiresModulePath && !fs.existsSync(mod.requiresModulePath)) {
+      log.info(`[UnifiedApp] Skipping optional module ${mod.id}: source not present`, {
+        moduleId: mod.id,
+        missingPath: mod.requiresModulePath
+      });
+      return false;
+    }
+    return true;
+  });
 
   const closers = [];
   closers.push(() => {

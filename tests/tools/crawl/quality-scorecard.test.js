@@ -65,6 +65,72 @@ describe('quality-scorecard buildQualityScorecard', () => {
     expect(card.checks.find((c) => c.id === 'success-rate').status).toBe('skip');
   });
 
+  test('an all-304 re-crawl passes: not-modified counts as evidence and success', () => {
+    const card = buildQualityScorecard({
+      signals: {
+        downloads: 0,
+        responses: 12,
+        notModifiedCount: 12,
+        successRate: 1, // deriveSignals computes (0 + 12×304)/12
+        statusTaxonomy: { '304': 12 },
+        freshness: { etag: 12, lastModified: 0, notModified: 12 },
+      },
+    });
+    const evidence = card.checks.find((c) => c.id === 'crawl-produced-evidence');
+    expect(evidence.status).toBe('pass');
+    expect(evidence.actual).toMatch(/304/);
+    const rate = card.checks.find((c) => c.id === 'success-rate');
+    expect(rate.status).toBe('pass');
+    expect(rate.actual).toMatch(/304/);
+    expect(card.verdict).toBe('PASS');
+  });
+
+  test('seed-fetched is a hard check: missing seed fails, fetched-with-404 passes', () => {
+    const failing = buildQualityScorecard({
+      signals: {
+        downloads: 5, responses: 5, statusTaxonomy: { '200': 5 },
+        seedFetch: { requested: 1, fetched: 0, missing: ['https://example.com/world'] },
+      },
+    });
+    expect(failing.verdict).toBe('FAIL');
+    const check = failing.checks.find((c) => c.id === 'seed-fetched');
+    expect(check.status).toBe('fail');
+    expect(check.detail).toMatch(/example\.com\/world/);
+
+    const passing = buildQualityScorecard({
+      signals: {
+        downloads: 5, responses: 5, statusTaxonomy: { '200': 5 },
+        seedFetch: { requested: 1, fetched: 1, missing: [] },
+      },
+    });
+    expect(passing.checks.find((c) => c.id === 'seed-fetched').status).toBe('pass');
+    expect(passing.verdict).toBe('PASS');
+  });
+
+  test('probe 404s and infra fetches are itemized without failing the card', () => {
+    const card = buildQualityScorecard({
+      signals: {
+        downloads: 1,
+        responses: 2,
+        successRate: 1, // 1 / (2 - 1 discovery miss)
+        notFoundCount: 1,
+        infra: { responses: 2, robots: 1, sitemapProbes: 1, ok: 1, notFound: 1 },
+        statusTaxonomy: { '200': 1, '404': 1 },
+        requestedHosts: ['127.0.0.1'],
+        distinctHostsFetched: 1,
+      },
+    });
+    expect(card.verdict).toBe('PASS');
+    const rate = card.checks.find((c) => c.id === 'success-rate');
+    expect(rate.status).toBe('pass');
+    expect(rate.actual).toMatch(/discovery miss/);
+    const infra = card.checks.find((c) => c.id === 'infra-fetches');
+    expect(infra.status).toBe('info');
+    expect(infra.actual).toMatch(/robots=1/);
+    const misses = card.checks.find((c) => c.id === 'discovery-misses');
+    expect(misses.status).toBe('info');
+  });
+
   test('a stall fails the no-stall check', () => {
     const card = buildQualityScorecard({
       signals: { downloads: 5, responses: 5, stalled: true, statusTaxonomy: { '200': 5 } },

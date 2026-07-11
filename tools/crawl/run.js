@@ -363,7 +363,13 @@ function parseArgs(argv) {
         if (!kv || !kv.includes('=')) throw new Error(`--override requires key=value, got: ${kv}`);
         runFlags.rawOverrides.push(kv);
         const [k, ...vparts] = kv.split('=');
-        runFlags.overrides[k] = vparts.join('=');
+        const raw = vparts.join('=');
+        // Coerce JSON-shaped values (true/false/numbers/null) so overrides like
+        // preferCache=false reach the crawler as real booleans, not truthy
+        // strings. Non-JSON values (paths, profile names) stay raw strings.
+        let value = raw;
+        try { value = JSON.parse(raw); } catch (_) { /* keep raw string */ }
+        runFlags.overrides[k] = value;
         break;
       }
       default:

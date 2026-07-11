@@ -64,8 +64,10 @@ function fmtSecs(ms) {
 // ── Local backend ───────────────────────────────────────────────
 
 function openLocalDb(dbPath) {
-  const Database = require('better-sqlite3');
-  return new Database(dbPath, { readonly: true, fileMustExist: true });
+  // DB access goes through the db module only (hub-loop P0, 2026-07-11) —
+  // no direct better-sqlite3 requires outside news-crawler-db.
+  const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
+  return openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
 }
 
 function makeLocalSampler(dbPath, sinceIso) {
@@ -80,9 +82,18 @@ function makeLocalSampler(dbPath, sinceIso) {
         try { db = openLocalDb(dbPath); }
         catch (err) { return { ok: false, reason: `db-open-failed:${err.message}` }; }
         try {
+          // `fetches` has been unpopulated since ~2026-03 (writers land in
+          // http_responses). Prefer whichever table holds rows, matching
+          // sample-db-signals' useHttp logic; datetime() normalizes the
+          // mixed T/space timestamp formats present in older rows.
+          const count = (table) => {
+            try { return db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n; }
+            catch (_e) { return -1; }
+          };
+          const table = count('http_responses') >= count('fetches') ? 'http_responses' : 'fetches';
           stmt = db.prepare(
             'SELECT COUNT(*) AS docs, COALESCE(SUM(bytes_downloaded), 0) AS bytes ' +
-            'FROM fetches WHERE fetched_at >= ?'
+            `FROM ${table} WHERE datetime(fetched_at) >= datetime(?)`
           );
         } catch (err) {
           return { ok: false, reason: `prepare-failed:${err.message}` };

@@ -1197,3 +1197,45 @@ See [docs/cli/crawl.md](../../docs/cli/crawl.md) for full CLI reference includin
 |-------|------------|
 | 🕷️ Crawler Singularity | Architecture-level crawler changes |
 | 💡UI Singularity💡 | Crawler UI / dashboard work |
+
+---
+
+## Dev Bridge & Operator-Machine Crawl Ops (added 2026-07-07, crawl-ops loop)
+
+The Cowork sandbox drives crawls ON the operator's Windows machine (production
+`data/news.db` on native disk) via `tools/dev-bridge/` — a zero-dependency
+file-RPC watcher started with `start-dev-bridge.cmd`. Full session evidence:
+`docs/sessions/2026-07-07-crawl-ops-loop/`.
+
+**Bridge protocol** (from the sandbox, through the shared folder): write
+`inbox/<globally-unique-id>.tmp`, `mv` to `.json` (atomic handoff; the mount
+races partial writes). Poll `outbox/<id>.result.json` by existence+size with
+retries. Action ids must be unique CASE-INSENSITIVELY and never reused
+(Windows filename collision + the mount serves overwritten files truncated at
+the old byte length). Directory listings through the mount lie; direct reads
+work. Allowlisted actions only — see ACTIONS in `dev-bridge.js` (ping/status/
+start-ui/stop-ui/restart-ui/start-electron/stop-electron/run-tests/
+run-node(repo scripts, timeoutMs ≤2000s)/tail-log/http(localhost only)/
+restart-bridge/kill-pid(repo-guarded)). Heartbeats: `state/hb-<n>.json` every
+30s (fresh-named). Managed processes are detached + registered in
+`state/procs.json` so they survive bridge restarts.
+
+**Crawl ops facts (hard-won 2026-07-07):**
+- In-process operation jobs starve the unified UI's event loop — API calls
+  can stall >15-20s under concurrent crawls. Use ≥60s client timeouts.
+- Job routes need FULL UUIDs (prefixes → 404). `POST /api/v1/crawl/jobs/<id>/stop`
+  works; terminal state lags up to ~1min. Failed jobs carry `job.error`
+  (registry fix 2026-07-07 — previously the reason was emitted but never stored).
+- The engine has NO wall-clock bound — use `tools/crawl/bounded-dispatch.js`
+  (`--url --max-downloads --budget-ms [--depth N]`; adopt-orphan; reports
+  underBudget/budgetEnforced). Engine default maxDepth=3.
+- ALWAYS preflight unproven domains: `tools/crawl/domain-preflight.js <url>`
+  (ok|bot-challenge|blocked|unreachable). Do-not-crawl as of 2026-07-07:
+  npr.org, reuters.com (bot-challenged).
+- Verify evidence read-only: `tools/crawl/verify-crawl-delta.js --since <ISO>`
+  (timestamp comparisons are datetime()-normalized; mixed T/space formats in
+  the DB). `fetches` table is dead (unpopulated since ~2026-03) — use
+  http_responses; the scorecard's settle fix (waitForEvidenceSettle) closes
+  the score-before-writer-commits race.
+- Sitemap fetches are conditional since 2026-07-07 (file cache + ETag/304 —
+  live-proven: 304s at 0 bytes on repeat crawls).

@@ -310,7 +310,16 @@ describe('QueueManager basic', () => {
 
     const result = await qm.pullNext();
     expect(result).not.toBeNull();
-    expect(result.context).toBeNull();
+    // Contract: a cache miss falls back to a NETWORK fetch — the context must
+    // carry no cache directives. requestMeta propagation is intended behavior
+    // (downstream fetch-policy handling reads it), so the context need not be
+    // null. (cycle 12: test previously asserted the stale implementation
+    // detail `context === null` and had failed since requestMeta propagation
+    // was committed in 811b7def.)
+    expect(result.context?.forceCache).toBeFalsy();
+    expect(result.context?.cachedPage).toBeUndefined();
+    expect(result.context?.processCacheResult).toBeFalsy();
+    expect(result.context?.requestMeta).toEqual(meta);
     expect(cacheGet).toHaveBeenCalledWith(targetUrl);
   });
 

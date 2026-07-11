@@ -169,22 +169,32 @@ class RobotsCache {
     }
 
     const headers = this._conditionalHeaders(cached);
+    const requestStartedIso = new Date(this.now()).toISOString();
     const response = await this._fetchWithRetry(headers);
+    const fetchedAtIso = new Date(this.now()).toISOString();
     if (!response) {
       return cached ? this._result('stale-cache', cached) : { loaded: false, source: 'fetch-failed' };
     }
     if (response.status === 304 && cached) {
+      await this._recordFetchVisibility(response, { requestStartedIso, fetchedAtIso, bytes: 0 });
       const touched = await this._touchCache(db, cached);
       return this._result('revalidated-304', { ...cached, fetchedAt: touched || new Date(this.now()).toISOString() });
     }
     if (response.status === 404) {
+      await this._recordFetchVisibility(response, { requestStartedIso, fetchedAtIso, bytes: 0 });
       return { loaded: false, source: 'not-found', httpStatus: 404 };
     }
     if (!response.ok) {
+      await this._recordFetchVisibility(response, { requestStartedIso, fetchedAtIso, bytes: 0 });
       return cached ? this._result('stale-cache', cached) : { loaded: false, source: 'http-error', httpStatus: response.status };
     }
 
     const robotsTxt = await response.text();
+    await this._recordFetchVisibility(response, {
+      requestStartedIso,
+      fetchedAtIso,
+      bytes: Buffer.byteLength(robotsTxt, 'utf8')
+    });
     const record = {
       domain: this.domain,
       robotsTxt,
@@ -214,6 +224,28 @@ class RobotsCache {
         ? record.sitemapUrls
         : extractSitemapUrls(record.robotsTxt, this.baseUrl)
     };
+  }
+
+  /**
+   * Fetch-visibility: land the robots.txt request in http_responses like any
+   * other real HTTP request, so politeness/throughput accounting sees it.
+   * Best-effort — recording must never break robots loading.
+   */
+  async _recordFetchVisibility(response, { requestStartedIso, fetchedAtIso, bytes = 0 } = {}) {
+    try {
+      const adapter = typeof this.dbAdapter === 'function' ? this.dbAdapter() : this.dbAdapter;
+      if (!adapter || typeof adapter.insertHttpResponse !== 'function') return;
+      await adapter.insertHttpResponse({
+        url: this.robotsUrl,
+        request_started_at: requestStartedIso,
+        fetched_at: fetchedAtIso,
+        http_status: response.status,
+        content_type: getHeader(response.headers, 'content-type'),
+        etag: getHeader(response.headers, 'etag'),
+        last_modified: getHeader(response.headers, 'last-modified'),
+        bytes_downloaded: bytes
+      });
+    } catch (_error) { /* visibility is best-effort */ }
   }
 
   _resolveDb() {

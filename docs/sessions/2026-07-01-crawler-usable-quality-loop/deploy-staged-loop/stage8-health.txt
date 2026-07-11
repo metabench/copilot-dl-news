@@ -1,0 +1,1 @@
+  ✅ multi-domain server healthy — 10 domains, 0 running, 3 stored

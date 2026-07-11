@@ -31,7 +31,7 @@ const RUN_SCRIPT = path.join(__dirname, 'run.js');
 const SAMPLES_DIR = path.join(REPO_ROOT, 'data', 'samples');
 
 const { uniqueHostnamesFromUrls, normalizeUrl } = require('./run');
-const { readSampleDbSignals, NativeDbUnavailableError } = require('./lib/sample-db-signals');
+const { readSampleDbSignals, waitForEvidenceSettle, NativeDbUnavailableError } = require('./lib/sample-db-signals');
 const { sampleWriterDb } = require('./lib/crawl-progress-monitor');
 const { buildQualityScorecard, renderScorecardText } = require('./lib/quality-scorecard');
 
@@ -56,6 +56,7 @@ function parseSampleArgs(argv = []) {
     watchTimeoutSec: undefined,
     json: false,
     keepDb: false,
+    overrides: [],
     help: false,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -74,6 +75,12 @@ function parseSampleArgs(argv = []) {
       case '--json': args.json = true; break;
       case '--keep-db': args.keepDb = true; break;
       case '--fresh': args.keepDb = false; break;
+      case '--override': {
+        const kv = String(next() || '');
+        if (!kv.includes('=')) throw new Error(`--override requires key=value, got: ${kv}`);
+        args.overrides.push(kv);
+        break;
+      }
       default:
         if (typeof t === 'string' && !t.startsWith('-')) {
           // URL / hostname / csv of targets
@@ -107,6 +114,7 @@ function resolveSamplePlan(args) {
     watchTimeoutSec: Number.isFinite(args.watchTimeoutSec) ? args.watchTimeoutSec : caps.watchTimeoutSec,
     keepDb: args.keepDb === true,
     json: args.json === true,
+    overrides: Array.isArray(args.overrides) ? args.overrides.slice() : [],
   };
 }
 
@@ -124,6 +132,9 @@ function buildRunArgs(plan) {
   if (Number.isFinite(plan.perDomainIntervalMs)) {
     out.push('--per-domain-interval-ms', String(plan.perDomainIntervalMs));
   }
+  for (const kv of plan.overrides || []) {
+    out.push('--override', kv);
+  }
   // Follow the crawl to completion so the sample DB is complete before scoring:
   //  --watch-min-fetches 1               wait for real fetch evidence (avoids a
   //                                      "stable at zero" early stop before the
@@ -140,6 +151,17 @@ function buildRunArgs(plan) {
   out.push('--auto-stop');
   if (plan.json) out.push('--json');
   return out;
+}
+
+/**
+ * PURE. Per-run signal window: accumulating (--keep-db) runs score only rows
+ * fetched after launch; fresh-DB runs score the whole DB (it IS the run).
+ */
+function runWindowSinceIso(keepDb, startedAtMs) {
+  if (!keepDb) return undefined;
+  const t = Number(startedAtMs);
+  if (!Number.isFinite(t) || t <= 0) return undefined;
+  return new Date(t).toISOString();
 }
 
 function isInsideSamplesDir(p) {
@@ -222,6 +244,7 @@ function renderHelp() {
     '  --per-domain-interval-ms <n>  extra politeness spacing per host',
     '  --watch-timeout <sec>       give up following the crawl after N seconds',
     '  --keep-db                   accumulate into the existing sample DB (default: fresh)',
+    '  --override <k=v>            repeatable; forwarded to run.js crawl overrides (e.g. preferCache=false)',
     '  --json                      machine-readable scorecard on stdout',
     '',
     'Exit codes: 0 PASS · 2 FAIL · 3 usage/preflight error',
@@ -272,11 +295,22 @@ async function runCli(argv = process.argv.slice(2)) {
   const elapsedSec = Math.round((Date.now() - startedAt) / 100) / 10;
   log(`\n[sample] crawl finished (run.js exit=${launchExitCode}, ${elapsedSec}s); scoring sample DB…`);
 
+  // Late-writer guard: run.js may exit while the crawl child is still
+  // committing; score only after evidence counts hold steady (c15 root cause).
+  try {
+    const settle = await waitForEvidenceSettle(plan.dbPath);
+    log(`[sample] evidence ${settle.settled ? 'settled' : 'still moving'} after ${settle.polls} poll(s) (${settle.last})`);
+  } catch (_e) { /* settling is best-effort; scoring proceeds regardless */ }
+
   let signals;
   try {
     signals = readSampleDbSignals(plan.dbPath, {
       baseline,
+      // Accumulating runs must score only THIS run's rows; fresh DBs are the
+      // run, so no window (also avoids clipping on any clock skew).
+      sinceIso: runWindowSinceIso(plan.keepDb, startedAt),
       requestedHosts: plan.requestedHosts,
+      requestedUrls: plan.urls,
       elapsedSec,
       launchExitCode,
       stalled: false,
@@ -321,6 +355,7 @@ module.exports = {
   parseSampleArgs,
   resolveSamplePlan,
   buildRunArgs,
+  runWindowSinceIso,
   isInsideSamplesDir,
   runCli,
 };

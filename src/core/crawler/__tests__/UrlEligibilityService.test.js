@@ -23,6 +23,7 @@ describe('UrlEligibilityService', () => {
       knownArticlesCache,
       getDbAdapter: overrides.getDbAdapter || (() => adapter),
       maxAgeHubMs: overrides.maxAgeHubMs,
+      maxAgeArticleMs: overrides.maxAgeArticleMs,
       urlDecisionOrchestrator: overrides.urlDecisionOrchestrator || null
     });
   };
@@ -239,6 +240,85 @@ describe('UrlEligibilityService', () => {
 
       expect(result.status).toBe('drop');
       expect(result.reason).toBe('already-processed');
+    });
+  });
+
+  describe('article freshness with maxAgeArticleMs', () => {
+    const buildDb = (fetchedAtIso) => ({
+      prepare: jest.fn((sql) => {
+        if (sql.includes('content_storage')) {
+          return { get: jest.fn(() => ({ ok: 1 })) };
+        }
+        if (sql.includes('ORDER BY hr.fetched_at DESC')) {
+          return { get: jest.fn(() => ({ fetched_at: fetchedAtIso })) };
+        }
+        throw new Error(`Unexpected SQL: ${sql}`);
+      })
+    });
+
+    const evaluateArticle = (service) => service.evaluate({
+      url: 'https://example.com/news/story',
+      depth: 0,
+      type: 'article',
+      queueSize: 0,
+      isDuplicate: () => false
+    });
+
+    it('drops stored articles when no age window is configured (default behavior)', () => {
+      const adapter = {
+        isEnabled: () => true,
+        getDb: () => buildDb(new Date(Date.now() - 60 * 60 * 1000).toISOString())
+      };
+      const service = createService({ getDbAdapter: () => adapter });
+      const result = evaluateArticle(service);
+      expect(result.status).toBe('drop');
+      expect(result.reason).toBe('already-processed');
+    });
+
+    it('allows revalidation when the stored article is older than maxAgeArticleMs', () => {
+      const adapter = {
+        isEnabled: () => true,
+        getDb: () => buildDb(new Date(Date.now() - 60 * 60 * 1000).toISOString())
+      };
+      const service = createService({ getDbAdapter: () => adapter, maxAgeArticleMs: 60 * 1000 });
+      const result = evaluateArticle(service);
+      expect(result.status).toBe('allow');
+    });
+
+    it('maxAgeArticleMs=0 means always revalidate', () => {
+      const adapter = {
+        isEnabled: () => true,
+        getDb: () => buildDb(new Date(Date.now() - 10).toISOString())
+      };
+      const service = createService({ getDbAdapter: () => adapter, maxAgeArticleMs: 0 });
+      const result = evaluateArticle(service);
+      expect(result.status).toBe('allow');
+    });
+
+    it('still drops articles fetched within the age window', () => {
+      const adapter = {
+        isEnabled: () => true,
+        getDb: () => buildDb(new Date(Date.now() - 1000).toISOString())
+      };
+      const service = createService({ getDbAdapter: () => adapter, maxAgeArticleMs: 60 * 60 * 1000 });
+      const result = evaluateArticle(service);
+      expect(result.status).toBe('drop');
+      expect(result.reason).toBe('already-processed');
+    });
+
+    it('bypasses the known-articles cache when an age window is configured', () => {
+      const knownArticlesCache = new Map([['https://example.com/news/story', true]]);
+      const adapter = {
+        isEnabled: () => true,
+        getDb: () => buildDb(new Date(Date.now() - 60 * 60 * 1000).toISOString())
+      };
+      const service = createService({
+        getDbAdapter: () => adapter,
+        knownArticlesCache,
+        maxAgeArticleMs: 60 * 1000
+      });
+      const result = evaluateArticle(service);
+      expect(result.status).toBe('allow');
     });
   });
 });

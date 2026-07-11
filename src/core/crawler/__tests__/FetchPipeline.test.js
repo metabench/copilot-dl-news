@@ -135,6 +135,41 @@ describe('FetchPipeline', () => {
     });
   });
 
+  it('re-consults the DB for validators after a null first lookup (within-run re-fetch)', async () => {
+    const deps = baseDeps();
+    let storedHeaders = null; // no validators yet on first fetch
+    const dbAdapter = {
+      isEnabled: () => true,
+      getArticleHeaders: jest.fn(() => storedHeaders),
+      insertHttpResponse: jest.fn(async () => {})
+    };
+    deps.fetchFn = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: {
+        get: (key) => {
+          if (key === 'content-type') return 'text/html';
+          if (key === 'etag') return '"v1"';
+          return null;
+        }
+      },
+      text: async () => '<html><body>hub</body></html>'
+    }));
+
+    const pipeline = new FetchPipeline({ ...deps, getDbAdapter: () => dbAdapter, fetchFn: deps.fetchFn });
+
+    await pipeline.fetch({ url: 'https://example.com/hub', context: { depth: 0, allowRevisit: true } });
+    const firstHeaders = deps.fetchFn.mock.calls[0][1].headers;
+    expect(firstHeaders['If-None-Match']).toBeUndefined();
+
+    // Validators get persisted between fetches (e.g. hub page stored to DB).
+    storedHeaders = { etag: '"v1"', last_modified: null, fetched_at: '2026-07-02T10:00:00.000Z' };
+
+    await pipeline.fetch({ url: 'https://example.com/hub', context: { depth: 0, allowRevisit: true } });
+    const secondHeaders = deps.fetchFn.mock.calls[deps.fetchFn.mock.calls.length - 1][1].headers;
+    expect(secondHeaders['If-None-Match']).toBe('"v1"');
+  });
+
   it('classifies conditional 200 responses with sitemap lastmod as updated freshness', async () => {
     const deps = baseDeps();
     const dbAdapter = {
@@ -455,6 +490,92 @@ describe('FetchPipeline', () => {
       expect(result.source).toBe('skipped');
       expect(result.meta.status).toBe('skipped-deferred');
       expect(result.meta.reason).toBe('domain-throttled');
+    });
+  });
+
+  describe('fetch-skip visibility (cycle 10)', () => {
+    const withQueueTelemetry = (deps) => {
+      deps.telemetry = {
+        telemetry: jest.fn(),
+        queueEvent: jest.fn(),
+        enhancedQueueEvent: jest.fn()
+      };
+      return deps;
+    };
+
+    it('emits a fetch-skip queue event when the orchestrator skips a dequeued URL', async () => {
+      const deps = withQueueTelemetry(baseDeps());
+      deps.getUrlDecision = jest.fn();
+      const urlDecisionOrchestrator = {
+        decide: jest.fn(async () => ({
+          action: 'skip',
+          reason: 'already-visited',
+          analysis: { normalized: 'https://example.com/seed' }
+        }))
+      };
+
+      const pipeline = new FetchPipeline({ ...deps, urlDecisionOrchestrator });
+      const result = await pipeline.fetch({
+        url: 'https://example.com/seed',
+        context: { depth: 0, allowRevisit: true }
+      });
+
+      expect(result.source).toBe('skipped');
+      expect(deps.telemetry.enhancedQueueEvent).toHaveBeenCalledTimes(1);
+      const evt = deps.telemetry.enhancedQueueEvent.mock.calls[0][0];
+      expect(evt.action).toBe('fetch-skip');
+      expect(evt.url).toBe('https://example.com/seed');
+      expect(evt.reason).toBe('orchestrator:already-visited');
+      expect(evt.host).toBe('example.com');
+      expect(evt.depth).toBe(0);
+    });
+
+    it('emits a fetch-skip queue event for already-visited URLs without allowRevisit', async () => {
+      const deps = withQueueTelemetry(baseDeps());
+      deps.hasVisited = jest.fn(() => true);
+
+      const pipeline = new FetchPipeline({ ...deps });
+      const result = await pipeline.fetch({
+        url: 'https://example.com/page',
+        context: { depth: 1, allowRevisit: false }
+      });
+
+      expect(result.source).toBe('skipped');
+      expect(result.meta.reason).toBe('already-visited');
+      const evt = deps.telemetry.enhancedQueueEvent.mock.calls[0][0];
+      expect(evt.action).toBe('fetch-skip');
+      expect(evt.reason).toBe('already-visited');
+    });
+
+    it('emits a fetch-skip queue event when robots/domain policy blocks the fetch', async () => {
+      const deps = withQueueTelemetry(baseDeps());
+      deps.isAllowed = jest.fn(() => false);
+
+      const pipeline = new FetchPipeline({ ...deps });
+      const result = await pipeline.fetch({
+        url: 'https://example.com/blocked',
+        context: { depth: 0 }
+      });
+
+      expect(result.source).toBe('skipped');
+      const evt = deps.telemetry.enhancedQueueEvent.mock.calls[0][0];
+      expect(evt.action).toBe('fetch-skip');
+      expect(evt.reason).toBe('robots-disallow');
+    });
+
+    it('does not emit fetch-skip events for successful cache serves', async () => {
+      const deps = withQueueTelemetry(baseDeps());
+      const cached = { html: '<html></html>', crawledAt: new Date().toISOString(), source: 'db' };
+      deps.getCachedArticle.mockResolvedValue(cached);
+
+      const pipeline = new FetchPipeline({ ...deps });
+      const result = await pipeline.fetch({
+        url: 'https://example.com/page',
+        context: { forceCache: true, depth: 0, allowRevisit: false }
+      });
+
+      expect(result.source).toBe('cache');
+      expect(deps.telemetry.enhancedQueueEvent).not.toHaveBeenCalled();
     });
   });
 });

@@ -130,6 +130,49 @@ describe('RobotsCache', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  test('records the robots.txt fetch into http_responses (fetch-visibility)', async () => {
+    const response = {
+      ok: true,
+      status: 200,
+      headers: { etag: '"vis"', 'content-type': 'text/plain; charset=utf-8' },
+      text: async () => 'User-agent: *\nAllow: /'
+    };
+    const dbAdapter = {
+      getRobotsCache: jest.fn(async () => null),
+      upsertRobotsCache: jest.fn(async () => {}),
+      insertHttpResponse: jest.fn(async () => 1)
+    };
+
+    await makeCache({ fetchImpl: jest.fn(async () => response), dbAdapter }).load();
+
+    expect(dbAdapter.insertHttpResponse).toHaveBeenCalledTimes(1);
+    expect(dbAdapter.insertHttpResponse).toHaveBeenCalledWith(expect.objectContaining({
+      url: 'https://example.com/robots.txt',
+      http_status: 200,
+      content_type: 'text/plain; charset=utf-8',
+      etag: '"vis"',
+      bytes_downloaded: expect.any(Number)
+    }));
+  });
+
+  test('fetch-visibility recording failures never break robots loading', async () => {
+    const response = {
+      ok: true,
+      status: 200,
+      headers: {},
+      text: async () => 'User-agent: *\nAllow: /'
+    };
+    const dbAdapter = {
+      getRobotsCache: jest.fn(async () => null),
+      upsertRobotsCache: jest.fn(async () => {}),
+      insertHttpResponse: jest.fn(async () => { throw new Error('db closed'); })
+    };
+
+    const result = await makeCache({ fetchImpl: jest.fn(async () => response), dbAdapter }).load();
+    expect(result.loaded).toBe(true);
+    expect(result.source).toBe('network');
+  });
+
   test('parses crawl delay with agent-specific and wildcard fallback', () => {
     const robotsTxt = [
       'User-agent: NewsBot',

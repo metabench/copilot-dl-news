@@ -1,0 +1,83 @@
+{
+  "mode": "preflight-only",
+  "force": false,
+  "forceBuild": false,
+  "sshTarget": "ubuntu@141.144.193.218",
+  "statusUrl": "http://141.144.193.218:3200/api/status",
+  "remoteDir": "~/apps/remote-crawler-v2",
+  "service": "crawl-server-v4",
+  "config": "deploy/remote-crawler-v2/crawl-domains.news-10x1000.json",
+  "remoteDb": "data/news.db",
+  "buildDir": "/sessions/epic-tender-newton/mnt/repos/copilot-dl-news/tmp/remote-crawler-v2-deploy",
+  "dbModuleDir": "/sessions/epic-tender-newton/mnt/repos/news-crawler-db",
+  "busy": {
+    "busy": true,
+    "reasons": [
+      "1273 pending URL(s)"
+    ],
+    "runningDomains": [],
+    "pending": 1273,
+    "currentlyRunning": 0,
+    "orchestratorRunning": false,
+    "activeThroughput": false
+  },
+  "packageShape": [
+    "deploy/remote-crawler-v2/**",
+    "src/db/openNewsCrawlerDb.js",
+    "vendor/news-crawler-db/dist/db/**",
+    "package.json with production runtime dependencies"
+  ],
+  "generatedAt": "2026-07-07T16:20:06.699Z",
+  "localBuild": {
+    "current": false,
+    "manifestPath": "/sessions/epic-tender-newton/mnt/repos/copilot-dl-news/tmp/remote-crawler-v2-deploy/build-manifest.json",
+    "tarball": "/sessions/epic-tender-newton/mnt/repos/copilot-dl-news/tmp/remote-crawler-v2-deploy/remote-crawler-v2-deploy.tar.gz",
+    "tarballExists": true,
+    "buildId": "20260527035514",
+    "builtAt": "2026-05-27T03:55:14.918Z",
+    "builtAtMs": 1779854114918,
+    "sourceLatestPath": "../news-crawler-db/src/db/sqlite/access/legacy-StatementManager.ts",
+    "sourceLatestMtimeMs": 1782964194102.2595,
+    "sourceFileCount": 406,
+    "staleReasons": [
+      "source newer than local build: ../news-crawler-db/src/db/sqlite/access/legacy-StatementManager.ts"
+    ]
+  },
+  "remoteBuild": {
+    "schemaVersion": 1,
+    "buildId": "20260527035514",
+    "builtAt": "2026-05-27T03:55:14.918Z",
+    "builtAtMs": 1779854114918,
+    "source": {
+      "fileCount": 406,
+      "latestMtimeMs": 1779819987996.0842,
+      "latestMtime": "2026-05-26T18:26:27.996Z",
+      "latestPath": "../news-crawler-db/src/db/sqlite/access/graph.ts"
+    }
+  },
+  "comparison": {
+    "deployNeeded": false,
+    "reason": "remote build 2026-05-27T03:55:14.918Z is current",
+    "remoteBuild": {
+      "schemaVersion": 1,
+      "buildId": "20260527035514",
+      "builtAt": "2026-05-27T03:55:14.918Z",
+      "builtAtMs": 1779854114918,
+      "source": {
+        "fileCount": 406,
+        "latestMtimeMs": 1779819987996.0842,
+        "latestMtime": "2026-05-26T18:26:27.996Z",
+        "latestPath": "../news-crawler-db/src/db/sqlite/access/graph.ts"
+      }
+    }
+  },
+  "decision": "blocked-busy",
+  "readyForLiveSeedProof": false,
+  "operatorMessage": "Remote has running or retained pending work; do not deploy, force deploy, or seed without resolving queue readiness and explicit approval.",
+  "actionPolicy": {
+    "proofOnly": true,
+    "buildsLocalPackage": false,
+    "deploysRemote": false,
+    "stopsRemote": false
+  }
+}

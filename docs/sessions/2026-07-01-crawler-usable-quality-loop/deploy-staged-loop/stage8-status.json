@@ -1,0 +1,216 @@
+{
+  "service": "Multi-Domain Crawl Server v4",
+  "version": "4.0.0",
+  "build": {
+    "schemaVersion": 1,
+    "buildId": "20260527035514",
+    "builtAt": "2026-05-27T03:55:14.918Z",
+    "builtAtMs": 1779854114918,
+    "source": {
+      "fileCount": 406,
+      "latestMtimeMs": 1779819987996.0842,
+      "latestMtime": "2026-05-26T18:26:27.996Z",
+      "latestPath": "../news-crawler-db/src/db/sqlite/access/graph.ts"
+    }
+  },
+  "schemaVersion": 4,
+  "uptime": 3497958,
+  "memory": {
+    "rss": 101,
+    "heapUsed": 27,
+    "heapTotal": 33
+  },
+  "idle": {
+    "minutes": 58295,
+    "timeoutMin": 0,
+    "autoShutdown": false
+  },
+  "orchestrator": {
+    "running": false,
+    "maxConcurrent": 10,
+    "currentlyRunning": 0,
+    "totalDomains": 10
+  },
+  "shield": {
+    "active": true,
+    "startedAt": "2026-05-28T04:40:49.817Z",
+    "sampledAt": "2026-07-07T16:20:08.015Z",
+    "rssMb": 101,
+    "heapUsedMb": 27,
+    "heapTotalMb": 33
+  },
+  "throughput": {
+    "fetchesPerSec": 0,
+    "writesPerSec": 0,
+    "windowSec": 1
+  },
+  "wal": {
+    "pendingCheckpoints": 0
+  },
+  "totals": {
+    "fetched": 3,
+    "stored": 3,
+    "errors": 0,
+    "pending": 1273
+  },
+  "domains": [
+    {
+      "domain": "bbc.com",
+      "state": "stopped",
+      "isRunning": false,
+      "startedAt": "2026-05-28T04:44:14.521Z",
+      "stoppedAt": "2026-05-28T04:44:15.470Z",
+      "stats": {
+        "fetched": 3,
+        "done": 3,
+        "errors": 0,
+        "pending": 1273,
+        "maxDepth": 2,
+        "seedQueued": 3,
+        "seedAlreadyKnown": 0,
+        "seedRefreshed": 0,
+        "discoveredQueued": 66,
+        "discoveredAlreadyKnown": 294,
+        "discoveredInvalid": 0,
+        "discoveredOutsideDomain": 0,
+        "depthLimitSkipped": 0,
+        "refreshed": 0
+      },
+      "contentPipeline": {
+        "totalStored": 3,
+        "totalCompressedMB": 0.17
+      },
+      "rateLimiter": null,
+      "fatalState": null,
+      "maxPages": 1000,
+      "maxDepth": 2,
+      "seedUrls": 3
+    },
+    {
+      "domain": "theguardian.com",
+      "state": "stopped",
+      "isRunning": false,
+      "startedAt": null,
+      "stoppedAt": "2026-05-28T04:46:37.407Z",
+      "stats": {},
+      "contentPipeline": null,
+      "rateLimiter": null,
+      "fatalState": null,
+      "maxPages": 1000,
+      "maxDepth": 2,
+      "seedUrls": 1
+    },
+    {
+      "domain": "reuters.com",
+      "state": "stopped",
+      "isRunning": false,
+      "startedAt": null,
+      "stoppedAt": "2026-05-28T04:46:37.571Z",
+      "stats": {},
+      "contentPipeline": null,
+      "rateLimiter": null,
+      "fatalState": null,
+      "maxPages": 1000,
+      "maxDepth": 2,
+      "seedUrls": 1
+    },
+    {
+      "domain": "nytimes.com",
+      "state": "stopped",
+      "isRunning": false,
+      "startedAt": null,
+      "stoppedAt": "2026-05-28T04:46:37.736Z",
+      "stats": {},
+      "contentPipeline": null,
+      "rateLimiter": null,
+      "fatalState": null,
+      "maxPages": 1000,
+      "maxDepth": 2,
+      "seedUrls": 1
+    },
+    {
+      "domain": "washingtonpost.com",
+      "state": "stopped",
+      "isRunning": false,
+      "startedAt": null,
+      "stoppedAt": "2026-05-28T04:46:37.899Z",
+      "stats": {},
+      "contentPipeline": null,
+      "rateLimiter": null,
+      "fatalState": null,
+      "maxPages": 1000,
+      "maxDepth": 2,
+      "seedUrls": 1
+    },
+    {
+      "domain": "cnn.com",
+      "state": "stopped",
+      "isRunning": false,
+      "startedAt": null,
+      "stoppedAt": "2026-05-28T04:46:38.060Z",
+      "stats": {},
+      "contentPipeline": null,
+      "rateLimiter": null,
+      "fatalState": null,
+      "maxPages": 1000,
+      "maxDepth": 2,
+      "seedUrls": 1
+    },
+    {
+      "domain": "apnews.com",
+      "state": "stopped",
+      "isRunning": false,
+      "startedAt": null,
+      "stoppedAt": "2026-05-28T04:46:38.225Z",
+      "stats": {},
+      "contentPipeline": null,
+      "rateLimiter": null,
+      "fatalState": null,
+      "maxPages": 1000,
+      "maxDepth": 2,
+      "seedUrls": 1
+    },
+    {
+      "domain": "bloomberg.com",
+      "state": "stopped",
+      "isRunning": false,
+      "startedAt": null,
+      "stoppedAt": "2026-05-28T04:46:38.388Z",
+      "stats": {},
+      "contentPipeline": null,
+      "rateLimiter": null,
+      "fatalState": null,
+      "maxPages": 1000,
+      "maxDepth": 2,
+      "seedUrls": 1
+    },
+    {
+      "domain": "ft.com",
+      "state": "stopped",
+      "isRunning": false,
+      "startedAt": null,
+      "stoppedAt": "2026-05-28T04:46:38.552Z",
+      "stats": {},
+      "contentPipeline": null,
+      "rateLimiter": null,
+      "fatalState": null,
+      "maxPages": 1000,
+      "maxDepth": 2,
+      "seedUrls": 1
+    },
+    {
+      "domain": "npr.org",
+      "state": "stopped",
+      "isRunning": false,
+      "startedAt": null,
+      "stoppedAt": "2026-05-28T04:46:38.714Z",
+      "stats": {},
+      "contentPipeline": null,
+      "rateLimiter": null,
+      "fatalState": null,
+      "maxPages": 1000,
+      "maxDepth": 2,
+      "seedUrls": 1
+    }
+  ]
+}

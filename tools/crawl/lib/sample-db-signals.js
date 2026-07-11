@@ -50,6 +50,8 @@ function classifyStatuses(taxonomy = {}) {
   let serverErrors = 0;
   let clientErrors = 0;
   let success = 0;
+  let notModified = 0;
+  let notFound = 0;
   for (const [code, count] of Object.entries(taxonomy)) {
     const status = Number(code);
     const n = num(count);
@@ -57,8 +59,65 @@ function classifyStatuses(taxonomy = {}) {
     if (status >= 500 && status < 600) serverErrors += n;
     if (status >= 400 && status < 500) clientErrors += n;
     if (status >= 200 && status < 300) success += n;
+    if (status === 304) notModified += n;
+    if (status === 404 || status === 410) notFound += n;
   }
-  return { rateLimited, serverErrors, clientErrors, success };
+  return { rateLimited, serverErrors, clientErrors, success, notModified, notFound };
+}
+
+// Infrastructure requests (robots.txt, sitemap XML) are real fetches worth
+// recording, but they are not CONTENT: they must not dilute content-quality
+// metrics. SQL twin of this predicate: INFRA_URL_SQL_PREDICATE.
+const INFRA_URL_SQL_PREDICATE = "(url LIKE '%/robots.txt' OR (url LIKE '%sitemap%' AND url LIKE '%.xml'))";
+
+function isInfraUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  try {
+    const pathname = new URL(url).pathname.toLowerCase();
+    return pathname.endsWith('/robots.txt') || (pathname.includes('sitemap') && pathname.endsWith('.xml'));
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * PURE. Self-clocked throughput from DB fetch timestamps (never harness
+ * wall-clock: session-clock vs file-timestamp skew produced negative elapsed
+ * in earlier scaled runs). Window = first request start -> last fetch end.
+ *
+ * Binding constraint:
+ *   politeness-bound — the crawler idles most of the window (pacing waits)
+ *   latency-bound    — busy, and time-to-first-byte dominates transfer time
+ *   bandwidth-bound  — busy, and transfer time dominates
+ *
+ * @param {object} timing { windowStartIso, windowEndIso, busyMs, avgTtfbMs, avgDownloadMs }
+ * @param {number} responses
+ * @param {number} bytesDownloaded
+ * @returns {object|null} { docsPerSec, bytesPerSec, windowSec, busyFraction, bindingConstraint, basis }
+ */
+function deriveThroughput(timing, responses, bytesDownloaded) {
+  if (!timing || typeof timing !== 'object') return null;
+  const start = Date.parse(timing.windowStartIso || '');
+  const end = Date.parse(timing.windowEndIso || '');
+  const nResponses = num(responses, 0);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || nResponses <= 0) return null;
+  const windowSec = (end - start) / 1000;
+  const busyMs = Math.max(0, num(timing.busyMs, 0));
+  const busyFraction = Math.min(1, busyMs / (end - start));
+  const avgTtfb = num(timing.avgTtfbMs, 0);
+  const avgDownload = num(timing.avgDownloadMs, 0);
+  let bindingConstraint;
+  if (busyFraction < 0.5) bindingConstraint = 'politeness-bound';
+  else if (avgTtfb >= avgDownload) bindingConstraint = 'latency-bound';
+  else bindingConstraint = 'bandwidth-bound';
+  return {
+    docsPerSec: nResponses / windowSec,
+    bytesPerSec: num(bytesDownloaded, 0) / windowSec,
+    windowSec,
+    busyFraction,
+    bindingConstraint,
+    basis: 'db-timestamps',
+  };
 }
 
 /**
@@ -74,6 +133,7 @@ function classifyStatuses(taxonomy = {}) {
  * @param {object} [input.dedup]       { total, distinct }
  * @param {object} [input.freshness]   { etag, lastModified, notModified }
  * @param {number} [input.bytesDownloaded]
+ * @param {object} [input.timing]      { windowStartIso, windowEndIso, busyMs, avgTtfbMs, avgDownloadMs }
  * @param {string[]|number} [input.requestedHosts]
  * @param {number} [input.elapsedSec]
  * @param {number} [input.launchExitCode]
@@ -83,9 +143,20 @@ function classifyStatuses(taxonomy = {}) {
 function deriveSignals(input = {}) {
   const current = totalsOf(input.snapshot);
   const baseline = input.baseline != null ? totalsOf(input.baseline) : null;
-  const downloads = baseline ? Math.max(0, current.successResponses - baseline.successResponses) : current.successResponses;
-  const responses = baseline ? Math.max(0, current.responses - baseline.responses) : current.responses;
-  const failedResponses = baseline ? Math.max(0, current.failedResponses - baseline.failedResponses) : current.failedResponses;
+  // Prefer content-only counts (infra-excluded taxonomy) when the query layer
+  // provides them; otherwise fall back to whole-DB snapshot math.
+  const content = input.contentCounts && Number.isFinite(Number(input.contentCounts.responses))
+    ? { responses: num(input.contentCounts.responses), downloads: num(input.contentCounts.downloads) }
+    : null;
+  const downloads = content
+    ? content.downloads
+    : (baseline ? Math.max(0, current.successResponses - baseline.successResponses) : current.successResponses);
+  const responses = content
+    ? content.responses
+    : (baseline ? Math.max(0, current.responses - baseline.responses) : current.responses);
+  const failedResponses = content
+    ? Math.max(0, responses - downloads)
+    : (baseline ? Math.max(0, current.failedResponses - baseline.failedResponses) : current.failedResponses);
   const taxonomy = input.taxonomy || {};
   const classified = classifyStatuses(taxonomy);
 
@@ -95,11 +166,24 @@ function deriveSignals(input = {}) {
 
   const fresh = input.freshness || {};
 
+  // Success rate measures FETCH RELIABILITY over content requests:
+  //  - 304 Not-Modified counts as success (a working conditional re-fetch);
+  //  - 404/410 discovery misses are excluded from the denominator (the server
+  //    answered fine; the URL was a bad guess — that is URL-selection quality,
+  //    itemized separately, not fetch failure).
+  const reliabilityDenominator = responses - classified.notFound;
+  const successRate = responses > 0 && reliabilityDenominator > 0
+    ? Math.min(1, (downloads + classified.notModified) / reliabilityDenominator)
+    : null;
+
   return {
     downloads,
     responses,
     failedResponses,
-    successRate: responses > 0 ? downloads / responses : null,
+    successRate,
+    notModifiedCount: classified.notModified,
+    notFoundCount: classified.notFound,
+    infra: input.infra || null,
     statusTaxonomy: taxonomy,
     rateLimitedCount: classified.rateLimited,
     serverErrorCount: classified.serverErrors,
@@ -119,6 +203,7 @@ function deriveSignals(input = {}) {
       duplicateResponses,
     },
     bytesDownloaded: num(input.bytesDownloaded, 0),
+    throughput: deriveThroughput(input.timing, responses, input.bytesDownloaded),
     elapsedSec: input.elapsedSec != null ? num(input.elapsedSec) : null,
     launchExitCode: input.launchExitCode != null ? num(input.launchExitCode) : null,
   };
@@ -157,16 +242,47 @@ function queryRawSignals(db, opts = {}) {
   const useHttp = httpCount >= fetchesCount; // prefer the richer table on ties
   const table = useHttp ? 'http_responses' : 'fetches';
 
+  // Content metrics exclude infrastructure fetches (robots/sitemap): those are
+  // recorded for visibility but must not dilute content-quality signals.
+  const infraExclusion = useHttp
+    ? `url_id NOT IN (SELECT id FROM urls WHERE ${INFRA_URL_SQL_PREDICATE})`
+    : null;
+  const contentWhere = [sinceIso ? 'fetched_at >= ?' : null, infraExclusion].filter(Boolean).join(' AND ');
+  const contentClause = contentWhere ? `WHERE ${contentWhere}` : '';
+
   const safe = (fn, fallback) => { try { return fn(); } catch (_e) { return fallback; } };
 
   const taxonomy = {};
   safe(() => {
-    const rows = db.prepare(`SELECT http_status AS s, COUNT(*) AS n FROM ${table} ${sinceClause} GROUP BY http_status`).all(...sinceArgs);
+    const rows = db.prepare(`SELECT http_status AS s, COUNT(*) AS n FROM ${table} ${contentClause} GROUP BY http_status`).all(...sinceArgs);
     for (const r of rows) {
       if (r.s == null) continue;
       taxonomy[String(r.s)] = num(r.n);
     }
   }, null);
+
+  // Infrastructure fetch summary (visibility evidence, informational).
+  const infra = useHttp ? safe(() => {
+    const row = db.prepare(
+      `SELECT COUNT(*) AS responses,
+              SUM(CASE WHEN u.url LIKE '%/robots.txt' THEN 1 ELSE 0 END) AS robots,
+              SUM(CASE WHEN u.url LIKE '%sitemap%' AND u.url LIKE '%.xml' THEN 1 ELSE 0 END) AS sitemaps,
+              SUM(CASE WHEN r.http_status >= 200 AND r.http_status < 300 THEN 1 ELSE 0 END) AS ok,
+              SUM(CASE WHEN r.http_status IN (404, 410) THEN 1 ELSE 0 END) AS missing
+       FROM http_responses r JOIN urls u ON u.id = r.url_id
+       WHERE (u.url LIKE '%/robots.txt' OR (u.url LIKE '%sitemap%' AND u.url LIKE '%.xml'))
+         ${sinceIso ? 'AND r.fetched_at >= ?' : ''}`
+    ).get(...sinceArgs);
+    const responses = num(row?.responses);
+    if (!responses) return null;
+    return {
+      responses,
+      robots: num(row?.robots),
+      sitemapProbes: num(row?.sitemaps),
+      ok: num(row?.ok),
+      notFound: num(row?.missing),
+    };
+  }, null) : null;
 
   let distinctHostsFetched = 0;
   if (useHttp) {
@@ -183,7 +299,7 @@ function queryRawSignals(db, opts = {}) {
 
   const dedup = safe(() => {
     const key = useHttp ? 'url_id' : 'url';
-    const row = db.prepare(`SELECT COUNT(*) AS total, COUNT(DISTINCT ${key}) AS distinct_urls FROM ${table} ${sinceClause}`).get(...sinceArgs);
+    const row = db.prepare(`SELECT COUNT(*) AS total, COUNT(DISTINCT ${key}) AS distinct_urls FROM ${table} ${contentClause}`).get(...sinceArgs);
     return { total: num(row?.total), distinct: num(row?.distinct_urls) };
   }, { total: 0, distinct: 0 });
 
@@ -193,16 +309,74 @@ function queryRawSignals(db, opts = {}) {
       `SELECT SUM(CASE WHEN etag IS NOT NULL AND etag <> '' THEN 1 ELSE 0 END) AS etag,
               SUM(CASE WHEN last_modified IS NOT NULL AND last_modified <> '' THEN 1 ELSE 0 END) AS lastmod,
               SUM(CASE WHEN http_status = 304 THEN 1 ELSE 0 END) AS c304
-       FROM http_responses ${sinceClause}`
+       FROM http_responses ${contentClause}`
     ).get(...sinceArgs);
     return { etag: num(row?.etag), lastModified: num(row?.lastmod), notModified: num(row?.c304) };
   }, { etag: 0, lastModified: 0, notModified: 0 }) : { etag: 0, lastModified: 0, notModified: 0 };
 
   const bytesDownloaded = safe(() => num(db.prepare(
-    `SELECT COALESCE(SUM(bytes_downloaded), 0) AS bytes FROM ${table} ${sinceClause}`
+    `SELECT COALESCE(SUM(bytes_downloaded), 0) AS bytes FROM ${table} ${contentClause}`
   ).get(...sinceArgs)?.bytes, 0), 0);
 
-  return { snapshot, taxonomy, distinctHostsFetched, distinctHostsDiscovered, dedup, freshness, bytesDownloaded, sourceTable: table };
+  // Content-only headline counts derived from the (windowed, infra-excluded)
+  // taxonomy, so robots/sitemap fetches don't inflate downloads.
+  const contentCounts = useHttp ? (() => {
+    let responses = 0;
+    let downloads = 0;
+    for (const [code, count] of Object.entries(taxonomy)) {
+      const status = Number(code);
+      const n = num(count);
+      responses += n;
+      if (status >= 200 && status < 300) downloads += n;
+    }
+    return { responses, downloads };
+  })() : null;
+
+  // Fetch-event timing for self-clocked throughput. Columns beyond fetched_at
+  // only exist on http_responses; on the fetches table the window degrades to
+  // fetched_at-only and busy/ttfb/download stay 0 (throughput still computes).
+  const timing = safe(() => {
+    const cols = useHttp
+      ? `MIN(COALESCE(request_started_at, fetched_at)) AS ws, MAX(fetched_at) AS we,
+         COALESCE(SUM(total_ms), 0) AS busy, AVG(ttfb_ms) AS ttfb, AVG(download_ms) AS dl`
+      : 'MIN(fetched_at) AS ws, MAX(fetched_at) AS we, 0 AS busy, NULL AS ttfb, NULL AS dl';
+    const row = db.prepare(`SELECT ${cols} FROM ${table} ${contentClause}`).get(...sinceArgs);
+    if (!row || !row.ws || !row.we) return null;
+    return {
+      windowStartIso: row.ws,
+      windowEndIso: row.we,
+      busyMs: num(row.busy, 0),
+      avgTtfbMs: num(row.ttfb, 0),
+      avgDownloadMs: num(row.dl, 0),
+    };
+  }, null);
+
+  return { snapshot, taxonomy, distinctHostsFetched, distinctHostsDiscovered, dedup, freshness, bytesDownloaded, timing, infra, contentCounts, sourceTable: table };
+}
+
+/**
+ * Seed-fetch evidence: did each requested start URL actually get a recorded
+ * response this run? A 404 row still counts (the crawler TRIED); only a
+ * missing row means the operator's URL was never fetched.
+ */
+function querySeedFetch(db, requestedUrls, sinceIso) {
+  const urls = Array.isArray(requestedUrls) ? requestedUrls.filter((u) => typeof u === 'string' && u) : [];
+  if (!urls.length) return null;
+  const missing = [];
+  let fetched = 0;
+  for (const url of urls) {
+    let n = 0;
+    try {
+      const row = db.prepare(
+        `SELECT COUNT(*) AS n FROM http_responses r JOIN urls u ON u.id = r.url_id
+         WHERE u.url = ? ${sinceIso ? 'AND r.fetched_at >= ?' : ''}`
+      ).get(...(sinceIso ? [url, sinceIso] : [url]));
+      n = num(row?.n, 0);
+    } catch (_e) { n = 0; }
+    if (n > 0) fetched += 1;
+    else missing.push(url);
+  }
+  return { requested: urls.length, fetched, missing };
 }
 
 class NativeDbUnavailableError extends Error {
@@ -239,6 +413,49 @@ function isNativeLoadError(err) {
  * @param {object} [opts.deps]         { openDb, snapshotFn } for tests.
  * @returns {object} signals (deriveSignals output) + { sourceTable, snapshot }
  */
+/**
+ * Wait for the sample DB's fetch evidence to stop changing before scoring.
+ *
+ * Why: run.js can exit (watch timeout) while the auto-spawned UI child is
+ * still committing rows; scoring immediately then reads a snapshot that is
+ * about to grow, producing false "0 downloads" FAILs (observed cycle 15,
+ * root-caused 2026-07-07). Two consecutive identical readings = settled.
+ *
+ * @param {string} dbPath
+ * @param {object} [opts] { tries=5, intervalMs=1500, readCounts, sleep }
+ *        readCounts(dbPath) -> comparable value (string/number) — injectable.
+ * @returns {Promise<{settled: boolean, polls: number, last: *}>}
+ */
+async function waitForEvidenceSettle(dbPath, opts = {}) {
+  const tries = Number.isFinite(opts.tries) ? opts.tries : 5;
+  const intervalMs = Number.isFinite(opts.intervalMs) ? opts.intervalMs : 1500;
+  const sleep = opts.sleep || ((ms) => new Promise((r) => setTimeout(r, ms)));
+  const readCounts = opts.readCounts || ((p) => {
+    const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
+    const db = openNewsCrawlerDb(path.resolve(p), { readonly: true });
+    try {
+      const one = (sql) => { try { return db.prepare(sql).get().n; } catch (_e) { return 0; } };
+      return [
+        one('SELECT COUNT(*) AS n FROM http_responses'),
+        one('SELECT COUNT(*) AS n FROM content_storage'),
+        one('SELECT COUNT(*) AS n FROM fetches')
+      ].join('/');
+    } finally {
+      try { db.close(); } catch (_e) { /* ignore */ }
+    }
+  });
+
+  let prev = null;
+  for (let i = 1; i <= tries; i++) {
+    let cur;
+    try { cur = readCounts(dbPath); } catch (_e) { cur = `err:${i}`; }
+    if (prev !== null && cur === prev) return { settled: true, polls: i, last: cur };
+    prev = cur;
+    if (i < tries) await sleep(intervalMs);
+  }
+  return { settled: false, polls: tries, last: prev };
+}
+
 function readSampleDbSignals(dbPath, opts = {}) {
   const resolved = path.resolve(dbPath);
   const deps = opts.deps || {};
@@ -253,6 +470,7 @@ function readSampleDbSignals(dbPath, opts = {}) {
   }
   try {
     const raw = queryRawSignals(db, { sinceIso: opts.sinceIso, snapshotFn: deps.snapshotFn });
+    const seedFetch = querySeedFetch(db, opts.requestedUrls, opts.sinceIso);
     const signals = deriveSignals({
       snapshot: raw.snapshot,
       baseline: opts.baseline || null,
@@ -262,12 +480,15 @@ function readSampleDbSignals(dbPath, opts = {}) {
       dedup: raw.dedup,
       freshness: raw.freshness,
       bytesDownloaded: raw.bytesDownloaded,
+      timing: raw.timing,
+      infra: raw.infra,
+      contentCounts: raw.contentCounts,
       requestedHosts: opts.requestedHosts,
       elapsedSec: opts.elapsedSec,
       launchExitCode: opts.launchExitCode,
       stalled: opts.stalled,
     });
-    return Object.assign(signals, { sourceTable: raw.sourceTable, snapshot: raw.snapshot });
+    return Object.assign(signals, { seedFetch, sourceTable: raw.sourceTable, snapshot: raw.snapshot });
   } finally {
     if (db && typeof db.close === 'function') { try { db.close(); } catch (_e) { /* ignore */ } }
   }
@@ -277,8 +498,13 @@ module.exports = {
   EMPTY_TOTALS,
   totalsOf,
   classifyStatuses,
+  isInfraUrl,
+  INFRA_URL_SQL_PREDICATE,
+  querySeedFetch,
+  deriveThroughput,
   deriveSignals,
   queryRawSignals,
+  waitForEvidenceSettle,
   readSampleDbSignals,
   NativeDbUnavailableError,
   isNativeLoadError,

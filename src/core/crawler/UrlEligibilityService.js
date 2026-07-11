@@ -20,6 +20,7 @@ class UrlEligibilityService {
       knownArticlesCache,
       getDbAdapter,
       maxAgeHubMs,
+      maxAgeArticleMs,
       urlDecisionOrchestrator
     } = options;
     if (typeof getUrlDecision !== 'function') {
@@ -43,6 +44,7 @@ class UrlEligibilityService {
     this.knownArticlesCache = knownArticlesCache || new Map();
     this.getDbAdapter = typeof getDbAdapter === 'function' ? getDbAdapter : null;
     this.maxAgeHubMs = Number.isFinite(maxAgeHubMs) && maxAgeHubMs >= 0 ? maxAgeHubMs : null;
+    this.maxAgeArticleMs = Number.isFinite(maxAgeArticleMs) && maxAgeArticleMs >= 0 ? maxAgeArticleMs : null;
     this.urlDecisionOrchestrator = urlDecisionOrchestrator || null;
   }
 
@@ -237,27 +239,30 @@ class UrlEligibilityService {
    */
   _isAlreadyProcessed(normalized, options = {}) {
     if (!normalized) return false;
-    
-    // Check cache first
-    if (this.knownArticlesCache?.has(normalized)) {
+
+    const isNavigationKind = this._isNavigationKind(options.kind);
+    const ageWindowMs = isNavigationKind ? this.maxAgeHubMs : this.maxAgeArticleMs;
+
+    // A configured freshness window means "stale stored content must be
+    // revalidated" (a cheap conditional GET when validators are stored), so
+    // the known-URL cache shortcut cannot answer — it has no notion of age.
+    if (ageWindowMs == null && this.knownArticlesCache?.has(normalized)) {
       return !!this.knownArticlesCache.get(normalized);
     }
-    
+
     const adapter = this.getDbAdapter ? this.getDbAdapter() : null;
     if (!adapter || !adapter.isEnabled || !adapter.isEnabled()) {
       return false;
     }
-    
+
     try {
       // Check if URL has successful HTTP response with content storage
       const db = adapter.getDb ? adapter.getDb() : null;
       if (!db) return false;
 
-      const isNavigationKind = this._isNavigationKind(options.kind);
-
-      if (isNavigationKind && this.maxAgeHubMs != null) {
+      if (ageWindowMs != null) {
         const latestRow = this._getLatestFetch(db, normalized);
-        if (!this._isHubFetchFresh(latestRow)) {
+        if (!this._isFetchFresh(latestRow, ageWindowMs)) {
           return false;
         }
       }
@@ -280,11 +285,11 @@ class UrlEligibilityService {
     }
   }
 
-  _isHubFetchFresh(row) {
+  _isFetchFresh(row, ageWindowMs) {
     if (!row || !row.fetched_at) {
       return false;
     }
-    if (this.maxAgeHubMs == null) {
+    if (ageWindowMs == null) {
       return false;
     }
     const fetchedAtMs = Date.parse(row.fetched_at);
@@ -295,7 +300,11 @@ class UrlEligibilityService {
     if (ageMs < 0) {
       return false;
     }
-    return ageMs < this.maxAgeHubMs;
+    return ageMs < ageWindowMs;
+  }
+
+  _isHubFetchFresh(row) {
+    return this._isFetchFresh(row, this.maxAgeHubMs);
   }
 
   _isNavigationKind(kind) {

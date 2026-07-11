@@ -1,0 +1,31 @@
+[
+ {
+  "id": "6898fc4f-adaf-43be-818c-441a0e629e90",
+  "mode": "in-process",
+  "operationName": "basicArticleCrawl",
+  "startUrl": "http://127.0.0.1:9/nothing",
+  "status": "failed",
+  "createdAt": "2026-07-07T20:40:47.700Z",
+  "startedAt": "2026-07-07T20:40:47.700Z",
+  "finishedAt": "2026-07-07T20:40:57.209Z",
+  "paused": false,
+  "abortRequested": false,
+  "error": {
+   "message": "Crawl failed: no pages downloaded after 1 error (first: exception ECONNREFUSED http://127.0.0.1:9/nothing)",
+   "stack": "Error: Crawl failed: no pages downloaded after 1 error (first: exception ECONNREFUSED http://127.0.0.1:9/nothing)\n    at ErrorTracker.determineOutcomeError (C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\src\\core\\crawler\\ErrorTracker.js:132:19)\n    at NewsCrawler._determineOutcomeError (C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\src\\core\\crawler\\NewsCrawler.js:585:31)\n    at NewsCrawler._finalizeRun (C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\src\\core\\crawler\\NewsCrawler.js:2113:29)\n    at NewsCrawler._runLegacySequential (C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\src\\core\\crawler\\NewsCrawler.js:1795:16)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async BasicArticleCrawlOperation.run (C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\src\\core\\crawler\\operations\\CrawlOperation.js:254:7)"
+  }
+ },
+ {
+  "id": "ac464b58-a7f5-42c5-8140-6d78a4a1caf9",
+  "mode": "in-process",
+  "operationName": "basicArticleCrawl",
+  "startUrl": "https://www.theguardian.com/world",
+  "status": "completed",
+  "createdAt": "2026-07-07T20:46:09.052Z",
+  "startedAt": "2026-07-07T20:46:09.052Z",
+  "finishedAt": "2026-07-07T21:16:30.712Z",
+  "paused": false,
+  "abortRequested": true,
+  "error": null
+ }
+]

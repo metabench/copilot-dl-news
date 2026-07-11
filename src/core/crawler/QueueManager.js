@@ -387,8 +387,23 @@ class QueueManager {
 
   _pushItem(item, queueType) {
     item.queueType = queueType;
-    if (this.usePriorityQueue) this.priorityQueues[queueType].push(item);
-    else this.fifoQueues[queueType].push(item);
+    if (this.usePriorityQueue) {
+      this.priorityQueues[queueType].push(item);
+      return;
+    }
+    // FIFO mode (single-worker crawls: NewsCrawler sets usePriorityQueue =
+    // concurrency > 1) ignores priority scores entirely, which silently
+    // starves explicit overrides: the seed guarantee (priority 1e9 ->
+    // negative explicit-override) was appended BEHIND the sitemap flood and
+    // the pull scan window (64 items) never reached it — cycle-11 root cause
+    // of the seed-fetched FAIL on real sites. Honor explicit overrides in
+    // FIFO mode by inserting at the front so "crawl X fetches X" holds
+    // regardless of queue implementation.
+    if (item.priorityMetadata && item.priorityMetadata.override) {
+      this.fifoQueues[queueType].unshift(item);
+    } else {
+      this.fifoQueues[queueType].push(item);
+    }
   }
 
   _queueLength(queueType) {

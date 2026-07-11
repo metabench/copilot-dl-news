@@ -149,10 +149,75 @@ class RobotsAndSitemapCoordinator {
     if (!this.useSitemap) return 0;
     const pushed = await this.loadSitemaps(this.baseUrl, this.domain, this.sitemapUrls, {
       sitemapMaxUrls: this.sitemapMaxUrls,
-      push: (url, meta) => this._handleSitemapUrl(url, meta)
+      push: (url, meta) => this._handleSitemapUrl(url, meta),
+      onFetch: (info) => this._recordSitemapFetch(info),
+      cache: this._sitemapCache()
     });
     this.logger.log(`Sitemap enqueue complete: ${pushed} URL(s)`);
     return pushed;
+  }
+
+  /**
+   * DB-backed conditional-fetch cache for sitemap bodies (news-crawler-db
+   * sitemap_cache accessors on the coverage namespace). Returns null when the
+   * adapter lacks the accessors — loadSitemaps then fetches unconditionally.
+   * All sitemap-cache persistence lives in the DB (hub-loop P0, 2026-07-11).
+   */
+  _sitemapCache() {
+    try {
+      const adapter = typeof this.dbAdapter === 'function' ? this.dbAdapter() : this.dbAdapter;
+      if (!adapter) return null;
+
+      // Coverage namespace — resolve it exactly like CrawlerDb.getRobotsCache
+      // does (adapter.coverage OR adapter.db.coverage OR adapter._getCoverageAccess()).
+      // The live crawler's dbAdapter is CrawlerDb, whose coverage lives on
+      // adapter.db.coverage — one level deeper than the drizzle adapter.
+      // The drizzle SqliteCoverageAccess self-ensures the table (hub-loop P0).
+      const cov = adapter.coverage
+        || (adapter.db && adapter.db.coverage)
+        || (adapter.db && adapter.db.access && adapter.db.access.coverage)
+        || (typeof adapter._getCoverageAccess === 'function' ? adapter._getCoverageAccess() : null);
+      if (cov && typeof cov.getSitemapCache === 'function' && typeof cov.upsertSitemapCache === 'function') {
+        return {
+          get: (url) => cov.getSitemapCache(url),
+          set: (url, record) => cov.upsertSitemapCache({ ...record, url })
+        };
+      }
+
+      // Legacy CrawlerDb path (live crawls): raw-handle functional accessors
+      // from the db module — SQL stays inside news-crawler-db.
+      const { sitemapCacheGet, sitemapCacheUpsert } = require('news-crawler-db');
+      if (typeof sitemapCacheGet === 'function' && typeof sitemapCacheUpsert === 'function') {
+        return {
+          get: async (url) => sitemapCacheGet(adapter, url),
+          set: async (url, record) => { sitemapCacheUpsert(adapter, { ...record, url }); }
+        };
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * Fetch-visibility: land sitemap requests in http_responses like any other
+   * real HTTP request. Best-effort — must never break sitemap loading.
+   */
+  async _recordSitemapFetch(info) {
+    try {
+      const adapter = typeof this.dbAdapter === 'function' ? this.dbAdapter() : this.dbAdapter;
+      if (!adapter || typeof adapter.insertHttpResponse !== 'function' || !info?.url) return;
+      await adapter.insertHttpResponse({
+        url: info.url,
+        request_started_at: info.requestStartedIso,
+        fetched_at: info.fetchedAtIso,
+        http_status: info.status,
+        content_type: info.contentType,
+        etag: info.etag,
+        last_modified: info.lastModified,
+        bytes_downloaded: info.bytes || 0
+      });
+    } catch (_error) { /* visibility is best-effort */ }
   }
 
   _harvestSitemaps(robotsTxt) {

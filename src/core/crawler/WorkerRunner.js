@@ -160,7 +160,12 @@ class WorkerRunner {
       try {
         const host = this.safeHostFromUrl(item.url);
         const sizeNow = this.getQueueSize();
-        this.telemetry?.queueEvent({
+        // Enhanced channel: persisted to queue_events_enhanced so pulls are
+        // auditable next to 'enqueued' rows (seed-fetched forensics, c10).
+        const emitter = this.telemetry?.enhancedQueueEvent
+          ? (evt) => this.telemetry.enhancedQueueEvent(evt)
+          : (evt) => this.telemetry?.queueEvent(evt);
+        emitter({
           action: 'dequeued',
           url: item.url,
           depth: item.depth,

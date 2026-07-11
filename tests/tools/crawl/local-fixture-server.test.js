@@ -25,13 +25,13 @@ function reservePort() {
   });
 }
 
-function getText(url) {
+function getText(url, requestHeaders = undefined) {
   return new Promise((resolve, reject) => {
-    http.get(url, (res) => {
+    http.get(url, requestHeaders ? { headers: requestHeaders } : {}, (res) => {
       let body = '';
       res.setEncoding('utf8');
       res.on('data', chunk => { body += chunk; });
-      res.on('end', () => resolve({ statusCode: res.statusCode, body }));
+      res.on('end', () => resolve({ statusCode: res.statusCode, body, headers: res.headers }));
     }).on('error', reject);
   });
 }
@@ -101,6 +101,70 @@ describe('local fixture server helper', () => {
         port,
       });
       expect(fs.readFileSync(pidFile, 'utf8').trim()).toBe(String(process.pid));
+    } finally {
+      await runtime.close();
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test('emits deterministic validators and answers conditional GETs with 304', async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'local-fixture-304-'));
+    const reserved = await reservePort();
+    const port = reserved.port;
+    await reserved.close();
+    const plan = buildFixturePlan({
+      preset: 'small',
+      port,
+      readyFile: path.join(tmp, 'ready.json'),
+      pidFile: path.join(tmp, 'server.pid'),
+    });
+    const runtime = await startFixtureServers(plan);
+    try {
+      const first = await getText(plan.urls[0]);
+      expect(first.statusCode).toBe(200);
+      expect(first.headers.etag).toMatch(/^"fx-small-/);
+      expect(first.headers['last-modified']).toBe('Fri, 29 May 2026 12:00:00 GMT');
+
+      const revalidated = await getText(plan.urls[0], { 'If-None-Match': first.headers.etag });
+      expect(revalidated.statusCode).toBe(304);
+      expect(revalidated.body).toBe('');
+      expect(revalidated.headers.etag).toBe(first.headers.etag);
+
+      const staleEtag = await getText(plan.urls[0], { 'If-None-Match': '"fx-other"' });
+      expect(staleEtag.statusCode).toBe(200);
+
+      const modifiedSince = await getText(plan.urls[0], { 'If-Modified-Since': 'Sat, 30 May 2026 00:00:00 GMT' });
+      expect(modifiedSince.statusCode).toBe(304);
+    } finally {
+      await runtime.close();
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test('writes a request ledger (ground truth for fetch-visibility diffs)', async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'local-fixture-ledger-'));
+    const reserved = await reservePort();
+    const port = reserved.port;
+    await reserved.close();
+    const requestLog = path.join(tmp, 'requests.jsonl');
+    const plan = buildFixturePlan({
+      preset: 'small',
+      port,
+      readyFile: path.join(tmp, 'ready.json'),
+      pidFile: path.join(tmp, 'server.pid'),
+      requestLog,
+    });
+    const runtime = await startFixtureServers(plan);
+    try {
+      const first = await getText(plan.urls[0]);
+      await getText(`http://127.0.0.1:${port}/robots.txt`);
+      await getText(plan.urls[0], { 'If-None-Match': first.headers.etag });
+
+      const lines = fs.readFileSync(requestLog, 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+      expect(lines).toHaveLength(3);
+      expect(lines[0]).toMatchObject({ path: plan.targets[0].path, status: 200, conditional: false });
+      expect(lines[1]).toMatchObject({ path: '/robots.txt', status: 200 });
+      expect(lines[2]).toMatchObject({ path: plan.targets[0].path, status: 304, conditional: true });
     } finally {
       await runtime.close();
       fs.rmSync(tmp, { recursive: true, force: true });

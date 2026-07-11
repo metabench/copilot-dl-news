@@ -186,6 +186,29 @@ describe('RobotsAndSitemapCoordinator', () => {
     expect(emitProgress).toHaveBeenCalled();
   });
 
+  // Cycle 13 regression guard: c9 reported `useSitemap=false` as a dead knob
+  // (sitemaps still fetched). Cycle-13 live verification (engine-direct AND
+  // full HTTP dispatch path) showed the knob works on current code: sitemap
+  // stage skipped, zero sitemap fetches, only robots + seed hit the network.
+  // This test pins that behavior so the knob can't silently die again.
+  test('loadSitemapsAndEnqueue is a no-op when useSitemap=false (knob must stay alive)', async () => {
+    const enqueueRequest = jest.fn();
+    const { coordinator, loadSitemaps } = createCoordinator({
+      useSitemap: false,
+      enqueueRequest
+    });
+
+    coordinator.robotsTxtLoaded = true;
+    coordinator.robotsRules = { isAllowed: () => true };
+    coordinator.sitemapUrls = ['https://example.com/news.xml'];
+
+    const pushed = await coordinator.loadSitemapsAndEnqueue();
+
+    expect(pushed).toBe(0);
+    expect(loadSitemaps).not.toHaveBeenCalled();
+    expect(enqueueRequest).not.toHaveBeenCalled();
+  });
+
   test('isAllowed falls back to true when robots not loaded', () => {
     const { coordinator } = createCoordinator();
     expect(coordinator.isAllowed('https://example.com/page')).toBe(true);

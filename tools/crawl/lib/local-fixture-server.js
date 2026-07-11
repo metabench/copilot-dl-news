@@ -139,6 +139,7 @@ function buildFixturePlan(options = {}) {
   const targetToken = normalizeTargetToken(options.targetToken || options['target-token']);
   const readyFile = options.readyFile || options['ready-file'] || defaultReadyFile(preset);
   const pidFile = options.pidFile || options['pid-file'] || defaultPidFile(preset);
+  const requestLog = options.requestLog || options['request-log'] || null;
   const targets = spec.hosts.map((host, index) => {
     const page = spec.pages[index] || spec.pages[0];
     const targetPath = tokenizedPath(page.path, targetToken);
@@ -185,6 +186,7 @@ function buildFixturePlan(options = {}) {
       port,
       readyFile,
       pidFile,
+      requestLog,
       bindHosts: spec.hosts.slice(),
     },
     commands: {
@@ -203,8 +205,31 @@ function buildFixturePlan(options = {}) {
   };
 }
 
-function createFixtureRequestHandler(plan, host) {
+// Deterministic validators so conditional-GET / 304 behavior can be proven
+// against the fixture: content never changes, so the ETag never changes and a
+// revalidating re-crawl must observe 304 Not-Modified.
+const FIXTURE_LAST_MODIFIED = 'Fri, 29 May 2026 12:00:00 GMT';
+
+function fixtureEtag(plan, page) {
+  return `"fx-${plan.preset}-${page.slug}-v1"`;
+}
+
+/**
+ * Append one JSON line per served request so a crawl's server-side ground
+ * truth can be diffed against what the crawler recorded (fetch-visibility).
+ */
+function appendRequestLog(requestLogPath, entry) {
+  if (!requestLogPath) return;
+  try {
+    const resolved = path.resolve(requestLogPath);
+    fs.mkdirSync(path.dirname(resolved), { recursive: true });
+    fs.appendFileSync(resolved, `${JSON.stringify(entry)}\n`);
+  } catch (_error) { /* ledger is best-effort; serving must not fail */ }
+}
+
+function createFixtureRequestHandler(plan, host, options = {}) {
   const target = plan.targets.find(item => item.host === host) || plan.targets[0];
+  const requestLogPath = options.requestLog || plan.server.requestLog || null;
   const page = {
     path: target.path,
     slug: target.slug,
@@ -212,6 +237,20 @@ function createFixtureRequestHandler(plan, host) {
   };
   return (req, res) => {
     const reqUrl = req.url || '/';
+    const logServed = (status) => appendRequestLog(requestLogPath, {
+      ts: new Date().toISOString(),
+      host,
+      port: plan.server.port,
+      method: req.method || 'GET',
+      path: reqUrl,
+      status,
+      conditional: Boolean(req.headers['if-none-match'] || req.headers['if-modified-since']),
+    });
+    const writeHead = res.writeHead.bind(res);
+    res.writeHead = (status, ...rest) => {
+      logServed(status);
+      return writeHead(status, ...rest);
+    };
     res.setHeader('Cache-Control', 'no-store');
     if (reqUrl === '/robots.txt') {
       res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
@@ -219,7 +258,26 @@ function createFixtureRequestHandler(plan, host) {
       return;
     }
     if (reqUrl === '/' || reqUrl === page.path) {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      const etag = fixtureEtag(plan, page);
+      const ifNoneMatch = req.headers['if-none-match'];
+      const ifModifiedSince = req.headers['if-modified-since'];
+      const etagMatches = typeof ifNoneMatch === 'string'
+        && ifNoneMatch.split(',').map(v => v.trim()).some(v => v === etag || v === '*');
+      const notModifiedSince = typeof ifModifiedSince === 'string'
+        && Number.isFinite(Date.parse(ifModifiedSince))
+        && Date.parse(ifModifiedSince) >= Date.parse(FIXTURE_LAST_MODIFIED);
+      // Per RFC 9110, If-None-Match takes precedence over If-Modified-Since.
+      const notModified = typeof ifNoneMatch === 'string' ? etagMatches : notModifiedSince;
+      if (notModified) {
+        res.writeHead(304, { etag, 'last-modified': FIXTURE_LAST_MODIFIED });
+        res.end();
+        return;
+      }
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        etag,
+        'last-modified': FIXTURE_LAST_MODIFIED,
+      });
       res.end(renderArticleHtml({
         preset: plan.preset,
         host,
@@ -355,15 +413,18 @@ function parseArgs(argv = []) {
   args.targetToken = normalizeTargetToken(args.targetToken || args['target-token']);
   args.readyFile = args.readyFile || args['ready-file'] || defaultReadyFile(args.preset);
   args.pidFile = args.pidFile || args['pid-file'] || defaultPidFile(args.preset);
+  args.requestLog = args.requestLog || args['request-log'] || null;
   args.lifetimeMs = normalizeLifetimeMs(args.lifetimeMs || args['lifetime-ms']);
   return args;
 }
 
 module.exports = {
   FIXTURE_PRESETS,
+  FIXTURE_LAST_MODIFIED,
   buildFixturePlan,
   closeServers,
   createFixtureRequestHandler,
+  fixtureEtag,
   normalizePort,
   normalizePreset,
   normalizeTargetToken,

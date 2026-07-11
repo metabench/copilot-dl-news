@@ -163,18 +163,22 @@ describe('tools/crawl/run.js — parseArgs', () => {
       .toThrow('--graph-feedback-artifact requires a path');
   });
 
-  test('--override is repeatable and parsed into overrides map', () => {
+  test('--override is repeatable and coerces JSON-shaped values to real types', () => {
     const { runFlags } = run.parseArgs([
       '--override', 'requestTimeoutMs=20000',
       '--override', 'slowMode=true',
+      '--override', 'preferCache=false',
+      '--override', 'profileName=gentle',
       'bbc.com'
     ]);
     expect(runFlags.overrides).toEqual({
-      requestTimeoutMs: '20000',
-      slowMode: 'true'
+      requestTimeoutMs: 20000,
+      slowMode: true,
+      preferCache: false,
+      profileName: 'gentle'
     });
     expect(runFlags.rawOverrides).toEqual([
-      'requestTimeoutMs=20000', 'slowMode=true'
+      'requestTimeoutMs=20000', 'slowMode=true', 'preferCache=false', 'profileName=gentle'
     ]);
   });
 

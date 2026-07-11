@@ -343,10 +343,17 @@ function sampleWriterDb(dbPath, deps = {}) {
     const snapshot = snapshotFn(db, { path: resolved, capturedAt: new Date().toISOString() });
     let bytes = 0;
     try {
-      const row = db.prepare(
-        'SELECT COALESCE(SUM(bytes_downloaded), 0) AS bytes FROM fetches'
-      ).get();
-      bytes = toFiniteNumber(row && row.bytes, 0);
+      // Sum from http_responses first (fetches has been unpopulated since
+      // ~2026-03); fall back to fetches for legacy DBs where it still wins.
+      const sum = (table) => {
+        try {
+          const row = db.prepare(`SELECT COALESCE(SUM(bytes_downloaded), 0) AS bytes, COUNT(*) AS n FROM ${table}`).get();
+          return { bytes: toFiniteNumber(row && row.bytes, 0), n: toFiniteNumber(row && row.n, 0) };
+        } catch (_e) { return { bytes: 0, n: -1 }; }
+      };
+      const http = sum('http_responses');
+      const legacy = sum('fetches');
+      bytes = http.n >= legacy.n ? http.bytes : legacy.bytes;
     } catch (_err) {
       bytes = 0; // bytes are optional; tolerate missing table/column
     }

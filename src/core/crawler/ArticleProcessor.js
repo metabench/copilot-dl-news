@@ -706,6 +706,20 @@ class ArticleProcessor {
         analysis: JSON.stringify(hubAnalysis)
       });
 
+      // Keep the conditional-GET header cache warm for hub pages too, so a
+      // within-run re-fetch of a hub (e.g. the seed) can send If-None-Match /
+      // If-Modified-Since instead of paying for a full 200 re-download.
+      const normalizedHubUrl = (() => {
+        try { return this.normalizeUrl(url); } catch (_) { return url; }
+      })();
+      if (normalizedHubUrl && this.articleHeaderCache && (fetchMeta?.etag || fetchMeta?.lastModified)) {
+        this.articleHeaderCache.set(normalizedHubUrl, {
+          etag: fetchMeta?.etag || null,
+          last_modified: fetchMeta?.lastModified || null,
+          fetched_at: fetchMeta?.fetchedAtIso || null
+        });
+      }
+
       const bytes = Buffer.byteLength(html, 'utf8');
       this._log('log', `Saved hub page: ${metadata?.title || url} (${bytes} bytes, ${navigationLinks?.length || 0} nav links, ${articleLinks?.length || 0} article links)`);
 

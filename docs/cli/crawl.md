@@ -55,10 +55,21 @@ npm run crawl:sample -- bbc.com --json                    # machine-readable sco
 - Crawls to an isolated **sample DB** (`data/samples/<rung>-sample.db`), never `data/news.db`.
 - Auto-starts the unified UI, obeys robots + Crawl-delay, follows the job to a terminal
   state, then tears the UI down (`--auto-stop`).
-- Scores success rate, politeness (429 storms), host coverage, freshness, and dedup;
-  prints a scorecard and exits **0 = PASS, 2 = FAIL, 3 = usage/preflight error**.
-- Fresh DB per run by default (`--keep-db` to accumulate). Run `npm run crawl:sample -- --help`
-  for all options.
+- Scores success rate, politeness (429 storms), host coverage, freshness, dedup, and
+  throughput (docs/s + bytes/s self-clocked from DB fetch timestamps, classified as
+  politeness-/latency-/bandwidth-bound); prints a scorecard and exits
+  **0 = PASS, 2 = FAIL, 3 = usage/preflight error**.
+- Fresh DB per run by default (`--keep-db` to accumulate). `--override k=v` (repeatable)
+  forwards crawl overrides to run.js with JSON-typed values.
+  Run `npm run crawl:sample -- --help` for all options.
+- **Revalidating a previous crawl:** stored articles are skipped by default
+  (`already-processed`). Pass `--keep-db --override maxAgeArticleMs=0` to revalidate
+  stored articles with conditional GETs — unchanged pages come back as cheap 304s
+  (0 bytes), which the scorecard counts as successes. Hubs use `maxAgeHubMs`
+  (default 10 min) the same way.
+- The loopback fixture server (`tools/crawl/local-fixture-server.js`) emits deterministic
+  `ETag`/`Last-Modified` validators and answers conditional GETs with 304, so freshness
+  behavior can be proven without live-site churn.
 
 If it reports a native SQLite load failure, run `cd ../news-crawler-db && npm rebuild better-sqlite3`.
 

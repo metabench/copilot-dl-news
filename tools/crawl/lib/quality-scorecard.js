@@ -84,6 +84,7 @@ function buildQualityScorecard({ signals = {}, targets = {}, context = {} } = {}
 
   const downloads = num(signals.downloads, 0);
   const responses = num(signals.responses, 0);
+  const notModified = num(signals.notModifiedCount, 0);
   const failedResponses = num(signals.failedResponses, Math.max(0, responses - downloads));
   const successRate = deriveSuccessRate(signals);
   const rateLimited = num(signals.rateLimitedCount, 0);
@@ -92,25 +93,34 @@ function buildQualityScorecard({ signals = {}, targets = {}, context = {} } = {}
   const requestedHostCount = hostCount(signals.requestedHosts);
 
   // 1. Fundamental usability proof: the crawl actually produced fetch evidence.
-  checks.push({
-    id: 'crawl-produced-evidence',
-    label: 'Crawl produced fetch evidence',
-    status: downloads >= num(t.min_downloads, 1) ? 'pass' : 'fail',
-    actual: `${downloads} download(s), ${responses} response(s)`,
-    target: `>= ${num(t.min_downloads, 1)} download(s)`,
-    detail: downloads >= num(t.min_downloads, 1)
-      ? null
-      : 'No successful downloads landed in the sample DB — the crawl did not run, was blocked, or wrote nowhere. Check the seed URL, robots access, and that the writer DB path is the one being scored.',
-  });
+  //    A 304 Not-Modified is evidence too (a successful conditional re-fetch),
+  //    so an all-unchanged re-crawl still passes.
+  {
+    const evidence = downloads + notModified;
+    checks.push({
+      id: 'crawl-produced-evidence',
+      label: 'Crawl produced fetch evidence',
+      status: evidence >= num(t.min_downloads, 1) ? 'pass' : 'fail',
+      actual: `${downloads} download(s)${notModified ? `, ${notModified}×304 not-modified` : ''}, ${responses} response(s)`,
+      target: `>= ${num(t.min_downloads, 1)} download(s) or 304(s)`,
+      detail: evidence >= num(t.min_downloads, 1)
+        ? null
+        : 'No successful downloads landed in the sample DB — the crawl did not run, was blocked, or wrote nowhere. Check the seed URL, robots access, and that the writer DB path is the one being scored.',
+    });
+  }
 
   // 2. Success rate.
   if (responses > 0 && successRate != null) {
+    const notFound = num(signals.notFoundCount, 0);
+    const denominator = Math.max(0, responses - notFound);
     const pass = successRate >= num(t.success_rate, 0.95);
+    const parts = [`${downloads}`];
+    if (notModified) parts.push(`${notModified}×304`);
     checks.push({
       id: 'success-rate',
-      label: 'HTTP success rate',
+      label: 'Fetch reliability',
       status: pass ? 'pass' : 'fail',
-      actual: `${round(successRate * 100, 1)}% (${downloads}/${responses})`,
+      actual: `${round(successRate * 100, 1)}% ((${parts.join(' + ')})/${denominator}${notFound ? `; ${notFound}×404 discovery miss(es) excluded` : ''})`,
       target: `>= ${round(num(t.success_rate, 0.95) * 100, 1)}%`,
       detail: pass ? null
         : `${failedResponses} response(s) failed. Inspect the error taxonomy below; retry/backoff tuning or a bad seed path are the usual causes.`,
@@ -195,7 +205,71 @@ function buildQualityScorecard({ signals = {}, targets = {}, context = {} } = {}
     });
   }
 
-  // 7. Dedup (informational).
+  // 5b. Seed fetch: "crawl X" must actually fetch X. A recorded 404 counts as
+  //     fetched (the crawler tried); only a missing row fails.
+  if (signals.seedFetch && typeof signals.seedFetch === 'object') {
+    const sf = signals.seedFetch;
+    const missing = Array.isArray(sf.missing) ? sf.missing : [];
+    const pass = missing.length === 0;
+    checks.push({
+      id: 'seed-fetched',
+      label: 'Requested URL(s) fetched',
+      status: pass ? 'pass' : 'fail',
+      actual: `${num(sf.fetched, 0)}/${num(sf.requested, 0)} requested URL(s) have a recorded fetch`,
+      target: 'every requested URL fetched',
+      detail: pass ? null
+        : `Never fetched: ${missing.join(', ')} — the seed was enqueued but silently skipped or starved; this breaks the "crawl X fetches X" expectation. `
+          + `Diagnose: re-run with CRAWLER_LOG_QUEUE_DROPS=1 (stderr lines: [queue] action=seed-enqueue/dequeued/fetch-skip/drop with reasons), `
+          + `or query queue_events_enhanced for the URL (enqueued -> dequeued -> fetch-skip trail is persisted as of cycle 10).`,
+    });
+  }
+
+  // 6b. Infrastructure fetches (informational: robots/sitemap visibility).
+  if (signals.infra && typeof signals.infra === 'object') {
+    const inf = signals.infra;
+    checks.push({
+      id: 'infra-fetches',
+      label: 'Infrastructure fetches',
+      status: 'info',
+      actual: `robots=${num(inf.robots, 0)} sitemap-probes=${num(inf.sitemapProbes, 0)} (${num(inf.ok, 0)} ok, ${num(inf.notFound, 0)} missing)`,
+      target: 'informational (fetch visibility)',
+      detail: null,
+    });
+  }
+
+  // 6c. Discovery misses (informational: 404/410 on guessed/linked URLs — a
+  //     URL-selection quality signal, excluded from fetch reliability).
+  {
+    const notFound = num(signals.notFoundCount, 0);
+    if (notFound > 0) {
+      checks.push({
+        id: 'discovery-misses',
+        label: 'Discovery misses (404/410)',
+        status: 'info',
+        actual: `${notFound} of ${responses} content request(s) hit nonexistent URLs`,
+        target: 'informational (URL-selection quality)',
+        detail: null,
+      });
+    }
+  }
+
+  // 7. Throughput (informational: self-clocked from DB timestamps).
+  if (signals.throughput && typeof signals.throughput === 'object') {
+    const th = signals.throughput;
+    const docs = round(num(th.docsPerSec, 0), 2);
+    const kb = round(num(th.bytesPerSec, 0) / 1024, 1);
+    const busyPct = round(num(th.busyFraction, 0) * 100, 0);
+    checks.push({
+      id: 'throughput',
+      label: 'Throughput',
+      status: 'info',
+      actual: `${docs} docs/s, ${kb} KB/s over ${round(num(th.windowSec, 0), 1)}s — ${th.bindingConstraint || 'unclassified'} (busy ${busyPct}%)`,
+      target: 'informational',
+      detail: null,
+    });
+  }
+
+  // 8. Dedup (informational).
   if (signals.dedup && typeof signals.dedup === 'object') {
     const d = signals.dedup;
     const total = num(d.totalResponses, responses);
@@ -237,6 +311,9 @@ function buildQualityScorecard({ signals = {}, targets = {}, context = {} } = {}
       rateLimited,
       serverErrors,
       bytesDownloaded: num(signals.bytesDownloaded, 0),
+      notModified: notModified,
+      discoveryMisses: num(signals.notFoundCount, 0),
+      infra: signals.infra || null,
       throughput: signals.throughput || null,
       statusTaxonomy: signals.statusTaxonomy || null,
     },

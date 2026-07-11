@@ -34,6 +34,15 @@ module.exports = {
     concurrency: commonCrawlerOptions.concurrency,
     preferCache: commonCrawlerOptions.preferCache,
 
+    // Freshness: stored articles older than this are revalidated with a
+    // conditional GET (304 = cheap "unchanged"); unset = never re-fetched.
+    maxAgeArticleMs: {
+      type: 'number',
+      label: 'Article max age (ms)',
+      description: 'Revalidate stored articles older than this many milliseconds (0 = always revalidate). Leave unset to never re-fetch stored articles.',
+      default: undefined
+    },
+
     // Discovery
     useSitemap: commonCrawlerOptions.useSitemap,
 

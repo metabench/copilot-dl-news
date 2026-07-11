@@ -460,6 +460,31 @@ class FetchPipeline extends EventEmitter {
    * @param {{url: string, context?: object, retryCount?: number}} params
    * @returns {Promise<{html: string|null, meta: object, source: 'cache'|'network'|'not-modified'|'skipped'|'error'}>}
    */
+  // Every pre-network skip in fetch() funnels through here so a dequeued item
+  // can never vanish silently again (cycle-10 root-cause instrument: the c9
+  // Guardian seed was enqueued, dequeued, then discarded with no trace).
+  // Emits an enhanced queue event (persisted to queue_events_enhanced) and is
+  // mirrored to stderr by CrawlerTelemetry when CRAWLER_LOG_QUEUE_DROPS is set.
+  _noteFetchSkip({ url, depth, reason, status }) {
+    try {
+      if (!this.telemetry) return;
+      let host = null;
+      try { host = new URL(url).hostname; } catch (_) { }
+      const evt = {
+        action: 'fetch-skip',
+        url,
+        depth: typeof depth === 'number' ? depth : null,
+        host,
+        reason: reason || status || 'skipped'
+      };
+      if (typeof this.telemetry.enhancedQueueEvent === 'function') {
+        this.telemetry.enhancedQueueEvent(evt);
+      } else if (typeof this.telemetry.queueEvent === 'function') {
+        this.telemetry.queueEvent(evt);
+      }
+    } catch (_) { /* visibility must never break the fetch */ }
+  }
+
   async fetch(params) {
     const { url, context = {}, retryCount = 0 } = params || {};
     this.emit('fetch:start', { url, context, retryCount });
@@ -484,6 +509,7 @@ class FetchPipeline extends EventEmitter {
     const normalizedUrl = analysis && !analysis.invalid ? analysis.normalized : null;
 
     if (!normalizedUrl) {
+      this._noteFetchSkip({ url, depth, reason: 'normalize-failed', status: 'skipped' });
       return this._buildResult({
         status: 'skipped',
         source: 'skipped',
@@ -496,6 +522,7 @@ class FetchPipeline extends EventEmitter {
       if (this.handlePolicySkip && reason === 'query-superfluous') {
         safeCall(() => this.handlePolicySkip(decision, { depth, context, normalizedUrl }));
       }
+      this._noteFetchSkip({ url: normalizedUrl, depth, reason: `orchestrator:${reason}`, status: 'skipped-policy' });
       return this._buildResult({
         status: 'skipped-policy',
         source: 'skipped',
@@ -506,6 +533,7 @@ class FetchPipeline extends EventEmitter {
     }
 
     if (orchestration && orchestration.action === 'defer') {
+      this._noteFetchSkip({ url: normalizedUrl, depth, reason: `orchestrator-defer:${orchestration.reason || 'deferred'}`, status: 'skipped-deferred' });
       return this._buildResult({
         status: 'skipped-deferred',
         source: 'skipped',
@@ -516,6 +544,7 @@ class FetchPipeline extends EventEmitter {
     }
 
     if (!allowRevisit && this.hasVisited(normalizedUrl)) {
+      this._noteFetchSkip({ url: normalizedUrl, depth, reason: 'already-visited', status: 'skipped' });
       return this._buildResult({
         status: 'skipped',
         source: 'skipped',
@@ -526,6 +555,12 @@ class FetchPipeline extends EventEmitter {
 
     if (!this.isOnDomain(normalizedUrl) || !this.isAllowed(normalizedUrl)) {
       this.logger.info(`Skipping ${normalizedUrl} (not allowed or off-domain)`);
+      this._noteFetchSkip({
+        url: normalizedUrl,
+        depth,
+        reason: !this.isOnDomain(normalizedUrl) ? 'off-domain' : 'robots-disallow',
+        status: 'skipped'
+      });
       return this._buildResult({
         status: 'skipped',
         source: 'skipped',
@@ -539,6 +574,7 @@ class FetchPipeline extends EventEmitter {
           safeCall(() => this.handlePolicySkip(decision, { depth, context, normalizedUrl }));
       }
       const reason = decision.reason || 'policy';
+      this._noteFetchSkip({ url: normalizedUrl, depth, reason: `decision:${reason}`, status: 'skipped-policy' });
       return this._buildResult({
         status: 'skipped-policy',
         source: 'skipped',
@@ -564,6 +600,7 @@ class FetchPipeline extends EventEmitter {
     }
 
     if (forceCache) {
+      this._noteFetchSkip({ url: normalizedUrl, depth, reason: orchestration.reason || 'cache-miss', status: 'skipped-cache-miss' });
       return this._buildResult({
         status: 'skipped-cache-miss',
         source: 'skipped',
@@ -1386,11 +1423,14 @@ class FetchPipeline extends EventEmitter {
     if (!dbAdapter || !dbAdapter.isEnabled?.()) return null;
     let meta = null;
     try {
-      if (this.articleHeaderCache && this.articleHeaderCache.has(normalizedUrl)) {
-        meta = this.articleHeaderCache.get(normalizedUrl);
+      const cached = this.articleHeaderCache ? this.articleHeaderCache.get(normalizedUrl) : null;
+      if (cached) {
+        meta = cached;
       } else {
+        // A cached null must not shadow the DB: validators may have been
+        // persisted after the first (miss) lookup, e.g. by this very run.
         meta = dbAdapter.getArticleHeaders(normalizedUrl) || null;
-        if (this.articleHeaderCache) {
+        if (this.articleHeaderCache && meta) {
           this.articleHeaderCache.set(normalizedUrl, meta);
         }
       }
