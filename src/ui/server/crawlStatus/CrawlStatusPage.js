@@ -277,6 +277,50 @@ class CrawlStatusPage extends Standard_Web_Page {
       item.add(small);
     }
 
+    // Remote fetch strip — live status of the "local coordination, remote
+    // page downloads" mode (Oracle fetch worker). Populated from the
+    // remoteFetch section of crawl:progress telemetry events; hidden while
+    // crawls fetch locally. See src/core/crawler/adapters/remoteFetch.js.
+    const remoteFetchStrip = new Control({ context: ctx, tagName: 'section' });
+    remoteFetchStrip.dom.attributes.id = 'remote-fetch-strip';
+    remoteFetchStrip.dom.attributes.class = 'throughput-strip remote-fetch-strip';
+    remoteFetchStrip.dom.attributes['data-screenshot-subject'] = 'crawl-status-remote-fetch-strip';
+    remoteFetchStrip.dom.attributes['data-crawl-remote-fetch-strip'] = 'true';
+    remoteFetchStrip.dom.attributes.style = 'display:none';
+    body.add(remoteFetchStrip);
+
+    const remoteFetchTitle = new Control({ context: ctx, tagName: 'div' });
+    remoteFetchTitle.dom.attributes.class = 'throughput-item remote-fetch-title';
+    remoteFetchStrip.add(remoteFetchTitle);
+    const remoteFetchHealth = new Control({ context: ctx, tagName: 'span' });
+    remoteFetchHealth.dom.attributes['data-crawl-remote-fetch-stat'] = 'health';
+    remoteFetchHealth.add('○');
+    remoteFetchTitle.add(remoteFetchHealth);
+    const remoteFetchWorker = new Control({ context: ctx, tagName: 'small' });
+    remoteFetchWorker.dom.attributes['data-crawl-remote-fetch-stat'] = 'worker';
+    remoteFetchWorker.add('Remote fetch');
+    remoteFetchTitle.add(remoteFetchWorker);
+
+    const remoteFetchItems = [
+      ['ok', 'Remote OK'],
+      ['errors', 'Remote errors'],
+      ['mb', 'Remote MB'],
+      ['fallbacks', 'Local fallbacks'],
+      ['lastMs', 'Last fetch ms']
+    ];
+    for (const [key, label] of remoteFetchItems) {
+      const item = new Control({ context: ctx, tagName: 'div' });
+      item.dom.attributes.class = 'throughput-item';
+      remoteFetchStrip.add(item);
+      const value = new Control({ context: ctx, tagName: 'span' });
+      value.dom.attributes['data-crawl-remote-fetch-stat'] = key;
+      value.add('0');
+      item.add(value);
+      const small = new Control({ context: ctx, tagName: 'small' });
+      small.add(label);
+      item.add(small);
+    }
+
     const table = new Control({ context: ctx, tagName: 'table' });
     body.add(table);
 

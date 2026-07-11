@@ -338,12 +338,29 @@ class Crawler extends EventedCrawlerBase {
     }
     this._lastProgressEmitAt = now;
     
+    const remoteFetchTelemetry = this._getRemoteFetchTelemetry();
     this.emit('progress', {
       stats: this.state.getStats(),
       paused: this._paused,
       abortRequested: this._abortRequested,
+      ...(remoteFetchTelemetry ? { remoteFetch: remoteFetchTelemetry } : {}),
       ...metadata
     });
+  }
+
+  /**
+   * Remote-fetch telemetry snapshot (local coordination, remote downloads).
+   * Populated when remote fetch is enabled — CrawlerServiceWiring sets
+   * this.remoteFetch = { config, getStats }. Never throws.
+   * @returns {Object|null}
+   */
+  _getRemoteFetchTelemetry() {
+    try {
+      if (this.remoteFetch && typeof this.remoteFetch.getStats === 'function') {
+        return this.remoteFetch.getStats() || null;
+      }
+    } catch (_) { /* telemetry must never break the crawl */ }
+    return null;
   }
 
   /**

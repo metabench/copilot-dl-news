@@ -190,7 +190,10 @@ class CrawlTelemetryBridge {
         phase: progress.phase ?? null,
         throttled: progress.throttled ?? null,
         throttleReason: progress.throttleReason ?? null,
-        throttleDomain: progress.throttleDomain ?? null
+        throttleDomain: progress.throttleDomain ?? null,
+        // Remote fetch telemetry rides alongside the base stats payload
+        // (emitted by core/Crawler.emitProgress when remote fetch is on).
+        remoteFetch: progress.remoteFetch ?? null
       };
     }
 

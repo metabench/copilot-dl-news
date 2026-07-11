@@ -1,6 +1,9 @@
 'use strict';
 
 const crypto = require('crypto');
+const path = require('path');
+const { fork } = require('child_process');
+const { EventEmitter } = require('events');
 const { observable } = require('fnl');
 
 function createJobId() {
@@ -30,8 +33,13 @@ class InProcessCrawlJobRegistry {
     serviceOptions,
     telemetryIntegration,
     allowMultiJobs = false,
-    historyLimit = 200
+    historyLimit = 200,
+    // Worker mode runs each operation in a forked child so crawls cannot
+    // starve this server's event loop (in-process jobs stalled the API
+    // 15-20s+ under load — 2026-07-07). Default from UI_CRAWL_WORKER=1.
+    workerMode = process.env.UI_CRAWL_WORKER === '1'
   } = {}) {
+    this._workerMode = Boolean(workerMode);
     this._createCrawlService = typeof createCrawlService === 'function' ? createCrawlService : null;
     this._serviceOptions = serviceOptions && typeof serviceOptions === 'object' ? serviceOptions : {};
     this._defaultOverrides = this._serviceOptions.defaultOverrides && typeof this._serviceOptions.defaultOverrides === 'object'
@@ -62,26 +70,19 @@ class InProcessCrawlJobRegistry {
   }
 
   list() {
-    return Array.from(this._jobs.values()).map((job) => ({
-      id: job.id,
-      mode: 'in-process',
-      operationName: job.operationName,
-      startUrl: job.startUrl,
-      status: job.status,
-      createdAt: job.createdAt,
-      startedAt: job.startedAt,
-      finishedAt: job.finishedAt,
-      paused: Boolean(job.paused),
-      abortRequested: Boolean(job.abortRequested)
-    }));
+    return Array.from(this._jobs.values()).map((job) => this._toPublicJob(job));
   }
 
   get(jobId) {
     const job = this._jobs.get(jobId);
     if (!job) return null;
+    return this._toPublicJob(job);
+  }
+
+  _toPublicJob(job) {
     return {
       id: job.id,
-      mode: 'in-process',
+      mode: job.mode || 'in-process',
       operationName: job.operationName,
       startUrl: job.startUrl,
       status: job.status,
@@ -89,8 +90,34 @@ class InProcessCrawlJobRegistry {
       startedAt: job.startedAt,
       finishedAt: job.finishedAt,
       paused: Boolean(job.paused),
-      abortRequested: Boolean(job.abortRequested)
+      abortRequested: Boolean(job.abortRequested),
+      error: job.error || null,
+      // Live numeric progress for the crawl status page (jobs table +
+      // throughput strip), incl. the Electron unified app. Populated by
+      // _attachJobProgress; null until the first progress event or in
+      // worker mode. See core/jobProgress.js.
+      progress: job.progress || null
     };
+  }
+
+  /**
+   * Subscribe to a crawler's in-process progress events and keep a
+   * normalized snapshot on the job record so /api/v1/crawl/jobs carries
+   * live numbers. Never throws; display must not affect the crawl.
+   */
+  _attachJobProgress(job, crawler) {
+    if (!job || !crawler || typeof crawler.on !== 'function') return;
+    if (job._progressAttached) return;
+    job._progressAttached = true;
+    try {
+      const { createJobProgressTracker } = require('./jobProgress');
+      const tracker = createJobProgressTracker();
+      crawler.on('progress', (payload) => {
+        try {
+          job.progress = tracker.record(payload);
+        } catch (_) { /* ignore */ }
+      });
+    } catch (_) { /* progress display is best-effort */ }
   }
 
   _getInternal(jobId) {
@@ -157,6 +184,7 @@ class InProcessCrawlJobRegistry {
       id: jobId,
       operationName: op,
       startUrl: url,
+      mode: 'in-process',
       status: 'running',
       createdAt: nowIso,
       startedAt: nowIso,
@@ -170,12 +198,17 @@ class InProcessCrawlJobRegistry {
       promise: null
     };
 
+    if (this._workerMode) {
+      return this._startOperationInWorker(job, { operationName: op, startUrl: url, overrides });
+    }
+
     let crawlerRef = null;
 
     const wrappedTelemetry = this._telemetry
       ? {
           connectCrawler: (crawler, meta) => {
             crawlerRef = crawler;
+            this._attachJobProgress(job, crawler);
             try {
               return this._telemetry.connectCrawler(crawler, {
                 ...(meta && typeof meta === 'object' ? meta : {}),
@@ -236,12 +269,21 @@ class InProcessCrawlJobRegistry {
         }))
         .then((result) => {
           job.status = result && result.status === 'ok' ? 'completed' : 'failed';
+          if (job.status === 'failed') {
+            const reason = result && (result.error || result.message);
+            job.error = typeof reason === 'string'
+              ? reason
+              : (reason && reason.message) || (reason ? JSON.stringify(reason).slice(0, 500) : 'operation returned non-ok status');
+          }
           job.finishedAt = new Date().toISOString();
           next({ type: 'job:result', jobId, result });
           complete({ jobId, result });
         })
         .catch((err) => {
           job.status = 'failed';
+          // Persist the reason on the record: previously it was only emitted as
+          // a job:failed event and lost to API consumers (2026-07-07 crawl-ops c4).
+          job.error = (err && err.message) || String(err);
           job.finishedAt = new Date().toISOString();
           error(err);
         });
@@ -274,6 +316,93 @@ class InProcessCrawlJobRegistry {
         this._jobs.delete(oldestKey);
       }
     }
+
+    return { jobId, job: this.get(jobId) };
+  }
+
+  /**
+   * Worker mode: run the operation in a forked child. Crawler telemetry
+   * events arrive over IPC and are replayed onto a local EventEmitter that is
+   * connected to the real telemetry bridge — the UI sees identical progress.
+   */
+  _startOperationInWorker(job, { operationName, startUrl, overrides }) {
+    const jobId = job.id;
+    job.mode = 'worker';
+
+    const mergedOverrides = {
+      ...this._defaultOverrides,
+      ...normalizeOverrides(overrides),
+      jobId,
+      crawlType: 'operation'
+    };
+
+    const child = fork(path.join(__dirname, 'crawl-operation-worker.js'), [], {
+      stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
+      env: { ...process.env }
+    });
+
+    // Replay child crawler events into the real bridge via a stand-in emitter.
+    const emitter = new EventEmitter();
+    // Live job progress works in worker mode too: the replayed 'progress'
+    // events feed the same per-job tracker as in-process crawls.
+    this._attachJobProgress(job, emitter);
+    let disconnect = null;
+    if (this._telemetry) {
+      try {
+        disconnect = this._telemetry.connectCrawler(emitter, { jobId, crawlType: 'operation' });
+      } catch (_) { disconnect = null; }
+    }
+
+    let settled = false;
+    const settle = (status, error) => {
+      if (settled) return;
+      settled = true;
+      job.status = status;
+      if (error) job.error = typeof error === 'string' ? error : (error.message || JSON.stringify(error).slice(0, 500));
+      job.finishedAt = new Date().toISOString();
+      try { if (disconnect) disconnect(); } catch (_) {}
+      this._emit({ type: status === 'completed' ? 'job:completed' : 'job:failed', jobId, error: job.error || undefined });
+    };
+
+    child.on('message', (m) => {
+      if (!m || typeof m !== 'object') return;
+      if (m.type === 'crawler-event') {
+        try { emitter.emit(m.event, m.data); } catch (_) {}
+      } else if (m.type === 'result') {
+        settle(m.status === 'ok' ? 'completed' : 'failed', m.error || null);
+      } else if (m.type === 'fatal') {
+        settle('failed', m.error || 'worker fatal error');
+      }
+    });
+
+    child.on('exit', (code, signal) => {
+      settle(code === 0 ? 'completed' : 'failed', code === 0 ? null : `worker exited code=${code} signal=${signal || 'none'}`);
+    });
+    child.on('error', (err) => settle('failed', err));
+
+    job.stop = () => {
+      job.abortRequested = true;
+      try { child.send({ type: 'stop' }); } catch (_) {}
+      // Escalate if the graceful stop stalls.
+      setTimeout(() => { if (!settled) { try { child.kill(); } catch (_) {} } }, 30000);
+    };
+
+    job.promise = new Promise((resolve) => {
+      const check = setInterval(() => {
+        if (settled) { clearInterval(check); resolve({ jobId, status: job.status }); }
+      }, 500);
+      if (typeof check.unref === 'function') check.unref();
+    });
+
+    this._jobs.set(jobId, job);
+    this._emit({ type: 'job:started', jobId, job: this.get(jobId) });
+
+    if (this._jobs.size > this._historyLimit) {
+      const oldestKey = this._jobs.keys().next().value;
+      if (oldestKey) this._jobs.delete(oldestKey);
+    }
+
+    child.send({ type: 'run', operationName, startUrl, overrides: mergedOverrides });
 
     return { jobId, job: this.get(jobId) };
   }

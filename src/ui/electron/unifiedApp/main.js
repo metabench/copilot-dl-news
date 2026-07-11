@@ -6,6 +6,21 @@ const http = require('http');
 const { spawn } = require('child_process');
 const { app: electronApp, BrowserWindow } = require('electron');
 
+// --user-data-dir <path>: isolate this instance's Chromium profile. Needed
+// when a second instance runs beside the main app (e.g. smoke screenshots) —
+// sharing the default profile causes GPU/disk-cache lock fights ("Access is
+// denied") and can leave capturePage output empty. Must run before ready.
+{
+  const udIndex = process.argv.indexOf('--user-data-dir');
+  if (udIndex >= 0 && process.argv[udIndex + 1]) {
+    try {
+      const dir = path.resolve(process.argv[udIndex + 1]);
+      fs.mkdirSync(dir, { recursive: true });
+      electronApp.setPath('userData', dir);
+    } catch (_) { /* fall back to default profile */ }
+  }
+}
+
 function getDevRepoRoot() {
   // __dirname = <repo>/src/ui/electron/unifiedApp
   return path.resolve(__dirname, '..', '..', '..', '..');
@@ -177,9 +192,23 @@ function normalizeUrlPath(urlPath, appId) {
 
 async function captureScreenshot(win, screenshotPath, delayMs) {
   await new Promise((resolve) => setTimeout(resolve, delayMs));
-  const image = await win.webContents.capturePage();
+  // capturePage can return an empty image before the compositor has painted
+  // (seen on Windows under GPU-cache contention). Retry until non-empty.
+  let png = Buffer.alloc(0);
+  for (let attempt = 0; attempt < 6; attempt++) {
+    try {
+      if (!win.isVisible()) win.show();
+      const image = await win.webContents.capturePage();
+      png = image.toPNG();
+      if (png.length > 0) break;
+    } catch (_) { /* retry */ }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
   fs.mkdirSync(path.dirname(screenshotPath), { recursive: true });
-  fs.writeFileSync(screenshotPath, image.toPNG());
+  fs.writeFileSync(screenshotPath, png);
+  if (png.length === 0) {
+    console.warn('[Electron Unified] screenshot captured empty after retries:', screenshotPath);
+  }
 }
 
 electronApp.whenReady().then(async () => {

@@ -51,6 +51,7 @@ function buildCrawlStatusClientScript({
   const statusEl = document.getElementById('status');
   const rowsEl = document.getElementById('rows');
   const throughputEl = document.getElementById('throughput-strip');
+  const remoteFetchEl = document.getElementById('remote-fetch-strip');
   const form = document.getElementById('crawl-start-form');
   const urlInput = document.getElementById('crawl-start-url');
   const profileSelect = document.getElementById('crawl-profile-select');
@@ -383,11 +384,63 @@ function buildCrawlStatusClientScript({
     if (event.target && event.target.matches('[data-refresh-crawls]')) refreshJobs();
   });
 
+  // ── Remote fetch strip (local coordination, remote page downloads) ──
+  // Live-updated from crawl:progress telemetry events over SSE. The strip
+  // stays hidden until a crawl reports remoteFetch telemetry.
+  function setRemoteFetchStat(name, value) {
+    if (!remoteFetchEl) return;
+    const el = remoteFetchEl.querySelector('[data-crawl-remote-fetch-stat="' + name + '"]');
+    if (el) el.textContent = String(value);
+  }
+
+  function renderRemoteFetch(rf) {
+    if (!remoteFetchEl || !rf) return;
+    remoteFetchEl.style.display = '';
+    remoteFetchEl.setAttribute('data-crawl-remote-fetch-active', 'true');
+    const health = rf.healthy === true ? '●' : (rf.healthy === false ? '●!' : '○');
+    setRemoteFetchStat('health', health);
+    remoteFetchEl.setAttribute('data-crawl-remote-fetch-health',
+      rf.healthy === true ? 'healthy' : (rf.healthy === false ? 'unhealthy' : 'unknown'));
+    setRemoteFetchStat('worker', 'Remote fetch: ' + (rf.workerUrl || 'worker'));
+    setRemoteFetchStat('ok', rf.requestsOk != null ? rf.requestsOk : 0);
+    setRemoteFetchStat('errors', rf.requestsError != null ? rf.requestsError : 0);
+    setRemoteFetchStat('mb', ((rf.bytesTransferred || 0) / (1024 * 1024)).toFixed(2));
+    setRemoteFetchStat('fallbacks', rf.localFallbacks != null ? rf.localFallbacks : 0);
+    setRemoteFetchStat('lastMs', rf.lastFetchMs != null ? rf.lastFetchMs : '–');
+  }
+
+  function extractRemoteFetch(parsed) {
+    // Frames arrive as {type:'crawl:telemetry', data:<event>} where <event>
+    // is {type:'crawl:progress', data:{...fields, remoteFetch}}. Be tolerant
+    // of intermediate shapes.
+    let node = parsed;
+    for (let depth = 0; node && typeof node === 'object' && depth < 4; depth++) {
+      if (node.remoteFetch && typeof node.remoteFetch === 'object') return node.remoteFetch;
+      node = node.data;
+    }
+    return null;
+  }
+
+  function initTelemetryStream() {
+    if (!remoteFetchEl || typeof window.EventSource !== 'function') return;
+    try {
+      const source = new EventSource(config.eventsPath);
+      source.onmessage = function(message) {
+        try {
+          const rf = extractRemoteFetch(JSON.parse(message.data));
+          if (rf) renderRemoteFetch(rf);
+        } catch (_) { /* non-JSON frames are fine to skip */ }
+      };
+      // EventSource auto-reconnects; nothing else needed.
+    } catch (_) { /* SSE unavailable — strip stays hidden */ }
+  }
+
   seedStartControls();
   updateBatchSummary();
   loadOperations().finally(markReady);
   refreshJobs();
   setInterval(refreshJobs, 3000);
+  initTelemetryStream();
 })();`;
 }
 

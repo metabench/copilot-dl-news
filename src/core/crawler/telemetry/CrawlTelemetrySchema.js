@@ -214,7 +214,14 @@ function createProgressEvent(stats, options = {}) {
     phase: stats.phase ?? null,
     throttled: stats.throttled ?? null,
     throttleReason: stats.throttleReason ?? null,
-    throttleDomain: stats.throttleDomain ?? null
+    throttleDomain: stats.throttleDomain ?? null,
+
+    // Remote fetch telemetry (local coordination, remote page downloads).
+    // Shape: { enabled, workerUrl, healthy, requestsSent, requestsOk,
+    //          requestsError, bytesTransferred, batchesSent, localFallbacks,
+    //          lastBatchAt, lastBatchMs, lastBatchSize } — null when the
+    // crawl fetches locally. See src/core/crawler/adapters/remoteFetch.js.
+    remoteFetch: stats.remoteFetch ?? null
   };
 
   return createTelemetryEvent(CRAWL_EVENT_TYPES.PROGRESS, data, {
