@@ -307,6 +307,7 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     knownArticlesCache: crawler.state.getKnownArticlesCache(),
     getDbAdapter: () => crawler.dbAdapter,
     maxAgeHubMs: crawler.maxAgeHubMs,
+    maxAgeArticleMs: crawler.maxAgeArticleMs,
     urlDecisionOrchestrator: crawler.urlDecisionOrchestrator || null
   });
   crawler.queue = new QueueManager({
@@ -372,7 +373,26 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     console.warn('[CrawlerServiceWiring] NewAbstractionsAdapter failed to initialize:', err.message);
   }
 
+  // Remote fetch (optional): coordinate the crawl locally but execute page
+  // downloads on a remote fetch worker. Enabled via the crawler option
+  // { remoteFetch: { enabled: true, workerUrl } } or CRAWL_REMOTE_FETCH=true.
+  // See src/core/crawler/adapters/remoteFetch.js.
+  let remoteFetchFn = null;
+  try {
+    const { resolveRemoteFetchConfig, createRemoteFetchFn } = require('./adapters/remoteFetch');
+    const remoteFetchConfig = resolveRemoteFetchConfig(rawOptions.remoteFetch || {});
+    remoteFetchFn = createRemoteFetchFn(remoteFetchConfig, { logger: console });
+    if (remoteFetchFn) {
+      // getStats feeds the crawl dashboard: core/Crawler.emitProgress attaches
+      // it to every progress event as `remoteFetch`.
+      crawler.remoteFetch = { config: remoteFetchConfig, getStats: remoteFetchFn.getTelemetry };
+    }
+  } catch (err) {
+    console.warn('[CrawlerServiceWiring] remote fetch unavailable, using local fetch:', err.message);
+  }
+
   crawler.fetchPipeline = new FetchPipeline({
+    fetchFn: remoteFetchFn || undefined,
     getUrlDecision: (targetUrl, ctx) => crawler._getUrlDecision(targetUrl, ctx),
     normalizeUrl: (targetUrl, ctx) => crawler.normalizeUrl(targetUrl, ctx),
     isOnDomain: (targetUrl) => crawler.isOnDomain(targetUrl),

@@ -709,6 +709,11 @@ async function fetchOne(task, options) {
         });
         result.status = resp.status;
         result.ok = resp.ok;
+        // Report where redirects landed; clients (e.g. DistributedFetchAdapter
+        // _createResponse) surface this as response.url.
+        if (resp.url && resp.url !== url) {
+          result.finalUrl = resp.url;
+        }
         try {
           // resp.headers is a Headers object in Node fetch.
           const asObj = Object.fromEntries(resp.headers.entries());

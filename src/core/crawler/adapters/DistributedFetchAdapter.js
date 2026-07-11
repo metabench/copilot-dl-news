@@ -19,7 +19,18 @@ const http = require('http');
 const zlib = require('zlib');
 const EventEmitter = require('events');
 
-const DEFAULT_WORKER_URL = 'http://144.21.42.149:8081';
+// Default worker address comes from WORKER_URL env, then the fleet host
+// (FLEET_HOST env / tools/crawl/.fleet-host), then localhost — resolved
+// lazily to avoid a require cycle with remoteFetch.js.
+// (Previously hardcoded to an Oracle IP.)
+function resolveDefaultWorkerUrl() {
+  try {
+    const { resolveWorkerUrl } = require('./remoteFetch');
+    return resolveWorkerUrl();
+  } catch (_) {
+    return 'http://127.0.0.1:8081';
+  }
+}
 
 class DistributedFetchAdapter extends EventEmitter {
   /**
@@ -35,7 +46,7 @@ class DistributedFetchAdapter extends EventEmitter {
    */
   constructor(options = {}) {
     super();
-    this.workerUrl = options.workerUrl || DEFAULT_WORKER_URL;
+    this.workerUrl = options.workerUrl || resolveDefaultWorkerUrl();
     this.batchSize = options.batchSize || 50;
     this.maxConcurrency = options.maxConcurrency || 20;
     this.timeoutMs = options.timeoutMs || 30000;
@@ -540,5 +551,5 @@ module.exports = {
   DistributedFetchAdapter,
   getDistributedFetchAdapter,
   createDistributedFetchAdapter,
-  DEFAULT_WORKER_URL,
+  resolveDefaultWorkerUrl,
 };

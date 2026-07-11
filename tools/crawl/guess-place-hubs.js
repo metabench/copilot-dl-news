@@ -26,7 +26,7 @@ function parseCliArgs(argv) {
     .add('--limit <number>', 'Max number of probes to run', undefined, 'int')
     .add('--apply', 'Apply changes (save discovered hubs to DB)', false, 'boolean')
     .add('--distributed', 'Use distributed fetching via remote worker', false, 'boolean')
-    .add('--worker-url <url>', 'Remote worker URL for distributed mode', 'http://144.21.42.149:8081')
+    .add('--worker-url <url>', 'Remote worker URL for distributed mode (default: WORKER_URL env / fleet host)')
     .add('--confidence-mode <mode>', 'Confidence mode: off | shadow | enforce', 'shadow')
     .add('--min-confidence <number>', 'Minimum confidence threshold for enforce mode (0-1)', 0.65, 'float')
     .add('--verbose', 'Enable verbose output', false, 'boolean')
@@ -84,7 +84,7 @@ function normalizeOptions(rawArgs) {
     limit: rawArgs.limit,
     apply: Boolean(rawArgs.apply),
     distributed: Boolean(rawArgs.distributed),
-    workerUrl: rawArgs.workerUrl || 'http://144.21.42.149:8081',
+    workerUrl: require('../../src/core/crawler/adapters/remoteFetch').resolveWorkerUrl(rawArgs.workerUrl),
     confidenceMode,
     minConfidence,
     verbose: Boolean(rawArgs.verbose),

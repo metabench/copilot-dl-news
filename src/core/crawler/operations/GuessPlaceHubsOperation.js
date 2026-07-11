@@ -190,7 +190,10 @@ class GuessPlaceHubsOperation extends CrawlOperation {
       overrides.distributed,
       parseBoolean(process.env.GUESS_PLACE_HUBS_DISTRIBUTED, true)
     );
-    const workerUrl = overrides.workerUrl || 'http://144.21.42.149:8081';
+    // Worker address resolution: WORKER_URL env → FLEET_HOST/.fleet-host →
+    // localhost. (Previously hardcoded to an Oracle IP; see remoteFetch.js.)
+    const { resolveWorkerUrl } = require('../adapters/remoteFetch');
+    const workerUrl = resolveWorkerUrl(overrides.workerUrl);
 
     const dependencies = createPlaceHubDependencies({
       dbPath,

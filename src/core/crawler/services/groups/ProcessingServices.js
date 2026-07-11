@@ -74,7 +74,15 @@ function registerProcessingServices(container, config) {
   container.register('fetchPipeline', (c) => {
     try {
       const FetchPipeline = require('../../FetchPipeline');
+      // Optional remote fetch: local coordination, remote page downloads.
+      // See src/core/crawler/adapters/remoteFetch.js.
+      let remoteFetchFn = null;
+      try {
+        const { resolveRemoteFetchConfig, createRemoteFetchFn } = require('../../adapters/remoteFetch');
+        remoteFetchFn = createRemoteFetchFn(resolveRemoteFetchConfig(config.remoteFetch || {}));
+      } catch (_) { /* fall back to local fetch */ }
       return new FetchPipeline({
+        fetchFn: remoteFetchFn || undefined,
         context: c.get('context'),
         retryCoordinator: c.tryGet('retryCoordinator'),
         urlDecisionOrchestrator: c.tryGet('urlDecisionOrchestrator'),

@@ -2,6 +2,9 @@
 
 Production and development deployment setup for the News Crawler system.
 
+> Coordinating crawls locally with page downloads executed remotely? See
+> [`remote-fetch-worker/README.md`](remote-fetch-worker/README.md).
+
 ## Quick Start
 
 ### Production
