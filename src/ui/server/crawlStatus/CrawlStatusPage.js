@@ -11,7 +11,21 @@ const { CrawlBatchLauncherControl } = require('./controls/CrawlBatchLauncherCont
 const CRAWL_STATUS_CSS = require('./crawl-status-styles');
 
 // ─────────────────────────────────────────────────────────────────
-// CrawlStatusPage — SSR composition
+// CrawlStatusPage — SSR composition (jsgui3, Visual Studio 2005 theme)
+//
+// Layout is classic mid-2000s IDE chrome, driven by the jsgui3-html
+// Admin_Theme 'vs-2005' preset (--admin-* CSS variables):
+//   ┌ caption bar ─────────────────────────────────────────────┐
+//   ├ toolbar (the start-crawl form: profile · URL · Start …) ─┤
+//   ├ advanced strip (collapsed <details>)                     │
+//   ├ [tool window] Batch launch                               │
+//   ├ [tool window] Crawl activity                             │
+//   │    throughput strip · remote-fetch strip · jobs grid     │
+//   └ status bar (live status text · quick links) ─────────────┘
+//
+// All element ids and data-* attributes are load-bearing: the client
+// script (crawl-status-client.js), checks, and screenshot tooling key
+// off them. Restyle freely; rename nothing.
 // ─────────────────────────────────────────────────────────────────
 
 class CrawlStatusPage extends Standard_Web_Page {
@@ -35,227 +49,138 @@ class CrawlStatusPage extends Standard_Web_Page {
     }
 
     const ctx = this.context;
+    const el = (tagName, attrs = {}, text = null) => {
+      const c = new Control({ context: ctx, tagName });
+      for (const [k, v] of Object.entries(attrs)) c.dom.attributes[k] = v;
+      if (text !== null) c.add(text);
+      return c;
+    };
 
     // Shared RemoteObservable browser modules (plain scripts; no bundler required).
     // These enable an Evented/Rx/async-iterator interface over the crawl telemetry stream.
     if (this.head) {
-      const s1 = new Control({ context: ctx, tagName: 'script' });
-      s1.dom.attributes.src = '/shared-remote-obs/RemoteObservableShared.js';
-      this.head.add(s1);
-
-      const s2 = new Control({ context: ctx, tagName: 'script' });
-      s2.dom.attributes.src = '/shared-remote-obs/RemoteObservableClient.js';
-      this.head.add(s2);
-
-      const s3 = new Control({ context: ctx, tagName: 'script' });
-      s3.dom.attributes.src = '/shared-remote-obs/RemoteObservableClientAdapters.js';
-      this.head.add(s3);
+      this.head.add(el('script', { src: '/shared-remote-obs/RemoteObservableShared.js' }));
+      this.head.add(el('script', { src: '/shared-remote-obs/RemoteObservableClient.js' }));
+      this.head.add(el('script', { src: '/shared-remote-obs/RemoteObservableClientAdapters.js' }));
     }
 
+    // Theme variables (Admin_Theme presets, incl. 'vs-2005') + page styles.
+    // NOTE: CSS must be added via String_Control (raw text). Plain .add()
+    // HTML-escapes text nodes in current jsgui3-html — apostrophes become
+    // &#x27; and /* comments */ become &#x2F;* … *&#x2F;, which corrupts the
+    // stylesheet (each garbled comment swallows the following rule).
     const style = new Control({ context: ctx, tagName: 'style' });
-    style.add(CRAWL_STATUS_CSS);
+    const adminThemeCss = jsgui.Admin_Theme && jsgui.Admin_Theme.css ? jsgui.Admin_Theme.css : '';
+    style.add(new String_Control({ context: ctx, text: adminThemeCss + '\n' + CRAWL_STATUS_CSS }));
     this.head.add(style);
 
     const body = this.body || this;
     body.dom.attributes['data-screenshot-subject'] = 'crawl-status';
     body.dom.attributes['data-screenshot-route'] = '/crawl-status';
+    body.dom.attributes['data-admin-theme'] = 'vs-2005';
+    body.dom.attributes.class = 'vs-shell';
 
-    const header = new Control({ context: ctx, tagName: 'header' });
+    // ── Caption bar ─────────────────────────────────────────────────
+    const header = el('header', { class: 'vs-caption' });
     body.add(header);
 
-    const left = new Control({ context: ctx, tagName: 'div' });
-    header.add(left);
+    const captionLeft = el('div', { class: 'vs-caption-left' });
+    header.add(captionLeft);
+    captionLeft.add(el('span', { class: 'vs-caption-glyph', 'aria-hidden': 'true' }, '◉'));
+    captionLeft.add(el('h1', {}, 'Ongoing Crawl Status'));
 
-    const h1 = new Control({ context: ctx, tagName: 'h1' });
-    h1.add('Ongoing Crawl Status');
-    left.add(h1);
+    const meta = el('div', { class: 'meta' });
+    meta.add('live ');
+    meta.add(el('span', { class: 'mono' }, this.eventsPath));
+    meta.add(' · snapshots ');
+    meta.add(el('span', { class: 'mono' }, this.jobsApiPath));
+    header.add(meta);
 
-    const meta = new Control({ context: ctx, tagName: 'div' });
-    meta.dom.attributes.class = 'meta';
-    meta.add('Live updates via ');
-    const metaEvents = new Control({ context: ctx, tagName: 'span' });
-    metaEvents.dom.attributes.class = 'mono';
-    metaEvents.add(this.eventsPath);
-    meta.add(metaEvents);
-    meta.add(', snapshots via ');
-    const metaJobs = new Control({ context: ctx, tagName: 'span' });
-    metaJobs.dom.attributes.class = 'mono';
-    metaJobs.add(this.jobsApiPath);
-    meta.add(metaJobs);
-    left.add(meta);
+    // ── Toolbar (the start-crawl form) ──────────────────────────────
+    const form = el('form', { id: 'crawl-start-form', class: 'vs-toolbar' });
+    body.add(form);
 
-    const links = new Control({ context: ctx, tagName: 'div' });
-    links.dom.attributes.class = 'links';
-    header.add(links);
-
-    const linkApiDocs = new Control({ context: ctx, tagName: 'a' });
-    linkApiDocs.dom.attributes.href = '/api-docs';
-    linkApiDocs.add('API docs');
-    links.add(linkApiDocs);
-
-    const linkJobs = new Control({ context: ctx, tagName: 'a' });
-    linkJobs.dom.attributes.href = this.jobsApiPath;
-    linkJobs.add('jobs JSON');
-    links.add(linkJobs);
-
-    if (this.extraJobsApiPath) {
-      const linkJobs2 = new Control({ context: ctx, tagName: 'a' });
-      linkJobs2.dom.attributes.href = this.extraJobsApiPath;
-      linkJobs2.add('in-process jobs JSON');
-      links.add(linkJobs2);
-    }
-
-    const linkEvents = new Control({ context: ctx, tagName: 'a' });
-    linkEvents.dom.attributes.href = this.eventsPath;
-    linkEvents.add('events stream');
-    links.add(linkEvents);
-
-    const linkHistory = new Control({ context: ctx, tagName: 'a' });
-    linkHistory.dom.attributes.href = this.telemetryHistoryPath;
-    linkHistory.add('telemetry history');
-    links.add(linkHistory);
-
-    const linkObserver = new Control({ context: ctx, tagName: 'a' });
-    linkObserver.dom.attributes.href = '/crawl-observer';
-    linkObserver.add('crawl observer');
-    links.add(linkObserver);
-
-    const startPanel = new Control({ context: ctx, tagName: 'section' });
-    startPanel.dom.attributes.class = 'start';
-    body.add(startPanel);
-
-    const startTitle = new Control({ context: ctx, tagName: 'h2' });
-    startTitle.add('Start crawl (in-process)');
-    startPanel.add(startTitle);
-
-    const form = new Control({ context: ctx, tagName: 'form' });
-    form.dom.attributes.id = 'crawl-start-form';
-    startPanel.add(form);
-
-    const row = new Control({ context: ctx, tagName: 'div' });
-    row.dom.attributes.class = 'start-row';
-    form.add(row);
-
-    const profileField = new Control({ context: ctx, tagName: 'div' });
-    profileField.dom.attributes.class = 'start-field';
-    row.add(profileField);
-    const profileLabel = new Control({ context: ctx, tagName: 'label' });
-    profileLabel.dom.attributes.for = 'crawl-profile-select';
-    profileLabel.add('Profile');
-    profileField.add(profileLabel);
-    const profileSelect = new Control({ context: ctx, tagName: 'select' });
-    profileSelect.dom.attributes.id = 'crawl-profile-select';
-    const profileInitial = new Control({ context: ctx, tagName: 'option' });
-    profileInitial.dom.attributes.value = '';
-    profileInitial.add('Loading…');
-    profileSelect.add(profileInitial);
+    const profileField = el('div', { class: 'start-field vs-tool-field' });
+    form.add(profileField);
+    profileField.add(el('label', { for: 'crawl-profile-select' }, 'Profile'));
+    const profileSelect = el('select', { id: 'crawl-profile-select' });
+    profileSelect.add(el('option', { value: '' }, 'Loading…'));
     profileField.add(profileSelect);
 
-    const urlField = new Control({ context: ctx, tagName: 'div' });
-    urlField.dom.attributes.class = 'start-field';
-    row.add(urlField);
-    const urlLabel = new Control({ context: ctx, tagName: 'label' });
-    urlLabel.dom.attributes.for = 'crawl-start-url';
-    urlLabel.add('Start URL');
-    urlField.add(urlLabel);
-    const urlInput = new Control({ context: ctx, tagName: 'input' });
-    urlInput.dom.attributes.id = 'crawl-start-url';
-    urlInput.dom.attributes.type = 'url';
-    urlInput.dom.attributes.placeholder = 'https://example.com';
-    urlField.add(urlInput);
+    const urlField = el('div', { class: 'start-field vs-tool-field vs-tool-field-grow' });
+    form.add(urlField);
+    urlField.add(el('label', { for: 'crawl-start-url' }, 'Start URL'));
+    urlField.add(el('input', {
+      id: 'crawl-start-url',
+      type: 'url',
+      placeholder: 'https://example.com'
+    }));
 
-    const actions = new Control({ context: ctx, tagName: 'div' });
-    actions.dom.attributes.class = 'start-actions';
-    row.add(actions);
-    const startBtn = new Control({ context: ctx, tagName: 'button' });
-    startBtn.dom.attributes.type = 'submit';
-    startBtn.add('Start');
-    actions.add(startBtn);
+    const actions = el('div', { class: 'start-actions vs-tool-actions' });
+    form.add(actions);
+    actions.add(el('button', { type: 'submit', class: 'vs-btn vs-btn-primary' }, 'Start'));
+    actions.add(el('span', { class: 'vs-tool-sep', 'aria-hidden': 'true' }));
+    actions.add(el('button', { type: 'button', id: 'crawl-profile-bootstrap', class: 'vs-btn' }, 'Install Guardian presets'));
+    actions.add(el('a', {
+      href: '/crawler-profiles',
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      class: 'vs-tool-link'
+    }, 'Profiles'));
 
-    const presetsBtn = new Control({ context: ctx, tagName: 'button' });
-    presetsBtn.dom.attributes.type = 'button';
-    presetsBtn.dom.attributes.id = 'crawl-profile-bootstrap';
-    presetsBtn.add('Install Guardian presets');
-    actions.add(presetsBtn);
+    // ── Info strip: operation, live form status, advanced options ───
+    const infoStrip = el('div', { class: 'vs-infostrip' });
+    body.add(infoStrip);
 
-    const profilesLink = new Control({ context: ctx, tagName: 'a' });
-    profilesLink.dom.attributes.href = '/crawler-profiles';
-    profilesLink.dom.attributes.target = '_blank';
-    profilesLink.dom.attributes.rel = 'noopener noreferrer';
-    profilesLink.add('Profiles');
-    actions.add(profilesLink);
-
-    const metaRow = new Control({ context: ctx, tagName: 'div' });
-    metaRow.dom.attributes.class = 'start-meta';
+    const metaRow = el('div', { class: 'start-meta' });
     metaRow.add('Operation: ');
-    const opLabel = new Control({ context: ctx, tagName: 'span' });
-    opLabel.dom.attributes.class = 'mono';
-    opLabel.dom.attributes.id = 'crawl-start-operation-label';
-    opLabel.add('Loading…');
-    metaRow.add(opLabel);
-    startPanel.add(metaRow);
+    metaRow.add(el('span', { class: 'mono', id: 'crawl-start-operation-label' }, 'Loading…'));
+    infoStrip.add(metaRow);
 
-    const advanced = new Control({ context: ctx, tagName: 'details' });
-    advanced.dom.attributes.class = 'start-advanced';
-    advanced.dom.attributes.id = 'crawl-start-advanced';
-    startPanel.add(advanced);
-    const advancedSummary = new Control({ context: ctx, tagName: 'summary' });
-    advancedSummary.add('Advanced (operation + overrides)');
-    advanced.add(advancedSummary);
+    const startStatus = el('div', { id: 'crawl-start-status', class: 'start-status' }, 'Loading operations…');
+    infoStrip.add(startStatus);
 
-    const advancedBody = new Control({ context: ctx, tagName: 'div' });
-    advancedBody.dom.attributes.class = 'start-advanced-body';
+    const advanced = el('details', { class: 'start-advanced', id: 'crawl-start-advanced' });
+    body.add(advanced);
+    advanced.add(el('summary', {}, 'Advanced (operation + overrides)'));
+
+    const advancedBody = el('div', { class: 'start-advanced-body' });
     advanced.add(advancedBody);
 
-    const opField = new Control({ context: ctx, tagName: 'div' });
-    opField.dom.attributes.class = 'start-field';
+    const opField = el('div', { class: 'start-field' });
     advancedBody.add(opField);
-    const opSelectLabel = new Control({ context: ctx, tagName: 'label' });
-    opSelectLabel.dom.attributes.for = 'crawl-start-operation';
-    opSelectLabel.add('Operation');
-    opField.add(opSelectLabel);
-    const opSelect = new Control({ context: ctx, tagName: 'select' });
-    opSelect.dom.attributes.id = 'crawl-start-operation';
-    const opInitial = new Control({ context: ctx, tagName: 'option' });
-    opInitial.dom.attributes.value = '';
-    opInitial.add('Loading…');
-    opSelect.add(opInitial);
+    opField.add(el('label', { for: 'crawl-start-operation' }, 'Operation'));
+    const opSelect = el('select', { id: 'crawl-start-operation' });
+    opSelect.add(el('option', { value: '' }, 'Loading…'));
     opField.add(opSelect);
 
-    const ovField = new Control({ context: ctx, tagName: 'div' });
-    ovField.dom.attributes.class = 'start-field';
+    const ovField = el('div', { class: 'start-field' });
     advancedBody.add(ovField);
-    const ovLabel = new Control({ context: ctx, tagName: 'label' });
-    ovLabel.dom.attributes.for = 'crawl-start-overrides';
-    ovLabel.add('Overrides (JSON)');
-    ovField.add(ovLabel);
-    const ovText = new Control({ context: ctx, tagName: 'textarea' });
-    ovText.dom.attributes.id = 'crawl-start-overrides';
-    ovText.dom.attributes.placeholder = '{ }';
-    ovField.add(ovText);
+    ovField.add(el('label', { for: 'crawl-start-overrides' }, 'Overrides (JSON)'));
+    ovField.add(el('textarea', { id: 'crawl-start-overrides', placeholder: '{ }' }));
 
-    const startStatus = new Control({ context: ctx, tagName: 'div' });
-    startStatus.dom.attributes.id = 'crawl-start-status';
-    startStatus.dom.attributes.class = 'start-status';
-    startStatus.add('Loading operations…');
-    startPanel.add(startStatus);
-
+    // ── Tool window: batch launch ───────────────────────────────────
+    const batchWindow = el('section', { class: 'tool-window tool-window-batch' });
+    body.add(batchWindow);
     const batchLauncher = new CrawlBatchLauncherControl({ context: ctx });
     batchLauncher.compose();
-    body.add(batchLauncher);
+    batchWindow.add(batchLauncher);
 
-    const status = new Control({ context: ctx, tagName: 'div' });
-    status.dom.attributes.id = 'status';
-    status.dom.attributes.class = 'footer';
-    status.add('Loading…');
-    body.add(status);
+    // ── Tool window: crawl activity ─────────────────────────────────
+    const activityWindow = el('section', { class: 'tool-window tool-window-activity' });
+    body.add(activityWindow);
+    activityWindow.add(el('div', { class: 'tool-window-header' }, 'Crawl activity'));
 
-    const throughputStrip = new Control({ context: ctx, tagName: 'section' });
-    throughputStrip.dom.attributes.id = 'throughput-strip';
-    throughputStrip.dom.attributes.class = 'throughput-strip';
-    throughputStrip.dom.attributes['data-screenshot-subject'] = 'crawl-status-throughput-strip';
-    throughputStrip.dom.attributes['data-crawl-throughput-strip'] = 'true';
-    body.add(throughputStrip);
+    const activityBody = el('div', { class: 'tool-window-body' });
+    activityWindow.add(activityBody);
+
+    const throughputStrip = el('section', {
+      id: 'throughput-strip',
+      class: 'throughput-strip',
+      'data-screenshot-subject': 'crawl-status-throughput-strip',
+      'data-crawl-throughput-strip': 'true'
+    });
+    activityBody.add(throughputStrip);
 
     const throughputItems = [
       ['network', 'Network MB/s'],
@@ -265,41 +190,30 @@ class CrawlStatusPage extends Standard_Web_Page {
       ['queue', 'Queue']
     ];
     for (const [key, label] of throughputItems) {
-      const item = new Control({ context: ctx, tagName: 'div' });
-      item.dom.attributes.class = 'throughput-item';
+      const item = el('div', { class: 'throughput-item' });
       throughputStrip.add(item);
-      const value = new Control({ context: ctx, tagName: 'span' });
-      value.dom.attributes['data-crawl-throughput-stat'] = key;
-      value.add(key === 'queue' ? '0' : '0.00');
+      const value = el('span', { 'data-crawl-throughput-stat': key }, key === 'queue' ? '0' : '0.00');
       item.add(value);
-      const small = new Control({ context: ctx, tagName: 'small' });
-      small.add(label);
-      item.add(small);
+      item.add(el('small', {}, label));
     }
 
     // Remote fetch strip — live status of the "local coordination, remote
     // page downloads" mode (Oracle fetch worker). Populated from the
     // remoteFetch section of crawl:progress telemetry events; hidden while
     // crawls fetch locally. See src/core/crawler/adapters/remoteFetch.js.
-    const remoteFetchStrip = new Control({ context: ctx, tagName: 'section' });
-    remoteFetchStrip.dom.attributes.id = 'remote-fetch-strip';
-    remoteFetchStrip.dom.attributes.class = 'throughput-strip remote-fetch-strip';
-    remoteFetchStrip.dom.attributes['data-screenshot-subject'] = 'crawl-status-remote-fetch-strip';
-    remoteFetchStrip.dom.attributes['data-crawl-remote-fetch-strip'] = 'true';
-    remoteFetchStrip.dom.attributes.style = 'display:none';
-    body.add(remoteFetchStrip);
+    const remoteFetchStrip = el('section', {
+      id: 'remote-fetch-strip',
+      class: 'throughput-strip remote-fetch-strip',
+      'data-screenshot-subject': 'crawl-status-remote-fetch-strip',
+      'data-crawl-remote-fetch-strip': 'true',
+      style: 'display:none'
+    });
+    activityBody.add(remoteFetchStrip);
 
-    const remoteFetchTitle = new Control({ context: ctx, tagName: 'div' });
-    remoteFetchTitle.dom.attributes.class = 'throughput-item remote-fetch-title';
+    const remoteFetchTitle = el('div', { class: 'throughput-item remote-fetch-title' });
     remoteFetchStrip.add(remoteFetchTitle);
-    const remoteFetchHealth = new Control({ context: ctx, tagName: 'span' });
-    remoteFetchHealth.dom.attributes['data-crawl-remote-fetch-stat'] = 'health';
-    remoteFetchHealth.add('○');
-    remoteFetchTitle.add(remoteFetchHealth);
-    const remoteFetchWorker = new Control({ context: ctx, tagName: 'small' });
-    remoteFetchWorker.dom.attributes['data-crawl-remote-fetch-stat'] = 'worker';
-    remoteFetchWorker.add('Remote fetch');
-    remoteFetchTitle.add(remoteFetchWorker);
+    remoteFetchTitle.add(el('span', { 'data-crawl-remote-fetch-stat': 'health' }, '○'));
+    remoteFetchTitle.add(el('small', { 'data-crawl-remote-fetch-stat': 'worker' }, 'Remote fetch'));
 
     const remoteFetchItems = [
       ['ok', 'Remote OK'],
@@ -309,42 +223,53 @@ class CrawlStatusPage extends Standard_Web_Page {
       ['lastMs', 'Last fetch ms']
     ];
     for (const [key, label] of remoteFetchItems) {
-      const item = new Control({ context: ctx, tagName: 'div' });
-      item.dom.attributes.class = 'throughput-item';
+      const item = el('div', { class: 'throughput-item' });
       remoteFetchStrip.add(item);
-      const value = new Control({ context: ctx, tagName: 'span' });
-      value.dom.attributes['data-crawl-remote-fetch-stat'] = key;
-      value.add('0');
-      item.add(value);
-      const small = new Control({ context: ctx, tagName: 'small' });
-      small.add(label);
-      item.add(small);
+      item.add(el('span', { 'data-crawl-remote-fetch-stat': key }, '0'));
+      item.add(el('small', {}, label));
     }
 
-    const table = new Control({ context: ctx, tagName: 'table' });
-    body.add(table);
+    // Jobs grid (VS2005 list-view styling via CSS)
+    const tableWrap = el('div', { class: 'table-wrap' });
+    activityBody.add(tableWrap);
 
-    const thead = new Control({ context: ctx, tagName: 'thead' });
+    const table = el('table', {});
+    tableWrap.add(table);
+
+    const thead = el('thead', {});
     table.add(thead);
-
-    const headRow = new Control({ context: ctx, tagName: 'tr' });
+    const headRow = el('tr', {});
     thead.add(headRow);
-
     const columns = ['Job', 'Status', 'Progress', 'Visited', 'Downloaded', 'Errors', 'Queue', 'Last Activity', 'Controls'];
     for (const col of columns) {
-      const th = new Control({ context: ctx, tagName: 'th' });
-      th.add(col);
-      headRow.add(th);
+      headRow.add(el('th', {}, col));
     }
-
-    const tbody = new Control({ context: ctx, tagName: 'tbody' });
-    tbody.dom.attributes.id = 'rows';
+    const tbody = el('tbody', { id: 'rows' });
     table.add(tbody);
 
-    const readyMarker = new Control({ context: ctx, tagName: 'div' });
-    readyMarker.dom.attributes.class = 'screenshot-ready-marker';
-    readyMarker.dom.attributes['data-crawl-status-ready'] = 'false';
-    readyMarker.dom.attributes['data-screenshot-ready'] = 'crawl-status';
+    // ── Status bar ──────────────────────────────────────────────────
+    const statusBar = el('footer', { class: 'vs-statusbar' });
+    body.add(statusBar);
+
+    const status = el('div', { id: 'status', class: 'footer vs-statusbar-pane vs-statusbar-main' }, 'Loading…');
+    statusBar.add(status);
+
+    const links = el('div', { class: 'links vs-statusbar-pane' });
+    statusBar.add(links);
+    links.add(el('a', { href: '/api-docs' }, 'API docs'));
+    links.add(el('a', { href: this.jobsApiPath }, 'jobs JSON'));
+    if (this.extraJobsApiPath) {
+      links.add(el('a', { href: this.extraJobsApiPath }, 'in-process jobs JSON'));
+    }
+    links.add(el('a', { href: this.eventsPath }, 'events stream'));
+    links.add(el('a', { href: this.telemetryHistoryPath }, 'telemetry history'));
+    links.add(el('a', { href: '/crawl-observer' }, 'crawl observer'));
+
+    const readyMarker = el('div', {
+      class: 'screenshot-ready-marker',
+      'data-crawl-status-ready': 'false',
+      'data-screenshot-ready': 'crawl-status'
+    });
     body.add(readyMarker);
 
     const script = new Control({ context: ctx, tagName: 'script' });

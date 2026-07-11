@@ -119,6 +119,10 @@ const UI_SERVER = path.join(ROOT, 'src', 'ui', 'server', 'unifiedApp', 'server.j
 const ELECTRON_BIN = process.platform === 'win32'
   ? path.join(ROOT, 'node_modules', '.bin', 'electron.cmd')
   : path.join(ROOT, 'node_modules', '.bin', 'electron');
+// Prefer electron's cli.js via node: no .cmd shell wrapper, so the tracked
+// pid is the real process tree root and taskkill /T reliably stops the app.
+// (The .cmd wrapper path leaked orphan app trees on stop/start — 2026-07-11.)
+const ELECTRON_CLI = path.join(ROOT, 'node_modules', 'electron', 'cli.js');
 
 const ACTIONS = {
   // Liveness probe.
@@ -189,7 +193,8 @@ const ACTIONS = {
   //           0 = don't wait). Waits for the app's HTTP server and reports
   //           httpOk so the caller knows the UI actually came up.
   'start-electron': async (p = {}) => {
-    if (!fs.existsSync(ELECTRON_BIN)) return { ok: false, error: 'electron binary not found in node_modules' };
+    const useCli = fs.existsSync(ELECTRON_CLI);
+    if (!useCli && !fs.existsSync(ELECTRON_BIN)) return { ok: false, error: 'electron not found in node_modules' };
     const port = Number(p.port) || 3170;
     const appId = p.app === undefined ? 'crawl-status' : p.app;
     const args = [path.join(ROOT, 'src', 'ui', 'electron', 'unifiedApp', 'main.js'), '--port', String(port)];
@@ -197,7 +202,9 @@ const ACTIONS = {
     if (p.allowMultiJobs !== false) args.push('--allow-multi-jobs');
     const env = {};
     if (p.dbPath) env.DB_PATH = path.resolve(ROOT, p.dbPath);
-    const r = startManaged('electron-app', ELECTRON_BIN, args, { env });
+    const r = useCli
+      ? startManaged('electron-app', process.execPath, [ELECTRON_CLI, ...args], { env })
+      : startManaged('electron-app', ELECTRON_BIN, args, { env });
     if (!r.ok) return r;
     const readyTimeoutMs = p.readyTimeoutMs === undefined ? 45000 : Number(p.readyTimeoutMs);
     let httpOk = null;

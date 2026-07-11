@@ -160,9 +160,9 @@ function buildCrawlStatusClientScript({
       const visited = progress.visited || metrics.visited || job.visited || 0;
       const downloaded = progress.downloaded || metrics.downloaded || job.downloaded || 0;
       const errors = progress.errors || metrics.errors || job.errors || 0;
-      const queue = progress.queue || progress.queueSize || metrics.queueSize || job.queue || job.pending || 0;
+      const queue = progress.queued || progress.queue || progress.queueSize || metrics.queueSize || job.queue || job.pending || 0;
       const pct = Math.max(0, Math.min(100, progress.percentComplete || job.percentComplete || 0));
-      const last = job.lastActivityAt || job.last_activity_at || job.updatedAt || job.updated_at || '';
+      const last = job.lastActivityAt || job.last_activity_at || progress.updatedAt || job.updatedAt || job.updated_at || '';
       return '<tr>'
         + '<td class="mono">' + escapeHtml(id) + '</td>'
         + '<td>' + escapeHtml(status) + '</td>'
