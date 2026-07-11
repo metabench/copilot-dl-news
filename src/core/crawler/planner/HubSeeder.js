@@ -1,6 +1,7 @@
 'use strict';
 
 const { recordPlaceHubSeed } = require('../data/placeHubs');
+const { identifyAndPersistHub } = require('../hubs/hubIdentifier');
 const { getContinentNames } = require('../../../data/continents');
 const { isTotalPrioritisationEnabled } = require('../../../shared/utils/priorityConfig');
 
@@ -474,9 +475,23 @@ class HubSeeder {
           priorityBias: typeof meta?.priorityBias === 'number' ? meta.priorityBias : null
         }
       });
-    } catch (_) {
-      // ignore DB errors
+    } catch (err) {
+      // Seed recording must never break the crawl, but silently swallowing
+      // errors previously hid a broken INSERT (nonexistent url column) for
+      // months. Log the first failure loudly, then once per 100 to avoid spam.
+      this._seedRecordErrorCount = (this._seedRecordErrorCount || 0) + 1;
+      if (this._seedRecordErrorCount === 1 || this._seedRecordErrorCount % 100 === 0) {
+        this._log(`HubSeeder: failed to record place-hub seed in DB (count=${this._seedRecordErrorCount}): ${err?.message || err}`);
+      }
     }
+    // DUAL-WRITE (hub-loop P3): also populate the generalized hubs/hub_members
+    // tables via the segmentation identifier. Fire-and-forget, best-effort —
+    // must never affect the crawl. Legacy place_hubs above stays authoritative
+    // during the transition.
+    try {
+      Promise.resolve(identifyAndPersistHub({ host, url: hubUrl, adapter: this.db }))
+        .catch(() => {});
+    } catch (_) { /* best-effort */ }
   }
 
   _buildHubEntries({ sectionSlugs = [], countryCandidates = [], navigationLinks = [], totalPrioritisation = false }) {

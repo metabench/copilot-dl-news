@@ -1,5 +1,40 @@
 # Country Hub Discovery Strategies
 
+## Storage Invariants (July 2026, migration 41)
+
+Place-hub storage is canonical-host and duplicate-free:
+
+- `place_hubs.host`, `place_hub_candidates.domain` and
+  `place_page_mappings.host` store the canonical host: trimmed, lowercased,
+  leading `www.` stripped (`canonicalizeHost()` in news-crawler-db,
+  `src/db/sqlite/access/hostCanonicalization.ts`). Historically the guess and
+  crawler-seed paths kept `www.` while the drizzle path stripped it, which
+  split The Guardian into `theguardian.com` + `www.theguardian.com` and
+  produced ~25% duplicate country-hub rows.
+- Fetching still uses the site's real hostname (`normalizeDomain()` in
+  `src/core/orchestration/utils/domainUtils.js` is unchanged); only storage
+  is canonicalized.
+- `place_hubs` enforces one row per page (`uq_place_hubs_url_id`) and one row
+  per logical hub (`uq_place_hubs_entity` on host + place_slug + place_kind +
+  topic_slug). Distinct topic hubs for the same place (e.g. Guardian
+  `/sport/australia-sport` vs `/world/australia`) remain separate rows via
+  `topic_slug`.
+- The crawler seed path (`HubSeeder` → `recordPlaceHubSeed`) records seeds by
+  `url_id`. (Before July 2026 it referenced a nonexistent `url` column and
+  silently failed on every crawl; seed-recording errors are now logged.)
+
+To upgrade a legacy database:
+
+```
+node tools/migrations/place-hubs-host-dedupe.js [--db path/to/news.db] [--status]
+```
+
+Stop any running crawler first; the migration merges duplicate rows (keeping
+the most recently seen row, merging `first_seen_at` and link counts),
+canonicalizes hosts across the three tables, remaps
+`place_page_mappings.hub_id` references, and installs the unique indexes.
+Applied as version 41 in `schema_migrations`.
+
 ## Current Status (October 2025)
 
 **What's Working**:
