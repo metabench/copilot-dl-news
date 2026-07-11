@@ -137,4 +137,12 @@ deploy/remote-crawler-v2/remote-*.json
 
 # Local scratchpad and experiment scripts
 /scratch/
+
+# bridge runtime files (file-driven command protocol)
+tools/dev/agent-bridge/inbox/
+tools/dev/agent-bridge/outbox/
+tools/dev-bridge/inbox/
+tools/dev-bridge/outbox/
+tools/dev-bridge/logs/
+tools/dev-bridge/state/
 
