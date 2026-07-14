@@ -59,7 +59,7 @@ async function startUnifiedServer({ port, useExistingServer = false }) {
   const output = { stdout: '', stderr: '' };
 
   if (useExistingServer) {
-    await waitForHttp(`http://127.0.0.1:${port}/`, 20_000, null, output);
+    await waitForHttp(`http://127.0.0.1:${port}/`, parseNumberArg('--server-wait-ms', 60_000), null, output);
     return { server: null, close: async () => {}, appRoot };
   }
 
@@ -82,7 +82,9 @@ async function startUnifiedServer({ port, useExistingServer = false }) {
     output.stderr += chunk.toString();
   });
 
-  await waitForHttp(`http://127.0.0.1:${port}/`, 20_000, server, output);
+  // Cold boots (first news.db open after a reboot, AV scans) can exceed 20s;
+  // default to 60s and allow override via --server-wait-ms.
+  await waitForHttp(`http://127.0.0.1:${port}/`, parseNumberArg('--server-wait-ms', 60_000), server, output);
 
   const close = async () => {
     try {

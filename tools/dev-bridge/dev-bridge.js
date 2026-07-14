@@ -202,6 +202,10 @@ const ACTIONS = {
     if (p.allowMultiJobs !== false) args.push('--allow-multi-jobs');
     const env = {};
     if (p.dbPath) env.DB_PATH = path.resolve(ROOT, p.dbPath);
+    // Worker mode by default: in-process crawl jobs starve the UI server's
+    // event loop (API timeouts while crawling — seen 2026-07-07 and again
+    // 2026-07-14). Forked workers keep the jobs/telemetry APIs responsive.
+    if (p.workerMode !== false) env.UI_CRAWL_WORKER = '1';
     const r = useCli
       ? startManaged('electron-app', process.execPath, [ELECTRON_CLI, ...args], { env })
       : startManaged('electron-app', ELECTRON_BIN, args, { env });
