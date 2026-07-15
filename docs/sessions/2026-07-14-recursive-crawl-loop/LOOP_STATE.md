@@ -27,14 +27,9 @@
 
 ## Now (pick the top item, keep it small)
 
-1. Guardian ECONNRESET on direct fetch (anti-bot TLS fingerprinting; job
-   0ff6f86d failed after 1 error). Options: verify the Puppeteer fallback
-   engages in worker-mode crawls, or route Guardian through the remote
-   fetch worker. Reproduce with maxPages=5 and check FetchPipeline's
-   puppeteerFallbackOnEconnreset path.
-2. Larger crawl batch: 5 sites × maxPages 200 via the batch API; watch
+1. Larger crawl batch: 5 sites × maxPages 200 via the batch API; watch
    throughput strip live; note any per-host failures here.
-3. crawl API nit: start body key is `startUrl` (`url` → 400). Consider
+2. crawl API nit: start body key is `startUrl` (`url` → 400). Consider
    accepting both in operations.js.
 
 ## Next (short backlog — refill as items complete)
@@ -52,6 +47,17 @@
   (lemonde.fr) to exercise migration-41 write paths end to end.
 
 ## Findings / decisions log (newest first, one line each)
+
+- 2026-07-15: Guardian FIXED end-to-end — jest 5/5 on host, live re-crawl
+  cae10aee completed 5/5/5 saved, 0 errors (was: instant ECONNRESET death).
+  FetchPipeline diff contained ONLY the fallback fix → committed with the
+  regression test. Static TLS list now a baseline under the auto-learn mgr.
+- 2026-07-14 (pm, sandbox-only turn): Guardian ECONNRESET root cause =
+  _shouldUsePuppeteerFallback let the unlearned domain manager veto the
+  static fingerprinting list; uncommitted fix found in worktree (concurrent
+  editor), logic verified in sandbox, regression test added; live verify +
+  commit deferred (no machine access this turn). NOTE: FetchPipeline.js has
+  someone's uncommitted work — coordinate before committing.
 
 - 2026-07-14: FIRST LOOP CRAWLS — BBC completed (54 visited/50 dl/32 saved/
   0 err, ~12MB); Guardian failed (ECONNRESET, → Now#1). In-process jobs

@@ -416,14 +416,18 @@ class FetchPipeline extends EventEmitter {
   _shouldUsePuppeteerFallback(host) {
     if (!this.puppeteerFallbackEnabled) return false;
     const lowerHost = host.toLowerCase();
-    
-    // Use domain manager if available (supports auto-learning)
-    if (this._puppeteerDomainManager) {
-      return this._puppeteerDomainManager.shouldUsePuppeteer(lowerHost);
+
+    // Domain manager (auto-learning) can approve additional domains…
+    if (this._puppeteerDomainManager && this._puppeteerDomainManager.shouldUsePuppeteer(lowerHost)) {
+      return true;
     }
-    
-    // Legacy fallback: static domain list
-    return this.puppeteerFallbackDomains.some(domain => 
+
+    // …but the known TLS-fingerprinting defaults always apply as a baseline.
+    // (Previously the manager path returned its answer outright, so with an
+    // empty/missing config the static list was bypassed and e.g. Guardian
+    // failed with ECONNRESET on first contact instead of falling back —
+    // seen live 2026-07-14, job 0ff6f86d.)
+    return this.puppeteerFallbackDomains.some(domain =>
       lowerHost === domain || lowerHost.endsWith('.' + domain)
     );
   }
