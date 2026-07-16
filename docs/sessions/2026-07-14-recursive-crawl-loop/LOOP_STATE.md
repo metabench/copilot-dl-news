@@ -27,9 +27,17 @@
 
 ## Now (pick the top item, keep it small)
 
-1. Larger crawl batch: 5 sites × maxPages 200 via the batch API; watch
-   throughput strip live; note any per-host failures here.
-2. crawl API nit: start body key is `startUrl` (`url` → 400). Consider
+1. Worker-job error observability: LeMonde's 5,146 errors exist ONLY in
+   in-memory progress counters — nothing lands in `errors`, `crawl_problems`
+   or `fetches`, and worker stdout is `inherit` (InProcessCrawlJobRegistry
+   fork) so it vanishes with the server console. Persist per-job error
+   samples (first N + counts by code) to crawl_problems, and/or capture
+   worker stdio to a per-job log file.
+2. Diagnose LeMonde error storm (5,146 errs / 1 download in ~8 min ≈ 10/s —
+   too fast for network timeouts; likely synchronous rejections or anti-bot
+   resets) and Reuters silent 0-page "completed" (likely robots/policy block
+   of the start URL — a 0-download completion should be flagged, not green).
+3. crawl API nit: start body key is `startUrl` (`url` → 400). Consider
    accepting both in operations.js.
 
 ## Next (short backlog — refill as items complete)
@@ -48,6 +56,14 @@
 
 ## Findings / decisions log (newest first, one line each)
 
+- 2026-07-15/16: 5-site × 200-page batch (all 5 accepted, ran concurrently
+  in worker mode): AlJazeera 200 dl/196 saved/0 err (40.6MB, 0.87/s) ✔;
+  BBC clean and finishing; Guardian clean via puppeteer (~0.02/s — slow but
+  0 errors, fix holding); LeMonde 5,146 errors/1 dl (→ Now#2, error detail
+  unpersisted → Now#1); Reuters "completed" 0 pages 0 errors (→ Now#2).
+  Concurrent ramp-up is staggered (DB contention); ui-screenshot timed out
+  under load. Stale index.lock (35h) blocked a commit → swept; consider
+  auto-sweep in bridge git path.
 - 2026-07-15: Guardian FIXED end-to-end — jest 5/5 on host, live re-crawl
   cae10aee completed 5/5/5 saved, 0 errors (was: instant ECONNRESET death).
   FetchPipeline diff contained ONLY the fallback fix → committed with the
