@@ -27,16 +27,15 @@
 
 ## Now (pick the top item, keep it small)
 
-1. Worker-job error observability: LeMonde's 5,146 errors exist ONLY in
-   in-memory progress counters — nothing lands in `errors`, `crawl_problems`
-   or `fetches`, and worker stdout is `inherit` (InProcessCrawlJobRegistry
-   fork) so it vanishes with the server console. Persist per-job error
-   samples (first N + counts by code) to crawl_problems, and/or capture
-   worker stdio to a per-job log file.
-2. Diagnose LeMonde error storm (5,146 errs / 1 download in ~8 min ≈ 10/s —
-   too fast for network timeouts; likely synchronous rejections or anti-bot
-   resets) and Reuters silent 0-page "completed" (likely robots/policy block
-   of the start URL — a 0-download completion should be flagged, not green).
+1. LeMonde/Reuters access: both anti-bot-blocked (LeMonde = HTTP 402 on
+   every fetch; Reuters start URL silently policy-blocked → 0-page green
+   "completed"). Try puppeteer fallback for lemonde.fr (extend static list
+   or auto-learn from 402s?); make 0-download completions surface as
+   warnings, not green.
+2. errorSummary gap: FetchPipeline.recordError → crawler._recordError does
+   NOT emit url:error, so job.errorSummary missed LeMonde's real 402s (log
+   file caught them). Wire fetch errors into url:error (or the summary
+   directly) so the jobs API carries samples.
 3. crawl API nit: start body key is `startUrl` (`url` → 400). Consider
    accepting both in operations.js.
 
@@ -56,6 +55,18 @@
 
 ## Findings / decisions log (newest first, one line each)
 
+- 2026-07-16: LeMonde error storm ROOT-CAUSED + FIXED. Cause: lemonde.fr
+  402s every fetch → host retry budget locks → but the lock lived only in
+  FetchPipeline, so QueueManager kept dequeuing → 5,140 synthetic
+  HOST_RETRY_EXHAUSTED errors per lock window. Fix: HostRetryBudgetManager
+  onLockout → DomainThrottleManager.applyHostBackoff → getHostResumeTime
+  gates the queue (deferral machinery already existed). Live re-run: 6 real
+  402 errors, 0 spin (was 5,146). Also shipped: per-job worker stdio logs
+  (data/logs/jobs/<jobId>.log — made the diagnosis possible) + bounded
+  url:error summaries on job records (errorSummary in jobs API). Guardian
+  + BBC finished their 200-page crawls clean (200 dl each, 0 errors) —
+  batch ended 3/5 sites × 200 pages = 600 pages, 0 errors on the healthy
+  hosts.
 - 2026-07-15/16: 5-site × 200-page batch (all 5 accepted, ran concurrently
   in worker mode): AlJazeera 200 dl/196 saved/0 err (40.6MB, 0.87/s) ✔;
   BBC clean and finishing; Guardian clean via puppeteer (~0.02/s — slow but

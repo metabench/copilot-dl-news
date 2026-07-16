@@ -415,6 +415,12 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     emitProgress: () => crawler.telemetry.progress(),
     note429: (host, retryAfterMs) => crawler.note429(host, retryAfterMs),
     noteSuccess: (host) => crawler.noteSuccess(host),
+    // Retry-budget lockouts must reach the queue's host gating, or every
+    // queued URL for the host dequeues into a HOST_RETRY_EXHAUSTED error
+    // (LeMonde 2026-07-15: 5,140 synthetic errors during one 2-min lock).
+    onHostLockout: (host, lockExpiresAt) => {
+      try { crawler.domainThrottle.applyHostBackoff(host, lockExpiresAt); } catch (_) {}
+    },
     recordError: (info) => crawler._recordError(info),
     handleConnectionReset: (normalized, err) => crawler._handleConnectionReset(normalized, err),
     telemetry: crawler.telemetry,

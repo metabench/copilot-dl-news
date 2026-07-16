@@ -66,6 +66,22 @@ class DomainThrottleManager {
     return resumeAt > 0 ? resumeAt : null;
   }
 
+  /**
+   * Externally imposed backoff (e.g. host retry-budget lockout). Makes
+   * getHostResumeTime honor the lock so QueueManager defers the host's
+   * queued URLs instead of dequeuing each into a synthetic error. Never
+   * shortens an existing backoff.
+   */
+  applyHostBackoff(host, untilMs) {
+    if (!host || !Number.isFinite(untilMs)) return;
+    const state = this.getDomainState(host);
+    if (!state) return;
+    if ((state.backoffUntil || 0) < untilMs) {
+      state.backoffUntil = untilMs;
+      this.state.setDomainLimitState(host, state);
+    }
+  }
+
   isHostRateLimited(host) {
     if (!host) return false;
     const state = this.state.getDomainLimitState(host);

@@ -280,7 +280,16 @@ class FetchPipeline extends EventEmitter {
       windowMs: resolvedHostWindowMs,
       lockoutMs: resolvedHostLockoutMs
     };
-    this._hostRetryManager = new HostRetryBudgetManager({ telemetry: this.telemetry, logger: this.logger, maxErrors: this.hostRetryBudget.maxErrors, windowMs: this.hostRetryBudget.windowMs, lockoutMs: this.hostRetryBudget.lockoutMs });
+    this._hostRetryManager = new HostRetryBudgetManager({
+      telemetry: this.telemetry,
+      logger: this.logger,
+      maxErrors: this.hostRetryBudget.maxErrors,
+      windowMs: this.hostRetryBudget.windowMs,
+      lockoutMs: this.hostRetryBudget.lockoutMs,
+      // Propagates the lockout to the domain throttle (see wiring) so the
+      // queue defers this host's URLs instead of error-spinning through them.
+      onLockout: typeof opts.onHostLockout === 'function' ? opts.onHostLockout : null
+    });
     this.parseRetryAfter = opts.parseRetryAfter;
     this.onCacheServed = typeof opts.onCacheServed === 'function' ? opts.onCacheServed : null;
     this.fetchFn = typeof opts.fetchFn === 'function' ? opts.fetchFn : fetchImpl;

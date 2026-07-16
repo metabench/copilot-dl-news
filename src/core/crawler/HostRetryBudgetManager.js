@@ -8,6 +8,12 @@ class HostRetryBudgetManager {
     this.lockoutMs = Number.isFinite(opts.lockoutMs) && opts.lockoutMs > 0 ? opts.lockoutMs : 2 * 60 * 1000;
     this.telemetry = opts.telemetry || null;
     this.logger = opts.logger || console;
+    // Invoked once per lockout with (host, lockExpiresAt). Lets the wiring
+    // propagate the lock into the domain throttle so the queue DEFERS the
+    // host's URLs instead of dequeuing each one into a synthetic
+    // HOST_RETRY_EXHAUSTED error (LeMonde 2026-07-15: 5,140 spin errors in
+    // ~8 min from exactly this).
+    this.onLockout = typeof opts.onLockout === 'function' ? opts.onLockout : null;
     this._state = new Map();
   }
 
@@ -76,6 +82,7 @@ class HostRetryBudgetManager {
         state.lockExpiresAt = now + this.lockoutMs;
         this.logger.warn(`[network] host retry budget exhausted for ${host}; lockout until ${new Date(state.lockExpiresAt).toISOString()}`);
         this._emitHostBudgetTelemetry('exhausted', host, state, meta);
+        if (this.onLockout) safeCall(() => this.onLockout(host, state.lockExpiresAt));
       }
     }
     this._state.set(host, state);

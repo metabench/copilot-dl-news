@@ -2,9 +2,24 @@
 
 const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
 const { fork } = require('child_process');
 const { EventEmitter } = require('events');
 const { observable } = require('fnl');
+
+// Per-job worker logs land here (repo-root/data/logs/jobs/<jobId>.log).
+// Why: worker stdio used to be 'inherit', so when LeMonde failed with 5,146
+// errors (2026-07-15, job 143fc616) every error detail vanished with the
+// server console — nothing in `errors`/`crawl_problems` either. See
+// docs/sessions/2026-07-14-recursive-crawl-loop/LOOP_STATE.md.
+const JOB_LOG_DIR = path.resolve(__dirname, '..', '..', '..', '..', '..', 'data', 'logs', 'jobs');
+
+function classifyErrorMessage(message) {
+  const text = String(message || 'unknown');
+  // Prefer a recognizable code: ECONNRESET, ETIMEDOUT, HTTP 403, 429…
+  const m = text.match(/\b(E[A-Z]{4,}|ERR_[A-Z_]+|HTTP[ _]?\d{3}|status \d{3}|\b[45]\d{2}\b)/);
+  return m ? m[1] : text.slice(0, 80);
+}
 
 function createJobId() {
   try {
@@ -96,8 +111,41 @@ class InProcessCrawlJobRegistry {
       // throughput strip), incl. the Electron unified app. Populated by
       // _attachJobProgress; null until the first progress event or in
       // worker mode. See core/jobProgress.js.
-      progress: job.progress || null
+      progress: job.progress || null,
+      // Post-mortem material: first-N url:error samples + counts by kind
+      // (see _attachErrorSummary), and the worker's captured stdio log.
+      errorSummary: job.errorSummary || null,
+      logPath: job.logPath || null
     };
+  }
+
+  /**
+   * Keep a bounded, queryable record of url:error events on the job so a
+   * failed crawl can be diagnosed after the fact (LeMonde 2026-07-15 burned
+   * 5,146 errors with zero persisted detail). Never throws; never grows
+   * unbounded: counts are per-kind, samples cap at 25.
+   */
+  _attachErrorSummary(job, crawler) {
+    if (!job || !crawler || typeof crawler.on !== 'function') return;
+    if (job._errorSummaryAttached) return;
+    job._errorSummaryAttached = true;
+    try {
+      crawler.on('url:error', (data) => {
+        try {
+          const summary = job.errorSummary || (job.errorSummary = { total: 0, byKind: {}, samples: [] });
+          summary.total += 1;
+          const kind = classifyErrorMessage(data && data.error);
+          summary.byKind[kind] = (summary.byKind[kind] || 0) + 1;
+          if (summary.samples.length < 25) {
+            summary.samples.push({
+              url: (data && data.url) || null,
+              error: String((data && data.error) || 'unknown').slice(0, 300),
+              at: new Date(data && data.timestamp || Date.now()).toISOString()
+            });
+          }
+        } catch (_) { /* diagnostics must not affect the crawl */ }
+      });
+    } catch (_) { /* best-effort */ }
   }
 
   /**
@@ -209,6 +257,7 @@ class InProcessCrawlJobRegistry {
           connectCrawler: (crawler, meta) => {
             crawlerRef = crawler;
             this._attachJobProgress(job, crawler);
+            this._attachErrorSummary(job, crawler);
             try {
               return this._telemetry.connectCrawler(crawler, {
                 ...(meta && typeof meta === 'object' ? meta : {}),
@@ -336,16 +385,32 @@ class InProcessCrawlJobRegistry {
       crawlType: 'operation'
     };
 
+    // Capture worker stdio to a per-job log file ('inherit' lost it with the
+    // server console — undiagnosable LeMonde failure, 2026-07-15).
     const child = fork(path.join(__dirname, 'crawl-operation-worker.js'), [], {
-      stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
+      stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
       env: { ...process.env }
     });
+
+    let logStream = null;
+    try {
+      fs.mkdirSync(JOB_LOG_DIR, { recursive: true });
+      const logFile = path.join(JOB_LOG_DIR, `${jobId}.log`);
+      logStream = fs.createWriteStream(logFile, { flags: 'a' });
+      logStream.write(`[job ${jobId}] ${operationName} ${startUrl} started ${new Date().toISOString()}\n`);
+      job.logPath = path.relative(path.resolve(JOB_LOG_DIR, '..', '..', '..'), logFile).split(path.sep).join('/');
+      if (child.stdout) child.stdout.pipe(logStream, { end: false });
+      if (child.stderr) child.stderr.pipe(logStream, { end: false });
+    } catch (_) { logStream = null; /* logging is best-effort */ }
 
     // Replay child crawler events into the real bridge via a stand-in emitter.
     const emitter = new EventEmitter();
     // Live job progress works in worker mode too: the replayed 'progress'
     // events feed the same per-job tracker as in-process crawls.
     this._attachJobProgress(job, emitter);
+    // url:error events are forwarded over IPC as well — same bounded
+    // summary as in-process jobs (kind counts + first-25 samples).
+    this._attachErrorSummary(job, emitter);
     let disconnect = null;
     if (this._telemetry) {
       try {
@@ -361,6 +426,13 @@ class InProcessCrawlJobRegistry {
       if (error) job.error = typeof error === 'string' ? error : (error.message || JSON.stringify(error).slice(0, 500));
       job.finishedAt = new Date().toISOString();
       try { if (disconnect) disconnect(); } catch (_) {}
+      try {
+        if (logStream) {
+          const errLine = job.errorSummary ? ` errors=${job.errorSummary.total} kinds=${JSON.stringify(job.errorSummary.byKind)}` : '';
+          logStream.write(`[job ${jobId}] finished status=${status}${job.error ? ` error=${job.error}` : ''}${errLine} ${job.finishedAt}\n`);
+          logStream.end();
+        }
+      } catch (_) {}
       this._emit({ type: status === 'completed' ? 'job:completed' : 'job:failed', jobId, error: job.error || undefined });
     };
 
