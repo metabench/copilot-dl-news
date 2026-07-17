@@ -46,6 +46,21 @@ code audit. App was running throughout; no writes made.
    place_kind='country'; one hub row with no URL (null url_id join).
    Remaining nicety: a link FROM the matrix page back to the table
    (matrix HTML lives in jsgui controls; left for a later chunk).
+   → **A4 ALSO DONE same day**: ISO-code junk mappings retired THROUGH
+   the review API (checks/retire-iso-junk-mappings.js, one host-side
+   session, agent 'claude-loop-a4', every write audited). Scoping found
+   the pattern was 3 hosts, not 2: semana.com AND eltiempo.com (same
+   publisher family) each enumerate /news/<cc> for ~50 ISO codes (all
+   "verified" — catch-all-200 bulk mis-verification), plus ~24
+   independent.co.uk /topic/<cc> pattern guesses. 124 rejected, 0
+   failed; audit 2→126 rows. The one VERIFIED plausible row
+   (independent /topic/us) was classify-probed (candidate 0.75 =
+   cold-start prior, not content proof) and left in place for a content
+   check. Post-verify: search?place=andorra returns only legit Guardian
+   rows. New curiosities for the list: search joins hubs by URL form so
+   a www-variant mapping shows placeHubId null after dedupe kept the
+   non-www hub; a `world/asia-pacific+world/south-and-central-asia`
+   subcontinent mapping on Andorra looks malformed.
 2. **No village granularity.** Gazetteer kinds today: city 7,325,
    region 6,113, country 249, planet 1. Hub kinds: country 416, city 7,
    region 3, subcontinent 2. "Filter by village" cannot work until
