@@ -27,10 +27,10 @@
 
 ## Now (pick the top item, keep it small)
 
-1. Place-hub slice 3: site-as-hub place search (domain_locales join);
-   revalidation scheduler working listHubsNeedingRevalidation; run the
-   learn→guess loop across guardian (needs puppeteer-aware fetchFn in
-   guess pipeline — direct fetch ECONNRESETs) and the remaining hosts.
+1. Revalidation scheduler: drain listHubsNeedingRevalidation on a cadence
+   (policy-aware fetch now exists); then run learn→guess across the
+   remaining seeded hosts (lemonde puppeteer TRIAL unproven, reuters
+   guess) and record outcomes in fetch-policy evidence.
 2. LeMonde/Reuters access: both anti-bot-blocked (LeMonde = HTTP 402 on
    every fetch; Reuters start URL silently policy-blocked → 0-page green
    "completed"). Try puppeteer fallback for lemonde.fr (extend static list
@@ -70,7 +70,9 @@
   reunion, western-sahara) via puppeteer GETs; prefilter dropped
   /preference/edition/* junk. Site-as-hub search live: country queries
   return national outlets from domain_locales (sites=0 to disable).
-  ncdb 16/16 vitest.
+  ncdb 16/16 vitest. Fix en route: puppeteer browser now destroy()ed in
+  processDomain finally — without it CLI guess runs hung to timeout
+  (first guardian trial); re-run exits 0 in ~90s.
 - 2026-07-17 (2): SLICE 2 CLOSED THE LOOP — DomainProcessor prefilter
   (place path only; GUESS_URL_PREFILTER=0 kill-switch) + Strategy 0.5
   (predict FROM learned templates) + auto hub_validations at crawl

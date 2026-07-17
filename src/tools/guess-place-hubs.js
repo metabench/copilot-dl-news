@@ -122,6 +122,9 @@ async function guessPlaceHubs(options = {}, legacyDeps = {}) {
   try {
     return await guessPlaceHubsForDomain(orchestrationOptions, deps);
   } finally {
+    // Release the policy-aware fetch's Puppeteer browser (if it launched
+    // one for a TLS-fingerprinting host) before closing the DB.
+    try { if (deps.fetchFn && typeof deps.fetchFn.close === 'function') await deps.fetchFn.close(); } catch (_) {}
     // Close database connections to avoid EBUSY errors in tests
     try { if (deps.db && typeof deps.db.close === 'function') deps.db.close(); } catch (_) {}
     try { if (deps.newsDb && typeof deps.newsDb.close === 'function') deps.newsDb.close(); } catch (_) {}

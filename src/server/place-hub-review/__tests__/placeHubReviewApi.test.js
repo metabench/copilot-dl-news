@@ -193,6 +193,70 @@ describe('place-hub review API', () => {
     expect(res.body.clearedUnknownTerms).toBe(1); // matched despite www. prefix in storage
   });
 
+  it('fetch-policies: seeds are visible, upserts require agent, invalid strategy rejected', async () => {
+    // Registration seeded the known-protection hosts (non-destructively).
+    const list = await request(app).get('/api/v1/place-hubs/fetch-policies');
+    expect(list.status).toBe(200);
+    const hosts = list.body.policies.map((p) => p.host);
+    expect(hosts).toEqual(expect.arrayContaining(['theguardian.com', 'lemonde.fr', 'reuters.com']));
+    const guardian = list.body.policies.find((p) => p.host === 'theguardian.com');
+    expect(guardian.fetch_strategy).toBe('puppeteer');
+    expect(guardian.protection_kind).toBe('tls-fingerprint');
+
+    // Anonymous mutation refused
+    const anon = await request(app).post('/api/v1/place-hubs/fetch-policies')
+      .send({ host: 'x.com', fetchStrategy: 'direct' });
+    expect(anon.status).toBe(400);
+
+    // Invalid strategy → 400 with the validator's message
+    const bad = await request(app).post('/api/v1/place-hubs/fetch-policies')
+      .send({ host: 'x.com', fetchStrategy: 'carrier-pigeon', agent: 'a', reason: 'r' });
+    expect(bad.status).toBe(400);
+    expect(bad.body.message).toMatch(/invalid fetch_strategy/);
+
+    // Valid AI decision persists with provenance + audit
+    const ok = await request(app).post('/api/v1/place-hubs/fetch-policies').send({
+      host: 'www.nytimes.com', protectionKind: 'paywall', fetchStrategy: 'puppeteer',
+      confidence: 0.6, agent: 'claude-fable-5', reason: 'metered paywall serves full HTML to browsers'
+    });
+    expect(ok.status).toBe(200);
+    expect(ok.body.policy.host).toBe('nytimes.com'); // canonicalized
+    expect(ok.body.policy.provenance).toBe('ai-review:claude-fable-5');
+    expect(db.prepare("SELECT COUNT(*) c FROM place_hub_audit WHERE decision='ai:fetch-policy-upsert'").get().c).toBe(1);
+
+    // Filter by strategy works
+    const filtered = await request(app).get('/api/v1/place-hubs/fetch-policies?strategy=puppeteer');
+    expect(filtered.body.policies.every((p) => p.fetch_strategy === 'puppeteer')).toBe(true);
+  });
+
+  it('fetch-policies: GET lists the seeded bot-protection model', async () => {
+    const res = await request(app).get('/api/v1/place-hubs/fetch-policies');
+    expect(res.status).toBe(200);
+    const guardian = res.body.policies.find((p) => p.host === 'theguardian.com');
+    expect(guardian.fetch_strategy).toBe('puppeteer');
+    expect(guardian.protection_kind).toBe('tls-fingerprint');
+    // strategy filter
+    const puppeteerOnly = await request(app).get('/api/v1/place-hubs/fetch-policies?strategy=puppeteer');
+    expect(puppeteerOnly.body.policies.every((p) => p.fetch_strategy === 'puppeteer')).toBe(true);
+  });
+
+  it('fetch-policies: POST upserts a policy (agent+reason), rejects bad strategy', async () => {
+    const ok = await request(app).post('/api/v1/place-hubs/fetch-policies').send({
+      host: 'newssite.example', protectionKind: 'bot-block', fetchStrategy: 'remote-worker',
+      agent: 'claude-fable-5', reason: 'Cloudflare challenge on direct + puppeteer; route via residential worker'
+    });
+    expect(ok.status).toBe(200);
+    expect(ok.body.policy.fetch_strategy).toBe('remote-worker');
+    expect(ok.body.policy.provenance).toBe('ai-review:claude-fable-5');
+    const bad = await request(app).post('/api/v1/place-hubs/fetch-policies').send({
+      host: 'x.example', fetchStrategy: 'carrier-pigeon', agent: 'a', reason: 'r'
+    });
+    expect(bad.status).toBe(400);
+    expect(bad.body.message).toMatch(/invalid fetch_strategy/);
+    const anon = await request(app).post('/api/v1/place-hubs/fetch-policies').send({ host: 'x.example', fetchStrategy: 'direct' });
+    expect(anon.status).toBe(400);
+  });
+
   it('actions/learn and actions/assess-structure run and audit', async () => {
     db.prepare("INSERT INTO urls (url) VALUES ('https://n.example/world/france')").run();
     db.prepare("INSERT INTO urls (url) VALUES ('https://n.example/world/kenya')").run();

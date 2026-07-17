@@ -177,6 +177,41 @@ after Strategy 0.5, 36 /where/ candidates proposed → 28 HEAD, 5 GET →
 predict from learned shapes → prefilter → verify → ledger → AI reviews
 the leftovers via the API.
 
+## Part 5.5 — Bot protections modelled in the DB (2026-07-17)
+
+Before: bot-defense knowledge was a hard-coded TLS list in FetchPipeline
+(theguardian/bloomberg/wsj), a PuppeteerDomainManager JSON read from the
+wrong path (silently empty), and loop notes for lemonde 402 / reuters
+block. Not queryable, not shared, not AI-editable.
+
+Now: `domain_fetch_policies` (news.db) is the single model — host,
+protection_kind (tls-fingerprint | http-402 | bot-block | rate-limit |
+paywall | none | unknown), fetch_strategy (direct | puppeteer |
+remote-worker | skip), evidence JSON, provenance, recheck_after. Access
+in news-crawler-db (upsert/get/list + recordProtectionEvidence, which
+appends observations without clobbering the decision). Wiring:
+- `policyAwareFetch` wraps the guess pipeline's fetch: puppeteer-strategy
+  hosts render via PuppeteerFetcher (HEAD answered synthetically — the
+  GET is the real probe), skip → synthetic 403, direct → base fetch.
+  Every ECONNRESET/402/403/429 is fed back via recordProtectionEvidence.
+  Kill-switch GUESS_POLICY_FETCH=0.
+- `/api/v1/place-hubs/fetch-policies` GET/POST (agent+reason) — AI reads
+  the model and changes a strategy as data, honoring recheck_after.
+- Seeded 5 hosts from what live crawling taught us.
+
+Live proof: `guess-place-hubs --domain theguardian.com` — which used to
+die with ECONNRESET on first contact — fetched /world/kosovo at HTTP 200
+through the policy-driven Puppeteer path and ledgered it valid
+(crawl-content); earlier runs verified western-sahara and reunion too.
+Zero ECONNRESET. An AI operator then changed reuters.com to
+remote-worker via POST (provenance ai-review), reasoning that a
+datacentre Puppeteer IP will also be flagged.
+
+Not yet done (follow-up): make the MAIN crawler's FetchPipeline
+_shouldUsePuppeteerFallback consult domain_fetch_policies too (it still
+uses its static list — which the seed mirrors, so behavior is
+consistent); retire config/puppeteer-domains.json once it does.
+
 ## Part 5 — Legacy GOFAI verdict
 
 Located: `src/intelligence/planner/` — PlannerHost + plugins

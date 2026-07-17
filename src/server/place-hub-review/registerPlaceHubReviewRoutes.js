@@ -369,11 +369,28 @@ function registerPlaceHubReviewRoutes(app, {
   });
 
   // ── Bot-protection model (domain_fetch_policies) ───────────────────────
+  // Seed the hosts whose protections were established the hard way.
+  // Non-destructive: existing rows (agent decisions) are never overwritten.
+  try {
+    const seeds = [
+      { host: 'theguardian.com', protectionKind: 'tls-fingerprint', fetchStrategy: 'puppeteer', confidence: 0.95, provenance: 'static-seed:verified-2026-07-15', evidence: [{ code: 'ECONNRESET', note: 'direct fetch resets; puppeteer verified live (200 pages, 0 errors)' }] },
+      { host: 'bloomberg.com', protectionKind: 'tls-fingerprint', fetchStrategy: 'puppeteer', confidence: 0.7, provenance: 'static-seed', evidence: [{ code: 'ECONNRESET', note: 'legacy static fallback list' }] },
+      { host: 'wsj.com', protectionKind: 'tls-fingerprint', fetchStrategy: 'puppeteer', confidence: 0.7, provenance: 'static-seed', evidence: [{ code: 'ECONNRESET', note: 'legacy static fallback list' }] },
+      { host: 'lemonde.fr', protectionKind: 'http-402', fetchStrategy: 'puppeteer', confidence: 0.5, provenance: 'static-seed:trial', evidence: [{ httpStatus: 402, note: 'every direct fetch 402s (jobs 143fc616, ce78bfd3, 82cbcaf9); puppeteer unproven — TRIAL' }] },
+      { host: 'reuters.com', protectionKind: 'bot-block', fetchStrategy: 'puppeteer', confidence: 0.4, provenance: 'static-seed:guess', evidence: [{ note: 'silent 0-page completions; consider remote-worker if puppeteer fails' }] }
+    ];
+    for (const seed of seeds) {
+      if (!ncdb.getDomainFetchPolicy(db, seed.host)) ncdb.upsertDomainFetchPolicy(db, seed);
+    }
+  } catch (err) {
+    logger.warn?.('[place-hub-review] fetch-policy seeding failed:', err.message);
+  }
+
   app.get(`${basePath}/fetch-policies`, (req, res) => {
     try {
       const rows = ncdb.listDomainFetchPolicies(db, {
         strategy: req.query.strategy || null,
-        limit: Number(req.query.limit) || 200
+        limit: Math.max(1, Math.min(500, Number(req.query.limit) || 200))
       });
       res.json({ status: 'ok', count: rows.length, policies: rows });
     } catch (error) {
@@ -385,28 +402,26 @@ function registerPlaceHubReviewRoutes(app, {
     try {
       const who = requireAgent(req, res);
       if (!who) return;
-      const { host, protectionKind, fetchStrategy } = req.body || {};
-      if (!host || !fetchStrategy) {
-        return res.status(400).json({ status: 'error', message: 'host and fetchStrategy required' });
+      const { host, protectionKind, fetchStrategy, notes, confidence, evidence } = req.body || {};
+      if (!host) return res.status(400).json({ status: 'error', message: 'host required' });
+      let result;
+      try {
+        result = ncdb.upsertDomainFetchPolicy(db, {
+          host,
+          protectionKind: protectionKind || 'unknown',
+          fetchStrategy: fetchStrategy || 'direct',
+          notes: notes || null,
+          confidence: Number.isFinite(confidence) ? confidence : null,
+          evidence: evidence || null,
+          provenance: `ai-review:${who.agent}`
+        });
+      } catch (e) {
+        return res.status(400).json({ status: 'error', message: e.message });
       }
-      const result = ncdb.upsertDomainFetchPolicy(db, {
-        host,
-        protectionKind: protectionKind || 'unknown',
-        fetchStrategy,
-        evidence: req.body.evidence || null,
-        notes: req.body.notes || null,
-        provenance: `ai-review:${who.agent}`,
-        confidence: Number.isFinite(req.body.confidence) ? req.body.confidence : null,
-        recheckAfter: req.body.recheckAfter || null
-      });
-      audit({
-        domain: canonicalHost(host), url: null, decision: 'ai:fetch-policy-upsert',
-        payload: { protectionKind, fetchStrategy, agent: who.agent, reason: who.reason }
-      });
+      audit({ domain: canonicalHost(host), url: null, decision: 'ai:fetch-policy-upsert', payload: { protectionKind, fetchStrategy, agent: who.agent, reason: who.reason } });
       res.json({ status: 'ok', changes: result.changes, policy: ncdb.getDomainFetchPolicy(db, host) });
     } catch (error) {
-      res.status(error.message?.includes('invalid fetch_strategy') ? 400 : 500)
-        .json({ status: 'error', message: error.message });
+      res.status(500).json({ status: 'error', message: error.message });
     }
   });
 

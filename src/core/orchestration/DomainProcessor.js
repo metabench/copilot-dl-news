@@ -325,6 +325,14 @@ class DomainProcessor {
       }
 
       throw error;
+    } finally {
+      // Policy fetches may have launched a puppeteer browser; without
+      // destroy() it keeps the event loop alive and CLI runs hang until
+      // their outer timeout (seen live: guardian trial 2026-07-17).
+      if (this._puppeteerFetcher) {
+        try { await this._puppeteerFetcher.destroy(); } catch (_) { /* best-effort */ }
+        this._puppeteerFetcher = null;
+      }
     }
 
     return finalizeSummary();
@@ -1108,34 +1116,68 @@ class DomainProcessor {
       return { attemptCounter: nextAttemptCounter, rateLimitTriggered: false };
     }
 
-    const headOutcome = await this._performHeadProbe({
-      candidateUrl,
-      normalizedDomain,
-      deps,
-      attemptId,
-      attemptStartedAt,
-      summary,
-      options,
-      recordFetch,
-      recordDecision,
-      stores
-    });
+    // Bot-protection policy: puppeteer hosts must SKIP the HEAD probe —
+    // a direct HEAD is exactly what their protection resets/blocks.
+    const fetchPolicy = this._resolveFetchPolicy(normalizedDomain.host, deps, options);
+    const policyStrategy = fetchPolicy?.fetch_strategy || 'direct';
 
-    if (headOutcome.rateLimitTriggered) {
-      return { attemptCounter: nextAttemptCounter, rateLimitTriggered: true };
+    if (policyStrategy === 'skip') {
+      summary.skipped += 1;
+      stores.candidates?.markStatus?.({
+        domain: normalizedDomain.host,
+        candidateUrl,
+        status: 'skipped-policy',
+        lastSeenAt: attemptStartedAt
+      });
+      recordDecision({
+        stage: 'POLICY',
+        status: null,
+        outcome: 'skipped',
+        level: 'info',
+        message: `Fetch policy 'skip' (${fetchPolicy?.protection_kind || 'unknown'}): ${candidateUrl}`
+      });
+      return { attemptCounter: nextAttemptCounter, rateLimitTriggered: false };
     }
 
-    if (!headOutcome.shouldProceed) {
-      if (headOutcome.notFound) {
-        recordAbsentMapping(headOutcome.status, 'guess-place-hubs.head');
+    if (policyStrategy === 'direct') {
+      const headOutcome = await this._performHeadProbe({
+        candidateUrl,
+        normalizedDomain,
+        deps,
+        attemptId,
+        attemptStartedAt,
+        summary,
+        options,
+        recordFetch,
+        recordDecision,
+        stores
+      });
+
+      if (headOutcome.rateLimitTriggered) {
+        return { attemptCounter: nextAttemptCounter, rateLimitTriggered: true };
       }
-      return { attemptCounter: nextAttemptCounter, rateLimitTriggered: false };
+
+      if (!headOutcome.shouldProceed) {
+        if (headOutcome.notFound) {
+          recordAbsentMapping(headOutcome.status, 'guess-place-hubs.head');
+        }
+        return { attemptCounter: nextAttemptCounter, rateLimitTriggered: false };
+      }
     }
 
     // Fetch URL
     try {
-      const result = await fetchUrl(candidateUrl, deps.fetchFn, { logger: deps.logger, timeoutMs: 15000 });
+      const result = await this._fetchCandidateWithPolicy(candidateUrl, fetchPolicy, deps);
       summary.fetched += 1;
+
+      // Blocked-outcome evidence flows back into the policy table.
+      if ([402, 403, 429].includes(result.status)) {
+        this._recordProtectionObservation(deps, normalizedDomain.host, {
+          httpStatus: result.status,
+          url: candidateUrl,
+          strategy: policyStrategy
+        });
+      }
 
       const fetchRow = createFetchRow(result, normalizedDomain.host);
       recordFetch(fetchRow, { stage: 'GET', attemptId, cacheHit: false });
@@ -1328,6 +1370,13 @@ class DomainProcessor {
 
     } catch (fetchError) {
       summary.errors += 1;
+      if (fetchError && ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT'].includes(fetchError.code)) {
+        this._recordProtectionObservation(deps, normalizedDomain.host, {
+          code: fetchError.code,
+          url: candidateUrl,
+          strategy: policyStrategy
+        });
+      }
       stores.candidates?.markStatus?.({
         domain: normalizedDomain.host,
         candidateUrl,
@@ -2251,6 +2300,88 @@ class DomainProcessor {
     } catch (err) {
       deps?.logger?.warn?.(`[orchestration] hub_validations write failed for ${url}: ${err?.message || err}`);
     }
+  }
+
+  /**
+   * Resolve the host's bot-protection fetch policy from the DB
+   * (domain_fetch_policies). Memoized per db handle+host for the run.
+   * Kill-switch: options.policyFetch === false or GUESS_POLICY_FETCH=0.
+   */
+  _resolveFetchPolicy(host, deps, options = {}) {
+    if (options.policyFetch === false || process.env.GUESS_POLICY_FETCH === '0') return null;
+    if (!deps?.db) return null;
+    try {
+      if (!this._fetchPolicyCache || this._fetchPolicyCacheDb !== deps.db) {
+        this._fetchPolicyCache = new Map();
+        this._fetchPolicyCacheDb = deps.db;
+      }
+      const key = String(host || '').toLowerCase().replace(/^www\./, '');
+      if (this._fetchPolicyCache.has(key)) return this._fetchPolicyCache.get(key);
+      const { getDomainFetchPolicy } = require('news-crawler-db');
+      const policy = getDomainFetchPolicy(deps.db, key);
+      this._fetchPolicyCache.set(key, policy);
+      return policy;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * Merge a blocked-fetch observation into domain_fetch_policies.evidence
+   * (never changes the decided strategy; creates an 'unknown' row when
+   * absent so the observation reaches the review queue). Best-effort.
+   */
+  _recordProtectionObservation(deps, host, observation) {
+    try {
+      if (!deps?.db) return;
+      const { recordProtectionEvidence } = require('news-crawler-db');
+      recordProtectionEvidence(deps.db, { host, observation: { ...observation, source: 'guess-place-hubs' } });
+    } catch (err) {
+      deps?.logger?.warn?.(`[orchestration] protection evidence write failed for ${host}: ${err?.message || err}`);
+    }
+  }
+
+  /**
+   * GET a candidate honoring the host's fetch policy: 'puppeteer' routes
+   * through the shared PuppeteerFetcher (TLS-fingerprinting hosts like
+   * theguardian.com reset direct fetches), 'skip' short-circuits,
+   * otherwise plain fetchUrl. Returns the fetchUrl result shape.
+   */
+  async _fetchCandidateWithPolicy(candidateUrl, policy, deps) {
+    const strategy = policy?.fetch_strategy || 'direct';
+    if (strategy === 'skip') {
+      return { ok: false, status: 0, finalUrl: candidateUrl, body: '', policySkip: true, metrics: {} };
+    }
+    if (strategy === 'puppeteer' || strategy === 'remote-worker') {
+      // remote-worker falls back to puppeteer locally until the guess
+      // pipeline learns to enqueue remote batches.
+      try {
+        if (!this._puppeteerFetcher) {
+          const { PuppeteerFetcher } = require('../crawler/PuppeteerFetcher');
+          this._puppeteerFetcher = new PuppeteerFetcher({ logger: deps.logger || console });
+        }
+        const started = Date.now();
+        const result = await this._puppeteerFetcher.fetch(candidateUrl);
+        const status = Number.isFinite(result?.httpStatus) ? result.httpStatus : (result?.success ? 200 : 500);
+        return {
+          ok: Boolean(result?.success) && status >= 200 && status < 300,
+          status,
+          finalUrl: result?.finalUrl || candidateUrl,
+          body: result?.html || '',
+          fetchMethod: 'puppeteer',
+          metrics: {
+            request_started_at: new Date(started).toISOString(),
+            fetched_at: new Date().toISOString(),
+            bytes_downloaded: result?.contentLength || 0,
+            duration_ms: result?.durationMs || (Date.now() - started)
+          },
+          error: result?.success ? null : new Error(result?.error || 'puppeteer fetch failed')
+        };
+      } catch (err) {
+        deps?.logger?.warn?.(`[orchestration] puppeteer fetch failed for ${candidateUrl}: ${err?.message || err}; falling back to direct`);
+      }
+    }
+    return fetchUrl(candidateUrl, deps.fetchFn, { logger: deps.logger, timeoutMs: 15000 });
   }
 
   _checkUrlCache(candidateUrl, queries, options, summary, stores, attemptStartedAt) {
