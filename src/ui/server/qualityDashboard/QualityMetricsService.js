@@ -13,7 +13,7 @@
  * src/db/sqlite/v1/queries/ui/qualityMetrics.js
  */
 
-const { createQualityMetricsQueries } = require('../../../data/db/sqlite/v1/queries/ui/qualityMetrics');
+const { createQualityMetricsQueries } = require('news-crawler-db');
 
 /**
  * @typedef {Object} QualitySummary

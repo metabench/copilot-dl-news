@@ -10,7 +10,7 @@
 
 const { formatCount } = require("../../utils/formatting");
 const { buildViewMeta } = require("./shared");
-const { listClassificationsWithCounts } = require("../../../../data/db/sqlite/v1/queries/ui/classificationTypes");
+const { listClassificationsWithCounts } = require("news-crawler-db");
 
 /**
  * Build table columns for classification types listing

@@ -8,7 +8,7 @@ const { openNewsCrawlerDb } = require('../../../../../../../db/openNewsCrawlerDb
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { listQueues, getQueueDetail } = require('../../../../../../../data/db/sqlite/v1/queries/ui/queues');
+const { listQueues, getQueueDetail } = require('news-crawler-db');
 
 describe('Queue queries performance and correctness', () => {
   let db;

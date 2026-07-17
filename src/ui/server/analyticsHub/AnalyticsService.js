@@ -14,7 +14,7 @@
  * src/db/sqlite/v1/queries/ui/analytics.js
  */
 
-const { createAnalyticsQueries } = require('../../../data/db/sqlite/v1/queries/ui/analytics');
+const { createAnalyticsQueries } = require('news-crawler-db');
 
 /**
  * @typedef {Object} DailyCount

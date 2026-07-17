@@ -43,37 +43,38 @@ const {
   normalizeHostMode,
   parseHosts
 } = require("../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
+// UI queries direct from news-crawler-db (DB-consolidation slice 3 —
+// these used to route through src/data/db/sqlite/v1/queries/ui/* re-export
+// shims; the normalizeSortColumn/Direction names below preserve the
+// domainListing shim's historical renames).
 const {
   getArticleCount,
   getFetchCountDirect,
-  getFetchCountViaJoin
-} = require("../../data/db/sqlite/v1/queries/ui/domainSummary");
-const { selectDomainCountsByHosts } = require("../../data/db/sqlite/v1/queries/ui/domainCounts");
-const {
+  getFetchCountViaJoin,
+  selectDomainCountsByHosts,
   selectDomainPage,
   countDomains,
-  normalizeSortColumn,
-  normalizeSortDirection
-} = require("../../data/db/sqlite/v1/queries/ui/domainListing");
-const { listRecentCrawls } = require("../../data/db/sqlite/v1/queries/ui/crawls");
-const { listRecentErrors } = require("news-crawler-db");
-const {
+  normalizeDomainListingSortColumn: normalizeSortColumn,
+  normalizeDomainListingSortDirection: normalizeSortDirection,
+  listRecentCrawls,
+  listRecentErrors,
   listPlaceHubs,
   countPlaceHubs,
   getPlaceHubHosts,
   getPlaceHubsByHost,
-  getPlaceHubsByKind
-} = require("../../data/db/sqlite/v1/queries/ui/placeHubs");
-const { selectUrlById, selectFetchHistory, selectFetchById } = require("../../data/db/sqlite/v1/queries/ui/urlDetails");
-const { selectHostSummary, selectHostDownloads } = require("../../data/db/sqlite/v1/queries/ui/domainDetails");
-const { listConfiguration } = require("../../data/db/sqlite/v1/queries/ui/configuration");
-const {
+  getPlaceHubsByKind,
+  selectUrlById,
+  selectFetchHistory,
+  selectFetchById,
+  selectHostSummary,
+  selectHostDownloads,
+  listConfiguration,
   listClassificationsWithCounts,
   getClassificationByName,
   getDocumentsForClassification,
   countDocumentsForClassification,
   getRandomDocumentsForClassification
-} = require("../../data/db/sqlite/v1/queries/ui/classificationTypes");
+} = require("news-crawler-db");
 const { getCachedMetric } = require("./services/metricsService");
 const { renderHtml, resolveDbPath } = require("../render-url-table");
 const { buildDomainSnapshot, createHomeCardLoaders } = require("../homeCardData");

@@ -1,13 +1,15 @@
 "use strict";
 
 const { countUrls } = require("../../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
-const { selectRecentDomains } = require("../../../data/db/sqlite/v1/queries/ui/recentDomains");
+// (recentDomains + uiCachedMetrics direct from news-crawler-db; the
+// resolveDbHandle name preserves the retired shim's historical rename.)
 const {
-  resolveDbHandle,
+  selectRecentDomains,
+  resolveUiCachedMetricsDbHandle: resolveDbHandle,
   ensureUiCachedMetricsTable,
   selectMetricRow,
   upsertCachedMetricRow
-} = require("../../../data/db/sqlite/v1/queries/ui/uiCachedMetrics");
+} = require("news-crawler-db");
 
 const DEFAULT_MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -53,7 +55,7 @@ const STAT_DEFINITIONS = [
     maxAgeMs: 10 * 60 * 1000,
     intervalMs: 10 * 60 * 1000,
     compute: ({ db }) => {
-      const { getStorageTotals } = require("../../../data/db/sqlite/v1/queries/ui/storage");
+      const { getStorageTotals } = require("news-crawler-db");
       const row = getStorageTotals(db);
       return {
         objectCount: row?.objectCount ?? 0,

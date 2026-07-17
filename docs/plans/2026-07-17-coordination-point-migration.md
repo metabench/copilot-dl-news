@@ -156,6 +156,21 @@ a later core-crawler test-drift pass.
      reworked — identity form impossible post-deletion), LIVE
      download-verification.check 9/9 on :memory:, node --check 10/10.
      src/data/db: 197 files remain.
+   - Slice 3 DONE 2026-07-17: 21 more shim files DELETED — 19 pure
+     re-export shims under sqlite/v1/queries/ui/ (crawls, crawlEvents,
+     configuration, storage, recentDomains, domainDetails/Counts/Listing/
+     Summary, urlDetails, placeHubs, queues, gazetteerPlace/Country [zero
+     consumers, full rename maps], analytics, qualityMetrics,
+     patternSharing, classificationTypes, uiCachedMetrics) + the 2
+     old-layer shims-of-shims under sqlite/queries/ui/. 10 consumer files
+     repointed (dataExplorerServer's 9 requires consolidated into ONE ncdb
+     destructure; aliases preserved: normalizeSortColumn/Direction,
+     resolveDbHandle). NOT touched: urlListingNormalized + articleViewer
+     (REAL logic — articleViewer does decompression/extraction over ncdb
+     queries; both are migrate-later candidates, not path-swaps).
+     Verified: surface smoke 75 fns + 4 consts, dataExplorerServer jest
+     30/30 (app stopped), queues perf 6/6, node --check 10/10.
+     src/data/db: 193→172 files.
    - Slice 2 DONE 2026-07-17: four more pure shims DELETED (no renames —
      path-swap repoints only): queries/ui/crawlTypes.js (0 importers),
      queries/ui/uiThemes.js (themeService.js), queries/ui/errors.js

@@ -9,7 +9,7 @@
  */
 
 const { formatDateTime } = require("../../utils/formatting");
-const { listConfiguration } = require("../../../../data/db/sqlite/v1/queries/ui/configuration");
+const { listConfiguration } = require("news-crawler-db");
 const { ConfigMatrixControl } = require("../../../controls/ConfigMatrixControl");
 const { buildViewMeta } = require("./shared");
 

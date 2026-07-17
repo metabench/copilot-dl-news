@@ -1,7 +1,6 @@
 "use strict";
 
-const { selectRecentDomains } = require("../data/db/sqlite/v1/queries/ui/recentDomains");
-const { listRecentCrawls } = require("../data/db/sqlite/v1/queries/ui/crawls");
+const { selectRecentDomains, listRecentCrawls } = require("news-crawler-db");
 const { listRecentErrors } = require("news-crawler-db");
 const { getCachedMetric } = require("./server/services/metricsService");
 

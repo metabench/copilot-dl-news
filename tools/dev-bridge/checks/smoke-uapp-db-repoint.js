@@ -56,7 +56,45 @@ const FNS = [
   'getAnalysisRunById',
   'getAnalysisRunEvents',
   'getLatestAnalysisRunVersion',
-  'listCrawlTypes'
+  'listCrawlTypes',
+  // slice-3 consumers (dataExplorer, homeCardData, metricsService,
+  // analyticsHub, qualityDashboard, queues perf test) + A1 placeHubsTable
+  'getArticleCount',
+  'getFetchCountDirect',
+  'getFetchCountViaJoin',
+  'selectDomainCountsByHosts',
+  'selectDomainPage',
+  'countDomains',
+  'normalizeDomainListingSortColumn',
+  'normalizeDomainListingSortDirection',
+  'listRecentCrawls',
+  'selectUrlById',
+  'selectFetchHistory',
+  'selectFetchById',
+  'selectHostSummary',
+  'selectHostDownloads',
+  'listConfiguration',
+  'listClassificationsWithCounts',
+  'getClassificationByName',
+  'getDocumentsForClassification',
+  'countDocumentsForClassification',
+  'getRandomDocumentsForClassification',
+  'listPlaceHubs',
+  'countPlaceHubs',
+  'getPlaceHubsByKind',
+  'getPlaceHubsByHost',
+  'getPlaceHubHosts',
+  'selectRecentDomains',
+  'getStorageTotals',
+  'resolveUiCachedMetricsDbHandle',
+  'ensureUiCachedMetricsTable',
+  'selectMetricRow',
+  'upsertCachedMetricRow',
+  'createAnalyticsQueries',
+  'createQualityMetricsQueries',
+  'createPatternSharingQueries',
+  'listQueues',
+  'getQueueDetail'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);
@@ -69,4 +107,4 @@ for (const c of CONSTS) {
   assert.ok(ncdb[c] !== undefined && ncdb[c] !== null, `ncdb.${c} missing`);
 }
 console.log(`constants: ok (${CONSTS.length})`);
-console.log('SMOKE PASS: ncdb surface covers all repointed consumers (slices 0+1+2)');
+console.log('SMOKE PASS: ncdb surface covers all repointed consumers (slices 0+1+2+3)');
