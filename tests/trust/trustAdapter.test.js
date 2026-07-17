@@ -7,7 +7,7 @@
  * The module exports { createTrustAdapter } which requires a db handle.
  */
 
-const trustAdapterModule = require('../../src/data/db/sqlite/v1/queries/trustAdapter');
+const trustAdapterModule = require('news-crawler-db');
 
 describe('trustAdapter module exports', () => {
   it('should export createTrustAdapter factory function', () => {

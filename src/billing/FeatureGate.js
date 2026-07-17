@@ -12,7 +12,7 @@
  * @module FeatureGate
  */
 
-const { METRICS, getCurrentPeriod } = require('../data/db/sqlite/v1/queries/billingAdapter');
+const { METRICS, getCurrentPeriod } = require('news-crawler-db');
 
 /**
  * Default configuration

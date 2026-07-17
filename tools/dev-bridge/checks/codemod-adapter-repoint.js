@@ -1,0 +1,38 @@
+'use strict';
+// B5 codemod: repoint consumers of the 19 PURE adapter shims (no renames)
+// from src/data/db/sqlite/v1/queries/<name> to 'news-crawler-db'.
+// searchAdapter/userAdapter/workspaceAdapter carry renames — DEFERRED, not
+// touched. Ghost paths (src/db/...) are left alone (already dead).
+// Default DRY-RUN (lists rewrites); --apply writes files.
+const path = require('path');
+const fs = require('fs');
+const APPLY = process.argv.includes('--apply');
+const ROOT = path.resolve(__dirname, '..', '..', '..');
+const PURE = ['adminAdapter', 'alertAdapter', 'apiKeyAdapter', 'articlesAdapter',
+  'billingAdapter', 'coverageAdapter', 'healingAdapter', 'integrationAdapter',
+  'layoutAdapter', 'pushAdapter', 'recommendationAdapter', 'scheduleAdapter',
+  'sentimentAdapter', 'similarityAdapter', 'summaryAdapter', 'tagAdapter',
+  'templateReviewAdapter', 'topicAdapter', 'trustAdapter'];
+const RX = new RegExp(
+  `require\\((['"])(?:\\.\\./)*(?:src/)?data/db/sqlite/v1/queries/(${PURE.join('|')})\\1\\)`, 'g');
+
+const changed = [];
+function walk(dir) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (e.name === 'node_modules' || e.name === '.git') continue;
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) walk(p);
+    else if (e.name.endsWith('.js')) {
+      const src = fs.readFileSync(p, 'utf8');
+      if (!RX.test(src)) { RX.lastIndex = 0; continue; }
+      RX.lastIndex = 0;
+      const out = src.replace(RX, (m, q) => `require(${q}news-crawler-db${q})`);
+      const n = (src.match(RX) || []).length; RX.lastIndex = 0;
+      changed.push({ file: path.relative(ROOT, p), n });
+      if (APPLY) fs.writeFileSync(p, out);
+    }
+  }
+}
+for (const d of ['src', 'tests']) walk(path.join(ROOT, d));
+for (const c of changed) console.log(`${APPLY ? 'rewrote' : 'would rewrite'} ${c.file} (${c.n})`);
+console.log(`files: ${changed.length}; ${APPLY ? 'APPLIED' : 'dry-run'}`);

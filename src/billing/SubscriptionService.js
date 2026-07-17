@@ -14,7 +14,7 @@
  * @module SubscriptionService
  */
 
-const { PLANS, METRICS } = require('../data/db/sqlite/v1/queries/billingAdapter');
+const { PLANS, METRICS } = require('news-crawler-db');
 
 /**
  * SubscriptionService class

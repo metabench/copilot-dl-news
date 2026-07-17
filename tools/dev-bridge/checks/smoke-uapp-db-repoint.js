@@ -144,7 +144,28 @@ const FNS = [
   'createGuessPlaceHubsQueries',
   'createCrawlObserverUiQueries',
   // A-quirks maintenance
-  'fixPlaceHubKinds'
+  'fixPlaceHubKinds',
+  'backfillHubValidationsFromMappings',
+  // slice-5 adapter-cluster consumers (19 pure adapter shims retired)
+  'createAdminAdapter',
+  'ensureAdminSchema',
+  'createAlertAdapter',
+  'createApiKeyAdapter',
+  'createArticlesAdapter',
+  'createBillingAdapter',
+  'getCurrentPeriod',
+  'createCoverageAdapter',
+  'recordHealingEvent',
+  'getHealingStats',
+  'createIntegrationAdapter',
+  'createIntegrationAdapterFromSqliteHandle',
+  'createLayoutAdapter',
+  'createPushAdapter',
+  'createRecommendationAdapter',
+  'createSimilarityAdapter',
+  'createSummaryAdapter',
+  'createTagAdapter',
+  'createTopicAdapter'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);
@@ -157,4 +178,4 @@ for (const c of CONSTS) {
   assert.ok(ncdb[c] !== undefined && ncdb[c] !== null, `ncdb.${c} missing`);
 }
 console.log(`constants: ok (${CONSTS.length})`);
-console.log('SMOKE PASS: ncdb surface covers all repointed consumers (slices 0-4)');
+console.log('SMOKE PASS: ncdb surface covers all repointed consumers (slices 0-5 + maintenance)');

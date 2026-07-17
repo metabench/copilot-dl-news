@@ -26,7 +26,7 @@ console.log('\n[1] Testing AdminAdapter...');
 const {
   createAdminAdapter,
   createAdminDashboardCheckFixture
-} = require('../../../../data/db/sqlite/v1/queries/adminAdapter');
+} = require('news-crawler-db');
 
 const db = openNewsCrawlerDb(':memory:');
 createAdminDashboardCheckFixture(db);

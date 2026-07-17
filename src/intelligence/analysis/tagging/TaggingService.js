@@ -317,7 +317,7 @@ class TaggingService {
  * @returns {TaggingService} Configured service
  */
 function createTaggingService(db, options = {}) {
-  const { createTagAdapter } = require('../../../data/db/sqlite/v1/queries/tagAdapter');
+  const { createTagAdapter } = require('news-crawler-db');
   
   const tagAdapter = createTagAdapter(db);
   

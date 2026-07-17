@@ -314,8 +314,8 @@ class TagRecommender {
  * @returns {TagRecommender} Configured recommender
  */
 function createTagRecommender(db, options = {}) {
-  const { createTagAdapter } = require('../../../data/db/sqlite/v1/queries/tagAdapter');
-  const { createArticlesAdapter } = require('../../../data/db/sqlite/v1/queries/articlesAdapter');
+  const { createTagAdapter } = require('news-crawler-db');
+  const { createArticlesAdapter } = require('news-crawler-db');
   
   const tagAdapter = createTagAdapter(db);
   const articlesAdapter = createArticlesAdapter(db);

@@ -16,7 +16,7 @@ const fs = require('fs');
 const CrawlScheduler = require('../../../src/core/crawler/scheduler/CrawlScheduler');
 const UpdatePatternAnalyzer = require('../../../src/core/crawler/scheduler/UpdatePatternAnalyzer');
 const ScheduleStore = require('../../../src/core/crawler/scheduler/ScheduleStore');
-const scheduleAdapter = require('../../../src/data/db/sqlite/v1/queries/scheduleAdapter');
+const scheduleAdapter = require('news-crawler-db');
 const { TaskEventWriter } = require('../../../src/data/db/TaskEventWriter');
 
 describe('CrawlScheduler', () => {

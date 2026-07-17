@@ -80,6 +80,13 @@ code audit. App was running throughout; no writes made.
    195) of ~15 seeded hosts.
 4. **Validation thin**: 11 hub_validations vs 428 hubs (ledger 3 days
    old); backfill validations for legacy hubs or age them out.
+   → **A3 DONE 2026-07-17**: ncdb `backfillHubValidationsFromMappings`
+   (vitest; INSERT OR IGNORE respects the global hub_url unique;
+   validated_at = mapping's verified_at, TTL 2y — pre-expired entries
+   would surface honestly as 'expired-validation'; none were). Applied
+   app-stopped: 368 candidates → 365 inserted (3 duplicate-URL
+   ignores), ledger 169→534; methods: backfill-mapping-evidence 365 /
+   ai-review 160 / crawl-content 7 / crawl-fetch-404 2.
 5. **Data quality**: duplicate (host,slug) rows (andorra ×2 —
    uq_place_hubs_entity tolerates url_id/www variants); ISO-code junk
    mappings (independent.co.uk/topic/**ad**, semana.com/news/**ad** ↦

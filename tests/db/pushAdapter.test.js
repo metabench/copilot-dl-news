@@ -4,7 +4,7 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * @fileoverview Tests for Push Subscription Adapter
  */
-const { createPushAdapter } = require('../../../src/data/db/sqlite/v1/queries/pushAdapter');
+const { createPushAdapter } = require('news-crawler-db');
 
 describe('pushAdapter', () => {
   let db;

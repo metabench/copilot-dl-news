@@ -587,10 +587,10 @@ class RecommendationEngine {
  * @returns {RecommendationEngine} Configured engine
  */
 function createRecommendationEngine(db, options = {}) {
-  const { createRecommendationAdapter } = require('../../../data/db/sqlite/v1/queries/recommendationAdapter');
-  const { createArticlesAdapter } = require('../../../data/db/sqlite/v1/queries/articlesAdapter');
+  const { createRecommendationAdapter } = require('news-crawler-db');
+  const { createArticlesAdapter } = require('news-crawler-db');
   const { createDuplicateDetector } = require('../similarity/DuplicateDetector');
-  const { createTagAdapter } = require('../../../data/db/sqlite/v1/queries/tagAdapter');
+  const { createTagAdapter } = require('news-crawler-db');
   
   const recommendationAdapter = createRecommendationAdapter(db);
   const articlesAdapter = createArticlesAdapter(db);

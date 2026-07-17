@@ -7,7 +7,7 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 
 const path = require('path');
 const { AdminService } = require('../../src/admin/AdminService');
-const { createAdminAdapter } = require('../../src/data/db/sqlite/v1/queries/adminAdapter');
+const { createAdminAdapter } = require('news-crawler-db');
 
 describe('AdminService', () => {
   let db;

@@ -4,7 +4,7 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 /**
  * adminAdapter unit tests
  */
-const { createAdminAdapter } = require('../../src/data/db/sqlite/v1/queries/adminAdapter');
+const { createAdminAdapter } = require('news-crawler-db');
 
 describe('adminAdapter', () => {
   let db;

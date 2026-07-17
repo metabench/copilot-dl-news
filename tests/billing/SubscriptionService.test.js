@@ -15,7 +15,7 @@ const {
 const { 
   createBillingAdapter, 
   ensureBillingSchema
-} = require('../../src/data/db/sqlite/v1/queries/billingAdapter');
+} = require('news-crawler-db');
 
 /**
  * Create minimal users table for FK constraints

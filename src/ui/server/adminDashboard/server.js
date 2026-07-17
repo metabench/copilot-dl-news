@@ -26,7 +26,7 @@ const path = require('path');
 const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 const jsgui = require('jsgui3-html');
 
-const { createAdminAdapter } = require('../../../data/db/sqlite/v1/queries/adminAdapter');
+const { createAdminAdapter } = require('news-crawler-db');
 const { AdminService } = require('../../../admin/AdminService');
 
 const { AdminDashboard } = require('./views/AdminDashboard');

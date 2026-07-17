@@ -35,9 +35,9 @@ const swaggerUi = require('swagger-ui-express');
 const YAML = require('js-yaml');
 
 const { ensureDb } = require('../../data/db/sqlite/ensureDb');
-const { createApiKeyAdapter } = require('../../data/db/sqlite/v1/queries/apiKeyAdapter');
-const { createArticlesAdapter } = require('../../data/db/sqlite/v1/queries/articlesAdapter');
-const { createSimilarityAdapter } = require('../../data/db/sqlite/v1/queries/similarityAdapter');
+const { createApiKeyAdapter } = require('news-crawler-db');
+const { createArticlesAdapter } = require('news-crawler-db');
+const { createSimilarityAdapter } = require('news-crawler-db');
 const { createAuthMiddleware } = require('./middleware/auth');
 const { createRateLimitMiddleware, cleanupStaleEntries } = require('./middleware/rateLimit');
 const { createArticlesRouter } = require('./routes/articles');
@@ -48,7 +48,7 @@ const { DuplicateDetector } = require('../../intelligence/analysis/similarity/Du
 const { createSSEHandler, getBroadcaster } = require('../streaming');
 const { createWebSocketServer } = require('../streaming');
 const { Summarizer } = require('../../intelligence/analysis/summarization');
-const { createSummaryAdapter } = require('../../data/db/sqlite/v1/queries/summaryAdapter');
+const { createSummaryAdapter } = require('news-crawler-db');
 
 // Default configuration
 const DEFAULT_PORT = 4000;

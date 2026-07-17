@@ -360,8 +360,8 @@ class DuplicateDetector {
  */
 function createDuplicateDetector(db, options = {}) {
   // Import adapters dynamically to avoid circular deps
-  const { createSimilarityAdapter } = require('../../../data/db/sqlite/v1/queries/similarityAdapter');
-  const { createArticlesAdapter } = require('../../../data/db/sqlite/v1/queries/articlesAdapter');
+  const { createSimilarityAdapter } = require('news-crawler-db');
+  const { createArticlesAdapter } = require('news-crawler-db');
   
   const similarityAdapter = createSimilarityAdapter(db);
   const articlesAdapter = createArticlesAdapter(db);

@@ -13,7 +13,7 @@ const {
   METRICS,
   SUBSCRIPTION_STATUS,
   getCurrentPeriod
-} = require('../../src/data/db/sqlite/v1/queries/billingAdapter');
+} = require('news-crawler-db');
 
 /**
  * Create minimal users table for FK constraints

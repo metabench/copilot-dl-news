@@ -23,7 +23,7 @@ const express = require('express');
 const path = require('path');
 const jsgui = require('jsgui3-html');
 
-const { createIntegrationAdapterFromSqliteHandle } = require('../../../data/db/sqlite/v1/queries/integrationAdapter');
+const { createIntegrationAdapterFromSqliteHandle } = require('news-crawler-db');
 const { WebhookService, EVENT_TYPES } = require('../../../integrations/WebhookService');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');

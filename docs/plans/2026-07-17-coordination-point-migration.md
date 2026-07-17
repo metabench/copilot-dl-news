@@ -156,6 +156,16 @@ a later core-crawler test-drift pass.
      reworked — identity form impossible post-deletion), LIVE
      download-verification.check 9/9 on :memory:, node --check 10/10.
      src/data/db: 197 files remain.
+   - Slice 5 DONE 2026-07-17: 19 PURE adapter shims DELETED (admin, alert,
+     apiKey, articles, billing, coverage, healing, integration, layout,
+     push, recommendation, schedule, sentiment, similarity, summary, tag,
+     templateReview, topic, trust) via CODEMOD
+     (checks/codemod-adapter-repoint.js): 26 consumer files rewritten in
+     one pass (15 src + 11 tests). DEFERRED with renames: searchAdapter,
+     userAdapter, workspaceAdapter (+ their consumers). Verified: smoke
+     142 fns (a guessed name createHealingAdapter was caught by the smoke
+     itself — replaced with shim-verified names), tests/billing 92/92.
+     src/data/db: 167→148 files.
    - Slice 4 DONE 2026-07-17: 5 top-level queries/* shims DELETED
      (placeHubGuessingUiQueries [44 names, no renames],
      topicHubGuessingUiQueries, nonGeoTopicSlugsUiQueries [both with

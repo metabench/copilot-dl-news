@@ -7,7 +7,7 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 
 const path = require('path');
 const { AuditLogger, AUDIT_ACTIONS } = require('../../src/admin/AuditLogger');
-const { createAdminAdapter } = require('../../src/data/db/sqlite/v1/queries/adminAdapter');
+const { createAdminAdapter } = require('news-crawler-db');
 
 describe('AuditLogger', () => {
   let db;

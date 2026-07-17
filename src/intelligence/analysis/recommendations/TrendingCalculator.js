@@ -255,7 +255,7 @@ class TrendingCalculator {
  * @returns {TrendingCalculator} Configured calculator
  */
 function createTrendingCalculator(db, options = {}) {
-  const { createRecommendationAdapter } = require('../../../data/db/sqlite/v1/queries/recommendationAdapter');
+  const { createRecommendationAdapter } = require('news-crawler-db');
   
   const recommendationAdapter = createRecommendationAdapter(db);
   

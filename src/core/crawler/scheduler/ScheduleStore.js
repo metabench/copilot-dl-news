@@ -9,7 +9,7 @@
  * @module ScheduleStore
  */
 
-const scheduleAdapter = require('../../../data/db/sqlite/v1/queries/scheduleAdapter');
+const scheduleAdapter = require('news-crawler-db');
 
 class ScheduleStore {
   /**

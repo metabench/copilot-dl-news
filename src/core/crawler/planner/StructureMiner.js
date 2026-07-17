@@ -18,7 +18,7 @@
  */
 
 const SkeletonHash = require('../../../intelligence/analysis/structure/SkeletonHash');
-const { createLayoutAdapter } = require('../../../data/db/sqlite/v1/queries/layoutAdapter');
+const { createLayoutAdapter } = require('news-crawler-db');
 
 class StructureMiner {
   /**

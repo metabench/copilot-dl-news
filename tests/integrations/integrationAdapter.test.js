@@ -1,6 +1,6 @@
 'use strict';
 
-const { createIntegrationAdapter } = require('../../src/data/db/sqlite/v1/queries/integrationAdapter');
+const { createIntegrationAdapter } = require('news-crawler-db');
 
 // Mock database
 function createMockDb() {
