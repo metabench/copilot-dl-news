@@ -58,19 +58,43 @@ for the internal deprecated-ui consumers and dies with the tree.
 Verified: ncdb 3/3 vitest; copilot 13+22+5 jest + require-smoke
 (checks/smoke-analysis-imports.js).
 
-Remaining couplings:
-- `src/api/server.js` deeply imports it (writableDb, JobRegistry,
-  RealtimeBroadcaster, events router). server.js isn't launched by any
-  script, but is referenced by `src/ui/server/analyticsHub/index.js` and
-  `qualityDashboard/index.js` — confirm those are live before removing.
-- `src/ui/electron/backgroundTasksMonitor/main.js` only MENTIONS
-  deprecated-ui in comments (probes its old ports) — no code dependency.
+Recipe step (2) DONE 2026-07-17: verdict reached and acted on.
+- analyticsHub + qualityDashboard are LIVE — unifiedApp mounts their
+  `server.js` router factories — but they import NOTHING from
+  deprecated-ui or src/api/server.js. The earlier claim that their
+  index.js files reference api/server was wrong (they are barrels over
+  ./server + ./controls).
+- `src/api/server.js` was an unlaunched duplicate of unifiedApp's
+  serving role (none of the 147 package scripts, no cmd, no electron
+  main referenced it; unifiedApp wires its own API via
+  registerPlaceHubReviewRoutes + server/crawl-api/v1). DELETED, along
+  with its only consumer tests/api/crawl-status-page.test.js (it tested
+  the dead /crawl-status duplicate; the live one is unifiedApp's).
+  That removes deprecated-ui's last non-test importer in src/.
+- Fallout finding: `src/api/routes/*` (analysis, background-tasks,
+  place-hubs, crawls, health, decisionConfigSet) were mounted ONLY by
+  the deleted server.js, yet stay green under tests/server/api/*.
+  They are now tested-but-unmounted library code — decide later:
+  mount them in unifiedApp or retire them (the src/api/v1 + graphql
+  trees likely share this condition; unverified).
+- Also repaired in passing (same class as the pass-1 PuppeteerDomainManager
+  fix): tests/api/push.test.js had a require path overshooting the repo
+  root — silently unloadable; path fixed, 8/15 pass, 7 drifted
+  assertions test.skip'd pending a push-router reconciliation pass.
+  tests/api/v1/routes/articles.test.js updated for the implemented
+  /similar route (501 without engine, was Phase-8 placeholder 200).
 
-Removal recipe (remaining): (2) determine whether src/api/server.js +
-analyticsHub + qualityDashboard are retired (superseded by unifiedApp) —
-if so remove them with deprecated-ui, else migrate their deprecated-ui
-imports; (3) delete src/deprecated-ui and its test dir; jest already
-ignores it via testPathIgnorePatterns.
+Removal recipe (remaining): (3) delete src/deprecated-ui + its test
+dir. Blockers to clear first — importers that still reach into the tree:
+- src/core/crawler/__tests__/IntelligentCrawlerManager.dynamic-replanning
+  .test.js + phase-123-integration.test.js (IntelligentCrawlerManager)
+- tools/benchmarks/run.js (gazetteerCountry, ssr.gazetteer.country)
+- tools/manual-tests/{test-gazetteer-aware-planning,test-geography-crawl,
+  verify-queues-impl}.js
+- tests/server-connection.test.js (deprecated-ui/express/server)
+- tests/deprecated-ui/** (jest-ignored already; deleted with the tree)
+- tools/dev-bridge/checks/smoke-analysis-imports.js re-requires the
+  analysisRuns shim intentionally — update it when the tree goes.
 
 ## Recommended remaining phases (owner to sequence)
 

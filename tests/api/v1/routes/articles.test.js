@@ -198,7 +198,10 @@ describe('articles routes', () => {
   });
 
   describe('GET /api/v1/articles/:id/similar', () => {
-    test('returns placeholder response', async () => {
+    test('returns 501 when no similarity engine is configured', async () => {
+      // The Content Similarity Engine shipped (SimHash + MinHash + LSH);
+      // without a duplicateDetector the route now reports NOT_IMPLEMENTED
+      // instead of the old Phase-8 placeholder 200.
       mockArticlesAdapter.getArticleById.mockReturnValue({
         id: 1,
         title: 'Test'
@@ -206,11 +209,11 @@ describe('articles routes', () => {
 
       const response = await request(app)
         .get('/api/v1/articles/1/similar')
-        .expect(200);
+        .expect(501);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.message).toContain('Phase 8 Item 3');
-      expect(response.body.similar).toEqual([]);
+      expect(response.body.success).toBe(false);
+      expect(response.body.error).toBe('NOT_IMPLEMENTED');
+      expect(response.body.message).toContain('Content Similarity Engine');
     });
 
     test('returns 404 when source article not found', async () => {

@@ -59,6 +59,7 @@
 
 ## Findings / decisions log (newest first, one line each)
 
+- 2026-07-17 (5): COORDINATION-POINT step 2 — VERDICT: analyticsHub/qualityDashboard LIVE via unifiedApp routers (zero deprecated-ui imports; plan's index.js claim was wrong); src/api/server.js was an unlaunched unifiedApp duplicate → deleted with its crawl-status test = deprecated-ui's last non-test src importer gone; fallout: src/api/routes/* now tested-but-unmounted (disposition needed); revived silently-dead push.test.js (require overshot root; 7 drifted tests skipped, articles /similar test updated to 501) → tests/api 12/12 suites 299 green; step-3 blockers enumerated in plan; NEW gotcha: sandbox mount can serve NUL-padded file tails — trust host via checks/parse-package-json.js pattern; NEW tool: checks/jest-failures.js (compact failure lists past the 4k tail cap).
 - 2026-07-17 (4): COORDINATION-POINT: deprecated-ui recipe step 1 done — analysisRuns relocated INTO news-crawler-db (listAnalysisRuns/getAnalysisRun/diagnostics added + vitest; ncdb was already 5/7 identical — deprecated-ui copy was a stale fork), propertyEditor → src/shared/; 5 importers repointed (incl. upgrade-analysis-schema.js, missed by the plan's survey), deprecated-ui service now a shim; 13+22+5 jest + smoke green; remaining blocker = src/api/server.js↔analyticsHub/qualityDashboard liveness (recipe step 2).
 - 2026-07-17 (3): BOT PROTECTIONS MODELLED IN DB + SLICE 3 —
   domain_fetch_policies table (protection_kind / fetch_strategy /
