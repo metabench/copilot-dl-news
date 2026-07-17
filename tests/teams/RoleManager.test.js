@@ -7,7 +7,7 @@
  */
 
 const { RoleManager } = require('../../src/teams/RoleManager');
-const { ROLES, ROLE_HIERARCHY } = require('../../src/data/db/sqlite/v1/queries/workspaceAdapter');
+const { ROLES, ROLE_HIERARCHY } = require('news-crawler-db');
 
 describe('RoleManager', () => {
   let roleManager;

@@ -129,7 +129,7 @@ function createGatewayApp(options = {}) {
   // Try to load search adapter if available
   let searchAdapter = null;
   try {
-    const { createSearchAdapter } = require('../../data/db/sqlite/v1/queries/searchAdapter');
+    const { createSqliteArticleSearchAdapter: createSearchAdapter } = require('news-crawler-db');
     searchAdapter = createSearchAdapter(db);
   } catch {
     if (verbose) {

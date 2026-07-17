@@ -1,7 +1,7 @@
 'use strict';
 
 const { tof, is_array } = require('lang-tools');
-const progressQueries = require('../../../data/db/sqlite/v1/queries/gazetteer.progress');
+const progressQueries = require('news-crawler-db');
 const { getDb } = require('../../../data/db');
 const { databaseTableExists } = require('news-crawler-db');
 

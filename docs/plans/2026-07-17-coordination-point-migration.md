@@ -156,6 +156,18 @@ a later core-crawler test-drift pass.
      reworked — identity form impossible post-deletion), LIVE
      download-verification.check 9/9 on :memory:, node --check 10/10.
      src/data/db: 197 files remain.
+   - Slice 6 DONE 2026-07-17: 16 more shims DELETED — 13 pure v1
+     gazetteer.* + gazetteerPlaceNames (codemod, 31 consumer files across
+     src/tests/tools — the codemod now walks tools/ too) + the renamed
+     trio searchAdapter/userAdapter/workspaceAdapter (search consumers
+     aliased createSqliteArticleSearchAdapter→createSearchAdapter etc. —
+     the smoke caught that the shim WRAPPED the factory under a
+     historical name, git show verified; workspace's renamed generateSlug
+     was consumed nowhere; user had no live consumers). Old-layer
+     sqlite/queries/gazetteer.places.js became a named ncdb re-export
+     (it re-required the dying v1 shim); rest of old layer deferred.
+     Verified: smoke 174 fns + 11 consts, tests/teams 204/204, syntax
+     sweep clean. src/data/db: 148→132 files.
    - Slice 5 DONE 2026-07-17: 19 PURE adapter shims DELETED (admin, alert,
      apiKey, articles, billing, coverage, healing, integration, layout,
      push, recommendation, schedule, sentiment, similarity, summary, tag,

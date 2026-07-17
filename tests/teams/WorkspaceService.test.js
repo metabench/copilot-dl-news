@@ -8,7 +8,7 @@
  */
 
 const { WorkspaceService } = require('../../src/teams/WorkspaceService');
-const { ROLES, ACTIVITY_ACTIONS } = require('../../src/data/db/sqlite/v1/queries/workspaceAdapter');
+const { ROLES, ACTIVITY_ACTIONS } = require('news-crawler-db');
 
 describe('WorkspaceService', () => {
   let service;

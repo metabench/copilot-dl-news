@@ -5,7 +5,7 @@
  * different types of hubs (place, topic, place-topic, place-place).
  */
 
-const { getAllPlaceNames } = require('../../data/db/sqlite/v1/queries/gazetteerPlaceNames');
+const { getAllPlaceNames } = require('news-crawler-db');
 const { getTopicTermsForLanguage } = require('../../data/db/sqlite/v1/queries/topicKeywords');
 const { getSkipTermsForLanguage } = require('../../data/db/sqlite/v1/queries/crawlSkipTerms');
 const { discoverPlacePlacePatternsFromMappings, updateDsplWithPlacePlacePatterns } = require('../../services/shared/dspl');

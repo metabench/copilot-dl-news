@@ -18,7 +18,7 @@ const { ensureDb, ensureGazetteer } = require('../data/db/sqlite');
 const {
   createAttributeStatements,
   recordAttribute
-} = require('../data/db/sqlite/v1/queries/gazetteer.attributes');
+} = require('news-crawler-db');
 const {
   createDeduplicationStatements,
   findExistingPlace,
@@ -27,8 +27,8 @@ const {
   completeIngestionRun,
   generateCapitalExternalId,
   addCapitalRelationship
-} = require('../data/db/sqlite/v1/queries/gazetteer.deduplication');
-const { createPopulateGazetteerQueries } = require('../data/db/sqlite/v1/queries/gazetteer.populateTool');
+} = require('news-crawler-db');
+const { createPopulateGazetteerQueries } = require('news-crawler-db');
 const { fetchCountries } = require('./restcountries');
 const { findProjectRoot } = require('../shared/utils/project-root');
 const { CliFormatter } = require('../shared/utils/CliFormatter');

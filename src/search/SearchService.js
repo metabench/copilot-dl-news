@@ -13,7 +13,12 @@
  *   - Performance metrics
  */
 
-const { createSearchAdapter, BM25_WEIGHTS } = require('../data/db/sqlite/v1/queries/searchAdapter');
+// (direct from news-crawler-db; aliases preserve the retired searchAdapter
+// shim's historical renames)
+const {
+  createSqliteArticleSearchAdapter: createSearchAdapter,
+  SQLITE_ARTICLE_SEARCH_BM25_WEIGHTS: BM25_WEIGHTS
+} = require('news-crawler-db');
 
 class SearchService {
   /**

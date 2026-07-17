@@ -20,7 +20,7 @@
 
 const path = require('path');
 const { ensureDatabase } = require('../../src/data/db/sqlite');
-const { fixPlaceHubNames } = require('../../src/data/db/sqlite/v1/queries/gazetteer.names');
+const { fixPlaceHubNames } = require('news-crawler-db');
 
 // Parse command line arguments
 const args = process.argv.slice(2);

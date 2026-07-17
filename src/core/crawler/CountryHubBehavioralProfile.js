@@ -279,7 +279,7 @@ class CountryHubBehavioralProfile {
   _getTotalCountries() {
     // Get total countries from gazetteer
     try {
-      const { getAllCountries } = require('../../data/db/sqlite/v1/queries/gazetteer.places');
+      const { getAllCountries } = require('news-crawler-db');
       // Use openDatabase to avoid full schema initialization
       const { openDatabase } = require('../../data/db/sqlite/v1/connection');
       const { resolveGazetteerDbPath } = require('../../shared/utils/gazetteer-db-path');

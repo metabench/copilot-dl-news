@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { tof, is_array, each } = require('lang-tools');
 const { compact } = require('../../../../shared/utils/pipelines');
-const ingestQueries = require('../../../../data/db/sqlite/v1/queries/gazetteer.ingest');
+const ingestQueries = require('news-crawler-db');
 const { HttpRequestResponseFacadeInstance } = require('../../../../shared/utils/HttpRequestResponseFacade');
 const {
   DEFAULT_LABEL_LANGUAGES,

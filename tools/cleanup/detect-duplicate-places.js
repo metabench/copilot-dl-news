@@ -42,7 +42,7 @@ const {
   findPlacesWithCoords,
   findNameDuplicates,
   getTotalPlacesCount
-} = require('../src/data/db/sqlite/v1/queries/gazetteer.duplicates');
+} = require('news-crawler-db');
 
 function getArg(name, fallback) {
   const a = process.argv.find(x => x.startsWith(`--${name}=`));

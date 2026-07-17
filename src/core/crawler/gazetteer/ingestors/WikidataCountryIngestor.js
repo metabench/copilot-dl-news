@@ -6,7 +6,7 @@ const chalk = require('chalk');
 const { tof, each, is_array } = require('lang-tools');
 const { compact } = require('../../../../shared/utils/pipelines');
 const { AttributeBuilder } = require('../../../../shared/utils/attributeBuilder');
-const ingestQueries = require('../../../../data/db/sqlite/v1/queries/gazetteer.ingest');
+const ingestQueries = require('news-crawler-db');
 const { getDb } = require('../../../../data/db');
 const {
   DEFAULT_LABEL_LANGUAGES,

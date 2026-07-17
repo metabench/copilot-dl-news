@@ -85,7 +85,7 @@ const { ensureDatabase } = require('../../src/data/db/sqlite');
 const {
   countPlacesForDuplicateCorrection,
   mergeDuplicatePlaces
-} = require('../../src/data/db/sqlite/v1/queries/gazetteer.deduplication');
+} = require('news-crawler-db');
 const path = require('path');
 
 function getArg(name, fallback) {

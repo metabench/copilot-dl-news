@@ -12,7 +12,16 @@ const PURE = ['adminAdapter', 'alertAdapter', 'apiKeyAdapter', 'articlesAdapter'
   'billingAdapter', 'coverageAdapter', 'healingAdapter', 'integrationAdapter',
   'layoutAdapter', 'pushAdapter', 'recommendationAdapter', 'scheduleAdapter',
   'sentimentAdapter', 'similarityAdapter', 'summaryAdapter', 'tagAdapter',
-  'templateReviewAdapter', 'topicAdapter', 'trustAdapter'];
+  'templateReviewAdapter', 'topicAdapter', 'trustAdapter',
+  // B6 (2026-07-17): v1 gazetteer cluster — all pure, no renames.
+  'gazetteer\\.attributes', 'gazetteer\\.deduplication', 'gazetteer\\.duplicates',
+  'gazetteer\\.export', 'gazetteer\\.ingest', 'gazetteer\\.names',
+  'gazetteer\\.osm', 'gazetteer\\.places', 'gazetteer\\.populateTool',
+  'gazetteer\\.progress', 'gazetteer\\.search', 'gazetteer\\.utils',
+  'gazetteerPlaceNames',
+  // B6b: workspace/user adapters — renamed exports exist but are consumed
+  // nowhere (generateSlug) / no live consumers at all (userAdapter).
+  'workspaceAdapter', 'userAdapter'];
 const RX = new RegExp(
   `require\\((['"])(?:\\.\\./)*(?:src/)?data/db/sqlite/v1/queries/(${PURE.join('|')})\\1\\)`, 'g');
 
@@ -33,6 +42,6 @@ function walk(dir) {
     }
   }
 }
-for (const d of ['src', 'tests']) walk(path.join(ROOT, d));
+for (const d of ['src', 'tests', 'tools']) walk(path.join(ROOT, d));
 for (const c of changed) console.log(`${APPLY ? 'rewrote' : 'would rewrite'} ${c.file} (${c.n})`);
 console.log(`files: ${changed.length}; ${APPLY ? 'APPLIED' : 'dry-run'}`);

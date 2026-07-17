@@ -8,7 +8,7 @@
  * Uses database query module for all SQL operations (no inline SQL).
  */
 
-const { getPlacesByCountryAndKind, getPlaceHierarchy } = require('../data/db/sqlite/v1/queries/gazetteer.places');
+const { getPlacesByCountryAndKind, getPlaceHierarchy } = require('news-crawler-db');
 const { getPlacePlaceHubCoverage } = require('../data/db/sqlite/v1/queries/placePageMappings');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 const { getDsplForDomain } = require('./shared/dspl');

@@ -18,7 +18,7 @@
 
 const path = require('path');
 const { ensureDb } = require('../data/db/sqlite/ensureDb');
-const { normalizeName } = require('../data/db/sqlite/v1/queries/gazetteer.utils');
+const { normalizeName } = require('news-crawler-db');
 const { CliFormatter, COLORS, ICONS } = require('../shared/utils/CliFormatter');
 
 // Default paths

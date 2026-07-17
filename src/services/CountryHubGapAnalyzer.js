@@ -9,7 +9,7 @@
  * Learns URL patterns from existing data via Domain-Specific Pattern Libraries (DSPLs).
  */
 
-const { getAllCountries, getTopCountries, getCountryByName, getPlaceNameVariantsForHubDiscovery } = require('../data/db/sqlite/v1/queries/gazetteer.places');
+const { getAllCountries, getTopCountries, getCountryByName, getPlaceNameVariantsForHubDiscovery } = require('news-crawler-db');
 const { getCountryHubCoverage } = require('../data/db/sqlite/v1/queries/placePageMappings');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 const { getDsplForDomain } = require('./shared/dspl');

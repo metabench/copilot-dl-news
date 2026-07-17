@@ -17,12 +17,12 @@ const { ensureDb } = require('../data/db/sqlite');
 const { findProjectRoot } = require('../shared/utils/project-root');
 const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');
 const { GazetteerTelemetry } = require('./gazetteer/GazetteerTelemetry');
-const { searchPlacesByName, getPlaceDetails } = require('../data/db/sqlite/v1/queries/gazetteer.search');
+const { searchPlacesByName, getPlaceDetails } = require('news-crawler-db');
 const { 
   getPlaceCountByKind, 
   getPlacesByCountryAndKind,
   getCountryByCode
-} = require('../data/db/sqlite/v1/queries/gazetteer.places');
+} = require('news-crawler-db');
 
 function parseCliArgs(argv) {
   const parser = new CliArgumentParser(

@@ -2,7 +2,7 @@
 
 const path = require('path');
 const { getDb } = require('../data/db');
-const { getTopCities, getPlacesByCountryAndKind } = require('../data/db/sqlite/v1/queries/gazetteer.places');
+const { getTopCities, getPlacesByCountryAndKind } = require('news-crawler-db');
 const { slugify } = require('../tools/slugify');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 

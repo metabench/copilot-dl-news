@@ -6,10 +6,10 @@ const {
   createOsmBoundaryStatements,
   listBoundaryCandidates,
   saveBoundaryData
-} = require('../../../../data/db/sqlite/v1/queries/gazetteer.osm');
+} = require('news-crawler-db');
 const {
   registerPlaceSource
-} = require('../../../../data/db/sqlite/v1/queries/gazetteer.ingest');
+} = require('news-crawler-db');
 
 class OsmBoundaryIngestor {
   constructor({

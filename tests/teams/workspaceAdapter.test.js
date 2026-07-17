@@ -17,7 +17,7 @@ const {
   ROLES,
   ANNOTATION_TYPES,
   ACTIVITY_ACTIONS
-} = require('../../src/data/db/sqlite/v1/queries/workspaceAdapter');
+} = require('news-crawler-db');
 
 describe('workspaceAdapter', () => {
   let db;

@@ -7,7 +7,7 @@
  */
 
 const { AnnotationService } = require('../../src/teams/AnnotationService');
-const { ROLES, ANNOTATION_TYPES, ACTIVITY_ACTIONS } = require('../../src/data/db/sqlite/v1/queries/workspaceAdapter');
+const { ROLES, ANNOTATION_TYPES, ACTIVITY_ACTIONS } = require('news-crawler-db');
 
 describe('AnnotationService', () => {
   let service;

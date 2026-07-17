@@ -1149,7 +1149,7 @@ function createEnhancedPlaceExtractor(db, options = {}) {
       const queries = getMultiLangQueries();
       if (!queries) {
         // Fallback to basic search
-        const { searchPlacesByName } = require('../../data/db/sqlite/v1/queries/gazetteer.search');
+        const { searchPlacesByName } = require('news-crawler-db');
         return searchPlacesByName(db, term, options);
       }
       // Use findByName which auto-detects language/script

@@ -165,7 +165,23 @@ const FNS = [
   'createSimilarityAdapter',
   'createSummaryAdapter',
   'createTagAdapter',
-  'createTopicAdapter'
+  'createTopicAdapter',
+  // slice-6: gazetteer cluster (names lifted from the retired v1 shims —
+  // any failure here means the shim was silently exporting undefined)
+  'getAllCountries', 'getTopCountries', 'getTopRegions', 'getTopCities',
+  'getCountryByName', 'getCountryByCode', 'getPlaceCountByKind',
+  'getPlacesByCountryAndKind', 'getPlaceHierarchy',
+  'getPlaceNameVariantsForHubDiscovery', 'getPlaceNamesByLanguages',
+  'getAllCountriesWithNameVariants', 'getTopCitiesPerCountry',
+  'createIngestionStatements', 'createAttributeStatements',
+  'createDeduplicationStatements', 'createOsmBoundaryStatements',
+  'createPopulateGazetteerQueries', 'exportGazetteerTables',
+  'findNameDuplicates', 'findExternalIDDupes', 'findOSMDuplicates',
+  'findWikidataDuplicates', 'mergeDuplicatePlaces', 'mergeDuplicateCapitals',
+  'searchPlacesByName', 'getAllPlaceNames', 'normalizeName',
+  'getTotalPlaceCount', 'getPlaceCountsByKind',
+  // slice-6b: renamed-adapter trio sources (shim-verified via git show)
+  'createSqliteArticleSearchAdapter', 'sanitizeSqliteArticleSearchQuery'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);
@@ -173,7 +189,10 @@ for (const fn of FNS) {
 console.log(`functions: ok (${FNS.length})`);
 
 const CONSTS = ['DEFAULT_CLOUD_CRAWL_TARGETS', 'DOWNLOAD_BAR_CHART_VALID_SOURCES',
-  'DOWNLOAD_BAR_CHART_VALID_MODES', 'DOWNLOAD_BAR_CHART_SOURCE_LABELS'];
+  'DOWNLOAD_BAR_CHART_VALID_MODES', 'DOWNLOAD_BAR_CHART_SOURCE_LABELS',
+  'SQLITE_ARTICLE_SEARCH_BM25_WEIGHTS',
+  'ROLES', 'ROLE_HIERARCHY', 'ACTIVITY_ACTIONS', 'ANNOTATION_TYPES',
+  'PLANS', 'METRICS'];
 for (const c of CONSTS) {
   assert.ok(ncdb[c] !== undefined && ncdb[c] !== null, `ncdb.${c} missing`);
 }
