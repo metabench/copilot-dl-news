@@ -76,7 +76,7 @@ const STAT_DEFINITIONS = [
     compute: ({ db, definition }) => {
       const days = definition?.params?.days || 7;
       const limit = definition?.params?.limit || 200;
-      const { dailyHostHistogram } = require("../../../data/db/sqlite/v1/queries/ui/errors");
+      const { dailyHostHistogram } = require("news-crawler-db");
       const rows = dailyHostHistogram(db).all(`-${days} days`, limit);
       return {
         days,

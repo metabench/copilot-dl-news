@@ -1,10 +1,11 @@
 'use strict';
-// DB-consolidation slices 0+1: the cloudCrawl + downloadEvidence re-export
-// shims are DELETED; consumers require news-crawler-db directly. This smoke
-// asserts ncdb's runtime surface carries every name those repointed
-// consumers use. (The original slice-0 version proved reference identity
-// shim fn === ncdb fn while the shims still existed — with the shims gone,
-// surface presence + repointed-consumer checks are the guard.)
+// DB-consolidation slices 0+1+2: deleted re-export shims (cloudCrawl,
+// downloadEvidence, ui/errors, ui/uiThemes, ui/crawlTypes, analysisRuns);
+// consumers require news-crawler-db directly. This smoke asserts ncdb's
+// runtime surface carries every name those repointed consumers use. (The
+// original slice-0 version proved reference identity shim fn === ncdb fn
+// while the shims still existed — with the shims gone, surface presence +
+// repointed-consumer checks are the guard.)
 // Consumers covered: unifiedApp/server.js, unifiedApp/checks/
 // download-verification.check.js, tools/dev/{verified-crawl,db-downloads,
 // downloads-bar-chart-server}.js, tools/crawl/cloud-crawl-e2e.js,
@@ -35,7 +36,27 @@ const FNS = [
   'listDownloadHosts',
   'listDownloadTimelineByMinute',
   'getDownloadBarChartSourceLabel',
-  'getDailyDownloadBars'
+  'getDailyDownloadBars',
+  // slice-2 consumers (errors, uiThemes, analysisRuns, crawlTypes shims)
+  'listRecentErrors',
+  'dailyHostHistogram',
+  'ensureUiThemesTable',
+  'ensureSystemThemes',
+  'listThemes',
+  'getThemeRow',
+  'getDefaultThemeRow',
+  'createTheme',
+  'updateTheme',
+  'setDefaultTheme',
+  'deleteTheme',
+  'ensureAnalysisRunSchema',
+  'createAnalysisRun',
+  'updateAnalysisRun',
+  'addAnalysisRunEvent',
+  'getAnalysisRunById',
+  'getAnalysisRunEvents',
+  'getLatestAnalysisRunVersion',
+  'listCrawlTypes'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);
@@ -48,4 +69,4 @@ for (const c of CONSTS) {
   assert.ok(ncdb[c] !== undefined && ncdb[c] !== null, `ncdb.${c} missing`);
 }
 console.log(`constants: ok (${CONSTS.length})`);
-console.log('SMOKE PASS: ncdb surface covers all repointed consumers (slices 0+1)');
+console.log('SMOKE PASS: ncdb surface covers all repointed consumers (slices 0+1+2)');

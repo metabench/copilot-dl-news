@@ -2,7 +2,7 @@
 
 const { selectRecentDomains } = require("../data/db/sqlite/v1/queries/ui/recentDomains");
 const { listRecentCrawls } = require("../data/db/sqlite/v1/queries/ui/crawls");
-const { listRecentErrors } = require("../data/db/sqlite/v1/queries/ui/errors");
+const { listRecentErrors } = require("news-crawler-db");
 const { getCachedMetric } = require("./server/services/metricsService");
 
 function normalizeDomainEntry(entry) {

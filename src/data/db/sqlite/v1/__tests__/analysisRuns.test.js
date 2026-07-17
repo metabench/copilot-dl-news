@@ -8,7 +8,7 @@ const {
   getAnalysisRunById,
   getAnalysisRunEvents,
   getLatestAnalysisRunVersion
-} = require('../queries/analysisRuns');
+} = require('news-crawler-db');
 
 function createTestDb() {
   const db = openNewsCrawlerDb(':memory:');

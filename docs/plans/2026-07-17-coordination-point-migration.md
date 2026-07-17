@@ -156,6 +156,15 @@ a later core-crawler test-drift pass.
      reworked — identity form impossible post-deletion), LIVE
      download-verification.check 9/9 on :memory:, node --check 10/10.
      src/data/db: 197 files remain.
+   - Slice 2 DONE 2026-07-17: four more pure shims DELETED (no renames —
+     path-swap repoints only): queries/ui/crawlTypes.js (0 importers),
+     queries/ui/uiThemes.js (themeService.js), queries/ui/errors.js
+     (homeCardData, metricsService inline, dataExplorerServer,
+     dataExplorer/views/errors), queries/analysisRuns.js (its own jest
+     test, repointed in place — moves out whenever the sqlite/v1 tree
+     dies). Verified: surface smoke 39 fns + 4 consts, analysisRuns jest
+     5/5 on :memory: through the repointed require, node --check 6/6.
+     src/data/db: 193 files remain.
    - Dead references found (pre-existing, not blockers): root checks/
      {download-evidence,downloads-api,downloads-stats-api}.check.js require
      `../src/db/queries/downloadEvidence` — a path that does NOT exist

@@ -56,7 +56,7 @@ const {
   normalizeSortDirection
 } = require("../../data/db/sqlite/v1/queries/ui/domainListing");
 const { listRecentCrawls } = require("../../data/db/sqlite/v1/queries/ui/crawls");
-const { listRecentErrors } = require("../../data/db/sqlite/v1/queries/ui/errors");
+const { listRecentErrors } = require("news-crawler-db");
 const {
   listPlaceHubs,
   countPlaceHubs,
