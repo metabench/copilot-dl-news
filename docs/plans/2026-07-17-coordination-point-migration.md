@@ -23,7 +23,7 @@ Tracked JS/TS file counts (excludes node_modules/dist):
 
 | Domain | Extracted repo | Used by copilot? | Internal duplicate still present |
 |--------|----------------|------------------|----------------------------------|
-| DB access | news-crawler-db (517) | Yes | **Yes — src/data/db (199 files); unifiedApp imports BOTH in one file** |
+| DB access | news-crawler-db (517) | Yes | **Mostly a SHIM layer now — see DB-consolidation audit below (143/199 files re-export ncdb)** |
 | Analysis | news-db-pure-analysis (54) | Yes (9 files) | Partial — src/intelligence/analysis parallels |
 | UI framework | jsgui3-html/client/server | Yes | src/ui (515) large; deprecated-ui (319) REMOVED 2026-07-17 |
 | Crawler engine | news-crawler-itself | **No — repo missing, nothing imports it** | src/core (380) is the real engine |
@@ -121,10 +121,34 @@ a later core-crawler test-drift pass.
 
 ## Recommended remaining phases (owner to sequence)
 
-1. **DB consolidation** — the biggest duplication: retire src/data/db
-   (199 files) into news-crawler-db; repoint imports; delete internal
-   copies. Highest payoff, needs careful verification (live app imports
-   both today).
+1. **DB consolidation** — slice-0 AUDIT DONE 2026-07-17; the plan's old
+   framing ("199-file internal duplicate") was WRONG. Corrected map:
+   - src/data/db is mostly a COMPATIBILITY SHIM layer: 143/199 files
+     require news-crawler-db and largely re-export it. The core
+     SQLiteNewsDatabase.js is a documented wrapper ("SQL and facade
+     ownership live in news-crawler-db"); ncdb exports NewsDatabase/
+     SQLiteNewsDatabase/StatementManager/SchemaInitializer directly.
+   - Real-logic residue (non-ncdb-requiring, excl. tests): TaskEventWriter
+     (548 ln), EnhancedDatabaseAdapter (444), migration/orchestrator (308),
+     index.js barrel (211), dbAccess.js (163, convenience wrappers over the
+     wrapper), sqlite/v1/connection.js (136), ui/urlListingNormalized (99),
+     queries/analysisQueries (62), small barrels/checks.
+   - Consumers of src/data/db paths: ~157 src + 41 tools + 27 tests files
+     (~330 requires). The migration mechanic is repoint-then-delete-shim,
+     file by file or module by module; behavior identity is provable via
+     reference-equality smokes (checks/smoke-uapp-db-repoint.js pattern,
+     shim fn === ncdb fn).
+   - First repoint LANDED: unifiedApp/server.js cloudCrawl trio +
+     downloadEvidence seven now come from ncdb directly (aliases preserved:
+     normalizeCloudCrawlDomains→normalizeDomains, getGlobalDownloadStats→
+     getGlobalStats). Its only remaining src/data/db import is
+     dbAccess.openNewsDb (real logic, migrate later).
+   - VERIFICATION CAVEAT for ui suites: with the Electron app live (port
+     3170 + 28GB WAL DB), tests/ui/unifiedApp.* can watchdog-timeout on the
+     bridge — even at HEAD (verified: two baseline runs timed out; one
+     completed run showed 2 pre-existing "Available Apps" HTML-count
+     failures in registry.test, untouched by imports). Prefer identity
+     smokes for repoints; run ui suites when the app is stopped.
 2. **deprecated-ui removal** — DONE 2026-07-17 (steps 1–3; ~368 files gone).
 3. **Crawler-engine decision** — is news-crawler-itself the intended
    future engine (restore + migrate src/core to it) or abandoned (already

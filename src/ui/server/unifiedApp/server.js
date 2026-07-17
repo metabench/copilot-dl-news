@@ -29,7 +29,12 @@ const { createSubAppRegistry } = require('./subApps/registry');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 const { openNewsDb } = require('../../../data/db/dbAccess');
 const { createMcpLogger } = require("../../../shared/utils/mcpLogger");
-const { listContentAnalysisSectionCounts } = require('news-crawler-db');
+const {
+  listContentAnalysisSectionCounts,
+  DEFAULT_CLOUD_CRAWL_TARGETS,
+  getCloudCrawlStatusSnapshot,
+  normalizeCloudCrawlDomains: normalizeDomains
+} = require('news-crawler-db');
 
 const { createRateLimitDashboardRouter } = require('../rateLimitDashboard/server');
 const { createWebhookDashboardRouter } = require('../webhookDashboard/server');
@@ -67,11 +72,9 @@ const {
   resolveDomSnapshotAsset,
   resolveScreenshotAsset
 } = require('./lib/screenshotReviewStore');
-const {
-  DEFAULT_CLOUD_CRAWL_TARGETS,
-  getCloudCrawlStatusSnapshot,
-  normalizeDomains
-} = require('../../../data/db/sqlite/v1/queries/ui/cloudCrawl');
+// (cloud-crawl queries now come from news-crawler-db directly — see the
+// destructure above; the src/data/db/sqlite/v1/queries/ui/cloudCrawl shim
+// this used to go through is retirement-bound.)
 
 const PORT = process.env.PORT || 3000;
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
@@ -467,7 +470,29 @@ load(); setInterval(load, 60000);
   // Download Evidence API - Proof-grade download statistics
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const downloadEvidence = require('../../../data/db/queries/downloadEvidence');
+  // Download-evidence queries direct from news-crawler-db (this used to go
+  // through the src/data/db/queries/downloadEvidence re-export shim; the
+  // getGlobalStats alias below preserves the shim's historical rename).
+  const downloadEvidence = (() => {
+    const {
+      getDownloadStats,
+      getDownloadEvidence,
+      verifyDownloadClaim,
+      getDownloadTimeline,
+      getGlobalDownloadStats,
+      getRecentDownloadVerifications,
+      listRecentDownloads
+    } = require('news-crawler-db');
+    return {
+      getDownloadStats,
+      getDownloadEvidence,
+      verifyDownloadClaim,
+      getDownloadTimeline,
+      getGlobalStats: getGlobalDownloadStats,
+      getRecentDownloadVerifications,
+      listRecentDownloads
+    };
+  })();
 
   // Helper to get the raw better-sqlite3 db object
   function getDb() {
