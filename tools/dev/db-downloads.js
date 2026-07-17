@@ -18,7 +18,9 @@
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
 // Import DB query module
-const downloadEvidence = require('../../src/data/db/queries/downloadEvidence');
+// news-crawler-db exports every download-evidence query this file uses
+// (was the src/data/db/queries/downloadEvidence re-export shim).
+const downloadEvidence = require('news-crawler-db');
 
 // CLI argument parsing
 const args = process.argv.slice(2);

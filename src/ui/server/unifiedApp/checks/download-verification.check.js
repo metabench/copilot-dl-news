@@ -4,7 +4,7 @@ const { openNewsCrawlerDb } = require('../../../../db/openNewsCrawlerDb');
 const {
   createDownloadVerificationCheckFixture,
   getRecentDownloadVerifications
-} = require("../../../../data/db/queries/downloadEvidence");
+} = require("news-crawler-db");
 
 function assert(name, condition) {
   if (!condition) {

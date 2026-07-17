@@ -45,7 +45,9 @@ const path = require('path');
 const http = require('http');
 const express = require('express');
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
-const downloadEvidence = require('../../src/data/db/queries/downloadEvidence');
+// news-crawler-db exports every download-evidence query + bar-chart constant
+// this file uses (was the src/data/db/queries/downloadEvidence shim).
+const downloadEvidence = require('news-crawler-db');
 const VALID_SOURCES = [...downloadEvidence.DOWNLOAD_BAR_CHART_VALID_SOURCES];
 const VALID_MODES = [...downloadEvidence.DOWNLOAD_BAR_CHART_VALID_MODES];
 const SOURCE_QUERIES = Object.freeze(Object.fromEntries(

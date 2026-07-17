@@ -337,7 +337,7 @@ function sampleWriterDb(dbPath, deps = {}) {
   }
   const openDb = deps.openDb || ((p) => require('../../../src/db/openNewsCrawlerDb').openNewsCrawlerDb(p, { readonly: true }));
   const snapshotFn = deps.snapshot
-    || ((db, opts) => require('../../../src/data/db/queries/downloadEvidence').getCloudCrawlDatabaseSnapshot(db, opts));
+    || ((db, opts) => require('news-crawler-db').getCloudCrawlDatabaseSnapshot(db, opts));
   const db = openDb(resolved);
   try {
     const snapshot = snapshotFn(db, { path: resolved, capturedAt: new Date().toISOString() });

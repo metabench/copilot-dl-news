@@ -231,7 +231,7 @@ function tableRowCount(db, table, sinceClause, sinceArgs) {
 function queryRawSignals(db, opts = {}) {
   const sinceIso = opts.sinceIso || null;
   const snapshotFn = opts.snapshotFn
-    || ((d) => require('../../../src/data/db/queries/downloadEvidence').getCloudCrawlDatabaseSnapshot(d, { path: 'sample-db-signals' }));
+    || ((d) => require('news-crawler-db').getCloudCrawlDatabaseSnapshot(d, { path: 'sample-db-signals' }));
   const snapshot = snapshotFn(db);
 
   const sinceClause = sinceIso ? 'WHERE fetched_at >= ?' : '';

@@ -44,7 +44,9 @@ const fs = require('fs');
 
 const meterLib = require('./throughput-meter');
 const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
-const downloadEvidence = require('../../../src/data/db/queries/downloadEvidence');
+// news-crawler-db exports every download-evidence query this file uses
+// (was the src/data/db/queries/downloadEvidence re-export shim).
+const downloadEvidence = require('news-crawler-db');
 
 // ── Shared helpers ───────────────────────────────────────────────────────────
 

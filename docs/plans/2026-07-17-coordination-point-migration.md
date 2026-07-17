@@ -143,6 +143,25 @@ a later core-crawler test-drift pass.
      normalizeCloudCrawlDomains→normalizeDomains, getGlobalDownloadStats→
      getGlobalStats). Its only remaining src/data/db import is
      dbAccess.openNewsDb (real logic, migrate later).
+   - Slice 1 DONE 2026-07-17: BOTH shims DELETED (queries/ui/cloudCrawl.js —
+     zero importers after slice 0 — and queries/downloadEvidence.js — its 10
+     importers repointed: unifiedApp/checks/download-verification.check.js,
+     tools/dev/{verified-crawl,db-downloads,downloads-bar-chart-server},
+     tools/crawl/cloud-crawl-e2e, tools/crawl/lib/{sample-db-signals,
+     monitored-small-crawl,crawl-progress-monitor,crawl-packet,
+     crawl-backend}). Only verified-crawl used the getGlobalStats alias
+     (small alias object); the rest are plain ncdb names (whole-module
+     `require('news-crawler-db')` where files did property access).
+     Verified: surface smoke 20 fns + 4 consts (smoke-uapp-db-repoint.js,
+     reworked — identity form impossible post-deletion), LIVE
+     download-verification.check 9/9 on :memory:, node --check 10/10.
+     src/data/db: 197 files remain.
+   - Dead references found (pre-existing, not blockers): root checks/
+     {download-evidence,downloads-api,downloads-stats-api}.check.js require
+     `../src/db/queries/downloadEvidence` — a path that does NOT exist
+     (src/db/ has only TaskEventWriter + openNewsCrawlerDb). Fix-or-retire
+     in a later checks sweep; docs/tools/CRAWL-TOOLING.md names the same
+     ghost path.
    - VERIFICATION CAVEAT for ui suites: with the Electron app live (port
      3170 + 28GB WAL DB), tests/ui/unifiedApp.* can watchdog-timeout on the
      bridge — even at HEAD (verified: two baseline runs timed out; one

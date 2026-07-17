@@ -18,7 +18,11 @@
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const path = require('path');
 const { spawn } = require('child_process');
-const evidence = require('../../src/data/db/queries/downloadEvidence');
+// Download-evidence queries direct from news-crawler-db (was the
+// src/data/db/queries/downloadEvidence re-export shim; getGlobalStats
+// preserves the shim's historical rename of getGlobalDownloadStats).
+const { getGlobalDownloadStats, getDownloadEvidence } = require('news-crawler-db');
+const evidence = { getGlobalStats: getGlobalDownloadStats, getDownloadEvidence };
 
 const DB_PATH = path.join(process.cwd(), 'data', 'news.db');
 

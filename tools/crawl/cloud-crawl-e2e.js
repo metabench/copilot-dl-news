@@ -7,7 +7,9 @@ const path = require('path');
 const http = require('http');
 const https = require('https');
 const { spawn } = require('child_process');
-const downloadEvidence = require('../../src/data/db/queries/downloadEvidence');
+// news-crawler-db exports every download-evidence query this file uses
+// (was the src/data/db/queries/downloadEvidence re-export shim).
+const downloadEvidence = require('news-crawler-db');
 
 const {
   normalizeValidationOptions,

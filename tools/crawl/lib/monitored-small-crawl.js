@@ -4,7 +4,9 @@ const fs = require('fs');
 const path = require('path');
 
 const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
-const downloadEvidence = require('../../../src/data/db/queries/downloadEvidence');
+// news-crawler-db exports every download-evidence query this file uses
+// (was the src/data/db/queries/downloadEvidence re-export shim).
+const downloadEvidence = require('news-crawler-db');
 
 const SCHEMA_VERSION = 1;
 const DEFAULT_WINDOW_MINUTES = 60;
