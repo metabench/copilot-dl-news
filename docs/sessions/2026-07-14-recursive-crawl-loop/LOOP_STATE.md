@@ -27,7 +27,11 @@
 
 ## Now (pick the top item, keep it small)
 
-1. LeMonde/Reuters access: both anti-bot-blocked (LeMonde = HTTP 402 on
+1. Place-hub slice 2 (see docs/plans/2026-07-16-place-hub-intelligence.md):
+   wire PlaceHubUrlIndex into DomainProcessor as candidate pre-filter
+   (kill the 512-fetched-404 waste) + make HubValidator write
+   hub_validations everywhere; then site-as-hub place search.
+2. LeMonde/Reuters access: both anti-bot-blocked (LeMonde = HTTP 402 on
    every fetch; Reuters start URL silently policy-blocked → 0-page green
    "completed"). Try puppeteer fallback for lemonde.fr (extend static list
    or auto-learn from 402s?); make 0-download completions surface as
@@ -55,6 +59,14 @@
 
 ## Findings / decisions log (newest first, one line each)
 
+- 2026-07-16 (pm2): PLACE-HUB INTELLIGENCE SLICE 1 — review found 4
+  disconnected pattern mechanisms, dormant hub_validations (0 rows),
+  place_hub_url_patterns absent from live DB, hubs on only 2 hosts.
+  Landed: DB-canonical pattern surface (scope host/global + 8 GOFAI
+  priors), PlaceHubUrlIndex (classify/learn/drift), 2-year cached-content
+  freshness rule, hub_validations writer + place-keyed hub search.
+  Live: guardian/aljazeera patterns learned (acc .95), andorra/gibraltar
+  now classify 0.99, lemonde cold-starts 0.75 via priors. 19 new tests.
 - 2026-07-16 (pm): DB-CONSOLIDATION — stale sibling DBs archived to
   data/backups/stale-dbs-2026-07-16/ (containment-checked); new
   gazetteer-db-path resolver points everything at news.db (PlaceLookup
