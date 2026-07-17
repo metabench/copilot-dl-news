@@ -60,6 +60,17 @@ code audit. App was running throughout; no writes made.
    mappings (independent.co.uk/topic/**ad**, semana.com/news/**ad** ↦
    Andorra — semana's is "verified"); pageKind vocabulary drift
    ('country' vs 'country-hub') yields duplicate search rows.
+   → **Dupes + vocab FIXED same day (chunk A2)**: ncdb
+   `legacy-placeHubMaintenance.ts` (dedupePlaceHubs +
+   reconcilePlacePageMappingPageKinds, vitest 6/6; ncdb 8dfe6ea), driven
+   by copilot `checks/dedupe-place-hubs.js` (dry-run → apply). Live:
+   place_hubs 428→407 (20 groups, one triple; 9 mappings repointed),
+   page_kind now canonical -hub forms (12 renamed, 63 bare rows merged
+   into their suffixed twins). Discovered mid-apply: the live table has
+   UNIQUE(place_id, host, page_kind) as an sqlite autoindex that
+   drizzle schema.ts does NOT declare — schema drift for the A5 schema
+   reference doc. ISO-code junk mappings (…/ad) remain — A4. The bare
+   'hub' page_kind (33 rows) left untouched (ambiguous).
 6. **Slug-keyed hubs**: place_hubs has no place_id FK; only
    place_page_mappings is id-keyed. Ambiguous slugs (london) rely on
    mappings + classify evidence.
