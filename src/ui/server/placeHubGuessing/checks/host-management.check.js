@@ -8,7 +8,7 @@
 'use strict';
 
 const { resolveBetterSqliteHandle } = require('../../utils/dashboardModule');
-const { getHostPageCounts, getHostsAboveThreshold, getHostsBelowThreshold, getHostPageCount, getHostPageCountMap } = require('../../../../data/db/sqlite/v1/queries/placeHubGuessingUiQueries');
+const { getHostPageCounts, getHostsAboveThreshold, getHostsBelowThreshold, getHostPageCount, getHostPageCountMap } = require('news-crawler-db');
 
 const CRAWL_THRESHOLD = 500;
 

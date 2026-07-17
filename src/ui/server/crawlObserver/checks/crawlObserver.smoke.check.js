@@ -1,7 +1,7 @@
 const assert = require('assert');
 
 const { resolveBetterSqliteHandle } = require('../../utils/dashboardModule');
-const { createCrawlObserverUiQueries } = require('../../../../data/db/sqlite/v1/queries/crawlObserverUiQueries');
+const { createCrawlObserverUiQueries } = require('news-crawler-db');
 
 async function main() {
   const resolved = await resolveBetterSqliteHandle();

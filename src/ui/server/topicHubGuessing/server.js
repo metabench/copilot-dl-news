@@ -9,18 +9,22 @@ const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
 const { renderPageHtml } = require('../shared');
 const { createPlaceHubDependencies } = require('../../../core/orchestration/dependencies');
 const { guessPlaceHubsBatch } = require('../../../core/orchestration/placeHubGuessing');
-const { selectTopicSlugRows } = require('../../../data/db/sqlite/v1/queries/nonGeoTopicSlugsUiQueries');
+const { selectTopicSlugRows } = require('news-crawler-db');
 const { createHubGuessingJobStore } = require('../hubGuessing/utils/hubGuessingJobs');
 const { parseBoolean, parseNumber } = require('../hubGuessing/utils/guessingRequestUtils');
 
+// (direct from news-crawler-db; aliases preserve the retired
+// topicHubGuessingUiQueries shim's historical renames. normalizeLang was
+// silently undefined through the shim era — ncdb never re-exported the
+// topic-hub module's normalizer; now exported as normalizeTopicHubLang.)
 const {
-  buildMatrixModel,
-  selectCellRows,
-  normalizeLang,
+  buildTopicHubMatrixModel: buildMatrixModel,
+  selectTopicHubCellRows: selectCellRows,
+  normalizeTopicHubLang: normalizeLang,
   normalizeSearchQuery,
   clampInt,
   selectTopicHubHosts
-} = require('../../../data/db/sqlite/v1/queries/topicHubGuessingUiQueries');
+} = require('news-crawler-db');
 
 const { TopicHubGuessingMatrixControl, TopicHubGuessingCellControl } = require('./controls');
 

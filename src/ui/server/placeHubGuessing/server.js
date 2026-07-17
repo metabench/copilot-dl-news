@@ -45,7 +45,7 @@ const {
   getHostsBelowThreshold,
   getHostPageCount,
   getHostPageCountMap
-} = require('../../../data/db/sqlite/v1/queries/placeHubGuessingUiQueries');
+} = require('news-crawler-db');
 
 const { guessPlaceHubsBatch } = require('../../../core/orchestration/placeHubGuessing');
 const { createPlaceHubDependencies } = require('../../../core/orchestration/dependencies');

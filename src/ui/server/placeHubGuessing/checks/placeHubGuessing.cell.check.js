@@ -22,7 +22,7 @@ const {
   getHostUrlPatterns,
   getHostAnalysisFreshness,
   getPlaceHubGuessingFirstVerifiedMappingWithUrl
-} = require('../../../../data/db/sqlite/v1/queries/placeHubGuessingUiQueries');
+} = require('news-crawler-db');
 
 const jsgui = require('jsgui3-html');
 const { renderPageHtml } = require('../../shared');

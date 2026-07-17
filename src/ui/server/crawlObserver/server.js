@@ -17,7 +17,7 @@ const { createMcpLogger } = require("../../../shared/utils/mcpLogger");
 const { spawn } = require('child_process');
 
 const log = createMcpLogger.uiServer('crawl-observer');
-const { createCrawlObserverUiQueries } = require('../../../data/db/sqlite/v1/queries/crawlObserverUiQueries');
+const { createCrawlObserverUiQueries } = require('news-crawler-db');
 
 const { TaskListControl } = require('./controls/TaskListControl');
 const { TaskDetailControl } = require('./controls/TaskDetailControl');

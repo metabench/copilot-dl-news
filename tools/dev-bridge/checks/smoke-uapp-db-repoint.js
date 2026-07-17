@@ -94,7 +94,57 @@ const FNS = [
   'createQualityMetricsQueries',
   'createPatternSharingQueries',
   'listQueues',
-  'getQueueDetail'
+  'getQueueDetail',
+  // slice-4 consumers (placeHubGuessing ×3, topicHubGuessing, topicLists,
+  // guess-place-hubs, orchestration deps, crawlObserver ×2)
+  'buildMatrixModel',
+  'getCellModel',
+  'upsertCellVerification',
+  'computeAgeLabel',
+  'getMappingOutcome',
+  'normalizePlaceKind',
+  'normalizePageKind',
+  'normalizeHost',
+  'clampInt',
+  'parseEvidenceJson',
+  'normalizeOutcome',
+  'selectHosts',
+  'selectPlaces',
+  'selectCountriesByContinent',
+  'listContinents',
+  'extractPathPattern',
+  'getHubArticleMetrics',
+  'getRecentHubArticles',
+  'getPlaceNameVariants',
+  'generateUrlPatterns',
+  'getHostUrlPatterns',
+  'getHostAnalysisFreshness',
+  'getPlaceById',
+  'getPlaceHubGuessingMappingByPlaceHost',
+  'getPlaceHubGuessingFirstVerifiedMappingWithUrl',
+  'getUncheckedHostsForPlace',
+  'getMappingsForPlace',
+  'getHostPageCounts',
+  'getHostsAboveThreshold',
+  'getHostsBelowThreshold',
+  'getHostPageCount',
+  'getHostPageCountMap',
+  'getSitePatterns',
+  'generateCandidateHubUrls',
+  'buildTopicHubMatrixModel',
+  'selectTopicHubCellRows',
+  'normalizeTopicHubLang',
+  'selectTopicHubHosts',
+  'selectTopicSlugRows',
+  'selectTopicLanguages',
+  'upsertTopicSlugRow',
+  'deleteTopicSlugRow',
+  'normalizeNonGeoTopicSlugLang',
+  'normalizeNonGeoTopicSlugSearchQuery',
+  'createGuessPlaceHubsQueries',
+  'createCrawlObserverUiQueries',
+  // A-quirks maintenance
+  'fixPlaceHubKinds'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);
@@ -107,4 +157,4 @@ for (const c of CONSTS) {
   assert.ok(ncdb[c] !== undefined && ncdb[c] !== null, `ncdb.${c} missing`);
 }
 console.log(`constants: ok (${CONSTS.length})`);
-console.log('SMOKE PASS: ncdb surface covers all repointed consumers (slices 0+1+2+3)');
+console.log('SMOKE PASS: ncdb surface covers all repointed consumers (slices 0-4)');

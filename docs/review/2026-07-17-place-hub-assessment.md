@@ -46,6 +46,16 @@ code audit. App was running throughout; no writes made.
    place_kind='country'; one hub row with no URL (null url_id join).
    Remaining nicety: a link FROM the matrix page back to the table
    (matrix HTML lives in jsgui controls; left for a later chunk).
+   → **Quirk sweep (multi-chunk turn, same day)**: the 33 bare-'hub'
+   rows were ONE synthetic probe batch (fabricated www.<host>/world/
+   ireland|uk URLs incl. test hosts, all "verified") — rejected via the
+   review API together with the malformed +-compound mapping (34 posts,
+   audit → 160); guardian quebec hub country→region via ncdb
+   fixPlaceHubKinds (auditable maintenance). Slug-join kind comparison
+   is homonym-unsafe (belize/guatemala/panama = capital cities) — most
+   suspected mislabels were probe artifacts; quebec was the only real
+   one. Latent bug fixed en passant: ncdb never exported topic-hub
+   normalizeLang (3 routes would throw) — normalizeTopicHubLang now.
    → **A4 ALSO DONE same day**: ISO-code junk mappings retired THROUGH
    the review API (checks/retire-iso-junk-mappings.js, one host-side
    session, agent 'claude-loop-a4', every write audited). Scoping found

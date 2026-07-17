@@ -156,6 +156,17 @@ a later core-crawler test-drift pass.
      reworked — identity form impossible post-deletion), LIVE
      download-verification.check 9/9 on :memory:, node --check 10/10.
      src/data/db: 197 files remain.
+   - Slice 4 DONE 2026-07-17: 5 top-level queries/* shims DELETED
+     (placeHubGuessingUiQueries [44 names, no renames],
+     topicHubGuessingUiQueries, nonGeoTopicSlugsUiQueries [both with
+     renames → consumer-side aliases], guessPlaceHubsQueries,
+     crawlObserverUiQueries); 9 consumers repointed. The smoke CAUGHT a
+     LATENT RUNTIME BUG: ncdb never re-exported the topic-hub module's
+     normalizeLang, so the shim destructured undefined and three
+     topicHubGuessing route handlers would throw when hit — fixed by
+     exporting normalizeTopicHubLang from ncdb index.ts + consumer alias.
+     Verified: smoke 122 fns + 4 consts, node --check 9/9.
+     src/data/db: 172→167 files.
    - Slice 3 DONE 2026-07-17: 21 more shim files DELETED — 19 pure
      re-export shims under sqlite/v1/queries/ui/ (crawls, crawlEvents,
      configuration, storage, recentDomains, domainDetails/Counts/Listing/

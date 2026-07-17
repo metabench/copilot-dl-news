@@ -7,14 +7,16 @@ const jsgui = require('jsgui3-html');
 const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
 const { renderPageHtml } = require('../shared');
 
+// (direct from news-crawler-db; aliases preserve the retired
+// nonGeoTopicSlugsUiQueries shim's historical renames)
 const {
   selectTopicLanguages,
   selectTopicSlugRows,
   upsertTopicSlugRow,
   deleteTopicSlugRow,
-  normalizeLang,
-  normalizeSearchQuery
-} = require('../../../data/db/sqlite/v1/queries/nonGeoTopicSlugsUiQueries');
+  normalizeNonGeoTopicSlugLang: normalizeLang,
+  normalizeNonGeoTopicSlugSearchQuery: normalizeSearchQuery
+} = require('news-crawler-db');
 
 const { TopicListsControl } = require('./controls');
 

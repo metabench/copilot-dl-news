@@ -49,7 +49,7 @@ async function guessPlaceHubs(options = {}, legacyDeps = {}) {
   // Create dependencies manually to avoid factory function creating console logger
   const { ensureDb } = require('../data/db/sqlite/ensureDb');
   const { createSQLiteDatabase } = require('../data/db/sqlite');
-  const { createGuessPlaceHubsQueries } = require('../data/db/sqlite/v1/queries/guessPlaceHubsQueries');
+  const { createGuessPlaceHubsQueries } = require('news-crawler-db');
   const { CountryHubGapAnalyzer } = require('../services/CountryHubGapAnalyzer');
   const { RegionHubGapAnalyzer } = require('../services/RegionHubGapAnalyzer');
   const { CityHubGapAnalyzer } = require('../services/CityHubGapAnalyzer');
