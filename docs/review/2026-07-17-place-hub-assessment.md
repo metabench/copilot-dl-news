@@ -92,3 +92,14 @@ code audit. App was running throughout; no writes made.
 7. **Docs**: behavioral spec is strong; a schema reference for the
    place_hub_* tables is missing (my probe guessed 3 column names wrong
    — narrative and schema have drifted).
+   → **A5 DONE same day**: news-crawler-db `docs/PLACE_HUB_SCHEMA.md`
+   (ncdb a5acaf0) — full family reference from live sqlite_master DDL,
+   with a drift+quirk ledger and a warning comment in schema.ts at
+   placePageMappings. Key corrections it pins down: uq_place_hubs_entity
+   is an expression unique incl. COALESCE(topic_slug,'') (the REAL A2
+   dupe mechanism — topic-annotated vs bare rows coexist);
+   hub_validations.hub_url is globally unique and the ledger grew
+   11→135 via A4's API writes (A3's backfill framing should start from
+   135, distinguishing rejected vs valid entries);
+   place_hub_guess_runs has never been written (0 rows — wire or drop);
+   unknown_terms backlog is 4,157 rows.
