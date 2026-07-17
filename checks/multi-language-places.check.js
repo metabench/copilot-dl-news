@@ -12,7 +12,7 @@ const { openNewsCrawlerDb } = require('../src/db/openNewsCrawlerDb');
  */
 
 const path = require('path');
-const { createMultiLanguagePlaceQueries } = require('../src/db/sqlite/v1/queries/multiLanguagePlaces');
+const { createMultiLanguagePlaceQueries } = require('news-crawler-db');
 
 const DB_PATH = path.join(__dirname, '..', 'data', 'news.db');
 

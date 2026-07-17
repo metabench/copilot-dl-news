@@ -10,7 +10,7 @@ const { loadNonGeoTopicSlugs } = require('./nonGeoTopicSlugs');
 const { ArticleXPathService } = require('../services/ArticleXPathService');
 const { DecompressionWorkerPool } = require('../background/workers/DecompressionWorkerPool');
 const SkeletonHash = require('../intelligence/analysis/structure/SkeletonHash');
-const { createLayoutSignaturesQueries } = require('../data/db/sqlite/v1/queries/layoutSignatures');
+const { createLayoutSignaturesQueries } = require('news-crawler-db');
 
 function toNumber(value, fallback) {
   const num = Number(value);

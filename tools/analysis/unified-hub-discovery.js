@@ -20,7 +20,7 @@ const { ensureDatabase } = require('../src/data/db/sqlite');
 const { CountryHubGapAnalyzer } = require('../src/services/CountryHubGapAnalyzer');
 const { HubValidator } = require('../src/core/crawler/hub-discovery/HubValidator');
 const { getAllCountries } = require('news-crawler-db');
-const { getCountryHubCoverage } = require('../src/data/db/sqlite/v1/queries/placePageMappings');
+const { getCountryHubCoverage } = require('news-crawler-db');
 const { discoverPatternsFromMappings, updateDsplWithPatterns } = require('../src/services/shared/dspl');
 const path = require('path');
 

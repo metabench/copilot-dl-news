@@ -2,7 +2,7 @@
 
 const { createJsdom } = require('../shared/utils/jsdomUtils');
 const { ensureDb } = require('../data/db/sqlite');
-const { createBackfillDatesQueries } = require('../data/db/sqlite/v1/queries/articles.backfillDates');
+const { createBackfillDatesQueries } = require('news-crawler-db');
 
 function toIso(value) {
   if (!value) return null;

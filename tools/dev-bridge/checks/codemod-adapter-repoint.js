@@ -21,7 +21,17 @@ const PURE = ['adminAdapter', 'alertAdapter', 'apiKeyAdapter', 'articlesAdapter'
   'gazetteerPlaceNames',
   // B6b: workspace/user adapters — renamed exports exist but are consumed
   // nowhere (generateSlug) / no live consumers at all (userAdapter).
-  'workspaceAdapter', 'userAdapter'];
+  'workspaceAdapter', 'userAdapter',
+  // B8 (2026-07-18): queries/* sweep — consumers verified to use only
+  // identical-named exports (renamed exports like normalizeTerm /
+  // MULTI_LANGUAGE_PLACE_* consts are consumed nowhere). placeHubs (bare)
+  // and queries/schema are NOT here: their consumers use renamed exports
+  // (normalizeHost, tableExists) and get manual alias edits instead.
+  'analysis\\.showAnalysis', 'articles\\.backfillDates', 'backgroundTasks',
+  'layoutMasks', 'layoutSignatures', 'layoutTemplates', 'maintenance',
+  'multiModalCrawl', 'patternLearning', 'placeHubs\\.crawlTool',
+  'placePageMappings', 'topicKeywords', 'crawlSkipTerms',
+  'multiLanguagePlaces'];
 const RX = new RegExp(
   `require\\((['"])(?:\\.\\./)*(?:src/)?data/db/sqlite/v1/queries/(${PURE.join('|')})\\1\\)`, 'g');
 

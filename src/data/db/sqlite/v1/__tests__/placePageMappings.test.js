@@ -4,7 +4,7 @@ const { initializeSchema } = require('../schema');
 const {
   getCountryHubCoverage,
   upsertPlacePageMapping
-} = require('../queries/placePageMappings');
+} = require('news-crawler-db');
 
 function createTestDatabase() {
   const db = openNewsCrawlerDb(':memory:');

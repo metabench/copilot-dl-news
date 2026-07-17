@@ -9,7 +9,7 @@ const { summarizeDsplPatterns, assessDomainReadiness, selectPlaces, selectTopics
 const { createBatchSummary, aggregateSummaryInto, createFailedDomainSummary } = require('./utils/summaryUtils');
 const { fetchUrl } = require('./utils/httpUtils');
 const { getConfidenceConfig, scoreHubCandidate, applyConfidenceDecision } = require('./utils/hubConfidenceScorer');
-const { upsertAbsentPlacePageMapping } = require('../../data/db/sqlite/v1/queries/placePageMappings');
+const { upsertAbsentPlacePageMapping } = require('news-crawler-db');
 
 const { CRAWL_EVENT_TYPES, SEVERITY_LEVELS, createTelemetryEvent } = require('../../core/crawler/telemetry');
 

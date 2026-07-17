@@ -9,7 +9,7 @@
  */
 
 const { getPlacesByCountryAndKind, getPlaceHierarchy } = require('news-crawler-db');
-const { getPlacePlaceHubCoverage } = require('../data/db/sqlite/v1/queries/placePageMappings');
+const { getPlacePlaceHubCoverage } = require('news-crawler-db');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 const { getDsplForDomain } = require('./shared/dspl');
 const { slugify } = require('../tools/slugify');

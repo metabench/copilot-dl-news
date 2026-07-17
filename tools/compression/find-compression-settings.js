@@ -15,12 +15,14 @@
  */
 
 const path = require('path');
-const { openDatabase } = require('../src/data/db/sqlite/v1/connection');
+const { openDatabase } = require('../../src/data/db/sqlite/v1/connection');
+// getCompressionStats is the retired v1 compression shim's historical name
+// for ncdb's getCompressionUsageStats.
 const {
   findTablesWithCompression,
   getTableRecordCount,
-  getCompressionStats
-} = require('../src/data/db/sqlite/v1/queries/compression');
+  getCompressionUsageStats: getCompressionStats
+} = require('news-crawler-db');
 
 // ANSI color codes
 const colors = {

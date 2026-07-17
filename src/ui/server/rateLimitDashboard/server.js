@@ -21,7 +21,7 @@ const express = require('express');
 const path = require('path');
 const jsgui = require('jsgui3-html');
 
-const { createRateLimitAdapter } = require('../../../data/db/sqlite/v1/rateLimitAdapter');
+const { createRateLimitAdapter } = require('news-crawler-db');
 const { RateLimitTracker } = require('../../../core/crawler/RateLimitTracker');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');

@@ -5,7 +5,7 @@
 const path = require('path');
 const { ensureDatabase } = require('../../src/data/db/sqlite');
 const { CountryHubMatcher } = require('../../src/services/CountryHubMatcher');
-const { normalizeHost } = require('../../src/data/db/sqlite/v1/queries/placeHubs');
+const { normalizePlaceHubCandidateHost: normalizeHost } = require('news-crawler-db');
 
 function parseArgs(argv) {
   const args = {

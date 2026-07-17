@@ -5,7 +5,7 @@ const {
   createBackgroundTask,
   updateBackgroundTask,
   getBackgroundTaskById
-} = require('../queries/backgroundTasks');
+} = require('news-crawler-db');
 
 function createTestDb() {
   const db = openNewsCrawlerDb(':memory:');

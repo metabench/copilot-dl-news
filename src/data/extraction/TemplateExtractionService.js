@@ -33,7 +33,7 @@ class TemplateExtractionService {
     if (options.layoutTemplateQueries) {
       this._queries = options.layoutTemplateQueries;
     } else {
-      const { createLayoutTemplatesQueries } = require('../../data/db/sqlite/v1/queries/layoutTemplates');
+      const { createLayoutTemplatesQueries } = require('news-crawler-db');
       this._queries = createLayoutTemplatesQueries(this.db);
     }
     

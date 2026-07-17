@@ -6,8 +6,8 @@
  */
 
 const { getAllPlaceNames } = require('news-crawler-db');
-const { getTopicTermsForLanguage } = require('../../data/db/sqlite/v1/queries/topicKeywords');
-const { getSkipTermsForLanguage } = require('../../data/db/sqlite/v1/queries/crawlSkipTerms');
+const { getTopicTermsForLanguage } = require('news-crawler-db');
+const { getSkipTermsForLanguage } = require('news-crawler-db');
 const { discoverPlacePlacePatternsFromMappings, updateDsplWithPlacePlacePatterns } = require('../../services/shared/dspl');
 const { HubUrlValidator } = require('./HubUrlValidator');
 const { HubNormalizer } = require('./HubNormalizer');

@@ -263,7 +263,7 @@ class HubTaskGenerator extends EventEmitter {
     this.isRunning = true;
     this.abortController = new AbortController();
 
-    const { getVerifiedHubsForArchive, updateHubDepthCheck } = require('../data/db/sqlite/v1/queries/placePageMappings');
+    const { getVerifiedHubsForArchive, updateHubDepthCheck } = require('news-crawler-db');
 
     const hubs = getVerifiedHubsForArchive(this.db, {
       host,
@@ -323,7 +323,7 @@ class HubTaskGenerator extends EventEmitter {
       jobId = null
     } = options;
 
-    const { getHubsNeedingArchive } = require('../data/db/sqlite/v1/queries/placePageMappings');
+    const { getHubsNeedingArchive } = require('news-crawler-db');
 
     const hubs = getHubsNeedingArchive(this.db, { host, minDepth, limit: hubLimit });
 

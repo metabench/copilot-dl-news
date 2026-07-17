@@ -19,7 +19,7 @@ const { JSDOM } = require('jsdom');
 
 const { TemplateExtractor, TemplateExtractionService } = require('../../../data/extraction');
 const { TeacherService } = require('../../../intelligence/teacher/TeacherService');
-const { createLayoutTemplatesQueries } = require('../../../data/db/sqlite/v1/queries/layoutTemplates');
+const { createLayoutTemplatesQueries } = require('news-crawler-db');
 const { resolveNewsCrawlerDbModule } = require('../../../db/openNewsCrawlerDb');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');

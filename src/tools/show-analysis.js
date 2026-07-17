@@ -18,7 +18,7 @@ const { findProjectRoot } = require('../shared/utils/project-root');
 const { ensureDb } = require('../data/db/sqlite');
 const { CliFormatter } = require('../shared/utils/CliFormatter');
 const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');
-const { createShowAnalysisQueries } = require('../data/db/sqlite/v1/queries/analysis.showAnalysis');
+const { createShowAnalysisQueries } = require('news-crawler-db');
 
 const projectRoot = findProjectRoot(__dirname);
 const fmt = new CliFormatter();

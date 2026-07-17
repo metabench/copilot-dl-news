@@ -1,8 +1,10 @@
 'use strict';
 
 const { CountryHubGapAnalyzer } = require('./CountryHubGapAnalyzer');
-const { getCountryHubCandidates, normalizeHost } = require('../data/db/sqlite/v1/queries/placeHubs');
-const { upsertPlacePageMapping } = require('../data/db/sqlite/v1/queries/placePageMappings');
+// normalizeHost is the retired v1 placeHubs shim's historical name for
+// ncdb's normalizePlaceHubCandidateHost.
+const { getCountryHubCandidates, normalizePlaceHubCandidateHost: normalizeHost } = require('news-crawler-db');
+const { upsertPlacePageMapping } = require('news-crawler-db');
 const { slugify, normalizeForMatching } = require('../tools/slugify');
 const { getPreferredEnglishAndFallbackPlaceNames } = require('news-crawler-db');
 

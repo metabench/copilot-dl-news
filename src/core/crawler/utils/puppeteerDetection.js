@@ -22,7 +22,22 @@ let tableEnsured = false;
 function getDbQueries() {
   if (!dbQueries) {
     try {
-      dbQueries = require('../../../data/db/sqlite/v1/queries/domainCrawlBehaviorsQueries');
+      // The retired v1 domainCrawlBehaviorsQueries shim exposed ncdb's
+      // ensureDomainCrawlBehaviorsTable under the historical name
+      // ensureTable — this module was built against that surface.
+      const ncdb = require('news-crawler-db');
+      dbQueries = {
+        ensureTable: ncdb.ensureDomainCrawlBehaviorsTable,
+        getDomainBehavior: ncdb.getDomainBehavior,
+        checkPuppeteerNeeded: ncdb.checkPuppeteerNeeded,
+        recordPuppeteerNeeded: ncdb.recordPuppeteerNeeded,
+        recordPuppeteerSuccess: ncdb.recordPuppeteerSuccess,
+        recordHttpSuccess: ncdb.recordHttpSuccess,
+        recordHeadNotSupported: ncdb.recordHeadNotSupported,
+        getPuppeteerDomains: ncdb.getPuppeteerDomains,
+        getDomainBehaviorStats: ncdb.getDomainBehaviorStats,
+        clearPuppeteerRequirement: ncdb.clearPuppeteerRequirement
+      };
     } catch (e) {
       // Queries not available, will use in-memory only
       dbQueries = null;

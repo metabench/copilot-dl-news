@@ -8,7 +8,7 @@ function resolvePatternLearningQueries(db) {
   }
   const raw = db.db && typeof db.db.prepare === 'function' ? db.db : db;
   if (raw && typeof raw.prepare === 'function') {
-    const { createPatternLearningQueries } = require('../data/db/sqlite/v1/queries/patternLearning');
+    const { createPatternLearningQueries } = require('news-crawler-db');
     return createPatternLearningQueries(raw);
   }
   return null;

@@ -1,11 +1,13 @@
 "use strict";
 
+// DEFAULT_THRESHOLD_MS is the retired v1 queryTimeBudget shim's historical
+// name for ncdb's DEFAULT_QUERY_TIME_BUDGET_THRESHOLD_MS.
 const {
   timedQuery,
   instrumentStatement,
   createTimedDb,
-  DEFAULT_THRESHOLD_MS
-} = require("../../../../../src/data/db/sqlite/v1/queries/helpers/queryTimeBudget");
+  DEFAULT_QUERY_TIME_BUDGET_THRESHOLD_MS: DEFAULT_THRESHOLD_MS
+} = require("news-crawler-db");
 
 describe("queryTimeBudget", () => {
   describe("timedQuery", () => {

@@ -10,7 +10,7 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
  */
 const path = require('path');
 const fs = require('fs');
-const { getTableInfo, getTableIndexNames } = require('../src/data/db/sqlite/v1/queries/schema');
+const { getTableInfo, getTableIndexNames } = require('news-crawler-db');
 
 const DEFAULT_DB_PATH = path.join(__dirname, '..', 'data', 'news.db');
 

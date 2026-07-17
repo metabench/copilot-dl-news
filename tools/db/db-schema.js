@@ -4,19 +4,21 @@
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 const fs = require('fs');
 const path = require('path');
-const { CliFormatter } = require('../src/shared/utils/CliFormatter');
-const { CliArgumentParser } = require('../src/shared/utils/CliArgumentParser');
+const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
+const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
+// tableExists is the retired v1 schema shim's historical name for ncdb's
+// schemaInspectionTableExists.
 const {
   getTableInfo,
   getTableIndexes,
   getIndexInfo,
   getAllTablesAndViews,
-  tableExists,
+  schemaInspectionTableExists: tableExists,
   getAllIndexes,
   getForeignKeys,
   getAllTables,
   getTableRowCount
-} = require('../src/data/db/sqlite/v1/queries/schema');
+} = require('news-crawler-db');
 
 const DEFAULT_DB_PATH = path.join(__dirname, '..', 'data', 'news.db');
 

@@ -16,7 +16,7 @@ const express = require('express');
 const { openNewsCrawlerDb } = require('../../db/openNewsCrawlerDb');
 const { PublisherPrior } = require('../../intelligence/analysis/publisher-prior');
 const { PlaceCoherence, haversineDistance, distanceToCoherence } = require('../../intelligence/analysis/place-coherence');
-const { createMultiLanguagePlaceQueries } = require('../../data/db/sqlite/v1/queries/multiLanguagePlaces');
+const { createMultiLanguagePlaceQueries } = require('news-crawler-db');
 
 /**
  * Create places API router

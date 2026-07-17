@@ -740,7 +740,7 @@ class IntelligentCrawlServer extends EventEmitter {
   }
 
   _handleHubArchiveStats(req, res) {
-    const { getArchiveCrawlStats } = require('../data/db/sqlite/v1/queries/placePageMappings');
+    const { getArchiveCrawlStats } = require('news-crawler-db');
 
     // Get stats for all hosts or aggregate
     try {
@@ -776,7 +776,7 @@ class IntelligentCrawlServer extends EventEmitter {
   }
 
   _handleHubArchiveListHubs(req, res, url) {
-    const { getVerifiedHubsForArchive, getHubsNeedingArchive } = require('../data/db/sqlite/v1/queries/placePageMappings');
+    const { getVerifiedHubsForArchive, getHubsNeedingArchive } = require('news-crawler-db');
 
     const host = url.searchParams.get('host');
     const limit = parseInt(url.searchParams.get('limit') || '50', 10);

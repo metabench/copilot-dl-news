@@ -198,7 +198,40 @@ const FNS = [
   'getRegionPlaceIdByAdm1Code',
   'insertAdminParentHierarchy',
   'getTopicTermsForLanguage',
-  'getAllTopicTerms'
+  'getAllTopicTerms',
+  // B8 queries/* sweep (2026-07-18): names lifted from the 25 retired
+  // v1/queries shims + v1/rateLimitAdapter (shim-verified from the shim
+  // bodies at HEAD). Renamed ncdb sources consumers now alias locally:
+  // normalizePlaceHubCandidateHost (was normalizeHost),
+  // ensureDomainCrawlBehaviorsTable (was ensureTable),
+  // getCompressionUsageStats (was getCompressionStats),
+  // schemaInspectionTableExists (was tableExists),
+  // DEFAULT_QUERY_TIME_BUDGET_THRESHOLD_MS (was DEFAULT_THRESHOLD_MS).
+  'createShowAnalysisQueries', 'createBackfillDatesQueries',
+  'createLayoutMasksQueries', 'createLayoutSignaturesQueries',
+  'createLayoutTemplatesQueries',
+  'vacuumDatabase', 'getDatabaseSize', 'dropLegacyTables',
+  'createMultiModalCrawlQueries', 'createPatternLearningQueries',
+  'createCrawlPlaceHubsQueries',
+  'getCountryHubCoverage', 'getPlacePlaceHubCoverage',
+  'markPlacePageMappingVerified', 'upsertPlacePageMapping',
+  'upsertAbsentPlacePageMapping', 'getVerifiedHubsForArchive',
+  'updateHubDepthCheck', 'getArchiveCrawlStats', 'getHubsNeedingArchive',
+  'getSkipTermsForLanguage', 'createMultiLanguagePlaceQueries',
+  'getCountryHubCandidates', 'normalizePlaceHubCandidateHost',
+  'ensureDomainCrawlBehaviorsTable', 'getDomainBehavior',
+  'checkPuppeteerNeeded', 'recordPuppeteerNeeded', 'recordPuppeteerSuccess',
+  'recordHttpSuccess', 'recordHeadNotSupported', 'getPuppeteerDomains',
+  'getDomainBehaviorStats', 'clearPuppeteerRequirement',
+  'findTablesWithCompression', 'getTableRecordCount',
+  'getCompressionUsageStats',
+  'getTableInfo', 'getTableIndexes', 'getIndexInfo', 'getTableIndexNames',
+  'getAllTablesAndViews', 'schemaInspectionTableExists', 'getAllIndexes',
+  'getForeignKeys', 'getAllTables', 'getTableRowCount',
+  'timedQuery', 'instrumentStatement', 'createTimedDb',
+  'createRateLimitAdapter',
+  'ensureBackgroundTaskSchema', 'createBackgroundTask',
+  'updateBackgroundTask', 'getBackgroundTaskById', 'normalizeBackgroundTaskRow'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);
@@ -209,7 +242,10 @@ const CONSTS = ['DEFAULT_CLOUD_CRAWL_TARGETS', 'DOWNLOAD_BAR_CHART_VALID_SOURCES
   'DOWNLOAD_BAR_CHART_VALID_MODES', 'DOWNLOAD_BAR_CHART_SOURCE_LABELS',
   'SQLITE_ARTICLE_SEARCH_BM25_WEIGHTS',
   'ROLES', 'ROLE_HIERARCHY', 'ACTIVITY_ACTIONS', 'ANNOTATION_TYPES',
-  'PLANS', 'METRICS'];
+  'PLANS', 'METRICS',
+  // B8: queryTimeBudget const (consumer aliases it back to
+  // DEFAULT_THRESHOLD_MS)
+  'DEFAULT_QUERY_TIME_BUDGET_THRESHOLD_MS'];
 for (const c of CONSTS) {
   assert.ok(ncdb[c] !== undefined && ncdb[c] !== null, `ncdb.${c} missing`);
 }

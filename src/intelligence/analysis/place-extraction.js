@@ -15,7 +15,7 @@ let DEFAULT_TOPIC_TOKENS = null;
 
 function getDefaultTopicTokens(db) {
   if (!DEFAULT_TOPIC_TOKENS && db) {
-    const { getTopicTermsForLanguage } = require('../../data/db/sqlite/v1/queries/topicKeywords');
+    const { getTopicTermsForLanguage } = require('news-crawler-db');
     DEFAULT_TOPIC_TOKENS = getTopicTermsForLanguage(db, 'en');
   }
   // Fallback to minimal set if no database provided
@@ -1010,7 +1010,7 @@ function createEnhancedPlaceExtractor(db, options = {}) {
   const getMultiLangQueries = () => {
     if (!multiLangQueries) {
       try {
-        const { createMultiLanguagePlaceQueries } = require('../../data/db/sqlite/v1/queries/multiLanguagePlaces');
+        const { createMultiLanguagePlaceQueries } = require('news-crawler-db');
         multiLangQueries = createMultiLanguagePlaceQueries(db);
       } catch (err) {
         multiLangQueries = null;

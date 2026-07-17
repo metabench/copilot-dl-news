@@ -10,7 +10,7 @@
 
 const { ensureDatabase } = require('../../src/data/db/sqlite');
 const { resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
-const { dropLegacyTables } = require('../../src/data/db/sqlite/v1/queries/maintenance');
+const { dropLegacyTables } = require('news-crawler-db');
 const path = require('path');
 
 const {

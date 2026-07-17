@@ -19,7 +19,7 @@ if (canUseDatabase) {
 }
 
 const describeDb = canUseDatabase ? describe : describe.skip;
-const { createMultiModalCrawlQueries } = require('../sqlite/v1/queries/multiModalCrawl');
+const { createMultiModalCrawlQueries } = require('news-crawler-db');
 
 describeDb('multiModalCrawlQueries', () => {
   let db;

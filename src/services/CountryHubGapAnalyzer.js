@@ -10,7 +10,7 @@
  */
 
 const { getAllCountries, getTopCountries, getCountryByName, getPlaceNameVariantsForHubDiscovery } = require('news-crawler-db');
-const { getCountryHubCoverage } = require('../data/db/sqlite/v1/queries/placePageMappings');
+const { getCountryHubCoverage } = require('news-crawler-db');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 const { getDsplForDomain } = require('./shared/dspl');
 const { slugify, generateSlugVariants } = require('../tools/slugify');
