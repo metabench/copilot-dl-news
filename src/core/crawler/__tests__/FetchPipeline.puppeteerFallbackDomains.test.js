@@ -93,4 +93,32 @@ describe('FetchPipeline puppeteer fallback domain decision', () => {
     expect(pipeline._shouldUsePuppeteerFallback('custom-site.example')).toBe(true);
     expect(pipeline._shouldUsePuppeteerFallback('www.theguardian.com')).toBe(false);
   });
+
+  it('falls back for DB policy hosts (domain_fetch_policies) beyond the static list', () => {
+    // lemonde.fr / reuters.com live only in domain_fetch_policies, injected
+    // by the wiring as policyHosts. Consistency fix 2026-07-17: the live
+    // crawler must honor them, not just the static guardian/bloomberg/wsj.
+    const pipeline = new FetchPipeline(minimalDeps({
+      domainManager: managerSaying(false),
+      policyHosts: ['lemonde.fr', 'reuters.com']
+    }));
+    expect(pipeline._shouldUsePuppeteerFallback('www.lemonde.fr')).toBe(true);
+    expect(pipeline._shouldUsePuppeteerFallback('lemonde.fr')).toBe(true);
+    expect(pipeline._shouldUsePuppeteerFallback('reuters.com')).toBe(true);
+    // static defaults still apply alongside policy hosts
+    expect(pipeline._shouldUsePuppeteerFallback('theguardian.com')).toBe(true);
+    // unrelated host still not matched
+    expect(pipeline._shouldUsePuppeteerFallback('bbc.com')).toBe(false);
+  });
+
+  it('explicit custom domains override policy hosts (test isolation)', () => {
+    const pipeline = new FetchPipeline(minimalDeps({
+      domains: ['custom-site.example'],
+      policyHosts: ['lemonde.fr'],
+      domainManager: managerSaying(false)
+    }));
+    // custom domains disable both the static list and policy hosts
+    expect(pipeline._shouldUsePuppeteerFallback('lemonde.fr')).toBe(false);
+    expect(pipeline._shouldUsePuppeteerFallback('custom-site.example')).toBe(true);
+  });
 });

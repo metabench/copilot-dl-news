@@ -308,7 +308,22 @@ class FetchPipeline extends EventEmitter {
     const hasCustomDomains = Array.isArray(puppeteerOpts.domains) && puppeteerOpts.domains.length > 0;
     this.puppeteerFallbackDomains = hasCustomDomains
       ? puppeteerOpts.domains.map(d => d.toLowerCase())
-      : ['theguardian.com', 'bloomberg.com', 'wsj.com']; // Default TLS-fingerprinting sites
+      : ['theguardian.com', 'bloomberg.com', 'wsj.com']; // Default TLS-fingerprinting sites (bootstrap default)
+
+    // DB-sourced policy hosts (domain_fetch_policies rows with a
+    // puppeteer/remote-worker strategy), injected by the wiring layer so
+    // the crawler and the guess pipeline agree on which hosts need a
+    // browser. This is the authoritative source; the static list above is
+    // only the bootstrap default for an unseeded DB. Union'd into the
+    // baseline unless an explicit custom domain override was passed (tests).
+    // Fixes: lemonde.fr/reuters.com lived only in the DB, so the live
+    // crawler kept ECONNRESET/402-ing on them (2026-07-17 consistency pass).
+    this.puppeteerPolicyHosts = new Set();
+    if (!hasCustomDomains && Array.isArray(puppeteerOpts.policyHosts)) {
+      for (const h of puppeteerOpts.policyHosts) {
+        if (h) this.puppeteerPolicyHosts.add(String(h).toLowerCase().replace(/^www\./, ''));
+      }
+    }
     
     // Initialize PuppeteerDomainManager for auto-learning (only when not using custom domain list)
     this._puppeteerDomainManager = puppeteerOpts.domainManager || null;
@@ -425,13 +440,21 @@ class FetchPipeline extends EventEmitter {
   _shouldUsePuppeteerFallback(host) {
     if (!this.puppeteerFallbackEnabled) return false;
     const lowerHost = host.toLowerCase();
+    const bareHost = lowerHost.replace(/^www\./, '');
 
     // Domain manager (auto-learning) can approve additional domains…
     if (this._puppeteerDomainManager && this._puppeteerDomainManager.shouldUsePuppeteer(lowerHost)) {
       return true;
     }
 
-    // …but the known TLS-fingerprinting defaults always apply as a baseline.
+    // …the DB bot-protection model (domain_fetch_policies, injected as
+    // policyHosts) is the authoritative host set — this is where lemonde.fr
+    // and reuters.com live…
+    if (this.puppeteerPolicyHosts.has(bareHost)) {
+      return true;
+    }
+
+    // …and the known TLS-fingerprinting defaults always apply as a baseline.
     // (Previously the manager path returned its answer outright, so with an
     // empty/missing config the static list was bypassed and e.g. Guardian
     // failed with ECONNRESET on first contact instead of falling back —

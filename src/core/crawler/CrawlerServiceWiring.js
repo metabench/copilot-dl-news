@@ -391,8 +391,29 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     console.warn('[CrawlerServiceWiring] remote fetch unavailable, using local fetch:', err.message);
   }
 
+  // Bot-protection host set from the DB (domain_fetch_policies): hosts whose
+  // decided strategy needs a real browser. Sourced here (wiring has a raw DB
+  // handle) and injected into FetchPipeline so the LIVE crawler agrees with
+  // the guess pipeline — previously the crawler only knew the static
+  // theguardian/bloomberg/wsj list, so lemonde.fr/reuters.com (DB-only) kept
+  // failing. Loaded once at construction; never blocks the hot path.
+  let puppeteerPolicyHosts = [];
+  try {
+    const rawDb = crawler.dbAdapter?.getDb?.();
+    if (rawDb) {
+      const { listDomainFetchPolicies } = require('news-crawler-db');
+      puppeteerPolicyHosts = [
+        ...listDomainFetchPolicies(rawDb, { strategy: 'puppeteer' }),
+        ...listDomainFetchPolicies(rawDb, { strategy: 'remote-worker' })
+      ].map((p) => p.host).filter(Boolean);
+    }
+  } catch (err) {
+    console.warn('[CrawlerServiceWiring] domain_fetch_policies unavailable for puppeteer hosts:', err.message);
+  }
+
   crawler.fetchPipeline = new FetchPipeline({
     fetchFn: remoteFetchFn || undefined,
+    puppeteerFallback: { policyHosts: puppeteerPolicyHosts },
     getUrlDecision: (targetUrl, ctx) => crawler._getUrlDecision(targetUrl, ctx),
     normalizeUrl: (targetUrl, ctx) => crawler.normalizeUrl(targetUrl, ctx),
     isOnDomain: (targetUrl) => crawler.isOnDomain(targetUrl),

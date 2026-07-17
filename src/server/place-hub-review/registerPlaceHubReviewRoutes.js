@@ -109,12 +109,19 @@ function registerPlaceHubReviewRoutes(app, {
       const items = [];
 
       if (wants('unknown-term')) {
+        // place_hub_unknown_terms.host is stored raw (often www-prefixed)
+        // while every other table uses the bare-host canonical form. Group
+        // on the canonicalized host so www/non-www rows for the same site
+        // collapse and match candidate/pattern/policy joins downstream
+        // (2026-07-17 consistency pass).
+        const canonHostExpr = `CASE WHEN LOWER(ut.host) LIKE 'www.%' THEN SUBSTR(LOWER(ut.host), 5) ELSE LOWER(ut.host) END`;
         const rows = db.prepare(`
-          SELECT ut.host, ut.term_slug AS termSlug, MAX(ut.term_label) AS termLabel,
+          SELECT ${canonHostExpr} AS host,
+                 ut.term_slug AS termSlug, MAX(ut.term_label) AS termLabel,
                  SUM(ut.occurrences) AS occurrences, MAX(ut.last_seen_at) AS lastSeenAt
           FROM place_hub_unknown_terms ut
           WHERE ut.term_slug NOT IN (SELECT slug FROM non_geo_topic_slugs)
-          GROUP BY ut.host, ut.term_slug
+          GROUP BY ${canonHostExpr}, ut.term_slug
           ORDER BY occurrences DESC
           LIMIT ?
         `).all(limit);

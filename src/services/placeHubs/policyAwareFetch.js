@@ -1,6 +1,15 @@
 'use strict';
 
 /**
+ * STATUS (2026-07-17): SUPERSEDED / NOT WIRED. The guess pipeline's single
+ * bot-protection seam is now DomainProcessor (_resolveFetchPolicy +
+ * _fetchCandidateWithPolicy + _recordProtectionObservation), which also
+ * skips the HEAD probe for puppeteer hosts — something a fetch wrapper
+ * cannot do. This module was a second seam that double-recorded evidence;
+ * it is retained only as a standalone reference/utility (its unit test
+ * still exercises the routing logic) and can be deleted. Do not re-wire it
+ * into guess-place-hubs without removing DomainProcessor's policy path.
+ *
  * policyAwareFetch — fetch that consults the DB's bot-protection model.
  *
  * domain_fetch_policies (news.db) records what each host does to bots and
