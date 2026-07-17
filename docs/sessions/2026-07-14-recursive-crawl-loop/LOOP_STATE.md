@@ -59,6 +59,18 @@
 
 ## Findings / decisions log (newest first, one line each)
 
+- 2026-07-17: AI-OPERABLE REVIEW API live at /api/v1/place-hubs/*
+  (review-queue, classify/search probes, overrides, heuristics/patterns,
+  learn + assess-structure; agent+reason mandatory, all writes audited).
+  First AI session: 8 calls settled 95+34 unknown-term rows (politics/
+  science/global-development/world/all → non-geo; andorra → confirmed
+  country hub, validation ledger + mapping), retired junk reuters↦Andorra
+  mapping found by place search. Live bug found+fixed: unknown_terms
+  stores www-hosts, resolve now matches both forms (9/9 jest). GOFAI
+  verdict: microprolog stays unintegrated (documented Part 5); rule base
+  = DB patterns editable via API. Guide: docs/agents/PLACE_HUB_REVIEW_API.md.
+  Remaining queue honest: united-kingdom/london/gibraltar/cook-islands
+  (real places awaiting confirm), football/email-newsletters (non-geo).
 - 2026-07-16 (pm2): PLACE-HUB INTELLIGENCE SLICE 1 — review found 4
   disconnected pattern mechanisms, dormant hub_validations (0 rows),
   place_hub_url_patterns absent from live DB, hubs on only 2 hosts.

@@ -140,3 +140,38 @@ Live exercise against news.db:
   prior + gazetteer; `bbc.com/news/world/europe` → 0.60 via prior.
 - Drift check on both hosts: guardian 27/168 dead (16%, healthy-ish —
   watch), aljazeera 0% — no false positives.
+
+## Part 4 — AI-operable review surface (2026-07-17)
+
+`/api/v1/place-hubs/*` on the unified server (see
+docs/agents/PLACE_HUB_REVIEW_API.md for the operator guide): review-queue
+(unknown terms, unverified candidates, expired validations,
+structure-changes, uncertain patterns) + classify/search probes +
+overrides (mark-non-geo, resolve-unknown-term, confirm/reject-place-hub)
++ heuristics/patterns (upsert/demote, `domain:'*'` = global prior) +
+actions (learn, assess-structure). Every mutation requires agent+reason
+and lands in place_hub_audit. First live session: 8 API calls settled 95
+queue rows, confirmed the Andorra hub, and retired a junk
+reuters↦Andorra mapping — zero code edits.
+
+## Part 5 — Legacy GOFAI verdict
+
+Located: `src/intelligence/planner/` — PlannerHost + plugins
+(GraphReasoner, QueryCostEstimator, GazetteerAwareReasoner) ARE wired
+into IntelligentPlanRunner and stay. The unintegrated part is
+`microprolog/` (633-line SLD-resolution engine, self-labeled "NOT in
+current execution path / design phase") plus the `meta/` layer that
+imports it (ExperimentManager, MetaPlanCoordinator, PlanArbitrator,
+PlanEvaluator; only deprecated-ui references otherwise).
+
+Verdict: do NOT integrate the Prolog engine now. The place/topic-hub
+problem is served better by the transparent production-rule pipeline we
+shipped (DB-stored patterns + gazetteer + vetoes), which an AI can edit
+as DATA through the review API — a Horn-clause interpreter would add a
+second rule formalism without adding decisions we can't already express,
+i.e. exactly the complexity bloat to avoid. What we did keep from its
+design: explainability (classifyUrl emits reasons[]; every verdict and
+override carries provenance). Revisit microprolog only if rules ever
+need recursion/joins the flat pattern table can't express (e.g.
+hierarchical place containment reasoning); if so, reimplement against
+the DB rather than reviving the meta/ layer.

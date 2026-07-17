@@ -54,6 +54,7 @@ const { SearchService } = require('../../../search/SearchService');
 const { TelemetryIntegration } = require('../../../core/crawler/telemetry/TelemetryIntegration');
 const { InProcessCrawlJobRegistry } = require('../../../server/crawl-api/v1/core/InProcessCrawlJobRegistry');
 const { registerCrawlApiV1Routes } = require('../../../api/route-loaders/crawl-v1');
+const { registerPlaceHubReviewRoutes } = require('../../../server/place-hub-review/registerPlaceHubReviewRoutes');
 const { createCrawlService } = require('../../../server/crawl-api/core/crawlService');
 const { resolvePresetDateRange } = require('./lib/searchDateRange');
 const { computeSearchFreshness } = require('./lib/searchFreshness');
@@ -1263,6 +1264,15 @@ load(); setInterval(load, 60000);
     serviceOptions: crawlServiceOptions,
     inProcessJobRegistry: inProcessCrawlJobRegistry
   });
+
+  // AI-operable review surface: uncertain classifier decisions out,
+  // classification overrides + heuristic updates in. Never fatal to the
+  // UI server — the crawler must run even if the review surface can't.
+  try {
+    registerPlaceHubReviewRoutes(unifiedApp, { basePath: '/api/v1/place-hubs' });
+  } catch (err) {
+    console.warn('[unifiedApp] place-hub review API unavailable:', err.message);
+  }
 
   function getHistoryTimestampMs(ev) {
     if (!ev || typeof ev !== 'object') return null;
