@@ -1,4 +1,4 @@
-const { getAllCountries, getTopCountries } = require('../../src/data/db/sqlite/queries/gazetteer.places');
+const { getAllCountries, getTopCountries } = require('news-crawler-db');
 const { ensureDatabase } = require('../../src/data/db/sqlite');
 const path = require('path');
 

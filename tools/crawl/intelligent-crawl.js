@@ -151,8 +151,9 @@ const originalConsole = {
 
 const NewsCrawler = require('../../src/crawl.js');
 const { ensureDatabase } = require('../../src/data/db/sqlite');
-const { getAllPlaceNames } = require('../../src/data/db/sqlite/queries/gazetteerPlaceNames');
-const { getAllCountries } = require('../../src/data/db/sqlite/queries/gazetteer.places');
+// (direct from news-crawler-db; alias preserves the retired old-layer
+// gazetteerPlaceNames shim's historical name — Classic gazetteer surface)
+const { getAllClassicGazetteerPlaceNames: getAllPlaceNames, getAllCountries } = require('news-crawler-db');
 const { getTopicTermsForLanguage } = require('../../src/data/db/sqlite/queries/topicKeywords');
 
 // Initialize database for place verification

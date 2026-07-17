@@ -55,7 +55,7 @@ for (const [lang, count] of Object.entries(byLang).sort((a, b) => b[1] - a[1])) 
 console.log('');
 
 for (const nameRecord of namesToFix) {
-  const newNormalized = require('../../src/data/db/sqlite/queries/gazetteer.utils').normalizeName(nameRecord.name);
+  const newNormalized = require('news-crawler-db').normalizeClassicGazetteerName(nameRecord.name);
 
   if (!newNormalized) {
     console.log(`⚠ Name "${nameRecord.name}" (${nameRecord.lang}) still normalizes to empty - skipping`);

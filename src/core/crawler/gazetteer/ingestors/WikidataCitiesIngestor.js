@@ -21,7 +21,35 @@ const chalk = require('chalk');
 const { tof, each, is_array } = require('lang-tools');
 const { compact } = require('../../../../shared/utils/pipelines');
 const { AttributeBuilder } = require('../../../../shared/utils/attributeBuilder');
-const ingestQueries = require('../../../../data/db/sqlite/queries/gazetteer.ingest');
+// Classic-gazetteer ingestion queries direct from news-crawler-db; the
+// alias object preserves the retired old-layer gazetteer.ingest shim's
+// historical short names. NOTE: ncdb also exports SHORT-named ingest
+// functions from the modern gazetteer surface — these Classic* ones are
+// what this ingestor was always bound to; do not "simplify" the aliases.
+const {
+  createClassicGazetteerIngestionStatements,
+  upsertClassicGazetteerPlace,
+  insertClassicGazetteerPlaceName,
+  insertClassicGazetteerExternalId,
+  setClassicGazetteerCanonicalName,
+  registerPlaceSource,
+  listWikidataCountryIngestionRows,
+  getAdm1CodeForWikidataRegion,
+  getRegionPlaceIdByAdm1Code,
+  insertAdminParentHierarchy
+} = require('news-crawler-db');
+const ingestQueries = {
+  createIngestionStatements: createClassicGazetteerIngestionStatements,
+  upsertPlace: upsertClassicGazetteerPlace,
+  insertPlaceName: insertClassicGazetteerPlaceName,
+  insertExternalId: insertClassicGazetteerExternalId,
+  setCanonicalName: setClassicGazetteerCanonicalName,
+  registerPlaceSource,
+  listWikidataCountryIngestionRows,
+  getAdm1CodeForWikidataRegion,
+  getRegionPlaceIdByAdm1Code,
+  insertAdminParentHierarchy
+};
 const {
   DEFAULT_LABEL_LANGUAGES,
   buildCitiesDiscoveryQuery,

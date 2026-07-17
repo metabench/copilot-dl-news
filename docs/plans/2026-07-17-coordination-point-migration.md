@@ -156,6 +156,16 @@ a later core-crawler test-drift pass.
      reworked — identity form impossible post-deletion), LIVE
      download-verification.check 9/9 on :memory:, node --check 10/10.
      src/data/db: 197 files remain.
+   - Slice 7 (B7) DONE 2026-07-17: OLD LAYER swept — 9 of 10
+     sqlite/queries/* files deleted (gazetteer.{attributes,deduplication,
+     ingest,places,utils}, gazetteerPlaceNames, maintenance, schema,
+     rateLimitAnalysis); 4 consumers repointed keeping the
+     Classic-prefixed ncdb sources they were bound to (ncdb ALSO exports
+     short-named modern-surface ingest fns — do NOT "simplify" the
+     aliases; WikidataCitiesIngestor got an explicit alias object).
+     topicKeywords.js STAYS (real error-tolerance wrapper — migrate-later
+     with urlListingNormalized + articleViewer). Verified: smoke 188 fns,
+     syntax clean. src/data/db: 132→123 files.
    - Slice 6 DONE 2026-07-17: 16 more shims DELETED — 13 pure v1
      gazetteer.* + gazetteerPlaceNames (codemod, 31 consumer files across
      src/tests/tools — the codemod now walks tools/ too) + the renamed

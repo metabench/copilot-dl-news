@@ -181,7 +181,24 @@ const FNS = [
   'searchPlacesByName', 'getAllPlaceNames', 'normalizeName',
   'getTotalPlaceCount', 'getPlaceCountsByKind',
   // slice-6b: renamed-adapter trio sources (shim-verified via git show)
-  'createSqliteArticleSearchAdapter', 'sanitizeSqliteArticleSearchQuery'
+  'createSqliteArticleSearchAdapter', 'sanitizeSqliteArticleSearchQuery',
+  // B7 old-layer sweep: Classic-gazetteer sources (shim-verified from the
+  // old-layer bodies; ncdb also exports SHORT ingest names from the modern
+  // surface — consumers stay bound to Classic*)
+  'getAllClassicGazetteerPlaceNames',
+  'normalizeClassicGazetteerName',
+  'createClassicGazetteerIngestionStatements',
+  'upsertClassicGazetteerPlace',
+  'insertClassicGazetteerPlaceName',
+  'insertClassicGazetteerExternalId',
+  'setClassicGazetteerCanonicalName',
+  'registerPlaceSource',
+  'listWikidataCountryIngestionRows',
+  'getAdm1CodeForWikidataRegion',
+  'getRegionPlaceIdByAdm1Code',
+  'insertAdminParentHierarchy',
+  'getTopicTermsForLanguage',
+  'getAllTopicTerms'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);

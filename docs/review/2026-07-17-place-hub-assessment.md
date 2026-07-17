@@ -76,6 +76,19 @@ code audit. App was running throughout; no writes made.
    region 3, subcontinent 2. "Filter by village" cannot work until
    populate-gazetteer ingests finer kinds (config caps cities/country
    at 50; no village/town kind exists). Kind filter itself works.
+   → **A6 slice-0 SCOPED 2026-07-17**: cities come from Wikidata
+   `?city wdt:P31/wdt:P279* wd:Q515` LIMIT maxCitiesPerCountry (50),
+   kind hardcoded 'city' (populate-gazetteer.js:621,642). Village/town
+   plan: (1) `places.kind` is free TEXT — no schema change; add 'town'
+   (Q3957) + 'village' (Q532) SPARQL classes to WikidataCitiesIngestor
+   (or a sibling ingestor) with a population floor (wdt:P1082 ≥ ~5000)
+   and per-country caps (villages are numerous — floor is the real
+   control); (2) extend ncdb KIND_TO_PLACE_TYPE / GAZETTEER_KIND_TO_TYPE
+   maps + any kind-ordering logic; (3) CLI flags --towns-per-country /
+   --villages-per-country; (4) UI is already generic (kind dropdowns
+   reflect live kinds). Effort: one ingestor extension + ncdb map rows +
+   bounded live populate run. Slice 1 = towns-only for 2-3 countries,
+   verify hub guessing picks them up, then widen.
 3. **Coverage narrow**: 428 hubs on 2 hosts (guardian 233, aljazeera
    195) of ~15 seeded hosts.
 4. **Validation thin**: 11 hub_validations vs 428 hubs (ledger 3 days
