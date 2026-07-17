@@ -166,6 +166,49 @@ class PlaceHubUrlIndex {
   }
 
   /**
+   * Pre-fetch gate for guess-pipeline candidates. Policy:
+   *  1. Hard vetoes always drop: known non-geo slug, date-shaped
+   *     (article) paths, unparseable URLs.
+   *  2. Learned-coverage gate: when the host has trustworthy learned
+   *     patterns (host-scope, accuracy ≥ 0.8), a candidate that matches
+   *     NONE of them is the wrong shape for this site — drop it before
+   *     spending a fetch. (This is what turned 512 fetched-404s into
+   *     skips: predictions try many URL shapes; a learned site has
+   *     already told us which shapes are real.)
+   *  3. Cold-start hosts (no strong learned patterns) allow everything
+   *     not hard-vetoed — priors/gazetteer are hints, not gates, and
+   *     verification does the deciding.
+   * Returns { allow, reason, classification }.
+   */
+  prefilterCandidate(url) {
+    const classification = this.classifyUrl(url);
+    const veto = classification.reasons.find((r) =>
+      r.startsWith('non-geo-slug') || r === 'date-path(article-shaped)' || r === 'no-parseable-path');
+    if (veto) {
+      return { allow: false, reason: `veto:${veto}`, classification };
+    }
+    const host = classification.host;
+    if (host) {
+      if (!this._learnedCoverage) this._learnedCoverage = new Map();
+      let hasLearned = this._learnedCoverage.get(host);
+      if (hasLearned === undefined) {
+        try {
+          hasLearned = this.store.getPatternsForHost(host, { minAccuracy: 0.8 })
+            .some((p) => (p.scope || 'host') === 'host');
+        } catch (_) { hasLearned = false; }
+        this._learnedCoverage.set(host, hasLearned);
+      }
+      if (hasLearned) {
+        const matchedHostPattern = classification.pattern && classification.pattern.scope === 'host';
+        if (!matchedHostPattern) {
+          return { allow: false, reason: 'learned-coverage:no-host-pattern-match', classification };
+        }
+      }
+    }
+    return { allow: true, reason: classification.pattern ? `pattern:${classification.pattern.type}` : 'cold-start', classification };
+  }
+
+  /**
    * Mine verified place_hubs rows for a host into persisted URL patterns.
    * Template derivation: replace the place-slug path segment with a slug
    * class; templates seen >= minCount become patterns (scope 'host',

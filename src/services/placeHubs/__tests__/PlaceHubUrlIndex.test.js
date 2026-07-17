@@ -94,6 +94,56 @@ describe('PlaceHubUrlIndex.classifyUrl', () => {
   });
 });
 
+describe('PlaceHubUrlIndex.prefilterCandidate (guess-pipeline gate)', () => {
+  let db, store, index;
+
+  beforeEach(() => {
+    db = makeDb();
+    store = createPlaceHubUrlPatternsStore(db);
+    store.seedGlobalPriors();
+    db.prepare("INSERT INTO non_geo_topic_slugs (slug) VALUES ('opinion')").run();
+    index = new PlaceHubUrlIndex({ db, store, lookup: fakeLookup({ france: FR }), logger: { warn: () => {} } });
+  });
+  afterEach(() => db.close());
+
+  it('hard-vetoes non-geo slugs and article-shaped paths', () => {
+    expect(index.prefilterCandidate('https://a.example/world/opinion').allow).toBe(false);
+    expect(index.prefilterCandidate('https://a.example/2026/07/17/story').allow).toBe(false);
+    expect(index.prefilterCandidate('not a url').allow).toBe(false);
+  });
+
+  it('cold-start hosts allow anything not hard-vetoed', () => {
+    const gate = index.prefilterCandidate('https://brand-new.example/unusual/shape/france');
+    expect(gate.allow).toBe(true);
+    expect(gate.reason).toBe('cold-start');
+  });
+
+  it('learned-coverage gate drops wrong-shape predictions on learned hosts', () => {
+    store.savePattern({
+      domain: 'learned.example', patternType: 'learned:/world/{slug}',
+      patternRegex: '\\/world\\/[a-z0-9-]+\\/?$', placeKind: 'country',
+      accuracy: 0.95, scope: 'host', provenance: 'learned-from-verified-hubs'
+    });
+    // Right shape → allowed
+    expect(index.prefilterCandidate('https://learned.example/world/france').allow).toBe(true);
+    // Wrong shape for THIS site (would 404) → dropped, no fetch
+    const wrong = index.prefilterCandidate('https://learned.example/news/france');
+    expect(wrong.allow).toBe(false);
+    expect(wrong.reason).toBe('learned-coverage:no-host-pattern-match');
+    // Matching only a GLOBAL prior does not satisfy the learned gate
+    const priorOnly = index.prefilterCandidate('https://learned.example/where/france');
+    expect(priorOnly.allow).toBe(false);
+  });
+
+  it('weak learned patterns (below 0.8) do not activate the gate', () => {
+    store.savePattern({
+      domain: 'weak.example', patternType: 't', patternRegex: '\\/world\\/[a-z-]+$',
+      accuracy: 0.6, scope: 'host'
+    });
+    expect(index.prefilterCandidate('https://weak.example/news/france').allow).toBe(true);
+  });
+});
+
 describe('PlaceHubUrlIndex.learnFromVerifiedHubs', () => {
   it('mines repeated templates into persisted host patterns', () => {
     const db = makeDb();

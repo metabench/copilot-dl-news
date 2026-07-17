@@ -366,6 +366,8 @@ class DomainProcessor {
       validationSucceeded: 0,
       validationFailed: 0,
       validationFailureReasons: {},
+      prefiltered: 0,
+      prefilterReasons: {},
       confidenceMode: 'shadow',
       minConfidence: 0.65,
       confidenceScored: 0,
@@ -1064,6 +1066,42 @@ class DomainProcessor {
       }
     }
 
+    // URL pre-filter (place candidates only — topic hubs are legitimately
+    // non-geo): the DB-resident classifier vetoes wrong-shape or non-geo
+    // URLs BEFORE any network cost. On hosts with trustworthy learned
+    // patterns this drops predictions of shapes the site does not use —
+    // the source of the 512 fetched-404s on 2026-07-14. Disable with
+    // options.urlPrefilter === false or GUESS_URL_PREFILTER=0.
+    if (options.urlPrefilter !== false && process.env.GUESS_URL_PREFILTER !== '0') {
+      const gate = this._prefilterCandidateUrl(candidateUrl, deps);
+      if (gate && gate.allow === false) {
+        summary.prefiltered = (summary.prefiltered || 0) + 1;
+        summary.prefilterReasons = summary.prefilterReasons || {};
+        summary.prefilterReasons[gate.reason] = (summary.prefilterReasons[gate.reason] || 0) + 1;
+        stores.candidates?.markStatus?.({
+          domain: normalizedDomain.host,
+          candidateUrl,
+          status: 'skipped-prefilter',
+          lastSeenAt: attemptStartedAt
+        });
+        stores.candidates?.updateValidation?.({
+          domain: normalizedDomain.host,
+          candidateUrl,
+          validationStatus: 'url-veto',
+          validationDetails: { prefilter: gate.reason, provenance: gate.classification?.provenance || null },
+          lastSeenAt: attemptStartedAt
+        });
+        recordDecision({
+          stage: 'PREFILTER',
+          status: null,
+          outcome: 'skipped',
+          level: 'info',
+          message: `Prefiltered (${gate.reason}): ${candidateUrl}`
+        });
+        return { attemptCounter: nextAttemptCounter, rateLimitTriggered: false };
+      }
+    }
+
     // Check cache
     const cacheResult = this._checkUrlCache(candidateUrl, queries, options, summary, stores, attemptStartedAt);
     if (cacheResult.cached) {
@@ -1121,6 +1159,13 @@ class DomainProcessor {
       if (result.status === 404 || result.status === 410) {
         summary.stored404 += 1;
         recordAbsentMapping(result.status, 'guess-place-hubs.fetch');
+        this._recordCrawlValidationVerdict(deps, {
+          host: normalizedDomain.host,
+          url: candidateUrl,
+          isValid: false,
+          httpStatus: result.status,
+          method: 'crawl-fetch-404'
+        });
         return { attemptCounter: nextAttemptCounter, rateLimitTriggered: false };
       }
 
@@ -1225,6 +1270,19 @@ class DomainProcessor {
       }, {
         severity: finalValidation.isValid ? SEVERITY_LEVELS.INFO : SEVERITY_LEVELS.WARN,
         message: finalValidation.isValid ? `Accepted: ${candidateUrl}` : `Rejected: ${candidateUrl}`
+      });
+
+      // Ledger the verdict (AI review API reads the same store) — both
+      // outcomes, regardless of apply: knowledge is knowledge.
+      this._recordCrawlValidationVerdict(deps, {
+        host: normalizedDomain.host,
+        url: candidateUrl,
+        isValid: Boolean(finalValidation.isValid),
+        confidence: finalValidation.confidenceScore ?? finalValidation.confidence,
+        httpStatus: result.status,
+        navLinks: finalValidation.navLinkCount,
+        articleLinks: finalValidation.articleLinkCount,
+        pageTitle
       });
 
       if (finalValidation.isValid) {
@@ -2140,6 +2198,59 @@ class DomainProcessor {
     }
 
     return normalizedPredictions;
+  }
+
+  /**
+   * Lazily build (and memoize per-db) the PlaceHubUrlIndex used by the
+   * candidate pre-filter. Gazetteer lookup is deliberately NOT loaded —
+   * the gate only needs DB patterns + vetoes, and guess runs should not
+   * pay a multi-second, few-hundred-MB gazetteer load. Never throws:
+   * a broken index disables the gate, not the guessing.
+   */
+  _prefilterCandidateUrl(candidateUrl, deps) {
+    try {
+      if (!deps?.db) return { allow: true, reason: 'no-db' };
+      if (!this._urlIndex || this._urlIndexDb !== deps.db) {
+        const { createPlaceHubUrlPatternsStore } = require('news-crawler-db');
+        const { PlaceHubUrlIndex } = require('../../services/placeHubs/PlaceHubUrlIndex');
+        this._urlIndex = new PlaceHubUrlIndex({
+          db: deps.db,
+          store: createPlaceHubUrlPatternsStore(deps.db, { ensureSchema: true }),
+          lookup: null,
+          logger: deps.logger || console
+        });
+        this._urlIndexDb = deps.db;
+      }
+      return this._urlIndex.prefilterCandidate(candidateUrl);
+    } catch (err) {
+      deps?.logger?.warn?.(`[orchestration] prefilter unavailable (${err?.message || err}); allowing candidate`);
+      return { allow: true, reason: 'prefilter-error' };
+    }
+  }
+
+  /**
+   * Crawl-time verification writes the hub_validations ledger (the same
+   * store the AI review API reads/writes), so every GET-verified verdict
+   * carries validated_at/expires_at (2y TTL) without operator action.
+   * Best-effort: ledger failures never affect the guess run.
+   */
+  _recordCrawlValidationVerdict(deps, { host, url, isValid, confidence, httpStatus, navLinks, articleLinks, pageTitle, method = 'crawl-content' }) {
+    try {
+      if (!deps?.db) return;
+      const { recordHubValidation } = require('news-crawler-db');
+      recordHubValidation(deps.db, {
+        domain: host,
+        hubUrl: url,
+        hubType: 'place',
+        validationStatus: isValid ? 'valid' : 'invalid',
+        classificationConfidence: Number.isFinite(confidence) ? confidence : null,
+        lastFetchStatus: Number.isFinite(httpStatus) ? httpStatus : null,
+        contentIndicators: { navLinks: navLinks ?? null, articleLinks: articleLinks ?? null, pageTitle: pageTitle || null },
+        validationMethod: method
+      });
+    } catch (err) {
+      deps?.logger?.warn?.(`[orchestration] hub_validations write failed for ${url}: ${err?.message || err}`);
+    }
   }
 
   _checkUrlCache(candidateUrl, queries, options, summary, stores, attemptStartedAt) {

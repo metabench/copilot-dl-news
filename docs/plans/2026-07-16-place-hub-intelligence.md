@@ -154,6 +154,29 @@ and lands in place_hub_audit. First live session: 8 API calls settled 95
 queue rows, confirmed the Andorra hub, and retired a junk
 reuters↦Andorra mapping — zero code edits.
 
+## Part 4.5 — Slice 2: the loop closed (2026-07-17)
+
+- DomainProcessor pre-filter (place candidates only; kill-switch
+  GUESS_URL_PREFILTER=0): PlaceHubUrlIndex.prefilterCandidate vetoes
+  non-geo/article-shaped URLs and, on hosts with trustworthy learned
+  patterns (accuracy ≥ 0.8), drops predictions whose shape the site
+  does not use — before any network cost.
+- CountryHubGapAnalyzer Strategy 0.5: predictions generated FROM the
+  DB-learned templates (patternType carries `learned:/where/{slug}`),
+  so classification patterns double as prediction generators.
+- Crawl-time verification writes hub_validations automatically
+  (method 'crawl-content' / 'crawl-fetch-404', 2y TTL) — the same
+  ledger the AI review API reads.
+
+Live (aljazeera.com, limit 8, dry-run): first run pre-filtered 24/24
+generic-shape candidates (zero fetches — those were yesterday's
+404-storm shapes) and exposed that no /where/ URLs were proposed;
+after Strategy 0.5, 36 /where/ candidates proposed → 28 HEAD, 5 GET →
+4 NEW hubs content-verified (new-caledonia, western-sahara, kosovo ×2)
++ 1 invalid (404) — all ledgered. The unattended loop is: learn →
+predict from learned shapes → prefilter → verify → ledger → AI reviews
+the leftovers via the API.
+
 ## Part 5 — Legacy GOFAI verdict
 
 Located: `src/intelligence/planner/` — PlannerHost + plugins

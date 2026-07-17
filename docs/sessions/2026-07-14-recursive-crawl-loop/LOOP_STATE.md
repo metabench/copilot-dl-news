@@ -27,10 +27,10 @@
 
 ## Now (pick the top item, keep it small)
 
-1. Place-hub slice 2 (see docs/plans/2026-07-16-place-hub-intelligence.md):
-   wire PlaceHubUrlIndex into DomainProcessor as candidate pre-filter
-   (kill the 512-fetched-404 waste) + make HubValidator write
-   hub_validations everywhere; then site-as-hub place search.
+1. Place-hub slice 3: site-as-hub place search (domain_locales join);
+   revalidation scheduler working listHubsNeedingRevalidation; run the
+   learn→guess loop across guardian (needs puppeteer-aware fetchFn in
+   guess pipeline — direct fetch ECONNRESETs) and the remaining hosts.
 2. LeMonde/Reuters access: both anti-bot-blocked (LeMonde = HTTP 402 on
    every fetch; Reuters start URL silently policy-blocked → 0-page green
    "completed"). Try puppeteer fallback for lemonde.fr (extend static list
@@ -59,6 +59,14 @@
 
 ## Findings / decisions log (newest first, one line each)
 
+- 2026-07-17 (2): SLICE 2 CLOSED THE LOOP — DomainProcessor prefilter
+  (place path only; GUESS_URL_PREFILTER=0 kill-switch) + Strategy 0.5
+  (predict FROM learned templates) + auto hub_validations at crawl
+  verification. Live aljazeera run: 24/24 wrong-shape candidates
+  skipped pre-network, then 36 /where/ proposed → 4 NEW hubs verified
+  (new-caledonia, western-sahara, kosovo ×2) + 1 404 ledgered. 12/12
+  jest. Unattended loop: learn → predict → prefilter → verify → ledger
+  → AI reviews leftovers via API.
 - 2026-07-17: AI-OPERABLE REVIEW API live at /api/v1/place-hubs/*
   (review-queue, classify/search probes, overrides, heuristics/patterns,
   learn + assess-structure; agent+reason mandatory, all writes audited).

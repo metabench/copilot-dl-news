@@ -63,6 +63,36 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
 
   }
 
+  /**
+   * Templates from the DB-canonical pattern surface
+   * (place_hub_url_patterns, scope 'host'). learnFromVerifiedHubs stores
+   * patternType as `learned:/where/{slug}` — the template rides along, so
+   * classification patterns double as prediction generators. Without
+   * this, the guess pipeline proposed only generic shapes and the
+   * prefilter (correctly) dropped them all on learned hosts: 24/24
+   * candidates skipped, zero /where/ URLs proposed (aljazeera,
+   * 2026-07-17).
+   */
+  getLearnedTemplates(domain) {
+    if (!this._learnedTemplatesCache) this._learnedTemplatesCache = new Map();
+    if (this._learnedTemplatesCache.has(domain)) {
+      return this._learnedTemplatesCache.get(domain);
+    }
+    let templates = [];
+    try {
+      const { createPlaceHubUrlPatternsStore } = require('news-crawler-db');
+      const store = createPlaceHubUrlPatternsStore(this.db, { ensureSchema: false });
+      templates = store.getPatternsForHost(domain, { minAccuracy: 0.7 })
+        .filter((p) => (p.scope || 'host') === 'host' && typeof p.pattern_type === 'string' && p.pattern_type.startsWith('learned:'))
+        .map((p) => ({ template: p.pattern_type.slice('learned:'.length), accuracy: p.accuracy, placeKind: p.place_kind }))
+        .filter((t) => t.template.includes('{slug}'));
+    } catch (err) {
+      this.logger?.warn?.(`[CountryHubGapAnalyzer] learned templates unavailable for ${domain}: ${err?.message || err}`);
+    }
+    this._learnedTemplatesCache.set(domain, templates);
+    return templates;
+  }
+
   getInferredPatterns(domain) {
     if (!this._inferredPatternsCache) this._inferredPatternsCache = new Map();
     if (this._inferredPatternsCache.has(domain)) {
@@ -408,6 +438,32 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
               confidence: weight,
               strategy: 'data-inferred',
               pattern: pattern,
+              entity,
+              domain
+            });
+          }
+        }
+      }
+    }
+
+    // STRATEGY 0.5: DB-learned templates (place_hub_url_patterns) — the
+    // shapes this site has VERIFIED hubs for. Highest useful confidence:
+    // these survive the DomainProcessor prefilter's learned-coverage gate
+    // by construction.
+    const learnedTemplates = this.getLearnedTemplates(domain);
+    if (learnedTemplates.length > 0) {
+      const seenUrls = new Set(predictions.map((p) => p.url));
+      const slugsToTry = metadata?.allSlugs?.length > 0 ? metadata.allSlugs : [{ slug: slugify(countryName) }];
+      for (const { template, accuracy } of learnedTemplates) {
+        for (const { slug } of slugsToTry) {
+          const url = `https://${domain}${template.replace('{slug}', slug)}`;
+          if (!seenUrls.has(url)) {
+            seenUrls.add(url);
+            predictions.push({
+              url,
+              confidence: Math.min(0.9, accuracy),
+              strategy: 'db-learned-pattern',
+              pattern: template,
               entity,
               domain
             });
