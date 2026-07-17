@@ -84,17 +84,32 @@ Recipe step (2) DONE 2026-07-17: verdict reached and acted on.
   tests/api/v1/routes/articles.test.js updated for the implemented
   /similar route (501 without engine, was Phase-8 placeholder 200).
 
-Removal recipe (remaining): (3) delete src/deprecated-ui + its test
-dir. Blockers to clear first — importers that still reach into the tree:
-- src/core/crawler/__tests__/IntelligentCrawlerManager.dynamic-replanning
-  .test.js + phase-123-integration.test.js (IntelligentCrawlerManager)
-- tools/benchmarks/run.js (gazetteerCountry, ssr.gazetteer.country)
-- tools/manual-tests/{test-gazetteer-aware-planning,test-geography-crawl,
-  verify-queues-impl}.js
-- tests/server-connection.test.js (deprecated-ui/express/server)
-- tests/deprecated-ui/** (jest-ignored already; deleted with the tree)
-- tools/dev-bridge/checks/smoke-analysis-imports.js re-requires the
-  analysisRuns shim intentionally — update it when the tree goes.
+Removal recipe (remaining): (3) delete src/deprecated-ui + its test dir.
+
+Step-3 blockers CLEARED 2026-07-17 (importers that reached into the tree
+are now repointed/retired and green):
+- IntelligentCrawlerManager.js RELOCATED src/deprecated-ui/express/services
+  → src/core/crawler/ (beside its only live testers). Its lone relative
+  require (../../../shared/utils/domainUtils) was recalibrated to ../../ for
+  the shallower depth — the naive git mv left it dangling and it only
+  surfaced once the module ran under a NON-ignored dir. Both core tests
+  (dynamic-replanning, phase-123-integration) repointed to
+  ../IntelligentCrawlerManager: 27/27 + 9/9 green.
+- git rm'd (dead consumers, no live importer): tools/benchmarks/run.js (+
+  its now-dead `benchmarks` package.json script), tools/manual-tests/
+  {test-gazetteer-aware-planning,test-geography-crawl,verify-queues-impl}.js,
+  tests/server-connection.test.js (imported deprecated-ui/express/server).
+- deprecated-ui/express/server.js + the deprecated-ui ICM tests still name
+  the old module path, but the whole /src/deprecated-ui/ subtree is
+  jest-ignored (package.json testPathIgnorePatterns) and dies in step (3).
+
+Remaining for (3): delete src/deprecated-ui + tests/deprecated-ui, and
+update tools/dev-bridge/checks/smoke-analysis-imports.js (re-requires the
+analysisRuns shim intentionally — repoint/retire when the tree goes).
+NOTE, pre-existing + unrelated to this chunk: src/core/crawler/__tests__
+placeHubs.data (no such column: url), ProblemResolutionService (prepare
+call-count), utils.safeCall (missing module) fail on their own — leave for
+a later core-crawler test-drift pass.
 
 ## Recommended remaining phases (owner to sequence)
 

@@ -98,7 +98,6 @@
     "cleanup:gazetteer": "node src/tools/gazetteer-cleanup.js",
     "export:gazetteer": "node src/tools/export-gazetteer.js",
     "validate:gazetteer": "node src/tools/validate-gazetteer.js",
-    "benchmarks": "node tools/benchmarks/run.js",
     "schema:sync": "node tools/schema/schema-sync.js",
     "schema:check": "node tools/schema/schema-sync.js --check",
     "schema:stats": "node tools/schema/schema-sync.js --stats --verbose",

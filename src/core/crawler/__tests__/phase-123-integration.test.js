@@ -8,7 +8,7 @@ const os = require('os');
 const fs = require('fs');
 
 const { HierarchicalPlanner } = require('../HierarchicalPlanner');
-const { IntelligentCrawlerManager } = require('../../../deprecated-ui/express/services/IntelligentCrawlerManager');
+const { IntelligentCrawlerManager } = require('../IntelligentCrawlerManager');
 
 describe('Phase 1-3 Integration Tests', () => {
   let tempDir;

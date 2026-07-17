@@ -4,7 +4,7 @@ const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
  * Tests for _shouldReplan, _calculateAvgPerformance, _triggerReplan, _mergePlans
  */
 
-const { IntelligentCrawlerManager } = require('../../../deprecated-ui/express/services/IntelligentCrawlerManager');
+const { IntelligentCrawlerManager } = require('../IntelligentCrawlerManager');
 describe('IntelligentCrawlerManager - Dynamic Re-Planning (Phase 3)', () => {
   let db;
   let manager;
