@@ -25,7 +25,7 @@ Tracked JS/TS file counts (excludes node_modules/dist):
 |--------|----------------|------------------|----------------------------------|
 | DB access | news-crawler-db (517) | Yes | **Yes — src/data/db (199 files); unifiedApp imports BOTH in one file** |
 | Analysis | news-db-pure-analysis (54) | Yes (9 files) | Partial — src/intelligence/analysis parallels |
-| UI framework | jsgui3-html/client/server | Yes | src/ui (515) + deprecated-ui (319) still large |
+| UI framework | jsgui3-html/client/server | Yes | src/ui (515) large; deprecated-ui (319) REMOVED 2026-07-17 |
 | Crawler engine | news-crawler-itself | **No — repo missing, nothing imports it** | src/core (380) is the real engine |
 
 ## Cleared this pass (dead weight, low-risk)
@@ -43,7 +43,7 @@ Tracked JS/TS file counts (excludes node_modules/dist):
   (the auto-learn feature is itself dead — wrong config path — and
   superseded by domain_fetch_policies).
 
-## NOT removable yet — deprecated-ui (319 files)
+## deprecated-ui — REMOVED 2026-07-17 (recipe steps 1–3 complete)
 
 Recipe step (1) DONE 2026-07-17: `analysisRuns` now lives in
 news-crawler-db (listAnalysisRuns + getAnalysisRun + diagnostics added
@@ -103,9 +103,17 @@ are now repointed/retired and green):
   the old module path, but the whole /src/deprecated-ui/ subtree is
   jest-ignored (package.json testPathIgnorePatterns) and dies in step (3).
 
-Remaining for (3): delete src/deprecated-ui + tests/deprecated-ui, and
-update tools/dev-bridge/checks/smoke-analysis-imports.js (re-requires the
-analysisRuns shim intentionally — repoint/retire when the tree goes).
+Step 3 DONE 2026-07-17: src/deprecated-ui + tests/deprecated-ui git rm -r'd
+(368 files). Pre-audit found the only require()s of the tree were INSIDE it
+(both jest-ignored); no live/mounted importer remained (src/api/server.js,
+its last non-test src importer, went in step 2). smoke-analysis-imports.js
+had its shim require dropped first (the ncdb surface check is now the
+canonical guard). Verified post-delete: smoke PASS, tests/server/api/
+analysis.test.js 13/13. Loose ends (harmless no-ops, tidy in a later sweep):
+test-config.json still defines a `deprecated-ui` run-tests profile + several
+/deprecated-ui/ ignore entries; jest.careful.config + the main jest
+testPathIgnorePatterns still list the now-absent paths;
+backgroundTasksMonitor/main.js comments name a `ui:deprecated` server.
 NOTE, pre-existing + unrelated to this chunk: src/core/crawler/__tests__
 placeHubs.data (no such column: url), ProblemResolutionService (prepare
 call-count), utils.safeCall (missing module) fail on their own — leave for
@@ -117,7 +125,7 @@ a later core-crawler test-drift pass.
    (199 files) into news-crawler-db; repoint imports; delete internal
    copies. Highest payoff, needs careful verification (live app imports
    both today).
-2. **deprecated-ui removal** — per the recipe above (~319 files).
+2. **deprecated-ui removal** — DONE 2026-07-17 (steps 1–3; ~368 files gone).
 3. **Crawler-engine decision** — is news-crawler-itself the intended
    future engine (restore + migrate src/core to it) or abandoned (already
    removed the dep; keep src/core as the engine and, longer term, extract

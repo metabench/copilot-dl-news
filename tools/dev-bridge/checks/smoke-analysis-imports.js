@@ -12,9 +12,9 @@ for (const fn of ['ensureAnalysisRunSchema', 'createAnalysisRun', 'updateAnalysi
 }
 console.log('ncdb surface: ok (6 fns)');
 
-const shim = require(path.join(ROOT, 'src/deprecated-ui/express/services/analysisRuns.js'));
-assert.strictEqual(shim.listAnalysisRuns, ncdb.listAnalysisRuns, 'shim must re-export ncdb');
-console.log('deprecated-ui shim: ok (re-exports ncdb)');
+// (The deprecated-ui/express/services/analysisRuns.js re-export shim was
+// retired together with the whole src/deprecated-ui tree in step 3 — the ncdb
+// surface check above is now the canonical guard for the analysisRuns move.)
 
 const pe = require(path.join(ROOT, 'src/shared/propertyEditor.js'));
 assert.strictEqual(typeof pe.validateValues, 'function');
