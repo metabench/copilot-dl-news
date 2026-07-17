@@ -368,16 +368,59 @@ function registerPlaceHubReviewRoutes(app, {
     }
   });
 
+  // ── Bot-protection model (domain_fetch_policies) ───────────────────────
+  app.get(`${basePath}/fetch-policies`, (req, res) => {
+    try {
+      const rows = ncdb.listDomainFetchPolicies(db, {
+        strategy: req.query.strategy || null,
+        limit: Number(req.query.limit) || 200
+      });
+      res.json({ status: 'ok', count: rows.length, policies: rows });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  app.post(`${basePath}/fetch-policies`, (req, res) => {
+    try {
+      const who = requireAgent(req, res);
+      if (!who) return;
+      const { host, protectionKind, fetchStrategy } = req.body || {};
+      if (!host || !fetchStrategy) {
+        return res.status(400).json({ status: 'error', message: 'host and fetchStrategy required' });
+      }
+      const result = ncdb.upsertDomainFetchPolicy(db, {
+        host,
+        protectionKind: protectionKind || 'unknown',
+        fetchStrategy,
+        evidence: req.body.evidence || null,
+        notes: req.body.notes || null,
+        provenance: `ai-review:${who.agent}`,
+        confidence: Number.isFinite(req.body.confidence) ? req.body.confidence : null,
+        recheckAfter: req.body.recheckAfter || null
+      });
+      audit({
+        domain: canonicalHost(host), url: null, decision: 'ai:fetch-policy-upsert',
+        payload: { protectionKind, fetchStrategy, agent: who.agent, reason: who.reason }
+      });
+      res.json({ status: 'ok', changes: result.changes, policy: ncdb.getDomainFetchPolicy(db, host) });
+    } catch (error) {
+      res.status(error.message?.includes('invalid fetch_strategy') ? 400 : 500)
+        .json({ status: 'error', message: error.message });
+    }
+  });
+
   // ── Place-keyed search ─────────────────────────────────────────────────
   app.get(`${basePath}/search`, (req, res) => {
     try {
       const requireFresh = req.query.fresh === '1' || req.query.fresh === 'true';
+      const includeSites = !(req.query.sites === '0' || req.query.sites === 'false');
       const limit = Math.max(1, Math.min(500, Number(req.query.limit) || 100));
       let rows;
       if (req.query.placeId) {
-        rows = ncdb.findHubsForPlace(db, Number(req.query.placeId), { requireFresh, limit });
+        rows = ncdb.findHubsForPlace(db, Number(req.query.placeId), { requireFresh, limit, includeSites });
       } else if (req.query.place) {
-        rows = ncdb.findHubsForPlaceSlug(db, String(req.query.place), { requireFresh, limit });
+        rows = ncdb.findHubsForPlaceSlug(db, String(req.query.place), { requireFresh, limit, includeSites });
       } else {
         return res.status(400).json({ status: 'error', message: 'place or placeId query param required' });
       }

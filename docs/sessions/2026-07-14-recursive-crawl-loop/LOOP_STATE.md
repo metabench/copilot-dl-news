@@ -59,6 +59,18 @@
 
 ## Findings / decisions log (newest first, one line each)
 
+- 2026-07-17 (3): BOT PROTECTIONS MODELLED IN DB + SLICE 3 —
+  domain_fetch_policies table (protection_kind / fetch_strategy /
+  evidence / provenance / recheck_after) replaces scattered knowledge
+  (hard-coded TLS list, wrong-path JSON, loop notes); seeded 5 hosts;
+  review API GET/POST /fetch-policies; guess pipeline fetch is now
+  policy-aware (puppeteer for TLS hosts, evidence auto-merged on
+  ECONNRESET/402/403/429; GUESS_POLICY_FETCH=0 kill-switch). LIVE:
+  guardian guess run — impossible before — verified 3 new hubs (kosovo,
+  reunion, western-sahara) via puppeteer GETs; prefilter dropped
+  /preference/edition/* junk. Site-as-hub search live: country queries
+  return national outlets from domain_locales (sites=0 to disable).
+  ncdb 16/16 vitest.
 - 2026-07-17 (2): SLICE 2 CLOSED THE LOOP — DomainProcessor prefilter
   (place path only; GUESS_URL_PREFILTER=0 kill-switch) + Strategy 0.5
   (predict FROM learned templates) + auto hub_validations at crawl

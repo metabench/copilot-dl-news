@@ -68,12 +68,24 @@ async function guessPlaceHubs(options = {}, legacyDeps = {}) {
   };
   
   const validator = new HubValidator(db);
-  const fetchFn = typeof legacyDeps.fetchFn === 'function'
+  const baseFetchFn = typeof legacyDeps.fetchFn === 'function'
     ? legacyDeps.fetchFn
     : async (...fetchArgs) => {
         const { default: fetch } = await import('node-fetch');
         return fetch(...fetchArgs);
       };
+  // Bot-protection aware: consult domain_fetch_policies (news.db) so
+  // TLS-fingerprinting hosts (e.g. theguardian.com) fetch via Puppeteer
+  // instead of ECONNRESETting. Kill-switch: GUESS_POLICY_FETCH=0.
+  let fetchFn = baseFetchFn;
+  if (process.env.GUESS_POLICY_FETCH !== '0') {
+    try {
+      const { createPolicyAwareFetchFn } = require('../services/placeHubs/policyAwareFetch');
+      fetchFn = createPolicyAwareFetchFn({ db, baseFetchFn, logger });
+    } catch (err) {
+      logger?.warn?.(`[guess-place-hubs] policy-aware fetch unavailable (${err?.message || err}); using direct fetch`);
+    }
+  }
   const now = legacyDeps.now || (() => new Date());
   
   const deps = {

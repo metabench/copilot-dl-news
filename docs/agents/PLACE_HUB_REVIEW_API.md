@@ -44,6 +44,23 @@ normal move. Code changes are the escalation path, not the default.
    - `POST /actions/assess-structure` `{host, apply?}` — drift check;
      when drifted, resets host patterns and records a determination.
 
+## Bot protections (domain_fetch_policies)
+
+The DB models what each host does to bots and the strategy that works:
+`GET /fetch-policies` lists rows (host, protection_kind, fetch_strategy
+'direct'|'puppeteer'|'remote-worker'|'skip', evidence JSON, provenance,
+recheck_after); `POST /fetch-policies` upserts one (agent+reason
+required). The guess pipeline's fetch consults this table (puppeteer for
+TLS-fingerprinting hosts like theguardian.com; kill-switch
+GUESS_POLICY_FETCH=0), and blocked outcomes (ECONNRESET/402/403/429)
+are merged back into `evidence` automatically. When a host starts
+failing, check its policy's evidence first; change strategy through the
+API, not code. Respect `recheck_after` — protections change, so stale
+"blocked" verdicts deserve a re-probe. Known at seed time: guardian/
+bloomberg/wsj = tls-fingerprint→puppeteer (verified for guardian);
+lemonde.fr = http-402→puppeteer (TRIAL); reuters.com = bot-block→
+puppeteer (guess; consider remote-worker).
+
 ## Decision guidance
 
 - **A slug that is a real place** (gazetteer resolves it, classify says
