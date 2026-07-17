@@ -59,6 +59,7 @@
 
 ## Findings / decisions log (newest first, one line each)
 
+- 2026-07-17 (4): COORDINATION-POINT: deprecated-ui recipe step 1 done — analysisRuns relocated INTO news-crawler-db (listAnalysisRuns/getAnalysisRun/diagnostics added + vitest; ncdb was already 5/7 identical — deprecated-ui copy was a stale fork), propertyEditor → src/shared/; 5 importers repointed (incl. upgrade-analysis-schema.js, missed by the plan's survey), deprecated-ui service now a shim; 13+22+5 jest + smoke green; remaining blocker = src/api/server.js↔analyticsHub/qualityDashboard liveness (recipe step 2).
 - 2026-07-17 (3): BOT PROTECTIONS MODELLED IN DB + SLICE 3 —
   domain_fetch_policies table (protection_kind / fetch_strategy /
   evidence / provenance / recheck_after) replaces scattered knowledge

@@ -40,8 +40,8 @@ function main() {
     
     console.log(`\nBefore: ${beforeColumns.length} columns`);
     
-    // Import the service to run the schema upgrade
-    const { ensureAnalysisRunSchema } = require('../src/deprecated-ui/express/services/analysisRuns');
+    // Import the DB layer to run the schema upgrade
+    const { ensureAnalysisRunSchema } = require('news-crawler-db');
     
     ensureAnalysisRunSchema(db);
     

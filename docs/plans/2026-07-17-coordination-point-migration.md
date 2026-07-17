@@ -45,27 +45,32 @@ Tracked JS/TS file counts (excludes node_modules/dist):
 
 ## NOT removable yet — deprecated-ui (319 files)
 
-Still wired into live-ish code, so it needs a dedicated unwiring pass,
-not a blind delete. Exact couplings:
+Recipe step (1) DONE 2026-07-17: `analysisRuns` now lives in
+news-crawler-db (listAnalysisRuns + getAnalysisRun + diagnostics added
+there — it is pure DB access, so it went to the DB repo, not a copilot
+halfway house; vitest legacyAnalysisRunsListGet.test.ts covers them).
+`propertyEditor` moved to `src/shared/propertyEditor.js`. All live
+importers repointed (routes/analysis.js, tools/analysis-run.js,
+tools/analysis/upgrade-analysis-schema.js — a 4th importer the original
+survey missed — taskDefinitions.js, tests/server/api/analysis.test.js).
+`deprecated-ui/express/services/analysisRuns.js` is now a re-export shim
+for the internal deprecated-ui consumers and dies with the tree.
+Verified: ncdb 3/3 vitest; copilot 13+22+5 jest + require-smoke
+(checks/smoke-analysis-imports.js).
+
+Remaining couplings:
 - `src/api/server.js` deeply imports it (writableDb, JobRegistry,
   RealtimeBroadcaster, events router). server.js isn't launched by any
   script, but is referenced by `src/ui/server/analyticsHub/index.js` and
   `qualityDashboard/index.js` — confirm those are live before removing.
-- `src/api/routes/analysis.js` + `src/tools/analysis-run.js` (the latter
-  is the live `analysis:run` script) use
-  `deprecated-ui/express/services/analysisRuns` — relocate that service.
-- `src/background/tasks/taskDefinitions.js` uses
-  `deprecated-ui/shared/propertyEditor` ({FieldType, validateValues}) —
-  relocate that small util.
 - `src/ui/electron/backgroundTasksMonitor/main.js` only MENTIONS
   deprecated-ui in comments (probes its old ports) — no code dependency.
 
-Removal recipe: (1) relocate `analysisRuns` and `propertyEditor` to a
-live home (e.g. src/services), repoint the 3 importers; (2) determine
-whether src/api/server.js + analyticsHub + qualityDashboard are retired
-(superseded by unifiedApp) — if so remove them with deprecated-ui, else
-migrate their deprecated-ui imports; (3) delete src/deprecated-ui and its
-test dir; jest already ignores it via testPathIgnorePatterns.
+Removal recipe (remaining): (2) determine whether src/api/server.js +
+analyticsHub + qualityDashboard are retired (superseded by unifiedApp) —
+if so remove them with deprecated-ui, else migrate their deprecated-ui
+imports; (3) delete src/deprecated-ui and its test dir; jest already
+ignores it via testPathIgnorePatterns.
 
 ## Recommended remaining phases (owner to sequence)
 

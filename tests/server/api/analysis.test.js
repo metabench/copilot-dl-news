@@ -4,7 +4,7 @@ const express = require('express');
 const request = require('supertest');
 const { createAnalysisRouter } = require('../../../src/api/routes/analysis');
 
-jest.mock('../../../src/deprecated-ui/express/services/analysisRuns', () => ({
+jest.mock('news-crawler-db', () => ({
   ensureAnalysisRunSchema: jest.fn(),
   listAnalysisRuns: jest.fn(),
   getAnalysisRun: jest.fn()
@@ -19,7 +19,7 @@ const {
   ensureAnalysisRunSchema,
   listAnalysisRuns,
   getAnalysisRun
-} = require('../../../src/deprecated-ui/express/services/analysisRuns');
+} = require('news-crawler-db');
 const {
   countArticlesNeedingAnalysis,
   getAnalysisStatusCounts

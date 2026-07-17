@@ -5,7 +5,7 @@ const {
   ensureAnalysisRunSchema,
   listAnalysisRuns,
   getAnalysisRun
-} = require('../../deprecated-ui/express/services/analysisRuns');
+} = require('news-crawler-db');
 const {
   countArticlesNeedingAnalysis,
   getAnalysisStatusCounts
