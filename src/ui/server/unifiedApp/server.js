@@ -45,6 +45,7 @@ const { createAnalyticsHubRouter } = require('../analyticsHub/server');
 const { createDocsViewerRouter } = require('../docsViewer/server');
 const { createDesignStudioRouter } = require('../designStudio/server');
 const { createPlaceHubGuessingRouter } = require('../placeHubGuessing/server');
+const { createPlaceHubsTableRouter } = require('../placeHubsTable/server');
 const { createTopicHubGuessingRouter } = require('../topicHubGuessing/server');
 const { createTopicListsRouter } = require('../topicLists/server');
 const { createCrawlObserverRouter } = require('../crawlObserver/server');
@@ -1456,6 +1457,13 @@ load(); setInterval(load, 60000);
       id: 'place-hubs',
       mountPath: '/place-hubs',
       full: () => createPlaceHubGuessingRouter({
+        getDbRW
+      })
+    },
+    {
+      id: 'place-hubs-table',
+      mountPath: '/place-hubs-table',
+      full: () => createPlaceHubsTableRouter({
         getDbRW
       })
     },

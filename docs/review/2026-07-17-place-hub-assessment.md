@@ -36,6 +36,16 @@ code audit. App was running throughout; no writes made.
    in the registry links the browsable table. Fix: mount/iframe the
    dataExplorer place-hubs view (or port renderPlaceHubsView) into the
    unified shell.
+   → **FIXED same day (chunk A1)**: new composition-only sub-app
+   `src/ui/server/placeHubsTable/server.js` (all queries from ncdb;
+   no src/data/db imports) mounted at `/place-hubs-table` + registry
+   tile "Place Hubs" 📍; links to the matrix and review queue; JSON
+   twin at `/place-hubs-table/api/list`. Verified live: HTTP 200 page +
+   API (search=andorra → 2 hubs), ui-screenshot shows the table in the
+   shell. Screenshot also caught fresh data-quality examples: quebec
+   place_kind='country'; one hub row with no URL (null url_id join).
+   Remaining nicety: a link FROM the matrix page back to the table
+   (matrix HTML lives in jsgui controls; left for a later chunk).
 2. **No village granularity.** Gazetteer kinds today: city 7,325,
    region 6,113, country 249, planet 1. Hub kinds: country 416, city 7,
    region 3, subcontinent 2. "Filter by village" cannot work until

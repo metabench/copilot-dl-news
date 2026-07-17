@@ -712,6 +712,17 @@ function createSubAppRegistry(options = {}) {
     },
 
     {
+      id: 'place-hubs-table',
+      label: 'Place Hubs',
+      icon: '📍',
+      category: 'analytics',
+      description: 'Browse place hub URLs — filter by host and kind, search by place',
+      renderContent: async () => {
+        return renderIframeApp('/place-hubs-table', 'Place Hubs');
+      }
+    },
+
+    {
       id: 'topic-hub-guessing',
       label: 'Topic Hub Guessing',
       icon: '🏷️',
