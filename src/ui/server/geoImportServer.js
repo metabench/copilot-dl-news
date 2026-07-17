@@ -66,9 +66,11 @@ function openDatabase(dbPath, options = {}) {
 
 function getDefaultDbPath(standalone = false) {
   if (standalone) {
+    // Deliberate isolation sandbox — created on demand, not tracked data.
     return path.join(PROJECT_ROOT, 'data', 'gazetteer-standalone.db');
   }
-  return path.join(PROJECT_ROOT, 'data', 'gazetteer.db');
+  // Live gazetteer lives in news.db (data/gazetteer.db retired 2026-07-16).
+  return path.join(PROJECT_ROOT, 'data', 'news.db');
 }
 
 /**

@@ -25,15 +25,18 @@ const { getPlaceLookup } = require('../../../intelligence/knowledge');
 class ContainsPlaceName extends UrlFact {
   /**
    * @param {Object} [options]
-   * @param {string} [options.gazetteerPath='data/gazetteer.db'] - Path to gazetteer
+   * @param {string} [options.gazetteerPath] - Path to gazetteer DB.
+   *   Defaults via resolveGazetteerDbPath() (data/news.db — the live
+   *   gazetteer; data/gazetteer.db is retired).
    */
   constructor(options = {}) {
     super({
       name: "url.containsPlaceName",
       description: "URL path contains a recognized geographic place name"
     });
-    
-    this._gazetteerPath = options.gazetteerPath || "data/gazetteer.db";
+
+    const { resolveGazetteerDbPath } = require('../../../shared/utils/gazetteer-db-path');
+    this._gazetteerPath = resolveGazetteerDbPath(options.gazetteerPath);
     this._lookup = null;
   }
   

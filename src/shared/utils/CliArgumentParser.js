@@ -6,7 +6,7 @@
  * 
  * @example
  * const parser = new CliArgumentParser('validate-gazetteer', 'Validate gazetteer data');
- * parser.add('--db <path>', 'Database path', 'data/gazetteer.db');
+ * parser.add('--db <path>', 'Database path', 'data/news.db');
  * parser.add('--details', 'Print detailed output', false, 'boolean');
  * parser.add('--fix', 'Apply fixes', false, 'boolean');
  * 

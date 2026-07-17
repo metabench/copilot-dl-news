@@ -27,7 +27,7 @@ function parseArgs(argv) {
   );
 
   parser
-    .add('--db <path>', 'Path to gazetteer database', 'data/gazetteer.db')
+    .add('--db <path>', 'Path to gazetteer database', 'data/news.db')
     .add('--details', 'Print detailed issue lists', false, 'boolean')
     .add('--json', 'Output as JSON instead of formatted text', false, 'boolean');
 

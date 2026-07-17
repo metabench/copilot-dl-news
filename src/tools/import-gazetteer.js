@@ -43,7 +43,7 @@ function getArg(name, fallback) {
 (async () => {
   const log = (...args) => { try { console.error(...args); } catch (_) {} };
   const projectRoot = findProjectRoot(__dirname);
-  const dbPath = getArg('db', path.join(projectRoot, 'data', 'gazetteer.db'));
+  const dbPath = getArg('db', path.join(projectRoot, 'data', 'news.db'));
   const ndjsonPath = getArg('ndjson', path.join(projectRoot, 'data', 'gazetteer.ndjson'));
   const verbose = String(getArg('verbose', '1')) === '1';
 

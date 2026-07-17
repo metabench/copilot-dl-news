@@ -22,7 +22,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Database Setup
-const dbPath = path.join(process.cwd(), 'data', 'gazetteer.db');
+const { resolveGazetteerDbPath } = require('../../shared/utils/gazetteer-db-path');
+const dbPath = resolveGazetteerDbPath();
 let db;
 try {
   db = ensureDb(dbPath, { fileMustExist: true });

@@ -225,7 +225,7 @@ function main() {
 
   // Test getPlaceNameVariants (requires gazetteer.db)
   let placeNameVariants = [];
-  const gazetteerPath = path.join(process.cwd(), 'data', 'gazetteer.db');
+  const gazetteerPath = path.join(process.cwd(), 'data', 'news.db');
   const fs = require('fs');
   if (fs.existsSync(gazetteerPath)) {
     const gazDb = openNewsCrawlerDb(gazetteerPath, { readonly: true });

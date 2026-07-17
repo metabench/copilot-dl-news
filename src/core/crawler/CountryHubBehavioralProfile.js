@@ -282,7 +282,8 @@ class CountryHubBehavioralProfile {
       const { getAllCountries } = require('../../data/db/sqlite/v1/queries/gazetteer.places');
       // Use openDatabase to avoid full schema initialization
       const { openDatabase } = require('../../data/db/sqlite/v1/connection');
-      const gazetteerDb = openDatabase('./data/gazetteer.db', { readonly: true, fileMustExist: true });
+      const { resolveGazetteerDbPath } = require('../../shared/utils/gazetteer-db-path');
+      const gazetteerDb = openDatabase(resolveGazetteerDbPath(), { readonly: true, fileMustExist: true });
       const countries = getAllCountries(gazetteerDb);
       gazetteerDb.close();
       return countries.length;

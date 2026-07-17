@@ -3,6 +3,28 @@
 Date: 2026-07-16. Companion to the recursive crawl loop
 (docs/sessions/2026-07-14-recursive-crawl-loop/LOOP_STATE.md).
 
+## PROGRESS (2026-07-16, same day)
+
+- **Stale DBs retired**: gazetteer.db, gazetteer-standalone.db,
+  crawl-multi.db, crawl-data.sqlite (+ wal/shm) moved to
+  `data/backups/stale-dbs-2026-07-16/` after a containment probe showed
+  only 3/10,596 names unique to the old gazetteer (historical variants,
+  preserved in the archive). crawl-multi.db and crawl-data.sqlite had
+  zero code references.
+- **Single geo resolver**: `src/shared/utils/gazetteer-db-path.js`
+  (explicit arg > GAZETTEER_DB_PATH > data/news.db). All ~12 former
+  `data/gazetteer.db` defaults now resolve through it or default to
+  news.db directly. PlaceLookup was silently loading the stale copy
+  (508 places) — it now loads news.db (13,688 places / 275k names,
+  verified live). Its SQL is schema-tolerant (old place_type column vs
+  news.db's kind).
+- **Per-site geo now in DB**: `src/tools/sync-site-geo.js` (idempotent,
+  verified twice) merged country/language/tier from
+  config/news-sources.json into `news_websites.metadata` (8 rows) and
+  upserted `domain_locales` (3 → 15 rows, bare-host canonical form per
+  migration 41; legacy www.-prefixed rows normalized).
+- Bootstrap JSONs remain as install media only, per direction.
+
 ## Part 1 — Audit: what site/geo data lives OUTSIDE news.db today
 
 The goal is that adding a news website (including its geographic

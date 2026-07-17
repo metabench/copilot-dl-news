@@ -2127,7 +2127,8 @@ async function createPlaceHubGuessingRouter(options = {}) {
         // Get place name variants from gazetteer database
         let placeNameVariants = [];
         try {
-          const gazetteerPath = path.join(process.cwd(), 'data', 'gazetteer.db');
+          const { resolveGazetteerDbPath } = require('../../../shared/utils/gazetteer-db-path');
+          const gazetteerPath = resolveGazetteerDbPath();
           if (fs.existsSync(gazetteerPath)) {
             const gazDb = openNewsCrawlerDb(gazetteerPath, { readonly: true, fileMustExist: true });
             placeNameVariants = getPlaceNameVariants(gazDb, result.place?.place_id);

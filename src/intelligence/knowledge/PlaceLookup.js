@@ -13,7 +13,7 @@
  * Memory footprint is minimal (~1-2 MB for current gazetteer).
  * 
  * Usage:
- *   const lookup = await PlaceLookup.load('data/gazetteer.db');
+ *   const lookup = await PlaceLookup.load('data/news.db');
  *   const places = lookup.find('london');
  *   // => [{ placeId: 21, kind: 'city', countryCode: 'GB', population: 8799728, ... }]
  */
@@ -80,18 +80,23 @@ class PlaceLookup {
     const db = openNewsCrawlerDb(dbPath, { readonly: true, fileMustExist: true });
     
     try {
+      // Schema tolerance: the retired standalone gazetteer.db had a
+      // place_type column; the live gazetteer in news.db uses `kind`
+      // only. Select place_type when present, otherwise alias kind.
+      const placeCols = db.prepare('PRAGMA table_info(places)').all().map((c) => c.name);
+      const placeTypeExpr = placeCols.includes('place_type') ? 'p.place_type' : 'p.kind AS place_type';
       // Load all places first
       const places = db.prepare(`
-        SELECT 
+        SELECT
           p.id,
           p.kind,
-          p.place_type,
+          ${placeTypeExpr},
           p.country_code,
           p.population,
           p.wikidata_qid,
           pn_canonical.name as canonical_name
         FROM places p
-        LEFT JOIN place_names pn_canonical 
+        LEFT JOIN place_names pn_canonical
           ON pn_canonical.id = p.canonical_name_id
       `).all();
       
@@ -267,13 +272,16 @@ let _loadPromise = null;
 
 /**
  * Get or create the singleton PlaceLookup instance
- * 
- * @param {string} [dbPath='data/gazetteer.db'] - Path to gazetteer database
+ *
+ * @param {string} [dbPath] - Path to gazetteer database. Defaults via
+ *   resolveGazetteerDbPath() (GAZETTEER_DB_PATH env or data/news.db —
+ *   the live gazetteer lives in news.db; data/gazetteer.db is retired).
  * @returns {PlaceLookup}
  */
-function getPlaceLookup(dbPath = "data/gazetteer.db") {
+function getPlaceLookup(dbPath) {
   if (!_instance) {
-    _instance = PlaceLookup.load(dbPath);
+    const { resolveGazetteerDbPath } = require('../../shared/utils/gazetteer-db-path');
+    _instance = PlaceLookup.load(resolveGazetteerDbPath(dbPath));
   }
   return _instance;
 }

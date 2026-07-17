@@ -55,6 +55,14 @@
 
 ## Findings / decisions log (newest first, one line each)
 
+- 2026-07-16 (pm): DB-CONSOLIDATION — stale sibling DBs archived to
+  data/backups/stale-dbs-2026-07-16/ (containment-checked); new
+  gazetteer-db-path resolver points everything at news.db (PlaceLookup
+  had been loading the stale 508-place copy — now 13,688 places);
+  sync-site-geo.js moved country/language/tier from
+  config/news-sources.json into news_websites.metadata + domain_locales
+  (15 rows, bare-host form). See docs/plans/2026-07-16-news-sites-100…md
+  PROGRESS section.
 - 2026-07-16: LeMonde error storm ROOT-CAUSED + FIXED. Cause: lemonde.fr
   402s every fetch → host retry budget locks → but the lock lived only in
   FetchPipeline, so QueueManager kept dequeuing → 5,140 synthetic

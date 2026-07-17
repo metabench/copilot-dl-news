@@ -3,7 +3,7 @@ const path = require('path');
 const { openNewsCrawlerDb, resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 // Native fetch is available in Node 18+.
 
-const DB_PATH = path.join(__dirname, '../../data/gazetteer.db');
+const DB_PATH = path.join(__dirname, '../../data/news.db');
 const CANDIDATES_PATH = path.join(__dirname, '../../data/knowledge/historical_names_candidates.json');
 
 function getHistoricalNamesApi() {

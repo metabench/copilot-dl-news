@@ -170,7 +170,7 @@ function defaultConfig() {
     apply: false,
     maxExportBytes: 512 * 1024 * 1024,
 
-    keepDbPaths: ["data/news.db", "data/gazetteer.db"],
+    keepDbPaths: ["data/news.db"],
     keepDbSidecars: true,
 
     exportDirs: ["migration-export"],

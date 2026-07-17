@@ -28,7 +28,7 @@ function parseArgs(argv) {
   );
 
   parser
-    .add('--db <path>', 'Path to gazetteer database', 'data/gazetteer.db')
+    .add('--db <path>', 'Path to gazetteer database', 'data/news.db')
     .add('--out <path>', 'Destination NDJSON file', 'data/gazetteer.ndjson')
     .add('--format <mode>', 'Summary format: ascii | json', 'ascii')
     .add('--quiet', 'Suppress summary output (errors still shown)', false, 'boolean');

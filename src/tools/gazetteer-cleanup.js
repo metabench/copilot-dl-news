@@ -22,7 +22,7 @@ const { normalizeName } = require('../data/db/sqlite/v1/queries/gazetteer.utils'
 const { CliFormatter, COLORS, ICONS } = require('../shared/utils/CliFormatter');
 
 // Default paths
-const DEFAULT_DB_PATH = path.join(__dirname, '../../data/gazetteer.db');
+const DEFAULT_DB_PATH = path.join(__dirname, '../../data/news.db');
 
 // Initialize formatter
 const fmt = new CliFormatter({ useEmojis: true });

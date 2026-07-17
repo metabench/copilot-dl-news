@@ -31,7 +31,7 @@ function parseCliArgs(argv) {
     .add('--repo <dir>', 'Repo root directory (defaults to current repo)', '')
     .add('--apply', 'Actually delete files (default: dry-run)', false, 'boolean')
     .add('--max-export-mb <n>', 'Maximum exported data to keep (MB)', 512, 'number')
-    .add('--keep-db <path...>', 'DB file(s) to always keep (relative to repo root). Repeatable.', ['data/news.db', 'data/gazetteer.db'])
+    .add('--keep-db <path...>', 'DB file(s) to always keep (relative to repo root). Repeatable.', ['data/news.db'])
     .add('--no-keep-db-sidecars', 'Do not keep -wal/-shm sidecars for kept DBs', false, 'boolean')
     .add('--export-dir <path...>', 'Export directory roots to enforce the export budget on', ['migration-export'])
     .add('--delete-dir <path...>', 'Directory roots whose files should be deleted entirely', [

@@ -633,7 +633,7 @@ class GeoImportDashboard extends Control {
       // Placeholder
       const placeholder = el(ctx, 'div', null, 'db-placeholder');
       placeholder.add(el(ctx, 'p', '🗄️ Database selector will appear here'));
-      placeholder.add(el(ctx, 'p', 'Current path: data/gazetteer.db', 'db-path'));
+      placeholder.add(el(ctx, 'p', 'Current path: data/news.db', 'db-path'));
       container.add(placeholder);
     }
     
