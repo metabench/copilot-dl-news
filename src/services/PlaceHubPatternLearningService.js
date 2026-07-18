@@ -17,7 +17,7 @@
 
 const { URL } = require('url');
 const { createPlaceHubUrlPatternsStore } = require('../data/db/placeHubUrlPatternsStore');
-const { getDb } = require('../data/db');
+const { getDb } = require('../db');
 const { createSqliteHubGapAnalysisAccess } = require('news-crawler-db');
 
 // Common place hub URL indicators

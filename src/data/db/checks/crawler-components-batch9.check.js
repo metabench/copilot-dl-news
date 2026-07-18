@@ -1,7 +1,7 @@
 const { UrlPatternLearningService } = require('../../../services/UrlPatternLearningService');
 const { RegionHubGapAnalyzer } = require('../../../services/RegionHubGapAnalyzer');
 const { CityHubGapAnalyzer } = require('../../../services/CityHubGapAnalyzer');
-const { getDb } = require('../../../data/db');
+const { getDb } = require('../../../db');
 
 async function check() {
     console.log('Checking Batch 9 components...');

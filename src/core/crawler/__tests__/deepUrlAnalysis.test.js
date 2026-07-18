@@ -2,7 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { DeepUrlAnalyzer } = require('../deepUrlAnalysis');
-const NewsDatabase = require('../../../data/db');
+const NewsDatabase = require('../../../db');
 
 describe('DeepUrlAnalyzer', () => {
   jest.setTimeout(15000);

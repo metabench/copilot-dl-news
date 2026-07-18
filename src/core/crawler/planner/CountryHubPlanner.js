@@ -1,6 +1,6 @@
 'use strict';
 
-const { getDb } = require('../../../data/db');
+const { getDb } = require('../../../db');
 const { getLatestHttpStatusForUrl } = require('news-crawler-db');
 
 const DEFAULT_COUNTRY_NAMES = [

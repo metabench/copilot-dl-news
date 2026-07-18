@@ -1,7 +1,7 @@
 'use strict';
 
 const { TemporalPatternLearner: DbTemporalPatternLearner } = require('news-crawler-db');
-const { getDb } = require('../../data/db');
+const { getDb } = require('../../db');
 
 class TemporalPatternLearner extends DbTemporalPatternLearner {
   constructor(options = {}) {

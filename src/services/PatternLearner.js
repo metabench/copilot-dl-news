@@ -1,4 +1,4 @@
-const { getDb } = require('../data/db');
+const { getDb } = require('../db');
 const { slugify } = require('../tools/slugify');
 
 function resolvePatternLearningQueries(db) {

@@ -1,7 +1,7 @@
 'use strict';
 
 const { PredictiveHubDiscovery: DbPredictiveHubDiscovery } = require('news-crawler-db');
-const { getDb } = require('../../data/db');
+const { getDb } = require('../../db');
 
 class PredictiveHubDiscovery extends DbPredictiveHubDiscovery {
   constructor(options = {}) {

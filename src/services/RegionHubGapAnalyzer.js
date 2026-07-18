@@ -1,7 +1,7 @@
 'use strict';
 
 const path = require('path');
-const { getDb } = require('../data/db');
+const { getDb } = require('../db');
 const { getTopRegions, getPlacesByCountryAndKind } = require('news-crawler-db');
 const { slugify } = require('../tools/slugify');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');

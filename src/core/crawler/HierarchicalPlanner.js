@@ -9,7 +9,7 @@
  * - Maintain multiple plan hypotheses, prune low-probability branches
  */
 
-const { getDb } = require('../../data/db');
+const { getDb } = require('../../db');
 const {
   listHighValuePlanningPatternRows,
   getArticleDomainProfile,

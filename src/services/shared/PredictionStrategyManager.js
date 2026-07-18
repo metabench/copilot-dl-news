@@ -7,7 +7,7 @@
  * Provides standardized prediction strategies that can be configured for different entity types.
  */
 
-const { getDb } = require('../../data/db');
+const { getDb } = require('../../db');
 const { listCrawlDataUrlsMatchingPattern } = require('news-crawler-db');
 
 class PredictionStrategyManager {

@@ -7,7 +7,7 @@ const { tof, each, is_array } = require('lang-tools');
 const { compact } = require('../../../../shared/utils/pipelines');
 const { AttributeBuilder } = require('../../../../shared/utils/attributeBuilder');
 const ingestQueries = require('news-crawler-db');
-const { getDb } = require('../../../../data/db');
+const { getDb } = require('../../../../db');
 const {
   DEFAULT_LABEL_LANGUAGES,
   buildCountryDiscoveryQuery

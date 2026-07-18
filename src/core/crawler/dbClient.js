@@ -2,7 +2,7 @@ const fs = require('fs').promises;
 const { recordPlaceHubSeed } = require('./data/placeHubs');
 const NewsWebsiteService = require('../../services/NewsWebsiteService');
 const { safeCall } = require('./utils');
-const { getDb } = require('../../data/db');
+const { getDb } = require('../../db');
 const { updateUrlStatus: updateUrlStatusInDb } = require('news-crawler-db');
 
 let NewsDatabase = null;
@@ -12,7 +12,7 @@ function loadNewsDatabase() {
     // Lazy require so environments without better-sqlite3 can still run
     // other parts of the crawler.
     // eslint-disable-next-line global-require
-    NewsDatabase = require('../../data/db');
+    NewsDatabase = require('../../db');
   }
   return NewsDatabase;
 }

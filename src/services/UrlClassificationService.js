@@ -1,7 +1,7 @@
 'use strict';
 
 const { UrlClassificationService: DbUrlClassificationService } = require('news-crawler-db');
-const { getDb } = require('../data/db');
+const { getDb } = require('../db');
 
 class UrlClassificationService extends DbUrlClassificationService {
   constructor(options = {}) {

@@ -443,7 +443,7 @@ function createProgressReporter({ label = 'Page analysis progress', logger = log
 
 function ensureDatabasePrepared(dbPath, { verbose = false } = {}) {
   if (!NewsDatabase) {
-    NewsDatabase = require('../data/db');
+    NewsDatabase = require('../db');
   }
   const db = new NewsDatabase(dbPath);
   try {
@@ -603,7 +603,7 @@ async function runAnalysis(rawOptions = {}) {
   if (!effectiveAnalysisVersion) {
     try {
       if (!NewsDatabase) {
-        NewsDatabase = require('../data/db');
+        NewsDatabase = require('../db');
       }
       const tempDb = new NewsDatabase(dbPath);
       try {
@@ -893,7 +893,7 @@ async function runAnalysis(rawOptions = {}) {
       let totalToAnalyze = 0;
       try {
         if (!NewsDatabase) {
-          NewsDatabase = require('../data/db');
+          NewsDatabase = require('../db');
         }
         const tempDb = new NewsDatabase(dbPath);
         try {
@@ -1111,7 +1111,7 @@ async function runAnalysis(rawOptions = {}) {
     logInfo('Awarding milestones', { runId, dryRun });
   emitProgress({ stage: 'awarding-milestones', status: 'running', summary: 'Awarding milestones…' });
 
-    try { NewsDatabase = require('../data/db'); } catch (e) {
+    try { NewsDatabase = require('../db'); } catch (e) {
       console.error('Database unavailable:', e.message);
       tracker.event('failed', 'Database unavailable', { error: e.message });
       throw e;

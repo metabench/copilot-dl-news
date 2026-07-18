@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const { once } = require('events');
-const NewsDatabase = require('../data/db');
+const NewsDatabase = require('../db');
 
 function makeTempDb(filePath) {
   const db = new NewsDatabase(filePath);

@@ -1,7 +1,7 @@
 'use strict';
 
 const { BudgetAllocator: DbBudgetAllocator } = require('news-crawler-db');
-const { getDb } = require('../../data/db');
+const { getDb } = require('../../db');
 
 class BudgetAllocator extends DbBudgetAllocator {
   constructor(options = {}) {

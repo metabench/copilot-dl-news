@@ -2,7 +2,7 @@
 
 const { tof, is_array } = require('lang-tools');
 const progressQueries = require('news-crawler-db');
-const { getDb } = require('../../../data/db');
+const { getDb } = require('../../../db');
 const { databaseTableExists } = require('news-crawler-db');
 
 const DEFAULT_STAGE_DEFS = Object.freeze([

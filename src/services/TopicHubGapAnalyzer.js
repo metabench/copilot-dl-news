@@ -1,6 +1,6 @@
 'use strict';
 
-const { getDb } = require('../data/db');
+const { getDb } = require('../db');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 const { slugify } = require('../tools/slugify');
 const { listTopicKeywordRows } = require('news-crawler-db');

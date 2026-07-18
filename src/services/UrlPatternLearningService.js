@@ -1,7 +1,7 @@
 'use strict';
 
 const { UrlPatternLearningService: DbUrlPatternLearningService } = require('news-crawler-db');
-const { getDb } = require('../data/db');
+const { getDb } = require('../db');
 
 class UrlPatternLearningService extends DbUrlPatternLearningService {
   constructor(options = {}) {

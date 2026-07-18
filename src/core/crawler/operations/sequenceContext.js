@@ -12,7 +12,7 @@
  */
 
 const { CrawlPlaybookService } = require('../CrawlPlaybookService');
-const { getDb } = require('../../../data/db');
+const { getDb } = require('../../../db');
 const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 
 class SequenceContextAdapter {

@@ -1,4 +1,4 @@
-const NewsDatabaseFacade = require('../../../data/db');
+const NewsDatabaseFacade = require('../../../db');
 const path = require('path');
 const { checkDatabaseHealth } = require('news-crawler-db');
 
@@ -45,7 +45,7 @@ try {
 // We want to just do: const { getDb } = require('../src/db'); const db = getDb();
 console.log('\n[New Way] Attempting to use getDb() (should fail or be undefined currently)...');
 try {
-    const { getDb } = require('../../../data/db');
+    const { getDb } = require('../../../db');
     if (typeof getDb !== 'function') {
         console.log('[New Way] getDb is not defined yet (Expected).');
     } else {

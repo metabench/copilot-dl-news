@@ -49,7 +49,7 @@ async function analysePages({
   }
 
   if (!NewsDatabase) {
-    NewsDatabase = require('../data/db');
+    NewsDatabase = require('../db');
   }
 
   const db = new NewsDatabase(dbPath);

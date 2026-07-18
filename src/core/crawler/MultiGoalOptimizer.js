@@ -9,7 +9,7 @@
  * - Learn which goal combinations work best per domain type
  */
 
-const { getDb } = require('../../data/db');
+const { getDb } = require('../../db');
 const {
   listRecentGoalOptimizations,
   insertGoalOptimization

@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const NewsDatabase = require('../../../data/db');
+const NewsDatabase = require('../../../db');
 const { recordPlaceHubSeed, resolveHandle } = require('../data/placeHubs');
 
 describe('placeHubs data helper', () => {

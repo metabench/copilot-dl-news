@@ -50,7 +50,7 @@ function main() {
 
   let NewsDatabase;
   try {
-    NewsDatabase = require('../data/db');
+    NewsDatabase = require('../db');
   } catch (e) {
     fmt.error('Database unavailable: ' + e.message);
     process.exit(1);

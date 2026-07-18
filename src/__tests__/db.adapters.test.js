@@ -9,11 +9,11 @@ describe('database adapter registry', () => {
       const dbPath = path.join(tmpRoot, 'news.db');
       
       // Manually register the sqlite adapter since isolateModules prevents auto-registration
-      const { registerAdapter } = require('../data/db');
+      const { registerAdapter } = require('../db');
       registerAdapter("sqlite", (options) => {
         const { createSQLiteDatabase } = require("../db/ensureNewsDb");
         return createSQLiteDatabase(options);
-      });      const NewsDatabase = require('../data/db');
+      });      const NewsDatabase = require('../db');
 
       let db;
       try {
@@ -38,7 +38,7 @@ describe('database adapter registry', () => {
         createDatabase,
         registerAdapter,
         getRegisteredAdapters
-      } = require('../data/db');
+      } = require('../db');
 
       const factory = jest.fn(() => ({ name: 'mock-adapter' }));
       registerAdapter('mock', factory);
