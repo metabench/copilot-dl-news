@@ -1,5 +1,5 @@
 const { GazetteerPriorityScheduler } = require('../../../core/crawler/gazetteer/GazetteerPriorityScheduler');
-const { getDb } = require('../index');
+const { getDb } = require('../../../db');
 const { checkDatabaseHealth } = require('news-crawler-db');
 
 async function run() {

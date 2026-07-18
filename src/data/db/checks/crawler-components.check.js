@@ -1,7 +1,7 @@
 const { HierarchicalPlanner } = require('../../../core/crawler/HierarchicalPlanner');
 const { MultiGoalOptimizer } = require('../../../core/crawler/MultiGoalOptimizer');
 const { PredictiveHubDiscovery } = require('../../../core/crawler/PredictiveHubDiscovery');
-const { getDb } = require('../index');
+const { getDb } = require('../../../db');
 const { checkDatabaseHealth } = require('news-crawler-db');
 
 async function run() {
