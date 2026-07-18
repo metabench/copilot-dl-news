@@ -250,7 +250,13 @@ const FNS = [
   // B10c: v1 connection core absorbed into ncdb (10a9d56); the spy seam
   // and its schema/metadata/seeder deps died with it. src/db/ensureNewsDb
   // is the copilot wrapper; openDatabase consumers alias the ncdb name.
-  'openSqliteNewsDatabase', 'ensureSqliteNewsDatabase', 'dedupePlaceSources'
+  'openSqliteNewsDatabase', 'ensureSqliteNewsDatabase', 'dedupePlaceSources',
+  // B11: queryTelemetry facade + queries/analysisQueries retired — both
+  // were pure delegations; _getWriterForDb newly surfaced on the index
+  // (ncdb 8b4203f) fixing the two-suite drift.
+  'recordQuery', 'getQueryStats', 'getRecentQueries', '_getWriterForDb',
+  'countArticlesNeedingAnalysis', 'getAnalysisStatusCounts',
+  'getArticlesNeedingAnalysis'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);

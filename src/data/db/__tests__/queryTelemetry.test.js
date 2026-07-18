@@ -1,6 +1,6 @@
 'use strict';
 const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
-const { recordQuery, getQueryStats, getRecentQueries, _getWriterForDb } = require('../queryTelemetry');
+const { recordQuery, getQueryStats, getRecentQueries, _getWriterForDb } = require('news-crawler-db');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');

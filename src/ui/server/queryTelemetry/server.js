@@ -12,7 +12,7 @@ const express = require('express');
 const path = require('path');
 const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 const jsgui = require('jsgui3-html');
-const { getQueryStats, getRecentQueries } = require('../../../data/db/queryTelemetry');
+const { getQueryStats, getRecentQueries } = require('news-crawler-db');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 
 const PORT = process.env.PORT || 3020;

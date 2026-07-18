@@ -7,10 +7,8 @@ const { createAnalysisRouter } = require('../../../src/api/routes/analysis');
 jest.mock('news-crawler-db', () => ({
   ensureAnalysisRunSchema: jest.fn(),
   listAnalysisRuns: jest.fn(),
-  getAnalysisRun: jest.fn()
-}));
-
-jest.mock('../../../src/data/db/queries/analysisQueries', () => ({
+  getAnalysisRun: jest.fn(),
+  // B11: the analysisQueries facade lives on ncdb now
   countArticlesNeedingAnalysis: jest.fn(),
   getAnalysisStatusCounts: jest.fn()
 }));
@@ -18,12 +16,10 @@ jest.mock('../../../src/data/db/queries/analysisQueries', () => ({
 const {
   ensureAnalysisRunSchema,
   listAnalysisRuns,
-  getAnalysisRun
-} = require('news-crawler-db');
-const {
+  getAnalysisRun,
   countArticlesNeedingAnalysis,
   getAnalysisStatusCounts
-} = require('../../../src/data/db/queries/analysisQueries');
+} = require('news-crawler-db');
 
 function createApp(overrides = {}) {
   const getDbRW = overrides.getDbRW ?? (() => overrides.db ?? { name: 'db' });

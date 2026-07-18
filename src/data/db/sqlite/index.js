@@ -14,7 +14,7 @@ const {
   createSQLiteDatabase,
   ensureGazetteer
 } = require('../../../db/ensureNewsDb');
-const { wrapWithTelemetry, createInstrumentedDb } = require('../queryTelemetry');
+const { wrapWithTelemetry, createInstrumentedDb } = require('news-crawler-db');
 
 module.exports = {
   ensureDb,

@@ -156,6 +156,19 @@ a later core-crawler test-drift pass.
      reworked — identity form impossible post-deletion), LIVE
      download-verification.check 9/9 on :memory:, node --check 10/10.
      src/data/db: 197 files remain.
+   - Slice 11a DONE 2026-07-18: queries/ dir GONE; four ledger failures
+     cleared at their roots. latest_fetch was a PHANTOM: five ncdb modules
+     query it, no schema path nor the live DB ever created it (fallbacks
+     masked it) — canonical view added (ncdb 3727b55) + applied live
+     (52,631 rows). _getWriterForDb surfaced on ncdb's index (8b4203f).
+     analysisQueries absorbed as ncdb legacy-analysisQueriesFacade
+     (vitest 5/5); queryTelemetry.js was pure delegation — both retired,
+     9 consumers repointed. QueryCostEstimatorPlugin.test's ghost
+     '../../../plugins/' requires fixed. src/data/db: 71 -> 69 js files.
+     REMAINING: dbAccess.js (~10 consumers), index.js barrel (getDb,
+     10+ core-crawler consumers incl. dbClient), newsCrawlerDbCompat
+     (barrel-internal), TaskEventWriter, EnhancedDatabaseAdapter,
+     migration/, checks/, v1/{migrations,tools,__tests__}, sqlite barrels.
    - Slice 10c DONE 2026-07-18: THE V1 CORE IS GONE. ncdb legacy-connection
      (10a9d56) absorbed connection.js's orchestration (open/ensure with the
      fingerprint fast path; bootstrapData passed parsed — no fs discovery

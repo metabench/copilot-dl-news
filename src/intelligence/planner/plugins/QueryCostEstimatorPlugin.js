@@ -1,6 +1,6 @@
 'use strict';
 
-const { getQueryStats } = require('../../../data/db/queryTelemetry');
+const { getQueryStats } = require('news-crawler-db');
 
 /**
  * QueryCostEstimatorPlugin: GOFAI plugin that analyzes query telemetry

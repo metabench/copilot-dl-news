@@ -1,10 +1,10 @@
 'use strict';
 const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 const { PlannerHost } = require('../PlannerHost');
-const { GraphReasonerPlugin } = require('../../../plugins/GraphReasonerPlugin');
-const { QueryCostEstimatorPlugin } = require('../../../plugins/QueryCostEstimatorPlugin');
+const { GraphReasonerPlugin } = require('../plugins/GraphReasonerPlugin');
+const { QueryCostEstimatorPlugin } = require('../plugins/QueryCostEstimatorPlugin');
 const { ensureDb } = require('../../../data/db/sqlite/ensureDb');
-const { recordQuery, _getWriterForDb } = require('../../../data/db/queryTelemetry');
+const { recordQuery, _getWriterForDb } = require('news-crawler-db');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');

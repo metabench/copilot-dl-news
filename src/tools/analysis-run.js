@@ -20,7 +20,7 @@ const {
 } = require('news-crawler-db');
 const { awardMilestones } = require('./milestones');
 const { analysePages } = require('./analyse-pages-core');
-const { countArticlesNeedingAnalysis } = require('../data/db/queries/analysisQueries');
+const { countArticlesNeedingAnalysis } = require('news-crawler-db');
 let NewsDatabase;
 
 function createArgumentParser() {

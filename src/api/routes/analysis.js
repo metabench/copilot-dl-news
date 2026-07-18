@@ -4,12 +4,10 @@ const express = require('express');
 const {
   ensureAnalysisRunSchema,
   listAnalysisRuns,
-  getAnalysisRun
-} = require('news-crawler-db');
-const {
+  getAnalysisRun,
   countArticlesNeedingAnalysis,
   getAnalysisStatusCounts
-} = require('../../data/db/queries/analysisQueries');
+} = require('news-crawler-db');
 
 function createErrorPayload(code, message) {
   return {
