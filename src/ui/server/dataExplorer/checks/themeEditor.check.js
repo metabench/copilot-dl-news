@@ -4,7 +4,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const { openNewsDb } = require("../../../../data/db/dbAccess");
+const { openNewsDb } = require("../../../../db/dbAccess");
 const { findProjectRoot } = require('../../../../shared/utils/project-root');
 const { renderHtml, resolveDbPath } = require("../../../render-url-table");
 const { buildNavLinks } = require("../../navigation");

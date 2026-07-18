@@ -9,11 +9,11 @@ jest.mock('jsdom', () => ({
 }));
 
 const request = require("supertest");
-jest.mock("../../../src/data/db/dbAccess", () => ({
+jest.mock("../../../src/db/dbAccess", () => ({
   openNewsDb: jest.fn()
 }));
 
-const { openNewsDb } = require("../../../src/data/db/dbAccess");
+const { openNewsDb } = require("../../../src/db/dbAccess");
 const { createDataExplorerServer } = require("../../../src/ui/server/dataExplorerServer");
 
 function buildInMemoryDb() {

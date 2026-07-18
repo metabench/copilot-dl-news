@@ -8,7 +8,7 @@ const { getLoggerWriter } = require('./cliRuntime');
 const { printDownloadSummary, printStatus } = require('./reporting');
 const { CrawlOperations } = require('../../core/crawler/CrawlOperations');
 const { createMultiModalCrawl, MultiModalCrawlManager } = require('../../core/crawler/multimodal');
-const { openNewsDb } = require('../../data/db/dbAccess');
+const { openNewsDb } = require('../../db/dbAccess');
 
 // Import shared utilities (DRY)
 const { mergeOverrideObjects, extractStatsFromSteps, pickString } = require('./shared');

@@ -41,7 +41,7 @@ async function startServer({ port }) {
   process.chdir(appRoot);
 
   // Load DB access and place hub guessing router
-  const { openNewsDb } = require('../../../data/db/dbAccess');
+  const { openNewsDb } = require('../../../db/dbAccess');
   const { createPlaceHubGuessingRouter } = require('../../server/placeHubGuessing/server');
 
   // Open database with read-write handle

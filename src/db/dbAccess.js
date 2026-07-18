@@ -7,31 +7,29 @@
  * USAGE PATTERNS:
  * 
  * 1. CLI Tools / Scripts:
- *    const { withNewsDb } = require('../../data/db/dbAccess');
+ *    const { withNewsDb } = require('../db/dbAccess');
  *    withNewsDb(dbPath, (db) => {
  *      // Use db here - automatically closed when done
  *    });
  * 
  * 2. Express Routes (with getDbRW injected):
- *    const { createDbMiddleware } = require('../../data/db/dbAccess');
+ *    const { createDbMiddleware } = require('../db/dbAccess');
  *    router.use(createDbMiddleware(getDbRW));
  *    router.get('/route', (req, res) => {
  *      const db = req.db; // Already available, handles errors
  *    });
  * 
  * 3. Background Services:
- *    const { openNewsDb } = require('../../data/db/dbAccess');
+ *    const { openNewsDb } = require('../db/dbAccess');
  *    const db = openNewsDb(dbPath);
  *    // Use db...
  *    db.close(); // Remember to close!
  */
 
 const path = require('path');
-// Retired v1/SQLiteNewsDatabase shim exported ncdb's NewsDatabase with a
-// SQLiteNewsDatabase fallback — same resolution preserved here.
-const ncdbForNewsDatabase = require('news-crawler-db');
-const NewsDatabase = ncdbForNewsDatabase.NewsDatabase || ncdbForNewsDatabase.SQLiteNewsDatabase;
-const { ensureDb } = require('./sqlite/ensureDb');
+// NewsDatabase + ensureDb come from the ensureNewsDb seam (same dir) —
+// it carries the ncdb NewsDatabase||SQLiteNewsDatabase resolution.
+const { NewsDatabase, ensureDb } = require('./ensureNewsDb');
 
 /**
  * Open a NewsDatabase connection

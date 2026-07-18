@@ -30,7 +30,7 @@ const compression = require("compression");
 const { spawn } = require("child_process");
 const jsgui = require("jsgui3-html");
 
-const { openNewsDb } = require("../../data/db/dbAccess");
+const { openNewsDb } = require("../../db/dbAccess");
 const { findProjectRoot } = require("../../shared/utils/project-root");
 const { buildLuxuryObsidianCss } = require("../styles/luxuryObsidianCss");
 const { FactsUrlListControl, formatCount, formatDateTime } = require("../controls/FactsUrlList");

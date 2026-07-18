@@ -24,7 +24,7 @@ const log = createMcpLogger.uiServer('data-explorer');
 // PID file for detached mode management
 const PID_FILE = path.join(process.cwd(), "tmp", ".data-explorer.pid");
 
-const { openNewsDb } = require("../../data/db/dbAccess");
+const { openNewsDb } = require("../../db/dbAccess");
 const { findProjectRoot } = require("../../shared/utils/project-root");
 const {
   selectUrlPage,

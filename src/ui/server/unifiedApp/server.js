@@ -27,7 +27,7 @@ const { createTwoColumnLayoutControls } = require('../../controls/layouts/TwoCol
 const { UnifiedShell } = require('./views/UnifiedShell');
 const { createSubAppRegistry } = require('./subApps/registry');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
-const { openNewsDb } = require('../../../data/db/dbAccess');
+const { openNewsDb } = require('../../../db/dbAccess');
 const { createMcpLogger } = require("../../../shared/utils/mcpLogger");
 const {
   listContentAnalysisSectionCounts,

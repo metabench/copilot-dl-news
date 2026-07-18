@@ -5,7 +5,7 @@ const path = require("path");
 const net = require("net");
 const { spawnSync } = require("child_process");
 
-const { openNewsDb } = require("../../../data/db/dbAccess");
+const { openNewsDb } = require("../../../db/dbAccess");
 const { findProjectRoot } = require('../../../shared/utils/project-root');
 const { renderHtml, resolveDbPath } = require("../../render-url-table");
 const { DEFAULT_PAGE_SIZE, renderUrlListingView, DATA_VIEWS } = require("../dataExplorerServer");

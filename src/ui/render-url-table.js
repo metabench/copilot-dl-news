@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const jsgui = require("jsgui3-html");
 
-const { openNewsDb } = require("../data/db/dbAccess");
+const { openNewsDb } = require("../db/dbAccess");
 const { findProjectRoot } = require("../shared/utils/project-root");
 const { selectInitialUrls, countUrls } = require("news-crawler-db");
 const {
