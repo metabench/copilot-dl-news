@@ -156,6 +156,14 @@ a later core-crawler test-drift pass.
      reworked — identity form impossible post-deletion), LIVE
      download-verification.check 9/9 on :memory:, node --check 10/10.
      src/data/db: 197 files remain.
+   - A6 slice 3 DONE 2026-07-18 (cross-ref; A-track): town/village hub
+     guessing live end-to-end — ncdb getTopSettlementsByKind + scoped
+     kind-list extensions (07fd28b); selectPlaces + ActiveProbeProcessor
+     settlement cases; PLACE_KIND_TO_PAGE_KIND town/village entries (the
+     'country-hub' fallback would have mislabeled). Guardian active-probe
+     '/uk/{slug}': 5/5 towns verified+applied, in /place-hubs-table
+     kind filter. Remaining: learn town-scoped DSPL patterns so standard
+     mode works; bbc; mappings written only by standard mode.
    - Slice 11a DONE 2026-07-18: queries/ dir GONE; four ledger failures
      cleared at their roots. latest_fetch was a PHANTOM: five ncdb modules
      query it, no schema path nor the live DB ever created it (fallbacks

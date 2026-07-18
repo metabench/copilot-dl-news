@@ -21,7 +21,7 @@ function parseCliArgs(argv) {
     .add('--mode <mode>', 'Operation mode: "standard" (gaps) or "active-probe" (brute force)', 'standard')
     .add('--pattern <pattern>', 'Active probe URL pattern (e.g., "/world/{slug}")')
     .add('--lang <lang>', 'Target language for place names (e.g. "es", "fr")', 'en')
-    .add('--kind <kind>', 'Probe specific kind (country, region, city)', 'country')
+    .add('--kind <kind>', 'Probe specific kind (country, region, city, town, village)', 'country')
     .add('--parent <place>', 'Parent place name (e.g. "Colombia") for filtering')
     .add('--limit <number>', 'Max number of probes to run', undefined, 'int')
     .add('--apply', 'Apply changes (save discovered hubs to DB)', false, 'boolean')

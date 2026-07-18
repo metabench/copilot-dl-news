@@ -17,7 +17,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const PLACE_KIND_TO_PAGE_KIND = {
   country: 'country-hub',
   region: 'region-hub',
-  city: 'city-hub'
+  city: 'city-hub',
+  // A6 slice 3 — without these entries the || 'country-hub' fallback
+  // below would mislabel town/village hubs as country hubs.
+  town: 'town-hub',
+  village: 'village-hub'
 };
 
 function resolvePageKind(placeKind) {

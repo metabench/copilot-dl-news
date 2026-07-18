@@ -256,7 +256,9 @@ const FNS = [
   // (ncdb 8b4203f) fixing the two-suite drift.
   'recordQuery', 'getQueryStats', 'getRecentQueries', '_getWriterForDb',
   'countArticlesNeedingAnalysis', 'getAnalysisStatusCounts',
-  'getArticlesNeedingAnalysis'
+  'getArticlesNeedingAnalysis',
+  // A6 slice 3: kind-generic settlement selection for hub guessing
+  'getTopSettlementsByKind'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);

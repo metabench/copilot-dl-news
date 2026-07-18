@@ -209,6 +209,23 @@ class ActiveProbeProcessor {
         targets = targets.concat(mapped);
       }
 
+      // A6 slice 3: settlement kinds ride the city analyzer's kind-generic
+      // query (same shape as the city block).
+      for (const settlementKind of ['town', 'village']) {
+        if (!options.kinds.includes(settlementKind)) continue;
+        if (typeof analyzers.city.getTopSettlements !== 'function') break;
+        const settlements = analyzers.city.getTopSettlements(settlementKind, 300, lang);
+        const mapped = settlements.map(s => ({
+          placeId: s.id ?? s.placeId ?? s.place_id ?? null,
+          kind: settlementKind,
+          name: s.name,
+          slug: slugify(s.name),
+          importance: s.importance,
+          countryCode: s.countryCode
+        }));
+        targets = targets.concat(mapped);
+      }
+
       summary.totalCandidates = targets.length;
       logger.info(`[ActiveProbe] Generated ${targets.length} targets`);
 

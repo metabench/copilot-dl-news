@@ -2,7 +2,7 @@
 
 const path = require('path');
 const { getDb } = require('../data/db');
-const { getTopCities, getPlacesByCountryAndKind } = require('news-crawler-db');
+const { getTopCities, getTopSettlementsByKind, getPlacesByCountryAndKind } = require('news-crawler-db');
 const { slugify } = require('../tools/slugify');
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 
@@ -77,6 +77,19 @@ class CityHubGapAnalyzer extends HubGapAnalyzerBase {
    */
   getTopCities(limit = 50, lang = 'en') {
     return getTopCities(this.db, limit, lang);
+  }
+
+  /**
+   * Retrieve top settlements of a given kind (city | town | village),
+   * prioritised by population/priority score (A6 slice 3).
+   *
+   * @param {string} kind - Settlement kind: 'city', 'town' or 'village'.
+   * @param {number} [limit=50] - Maximum number of settlements to return.
+   * @param {string} [lang='en'] - Language code.
+   * @returns {Array<{id: number, name: string, countryCode: string|null, regionName: string|null, regionId: number|null, importance: number}>}
+   */
+  getTopSettlements(kind, limit = 50, lang = 'en') {
+    return getTopSettlementsByKind(this.db, kind, limit, lang);
   }
 
   /**

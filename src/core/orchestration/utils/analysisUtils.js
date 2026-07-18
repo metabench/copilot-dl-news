@@ -194,6 +194,29 @@ function selectPlaces({ countryAnalyzer, regionAnalyzer, cityAnalyzer }, request
         }));
         break;
       }
+      case 'town':
+      case 'village': {
+        // A6 slice 3: settlement kinds ride the city analyzer's
+        // kind-generic query.
+        const analyzer = cityAnalyzer;
+        if (!analyzer || typeof analyzer.getTopSettlements !== 'function') {
+          unsupported.push(kind);
+          break;
+        }
+
+        const count = remaining !== null ? Math.max(remaining, 0) : undefined;
+        const settlements = analyzer.getTopSettlements(kind, count);
+        take(settlements, (settlement) => ({
+          placeId: settlement.id ?? settlement.placeId ?? settlement.place_id ?? null,
+          kind,
+          name: settlement.name,
+          code: settlement.code || null,
+          countryCode: settlement.countryCode || null,
+          regionName: settlement.regionName || null,
+          importance: settlement.importance || 0
+        }));
+        break;
+      }
       default:
         unsupported.push(kind);
         break;
