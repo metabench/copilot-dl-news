@@ -14,7 +14,7 @@ describe('Query Telemetry', () => {
     db = openNewsCrawlerDb(':memory:');
 
     // Apply the schema, including the query_telemetry table
-    const { initializeSchema } = require('../sqlite/schema');
+    const { initializeSqliteV1Schema: initializeSchema } = require('news-crawler-db');
     initializeSchema(db);
 
     // Get the writer for the test database

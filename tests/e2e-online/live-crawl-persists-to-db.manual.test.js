@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const NewsCrawler = require('../../src/crawl');
 const { ensureDb } = require('../../src/data/db/sqlite');
-const { createTempDb } = require('../../src/data/db/sqlite/v1/test-utils');
+const { createTempDbPath: createTempDb } = require('../../src/test-utils/db-helpers');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 

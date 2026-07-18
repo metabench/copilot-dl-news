@@ -1,6 +1,6 @@
 const fs = require('fs');
 const { ensureDatabase } = require('..');
-const { createTempDb } = require('../test-utils');
+const { createTempDbPath: createTempDb } = require('../../../../../test-utils/db-helpers');
 const { createLayoutMasksQueries, createLayoutTemplatesQueries } = require('news-crawler-db');
 
 describe('layout_* tables', () => {

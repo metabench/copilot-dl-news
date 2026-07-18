@@ -1,6 +1,6 @@
 'use strict';
 const { openNewsCrawlerDb } = require('../../../../../db/openNewsCrawlerDb');
-const { initializeSchema } = require('../schema');
+const { initializeSqliteV1Schema: initializeSchema } = require('news-crawler-db');
 const { getTopCitiesPerCountry } = require('news-crawler-db');
 
 function createTestDatabase() {

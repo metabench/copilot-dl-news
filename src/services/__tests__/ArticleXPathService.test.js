@@ -2,7 +2,7 @@ const { openNewsCrawlerDb } = require('../../db/openNewsCrawlerDb');
 const { ArticleXPathService } = require('../ArticleXPathService');
 const ncdbForNewsDatabase = require('news-crawler-db');
 const SQLiteNewsDatabase = ncdbForNewsDatabase.NewsDatabase || ncdbForNewsDatabase.SQLiteNewsDatabase;
-const { initializeSchema } = require('../../data/db/sqlite/v1/schema');
+const initializeSchema = ncdbForNewsDatabase.initializeSqliteV1Schema;
 
 describe('ArticleXPathService', () => {
   let db;

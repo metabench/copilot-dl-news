@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { ensureDatabase, NewsDatabase } = require('..');
-const { createTempDb } = require('../test-utils');
+const { createTempDbPath: createTempDb } = require('../../../../../test-utils/db-helpers');
 
 describe('SQLiteNewsDatabase#getFetchesByUrl', () => {
   let dbPath;

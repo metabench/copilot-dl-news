@@ -8,7 +8,11 @@ const { ensureDb } = require("./ensureDb");
 const { openDatabase, ensureDatabase } = require("./connection");
 const { wrapWithTelemetry } = require("./instrumentation");
 const { createInstrumentedDb } = require("./instrumentedDb");
-const { initializeSchema, initGazetteerTables } = require("./schema");
+// Historical short names; ncdb sources carry the SqliteV1 infix.
+const {
+  initializeSqliteV1Schema: initializeSchema,
+  initSqliteV1GazetteerTables: initGazetteerTables
+} = require("news-crawler-db");
 const { dedupePlaceSources } = require("./tools/dedupePlaceSources");
 
 function normalizeSQLiteOptions(options = {}) {

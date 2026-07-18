@@ -242,7 +242,11 @@ const FNS = [
   'countFetchedUrlsFiltered', 'normalizeHostMode', 'parseHosts',
   // B10a: v1/SQLiteNewsDatabase shim retired — consumers resolve
   // NewsDatabase || SQLiteNewsDatabase from ncdb directly (both classes).
-  'NewsDatabase', 'SQLiteNewsDatabase'
+  'NewsDatabase', 'SQLiteNewsDatabase',
+  // B10b: sqlite/schema.js outer shim retired; v1/schema stays ONLY as
+  // connection.js's jest-spy seam. Other consumers alias the SqliteV1
+  // sources back to the historical short names.
+  'initializeSqliteV1Schema', 'initSqliteV1GazetteerTables'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);

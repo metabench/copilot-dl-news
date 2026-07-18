@@ -1,7 +1,7 @@
 const { openNewsCrawlerDb } = require('../../../../../db/openNewsCrawlerDb');
 const fs = require('fs');
 const { ensureDatabase } = require('..');
-const { createTempDb } = require('../test-utils');
+const { createTempDbPath: createTempDb } = require('../../../../../test-utils/db-helpers');
 const { CURRENT_SCHEMA_FINGERPRINT } = require('../schemaMetadata');
 function createCapturingLogger() {
   const messages = [];

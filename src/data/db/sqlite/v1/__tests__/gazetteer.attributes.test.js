@@ -1,6 +1,6 @@
 'use strict';
 const { openNewsCrawlerDb } = require('../../../../../db/openNewsCrawlerDb');
-const { initGazetteerTables } = require('../schema');
+const { initSqliteV1GazetteerTables: initGazetteerTables } = require('news-crawler-db');
 const {
   createAttributeStatements,
   recordAttribute,

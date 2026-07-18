@@ -15,7 +15,7 @@ describe('QueryCostEstimatorPlugin', () => {
 
   beforeEach(async () => {
     db = openNewsCrawlerDb(':memory:');
-    const { initializeSchema } = require('../../../data/db/sqlite/schema');
+    const { initializeSqliteV1Schema: initializeSchema } = require('news-crawler-db');
     initializeSchema(db);
 
     writer = _getWriterForDb(db);

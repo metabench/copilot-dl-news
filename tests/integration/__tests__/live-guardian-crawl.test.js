@@ -15,7 +15,7 @@
 const path = require("path");
 const fs = require("fs");
 const NewsCrawler = require("../../../src/crawl");
-const { createTempDb } = require("../../../src/data/db/sqlite/v1/test-utils");
+const { createTempDbPath: createTempDb } = require("../../../src/test-utils/db-helpers");
 const { ensureDb } = require("../../../src/data/db/sqlite");
 
 const GUARDIAN_URL = "https://www.theguardian.com/international";
