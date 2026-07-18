@@ -274,4 +274,50 @@ describe('place-hub review API', () => {
     expect(assess.body.assessment.drifted).toBe(false);
     expect(db.prepare("SELECT COUNT(*) c FROM place_hub_audit WHERE decision IN ('ai:learn-patterns','ai:assess-structure')").get().c).toBe(2);
   });
+
+  // A7: the admin_class_map review surface — the single human step of
+  // unattended admin-area ingestion. ncdb's list/seed/setAdminClassReview
+  // ensure the table on first touch, so no extra schema is needed here.
+  describe('admin-class-map review', () => {
+    const { seedAdminClassMap } = require('news-crawler-db');
+
+    beforeEach(() => {
+      seedAdminClassMap(db, [
+        { countryCode: 'FR', adminLevel: 2, wikidataClassQid: 'Q6465', placeKind: 'region', label: 'department of France', provenance: 'auto-discovered', verified: 0, subclassWalk: 0 },
+        { countryCode: 'GB', adminLevel: 2, wikidataClassQid: 'Q180673', placeKind: 'county', label: 'English ceremonial county', provenance: 'seed', verified: 1, subclassWalk: 1 },
+      ]);
+    });
+
+    it('lists all rows, and verifiedOnly filters to reviewed ones', async () => {
+      const all = await request(app).get('/api/v1/place-hubs/admin-class-map');
+      expect(all.status).toBe(200);
+      expect(all.body.count).toBe(2);
+      const fr = await request(app).get('/api/v1/place-hubs/admin-class-map?countryCode=FR&verifiedOnly=1');
+      expect(fr.body.count).toBe(0); // Q6465 is still an unverified candidate
+    });
+
+    it('verify flips the candidate, corrects kind, and audits with agent+reason', async () => {
+      const res = await request(app).post('/api/v1/place-hubs/admin-class-map/verify').send({
+        countryCode: 'FR', wikidataClassQid: 'Q6465', verified: 1, placeKind: 'county',
+        agent: 'claude-loop-test', reason: 'department of France is the true FR ADM2'
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.class).toMatchObject({ verified: 1, placeKind: 'county', provenance: 'review:claude-loop-test' });
+      const fr = await request(app).get('/api/v1/place-hubs/admin-class-map?countryCode=FR&verifiedOnly=1');
+      expect(fr.body.count).toBe(1);
+      expect(db.prepare("SELECT COUNT(*) c FROM place_hub_audit WHERE decision = 'ai:admin-class-verify'").get().c).toBe(1);
+    });
+
+    it('refuses anonymous mutations (400) and unknown keys (404)', async () => {
+      const anon = await request(app).post('/api/v1/place-hubs/admin-class-map/verify').send({
+        countryCode: 'FR', wikidataClassQid: 'Q6465', verified: 1
+      });
+      expect(anon.status).toBe(400);
+      const missing = await request(app).post('/api/v1/place-hubs/admin-class-map/verify').send({
+        countryCode: 'FR', wikidataClassQid: 'Q999999', verified: 1,
+        agent: 'claude-loop-test', reason: 'no such row'
+      });
+      expect(missing.status).toBe(404);
+    });
+  });
 });
