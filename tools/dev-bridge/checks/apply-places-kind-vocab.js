@@ -30,9 +30,9 @@ if (!APPLY) {
   const after = db.prepare(
     "SELECT name, sql FROM sqlite_master WHERE type='trigger' AND name LIKE 'trg_places_kind_check%' ORDER BY name"
   ).all();
-  const allExtended = after.length === 2 && after.every(t => t.sql.includes("'town'") && t.sql.includes("'village'"));
+  const allExtended = after.length === 2 && after.every(t => t.sql.includes("'town'") && t.sql.includes("'village'") && t.sql.includes("'county'"));
   console.log(`recreated: ${recreated.join(', ')}`);
-  console.log(allExtended ? 'APPLIED: both triggers carry town/village' : 'ERROR: post-apply verification failed');
+  console.log(allExtended ? 'APPLIED: both triggers carry town/village/county' : 'ERROR: post-apply verification failed');
   if (!allExtended) process.exitCode = 1;
 }
 db.close();

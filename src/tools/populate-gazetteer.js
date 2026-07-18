@@ -93,6 +93,7 @@ function parseCliArgs(argv) {
     .add('--adm1-limit <number>', 'Maximum ADM1 rows to fetch per country', 200, 'number')
     .add('--adm2-limit <number>', 'Maximum ADM2 rows to fetch per country', 400, 'number')
     .add('--adm2-class <qid>', 'Wikidata class QID for ADM2 discovery (e.g. Q180673 for English ceremonial counties — GB counties bypass the generic Q13220204 subclass tree)', 'Q13220204')
+    .add('--adm2-kind <kind>', "places.kind for ADM2 rows: 'region' (default) or 'county' (GB ceremonial counties — avoids the region trigger/uniqueness)", 'region')
     .add('--cleanup', 'Run duplicate cleanup after ingestion', false, 'boolean')
     .add('--cleanup-only', 'Run cleanup without ingesting new data', false, 'boolean')
     .add('--offline', 'Use cached REST Countries payload (avoid network)', offlineDefault, 'boolean')
@@ -160,6 +161,7 @@ function normalizeOptions(rawArgs) {
     adm1Limit: Number.isFinite(rawArgs.adm1Limit) ? rawArgs.adm1Limit : 200,
     adm2Limit: Number.isFinite(rawArgs.adm2Limit) ? rawArgs.adm2Limit : 400,
     adm2Class: /^Q[0-9]+$/.test(String(rawArgs.adm2Class || '')) ? rawArgs.adm2Class : 'Q13220204',
+    adm2Kind: ['region','county'].includes(String(rawArgs.adm2Kind || '').toLowerCase()) ? String(rawArgs.adm2Kind).toLowerCase() : 'region',
     offline: Boolean(rawArgs.offline),
     restRetries: Number.isFinite(rawArgs.restRetries) ? rawArgs.restRetries : 2,
     restTimeoutMs: Number.isFinite(rawArgs.restTimeoutMs) ? rawArgs.restTimeoutMs : 12000,
@@ -211,6 +213,7 @@ function normalizeOptions(rawArgs) {
     adm1Limit,
     adm2Limit,
     adm2Class,
+    adm2Kind,
     offline,
     restRetries,
     restTimeoutMs,
@@ -833,6 +836,8 @@ function normalizeOptions(rawArgs) {
       pid = populateQueries.insertPlace({
         kind,
         countryCode: countryCode || null,
+        adm1Code: opts.adm1Code || null,
+        adm2Code: opts.adm2Code || null,
         population: pop || null,
         timezone: null,
         lat: lat || null,
@@ -1081,7 +1086,7 @@ function normalizeOptions(rawArgs) {
             const lat = pt ? pt.lat : null;
             const lon = pt ? pt.lon : null;
             const namesArr = ent ? labelMap(ent) : (r.adm2Label?.value ? [{ name: r.adm2Label.value, lang: 'und', kind:'official', preferred:1, official:1 }] : []);
-            const { id: rid, created } = insPlaceWithNames('region', crow.country_code, lat, lon, null, namesArr, 'wikidata', qid, { adm2Code });
+            const { id: rid, created } = insPlaceWithNames(adm2Kind, crow.country_code, lat, lon, null, namesArr, 'wikidata', qid, { adm2Code });
             if (created) adm2Count++;
             // Parent link: prefer parent region if known; else link to country
             const parentQ = (r.parent?.value||'').split('/').pop();
