@@ -975,7 +975,7 @@ function normalizeOptions(rawArgs) {
       const seedDoc = readBootstrapJson(seedFile);
       if (seedDoc && Array.isArray(seedDoc.classes)) {
         const seeded = seedAdminClassMap(raw, seedDoc.classes);
-        telemetry.info(`[gazetteer] admin_class_map seed: created=${seeded.created} existing=${seeded.existing} failed=${seeded.failed}${seeded.failed ? ' errors: ' + seeded.errors.join('; ') : ''}`);
+        telemetry.info(`[gazetteer] admin_class_map seed: created=${seeded.created} updated=${seeded.updated || 0} existing=${seeded.existing} failed=${seeded.failed}${seeded.failed ? ' errors: ' + seeded.errors.join('; ') : ''}`);
       }
     } catch (e) {
       telemetry.warn(`[gazetteer] admin_class_map seeding failed: ${e.message}`);
@@ -1089,9 +1089,12 @@ function normalizeOptions(rawArgs) {
         }
         for (const cls of adm2Classes) {
         try {
+          // subclass_walk=0 → direct P31 only (umbrella classes over-match
+          // on the P279* tree; NI: 60 rows for 11 districts).
+          const adm2ClassPath = cls.subclassWalk === 0 ? 'wdt:P31' : 'wdt:P31/wdt:P279*';
           const sparql = `SELECT ?adm2 ?adm2Label ?parent ?parentLabel ?iso ?fips ?coord WHERE {
             ?country wdt:P297 "${crow.country_code}".
-            ?adm2 wdt:P31/wdt:P279* wd:${cls.wikidataClassQid}; wdt:P17 ?country.
+            ?adm2 ${adm2ClassPath} wd:${cls.wikidataClassQid}; wdt:P17 ?country.
             OPTIONAL { ?adm2 wdt:P131 ?parent. }
             OPTIONAL { ?adm2 wdt:P300 ?iso. }
             OPTIONAL { ?adm2 wdt:P882 ?fips. }

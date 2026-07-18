@@ -35,7 +35,8 @@
       "placeKind": "county",
       "label": "administrative territorial entity of Northern Ireland",
       "verified": 1,
-      "evidence": "12 P31 instances probed 2026-07-18 via Antrim and Newtownabbey's own P31 (11 districts expected; dedupe absorbs extras)"
+      "subclassWalk": 0,
+      "evidence": "12 P31 instances probed 2026-07-18 via Antrim and Newtownabbey's own P31. subclassWalk=0: this is an UMBRELLA class — its P279* walk over-matched 60 rows (historical counties etc.); direct P31 only."
     }
   ]
 }
