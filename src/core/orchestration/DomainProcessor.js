@@ -21,7 +21,8 @@ const PLACE_KIND_TO_PAGE_KIND = {
   // A6 slice 3 — without these entries the || 'country-hub' fallback
   // below would mislabel town/village hubs as country hubs.
   town: 'town-hub',
-  village: 'village-hub'
+  village: 'village-hub',
+  county: 'county-hub'
 };
 
 function resolvePageKind(placeKind) {

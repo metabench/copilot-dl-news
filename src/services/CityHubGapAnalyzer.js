@@ -93,6 +93,22 @@ class CityHubGapAnalyzer extends HubGapAnalyzerBase {
   }
 
   /**
+   * Get counties for a specific country (A7 — counties aren't settlements;
+   * selection is country-scoped by design).
+   * @param {string} countryCode - ISO country code
+   * @param {number} [limit=120] - Max counties
+   * @param {string} [lang='en'] - Language code.
+   * @returns {Array} List of counties (id, name, countryCode, importance)
+   */
+  getCountiesByCountry(countryCode, limit = 120, lang = 'en') {
+    const places = getPlacesByCountryAndKind(this.db, countryCode, 'county', lang);
+    return places.slice(0, limit).map(p => ({
+      ...p,
+      countryCode: p.country_code
+    }));
+  }
+
+  /**
    * Get cities for a specific country
    * @param {string} countryCode - ISO country code
    * @param {number} [limit=50] - Max cities

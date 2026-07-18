@@ -209,6 +209,25 @@ class ActiveProbeProcessor {
         targets = targets.concat(mapped);
       }
 
+      // A7: counties aren't settlements — selection is country-scoped and
+      // REQUIRES a resolved parent country (bounded by design).
+      if (options.kinds.includes('county')) {
+        if (!parentCountryCode) {
+          logger.warn('[ActiveProbe] county kind requires --parent <country> to scope selection; skipping');
+        } else if (typeof analyzers.city.getCountiesByCountry === 'function') {
+          const counties = analyzers.city.getCountiesByCountry(parentCountryCode, 300, lang);
+          const mapped = counties.map(c => ({
+            placeId: c.id ?? c.placeId ?? c.place_id ?? null,
+            kind: 'county',
+            name: c.name,
+            slug: slugify(c.name),
+            importance: c.importance,
+            countryCode: c.countryCode
+          }));
+          targets = targets.concat(mapped);
+        }
+      }
+
       // A6 slice 3: settlement kinds ride the city analyzer's kind-generic
       // query (same shape as the city block).
       for (const settlementKind of ['town', 'village']) {
