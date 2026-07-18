@@ -59,6 +59,7 @@
 
 ## Findings / decisions log (newest first, one line each)
 
+- 2026-07-18 (21): MULTI-CHUNK B8+B9+A6-SLICE-1 — B8: 46-file fleet audit (one agent per remaining v1 file) then 26 shims retired (9 dead-zero-importers incl common.js; 12 no-rename codemodded, 21 consumers; 5 renamed via consumer aliases: normalizeHost→normalizePlaceHubCandidateHost ×3, ensureTable→ensureDomainCrawlBehaviorsTable, getCompressionStats→getCompressionUsageStats, tableExists→schemaInspectionTableExists, DEFAULT_THRESHOLD_MS→DEFAULT_QUERY_TIME_BUDGET_THRESHOLD_MS; + v1/rateLimitAdapter); BONUS 6 tools broken at HEAD by ghost ../src/ requires (tools/src doesn't exist) repaired: find-compression-settings, upgrade-analysis-schema, db-schema, vacuum-db, unified-hub-discovery, multi-language-places.check. B9: urlListingNormalized "real logic" was STALE MEMORY — zero SQL, pure db-first facade → absorbed into ncdb legacy-ui-urlListingNormalized (cb4038e, vitest 6/6, 15 historical names incl. standalone normalizeHostMode/parseHosts), 11 consumers repointed; articleViewer (composition: decompress+extract over ncdb reads) relocated to src/ui/server/services/ w/ recalibrated relatives; queues perf test moved to tests/db/sqlite/ui; **sqlite/v1/queries/ tree GONE**, src/data/db 123→95. Smoke 259 fns+12 consts; jest 27 green across 7 suites. A6 SLICE 1 LIVE: places.kind is NOT free text — trg_places_kind_check_ins/upd TRIGGERS enforce the vocab (towns jest test caught the ABORT; scoping note was wrong); ncdb 02c5f96 extends canonical triggers (+town+village) + ensurePlacesKindTriggers (vitest 3/3); live DB upgraded via checks/apply-places-kind-vocab.js (app stopped); WikidataCitiesIngestor + buildCitiesDiscoveryQuery kind/classQids-parameterized (jest 6/6); CLI --import-towns/--towns-per-country/--town-min-population; LIVE populate GB+FR → 18 towns (GB 13: Leicester/Stockport/Nottingham…, FR 5), dedupe-by-QID left city rows untouched; app restarted httpOk. NEW BUGS FOUND+FIXED IN PASSING: restcountries.com now 301s and client doesn't follow (CLI crashed pre-towns; Array.isArray guard added, redirect fix still TODO); fetchSparql facade calls were unawaited + urlless ("cache hit" every run then URL-is-required throw) → fixed both call sites. STILL BROKEN (small-batch): wikidataGet batches ids into Special:EntityData (single-id endpoint) → 404, label-fallback saved ingestion — should use wbgetentities like the ingestor's _fetchEntityBatch; towns invisible to dsplAnalysis + several ncdb queries with kind IN ('country','region','city') filters; GB Q3957 SPARQL needs ~90s timeout (20s default aborts). V1-ROOT AUDIT MAP (endgame input): dead=ArticleOperations/SchemaInitializer/StatementManager/UtilityFunctions/newsSourcesSeeder/access/schema-definitions; index.js ext:17, test-utils ext:5(tests), connection ext:3, ensureDb ext:3, v1/schema renames ext:2; SQLiteNewsDatabase ext:2 tests.
 - 2026-07-17 (20): MULTI-CHUNK B7+A6-scope — OLD LAYER swept: 9/10 sqlite/queries/* deleted, 4 consumers repointed PRESERVING Classic-prefixed ncdb sources (KEY FINDING: ncdb exports BOTH Classic* and short-named ingest fns from different gazetteer surfaces — swapping to short names would silently switch implementations; WikidataCitiesIngestor got an explicit alias object with a warning comment); topicKeywords.js stays (real error-tolerance wrapper → migrate-later trio w/ urlListingNormalized + articleViewer); smoke 188 fns green, syntax clean, src/data/db 132→123. A6 SLICE-0 SCOPED (assessment doc): villages/towns = new SPARQL classes Q3957/Q532 in WikidataCitiesIngestor + population floor (P1082 ≥ ~5000, the real volume control) + per-country caps + ncdb kind-map rows + CLI flags; places.kind is free TEXT (no schema change); UI already generic; slice 1 = towns-only 2-3 countries. Remaining v1 queries dir: ~44 files (analysis.*, articles.*, layout*, compression, telemetry, backgroundTasks, patternLearning, multiModalCrawl, helpers, common + residue) — audit next.
 - 2026-07-17 (19): MULTI-CHUNK B6+B6b — 16 shims deleted: 13 pure v1 gazetteer (codemod v3 now walks tools/ too — dry-run caught the missing dir AGAIN, 31 files rewritten) + renamed trio search/user/workspaceAdapter (smoke caught createSearchAdapter missing on ncdb → git show revealed the shim WRAPPED createSqliteArticleSearchAdapter under the historical name → consumers aliased; workspace generateSlug consumed nowhere; user no live consumers). Old-layer sqlite/queries/gazetteer.places.js converted to named ncdb re-export (was re-requiring the dying v1 shim); REST OF OLD LAYER (gazetteerPlaceNames/utils/ingest/topicKeywords/maintenance/schema/rateLimitAnalysis — some with renames, 5 importer files) deferred to an old-layer sweep. Verified: smoke 174 fns + 11 consts (incl. all ~30 gazetteer names = no shim-era undefineds in that cluster), tests/teams 204/204, tests/search 0-total (ghost-path suite, pre-existing), syntax clean. src/data/db 148→132. Pattern refinements: smoke names must be shim-verified (git show), never guessed — 3rd catch this session; codemod walk-list must cover src+tests+tools.
 - 2026-07-17 (18): MULTI-CHUNK ×2 — B SLICE 5: 19 pure adapter shims deleted via CODEMOD (checks/codemod-adapter-repoint.js rewrote 26 consumer files in one pass — 15 src + 11 tests; first regex missed tests' src/-prefixed paths, dry-run caught it); deferred w/ renames: search/user/workspaceAdapter; smoke 142 fns — the smoke AGAIN caught a bad guess (createHealingAdapter doesn't exist; healing exports fns not a factory → git show HEAD:<shim> is the verification pattern for deleted-shim names); tests/billing 92/92; src/data/db 167→148. A3 VALIDATIONS BACKFILL: ncdb backfillHubValidationsFromMappings (vitest 8/8; INSERT OR IGNORE under global hub_url unique; validated_at=mapping verified_at, TTL 2y, pre-expired would queue as 'expired-validation' honestly — none were) applied app-stopped: 368 candidates → 365 inserted (3 dup-URL ignores), ledger 169→534. CODEMOD approach is the new default for >10-consumer repoints. Next B targets: gazetteer.* cluster (12), analysis.*/articles.*, layout* trio, urlListingNormalized SQL migration; A remaining: A6 villages, guess_runs wire-or-drop, URL-form search join, matrix backlink.
@@ -126,26 +127,15 @@
   config/news-sources.json into news_websites.metadata + domain_locales
   (15 rows, bare-host form). See docs/plans/2026-07-16-news-sites-100…md
   PROGRESS section.
-- 2026-07-16: LeMonde error storm ROOT-CAUSED + FIXED. Cause: lemonde.fr
-  402s every fetch → host retry budget locks → but the lock lived only in
-  FetchPipeline, so QueueManager kept dequeuing → 5,140 synthetic
-  HOST_RETRY_EXHAUSTED errors per lock window. Fix: HostRetryBudgetManager
-  onLockout → DomainThrottleManager.applyHostBackoff → getHostResumeTime
-  gates the queue (deferral machinery already existed). Live re-run: 6 real
-  402 errors, 0 spin (was 5,146). Also shipped: per-job worker stdio logs
-  (data/logs/jobs/<jobId>.log — made the diagnosis possible) + bounded
-  url:error summaries on job records (errorSummary in jobs API). Guardian
-  + BBC finished their 200-page crawls clean (200 dl each, 0 errors) —
-  batch ended 3/5 sites × 200 pages = 600 pages, 0 errors on the healthy
-  hosts.
-- 2026-07-15/16: 5-site × 200-page batch (all 5 accepted, ran concurrently
-  in worker mode): AlJazeera 200 dl/196 saved/0 err (40.6MB, 0.87/s) ✔;
-  BBC clean and finishing; Guardian clean via puppeteer (~0.02/s — slow but
-  0 errors, fix holding); LeMonde 5,146 errors/1 dl (→ Now#2, error detail
-  unpersisted → Now#1); Reuters "completed" 0 pages 0 errors (→ Now#2).
-  Concurrent ramp-up is staggered (DB contention); ui-screenshot timed out
-  under load. Stale index.lock (35h) blocked a commit → swept; consider
-  auto-sweep in bridge git path.
+- 2026-07-16: LeMonde error storm root-caused+fixed (retry lock lived only in
+  FetchPipeline → queue kept dequeuing → 5,140 synthetic errors; now
+  HostRetryBudgetManager onLockout gates the queue via host backoff; re-run 6
+  real 402s, 0 spin). Shipped per-job worker stdio logs (data/logs/jobs/) +
+  bounded errorSummary on jobs API.
+- 2026-07-15/16: 5-site × 200-page batch: AlJazeera/BBC/Guardian clean (600
+  pages, 0 errors on healthy hosts; Guardian via puppeteer ~0.02/s), LeMonde
+  402-blocked, Reuters silent 0-page green (→ Now items). Stale index.lock
+  (35h) blocked a commit → swept.
 - 2026-07-15: Guardian FIXED end-to-end — jest 5/5 on host, live re-crawl
   cae10aee completed 5/5/5 saved, 0 errors (was: instant ECONNRESET death).
   FetchPipeline diff contained ONLY the fallback fix → committed with the

@@ -22,6 +22,10 @@ const COUNTRY_CLASS_QIDS = ['Q3624078', 'Q6256'];
 
 const CITY_CLASS_QIDS = ['Q515'];
 
+// A6 towns: Q3957 (town). Population floor (P1082) is the volume control —
+// Q3957 membership alone is far too broad for bounded ingestion.
+const TOWN_CLASS_QIDS = ['Q3957'];
+
 function buildLabelServiceClause(languages = DEFAULT_LABEL_LANGUAGES) {
   const languageList = Array.isArray(languages) ? languages.join(',') : String(languages);
   return `SERVICE wikibase:label { bd:serviceParam wikibase:language "${languageList}" . bd:serviceParam wikibase:normalize "true" . }`;
@@ -148,13 +152,15 @@ function buildCitiesDiscoveryQuery({
   limit = 200,
   minPopulation = null,
   includeCoordinates = true,
-  includePopulation = true
+  includePopulation = true,
+  classQids = CITY_CLASS_QIDS
 } = {}) {
   if (!countryClause || typeof countryClause !== 'string') {
     throw new Error('buildCitiesDiscoveryQuery requires a countryClause string');
   }
 
-  const classValues = CITY_CLASS_QIDS.map(qid => `wd:${qid}`).join(' ');
+  const effectiveClassQids = Array.isArray(classQids) && classQids.length ? classQids : CITY_CLASS_QIDS;
+  const classValues = effectiveClassQids.map(qid => `wd:${qid}`).join(' ');
   const optionalParts = [];
   if (includeCoordinates) {
     optionalParts.push('OPTIONAL { ?city wdt:P625 ?coord. }  # Coordinates');
@@ -186,6 +192,8 @@ LIMIT ${Number(limit)}`.trim();
 module.exports = {
   DEFAULT_LABEL_LANGUAGES,
   DEFAULT_REGION_CLASS_QIDS,
+  CITY_CLASS_QIDS,
+  TOWN_CLASS_QIDS,
   buildLabelServiceClause,
   buildCountryClause,
   buildCountryDiscoveryQuery,

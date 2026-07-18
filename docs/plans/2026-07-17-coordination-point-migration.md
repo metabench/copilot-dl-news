@@ -156,6 +156,33 @@ a later core-crawler test-drift pass.
      reworked — identity form impossible post-deletion), LIVE
      download-verification.check 9/9 on :memory:, node --check 10/10.
      src/data/db: 197 files remain.
+   - Slice 9 (B9) DONE 2026-07-18: the sqlite/v1/queries tree is GONE.
+     urlListingNormalized (11 consumers) had NO SQL of its own — the B7
+     "real logic" note was stale; its db-first function surface (15
+     historical names incl. standalone normalizeHostMode/parseHosts) moved
+     into ncdb legacy-ui-urlListingNormalized (cb4038e, vitest 6/6) and
+     consumers were codemodded/hand-repaired (3 scripts had ghost
+     src/db/sqlite requires, broken at HEAD). articleViewer (MIXED:
+     decompress+extract composition over ncdb reads) relocated to
+     src/ui/server/services/articleViewer.js — composition stays in the
+     coordination point. queues.performance.test.js moved to
+     tests/db/sqlite/ui/. src/data/db: 97 -> 95 js files.
+   - Slice 8 (B8) DONE 2026-07-18: fleet audit of ALL 46 remaining v1
+     files (classification + importer census per file), then 26 shims
+     retired: 9 dead (zero importers), 12 no-rename codemodded (21
+     consumer files), 5 renamed via consumer-side aliases
+     (normalizePlaceHubCandidateHost, ensureDomainCrawlBehaviorsTable,
+     getCompressionUsageStats, schemaInspectionTableExists,
+     DEFAULT_QUERY_TIME_BUDGET_THRESHOLD_MS), + v1/rateLimitAdapter.
+     Six tools were broken at HEAD by ghost ../src/ requires (tools/src
+     does not exist) and are repaired by the repoint. Smoke 244→259 fns.
+     src/data/db: 123 -> 97 js files. V1-ROOT ENDGAME MAP (audited):
+     dead = ArticleOperations, SchemaInitializer, StatementManager,
+     UtilityFunctions, newsSourcesSeeder, access, schema-definitions;
+     index.js has 17 external importers, test-utils 5 (tests),
+     connection 3, ensureDb 3, v1/schema 2 (renames), SQLiteNewsDatabase
+     2 (tests); instrumentation/instrumentedDb/schemaMetadata/seeders/
+     seed-utils are internal-only.
    - Slice 7 (B7) DONE 2026-07-17: OLD LAYER swept — 9 of 10
      sqlite/queries/* files deleted (gazetteer.{attributes,deduplication,
      ingest,places,utils}, gazetteerPlaceNames, maintenance, schema,

@@ -84,6 +84,9 @@ function parseCliArgs(argv) {
     .add('--import-adm2', 'Import ADM2 regions from Wikidata', false, 'boolean')
     .add('--import-cities', 'Import top cities from Wikidata', false, 'boolean')
     .add('--cities-per-country <number>', 'Max cities per country when importing', 50, 'number')
+    .add('--import-towns', 'Import towns (Q3957) from Wikidata; population floor is the volume control', false, 'boolean')
+    .add('--towns-per-country <number>', 'Max towns per country when importing', 25, 'number')
+    .add('--town-min-population <number>', 'Minimum population (P1082) required for towns', 5000, 'number')
     .add('--adm1-limit <number>', 'Maximum ADM1 rows to fetch per country', 200, 'number')
     .add('--adm2-limit <number>', 'Maximum ADM2 rows to fetch per country', 400, 'number')
     .add('--cleanup', 'Run duplicate cleanup after ingestion', false, 'boolean')
@@ -144,6 +147,9 @@ function normalizeOptions(rawArgs) {
     importAdm2: Boolean(rawArgs.importAdm2),
     importCities: Boolean(rawArgs.importCities),
     maxCitiesPerCountry: Number.isFinite(rawArgs.citiesPerCountry) ? rawArgs.citiesPerCountry : 50,
+    importTowns: Boolean(rawArgs.importTowns),
+    maxTownsPerCountry: Number.isFinite(rawArgs.townsPerCountry) ? rawArgs.townsPerCountry : 25,
+    townMinPopulation: Number.isFinite(rawArgs.townMinPopulation) ? rawArgs.townMinPopulation : 5000,
     adm1Limit: Number.isFinite(rawArgs.adm1Limit) ? rawArgs.adm1Limit : 200,
     adm2Limit: Number.isFinite(rawArgs.adm2Limit) ? rawArgs.adm2Limit : 400,
     offline: Boolean(rawArgs.offline),
@@ -188,6 +194,9 @@ function normalizeOptions(rawArgs) {
     importAdm2,
     importCities,
     maxCitiesPerCountry,
+    importTowns,
+    maxTownsPerCountry,
+    townMinPopulation,
     adm1Limit,
     adm2Limit,
     offline,
@@ -309,7 +318,7 @@ function normalizeOptions(rawArgs) {
   // Fast path: if already populated and no filters/enrichment, skip network fetch
   try {
     const existingCountries = populateQueries.countTotalByKind('country');
-    const noFilters = !countriesFilter.length && !regionFilter && !subregionFilter && !importAdm1 && !importCities;
+    const noFilters = !countriesFilter.length && !regionFilter && !subregionFilter && !importAdm1 && !importCities && !importTowns;
     const populatedEnough = offline ? (existingCountries > 0) : (existingCountries >= 200);
     if (!force && noFilters && populatedEnough) {
       const summary = { countries: 0, capitals: 0, names: 0, source: 'restcountries@v3.1', skipped: 'already-populated' };
@@ -339,6 +348,7 @@ function normalizeOptions(rawArgs) {
     countriesFilter: countriesFilter.length > 0 ? countriesFilter : null,
     importAdm1,
     importCities,
+    importTowns,
     offline
   });
   telemetry.info(`[gazetteer] Started ingestion run #${runId}`);
@@ -351,7 +361,7 @@ function normalizeOptions(rawArgs) {
   }
 
   let countries = 0, capitals = 0, names = 0;
-  let adm1Count = 0, adm2Count = 0, cityCount = 0;
+  let adm1Count = 0, adm2Count = 0, cityCount = 0, townCount = 0;
 
   const attributeStatements = createAttributeStatements(raw);
 
@@ -415,6 +425,14 @@ function normalizeOptions(rawArgs) {
     return id;
   }
 
+  // REST Countries can hand back a non-array (the endpoint now 301s and a
+  // poisoned/raw cache body can surface here); countries already in the DB
+  // don't need this upsert, and the Wikidata import blocks below read
+  // countries from the DB — so skip the upsert rather than crash.
+  if (!Array.isArray(data)) {
+    telemetry.warn(`[gazetteer] REST Countries payload is not an array (${data === null ? 'null' : typeof data}); skipping country upsert, continuing with DB countries`);
+    data = [];
+  }
   const tx = raw.transaction(() => {
     for (const c of data) {
       if (!includeCountry(c)) continue;
@@ -743,20 +761,19 @@ function normalizeOptions(rawArgs) {
   async function fetchSparql(query) {
     const qurl = `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(query)}`;
 
-    // Try cache first
+    // Try cache first. NOTE (fixed 2026-07-18): the facade is async and
+    // keyed by (url, metadata) — the old call passed a single object with
+    // no url and no await, so `cached` was always a truthy Promise ("cache
+    // hit" every run) that then rejected with 'URL is required'.
     if (wikidataCache) {
       try {
-        const cached = facade.getCachedHttpResponse({
-          category: 'wikidata',
-          subcategory: 'sparql-query',
-          requestMethod: 'SPARQL',
-          contentCategory: 'sparql',
-          contentSubType: 'results',
-          query
+        const cached = await facade.getCachedHttpResponse(qurl, {
+          category: 'api-wikidata-sparql',
+          metadata: { subcategory: 'sparql-query' }
         });
-        if (cached) {
+        if (cached && cached.body != null) {
           telemetry.info(`[gazetteer] SPARQL cache hit: ${qurl}`);
-          return cached;
+          return typeof cached.body === 'string' ? JSON.parse(cached.body) : cached.body;
         }
       } catch (e) {
         telemetry.warn(`[gazetteer] SPARQL cache read failed: ${e.message}`);
@@ -771,14 +788,13 @@ function normalizeOptions(rawArgs) {
     // Cache the result
     if (wikidataCache) {
       try {
-        facade.cacheHttpResponse({
-          category: 'wikidata',
-          subcategory: 'sparql-query',
-          requestMethod: 'SPARQL',
-          contentCategory: 'sparql',
-          contentSubType: 'results',
-          query
-        }, jr);
+        // Metadata must mirror the read call above — the cache key is
+        // derived from (url, request, metadata).
+        await facade.cacheHttpResponse({
+          url: qurl,
+          response: { status: 200, body: JSON.stringify(jr) },
+          metadata: { category: 'api-wikidata-sparql', subcategory: 'sparql-query' }
+        });
       } catch (e) {
         telemetry.warn(`[gazetteer] SPARQL cache write failed: ${e.message}`);
       }
@@ -876,11 +892,11 @@ function normalizeOptions(rawArgs) {
   }
 
   // For each included country, optionally import ADM1 and top cities
-  if (importAdm1 || importAdm2 || importCities) {
+  if (importAdm1 || importAdm2 || importCities || importTowns) {
   const countryRows = populateQueries.fetchCountries();
     for (const crow of countryRows) {
       if (countriesFilter.length && !countriesFilter.includes((crow.country_code||'').toUpperCase())) continue;
-  telemetry.info(`[gazetteer] Country ${crow.country_code}: importing${importAdm1?' ADM1':''}${importAdm2?' ADM2':''}${importCities?' cities':''} from Wikidata (SPARQL)`);
+  telemetry.info(`[gazetteer] Country ${crow.country_code}: importing${importAdm1?' ADM1':''}${importAdm2?' ADM2':''}${importCities?' cities':''}${importTowns?' towns':''} from Wikidata (SPARQL)`);
       // Find Wikidata QID for the country via restcountries cca2→ Wikidata is not reliable here without mapping; skip if not available.
       // As a pragmatic fallback, import top cities via GeoNames-like heuristic from Wikipedia/Wikidata SPARQL is too heavy; keep constrained:
     if (importCities) {
@@ -912,6 +928,43 @@ function normalizeOptions(rawArgs) {
           }
         } catch (e) {
           telemetry.warn(`[gazetteer] Cities import failed for ${crow.country_code}: ${e.message}`);
+        }
+      }
+      if (importTowns) {
+        try {
+          // Towns (A6 slice 1): Q3957 with a REQUIRED population claim and
+          // floor — Q3957 membership alone is far too broad for bounded
+          // ingestion, so ?pop is non-OPTIONAL here (unlike cities).
+          // insPlaceWithNames dedupes on (source, qid) and never rewrites
+          // kind, so places already ingested as cities are left untouched.
+          const townMinPop = Math.max(0, Number(townMinPopulation) || 0);
+          const sparql = `SELECT ?town ?townLabel ?pop ?coord WHERE {
+            ?country wdt:P297 "${crow.country_code}".
+            ?town wdt:P31/wdt:P279* wd:Q3957; wdt:P17 ?country.
+            ?town wdt:P1082 ?pop.
+            FILTER(?pop >= ${townMinPop})
+            OPTIONAL { ?town wdt:P625 ?coord. }
+            SERVICE wikibase:label { bd:serviceParam wikibase:language "en,fr,de,es,ru,zh,ar,und". }
+          } ORDER BY DESC(?pop) LIMIT ${Math.max(1, Math.min(maxTownsPerCountry, 200))}`;
+          const jr = await fetchSparql(sparql);
+          const rows = (jr.results && jr.results.bindings) || [];
+          telemetry.info(`[gazetteer] Towns query for ${crow.country_code} returned ${rows.length}`);
+          const ids = rows.map(r => (r.town?.value||'').split('/').pop()).filter(Boolean);
+          const entities = await wikidataGet(ids);
+          for (const r of rows) {
+            const qid = (r.town?.value||'').split('/').pop();
+            const pt = r.coord?.value ? parseWktPoint(r.coord.value) : null;
+            const lat = pt ? pt.lat : null;
+            const lon = pt ? pt.lon : null;
+            const pop = r.pop ? parseInt(r.pop.value, 10) : null;
+            const ent = entities?.entities?.[qid] || null;
+            const namesArr = ent ? labelMap(ent) : (r.townLabel?.value ? [{ name: r.townLabel.value, lang: 'und', kind:'endonym', preferred:1, official:0 }] : []);
+            const { id: tid, created } = insPlaceWithNames('town', crow.country_code, lat, lon, pop, namesArr, 'wikidata', qid);
+            if (created) townCount++;
+            try { populateQueries.insertHierarchyRelation(crow.id, tid, 'admin_parent', 1); } catch (_) {}
+          }
+        } catch (e) {
+          telemetry.warn(`[gazetteer] Towns import failed for ${crow.country_code}: ${e.message}`);
         }
       }
       if (importAdm1) {
@@ -1030,7 +1083,7 @@ function normalizeOptions(rawArgs) {
   } catch (_) { /* best effort */ }
 
   // Final summary with counts
-  const finalSummary = { countries, capitals, names, adm1: adm1Count, adm2: adm2Count, cities: cityCount, source: 'restcountries@v3.1', rest_all_url: `https://restcountries.com/v3.1/all?fields=${encodeURIComponent('name,cca2,cca3,latlng,capital,capitalInfo,timezones,region,subregion,translations')}` };
+  const finalSummary = { countries, capitals, names, adm1: adm1Count, adm2: adm2Count, cities: cityCount, towns: townCount, source: 'restcountries@v3.1', rest_all_url: `https://restcountries.com/v3.1/all?fields=${encodeURIComponent('name,cca2,cca3,latlng,capital,capitalInfo,timezones,region,subregion,translations')}` };
   // Cleanup: remove empty names and nameless places
   try {
     populateQueries.trimPlaceNames();

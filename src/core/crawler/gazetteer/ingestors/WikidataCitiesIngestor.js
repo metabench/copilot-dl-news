@@ -52,6 +52,8 @@ const ingestQueries = {
 };
 const {
   DEFAULT_LABEL_LANGUAGES,
+  CITY_CLASS_QIDS,
+  TOWN_CLASS_QIDS,
   buildCitiesDiscoveryQuery,
   buildCountryClause
 } = require('../queries/geographyQueries');
@@ -68,6 +70,8 @@ class WikidataCitiesIngestor {
     minPopulation = 100000,
     limitCountries = null,
     targetCountries = null,
+    placeKind = 'city',
+    classQids = null,
     verbose = false
   } = {}) {
     if (!db) {
@@ -82,13 +86,21 @@ class WikidataCitiesIngestor {
     this.maxCitiesPerCountry = maxCitiesPerCountry;
     this.minPopulation = minPopulation;
     this.limitCountries = limitCountries;
+    // A6: the ingestor is kind-parameterized — 'city' (Q515, the default)
+    // or 'town' (Q3957 with a population floor as the volume control).
+    // places.kind is free TEXT and ncdb normalizePlaceKind is a lowercase
+    // passthrough, so no DB-side vocabulary change is needed.
+    this.placeKind = String(placeKind || 'city').trim().toLowerCase() === 'town' ? 'town' : 'city';
+    this.classQids = Array.isArray(classQids) && classQids.length
+      ? classQids
+      : (this.placeKind === 'town' ? TOWN_CLASS_QIDS : CITY_CLASS_QIDS);
   this.targetCountries = Array.isArray(targetCountries) && targetCountries.length ? targetCountries : null;
   this.countryFilter = this.targetCountries ? this._buildCountryFilter(this.targetCountries) : null;
     this.cacheDir = cacheDir || path.join(process.cwd(), 'data', 'cache', 'sparql');
     this.labelLanguages = [...DEFAULT_LABEL_LANGUAGES];
 
-    this.id = 'wikidata-cities';
-    this.name = 'Wikidata Cities Ingestor';
+    this.id = this.placeKind === 'town' ? 'wikidata-towns' : 'wikidata-cities';
+    this.name = this.placeKind === 'town' ? 'Wikidata Towns Ingestor' : 'Wikidata Cities Ingestor';
 
     try {
       ingestQueries.registerPlaceSource(this.db, {
@@ -258,7 +270,8 @@ class WikidataCitiesIngestor {
       countryClause,
       languages: this.labelLanguages,
       limit: this.maxCitiesPerCountry,
-      minPopulation: this.minPopulation > 0 ? this.minPopulation : null
+      minPopulation: this.minPopulation > 0 ? this.minPopulation : null,
+      classQids: this.classQids
     });
 
     try {
@@ -432,9 +445,11 @@ class WikidataCitiesIngestor {
   async _fetchCityQidsSimple(country) {
     try {
       const countryClause = this._buildCountryClause(country, 'city');
+      const classValues = this.classQids.map(qid => `wd:${qid}`).join(' ');
       const sparql = `
         SELECT DISTINCT ?city WHERE {
-          ?city wdt:P31/wdt:P279* wd:Q515.
+          VALUES ?cityClass { ${classValues} }
+          ?city wdt:P31/wdt:P279* ?cityClass.
           ${countryClause}
         }
         LIMIT ${this.maxCitiesPerCountry}
@@ -496,7 +511,7 @@ class WikidataCitiesIngestor {
     // Upsert place
     const { placeId } = ingestQueries.upsertPlace(this.db, this.stmts, {
       wikidataQid: qid,
-      kind: 'city',
+      kind: this.placeKind,
       countryCode: country.country_code,
       adm1Code,
       adm2Code: null,
