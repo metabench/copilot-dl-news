@@ -1300,6 +1300,17 @@ load(); setInterval(load, 60000);
     console.warn('[unifiedApp] place-hub review API unavailable:', err.message);
   }
 
+  // In-app background-task subsystem (A7): a BackgroundTaskManager over the
+  // app's own db handle + the IngestAdminAreasTask, so admin-area ingestion
+  // runs IN-process (no app-stop dance). Non-fatal — the crawler must run
+  // even if the task API can't mount.
+  try {
+    const { mountBackgroundTasks } = require('../../../server/background-tasks/mountBackgroundTasks');
+    mountBackgroundTasks(unifiedApp, getDbRW, { logger: console });
+  } catch (err) {
+    console.warn('[unifiedApp] background-tasks API unavailable:', err.message);
+  }
+
   function getHistoryTimestampMs(ev) {
     if (!ev || typeof ev !== 'object') return null;
     if (Number.isFinite(ev.timestampMs)) return ev.timestampMs;
