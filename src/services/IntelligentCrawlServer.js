@@ -505,7 +505,7 @@ class IntelligentCrawlServer extends EventEmitter {
     if (!this.dbFacade) {
       // Need to upgrade to facade
       try {
-        const { DualDatabaseFacade } = require('../data/db/DualDatabaseFacade');
+        const { DualDatabaseFacade } = require('news-crawler-db');
         this.dbFacade = new DualDatabaseFacade({
           mode,
           primary: this.config.database?.primary || { engine: 'sqlite', dbPath: 'data/news.db' },
@@ -558,7 +558,7 @@ class IntelligentCrawlServer extends EventEmitter {
     }
     
     // Create exporter
-    const { DatabaseExporter } = require('../data/db/DatabaseExporter');
+    const { DatabaseExporter } = require('news-crawler-db');
     this.exporter = new DatabaseExporter({
       source: { engine: 'sqlite', dbPath: process.env.NEWS_DB_PATH || 'data/news.db' },
       target: { engine: 'postgres', ...target },
@@ -1113,7 +1113,7 @@ EXAMPLE:
     db = openNewsCrawlerDb(dbPath);
   } else {
     // Use DualDatabaseFacade (will be initialized async)
-    const { DualDatabaseFacade } = require('../data/db/DualDatabaseFacade');
+    const { DualDatabaseFacade } = require('news-crawler-db');
     db = new DualDatabaseFacade(dbConfig);
   }
 

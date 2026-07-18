@@ -1,4 +1,4 @@
-const { getDb } = require('./data/db');
+const { getDb } = require('./db');
 
 // File-based cache removed
 

@@ -1,4 +1,4 @@
-const { PlannerDatabase } = require('../../data/db/PlannerDatabase');
+const { PlannerDatabase } = require('news-crawler-db');
 
 /**
  * Planner knowledge reuse service for intelligent crawling
