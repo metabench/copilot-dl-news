@@ -11,7 +11,7 @@
 const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('../shared/utils/project-root');
-const { ensureDatabase } = require('../data/db/sqlite/v1');
+const { ensureDatabase } = require('../db/ensureNewsDb');
 const { CompressionAnalytics } = require('../shared/utils/CompressionAnalytics');
 
 function normalizeSummary(summary = {}) {

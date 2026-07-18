@@ -10,7 +10,7 @@
 
 const EventEmitter = require('events');
 const path = require('path');
-const { openDatabase } = require('../../../../src/db/sqlite/v1');
+const { openSqliteNewsDatabase: openDatabase } = require('news-crawler-db');
 
 /**
  * Observable gazetteer loader that emits progress events

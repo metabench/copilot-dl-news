@@ -8,7 +8,7 @@ const { Worker } = require('worker_threads');
 const extract = require('extract-zip');
 const { CliFormatter } = require('../../src/shared/utils/CliFormatter');
 const { CliArgumentParser } = require('../../src/shared/utils/CliArgumentParser');
-const { openDatabase } = require('../../src/data/db/sqlite/v1');
+const { openSqliteNewsDatabase: openDatabase } = require('news-crawler-db');
 const { findProjectRoot } = require('../../src/shared/utils/project-root');
 const {
   getSqliteDbstatTableSizesQuery,

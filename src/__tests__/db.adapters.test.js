@@ -11,7 +11,7 @@ describe('database adapter registry', () => {
       // Manually register the sqlite adapter since isolateModules prevents auto-registration
       const { registerAdapter } = require('../data/db');
       registerAdapter("sqlite", (options) => {
-        const { createSQLiteDatabase } = require("../data/db/sqlite/v1/index");
+        const { createSQLiteDatabase } = require("../db/ensureNewsDb");
         return createSQLiteDatabase(options);
       });      const NewsDatabase = require('../data/db');
 

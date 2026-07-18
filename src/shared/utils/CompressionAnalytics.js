@@ -5,7 +5,7 @@
  * Tracks compression performance, effectiveness, and system health.
  */
 
-const { ensureDatabase } = require('../../data/db/sqlite/v1');
+const { ensureDatabase } = require('../../db/ensureNewsDb');
 const { compressionConfig } = require('../../shared/config/compression');
 
 class CompressionAnalytics {

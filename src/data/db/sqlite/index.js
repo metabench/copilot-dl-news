@@ -1,18 +1,26 @@
 /**
  * SQLite Database Module
- * 
- * Main entry point for SQLite database functionality.
- * This bridges the old API to the new v1 structure.
+ *
+ * Compatibility barrel for the many src/core + tests consumers. The v1
+ * core it used to bridge is retired (B10c): DB mechanics live in
+ * news-crawler-db; project wiring lives in src/db/ensureNewsDb.js.
+ * ensureGazetteer is newly exported here — NewsCrawler always destructured
+ * it from this barrel and silently got undefined before.
  */
 
-const { ensureDb } = require('./v1/ensureDb');
-const { createSQLiteDatabase } = require('./v1/index');
-const { ensureDatabase, wrapWithTelemetry, createInstrumentedDb } = require('./v1');
+const {
+  ensureDb,
+  ensureDatabase,
+  createSQLiteDatabase,
+  ensureGazetteer
+} = require('../../../db/ensureNewsDb');
+const { wrapWithTelemetry, createInstrumentedDb } = require('../queryTelemetry');
 
 module.exports = {
   ensureDb,
   createSQLiteDatabase,
   ensureDatabase,
   wrapWithTelemetry,
-  createInstrumentedDb
+  createInstrumentedDb,
+  ensureGazetteer
 };

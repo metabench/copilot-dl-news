@@ -1,11 +1,11 @@
 /**
  * SQLite Database Ensure Module
- * 
- * Main entry point for database initialization.
- * This bridges the old API to the new v1 structure.
+ *
+ * Compatibility bridge (B10c): the v1 implementation retired into
+ * news-crawler-db + src/db/ensureNewsDb.js.
  */
 
-const { ensureDb } = require('./v1/ensureDb');
+const { ensureDb } = require('../../../db/ensureNewsDb');
 
 module.exports = {
   ensureDb

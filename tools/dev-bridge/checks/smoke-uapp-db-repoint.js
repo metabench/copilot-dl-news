@@ -246,7 +246,11 @@ const FNS = [
   // B10b: sqlite/schema.js outer shim retired; v1/schema stays ONLY as
   // connection.js's jest-spy seam. Other consumers alias the SqliteV1
   // sources back to the historical short names.
-  'initializeSqliteV1Schema', 'initSqliteV1GazetteerTables'
+  'initializeSqliteV1Schema', 'initSqliteV1GazetteerTables',
+  // B10c: v1 connection core absorbed into ncdb (10a9d56); the spy seam
+  // and its schema/metadata/seeder deps died with it. src/db/ensureNewsDb
+  // is the copilot wrapper; openDatabase consumers alias the ncdb name.
+  'openSqliteNewsDatabase', 'ensureSqliteNewsDatabase', 'dedupePlaceSources'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);

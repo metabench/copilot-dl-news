@@ -2,7 +2,7 @@
  * Database test helpers
  */
 
-const { ensureDb } = require('../data/db/sqlite/v1/ensureDb');
+const { ensureDb } = require('../db/ensureNewsDb');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');

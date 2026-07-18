@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const { CliFormatter } = require('../src/shared/utils/CliFormatter');
 const { CliArgumentParser } = require('../src/shared/utils/CliArgumentParser');
-const { openDatabase } = require('../src/data/db/sqlite/v1');
+const { openSqliteNewsDatabase: openDatabase } = require('news-crawler-db');
 const { vacuumDatabase } = require('news-crawler-db');
 const { findProjectRoot } = require('../src/shared/utils/project-root');
 

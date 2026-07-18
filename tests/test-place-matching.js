@@ -5,7 +5,7 @@
  */
 
 const { ArticlePlaceMatcher } = require('../src/intelligence/matching/ArticlePlaceMatcher');
-const { ensureDatabase } = require('../src/data/db/sqlite/v1');
+const { ensureDatabase } = require('../src/db/ensureNewsDb');
 
 async function testPlaceMatching() {
   console.log('Testing Article-Place Matching...');

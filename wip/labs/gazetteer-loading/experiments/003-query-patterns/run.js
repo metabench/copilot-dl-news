@@ -9,7 +9,7 @@
 'use strict';
 
 const path = require('path');
-const { openDatabase } = require('../../../../src/db/sqlite/v1');
+const { openSqliteNewsDatabase: openDatabase } = require('news-crawler-db');
 const { buildGazetteerMatchers, extractGazetteerPlacesFromText } = require('../../../../src/analysis/place-extraction');
 const { searchPlacesByName } = require('../../../../src/db/sqlite/v1/queries/gazetteer.search');
 

@@ -1,7 +1,7 @@
 'use strict';
 
 const fs = require('fs');
-const { ensureDatabase, NewsDatabase } = require('..');
+const { ensureDatabase, NewsDatabase } = require('../../../../../db/ensureNewsDb');
 const { createTempDbPath: createTempDb } = require('../../../../../test-utils/db-helpers');
 
 const silentLogger = {

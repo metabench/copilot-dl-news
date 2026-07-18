@@ -156,6 +156,22 @@ a later core-crawler test-drift pass.
      reworked — identity form impossible post-deletion), LIVE
      download-verification.check 9/9 on :memory:, node --check 10/10.
      src/data/db: 197 files remain.
+   - Slice 10c DONE 2026-07-18: THE V1 CORE IS GONE. ncdb legacy-connection
+     (10a9d56) absorbed connection.js's orchestration (open/ensure with the
+     fingerprint fast path; bootstrapData passed parsed — no fs discovery
+     in the DB layer); fast-path tests ported behaviorally to vitest 6/6,
+     retiring the spy seam. Copilot src/db/ensureNewsDb.js carries the
+     project wiring (bootstrap discovery, default db path, schema-ensured
+     createSQLiteDatabase — ncdb's same-named factory does NOT ensure).
+     The sqlite/ barrel + sqlite/ensureDb.js survive REWIRED (NewsCrawler
+     + ~8 consumers) and now export ensureGazetteer, fixing NewsCrawler's
+     silent-undefined destructure. 26 consumers repointed; a post-delete
+     grep sweep caught 7 stragglers beyond the index-importer census.
+     Deleted 13 files. src/data/db: 85 -> 71 js files. REMAINING:
+     queries/analysisQueries.js, queryTelemetry.js, dbAccess.js,
+     newsCrawlerDbCompat.js, index.js barrel, TaskEventWriter,
+     EnhancedDatabaseAdapter, migration/, checks/, v1/{migrations,tools
+     (gazetteerExport/QA, maintainDb), __tests__}, sqlite barrels.
    - Slice 10 (B10a+b) DONE 2026-07-18: v1-root retirement — 10 files
      gone (7 audited-dead + SQLiteNewsDatabase + sqlite/schema.js +
      test-utils). SQLiteNewsDatabase's 5 consumers inline the exact

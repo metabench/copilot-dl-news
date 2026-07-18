@@ -15,7 +15,7 @@
  */
 
 const path = require('path');
-const { openDatabase } = require('../../src/data/db/sqlite/v1/connection');
+const { openSqliteNewsDatabase: openDatabase } = require('news-crawler-db');
 // getCompressionStats is the retired v1 compression shim's historical name
 // for ncdb's getCompressionUsageStats.
 const {

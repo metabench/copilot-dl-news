@@ -1,4 +1,4 @@
-const { NewsDatabase } = require('../data/db/sqlite/v1');
+const { NewsDatabase } = require('../db/ensureNewsDb');
 
 const DEFAULT_JOB_ID = 'analysis-run';
 

@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { ensureDatabase } = require('../../src/data/db/sqlite/v1/connection');
+const { ensureDatabase } = require('../../src/db/ensureNewsDb');
 
 async function runSchemaSmoke() {
   const tmp = path.join(os.tmpdir(), `nc-smoke-${Date.now()}.db`);

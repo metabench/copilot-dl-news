@@ -5,7 +5,7 @@ const path = require("path");
 // SQLiteNewsDatabase fallback — same resolution preserved here.
 const ncdbForNewsDatabase = require("news-crawler-db");
 const NewsDatabase = ncdbForNewsDatabase.NewsDatabase || ncdbForNewsDatabase.SQLiteNewsDatabase;
-const { ensureDatabase } = require("./sqlite/v1/connection");
+const { ensureDatabase } = require("../../db/ensureNewsDb");
 
 function resolveDbPath(options = {}) {
   if (typeof options === "string") return options;

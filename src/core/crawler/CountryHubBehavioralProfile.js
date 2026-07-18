@@ -281,7 +281,7 @@ class CountryHubBehavioralProfile {
     try {
       const { getAllCountries } = require('news-crawler-db');
       // Use openDatabase to avoid full schema initialization
-      const { openDatabase } = require('../../data/db/sqlite/v1/connection');
+      const { openSqliteNewsDatabase: openDatabase } = require('news-crawler-db');
       const { resolveGazetteerDbPath } = require('../../shared/utils/gazetteer-db-path');
       const gazetteerDb = openDatabase(resolveGazetteerDbPath(), { readonly: true, fileMustExist: true });
       const countries = getAllCountries(gazetteerDb);

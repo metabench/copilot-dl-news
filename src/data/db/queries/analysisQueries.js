@@ -3,7 +3,7 @@
  * Separated from UI and business logic for modularity
  */
 
-const { NewsDatabase } = require('../sqlite/v1');
+const { NewsDatabase } = require('../../../db/ensureNewsDb');
 
 function resolveNewsDatabase(dbish) {
   if (!dbish) {
