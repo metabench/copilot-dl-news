@@ -1,0 +1,41 @@
+{
+  "comment": "Judgment-call seeds for admin-area ingestion (A7, owner directive). Each row maps a country/level to the Wikidata class QID whose instances are that country's admin areas, and the places.kind they should be stored as. Loaded through shared/utils/bootstrapGuard (10MB hard cap) into ncdb's admin_class_map table; ingestion reads verified rows only. Evidence fields record how each QID was validated — keep them honest.",
+  "classes": [
+    {
+      "countryCode": "GB",
+      "adminLevel": 2,
+      "wikidataClassQid": "Q180673",
+      "placeKind": "county",
+      "label": "English ceremonial county",
+      "verified": 1,
+      "evidence": "59 discovered / 52 ingested live 2026-07-18 (Leicestershire id 1002592)"
+    },
+    {
+      "countryCode": "GB",
+      "adminLevel": 2,
+      "wikidataClassQid": "Q15060255",
+      "placeKind": "county",
+      "label": "council area of Scotland",
+      "verified": 1,
+      "evidence": "35 P31 instances probed 2026-07-18 (32 current + historical; QID dedupe handles)"
+    },
+    {
+      "countryCode": "GB",
+      "adminLevel": 2,
+      "wikidataClassQid": "Q15979307",
+      "placeKind": "county",
+      "label": "principal area of Wales",
+      "verified": 1,
+      "evidence": "22 P31 instances probed 2026-07-18 (exact)"
+    },
+    {
+      "countryCode": "GB",
+      "adminLevel": 2,
+      "wikidataClassQid": "Q1049540",
+      "placeKind": "county",
+      "label": "administrative territorial entity of Northern Ireland",
+      "verified": 1,
+      "evidence": "12 P31 instances probed 2026-07-18 via Antrim and Newtownabbey's own P31 (11 districts expected; dedupe absorbs extras)"
+    }
+  ]
+}

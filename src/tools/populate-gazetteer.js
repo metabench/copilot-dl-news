@@ -29,6 +29,10 @@ const {
   addCapitalRelationship
 } = require('news-crawler-db');
 const { createPopulateGazetteerQueries } = require('news-crawler-db');
+// A7: judgment-call map for admin-area classes (seeded from
+// config/admin-class-map.json through the 10MB bootstrap guard).
+const { seedAdminClassMap, listAdminClasses } = require('news-crawler-db');
+const { readBootstrapJson } = require('../shared/utils/bootstrapGuard');
 const { fetchCountries } = require('./restcountries');
 const { findProjectRoot } = require('../shared/utils/project-root');
 const { CliFormatter } = require('../shared/utils/CliFormatter');
@@ -162,6 +166,8 @@ function normalizeOptions(rawArgs) {
     adm2Limit: Number.isFinite(rawArgs.adm2Limit) ? rawArgs.adm2Limit : 400,
     adm2Class: /^Q[0-9]+$/.test(String(rawArgs.adm2Class || '')) ? rawArgs.adm2Class : 'Q13220204',
     adm2Kind: ['region','county'].includes(String(rawArgs.adm2Kind || '').toLowerCase()) ? String(rawArgs.adm2Kind).toLowerCase() : 'region',
+    // Explicit --adm2-class overrides the admin_class_map lookup.
+    adm2ClassExplicit: process.argv.some((a) => String(a).startsWith('--adm2-class')),
     offline: Boolean(rawArgs.offline),
     restRetries: Number.isFinite(rawArgs.restRetries) ? rawArgs.restRetries : 2,
     restTimeoutMs: Number.isFinite(rawArgs.restTimeoutMs) ? rawArgs.restTimeoutMs : 12000,
@@ -213,6 +219,7 @@ function normalizeOptions(rawArgs) {
     adm1Limit,
     adm2Limit,
     adm2Class,
+    adm2ClassExplicit,
     adm2Kind,
     offline,
     restRetries,
@@ -377,7 +384,7 @@ function normalizeOptions(rawArgs) {
   }
 
   let countries = 0, capitals = 0, names = 0;
-  let adm1Count = 0, adm2Count = 0, cityCount = 0, townCount = 0, villageCount = 0;
+  let adm1Count = 0, adm2Count = 0, adm2Existing = 0, adm2Failed = 0, cityCount = 0, townCount = 0, villageCount = 0;
 
   const attributeStatements = createAttributeStatements(raw);
 
@@ -932,7 +939,7 @@ function normalizeOptions(rawArgs) {
     // at 90s. Direct instance-of is the common classing for villages;
     // subclass-classed stragglers are a later enrichment.
     const classPath = subclassWalk ? 'wdt:P31/wdt:P279*' : 'wdt:P31';
-    const sparql = `SELECT ?town ?townLabel ?pop ?coord WHERE {
+    const sparql = `SELECT DISTINCT ?town ?townLabel ?pop ?coord WHERE {
             ?country wdt:P297 "${crow.country_code}".
             ?town ${classPath} wd:${classQid}; wdt:P17 ?country.
             ?town wdt:P1082 ?pop.
@@ -960,6 +967,20 @@ function normalizeOptions(rawArgs) {
   }
 
   if (importAdm1 || importAdm2 || importCities || importTowns || importVillages) {
+  // A7: sync the judgment-call seeds into admin_class_map (idempotent;
+  // honest counters). The 10MB bootstrap cap applies via readBootstrapJson.
+  if (importAdm2) {
+    try {
+      const seedFile = path.join(projectRoot, 'config', 'admin-class-map.json');
+      const seedDoc = readBootstrapJson(seedFile);
+      if (seedDoc && Array.isArray(seedDoc.classes)) {
+        const seeded = seedAdminClassMap(raw, seedDoc.classes);
+        telemetry.info(`[gazetteer] admin_class_map seed: created=${seeded.created} existing=${seeded.existing} failed=${seeded.failed}${seeded.failed ? ' errors: ' + seeded.errors.join('; ') : ''}`);
+      }
+    } catch (e) {
+      telemetry.warn(`[gazetteer] admin_class_map seeding failed: ${e.message}`);
+    }
+  }
   const countryRows = populateQueries.fetchCountries();
     for (const crow of countryRows) {
       if (countriesFilter.length && !countriesFilter.includes((crow.country_code||'').toUpperCase())) continue;
@@ -969,7 +990,7 @@ function normalizeOptions(rawArgs) {
     if (importCities) {
         try {
           // Use Wikidata SPARQL for top populated cities by country code (limited)
-      const sparql = `SELECT ?city ?cityLabel ?pop ?coord WHERE {
+      const sparql = `SELECT DISTINCT ?city ?cityLabel ?pop ?coord WHERE {
             ?country wdt:P297 "${crow.country_code}".
             ?city wdt:P31/wdt:P279* wd:Q515; wdt:P17 ?country.
             OPTIONAL { ?city wdt:P1082 ?pop. }
@@ -1053,11 +1074,24 @@ function normalizeOptions(rawArgs) {
         }
       }
       if (importAdm2) {
-        // ADM2 (second-level, e.g., counties) via Wikidata
+        // ADM2 (second-level: counties, council areas...) via Wikidata.
+        // A7: class resolution — an explicit --adm2-class flag wins; else
+        // the verified admin_class_map rows for this country drive the
+        // loop (multiple classes per country, e.g. GB's four nations).
+        let adm2Classes;
+        if (adm2ClassExplicit) {
+          adm2Classes = [{ wikidataClassQid: adm2Class, placeKind: adm2Kind, label: 'cli-override' }];
+        } else {
+          adm2Classes = listAdminClasses(raw, { countryCode: crow.country_code, adminLevel: 2 });
+          if (!adm2Classes.length) {
+            telemetry.info(`[gazetteer] No verified admin_class_map rows for ${crow.country_code} level 2 — skipping ADM2 (seed config/admin-class-map.json or pass --adm2-class)`);
+          }
+        }
+        for (const cls of adm2Classes) {
         try {
           const sparql = `SELECT ?adm2 ?adm2Label ?parent ?parentLabel ?iso ?fips ?coord WHERE {
             ?country wdt:P297 "${crow.country_code}".
-            ?adm2 wdt:P31/wdt:P279* wd:${adm2Class}; wdt:P17 ?country.
+            ?adm2 wdt:P31/wdt:P279* wd:${cls.wikidataClassQid}; wdt:P17 ?country.
             OPTIONAL { ?adm2 wdt:P131 ?parent. }
             OPTIONAL { ?adm2 wdt:P300 ?iso. }
             OPTIONAL { ?adm2 wdt:P882 ?fips. }
@@ -1066,11 +1100,12 @@ function normalizeOptions(rawArgs) {
           } LIMIT ${Math.max(1, Math.min(adm2Limit, 1000))}`;
           const jr = await fetchSparql(sparql);
           const rows = (jr.results && jr.results.bindings) || [];
-          telemetry.info(`[gazetteer] ADM2 query for ${crow.country_code} returned ${rows.length}`);
+          telemetry.info(`[gazetteer] ADM2 query for ${crow.country_code} (${cls.label || cls.wikidataClassQid} -> ${cls.placeKind}) returned ${rows.length}`);
           const ids = rows.map(r => (r.adm2?.value||'').split('/').pop()).filter(Boolean);
           const entities = await wikidataGet(ids);
           for (const r of rows) {
             const qid = (r.adm2?.value||'').split('/').pop();
+            try {
             const ent = entities?.entities?.[qid] || null;
             let adm2Code = null;
             try {
@@ -1086,8 +1121,8 @@ function normalizeOptions(rawArgs) {
             const lat = pt ? pt.lat : null;
             const lon = pt ? pt.lon : null;
             const namesArr = ent ? labelMap(ent) : (r.adm2Label?.value ? [{ name: r.adm2Label.value, lang: 'und', kind:'official', preferred:1, official:1 }] : []);
-            const { id: rid, created } = insPlaceWithNames(adm2Kind, crow.country_code, lat, lon, null, namesArr, 'wikidata', qid, { adm2Code });
-            if (created) adm2Count++;
+            const { id: rid, created } = insPlaceWithNames(cls.placeKind, crow.country_code, lat, lon, null, namesArr, 'wikidata', qid, { adm2Code });
+            if (created) adm2Count++; else adm2Existing++;
             // Parent link: prefer parent region if known; else link to country
             const parentQ = (r.parent?.value||'').split('/').pop();
             let parentId = null;
@@ -1097,9 +1132,15 @@ function normalizeOptions(rawArgs) {
             try {
               populateQueries.insertHierarchyRelation(parentId || crow.id, rid, 'admin_parent', 1);
             } catch (_) {}
+            } catch (rowErr) {
+              // Honest counters: a failed row is a FAILED row, not silence.
+              adm2Failed++;
+              telemetry.warn(`[gazetteer] ADM2 row failed (${qid}, ${cls.placeKind}): ${rowErr.message}`);
+            }
           }
         } catch (e) {
-          telemetry.warn(`[gazetteer] ADM2 import failed for ${crow.country_code}: ${e.message}`);
+          telemetry.warn(`[gazetteer] ADM2 import failed for ${crow.country_code}/${cls.wikidataClassQid}: ${e.message}`);
+        }
         }
       }
     }
@@ -1134,7 +1175,7 @@ function normalizeOptions(rawArgs) {
   } catch (_) { /* best effort */ }
 
   // Final summary with counts
-  const finalSummary = { countries, capitals, names, adm1: adm1Count, adm2: adm2Count, cities: cityCount, towns: townCount, villages: villageCount, source: 'restcountries@v3.1', rest_all_url: `https://restcountries.com/v3.1/all?fields=${encodeURIComponent('name,cca2,cca3,latlng,capital,capitalInfo,timezones,region,subregion,translations')}` };
+  const finalSummary = { countries, capitals, names, adm1: adm1Count, adm2: adm2Count, adm2Existing, adm2Failed, cities: cityCount, towns: townCount, villages: villageCount, source: 'restcountries@v3.1', rest_all_url: `https://restcountries.com/v3.1/all?fields=${encodeURIComponent('name,cca2,cca3,latlng,capital,capitalInfo,timezones,region,subregion,translations')}` };
   // Cleanup: remove empty names and nameless places
   try {
     populateQueries.trimPlaceNames();
