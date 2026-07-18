@@ -12,7 +12,8 @@ const {
   ensureDb,
   ensureDatabase,
   createSQLiteDatabase,
-  ensureGazetteer
+  ensureGazetteer,
+  openDbReadOnly
 } = require('../../../db/ensureNewsDb');
 const { wrapWithTelemetry, createInstrumentedDb } = require('news-crawler-db');
 
@@ -22,5 +23,6 @@ module.exports = {
   ensureDatabase,
   wrapWithTelemetry,
   createInstrumentedDb,
-  ensureGazetteer
+  ensureGazetteer,
+  openDbReadOnly
 };

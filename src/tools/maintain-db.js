@@ -4,15 +4,18 @@
 const path = require('path');
 const { ensureDb } = require('../db/ensureNewsDb');
 const { dedupePlaceSources } = require('news-crawler-db');
-const { repairGazetteer } = require('../data/db/sqlite/v1/tools/gazetteerQA');
+const { repairGazetteerIntegrity: repairGazetteer } = require('news-crawler-db');
+// Historical names for ncdb's MaintainDb surface (retired v1/tools
+// wrapper); trimPlaceNames keeps its never-throws boolean contract.
 const {
-  countPlaces,
-  countPlaceNames,
-  normalizePlaceNames,
-  trimPlaceNames,
+  countMaintainDbPlaces: countPlaces,
+  countMaintainDbPlaceNames: countPlaceNames,
+  normalizeMissingPlaceNames: normalizePlaceNames,
+  trimStoredPlaceNames,
   deleteEmptyPlaceNames,
   deleteNamelessPlaces
-} = require('../data/db/sqlite/v1/tools/maintainDb');
+} = require('news-crawler-db');
+const trimPlaceNames = (db) => { try { trimStoredPlaceNames(db); return true; } catch (_) { return false; } };
 
 function parseArgs(argv) {
   const args = {};

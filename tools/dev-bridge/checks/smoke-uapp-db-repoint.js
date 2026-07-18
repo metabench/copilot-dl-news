@@ -261,7 +261,27 @@ const FNS = [
   'getTopSettlementsByKind',
   // B11d: placeHub store compat wrappers retired — ncdb exports BOTH the
   // short and Sqlite-prefixed names; consumers use the short ones.
-  'createPlaceHubUrlPatternsStore', 'createPlaceHubCandidatesStore'
+  'createPlaceHubUrlPatternsStore', 'createPlaceHubCandidatesStore',
+  // B11e: DualDatabaseFacade/DatabaseExporter/PlannerDatabase wrappers
+  // retired — identical class names on ncdb. (The first attempt at this
+  // extension was a SILENT NO-OP: an unasserted replace() with an
+  // LF-vs-CRLF-mismatched anchor wrote the file unchanged. Use the Edit
+  // tool or assert anchors.)
+  'DualDatabaseFacade', 'DatabaseExporter', 'PlannerDatabase',
+  // B11f: v1/tools trio + outer gazetteerQA shim retired; renamed ncdb
+  // sources consumers alias (validateGazetteer<-validateGazetteerIntegrity,
+  // repairGazetteer<-repairGazetteerIntegrity, countPlaces<-
+  // countMaintainDbPlaces, normalizePlaceNames<-normalizeMissingPlaceNames,
+  // trimPlaceNames wraps trimStoredPlaceNames w/ boolean contract,
+  // safeIterateAll<-iterateGazetteerTableRows). Coverage fallback now
+  // ncdb's CoverageDatabase.
+  'iteratePlaceSources', 'iteratePlaces', 'iteratePlaceNames',
+  'iteratePlaceHierarchy', 'iteratePlaceExternalIds',
+  'iterateGazetteerTableRows', 'validateGazetteerIntegrity',
+  'repairGazetteerIntegrity', 'countMaintainDbPlaces',
+  'countMaintainDbPlaceNames', 'normalizeMissingPlaceNames',
+  'trimStoredPlaceNames', 'deleteEmptyPlaceNames', 'deleteNamelessPlaces',
+  'CoverageDatabase'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);

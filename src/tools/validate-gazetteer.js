@@ -11,7 +11,7 @@
 
 const path = require('path');
 const { ensureDb, openDbReadOnly } = require('../data/db/sqlite');
-const { validateGazetteer } = require('../data/db/sqlite/tools/gazetteerQA');
+const { validateGazetteerIntegrity: validateGazetteer } = require('news-crawler-db');
 const { CliFormatter, ICONS } = require('../shared/utils/CliFormatter');
 const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');
 

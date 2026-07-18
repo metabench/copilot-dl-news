@@ -3,6 +3,6 @@
 //  - validateGazetteer(db): returns { details, summary }
 //  - repairGazetteer(db): performs safe fixes and returns a summary of actions
 
-const { validateGazetteer, repairGazetteer } = require('../data/db/sqlite/tools/gazetteerQA');
+const { validateGazetteerIntegrity: validateGazetteer, repairGazetteerIntegrity: repairGazetteer } = require('news-crawler-db');
 
 module.exports = { validateGazetteer, repairGazetteer };

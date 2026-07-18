@@ -72,9 +72,17 @@ function ensureGazetteer(db) {
   return ncdb.initSqliteV1GazetteerTables(db, { verbose: false, logger: console });
 }
 
+// Historical helper from the retired v1 barrel (B11f: export-gazetteer
+// still destructured it from the sqlite barrel, silently undefined
+// since B10c).
+function openDbReadOnly(dbPath) {
+  return openDatabase(dbPath, { readonly: true, fileMustExist: true });
+}
+
 module.exports = {
   NewsDatabase,
   openDatabase,
+  openDbReadOnly,
   ensureDatabase,
   ensureDb,
   createSQLiteDatabase,

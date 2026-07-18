@@ -14,7 +14,7 @@ const {
   iteratePlaceNames,
   iteratePlaceHierarchy,
   iteratePlaceExternalIds
-} = require('../data/db/sqlite/v1/tools/gazetteerExport');
+} = require('news-crawler-db');
 const { findProjectRoot } = require('../shared/utils/project-root');
 const { CliFormatter } = require('../shared/utils/CliFormatter');
 const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');

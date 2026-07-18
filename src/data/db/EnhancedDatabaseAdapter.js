@@ -22,7 +22,7 @@ try {
   coverageSource = 'external';
 } catch (_externalErr) {
   try {
-    ({ CoverageDatabase } = require('./CoverageDatabase'));
+    ({ CoverageDatabase } = require('news-crawler-db'));
     coverageSource = 'local';
   } catch (_localErr) {
     // Both unavailable — coverage features will be disabled
