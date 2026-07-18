@@ -470,6 +470,32 @@ const TASK_DEFINITIONS = {
       }
     ]
   },
+  'ingest-admin-areas': {
+    taskType: 'ingest-admin-areas',
+    title: 'Ingest Admin Areas',
+    description: 'Ingest ADM2 admin areas (counties/districts/departments) from Wikidata for verified admin_class_map classes — runs in-app, no app-stop',
+    icon: '🗺️',
+    fields: [
+      {
+        name: 'countries',
+        label: 'Countries (comma-separated ISO-3166 alpha-2)',
+        type: FieldType.TEXT,
+        default: '',
+        required: true,
+        placeholder: 'FR,GB',
+        description: 'Only countries with VERIFIED admin_class_map rows are ingested'
+      },
+      {
+        name: 'limit',
+        label: 'Max rows per class',
+        type: FieldType.NUMBER,
+        default: 200,
+        min: 1,
+        max: 1000,
+        description: 'WDQS LIMIT per Wikidata class'
+      }
+    ]
+  },
 };
 
 /**
