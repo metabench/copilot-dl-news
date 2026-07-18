@@ -668,6 +668,10 @@ class DomainProcessor {
       predictions = analyzers.region.predictRegionHubUrls(normalizedDomain.host, place);
     } else if (place.kind === 'city') {
       predictions = analyzers.city.predictCityHubUrls(normalizedDomain.host, place);
+    } else if ((place.kind === 'town' || place.kind === 'village') &&
+               typeof analyzers.city.predictSettlementHubUrls === 'function') {
+      // A6 arc: settlement kinds predict from DSPL `${kind}HubPatterns` only.
+      predictions = analyzers.city.predictSettlementHubUrls(normalizedDomain.host, place, place.kind);
     }
 
     const normalizedPredictions = this._normalizePredictions(predictions, normalizedDomain.scheme);

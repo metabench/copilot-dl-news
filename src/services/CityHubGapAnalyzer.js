@@ -121,6 +121,51 @@ class CityHubGapAnalyzer extends HubGapAnalyzerBase {
   predictCityHubUrls(domain, city) {
     return this.predictHubUrls(domain, city);
   }
+
+  /**
+   * Generate candidate URLs for a town/village hub (A6 arc).
+   *
+   * Reads `${kind}HubPatterns` from the domain's DSPL only — deliberately
+   * NO fallback-pattern spray: settlement counts are large and unverified
+   * fallback guessing would be noisy. Metadata exposes slug under several
+   * placeholder names ({slug}, {townSlug}/{villageSlug}, {citySlug}) so
+   * both new and historical pattern styles format.
+   *
+   * @param {string} domain - Host (e.g. theguardian.com).
+   * @param {Object} place - Settlement row (name, countryCode, regionName).
+   * @param {string} kind - 'town' | 'village'.
+   * @returns {string[]} Candidate URLs (absolute).
+   */
+  predictSettlementHubUrls(domain, place, kind) {
+    if (!domain || !place?.name) return [];
+    const slug = slugify(place.name);
+    if (!slug) return [];
+
+    const { getDsplForDomain } = require('./shared/dspl');
+    const metadata = {
+      slug,
+      [`${kind}Slug`]: slug,
+      citySlug: slug,
+      countryCode: place.countryCode ? String(place.countryCode).toLowerCase() : null,
+      regionSlug: place.regionName ? slugify(place.regionName) : null,
+      name: place.name
+    };
+
+    const baseUrl = `https://${domain}`;
+    const urls = new Set();
+    const dspl = getDsplForDomain(this.dspls, domain);
+    const patterns = dspl?.[`${kind}HubPatterns`] || [];
+    for (const entry of patterns) {
+      if (!entry || entry.verified === false) continue;
+      try {
+        const formatted = this._formatPattern(entry.pattern || entry, metadata);
+        urls.add(new URL(formatted, baseUrl).href);
+      } catch (_) {
+        // Ignore invalid URLs
+      }
+    }
+    return Array.from(urls);
+  }
 }
 
 module.exports = {

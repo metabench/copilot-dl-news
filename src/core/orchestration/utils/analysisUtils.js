@@ -20,7 +20,10 @@ function summarizeDsplPatterns(dsplEntry, requestedKinds) {
   const availableKinds = new Set();
 
   for (const kind of requestedKinds) {
-    const kindPatterns = dsplEntry[kind] || [];
+    // DSPL files key patterns as `${kind}HubPatterns` (countryHubPatterns,
+    // townHubPatterns, ...); the bare-kind lookup is kept for any legacy
+    // entries that used it.
+    const kindPatterns = dsplEntry[kind] || dsplEntry[`${kind}HubPatterns`] || [];
     if (kindPatterns.length > 0) {
       availableKinds.add(kind);
       patterns[kind] = {
