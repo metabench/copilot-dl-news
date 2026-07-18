@@ -87,6 +87,9 @@ function parseCliArgs(argv) {
     .add('--import-towns', 'Import towns (Q3957) from Wikidata; population floor is the volume control', false, 'boolean')
     .add('--towns-per-country <number>', 'Max towns per country when importing', 25, 'number')
     .add('--town-min-population <number>', 'Minimum population (P1082) required for towns', 5000, 'number')
+    .add('--import-villages', 'Import villages (Q532) from Wikidata; population floor is the volume control', false, 'boolean')
+    .add('--villages-per-country <number>', 'Max villages per country when importing', 25, 'number')
+    .add('--village-min-population <number>', 'Minimum population (P1082) required for villages', 5000, 'number')
     .add('--adm1-limit <number>', 'Maximum ADM1 rows to fetch per country', 200, 'number')
     .add('--adm2-limit <number>', 'Maximum ADM2 rows to fetch per country', 400, 'number')
     .add('--cleanup', 'Run duplicate cleanup after ingestion', false, 'boolean')
@@ -150,6 +153,9 @@ function normalizeOptions(rawArgs) {
     importTowns: Boolean(rawArgs.importTowns),
     maxTownsPerCountry: Number.isFinite(rawArgs.townsPerCountry) ? rawArgs.townsPerCountry : 25,
     townMinPopulation: Number.isFinite(rawArgs.townMinPopulation) ? rawArgs.townMinPopulation : 5000,
+    importVillages: Boolean(rawArgs.importVillages),
+    maxVillagesPerCountry: Number.isFinite(rawArgs.villagesPerCountry) ? rawArgs.villagesPerCountry : 25,
+    villageMinPopulation: Number.isFinite(rawArgs.villageMinPopulation) ? rawArgs.villageMinPopulation : 5000,
     adm1Limit: Number.isFinite(rawArgs.adm1Limit) ? rawArgs.adm1Limit : 200,
     adm2Limit: Number.isFinite(rawArgs.adm2Limit) ? rawArgs.adm2Limit : 400,
     offline: Boolean(rawArgs.offline),
@@ -197,6 +203,9 @@ function normalizeOptions(rawArgs) {
     importTowns,
     maxTownsPerCountry,
     townMinPopulation,
+    importVillages,
+    maxVillagesPerCountry,
+    villageMinPopulation,
     adm1Limit,
     adm2Limit,
     offline,
@@ -318,7 +327,7 @@ function normalizeOptions(rawArgs) {
   // Fast path: if already populated and no filters/enrichment, skip network fetch
   try {
     const existingCountries = populateQueries.countTotalByKind('country');
-    const noFilters = !countriesFilter.length && !regionFilter && !subregionFilter && !importAdm1 && !importCities && !importTowns;
+    const noFilters = !countriesFilter.length && !regionFilter && !subregionFilter && !importAdm1 && !importCities && !importTowns && !importVillages;
     const populatedEnough = offline ? (existingCountries > 0) : (existingCountries >= 200);
     if (!force && noFilters && populatedEnough) {
       const summary = { countries: 0, capitals: 0, names: 0, source: 'restcountries@v3.1', skipped: 'already-populated' };
@@ -349,6 +358,7 @@ function normalizeOptions(rawArgs) {
     importAdm1,
     importCities,
     importTowns,
+    importVillages,
     offline
   });
   telemetry.info(`[gazetteer] Started ingestion run #${runId}`);
@@ -361,7 +371,7 @@ function normalizeOptions(rawArgs) {
   }
 
   let countries = 0, capitals = 0, names = 0;
-  let adm1Count = 0, adm2Count = 0, cityCount = 0, townCount = 0;
+  let adm1Count = 0, adm2Count = 0, cityCount = 0, townCount = 0, villageCount = 0;
 
   const attributeStatements = createAttributeStatements(raw);
 
@@ -868,14 +878,25 @@ function normalizeOptions(rawArgs) {
   async function wikidataGet(ids){
     const set = Array.from(new Set(ids.filter(Boolean)));
     if (!set.length) return {};
-    const url = `https://www.wikidata.org/wiki/Special:EntityData/${encodeURIComponent(set.join('|'))}.json`;
+    // wbgetentities accepts up to 50 pipe-joined ids per call.
+    // (Fixed 2026-07-18: the old Special:EntityData/<id>.json endpoint is
+    // single-entity only — pipe-joined ids 404'd on every batch and name
+    // ingestion silently fell back to the lone SPARQL label.)
+    const BATCH = 50;
+    const aggregate = {};
     try {
-      const jr = await fetchJson(url, { 'User-Agent': 'copilot-dl-news/1.0 (Wikidata entity fetch)', 'Accept': 'application/json' }, Math.max(15000, wikidataTimeoutMs));
+      for (let i = 0; i < set.length; i += BATCH) {
+        const batch = set.slice(i, i + BATCH);
+        const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${encodeURIComponent(batch.join('|'))}&format=json&props=labels%7Caliases%7Cclaims`;
+        const jr = await fetchJson(url, { 'User-Agent': 'copilot-dl-news/1.0 (Wikidata entity fetch)', 'Accept': 'application/json' }, Math.max(15000, wikidataTimeoutMs));
+        if (jr && jr.entities) Object.assign(aggregate, jr.entities);
+        if (wikidataSleepMs > 0 && i + BATCH < set.length) await sleep(wikidataSleepMs);
+      }
       if (wikidataSleepMs > 0) await sleep(wikidataSleepMs);
-      return jr;
+      return { entities: aggregate };
     } catch (e) {
       const idsStr = set.join(',');
-      telemetry.warn(`[gazetteer] Wikidata entity fetch failed: ${e.message} ids: ${idsStr} url: ${url}`);
+      telemetry.warn(`[gazetteer] Wikidata entity fetch failed: ${e.message} ids: ${idsStr}`);
       return {};
     }
   }
@@ -892,11 +913,49 @@ function normalizeOptions(rawArgs) {
   }
 
   // For each included country, optionally import ADM1 and top cities
-  if (importAdm1 || importAdm2 || importCities || importTowns) {
+  // Shared settlement importer for the population-floor kinds (towns Q3957,
+  // villages Q532). ?pop is REQUIRED — class membership alone is far too
+  // broad for bounded ingestion (cities keep their own block: no floor).
+  // insPlaceWithNames dedupes on (source, qid) and never rewrites kind.
+  async function importSettlementsForCountry(crow, { kind, classQid, minPop, limit, subclassWalk = true }) {
+    const floor = Math.max(0, Number(minPop) || 0);
+    // subclassWalk=false queries DIRECT instances only — required for Q532
+    // (villages): the P279* walk over millions of instances 504s WDQS even
+    // at 90s. Direct instance-of is the common classing for villages;
+    // subclass-classed stragglers are a later enrichment.
+    const classPath = subclassWalk ? 'wdt:P31/wdt:P279*' : 'wdt:P31';
+    const sparql = `SELECT ?town ?townLabel ?pop ?coord WHERE {
+            ?country wdt:P297 "${crow.country_code}".
+            ?town ${classPath} wd:${classQid}; wdt:P17 ?country.
+            ?town wdt:P1082 ?pop.
+            FILTER(?pop >= ${floor})
+            OPTIONAL { ?town wdt:P625 ?coord. }
+            SERVICE wikibase:label { bd:serviceParam wikibase:language "en,fr,de,es,ru,zh,ar,und". }
+          } ORDER BY DESC(?pop) LIMIT ${Math.max(1, Math.min(limit, 200))}`;
+    const jr = await fetchSparql(sparql);
+    const rows = (jr.results && jr.results.bindings) || [];
+    telemetry.info(`[gazetteer] ${kind} query for ${crow.country_code} returned ${rows.length}`);
+    const ids = rows.map(r => (r.town?.value||'').split('/').pop()).filter(Boolean);
+    const entities = await wikidataGet(ids);
+    let created = 0;
+    for (const r of rows) {
+      const qid = (r.town?.value||'').split('/').pop();
+      const pt = r.coord?.value ? parseWktPoint(r.coord.value) : null;
+      const pop = r.pop ? parseInt(r.pop.value, 10) : null;
+      const ent = entities?.entities?.[qid] || null;
+      const namesArr = ent ? labelMap(ent) : (r.townLabel?.value ? [{ name: r.townLabel.value, lang: 'und', kind:'endonym', preferred:1, official:0 }] : []);
+      const { id: sid, created: isNew } = insPlaceWithNames(kind, crow.country_code, pt ? pt.lat : null, pt ? pt.lon : null, pop, namesArr, 'wikidata', qid);
+      if (isNew) created++;
+      try { populateQueries.insertHierarchyRelation(crow.id, sid, 'admin_parent', 1); } catch (_) {}
+    }
+    return created;
+  }
+
+  if (importAdm1 || importAdm2 || importCities || importTowns || importVillages) {
   const countryRows = populateQueries.fetchCountries();
     for (const crow of countryRows) {
       if (countriesFilter.length && !countriesFilter.includes((crow.country_code||'').toUpperCase())) continue;
-  telemetry.info(`[gazetteer] Country ${crow.country_code}: importing${importAdm1?' ADM1':''}${importAdm2?' ADM2':''}${importCities?' cities':''}${importTowns?' towns':''} from Wikidata (SPARQL)`);
+  telemetry.info(`[gazetteer] Country ${crow.country_code}: importing${importAdm1?' ADM1':''}${importAdm2?' ADM2':''}${importCities?' cities':''}${importTowns?' towns':''}${importVillages?' villages':''} from Wikidata (SPARQL)`);
       // Find Wikidata QID for the country via restcountries cca2→ Wikidata is not reliable here without mapping; skip if not available.
       // As a pragmatic fallback, import top cities via GeoNames-like heuristic from Wikipedia/Wikidata SPARQL is too heavy; keep constrained:
     if (importCities) {
@@ -932,39 +991,23 @@ function normalizeOptions(rawArgs) {
       }
       if (importTowns) {
         try {
-          // Towns (A6 slice 1): Q3957 with a REQUIRED population claim and
-          // floor — Q3957 membership alone is far too broad for bounded
-          // ingestion, so ?pop is non-OPTIONAL here (unlike cities).
-          // insPlaceWithNames dedupes on (source, qid) and never rewrites
-          // kind, so places already ingested as cities are left untouched.
-          const townMinPop = Math.max(0, Number(townMinPopulation) || 0);
-          const sparql = `SELECT ?town ?townLabel ?pop ?coord WHERE {
-            ?country wdt:P297 "${crow.country_code}".
-            ?town wdt:P31/wdt:P279* wd:Q3957; wdt:P17 ?country.
-            ?town wdt:P1082 ?pop.
-            FILTER(?pop >= ${townMinPop})
-            OPTIONAL { ?town wdt:P625 ?coord. }
-            SERVICE wikibase:label { bd:serviceParam wikibase:language "en,fr,de,es,ru,zh,ar,und". }
-          } ORDER BY DESC(?pop) LIMIT ${Math.max(1, Math.min(maxTownsPerCountry, 200))}`;
-          const jr = await fetchSparql(sparql);
-          const rows = (jr.results && jr.results.bindings) || [];
-          telemetry.info(`[gazetteer] Towns query for ${crow.country_code} returned ${rows.length}`);
-          const ids = rows.map(r => (r.town?.value||'').split('/').pop()).filter(Boolean);
-          const entities = await wikidataGet(ids);
-          for (const r of rows) {
-            const qid = (r.town?.value||'').split('/').pop();
-            const pt = r.coord?.value ? parseWktPoint(r.coord.value) : null;
-            const lat = pt ? pt.lat : null;
-            const lon = pt ? pt.lon : null;
-            const pop = r.pop ? parseInt(r.pop.value, 10) : null;
-            const ent = entities?.entities?.[qid] || null;
-            const namesArr = ent ? labelMap(ent) : (r.townLabel?.value ? [{ name: r.townLabel.value, lang: 'und', kind:'endonym', preferred:1, official:0 }] : []);
-            const { id: tid, created } = insPlaceWithNames('town', crow.country_code, lat, lon, pop, namesArr, 'wikidata', qid);
-            if (created) townCount++;
-            try { populateQueries.insertHierarchyRelation(crow.id, tid, 'admin_parent', 1); } catch (_) {}
-          }
+          townCount += await importSettlementsForCountry(crow, {
+            kind: 'town', classQid: 'Q3957',
+            minPop: townMinPopulation, limit: maxTownsPerCountry
+          });
         } catch (e) {
           telemetry.warn(`[gazetteer] Towns import failed for ${crow.country_code}: ${e.message}`);
+        }
+      }
+      if (importVillages) {
+        try {
+          villageCount += await importSettlementsForCountry(crow, {
+            kind: 'village', classQid: 'Q532',
+            minPop: villageMinPopulation, limit: maxVillagesPerCountry,
+            subclassWalk: false
+          });
+        } catch (e) {
+          telemetry.warn(`[gazetteer] Villages import failed for ${crow.country_code}: ${e.message}`);
         }
       }
       if (importAdm1) {
@@ -1083,7 +1126,7 @@ function normalizeOptions(rawArgs) {
   } catch (_) { /* best effort */ }
 
   // Final summary with counts
-  const finalSummary = { countries, capitals, names, adm1: adm1Count, adm2: adm2Count, cities: cityCount, towns: townCount, source: 'restcountries@v3.1', rest_all_url: `https://restcountries.com/v3.1/all?fields=${encodeURIComponent('name,cca2,cca3,latlng,capital,capitalInfo,timezones,region,subregion,translations')}` };
+  const finalSummary = { countries, capitals, names, adm1: adm1Count, adm2: adm2Count, cities: cityCount, towns: townCount, villages: villageCount, source: 'restcountries@v3.1', rest_all_url: `https://restcountries.com/v3.1/all?fields=${encodeURIComponent('name,cca2,cca3,latlng,capital,capitalInfo,timezones,region,subregion,translations')}` };
   // Cleanup: remove empty names and nameless places
   try {
     populateQueries.trimPlaceNames();

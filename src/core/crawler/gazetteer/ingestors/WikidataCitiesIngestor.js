@@ -54,9 +54,18 @@ const {
   DEFAULT_LABEL_LANGUAGES,
   CITY_CLASS_QIDS,
   TOWN_CLASS_QIDS,
+  VILLAGE_CLASS_QIDS,
   buildCitiesDiscoveryQuery,
   buildCountryClause
 } = require('../queries/geographyQueries');
+
+// A6: settlement kinds this ingestor can write. places.kind vocabulary is
+// enforced DB-side by trg_places_kind_check_* (ncdb 02c5f96).
+const SETTLEMENT_KIND_CLASSES = {
+  city: CITY_CLASS_QIDS,
+  town: TOWN_CLASS_QIDS,
+  village: VILLAGE_CLASS_QIDS
+};
 
 class WikidataCitiesIngestor {
   constructor({
@@ -86,21 +95,22 @@ class WikidataCitiesIngestor {
     this.maxCitiesPerCountry = maxCitiesPerCountry;
     this.minPopulation = minPopulation;
     this.limitCountries = limitCountries;
-    // A6: the ingestor is kind-parameterized — 'city' (Q515, the default)
-    // or 'town' (Q3957 with a population floor as the volume control).
-    // places.kind is free TEXT and ncdb normalizePlaceKind is a lowercase
-    // passthrough, so no DB-side vocabulary change is needed.
-    this.placeKind = String(placeKind || 'city').trim().toLowerCase() === 'town' ? 'town' : 'city';
+    // A6: the ingestor is kind-parameterized — 'city' (Q515, the default),
+    // 'town' (Q3957) or 'village' (Q532), each with a population floor as
+    // the volume control for the non-city kinds.
+    const requestedKind = String(placeKind || 'city').trim().toLowerCase();
+    this.placeKind = SETTLEMENT_KIND_CLASSES[requestedKind] ? requestedKind : 'city';
     this.classQids = Array.isArray(classQids) && classQids.length
       ? classQids
-      : (this.placeKind === 'town' ? TOWN_CLASS_QIDS : CITY_CLASS_QIDS);
+      : SETTLEMENT_KIND_CLASSES[this.placeKind];
   this.targetCountries = Array.isArray(targetCountries) && targetCountries.length ? targetCountries : null;
   this.countryFilter = this.targetCountries ? this._buildCountryFilter(this.targetCountries) : null;
     this.cacheDir = cacheDir || path.join(process.cwd(), 'data', 'cache', 'sparql');
     this.labelLanguages = [...DEFAULT_LABEL_LANGUAGES];
 
-    this.id = this.placeKind === 'town' ? 'wikidata-towns' : 'wikidata-cities';
-    this.name = this.placeKind === 'town' ? 'Wikidata Towns Ingestor' : 'Wikidata Cities Ingestor';
+    this.id = `wikidata-${this.placeKind === 'city' ? 'cities' : this.placeKind + 's'}`;
+    const kindTitle = this.placeKind.charAt(0).toUpperCase() + this.placeKind.slice(1);
+    this.name = `Wikidata ${this.placeKind === 'city' ? 'Cities' : kindTitle + 's'} Ingestor`;
 
     try {
       ingestQueries.registerPlaceSource(this.db, {

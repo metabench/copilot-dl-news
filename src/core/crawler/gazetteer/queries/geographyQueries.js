@@ -26,6 +26,9 @@ const CITY_CLASS_QIDS = ['Q515'];
 // Q3957 membership alone is far too broad for bounded ingestion.
 const TOWN_CLASS_QIDS = ['Q3957'];
 
+// A6 slice 2: Q532 (village). Same population-floor discipline.
+const VILLAGE_CLASS_QIDS = ['Q532'];
+
 function buildLabelServiceClause(languages = DEFAULT_LABEL_LANGUAGES) {
   const languageList = Array.isArray(languages) ? languages.join(',') : String(languages);
   return `SERVICE wikibase:label { bd:serviceParam wikibase:language "${languageList}" . bd:serviceParam wikibase:normalize "true" . }`;
@@ -194,6 +197,7 @@ module.exports = {
   DEFAULT_REGION_CLASS_QIDS,
   CITY_CLASS_QIDS,
   TOWN_CLASS_QIDS,
+  VILLAGE_CLASS_QIDS,
   buildLabelServiceClause,
   buildCountryClause,
   buildCountryDiscoveryQuery,

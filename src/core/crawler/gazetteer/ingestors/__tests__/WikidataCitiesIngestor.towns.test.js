@@ -13,7 +13,8 @@ const {
   buildCitiesDiscoveryQuery,
   buildCountryClause,
   CITY_CLASS_QIDS,
-  TOWN_CLASS_QIDS
+  TOWN_CLASS_QIDS,
+  VILLAGE_CLASS_QIDS
 } = require('../../queries/geographyQueries');
 const path = require('path');
 const os = require('os');
@@ -83,6 +84,14 @@ describe('WikidataCitiesIngestor - towns parameterization (A6)', () => {
       expect(ingestor.placeKind).toBe('town');
       expect(ingestor.classQids).toEqual(TOWN_CLASS_QIDS);
       expect(ingestor.id).toBe('wikidata-towns');
+    });
+
+    test('village kind selects Q532 and the villages id (slice 2)', () => {
+      const ingestor = new WikidataCitiesIngestor({ db, cacheDir: tempCacheDir, placeKind: 'village' });
+      expect(ingestor.placeKind).toBe('village');
+      expect(ingestor.classQids).toEqual(VILLAGE_CLASS_QIDS);
+      expect(ingestor.id).toBe('wikidata-villages');
+      expect(ingestor.name).toBe('Wikidata Villages Ingestor');
     });
 
     test('unknown kinds fall back to city (bounded vocabulary for slice 1)', () => {

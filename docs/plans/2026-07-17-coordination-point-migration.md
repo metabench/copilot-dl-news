@@ -156,6 +156,22 @@ a later core-crawler test-drift pass.
      reworked — identity form impossible post-deletion), LIVE
      download-verification.check 9/9 on :memory:, node --check 10/10.
      src/data/db: 197 files remain.
+   - Slice 10 (B10a+b) DONE 2026-07-18: v1-root retirement — 10 files
+     gone (7 audited-dead + SQLiteNewsDatabase + sqlite/schema.js +
+     test-utils). SQLiteNewsDatabase's 5 consumers inline the exact
+     `ncdb.NewsDatabase || ncdb.SQLiteNewsDatabase` resolution; schema
+     consumers alias the SqliteV1-infix sources; test-utils' createTempDb
+     (returns a PATH) maps to src/test-utils/db-helpers createTempDbPath
+     (its name-twin createTempDb returns a HANDLE — do not confuse).
+     KEPT DELIBERATELY: v1/schema.js (2 importers) as connection.js's
+     jest-spy seam (spyOn needs the shared mutable module object; ncdb
+     dist exports are getter-shaped) — retires WITH connection.js.
+     Also completed a B6 miss (sibling-relative ../queries/gazetteer.*
+     test requires, silently dead two turns → 7/7 green).
+     src/data/db: 95 -> 85 js files. Remaining v1 root: connection,
+     ensureDb, schema (seam), schemaMetadata, instrumentation,
+     instrumentedDb, seeders, seed-utils, index.js (17 ext importers),
+     + migrations/ tools/ __tests__/.
    - Slice 9 (B9) DONE 2026-07-18: the sqlite/v1/queries tree is GONE.
      urlListingNormalized (11 consumers) had NO SQL of its own — the B7
      "real logic" note was stale; its db-first function surface (15
