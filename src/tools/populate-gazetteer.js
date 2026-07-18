@@ -92,6 +92,7 @@ function parseCliArgs(argv) {
     .add('--village-min-population <number>', 'Minimum population (P1082) required for villages', 5000, 'number')
     .add('--adm1-limit <number>', 'Maximum ADM1 rows to fetch per country', 200, 'number')
     .add('--adm2-limit <number>', 'Maximum ADM2 rows to fetch per country', 400, 'number')
+    .add('--adm2-class <qid>', 'Wikidata class QID for ADM2 discovery (e.g. Q180673 for English ceremonial counties — GB counties bypass the generic Q13220204 subclass tree)', 'Q13220204')
     .add('--cleanup', 'Run duplicate cleanup after ingestion', false, 'boolean')
     .add('--cleanup-only', 'Run cleanup without ingesting new data', false, 'boolean')
     .add('--offline', 'Use cached REST Countries payload (avoid network)', offlineDefault, 'boolean')
@@ -158,6 +159,7 @@ function normalizeOptions(rawArgs) {
     villageMinPopulation: Number.isFinite(rawArgs.villageMinPopulation) ? rawArgs.villageMinPopulation : 5000,
     adm1Limit: Number.isFinite(rawArgs.adm1Limit) ? rawArgs.adm1Limit : 200,
     adm2Limit: Number.isFinite(rawArgs.adm2Limit) ? rawArgs.adm2Limit : 400,
+    adm2Class: /^Q[0-9]+$/.test(String(rawArgs.adm2Class || '')) ? rawArgs.adm2Class : 'Q13220204',
     offline: Boolean(rawArgs.offline),
     restRetries: Number.isFinite(rawArgs.restRetries) ? rawArgs.restRetries : 2,
     restTimeoutMs: Number.isFinite(rawArgs.restTimeoutMs) ? rawArgs.restTimeoutMs : 12000,
@@ -208,6 +210,7 @@ function normalizeOptions(rawArgs) {
     villageMinPopulation,
     adm1Limit,
     adm2Limit,
+    adm2Class,
     offline,
     restRetries,
     restTimeoutMs,
@@ -1049,7 +1052,7 @@ function normalizeOptions(rawArgs) {
         try {
           const sparql = `SELECT ?adm2 ?adm2Label ?parent ?parentLabel ?iso ?fips ?coord WHERE {
             ?country wdt:P297 "${crow.country_code}".
-            ?adm2 wdt:P31/wdt:P279* wd:Q13220204; wdt:P17 ?country.
+            ?adm2 wdt:P31/wdt:P279* wd:${adm2Class}; wdt:P17 ?country.
             OPTIONAL { ?adm2 wdt:P131 ?parent. }
             OPTIONAL { ?adm2 wdt:P300 ?iso. }
             OPTIONAL { ?adm2 wdt:P882 ?fips. }
