@@ -15,6 +15,12 @@ function readDatasetFromFile(filePath) {
     throw new TypeError('readDatasetFromFile requires a filePath string');
   }
   const resolved = path.resolve(filePath);
+  // 10MB hard limit on bootstrap seed files (see shared/utils/bootstrapGuard).
+  const { MAX_BOOTSTRAP_BYTES } = require('../shared/utils/bootstrapGuard');
+  const { size } = fs.statSync(resolved);
+  if (size > MAX_BOOTSTRAP_BYTES) {
+    throw new Error(`bootstrap dataset exceeds the 10MB hard limit: ${resolved} is ${size} bytes`);
+  }
   const raw = fs.readFileSync(resolved, 'utf8');
   try {
     const parsed = JSON.parse(raw);

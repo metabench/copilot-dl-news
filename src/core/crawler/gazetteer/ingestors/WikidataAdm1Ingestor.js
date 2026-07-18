@@ -343,8 +343,9 @@ class WikidataAdm1Ingestor {
       return [];
     }
     try {
-      const raw = fs.readFileSync(this.snapshotPath, 'utf8');
-      const parsed = JSON.parse(raw);
+      // 10MB hard limit on bootstrap seed files.
+      const { readBootstrapJson } = require('../../../../shared/utils/bootstrapGuard');
+      const parsed = readBootstrapJson(this.snapshotPath);
       if (!is_array(parsed)) {
         this.logger.warn('[WikidataAdm1Ingestor] Snapshot file did not contain an array, ignoring');
         return [];

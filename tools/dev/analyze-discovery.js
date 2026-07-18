@@ -11,7 +11,8 @@ function analyzeResults() {
   }
 
   const files = fs.readdirSync(DISCOVERY_DIR).filter(f => f.endsWith('.json') && f !== '_summary.json');
-  const sources = JSON.parse(fs.readFileSync(SOURCES_FILE, 'utf8')).sources;
+  const { readBootstrapJson } = require('../../src/shared/utils/bootstrapGuard');
+  const sources = readBootstrapJson(SOURCES_FILE).sources;
   
   const results = {};
   const missing = [];

@@ -15,6 +15,7 @@
 const path = require('path');
 const fs = require('fs');
 const { findProjectRoot } = require('../shared/utils/project-root');
+const { readBootstrapJson } = require('../shared/utils/bootstrapGuard');
 const ncdb = require('news-crawler-db');
 
 const NewsDatabase = ncdb.NewsDatabase || ncdb.SQLiteNewsDatabase;
@@ -23,9 +24,7 @@ function loadBootstrapData(logger = console) {
   try {
     const projectRoot = findProjectRoot(__dirname);
     const bootstrapPath = path.join(projectRoot, 'data', 'bootstrap', 'bootstrap-db.json');
-    if (fs.existsSync(bootstrapPath)) {
-      return JSON.parse(fs.readFileSync(bootstrapPath, 'utf-8'));
-    }
+    return readBootstrapJson(bootstrapPath);
   } catch (error) {
     (logger || console).error('Failed to load bootstrap data:', error);
   }
