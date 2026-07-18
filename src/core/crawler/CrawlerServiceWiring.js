@@ -136,7 +136,7 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
   }
   crawler.enhancedFeatures = new EnhancedFeaturesManager({
     ConfigManager,
-    EnhancedDatabaseAdapter: require('../../data/db/EnhancedDatabaseAdapter').EnhancedDatabaseAdapter,
+    EnhancedDatabaseAdapter: require('./EnhancedDatabaseAdapter').EnhancedDatabaseAdapter,
     PriorityScorer: require('./PriorityScorer').PriorityScorer,
     ProblemClusteringService: require('./ProblemClusteringService').ProblemClusteringService,
     PlannerKnowledgeService: require('./PlannerKnowledgeService').PlannerKnowledgeService,

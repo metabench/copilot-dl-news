@@ -13,7 +13,7 @@
 
 const path = require('path');
 const { ensureDatabase } = require('../../src/data/db/sqlite');
-const { EnhancedDatabaseAdapter } = require('../../src/data/db/EnhancedDatabaseAdapter');
+const { EnhancedDatabaseAdapter } = require('../../src/core/crawler/EnhancedDatabaseAdapter');
 const { GazetteerPlanRunner } = require('../../src/core/crawler/gazetteer/GazetteerPlanRunner');
 
 async function main() {

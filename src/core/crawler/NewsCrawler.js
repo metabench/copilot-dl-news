@@ -62,7 +62,7 @@ const {
 } = require('../../shared/config/ConfigManager');
 const {
   EnhancedDatabaseAdapter
-} = require('../../data/db/EnhancedDatabaseAdapter');
+} = require('./EnhancedDatabaseAdapter');
 const {
   PriorityScorer
 } = require('./PriorityScorer');
