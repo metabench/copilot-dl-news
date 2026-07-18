@@ -452,6 +452,55 @@ function registerPlaceHubReviewRoutes(app, {
     }
   });
 
+  // ── Admin-class map review (A7 finale) ─────────────────────────────────
+  // The verified flip is the single human step of unattended admin-area
+  // ingestion: list shows ALL rows (incl. auto-discovered candidates);
+  // verify mutates review-owned fields with agent+reason + audit.
+  app.get(`${basePath}/admin-class-map`, (req, res) => {
+    try {
+      const rows = ncdb.listAdminClasses(db, {
+        countryCode: req.query.countryCode ? String(req.query.countryCode) : undefined,
+        adminLevel: req.query.adminLevel !== undefined ? Number(req.query.adminLevel) : undefined,
+        verifiedOnly: req.query.verifiedOnly === '1'
+      });
+      res.json({ status: 'ok', count: rows.length, classes: rows });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
+  app.post(`${basePath}/admin-class-map/verify`, (req, res) => {
+    try {
+      const who = requireAgent(req, res);
+      if (!who) return;
+      const { countryCode, wikidataClassQid, verified, placeKind, adminLevel, subclassWalk } = req.body || {};
+      if (!countryCode || !wikidataClassQid || verified === undefined) {
+        return res.status(400).json({ status: 'error', message: 'countryCode, wikidataClassQid and verified are required' });
+      }
+      const updated = ncdb.setAdminClassReview(db, {
+        countryCode,
+        wikidataClassQid,
+        verified,
+        placeKind,
+        adminLevel,
+        subclassWalk,
+        provenance: `review:${who.agent}`
+      });
+      if (!updated) {
+        return res.status(404).json({ status: 'error', message: `no admin_class_map row for ${countryCode}/${wikidataClassQid}` });
+      }
+      audit({
+        domain: null,
+        url: null,
+        decision: `ai:admin-class-${verified ? 'verify' : 'unverify'}`,
+        payload: { countryCode, wikidataClassQid, placeKind: updated.placeKind, adminLevel: updated.adminLevel, subclassWalk: updated.subclassWalk, agent: who.agent, reason: who.reason }
+      });
+      res.json({ status: 'ok', class: updated });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  });
+
   return { db, store, index, basePath };
 }
 

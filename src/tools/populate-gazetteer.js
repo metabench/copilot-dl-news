@@ -1099,7 +1099,7 @@ function normalizeOptions(rawArgs) {
             OPTIONAL { ?adm2 wdt:P300 ?iso. }
             OPTIONAL { ?adm2 wdt:P882 ?fips. }
             OPTIONAL { ?adm2 wdt:P625 ?coord. }
-            SERVICE wikibase:label { bd:serviceParam wikibase:language "en,fr,de,es,ru,zh,ar,und". }
+            SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
           } LIMIT ${Math.max(1, Math.min(adm2Limit, 1000))}`;
           const jr = await fetchSparql(sparql);
           const rows = (jr.results && jr.results.bindings) || [];
