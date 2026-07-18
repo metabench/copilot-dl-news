@@ -53,6 +53,10 @@ describe('gazetteer export helpers', () => {
   });
 
   it('throws for non-database inputs', () => {
-    expect(() => safeIterateAll(null, 'places')).toThrow(/better-sqlite3/);
+    // ncdb's iterateGazetteerTableRows (the source since the B11f repoint)
+    // throws when it cannot .prepare() on the handle — a null db surfaces
+    // as a TypeError. The old copilot wrapper mentioned "better-sqlite3";
+    // the intent (reject non-db input) is preserved, message updated.
+    expect(() => safeIterateAll(null, 'places')).toThrow(/prepare/);
   });
 });
