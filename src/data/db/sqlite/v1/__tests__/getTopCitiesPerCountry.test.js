@@ -1,7 +1,7 @@
 'use strict';
 const { openNewsCrawlerDb } = require('../../../../../db/openNewsCrawlerDb');
 const { initializeSchema } = require('../schema');
-const { getTopCitiesPerCountry } = require('../queries/gazetteer.places');
+const { getTopCitiesPerCountry } = require('news-crawler-db');
 
 function createTestDatabase() {
     const db = openNewsCrawlerDb(':memory:');

@@ -1,6 +1,9 @@
 "use strict";
 
-const NewsDatabase = require("./SQLiteNewsDatabase");
+// Retired ./SQLiteNewsDatabase shim exported ncdb's NewsDatabase with a
+// SQLiteNewsDatabase fallback — same resolution preserved here.
+const ncdbForNewsDatabase = require("news-crawler-db");
+const NewsDatabase = ncdbForNewsDatabase.NewsDatabase || ncdbForNewsDatabase.SQLiteNewsDatabase;
 const { ensureDb } = require("./ensureDb");
 const { openDatabase, ensureDatabase } = require("./connection");
 const { wrapWithTelemetry } = require("./instrumentation");

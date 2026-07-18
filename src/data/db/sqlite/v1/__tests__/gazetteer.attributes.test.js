@@ -5,7 +5,7 @@ const {
   createAttributeStatements,
   recordAttribute,
   recordAttributes
-} = require('../queries/gazetteer.attributes');
+} = require('news-crawler-db');
 
 describe('gazetteer.attributes helpers', () => {
   let db;

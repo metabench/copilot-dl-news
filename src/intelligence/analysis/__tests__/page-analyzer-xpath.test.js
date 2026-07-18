@@ -1,5 +1,6 @@
 const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
-const SQLiteNewsDatabase = require('../../../data/db/sqlite/v1/SQLiteNewsDatabase');
+const ncdbForNewsDatabase = require('news-crawler-db');
+const SQLiteNewsDatabase = ncdbForNewsDatabase.NewsDatabase || ncdbForNewsDatabase.SQLiteNewsDatabase;
 const { initializeSchema } = require('../../../data/db/sqlite/v1/schema');
 const { analyzePage, buildAnalysis, prepareArticleContent } = require('../page-analyzer');
 const { ArticleXPathService } = require('../../../services/ArticleXPathService');

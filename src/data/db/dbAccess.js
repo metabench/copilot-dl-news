@@ -27,7 +27,10 @@
  */
 
 const path = require('path');
-const NewsDatabase = require('./sqlite/v1/SQLiteNewsDatabase');
+// Retired v1/SQLiteNewsDatabase shim exported ncdb's NewsDatabase with a
+// SQLiteNewsDatabase fallback — same resolution preserved here.
+const ncdbForNewsDatabase = require('news-crawler-db');
+const NewsDatabase = ncdbForNewsDatabase.NewsDatabase || ncdbForNewsDatabase.SQLiteNewsDatabase;
 const { ensureDb } = require('./sqlite/ensureDb');
 
 /**

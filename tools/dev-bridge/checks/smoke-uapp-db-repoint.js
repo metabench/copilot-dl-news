@@ -239,7 +239,10 @@ const FNS = [
   'countUrlsByHost', 'selectFetchedUrlPage', 'selectFetchedUrlPageByHost',
   'countFetchedUrls', 'countFetchedUrlsByHost', 'selectUrlPageFiltered',
   'countUrlsFiltered', 'selectFetchedUrlPageFiltered',
-  'countFetchedUrlsFiltered', 'normalizeHostMode', 'parseHosts'
+  'countFetchedUrlsFiltered', 'normalizeHostMode', 'parseHosts',
+  // B10a: v1/SQLiteNewsDatabase shim retired — consumers resolve
+  // NewsDatabase || SQLiteNewsDatabase from ncdb directly (both classes).
+  'NewsDatabase', 'SQLiteNewsDatabase'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);
