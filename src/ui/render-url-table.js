@@ -6,7 +6,7 @@ const jsgui = require("jsgui3-html");
 
 const { openNewsDb } = require("../data/db/dbAccess");
 const { findProjectRoot } = require("../shared/utils/project-root");
-const { selectInitialUrls, countUrls } = require("../data/db/sqlite/v1/queries/ui/urlListingNormalized");
+const { selectInitialUrls, countUrls } = require("news-crawler-db");
 const {
   UrlListingTableControl,
   buildColumns,

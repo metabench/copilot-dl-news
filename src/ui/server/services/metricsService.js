@@ -1,6 +1,6 @@
 "use strict";
 
-const { countUrls } = require("../../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
+const { countUrls } = require("news-crawler-db");
 // (recentDomains + uiCachedMetrics direct from news-crawler-db; the
 // resolveDbHandle name preserves the retired shim's historical rename.)
 const {

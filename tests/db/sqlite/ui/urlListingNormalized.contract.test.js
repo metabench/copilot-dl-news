@@ -5,7 +5,7 @@ const {
   countUrls,
   parseHosts,
   normalizeHostMode
-} = require("../../../../src/data/db/sqlite/v1/queries/ui/urlListingNormalized");
+} = require("news-crawler-db");
 
 function buildDb() {
   const db = openNewsCrawlerDb(":memory:");

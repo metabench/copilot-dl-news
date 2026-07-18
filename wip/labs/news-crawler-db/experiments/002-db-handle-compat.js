@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const { countUrls } = require("../../../src/data/db/sqlite/v1/queries/ui/urlListingNormalized");
+const { countUrls } = require("news-crawler-db");
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });

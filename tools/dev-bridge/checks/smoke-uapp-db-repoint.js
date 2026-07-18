@@ -231,7 +231,15 @@ const FNS = [
   'timedQuery', 'instrumentStatement', 'createTimedDb',
   'createRateLimitAdapter',
   'ensureBackgroundTaskSchema', 'createBackgroundTask',
-  'updateBackgroundTask', 'getBackgroundTaskById', 'normalizeBackgroundTaskRow'
+  'updateBackgroundTask', 'getBackgroundTaskById', 'normalizeBackgroundTaskRow',
+  // B9: urlListingNormalized facade absorbed into ncdb (cb4038e) — the 15
+  // historical db-first names, consumed by dataExplorer/facts/metrics/
+  // render-url-table + contract test + scripts/wip labs.
+  'selectInitialUrls', 'selectUrlPage', 'selectUrlPageByHost', 'countUrls',
+  'countUrlsByHost', 'selectFetchedUrlPage', 'selectFetchedUrlPageByHost',
+  'countFetchedUrls', 'countFetchedUrlsByHost', 'selectUrlPageFiltered',
+  'countUrlsFiltered', 'selectFetchedUrlPageFiltered',
+  'countFetchedUrlsFiltered', 'normalizeHostMode', 'parseHosts'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);

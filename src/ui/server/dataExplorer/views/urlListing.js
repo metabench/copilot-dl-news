@@ -14,7 +14,7 @@ const { buildPagination, buildUrlFilterOptions } = require("../../utils/paginati
 const {
   selectUrlPage,
   selectFetchedUrlPage
-} = require("../../../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
+} = require("news-crawler-db");
 const {
   buildColumns,
   buildDisplayRows

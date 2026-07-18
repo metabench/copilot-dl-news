@@ -11,7 +11,7 @@
 
 const { formatDateTime, formatCount } = require("../../utils/formatting");
 const { getCachedMetric } = require("../../services/metricsService");
-const { countUrls, countFetchedUrls } = require("../../../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
+const { countUrls, countFetchedUrls } = require("news-crawler-db");
 const { appendBackParams } = require("../../navigation");
 
 // ============================================================================

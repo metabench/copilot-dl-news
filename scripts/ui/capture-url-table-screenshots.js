@@ -7,7 +7,7 @@ const puppeteer = require("puppeteer");
 
 const { openNewsDb } = require("../../src/db/dbAccess");
 const { findProjectRoot } = require("../../src/utils/project-root");
-const { selectInitialUrls } = require("../../src/db/sqlite/v1/queries/ui/urlListingNormalized");
+const { selectInitialUrls } = require("news-crawler-db");
 const { renderHtml, resolveDbPath } = require("../../src/ui/render-url-table");
 const {
   buildColumns,

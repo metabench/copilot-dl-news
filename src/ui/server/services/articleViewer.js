@@ -6,8 +6,8 @@ const {
   listArticlesWithContent,
   countArticlesWithContent
 } = require('news-crawler-db');
-const { decompress } = require('../../../../../../shared/utils/compression');
-const { HtmlArticleExtractor } = require('../../../../../../shared/utils/HtmlArticleExtractor');
+const { decompress } = require('../../../shared/utils/compression');
+const { HtmlArticleExtractor } = require('../../../shared/utils/HtmlArticleExtractor');
 
 const extractor = new HtmlArticleExtractor({ minWordCount: 20 });
 

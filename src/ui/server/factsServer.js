@@ -40,7 +40,7 @@ const { UrlFactsPopup } = require("../controls/UrlFactsPopup");
 const {
   selectUrlPage,
   countUrls
-} = require("../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
+} = require("news-crawler-db");
 
 const StringControl = jsgui.String_Control;
 

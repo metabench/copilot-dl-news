@@ -8,7 +8,7 @@ const { createDataExplorerServer } = require("../../src/ui/server/dataExplorerSe
 const { findProjectRoot } = require("../../src/utils/project-root");
 const { resolveDbPath } = require("../../src/ui/render-url-table");
 const { openNewsDb } = require("../../src/db/dbAccess");
-const { selectInitialUrls } = require("../../src/db/sqlite/v1/queries/ui/urlListingNormalized");
+const { selectInitialUrls } = require("news-crawler-db");
 const { selectHostSummary } = require("../../src/db/sqlite/v1/queries/ui/domainDetails");
 
 const DEFAULT_OUTPUT_DIR = path.join("screenshots", "data-explorer");

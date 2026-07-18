@@ -1,4 +1,4 @@
-const { openNewsCrawlerDb } = require('../../../../../../../db/openNewsCrawlerDb');
+const { openNewsCrawlerDb } = require('../../../../src/db/openNewsCrawlerDb');
 /**
  * @fileoverview Performance tests for queue queries
  * 

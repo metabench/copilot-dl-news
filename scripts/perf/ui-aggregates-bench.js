@@ -12,7 +12,7 @@ function repoRequire(relativePath) {
   return require(path.join(repoRoot, relativePath));
 }
 
-const urlListing = repoRequire("src/db/sqlite/v1/queries/ui/urlListingNormalized");
+const urlListing = require("news-crawler-db");
 const domainSummary = repoRequire("src/db/sqlite/v1/queries/ui/domainSummary");
 const recentDomains = repoRequire("src/db/sqlite/v1/queries/ui/recentDomains");
 const queueQueries = repoRequire("src/db/sqlite/v1/queries/ui/queues");

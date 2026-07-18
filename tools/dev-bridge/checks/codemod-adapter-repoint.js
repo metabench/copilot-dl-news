@@ -31,7 +31,10 @@ const PURE = ['adminAdapter', 'alertAdapter', 'apiKeyAdapter', 'articlesAdapter'
   'layoutMasks', 'layoutSignatures', 'layoutTemplates', 'maintenance',
   'multiModalCrawl', 'patternLearning', 'placeHubs\\.crawlTool',
   'placePageMappings', 'topicKeywords', 'crawlSkipTerms',
-  'multiLanguagePlaces'];
+  'multiLanguagePlaces',
+  // B9: urlListingNormalized facade absorbed into ncdb (ncdb cb4038e) —
+  // all 15 historical names now on the ncdb surface, no renames.
+  'ui/urlListingNormalized'];
 const RX = new RegExp(
   `require\\((['"])(?:\\.\\./)*(?:src/)?data/db/sqlite/v1/queries/(${PURE.join('|')})\\1\\)`, 'g');
 

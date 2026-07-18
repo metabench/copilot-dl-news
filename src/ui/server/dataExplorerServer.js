@@ -42,7 +42,7 @@ const {
   countFetchedUrlsFiltered,
   normalizeHostMode,
   parseHosts
-} = require("../../data/db/sqlite/v1/queries/ui/urlListingNormalized");
+} = require("news-crawler-db");
 // UI queries direct from news-crawler-db (DB-consolidation slice 3 —
 // these used to route through src/data/db/sqlite/v1/queries/ui/* re-export
 // shims; the normalizeSortColumn/Direction names below preserve the
@@ -138,7 +138,7 @@ const {
   listArticlesWithContent,
   countArticlesWithContent,
   getExtractedArticle
-} = require("../../data/db/sqlite/v1/queries/ui/articleViewer");
+} = require("./services/articleViewer");
 
 const { ACTIVE_SET_KEY } = require("../../core/crawler/observatory/DecisionConfigSetState");
 
