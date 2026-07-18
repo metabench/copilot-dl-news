@@ -1,7 +1,7 @@
 'use strict';
 
 const { openNewsCrawlerDb } = require('../../db/openNewsCrawlerDb');
-const { createPlaceHubUrlPatternsStore } = require('../../data/db/placeHubUrlPatternsStore');
+const { createPlaceHubUrlPatternsStore } = require('news-crawler-db');
 const { PlaceHubPatternLearningService } = require('../PlaceHubPatternLearningService');
 
 describe('PlaceHubPatternLearningService runtime predictions', () => {

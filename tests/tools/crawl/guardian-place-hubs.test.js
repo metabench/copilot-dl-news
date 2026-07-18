@@ -109,7 +109,7 @@ describe('guardian place hub helper', () => {
     });
 
     expect(plan.mode).toBe('guardian-place-hub-db-persistence-plan');
-    expect(plan.dbModule.wrapper).toBe('src/data/db/placeHubUrlPatternsStore.js');
+    expect(plan.dbModule.wrapper).toBe('news-crawler-db');
     expect(plan.dbModule.owner).toBe('news-crawler-db');
     expect(plan.actionPolicy.writesLocalDb).toBe(false);
     expect(plan.actionPolicy.writesLocalDbWhenApplied).toBe(true);

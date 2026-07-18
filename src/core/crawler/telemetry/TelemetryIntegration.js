@@ -33,7 +33,7 @@
  */
 
 const { CrawlTelemetryBridge } = require('./CrawlTelemetryBridge');
-const { TaskEventWriter } = require('../../../data/db/TaskEventWriter');
+const { TaskEventWriter } = require('../../../db/TaskEventWriter');
 
 function createSafeJsonReplacer() {
   const seen = new WeakSet();

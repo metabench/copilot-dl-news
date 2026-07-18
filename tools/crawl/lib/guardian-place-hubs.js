@@ -292,7 +292,7 @@ function buildGuardianRuntimePatternProof(learningService, options = {}) {
       mutatesRemoteQueue: false
     },
     runtimePath: {
-      persistence: 'src/data/db/placeHubUrlPatternsStore.js -> news-crawler-db',
+      persistence: 'news-crawler-db createPlaceHubUrlPatternsStore (wrapper retired B11d)',
       predictor: 'src/services/PlaceHubPatternLearningService.predictPlaceHub',
       pageUse: 'src/core/crawler/PageExecutionService enqueues predicted place hubs with metadata'
     },
@@ -438,7 +438,7 @@ function buildGuardianDbPersistencePlan(options = {}) {
       mutatesRemoteQueue: false
     },
     dbModule: {
-      wrapper: 'src/data/db/placeHubUrlPatternsStore.js',
+      wrapper: 'news-crawler-db',
       owner: 'news-crawler-db',
       method: 'createPlaceHubUrlPatternsStore(db).savePattern(pattern)'
     },
@@ -450,7 +450,7 @@ function buildGuardianDbPersistencePlan(options = {}) {
     records,
     proofPlan: [
       'open isolated sample DB with src/db/openNewsCrawlerDb.js',
-      'create store with src/data/db/placeHubUrlPatternsStore.js',
+      'create store with news-crawler-db createPlaceHubUrlPatternsStore',
       'save each Guardian pattern through store.savePattern',
       'read back getPatternsForDomain(www.theguardian.com) and require all pattern IDs',
       'do not write production data/news.db unless explicitly requested'

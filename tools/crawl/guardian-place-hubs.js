@@ -189,7 +189,7 @@ function runCli(argv = process.argv.slice(2)) {
   } else if (args.mode === 'persist') {
     if (!args.db || args.db === true) throw new Error('--db is required for persist mode');
     const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
-    const { createPlaceHubUrlPatternsStore } = require('../../src/data/db/placeHubUrlPatternsStore');
+    const { createPlaceHubUrlPatternsStore } = require('news-crawler-db');
     const db = openNewsCrawlerDb(args.db);
     try {
       payload = persistGuardianHubPatternsToStore(createPlaceHubUrlPatternsStore(db));
@@ -199,7 +199,7 @@ function runCli(argv = process.argv.slice(2)) {
   } else if (args.mode === 'runtime-proof') {
     if (!args.db || args.db === true) throw new Error('--db is required for runtime-proof mode');
     const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
-    const { createPlaceHubUrlPatternsStore } = require('../../src/data/db/placeHubUrlPatternsStore');
+    const { createPlaceHubUrlPatternsStore } = require('news-crawler-db');
     const { PlaceHubPatternLearningService } = require('../../src/services/PlaceHubPatternLearningService');
     const db = openNewsCrawlerDb(args.db);
     try {
@@ -223,7 +223,7 @@ function runCli(argv = process.argv.slice(2)) {
     if (!args.db || args.db === true) throw new Error('--db is required for latest-story-proof mode');
     if (!args.html || args.html === true) throw new Error('--html is required for latest-story-proof mode');
     const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
-    const { createPlaceHubUrlPatternsStore } = require('../../src/data/db/placeHubUrlPatternsStore');
+    const { createPlaceHubUrlPatternsStore } = require('news-crawler-db');
     const { PlaceHubPatternLearningService } = require('../../src/services/PlaceHubPatternLearningService');
     const db = openNewsCrawlerDb(args.db);
     try {

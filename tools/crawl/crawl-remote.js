@@ -432,7 +432,7 @@ function writeAgentEvent(type, payload = {}) {
   // Push to local db task_events for UI observability
   if (effectiveCommand === 'collect' && localDb) {
     if (!taskEventWriter) {
-      const { TaskEventWriter } = require('../../src/data/db/TaskEventWriter');
+      const { TaskEventWriter } = require('../../src/db/TaskEventWriter');
       taskEventWriter = new TaskEventWriter(localDb, { batchWrites: false });
     }
 

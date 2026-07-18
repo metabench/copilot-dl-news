@@ -11,7 +11,7 @@
 
 const { ensureDb } = require('../../data/db/sqlite/ensureDb');
 const { createSQLiteDatabase } = require('../../data/db/sqlite');
-const { createPlaceHubCandidatesStore } = require('../../data/db/placeHubCandidatesStore');
+const { createPlaceHubCandidatesStore } = require('news-crawler-db');
 const { createGuessPlaceHubsQueries } = require('news-crawler-db');
 const { CountryHubGapAnalyzer } = require('../../services/CountryHubGapAnalyzer');
 const { RegionHubGapAnalyzer } = require('../../services/RegionHubGapAnalyzer');

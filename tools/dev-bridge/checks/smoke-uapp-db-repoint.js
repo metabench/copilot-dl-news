@@ -258,7 +258,10 @@ const FNS = [
   'countArticlesNeedingAnalysis', 'getAnalysisStatusCounts',
   'getArticlesNeedingAnalysis',
   // A6 slice 3: kind-generic settlement selection for hub guessing
-  'getTopSettlementsByKind'
+  'getTopSettlementsByKind',
+  // B11d: placeHub store compat wrappers retired — ncdb exports BOTH the
+  // short and Sqlite-prefixed names; consumers use the short ones.
+  'createPlaceHubUrlPatternsStore', 'createPlaceHubCandidatesStore'
 ];
 for (const fn of FNS) {
   assert.strictEqual(typeof ncdb[fn], 'function', `ncdb.${fn} missing/not a function`);

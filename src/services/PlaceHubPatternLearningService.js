@@ -16,7 +16,7 @@
  */
 
 const { URL } = require('url');
-const { createPlaceHubUrlPatternsStore } = require('../data/db/placeHubUrlPatternsStore');
+const { createPlaceHubUrlPatternsStore } = require('news-crawler-db');
 const { getDb } = require('../db');
 const { createSqliteHubGapAnalysisAccess } = require('news-crawler-db');
 

@@ -17,7 +17,7 @@ const CrawlScheduler = require('../../../src/core/crawler/scheduler/CrawlSchedul
 const UpdatePatternAnalyzer = require('../../../src/core/crawler/scheduler/UpdatePatternAnalyzer');
 const ScheduleStore = require('../../../src/core/crawler/scheduler/ScheduleStore');
 const scheduleAdapter = require('news-crawler-db');
-const { TaskEventWriter } = require('../../../src/data/db/TaskEventWriter');
+const { TaskEventWriter } = require('../../../src/db/TaskEventWriter');
 
 describe('CrawlScheduler', () => {
   let db;
