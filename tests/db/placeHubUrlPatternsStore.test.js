@@ -1,6 +1,6 @@
 'use strict';
-const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
-const { createPlaceHubUrlPatternsStore } = require('../placeHubUrlPatternsStore');
+const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
+const { createPlaceHubUrlPatternsStore } = require('news-crawler-db');
 
 describe('placeHubUrlPatternsStore', () => {
   let db;

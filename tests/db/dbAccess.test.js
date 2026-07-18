@@ -1,4 +1,4 @@
-const dbAccess = require('../dbAccess');
+const dbAccess = require('../../src/db/dbAccess');
 const path = require('path');
 const fs = require('fs');
 
