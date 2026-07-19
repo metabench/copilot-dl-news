@@ -233,9 +233,15 @@ function buildCrawlStatusClientScript({
     var inflight = progress.currentDownloads || [];
     var inflightCount = progress.currentDownloadsCount != null ? progress.currentDownloadsCount : inflight.length;
     var sitemapHeader = '<p class="detail-meta">' + escapeHtml(sitemapFetched) + ' of ' + escapeHtml(sitemapCount) + ' sitemap(s) fetched · ' + escapeHtml(sitemapEnqueued) + ' URLs enqueued</p>';
+    // In-flight is a point-in-time snapshot from the periodic progress emit;
+    // during active crawling an empty list means "none caught in this sample",
+    // not "idle" — say so, so a busy crawl doesn't read as stalled.
+    var inflightEmpty = (progress.phase === 'crawling')
+      ? 'No download caught in this sample (updated periodically)'
+      : 'None in flight';
     return '<div class="detail-grid" role="region" aria-label="Crawl detail">'
       + '<div class="detail-block"><h4>Sitemaps</h4>' + sitemapHeader + sitemapListHtml(sitemaps) + '</div>'
-      + '<div class="detail-block"><h4>In-flight (' + escapeHtml(inflightCount) + ')</h4>' + detailListHtml(inflight, 'None in flight') + '</div>'
+      + '<div class="detail-block"><h4>In-flight (' + escapeHtml(inflightCount) + ')</h4>' + detailListHtml(inflight, inflightEmpty) + '</div>'
       + '<div class="detail-block"><h4>Per-host limits</h4>' + limitsHtml(progress.perHostLimits) + '</div>'
       + '<div class="detail-block"><h4>Robots</h4>' + robotsHtml(progress.robots) + '</div>'
       + '</div>';

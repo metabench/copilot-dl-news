@@ -153,6 +153,20 @@ describe('crawl-status client rendering', () => {
     expect(document.querySelector('#detail-run-1').hidden).toBe(true);
   });
 
+  it('gives the in-flight empty state phase-aware wording (crawling = a sample, not idle)', async () => {
+    const jobs = { items: [
+      { id: 'crawl-1', status: 'running', progress: { phase: 'crawling', visited: 5, currentDownloads: [], currentDownloadsCount: 0 } },
+      { id: 'prep-1', status: 'running', progress: { phase: 'preparing', visited: 0, currentDownloads: [], currentDownloadsCount: 0 } }
+    ] };
+    bootClient(jobs);
+    await flush();
+    // in-flight is the 2nd detail block
+    const crawlInflight = document.querySelector('#detail-crawl-1 .detail-block:nth-child(2)');
+    const prepInflight = document.querySelector('#detail-prep-1 .detail-block:nth-child(2)');
+    expect(crawlInflight.textContent).toContain('caught in this sample');
+    expect(prepInflight.textContent).toContain('None in flight');
+  });
+
   it('renders the empty state with the 9-column colspan when there are no jobs', async () => {
     bootClient({ items: [] });
     await flush();
