@@ -60,8 +60,13 @@ function getActiveCrawls() {
     
     // Step 2: Get command lines via WMIC and filter to crawl processes
     const crawlPatterns = ["crawl", "guardian", "NewsCrawler", "mini-crawl"];
+    // NOT crawls, despite matching "crawl": this tool itself, the Electron
+    // shell + unified server (argv contains "--app crawl-status"), and the
+    // dev-bridge poller. Real crawls run as forked workers whose argv points
+    // at src/core/crawler/* or the crawl CLIs, none of which match these.
+    const excludePatterns = ["crawl-status.js", "electron", "unifiedapp", "dev-bridge"];
     const crawlProcs = [];
-    
+
     for (const proc of procs) {
       try {
         const wmicResult = execSync(
@@ -70,7 +75,10 @@ function getActiveCrawls() {
         );
         const cmdMatch = wmicResult.match(/CommandLine=(.+)/);
         const cmdLine = cmdMatch ? cmdMatch[1].trim() : "";
-        
+
+        if (excludePatterns.some(pat => cmdLine.toLowerCase().includes(pat))) {
+          continue;
+        }
         if (crawlPatterns.some(pat => cmdLine.toLowerCase().includes(pat.toLowerCase()))) {
           crawlProcs.push({
             pid: proc.Id,
