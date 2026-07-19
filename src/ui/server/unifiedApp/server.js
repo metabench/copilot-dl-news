@@ -1331,6 +1331,18 @@ load(); setInterval(load, 60000);
     }
   });
 
+  // Standalone mini crawl dashboard (~600x240): last-24h totals + live "+N"
+  // heal-number feedback as pages download. Self-contained page (no shell);
+  // open it in a small Electron/browser window. ?demo=1 exercises the animation.
+  unifiedApp.get('/crawl-mini', (req, res) => {
+    try {
+      const { renderCrawlMiniPage } = require('./crawlMiniPage');
+      res.set('Content-Type', 'text/html; charset=utf-8').send(renderCrawlMiniPage());
+    } catch (err) {
+      res.status(500).send('crawl-mini unavailable: ' + err.message);
+    }
+  });
+
   // In-app background-task subsystem (A7): a BackgroundTaskManager over the
   // app's own db handle + the IngestAdminAreasTask, so admin-area ingestion
   // runs IN-process (no app-stop dance). Non-fatal — the crawler must run
