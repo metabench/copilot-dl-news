@@ -145,6 +145,10 @@ const TASK_DEFINITIONS = {
     title: 'Export Database',
     description: 'Export database to JSON/NDJSON format for backup or analysis',
     icon: '💾',
+    // Schema-only: no backing class in BUILTIN_TASKS yet, so it is not
+    // advertised by getTaskSummaries/getAvailableTaskTypes (would fail on
+    // create). Keep the schema for when the task class is implemented.
+    implemented: false,
     fields: [
       {
         name: 'outputPath',
@@ -206,6 +210,9 @@ const TASK_DEFINITIONS = {
     title: 'Import Gazetteer Data',
     description: 'Import place data from external sources into the gazetteer',
     icon: '🌍',
+    // Schema-only (no BUILTIN_TASKS class yet) — not advertised. Note: live
+    // gazetteer admin-area ingest is the separate 'ingest-admin-areas' task.
+    implemented: false,
     fields: [
       {
         name: 'sourcePath',
@@ -253,6 +260,8 @@ const TASK_DEFINITIONS = {
     title: 'Vacuum Database',
     description: 'Reclaim space and optimize database performance (requires exclusive access)',
     icon: '🧹',
+    // Schema-only (no BUILTIN_TASKS class yet) — not advertised.
+    implemented: false,
     fields: [
       {
         name: 'mode',
@@ -508,24 +517,31 @@ function getTaskDefinition(taskType) {
 }
 
 /**
- * Get all available task types
+ * Get all available task types (only those with a backing runtime class —
+ * definitions flagged implemented:false are schema-only and excluded).
  * @returns {Array<string>} Array of task type identifiers
  */
 function getAvailableTaskTypes() {
-  return Object.keys(TASK_DEFINITIONS);
+  return Object.values(TASK_DEFINITIONS)
+    .filter(def => def.implemented !== false)
+    .map(def => def.taskType);
 }
 
 /**
- * Get task definitions for UI rendering
+ * Get task definitions for UI rendering. Excludes schema-only definitions
+ * (implemented:false) so the UI never advertises a task that has no backing
+ * class and would fail on create.
  * @returns {Array<Object>} Array of task definition summaries
  */
 function getTaskSummaries() {
-  return Object.values(TASK_DEFINITIONS).map(def => ({
-    taskType: def.taskType,
-    title: def.title,
-    description: def.description,
-    icon: def.icon || '📋'
-  }));
+  return Object.values(TASK_DEFINITIONS)
+    .filter(def => def.implemented !== false)
+    .map(def => ({
+      taskType: def.taskType,
+      title: def.title,
+      description: def.description,
+      icon: def.icon || '📋'
+    }));
 }
 
 /**

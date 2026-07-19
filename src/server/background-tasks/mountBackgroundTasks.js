@@ -24,11 +24,13 @@
  */
 // Canonical taskType -> TaskClass mapping. There is no authoritative
 // registry elsewhere (grep: registerTaskType only in tests + this file), so
-// this IS it. Only taskTypes with a real class appear; the taskDefinitions
-// database-export / gazetteer-import / database-vacuum are orphan defs with
-// no class, and CompressionLifecycleTask is an orphan class with no def —
-// both left out until reconciled. article-compression = CompressionTask
-// (Brotli/article), NOT CompressionLifecycleTask (age-based tiering).
+// this IS it. Only taskTypes with a real class appear. The taskDefinitions
+// database-export / gazetteer-import / database-vacuum are now schema-only
+// (implemented:false; filtered out of getTaskSummaries/getAvailableTaskTypes
+// so the UI never advertises an unrunnable task — see taskDefinitions.test.js).
+// CompressionLifecycleTask remains an orphan class with no def — left out until
+// reconciled. article-compression = CompressionTask (Brotli/article), NOT
+// CompressionLifecycleTask (age-based tiering).
 const BUILTIN_TASKS = {
   'ingest-admin-areas': () => require('../../background/tasks/IngestAdminAreasTask').IngestAdminAreasTask,
   'backfill-dates': () => require('../../background/tasks/BackfillDatesTask').BackfillDatesTask,
