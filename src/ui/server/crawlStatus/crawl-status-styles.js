@@ -337,5 +337,48 @@ td button { padding: 1px 9px; }
   .throughput-strip, .remote-fetch-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .vs-statusbar { flex-wrap: wrap; }
   .table-wrap { overflow-x: auto; }
+  .detail-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Phase badge + expandable job detail ────────────────────────── */
+/* Coarse lifecycle phase shown next to a running job's status so the crawl is
+   legible before the first page download (esp. the sitemap-fetch phase). */
+.phase-badge {
+  display: inline-block; margin-left: 6px; padding: 0 6px;
+  font-size: 9px; line-height: 15px; text-transform: uppercase; letter-spacing: .3px;
+  color: #fff; background: var(--admin-accent, #316AC5);
+  border: 1px solid #2A5CA9; border-radius: 2px; vertical-align: middle;
+}
+.phase-badge[data-phase="sitemaps"] { background: #7A5CC5; border-color: #5E43A8; }
+.phase-badge[data-phase="robots"] { background: #B8860B; border-color: #8A6508; }
+.phase-badge[data-phase="crawling"] { background: var(--admin-success, #2C7D2C); border-color: #1F5E1F; }
+.phase-badge[data-phase="preparing"] { background: #6B7A8F; border-color: #51606F; }
+/* Disclosure caret; lives inside the Job cell so the column count stays 9. */
+.detail-toggle {
+  padding: 0 4px; margin-right: 4px; font-size: 10px; line-height: 1;
+  color: var(--admin-accent, #316AC5); background: transparent;
+  border: 1px solid transparent; border-radius: 2px; box-shadow: none; cursor: pointer;
+}
+.detail-toggle:hover { background: var(--admin-hover-bg, #DFE7F5); border-color: var(--admin-border, #ACA899); }
+.detail-toggle[aria-expanded="true"] { color: #16418B; }
+/* Second <tr> per job, hidden until its caret is clicked. */
+tr.detail-row[hidden] { display: none; }
+tr.detail-row > .detail-cell { padding: 0; background: var(--admin-stripe-bg, #F7F6EF); border-bottom: 1px solid var(--admin-border, #ACA899); }
+tbody tr.detail-row:hover { background: var(--admin-stripe-bg, #F7F6EF); }
+.detail-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px; padding: 8px 10px 10px 26px;
+}
+.detail-block h4 {
+  margin: 0 0 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: .3px;
+  color: var(--admin-text-secondary, #444437); border-bottom: 1px solid #D8D4C3; padding-bottom: 2px;
+}
+.detail-list { margin: 0; padding-left: 16px; list-style: square; }
+.detail-list li { padding: 1px 0; word-break: break-all; }
+.detail-list.mono, .detail-limits .mono { font-family: var(--admin-font-mono, 'Courier New', monospace); }
+.detail-empty { margin: 0; color: var(--admin-text-muted, #7F7D6F); font-style: italic; }
+.detail-meta { margin: 0 0 4px; color: var(--admin-text-secondary, #444437); }
+.detail-limits { width: 100%; border-collapse: collapse; }
+.detail-limits th, .detail-limits td { padding: 1px 6px; border-bottom: 1px solid #EFECE2; font-size: 10px; text-align: left; white-space: nowrap; }
+.badge-limited { display: inline-block; padding: 0 5px; font-size: 9px; color: #fff; background: var(--admin-danger, #C43C35); border-radius: 2px; }
 `;

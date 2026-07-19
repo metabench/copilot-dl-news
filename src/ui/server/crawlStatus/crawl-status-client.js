@@ -69,6 +69,12 @@ function buildCrawlStatusClientScript({
   const batchStartButton = document.getElementById('crawl-batch-start');
   const batchStatus = document.getElementById('crawl-batch-status');
 
+  // Job ids whose detail panel is expanded. Kept in the IIFE scope (not inside
+  // renderJobs) so it survives the full #rows innerHTML rebuild every 3s and is
+  // visible to the delegated click handler. applyExpandedState() re-applies it
+  // after each rebuild — without that, open panels would snap shut on refresh.
+  const expandedJobs = new Set();
+
   function escapeHtml(value) {
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;')
@@ -145,6 +151,94 @@ function buildCrawlStatusClientScript({
     });
   }
 
+  // Friendly label for the coarse crawler phase (raw startup-stage ids collapse
+  // to 'preparing'; the sitemap-fetch phase gets its own clear wording).
+  function phaseLabel(phase) {
+    var map = {
+      sitemaps: 'fetching sitemaps',
+      robots: 'reading robots.txt',
+      crawling: 'crawling',
+      preparing: 'preparing'
+    };
+    return map[phase] || phaseClass(phase);
+  }
+
+  function phaseClass(phase) {
+    if (phase === 'sitemaps' || phase === 'robots' || phase === 'crawling') return phase;
+    return 'preparing';
+  }
+
+  // Job ids can be UUIDs/task ids; slug them before use in id/aria/Set keys.
+  function slugId(id) {
+    return String(id).replace(/[^A-Za-z0-9_-]/g, '-');
+  }
+
+  function detailListHtml(items, emptyText) {
+    if (!items || !items.length) return '<p class="detail-empty">' + escapeHtml(emptyText) + '</p>';
+    var lis = items.map(function(item) {
+      var text = typeof item === 'string' ? item : (item && (item.url || item.loc) ? (item.url || item.loc) : JSON.stringify(item));
+      return '<li>' + escapeHtml(text) + '</li>';
+    }).join('');
+    return '<ul class="detail-list mono">' + lis + '</ul>';
+  }
+
+  function limitsHtml(perHostLimits) {
+    var hosts = perHostLimits ? Object.keys(perHostLimits) : [];
+    if (!hosts.length) return '<p class="detail-empty">No per-host limits reported</p>';
+    var rows = hosts.map(function(h) {
+      var l = perHostLimits[h] || {};
+      return '<tr>'
+        + '<td class="mono">' + escapeHtml(h) + '</td>'
+        + '<td>' + escapeHtml(l.limit != null ? l.limit : '–') + '</td>'
+        + '<td>' + escapeHtml(l.intervalMs != null ? l.intervalMs + 'ms' : '–') + '</td>'
+        + '<td>' + escapeHtml(l.backoffMs != null ? l.backoffMs + 'ms' : '–') + '</td>'
+        + '<td>' + (l.rateLimited ? '<span class="badge-limited">limited</span>' : '') + '</td>'
+        + '</tr>';
+    }).join('');
+    return '<table class="detail-limits"><thead><tr><th>Host</th><th>rpm</th><th>interval</th><th>backoff</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function robotsHtml(robots) {
+    if (!robots) return '<p class="detail-empty">robots.txt not loaded yet</p>';
+    return '<p class="detail-meta">loaded: ' + (robots.loaded ? 'yes' : 'no')
+      + (robots.source ? ' · source: ' + escapeHtml(robots.source) : '')
+      + (robots.crawlDelaySeconds != null ? ' · crawl-delay: ' + escapeHtml(robots.crawlDelaySeconds) + 's' : '')
+      + '</p>';
+  }
+
+  // The normally-hidden per-crawl detail: which sitemaps were harvested, the
+  // pages currently downloading, per-host rate limits, and robots policy.
+  function renderDetailCell(progress) {
+    var sitemaps = progress.sitemaps || progress.sitemapUrls || [];
+    var sitemapCount = progress.sitemapCount != null ? progress.sitemapCount : sitemaps.length;
+    var sitemapEnqueued = progress.sitemapEnqueued != null ? progress.sitemapEnqueued : 0;
+    var inflight = progress.currentDownloads || [];
+    var inflightCount = progress.currentDownloadsCount != null ? progress.currentDownloadsCount : inflight.length;
+    var sitemapHeader = '<p class="detail-meta">' + escapeHtml(sitemapCount) + ' sitemap(s) · ' + escapeHtml(sitemapEnqueued) + ' URLs enqueued</p>';
+    return '<div class="detail-grid" role="region" aria-label="Crawl detail">'
+      + '<div class="detail-block"><h4>Sitemaps</h4>' + sitemapHeader + detailListHtml(sitemaps, 'No sitemaps harvested') + '</div>'
+      + '<div class="detail-block"><h4>In-flight (' + escapeHtml(inflightCount) + ')</h4>' + detailListHtml(inflight, 'None in flight') + '</div>'
+      + '<div class="detail-block"><h4>Per-host limits</h4>' + limitsHtml(progress.perHostLimits) + '</div>'
+      + '<div class="detail-block"><h4>Robots</h4>' + robotsHtml(progress.robots) + '</div>'
+      + '</div>';
+  }
+
+  // Re-apply expansion after every full innerHTML rebuild — this is what keeps
+  // an open detail panel open across the 3s refresh.
+  function applyExpandedState() {
+    if (!rowsEl) return;
+    var detailRows = rowsEl.querySelectorAll('[data-detail-for]');
+    for (var i = 0; i < detailRows.length; i++) {
+      detailRows[i].hidden = !expandedJobs.has(detailRows[i].getAttribute('data-detail-for'));
+    }
+    var toggles = rowsEl.querySelectorAll('[data-detail-toggle]');
+    for (var j = 0; j < toggles.length; j++) {
+      var on = expandedJobs.has(toggles[j].getAttribute('data-detail-toggle'));
+      toggles[j].setAttribute('aria-expanded', on ? 'true' : 'false');
+      toggles[j].textContent = on ? '▾' : '▸';
+    }
+  }
+
   function renderJobs(jobs) {
     if (!rowsEl) return;
     if (!jobs.length) {
@@ -152,8 +246,11 @@ function buildCrawlStatusClientScript({
       return;
     }
 
+    const liveIds = Object.create(null); // null-proto: job ids like 'toString' must not inherit truthy prototype members and escape pruning
     rowsEl.innerHTML = jobs.map(function(job) {
       const id = job.id || job.taskId || job.task_id || 'crawl';
+      const key = slugId(id);
+      liveIds[key] = true;
       const status = job.status || job.state || 'unknown';
       const metrics = job.metrics || {};
       const progress = job.progress || metrics || {};
@@ -163,9 +260,16 @@ function buildCrawlStatusClientScript({
       const queue = progress.queued || progress.queue || progress.queueSize || metrics.queueSize || job.queue || job.pending || 0;
       const pct = Math.max(0, Math.min(100, progress.percentComplete || job.percentComplete || 0));
       const last = job.lastActivityAt || job.last_activity_at || progress.updatedAt || job.updatedAt || job.updated_at || '';
-      return '<tr>'
-        + '<td class="mono">' + escapeHtml(id) + '</td>'
-        + '<td>' + escapeHtml(status) + '</td>'
+      const isRunning = status === 'running' || status === 'active';
+      const phase = progress.phase || job.phase || '';
+      const badge = (isRunning && phase)
+        ? ' <span class="phase-badge" data-phase="' + escapeHtml(phaseClass(phase)) + '">' + escapeHtml(phaseLabel(phase)) + '</span>'
+        : '';
+      // Toggle caret lives INSIDE the Job cell so the column count stays 9 and
+      // Visited stays the 4th <td> (Electron E2E asserts nth-child(4)).
+      const mainRow = '<tr>'
+        + '<td class="mono"><button type="button" class="detail-toggle" data-detail-toggle="' + escapeHtml(key) + '" aria-expanded="false" aria-controls="detail-' + escapeHtml(key) + '" aria-label="Toggle crawl detail" title="Show crawl detail">▸</button>' + escapeHtml(id) + '</td>'
+        + '<td><span class="status-text">' + escapeHtml(status) + '</span>' + badge + '</td>'
         + '<td><div class="bar"><span style="width:' + pct + '%"></span></div></td>'
         + '<td>' + escapeHtml(visited) + '</td>'
         + '<td>' + escapeHtml(downloaded) + '</td>'
@@ -174,7 +278,16 @@ function buildCrawlStatusClientScript({
         + '<td>' + escapeHtml(last) + '</td>'
         + '<td><button type="button" data-refresh-crawls>Refresh</button></td>'
         + '</tr>';
+      // Detail row renders AFTER its main row (never before) — protects the
+      // nth-child(4)==Visited assertion; hidden until the caret is clicked.
+      const detailRow = '<tr class="detail-row" id="detail-' + escapeHtml(key) + '" data-detail-for="' + escapeHtml(key) + '" hidden>'
+        + '<td colspan="9" class="detail-cell">' + renderDetailCell(progress) + '</td>'
+        + '</tr>';
+      return mainRow + detailRow;
     }).join('');
+    // Prune finished jobs so the Set can't grow unbounded, then re-open tracked rows.
+    expandedJobs.forEach(function(jobKey) { if (!liveIds[jobKey]) expandedJobs.delete(jobKey); });
+    applyExpandedState();
   }
 
   async function refreshJobs() {
@@ -381,7 +494,13 @@ function buildCrawlStatusClientScript({
   });
 
   document.addEventListener('click', function(event) {
-    if (event.target && event.target.matches('[data-refresh-crawls]')) refreshJobs();
+    if (event.target && event.target.matches('[data-refresh-crawls]')) { refreshJobs(); return; }
+    var toggle = event.target && event.target.closest ? event.target.closest('[data-detail-toggle]') : null;
+    if (toggle) {
+      var key = toggle.getAttribute('data-detail-toggle');
+      if (expandedJobs.has(key)) expandedJobs.delete(key); else expandedJobs.add(key);
+      applyExpandedState();
+    }
   });
 
   // ── Remote fetch strip (local coordination, remote page downloads) ──
