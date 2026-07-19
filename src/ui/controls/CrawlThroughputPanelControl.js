@@ -56,14 +56,12 @@ class CrawlThroughputPanelControl extends jsgui.Control {
     const card = this._el("div", null, { "data-tp-card": win },
       "flex:1;min-width:180px;border:1px solid #d8d0c1;border-radius:10px;padding:14px 16px;background:#fbfaf7;");
     card.add(this._el("div", title, {}, "font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;margin-bottom:6px;"));
-    // Headline: pages crawled
-    const head = this._el("div", null, {}, "display:flex;align-items:baseline;gap:6px;");
+    // Headline: pages crawled — a direct COUNT over this span, not a rate estimate.
+    const head = this._el("div", null, {}, "display:flex;align-items:baseline;gap:6px;margin-bottom:10px;");
     head.add(this._el("span", "—", { "data-tp-window": win, "data-tp-metric": "pages" },
       "font-size:30px;font-weight:700;color:#0b0f1a;font-variant-numeric:tabular-nums;line-height:1.1;"));
     head.add(this._el("span", "pages", {}, "font-size:13px;color:#6b7280;"));
     card.add(head);
-    card.add(this._el("div", "—", { "data-tp-window": win, "data-tp-metric": "rate" },
-      "font-size:12px;color:#1a8f4d;margin:2px 0 10px;font-variant-numeric:tabular-nums;"));
     card.add(this._metricRow(win, "documents", "📄 Documents"));
     card.add(this._metricRow(win, "down", "⬇ MB downloaded"));
     card.add(this._metricRow(win, "stored", "🗄️ MB stored (compressed)"));
@@ -85,7 +83,7 @@ class CrawlThroughputPanelControl extends jsgui.Control {
     for (const w of WINDOWS) grid.add(this._card(w.key, w.title));
     this.add(grid);
 
-    this.add(this._el("p", "Documents = pages that produced stored content. MB stored is the actual on-disk size after compression. Windows read the crawl fetch time; an idle crawler shows 0 in the shorter windows.",
+    this.add(this._el("p", "Each window is an independent count measured over that span (by crawl fetch time) — not an extrapolation of the 1-hour figure. Documents = pages that produced stored content; MB stored is the actual on-disk size after compression. An idle crawler shows 0 in the shorter windows.",
       {}, "font-size:11px;color:#9ca3af;margin-top:12px;line-height:1.5;"));
   }
 

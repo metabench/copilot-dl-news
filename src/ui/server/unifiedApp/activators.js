@@ -355,12 +355,13 @@ function buildCrawlThroughputActivator() {
               if (el) el.textContent = value;
             }
             function paint(w) {
+              // Every figure is a direct measurement of the window returned by the
+              // route; no rates are derived here (an averaged pages/hr would be an
+              // estimate, which this panel deliberately does not show).
               setCell(w.label, 'pages', fmtInt(w.pages));
               setCell(w.label, 'documents', fmtInt(w.documents));
               setCell(w.label, 'down', fmtMB(w.bytesDownloaded));
               setCell(w.label, 'stored', fmtMB(w.bytesStored));
-              const perHr = w.hours ? Math.round(w.pages / w.hours) : w.pages;
-              setCell(w.label, 'rate', w.pages ? ('\\u2248 ' + fmtInt(perHr) + ' pages/hr') : 'idle');
             }
             async function refresh() {
               try {
