@@ -1,4 +1,5 @@
 const { NewsDatabase } = require('../db/ensureNewsDb');
+const { insertCrawlMilestoneNow } = require('news-crawler-db');
 
 const DEFAULT_JOB_ID = 'analysis-run';
 
@@ -106,13 +107,13 @@ function awardMilestones(dbish, { dryRun = false, verbose = false, jobId = DEFAU
   ensureMilestoneSchema(db);
   const existingRows = db.prepare('SELECT scope, kind FROM crawl_milestones').all();
   const existing = new Set(existingRows.map((r) => `${(r.scope || '').toLowerCase()}|${r.kind}`));
-  const insertStmt = db.prepare(`
-    INSERT INTO crawl_milestones(job_id, ts, kind, scope, target, message, details)
-    VALUES (@jobId, datetime('now'), @kind, @scope, @target, @message, @details)
-  `);
+  // INSERT SQL delegated to ncdb's insertCrawlMilestoneNow (ts = datetime('now'),
+  // same columns) — verified byte-identical to the prior inline statement. The
+  // CREATE TABLE stays here (ensureMilestoneSchema above) until ncdb owns the
+  // schema-ensure on this handle; see db-coordination-audit-2026-07-19.md.
   const insertMany = db.transaction((items) => {
     for (const item of items) {
-      insertStmt.run(item);
+      insertCrawlMilestoneNow(db, item);
     }
   });
 
