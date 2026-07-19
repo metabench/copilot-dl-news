@@ -12,6 +12,7 @@ const {
   buildDownloadsActivator,
   buildDownloadVerificationActivator,
   buildBackgroundTasksActivator,
+  buildCrawlThroughputActivator,
   buildSearchExplorerActivator,
   buildScreenshotReviewActivator,
   buildPlaceholderActivator,
@@ -1453,6 +1454,7 @@ class UnifiedShell extends Control {
           ${buildDownloadsActivator()}
           ${buildDownloadVerificationActivator()}
           ${buildBackgroundTasksActivator()}
+          ${buildCrawlThroughputActivator()}
           ${buildSearchExplorerActivator()}
           ${buildScreenshotReviewActivator()}
         })();

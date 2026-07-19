@@ -1317,6 +1317,20 @@ load(); setInterval(load, 60000);
     }
   });
 
+  // Crawl throughput windows (1h / 6h / 24h): pages, documents, MB downloaded,
+  // MB stored-compressed. DB aggregation lives in ncdb (no raw SQL here);
+  // ~180ms warm on the live DB, so serve fresh per poll.
+  unifiedApp.get('/api/v1/crawl-throughput', (req, res) => {
+    try {
+      const { getCrawlThroughputWindows } = require('news-crawler-db');
+      const facadeForTp = getDbRW();
+      const handleForTp = facadeForTp && facadeForTp.db ? facadeForTp.db : facadeForTp;
+      res.json(getCrawlThroughputWindows(handleForTp));
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // In-app background-task subsystem (A7): a BackgroundTaskManager over the
   // app's own db handle + the IngestAdminAreasTask, so admin-area ingestion
   // runs IN-process (no app-stop dance). Non-fatal — the crawler must run

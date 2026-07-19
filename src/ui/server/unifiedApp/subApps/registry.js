@@ -21,6 +21,7 @@ const { renderStatCard, renderStatsRow, renderPanelHero } = require('./panelHelp
 const { SearchExplorerControl } = require('../../../controls/SearchExplorerControl');
 const { DownloadVerificationPanelControl } = require('../../../controls/DownloadVerificationPanelControl');
 const { BackgroundTasksPanelControl } = require('../../../controls/BackgroundTasksPanelControl');
+const { CrawlThroughputPanelControl } = require('../../../controls/CrawlThroughputPanelControl');
 const { CloudCrawlPanelControl } = require('../../../controls/CloudCrawlPanelControl');
 const { ScreenshotReviewPanelControl } = require('../../../controls/ScreenshotReviewPanelControl');
 const { getUnifiedAppHomeDashboardCounts } = require('news-crawler-db');
@@ -300,6 +301,26 @@ function renderSearchExplorerPanel() {
   return {
     content: wrapPanelHtml({
       appId: 'search-explorer',
+      activationKey,
+      html
+    }),
+    embed: 'panel',
+    activationKey
+  };
+}
+
+function renderCrawlThroughputPanel() {
+  const context = new jsgui.Page_Context();
+  const control = new CrawlThroughputPanelControl({
+    context,
+    apiBase: '/api/v1/crawl-throughput'
+  });
+  const html = control.renderHtml();
+
+  const activationKey = 'crawl-throughput';
+  return {
+    content: wrapPanelHtml({
+      appId: 'crawl-throughput',
       activationKey,
       html
     }),
@@ -695,6 +716,16 @@ function createSubAppRegistry(options = {}) {
       description: 'Live progress for in-app background tasks (analysis, place matching, compression, ingestion)',
       renderContent: async () => {
         return renderBackgroundTasksPanel();
+      }
+    },
+    {
+      id: 'crawl-throughput',
+      label: 'Crawl Rate',
+      icon: '📈',
+      category: 'crawler',
+      description: 'Rate of crawling — pages, documents, MB downloaded and stored over the last 1h / 6h / 24h',
+      renderContent: async () => {
+        return renderCrawlThroughputPanel();
       }
     },
 

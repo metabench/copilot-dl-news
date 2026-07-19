@@ -334,6 +334,56 @@ function buildCloudCrawlActivator() {
           });`;
 }
 
+function buildCrawlThroughputActivator() {
+  return `
+          window.UnifiedAppPanels.registerActivator('crawl-throughput', function(root) {
+            if (!root) return;
+            const apiBase = root.dataset.tpApi || '/api/v1/crawl-throughput';
+            const status = root.querySelector('[data-tp-status]');
+            const refreshBtn = root.querySelector('[data-tp-action="refresh"]');
+            function setStatus(t) { if (status) status.textContent = t; }
+            function fmtInt(n) { return Number(n || 0).toLocaleString('en-US'); }
+            function fmtMB(bytes) {
+              const mb = Number(bytes || 0) / 1048576;
+              if (mb === 0) return '0';
+              if (mb < 10) return mb.toFixed(2);
+              if (mb < 1000) return mb.toFixed(1);
+              return Math.round(mb).toLocaleString('en-US');
+            }
+            function setCell(win, metric, value) {
+              const el = root.querySelector('[data-tp-window="' + win + '"][data-tp-metric="' + metric + '"]');
+              if (el) el.textContent = value;
+            }
+            function paint(w) {
+              setCell(w.label, 'pages', fmtInt(w.pages));
+              setCell(w.label, 'documents', fmtInt(w.documents));
+              setCell(w.label, 'down', fmtMB(w.bytesDownloaded));
+              setCell(w.label, 'stored', fmtMB(w.bytesStored));
+              const perHr = w.hours ? Math.round(w.pages / w.hours) : w.pages;
+              setCell(w.label, 'rate', w.pages ? ('\\u2248 ' + fmtInt(perHr) + ' pages/hr') : 'idle');
+            }
+            async function refresh() {
+              try {
+                const res = await fetch(apiBase);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                (data.windows || []).forEach(paint);
+                const gen = data.generatedAt ? new Date(data.generatedAt).toLocaleTimeString() : new Date().toLocaleTimeString();
+                setStatus('Updated ' + gen);
+              } catch (err) {
+                setStatus('Throughput failed: ' + (err.message || err));
+              }
+            }
+            if (refreshBtn && refreshBtn.dataset.tpBound !== 'true') {
+              refreshBtn.dataset.tpBound = 'true';
+              refreshBtn.addEventListener('click', refresh);
+            }
+            refresh();
+            const timer = setInterval(refresh, 15000);
+            root.addEventListener('panel:deactivate', function() { clearInterval(timer); });
+          });`;
+}
+
 function buildBackgroundTasksActivator() {
   return `
           window.UnifiedAppPanels.registerActivator('background-tasks', function(root) {
@@ -868,6 +918,7 @@ function buildSubAppDelegateActivator() {
 
 module.exports = {
   buildBackgroundTasksActivator,
+  buildCrawlThroughputActivator,
   buildCloudCrawlActivator,
   buildDownloadVerificationActivator,
   buildDownloadsActivator,
