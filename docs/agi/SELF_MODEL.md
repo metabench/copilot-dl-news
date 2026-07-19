@@ -21,6 +21,7 @@ probe-before-believing calibrates implicitly.
 | 2025-11-16 | Heterogeneous lineage (GitHub Copilot-era agents, others) | Corpus founded; tools/agi CLI era |
 | ≤ 2026-07-19 | Claude Opus 4.8 (Claude Code sessions) | Thin-coordination mission, crawl-status UI, gazetteer ADM2; private-memory era (corpus unread — fixed by BOOT.md) |
 | 2026-07-19 | Claude Fable 5 | First explicit swap; ran this reconciliation; inherited scaffold intact |
+| 2026-07-19 | Claude Opus 4.8 (returned) | Second explicit swap — handoff back after Fable 5's delegations 2–4, redo-analysis pathway, and WLILO skill. Calibration: nothing model-specific to retire (Fable's work is test/benchmark-verified, not crutch-shaped); one benchmark-surfaced over-restraint corrected (WLILO finish pass had stripped all illustrative glyphs, violating the emoji/unicode requirement). The ratchet held: incoming model resumed mid-task from durable state + probes, no context loss. |
 
 ## Purpose
 Describe how this repository can host an AGI-style, tool-enabled workflow where agents iteratively sense the state of the system, plan work, act through tooling, and document outcomes.
