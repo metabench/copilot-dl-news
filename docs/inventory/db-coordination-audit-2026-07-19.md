@@ -86,3 +86,37 @@ one needs **ncdb-side work**, not a copilot repoint.
    same-repo slice — **verify the `insertCrawlMilestone` semantics + who owns the schema first**.
 3. For any analysis-version delegation, first add a single-table `getLatestContentAnalysisVersion`
    to ncdb; the existing two-table `getLatestAnalysisRunVersion` is a behavior change here.
+
+## Verified verdicts (2026-07-19 follow-up — adversarial per-candidate check)
+
+Three candidates were adversarially verified against the runtime `dist/db/index.js` + call sites.
+**All THREE are NOT_SAFE as same-repo repoints** — every one is a behavior change, not a no-op.
+The through-line: the migration for these is **ncdb-side work** (add a NEW export whose SQL exactly
+reproduces the copilot semantics), NOT reuse of an existing name-matching export.
+
+- **A — `milestones.js` INSERT → `insertCrawlMilestone`: NOT_SAFE.** The ncdb export EXISTS
+  (`dist/db/index.js:961`) with exact columns, BUT it binds `ts` as a caller-supplied positional
+  param; copilot computes `ts` inside SQL as `datetime('now')` (UTC, second precision). No way to
+  make ncdb emit `datetime('now')` internally → the stored timestamp changes. Also deleting
+  `ensureMilestoneSchema` removes a safety net for the `AnalysisTask.js:385` call site (externally
+  supplied `this.db`, not verified ncdb-ensured). UNBLOCK: add ncdb `insertCrawlMilestoneNow(db,
+  {jobId,kind,scope,target,message,details})` that computes `ts=datetime('now')`, then repoint +
+  confirm the AnalysisTask handle is schema-ensured before deleting the DDL. Smallest blast radius.
+- **B — `sync-site-geo.js` upsert → `upsertDomainLocaleRows`: NOT_SAFE.** Copilot uses
+  `ON CONFLICT(host) DO UPDATE SET country_code=COALESCE(excluded.country_code, …)` (PRESERVES
+  existing non-null); ncdb export uses `INSERT OR REPLACE` (blind overwrite), omits `updated_at`,
+  defaults `primary_langs='es'`, rewrites `confidence` → clobbers data. The www-canonicalization
+  needs `DO NOTHING` + `DELETE` (INSERT OR REPLACE can't express). The two coverage counts match no
+  ncdb export. UNBLOCK: new ncdb upsert reproducing the COALESCE-preserve semantics + a DO-NOTHING
+  helper + the two filtered counts.
+- **C — `detect-articles.js` 4-table join → article-read export: NOT_SAFE.** Copilot's load-bearing
+  filter is the per-`content_id` correlated `ca.analysis_version = (SELECT MAX(...) WHERE content_id
+  = cs.id)`; ncdb only has `MAX(analysis_version)` as a global scalar or against `analysis_runs` —
+  never the per-content dedup. Swapping returns duplicate/arbitrary-version rows; `listArticlesWithContent`
+  also uses INNER JOINs + omits `analysis_json`. Largest blast radius (3 call sites). UNBLOCK: new
+  ncdb article-read export carrying the per-`content_id` MAX subquery + LEFT JOINs + `analysis_json`.
+
+**Meta-lesson (reinforced):** among the audit's "plausible" small slices, the adversarial check
+found 0/3 safe — every name-matching ncdb export had a real semantic divergence. Do NOT repoint
+without a per-candidate semantic verification; the copilot→ncdb delegation is gated on ncdb-side
+exports, not copilot edits.
