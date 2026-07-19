@@ -19,6 +19,20 @@
 const path = require('path');
 const fs = require('fs');
 const { findProjectRoot } = require('../shared/utils/project-root');
+// DB-shaped statements live in ncdb (legacy-syncSiteGeo, byte-identical to the
+// former inline SQL — differential-e2e verified); this file keeps the
+// orchestration: config parsing, host canonicalization, country mapping,
+// dry-run, transaction boundary, logging.
+const {
+  listNewsWebsiteGeoRows,
+  updateNewsWebsiteMetadata,
+  upsertDomainLocaleConfigSync,
+  listWwwDomainLocales,
+  insertDomainLocaleIfAbsent,
+  deleteDomainLocaleByHost,
+  countDomainLocales,
+  countNewsWebsitesWithCountryMetadata
+} = require('news-crawler-db');
 
 const ROOT = findProjectRoot(__dirname);
 const argv = process.argv.slice(2);
@@ -68,19 +82,8 @@ function main() {
 
   const db = new Database(DB_PATH, { timeout: 10000 });
   try {
-    const sites = db.prepare('SELECT id, url, parent_domain, metadata FROM news_websites').all();
+    const sites = listNewsWebsiteGeoRows(db);
     const byDomain = new Map(sites.map((s) => [canonicalizeHost(s.parent_domain), s]));
-
-    const updMeta = db.prepare('UPDATE news_websites SET metadata = ? WHERE id = ?');
-    const upsertLocale = db.prepare(`
-      INSERT INTO domain_locales (host, country_code, primary_langs, confidence, source, updated_at)
-      VALUES (?, ?, ?, 1.0, 'news-sources-config-sync', ?)
-      ON CONFLICT(host) DO UPDATE SET
-        country_code = COALESCE(excluded.country_code, domain_locales.country_code),
-        primary_langs = COALESCE(excluded.primary_langs, domain_locales.primary_langs),
-        source = excluded.source,
-        updated_at = excluded.updated_at
-    `);
 
     let metaUpdated = 0, localesUpserted = 0, unmatched = 0;
     const now = new Date().toISOString();
@@ -96,7 +99,7 @@ function main() {
           if (src.tier != null) merged.tier = src.tier;
           const next = JSON.stringify(merged);
           if (next !== site.metadata) {
-            if (!DRY) updMeta.run(next, site.id);
+            if (!DRY) updateNewsWebsiteMetadata(db, { id: site.id, metadata: next });
             metaUpdated++;
           }
         } else {
@@ -105,21 +108,24 @@ function main() {
         }
         const cc = toCountryCode(src.country);
         if (cc || src.language) {
-          if (!DRY) upsertLocale.run(src.domain, cc, src.language || null, now);
+          if (!DRY) upsertDomainLocaleConfigSync(db, { host: src.domain, countryCode: cc, primaryLangs: src.language || null, updatedAt: now });
           localesUpserted++;
         }
       }
       // Normalize legacy www.-prefixed manual-seed rows to bare-host form.
-      const legacy = db.prepare("SELECT host, country_code, primary_langs, confidence, source FROM domain_locales WHERE host LIKE 'www.%'").all();
+      const legacy = listWwwDomainLocales(db);
       for (const row of legacy) {
         const bare = canonicalizeHost(row.host);
         if (!DRY) {
-          db.prepare(`
-            INSERT INTO domain_locales (host, country_code, primary_langs, confidence, source, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(host) DO NOTHING
-          `).run(bare, row.country_code, row.primary_langs, row.confidence, row.source, now);
-          db.prepare('DELETE FROM domain_locales WHERE host = ?').run(row.host);
+          insertDomainLocaleIfAbsent(db, {
+            host: bare,
+            countryCode: row.country_code,
+            primaryLangs: row.primary_langs,
+            confidence: row.confidence,
+            source: row.source,
+            updatedAt: now
+          });
+          deleteDomainLocaleByHost(db, row.host);
         }
         console.log(`[sync-site-geo] canonicalized locale host ${row.host} → ${bare}`);
       }
@@ -127,8 +133,8 @@ function main() {
     run();
 
     console.log(`[sync-site-geo] metadata updated: ${metaUpdated}, locales upserted: ${localesUpserted}, unmatched sources: ${unmatched}`);
-    const total = db.prepare('SELECT COUNT(*) c FROM domain_locales').get().c;
-    const withGeo = db.prepare("SELECT COUNT(*) c FROM news_websites WHERE metadata LIKE '%\"country\"%'").get().c;
+    const total = countDomainLocales(db);
+    const withGeo = countNewsWebsitesWithCountryMetadata(db);
     console.log(`[verify] domain_locales rows: ${total}; news_websites with country metadata: ${withGeo}`);
   } finally {
     db.close();
