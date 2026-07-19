@@ -7,6 +7,9 @@ const {
   validateTaskParameters
 } = require('../../background/tasks/taskDefinitions');
 const { RateLimitError } = require('../../background/errors/RateLimitError');
+// DB-shaped delete lives in ncdb (completes its background_tasks CRUD);
+// terminal-state policy stays here in the route.
+const { deleteBackgroundTask } = require('news-crawler-db');
 
 function defaultLogger(logger) {
   if (logger && typeof logger.error === 'function') {
@@ -307,7 +310,7 @@ function createBackgroundTasksRouter({ taskManager, getDbRW, logger } = {}) {
 
       const db = resolveDb();
       if (db && typeof db.prepare === 'function') {
-        db.prepare('DELETE FROM background_tasks WHERE id = ?').run(taskId);
+        deleteBackgroundTask(db, taskId);
       }
 
       res.json({
