@@ -58,6 +58,33 @@ describe('mountBackgroundTasks', () => {
     expect(ids).toContain('ingest-admin-areas');
   });
 
+  it('BUILTIN_TASKS maps every class-backed taskType (map completeness)', () => {
+    const { BUILTIN_TASKS } = require('../mountBackgroundTasks');
+    expect(Object.keys(BUILTIN_TASKS).sort()).toEqual(
+      ['analysis-run', 'article-compression', 'backfill-dates', 'guess-place-hubs', 'ingest-admin-areas']
+    );
+  });
+
+  it('registers the jest-safe tasks with correct taskType->class wiring + createTask', () => {
+    // analysis-run and backfill-dates transitively require jsdom/parse5,
+    // which throws under the jest transform (a KNOWN pre-existing issue) —
+    // they register fine in production node (verified live via /types). Here
+    // we assert the subset that loads under jest.
+    const { manager, registered } = mountBackgroundTasks(express(), () => db, {
+      logger: { info() {}, warn() {}, error() {} },
+    });
+    const jestSafe = { 'ingest-admin-areas': 'IngestAdminAreasTask', 'guess-place-hubs': 'GuessPlaceHubsTask', 'article-compression': 'CompressionTask' };
+    for (const [taskType, className] of Object.entries(jestSafe)) {
+      expect(registered).toContain(taskType);
+      const reg = manager.taskRegistry.get(taskType);
+      expect(reg && reg.TaskClass && reg.TaskClass.name).toBe(className);
+      // createTask INSERTs a pending row without constructing/running the
+      // task — proves the type is creatable without needing its infra.
+      const id = manager.createTask(taskType, {});
+      expect(manager.getTask(id).status).toBe('pending');
+    }
+  });
+
   it('POST create+autostart ingests counties in-process via HTTP', async () => {
     const create = await request(app).post('/api/v1/background-tasks').send({
       taskType: 'ingest-admin-areas', parameters: { countries: 'FR', limit: 110 }, autoStart: true,

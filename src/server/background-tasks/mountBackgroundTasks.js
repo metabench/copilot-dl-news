@@ -22,9 +22,23 @@
  *                    (e.g. fetchSparql/fetchEntities for tests)
  * @returns {{ manager, router, basePath }}
  */
+// Canonical taskType -> TaskClass mapping. There is no authoritative
+// registry elsewhere (grep: registerTaskType only in tests + this file), so
+// this IS it. Only taskTypes with a real class appear; the taskDefinitions
+// database-export / gazetteer-import / database-vacuum are orphan defs with
+// no class, and CompressionLifecycleTask is an orphan class with no def —
+// both left out until reconciled. article-compression = CompressionTask
+// (Brotli/article), NOT CompressionLifecycleTask (age-based tiering).
+const BUILTIN_TASKS = {
+  'ingest-admin-areas': () => require('../../background/tasks/IngestAdminAreasTask').IngestAdminAreasTask,
+  'backfill-dates': () => require('../../background/tasks/BackfillDatesTask').BackfillDatesTask,
+  'analysis-run': () => require('../../background/tasks/AnalysisTask').AnalysisTask,
+  'guess-place-hubs': () => require('../../background/tasks/GuessPlaceHubsTask').GuessPlaceHubsTask,
+  'article-compression': () => require('../../background/tasks/CompressionTask').CompressionTask,
+};
+
 function mountBackgroundTasks(app, getDbRW, options = {}) {
   const { BackgroundTaskManager } = require('../../background/BackgroundTaskManager');
-  const { IngestAdminAreasTask } = require('../../background/tasks/IngestAdminAreasTask');
   const { createBackgroundTasksRouter } = require('../../api/routes/background-tasks');
 
   const basePath = options.basePath || '/api/v1/background-tasks';
@@ -38,15 +52,28 @@ function mountBackgroundTasks(app, getDbRW, options = {}) {
 
   const manager = new BackgroundTaskManager({ db: dbHandle });
 
-  // Only the verified task for now (in-app admin-area ingestion — the piece
-  // that retires the app-stop dance). Network injected via registration so
-  // tests use fakes and production gets real WDQS.
-  manager.registerTaskType('ingest-admin-areas', IngestAdminAreasTask, options.registrationOptions || {});
+  // Register every built-in task that has a class. Registration is a
+  // Map.set — construction/execution only happens on createTask+startTask,
+  // so an infra-heavy task (analysis, compression, guess) is safe to make
+  // AVAILABLE here; it only exercises its deps when actually triggered.
+  // ingest-admin-areas gets the injected network (registrationOptions);
+  // the rest take their defaults.
+  const registered = [];
+  for (const [taskType, load] of Object.entries(BUILTIN_TASKS)) {
+    try {
+      const TaskClass = load();
+      const opts = taskType === 'ingest-admin-areas' ? (options.registrationOptions || {}) : {};
+      manager.registerTaskType(taskType, TaskClass, opts);
+      registered.push(taskType);
+    } catch (err) {
+      logger.warn(`[background-tasks] could not register ${taskType}: ${err.message}`);
+    }
+  }
 
   const router = createBackgroundTasksRouter({ taskManager: manager, getDbRW, logger });
   app.use(basePath, router);
 
-  return { manager, router, basePath };
+  return { manager, router, basePath, registered };
 }
 
-module.exports = { mountBackgroundTasks };
+module.exports = { mountBackgroundTasks, BUILTIN_TASKS };
