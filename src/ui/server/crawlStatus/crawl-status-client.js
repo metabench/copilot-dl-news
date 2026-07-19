@@ -581,9 +581,39 @@ function buildCrawlStatusClientScript({
   seedStartControls();
   updateBatchSummary();
   loadOperations().finally(markReady);
+  function setCrawlWindowStat(key, val) {
+    const node = document.querySelector('[data-crawl-window-stat="' + key + '"]');
+    if (node) node.textContent = val;
+  }
+  function fmtWindowMB(bytes) {
+    const mb = (Number(bytes) || 0) / 1048576;
+    if (mb === 0) return '0';
+    if (mb < 10) return mb.toFixed(2);
+    if (mb < 1000) return mb.toFixed(1);
+    return Math.round(mb).toLocaleString('en-US');
+  }
+  async function fetchCrawlWindows() {
+    try {
+      const res = await fetch('/api/v1/crawl-throughput', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const w = {};
+      (data.windows || []).forEach(function(x) { w[x.label] = x; });
+      const o = w['1h'] || {}, s = w['6h'] || {}, t = w['24h'] || {};
+      setCrawlWindowStat('pages-1h', (o.pages || 0).toLocaleString('en-US'));
+      setCrawlWindowStat('pages-6h', (s.pages || 0).toLocaleString('en-US'));
+      setCrawlWindowStat('pages-24h', (t.pages || 0).toLocaleString('en-US'));
+      setCrawlWindowStat('docs-24h', (t.documents || 0).toLocaleString('en-US'));
+      setCrawlWindowStat('down-24h', fmtWindowMB(t.bytesDownloaded));
+      setCrawlWindowStat('stored-24h', fmtWindowMB(t.bytesStored));
+    } catch (e) { /* endpoint transient — leave prior values */ }
+  }
+
   refreshJobs();
   setInterval(refreshJobs, 3000);
   initTelemetryStream();
+  fetchCrawlWindows();
+  setInterval(fetchCrawlWindows, 15000);
 })();`;
 }
 

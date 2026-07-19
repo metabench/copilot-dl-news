@@ -197,6 +197,31 @@ class CrawlStatusPage extends Standard_Web_Page {
       item.add(el('small', {}, label));
     }
 
+    // Measured-windows strip: cumulative pages/docs/MB over the last 1h/6h/24h
+    // (from /api/v1/crawl-throughput) — the durable "how much have we crawled"
+    // counterpart to the live per-second rates above. Populated by the client.
+    activityBody.add(el('div', {
+      class: 'throughput-windows-label',
+      style: 'font-size:11px;color:#888;margin:8px 0 2px;letter-spacing:.03em;'
+    }, 'Recent totals (measured windows)'));
+    const windowsStrip = el('section', {
+      id: 'crawl-windows-strip',
+      class: 'throughput-strip',
+      'data-screenshot-subject': 'crawl-status-windows-strip',
+      'data-crawl-windows-strip': 'true'
+    });
+    activityBody.add(windowsStrip);
+    const windowItems = [
+      ['pages-1h', 'pages · 1h'], ['pages-6h', 'pages · 6h'], ['pages-24h', 'pages · 24h'],
+      ['docs-24h', 'docs · 24h'], ['down-24h', 'MB down · 24h'], ['stored-24h', 'MB stored · 24h']
+    ];
+    for (const [key, label] of windowItems) {
+      const item = el('div', { class: 'throughput-item' });
+      windowsStrip.add(item);
+      item.add(el('span', { 'data-crawl-window-stat': key }, '—'));
+      item.add(el('small', {}, label));
+    }
+
     // Remote fetch strip — live status of the "local coordination, remote
     // page downloads" mode (Oracle fetch worker). Populated from the
     // remoteFetch section of crawl:progress telemetry events; hidden while
