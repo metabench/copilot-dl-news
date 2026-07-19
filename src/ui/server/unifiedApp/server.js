@@ -1300,6 +1300,23 @@ load(); setInterval(load, 60000);
     console.warn('[unifiedApp] place-hub review API unavailable:', err.message);
   }
 
+  // Gazetteer place list for article→place matching. ArticlePlaceMatcher
+  // fetches `${baseUrl}/api/gazetteer/places` (bare array of
+  // {id, canonicalName, names:[{name, normalized}]}); until 2026-07-19 this
+  // route existed nowhere, so in-app matching always saw zero candidates.
+  // ~17MB / ~4s on the live gazetteer — the matcher caches for 5 minutes,
+  // so serve fresh per request via the ncdb export (no raw SQL here).
+  unifiedApp.get('/api/gazetteer/places', (req, res) => {
+    try {
+      const { listPlacesWithNamesForMatching } = require('news-crawler-db');
+      const facadeForPlaces = getDbRW();
+      const handleForPlaces = facadeForPlaces && facadeForPlaces.db ? facadeForPlaces.db : facadeForPlaces;
+      res.json(listPlacesWithNamesForMatching(handleForPlaces));
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // In-app background-task subsystem (A7): a BackgroundTaskManager over the
   // app's own db handle + the IngestAdminAreasTask, so admin-area ingestion
   // runs IN-process (no app-stop dance). Non-fatal — the crawler must run

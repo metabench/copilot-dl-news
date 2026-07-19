@@ -66,6 +66,11 @@ class AnalysisTask {
       .split(',')
       .map((s) => Number(String(s).trim()))
       .filter((n) => Number.isInteger(n) && n > 0);
+    // Where the matcher fetches /api/gazetteer/places from. The matcher's own
+    // default (localhost:3000) predates the unified app; point at the app we
+    // run inside of (canonical port 3170) unless configured otherwise.
+    this.gazetteerBaseUrl = this.config.gazetteerBaseUrl
+      || `http://127.0.0.1:${process.env.PORT || 3170}`;
     this.placeMatchingRuleLevel = this.config.placeMatchingRuleLevel ?? 1;
     this.verbose = this.config.verbose ?? false;
     this.dbPath = this.config.dbPath;
@@ -259,7 +264,10 @@ class AnalysisTask {
     this._reportProgress('Starting place matching', { stage: 'place-matching' });
     
     try {
-      const matcher = new ArticlePlaceMatcher({ db: this.db });
+      const matcher = new ArticlePlaceMatcher({
+        db: this.db,
+        gazetteerApi: { baseUrl: this.gazetteerBaseUrl }
+      });
 
       // Get articles that need place matching.
       // Default: only articles with no relations yet (NOT EXISTS).
