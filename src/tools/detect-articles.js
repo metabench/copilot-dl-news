@@ -20,6 +20,13 @@ const {
 } = require('../intelligence/analysis/articleDetection');
 const { findProjectRoot } = require('../shared/utils/project-root');
 const { ensureDb } = require('../data/db/sqlite/ensureDb');
+// The canonical per-content-MAX article-read SQL lives in ncdb
+// (legacy-articleDetection, byte-identical — differential-e2e verified).
+const {
+  buildArticleCandidateQuery,
+  listArticleCandidates,
+  selectArticleFetchDetails
+} = require('news-crawler-db');
 const { COLORS, ICONS } = require('../shared/utils/CliFormatter');
 const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');
 
@@ -50,38 +57,9 @@ function parseCliArgs(argv) {
   return parser.parse(argv);
 }
 
-function buildCandidateQuery(options) {
-  const where = ["u.url LIKE 'http%'"]; // only consider http(s) URLs
-  if (options.host) {
-    where.push('LOWER(u.host) = LOWER(?)');
-  }
-  const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
-
-  const orderClause = options.sample ? 'ORDER BY RANDOM()' : 'ORDER BY COALESCE(hr.fetched_at, u.created_at) DESC';
-
-  let limitClause = '';
-  if (options.sample) {
-    limitClause = `LIMIT ${options.sample}`;
-  } else if (options.limit) {
-    limitClause = `LIMIT ${options.limit}`;
-  }
-
-  return `
-    SELECT u.url,
-           ca.title,
-           u.host,
-           ca.word_count AS content_word_count,
-           ca.analysis_json AS content_analysis,
-           hr.fetched_at AS latest_fetched_at
-      FROM urls u
- LEFT JOIN http_responses hr ON hr.url_id = u.id
- LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
- LEFT JOIN content_analysis ca ON ca.content_id = cs.id AND ca.analysis_version = (SELECT MAX(analysis_version) FROM content_analysis WHERE content_id = cs.id)
-      ${whereClause}
-      ${orderClause}
-      ${limitClause}
-  `;
-}
+// Query construction delegated to ncdb's buildArticleCandidateQuery
+// (string-equal for every option shape; kept exported-name compatibility).
+const buildCandidateQuery = buildArticleCandidateQuery;
 
 function resolveDbPath(dbPath) {
   if (dbPath) {
@@ -92,13 +70,7 @@ function resolveDbPath(dbPath) {
 }
 
 function loadCandidates(db, options) {
-  const sql = buildCandidateQuery(options);
-  const statement = db.prepare(sql);
-  const params = [];
-  if (options.host) {
-    params.push(options.host);
-  }
-  return statement.all(...params);
+  return listArticleCandidates(db, options);
 }
 
 function runDetectArticles(options) {
@@ -118,20 +90,7 @@ function runDetectArticles(options) {
   }
   console.log();
 
-  const fetchDetailsStmt = db.prepare(`
-    SELECT hr.bytes_downloaded,
-           ca.word_count,
-           ca.nav_links_count,
-           ca.article_links_count,
-           ca.analysis_json
-      FROM urls u
- LEFT JOIN http_responses hr ON hr.url_id = u.id
- LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
- LEFT JOIN content_analysis ca ON ca.content_id = cs.id AND ca.analysis_version = (SELECT MAX(analysis_version) FROM content_analysis WHERE content_id = cs.id)
-     WHERE u.url = ?
-  ORDER BY hr.fetched_at DESC
-     LIMIT 1
-  `);
+  const fetchDetailsStmt = { get: (url) => selectArticleFetchDetails(db, url) };
 
   const rows = loadCandidates(db, options);
 

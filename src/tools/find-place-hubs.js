@@ -5,6 +5,9 @@
 const path = require('path');
 const { findProjectRoot } = require('../shared/utils/project-root');
 const { ensureDb } = require('../data/db/sqlite/ensureDb');
+// Canonical per-content-MAX article-read SQL lives in ncdb
+// (legacy-articleDetection, byte-identical — differential-e2e verified).
+const { listPlaceHubArticleCandidates, selectArticleFetchDetails } = require('news-crawler-db');
 const { buildGazetteerMatchers, extractPlacesFromUrl } = require('../intelligence/analysis/place-extraction');
 const { detectPlaceHub } = require('./placeHubDetector');
 const { loadNonGeoTopicSlugs } = require('./nonGeoTopicSlugs');
@@ -202,44 +205,10 @@ function findPlaceHubs(options = {}) {
           throw new Error('Normalized schema tables (urls, http_responses) not found. Database migration may be incomplete.');
         }
 
-        // Build query using normalized schema
-        const limitClause = options.limit ? `LIMIT ${options.limit}` : '';
-        const hostWhereClause = options.host ? 'AND LOWER(u.host) = LOWER(?)' : '';
-
-        const selectCandidates = db.prepare(`
-          SELECT u.url,
-                 ca.title,
-                 u.host,
-                 hr.http_status,
-                 hr.content_type,
-                 ca.word_count AS content_word_count,
-                 ca.analysis_json AS analysis_data,
-                 ca.analyzed_at,
-                 hr.fetched_at AS last_fetch_at
-            FROM urls u
-       LEFT JOIN http_responses hr ON hr.url_id = u.id
-       LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
-       LEFT JOIN content_analysis ca ON ca.content_id = cs.id AND ca.analysis_version = (SELECT MAX(analysis_version) FROM content_analysis WHERE content_id = cs.id)
-           WHERE u.url LIKE 'http%'
-             ${hostWhereClause}
-          ORDER BY COALESCE(hr.fetched_at, u.created_at) DESC
-           ${limitClause}
-        `);
-
-        const selectFetchStats = db.prepare(`
-          SELECT hr.bytes_downloaded,
-                 ca.word_count,
-                 ca.nav_links_count,
-                 ca.article_links_count,
-                 ca.analysis_json
-            FROM urls u
-       LEFT JOIN http_responses hr ON hr.url_id = u.id
-       LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
-       LEFT JOIN content_analysis ca ON ca.content_id = cs.id AND ca.analysis_version = (SELECT MAX(analysis_version) FROM content_analysis WHERE content_id = cs.id)
-           WHERE u.url = ?
-          ORDER BY hr.fetched_at DESC
-           LIMIT 1
-        `);
+        // Query construction delegated to ncdb (statement-shaped shims keep the
+        // .all()/.get() call sites below unchanged; host/limit come from options).
+        const selectCandidates = { all: () => listPlaceHubArticleCandidates(db, options) };
+        const selectFetchStats = { get: (url) => selectArticleFetchDetails(db, url) };
 
     const selectHubByUrl = db.prepare('SELECT id, place_slug FROM place_hubs WHERE url = ?');
     const insertHub = db.prepare(`
