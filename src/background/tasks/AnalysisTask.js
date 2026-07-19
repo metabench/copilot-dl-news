@@ -11,7 +11,7 @@
 
 const { analysePages } = require('../../tools/analyse-pages-core');
 const { awardMilestones } = require('../../tools/milestones');
-const { countArticlesNeedingAnalysis } = require('news-crawler-db');
+const { countArticlesNeedingAnalysis, deleteArticlePlaceRelationsForArticle } = require('news-crawler-db');
 const { ArticlePlaceMatcher } = require('../../intelligence/matching/ArticlePlaceMatcher');
 const { tof } = require('lang-tools');
 
@@ -58,6 +58,14 @@ class AnalysisTask {
     this.skipDomains = this.config.skipDomains ?? false;
     this.skipMilestones = this.config.skipMilestones ?? false;
     this.skipPlaceMatching = this.config.skipPlaceMatching ?? false;
+    this.redoPlaceMatching = this.config.redoPlaceMatching ?? false;
+    // Optional with redo: restrict to specific http_response ids (comma-separated
+    // string or array) so a targeted purge can reach OLD articles without
+    // re-matching everything fetched since (newest-first order buries them).
+    this.redoArticleIds = String(this.config.redoArticleIds ?? '')
+      .split(',')
+      .map((s) => Number(String(s).trim()))
+      .filter((n) => Number.isInteger(n) && n > 0);
     this.placeMatchingRuleLevel = this.config.placeMatchingRuleLevel ?? 1;
     this.verbose = this.config.verbose ?? false;
     this.dbPath = this.config.dbPath;
@@ -252,22 +260,37 @@ class AnalysisTask {
     
     try {
       const matcher = new ArticlePlaceMatcher({ db: this.db });
-      
-      // Get articles that need place matching
-      // For now, match all articles that don't have place relations yet
-      // In the future, we could be more selective
+
+      // Get articles that need place matching.
+      // Default: only articles with no relations yet (NOT EXISTS).
+      // redoPlaceMatching: select regardless of existing relations — each
+      // selected article's old relations are deleted just before re-matching
+      // (INSERT OR REPLACE alone cannot remove stale pairs; unique key is
+      // article_id+place_id+rule_level). Needed to purge wrong-headline
+      // relations produced by the pre-2026-07-19 ArticlePlaceMatcher join bug.
+      const scopedToIds = this.redoPlaceMatching && this.redoArticleIds.length > 0;
+      const notMatchedFilter = scopedToIds
+        ? `
+        WHERE hr.id IN (${this.redoArticleIds.join(',')})`
+        : this.redoPlaceMatching ? '' : `
+        WHERE NOT EXISTS (
+          SELECT 1 FROM article_place_relations apr WHERE apr.article_id = hr.id
+        )`;
       const articlesToMatch = this.db.prepare(`
         SELECT
           hr.id,
-          COALESCE(ca.title, u.url) AS title,
+          COALESCE((
+            SELECT ca.title
+            FROM content_storage cs
+            JOIN content_analysis ca ON ca.content_id = cs.id
+            WHERE cs.http_response_id = hr.id AND ca.title IS NOT NULL
+            ORDER BY ca.analysis_version DESC
+            LIMIT 1
+          ), u.url) AS title,
           u.url,
           hr.fetched_at
         FROM http_responses hr
-        JOIN urls u ON u.id = hr.url_id
-        LEFT JOIN content_analysis ca ON ca.content_id = hr.id
-        WHERE NOT EXISTS (
-          SELECT 1 FROM article_place_relations apr WHERE apr.article_id = hr.id
-        )
+        JOIN urls u ON u.id = hr.url_id${notMatchedFilter}
         ORDER BY hr.fetched_at DESC, hr.id DESC
         LIMIT ?
       `).all(this.pageLimit || 1000);
@@ -292,9 +315,19 @@ class AnalysisTask {
         const article = articlesToMatch[i];
         
         try {
+          // On redo, purge this article's old relations first — stale pairs
+          // (e.g. wrong-headline matches) must not survive the re-match.
+          if (this.redoPlaceMatching) {
+            deleteArticlePlaceRelationsForArticle(this.db, article.id);
+          }
+
           const relations = await matcher.matchArticleToPlaces(article.id, this.placeMatchingRuleLevel);
-          
+
           if (relations.length > 0) {
+            // Persist! matchArticleToPlaces only RETURNS relations; without
+            // storeArticlePlaces nothing reaches article_place_relations (the
+            // pre-2026-07-19 code silently dropped every result here).
+            await matcher.storeArticlePlaces(relations);
             matchedCount++;
             relationsCreated += relations.length;
           }

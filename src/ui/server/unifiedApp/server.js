@@ -1306,7 +1306,28 @@ load(); setInterval(load, 60000);
   // even if the task API can't mount.
   try {
     const { mountBackgroundTasks } = require('../../../server/background-tasks/mountBackgroundTasks');
-    mountBackgroundTasks(unifiedApp, getDbRW, { logger: console });
+    // Wire task progress into the live surfaces (2026-07-19): task:* frames
+    // ride the existing /api/crawl-telemetry/events SSE (history replay +
+    // heartbeats for free), and throttled progress persists to task_events
+    // (TaskEventWriter) so task-events.js / Crawl Observer show analysis runs.
+    let emitTelemetry;
+    try {
+      const { TaskEventWriter } = require('../../../db/TaskEventWriter');
+      const facadeForTasks = getDbRW();
+      const handleForTasks = facadeForTasks && facadeForTasks.db ? facadeForTasks.db : facadeForTasks;
+      emitTelemetry = new TaskEventWriter(handleForTasks).createBackgroundTaskEmitter();
+    } catch (telemetryErr) {
+      console.warn('[unifiedApp] background-task telemetry unavailable:', telemetryErr.message);
+    }
+    mountBackgroundTasks(unifiedApp, getDbRW, {
+      logger: console,
+      broadcastEvent: (type, task) => {
+        try {
+          crawlTelemetry.bridge.emitEvent({ type: `task:${type}`, ts: new Date().toISOString(), data: task });
+        } catch (_) { /* SSE broadcast is best-effort */ }
+      },
+      emitTelemetry
+    });
   } catch (err) {
     console.warn('[unifiedApp] background-tasks API unavailable:', err.message);
   }

@@ -52,7 +52,16 @@ function mountBackgroundTasks(app, getDbRW, options = {}) {
     throw new Error('mountBackgroundTasks: getDbRW() did not yield a better-sqlite3 handle');
   }
 
-  const manager = new BackgroundTaskManager({ db: dbHandle });
+  // Live-progress sinks (both optional): broadcastEvent rides an SSE bridge
+  // (the manager emits task-created/task-progress/task-completed frames);
+  // emitTelemetry persists throttled progress to task_events so
+  // tools/dev/task-events.js and the Crawl Observer can show analysis tasks.
+  // Until 2026-07-19 neither was passed, so task progress reached no live sink.
+  const manager = new BackgroundTaskManager({
+    db: dbHandle,
+    broadcastEvent: options.broadcastEvent,
+    emitTelemetry: options.emitTelemetry
+  });
 
   // Register every built-in task that has a class. Registration is a
   // Map.set — construction/execution only happens on createTask+startTask,

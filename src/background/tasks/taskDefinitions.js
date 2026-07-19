@@ -411,6 +411,20 @@ const TASK_DEFINITIONS = {
         description: 'Skip matching articles to places using gazetteer data'
       },
       {
+        name: 'redoPlaceMatching',
+        label: 'Redo Place Matching (re-match already-matched articles)',
+        type: FieldType.BOOLEAN,
+        default: false,
+        description: 'Select articles even if they already have place relations; each selected article\'s old relations are deleted just before re-matching. Use to purge relations produced by the pre-2026-07-19 wrong-headline matcher bug.'
+      },
+      {
+        name: 'redoArticleIds',
+        label: 'Redo: specific article ids (comma-separated, optional)',
+        type: FieldType.TEXT,
+        default: '',
+        description: 'With Redo enabled: re-match ONLY these http_response ids instead of newest-first. Lets a targeted purge reach old tainted articles without re-matching everything newer.'
+      },
+      {
         name: 'placeMatchingRuleLevel',
         label: 'Place Matching Rule Level',
         type: FieldType.SELECT,
