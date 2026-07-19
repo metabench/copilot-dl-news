@@ -120,20 +120,42 @@ function renderCrawlMiniPage() {
     layer.appendChild(f);
     f.addEventListener('animationend', function(){ f.remove(); });
   }
-  function apply(next){
-    if(st.inited){
-      var d=next.pages-st.pages;
-      if(d>0){ spawnFloat(d); countUp(el('pages'), st.pages, next.pages, 550); flashUp(el('pages')); }
-      else el('pages').textContent=fmtInt(next.pages);
-    } else el('pages').textContent=fmtInt(next.pages);
-    if(next.docs>st.docs) flashUp(el('docs'));
+  // Silent absolute sync from the authoritative DB poll — no float (the SSE
+  // stream owns the "+N" pulses; poll only reconciles the true totals).
+  function sync(next){
+    countUp(el('pages'), st.pages, next.pages, 400);
     el('docs').textContent=fmtInt(next.docs);
     el('down').textContent=fmtMB(next.down);
     el('stored').textContent=fmtMB(next.stored);
     el('p1').textContent=fmtInt(next.p1); el('p6').textContent=fmtInt(next.p6); el('p24').textContent=fmtInt(next.pages);
     st.pages=next.pages; st.docs=next.docs; st.down=next.down; st.stored=next.stored; st.inited=true;
   }
+  // Live delta from a lean crawl:download event — the JRPG "+N" heal.
+  function pulse(d){
+    var p=Math.max(0, d.pages||0);
+    if(p>0){ spawnFloat(p); countUp(el('pages'), st.pages, st.pages+p, 500); flashUp(el('pages')); st.pages+=p; }
+    if(d.docs){ st.docs+=d.docs; el('docs').textContent=fmtInt(st.docs); flashUp(el('docs')); }
+    if(d.bytes){ st.down+=d.bytes; el('down').textContent=fmtMB(st.down); }
+    if(d.stored){ st.stored+=d.stored; el('stored').textContent=fmtMB(st.stored); }
+    lastSSE=Date.now(); setLive(true,'crawling');
+  }
   function setLive(on, text){ el('dot').className='dot'+(on?' live':''); el('stat').textContent=text; }
+
+  var lastSSE=0, es=null;
+  function connectSSE(){
+    try{
+      es=new EventSource('/api/crawl-telemetry/events');
+      es.onmessage=function(ev){
+        if(!ev||!ev.data||ev.data.charAt(0)!=='{') return;   // skip ':ok' heartbeats
+        var f; try{ f=JSON.parse(ev.data); }catch(_){ return; }
+        if(f.type!=='crawl:telemetry'||!f.data) return;
+        var inner=f.data;
+        if(inner.type==='crawl:download' && inner.data){ pulse(inner.data); }
+        else if(inner.type==='crawl:progress'){ lastSSE=Date.now(); setLive(true,'crawling'); }
+      };
+      es.onerror=function(){ /* EventSource auto-reconnects */ };
+    }catch(_){}
+  }
 
   async function poll(){
     try{
@@ -141,26 +163,24 @@ function renderCrawlMiniPage() {
       if(!r.ok) throw new Error('HTTP '+r.status);
       var d=await r.json(); var w={}; (d.windows||[]).forEach(function(x){ w[x.label]=x; });
       var t=w['24h']||{}, o=w['1h']||{}, s=w['6h']||{};
-      var grew = st.inited && (t.pages>st.pages);
-      apply({ pages:t.pages||0, docs:t.documents||0, down:t.bytesDownloaded||0, stored:t.bytesStored||0, p1:o.pages||0, p6:s.pages||0 });
-      var lbl = grew ? 'crawling' : (o.pages>0 ? 'active' : 'idle');
-      setLive(grew || (o.pages>0), lbl + ' \\u00b7 ' + new Date().toLocaleTimeString());
-    }catch(e){ setLive(false, 'offline'); }
+      sync({ pages:t.pages||0, docs:t.documents||0, down:t.bytesDownloaded||0, stored:t.bytesStored||0, p1:o.pages||0, p6:s.pages||0 });
+      var sseLive = lastSSE && (Date.now()-lastSSE < 8000);
+      if(!sseLive) setLive(o.pages>0, (o.pages>0?'active':'idle') + ' \\u00b7 ' + new Date().toLocaleTimeString());
+    }catch(e){ if(!lastSSE || Date.now()-lastSSE>8000) setLive(false, 'offline'); }
   }
 
   if(DEMO){
     el('badge').className='badge on';
-    var base={ pages:344, docs:152, down:67.6*1048576, stored:5.06*1048576 };
-    apply({ pages:base.pages, docs:base.docs, down:base.down, stored:base.stored, p1:0, p6:1 });
+    sync({ pages:344, docs:152, down:67.6*1048576, stored:5.06*1048576, p1:0, p6:1 });
     setLive(true,'demo \\u00b7 crawling');
     setInterval(function(){
       var add=1+Math.floor(Math.random()*Math.random()*14);  // skew small, occasional bursts
-      base.pages+=add; base.docs+=Math.round(add*0.45);
-      base.down+=add*90000; base.stored+=add*15000;
-      apply({ pages:base.pages, docs:base.docs, down:base.down, stored:base.stored, p1:add, p6:1+add });
+      pulse({ pages:add, docs:Math.round(add*0.45), bytes:add*90000, stored:add*15000 });
     }, 1200);
   } else {
-    poll(); setInterval(poll, 2000);
+    poll();                          // authoritative totals now
+    setInterval(poll, 12000);        // + slow reconciliation
+    connectSSE();                    // instant "+N" via the lean crawl:download stream
   }
 })();
 </script>

@@ -387,6 +387,37 @@ function mountDashboardModules(unifiedApp, options = {}) {
 
   crawlTelemetry.mountSSE(unifiedApp, '/api/crawl-telemetry/events');
   crawlTelemetry.mountRemoteObservable(unifiedApp, '/api/crawl-telemetry/remote-obs');
+
+  // Lean download broadcaster: turns batched crawl:progress snapshots into small,
+  // specific `crawl:download` delta events (published only when new pages arrive),
+  // so the mini dashboard gets an instant "+N" by subscribing to just that.
+  let downloadTicker = null;
+  try {
+    const { CrawlDownloadTicker } = require('../../../core/crawler/telemetry/CrawlDownloadTicker');
+    downloadTicker = new CrawlDownloadTicker(crawlTelemetry.bridge);
+  } catch (err) {
+    console.warn('[unifiedApp] download ticker unavailable:', err.message);
+  }
+
+  // Loopback-only test hook: publish a synthetic crawl:download so the pub/sub
+  // path (backend publish -> SSE -> subscriber "+N") can be verified without a
+  // live crawl. POST /api/crawl-telemetry/_emit-test?pages=N
+  unifiedApp.post('/api/crawl-telemetry/_emit-test', (req, res) => {
+    const ip = String(req.ip || (req.connection && req.connection.remoteAddress) || '');
+    if (!/(^|:)(127\.0\.0\.1|::1)$/.test(ip) && !/127\.0\.0\.1|::1/.test(ip)) {
+      return res.status(403).json({ error: 'loopback only' });
+    }
+    const n = Math.max(1, Math.min(500, Number(req.query.pages) || 5));
+    try {
+      const { createTelemetryEvent } = require('../../../core/crawler/telemetry/CrawlTelemetrySchema');
+      crawlTelemetry.bridge.emitEvent(createTelemetryEvent(
+        'crawl:download',
+        { pages: n, docs: Math.round(n * 0.45), bytes: n * 90000, stored: n * 15000 },
+        { jobId: 'test', source: 'emit-test' }
+      ));
+      res.json({ ok: true, emitted: { pages: n } });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
   unifiedApp.get('/api/crawl-telemetry/history', (req, res) => {
     const limitRaw = req.query && req.query.limit != null ? Number(req.query.limit) : undefined;
     const limit = Number.isFinite(limitRaw) ? Math.max(0, Math.trunc(limitRaw)) : undefined;
@@ -1664,6 +1695,11 @@ load(); setInterval(load, 60000);
 
   const closers = [];
   closers.push(() => {
+    try {
+      if (downloadTicker) downloadTicker.destroy();
+    } catch {
+      // ignore
+    }
     try {
       crawlTelemetry.destroy();
     } catch {
