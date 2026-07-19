@@ -74,15 +74,21 @@ async function ingestAdminAreas(db, opts = {}) {
         // the P279* tree; NI: 60 rows for 11 districts).
         const classPath = cls.subclassWalk === 0 ? 'wdt:P31' : 'wdt:P31/wdt:P279*';
         const currentFilter = currentOnly ? 'FILTER NOT EXISTS { ?adm2 wdt:P576 ?dissolved }' : '';
+        // Labels via a direct rdfs:label OPTIONAL, NOT `SERVICE wikibase:label`:
+        // the label service over a P279* class walk + OPTIONALs times out on
+        // WDQS for larger countries (DE Q106658 timed out -> 0 rows ingested
+        // 2026-07-19; the direct label returns 400 rows in ~1.7s). Labels are
+        // primarily taken from wbgetentities below; adm2Label is only a fallback
+        // when the entity fetch misses.
         const sparql = `SELECT ?adm2 ?adm2Label ?parent ?iso ?fips ?coord WHERE {
             ?country wdt:P297 "${countryCode}".
             ?adm2 ${classPath} wd:${cls.wikidataClassQid}; wdt:P17 ?country.
             ${currentFilter}
+            OPTIONAL { ?adm2 rdfs:label ?adm2Label. FILTER(LANG(?adm2Label) = "en") }
             OPTIONAL { ?adm2 wdt:P131 ?parent. }
             OPTIONAL { ?adm2 wdt:P300 ?iso. }
             OPTIONAL { ?adm2 wdt:P882 ?fips. }
             OPTIONAL { ?adm2 wdt:P625 ?coord. }
-            SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
           } LIMIT ${Math.max(1, Math.min(limit, 1000))}`;
 
         const jr = await fetchSparql(sparql);

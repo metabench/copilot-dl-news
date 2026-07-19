@@ -68,6 +68,11 @@ describe('ingestAdminAreas', () => {
     await ingestAdminAreas(db, { countries: ['FR'], logger, currentOnly: false, fetchSparql: async (query) => { capturedOff = query; return { results: { bindings: [] } }; }, fetchEntities: async () => ({ entities: {} }) });
     expect(capturedDefault).toMatch(/FILTER NOT EXISTS \{ \?adm2 wdt:P576/);
     expect(capturedOff).not.toMatch(/P576/);
+    // Labels via a lightweight direct rdfs:label, NOT the wikibase:label SERVICE
+    // (the service times out on WDQS over a P279* walk — DE ingested 0 rows
+    // 2026-07-19 until this was changed).
+    expect(capturedDefault).toMatch(/rdfs:label \?adm2Label/);
+    expect(capturedDefault).not.toMatch(/wikibase:label/);
   });
 
   it('is idempotent — a second run creates nothing (QID dedupe)', async () => {
