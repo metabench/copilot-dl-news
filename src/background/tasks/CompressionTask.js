@@ -6,7 +6,8 @@
  * Tracks progress, handles errors, and supports pause/resume.
  */
 
-const { compressAndStore, getCompressionType } = require('../../shared/utils/CompressionFacade');
+const { compress, getCompressionType } = require('../../shared/utils/CompressionFacade');
+const { updateContentStorageCompressionCleanupResult } = require('news-crawler-db');
 const { tof } = require('lang-tools');
 
 /**
@@ -118,27 +119,11 @@ class CompressionTask {
             }
             
             try {
-              // Compress content using compressAndStore utility
-              const result = compressAndStore(this.db, content.content_blob, {
-                compressionType: this.compressionType,
-                useCase: 'balanced'
-              });
-              
-              // Update content_storage record to point to compressed version
-              this.db.prepare(`
-                UPDATE content_storage
-                SET storage_type = 'db_compressed',
-                    compression_type_id = ?,
-                    compressed_size = ?,
-                    compression_ratio = ?
-                WHERE id = ?
-              `).run(
-                this._getCompressionTypeId(this.compressionType),
-                result.compressedSize,
-                result.ratio,
-                content.id
-              );
-              
+              // Compress the row IN PLACE (rewrites content_blob). NOT
+              // compressAndStore, which INSERTs a new orphan row and leaves this
+              // row's content_blob raw while marking it db_compressed -> the row
+              // then fails to decompress on read (data corruption).
+              this._compressRowInPlace(content);
               processed++;
               lastProcessedId = content.id;
               
@@ -211,27 +196,7 @@ class CompressionTask {
       }
       
       try {
-        // Compress using compressAndStore utility
-        const result = compressAndStore(this.db, content.content_blob, {
-          compressionType: this.compressionType,
-          useCase: 'balanced'
-        });
-        
-        // Update content_storage record to point to compressed version
-        this.db.prepare(`
-          UPDATE content_storage
-          SET storage_type = 'db_compressed',
-              compression_type_id = ?,
-              compressed_size = ?,
-              compression_ratio = ?
-          WHERE id = ?
-        `).run(
-          this._getCompressionTypeId(this.compressionType),
-          result.compressedSize,
-          result.ratio,
-          content.id
-        );
-        
+        this._compressRowInPlace(content); // in-place; see the main-thread path
         onComplete(true, content.id);
         
       } catch (error) {
@@ -251,6 +216,32 @@ class CompressionTask {
     this.paused = true;
   }
   
+  /**
+   * Compress one content_storage row IN PLACE via ncdb's in-place update
+   * (rewrites content_blob with the compressed bytes; leaves content_sha256 /
+   * uncompressed_size, which describe the uncompressed content). This is the
+   * fix for the compressAndStore corruption bug — compressAndStore INSERTs a
+   * NEW row and returns its id, so the old code marked the ORIGINAL row
+   * db_compressed while its content_blob stayed raw HTML -> unreadable on read.
+   * @private
+   */
+  _compressRowInPlace(content) {
+    const type = getCompressionType(this.db, this.compressionType);
+    const result = compress(content.content_blob, {
+      algorithm: type.algorithm,
+      level: type.level,
+      windowBits: type.window_bits,
+      blockBits: type.block_bits
+    });
+    updateContentStorageCompressionCleanupResult(this.db, {
+      id: content.id,
+      compressionTypeId: type.id,
+      contentBlob: result.compressed,
+      compressedSize: result.compressedSize,
+      compressionRatio: result.ratio
+    });
+  }
+
   /**
    * Get compression type ID by name
    * @private
