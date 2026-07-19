@@ -1,5 +1,27 @@
 # AGI Self-Model (Draft)
 
+> **Status 2026-07-19:** reconciled against the live repo — several "Current Capabilities" below
+> are now historical (the whole `tools/agi/` CLI layer was deleted in the 2026-04-24 slim-down;
+> the MCP-side instruction-proposal/retrospective tools survive in
+> `tools/mcp/docs-memory/mcp-server.js`). Verdicts: [RECONCILIATION_2026-07-19.md](RECONCILIATION_2026-07-19.md).
+> Agents boot via [BOOT.md](BOOT.md).
+
+## Model lineage
+
+The agent is the *model plus this durable scaffold*; the scaffold compounds within a model and
+ratchets across models. Append a row whenever the operating model detectably changes (the harness
+names the current model in its system prompt); then run the calibration in
+`.claude/skills/singularity/SKILL.md` — owner rules carry unconditionally, empirical heuristics
+get re-probed on next use, model-specific compensations get re-tested rather than inherited.
+If the model is not detectable, no action: all artifacts are model-agnostic and
+probe-before-believing calibrates implicitly.
+
+| From | Model | Notes |
+| --- | --- | --- |
+| 2025-11-16 | Heterogeneous lineage (GitHub Copilot-era agents, others) | Corpus founded; tools/agi CLI era |
+| ≤ 2026-07-19 | Claude Opus 4.8 (Claude Code sessions) | Thin-coordination mission, crawl-status UI, gazetteer ADM2; private-memory era (corpus unread — fixed by BOOT.md) |
+| 2026-07-19 | Claude Fable 5 | First explicit swap; ran this reconciliation; inherited scaffold intact |
+
 ## Purpose
 Describe how this repository can host an AGI-style, tool-enabled workflow where agents iteratively sense the state of the system, plan work, act through tooling, and document outcomes.
 

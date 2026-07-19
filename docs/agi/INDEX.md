@@ -2,6 +2,9 @@
 
 This directory describes how the copilot-dl-news project can evolve toward an AGI-aligned, tool-augmented workflow. Every document here is a proposal that requires human review before adoption in live agent configs.
 
+> **Agents: start at [BOOT.md](BOOT.md)** — the probe-verified session entry point (one-hop rule).
+> Corpus-wide validity verdicts as of the last sweep: [RECONCILIATION_2026-07-19.md](RECONCILIATION_2026-07-19.md).
+
 ## Core References
 - [SELF_MODEL.md](SELF_MODEL.md) – Current understanding of the agent ecosystem, capabilities, and limits.
 - [WORKFLOWS.md](WORKFLOWS.md) – Canonical Sense → Plan → Act loops for key activities.
