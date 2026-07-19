@@ -24,6 +24,12 @@ got *cheaper* (proof-style checks replacing fan-outs where applicable). Compound
 far** — driven by codified lessons (own cache key, real fixtures) and the reusable
 differential-e2e harness pattern.
 
+## Repair + capability cycles
+
+| Date | What | Cost | Verified how | Notes |
+| ---- | ---- | ---- | ------------ | ----- |
+| 2026-07-19 | Wrong-headline taint verified + purged; redo-place-matching pathway (AnalysisTask redoPlaceMatching/redoArticleIds + PERSISTENCE fix), task→SSE+task_events wiring, redo CLI with terminal progress bar, Background Tasks UI panel with live jsgui3 progress bar (copilot 2 commits ending 7319b2f0; ncdb 50aa2a5) | ~1.0 turn | Taint demonstrated in stored evidence verbatim; live redo (task 73) purged 1,032 rows, independent read-only COUNT; analysis tasks now visible in task-events.js (first ever); panel screenshot live; sql:check-ui green | Recon workflow found place matching was TRIPLY dead (wrong-row join [other session], results never persisted, place source 404s on a wrong port). Two of three fixed; third filed (place-source chip). "0 relations" was honestly reported as expected-but-unproven-positive — the positive-persistence proof is gated on the place source. Coordinated with a concurrent fix session by never touching its uncommitted files. |
+
 ## Second-order tools (the recursion signal)
 
 | Date | Artifact | Why second-order |
