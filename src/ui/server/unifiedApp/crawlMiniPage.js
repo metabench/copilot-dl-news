@@ -141,7 +141,7 @@ function renderCrawlMiniPage() {
   }
   function setLive(on, text){ el('dot').className='dot'+(on?' live':''); el('stat').textContent=text; }
 
-  var lastSSE=0, es=null;
+  var lastSSE=0, es=null, pageLoadedAt=Date.now();
   function connectSSE(){
     try{
       es=new EventSource('/api/crawl-telemetry/events');
@@ -150,6 +150,11 @@ function renderCrawlMiniPage() {
         var f; try{ f=JSON.parse(ev.data); }catch(_){ return; }
         if(f.type!=='crawl:telemetry'||!f.data) return;
         var inner=f.data;
+        // SSE replays bridge history on connect — a fresh page would fire a burst
+        // of stale "+N" floats for old downloads. Only pulse for events newer
+        // than page load (with 2s clock slack); older frames are history.
+        var ts=inner.timestampMs || (inner.timestamp ? Date.parse(inner.timestamp) : 0);
+        if(ts && ts < pageLoadedAt - 2000) return;
         if(inner.type==='crawl:download' && inner.data){ pulse(inner.data); }
         else if(inner.type==='crawl:progress'){ lastSSE=Date.now(); setLive(true,'crawling'); }
       };
