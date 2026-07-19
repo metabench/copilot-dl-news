@@ -89,8 +89,9 @@ describe('createJobProgressTracker', () => {
     const snap = tracker.record({
       ...crawlerPayload({ visited: 0, downloaded: 0, queueSize: 5000 }),
       phase: 'sitemaps',
-      sitemaps: ['https://x/sitemap.xml', 'https://x/news-sitemap.xml'],
+      sitemaps: [{ url: 'https://x/sitemap.xml', status: 'fetched' }, 'https://x/news-sitemap.xml'],
       sitemapCount: 2,
+      sitemapsFetched: 1,
       sitemapEnqueued: 5000,
       currentDownloads: [{ url: 'https://x/a', ageMs: 120 }],
       currentDownloadsCount: 1,
@@ -98,8 +99,13 @@ describe('createJobProgressTracker', () => {
       robots: { loaded: true, source: 'network', crawlDelaySeconds: null, politenessFloorMs: null }
     });
     expect(snap.phase).toBe('sitemaps');
-    expect(snap.sitemaps).toEqual(['https://x/sitemap.xml', 'https://x/news-sitemap.xml']);
+    // objects pass through; a bare-string entry is normalized to { url, status:null }
+    expect(snap.sitemaps).toEqual([
+      { url: 'https://x/sitemap.xml', status: 'fetched' },
+      { url: 'https://x/news-sitemap.xml', status: null }
+    ]);
     expect(snap.sitemapCount).toBe(2);
+    expect(snap.sitemapsFetched).toBe(1);
     expect(snap.sitemapEnqueued).toBe(5000);
     expect(snap.currentDownloads).toEqual([{ url: 'https://x/a', ageMs: 120 }]);
     expect(snap.currentDownloadsCount).toBe(1);

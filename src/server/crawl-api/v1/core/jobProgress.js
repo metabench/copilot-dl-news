@@ -88,8 +88,11 @@ function createJobProgressTracker({ now = () => Date.now() } = {}) {
       // them (mirrors the conditional `queued` pattern above). Arrays are
       // re-capped defensively so the 200-job history can't be bloated.
       ...(payload.phase != null ? { phase: String(payload.phase) } : {}),
-      ...(Array.isArray(payload.sitemaps) ? { sitemaps: payload.sitemaps.slice(0, 50).map(String) } : {}),
+      ...(Array.isArray(payload.sitemaps) ? { sitemaps: payload.sitemaps.slice(0, 50).map((s) => (s && typeof s === 'object')
+        ? { url: String(s.url == null ? '' : s.url), status: s.status || null }
+        : { url: String(s), status: null }) } : {}),
       ...(payload.sitemapCount != null ? { sitemapCount: toCount(payload.sitemapCount) } : {}),
+      ...(payload.sitemapsFetched != null ? { sitemapsFetched: toCount(payload.sitemapsFetched) } : {}),
       ...(payload.sitemapEnqueued != null ? { sitemapEnqueued: toCount(payload.sitemapEnqueued) } : {}),
       ...(Array.isArray(payload.currentDownloads) ? { currentDownloads: payload.currentDownloads.slice(0, 10) } : {}),
       ...(payload.currentDownloadsCount != null ? { currentDownloadsCount: toCount(payload.currentDownloadsCount) } : {}),

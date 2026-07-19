@@ -381,4 +381,10 @@ tbody tr.detail-row:hover { background: var(--admin-stripe-bg, #F7F6EF); }
 .detail-limits { width: 100%; border-collapse: collapse; }
 .detail-limits th, .detail-limits td { padding: 1px 6px; border-bottom: 1px solid #EFECE2; font-size: 10px; text-align: left; white-space: nowrap; }
 .badge-limited { display: inline-block; padding: 0 5px; font-size: 9px; color: #fff; background: var(--admin-danger, #C43C35); border-radius: 2px; }
+/* Per-sitemap fetch status glyph */
+.detail-sitemaps li { list-style: none; margin-left: -16px; }
+.sm-status { display: inline-block; width: 12px; text-align: center; font-weight: bold; }
+.sm-fetched { color: var(--admin-success, #2C7D2C); }
+.sm-failed { color: var(--admin-danger, #C43C35); }
+.sm-pending { color: var(--admin-text-muted, #7F7D6F); }
 `;

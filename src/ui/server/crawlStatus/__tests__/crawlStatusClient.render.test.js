@@ -25,8 +25,8 @@ const JOBS = {
       id: 'run-1', status: 'running',
       progress: {
         phase: 'sitemaps', visited: 24, downloaded: 0, errors: 0, queued: 5096,
-        sitemaps: ['https://x/sitemap.xml', 'https://x/news-sitemap.xml'],
-        sitemapCount: 2, sitemapEnqueued: 5096,
+        sitemaps: [{ url: 'https://x/sitemap.xml', status: 'fetched' }, { url: 'https://x/news-sitemap.xml', status: 'pending' }],
+        sitemapCount: 2, sitemapsFetched: 1, sitemapEnqueued: 5096,
         currentDownloads: [{ url: 'https://x/a', ageMs: 120 }],
         currentDownloadsCount: 1,
         perHostLimits: { 'x.example': { rateLimited: true, limit: 30, intervalMs: 2000, backoffMs: 4000 } },
@@ -83,8 +83,13 @@ describe('crawl-status client rendering', () => {
     // the running job's panel lists the actual sitemap files
     const runDetail = document.querySelector('#detail-run-1');
     // Sitemaps is the first detail block; scope to it (In-flight also uses .detail-list).
-    const sitemapItems = runDetail.querySelector('.detail-block:first-child').querySelectorAll('.detail-list li');
-    expect(Array.from(sitemapItems).map((li) => li.textContent)).toEqual(['https://x/sitemap.xml', 'https://x/news-sitemap.xml']);
+    const sitemapBlock = runDetail.querySelector('.detail-block:first-child');
+    const sitemapItems = sitemapBlock.querySelectorAll('.detail-sitemaps li');
+    expect(sitemapItems.length).toBe(2);
+    expect(sitemapItems[0].textContent).toContain('https://x/sitemap.xml');
+    expect(sitemapBlock.querySelector('.sm-fetched')).toBeTruthy(); // first sitemap fetched
+    expect(sitemapBlock.querySelector('.sm-pending')).toBeTruthy(); // second still pending
+    expect(runDetail.textContent).toContain('1 of 2 sitemap(s) fetched');
     expect(runDetail.textContent).toContain('5096 URLs enqueued');
     expect(runDetail.textContent).toContain('x.example'); // per-host limits
     expect(runDetail.querySelector('.badge-limited')).toBeTruthy(); // rateLimited: true

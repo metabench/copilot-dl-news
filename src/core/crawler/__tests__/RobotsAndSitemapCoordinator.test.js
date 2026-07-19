@@ -213,4 +213,19 @@ describe('RobotsAndSitemapCoordinator', () => {
     const { coordinator } = createCoordinator();
     expect(coordinator.isAllowed('https://example.com/page')).toBe(true);
   });
+
+  test('getSitemapInfo().fetches records per-sitemap fetch outcomes (crawl-status panel)', async () => {
+    const { coordinator } = createCoordinator();
+    // _recordSitemapFetch is the onFetch sink wired in loadSitemapsAndEnqueue.
+    await coordinator._recordSitemapFetch({ url: 'https://example.com/sitemap.xml', status: 200, bytes: 1234, fetchedAtIso: '2026-07-19T00:00:00.000Z' });
+    await coordinator._recordSitemapFetch({ url: 'https://example.com/news.xml', status: 404, bytes: 0, fetchedAtIso: '2026-07-19T00:00:01.000Z' });
+    // idempotent per url — a re-fetch updates in place, not appends
+    await coordinator._recordSitemapFetch({ url: 'https://example.com/sitemap.xml', status: 304, bytes: 0, fetchedAtIso: '2026-07-19T00:00:02.000Z' });
+
+    const info = coordinator.getSitemapInfo();
+    expect(info.fetches).toEqual([
+      { url: 'https://example.com/sitemap.xml', status: 304, bytes: 0, fetchedAtIso: '2026-07-19T00:00:02.000Z' },
+      { url: 'https://example.com/news.xml', status: 404, bytes: 0, fetchedAtIso: '2026-07-19T00:00:01.000Z' }
+    ]);
+  });
 });

@@ -206,17 +206,35 @@ function buildCrawlStatusClientScript({
       + '</p>';
   }
 
-  // The normally-hidden per-crawl detail: which sitemaps were harvested, the
-  // pages currently downloading, per-host rate limits, and robots policy.
+  // A sitemap file rendered with its fetch status (fetched / pending / failed).
+  function sitemapStatusTag(status) {
+    if (status === 'fetched') return '<span class="sm-status sm-fetched" title="fetched">✓</span>';
+    if (status === 'failed') return '<span class="sm-status sm-failed" title="failed">✗</span>';
+    return '<span class="sm-status sm-pending" title="pending">⋯</span>';
+  }
+  function sitemapListHtml(sitemaps) {
+    if (!sitemaps || !sitemaps.length) return '<p class="detail-empty">No sitemaps harvested</p>';
+    var lis = sitemaps.map(function(s) {
+      var url = (s && typeof s === 'object') ? (s.url || '') : String(s);
+      var status = (s && typeof s === 'object') ? s.status : null;
+      return '<li>' + sitemapStatusTag(status) + ' ' + escapeHtml(url) + '</li>';
+    }).join('');
+    return '<ul class="detail-list detail-sitemaps mono">' + lis + '</ul>';
+  }
+
+  // The normally-hidden per-crawl detail: which sitemaps were harvested (and
+  // whether each is fetched yet), the pages currently downloading, per-host
+  // rate limits, and robots policy.
   function renderDetailCell(progress) {
     var sitemaps = progress.sitemaps || progress.sitemapUrls || [];
     var sitemapCount = progress.sitemapCount != null ? progress.sitemapCount : sitemaps.length;
+    var sitemapFetched = progress.sitemapsFetched != null ? progress.sitemapsFetched : 0;
     var sitemapEnqueued = progress.sitemapEnqueued != null ? progress.sitemapEnqueued : 0;
     var inflight = progress.currentDownloads || [];
     var inflightCount = progress.currentDownloadsCount != null ? progress.currentDownloadsCount : inflight.length;
-    var sitemapHeader = '<p class="detail-meta">' + escapeHtml(sitemapCount) + ' sitemap(s) · ' + escapeHtml(sitemapEnqueued) + ' URLs enqueued</p>';
+    var sitemapHeader = '<p class="detail-meta">' + escapeHtml(sitemapFetched) + ' of ' + escapeHtml(sitemapCount) + ' sitemap(s) fetched · ' + escapeHtml(sitemapEnqueued) + ' URLs enqueued</p>';
     return '<div class="detail-grid" role="region" aria-label="Crawl detail">'
-      + '<div class="detail-block"><h4>Sitemaps</h4>' + sitemapHeader + detailListHtml(sitemaps, 'No sitemaps harvested') + '</div>'
+      + '<div class="detail-block"><h4>Sitemaps</h4>' + sitemapHeader + sitemapListHtml(sitemaps) + '</div>'
       + '<div class="detail-block"><h4>In-flight (' + escapeHtml(inflightCount) + ')</h4>' + detailListHtml(inflight, 'None in flight') + '</div>'
       + '<div class="detail-block"><h4>Per-host limits</h4>' + limitsHtml(progress.perHostLimits) + '</div>'
       + '<div class="detail-block"><h4>Robots</h4>' + robotsHtml(progress.robots) + '</div>'

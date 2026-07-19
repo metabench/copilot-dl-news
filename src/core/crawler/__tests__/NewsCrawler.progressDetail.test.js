@@ -31,12 +31,38 @@ function sources(overrides = {}) {
 }
 
 describe('buildProgressDetail', () => {
-  it('surfaces the phase, which sitemaps, and enqueue count', () => {
+  it('surfaces the phase, which sitemaps (pending until fetched), and enqueue count', () => {
     const detail = buildProgressDetail(sources());
     expect(detail.phase).toBe('sitemaps');
-    expect(detail.sitemaps).toEqual(['https://site/sitemap.xml', 'https://site/news-sitemap.xml']);
+    expect(detail.sitemaps).toEqual([
+      { url: 'https://site/sitemap.xml', status: 'pending' },
+      { url: 'https://site/news-sitemap.xml', status: 'pending' }
+    ]);
     expect(detail.sitemapCount).toBe(2);
+    expect(detail.sitemapsFetched).toBe(0);
     expect(detail.sitemapEnqueued).toBe(4213);
+  });
+
+  it('marks sitemaps fetched/failed/pending from fetch outcomes (incl. nested children)', () => {
+    const detail = buildProgressDetail(sources({
+      sitemapInfo: {
+        urls: ['https://s/a.xml', 'https://s/b.xml', 'https://s/c.xml'],
+        discovered: 10,
+        fetches: [
+          { url: 'https://s/a.xml', status: 200 },
+          { url: 'https://s/b.xml', status: 404 },
+          { url: 'https://s/child.xml', status: 304 } // nested, not in harvested list
+        ]
+      }
+    }));
+    expect(detail.sitemaps).toEqual([
+      { url: 'https://s/a.xml', status: 'fetched' },
+      { url: 'https://s/b.xml', status: 'failed' },
+      { url: 'https://s/c.xml', status: 'pending' },
+      { url: 'https://s/child.xml', status: 'fetched' } // 304 counts as fetched
+    ]);
+    expect(detail.sitemapCount).toBe(4);
+    expect(detail.sitemapsFetched).toBe(2);
   });
 
   it('lists in-flight downloads newest-first with query strings stripped (no token leak)', () => {

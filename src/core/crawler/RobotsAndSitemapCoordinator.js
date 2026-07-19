@@ -88,6 +88,10 @@ class RobotsAndSitemapCoordinator {
     this.robotsInfo = { robotsLoaded: false };
     this.sitemapUrls = [];
     this.sitemapDiscovered = 0;
+    // Per-sitemap-file fetch outcomes (url -> { status, bytes, fetchedAtIso }),
+    // populated from the onFetch callback so the crawl-status detail panel can
+    // show which sitemaps have been fetched vs are still pending.
+    this.sitemapFetches = new Map();
   }
 
   getRobotsInfo() {
@@ -100,7 +104,8 @@ class RobotsAndSitemapCoordinator {
   getSitemapInfo() {
     return {
       urls: this.sitemapUrls,
-      discovered: this.sitemapDiscovered
+      discovered: this.sitemapDiscovered,
+      fetches: Array.from(this.sitemapFetches, ([url, r]) => ({ url, ...r }))
     };
   }
 
@@ -204,6 +209,18 @@ class RobotsAndSitemapCoordinator {
    * real HTTP request. Best-effort — must never break sitemap loading.
    */
   async _recordSitemapFetch(info) {
+    // In-memory per-sitemap status for the crawl-status panel — recorded first
+    // and unconditionally (the DB visibility below early-returns without an
+    // adapter). Never throws.
+    try {
+      if (info?.url) {
+        this.sitemapFetches.set(info.url, {
+          status: info.status ?? null,
+          bytes: info.bytes || 0,
+          fetchedAtIso: info.fetchedAtIso || null
+        });
+      }
+    } catch (_) { /* status tracking is best-effort */ }
     try {
       const adapter = typeof this.dbAdapter === 'function' ? this.dbAdapter() : this.dbAdapter;
       if (!adapter || typeof adapter.insertHttpResponse !== 'function' || !info?.url) return;

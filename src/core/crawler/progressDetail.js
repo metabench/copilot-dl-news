@@ -44,8 +44,27 @@ function buildProgressDetail({
   try {
     if (sitemapInfo) {
       const urls = Array.isArray(sitemapInfo.urls) ? sitemapInfo.urls : [];
-      detail.sitemaps = urls.slice(0, MAX_SITEMAPS).map(String);
-      detail.sitemapCount = urls.length;
+      const fetches = Array.isArray(sitemapInfo.fetches) ? sitemapInfo.fetches : [];
+      // Merge the harvested sitemap files (order preserved) with per-file fetch
+      // outcomes into { url, status } where status is 'pending' (harvested, not
+      // fetched yet), 'fetched' (2xx/304), or 'failed' (>=400). Nested/child
+      // sitemaps that were fetched but never appeared in robots.txt are included.
+      const byUrl = new Map();
+      for (const u of urls) {
+        if (u != null) byUrl.set(String(u), { url: String(u), status: 'pending' });
+      }
+      for (const f of fetches) {
+        if (!f || f.url == null) continue;
+        const code = Number(f.status);
+        byUrl.set(String(f.url), {
+          url: String(f.url),
+          status: (Number.isFinite(code) && code >= 400) ? 'failed' : 'fetched'
+        });
+      }
+      const merged = Array.from(byUrl.values());
+      detail.sitemaps = merged.slice(0, MAX_SITEMAPS);
+      detail.sitemapCount = merged.length;
+      detail.sitemapsFetched = merged.filter((s) => s.status === 'fetched').length;
       detail.sitemapEnqueued = sitemapInfo.discovered || 0;
     }
   } catch (_) { /* sitemap detail is best-effort */ }
