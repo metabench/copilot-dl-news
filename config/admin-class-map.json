@@ -57,6 +57,26 @@
       "verified": 1,
       "subclassWalk": 0,
       "evidence": "Clean leaf class: direct P31 = P279* walk = 51 in ES with the currentOnly filter (FILTER NOT EXISTS P576), probed 2026-07-19 — the 50 provinces + edge. No subclass over-match (unlike DE Q22865). Provinces are ADM2; the upsert dedups by wikidata QID, so any already stored as region get adm2_code tagged and the rest are created as county."
+    },
+    {
+      "countryCode": "IT",
+      "adminLevel": 2,
+      "wikidataClassQid": "Q15089",
+      "placeKind": "county",
+      "label": "province of Italy",
+      "verified": 1,
+      "subclassWalk": 0,
+      "evidence": "direct P31 = 83 current provinces in IT (currentOnly, probed 2026-07-19); sampled labels all real (Cuneo, Pisa, Perugia, Vercelli). subclassWalk=0 so metropolitan cities (separate class) and abolished provinces are excluded. Post-2015-reform current set."
+    },
+    {
+      "countryCode": "BE",
+      "adminLevel": 2,
+      "wikidataClassQid": "Q91028",
+      "placeKind": "county",
+      "label": "administrative arrondissement of Belgium",
+      "verified": 1,
+      "subclassWalk": 0,
+      "evidence": "direct P31 = 43 in BE (currentOnly, probed 2026-07-19) — exact match to the 43 administrative arrondissements; sampled labels all real (Antwerp, Leuven, Hasselt, Tongeren). Pure admin subdivisions (not cities). subclassWalk=0."
     }
   ]
 }
