@@ -61,7 +61,7 @@ describe('mountBackgroundTasks', () => {
   it('BUILTIN_TASKS maps every class-backed taskType (map completeness)', () => {
     const { BUILTIN_TASKS } = require('../mountBackgroundTasks');
     expect(Object.keys(BUILTIN_TASKS).sort()).toEqual(
-      ['analysis-run', 'article-compression', 'backfill-dates', 'guess-place-hubs', 'ingest-admin-areas']
+      ['analysis-run', 'article-compression', 'backfill-dates', 'compression-lifecycle', 'guess-place-hubs', 'ingest-admin-areas']
     );
   });
 
@@ -73,7 +73,7 @@ describe('mountBackgroundTasks', () => {
     const { manager, registered } = mountBackgroundTasks(express(), () => db, {
       logger: { info() {}, warn() {}, error() {} },
     });
-    const jestSafe = { 'ingest-admin-areas': 'IngestAdminAreasTask', 'guess-place-hubs': 'GuessPlaceHubsTask', 'article-compression': 'CompressionTask' };
+    const jestSafe = { 'ingest-admin-areas': 'IngestAdminAreasTask', 'guess-place-hubs': 'GuessPlaceHubsTask', 'article-compression': 'CompressionTask', 'compression-lifecycle': 'CompressionLifecycleTask' };
     for (const [taskType, className] of Object.entries(jestSafe)) {
       expect(registered).toContain(taskType);
       const reg = manager.taskRegistry.get(taskType);

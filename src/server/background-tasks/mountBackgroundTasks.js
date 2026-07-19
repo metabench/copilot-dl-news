@@ -28,15 +28,15 @@
 // database-export / gazetteer-import / database-vacuum are now schema-only
 // (implemented:false; filtered out of getTaskSummaries/getAvailableTaskTypes
 // so the UI never advertises an unrunnable task — see taskDefinitions.test.js).
-// CompressionLifecycleTask remains an orphan class with no def — left out until
-// reconciled. article-compression = CompressionTask (Brotli/article), NOT
-// CompressionLifecycleTask (age-based tiering).
+// article-compression = CompressionTask (Brotli/article); compression-lifecycle
+// = CompressionLifecycleTask (age-based tiering, dryRun-default, in-place).
 const BUILTIN_TASKS = {
   'ingest-admin-areas': () => require('../../background/tasks/IngestAdminAreasTask').IngestAdminAreasTask,
   'backfill-dates': () => require('../../background/tasks/BackfillDatesTask').BackfillDatesTask,
   'analysis-run': () => require('../../background/tasks/AnalysisTask').AnalysisTask,
   'guess-place-hubs': () => require('../../background/tasks/GuessPlaceHubsTask').GuessPlaceHubsTask,
   'article-compression': () => require('../../background/tasks/CompressionTask').CompressionTask,
+  'compression-lifecycle': () => require('../../background/tasks/CompressionLifecycleTask').CompressionLifecycleTask,
 };
 
 function mountBackgroundTasks(app, getDbRW, options = {}) {

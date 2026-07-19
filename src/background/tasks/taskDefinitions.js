@@ -140,6 +140,68 @@ const TASK_DEFINITIONS = {
     ]
   },
 
+  'compression-lifecycle': {
+    taskType: 'compression-lifecycle',
+    title: 'Compression Lifecycle (age-based)',
+    description: 'Recompress stored content by age: hot (<7d) untouched, warm (7-30d) brotli_6, cold (30d+) brotli_11. Dry run by default.',
+    icon: '♻️',
+    implemented: true,
+    fields: [
+      {
+        name: 'dryRun',
+        label: 'Dry run (report only, no writes)',
+        type: FieldType.BOOLEAN,
+        default: true,
+        description: 'ON = count rows per tier and write nothing (safe). Turn OFF to actually recompress in place.'
+      },
+      {
+        name: 'maxRows',
+        label: 'Max Rows (0 = unlimited)',
+        type: FieldType.NUMBER,
+        default: 1000,
+        min: 0,
+        description: 'Hard cap on rows touched across all tiers in one run'
+      },
+      {
+        name: 'batchSize',
+        label: 'Batch Size',
+        type: FieldType.NUMBER,
+        default: 100,
+        min: 10,
+        max: 1000,
+        required: true,
+        description: 'Rows fetched/processed per batch'
+      },
+      {
+        name: 'delayMs',
+        label: 'Delay Between Batches (ms)',
+        type: FieldType.NUMBER,
+        default: 50,
+        min: 0,
+        max: 60000,
+        description: 'Throttle so the in-process shared DB handle stays responsive'
+      },
+      {
+        name: 'hotMaxAgeDays',
+        label: 'Hot Boundary (days)',
+        type: FieldType.NUMBER,
+        default: 7,
+        min: 0,
+        max: 3650,
+        description: 'Content newer than this is left uncompressed'
+      },
+      {
+        name: 'warmMaxAgeDays',
+        label: 'Warm Boundary (days)',
+        type: FieldType.NUMBER,
+        default: 30,
+        min: 1,
+        max: 3650,
+        description: 'Content older than this is cold-tier (brotli_11); between hot and this is warm (brotli_6)'
+      }
+    ]
+  },
+
   'database-export': {
     taskType: 'database-export',
     title: 'Export Database',
