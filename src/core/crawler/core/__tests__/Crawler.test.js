@@ -224,6 +224,24 @@ describe('Crawler base class', () => {
       crawler.emitProgress();
     });
 
+    it('spreads metadata (e.g. queueSize) onto the emitted progress event', (done) => {
+      // NewsCrawler.emitProgress passes { queueSize } through this two-arg form
+      // so the crawl-status UI shows queue depth during the queue-building phase
+      // (robots+sitemap enqueue), when visited/downloaded are still 0. Regression
+      // guard: the base class must forward metadata AND honor force via options.
+      const crawler = new Crawler('https://example.com', { progressEmitIntervalMs: 1000 });
+      createdCrawlers.push(crawler);
+      mockState.getStats.mockReturnValue({ pagesDownloaded: 0 });
+
+      crawler.on('progress', (data) => {
+        expect(data.queueSize).toBe(5026);
+        expect(data.stats).toEqual({ pagesDownloaded: 0 });
+        done();
+      });
+
+      crawler.emitProgress({ queueSize: 5026 }, { force: true });
+    });
+
     it('throttles progress events based on interval', () => {
       const crawler = new Crawler('https://example.com', { progressEmitIntervalMs: 1000 });
       createdCrawlers.push(crawler);

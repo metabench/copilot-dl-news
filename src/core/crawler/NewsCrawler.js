@@ -952,16 +952,22 @@ class NewsCrawler extends Crawler {
             structure: snapshot
           }
         });
-        // Also emit EventEmitter 'progress' event for TelemetryIntegration bridge
-        // Pass force to bypass parent's throttle
-        super.emitProgress(force);
+        // Also emit EventEmitter 'progress' event for TelemetryIntegration bridge.
+        // Carry the live queue depth so the crawl-status UI shows activity during
+        // the queue-building phase (robots+sitemap enqueue), when visited/downloaded
+        // are still 0 but thousands of URLs are being discovered. Pass force via
+        // options to bypass the parent throttle.
+        super.emitProgress({ queueSize: this.queue?.size?.() || 0 }, { force: !!force });
         return;
       }
     }
     this.telemetry.progress(force);
-    // Also emit EventEmitter 'progress' event for TelemetryIntegration bridge
-    // Pass force to bypass parent's throttle
-    super.emitProgress(force);
+    // Also emit EventEmitter 'progress' event for TelemetryIntegration bridge.
+    // Carry the live queue depth so the crawl-status UI shows activity during
+    // the queue-building phase (robots+sitemap enqueue), when visited/downloaded
+    // are still 0 but thousands of URLs are being discovered. Pass force via
+    // options to bypass the parent throttle.
+    super.emitProgress({ queueSize: this.queue?.size?.() || 0 }, { force: !!force });
   }
 
   _emitStartupProgress(progressPayload, statusText = null) {
