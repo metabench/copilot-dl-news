@@ -21,13 +21,25 @@ const countries = String(arg('--country', '')).split(',').map((c) => c.trim().to
 const limit = parseInt(arg('--limit', '200'), 10);
 if (!countries.length) { console.error('usage: --country <ISO2[,ISO2...]> [--limit 200] [--apply]'); process.exit(1); }
 
-const { listAdminClasses } = require('news-crawler-db');
+const SEED = process.argv.includes('--seed');
+const { listAdminClasses, seedAdminClassMap } = require('news-crawler-db');
+const { readBootstrapJson } = require(path.join(ROOT, 'src', 'shared', 'utils', 'bootstrapGuard'));
 const { ingestAdminAreas } = require(path.join(ROOT, 'src', 'tools', 'gazetteer', 'ingestAdminAreas'));
 const Database = require(path.join(ROOT, '..', 'news-crawler-db', 'node_modules', 'better-sqlite3'));
 
 (async () => {
-  const db = new Database(path.join(ROOT, 'data', 'news.db'), { readonly: !APPLY, fileMustExist: true });
+  const needsWrite = APPLY || SEED;
+  const db = new Database(path.join(ROOT, 'data', 'news.db'), { readonly: !needsWrite, fileMustExist: true });
   try {
+    // --seed loads the judgment-call seeds from config/admin-class-map.json
+    // into admin_class_map (idempotent; review-owned fields preserved).
+    if (SEED) {
+      const seedDoc = readBootstrapJson(path.join(ROOT, 'config', 'admin-class-map.json'));
+      if (seedDoc && Array.isArray(seedDoc.classes)) {
+        const r = seedAdminClassMap(db, seedDoc.classes);
+        console.log(`seed: created=${r.created} updated=${r.updated} existing=${r.existing} failed=${r.failed}`);
+      }
+    }
     for (const c of countries) {
       const verified = listAdminClasses(db, { countryCode: c, adminLevel: 2 });
       console.log(`${c}: ${verified.length} verified level-2 class(es): ${verified.map((v) => `${v.wikidataClassQid}->${v.placeKind}(walk=${v.subclassWalk})`).join(', ') || '(none)'}`);

@@ -37,6 +37,16 @@
       "verified": 1,
       "subclassWalk": 0,
       "evidence": "12 P31 instances probed 2026-07-18 via Antrim and Newtownabbey's own P31. subclassWalk=0: this is an UMBRELLA class — its P279* walk over-matched 60 rows (historical counties etc.); direct P31 only."
+    },
+    {
+      "countryCode": "DE",
+      "adminLevel": 2,
+      "wikidataClassQid": "Q106658",
+      "placeKind": "county",
+      "label": "Landkreis (rural district of Germany)",
+      "verified": 1,
+      "subclassWalk": 1,
+      "evidence": "P279* walk yields 639 in DE (history included); the currentOnly filter (FILTER NOT EXISTS P576 dissolution) yields 295 — the real current Landkreis count. Auto-discovery missed this umbrella (it ranked leaf per-Land classes); reviewed + seeded 2026-07-19. Covers Landkreise only, not kreisfreie Städte (Q22865, separate future class)."
     }
   ]
 }

@@ -32,6 +32,11 @@ async function ingestAdminAreas(db, opts = {}) {
     countries = [],
     limit = 200,
     classesByCountry = null,
+    // currentOnly (default true) excludes entities with a dissolution date
+    // (P576) — a P279* class walk otherwise pulls in historical/abolished
+    // districts (DE Q106658: 639 with history vs 295 current). You almost
+    // never want dissolved admin areas in a current gazetteer.
+    currentOnly = true,
     logger = { info() {}, warn() {} },
     signal = null,
     onProgress = null,
@@ -68,9 +73,11 @@ async function ingestAdminAreas(db, opts = {}) {
         // subclass_walk=0 → direct P31 only (umbrella classes over-match on
         // the P279* tree; NI: 60 rows for 11 districts).
         const classPath = cls.subclassWalk === 0 ? 'wdt:P31' : 'wdt:P31/wdt:P279*';
+        const currentFilter = currentOnly ? 'FILTER NOT EXISTS { ?adm2 wdt:P576 ?dissolved }' : '';
         const sparql = `SELECT ?adm2 ?adm2Label ?parent ?iso ?fips ?coord WHERE {
             ?country wdt:P297 "${countryCode}".
             ?adm2 ${classPath} wd:${cls.wikidataClassQid}; wdt:P17 ?country.
+            ${currentFilter}
             OPTIONAL { ?adm2 wdt:P131 ?parent. }
             OPTIONAL { ?adm2 wdt:P300 ?iso. }
             OPTIONAL { ?adm2 wdt:P882 ?fips. }

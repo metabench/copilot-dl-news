@@ -62,6 +62,14 @@ describe('ingestAdminAreas', () => {
     expect(links.c).toBe(2);
   });
 
+  it('emits the current-status filter by default, omits it when currentOnly=false', async () => {
+    let capturedDefault = '', capturedOff = '';
+    await ingestAdminAreas(db, { countries: ['FR'], logger, fetchSparql: async (query) => { capturedDefault = query; return { results: { bindings: [] } }; }, fetchEntities: async () => ({ entities: {} }) });
+    await ingestAdminAreas(db, { countries: ['FR'], logger, currentOnly: false, fetchSparql: async (query) => { capturedOff = query; return { results: { bindings: [] } }; }, fetchEntities: async () => ({ entities: {} }) });
+    expect(capturedDefault).toMatch(/FILTER NOT EXISTS \{ \?adm2 wdt:P576/);
+    expect(capturedOff).not.toMatch(/P576/);
+  });
+
   it('is idempotent — a second run creates nothing (QID dedupe)', async () => {
     const opts = { countries: ['FR'], logger, fetchSparql: async () => SPARQL_ROWS, fetchEntities: async () => ENTITIES };
     await ingestAdminAreas(db, opts);
