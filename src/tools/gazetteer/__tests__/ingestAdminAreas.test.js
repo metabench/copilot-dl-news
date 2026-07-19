@@ -73,6 +73,10 @@ describe('ingestAdminAreas', () => {
     // 2026-07-19 until this was changed).
     expect(capturedDefault).toMatch(/rdfs:label \?adm2Label/);
     expect(capturedDefault).not.toMatch(/wikibase:label/);
+    // LIMIT bounds DISTINCT entities via an inner subquery, so multi-valued
+    // OPTIONAL fan-out can't undercount (DE got 108 of ~295 under a plain
+    // outer LIMIT 2026-07-19).
+    expect(capturedDefault).toMatch(/SELECT DISTINCT \?adm2 WHERE/);
   });
 
   it('is idempotent — a second run creates nothing (QID dedupe)', async () => {

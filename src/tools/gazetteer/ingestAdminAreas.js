@@ -80,16 +80,24 @@ async function ingestAdminAreas(db, opts = {}) {
         // 2026-07-19; the direct label returns 400 rows in ~1.7s). Labels are
         // primarily taken from wbgetentities below; adm2Label is only a fallback
         // when the entity fetch misses.
+        // LIMIT the DISTINCT entities in an inner subquery, THEN fan out the
+        // OPTIONALs — otherwise the multi-valued OPTIONALs (P131 parent, P625
+        // coord, multi-label) multiply each entity into ~4 rows and a plain
+        // outer LIMIT undercounts: DE Q106658 got 108 of ~295 Landkreise under
+        // LIMIT 400 (2026-07-19). Now LIMIT means "up to N distinct entities".
+        const cap = Math.max(1, Math.min(limit, 5000));
         const sparql = `SELECT ?adm2 ?adm2Label ?parent ?iso ?fips ?coord WHERE {
-            ?country wdt:P297 "${countryCode}".
-            ?adm2 ${classPath} wd:${cls.wikidataClassQid}; wdt:P17 ?country.
-            ${currentFilter}
+            { SELECT DISTINCT ?adm2 WHERE {
+                ?country wdt:P297 "${countryCode}".
+                ?adm2 ${classPath} wd:${cls.wikidataClassQid}; wdt:P17 ?country.
+                ${currentFilter}
+              } LIMIT ${cap} }
             OPTIONAL { ?adm2 rdfs:label ?adm2Label. FILTER(LANG(?adm2Label) = "en") }
             OPTIONAL { ?adm2 wdt:P131 ?parent. }
             OPTIONAL { ?adm2 wdt:P300 ?iso. }
             OPTIONAL { ?adm2 wdt:P882 ?fips. }
             OPTIONAL { ?adm2 wdt:P625 ?coord. }
-          } LIMIT ${Math.max(1, Math.min(limit, 1000))}`;
+          }`;
 
         const jr = await fetchSparql(sparql);
         const rows = (jr?.results?.bindings) || [];
