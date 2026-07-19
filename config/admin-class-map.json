@@ -77,6 +77,16 @@
       "verified": 1,
       "subclassWalk": 0,
       "evidence": "direct P31 = 43 in BE (currentOnly, probed 2026-07-19) — exact match to the 43 administrative arrondissements; sampled labels all real (Antwerp, Leuven, Hasselt, Tongeren). Pure admin subdivisions (not cities). subclassWalk=0."
+    },
+    {
+      "countryCode": "AT",
+      "adminLevel": 2,
+      "wikidataClassQid": "Q871419",
+      "placeKind": "county",
+      "label": "district of Austria",
+      "verified": 1,
+      "subclassWalk": 0,
+      "evidence": "direct P31 = 102 current in AT (currentOnly, probed 2026-07-19); sampled labels all real (Horn/Lienz/Rohrbach/Schärding/Gmunden District + Statutarstädte St. Pölten/Krems/Wels/Wiener Neustadt). QID found off-SPARQL (wikidata.org/wiki/Q871419) since the P279* discovery walk 502s. = ~79 Bezirke + ~23 statutory cities (dual-nature: existing city rows get adm2_code tagged, kind preserved). subclassWalk=0 (direct, over-match-proof)."
     }
   ]
 }
