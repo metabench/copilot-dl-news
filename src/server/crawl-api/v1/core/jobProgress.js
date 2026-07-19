@@ -83,6 +83,18 @@ function createJobProgressTracker({ now = () => Date.now() } = {}) {
       remoteFetch: payload.remoteFetch && typeof payload.remoteFetch === 'object'
         ? payload.remoteFetch
         : null,
+      // Normally-hidden crawl detail carried through for the crawl-status UI's
+      // phase badge + expandable job panel. Present only when the crawler emits
+      // them (mirrors the conditional `queued` pattern above). Arrays are
+      // re-capped defensively so the 200-job history can't be bloated.
+      ...(payload.phase != null ? { phase: String(payload.phase) } : {}),
+      ...(Array.isArray(payload.sitemaps) ? { sitemaps: payload.sitemaps.slice(0, 50).map(String) } : {}),
+      ...(payload.sitemapCount != null ? { sitemapCount: toCount(payload.sitemapCount) } : {}),
+      ...(payload.sitemapEnqueued != null ? { sitemapEnqueued: toCount(payload.sitemapEnqueued) } : {}),
+      ...(Array.isArray(payload.currentDownloads) ? { currentDownloads: payload.currentDownloads.slice(0, 10) } : {}),
+      ...(payload.currentDownloadsCount != null ? { currentDownloadsCount: toCount(payload.currentDownloadsCount) } : {}),
+      ...(payload.perHostLimits && typeof payload.perHostLimits === 'object' ? { perHostLimits: payload.perHostLimits } : {}),
+      ...(payload.robots && typeof payload.robots === 'object' ? { robots: payload.robots } : {}),
       updatedAt: new Date(at).toISOString()
     };
     return snapshot;

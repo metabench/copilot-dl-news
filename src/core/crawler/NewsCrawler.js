@@ -94,6 +94,7 @@ const {
 } = require('./cli/progressReporter');
 const Crawler = require('./core/Crawler');
 const { wireCrawlerServices } = require('./CrawlerServiceWiring');
+const { buildProgressDetail } = require('./progressDetail');
 
 const log = createCliLogger();
 
@@ -309,6 +310,10 @@ class NewsCrawler extends Crawler {
     this.useSitemap = opts.useSitemap;
     this.sitemapOnly = opts.sitemapOnly;
     this.sitemapMaxUrls = opts.sitemapMaxUrls;
+    // Coarse lifecycle phase surfaced to the crawl-status UI so a running
+    // crawl is legible ('preparing' -> a startup stage id like 'sitemaps'
+    // -> 'crawling'). Updated in _trackStartupStage and _markStartupComplete.
+    this._phase = 'preparing';
     this.hubMaxPages = opts.hubMaxPages;
     this.hubMaxDays = opts.hubMaxDays;
     this.intMaxSeeds = opts.intMaxSeeds;
@@ -940,6 +945,25 @@ class NewsCrawler extends Crawler {
     return analysis.normalized;
   }
 
+  // Gather the live sources for the normally-hidden crawl detail (phase, which
+  // sitemaps, in-flight downloads, per-host limits, robots) and delegate to the
+  // pure buildProgressDetail(). Carried on the 'progress' event metadata and
+  // consumed by the crawl-status UI's phase badge + expandable job panel. Each
+  // source read is guarded so telemetry can never break the crawl.
+  _buildProgressDetail() {
+    let sitemapInfo = null;
+    let robotsInfo = null;
+    try { sitemapInfo = this.robotsCoordinator?.getSitemapInfo?.() || null; } catch (_) { /* best-effort */ }
+    try { robotsInfo = this.robotsCoordinator?.getRobotsInfo?.() || null; } catch (_) { /* best-effort */ }
+    return buildProgressDetail({
+      phase: this._phase,
+      sitemapInfo,
+      currentDownloads: this.state?.currentDownloads || null,
+      domainLimits: this.state?.domainLimits || null,
+      robotsInfo
+    });
+  }
+
   emitProgress(force = false) {
     if (this.structureOnly) {
       const snapshot = typeof this.state?.getStructureSnapshot === 'function'
@@ -957,7 +981,7 @@ class NewsCrawler extends Crawler {
         // the queue-building phase (robots+sitemap enqueue), when visited/downloaded
         // are still 0 but thousands of URLs are being discovered. Pass force via
         // options to bypass the parent throttle.
-        super.emitProgress({ queueSize: this.queue?.size?.() || 0 }, { force: !!force });
+        super.emitProgress({ queueSize: this.queue?.size?.() || 0, ...this._buildProgressDetail() }, { force: !!force });
         return;
       }
     }
@@ -967,7 +991,7 @@ class NewsCrawler extends Crawler {
     // the queue-building phase (robots+sitemap enqueue), when visited/downloaded
     // are still 0 but thousands of URLs are being discovered. Pass force via
     // options to bypass the parent throttle.
-    super.emitProgress({ queueSize: this.queue?.size?.() || 0 }, { force: !!force });
+    super.emitProgress({ queueSize: this.queue?.size?.() || 0, ...this._buildProgressDetail() }, { force: !!force });
   }
 
   _emitStartupProgress(progressPayload, statusText = null) {
@@ -1000,6 +1024,10 @@ class NewsCrawler extends Crawler {
       }
       return undefined;
     }
+    // Surface the running startup stage as the coarse phase (e.g. 'sitemaps'
+    // during sitemap enqueue) so the crawl-status UI shows what the crawl is
+    // doing before the first page download.
+    this._phase = id;
     if (this.startupTracker) {
       this.startupTracker.startStage(id, { label });
     }
@@ -1074,6 +1102,12 @@ class NewsCrawler extends Crawler {
   }
 
   _markStartupComplete(message = null) {
+    // Startup (robots, sitemaps, schema, …) is done — the main fetch loop runs next.
+    this._phase = 'crawling';
+    // Force one progress emit so the UI phase badge flips 'fetching sitemaps' ->
+    // 'crawling' immediately, rather than waiting up to the 5s emit throttle for
+    // the next NewsCrawler.emitProgress (per-download emits don't carry phase).
+    try { this.emitProgress(true); } catch (_) { /* telemetry must not break the crawl */ }
     if (!this.startupTracker) return;
     this.startupTracker.markComplete(message);
   }

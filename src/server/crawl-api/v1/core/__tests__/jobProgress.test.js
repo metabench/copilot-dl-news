@@ -83,6 +83,46 @@ describe('createJobProgressTracker', () => {
     expect(snap.visited).toBe(7);
     expect(snap.queued).toBe(4);
   });
+
+  it('passes through the phase + sitemap + detail fields for the crawl-status UI', () => {
+    const tracker = createJobProgressTracker();
+    const snap = tracker.record({
+      ...crawlerPayload({ visited: 0, downloaded: 0, queueSize: 5000 }),
+      phase: 'sitemaps',
+      sitemaps: ['https://x/sitemap.xml', 'https://x/news-sitemap.xml'],
+      sitemapCount: 2,
+      sitemapEnqueued: 5000,
+      currentDownloads: [{ url: 'https://x/a', ageMs: 120 }],
+      currentDownloadsCount: 1,
+      perHostLimits: { 'x': { rateLimited: false, limit: 30, intervalMs: 2000, backoffMs: null } },
+      robots: { loaded: true, source: 'network', crawlDelaySeconds: null, politenessFloorMs: null }
+    });
+    expect(snap.phase).toBe('sitemaps');
+    expect(snap.sitemaps).toEqual(['https://x/sitemap.xml', 'https://x/news-sitemap.xml']);
+    expect(snap.sitemapCount).toBe(2);
+    expect(snap.sitemapEnqueued).toBe(5000);
+    expect(snap.currentDownloads).toEqual([{ url: 'https://x/a', ageMs: 120 }]);
+    expect(snap.currentDownloadsCount).toBe(1);
+    expect(snap.perHostLimits).toEqual({ 'x': { rateLimited: false, limit: 30, intervalMs: 2000, backoffMs: null } });
+    expect(snap.robots).toEqual({ loaded: true, source: 'network', crawlDelaySeconds: null, politenessFloorMs: null });
+  });
+
+  it('omits the detail keys entirely when the crawler does not emit them (back-compat)', () => {
+    const tracker = createJobProgressTracker();
+    const snap = tracker.record(crawlerPayload({ visited: 3, downloaded: 2 }));
+    expect(snap.phase).toBeUndefined();
+    expect(snap.sitemaps).toBeUndefined();
+    expect(snap.currentDownloads).toBeUndefined();
+    expect(snap.perHostLimits).toBeUndefined();
+    expect(snap.robots).toBeUndefined();
+  });
+
+  it('caps the sitemaps array defensively (history-bloat guard)', () => {
+    const tracker = createJobProgressTracker();
+    const many = Array.from({ length: 80 }, (_v, i) => 'https://x/sitemap-' + i + '.xml');
+    const snap = tracker.record({ ...crawlerPayload({ visited: 1, downloaded: 1 }), sitemaps: many });
+    expect(snap.sitemaps.length).toBe(50);
+  });
 });
 
 (InProcessCrawlJobRegistry ? describe : describe.skip)('InProcessCrawlJobRegistry job progress', () => {
