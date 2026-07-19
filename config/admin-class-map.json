@@ -47,6 +47,16 @@
       "verified": 1,
       "subclassWalk": 1,
       "evidence": "P279* walk yields 639 in DE (history included); the currentOnly filter (FILTER NOT EXISTS P576 dissolution) yields 295 — the real current Landkreis count. Auto-discovery missed this umbrella (it ranked leaf per-Land classes); reviewed + seeded 2026-07-19. Covers Landkreise only, not kreisfreie Städte (Q22865, separate future class)."
+    },
+    {
+      "countryCode": "ES",
+      "adminLevel": 2,
+      "wikidataClassQid": "Q162620",
+      "placeKind": "county",
+      "label": "province of Spain",
+      "verified": 1,
+      "subclassWalk": 0,
+      "evidence": "Clean leaf class: direct P31 = P279* walk = 51 in ES with the currentOnly filter (FILTER NOT EXISTS P576), probed 2026-07-19 — the 50 provinces + edge. No subclass over-match (unlike DE Q22865). Provinces are ADM2; the upsert dedups by wikidata QID, so any already stored as region get adm2_code tagged and the rest are created as county."
     }
   ]
 }
