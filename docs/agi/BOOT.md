@@ -58,6 +58,8 @@ re-probe anything here whose subject you're about to depend on.
 - [WORKFLOWS.md](WORKFLOWS.md) — canonical Sense→Plan→Act loops.
 - [RESEARCH_BACKLOG.md](RESEARCH_BACKLOG.md) — the live research queue. Each improvement cycle
   advances one item or records why none was actionable.
+- [IMPROVEMENT_LEDGER.md](IMPROVEMENT_LEDGER.md) — cost-per-improvement + second-order-tools
+  record; append a row per cycle, honestly (a no-delta cycle gets written down too).
 - [SELF_MODEL.md](SELF_MODEL.md) — ecosystem model + the **model lineage table**; on a detected
   model swap, run the calibration in `.claude/skills/singularity/SKILL.md`.
 - [journal/](journal/) and [../sessions/SESSIONS_HUB.md](../sessions/SESSIONS_HUB.md) — history.
