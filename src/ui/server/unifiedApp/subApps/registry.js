@@ -20,6 +20,7 @@ const { wrapPanelHtml } = require('./panelContract');
 const { renderStatCard, renderStatsRow, renderPanelHero } = require('./panelHelpers');
 const { SearchExplorerControl } = require('../../../controls/SearchExplorerControl');
 const { DownloadVerificationPanelControl } = require('../../../controls/DownloadVerificationPanelControl');
+const { BackgroundTasksPanelControl } = require('../../../controls/BackgroundTasksPanelControl');
 const { CloudCrawlPanelControl } = require('../../../controls/CloudCrawlPanelControl');
 const { ScreenshotReviewPanelControl } = require('../../../controls/ScreenshotReviewPanelControl');
 const { getUnifiedAppHomeDashboardCounts } = require('news-crawler-db');
@@ -299,6 +300,26 @@ function renderSearchExplorerPanel() {
   return {
     content: wrapPanelHtml({
       appId: 'search-explorer',
+      activationKey,
+      html
+    }),
+    embed: 'panel',
+    activationKey
+  };
+}
+
+function renderBackgroundTasksPanel() {
+  const context = new jsgui.Page_Context();
+  const control = new BackgroundTasksPanelControl({
+    context,
+    apiBase: '/api/v1/background-tasks'
+  });
+  const html = control.renderHtml();
+
+  const activationKey = 'background-tasks';
+  return {
+    content: wrapPanelHtml({
+      appId: 'background-tasks',
       activationKey,
       html
     }),
@@ -664,6 +685,16 @@ function createSubAppRegistry(options = {}) {
       description: 'Recent download persistence and compression verification',
       renderContent: async () => {
         return renderDownloadVerificationPanel();
+      }
+    },
+    {
+      id: 'background-tasks',
+      label: 'Background Tasks',
+      icon: '⏳',
+      category: 'admin',
+      description: 'Live progress for in-app background tasks (analysis, place matching, compression, ingestion)',
+      renderContent: async () => {
+        return renderBackgroundTasksPanel();
       }
     },
 

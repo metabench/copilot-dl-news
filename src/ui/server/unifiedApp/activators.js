@@ -334,6 +334,123 @@ function buildCloudCrawlActivator() {
           });`;
 }
 
+function buildBackgroundTasksActivator() {
+  return `
+          window.UnifiedAppPanels.registerActivator('background-tasks', function(root) {
+            if (!root) return;
+            const apiBase = root.dataset.btApiBase || '/api/v1/background-tasks';
+            const fill = root.querySelector('[data-bt-bar-fill]');
+            const track = root.querySelector('[data-bt-bar-track]');
+            const activeTitle = root.querySelector('[data-bt-active-title]');
+            const activeMessage = root.querySelector('[data-bt-active-message]');
+            const status = root.querySelector('[data-bt-status]');
+            const listTarget = root.querySelector('[data-bt-task-list]');
+            const redoButton = root.querySelector('[data-bt-action="redo-place-matching"]');
+            const refreshButton = root.querySelector('[data-bt-action="refresh"]');
+            function setStatus(text) { if (status) status.textContent = text; }
+            function escapeHtml(str) {
+              return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+            }
+            function setBar(percent, indeterminate) {
+              if (!fill) return;
+              const p = Math.max(0, Math.min(100, Number(percent) || 0));
+              fill.style.width = (indeterminate ? 100 : p) + '%';
+              fill.style.opacity = indeterminate ? '0.45' : '1';
+              if (track) track.setAttribute('aria-valuenow', String(Math.round(p)));
+            }
+            function renderList(tasks) {
+              if (!listTarget) return;
+              if (!Array.isArray(tasks) || !tasks.length) {
+                listTarget.innerHTML = '<div class="panel-log__empty">No background tasks yet.</div>';
+                return;
+              }
+              listTarget.innerHTML = tasks.map(function(t) {
+                const prog = t.progress || {};
+                const pct = prog.percent != null ? Math.round(prog.percent) + '%' : '-';
+                return '<div style="display:flex;gap:10px;padding:4px 0;border-bottom:1px solid #eee;font-size:12px">'
+                  + '<span style="min-width:34px;font-weight:600">#' + escapeHtml(t.id) + '</span>'
+                  + '<span style="min-width:150px">' + escapeHtml(t.task_type) + '</span>'
+                  + '<span style="min-width:70px">' + escapeHtml(t.status) + '</span>'
+                  + '<span style="min-width:44px">' + escapeHtml(pct) + '</span>'
+                  + '<span style="color:#777">' + escapeHtml(String(prog.message || '').slice(0, 80)) + '</span>'
+                  + '</div>';
+              }).join('');
+            }
+            async function refresh() {
+              try {
+                const res = await fetch(apiBase + '?limit=10');
+                const body = await res.json();
+                const tasks = (body && (body.data || body.tasks || body)) || [];
+                const running = tasks.find(function(t) { return t.status === 'running'; })
+                  || tasks.find(function(t) { return t.status === 'paused'; });
+                if (running) {
+                  const prog = running.progress || {};
+                  if (activeTitle) activeTitle.textContent = '#' + running.id + ' ' + running.task_type + ' — ' + running.status;
+                  if (activeMessage) activeMessage.textContent = String(prog.message || '') || ('progress ' + (prog.current || 0) + '/' + (prog.total || '?'));
+                  setBar(prog.percent, prog.percent == null);
+                } else {
+                  if (activeTitle) activeTitle.textContent = 'No active task';
+                  if (activeMessage) activeMessage.textContent = 'Idle — no task running';
+                  setBar(0, false);
+                }
+                renderList(tasks);
+                setStatus('Updated ' + new Date().toLocaleTimeString());
+              } catch (err) {
+                setStatus('Task list failed: ' + (err.message || err));
+              }
+            }
+            async function redoPlaceMatching() {
+              if (!window.confirm('Redo place matching for up to 1000 articles? Existing relations for each re-matched article are deleted first.')) return;
+              try {
+                const typesRes = await fetch(apiBase + '/types/analysis-run');
+                const typesBody = await typesRes.json();
+                const fields = ((typesBody && (typesBody.data || typesBody)) || {}).fields || [];
+                const versionField = fields.find(function(f) { return f.name === 'analysisVersion'; });
+                const res = await fetch(apiBase, {
+                  method: 'POST',
+                  headers: { 'content-type': 'application/json' },
+                  body: JSON.stringify({
+                    taskType: 'analysis-run',
+                    autoStart: true,
+                    parameters: {
+                      analysisVersion: versionField && versionField.default != null ? versionField.default : 1,
+                      skipPages: true,
+                      skipDomains: true,
+                      skipMilestones: true,
+                      redoPlaceMatching: true,
+                      pageLimit: 1000
+                    }
+                  })
+                });
+                if (!res.ok) {
+                  const body = await res.json().catch(function() { return {}; });
+                  throw new Error('HTTP ' + res.status + ': ' + JSON.stringify(body).slice(0, 160));
+                }
+                setStatus('Redo task started');
+                refresh();
+              } catch (err) {
+                setStatus('Redo failed: ' + (err.message || err));
+              }
+            }
+            if (redoButton && redoButton.dataset.btBound !== 'true') {
+              redoButton.dataset.btBound = 'true';
+              redoButton.addEventListener('click', redoPlaceMatching);
+            }
+            if (refreshButton && refreshButton.dataset.btBound !== 'true') {
+              refreshButton.dataset.btBound = 'true';
+              refreshButton.addEventListener('click', refresh);
+            }
+            refresh();
+            const timer = setInterval(refresh, 2500);
+            root.addEventListener('panel:deactivate', function() { clearInterval(timer); });
+          });`;
+}
+
 function buildDownloadVerificationActivator() {
   return `
           window.UnifiedAppPanels.registerActivator('download-verification', function(root) {
@@ -750,6 +867,7 @@ function buildSubAppDelegateActivator() {
 }
 
 module.exports = {
+  buildBackgroundTasksActivator,
   buildCloudCrawlActivator,
   buildDownloadVerificationActivator,
   buildDownloadsActivator,

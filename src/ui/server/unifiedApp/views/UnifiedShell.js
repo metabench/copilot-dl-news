@@ -11,6 +11,7 @@ const {
   buildMultiModalCrawlActivator,
   buildDownloadsActivator,
   buildDownloadVerificationActivator,
+  buildBackgroundTasksActivator,
   buildSearchExplorerActivator,
   buildScreenshotReviewActivator,
   buildPlaceholderActivator,
@@ -1451,6 +1452,7 @@ class UnifiedShell extends Control {
           ${buildCloudCrawlActivator()}
           ${buildDownloadsActivator()}
           ${buildDownloadVerificationActivator()}
+          ${buildBackgroundTasksActivator()}
           ${buildSearchExplorerActivator()}
           ${buildScreenshotReviewActivator()}
         })();
