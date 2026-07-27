@@ -115,6 +115,14 @@
       "timeoutMs": 15000
     },
     {
+      "id": "ui-browser-coverage",
+      "description": "the handful of UI checks that drive a REAL browser cannot silently drop to zero (RB-009, cycle 133). Measured 2026-07-27: of 82 UI self-tests totalling ~10,600 lines, only 4 (5%) drive puppeteer/playwright; 75 (91%) are in-process render + string assertions. That 95% majority is blind BY CONSTRUCTION to the cycle-128.5 defect class - SSR frozen at publish while the client silently repairs the DOM, so the page looks correct to every string assertion. This is a no-regression FLOOR at the current value, not an aspiration; raise it deliberately when live coverage is added",
+      "cmd": "node",
+      "args": ["tools/dev/ui-check-inventory.js", "--min-live", "4"],
+      "needsServer": false,
+      "timeoutMs": 20000
+    },
+    {
       "id": "workflow-scorecard-ratchet",
       "description": "no workflow task-type with >=5 recorded runs exceeds the cost-to-catch ceiling (turns spent per validation-CONFIRMED real catch) — a degrading/bloating workflow surface (one that stops earning its cost) is a regression, caught at orient. Bootstrapped 2026-07-21 (cycle 48) with 13 labeled runs; diagnosis=0.9, delegation-safety=1.0, equivalence=0.4. See docs/agi/WORKFLOW_MEASUREMENT.md §2 (cost-to-catch is the sound ratchet signal; verdict-accuracy is a diagnostic-to-read, not a gate, because a REFUTED verdict can be the workflow correctly refuting a bad premise)",
       "cmd": "node",
