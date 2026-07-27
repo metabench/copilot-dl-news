@@ -2,48 +2,463 @@
   "_comment": "SMAC-style tech tree structure (owner directive 2026-07-27, researched against Sid Meier's Alpha Centauri: categories form an INTERTWINING tree; every tech has AT MOST TWO prerequisites; tiers flow foundations -> frontier; blind research means the far tree is fog). Three branches for now (owner: 'just 3 pages for the moment'). RULES: roots are the FINITE set of already-built capabilities — curated at the CAPABILITY level, deliberately not a per-RB retrofit; techs reference either a backlog row (ref: RB-*, state read LIVE from RESEARCH_BACKLOG's state column — that file stays the single state source for RB items) or are curated near-frontier items (allowed state: available only; completion later lands in the ledger/backlog and promotes the node). Every tech's prereqs list existing root/tech ids and is capped at 2, per SMAC; edges are design statements about what COMBINES into what. Colors validated 2026-07-27 with the dataviz palette validator on the dark surface (all four checks pass; gold-green tritan dE 9.9 sits in the legal-with-secondary-encoding band, and every node carries its branch icon + text label, never color alone).",
   "asOf": "2026-07-27",
   "branches": {
-    "agi": { "label": "AGI", "color": "#4d9ec8", "icon": "iceBulb", "tagline": "the loop that improves the loop — self-verifying, self-prompting, self-checking" },
-    "tree": { "label": "TECH TREE", "color": "#55a377", "icon": "treeMonitor", "tagline": "the instrument panel of progress — record, picture, page, prompt" },
-    "crawler": { "label": "CRAWLER", "color": "#b8862e", "icon": "spiderWeb", "tagline": "the product — polite, database-driven news harvesting at archive scale" },
-    "factory": { "label": "TOOL FACTORY", "color": "#a678c8", "icon": "factorySpanner", "tagline": "the coordination point for the system's tools — 600+ scripts, and the operations that combine, extend and improve them" }
+    "agi": {
+      "label": "AGI",
+      "color": "#4d9ec8",
+      "icon": "iceBulb",
+      "tagline": "the loop that improves the loop — self-verifying, self-prompting, self-checking"
+    },
+    "tree": {
+      "label": "TECH TREE",
+      "color": "#55a377",
+      "icon": "treeMonitor",
+      "tagline": "the instrument panel of progress — record, picture, page, prompt"
+    },
+    "crawler": {
+      "label": "CRAWLER",
+      "color": "#b8862e",
+      "icon": "spiderWeb",
+      "tagline": "the product — polite, database-driven news harvesting at archive scale"
+    },
+    "factory": {
+      "label": "TOOL FACTORY",
+      "color": "#a678c8",
+      "icon": "factorySpanner",
+      "tagline": "the coordination point for the system's tools — 600+ scripts, and the operations that combine, extend and improve them"
+    }
   },
   "roots": [
-    { "id": "CR-ENGINE", "branch": "crawler", "title": "Crawler Engine", "note": "news-crawler-itself: fetch loop, worker-thread compression, remote runtime" },
-    { "id": "CR-POLITE", "branch": "crawler", "title": "Politeness Stack", "note": "robots floors + 429 backoff escalation; 0×429 across 3,419 live responses" },
-    { "id": "CR-FRONTIER", "branch": "crawler", "title": "DB-Driven Frontier", "note": "the urls table IS the frontier; hydration, recency, place-hub redownload" },
-    { "id": "CR-DB", "branch": "crawler", "title": "News Database", "note": "ncdb unified layer over a ~30 GB archive; 16.9k pages crawled during cycles" },
-    { "id": "CR-INTEL", "branch": "crawler", "title": "Content Intelligence", "note": "url / document / places / general intelligence modules" },
-    { "id": "TR-LEDGER", "branch": "tree", "title": "Cycle Ledger + Stanzas", "note": "the loop's only act of record-keeping; everything else is projection" },
-    { "id": "TR-PROBES", "branch": "tree", "title": "Probe Manifest", "note": "17 runnable re-verifications at orient; false greens hunted on sight" },
-    { "id": "TR-PICTURE", "branch": "tree", "title": "Progress Picture", "note": "deterministic SVG + per-repo lanes; byte-compare staleness" },
-    { "id": "TR-PAGE", "branch": "tree", "title": "Status Page", "note": "this jsgui3 app: live chips, path ahead, the tree you are reading" },
-    { "id": "TR-PROMPT", "branch": "tree", "title": "Prompt Generator", "note": "next cycle's prompt derived from the record; curation labelled, never faked" },
-    { "id": "TR-DEVTOOLS", "branch": "tree", "title": "Dev Tooling", "note": "js-scan / js-edit: AST search, guarded edits, continuation tokens" },
-    { "id": "TF-LOOP", "branch": "factory", "title": "Loop Tooling", "note": "tools/agi (9 scripts): cycle-metrics, progress-svg, repo-activity, next-prompt, ack-signal — the loop's own instruments" },
-    { "id": "TF-PROBES", "branch": "factory", "title": "Probe & Check Rig", "note": "tools/dev (~131 scripts): run-probes + 18 registered probes, ncdb-debt-scan, churn-scan, ui-check-inventory, workflow-scorecard" },
-    { "id": "TF-CRAWLOPS", "branch": "factory", "title": "Crawl Operations", "note": "tools/crawl (96 scripts): campaign-runner, host-health, crawl-rate, frontier hydration/composition tooling" },
-    { "id": "TF-DBSAFETY", "branch": "factory", "title": "DB Safety Kit", "note": "tools/db (12 scripts): timed-probe (the WAL-pin incident guard), dedup-http-responses, vacuum, schema inspectors" },
-    { "id": "TF-BRIDGE", "branch": "factory", "title": "Dev Bridge", "note": "tools/dev-bridge (136 scripts): inbox daemon, restart-electron, resilience checks — the hands that reach the electron app" },
-    { "id": "TF-PERF", "branch": "factory", "title": "Perf Bench", "note": "tools/perf (5 scripts): fixture-server, concurrency-bench, postfetch-cost, profile-crawl — offline measurement with a control arm" },
-    { "id": "TF-MAINT", "branch": "factory", "title": "Migration & Repair Shop", "note": "migrations (20) + maintenance (19) + corrections (8) + cleanup (4): schema evolution and data repair, one-shot by design" },
-    { "id": "AG-COMPLIANCE", "branch": "agi", "title": "Compliance Meta-tests", "note": "probes that check the AGENT followed directives, not just the code" },
-    { "id": "AG-HARNESS", "branch": "agi", "title": "Live Browser Harness", "note": "real pages in a real browser; assertions no in-process check can make" },
-    { "id": "AG-METHOD", "branch": "agi", "title": "Earned Method", "note": "rules that exist only because a recorded mistake produced them" }
+    {
+      "id": "CR-ENGINE",
+      "branch": "crawler",
+      "title": "Crawler Engine",
+      "note": "news-crawler-itself: fetch loop, worker-thread compression, remote runtime",
+      "detail": [
+        "Cycle 73 (2026-07-22, Sonnet 5 after a mid-loop model swap) moved the entire crawler engine out of copilot-dl-news into the sibling package news-crawler-itself — 17 files + 4 config JSONs — after discovering the extraction playbook's own file list was missing 5 of 12 required files (hash-manifest.js, resource-shield.js, intelligence-pool.js, export-retention.js, orchestrator-utils.js), found only by tracing the real require graphs.",
+        "The same cycle shipped a new GzipPool over worker_threads (pool size min(cpus-1,4), ArrayBuffer transfer, respawn-once-then-dead policy) replacing synchronous zlib.gzipSync in the fetch loop; two real bugs were self-caught pre-ship — a queued-job-forever hang in close() and a spawnSync event-loop deadlock where a fixture HTTP server in the same process could never answer the child (banked as a permanent memory rule: async spawn for integration tests).",
+        "Deployed to the Oracle box with buildId change + PM2 0-restarts, then DB-evidence-verified: ~83-87% real compression on live bbc.com/theguardian.com/apnews.com content and intact 1s-floor politeness (median ~1.04s deltas); reuters.com hit a genuine external 401 bot-block, npr.org honestly reported as 0-yield.",
+        "Standalone test count landed at 45/45 including 2 end-to-end integration tests through the actual child-process entry point; a 948-test broader sweep confirmed the 40 pre-existing failures were unrelated to the extraction.",
+        "An earlier Oracle deploy (cycle 70) was only rescued by DB evidence: a false \"deploy complete\" was caught and the entire D2a robots/crawl-delay politeness layer turned out to be dead code on the remote worker (grep: 0 matches) — fixed with polite-fetch.js which gates EVERY redirect hop with redirect:'manual'.",
+        "Phase E of cycle 73 overran: the \"5 sites x 10 pages\" owner test crawl ran far past target across PM2 restarts before cycle 73.5 caught it, and it exposed that run-worker.js is one-shot so PM2 fork_mode autorestart cycles it on every clean completion — worker restart count is NOT a crash signal; as of 2026-07-27 the whole package still has no .git (owner decision pending)."
+      ]
+    },
+    {
+      "id": "CR-POLITE",
+      "branch": "crawler",
+      "title": "Politeness Stack",
+      "note": "robots floors + 429 backoff escalation; 0×429 across 3,419 live responses",
+      "detail": [
+        "The safety-evidence headline number: 3,419 live responses across 7 mixed hosts at concurrency 3 with 0x429, 0x403, 0x503 — and the agent self-caught an incoherence where its earlier proposal quoted a 3.23x speedup at concurrency 4 next to safety data gathered at concurrency 3, so it re-measured at the same concurrency before recommending anything.",
+        "Default worker concurrency is pinned at 3 (4 bought only +12% throughput for 33% more per-host load), with a guard test asserting the default so a silent revert fails CI, and the setting is a GATED owner directive checked by tools/dev/checks/ritual-compliance.check.js.",
+        "Guardian's ~31-34s inter-fetch gap was mis-read as whole-process dead-time for ~3 months before tools/crawl/host-health.js made the distinction legible — it classifies hosts FAST / POLITE-THROTTLE / SLOW-IRREGULAR by gap regularity (coefficient of variation), proving the gap was a compliant robots crawl-delay floor in limiter.js, not a bug.",
+        "The real throughput lever (task #45) is scheduling AROUND crawl-delays, not shrinking them: seed more hosts and release/refill a throttled host's worker slot so its polite idle overlaps other hosts' fetches; per-host history sizes the lease so a slow-delay host is never over-leased.",
+        "Cycle 120's owner-directed run delivered 2,167 pages (2,069 HTTP 200s, 696.1 MB at 495 KB/s avg) with zero 429s across all 10 hosts — recorded in the cycle stanza literally as result \"OWNER_ASK_DELIVERED_2167_pages_0x429\".",
+        "A planned second Oracle crawl node was analyzed and rejected: under a shared host's crawl-delay-sum constraint a second node adds ZERO throughput to that host while costing WAN RTT per fetch, and per-process 429 backoff is invisible cross-node — the one safety-critical missing piece for distribution."
+      ]
+    },
+    {
+      "id": "CR-FRONTIER",
+      "branch": "crawler",
+      "title": "DB-Driven Frontier",
+      "note": "the urls table IS the frontier; hydration, recency, place-hub redownload",
+      "detail": [
+        "RB-012 (\"the urls table IS the frontier\" — no new schema) is closed as Delivered: phases P1-P6 all shipped and live-verified, including DB-seeded fetching, a UI recency knob, queue hydration, place-hub redownload, concurrent multi-host runs, plus the quality layer live runs demanded — news-host policy, dead-hub suppression (hubDead=54), low-value URL gate, redirect-aware reconciliation.",
+        "The hub-domination fix (cycle 50, task #48) took two live-verified attempts: the URL-shape preference alone did NOT move headlines (crawls still yielded \"Society\"/\"Education\" section titles) because requeuedHubs=6/6 — hub-refresh was filling every batch slot; the real lever was a hubFraction cap (0.5) with hub-backfill in ncdb selectDueFrontier, after which real headlines landed (\"'SNL' creator Lorne Michaels donates archive\", \"Edwin Poots to stand down as DUP leader\").",
+        "isArticleShapedUrl was itself found buggy by the cycle-74 differential harness: it under-selected 136 real articles (trailing-slash rejection dropped nytimes /athletic/.../slug/, its hex-id regex missed bbc 12-char mixed alnum ids) and over-selected 33 live-blog ?page=with:block pagination fragments; the cycle-75 fix was verified on 1,800 real news.db URLs and an adversarial 3-skeptic review refuted the first fix attempt TWICE (multi-word section hubs like apnews /hub/us-department-of-education were being re-admitted).",
+        "A frontier-fill busy-loop once DoS'd the electron server (tasks #37-#40): concurrent frontier reconciliation on synchronous better-sqlite3 starved the HTTP event loop — port REFUSED while the pid stayed alive and workers kept downloading; the true fix moved reconcile/hydration off the crawl thread (dispatch-and-return).",
+        "Per memory, frontier-seeded crawls of URLs-without-content gave a 6x yield improvement over discovery crawling (task #35), and hubFraction is now tunable per-request on POST /frontier/hydrate (clamped 0..1, live-verified at 0.2)."
+      ]
+    },
+    {
+      "id": "CR-DB",
+      "branch": "crawler",
+      "title": "News Database",
+      "note": "ncdb unified layer over a ~30 GB archive; 16.9k pages crawled during cycles",
+      "detail": [
+        "The owner-approved dedup (2026-07-27, copy→dedup→verify→swap on the live archive) shrank http_responses 325,614 → 290,144 (−35,470 redundant rows), removed 10,537 content_storage and 4,829 content_analysis rows, collapsed 25,351 duplicate groups to 0, and cut the file 30.24 → 28.89 GB with 0 unique content lost — distinct content sha 186,255 and analyzed sha 70,907 both unchanged, foreign_key_check=0, integrity_check=ok.",
+        "The dedup's hidden trap was article_place_relations, a reverse-FK child with ON DELETE CASCADE that a naive delete would have silently destroyed — found only by scanning the FULL reverse-FK graph and re-pointing cascade children to the keeper row; post-swap a real crawl added +37 rows with dup_groups staying at 0.",
+        "The WAL incident (2026-07-20): an unbounded inline probe of a known-slow query against the then-29GB DB hit synchronous better-sqlite3 native code that no in-process timeout can interrupt; the Bash timeout killed the shell but not the node grandchild, which ground on as an orphan for 25+ minutes pinning the WAL snapshot — news.db-wal ballooned to 870MB while the app kept writing.",
+        "Prevention shipped as tools/db/timed-probe.js: child-process execution with a hard external kill at --timeout-ms, a LIMIT guard that REFUSES unbounded SQL (the incident query exits code 3), and EXPLAIN QUERY PLAN printed BEFORE timing so the diagnostic survives a kill; verified live — bounded probe 1ms, the full incident query killed at exactly 20s with zero orphans.",
+        "The incident's diagnostic yield beat its cost: the slow query's real killer wasn't the 2-table COALESCE sort (~1.5s) but a per-row correlated scalar subquery (MAX(analysis_version)) over 1.68M rows under a TEMP B-TREE sort; the follow-up --fast variant ran in 5ms vs killed-at-60s.",
+        "A planner gotcha lives in memory: the recent-headlines query picks idx_classification (~all rows) plus a TEMP B-TREE sort (~4s) unless pinned with INDEXED BY idx_content_analysis_analyzed_at (~1ms), and fetched_at/analyzed_at mix ISO-T-Z and space-form timestamps so every comparison must wrap datetime() on both sides."
+      ]
+    },
+    {
+      "id": "CR-INTEL",
+      "branch": "crawler",
+      "title": "Content Intelligence",
+      "note": "url / document / places / general intelligence modules",
+      "detail": [
+        "The four sibling modules are news-crawler-url-intelligence, news-crawler-document-intelligence, news-crawler-places-intelligence, and news-crawler-general-intelligence (the fusion layer combining the other three's signals into page verdicts — listed active in docs/plans/2026-07-22-module-ecosystem.md but never yet scouted by a cycle).",
+        "url-intelligence (cycle 74): delegation correctly BLOCKED by a differential harness on 1,800 real URLs — the module's 7-label taxonomy leaves 3/7 labels homeless in copilot's scheme and copilot's hub/place-hub is unreconstructable from URL facts alone; the honest divergence is a BAND 12.9%-21.2%-33.6% with 89 section-hub hard-zero regressions (need 0), so a silent swap is a \"repoint-in-disguise\".",
+        "The blocked url-intelligence harness still paid for itself twice: it surfaced the two copilot product bugs (136 under-selected + 33 over-selected URLs) that cycle 75 fixed, and cycle 77 then MEASURED the recommended additive veto redundant on a 5,000-URL real frontier sample — shipping a frontier-composition observability tool instead of the veto.",
+        "document-intelligence NO-GO (cycle 81): measured against copilot's own 78,889 stored article verdicts as non-circular ground truth, the module called a confirmed article \"article\" only 38.0% of the time (114/300) with a 39.3% hard false-positive rate — real headlines like \"Trump says China's Xi to visit U.S.\" labeled product_page and a Newsom encampments story labeled login_page; the gate (≥80% recall AND ≤5% hard-FP) failed decisively, committed as a rerunnable doc-intel-diff.js --accuracy mode.",
+        "places-intelligence (cycle 83) was the FIRST feasible delegation: green on every axis (detects in text+url so no re-parse, reads the gazetteer via ncdb's SqliteGazetteerAccess with zero SQL of its own — 810k place_names, 561,609 tier2 names across 491 languages, ~41s/510MB one-time index, find_in_text ~27ms p50), correctly suppressing the \"world\"→place_id-999999 trap and detecting CJK/Arabic places, but a hand-labeled precision gate failed both tiers (tier1: 90.9% recall but only 50% trap-rejection from function-word homographs like As→Aš) — a TUNABLE gap, unlike doc-intel's fundamental miscalibration, and per the later ledger places-intelligence is ADOPTED.",
+        "The cycle-80 doc-intel scout also found the drop-in path would re-parse HTML with its own cheerio.load (+2 DOM clones) on the crawl hot path — reversing the task-#46 hygiene win — which is why the offline-only accuracy gate was run at all."
+      ]
+    },
+    {
+      "id": "TR-LEDGER",
+      "branch": "tree",
+      "title": "Cycle Ledger + Stanzas",
+      "note": "the loop's only act of record-keeping; everything else is projection",
+      "detail": [
+        "docs/agi/IMPROVEMENT_LEDGER.md is a 439-line file carrying roughly 149 dated rows and exactly 100 machine-readable <!-- cycle:{...} --> JSON stanzas, and since cycle 125 the stanza is 'the only act of record-keeping — everything else (page, SVG, prompt) is projection'.",
+        "The stanza-schema probe (cycle 126, tools/dev/checks/stanza-schema.check.js) caught two real historical record defects on its very first run: cycle 58's defects entry was a bare string so d.preship was undefined and a defect the prose proves was caught pre-ship had been silently counted post-ship for weeks, and the '73b' addendum carried a string id that sort((a.id||0)-(b.id||0)) could not order — repaired as typed object preship:true and id 73.5 with an id_note, correcting the defect split from 122/15 to 123/14.",
+        "The long-standing '2 malformed stanzas' count turned out to be the parser false-positiving on cycle:{...} DOCUMENTATION placeholders in row prose (the cycle-47 row literally names the convention) — carried in metrics and prompts as fact for many cycles before the c126 fix.",
+        "The ritual-compliance --history audit (cycle 128) measured that 77 of 84 stanzas landed in git at least 1 day after their ledger date (only 7 same-day, worst 6 days): zero commits repo-wide for seven days (07-20..07-26) while cycles 46-120 were being recorded, until the owner had to ask 'please get everything into their repos'.",
+        "Stanzas keep growing load-bearing fields: second_order[] slugs written as 'ledger color' for 30+ cycles became the literal source of the generated prompt's METHOD section (c125), owed_closed[] was added in c123 so a paid debt stops rendering as outstanding, and headline was added in c129 so PROGRESS lines read as prose instead of slugs.",
+        "Per memory, tools/agi/cycle-metrics.js makes the per-cycle stanza REQUIRED — the orient probe fails if the newest ledger row lacks one."
+      ]
+    },
+    {
+      "id": "TR-PROBES",
+      "branch": "tree",
+      "title": "Probe Manifest",
+      "note": "17 runnable re-verifications at orient; false greens hunted on sight"
+    },
+    {
+      "id": "TR-PICTURE",
+      "branch": "tree",
+      "title": "Progress Picture",
+      "note": "deterministic SVG + per-repo lanes; byte-compare staleness",
+      "detail": [
+        "tools/agi/progress-svg.js (301 lines, shipped cycle 121) renders docs/agi/progress/progress.svg from ledger stanzas — first render covered 76 stanzas: 98 verified improvements, 118/132 defects caught pre-ship (89%), 3 corrections drawn as red diamonds ON the progress line, 16,856 pages crawled, 18.4 KB output.",
+        "Design is regenerate-never-mutate and strictly deterministic (byte-identical for identical committed inputs), which is what lets tools/dev/checks/progress-svg-staleness.check.js detect staleness as an exact BYTE COMPARE against an in-memory re-render — red mid-cycle is expected, red at orient means the close ritual was skipped.",
+        "The palette (gold #b8862e / green #55a377 / red #b34d4d) was computationally validated for color-vision deficiency (worst CVD dE 16.1) and only passed the validator after 2 failed iterations.",
+        "Per-repo lanes (cycle 127) came via tools/agi/repo-activity.js (101 lines) snapshotting git commit-dates into a COMMITTED repo-activity.json — live git never touches the render, so the byte-compare staleness guarantee survives; the unversioned news-crawler-itself repo draws as a red dashed warning lane reading 'no .git — not in the record'.",
+        "One pre-ship defect in the lanes build: the repo root resolved relative to config/ instead of the repo root, making EVERY repo — including the one being rendered from — report 'no .git'; the absurd preview result was the catch.",
+        "The lanes exposed a workflow finding rendered as an honest caveat in the SVG title: they show LANDING date, not work date — git proved cycles 47-120 (ledger-dated 07-21..07-26) landed as bulk catch-up commits with zero commits on the days the work was actually done."
+      ]
+    },
+    {
+      "id": "TR-PAGE",
+      "branch": "tree",
+      "title": "Status Page",
+      "note": "this jsgui3 app: live chips, path ahead, the tree you are reading",
+      "detail": [
+        "src/ui/server/projectStatus (statusData.js + controls.js + server.js + techPages.js + signals.js, port 3184) shipped in cycle 122 on the full jsgui3 stack, after a mid-build owner refinement: keep the game-UI VISUAL design but strip gaming VOCABULARY (QUEST/PARTY/XP/'Singularity Wrangler' all replaced, verified by an in-DOM no-gaming-terms regex).",
+        "Cycle 122's first real defect: client activation silently no-opped — bundle served, class present, zero errors, page looked perfect — because jsgui3 activation lives in jsgui3-client and resolves via jsgui.controls, which the entry never registered; proven fixed only by a verifiable ps-client-active marker added in activate().",
+        "The cycle 128.5 SSR-freeze defect: the server-rendered HTML said 82 cycles / 108 improvements while /api/status in the SAME process said 84 / 111 — because jsgui3's Server({Ctrl}) recipe routes through HTTP_Webpage_Publisher, which renders SSR HTML ONCE at server start; the client's setInterval(refresh, 60000) had no immediate call, so every visitor got a full 60 seconds of confidently wrong numbers (permanently wrong without JS). Fix: one line, refresh() on activate.",
+        "The 128.5 fix shipped with no guard at all, so cycle 131's progress-surface probe added tripwire P2 (client must fetch immediately on activate) — proven to bite by deleting the bare refresh() from the REAL file, not a fixture.",
+        "Status page v2 (cycle 124) was verified by a no-reload mechanism marker: a window variable set before clicking REFRESH that SURVIVED the click (markerSurvived: true), distinguishing in-place update from a full reload that would look identical; CHIP_DEFS label builders are shared between server compose and client apply so SSR and client cannot drift by construction.",
+        "The recurring 'c135 live check 5/5' in cycles 137-141 is the live-browser harness re-verifying the page after every change; cycle 138's three tech pages render PER REQUEST inside the route handler, with a footer stating 'this page cannot go stale' — the 128.5 defect class made structurally impossible."
+      ]
+    },
+    {
+      "id": "TR-PROMPT",
+      "branch": "tree",
+      "title": "Prompt Generator",
+      "note": "next cycle's prompt derived from the record; curation labelled, never faked",
+      "detail": [
+        "tools/agi/next-prompt.js (222 lines) delivered RB-014 in cycle 125: PROGRESS/owed/decisions/METHOD all DERIVED from the same buildStatus + stanza source the status page and SVG use, while the ▶ selection stays human and is explicitly labelled '[CURATE: selection is judgment]' rather than pretending the tool chose.",
+        "The METHOD (earned) section is generated from the stanzas' second_order[] slugs — newest-first, deduped, capped at 10 — making the method list literally 'rules that exist only because a recorded mistake produced them'.",
+        "v1's candidate filter was a prose heuristic (/delivered|superseded/ on status text), so every honestly-answered row that also named a remainder — RB-008, RB-011, RB-015 — was re-offered every single cycle as if untouched.",
+        "The cycle 129 fix added a real state FIELD (open/partial/blocked/done/superseded) across all 15 RESEARCH_BACKLOG rows; candidates are state ∈ {open, partial}, 'blocked' exists precisely so owner-gated work is not mistaken for available work, a partial row is offered by its Remaining: clause instead of its answered question, and an unknown state THROWS instead of defaulting to actionable.",
+        "Live before/after in c129: the candidate list went from 5 offerings (3 of them already answered) to 6 real ones that name the remaining work; 74/74 jest, 27 of them on next-prompt, with tests anchored on the exact v1 defect.",
+        "Pending owner lightbulb signals (cycle 139) render into the generated prompt as a ⚡ OWNER SIGNAL line ABOVE the curated ▶ selection, preempting it — one of the two surfaces the agent provably reads every cycle."
+      ]
+    },
+    {
+      "id": "TR-DEVTOOLS",
+      "branch": "tree",
+      "title": "Dev Tooling",
+      "note": "js-scan / js-edit: AST search, guarded edits, continuation tokens",
+      "detail": [
+        "js-scan and js-edit live in the sibling TypeScript repo C:/Users/james/Documents/repos/news-dev-tools (src/js-scan, src/js-edit, plus md-scan/md-edit, an mcp server, ast and knowledge modules) — AST-powered code search and guarded programmatic editing consumed by copilot-dl-news.",
+        "RB-002 (done): js-edit gained --from-plan/--from-token/--match-snapshot so multi-day refactors can be stored and resumed safely — verified against --help output.",
+        "RB-006 (done): js-scan relationship queries in --ai-mode --json emit continuation tokens plus jsEditHint payloads that js-edit ingests without re-running locate steps — the scan→edit handoff without repeated discovery.",
+        "RB-001 remains only partial: js-scan --build-index exists, but the persisted knowledge-graph consumer (nodes: modules, edges: imports/calls) was never built.",
+        "RB-004's hotspot answer pairs js-scan --ripple-analysis/--call-graph (fan-in/out) with tools/dev/churn-scan.js (git churn); live top src/*.js hotspot over 30 days was unifiedApp/server.js at 11 commits, matching its coordination-point role.",
+        "On the tech tree the node is a curated foundation whose note reads 'js-scan / js-edit: AST search, guarded edits, continuation tokens', and it is a prerequisite of RB-001's frontier tech alongside CR-DB."
+      ]
+    },
+    {
+      "id": "TF-LOOP",
+      "branch": "factory",
+      "title": "Loop Tooling",
+      "note": "tools/agi (9 scripts): cycle-metrics, progress-svg, repo-activity, next-prompt, ack-signal — the loop's own instruments",
+      "detail": [
+        "tools/agi holds exactly 9 .js files: 5 instruments (ack-signal.js, cycle-metrics.js, next-prompt.js, progress-svg.js, repo-activity.js) plus 4 matching __tests__ files — the tech-tree note's '9 scripts' checks out on disk.",
+        "cycle-metrics.js --check is a registered orient probe: every ledger cycle since the instrumentation floor (cycle 47) must carry a machine-readable <!-- cycle:{...} --> stanza or orient fails — the loop guards its own measurement record the way ncdb-debt-ratchet guards raw SQL.",
+        "progress-svg.js renders progress.svg deterministically from committed inputs only (never live git), which makes staleness an exact byte-compare probe — red mid-cycle is expected, red at orient means last cycle skipped the regeneration ritual.",
+        "ack-signal.js was born in cycle 139 (2026-07-27) as the closing half of the owner's 'big lightbulb': a click on a tech node POSTs to data/agi-signals.jsonl, turns an orient probe RED ('RED here is not breakage — it is the OWNER TALKING'), and ack-signal.js <id> appends the superseding done record.",
+        "next-prompt.js generates the per-cycle prompt and renders pending owner signals as a ⚡ OWNER SIGNAL line ABOVE its curated ▶ selection — chosen because there is no push channel into an agent session, so signals ride the two surfaces the agent provably reads.",
+        "repo-activity.js snapshots are checked by the ritual-compliance probe (added cycle 128) after an audit found cycles 47-120 had landed as bulk catch-up commits days after their ledger dates — nothing had been checking the agent, only the artifacts."
+      ]
+    },
+    {
+      "id": "TF-PROBES",
+      "branch": "factory",
+      "title": "Probe & Check Rig",
+      "note": "tools/dev (~131 scripts): run-probes + 18 registered probes, ncdb-debt-scan, churn-scan, ui-check-inventory, workflow-scorecard",
+      "detail": [
+        "tools/dev/probes.json registers 19 probes run by node tools/dev/run-probes.js at every orient; needsServer probes (frontier-api) are skipped, not failed, when nothing serves :3170 — recent ledger rows report '17 probes pass'.",
+        "Three probes are explicit RATCHETS: ncdb-debt-scan --max 241 (raw-SQL signatures outside ncdb, ratcheted down 269→258→249→241 as delegations landed), workflow-scorecard --max-cost-to-catch 4 (no task type with ≥5 runs may exceed 4 turns per confirmed real catch), and ui-check-inventory --min-live 5 (a floor raised 4→5 in cycle 135 when the first real-browser check landed).",
+        "The ui-browser-coverage probe encodes a brutal measurement from 2026-07-27: of 82 UI self-tests totalling ~10,600 lines, only 4 (5%) drove a real browser — the other 91% are in-process string assertions that are blind by construction to the cycle-128.5 defect class (SSR frozen while the client silently repairs the DOM).",
+        "The timed-probe-guard probe deliberately runs an UNBOUNDED query against timed-probe.js and asserts exit code 3 — proving the WAL-pin incident guard still refuses no-LIMIT SQL.",
+        "The doc-links probe is deliberately scoped to docs/agi only: the 154-doc legacy corpus is 94% frozen 2025 analyses, and an earlier pass that counted backticked filenames reported 982 broken refs at a 98.7% false-positive rate before being thrown out.",
+        "tools/dev itself is the biggest single family after dev-bridge — 177 .js files including subdirectories (the tree note says ~131 top-level scripts), spanning js-edit/js-scan/md-edit code tools, an SVG toolchain, crawl drivers, and the check rig."
+      ]
+    },
+    {
+      "id": "TF-CRAWLOPS",
+      "branch": "factory",
+      "title": "Crawl Operations",
+      "note": "tools/crawl (96 scripts): campaign-runner, host-health, crawl-rate, frontier hydration/composition tooling",
+      "detail": [
+        "tools/crawl counts 100 .js files including lib/ and profiles/ (67 top-level; the cycle-141 inventory recorded 96) — from p0-p3 activation proofs through frontier hydration to fleet deployment.",
+        "campaign-runner.js was FOUND, not built: on 2026-07-20, after an owner complaint that 6 hours yielded only 76 pages, the agent discovered the existing multi-hour round-robin bounded-leg runner already wired into the bridge's start-campaign action, and deleted a duplicate crawl-watch.js it had started writing.",
+        "campaign-runner --mode frontier plus frontier-leg.js delivered the decisive live proof of DB-initiated crawling: one Guardian leg (limit 60) fetched 118 pages and grew the archive +100 (72,254→72,354) in ~12 minutes versus discover-mode's 17 — roughly 6x yield.",
+        "host-health.js classifies each host FAST / POLITE-THROTTLE / SLOW-IRREGULAR from inter-fetch gap regularity (CV) over http_responses — built to make the throttle-vs-stall distinction legible after Guardian's ~33s gaps were misdiagnosed as whole-process dead time when they were a per-host robots crawl-delay working as intended.",
+        "host-health's classification later became a live per-host HEALTH METER badge strip on crawl-status (cycle 58), where the badge stayed 'loading…' despite every static check passing — only live network watching exposed that fetchHostHealth referenced a bare apiBasePath config property.",
+        "crawl-rate.js once reported a fake 4.83 MB/s because it string-compared ISO-T-Z timestamps against SQLite space-form datetimes; the fix (datetime(fetched_at) on both sides) revealed the real sustained peak was 0.43 MB/s — the wrong number had sent two whole cycles chasing a nonexistent 'worker-side cap'."
+      ]
+    },
+    {
+      "id": "TF-DBSAFETY",
+      "branch": "factory",
+      "title": "DB Safety Kit",
+      "note": "tools/db (12 scripts): timed-probe (the WAL-pin incident guard), dedup-http-responses, vacuum, schema inspectors",
+      "detail": [
+        "tools/db is 12 scripts; the two with war stories are timed-probe.js and dedup-http-responses.js, guarding a live 28 GB news.db.",
+        "timed-probe.js exists because an inline slow-query probe against live news.db once left an uninterruptible better-sqlite3 call in an orphaned grandchild process that pinned an 870 MB WAL file — the tool now runs every query under an external-kill watchdog with a mandatory LIMIT guard and plan-before-timing.",
+        "The guard is itself probed: the timed-probe-guard orient probe feeds it 'SELECT 1 FROM urls' with no LIMIT and asserts it refuses with exit code 3, so a refactor can't silently delete the incident protection.",
+        "dedup-http-responses.js ran an owner-approved copy→dedup→verify→swap on the live DB, shrinking http_responses 325,614→290,144 rows with zero unique content lost — losslessness verified by sha-based invariants, not content_id.",
+        "The dedup nearly destroyed data via a hidden trap: article_place_relations had an ON DELETE CASCADE foreign key that a naive delete would have cascaded through — the fix scanned the FULL reverse-FK graph and re-pointed CASCADE children to the keeper row before deleting, then ran foreign_key_check + integrity_check post-swap.",
+        "Post-swap, the freshly written multi-GB DB opened so slowly cold that the 60-second electron startup probe failed — a retry once the OS cache was warm succeeded, a false-corruption scare now recorded as a known gotcha."
+      ]
+    },
+    {
+      "id": "TF-BRIDGE",
+      "branch": "factory",
+      "title": "Dev Bridge",
+      "note": "tools/dev-bridge (136 scripts): inbox daemon, restart-electron, resilience checks — the hands that reach the electron app",
+      "detail": [
+        "tools/dev-bridge is the largest tool family at 136 .js files — the inbox/outbox daemon (dev-bridge.js) is 'the hands that reach the electron app': agents drop action files in inbox/, the daemon executes and answers in outbox/.",
+        "Resilience v5 (2026-07-20, owner-requested) fixed a real outage: the bridge's liveness was tied to a manually-launched console (start-dev-bridge.cmd), and when that console died the bridge stayed dead a whole cycle with inbox actions silently piling up.",
+        "v5 shipped respawn-guard.js (a pure crash-loop guard allowing <3 respawns per 60s), self-respawn of a DETACHED console-independent successor on uncaughtException, and a daemonize action — proven live when daemonize handed off from pid 37436 to detached successor pid 29952 while the app on :3170 stayed healthy.",
+        "Mid-cycle that same day the agent found and recovered a LIVE wedged bridge (stale lock with a dead pid, 30-minute-stale heartbeat, orphan .processing files) by pinning every fact before acting rather than blind-killing — the restarted v5 took the stale lock and drained the backlog.",
+        "The restart-electron bridge action (stop+start+probe in one call) replaced a 3-file dance the agent had performed 5 times in a single day; it was dogfooded twice on day one (httpOk:true, ~26s each) and became the standard deploy path for crawler changes.",
+        "Two orient probes watch the bridge permanently: bridge-health.check.js fails loud when the heartbeat is stale (the exact outage that once hid for a session), and resilience-wiring.check.js is a static tripwire so a refactor cannot silently delete the supervisor/watchdog/FATAL-capture guards."
+      ]
+    },
+    {
+      "id": "TF-PERF",
+      "branch": "factory",
+      "title": "Perf Bench",
+      "note": "tools/perf (5 scripts): fixture-server, concurrency-bench, postfetch-cost, profile-crawl — offline measurement with a control arm",
+      "detail": [
+        "tools/perf is exactly 5 scripts: fixture-server.js, fixture-crawl-runner.js, concurrency-bench.js, postfetch-cost.js, profile-crawl.js — offline measurement with a control arm as the house rule.",
+        "The warm-up discard story: the first replicate of a postfetch-cost run was reliably the outlier (e.g. 82.0 then 50.1, 49.8), and in cycle 25 that shape was misread as 'the machine slowed 2.5x', voiding a sound measurement — postfetch-cost.js now runs and DISCARDS a warm-up replicate per arm, dropping variance to 4.6%/6.5%/3.2%.",
+        "The control arm once prevented a false regression claim: raw numbers said a change made things 53% SLOWER, but the control arm (which the change could not affect) moved 53% too — the honest verdict was 'no measurable difference'.",
+        "concurrency-bench measured 2.88x throughput at concurrency 3 on the fixture (15.81 vs 5.48 req/s, noise 4.7%, maxInFlight=3 confirmed applied), matched deliberately to the setting the live safety evidence was gathered at — zero 429/403/503 across 3,419 live responses on 7 hosts.",
+        "The same bench justified the conservative default: concurrency 4 gave 3.23x, so going 3→4 buys only +12% while raising per-host load 33% — evidence recorded verbatim at the NewsCrawler.js change site when the default landed.",
+        "The 429-count insight made live validation possible at all: live rate is undecidable at the measured 60% same-condition variance, but 429s are a COUNT immune to that variance, so a live run can decide 'is this polite enough?' even though it cannot decide 'how much faster?'."
+      ]
+    },
+    {
+      "id": "TF-MAINT",
+      "branch": "factory",
+      "title": "Migration & Repair Shop",
+      "note": "migrations (20) + maintenance (19) + corrections (8) + cleanup (4): schema evolution and data repair, one-shot by design",
+      "detail": [
+        "The repair shop is four directories: tools/migrations (20 scripts), tools/maintenance (19), tools/corrections (8), tools/cleanup (4) — 51 one-shot scripts of schema evolution and data repair.",
+        "migrations/ reads like the schema's geology: url-normalization-schema.js and its validator, phase-2-enable-dual-write.js, place-hubs-host-dedupe.js, and dated one-offs like 2025-11-24-add-temporal-cols-to-place-names.js.",
+        "corrections/ is entirely place-data penance — 6 of its 8 scripts fix places (fix-duplicate-places, fix-duplicate-capitals, fix-canonical-names, fix-normalized-names, fix-place-hub-names, fix-article-place-relations), residue of the gazetteer ingestion era.",
+        "maintenance/ mixes checkers (check-db, check-fk, check-tables, check_schema) with builders (create-performance-indexes.js, create-articles-view.js) and the UI build scripts (build-ui.js, build-components.js).",
+        "cleanup/ is the smallest family at 4 scripts (prune-large-artifacts, clear-telemetry, cleanup-test-logs, detect-duplicate-places) — the character of the whole branch is one-shot-by-design, unlike the standing instruments in tools/agi and tools/dev."
+      ]
+    },
+    {
+      "id": "AG-COMPLIANCE",
+      "branch": "agi",
+      "title": "Compliance Meta-tests",
+      "note": "probes that check the AGENT followed directives, not just the code",
+      "detail": [
+        "Born cycle 128 (2026-07-27) as the first probe in the tree that checks the AGENT rather than the code — tools/dev/checks/ritual-compliance.check.js (331 lines) verifies the close-the-cycle ritual and an owner-gated crawler concurrency default of ≤3 were actually followed.",
+        "Its --history audit turned a qualitative hunch into a number: 77 of 84 ledger stanzas landed in git ≥1 day after their ledger date, only 7 same-day, worst lag 6 days (cycles 46-50 dated 07-21 landed 07-27) — and git showed zero commits repo-wide for the seven days 07-20..07-26 until the owner asked 'please get everything into their repos'.",
+        "On its very first live run the check emitted a false GREEN: git() trimmed command output, eating the leading space of only the FIRST `git status --porcelain` line, so slice(3) mangled exactly one path and the ledger's modified state went unreported — fixed by asking git about each record path individually, plus a static tripwire test.",
+        "Each check was proven to BITE before trusting green: the crawler default was temporarily raised to 8 to watch check B1 go red with the gate message and exit 1, then restored byte-identically (`git diff --stat` empty) — 'a compliance probe that has never been red is theatre.'",
+        "Cycle 130 closed RB-008 by adding five standing-gate checks baselined in config/gated-surfaces.json: C1 no hooks installed (checking .claude/settings*.json, not just a hooks directory), C2 skills match baseline, C3 both ~30 GB DB backups exist, C4 the 429 backoff escalation intact, C5 every stanza records verification[] — and the probe PRINTS its three unverifiable directives every run rather than implying coverage.",
+        "Cycle 132's owner-approved deletion of the 28.16 GB news.db.predup-bak was the live end-to-end test of C3 that could not be staged: the probe went red naming the exact missing file, then green once gated-surfaces.json recorded the approval — upgrading C3's evidence from inferred to observed."
+      ]
+    },
+    {
+      "id": "AG-HARNESS",
+      "branch": "agi",
+      "title": "Live Browser Harness",
+      "note": "real pages in a real browser; assertions no in-process check can make",
+      "detail": [
+        "Cycle 135 (2026-07-27) shipped projectStatus.live.check.js (160 lines) — the FIRST check in the whole tree to load a real page in a real browser: the three pre-existing 'browser' screenshot checks all rendered SSR HTML in-process and photographed it without ever loading a URL.",
+        "It spawns its own server on port 3191 (leaving a running preview on :3184 untouched) using async spawn — never spawnSync, which would deadlock the very event loop the server needs — and makes five assertions: L1 isomorphic client activated, L2 /api/status fetched ON LOAD not just on the 60s interval, L3 rendered DOM agrees with the LIVE API not boot-time SSR, L4 no console errors, L5 every page-requested resource loaded.",
+        "Its first run failed L4 on a /favicon.ico 404 and the CHECK was wrong, not the page; the fix exposed a second defect — filtering console messages by text silently kept the noise because Chrome's failed-load message omits the URL entirely, which lives in m.location() — two of the cycle's three defects were in the instrument itself.",
+        "L2 was proven to bite by reproducing a historical defect: removing cycle 128.5's one-line refresh() fix (when SSR said 82 cycles while the API said 84) turned L2 red immediately, then the fix was restored with `git diff --numstat` empty.",
+        "The ledger states an honest limit: L3, the strongest assertion, has the weakest proof — a freshly spawned server renders current SSR so DOM and API agree by construction; L3 is 'reasoned, not observed', which is exactly the gap the TECH-L3PROOF node exists to close.",
+        "The harness became a regression net immediately: its 5/5 green run was re-executed against the changed status page in cycles 136, 137, 138, 139 and 140 — a page it had never seen when written."
+      ]
+    },
+    {
+      "id": "AG-METHOD",
+      "branch": "agi",
+      "title": "Earned Method",
+      "note": "rules that exist only because a recorded mistake produced them",
+      "detail": [
+        "The ledger's machine-readable cycle stanzas carry 291 second_order slugs across 98 stanzas (counted by parsing every `\"second_order\":[...]` array in docs/agi/IMPROVEMENT_LEDGER.md) — each one a rule earned from a recorded mistake, feeding the METHOD section of generated next-prompts.",
+        "Sample slug (cycle 128): 'a-compliance-probe-that-has-never-been-red-is-theatre-prove-each-check-bites' — earned by deliberately raising the crawler concurrency gate to 8 to watch the check fail before trusting its first green.",
+        "Sample slug (cycle 139): 'there-is-no-push-channel-into-a-session-route-signals-through-surfaces-the-agent-provably-reads' — the design rule behind the lightbulb signal button riding a RED orient probe instead of a fake websocket interrupt.",
+        "Sample slug (cycle 137): 'pixels-can-accuse-as-well-as-flatter-cross-check-the-dom-in-whichever-direction-doubt-runs' — earned when a dark screenshot crop suggested a gated tree node was missing and a DOM rect/opacity query proved it was there.",
+        "The tree-review node's own prelim ranks these slugs as the #1 source for new tech ideas ('every earned rule implies a tool that enforces it'), ahead of post-ship defects, recurring owed[] items, and branch imbalance.",
+        "Cycle 129 formalized the pipeline: stanzas gained an optional `headline` prose field so the loop is not pushed into writing slugs that read like prose, and the backlog gained a real `state` column after two tools were caught inferring facts from prose."
+      ]
+    }
   ],
   "techs": [
-    { "ref": "RB-001", "branch": "agi", "prereqs": ["TR-DEVTOOLS", "CR-DB"] },
-    { "ref": "RB-007", "branch": "agi", "prereqs": ["AG-COMPLIANCE", "TR-PROMPT"] },
-    { "ref": "RB-015", "branch": "tree", "prereqs": ["TR-PICTURE"] },
-    { "id": "TECH-TYPEDEDGES", "branch": "factory", "title": "Typed Edge Grammar", "research": "every edge takes one of the owner's verbs — combine (exactly two inputs fuse), extend (one input + a named capability), improve (one input + a MEASURED axis)", "prereqs": ["AG-METHOD", "TR-PAGE"], "state": "available",
+    {
+      "ref": "RB-001",
+      "branch": "agi",
+      "prereqs": [
+        "TR-DEVTOOLS",
+        "CR-DB"
+      ],
+      "detail": [
+        "Full backlog row (docs/agi/RESEARCH_BACKLOG.md line 5): state=partial, question 'How can js-scan output be converted into a persistent knowledge graph (nodes: modules, edges: imports/calls)?', priority High, added 2026-07-19, source TOOLS.md#proposed-tooling-extensions.",
+        "Status clause: 'Partially delivered — js-scan --build-index exists. Remaining: a persisted graph consumer' — under the cycle-129 rule, that Remaining clause (not the answered question) is what the prompt generator and tech-tree page display as its research text.",
+        "In config/tech-tree.json it sits on the AGI branch as a live-state RB ref with prereqs TR-DEVTOOLS + CR-DB — its state is read from the backlog at render time, so completing it would make it the tree's first visible post-cutoff growth.",
+        "At cycle 136's live assembly it was one of exactly 2 lightbulb 'RESEARCH AVAILABLE' nodes on the entire status page (alongside RB-007), out of 12 researched, 1 gated, and 3 fog slots.",
+        "Cycle 132's closing note named it in the owner's block direction for the v3 stragglers: 'RB-003 (docs diffing) · RB-009 (generalized UI pipeline) · RB-001 (persisted graph consumer) · RB-007 (nightly automation)'."
+      ]
+    },
+    {
+      "ref": "RB-007",
+      "branch": "agi",
+      "prereqs": [
+        "AG-COMPLIANCE",
+        "TR-PROMPT"
+      ],
+      "detail": [
+        "Full backlog row (docs/agi/RESEARCH_BACKLOG.md line 11): state=partial, question 'How can a Proactive Architect Agent autonomously monitor LESSONS.md and propose refactors to align code with new patterns?', priority High, added 2026-07-19, source WORKFLOWS.md#proactive-refactoring.",
+        "Status clause: 'Partially realized — .claude/skills/singularity/SKILL.md (local) runs a bounded improvement cycle. Remaining: nightly automation.'",
+        "Its remainder is entangled with a gated surface: nightly automation implies hooks or scheduled runs, and cycle 132 recorded it as 'RB-007 (nightly automation, still gated on hooks)' — while compliance check C1 (cycle 130) exists precisely to red-flag any hook install against the config/gated-surfaces.json baseline.",
+        "In config/tech-tree.json its prereq edge is AG-COMPLIANCE + TR-PROMPT — the tree literally claims nightly automation can only be built by combining the compliance meta-tests with the prompt generator.",
+        "At cycle 136's live tech-tree assembly it was one of only 2 researchable lightbulb nodes on the whole page (with RB-001)."
+      ]
+    },
+    {
+      "ref": "RB-015",
+      "branch": "tree",
+      "prereqs": [
+        "TR-PICTURE"
+      ],
+      "detail": [
+        "The backlog row reads: state=blocked, 'Progress SVG workflow v2: stanza-schema probe, CI staleness byte-compare, per-repo lanes, optional /progress skill + PostToolUse hook (owner-installed)', priority Medium, last_update 2026-07-27, linked to CAPABILITY_RESEARCH_2026-07-27.md.",
+        "v2 was delivered in cycle 126 — and its founding premise was FALSE: the '2/78 unparseable stanzas' were parser false-positives on documentation placeholders, yet the new stanza-schema probe's first run still caught 2 REAL typed-field defects parse-only checking had missed (cycle 58's string defect entry mis-counted post-ship, 73b's unsortable string id).",
+        "The progress-svg-staleness probe works by exact byte-compare against a fresh in-memory render — possible only because the renderer is deterministic over committed inputs — and the row notes a CI job can invoke the same script.",
+        "Per-repo lanes were delivered in cycle 127 (the first Workflow v3 cycle) via a git-history snapshot: tools/agi/repo-activity.js writes a committed repo-activity.json which becomes lanes in progress.svg, keeping the render a pure function of committed inputs so the byte-compare survives.",
+        "The row is 'blocked' rather than done for exactly one remainder: the /progress skill + PostToolUse hook is owner-gated (no hooks/skills without approval) — and cycle 129's state field exists so that owner-gated work stops being offered as an available candidate.",
+        "On the tech tree RB-015 sits on the tree branch with a single prereq edge to TR-PICTURE, and its owner-gated state renders on /tech/tree as the gated node (re-proven by DOM rect query in cycle 137)."
+      ]
+    },
+    {
+      "id": "TECH-TYPEDEDGES",
+      "branch": "factory",
+      "title": "Typed Edge Grammar",
+      "research": "every edge takes one of the owner's verbs — combine (exactly two inputs fuse), extend (one input + a named capability), improve (one input + a MEASURED axis)",
+      "prereqs": [
+        "AG-METHOD",
+        "TR-PAGE"
+      ],
+      "state": "available",
       "prelim": [
         "OWNER 2026-07-28: all five factory integrations adopted; this grammar is the one the other four build on.",
         "Discipline per verb: combine keeps the SMAC two-input cap; extend must NAME the new capability; improve must name a measured axis — an improve claim without a number is not an improve. The schema probe enforces all three, so a lazy edge cannot ship."
-      ] },
-    { "id": "TECH-WORKORDERS", "branch": "factory", "title": "Work Order Queue", "research": "researchable techs double as factory work orders — inputs, operation, expected output — listed by operation type", "prereqs": ["TECH-TYPEDEDGES", "TR-PAGE"], "state": "available" },
-    { "id": "TECH-PRODUCTS", "branch": "factory", "title": "Products Shelf", "research": "derive the factory's product listing mechanically from ledger stanzas' scaffold_added[] — tool, birth cycle, operation; zero new bookkeeping", "prereqs": ["TR-LEDGER", "TF-LOOP"], "state": "available" },
-    { "id": "TECH-SUGGEST", "branch": "factory", "title": "Suggestion Synthesis", "research": "machine-proposed work orders: shared data source → combine candidate; defect-named tool → improve candidate (the defect is the axis); manually-run-every-cycle tool → extend-to-automation candidate", "prereqs": ["TF-PROBES", "TECH-TYPEDEDGES"], "state": "available" },
-    { "id": "TECH-TOOLHEALTH", "branch": "factory", "title": "Health Badges", "research": "tool families wear live status from existing substrate — probe results, churn-scan activity, workflow-scorecard cost-to-catch", "prereqs": ["TF-PROBES", "TR-PAGE"], "state": "available" },
-    { "id": "TECH-APPREVIEW", "branch": "tree", "title": "Tech Tree App Review", "research": "review the tech-tree system itself and generate improvement items across GUI, data model, interactivity, automation, progress tie-ins and self-testing", "prereqs": ["TR-PAGE", "AG-METHOD"], "state": "available", "signal": "app-review",
+      ],
+      "detail": [
+        "Born in cycle 141 (2026-07-28) when the owner picked ALL FIVE factory integrations from a presented menu; TECH-TYPEDEDGES is the grammar the other four build on, combining prereqs AG-METHOD + TR-PAGE.",
+        "Every edge must take one of the owner's three verbs: combine (exactly two inputs fuse, keeping the SMAC two-input cap), extend (one input plus a NAMED capability), improve (one input plus a MEASURED axis).",
+        "Its prelim notes carry the enforcement rule verbatim: 'an improve claim without a number is not an improve' — the schema probe is to enforce all three disciplines so a lazy edge cannot ship.",
+        "The ≤2-prereq cap this formalizes already paid off in the same cycle: the cycle-141 ledger notes the drawn-tree DAG layout was 'almost trivial' precisely because lazy edges had been refused since c138."
+      ]
+    },
+    {
+      "id": "TECH-WORKORDERS",
+      "branch": "factory",
+      "title": "Work Order Queue",
+      "research": "researchable techs double as factory work orders — inputs, operation, expected output — listed by operation type",
+      "prereqs": [
+        "TECH-TYPEDEDGES",
+        "TR-PAGE"
+      ],
+      "state": "available",
+      "detail": [
+        "The idea: researchable techs double as factory WORK ORDERS — inputs, operation, expected output — listed by operation type, turning the tech tree into a production queue.",
+        "It depends on TECH-TYPEDEDGES (plus TR-PAGE) and sits one prereq-depth layer deeper — the cycle-141 DOM verification explicitly checked that TECH-WORKORDERS rendered one layer right of TECH-TYPEDEDGES in the drawn SVG tree, proving depth chains were visible.",
+        "One of five factory integration nodes the owner adopted wholesale on 2026-07-28 (cycle 141), all standing as researchable 'available'-state nodes in config/tech-tree.json.",
+        "The factory page it lives on renders with a validated 4-color violet palette (#a678c8), a factory-with-spanner SVG badge, and a live inventory line counted per request ('603 scripts across 31 tool directories — counted this request') so the page cannot drift from disk."
+      ]
+    },
+    {
+      "id": "TECH-PRODUCTS",
+      "branch": "factory",
+      "title": "Products Shelf",
+      "research": "derive the factory's product listing mechanically from ledger stanzas' scaffold_added[] — tool, birth cycle, operation; zero new bookkeeping",
+      "prereqs": [
+        "TR-LEDGER",
+        "TF-LOOP"
+      ],
+      "state": "available",
+      "detail": [
+        "The mechanism: derive the factory's product shelf mechanically from ledger stanzas' scaffold_added[] arrays — tool, birth cycle, operation — with ZERO new bookkeeping, since every cycle already records what it built.",
+        "Its prereqs are TR-LEDGER + TF-LOOP: the machine-readable <!-- cycle:{...} --> stanzas (mandatory since cycle 47, schema-checked by two orient probes) are exactly the substrate that makes the derivation possible.",
+        "The raw material is rich: cycle 141 alone recorded scaffold_added entries like factory-branch, renderTreeSvg-DAG, factorySpanner-icon, and live-tool-inventory — each one a shelf item with a birth cycle.",
+        "Adopted 2026-07-28 in cycle 141 as one of the five owner-approved factory integrations, on a page whose foundations were counted before curated: 603 real scripts across 31 directories gave the seven tool families their weight."
+      ]
+    },
+    {
+      "id": "TECH-SUGGEST",
+      "branch": "factory",
+      "title": "Suggestion Synthesis",
+      "research": "machine-proposed work orders: shared data source → combine candidate; defect-named tool → improve candidate (the defect is the axis); manually-run-every-cycle tool → extend-to-automation candidate",
+      "prereqs": [
+        "TF-PROBES",
+        "TECH-TYPEDEDGES"
+      ],
+      "state": "available",
+      "detail": [
+        "The pitch is machine-PROPOSED work orders from observable patterns: two tools sharing a data source → a combine candidate; a tool named in a defect → an improve candidate with the defect as the measured axis; a tool manually run every cycle → an extend-to-automation candidate.",
+        "Its prereqs are TF-PROBES + TECH-TYPEDEDGES — the 19-probe rig and defect-bearing ledger stanzas supply the raw signals, and the typed-edge grammar gives each suggestion its verb.",
+        "The improve-candidate heuristic has real fuel: ledger stanzas carry structured defects[] entries (e.g. cycle 90's crawl-rate timezone bug), so a defect-named tool is machine-findable today.",
+        "One of the five factory integrations the owner selected all-at-once on 2026-07-28 (cycle 141) after the agent presented the menu — the same scope-elicitation pattern that in cycle 140 saved a rebuild ('eliciting scope cost one question; guessing wrong would have cost a rebuild')."
+      ]
+    },
+    {
+      "id": "TECH-TOOLHEALTH",
+      "branch": "factory",
+      "title": "Health Badges",
+      "research": "tool families wear live status from existing substrate — probe results, churn-scan activity, workflow-scorecard cost-to-catch",
+      "prereqs": [
+        "TF-PROBES",
+        "TR-PAGE"
+      ],
+      "state": "available",
+      "detail": [
+        "The idea: tool families wear LIVE status badges derived entirely from existing substrate — probe pass/fail results, churn-scan git activity, and workflow-scorecard cost-to-catch — no new instrumentation.",
+        "All three feeds already run at every orient: 19 registered probes via run-probes.js, churn-scan.js --json (itself probe-checked, RB-004), and workflow-scorecard.js whose cost-to-catch ratchet (≤4 turns per confirmed catch, ≥5 runs) was bootstrapped in cycle 48 with 13 labeled runs.",
+        "Prereqs are TF-PROBES + TR-PAGE; it was adopted 2026-07-28 as one of the five owner-approved cycle-141 factory integrations.",
+        "The factory page it would badge was DOM-verified live in cycle 141 by measurement rather than pixels (the pane wasn't compositing): 22 node rects, 10 edge paths, 6 layer positions confirmed the drawn tree."
+      ]
+    },
+    {
+      "id": "TECH-APPREVIEW",
+      "branch": "tree",
+      "title": "Tech Tree App Review",
+      "research": "review the tech-tree system itself and generate improvement items across GUI, data model, interactivity, automation, progress tie-ins and self-testing",
+      "prereqs": [
+        "TR-PAGE",
+        "AG-METHOD"
+      ],
+      "state": "available",
+      "signal": "app-review",
       "prelim": [
         "OWNER-APPROVED SCOPE (2026-07-28, all six): the review generates improvement ITEMS — new tech nodes, spec edits, and small direct fixes — across the six categories below, RANKED by value-per-effort. It ships the top slice, not the whole list; unshipped items become named techs or fog seeds so nothing evaporates.",
         "1 · GUI/UX: a real drawn tree — SVG edges connecting nodes instead of tier columns; per-tech datalinks pages (one page per tech, unlimited Preliminary Data); hover/detail states; mobile layout; motion when a node changes tier. The current tier-column layout was v1 pragmatism, not a decision.",
@@ -53,8 +468,27 @@
         "5 · Progress-picture tie-in: per-branch research counts (or the frontier itself) rendered into the committed progress.svg so the lanes and the tree tell one story — via committed inputs only, preserving the byte-compare staleness guarantee; grown nodes linking to the ledger cycle that researched them.",
         "6 · App self-testing: extend the live browser harness to the three tech pages — nothing currently clicks a signal button or opens a Preliminary Data block in a real browser; the check must ack its own test click as a test click (the c139 rule) so the queue stays honest.",
         "Constraint carried from the tree's own rules: every improvement item the review proposes must name its ≤2 foundations before it leaves the fog — the review is subject to the discipline it audits."
-      ] },
-    { "id": "TECH-TREEREVIEW", "branch": "agi", "title": "Tech Tree & Project Review", "research": "review the project plans and the tree itself; improve, and where needed create, the ideas for upcoming research", "prereqs": ["AG-METHOD", "TR-PROMPT"], "state": "available", "signal": "research-review",
+      ],
+      "detail": [
+        "config/tech-tree.json line 46: tree-branch tech 'Tech Tree App Review', combines TR-PAGE + AG-METHOD (the ≤2-prereq SMAC cap), state available, wired to signal 'app-review' — a second lightbulb button so the tree branch can request review of the tech-tree system itself.",
+        "Shipped in cycle 140 (2026-07-28, ~0.6 turn) after the owner said to present ideas BEFORE implementation: six improvement categories were offered in chat (GUI/UX, data model & rules, interactivity & signals, automation & write-back, progress-picture tie-in, app self-testing) and the owner chose ALL SIX — a GUI-only guess would have silently dropped automation and self-testing.",
+        "The approved scope lives as 8 Preliminary Data notes on the node, including the typed-edges idea (the owner's verbs combine/extend/improve are three relationships currently flattened into one 'combines' chip) and a fog-node idea box that writes straight into the signal queue without a chat turn.",
+        "The final prelim note makes the review subject to the discipline it audits: every improvement item it proposes must name its ≤2 foundations before it leaves the fog, and unshipped items become named techs or fog seeds 'so nothing evaporates'.",
+        "Building it surfaced a latent hardcoding from cycle 139: the request button's accent was hardcoded ice-blue; it now wears the page's branch accent — verified live as computed border rgb(85,163,119) green on /tech/tree while /tech/agi stays ice — 'a second instance is where hardcodings surface'.",
+        "The button was deliberately NOT clicked in verification: the signal path is cycle 139's already-proven code, and a second harness click would spend another ack for nothing (the c139 rule: ack your own test click or the button's first real use is burned); verified instead by 13/13 page tests, render smoke, live pane DOM, 17 probes passing."
+      ]
+    },
+    {
+      "id": "TECH-TREEREVIEW",
+      "branch": "agi",
+      "title": "Tech Tree & Project Review",
+      "research": "review the project plans and the tree itself; improve, and where needed create, the ideas for upcoming research",
+      "prereqs": [
+        "AG-METHOD",
+        "TR-PROMPT"
+      ],
+      "state": "available",
+      "signal": "research-review",
       "prelim": [
         "Scope of a review pass: every open/partial backlog row, every tech node on this tree, the roadmap steps, and the fog slots. The output is not a report — it is EDITS: sharpened research texts, corrected prereq edges, new tech nodes, and (rarely) a retired one, each traceable to a reason.",
         "Idea quality has a measurable proxy here: a research text is good when it names the REMAINDER (what to build next), not the answered question — the c129 rule. A review should rewrite any node whose text a newcomer could not act on tomorrow.",
@@ -62,16 +496,111 @@
         "Prereq edges are claims, and reviews should re-verify them: does TECH-DASH2B still genuinely combine CR-ENGINE + TR-PAGE, or has the design drifted? An edge nobody believes is worse than no edge.",
         "Fog promotion is the creative act: a Future Technology slot becomes a named tech when two foundations suggest a combination nobody has written down. Candidate seeds noticed so far: probe results rendered onto the tree nodes themselves (TR-PROBES + TR-PAGE); a crawl-quality scoreboard fed by content intelligence (CR-INTEL + TR-PICTURE); signal-driven research queues generalised beyond this one button (this very node + TR-PROMPT).",
         "Anti-goal: the review must not inflate the tree. SMAC's discipline applies to ideation too — a node that cannot name its two foundations is not ready to leave the fog."
-      ] },
-    { "id": "TECH-L3PROOF", "branch": "agi", "title": "Staged-Divergence Proof", "research": "harness base-URL mode + the staged SSR-vs-API divergence that gives L3 observed proof", "prereqs": ["AG-HARNESS", "TR-PAGE"], "state": "available",
+      ],
+      "detail": [
+        "Shipped cycle 139 (2026-07-27, Fable 5, owner directive) as 'Tech Tree & Project Review' on the AGI branch with a LARGE cold-light bulb button; prereqs AG-METHOD + TR-PROMPT, signal name 'research-review' in config/tech-tree.json.",
+        "The signal path is deliberately honest about agent sessions: no push channel exists, so a click POSTs to /api/research-signal, appends to gitignored data/agi-signals.jsonl, and rides the two surfaces the agent provably reads — a new agi-signal orient probe that goes RED ('RED here is not breakage — it is the OWNER TALKING') and a ⚡ OWNER SIGNAL line rendered ABOVE the curated selection in the generated next-prompt.",
+        "Proven end to end by clicking the real button in the pane: button flipped to RESEARCH REQUESTED with its signal id, probe went RED quoting the request, regenerated prompt carried the ⚡ line — then the test click was acknowledged AS a harness verification via tools/agi/ack-signal.js so the button's first real use would not be burned.",
+        "Its prelim[] block holds 6 curated notes, including the rule that a review's output 'is not a report — it is EDITS', the c129 remainder-quality proxy ('rewrite any node whose text a newcomer could not act on tomorrow'), and an anti-inflation clause: a node that cannot name its two foundations is not ready to leave the fog.",
+        "The prelim ranks idea sources by signal strength — ledger second_order slugs first ('every earned rule implies a tool that enforces it') — and names three fog-promotion seeds: probe results rendered on tree nodes, a crawl-quality scoreboard, and generalised signal-driven research queues.",
+        "Verification for the cycle: 123/123 jest across all three suites including 5 new signal tests (raise/ack roundtrip, double-ack refused, torn-line skipped, runaway note truncated, missing file = no signals), 17 probes pass, c135 live check 5/5."
+      ]
+    },
+    {
+      "id": "TECH-L3PROOF",
+      "branch": "agi",
+      "title": "Staged-Divergence Proof",
+      "research": "harness base-URL mode + the staged SSR-vs-API divergence that gives L3 observed proof",
+      "prereqs": [
+        "AG-HARNESS",
+        "TR-PAGE"
+      ],
+      "state": "available",
       "prelim": [
         "The gap being closed: L3 (DOM agrees with live API) is reasoned, not observed — a freshly spawned server renders current SSR, so DOM and API agree by construction. The proof needs data to MOVE after boot.",
         "Sketch: start the server against a fixture ledger, load the page once, append a stanza to the fixture, reload WITHOUT restarting — assert the DOM shows the new count while a frozen page would show the old one. Run it both with and without the c128.5 refresh() line to see the assertion flip."
-      ] },
-    { "id": "TECH-CSLIVE", "branch": "crawler", "title": "Crawl-Status Live Checks", "research": "extend the live harness to the crawler's own UI — the page with the most client behaviour", "prereqs": ["AG-HARNESS", "CR-FRONTIER"], "state": "available" },
-    { "id": "TECH-P5AUTO", "branch": "crawler", "title": "Place-Hub Refresh Automation", "research": "scheduled place-hub redownload driven by hub staleness", "prereqs": ["CR-FRONTIER", "CR-INTEL"], "state": "available" },
-    { "id": "TECH-HEADLINE2", "branch": "crawler", "title": "Frontier Headline Quality II", "research": "push real-headline yield further via shape preference + host density", "prereqs": ["CR-FRONTIER", "CR-INTEL"], "state": "available" },
-    { "id": "TECH-DASH2B", "branch": "crawler", "title": "Remote Activity Dashboard", "research": "activity/headline control + esbuild bundle served from the remote worker", "prereqs": ["CR-ENGINE", "TR-PAGE"], "state": "available" }
+      ],
+      "detail": [
+        "'Staged-Divergence Proof' on the AGI branch of config/tech-tree.json, prereqs AG-HARNESS + TR-PAGE, state available — it exists to close the one honestly-named gap in the cycle-135 live harness: L3 (DOM agrees with live API) is 'reasoned, not observed'.",
+        "Its prelim states why the proof is hard: a freshly spawned server renders current SSR, so DOM and API agree by construction — the historical failure it guards (cycle 128.5, SSR said 82 cycles while the API said 84) needs data to MOVE after boot.",
+        "The prelim's sketch is concrete: boot the server against a fixture ledger, load the page, append a stanza to the fixture, reload WITHOUT restarting, assert the DOM shows the new count — and run it both with and without the c128.5 refresh() line to watch the assertion flip.",
+        "It carries exactly 2 prelim notes (versus TECH-TREEREVIEW's 6), added in the same cycle-139 change that introduced the collapsible 'Preliminary Data' block on tech nodes.",
+        "It was the standing owner-block 'next' item for three consecutive cycles (136, 137, 138 all end 'L3 real proof / base-URL harness mode'), and cycle 138's closing line notes it became 'literally a 💡 node named TECH-L3PROOF on the AGI page'."
+      ]
+    },
+    {
+      "id": "TECH-CSLIVE",
+      "branch": "crawler",
+      "title": "Crawl-Status Live Checks",
+      "research": "extend the live harness to the crawler's own UI — the page with the most client behaviour",
+      "prereqs": [
+        "AG-HARNESS",
+        "CR-FRONTIER"
+      ],
+      "state": "available",
+      "detail": [
+        "The tech's premise is measured, not vibes: RB-009's cycle-133 inventory (tools/dev/ui-check-inventory.js) counted 82 UI self-tests totalling ~10,600 lines, of which 75 (91%) are in-process render + string assertions — blind BY CONSTRUCTION to the cycle-128.5 defect class — and only 4/82 (5%) run in a real browser; even the 3 screenshot checks photograph SSR HTML, not a live page.",
+        "The defect class it targets is real: cycle 128.5 found the status page's SSR frozen at publish (SSR said 82 cycles while the API said 84) with the client silently repairing the DOM so every string assertion read as correct; the fix shipped with no guard until RB-011's progress-surface probe converted it to a runnable contract.",
+        "Crawl-status is the riskiest page for this class because crawl-status-client.js emits its entire client script from one backtick template literal that eats regex backslashes — a trap that has bitten four distinct ways (backslash-eating → apiBasePath-scope → contrast → phantom rates), banked in the crawl-status-client-template-trap memory.",
+        "Live verification has already beaten every static check on this exact page once: the client emitted fine (40,537 chars) and all emitted-text checks passed while the real page was broken — the bug only surfaced in a live browser.",
+        "Extra wrinkle for the harness: crawl-status renders inside an iframe at /crawl-status (not the shell page), so puppeteer must target the frame — a lesson from the P4-era screenshot loop; a ui-browser-coverage no-regression floor (raised 4→5 deliberately) already guards browser-check count."
+      ]
+    },
+    {
+      "id": "TECH-P5AUTO",
+      "branch": "crawler",
+      "title": "Place-Hub Refresh Automation",
+      "research": "scheduled place-hub redownload driven by hub staleness",
+      "prereqs": [
+        "CR-FRONTIER",
+        "CR-INTEL"
+      ],
+      "state": "available",
+      "detail": [
+        "The manual foundation shipped 2026-07-20 as RB-012 P5: ncdb selectPlaceHubUrlsForPlace merges place_page_mappings (place_id-keyed) with place_hubs (slug-keyed, homonym-guarded via place_kind + all-known-names slug variants), and POST /api/v1/crawl/place-hubs/redownload {placeId} force-enqueues with recency bypassed then reuses P4's exact dequeue→job→reconcile machinery.",
+        "Live proof used placeId 440 (Ukraine): 5 hub URLs merged from 2 sources across 5 hosts — aljazeera.com surfaced ONLY via place_hubs, proving the merge does real work; theguardian.com and independent.co.uk saved fresh content (467KB/277KB) while cnn (403) and telegraph (402) were genuine site blocks correctly reported as failures.",
+        "A RedownloadCooldownGuard (mirroring HostRetryBudgetManager's shape) already protects against re-click storms — the exact primitive a staleness-driven scheduler must respect; 10 new tests shipped including a live-shaped homonym trap, with the full ncdb suite at 836/839.",
+        "P5's live run found a real reconciliation gap in the reused P4 machinery — al jazeera's fetch succeeded at a redirect target but reconciliation only checked the originally-queued url_id, producing a false \"failed\" on a real success — fixed as its own follow-up (task #17, redirect_chain fallback).",
+        "The upstream hub data is shaky in ways automation must handle: find-place-hubs once persisted ZERO hubs from 3 compounding bugs (url_id drift, dropped gazetteer init, defeated detection gate), its counters lie without the uq_place_hubs_url_id unique index, real-data nav_links_count is ~94% null, and dead-hub suppression already marks hubDead=54."
+      ]
+    },
+    {
+      "id": "TECH-HEADLINE2",
+      "branch": "crawler",
+      "title": "Frontier Headline Quality II",
+      "research": "push real-headline yield further via shape preference + host density",
+      "prereqs": [
+        "CR-FRONTIER",
+        "CR-INTEL"
+      ],
+      "state": "available",
+      "detail": [
+        "Round one (cycle 50) proved the binding constraint was hub-domination, not URL shape: shape preference alone still yielded \"Society\"/\"Education\" section titles because requeuedHubs=6/6; the hubFraction cap (0.5) + hub-backfill was the real lever, and the acceptance test flipped from section titles to real headlines in one live crawl (~56 pages).",
+        "Round two (cycle 75) hardened the predicate itself on 1,800 real DB URLs — recovering 136 under-selected articles and rejecting 33 live-blog pagination fragments — with an adversarial 3-skeptic review refuting the first fix twice on multi-word section-hub landings the stratified sample had missed (apnews /hub/us-department-of-education vs the control /hub/congress).",
+        "Cycle 77 established the measure-before-build precedent this node inherits: the recommended url-intelligence negative veto was measured redundant on a 5,000-URL real frontier sample, and the shipped alternative — a frontier-composition report tool (label distribution × copilot-admit overlap × cross-host share-junk count, WAL-safe via timed-probe) — is the instrument any further headline push should read first.",
+        "The other proven quality levers already exist to combine: host-density ranking (frontier-hosts.js, necessary-but-not-sufficient per the frontier-leak memory), the article-new quality gate + yield filter (default 0.6 keeps nytimes at 84% yield; strict 0.9 excludes it and backfills cnn/scmp), and per-request hubFraction tuning on /frontier/hydrate.",
+        "Known residual junk source: ~16k cross-host social-share links pollute discovery, but cycle 79 proved they CANNOT be filtered at discovery time — news-db-analysis's GraphAccess interface explicitly consumes cross-host edges, so the filter must live at selection, not storage."
+      ]
+    },
+    {
+      "id": "TECH-DASH2B",
+      "branch": "crawler",
+      "title": "Remote Activity Dashboard",
+      "research": "activity/headline control + esbuild bundle served from the remote worker",
+      "prereqs": [
+        "CR-ENGINE",
+        "TR-PAGE"
+      ],
+      "state": "available",
+      "detail": [
+        "D4 slice 2b (activity/headline control + esbuild bundle served from the remote worker) is the loop's longest-deferred slice: task #54 is still pending, having been explicitly deferred across cycles 73-74 for the engine extraction and again at cycles 77-80.",
+        "Cycle 79's consumer-grep found the D4 slice-2 controls (ThroughputStripControl, HostHealthBadgesControl from cycles 71-72) were UNMOUNTED scaffold — zero live pages rendered them and the only /api/v1/crawl/dashboard-model consumers were the controls themselves plus a dev tool — so instead of building slice 2b on unmounted scaffold, the cycle gave the endpoint its first real consumer.",
+        "That first consumer is the live crawl-throughput strip on the home control center (docs/s down · docs/s stored · MB/s · queue), hydrated client-side in the existing 5s poll and built backslash-free/textContent-only so it is template-trap-safe by construction; a live mid-crawl screenshot showed it updating with 0 console errors.",
+        "The slice's real home is the remote multi-domain-server route on the Oracle box — the ledger notes \"the controls' real home; latent until the remote-serving lift\" — which is why the tech-tree edge combines CR-ENGINE with TR-PAGE.",
+        "The remote target already runs a dashboard-capable server: Oracle's v2 responds \"Multi-Domain Crawl Server v4\" on /api/health, and the documented /status.json health path was found to 404 (deploy drift caught and corrected in cycle 64's unification research).",
+        "Cycle 79 also demonstrated the electron-restart-gotcha en route: the first restart probe reported httpOk:false, and the agent verified its own code rendered standalone before blaming it — the failure was transient, banked as its own memory rule."
+      ]
+    }
   ],
   "fogPerBranch": 2
 }

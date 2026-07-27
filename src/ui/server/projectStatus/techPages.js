@@ -55,7 +55,114 @@ function prereqChips(prereqs, branches) {
   return `<div class="tp-node__req">combines ${prereqs.map(chip).join(' + ')}</div>`;
 }
 
-function node(cls, inner) { return `<div class="tp-node ${cls}">${inner}</div>`; }
+function node(cls, inner, nodeId) {
+  const attrs = nodeId ? ` data-node-id="${esc(nodeId)}" role="button" tabindex="0"` : '';
+  return `<div class="tp-node ${cls}"${attrs}>${inner}</div>`;
+}
+
+// ---- node detail modal (owner 2026-07-28: click any tech-tree item, any tree,
+// for a popup with further information — a browsing tool for thinking time). ----
+
+/**
+ * One flat index of EVERY node across ALL branches rides each page as a JSON data
+ * island, so clicking a dashed foreign node opens its real record and chips can hop
+ * branch to branch without a page load. The island is the same objects the tiers
+ * render from — one source, no drift.
+ */
+function nodeDataIsland(techTree) {
+  const out = {};
+  for (const b of (techTree.branches || [])) {
+    const base = { branch: b.key, branchLabel: b.label, color: b.color };
+    for (const r of b.roots) out[r.id] = { ...r, ...base, kind: 'foundation' };
+    for (const g of b.grown) out[g.id] = { ...g, ...base, kind: 'researched' };
+    for (const a of b.available) out[a.id] = { ...a, ...base, kind: 'research available' };
+    for (const g of b.gated) out[g.id] = { ...g, ...base, kind: 'gated' };
+    for (const f of b.future) {
+      out[f.id] = {
+        ...f, ...base, kind: 'fog',
+        note: 'Not yet conceptualised. Blind research: the far tree is deliberately unrevealed, and a fog slot has no edges because what feeds it is unknown. It becomes a named technology when two foundations suggest a combination worth writing down — the reviews (and the owner) do that promotion.'
+      };
+    }
+  }
+  // </script> inside JSON would end the island early; \u003c keeps it inert.
+  return `<script type="application/json" id="tp-node-data">${JSON.stringify(out).replace(/</g, '\\u003c')}</script>`;
+}
+
+const MODAL_HTML = `<dialog class="tp-modal" id="tp-modal">
+  <div class="tp-modal__bar"><span class="tp-modal__id" id="tpm-id"></span><button class="tp-modal__x" id="tpm-close" type="button" aria-label="close">✕</button></div>
+  <h2 class="tp-modal__title" id="tpm-title"></h2>
+  <div class="tp-modal__meta" id="tpm-meta"></div>
+  <div class="tp-modal__body" id="tpm-body"></div>
+</dialog>`;
+
+const MODAL_SCRIPT = `<script>
+(function () {
+  var data = {};
+  try { data = JSON.parse(document.getElementById('tp-node-data').textContent); } catch (e) {}
+  var dlg = document.getElementById('tp-modal');
+  var el = function (tag, cls, text) {
+    var d = document.createElement(tag);
+    if (cls) d.className = cls;
+    if (text !== undefined) d.textContent = text;
+    return d;
+  };
+  function chipRow(label, ids) {
+    if (!ids || !ids.length) return null;
+    var row = el('div', 'tp-modal__chips');
+    row.appendChild(el('span', 'tp-modal__chiplabel', label));
+    ids.forEach(function (id) {
+      var n = data[id] || {};
+      var c = el('button', 'tp-chip tp-chip--hop', id);
+      c.type = 'button';
+      if (n.color) { c.style.borderColor = n.color; c.style.color = n.color; }
+      c.addEventListener('click', function () { openNode(id); });
+      row.appendChild(c);
+    });
+    return row;
+  }
+  function section(title) { return el('div', 'tp-modal__sec', title); }
+  function openNode(id) {
+    var n = data[id];
+    if (!n) return;
+    document.getElementById('tpm-id').textContent = (n.branchLabel || '') + ' · ' + (id.indexOf('future') >= 0 ? 'FOG OF WAR' : id);
+    document.getElementById('tpm-title').textContent = n.title || id;
+    var meta = [n.kind];
+    if (n.priority) meta.push('priority ' + n.priority);
+    if (n.researchedOn) meta.push('researched ' + n.researchedOn);
+    if (n.lastUpdate) meta.push('updated ' + n.lastUpdate);
+    document.getElementById('tpm-meta').textContent = meta.filter(Boolean).join(' · ');
+    dlg.style.setProperty('--accent', n.color || '#8a8778');
+    var body = document.getElementById('tpm-body');
+    while (body.firstChild) body.removeChild(body.firstChild);
+    if (n.research) { body.appendChild(section('RESEARCH MEANS')); body.appendChild(el('p', 'tp-modal__p', n.research)); }
+    if (n.note && !n.research) { body.appendChild(section(n.kind === 'fog' ? 'THE FOG' : 'WHAT THIS IS')); body.appendChild(el('p', 'tp-modal__p', n.note)); }
+    if (n.question) { body.appendChild(section('THE QUESTION')); body.appendChild(el('p', 'tp-modal__p', n.question)); }
+    var combines = chipRow('combines', (n.prereqs || []).map(function (p) { return p.id; }));
+    if (combines) { body.appendChild(section('BUILT FROM')); body.appendChild(combines); }
+    var unlocks = chipRow('unlocks', n.unlocks);
+    if (unlocks) { body.appendChild(section('UNLOCKS')); body.appendChild(unlocks); }
+    if (n.statusProse) { body.appendChild(section('FULL RECORD (research backlog, live)')); body.appendChild(el('p', 'tp-modal__p tp-modal__p--prose', n.statusProse)); }
+    (n.detail || []).length && body.appendChild(section('DETAIL — from the project record'));
+    (n.detail || []).forEach(function (d) { body.appendChild(el('p', 'tp-modal__p tp-modal__p--fact', '▪ ' + d)); });
+    (n.prelim || []).length && body.appendChild(section('PRELIMINARY DATA — ' + n.prelim.length + ' notes'));
+    (n.prelim || []).forEach(function (p) { body.appendChild(el('p', 'tp-modal__p', p)); });
+    if (typeof dlg.showModal === 'function' && !dlg.open) dlg.showModal();
+    dlg.scrollTop = 0;
+  }
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('button.tp-signal') || e.target.closest('.tp-prelim')) return;
+    var host = e.target.closest('[data-node-id]');
+    if (host) openNode(host.getAttribute('data-node-id'));
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var host = e.target.closest && e.target.closest('[data-node-id]');
+    if (host) { e.preventDefault(); openNode(host.getAttribute('data-node-id')); }
+  });
+  document.getElementById('tpm-close').addEventListener('click', function () { dlg.close(); });
+  dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
+})();
+</script>`;
 
 /** 'Preliminary Data' — a tech's ideation, collapsed until the reader wants it. */
 function prelimBlock(prelim) {
@@ -191,9 +298,9 @@ function renderTreeSvg(b, branches) {
     const glow = n.kind === 'avail' ? `<rect x="${p.x - 1.5}" y="${p.y - 1.5}" width="${NW + 3}" height="${NH + 3}" rx="6" fill="none" stroke="${accent}" stroke-width="0.6" opacity="0.4"/>` : '';
     const t = n.title.length > 21 ? `${n.title.slice(0, 20)}…` : n.title;
     const label = n.kind === 'fog' ? '❓ Future Technology' : t;
-    return `${glow}<rect x="${p.x}" y="${p.y}" width="${NW}" height="${NH}" rx="5" ${style}/>
+    return `<g data-node-id="${esc(n.id)}" style="cursor:pointer">${glow}<rect x="${p.x}" y="${p.y}" width="${NW}" height="${NH}" rx="5" ${style}/>
 <text x="${p.x + 7}" y="${p.y + 12}" font-family="Segoe UI, sans-serif" font-size="8" fill="${n.kind === 'fog' ? '#6b675a' : '#8a8778'}">${esc(n.kind === 'fog' ? '' : n.id)}</text>
-<text x="${p.x + 7}" y="${p.y + 23}" font-family="Segoe UI, sans-serif" font-size="9" font-weight="600" fill="${n.kind === 'fog' ? '#6b675a' : '#e8e4d8'}">${esc(label)}</text>`;
+<text x="${p.x + 7}" y="${p.y + 23}" font-family="Segoe UI, sans-serif" font-size="9" font-weight="600" fill="${n.kind === 'fog' ? '#6b675a' : '#e8e4d8'}">${esc(label)}</text></g>`;
   }).join('');
 
   return `<section class="tp-treeview"><h2 class="tp-tier__head">TREE VIEW</h2>
@@ -213,23 +320,23 @@ function renderTechPage(branchKey, techTree, opts = {}) {
   const pendingSignals = opts.pendingSignals || [];
 
   const rootsHtml = b.roots.map((r) => node('tp-node--root',
-    `<div class="tp-node__t">${esc(r.id)} · ${esc(r.title)}</div><div class="tp-node__s">${esc(r.note)}</div>`)).join('')
+    `<div class="tp-node__t">${esc(r.id)} · ${esc(r.title)}</div><div class="tp-node__s">${esc(r.note)}</div>`, r.id)).join('')
     || node('tp-node--seed', 'no foundations recorded for this branch');
 
   const grownHtml = b.grown.map((g) => node('tp-node--grown',
-    `<div class="tp-node__t">✓ ${esc(g.id)} · ${esc(g.title)}</div><div class="tp-node__s">researched ${esc(g.researchedOn)}</div>${prereqChips(g.prereqs, branches)}${prelimBlock(g.prelim)}`)).join('');
+    `<div class="tp-node__t">✓ ${esc(g.id)} · ${esc(g.title)}</div><div class="tp-node__s">researched ${esc(g.researchedOn)}</div>${prereqChips(g.prereqs, branches)}${prelimBlock(g.prelim)}`, g.id)).join('');
 
   const availHtml = b.available.map((a) => node('tp-node--avail',
     `<div class="tp-node__t">${branchKey === 'agi' ? ICONS.iceBulb(15) : '💡'} ${esc(a.id)} · ${esc(a.title)}</div>` +
     `<div class="tp-node__s">research: ${esc(a.research)}</div>${prereqChips(a.prereqs, branches)}` +
-    `${a.signal ? signalButton(a, pendingSignals) : ''}${prelimBlock(a.prelim)}`)).join('')
+    `${a.signal ? signalButton(a, pendingSignals) : ''}${prelimBlock(a.prelim)}`, a.id)).join('')
     || node('tp-node--seed', 'no research currently available on this branch');
 
   const gatedHtml = b.gated.map((g) => node('tp-node--gated',
-    `<div class="tp-node__t">🔒 ${esc(g.id)} · ${esc(g.title)}</div><div class="tp-node__s">${esc(g.note)}</div>${prereqChips(g.prereqs, branches)}`)).join('')
+    `<div class="tp-node__t">🔒 ${esc(g.id)} · ${esc(g.title)}</div><div class="tp-node__s">${esc(g.note)}</div>${prereqChips(g.prereqs, branches)}`, g.id)).join('')
     || node('tp-node--seed', 'nothing gated');
 
-  const fogHtml = b.future.map((f) => node('tp-node--fog', `<div class="tp-node__t">❓ ${esc(f.title)}</div>`)).join('');
+  const fogHtml = b.future.map((f) => node('tp-node--fog', `<div class="tp-node__t">❓ ${esc(f.title)}</div>`, f.id)).join('');
 
   const others = branches.filter((x) => x.key !== branchKey)
     .map((o) => `<a class="tp-cross" href="/tech/${o.key}" style="border-color:${o.color}">${ICONS[o.icon](14)} ${esc(o.label)}: ${o.available.length} research available</a>`)
@@ -255,7 +362,10 @@ ${renderTreeSvg(b, branches)}
 </main>
 <div class="tp-others">${others}</div>
 <footer class="tp-foot">${branchKey === 'factory' && opts.toolInventory ? `live inventory: ${opts.toolInventory.total} scripts across ${opts.toolInventory.dirs} tool directories (counted this request) · ` : ''}rendered per request from tech-tree.json (structure) · RESEARCH_BACKLOG states · roadmap.json cutoff · reload to refresh — this page cannot go stale${techTree.absorbed ? ` · ${techTree.absorbed} pre-tree research items absorbed into the foundations` : ''}</footer>
+${nodeDataIsland(techTree)}
+${MODAL_HTML}
 ${SIGNAL_SCRIPT}
+${MODAL_SCRIPT}
 </body></html>`;
 }
 
@@ -297,6 +407,24 @@ const CSS = `
 .tp-prelim__p { font-size: 10px; color: #a39f8f; margin: 6px 0 0; line-height: 1.5; }
 .tp-treeview { padding: 14px 22px 0; }
 .tp-treeview__scroll { overflow-x: auto; background: #0c0e11; border: 1px solid #232833; border-radius: 6px; padding: 6px; }
+[data-node-id] { cursor: pointer; }
+.tp-node[data-node-id]:hover { border-color: #8a8778; }
+.tp-modal { background: #14171c; color: #e8e4d8; border: 2px solid var(--accent, #8a8778); border-radius: 8px; padding: 0 18px 16px; max-width: 640px; width: min(92vw, 640px); max-height: 84vh; box-shadow: 0 0 40px rgba(0,0,0,0.7), 0 0 18px color-mix(in srgb, var(--accent, #8a8778) 25%, transparent); }
+.tp-modal::backdrop { background: rgba(6, 8, 11, 0.75); }
+.tp-modal__bar { display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #14171c; padding: 12px 0 6px; }
+.tp-modal__id { font-size: 10px; letter-spacing: 0.16em; color: var(--accent, #8a8778); }
+.tp-modal__x { background: none; border: 1px solid #2e3440; color: #8a8778; border-radius: 4px; cursor: pointer; font-size: 11px; padding: 2px 8px; }
+.tp-modal__x:hover { color: #e8e4d8; border-color: #8a8778; }
+.tp-modal__title { font-size: 17px; letter-spacing: 0.04em; margin: 2px 0 4px; }
+.tp-modal__meta { font-size: 10px; color: #8a8778; border-bottom: 1px solid #232833; padding-bottom: 8px; }
+.tp-modal__sec { font-size: 9.5px; letter-spacing: 0.16em; color: var(--accent, #8a8778); margin: 14px 0 4px; }
+.tp-modal__p { font-size: 11.5px; line-height: 1.55; color: #cfcabd; margin: 4px 0; }
+.tp-modal__p--prose { font-size: 10.5px; color: #a39f8f; }
+.tp-modal__p--fact { color: #d8d3c4; }
+.tp-modal__chips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.tp-modal__chiplabel { font-size: 9px; color: #6b675a; margin-right: 3px; }
+.tp-chip--hop { cursor: pointer; background: none; font-family: inherit; padding: 2px 7px; }
+.tp-chip--hop:hover { background: #1b1f26; }
 .tp-others { display: flex; gap: 10px; padding: 4px 22px 10px; flex-wrap: wrap; }
 .tp-cross { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: #8a8778; text-decoration: none; border: 1px dashed; border-radius: 4px; padding: 5px 9px; }
 .tp-cross:hover { color: #e8e4d8; }

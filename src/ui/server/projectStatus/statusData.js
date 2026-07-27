@@ -92,7 +92,10 @@ function buildTechTree(backlogRows, roadmap, spec) {
 
   const branches = Object.entries(spec.branches).map(([key, b]) => ({
     key, label: b.label, color: b.color, icon: b.icon, tagline: b.tagline || '',
-    roots: spec.roots.filter((r) => r.branch === key).map((r) => ({ id: r.id, title: r.title, note: r.note || '' })),
+    roots: spec.roots.filter((r) => r.branch === key).map((r) => ({
+      id: r.id, title: r.title, note: r.note || '',
+      ...(Array.isArray(r.detail) && r.detail.length ? { detail: r.detail } : {})
+    })),
     grown: [], available: [], gated: [],
     future: Array.from({ length: spec.fogPerBranch || 2 }, (_, i) => ({ id: `${key}-future-${i + 1}`, title: 'Future Technology' }))
   }));
@@ -108,8 +111,14 @@ function buildTechTree(backlogRows, roadmap, spec) {
     if (t.ref) {
       const row = byId.get(t.ref);
       if (!row) throw new Error(`${owner}: no such backlog row — a ref must point at a real RB id`);
-      const node = { id: row.id, title: shortTitle(row.question), prereqs };
+      // Full backlog prose rides along for the detail modal (cycle 142) — the status
+      // cell is the richest record an RB node has, and it stays single-source (live).
+      const node = {
+        id: row.id, title: shortTitle(row.question), prereqs,
+        question: row.question, statusProse: row.status, priority: row.priority || '', lastUpdate: row.lastUpdate || ''
+      };
       if (Array.isArray(t.prelim) && t.prelim.length) node.prelim = t.prelim;
+      if (Array.isArray(t.detail) && t.detail.length) node.detail = t.detail;
       if (row.state === 'done' || row.state === 'superseded') {
         const grownDate = /^\d{4}-\d{2}-\d{2}$/.test(String(row.lastUpdate || '')) && cutoff && row.lastUpdate > cutoff;
         if (grownDate) dest.grown.push({ ...node, researchedOn: row.lastUpdate });
@@ -129,6 +138,7 @@ function buildTechTree(backlogRows, roadmap, spec) {
       // 'Preliminary Data' (owner 2026-07-27): a tech may carry extensive ideation
       // about accomplishing it — rendered as a collapsible block on its branch page.
       if (Array.isArray(t.prelim) && t.prelim.length) extra.prelim = t.prelim;
+      if (Array.isArray(t.detail) && t.detail.length) extra.detail = t.detail;
       // A signal-bearing tech renders the big lightbulb REQUEST button; the click
       // lands in data/agi-signals.jsonl and reaches the agent via orient + prompt.
       if (t.signal) extra.signal = t.signal;
@@ -139,6 +149,23 @@ function buildTechTree(backlogRows, roadmap, spec) {
   // Completed RB rows the spec does not reference are also pre-tree history: absorbed.
   const referenced = new Set(spec.techs.filter((t) => t.ref).map((t) => t.ref));
   absorbed += backlogRows.filter((r) => (r.state === 'done' || r.state === 'superseded') && !referenced.has(r.id)).length;
+
+  // Reverse edges (cycle 142): every node learns what it UNLOCKS — derived by
+  // scanning all techs' prereqs, so it can never disagree with the forward edges.
+  const index = new Map();
+  for (const b of branches) {
+    for (const list of [b.roots, b.grown, b.available, b.gated]) for (const n of list) index.set(n.id, n);
+  }
+  for (const b of branches) {
+    for (const list of [b.grown, b.available, b.gated]) {
+      for (const n of list) {
+        for (const p of (n.prereqs || [])) {
+          const src = index.get(p.id);
+          if (src) (src.unlocks = src.unlocks || []).push(n.id);
+        }
+      }
+    }
+  }
 
   return { branches, absorbed };
 }
