@@ -44,34 +44,22 @@ const recentText = (r) => `${r.correction ? '↺' : '·'} c${r.cycle} — ${r.la
 // as CHIP_DEFS. States derive from the backlog's state column; only open/partial
 // rows earn the 💡 (they are exactly the ▶ candidates next-prompt offers). The tree
 // is deliberately not fully visible: '❓ Future Technology' marks the fog of war.
-const TREE_COLS = [
-  { key: 'grown', head: '✓ RESEARCHED ON THE TREE', empty: 'none yet — the tree starts here' },
-  { key: 'available', head: '💡 RESEARCH AVAILABLE' },
-  { key: 'gated', head: '🔒 GATED' },
-  { key: 'future', head: '❓ NOT YET REVEALED' }
-];
-// Everything completed before the tree existed is its ROOTS: real, load-bearing,
-// and deliberately not displayed (owner: don't pigeonhole past work into the tree).
-const rootsText = (roots) =>
-  `🌱 roots — ${roots && roots.count ? roots.count : 0} technologies researched before the tree; not displayed`;
-function techNodeModel(colKey, n) {
-  const sub = [];
-  if (colKey === 'grown') {
-    if (n.researchedOn) sub.push(`researched ${n.researchedOn}`);
-    if (n.buildsOn && n.buildsOn.length) sub.push(`builds on ${n.buildsOn.join(' + ')}`);
-    return { cls: 'ps-tech ps-tech--done', title: `✓ ${n.id} · ${n.title}`, sub };
-  }
-  if (colKey === 'available') {
-    sub.push(`research: ${n.research}`);
-    if (n.buildsOn && n.buildsOn.length) sub.push(`builds on ${n.buildsOn.join(' + ')}`);
-    return { cls: 'ps-tech ps-tech--avail', title: `💡 ${n.id} · ${n.title}`, sub };
-  }
-  if (colKey === 'gated') {
-    if (n.note) sub.push(n.note);
-    return { cls: 'ps-tech ps-tech--gated', title: `🔒 ${n.id} · ${n.title}`, sub };
-  }
-  return { cls: 'ps-tech ps-tech--future', title: `❓ ${n.title}`, sub: [] };
+// The hub shows one CARD per branch, linking to its SMAC-style page (/tech/<key>)
+// where the full tiers + SVG art render per request. Emoji stand in for the branch
+// icons here (the isomorphic bundle treats control text as text, so inline SVG art
+// belongs on the server-rendered pages); the branch COLOR carries on the card border.
+const BRANCH_EMOJI = { iceBulb: '💡', treeMonitor: '🖥️', spiderWeb: '🕷️' };
+function branchCardModel(b) {
+  return {
+    key: b.key,
+    href: `/tech/${b.key}`,
+    color: b.color,
+    title: `${BRANCH_EMOJI[b.icon] || '▣'} ${b.label}`,
+    tagline: b.tagline || '',
+    counts: `${b.roots.length} foundations · ${b.grown.length + b.available.length} research (${b.available.length} open) · ${b.gated.length} gated · ${b.future.length} beyond`
+  };
 }
+const absorbedText = (n) => `🌱 ${n || 0} pre-tree research items absorbed into the foundations — the deep roots are not displayed`;
 function roadCardModels(s) {
   const cards = [];
   const r = s.roadmap || {};
@@ -194,32 +182,26 @@ class Status_Widget extends Control {
     });
     research.add(strip);
 
-    research.add(this._el('h2', 'ps-h', 'RESEARCH — TECH TREE'));
+    research.add(this._el('h2', 'ps-h', 'RESEARCH — TECH TREE BRANCHES'));
     if (s.techTree && s.techTree.error) {
       research.add(this._el('div', 'ps-quest-item ps-input', `tech tree unavailable: ${s.techTree.error}`));
     }
-    const rootsLine = this._el('div', 'ps-tree__roots', rootsText(s.techTree && s.techTree.roots));
-    rootsLine.dom.attributes['data-ps-tree-roots'] = 'true';
-    research.add(rootsLine);
-    const tree = this._el('div', 'ps-tree');
-    for (const col of TREE_COLS) {
-      const colBox = this._el('div', 'ps-tree__col');
-      colBox.add(this._el('div', 'ps-tree__head', col.head));
-      const list = this._el('div', 'ps-tree__list');
-      list.dom.attributes['data-ps-tree'] = col.key;
-      const items = (s.techTree && s.techTree[col.key]) || [];
-      if (!items.length && col.empty) list.add(this._el('div', 'ps-tech ps-tech--seed', col.empty));
-      for (const n of items) {
-        const m = techNodeModel(col.key, n);
-        const nodeEl = this._el('div', m.cls);
-        nodeEl.add(this._el('div', 'ps-tech__t', m.title));
-        for (const line of m.sub) nodeEl.add(this._el('div', 'ps-tech__s', line));
-        list.add(nodeEl);
-      }
-      colBox.add(list);
-      tree.add(colBox);
+    const branchesBox = this._el('div', 'ps-branches');
+    branchesBox.dom.attributes['data-ps-branches'] = 'true';
+    for (const b of ((s.techTree && s.techTree.branches) || [])) {
+      const m = branchCardModel(b);
+      const card = this._el('a', 'ps-branch');
+      card.dom.attributes.href = m.href;
+      card.dom.attributes.style = `border-color:${m.color};`;
+      card.add(this._el('div', 'ps-branch__t', m.title));
+      card.add(this._el('div', 'ps-branch__tag', m.tagline));
+      card.add(this._el('div', 'ps-branch__n', m.counts));
+      branchesBox.add(card);
     }
-    research.add(tree);
+    research.add(branchesBox);
+    const absorbedLine = this._el('div', 'ps-tree__roots', absorbedText(s.techTree && s.techTree.absorbed));
+    absorbedLine.dom.attributes['data-ps-absorbed'] = 'true';
+    research.add(absorbedLine);
     this.add(research);
 
     // ---- history: the committed progress SVG, same data substrate ----
@@ -330,34 +312,24 @@ class Status_Widget extends Control {
         road.appendChild(card);
       });
     }
-    if (s.techTree) {
-      setText('[data-ps-tree-roots]', rootsText(s.techTree.roots));
-      for (const col of TREE_COLS) {
-        const list = q(`[data-ps-tree="${col.key}"]`);
-        if (!list) continue;
-        while (list.firstChild) list.removeChild(list.firstChild);
-        const items = s.techTree[col.key] || [];
-        if (!items.length && col.empty) {
-          const seed = document.createElement('div');
-          seed.className = 'ps-tech ps-tech--seed';
-          seed.textContent = col.empty;
-          list.appendChild(seed);
-        }
-        for (const n of items) {
-          const m = techNodeModel(col.key, n);
-          const nodeEl = document.createElement('div');
-          nodeEl.className = m.cls;
-          const t = document.createElement('div');
-          t.className = 'ps-tech__t';
-          t.textContent = m.title;
-          nodeEl.appendChild(t);
-          for (const line of m.sub) {
+    if (s.techTree && Array.isArray(s.techTree.branches)) {
+      setText('[data-ps-absorbed]', absorbedText(s.techTree.absorbed));
+      const box = q('[data-ps-branches]');
+      if (box) {
+        while (box.firstChild) box.removeChild(box.firstChild);
+        for (const b of s.techTree.branches) {
+          const m = branchCardModel(b);
+          const card = document.createElement('a');
+          card.className = 'ps-branch';
+          card.href = m.href;
+          card.style.borderColor = m.color;
+          for (const [cls, text] of [['ps-branch__t', m.title], ['ps-branch__tag', m.tagline], ['ps-branch__n', m.counts]]) {
             const d = document.createElement('div');
-            d.className = 'ps-tech__s';
-            d.textContent = line;
-            nodeEl.appendChild(d);
+            d.className = cls;
+            d.textContent = text;
+            card.appendChild(d);
           }
-          list.appendChild(nodeEl);
+          box.appendChild(card);
         }
       }
     }
@@ -450,7 +422,14 @@ Status_Widget.css = `
 .ps-road__main { font-size: 12px; font-weight: 600; color: #e8e4d8; }
 .ps-road__sub { font-size: 10px; color: #8a8778; margin-top: 4px; }
 .ps-road__arrow { align-self: center; color: #b8862e; font-size: 16px; flex: 0 0 auto; }
-.ps-tree__roots { font-size: 10px; color: #6b675a; border-bottom: 1px dashed #2e3440; padding-bottom: 6px; margin-bottom: 8px; }
+.ps-tree__roots { font-size: 10px; color: #6b675a; border-top: 1px dashed #2e3440; padding-top: 6px; margin-top: 8px; }
+.ps-branches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 760px) { .ps-branches { grid-template-columns: 1fr; } }
+.ps-branch { display: block; background: #101216; border: 2px solid #2e3440; border-radius: 6px; padding: 10px 12px; text-decoration: none; color: inherit; }
+.ps-branch:hover { background: #14171c; box-shadow: 0 0 8px rgba(184,134,46,0.15); }
+.ps-branch__t { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; color: #e8e4d8; }
+.ps-branch__tag { font-size: 10px; color: #8a8778; margin-top: 4px; }
+.ps-branch__n { font-size: 9.5px; color: #6b675a; margin-top: 6px; font-variant-numeric: tabular-nums; }
 .ps-tech--seed { border-style: dashed; opacity: 0.5; color: #8a8778; font-size: 10px; text-align: center; }
 .ps-tree { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 @media (max-width: 900px) { .ps-tree { grid-template-columns: repeat(2, 1fr); } }

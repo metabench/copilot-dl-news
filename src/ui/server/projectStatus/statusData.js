@@ -54,60 +54,85 @@ function shortTitle(question, cap = 72) {
 }
 
 /**
- * SMAC-style tech tree, derived from the backlog's state column + curated roadmap.
- * PURE (rows + roadmap in, tree out) so it is testable without the filesystem.
+ * SMAC-style tech tree v3 (owner directive 2026-07-27, researched against Alpha
+ * Centauri): BRANCHES are the game's research categories — an intertwining tree,
+ * every tech capped at TWO prerequisites, blind-research fog beyond the frontier.
  *
- *   done/superseded -> RESEARCHED        (✓ dimmed — the past)
- *   open/partial    -> RESEARCH AVAILABLE (💡 — exactly the ▶ candidates the
- *                      next-prompt generator offers; same rows, same read)
- *   blocked         -> GATED             (🔒 waiting on the owner, NOT available)
- *   beyond that     -> FUTURE TECHNOLOGY (❓ fog-of-war placeholders: the tree is
- *                      deliberately not fully visible — items not yet conceptualised)
+ * Sources of truth stay split on the one-fact-one-field rule:
+ *   config/tech-tree.json  — STRUCTURE: branches, the finite curated roots
+ *                            (capability-level, deliberately not a per-RB retrofit),
+ *                            tech nodes + their <=2 prereq edges, fog size.
+ *   RESEARCH_BACKLOG.md    — STATE for every RB-* tech (read live; ref entries in the
+ *                            spec carry no state of their own, so they cannot disagree).
+ *   roadmap.json           — the rootsCutoff date: RB rows completed at/before it are
+ *                            ABSORBED into the curated roots (counted, never re-listed);
+ *                            later completions surface as grown nodes on the tree.
+ *
+ * Violations THROW (the c129 rule): an unknown state, a phantom edge, a third prereq
+ * or a curated tech claiming completion is a broken record to fix, not render around.
  */
-function buildTechTree(backlogRows, roadmap) {
-  const prereqs = (roadmap && roadmap.prereqs) || {};
-  const doneIds = new Set(backlogRows.filter((r) => r.state === 'done' || r.state === 'superseded').map((r) => r.id));
-  const node = (r) => ({ id: r.id, title: shortTitle(r.question), state: r.state });
-
-  // Roots vs grown (owner, 2026-07-27): tech completed at/before the cutoff is the
-  // ROOTS — real but NOT displayed, and not worth the effort of pigeonholing into
-  // tree positions. Only research completed AFTER the tree existed grows on it.
-  // Strictly-after compare on YYYY-MM-DD strings; a row with no usable date stays a
-  // root (never promoted by a parsing accident). No cutoff configured = no roots split.
+function buildTechTree(backlogRows, roadmap, spec) {
+  if (!spec || !spec.branches || !Array.isArray(spec.roots) || !Array.isArray(spec.techs)) {
+    throw new Error('tech-tree.json missing or malformed — branches/roots/techs are required');
+  }
   const cutoff = roadmap && roadmap.rootsCutoff && roadmap.rootsCutoff.date;
-  const doneRows = backlogRows.filter((r) => doneIds.has(r.id));
-  const isGrown = (r) => Boolean(cutoff) && /^\d{4}-\d{2}-\d{2}$/.test(String(r.lastUpdate || '')) && r.lastUpdate > cutoff;
+  const byId = new Map(backlogRows.map((r) => [r.id, r]));
+  const knownIds = new Set([...spec.roots.map((r) => r.id), ...spec.techs.map((t) => t.ref || t.id)]);
+  const branchOf = new Map(spec.roots.map((r) => [r.id, r.branch]));
+  for (const t of spec.techs) branchOf.set(t.ref || t.id, t.branch);
 
-  const roots = { count: doneRows.filter((r) => !isGrown(r)).length };
-  const grown = doneRows
-    .filter(isGrown)
-    .map((r) => ({
-      ...node(r),
-      researchedOn: r.lastUpdate,
-      buildsOn: (prereqs[r.id] || []).filter((p) => doneIds.has(p))
-    }));
-
-  const available = backlogRows
-    .filter((r) => r.state === 'open' || r.state === 'partial')
-    .map((r) => {
-      const remainder = r.state === 'partial' ? remainderOf(r.status) : null;
-      return {
-        ...node(r),
-        // a partial row is offered by its REMAINDER — researching it means the remainder
-        research: remainder ? shortTitle(remainder, 90) : shortTitle(r.question, 90),
-        buildsOn: (prereqs[r.id] || []).filter((p) => doneIds.has(p))
-      };
+  const resolvePrereqs = (t, owner) => {
+    const list = Array.isArray(t.prereqs) ? t.prereqs : [];
+    if (list.length > 2) throw new Error(`${owner}: ${list.length} prereqs — SMAC caps at two; split the tech instead`);
+    return list.map((p) => {
+      if (!knownIds.has(p)) throw new Error(`${owner}: prereq ${p} names no root or tech — edges must be real`);
+      return { id: p, branch: branchOf.get(p) };
     });
+  };
 
-  const gated = backlogRows
-    .filter((r) => r.state === 'blocked')
-    .map((r) => ({ ...node(r), note: shortTitle(remainderOf(r.status) || r.status, 90) }));
-
-  const future = Array.from({ length: (roadmap && roadmap.futureSlots) || 3 }, (_, i) => ({
-    id: `future-${i + 1}`, title: 'Future Technology'
+  const branches = Object.entries(spec.branches).map(([key, b]) => ({
+    key, label: b.label, color: b.color, icon: b.icon, tagline: b.tagline || '',
+    roots: spec.roots.filter((r) => r.branch === key).map((r) => ({ id: r.id, title: r.title, note: r.note || '' })),
+    grown: [], available: [], gated: [],
+    future: Array.from({ length: spec.fogPerBranch || 2 }, (_, i) => ({ id: `${key}-future-${i + 1}`, title: 'Future Technology' }))
   }));
+  const branch = (key) => branches.find((b) => b.key === key);
+  let absorbed = 0;
 
-  return { roots, grown, available, gated, future };
+  for (const t of spec.techs) {
+    const owner = t.ref || t.id;
+    const dest = branch(t.branch);
+    if (!dest) throw new Error(`${owner}: unknown branch ${JSON.stringify(t.branch)}`);
+    const prereqs = resolvePrereqs(t, owner);
+
+    if (t.ref) {
+      const row = byId.get(t.ref);
+      if (!row) throw new Error(`${owner}: no such backlog row — a ref must point at a real RB id`);
+      const node = { id: row.id, title: shortTitle(row.question), prereqs };
+      if (row.state === 'done' || row.state === 'superseded') {
+        const grownDate = /^\d{4}-\d{2}-\d{2}$/.test(String(row.lastUpdate || '')) && cutoff && row.lastUpdate > cutoff;
+        if (grownDate) dest.grown.push({ ...node, researchedOn: row.lastUpdate });
+        else absorbed++; // completed pre-tree: embodied in the curated roots, never re-listed
+      } else if (row.state === 'blocked') {
+        dest.gated.push({ ...node, note: shortTitle(remainderOf(row.status) || row.status, 90) });
+      } else {
+        const remainder = row.state === 'partial' ? remainderOf(row.status) : null;
+        // a partial row is offered by its REMAINDER — researching it means the remainder
+        dest.available.push({ ...node, research: remainder ? shortTitle(remainder, 90) : shortTitle(row.question, 90) });
+      }
+    } else {
+      if (t.state !== 'available') {
+        throw new Error(`${owner}: curated techs may only be "available" — completion belongs in the ledger/backlog, then the node is promoted`);
+      }
+      dest.available.push({ id: t.id, title: t.title, research: t.research || '', prereqs });
+    }
+  }
+
+  // Completed RB rows the spec does not reference are also pre-tree history: absorbed.
+  const referenced = new Set(spec.techs.filter((t) => t.ref).map((t) => t.ref));
+  absorbed += backlogRows.filter((r) => (r.state === 'done' || r.state === 'superseded') && !referenced.has(r.id)).length;
+
+  return { branches, absorbed };
 }
 
 function buildStatus() {
@@ -181,17 +206,20 @@ function buildStatus() {
     }
   } catch (_) { /* no annotations yet */ }
 
-  // tech tree + path ahead — states live in the backlog, the curated path in roadmap.json
-  let techTree = { roots: { count: 0 }, grown: [], available: [], gated: [], future: [] };
+  // tech tree + path ahead — structure in tech-tree.json, states in the backlog,
+  // the curated path in roadmap.json (one fact, one field, three files)
+  let techTree = { branches: [], absorbed: 0 };
   let roadmapOut = { block: null, steps: [] };
   try {
     const backlogRows = parseBacklog(fs.readFileSync(path.join(ROOT, 'docs', 'agi', 'RESEARCH_BACKLOG.md'), 'utf8'));
+    const spec = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'tech-tree.json'), 'utf8'));
     let roadmap = null;
     try { roadmap = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'roadmap.json'), 'utf8')); } catch (_) {}
-    techTree = buildTechTree(backlogRows, roadmap);
+    techTree = buildTechTree(backlogRows, roadmap, spec);
     if (roadmap) roadmapOut = { block: roadmap.block || null, steps: Array.isArray(roadmap.steps) ? roadmap.steps : [] };
   } catch (e) {
-    // parseBacklog THROWS on an unknown state (by design) — surface it, don't blank the page
+    // the builder THROWS on a broken record (unknown state / phantom edge / >2 prereqs)
+    // by design — surface it on the page rather than blanking or guessing
     techTree.error = e.message;
   }
 

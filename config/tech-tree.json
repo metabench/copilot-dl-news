@@ -1,0 +1,36 @@
+{
+  "_comment": "SMAC-style tech tree structure (owner directive 2026-07-27, researched against Sid Meier's Alpha Centauri: categories form an INTERTWINING tree; every tech has AT MOST TWO prerequisites; tiers flow foundations -> frontier; blind research means the far tree is fog). Three branches for now (owner: 'just 3 pages for the moment'). RULES: roots are the FINITE set of already-built capabilities — curated at the CAPABILITY level, deliberately not a per-RB retrofit; techs reference either a backlog row (ref: RB-*, state read LIVE from RESEARCH_BACKLOG's state column — that file stays the single state source for RB items) or are curated near-frontier items (allowed state: available only; completion later lands in the ledger/backlog and promotes the node). Every tech's prereqs list existing root/tech ids and is capped at 2, per SMAC; edges are design statements about what COMBINES into what. Colors validated 2026-07-27 with the dataviz palette validator on the dark surface (all four checks pass; gold-green tritan dE 9.9 sits in the legal-with-secondary-encoding band, and every node carries its branch icon + text label, never color alone).",
+  "asOf": "2026-07-27",
+  "branches": {
+    "agi": { "label": "AGI", "color": "#4d9ec8", "icon": "iceBulb", "tagline": "the loop that improves the loop — self-verifying, self-prompting, self-checking" },
+    "tree": { "label": "TECH TREE", "color": "#55a377", "icon": "treeMonitor", "tagline": "the instrument panel of progress — record, picture, page, prompt" },
+    "crawler": { "label": "CRAWLER", "color": "#b8862e", "icon": "spiderWeb", "tagline": "the product — polite, database-driven news harvesting at archive scale" }
+  },
+  "roots": [
+    { "id": "CR-ENGINE", "branch": "crawler", "title": "Crawler Engine", "note": "news-crawler-itself: fetch loop, worker-thread compression, remote runtime" },
+    { "id": "CR-POLITE", "branch": "crawler", "title": "Politeness Stack", "note": "robots floors + 429 backoff escalation; 0×429 across 3,419 live responses" },
+    { "id": "CR-FRONTIER", "branch": "crawler", "title": "DB-Driven Frontier", "note": "the urls table IS the frontier; hydration, recency, place-hub redownload" },
+    { "id": "CR-DB", "branch": "crawler", "title": "News Database", "note": "ncdb unified layer over a ~30 GB archive; 16.9k pages crawled during cycles" },
+    { "id": "CR-INTEL", "branch": "crawler", "title": "Content Intelligence", "note": "url / document / places / general intelligence modules" },
+    { "id": "TR-LEDGER", "branch": "tree", "title": "Cycle Ledger + Stanzas", "note": "the loop's only act of record-keeping; everything else is projection" },
+    { "id": "TR-PROBES", "branch": "tree", "title": "Probe Manifest", "note": "17 runnable re-verifications at orient; false greens hunted on sight" },
+    { "id": "TR-PICTURE", "branch": "tree", "title": "Progress Picture", "note": "deterministic SVG + per-repo lanes; byte-compare staleness" },
+    { "id": "TR-PAGE", "branch": "tree", "title": "Status Page", "note": "this jsgui3 app: live chips, path ahead, the tree you are reading" },
+    { "id": "TR-PROMPT", "branch": "tree", "title": "Prompt Generator", "note": "next cycle's prompt derived from the record; curation labelled, never faked" },
+    { "id": "TR-DEVTOOLS", "branch": "tree", "title": "Dev Tooling", "note": "js-scan / js-edit: AST search, guarded edits, continuation tokens" },
+    { "id": "AG-COMPLIANCE", "branch": "agi", "title": "Compliance Meta-tests", "note": "probes that check the AGENT followed directives, not just the code" },
+    { "id": "AG-HARNESS", "branch": "agi", "title": "Live Browser Harness", "note": "real pages in a real browser; assertions no in-process check can make" },
+    { "id": "AG-METHOD", "branch": "agi", "title": "Earned Method", "note": "rules that exist only because a recorded mistake produced them" }
+  ],
+  "techs": [
+    { "ref": "RB-001", "branch": "agi", "prereqs": ["TR-DEVTOOLS", "CR-DB"] },
+    { "ref": "RB-007", "branch": "agi", "prereqs": ["AG-COMPLIANCE", "TR-PROMPT"] },
+    { "ref": "RB-015", "branch": "tree", "prereqs": ["TR-PICTURE"] },
+    { "id": "TECH-L3PROOF", "branch": "agi", "title": "Staged-Divergence Proof", "research": "harness base-URL mode + the staged SSR-vs-API divergence that gives L3 observed proof", "prereqs": ["AG-HARNESS", "TR-PAGE"], "state": "available" },
+    { "id": "TECH-CSLIVE", "branch": "crawler", "title": "Crawl-Status Live Checks", "research": "extend the live harness to the crawler's own UI — the page with the most client behaviour", "prereqs": ["AG-HARNESS", "CR-FRONTIER"], "state": "available" },
+    { "id": "TECH-P5AUTO", "branch": "crawler", "title": "Place-Hub Refresh Automation", "research": "scheduled place-hub redownload driven by hub staleness", "prereqs": ["CR-FRONTIER", "CR-INTEL"], "state": "available" },
+    { "id": "TECH-HEADLINE2", "branch": "crawler", "title": "Frontier Headline Quality II", "research": "push real-headline yield further via shape preference + host density", "prereqs": ["CR-FRONTIER", "CR-INTEL"], "state": "available" },
+    { "id": "TECH-DASH2B", "branch": "crawler", "title": "Remote Activity Dashboard", "research": "activity/headline control + esbuild bundle served from the remote worker", "prereqs": ["CR-ENGINE", "TR-PAGE"], "state": "available" }
+  ],
+  "fogPerBranch": 2
+}

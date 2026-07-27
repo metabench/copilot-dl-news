@@ -54,6 +54,24 @@ async function main() {
       }
     });
 
+    // SMAC-style branch pages (owner 2026-07-27): /tech/agi, /tech/tree,
+    // /tech/crawler. RENDERED PER REQUEST inside the handler — unlike the main
+    // page's publish-once SSR, these can never serve a boot-time snapshot.
+    const { renderTechPage } = require('./techPages');
+    for (const branchKey of ['agi', 'tree', 'crawler']) {
+      router.set_route(`/tech/${branchKey}`, null, (req, res) => {
+        try {
+          const html = renderTechPage(branchKey, buildStatus().techTree);
+          if (!html) { res.writeHead(404); res.end('unknown branch'); return; }
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+          res.end(html);
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end(`tech page failed: ${e.message}`);
+        }
+      });
+    }
+
     // The committed progress SVG, embedded by the page's HISTORY panel. Served from
     // disk each request so a regenerated picture shows on the next refresh.
     const svg_path = path.resolve(__dirname, '..', '..', '..', '..', 'docs', 'agi', 'progress', 'progress.svg');
