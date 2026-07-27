@@ -1,0 +1,19 @@
+{
+  "_comment": "The PLANNED PATH + tech-tree lineage for the project-status page. Until cycle 136 the 'path ahead' lived only in pasted prompts and chat decisions — a fact tools had to infer from prose, which the loop's own rule (cycle 129) says must be written down as a field instead. CURATED by design: block/steps record owner direction + the on-record ▶ curation; prereqs record only lineage the ledger actually states (do not invent edges to make the tree look fuller). The tech-tree STATES themselves are NOT here — they derive live from RESEARCH_BACKLOG.md's state column, so this file cannot contradict the backlog.",
+  "asOf": "2026-07-27",
+  "block": {
+    "label": "Live-browser test coverage",
+    "why": "owner direction after c134: 95% of UI self-tests cannot observe what the client does — the defect class that actually shipped (c128.5)"
+  },
+  "steps": [
+    { "label": "Give L3 real proof — harness base-URL mode + staged SSR-vs-API divergence", "detail": "the DOM-vs-live-API assertion is reasoned, not observed, until the c128.5 scenario is stageable against an already-running server" },
+    { "label": "Extend live checks to crawl-status (:3170)", "detail": "the page with the most client behaviour and no live check" }
+  ],
+  "prereqs": {
+    "_comment": "id -> ids it demonstrably built on, each edge traceable to a ledger row",
+    "RB-008": ["RB-011"],
+    "RB-015": ["RB-011"],
+    "RB-014": ["RB-013"]
+  },
+  "futureSlots": 3
+}

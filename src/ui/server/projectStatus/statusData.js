@@ -23,6 +23,10 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 const { parseCycleStanzas, computeSeries } = require(path.join(ROOT, 'tools', 'agi', 'progress-svg.js'));
 const { checkEntry } = require(path.join(ROOT, 'tools', 'dev', 'check-repo-scope.js'));
+// Safe to require at module level: next-prompt only lazy-requires THIS file inside
+// its main(), so there is no circular-require at load time. Reusing its parser keeps
+// the tech tree and the ▶ candidate list projections of the SAME backlog read.
+const { parseBacklog, remainderOf } = require(path.join(ROOT, 'tools', 'agi', 'next-prompt.js'));
 
 const XP_PER_LEVEL = 10; // improvement-count milestone size for the header progress bar
 
@@ -39,6 +43,57 @@ let cache = { at: 0, data: null };
 
 function humanize(s) {
   return String(s || '').replace(/[-_+]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/** Node title: the question up to its "?" (or a hard cap) — tree cards, not prose. */
+function shortTitle(question, cap = 72) {
+  const q = String(question || '').trim();
+  const cut = q.indexOf('?');
+  const t = cut > 0 && cut < cap ? q.slice(0, cut) : q.slice(0, cap);
+  return t === q ? t : `${t}…`;
+}
+
+/**
+ * SMAC-style tech tree, derived from the backlog's state column + curated roadmap.
+ * PURE (rows + roadmap in, tree out) so it is testable without the filesystem.
+ *
+ *   done/superseded -> RESEARCHED        (✓ dimmed — the past)
+ *   open/partial    -> RESEARCH AVAILABLE (💡 — exactly the ▶ candidates the
+ *                      next-prompt generator offers; same rows, same read)
+ *   blocked         -> GATED             (🔒 waiting on the owner, NOT available)
+ *   beyond that     -> FUTURE TECHNOLOGY (❓ fog-of-war placeholders: the tree is
+ *                      deliberately not fully visible — items not yet conceptualised)
+ */
+function buildTechTree(backlogRows, roadmap) {
+  const prereqs = (roadmap && roadmap.prereqs) || {};
+  const doneIds = new Set(backlogRows.filter((r) => r.state === 'done' || r.state === 'superseded').map((r) => r.id));
+  const node = (r) => ({ id: r.id, title: shortTitle(r.question), state: r.state });
+
+  const researched = backlogRows
+    .filter((r) => doneIds.has(r.id))
+    .map((r) => ({ ...node(r), unlocked: (prereqs[r.id] || []).filter((p) => doneIds.has(p)) }));
+
+  const available = backlogRows
+    .filter((r) => r.state === 'open' || r.state === 'partial')
+    .map((r) => {
+      const remainder = r.state === 'partial' ? remainderOf(r.status) : null;
+      return {
+        ...node(r),
+        // a partial row is offered by its REMAINDER — researching it means the remainder
+        research: remainder ? shortTitle(remainder, 90) : shortTitle(r.question, 90),
+        buildsOn: (prereqs[r.id] || []).filter((p) => doneIds.has(p))
+      };
+    });
+
+  const gated = backlogRows
+    .filter((r) => r.state === 'blocked')
+    .map((r) => ({ ...node(r), note: shortTitle(remainderOf(r.status) || r.status, 90) }));
+
+  const future = Array.from({ length: (roadmap && roadmap.futureSlots) || 3 }, (_, i) => ({
+    id: `future-${i + 1}`, title: 'Future Technology'
+  }));
+
+  return { researched, available, gated, future };
 }
 
 function buildStatus() {
@@ -112,6 +167,20 @@ function buildStatus() {
     }
   } catch (_) { /* no annotations yet */ }
 
+  // tech tree + path ahead — states live in the backlog, the curated path in roadmap.json
+  let techTree = { researched: [], available: [], gated: [], future: [] };
+  let roadmapOut = { block: null, steps: [] };
+  try {
+    const backlogRows = parseBacklog(fs.readFileSync(path.join(ROOT, 'docs', 'agi', 'RESEARCH_BACKLOG.md'), 'utf8'));
+    let roadmap = null;
+    try { roadmap = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'roadmap.json'), 'utf8')); } catch (_) {}
+    techTree = buildTechTree(backlogRows, roadmap);
+    if (roadmap) roadmapOut = { block: roadmap.block || null, steps: Array.isArray(roadmap.steps) ? roadmap.steps : [] };
+  } catch (e) {
+    // parseBacklog THROWS on an unknown state (by design) — surface it, don't blank the page
+    techTree.error = e.message;
+  }
+
   const data = {
     player,
     stats: {
@@ -131,10 +200,12 @@ function buildStatus() {
     playerInput: PLAYER_INPUT_REQUIRED,
     recent,
     party,
-    achievements
+    achievements,
+    techTree,
+    roadmap: roadmapOut
   };
   cache = { at: Date.now(), data };
   return data;
 }
 
-module.exports = { buildStatus };
+module.exports = { buildStatus, buildTechTree, shortTitle };

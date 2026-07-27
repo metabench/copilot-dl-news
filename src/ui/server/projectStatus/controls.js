@@ -39,6 +39,43 @@ const xpLabelText = (p) =>
 const owedText = (q) => `▸ ${q.label} (from cycle ${q.cycle})`;
 const recentText = (r) => `${r.correction ? '↺' : '·'} c${r.cycle} — ${r.label}`;
 
+// ---- tech tree + path ahead (SMAC-style; owner directive 2026-07-27) ----
+// Shared MODELS between server compose and client apply — same one-definition rule
+// as CHIP_DEFS. States derive from the backlog's state column; only open/partial
+// rows earn the 💡 (they are exactly the ▶ candidates next-prompt offers). The tree
+// is deliberately not fully visible: '❓ Future Technology' marks the fog of war.
+const TREE_COLS = [
+  { key: 'researched', head: '✓ RESEARCHED' },
+  { key: 'available', head: '💡 RESEARCH AVAILABLE' },
+  { key: 'gated', head: '🔒 GATED' },
+  { key: 'future', head: '❓ NOT YET REVEALED' }
+];
+function techNodeModel(colKey, n) {
+  const sub = [];
+  if (colKey === 'researched') {
+    if (n.unlocked && n.unlocked.length) sub.push(`builds on ${n.unlocked.join(' + ')}`);
+    return { cls: 'ps-tech ps-tech--done', title: `${n.id} · ${n.title}`, sub };
+  }
+  if (colKey === 'available') {
+    sub.push(`research: ${n.research}`);
+    if (n.buildsOn && n.buildsOn.length) sub.push(`builds on ${n.buildsOn.join(' + ')}`);
+    return { cls: 'ps-tech ps-tech--avail', title: `💡 ${n.id} · ${n.title}`, sub };
+  }
+  if (colKey === 'gated') {
+    if (n.note) sub.push(n.note);
+    return { cls: 'ps-tech ps-tech--gated', title: `🔒 ${n.id} · ${n.title}`, sub };
+  }
+  return { cls: 'ps-tech ps-tech--future', title: `❓ ${n.title}`, sub: [] };
+}
+function roadCardModels(s) {
+  const cards = [];
+  const r = s.roadmap || {};
+  if (r.block) cards.push({ cls: 'ps-road__card ps-road__card--now', top: 'NOW', main: r.block.label, sub: r.block.why || '' });
+  (r.steps || []).forEach((st, i) => cards.push({ cls: 'ps-road__card', top: `NEXT ${i + 1}`, main: st.label, sub: st.detail || '' }));
+  cards.push({ cls: 'ps-road__card ps-road__card--future', top: 'BEYOND', main: '❓ Future Technology', sub: 'not yet conceptualised' });
+  return cards;
+}
+
 class Status_Widget extends Control {
   constructor(spec = {}) {
     spec.__type_name = spec.__type_name || 'status_widget';
@@ -136,6 +173,45 @@ class Status_Widget extends Control {
     cols.add(modules);
     this.add(cols);
 
+    // ---- path ahead + tech tree ----
+    const research = this._el('section', 'ps-panel');
+    research.add(this._el('h2', 'ps-h', 'PATH AHEAD'));
+    const strip = this._el('div', 'ps-road');
+    strip.dom.attributes['data-ps-road'] = 'true';
+    const roadCards = roadCardModels(s);
+    roadCards.forEach((c, i) => {
+      if (i > 0) strip.add(this._el('div', 'ps-road__arrow', '→'));
+      const card = this._el('div', c.cls);
+      card.add(this._el('div', 'ps-road__top', c.top));
+      card.add(this._el('div', 'ps-road__main', c.main));
+      if (c.sub) card.add(this._el('div', 'ps-road__sub', c.sub));
+      strip.add(card);
+    });
+    research.add(strip);
+
+    research.add(this._el('h2', 'ps-h', 'RESEARCH — TECH TREE'));
+    if (s.techTree && s.techTree.error) {
+      research.add(this._el('div', 'ps-quest-item ps-input', `tech tree unavailable: ${s.techTree.error}`));
+    }
+    const tree = this._el('div', 'ps-tree');
+    for (const col of TREE_COLS) {
+      const colBox = this._el('div', 'ps-tree__col');
+      colBox.add(this._el('div', 'ps-tree__head', col.head));
+      const list = this._el('div', 'ps-tree__list');
+      list.dom.attributes['data-ps-tree'] = col.key;
+      for (const n of ((s.techTree && s.techTree[col.key]) || [])) {
+        const m = techNodeModel(col.key, n);
+        const nodeEl = this._el('div', m.cls);
+        nodeEl.add(this._el('div', 'ps-tech__t', m.title));
+        for (const line of m.sub) nodeEl.add(this._el('div', 'ps-tech__s', line));
+        list.add(nodeEl);
+      }
+      colBox.add(list);
+      tree.add(colBox);
+    }
+    research.add(tree);
+    this.add(research);
+
     // ---- history: the committed progress SVG, same data substrate ----
     const hist = this._el('section', 'ps-panel');
     hist.add(this._el('h2', 'ps-h', 'HISTORY'));
@@ -161,7 +237,7 @@ class Status_Widget extends Control {
     this.add(mile);
 
     const foot = this._el('footer', 'ps-foot',
-      'sources: IMPROVEMENT_LEDGER stanzas · repo-scope.json · annotations.json — every number recountable · ');
+      'sources: IMPROVEMENT_LEDGER stanzas · repo-scope.json · RESEARCH_BACKLOG states · roadmap.json · annotations.json — every number recountable · ');
     const btn = this._el('button', 'ps-refresh', '↻ REFRESH');
     btn.dom.attributes['data-ps-refresh'] = 'true';
     foot.add(btn);
@@ -219,6 +295,53 @@ class Status_Widget extends Control {
       }
       const card = q(`[data-ps-card="${m.name}"]`);
       if (card) card.className = `ps-card${m.danger ? ' ps-card--danger' : ''}`;
+    }
+
+    // path ahead + tech tree — rebuilt from the same models the server composed with
+    const road = q('[data-ps-road]');
+    if (road && s.roadmap) {
+      while (road.firstChild) road.removeChild(road.firstChild);
+      roadCardModels(s).forEach((c, i) => {
+        if (i > 0) {
+          const a = document.createElement('div');
+          a.className = 'ps-road__arrow';
+          a.textContent = '→';
+          road.appendChild(a);
+        }
+        const card = document.createElement('div');
+        card.className = c.cls;
+        for (const [cls, text] of [['ps-road__top', c.top], ['ps-road__main', c.main], ['ps-road__sub', c.sub]]) {
+          if (!text) continue;
+          const d = document.createElement('div');
+          d.className = cls;
+          d.textContent = text;
+          card.appendChild(d);
+        }
+        road.appendChild(card);
+      });
+    }
+    if (s.techTree) {
+      for (const col of TREE_COLS) {
+        const list = q(`[data-ps-tree="${col.key}"]`);
+        if (!list) continue;
+        while (list.firstChild) list.removeChild(list.firstChild);
+        for (const n of (s.techTree[col.key] || [])) {
+          const m = techNodeModel(col.key, n);
+          const nodeEl = document.createElement('div');
+          nodeEl.className = m.cls;
+          const t = document.createElement('div');
+          t.className = 'ps-tech__t';
+          t.textContent = m.title;
+          nodeEl.appendChild(t);
+          for (const line of m.sub) {
+            const d = document.createElement('div');
+            d.className = 'ps-tech__s';
+            d.textContent = line;
+            nodeEl.appendChild(d);
+          }
+          list.appendChild(nodeEl);
+        }
+      }
     }
 
     const img = q('[data-ps-history]');
@@ -301,6 +424,24 @@ Status_Widget.css = `
 .ps-ach__icon { font-size: 18px; color: #b8862e; }
 .ps-ach__label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; }
 .ps-ach__detail { font-size: 10px; color: #8a8778; }
+.ps-road { display: flex; align-items: stretch; gap: 8px; overflow-x: auto; padding: 4px 0 10px; }
+.ps-road__card { flex: 0 0 auto; min-width: 180px; max-width: 250px; background: #101216; border: 2px solid #2e3440; border-radius: 6px; padding: 8px 10px; }
+.ps-road__card--now { border-color: #b8862e; box-shadow: 0 0 0 1px rgba(184,134,46,0.35); }
+.ps-road__card--future { border-style: dashed; opacity: 0.55; }
+.ps-road__top { font-size: 9px; letter-spacing: 0.14em; color: #8a8778; margin-bottom: 4px; }
+.ps-road__main { font-size: 12px; font-weight: 600; color: #e8e4d8; }
+.ps-road__sub { font-size: 10px; color: #8a8778; margin-top: 4px; }
+.ps-road__arrow { align-self: center; color: #b8862e; font-size: 16px; flex: 0 0 auto; }
+.ps-tree { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media (max-width: 900px) { .ps-tree { grid-template-columns: repeat(2, 1fr); } }
+.ps-tree__head { font-size: 10px; letter-spacing: 0.12em; color: #8a8778; border-bottom: 1px solid #2e3440; padding-bottom: 4px; margin-bottom: 6px; }
+.ps-tech { background: #101216; border: 1px solid #2e3440; border-left: 3px solid #2e3440; border-radius: 4px; padding: 6px 8px; margin-bottom: 6px; }
+.ps-tech__t { font-size: 11px; color: #e8e4d8; }
+.ps-tech__s { font-size: 9.5px; color: #8a8778; margin-top: 3px; }
+.ps-tech--done { opacity: 0.62; border-left-color: #55a377; }
+.ps-tech--avail { border-color: #b8862e; border-left-color: #b8862e; box-shadow: 0 0 6px rgba(184,134,46,0.18); }
+.ps-tech--gated { border-left-color: #b34d4d; opacity: 0.8; }
+.ps-tech--future { border-style: dashed; opacity: 0.45; text-align: center; }
 .ps-foot { font-size: 10px; color: #6b675a; margin-top: 4px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .ps-refresh { background: #171a20; color: #b8862e; border: 2px solid #b8862e; border-radius: 4px; font-size: 10px; letter-spacing: 0.1em; padding: 4px 10px; cursor: pointer; }
 .ps-refresh:hover { background: #b8862e; color: #0c0e11; }
