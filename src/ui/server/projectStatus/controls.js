@@ -244,6 +244,14 @@ class Status_Widget extends Control {
         const t = e && (e.target || e.srcElement);
         if (t && t.getAttribute && t.getAttribute('data-ps-refresh')) refresh();
       });
+      // Refresh IMMEDIATELY, not only on the interval. The Server({Ctrl}) recipe
+      // serves the page through HTTP_Webpage_Publisher, which renders the SSR HTML
+      // ONCE at publish (server start) — so the markup a visitor first sees carries
+      // whatever the numbers were when the server booted, and stays that way until
+      // the client rewrites it. Without this call that was a full 60 s of confidently
+      // wrong numbers on every page load (measured: SSR said 82 cycles while the same
+      // process's /api/status said 84).
+      refresh();
       setInterval(refresh, 60000);
     }
   }
