@@ -95,6 +95,9 @@ from that mode). Probe: `ls ../news-crawler-itself` (README + AGENTS.md exist si
   edit the data and re-render. Milestones: `--annotate "cycleId=label"`. The repo-activity
   snapshot keeps live git state out of the render so the staleness probe stays an exact
   byte-compare; a cycle's own closing commit appears in the NEXT cycle's snapshot by design).
+  **The ritual is now machine-checked**: the `ritual-compliance` probe verifies at orient that
+  the last cycle actually committed and pushed its record (RB-008 — added after a history audit
+  found 77/84 stanzas landed ≥1 day after their ledger date; `--history` re-runs that audit).
 - [SELF_MODEL.md](SELF_MODEL.md) — ecosystem model + the **model lineage table**; on a detected
   model swap, run the calibration in `.claude/skills/singularity/SKILL.md`.
 - [journal/](journal/) and [../sessions/SESSIONS_HUB.md](../sessions/SESSIONS_HUB.md) — history.
