@@ -41,6 +41,12 @@ describe('stanza-schema validateStanza', () => {
     expect(validateStanza({ id: 1 })).toContain('date must be YYYY-MM-DD');
   });
 
+  it('type-checks the prose fields (headline feeds next-prompt PROGRESS lines)', () => {
+    expect(validateStanza({ id: 1, date: '2026-07-01', headline: 'A readable sentence' })).toEqual([]);
+    expect(validateStanza({ id: 1, date: '2026-07-01', headline: 42 })).toContain('headline must be a string');
+    expect(validateStanza({ id: 1, date: '2026-07-01', result: ['a'] })).toContain('result must be a string');
+  });
+
   it('type-checks numeric and string-array optionals when present', () => {
     expect(validateStanza({ id: 1, date: '2026-07-01', cost_turns: 'one' }))
       .toContain('cost_turns must be a number');

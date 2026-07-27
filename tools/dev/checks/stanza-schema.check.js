@@ -43,6 +43,11 @@ function validateStanza(c) {
   for (const k of ['second_order', 'scaffold_added', 'scaffold_retired', 'verification', 'tracks', 'owed', 'owed_closed', 'reused']) {
     if (c[k] !== undefined && !isStrArray(c[k])) bad.push(`${k} must be an array of strings`);
   }
+  // `headline` is the cycle's own sentence for its PROGRESS line (next-prompt v2
+  // prefers it over humanizing the result slug); `result`/`id_note` are prose too.
+  for (const k of ['headline', 'result', 'id_note', 'model']) {
+    if (c[k] !== undefined && typeof c[k] !== 'string') bad.push(`${k} must be a string`);
+  }
   return bad;
 }
 

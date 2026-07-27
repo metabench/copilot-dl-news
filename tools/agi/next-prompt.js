@@ -48,19 +48,83 @@ const STATIC = {
   onCompletion: 'ledger row + stanza (owed/owed_closed as applicable) · node tools/agi/repo-activity.js && node tools/agi/progress-svg.js · commit + push · regenerate this prompt (node tools/agi/next-prompt.js, then curate the ▶ selection).'
 };
 
-const humanize = (s) => String(s || '').replace(/[-_+]/g, ' ').replace(/\s+/g, ' ').trim();
-
-/** RESEARCH_BACKLOG.md table rows whose status is not delivered/superseded. */
-function parseOpenBacklog(markdown) {
-  const open = [];
-  for (const line of String(markdown).split('\n')) {
-    const m = /^\|\s*(RB-\d+)\s*\|\s*([^|]+)\|[^|]*\|\s*([^|]+)\|/.exec(line);
-    if (!m) continue;
-    const [, id, question, status] = m;
-    if (/delivered|superseded/i.test(status) && !/v2 items open|remaining/i.test(status)) continue;
-    open.push({ id, question: question.trim().slice(0, 110), status: status.trim().slice(0, 60) });
+/**
+ * Slug -> prose. Kebab/snake slugs are the loop's own words, so the job is mostly
+ * separator swapping — but identifiers must survive it: `RB_008` reads as a broken
+ * word once the underscore becomes a space, and an all-caps token (NO-GO, SSR) is
+ * meaning, not shouting. v1 flattened both.
+ */
+function humanize(s) {
+  const raw = String(s || '').trim();
+  if (!raw) return '';
+  const words = raw.split(/[-_+\s]+/).filter(Boolean);
+  const out = [];
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i], next = words[i + 1];
+    if (/^RB$/i.test(w) && /^\d{2,3}$/.test(next || '')) { out.push(`RB-${next}`); i++; continue; }
+    if (/^c$/i.test(w) && /^\d{1,4}$/.test(next || '')) { out.push(`c${next}`); i++; continue; }
+    out.push(w);
   }
-  return open;
+  return out.join(' ');
+}
+
+/** Backlog states an agent may still pick up, vs states that are finished/parked. */
+const ACTIONABLE_STATES = new Set(['open', 'partial']);
+const KNOWN_STATES = new Set([...ACTIONABLE_STATES, 'blocked', 'done', 'superseded']);
+
+/**
+ * RESEARCH_BACKLOG.md rows, read from the `state` COLUMN rather than sniffed from
+ * status prose. v1 tested the status text for /delivered|superseded/ with a
+ * `remaining` escape hatch, so any answered row that honestly named its remainder
+ * (RB-008, RB-011, RB-015) was re-offered as if untouched. A row's state is a fact
+ * about the row; it belongs in a field.
+ *
+ * An unrecognised or missing state THROWS rather than defaulting to open — a filter
+ * that silently treats unknown input as actionable is the same false-green class as
+ * the c128 porcelain bug.
+ */
+function parseBacklog(markdown) {
+  const rows = [];
+  for (const line of String(markdown).split('\n')) {
+    const m = /^\|\s*(RB-\d+)\s*\|\s*([^|]*)\|\s*([^|]+)\|[^|]*\|\s*([^|]+)\|/.exec(line);
+    if (!m) continue;
+    const [, id, stateRaw, question, status] = m;
+    const state = stateRaw.trim().toLowerCase();
+    if (!KNOWN_STATES.has(state)) {
+      throw new Error(`${id}: unknown backlog state ${JSON.stringify(stateRaw.trim())} — expected one of ${[...KNOWN_STATES].join('/')}`);
+    }
+    rows.push({ id, state, question: question.trim(), status: status.trim() });
+  }
+  return rows;
+}
+
+/** The `Remaining: ...` clause a partial row must carry, so the ▶ line names real work. */
+function remainderOf(status) {
+  const m = /Remaining:\s*([^|]+?)\s*$/.exec(String(status || ''));
+  return m ? m[1].replace(/\s+/g, ' ').trim() : null;
+}
+
+/**
+ * Candidates for the ▶ list: actionable rows only. A `partial` row is offered by its
+ * REMAINDER, not its original question — "can we implement compliance tests?" is
+ * answered and re-reading it wastes the reader's attention; "session-init and
+ * per-turn directives are still unchecked" is the actual next step.
+ */
+function backlogCandidates(markdown) {
+  return parseBacklog(markdown)
+    .filter((r) => ACTIONABLE_STATES.has(r.state))
+    .map((r) => {
+      const remainder = r.state === 'partial' ? remainderOf(r.status) : null;
+      return {
+        id: r.id,
+        state: r.state,
+        text: remainder || r.question,
+        isRemainder: Boolean(remainder),
+        // A partial row with no Remaining: clause cannot say what is left — flag it
+        // rather than quietly offering the answered question again.
+        needsRemainder: r.state === 'partial' && !remainder
+      };
+    });
 }
 
 /** Newest-first, deduped, capped METHOD lines from recent stanzas' second_order[]. */
@@ -85,11 +149,16 @@ function buildPromptModel({ cycles, status, backlogText }) {
   return {
     nextAfter: latest.id || 0,
     dataThrough: latest.date || '',
-    done: cycles.slice(-DONE_LINES).map((c) => ({ id: c.id, label: humanize(c.result || 'cycle logged') })),
+    // `headline` is the cycle's own sentence; the slug is a fallback. A generator
+    // that can only echo slugs makes the loop write slugs that read like prose.
+    done: cycles.slice(-DONE_LINES).map((c) => ({
+      id: c.id,
+      label: (typeof c.headline === 'string' && c.headline.trim()) || humanize(c.result || 'cycle logged')
+    })),
     owed: (status && status.sideQuests) || [],
     decisions: (status && status.playerInput) || [],
     method: collectMethod(cycles),
-    options: parseOpenBacklog(backlogText)
+    options: backlogCandidates(backlogText)
   };
 }
 
@@ -105,8 +174,11 @@ function render(m) {
     L.push('  OWED (from stanzas, closures applied):');
     for (const o of m.owed) L.push(`  ⚠ ${o.label} (from cycle ${o.cycle})`);
   }
-  L.push('  ▶ Pick ONE — [CURATE: selection is judgment; candidates from the open backlog]');
-  for (const o of m.options) L.push(`     ${o.id}: ${o.question} [${o.status}]`);
+  L.push('  ▶ Pick ONE — [CURATE: selection is judgment; candidates = backlog rows in state open/partial]');
+  for (const o of m.options) {
+    const flag = o.needsRemainder ? ' [PARTIAL row with no "Remaining:" clause — say what is left]' : '';
+    L.push(`     ${o.id} (${o.state})${o.isRemainder ? ' remaining' : ''}: ${o.text}${flag}`);
+  }
   L.push(`OWNER DECISIONS STANDING  ${m.decisions.join(' · ') || 'none recorded'}`);
   L.push('METHOD (earned — from recent cycle stanzas, newest first)');
   for (const line of m.method) L.push(`  • ${line}`);
@@ -135,5 +207,8 @@ function main() {
   }
 }
 
-module.exports = { parseOpenBacklog, collectMethod, buildPromptModel, render };
+module.exports = {
+  humanize, parseBacklog, remainderOf, backlogCandidates, collectMethod, buildPromptModel, render,
+  ACTIONABLE_STATES, KNOWN_STATES
+};
 if (require.main === module) main();
