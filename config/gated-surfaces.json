@@ -10,8 +10,9 @@
     "allowed": ["singularity", "wlilo", "wlilo-workspace"]
   },
   "backups": {
-    "_rule": "Deleting either backup is GATED and irreversible (~29-30 GB each, owner decision pending). The check asserts they still EXIST — it is a tripwire against the deletion, not a size assertion.",
-    "mustExist": ["data/news.db.pre-placenames-bak", "data/news.db.predup-bak"]
+    "_rule": "Deleting a backup is GATED and irreversible. The check asserts the remaining one still EXISTS — a tripwire against deletion, not a size assertion.",
+    "_decision": "OWNER 2026-07-27 (cycle 132), per-action approval in chat: DELETE news.db.predup-bak only (28.16 GB freed), KEEP news.db.pre-placenames-bak as the safety net. predup-bak predated the http_responses dedup that was verified lossless (325,614 -> 290,144 rows, 0 unique content lost). The probe correctly went RED on the deletion before this record was updated - that red was the tripwire working, not a fault.",
+    "mustExist": ["data/news.db.pre-placenames-bak"]
   },
   "politeness": {
     "_rule": "Loosening politeness is GATED. There is no single floor CONSTANT to assert (the effective floor is max() of robots + stored values, and adaptive speed-up is pre-existing behaviour), so the check guards the part that matters most and IS static: the 429 backoff escalation must not be weakened or deleted.",

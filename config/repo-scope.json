@@ -4,7 +4,7 @@
   "root": "..",
   "entries": [
     { "name": "copilot-dl-news", "status": "in", "role": "Coordination point: Electron/unified-app shell, live data/news.db custodian, UI, operational tooling. Calls module APIs rather than containing implementations.", "requireGit": true, "confirmed": true },
-    { "name": "news-crawler-itself", "status": "in", "role": "THE crawler engine (owner: most important). Fetch loop, politeness, worker-thread compression, remote-worker runtime.", "requireGit": true, "confirmed": true, "knownIssue": "NO .git as of 2026-07-27 - the designated most-important module is the only unversioned link in the chain; owner decision pending on init + push to a remote" },
+    { "name": "news-crawler-itself", "status": "in", "role": "THE crawler engine (owner: most important). Fetch loop, politeness, worker-thread compression, remote-worker runtime.", "requireGit": true, "confirmed": true, "_resolved": "2026-07-27 (cycle 132): owner approved init + remote. Versioned and pushed to metabench/news-crawler-itself (PRIVATE, matching sibling convention). The repo already existed as an unused 2026-05-10 placeholder holding only a .gitignore template, so the histories were MERGED rather than force-pushed. knownIssue cleared." },
     { "name": "news-crawler-db", "status": "in", "role": "Unified DB layer + API (Drizzle/TS). The ncdb-debt ratchet drives DB-shaped logic here.", "requireGit": true, "confirmed": true },
     { "name": "news-db-pure-analysis", "status": "in", "role": "Pure functional business logic, zero IO.", "requireGit": true, "confirmed": true },
     { "name": "news-db-analysis", "status": "in", "role": "TS analysis package (stats, coverage, trends).", "requireGit": true, "confirmed": true },

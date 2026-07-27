@@ -28,10 +28,11 @@ const XP_PER_LEVEL = 10; // improvement-count milestone size for the header prog
 
 // v1: the standing owner decisions live in prose (fix-queue doc §3 / module-ecosystem doc).
 // Hardcoded here with that provenance; RB-015 v2 can move them to a manifest.
+// Decisions only the owner can make. Two of the original three were settled in
+// cycle 132 and removed; the survivor stays because an agent must not change a
+// system security setting even with approval — the owner runs it themselves.
 const PLAYER_INPUT_REQUIRED = [
-  'news-crawler-itself: git init + remote (engine is not under version control)',
-  'Two ~30 GB news.db backups: keep or delete',
-  'Defender exclusion for the repo tree (~64 s cold-boot lever)'
+  'Defender exclusion for the repo tree (~64 s cold-boot lever) — needs an elevated PowerShell run by the owner; agents must not modify security settings'
 ];
 
 let cache = { at: 0, data: null };

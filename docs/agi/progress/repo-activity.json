@@ -10,17 +10,21 @@
       "days": [
         [
           "2026-07-27",
-          13
+          14
         ]
       ],
-      "total": 13
+      "total": 14
     },
     {
       "name": "news-crawler-itself",
       "status": "in",
-      "note": "no .git",
-      "days": [],
-      "total": 0
+      "days": [
+        [
+          "2026-07-27",
+          2
+        ]
+      ],
+      "total": 2
     },
     {
       "name": "news-crawler-db",
