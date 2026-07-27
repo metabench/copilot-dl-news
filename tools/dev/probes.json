@@ -75,6 +75,14 @@
       "timeoutMs": 15000
     },
     {
+      "id": "repo-scope",
+      "description": "agent scope matches disk reality: every in-scope sibling repo exists, is versioned, and its origin matches its name (config/repo-scope.json vs the filesystem). Added 2026-07-27 after prose scope drifted twice: the module-ecosystem doc called news-crawler-itself 'an EMPTY placeholder' months after it held 36 files, and a .git-based survey silently skipped it BECAUSE it is unversioned — the case that most needed flagging. knownIssue entries WARN loudly every orient without failing",
+      "cmd": "node",
+      "args": ["tools/dev/check-repo-scope.js"],
+      "needsServer": false,
+      "timeoutMs": 30000
+    },
+    {
       "id": "workflow-scorecard-ratchet",
       "description": "no workflow task-type with >=5 recorded runs exceeds the cost-to-catch ceiling (turns spent per validation-CONFIRMED real catch) — a degrading/bloating workflow surface (one that stops earning its cost) is a regression, caught at orient. Bootstrapped 2026-07-21 (cycle 48) with 13 labeled runs; diagnosis=0.9, delegation-safety=1.0, equivalence=0.4. See docs/agi/WORKFLOW_MEASUREMENT.md §2 (cost-to-catch is the sound ratchet signal; verdict-accuracy is a diagnostic-to-read, not a gate, because a REFUTED verdict can be the workflow correctly refuting a bad premise)",
       "cmd": "node",

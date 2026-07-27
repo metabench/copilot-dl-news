@@ -21,7 +21,7 @@ breakthroughs" — focused in-module deep work is an explicit goal, not just hyg
 
 | Repo | Role | Status |
 |------|------|--------|
-| **`news-crawler-itself`** | **THE crawler engine** — the most important module. Home for the latest-generation crawler as a worker: fetch loop, politeness, parallel (worker-thread) compression, remote-worker runtime. Currently an EMPTY placeholder to be bootstrapped. | bootstrap now |
+| **`news-crawler-itself`** | **THE crawler engine** — the most important module. Home for the latest-generation crawler as a worker: fetch loop, politeness, parallel (worker-thread) compression, remote-worker runtime. Bootstrapped cycle 73 (2026-07-22): ~36 source files incl. the gzip worker pool; live `file:` dependency of copilot-dl-news. **⚠️ NOT under version control as of 2026-07-27** — no `.git`, no remote, no backup; owner decision pending on init + push. *(Corrected 2026-07-27: this row previously still said "EMPTY placeholder", months stale — which is why scope is now also machine-checked, see below.)* | **owner: decide git init + remote** |
 | `news-crawler-db` (ncdb) | Unified DB layer + API (Drizzle/TS). Already wired (`file:../news-crawler-db`). The ncdb-debt ratchet keeps driving DB-shaped logic here. | active, wired |
 | `news-db-pure-analysis` | Pure functional business logic, zero IO. Already wired. | active, wired |
 | `news-db-analysis` | TS analysis package (stats, coverage, trends). | active |
@@ -36,6 +36,15 @@ breakthroughs" — focused in-module deep work is an explicit goal, not just hyg
 `copilot-dl-news` remains: the Electron/unified-app shell, the coordination point, the
 live `data/news.db` custodian, the UI, and the operational tooling — **calling** module
 APIs rather than containing their implementations.
+
+**Machine-checkable scope (2026-07-27):** this table is mirrored in
+[`config/repo-scope.json`](../../config/repo-scope.json) and verified by
+`node tools/dev/check-repo-scope.js` (registered in the RB-011 probe manifest, so it runs
+at every orient). The manifest distinguishes owner-**confirmed** entries from agent-**inferred**
+ones (`confirmed:false` — currently the three `jsgui3-*` repos, treated as consume-only
+pending an owner ruling), and carries `knownIssue` flags for tracked violations. Prose
+drifts; the probe does not — when this table and the manifest disagree, reconcile them
+with the owner rather than trusting either.
 
 ## 2. The working rules
 

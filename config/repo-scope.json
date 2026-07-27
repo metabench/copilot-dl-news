@@ -1,0 +1,22 @@
+{
+  "_comment": "Machine-checkable agent scope for the news-crawler module ecosystem. Source of authority: docs/plans/2026-07-22-module-ecosystem.md (owner directive) + owner rulings in chat. Verified by tools/dev/check-repo-scope.js (registered as an RB-011 probe). `confirmed:false` marks entries INFERRED by an agent and awaiting owner ruling — agents treat those conservatively. `knownIssue` downgrades a violation to a loud WARN so it surfaces every orient without blocking, until the owner resolves it.",
+  "asOf": "2026-07-27",
+  "root": "..",
+  "entries": [
+    { "name": "copilot-dl-news", "status": "in", "role": "Coordination point: Electron/unified-app shell, live data/news.db custodian, UI, operational tooling. Calls module APIs rather than containing implementations.", "requireGit": true, "confirmed": true },
+    { "name": "news-crawler-itself", "status": "in", "role": "THE crawler engine (owner: most important). Fetch loop, politeness, worker-thread compression, remote-worker runtime.", "requireGit": true, "confirmed": true, "knownIssue": "NO .git as of 2026-07-27 - the designated most-important module is the only unversioned link in the chain; owner decision pending on init + push to a remote" },
+    { "name": "news-crawler-db", "status": "in", "role": "Unified DB layer + API (Drizzle/TS). The ncdb-debt ratchet drives DB-shaped logic here.", "requireGit": true, "confirmed": true },
+    { "name": "news-db-pure-analysis", "status": "in", "role": "Pure functional business logic, zero IO.", "requireGit": true, "confirmed": true },
+    { "name": "news-db-analysis", "status": "in", "role": "TS analysis package (stats, coverage, trends).", "requireGit": true, "confirmed": true },
+    { "name": "news-crawler-document-intelligence", "status": "in", "role": "Pure HTML/DOM document intelligence.", "requireGit": true, "confirmed": true },
+    { "name": "news-crawler-url-intelligence", "status": "in", "role": "URL intelligence (classification, shape).", "requireGit": true, "confirmed": true },
+    { "name": "news-crawler-places-intelligence", "status": "in", "role": "Multilingual place detection/matching.", "requireGit": true, "confirmed": true },
+    { "name": "news-crawler-general-intelligence", "status": "in", "role": "Fusion layer: combines places/document/URL signals into page verdicts.", "requireGit": true, "confirmed": true },
+    { "name": "news-dev-tools", "status": "in", "role": "Cross-repo developer tooling (AST scan/edit, sessions, MCP servers).", "requireGit": true, "confirmed": true },
+    { "name": "news-crawler-backend-core", "status": "excluded-for-now", "role": "Shared backend kernel. Owner: excluded for the moment - do not modify.", "requireGit": false, "confirmed": true },
+    { "name": "http-cache-store", "status": "out", "role": "Owner: 'I have not been using http-cache-store' - not part of this ecosystem.", "requireGit": false, "confirmed": true },
+    { "name": "jsgui3-html", "status": "consume-only", "role": "UI framework dependency (file:../jsgui3-html). INFERRED as read/consume but not modify without separate direction - it sits outside the module-ecosystem table yet inside the workspace name.", "requireGit": false, "confirmed": false },
+    { "name": "jsgui3-client", "status": "consume-only", "role": "INFERRED consume-only, same reasoning as jsgui3-html.", "requireGit": false, "confirmed": false },
+    { "name": "jsgui3-ecosystem", "status": "consume-only", "role": "INFERRED consume-only, same reasoning as jsgui3-html.", "requireGit": false, "confirmed": false }
+  ]
+}

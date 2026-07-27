@@ -88,6 +88,11 @@ from that mode). Probe: `ls ../news-crawler-itself` (README + AGENTS.md exist si
   co-located `<!-- cycle:{...} -->` machine stanza under each row and read the computed verdict
   at orient: `node tools/agi/cycle-metrics.js` (COMPOUNDING/PLATEAU/BLOATING) — see
   [WORKFLOW_MEASUREMENT.md](WORKFLOW_MEASUREMENT.md) for the stanza schema + the workflow-scorecard.
+  **After appending the row + stanza, regenerate the progress picture:**
+  `node tools/agi/progress-svg.js` → [progress/progress.svg](progress/progress.svg) (owner
+  directive 2026-07-27: the workflow produces visible progress artifacts, rendered from the
+  stanzas — never hand-edit the SVG; edit the data and re-render. Milestones:
+  `--annotate "cycleId=label"`).
 - [SELF_MODEL.md](SELF_MODEL.md) — ecosystem model + the **model lineage table**; on a detected
   model swap, run the calibration in `.claude/skills/singularity/SKILL.md`.
 - [journal/](journal/) and [../sessions/SESSIONS_HUB.md](../sessions/SESSIONS_HUB.md) — history.
