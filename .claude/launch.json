@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "project-status",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["src/ui/server/projectStatus/server.js"],
+      "port": 3184
+    }
+  ]
+}

@@ -15,8 +15,9 @@
     { "name": "news-dev-tools", "status": "in", "role": "Cross-repo developer tooling (AST scan/edit, sessions, MCP servers).", "requireGit": true, "confirmed": true },
     { "name": "news-crawler-backend-core", "status": "excluded-for-now", "role": "Shared backend kernel. Owner: excluded for the moment - do not modify.", "requireGit": false, "confirmed": true },
     { "name": "http-cache-store", "status": "out", "role": "Owner: 'I have not been using http-cache-store' - not part of this ecosystem.", "requireGit": false, "confirmed": true },
-    { "name": "jsgui3-html", "status": "consume-only", "role": "UI framework dependency (file:../jsgui3-html). INFERRED as read/consume but not modify without separate direction - it sits outside the module-ecosystem table yet inside the workspace name.", "requireGit": false, "confirmed": false },
-    { "name": "jsgui3-client", "status": "consume-only", "role": "INFERRED consume-only, same reasoning as jsgui3-html.", "requireGit": false, "confirmed": false },
-    { "name": "jsgui3-ecosystem", "status": "consume-only", "role": "INFERRED consume-only, same reasoning as jsgui3-html.", "requireGit": false, "confirmed": false }
+    { "name": "jsgui3-html", "status": "consume-only", "role": "UI framework dependency (file:../jsgui3-html). OWNER RULING 2026-07-27: consume only, but fixes and improvements are permitted when needed.", "requireGit": false, "confirmed": true },
+    { "name": "jsgui3-client", "status": "consume-only", "role": "OWNER RULING 2026-07-27: consume only; fixes and improvements permitted when needed.", "requireGit": false, "confirmed": true },
+    { "name": "jsgui3-server", "status": "consume-only", "role": "OWNER RULING 2026-07-27: consume only; fixes and improvements permitted when needed. Consumed by the project-status page (src/ui/server/projectStatus) via sibling-path require - not yet a package.json dependency.", "requireGit": false, "confirmed": true },
+    { "name": "jsgui3-ecosystem", "status": "consume-only", "role": "OWNER RULING 2026-07-27: consume only; fixes and improvements permitted when needed.", "requireGit": false, "confirmed": true }
   ]
 }
