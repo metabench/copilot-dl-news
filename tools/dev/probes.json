@@ -123,6 +123,14 @@
       "timeoutMs": 20000
     },
     {
+      "id": "doc-links",
+      "description": "every markdown link in the LIVING doc corpus (docs/agi) resolves (RB-003, cycle 134). Scoped deliberately: the 154-doc legacy docs/ corpus is 94% frozen 2025 point-in-time analyses, and 'aligning' a dated architecture review with today's code would destroy the record it exists to be - so no diffing strategy was built, only this guard on the corpus BOOT actually depends on. Measured contradiction across both corpora was 13 broken links in 172 docs; the 2 in docs/agi are fixed. Only markdown links are checked: an earlier pass that counted backticked filenames reported 982 broken refs at a 98.7% false-positive rate",
+      "cmd": "node",
+      "args": ["tools/dev/checks/doc-links.check.js"],
+      "needsServer": false,
+      "timeoutMs": 15000
+    },
+    {
       "id": "workflow-scorecard-ratchet",
       "description": "no workflow task-type with >=5 recorded runs exceeds the cost-to-catch ceiling (turns spent per validation-CONFIRMED real catch) — a degrading/bloating workflow surface (one that stops earning its cost) is a regression, caught at orient. Bootstrapped 2026-07-21 (cycle 48) with 13 labeled runs; diagnosis=0.9, delegation-safety=1.0, equivalence=0.4. See docs/agi/WORKFLOW_MEASUREMENT.md §2 (cost-to-catch is the sound ratchet signal; verdict-accuracy is a diagnostic-to-read, not a gate, because a REFUTED verdict can be the workflow correctly refuting a bad premise)",
       "cmd": "node",
