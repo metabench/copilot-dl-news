@@ -41,11 +41,32 @@ async function parseXmlMaybe(xml) {
   }
 }
 
+// Child sitemaps that describe media libraries, not articles. When the fetch
+// budget is tight these go to the back of the queue so news/article sitemaps
+// are read first (SMH's index chained 30+ video sitemap XMLs ahead of news —
+// observed 2026-07-19, it consumed the whole discovery phase of a crawl).
+function isLowPrioritySitemapUrl(u) {
+  const s = String(u).toLowerCase();
+  return s.includes('video') || s.includes('image') || s.includes('podcast')
+    || s.includes('gallery') || s.includes('/tag') || s.includes('topic-sitemap');
+}
+
 async function loadSitemaps(baseUrl, domain, sitemapUrls, opts) {
   const list = Array.isArray(sitemapUrls) && sitemapUrls.length ? sitemapUrls.slice() : [ `${baseUrl}/sitemap.xml` ];
   const seen = new Set();
   let enqueued = 0;
   const maxUrls = Math.max(0, opts?.sitemapMaxUrls || 5000);
+  // Budget on sitemap DOCUMENTS fetched (indexes chain: one index can point at
+  // hundreds of children). Discovery must pivot to real pages quickly — the
+  // budget bounds time-to-first-article instead of letting XML crowd it out.
+  const maxFetches = Math.max(1, opts?.sitemapMaxFetches || 12);
+  let fetches = 0;
+  // Bandwidth note: sitemap XML is deliberately NOT charged to the global
+  // bandwidth limiter. Charging it was tried (2026-07-19) and stalled whole
+  // fleets: a multi-MB index against a small per-worker slice puts the worker
+  // in minutes of byte-debt before its first article. The fetch budget above
+  // is what bounds XML volume (≤ maxFetches documents, one-time per crawl);
+  // the cap governs page-content download, which dominates steady-state.
 
   // Conditional-fetch cache, injected (DB-backed via news-crawler-db's
   // sitemap_cache accessors — see RobotsAndSitemapCoordinator). Shape:
@@ -96,6 +117,8 @@ async function loadSitemaps(baseUrl, domain, sitemapUrls, opts) {
       if (cached?.etag) headers['If-None-Match'] = cached.etag;
       if (cached?.lastModified) headers['If-Modified-Since'] = cached.lastModified;
 
+      // Network fetch: consumes one unit of the sitemap budget.
+      fetches += 1;
       const res = await timeoutFetch(u, { headers }, opts?.fetchImpl);
 
       // 304: origin confirms our cached body is current — reuse it, record
@@ -177,17 +200,24 @@ async function loadSitemaps(baseUrl, domain, sitemapUrls, opts) {
       return;
     }
 
-    // Handle <sitemapindex> (nested sitemaps)
+    // Handle <sitemapindex> (nested sitemaps). Children are enqueued
+    // news/article-looking first so the bounded fetch budget is spent on
+    // sitemaps likely to yield articles, and media libraries only if budget
+    // remains.
     if (doc.sitemapindex && doc.sitemapindex.sitemap) {
       const arr = Array.isArray(doc.sitemapindex.sitemap) ? doc.sitemapindex.sitemap : [doc.sitemapindex.sitemap];
+      const children = [];
       for (const e of arr) {
         const loc = e.loc || e['#text'] || null;
-        if (loc) list.push(String(loc));
+        if (loc) children.push(String(loc));
       }
+      children.sort((a, b) => (isLowPrioritySitemapUrl(a) ? 1 : 0) - (isLowPrioritySitemapUrl(b) ? 1 : 0));
+      for (const c of children) list.push(c);
     }
   };
 
   for (let i = 0; i < list.length; i++) {
+    if (fetches >= maxFetches) break;   // discovery budget spent — pivot to pages
     const u = list[i];
     if (typeof u !== 'string') continue;
     try {

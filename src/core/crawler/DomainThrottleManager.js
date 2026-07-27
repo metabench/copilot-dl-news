@@ -6,7 +6,12 @@ class DomainThrottleManager {
     pacerJitterMinMs,
     pacerJitterMaxMs,
     getDbAdapter = () => null,
-    limiterFactory = null
+    limiterFactory = null,
+    // 2026-07-26 (owner decision #2, cycle 14): stored domain_rate_limits rows are
+    // honoured as a pacing floor. Injected as a function so this class stays
+    // DB-agnostic (host -> { rpm?, crawlDelaySeconds? } | null); the caller owns the
+    // query. Absent provider => behaviour is exactly as before.
+    storedRateLimitProvider = null
   } = {}) {
     if (!state) {
       throw new Error('DomainThrottleManager requires a state instance');
@@ -19,6 +24,19 @@ class DomainThrottleManager {
     this._domainLimiter = null;
     this._limiterInitialized = false;
     this._politenessFloors = new Map();
+    this.storedRateLimitProvider = typeof storedRateLimitProvider === 'function' ? storedRateLimitProvider : null;
+    // Stored (domain_rate_limits) floors, keyed by NORMALISED host. Kept separate from
+    // the robots floors so the two can be combined by max() rather than overwriting.
+    this._storedFloors = new Map();
+    this._storedLookedUp = new Set();
+    // Degraded-limiter visibility (2026-07-21, distributed-crawl plan v2 D2a): a
+    // limiter construction/acquire failure previously fell back to
+    // CrawlerState-cached pacing SILENTLY — an operator had no signal that
+    // politeness had degraded from the real DomainLimiter (robots-informed,
+    // 429-adaptive) to the coarser cached floor. Count + log it loudly; the
+    // fallback pacing itself is unchanged (still degrades gracefully, never
+    // throws), this only removes the silence.
+    this.degradedLimiterAcquireFailures = 0;
   }
 
   /**
@@ -96,6 +114,7 @@ class DomainThrottleManager {
     const state = this.getDomainState(host);
     if (!state) return;
     const limiter = safeCall(() => this._ensureLimiter(), null);
+    this._ensureStoredRateLimit(host);
     this._applyStoredPolitenessFloor(host, limiter, state);
     if (limiter) {
       const acquired = await safeCallAsync(async () => {
@@ -107,6 +126,14 @@ class DomainThrottleManager {
         return;
       }
     }
+    // Reached only when the real DomainLimiter is unavailable or threw —
+    // degrading to CrawlerState-cached pacing. Loud on purpose (see the
+    // degradedLimiterAcquireFailures comment in the constructor).
+    this.degradedLimiterAcquireFailures += 1;
+    safeCall(() => console.warn(
+      `[DomainThrottleManager] degraded pacing for ${host}: DomainLimiter unavailable/failed ` +
+      `(count=${this.degradedLimiterAcquireFailures}) — falling back to cached-state floor`
+    ), undefined);
     const now = nowMs();
     if ((state.backoffUntil || 0) > now) {
       await sleep(state.backoffUntil - now);
@@ -201,7 +228,7 @@ class DomainThrottleManager {
       source: floorMs > 0 ? source : null,
       crawlDelaySeconds: floorMs > 0 ? seconds : null
     };
-    this._politenessFloors.set(host, payload);
+    this._politenessFloors.set(DomainThrottleManager.normalizeHostKey(host), payload);
     const limiter = safeCall(() => this._ensureLimiter(), null);
     this._applyStoredPolitenessFloor(host, limiter, state);
     this._persist(host, state);
@@ -231,9 +258,72 @@ class DomainThrottleManager {
     return this._domainLimiter;
   }
 
+  /**
+   * Normalise a host to one key. `domain_rate_limits` holds rows under BOTH bare and
+   * `www.` forms (measured 2026-07-26: `telegraph.co.uk` preset vs `www.irishtimes.com`
+   * learned), so an exact-string lookup silently misses half of them. Lowercase + strip
+   * a single leading `www.`.
+   */
+  static normalizeHostKey(host) {
+    if (!host) return '';
+    return String(host).trim().toLowerCase().replace(/^www\./, '');
+  }
+
+  /**
+   * Convert a stored domain_rate_limits row into a floor in ms. An explicit
+   * crawl_delay_seconds wins over an rpm, since it is the more direct statement.
+   */
+  static storedRowToFloorMs(row) {
+    if (!row) return 0;
+    const secs = Number(row.crawlDelaySeconds ?? row.crawl_delay_seconds);
+    if (Number.isFinite(secs) && secs > 0) return Math.floor(secs * 1000);
+    const rpm = Number(row.rpm ?? row.safe_rpm ?? row.safeRpm ?? row.learned_rpm ?? row.learnedRpm);
+    if (Number.isFinite(rpm) && rpm > 0) return Math.floor(60000 / rpm);
+    return 0;
+  }
+
+  /**
+   * Lazily consult the injected provider once per normalised host and cache the result.
+   * A provider that throws or returns nothing leaves pacing exactly as it was.
+   */
+  _ensureStoredRateLimit(host) {
+    const key = DomainThrottleManager.normalizeHostKey(host);
+    if (!key || this._storedLookedUp.has(key)) return;
+    this._storedLookedUp.add(key);
+    if (!this.storedRateLimitProvider) return;
+    const row = safeCall(() => this.storedRateLimitProvider(key), null);
+    const floorMs = DomainThrottleManager.storedRowToFloorMs(row);
+    if (floorMs > 0) {
+      this._storedFloors.set(key, {
+        floorMs,
+        source: `stored-rate-limit:${(row && row.source) || 'domain_rate_limits'}`,
+        crawlDelaySeconds: floorMs / 1000
+      });
+    }
+  }
+
+  /**
+   * The floor actually applied = the MAX of the robots crawl-delay and any stored limit.
+   *
+   * Owner decision 2026-07-26 #2 was "be more polite, accept slower", so the two floors
+   * COMBINE rather than one overwriting the other: taking the max can only ever slow us
+   * down, and it satisfies "robots crawl-delay is an absolute floor" in the direction
+   * that matters — we never fetch faster than robots.txt permits, and if a stored limit
+   * is stricter still we honour that too.
+   */
+  _effectiveFloor(host) {
+    const key = DomainThrottleManager.normalizeHostKey(host);
+    const robots = this._politenessFloors.get(key) || this._politenessFloors.get(host) || null;
+    const stored = this._storedFloors.get(key) || null;
+    if (!robots && !stored) return null;
+    if (robots && !stored) return robots;
+    if (stored && !robots) return stored;
+    return (robots.floorMs >= stored.floorMs) ? robots : stored;
+  }
+
   _applyStoredPolitenessFloor(host, limiter, state) {
-    const floor = this._politenessFloors.get(host);
-    if (!floor) return;
+    const floor = this._effectiveFloor(host);
+    if (!floor || !(floor.floorMs > 0)) return;
     if (limiter && typeof limiter.setPolitenessFloor === 'function') {
       safeCall(() => limiter.setPolitenessFloor(host, floor.floorMs, {
         source: floor.source,

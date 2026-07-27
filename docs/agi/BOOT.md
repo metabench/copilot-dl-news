@@ -18,8 +18,9 @@ re-probe anything here whose subject you're about to depend on.
 
 | Need | Command |
 | --- | --- |
+| Knowledge probes (RB-011) | `node tools/dev/run-probes.js` — executes every registered re-verification probe (frontier API, SSR/template-trap tripwire, churn tool, DB-probe incident guard); server-dependent probes SKIP (not fail) when :3170 is down. Run at orient; add an entry to `tools/dev/probes.json` when a claim gains a runnable check. |
 | Targeted tests | `npm run test:by-path -- <test-file>` (Jest 30 careful runner — the house way) |
-| SQL-boundary tripwire | `npm run sql:check-ui` — run after ANY DB-logic move (2026-07-19: 8 pre-existing findings in src/ui/server/*, scopes need refresh; nothing new may add to them) |
+| SQL-boundary tripwire | `npm run sql:check-ui` — run after ANY DB-logic move (2026-07-19 triage: scans src/ui only, comment-aware, allow list empty; passes CLEAN — any finding is a regression) |
 | AST search / impact | `node tools/dev/js-scan.js --ai-mode --json …`; `--ripple-analysis <file>`; `--call-graph <file> --depth 3` |
 | Guarded edits | `node tools/dev/js-edit.js --from-plan / --from-token / --match-snapshot` |
 | Docs search | `node tools/dev/md-scan.js --dir docs/agi --search <term>` |
@@ -48,8 +49,28 @@ re-probe anything here whose subject you're about to depend on.
 - **PowerShell:** `Tee-Object` writes UTF-16 LE — check BOM before `readFileSync('utf8')`; never
   inline SQL in shell strings — write a small Node script.
 
+## Module ecosystem (owner directive 2026-07-22 — the working model)
+
+Functionality is implemented and tested in **sibling module repos** with clearly defined
+APIs; this repo is the **coordinator** that calls them (the ncdb pattern, generalized).
+`../news-crawler-itself` is **the most important module** — the crawler engine's home
+(first extraction: the remote worker + a worker-thread parallel-compression pool out of
+`deploy/remote-crawler-v2/`). `news-crawler-backend-core` is excluded for the moment;
+`http-cache-store` is not part of this ecosystem. Before writing new code here, ask
+"which module owns this?" Full map + rules:
+[../plans/2026-07-22-module-ecosystem.md](../plans/2026-07-22-module-ecosystem.md).
+Focused deep-work cycles inside one module are first-class (owner expects breakthroughs
+from that mode). Probe: `ls ../news-crawler-itself` (README + AGENTS.md exist since
+2026-07-22).
+
 ## Corpus map (one hop each)
 
+- **[../agents/FUTURE_AGENT_PLAYBOOK.md](../agents/FUTURE_AGENT_PLAYBOOK.md) — START HERE
+  for step-by-step instructions** (2026-07-22): session ritual, where-code-goes decision
+  table, golden rules G1–G10 with their incidents, the pending extraction mission
+  (news-crawler-itself + compression pool + deploy + 5×10 crawl), exact deploy/crawl/
+  restart procedures, troubleshooting table, STOP conditions. Written to be followed
+  literally — verify after every step.
 - [LESSONS.md](LESSONS.md) · [PATTERNS.md](PATTERNS.md) · [ANTI_PATTERNS.md](ANTI_PATTERNS.md) —
   distilled experience. Trust the mechanisms; re-resolve any pre-2026 path (table below).
 - [SKILLS.md](SKILLS.md) + [skills/](skills/) — 17 skill packs on disk (jsgui3-activation-debug,
@@ -58,8 +79,15 @@ re-probe anything here whose subject you're about to depend on.
 - [WORKFLOWS.md](WORKFLOWS.md) — canonical Sense→Plan→Act loops.
 - [RESEARCH_BACKLOG.md](RESEARCH_BACKLOG.md) — the live research queue. Each improvement cycle
   advances one item or records why none was actionable.
+- [../plans/2026-07-db-driven-crawling.md](../plans/2026-07-db-driven-crawling.md) — owner-directed
+  multi-turn roadmap: crawl from the DB frontier (urls⋈http_responses; ~1.5M known-but-undownloaded),
+  per-type recency (hubs 1-day, UI-configurable), place-hub redownload. P1 shipped; ground-truth
+  schema rules + traps live here (RB-012).
 - [IMPROVEMENT_LEDGER.md](IMPROVEMENT_LEDGER.md) — cost-per-improvement + second-order-tools
-  record; append a row per cycle, honestly (a no-delta cycle gets written down too).
+  record; append a row per cycle, honestly (a no-delta cycle gets written down too). Emit a
+  co-located `<!-- cycle:{...} -->` machine stanza under each row and read the computed verdict
+  at orient: `node tools/agi/cycle-metrics.js` (COMPOUNDING/PLATEAU/BLOATING) — see
+  [WORKFLOW_MEASUREMENT.md](WORKFLOW_MEASUREMENT.md) for the stanza schema + the workflow-scorecard.
 - [SELF_MODEL.md](SELF_MODEL.md) — ecosystem model + the **model lineage table**; on a detected
   model swap, run the calibration in `.claude/skills/singularity/SKILL.md`.
 - [journal/](journal/) and [../sessions/SESSIONS_HUB.md](../sessions/SESSIONS_HUB.md) — history.

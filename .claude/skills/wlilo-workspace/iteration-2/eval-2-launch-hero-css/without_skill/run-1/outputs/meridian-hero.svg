@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 1600 900" width="1600" height="900" role="img"
+     aria-labelledby="heroTitle heroDesc">
+  <title id="heroTitle">Meridian 2.0 — launch hero</title>
+  <desc id="heroDesc">White-light luxury hero poster for the Meridian data-pipeline suite,
+    version 2.0. A porcelain field crossed by prismatic iridescent light, a gold armillary
+    meridian sphere, and two gemstone-cut buttons: Get started and Read the docs.</desc>
+
+  <defs>
+    <!-- ======== WLILO palette: White Light · Iridescence · Luxury · Object ======== -->
+    <radialGradient id="bg" cx="36%" cy="30%" r="95%">
+      <stop offset="0"    stop-color="#ffffff"/>
+      <stop offset="0.5"  stop-color="#fbf8f2"/>
+      <stop offset="1"    stop-color="#eee8dc"/>
+    </radialGradient>
+
+    <radialGradient id="vignette" cx="50%" cy="46%" r="72%">
+      <stop offset="0"    stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.78" stop-color="#e7dfd0" stop-opacity="0"/>
+      <stop offset="1"    stop-color="#b9ac93" stop-opacity="0.30"/>
+    </radialGradient>
+
+    <!-- Prism sequence -->
+    <linearGradient id="irisSweep" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0"    stop-color="#ffd9e8"/>
+      <stop offset="0.2"  stop-color="#ffe9c9"/>
+      <stop offset="0.4"  stop-color="#fdf6cf"/>
+      <stop offset="0.6"  stop-color="#d5f5e6"/>
+      <stop offset="0.8"  stop-color="#d3ecff"/>
+      <stop offset="1"    stop-color="#e4dcff"/>
+    </linearGradient>
+
+    <linearGradient id="irisBeam" x1="0" y1="0" x2="1" y2="0.25">
+      <stop offset="0"    stop-color="#ffd9e8" stop-opacity="0"/>
+      <stop offset="0.25" stop-color="#ffe9c9" stop-opacity="0.55"/>
+      <stop offset="0.5"  stop-color="#d5f5e6" stop-opacity="0.65"/>
+      <stop offset="0.75" stop-color="#d3ecff" stop-opacity="0.55"/>
+      <stop offset="1"    stop-color="#e4dcff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Luxury metals -->
+    <linearGradient id="goldLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0"    stop-color="#b98a2e"/>
+      <stop offset="0.25" stop-color="#f4dd9a"/>
+      <stop offset="0.5"  stop-color="#8f6a1f"/>
+      <stop offset="0.75" stop-color="#f7e7b4"/>
+      <stop offset="1"    stop-color="#caa64c"/>
+    </linearGradient>
+
+    <linearGradient id="goldRing" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"    stop-color="#f9edc4"/>
+      <stop offset="0.35" stop-color="#d9b968"/>
+      <stop offset="0.7"  stop-color="#8f6a1f"/>
+      <stop offset="1"    stop-color="#e8cf8a"/>
+    </linearGradient>
+
+    <linearGradient id="inkSheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"    stop-color="#2b2417"/>
+      <stop offset="0.55" stop-color="#5c4b26"/>
+      <stop offset="1"    stop-color="#221c12"/>
+    </linearGradient>
+
+    <!-- Glass sphere -->
+    <radialGradient id="sphereGlass" cx="0.35" cy="0.28" r="0.9">
+      <stop offset="0"    stop-color="#ffffff" stop-opacity="0.97"/>
+      <stop offset="0.45" stop-color="#f4f0ff" stop-opacity="0.85"/>
+      <stop offset="0.78" stop-color="#e3ecff" stop-opacity="0.55"/>
+      <stop offset="1"    stop-color="#c9d3ea" stop-opacity="0.9"/>
+    </radialGradient>
+
+    <!-- Gemstones -->
+    <linearGradient id="emeraldBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"    stop-color="#6fe3b1"/>
+      <stop offset="0.35" stop-color="#23a877"/>
+      <stop offset="0.72" stop-color="#0e6b4a"/>
+      <stop offset="1"    stop-color="#063d2a"/>
+    </linearGradient>
+
+    <linearGradient id="crystalBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"    stop-color="#ffffff"/>
+      <stop offset="0.4"  stop-color="#f2f4fa"/>
+      <stop offset="0.75" stop-color="#e2e8f4"/>
+      <stop offset="1"    stop-color="#ccd5e8"/>
+    </linearGradient>
+
+    <linearGradient id="glassTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Filters -->
+    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+    <filter id="blurXL" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="34"/>
+    </filter>
+    <filter id="dropGem" x="-40%" y="-40%" width="180%" height="200%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#1d1a14" flood-opacity="0.32"/>
+    </filter>
+    <filter id="dropSoft" x="-40%" y="-40%" width="180%" height="200%">
+      <feDropShadow dx="0" dy="14" stdDeviation="22" flood-color="#6b5b33" flood-opacity="0.22"/>
+    </filter>
+
+    <!-- Button clips -->
+    <clipPath id="gemClipA"><rect width="300" height="84" rx="42"/></clipPath>
+    <clipPath id="gemClipB"><rect width="330" height="84" rx="42"/></clipPath>
+
+    <!-- Four-point sparkle -->
+    <path id="spark" d="M0 -12 C1.2 -3.2 3.2 -1.2 12 0 C3.2 1.2 1.2 3.2 0 12
+                        C-1.2 3.2 -3.2 1.2 -12 0 C-3.2 -1.2 -1.2 -3.2 0 -12 Z"/>
+  </defs>
+
+  <!-- ================= Field of white light ================= -->
+  <rect width="1600" height="900" fill="url(#bg)"/>
+
+  <!-- Prismatic beams sweeping the field -->
+  <g filter="url(#blurXL)">
+    <polygon points="820,-140 1700,340 1700,560 640,60" fill="url(#irisBeam)" opacity="0.5"/>
+    <polygon points="-100,620 900,140 1020,220 -40,760" fill="url(#irisBeam)" opacity="0.32"/>
+  </g>
+
+  <!-- Faint concentric survey arcs, lower left -->
+  <g fill="none" stroke="#a1873c" opacity="0.6">
+    <circle cx="60" cy="900" r="240" stroke-opacity="0.14"/>
+    <circle cx="60" cy="900" r="320" stroke-opacity="0.10"/>
+    <circle cx="60" cy="900" r="400" stroke-opacity="0.07"/>
+  </g>
+
+  <rect width="1600" height="900" fill="url(#vignette)"/>
+
+  <!-- ================= The luxury object: meridian sphere ================= -->
+  <g transform="translate(1215,455)">
+    <!-- iridescent halo -->
+    <circle r="250" fill="url(#irisSweep)" opacity="0.35" filter="url(#blurXL)"/>
+
+    <!-- floor shadow and iridescent caustic -->
+    <ellipse cy="330" rx="300" ry="32" fill="#6b5b33" opacity="0.18" filter="url(#softGlow)"/>
+    <ellipse cy="326" rx="210" ry="18" fill="url(#irisSweep)" opacity="0.35" filter="url(#softGlow)"/>
+
+    <!-- armillary ring, back half -->
+    <g transform="rotate(-20)">
+      <ellipse rx="300" ry="92" fill="none" stroke="url(#goldRing)" stroke-width="16"/>
+      <ellipse rx="300" ry="92" fill="none" stroke="url(#irisSweep)" stroke-width="34" opacity="0.22"/>
+      <ellipse rx="324" ry="106" fill="none" stroke="#a1873c" stroke-width="1" opacity="0.5"/>
+      <ellipse rx="276" ry="78"  fill="none" stroke="#a1873c" stroke-width="1" opacity="0.5"/>
+    </g>
+
+    <!-- glass sphere -->
+    <circle r="205" fill="url(#sphereGlass)" stroke="#caa64c" stroke-width="1.4"
+            stroke-opacity="0.55" filter="url(#dropSoft)"/>
+
+    <!-- graticule: meridians and parallels -->
+    <g fill="none" stroke="#a1873c">
+      <ellipse rx="60"  ry="205" stroke-width="1"   opacity="0.4"/>
+      <ellipse rx="120" ry="205" stroke-width="2.2" opacity="0.75" stroke="url(#irisSweep)"/>
+      <ellipse rx="170" ry="205" stroke-width="1"   opacity="0.4"/>
+      <ellipse cy="-78" rx="188" ry="36" stroke-width="1" opacity="0.42"/>
+      <ellipse            rx="205" ry="46" stroke-width="1.2" opacity="0.5"/>
+      <ellipse cy="80"  rx="186" ry="38" stroke-width="1" opacity="0.42"/>
+      <!-- prime meridian, gold and slightly heavier -->
+      <ellipse rx="0.8" ry="205" stroke="url(#goldRing)" stroke-width="2.4" opacity="0.8"/>
+    </g>
+
+    <!-- specular bloom -->
+    <ellipse cx="-72" cy="-92" rx="92" ry="60" fill="#ffffff" opacity="0.75" filter="url(#softGlow)"/>
+
+    <!-- centre jewel: emerald cabochon in gold -->
+    <circle r="34" fill="#063d2a" opacity="0.4" filter="url(#softGlow)"/>
+    <circle r="27" fill="url(#emeraldBody)" stroke="url(#goldLine)" stroke-width="2.5"/>
+    <ellipse cx="-7" cy="-9" rx="11" ry="7" fill="#ffffff" opacity="0.8"/>
+
+    <!-- armillary ring, front half (occludes the sphere) -->
+    <g transform="rotate(-20)">
+      <path d="M -300 0 A 300 92 0 0 0 300 0" fill="none" stroke="url(#goldRing)" stroke-width="16"/>
+      <path d="M -300 0 A 300 92 0 0 0 300 0" fill="none" stroke="url(#irisSweep)"
+            stroke-width="34" opacity="0.22"/>
+      <path d="M -324 0 A 324 106 0 0 0 324 0" fill="none" stroke="#a1873c" stroke-width="1" opacity="0.5"/>
+      <!-- gem studs riding the ring -->
+      <circle cx="-300" r="9"  fill="url(#emeraldBody)" stroke="url(#goldLine)" stroke-width="1.6"/>
+      <circle cx="245" cy="53" r="7" fill="url(#crystalBody)" stroke="url(#goldLine)" stroke-width="1.4"/>
+      <circle cx="-160" cy="78" r="5.5" fill="url(#crystalBody)" stroke="url(#goldLine)" stroke-width="1.2"/>
+    </g>
+
+    <!-- sparkles -->
+    <use href="#spark" transform="translate(-138,-158) scale(1.15)" fill="#ffffff" opacity="0.95"/>
+    <use href="#spark" transform="translate(150,-108) scale(0.6)"  fill="#ffffff" opacity="0.8"/>
+    <use href="#spark" transform="translate(238,150) scale(0.8)"   fill="#f7e7b4" opacity="0.9"/>
+    <use href="#spark" transform="translate(-232,96) scale(0.5)"   fill="#f7e7b4" opacity="0.7"/>
+  </g>
+
+  <!-- ================= Corner ornaments ================= -->
+  <g stroke="#a1873c" stroke-width="1.2" opacity="0.55" fill="none">
+    <path d="M 48 84 L 48 48 L 84 48"/>
+    <path d="M 1552 84 L 1552 48 L 1516 48"/>
+    <path d="M 48 816 L 48 852 L 84 852"/>
+    <path d="M 1552 816 L 1552 852 L 1516 852"/>
+  </g>
+  <g fill="#caa64c" opacity="0.8">
+    <use href="#spark" transform="translate(48,48) scale(0.42)"/>
+    <use href="#spark" transform="translate(1552,48) scale(0.42)"/>
+    <use href="#spark" transform="translate(48,852) scale(0.42)"/>
+    <use href="#spark" transform="translate(1552,852) scale(0.42)"/>
+  </g>
+
+  <!-- ================= Copy block ================= -->
+  <!-- Eyebrow -->
+  <g>
+    <line x1="120" y1="256" x2="168" y2="256" stroke="url(#goldLine)" stroke-width="1.4"/>
+    <text x="182" y="262" font-family="Futura, 'Avenir Next', 'Segoe UI', Verdana, sans-serif"
+          font-size="17" letter-spacing="4.5" fill="#8a7a4e">THE LUXURY DATA PIPELINE
+      <tspan fill="#a1873c">&#183;</tspan> VERSION 2.0</text>
+    <line x1="672" y1="256" x2="900" y2="256" stroke="#caa64c" stroke-opacity="0.45" stroke-width="1"/>
+  </g>
+
+  <!-- Headline -->
+  <text x="112" y="430"
+        font-family="Didot, 'Bodoni MT', 'Playfair Display', Georgia, 'Times New Roman', serif"
+        font-size="148" letter-spacing="10" fill="url(#inkSheen)">MERIDIAN</text>
+  <g>
+    <line x1="120" y1="458" x2="560" y2="458" stroke="#caa64c" stroke-opacity="0.55" stroke-width="1"/>
+    <use href="#spark" transform="translate(576,458) scale(0.5)" fill="#caa64c" opacity="0.85"/>
+    <line x1="592" y1="458" x2="880" y2="458" stroke="#caa64c" stroke-opacity="0.55" stroke-width="1"/>
+  </g>
+
+  <!-- Tagline -->
+  <text x="118" y="516"
+        font-family="Didot, 'Bodoni MT', 'Playfair Display', Georgia, 'Times New Roman', serif"
+        font-style="italic" font-size="40" fill="#3a3122">Data pipelines, refined to brilliance.</text>
+
+  <!-- Subcopy -->
+  <text x="120" y="566" font-family="'Avenir Next', 'Segoe UI', Verdana, sans-serif"
+        font-size="21" fill="#5c564a">Version 2.0 &#8212; a unified control plane, prism-fast transforms,</text>
+  <text x="120" y="598" font-family="'Avenir Next', 'Segoe UI', Verdana, sans-serif"
+        font-size="21" fill="#5c564a">and observability polished to a mirror finish.</text>
+
+  <!-- ================= Gemstone buttons ================= -->
+  <!-- Get started : emerald -->
+  <g transform="translate(120,644)">
+    <ellipse cx="150" cy="88" rx="138" ry="15" fill="#063d2a" opacity="0.35" filter="url(#softGlow)"/>
+    <rect x="-5" y="-5" width="310" height="94" rx="47" fill="none"
+          stroke="url(#irisSweep)" stroke-width="1.6" opacity="0.55"/>
+    <g clip-path="url(#gemClipA)" filter="url(#dropGem)">
+      <rect width="300" height="84" fill="url(#emeraldBody)"/>
+      <!-- facet cuts -->
+      <polygon points="0,0 62,0 30,84 0,84"        fill="#ffffff" opacity="0.10"/>
+      <polygon points="62,0 118,0 92,84 30,84"     fill="#02160d" opacity="0.16"/>
+      <polygon points="118,0 190,0 160,84 92,84"   fill="#ffffff" opacity="0.13"/>
+      <polygon points="190,0 244,0 226,84 160,84"  fill="#02160d" opacity="0.13"/>
+      <polygon points="244,0 300,0 300,84 226,84"  fill="#ffffff" opacity="0.10"/>
+      <polygon points="-20,0 92,0 34,84 -62,84"    fill="#ffffff" opacity="0.20"/>
+      <ellipse cx="150" cy="94" rx="132" ry="26" fill="#7dffca" opacity="0.35" filter="url(#softGlow)"/>
+      <rect x="6" y="5" width="288" height="38" rx="24" fill="url(#glassTop)" opacity="0.85"/>
+    </g>
+    <rect x="1.5" y="1.5" width="297" height="81" rx="40.5" fill="none"
+          stroke="url(#goldLine)" stroke-width="2.6"/>
+    <rect x="6" y="6" width="288" height="72" rx="36" fill="none"
+          stroke="#ffffff" stroke-opacity="0.35" stroke-width="1"/>
+    <use href="#spark" transform="translate(46,20) scale(0.78)" fill="#ffffff" opacity="0.95"/>
+    <use href="#spark" transform="translate(262,62) scale(0.45)" fill="#ffffff" opacity="0.7"/>
+    <text x="150" y="53" text-anchor="middle"
+          font-family="Futura, 'Avenir Next', 'Segoe UI', Verdana, sans-serif"
+          font-size="20" font-weight="600" letter-spacing="3.5" fill="#ffffff">GET STARTED</text>
+  </g>
+
+  <!-- Read the docs : crystal -->
+  <g transform="translate(452,644)">
+    <ellipse cx="165" cy="88" rx="150" ry="15" fill="#6b5b33" opacity="0.28" filter="url(#softGlow)"/>
+    <rect x="-5" y="-5" width="340" height="94" rx="47" fill="none"
+          stroke="url(#irisSweep)" stroke-width="1.6" opacity="0.55"/>
+    <g clip-path="url(#gemClipB)" filter="url(#dropGem)">
+      <rect width="330" height="84" fill="url(#crystalBody)"/>
+      <!-- iridescent facet cuts -->
+      <polygon points="0,0 70,0 36,84 0,84"        fill="#ffd9e8" opacity="0.4"/>
+      <polygon points="70,0 132,0 104,84 36,84"    fill="#d3ecff" opacity="0.45"/>
+      <polygon points="132,0 208,0 178,84 104,84"  fill="#ffffff" opacity="0.5"/>
+      <polygon points="208,0 268,0 248,84 178,84"  fill="#e4dcff" opacity="0.42"/>
+      <polygon points="268,0 330,0 330,84 248,84"  fill="#d5f5e6" opacity="0.4"/>
+      <polygon points="-20,0 100,0 40,84 -66,84"   fill="#ffffff" opacity="0.35"/>
+      <rect x="6" y="5" width="318" height="38" rx="24" fill="url(#glassTop)" opacity="0.9"/>
+    </g>
+    <rect x="1.5" y="1.5" width="327" height="81" rx="40.5" fill="none"
+          stroke="url(#goldLine)" stroke-width="2.6"/>
+    <rect x="6" y="6" width="318" height="72" rx="36" fill="none"
+          stroke="#ffffff" stroke-opacity="0.55" stroke-width="1"/>
+    <use href="#spark" transform="translate(50,20) scale(0.7)" fill="#ffffff" opacity="0.95"/>
+    <use href="#spark" transform="translate(288,60) scale(0.4)" fill="#caa64c" opacity="0.8"/>
+    <text x="165" y="53" text-anchor="middle"
+          font-family="Futura, 'Avenir Next', 'Segoe UI', Verdana, sans-serif"
+          font-size="20" font-weight="600" letter-spacing="3.5" fill="#2a2318">READ THE DOCS</text>
+  </g>
+
+  <!-- Assurance line -->
+  <text x="120" y="778" font-family="'Avenir Next', 'Segoe UI', Verdana, sans-serif"
+        font-size="14" letter-spacing="2" fill="#8a7a4e">NO CREDIT CARD REQUIRED
+    <tspan fill="#a1873c">&#183;</tspan> SOC 2 TYPE II
+    <tspan fill="#a1873c">&#183;</tspan> 99.99% UPTIME</text>
+
+  <!-- ================= Footer rule ================= -->
+  <line x1="120" y1="822" x2="778" y2="822" stroke="#caa64c" stroke-opacity="0.45" stroke-width="1"/>
+  <use href="#spark" transform="translate(800,822) scale(0.5)" fill="#caa64c" opacity="0.85"/>
+  <line x1="822" y1="822" x2="1480" y2="822" stroke="#caa64c" stroke-opacity="0.45" stroke-width="1"/>
+  <text x="120" y="856" font-family="Futura, 'Avenir Next', 'Segoe UI', Verdana, sans-serif"
+        font-size="14" letter-spacing="3" fill="#8a7a4e">MERIDIAN 2.0 &#8212; WHITE LIGHT
+    <tspan fill="#a1873c">&#183;</tspan> IRIDESCENCE
+    <tspan fill="#a1873c">&#183;</tspan> LUXURY</text>
+  <text x="1480" y="856" text-anchor="end"
+        font-family="Futura, 'Avenir Next', 'Segoe UI', Verdana, sans-serif"
+        font-size="14" letter-spacing="3" fill="#8a7a4e">LAUNCH EDITION
+    <tspan fill="#a1873c">&#183;</tspan> MMXXVI</text>
+</svg>

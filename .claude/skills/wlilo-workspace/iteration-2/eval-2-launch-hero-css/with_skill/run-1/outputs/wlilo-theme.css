@@ -1,0 +1,157 @@
+/* ============================================================
+   WLILO theme — Luxe/UI register (white-leather-obsidian)
+   Matches meridian-hero.svg (same register; do not mix with the
+   warmer diagram palette). Scope: :root, or move onto .wlilo-app.
+   Note: the hero SVG ships as a file, so its colors are baked in;
+   inline SVG on this page MAY reference these variables instead.
+   ============================================================ */
+
+:root {
+  /* leather (light page surfaces) */
+  --wlilo-bg: #ffffff;
+  --wlilo-bg-alt: #f0ece4;
+  --wlilo-surface: #f6f3ee;
+  --wlilo-surface-hover: #ece6dc;
+
+  /* obsidian (dark panels) */
+  --wlilo-panel: #0b0f1a;
+  --wlilo-panel-light: #111828;
+  --wlilo-panel-dark: #05070c;
+
+  /* borders */
+  --wlilo-border: #d8d0c1;
+  --wlilo-border-light: #e4ddd1;
+
+  /* text — dual-surface: page tokens AND on-panel tokens */
+  --wlilo-text: #0a0d14;
+  --wlilo-text-secondary: #2f3645;
+  --wlilo-text-muted: #4b5262;
+  --wlilo-text-on-panel: #f0ece4;
+  --wlilo-text-on-panel-gold: #e6d7b5;
+
+  /* brushed metals (accents stay scarce) */
+  --wlilo-gold: #d8cba9;
+  --wlilo-gold-bright: #e6d7b5;
+  --wlilo-gold-dark: #b5a273;
+  --wlilo-platinum: #e5e1d7;
+
+  /* gemstones (sapphire = primary/start, emerald = decision/nav, ruby = destructive/result) */
+  --wlilo-ruby: #c21f32;
+  --wlilo-emerald: #1a8f4d;
+  --wlilo-sapphire: #1e5aad;
+
+  /* depth — low blur is the signature */
+  --wlilo-shadow-sm: 0 2px 6px rgba(10, 13, 20, 0.08);
+  --wlilo-shadow-md: 0 8px 18px rgba(10, 13, 20, 0.12);
+  --wlilo-shadow-lg: 0 16px 36px rgba(10, 13, 20, 0.16);
+  --wlilo-shadow-glow: 0 0 24px rgba(12, 19, 32, 0.25);
+  --wlilo-shadow-inner: inset 0 2px 4px rgba(255, 255, 255, 0.45);
+
+  /* typography */
+  --wlilo-font-display: "Playfair Display", Georgia, serif;
+  --wlilo-font-body: "Inter", -apple-system, "Segoe UI", sans-serif;
+  --wlilo-font-mono: "JetBrains Mono", "Fira Code", Consolas, monospace;
+
+  /* geometry & motion */
+  --wlilo-radius-sm: 6px;
+  --wlilo-radius-md: 12px;
+  --wlilo-radius-lg: 20px;
+  --wlilo-radius-pill: 9999px;
+  --wlilo-transition-fast: 0.12s ease;
+  --wlilo-transition-normal: 0.2s ease;
+}
+
+/* ---- page shell -------------------------------------------- */
+
+.wlilo-app {
+  background: linear-gradient(135deg, var(--wlilo-bg) 0%, var(--wlilo-surface) 55%, #eae4da 100%);
+  color: var(--wlilo-text);
+  font-family: var(--wlilo-font-body);
+  line-height: 1.5;
+}
+
+.wlilo-display {
+  font-family: var(--wlilo-font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--wlilo-text);
+}
+
+.wlilo-eyebrow {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--wlilo-gold-dark);
+}
+.wlilo-eyebrow::before {
+  content: "\2726\00a0"; /* ✦ house accent star */
+}
+
+/* ---- obsidian panel ---------------------------------------- */
+
+.wlilo-panel {
+  background: linear-gradient(135deg, var(--wlilo-panel-light) 0%, var(--wlilo-panel) 55%, var(--wlilo-panel-dark) 100%);
+  border: 1px solid var(--wlilo-gold);
+  border-radius: var(--wlilo-radius-md);
+  color: var(--wlilo-text-on-panel);
+  box-shadow: var(--wlilo-shadow-md);
+  padding: 32px;
+}
+
+.wlilo-panel__title {
+  font-family: var(--wlilo-font-display);
+  font-weight: 700;
+  color: var(--wlilo-text-on-panel-gold);
+  border-bottom: 1px solid var(--wlilo-gold);
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+/* ---- version badge (obsidian pill, mono literal) ----------- */
+
+.wlilo-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border: 1px solid var(--wlilo-gold);
+  border-radius: var(--wlilo-radius-pill);
+  background: linear-gradient(135deg, var(--wlilo-panel-light), var(--wlilo-panel-dark));
+  color: var(--wlilo-text-on-panel-gold);
+  font-family: var(--wlilo-font-mono);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+/* ---- gemstone CTAs (3-layer: gold bezel + obsidian frame + gem) ---- */
+
+.wlilo-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 12px 28px;
+  font: 700 1rem/1.2 var(--wlilo-font-body);
+  color: #ffffff;
+  text-decoration: none;
+  cursor: pointer;
+  border: 4px solid transparent; /* the obsidian frame */
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, var(--wlilo-gem-hi), var(--wlilo-gem-mid) 50%, var(--wlilo-gem-lo)) padding-box,
+    linear-gradient(135deg, var(--wlilo-panel-light), var(--wlilo-panel-dark)) border-box;
+  box-shadow: 0 0 0 1px var(--wlilo-gold), var(--wlilo-shadow-inner), var(--wlilo-shadow-sm);
+  transition: box-shadow var(--wlilo-transition-fast), transform var(--wlilo-transition-fast);
+}
+.wlilo-cta:hover {
+  box-shadow: 0 0 0 1px var(--wlilo-gold-bright), var(--wlilo-shadow-inner), var(--wlilo-shadow-md), var(--wlilo-shadow-glow);
+  transform: translateY(-1px);
+}
+.wlilo-cta:focus-visible {
+  outline: 2px solid var(--wlilo-gem-mid);
+  outline-offset: 3px;
+}
+
+.wlilo-cta--sapphire { --wlilo-gem-hi: #60a5fa; --wlilo-gem-mid: var(--wlilo-sapphire); --wlilo-gem-lo: #123a74; }
+.wlilo-cta--emerald  { --wlilo-gem-hi: #2dd4bf; --wlilo-gem-mid: var(--wlilo-emerald);  --wlilo-gem-lo: #0f5f33; }
+.wlilo-cta--ruby     { --wlilo-gem-hi: #e74c5e; --wlilo-gem-mid: var(--wlilo-ruby);     --wlilo-gem-lo: #8d1424; }

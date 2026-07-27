@@ -1,10 +1,13 @@
 'use strict';
 
-const {
-  getDomainsToSchedule,
-  normalizeManagedWorkerStatus,
-  shouldStopOrchestrator,
-} = require('../../deploy/remote-crawler-v2/lib/orchestrator-utils');
+// NOTE (cycle 73, module-ecosystem extraction): this file used to also test
+// orchestrator-utils.js's scheduling helpers (getDomainsToSchedule,
+// normalizeManagedWorkerStatus, shouldStopOrchestrator) — that module moved to
+// ../news-crawler-itself/lib/orchestrator-utils.js along with the rest of the
+// remote crawler engine; its tests moved with it to
+// news-crawler-itself/lib/__tests__/orchestrator-utils.test.js. This file keeps
+// only the copilot-dl-news-side driver helpers (crawl-remote-bounded.js), which
+// stay in the coordinator.
 const {
   findMissingDomains,
   normalizeCollectOptions,
@@ -14,52 +17,6 @@ const {
 } = require('../../tools/crawl/lib/crawl-remote-bounded');
 
 describe('remote crawl bounded reliability helpers', () => {
-  test('scheduler starts second-wave idle domains without requiring pending URLs', () => {
-    const workers = new Map([
-      ['bbc.com', { state: 'stopped' }],
-      ['reuters.com', { state: 'stopped' }],
-      ['apnews.com', { state: 'idle', worker: { getStatus: () => ({ stats: { pending: 0 } }) } }],
-      ['theguardian.com', { state: 'idle', worker: { getStatus: () => ({ stats: { pending: 0 } }) } }],
-      ['cbc.ca', { state: 'idle', worker: { getStatus: () => ({ stats: { pending: 0 } }) } }],
-    ]);
-
-    expect(getDomainsToSchedule(workers, 2)).toEqual(['apnews.com', 'theguardian.com']);
-  });
-
-  test('scheduler respects remaining concurrency slots', () => {
-    const workers = new Map([
-      ['bbc.com', { state: 'running' }],
-      ['reuters.com', { state: 'idle' }],
-      ['apnews.com', { state: 'idle' }],
-    ]);
-
-    expect(getDomainsToSchedule(workers, 2)).toEqual(['reuters.com']);
-  });
-
-  test('orchestrator stops only after scoped work is fully terminal', () => {
-    const workers = new Map([
-      ['bbc.com', { state: 'stopped' }],
-      ['reuters.com', { state: 'idle' }],
-      ['apnews.com', { state: 'stopped' }],
-    ]);
-
-    expect(shouldStopOrchestrator(workers, new Set(['bbc.com', 'apnews.com']))).toBe(true);
-    expect(shouldStopOrchestrator(workers, null)).toBe(false);
-  });
-
-  test('completed worker idle heartbeat is normalized to stopped', () => {
-    const normalized = normalizeManagedWorkerStatus('running', {
-      state: 'idle',
-      isRunning: false,
-      startedAt: '2026-03-08T14:28:28.966Z',
-      stoppedAt: null,
-      stats: { fetched: 5 },
-    });
-
-    expect(normalized.state).toBe('stopped');
-    expect(normalized.isRunning).toBe(false);
-  });
-
   test('bounded summary treats untouched idle domains as incomplete', () => {
     const summary = summarizeBoundedRun({
       domains: [

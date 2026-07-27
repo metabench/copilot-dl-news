@@ -1,0 +1,131 @@
+/* ==========================================================================
+   WLILO theme — White Light · Iridescence · Luxury · Object
+   Meridian 2.0 launch-page tokens. Matches meridian-hero.svg exactly.
+   ========================================================================== */
+
+:root {
+  /* ---- White light -------------------------------------------------- */
+  --wlilo-white:      #ffffff;
+  --wlilo-porcelain:  #fbf8f2;   /* page field                           */
+  --wlilo-pearl:      #eee8dc;   /* field edge / cards                   */
+  --wlilo-ink:        #221c12;   /* display text                         */
+  --wlilo-ink-bronze: #5c4b26;   /* headline sheen midtone               */
+  --wlilo-ink-soft:   #5c564a;   /* body copy                            */
+  --wlilo-ink-caption:#8a7a4e;   /* eyebrows, captions, small caps       */
+
+  /* ---- Iridescence (prism sequence, in order) ------------------------ */
+  --wlilo-iris-rose:   #ffd9e8;
+  --wlilo-iris-amber:  #ffe9c9;
+  --wlilo-iris-citron: #fdf6cf;
+  --wlilo-iris-mint:   #d5f5e6;
+  --wlilo-iris-sky:    #d3ecff;
+  --wlilo-iris-lilac:  #e4dcff;
+  --wlilo-iridescence: linear-gradient(115deg,
+      var(--wlilo-iris-rose)   0%,
+      var(--wlilo-iris-amber) 20%,
+      var(--wlilo-iris-citron)40%,
+      var(--wlilo-iris-mint)  60%,
+      var(--wlilo-iris-sky)   80%,
+      var(--wlilo-iris-lilac)100%);
+
+  /* ---- Luxury metals -------------------------------------------------- */
+  --wlilo-gold-hi:   #f7e7b4;
+  --wlilo-gold:      #caa64c;
+  --wlilo-gold-deep: #8f6a1f;
+  --wlilo-gold-line: linear-gradient(90deg,
+      #b98a2e, var(--wlilo-gold-hi) 25%, var(--wlilo-gold-deep) 50%,
+      #f4dd9a 75%, var(--wlilo-gold));
+
+  /* ---- Gemstones ------------------------------------------------------- */
+  --wlilo-emerald-hi:   #6fe3b1;
+  --wlilo-emerald:      #23a877;
+  --wlilo-emerald-deep: #0e6b4a;
+  --wlilo-emerald-abyss:#063d2a;
+  --wlilo-gem-emerald: linear-gradient(180deg,
+      var(--wlilo-emerald-hi), var(--wlilo-emerald) 35%,
+      var(--wlilo-emerald-deep) 72%, var(--wlilo-emerald-abyss));
+  --wlilo-gem-crystal: linear-gradient(180deg,
+      #ffffff, #f2f4fa 40%, #e2e8f4 75%, #ccd5e8);
+
+  /* ---- Light and shadow ------------------------------------------------ */
+  --wlilo-shadow-soft: 0 14px 44px rgba(107, 91, 51, 0.22);
+  --wlilo-shadow-gem:  0 10px 24px rgba(29, 26, 20, 0.32);
+  --wlilo-glow-iris:   0 0 0 5px rgba(255, 255, 255, 0.6),
+                       0 0 34px rgba(212, 236, 255, 0.55);
+  --wlilo-field: radial-gradient(120% 120% at 36% 30%,
+      var(--wlilo-white), var(--wlilo-porcelain) 50%, var(--wlilo-pearl));
+
+  /* ---- Shape and type -------------------------------------------------- */
+  --wlilo-radius-gem: 42px;
+  --wlilo-font-display: Didot, "Bodoni MT", "Playfair Display",
+      Georgia, "Times New Roman", serif;
+  --wlilo-font-body: Futura, "Avenir Next", "Segoe UI", Verdana, sans-serif;
+  --wlilo-tracking-caps: 0.22em;
+}
+
+/* --------------------------------------------------------------------------
+   Minimal components (mirror the hero SVG)
+   -------------------------------------------------------------------------- */
+
+.wlilo-page {
+  background: var(--wlilo-field);
+  color: var(--wlilo-ink-soft);
+  font-family: var(--wlilo-font-body);
+}
+
+.wlilo-display {
+  font-family: var(--wlilo-font-display);
+  color: var(--wlilo-ink);
+  letter-spacing: 0.07em;
+}
+
+.wlilo-eyebrow {
+  font-size: 0.8rem;
+  letter-spacing: var(--wlilo-tracking-caps);
+  text-transform: uppercase;
+  color: var(--wlilo-ink-caption);
+}
+
+.wlilo-rule {
+  border: 0;
+  height: 1px;
+  background: var(--wlilo-gold);
+  opacity: 0.45;
+}
+
+/* Gemstone buttons ---------------------------------------------------------- */
+.wlilo-btn {
+  display: inline-block;
+  padding: 1.1rem 2.6rem;
+  border-radius: var(--wlilo-radius-gem);
+  border: 2px solid var(--wlilo-gold);
+  font: 600 0.95rem/1 var(--wlilo-font-body);
+  letter-spacing: var(--wlilo-tracking-caps);
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: var(--wlilo-shadow-gem),
+              inset 0 14px 18px rgba(255, 255, 255, 0.45),
+              inset 0 -12px 20px rgba(0, 0, 0, 0.18);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+.wlilo-btn:hover  { transform: translateY(-1px);
+                    box-shadow: var(--wlilo-shadow-gem), var(--wlilo-glow-iris); }
+.wlilo-btn:active { transform: translateY(1px); }
+.wlilo-btn:focus-visible { outline: 3px solid var(--wlilo-iris-sky); outline-offset: 3px; }
+
+.wlilo-btn--emerald {          /* "Get started" */
+  background: var(--wlilo-gem-emerald);
+  color: var(--wlilo-white);
+}
+.wlilo-btn--crystal {          /* "Read the docs" */
+  background: var(--wlilo-gem-crystal);
+  color: #2a2318;
+  box-shadow: var(--wlilo-shadow-soft),
+              inset 0 14px 18px rgba(255, 255, 255, 0.75),
+              inset 0 -10px 18px rgba(140, 155, 190, 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wlilo-btn { transition: none; }
+}

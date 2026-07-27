@@ -1,5 +1,8 @@
 const { ensureDb } = require('../../data/db/sqlite/ensureDb');
 const { UrlResolver } = require('../../shared/utils/UrlResolver');
+// Schema introspection is DB-shaped logic — delegated to ncdb (thin-coordination).
+// The migration DDL/batch-UPDATE below is procedural migration logic and stays here.
+const { getTableInfo, getTableIndexes, getColumnFillStats, getTableRowCount } = require('news-crawler-db');
 
 async function normalizeFetches() {
   const db = ensureDb();
@@ -9,8 +12,7 @@ async function normalizeFetches() {
 
   // Phase 1: Add new column (if not exists)
   console.log('Phase 1: Adding url_id column...');
-  const columns = db.prepare("PRAGMA table_info(fetches)").all();
-  const hasUrlId = columns.some(col => col.name === 'url_id');
+  const hasUrlId = getTableInfo(db, 'fetches').some(col => col.name === 'url_id');
 
   if (!hasUrlId) {
     db.exec(`ALTER TABLE fetches ADD COLUMN url_id INTEGER REFERENCES urls(id)`);
@@ -36,6 +38,7 @@ async function normalizeFetches() {
     console.log(`Processing batch of ${rows.length} rows...`);
     const urlToIdMap = await urlResolver.batchResolve(rows.map(r => r.url));
 
+    let updatedThisBatch = 0;
     for (const row of rows) {
       const urlId = urlToIdMap.get(row.url);
       if (!urlId) {
@@ -44,16 +47,24 @@ async function normalizeFetches() {
       }
       db.prepare('UPDATE fetches SET url_id = ? WHERE id = ?')
          .run(urlId, row.id);
+      updatedThisBatch += 1;
     }
 
-    totalProcessed += rows.length;
+    totalProcessed += updatedThisBatch;
     console.log(`Processed ${totalProcessed} rows so far...`);
+
+    // No-progress guard (FIX 1): if not one row in this batch resolved to a url_id,
+    // the next iteration re-selects the same NULL-url_id rows and the loop spins
+    // forever. Break; Phase 4's NULL-count check then surfaces the unresolved rows.
+    if (updatedThisBatch === 0) {
+      console.warn(`No rows updated in this batch of ${rows.length}; stopping to avoid an infinite loop. Remaining NULL url_id rows will be reported by Phase 4.`);
+      break;
+    }
   }
 
   // Phase 3: Create index (if not exists)
   console.log('Phase 3: Creating index...');
-  const indexes = db.prepare("PRAGMA index_list(fetches)").all();
-  const hasIndex = indexes.some(idx => idx.name === 'idx_fetches_url');
+  const hasIndex = getTableIndexes(db, 'fetches').some(idx => idx.name === 'idx_fetches_url');
 
   if (!hasIndex) {
     db.exec(`CREATE INDEX idx_fetches_url ON fetches(url_id)`);
@@ -63,12 +74,12 @@ async function normalizeFetches() {
 
   // Phase 4: Validate migration
   console.log('Phase 4: Validating migration...');
-  const nullCount = db.prepare('SELECT COUNT(*) as count FROM fetches WHERE url_id IS NULL').get().count;
+  const nullCount = getColumnFillStats(db, 'fetches', 'url_id').without_value;
   if (nullCount > 0) {
     throw new Error(`${nullCount} rows still have NULL url_id`);
   }
 
-  const totalRows = db.prepare('SELECT COUNT(*) as count FROM fetches').get().count;
+  const totalRows = getTableRowCount(db, 'fetches');
   console.log(`fetches URL normalization complete! Migrated ${totalRows} rows.`);
 }
 

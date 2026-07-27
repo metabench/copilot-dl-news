@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+// DEPRECATED (2026-07-21, plan Phase D1): POSTs to /api/jobs:3120, which nothing
+// deployed serves (the deployed v2 server on :3200 uses /api/seed). See
+// tools/remote-crawl/DEPRECATED.md; use tools/crawl/crawl-remote.js instead.
+
 /**
  * queue-urls-to-remote.js
  * -----------------------

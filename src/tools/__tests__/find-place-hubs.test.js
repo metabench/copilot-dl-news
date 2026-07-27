@@ -40,53 +40,67 @@ function seedGazetteer(db, { placeName, countryCode }) {
   return placeId;
 }
 
-function seedArticle(db, { url, host, title, section, navLinks, articleLinks, wordCount }) {
+// Seed a hub-like page through the NORMALIZED schema the tool actually reads:
+// urls -> http_responses -> content_storage -> content_analysis
+// (the ncdb candidate join dedups content_analysis by per-content_id MAX version).
+function seedHubPage(db, { url, host, title, navLinks, articleLinks, wordCount, places }) {
   const now = '2025-01-01T00:00:00Z';
 
-  db.prepare(
-    `INSERT INTO fetches(url, request_started_at, fetched_at, http_status, classification, nav_links_count, article_links_count, word_count, host)
-     VALUES (?, ?, ?, 200, 'nav', ?, ?, ?, ?)`
-  ).run(url, now, now, navLinks, articleLinks, wordCount, host);
+  const urlId = db.prepare(
+    `INSERT INTO urls(url, host, created_at, last_seen_at) VALUES (?, ?, ?, ?)`
+  ).run(url, host, now, now).lastInsertRowid;
+
+  const httpResponseId = db.prepare(
+    `INSERT INTO http_responses(url_id, request_started_at, fetched_at, http_status, content_type, bytes_downloaded)
+     VALUES (?, ?, ?, 200, 'text/html', 1000)`
+  ).run(urlId, now, now).lastInsertRowid;
+
+  const contentId = db.prepare(
+    `INSERT INTO content_storage(http_response_id, storage_type, content_blob, uncompressed_size, created_at)
+     VALUES (?, 'db_inline', ?, ?, ?)`
+  ).run(httpResponseId, `${title} content placeholder`, wordCount, now).lastInsertRowid;
 
   db.prepare(
-    `INSERT INTO articles(url, host, title, section, crawled_at, fetched_at, http_status, text, word_count, analysis)
-     VALUES (?, ?, ?, ?, ?, ?, 200, ?, ?, ?)`
+    `INSERT INTO content_analysis(content_id, analysis_version, classification, title, word_count,
+                                  nav_links_count, article_links_count, analysis_json, analyzed_at, language)
+     VALUES (?, 1, 'nav', ?, ?, ?, ?, ?, ?, 'en')`
   ).run(
-    url,
-    host,
+    contentId,
     title,
-    section,
-    now,
-    now,
-    `${title} content placeholder`,
     wordCount,
+    navLinks,
+    articleLinks,
     JSON.stringify({
       analysis_version: 1,
-      findings: {
-        places: [
-          { place: 'Canada', place_kind: 'country', country_code: 'CA' }
-        ]
-      }
-    })
+      findings: { places }
+    }),
+    now
   );
+
+  return { urlId, httpResponseId, contentId };
 }
 
-describe('find-place-hubs', () => {
+describe('find-place-hubs (normalized schema)', () => {
   let temp;
+  const HUB_URL = 'https://example.com/world/canada/';
 
   beforeEach(() => {
     temp = createTempDb();
     const db = ensureDb(temp.dbPath);
     try {
+      // The live news.db carries this unique index (migration 41); the writer's
+      // INSERT OR IGNORE keys dedup on it, so mirror it here to reflect prod.
+      db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS uq_place_hubs_url_id
+                 ON place_hubs(url_id) WHERE url_id IS NOT NULL`);
       seedGazetteer(db, { placeName: 'Canada', countryCode: 'CA' });
-      seedArticle(db, {
-        url: 'https://example.com/world/canada/',
+      seedHubPage(db, {
+        url: HUB_URL,
         host: 'example.com',
         title: 'Canada | Example News',
-        section: 'World',
         navLinks: 24,
         articleLinks: 8,
-        wordCount: 150
+        wordCount: 150,
+        places: [{ place: 'Canada', place_kind: 'country', country_code: 'CA' }]
       });
     } finally {
       db.close();
@@ -100,9 +114,9 @@ describe('find-place-hubs', () => {
     }
   });
 
-  test('dry-run reports hub without writing to database', () => {
+  test('dry-run reports the hub without writing to place_hubs', () => {
     const { summary, hubs } = findPlaceHubs({
-      dbPath: temp.dbPath,
+      db: temp.dbPath,
       limit: 50,
       dryRun: true,
       list: true,
@@ -110,45 +124,77 @@ describe('find-place-hubs', () => {
     });
 
     expect(summary.processed).toBeGreaterThan(0);
-  expect(summary.matched).toBe(1);
-  expect(summary.validated).toBe(1);
-  expect(summary.rejected).toBe(0);
-  expect(summary.inserted).toBe(1);
+    expect(summary.matched).toBe(1);
+    expect(summary.validated).toBe(1);
+    expect(summary.rejected).toBe(0);
+    expect(summary.inserted).toBe(1);
     expect(summary.dryRun).toBe(true);
     expect(hubs).toHaveLength(1);
     expect(hubs[0]).toMatchObject({
-      url: 'https://example.com/world/canada/',
+      url: HUB_URL,
       host: 'example.com',
       place_slug: 'canada',
       action: 'insert'
     });
 
+    // Assert the REAL table state, not the tool's counters: dry-run writes nothing.
     const db = ensureDb(temp.dbPath);
-    const countRow = db.prepare('SELECT COUNT(*) AS cnt FROM place_hubs').get();
-    expect(countRow.cnt).toBe(0);
-    db.close();
+    try {
+      const countRow = db.prepare('SELECT COUNT(*) AS cnt FROM place_hubs').get();
+      expect(countRow.cnt).toBe(0);
+    } finally {
+      db.close();
+    }
   });
 
-  test('apply persists hubs into place_hubs table', () => {
+  test('apply persists a place_hubs row keyed by url_id', () => {
     const result = findPlaceHubs({
-      dbPath: temp.dbPath,
+      db: temp.dbPath,
       limit: 10,
       dryRun: false,
       list: false
     });
 
     expect(result.summary.dryRun).toBe(false);
-  expect(result.summary.validated).toBe(1);
-  expect(result.summary.rejected).toBe(0);
-  expect(result.summary.inserted).toBe(1);
+    expect(result.summary.validated).toBe(1);
+    expect(result.summary.inserted).toBe(1);
+
+    // Independent verification against the DB (the tool's counters can't be trusted
+    // for this bug): a real row exists, resolved back to the hub URL via url_id.
+    const db = ensureDb(temp.dbPath);
+    try {
+      const countRow = db.prepare('SELECT COUNT(*) AS cnt FROM place_hubs').get();
+      expect(countRow.cnt).toBe(1);
+
+      const hubRow = db.prepare(`
+        SELECT ph.host, ph.place_slug, u.url
+          FROM place_hubs ph
+          JOIN urls u ON u.id = ph.url_id
+      `).get();
+      expect(hubRow).toMatchObject({
+        host: 'example.com',
+        place_slug: 'canada',
+        url: HUB_URL
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  test('apply is idempotent — a second run updates in place (no duplicate row)', () => {
+    findPlaceHubs({ db: temp.dbPath, dryRun: false, list: false });
+    const second = findPlaceHubs({ db: temp.dbPath, dryRun: false, list: false });
+
+    // The uq_place_hubs_url_id unique index makes the re-run an UPDATE, not an INSERT.
+    expect(second.summary.inserted).toBe(0);
+    expect(second.summary.updated).toBe(1);
 
     const db = ensureDb(temp.dbPath);
-    const hubRow = db.prepare('SELECT host, place_slug, url FROM place_hubs').get();
-    expect(hubRow).toMatchObject({
-      host: 'example.com',
-      place_slug: 'canada',
-      url: 'https://example.com/world/canada/'
-    });
-    db.close();
+    try {
+      const countRow = db.prepare('SELECT COUNT(*) AS cnt FROM place_hubs').get();
+      expect(countRow.cnt).toBe(1);
+    } finally {
+      db.close();
+    }
   });
 });

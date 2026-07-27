@@ -128,7 +128,19 @@ function buildCrawlStatusClientScript({
 
   function renderThroughput(jobs) {
     if (!throughputEl) return;
-    const totals = jobs.reduce(function(acc, job) {
+    // The strip is a "right now" display: only ACTIVE jobs contribute. Finished
+    // jobs used to be summed too, so their final-snapshot rates (and stale
+    // queue counts) displayed as phantom throughput long after crawls ended —
+    // the owner-reported "Saved docs/s is wrong" (cycle 69). The server also
+    // zeroes rates on terminal jobs (_publicProgress); this filter is the
+    // client half: it keeps completed jobs' queue/rate ghosts out even if an
+    // older server build is serving.
+    const activeJobs = jobs.filter(function(job) {
+      if (!job) return false;
+      if (job.finishedAt) return false;
+      return job.status === 'running' || job.status === 'pending' || job.status === 'created';
+    });
+    const totals = activeJobs.reduce(function(acc, job) {
       acc.network += metricValue(job, ['networkMbPerSec', 'networkMbPerSecond', 'mbPerSecond'], 0);
       acc.downloaded += metricValue(job, ['docsDownloadedPerSec', 'docsDownloadedPerSecond', 'downloadedDocsPerSecond', 'pagesPerSecond', 'requestsPerSec'], 0);
       acc.saved += metricValue(job, ['docsSavedPerSec', 'docsSavedPerSecond', 'savedDocsPerSecond'], 0);
@@ -609,11 +621,284 @@ function buildCrawlStatusClientScript({
     } catch (e) { /* endpoint transient — leave prior values */ }
   }
 
+  // Latest headlines — the real news that just came in. DOM-built (textContent,
+  // never innerHTML) so arbitrary headline text can never inject markup.
+  // NB: this code is emitted inside a template literal, so a regex backslash like
+  // /^www\./ would be eaten by the template parser (\. -> .) and misbehave. Use
+  // backslash-free string ops here to stay correct after emission.
+  function shortHost(h) { h = String(h || ''); return h.indexOf('www.') === 0 ? h.slice(4) : h; }
+  function fmtAnalyzedAt(t) { return String(t || '').replace('T', ' ').slice(0, 19); }
+  function renderRecentHeadlines(list) {
+    const ol = document.getElementById('crawl-latest-headlines');
+    if (!ol) return;
+    while (ol.firstChild) ol.removeChild(ol.firstChild);
+    if (!list || !list.length) {
+      const li = document.createElement('li');
+      li.setAttribute('data-crawl-headlines-empty', 'true');
+      li.style.cssText = 'padding:8px 10px;color:#777;font-size:12px;';
+      li.textContent = 'No analysed headlines yet — start a crawl to populate.';
+      ol.appendChild(li);
+      return;
+    }
+    list.forEach(function(h, i) {
+      const li = document.createElement('li');
+      li.style.cssText = 'padding:6px 10px;border-bottom:1px solid #1e1e1e;'
+        + (i % 2 ? 'background:#0e0e0e;' : '');
+      const title = document.createElement('div');
+      title.style.cssText = 'font-size:12.5px;color:#e6e6e6;line-height:1.3;';
+      if (h.url) {
+        const a = document.createElement('a');
+        a.href = h.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.style.cssText = 'color:#e6e6e6;text-decoration:none;';
+        a.textContent = h.title || '(untitled)';
+        title.appendChild(a);
+      } else {
+        title.textContent = h.title || '(untitled)';
+      }
+      const meta = document.createElement('div');
+      meta.style.cssText = 'font-size:10.5px;color:#7a7a7a;margin-top:1px;';
+      const bits = [];
+      if (h.host) bits.push(shortHost(h.host));
+      if (h.section) bits.push(h.section);
+      if (h.analyzedAt) bits.push(fmtAnalyzedAt(h.analyzedAt) + ' UTC');
+      meta.textContent = bits.join('  ·  ');
+      li.appendChild(title);
+      li.appendChild(meta);
+      ol.appendChild(li);
+    });
+  }
+  // DB frontier tile (P1+P2 of DB-driven crawling): candidate URLs not yet
+  // downloaded, hubs due for a recency-window refresh, + top hosts.
+  // Server-cached (heavy scan), so poll gently.
+  var recencyUserEdited = false; // don't clobber an in-progress edit with a poll
+  async function fetchFrontierSummary() {
+    try {
+      const res = await fetch('/api/v1/crawl/frontier/summary', { cache: 'no-store' });
+      if (!res.ok) return;
+      const d = await res.json();
+      const big = document.querySelector('[data-crawl-frontier-stat="crawlable"]');
+      if (big) big.textContent = (d.crawlable == null)
+        ? (d.refreshing ? 'computing…' : '—')
+        : Number(d.crawlable).toLocaleString('en-US');
+      const hubStaleEl = document.querySelector('[data-crawl-frontier-stat="hubStale"]');
+      if (hubStaleEl) hubStaleEl.textContent = (d.hubStale == null)
+        ? (d.refreshing ? 'computing…' : '—')
+        : Number(d.hubStale).toLocaleString('en-US');
+      const recencyInput = document.getElementById('crawl-hub-recency-days');
+      if (recencyInput && !recencyUserEdited && document.activeElement !== recencyInput && d.hubRecencyDays != null) {
+        recencyInput.value = d.hubRecencyDays;
+      }
+      // Suppression visibility: dead (persistently failing) / low-value
+      // (pagination + old-archive URLs the hub classifier tagged as hubs).
+      const suppressedEl = document.querySelector('[data-crawl-frontier-stat="suppressed"]');
+      if (suppressedEl) {
+        suppressedEl.textContent = (d.hubDead == null && d.hubLowValue == null)
+          ? (d.refreshing ? 'computing…' : '—')
+          : (Number(d.hubDead || 0).toLocaleString('en-US') + ' / ' + Number(d.hubLowValue || 0).toLocaleString('en-US'));
+      }
+      const hostsEl = document.querySelector('[data-crawl-frontier-hosts]');
+      if (hostsEl) {
+        var parts = (d.hosts || []).slice(0, 6).map(function(h) {
+          var host = String(h.host);
+          if (host.indexOf('www.') === 0) host = host.slice(4);   // backslash-free (emitted-template trap)
+          return host + ' ' + Number(h.count).toLocaleString('en-US');
+        });
+        hostsEl.textContent = parts.length ? ('top hosts: ' + parts.join('  ·  ')) : '';
+      }
+    } catch (e) { /* transient — leave prior values */ }
+  }
+  // P3: crawl_queue stats + dry-run hydration (fills the queue, no fetching).
+  async function fetchQueueStats() {
+    try {
+      const res = await fetch('/api/v1/crawl/frontier/queue-stats', { cache: 'no-store' });
+      if (!res.ok) return;
+      const s = await res.json();
+      const node = document.querySelector('[data-crawl-frontier-stat="queue"]');
+      if (node) node.textContent = Number(s.pending || 0).toLocaleString('en-US')
+        + ' / ' + Number(s.inProgress || 0).toLocaleString('en-US')
+        + ' / ' + Number(s.completed || 0).toLocaleString('en-US');
+    } catch (e) { /* transient */ }
+  }
+  function initHydrateButton() {
+    var btn = document.getElementById('crawl-frontier-hydrate-btn');
+    var hostInput = document.getElementById('crawl-frontier-hydrate-host');
+    var statusEl = document.querySelector('[data-crawl-frontier-hydrate-status]');
+    if (!btn || !hostInput) return;
+    btn.addEventListener('click', async function() {
+      var host = (hostInput.value || '').trim();
+      if (!host) { if (statusEl) statusEl.textContent = 'enter a host first'; return; }
+      btn.disabled = true;
+      if (statusEl) statusEl.textContent = 'hydrating ' + host + '…';
+      try {
+        var r = await fetchJson('/api/v1/crawl/frontier/hydrate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ host: host, limit: 50 })
+        });
+        if (statusEl) statusEl.textContent = 'due ' + r.due + ' · inserted ' + r.inserted
+          + ' · requeued hubs ' + r.requeuedHubs + ' · already queued ' + r.alreadyQueued
+          + ' · pending now ' + (r.stats && r.stats.pending);
+        fetchQueueStats();
+      } catch (e) {
+        if (statusEl) statusEl.textContent = 'hydrate failed — see server log';
+      }
+      btn.disabled = false;
+    });
+  }
+
+  // P6 UI catch-up (2026-07-20): run-multi button + autoHydrate toggle.
+  function initRunMultiButton() {
+    var btn = document.getElementById('crawl-frontier-runmulti-btn');
+    var statusEl = document.querySelector('[data-crawl-frontier-runmulti-status]');
+    if (!btn) return;
+    btn.addEventListener('click', async function() {
+      btn.disabled = true;
+      if (statusEl) statusEl.textContent = 'running (concurrent per-host jobs — can take minutes)…';
+      try {
+        // run-multi is dispatch-and-return: POST yields a batchId, then poll.
+        var kick = await fetchJson('/api/v1/crawl/frontier/run-multi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ maxHosts: 3, perHostLimit: 4 })
+        });
+        if (kick.message) {
+          if (statusEl) statusEl.textContent = kick.message;
+        } else if (kick.batchId) {
+          var r = kick;
+          var tries = 0;
+          while (tries < 200) {
+            await new Promise(function(res){ setTimeout(res, 3000); });
+            r = await fetchJson('/api/v1/crawl/frontier/run-multi/' + kick.batchId);
+            if (statusEl) statusEl.textContent = 'running… ' + (r.done || 0) + '/' + (r.total || 0) + ' hosts reconciled';
+            if (r.status && r.status !== 'running') break;
+            tries++;
+          }
+          var t = r.totals || {};
+          if (statusEl) statusEl.textContent = 'hosts: ' + (r.hosts || []).join(', ')
+            + ' — fetched ' + (t.fetched || 0) + ' · completed ' + (t.completed || 0)
+            + ' (via redirect ' + (t.completedViaRedirect || 0) + ') · failed ' + (t.failed || 0);
+        }
+        fetchQueueStats();
+        fetchRecentHeadlines();
+      } catch (e) {
+        if (statusEl) statusEl.textContent = 'run-multi failed — see server log';
+      }
+      btn.disabled = false;
+    });
+  }
+  var autoHydrateUserToggling = false;
+  async function fetchAutoHydrate() {
+    try {
+      const res = await fetch('/api/v1/crawl/auto-hydrate', { cache: 'no-store' });
+      if (!res.ok) return;
+      const d = await res.json();
+      var toggle = document.getElementById('crawl-auto-hydrate-enabled');
+      if (toggle && !autoHydrateUserToggling) toggle.checked = d.enabled === true;
+      var statusEl = document.querySelector('[data-crawl-auto-hydrate-status]');
+      if (statusEl) {
+        statusEl.textContent = (d.enabled ? 'ON' : 'off')
+          + ' · every ' + d.intervalMinutes + 'm × ' + d.hostsPerTick + ' hosts'
+          + (d.lastTickAt ? (' · last tick ' + String(d.lastTickAt).slice(11, 16) + ' UTC') : ' · never ticked');
+      }
+    } catch (e) { /* transient */ }
+  }
+  function initAutoHydrateToggle() {
+    var toggle = document.getElementById('crawl-auto-hydrate-enabled');
+    if (!toggle) return;
+    toggle.addEventListener('change', async function() {
+      autoHydrateUserToggling = true;
+      try {
+        await fetchJson('/api/v1/crawl/auto-hydrate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: toggle.checked })
+        });
+      } catch (e) { /* re-sync below shows the persisted truth either way */ }
+      autoHydrateUserToggling = false;
+      fetchAutoHydrate();
+    });
+  }
+
+  async function saveHubRecencyDays(days) {
+    try {
+      await fetchJson('/api/v1/crawl/hub-recency', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: days })
+      });
+      recencyUserEdited = false;
+      fetchFrontierSummary();
+    } catch (e) { /* transient — the input keeps its typed value */ }
+  }
+  function initHubRecencyInput() {
+    var input = document.getElementById('crawl-hub-recency-days');
+    if (!input) return;
+    input.addEventListener('input', function() { recencyUserEdited = true; });
+    input.addEventListener('change', function() {
+      var days = parseFloat(input.value);
+      if (isFinite(days) && days > 0) saveHubRecencyDays(days);
+    });
+  }
+
+  async function fetchRecentHeadlines() {
+    try {
+      const res = await fetch('/api/v1/recent-headlines?limit=15', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      renderRecentHeadlines(data.headlines || []);
+    } catch (e) { /* endpoint transient — leave prior list */ }
+  }
+
+  // Per-host crawl health badges (cycle 58): FAST / POLITE-THROTTLE /
+  // SLOW-IRREGULAR from /api/v1/crawl/host-health (server computes it off-loop in
+  // a child process). Colour + a hover tooltip make "polite throttle vs real
+  // stall" readable at a glance. Backslash-free string ops only (template trap).
+  function setHostHealth(payload) {
+    var strip = document.querySelector('[data-crawl-host-health]');
+    if (!strip) return;
+    var hosts = (payload && payload.hosts) || [];
+    if (!hosts.length) { strip.textContent = (payload && payload.refreshing) ? 'computing…' : 'no host met the threshold recently'; return; }
+    var color = { 'FAST': '#3a9d6a', 'POLITE-THROTTLE': '#c99a33', 'SLOW-IRREGULAR': '#c0563a' };
+    strip.textContent = '';
+    for (var i = 0; i < hosts.length; i++) {
+      var h = hosts[i];
+      var c = color[h.cls] || '#666';
+      var badge = document.createElement('span');
+      badge.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:11px;background:#241f18;color:#ece8e0;font-size:12px;border:1px solid ' + c;
+      badge.title = h.host + ' — ' + h.verdict + ' (' + h.n + ' fetches, gap~' + Math.round(h.gMed) + 's, CV ' + Number(h.cv).toFixed(2) + ', ' + Number(h.mbps).toFixed(3) + ' MB/s, ' + Math.round(h.kbMed) + 'KB/pg)';
+      var dot = document.createElement('span');
+      dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex:none;background:' + c;
+      var label = document.createElement('span');
+      label.textContent = String(h.host || '').split('www.').join('') + '  ' + Math.round(h.gMed) + 's';
+      badge.appendChild(dot);
+      badge.appendChild(label);
+      strip.appendChild(badge);
+    }
+  }
+  async function fetchHostHealth() {
+    try { setHostHealth(await fetchJson(config.apiBasePath + '/host-health')); }
+    catch (e) { /* endpoint transient — leave prior badges */ }
+  }
+
   refreshJobs();
   setInterval(refreshJobs, 3000);
   initTelemetryStream();
   fetchCrawlWindows();
   setInterval(fetchCrawlWindows, 15000);
+  fetchRecentHeadlines();
+  setInterval(fetchRecentHeadlines, 20000);
+  initHubRecencyInput();
+  initHydrateButton();
+  initRunMultiButton();
+  initAutoHydrateToggle();
+  fetchFrontierSummary();
+  setInterval(fetchFrontierSummary, 30000);
+  fetchQueueStats();
+  setInterval(fetchQueueStats, 30000);
+  fetchAutoHydrate();
+  setInterval(fetchAutoHydrate, 30000);
+  fetchHostHealth();
+  setInterval(fetchHostHealth, 30000);
 })();`;
 }
 

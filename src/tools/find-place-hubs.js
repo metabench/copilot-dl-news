@@ -7,7 +7,10 @@ const { findProjectRoot } = require('../shared/utils/project-root');
 const { ensureDb } = require('../data/db/sqlite/ensureDb');
 // Canonical per-content-MAX article-read SQL lives in ncdb
 // (legacy-articleDetection, byte-identical — differential-e2e verified).
-const { listPlaceHubArticleCandidates, selectArticleFetchDetails } = require('news-crawler-db');
+// place_hubs / place_hub_unknown_terms writes are likewise owned by ncdb
+// (createAnalysePagesCoreQueries): the live normalized schema keys these tables
+// by url_id / canonical_url_id, not the retired `url` / `canonical_url` columns.
+const { listPlaceHubArticleCandidates, selectArticleFetchDetails, createAnalysePagesCoreQueries } = require('news-crawler-db');
 const { buildGazetteerMatchers, extractPlacesFromUrl } = require('../intelligence/analysis/place-extraction');
 const { detectPlaceHub } = require('./placeHubDetector');
 const { loadNonGeoTopicSlugs } = require('./nonGeoTopicSlugs');
@@ -210,62 +213,26 @@ function findPlaceHubs(options = {}) {
         const selectCandidates = { all: () => listPlaceHubArticleCandidates(db, options) };
         const selectFetchStats = { get: (url) => selectArticleFetchDetails(db, url) };
 
-    const selectHubByUrl = db.prepare('SELECT id, place_slug FROM place_hubs WHERE url = ?');
-    const insertHub = db.prepare(`
-      INSERT OR IGNORE INTO place_hubs(
-        host,
-        url,
-        place_slug,
-        place_kind,
-        topic_slug,
-        topic_label,
-        topic_kind,
-        title,
-        first_seen_at,
-        last_seen_at,
-        nav_links_count,
-        article_links_count,
-        evidence
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), ?, ?, ?)
-    `);
-    const updateHub = db.prepare(`
-      UPDATE place_hubs
-         SET place_slug = COALESCE(?, place_slug),
-             place_kind = COALESCE(?, place_kind),
-             topic_slug = COALESCE(?, topic_slug),
-             topic_label = COALESCE(?, topic_label),
-             topic_kind = COALESCE(?, topic_kind),
-             title = COALESCE(?, title),
-             last_seen_at = datetime('now'),
-             nav_links_count = COALESCE(?, nav_links_count),
-             article_links_count = COALESCE(?, article_links_count),
-             evidence = COALESCE(?, evidence)
-       WHERE url = ?
-    `);
-    const upsertUnknownTerm = db.prepare(`
-      INSERT INTO place_hub_unknown_terms(
-        host,
-        url,
-        canonical_url,
-        term_slug,
-        term_label,
-        source,
-        reason,
-        confidence,
-        evidence,
-        occurrences,
-        first_seen_at,
-        last_seen_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
-      ON CONFLICT(host, canonical_url, term_slug) DO UPDATE SET
-        term_label = COALESCE(excluded.term_label, term_label),
-        source = COALESCE(excluded.source, source),
-        reason = COALESCE(excluded.reason, reason),
-        confidence = COALESCE(excluded.confidence, confidence),
-        evidence = COALESCE(excluded.evidence, evidence),
-        occurrences = occurrences + 1,
-        last_seen_at = datetime('now')
-    `);
+    // Gazetteer + non-geo topic context feed URL place extraction
+    // (extractPlacesFromUrl) and hub classification (detectPlaceHub) below.
+    const nonGeoTopicSlugs = loadNonGeoTopicSlugs(db).slugs;
+    let gazetteerMatchers = null;
+    try {
+      gazetteerMatchers = buildGazetteerMatchers(db);
+    } catch (error) {
+      if (verbose) {
+        console.warn('[find-place-hubs] failed to build gazetteer matchers', error?.message || error);
+      }
+    }
+    const gazetteerPlaceNames = collectGazetteerPlaceNames(gazetteerMatchers);
+
+    // place_hubs / place_hub_unknown_terms writes are owned by ncdb. This store
+    // resolves url -> urls.id and writes url_id / canonical_url_id (the live
+    // normalized schema has no `url` / `canonical_url` columns), including the
+    // ON CONFLICT(host, canonical_url_id, term_slug) upsert for unknown terms.
+    // getPlaceHubByUrl registers the URL in `urls` if absent but never writes
+    // place_hubs, so the dry-run contract ("do not write to place_hubs") holds.
+    const placeHubStore = createAnalysePagesCoreQueries(db);
 
     // Execute query with only host parameter if provided
     const candidateRows = selectCandidates.all(
@@ -358,11 +325,14 @@ function findPlaceHubs(options = {}) {
         title: row.title,
         urlPlaceAnalysis,
         analysisPlaces,
-        section: null, // Not available in normalized schema
-        fetchClassification: null, // Not available in normalized schema
-        latestClassification: null, // Not available in normalized schema
-        navLinksCount: null, // Not available in normalized schema
-        articleLinksCount: null, // Not available in normalized schema
+        section: null, // classification/section not surfaced by the ncdb reads
+        fetchClassification: null, // (see above) — detection falls back to nav-link signal
+        latestClassification: null, // (see above)
+        // nav/article link counts DO come back via selectArticleFetchDetails; the
+        // detector's hub gate needs them (a nav-heavy page qualifies even without
+        // a 'nav' classification). Hardcoding null here previously defeated it.
+        navLinksCount: fetchStats.nav_links_count ?? null,
+        articleLinksCount: fetchStats.article_links_count ?? null,
         wordCount,
         articleWordCount: wordCount, // Use same value
         fetchWordCount: wordCount, // Use same value
@@ -424,17 +394,17 @@ function findPlaceHubs(options = {}) {
 
             if (!dryRun) {
               try {
-                upsertUnknownTerm.run(
-                  entry.host,
-                  entry.url,
-                  entry.canonical_url,
-                  entry.term_slug,
-                  entry.term_label,
-                  entry.source,
-                  entry.reason,
-                  entry.confidence,
-                  entry.evidence
-                );
+                placeHubStore.saveUnknownTerm({
+                  host: entry.host,
+                  url: entry.url,
+                  canonicalUrl: entry.canonical_url,
+                  termSlug: entry.term_slug,
+                  termLabel: entry.term_label,
+                  source: entry.source,
+                  reason: entry.reason,
+                  confidence: entry.confidence,
+                  evidence: entry.evidence
+                });
               } catch (error) {
                 if (verbose) {
                   console.warn('[find-place-hubs] failed to upsert unknown term', entry.term_slug, error?.message || error);
@@ -492,36 +462,26 @@ function findPlaceHubs(options = {}) {
 
       validated += 1;
 
-      const existing = selectHubByUrl.get(canonicalUrl) || null;
+      const existing = placeHubStore.getPlaceHubByUrl(canonicalUrl) || null;
       const isNew = !existing;
 
       if (!dryRun) {
         try {
-          insertHub.run(
-            candidateHost,
-            canonicalUrl,
-            hubCandidate.placeSlug,
-            hubCandidate.placeKind,
-            hubCandidate.topic?.slug ?? null,
-            hubCandidate.topic?.label ?? null,
-            hubCandidate.topic?.kind ?? null,
-            row.title || null,
-            null, // nav_links_count - not available
-            null, // article_links_count - not available
-            JSON.stringify(hubCandidate.evidence)
-          );
-          updateHub.run(
-            hubCandidate.placeSlug,
-            hubCandidate.placeKind,
-            hubCandidate.topic?.slug ?? null,
-            hubCandidate.topic?.label ?? null,
-            hubCandidate.topic?.kind ?? null,
-            row.title || null,
-            null, // nav_links_count - not available
-            null, // article_links_count - not available
-            JSON.stringify(hubCandidate.evidence),
-            canonicalUrl
-          );
+          // savePlaceHub runs INSERT OR IGNORE then UPDATE (keyed on url_id),
+          // mirroring the previous insert-then-update pair.
+          placeHubStore.savePlaceHub({
+            host: candidateHost,
+            url: canonicalUrl,
+            placeSlug: hubCandidate.placeSlug,
+            placeKind: hubCandidate.placeKind,
+            topicSlug: hubCandidate.topic?.slug ?? null,
+            topicLabel: hubCandidate.topic?.label ?? null,
+            topicKind: hubCandidate.topic?.kind ?? null,
+            title: row.title || null,
+            navLinksCount: fetchStats.nav_links_count ?? null,
+            articleLinksCount: fetchStats.article_links_count ?? null,
+            evidenceJson: JSON.stringify(hubCandidate.evidence)
+          });
         } catch (error) {
           if (verbose) {
             console.warn('[find-place-hubs] failed to persist hub', row.url, error?.message || error);

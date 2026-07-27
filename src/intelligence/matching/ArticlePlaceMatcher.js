@@ -6,6 +6,12 @@
  */
 
 const { HtmlArticleExtractor } = require('../../shared/utils/HtmlArticleExtractor');
+const { decompress } = require('../../shared/utils/CompressionFacade');
+// The article-text read SQL lives in ncdb (legacy-articlePlaceMatcher):
+// content_analysis joins through content_storage at the latest
+// analysis_version — ca.content_id references content_storage.id, NOT
+// http_responses.id.
+const { selectArticleTextRowForPlaceMatching } = require('news-crawler-db');
 
 const MATCHING_RULE_LEVELS = {
   0: 'no_rules_applied',     // Default for existing content
@@ -48,21 +54,29 @@ class ArticlePlaceMatcher {
   }
 
   /**
+   * Load the article row for matching (title, html blob, analysis_json),
+   * decoding content_blob when it is stored compressed.
+   */
+  getArticleData(articleId) {
+    const row = selectArticleTextRowForPlaceMatching(this.db, articleId);
+
+    if (!row) return null;
+
+    if (row.html_content && row.compression_algorithm && row.compression_algorithm !== 'none') {
+      row.html_content = decompress(row.html_content, row.compression_algorithm);
+    }
+    if (Buffer.isBuffer(row.html_content)) {
+      row.html_content = row.html_content.toString('utf8');
+    }
+
+    return row;
+  }
+
+  /**
    * Match a single article to places using specified rule level
    */
   async matchArticleToPlaces(articleId, ruleLevel = 1) {
-    // Get article data from normalized tables
-    const articleData = this.db.prepare(`
-      SELECT
-        hr.id,
-        ca.title,
-        cs.content_blob as html_content,
-        ca.analysis_json
-      FROM http_responses hr
-      LEFT JOIN content_analysis ca ON hr.id = ca.content_id
-      LEFT JOIN content_storage cs ON hr.id = cs.http_response_id
-      WHERE hr.id = ?
-    `).get(articleId);
+    const articleData = this.getArticleData(articleId);
 
     if (!articleData) return [];
 
@@ -479,18 +493,7 @@ class ArticlePlaceMatcher {
    * Match article to places using ArticlePlus extraction
    */
   async matchArticleToPlacesPlus(articleId, ruleLevel = 1, url = null) {
-    // Get article data from normalized tables
-    const articleData = this.db.prepare(`
-      SELECT
-        hr.id,
-        ca.title,
-        cs.content_blob as html_content,
-        ca.analysis_json
-      FROM http_responses hr
-      LEFT JOIN content_analysis ca ON hr.id = ca.content_id
-      LEFT JOIN content_storage cs ON hr.id = cs.http_response_id
-      WHERE hr.id = ?
-    `).get(articleId);
+    const articleData = this.getArticleData(articleId);
 
     if (!articleData) return [];
 

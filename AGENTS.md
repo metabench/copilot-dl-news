@@ -8,6 +8,12 @@ Living Agent Workflow (Plan → Improve → Document)
 - `tmp/` — gitignored scratch. Anything here is disposable.
 - See ADR `docs/decisions/2026-04-24-repo-slimdown.md` for what was deleted/moved.
 
+**QUICK START for ALL agents — read the playbook first**:
+[docs/agents/FUTURE_AGENT_PLAYBOOK.md](docs/agents/FUTURE_AGENT_PLAYBOOK.md) — detailed
+step-by-step instructions (session ritual, module-ecosystem decision table, golden rules
+with their incidents, exact deploy/crawl procedures, troubleshooting, STOP conditions).
+Written to be followed literally; verify after every step.
+
 **QUICK START for Tooling Improvements**: New 3-tier strategy document available!
 - **READ FIRST**: `/docs/TOOLING_RECOMMENDATIONS.md` (executive recommendation, 15 min)
 - **IMPLEMENT**: `/docs/IMPLEMENTATION_ROADMAP.md` (hour-by-hour plan, ready to start)
@@ -34,9 +40,24 @@ Doc topology. Keep this file focused and actionable. Heavier guidance lives in /
 
 /docs/decisions/ – ADR-lite notes: date, context, options, decision, consequences.
 
-**External Modules**:
-- **News Crawler DB** (`../news-crawler-db`): Unified Drizzle ORM schema + Fastify API.
-- **News DB Analysis** (`../news-db-analysis`): Pure analysis library (stats, coverage, trends).
+**External Modules — the module-ecosystem working model (owner directive 2026-07-22)**:
+Functionality is implemented and tested in dedicated sibling module repos with clearly
+defined APIs; this repo is the **coordinator** that calls them. Before writing new code
+here, ask "which module owns this?" Full map + rules:
+[docs/plans/2026-07-22-module-ecosystem.md](docs/plans/2026-07-22-module-ecosystem.md).
+
+- **`../news-crawler-itself`** — **the crawler engine (most important module)**: the
+  latest-generation crawler as a worker — fetch loop, politeness, worker-thread parallel
+  compression, remote-worker runtime. First extraction target: `deploy/remote-crawler-v2/`.
+- **`../news-crawler-db`** (wired `file:`): Unified DB layer + API — all DB-shaped logic.
+- **`../news-db-pure-analysis`** (wired `file:`): Pure functional business logic, zero IO.
+- **`../news-db-analysis`**: Analysis library (stats, coverage, trends).
+- **`../news-crawler-document-intelligence`** / **`url-intelligence`** /
+  **`places-intelligence`** / **`general-intelligence`**: the intelligence layers
+  (document/DOM, URL, places, fusion).
+- **`../news-dev-tools`**: Cross-repo developer tooling.
+- `../news-crawler-backend-core` is EXCLUDED for the moment (owner); `http-cache-store`
+  is not part of this ecosystem.
 > See [docs/agents/modules-reference.md](docs/agents/modules-reference.md) for usage guide.
 
 /docs/decisions/ – ADR-lite notes: date, context, options, decision, consequences.

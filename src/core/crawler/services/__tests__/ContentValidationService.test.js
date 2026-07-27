@@ -65,7 +65,7 @@ describe('ContentValidationService', () => {
     });
 
     describe('garbage signature detection', () => {
-      test('should reject "please enable javascript" pages', () => {
+      test('should reject a genuinely empty SPA shell (noscript fallback, no real content)', () => {
         const html = `
           <html><body>
             <noscript>Please enable JavaScript to continue using this application.</noscript>
@@ -74,9 +74,42 @@ describe('ContentValidationService', () => {
         `;
 
         const result = service.validate({ url, html });
+        // Real gap found live 2026-07-20 (Globe and Mail): a <noscript> tag is
+        // routine boilerplate on nearly every modern JS-framework site,
+        // present whether or not the page ACTUALLY needs JS to show content.
+        // It must never by itself decide rejection — an empty shell like this
+        // one is correctly still rejected, but via "no real content extracted"
+        // (no-extracted-content), not via matching the noscript text.
         expect(result.valid).toBe(false);
-        expect(result.reason).toBe('javascript-required');
+        expect(result.reason).toBe('no-extracted-content');
         expect(result.failureType).toBe('soft');
+      });
+
+      test('should ACCEPT a real page that has both genuine article content AND a routine noscript fallback', () => {
+        // This is exactly the Globe and Mail shape found live 2026-07-20: a
+        // server-rendered article with full real text, plus the standard
+        // defensive <noscript>...</noscript> tag every React/Vue/Angular site
+        // ships. Before the fix, the noscript text alone tripped the
+        // javascript-required signature and threw away perfectly good,
+        // already-downloaded content.
+        const html = `
+          <html><body>
+            <script>window.__DATA__ = {};</script>
+            <noscript>Please enable JavaScript to view this content.</noscript>
+            <article>
+              <h1>Belarusian diaspora in Alberta targeted for criticizing Lukashenko regime</h1>
+              <p>The report, published by the Digital Forensic Research Lab of the Atlantic
+                 Council, documents cases among the Belarusian community in Alberta who say
+                 they have faced harassment for speaking out against the government.</p>
+              <p>Researchers interviewed a dozen members of the diaspora community over several
+                 months, cataloguing a pattern of intimidation that officials say has intensified
+                 since the disputed election.</p>
+            </article>
+          </body></html>
+        `;
+
+        const result = service.validate({ url, html });
+        expect(result.valid).toBe(true);
       });
 
       test('should reject Cloudflare challenge pages', () => {

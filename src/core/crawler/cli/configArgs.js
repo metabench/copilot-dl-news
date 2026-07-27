@@ -231,18 +231,52 @@ async function resolveCliArguments({
     };
   }
 
-  // Merge config args with direct args
-  // Direct args override config args because argumentNormalizer now respects "last match wins"
-  // We need to handle startUrl carefully. configArgv[0] is startUrl.
-  
-  const mergedArgv = [...configArgv, ...directArgv];
+  // Merge config args with direct args.
+  // Flags follow "last match wins", so appending directArgv overrides config flags.
+  // The START URL does NOT work that way: it is a POSITIONAL, configArgv[0], and the
+  // normalizer takes the FIRST positional — so a URL typed on the command line was
+  // silently ignored whenever crawl.js.config.json set a startUrl.
+  // Measured 2026-07-26: a benchmark aimed at a local fixture crawled
+  // https://www.theguardian.com instead, with no warning. Only the fixture's own
+  // request counter (0 requests) revealed it.
+  // Fix: when the command line supplies its own start URL, drop the config's.
+  const explicitStartUrl = findExplicitStartUrl(directArgv);
+  const configArgvForMerge = explicitStartUrl ? configArgv.slice(1) : configArgv;
+  const mergedArgv = [...configArgvForMerge, ...directArgv];
 
   return {
     argv: mergedArgv,
     config,
     configPath: resolvedConfigPath,
-    origin: 'merged'
+    origin: 'merged',
+    explicitStartUrl: explicitStartUrl || null,
+    overriddenConfigStartUrl: explicitStartUrl && explicitStartUrl !== config.startUrl
+      ? config.startUrl
+      : null
   };
+}
+
+/**
+ * Find a start URL supplied on the command line.
+ *
+ * Deliberately conservative: it must be a bare http(s) URL that is NOT the value of a
+ * space-separated flag (e.g. `--cached-seed https://…` passes a URL that is an argument
+ * TO a flag, not the start URL). When in doubt this returns null, which preserves the
+ * previous behaviour rather than hijacking the crawl target.
+ *
+ * @returns {string|null}
+ */
+function findExplicitStartUrl(directArgv) {
+  if (!Array.isArray(directArgv)) return null;
+  for (let i = 0; i < directArgv.length; i++) {
+    const token = directArgv[i];
+    if (typeof token !== 'string' || !/^https?:\/\//i.test(token)) continue;
+    const prev = i > 0 ? directArgv[i - 1] : null;
+    // A preceding bare flag (no '=') may be consuming this token as its value.
+    if (typeof prev === 'string' && prev.startsWith('-') && !prev.includes('=')) continue;
+    return token;
+  }
+  return null;
 }
 
 module.exports = {
@@ -250,5 +284,6 @@ module.exports = {
   DEFAULT_CONFIG_FILENAME,
   loadCliConfig,
   resolveCliArguments,
-  createArgvFromConfig
+  createArgvFromConfig,
+  findExplicitStartUrl
 };

@@ -1,0 +1,196 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1730" width="1200" height="1730" role="img" aria-labelledby="svgTitle svgDesc" font-family="ui-sans-serif, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title id="svgTitle">How HTTP caching works: Cache-Control max-age, ETags, and 304 revalidation</title>
+  <desc id="svgDesc">A three-panel sequence diagram following one file through a browser HTTP cache: the first request stores the response with its ETag and max-age; a second request within max-age is served from cache with no network traffic; after max-age the stale entry is revalidated with If-None-Match, and the origin answers either 304 Not Modified (no body, freshness reset) or 200 with a new body and new ETag.</desc>
+
+  <defs>
+    <marker id="aBlue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="aGreen" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#16a34a"/>
+    </marker>
+    <marker id="aGray" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#b8b2a7"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="1730" fill="#f8f7f4"/>
+
+  <!-- ===================== Header ===================== -->
+  <text x="48" y="64" font-size="30" font-weight="700" fill="#1c1917">How HTTP caching works</text>
+  <text x="48" y="94" font-size="15" fill="#78716c">Following one file — /assets/app.js — through the browser's HTTP cache: Cache-Control max-age, ETags, and 304 Not Modified.</text>
+
+  <!-- ===================== Panel 1: cold cache ===================== -->
+  <g transform="translate(24,130)">
+    <rect x="0" y="0" width="1152" height="420" rx="14" fill="#ffffff" stroke="#e5e0d6"/>
+    <circle cx="36" cy="40" r="16" fill="#2563eb"/>
+    <text x="36" y="45" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">1</text>
+    <text x="62" y="46" font-size="19" font-weight="700" fill="#1c1917">First request — the cache is cold</text>
+    <rect x="1002" y="22" width="118" height="30" rx="15" fill="#f1efe9"/>
+    <text x="1061" y="42" text-anchor="middle" font-size="13" fill="#57534e" font-family="ui-monospace, Consolas, Menlo, monospace">t = 0</text>
+
+    <!-- lifelines (drawn first so cards mask them) -->
+    <line x1="240" y1="116" x2="240" y2="396" stroke="#ddd8ce" stroke-dasharray="4 4"/>
+    <line x1="960" y1="116" x2="960" y2="396" stroke="#ddd8ce" stroke-dasharray="4 4"/>
+
+    <!-- actors -->
+    <rect x="140" y="76" width="200" height="40" rx="8" fill="#eff6ff" stroke="#bfdbfe"/>
+    <text x="240" y="101" text-anchor="middle" font-size="14" font-weight="600" fill="#1d4ed8">Browser + HTTP cache</text>
+    <rect x="860" y="76" width="200" height="40" rx="8" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <text x="960" y="101" text-anchor="middle" font-size="14" font-weight="600" fill="#6d28d9">Origin server</text>
+
+    <!-- request -->
+    <text x="600" y="150" text-anchor="middle" font-size="14" fill="#1e40af" font-family="ui-monospace, Consolas, Menlo, monospace">GET /assets/app.js</text>
+    <line x1="240" y1="162" x2="950" y2="162" stroke="#2563eb" stroke-width="2" marker-end="url(#aBlue)"/>
+    <text x="600" y="184" text-anchor="middle" font-size="12.5" font-style="italic" fill="#78716c">nothing stored for this URL yet → cache miss, so the request goes to the origin</text>
+
+    <!-- response -->
+    <text x="600" y="222" text-anchor="middle" font-size="12.5" font-style="italic" fill="#78716c">response: the body plus two caching headers</text>
+    <line x1="960" y1="232" x2="250" y2="232" stroke="#16a34a" stroke-width="2" marker-end="url(#aGreen)"/>
+    <rect x="430" y="246" width="340" height="98" rx="8" fill="#f0fdf4" stroke="#bbf7d0"/>
+    <g font-family="ui-monospace, Consolas, Menlo, monospace" font-size="13" fill="#14532d">
+      <text x="446" y="270">HTTP/1.1 200 OK</text>
+      <text x="446" y="290">Cache-Control: max-age=3600</text>
+      <text x="446" y="310">ETag: "33a64df5"</text>
+      <text x="446" y="330">body: 42 KB of JavaScript</text>
+    </g>
+
+    <!-- ETag annotation, server side -->
+    <rect x="796" y="254" width="322" height="62" fill="#ffffff"/>
+    <g font-size="12.5" font-style="italic" fill="#78716c">
+      <text x="806" y="270">the server mints the ETag — an opaque</text>
+      <text x="806" y="288">version id (e.g. a content hash) that</text>
+      <text x="806" y="306">changes whenever the bytes change</text>
+    </g>
+
+    <!-- store card -->
+    <rect x="90" y="300" width="300" height="84" rx="8" fill="#eff6ff" stroke="#bfdbfe"/>
+    <text x="106" y="322" font-size="13" font-weight="700" fill="#1e40af">Cache stores the entry:</text>
+    <text x="106" y="342" font-size="12" fill="#1e3a8a" font-family="ui-monospace, Consolas, Menlo, monospace">body + ETag "33a64df5" + timestamps</text>
+    <text x="106" y="362" font-size="12.5" fill="#44403c">fresh for the next 3600 s (1 hour)</text>
+  </g>
+
+  <!-- ===================== Panel 2: fresh hit ===================== -->
+  <g transform="translate(24,570)">
+    <rect x="0" y="0" width="1152" height="300" rx="14" fill="#ffffff" stroke="#e5e0d6"/>
+    <circle cx="36" cy="40" r="16" fill="#16a34a"/>
+    <text x="36" y="45" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">2</text>
+    <text x="62" y="46" font-size="19" font-weight="700" fill="#1c1917">15 minutes later — the copy is still fresh</text>
+    <rect x="1002" y="22" width="118" height="30" rx="15" fill="#f1efe9"/>
+    <text x="1061" y="42" text-anchor="middle" font-size="13" fill="#57534e" font-family="ui-monospace, Consolas, Menlo, monospace">t = 900</text>
+
+    <line x1="240" y1="116" x2="240" y2="272" stroke="#ddd8ce" stroke-dasharray="4 4"/>
+    <line x1="960" y1="116" x2="960" y2="272" stroke="#eeece7" stroke-dasharray="4 4"/>
+
+    <rect x="140" y="76" width="200" height="40" rx="8" fill="#eff6ff" stroke="#bfdbfe"/>
+    <text x="240" y="101" text-anchor="middle" font-size="14" font-weight="600" fill="#1d4ed8">Browser + HTTP cache</text>
+    <rect x="860" y="76" width="200" height="40" rx="8" fill="#fafaf9" stroke="#e7e5e4"/>
+    <text x="960" y="101" text-anchor="middle" font-size="14" font-weight="600" fill="#a8a29e">Origin server</text>
+    <text x="960" y="136" text-anchor="middle" font-size="12" font-style="italic" fill="#a8a29e">not contacted</text>
+
+    <!-- freshness check -->
+    <rect x="90" y="150" width="310" height="84" rx="8" fill="#f0fdf4" stroke="#bbf7d0"/>
+    <text x="106" y="172" font-size="13" font-weight="700" fill="#166534">Freshness check</text>
+    <text x="106" y="192" font-size="12.5" fill="#14532d" font-family="ui-monospace, Consolas, Menlo, monospace">age = 900 s  &lt;  max-age = 3600 s</text>
+    <text x="106" y="212" font-size="12.5" fill="#44403c">→ fresh: reuse it without asking anyone</text>
+
+    <!-- big statement -->
+    <text x="470" y="178" font-size="20" font-weight="700" fill="#166534">No request leaves the machine.</text>
+    <text x="470" y="204" font-size="13" fill="#57534e">The stored body is returned instantly, from memory or disk.</text>
+    <text x="470" y="224" font-size="13" fill="#57534e">That is what max-age buys: while fresh, the round trip is skipped.</text>
+
+    <!-- the request that never happens -->
+    <text x="600" y="242" text-anchor="middle" font-size="12" font-style="italic" fill="#a8a29e">the request that never happens</text>
+    <line x1="250" y1="254" x2="944" y2="254" stroke="#cfc9bd" stroke-width="1.5" stroke-dasharray="5 5" marker-end="url(#aGray)"/>
+    <circle cx="600" cy="254" r="11" fill="#ffffff" stroke="#fecaca"/>
+    <text x="600" y="259" text-anchor="middle" font-size="12" font-weight="700" fill="#dc2626">✕</text>
+  </g>
+
+  <!-- ===================== Panel 3: stale + revalidation ===================== -->
+  <g transform="translate(24,890)">
+    <rect x="0" y="0" width="1152" height="560" rx="14" fill="#ffffff" stroke="#e5e0d6"/>
+    <circle cx="36" cy="40" r="16" fill="#d97706"/>
+    <text x="36" y="45" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">3</text>
+    <text x="62" y="46" font-size="19" font-weight="700" fill="#1c1917">Two hours later — stale, so the cache revalidates</text>
+    <rect x="1002" y="22" width="118" height="30" rx="15" fill="#f1efe9"/>
+    <text x="1061" y="42" text-anchor="middle" font-size="13" fill="#57534e" font-family="ui-monospace, Consolas, Menlo, monospace">t = 7200</text>
+
+    <line x1="240" y1="116" x2="240" y2="376" stroke="#ddd8ce" stroke-dasharray="4 4"/>
+    <line x1="960" y1="116" x2="960" y2="376" stroke="#ddd8ce" stroke-dasharray="4 4"/>
+
+    <rect x="140" y="76" width="200" height="40" rx="8" fill="#eff6ff" stroke="#bfdbfe"/>
+    <text x="240" y="101" text-anchor="middle" font-size="14" font-weight="600" fill="#1d4ed8">Browser + HTTP cache</text>
+    <rect x="860" y="76" width="200" height="40" rx="8" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <text x="960" y="101" text-anchor="middle" font-size="14" font-weight="600" fill="#6d28d9">Origin server</text>
+
+    <!-- staleness check -->
+    <rect x="80" y="136" width="330" height="96" rx="8" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="96" y="158" font-size="13" font-weight="700" fill="#92400e">Freshness check</text>
+    <text x="96" y="178" font-size="12.5" fill="#78350f" font-family="ui-monospace, Consolas, Menlo, monospace">age = 7200 s  &gt;  max-age = 3600 s</text>
+    <text x="96" y="198" font-size="12.5" fill="#57534e">→ stale. Stale ≠ deleted: the body is kept,</text>
+    <text x="96" y="216" font-size="12.5" fill="#57534e">but it must be revalidated before reuse.</text>
+
+    <!-- conditional request -->
+    <g font-family="ui-monospace, Consolas, Menlo, monospace" font-size="14" fill="#1e40af">
+      <text x="600" y="252" text-anchor="middle">GET /assets/app.js</text>
+      <text x="600" y="272" text-anchor="middle">If-None-Match: "33a64df5"</text>
+    </g>
+    <line x1="240" y1="284" x2="950" y2="284" stroke="#2563eb" stroke-width="2" marker-end="url(#aBlue)"/>
+    <text x="600" y="306" text-anchor="middle" font-size="12.5" font-style="italic" fill="#78716c">“here is the version I already have — has it changed?”</text>
+
+    <!-- server compare -->
+    <rect x="830" y="312" width="280" height="58" rx="8" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <text x="846" y="334" font-size="12.5" fill="#5b21b6">The server compares "33a64df5"</text>
+    <text x="846" y="352" font-size="12.5" fill="#5b21b6">with the file's current ETag…</text>
+
+    <text x="600" y="384" text-anchor="middle" font-size="12.5" font-style="italic" fill="#78716c">…and answers in one of two ways:</text>
+
+    <!-- Outcome A -->
+    <rect x="70" y="396" width="505" height="150" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+    <text x="90" y="422" font-size="15" font-weight="700" fill="#166534">A — unchanged (the common case)</text>
+    <g font-family="ui-monospace, Consolas, Menlo, monospace" font-size="13" fill="#14532d">
+      <text x="90" y="448">HTTP/1.1 304 Not Modified</text>
+      <text x="90" y="468">ETag: "33a64df5"</text>
+      <text x="90" y="488">Cache-Control: max-age=3600   (no body)</text>
+    </g>
+    <text x="90" y="514" font-size="12.5" fill="#44403c">Headers only — a tiny response. The cache serves its stored</text>
+    <text x="90" y="532" font-size="12.5" fill="#44403c">body and resets the freshness clock: fresh again for 3600 s.</text>
+
+    <!-- Outcome B -->
+    <rect x="595" y="396" width="505" height="150" rx="10" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+    <text x="615" y="422" font-size="15" font-weight="700" fill="#1d4ed8">B — the file changed</text>
+    <g font-family="ui-monospace, Consolas, Menlo, monospace" font-size="13" fill="#1e3a8a">
+      <text x="615" y="448">HTTP/1.1 200 OK</text>
+      <text x="615" y="468">ETag: "5c3f9a12"   ← new version id</text>
+      <text x="615" y="488">Cache-Control: max-age=3600  + new body</text>
+    </g>
+    <text x="615" y="514" font-size="12.5" fill="#44403c">A full download, as in panel 1. The cache replaces the old</text>
+    <text x="615" y="532" font-size="12.5" fill="#44403c">entry: new body, new ETag, new 3600 s freshness window.</text>
+  </g>
+
+  <!-- ===================== Footer facts ===================== -->
+  <g transform="translate(24,1470)">
+    <rect x="0" y="0" width="1152" height="208" rx="14" fill="#ffffff" stroke="#e5e0d6"/>
+    <text x="36" y="42" font-size="16" font-weight="700" fill="#1c1917">Four details people get wrong</text>
+
+    <g font-size="13" fill="#57534e">
+      <text x="36" y="76"><tspan font-weight="700" fill="#44403c">max-age is relative to response generation,</tspan> not receipt —</text>
+      <text x="36" y="94">a shared cache reports time already spent via the Age header,</text>
+      <text x="36" y="112">so downstream caches don't double-count freshness.</text>
+
+      <text x="612" y="76"><tspan font-weight="700" fill="#44403c">Expiry evicts nothing.</tspan> Stale only means “revalidate before</text>
+      <text x="612" y="94">reuse” — the body stays stored, and one cheap 304 makes the</text>
+      <text x="612" y="112">same bytes fresh again.</text>
+
+      <text x="36" y="148"><tspan font-weight="700" fill="#44403c">A 304 never has a body.</tspan> It saves bandwidth, but still costs</text>
+      <text x="36" y="166">a round trip. A fresh max-age hit skips the network entirely —</text>
+      <text x="36" y="184">that is the difference between the two wins.</text>
+
+      <text x="612" y="148"><tspan font-weight="700" fill="#44403c">ETags are opaque.</tspan> Only the origin interprets them; caches echo</text>
+      <text x="612" y="166">them back verbatim in If-None-Match. (A W/ prefix marks a weak</text>
+      <text x="612" y="184">ETag: equivalent content, not byte-identical.)</text>
+    </g>
+  </g>
+
+  <text x="600" y="1706" text-anchor="middle" font-size="11.5" fill="#a8a29e">Semantics per RFC 9110 (HTTP) and RFC 9111 (HTTP caching)</text>
+</svg>

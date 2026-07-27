@@ -25,6 +25,7 @@ const { ensureDb } = require('../data/db/sqlite/ensureDb');
 const {
   buildArticleCandidateQuery,
   listArticleCandidates,
+  listArticleCandidatesFast,
   selectArticleFetchDetails
 } = require('news-crawler-db');
 const { COLORS, ICONS } = require('../shared/utils/CliFormatter');
@@ -51,6 +52,7 @@ function parseCliArgs(argv) {
     .add('--limit <number>', 'Maximum records to inspect', null, 'number')
     .add('--sample <number>', 'Random sample size', null, 'number')
     .add('--host <host>', 'Restrict to specific host', null, 'string')
+    .add('--fast', 'Indexed per-id candidate read (latest response per URL, fetched URLs only; ~5ms vs minutes on the live DB — see ncdb legacy-articleDetection for the documented semantic differences). Not compatible with --sample.', false, 'boolean')
     .add('--explain', 'Print reasoning for each decision', false, 'boolean')
     .add('--scores', 'Include score/confidence in output', false, 'boolean');
 
@@ -70,6 +72,16 @@ function resolveDbPath(dbPath) {
 }
 
 function loadCandidates(db, options) {
+  if (options.fast) {
+    if (options.sample) {
+      console.log(`${COLORS.info('[INFO]')} --fast does not support --sample (no index drives RANDOM()); using the original sampled read.`);
+      return listArticleCandidates(db, options);
+    }
+    // Deliberate opt-in perf variant (2026-07-20): latest response per URL,
+    // fetched URLs only — the live original takes minutes (correlated
+    // MAX(analysis_version) per row under a full sort).
+    return listArticleCandidatesFast(db, { ...options, limit: options.limit || 100 });
+  }
   return listArticleCandidates(db, options);
 }
 

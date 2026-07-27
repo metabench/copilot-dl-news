@@ -1,3 +1,11 @@
+// DEPRECATED (2026-07-21, plan v2 Phase D1 one-transport decision — see
+// docs/plans/2026-07-distributed-crawl-unification.md §1): the fleet's single
+// remote transport is the Gen2 v2 server (:3200, remote queue + watermark batch
+// export). This stateless synchronous worker cannot serve "queue on the remote",
+// and its batch client is dead in the live crawl path. Do not build against it.
+// REOPEN CLAUSE: only via an explicit new decision if measured delivery latency
+// exceeds 60s under the hardened v2 sync loop.
+
 const http = require('http');
 const zlib = require('zlib');
 const { setTimeout: delay } = require('timers/promises');

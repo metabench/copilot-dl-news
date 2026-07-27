@@ -804,7 +804,42 @@ function request(method, path, body = null, timeoutMs = 30000) {
   });
 }
 
+// ── Fleet partition guard (plan v2 Phase D1, cycle 66) ───────────────────────
+// EXCLUSIVE HOST OWNERSHIP: seeding the remote with a host NOT in the fleet
+// partition's remoteHosts would have BOTH nodes crawling it → the cross-node sum
+// beats the host's crawl-delay (the 429/blackout failure mode). This single
+// choke point covers every present/future seed path (/api/seed, /api/domains/add
+// all funnel through requestWithTimeout). Empty partition = remote owns nothing
+// = all seeding refused (fail-closed) until the operator populates
+// tools/crawl/fleet-partition.json. Deliberate override: FLEET_PARTITION_BYPASS=1.
+const SEED_PATHS = ['/api/seed', '/api/domains/add'];
+function assertSeedAllowedByPartition(method, path, body) {
+  if (String(method).toUpperCase() !== 'POST') return;
+  if (!SEED_PATHS.some((p) => String(path).startsWith(p))) return;
+  if (process.env.FLEET_PARTITION_BYPASS === '1') {
+    console.warn('  [partition] BYPASS active (FLEET_PARTITION_BYPASS=1) — partition guard skipped');
+    return;
+  }
+  const domain = body && (body.domain || body.host);
+  const { getFleetPartition, isRemoteAssignedHost } = require('./lib/fleet-host-resolver');
+  const { remoteHosts } = getFleetPartition();
+  if (!remoteHosts.length) {
+    throw new Error(
+      `[partition] refusing ${path}: fleet partition is EMPTY (remote owns no hosts). ` +
+      'Add the host to tools/crawl/fleet-partition.json remoteHosts first — exclusive ' +
+      'ownership is what keeps 2-node crawling polite (plan v2 §2).'
+    );
+  }
+  if (domain && !isRemoteAssignedHost(domain)) {
+    throw new Error(
+      `[partition] refusing ${path} for "${domain}": not in fleet-partition.json remoteHosts ` +
+      `(${remoteHosts.join(', ')}). Seeding it remotely would double-crawl a locally-owned host.`
+    );
+  }
+}
+
 function requestWithTimeout(method, path, body = null, timeoutMs = 30000) {
+  assertSeedAllowedByPartition(method, path, body);
   return request(method, path, body, timeoutMs);
 }
 

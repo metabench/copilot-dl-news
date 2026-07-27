@@ -71,15 +71,26 @@ function appendBatch(ledger, { batchId, exportedAt, watermark, urlIds }) {
     pruneRetries: 0,
     deleted: null,
   });
-  next.lastWatermark = newerWatermark(next.lastWatermark, watermark);
+  // D3(a) (2026-07-21, distributed-crawl plan v2): lastWatermark does NOT
+  // advance here. It used to — meaning a crash between append and confirm
+  // left the watermark already past this batch's data, so on restart the
+  // sync loop would request `since=<that watermark>` and this batch's URLs
+  // were SKIPPED FOREVER (never re-pulled, never confirmed). The watermark
+  // now advances only in markConfirmed, once ingest+verify actually
+  // succeeded — a re-pull of the same window after a crash is the safe
+  // failure mode (harmless replay, protected by remote_sync_batches
+  // idempotency — see legacy-remoteCrawlSyncIngest.ts), not silent loss.
   next.totalPulled = (next.totalPulled || 0) + urlIds.length;
   return trim(next);
 }
 
 function markConfirmed(ledger, batchId, at = new Date().toISOString()) {
-  return updateEntry(ledger, batchId, (e) => {
+  const next = updateEntry(ledger, batchId, (e) => {
     e.confirmedAt = at;
   });
+  const entry = next.entries.find((e) => e.batchId === String(batchId));
+  next.lastWatermark = newerWatermark(next.lastWatermark, entry && entry.watermark);
+  return next;
 }
 
 function markPruned(ledger, batchId, { at, deleted } = {}) {
@@ -150,37 +161,67 @@ function trim(ledger) {
 
 // ── Persistence wrapper ─────────────────────────────────────
 
+// D3(d) (2026-07-21): a MISSING ledger file is a normal, safe case (first run,
+// or migrating from the legacy watermark file) — emptyLedger()/migration is
+// correct. A ledger file that EXISTS but fails to PARSE is a different,
+// dangerous case: silently returning emptyLedger() there used to wipe the
+// watermark + all in-flight batch history without a trace, which could drive
+// a costly full re-sync from scratch or (worse, combined with a stale legacy
+// watermark file) confuse `since` resolution. Now: quarantine the unreadable
+// file (rename aside, never delete) and THROW — loud failure an operator must
+// notice, not a silent reset. Scope note: this does NOT attempt to rebuild the
+// watermark from remote_sync_batches (the ingest-idempotency table) — that
+// auto-recovery is a larger, separate piece of work; quarantine+halt is the
+// safe minimum that stops silent data loss today.
+class LedgerCorruptError extends Error {
+  constructor(filePath, quarantinePath, cause) {
+    super(`Sync ledger at ${filePath} exists but is unreadable/corrupt — quarantined to ` +
+      `${quarantinePath}. Refusing to silently reset sync state (this used to wipe the ` +
+      `watermark silently). Inspect the quarantined file; if truly unrecoverable, delete it ` +
+      `to start a fresh ledger deliberately. Cause: ${cause && cause.message}`);
+    this.name = 'LedgerCorruptError';
+    this.filePath = filePath;
+    this.quarantinePath = quarantinePath;
+    this.cause = cause;
+  }
+}
+
 function loadLedger(filePath) {
-  try {
-    if (!fs.existsSync(filePath)) {
-      // Migration: try the legacy watermark file in the same directory
-      const legacy = path.join(path.dirname(filePath), '.crawl-remote-watermark.json');
-      if (fs.existsSync(legacy)) {
-        try {
-          const wm = JSON.parse(fs.readFileSync(legacy, 'utf8'));
-          const migrated = emptyLedger();
-          migrated.lastWatermark = wm.lastWatermark || null;
-          migrated.totalPulled = wm.totalPulled || 0;
-          return migrated;
-        } catch (_) { /* ignore */ }
-      }
-      return emptyLedger();
+  if (!fs.existsSync(filePath)) {
+    // Migration: try the legacy watermark file in the same directory
+    const legacy = path.join(path.dirname(filePath), '.crawl-remote-watermark.json');
+    if (fs.existsSync(legacy)) {
+      try {
+        const wm = JSON.parse(fs.readFileSync(legacy, 'utf8'));
+        const migrated = emptyLedger();
+        migrated.lastWatermark = wm.lastWatermark || null;
+        migrated.totalPulled = wm.totalPulled || 0;
+        return migrated;
+      } catch (_) { /* legacy file itself corrupt — fall through to a fresh ledger */ }
     }
-    const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    if (!raw || raw.version !== LEDGER_VERSION) {
-      // forward-migrate flat watermark
-      if (raw && (raw.lastWatermark || raw.totalPulled)) {
-        const m = emptyLedger();
-        m.lastWatermark = raw.lastWatermark || null;
-        m.totalPulled = raw.totalPulled || 0;
-        return m;
-      }
-      return emptyLedger();
-    }
-    return cloneLedger(raw);
-  } catch (_) {
     return emptyLedger();
   }
+
+  let raw;
+  try {
+    raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (err) {
+    const quarantinePath = `${filePath}.corrupt-${Date.now()}`;
+    try { fs.renameSync(filePath, quarantinePath); } catch (_) { /* best-effort quarantine */ }
+    throw new LedgerCorruptError(filePath, quarantinePath, err);
+  }
+
+  if (!raw || raw.version !== LEDGER_VERSION) {
+    // forward-migrate flat watermark (a recognizable OLD-but-valid shape, not corruption)
+    if (raw && (raw.lastWatermark || raw.totalPulled)) {
+      const m = emptyLedger();
+      m.lastWatermark = raw.lastWatermark || null;
+      m.totalPulled = raw.totalPulled || 0;
+      return m;
+    }
+    return emptyLedger();
+  }
+  return cloneLedger(raw);
 }
 
 function saveLedger(filePath, ledger) {
@@ -195,6 +236,7 @@ function generateBatchId(now = Date.now()) {
 
 module.exports = {
   LEDGER_VERSION,
+  LedgerCorruptError,
   emptyLedger,
   appendBatch,
   markConfirmed,

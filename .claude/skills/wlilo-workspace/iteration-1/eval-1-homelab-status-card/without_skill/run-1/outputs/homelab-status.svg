@@ -1,0 +1,63 @@
+<svg viewBox="0 0 640 292" width="640" height="292" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t d">
+  <title id="t">WLILO home lab status</title>
+  <desc id="d">atlas up, disk 78 percent, backup 02:14. hermes up, disk 41 percent, backup 03:02. pluto down since 18 July, disk 91 percent, backup failed.</desc>
+  <style>
+    text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .num { font-variant-numeric: tabular-nums; }
+  </style>
+
+  <!-- card -->
+  <rect x="0.5" y="0.5" width="639" height="291" rx="12" fill="#1a1a19" stroke="rgba(255,255,255,0.10)"/>
+
+  <!-- header -->
+  <text x="28" y="40" font-size="15" font-weight="600" fill="#ffffff">WLILO <tspan fill="#898781" font-weight="400">— home lab status</tspan></text>
+  <text x="612" y="40" text-anchor="end" font-size="11" fill="#898781" class="num">19 Jul 2026</text>
+
+  <!-- column labels -->
+  <g font-size="9.5" fill="#898781" letter-spacing="0.08em">
+    <text x="28" y="74">SERVER</text>
+    <text x="170" y="74">STATUS</text>
+    <text x="300" y="74">DISK</text>
+    <text x="480" y="74">LAST BACKUP</text>
+  </g>
+  <line x1="28" y1="84" x2="612" y2="84" stroke="#2c2c2a"/>
+
+  <!-- row: atlas -->
+  <text x="28" y="116" font-size="14" font-weight="600" fill="#ffffff">atlas</text>
+  <circle cx="176" cy="111" r="4.5" fill="#0ca30c"/>
+  <text x="188" y="115" font-size="12" font-weight="600" fill="#0ca30c">UP</text>
+  <rect x="300" y="107.5" width="100" height="7" rx="3.5" fill="#2c2c2a"/>
+  <rect x="300" y="107.5" width="78" height="7" rx="3.5" fill="#fab219"/>
+  <text x="412" y="115" font-size="12" fill="#ffffff" class="num">78%</text>
+  <text x="480" y="115" font-size="12" font-weight="600" fill="#0ca30c">&#10003;</text>
+  <text x="496" y="115" font-size="12" fill="#c3c2b7" class="num">02:14</text>
+  <line x1="28" y1="138" x2="612" y2="138" stroke="#2c2c2a"/>
+
+  <!-- row: hermes -->
+  <text x="28" y="170" font-size="14" font-weight="600" fill="#ffffff">hermes</text>
+  <circle cx="176" cy="165" r="4.5" fill="#0ca30c"/>
+  <text x="188" y="169" font-size="12" font-weight="600" fill="#0ca30c">UP</text>
+  <rect x="300" y="161.5" width="100" height="7" rx="3.5" fill="#2c2c2a"/>
+  <rect x="300" y="161.5" width="41" height="7" rx="3.5" fill="#0ca30c"/>
+  <text x="412" y="169" font-size="12" fill="#ffffff" class="num">41%</text>
+  <text x="480" y="169" font-size="12" font-weight="600" fill="#0ca30c">&#10003;</text>
+  <text x="496" y="169" font-size="12" fill="#c3c2b7" class="num">03:02</text>
+  <line x1="28" y1="192" x2="612" y2="192" stroke="#2c2c2a"/>
+
+  <!-- row: pluto (down) -->
+  <rect x="2" y="192" width="636" height="54" fill="rgba(208,59,59,0.06)"/>
+  <rect x="2" y="192" width="3" height="54" fill="#d03b3b"/>
+  <text x="28" y="224" font-size="14" font-weight="600" fill="#ffffff">pluto</text>
+  <text x="170" y="219" font-size="12" font-weight="700" fill="#d03b3b">&#10005;</text>
+  <text x="188" y="219" font-size="12" font-weight="700" fill="#ffffff">DOWN</text>
+  <text x="188" y="233" font-size="9.5" fill="#c3c2b7">since 18 Jul</text>
+  <rect x="300" y="215.5" width="100" height="7" rx="3.5" fill="#2c2c2a"/>
+  <rect x="300" y="215.5" width="91" height="7" rx="3.5" fill="#d03b3b"/>
+  <text x="412" y="223" font-size="12" fill="#ffffff" class="num">91%</text>
+  <text x="480" y="223" font-size="12" font-weight="700" fill="#d03b3b">&#10005;</text>
+  <text x="496" y="223" font-size="12" font-weight="700" fill="#ffffff">FAILED</text>
+
+  <!-- footer -->
+  <line x1="28" y1="246" x2="612" y2="246" stroke="#2c2c2a"/>
+  <text x="28" y="270" font-size="10.5" fill="#898781">2 / 3 nodes up &#183; disk alert: pluto 91% &#183; backups: 2 ok, 1 failed</text>
+</svg>

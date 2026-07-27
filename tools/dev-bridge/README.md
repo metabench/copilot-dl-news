@@ -35,9 +35,10 @@ shared mount is unreliable about appends).
 |---|---|---|
 | `ping` | – | liveness, version, pid |
 | `restart-bridge` | – | reload with current code (supervisor respawns) |
+| `daemonize` | – | spawn a DETACHED, console-independent successor and exit — after this the bridge survives the supervisor console being closed (v5; the 2026-07-20 whole-session outage was a closed console with nothing to respawn the bridge). Also self-respawns on uncaughtException/unhandledRejection with a crash-loop guard. |
 | `status` | – | managed-process registry (live pids) |
 | `start-ui` / `stop-ui` / `restart-ui` | `port=3000, dbPath, workerMode` | unified web UI server |
-| `start-electron` / `stop-electron` | `port=3170, app='crawl-status', dbPath, allowMultiJobs=true, readyTimeoutMs=45000` | desktop app; waits for HTTP, reports `httpOk` |
+| `start-electron` / `stop-electron` / `restart-electron` | `port=3170, app='crawl-status', dbPath, allowMultiJobs=true, readyTimeoutMs=90000` | desktop app; waits for HTTP, reports `httpOk` (default raised from 45s: cold start is ~37s, the old probe misread slow-but-successful starts as failures). `restart-electron` = stop+start in one action — use it for deploys |
 | `ui-screenshot` | `port=3000, app, delayMs` | PNG of the real UI via a second Electron instance (isolated `--user-data-dir`; capture retries until painted) → `state/ui-shots/` |
 | `start-campaign` / `stop-campaign` / `campaign-status` | `durationMs, urls, maxDownloads, legBudgetMs` | long crawl campaigns (managed) |
 | `run-tests` | `testPath` | bounded jest run (repo-confined) |

@@ -1,0 +1,13 @@
+{
+  "eval_id": 1,
+  "eval_name": "homelab-status-card",
+  "prompt": "Quick one: WLILO status card SVG for my home lab. Three servers: atlas (up, disk 78% full, last backup 02:14), hermes (up, disk 41%, backup 03:02), pluto (DOWN since yesterday, disk 91%, backup FAILED). Keep it fast and text-forward, don't over-draw it.",
+  "assertions": [
+    "SVG file exists, parses as XML, and has a viewBox",
+    "Data fidelity: all of atlas, hermes, pluto, 78, 41, 91 appear in text",
+    "Tier-1 restraint honored: at most 6 <path> elements (text-forward, not over-drawn)",
+    "Unicode block characters used as bar meters (any of ▁▂▃▄▅▆▇█░▒▓)",
+    "Failure state visually distinct: WLILO error/ruby color (#c21f32 or #8d1424 or #e74c5e) present",
+    "WLILO palette adherence: leather background tone and obsidian panel tone both present"
+  ]
+}

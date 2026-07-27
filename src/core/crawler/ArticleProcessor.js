@@ -134,7 +134,12 @@ class ArticleProcessor {
         fetchMeta,
         referrerUrl,
         discoveredAt,
-        depth
+        depth,
+        // Reuse the already-parsed document — process() parsed `html` once at the
+        // top (line ~86) and only READ it since (link extraction + content
+        // signals), so the canonical + analysis reads below can share it instead
+        // of each re-parsing the full HTML. Collapses 3 cheerio.load() per page → 1.
+        $
       });
       if (articleSaved) {
         this._contentSaveStats.saved++;
@@ -229,9 +234,34 @@ class ArticleProcessor {
     };
   }
 
+  // Read an element's text with element boundaries preserved as whitespace.
+  // cheerio `.text()` concatenates across `<br>` and adjacent nodes without a
+  // separator, so `<h1>accurate news<br>is essential</h1>` becomes the
+  // run-together "accurate newsis essential". Clone first (never mutate the
+  // shared $), turn `<br>` into a space, then `.text()` (which still decodes
+  // entities and drops other tags). Equivalent to `.text()` when there is no
+  // `<br>`. Confirmed against apnews.com/purpose/ (2026-07-21).
+  _titleText($el) {
+    if (!$el || $el.length === 0) return '';
+    try {
+      const clone = $el.first().clone();
+      clone.find('br').replaceWith(' ');
+      return (clone.text() || '').replace(/\s+/g, ' ').trim();
+    } catch (_) {
+      return ($el.first().text() || '').replace(/\s+/g, ' ').trim();
+    }
+  }
+
   _extractArticleMetadata($, url) {
-    const title = $('h1').first().text().trim() ||
-      $('title').text().trim() ||
+    // NOTE: scope the document-title selector to <head>. A bare `$('title')`
+    // matches EVERY <title> element in the DOM — including the accessible
+    // <title> labels inside inline SVG icons (e.g. the Guardian's pull-quote
+    // glyphs are literally labelled "double quotation mark") — and cheerio's
+    // .text() then concatenates all of them onto the real page title, yielding
+    // garbage like "… | The Guardiandouble quotation mark". SVG titles live in
+    // <body>, so `head > title` extracts only the document title.
+    const title = this._titleText($('h1').first()) ||
+      $('head > title').first().text().trim() ||
       $('[property="og:title"]').attr('content') ||
       'Unknown Title';
 
@@ -404,12 +434,12 @@ class ArticleProcessor {
     }
   }
 
-  async _persistArticle({ url, html, metadata, readability, fetchMeta, referrerUrl, discoveredAt, depth }) {
+  async _persistArticle({ url, html, metadata, readability, fetchMeta, referrerUrl, discoveredAt, depth, $ = null }) {
     try {
       const adapter = this._getDbAdapter();
       if (!adapter) return false;
-      const canonicalUrl = this._extractCanonicalUrl(html);
-      const articleAnalysis = this._buildArticleAnalysis({ url, html, readability });
+      const canonicalUrl = this._extractCanonicalUrl(html, $);
+      const articleAnalysis = this._buildArticleAnalysis({ url, html, readability, $ });
       const upsertResult = adapter.upsertArticle({
         url,
         title: metadata.title,
@@ -460,13 +490,18 @@ class ArticleProcessor {
       }
 
       const bytes = Buffer.byteLength(html, 'utf8');
-      let compressedBytes = 0;
-      try {
-        compressedBytes = zlib.gzipSync(html).length;
-      } catch (_) { }
-
       if (this.events && typeof this.events.incrementBytesSaved === 'function') {
-        this.events.incrementBytesSaved(bytes, compressedBytes);
+        // Compression-ratio metric OFF the synchronous fetch hot path (2026-07-21):
+        // a full-HTML zlib.gzipSync (up to ~1.5MB for large-page hosts) blocked
+        // the worker's event loop per page purely for a display counter — the
+        // compressed output is discarded except .length. Async gzip runs on the
+        // worker's libuv threadpool so the fetch loop stays responsive; the metric
+        // updates a beat later. Same exact bytesSaved value, less per-page CPU
+        // (matters more now that the crawl runs a broad concurrent host set).
+        zlib.gzip(html, (err, buf) => {
+          if (err || !buf) return;
+          try { this.events.incrementBytesSaved(bytes, buf.length); } catch (_) { /* metric best-effort */ }
+        });
       }
 
       this._log('log', `Saved article: ${metadata.title}`);
@@ -488,18 +523,18 @@ class ArticleProcessor {
     }
   }
 
-  _extractCanonicalUrl(html) {
+  _extractCanonicalUrl(html, providedDoc = null) {
     try {
-      const $ = cheerio.load(html);
+      const $ = providedDoc || cheerio.load(html);
       const c = $('link[rel="canonical"]').attr('href');
       if (c) return this.normalizeUrl(c);
     } catch (_) { /* ignore */ }
     return null;
   }
 
-  _buildArticleAnalysis({ url, html, readability }) {
+  _buildArticleAnalysis({ url, html, readability, $: providedDoc = null }) {
     try {
-      const $ = cheerio.load(html || '');
+      const $ = providedDoc || cheerio.load(html || '');
       const urlSig = this.computeUrlSignals(url);
       const contentSig = this.computeContentSignals($, html || '');
       let schemaSignals = null;
@@ -628,8 +663,10 @@ class ArticleProcessor {
    * @returns {object}
    */
   _extractHubMetadata($, url, navigationLinks, articleLinks) {
-    const title = $('h1').first().text().trim() ||
-      $('title').text().trim() ||
+    // See _extractArticleMetadata: `head > title` avoids concatenating the
+    // <title> labels of inline SVG icons onto the real document title.
+    const title = this._titleText($('h1').first()) ||
+      $('head > title').first().text().trim() ||
       $('[property="og:title"]').attr('content') ||
       'Hub Page';
 

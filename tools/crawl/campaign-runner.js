@@ -22,6 +22,7 @@
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
+const { rollupTotals } = require('./lib/campaign-totals');
 
 const args = process.argv.slice(2);
 function argOf(flag, dflt) { const i = args.indexOf(flag); return i >= 0 && args[i + 1] ? args[i + 1] : dflt; }
@@ -39,6 +40,12 @@ const legBudgetMs = Number(argOf('--leg-budget-ms', 20 * 60 * 1000));
 const legGapMs = Number(argOf('--leg-gap-ms', 60000));
 const port = Number(argOf('--port', 3000));
 const operation = argOf('--operation', 'basicArticleCrawl');
+// --mode: 'discover' (default; basicArticleCrawl from a hub URL) or
+// 'frontier' (drain the DB frontier's never-downloaded URLs for the host —
+// added 2026-07-20 after discover-mode ran supply-bound at ~18 pages/leg
+// while the frontier holds 100k+ URLs/host). In frontier mode --urls are
+// HOSTS (www.bbc.com), not hub URLs.
+const mode = argOf('--mode', 'discover');
 // Periodic UI screenshots (agent-reviewable visual record). 0 = off.
 const screenshotEveryMs = Number(argOf('--screenshot-every-ms', 0));
 const SHOTS_DIR = path.join(STATE_DIR, 'ui-shots');
@@ -71,9 +78,15 @@ const status = {
   startedAt: new Date(startedAt).toISOString(),
   deadline: new Date(deadline).toISOString(),
   urls, maxDownloads, legBudgetMs,
-  legs: [], state: 'starting', currentLeg: null
+  legs: [], state: 'starting', currentLeg: null,
+  totals: rollupTotals([]) // at-a-glance campaign progress; refreshed each leg
 };
-function saveStatus() { try { fs.writeFileSync(STATUS_FILE, JSON.stringify(status, null, 1)); } catch (_) {} }
+// Refresh the totals rollup from all completed legs before every write, so
+// `campaign-status` always shows current downloaded/saved/errors/MB.
+function saveStatus() {
+  status.totals = rollupTotals(status.legs);
+  try { fs.writeFileSync(STATUS_FILE, JSON.stringify(status, null, 1)); } catch (_) {}
+}
 
 function stopRequested() { return fs.existsSync(STOP_FILE); }
 
@@ -123,11 +136,13 @@ async function stopActiveJobs() {
   let leg = 0;
   while (Date.now() < deadline && !stopRequested()) {
     const url = urls[leg % urls.length];
-    const legRec = { n: leg + 1, url, startedAt: new Date().toISOString(), preflight: null, report: null };
+    const legRec = { n: leg + 1, url, mode, startedAt: new Date().toISOString(), preflight: null, report: null };
     status.currentLeg = legRec; saveStatus();
 
-    // Fresh preflight each leg (2 requests; politeness-safe).
-    const pfOut = await runChild('tools/crawl/domain-preflight.js', [url], 60000);
+    // Preflight target: in frontier mode --urls are HOSTS, so probe the site
+    // root; in discover mode they're already hub URLs.
+    const preflightTarget = mode === 'frontier' ? `https://${url.replace(/^https?:\/\//, '').replace(/\/.*$/, '')}/` : url;
+    const pfOut = await runChild('tools/crawl/domain-preflight.js', [preflightTarget], 60000);
     let verdict = 'unreachable';
     try { verdict = JSON.parse(pfOut)[0].verdict; } catch (_) {}
     legRec.preflight = verdict;
@@ -136,6 +151,16 @@ async function stopActiveJobs() {
     if (verdict !== 'ok') {
       log(`leg ${leg + 1}: SKIP ${url} (preflight: ${verdict})`);
       legRec.report = { skipped: true, reason: `preflight:${verdict}` };
+    } else if (mode === 'frontier') {
+      // Frontier leg: drain the host's never-downloaded URLs (no discovery
+      // bottleneck). --urls are bare hosts here.
+      const host = url.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+      log(`leg ${leg + 1}: FRONTIER ${host} (${maxDownloads} URLs)`);
+      const out = await runChild('tools/crawl/frontier-leg.js', [
+        '--host', host, '--limit', String(maxDownloads), '--port', String(port)
+      ], legBudgetMs + 120000);
+      try { legRec.report = JSON.parse(out.trim().split('\n').pop()); } catch (_) { legRec.report = { raw: out.slice(-300) }; }
+      log(`leg ${leg + 1} done:`, JSON.stringify(legRec.report).slice(0, 160));
     } else {
       log(`leg ${leg + 1}: ${url} (${maxDownloads}pp, budget ${Math.round(legBudgetMs / 60000)}min)`);
       const out = await runChild('tools/crawl/bounded-dispatch.js', [

@@ -7,6 +7,7 @@ const EventEmitter = require('events');
 const http = require('http');
 const https = require('https');
 const { PuppeteerDomainManager } = require('./PuppeteerDomainManager');
+const { getGlobalBandwidthLimiter } = require('./GlobalBandwidthLimiter');
 
 // Lazy-load PuppeteerFetcher to avoid requiring puppeteer when not needed
 let PuppeteerFetcher = null;
@@ -465,6 +466,88 @@ class FetchPipeline extends EventEmitter {
   }
 
   /**
+   * Attempt a Puppeteer re-fetch of one URL and build a network-fetch-shaped
+   * result on success. Shared by two triggers: (1) an ECONNRESET exception
+   * (probabilistic TLS-fingerprint-blocking signal, gated by
+   * _shouldUsePuppeteerFallback's host allowlist), and (2) a content-validation
+   * 'soft' rejection (direct evidence — the page literally says "enable
+   * JavaScript" — so that caller bypasses the allowlist gate; the failure
+   * reason IS the justification). Returns null on any failure so the caller
+   * falls through to its own failure handling; never throws.
+   *
+   * @param {string} normalizedUrl
+   * @param {string} host
+   * @param {{context, requestMeta, storedHeaderMeta, reasonForLog}} opts
+   * @returns {Promise<{html, finalUrl, httpStatus, fetchMeta}|null>}
+   */
+  async _attemptPuppeteerRescue(normalizedUrl, host, { context, requestMeta, storedHeaderMeta, reasonForLog, waitUntil, timeoutMs }) {
+    if (!this.puppeteerFallbackEnabled) return null;
+    this.logger.info(`[puppeteer] Attempting Puppeteer fallback for ${normalizedUrl} (${reasonForLog})`, { type: 'PUPPETEER' });
+    try {
+      const puppeteer = await this._getPuppeteerFetcher();
+      if (!puppeteer) return null;
+
+      const puppeteerResult = await puppeteer.fetch(normalizedUrl, {
+        timeout: timeoutMs || this.requestTimeoutMs,
+        ...(waitUntil ? { waitUntil } : {})
+      });
+
+      if (!puppeteerResult.success) {
+        this.logger.warn(`[puppeteer] Failed for ${normalizedUrl}: ${puppeteerResult.error}`, { type: 'PUPPETEER' });
+        return null;
+      }
+
+      this.logger.info(`[puppeteer] Success for ${normalizedUrl}: ${puppeteerResult.httpStatus}`, { type: 'PUPPETEER' });
+      this._noteHostSuccess(this._safeHost(normalizedUrl, host));
+      this.noteSuccess(host);
+
+      // Build fetchMeta compatible with standard network fetch
+      const fetchMeta = {
+        requestStartedIso: new Date().toISOString(),
+        fetchedAtIso: new Date().toISOString(),
+        httpStatus: puppeteerResult.httpStatus,
+        contentType: 'text/html',
+        contentLength: puppeteerResult.contentLength,
+        contentEncoding: null,
+        etag: null,
+        lastModified: null,
+        redirectChain: puppeteerResult.finalUrl !== normalizedUrl
+          ? JSON.stringify([normalizedUrl, puppeteerResult.finalUrl])
+          : null,
+        referrerUrl: context?.referrerUrl || null,
+        crawlDepth: context?.depth ?? null,
+        ttfbMs: null,
+        downloadMs: puppeteerResult.durationMs,
+        totalMs: puppeteerResult.durationMs,
+        bytesDownloaded: puppeteerResult.contentLength,
+        transferKbps: null,
+        conditional: false,
+        fetchMethod: 'puppeteer-fallback'
+      };
+      // Puppeteer downloads count against the shared bandwidth cap too.
+      getGlobalBandwidthLimiter().record(puppeteerResult.contentLength);
+      fetchMeta.freshness = classifyFreshness({
+        source: 'network',
+        status: 'success',
+        fetchMeta,
+        requestMeta,
+        headerMeta: storedHeaderMeta,
+        conditionalHeaders: null
+      });
+
+      return {
+        html: puppeteerResult.html,
+        finalUrl: puppeteerResult.finalUrl,
+        httpStatus: puppeteerResult.httpStatus,
+        fetchMeta
+      };
+    } catch (puppeteerError) {
+      this.logger.warn(`[puppeteer] Error during fallback for ${normalizedUrl}: ${puppeteerError.message}`, { type: 'PUPPETEER' });
+      return null;
+    }
+  }
+
+  /**
    * Cleanup Puppeteer resources (call when crawler is done)
    * @returns {Promise<Object|null>} Final telemetry stats or null
    */
@@ -877,6 +960,9 @@ class FetchPipeline extends EventEmitter {
     if (this.rateLimitMs > 0) {
       await this.acquireRateToken();
     }
+    // Global bandwidth cap (process-wide, shared by every concurrent job):
+    // waits only while the shared bucket is in byte-debt. No-op when unlimited.
+    await getGlobalBandwidthLimiter().acquire();
 
     const started = Date.now();
     const requestStartedIso = new Date(started).toISOString();
@@ -1140,6 +1226,9 @@ class FetchPipeline extends EventEmitter {
       const downloadMs = finished - headersReady;
       const totalMs = finished - started;
       const bytesDownloaded = Buffer.byteLength(html, 'utf8');
+      // Charge the shared bandwidth bucket with what was actually downloaded
+      // (same uncompressed units as bytes_downloaded everywhere else).
+      getGlobalBandwidthLimiter().record(bytesDownloaded);
       const transferKbps = downloadMs > 0 ? (bytesDownloaded / 1024) / (downloadMs / 1000) : null;
       
       // Use finalUrl from redirect handling above, or fall back to normalizedUrl
@@ -1234,7 +1323,60 @@ class FetchPipeline extends EventEmitter {
           if (validation.failureType === 'hard' && this.resilienceService) {
             this.resilienceService.recordFailure(host, 'content-rejection', validation.reason);
           }
-          // Phase 2: Soft failures (JS-required, etc.) can be re-queued for Teacher rendering
+          // Soft failures (JS-required, bot-check interstitials, etc.) get an
+          // IMMEDIATE Puppeteer retry. Unlike the ECONNRESET trigger (a
+          // probabilistic signal gated by _shouldUsePuppeteerFallback's host
+          // allowlist), this is direct evidence — the page literally says
+          // "enable JavaScript" — so the allowlist gate is bypassed on
+          // purpose; the failure reason itself is the justification. The
+          // rendered result is re-validated (defensive: a bot-check page can
+          // sometimes trip headless Chrome too) before being trusted.
+          if (validation.failureType === 'soft') {
+            const rescue = await this._attemptPuppeteerRescue(finalUrl, host, {
+              context, requestMeta, storedHeaderMeta,
+              reasonForLog: `content-validation soft-failure: ${validation.reason}`,
+              // A JS-required wall means the initial document is a
+              // pre-hydration placeholder — waiting only for
+              // 'domcontentloaded' (the ECONNRESET path's default) captures
+              // that SAME placeholder via Puppeteer too. 'networkidle2' waits
+              // for the SPA's data-fetch + render cycle to actually finish
+              // (live-observed on Globe and Mail: domcontentloaded alone
+              // still returned the "enable JavaScript" text). Give it a
+              // longer budget than a plain fetch — full JS hydration is
+              // slower than a network round-trip.
+              waitUntil: 'networkidle2',
+              timeoutMs: Math.max(this.requestTimeoutMs, 25000)
+            });
+            if (rescue) {
+              const rescueValidation = this.contentValidationService.validate({
+                url: rescue.finalUrl,
+                html: rescue.html,
+                statusCode: rescue.httpStatus
+              });
+              if (rescueValidation.valid) {
+                // Converge this host toward the auto-learned allowlist so
+                // future fetches skip straight to Puppeteer instead of
+                // paying for a doomed plain fetch first.
+                if (this._puppeteerDomainManager && this._puppeteerDomainManager.isTrackingEnabled()) {
+                  this._puppeteerDomainManager.recordFailure(host, finalUrl, validation.reason);
+                }
+                this.emit('fetch:success', { url: rescue.finalUrl, status: rescue.httpStatus, fetchMeta: rescue.fetchMeta });
+                return this._buildResult({
+                  status: 'success',
+                  source: 'network',
+                  url: rescue.finalUrl,
+                  html: rescue.html,
+                  fetchMeta: rescue.fetchMeta,
+                  decision
+                });
+              }
+              this.logger.warn(`[puppeteer] Rendered content for ${finalUrl} still failed validation: ${rescueValidation.reason}`, { type: 'PUPPETEER' });
+            }
+          }
+          // Phase 2 (unfinished "Teacher rendering" pathway): kept as a
+          // best-effort secondary hook. teacherService is never constructed
+          // anywhere today so this.onSoftFailure is always null in practice —
+          // harmless if it ever is wired up.
           if (validation.failureType === 'soft' && this.onSoftFailure) {
             this.onSoftFailure({
               url: finalUrl,
@@ -1340,66 +1482,20 @@ class FetchPipeline extends EventEmitter {
         
         // Puppeteer fallback for TLS-fingerprinting sites (ECONNRESET often means JA3/JA4 blocking)
         if (this.puppeteerFallbackOnEconnreset && this._shouldUsePuppeteerFallback(host)) {
-          this.logger.info(`[puppeteer] Attempting Puppeteer fallback for ${normalizedUrl} (ECONNRESET on TLS-fingerprinting site)`, { type: 'PUPPETEER' });
-          try {
-            const puppeteer = await this._getPuppeteerFetcher();
-            if (puppeteer) {
-              const puppeteerResult = await puppeteer.fetch(normalizedUrl, {
-                timeout: this.requestTimeoutMs
-              });
-              
-              if (puppeteerResult.success) {
-                this.logger.info(`[puppeteer] Success for ${normalizedUrl}: ${puppeteerResult.httpStatus}`, { type: 'PUPPETEER' });
-                this._noteHostSuccess(this._safeHost(normalizedUrl, host));
-                this.noteSuccess(host);
-                
-                // Build fetchMeta compatible with standard network fetch
-                const fetchMeta = {
-                  requestStartedIso: new Date().toISOString(),
-                  fetchedAtIso: new Date().toISOString(),
-                  httpStatus: puppeteerResult.httpStatus,
-                  contentType: 'text/html',
-                  contentLength: puppeteerResult.contentLength,
-                  contentEncoding: null,
-                  etag: null,
-                  lastModified: null,
-                  redirectChain: puppeteerResult.finalUrl !== normalizedUrl
-                    ? JSON.stringify([normalizedUrl, puppeteerResult.finalUrl])
-                    : null,
-                  referrerUrl: context.referrerUrl || null,
-                  crawlDepth: context.depth ?? null,
-                  ttfbMs: null,
-                  downloadMs: puppeteerResult.durationMs,
-                  totalMs: puppeteerResult.durationMs,
-                  bytesDownloaded: puppeteerResult.contentLength,
-                  transferKbps: null,
-                  conditional: false,
-                  fetchMethod: 'puppeteer-fallback'
-                };
-                fetchMeta.freshness = classifyFreshness({
-                  source: 'network',
-                  status: 'success',
-                  fetchMeta,
-                  requestMeta,
-                  headerMeta: storedHeaderMeta,
-                  conditionalHeaders: null
-                });
-                
-                this.emit('fetch:success', { url: puppeteerResult.finalUrl, status: puppeteerResult.httpStatus, fetchMeta });
-                return this._buildResult({
-                  status: 'success',
-                  source: 'network',
-                  url: puppeteerResult.finalUrl,
-                  html: puppeteerResult.html,
-                  fetchMeta,
-                  decision
-                });
-              } else {
-                this.logger.warn(`[puppeteer] Failed for ${normalizedUrl}: ${puppeteerResult.error}`, { type: 'PUPPETEER' });
-              }
-            }
-          } catch (puppeteerError) {
-            this.logger.warn(`[puppeteer] Error during fallback for ${normalizedUrl}: ${puppeteerError.message}`, { type: 'PUPPETEER' });
+          const rescue = await this._attemptPuppeteerRescue(normalizedUrl, host, {
+            context, requestMeta, storedHeaderMeta,
+            reasonForLog: 'ECONNRESET on TLS-fingerprinting site'
+          });
+          if (rescue) {
+            this.emit('fetch:success', { url: rescue.finalUrl, status: rescue.httpStatus, fetchMeta: rescue.fetchMeta });
+            return this._buildResult({
+              status: 'success',
+              source: 'network',
+              url: rescue.finalUrl,
+              html: rescue.html,
+              fetchMeta: rescue.fetchMeta,
+              decision
+            });
           }
         }
       }

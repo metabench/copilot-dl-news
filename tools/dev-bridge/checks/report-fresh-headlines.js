@@ -28,6 +28,7 @@ const MINUTES = Number(getArg('--minutes', 60));
 const HOST = getArg('--host', null);
 const LIMIT = Number(getArg('--limit', 40));
 const SHOW_ARCHIVE = !argv.includes('--no-archive');
+const HUB_LINKS = argv.includes('--hub-links'); // list story headlines hub pages link to
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const Database = require(require.resolve('better-sqlite3', { paths: [ROOT, path.join(ROOT, '..', 'news-crawler-db')] }));
@@ -65,6 +66,61 @@ function extractHeadline(html) {
   return t ? decodeEntities(t[1]) : null;
 }
 
+// FIX 18: a section/utility page's <title>/og:title is just the section/nav name
+// ("Opinion", "Sport", "About Us", "Privacy Settings", a tagline), not a story
+// headline — it clutters the "what just arrived" list. A LENGTH GATE protects
+// real headlines that merely start with a section word ("Business leaders warn…"
+// is long, kept), so only a SHORT title matching the section/utility vocabulary
+// (or a known boilerplate phrase) is routed to a collapsed summary line instead.
+// The most reliable signal is the URL SHAPE, not the title text: a section/author/
+// utility page has a shallow or trailing-slash path (/sports/, /author/sal-christ,
+// /purpose/), whereas an article ends in a substantial slug (long id/hash, 6+ digit
+// id, date path, or a many-word hyphenated slug). Mirrors ArticleSignalsService
+// .isArticleShapedUrl (kept inline so this read-only tool stays dependency-free).
+function isArticleShapedUrl(url) {
+  try {
+    const p = new URL(url).pathname;
+    if (p.endsWith('/')) return false;
+    const segs = p.split('/').filter(Boolean);
+    if (segs.length < 2) return false;
+    const last = segs[segs.length - 1];
+    const hyphenParts = last.split('-').filter(Boolean).length;
+    return /[a-f0-9]{12,}|\d{6,}/i.test(last) || /\/(19|20)\d{2}\/\d{1,2}\/\d{1,2}\//.test(p) || hyphenParts >= 4;
+  } catch (_) { return false; }
+}
+const SECTION_UTILITY = /^(opinion|sports?|business|politics|video(s)?|quiz(zes)?|about( us)?|privacy( settings)?|data|life( ?& ?style)?|culture|entertainment|society|education|books|premium|elections?|sci-?tech|home|news|my ?account|newsletters?|subscribe|weather|podcasts?|photos?|live|standards editor|columnist|contributors?|authors?)\b/i;
+// A row is noise if its URL is not article-shaped (the primary signal), OR the
+// title is a short section word / known boilerplate (catches junk titles on
+// otherwise article-shaped URLs).
+function isSectionOrUtility(url, title) {
+  if (url && !isArticleShapedUrl(url)) return true;
+  const t = (title || '').trim();
+  if (t.length <= 30 && SECTION_UTILITY.test(t)) return true;
+  if (/accurate news.?is essential|digital advertisement registry|stay connected with|welcome to|website accessibility|al jazeera live/i.test(t)) return true;
+  return false;
+}
+
+// --hub-links: hub/section pages carry the REAL story of the crawl — the
+// article headlines they link to — but their own <title> is just the section
+// name. Extract linked-story titles from full page HTML. Two passes, union:
+// (a) aria-label on story links (Guardian and other accessibility-labelled
+// fronts put the full headline there); (b) anchor text on article-shaped
+// paths (/news/, /article, dated paths etc.), which covers Al Jazeera, DW,
+// The Hindu and most others. Noise-gated: min length, no nav/CTA verbs.
+function extractHubStoryTitles(html, cap = 6) {
+  if (!html) return [];
+  const NOISE = /^(View|More|All|Sign|Log|Search|Menu|Subscribe|Newsletter|Listen|Watch live|Live\b|Home|About|Contact)/i;
+  const titles = [];
+  const push = (raw) => {
+    const t = decodeEntities(raw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (t.length < 35 || t.length > 160 || NOISE.test(t)) return;
+    if (!titles.includes(t)) titles.push(t);
+  };
+  for (const m of html.matchAll(/aria-label="([^"]{35,200})"/gi)) push(m[1]);
+  for (const m of html.matchAll(/<a [^>]*href="[^"]*(?:\/news\/|\/article|\/story\/|\/\d{4}\/\d{1,2}\/)[^"]*"[^>]*>([\s\S]{35,300}?)<\/a>/gi)) push(m[1]);
+  return titles.slice(0, cap);
+}
+
 // ---- Fresh downloads in the window ----------------------------------------
 // fetched_at is stored in MIXED formats (ISO T…Z + space) — normalize via datetime().
 const hostFilter = HOST ? "AND u.host LIKE '%' || ? || '%'" : '';
@@ -84,15 +140,24 @@ const rows = db.prepare(`
 
 console.log(`\n== Fresh downloads (last ${MINUTES} min${HOST ? ', host~' + HOST : ''}) — ${rows.length} row(s) ==`);
 const seen = new Set();
+const sectionTitles = new Set(); // FIX 18: section/utility "headlines" collapsed below
 let shown = 0;
 for (const r of rows) {
-  const headline = extractHeadline(r.blob ? String(inflate(r.blob, r.alg)) : null);
+  const html = r.blob ? String(inflate(r.blob, r.alg)) : null;
+  const headline = extractHeadline(html);
   const label = headline || '(no stored content / no title)';
   if (seen.has(label) && headline) continue; // collapse duplicate headlines (listing pages etc.)
   seen.add(label);
+  if (isSectionOrUtility(r.url, headline)) { sectionTitles.add(headline || r.url.replace(/^https?:\/\//, '')); continue; } // FIX 18
   shown++;
   console.log(`  • [${r.fetched} UTC] ${label}`);
   console.log(`      ${r.url.slice(0, 110)}`);
+  if (HUB_LINKS && html) {
+    for (const story of extractHubStoryTitles(html)) console.log(`        › ${story}`);
+  }
+}
+if (sectionTitles.size) {
+  console.log(`  (+ ${sectionTitles.size} section/utility page(s) hidden: ${[...sectionTitles].slice(0, 12).join(', ')})`);
 }
 if (!rows.length) console.log('  (none — crawler idle in this window)');
 

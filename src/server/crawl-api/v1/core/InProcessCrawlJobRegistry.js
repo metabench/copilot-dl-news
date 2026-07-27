@@ -72,6 +72,80 @@ class InProcessCrawlJobRegistry {
 
     // Minimal observable for job list changes.
     this._events = observable(() => {});
+
+    // Worker-mode bandwidth coordination: the global download cap lives in
+    // this (server) process's GlobalBandwidthLimiter, but fetches happen in
+    // forked workers — so the cap is divided into equal per-worker slices
+    // (cap / active worker jobs) and pushed over IPC. Rebalanced whenever a
+    // job starts, a job settles, or the cap is changed at runtime.
+    try {
+      const bw = require('../../../../core/crawler/GlobalBandwidthLimiter');
+      this._bandwidthLimiter = bw.getGlobalBandwidthLimiter();
+      this._computeDemandSlices = bw.computeDemandSlices;
+      this._bandwidthLimiter.onRateChange(() => this._rebalanceBandwidth());
+      // Periodic demand-aware rebalance: workers report bytes every 2s; every
+      // 3s slices are recomputed from the observed rates so starved workers
+      // yield budget to supplied ones (see computeDemandSlices for the math).
+      this._bandwidthRebalanceTimer = setInterval(() => this._rebalanceBandwidth(), 3000);
+      if (typeof this._bandwidthRebalanceTimer.unref === 'function') this._bandwidthRebalanceTimer.unref();
+    } catch (_) {
+      this._bandwidthLimiter = null;
+    }
+  }
+
+  _activeWorkerJobs() {
+    return Array.from(this._jobs.values()).filter(
+      (job) => job.child && !job.finishedAt && (job.status === 'running' || job.status === 'pending')
+    );
+  }
+
+  _currentBandwidthSlice(extraJobs = 0) {
+    if (!this._bandwidthLimiter) return undefined;
+    const rate = this._bandwidthLimiter.getRateBytesPerSec();
+    if (!rate || rate <= 0) return 0; // 0 = explicitly unlimited in workers too
+    const count = this._activeWorkerJobs().length + extraJobs;
+    return rate / Math.max(1, count);
+  }
+
+  // Called from worker 'bandwidth-usage' messages: fold the byte delta into an
+  // exponentially-weighted rate so bursts don't whipsaw the slices.
+  _noteBandwidthUsage(job, totalBytes) {
+    const now = Date.now();
+    const total = Number(totalBytes) || 0;
+    if (job._bwLastTotal === undefined) {
+      job._bwLastTotal = total;
+      job._bwLastAt = now;
+      job._bwEwma = 0;
+      return;
+    }
+    const dtSec = Math.max(0.25, (now - (job._bwLastAt || now)) / 1000);
+    const rate = Math.max(0, total - job._bwLastTotal) / dtSec;
+    const ALPHA = 0.4;
+    job._bwEwma = job._bwEwma === undefined ? rate : ALPHA * rate + (1 - ALPHA) * job._bwEwma;
+    job._bwLastTotal = total;
+    job._bwLastAt = now;
+  }
+
+  _rebalanceBandwidth() {
+    if (!this._bandwidthLimiter) return;
+    const active = this._activeWorkerJobs();
+    if (!active.length) return;
+    const rate = this._bandwidthLimiter.getRateBytesPerSec();
+    if (!(rate > 0)) {
+      for (const job of active) {
+        try { job.child.send({ type: 'bandwidth-rate', bytesPerSec: 0 }); } catch (_) { /* worker gone */ }
+      }
+      return;
+    }
+    const slices = this._computeDemandSlices(
+      rate,
+      active.map((job) => ({ id: job.id, bytesPerSec: job._bwEwma || 0 }))
+    );
+    for (const job of active) {
+      const slice = slices.get(job.id);
+      if (slice === undefined) continue;
+      try { job.child.send({ type: 'bandwidth-rate', bytesPerSec: slice }); } catch (_) { /* worker gone */ }
+    }
   }
 
   _emit(event) {
@@ -94,6 +168,30 @@ class InProcessCrawlJobRegistry {
     return this._toPublicJob(job);
   }
 
+  // A finished job's LAST progress snapshot freezes whatever per-second rates
+  // its final delta window computed — typically a reconcile step where `saved`
+  // jumps while `downloaded` doesn't, leaving docsSavedPerSec > 0 forever.
+  // The crawl-status throughput strip sums rates across the whole jobs list,
+  // so those ghosts displayed as a phantom "Saved docs/s" long after every
+  // crawl finished (owner-reported, 2026-07-21 cycle 69). Zero the rate keys
+  // at THIS single serialization seam — it covers every terminal path
+  // (in-process resolve/reject, worker-mode status message, stop) and every
+  // consumer of the public payload. Cumulative counters (visited/saved/bytes)
+  // stay untouched: they are totals, still true after completion.
+  _publicProgress(job) {
+    const progress = job.progress || null;
+    if (!progress) return null;
+    const terminal = Boolean(job.finishedAt) || ['completed', 'failed', 'stopped'].includes(job.status);
+    if (!terminal) return progress;
+    return {
+      ...progress,
+      docsDownloadedPerSec: 0,
+      docsSavedPerSec: 0,
+      networkMbPerSec: 0,
+      savedMbPerSec: 0
+    };
+  }
+
   _toPublicJob(job) {
     return {
       id: job.id,
@@ -110,13 +208,49 @@ class InProcessCrawlJobRegistry {
       // Live numeric progress for the crawl status page (jobs table +
       // throughput strip), incl. the Electron unified app. Populated by
       // _attachJobProgress; null until the first progress event or in
-      // worker mode. See core/jobProgress.js.
-      progress: job.progress || null,
+      // worker mode. Rates are zeroed once the job is terminal (see
+      // _publicProgress). See core/jobProgress.js.
+      progress: this._publicProgress(job),
+      // Live per-job bandwidth activity (from worker 'bandwidth-usage' msgs via
+      // _noteBandwidthUsage). bytesTotal is the cumulative downloaded-bytes
+      // counter (monotonic) — a frozen bytesTotal is the ground-truth "this
+      // host is emitting nothing" signal the guarded stuck-host trigger reads;
+      // bytesPerSecEwma is the smoothed rate the demand-slicer uses. Exposed
+      // here so run-multi's stuck-monitor + the crawl-status throughput strip
+      // can see them without reaching into private fields.
+      bytesTotal: job._bwLastTotal != null ? job._bwLastTotal : null,
+      bytesPerSecEwma: job._bwEwma != null ? job._bwEwma : null,
       // Post-mortem material: first-N url:error samples + counts by kind
       // (see _attachErrorSummary), and the worker's captured stdio log.
       errorSummary: job.errorSummary || null,
       logPath: job.logPath || null
     };
+  }
+
+  /**
+   * Attach a best-effort 'error' listener to each given stream/emitter so a
+   * stream failure can NEVER crash the server child. A Node stream that emits
+   * 'error' with no listener re-throws it as an uncaught exception — for the
+   * per-job log WriteStream (and the worker stdout/stderr piped into it) a
+   * disk-full (ENOSPC), broken pipe (EPIPE), permission (EACCES) or late
+   * write-after-end would otherwise take the whole crawl server down. Logging is
+   * best-effort infrastructure: degrade it, never let it be fatal. Returns the
+   * count of guarded streams (for tests). Reusable for any other at-risk stream.
+   */
+  _guardStreamErrors(streams, context = '') {
+    let guarded = 0;
+    for (const s of (Array.isArray(streams) ? streams : [streams])) {
+      if (s && typeof s.on === 'function') {
+        s.on('error', (err) => {
+          try {
+            const msg = err && err.message ? err.message : String(err);
+            console.warn(`[crawl-job] stream error (non-fatal${context ? ' ' + context : ''}): ${msg}`);
+          } catch (_) { /* even the warn is best-effort */ }
+        });
+        guarded++;
+      }
+    }
+    return guarded;
   }
 
   /**
@@ -170,6 +304,19 @@ class InProcessCrawlJobRegistry {
 
   _getInternal(jobId) {
     return this._jobs.get(jobId) || null;
+  }
+
+  // Public completion signal. startOperation()/_startOperationInWorker() return
+  // { jobId, job } where `job` is the SANITIZED _toPublicJob() snapshot — it has
+  // no `promise` field (a caller awaiting `job.promise` awaits undefined, i.e.
+  // resolves immediately, and would reconcile a still-running job as if it had
+  // already settled). This accessor exposes the real internal promise (already
+  // set at job.promise = new Promise(...) in both the in-process and worker-mode
+  // branches) without changing the public snapshot shape any other caller relies on.
+  waitForJob(jobId) {
+    const job = this._getInternal(jobId);
+    if (!job) return Promise.reject(new Error(`Unknown job ${jobId}`));
+    return job.promise;
   }
 
   pause(jobId) {
@@ -397,6 +544,10 @@ class InProcessCrawlJobRegistry {
       fs.mkdirSync(JOB_LOG_DIR, { recursive: true });
       const logFile = path.join(JOB_LOG_DIR, `${jobId}.log`);
       logStream = fs.createWriteStream(logFile, { flags: 'a' });
+      // Guard BEFORE any write or pipe: the log stream and the worker stdio piped
+      // into it must never crash the server child on ENOSPC/EPIPE/EACCES/etc.
+      // (.pipe() does not forward source errors, so stdout/stderr need their own).
+      this._guardStreamErrors([logStream, child.stdout, child.stderr], `job=${jobId}`);
       logStream.write(`[job ${jobId}] ${operationName} ${startUrl} started ${new Date().toISOString()}\n`);
       job.logPath = path.relative(path.resolve(JOB_LOG_DIR, '..', '..', '..'), logFile).split(path.sep).join('/');
       if (child.stdout) child.stdout.pipe(logStream, { end: false });
@@ -433,6 +584,8 @@ class InProcessCrawlJobRegistry {
           logStream.end();
         }
       } catch (_) {}
+      // A finished job frees its bandwidth slice for the survivors.
+      this._rebalanceBandwidth();
       this._emit({ type: status === 'completed' ? 'job:completed' : 'job:failed', jobId, error: job.error || undefined });
     };
 
@@ -440,6 +593,8 @@ class InProcessCrawlJobRegistry {
       if (!m || typeof m !== 'object') return;
       if (m.type === 'crawler-event') {
         try { emitter.emit(m.event, m.data); } catch (_) {}
+      } else if (m.type === 'bandwidth-usage') {
+        this._noteBandwidthUsage(job, m.totalBytes);
       } else if (m.type === 'result') {
         settle(m.status === 'ok' ? 'completed' : 'failed', m.error || null);
       } else if (m.type === 'fatal') {
@@ -466,6 +621,7 @@ class InProcessCrawlJobRegistry {
       if (typeof check.unref === 'function') check.unref();
     });
 
+    job.child = child;
     this._jobs.set(jobId, job);
     this._emit({ type: 'job:started', jobId, job: this.get(jobId) });
 
@@ -474,7 +630,10 @@ class InProcessCrawlJobRegistry {
       if (oldestKey) this._jobs.delete(oldestKey);
     }
 
-    child.send({ type: 'run', operationName, startUrl, overrides: mergedOverrides });
+    // Initial slice counts this job (already in _jobs); shrink the others too.
+    const bandwidthBytesPerSec = this._currentBandwidthSlice();
+    child.send({ type: 'run', operationName, startUrl, overrides: mergedOverrides, bandwidthBytesPerSec });
+    this._rebalanceBandwidth();
 
     return { jobId, job: this.get(jobId) };
   }

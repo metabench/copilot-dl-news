@@ -14,12 +14,10 @@ const ALL_DEPLOYMENTS = [
         local: 'src/ui/server/docsViewer',
         remote: 'apps/docs-viewer',
         restart: true
-    },
-    {
-        name: 'remote-crawler-v2',
-        local: 'deploy/remote-crawler-v2',
-        remote: 'apps/remote-crawler-v2'
     }
+    // (cycle 76) removed the stale 'remote-crawler-v2' entry — its local dir
+    // deploy/remote-crawler-v2/ was extracted to ../news-crawler-itself in cycle 73;
+    // the canonical remote-crawler deploy is tools/crawl/deploy-remote-server.js.
 ];
 
 // ── Parse --only flag ───────────────────────────────────────
@@ -27,7 +25,7 @@ const onlyArg = process.argv.find(a => a.startsWith('--only='));
 const only = onlyArg ? onlyArg.split('=')[1].split(',') : null;
 
 const DEPLOYMENTS = only
-    ? ALL_DEPLOYMENTS.filter(d => only.includes(d.name) || only.includes(d.name.replace('remote-crawler-v2', 'crawler')))
+    ? ALL_DEPLOYMENTS.filter(d => only.includes(d.name))
     : ALL_DEPLOYMENTS;
 
 if (DEPLOYMENTS.length === 0) {

@@ -1,6 +1,7 @@
 "use strict";
 
 const ArticleSignalsService = require('./ArticleSignalsService');
+const { createStoredRateLimitProvider } = require('./storedRateLimitProvider');
 const { EnhancedFeaturesManager } = require('./EnhancedFeaturesManager');
 const { ArticleCache } = require('../../cache');
 const HubFreshnessController = require('./HubFreshnessController');
@@ -292,7 +293,23 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
   // Only load if a config file exists (silent no-op otherwise)
   crawler.proxyManager.load();
 
-  crawler.domainThrottle = new DomainThrottleManager({ state: crawler.state, pacerJitterMinMs: crawler.pacerJitterMinMs, pacerJitterMaxMs: crawler.pacerJitterMaxMs, getDbAdapter: () => crawler.dbAdapter });
+  // 2026-07-26 (owner decision #2, cycle 14): honour stored domain_rate_limits rows as a
+  // pacing floor. Until now NOTHING read that table — measured: no callers for ncdb's
+  // getDomainRateLimit, no references to learned_rpm/safe_rpm in src/ — so presets
+  // expressing intended politeness (telegraph.co.uk 25 rpm, independent.co.uk 30,
+  // aljazeera.com 40) were ignored and we fetched FASTER than they specify. The floor
+  // combines with the robots crawl-delay by max(), so this can only ever slow us down.
+  // Lookup is keyed on the NORMALISED host because the table holds both `www.` and bare
+  // forms. Consulted once per host, and any failure leaves pacing untouched.
+  crawler.domainThrottle = new DomainThrottleManager({
+    state: crawler.state,
+    pacerJitterMinMs: crawler.pacerJitterMinMs,
+    pacerJitterMaxMs: crawler.pacerJitterMaxMs,
+    getDbAdapter: () => crawler.dbAdapter,
+    // Extracted to its own module so the seam is testable against a REAL adapter —
+    // see storedRateLimitProvider.js for why (cycle 14 shipped a silent no-op here).
+    storedRateLimitProvider: createStoredRateLimitProvider(() => crawler.dbAdapter)
+  });
   crawler.articleProcessor = new ArticleProcessor({ linkExtractor: crawler.linkExtractor, normalizeUrl: (url, ctx) => crawler.normalizeUrl(url, ctx), looksLikeArticle: (url) => crawler.looksLikeArticle(url), computeUrlSignals: (url) => crawler._computeUrlSignals(url), computeContentSignals: ($, html) => crawler._computeContentSignals($, html), combineSignals: (urlSignals, contentSignals, opts) => crawler._combineSignals(urlSignals, contentSignals, opts), dbAdapter: () => crawler.dbAdapter, articleHeaderCache: crawler.state.getArticleHeaderCache(), knownArticlesCache: crawler.state.getKnownArticlesCache(), events: crawler.events, logger: console });
   crawler.navigationDiscoveryService = new NavigationDiscoveryService({ linkExtractor: crawler.linkExtractor, normalizeUrl: (url, ctx) => crawler.normalizeUrl(url, ctx), looksLikeArticle: (url) => crawler.looksLikeArticle(url), logger: console });
   crawler.contentAcquisitionService = new ContentAcquisitionService({ articleProcessor: crawler.articleProcessor, logger: console });
@@ -340,6 +357,7 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     loadSitemaps,
     useSitemap: crawler.useSitemap,
     sitemapMaxUrls: crawler.sitemapMaxUrls,
+    sitemapMaxFetches: crawler.sitemapMaxFetches,
     getUrlDecision: (url, ctx) => crawler._getUrlDecision(url, ctx),
     handlePolicySkip: (decision, info) => crawler._handlePolicySkip(decision, info),
     isOnDomain: (url) => crawler.isOnDomain(url),

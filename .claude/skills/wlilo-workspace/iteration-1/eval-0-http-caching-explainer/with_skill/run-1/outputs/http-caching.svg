@@ -1,0 +1,242 @@
+<svg viewBox="0 0 1200 1160" xmlns="http://www.w3.org/2000/svg" role="img">
+  <title>How HTTP caching works: max-age freshness, ETag validators, 304 revalidation</title>
+  <desc>Three sequence panels show a cache miss storing a response with an ETag and Cache-Control max-age, a fresh hit served from cache with no network request, and a stale revalidation using If-None-Match that ends in either a bodyless 304 Not Modified or a full 200 with a new ETag.</desc>
+  <defs>
+    <linearGradient id="leatherBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#faf9f7"/><stop offset="55%" stop-color="#f5f3ef"/>
+      <stop offset="100%" stop-color="#ebe8e2"/>
+    </linearGradient>
+    <linearGradient id="obsidianPanel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2d2d2d"/><stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c9a962"/><stop offset="100%" stop-color="#e8d5a3"/>
+    </linearGradient>
+    <pattern id="leatherGrain" width="6" height="6" patternUnits="userSpaceOnUse"
+             patternTransform="rotate(35)">
+      <rect width="6" height="6" fill="none"/>
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#1a1a1a" stroke-width="0.5" opacity="0.025"/>
+    </pattern>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3.5" flood-color="#0a0d14" flood-opacity="0.18"/>
+    </filter>
+    <marker id="arrowGold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+            markerHeight="7" orient="auto">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#c9a962"/>
+    </marker>
+  </defs>
+
+  <!-- 1 · background -->
+  <rect width="1200" height="1160" fill="url(#leatherBg)"/>
+  <rect width="1200" height="1160" fill="url(#leatherGrain)"/>
+
+  <!-- 5-layer order holds inside each panel group: connectors, then labels -->
+
+  <!-- Title block -->
+  <text x="600" y="54" text-anchor="middle" font-family="Georgia, serif" font-size="28"
+        font-weight="bold" fill="#2d2d2d">How HTTP Caching Works</text>
+  <text x="600" y="80" text-anchor="middle" font-family="Arial, sans-serif" font-size="13"
+        fill="#666">Freshness via Cache-Control: max-age · validation via ETag + If-None-Match · 304 Not Modified</text>
+  <line x1="420" y1="95" x2="585" y2="95" stroke="url(#goldAccent)" stroke-width="1"/>
+  <line x1="615" y1="95" x2="780" y2="95" stroke="url(#goldAccent)" stroke-width="1"/>
+  <text x="600" y="99" text-anchor="middle" font-family="Arial, sans-serif" font-size="12"
+        fill="#c9a962">✦</text>
+
+  <!-- ===================== Panel 1 · cache miss ===================== -->
+  <g transform="translate(40,112)">
+    <rect width="1120" height="278" rx="12" fill="url(#obsidianPanel)"
+          stroke="#c9a962" stroke-width="1.5" filter="url(#softShadow)"/>
+    <text x="560" y="32" text-anchor="middle" font-family="Georgia, serif" font-size="16"
+          font-weight="bold" fill="#e8d5a3">① Cache miss — the origin sends the full response</text>
+    <text x="1088" y="32" text-anchor="end" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="11" fill="#c9a962">t = 0 s</text>
+    <line x1="24" y1="46" x2="1096" y2="46" stroke="url(#goldAccent)" stroke-width="1"/>
+
+    <!-- lifelines (connectors before chips' labels is moot; lines first, chips after) -->
+    <line x1="170" y1="96" x2="170" y2="246" stroke="#888" stroke-width="1"
+          stroke-dasharray="2,4" opacity="0.7"/>
+    <line x1="560" y1="96" x2="560" y2="246" stroke="#888" stroke-width="1"
+          stroke-dasharray="2,4" opacity="0.7"/>
+    <line x1="950" y1="96" x2="950" y2="246" stroke="#888" stroke-width="1"
+          stroke-dasharray="2,4" opacity="0.7"/>
+
+    <!-- message arrows -->
+    <line x1="170" y1="132" x2="554" y2="132" stroke="#888" stroke-width="1.5"
+          marker-end="url(#arrowGold)"/>
+    <line x1="560" y1="132" x2="944" y2="132" stroke="#888" stroke-width="1.5"
+          marker-end="url(#arrowGold)"/>
+    <line x1="950" y1="178" x2="566" y2="178" stroke="#888" stroke-width="1.5"
+          marker-end="url(#arrowGold)"/>
+    <line x1="560" y1="224" x2="176" y2="224" stroke="#888" stroke-width="1.5"
+          marker-end="url(#arrowGold)"/>
+
+    <!-- actor chips -->
+    <rect x="75" y="60" width="190" height="36" rx="8" fill="#f5f3ef"
+          stroke="#c9a962" stroke-width="1"/>
+    <rect x="465" y="60" width="190" height="36" rx="8" fill="#f5f3ef"
+          stroke="#c9a962" stroke-width="1"/>
+    <rect x="855" y="60" width="190" height="36" rx="8" fill="#f5f3ef"
+          stroke="#c9a962" stroke-width="1"/>
+    <text x="170" y="83" text-anchor="middle" font-family="Arial, sans-serif" font-size="13"
+          font-weight="bold" fill="#2d2d2d">🌐 Client</text>
+    <text x="560" y="83" text-anchor="middle" font-family="Arial, sans-serif" font-size="13"
+          font-weight="bold" fill="#2d2d2d">📦 HTTP cache</text>
+    <text x="950" y="83" text-anchor="middle" font-family="Arial, sans-serif" font-size="13"
+          font-weight="bold" fill="#2d2d2d">🗄️ Origin server</text>
+
+    <!-- message labels -->
+    <text x="365" y="124" text-anchor="middle" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="11" fill="#faf9f7">GET /app.js</text>
+    <text x="755" y="124" text-anchor="middle" font-family="Arial, sans-serif" font-size="11"
+          fill="#d8d0c1">cache miss → forward</text>
+    <text x="755" y="170" text-anchor="middle" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="11" fill="#faf9f7">200 OK + body (48 KB)</text>
+    <text x="755" y="192" text-anchor="middle" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="10" fill="#e8d5a3">ETag: "a1b2c3" · Cache-Control: max-age=600</text>
+    <text x="365" y="216" text-anchor="middle" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="11" fill="#faf9f7">200 OK + body</text>
+    <text x="365" y="238" text-anchor="middle" font-family="Arial, sans-serif" font-size="10"
+          fill="#d8d0c1">stores body + validator (ETag) before answering</text>
+    <text x="560" y="264" text-anchor="middle" font-family="Arial, sans-serif" font-size="11"
+          fill="#d8d0c1">Stored response is fresh for max-age = 600 s, counted from generation at the origin — the Age header tracks time already spent in caches.</text>
+  </g>
+
+  <!-- ===================== Panel 2 · fresh hit ===================== -->
+  <g transform="translate(40,410)">
+    <rect width="1120" height="216" rx="12" fill="url(#obsidianPanel)"
+          stroke="#c9a962" stroke-width="1.5" filter="url(#softShadow)"/>
+    <text x="560" y="32" text-anchor="middle" font-family="Georgia, serif" font-size="16"
+          font-weight="bold" fill="#e8d5a3">② Fresh hit — age &lt; max-age, served from cache</text>
+    <text x="1088" y="32" text-anchor="end" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="11" fill="#c9a962">t = 120 s</text>
+    <line x1="24" y1="46" x2="1096" y2="46" stroke="url(#goldAccent)" stroke-width="1"/>
+
+    <line x1="170" y1="96" x2="170" y2="184" stroke="#888" stroke-width="1"
+          stroke-dasharray="2,4" opacity="0.7"/>
+    <line x1="560" y1="96" x2="560" y2="184" stroke="#888" stroke-width="1"
+          stroke-dasharray="2,4" opacity="0.7"/>
+    <line x1="950" y1="96" x2="950" y2="184" stroke="#888" stroke-width="1"
+          stroke-dasharray="2,4" opacity="0.7"/>
+
+    <line x1="170" y1="130" x2="554" y2="130" stroke="#888" stroke-width="1.5"
+          marker-end="url(#arrowGold)"/>
+    <line x1="560" y1="130" x2="944" y2="130" stroke="#888" stroke-width="1.2"
+          stroke-dasharray="5,4"/>
+    <line x1="560" y1="168" x2="176" y2="168" stroke="#888" stroke-width="1.5"
+          marker-end="url(#arrowGold)"/>
+
+    <rect x="75" y="60" width="190" height="36" rx="8" fill="#f5f3ef"
+          stroke="#c9a962" stroke-width="1"/>
+    <rect x="465" y="60" width="190" height="36" rx="8" fill="#f5f3ef"
+          stroke="#c9a962" stroke-width="1"/>
+    <rect x="855" y="60" width="190" height="36" rx="8" fill="#f5f3ef"
+          stroke="#c9a962" stroke-width="1"/>
+    <text x="170" y="83" text-anchor="middle" font-family="Arial, sans-serif" font-size="13"
+          font-weight="bold" fill="#2d2d2d">🌐 Client</text>
+    <text x="560" y="83" text-anchor="middle" font-family="Arial, sans-serif" font-size="13"
+          font-weight="bold" fill="#2d2d2d">📦 HTTP cache</text>
+    <text x="950" y="83" text-anchor="middle" font-family="Arial, sans-serif" font-size="13"
+          font-weight="bold" fill="#2d2d2d">🗄️ Origin server</text>
+
+    <text x="365" y="122" text-anchor="middle" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="11" fill="#faf9f7">GET /app.js</text>
+    <text x="755" y="122" text-anchor="middle" font-family="Arial, sans-serif" font-size="11"
+          fill="#d8d0c1"><tspan fill="#c21f32" font-weight="bold">✗</tspan> no request to origin</text>
+    <text x="365" y="160" text-anchor="middle" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="11" fill="#faf9f7">200 OK (from cache)</text>
+    <text x="365" y="182" text-anchor="middle" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="10" fill="#e8d5a3">age 120 s &lt; max-age 600 s → still fresh <tspan fill="#1a8f4d" font-weight="bold">✓</tspan></text>
+    <text x="560" y="204" text-anchor="middle" font-family="Arial, sans-serif" font-size="11"
+          fill="#d8d0c1">While fresh, the cache answers alone — no request leaves the machine. Long max-age on fingerprinted assets maximises this path.</text>
+  </g>
+
+  <!-- ===================== Panel 3 · stale, revalidate ===================== -->
+  <g transform="translate(40,646)">
+    <rect width="1120" height="352" rx="12" fill="url(#obsidianPanel)"
+          stroke="#c9a962" stroke-width="1.5" filter="url(#softShadow)"/>
+    <text x="560" y="32" text-anchor="middle" font-family="Georgia, serif" font-size="16"
+          font-weight="bold" fill="#e8d5a3">③ Stale — revalidate with If-None-Match</text>
+    <text x="1088" y="32" text-anchor="end" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="11" fill="#c9a962">t = 900 s</text>
+    <line x1="24" y1="46" x2="1096" y2="46" stroke="url(#goldAccent)" stroke-width="1"/>
+
+    <line x1="170" y1="96" x2="170" y2="322" stroke="#888" stroke-width="1"
+          stroke-dasharray="2,4" opacity="0.7"/>
+    <line x1="560" y1="96" x2="560" y2="322" stroke="#888" stroke-width="1"
+          stroke-dasharray="2,4" opacity="0.7"/>
+    <line x1="950" y1="96" x2="950" y2="322" stroke="#888" stroke-width="1"
+          stroke-dasharray="2,4" opacity="0.7"/>
+
+    <line x1="170" y1="128" x2="554" y2="128" stroke="#888" stroke-width="1.5"
+          marker-end="url(#arrowGold)"/>
+    <line x1="560" y1="128" x2="944" y2="128" stroke="#888" stroke-width="1.5"
+          marker-end="url(#arrowGold)"/>
+    <line x1="950" y1="186" x2="566" y2="186" stroke="#c9a962" stroke-width="2"
+          marker-end="url(#arrowGold)"/>
+    <line x1="560" y1="232" x2="176" y2="232" stroke="#888" stroke-width="1.5"
+          marker-end="url(#arrowGold)"/>
+    <line x1="60" y1="268" x2="350" y2="268" stroke="#888" stroke-width="1"
+          stroke-dasharray="3,4" opacity="0.6"/>
+    <line x1="770" y1="268" x2="1060" y2="268" stroke="#888" stroke-width="1"
+          stroke-dasharray="3,4" opacity="0.6"/>
+    <line x1="950" y1="302" x2="566" y2="302" stroke="#888" stroke-width="1.5"
+          marker-end="url(#arrowGold)"/>
+
+    <rect x="75" y="60" width="190" height="36" rx="8" fill="#f5f3ef"
+          stroke="#c9a962" stroke-width="1"/>
+    <rect x="465" y="60" width="190" height="36" rx="8" fill="#f5f3ef"
+          stroke="#c9a962" stroke-width="1"/>
+    <rect x="855" y="60" width="190" height="36" rx="8" fill="#f5f3ef"
+          stroke="#c9a962" stroke-width="1"/>
+    <text x="170" y="83" text-anchor="middle" font-family="Arial, sans-serif" font-size="13"
+          font-weight="bold" fill="#2d2d2d">🌐 Client</text>
+    <text x="560" y="83" text-anchor="middle" font-family="Arial, sans-serif" font-size="13"
+          font-weight="bold" fill="#2d2d2d">📦 HTTP cache</text>
+    <text x="950" y="83" text-anchor="middle" font-family="Arial, sans-serif" font-size="13"
+          font-weight="bold" fill="#2d2d2d">🗄️ Origin server</text>
+
+    <text x="365" y="120" text-anchor="middle" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="11" fill="#faf9f7">GET /app.js</text>
+    <text x="755" y="120" text-anchor="middle" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="11" fill="#faf9f7">GET /app.js</text>
+    <text x="755" y="142" text-anchor="middle" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="10" fill="#e8d5a3">If-None-Match: "a1b2c3"</text>
+    <text x="755" y="178" text-anchor="middle" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="11" font-weight="bold" fill="#e8d5a3">304 Not Modified — headers only, no body</text>
+    <text x="755" y="200" text-anchor="middle" font-family="Arial, sans-serif" font-size="10"
+          fill="#d8d0c1"><tspan fill="#1a8f4d" font-weight="bold">✓</tspan> ETag matches — freshness resets from the 304's headers</text>
+    <text x="365" y="224" text-anchor="middle" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="11" fill="#faf9f7">200 OK · stored body</text>
+    <text x="365" y="246" text-anchor="middle" font-family="Arial, sans-serif" font-size="10"
+          fill="#d8d0c1">the client just sees a fresh 200 — never the 304</text>
+    <text x="560" y="272" text-anchor="middle" font-family="Arial, sans-serif" font-size="11"
+          font-style="italic" fill="#d8d0c1">or — if the representation changed:</text>
+    <text x="755" y="294" text-anchor="middle" font-family="JetBrains Mono, Consolas, monospace"
+          font-size="11" fill="#faf9f7">200 OK · new body · ETag: "d4e5f6"</text>
+    <text x="755" y="316" text-anchor="middle" font-family="Arial, sans-serif" font-size="10"
+          fill="#d8d0c1">cache replaces the stored copy and its validator</text>
+    <text x="560" y="340" text-anchor="middle" font-family="Arial, sans-serif" font-size="11"
+          fill="#d8d0c1">Revalidation still costs a round trip — a 304 saves the transfer bytes, not the latency.</text>
+  </g>
+
+  <!-- ===================== Field notes (leather) ===================== -->
+  <text x="40" y="1026" font-family="Arial, sans-serif" font-size="11" font-weight="bold"
+        letter-spacing="0.05em" fill="#c9a962">✦ FIELD NOTES</text>
+  <line x1="148" y1="1022" x2="1160" y2="1022" stroke="url(#goldAccent)" stroke-width="1"/>
+
+  <text x="40" y="1052" font-family="Arial, sans-serif" font-size="11" fill="#c9a962">✦</text>
+  <text x="58" y="1052" font-family="Arial, sans-serif" font-size="11" fill="#2d2d2d"><tspan font-family="JetBrains Mono, Consolas, monospace">no-cache</tspan> ≠ "don't cache" — it means store, but revalidate before every reuse.</text>
+  <text x="58" y="1068" font-family="Arial, sans-serif" font-size="11" fill="#2d2d2d"><tspan font-family="JetBrains Mono, Consolas, monospace">no-store</tspan> is the directive that forbids storing anything.</text>
+
+  <text x="610" y="1052" font-family="Arial, sans-serif" font-size="11" fill="#c9a962">✦</text>
+  <text x="628" y="1052" font-family="Arial, sans-serif" font-size="11" fill="#2d2d2d">ETags are opaque strings chosen by the origin;</text>
+  <text x="628" y="1068" font-family="Arial, sans-serif" font-size="11" fill="#2d2d2d"><tspan font-family="JetBrains Mono, Consolas, monospace">W/"…"</tspan> marks a weak validator — semantic match, not byte-identical.</text>
+
+  <text x="40" y="1096" font-family="Arial, sans-serif" font-size="11" fill="#c9a962">✦</text>
+  <text x="58" y="1096" font-family="Arial, sans-serif" font-size="11" fill="#2d2d2d"><tspan font-family="JetBrains Mono, Consolas, monospace">If-None-Match</tspan> wins over <tspan font-family="JetBrains Mono, Consolas, monospace">If-Modified-Since</tspan> when both are sent;</text>
+  <text x="58" y="1112" font-family="Arial, sans-serif" font-size="11" fill="#2d2d2d">send both when you have them — the ETag comparison decides.</text>
+
+  <text x="610" y="1096" font-family="Arial, sans-serif" font-size="11" fill="#c9a962">✦</text>
+  <text x="628" y="1096" font-family="Arial, sans-serif" font-size="11" fill="#2d2d2d">Classic recipe: hashed assets → <tspan font-family="JetBrains Mono, Consolas, monospace">max-age=31536000, immutable</tspan>;</text>
+  <text x="628" y="1112" font-family="Arial, sans-serif" font-size="11" fill="#2d2d2d">HTML → <tspan font-family="JetBrains Mono, Consolas, monospace">no-cache</tspan> + ETag, so every navigation revalidates cheaply.</text>
+</svg>

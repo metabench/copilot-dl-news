@@ -69,10 +69,16 @@ async function adoptOrphan(t0iso) {
 
   let stopped = false;
   let finalStatus = 'unknown';
+  let lastProgress = null; // capture the job's page counts so the campaign
+                           // runner can roll up "how well is the crawl going"
+                           // (the dispatch result previously dropped these —
+                           // 2026-07-20: campaign-status had no page totals).
   for (;;) {
     await sleep(5000);
     const j = await api('GET', `/api/v1/crawl/jobs/${jobId}`);
-    finalStatus = j.json && j.json.job ? j.json.job.status : 'unknown';
+    const job = j.json && j.json.job ? j.json.job : null;
+    finalStatus = job ? job.status : 'unknown';
+    if (job && job.progress) lastProgress = job.progress;
     if (['completed', 'failed', 'stopped'].includes(finalStatus)) break;
     if (!stopped && Date.now() - t0 > budgetMs) {
       await api('POST', `/api/v1/crawl/jobs/${jobId}/stop`);
@@ -81,10 +87,15 @@ async function adoptOrphan(t0iso) {
     if (Date.now() - t0 > budgetMs + 60000) break; // stop didn't land; give up politely
   }
 
+  const p = lastProgress || {};
   console.log(JSON.stringify({
     ok: ['completed', 'stopped'].includes(finalStatus),
     jobId, startUrl, finalStatus, adopted,
     budgetMs, elapsedMs: Date.now() - t0, budgetEnforced: stopped,
-    underBudget: !stopped && Date.now() - t0 <= budgetMs
+    underBudget: !stopped && Date.now() - t0 <= budgetMs,
+    // Final job progress — the load-bearing "how much did this leg fetch" data.
+    downloaded: Number(p.downloaded || 0), saved: Number(p.saved || 0),
+    found: Number(p.found || 0), errors: Number(p.errors || 0),
+    bytesDownloaded: Number(p.bytes || 0)
   }));
 })().catch((err) => { console.log(JSON.stringify({ ok: false, error: err.message })); process.exit(1); });

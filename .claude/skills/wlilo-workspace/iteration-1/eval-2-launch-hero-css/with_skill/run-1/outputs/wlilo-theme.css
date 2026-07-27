@@ -1,0 +1,125 @@
+/* WLILO theme — Luxe/UI register (matches meridian-hero.svg, which bakes these values in).
+   White Leather Industrial Luxury Obsidian: cream leather page, obsidian panels framed in
+   thin gold, scarce gold accents, gemstone CTAs (sapphire = primary/start, emerald =
+   navigation, ruby = destructive/result). */
+
+:root {
+  /* leather */
+  --wlilo-bg: #ffffff;
+  --wlilo-bg-alt: #f0ece4;
+  --wlilo-surface: #f6f3ee;
+  --wlilo-surface-hover: #ece6dc;
+
+  /* obsidian */
+  --wlilo-panel: #0b0f1a;
+  --wlilo-panel-light: #111828;
+  --wlilo-panel-dark: #05070c;
+  --wlilo-panel-hover: #162035;
+
+  /* borders */
+  --wlilo-border: #d8d0c1;
+  --wlilo-border-light: #e4ddd1;
+
+  /* text — dual surface: page tokens AND on-panel tokens */
+  --wlilo-text: #0a0d14;
+  --wlilo-text-secondary: #2f3645;
+  --wlilo-text-muted: #4b5262;
+  --wlilo-text-on-panel: #f0ece4;
+  --wlilo-text-on-panel-gold: #e6d7b5;
+
+  /* metals */
+  --wlilo-gold: #d8cba9;
+  --wlilo-gold-bright: #e6d7b5;
+  --wlilo-gold-dark: #b5a273;
+  --wlilo-platinum: #e5e1d7;
+
+  /* gemstones */
+  --wlilo-ruby: #c21f32;
+  --wlilo-emerald: #1a8f4d;
+  --wlilo-sapphire: #1e5aad;
+
+  /* depth */
+  --wlilo-shadow-sm: 0 2px 6px rgba(10, 13, 20, 0.08);
+  --wlilo-shadow-md: 0 8px 18px rgba(10, 13, 20, 0.12);
+  --wlilo-shadow-lg: 0 16px 36px rgba(10, 13, 20, 0.16);
+
+  /* type */
+  --wlilo-font-display: "Playfair Display", Georgia, serif;
+  --wlilo-font-body: "Inter", -apple-system, "Segoe UI", sans-serif;
+  --wlilo-font-mono: "JetBrains Mono", "Fira Code", Consolas, monospace;
+
+  --wlilo-transition-fast: 0.12s ease;
+  --wlilo-transition: 0.2s ease;
+}
+
+/* leather page — surfaces always carry a gentle diagonal gradient, never flat */
+.wlilo-page {
+  background: linear-gradient(135deg, var(--wlilo-bg) 0%, var(--wlilo-surface) 55%, #eae4da 100%);
+  color: var(--wlilo-text);
+  font-family: var(--wlilo-font-body);
+  line-height: 1.5;
+}
+
+.wlilo-header {
+  font-family: var(--wlilo-font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--wlilo-text);
+}
+
+.wlilo-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--wlilo-text-muted);
+}
+.wlilo-eyebrow::before { content: "✦ "; color: var(--wlilo-gold-dark); }
+
+/* obsidian panel: dark card on the light page, thin gold frame, on-panel text tokens */
+.wlilo-panel-card {
+  background: linear-gradient(135deg, var(--wlilo-panel-light) 0%, var(--wlilo-panel-dark) 100%);
+  border: 1.5px solid var(--wlilo-gold);
+  border-radius: 12px;
+  padding: 24px;
+  color: var(--wlilo-text-on-panel);
+  box-shadow: var(--wlilo-shadow-md);
+}
+.wlilo-panel-card h2,
+.wlilo-panel-card h3 {
+  font-family: var(--wlilo-font-display);
+  color: var(--wlilo-text-on-panel-gold);
+}
+
+.wlilo-hairline {
+  border: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--wlilo-gold-dark), var(--wlilo-gold-bright));
+}
+
+/* gemstone CTA — the 3-layer recipe in CSS:
+   outer gold bezel (box-shadow ring) → obsidian frame (border) → gem gradient (padding-box) */
+.wlilo-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.6em 1.5em;
+  font-family: var(--wlilo-font-body);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-decoration: none;
+  cursor: pointer;
+  border: 6px solid var(--wlilo-panel);
+  border-radius: 10px;
+  background-clip: padding-box;
+  box-shadow: 0 0 0 2px var(--wlilo-gold), var(--wlilo-shadow-md);
+  transition: box-shadow var(--wlilo-transition-fast), transform var(--wlilo-transition-fast);
+}
+.wlilo-cta:hover {
+  box-shadow: 0 0 0 2px var(--wlilo-gold-bright), var(--wlilo-shadow-lg);
+  transform: translateY(-1px);
+}
+.wlilo-cta--sapphire { background-image: linear-gradient(135deg, #60a5fa 0%, var(--wlilo-sapphire) 50%, #123a74 100%); }
+.wlilo-cta--emerald  { background-image: linear-gradient(135deg, #2dd4bf 0%, var(--wlilo-emerald) 50%, #0f5f33 100%); }
+.wlilo-cta--ruby     { background-image: linear-gradient(135deg, #e74c5e 0%, var(--wlilo-ruby) 50%, #8d1424 100%); }

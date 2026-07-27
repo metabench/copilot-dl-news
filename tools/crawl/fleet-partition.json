@@ -1,0 +1,4 @@
+{
+  "_comment": "Static fleet partition (plan v2 Phase D1). remoteHosts = hosts the REMOTE Oracle node exclusively owns (www-insensitive). Local frontier hydration excludes these; crawl-remote.js refuses to seed hosts NOT listed here. Empty = remote owns nothing (local crawls everything; remote seeding refused). Populate deliberately when starting a partitioned 2-node crawl; remove hosts to hand them back to local.",
+  "remoteHosts": []
+}

@@ -94,6 +94,19 @@ class CrawlOperation {
 
     const crawler = createCrawler(normalizedStartUrl, options);
 
+    // DB-driven crawling (P4): an explicit additional-URL batch to fetch
+    // alongside startUrl, e.g. a page from the DB frontier's due-for-refresh
+    // set. Uses NewsCrawler.prototype.seedUrls() — the SAME already-tested
+    // production API RemoteCrawlerAdapter/PeerCrawlServer use for remote/peer
+    // seeding (real enqueueRequest → normal fetch-eligibility path). Deliberately
+    // NOT options.cachedSeedUrls: that constructor option forces a stale-cache
+    // REPLAY for any URL with existing stored content (_buildCachedSeedMeta),
+    // which would silently skip refetching exactly the due/stale URLs this
+    // batch exists to refresh.
+    if (Array.isArray(options.seedUrls) && options.seedUrls.length && typeof crawler.seedUrls === 'function') {
+      crawler.seedUrls(options.seedUrls, { source: 'frontier-run', jobId: options.jobId || null });
+    }
+
     // Output crawl telemetry events to stdout when telemetryJson option is enabled.
     // Intended for external UIs (e.g. Electron crawl-widget) to forward into their own
     // telemetry streams without needing to import crawler internals.

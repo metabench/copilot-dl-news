@@ -1,0 +1,49 @@
+{
+  "expectations": [
+    {
+      "text": "SVG exists, tags balanced, viewBox present",
+      "passed": true,
+      "evidence": "wellFormed=true viewBox=true len=4461"
+    },
+    {
+      "text": "WLILO palette adherence: >=3 token hexes and >=60% of distinct hexes are tokens",
+      "passed": false,
+      "evidence": "distinct=15 tokens=1 (7%) nonTokens=[fcfcfb,0b0b0b,52514e,898781,e1e0d9,2a78d6,0ca30c,006300]"
+    },
+    {
+      "text": "Never-flat rule: at least one linearGradient defined",
+      "passed": false,
+      "evidence": "0 gradients"
+    },
+    {
+      "text": "Data fidelity: atlas/hermes/pluto + 78/41/91 all present",
+      "passed": true,
+      "evidence": "all present"
+    },
+    {
+      "text": "Tier-1 restraint: at most 6 <path> elements",
+      "passed": true,
+      "evidence": "0 path elements"
+    },
+    {
+      "text": "Unicode block-bar meters used",
+      "passed": false,
+      "evidence": "block char scan"
+    },
+    {
+      "text": "Failure state uses WLILO error/ruby color",
+      "passed": false,
+      "evidence": "ruby hex scan"
+    },
+    {
+      "text": "Leather AND obsidian tones both present (the WLILO signature)",
+      "passed": false,
+      "evidence": "leather+obsidian hex scan"
+    }
+  ],
+  "summary": {
+    "pass_rate": 0.375,
+    "passed": 3,
+    "total": 8
+  }
+}

@@ -1,0 +1,229 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 960" role="img" aria-label="Diagram explaining HTTP caching: ETags, Cache-Control max-age, and 304 revalidation">
+  <title>How HTTP caching works</title>
+  <desc>Four scenes in the life of one cached file: first request stores the response, a fresh hit is served with no network, a stale entry is revalidated with If-None-Match and answered with 304 Not Modified, and a changed file comes back as a full 200 with a new ETag. Plus a freshness timeline and a Cache-Control quick reference.</desc>
+
+  <style>
+    .s { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #262f38; }
+    .m { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; fill: #262f38; }
+    .dim { fill: #6d7681; }
+  </style>
+
+  <defs>
+    <marker id="aInk" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#262f38"/>
+    </marker>
+    <marker id="aPurple" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6d4fa1"/>
+    </marker>
+  </defs>
+
+  <!-- paper background -->
+  <rect x="0" y="0" width="1240" height="960" fill="#fdfaf3"/>
+
+  <!-- ===================== header ===================== -->
+  <rect x="103" y="30" width="208" height="30" rx="5" fill="#f8e39a" opacity="0.55"/>
+  <text class="s" x="40" y="54" font-size="30" font-weight="700">How HTTP caching works</text>
+  <text class="s dim" x="40" y="82" font-size="14.5">ETag, Cache-Control: max-age and 304 revalidation — the life of one cached file, /app.css, in four scenes</text>
+
+  <!-- ===================== scene panels ===================== -->
+
+  <!-- ========== Scene 1: first request (MISS) ========== -->
+  <g transform="translate(30,110)">
+    <rect x="0" y="0" width="285" height="452" rx="14" fill="#ffffff" stroke="#e0d9c8" stroke-width="1.5"/>
+    <circle cx="30" cy="30" r="13" fill="#b4453a"/>
+    <text class="s" x="30" y="35" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+    <text class="s" x="52" y="27" font-size="15.5" font-weight="700">First request</text>
+    <text class="s dim" x="52" y="46" font-size="11.5">cache empty — nothing to reuse</text>
+
+    <rect x="16" y="70" width="110" height="28" rx="6" fill="#e3ecf5" stroke="#35618f"/>
+    <text class="s" x="71" y="88" font-size="11" font-weight="600" fill="#24435f" text-anchor="middle">Browser cache</text>
+    <rect x="159" y="70" width="110" height="28" rx="6" fill="#fbe9dc" stroke="#c05f2c"/>
+    <text class="s" x="214" y="88" font-size="11" font-weight="600" fill="#7a3a17" text-anchor="middle">Origin server</text>
+    <line x1="71" y1="98" x2="71" y2="290" stroke="#c9c2b4" stroke-dasharray="3 4"/>
+    <line x1="214" y1="98" x2="214" y2="290" stroke="#c9c2b4" stroke-dasharray="3 4"/>
+
+    <text class="m" x="142" y="138" font-size="10.5" text-anchor="middle">GET /app.css</text>
+    <line x1="71" y1="146" x2="209" y2="146" stroke="#262f38" stroke-width="1.6" marker-end="url(#aInk)"/>
+
+    <text class="m" x="142" y="186" font-size="11" font-weight="700" text-anchor="middle">200 OK</text>
+    <line x1="214" y1="194" x2="76" y2="194" stroke="#262f38" stroke-width="1.6" marker-end="url(#aInk)"/>
+    <text class="m" x="142" y="214" font-size="10.5" text-anchor="middle">Cache-Control: max-age=3600</text>
+    <text class="m" x="142" y="229" font-size="10.5" text-anchor="middle">ETag: "v1-8f3d"</text>
+    <text class="m dim" x="142" y="244" font-size="10.5" font-style="italic" text-anchor="middle">(body · 42 KB)</text>
+
+    <rect x="16" y="300" width="253" height="78" rx="9" fill="#f7f1e3"/>
+    <text class="s" x="28" y="322" font-size="11">The cache stores body + headers and</text>
+    <text class="s" x="28" y="337" font-size="11">starts the freshness clock: this copy</text>
+    <text class="s" x="28" y="352" font-size="11">is fresh for the next 3600 s.</text>
+
+    <g transform="rotate(-2 142 411)">
+      <rect x="57" y="396" width="170" height="30" rx="15" fill="#fbe9e7" stroke="#b4453a" stroke-width="1.5"/>
+      <text class="s" x="142" y="416" font-size="12.5" font-weight="700" fill="#b4453a" text-anchor="middle">MISS · full download</text>
+    </g>
+    <text class="s dim" x="142" y="444" font-size="10.5" font-style="italic" text-anchor="middle">cost: 1 round trip + whole body</text>
+  </g>
+
+  <!-- ========== Scene 2: fresh HIT ========== -->
+  <g transform="translate(335,110)">
+    <rect x="0" y="0" width="285" height="452" rx="14" fill="#ffffff" stroke="#e0d9c8" stroke-width="1.5"/>
+    <circle cx="30" cy="30" r="13" fill="#2e7d4f"/>
+    <text class="s" x="30" y="35" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+    <text class="s" x="52" y="27" font-size="15.5" font-weight="700">10 minutes later</text>
+    <text class="s dim" x="52" y="46" font-size="11.5">age 600 s &lt; 3600 s → still fresh</text>
+
+    <rect x="16" y="70" width="110" height="28" rx="6" fill="#e3ecf5" stroke="#35618f"/>
+    <text class="s" x="71" y="88" font-size="11" font-weight="600" fill="#24435f" text-anchor="middle">Browser cache</text>
+    <rect x="159" y="70" width="110" height="28" rx="6" fill="#fbe9dc" stroke="#c05f2c"/>
+    <text class="s" x="214" y="88" font-size="11" font-weight="600" fill="#7a3a17" text-anchor="middle">Origin server</text>
+    <line x1="71" y1="98" x2="71" y2="290" stroke="#c9c2b4" stroke-dasharray="3 4"/>
+    <line x1="214" y1="98" x2="214" y2="290" stroke="#c9c2b4" stroke-dasharray="3 4"/>
+
+    <text class="s dim" x="142" y="128" font-size="10.5" text-anchor="middle">browser asks for /app.css again</text>
+    <rect x="30" y="136" width="224" height="30" rx="15" fill="#e6f4ea" stroke="#2e7d4f" stroke-width="1.5"/>
+    <text class="s" x="142" y="155" font-size="11" font-weight="700" fill="#2e7d4f" text-anchor="middle">still fresh → serve stored copy</text>
+
+    <line x1="71" y1="205" x2="214" y2="205" stroke="#b9b2a3" stroke-dasharray="4 4"/>
+    <line x1="136" y1="199" x2="148" y2="211" stroke="#b4453a" stroke-width="2"/>
+    <line x1="148" y1="199" x2="136" y2="211" stroke="#b4453a" stroke-width="2"/>
+    <text class="s dim" x="142" y="230" font-size="10.5" text-anchor="middle">no request sent — 0 bytes on the wire</text>
+
+    <rect x="16" y="300" width="253" height="78" rx="9" fill="#f7f1e3"/>
+    <text class="s" x="28" y="318" font-size="11">While fresh, the cache answers by</text>
+    <text class="s" x="28" y="333" font-size="11">itself — the origin never hears about</text>
+    <text class="s" x="28" y="348" font-size="11">it. Zero latency, zero bytes moved.</text>
+    <text class="s" x="28" y="363" font-size="11">DevTools: “200 (from disk cache)”.</text>
+
+    <g transform="rotate(-2 142 411)">
+      <rect x="52" y="396" width="180" height="30" rx="15" fill="#e6f4ea" stroke="#2e7d4f" stroke-width="1.5"/>
+      <text class="s" x="142" y="416" font-size="12.5" font-weight="700" fill="#2e7d4f" text-anchor="middle">HIT · served from cache</text>
+    </g>
+    <text class="s dim" x="142" y="444" font-size="10.5" font-style="italic" text-anchor="middle">cost: nothing at all</text>
+  </g>
+
+  <!-- ========== Scene 3: stale, unchanged → 304 ========== -->
+  <g transform="translate(640,110)">
+    <rect x="0" y="0" width="285" height="452" rx="14" fill="#ffffff" stroke="#e0d9c8" stroke-width="1.5"/>
+    <circle cx="30" cy="30" r="13" fill="#6d4fa1"/>
+    <text class="s" x="30" y="35" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+    <text class="s" x="52" y="27" font-size="15.5" font-weight="700">1 hour later — unchanged</text>
+    <text class="s dim" x="52" y="46" font-size="11.5">stale → ask the origin first</text>
+
+    <rect x="16" y="70" width="110" height="28" rx="6" fill="#e3ecf5" stroke="#35618f"/>
+    <text class="s" x="71" y="88" font-size="11" font-weight="600" fill="#24435f" text-anchor="middle">Browser cache</text>
+    <rect x="159" y="70" width="110" height="28" rx="6" fill="#fbe9dc" stroke="#c05f2c"/>
+    <text class="s" x="214" y="88" font-size="11" font-weight="600" fill="#7a3a17" text-anchor="middle">Origin server</text>
+    <line x1="71" y1="98" x2="71" y2="290" stroke="#c9c2b4" stroke-dasharray="3 4"/>
+    <line x1="214" y1="98" x2="214" y2="290" stroke="#c9c2b4" stroke-dasharray="3 4"/>
+
+    <text class="m" x="142" y="126" font-size="10.5" text-anchor="middle">GET /app.css</text>
+    <text class="m" x="142" y="140" font-size="10.5" text-anchor="middle">If-None-Match: "v1-8f3d"</text>
+    <line x1="71" y1="148" x2="209" y2="148" stroke="#262f38" stroke-width="1.6" marker-end="url(#aInk)"/>
+
+    <text class="s dim" x="196" y="168" font-size="9.5" text-anchor="middle">server compares:</text>
+    <text class="m dim" x="196" y="181" font-size="9.5" text-anchor="middle">"v1-8f3d" = "v1-8f3d" ✓</text>
+
+    <text class="m" x="142" y="200" font-size="11" font-weight="700" fill="#6d4fa1" text-anchor="middle">304 Not Modified</text>
+    <line x1="214" y1="208" x2="76" y2="208" stroke="#6d4fa1" stroke-width="1.6" marker-end="url(#aPurple)"/>
+    <text class="m" x="142" y="228" font-size="10.5" text-anchor="middle">Cache-Control: max-age=3600</text>
+    <text class="m dim" x="142" y="243" font-size="10.5" font-style="italic" text-anchor="middle">(no body!)</text>
+
+    <rect x="16" y="300" width="253" height="78" rx="9" fill="#f7f1e3"/>
+    <text class="s" x="28" y="318" font-size="11">ETag matches → no body is sent. The</text>
+    <text class="s" x="28" y="333" font-size="11">cache reuses its stored copy and the</text>
+    <text class="s" x="28" y="348" font-size="11">clock restarts: fresh for another</text>
+    <text class="s" x="28" y="363" font-size="11">3600 s. Only headers crossed the wire.</text>
+
+    <g transform="rotate(-2 142 411)">
+      <rect x="62" y="396" width="160" height="30" rx="15" fill="#efe9f7" stroke="#6d4fa1" stroke-width="1.5"/>
+      <text class="s" x="142" y="416" font-size="12.5" font-weight="700" fill="#6d4fa1" text-anchor="middle">304 · body reused</text>
+    </g>
+    <text class="s dim" x="142" y="444" font-size="10.5" font-style="italic" text-anchor="middle">cost: 1 small round trip, headers only</text>
+  </g>
+
+  <!-- ========== Scene 4: stale, changed → 200 ========== -->
+  <g transform="translate(945,110)">
+    <rect x="0" y="0" width="285" height="452" rx="14" fill="#ffffff" stroke="#e0d9c8" stroke-width="1.5"/>
+    <circle cx="30" cy="30" r="13" fill="#c05f2c"/>
+    <text class="s" x="30" y="35" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
+    <text class="s" x="52" y="27" font-size="15.5" font-weight="700">1 hour later — changed</text>
+    <text class="s dim" x="52" y="46" font-size="11.5">same question, different answer</text>
+
+    <rect x="16" y="70" width="110" height="28" rx="6" fill="#e3ecf5" stroke="#35618f"/>
+    <text class="s" x="71" y="88" font-size="11" font-weight="600" fill="#24435f" text-anchor="middle">Browser cache</text>
+    <rect x="159" y="70" width="110" height="28" rx="6" fill="#fbe9dc" stroke="#c05f2c"/>
+    <text class="s" x="214" y="88" font-size="11" font-weight="600" fill="#7a3a17" text-anchor="middle">Origin server</text>
+    <line x1="71" y1="98" x2="71" y2="290" stroke="#c9c2b4" stroke-dasharray="3 4"/>
+    <line x1="214" y1="98" x2="214" y2="290" stroke="#c9c2b4" stroke-dasharray="3 4"/>
+
+    <text class="m" x="142" y="126" font-size="10.5" text-anchor="middle">GET /app.css</text>
+    <text class="m" x="142" y="140" font-size="10.5" text-anchor="middle">If-None-Match: "v1-8f3d"</text>
+    <line x1="71" y1="148" x2="209" y2="148" stroke="#262f38" stroke-width="1.6" marker-end="url(#aInk)"/>
+
+    <text class="s dim" x="196" y="168" font-size="9.5" text-anchor="middle">server compares:</text>
+    <text class="m dim" x="196" y="181" font-size="9.5" text-anchor="middle">"v1-8f3d" ≠ "v2-c07a"</text>
+
+    <text class="m" x="142" y="200" font-size="11" font-weight="700" fill="#c05f2c" text-anchor="middle">200 OK</text>
+    <line x1="214" y1="208" x2="76" y2="208" stroke="#262f38" stroke-width="1.6" marker-end="url(#aInk)"/>
+    <text class="m" x="142" y="228" font-size="10.5" text-anchor="middle">ETag: "v2-c07a"</text>
+    <text class="m" x="142" y="243" font-size="10.5" text-anchor="middle">Cache-Control: max-age=3600</text>
+    <text class="m dim" x="142" y="258" font-size="10.5" font-style="italic" text-anchor="middle">(new body · 41 KB)</text>
+
+    <rect x="16" y="300" width="253" height="78" rx="9" fill="#f7f1e3"/>
+    <text class="s" x="28" y="318" font-size="11">ETags differ → the origin sends the</text>
+    <text class="s" x="28" y="333" font-size="11">whole new file. The cache replaces</text>
+    <text class="s" x="28" y="348" font-size="11">body, ETag and clock — back to</text>
+    <text class="s" x="28" y="363" font-size="11">scene 2 for the next hour.</text>
+
+    <g transform="rotate(-2 142 411)">
+      <rect x="57" y="396" width="170" height="30" rx="15" fill="#fdeee2" stroke="#c05f2c" stroke-width="1.5"/>
+      <text class="s" x="142" y="416" font-size="12.5" font-weight="700" fill="#c05f2c" text-anchor="middle">200 · entry replaced</text>
+    </g>
+    <text class="s dim" x="142" y="444" font-size="10.5" font-style="italic" text-anchor="middle">cost: 1 round trip + whole body</text>
+  </g>
+
+  <!-- ===================== freshness clock ===================== -->
+  <g>
+    <rect x="30" y="580" width="1180" height="175" rx="14" fill="#ffffff" stroke="#e0d9c8" stroke-width="1.5"/>
+    <text class="s" x="50" y="608" font-size="16" font-weight="700">The freshness clock</text>
+
+    <text class="s" x="622" y="592" font-size="11.5" font-weight="600" fill="#6d4fa1" text-anchor="middle">a 304 restarts the clock — fresh again for another max-age</text>
+    <path d="M 900 630 C 800 598, 440 598, 350 630" fill="none" stroke="#6d4fa1" stroke-width="2" marker-end="url(#aPurple)"/>
+
+    <rect x="90" y="640" width="520" height="28" fill="#2e7d4f"/>
+    <rect x="610" y="640" width="540" height="28" fill="#e7c46a"/>
+    <text class="s" x="350" y="659" font-size="11.5" font-weight="700" fill="#ffffff" text-anchor="middle">FRESH — cache answers alone, no network</text>
+    <text class="s" x="880" y="659" font-size="11.5" font-weight="700" fill="#5b430b" text-anchor="middle">STALE — still stored, must revalidate before use</text>
+
+    <line x1="90" y1="668" x2="90" y2="678" stroke="#262f38" stroke-width="1.5"/>
+    <line x1="610" y1="668" x2="610" y2="678" stroke="#262f38" stroke-width="1.5"/>
+    <text class="s dim" x="90" y="692" font-size="10.5">t = 0 — origin generated the response (Date header)</text>
+    <text class="s dim" x="610" y="692" font-size="10.5" text-anchor="middle" dx="60">t = 3600 s — max-age spent</text>
+
+    <text class="s dim" x="50" y="730" font-size="11">Freshness is counted from when the origin generated the response, not when you received it — the Age header carries time already spent in shared caches, so a CDN may hand you a copy that is already half-expired.</text>
+  </g>
+
+  <!-- ===================== bottom reference cards ===================== -->
+  <g>
+    <rect x="30" y="775" width="565" height="160" rx="14" fill="#ffffff" stroke="#e0d9c8" stroke-width="1.5"/>
+    <text class="s" x="50" y="801" font-size="15" font-weight="700">ETag, in one sentence</text>
+    <text class="s" x="50" y="826" font-size="12">An opaque version stamp the server picks for each file — a content hash, build</text>
+    <text class="s" x="50" y="843" font-size="12">id, mtime… The browser never parses it; it just echoes it back to be compared:</text>
+    <text class="m" x="50" y="870" font-size="11.5">If-None-Match: "v1-8f3d" → match? 304 : 200 + new ETag</text>
+    <text class="s dim" x="50" y="896" font-size="11">Weak form W/"v1-8f3d" means “equivalent, but not necessarily byte-identical”.</text>
+  </g>
+
+  <g>
+    <rect x="615" y="775" width="595" height="160" rx="14" fill="#ffffff" stroke="#e0d9c8" stroke-width="1.5"/>
+    <text class="s" x="635" y="801" font-size="15" font-weight="700">Cache-Control quick reference</text>
+    <text class="m" x="635" y="830" font-size="11.5" font-weight="700">max-age=3600</text>
+    <text class="s dim" x="775" y="830" font-size="11.5">fresh for 3600 s after generation</text>
+    <text class="m" x="635" y="852" font-size="11.5" font-weight="700">no-cache</text>
+    <text class="s dim" x="775" y="852" font-size="11.5">store it, but revalidate before every use (304s still apply)</text>
+    <text class="m" x="635" y="874" font-size="11.5" font-weight="700">no-store</text>
+    <text class="s dim" x="775" y="874" font-size="11.5">never store — nothing to reuse or revalidate</text>
+    <text class="m" x="635" y="896" font-size="11.5" font-weight="700">private</text>
+    <text class="s dim" x="775" y="896" font-size="11.5">for one user: the browser may store it, shared caches (CDNs) must not</text>
+    <text class="m" x="635" y="918" font-size="11.5" font-weight="700">immutable</text>
+    <text class="s dim" x="775" y="918" font-size="11.5">while fresh, don’t revalidate at all — not even on reload</text>
+  </g>
+</svg>

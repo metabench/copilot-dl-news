@@ -6,6 +6,10 @@ const manifest = [
     loader: () => require("./UrlListingTable").UrlListingTableControl
   },
   {
+    type: "article_detail_table",
+    loader: () => require("./ArticleDetailTable").ArticleDetailTableControl
+  },
+  {
     type: "url_filter_toggle",
     loader: () => require("./UrlFilterToggle").UrlFilterToggleControl
   },

@@ -28,9 +28,22 @@ const DEFAULT_LAUNCH_OPTIONS = {
     '--disable-dev-shm-usage',
     '--disable-accelerated-2d-canvas',
     '--disable-gpu',
-    '--window-size=1920,1080'
+    '--window-size=1920,1080',
+    // Removes the CDP-added flag most anti-bot checks probe for directly
+    // (window.chrome.runtime absence, etc.) — the single highest-value flag
+    // for the "stealth browsing" this file's comment already claimed but
+    // didn't implement (live-observed 2026-07-20: Globe and Mail served its
+    // "enable JavaScript" wall to stock headless Chrome even after full
+    // hydration — a rendering-timing fix alone did not help).
+    '--disable-blink-features=AutomationControlled'
   ]
 };
+
+// A realistic desktop UA — matches the plain-fetch UA already used elsewhere
+// in this crawler (FetchPipeline.js) for consistency, and avoids relying on
+// whatever UA string ships with the bundled Chromium build.
+const STEALTH_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+  '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 /**
  * Default page navigation options
@@ -327,8 +340,36 @@ class PuppeteerFetcher extends EventEmitter {
   }
 
   /**
+   * Apply anti-detection patches to a fresh page, BEFORE navigation. Stock
+   * headless Chrome exposes `navigator.webdriver === true` and lacks the
+   * `window.chrome` runtime object real Chrome has — both are checked
+   * directly by common bot-detection scripts to decide whether to serve a
+   * "please enable JavaScript" fallback to an otherwise fully-JS-capable
+   * browser (live-observed 2026-07-20: Globe and Mail did exactly this — a
+   * `networkidle2` wait alone did not help, because the page was never
+   * going to render real content for a detected-automation session no
+   * matter how long we waited). This is the standard, dependency-free core
+   * of what `puppeteer-extra-plugin-stealth` does; kept minimal rather than
+   * adding that package.
+   * @param {import('puppeteer').Page} page
+   */
+  async _applyStealth(page) {
+    try {
+      await page.setUserAgent(STEALTH_USER_AGENT);
+      await page.evaluateOnNewDocument(() => {
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        window.chrome = window.chrome || { runtime: {} };
+        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+        Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+      });
+    } catch (err) {
+      this.logger.warn(`[puppeteer] Stealth patch failed (continuing without it): ${err.message}`);
+    }
+  }
+
+  /**
    * Fetch a URL using Puppeteer
-   * 
+   *
    * @param {string} url - URL to fetch
    * @param {Object} [opts] - Fetch options
    * @param {number} [opts.timeout] - Navigation timeout
@@ -380,6 +421,7 @@ class PuppeteerFetcher extends EventEmitter {
 
       // Set viewport
       await page.setViewport({ width: 1920, height: 1080 });
+      await this._applyStealth(page);
 
       // Navigate
       const response = await page.goto(url, navOptions);

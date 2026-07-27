@@ -1322,6 +1322,92 @@ class UnifiedShell extends Control {
 
         const crawlNavItems = document.querySelectorAll('.nav-item[data-app-category="crawler"]');
 
+        // cycle 78 — "Recent Crawl Activity" hydration from the LIVE in-process job
+        // registry (/api/v1/crawl/jobs), the same source as the Active Crawls stat.
+        function escHtml(s) {
+          return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+          });
+        }
+        function fmtDuration(startedAt, finishedAt) {
+          const s = startedAt ? new Date(startedAt).getTime() : NaN;
+          const e = finishedAt ? new Date(finishedAt).getTime() : Date.now();
+          if (!Number.isFinite(s) || !Number.isFinite(e) || e < s) return '–';
+          const sec = Math.round((e - s) / 1000);
+          return sec >= 60 ? Math.floor(sec / 60) + 'm ' + (sec % 60) + 's' : sec + 's';
+        }
+        function activityStatus(job) {
+          // Map the registry's status to a label + colour. A job with no finishedAt
+          // that is running/pending is genuinely Active; terminal states are honest.
+          const raw = String(job.status || '').toLowerCase();
+          if (raw === 'running' || raw === 'active' || raw === 'pending' || (!job.finishedAt && raw !== 'failed' && raw !== 'completed' && raw !== 'paused')) {
+            return { label: 'Active', color: '#4ade80' };
+          }
+          if (raw === 'failed' || raw === 'error') return { label: 'Failed', color: '#f87171' };
+          if (raw === 'completed' || raw === 'complete') return { label: 'Complete', color: 'var(--text-cream)' };
+          if (raw === 'paused') return { label: 'Paused', color: 'var(--text-muted)' };
+          return { label: job.status ? String(job.status) : 'Unknown', color: 'var(--text-cream)' };
+        }
+        function activityTarget(job) {
+          // Backslash-FREE string ops only: this whole script is emitted from a
+          // backtick template literal, which eats regex backslashes (\\/ -> /,
+          // \\. -> .) and would turn a strip-regex into a broken one or a comment.
+          // See memory crawl-status-client-template-trap.
+          let s = String(job.startUrl || job.domain || '');
+          const ix = s.indexOf('://');
+          if (ix >= 0) s = s.slice(ix + 3);
+          if (s.slice(0, 4) === 'www.') s = s.slice(4);
+          if (s.slice(-1) === '/') s = s.slice(0, -1);
+          const t = s || (job.operationName || 'crawl');
+          return t.length > 46 ? t.slice(0, 45) + '…' : t;
+        }
+        async function hydrateHomeActivity() {
+          const body = document.querySelector('[data-home-activity-body]');
+          if (!body) return; // only present on the home panel
+          let items = [];
+          try {
+            const res = await fetch('/api/v1/crawl/jobs', { cache: 'no-store' });
+            const json = await res.json();
+            items = (json && Array.isArray(json.items)) ? json.items.slice() : [];
+          } catch { return; /* keep the last-rendered rows on a transient error */ }
+          items.sort(function (a, b) { return new Date(b.createdAt || b.startedAt || 0) - new Date(a.createdAt || a.startedAt || 0); });
+          items = items.slice(0, 6);
+          if (!items.length) {
+            body.innerHTML = '<tr><td colspan="3" style="padding: 24px; text-align: center; color: var(--text-muted);">No recent crawls.</td></tr>';
+            return;
+          }
+          body.innerHTML = items.map(function (job) {
+            const st = activityStatus(job);
+            return '<tr style="border-bottom: 1px solid rgba(139, 105, 20, 0.2);">'
+              + '<td style="padding: 12px 16px; color: var(--gold); font-family: monospace;">' + escHtml(activityTarget(job)) + '</td>'
+              + '<td style="padding: 12px 16px; text-align: center;">' + escHtml(fmtDuration(job.startedAt, job.finishedAt)) + '</td>'
+              + '<td style="padding: 12px 16px; text-align: right; color: ' + st.color + ';">' + escHtml(st.label) + '</td>'
+              + '</tr>';
+          }).join('');
+        }
+
+        // cycle 79 — live crawl throughput strip on the home control center, fed by
+        // the D4 shared crawl-dash-core via /api/v1/crawl/dashboard-model (its first
+        // live consumer). textContent-only (no regex) — template-trap-safe.
+        async function hydrateHomeThroughput() {
+          const strip = document.querySelector('[data-home-throughput]');
+          if (!strip) return; // only on the home panel
+          let model;
+          try {
+            const res = await fetch('/api/v1/crawl/dashboard-model', { cache: 'no-store' });
+            model = await res.json();
+          } catch { return; /* keep the last values on a transient error */ }
+          const fmt = (model && model.throughput && model.throughput.formatted) || {};
+          const set = function (key, val) {
+            const el = strip.querySelector('[data-tp="' + key + '"]');
+            if (el) el.textContent = (val == null || val === '') ? '–' : String(val);
+          };
+          set('downloaded', fmt.downloaded);
+          set('saved', fmt.saved);
+          set('network', fmt.network);
+          set('queue', fmt.queue);
+        }
+
         async function fetchCrawlSummary() {
           const res = await fetch('/api/crawl/summary', { cache: 'no-store' });
           const json = await res.json();
@@ -1372,7 +1458,14 @@ class UnifiedShell extends Control {
               
               const errorCount = document.querySelector('[data-home-stat="errorsLast10m"]');
               if (errorCount) errorCount.textContent = summary.errorsLast10m || '0';
-              
+
+              // Recent Crawl Activity table — hydrate from the LIVE job registry so
+              // target/status/duration are real (cycle 78 fix; the old server render
+              // read the stale task_events table).
+              await hydrateHomeActivity();
+              // Live throughput strip from the D4 crawl-dash-core (cycle 79).
+              await hydrateHomeThroughput();
+
               const alertBox = document.querySelector('[data-home-crawl-alert]');
               const alertMsg = document.querySelector('[data-home-crawl-error-message]');
               

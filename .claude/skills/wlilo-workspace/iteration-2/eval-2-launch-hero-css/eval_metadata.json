@@ -1,0 +1,13 @@
+{
+  "eval_id": 2,
+  "eval_name": "launch-hero-css",
+  "prompt": "We're launching v2.0 of 'Meridian', our data-pipeline product. I want a hero/poster-grade WLILO SVG for the launch page (full luxury treatment — gemstone buttons for 'Get started' and 'Read the docs') plus a small matching CSS snippet with the WLILO variables so our frontend can style the surrounding page consistently.",
+  "assertions": [
+    "Both deliverables exist: an SVG file and a CSS file",
+    "SVG parses as XML with viewBox, <title> and <desc>",
+    "Gemstone CTA construction: both button labels ('Get started', 'Read the docs') present, sapphire gradient hexes (#1e5aad/#60a5fa/#123a74) present for the primary CTA, and ruby is NOT used for either CTA (ruby = destructive semantics)",
+    "Full-luxe texture: at least one <pattern> element (grain or brushed metal) or the 5-stop brushedMetal gradient",
+    "CSS defines at least 5 --wlilo-* custom properties with values drawn from the WLILO token tables",
+    "CSS uses semantic classes (e.g. .wlilo-*) rather than element inline styles"
+  ]
+}

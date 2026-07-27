@@ -109,22 +109,10 @@ function registerPlaceHubReviewRoutes(app, {
       const items = [];
 
       if (wants('unknown-term')) {
-        // place_hub_unknown_terms.host is stored raw (often www-prefixed)
-        // while every other table uses the bare-host canonical form. Group
-        // on the canonicalized host so www/non-www rows for the same site
-        // collapse and match candidate/pattern/policy joins downstream
-        // (2026-07-17 consistency pass).
-        const canonHostExpr = `CASE WHEN LOWER(ut.host) LIKE 'www.%' THEN SUBSTR(LOWER(ut.host), 5) ELSE LOWER(ut.host) END`;
-        const rows = db.prepare(`
-          SELECT ${canonHostExpr} AS host,
-                 ut.term_slug AS termSlug, MAX(ut.term_label) AS termLabel,
-                 SUM(ut.occurrences) AS occurrences, MAX(ut.last_seen_at) AS lastSeenAt
-          FROM place_hub_unknown_terms ut
-          WHERE ut.term_slug NOT IN (SELECT slug FROM non_geo_topic_slugs)
-          GROUP BY ${canonHostExpr}, ut.term_slug
-          ORDER BY occurrences DESC
-          LIMIT ?
-        `).all(limit);
+        // SQL delegated to ncdb.selectUnknownTermReviewRows (2026-07-20;
+        // www/non-www host collapse + suppressed-slug exclusion preserved
+        // there byte-for-byte, differential-e2e verified).
+        const rows = ncdb.selectUnknownTermReviewRows(db, limit);
         for (const r of rows) {
           items.push({
             kind: 'unknown-term',
@@ -136,14 +124,7 @@ function registerPlaceHubReviewRoutes(app, {
       }
 
       if (wants('unverified-candidate')) {
-        const rows = db.prepare(`
-          SELECT domain, candidate_url AS url, place_kind AS placeKind, place_name AS placeName,
-                 score, confidence, status, last_seen_at AS lastSeenAt
-          FROM place_hub_candidates
-          WHERE status IN ('fetched-ok', 'cached-ok') AND (validation_status IS NULL OR validation_status = 'inconclusive')
-          ORDER BY last_seen_at DESC
-          LIMIT ?
-        `).all(limit);
+        const rows = ncdb.selectUnverifiedCandidateReviewRows(db, limit);
         for (const r of rows) {
           items.push({
             kind: 'unverified-candidate',
@@ -166,13 +147,7 @@ function registerPlaceHubReviewRoutes(app, {
       }
 
       if (wants('structure-change')) {
-        const rows = db.prepare(`
-          SELECT domain, reason, details_json AS details, created_at AS createdAt
-          FROM place_hub_determinations
-          WHERE determination = 'structure-changed'
-          ORDER BY created_at DESC
-          LIMIT ?
-        `).all(limit);
+        const rows = ncdb.selectStructureChangeReviewRows(db, limit);
         for (const r of rows) {
           items.push({
             kind: 'structure-change',
@@ -184,14 +159,7 @@ function registerPlaceHubReviewRoutes(app, {
       }
 
       if (wants('uncertain-pattern')) {
-        const rows = db.prepare(`
-          SELECT domain, pattern_type AS patternType, pattern_regex AS patternRegex,
-                 accuracy, verified_count AS verifiedCount, sample_count AS sampleCount, provenance
-          FROM place_hub_url_patterns
-          WHERE accuracy > 0.3 AND accuracy < 0.7 AND scope = 'host'
-          ORDER BY sample_count DESC
-          LIMIT ?
-        `).all(limit);
+        const rows = ncdb.selectUncertainPatternReviewRows(db, limit);
         for (const r of rows) {
           items.push({
             kind: 'uncertain-pattern',
@@ -231,9 +199,10 @@ function registerPlaceHubReviewRoutes(app, {
       if (action === 'mark-non-geo') {
         const slug = String(req.body.slug || '').toLowerCase().trim();
         if (!slug) return res.status(400).json({ status: 'error', message: 'slug required' });
-        db.prepare(`INSERT OR IGNORE INTO non_geo_topic_slugs (slug, label, lang, source) VALUES (?, ?, ?, ?)`)
-          .run(slug, req.body.label || slug, req.body.lang || 'en', `ai-review:${who.agent}`);
-        const cleared = db.prepare(`DELETE FROM place_hub_unknown_terms WHERE term_slug = ?`).run(slug);
+        // SQL delegated to ncdb (2026-07-20 delegation #2; post-state
+        // differential-e2e verified).
+        ncdb.insertNonGeoTopicSlug(db, { slug, label: req.body.label || slug, lang: req.body.lang || 'en', source: `ai-review:${who.agent}` });
+        const cleared = ncdb.deleteUnknownTermsBySlug(db, slug);
         index.nonGeoSlugs.add(slug);
         audit({ domain: req.body.host || null, url: null, decision: 'ai:mark-non-geo', payload: { slug, ...provenance, clearedUnknownTerms: cleared.changes } });
         return res.json({ status: 'ok', action, slug, clearedUnknownTerms: cleared.changes });
@@ -257,17 +226,44 @@ function registerPlaceHubReviewRoutes(app, {
           UPDATE place_hub_candidates SET validation_status = ? WHERE candidate_url = ?
         `).run(valid ? 'valid' : 'invalid', url);
         if (Number.isFinite(req.body.placeId)) {
-          const existing = db.prepare(`SELECT id FROM place_page_mappings WHERE place_id = ? AND url = ?`).get(req.body.placeId, url);
+          // Delegated to ncdb.upsertPlacePageMapping (delegation #3, 2026-07-20).
+          // The old inline path keyed on (place_id, url), but the table's REAL
+          // unique key is (place_id, host, page_kind). So confirming a DIFFERENT
+          // url for an already-occupied (place,host,page_kind) slot made the
+          // inline SELECT miss → INSERT → UNIQUE violation → HTTP 500 with a
+          // PARTIAL write (recordHubValidation + the candidates UPDATE already
+          // committed; no txn); and the SELECT.get() picked arbitrarily when a
+          // url spanned two page_kinds. ncdb's ON CONFLICT(place_id,host,page_kind)
+          // DO UPDATE repoints the slot (last-write-wins) — the exact shape the
+          // rest of the system already writes these mappings. Equivalence on the
+          // fresh-insert + absent paths and the intended conflict-path divergences
+          // are pinned by the ncdb differential-e2e (legacy-placePageMappingUpsert.test.ts).
           const now = new Date().toISOString();
-          if (existing) {
-            db.prepare(`UPDATE place_page_mappings SET status = ?, verified_at = ?, last_seen_at = ? WHERE id = ?`)
-              .run(valid ? 'verified' : 'absent', now, now, existing.id);
-          } else {
-            db.prepare(`
-              INSERT INTO place_page_mappings (place_id, host, url, page_kind, status, first_seen_at, last_seen_at, verified_at, evidence)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(req.body.placeId, host, url, req.body.pageKind || `${req.body.placeKind || 'place'}-hub`,
-              valid ? 'verified' : 'absent', now, now, now, JSON.stringify(provenance));
+          const pageKind = req.body.pageKind || `${req.body.placeKind || 'place'}-hub`;
+          // GUARD (adversarial-review ship-gate, 2026-07-21): a REJECT of a
+          // DIFFERENT url for a slot already holding a VERIFIED url must NOT
+          // clobber it. Inline fail-closed here (UNIQUE violation → 500, row
+          // preserved); last-write-wins would instead SILENTLY un-verify a real
+          // place's confirmed hub and flip the coverage source-of-truth (status)
+          // to 'absent'. So skip the mapping write in exactly that case — the
+          // rejection is still recorded via recordHubValidation + the candidates
+          // UPDATE above. A CONFIRM that repoints the slot stays unguarded (that
+          // repoint is the motivating fix). ncdb.getPlacePageMappingSlot
+          // normalizes host to match the ON CONFLICT target so the lookup can't
+          // phantom-miss (and keeps the read in ncdb — thin coordination point).
+          const slot = ncdb.getPlacePageMappingSlot(db, { placeId: req.body.placeId, host, pageKind });
+          const rejectWouldClobberVerifiedSlot = !valid && slot && slot.status === 'verified' && slot.url !== url;
+          if (!rejectWouldClobberVerifiedSlot) {
+            ncdb.upsertPlacePageMapping(db, {
+              placeId: req.body.placeId,
+              host,
+              url,
+              pageKind,
+              status: valid ? 'verified' : 'absent',
+              evidence: provenance,
+              verifiedAt: now,
+              timestamp: now
+            });
           }
         }
         audit({ domain: host, url, decision: `ai:${action}`, payload: { ...provenance, placeId: req.body.placeId || null } });
@@ -282,15 +278,13 @@ function registerPlaceHubReviewRoutes(app, {
           return res.status(400).json({ status: 'error', message: 'termSlug and resolution (place|non-geo|junk) required' });
         }
         if (resolution === 'non-geo') {
-          db.prepare(`INSERT OR IGNORE INTO non_geo_topic_slugs (slug, label, lang, source) VALUES (?, ?, 'en', ?)`)
-            .run(termSlug, req.body.label || termSlug, `ai-review:${who.agent}`);
+          ncdb.insertNonGeoTopicSlug(db, { slug: termSlug, label: req.body.label || termSlug, lang: 'en', source: `ai-review:${who.agent}` });
           index.nonGeoSlugs.add(termSlug);
         }
-        // unknown_terms.host is stored in whatever form the crawler saw
-        // (frequently www.-prefixed) — match both canonical and www forms.
-        const scope = host ? 'AND (host = ? OR host = ?)' : '';
-        const params = host ? [termSlug, host, `www.${host}`] : [termSlug];
-        const cleared = db.prepare(`DELETE FROM place_hub_unknown_terms WHERE term_slug = ? ${scope}`).run(...params);
+        // Delegated to ncdb.deleteUnknownTermsBySlug (host-scoped to both the
+        // canonical and www- forms, since unknown_terms.host is stored in
+        // whatever form the crawler saw).
+        const cleared = ncdb.deleteUnknownTermsBySlug(db, termSlug, host ? { host } : {});
         audit({ domain: host || null, url: null, decision: `ai:resolve-unknown-term:${resolution}`, payload: { termSlug, placeId: req.body.placeId || null, ...provenance } });
         return res.json({ status: 'ok', action, termSlug, resolution, clearedUnknownTerms: cleared.changes });
       }

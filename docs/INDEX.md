@@ -1,21 +1,11 @@
 # Project Documentation Index
 
-_Last updated: 2026-04-24 (repo slim-down: 53 docs archived → `archives/2026-Q2/`)_
+_Last updated: 2026-01-17_
 
 ## Quick References
 - [Command Execution Guide](COMMAND_EXECUTION_GUIDE.md)
 - [Testing Quick Reference](TESTING_QUICK_REFERENCE.md)
 - [Database Quick Reference](DATABASE_QUICK_REFERENCE.md)
-
-## Path-Local Agent Guides (AGENT.md)
-
-Every major subsystem directory has an `AGENT.md` file with context-specific workflows, essential reading, and critical knowledge. **Check for an AGENT.md in your working directory before starting any task.**
-
-| Path | Scope |
-|------|-------|
-| [src/data/db/AGENT.md](../src/data/db/AGENT.md) | Database adapters + schema sync |
-| [tools/crawl/AGENT.md](../tools/crawl/AGENT.md) | Crawl CLI tools |
-| [tools/dev/AGENT.md](../tools/dev/AGENT.md) | Developer CLI tools (js-scan, js-edit) |
 
 ## Agents
 - [Agent Policy](agents/agent_policy.md)
@@ -38,12 +28,7 @@ Every major subsystem directory has an `AGENT.md` file with context-specific wor
 - [Tier 1 Tooling Loop](workflows/tier1_tooling_loop.md) - js-scan/js-edit discovery, dry-run, apply, and verification loop for JS changes.
 - [Emoji Search in Markdown (Windows-safe)](workflows/emoji_search_markdown.md) - Find emojis in docs without relying on literal emoji input.
 - [UI Inspection Workflow](workflows/ui-inspection-workflow.md) - Autonomous visual (MCP/Playwright) + numeric (Puppeteer) UI inspection loop.
-- [UI Screenshot Feedback Loop](workflows/ui-screenshot-feedback-loop.md) - Automatic screenshot capture, Electron/Puppeteer rigging, control-centre review artifacts, and comment-driven UI iteration.
 - [Single UI App Cohesion](workflows/single-ui-app-cohesion.md) - No-retirement unified shell: add sub-apps + add `--check`.
-- [Graph Feedback Artifact Planning](workflows/graph-feedback-artifact-planning.md) - Safe crawler profile preflight/report workflow using bounded graph-feedback artifacts without live seeding.
-- [Graph Feedback Profile Workflow Sample](workflows/graph-feedback-profile-workflow-sample.md) - Compact sample of the profile workflow checklist output shape.
-- [Remote Crawler Health, Recovery, And Deploy](workflows/remote-crawler-health-recovery-deploy.md) - Fast checks, stop/recover steps, deploy commands, and verification before live remote crawler work.
-
 
 ## Standards
 - [Commit & PR Standards](standards/commit_pr_standards.md)
@@ -66,15 +51,12 @@ High-signal entry points for the crawler subsystem. Start with the architecture 
 - [Architecture: Crawls vs Background Tasks](ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md)
 - [Crawler Runbook (Ops)](RUNBOOK.md)
 - [Debugging Child Processes](DEBUGGING_CHILD_PROCESSES.md)
-- [Crawl CLI Quick Reference](cli/crawl.md) - Harnessed 15-minute validation vs non-harnessed operator/local crawl commands.
+- [Crawl CLI Quick Reference](cli/crawl.md)
 - [DB Queries During Crawls](DB_QUERIES_DURING_CRAWLS.md)
 - [Enhanced Features](ENHANCED_FEATURES.md)
 - [Geography Crawl Type](GEOGRAPHY_CRAWL_TYPE.md)
+- [Reliable Crawler Roadmap](goals/RELIABLE_CRAWLER_ROADMAP.md)
 - [Intelligent Crawl Startup](agents/intelligent-crawl-startup.md) - Agent workflow for iterating on startup output and preflight.
-
-### V4 Distributed Crawl System
-
-- [V5 Crawler Architecture Proposal](books/v5-crawler-architecture.md) - Product plan for a remotely operated crawler application.
 
 ## Guides
 
@@ -109,16 +91,11 @@ These guides are **authoritative sources** for their domains. When working in th
 - [Test Hanging Prevention Guide](guides/TEST_HANGING_PREVENTION_GUIDE.md) - **CRITICAL for E2E tests**: Preventing "Jest did not exit" warnings, server cleanup patterns, timeout strategies, and reliable async test structure.
 - [Puppeteer UI Workflow Guide](guides/PUPPETEER_UI_WORKFLOW.md) - One-shot browser console/network capture for debugging UI routes without writing a full E2E.
 - [Puppeteer Scenario Suites](guides/PUPPETEER_SCENARIO_SUITES.md) - Fast UI verification by running many scenarios per browser session (deterministic fixtures + artifacts on failure).
-- [UI Screenshot Feedback Methodology](guides/UI_SCREENSHOT_FEEDBACK_METHODOLOGY.md) - Product loop for planning journeys, capturing screenshots, saving control-centre review artifacts, and processing screenshot comments.
 - [jsgui3 Activation Log Noise (Expected)](guides/JSGUI3_DEBUGGING_GUIDE.md#activation-log-noise-expected-warnings) - Interpreting `Missing context.map_Controls` and `&&& no corresponding control` without chasing false alarms.
 
 ### Authorization UX (CLI)
 
 - [Authorization Workflows — Case Study + Patterns](guides/AUTHORIZATION_WORKFLOWS_CASE_STUDY.md) - Device-code OAuth case study (GitHub-style) + simpler high-quality CLI auth patterns.
-
-### Distributed Crawling Architecture
-
-_Architecture books (v1→v4 evolution, V4 deep-dive) were previously in guides/ but files no longer exist._
 
 ### Server Telemetry
 
@@ -147,10 +124,9 @@ Architecture and system design documents for proposed or implemented features.
 - [Task Events API](database/task-events-api.md) - Unified event storage for crawls and background tasks, with AI query helpers and REST endpoints.
 - [Project Overview](reference/project_overview.md)
 
-
-
 ## AGI Memory & Observability
 - [docs-memory MCP Server](../tools/mcp/docs-memory/README.md) - AGI memory layer: sessions, skills, lessons, patterns, and app logging.
+- [MCP Logger Client](../src/utils/mcpLogger.js) - Client library for apps to write logs that AI agents can read.
 - [Log Storage](../docs/agi/logs/README.md) - NDJSON log files for app telemetry.
 
 ## Checklists
@@ -160,11 +136,17 @@ Architecture and system design documents for proposed or implemented features.
 
 ## Sessions
 - [Session Documentation Hub](sessions/SESSIONS_HUB.md) - Entry point for current/archived session folders.
+- [2025-11-18 Crawl Output Refresh](sessions/2025-11-18-crawl-output-refresh/INDEX.md) - Trim crawl output, cached seed handling, 10-minute hub refresh default.
 
 ## Plans
 - [Project Plans Index](plans/INDEX.md) - AI-generated long-term plans for human review. File-based, links to sessions.
+- [Plan Proposals](plans/proposals/README.md) - Pending proposals awaiting Central Planner review.
+
+## Reports
+- [Crawler State Report (Dec 15, 2025)](reports/2025-12-15-CRAWLER_STATE_REPORT.md) - Comprehensive overview of the crawler subsystem: 259 files, 4-phase roadmap, Phase 1 complete, 7+ improvement opportunities identified.
+- [20-Session Retrospective (Nov 29, 2025)](reports/20-SESSION-RETROSPECTIVE-2025-11-29.md) - **REQUIRED READING**: Analysis of 20 recent sessions with patterns, solutions, and agent instruction improvements. Covers UI hydration fixes, tooling enhancements, and workflow violations.
+- [OpenClaw (MoldBot/Moltbot) Research Brief (Feb 2, 2026)](reports/2026-02-02-OPENCLAW_MOLDBOT_RESEARCH.md) - Naming history, architecture, capabilities, setup, and security risks.
 
 ## Legacy Collections
 - [Root Migration Collection](root-migration/README.md) - Former root-level docs awaiting categorization.
-- [Archives](archives/) - Historical copies + archived planning artifacts.
-- [Archives — 2026 Q2](archives/2026-Q2/README.md) - 53 PHASE/COMPLETE/SUMMARY docs archived 2026-04-24 in repo slim-down. See [ADR](decisions/2026-04-24-repo-slimdown.md).
+- [AGENTS Archives](archives/agents/) - Historical copies of AGENTS.md variants for reference.

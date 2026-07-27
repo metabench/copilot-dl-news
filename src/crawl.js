@@ -41,6 +41,15 @@ async function main() {
       cliMetadata.configPath = resolvedArgs.configPath;
       console.log(`\x1b[32mLoaded configuration from: ${resolvedArgs.configPath}\x1b[0m`);
     }
+    // Say it out loud when a command-line URL replaces the configured one. This used to
+    // happen the other way round and SILENTLY: the config's startUrl won and the URL you
+    // typed was ignored, so a run could crawl a completely different site than requested.
+    if (resolvedArgs.overriddenConfigStartUrl) {
+      console.log(
+        `\x1b[33mStart URL from command line: ${resolvedArgs.explicitStartUrl} ` +
+        `(overrides ${resolvedArgs.overriddenConfigStartUrl} from config)\x1b[0m`
+      );
+    }
   } catch (error) {
     renderCliError(error, {
       stderr: console.error,

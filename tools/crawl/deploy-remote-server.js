@@ -16,6 +16,13 @@ const DEFAULT_REMOTE_DIR = '~/apps/remote-crawler-v2';
 const DEFAULT_REMOTE_TARBALL = '/tmp/remote-crawler-v2-deploy.tar.gz';
 const DEFAULT_CONFIG = 'deploy/remote-crawler-v2/crawl-domains.news-10x1000.json';
 const DEFAULT_DB_MODULE_DIR = path.resolve(ROOT, '..', 'news-crawler-db');
+// The crawler ENGINE itself (cycle 73 extraction, module-ecosystem directive):
+// module-ecosystem.md moved run-worker.js/multi-domain-server.js/politeness/
+// compression out of copilot-dl-news's own deploy/remote-crawler-v2/ into this
+// sibling module. The staged ON-BOX layout (deploy/remote-crawler-v2/** under
+// $REMOTE_DIR) is UNCHANGED on purpose — only the local COPY SOURCE moves — so
+// the install script, PM2 entry, and rm-list below did not need to change.
+const DEFAULT_CRAWLER_MODULE_DIR = path.resolve(ROOT, '..', 'news-crawler-itself');
 const DEFAULT_BUILD_DIR = path.join(ROOT, 'tmp', 'remote-crawler-v2-deploy');
 const DEFAULT_REMOTE_DB = 'data/news.db';
 
@@ -79,6 +86,7 @@ function parseArgv(argv = []) {
     idleTimeout: 0,
     buildDir: DEFAULT_BUILD_DIR,
     dbModuleDir: DEFAULT_DB_MODULE_DIR,
+    crawlerModuleDir: DEFAULT_CRAWLER_MODULE_DIR,
     healthTimeoutMs: 60000,
   };
 
@@ -122,6 +130,7 @@ function parseArgv(argv = []) {
     else if (flag === '--idle-timeout') opts.idleTimeout = parseNonNegativeInteger(nextValue(), 0);
     else if (flag === '--build-dir') opts.buildDir = path.resolve(nextValue());
     else if (flag === '--db-module-dir') opts.dbModuleDir = path.resolve(nextValue());
+    else if (flag === '--crawler-module-dir') opts.crawlerModuleDir = path.resolve(nextValue());
     else if (flag === '--health-timeout-ms') opts.healthTimeoutMs = parsePositiveInteger(nextValue(), 60000);
     else if (flag === '--help' || flag === '-h') opts.help = true;
     else throw new Error(`Unknown option: ${raw}`);
@@ -221,6 +230,7 @@ Options:
   --config <path>             Server config path inside remote dir (default: ${DEFAULT_CONFIG})
   --remote-db <path>          Server DB path inside remote dir (default: ${DEFAULT_REMOTE_DB})
   --db-module-dir <path>      Local news-crawler-db repo (default: ../news-crawler-db)
+  --crawler-module-dir <path> Local news-crawler-itself repo (default: ../news-crawler-itself)
   --skip-db-build             Do not run npm run build in news-crawler-db
   --skip-busy-check           Do not query /api/status before deploy
   --skip-health-check         Do not poll /api/status after restart
@@ -282,10 +292,10 @@ function summarizePlan(opts, statusSummary) {
     remoteDb: opts.remoteDb,
     buildDir: opts.buildDir,
     dbModuleDir: opts.dbModuleDir,
+    crawlerModuleDir: opts.crawlerModuleDir,
     busy: statusSummary || null,
     packageShape: [
       'deploy/remote-crawler-v2/**',
-      'src/db/openNewsCrawlerDb.js',
       'vendor/news-crawler-db/dist/db/**',
       'package.json with production runtime dependencies',
     ],
@@ -403,7 +413,7 @@ function formatBuildId(date = new Date()) {
 function shouldSkipSourcePath(entryPath, stat) {
   const base = path.basename(entryPath);
   if (base === '.git' || base === 'node_modules' || base === 'tmp') return true;
-  if (stat.isDirectory() && (base === '__tests__' || base === 'tests' || base === 'test')) return true;
+  if (stat.isDirectory() && (base === '__tests__' || base === 'tests' || base === 'test' || base === 'fixtures')) return true;
   if (stat.isDirectory() && base === 'data') return true;
   if (stat.isDirectory() && base === 'dist') return true;
   if (stat.isFile() && /\.(test|spec)\.[cm]?[jt]sx?$/i.test(base)) return true;
@@ -431,8 +441,11 @@ function walkSourceFiles(entryPath, out = []) {
 
 function collectSourceSnapshot(opts) {
   const roots = [
-    path.join(ROOT, 'deploy', 'remote-crawler-v2'),
-    path.join(ROOT, 'src', 'db', 'openNewsCrawlerDb.js'),
+    // The crawler engine (cycle 73: moved out of deploy/remote-crawler-v2/ into
+    // ../news-crawler-itself). shouldSkipSourcePath already excludes
+    // node_modules/__tests__/dist/*.test.js, so this stays a real SOURCE
+    // fingerprint, not a devDependency-churn counter.
+    opts.crawlerModuleDir,
     path.join(opts.dbModuleDir, 'src'),
     path.join(opts.dbModuleDir, 'package.json'),
     path.join(opts.dbModuleDir, 'tsconfig.json'),
@@ -590,9 +603,16 @@ function copyFiltered(src, dest, shouldSkip = () => false) {
 }
 
 function runCommand(command, args, options = {}) {
+  const hasInput = typeof options.input === 'string';
+  // stdin: a pipe when we're feeding the child a script via `input` (see
+  // deployPackage), otherwise the prior behavior (ignore when capturing output,
+  // inherit for interactive streaming).
+  const stdinMode = hasInput ? 'pipe' : (options.capture ? 'ignore' : 'inherit');
+  const outMode = options.capture ? 'pipe' : 'inherit';
   const result = spawnSync(command, args, {
     cwd: options.cwd || ROOT,
-    stdio: options.capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
+    input: hasInput ? options.input : undefined,
+    stdio: [stdinMode, outMode, outMode],
     encoding: options.capture ? 'utf8' : undefined,
     shell: process.platform === 'win32',
   });
@@ -628,12 +648,17 @@ function buildDeployPackage(opts, buildOptions = {}) {
   fs.rmSync(opts.buildDir, { recursive: true, force: true });
   fs.mkdirSync(stageDir, { recursive: true });
 
+  // Source is the crawler ENGINE MODULE (cycle 73 extraction) — the ON-BOX target
+  // path stays `deploy/remote-crawler-v2/**` (unchanged; the install script, PM2
+  // entry, and rm-list all key off that path). shouldSkipSourcePath excludes
+  // node_modules/__tests__/dist/.git/*.test.js — the module's own devDependencies
+  // (e.g. jest) and tests never ship to the box. The module carries its own
+  // lib/db.js now, so the old separate openNewsCrawlerDb.js copy is gone.
   copyFiltered(
-    path.join(ROOT, 'deploy', 'remote-crawler-v2'),
+    opts.crawlerModuleDir,
     path.join(stageDir, 'deploy', 'remote-crawler-v2'),
-    (entryPath, stat) => stat.isDirectory() && path.basename(entryPath) === 'data'
+    (entryPath, stat) => shouldSkipSourcePath(entryPath, stat) || (stat.isDirectory() && path.basename(entryPath) === 'data')
   );
-  copyFiltered(path.join(ROOT, 'src', 'db', 'openNewsCrawlerDb.js'), path.join(stageDir, 'src', 'db', 'openNewsCrawlerDb.js'));
   copyFiltered(dbDist, path.join(stageDir, 'vendor', 'news-crawler-db', 'dist', 'db'));
 
   const dbPackage = readPackageJson(opts.dbModuleDir);
@@ -670,7 +695,14 @@ function buildDeployPackage(opts, buildOptions = {}) {
 
   runCommand('node', ['--check', path.join(stageDir, 'deploy', 'remote-crawler-v2', 'multi-domain-server.js')]);
   runCommand('node', ['--check', path.join(stageDir, 'deploy', 'remote-crawler-v2', 'lib', 'run-worker.js')]);
-  runCommand('tar', ['-czf', tarball, '-C', stageDir, '.']);
+  runCommand('node', ['--check', path.join(stageDir, 'deploy', 'remote-crawler-v2', 'src', 'compression', 'gzip-pool.js')]);
+  runCommand('node', ['--check', path.join(stageDir, 'deploy', 'remote-crawler-v2', 'src', 'compression', 'gzip-worker.js')]);
+  // --force-local on Windows: GNU tar parses `C:\...` as a REMOTE host spec
+  // ("Cannot connect to C: resolve failed"), which broke the first Windows-run
+  // deploy (2026-07-22). Harmless flag elsewhere but scoped to win32 anyway.
+  const tarArgs = ['-czf', tarball, '-C', stageDir, '.'];
+  if (process.platform === 'win32') tarArgs.unshift('--force-local');
+  runCommand('tar', tarArgs);
   fs.writeFileSync(
     path.join(opts.buildDir, 'build-manifest.json'),
     JSON.stringify(buildInfo, null, 2),
@@ -768,7 +800,15 @@ pm2 show "$SERVICE" | sed -n '1,80p' || true
 function deployPackage(opts, buildResult) {
   const target = sshTarget(opts);
   runCommand('scp', [...scpArgs(opts), buildResult.tarball, `${target}:${opts.remoteTarball}`]);
-  runCommand('ssh', [...sshArgs(opts), target, createRemoteInstallScript(opts)]);
+  // Deliver the multi-line install script over ssh STDIN to `bash -s`, NOT as an
+  // argv element. On Windows spawnSync runs with shell:true (needed so the bare
+  // `ssh`/`scp` names resolve via PATHEXT), and cmd.exe mangles a multi-line
+  // script passed on the command line — that silently corrupted the remote
+  // install and produced a false "deploy complete" (cycle 70). The argv here is
+  // all simple tokens; the script travels as raw stdin bytes cmd.exe can't touch.
+  runCommand('ssh', [...sshArgs(opts), target, 'bash', '-s'], {
+    input: createRemoteInstallScript(opts),
+  });
 }
 
 function checkSshAccess(opts) {

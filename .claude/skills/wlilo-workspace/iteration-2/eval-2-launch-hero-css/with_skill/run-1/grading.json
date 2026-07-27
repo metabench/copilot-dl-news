@@ -1,0 +1,54 @@
+{
+  "expectations": [
+    {
+      "text": "Both deliverables exist (SVG + CSS)",
+      "passed": true,
+      "evidence": "svg=true css=true"
+    },
+    {
+      "text": "SVG exists, tags balanced, viewBox present",
+      "passed": true,
+      "evidence": "wellFormed=true viewBox=true len=11110"
+    },
+    {
+      "text": "WLILO palette adherence: >=3 token hexes and >=60% of distinct hexes are tokens",
+      "passed": true,
+      "evidence": "distinct=25 tokens=25 (100%) nonTokens=[]"
+    },
+    {
+      "text": "Never-flat rule: at least one linearGradient defined",
+      "passed": true,
+      "evidence": "7 gradients"
+    },
+    {
+      "text": "Accessibility: <title> and <desc> present",
+      "passed": true,
+      "evidence": "title=true desc=true"
+    },
+    {
+      "text": "Gemstone CTAs: both labels present, sapphire used, and sapphire is the PRIMARY (Get started) gem",
+      "passed": true,
+      "evidence": "labels=true sapphireInFile=true primaryIsSapphire=true"
+    },
+    {
+      "text": "Full-luxe texture: <pattern> or 5-stop brushed metal present",
+      "passed": true,
+      "evidence": "pattern=true"
+    },
+    {
+      "text": "CSS defines >=5 --wlilo-* custom properties",
+      "passed": true,
+      "evidence": "38 vars: --wlilo-bg,--wlilo-bg-alt,--wlilo-surface,--wlilo-surface-hover,--wlilo-panel,--wlilo-panel-light,--wlilo-panel-dark,--wlilo-border"
+    },
+    {
+      "text": "CSS uses semantic .wlilo-* classes",
+      "passed": true,
+      "evidence": ".wlilo-app,.wlilo-display,.wlilo-eyebrow,.wlilo-panel,.wlilo-panel__title,.wlilo-badge"
+    }
+  ],
+  "summary": {
+    "pass_rate": 1,
+    "passed": 9,
+    "total": 9
+  }
+}

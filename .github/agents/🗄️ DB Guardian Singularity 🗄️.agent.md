@@ -69,6 +69,13 @@ Return Payload: <summary, changed files, tests/checks run, blockers/assumptions>
 
 > **Mission**: Own DB-focused changes **end-to-end** — from schema and adapters through services, UI, and documentation. Enforce "SQL stays in adapters" architecture, maintain automated boundary guards, and ensure every agent understands the data access contract.
 
+> **⚠️ Layout note (updated 2026-07-19)** — this charter predates two big moves; verify paths before acting:
+>
+> 1. `crawl-widget/` is **gone**. Electron surfaces live under `src/ui/electron/*` — thin `main.js` shells per app; the unified app spawns `src/ui/server/unifiedApp/server.js` in system Node and loads `http://localhost:3170`.
+> 2. The DB layer is migrating out of `src/db/**` into the **ncdb** package (`news-crawler-db`). `src/db/**` is now a thin coordination layer; `src/db/adapters/**`, `src/db/repositories/**`, and `src/db/sqlite/v1/**` no longer exist. Code examples below that use those paths illustrate the adapter *pattern*, not current file locations. Authority: `docs/inventory/db-coordination-audit-2026-07-19.md`.
+>
+> Full layout verdicts: `docs/agi/RECONCILIATION_2026-07-19.md`; path translation table: `docs/agi/BOOT.md`.
+
 ---
 
 ## 🎯 What This Agent Does (Quick Summary)
@@ -106,9 +113,9 @@ Return Payload: <summary, changed files, tests/checks run, blockers/assumptions>
 │                    THE DATA LAYER ARCHITECTURE                       │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
-│   ❌ FORBIDDEN ZONE (UI/Electron Layers)                            │
+│   ❌ FORBIDDEN ZONE (UI/Electron Layers) — guard-enforced           │
 │   ┌──────────────────────────────────────────────────────────┐      │
-│   │  src/ui/**          crawl-widget/**                      │      │
+│   │  src/ui/**  (incl. src/ui/electron/** + src/ui/server)   │      │
 │   │  ❌ No db.prepare()  ❌ No db.exec()                     │      │
 │   │  ❌ No new Database() ❌ No require('better-sqlite3')    │      │
 │   └──────────────────────────────────────────────────────────┘      │
@@ -116,16 +123,16 @@ Return Payload: <summary, changed files, tests/checks run, blockers/assumptions>
 │                              ▼                                       │
 │   ✅ DATA ACCESS LAYER (SQL Lives Here)                             │
 │   ┌──────────────────────────────────────────────────────────┐      │
-│   │  src/db/**           src/db/adapters/**                  │      │
-│   │  src/db/sqlite/**    src/db/repositories/**              │      │
-│   │  ✅ All SQL here     ✅ All DB logic here                │      │
+│   │  ncdb (news-crawler-db package)  ← delegation target     │      │
+│   │  src/db/**       thin coordination layer (in migration)  │      │
+│   │  src/data/db/**  schema definitions, migrations, queries │      │
 │   └──────────────────────────────────────────────────────────┘      │
 │                              │                                       │
-│   ⚙️ TOOLING EXCEPTIONS (Allowed with explicit allow-list)         │
+│   ⚙️ OUT OF GUARD SCOPE (SQL tolerated for tooling/testing)        │
 │   ┌──────────────────────────────────────────────────────────┐      │
 │   │  tests/**            tools/**           scripts/**       │      │
-│   │  checks/**           migrations/**                       │      │
-│   │  ⚠️ SQL allowed for tooling/testing                     │      │
+│   │  ⚠️ The guard walks src/ui only — these are never       │      │
+│   │     scanned; keep production SQL out of them anyway      │      │
 │   └──────────────────────────────────────────────────────────┘      │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
@@ -134,15 +141,15 @@ Return Payload: <summary, changed files, tests/checks run, blockers/assumptions>
 ### Non-Negotiable Rules
 
 1. **UI layer = NO SQL** — `src/ui/**` must never import `better-sqlite3` or call `db.prepare/db.exec`
-2. **Electron layer = NO SQL** — `crawl-widget/**` (except `main.js` DB opening) must not run SQL
-3. **All SQL in adapters** — Every query lives in `src/db/**` (adapters, repositories, or SQLiteNewsDatabase)
+2. **Electron layer = NO SQL, no exceptions** — `src/ui/electron/**` ships zero DB access. Electron mains are thin shells; the unified app spawns `src/ui/server/unifiedApp/server.js` (system Node, port 3170) and talks to it over HTTP. The old `crawl-widget/main.js` "may open the DB" exception died with crawl-widget.
+3. **All SQL in the data layer** — queries live in ncdb (`news-crawler-db`) or, during migration, `src/db/**` (see `docs/inventory/db-coordination-audit-2026-07-19.md` for the delegation recipe)
 4. **Guard always runs** — `npm run sql:check-ui` must pass before any PR
 
 ---
 
 ## Known Data Pipeline Problems
 
-**Consult** `docs/designs/CRAWL_SYSTEM_PROBLEMS_AND_RESEARCH.md` before working on:
+**Historical**: `docs/designs/CRAWL_SYSTEM_PROBLEMS_AND_RESEARCH.md` was removed in the 2026-04-24 repo slim-down (consult `docs/decisions/2026-04-24-repo-slimdown.md` before declaring anything lost). The problem list below is kept as context; re-verify each against the live DB before acting:
 - Error storage (`errors` table — P1: recording broken since Oct 2025)
 - Content storage (`content_storage` table — P2: save rate collapsed to 0%)
 - Stuck crawl runs (`crawl_runs` table — P3: 10 runs stuck ~30 days)
@@ -182,10 +189,13 @@ This agent owns and maintains the boundary enforcement tooling:
 # Run the guard (must pass before any PR touching UI/Electron code)
 npm run sql:check-ui
 
-# What it does:
-# - Scans src/ui/** and crawl-widget/**
-# - Detects: db.prepare(, db.exec(, better-sqlite3 imports, new Database(
-# - Ignores: src/db/**, tests/**, tools/**, scripts/**, checks/**, node_modules/**
+# What it does (verified 2026-07-19):
+# - Scans src/ui/** ONLY — this covers src/ui/electron/** and src/ui/server/**
+#   (crawl-widget/ no longer exists; nothing outside src/ui is walked)
+# - Detects: db.prepare(, db.exec(, better-sqlite3, new Database(
+# - Comment-aware: // and /* */ comments are blanked before matching, so
+#   doc-comments don't false-positive; string literals STILL match, so
+#   require('better-sqlite3') in real code always trips it
 # - Exit 0 = clean, Exit 1 = violations found
 ```
 
@@ -193,8 +203,11 @@ npm run sql:check-ui
 
 ```
 config/sql-boundary-allowlist.json
-├── ignoreRoots: []     # Directories to skip entirely
-└── allow: []           # Explicit exceptions with reasons
+├── ignoreRoots: ["src/db", "tests", "tools", "scripts", "checks"]
+│                       # legacy — the scan walks src/ui only, so these
+│                       # roots are already outside its scope
+└── allow: []           # per-file exceptions ({ path, ... }) — EMPTY as of
+                        # 2026-07-19; any new entry needs a reason + ticket
 ```
 
 ### Guard Ownership Responsibilities
@@ -209,18 +222,17 @@ config/sql-boundary-allowlist.json
 
 ### Current Violation Inventory (Living Document)
 
-**Last scan: 2025-12-21**
+**Last scan: 2026-07-19 — ✅ CLEAN (0 violations, allow list empty)**
 
-| Module | Violations | Priority | Owner | Status |
-|--------|------------|----------|-------|--------|
-| `src/ui/server/geoImportServer.js` | 27 | HIGH | UI Singularity | Not started |
-| `src/ui/server/services/themeService.js` | 14 | HIGH | UI Singularity | Not started |
-| `src/ui/server/services/metricsService.js` | 3 | MEDIUM | UI Singularity | Not started |
-| `src/ui/server/factsServer.js` | 1 | LOW | UI Singularity | Not started |
+The 2025-12-21 backlog (geoImportServer 27, themeService 14, metricsService 3,
+factsServer 1) has been cleared, and the 8 findings reported by the 2026-07-19
+reconciliation were resolved in the same-day triage (comment-aware matching
+removed doc-comment false positives; scan scope fixed to src/ui). Any new
+finding is a regression — fix it, don't allow-list it.
 
 **To refresh this inventory:**
 ```bash
-npm run sql:check-ui 2>&1 | Select-Object -First 100
+npm run sql:check-ui
 ```
 
 ---
@@ -253,11 +265,14 @@ When interacting with other agents about DB concerns:
 ┌─────────────────────────────────────────────────────────────────────┐
 │ LAYER 1: Presentation (UI/Electron)                                 │
 ├─────────────────────────────────────────────────────────────────────┤
-│ • Express routes in src/ui/server/*.js                              │
+│ • Express routes in src/ui/server/** (unified app, port 3170)       │
 │ • jsgui3 controls in src/ui/controls/**                             │
-│ • Electron renderer in crawl-widget/ui/**                           │
+│ • Electron shells in src/ui/electron/*  (thin main.js per app;      │
+│   unified app spawns src/ui/server/unifiedApp/server.js in system   │
+│   Node and loads http://localhost:3170 — renderers have             │
+│   nodeIntegration: false, contextIsolation: true)                   │
 │                                                                     │
-│ ✅ CAN: Call services/adapters                                      │
+│ ✅ CAN: Call services/adapters (server) or fetch routes (renderer)  │
 │ ❌ CANNOT: Import better-sqlite3, call db.prepare/exec              │
 └─────────────────────────────────────────────────────────────────────┘
                               │
@@ -265,9 +280,9 @@ When interacting with other agents about DB concerns:
 ┌─────────────────────────────────────────────────────────────────────┐
 │ LAYER 2: Service Layer (Business Logic)                            │
 ├─────────────────────────────────────────────────────────────────────┤
-│ • src/modules/**                                                    │
 │ • src/services/**                                                   │
-│ • src/crawler/**                                                    │
+│ • src/core/crawler/**      (pre-2026 docs say src/crawler)          │
+│ • src/intelligence/**      (planner, analysis)                      │
 │                                                                     │
 │ ✅ CAN: Call adapters, orchestrate multiple adapters                │
 │ ⚠️ TRANSITIONAL: Some legacy SQL exists (migration in progress)   │
@@ -278,10 +293,12 @@ When interacting with other agents about DB concerns:
 ┌─────────────────────────────────────────────────────────────────────┐
 │ LAYER 3: Data Access Layer (SQL Lives Here)                        │
 ├─────────────────────────────────────────────────────────────────────┤
-│ • src/db/adapters/**      → Entity-specific data access            │
-│ • src/db/repositories/**  → Query composition                       │
-│ • src/db/sqlite/**        → SQLite-specific implementations        │
-│ • SQLiteNewsDatabase      → Main database wrapper                  │
+│ • ncdb (news-crawler-db)  → the DB engine (delegation target)      │
+│ • src/db/**               → thin coordination layer:               │
+│   openNewsCrawlerDb, newsCrawlerDbCompat, dbAccess,                │
+│   TaskEventWriter (task_events telemetry)                          │
+│ • src/data/db/**          → schema definitions, migrations,        │
+│   named queries (see src/data/db/AGENT.md)                         │
 │                                                                     │
 │ ✅ ALL SQL here                                                     │
 │ ✅ Transaction management                                           │
@@ -302,14 +319,24 @@ When interacting with other agents about DB concerns:
 
 | File | Purpose | Pattern |
 |------|---------|---------|
-| `src/db/sqlite/v1/SQLiteNewsDatabase.js` | Main DB wrapper | Singleton adapter |
-| `src/db/sqlite/v1/schema-definitions.js` | Schema source of truth | Auto-generated |
-| `src/db/adapters/*.js` | Entity adapters | Class-based |
-| `src/db/repositories/*.js` | Query composition | Functional |
+| `src/db/index.js` + `dbAccess.js` | Thin coordination layer entry | Delegates to ncdb |
+| `src/db/openNewsCrawlerDb.js` + `newsCrawlerDbCompat.js` | ncdb open + compat seam | Delegation, not repoint |
+| `node_modules/news-crawler-db` (ncdb) | The DB engine | Target home for new SQL |
+| `src/data/db/**` | Schema definitions, migrations, named queries | See `src/data/db/AGENT.md` |
+
+> Migration state, verdicts, and the ncdb-exact-SQL-first delegation recipe:
+> `docs/inventory/db-coordination-audit-2026-07-19.md`.
 
 ---
 
 ## 🔄 Migration Workflow (UI → Adapter)
+
+> **⚠️ Historical paths in the examples below**: `src/db/adapters/**` and
+> `tests/db/adapters/**` are the pre-2026 in-repo layout. New adapter methods
+> now land in **ncdb** (`news-crawler-db`) via the delegation recipe in
+> `docs/inventory/db-coordination-audit-2026-07-19.md`. The workflow itself —
+> inventory → categorize → adapter method → caller update → contract test →
+> guard — is unchanged.
 
 When migrating SQL from UI/Electron layers to adapters:
 
@@ -503,8 +530,9 @@ When refactoring code that touches DB:
 #### For 🕷️ Crawler Singularity 🕷️
 ```
 When working on crawler DB operations:
-1. Use SQLiteNewsDatabase methods
-2. If new query needed, add to SQLiteNewsDatabase
+1. Use the src/db coordination layer (openNewsCrawlerDb / index.js)
+2. If a new query is needed, add it to ncdb per the delegation recipe
+   (docs/inventory/db-coordination-audit-2026-07-19.md)
 3. Never add SQL to NewsCrawler directly
 4. Use wireCrawlerServices for DI
 ```
@@ -531,9 +559,9 @@ When handing off DB-related work:
 4. [ ] Verify guard passes
 
 ### Files to touch
-- Adapter: src/db/adapters/[name].js
+- Adapter/query home: ncdb (news-crawler-db) or src/db/** during migration
 - Caller: [file being migrated]
-- Test: tests/db/adapters/[name].test.js
+- Test: tests/db/[name].test.js
 
 ### Success criteria
 - `npm run sql:check-ui` shows [X] fewer violations
@@ -556,13 +584,18 @@ npm run schema:stats     # Update statistics
 
 ### Schema Definition Source of Truth
 
+Schema-definitions files (tables, indexes, triggers, views) now live at:
+
 ```
-src/db/sqlite/v1/schema-definitions.js
-├── Tables with columns, types, constraints
-├── Indexes with columns and uniqueness
-├── Triggers with timing and statements
-└── Views with definitions
+src/data/db/postgres/v1/schema-definitions.js          # Postgres (experimental)
+src/data/db/sqlite/gazetteer/v1/schema-definitions.js  # gazetteer.db
+news-crawler-db dist/db/sqlite/access/legacy-*-schema-definitions.js
+                                                       # news.db (moved into ncdb)
 ```
+
+> **⚠️ Tool gotcha**: `tools/schema/schema-sync.js` still defaults its output to
+> the deleted `src/db/sqlite/v1/schema-definitions.js` path — pass `--output`
+> (or fix the default) before trusting `npm run schema:sync`.
 
 ### Migration Best Practices
 
@@ -658,11 +691,11 @@ src/db/sqlite/v1/schema-definitions.js
 ### Impact Tracing Commands
 
 ```bash
-# Step 1: Find what calls the adapter you're changing
-node tools/dev/js-scan.js --what-imports src/db/adapters/[name].js --json
+# Step 1: Find what calls the DB layer you're changing
+node tools/dev/js-scan.js --what-imports src/db/index.js --json
 
 # Step 2: For each caller, find what calls THAT
-node tools/dev/js-scan.js --what-imports src/modules/[caller].js --json
+node tools/dev/js-scan.js --what-imports src/services/[caller].js --json
 
 # Step 3: Find Express routes that use the service
 node tools/dev/js-scan.js --dir src/ui/server --search "[serviceName]" --json
@@ -670,8 +703,8 @@ node tools/dev/js-scan.js --dir src/ui/server --search "[serviceName]" --json
 # Step 4: Find controls that render the affected data
 node tools/dev/js-scan.js --dir src/ui/controls --search "[dataFieldName]" --json
 
-# Step 5: Find Electron handlers
-node tools/dev/js-scan.js --dir crawl-widget --search "[channelName]" --json
+# Step 5: Find Electron main-process handlers (unified app + helper apps)
+node tools/dev/js-scan.js --dir src/ui/electron --search "[channelName]" --json
 ```
 
 ### Example: Adding a New Field to URLs Table
@@ -687,8 +720,8 @@ node tools/dev/js-scan.js --dir crawl-widget --search "[channelName]" --json
 # 5. Add contract test
 
 # ② Service Layer
-# Find callers
-node tools/dev/js-scan.js --what-imports src/db/sqlite/v1/SQLiteNewsDatabase.js --search "urls" --json
+# Find callers of the coordination layer
+node tools/dev/js-scan.js --what-imports src/db/index.js --search "urls" --json
 # Update urlService.js to expose new method
 # Add service test
 
@@ -735,8 +768,8 @@ node tools/dev/js-scan.js --dir src/ui/server --search "urlService" "getUrls" --
 - [ ] Check script passes
 
 ### Files to reference
-- Adapter: `src/db/adapters/[name].js`
-- Service: `src/modules/[name].js`
+- Adapter/query home: ncdb (`news-crawler-db`) or `src/db/**` during migration
+- Service: `src/services/[name].js`
 - Route: `src/ui/server/[name].js`
 ```
 
@@ -753,8 +786,9 @@ node tools/dev/js-scan.js --dir src --search "db.prepare" "db.exec" --json
 # Just UI layer violations
 npm run sql:check-ui
 
-# Find what imports a DB module
-node tools/dev/js-scan.js --what-imports src/db/sqlite/v1/SQLiteNewsDatabase.js --json
+# Find what imports the DB coordination layer
+node tools/dev/js-scan.js --what-imports src/db/index.js --json
+node tools/dev/js-scan.js --what-imports src/db/openNewsCrawlerDb.js --json
 
 # Find usage of specific table
 node tools/dev/js-scan.js --dir src --search "FROM urls" "INTO urls" "UPDATE urls" --json
@@ -835,30 +869,39 @@ class EntityListControl extends jsgui.Control {
 }
 ```
 
-### Electron IPC Pattern
+### Electron Data Access Pattern (2026 layout)
+
+The Electron layer no longer touches the DB **at all**. Each app under
+`src/ui/electron/*` is a thin `main.js` shell; the unified app spawns
+`src/ui/server/unifiedApp/server.js` in **system Node** (better-sqlite3 ABI —
+never inside Electron) and points a BrowserWindow at `http://localhost:3170`.
+Renderers run with `nodeIntegration: false, contextIsolation: true`, so data
+reaches them over HTTP routes, never over a DB handle or raw IPC-to-DB bridge.
 
 ```javascript
-// crawl-widget/main.js (main process)
+// src/ui/electron/unifiedApp/main.js (main process)
 
-// ✅ ALLOWED: main.js can open/access DB
-const db = new Database(dbPath);
-const adapter = new EntityAdapter(db);
+// ✅ CORRECT: shell only — spawn the server, load the URL
+const { server } = await startUnifiedServer({ port: 3170 });
+createWindow('http://localhost:3170');
 
-ipcMain.handle('get-entity', async (event, id) => {
-  return adapter.getById(id);
-});
+// Renderer / jsgui3 control (browser context)
 
-// crawl-widget/ui/controls/EntityControl.js (renderer)
-
-// ✅ CORRECT: Renderer calls IPC, never touches DB
+// ✅ CORRECT: fetch from unified-server routes (route → service → adapter)
 async loadEntity(id) {
-  const entity = await window.api.getEntity(id);
+  const entity = await fetch(`/api/entities/${id}`).then(r => r.json());
   this._renderEntity(entity);
 }
 
-// ❌ WRONG: Renderer imports DB
-const db = require('better-sqlite3')('./data.db'); // NEVER DO THIS
+// ❌ WRONG anywhere under src/ui/electron/**: opening the DB
+const db = require('better-sqlite3')('./data.db'); // guard failure — no exceptions
 ```
+
+> **Historical**: the deleted `crawl-widget/` app let `main.js` open the DB and
+> serve renderers over IPC. That exception is gone — `src/ui/electron/**` has
+> zero DB access, and `npm run sql:check-ui` enforces it (allow list is empty).
+> Helper apps (crawlerApp, taskMonitor) may still use `ipcMain` for app-control
+> concerns, but never for data access.
 
 ### Check Script Pattern
 
@@ -952,7 +995,7 @@ We chose **Option [X]** because [reasoning].
 ## Links
 - PR: [link]
 - Related session: [link]
-- Adapter: `src/db/adapters/[name].js`
+- Adapter/query home: ncdb (`news-crawler-db`) or `src/db/**`
 ```
 
 ### Session Notes Pattern
@@ -1104,7 +1147,7 @@ npm run test:by-path tests/db/
 
 | Metric | Target | Current | How to Measure |
 |--------|--------|---------|----------------|
-| UI layer SQL violations | 0 | ~58 | `npm run sql:check-ui` |
+| UI layer SQL violations | 0 | 0 ✅ (2026-07-19) | `npm run sql:check-ui` |
 | Adapter test coverage | >80% | TBD | Jest coverage on `src/db/` |
 | Migration test coverage | 100% | TBD | All migrations have up/down tests |
 | Query performance budget | <100ms p95 | TBD | Telemetry/logging |
@@ -1122,9 +1165,9 @@ Week of: YYYY-MM-DD
 - Change: -X (X% reduction)
 
 ### Migrations Completed
-- [ ] themeService → ThemeAdapter
-- [ ] geoImportServer → GazetteerAdapter
-- [ ] metricsService → MetricsAdapter
+- (UI-layer violation backlog cleared as of 2026-07-19 — add entries here
+  when the guard reports new findings, or track ncdb delegation moves from
+  docs/inventory/db-coordination-audit-2026-07-19.md)
 
 ### New Adapters Added
 - (list new adapters)
@@ -1227,19 +1270,20 @@ npm run test:by-path tests/db/adapters/
 # Find SQL patterns
 node tools/dev/js-scan.js --dir src --search "db.prepare" --json
 
-# Find what uses an adapter
-node tools/dev/js-scan.js --what-imports src/db/adapters/[name].js --json
+# Find what uses the DB coordination layer
+node tools/dev/js-scan.js --what-imports src/db/index.js --json
 ```
 
 ### Key Files
 
 | Purpose | Location |
 |---------|----------|
-| Guard script | `tools/dev/sql-boundary-check.js` |
-| Allow-list config | `config/sql-boundary-allowlist.json` |
-| Schema definitions | `src/db/sqlite/v1/schema-definitions.js` |
-| Main DB wrapper | `src/db/sqlite/v1/SQLiteNewsDatabase.js` |
-| Adapters | `src/db/adapters/` |
+| Guard script | `tools/dev/sql-boundary-check.js` (scans `src/ui` only, comment-aware) |
+| Allow-list config | `config/sql-boundary-allowlist.json` (allow list empty) |
+| Schema definitions | `src/data/db/**/v1/schema-definitions.js` + ncdb `dist/db/sqlite/access/legacy-*-schema-definitions.js` |
+| DB coordination layer | `src/db/index.js`, `openNewsCrawlerDb.js`, `newsCrawlerDbCompat.js` |
+| DB engine | ncdb (`news-crawler-db` package) — see `docs/inventory/db-coordination-audit-2026-07-19.md` |
+| Electron surfaces | `src/ui/electron/*` (unified app → `src/ui/server/unifiedApp/server.js`, port 3170) |
 | Architecture doc | `docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md` |
 
 ### Success Criteria

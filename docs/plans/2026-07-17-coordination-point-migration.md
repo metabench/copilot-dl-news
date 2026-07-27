@@ -1,5 +1,14 @@
 # copilot-dl-news → coordination point: status + migration map
 
+> **SUPERSEDED (cycle 73, 2026-07-22)** by
+> [`2026-07-22-module-ecosystem.md`](2026-07-22-module-ecosystem.md), which states verbatim
+> that it "supersedes the narrower 'thin coordination point (all DB-shaped logic in ncdb)'
+> framing" — generalizing it to the multi-repo module rule. This file is a 2026-07-17
+> point-in-time migration snapshot kept for history; parts are now stale (e.g. it lists
+> `news-crawler-itself` as "MISSING on disk" — cycle 73 bootstrapped it as a real package and
+> moved the remote-crawler engine there). For current module state see the module-ecosystem
+> plan and `docs/agents/modules-reference.md`.
+
 Date 2026-07-17. Goal (owner's intent): copilot-dl-news becomes a thin
 coordination/orchestration layer that depends on extracted sibling repos,
 not a monolith that also contains internal copies of them.

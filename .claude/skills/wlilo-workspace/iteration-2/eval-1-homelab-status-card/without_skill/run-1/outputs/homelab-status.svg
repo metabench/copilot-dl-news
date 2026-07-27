@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 300" width="680" height="300" role="img"
+     aria-label="WLILO home lab status: atlas up, hermes up, pluto down since 18 July with failed backup">
+  <title>WLILO — home lab status</title>
+  <style>
+    :root {
+      --surface: #fcfcfb;
+      --ink:     #0b0b0b;
+      --ink2:    #52514e;
+      --muted:   #898781;
+      --hair:    #e1e0d9;
+      --border:  rgba(11,11,11,0.10);
+      --track:   #e1e0d9;
+      --seq:     #2a78d6;
+      --good:    #0ca30c;
+      --goodtxt: #006300;
+      --warn:    #fab219;
+      --crit:    #d03b3b;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --surface: #1a1a19;
+        --ink:     #ffffff;
+        --ink2:    #c3c2b7;
+        --muted:   #898781;
+        --hair:    #2c2c2a;
+        --border:  rgba(255,255,255,0.10);
+        --track:   #2c2c2a;
+        --seq:     #3987e5;
+        --goodtxt: #0ca30c;
+      }
+    }
+    text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .card    { fill: var(--surface); stroke: var(--border); }
+    .hair    { stroke: var(--hair); stroke-width: 1; }
+    .t-title { font-size: 18px; font-weight: 700; fill: var(--ink); }
+    .t-sub   { font-size: 12px; fill: var(--muted); }
+    .t-col   { font-size: 10px; font-weight: 600; letter-spacing: 1.2px; fill: var(--muted); }
+    .t-name  { font-size: 14px; font-weight: 600; fill: var(--ink); }
+    .t-val   { font-size: 13px; fill: var(--ink); font-variant-numeric: tabular-nums; }
+    .t-dim   { font-size: 11px; fill: var(--muted); }
+    .t-up    { font-size: 12px; font-weight: 700; fill: var(--goodtxt); }
+    .t-down  { font-size: 12px; font-weight: 700; fill: var(--crit); }
+    .t-foot  { font-size: 12px; fill: var(--ink2); }
+    .g-good  { fill: var(--goodtxt); font-weight: 700; }
+    .dot-good { fill: var(--good); }
+    .dot-crit { fill: var(--crit); }
+    .bar-track { fill: var(--track); }
+    .bar-seq   { fill: var(--seq); }
+    .bar-warn  { fill: var(--warn); }
+    .bar-crit  { fill: var(--crit); }
+  </style>
+
+  <rect class="card" x="1" y="1" width="678" height="298" rx="14"/>
+
+  <!-- header -->
+  <text class="t-title" x="28" y="42">WLILO</text>
+  <text class="t-sub" x="652" y="42" text-anchor="end">home lab · lights-out status · 19 Jul 2026</text>
+
+  <!-- column headers -->
+  <text class="t-col" x="28"  y="84">SERVER</text>
+  <text class="t-col" x="184" y="84">STATUS</text>
+  <text class="t-col" x="320" y="84">DISK</text>
+  <text class="t-col" x="652" y="84" text-anchor="end">LAST BACKUP</text>
+  <line class="hair" x1="28" y1="94" x2="652" y2="94"/>
+
+  <!-- row: atlas -->
+  <text class="t-name" x="28" y="130">atlas</text>
+  <circle class="dot-good" cx="188" cy="126" r="4"/>
+  <text class="t-up" x="200" y="130">UP</text>
+  <rect class="bar-track" x="320" y="120" width="110" height="6" rx="3"/>
+  <rect class="bar-warn"  x="320" y="120" width="86"  height="6" rx="3"/>
+  <text class="t-val" x="442" y="130">78%</text>
+  <text class="t-val" x="652" y="130" text-anchor="end"><tspan class="g-good">✓ </tspan>02:14</text>
+  <line class="hair" x1="28" y1="152" x2="652" y2="152"/>
+
+  <!-- row: hermes -->
+  <text class="t-name" x="28" y="182">hermes</text>
+  <circle class="dot-good" cx="188" cy="178" r="4"/>
+  <text class="t-up" x="200" y="182">UP</text>
+  <rect class="bar-track" x="320" y="172" width="110" height="6" rx="3"/>
+  <rect class="bar-seq"   x="320" y="172" width="45"  height="6" rx="3"/>
+  <text class="t-val" x="442" y="182">41%</text>
+  <text class="t-val" x="652" y="182" text-anchor="end"><tspan class="g-good">✓ </tspan>03:02</text>
+  <line class="hair" x1="28" y1="204" x2="652" y2="204"/>
+
+  <!-- row: pluto -->
+  <rect class="bar-crit" x="14" y="216" width="3" height="30" rx="1.5"/>
+  <text class="t-name" x="28" y="234">pluto</text>
+  <circle class="dot-crit" cx="188" cy="230" r="4"/>
+  <text class="t-down" x="200" y="234">DOWN</text>
+  <text class="t-dim" x="244" y="234">since 18 Jul</text>
+  <rect class="bar-track" x="320" y="224" width="110" height="6" rx="3"/>
+  <rect class="bar-crit"  x="320" y="224" width="100" height="6" rx="3"/>
+  <text class="t-val" x="442" y="234">91%</text>
+  <text class="t-down" x="652" y="234" text-anchor="end">✕ FAILED</text>
+
+  <!-- footer summary -->
+  <line class="hair" x1="28" y1="258" x2="652" y2="258"/>
+  <text class="t-foot" x="28" y="282">2 of 3 up · needs attention: pluto — down since 18 Jul, disk 91%, backup failed</text>
+</svg>

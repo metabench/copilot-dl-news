@@ -1,6 +1,15 @@
 # V5 Remote Crawler Application – Master Plan
 
-**Status:** Active  
+> **SUPERSEDED IN SUBSTANCE (cycle 73, 2026-07-22)** by
+> [`2026-07-22-module-ecosystem.md`](../2026-07-22-module-ecosystem.md) (crawler-engine
+> home is now `news-crawler-itself`; remote-crawler-v2 extracted) and
+> [`2026-07-distributed-crawl-unification.md`](../2026-07-distributed-crawl-unification.md)
+> (the one remote transport = Gen2). Retained for the still-unrealized operator-product
+> vision below (article library/reader, bundle-export jobs, monitoring/SRE, auth) — those
+> workstreams are neither delivered nor superseded. Do NOT resume the crawl-runtime /
+> gateway workstreams from here; they now live in the two successor plans.
+
+**Status:** SUPERSEDED in substance — see banner above  
 **Started:** 2026-03-08  
 **Linked Long-Term Session:** `docs/sessions/long-term/lt-001-advanced-crawler-ui/`
 

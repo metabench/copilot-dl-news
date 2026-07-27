@@ -1,0 +1,184 @@
+<svg viewBox="0 0 1240 928" xmlns="http://www.w3.org/2000/svg" role="img">
+  <title>HTTP caching: max-age freshness, ETag validators, and 304 revalidation</title>
+  <desc>Sequence diagram of a browser, its HTTP cache, and an origin server across three phases: a first-request cache miss that stores the response with Cache-Control max-age 600 and an ETag; a fresh repeat request served from the cache with no network; and a stale request revalidated with If-None-Match, answered by a bodyless 304 Not Modified that restarts the freshness clock.</desc>
+  <defs>
+    <linearGradient id="leatherBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#faf9f7"/><stop offset="55%" stop-color="#f5f3ef"/>
+      <stop offset="100%" stop-color="#ebe8e2"/>
+    </linearGradient>
+    <linearGradient id="obsidianPanel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2d2d2d"/><stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c9a962"/><stop offset="100%" stop-color="#e8d5a3"/>
+    </linearGradient>
+    <pattern id="leatherGrain" width="6" height="6" patternUnits="userSpaceOnUse"
+             patternTransform="rotate(35)">
+      <rect width="6" height="6" fill="none"/>
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#1a1a1a" stroke-width="0.5" opacity="0.025"/>
+    </pattern>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3.5" flood-color="#0a0d14" flood-opacity="0.18"/>
+    </filter>
+    <marker id="arrowGold" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8"
+            orient="auto">
+      <path d="M0.5,0.8 L7.5,4 L0.5,7.2 Z" fill="#c9a962"/>
+    </marker>
+  </defs>
+
+  <!-- 1 · background -->
+  <rect width="1240" height="928" fill="url(#leatherBg)"/>
+  <rect width="1240" height="928" fill="url(#leatherGrain)"/>
+
+  <!-- header -->
+  <text x="44" y="61" font-family="Georgia, serif" font-size="17" fill="#c9a962">&#x2726;</text>
+  <text x="72" y="66" font-family="Georgia, serif" font-size="30" font-weight="bold"
+        fill="#2d2d2d">HTTP Caching</text>
+  <rect x="1112" y="42" width="88" height="26" rx="7" fill="url(#obsidianPanel)"
+        stroke="#c9a962" stroke-width="1"/>
+  <text x="1156" y="59" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace"
+        font-size="10" fill="#e8d5a3">RFC 9111</text>
+  <text x="44" y="92" font-family="Arial, 'Segoe UI', sans-serif" font-size="13"
+        fill="#666">How a browser cache reuses, revalidates, or replaces a stored response &#8212; Cache-Control: max-age, ETag, and 304 Not Modified</text>
+  <rect x="40" y="106" width="1160" height="1" fill="url(#goldAccent)"/>
+
+  <!-- sequence panel -->
+  <g transform="translate(40,128)">
+    <rect width="1160" height="640" rx="12" fill="url(#obsidianPanel)"
+          stroke="#c9a962" stroke-width="1.5" filter="url(#softShadow)"/>
+
+    <!-- structural lifelines (furniture) -->
+    <line x1="170" y1="58" x2="170" y2="596" stroke="#888" stroke-width="1"
+          stroke-dasharray="3 5" opacity="0.55"/>
+    <line x1="580" y1="58" x2="580" y2="596" stroke="#888" stroke-width="1"
+          stroke-dasharray="3 5" opacity="0.55"/>
+    <line x1="990" y1="58" x2="990" y2="596" stroke="#888" stroke-width="1"
+          stroke-dasharray="3 5" opacity="0.55"/>
+
+    <!-- phase separators -->
+    <line x1="24" y1="276" x2="1136" y2="276" stroke="#666" stroke-width="0.75"
+          stroke-dasharray="2 6" opacity="0.5"/>
+    <line x1="24" y1="404" x2="1136" y2="404" stroke="#666" stroke-width="0.75"
+          stroke-dasharray="2 6" opacity="0.5"/>
+
+    <!-- phase 2 quiet-zone ghost card -->
+    <rect x="620" y="322" width="330" height="56" rx="8" fill="none" stroke="#888"
+          stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>
+
+    <!-- 2 · flow arrows (before nodes) -->
+    <line x1="178" y1="132" x2="572" y2="132" stroke="#888" stroke-width="2" marker-end="url(#arrowGold)"/>
+    <line x1="588" y1="164" x2="982" y2="164" stroke="#888" stroke-width="2" marker-end="url(#arrowGold)"/>
+    <line x1="982" y1="204" x2="588" y2="204" stroke="#888" stroke-width="2" marker-end="url(#arrowGold)"/>
+    <line x1="572" y1="244" x2="178" y2="244" stroke="#888" stroke-width="2" marker-end="url(#arrowGold)"/>
+    <line x1="178" y1="334" x2="572" y2="334" stroke="#888" stroke-width="2" marker-end="url(#arrowGold)"/>
+    <line x1="572" y1="366" x2="178" y2="366" stroke="#888" stroke-width="2" marker-end="url(#arrowGold)"/>
+    <line x1="178" y1="460" x2="572" y2="460" stroke="#888" stroke-width="2" marker-end="url(#arrowGold)"/>
+    <line x1="588" y1="492" x2="982" y2="492" stroke="#888" stroke-width="2" marker-end="url(#arrowGold)"/>
+    <!-- THE gold path: 304 Not Modified -->
+    <line x1="982" y1="536" x2="588" y2="536" stroke="#c9a962" stroke-width="2.25" marker-end="url(#arrowGold)"/>
+    <line x1="572" y1="576" x2="178" y2="576" stroke="#888" stroke-width="2" marker-end="url(#arrowGold)"/>
+
+    <!-- 3 · actor chips -->
+    <rect x="85" y="20" width="170" height="38" rx="8" fill="url(#leatherBg)"/>
+    <rect x="495" y="20" width="170" height="38" rx="8" fill="url(#leatherBg)"/>
+    <rect x="905" y="20" width="170" height="38" rx="8" fill="url(#leatherBg)"/>
+    <text x="170" y="44" text-anchor="middle" font-family="Arial, 'Segoe UI', sans-serif"
+          font-size="13" font-weight="bold" fill="#2d2d2d">&#x1F4BB; Browser</text>
+    <text x="580" y="44" text-anchor="middle" font-family="Arial, 'Segoe UI', sans-serif"
+          font-size="13" font-weight="bold" fill="#2d2d2d">&#x1F4E6; HTTP cache</text>
+    <text x="990" y="44" text-anchor="middle" font-family="Arial, 'Segoe UI', sans-serif"
+          font-size="13" font-weight="bold" fill="#2d2d2d">&#x1F5C4;&#xFE0F; Origin server</text>
+
+    <!-- 4 · phase 1 labels -->
+    <text x="24" y="100" font-family="Georgia, serif" font-size="15" font-weight="bold"
+          fill="#e8d5a3">&#x2460; First request &#8212; cache MISS</text>
+    <text x="1136" y="100" text-anchor="end" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="11" fill="#d8d0c1">t = 0 s &#183; nothing stored yet</text>
+    <text x="375" y="124" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="11" fill="#faf9f7">GET /assets/app.js</text>
+    <text x="785" y="156" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="11" fill="#faf9f7">GET /assets/app.js</text>
+    <text x="785" y="196" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="11" fill="#faf9f7">200 OK + body</text>
+    <text x="785" y="220" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="10" fill="#e8d5a3">Cache-Control: max-age=600 &#183; ETag: "a1b2c3"</text>
+    <text x="375" y="236" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="11" fill="#faf9f7">200 OK</text>
+    <text x="375" y="260" text-anchor="middle" font-family="Arial, 'Segoe UI', sans-serif"
+          font-size="10" fill="#d8d0c1">response stored &#8212; fresh for the next 600 s</text>
+
+    <!-- 4 · phase 2 labels -->
+    <text x="24" y="300" font-family="Georgia, serif" font-size="15" font-weight="bold"
+          fill="#e8d5a3">&#x2461; Repeat within 600 s &#8212; FRESH, served from cache</text>
+    <text x="1136" y="300" text-anchor="end" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="11" fill="#d8d0c1">age = 180 s &lt; max-age  <tspan fill="#27ae60">&#9679; FRESH</tspan></text>
+    <text x="375" y="326" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="11" fill="#faf9f7">GET /assets/app.js</text>
+    <text x="375" y="358" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="11" fill="#faf9f7">200 OK</text>
+    <text x="375" y="382" text-anchor="middle" font-family="Arial, 'Segoe UI', sans-serif"
+          font-size="10" fill="#d8d0c1">stored body returned &#8212; origin not asked</text>
+    <text x="785" y="346" text-anchor="middle" font-family="Arial, 'Segoe UI', sans-serif"
+          font-size="12" font-weight="bold" fill="#faf9f7">origin not contacted</text>
+    <text x="785" y="364" text-anchor="middle" font-family="Arial, 'Segoe UI', sans-serif"
+          font-size="10" fill="#d8d0c1">age &lt; max-age &#8594; reuse without revalidation</text>
+
+    <!-- 4 · phase 3 labels -->
+    <text x="24" y="428" font-family="Georgia, serif" font-size="15" font-weight="bold"
+          fill="#e8d5a3">&#x2462; After 600 s &#8212; STALE, revalidate</text>
+    <text x="1136" y="428" text-anchor="end" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="11" fill="#d8d0c1">age = 660 s &gt; max-age  &#9675; STALE</text>
+    <text x="375" y="452" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="11" fill="#faf9f7">GET /assets/app.js</text>
+    <text x="785" y="484" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="11" fill="#faf9f7">GET /assets/app.js</text>
+    <text x="785" y="508" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="10" fill="#e8d5a3">If-None-Match: "a1b2c3"</text>
+    <text x="1000" y="512" font-family="Arial, 'Segoe UI', sans-serif" font-size="10"
+          fill="#d8d0c1">ETag still matches</text>
+    <text x="1000" y="525" font-family="Arial, 'Segoe UI', sans-serif" font-size="10"
+          fill="#d8d0c1">the current version</text>
+    <text x="785" y="528" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="11" font-weight="bold" fill="#e8d5a3">304 Not Modified &#8212; no body</text>
+    <text x="785" y="552" text-anchor="middle" font-family="Arial, 'Segoe UI', sans-serif"
+          font-size="10" fill="#d8d0c1">stored copy revalidated &#8212; new headers refresh it</text>
+    <text x="375" y="568" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace"
+          font-size="11" fill="#faf9f7">200 OK</text>
+    <text x="375" y="592" text-anchor="middle" font-family="Arial, 'Segoe UI', sans-serif"
+          font-size="10" fill="#d8d0c1">stored body served &#8212; fresh for another 600 s</text>
+    <text x="24" y="618" font-family="Arial, 'Segoe UI', sans-serif" font-size="11"
+          fill="#d8d0c1"><tspan fill="#c9a962">&#8627;</tspan>  If the ETag no longer matched, the origin would send 200 OK with the new body and a new ETag &#8212; the cache would replace its copy.</text>
+  </g>
+
+  <!-- 5 · footer: wire vocabulary -->
+  <text x="40" y="800" font-family="Arial, 'Segoe UI', sans-serif" font-size="11"
+        font-weight="bold" letter-spacing="2" fill="#666">ON THE WIRE &#8212; QUICK REFERENCE</text>
+
+  <rect x="40" y="816" width="28" height="2" fill="#c9a962"/>
+  <text x="40" y="840" font-family="'JetBrains Mono', Consolas, monospace" font-size="12"
+        font-weight="bold" fill="#2d2d2d">Cache-Control: max-age=600</text>
+  <text x="40" y="858" font-family="Arial, 'Segoe UI', sans-serif" font-size="10.5" fill="#666">Freshness lifetime: the stored copy</text>
+  <text x="40" y="873" font-family="Arial, 'Segoe UI', sans-serif" font-size="10.5" fill="#666">may be reused without any request</text>
+  <text x="40" y="888" font-family="Arial, 'Segoe UI', sans-serif" font-size="10.5" fill="#666">while its age is under 600 seconds.</text>
+
+  <rect x="335" y="816" width="28" height="2" fill="#c9a962"/>
+  <text x="335" y="840" font-family="'JetBrains Mono', Consolas, monospace" font-size="12"
+        font-weight="bold" fill="#2d2d2d">ETag: "a1b2c3"</text>
+  <text x="335" y="858" font-family="Arial, 'Segoe UI', sans-serif" font-size="10.5" fill="#666">Opaque version fingerprint chosen</text>
+  <text x="335" y="873" font-family="Arial, 'Segoe UI', sans-serif" font-size="10.5" fill="#666">by the origin; stored beside the</text>
+  <text x="335" y="888" font-family="Arial, 'Segoe UI', sans-serif" font-size="10.5" fill="#666">cached body as its validator.</text>
+
+  <rect x="630" y="816" width="28" height="2" fill="#c9a962"/>
+  <text x="630" y="840" font-family="'JetBrains Mono', Consolas, monospace" font-size="12"
+        font-weight="bold" fill="#2d2d2d">If-None-Match: "a1b2c3"</text>
+  <text x="630" y="858" font-family="Arial, 'Segoe UI', sans-serif" font-size="10.5" fill="#666">Conditional GET: send the body only</text>
+  <text x="630" y="873" font-family="Arial, 'Segoe UI', sans-serif" font-size="10.5" fill="#666">if the current ETag differs from the</text>
+  <text x="630" y="888" font-family="Arial, 'Segoe UI', sans-serif" font-size="10.5" fill="#666">one the cache already holds.</text>
+
+  <rect x="925" y="816" width="28" height="2" fill="#c9a962"/>
+  <text x="925" y="840" font-family="'JetBrains Mono', Consolas, monospace" font-size="12"
+        font-weight="bold" fill="#2d2d2d">304 Not Modified</text>
+  <text x="925" y="858" font-family="Arial, 'Segoe UI', sans-serif" font-size="10.5" fill="#666">Bodyless answer: the stored copy is</text>
+  <text x="925" y="873" font-family="Arial, 'Segoe UI', sans-serif" font-size="10.5" fill="#666">still valid; its headers are updated</text>
+  <text x="925" y="888" font-family="Arial, 'Segoe UI', sans-serif" font-size="10.5" fill="#666">and the freshness clock restarts.</text>
+</svg>

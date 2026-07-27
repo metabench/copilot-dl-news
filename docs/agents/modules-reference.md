@@ -6,11 +6,26 @@
 
 ## Module Map
 
+> Updated 2026-07-22 per the module-ecosystem owner directive — see
+> [../plans/2026-07-22-module-ecosystem.md](../plans/2026-07-22-module-ecosystem.md)
+> for roles, rules, and migration status. copilot-dl-news is the COORDINATOR; new
+> functionality is implemented + tested in the owning module and called from here.
+
 | Module | Directory | Purpose | Tech Stack |
 |--------|-----------|---------|------------|
-| **Platform Core** | `copilot-dl-news` | The current monolithic orchestrator (crawlers, UI, legacy DB). | Node.js, SQLite (Legacy) |
-| **News Crawler DB** | `../news-crawler-db` | **The Future DB Layer**. Unified Drizzle ORM schema + Fastify API. | Drizzle, SQLite/Postgres, Fastify |
+| **Coordinator** | `copilot-dl-news` | Electron/unified-app shell, live `data/news.db` custodian, UI, operational tooling — calls the modules. | Node.js, SQLite |
+| **News Crawler Itself** | `../news-crawler-itself` | **THE crawler engine (most important module)**: worker fetch loop, politeness, worker-thread parallel compression, remote-worker runtime. Bootstrapped 2026-07-22; receiving `deploy/remote-crawler-v2/`. | Node.js |
+| **News Crawler DB** | `../news-crawler-db` | **The DB Layer** (wired `file:`). Unified Drizzle ORM schema + Fastify API. | Drizzle, SQLite/Postgres, Fastify |
+| **News DB Pure Analysis** | `../news-db-pure-analysis` | Pure functional business logic, zero IO (wired `file:`). | TypeScript |
 | **News DB Analysis** | `../news-db-analysis` | **Pure Analysis Library**. Time-series, coverage, trends. | TypeScript, Vitest |
+| **Document Intelligence** | `../news-crawler-document-intelligence` | Pure HTML/DOM document intelligence. | TypeScript |
+| **URL Intelligence** | `../news-crawler-url-intelligence` | URL classification/shape intelligence. | TypeScript |
+| **Places Intelligence** | `../news-crawler-places-intelligence` | Multilingual place detection/matching. | TypeScript |
+| **General Intelligence** | `../news-crawler-general-intelligence` | Fusion layer: places+document+URL signals → page verdicts. | TypeScript |
+| **News Dev Tools** | `../news-dev-tools` | Cross-repo developer tooling (AST scan/edit, sessions, MCP). | Node.js |
+
+Excluded for the moment (owner): `../news-crawler-backend-core`. Not part of this
+ecosystem: `http-cache-store`.
 
 ---
 

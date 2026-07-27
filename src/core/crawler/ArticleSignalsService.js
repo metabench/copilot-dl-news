@@ -75,6 +75,97 @@ class ArticleSignalsService {
     return this._compiledDatePathRegex.test(urlStr);
   }
 
+  /**
+   * STRICTER, shape-only article test for frontier selection (task #48). Unlike
+   * looksLikeArticle (which matches article-WORDS anywhere in the URL and so
+   * mis-labels section hubs like `/business/` or `/sport/` as articles), this
+   * looks purely at URL STRUCTURE: a real article has a deep path ending in a
+   * SUBSTANTIAL terminal slug (a long id/hash, a 6+ digit story id, a `.ece` CMS
+   * file, a date path, or a many-word hyphenated slug); a section index is a
+   * shallow path or a hub/media container.
+   *
+   * Hardened cycle 75 (harness-measured + adversarially verified):
+   *  - a single trailing slash is STRIPPED, not auto-rejected, so a deep dated/
+   *    slugged article that ends in '/' is not dropped;
+   *  - `/article(s)/<id>` and `article<digits>.ece` terminals are recognised even
+   *    when the id is short/mixed (bbc `/sport/…/articles/c0m2rkwm87po`);
+   *  - live-blog `?page=with:block` fragments are rejected (frontier de-dup);
+   *  - a two-tier content-type veto keeps TEXT articles only: MEDIA segments
+   *    (video/audio/podcast/gallery) veto unconditionally; HUB/index containers
+   *    (topic/category/series/section/hub/tag/author/newsletter…) veto UNLESS the
+   *    terminal carries a CMS-article signal — so apnews `/hub/<multiword>`,
+   *    aljazeera `/category/<multiword>`, guardian `/world/series/<multiword>`,
+   *    `/author/<name>_<id>` are all rejected (a bare 4+ hyphen slug does NOT
+   *    rescue a hub container), while a real story filed under a hub
+   *    (thehindu `/newsletter/<name>/<slug>/article<id>.ece`) is kept.
+   *
+   * Correctly rejects thehindu `/business/`, apnews `/hub/congress` AND
+   * `/hub/us-department-of-education`, bbc `/…/topics/<id>`; keeps apnews
+   * `/article/<32hex>`, thehindu `…/article70607271.ece`, guardian
+   * `/world/2025/sep/15/…`, bbc `/sport/…/articles/<id>`. Static + pure so it can
+   * be injected into ncdb selectDueFrontier without an ncdb→copilot dependency.
+   * Never throws; always returns a boolean.
+   */
+  static isArticleShapedUrl(url) {
+    if (!url || typeof url !== 'string') return false;
+    let u;
+    try { u = new URL(url); } catch (_) { return false; }
+    // OVER-selection fix (cycle 75, measured 33 cases): live-blog block-pagination
+    // fragments (e.g. Guardian `?page=with:block-<hash>`) are the SAME article
+    // re-emitted once per block anchor and flood the frontier with duplicates.
+    // Reject the ?page fragments; the base live-blog URL (no such query) is still
+    // evaluated normally below and kept as one article.
+    if (/[?&]page=with(:|%3A)block/i.test(u.search || '')) return false;
+    let p = u.pathname || '/';
+    // UNDER-selection fix (cycle 75): strip a SINGLE trailing slash rather than
+    // pre-rejecting. The old `endsWith('/') => false` dropped deep dated/slugged
+    // articles that merely end in '/' (e.g. nytimes /athletic/<id>/<Y>/<M>/<D>/<slug>/,
+    // /wirecutter/reviews/<slug>/) BEFORE their article signals were checked.
+    // Section indexes (/business/, /news/national/) stay rejected below: after the
+    // strip they are still too shallow or carry no article signal.
+    if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
+    const segs = p.split('/').filter(Boolean);
+    if (segs.length < 2) return false;               // /congress , /video , /business = too shallow
+    const lower = segs.map((s) => s.toLowerCase());
+    const last = segs[segs.length - 1];
+    const prev = segs[segs.length - 2] || '';
+    const hyphenParts = last.split('-').filter(Boolean).length;
+    const hasLongId = /[a-f0-9]{12,}|\d{6,}/i.test(last);   // 12+ hex hash or 6+ digit story id (topic ids are ~8 hex)
+    const hasDatePath = /\/(19|20)\d{2}\/\d{1,2}\/\d{1,2}\//.test(p);
+    // UNDER-selection fix (cycle 75, measured — bbc /sport/.../articles/<id>): a CMS
+    // `/article(s)/<id>` segment is an unambiguous article signal even when the id is
+    // a short mixed-alnum slug (e.g. `c0m2rkwm87po`, neither 12-hex nor 6-digit).
+    const isCmsArticlePath = (prev === 'article' || prev === 'articles') && /^[a-z0-9]{6,}$/i.test(last);
+    const isEceArticle = /^article\d{4,}\.ece$/i.test(last);   // thehindu CMS article file
+    // A CMS-article terminal signal (distinct from a bare long id, which author/topic
+    // ids also carry). Used to exempt a real article that lives under a hub container.
+    const cmsArticleSignal = hasDatePath || isCmsArticlePath || isEceArticle;
+    // Content-type veto, TWO TIERS (cycle 75; hardened after an adversarial pass
+    // found both a false-drop and section-hub over-calls the first single-tier
+    // veto caused):
+    //  Tier 1 — MEDIA (non-text regardless of terminal): veto if the word appears
+    //  as ANY whole path segment. Correctly drops bbc /reel/video, /audio/play,
+    //  irishtimes /video/video/<date>/<slug>, thehindu /podcast/…/article<id>.ece.
+    const MEDIA_SEGMENTS = new Set([
+      'video', 'videos', 'audio', 'podcast', 'podcasts', 'gallery', 'galleries',
+    ]);
+    if (lower.some((s) => MEDIA_SEGMENTS.has(s))) return false;
+    //  Tier 2 — HUB/INDEX containers (topic/category/series/author/tag/newsletter…):
+    //  veto ONLY when there is NO CMS-article terminal signal. This drops the index
+    //  landings (apnews /hub/<multiword>, aljazeera /category/<multiword>, guardian
+    //  /world/series/<multiword>, npr /series/<id>/<multiword>, /author/<name>_<id>)
+    //  — where a bare `hyphenParts>=4` or a hub/author id must NOT rescue — while
+    //  KEEPING a genuine article filed under a hub (thehindu
+    //  /newsletter/<name>/<slug>/article<id>.ece, or any dated story under a topic).
+    const HUB_SEGMENTS = new Set([
+      'tag', 'tags', 'topic', 'topics', 'author', 'authors', 'profile', 'search',
+      'newsletter', 'newsletters', 'category', 'categories', 'hub', 'hubs',
+      'series', 'section', 'sections', 'collection', 'collections',
+    ]);
+    if (lower.some((s) => HUB_SEGMENTS.has(s)) && !cmsArticleSignal) return false;
+    return hasDatePath || hasLongId || isCmsArticlePath || isEceArticle || hyphenParts >= 4;
+  }
+
   computeUrlSignals(rawUrl) {
     if (!rawUrl) return null;
     try {

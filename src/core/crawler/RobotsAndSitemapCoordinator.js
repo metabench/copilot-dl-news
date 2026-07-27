@@ -10,6 +10,7 @@ class RobotsAndSitemapCoordinator {
     loadSitemaps,
     useSitemap = true,
     sitemapMaxUrls = 5000,
+    sitemapMaxFetches = 12,
     getUrlDecision,
     handlePolicySkip,
     isOnDomain,
@@ -64,6 +65,7 @@ class RobotsAndSitemapCoordinator {
     this.loadSitemaps = loadSitemaps;
     this.useSitemap = useSitemap;
     this.sitemapMaxUrls = sitemapMaxUrls;
+    this.sitemapMaxFetches = sitemapMaxFetches;
     this.getUrlDecision = getUrlDecision;
     this.handlePolicySkip = handlePolicySkip;
     this.isOnDomain = isOnDomain;
@@ -154,6 +156,7 @@ class RobotsAndSitemapCoordinator {
     if (!this.useSitemap) return 0;
     const pushed = await this.loadSitemaps(this.baseUrl, this.domain, this.sitemapUrls, {
       sitemapMaxUrls: this.sitemapMaxUrls,
+      sitemapMaxFetches: this.sitemapMaxFetches,
       push: (url, meta) => this._handleSitemapUrl(url, meta),
       onFetch: (info) => this._recordSitemapFetch(info),
       cache: this._sitemapCache()

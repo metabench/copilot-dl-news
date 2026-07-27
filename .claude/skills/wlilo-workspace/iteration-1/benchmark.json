@@ -1,0 +1,410 @@
+{
+  "metadata": {
+    "skill_name": "wlilo",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-07-19T16:34:28Z",
+    "evals_run": [
+      0,
+      1,
+      2
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 0,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 647.7,
+        "tokens": 96027,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "SVG exists, tags balanced, viewBox present",
+          "passed": true,
+          "evidence": "wellFormed=true viewBox=true len=16907"
+        },
+        {
+          "text": "WLILO palette adherence: >=3 token hexes and >=60% of distinct hexes are tokens",
+          "passed": true,
+          "evidence": "distinct=13 tokens=13 (100%) nonTokens=[]"
+        },
+        {
+          "text": "Never-flat rule: at least one linearGradient defined",
+          "passed": true,
+          "evidence": "3 gradients"
+        },
+        {
+          "text": "Accessibility: <title> and <desc> present",
+          "passed": true,
+          "evidence": "title=true desc=true"
+        },
+        {
+          "text": "Correctness markers: ETag, max-age, 304, If-None-Match all present",
+          "passed": true,
+          "evidence": "all present"
+        },
+        {
+          "text": "Glyph vocabulary: at least one emoji/unicode glyph",
+          "passed": true,
+          "evidence": "regex over emoji+geometric+arrow+block ranges"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 217,
+        "tokens": 59739,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "SVG exists, tags balanced, viewBox present",
+          "passed": true,
+          "evidence": "wellFormed=true viewBox=true len=4063"
+        },
+        {
+          "text": "WLILO palette adherence: >=3 token hexes and >=60% of distinct hexes are tokens",
+          "passed": true,
+          "evidence": "distinct=11 tokens=11 (100%) nonTokens=[]"
+        },
+        {
+          "text": "Never-flat rule: at least one linearGradient defined",
+          "passed": true,
+          "evidence": "3 gradients"
+        },
+        {
+          "text": "Data fidelity: atlas/hermes/pluto + 78/41/91 all present",
+          "passed": true,
+          "evidence": "all present"
+        },
+        {
+          "text": "Tier-1 restraint: at most 6 <path> elements",
+          "passed": true,
+          "evidence": "0 path elements"
+        },
+        {
+          "text": "Unicode block-bar meters used",
+          "passed": true,
+          "evidence": "block char scan"
+        },
+        {
+          "text": "Failure state uses WLILO error/ruby color",
+          "passed": true,
+          "evidence": "ruby hex scan"
+        },
+        {
+          "text": "Leather AND obsidian tones both present (the WLILO signature)",
+          "passed": true,
+          "evidence": "leather+obsidian hex scan"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 445.3,
+        "tokens": 83990,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Both deliverables exist (SVG + CSS)",
+          "passed": true,
+          "evidence": "svg=true css=true"
+        },
+        {
+          "text": "SVG exists, tags balanced, viewBox present",
+          "passed": true,
+          "evidence": "wellFormed=true viewBox=true len=8119"
+        },
+        {
+          "text": "WLILO palette adherence: >=3 token hexes and >=60% of distinct hexes are tokens",
+          "passed": true,
+          "evidence": "distinct=21 tokens=21 (100%) nonTokens=[]"
+        },
+        {
+          "text": "Never-flat rule: at least one linearGradient defined",
+          "passed": true,
+          "evidence": "7 gradients"
+        },
+        {
+          "text": "Accessibility: <title> and <desc> present",
+          "passed": true,
+          "evidence": "title=true desc=true"
+        },
+        {
+          "text": "Gemstone CTAs: both labels present, sapphire used, and sapphire is the PRIMARY (Get started) gem",
+          "passed": true,
+          "evidence": "labels=true sapphireInFile=true primaryIsSapphire=true"
+        },
+        {
+          "text": "Full-luxe texture: <pattern> or 5-stop brushed metal present",
+          "passed": true,
+          "evidence": "pattern=true"
+        },
+        {
+          "text": "CSS defines >=5 --wlilo-* custom properties",
+          "passed": true,
+          "evidence": "30 vars: --wlilo-bg,--wlilo-bg-alt,--wlilo-surface,--wlilo-surface-hover,--wlilo-panel,--wlilo-panel-light,--wlilo-panel-dark,--wlilo-panel-hover"
+        },
+        {
+          "text": "CSS uses semantic .wlilo-* classes",
+          "passed": true,
+          "evidence": ".wlilo-page,.wlilo-header,.wlilo-eyebrow,.wlilo-panel-card,.wlilo-hairline,.wlilo-cta"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 0,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.6666666666666666,
+        "passed": 4,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 463,
+        "tokens": 63274,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "SVG exists, tags balanced, viewBox present",
+          "passed": true,
+          "evidence": "wellFormed=true viewBox=true len=14179"
+        },
+        {
+          "text": "WLILO palette adherence: >=3 token hexes and >=60% of distinct hexes are tokens",
+          "passed": false,
+          "evidence": "distinct=38 tokens=1 (3%) nonTokens=[2563eb,16a34a,b8b2a7,f8f7f4,1c1917,78716c,e5e0d6,f1efe9]"
+        },
+        {
+          "text": "Never-flat rule: at least one linearGradient defined",
+          "passed": false,
+          "evidence": "0 gradients"
+        },
+        {
+          "text": "Accessibility: <title> and <desc> present",
+          "passed": true,
+          "evidence": "title=true desc=true"
+        },
+        {
+          "text": "Correctness markers: ETag, max-age, 304, If-None-Match all present",
+          "passed": true,
+          "evidence": "all present"
+        },
+        {
+          "text": "Glyph vocabulary: at least one emoji/unicode glyph",
+          "passed": true,
+          "evidence": "regex over emoji+geometric+arrow+block ranges"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.375,
+        "passed": 3,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 194.3,
+        "tokens": 52909,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "SVG exists, tags balanced, viewBox present",
+          "passed": true,
+          "evidence": "wellFormed=true viewBox=true len=3700"
+        },
+        {
+          "text": "WLILO palette adherence: >=3 token hexes and >=60% of distinct hexes are tokens",
+          "passed": false,
+          "evidence": "distinct=9 tokens=1 (11%) nonTokens=[1a1a19,898781,2c2c2a,0ca30c,fab219,c3c2b7,d03b3b,118833]"
+        },
+        {
+          "text": "Never-flat rule: at least one linearGradient defined",
+          "passed": false,
+          "evidence": "0 gradients"
+        },
+        {
+          "text": "Data fidelity: atlas/hermes/pluto + 78/41/91 all present",
+          "passed": true,
+          "evidence": "all present"
+        },
+        {
+          "text": "Tier-1 restraint: at most 6 <path> elements",
+          "passed": true,
+          "evidence": "0 path elements"
+        },
+        {
+          "text": "Unicode block-bar meters used",
+          "passed": false,
+          "evidence": "block char scan"
+        },
+        {
+          "text": "Failure state uses WLILO error/ruby color",
+          "passed": false,
+          "evidence": "ruby hex scan"
+        },
+        {
+          "text": "Leather AND obsidian tones both present (the WLILO signature)",
+          "passed": false,
+          "evidence": "leather+obsidian hex scan"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.6666666666666666,
+        "passed": 6,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 374.4,
+        "tokens": 57571,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Both deliverables exist (SVG + CSS)",
+          "passed": true,
+          "evidence": "svg=true css=true"
+        },
+        {
+          "text": "SVG exists, tags balanced, viewBox present",
+          "passed": true,
+          "evidence": "wellFormed=true viewBox=true len=11389"
+        },
+        {
+          "text": "WLILO palette adherence: >=3 token hexes and >=60% of distinct hexes are tokens",
+          "passed": false,
+          "evidence": "distinct=35 tokens=1 (3%) nonTokens=[182742,0c1426,060a14,cfe4ff,7fa8e8,faf5e6,ead9a8,c9a24b]"
+        },
+        {
+          "text": "Never-flat rule: at least one linearGradient defined",
+          "passed": true,
+          "evidence": "8 gradients"
+        },
+        {
+          "text": "Accessibility: <title> and <desc> present",
+          "passed": true,
+          "evidence": "title=true desc=true"
+        },
+        {
+          "text": "Gemstone CTAs: both labels present, sapphire used, and sapphire is the PRIMARY (Get started) gem",
+          "passed": false,
+          "evidence": "labels=true sapphireInFile=false primaryIsSapphire=true"
+        },
+        {
+          "text": "Full-luxe texture: <pattern> or 5-stop brushed metal present",
+          "passed": false,
+          "evidence": "pattern=false"
+        },
+        {
+          "text": "CSS defines >=5 --wlilo-* custom properties",
+          "passed": true,
+          "evidence": "31 vars: --wlilo-ink,--wlilo-surface,--wlilo-surface-high,--wlilo-line,--wlilo-gold,--wlilo-gold-soft,--wlilo-gold-deep,--wlilo-champagne"
+        },
+        {
+          "text": "CSS uses semantic .wlilo-* classes",
+          "passed": true,
+          "evidence": ".wlilo-page,.wlilo-btn,.wlilo-btn--emerald,.wlilo-btn--sapphire,.wlilo-eyebrow,.wlilo-rule"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1,
+        "stddev": 0,
+        "min": 1,
+        "max": 1
+      },
+      "time_seconds": {
+        "mean": 436.6667,
+        "stddev": 215.4798,
+        "min": 217,
+        "max": 647.7
+      },
+      "tokens": {
+        "mean": 79918.6667,
+        "stddev": 18483.4129,
+        "min": 59739,
+        "max": 96027
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.5694,
+        "stddev": 0.1684,
+        "min": 0.375,
+        "max": 0.6667
+      },
+      "time_seconds": {
+        "mean": 343.9,
+        "stddev": 136.9219,
+        "min": 194.3,
+        "max": 463
+      },
+      "tokens": {
+        "mean": 57918,
+        "stddev": 5191.2054,
+        "min": 52909,
+        "max": 63274
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.43",
+      "time_seconds": "+92.8",
+      "tokens": "+22001"
+    }
+  },
+  "notes": [],
+  "analyst_observations": [
+    "Discriminating assertions: palette adherence is the single strongest signal (with-skill 100% token usage on every eval vs 3-11% baseline); never-flat gradients, block-bar meters, leather+obsidian signature, texture patterns, and sapphire-primary CTA semantics all separated cleanly.",
+    "Non-discriminating assertions: XML well-formedness, viewBox, and data fidelity passed in both configurations everywhere - they measure baseline competence, not the skill. Keep them as regression floors, not skill evidence.",
+    "Time/token premium (+93s, +22k tokens) is the cost of reading references and actually running validation gates (one with-skill run executed svg-validate + collisions + overflow incl. a puppeteer pass and wrote a fact sheet before drawing).",
+    "High with-skill time variance (stddev 216s) is the intensity ladder working as designed - tier 1 (status card) was fast, tier 3 (hero) slow - not flakiness.",
+    "Qualitative pattern: both baselines invented their own reading of WLILO (one went dark-mode, one expanded the acronym as White-Light-In-Light-Out) - the aesthetic contract is genuinely undiscoverable from the name, which is the skill's core value."
+  ]
+}

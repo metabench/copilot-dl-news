@@ -89,8 +89,9 @@ async function testPlaceMatching() {
         cs.content_blob as html_content,
         ca.analysis_json
       FROM http_responses hr
-      LEFT JOIN content_analysis ca ON hr.id = ca.content_id
-      LEFT JOIN content_storage cs ON hr.id = cs.http_response_id
+      LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+      LEFT JOIN content_analysis ca ON ca.content_id = cs.id
+        AND ca.analysis_version = (SELECT MAX(analysis_version) FROM content_analysis WHERE content_id = cs.id)
       WHERE hr.id = ?
     `).get(testArticleId);
 

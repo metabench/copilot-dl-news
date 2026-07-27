@@ -212,7 +212,18 @@ const crawlerOptionsSchema = {
   // Concurrency: For regular crawls, number of parallel workers.
   // For gazetteer/geography crawls: maximum allowed concurrency (may use less or none).
   // Gazetteer mode currently processes sequentially and ignores this value.
-  concurrency: { type: 'number', default: 1, processor: (val) => Math.max(1, val) },
+  // Default raised 1 -> 3 on 2026-07-26 (owner-approved). Serial fetching left each host
+  // idle for most of every inter-fetch gap: measured 68% of that time was neither
+  // downloading nor waiting on a configured delay. Concurrency overlaps that idle.
+  //   speed  : 2.88x on the offline fixture (5.48 -> 15.81 req/s, noise 4.7%,
+  //            maxInFlight=3 confirming the setting applied) — tools/perf/concurrency-bench.js
+  //   safety : ZERO 429/403/503 across 3,419 live responses on 7 hosts (mixed
+  //            preset-floor and no-floor) over 16 minutes at this exact value.
+  //   why 3  : concurrency 4 measured 3.23x — only +12% for 33% more load per host.
+  // This does NOT loosen politeness: the robots crawl-delay remains an absolute floor
+  // and 429 backoff is untouched. Concurrency overlaps WAITING; it never shortens a
+  // configured delay. See docs/plans/2026-07-24-crawl-perf-fix-queue.md §CYCLE 19.
+  concurrency: { type: 'number', default: 3, processor: (val) => Math.max(1, val) },
   maxQueue: { type: 'number', default: 10000, processor: (val) => Math.max(1000, val) },
   retryLimit: { type: 'number', default: 3 },
   backoffBaseMs: { type: 'number', default: 500 },
@@ -228,6 +239,9 @@ const crawlerOptionsSchema = {
   useSitemap: { type: 'boolean', default: true },
   sitemapOnly: { type: 'boolean', default: false },
   sitemapMaxUrls: { type: 'number', default: 5000, processor: (val) => Math.max(0, val) },
+  // Cap on sitemap DOCUMENTS fetched per crawl (indexes chain hundreds of
+  // children; discovery must pivot to real pages quickly). Override-able.
+  sitemapMaxFetches: { type: 'number', default: 12, processor: (val) => Math.max(1, val) },
   hubMaxPages: { type: 'number', default: undefined },
   hubMaxDays: { type: 'number', default: undefined },
   intMaxSeeds: { type: 'number', default: 50 },
@@ -310,6 +324,7 @@ class NewsCrawler extends Crawler {
     this.useSitemap = opts.useSitemap;
     this.sitemapOnly = opts.sitemapOnly;
     this.sitemapMaxUrls = opts.sitemapMaxUrls;
+    this.sitemapMaxFetches = opts.sitemapMaxFetches;
     // Coarse lifecycle phase surfaced to the crawl-status UI so a running
     // crawl is legible ('preparing' -> a startup stage id like 'sitemaps'
     // -> 'crawling'). Updated in _trackStartupStage and _markStartupComplete.

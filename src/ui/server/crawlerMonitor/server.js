@@ -150,8 +150,10 @@ async function addDemoData() {
   });
   await lockManager.acquire({ domain: 'example.com', workerId: 'worker-1', reason: 'crawling' });
   await lockManager.acquire({ domain: 'news.ycombinator.com', workerId: 'worker-2', reason: 'crawling' });
-  metricsService.recordVisit({ url: 'https://example.com/', workerId: 'worker-1', duration: 150, statusCode: 200 });
-  metricsService.recordError({ url: 'https://flaky-site.com/page', workerId: 'worker-1', error: 'ECONNRESET', message: 'Connection reset by peer' });
+  // (cycle 76) removed two demo-seed calls to CrawlerMetricsService.recordVisit
+  // (never existed → threw) and .recordError (dead recorder retired). The demo
+  // dashboard's throughput/error panels were already permanently empty; the
+  // lock-manager demo above still exercises the live path.
 }
 
 // ─────────────────────────────────────────────────────────────────

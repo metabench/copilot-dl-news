@@ -1,0 +1,26 @@
+{
+  "skill_name": "wlilo",
+  "evals": [
+    {
+      "id": 0,
+      "name": "http-caching-explainer",
+      "prompt": "Make me an SVG diagram in the WLILO style that explains how HTTP caching works — I want it to cover ETags, Cache-Control max-age, and 304 revalidation. It's going in our team's engineering docs, so it needs to be genuinely correct, not hand-wavy.",
+      "expected_output": "A hybrid-tier WLILO SVG: leather background, obsidian panels, gold-scarce accents, correct HTTP caching semantics (fresh vs stale, conditional GET with If-None-Match → 304), emoji node icons, validated layout with no overlapping text.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "homelab-status-card",
+      "prompt": "Quick one: WLILO status card SVG for my home lab. Three servers: atlas (up, disk 78% full, last backup 02:14), hermes (up, disk 41%, backup 03:02), pluto (DOWN since yesterday, disk 91%, backup FAILED). Keep it fast and text-forward, don't over-draw it.",
+      "expected_output": "A glyph-led (tier 1) WLILO card: one obsidian panel on leather, monospace rows with emoji identity icons, unicode block-bar disk meters, colored state dots; minimal paths; respects 'don't over-draw'.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "launch-hero-css",
+      "prompt": "We're launching v2.0 of 'Meridian', our data-pipeline product. I want a hero/poster-grade WLILO SVG for the launch page (full luxury treatment — gemstone buttons for 'Get started' and 'Read the docs') plus a small matching CSS snippet with the WLILO variables so our frontend can style the surrounding page consistently.",
+      "expected_output": "A full-luxe (tier 3) WLILO SVG poster: Luxe register, brushed metal, gemstone CTAs with correct semantics (sapphire primary, non-ruby secondary), grain texture, plus a CSS snippet defining --wlilo-* custom properties and semantic classes matching the token schema.",
+      "files": []
+    }
+  ]
+}

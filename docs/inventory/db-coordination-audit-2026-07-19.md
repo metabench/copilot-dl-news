@@ -120,3 +120,35 @@ reproduces the copilot semantics), NOT reuse of an existing name-matching export
 found 0/3 safe — every name-matching ncdb export had a real semantic divergence. Do NOT repoint
 without a per-candidate semantic verification; the copilot→ncdb delegation is gated on ncdb-side
 exports, not copilot edits.
+
+## Landed (2026-07-19, follow-up session): ArticlePlaceMatcher wrong-row fix + delegation
+
+Scope correction to Tier B's "duplicated in ArticlePlaceMatcher.js:55": that copy was NOT a
+duplicate of the canonical join but a DIVERGENT variant with a confirmed wrong-row bug —
+`LEFT JOIN content_analysis ca ON hr.id = ca.content_id` joins analysis against
+`http_responses.id`, but `content_analysis.content_id` references `content_storage.id`
+(178,304 of 193,366 live content_storage rows have `id != http_response_id`, so it read
+another article's title/analysis_json ~92% of the time).
+
+- **Fix + delegation (one step, ncdb-exact-SQL-first):** the corrected read (through
+  content_storage, per-content_id MAX `analysis_version`, plus a `compression_types` join so the
+  caller can decode `content_blob`) landed as NEW ncdb export
+  **`selectArticleTextRowForPlaceMatching(db, httpResponseId)`**
+  (`src/db/sqlite/access/legacy-articlePlaceMatcher.ts`, own statement-cache key). Both
+  `matchArticleToPlaces` and `matchArticleToPlacesPlus` now go through one
+  `getArticleData()` that calls it and decompresses (decode stays copilot-side).
+- **Regression suite:** `src/intelligence/matching/__tests__/ArticlePlaceMatcher.test.js` —
+  real NewsDatabase temp file with a deliberately misaligned-id fixture (a decoy
+  content_storage row takes the id equal to the target's http_response_id; aligned-id fixtures
+  mask this bug). Mutation-checked: restoring the buggy join fails the join tests; dropping the
+  MAX-version predicate fails the version test.
+- **Blast radius (live `data/news.db`):** `article_place_relations` held 1,034 rows across 3
+  articles. 1,032 rows (hr 67828: 476, hr 67830: 556; BBC Persian/Marathi pages, run of
+  2026-01-04) were matched with the WRONG headlines (POLITICO titles) — body HTML was joined
+  correctly, but the headline drives 2× score boosts and 'primary' relation_type, so
+  confidence/relation_type and any headline-only matches are contaminated. The other 2 rows
+  (hr 999) are manual-script fixture noise from `tests/test-place-matching.js` run against the
+  live DB. Purge + re-run NOT done (destructive; needs a decision).
+- **Same wrong join, second site:** `AnalysisTask.js:267` used `ca.content_id = hr.id` for the
+  progress-display title (selection logic unaffected) — fixed with a fan-out-safe correlated
+  scalar subquery.

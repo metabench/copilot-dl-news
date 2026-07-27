@@ -1,0 +1,114 @@
+/* ==========================================================================
+   WLILO theme — Meridian v2.0 launch
+   WLILO read as "White Light In, Light Out": white light enters, gem-cut
+   surfaces return dispersed colour. Variables mirror meridian-hero.svg so
+   the surrounding page styles consistently with the hero artwork.
+   ========================================================================== */
+
+:root {
+  /* ground */
+  --wlilo-ink:          #060a14;   /* page background            */
+  --wlilo-surface:      #0c1426;   /* cards, panels              */
+  --wlilo-surface-high: #182742;   /* raised / glow centre       */
+  --wlilo-line:         rgba(255, 255, 255, 0.08);
+
+  /* metals & type */
+  --wlilo-gold:         #d4af37;
+  --wlilo-gold-soft:    #ead9a8;
+  --wlilo-gold-deep:    #8a6a1c;
+  --wlilo-champagne:    linear-gradient(180deg, #faf5e6 0%, #ead9a8 55%, #c9a24b 100%);
+  --wlilo-text:         #f2ecd9;
+  --wlilo-text-muted:   #aeb8cc;
+  --wlilo-text-faint:   #7d8aa3;
+
+  /* gemstones (hi / mid / lo facets) */
+  --wlilo-emerald-hi:   #2fbf8f;
+  --wlilo-emerald-mid:  #0e8a5f;
+  --wlilo-emerald-lo:   #045139;
+  --wlilo-sapphire-hi:  #5ea0ff;
+  --wlilo-sapphire-mid: #2563c9;
+  --wlilo-sapphire-lo:  #12336e;
+  --wlilo-ruby:         #e5484d;
+  --wlilo-amber:        #f5a524;
+  --wlilo-amethyst:     #8b5cf6;
+
+  /* white light in -> light out */
+  --wlilo-beam:      linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.22) 35%, rgba(255,255,255,0.55) 100%);
+  --wlilo-spectrum:  linear-gradient(90deg, #ff6b6b, #ffa94d, #ffd43b, #51cf66, #4dabf7, #b197fc);
+
+  /* light & lift */
+  --wlilo-glow-emerald:  0 10px 32px rgba(15, 160, 111, 0.45);
+  --wlilo-glow-sapphire: 0 10px 32px rgba(47, 111, 216, 0.45);
+  --wlilo-gloss:         linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.04));
+  --wlilo-bezel:         linear-gradient(180deg, #f4e2a5, #d4af37 50%, #8a6a1c);
+
+  /* shape & voice */
+  --wlilo-radius-pill:  999px;
+  --wlilo-radius-card:  16px;
+  --wlilo-font-display: Didot, "Playfair Display", "Bodoni MT", Georgia, serif;
+  --wlilo-font-ui:      Futura, "Century Gothic", "Avenir Next", "Segoe UI", sans-serif;
+  --wlilo-tracking:     0.18em;
+}
+
+/* page ground matching the hero's radial glow */
+.wlilo-page {
+  background:
+    radial-gradient(85% 85% at 50% 30%, var(--wlilo-surface-high) 0%, var(--wlilo-surface) 45%, var(--wlilo-ink) 100%);
+  color: var(--wlilo-text);
+  font-family: var(--wlilo-font-ui);
+}
+
+/* gemstone buttons — bezel-set, glossed, lit from within */
+.wlilo-btn {
+  position: relative;
+  display: inline-block;
+  padding: 1.1rem 2.6rem;
+  border: 1.5px solid var(--wlilo-gold);
+  border-radius: var(--wlilo-radius-pill);
+  font-family: var(--wlilo-font-ui);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: var(--wlilo-tracking);
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.wlilo-btn::before {           /* top gloss band, as in the SVG gems */
+  content: "";
+  position: absolute;
+  inset: 10% 7% auto 7%;
+  height: 38%;
+  border-radius: var(--wlilo-radius-pill);
+  background: var(--wlilo-gloss);
+  pointer-events: none;
+}
+.wlilo-btn:hover  { transform: translateY(-2px); }
+.wlilo-btn:focus-visible { outline: 2px solid var(--wlilo-gold-soft); outline-offset: 3px; }
+
+.wlilo-btn--emerald {
+  color: #eafff5;
+  background: linear-gradient(180deg, var(--wlilo-emerald-hi) 0%, var(--wlilo-emerald-mid) 45%, var(--wlilo-emerald-lo) 100%);
+  box-shadow: var(--wlilo-glow-emerald);
+}
+.wlilo-btn--sapphire {
+  color: #eaf3ff;
+  background: linear-gradient(180deg, var(--wlilo-sapphire-hi) 0%, var(--wlilo-sapphire-mid) 45%, var(--wlilo-sapphire-lo) 100%);
+  box-shadow: var(--wlilo-glow-sapphire);
+}
+
+/* small helpers echoing the hero */
+.wlilo-eyebrow {
+  font-family: var(--wlilo-font-ui);
+  font-size: 0.8rem;
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  color: var(--wlilo-gold);
+}
+.wlilo-rule {                  /* spectral hairline divider */
+  height: 1px;
+  border: 0;
+  background: var(--wlilo-spectrum);
+  opacity: 0.6;
+}

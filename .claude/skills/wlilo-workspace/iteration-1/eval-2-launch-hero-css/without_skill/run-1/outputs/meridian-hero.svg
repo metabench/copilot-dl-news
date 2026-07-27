@@ -1,0 +1,195 @@
+<svg viewBox="0 0 1600 1000" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="mh-title mh-desc">
+  <!--
+    MERIDIAN v2.0 launch hero — WLILO treatment.
+    WLILO interpreted from the name as "White Light In, Light Out":
+    white light enters the composition from above, strikes a cut gem,
+    and leaves as dispersed spectral colour. Gemstone-cut CTAs in gold
+    bezels carry the same language. Palette mirrors wlilo-theme.css.
+  -->
+  <title id="mh-title">Meridian 2.0 — launch hero</title>
+  <desc id="mh-desc">Dark jewel-toned poster. A white beam enters a brilliant-cut diamond and disperses into spectral rays above the MERIDIAN wordmark. Below: version badge, tagline, an emerald Get started button and a sapphire Read the docs button, and a pipeline of gem nodes.</desc>
+
+  <defs>
+    <!-- ambient -->
+    <radialGradient id="bgGlow" cx="50%" cy="30%" r="85%">
+      <stop offset="0%"  stop-color="#182742"/>
+      <stop offset="45%" stop-color="#0c1426"/>
+      <stop offset="100%" stop-color="#060a14"/>
+    </radialGradient>
+    <linearGradient id="beamGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="35%" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.55"/>
+    </linearGradient>
+    <linearGradient id="diamondFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="45%" stop-color="#cfe4ff" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#7fa8e8" stop-opacity="0.75"/>
+    </linearGradient>
+
+    <!-- metals & type -->
+    <linearGradient id="champagne" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#faf5e6"/>
+      <stop offset="55%" stop-color="#ead9a8"/>
+      <stop offset="100%" stop-color="#c9a24b"/>
+    </linearGradient>
+    <linearGradient id="goldBezel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#f4e2a5"/>
+      <stop offset="50%" stop-color="#d4af37"/>
+      <stop offset="100%" stop-color="#8a6a1c"/>
+    </linearGradient>
+
+    <!-- gemstone bodies -->
+    <linearGradient id="emeraldBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#2fbf8f"/>
+      <stop offset="45%" stop-color="#0e8a5f"/>
+      <stop offset="100%" stop-color="#045139"/>
+    </linearGradient>
+    <linearGradient id="sapphireBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#5ea0ff"/>
+      <stop offset="45%" stop-color="#2563c9"/>
+      <stop offset="100%" stop-color="#12336e"/>
+    </linearGradient>
+    <linearGradient id="glossGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.04"/>
+    </linearGradient>
+    <radialGradient id="gemCore" cx="50%" cy="35%" r="75%">
+      <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.25"/>
+      <stop offset="60%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- pipeline -->
+    <linearGradient id="pipeGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#e5484d"/>
+      <stop offset="25%"  stop-color="#f5a524"/>
+      <stop offset="50%"  stop-color="#10b981"/>
+      <stop offset="75%"  stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+
+    <!-- glows -->
+    <filter id="glowEmerald" x="-40%" y="-40%" width="180%" height="220%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#0fa06f" flood-opacity="0.45"/>
+    </filter>
+    <filter id="glowSapphire" x="-40%" y="-40%" width="180%" height="220%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#2f6fd8" flood-opacity="0.45"/>
+    </filter>
+    <filter id="softBlur"><feGaussianBlur stdDeviation="6"/></filter>
+
+    <!-- 4-point sparkle -->
+    <path id="sparkle" d="M0 -6 L1.6 -1.6 L6 0 L1.6 1.6 L0 6 L-1.6 1.6 L-6 0 L-1.6 -1.6 Z"/>
+  </defs>
+
+  <!-- ======== ground ======== -->
+  <rect width="1600" height="1000" fill="url(#bgGlow)"/>
+
+  <!-- meridian wireframe, faint -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1">
+    <ellipse cx="800" cy="520" rx="500" ry="340"/>
+    <ellipse cx="800" cy="520" rx="360" ry="340"/>
+    <ellipse cx="800" cy="520" rx="220" ry="340"/>
+    <ellipse cx="800" cy="520" rx="90"  ry="340"/>
+    <circle  cx="800" cy="520" r="340"/>
+  </g>
+  <ellipse cx="800" cy="520" rx="640" ry="96" fill="none" stroke="#d4af37" stroke-opacity="0.10" stroke-width="1"/>
+
+  <!-- star dust -->
+  <g fill="#ffffff">
+    <circle cx="240" cy="150" r="1.4" opacity="0.5"/>
+    <circle cx="410" cy="95"  r="1"   opacity="0.35"/>
+    <circle cx="1210" cy="130" r="1.4" opacity="0.5"/>
+    <circle cx="1370" cy="220" r="1"   opacity="0.35"/>
+    <circle cx="1460" cy="90"  r="1.2" opacity="0.4"/>
+    <circle cx="150" cy="300" r="1.2" opacity="0.4"/>
+  </g>
+
+  <!-- luxury frame -->
+  <rect x="40" y="40" width="1520" height="920" fill="none" stroke="#d4af37" stroke-opacity="0.30" stroke-width="1"/>
+  <g fill="none" stroke="#d4af37" stroke-opacity="0.8" stroke-width="1.5">
+    <path d="M40 76 V40 H76"/><path d="M1524 40 H1560 V76"/>
+    <path d="M1560 924 V960 H1524"/><path d="M76 960 H40 V924"/>
+  </g>
+
+  <!-- ======== WLILO: white light in ======== -->
+  <polygon points="778,52 822,52 808,196 792,196" fill="url(#beamGrad)"/>
+  <polygon points="778,52 822,52 808,196 792,196" fill="url(#beamGrad)" filter="url(#softBlur)" opacity="0.6"/>
+
+  <!-- brilliant-cut diamond -->
+  <g>
+    <path d="M770 196 L830 196 L846 216 L800 268 L754 216 Z" fill="url(#diamondFill)"/>
+    <g fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="1">
+      <path d="M770 196 L830 196 L846 216 L800 268 L754 216 Z"/>
+      <path d="M754 216 H846"/>
+      <path d="M770 196 L784 216 L800 268"/>
+      <path d="M830 196 L816 216 L800 268"/>
+      <path d="M770 196 L816 216 M830 196 L784 216"/>
+    </g>
+    <use href="#sparkle" x="0" y="0" transform="translate(788,206) scale(0.7)" fill="#ffffff" opacity="0.95"/>
+  </g>
+
+  <!-- ======== WLILO: light out (dispersed spectrum) ======== -->
+  <g fill="none" stroke-width="1.6" stroke-linecap="round" opacity="0.85">
+    <path d="M800 268 Q 700 292 545 330" stroke="#ff6b6b" stroke-opacity="0.45"/>
+    <path d="M800 268 Q 730 296 640 336" stroke="#ffa94d" stroke-opacity="0.5"/>
+    <path d="M800 268 Q 775 300 738 340" stroke="#ffd43b" stroke-opacity="0.55"/>
+    <path d="M800 268 Q 825 300 862 340" stroke="#51cf66" stroke-opacity="0.55"/>
+    <path d="M800 268 Q 870 296 960 336" stroke="#4dabf7" stroke-opacity="0.5"/>
+    <path d="M800 268 Q 900 292 1055 330" stroke="#b197fc" stroke-opacity="0.45"/>
+  </g>
+
+  <!-- ======== identity ======== -->
+  <text x="812" y="366" text-anchor="middle" font-family="Futura, 'Century Gothic', 'Avenir Next', 'Segoe UI', sans-serif" font-size="17" letter-spacing="8" fill="#d4af37" opacity="0.9">THE DATA PIPELINE, CUT TO GRADE</text>
+
+  <text x="815" y="474" text-anchor="middle" font-family="Didot, 'Playfair Display', 'Bodoni MT', Georgia, serif" font-size="112" font-weight="500" letter-spacing="30" fill="url(#champagne)">MERIDIAN</text>
+
+  <!-- version badge -->
+  <g>
+    <rect x="722" y="502" width="156" height="38" rx="19" fill="#d4af37" fill-opacity="0.08" stroke="url(#goldBezel)" stroke-width="1.2"/>
+    <text x="802" y="527" text-anchor="middle" font-family="Futura, 'Century Gothic', 'Avenir Next', 'Segoe UI', sans-serif" font-size="15" letter-spacing="4" fill="#ead9a8">VERSION 2.0</text>
+  </g>
+
+  <text x="800" y="592" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="22" letter-spacing="0.5" fill="#aeb8cc">Move data with lapidary precision — ingest, refine, deliver.</text>
+
+  <!-- ======== gemstone CTAs ======== -->
+  <!-- Get started · emerald -->
+  <g filter="url(#glowEmerald)">
+    <rect x="515" y="640" width="270" height="68" rx="34" fill="url(#emeraldBody)" stroke="url(#goldBezel)" stroke-width="1.6"/>
+  </g>
+  <rect x="515" y="640" width="270" height="68" rx="34" fill="url(#gemCore)"/>
+  <rect x="533" y="647" width="234" height="26" rx="13" fill="url(#glossGrad)"/>
+  <use href="#sparkle" transform="translate(556,658) scale(0.85)" fill="#ffffff" opacity="0.9"/>
+  <use href="#sparkle" transform="translate(760,692) scale(0.55)" fill="#ffffff" opacity="0.55"/>
+  <text x="652" y="681" text-anchor="middle" font-family="Futura, 'Century Gothic', 'Avenir Next', 'Segoe UI', sans-serif" font-size="19" font-weight="600" letter-spacing="3" fill="#eafff5">GET STARTED</text>
+
+  <!-- Read the docs · sapphire -->
+  <g filter="url(#glowSapphire)">
+    <rect x="815" y="640" width="270" height="68" rx="34" fill="url(#sapphireBody)" stroke="url(#goldBezel)" stroke-width="1.6"/>
+  </g>
+  <rect x="815" y="640" width="270" height="68" rx="34" fill="url(#gemCore)"/>
+  <rect x="833" y="647" width="234" height="26" rx="13" fill="url(#glossGrad)"/>
+  <use href="#sparkle" transform="translate(856,658) scale(0.85)" fill="#ffffff" opacity="0.9"/>
+  <use href="#sparkle" transform="translate(1060,692) scale(0.55)" fill="#ffffff" opacity="0.55"/>
+  <text x="952" y="681" text-anchor="middle" font-family="Futura, 'Century Gothic', 'Avenir Next', 'Segoe UI', sans-serif" font-size="19" font-weight="600" letter-spacing="3" fill="#eaf3ff">READ THE DOCS</text>
+
+  <!-- ======== pipeline of gems ======== -->
+  <path d="M160 822 C 240 802, 270 806, 300 812 S 500 850, 550 840 S 760 810, 800 818 S 1010 852, 1050 842 S 1260 804, 1300 814 S 1400 824, 1440 820"
+        fill="none" stroke="url(#pipeGrad)" stroke-width="2" stroke-opacity="0.65"/>
+  <g>
+    <g><circle cx="300" cy="812" r="12" fill="none" stroke="#e5484d" stroke-opacity="0.3"/><circle cx="300" cy="812" r="7" fill="#e5484d"/><circle cx="298" cy="810" r="2" fill="#ffffff" opacity="0.85"/></g>
+    <g><circle cx="550" cy="840" r="12" fill="none" stroke="#f5a524" stroke-opacity="0.3"/><circle cx="550" cy="840" r="7" fill="#f5a524"/><circle cx="548" cy="838" r="2" fill="#ffffff" opacity="0.85"/></g>
+    <g><circle cx="800" cy="818" r="12" fill="none" stroke="#10b981" stroke-opacity="0.3"/><circle cx="800" cy="818" r="7" fill="#10b981"/><circle cx="798" cy="816" r="2" fill="#ffffff" opacity="0.85"/></g>
+    <g><circle cx="1050" cy="842" r="12" fill="none" stroke="#3b82f6" stroke-opacity="0.3"/><circle cx="1050" cy="842" r="7" fill="#3b82f6"/><circle cx="1048" cy="840" r="2" fill="#ffffff" opacity="0.85"/></g>
+    <g><circle cx="1300" cy="814" r="12" fill="none" stroke="#8b5cf6" stroke-opacity="0.3"/><circle cx="1300" cy="814" r="7" fill="#8b5cf6"/><circle cx="1298" cy="812" r="2" fill="#ffffff" opacity="0.85"/></g>
+  </g>
+  <g font-family="Futura, 'Century Gothic', 'Avenir Next', 'Segoe UI', sans-serif" font-size="11" letter-spacing="3" fill="#7d8aa3" text-anchor="middle">
+    <text x="302" y="882">INGEST</text>
+    <text x="552" y="882">VALIDATE</text>
+    <text x="802" y="882">TRANSFORM</text>
+    <text x="1052" y="882">ENRICH</text>
+    <text x="1302" y="882">DELIVER</text>
+  </g>
+
+  <!-- footer mark -->
+  <text x="803" y="938" text-anchor="middle" font-family="Futura, 'Century Gothic', 'Avenir Next', 'Segoe UI', sans-serif" font-size="12" letter-spacing="6" fill="#d4af37" opacity="0.55">WLILO — WHITE LIGHT IN · LIGHT OUT</text>
+</svg>

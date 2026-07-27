@@ -19,7 +19,6 @@
       "category": "regex-parser",
       "reason": "Regular expression exec loops over HTML, XML, SVG, or rendered markup.",
       "paths": [
-        "deploy/remote-crawler-v2/lib/run-worker.js",
         "scripts/agent_runner.js",
         "scripts/docs-bridge-mcp.js",
         "scripts/read_svg_comments.js",

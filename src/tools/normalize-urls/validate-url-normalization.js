@@ -11,37 +11,45 @@ const path = require('path');
 const { ensureDb } = require('../../data/db/sqlite/ensureDb');
 const { UrlResolver } = require('../../shared/utils/UrlResolver');
 const { findProjectRoot } = require('../../shared/utils/project-root');
+// Schema-introspection is DB-shaped logic — delegated to ncdb (thin-coordination).
+// These are the exact queries that used to be inline here (byte-equivalent, now
+// with safe identifier quoting); see news-crawler-db legacy-schemaInspection.
+const {
+  schemaInspectionTableExists,
+  getTableRowCount,
+  getTableInfo,
+  getTableIndexes,
+  getIndexInfo,
+  getColumnFillStats,
+  getOrphanedReferenceCount,
+  getColumnValueStats
+} = require('news-crawler-db');
 
 const TABLES_TO_CHECK = [
   {
     name: 'article_places',
     urlColumn: 'article_url',
-    idColumn: 'article_url_id',
-    expectedRows: 9808
+    idColumn: 'article_url_id'
   },
   {
     name: 'place_hubs',
     urlColumn: 'url',
-    idColumn: 'url_id',
-    expectedRows: 94
+    idColumn: 'url_id'
   },
   {
     name: 'place_hub_candidates',
     urlColumns: ['candidate_url', 'normalized_url'],
-    idColumns: ['candidate_url_id', 'normalized_url_id'],
-    expectedRows: 406
+    idColumns: ['candidate_url_id', 'normalized_url_id']
   },
   {
     name: 'place_hub_unknown_terms',
     urlColumns: ['canonical_url', 'url'],
-    idColumns: ['canonical_url_id', 'url_id'],
-    expectedRows: 4285
+    idColumns: ['canonical_url_id', 'url_id']
   },
   {
     name: 'fetches',
     urlColumn: 'url',
-    idColumn: 'url_id',
-    expectedRows: 479
+    idColumn: 'url_id'
   }
 ];
 
@@ -84,10 +92,7 @@ async function validateUrlNormalization(dbPath) {
       };
 
       // Check if table exists
-      const tableExists = db.prepare(`
-        SELECT name FROM sqlite_master
-        WHERE type='table' AND name=?
-      `).get(table.name);
+      const tableExists = schemaInspectionTableExists(db, table.name);
 
       if (!tableExists) {
         tableResult.errors.push(`Table ${table.name} does not exist`);
@@ -98,7 +103,7 @@ async function validateUrlNormalization(dbPath) {
       tableResult.exists = true;
 
       // Get row count
-      const rowCount = db.prepare(`SELECT COUNT(*) as count FROM ${table.name}`).get().count;
+      const rowCount = getTableRowCount(db, table.name);
       tableResult.rowCount = rowCount;
       console.log(`   Rows: ${rowCount}`);
 
@@ -112,10 +117,7 @@ async function validateUrlNormalization(dbPath) {
         let totalOrphaned = 0;
 
         for (const idCol of idColumns) {
-          const idColumnExists = db.prepare(`
-            SELECT 1 FROM pragma_table_info(?)
-            WHERE name = ?
-          `).get(table.name, idCol);
+          const idColumnExists = getTableInfo(db, table.name).some(c => c.name === idCol);
 
           if (!idColumnExists) {
             tableResult.errors.push(`Missing ${idCol} column`);
@@ -124,34 +126,23 @@ async function validateUrlNormalization(dbPath) {
           }
 
           // Check how many rows have the ID set
-          const idStats = db.prepare(`
-            SELECT
-              COUNT(*) as total,
-              COUNT(${idCol}) as with_id,
-              COUNT(CASE WHEN ${idCol} IS NULL THEN 1 END) as without_id
-            FROM ${table.name}
-          `).get();
+          const idStats = getColumnFillStats(db, table.name, idCol);
 
-          totalWithId += idStats.with_id;
-          totalWithoutId += idStats.without_id;
+          totalWithId += idStats.with_value;
+          totalWithoutId += idStats.without_value;
 
           // Check for orphaned references
-          const orphaned = db.prepare(`
-            SELECT COUNT(*) as count
-            FROM ${table.name}
-            WHERE ${idCol} IS NOT NULL
-              AND ${idCol} NOT IN (SELECT id FROM urls)
-          `).get().count;
+          const orphaned = getOrphanedReferenceCount(db, table.name, idCol, 'urls', 'id');
 
           totalOrphaned += orphaned;
 
           // Check index coverage for the ID column
-          const indexList = db.prepare(`PRAGMA index_list(${table.name})`).all();
+          const indexList = getTableIndexes(db, table.name);
           const hasCoveringIndex = indexList.some(index => {
             if (!index.name || index.name.startsWith('sqlite_autoindex')) {
               return false;
             }
-            const indexInfo = db.prepare(`PRAGMA index_info(${index.name})`).all();
+            const indexInfo = getIndexInfo(db, index.name);
             return indexInfo.some(info => info.name === idCol);
           });
 
@@ -183,25 +174,15 @@ async function validateUrlNormalization(dbPath) {
       const urlColumns = table.urlColumns || (table.urlColumn ? [table.urlColumn] : []);
 
       for (const urlCol of urlColumns) {
-        const columnExists = db.prepare(`
-          SELECT 1 FROM pragma_table_info(?)
-          WHERE name = ?
-        `).get(table.name, urlCol);
+        const columnExists = getTableInfo(db, table.name).some(c => c.name === urlCol);
 
         if (columnExists) {
-          const urlStats = db.prepare(`
-            SELECT
-              COUNT(*) as total,
-              COUNT(${urlCol}) as with_url,
-              COUNT(DISTINCT ${urlCol}) as unique_urls
-            FROM ${table.name}
-            WHERE ${urlCol} IS NOT NULL
-          `).get();
+          const urlStats = getColumnValueStats(db, table.name, urlCol);
 
-          console.log(`   📊 ${urlCol}: ${urlStats.with_url} non-null values, ${urlStats.unique_urls} unique`);
+          console.log(`   📊 ${urlCol}: ${urlStats.with_value} non-null values, ${urlStats.unique_values} unique`);
 
-          if (urlStats.with_url > 0) {
-            const message = `Denormalized ${urlCol} column still populated (${urlStats.with_url} rows)`;
+          if (urlStats.with_value > 0) {
+            const message = `Denormalized ${urlCol} column still populated (${urlStats.with_value} rows)`;
             tableResult.errors.push(message);
             results.overall.valid = false;
           } else {

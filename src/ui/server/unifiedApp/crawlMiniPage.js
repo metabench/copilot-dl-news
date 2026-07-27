@@ -31,7 +31,7 @@ function renderCrawlMiniPage() {
     color:var(--leather); font:13px/1.35 "Inter",-apple-system,"Segoe UI",sans-serif;
     overflow:hidden; -webkit-font-smoothing:antialiased;
   }
-  .wrap{height:100vh;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+  .wrap{height:100vh;padding:10px 14px 8px;display:flex;flex-direction:column;gap:6px}
   .top{display:flex;align-items:center;justify-content:space-between;flex:0 0 auto}
   .brand{display:flex;align-items:center;gap:7px;font-family:Georgia,serif;color:var(--gold);
     font-size:13px;letter-spacing:.06em;text-transform:uppercase}
@@ -40,11 +40,11 @@ function renderCrawlMiniPage() {
   .dot{width:8px;height:8px;border-radius:50%;background:#4b5262;box-shadow:0 0 0 0 rgba(84,224,138,0)}
   .dot.live{background:var(--heal);animation:pulse 1.6s ease-out infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(84,224,138,.55)}70%{box-shadow:0 0 0 7px rgba(84,224,138,0)}100%{box-shadow:0 0 0 0 rgba(84,224,138,0)}}
-  .body{flex:1 1 auto;display:grid;grid-template-columns:1.15fr 1fr;gap:14px;align-items:center}
+  .body{flex:1 1 auto;display:grid;grid-template-columns:1.15fr 1fr;gap:14px;align-items:center;min-height:0}
   /* left: live headline */
   .hero{position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;
     border-right:1px solid var(--line);padding-right:12px}
-  .hero .big{font-size:58px;font-weight:800;line-height:.95;color:#fff;font-variant-numeric:tabular-nums;
+  .hero .big{font-size:40px;font-weight:800;line-height:.95;color:#fff;font-variant-numeric:tabular-nums;
     text-shadow:0 2px 18px rgba(0,0,0,.4)}
   .hero .cap{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
   .floatLayer{position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none;overflow:visible}
@@ -69,6 +69,15 @@ function renderCrawlMiniPage() {
   .badge{position:absolute;bottom:9px;left:14px;font-size:9px;color:#0b0f1a;background:var(--gold);
     padding:1px 6px;border-radius:8px;letter-spacing:.05em;display:none}
   .badge.on{display:inline-block}
+  /* bottom: MB/s sparkline (single series + labeled cap reference line) */
+  .spark{flex:0 0 56px;position:relative;border-top:1px solid var(--line);padding-top:3px}
+  .spark .cap-row{display:flex;justify-content:space-between;align-items:baseline;font-size:9.5px;
+    color:var(--muted);letter-spacing:.04em}
+  .spark .cap-row b{color:var(--leather);font-weight:600;font-variant-numeric:tabular-nums}
+  .spark svg{display:block;width:100%;height:40px}
+  .spark .tip{position:absolute;pointer-events:none;display:none;background:#1b2438;color:var(--leather);
+    font-size:9.5px;padding:2px 6px;border-radius:3px;border:1px solid var(--line);white-space:nowrap;
+    font-variant-numeric:tabular-nums;transform:translate(-50%,-130%)}
 </style></head>
 <body>
 <div class="wrap">
@@ -89,6 +98,14 @@ function renderCrawlMiniPage() {
       <div class="rule"></div>
       <div class="mini">last hr <b id="p1">0</b> &middot; 6h <b id="p6">0</b> &middot; 24h <b id="p24">0</b></div>
     </div>
+  </div>
+  <div class="spark" id="spark">
+    <div class="cap-row">
+      <span>&#9207; MB/s &middot; last hour &middot; now <b id="rateNow">0.00</b></span>
+      <span id="capLabel">cap &mdash;</span>
+    </div>
+    <svg id="sparkSvg" viewBox="0 0 572 40" preserveAspectRatio="none" aria-label="Download rate, MB per second, last hour"></svg>
+    <div class="tip" id="sparkTip"></div>
   </div>
 </div>
 <span class="badge" id="badge">demo</span>
@@ -141,6 +158,67 @@ function renderCrawlMiniPage() {
   }
   function setLive(on, text){ el('dot').className='dot'+(on?' live':''); el('stat').textContent=text; }
 
+  // ── MB/s sparkline (single series + labeled cap reference) ────────────────
+  // Emitted from a template literal: no backslash-regex, no backticks here.
+  var SVGNS='http://www.w3.org/2000/svg';
+  var sparkData=[], sparkCap=0, sparkMax=0.01;
+  function svgEl(tag, attrs){ var n=document.createElementNS(SVGNS, tag);
+    for(var k in attrs) n.setAttribute(k, attrs[k]); return n; }
+  function drawSpark(){
+    var svg=el('sparkSvg'); if(!svg) return;
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    var W=572, H=40, n=sparkData.length; if(!n) return;
+    var mbps=sparkData.map(function(p){ return (p.bytes||0)/1048576/60; });
+    var dataMax=Math.max.apply(null, mbps);
+    sparkMax=Math.max(dataMax, sparkCap>0?sparkCap*1.08:0, 0.01);
+    var xs=function(i){ return i*(W/(n-1)); };
+    var ys=function(v){ return H-2-(v/sparkMax)*(H-6); };
+    // area fill (translucent series color) + 2px line on top
+    var d='M0,'+(H-2);
+    for(var i=0;i<n;i++){ d+=' L'+xs(i).toFixed(1)+','+ys(mbps[i]).toFixed(1); }
+    d+=' L'+W+','+(H-2)+' Z';
+    svg.appendChild(svgEl('path',{d:d, fill:'rgba(84,224,138,.16)', stroke:'none'}));
+    var dl='';
+    for(var j=0;j<n;j++){ dl+=(j?' L':'M')+xs(j).toFixed(1)+','+ys(mbps[j]).toFixed(1); }
+    svg.appendChild(svgEl('path',{d:dl, fill:'none', stroke:'#54e08a', 'stroke-width':'2',
+      'stroke-linejoin':'round', 'stroke-linecap':'round'}));
+    // cap reference line: dashed gold, labeled in the header row (never color-alone)
+    if(sparkCap>0){
+      var cy=ys(sparkCap);
+      svg.appendChild(svgEl('line',{x1:0,y1:cy,x2:W,y2:cy, stroke:'#d8cba9',
+        'stroke-width':'1','stroke-dasharray':'4 3', opacity:'0.75'}));
+    }
+    // baseline (recessive)
+    svg.appendChild(svgEl('line',{x1:0,y1:H-1,x2:W,y2:H-1, stroke:'rgba(216,203,169,.18)','stroke-width':'1'}));
+    var nowMbps=mbps[n-1]||0;
+    el('rateNow').textContent=nowMbps<10?nowMbps.toFixed(2):nowMbps.toFixed(1);
+  }
+  function sparkTipShow(evt){
+    var svg=el('sparkSvg'), tip=el('sparkTip'); if(!svg||!tip||!sparkData.length) return;
+    var r=svg.getBoundingClientRect();
+    var frac=Math.max(0, Math.min(1, (evt.clientX-r.left)/r.width));
+    var i=Math.round(frac*(sparkData.length-1));
+    var p=sparkData[i]; if(!p) return;
+    var v=(p.bytes||0)/1048576/60;
+    var hhmm=String(p.t||'').slice(11,16);
+    tip.textContent=hhmm+' UTC \\u00b7 '+(v<10?v.toFixed(2):v.toFixed(1))+' MB/s';
+    tip.style.left=(evt.clientX-r.left+14)+'px';
+    tip.style.top='14px';
+    tip.style.display='block';
+  }
+  function sparkTipHide(){ var tip=el('sparkTip'); if(tip) tip.style.display='none'; }
+  async function pollSpark(){
+    try{
+      var r=await fetch('/api/v1/crawl-rate-timeseries',{cache:'no-store'});
+      if(r.ok){ var d=await r.json(); sparkData=d.points||[]; }
+      var c=await fetch('/api/v1/crawl/bandwidth-cap',{cache:'no-store'});
+      if(c.ok){ var cd=await c.json(); sparkCap=cd.unlimited?0:(cd.rateMBps||0);
+        el('capLabel').textContent = cd.unlimited ? 'cap off' : ('cap '+sparkCap.toFixed(1)+' MB/s');
+      }
+      drawSpark();
+    }catch(e){ /* transient — keep last drawing */ }
+  }
+
   var lastSSE=0, es=null, pageLoadedAt=Date.now();
   function connectSSE(){
     try{
@@ -174,6 +252,12 @@ function renderCrawlMiniPage() {
     }catch(e){ if(!lastSSE || Date.now()-lastSSE>8000) setLive(false, 'offline'); }
   }
 
+  var sparkSvgEl=el('sparkSvg');
+  if(sparkSvgEl){
+    sparkSvgEl.addEventListener('mousemove', sparkTipShow);
+    sparkSvgEl.addEventListener('mouseleave', sparkTipHide);
+  }
+
   if(DEMO){
     el('badge').className='badge on';
     sync({ pages:344, docs:152, down:67.6*1048576, stored:5.06*1048576, p1:0, p6:1 });
@@ -182,10 +266,23 @@ function renderCrawlMiniPage() {
       var add=1+Math.floor(Math.random()*Math.random()*14);  // skew small, occasional bursts
       pulse({ pages:add, docs:Math.round(add*0.45), bytes:add*90000, stored:add*15000 });
     }, 1200);
+    // synthetic hour of rate data so the sparkline can be inspected offline
+    sparkCap=4;
+    el('capLabel').textContent='cap 4.0 MB/s';
+    sparkData=[];
+    var demoNow=Date.now();
+    for(var di=59;di>=0;di--){
+      var dt=new Date(demoNow-di*60000); dt.setUTCSeconds(0,0);
+      var wave=Math.max(0, Math.sin((59-di)/9)*2.2+1.9+(Math.random()*0.8-0.4));
+      sparkData.push({ t:dt.toISOString(), bytes:wave*60*1048576, fetches:Math.round(wave*4) });
+    }
+    drawSpark();
   } else {
     poll();                          // authoritative totals now
     setInterval(poll, 12000);        // + slow reconciliation
     connectSSE();                    // instant "+N" via the lean crawl:download stream
+    pollSpark();                     // MB/s sparkline + cap line
+    setInterval(pollSpark, 15000);
   }
 })();
 </script>

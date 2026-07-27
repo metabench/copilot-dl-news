@@ -16,11 +16,17 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
+const { shouldRespawn } = require('./respawn-guard');
 
-const VERSION = 4; // v4: merged tools/dev/agent-bridge (2026-07-11) — .cmd spawn
-                   // fix (Node>=18 EINVAL), start-electron readiness probe +
-                   // --allow-multi-jobs, ui-screenshot isolated user-data-dir,
-                   // kill-pid guard widened to the repos workspace, checks/.
+const VERSION = 5; // v5 (2026-07-20): supervisor-INDEPENDENT self-healing —
+                   // self-respawn on uncaughtException/unhandledRejection with
+                   // a crash-loop guard, plus a `daemonize` action that spawns
+                   // a console-independent successor (the whole-session outage
+                   // 2026-07-20 was a closed supervisor console killing the
+                   // bridge with nothing to respawn it). v4: merged
+                   // tools/dev/agent-bridge — .cmd spawn fix (Node>=18 EINVAL),
+                   // start-electron readiness probe + --allow-multi-jobs,
+                   // ui-screenshot isolated user-data-dir, kill-pid guard.
 const BASE = __dirname;
 const ROOT = path.resolve(BASE, '..', '..'); // repo root
 const INBOX = path.join(BASE, 'inbox');
@@ -49,6 +55,38 @@ function log(...args) {
   const line = `[${new Date().toISOString()}] ${args.join(' ')}`;
   console.log(line);
   bridgeLog.write(line + '\n');
+}
+
+// Supervisor-independent self-respawn (v5). The .cmd supervisor only restarts
+// the bridge while its console window lives; if that console is closed/killed
+// (as happened 2026-07-20, taking the bridge down for a whole session) nothing
+// respawns it. respawnSelf spawns a DETACHED, console-independent successor
+// that takes over via the single-instance LOCK. `guarded` uses the crash-loop
+// guard so a persistent fault fails loud-and-stopped instead of pegging a CPU;
+// intentional restarts (daemonize/restart-bridge) pass guarded=false.
+const RESPAWN_LOG = path.join(STATE, 'respawn-log.json');
+function respawnSelf(reason, guarded) {
+  const now = Date.now();
+  let stamps = [];
+  try { stamps = JSON.parse(fs.readFileSync(RESPAWN_LOG, 'utf8')); } catch { /* none yet */ }
+  const { allow, recent } = shouldRespawn(stamps, now, { windowMs: 60000, maxInWindow: 3 });
+  if (guarded && !allow) {
+    log(`respawn REFUSED (${recent.length} in 60s = crash loop); staying down. reason=${reason}. Fix the fault, then relaunch start-dev-bridge.cmd.`);
+    return false;
+  }
+  try { fs.writeFileSync(RESPAWN_LOG, JSON.stringify([...recent, now])); } catch { /* best-effort */ }
+  try { fs.unlinkSync(LOCK); } catch { /* replacement will re-acquire */ }
+  try {
+    const child = spawn(process.execPath, [path.join(BASE, 'dev-bridge.js')], {
+      detached: true, stdio: 'ignore', cwd: BASE, env: process.env
+    });
+    child.unref();
+    log(`respawned detached successor pid=${child.pid} reason=${reason} guarded=${!!guarded}`);
+    return true;
+  } catch (err) {
+    log(`respawn spawn failed: ${err.message}`);
+    return false;
+  }
 }
 
 // Managed processes are DETACHED and tracked in state/procs.json so they
@@ -145,6 +183,16 @@ const ACTIONS = {
     return { ok: true, restarting: true, supervised: process.env.BRIDGE_SUPERVISED === '1', oldPid: process.pid, newPid };
   },
 
+  // Daemonize: spawn a DETACHED, console-independent successor and exit.
+  // After one `daemonize`, the bridge survives the supervisor console being
+  // closed (the 2026-07-20 outage cause). Idempotent-safe: the successor
+  // takes the LOCK; if a supervisor is also running it just loses the race.
+  daemonize: async () => {
+    const ok = respawnSelf('daemonize', false);
+    setTimeout(() => process.exit(0), 800);
+    return { ok, daemonized: ok, note: 'detached successor spawned; survives console close', oldPid: process.pid };
+  },
+
   // Kill a process by pid — ONLY if its command line is under the repos
   // workspace (parent of this repo, e.g. ...\Documents\repos). Recovers
   // orphans from any repo's previous sessions; never a general kill.
@@ -189,9 +237,13 @@ const ACTIONS = {
 
   // Electron desktop app (spawns its own server unless port already serves).
   //   params: port (default 3170), app (default crawl-status), dbPath,
-  //           allowMultiJobs (default true), readyTimeoutMs (default 45000;
+  //           allowMultiJobs (default true), readyTimeoutMs (default 90000;
   //           0 = don't wait). Waits for the app's HTTP server and reports
   //           httpOk so the caller knows the UI actually came up.
+  //           Default raised 45s -> 90s (2026-07-20): the unified server's
+  //           cold start is ~37s (33 sub-apps + jsgui3 loading), so the old
+  //           45s probe reported httpOk:false on starts that were actually
+  //           SUCCEEDING moments later — twice misread as a failed start.
   'start-electron': async (p = {}) => {
     const useCli = fs.existsSync(ELECTRON_CLI);
     if (!useCli && !fs.existsSync(ELECTRON_BIN)) return { ok: false, error: 'electron not found in node_modules' };
@@ -210,7 +262,7 @@ const ACTIONS = {
       ? startManaged('electron-app', process.execPath, [ELECTRON_CLI, ...args], { env })
       : startManaged('electron-app', ELECTRON_BIN, args, { env });
     if (!r.ok) return r;
-    const readyTimeoutMs = p.readyTimeoutMs === undefined ? 45000 : Number(p.readyTimeoutMs);
+    const readyTimeoutMs = p.readyTimeoutMs === undefined ? 90000 : Number(p.readyTimeoutMs);
     let httpOk = null;
     if (readyTimeoutMs > 0) {
       httpOk = false;
@@ -226,6 +278,26 @@ const ACTIONS = {
     return { ...r, url: `http://localhost:${port}/`, port, httpOk };
   },
   'stop-electron': async () => stopManaged('electron-app'),
+  // One-action deploy cycle (added 2026-07-20 after five manual
+  // stop→start→wait dances in one day): same params as start-electron.
+  // Mirrors 'restart-ui'; the pause lets the port fully release before the
+  // fresh spawn probes it.
+  // FIX 13: the port-race — the previous instance hadn't released :port when the
+  // new one tried to bind, so the new server child failed and httpOk came back
+  // false, needing a manual retry every time. Settle longer (2500ms) and, if the
+  // first start still reports httpOk:false, stop the failed spawn, settle again,
+  // and retry ONCE (see [[electron-restart-gotcha]] — the retry always succeeded).
+  'restart-electron': async (p = {}) => {
+    stopManaged('electron-app');
+    await sleep(2500);
+    let res = await ACTIONS['start-electron'](p);
+    if (res && res.httpOk === false) {
+      stopManaged('electron-app');
+      await sleep(4000);
+      res = { ...(await ACTIONS['start-electron'](p)), retried: true };
+    }
+    return res;
+  },
 
   // Bounded test run. params: testPath (repo-relative, required)
   'run-tests': async (p = {}) => {
@@ -288,6 +360,7 @@ const ACTIONS = {
       '--leg-budget-ms', String(Number(p.legBudgetMs) || 20 * 60 * 1000),
       '--port', String(Number(p.port) || 3000),
       '--operation', String(p.operation || 'basicArticleCrawl'),
+      '--mode', String(p.mode || 'discover'), // 'frontier' drains the DB frontier (urls are HOSTS)
       '--screenshot-every-ms', String(Number(p.screenshotEveryMs) || 0)
     ];
     return startManaged('campaign', process.execPath, args);
@@ -425,7 +498,16 @@ async function main() {
   }
 }
 
-process.on('uncaughtException', (err) => log('UNCAUGHT:', err.stack || err.message));
-process.on('unhandledRejection', (err) => log('UNHANDLED REJECTION:', (err && err.stack) || String(err)));
+// Fatal-error self-healing (v5): log, spawn a guarded detached successor, then
+// exit so the successor runs on clean state. Previously these handlers only
+// logged and limped on — a corrupt post-exception state with no clean restart.
+// The crash-loop guard in respawnSelf prevents a tight respawn loop.
+function onFatal(kind, err) {
+  log(`${kind}:`, (err && err.stack) || String(err));
+  const respawned = respawnSelf(kind, true);
+  setTimeout(() => process.exit(respawned ? 1 : 2), 500);
+}
+process.on('uncaughtException', (err) => onFatal('UNCAUGHT', err));
+process.on('unhandledRejection', (err) => onFatal('UNHANDLED_REJECTION', err));
 
 main();

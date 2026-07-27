@@ -1,0 +1,142 @@
+<svg viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" role="img">
+  <title>Meridian 2.0 launch hero — the data-pipeline platform</title>
+  <desc>Launch poster for Meridian version 2.0: wordmark with v2.0 badge, tagline, three feature bullets, sapphire Get started and emerald Read the docs gemstone buttons, and an obsidian panel showing the Sources to Transform to Deliver pipeline with an illustrative reliability status row.</desc>
+  <defs>
+    <linearGradient id="leatherBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/><stop offset="55%" stop-color="#f6f3ee"/>
+      <stop offset="100%" stop-color="#eae4da"/>
+    </linearGradient>
+    <pattern id="leatherGrain" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+      <rect width="6" height="6" fill="none"/>
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#05070c" stroke-width="0.5" opacity="0.05"/>
+    </pattern>
+    <linearGradient id="obsidianPanel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111828"/><stop offset="55%" stop-color="#0b0f1a"/>
+      <stop offset="100%" stop-color="#05070c"/>
+    </linearGradient>
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#b5a273"/><stop offset="100%" stop-color="#e6d7b5"/>
+    </linearGradient>
+    <linearGradient id="chipSurface" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbf9f4"/><stop offset="100%" stop-color="#e8e1d6"/>
+    </linearGradient>
+    <linearGradient id="brushedMetal" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e5e1d7"/><stop offset="25%" stop-color="#d8cba9"/>
+      <stop offset="50%" stop-color="#e5e1d7"/><stop offset="75%" stop-color="#d8cba9"/>
+      <stop offset="100%" stop-color="#e5e1d7"/>
+    </linearGradient>
+    <linearGradient id="gemSapphire" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/><stop offset="50%" stop-color="#1e5aad"/>
+      <stop offset="100%" stop-color="#123a74"/>
+    </linearGradient>
+    <linearGradient id="gemEmerald" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2dd4bf"/><stop offset="50%" stop-color="#1a8f4d"/>
+      <stop offset="100%" stop-color="#0f5f33"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0a0d14" flood-opacity="0.18"/>
+    </filter>
+    <filter id="gemGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feComposite in="SourceGraphic" in2="b" operator="over"/>
+    </filter>
+    <marker id="goldArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#d8cba9"/>
+    </marker>
+  </defs>
+
+  <!-- 1 · background: leather + grain + brushed-metal frame bands -->
+  <rect width="1600" height="900" fill="url(#leatherBg)"/>
+  <rect width="1600" height="900" fill="url(#leatherGrain)"/>
+  <rect x="0" y="0" width="1600" height="6" fill="url(#brushedMetal)"/>
+  <rect x="0" y="894" width="1600" height="6" fill="url(#brushedMetal)"/>
+
+  <!-- 3/4 · left column: wordmark, badge, tagline, features, gemstone CTAs -->
+  <g transform="translate(96,0)">
+    <!-- eyebrow -->
+    <text x="0" y="200" font-family="Arial, sans-serif" font-size="14" fill="#b5a273">✦</text>
+    <text x="24" y="200" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="13" font-weight="600" letter-spacing="0.05em" fill="#b5a273">DATA PIPELINE PLATFORM</text>
+
+    <!-- wordmark + version badge (badge paired to cap-height centerline, 40px+ clearance) -->
+    <text x="0" y="296" font-family="'Playfair Display', Georgia, serif" font-size="80" font-weight="700" letter-spacing="-0.02em" fill="#0a0d14">Meridian</text>
+    <g transform="translate(424,252)">
+      <rect width="76" height="34" rx="17" fill="url(#obsidianPanel)" stroke="#d8cba9" stroke-width="1"/>
+      <text x="38" y="22" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace" font-size="14" font-weight="700" fill="#e6d7b5">v2.0</text>
+    </g>
+
+    <!-- tagline + positioning -->
+    <text x="0" y="356" font-family="'Playfair Display', Georgia, serif" font-size="27" font-style="italic" fill="#2f3645">Every stream finds its line.</text>
+    <text x="0" y="404" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="16" fill="#4b5262">The data-pipeline platform for teams</text>
+    <text x="0" y="432" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="16" fill="#4b5262">who ship data like software.</text>
+
+    <!-- feature bullets: one emoji per row, own text element -->
+    <text x="0" y="488" font-family="Arial, sans-serif" font-size="18">⚡</text>
+    <text x="36" y="488" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="15" font-weight="600" fill="#2f3645">One engine for streaming and batch</text>
+    <text x="0" y="532" font-family="Arial, sans-serif" font-size="18">🧭</text>
+    <text x="36" y="532" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="15" font-weight="600" fill="#2f3645">Declarative pipelines in SQL or Python</text>
+    <text x="0" y="576" font-family="Arial, sans-serif" font-size="18">🔍</text>
+    <text x="36" y="576" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="15" font-weight="600" fill="#2f3645">End-to-end lineage and live observability</text>
+
+    <!-- gemstone CTAs: sapphire = primary/start, emerald = navigation -->
+    <g transform="translate(0,624)">
+      <rect width="224" height="56" rx="10" fill="url(#obsidianPanel)" stroke="#d8cba9" stroke-width="1.5" filter="url(#softShadow)"/>
+      <rect x="2.5" y="2.5" width="219" height="51" rx="8" fill="none" stroke="#e5e1d7" stroke-width="0.5" opacity="0.7"/>
+      <rect x="8" y="8" width="208" height="40" rx="6" fill="url(#gemSapphire)" filter="url(#gemGlow)"/>
+      <ellipse cx="52" cy="17" rx="30" ry="6" fill="#ffffff" opacity="0.35"/>
+      <text x="112" y="34" text-anchor="middle" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" fill="#ffffff">Get started ⟶</text>
+    </g>
+    <g transform="translate(248,624)">
+      <rect width="224" height="56" rx="10" fill="url(#obsidianPanel)" stroke="#d8cba9" stroke-width="1.5" filter="url(#softShadow)"/>
+      <rect x="2.5" y="2.5" width="219" height="51" rx="8" fill="none" stroke="#e5e1d7" stroke-width="0.5" opacity="0.7"/>
+      <rect x="8" y="8" width="208" height="40" rx="6" fill="url(#gemEmerald)" filter="url(#gemGlow)"/>
+      <ellipse cx="52" cy="17" rx="30" ry="6" fill="#ffffff" opacity="0.35"/>
+      <text x="112" y="34" text-anchor="middle" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" fill="#ffffff">Read the docs</text>
+    </g>
+  </g>
+
+  <!-- 2+3+4 · right column: obsidian pipeline panel -->
+  <g transform="translate(880,128)">
+    <rect width="624" height="624" rx="12" fill="url(#obsidianPanel)" stroke="#d8cba9" stroke-width="1.5" filter="url(#softShadow)"/>
+    <text x="312" y="48" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-size="19" font-weight="700" fill="#e6d7b5">One line from source to insight</text>
+    <line x1="32" y1="68" x2="592" y2="68" stroke="url(#goldAccent)" stroke-width="1"/>
+
+    <!-- the one gold flow path (drawn before the chips) -->
+    <path d="M312 208 L312 246" stroke="#d8cba9" stroke-width="2.5" fill="none" marker-end="url(#goldArrow)"/>
+    <path d="M312 360 L312 398" stroke="#d8cba9" stroke-width="2.5" fill="none" marker-end="url(#goldArrow)"/>
+
+    <!-- stage chips (light leather on obsidian; one level of nesting max) -->
+    <g transform="translate(72,104)">
+      <rect width="480" height="96" rx="10" fill="url(#chipSurface)" stroke="#d8d0c1" stroke-width="1"/>
+      <rect x="20" y="16" width="64" height="64" rx="8" fill="#ffffff" stroke="#e4ddd1" stroke-width="1"/>
+      <text x="52" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="30">🗄️</text>
+      <text x="104" y="42" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="17" font-weight="600" fill="#0a0d14">Sources</text>
+      <text x="104" y="68" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="13" fill="#4b5262">Databases, event streams, SaaS apps</text>
+      <text x="452" y="52" text-anchor="end" font-family="'JetBrains Mono', Consolas, monospace" font-size="12" fill="#4b5262">42 connectors</text>
+    </g>
+    <g transform="translate(72,256)">
+      <rect width="480" height="96" rx="10" fill="url(#chipSurface)" stroke="#d8d0c1" stroke-width="1"/>
+      <rect x="20" y="16" width="64" height="64" rx="8" fill="#ffffff" stroke="#e4ddd1" stroke-width="1"/>
+      <text x="52" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="30">⚙️</text>
+      <text x="104" y="42" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="17" font-weight="600" fill="#0a0d14">Transform</text>
+      <text x="104" y="68" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="13" fill="#4b5262">Versioned, incremental logic</text>
+      <text x="452" y="52" text-anchor="end" font-family="'JetBrains Mono', Consolas, monospace" font-size="12" fill="#4b5262">SQL · Python</text>
+    </g>
+    <g transform="translate(72,408)">
+      <rect width="480" height="96" rx="10" fill="url(#chipSurface)" stroke="#d8d0c1" stroke-width="1"/>
+      <rect x="20" y="16" width="64" height="64" rx="8" fill="#ffffff" stroke="#e4ddd1" stroke-width="1"/>
+      <text x="52" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="30">📊</text>
+      <text x="104" y="42" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="17" font-weight="600" fill="#0a0d14">Deliver</text>
+      <text x="104" y="68" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="13" fill="#4b5262">Warehouses, lakes, live dashboards</text>
+      <text x="452" y="52" text-anchor="end" font-family="'JetBrains Mono', Consolas, monospace" font-size="12" fill="#4b5262">exactly-once</text>
+    </g>
+
+    <!-- status row -->
+    <line x1="32" y1="560" x2="592" y2="560" stroke="#f0ece4" stroke-width="0.75" opacity="0.18"/>
+    <text x="312" y="592" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace" font-size="12" fill="#f0ece4">THROUGHPUT ▇▇▇▇▇▇▂▁ 4.2 GB/s · <tspan fill="#1a8f4d">●</tspan> 99.99% delivered · ⟳ zero replays</text>
+  </g>
+
+  <!-- 5 · footer strip -->
+  <line x1="96" y1="816" x2="1504" y2="816" stroke="#d8d0c1" stroke-width="1"/>
+  <text x="96" y="848" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" letter-spacing="0.05em" fill="#6b7280">MERIDIAN SYSTEMS</text>
+  <text x="1504" y="848" text-anchor="end" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" letter-spacing="0.05em" fill="#6b7280"><tspan fill="#b5a273">✦ </tspan>LAUNCHING TODAY · MERIDIAN.DEV</text>
+</svg>

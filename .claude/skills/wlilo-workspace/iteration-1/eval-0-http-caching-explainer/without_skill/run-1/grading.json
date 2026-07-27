@@ -1,0 +1,39 @@
+{
+  "expectations": [
+    {
+      "text": "SVG exists, tags balanced, viewBox present",
+      "passed": true,
+      "evidence": "wellFormed=true viewBox=true len=14179"
+    },
+    {
+      "text": "WLILO palette adherence: >=3 token hexes and >=60% of distinct hexes are tokens",
+      "passed": false,
+      "evidence": "distinct=38 tokens=1 (3%) nonTokens=[2563eb,16a34a,b8b2a7,f8f7f4,1c1917,78716c,e5e0d6,f1efe9]"
+    },
+    {
+      "text": "Never-flat rule: at least one linearGradient defined",
+      "passed": false,
+      "evidence": "0 gradients"
+    },
+    {
+      "text": "Accessibility: <title> and <desc> present",
+      "passed": true,
+      "evidence": "title=true desc=true"
+    },
+    {
+      "text": "Correctness markers: ETag, max-age, 304, If-None-Match all present",
+      "passed": true,
+      "evidence": "all present"
+    },
+    {
+      "text": "Glyph vocabulary: at least one emoji/unicode glyph",
+      "passed": true,
+      "evidence": "regex over emoji+geometric+arrow+block ranges"
+    }
+  ],
+  "summary": {
+    "pass_rate": 0.6666666666666666,
+    "passed": 4,
+    "total": 6
+  }
+}

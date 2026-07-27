@@ -141,7 +141,7 @@ class ContentValidationService {
     
     // Extract text content for pattern matching
     const textContent = this._extractTextContent(html, $);
-    
+
     // Check for garbage signatures
     for (const pattern of this.garbageSignatures) {
       if (pattern.test(textContent)) {
@@ -153,15 +153,31 @@ class ContentValidationService {
         });
       }
     }
-    
+
     // Check structural validity (if $ is provided)
     if ($) {
       const structuralResult = this._validateStructure($);
       if (!structuralResult.valid) {
         return this._reject(url, structuralResult.reason, 'soft', structuralResult.details);
       }
+    } else {
+      // No Cheerio instance (the live FetchPipeline call site never provides
+      // one), so _validateStructure can't run — without SOME equivalent
+      // check here, an empty SPA shell (e.g. <div id="app"></div> with no
+      // Cheerio and its noscript fallback now correctly stripped by the
+      // extraction above) would sail through as "valid" with near-zero real
+      // content. Reusing minBodyLength against the EXTRACTED text (tags/
+      // script/style/noscript stripped) catches that case the same way the
+      // raw-html-length check catches a short raw response, without adding a
+      // new config knob.
+      if (textContent.length < this.minBodyLength) {
+        return this._reject(url, 'no-extracted-content', 'soft', {
+          extractedLength: textContent.length,
+          minRequired: this.minBodyLength
+        });
+      }
     }
-    
+
     return { valid: true };
   }
 
@@ -261,10 +277,23 @@ class ContentValidationService {
       }
     }
     
-    // Simple regex-based text extraction
+    // Simple regex-based text extraction. Must strip the SAME tag set as the
+    // Cheerio path above (script, style, noscript) — <noscript> especially,
+    // since it is standard defensive boilerplate ("Please enable JavaScript
+    // to view this content.") that nearly every modern JS-framework site
+    // includes REGARDLESS of whether the page actually needs JS, and is
+    // never rendered/visible in a real browser with JS enabled. Missing this
+    // strip here (while the Cheerio path already had it) caused a live false
+    // positive 2026-07-20: Globe and Mail's plain HTTP fetch already
+    // contained the full, real article text (SSR'd) alongside its routine
+    // <noscript> fallback tag, but the noscript text alone was enough to
+    // trip the javascript-required signature and reject perfectly good,
+    // already-downloaded content — then reject the Puppeteer-rendered
+    // rescue too, for the identical reason.
     return html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '')
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();

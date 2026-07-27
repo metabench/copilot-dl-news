@@ -1,6 +1,13 @@
 /**
+ * DEPRECATED (2026-07-21, plan v2 Phase D1 one-transport decision): the fleet's
+ * single remote transport is the Gen2 v2 server (:3200); this adapter's target
+ * worker is deprecated and its fetchBatch/queueRequest paths were never wired
+ * into the live crawl (batches of one). Kept for the documented reopen clause
+ * (delivery latency > 60s) — do not extend. See
+ * docs/plans/2026-07-distributed-crawl-unification.md §1.
+ *
  * DistributedFetchAdapter - Low-level HTTP fetch adapter using remote worker
- * 
+ *
  * This adapter provides a drop-in replacement for fetch() that routes requests
  * through the distributed worker for parallel execution. It batches requests
  * automatically and handles compression.

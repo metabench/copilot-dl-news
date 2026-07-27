@@ -1179,7 +1179,7 @@ See [docs/cli/crawl.md](../../docs/cli/crawl.md) for full CLI reference includin
 | Path | Relationship |
 |------|-------------|
 | `src/v4/` | V4 distributed crawl system |
-| `deploy/remote-crawler-v2/` | CrawlWorker + multi-domain server |
+| `../news-crawler-itself/` | The remote crawler engine (multi-domain server + worker + politeness + GzipPool). Extracted from the deleted local `deploy/remote-crawler-v2/` in cycle 73; the deploy tool stages it TO an on-box `deploy/remote-crawler-v2/` path. |
 | `tools/remote-crawl/` | Legacy Oracle crawler scripts; do not use for the simple distributed smoke path |
 | `src/core/crawler/` | V1/V3 core crawler pipeline |
 | `tools/dev/intelligent-crawl-server.js` | ICS server management |

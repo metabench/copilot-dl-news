@@ -1,0 +1,13 @@
+{
+  "eval_id": 0,
+  "eval_name": "http-caching-explainer",
+  "prompt": "Make me an SVG diagram in the WLILO style that explains how HTTP caching works — I want it to cover ETags, Cache-Control max-age, and 304 revalidation. It's going in our team's engineering docs, so it needs to be genuinely correct, not hand-wavy.",
+  "assertions": [
+    "SVG file exists, parses as XML, and has a viewBox",
+    "Accessibility present: <title> and <desc> elements",
+    "WLILO palette adherence: at least 3 distinct token hexes from the WLILO tables and at least 60% of all hex colors used are WLILO tokens",
+    "Never-flat rule: at least one linearGradient is defined and used",
+    "Technical correctness markers all present in text: ETag, max-age, 304, If-None-Match",
+    "Glyph vocabulary used: at least one emoji or WLILO unicode glyph (block/geometric/arrow/star) appears in text"
+  ]
+}

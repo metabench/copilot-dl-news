@@ -128,3 +128,79 @@ describe('configArgs', () => {
       .toThrow(`Missing ${DEFAULT_CONFIG_FILENAME} at ${path.resolve(fakePath)}.`);
   });
 });
+
+// 2026-07-26: a URL typed on the command line was SILENTLY IGNORED whenever
+// crawl.js.config.json set a startUrl — the merge appended directArgv after configArgv,
+// and since the start URL is a POSITIONAL the normalizer took configArgv[0]. A benchmark
+// aimed at a local fixture crawled https://www.theguardian.com instead, with no warning.
+describe('explicit command-line start URL beats the config startUrl', () => {
+  const { resolveCliArguments, findExplicitStartUrl } = require('../configArgs');
+
+  const fsModuleWith = (config) => ({
+    readFile: async () => JSON.stringify(config)
+  });
+  const CONFIG = { startUrl: 'https://config.example.com/', depth: 3, concurrency: 2, maxPages: 5000 };
+
+  it('puts the CLI URL first and drops the config start URL', async () => {
+    const res = await resolveCliArguments({
+      directArgv: ['http://127.0.0.1:8080/', '--max-pages=8'],
+      fsModule: fsModuleWith(CONFIG)
+    });
+    expect(res.argv).not.toContain('https://config.example.com/');
+    // The first positional (non-flag) argument is what the normalizer uses as start URL.
+    expect(res.argv.find((a) => !String(a).startsWith('-'))).toBe('http://127.0.0.1:8080/');
+    expect(res.explicitStartUrl).toBe('http://127.0.0.1:8080/');
+    expect(res.overriddenConfigStartUrl).toBe('https://config.example.com/');
+  });
+
+  it('still applies config FLAGS when the CLI overrides only the URL', async () => {
+    const res = await resolveCliArguments({
+      directArgv: ['http://127.0.0.1:8080/'],
+      fsModule: fsModuleWith(CONFIG)
+    });
+    expect(res.argv).toContain('--depth=3');
+    expect(res.argv).toContain('--concurrency=2');
+  });
+
+  it('keeps the config start URL when the CLI supplies none', async () => {
+    const res = await resolveCliArguments({
+      directArgv: ['--max-pages=8'],
+      fsModule: fsModuleWith(CONFIG)
+    });
+    expect(res.argv[0]).toBe('https://config.example.com/');
+    expect(res.explicitStartUrl).toBeNull();
+    expect(res.overriddenConfigStartUrl).toBeNull();
+  });
+
+  it('reports no override when the CLI URL equals the config URL', async () => {
+    const res = await resolveCliArguments({
+      directArgv: ['https://config.example.com/'],
+      fsModule: fsModuleWith(CONFIG)
+    });
+    expect(res.explicitStartUrl).toBe('https://config.example.com/');
+    expect(res.overriddenConfigStartUrl).toBeNull();
+  });
+
+  describe('findExplicitStartUrl is conservative', () => {
+    it('finds a bare http(s) URL', () => {
+      expect(findExplicitStartUrl(['https://a.test/', '--depth=2'])).toBe('https://a.test/');
+      expect(findExplicitStartUrl(['--depth=2', 'http://b.test/'])).toBe('http://b.test/');
+    });
+
+    it('does NOT treat a space-separated flag VALUE as the start URL', () => {
+      // `--cached-seed https://…` passes a URL to a flag; hijacking it would change the
+      // crawl target. When ambiguous the detector must decline.
+      expect(findExplicitStartUrl(['--cached-seed', 'https://seed.test/'])).toBeNull();
+    });
+
+    it('still finds a URL after an =-form flag', () => {
+      expect(findExplicitStartUrl(['--depth=2', 'https://a.test/'])).toBe('https://a.test/');
+    });
+
+    it('ignores non-URL positionals and empty input', () => {
+      expect(findExplicitStartUrl(['--db', 'C:/tmp/x.db'])).toBeNull();
+      expect(findExplicitStartUrl([])).toBeNull();
+      expect(findExplicitStartUrl(undefined)).toBeNull();
+    });
+  });
+});

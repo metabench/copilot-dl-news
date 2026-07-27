@@ -54,9 +54,10 @@ function makeDb() {
     );
     CREATE TABLE place_page_mappings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      place_id INTEGER NOT NULL, host TEXT, url TEXT, page_kind TEXT, status TEXT,
+      place_id INTEGER NOT NULL, host TEXT, url TEXT, page_kind TEXT, publisher TEXT, status TEXT,
       first_seen_at TEXT, last_seen_at TEXT, verified_at TEXT, evidence TEXT, hub_id INTEGER,
-      max_page_depth INTEGER, oldest_content_date TEXT, last_depth_check_at TEXT, depth_check_error TEXT
+      max_page_depth INTEGER, oldest_content_date TEXT, last_depth_check_at TEXT, depth_check_error TEXT,
+      UNIQUE(place_id, host, page_kind)
     );
     CREATE TABLE place_hubs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -142,6 +143,29 @@ describe('place-hub review API', () => {
     const search = await request(app).get('/api/v1/place-hubs/search?placeId=42');
     expect(search.body.count).toBe(1);
     expect(search.body.hubs[0].validationStatus).toBe('valid');
+  });
+
+  it('reject-place-hub does NOT clobber a verified mapping when the url differs (delegation-#3 ship-gate guard)', async () => {
+    // Confirm url A → a verified mapping fills the (place 42, bbc.com, region-hub) slot.
+    await request(app).post('/api/v1/place-hubs/overrides').send({
+      action: 'confirm-place-hub', url: 'https://www.bbc.com/news/world/europe', host: 'bbc.com',
+      placeId: 42, placeKind: 'region', agent: 'a', reason: 'confirm A'
+    });
+    expect(db.prepare('SELECT status FROM place_page_mappings WHERE place_id = 42').get().status).toBe('verified');
+    // Reject a DIFFERENT url B for the SAME slot. Raw last-write-wins would
+    // silently rewrite the slot to {url=B, status='absent'} and un-verify the
+    // place; the guard must preserve the confirmed hub (reject still recorded).
+    const res = await request(app).post('/api/v1/place-hubs/overrides').send({
+      action: 'reject-place-hub', url: 'https://www.bbc.com/news/world/europe-other', host: 'bbc.com',
+      placeId: 42, placeKind: 'region', agent: 'a', reason: 'reject B'
+    });
+    expect(res.status).toBe(200); // not a 500, and not destructive
+    const rows = db.prepare('SELECT url, status FROM place_page_mappings WHERE place_id = 42').all();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].url).toBe('https://www.bbc.com/news/world/europe'); // A preserved
+    expect(rows[0].status).toBe('verified');
+    // the rejection IS still recorded in the validation ledger for url B
+    expect(db.prepare("SELECT validation_status FROM hub_validations WHERE hub_url LIKE '%europe-other'").get().validation_status).toBe('invalid');
   });
 
   it('heuristics/patterns upserts an AI rule and the classifier uses it immediately', async () => {

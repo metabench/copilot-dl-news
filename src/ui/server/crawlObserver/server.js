@@ -309,6 +309,15 @@ app.post('/api/crawl/spawn', express.json(), (req, res) => {
       detached: true,
       cwd: path.resolve(__dirname, '../../../../') // repo root
     });
+    // A spawn failure (ENOENT if bareword 'node' is not on the server child's
+    // PATH — the child is launched via COPILOT_NODE_PATH, so that is plausible —
+    // or EACCES) is delivered ASYNCHRONOUSLY as an 'error' event. With no
+    // listener Node re-throws it as an uncaught exception that crashes the whole
+    // server child. The surrounding try/catch only guards the synchronous spawn
+    // call, so attach the listener before unref: degrade to a logged failure.
+    cp.on('error', (err) => {
+      try { log.error('Remote crawl process failed to start', { error: err && err.message ? err.message : String(err) }); } catch (_) { /* best-effort */ }
+    });
     cp.unref();
 
     log.info('Spawned remote crawl', { pid: cp.pid, args });

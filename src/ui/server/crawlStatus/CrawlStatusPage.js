@@ -222,6 +222,164 @@ class CrawlStatusPage extends Standard_Web_Page {
       item.add(el('small', {}, label));
     }
 
+    // DB crawl frontier (P1+P2 of DB-driven crawling): how many known URLs are
+    // not yet downloaded (candidates the crawler could fetch straight from the
+    // DB), how many hubs are due for a refresh under the configured recency
+    // window, and the top hosts holding candidates. Read-only, cached
+    // server-side. See docs/plans/2026-07-db-driven-crawling.md. Populated by
+    // the client; the recency input POSTs to /api/v1/crawl/hub-recency.
+    activityBody.add(el('div', {
+      class: 'throughput-windows-label',
+      style: 'font-size:11px;color:#888;margin:10px 0 2px;letter-spacing:.03em;'
+    }, 'DB frontier — candidate URLs not yet downloaded'));
+    const frontierStrip = el('section', {
+      id: 'crawl-frontier-strip',
+      class: 'throughput-strip',
+      'data-screenshot-subject': 'crawl-status-frontier-strip',
+      'data-crawl-frontier': 'true'
+    });
+    activityBody.add(frontierStrip);
+    const frontierBig = el('div', { class: 'throughput-item' });
+    frontierStrip.add(frontierBig);
+    frontierBig.add(el('span', { 'data-crawl-frontier-stat': 'crawlable' }, '—'));
+    frontierBig.add(el('small', {}, 'candidates (never downloaded)'));
+    const frontierHubs = el('div', { class: 'throughput-item' });
+    frontierStrip.add(frontierHubs);
+    frontierHubs.add(el('span', { 'data-crawl-frontier-stat': 'hubStale' }, '—'));
+    frontierHubs.add(el('small', {}, 'hubs due for refresh'));
+    // Suppression visibility (2026-07-20): hubs excluded from auto-selection —
+    // dead (latest N attempts all failed) and low-value (pagination/old-archive
+    // URLs misclassified as hubs). Skipping silently would make the tile lie
+    // about what the automation is actually willing to fetch.
+    const frontierSuppressed = el('div', { class: 'throughput-item' });
+    frontierStrip.add(frontierSuppressed);
+    frontierSuppressed.add(el('span', { 'data-crawl-frontier-stat': 'suppressed' }, '—'));
+    frontierSuppressed.add(el('small', {}, 'suppressed hubs (dead / low-value)'));
+    const frontierRecency = el('div', { class: 'throughput-item' });
+    frontierStrip.add(frontierRecency);
+    const recencyLabel = el('label', {
+      for: 'crawl-hub-recency-days',
+      style: 'display:block;font-size:11px;color:#888;'
+    }, 'Hub refresh recency (days)');
+    const recencyInput = el('input', {
+      id: 'crawl-hub-recency-days',
+      type: 'number',
+      min: '0.04',
+      step: '0.5',
+      value: '1',
+      style: 'width:70px;font-size:13px;padding:2px 4px;'
+    });
+    frontierRecency.add(recencyLabel);
+    frontierRecency.add(recencyInput);
+    // P3: crawl_queue readout + dry-run hydration control. Hydrate copies one
+    // host's due URLs (hubs first) into the persisted crawl_queue — no fetching
+    // yet; P4 jobs will consume the queue. Stats come from the adapter's own
+    // getStats (independent read).
+    const frontierQueue = el('div', { class: 'throughput-item' });
+    frontierStrip.add(frontierQueue);
+    frontierQueue.add(el('span', { 'data-crawl-frontier-stat': 'queue' }, '—'));
+    frontierQueue.add(el('small', {}, 'queued (pending / leased / done)'));
+    const hydrateWrap = el('div', { class: 'throughput-item' });
+    frontierStrip.add(hydrateWrap);
+    const hydrateHost = el('input', {
+      id: 'crawl-frontier-hydrate-host',
+      type: 'text',
+      placeholder: 'host e.g. www.bbc.com',
+      style: 'width:150px;font-size:12px;padding:2px 4px;'
+    });
+    const hydrateBtn = el('button', {
+      id: 'crawl-frontier-hydrate-btn',
+      type: 'button',
+      style: 'font-size:12px;margin-left:4px;padding:2px 8px;'
+    }, 'Hydrate queue');
+    const hydrateStatus = el('small', {
+      'data-crawl-frontier-hydrate-status': 'true',
+      style: 'display:block;color:#888;'
+    }, 'dry-run: fills crawl_queue, no fetching');
+    hydrateWrap.add(hydrateHost);
+    hydrateWrap.add(hydrateBtn);
+    hydrateWrap.add(hydrateStatus);
+    // P6 controls (2026-07-20): the API shipped cycles ago; this is the
+    // UI-legibility catch-up. run-multi drains the queue across up to 3
+    // hosts concurrently (blocks minutes — the button says so); the
+    // autoHydrate toggle flips the persisted setting (default off, news
+    // hosts only — enabling is deliberately an explicit owner action, which
+    // is exactly why it belongs on the page).
+    const runMultiWrap = el('div', { class: 'throughput-item' });
+    frontierStrip.add(runMultiWrap);
+    const runMultiBtn = el('button', {
+      id: 'crawl-frontier-runmulti-btn',
+      type: 'button',
+      style: 'font-size:12px;padding:2px 8px;'
+    }, 'Run multi-host crawl');
+    const runMultiStatus = el('small', {
+      'data-crawl-frontier-runmulti-status': 'true',
+      style: 'display:block;color:#888;'
+    }, 'drains queue: 3 hosts × 4 URLs, concurrent');
+    runMultiWrap.add(runMultiBtn);
+    runMultiWrap.add(runMultiStatus);
+    const autoHydrateWrap = el('div', { class: 'throughput-item' });
+    frontierStrip.add(autoHydrateWrap);
+    const autoHydrateLabel = el('label', {
+      for: 'crawl-auto-hydrate-enabled',
+      style: 'display:block;font-size:11px;color:#888;'
+    }, 'Auto-hydrate (news hosts only)');
+    const autoHydrateToggle = el('input', {
+      id: 'crawl-auto-hydrate-enabled',
+      type: 'checkbox'
+    });
+    const autoHydrateStatus = el('small', {
+      'data-crawl-auto-hydrate-status': 'true',
+      style: 'display:block;color:#888;'
+    }, '…');
+    autoHydrateWrap.add(autoHydrateLabel);
+    autoHydrateWrap.add(autoHydrateToggle);
+    autoHydrateWrap.add(autoHydrateStatus);
+    const frontierHosts = el('div', {
+      'data-crawl-frontier-hosts': 'true',
+      style: 'font-size:11px;color:#8a8a8a;margin:3px 0 0;font-variant-numeric:tabular-nums;'
+    }, '');
+    activityBody.add(frontierHosts);
+
+    // Per-host crawl HEALTH (task #44 observability, cycle 58): FAST /
+    // POLITE-THROTTLE / SLOW-IRREGULAR per host from persisted http_responses gap
+    // regularity, so the operator can SEE whether a slow host is compliant
+    // politeness or a real stall. Client (setHostHealth) fills it from
+    // /api/v1/crawl/host-health (computed off-loop in a child process).
+    activityBody.add(el('div', {
+      class: 'throughput-windows-label',
+      style: 'font-size:11px;color:#888;margin:10px 0 2px;letter-spacing:.03em;'
+    }, 'Per-host crawl health — polite throttle vs real stall'));
+    const hostHealthStrip = el('div', {
+      id: 'crawl-host-health-strip',
+      'data-screenshot-subject': 'crawl-status-host-health-strip',
+      'data-crawl-host-health': 'true',
+      style: 'display:flex;flex-wrap:wrap;gap:6px;font-size:11px;font-variant-numeric:tabular-nums;'
+    }, 'loading…');
+    activityBody.add(hostHealthStrip);
+
+    // Latest headlines: the real news that just came in (most-recently-analysed
+    // article titles + host/section) from /api/v1/recent-headlines. This turns
+    // the page from "how much" into "what" — the owner sees actual headlines,
+    // not only counts. Populated by the client (setRecentHeadlines).
+    activityBody.add(el('div', {
+      class: 'throughput-windows-label',
+      style: 'font-size:11px;color:#888;margin:10px 0 2px;letter-spacing:.03em;'
+    }, 'Latest headlines'));
+    const headlinesList = el('ol', {
+      id: 'crawl-latest-headlines',
+      'data-screenshot-subject': 'crawl-status-latest-headlines',
+      'data-crawl-headlines': 'true',
+      style: 'list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto;'
+        + 'border:1px solid #2a2a2a;border-radius:4px;background:#111;'
+    });
+    activityBody.add(headlinesList);
+    const headlinesEmpty = el('li', {
+      'data-crawl-headlines-empty': 'true',
+      style: 'padding:8px 10px;color:#777;font-size:12px;'
+    }, 'Loading latest headlines…');
+    headlinesList.add(headlinesEmpty);
+
     // Remote fetch strip — live status of the "local coordination, remote
     // page downloads" mode (Oracle fetch worker). Populated from the
     // remoteFetch section of crawl:progress telemetry events; hidden while

@@ -40,7 +40,15 @@ const JOBS = {
 const flush = async () => { for (let i = 0; i < 12; i++) { await Promise.resolve(); } };
 
 function bootClient(jobs) {
-  document.body.innerHTML = '<table><tbody id="rows"></tbody></table>';
+  document.body.innerHTML =
+    '<div id="throughput-strip">' +
+      '<span data-crawl-throughput-stat="network"></span>' +
+      '<span data-crawl-throughput-stat="downloaded"></span>' +
+      '<span data-crawl-throughput-stat="saved"></span>' +
+      '<span data-crawl-throughput-stat="stored"></span>' +
+      '<span data-crawl-throughput-stat="queue"></span>' +
+    '</div>' +
+    '<table><tbody id="rows"></tbody></table>';
   const stub = function (url) {
     const u = String(url);
     const body = u.indexOf('/jobs') >= 0 ? jobs : {};
@@ -173,5 +181,45 @@ describe('crawl-status client rendering', () => {
     const empty = document.querySelector('#rows td.empty');
     expect(empty).toBeTruthy();
     expect(empty.getAttribute('colspan')).toBe('9');
+  });
+
+  // Owner-reported (cycle 69): "Saved docs/s appears to be wrong." Finished jobs'
+  // final progress snapshots freeze non-zero rate fields (typically a terminal
+  // reconcile where saved jumps), and the strip summed rates across ALL jobs —
+  // so completed jobs displayed as phantom throughput long after crawls ended.
+  // renderThroughput must sum ACTIVE jobs only.
+  describe('throughput strip sums ACTIVE jobs only (phantom-rate guard)', () => {
+    const stat = (key) => document.querySelector('[data-crawl-throughput-stat="' + key + '"]').textContent;
+
+    it('a completed job with frozen ghost rates contributes NOTHING to the strip', async () => {
+      const jobs = { items: [
+        { id: 'ghost-1', status: 'completed', finishedAt: '2026-07-21T22:01:00.000Z',
+          progress: { visited: 6, downloaded: 6, saved: 6, queued: 4,
+            docsDownloadedPerSec: 0, docsSavedPerSec: 1.47, networkMbPerSec: 0.3, savedMbPerSec: 0.12 } },
+        { id: 'live-1', status: 'running',
+          progress: { visited: 2, downloaded: 2, saved: 1, queued: 7,
+            docsDownloadedPerSec: 0.5, docsSavedPerSec: 0.25, networkMbPerSec: 0.8, savedMbPerSec: 0.1 } }
+      ] };
+      bootClient(jobs);
+      await flush();
+      expect(stat('saved')).toBe('0.25');       // live-1 only — ghost-1's 1.47 excluded
+      expect(stat('downloaded')).toBe('0.50');
+      expect(stat('network')).toBe('0.80');
+      expect(stat('queue')).toBe('7');          // completed job's stale queued=4 excluded too
+    });
+
+    it('with ONLY finished jobs, every stat reads zero (idle truth)', async () => {
+      const jobs = { items: [
+        { id: 'g1', status: 'completed', finishedAt: 't', progress: { queued: 4, docsSavedPerSec: 1.47, networkMbPerSec: 0.3 } },
+        { id: 'g2', status: 'failed', finishedAt: 't', progress: { queued: 2, docsSavedPerSec: 2.46, savedMbPerSec: 0.2 } }
+      ] };
+      bootClient(jobs);
+      await flush();
+      expect(stat('saved')).toBe('0.00');
+      expect(stat('downloaded')).toBe('0.00');
+      expect(stat('network')).toBe('0.00');
+      expect(stat('stored')).toBe('0.00');
+      expect(stat('queue')).toBe('0');
+    });
   });
 });

@@ -437,7 +437,6 @@ function createSubAppRegistry(options = {}) {
         let totalArticles = '–';
         let knownHubs = '–';
         let domains = '–';
-        let recentRuns = [];
 
         try {
           const db = getDb();
@@ -446,47 +445,19 @@ function createSubAppRegistry(options = {}) {
             totalArticles = counts.totalArticles ?? totalArticles;
             knownHubs = counts.knownHubs ?? knownHubs;
             domains = counts.domains ?? domains;
-
-            recentRuns = db.taskEvents.listRecentCrawlTaskRuns({ limit: 5 });
-
-            // Format recent runs
-            for (let i = 0; i < recentRuns.length; i++) {
-              const r = recentRuns[i];
-              const startEvent = db.taskEvents.getFirstTaskEventPayload(r.task_id, ['crawl:start', 'crawl:started']);
-              let targetHost = 'Unknown';
-              if (startEvent && startEvent.payload) {
-                try {
-                  const config = JSON.parse(startEvent.payload);
-                  targetHost = config.startUrl || config.domain || r.task_id;
-                } catch (e) { targetHost = r.task_id; }
-              }
-              r.targetHost = targetHost;
-
-              const endEventType = db.taskEvents.getLatestTaskEventType(r.task_id);
-              r.status = endEventType ? (endEventType === 'crawl:error' ? 'Failed' : (endEventType === 'crawl:complete' ? 'Complete' : 'Active')) : 'Unknown';
-
-              // Simple duration calculation
-              const startMs = new Date(r.started_at).getTime();
-              const endMs = new Date(r.finished_at).getTime();
-              const durSec = Math.round((endMs - startMs) / 1000);
-              r.duration = durSec > 60 ? Math.round(durSec / 60) + 'm ' + (durSec % 60) + 's' : durSec + 's';
-            }
           }
         } catch (e) {
           console.error("Home dashdb error:", e);
         }
 
-        let activityRows = recentRuns.map(r => `
-          <tr style="border-bottom: 1px solid rgba(139, 105, 20, 0.2);">
-            <td style="padding: 12px 16px; color: var(--gold); font-family: monospace;">${r.targetHost.replace(/^https?:\/\/(www\.)?/, '')}</td>
-            <td style="padding: 12px 16px; text-align: center;">${r.duration}</td>
-            <td style="padding: 12px 16px; text-align: right; color: ${r.status === 'Active' ? '#4ade80' : r.status === 'Failed' ? '#f87171' : 'var(--text-cream)'};">${r.status}</td>
-          </tr>
-        `).join('');
-
-        if (!activityRows) {
-          activityRows = `<tr><td colspan="3" style="padding: 24px; text-align: center; color: var(--text-muted);">No recent crawls found.</td></tr>`;
-        }
+        // Recent crawl activity is hydrated CLIENT-SIDE from the LIVE in-process job
+        // registry (/api/v1/crawl/jobs) — the SAME source as the "Active Crawls" stat —
+        // so target/status/duration reflect real, current jobs. (cycle 78: the old
+        // server render read the stale `task_events` table, which surfaced months-old
+        // campaign runs with a task-id TIMESTAMP as the "target" and EVERY row labelled
+        // "Active" — contradicting "Active Crawls: 0". See UnifiedShell.js
+        // hydrateHomeActivity.)
+        const activityRows = `<tr><td colspan="3" style="padding: 24px; text-align: center; color: var(--text-muted);">Loading recent crawls…</td></tr>`;
 
         return renderHomePanel(`
           <div class="home-dashboard">
@@ -507,6 +478,16 @@ function createSubAppRegistry(options = {}) {
           { value: '...', label: 'Active Crawls', valueAttrs: { 'data-home-stat': 'activeCrawlJobs' } },
           { value: '...', label: 'Recent Errors (10m)', valueAttrs: { 'data-home-stat': 'errorsLast10m' } }
         ])}
+                <!-- Live crawl throughput — hydrated client-side from the D4 shared
+                     crawl-dash-core via /api/v1/crawl/dashboard-model (cycle 79: the
+                     first LIVE consumer of that endpoint/core; it was built cycles
+                     71-72 but never mounted). Zeros when idle, which is honest. -->
+                <div class="home-throughput-strip" data-home-throughput style="margin-top: 12px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--text-muted);">
+                  <span>&#8595; <strong data-tp="downloaded" style="color: var(--text-cream);">&#8211;</strong> docs/s</span>
+                  <span>&#128190; <strong data-tp="saved" style="color: var(--text-cream);">&#8211;</strong> docs/s</span>
+                  <span><strong data-tp="network" style="color: var(--text-cream);">&#8211;</strong> MB/s</span>
+                  <span>queue <strong data-tp="queue" style="color: var(--text-cream);">&#8211;</strong></span>
+                </div>
               </div>
               <div class="panel-card" style="padding: 0; overflow: hidden;">
                 <h3 style="padding: 16px; border-bottom: 1px solid var(--border-gold); margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Recent Crawl Activity</h3>
@@ -518,7 +499,7 @@ function createSubAppRegistry(options = {}) {
                       <th style="padding: 12px 16px; font-weight: normal; color: var(--text-muted); text-align: right;">Status</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody data-home-activity-body>
                     ${activityRows}
                   </tbody>
                 </table>

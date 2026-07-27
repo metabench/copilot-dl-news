@@ -1,6 +1,12 @@
 'use strict';
 
 /**
+ * DEPRECATED (2026-07-21, plan v2 Phase D1 one-transport decision): the fleet's
+ * single remote transport is the Gen2 v2 server (:3200, remote queue + watermark
+ * batch export); this per-URL remote-fetch path stays OFF by default and should
+ * not be extended. Reopen only per the plan's clause (delivery latency > 60s).
+ * See docs/plans/2026-07-distributed-crawl-unification.md §1.
+ *
  * remoteFetch — route the main crawler's page downloads to a remote fetch
  * worker while ALL coordination stays local.
  *

@@ -9,7 +9,10 @@ _Last Updated: 2026-03-08_
 
 | Plan | Status | Progress | Next Session | Priority |
 |------|--------|----------|--------------|----------|
-| [2026-03-v5-remote-crawler-application](./2026-03-v5-remote-crawler-application/PLAN.md) | active | planning complete, implementation not started | `2026-03-xx-v5-boundary-and-runtime-bootstrap` | critical |
+| [2026-07-22-module-ecosystem](./2026-07-22-module-ecosystem.md) | **ACTIVE OWNER DIRECTIVE** | working model defined; news-crawler-itself bootstrapped (README+AGENTS); first extraction (remote crawler engine + parallel compression) next | crawler engine → news-crawler-itself | **critical** |
+| [2026-07-distributed-crawl-unification](./2026-07-distributed-crawl-unification.md) | active | D1–D3 + D2a deployed/verified; D4 slices 1+2a shipped; implementation home moving to news-crawler-itself | D4 slice 2b after extraction | high |
+| [2026-03-v5-remote-crawler-application](./2026-03-v5-remote-crawler-application/PLAN.md) | superseded in substance by the Gen2 unification + module-ecosystem plans | planning complete, implementation not started | — | low |
+| [2026-07-db-driven-crawling](./2026-07-db-driven-crawling.md) | active | P1+P2+P3+P4 shipped (frontier read, recency knob, queue hydration, real DB-seeded fetching live-verified) | P5: on-demand place-hub redownload | high |
 
 ## Completed Plans
 

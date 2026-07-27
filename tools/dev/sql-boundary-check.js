@@ -8,6 +8,9 @@ const path = require("path");
  * SQL Boundary Check
  * Prevent SQL usage in UI/Electron layers
  * Exit: 0 = clean, 1 = violations found
+ *
+ * Comments are excluded from matching; string literals are not, so
+ * require('better-sqlite3') in real code always trips the check.
  */
 
 const REPO_ROOT = path.join(__dirname, "..", "..");
@@ -20,7 +23,10 @@ const SQL_PATTERNS = [
   /new\s+Database\s*\(/
 ];
 
-const TARGET_DIRS = ["src/ui", "crawl-widget"];
+// src/ui covers all current UI surfaces, including src/ui/electron/* and
+// src/ui/server/unifiedApp (crawl-widget/ was deleted; see
+// docs/agi/RECONCILIATION_2026-07-19.md).
+const TARGET_DIRS = ["src/ui"];
 
 let config = {
   ignoreRoots: ["src/db", "tests", "tools", "scripts", "checks"],
@@ -43,20 +49,57 @@ function normalizeRepoRelativePath(p) {
 }
 
 /**
- * Scan a file for SQL patterns
+ * Blank out // and block comments, preserving newlines (line numbers stay
+ * accurate) and string/template literal contents (SQL in strings must still
+ * match). Limitation: a regex literal containing "//" or "/*" reads as a
+ * comment start, hiding the rest of that line/block from matching.
+ */
+function blankComments(source) {
+  let out = "";
+  let state = "code";
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i];
+    const next = source[i + 1];
+    if (state === "code") {
+      if (ch === "/" && next === "/") { state = "line"; out += "  "; i++; }
+      else if (ch === "/" && next === "*") { state = "block"; out += "  "; i++; }
+      else {
+        if (ch === "'" || ch === '"' || ch === "`") state = ch;
+        out += ch;
+      }
+    } else if (state === "line") {
+      if (ch === "\n") { state = "code"; out += ch; }
+      else out += " ";
+    } else if (state === "block") {
+      if (ch === "*" && next === "/") { state = "code"; out += "  "; i++; }
+      else out += ch === "\n" ? ch : " ";
+    } else {
+      // inside a string literal delimited by `state`
+      out += ch;
+      if (ch === "\\") { out += next === undefined ? "" : next; i++; }
+      else if (ch === state) state = "code";
+      else if (ch === "\n" && state !== "`") state = "code";
+    }
+  }
+  return out;
+}
+
+/**
+ * Scan a file for SQL patterns (comments excluded)
  */
 function scanFile(filePath, relativePath) {
   const content = fs.readFileSync(filePath, "utf-8");
-  const lines = content.split("\n");
+  const originalLines = content.split("\n");
+  const codeLines = blankComments(content).split("\n");
 
-  lines.forEach((line, idx) => {
+  codeLines.forEach((line, idx) => {
     SQL_PATTERNS.forEach((pattern) => {
       if (pattern.test(line)) {
         violations.push({
           file: normalizeRepoRelativePath(relativePath),
           line: idx + 1,
           pattern: pattern.source,
-          context: line.trim().slice(0, 80)
+          context: originalLines[idx].trim().slice(0, 80)
         });
       }
     });
