@@ -116,9 +116,9 @@
     },
     {
       "id": "ui-browser-coverage",
-      "description": "the handful of UI checks that drive a REAL browser cannot silently drop to zero (RB-009, cycle 133). Measured 2026-07-27: of 82 UI self-tests totalling ~10,600 lines, only 4 (5%) drive puppeteer/playwright; 75 (91%) are in-process render + string assertions. That 95% majority is blind BY CONSTRUCTION to the cycle-128.5 defect class - SSR frozen at publish while the client silently repairs the DOM, so the page looks correct to every string assertion. This is a no-regression FLOOR at the current value, not an aspiration; raise it deliberately when live coverage is added",
+      "description": "the handful of UI checks that drive a REAL browser cannot silently drop to zero (RB-009, cycle 133). Measured 2026-07-27: of 82 UI self-tests totalling ~10,600 lines, only 4 (5%) drive puppeteer/playwright; 75 (91%) are in-process render + string assertions. That 95% majority is blind BY CONSTRUCTION to the cycle-128.5 defect class - SSR frozen at publish while the client silently repairs the DOM, so the page looks correct to every string assertion. This is a no-regression FLOOR, raised deliberately as live coverage lands: 4 -> 5 in cycle 135, when projectStatus.live.check.js became the first check in the tree to load a real page in a real browser (the 3 pre-existing screenshot checks render SSR HTML in-process and photograph it, so they never load a URL either)",
       "cmd": "node",
-      "args": ["tools/dev/ui-check-inventory.js", "--min-live", "4"],
+      "args": ["tools/dev/ui-check-inventory.js", "--min-live", "5"],
       "needsServer": false,
       "timeoutMs": 20000
     },
@@ -129,6 +129,14 @@
       "args": ["tools/dev/checks/doc-links.check.js"],
       "needsServer": false,
       "timeoutMs": 15000
+    },
+    {
+      "id": "project-status-live",
+      "description": "loads the project-status page in a REAL browser and asserts the five things no in-process check can see (cycle 135): L1 the isomorphic client actually activated, L2 it fetched /api/status ON LOAD rather than only on the 60 s interval (guards the c128.5 fix), L3 the rendered DOM agrees with the LIVE API rather than the boot-time SSR - the assertion that would have failed automatically in c128.5 when SSR said 82 cycles and the API said 84 - L4 no console errors, L5 every page-requested resource loaded. Spawns its own server on :3191 so a running preview on :3184 is untouched, and uses async spawn (spawnSync would deadlock the event loop the server needs). Proven to bite: removing the c128.5 one-line fix turns L2 red",
+      "cmd": "node",
+      "args": ["src/ui/server/projectStatus/checks/projectStatus.live.check.js"],
+      "needsServer": false,
+      "timeoutMs": 180000
     },
     {
       "id": "workflow-scorecard-ratchet",
