@@ -78,10 +78,17 @@ function buildStatus() {
   // quests — main = latest cycle result; side = owed[] fields from recent stanzas
   const latest = rows[rows.length - 1] || {};
   const latestCycle = cycles[cycles.length - 1] || {};
+  // owed[] entries accumulate from recent stanzas; a later stanza's owed_closed[]
+  // retires them (otherwise a paid debt would keep showing as outstanding).
+  const closed = new Set();
+  for (const c of cycles.slice(-10)) {
+    for (const o of (Array.isArray(c.owed_closed) ? c.owed_closed : [])) closed.add(humanize(o));
+  }
   const owed = [];
   for (const c of cycles.slice(-10).reverse()) {
     for (const o of (Array.isArray(c.owed) ? c.owed : [])) {
       const label = humanize(o);
+      if (closed.has(label)) continue;
       if (!owed.some((x) => x.label === label)) owed.push({ label, cycle: c.id });
     }
   }

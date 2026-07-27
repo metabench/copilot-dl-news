@@ -30,12 +30,10 @@ function resolveSqliteHandle(adapter) {
   return candidates.find((c) => c && typeof c.prepare === 'function') || null;
 }
 
-const LOOKUP_SQL = `
-  SELECT crawl_delay_seconds, safe_rpm, learned_rpm, source
-    FROM domain_rate_limits
-   WHERE domain = ? OR domain = ?
-ORDER BY COALESCE(safe_rpm, learned_rpm, 999999) ASC
-   LIMIT 1`;
+// The lookup SQL lives in ncdb (legacy-domainRateLimits.ts) as of 2026-07-27 —
+// delegated to keep DB-shaped logic inside the DB layer (ncdb-debt ratchet).
+// Contract there is byte-identical to the raw SQL this file used to carry.
+const { selectStoredRateLimitForHost } = require('news-crawler-db');
 
 /**
  * Build the provider DomainThrottleManager consumes: (normalisedHost) -> row | null.
@@ -51,12 +49,11 @@ function createStoredRateLimitProvider(getAdapter) {
     try {
       const db = resolveSqliteHandle(typeof getAdapter === 'function' ? getAdapter() : getAdapter);
       if (!db) return null;
-      // Match either stored key form; the table holds both bare and `www.` rows.
-      return db.prepare(LOOKUP_SQL).get(normalizedHost, `www.${normalizedHost}`) || null;
+      return selectStoredRateLimitForHost(db, normalizedHost);
     } catch (_) {
       return null;
     }
   };
 }
 
-module.exports = { resolveSqliteHandle, createStoredRateLimitProvider, LOOKUP_SQL };
+module.exports = { resolveSqliteHandle, createStoredRateLimitProvider };
