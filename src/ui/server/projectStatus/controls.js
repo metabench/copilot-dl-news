@@ -135,6 +135,12 @@ class Status_Widget extends Control {
     if (s.sideQuests.length) for (const q of s.sideQuests) owedBox.add(this._el('div', 'ps-quest-item', owedText(q)));
     else owedBox.add(this._el('div', 'ps-quest-item ps-muted', 'none — all clear'));
     work.add(owedBox);
+    const sigBox = this._el('div', 'ps-list');
+    sigBox.dom.attributes['data-ps-signals'] = 'true';
+    for (const sig of (s.pendingSignals || [])) {
+      sigBox.add(this._el('div', 'ps-quest-item ps-signal-line', `⚡ SIGNAL PENDING — ${sig.tech} (clicked ${sig.at.slice(0, 16).replace('T', ' ')}; picked up at the agent's next orient)`));
+    }
+    work.add(sigBox);
     work.add(this._el('div', 'ps-quest-tag ps-blink', 'AWAITING OWNER DECISION'));
     for (const p of s.playerInput) work.add(this._el('div', 'ps-quest-item ps-input', p));
     work.add(this._el('div', 'ps-quest-tag', 'RECENT CYCLES'));
@@ -266,6 +272,12 @@ class Status_Widget extends Control {
       }
       for (const it of items) box.appendChild(build(it));
     };
+    rebuild('[data-ps-signals]', s.pendingSignals || [], (sig) => {
+      const d = document.createElement('div');
+      d.className = 'ps-quest-item ps-signal-line';
+      d.textContent = `⚡ SIGNAL PENDING — ${sig.tech} (clicked ${sig.at.slice(0, 16).replace('T', ' ')}; picked up at the agent's next orient)`;
+      return d;
+    }, null);
     rebuild('[data-ps-owed]', s.sideQuests, (it) => {
       const d = document.createElement('div');
       d.className = 'ps-quest-item';
@@ -422,6 +434,7 @@ Status_Widget.css = `
 .ps-road__main { font-size: 12px; font-weight: 600; color: #e8e4d8; }
 .ps-road__sub { font-size: 10px; color: #8a8778; margin-top: 4px; }
 .ps-road__arrow { align-self: center; color: #b8862e; font-size: 16px; flex: 0 0 auto; }
+.ps-signal-line { color: #9fd4ec; border-left: 2px solid #4d9ec8; padding-left: 8px; }
 .ps-tree__roots { font-size: 10px; color: #6b675a; border-top: 1px dashed #2e3440; padding-top: 6px; margin-top: 8px; }
 .ps-branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
 @media (max-width: 760px) { .ps-branches { grid-template-columns: 1fr; } }
@@ -453,6 +466,16 @@ class Project_Status_Page extends Active_HTML_Document {
     super(spec);
     if (!spec.el) {
       this.title = 'Project Status — news-crawler ecosystem';
+      // Tab identity (cycle 143). Guarded: only if this document control exposes head.
+      try {
+        if (this.head) {
+          const icon = new Control({ context: this.context, tagName: 'link' });
+          icon.dom.attributes.rel = 'icon';
+          icon.dom.attributes.type = 'image/svg+xml';
+          icon.dom.attributes.href = '/favicon.svg';
+          this.head.add(icon);
+        }
+      } catch (_) { /* head not exposed by this jsgui3 version — favicon.ico route still serves */ }
       const get = Project_Status_Page.get_status;
       const status = typeof get === 'function' ? get() : null;
       this.body.add(new Status_Widget({ context: this.context, status }));

@@ -1,12 +1,13 @@
 'use strict';
 
 /**
- * techPages.js — the three SMAC-style branch pages (owner directive 2026-07-27:
- * "different parts of the tech tree, like in SMAC... just 3 pages for the moment"):
+ * techPages.js — the four SMAC-style branch pages (owner directives 2026-07-27/28),
+ * plus the node-detail modal every tree item opens (cycle 142):
  *
  *   /tech/agi      — 💡 cold blue-white light   (#4d9ec8, palette-validated)
  *   /tech/tree     — 🖥 a tree on a monitor      (#55a377)
  *   /tech/crawler  — 🕷 a spider on its web      (#b8862e)
+ *   /tech/factory  — 🏭 a factory with a spanner (#a678c8) + live tool inventory
  *
  * SMAC grounding (researched 2026-07-27): research categories form an INTERTWINING
  * tree; each tech has at most two prerequisites; techs sit in tiers from foundations
@@ -266,6 +267,26 @@ function renderTreeSvg(b, branches) {
     if (!layers.has(d)) layers.set(d, []);
     layers.get(d).push(n);
   }
+  // One barycentric pass (cycle 143 finishing touch): order each layer >0 by the
+  // mean row-index of its inputs in the previous ordering, so edges run flatter
+  // and cross less. Stable sort keeps spec order as the tiebreak; a single sweep
+  // is deliberate — full crossing minimisation is NP-hard and this is a glance
+  // diagram, not a graph editor.
+  const sortedDepths = [...layers.keys()].sort((a, b) => a - b);
+  const rowOf = new Map();
+  for (const d of sortedDepths) {
+    const ns = layers.get(d);
+    if (d > 0) {
+      const bary = (n) => {
+        const ins = edges.filter((e) => e.to === n.id).map((e) => rowOf.get(e.from)).filter((v) => v !== undefined);
+        return ins.length ? ins.reduce((a, v) => a + v, 0) / ins.length : Number.MAX_SAFE_INTEGER;
+      };
+      const keyed = ns.map((n, i) => ({ n, i, k: bary(n) }));
+      keyed.sort((a, b) => (a.k - b.k) || (a.i - b.i));
+      layers.set(d, keyed.map((x) => x.n));
+    }
+    layers.get(d).forEach((n, i) => rowOf.set(n.id, i));
+  }
   const pos = new Map();
   let maxRows = 0;
   for (const [d, ns] of layers) {
@@ -345,6 +366,7 @@ function renderTechPage(branchKey, techTree, opts = {}) {
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(b.label)} — tech tree</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>${CSS.replace(/__ACCENT__/g, b.color)}</style></head>
 <body class="tp-body">
 ${navBar(branchKey, branches)}

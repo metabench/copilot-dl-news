@@ -90,6 +90,16 @@ function factorySpanner(size = 28) {
 </svg>`;
 }
 
+/** The app's favicon: a compact branching tree in gold on obsidian (tab identity). */
+function faviconSvg() {
+  return `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+<rect width="32" height="32" rx="6" fill="#101216"/>
+<path d="M16 27V13M16 17l-6-4.5M16 17l6-4.5M10 12.5L6.5 9.5M22 12.5l3.5-3M16 13V7" stroke="#b8862e" stroke-width="2" stroke-linecap="round"/>
+<circle cx="16" cy="6" r="2" fill="#d9b25f"/><circle cx="6" cy="8.6" r="1.6" fill="#b8862e"/><circle cx="26" cy="8.6" r="1.6" fill="#b8862e"/>
+<circle cx="10" cy="12.2" r="1.4" fill="#8a6a2a"/><circle cx="22" cy="12.2" r="1.4" fill="#8a6a2a"/>
+</svg>`;
+}
+
 const ICONS = { iceBulb, treeMonitor, spiderWeb, factorySpanner };
 
-module.exports = { iceBulb, treeMonitor, spiderWeb, factorySpanner, headerScape, ICONS };
+module.exports = { iceBulb, treeMonitor, spiderWeb, factorySpanner, headerScape, faviconSvg, ICONS };

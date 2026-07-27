@@ -95,6 +95,16 @@ async function main() {
       });
     }
 
+    // Favicon (cycle 143 finishing touch): the app's tab identity, and the end of
+    // the browser's /favicon.ico 404 that the live check had to filter around.
+    const { faviconSvg } = require('./techArt');
+    for (const fav of ['/favicon.svg', '/favicon.ico']) {
+      router.set_route(fav, null, (req, res) => {
+        res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' });
+        res.end(faviconSvg());
+      });
+    }
+
     // The committed progress SVG, embedded by the page's HISTORY panel. Served from
     // disk each request so a regenerated picture shows on the next refresh.
     const svg_path = path.resolve(__dirname, '..', '..', '..', '..', 'docs', 'agi', 'progress', 'progress.svg');
